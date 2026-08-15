@@ -402,11 +402,10 @@ evaluating it extends the ambient scope for later/surrounding code:
   evaluation); the three function-call forms — lower-level with a
   `Predates` proof, same-level with a `Subterm` proof, and the TBD v2
   multi-proof form (§9, §13); type-constructor application;
-  value-constructor application; the three transitivity axioms (§8) —
-  scope-neutral regardless of whether they end up as special forms or
-  ordinary prelude functions, which is still undecided; a still-unnamed
-  form that bundles multiple values into a function's or match's
-  multi-value return (§11).
+  value-constructor application; the three transitivity axioms (§8, for
+  now special forms rather than ordinary prelude functions); a
+  still-unnamed form that bundles multiple values into a function's or
+  match's multi-value return (§11).
 
 ## 17. First-class objects
 
@@ -641,11 +640,9 @@ where it's actually specified.
 15. Value-constructor application (§5, §12).
 16. A multi-value bundling form (name TBD) — packages multiple values
     into a function's or match's multi-value return (§11).
-
-**Status undecided — may not end up as special forms at all:** the three
-transitivity axioms (`Predates` transitivity, `Subterm` transitivity,
-`Predates`-through-`Subterm`, §8) could instead be ordinary prelude
-functions (§9, §16).
+17. The three transitivity axioms — `Predates` transitivity, `Subterm`
+    transitivity, `Predates`-through-`Subterm` (§8). Special forms for
+    now, rather than ordinary prelude functions.
 
 Open question this list surfaces: are type-/value-constructor application
 (items 14–15) actually dispatched via the `Special` mechanism the way the
