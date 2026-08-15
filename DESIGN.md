@@ -497,3 +497,7 @@ constructors, and all type constructors regardless of individual marking
 Some variant of `coerce` plus a proof-of-coercibility: two values counted
 as the same modulo erased values, and/or modulo entering/leaving a
 Haskell-newtype-style wrapper type. Not designed yet.
+
+## 22. Evaluation strategy
+
+The language is eagerly evaluated.
