@@ -363,7 +363,7 @@ side.
 Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
-reify-add : (many a b : Nat) (erased c : Nat) (erased p : $ Add a b c) ->
+reify-add : (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
             (many d is c)
 ```
 
@@ -408,10 +408,10 @@ evaluating it extends the ambient scope for later/surrounding code:
 
 - **Scope-extending** (bindings visible to subsequent/surrounding code):
   `let`; `def-lvl`; `def-fns` (defines one or more, possibly mutually
-  recursive, functions — a single function is just the one-element case,
-  §28); `def-adts` (likewise, for one or more mutually recursive ADTs,
-  §28); `match` (branch-local field variables, and possibly refined `is`
-  facts on pre-existing variables, §14); `comptime-match` (§15). Every one
+  recursive, functions — a single function is just the one-element case);
+  `def-adts` (likewise, for one or more mutually recursive ADTs); `match`
+  (branch-local field variables, and possibly refined `is` facts on
+  pre-existing variables, §14); `comptime-match` (§15). Every one
   of these can appear at top level or
   nested inside a function body — nothing here is top-level-only. None of
   these take an explicit body/continuation the way a classic `let` would
@@ -638,10 +638,10 @@ where it's actually specified.
    is a single bare variable (§9).
 2. `def-lvl` — births a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
-   functions; a single function is just the one-element case (§28).
-   Possibly nested inside another function's body (§9, §16).
+   functions; a single function is just the one-element case. Possibly
+   nested inside another function's body (§9, §16).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
-   same one-element-case pattern as `def-fns` (§28); possibly nested;
+   same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16).
 5. `match` — pattern match; three branch kinds: present, absurd
    (automatic), absurd (by proof) (§12).
@@ -719,43 +719,76 @@ not just semantically different:
    multi-return here either. Multiple returns (§11) are function-only.
 
 All three share an underlying "telescope" notion (a list of annotated
-`name : Type` entries, §5's restricted grammar), just permitting
-different annotations and requiring different things of the return
-position. The distinct tagging is also what lets §4's head-dispatch tier
-1 tell a function, a type constructor, and a value constructor apart when
-deciding how to elaborate an application.
+`Type name` entries — type-first, §30 — built from §5's restricted
+grammar), just permitting different annotations and requiring different
+things of the return position. The distinct tagging is also what lets
+§4's head-dispatch tier 1 tell a function, a type constructor, and a
+value constructor apart when deciding how to elaborate an application.
 
 The `name : [level] (telescope) -> (telescope)` declaration syntax used
 for `length`/`List`/`Cons` in recent examples is sugar over these three
 formers plus a name and (for functions) a body — not a separate
 mechanism.
 
-More examples. Multi-return is function-only (above), but `is` (§14) is
-not — it works in a type-constructor's or value-constructor's telescope
-too, same as a function's:
+Multi-return is function-only (above), but `is` (§14) is not — it works
+in a type-constructor's or value-constructor's telescope too, same as a
+function's. See §30 for worked examples of all three formers (`reify-add`
+and `divmod`'s function types, a "homogeneous pair" type constructor, and
+a reify-pattern value constructor) — written type-first, per §30.
 
-`reify-add`'s type (§14), with an `is` return instead of a plain type:
+## 30. Type-first telescope entries; backwards references only
+
+A telescope entry is written `([subterm] [multiplicity] Type name...)` —
+type before name, Java-style rather than OCaml/Haskell `name : Type`
+style. Motivation: an entry may only depend on entries before it, left to
+right (§11) — a type can never mention the very name it's typing. Putting
+the type first makes source order track dependency order all the way
+down to a single entry, not just across entries: everything a type can
+reference sits to its left; the name being introduced, which nothing yet
+can reference, comes last.
+
+`is`-entries are *not* reordered — they stay `name is expr`, unlike
+`Type name`. Unlike a type annotation, which just describes, an `is`
+clause defines what the name *is*, and "d is c" reads correctly
+subject-first in a way "c is d" wouldn't (even though the underlying
+equality is symmetric).
+
+Whether the *outer* declaration-level naming (`length : Fn ...`) reorders
+the same way is still open — that's a binding (`let`-like: "give this
+name to this signature"), possibly not the same kind of thing as a
+telescope entry at all.
+
+Caveat: type-first breaks `$` when a name would trail a `$`-headed type
+expression, since `$` reads greedily until the enclosing form's
+terminator and would swallow the trailing name as another argument to
+the type instead. Plain parens are needed there instead of `$`.
+
+`let` requires backwards references only, OCaml-`let` style: a binding
+can never see itself or anything declared after it. This is what keeps
+`let` cleanly non-recursive, with all (possibly mutual) recursion
+required to go through `def-fns`/`def-adts` (§16, §27) instead — no
+separate `let rec` needed.
+
+Retrofitted examples:
+
+`reify-add`'s type:
 ```scheme
-(Fn L (many a b : Nat) (erased c : Nat) (erased p : $ Add a b c) ->
+(Fn L (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
    (many d is c))
 ```
 
-`divmod`'s type, with two (non-dependent, here) returns — function-only:
+`divmod`'s type:
 ```scheme
-(Fn L (subterm many n : Nat) (many d : Nat) ->
-   (many q : Nat) (many r : Nat))
+(Fn L (subterm many Nat n) (many Nat d) -> (many Nat q) (many Nat r))
 ```
 
-A "homogeneous pair" type constructor, `B` forced to match `A` via `is`
-(no multiplicity marker either way — forced erased regardless):
+The "homogeneous pair" type constructor:
 ```scheme
-(TyCtor (A : Type) (B is A) -> Type)
+(TyCtor (Type A) (B is A) -> Type)
 ```
 
-A value constructor using the same reify pattern as `reify-add`, but on
-a field instead of a return — `c2` materializes the erased `c` at a
-different (non-erased) multiplicity:
+The reify-pattern value constructor:
 ```scheme
-(ValCtor (erased a b c : Nat) (erased p : $ Add a b c) (many c2 is c) ->
+(ValCtor (erased Nat a b c) (erased (Add a b c) p) (many c2 is c) ->
    (Reified a b))
 ```
