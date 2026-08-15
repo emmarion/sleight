@@ -242,7 +242,9 @@ A function can return multiple values, including zero, and later return
 values can depend on earlier ones — this is, in effect, a built-in sigma
 (dependent tuple) type rather than something layered on top. As usual,
 each entry — argument or return value — may only depend on the entries
-before it, left to right.
+before it, left to right. This is a function-only feature: type and
+value constructors always have exactly one return (§29) — `Type` for a
+type constructor, the constructed type itself for a value constructor.
 
 `match` requires an explicit result-type annotation: it lists the return
 type(s) (plural, to match a function's possibly-multiple return values)
@@ -692,11 +694,12 @@ not just semantically different:
 2. **Type-constructor-type former** — no level (§7); its telescope
    entries carry *no* multiplicity choice at all, since type-constructor
    arguments are unconditionally erased (§12, §20) — there's nothing to
-   annotate; the return is always `Type`.
+   annotate; the return is always `Type`, a single one — no multi-return.
 3. **Value-constructor-type former** — no level, no `subterm` (constructors
    don't recurse); its telescope entries freely choose multiplicity per
-   field, same freedom as a function's arguments (§12); the return is
-   whatever concrete type the constructor builds.
+   field, same freedom as a function's arguments (§12); the return is a
+   single, whatever concrete type the constructor builds — no
+   multi-return here either. Multiple returns (§11) are function-only.
 
 All three share an underlying "telescope" notion (a list of annotated
 `name : Type` entries, §5's restricted grammar), just permitting
@@ -709,3 +712,16 @@ The `name : [level] (telescope) -> (telescope)` declaration syntax used
 for `length`/`List`/`Cons` in recent examples is sugar over these three
 formers plus a name and (for functions) a body — not a separate
 mechanism.
+
+Two more examples, both function types (`is`/multi-return are
+function-only features, per above):
+
+`reify-add`'s type (§14), with an `is` return instead of a plain type:
+```scheme
+(Fn L (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (w d is c))
+```
+
+`divmod`'s type, with two (non-dependent, here) returns:
+```scheme
+(Fn L (subterm w n : Nat) (w d : Nat) -> (w q : Nat) (w r : Nat))
+```
