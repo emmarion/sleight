@@ -88,12 +88,17 @@ function invocation. A type can only be built from:
 
 1. variable references,
 2. application of a type constructor,
-3. application of a value constructor.
+3. application of a value constructor,
+4. application of a type former (`Fn`, `TyCtor`, `ValCtor`, §29; or
+   `Matchable`, §17).
 
 The same restriction applies to "is" statements (the
 canonicalization/rewrite rules from §3). The intended consequence of this
 restriction is a simple type-checking rule: canonicalize, then compare
 for identity.
+
+A former's telescope entries bind names (§11, §30). Bound occurrences are
+de Bruijn indices; free references remain scope-table pointers as in §3.
 
 The language assumes Axiom K (uniqueness of identity proofs) — relevant
 to the dependent pattern matching / rewrite rules used inside match
@@ -653,14 +658,17 @@ where it's actually specified.
    (§15).
 
 **Locally scoped:**
-7. The function-type former (§7, §11, §16, §29).
-8. The type-constructor-type former (§29).
-9. The value-constructor-type former (§29).
-10. A `Matchable`-type former (§17).
+7. `Fn` — the function-type former (§7, §11, §16, §29).
+8. `TyCtor` — the type-constructor-type former (§29).
+9. `ValCtor` — the value-constructor-type former (§29).
+10. `Matchable` — the `Matchable`-type former (§17).
 11. `begin` — sequences expressions, hosts the scope-extending forms
     above, evaluates to its last expression; implicit (no keyword needed)
     in function bodies, `comptime` bodies, match branch bodies, and a
     file's top level (§16).
+
+Items 7–10 are also §5's production 4, i.e. they may appear inside a type
+or an `is` expression, not only at a declaration site.
 
 **Scope-neutral:**
 12. `Subterm` birth (name doubles as the type it births, §8) — asserts
@@ -685,8 +693,8 @@ Items 16–17 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
 head-dispatch algorithm for the real two-tier answer.
 
-**Telescope-entry tokens** (also `Special`, but lower-level than the
-above — they annotate a telescope entry rather than heading a list):
+**Annotation tokens** (also `Special`, but lower-level than the above —
+they annotate a form rather than heading a list):
 20. `erased` — the 0-multiplicity (§6).
 21. `many` — the ω-multiplicity (§6).
 22. `:` — separates a telescope entry's name from its type.
@@ -694,6 +702,14 @@ above — they annotate a telescope entry rather than heading a list):
     `is` expression instead of a type (§14).
 24. `->` — separates a signature's parameter telescope from its return
     telescope (§29).
+25. `subterm` — marks a telescope entry as participating in the
+    lexicographic subterm order (§7, §9, §30).
+26. `enum` — declares an ADT's discriminant non-erased (§12, §31).
+27. `union` — declares an ADT's discriminant erased (§12).
+28. `tail` — marks a call as compiling to a tail call; a hard compile
+    error if the compiler can't honor the claim (§9).
+29. `delegate` — `tail` plus the same pass-through requirement on the
+    call's non-erased arguments (§9).
 
 ## 28. ASCII only
 
@@ -710,18 +726,19 @@ enough, because a function's telescope, a type constructor's telescope,
 and a value constructor's telescope aren't structurally the same grammar,
 not just semantically different:
 
-1. **Function-type former** (§16) — takes a level (§7), plus a telescope
-   where each entry freely chooses its own multiplicity and can be marked
-   `subterm`; produces a function type.
-2. **Type-constructor-type former** — no level (§7); its telescope
-   entries carry *no* multiplicity choice at all, since type-constructor
-   arguments are unconditionally erased (§12, §20) — there's nothing to
-   annotate; the return is always `Type`, a single one — no multi-return.
-3. **Value-constructor-type former** — no level, no `subterm` (constructors
-   don't recurse); its telescope entries freely choose multiplicity per
-   field, same freedom as a function's arguments (§12); the return is a
-   single, whatever concrete type the constructor builds — no
-   multi-return here either (§11 multi-return is function-only). The
+1. **Function-type former**, `Fn` (§16) — takes a level (§7), plus a
+   telescope where each entry freely chooses its own multiplicity and can
+   be marked `subterm`; produces a function type.
+2. **Type-constructor-type former**, `TyCtor` — no level (§7); its
+   telescope entries carry *no* multiplicity choice at all, since
+   type-constructor arguments are unconditionally erased (§12, §20) —
+   there's nothing to annotate; the return is always `Type`, a single
+   one — no multi-return.
+3. **Value-constructor-type former**, `ValCtor` — no level, no `subterm`
+   (constructors don't recurse); its telescope entries freely choose
+   multiplicity per field, same freedom as a function's arguments (§12);
+   the return is a single, whatever concrete type the constructor builds
+   — no multi-return here either (§11 multi-return is function-only). The
    return *does* carry its own multiplicity marker, unlike a type
    constructor's bare `Type` return — `erased` there is what makes the
    whole constructor phantom (§12).
