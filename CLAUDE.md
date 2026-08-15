@@ -46,3 +46,8 @@ by the owner and apply to every session.
 
 9. **Think like a mathematician.** Reach for abstraction and generality
    as primary tools, not just as cleanup after the fact.
+
+10. **Terminology is negotiable.** The owner is flexible on naming (types,
+    axioms, keywords, etc.) and is happy for Claude to propose better
+    names. Feel free to suggest alternatives, but don't rename something
+    already settled in DESIGN.md without flagging the change explicitly.

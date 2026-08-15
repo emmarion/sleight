@@ -84,3 +84,24 @@ above) is termination. ADTs with zero variants are supported (e.g.
 decrements a lexicographic ordering whose most significant component is
 the function's level, followed by its `subterm`-annotated arguments in
 left-to-right order.
+
+## 8. Built-ins backing termination
+
+Names below are placeholders (see CLAUDE.md §10) — the owner is open to
+better ones. These reify §7's level/subterm machinery as actual types,
+usually fully erased:
+
+- `Level`: essentially an integer.
+- `LevelLT`/`After` (tentative names): `(A: Type) (a: A) -> Level -> Type`
+  — asserts a level decrease.
+- `Subterm` (heterogeneous): `(A: Type) (a: A) (B: Type) (b: B) -> Type`.
+
+Three core axioms/functions:
+
+1. Level-lt transitivity: `LevelLT a b -> LevelLT b c -> LevelLT a c`
+2. Subterm transitivity: `Subterm _ a _ b -> Subterm _ b _ c -> Subterm _ a _ c`
+3. Level transitivity through subterm:
+   `After _ a L -> Subterm _ a _ b -> After _ b L`
+
+There are also two ways for these to be "born" (introduced) — one for
+`Level`, one for `Subterm` — not yet specified (future design session).
