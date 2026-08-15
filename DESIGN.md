@@ -147,11 +147,11 @@ There are also two ways for these to be "born" (introduced):
   stored value if comptime, "is" rule). This holds even when the
   right-hand side is `inacc`: renaming an inaccessible variable this way
   is not a compile error (motivation deferred — relates to macros).
-- **Special forms as data.** A special form is a nullary variant of a
-  `Special` type (in effect an enum). The elaborator dispatches on seeing
-  a `Special` variant in head position. Open question: whether `Special`
-  should be exposed to the user as an ordinary type or stay
-  implementation-internal.
+- **Special forms as data.** A special form is a nullary variant of the
+  `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
+  dispatches on seeing a `Special` variant in head position. `Special`'s
+  variants are exactly §16's construct inventory: `Match`, `Let`,
+  `def-lvl`, etc.
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
@@ -379,11 +379,16 @@ Everything below can be passed around as ordinary first-class data:
 6. a `Type`
 7. an opaque object (a `Level`, or a `Subterm`/`Predates` proof, §8)
 
-`Special` (§9) is either an opaque object or an ordinary ADT value
-(undecided which); `Macro` (§9) is an ordinary ADT value. Applying a
-held, unapplied constructor (items 3–4) is ordinary constructor
-application, nothing special — no distinct mechanism needed despite the
-lack of currying (§7).
+`Special` and `Macro` (§9) are both ordinary ADT values. Applying a held,
+unapplied constructor (items 3–4) is ordinary constructor application,
+nothing special — no distinct mechanism needed despite the lack of
+currying (§7).
+
+Some scope entries need an external annotation beyond the fields in §3 —
+e.g. marking that a given entry *is* the `Type` universe itself (as
+opposed to merely having `Type` as its own type, which is true of many
+entries), or marking which `Matchable` is the canonical one describing
+`Special`'s own shape. Not yet worked out mechanically.
 
 Item 5, tentatively typed `Matchable [union|enum] T [C1(e1) ... Cn(en)]`
 (a tag for union-vs-enum, the type constructor being described, and its
