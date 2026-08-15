@@ -501,3 +501,13 @@ Haskell-newtype-style wrapper type. Not designed yet.
 ## 22. Evaluation strategy
 
 The language is eagerly evaluated.
+
+## 23. Invariant: erasure is conservative
+
+Erasure (§6, §12, §20) is, in a sense, just an optimization — a
+substantial one, but not semantics-changing. Invariant: take any program
+that validly compiles, strip out every erasure marking and phantom
+designator, and give `Level` and friends (§8) some ordinary non-erased
+representation instead — the result should still compile and run
+identically to the original. Recorded as an intended invariant/target,
+not something verified yet (in the spirit of §10).
