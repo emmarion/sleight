@@ -32,8 +32,8 @@ entry carries:
   just a tree whose leaves are references to entries in this same table
   (possibly this entry itself).
 - a **stored value**, present only if the state is `comptime`. If the
-  entry is also erased, this isn't a real value — it's a phantom token
-  that just asserts the value exists/is true, not actual data.
+  entry is also erased, this isn't a real value — it's a *token* that
+  just asserts the value exists/is true, not actual data.
 - an (implicit) **introduction order** — needed to make the `Predates`
   assertion (§8) well-founded.
 
@@ -209,10 +209,10 @@ together with each one's erasure (the 0/ω multiplicity from §6).
 
 **Two kinds of data type.** **Enums** have a non-erased discriminant,
 stored at runtime. **Unions** have an erased discriminant. Independent of
-that: each constructor can individually be marked erased or not, and each
-field (like each function argument) is individually annotated erased or
-not (sane default still TBD). Subterm recursion (§7) can go through an
-erased argument.
+that: each constructor can individually be marked erased ("phantom") or
+not, and each field (like each function argument) is individually
+annotated erased or not (sane default still TBD). Subterm recursion (§7)
+can go through an erased argument.
 
 **Match-proved equality isn't substitutability.** When a match proves two
 expressions equal (they rewrite/canonicalize identically, §5), that alone
@@ -224,22 +224,20 @@ separate axis from canonicalization equality.
 scrutinee:
 1. Variables introduced via a non-erased constructor inherit the field's
    declared erasure.
-2. Variables introduced via an erased constructor are always erased,
+2. Variables introduced via a phantom constructor are always erased,
    regardless of the field's own annotation (open question: maybe such
    fields should be required to be annotated erased, rather than silently
    overridden).
 
-But: when evaluating a branch reached through an erased constructor,
-everything in scope — and, more importantly, the expected type of the
-branch's own result — is erased. Concretely: such a branch's body can,
-and in fact must, return entirely erased values, and that's considered
-valid even when the match itself was annotated (§11) to return some
-non-erased result(s) — this branch is exempted from matching the match's
-declared erasures. (Naming note: a constructor marked erased in its own
-declaration is a different thing from a scope entry being erased, §3 —
-tentatively call the former "phantom," though that word is already used
-in §3 for an erased comptime entry's stored value, so it may need a
-different name; see CLAUDE.md §10.)
+But: when evaluating a branch reached through a **phantom** constructor
+(a constructor marked erased in its own declaration — distinct from a
+scope entry merely being erased, §3), everything in scope — and, more
+importantly, the expected type of the branch's own result — is erased.
+Concretely: such a branch's body can, and in fact must, return entirely
+erased values, and that's considered valid even when the match itself was
+annotated (§11) to return some non-erased result(s) — this branch is
+exempted from matching the match's declared erasures. §20 covers the
+underlying erasure-propagation model this fits into.
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
@@ -264,13 +262,15 @@ computation (or has a non-erased return):
 - if the discriminant is erased — an erased enum, or a union regardless
   of its own erasure — there can be at most one "real" branch. Every
   other branch must be one of: 1) automatically absurd (the rewrite rules
-  derive a contradiction), 2) absurd by proof, or 3) a branch matching an
-  erased constructor (its body is already fully erased per the
+  derive a contradiction), 2) absurd by proof, or 3) a branch matching a
+  phantom constructor (its body is already fully erased per the
   enum-matching rule above, so it needs no runtime dispatch of its own).
 
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
-always erased. Types themselves should be erased.
+always erased, and a type constructor itself always enters scope as
+erased — same for a phantom (marked-erased) value constructor (§20).
+Types themselves should be erased.
 
 ## 13. TBD (v2 candidate): a unified lexicographic-decrease proof
 
@@ -457,3 +457,31 @@ compiler to consult it. If multiple, mutually-inconsistent `Matchable`s
 for the same type are simultaneously in scope and it's genuinely
 ambiguous which one a match should use, that ambiguity is itself a
 compile error, not something resolved arbitrarily/silently.
+
+## 20. Bottom-up erasure
+
+Erasure doesn't need pervasive annotation — it's computed bottom-up.
+Explicit erasure annotation is only needed at the boundary: function
+arguments and return results (and, symmetrically, constructor fields,
+§12). Everywhere else it's derived, not declared.
+
+This works because the language is immutable, effect-free, and total
+(§7–§8): there's no observable difference between computing a value and
+not computing it if the value is never needed, so "erased" just means
+"not needed," and that's decidable from how a result is actually used
+rather than something that has to be stated everywhere by hand.
+
+The propagation rule for a function call or constructor application:
+1. If the overall result is erased, there's no further constraint —
+   any function/constructor, any argument erasures, all fine.
+2. If the overall result must be non-erased: each field/argument that's
+   declared non-erased in the callee's own signature must itself be
+   non-erased at the call site, *and* the function or constructor being
+   called must itself be non-erased.
+
+Consequence of rule 2: a phantom (marked-erased) constructor can only
+ever produce an erased result — it fails the "function/constructor
+itself must be non-erased" half of the rule. An ordinary (non-phantom)
+constructor can produce either, depending on context. Phantom
+constructors, and all type constructors regardless of individual marking
+(§12), always enter scope as erased.
