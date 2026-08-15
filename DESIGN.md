@@ -442,3 +442,10 @@ There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
 succeeds by adding the needed `is` fact(s).
+
+A `Matchable` doesn't need to be threaded through explicitly — having one
+for the relevant type anywhere in ambient scope is enough for the
+compiler to consult it. If multiple, mutually-inconsistent `Matchable`s
+for the same type are simultaneously in scope and it's genuinely
+ambiguous which one a match should use, that ambiguity is itself a
+compile error, not something resolved arbitrarily/silently.
