@@ -511,3 +511,8 @@ designator, and give `Level` and friends (§8) some ordinary non-erased
 representation instead — the result should still compile and run
 identically to the original. Recorded as an intended invariant/target,
 not something verified yet (in the spirit of §10).
+
+The non-erased stand-in for `Level` and friends would most likely just be
+`Unit` (an enum with one constructor, no fields) — but other
+representations (e.g. `Level` as a wrapper around an actual `Nat`) would
+satisfy the invariant too.
