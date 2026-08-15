@@ -261,8 +261,11 @@ together with each one's erasure (the `erased`/`many` multiplicity from
 
 **Two kinds of data type.** **Enums** have a non-erased discriminant,
 stored at runtime. **Unions** have an erased discriminant. Independent of
-that: each constructor can individually be marked erased ("phantom") or
-not, and each field (like each function argument) is individually
+that: a value constructor's own *return* position carries a multiplicity
+marker, `erased` or `many` (§29, §30) — `erased` is what makes it
+"phantom." No separate phantom flag: it's the same `erased`/`many`
+mechanism already used for fields, just applied to the return instead of
+a field. Each field (like each function argument) is individually
 annotated erased or not (sane default still TBD). Subterm recursion (§7)
 can go through an erased argument.
 
@@ -716,7 +719,10 @@ not just semantically different:
    don't recurse); its telescope entries freely choose multiplicity per
    field, same freedom as a function's arguments (§12); the return is a
    single, whatever concrete type the constructor builds — no
-   multi-return here either. Multiple returns (§11) are function-only.
+   multi-return here either (§11 multi-return is function-only). The
+   return *does* carry its own multiplicity marker, unlike a type
+   constructor's bare `Type` return — `erased` there is what makes the
+   whole constructor phantom (§12).
 
 All three share an underlying "telescope" notion (a list of annotated
 `Type name` entries — type-first, §30 — built from §5's restricted
@@ -787,8 +793,9 @@ The "homogeneous pair" type constructor:
 (TyCtor (Type A) (B is A) -> Type)
 ```
 
-The reify-pattern value constructor:
+The reify-pattern value constructor, `many` on the return since it's an
+ordinary (non-phantom) constructor:
 ```scheme
 (ValCtor (erased Nat a b c) (erased (Add a b c) p) (many c2 is c) ->
-   (Reified a b))
+   many (Reified a b))
 ```
