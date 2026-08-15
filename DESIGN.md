@@ -76,3 +76,11 @@ of its own level only under additional restrictions not yet specified
 (future design session). Currying is not supported, for functions or for
 type/value constructors. Type and value constructors have no associated
 level.
+
+The point of levels (and of the same-level call restrictions deferred
+above) is termination. ADTs with zero variants are supported (e.g.
+`False`). A function's parameters can be individually annotated
+`subterm`; this is part of the function's signature. A function call
+decrements a lexicographic ordering whose most significant component is
+the function's level, followed by its `subterm`-annotated arguments in
+left-to-right order.
