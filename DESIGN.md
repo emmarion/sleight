@@ -534,3 +534,18 @@ The non-erased stand-in for `Level` and friends would most likely just be
 `Unit` (an enum with one constructor, no fields) — but other
 representations (e.g. `Level` as a wrapper around an actual `Nat`) would
 satisfy the invariant too.
+
+## 24. Comptime blocks call freely at top level
+
+At the "top level" of a `comptime` block (§16, §20) — i.e. directly in
+the block's own body, not inside a function defined within it — any type
+or value constructor can be invoked (unsurprising, since constructors
+have no level, §7), and so can any function, with no `Predates` or
+`Subterm` proof required at all. In a sense, comptime-block top level
+sits at the "highest" level, above every ordinary function level.
+
+The owner's own reasoning for why this should still be sound: there's no
+way for an ordinary (leveled) function's body to call *into* a comptime
+block, so this unrestricted-calling privilege can never be reached
+through the leveled function-call graph that §7's termination machinery
+actually checks. Recorded as the owner's claim, not a verified result.
