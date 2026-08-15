@@ -271,7 +271,8 @@ marker, `erased` or `many` (§29, §30) — `erased` is what makes it
 "phantom." No separate phantom flag: it's the same `erased`/`many`
 mechanism already used for fields, just applied to the return instead of
 a field. Each field (like each function argument) is individually
-annotated erased or not (sane default still TBD). Subterm recursion (§7)
+annotated erased or not (sane default still TBD). Declaring a phantom
+constructor with any `many` field is a warning. Subterm recursion (§7)
 can go through an erased argument.
 
 **Type indices aren't shared scope.** An indexed ADT's index variables
@@ -288,24 +289,20 @@ doesn't make them substitutable for one another — their erasure ("silo"?
 — tentative term, see CLAUDE.md §10) can still differ, and that's a
 separate axis from canonicalization equality.
 
-**Matching on enums** is (mostly) straightforward. For a non-erased
-scrutinee:
-1. Variables introduced via a non-erased constructor inherit the field's
-   declared erasure.
-2. Variables introduced via a phantom constructor are always erased,
-   regardless of the field's own annotation (open question: maybe such
-   fields should be required to be annotated erased, rather than silently
-   overridden).
+**Matching on enums** is (mostly) straightforward: the erasure of the
+variables a branch introduces follows §20's mirror rule.
 
 But: when evaluating a branch reached through a **phantom** constructor
 (a constructor marked erased in its own declaration — distinct from a
-scope entry merely being erased, §3), everything in scope — and, more
-importantly, the expected type of the branch's own result — is erased.
-Concretely: such a branch's body can, and in fact must, return entirely
-erased values, and that's considered valid even when the match itself was
-annotated (§11) to return some non-erased result(s) — this branch is
-exempted from matching the match's declared erasures. §20 covers the
-underlying erasure-propagation model this fits into.
+scope entry merely being erased, §3), everything in scope is erased — the
+variables the branch introduces included, whatever their fields'
+annotations say — and, more importantly, so is the expected type of the
+branch's own result. Concretely: such a branch's body can, and in fact
+must, return entirely erased values, and that's considered valid even
+when the match itself was annotated (§11) to return some non-erased
+result(s) — this branch is exempted from matching the match's declared
+erasures. §20 covers the underlying erasure-propagation model this fits
+into.
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
@@ -332,7 +329,7 @@ computation (or has a non-erased return):
   other branch must be one of: 1) automatically absurd (the rewrite rules
   derive a contradiction), 2) absurd by proof, or 3) a branch matching a
   phantom constructor (its body is already fully erased per the
-  enum-matching rule above, so it needs no runtime dispatch of its own).
+  phantom-branch rule above, so it needs no runtime dispatch of its own).
 
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
