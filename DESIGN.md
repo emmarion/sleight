@@ -563,3 +563,11 @@ way for an ordinary (leveled) function's body to call *into* a comptime
 block, so this unrestricted-calling privilege can never be reached
 through the leveled function-call graph that §7's termination machinery
 actually checks. Recorded as the owner's claim, not a verified result.
+
+## 25. Bottom-up type inference
+
+The compiler does bottom-up type inference. Explicit types are required
+only at: ADT definitions, function arguments, function return results,
+and match return results (§11). Everywhere else, inference should
+suffice — the same "annotate only at the boundary" shape as §20's
+bottom-up erasure.
