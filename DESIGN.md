@@ -92,16 +92,16 @@ better ones. These reify §7's level/subterm machinery as actual types,
 usually fully erased:
 
 - `Level`: essentially an integer.
-- `LevelLT`/`After` (tentative names): `(A: Type) (a: A) -> Level -> Type`
-  — asserts a level decrease.
+- `Predates` (tentative name, replaces `LevelLT`/`After`):
+  `(A: Type) (a: A) -> Level -> Type` — asserts a level decrease.
 - `Subterm` (heterogeneous): `(A: Type) (a: A) (B: Type) (b: B) -> Type`.
 
 Three core axioms/functions:
 
-1. Level-lt transitivity: `LevelLT a b -> LevelLT b c -> LevelLT a c`
+1. Predates transitivity: `Predates a b -> Predates b c -> Predates a c`
 2. Subterm transitivity: `Subterm _ a _ b -> Subterm _ b _ c -> Subterm _ a _ c`
-3. Level transitivity through subterm:
-   `After _ a L -> Subterm _ a _ b -> After _ b L`
+3. Predates transitivity through subterm:
+   `Predates _ a L -> Subterm _ a _ b -> Predates _ b L`
 
 There are also two ways for these to be "born" (introduced):
 
@@ -120,8 +120,8 @@ There are also two ways for these to be "born" (introduced):
   a well-defined ordering here: a variable in scope above (lexically
   enclosing, prior to) a `def-lvl` statement counts as "before" it.
 
-  A second special form — tentatively `Above` (name and argument order
-  both open, see CLAUDE.md §10) — births the `LevelLT`/`After` claim
+  A second special form — tentatively also named `Predates` (argument
+  order still open, see CLAUDE.md §10) — births the `Predates` claim
   relating a variable to a level. It takes: 1) a `Level` value that must
   itself have been born by a `def-lvl` that is before the current code,
   and 2) a variable that was in scope at the time that `def-lvl` ran.
