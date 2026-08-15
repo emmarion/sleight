@@ -312,13 +312,16 @@ folding through calls or matches yet. One consequence: a match's
 scrutinee itself can only be `Const` or `Dyn` (never `Inacc`, which can't
 be accessed at all — §3).
 
-A new special form (name TBD, see CLAUDE.md §10) works specifically on a
-`Const` (comptime-known) scrutinee: it asserts the value has a given
-discriminant, and is a compile error if it doesn't. The intent is "proof
-via reflection/computation" — plausibly close to what's called "proof by
-reflection" in Coq (owner's recollection, not confirmed — see CLAUDE.md
-§1): a decidable proposition discharged by the compiler just computing,
-rather than the programmer constructing a proof term.
+A special form, `comptime-match`, works specifically on a `Const`
+(comptime-known) scrutinee: it asserts the value has a given
+discriminant, and is a compile error if it doesn't. It binds the matched
+constructor's fields as `Const`, the way a state-inheriting `let` would
+(§9). The intent is "proof via reflection/computation" — matches what's
+called "proof by reflection" in Coq (a real, externally-confirmed term
+for this general technique — a decidable proposition discharged by the
+compiler just computing/normalizing, rather than the programmer
+constructing a proof term by hand; whether this design's mechanism lines
+up with Coq's in the details is still just a plausible guess).
 
 Open items, not yet resolved:
 - Before binding a match branch's fields, we need a rule for how an
@@ -326,3 +329,118 @@ Open items, not yet resolved:
 - Whether `is`-declared constructor fields (§14) and forced type-index
   unification in a match are literally the same mechanism — suspected
   yes, not yet confirmed.
+
+## 16. Core language construct inventory
+
+Everything in the language is an expression — there's no separate
+statement category. The construct list below is split by whether
+evaluating it extends the ambient scope for later/surrounding code:
+
+- **Scope-extending** (bindings visible to subsequent/surrounding code):
+  `let`; `def-lvl`; (possibly mutual) function definitions, which can
+  appear at top level or nested inside another function's body;
+  (possibly mutual) ADT definitions, likewise nestable inside a function;
+  `match` (branch-local field variables, and possibly refined `is` facts
+  on pre-existing variables, §14); `comptime-match` (§15).
+- **Locally scoped** (bindings usable only within the construct's own
+  extent, not exported to arbitrary surrounding code): a function-type
+  former (parameters usable in a later parameter's type or the return
+  type, §11, but nowhere else); a `Match`-type former (§17).
+- **Ordinary, scope-neutral expressions**: `Subterm` birth and `Predates`
+  birth (§8); `comptime` (one argument, forces its compile-time
+  evaluation); the three function-call forms — lower-level with a
+  `Predates` proof, same-level with a `Subterm` proof, and the TBD v2
+  multi-proof form (§9, §13); type-constructor application;
+  value-constructor application; the three transitivity axioms (§8) —
+  scope-neutral regardless of whether they end up as special forms or
+  ordinary prelude functions, which is still undecided; a still-unnamed
+  form that bundles multiple values into a function's or match's
+  multi-value return (§11).
+
+## 17. First-class objects
+
+Everything below can be passed around as ordinary first-class data:
+
+1. an ADT value
+2. a function
+3. an ADT type constructor, unapplied
+4. an ADT value constructor, unapplied
+5. a "match"/"`Matchable`" object — see below
+6. a `Type`
+7. an opaque object (a `Level`, or a `Subterm`/`Predates` proof, §8)
+
+`Special` (§9) is either an opaque object or an ordinary ADT value
+(undecided which); `Macro` (§9) is an ordinary ADT value.
+
+Items 3–4 raise an open question: with no currying anywhere (§7), how
+does a *held* unapplied constructor later get applied to its arguments?
+Presumably a distinct application form from an ordinary (leveled)
+function call, since constructors have no level — not yet designed.
+
+Item 5, tentatively typed `Match [union|enum] T [C1(e1) ... Cn(en)]` (a
+tag for union-vs-enum, the type constructor being described, and its
+value constructors in declared order with each one's erasure) — proposed
+as the reified, first-class "shape" of an ADT. Its exact role isn't
+settled; see §19.
+
+## 18. Match-branch rewrite algorithm (working formulation)
+
+The current working picture for how entering a match branch updates the
+in-scope rewrite rules. Offered by the owner explicitly for pushback, and
+touched by enough follow-on discussion (§19) that it should be read as
+provisional, not final:
+
+- Before an occurs-check, and before recursing into any equation's LHS or
+  RHS, both sides are first canonicalized/rewritten to normal form.
+- All rewriting is driven by `is` statements. Whether this extends to
+  constructor-disjointness/occurs-check-implies-false, or those are a
+  separate, non-`is`, structural judgment applied after canonicalization,
+  is unresolved — see §19.
+- This canonicalization engine deliberately does not consult a comptime
+  variable's actual stored value — it works uniformly across `Const` and
+  `Dyn`, driven solely by `is` facts, even though `Const` carries
+  strictly more information. A deliberate simplification, not an
+  oversight.
+- Entering a branch adds exactly two core equations: the scrutinee equals
+  the branch's constructor applied to the newly-bound fields, and the
+  scrutinee's type equals the type computed from that same constructor
+  application. Any equation whose LHS and RHS are both non-atoms is then
+  recursed into structurally.
+- A freshly-introduced (atom) variable can always receive its `is` rule
+  with no conflict-checking and no recursion needed, since nothing
+  already in scope could reference it yet.
+- Contradiction sources identified so far: (1) `x` equated with an
+  expression containing `x` (`x = x` itself is a no-op, not a
+  contradiction); (2) two known, distinct constructors equated (arity
+  mismatch is one easy sufficient symptom of this given fixed arities and
+  no currying, not a separate case). Occurs-check needs to run *after*
+  resolving through any existing atom-to-atom `is`-alias chains, not just
+  against the literal surface form of a new equation.
+
+## 19. Open question: disjointness of (possibly first-class) constructors
+
+Since constructors are first class (§17), two constructor-*valued
+variables* aren't necessarily known to be the same or different just
+because they're syntactically distinct — the constructor a variable holds
+might itself be dynamic/unresolved. This threatens §18's "two known,
+distinct constructors ⇒ contradiction" rule, which implicitly assumes
+both sides resolve to literal, known constructors.
+
+Explored, not resolved:
+- A scope-table field listing known-disjoint constructors was proposed,
+  then set aside: it can't itself be passed around as a first-class
+  object, in tension with §9's everything-is-first-class goal.
+- The `Match`-type former (§17 item 5) was proposed as a possible
+  resolution — the disjointness judgment stays a fixed structural rule
+  (not an `is` statement), but reifies *what it's a judgment about* (a
+  type's full, ordered, disjoint constructor list) as genuine first-class
+  data, rather than hidden compiler bookkeeping. Not confirmed as the
+  actual mechanism.
+- Separately proposed, not confirmed: comparing two constructor-headed
+  terms may need a third outcome beyond "recurse" (both resolve to the
+  same known constructor) or "contradiction" (both resolve to different
+  known constructors) — namely "indeterminate," when at least one side
+  doesn't resolve to a literal known constructor at all.
+- Also unresolved: the constructors appearing in an ordinary `match`'s
+  branches likely need to be comptime-known for §18's contradiction rule
+  to be safely applied at all — exact requirement not pinned down.
