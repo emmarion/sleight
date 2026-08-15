@@ -103,5 +103,25 @@ Three core axioms/functions:
 3. Level transitivity through subterm:
    `After _ a L -> Subterm _ a _ b -> After _ b L`
 
-There are also two ways for these to be "born" (introduced) — one for
-`Level`, one for `Subterm` — not yet specified (future design session).
+There are also two ways for these to be "born" (introduced):
+
+- **`Subterm` birth.** A special form takes two expressions, asserting
+  the first is a subterm of the second. Both are canonicalized/rewritten
+  first; both are restricted to the "is"/type grammar of §5 (variable
+  references and type-/value-constructor application — no function
+  invocation). The birthed claim then requires the first, post-
+  canonicalization, to be a strict subtree of the second.
+
+- **`Level` birth.** A `def-lvl` form births a fresh `Level`. Mental
+  model (a model only — fully erased in practice, not a real runtime
+  counter): imagine a single global counter that increments each time a
+  `def-lvl` is "invoked"; its value at that point is the birthed level.
+  The language being immutable and acyclic is what makes "before"/"after"
+  a well-defined ordering here: a variable in scope above (lexically
+  enclosing, prior to) a `def-lvl` statement counts as "before" it.
+
+  A second special form — tentatively `Above` (name and argument order
+  both open, see CLAUDE.md §10) — births the `LevelLT`/`After` claim
+  relating a variable to a level. It takes: 1) a `Level` value that must
+  itself have been born by a `def-lvl` that is before the current code,
+  and 2) a variable that was in scope at the time that `def-lvl` ran.
