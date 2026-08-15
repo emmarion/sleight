@@ -145,6 +145,11 @@ There are also two ways for these to be "born" (introduced):
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
+- **Macro termination (interim).** The owner has a real design for this
+  but it's complicated and deferred to v2. For now: a single global
+  counter of macro expansions, checked against a limit configurable via
+  a command-line flag with some sane (TBD) default; hitting the limit is
+  the only termination guard on macro expansion.
 - **Call-site proofs.** This is how §7's level-decrease requirement gets
   discharged, and it differs by whether the call is a level-decreasing
   call or a same-level call:
