@@ -38,6 +38,14 @@ entry carries:
 - an (implicit) **introduction order** — needed to make the `Predates`
   assertion (§8) well-founded.
 
+A type-constructor or value-constructor application expression also gets
+its own (typically anonymous) entry, with an `is` statement set to that
+application. So "is"/type trees aren't a separate expression structure
+sitting apart from the scope table — every application anywhere is
+itself a scope entry, letting the rewrite engine "see into" and
+canonicalize through them uniformly (§18), the same as for any named
+variable.
+
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
 Goal: match Kernel's level of dynamism while still supporting clean
