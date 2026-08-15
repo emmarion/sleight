@@ -555,6 +555,12 @@ not computing it if the value is never needed, so "erased" just means
 "not needed," and that's decidable from how a result is actually used
 rather than something that has to be stated everywhere by hand.
 
+Multiplicity is relative to the enclosing context, not a global property
+of a value. Any function can be invoked in an erased context, and there
+its arguments may themselves be erased — so a parameter declared `many`
+may hold a value built by an erased constructor. `many` licenses runtime
+use if the enclosing invocation itself happens at runtime.
+
 The propagation rule for a function call or constructor application:
 1. If the overall result is erased, there's no further constraint —
    any function/constructor, any argument erasures, all fine.
