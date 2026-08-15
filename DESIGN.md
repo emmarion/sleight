@@ -195,3 +195,57 @@ before it, left to right.
 `match` requires an explicit result-type annotation: it lists the return
 type(s) (plural, to match a function's possibly-multiple return values)
 together with each one's erasure (the 0/ω multiplicity from §6).
+
+## 12. Data types, erasure, and match branch kinds
+
+**Two kinds of data type.** **Enums** have a non-erased discriminant,
+stored at runtime. **Unions** have an erased discriminant. Independent of
+that: each constructor can individually be marked erased or not, and each
+field (like each function argument) is individually annotated erased or
+not (sane default still TBD). Subterm recursion (§7) can go through an
+erased argument.
+
+**Match-proved equality isn't substitutability.** When a match proves two
+expressions equal (they rewrite/canonicalize identically, §5), that alone
+doesn't make them substitutable for one another — their erasure ("silo"?
+— tentative term, see CLAUDE.md §10) can still differ, and that's a
+separate axis from canonicalization equality.
+
+**Matching on enums** is (mostly) straightforward. For a non-erased
+scrutinee:
+1. Variables introduced via a non-erased constructor inherit the field's
+   declared erasure.
+2. Variables introduced via an erased constructor are always erased,
+   regardless of the field's own annotation (open question: maybe such
+   fields should be required to be annotated erased, rather than silently
+   overridden).
+
+But: when evaluating a branch reached through an erased constructor,
+everything in scope — and, more importantly, the expected type of the
+branch's own result — is erased.
+
+Matching on unions, and matching on an erased enum scrutinee, is more
+involved.
+
+**Three kinds of match branch** (orthogonal to whether the matched
+constructor is itself erased; names all tentative, see CLAUDE.md §10):
+1. **present** — an ordinary branch.
+2. **absurd, automatic** — a branch refuted structurally by the type
+   checker; written with special syntax, likely omitting the
+   would-be-introduced variable names (fewer parens, etc.), since there's
+   nothing to bind.
+3. **absurd, by proof** — a branch that, instead of producing the match's
+   expected result, must produce a value of the empty ADT (§7's
+   zero-variant type, e.g. `False`) — the programmer supplies a proof of
+   impossibility rather than relying on automatic refutation.
+
+**When a non-erased result is on the line.** If a match is entirely
+erasable, it's unconstrained. But if at least one branch is non-erased
+(produces a non-erased result, or does something non-erased), then
+either: the scrutinee must be "known" — i.e. a non-erased enum, so
+there's a real runtime tag to dispatch on — or there is at most one
+non-absurd branch (so no runtime choice is actually needed).
+
+**First-classness and type erasure.** Types, type constructors, and value
+constructors are all first class. All arguments to a type constructor are
+always erased. Types themselves should be erased.
