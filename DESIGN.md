@@ -286,11 +286,11 @@ side.
 Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
-reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (1 d is c)
+reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (ω d is c)
 ```
 
 `c` and the proof `p` are erased (multiplicity `0`); the return value `d`
-"is `c`" but is declared with multiplicity `1`. The "is" clause gives `d`
+"is `c`" but is declared with multiplicity `ω`. The "is" clause gives `d`
 its type (`Nat`, via `c`) while letting its erasure differ from `c`'s —
 this is the mechanism for reifying an erased witness into a materialized
 runtime value.
