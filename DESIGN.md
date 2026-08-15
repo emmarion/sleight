@@ -44,7 +44,10 @@ application. So "is"/type trees aren't a separate expression structure
 sitting apart from the scope table — every application anywhere is
 itself a scope entry, letting the rewrite engine "see into" and
 canonicalize through them uniformly (§18), the same as for any named
-variable.
+variable. Consequence worth calling out explicitly: the scope table's
+reference graph *is* the whole expression structure for anything in the
+restricted `is`/type grammar — no separate AST is needed alongside it for
+the rewrite engine to work with.
 
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
