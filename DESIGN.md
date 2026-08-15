@@ -596,3 +596,59 @@ fresh `def-lvl` and defining the function at it; the proof argument
 (`Predates`/`Subterm`, §9) of a function call; extracting the level of a
 function (it's part of the function's type, §7, but `_` may be useful
 sugar for pulling it out). Not designed yet.
+
+## 27. Special form registry
+
+Every special form (§9's `Special` ADT variants) established so far, in
+one place. Grouped by §16's scope categories; each entry cross-references
+where it's actually specified.
+
+**Scope-extending:**
+1. `let` — introduces a binding; type/`is` optional, inferred from the
+   right-hand side (§9, §14); state-inheriting when the right-hand side
+   is a single bare variable (§9).
+2. `def-lvl` — births a fresh `Level` (§8).
+3. Function definition — possibly mutual, possibly nested inside another
+   function's body (§9, §16).
+4. ADT definition — possibly mutual, possibly nested; index variables
+   aren't shared across constructors (§12, §16).
+5. `match` — pattern match; three branch kinds: present, absurd
+   (automatic), absurd (by proof) (§12).
+6. `comptime-match` — compile-time discriminant assertion on a `Const`,
+   non-erased-discriminant scrutinee; binds the matched fields as `Const`
+   (§15).
+
+**Locally scoped:**
+7. A function-type former (§11, §16).
+8. A `Matchable`-type former (§17).
+9. `begin` — sequences expressions, hosts the scope-extending forms
+   above, evaluates to its last expression; implicit (no keyword needed)
+   in function bodies, `comptime` bodies, match branch bodies, and a
+   file's top level (§16).
+
+**Scope-neutral:**
+10. `Subterm` birth (name doubles as the type it births, §8) — asserts
+    one expression is a subterm of another.
+11. `Predates` birth (name doubles as the type it births, §8) — relates
+    a variable to a `Level` born by an earlier `def-lvl`.
+12. `comptime` — forces its one argument to evaluate at compile time; its
+    body is an implicit `begin` (§16, §24).
+13. Function call — three proof flavors (a `Predates` proof for a
+    lower-level call, a `Subterm` proof for a same-level call, a TBD v2
+    multi-proof form, §9/§13); can be marked `tail` and/or `delegate`
+    (§9).
+14. Type-constructor application (§5, §12).
+15. Value-constructor application (§5, §12).
+16. A multi-value bundling form (name TBD) — packages multiple values
+    into a function's or match's multi-value return (§11).
+
+**Status undecided — may not end up as special forms at all:** the three
+transitivity axioms (`Predates` transitivity, `Subterm` transitivity,
+`Predates`-through-`Subterm`, §8) could instead be ordinary prelude
+functions (§9, §16).
+
+Open question this list surfaces: are type-/value-constructor application
+(items 14–15) actually dispatched via the `Special` mechanism the way the
+rest of this list is, or does a constructor in head position get
+recognized through some separate pathway (since a constructor is itself a
+first-class object, §17, distinct from a `Special` value)? Not resolved.
