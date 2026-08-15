@@ -185,7 +185,7 @@ There are also two ways for these to be "born" (introduced):
   dispatches on seeing a `Special` variant in head position. `Special`'s
   variants cover §16's construct inventory (`Match`, `Let`, `def-lvl`,
   etc.), plus lower-level tokens that also need first-class status:
-  `erased`, `many` (§6), `:`, and `is` (§14) — §27's registry.
+  `erased`, `many` (§6), `:`, `is` (§14), and `->` (§29) — §27's registry.
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
@@ -692,6 +692,8 @@ above — they annotate a telescope entry rather than heading a list):
 22. `:` — separates a telescope entry's name from its type.
 23. `is` — separates a telescope entry's (or any binding's) name from an
     `is` expression instead of a type (§14).
+24. `->` — separates a signature's parameter telescope from its return
+    telescope (§29).
 
 ## 28. ASCII only
 
