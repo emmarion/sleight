@@ -713,15 +713,29 @@ for `length`/`List`/`Cons` in recent examples is sugar over these three
 formers plus a name and (for functions) a body — not a separate
 mechanism.
 
-Two more examples, both function types (`is`/multi-return are
-function-only features, per above):
+More examples. Multi-return is function-only (above), but `is` (§14) is
+not — it works in a type-constructor's or value-constructor's telescope
+too, same as a function's:
 
 `reify-add`'s type (§14), with an `is` return instead of a plain type:
 ```scheme
 (Fn L (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (w d is c))
 ```
 
-`divmod`'s type, with two (non-dependent, here) returns:
+`divmod`'s type, with two (non-dependent, here) returns — function-only:
 ```scheme
 (Fn L (subterm w n : Nat) (w d : Nat) -> (w q : Nat) (w r : Nat))
+```
+
+A "homogeneous pair" type constructor, `B` forced to match `A` via `is`
+(no multiplicity marker either way — forced erased regardless):
+```scheme
+(TyCtor (A : Type) (B is A) -> Type)
+```
+
+A value constructor using the same reify pattern as `reify-add`, but on
+a field instead of a return — `c2` materializes the erased `c` at a
+different (non-erased) multiplicity:
+```scheme
+(ValCtor (0 a b c : Nat) (0 p : (Add a b c)) (w c2 is c) -> (Reified a b))
 ```
