@@ -240,11 +240,16 @@ constructor is itself erased; names all tentative, see CLAUDE.md §10):
    impossibility rather than relying on automatic refutation.
 
 **When a non-erased result is on the line.** If a match is entirely
-erasable, it's unconstrained. But if at least one branch is non-erased
-(produces a non-erased result, or does something non-erased), then
-either: the scrutinee must be "known" — i.e. a non-erased enum, so
-there's a real runtime tag to dispatch on — or there is at most one
-non-absurd branch (so no runtime choice is actually needed).
+erasable, it's unconstrained. But if at least one branch does non-erased
+computation (or has a non-erased return):
+- if the discriminant is non-erased (a non-erased enum), there's a real
+  runtime tag to dispatch on, and no further restriction applies;
+- if the discriminant is erased — an erased enum, or a union regardless
+  of its own erasure — there can be at most one "real" branch. Every
+  other branch must be one of: 1) automatically absurd (the rewrite rules
+  derive a contradiction), 2) absurd by proof, or 3) a branch matching an
+  erased constructor (its body is already fully erased per the
+  enum-matching rule above, so it needs no runtime dispatch of its own).
 
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
