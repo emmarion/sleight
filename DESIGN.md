@@ -9,12 +9,13 @@ Scheme syntax (s-expressions).
 
 ## 2. `$` for closing-paren reduction
 
-Borrowed from Haskell's `$`. A `$` acts as an open parenthesis *and* an
-automatic closing parenthesis: it closes right where the form it opens
-would otherwise need an explicit `)`. Parentheses are balanced in valid
-source even if `$` is ignored/stripped out. Used aggressively, `$` could
-in principle reduce any run of closing parens down to at most one — that
-may be more than we actually want stylistically, to be decided.
+Borrowed from Haskell's `$`. `$` parses exactly like `(`, opening a new
+list form, except it does not consume the `)` that ends it: it reads
+items until its *enclosing* form's terminator, then leaves that
+terminator in place for whichever form opened it to consume. With no
+enclosing form, the missing `)` is reported as missing, since none
+exists. Only a bare `$` token is special — `$` inside a run of other
+characters (e.g. `foo$bar`) is just part of an ordinary atom.
 
 ## 3. Scope environment
 
