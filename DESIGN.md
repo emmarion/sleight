@@ -32,6 +32,11 @@ variable is in exactly one of three states:
   motivating case is a dynamic variable from an enclosing scope becoming
   inaccessible inside a comptime block.
 
+Each entry also records its erasure (the 0/ω multiplicity from §6),
+orthogonal to which of the three states it's in. For a comptime variable
+that is erased, the stored "value" isn't a real value — it's a phantom
+token that just asserts the value exists/is true, not actual data.
+
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
 Goal: match Kernel's level of dynamism while still supporting clean
