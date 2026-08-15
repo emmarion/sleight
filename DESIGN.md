@@ -303,3 +303,26 @@ reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (ω d is c)
 its type (`Nat`, via `c`) while letting its erasure differ from `c`'s —
 this is the mechanism for reifying an erased witness into a materialized
 runtime value.
+
+## 15. Match/call results, and a compile-time discriminant assertion
+
+For now: both a function call's result and a match statement's result
+are always `Dyn` — never `Const`, never `Inacc`. No automatic constant-
+folding through calls or matches yet. One consequence: a match's
+scrutinee itself can only be `Const` or `Dyn` (never `Inacc`, which can't
+be accessed at all — §3).
+
+A new special form (name TBD, see CLAUDE.md §10) works specifically on a
+`Const` (comptime-known) scrutinee: it asserts the value has a given
+discriminant, and is a compile error if it doesn't. The intent is "proof
+via reflection/computation" — plausibly close to what's called "proof by
+reflection" in Coq (owner's recollection, not confirmed — see CLAUDE.md
+§1): a decidable proposition discharged by the compiler just computing,
+rather than the programmer constructing a proof term.
+
+Open items, not yet resolved:
+- Before binding a match branch's fields, we need a rule for how an
+  introduced variable's erasure relates to the scrutinee's own erasure.
+- Whether `is`-declared constructor fields (§14) and forced type-index
+  unification in a match are literally the same mechanism — suspected
+  yes, not yet confirmed.
