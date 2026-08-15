@@ -576,6 +576,20 @@ constructor can produce either, depending on context. Phantom
 constructors, and all type constructors regardless of individual marking
 (§12), always enter scope as erased.
 
+The mirror rule, for destruction — a match binding a constructor's
+fields. A variable bound by a match carries no erasure annotation; its
+erasure is derived, so what the branch body does with it settles the
+question:
+1. If evaluating the body never requires it non-erased, there's no
+   further constraint.
+2. If evaluating the body finds it required non-erased: the field must be
+   declared non-erased in the constructor's signature, and the scrutinee
+   must itself be non-erased.
+
+A phantom constructor needs no clause of its own: its branch's results
+are all erased (§12), so clause 2's antecedent cannot arise there.
+`comptime-match` (§15) binds fields the same way.
+
 This extends down to plain variable reference, not just calls: any
 variable, erased or not, can be referred to from an erased context. One
 (perhaps confusing) mental model: a non-erased value can be "copied" into
