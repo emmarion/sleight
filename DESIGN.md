@@ -254,3 +254,13 @@ computation (or has a non-erased return):
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
 always erased. Types themselves should be erased.
+
+## 13. TBD (v2 candidate): a unified lexicographic-decrease proof
+
+§9's call-site proof is currently two separate cases (a `Predates` proof,
+or a single `Subterm` proof plus a side condition that earlier
+`subterm`-marked arguments canonicalize identically). A possible future
+replacement: one proof structure that directly reifies the whole
+lexicographic order as a nested OR — level decreases, OR (levels equal
+AND (first `subterm`-marked argument is a `Subterm`, OR (that argument is
+equal AND the second is a `Subterm`, OR (…)))). Not designed yet.
