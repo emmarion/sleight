@@ -363,7 +363,7 @@ side.
 Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
-reify-add : (many a b : Nat) (erased c : Nat) (erased p : $Add a b c) ->
+reify-add : (many a b : Nat) (erased c : Nat) (erased p : $ Add a b c) ->
             (many d is c)
 ```
 
@@ -736,7 +736,7 @@ too, same as a function's:
 
 `reify-add`'s type (§14), with an `is` return instead of a plain type:
 ```scheme
-(Fn L (many a b : Nat) (erased c : Nat) (erased p : $Add a b c) ->
+(Fn L (many a b : Nat) (erased c : Nat) (erased p : $ Add a b c) ->
    (many d is c))
 ```
 
@@ -756,6 +756,6 @@ A value constructor using the same reify pattern as `reify-add`, but on
 a field instead of a return — `c2` materializes the erased `c` at a
 different (non-erased) multiplicity:
 ```scheme
-(ValCtor (erased a b c : Nat) (erased p : $Add a b c) (many c2 is c) ->
+(ValCtor (erased a b c : Nat) (erased p : $ Add a b c) (many c2 is c) ->
    (Reified a b))
 ```
