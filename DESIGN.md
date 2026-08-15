@@ -271,3 +271,26 @@ itself only be known via some erased computation — the call can still be
 known valid without any single position being fixed in advance. A nested
 disjunction wouldn't require committing to one; it would carry whichever
 disjunct that erased computation produced.
+
+## 14. "Is" as an alternative to a type annotation
+
+Wherever a variable is introduced into scope, instead of giving its
+(possibly dependent) type, one can instead say the variable "is" another
+value; the variable's type is then computed from that "is" expression.
+"Is" expressions follow the same restricted grammar as types (§5):
+variable references and type-/value-constructor application, no function
+invocation. `let` is the one binding site where a type (or "is" clause)
+is optional altogether, since it can be inferred from the right-hand
+side.
+
+Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
+
+```
+reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (1 d is c)
+```
+
+`c` and the proof `p` are erased (multiplicity `0`); the return value `d`
+"is `c`" but is declared with multiplicity `1`. The "is" clause gives `d`
+its type (`Nat`, via `c`) while letting its erasure differ from `c`'s —
+this is the mechanism for reifying an erased witness into a materialized
+runtime value.
