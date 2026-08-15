@@ -26,7 +26,8 @@ entry carries:
 - a **state**: `comptime`, `dynamic`, or `inacc` (inaccessible — the
   motivating case is a `dynamic` entry from an enclosing scope becoming
   inaccessible inside a comptime block).
-- a **type**.
+- a **type** — like an "is" statement (below), just a tree whose leaves
+  are references to entries in this same table (§5).
 - an **erasure** (the 0/ω multiplicity from §6) — orthogonal to state.
 - an **"is" statement** — a rewrite/canonicalization rule (§5), which is
   just a tree whose leaves are references to entries in this same table
