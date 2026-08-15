@@ -64,6 +64,22 @@ analyzing the *constantness* of the head of an s-expression:
   dynamic while evaluating inside a comptime block, yet become
   constant-known once evaluation leaves that block.
 
+**The elaborator's actual head-dispatch algorithm**, elaborating a list
+by examining its head:
+1. Look at the head's *type*: if it's a type constructor, a value
+   constructor, or a function type, that's ordinary application — proceed
+   (this needs no comptime-known-ness at all, matching §9: any of these
+   can be called through a first-class pointer).
+2. Otherwise, if the head is *additionally* comptime-known: if its value
+   is a `Special` or a `Macro` (§9), proceed — this is the
+   constant-known-head requirement above, made precise.
+3. Otherwise, it's an elaboration error.
+
+This resolves §27's open question: constructor/function application
+isn't dispatched through the `Special` mechanism at all — it's a
+separate, type-driven tier (1) that runs before the comptime-known
+`Special`/`Macro` tier (2) is even considered.
+
 ## 5. Restricted dependent types
 
 Dependent types are supported, but restricted: a type may never involve
@@ -644,8 +660,6 @@ where it's actually specified.
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
 
-Open question this list surfaces: are type-/value-constructor application
-(items 14–15) actually dispatched via the `Special` mechanism the way the
-rest of this list is, or does a constructor in head position get
-recognized through some separate pathway (since a constructor is itself a
-first-class object, §17, distinct from a `Special` value)? Not resolved.
+Items 14–15 (constructor application) are *not* actually dispatched
+through the `Special` mechanism the rest of this list uses — see §4's
+head-dispatch algorithm for the real two-tier answer.
