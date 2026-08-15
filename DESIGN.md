@@ -19,23 +19,23 @@ characters (e.g. `foo$bar`) is just part of an ordinary atom.
 
 ## 3. Scope environment
 
-The scope environment is a list of variables (shadowing allowed). Each
-variable is in exactly one of three states:
+The scope environment is a list of entries (shadowing allowed). Each
+entry carries:
 
-- **comptime**: has a stored type, a stored *value*, and an "is"
-  statement (a canonicalization/rewrite rule introduced via matching on
-  a dependent type).
-- **dynamic**: has a stored type and an "is" statement, but no stored
-  value.
-- **inacc** (inaccessible): same shape as dynamic (type + "is"
-  statement), but the variable cannot be accessed at all — the
-  motivating case is a dynamic variable from an enclosing scope becoming
-  inaccessible inside a comptime block.
-
-Each entry also records its erasure (the 0/ω multiplicity from §6),
-orthogonal to which of the three states it's in. For a comptime variable
-that is erased, the stored "value" isn't a real value — it's a phantom
-token that just asserts the value exists/is true, not actual data.
+- a **name** — optional; anonymous entries are allowed.
+- a **state**: `comptime`, `dynamic`, or `inacc` (inaccessible — the
+  motivating case is a `dynamic` entry from an enclosing scope becoming
+  inaccessible inside a comptime block).
+- a **type**.
+- an **erasure** (the 0/ω multiplicity from §6) — orthogonal to state.
+- an **"is" statement** — a rewrite/canonicalization rule (§5), which is
+  just a tree whose leaves are references to entries in this same table
+  (possibly this entry itself).
+- a **stored value**, present only if the state is `comptime`. If the
+  entry is also erased, this isn't a real value — it's a phantom token
+  that just asserts the value exists/is true, not actual data.
+- an (implicit) **introduction order** — needed to make the `Predates`
+  assertion (§8) well-founded.
 
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
@@ -231,7 +231,15 @@ scrutinee:
 
 But: when evaluating a branch reached through an erased constructor,
 everything in scope — and, more importantly, the expected type of the
-branch's own result — is erased.
+branch's own result — is erased. Concretely: such a branch's body can,
+and in fact must, return entirely erased values, and that's considered
+valid even when the match itself was annotated (§11) to return some
+non-erased result(s) — this branch is exempted from matching the match's
+declared erasures. (Naming note: a constructor marked erased in its own
+declaration is a different thing from a scope entry being erased, §3 —
+tentatively call the former "phantom," though that word is already used
+in §3 for an erased comptime entry's stored value, so it may need a
+different name; see CLAUDE.md §10.)
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
