@@ -491,3 +491,9 @@ itself must be non-erased" half of the rule. An ordinary (non-phantom)
 constructor can produce either, depending on context. Phantom
 constructors, and all type constructors regardless of individual marking
 (§12), always enter scope as erased.
+
+## 21. v2 TODO: coercion and coercibility proofs
+
+Some variant of `coerce` plus a proof-of-coercibility: two values counted
+as the same modulo erased values, and/or modulo entering/leaving a
+Haskell-newtype-style wrapper type. Not designed yet.
