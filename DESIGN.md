@@ -28,7 +28,8 @@ entry carries:
   inaccessible inside a comptime block).
 - a **type** — like an "is" statement (below), just a tree whose leaves
   are references to entries in this same table (§5).
-- an **erasure** (the 0/w multiplicity from §6) — orthogonal to state.
+- an **erasure** (the `erased`/`many` multiplicity from §6) — orthogonal
+  to state.
 - an **"is" statement** — a rewrite/canonicalization rule (§5), which is
   just a tree whose leaves are references to entries in this same table
   (possibly this entry itself).
@@ -101,9 +102,13 @@ branches (§12).
 ## 6. Erasure
 
 Erasure follows Idris 2's approach, living on the binding — i.e. the
-0/w multiplicity distinction from Idris 2's quantitative type theory
-(written `w` for what Idris spells `ω`, to keep the language's own
-syntax ASCII-only, §28). Linear/unique types are punted on for now.
+0/ω multiplicity distinction from Idris 2's quantitative type theory,
+written as the tokens `erased` and `many` (self-annotating and
+ASCII-only, §28, rather than terse symbols easily confused with the
+number `0` or the operator `*`). For now, multiplicity is always written
+explicitly, wherever it's an actual choice — no default-when-omitted, to
+cut down on mistakes while the design is still in flux. Linear/unique
+types are punted on for now.
 
 ## 7. Function levels
 
@@ -178,8 +183,9 @@ There are also two ways for these to be "born" (introduced):
 - **Special forms as data.** A special form is a nullary variant of the
   `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
   dispatches on seeing a `Special` variant in head position. `Special`'s
-  variants are exactly §16's construct inventory: `Match`, `Let`,
-  `def-lvl`, etc.
+  variants cover §16's construct inventory (`Match`, `Let`, `def-lvl`,
+  etc.), plus lower-level tokens that also need first-class status:
+  `erased`, `many` (§6), `:`, and `is` (§14) — §27's registry.
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
@@ -248,7 +254,8 @@ type constructor, the constructed type itself for a value constructor.
 
 `match` requires an explicit result-type annotation: it lists the return
 type(s) (plural, to match a function's possibly-multiple return values)
-together with each one's erasure (the 0/w multiplicity from §6).
+together with each one's erasure (the `erased`/`many` multiplicity from
+§6).
 
 ## 12. Data types, erasure, and match branch kinds
 
@@ -356,14 +363,15 @@ side.
 Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
-reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (w d is c)
+reify-add : (many a b : Nat) (erased c : Nat) (erased p : Add a b c) ->
+            (many d is c)
 ```
 
-`c` and the proof `p` are erased (multiplicity `0`); the return value `d`
-"is `c`" but is declared with multiplicity `w`. The "is" clause gives `d`
-its type (`Nat`, via `c`) while letting its erasure differ from `c`'s —
-this is the mechanism for reifying an erased witness into a materialized
-runtime value.
+`c` and the proof `p` are erased (multiplicity `erased`); the return
+value `d` "is `c`" but is declared with multiplicity `many`. The "is"
+clause gives `d` its type (`Nat`, via `c`) while letting its erasure
+differ from `c`'s — this is the mechanism for reifying an erased witness
+into a materialized runtime value.
 
 ## 15. Match/call results, and a compile-time discriminant assertion
 
@@ -674,11 +682,20 @@ Items 16–17 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
 head-dispatch algorithm for the real two-tier answer.
 
+**Telescope-entry tokens** (also `Special`, but lower-level than the
+above — they annotate a telescope entry rather than heading a list):
+20. `erased` — the 0-multiplicity (§6).
+21. `many` — the ω-multiplicity (§6).
+22. `:` — separates a telescope entry's name from its type.
+23. `is` — separates a telescope entry's (or any binding's) name from an
+    `is` expression instead of a type (§14).
+
 ## 28. ASCII only
 
 The language's own syntax is ASCII-only. Consequence already applied
-throughout this file: the non-erased multiplicity is written `w`, not
-Idris's `ω` (§6).
+throughout this file: the multiplicities are written as the self-
+annotating keywords `erased`/`many` rather than Idris's `0`/`ω` symbols
+(§6).
 
 ## 29. Three type-formers
 
@@ -719,12 +736,14 @@ too, same as a function's:
 
 `reify-add`'s type (§14), with an `is` return instead of a plain type:
 ```scheme
-(Fn L (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (w d is c))
+(Fn L (many a b : Nat) (erased c : Nat) (erased p : Add a b c) ->
+   (many d is c))
 ```
 
 `divmod`'s type, with two (non-dependent, here) returns — function-only:
 ```scheme
-(Fn L (subterm w n : Nat) (w d : Nat) -> (w q : Nat) (w r : Nat))
+(Fn L (subterm many n : Nat) (many d : Nat) ->
+   (many q : Nat) (many r : Nat))
 ```
 
 A "homogeneous pair" type constructor, `B` forced to match `A` via `is`
@@ -737,5 +756,6 @@ A value constructor using the same reify pattern as `reify-add`, but on
 a field instead of a return — `c2` materializes the erased `c` at a
 different (non-erased) multiplicity:
 ```scheme
-(ValCtor (0 a b c : Nat) (0 p : (Add a b c)) (w c2 is c) -> (Reified a b))
+(ValCtor (erased a b c : Nat) (erased p : (Add a b c)) (many c2 is c) ->
+   (Reified a b))
 ```
