@@ -183,9 +183,12 @@ There are also two ways for these to be "born" (introduced):
     post-canonicalization, to its counterpart at the call site — i.e. the
     usual lexicographic-decrease discipline: equal up to the chosen
     position, strictly decreasing there.
-  - Either kind of call can be made through a function pointer (a
-    first-class function value), not only by naming the function
-    directly.
+  - Every kind of application — type-constructor, value-constructor, a
+    lower-level call, a same-level call, `tail`- or `delegate`-marked —
+    works fine through a first-class pointer/value, not only by naming
+    the callee directly. None of these require a constant-known callee
+    at the head — that requirement is specific to invoking a macro or
+    special form (§4), not to ordinary application.
 - **`tail` marker.** A call can be marked `tail`, asserting the
   programmer's claim that it compiles to a tail call. If the compiler
   cannot honor that claim, it is a hard compile error, not a silent
