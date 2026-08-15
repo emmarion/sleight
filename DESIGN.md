@@ -183,3 +183,15 @@ asserts — explicitly *without* a soundness argument yet, expected to be a
 future, separate design session — that the language is nevertheless
 sound despite `Type : Type` and unrestricted positivity. Recorded here as
 the owner's claim/target, not a settled or verified result.
+
+## 11. Multiple return values (built-in sigma)
+
+A function can return multiple values, including zero, and later return
+values can depend on earlier ones — this is, in effect, a built-in sigma
+(dependent tuple) type rather than something layered on top. As usual,
+each entry — argument or return value — may only depend on the entries
+before it, left to right.
+
+`match` requires an explicit result-type annotation: it lists the return
+type(s) (plural, to match a function's possibly-multiple return values)
+together with each one's erasure (the 0/ω multiplicity from §6).
