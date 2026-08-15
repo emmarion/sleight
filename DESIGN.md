@@ -240,6 +240,14 @@ not, and each field (like each function argument) is individually
 annotated erased or not (sane default still TBD). Subterm recursion (§7)
 can go through an erased argument.
 
+**Type indices aren't shared scope.** An indexed ADT's index variables
+aren't bound once at the type's own head the way an ordinary (uniform,
+`List`-style) parameter is — they go out of scope right after the head.
+Each constructor that needs to reference or constrain an index has to
+redeclare its own variable for it, with an explicit type, inside that
+constructor's own signature — it doesn't get to reuse a shared name from
+the head.
+
 **Match-proved equality isn't substitutability.** When a match proves two
 expressions equal (they rewrite/canonicalize identically, §5), that alone
 doesn't make them substitutable for one another — their erasure ("silo"?
