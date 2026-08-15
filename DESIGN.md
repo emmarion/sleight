@@ -801,3 +801,34 @@ ordinary (non-phantom) constructor:
 (ValCtor (erased Nat a b c) (erased (Add a b c) p) (many c2 is c) ->
    many (Reified a b))
 ```
+
+## 31. Worked example: `List`
+
+```scheme
+(def-adts
+  (List : (Type A) -> Type
+    enum
+    (Nil : (erased Type A) -> many (List A))
+    (Cons : (erased Type A) (many A head) (many (List A) tail) ->
+       many (List A))))
+```
+
+Pulls together most of the design established so far:
+- `def-adts` (§16, §27) — one-or-more, possibly mutually recursive ADTs;
+  here just one.
+- `List : (Type A) -> Type` — the type constructor's own signature, no
+  level (§7).
+- `enum`, not `union` — `List` needs a real runtime tag to be walked over
+  (§12).
+- `Nil` and `Cons` each independently redeclare `A` — no shared telescope
+  at the head, full GADT-style (§12's index-scoping rule applies here
+  too, not just to genuinely-indexed types).
+- `(erased Type A)` — type-first (§30); `erased` because `A` is
+  `Type`-sorted (§12); multiplicity always explicit.
+- `(many A head)` / `(many (List A) tail)` — ordinary non-erased fields.
+- `many (List A)` on both returns — neither constructor is phantom (§12,
+  §29): phantom-ness is just `erased` on the return position, not a
+  separate flag.
+
+Paren balance checked with a script rather than by eye when this was
+drafted (12 opens, 12 closes).
