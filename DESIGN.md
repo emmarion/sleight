@@ -384,11 +384,19 @@ evaluating it extends the ambient scope for later/surrounding code:
   mutual) ADT definitions; `match` (branch-local field variables, and
   possibly refined `is` facts on pre-existing variables, §14);
   `comptime-match` (§15). Every one of these can appear at top level or
-  nested inside a function body — nothing here is top-level-only.
+  nested inside a function body — nothing here is top-level-only. None of
+  these take an explicit body/continuation the way a classic `let` would
+  — see `begin`, below, for what actually delimits their scope.
 - **Locally scoped** (bindings usable only within the construct's own
   extent, not exported to arbitrary surrounding code): a function-type
   former (parameters usable in a later parameter's type or the return
-  type, §11, but nowhere else); a `Matchable`-type former (§17).
+  type, §11, but nowhere else); a `Matchable`-type former (§17); `begin`
+  — a sequence of expressions, evaluating to its last one, that hosts the
+  scope-extending forms above: each one just adds its binding to the
+  ambient `begin`, visible to the rest of the sequence, and gone once the
+  `begin` itself ends. Function bodies, `comptime` bodies, match branch
+  bodies, and the top-level scope of a file are all *implicitly* `begin`
+  — none of them need the keyword written out explicitly.
 - **Ordinary, scope-neutral expressions**: `Subterm` birth and `Predates`
   birth (§8); `comptime` (one argument, forces its compile-time
   evaluation); the three function-call forms — lower-level with a
