@@ -28,7 +28,7 @@ entry carries:
   inaccessible inside a comptime block).
 - a **type** — like an "is" statement (below), just a tree whose leaves
   are references to entries in this same table (§5).
-- an **erasure** (the 0/ω multiplicity from §6) — orthogonal to state.
+- an **erasure** (the 0/w multiplicity from §6) — orthogonal to state.
 - an **"is" statement** — a rewrite/canonicalization rule (§5), which is
   just a tree whose leaves are references to entries in this same table
   (possibly this entry itself).
@@ -100,9 +100,10 @@ branches (§12).
 
 ## 6. Erasure
 
-Erasure follows Idris 2's approach, living on the binding — i.e. the 0/ω
-multiplicity distinction from Idris 2's quantitative type theory.
-Linear/unique types are punted on for now.
+Erasure follows Idris 2's approach, living on the binding — i.e. the
+0/w multiplicity distinction from Idris 2's quantitative type theory
+(written `w` for what Idris spells `ω`, to keep the language's own
+syntax ASCII-only, §28). Linear/unique types are punted on for now.
 
 ## 7. Function levels
 
@@ -245,7 +246,7 @@ before it, left to right.
 
 `match` requires an explicit result-type annotation: it lists the return
 type(s) (plural, to match a function's possibly-multiple return values)
-together with each one's erasure (the 0/ω multiplicity from §6).
+together with each one's erasure (the 0/w multiplicity from §6).
 
 ## 12. Data types, erasure, and match branch kinds
 
@@ -353,11 +354,11 @@ side.
 Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
-reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (ω d is c)
+reify-add : (a b : Nat) (0 c : Nat) (0 p : Add a b c) -> (w d is c)
 ```
 
 `c` and the proof `p` are erased (multiplicity `0`); the return value `d`
-"is `c`" but is declared with multiplicity `ω`. The "is" clause gives `d`
+"is `c`" but is declared with multiplicity `w`. The "is" clause gives `d`
 its type (`Nat`, via `c`) while letting its erasure differ from `c`'s —
 this is the mechanism for reifying an erased witness into a materialized
 runtime value.
@@ -396,10 +397,12 @@ statement category. The construct list below is split by whether
 evaluating it extends the ambient scope for later/surrounding code:
 
 - **Scope-extending** (bindings visible to subsequent/surrounding code):
-  `let`; `def-lvl`; (possibly mutual) function definitions; (possibly
-  mutual) ADT definitions; `match` (branch-local field variables, and
-  possibly refined `is` facts on pre-existing variables, §14);
-  `comptime-match` (§15). Every one of these can appear at top level or
+  `let`; `def-lvl`; `def-fns` (defines one or more, possibly mutually
+  recursive, functions — a single function is just the one-element case,
+  §28); `def-adts` (likewise, for one or more mutually recursive ADTs,
+  §28); `match` (branch-local field variables, and possibly refined `is`
+  facts on pre-existing variables, §14); `comptime-match` (§15). Every one
+  of these can appear at top level or
   nested inside a function body — nothing here is top-level-only. None of
   these take an explicit body/continuation the way a classic `let` would
   — see `begin`, below, for what actually delimits their scope.
@@ -623,10 +626,12 @@ where it's actually specified.
    right-hand side (§9, §14); state-inheriting when the right-hand side
    is a single bare variable (§9).
 2. `def-lvl` — births a fresh `Level` (§8).
-3. Function definition — possibly mutual, possibly nested inside another
-   function's body (§9, §16).
-4. ADT definition — possibly mutual, possibly nested; index variables
-   aren't shared across constructors (§12, §16).
+3. `def-fns` — defines one or more (possibly mutually recursive)
+   functions; a single function is just the one-element case (§28).
+   Possibly nested inside another function's body (§9, §16).
+4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
+   same one-element-case pattern as `def-fns` (§28); possibly nested;
+   index variables aren't shared across constructors (§12, §16).
 5. `match` — pattern match; three branch kinds: present, absurd
    (automatic), absurd (by proof) (§12).
 6. `comptime-match` — compile-time discriminant assertion on a `Const`,
@@ -663,3 +668,9 @@ where it's actually specified.
 Items 14–15 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
 head-dispatch algorithm for the real two-tier answer.
+
+## 28. ASCII only
+
+The language's own syntax is ASCII-only. Consequence already applied
+throughout this file: the non-erased multiplicity is written `w`, not
+Idris's `ω` (§6).
