@@ -66,3 +66,13 @@ for identity.
 Erasure follows Idris 2's approach, living on the binding — i.e. the 0/ω
 multiplicity distinction from Idris 2's quantitative type theory.
 Linear/unique types are punted on for now.
+
+## 7. Function levels
+
+Every function has an associated level — a natural number, normally
+erased — that is part of the function's type signature. A function may
+call functions of a strictly lower level freely, and may call functions
+of its own level only under additional restrictions not yet specified
+(future design session). Currying is not supported, for functions or for
+type/value constructors. Type and value constructors have no associated
+level.
