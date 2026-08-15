@@ -500,6 +500,13 @@ constructor can produce either, depending on context. Phantom
 constructors, and all type constructors regardless of individual marking
 (§12), always enter scope as erased.
 
+This extends down to plain variable reference, not just calls: any
+variable, erased or not, can be referred to from an erased context. One
+(perhaps confusing) mental model: a non-erased value can be "copied" into
+an erased one for free, but never the reverse — going the other way needs
+something like §21's still-undesigned coercion mechanism, or §14's `is`
+reification.
+
 ## 21. v2 TODO: coercion and coercibility proofs
 
 Some variant of `coerce` plus a proof-of-coercibility: two values counted
