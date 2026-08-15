@@ -125,3 +125,28 @@ There are also two ways for these to be "born" (introduced):
   relating a variable to a level. It takes: 1) a `Level` value that must
   itself have been born by a `def-lvl` that is before the current code,
   and 2) a variable that was in scope at the time that `def-lvl` ran.
+
+## 9. Namespaces, special forms, macros, call-site proofs
+
+- **One namespace.** Special forms, types, and values all share a single
+  namespace. Everything in it can be renamed/shadowed, special forms and
+  types included.
+- **State-inheriting `let`.** A `let` binding whose right-hand side is a
+  single term causes the left-hand side to inherit the right-hand side's
+  entire variable state (comptime/dynamic/inacc from §3, wholesale — type,
+  stored value if comptime, "is" rule). This holds even when the
+  right-hand side is `inacc`: renaming an inaccessible variable this way
+  is not a compile error (motivation deferred — relates to macros).
+- **Special forms as data.** A special form is a nullary variant of a
+  `Special` type (in effect an enum). The elaborator dispatches on seeing
+  a `Special` variant in head position. Open question: whether `Special`
+  should be exposed to the user as an ordinary type or stay
+  implementation-internal.
+- **Macros as data.** `Macro` is a type with one constructor with one
+  field, a function — tentatively `List Raw -> Raw`, from a list of
+  unelaborated ("raw") terms to a raw term.
+- **Call-site proofs.** Function invocation requires the caller to supply
+  an explicit proof alongside the call: either a `Predates` proof or a
+  `Subterm` proof. (Presumably this is how §7's level-decrease
+  requirement gets discharged at each call site, though whether it's
+  every call or only same-level calls isn't settled yet.)
