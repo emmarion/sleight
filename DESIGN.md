@@ -264,3 +264,10 @@ replacement: one proof structure that directly reifies the whole
 lexicographic order as a nested OR — level decreases, OR (levels equal
 AND (first `subterm`-marked argument is a `Subterm`, OR (that argument is
 equal AND the second is a `Subterm`, OR (…)))). Not designed yet.
+
+Motivation: §9's current scheme forces the call site to statically name
+which argument is the decreasing one. But which argument decreases may
+itself only be known via some erased computation — the call can still be
+known valid without any single position being fixed in advance. A nested
+disjunction wouldn't require committing to one; it would carry whichever
+disjunct that erased computation produced.
