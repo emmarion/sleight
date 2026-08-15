@@ -372,11 +372,11 @@ statement category. The construct list below is split by whether
 evaluating it extends the ambient scope for later/surrounding code:
 
 - **Scope-extending** (bindings visible to subsequent/surrounding code):
-  `let`; `def-lvl`; (possibly mutual) function definitions, which can
-  appear at top level or nested inside another function's body;
-  (possibly mutual) ADT definitions, likewise nestable inside a function;
-  `match` (branch-local field variables, and possibly refined `is` facts
-  on pre-existing variables, §14); `comptime-match` (§15).
+  `let`; `def-lvl`; (possibly mutual) function definitions; (possibly
+  mutual) ADT definitions; `match` (branch-local field variables, and
+  possibly refined `is` facts on pre-existing variables, §14);
+  `comptime-match` (§15). Every one of these can appear at top level or
+  nested inside a function body — nothing here is top-level-only.
 - **Locally scoped** (bindings usable only within the construct's own
   extent, not exported to arbitrary surrounding code): a function-type
   former (parameters usable in a later parameter's type or the return
@@ -571,3 +571,10 @@ only at: ADT definitions, function arguments, function return results,
 and match return results (§11). Everywhere else, inference should
 suffice — the same "annotate only at the boundary" shape as §20's
 bottom-up erasure.
+
+## 26. v2 TODO: `_` sugar
+
+Allow `_` as sugar in a few spots: a match return annotation (§11,
+sometimes); a newly-defined function's level, implicitly creating a
+fresh `def-lvl` and defining the function at it; the proof argument
+(`Predates`/`Subterm`, §9) of a function call. Not designed yet.
