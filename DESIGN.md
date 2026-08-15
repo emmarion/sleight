@@ -61,6 +61,10 @@ canonicalization/rewrite rules from §3). The intended consequence of this
 restriction is a simple type-checking rule: canonicalize, then compare
 for identity.
 
+The language assumes Axiom K (uniqueness of identity proofs) — relevant
+to the dependent pattern matching / rewrite rules used inside match
+branches (§12).
+
 ## 6. Erasure
 
 Erasure follows Idris 2's approach, living on the binding — i.e. the 0/ω
