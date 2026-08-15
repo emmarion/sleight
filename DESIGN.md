@@ -407,9 +407,10 @@ evaluating it extends the ambient scope for later/surrounding code:
   these take an explicit body/continuation the way a classic `let` would
   — see `begin`, below, for what actually delimits their scope.
 - **Locally scoped** (bindings usable only within the construct's own
-  extent, not exported to arbitrary surrounding code): a function-type
-  former (parameters usable in a later parameter's type or the return
-  type, §11, but nowhere else); a `Matchable`-type former (§17); `begin`
+  extent, not exported to arbitrary surrounding code): the three
+  type-formers — function, type-constructor, value-constructor (§29) —
+  each with parameters usable in a later parameter's type or the return
+  type, §11, but nowhere else; a `Matchable`-type former (§17); `begin`
   — a sequence of expressions, evaluating to its last one, that hosts the
   scope-extending forms above: each one just adds its binding to the
   ambient `begin`, visible to the rest of the sequence, and gone once the
@@ -639,33 +640,35 @@ where it's actually specified.
    (§15).
 
 **Locally scoped:**
-7. A function-type former (§11, §16).
-8. A `Matchable`-type former (§17).
-9. `begin` — sequences expressions, hosts the scope-extending forms
-   above, evaluates to its last expression; implicit (no keyword needed)
-   in function bodies, `comptime` bodies, match branch bodies, and a
-   file's top level (§16).
+7. The function-type former (§7, §11, §16, §29).
+8. The type-constructor-type former (§29).
+9. The value-constructor-type former (§29).
+10. A `Matchable`-type former (§17).
+11. `begin` — sequences expressions, hosts the scope-extending forms
+    above, evaluates to its last expression; implicit (no keyword needed)
+    in function bodies, `comptime` bodies, match branch bodies, and a
+    file's top level (§16).
 
 **Scope-neutral:**
-10. `Subterm` birth (name doubles as the type it births, §8) — asserts
+12. `Subterm` birth (name doubles as the type it births, §8) — asserts
     one expression is a subterm of another.
-11. `Predates` birth (name doubles as the type it births, §8) — relates
+13. `Predates` birth (name doubles as the type it births, §8) — relates
     a variable to a `Level` born by an earlier `def-lvl`.
-12. `comptime` — forces its one argument to evaluate at compile time; its
+14. `comptime` — forces its one argument to evaluate at compile time; its
     body is an implicit `begin` (§16, §24).
-13. Function call — three proof flavors (a `Predates` proof for a
+15. Function call — three proof flavors (a `Predates` proof for a
     lower-level call, a `Subterm` proof for a same-level call, a TBD v2
     multi-proof form, §9/§13); can be marked `tail` and/or `delegate`
     (§9).
-14. Type-constructor application (§5, §12).
-15. Value-constructor application (§5, §12).
-16. A multi-value bundling form (name TBD) — packages multiple values
+16. Type-constructor application (§5, §12).
+17. Value-constructor application (§5, §12).
+18. A multi-value bundling form (name TBD) — packages multiple values
     into a function's or match's multi-value return (§11).
-17. The three transitivity axioms — `Predates` transitivity, `Subterm`
+19. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
 
-Items 14–15 (constructor application) are *not* actually dispatched
+Items 16–17 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
 head-dispatch algorithm for the real two-tier answer.
 
@@ -674,3 +677,35 @@ head-dispatch algorithm for the real two-tier answer.
 The language's own syntax is ASCII-only. Consequence already applied
 throughout this file: the non-erased multiplicity is written `w`, not
 Idris's `ω` (§6).
+
+## 29. Three type-formers
+
+Types are first class (§17), so there need to be actual expressions that
+produce them — not just declaration-site sugar. One type-former isn't
+enough, because a function's telescope, a type constructor's telescope,
+and a value constructor's telescope aren't structurally the same grammar,
+not just semantically different:
+
+1. **Function-type former** (§16) — takes a level (§7), plus a telescope
+   where each entry freely chooses its own multiplicity and can be marked
+   `subterm`; produces a function type.
+2. **Type-constructor-type former** — no level (§7); its telescope
+   entries carry *no* multiplicity choice at all, since type-constructor
+   arguments are unconditionally erased (§12, §20) — there's nothing to
+   annotate; the return is always `Type`.
+3. **Value-constructor-type former** — no level, no `subterm` (constructors
+   don't recurse); its telescope entries freely choose multiplicity per
+   field, same freedom as a function's arguments (§12); the return is
+   whatever concrete type the constructor builds.
+
+All three share an underlying "telescope" notion (a list of annotated
+`name : Type` entries, §5's restricted grammar), just permitting
+different annotations and requiring different things of the return
+position. The distinct tagging is also what lets §4's head-dispatch tier
+1 tell a function, a type constructor, and a value constructor apart when
+deciding how to elaborate an application.
+
+The `name : [level] (telescope) -> (telescope)` declaration syntax used
+for `length`/`List`/`Cons` in recent examples is sugar over these three
+formers plus a name and (for functions) a body — not a separate
+mechanism.
