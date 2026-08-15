@@ -189,7 +189,18 @@ There are also two ways for these to be "born" (introduced):
 - **`tail` marker.** A call can be marked `tail`, asserting the
   programmer's claim that it compiles to a tail call. If the compiler
   cannot honor that claim, it is a hard compile error, not a silent
-  fallback.
+  fallback. Tail-ness is judged *after* stripping erasure (§23): you can
+  store a tail call's result, do further work with only phantom/erased
+  values, and then return, and it still counts as `tail` — the actual
+  requirement is just that the (non-erased) return value(s) and their
+  order match what the called function itself returns.
+- **`delegate` marker.** Same idea as `tail`, plus the same restriction
+  applied to the call's arguments: the non-erased arguments must also
+  pass straight through. The consequence is stronger than `tail` — after
+  stripping erasure, the marked function's body reduces to nothing but
+  the delegated call, so the two functions' non-erased behavior is
+  identical, and the outer function's function pointer could just *be*
+  the inner one's.
 
 ## 10. `Type : Type`, no strict positivity
 
