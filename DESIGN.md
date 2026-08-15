@@ -72,10 +72,10 @@ Linear/unique types are punted on for now.
 Every function has an associated level — a natural number, normally
 erased — that is part of the function's type signature. A function may
 call functions of a strictly lower level freely, and may call functions
-of its own level only under additional restrictions not yet specified
-(future design session). Currying is not supported, for functions or for
-type/value constructors. Type and value constructors have no associated
-level.
+of its own level only under the restrictions in §9 (an explicit `Subterm`
+proof, in place of the `Predates` proof a lower-level call needs).
+Currying is not supported, for functions or for type/value constructors.
+Type and value constructors have no associated level.
 
 The point of levels (and of the same-level call restrictions deferred
 above) is termination. ADTs with zero variants are supported (e.g.
@@ -145,8 +145,36 @@ There are also two ways for these to be "born" (introduced):
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
-- **Call-site proofs.** Function invocation requires the caller to supply
-  an explicit proof alongside the call: either a `Predates` proof or a
-  `Subterm` proof. (Presumably this is how §7's level-decrease
-  requirement gets discharged at each call site, though whether it's
-  every call or only same-level calls isn't settled yet.)
+- **Call-site proofs.** This is how §7's level-decrease requirement gets
+  discharged, and it differs by whether the call is a level-decreasing
+  call or a same-level call:
+  - A call to a strictly-lower-level function needs a `Predates` proof,
+    and no `Subterm` proof.
+  - A same-level call needs no `Predates` proof, but needs exactly one
+    `Subterm` proof instead. The call syntax must say explicitly which
+    argument is the subterm-decreasing one; every `subterm`-annotated
+    argument preceding it (§7's left-to-right order) must be identical,
+    post-canonicalization, to its counterpart at the call site — i.e. the
+    usual lexicographic-decrease discipline: equal up to the chosen
+    position, strictly decreasing there.
+  - Either kind of call can be made through a function pointer (a
+    first-class function value), not only by naming the function
+    directly.
+- **`tail` marker.** A call can be marked `tail`, asserting the
+  programmer's claim that it compiles to a tail call. If the compiler
+  cannot honor that claim, it is a hard compile error, not a silent
+  fallback.
+
+## 10. `Type : Type`, no strict positivity
+
+`Type : Type` (no universe stratification), and there is no strict-
+positivity requirement on function or datatype signatures.
+
+The owner's own summary of why: termination is carried entirely by the
+lexicographic level/subterm decrease of §§7–8, not by any restriction on
+recursive occurrences in a datatype, and types cannot compute because of
+§5's ban on function invocation inside types. On that basis the owner
+asserts — explicitly *without* a soundness argument yet, expected to be a
+future, separate design session — that the language is nevertheless
+sound despite `Type : Type` and unrestricted positivity. Recorded here as
+the owner's claim/target, not a settled or verified result.
