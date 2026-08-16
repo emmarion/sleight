@@ -826,9 +826,13 @@ mechanism.
 
 Multi-return is function-only (above), but `is` (§14) is not — it works
 in a type-constructor's or value-constructor's telescope too, same as a
-function's. See §30 for worked examples of all three formers (`reify-add`
-and `divmod`'s function types, a "homogeneous pair" type constructor, and
-a reify-pattern value constructor) — written type-first, per §30.
+function's. In a type constructor's it is legal but pointless: every
+entry there is unconditionally erased (above), so there is no
+multiplicity difference for an `is` to bridge and the entry can always be
+substituted away. See §30 for worked examples of all three formers
+(`reify-add` and `divmod`'s function types, a length-indexed vector's
+type constructor, and a value constructor pinning a runtime field with
+`is`) — written expression-before-name, per §30.
 
 ## 30. Expression-before-name telescope entries; backwards references only
 
@@ -868,7 +872,7 @@ Retrofitted examples:
 `reify-add`'s type:
 ```scheme
 (Fn L (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
-   (many d is c))
+   (many c is d))
 ```
 
 `divmod`'s type:
@@ -876,16 +880,21 @@ Retrofitted examples:
 (Fn L (subterm many Nat n) (many Nat d) -> (many Nat q) (many Nat r))
 ```
 
-The "homogeneous pair" type constructor:
+A length-indexed vector's type constructor. Its entries carry no
+multiplicities at all (§29):
 ```scheme
-(TyCtor (Type A) (B is A) -> Type)
+(TyCtor (Type A) (Nat n) -> Type)
 ```
 
-The reify-pattern value constructor, `many` on the return since it's an
-ordinary (non-phantom) constructor:
+A value constructor whose runtime field is pinned to a compound
+expression. `a` and `b` are erased indices of `Two`; `lst` is stored at
+runtime and is definitionally the two-element list built from them, so it
+serves as data and in type position at once. A plain
+`(many (List Nat) lst)` field would carry the same bytes with unknown
+identity:
 ```scheme
-(ValCtor (erased Nat a b c) (erased (Add a b c) p) (many c2 is c) ->
-   many (Reified a b))
+(ValCtor (erased Nat a) (erased Nat b)
+   (many (Cons Nat a $ Cons Nat b $ Nil Nat) is lst) -> (Two a b))
 ```
 
 ## 31. Worked example: `List`
