@@ -130,6 +130,7 @@ and 'e branch_body =
 
 and 'e ctor_assert = {
   asserted : 'e core;
+  asserted_via : var;
   ctor : var;
   fields_bound : name option list;
 }
