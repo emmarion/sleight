@@ -176,6 +176,12 @@ There are also two ways for these to be "born" (introduced):
   a well-defined ordering here: a variable in scope above (lexically
   enclosing, prior to) a `def-lvl` statement counts as "before" it.
 
+  A level born later is strictly higher than one born earlier, so a
+  function defined at a later-born level cannot be called from code at an
+  earlier one. Once there is a `main`, that includes anything born after
+  `main`'s own level: such a function is unreachable from `main`, though
+  a comptime block can still call it, at compile time only.
+
   A second special form, `prove-predates`, births the `Predates` claim
   relating a variable to a level. It takes them in the order the type
   above puts them: 1) a variable that was in scope when some earlier
@@ -436,7 +442,11 @@ For now: both a function call's result and a match statement's result
 are always `dynamic` — never `comptime`, never `inacc`. No automatic
 constant-folding through calls or matches yet. One consequence: a match's
 scrutinee itself can only be `comptime` or `dynamic` (never `inacc`,
-which can't be accessed at all — §3).
+which can't be accessed at all — §3). Inside a `comptime` block the same
+rule applies — a call's result is `dynamic` there too. What changes is
+the boundary: a value crossing out of a comptime block becomes
+`comptime` (§24). An `inacc` value crossing out is a compile error; that
+may be worth revisiting.
 
 A special form, `comptime-match`, works specifically on a `comptime`
 (comptime-known) scrutinee whose discriminant is non-erased — i.e. an
