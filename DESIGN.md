@@ -1037,3 +1037,67 @@ drafted (12 opens, 12 closes).
 - A call's item count therefore does not equal the callee's arity. The
   same holds for a lower-level call, which carries a `predates`
   annotation instead.
+
+## 33. Worked example: level-polymorphic `map`
+
+`map` calls the function it is given, so by §7 it must sit at a level
+strictly above that function's, and §9 wants a `Predates` proof for the
+call. The proof cannot be discharged inside `map`: the function is
+`map`'s own parameter, so it was not in scope when `map`'s level was
+born, which is what `prove-predates` requires (§8). The level relation
+has to be established where the level is born, so `map` is produced by a
+factory.
+
+```scheme
+(def-lvl F)
+
+(def-fns $ map-factory : F (erased (Level) M) ->
+    (erased (Level) L)
+    (many (Fn L (erased Type A) (erased Type B)
+              (many (Fn M (many A x) -> (many B y)) f)
+              (subterm many (List A) xs) ->
+              (many (List B) ys))
+          mapped)
+  (def-lvl L)
+  (let pml (prove-predates M L))
+  (def-fns $ map : L (erased Type A) (erased Type B)
+      (many (Fn M (many A x) -> (many B y)) f)
+      (subterm many (List A) xs) ->
+      (many (List B) ys)
+    (match xs ((many (List B) r))
+      ((Nil a) (Nil B))
+      ((Cons a hd tl)
+        (let p (prove-subterm tl xs))
+        (Cons B (f (predates pml) hd) $ map A B f (subterm p) tl))))
+  (values L map))
+```
+
+```scheme
+(def-lvl I)
+
+(def-fns $ inc : I (many (Nat) n) -> (many (Nat) m)
+  (Succ n))
+
+(let ML map-nat (comptime $ map-factory I))
+
+(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+
+(comptime $ map-nat (Nat) (Nat) inc xs)
+```
+
+- The factory births the level and returns it. Naming `L` in the return
+  telescope is what lets the second return's type mention it (§11); a
+  single-return factory would have had to take the level as an argument,
+  since a signature is fixed before its body runs.
+- `prove-predates` discharges inside the factory, `M` being in scope when
+  `def-lvl L` runs (§8).
+- `A` and `B` stay ordinary parameters of `map`. Types carry no level
+  (§7), so only the function's level has to be baked in.
+- Both call flavours appear in one body: `(f (predates pml) hd)` is the
+  lower-level call, `(map A B f (subterm p) tl)` the same-level
+  recursion (§9, §27).
+- `comptime` is what makes the factory worth calling — its results cross
+  out of the block as `comptime` (§15). The caller writes one `def-lvl`
+  and no proof.
+- `ML` is bound only because it is the first return; it is erased and
+  never used again.
