@@ -219,12 +219,13 @@ There are also two ways for these to be "born" (introduced):
   - A call to a strictly-lower-level function needs a `Predates` proof,
     and no `Subterm` proof.
   - A same-level call needs no `Predates` proof, but needs exactly one
-    `Subterm` proof instead. The call syntax must say explicitly which
-    argument is the subterm-decreasing one; every `subterm`-annotated
-    argument preceding it (§7's left-to-right order) must be identical,
-    post-canonicalization, to its counterpart at the call site — i.e. the
-    usual lexicographic-decrease discipline: equal up to the chosen
-    position, strictly decreasing there.
+    `Subterm` proof instead. The `(subterm p)` annotation marks which
+    argument is the subterm-decreasing one by sitting immediately before
+    it (§27, §32); every `subterm`-annotated argument preceding it (§7's
+    left-to-right order) must be identical, post-canonicalization, to its
+    counterpart at the call site — i.e. the usual lexicographic-decrease
+    discipline: equal up to the chosen position, strictly decreasing
+    there.
   - Every kind of application — type-constructor, value-constructor, a
     lower-level call, a same-level call, `tail`- or `delegate`-marked —
     works fine through a first-class pointer/value, not only by naming
