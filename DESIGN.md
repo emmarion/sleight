@@ -156,12 +156,14 @@ Three core axioms/functions, each as premises and conclusion:
 
 There are also two ways for these to be "born" (introduced):
 
-- **`Subterm` birth.** A special form takes two expressions, asserting
-  the first is a subterm of the second. Both are canonicalized/rewritten
-  first; both are restricted to the "is"/type grammar of §5 (variable
-  references and type-/value-constructor application — no function
-  invocation). The birthed claim then requires the first, post-
-  canonicalization, to be a strict subtree of the second.
+- **`Subterm` birth.** The special form `prove-subterm` takes two
+  expressions, asserting the first is a subterm of the second. Both are
+  canonicalized/rewritten first, and both are restricted to §5's
+  "is"/type grammar. The birthed claim then requires the first,
+  post-canonicalization, to be a strict subtree of the second, where the
+  search descends only through type- and value-constructor applications
+  (§5's productions 2 and 3). A type former (production 4) is opaque —
+  nothing inside its telescope counts as a subterm of it.
 
 - **`Level` birth.** A `def-lvl` form births a fresh `Level`. Mental
   model (a model only — fully erased in practice, not a real runtime
@@ -171,11 +173,11 @@ There are also two ways for these to be "born" (introduced):
   a well-defined ordering here: a variable in scope above (lexically
   enclosing, prior to) a `def-lvl` statement counts as "before" it.
 
-  A second special form — tentatively also named `Predates` (argument
-  order still open, see CLAUDE.md §10) — births the `Predates` claim
-  relating a variable to a level. It takes: 1) a `Level` value that must
-  itself have been born by a `def-lvl` that is before the current code,
-  and 2) a variable that was in scope at the time that `def-lvl` ran.
+  A second special form, `prove-predates`, births the `Predates` claim
+  relating a variable to a level. It takes them in the order the type
+  above puts them: 1) a variable that was in scope when some earlier
+  `def-lvl` ran, and 2) the `Level` that `def-lvl` birthed, which must be
+  before the current code.
 
 ## 9. Namespaces, special forms, macros, call-site proofs
 
