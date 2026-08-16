@@ -426,7 +426,9 @@ be accessed at all — §3).
 A special form, `comptime-match`, works specifically on a `Const`
 (comptime-known) scrutinee whose discriminant is non-erased — i.e. an
 enum, never a union (§12): it asserts the value has a given discriminant,
-and is a compile error if it doesn't. It binds the matched constructor's
+and is a compile error if it doesn't. It consults the type's `Matchable`
+(§17) for both the enum/union tag and the discriminant's position in the
+constructors' declared order. It binds the matched constructor's
 fields as `Const`, the way a state-inheriting `let` would (§9). The
 intent is "proof via reflection/computation" — matches what's
 called "proof by reflection" in Coq (a real, externally-confirmed term
