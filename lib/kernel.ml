@@ -39,7 +39,7 @@ and valctor_ty = {
 and matchable_ty = {
   disc : discriminant;
   described : var;
-  variants : (var * multiplicity) list;
+  variants : var list;
 }
 
 and decl = Has_type of inert | Is of inert
