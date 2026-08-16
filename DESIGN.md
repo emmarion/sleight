@@ -37,6 +37,9 @@ entry carries:
 - a **stored value**, present only if the state is `comptime`. If the
   entry is also erased, this isn't a real value — it's a *token* that
   just asserts the value exists/is true, not actual data.
+- a **level-birth marker** — set when the entry was introduced by
+  `def-lvl` (§8). `prove-predates` requires its `Level` argument to be
+  such an entry, not merely some value of type `(Level)`.
 - an (implicit) **introduction order** — needed to make the `Predates`
   assertion (§8) well-founded.
 
@@ -771,51 +774,59 @@ or an `is` expression, not only at a declaration site.
     annotation (§11, §16).
 11. `matchable-of` — yields the `Matchable` for a bare unapplied type
     constructor from ambient scope (§19).
-12. `Subterm` birth (name doubles as the type it births, §8) — asserts
-    one expression is a subterm of another.
-13. `Predates` birth (name doubles as the type it births, §8) — relates
-    a variable to a `Level` born by an earlier `def-lvl`.
-14. `comptime` — forces its argument to evaluate at compile time, taking
+12. `level-of` — yields the `Level` a function is defined at, read from
+    its type (§7). Not strictly needed, since that level is always in
+    scope anyway, but useful for sugar (§26).
+13. `prove-subterm` — asserts one expression is a subterm of another,
+    birthing the `Subterm` proof (§8).
+14. `prove-predates` — relates a variable to a `Level` born by an
+    earlier `def-lvl`, birthing the `Predates` proof (§8).
+15. `comptime` — forces its argument to evaluate at compile time, taking
     its size from it (§16, §24).
-15. Function call — three proof flavors (a `Predates` proof for a
-    lower-level call, a `Subterm` proof for a same-level call, a TBD v2
-    multi-proof form, §9/§13); can be marked `tail` and/or `delegate`
-    (§9).
-16. Type-constructor application (§5, §12).
-17. Value-constructor application (§5, §12).
-18. `values` — packages values into an expression's result; a one-entry
+16. Function call — the callee, its arguments, and a decrease
+    annotation: `(subterm p)` immediately before the decreasing argument
+    for a same-level call, or `(predates p)` immediately after the callee
+    for a lower-level one (§9, §32); the v2 multi-proof form is TBD
+    (§13). Can be marked `tail` and/or `delegate` (§9). A call's item
+    count therefore exceeds the callee's arity.
+17. Type-constructor application (§5, §12).
+18. Value-constructor application (§5, §12).
+19. `values` — packages values into an expression's result; a one-entry
     `values` may be left implicit, and `(values)` is the size-zero
     expression (§11, §16).
-19. The three transitivity axioms — `Predates` transitivity, `Subterm`
+20. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
-20. `inacc` — produces one value in the `inacc` state (§3), given either
+21. `inacc` — produces one value in the `inacc` state (§3), given either
     a type or, with `is`, an expression to take its identity from (§14).
     The value can be named and typed but never accessed.
 
-Items 16–17 (constructor application) are *not* actually dispatched
+Items 17–18 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
 head-dispatch algorithm for the real two-tier answer.
 
 **Annotation tokens** (also `Special`, but lower-level than the above —
 they annotate a form rather than heading a list):
-21. `erased` — the 0-multiplicity (§6).
-22. `many` — the ω-multiplicity (§6).
-23. `:` — separates a name from the signature being given to it, at a
+22. `erased` — the 0-multiplicity (§6).
+23. `many` — the ω-multiplicity (§6).
+24. `:` — separates a name from the signature being given to it, at a
     declaration (§30, §31). Whether this reorders the way telescope
     entries do is still open (§30).
-24. `is` — separates an `is` expression from the name it introduces, in
+25. `is` — separates an `is` expression from the name it introduces, in
     place of a type (§14, §30).
-25. `->` — separates a signature's parameter telescope from its return
+26. `->` — separates a signature's parameter telescope from its return
     telescope (§29).
-26. `subterm` — marks a telescope entry as participating in the
-    lexicographic subterm order (§7, §9, §30).
-27. `enum` — declares an ADT's discriminant non-erased (§12, §31).
-28. `union` — declares an ADT's discriminant erased (§12).
-29. `tail` — marks a call as compiling to a tail call; a hard compile
+27. `subterm` — marks a telescope entry as participating in the
+    lexicographic subterm order (§7, §9, §30), and heads the call-site
+    annotation that names the decreasing argument by position (§32).
+28. `enum` — declares an ADT's discriminant non-erased (§12, §31).
+29. `union` — declares an ADT's discriminant erased (§12).
+30. `tail` — marks a call as compiling to a tail call; a hard compile
     error if the compiler can't honor the claim (§9).
-30. `delegate` — `tail` plus the same pass-through requirement on the
+31. `delegate` — `tail` plus the same pass-through requirement on the
     call's non-erased arguments (§9).
+32. `predates` — heads the call-site annotation carrying a lower-level
+    call's proof (§9).
 
 ## 28. ASCII only
 
