@@ -301,6 +301,16 @@ annotated erased or not (sane default still TBD). Declaring a phantom
 constructor with any `many` field is a warning. Subterm recursion (§7)
 can go through an erased argument.
 
+**A constructor returns its own type.** Every value constructor is
+declared inside exactly one type constructor's entry in `def-adts`, and
+its return must be a saturated application of that type constructor —
+`(T i1 ... in)`, one argument per entry of `T`'s telescope, since there
+is no currying (§7). In a mutually recursive `def-adts` that means the
+specific type constructor it is nested under, not merely one of the
+group. The arguments are ordinary expressions in the constructor's own
+telescope under §5's grammar — which is where the redeclared index
+variables of the paragraph below appear.
+
 **Type indices aren't shared scope.** An indexed ADT's index variables
 aren't bound once at the type's own head the way an ordinary (uniform,
 `List`-style) parameter is — they go out of scope right after the head.
