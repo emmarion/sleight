@@ -54,6 +54,19 @@ reference graph *is* the whole expression structure for anything in the
 restricted `is`/type grammar — no separate AST is needed alongside it for
 the rewrite engine to work with.
 
+Alongside the table, elaboration carries two pieces of ambient context:
+
+- the **current level** — the level of the function body being elaborated
+  into, or a marker that elaboration is at the top level of a `comptime`
+  block, which sits above every ordinary level (§24). Entering a function
+  body replaces it with that function's level, including for a function
+  defined inside a comptime block. §9's lower-level call rule wants a
+  `Predates` proof relating the callee's level to this one.
+- the **enclosing subterm arguments** — references to the entries bound
+  by the enclosing function's `subterm`-marked parameters, in declaration
+  order. §9's same-level call rule compares a call's arguments against
+  these.
+
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
 Goal: match Kernel's level of dynamism while still supporting clean
