@@ -179,12 +179,17 @@ There are also two ways for these to be "born" (introduced):
 - **One namespace.** Special forms, types, and values all share a single
   namespace. Everything in it can be renamed/shadowed, special forms and
   types included.
-- **State-inheriting `let`.** A `let` binding whose right-hand side is a
-  single term causes the left-hand side to inherit the right-hand side's
-  entire variable state (comptime/dynamic/inacc from §3, wholesale — type,
-  stored value if comptime, "is" rule). This holds even when the
-  right-hand side is `inacc`: renaming an inaccessible variable this way
-  is not a compile error (motivation deferred — relates to macros).
+- **State-inheriting `let`.** A `let` binder inherits the entire variable
+  state of the right-hand-side entry it corresponds to
+  (comptime/dynamic/inacc from §3, wholesale — type, stored value if
+  comptime, "is" rule), whenever that entry is an expression in §5's
+  grammar and so has a scope entry of its own (§3). This is per-binder:
+  with `(let a b c (values x y z))`, each of `a`, `b`, `c` inherits from
+  `x`, `y`, `z` respectively. Where an entry is a call or a match there is
+  nothing to inherit, §15 making those results `Dyn`. Inheritance holds
+  even when the right-hand side is `inacc`: renaming an inaccessible
+  variable this way is not a compile error (motivation deferred — relates
+  to macros).
 - **Special forms as data.** A special form is a nullary variant of the
   `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
   dispatches on seeing a `Special` variant in head position. `Special`'s
@@ -721,54 +726,60 @@ sugar for pulling it out). Not designed yet.
 ## 27. Special form registry
 
 Every special form (§9's `Special` ADT variants) established so far, in
-one place. Grouped by §16's scope categories; each entry cross-references
-where it's actually specified.
+one place. Grouped as §16 splits them, statements from expressions, with
+the type formers separated out; each entry cross-references where it's
+actually specified.
 
-**Scope-extending:**
-1. `let` — introduces a binding; type/`is` optional, inferred from the
-   right-hand side (§9, §14); state-inheriting when the right-hand side
-   is a single bare variable (§9).
+**Statements** (§16):
+1. `let` — introduces zero or more bindings, one per value of the
+   right-hand side, which is the last item (§11); type/`is` optional,
+   inferred from the right-hand side (§9, §14); state-inheriting per
+   binder, from the corresponding right-hand-side entry when that entry
+   is in §5's grammar (§3, §9). Zero bindings is useless as the language
+   stands, being pure and total, but is expected to matter once linear or
+   unique types arrive (§6) — invoking a destructor, or similar.
 2. `def-lvl` — births a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
    functions; a single function is just the one-element case. Possibly
    nested inside another function's body (§9, §16).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
-   index variables aren't shared across constructors (§12, §16).
-5. `match` — pattern match; three branch kinds: present, absurd
-   (automatic), absurd (by proof) (§12).
-6. `comptime-match` — compile-time discriminant assertion on a `Const`,
+   index variables aren't shared across constructors (§12, §16); births
+   each type's `Matchable` (§19).
+5. `comptime-match` — compile-time discriminant assertion on a `Const`,
    non-erased-discriminant scrutinee; binds the matched fields as `Const`
    (§15).
 
-**Locally scoped:**
-7. `Fn` — the function-type former (§7, §11, §16, §29).
-8. `TyCtor` — the type-constructor-type former (§29).
-9. `ValCtor` — the value-constructor-type former (§29).
-10. `Matchable` — the `Matchable`-type former (§17).
-11. `begin` — sequences expressions, hosts the scope-extending forms
-    above, evaluates to its last expression; implicit (no keyword needed)
-    in function bodies, `comptime` bodies, match branch bodies, and a
-    file's top level (§16).
+**Type formers:**
+6. `Fn` — the function-type former (§7, §11, §16, §29).
+7. `TyCtor` — the type-constructor-type former (§29).
+8. `ValCtor` — the value-constructor-type former (§29).
+9. `Matchable` — the `Matchable`-type former (§17).
 
-Items 7–10 are also §5's production 4, i.e. they may appear inside a type
+Items 6–9 are also §5's production 4, i.e. they may appear inside a type
 or an `is` expression, not only at a declaration site.
 
-**Scope-neutral:**
+**Other expressions:**
+10. `match` — pattern match; three branch kinds: present, absurd
+    (automatic), absurd (by proof) (§12); its size is fixed by its return
+    annotation (§11, §16).
+11. `matchable-of` — yields the `Matchable` for a bare unapplied type
+    constructor from ambient scope (§19).
 12. `Subterm` birth (name doubles as the type it births, §8) — asserts
     one expression is a subterm of another.
 13. `Predates` birth (name doubles as the type it births, §8) — relates
     a variable to a `Level` born by an earlier `def-lvl`.
-14. `comptime` — forces its one argument to evaluate at compile time; its
-    body is an implicit `begin` (§16, §24).
+14. `comptime` — forces its argument to evaluate at compile time, taking
+    its size from it (§16, §24).
 15. Function call — three proof flavors (a `Predates` proof for a
     lower-level call, a `Subterm` proof for a same-level call, a TBD v2
     multi-proof form, §9/§13); can be marked `tail` and/or `delegate`
     (§9).
 16. Type-constructor application (§5, §12).
 17. Value-constructor application (§5, §12).
-18. A multi-value bundling form (name TBD) — packages multiple values
-    into a function's or match's multi-value return (§11).
+18. `values` — packages values into an expression's result; a one-entry
+    `values` may be left implicit, and `(values)` is the size-zero
+    expression (§11, §16).
 19. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
