@@ -261,7 +261,8 @@ sigma (dependent tuple), rather than something layered on top. As usual,
 each entry — argument or return value — may only depend on the entries
 before it, left to right. This is a function-only feature: type and
 value constructors always have exactly one return (§29) — `Type` for a
-type constructor, the constructed type itself for a value constructor.
+type constructor, an application of its own type constructor for a
+value constructor (§12).
 
 The resemblance stops short of it being a type: there is no sigma type
 former (§29), so a multi-size expression has no type of its own, and
