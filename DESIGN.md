@@ -512,9 +512,11 @@ as opposed to merely having `Type` as its own type, which is true of many
 entries; or marking which `Matchable` is the canonical one describing
 `Special`'s own shape. Not yet worked out mechanically.
 
-Item 5 is typed `Matchable [union|enum] T [C1(e1) ... Cn(en)]`: a tag for
-union-vs-enum, the type constructor being described, and its value
-constructors in declared order with each one's multiplicity. `T` and the
+Item 5 is typed `(Matchable enum T (e1 C1) ... (en Cn))`, the first token
+being `enum` or `union`: a tag for union-vs-enum, the type constructor
+being described, and its value constructors in declared order with each
+one's multiplicity — so `List`'s is
+`(Matchable enum List (many Nil) (many Cons))`. `T` and the
 `Ci` are bare and unapplied — an applied type such as `(List Nat)` cannot
 appear there, since the variant set belongs to the constructor, not to
 any application of it. The tag is §12's discriminant and the `ei` are
