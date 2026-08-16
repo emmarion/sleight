@@ -850,7 +850,7 @@ Return-position multiplicity therefore appears in exactly one of the
 three, `Fn` — the only one whose return is a telescope at all (§11).
 
 All three share an underlying "telescope" notion (a list of annotated
-`Type name` entries — type-first, §30 — built from §5's restricted
+`Type name` or `expr is name` entries, §30, built from §5's restricted
 grammar), just permitting different annotations and requiring different
 things of the return position. The distinct tagging is also what lets
 §4's head-dispatch tier 1 tell a function, a type constructor, and a
@@ -873,9 +873,9 @@ type constructor, and a value constructor pinning a runtime field with
 
 ## 30. Expression-before-name telescope entries; backwards references only
 
-A telescope entry is written `([subterm] [multiplicity] Type name...)` —
-type before name, Java-style rather than OCaml/Haskell `name : Type`
-style. Motivation: an entry may only depend on entries before it, left to
+A typed telescope entry is written
+`([subterm] [multiplicity] Type name...)` — type before name, Java-style
+rather than OCaml/Haskell `name : Type` style. Motivation: an entry may only depend on entries before it, left to
 right (§11) — a type can never mention the very name it's typing. Putting
 the type first makes source order track dependency order all the way
 down to a single entry, not just across entries: everything a type can
