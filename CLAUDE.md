@@ -51,3 +51,15 @@ by the owner and apply to every session.
     axioms, keywords, etc.) and is happy for Claude to propose better
     names. Feel free to suggest alternatives, but don't rename something
     already settled in DESIGN.md without flagging the change explicitly.
+
+11. **Never commit an unapproved design decision.** The docs and code
+    record the owner's decisions; Claude proposes, the owner disposes,
+    and the proposing happens in chat. If, while applying agreed edits,
+    a gap or contradiction turns up that the agreed edits don't cover,
+    stop and ask — do not invent a resolution and write it into any
+    committed file, however hedged or clearly flagged: "flagged for
+    owner review" in the text is not a substitute for asking first. If
+    something must land before the owner answers, record the gap itself
+    as an explicit open question, not a candidate answer. (Rule 1's
+    hedging governs claims; this rule governs decisions. Mechanical
+    wording choices while applying approved edits are fine.)
