@@ -406,7 +406,7 @@ Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
 
 ```
 reify-add : (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
-            (many d is c)
+            (many c is d)
 ```
 
 `c` and the proof `p` are erased (multiplicity `erased`); the return
