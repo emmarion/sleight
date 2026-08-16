@@ -253,20 +253,38 @@ application `(Univ)` — the same `is` mechanism used everywhere else, not
 a special case. So `Univ` is the type constructor and `Type` the name for
 the universe it builds, leaving `Type : Type` above reading unchanged.
 
-## 11. Multiple return values (built-in sigma)
+## 11. Multiple return values (sigma-like)
 
 A function can return multiple values, including zero, and later return
-values can depend on earlier ones — this is, in effect, a built-in sigma
-(dependent tuple) type rather than something layered on top. As usual,
+values can depend on earlier ones — in practice similar to a built-in
+sigma (dependent tuple), rather than something layered on top. As usual,
 each entry — argument or return value — may only depend on the entries
 before it, left to right. This is a function-only feature: type and
 value constructors always have exactly one return (§29) — `Type` for a
 type constructor, the constructed type itself for a value constructor.
 
+The resemblance stops short of it being a type: there is no sigma type
+former (§29), so a multi-size expression has no type of its own, and
+several values are never a single value. Each entry of a `values` is a
+size-one location (§16), so multiple values cannot nest, and there is
+nothing to pass into an argument slot or match on.
+
+Multiple values are introduced by `values` and eliminated by `let`,
+which binds one variable per value: `(let q r (divmod n d))` binds both
+of `divmod`'s returns, the right-hand side being the last item and the
+binders everything before it. The binders are a flat list, not a
+telescope. `let` is a statement (§16), so its binders enter the
+containing expression as ordinary scope entries, and an earlier binder
+is, to a later one, just another in-scope variable — a scope-table
+reference, not a de Bruijn index (§5). The dependency among a function's
+returns lives instead in the function's own return telescope, which is
+part of a closed, first-class type (§29) and does bind positionally; a
+`let` receives that telescope already instantiated.
+
 `match` requires an explicit result-type annotation: it lists the return
 type(s) (plural, to match a function's possibly-multiple return values)
 together with each one's erasure (the `erased`/`many` multiplicity from
-§6).
+§6). That annotation is what fixes the match's size (§16).
 
 ## 12. Data types, erasure, and match branch kinds
 
