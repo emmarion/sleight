@@ -507,16 +507,24 @@ nothing special — no distinct mechanism needed despite the lack of
 currying (§7).
 
 Some scope entries need an external annotation beyond the fields in §3 —
-e.g. marking that a given entry *is* the `Type` universe itself (as
-opposed to merely having `Type` as its own type, which is true of many
-entries), or marking which `Matchable` is the canonical one describing
+e.g. marking that a given entry *is* the `Univ` type constructor (§10),
+as opposed to merely having `Type` as its own type, which is true of many
+entries; or marking which `Matchable` is the canonical one describing
 `Special`'s own shape. Not yet worked out mechanically.
 
-Item 5, tentatively typed `Matchable [union|enum] T [C1(e1) ... Cn(en)]`
-(a tag for union-vs-enum, the type constructor being described, and its
-value constructors in declared order with each one's erasure), has two
-jobs: it's what lets the compiler know a type's constructors are
-disjoint (§19), and it's what lets you match on a first-class object
+Item 5 is typed `Matchable [union|enum] T [C1(e1) ... Cn(en)]`: a tag for
+union-vs-enum, the type constructor being described, and its value
+constructors in declared order with each one's multiplicity. `T` and the
+`Ci` are bare and unapplied — an applied type such as `(List Nat)` cannot
+appear there, since the variant set belongs to the constructor, not to
+any application of it. The tag is §12's discriminant and the `ei` are
+§12's phantom markers, which between them are exactly the facts no type
+records: a `TyCtor` type carries no discriminant, and a `ValCtor` type no
+phantom marker. A `Matchable` is always erased, everything it carries
+being in its type, and is born only by `def-adts` (§19).
+
+It has two jobs: it's what lets the compiler know a type's constructors
+are disjoint (§19), and it's what lets you match on a first-class object
 whose type is described only via first-class type/value constructors —
 i.e. not a syntactically fixed, named ADT.
 
