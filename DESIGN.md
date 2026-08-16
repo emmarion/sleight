@@ -761,9 +761,11 @@ head-dispatch algorithm for the real two-tier answer.
 they annotate a form rather than heading a list):
 20. `erased` — the 0-multiplicity (§6).
 21. `many` — the ω-multiplicity (§6).
-22. `:` — separates a telescope entry's name from its type.
-23. `is` — separates a telescope entry's (or any binding's) name from an
-    `is` expression instead of a type (§14).
+22. `:` — separates a name from the signature being given to it, at a
+    declaration (§30, §31). Whether this reorders the way telescope
+    entries do is still open (§30).
+23. `is` — separates an `is` expression from the name it introduces, in
+    place of a type (§14, §30).
 24. `->` — separates a signature's parameter telescope from its return
     telescope (§29).
 25. `subterm` — marks a telescope entry as participating in the
