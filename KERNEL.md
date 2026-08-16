@@ -29,5 +29,38 @@ constants.
 Round-trips nest: elaborating a comptime expression can hit a macro,
 itself a round-trip.
 
+The dialogue runs both ways: besides sending checked code out to the
+interpreter, the elaborator reads stored values back out of the scope
+environment — head dispatch (§4) needs the actual `Special` or `Macro`
+value of a `Const`, non-erased head. A block's boundary erasures (§34)
+are settled before it is stripped and run; nothing about a block's
+erasure depends on code after it.
+
 In v1 a macro is `List Raw -> Raw` (§9), so expanding one is that
 round-trip with result type `Raw`.
+
+## Interpreter trust
+
+The interpreter is untrusted for *semantics* but currently trusted for
+*facts*: every fact born from a stored value (`comptime-match`, and
+anything downstream of a value it bound) assumes the interpreter
+evaluated correctly. The assumption is not free. Consider
+
+```scheme
+(def-adts $ Maybe : -> Type
+  enum
+  (many T : -> (Maybe))
+  (many F : (erased (False) f) -> (Maybe)))
+```
+
+An honest program can only ever build `(T)`. A lying interpreter
+returns the `F` tag — and the erased proof field costs nothing to
+forge, because erased positions are stripped before it runs: there are
+no bytes to be wrong. A `comptime-match` asserting `F` then births a
+`(False)` token into scope, and consistency (§10) is gone. Erasure
+makes the forgery undetectable by construction, so §10's goal
+ultimately requires closing this: a small reference evaluator inside
+the kernel (the language is total, pure, and eager, so this is a
+modest recursive function over constructor trees) used as the arbiter
+for fact-bearing round trips. Recorded as a v2 obligation, load-bearing
+for §10, not merely an optimization concern.

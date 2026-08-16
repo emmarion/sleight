@@ -54,7 +54,7 @@ The same program as DESIGN.md §33, which is written without any.
 
 (let ML map-nat (comptime $ map-factory (level-of inc)))
 
-(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let xs (comptime $ Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (comptime $ map-nat (Nat) (Nat) inc xs)
 ```

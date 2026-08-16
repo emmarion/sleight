@@ -19,37 +19,52 @@ characters (e.g. `foo$bar`) is just part of an ordinary atom.
 
 ## 3. Scope environment
 
-The scope environment is a list of entries (shadowing allowed). Each
-entry carries:
+The scope environment is a list of entries (shadowing allowed), a pure
+registry. Each entry carries:
 
 - a **name** — optional; anonymous entries are allowed.
-- a **state**: `comptime`, `dynamic`, or `inacc` (inaccessible — the
-  motivating case is a `dynamic` entry from an enclosing scope becoming
-  inaccessible inside a comptime block; an `inacc` entry can also be
+- a **state**: `Const`, `Dyn`, or `Inacc` (inaccessible — the
+  motivating case is a `Dyn` entry from an enclosing scope becoming
+  inaccessible inside a comptime block; an `Inacc` entry can also be
   introduced directly, §27).
-- a **type** — like an "is" statement (below), just a tree whose leaves
-  are references to entries in this same table (§5).
-- an **erasure** (the `erased`/`many` multiplicity from §6) — orthogonal
-  to state.
-- an **"is" statement** — a rewrite/canonicalization rule (§5), which is
-  just a tree whose leaves are references to entries in this same table
-  (possibly this entry itself).
-- a **stored value**, present only if the state is `comptime`. If the
-  entry is also erased, this isn't a real value — it's a *token* that
-  just asserts the value exists/is true, not actual data.
+- a **stored value**, present only if the state is `Const`. If the
+  entry is erased, this isn't a real value — it's a *token* that just
+  asserts the value exists/is true, not actual data.
+- an **erasure** (the `erased`/`many` multiplicity from §6) — recorded
+  only on `Const` entries, which are born with it known (§34), and on
+  function parameters, whose erasure comes from the enclosing signature
+  when the body is entered. A `Dyn` intermediate's erasure is not
+  stored here at all: it is derived later, per §20, once its enclosing
+  unit has been fully checked.
 - a **level-birth marker** — set when the entry was introduced by
   `def-lvl` (§8). `prove-predates` requires its `Level` argument to be
   such an entry, not merely some value of type `(Level)`.
 - an (implicit) **introduction order** — needed to make the `Predates`
   assertion (§8) well-founded.
 
+An entry's **type** and its **"is" statement** (a
+rewrite/canonicalization rule) live not on the entry but in the two
+rewrite databases, the **silos** (§18). Each is just a tree whose
+leaves are references to entries in this same table (§5); an "is" tree
+may reference its own entry. Both are silo-relative — a type is as
+hypothesis-sensitive as a rule (§18), so the same entry's type may be
+refined under branch hypotheses in the full silo while staying
+hypothesis-free in the Const silo. Declaration sites (signatures,
+telescopes, `let` inference) write both silos; match-branch refinements
+write the full silo only; `comptime-match` verifications write both
+(§18).
+
+`Inacc` entries carry nothing beyond the registry fields above, and the
+silos may not be queried about them at all — any lookup is an access
+error.
+
 A type-constructor or value-constructor application expression also gets
-its own (typically anonymous) entry, with an `is` statement set to that
+its own (typically anonymous) entry, with an `is` rule set to that
 application. So "is"/type trees aren't a separate expression structure
-sitting apart from the scope table — every application anywhere is
-itself a scope entry, letting the rewrite engine "see into" and
+sitting apart from the registry and silos — every application anywhere
+is itself a scope entry, letting the rewrite engine "see into" and
 canonicalize through them uniformly (§18), the same as for any named
-variable. Consequence worth calling out explicitly: the scope table's
+variable. Consequence worth calling out explicitly: the silos'
 reference graph *is* the whole expression structure for anything in the
 restricted `is`/type grammar — no separate AST is needed alongside it for
 the rewrite engine to work with.
@@ -79,23 +94,25 @@ analyzing the *constantness* of the head of an s-expression:
   merely holding it as a value), the head of the s-expression must be
   constant-known.
 - Constant-known-ness is relative to where you are: something can be
-  dynamic while evaluating inside a comptime block, yet become
+  `Dyn` while evaluating inside a comptime block, yet become
   constant-known once evaluation leaves that block.
 
 **The elaborator's actual head-dispatch algorithm**, elaborating a list
 by examining its head:
 1. Look at the head's *type*: if it's a type constructor, a value
    constructor, or a function type, that's ordinary application — proceed
-   (this needs no comptime-known-ness at all, matching §9: any of these
+   (this needs no Const-known-ness at all, matching §9: any of these
    can be called through a first-class pointer).
-2. Otherwise, if the head is *additionally* comptime-known: if its value
-   is a `Special` or a `Macro` (§9), proceed — this is the
-   constant-known-head requirement above, made precise.
+2. Otherwise, if the head is *additionally* Const-known **and
+   non-erased** (§34): if its value is a `Special` or a `Macro` (§9),
+   proceed — this is the constant-known-head requirement above, made
+   precise. An erased `Const` entry stores only §3's token; there is no
+   value to dispatch on.
 3. Otherwise, it's an elaboration error.
 
 This resolves §27's open question: constructor/function application
 isn't dispatched through the `Special` mechanism at all — it's a
-separate, type-driven tier (1) that runs before the comptime-known
+separate, type-driven tier (1) that runs before the Const-known
 `Special`/`Macro` tier (2) is even considered.
 
 ## 5. Restricted dependent types
@@ -210,20 +227,32 @@ There are also two ways for these to be "born" (introduced):
   namespace. Everything in it can be renamed/shadowed, special forms and
   types included.
 - **State-inheriting `let`.** A `let` binder inherits the entire variable
-  state of the right-hand-side entry it corresponds to
-  (comptime/dynamic/inacc from §3, wholesale — type, stored value if
-  comptime, "is" rule), whenever that entry is an expression in §5's
-  grammar and so has a scope entry of its own (§3). This is per-binder:
+  state of the right-hand-side entry it corresponds to, wholesale —
+  state (§3), stored value if `Const`, settled erasure (§34), and, via
+  an alias rule recorded in both silos (§18), its type and "is" —
+  whenever that entry is an expression in §5's grammar and so has a
+  scope entry of its own (§3). This is per-binder:
   with `(let a b c (values x y z))`, each of `a`, `b`, `c` inherits from
   `x`, `y`, `z` respectively. Where an entry is a call or a match there is
-  nothing to inherit, §15 making those results `dynamic`. Inheritance holds
-  even when the right-hand side is `inacc`: renaming an inaccessible
+  nothing to inherit, §15 making those results `Dyn`. Inheritance holds
+  even when the right-hand side is `Inacc`: renaming an inaccessible
   variable this way is not a compile error (motivation deferred — relates
   to macros).
+- **Optional `let` assertions.** Each binder may independently carry an
+  optional type-or-`is` clause and an optional multiplicity — the full
+  2×2, per binder. Both are checked redundancies, not choices: the type
+  is compared for identity with the inferred one (§5), and the
+  multiplicity with the derived one (§20). A mismatch is a hard compile
+  error in *either* direction — asserting `many` on a binder whose
+  derived erasure is `erased` errors just as asserting `erased` on a
+  materialized one does. A programmer who does not care leaves the
+  annotation off. Deliberately strict for now; usage may argue for
+  softening later.
 - **Special forms as data.** A special form is a nullary variant of the
   `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
   dispatches on a `Special` variant in head position, and only when that
-  head is comptime-known (§4); held as a value it is ordinary data.
+  head is Const-known and non-erased (§4, §34); held as a value it is
+  ordinary data.
   `Special`'s variants are §27's registry — §16's statements and
   expressions, plus the lower-level tokens that annotate a form rather
   than heading a list.
@@ -319,10 +348,21 @@ returns lives instead in the function's own return telescope, which is
 part of a closed, first-class type (§29) and does bind positionally; a
 `let` receives that telescope already instantiated.
 
-`match` requires an explicit result-type annotation: it lists the return
-type(s) (plural, to match a function's possibly-multiple return values)
-together with each one's erasure (the `erased`/`many` multiplicity from
-§6). That annotation is what fixes the match's size (§16).
+`match` requires an explicit result-type annotation listing the return
+type(s) (plural, to match a function's possibly-multiple return
+values). The types are mandatory — they play the role of a match
+motive, and in a dependent match the branches' own result types mention
+branch-refined facts, so we believe the common generalization cannot
+reliably be inferred from the branches. Each entry's erasure, by
+contrast, is optional, per value: when present it is an assertion
+checked against the derived erasure (§20, §34), hard-erroring on
+mismatch either way, same as a `let` assertion (§9). The annotation is
+what fixes the match's size (§16).
+
+Any `values` entry may likewise carry an optional multiplicity
+assertion, with the same checked-redundancy semantics. Besides its
+tripwire use, this is one of the ways a comptime block's boundary
+erasure is determined (§34).
 
 ## 12. Data types, erasure, and match branch kinds
 
@@ -359,9 +399,9 @@ the head.
 
 **Match-proved equality isn't substitutability.** When a match proves two
 expressions equal (they rewrite/canonicalize identically, §5), that alone
-doesn't make them substitutable for one another — their erasure ("silo"?
-— tentative term, see CLAUDE.md §10) can still differ, and that's a
-separate axis from canonicalization equality.
+doesn't make them substitutable for one another — their erasure can
+still differ, and that's a separate axis from canonicalization
+equality.
 
 **Matching on enums** is (mostly) straightforward: the erasure of the
 variables a branch introduces follows §20's mirror rule.
@@ -437,7 +477,7 @@ value; the variable's type is then computed from that "is" expression.
 variable references and type-/value-constructor application, no function
 invocation. `let` is the one binding site where a type (or "is" clause)
 is optional altogether, since it can be inferred from the right-hand
-side.
+side; its optional multiplicity assertion is likewise per binder (§9).
 
 Motivating example, given `Add : (Nat) (Nat) (Nat) -> Type`:
 
@@ -455,22 +495,33 @@ into a materialized runtime value.
 ## 15. Match/call results, and a compile-time discriminant assertion
 
 For now: both a function call's result and a match statement's result
-are always `dynamic` — never `comptime`, never `inacc`. No automatic
+are always `Dyn` — never `Const`, never `Inacc`. No automatic
 constant-folding through calls or matches yet. One consequence: a match's
-scrutinee itself can only be `comptime` or `dynamic` (never `inacc`,
+scrutinee itself can only be `Const` or `Dyn` (never `Inacc`,
 which can't be accessed at all — §3). Inside a `comptime` block the same
-rule applies — a call's result is `dynamic` there too. What changes is
+rule applies — a call's result is `Dyn` there too. What changes is
 the boundary: a value crossing out of a comptime block becomes
-`comptime` (§24). An `inacc` value crossing out is a compile error; that
+`Const` (§24). An `Inacc` value crossing out is a compile error; that
 may be worth revisiting.
 
-A special form, `comptime-match`, works specifically on a `comptime`
-(comptime-known) scrutinee whose discriminant is non-erased — i.e. an
-enum, never a union (§12): it asserts the value has a given discriminant,
-and is a compile error if it doesn't. It consults the type's `Matchable`
-(§17) for both the enum/union tag and the discriminant's position in the
-constructors' declared order. It binds the matched constructor's
-fields as `comptime`, the way a state-inheriting `let` would (§9). The
+Constructor application does not confer `Const`-ness either: a value
+built by applying constructors to `Const` arguments is still `Dyn`
+where it stands. `Const` is born only as §34 lists — in particular, by
+crossing out of a comptime block — so a definition wanted as `Const` is
+wrapped in `comptime` (see §33's `xs`). This is deliberate; it may be
+relaxed later if it proves heavy.
+
+A special form, `comptime-match`, works specifically on a `Const`,
+itself non-erased (§34) scrutinee whose discriminant is also non-erased
+— i.e. an enum, never a union (§12): it asserts the value has a given
+discriminant, and is a compile error if it doesn't. It consults the
+type's `Matchable` (§17) for both the enum/union tag and the
+discriminant's position in the constructors' declared order. It binds
+the matched constructor's fields as `Const` at their declared
+multiplicities: `many`-declared fields bind with their values projected
+out of the stored value; `erased`-declared fields bind as §3's tokens —
+the stored value physically lacks them, the interpreter having run code
+with erased positions stripped (KERNEL.md). The
 intent is "proof via reflection/computation" — matches what's
 called "proof by reflection" in Coq (a real, externally-confirmed term
 for this general technique — a decidable proposition discharged by the
@@ -478,12 +529,16 @@ compiler just computing/normalizing, rather than the programmer
 constructing a proof term by hand; whether this design's mechanism lines
 up with Coq's in the details is still just a plausible guess).
 
-Open items, not yet resolved:
-- Before binding a match branch's fields, we need a rule for how an
-  introduced variable's erasure relates to the scrutinee's own erasure.
-- Whether `is`-declared constructor fields (§14) and forced type-index
-  unification in a match are literally the same mechanism — suspected
-  yes, not yet confirmed.
+On a discriminant mismatch the compile error prints the expected
+constructor and the actual value — discriminant and arguments. This is
+deliberately usable as a diagnostics channel: assert the expected
+variant of a wrapper enum whose other variants carry whatever payload
+the failure should report, and the payload becomes the error message.
+No dedicated mechanism needed.
+
+Open item, not yet resolved: whether `is`-declared constructor fields
+(§14) and forced type-index unification in a match are literally the
+same mechanism — suspected yes, not yet confirmed.
 
 ## 16. Expressions, statements, and size
 
@@ -535,6 +590,9 @@ the value a REPL would print.
 A file's top level counts as being inside a comptime block (§24), so
 calls there need no proofs. Worth revisiting.
 
+A comptime block's outputs must have their erasures determinable at the
+block boundary — see §34 for the rule and why.
+
 ## 17. First-class objects
 
 Everything below can be passed around as ordinary first-class data:
@@ -578,18 +636,65 @@ i.e. not a syntactically fixed, named ADT.
 
 ## 18. Match-branch rewrite algorithm (working formulation)
 
-The current working picture for how entering a match branch updates the
-in-scope rewrite rules:
+The current working picture for how the engine stores what it knows and
+how entering a match branch updates it:
 
-- The scope table (variables, their types, their `is` statements) is the
-  sole source of truth the rewrite/type-checking engine needs — almost
-  everything is answerable from just that.
+- The scope table (§3) plus the two rewrite databases, the **silos**,
+  are the sole sources of truth the rewrite/type-checking engine needs.
+  Each silo maps entries to a **type** and an optional **rewrite rule**
+  (atom → expression); types live in the silos, not on entries (§3),
+  because entering a branch forces unification on the scrutinee's type
+  as well as its structure — a type is as hypothesis-sensitive as a
+  rule, and "the" type of an entry is a silo-relative notion.
+- Rules and types are recorded after canonicalizing the proto-form —
+  which is why two whole silos rather than validity tags on individual
+  facts: fact *creation* depends on the facts already in force, so a
+  fact born under a branch hypothesis has that hypothesis baked into
+  its canonicalized form, and no per-fact tag can undo that. Each silo
+  is maintained self-consistently under its own canonicalization; the
+  same proto-fact — a type included — may take different normal forms
+  in the two, the full silo's possibly looking strange from outside,
+  and that is correct: it is only ever read under the hypotheses that
+  shaped it.
+- The **Const silo** is written by definitional and executed events
+  only: `is`-declarations, boundary crossings (§34), and
+  `comptime-match` verifications against a real stored value. It is
+  read when elaborating comptime blocks.
+- The **full silo** is written by all of the above *plus* match-branch
+  entry's forced unifications (below). It is read when type-checking
+  runtime code. Branch-forced rules land here *even when they rewrite a
+  `Const` entry*: a runtime match may scrutinize a `Const`, and the
+  forced rule is a claim with a runtime justification, pending at
+  elaboration time since ordinary matches never run during elaboration.
+- Every unconditional event writes to both silos, each write
+  canonicalized against that silo's own rules. Rules die with the scope
+  of the entries they mention, in both silos — §16's "none of it
+  survives the match" falls out for branch-forced rules, whose atoms
+  end with the branch.
+- Rationale for the split: a comptime block inside a match branch
+  elaborates and runs at compile time whether or not the branch is
+  runtime-reachable — reachability is undecidable in general — so
+  typing it against branch hypotheses could diverge from what the
+  interpreter actually computes. The Const silo is exactly the
+  hypothesis-free view the block needs. Boundary principle: only
+  Const-silo facts ever cross a boundary — comptime-block entry and
+  branch exit.
+- Two consequences, recorded as decisions: compile-time effects in
+  runtime-dead code still happen — a failing `comptime-match` in an
+  unreachable branch still fails the build, elaboration-time effects
+  being unconditional by nature. And a `comptime-match` inside a branch
+  is processed independently by each silo: succeeding in the Const silo
+  (verified against the real value) while deriving a contradiction in
+  the full one (verified `Nil` meets forced `Cons`) *is* the branch
+  being proven absurd (§12) — `comptime-match` doubles as a sound
+  dead-branch prover with no dedicated mechanism. A contradiction in
+  the Const silo is a genuine compile error.
 - Before an occurs-check, and before recursing into any equation's LHS or
   RHS, both sides are first canonicalized/rewritten to normal form via
   the applicable `is` statements.
 - This canonicalization engine deliberately does not consult a comptime
-  variable's actual stored value — it works uniformly across `comptime`
-  and `dynamic`, driven solely by `is` facts, even though `comptime`
+  variable's actual stored value — it works uniformly across `Const`
+  and `Dyn`, driven solely by `is` facts, even though `Const`
   carries strictly more information. A deliberate simplification, not an
   oversight.
 - Entering a branch **forces** a unification: the scrutinee is equated
@@ -619,7 +724,7 @@ in-scope rewrite rules:
 Since constructors are first class (§17), two constructor-*valued
 variables* aren't necessarily known to be the same or different just from
 being syntactically distinct — the constructor a variable holds might
-itself be dynamic/unresolved. A scope-table field listing known-disjoint
+itself be `Dyn`/unresolved. A scope-table field listing known-disjoint
 constructors was considered for this and set aside: it couldn't itself be
 passed around as a first-class object, in tension with §9's
 everything-is-first-class goal.
@@ -663,6 +768,14 @@ This works because the language is immutable, effect-free, and total
 not computing it if the value is never needed, so "erased" just means
 "not needed," and that's decidable from how a result is actually used
 rather than something that has to be stated everywhere by hand.
+
+The unit of derivation is the independently-evaluated unit: a function
+body (closed over its signature's declared multiplicities) or a
+comptime block (closed over its boundary erasures, §34). Inference
+never crosses an evaluation event — a unit's erasure is fully settled
+from its own text plus its boundary declarations before that unit is
+ever compiled or run, which is what makes the round trip (KERNEL.md)
+well-ordered.
 
 Multiplicity is relative to the enclosing context, not a global property
 of a value. Any function can be invoked in an erased context, and there
@@ -766,8 +879,9 @@ actually specified.
 
 **Statements** (§16):
 1. `let` — introduces zero or more bindings, one per value of the
-   right-hand side, which is the last item (§11); type/`is` optional,
-   inferred from the right-hand side (§9, §14); state-inheriting per
+   right-hand side, which is the last item (§11); type/`is` and
+   multiplicity each optional per binder, checked as assertions when
+   present (§9, §14); state-inheriting per
    binder, from the corresponding right-hand-side entry when that entry
    is in §5's grammar (§3, §9). Zero bindings is useless as the language
    stands, being pure and total, but is expected to matter once linear or
@@ -781,9 +895,10 @@ actually specified.
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
    each type's `Matchable` (§19).
-5. `comptime-match` — compile-time discriminant assertion on a
-   `comptime`, non-erased-discriminant scrutinee; binds the matched
-   fields as `comptime` (§15).
+5. `comptime-match` — compile-time discriminant assertion on a `Const`,
+   itself non-erased scrutinee with a non-erased discriminant; binds the
+   matched fields as `Const` at their declared multiplicities; a
+   mismatch is a compile error printing the actual value (§15, §34).
 
 **Type formers:**
 6. `Fn` — the function-type former (§7, §11, §16, §29).
@@ -808,7 +923,8 @@ or an `is` expression, not only at a declaration site.
 14. `prove-predates` — relates a variable to a `Level` born by an
     earlier `def-lvl`, birthing the `Predates` proof (§8).
 15. `comptime` — forces its argument to evaluate at compile time, taking
-    its size from it (§16, §24).
+    its size from it (§16, §24); its outputs' erasures must be
+    determinable at the boundary (§34).
 16. Function call — the callee, its arguments, and a decrease
     annotation: `(subterm p)` immediately before the decreasing argument
     for a same-level call, or `(predates p)` immediately after the callee
@@ -819,13 +935,14 @@ or an `is` expression, not only at a declaration site.
 18. Value-constructor application (§5, §12).
 19. `values` — packages values into an expression's result; a one-entry
     `values` may be left implicit, and `(values)` is the size-zero
-    expression (§11, §16).
+    expression (§11, §16); entries may carry optional multiplicity
+    assertions (§11).
 20. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
-21. `inacc` — produces one value in the `inacc` state (§3), given either
-    a type or, with `is`, an expression to take its identity from (§14).
-    The value can be named and typed but never accessed.
+21. `inacc` — produces one value in the `Inacc` state (§3), taking no
+    further arguments: it reserves a name that can never be accessed,
+    and about which the silos may not be queried (§3).
 
 Items 17–18 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
@@ -1096,7 +1213,7 @@ factory.
 
 (let ML map-nat (comptime $ map-factory I))
 
-(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let xs (comptime $ Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (comptime $ map-nat (Nat) (Nat) inc xs)
 ```
@@ -1112,10 +1229,129 @@ factory.
 - Both call flavours appear in one body: `(f (predates pml) hd)` is the
   lower-level call, `(map A B f (subterm p) tl)` the same-level
   recursion (§9, §27).
-- The usage reads two ways. Inside a function body the `comptime`
-  markers do real work, buying §24's proof-free calls where a leveled
-  body would otherwise need `Predates` proofs. At a file's top level,
-  which counts as being inside a comptime block (§16), they are
-  redundant.
+- The usage's `comptime` markers do double duty. Inside a function body
+  they buy §24's proof-free calls where a leveled body would otherwise
+  need `Predates` proofs. Everywhere — a file's top level included,
+  where calls need no proofs anyway (§16) — they are what births
+  `Const` (§34): `xs` is wrapped so the final block can reference it
+  rather than finding it `Inacc` (§3, §15). Its block's body ends in a
+  non-erased constructor application, so its boundary erasure is `many`
+  with no annotation, and `map-nat`'s block ends in a function call, so
+  its boundary erasures (`erased`, `many`) are read off `map-factory`'s
+  return telescope (§34).
 - `ML` is bound only because it is the first return; it is erased and
   never used again.
+
+## 34. Const formation and compile-time inspection
+
+The states are `Const`, `Dyn`, and `Inacc` (§3); "comptime" names the
+block form. This section collects how `Const` arises and what may be
+done with it.
+
+**Const values are born with known erasure.** The births:
+
+1. **Crossing a comptime-block boundary** (§16, §24) — erasure comes
+   from the block's boundary, below.
+2. **`comptime-match` field binding** (§15) — erasure is the field's
+   declared multiplicity.
+3. **State-inheriting `let`** (§9) — strictly propagation: the settled
+   erasure is inherited with the rest of the entry.
+4. **Definition statements** — `def-lvl`, `def-fns`, `def-adts` birth
+   their entries `Const`: a definition's value is built by elaboration
+   itself, with no evaluation involved — a function value is its own
+   compiled code; a `Level` or a `Matchable` is an erased token. This
+   item is Claude's inference from the principles here rather than an
+   explicit owner decision, recorded because without it §33's final
+   block could not reference `inc` or `I`; flagged for owner review.
+
+Nothing else births `Const`. In particular a constructor application
+over `Const` arguments is still `Dyn` (§15) — wrap it in `comptime` if
+`Const` is wanted.
+
+**Inspection requires Const and non-erased.** A `Const` entry's stored
+value is read in three places: §4's head dispatch (invoking a `Special`
+or `Macro`), `comptime-match`'s discriminant read (§15), and the
+execution of a comptime block that references the entry — the value
+gets embedded into the code the interpreter runs. §18's rewrite engine
+consults no stored values. All three require the entry to be `Const`
+and non-erased: an erased `Const` entry stores only §3's existence
+token, the value behind it never having been computed — the round trip
+strips erased positions before the interpreter runs (KERNEL.md). For
+block execution this requirement is just erasure checking doing its
+job: an erased `Const` may still be referenced from the block's own
+erased positions, which are stripped, not read.
+
+**The checker never evaluates.** The dividing line for what the checker
+itself computes: only work whose entire trace is spelled out in the
+source. Constructor application assembles data whose shape the source
+dictates; `comptime-match` *verifies* an asserted discriminant and
+projects — the programmer wrote the answer down. Selecting a match
+branch from a value would be the value steering elaboration — the first
+step of evaluation — so `match` results stay `Dyn` (§15) even on a
+`Const` scrutinee; the delimited alternative is wrapping the match in a
+comptime block, handing the branching to the interpreter. This is also
+why the inspection sites above stay checks rather than propagation: by
+the time any of them runs, the inspected entry's erasure is already
+settled, so no erasure demand ever flows backwards into code that has
+been checked, stripped, and run. The same shape governs the silos
+(§18): nothing — erasure demands, branch-hypothetical facts — crosses
+an evaluation boundary.
+
+**Comptime-block boundary erasure.** A block's outputs must have
+erasures known at its boundary, since the block is compiled and run
+before its surroundings are finished. No new annotation form is
+introduced; the erasures are read off the block body's final form,
+which must be one of:
+
+1. a `values` whose entries carry multiplicity assertions (§11);
+2. a `match` whose return annotation includes its optional erasures
+   (§11);
+3. a function call — the callee's declared return telescope;
+4. a value-constructor application whose head entry is non-erased — the
+   output is `many`. The requirement is on the head's *own* scope entry
+   (its §12 declaration marker, or the multiplicity of a binding
+   holding a first-class constructor), which is checkable without any
+   `Matchable` in scope; a constructor held at multiplicity `erased` is
+   rejected here, with the `values` annotation as the fallback.
+
+Anything else in final position — a bare variable, an unannotated
+`values` — is a compile error at a block boundary, fixed by annotating.
+Within the block, erasure inference is the ordinary closed-unit
+derivation (§20) against these boundary erasures.
+
+A comptime block thus resembles an anonymous nullary function: erasure
+declared (or determined) at its boundary, like a signature. Its result
+*type* needs no annotation, though — we believe the only true need for
+declared return types on functions is self-reference (recursion, §25),
+and a block, being anonymous and uncallable, cannot recurse into
+itself.
+
+§23's invariant appears to survive all of this: stripping erasure only
+turns erased positions non-erased, so a program valid under these rules
+should remain valid — argued by inspection, not verified.
+
+## 35. v2 sketch: macro hygiene via entry references
+
+Not settled — a recorded direction, from a design discussion, for the
+v2 macro system (§9 defers macro termination to v2 as well).
+
+`Raw`'s variable leaves could be of two kinds: a **name**, resolved at
+the expansion site (capturable, occasionally wanted), or an **entry
+reference** — the identity of a scope entry from the macro's definition
+site (unique ids, not table positions). References are identity-based,
+so shadowing at the expansion site cannot capture them; that is the
+hygiene property.
+
+At expansion, a reference to an entry still in scope resolves directly.
+A reference to a dead entry is, for now, simply an error: the division
+of labor is that expansion-site material enters through the macro's
+arguments, while captured definition-site material must still be alive.
+In principle a dead entry could instead be *grafted* into the live
+scope — a form of scope merging — but the rules for merging scopes and
+combining their rewrite rules are complicated and not designed.
+Recorded as an open v2 question, nothing more.
+
+This is in the lineage of syntactic closures (Bawden) more than
+Racket's scope-sets, we believe, without having verified the
+correspondence. It may also be the mechanism behind §9's deferred note
+that renaming `Inacc` entries via `let` "relates to macros".
