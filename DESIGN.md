@@ -532,6 +532,9 @@ one. What consumes its result is not yet settled: the intent is for it
 eventually to be a `String -> String` function, and for now it is simply
 the value a REPL would print.
 
+A file's top level counts as being inside a comptime block (§24), so
+calls there need no proofs. Worth revisiting.
+
 ## 17. First-class objects
 
 Everything below can be passed around as ordinary first-class data:
@@ -1109,8 +1112,10 @@ factory.
 - Both call flavours appear in one body: `(f (predates pml) hd)` is the
   lower-level call, `(map A B f (subterm p) tl)` the same-level
   recursion (§9, §27).
-- `comptime` is what makes the factory worth calling — its results cross
-  out of the block as `comptime` (§15). The caller writes one `def-lvl`
-  and no proof.
+- The usage reads two ways. Inside a function body the `comptime`
+  markers do real work, buying §24's proof-free calls where a leveled
+  body would otherwise need `Predates` proofs. At a file's top level,
+  which counts as being inside a comptime block (§16), they are
+  redundant.
 - `ML` is bound only because it is the first return; it is erased and
   never used again.
