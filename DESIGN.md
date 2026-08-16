@@ -408,16 +408,16 @@ invocation. `let` is the one binding site where a type (or "is" clause)
 is optional altogether, since it can be inferred from the right-hand
 side.
 
-Motivating example, given `Add : Nat -> Nat -> Nat -> Type`:
+Motivating example, given `Add : (Nat) (Nat) (Nat) -> Type`:
 
 ```
-reify-add : (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
+reify-add : (many (Nat) a b) (erased (Nat) c) (erased (Add a b c) p) ->
             (many c is d)
 ```
 
 `c` and the proof `p` are erased (multiplicity `erased`); the return
 value `d` "is `c`" but is declared with multiplicity `many`. The "is"
-clause gives `d` its type (`Nat`, via `c`) while letting its erasure
+clause gives `d` its type (`(Nat)`, via `c`) while letting its erasure
 differ from `c`'s — this is the mechanism for reifying an erased witness
 into a materialized runtime value.
 
@@ -525,7 +525,7 @@ being `enum` or `union`: a tag for union-vs-enum, the type constructor
 being described, and its value constructors in declared order with each
 one's multiplicity — so `List`'s is
 `(Matchable enum List (many Nil) (many Cons))`. `T` and the
-`Ci` are bare and unapplied — an applied type such as `(List Nat)` cannot
+`Ci` are bare and unapplied — an applied type such as `(List (Nat))` cannot
 appear there, since the variant set belongs to the constructor, not to
 any application of it. The tag is §12's discriminant and the `ei` are
 §12's phantom markers, which between them are exactly the facts no type
@@ -689,7 +689,7 @@ not something verified yet (in the spirit of §10).
 
 The non-erased stand-in for `Level` and friends would most likely just be
 `Unit` (an enum with one constructor, no fields) — but other
-representations (e.g. `Level` as a wrapper around an actual `Nat`) would
+representations (e.g. `Level` as a wrapper around an actual `(Nat)`) would
 satisfy the invariant too.
 
 ## 24. Comptime blocks call freely at top level
@@ -906,30 +906,30 @@ Retrofitted examples:
 
 `reify-add`'s type:
 ```scheme
-(Fn L (many Nat a b) (erased Nat c) (erased (Add a b c) p) ->
+(Fn L (many (Nat) a b) (erased (Nat) c) (erased (Add a b c) p) ->
    (many c is d))
 ```
 
 `divmod`'s type:
 ```scheme
-(Fn L (subterm many Nat n) (many Nat d) -> (many Nat q) (many Nat r))
+(Fn L (subterm many (Nat) n) (many (Nat) d) -> (many (Nat) q) (many (Nat) r))
 ```
 
 A length-indexed vector's type constructor. Its entries carry no
 multiplicities at all (§29):
 ```scheme
-(TyCtor (Type A) (Nat n) -> Type)
+(TyCtor (Type A) ((Nat) n) -> Type)
 ```
 
 A value constructor whose runtime field is pinned to a compound
 expression. `a` and `b` are erased indices of `Two`; `lst` is stored at
 runtime and is definitionally the two-element list built from them, so it
 serves as data and in type position at once. A plain
-`(many (List Nat) lst)` field would carry the same bytes with unknown
+`(many (List (Nat)) lst)` field would carry the same bytes with unknown
 identity:
 ```scheme
-(ValCtor (erased Nat a) (erased Nat b)
-   (many (Cons Nat a $ Cons Nat b $ Nil Nat) is lst) -> (Two a b))
+(ValCtor (erased (Nat) a) (erased (Nat) b)
+   (many (Cons (Nat) a $ Cons (Nat) b $ Nil (Nat)) is lst) -> (Two a b))
 ```
 
 ## 31. Worked example: `List`
