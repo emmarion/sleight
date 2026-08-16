@@ -60,8 +60,7 @@ type _ core =
   | Bundle : 'e core list -> 'e core
   | Apply : 'e core * 'e core list -> 'e core
   | Call : 'e call -> 'e core
-  | Comptime : 'e core -> 'e core
-  | Begin : 'e core list -> 'e core
+  | Comptime : 'e body -> 'e core
   | Let : 'e binding -> 'e core
   | Def_lvl : name option -> 'e core
   | Def_fns : 'e fn_def list -> 'e core
@@ -70,6 +69,8 @@ type _ core =
   | Comptime_match : 'e ctor_assert -> 'e core
   | Birth : birth -> 'e core
   | Axiom : 'e axiom -> 'e core
+
+and 'e body = 'e core list
 
 and 'e call = {
   callee : 'e core;
@@ -100,7 +101,7 @@ and 'e binding = {
   rhs : 'e core;
 }
 
-and 'e fn_def = { fn_name : name; fn_sig : fn_ty; body : 'e core }
+and 'e fn_def = { fn_name : name; fn_sig : fn_ty; body : 'e body }
 
 and adt_def = {
   adt_name : name;
@@ -123,7 +124,10 @@ and 'e branch = {
   outcome : 'e branch_body;
 }
 
-and 'e branch_body = Present of 'e core | Absurd | Absurd_by_proof of 'e core
+and 'e branch_body =
+  | Present of 'e body
+  | Absurd
+  | Absurd_by_proof of 'e body
 
 and 'e ctor_assert = {
   asserted : 'e core;
@@ -157,8 +161,8 @@ and entry = {
 and table = entry array
 
 type ask =
-  | Check of { term : complete core; expects : multiplicity telescope option }
-  | Evaluate of { term : complete core }
+  | Check of { term : complete body; expects : multiplicity telescope option }
+  | Evaluate of { term : complete body }
   | Admit of { obligation : obligation_id; results : value list }
   | Abandon of obligation_id
   | Infer of complete core
@@ -195,7 +199,7 @@ type reply =
     }
   | Runnable of {
       obligation : obligation_id;
-      code : elided core;
+      code : elided body;
       expects : multiplicity telescope;
     }
   | Inferred of multiplicity telescope
