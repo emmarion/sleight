@@ -137,6 +137,9 @@ decrements a lexicographic ordering whose most significant component is
 the function's level, followed by its `subterm`-annotated arguments in
 left-to-right order.
 
+All functions defined by one `def-fns` block share a single level,
+written once on the block rather than per function (§27).
+
 ## 8. Built-ins backing termination
 
 These reify §7's level/subterm machinery as actual types, usually fully
@@ -760,8 +763,9 @@ actually specified.
    unique types arrive (§6) — invoking a destructor, or similar.
 2. `def-lvl` — births a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
-   functions; a single function is just the one-element case. Possibly
-   nested inside another function's body (§9, §16).
+   functions at a shared level, written on the form itself; a single
+   function is just the one-element case. Possibly nested inside another
+   function's body (§9, §16).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
@@ -881,10 +885,11 @@ things of the return position. The distinct tagging is also what lets
 §4's head-dispatch tier 1 tell a function, a type constructor, and a
 value constructor apart when deciding how to elaborate an application.
 
-The `name : [level] (telescope) -> (telescope)` declaration syntax used
-for `length`/`List`/`Cons` in recent examples is sugar over these three
+The `name : (telescope) -> (telescope)` declaration syntax used for
+`length`/`List`/`Cons` in recent examples is sugar over these three
 formers plus a name and (for functions) a body — not a separate
-mechanism.
+mechanism. A function's level is written on its enclosing `def-fns`
+(§27), not in the declaration.
 
 Multi-return is function-only (above), but `is` (§14) is not — it works
 in a type-constructor's or value-constructor's telescope too, same as a
@@ -1007,7 +1012,7 @@ drafted (12 opens, 12 closes).
 
 (def-lvl L)
 
-(def-fns $ length : L (erased Type A) (subterm many (List A) xs) ->
+(def-fns L $ length : (erased Type A) (subterm many (List A) xs) ->
     (many (Nat) n)
   (match xs ((many (Nat) r))
     ((Nil a) (Zero))
@@ -1051,7 +1056,7 @@ factory.
 ```scheme
 (def-lvl F)
 
-(def-fns $ map-factory : F (erased (Level) M) ->
+(def-fns F $ map-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A) (erased Type B)
               (many (Fn M (many A x) -> (many B y)) f)
@@ -1060,7 +1065,7 @@ factory.
           mapped)
   (def-lvl L)
   (let pml (prove-predates M L))
-  (def-fns $ map : L (erased Type A) (erased Type B)
+  (def-fns L $ map : (erased Type A) (erased Type B)
       (many (Fn M (many A x) -> (many B y)) f)
       (subterm many (List A) xs) ->
       (many (List B) ys)
@@ -1075,7 +1080,7 @@ factory.
 ```scheme
 (def-lvl I)
 
-(def-fns $ inc : I (many (Nat) n) -> (many (Nat) m)
+(def-fns I $ inc : (many (Nat) n) -> (many (Nat) m)
   (Succ n))
 
 (let ML map-nat (comptime $ map-factory I))
