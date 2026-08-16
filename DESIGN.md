@@ -136,21 +136,23 @@ left-to-right order.
 
 ## 8. Built-ins backing termination
 
-Names below are placeholders (see CLAUDE.md §10) — the owner is open to
-better ones. These reify §7's level/subterm machinery as actual types,
-usually fully erased:
+These reify §7's level/subterm machinery as actual types, usually fully
+erased:
 
-- `Level`: essentially an integer.
-- `Predates` (tentative name, replaces `LevelLT`/`After`):
-  `(A: Type) (a: A) -> Level -> Type` — asserts a level decrease.
-- `Subterm` (heterogeneous): `(A: Type) (a: A) (B: Type) (b: B) -> Type`.
+- `Level`: essentially an integer; a nullary type constructor, so the
+  type it builds is `(Level)`.
+- `Predates`: `(Type A) (A a) ((Level) l) -> Type` — asserts a level
+  decrease.
+- `Subterm` (heterogeneous): `(Type A) (A a) (Type B) (B b) -> Type`.
 
-Three core axioms/functions:
+Three core axioms/functions, each as premises and conclusion:
 
-1. Predates transitivity: `Predates a b -> Predates b c -> Predates a c`
-2. Subterm transitivity: `Subterm _ a _ b -> Subterm _ b _ c -> Subterm _ a _ c`
-3. Predates transitivity through subterm:
-   `Predates _ a L -> Subterm _ a _ b -> Predates _ b L`
+1. `Predates` transitivity: from `(Predates A a l1)` and
+   `(Predates (Level) l1 l2)`, conclude `(Predates A a l2)`.
+2. `Subterm` transitivity: from `(Subterm A a B b)` and
+   `(Subterm B b C c)`, conclude `(Subterm A a C c)`.
+3. `Predates` through `Subterm`: from `(Predates A a l)` and
+   `(Subterm B b A a)`, conclude `(Predates B b l)`.
 
 There are also two ways for these to be "born" (introduced):
 
