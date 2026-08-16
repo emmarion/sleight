@@ -339,16 +339,16 @@ separate axis from canonicalization equality.
 variables a branch introduces follows §20's mirror rule.
 
 But: when evaluating a branch reached through a **phantom** constructor
-(a constructor marked erased in its own declaration — distinct from a
-scope entry merely being erased, §3), everything in scope is erased — the
-variables the branch introduces included, whatever their fields'
-annotations say — and, more importantly, so is the expected type of the
-branch's own result. Concretely: such a branch's body can, and in fact
-must, return entirely erased values, and that's considered valid even
-when the match itself was annotated (§11) to return some non-erased
-result(s) — this branch is exempted from matching the match's declared
-erasures. §20 covers the underlying erasure-propagation model this fits
-into.
+(one whose own `def-adts` declaration is marked erased, as against a
+binding elsewhere that merely holds a constructor at multiplicity
+`erased`, §3), everything in scope is erased — the variables the branch
+introduces included, whatever their fields' annotations say — and, more
+importantly, so is the expected type of the branch's own result.
+Concretely: such a branch's body can, and in fact must, return entirely
+erased values, and that's considered valid even when the match itself
+was annotated (§11) to return some non-erased result(s) — this branch is
+exempted from matching the match's declared erasures. §20 covers the
+underlying erasure-propagation model this fits into.
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
