@@ -876,12 +876,12 @@ type constructor, and a value constructor pinning a runtime field with
 
 A typed telescope entry is written
 `([subterm] [multiplicity] Type name...)` — type before name, Java-style
-rather than OCaml/Haskell `name : Type` style. Motivation: an entry may only depend on entries before it, left to
-right (§11) — a type can never mention the very name it's typing. Putting
-the type first makes source order track dependency order all the way
-down to a single entry, not just across entries: everything a type can
-reference sits to its left; the name being introduced, which nothing yet
-can reference, comes last.
+rather than OCaml/Haskell `name : Type` style. Motivation: an entry may
+only depend on entries before it, left to right (§11) — a type can never
+mention the very name it's typing. Putting the type first makes source
+order track dependency order all the way down to a single entry, not
+just across entries: everything a type can reference sits to its left;
+the name being introduced, which nothing yet can reference, comes last.
 
 `is`-entries are ordered the same way, `expr is name`, and for the same
 reason: the expression may only reference entries to its left, and the
