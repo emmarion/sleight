@@ -411,42 +411,52 @@ Open items, not yet resolved:
   unification in a match are literally the same mechanism — suspected
   yes, not yet confirmed.
 
-## 16. Core language construct inventory
+## 16. Expressions, statements, and size
 
-Everything in the language is an expression — there's no separate
-statement category. The construct list below is split by whether
-evaluating it extends the ambient scope for later/surrounding code:
+Every expression has a **size**: the number of values it produces.
 
-- **Scope-extending** (bindings visible to subsequent/surrounding code):
-  `let`; `def-lvl`; `def-fns` (defines one or more, possibly mutually
-  recursive, functions — a single function is just the one-element case);
-  `def-adts` (likewise, for one or more mutually recursive ADTs); `match`
-  (branch-local field variables, and possibly refined `is` facts on
-  pre-existing variables, §14); `comptime-match` (§15). Every one
-  of these can appear at top level or
-  nested inside a function body — nothing here is top-level-only. None of
-  these take an explicit body/continuation the way a classic `let` would
-  — see `begin`, below, for what actually delimits their scope.
-- **Locally scoped** (bindings usable only within the construct's own
-  extent, not exported to arbitrary surrounding code): the three
-  type-formers — function, type-constructor, value-constructor (§29) —
-  each with parameters usable in a later parameter's type or the return
-  type, §11, but nowhere else; a `Matchable`-type former (§17); `begin`
-  — a sequence of expressions, evaluating to its last one, that hosts the
-  scope-extending forms above: each one just adds its binding to the
-  ambient `begin`, visible to the rest of the sequence, and gone once the
-  `begin` itself ends. Function bodies, `comptime` bodies, match branch
-  bodies, and the top-level scope of a file are all *implicitly* `begin`
-  — none of them need the keyword written out explicitly.
-- **Ordinary, scope-neutral expressions**: `Subterm` birth and `Predates`
-  birth (§8); `comptime` (one argument, forces its compile-time
-  evaluation); the three function-call forms — lower-level with a
-  `Predates` proof, same-level with a `Subterm` proof, and the TBD v2
-  multi-proof form (§9, §13); type-constructor application;
-  value-constructor application; the three transitivity axioms (§8, for
-  now special forms rather than ordinary prelude functions); a
-  still-unnamed form that bundles multiple values into a function's or
-  match's multi-value return (§11).
+An expression of any size is a series of **statements** followed by a
+`values` line, where each entry of the `values` is itself an expression.
+A one-entry `values` may be left implicit, written as just that entry,
+so `x` and `(Cons A hd tl)` are ordinary size-one expressions with no
+statements, exactly equivalent to `(values x)` and
+`(values (Cons A hd tl))`. `(values)`, with no entries, is the size-zero
+expression.
+
+Every form binds within its own sub-expressions — a function's
+parameters in its body, a match branch's fields in that branch, a
+telescope entry in the entries after it. That is unremarkable and gets
+no name. A **statement** is a form that binds *outward* as well: its
+names enter the expression containing it, visible to the rest of that
+expression and gone once it ends. Statements produce no values.
+
+The statements are `let`, `def-lvl`, `def-fns`, `def-adts` and
+`comptime-match`. Every one can appear at top level or nested inside a
+function body; nothing here is top-level-only. `def-fns` and `def-adts`
+do both at once — the defined names go outward, while each definition's
+own parameters stay inward — and it is only the outward half that makes
+them statements.
+
+`match` binds inward only. Its branch-local fields, and any `is` facts
+refined by entering a branch, reach that branch and no further, since
+different branches learn different things and none of it survives the
+match. So `match` is an ordinary expression, of the size given by its
+return annotation (§11). `comptime-match` binds outward for the
+complementary reason: having no branches, it asserts a single
+discriminant, so what it learns is unambiguous.
+
+Most locations require a size-one expression. The exceptions are the
+three places where a size is fixed by something written down elsewhere:
+
+- a function body, matching the function's declared return telescope
+  (§11);
+- a match branch body, matching the match's own return annotation (§11);
+- a `let`'s right-hand side, matching the number of variables it binds.
+
+A file's top level is an expression like any other, and so requires size
+one. What consumes its result is not yet settled: the intent is for it
+eventually to be a `String -> String` function, and for now it is simply
+the value a REPL would print.
 
 ## 17. First-class objects
 
