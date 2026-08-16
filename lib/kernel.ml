@@ -30,16 +30,12 @@ and fn_ty = {
 
 and tyctor_ty = { indices : decl telescope }
 
-and valctor_ty = {
-  fields : slot telescope;
-  built_mult : multiplicity;
-  built : inert;
-}
+and valctor_ty = { fields : slot telescope; built : inert }
 
 and matchable_ty = {
   disc : discriminant;
   described : var;
-  variants : var list;
+  variants : (var * multiplicity) list;
 }
 
 and decl = Has_type of inert | Is of inert
@@ -108,7 +104,11 @@ and adt_def = {
   ctors : ctor_def list;
 }
 
-and ctor_def = { ctor_name : name; ctor_sig : valctor_ty }
+and ctor_def = {
+  ctor_name : name;
+  ctor_mult : multiplicity;
+  ctor_sig : valctor_ty;
+}
 
 and 'e match_form = {
   scrutinee : 'e core;
