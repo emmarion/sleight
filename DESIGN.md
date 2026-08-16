@@ -594,6 +594,14 @@ for the same type are simultaneously in scope and it's genuinely
 ambiguous which one a match should use, that ambiguity is itself a
 compile error, not something resolved arbitrarily/silently.
 
+`def-adts` is the sole birth site: declaring an ADT births an anonymous
+`Matchable` describing it, from the `enum`/`union` tag and the
+constructors' declaration markers (§12). Nothing else introduces one.
+
+A special form, `matchable-of`, takes a bare unapplied type constructor
+and yields the `Matchable` for it from ambient scope, erroring in the
+ambiguous case above. A `let` (§9) gives it a name where one is wanted.
+
 ## 20. Bottom-up erasure
 
 Erasure doesn't need pervasive annotation — it's computed bottom-up.
