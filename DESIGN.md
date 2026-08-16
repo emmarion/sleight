@@ -830,7 +830,7 @@ function's. See §30 for worked examples of all three formers (`reify-add`
 and `divmod`'s function types, a "homogeneous pair" type constructor, and
 a reify-pattern value constructor) — written type-first, per §30.
 
-## 30. Type-first telescope entries; backwards references only
+## 30. Expression-before-name telescope entries; backwards references only
 
 A telescope entry is written `([subterm] [multiplicity] Type name...)` —
 type before name, Java-style rather than OCaml/Haskell `name : Type`
@@ -841,21 +841,21 @@ down to a single entry, not just across entries: everything a type can
 reference sits to its left; the name being introduced, which nothing yet
 can reference, comes last.
 
-`is`-entries are *not* reordered — they stay `name is expr`, unlike
-`Type name`. Unlike a type annotation, which just describes, an `is`
-clause defines what the name *is*, and "d is c" reads correctly
-subject-first in a way "c is d" wouldn't (even though the underlying
-equality is symmetric).
+`is`-entries are ordered the same way, `expr is name`, and for the same
+reason: the expression may only reference entries to its left, and the
+name being introduced — which nothing can yet refer to — comes last. It
+reads as an ordinary definition, "(the two-element list) is `lst`", with
+the new name in final position.
 
 Whether the *outer* declaration-level naming (`length : Fn ...`) reorders
 the same way is still open — that's a binding (`let`-like: "give this
 name to this signature"), possibly not the same kind of thing as a
 telescope entry at all.
 
-Caveat: type-first breaks `$` when a name would trail a `$`-headed type
-expression, since `$` reads greedily until the enclosing form's
-terminator and would swallow the trailing name as another argument to
-the type instead. Plain parens are needed there instead of `$`.
+Caveat: this breaks `$` when a name would trail a `$`-headed expression,
+since `$` reads greedily until the enclosing form's terminator and would
+swallow the trailing name as another argument. Plain parens are needed
+there instead of `$`.
 
 `let` requires backwards references only, OCaml-`let` style: a binding
 can never see itself or anything declared after it. This is what keeps
