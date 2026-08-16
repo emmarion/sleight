@@ -639,12 +639,12 @@ The propagation rule for a function call or constructor application:
    non-erased at the call site, *and* the function or constructor being
    called must itself be non-erased.
 
-Consequence of rule 2: a phantom (marked-erased) constructor can only
-ever produce an erased result — it fails the "function/constructor
-itself must be non-erased" half of the rule. An ordinary (non-phantom)
-constructor can produce either, depending on context. Phantom
-constructors, and all type constructors regardless of individual marking
-(§12), always enter scope as erased.
+Phantom constructors, and all type constructors regardless of individual
+marking (§12), always enter scope as erased. Consequence of rule 2: a
+phantom constructor can only ever produce an erased result — it fails the
+"function/constructor itself must be non-erased" half of the rule. An
+ordinary (non-phantom) constructor can produce either, depending on
+context.
 
 The mirror rule, for destruction — a match binding a constructor's
 fields. A variable bound by a match carries no erasure annotation; its
