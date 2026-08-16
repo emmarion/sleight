@@ -194,7 +194,7 @@ There are also two ways for these to be "born" (introduced):
   grammar and so has a scope entry of its own (§3). This is per-binder:
   with `(let a b c (values x y z))`, each of `a`, `b`, `c` inherits from
   `x`, `y`, `z` respectively. Where an entry is a call or a match there is
-  nothing to inherit, §15 making those results `Dyn`. Inheritance holds
+  nothing to inherit, §15 making those results `dynamic`. Inheritance holds
   even when the right-hand side is `inacc`: renaming an inaccessible
   variable this way is not a compile error (motivation deferred — relates
   to macros).
@@ -432,18 +432,18 @@ into a materialized runtime value.
 ## 15. Match/call results, and a compile-time discriminant assertion
 
 For now: both a function call's result and a match statement's result
-are always `Dyn` — never `Const`, never `Inacc`. No automatic constant-
-folding through calls or matches yet. One consequence: a match's
-scrutinee itself can only be `Const` or `Dyn` (never `Inacc`, which can't
-be accessed at all — §3).
+are always `dynamic` — never `comptime`, never `inacc`. No automatic
+constant-folding through calls or matches yet. One consequence: a match's
+scrutinee itself can only be `comptime` or `dynamic` (never `inacc`,
+which can't be accessed at all — §3).
 
-A special form, `comptime-match`, works specifically on a `Const`
+A special form, `comptime-match`, works specifically on a `comptime`
 (comptime-known) scrutinee whose discriminant is non-erased — i.e. an
 enum, never a union (§12): it asserts the value has a given discriminant,
 and is a compile error if it doesn't. It consults the type's `Matchable`
 (§17) for both the enum/union tag and the discriminant's position in the
 constructors' declared order. It binds the matched constructor's
-fields as `Const`, the way a state-inheriting `let` would (§9). The
+fields as `comptime`, the way a state-inheriting `let` would (§9). The
 intent is "proof via reflection/computation" — matches what's
 called "proof by reflection" in Coq (a real, externally-confirmed term
 for this general technique — a decidable proposition discharged by the
@@ -558,9 +558,9 @@ in-scope rewrite rules:
   RHS, both sides are first canonicalized/rewritten to normal form via
   the applicable `is` statements.
 - This canonicalization engine deliberately does not consult a comptime
-  variable's actual stored value — it works uniformly across `Const` and
-  `Dyn`, driven solely by `is` facts, even though `Const` carries
-  strictly more information. A deliberate simplification, not an
+  variable's actual stored value — it works uniformly across `comptime`
+  and `dynamic`, driven solely by `is` facts, even though `comptime`
+  carries strictly more information. A deliberate simplification, not an
   oversight.
 - Entering a branch **forces** a unification: the scrutinee is equated
   with the branch's constructor applied to the newly-bound fields, and
@@ -755,9 +755,9 @@ actually specified.
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
    each type's `Matchable` (§19).
-5. `comptime-match` — compile-time discriminant assertion on a `Const`,
-   non-erased-discriminant scrutinee; binds the matched fields as `Const`
-   (§15).
+5. `comptime-match` — compile-time discriminant assertion on a
+   `comptime`, non-erased-discriminant scrutinee; binds the matched
+   fields as `comptime` (§15).
 
 **Type formers:**
 6. `Fn` — the function-type former (§7, §11, §16, §29).
@@ -843,7 +843,7 @@ enough, because a function's telescope, a type constructor's telescope,
 and a value constructor's telescope aren't structurally the same grammar,
 not just semantically different:
 
-1. **Function-type former**, `Fn` (§16) — takes a level (§7), plus a
+1. **Function-type former**, `Fn` — takes a level (§7), plus a
    telescope where each entry freely chooses its own multiplicity and can
    be marked `subterm`; produces a function type.
 2. **Type-constructor-type former**, `TyCtor` — no level (§7); its
