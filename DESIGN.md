@@ -195,10 +195,11 @@ There are also two ways for these to be "born" (introduced):
   to macros).
 - **Special forms as data.** A special form is a nullary variant of the
   `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
-  dispatches on seeing a `Special` variant in head position. `Special`'s
-  variants cover §16's construct inventory (`Match`, `Let`, `def-lvl`,
-  etc.), plus lower-level tokens that also need first-class status:
-  `erased`, `many` (§6), `:`, `is` (§14), and `->` (§29) — §27's registry.
+  dispatches on a `Special` variant in head position, and only when that
+  head is comptime-known (§4); held as a value it is ordinary data.
+  `Special`'s variants are §27's registry — §16's statements and
+  expressions, plus the lower-level tokens that annotate a form rather
+  than heading a list.
 - **Macros as data.** `Macro` is a type with one constructor with one
   field, a function — tentatively `List Raw -> Raw`, from a list of
   unelaborated ("raw") terms to a raw term.
