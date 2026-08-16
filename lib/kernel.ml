@@ -97,7 +97,7 @@ and 'e axiom =
   | Subterm_trans of 'e core * 'e core
   | Predates_via_subterm of 'e core * 'e core
 
-and 'e binding = { bound : decl option telescope; rhs : 'e core }
+and 'e binding = { bound : decl option binder list; rhs : 'e core }
 
 and 'e fn_def = { fn_name : name; fn_sig : fn_ty; body : 'e body }
 
