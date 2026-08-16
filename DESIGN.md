@@ -908,6 +908,10 @@ the same way is still open — that's a binding (`let`-like: "give this
 name to this signature"), possibly not the same kind of thing as a
 telescope entry at all.
 
+`let` also runs the other way: `(let p rhs)` puts the names first and the
+right-hand side last, where the rule above would have the names last.
+Left as is for now — worth reconsidering.
+
 Caveat: this breaks `$` when a name would trail a `$`-headed expression,
 since `$` reads greedily until the enclosing form's terminator and would
 swallow the trailing name as another argument. Plain parens are needed
