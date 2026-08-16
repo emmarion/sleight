@@ -58,18 +58,3 @@ The same program as DESIGN.md §33, which is written without any.
 
 (comptime $ map-nat (Nat) (Nat) inc xs)
 ```
-
-- The factory goes from 20 lines to 16, the usage from 8 to 5. All three
-  `def-lvl` forms are gone, as are both proof-binding `let`s, and the
-  `Cons` branch collapses to one line.
-- `level-of` (§27) is what lets a level stay anonymous and still be
-  referred to: the factory returns `(level-of map)`, and the caller
-  passes `(level-of inc)`.
-- `L` survives as a name in the return telescope, since the second
-  return's type has to mention it. It is the one level here that `_`
-  cannot replace.
-- The factory's signature is untouched. No `_` applies inside a
-  telescope, and the signature is over half of what remains.
-- `map-nat` cannot be inlined into the final `comptime`: the factory's
-  result has size 2, and every position except a `let`'s right-hand side
-  and a body's result requires size one (§16).
