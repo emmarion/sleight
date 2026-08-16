@@ -112,6 +112,7 @@ and ctor_def = {
 
 and 'e match_form = {
   scrutinee : 'e core;
+  matchable : var;
   result : slot telescope;
   branches : 'e branch list;
 }
@@ -139,7 +140,7 @@ type value =
   | Fun of { defn : entry_id; captured : table }
   | Ctor of var
 
-and attr = Is_universe | Describes_special
+and attr = Is_univ | Describes_special
 
 and entry = {
   entry_name : name option;
