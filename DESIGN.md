@@ -290,11 +290,13 @@ together with each one's erasure (the `erased`/`many` multiplicity from
 
 **Two kinds of data type.** **Enums** have a non-erased discriminant,
 stored at runtime. **Unions** have an erased discriminant. Independent of
-that: a value constructor's own *return* position carries a multiplicity
-marker, `erased` or `many` (§29, §30) — `erased` is what makes it
-"phantom." No separate phantom flag: it's the same `erased`/`many`
-mechanism already used for fields, just applied to the return instead of
-a field. Each field (like each function argument) is individually
+that: a value constructor's declaration in `def-adts` carries a
+multiplicity marker, `erased` or `many` (§30, §31) — the multiplicity the
+constructor's own scope entry takes, `erased` making it "phantom." The
+same marker is recorded in the type's `Matchable` (§17), which is where
+phantom-ness is read from when destructing; the constructor's `ValCtor`
+type does not carry it, and its return position has no multiplicity of
+its own (§29). Each field (like each function argument) is individually
 annotated erased or not (sane default still TBD). Declaring a phantom
 constructor with any `many` field is a warning. Subterm recursion (§7)
 can go through an erased argument.
