@@ -138,10 +138,6 @@ type value =
   | Data of { head : var; args : value list }
   | Fun of { defn : entry_id; captured : table }
   | Ctor of var
-  | Ty_val of inert
-  | Matchable_val of matchable_ty
-  | Level_val of int
-  | Opaque
 
 and attr = Is_universe | Describes_special
 
