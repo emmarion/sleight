@@ -737,14 +737,9 @@ and match return results (§11). Everywhere else, inference should
 suffice — the same "annotate only at the boundary" shape as §20's
 bottom-up erasure.
 
-## 26. v2 TODO: `_` sugar
+## 26. Sugar
 
-Allow `_` as sugar in a few spots: a match return annotation (§11,
-sometimes); a newly-defined function's level, implicitly creating a
-fresh `def-lvl` and defining the function at it; the proof argument
-(`Predates`/`Subterm`, §9) of a function call; extracting the level of a
-function (it's part of the function's type, §7, but `_` may be useful
-sugar for pulling it out). Not designed yet.
+Surface sugar is recorded in SUGAR.md.
 
 ## 27. Special form registry
 
@@ -791,7 +786,7 @@ or an `is` expression, not only at a declaration site.
     constructor from ambient scope (§19).
 12. `level-of` — yields the `Level` a function is defined at, read from
     its type (§7). Not strictly needed, since that level is always in
-    scope anyway, but useful for sugar (§26).
+    scope anyway, but useful for sugar (SUGAR.md).
 13. `prove-subterm` — asserts one expression is a subterm of another,
     birthing the `Subterm` proof (§8).
 14. `prove-predates` — relates a variable to a `Level` born by an

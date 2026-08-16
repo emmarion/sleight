@@ -1,8 +1,75 @@
 # Surface sugar
 
 DESIGN.md records the core language. This file records sugar: forms that
-elaborate away into constructs DESIGN.md already defines, carrying no
-meaning of their own. Each entry says whether it is settled or still an
-idea.
+would elaborate away into constructs DESIGN.md already defines, carrying
+no meaning of their own. Everything here is provisional. Examples using
+sugar live here; DESIGN.md's examples use none.
 
-## 1. Level ergonomics
+## 1. `_` as a `def-fns` level
+
+Writing `_` where a `def-fns` block's level goes (§7, §27) would do two
+things: insert a `def-lvl` immediately above the block, birthing an
+anonymous level, and define the block's functions at it.
+
+## 2. `_` in a match's return annotation
+
+Where a `match` is the result expression of a function body or of a match
+branch body (§16), the telescope it must produce is already fixed by that
+body. `_` in place of the annotation (§11) would inherit it.
+
+## 3. `_` in a call's decrease annotation
+
+`(predates _)` would read the callee's level (`level-of`, §27) and the
+level of the body being elaborated into, and build the `Predates` proof
+relating them. `(subterm _)` would attempt the `Subterm` proof for the
+argument it precedes. Both naive — no search, so both would fail wherever
+a proof needs §8's transitivity axioms.
+
+## 4. Worked example: `map` with sugar
+
+The same program as DESIGN.md §33, which is written without any.
+
+```scheme
+(def-fns _ $ map-factory : (erased (Level) M) ->
+    (erased (Level) L)
+    (many (Fn L (erased Type A) (erased Type B)
+              (many (Fn M (many A x) -> (many B y)) f)
+              (subterm many (List A) xs) ->
+              (many (List B) ys))
+          mapped)
+  (def-fns _ $ map : (erased Type A) (erased Type B)
+      (many (Fn M (many A x) -> (many B y)) f)
+      (subterm many (List A) xs) ->
+      (many (List B) ys)
+    (match xs _
+      ((Nil a) (Nil B))
+      ((Cons a hd tl)
+        (Cons B (f (predates _) hd) $ map A B f (subterm _) tl))))
+  (values (level-of map) map))
+```
+
+```scheme
+(def-fns _ $ inc : (many (Nat) n) -> (many (Nat) m)
+  (Succ n))
+
+(let ML map-nat (comptime $ map-factory (level-of inc)))
+
+(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+
+(comptime $ map-nat (Nat) (Nat) inc xs)
+```
+
+- The factory goes from 20 lines to 16, the usage from 8 to 5. All three
+  `def-lvl` forms are gone, as are both proof-binding `let`s, and the
+  `Cons` branch collapses to one line.
+- `level-of` (§27) is what lets a level stay anonymous and still be
+  referred to: the factory returns `(level-of map)`, and the caller
+  passes `(level-of inc)`.
+- `L` survives as a name in the return telescope, since the second
+  return's type has to mention it. It is the one level here that `_`
+  cannot replace.
+- The factory's signature is untouched. No `_` applies inside a
+  telescope, and the signature is over half of what remains.
+- `map-nat` cannot be inlined into the final `comptime`: the factory's
+  result has size 2, and every position except a `let`'s right-hand side
+  and a body's result requires size one (§16).
