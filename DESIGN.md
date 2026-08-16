@@ -967,3 +967,44 @@ Pulls together most of the design established so far:
 
 Paren balance checked with a script rather than by eye when this was
 drafted (12 opens, 12 closes).
+
+## 32. Worked example: `length`
+
+```scheme
+(def-adts $ Nat : -> Type
+  enum
+  (many Zero : -> (Nat))
+  (many Succ : (many (Nat) pred) -> (Nat)))
+
+(def-lvl L)
+
+(def-fns $ length : L (erased Type A) (subterm many (List A) xs) ->
+    (many (Nat) n)
+  (match xs ((many (Nat) r))
+    ((Nil a) (Zero))
+    ((Cons a hd tl)
+      (let p (prove-subterm tl xs))
+      (Succ $ length A (subterm p) tl))))
+```
+
+- `Nat : -> Type` — a nullary type constructor, so the type it builds is
+  `(Nat)`, the same shape as `Univ`/`Type` in §10.
+- `$` (§2) heads both definitions and the `Succ` application, saving a
+  paren pair each.
+- `(def-lvl L)` births the level `length` is defined at (§8, §27).
+- `(match xs ((many (Nat) r)) ...)` — §11's result annotation is one
+  parenthesized telescope directly after the scrutinee, so it cannot be
+  mistaken for a branch.
+- `((Cons a hd tl) ...)` — a branch is a pattern list followed by a body.
+  Every field gets a binder, the erased ones included.
+- `(prove-subterm tl xs)` births the proof (§8). Entering the `Cons`
+  branch forces `xs is (Cons A hd tl)` (§18), so `tl` canonicalizes to a
+  strict subtree of `xs`. The form's name differs from the `Subterm` type
+  it produces.
+- `(subterm p)` precedes the decreasing argument at the call site.
+  Position is what answers §9's "which argument is the
+  subterm-decreasing one", so no variable name is involved and nothing
+  can shadow it.
+- A call's item count therefore does not equal the callee's arity. The
+  same holds for a lower-level call, which carries a `predates`
+  annotation instead.
