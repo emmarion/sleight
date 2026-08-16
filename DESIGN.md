@@ -247,6 +247,12 @@ future, separate design session — that the language is nevertheless
 sound despite `Type : Type` and unrestricted positivity. Recorded here as
 the owner's claim/target, not a settled or verified result.
 
+`Type` is itself built by a nullary type constructor, `Univ : -> Type`.
+`Type` is then an ordinary scope entry whose `is` statement (§14) is the
+application `(Univ)` — the same `is` mechanism used everywhere else, not
+a special case. So `Univ` is the type constructor and `Type` the name for
+the universe it builds, leaving `Type : Type` above reading unchanged.
+
 ## 11. Multiple return values (built-in sigma)
 
 A function can return multiple values, including zero, and later return
