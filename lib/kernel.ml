@@ -4,6 +4,8 @@ type entry_id = int
 
 type index = int
 
+type obligation_id = int
+
 type multiplicity = Erased | Many
 
 type state = Comptime | Dynamic | Inacc
@@ -11,43 +13,6 @@ type state = Comptime | Dynamic | Inacc
 type discriminant = Enum | Union
 
 type var = Free of entry_id | Bound of index
-
-type raw = Atom of name | Sexp of raw list
-
-module Special = struct
-  type t =
-    | Let
-    | Def_lvl
-    | Def_fns
-    | Def_adts
-    | Match
-    | Comptime_match
-    | Fn
-    | Ty_ctor
-    | Val_ctor
-    | Matchable
-    | Begin
-    | Subterm_birth
-    | Predates_birth
-    | Comptime
-    | Call
-    | Ty_app
-    | Val_app
-    | Bundle
-    | Predates_trans
-    | Subterm_trans
-    | Predates_via_subterm
-    | Erased
-    | Many
-    | Colon
-    | Is
-    | Arrow
-    | Subterm
-    | Enum
-    | Union
-    | Tail
-    | Delegate
-end
 
 type inert = Var of var | App of var * var list | Ty of former
 
@@ -85,32 +50,37 @@ and 'a telescope = 'a binder list
 
 and 'a binder = { annot : 'a; declared : decl; binder_name : name option }
 
-type core =
-  | Inert of inert
-  | Bundle of core list
-  | Apply of core * core list
-  | Call of call
-  | Comptime of core
-  | Begin of core list
-  | Let of binding
-  | Def_lvl of name option
-  | Def_fns of fn_def list
-  | Def_adts of adt_def list
-  | Match of match_form
-  | Comptime_match of ctor_assert
-  | Birth of birth
-  | Axiom of axiom
+type complete
 
-and call = {
-  callee : core;
-  args : core list;
-  decrease : decrease;
+type elided
+
+type _ core =
+  | Elided : elided core
+  | Inert : inert -> 'e core
+  | Bundle : 'e core list -> 'e core
+  | Apply : 'e core * 'e core list -> 'e core
+  | Call : 'e call -> 'e core
+  | Comptime : 'e core -> 'e core
+  | Begin : 'e core list -> 'e core
+  | Let : 'e binding -> 'e core
+  | Def_lvl : name option -> 'e core
+  | Def_fns : 'e fn_def list -> 'e core
+  | Def_adts : adt_def list -> 'e core
+  | Match : 'e match_form -> 'e core
+  | Comptime_match : 'e ctor_assert -> 'e core
+  | Birth : birth -> 'e core
+  | Axiom : 'e axiom -> 'e core
+
+and 'e call = {
+  callee : 'e core;
+  args : 'e core list;
+  decrease : 'e decrease;
   marker : marker;
 }
 
-and decrease =
-  | Predates of core
-  | Subterm of { position : int; witness : core }
+and 'e decrease =
+  | Predates of 'e core
+  | Subterm of { position : int; witness : 'e core }
   | Unrestricted
 
 and marker = Unmarked | Tail | Delegate
@@ -119,14 +89,18 @@ and birth =
   | Subterm_of of inert * inert
   | Predates_lvl of { level : var; subject : var }
 
-and axiom =
-  | Predates_trans of core * core
-  | Subterm_trans of core * core
-  | Predates_via_subterm of core * core
+and 'e axiom =
+  | Predates_trans of 'e core * 'e core
+  | Subterm_trans of 'e core * 'e core
+  | Predates_via_subterm of 'e core * 'e core
 
-and binding = { bound : name option; ascription : decl option; rhs : core }
+and 'e binding = {
+  bound : name option;
+  ascription : decl option;
+  rhs : 'e core;
+}
 
-and fn_def = { fn_name : name; fn_sig : fn_ty; body : core }
+and 'e fn_def = { fn_name : name; fn_sig : fn_ty; body : 'e core }
 
 and adt_def = {
   adt_name : name;
@@ -137,30 +111,35 @@ and adt_def = {
 
 and ctor_def = { ctor_name : name; ctor_sig : valctor_ty }
 
-and match_form = {
-  scrutinee : core;
+and 'e match_form = {
+  scrutinee : 'e core;
   result : multiplicity telescope;
-  branches : branch list;
+  branches : 'e branch list;
 }
 
-and branch = { pattern : var; binds : name option list; outcome : branch_body }
+and 'e branch = {
+  pattern : var;
+  binds : name option list;
+  outcome : 'e branch_body;
+}
 
-and branch_body = Present of core | Absurd | Absurd_by_proof of core
+and 'e branch_body = Present of 'e core | Absurd | Absurd_by_proof of 'e core
 
-and ctor_assert = { asserted : core; ctor : var; fields_bound : name option list }
+and 'e ctor_assert = {
+  asserted : 'e core;
+  ctor : var;
+  fields_bound : name option list;
+}
 
 type value =
   | Token
   | Data of { head : var; args : value list }
-  | Fun of { def : fn_def; captured : table }
+  | Fun of { defn : entry_id; captured : table }
   | Ctor of var
-  | Universe_of of inert
+  | Ty_val of inert
   | Matchable_val of matchable_ty
   | Level_val of int
   | Opaque
-  | Special_val of Special.t
-  | Macro of value
-  | Datum of raw
 
 and attr = Is_universe | Describes_special
 
@@ -170,15 +149,20 @@ and entry = {
   entry_mult : multiplicity;
   entry_ty : inert;
   entry_is : inert option;
+  definition : complete core option;
   stored : value option;
   attrs : attr list;
 }
 
 and table = entry array
 
-type config = { macro_expansion_limit : int }
-
-type request = { config : config; ambient : table; program : raw }
+type ask =
+  | Check of { term : complete core; expects : multiplicity telescope option }
+  | Evaluate of { term : complete core }
+  | Admit of { obligation : obligation_id; results : value list }
+  | Abandon of obligation_id
+  | Infer of complete core
+  | Canonicalize of inert
 
 type warning = Phantom_with_many_field of { ctor : name; field : int }
 
@@ -197,10 +181,28 @@ type diagnostic =
   | Ambiguous_matchable of var
   | Too_many_real_branches
   | Wrong_discriminant of var
-  | Macro_limit_exceeded
+  | Unrestricted_outside_comptime
+  | Unknown_obligation of obligation_id
+  | Result_arity_mismatch of { expected : int; admitted : int }
+  | Value_not_of_type of value * inert
+  | Value_should_be_elided of index
 
-type checked = { final : table; elaborated : core }
+type reply =
+  | Accepted of {
+      table : table;
+      results : entry_id list;
+      warnings : warning list;
+    }
+  | Runnable of {
+      obligation : obligation_id;
+      code : elided core;
+      expects : multiplicity telescope;
+    }
+  | Inferred of multiplicity telescope
+  | Canonical of inert
+  | Refused of diagnostic list
 
-type outcome = Accepted of checked | Rejected of diagnostic list
-
-type verdict = { warnings : warning list; outcome : outcome }
+type session = {
+  scope : table;
+  outstanding : (obligation_id * multiplicity telescope) list;
+}
