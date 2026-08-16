@@ -25,7 +25,8 @@ entry carries:
 - a **name** — optional; anonymous entries are allowed.
 - a **state**: `comptime`, `dynamic`, or `inacc` (inaccessible — the
   motivating case is a `dynamic` entry from an enclosing scope becoming
-  inaccessible inside a comptime block).
+  inaccessible inside a comptime block; an `inacc` entry can also be
+  introduced directly, §27).
 - a **type** — like an "is" statement (below), just a tree whose leaves
   are references to entries in this same table (§5).
 - an **erasure** (the `erased`/`many` multiplicity from §6) — orthogonal
@@ -783,6 +784,9 @@ or an `is` expression, not only at a declaration site.
 19. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
+20. `inacc` — produces one value in the `inacc` state (§3), given either
+    a type or, with `is`, an expression to take its identity from (§14).
+    The value can be named and typed but never accessed.
 
 Items 16–17 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
@@ -790,22 +794,22 @@ head-dispatch algorithm for the real two-tier answer.
 
 **Annotation tokens** (also `Special`, but lower-level than the above —
 they annotate a form rather than heading a list):
-20. `erased` — the 0-multiplicity (§6).
-21. `many` — the ω-multiplicity (§6).
-22. `:` — separates a name from the signature being given to it, at a
+21. `erased` — the 0-multiplicity (§6).
+22. `many` — the ω-multiplicity (§6).
+23. `:` — separates a name from the signature being given to it, at a
     declaration (§30, §31). Whether this reorders the way telescope
     entries do is still open (§30).
-23. `is` — separates an `is` expression from the name it introduces, in
+24. `is` — separates an `is` expression from the name it introduces, in
     place of a type (§14, §30).
-24. `->` — separates a signature's parameter telescope from its return
+25. `->` — separates a signature's parameter telescope from its return
     telescope (§29).
-25. `subterm` — marks a telescope entry as participating in the
+26. `subterm` — marks a telescope entry as participating in the
     lexicographic subterm order (§7, §9, §30).
-26. `enum` — declares an ADT's discriminant non-erased (§12, §31).
-27. `union` — declares an ADT's discriminant erased (§12).
-28. `tail` — marks a call as compiling to a tail call; a hard compile
+27. `enum` — declares an ADT's discriminant non-erased (§12, §31).
+28. `union` — declares an ADT's discriminant erased (§12).
+29. `tail` — marks a call as compiling to a tail call; a hard compile
     error if the compiler can't honor the claim (§9).
-29. `delegate` — `tail` plus the same pass-through requirement on the
+30. `delegate` — `tail` plus the same pass-through requirement on the
     call's non-erased arguments (§9).
 
 ## 28. ASCII only
