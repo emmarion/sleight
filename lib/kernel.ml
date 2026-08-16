@@ -25,13 +25,13 @@ and former =
 and fn_ty = {
   level : var;
   params : param telescope;
-  returns : multiplicity telescope;
+  returns : slot telescope;
 }
 
-and tyctor_ty = { indices : unit telescope }
+and tyctor_ty = { indices : decl telescope }
 
 and valctor_ty = {
-  fields : multiplicity telescope;
+  fields : slot telescope;
   built_mult : multiplicity;
   built : inert;
 }
@@ -42,13 +42,15 @@ and matchable_ty = {
   variants : (var * multiplicity) list;
 }
 
-and param = { mult : multiplicity; decreasing : bool }
-
 and decl = Has_type of inert | Is of inert
+
+and slot = { mult : multiplicity; declared : decl }
+
+and param = { slot : slot; decreasing : bool }
 
 and 'a telescope = 'a binder list
 
-and 'a binder = { annot : 'a; declared : decl; binder_name : name option }
+and 'a binder = { site : 'a; binder_name : name option }
 
 type complete
 
@@ -95,11 +97,7 @@ and 'e axiom =
   | Subterm_trans of 'e core * 'e core
   | Predates_via_subterm of 'e core * 'e core
 
-and 'e binding = {
-  bound : name option;
-  ascription : decl option;
-  rhs : 'e core;
-}
+and 'e binding = { bound : decl option telescope; rhs : 'e core }
 
 and 'e fn_def = { fn_name : name; fn_sig : fn_ty; body : 'e body }
 
@@ -114,7 +112,7 @@ and ctor_def = { ctor_name : name; ctor_sig : valctor_ty }
 
 and 'e match_form = {
   scrutinee : 'e core;
-  result : multiplicity telescope;
+  result : slot telescope;
   branches : 'e branch list;
 }
 
@@ -161,7 +159,7 @@ and entry = {
 and table = entry array
 
 type ask =
-  | Check of { term : complete body; expects : multiplicity telescope option }
+  | Check of { term : complete body; expects : slot telescope option }
   | Evaluate of { term : complete body }
   | Admit of { obligation : obligation_id; results : value list }
   | Abandon of obligation_id
@@ -200,13 +198,13 @@ type reply =
   | Runnable of {
       obligation : obligation_id;
       code : elided body;
-      expects : multiplicity telescope;
+      expects : slot telescope;
     }
-  | Inferred of multiplicity telescope
+  | Inferred of slot telescope
   | Canonical of inert
   | Refused of diagnostic list
 
 type session = {
   scope : table;
-  outstanding : (obligation_id * multiplicity telescope) list;
+  outstanding : (obligation_id * slot telescope) list;
 }
