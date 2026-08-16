@@ -791,10 +791,13 @@ not just semantically different:
    (constructors don't recurse); its telescope entries freely choose
    multiplicity per field, same freedom as a function's arguments (§12);
    the return is a single, whatever concrete type the constructor builds
-   — no multi-return here either (§11 multi-return is function-only). The
-   return *does* carry its own multiplicity marker, unlike a type
-   constructor's bare `Type` return — `erased` there is what makes the
-   whole constructor phantom (§12).
+   — no multi-return here either (§11 multi-return is function-only).
+   The return carries no multiplicity of its own, phantom-ness being
+   declared on the constructor's `def-adts` line and recorded in the
+   type's `Matchable` (§12, §17).
+
+Return-position multiplicity therefore appears in exactly one of the
+three, `Fn` — the only one whose return is a telescope at all (§11).
 
 All three share an underlying "telescope" notion (a list of annotated
 `Type name` entries — type-first, §30 — built from §5's restricted
