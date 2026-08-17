@@ -1355,3 +1355,24 @@ This is in the lineage of syntactic closures (Bawden) more than
 Racket's scope-sets, we believe, without having verified the
 correspondence. It may also be the mechanism behind §9's deferred note
 that renaming `Inacc` entries via `let` "relates to macros".
+
+## 36. v2 sketch: `hoist`
+
+Not settled. In the worked examples, `comptime` often does pure
+level-hoisting: a body can only call into the past (nothing born during
+a body's execution is callable by that body), so manufacture must
+happen before the consumer's level is born, and a comptime block is how
+manufacture runs "early". A special form `(hoist L body)` would name
+that directly: `body` may reference only entries introduced at or
+before the in-scope `def-lvl` that birthed `L`, and its births count as
+happening just before `L`'s — so its product predates `L` and
+everything after, callable with ordinary `Predates` proofs, and the
+factory pattern becomes writable inline.
+
+Much remains to litigate before this is real: the silos would need
+caching at every `def-lvl`, with canonicalization of the body run
+against that cached view; and where the body actually *runs* is
+unsettled — one reading executes it in place with only its birth order
+fictionalized (purity arguing the difference is unobservable), while
+the comptime analogy argues for running it at the hoisted-to point and
+caching/closing over its value.
