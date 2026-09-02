@@ -342,7 +342,15 @@ and elab_call cc env expect l callee hcode lv params rets args =
            | _ -> assert false)
        | _ -> error l "lower-level call to %s needs a (predates p) annotation" (show env callee.term)));
   let env, ids = open_tele env ~named:false ~mults:(List.map (fun e -> if pos = Erased then Erased else e.mult) rets) ~ids:acc rets in
-  (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CApp (hcode, codes, cc))
+  let code =
+    let call = V.CApp (hcode, codes, cc) in
+    if pos = Erased then V.CErased
+    else if List.length expect <> List.length rets || List.for_all2 (fun m e -> m = Many || e.mult = Erased) expect rets then call
+    else
+      let kept = List.filter_map (fun (m, e) -> if e.mult = Many then Some (fresh (), m) else None) (List.combine expect rets) in
+      V.CLet (List.map fst kept, call, V.CValues (List.filter_map (fun (t, m) -> if m = Many then Some (V.CVar t) else None) kept))
+  in
+  (env, List.map (res_of env) ids, code)
 
 and elab_special tele env expect l sp args =
   let pos = pos_of expect in
@@ -534,6 +542,7 @@ and elab_match tele env expect l args =
         let tele, ret = ctor_type env bl c in
         if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
         let names = if kind = `Auto then List.map (fun _ -> None) tele else List.map name_or_anon field_names in
+        let dead = phantom && smult = Many in
         let mults = List.map (fun e -> if phantom || smult = Erased then Erased else e.mult) tele in
         let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
         let fvars = List.rev_map (fun x -> Var x) fids in
@@ -549,7 +558,7 @@ and elab_match tele env expect l args =
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
           | `Present, Some envb -> (
               try
-                let envb, ress, code = elab_body ~tele:ann_tele envb (if phantom then List.map (fun _ -> Erased) expect else expect) bl body in
+                let envb, ress, code = elab_body ~tele:ann_tele envb (if dead then List.map (fun _ -> Erased) expect else expect) bl body in
                 check_results envb bl ann_tele ress;
                 `Present code
               with BranchAbsurd _ -> `Absurd)
@@ -558,7 +567,7 @@ and elab_match tele env expect l args =
               check_empty envb bl (single bl ress).ty;
               `Absurd
         in
-        (c, non_erased envb fids, phantom, result)
+        (c, non_erased envb fids, dead, result)
       in
       let branches = List.map branch branches in
       List.iter
@@ -570,7 +579,7 @@ and elab_match tele env expect l args =
         ctors;
       let real =
         List.filter_map
-          (fun (c, fids, phantom, r) -> match r with `Present code when not phantom -> Some (V.CVar c, fids, code) | _ -> None)
+          (fun (c, fids, dead, r) -> match r with `Present code when not dead -> Some (V.CVar c, fids, code) | _ -> None)
           branches
       in
       if pos = Many && (disc = Union || smult = Erased) && List.length real > 1 then
@@ -639,6 +648,7 @@ and elab_comptime_match env l args =
       let c = var env pl (atom_or pl c "a constructor") in
       let tele, ret = ctor_type env pl c in
       let info = match Hashtbl.find_opt V.ctors c with Some i -> i | None -> error pl "%s is not a declared constructor" (name_of env c) in
+      if info.phantom then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" info.cname;
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
       let _, disc, _ = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";

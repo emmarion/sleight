@@ -59,7 +59,9 @@ let rec unify env depth a b =
     let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
     match (a, b) with
     | Var x, Var y when (entry env x).rigid && (entry env y).rigid -> contradiction ()
-    | Var x, Var y -> if x > y then add_rule env x (Var y) else add_rule env y (Var x)
+    | Var x, Var y ->
+        let rigid z = (entry env z).rigid in
+        if rigid y || ((not (rigid x)) && x > y) then add_rule env x (Var y) else add_rule env y (Var x)
     | Var x, t | t, Var x ->
         if (entry env x).rigid then contradiction ();
         no_binders x t;
