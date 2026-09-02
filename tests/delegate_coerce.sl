@@ -3,7 +3,7 @@
 ; A delegate whose argument and result pass through coerces: both erase to renamings (section 9).
 
 (def-adts $ Meters : -> Type
-  enum
+  enum newtype
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (def-lvl L)

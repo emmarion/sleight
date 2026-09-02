@@ -10,6 +10,7 @@ type term =
   | TyCtor of tele
   | ValCtor of tele * term
   | Matchable of disc * term * (mult * term) list
+  | Newtype of term
 
 and tele = entry list
 and entry = { name : string option; subterm : bool; mult : mult; sg : sg }
@@ -31,6 +32,7 @@ let rec map_vars f depth t =
       ValCtor (ps, map_vars f d r)
   | Matchable (d, t, cs) ->
       Matchable (d, map_vars f depth t, List.map (fun (m, c) -> (m, map_vars f depth c)) cs)
+  | Newtype t -> Newtype (map_vars f depth t)
 
 and map_tele f depth es =
   List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars f d) e.sg })) depth es
@@ -59,6 +61,7 @@ let rec fold_vars f acc t =
   | TyCtor ps -> fold_tele f acc ps
   | ValCtor (ps, r) -> fold_vars f (fold_tele f acc ps) r
   | Matchable (_, t, cs) -> List.fold_left (fun acc (_, c) -> fold_vars f acc c) (fold_vars f acc t) cs
+  | Newtype t -> fold_vars f acc t
 
 and fold_tele f acc es = List.fold_left (fun acc e -> fold_vars f acc (sg_term e.sg)) acc es
 
@@ -73,6 +76,7 @@ let rec has_dangling depth t =
   | TyCtor ps -> tele_dangling depth ps
   | ValCtor (ps, r) -> tele_dangling depth ps || has_dangling (depth + List.length ps) r
   | Matchable (_, t, cs) -> has_dangling depth t || List.exists (fun (_, c) -> has_dangling depth c) cs
+  | Newtype t -> has_dangling depth t
 
 and tele_dangling depth es =
   snd (List.fold_left (fun (d, b) e -> (d + 1, b || has_dangling d (sg_term e.sg))) (depth, false) es)
@@ -88,6 +92,7 @@ let rec equal a b =
   | Matchable (d, t, cs), Matchable (e, u, ds) ->
       d = e && equal t u && List.length cs = List.length ds
       && List.for_all2 (fun (m, c) (n, d) -> m = n && equal c d) cs ds
+  | Newtype t, Newtype u -> equal t u
   | _ -> false
 
 and equal_tele ps qs =
@@ -120,6 +125,7 @@ let to_string name_of t =
         "(Matchable " ^ String.concat " "
           (disc_name d :: go bound t :: List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
         ^ ")"
+    | Newtype t -> "(Newtype " ^ go bound t ^ ")"
   and tele ?(marks = true) bound es =
     List.fold_left_map
       (fun bound e ->

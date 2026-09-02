@@ -8,9 +8,7 @@ let bind ids vs env =
 
 (* Adds mutually recursive closures over [env] to it. *)
 let close env fns =
-  let rec env' =
-    lazy (List.fold_left (fun e (x, (fname, params, body)) -> IntMap.add x (VFn { fname; params; body; env = env' }) e) env fns)
-  in
+  let rec env' = lazy (List.fold_left (fun e (x, fn) -> IntMap.add x (VFn { fn; env = env' }) e) env fns) in
   Lazy.force env'
 
 let rec eval env code =
@@ -22,22 +20,24 @@ let rec eval env code =
   | CApp (f, args, _) -> apply (eval1 env f) (List.map (eval1 env) args)
   | CLet (ids, rhs, body) -> eval (bind ids (eval env rhs) env) body
   | CLetRec (fns, body) -> eval (close env fns) body
-  | CMatch (scrut, tagged, branches) -> (
+  | CMatch (scrut, branches) -> (
+      let ctor code = match eval1 env code with VCtorFn c -> c | v -> raise (Runtime ("not a constructor: " ^ show v)) in
+      let branches = List.map (fun (c, ids, body) -> (ctor c, ids, body)) branches in
       let v = eval1 env scrut in
-      match (tagged, branches, v) with
-      | false, [ (_, ids, body) ], v -> eval (bind ids (untuple (List.length ids) v) env) body
-      | true, _, VCtor (c, fields) -> (
-          let ctor code = match eval1 env code with VCtorFn c -> c.cid | v -> raise (Runtime ("not a constructor: " ^ show v)) in
-          match List.find_opt (fun (c', _, _) -> ctor c' = c.cid) branches with
+      match branches with
+      | [] -> raise (Runtime ("no branch for " ^ show v))
+      | (c, _, _) :: _ -> (
+          let i, fields = destruct c v in
+          match List.find_opt (fun (c', _, _) -> c'.index = i) branches with
           | Some (_, ids, body) -> eval (bind ids fields env) body
-          | None -> raise (Runtime ("no branch for " ^ show v)))
-      | _ -> raise (Runtime ("cannot match " ^ show v)))
+          | None -> raise (Runtime ("no branch for " ^ show v))))
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))
 
 and apply f args =
   match f with
-  | VFn cl -> eval (bind cl.params args (Lazy.force cl.env)) cl.body
-  | VCtorFn c -> [ (if c.tagged then VCtor (c, args) else tuple args) ]
+  | VFn { fn = { impl = Some impl; _ }; _ } when !use_externs -> impl args
+  | VFn cl -> eval (bind cl.fn.params args (Lazy.force cl.env)) cl.fn.body
+  | VCtorFn c -> [ construct c args ]
   | v -> raise (Runtime ("cannot apply " ^ show v))

@@ -1,5 +1,5 @@
 ; expect: (Succ (Succ (Zero)))
-; DESIGN.md sections 31 and 32: List, Nat, length.
+; DESIGN.md sections 31 and 32: List and length; Nat comes from the prelude.
 
 (def-adts
   (List : (Type A) -> Type
@@ -7,11 +7,6 @@
     (many Nil : (erased Type A) -> (List A))
     (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
        (List A))))
-
-(def-adts $ Nat : -> Type
-  enum
-  (many Zero : -> (Nat))
-  (many Succ : (many (Nat) pred) -> (Nat)))
 
 (def-lvl L)
 

@@ -36,9 +36,12 @@ let repl env =
   loop env
 
 let () =
-  match List.tl (Array.to_list Sys.argv) with
-  | [] -> ignore (run Prelude.env "-")
-  | args ->
-      let files, interactive = List.partition (( <> ) "--repl") args in
-      let env = List.fold_left run Prelude.env files in
-      if interactive <> [] then repl env
+  let args = List.tl (Array.to_list Sys.argv) in
+  let flag f = List.mem f args in
+  Value.use_externs := not (flag "--no-extern");
+  let env = Builtin.load () in
+  match List.filter (fun a -> a <> "--repl" && a <> "--no-extern") args with
+  | [] when not (flag "--repl") -> ignore (run env "-")
+  | files ->
+      let env = List.fold_left run env files in
+      if flag "--repl" then repl env

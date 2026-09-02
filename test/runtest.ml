@@ -15,14 +15,19 @@ let directive src key =
       else None)
     (String.split_on_char '\n' src)
 
-let run_test name =
+(* Every test runs with the FFI's implementations and again with them stripped (section 41's invariant). *)
+let rec run_test name =
   let src = read (Filename.concat dir (name ^ ".sl")) in
+  let modes = [ (true, "with externs"); (false, "without externs") ] in
+  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode src)) modes
+
+and run_mode src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 in
   let print s = Buffer.add_string printed (s ^ "\n") in
   let outcome =
     try
-      let env = List.fold_left (fun env n -> Elab.run_toplevel ~print env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) Prelude.env needs in
+      let env = List.fold_left (fun env n -> Elab.run_toplevel ~print env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
       Buffer.clear printed;
       ignore (Elab.run_toplevel ~print env (Reader.parse src));
       Ok (Buffer.contents printed)

@@ -1,11 +1,11 @@
 ; needs: list union
 ; expect: (Succ (Zero))
-; An indexed union is a newtype when its other non-phantom constructors have only erased fields (section 38):
+; An indexed union marked newtype: its other non-phantom constructors have only erased fields (section 38).
 ; MkA wraps a Nat at no cost, and a NoB value is the null.
 
 (def-adts
   (Tagged : ((Bool) k) -> Type
-    union
+    union newtype
     (many MkA : (many (Nat) n) -> (Tagged (True)))
     (many NoB : -> (Tagged (False)))))
 

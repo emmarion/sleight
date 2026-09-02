@@ -23,14 +23,16 @@ let special, env = Env.bind env ~rigid:true (Some "Special") Erased token (TyCto
 let special_term = App (Var special, [])
 
 let env =
-  let ctor env (sp, n) =
+  let adt = { V.tname = "Special"; tagged = true; ctors = []; ext = None } in
+  let ctor (env, index) (sp, n) =
     let c, env = Env.bind env ~rigid:true (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
-    let ctor = { V.cname = "%" ^ n; cid = c; tagged = true } in
+    let ctor = { V.cname = "%" ^ n; cid = c; index; arity = 0; adt } in
     let env = Env.set_state env c (Env.Const (V.VCtorFn ctor)) in
     Hashtbl.replace Special.table c sp;
-    (env, (sp, n, c, ctor))
+    ((env, index + 1), (sp, n, c, ctor))
   in
-  let env, ctors = List.fold_left_map ctor env Special.all in
+  let (env, _), ctors = List.fold_left_map ctor (env, 0) Special.all in
+  adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
   let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
   let _, env = Env.bind env None Erased token matchable in
   List.fold_left

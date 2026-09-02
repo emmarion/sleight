@@ -46,7 +46,7 @@ let rec infer env loc t =
       | TyCtor _ -> type_term
       | ValCtor (_, r) -> instantiate (List.rev args) r
       | ty -> error loc "%s has type %s and cannot be applied" (show env h) (show env ty))
-  | Fn _ | TyCtor _ | ValCtor _ | Matchable _ -> type_term
+  | Fn _ | TyCtor _ | ValCtor _ | Matchable _ | Newtype _ -> type_term
   | Bound _ -> error loc "internal: dangling binder"
 
 let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).mult }
@@ -89,6 +89,8 @@ let wrapper disc shapes =
   | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
   | _ -> None
 
+let newtype_of env tid = List.find_opt (fun x -> match type_of env x with Newtype (Var t) -> t = tid | _ -> false) env.scope
+let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
 let proof_type ctor args = App (Var ctor, args)
 
@@ -133,6 +135,14 @@ let split_returns env items =
 
 let no_mults loc = fun _ -> function None -> Some Erased | Some _ -> error loc "these entries carry no multiplicity"
 
+(* Leading annotation tokens drawn from [allowed], in any order. *)
+let marks env allowed items =
+  let rec go acc = function
+    | t :: rest when List.exists (is_special env t) allowed -> go (List.find (is_special env t) allowed :: acc) rest
+    | rest -> (acc, rest)
+  in
+  go [] items
+
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let open_tele env ?(named = true) ?names ?mults ?(state = Dyn) ?(ids = []) tele =
   let nth l i = Option.map (fun l -> List.nth l i) l in
@@ -175,6 +185,10 @@ let rec elab_term env raw =
               in
               Matchable (disc_of env l d, Var (var env l (atom_or l t "a type constructor name")), List.map ctor cs)
           | _ -> error l "malformed Matchable")
+      | Some Sp.Newtype -> (
+          match args with
+          | [ t ] -> Newtype (Var (var env l (atom_or l t "a type constructor name")))
+          | _ -> error l "malformed Newtype")
       | Some sp -> error l "%s cannot appear in a type" (Sp.name sp)
       | None -> (
           let h = Var (var env l (atom_or l head "a constructor")) in
@@ -375,7 +389,7 @@ and elab_special tele env expect l sp args =
   in
   let born env ty = let env, r = born env ty in (env, [ r ], V.CErased) in
   match (sp, args) with
-  | (Sp.Fn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable), _ ->
+  | (Sp.Fn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable | Sp.Newtype), _ ->
       ignore (one ());
       if pos = Many then error l "a type in a non-erased position";
       (env, [ { term = elab_term env (List (l, Atom (l, Sp.name sp) :: args)); ty = type_term; erasure = Erased } ], V.CErased)
@@ -395,6 +409,12 @@ and elab_special tele env expect l sp args =
       ignore (one ());
       let x, _, _ = find_matchable env l (var env l (atom_or l t "a type constructor name")) in
       (env, [ res_of env x ], V.CErased)
+  | Sp.NewtypeOf, [ t ] -> (
+      ignore (one ());
+      let tid = var env l (atom_or l t "a type constructor name") in
+      match newtype_of env tid with
+      | Some x -> (env, [ res_of env x ], V.CErased)
+      | None -> error l "%s has no Newtype in scope" (name_of env tid))
   | Sp.LevelOf, [ f ] -> (
       ignore (one ());
       let f = elab_term env f in
@@ -472,8 +492,9 @@ and elab_special tele env expect l sp args =
       ignore (one ());
       let c = var env l (atom_or l c "a constructor") in
       let tele, ret = ctor_type env l c in
-      let _, disc, ctors = find_matchable env l (tid_of env l c) in
-      if wrapper disc (shapes env l ctors) <> Some c then error l "%s is not the wrapping constructor of a transparent type" (name_of env c);
+      if newtype_of env (tid_of env l c) = None then error l "%s has no Newtype in scope" (name_of env (tid_of env l c));
+      let many = List.filter (fun e -> e.mult = Many) tele in
+      if List.length many <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
       let acc = elab_term_args env l tele args in
       let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
       born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
@@ -599,7 +620,7 @@ and elab_match tele env expect l args =
         | _ when pos = Erased -> V.CErased
         | [] -> V.CAbsurd
         | [ (_, _, body) ] when smult = Erased -> body
-        | _ -> V.CMatch (scode, tagged, real)
+        | _ -> V.CMatch (scode, real)
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
@@ -666,10 +687,10 @@ and elab_comptime_match env l args =
        | Some Many -> ()
        | None -> error pl "%s is not a constructor of %s" (name_of env c) (name_of env tid));
       let many_values =
-        if not (tagged disc (shapes env l ctors)) then V.untuple (List.length (List.filter (fun e -> e.mult = Many) tele)) value
-        else match value with
-          | V.VCtor (c', vs) when c'.cid = c -> vs
-          | _ -> error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value)
+        let ct = ctor_of env pl c in
+        let i, vs = V.destruct ct value in
+        if i <> ct.index then error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value);
+        vs
       in
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
@@ -695,7 +716,7 @@ and elab_def_fns env l args =
         match raw with
         | List (fl, m :: rest) -> (
             let mult = match mult_of env m with Some m -> m | None -> error fl "function needs a multiplicity" in
-            let absurd, rest = match rest with a :: rest when is_special env a Sp.Absurd -> (true, rest) | _ -> (false, rest) in
+            let marks, rest = marks env [ Sp.Absurd; Sp.Extern ] rest in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
                 let ps, rest = split_arrow env fl sg in
@@ -703,13 +724,18 @@ and elab_def_fns env l args =
                 let _, _, params = elab_tele env ~subterm:true ps in
                 let env_p, pids = open_tele env params in
                 let _, _, rets = elab_tele env_p ~ids:(List.rev pids) rs in
-                (fl, atom_or fl n "a function name", mult, absurd, Fn (Var lvl, params, rets), body)
+                let name = atom_or fl n "a function name" in
+                let impl =
+                  if not (List.mem Sp.Extern marks) then None
+                  else match List.assoc_opt name Ffi.fns with Some f -> Some f | None -> error fl "no extern implementation for %s" name
+                in
+                (fl, name, mult, List.mem Sp.Absurd marks, impl, Fn (Var lvl, params, rets), body)
             | _ -> error fl "malformed function header")
         | _ -> error (loc raw) "malformed function definition"
       in
       let headers = List.map header fns in
-      let env, fids = List.fold_left_map (fun env (_, name, mult, _, ty, _) -> let x, env = bind env (Some name) mult Dyn ty in (env, x)) env headers in
-      let define x (fl, name, mult, absurd, ty, body) =
+      let env, fids = List.fold_left_map (fun env (_, name, mult, _, _, ty, _) -> let x, env = bind env (Some name) mult Dyn ty in (env, x)) env headers in
+      let define x (fl, name, mult, absurd, impl, ty, body) =
         let params, rets = match ty with Fn (_, ps, rs) -> (ps, rs) | _ -> assert false in
         let envb, pids = open_tele env params in
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
@@ -726,7 +752,7 @@ and elab_def_fns env l args =
             check_results envb fl ~ids:pvars rets ress;
             (envb, if mult = Erased then V.CErased else code)
         in
-        ((x, (name, non_erased envb pids, code)), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))
+        ((x, { V.fname = name; params = non_erased envb pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))
       in
       let fns, proofs = List.split (List.map2 define fids headers) in
       let env =
@@ -757,16 +783,16 @@ and check_marks env l pids code =
         | rhs -> V.CLet (ids, rhs, norm sub rest))
     | V.CValues cs -> V.CValues (List.map (norm sub) cs)
     | V.CApp (f, args, cc) -> V.CApp (norm sub f, List.map (norm sub) args, cc)
-    | V.CLetRec (fns, rest) -> V.CLetRec (List.map (fun (x, (n, ps, c)) -> (x, (n, ps, norm sub c))) fns, norm sub rest)
-    | V.CMatch (s, t, brs) -> V.CMatch (norm sub s, t, List.map (fun (c, ids, b) -> (norm sub c, ids, norm sub b)) brs)
+    | V.CLetRec (fns, rest) -> V.CLetRec (List.map (fun (x, fn) -> (x, { fn with V.body = norm sub fn.V.body })) fns, norm sub rest)
+    | V.CMatch (s, brs) -> V.CMatch (norm sub s, List.map (fun (c, ids, b) -> (norm sub c, ids, norm sub b)) brs)
     | (V.CConst _ | V.CErased | V.CAbsurd) as c -> c
   in
   let code = norm [] code in
   let rec marked acc = function
     | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (if cc = V.Plain then acc else c :: acc) f) args
     | V.CLet (_, a, b) -> marked (marked acc a) b
-    | V.CLetRec (fns, b) -> List.fold_left (fun acc (_, (_, _, c)) -> marked acc c) (marked acc b) fns
-    | V.CMatch (s, _, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
+    | V.CLetRec (fns, b) -> List.fold_left (fun acc (_, fn) -> marked acc fn.V.body) (marked acc b) fns
+    | V.CMatch (s, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
     | V.CValues cs -> List.fold_left marked acc cs
     | V.CVar _ | V.CConst _ | V.CErased | V.CAbsurd -> acc
   in
@@ -775,7 +801,7 @@ and check_marks env l pids code =
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (ids, (V.CApp (_, _, (V.Tail | V.Delegate)) as c), rest) -> if returns ids rest then [ c ] else []
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
-    | V.CMatch (_, _, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
+    | V.CMatch (_, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
     | _ -> []
   in
   match marked [] code with
@@ -798,21 +824,21 @@ and elab_def_adts env adts =
     | List (al, n :: colon :: rest) when is_special env colon Sp.Colon -> (
         let ps, rest = split_arrow env al rest in
         match rest with
-        | ty :: d :: ctors -> (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ctors)
+        | ty :: d :: rest -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
         | _ -> error al "malformed def-adts entry")
     | _ -> error (loc raw) "malformed def-adts entry"
   in
   let headers = List.map header adts in
   let env, tids =
     List.fold_left_map
-      (fun env (al, name, ps, ty, _, _) ->
+      (fun env (al, name, ps, ty, _, _, _) ->
         let env', _, tele = elab_tele env ~mults:(no_mults al) ps in
         check_equal env' al (elab_term env' ty) type_term;
         let x, env = bind env ~rigid:true (Some name) Erased (const env V.VToken) (TyCtor tele) in
         (env, x))
       env headers
   in
-  let define (env, cids) tid (_, _, _, _, disc, ctors) =
+  let define (env, cids) tid (al, name, _, _, disc, ms, ctors) =
     let ctor env raw =
       match raw with
       | List (cl, m :: n :: colon :: rest) when is_special env colon Sp.Colon ->
@@ -828,10 +854,19 @@ and elab_def_adts env adts =
       | _ -> error (loc raw) "malformed constructor"
     in
     let env, ctors = List.fold_left_map ctor env ctors in
-    let tagged = tagged disc (shapes env 0 (List.map (fun (m, c) -> (m, Var c)) ctors)) in
-    let values = List.map (fun (_, c) -> (c, V.VCtorFn { V.cname = name_of env c; cid = c; tagged })) ctors in
+    let shapes = shapes env al (List.map (fun (m, c) -> (m, Var c)) ctors) in
+    let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
+    if List.mem Sp.Extern ms then
+      adt.ext <- (match List.assoc_opt name Ffi.types with Some mk -> Some (mk adt) | None -> error al "no extern implementation for %s" name);
+    adt.ctors <- List.mapi (fun index (_, c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) shapes;
+    let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let env = snd (bind env None Erased (const env V.VToken) (Matchable (disc, Var tid, List.map (fun (m, c) -> (m, Var c)) ctors))) in
+    let env =
+      if not (List.mem Sp.NewtypeMark ms) then env
+      else if wrapper disc shapes = None then error al "%s is not of newtype shape (section 38)" name
+      else snd (bind env None Erased (const env V.VToken) (Newtype (Var tid)))
+    in
     (env, cids @ values)
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in

@@ -3,7 +3,7 @@
 ; comptime-match on a Const of a transparent type projects the value itself as the field.
 
 (def-adts $ Meters : -> Type
-  enum
+  enum newtype
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (let (many m) (MkMeters (Succ (Zero))))

@@ -3,7 +3,7 @@
 ; DESIGN.md section 40: unwrapping a list with coerce, and a delegate proof. Needs list.sl and map.sl first.
 
 (def-adts $ Meters : -> Type
-  enum
+  enum newtype
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (def-lvl U)

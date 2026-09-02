@@ -2,7 +2,7 @@
 ; error: value mismatch
 
 (def-adts $ Meters : -> Type
-  enum
+  enum newtype
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (let (many one) (Succ (Zero)))

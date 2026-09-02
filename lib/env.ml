@@ -81,6 +81,7 @@ let rec unify env depth a b =
         List.fold_left2
           (fun env (m, c) (n, d) -> if m <> n then contradiction () else unify env depth c d)
           (unify env depth t u) cs ds
+    | Newtype t, Newtype u -> unify env depth t u
     | _ -> contradiction ()
 
 and unify_tele env depth ps qs =
