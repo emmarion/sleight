@@ -1408,10 +1408,11 @@ that, instead of producing its declared return telescope, produces a
 single value of a type with no constructors (§7's zero-variant ADTs,
 e.g. `False`), read off the type's `Matchable` (§19). It is the
 function-level counterpart of §12's absurd-by-proof branch, which
-carries the same token. Assuming §10's consistency, such a
-function can never be called at runtime, since a call would need the
-values from which its body derives the contradiction, so it compiles to
-no code: its function pointer may be null, or anything at all.
+carries the same token (worked example in §39). Assuming §10's
+consistency, such a function can never be called at runtime, since a
+call would need the values from which its body derives the
+contradiction, so it compiles to no code: its function pointer may be
+null, or anything at all.
 
 The owner's expectation, not yet applied to the rest of the design:
 with absurd functions available, a non-erased `match` with no branches
@@ -1422,7 +1423,8 @@ longer needed.
 
 A `coerce` reinterprets one value as another of identical runtime
 representation, at no runtime cost, on the strength of an erased proof
-that the two are coercible. It is the coercion §21 asked for.
+that the two are coercible. It is the coercion §21 asked for (worked
+example in §40).
 
 **The proof type.** `Coercible : (Type A) (A a) (Type B) (B b) -> Type`,
 heterogeneous like `Subterm` (§8), an opaque object (§17), always
@@ -1498,3 +1500,107 @@ types and coercions gone (§23): a call still counts as `tail` when its
 returns are bound by a `let` and repackaged in a `values` in the same
 order, coerced or not, and as `delegate` when its arguments likewise
 pass straight through.
+
+## 39. Worked example: absurd `explode`
+
+```scheme
+(def-adts $ False : -> Type
+  enum)
+
+(def-lvl X)
+
+(def-fns X $ many absurd explode : (erased Type A) (many (False) f) ->
+    (many A a)
+  f)
+```
+
+- `False` has no constructors (§7); its `Matchable` (§17) is
+  `(Matchable enum False)`, which is how §37 knows the type is empty.
+- `many absurd explode` — the multiplicity marker (§20) and the
+  `absurd` token (§37) share the line with the name.
+- The body is `f`, a single value of `(False)`, where the signature
+  promised `(many A a)`. Marked `absurd`, that is accepted (§37): the
+  function is ex falso. It compiles to no code, and holding it at
+  `many` is fine — the pointer is never followed.
+
+## 40. Worked example: unwrapping a list with `coerce`
+
+Written against §38's rules as recorded, not machine-checked — nothing
+implements them yet.
+
+```scheme
+(def-adts $ Meters : -> Type
+  enum
+  (many MkMeters : (many (Nat) n) -> (Meters)))
+
+(def-lvl U)
+
+(def-fns U $ erased unwrap-witness : (subterm many (List (Meters)) ms) ->
+    (erased (List (Nat)) ns)
+    (erased (Coercible (List (Meters)) ms (List (Nat)) ns) p)
+  (match erased ms (((List (Nat)) ns)
+                    ((Coercible (List (Meters)) ms (List (Nat)) ns) p))
+    ((Nil a) (values (Nil (Nat)) (coercible-ctor Nil (Meters) (Nat))))
+    ((Cons a m tl)
+      (let (erased sp) (prove-subterm tl ms))
+      (let (erased ws) (erased q) (unwrap-witness (subterm sp) tl))
+      (match erased m (((List (Nat)) ns)
+                       ((Coercible (List (Meters)) ms (List (Nat)) ns) p))
+        ((MkMeters n)
+          (values (Cons (Nat) n ws)
+                  (coercible-ctor Cons (Meters) (Nat)
+                    (coercible-sym (coercible-wrap MkMeters n))
+                    q)))))))
+
+(def-lvl V)
+
+(let (erased puv) (prove-predates U V))
+
+(def-fns V $ many unwrap-all : (many (List (Meters)) ms) ->
+    (many (List (Nat)) ns)
+  (let (erased ws) (erased p) (unwrap-witness (predates puv) ms))
+  (coerce ms p))
+```
+
+- `Meters` is transparent (§38): one non-phantom constructor with one
+  `many` field, so §38's representation requirement makes a `(Meters)`
+  exactly a `(Nat)` at runtime, and a `(List (Meters))` exactly a
+  `(List (Nat))`. `unwrap-all` is the zero-cost witness of that.
+- `unwrap-witness` is `erased` (§20): it never runs, but it is a
+  function like any other — level `U`, a `subterm` parameter, and §7's
+  termination check on the recursive call.
+- Its two returns form a telescope (§11): the witness list `ns` first,
+  then the proof, whose type names `ns`. Both matches carry that same
+  telescope as their annotation, with types only (§11).
+- `(coercible-ctor Nil (Meters) (Nat))` — `Nil`'s telescope has one
+  `erased` field, so two arguments: source and target values (§38).
+- In the `Cons` branch, `ms is (Cons a m tl)` is forced (§18), and in
+  the inner `MkMeters` branch, `m is (MkMeters n)`. So
+  `(coercible-wrap MkMeters n)` relates `n` to `m`, its `coercible-sym`
+  is the head proof, and the `coercible-ctor` for `Cons` takes source
+  and target `A`, that head proof, and the recursive tail proof `q`,
+  producing a proof whose source canonicalizes to `ms`.
+- Both matches are `erased`: the whole body is an erased position, and
+  §12's one-real-branch rule never bites since no result is non-erased.
+- `unwrap-all` calls `unwrap-witness` from a higher level, with the
+  `Predates` proof born in run position after `def-lvl V` (§8, §9). The
+  `let`'s binders are all `erased`, so the call is an erased position
+  (§20) and never runs. `(coerce ms p)` is the only runtime content,
+  and it erases to nothing (§38).
+
+A `delegate` proof, reusing `inc` from §33 at level `I`:
+
+```scheme
+(let (erased piv) (prove-predates I V))
+
+(def-fns V $ many inc-noted : (many (Nat) n) (erased (Nat) note) ->
+    (many (Nat) m)
+  (delegate (inc (predates piv) n)))
+
+(let (erased ig) (coercible-of inc-noted))
+```
+
+- After erasure `inc-noted`'s body is nothing but the call to `inc`
+  (§9), so `def-fns` births the proof and `coercible-of` fetches it:
+  `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
+  `(coerce inc-noted ig)` is then `inc`'s own pointer.
