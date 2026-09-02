@@ -247,7 +247,7 @@ let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.co
   let l = loc raw in
   let env, ress, code = elab_form cc tele env expect raw in
   if List.length ress <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length ress);
-  List.iter2 (fun m r -> if m = Many && r.erasure = Erased then error l "erased value %s used in a non-erased position" (show env r.term)) expect ress;
+  List.iter2 (fun m r -> if m = Many && r.erasure = Erased then error l "erased value %s : %s used in a non-erased position" (show env r.term) (show env r.ty)) expect ress;
   let code = match code with V.CErased when List.length expect <> 1 -> V.CValues (List.map (fun _ -> V.CErased) expect) | c -> c in
   (env, ress, code)
 
