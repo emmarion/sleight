@@ -64,9 +64,30 @@ ground.
     first, so an alias made by `let ... is` works, and the proof is
     about the canonical variable (SR 20).
 
+14. **`def-adts` ordering**: a type constructor's own telescope may
+    mention types defined earlier in the same `def-adts`, not later
+    ones; every constructor may mention every type of the group.
+15. **A `let` with no binders** is an erased position (all zero of its
+    binders are erased), so its right-hand side is checked but never
+    run. Section 27 calls such a `let` useless as the language stands.
+16. **A match in an erased position** elaborates its scrutinee erased
+    whatever the keyword says, per section 12's "unconstrained".
+17. **Tail position** for `tail`/`delegate` (section 9): the marked
+    call is the body's final expression, or its results are bound by a
+    `let` and returned in order by a final `values`; between the call
+    and the return only `let`s whose right-hand side is erased may
+    appear; before the call, any statements for `tail`, none but erased
+    `let`s for `delegate`; a match in tail position puts its branches in
+    tail position. A `delegate` callee must be a named variable, and
+    `coercible-of` returns the first anonymous `Coercible` proof about
+    the function found in scope.
+18. **Warnings** (a phantom constructor with a `many` field) go to
+    stderr and do not stop elaboration. Errors from unification carry
+    line 0, having no source position of their own.
+
 ## Type checking
 
-14. **Every non-grammar argument, scrutinee or result gets an
+19. **Every non-grammar argument, scrutinee or result gets an
     anonymous entry** (SR 14, second option): a call's returns, a
     match's returns and a `coerce` are bound to fresh anonymous `Dyn`
     entries carrying their types and any `is` rule, and dependent
@@ -74,86 +95,86 @@ ground.
     kept as trees rather than as anonymous entries with an `is` rule
     (section 3's picture); canonicalization should agree either way,
     but this is a representation choice, not the one section 3 draws.
-15. **`is` entries at use sites** (SR 13): an argument landing on an
+20. **`is` entries at use sites** (SR 13): an argument landing on an
     `is` parameter or field, or a result landing on an `is` return, is
     written like any other and must canonicalize identically to the
     `is` expression; its erasure is that of the position.
-16. **Match branches**: every constructor of the `Matchable` must
+21. **Match branches**: every constructor of the `Matchable` must
     appear exactly once, in any order (SR 17). A present branch whose
     forced unification contradicts is an error telling the programmer
     to write `(absurd C)`; an `(absurd C)` whose unification succeeds is
     an error. A `comptime-match` inside a branch that contradicts the
     branch's facts stops elaborating that branch and counts it as
     absurd (SR 7).
-17. **An absurd-by-proof branch body, and an `absurd` function body,
+22. **An absurd-by-proof branch body, and an `absurd` function body,
     are erased positions** (SR 18); they must produce one value of a
     type with an empty `Matchable`.
-18. **Proof arguments** to `predates`, `subterm`, the transitivity
+23. **Proof arguments** to `predates`, `subterm`, the transitivity
     forms and the `coercible-*` forms are elaborated as erased
     expressions, so they may be calls to erased functions (SR 18).
-19. **`(predates p)` accepts both shapes** (SR 15): the proof's subject
+24. **`(predates p)` accepts both shapes** (SR 15): the proof's subject
     may be the callee's level or the callee itself, compared after
     canonicalization; its level must be the current one.
-20. **`(subterm p)`** must sit before an argument whose parameter is
+25. **`(subterm p)`** must sit before an argument whose parameter is
     `subterm`-marked; the enclosing function must have a subterm
     parameter at the same subterm index, and the proof's second subject
     must be that parameter (SR 16). Fewer enclosing subterm parameters
     than the index is an error.
-21. **Top-level calls**: a decrease annotation written at the top level
+26. **Top-level calls**: a decrease annotation written at the top level
     is elaborated (so the proof must exist) but not checked against any
     level, since there is none (section 24).
-22. **Atom-vs-atom unification** makes the newer entry an alias of the
+27. **Atom-vs-atom unification** makes the newer entry an alias of the
     older one (SR 21). Unifying a variable with a term that mentions a
     telescope binder (something inside an `Fn` type, say) is a hard
     error rather than a contradiction, since treating it as a
     contradiction would refute a branch on no evidence; no realistic
     program has hit this.
-23. **Facts are read canonically to a fixpoint** rather than stored
+28. **Facts are read canonically to a fixpoint** rather than stored
     canonical at birth with re-canonicalization on every new rule (SR
     21); occurs checks on the canonical form keep the rules acyclic.
-24. **Facts born inside a `let`'s right-hand side survive it** unless
+29. **Facts born inside a `let`'s right-hand side survive it** unless
     they mention entries that went out of scope; only match branches
     restore the fact table on exit. The design's "a fact dies with the
     scope it was born in" is not enforced for right-hand sides. The
     facts in question come from `comptime-match` verifications, which
     are unconditionally true, so this looked harmless.
-25. **Constructors are `Const` even when born inside a body**, holding
+30. **Constructors are `Const` even when born inside a body**, holding
     the unapplied constructor as their value; section 34 says nested
     definitions birth `Dyn`. No observable difference was found, since
     constructor application never consults the state.
-26. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
+31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
     print it that way.
 
 ## Runtime representation
 
-27. **Erased positions still occupy a slot.** Erased arguments and
+32. **Erased positions still occupy a slot.** Erased arguments and
     fields are passed and stored as a token value, printed `_`, rather
     than physically removed; erased `let` binders and match fields are
     left unbound. Only erasure *checking* stops non-erased code from
     reading them.
-28. **Transparent types are represented as their `many` field**
+33. **Transparent types are represented as their `many` field**
     (section 38's requirement), so `coerce` is the identity at runtime.
     A value built by another constructor of a transparent type is the
     token (SR 23, "unspecified bits"). Since a match may go through a
     first-class constructor whose identity is only known at runtime
     (section 17), the evaluator looks up the representation when the
     match runs, from the constructors the branches name.
-29. **Union values carry a constructor tag** in the interpreter, since
+34. **Union values carry a constructor tag** in the interpreter, since
     nothing observes its absence; matches on unions with one real
     branch dispatch on it, which agrees with the one branch that can run.
-30. **An absurd function's code raises** if ever reached; a match whose
+35. **An absurd function's code raises** if ever reached; a match whose
     real branches are all absurd or phantom likewise compiles to code
     that raises.
 
 ## Not implemented
 
-31. Macros (`Macro`, `Raw`, the expansion limit). A REPL beyond
+36. Macros (`Macro`, `Raw`, the expansion limit). A REPL beyond
     reading a program from stdin. `lib/kernel_input.ml` is untouched
     and unused (SR 28).
 
 ## Sugar (SUGAR.md)
 
-32. All four forms are implemented as SUGAR.md describes them: `_` as
+37. All four forms are implemented as SUGAR.md describes them: `_` as
     a `def-fns` level births an anonymous level; `_` as a match
     annotation inherits the telescope of the enclosing function body or
     match branch, and is an error elsewhere; `(predates _)` proves

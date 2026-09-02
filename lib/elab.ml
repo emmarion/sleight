@@ -313,9 +313,9 @@ and elab_call cc env expect l callee hcode lv params rets args =
     | Some (`Subterm (i, Atom (_, "_"))), At _ ->
         let env, p = prove_subterm env l (List.nth arg_terms i) (Var (counterpart (subterm_index i))) in
         (env, Some (`Subterm (i, p.term)))
+    | Some (`Predates (Atom (_, "_")) | `Subterm (_, Atom (_, "_"))), Top | None, _ -> (env, None)
     | Some (`Predates p), _ -> let env, p = elab_erased env p in (env, Some (`Predates p))
     | Some (`Subterm (i, p)), _ -> let env, p = elab_erased env p in (env, Some (`Subterm (i, p)))
-    | None, _ -> (env, None)
   in
   (match env.level with
    | Top -> ()
