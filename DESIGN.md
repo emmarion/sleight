@@ -224,8 +224,8 @@ There are also two ways for these to be "born" (introduced):
   scope entry of its own (§3). This is per-binder:
   with `(let (many a) (many b) (many c) (values x y z))`, each of `a`,
   `b`, `c` inherits from
-  `x`, `y`, `z` respectively. Where an entry is a call or a match there is
-  nothing to inherit, §15 making those results `Dyn` inside a function
+  `x`, `y`, `z` respectively. Where an entry is a call, a match or a
+  transmute (§38) there is nothing to inherit, §15 making those results `Dyn` inside a function
   body or a match branch; in run position (§16) the statement is run
   instead and its binders are born `Const` (§34). Inheritance is one of
   the ways a `Const` reaches into a function body — a special form or
@@ -280,18 +280,22 @@ There are also two ways for these to be "born" (introduced):
 - **`tail` marker.** A call can be marked `tail`, asserting the
   programmer's claim that it compiles to a tail call. If the compiler
   cannot honor that claim, it is a hard compile error, not a silent
-  fallback. Tail-ness is judged *after* stripping erasure (§23): you can
-  store a tail call's result, do further work with only phantom/erased
-  values, and then return, and it still counts as `tail` — the actual
+  fallback. Tail-ness is judged on the post-erasure AST — erased
+  positions, types and transmutes (§38) all gone (§23): you can store a
+  tail call's result, do further work with only phantom/erased values,
+  and then return, and it still counts as `tail` — the actual
   requirement is just that the (non-erased) return value(s) and their
-  order match what the called function itself returns.
+  order match what the called function itself returns, which includes
+  binding them with a `let` and repackaging them, transmuted or not, in
+  a `values` in the same order.
 - **`delegate` marker.** Same idea as `tail`, plus the same restriction
   applied to the call's arguments: the non-erased arguments must also
-  pass straight through. The consequence is stronger than `tail` — after
-  stripping erasure, the marked function's body reduces to nothing but
-  the delegated call, so the two functions' non-erased behavior is
-  identical, and the outer function's function pointer could just *be*
-  the inner one's.
+  pass straight through, on the same post-erasure AST. The consequence
+  is stronger than `tail` — after stripping erasure, the marked
+  function's body reduces to nothing but the delegated call, so the two
+  functions' non-erased behavior is identical, and the outer function's
+  function pointer could just *be* the inner one's — which §38's
+  `tm-delegate-of` turns into a proof.
 
 ## 10. `Type : Type`, no strict positivity
 
@@ -489,8 +493,8 @@ into a materialized runtime value.
 
 ## 15. Match/call results, and a compile-time discriminant assertion
 
-For now: a function call's result, a match's result and a constructor
-application are all `Dyn` where they stand, even over `Const` arguments
+For now: a function call's result, a match's result, a constructor
+application and a transmute (§38) are all `Dyn` where they stand, even over `Const` arguments
 — never `Const`. No automatic constant-folding through calls, matches
 or constructors. Inside a function body or a match branch every binding
 is `Dyn`. Anywhere else — run position (§16), the file's top level
@@ -599,7 +603,8 @@ Everything below can be passed around as ordinary first-class data:
 4. an ADT value constructor, unapplied
 5. a `Matchable` object — see below
 6. a `Type`
-7. an opaque object (a `Level`, or a `Subterm`/`Predates` proof, §8)
+7. an opaque object (a `Level`, a `Subterm`/`Predates` proof, §8, or a
+   `Transmute` proof, §38)
 
 `Special` and `Macro` (§9) are both ordinary ADT values. Applying a held,
 unapplied constructor (items 3–4) is ordinary constructor application,
@@ -774,7 +779,9 @@ erased-declared parameter or field; any argument of a type constructor
 (§12); a type or `is` expression (§5, §14); the right-hand side of a
 `let` whose binders are all `erased`, each entry of a final `values`
 there taking its own binder's multiplicity; the scrutinee of an
-`erased` match; and every sub-expression of an erased expression. The
+`erased` match; the proof argument of a `transmute` and every argument
+of a `tm-*` form (§38); and every sub-expression of an erased
+expression. The
 body of a phantom constructor's branch is erased throughout (§12), and
 so is the body of an `erased` function: it is checked with every return
 entry `erased`, whatever its signature says — the analogue of the
@@ -784,8 +791,8 @@ multiplicity `erased`. Every other position is non-erased.
 Checking is then local. Referencing an `erased` name from a non-erased
 position is an error; referencing a `many` name from anywhere is fine —
 a non-erased value can be "copied" into an erased one for free, but
-never the reverse. Going the other way needs something like §21's
-still-undesigned coercion mechanism, or §14's `is` reification.
+never the reverse. Going the other way needs a proof: §38's
+`transmute`, or §14's `is` reification.
 
 The rule for a function call or constructor application:
 1. If the overall result is erased, there's no further constraint —
@@ -816,11 +823,11 @@ unit's text alone — a function body over its signature, a run-position
 statement over its `let` binders (§9) — before that unit is compiled or
 run, which is what makes the round trip (KERNEL.md) well-ordered.
 
-## 21. v2 TODO: coercion and coercibility proofs
+## 21. Coercion
 
-Some variant of `coerce` plus a proof-of-coercibility: two values counted
-as the same modulo erased values, and/or modulo entering/leaving a
-Haskell-newtype-style wrapper type. Not designed yet.
+Designed as `transmute`, §38: two values counted as the same modulo
+erased values (`tm-ctor`), or modulo entering/leaving a
+Haskell-newtype-style wrapper type (`tm-wrap`).
 
 ## 22. Evaluation strategy
 
@@ -831,9 +838,10 @@ The language is eagerly evaluated.
 Erasure (§6, §12, §20) is, in a sense, just an optimization — a
 substantial one, but not semantics-changing. Invariant: take any program
 that validly compiles, strip out every erasure marking and phantom
-designator, and give `Level` and friends (§8) some ordinary non-erased
-representation instead — the result should still compile and run
-identically to the original. Recorded as an intended invariant/target,
+designator, give `Level` and friends (§8) some ordinary non-erased
+representation instead, and replace every `(transmute a p)` by the `b`
+from `p`'s type, which the stripped program has as a real value (§38) —
+the result should still compile and run identically to the original. Recorded as an intended invariant/target,
 not something verified yet (in the spirit of §10).
 
 The non-erased stand-in for `Level` and friends would most likely just be
@@ -888,7 +896,8 @@ actually specified.
    functions at a shared level, written on the form itself, each
    function carrying its own `erased`/`many` marker (§20); a single
    function is just the one-element case. Possibly nested inside another
-   function's body (§9, §16). A body may be absurd (§37).
+   function's body (§9, §16). A body may be absurd (§37). Births a
+   `Transmute` proof for each `delegate`-bodied function (§38).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
@@ -935,6 +944,17 @@ or an `is` expression, not only at a declaration site.
 19. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
+20. `transmute` — reinterprets a value as the one named by an erased
+    `Transmute` proof, at no runtime cost (§38).
+21. `tm-refl`, `tm-sym`, `tm-compose` — reflexivity, symmetry and
+    transitivity of `Transmute` (§38), special forms like item 19.
+22. `tm-wrap` — births the proof wrapping a value into a transparent
+    type's one non-phantom constructor; unwrapping is its `tm-sym` (§38).
+23. `tm-ctor` — births the proof between two applications of the same
+    non-phantom constructor, from per-field values and proofs (§38).
+24. `tm-delegate-of` — yields the proof `def-fns` births for a
+    `delegate`-bodied function, from ambient scope (§38), as
+    `matchable-of` does for a `Matchable`.
 
 Items 16–17 (constructor application) are *not* actually dispatched
 through the `Special` mechanism the rest of this list uses — see §4's
@@ -942,25 +962,25 @@ head-dispatch algorithm for the real two-tier answer.
 
 **Annotation tokens** (also `Special`, but lower-level than the above —
 they annotate a form rather than heading a list):
-20. `erased` — the 0-multiplicity (§6).
-21. `many` — the ω-multiplicity (§6).
-22. `:` — separates a name from the signature being given to it, at a
+25. `erased` — the 0-multiplicity (§6).
+26. `many` — the ω-multiplicity (§6).
+27. `:` — separates a name from the signature being given to it, at a
     declaration (§30, §31). Whether this reorders the way telescope
     entries do is still open (§30).
-23. `is` — separates an `is` expression from the name it introduces, in
+28. `is` — separates an `is` expression from the name it introduces, in
     place of a type (§14, §30).
-24. `->` — separates a signature's parameter telescope from its return
+29. `->` — separates a signature's parameter telescope from its return
     telescope (§29).
-25. `subterm` — marks a telescope entry as participating in the
+30. `subterm` — marks a telescope entry as participating in the
     lexicographic subterm order (§7, §9, §30), and heads the call-site
     annotation that names the decreasing argument by position (§32).
-26. `enum` — declares an ADT's discriminant non-erased (§12, §31).
-27. `union` — declares an ADT's discriminant erased (§12).
-28. `tail` — marks a call as compiling to a tail call; a hard compile
+31. `enum` — declares an ADT's discriminant non-erased (§12, §31).
+32. `union` — declares an ADT's discriminant erased (§12).
+33. `tail` — marks a call as compiling to a tail call; a hard compile
     error if the compiler can't honor the claim (§9).
-29. `delegate` — `tail` plus the same pass-through requirement on the
+34. `delegate` — `tail` plus the same pass-through requirement on the
     call's non-erased arguments (§9).
-30. `predates` — heads the call-site annotation carrying a lower-level
+35. `predates` — heads the call-site annotation carrying a lower-level
     call's proof (§9).
 
 ## 28. ASCII only
@@ -1383,3 +1403,74 @@ longer needed.
 
 Open: whether an absurd body needs a marker beyond the type of what it
 returns, a question shared with §12's absurd-by-proof branch.
+
+## 38. Transmute
+
+A `transmute` reinterprets one value as another of identical runtime
+representation, at no runtime cost, on the strength of an erased proof
+that the two are transmutable. It is the coercion §21 asked for.
+
+**The proof type.** `Transmute : (Type A) (A a) (Type B) (B b) -> Type`,
+heterogeneous like `Subterm` (§8), an opaque object (§17), always
+erased.
+
+**The expression.** `(transmute a p)`, with `a` the value being
+reinterpreted and `p : (Transmute A a B b)`; `a` must be identical,
+post-canonicalization, to the value in `p`'s type, and `b` is read from
+it. It produces one value `d` of type `B` with `d is b` (§14); `d` is
+`Dyn` where it stands, like a call's result (§15). A transmute in a
+non-erased position demands `a` non-erased (§20); `p` is erased always.
+§23's invariant is stated with each transmute replaced by its `b`,
+which the stripped program has as a real value.
+
+**Birthing proofs.** All of the following are special forms (§27),
+checked entirely at elaboration time:
+
+1. `(tm-refl e)` — `(Transmute A e A e)`; since types canonicalize
+   (§5), this relates any two `is`-equal values.
+2. `(tm-sym p)` — from `a` to `b`, conclude `b` to `a`.
+3. `(tm-compose p q)` — from `a` to `b` and `b` to `c`, conclude `a` to
+   `c`.
+4. `(tm-wrap C arg1 ... argn)` — wrapping into a **transparent** type.
+   An enum is transparent when it has exactly one non-phantom
+   constructor and that constructor has exactly one `many` field; a
+   union is transparent when every constructor but one has only
+   `erased` fields and the remaining one is non-phantom with exactly one
+   `many` field. `C` is that constructor, and the arguments are its
+   telescope in order, so exactly one of them, `f`, sits at the `many`
+   field. The proof is `(Transmute F f T (C arg1 ... argn))`, unwrapping
+   being its `tm-sym`. The enum clause commits such an enum's
+   representation to carrying no tag.
+5. `(tm-ctor C ...)` — the same non-phantom constructor on both sides,
+   with fields that may differ. The arguments follow `C`'s telescope in
+   order: an `erased` field takes two, its source and target values,
+   and a `many` field takes one, a `Transmute` proof between the values
+   at that position. Each is checked against its field type
+   instantiated with the source values on the source side and the
+   target values on the target side, so `C`'s return type, and with it
+   any type index, may differ between the sides. The proof is
+   `(Transmute T (C sources) T' (C targets))`. Using it at a
+   `transmute` needs the source to canonicalize to `(C sources)`, which
+   is what entering a `C` branch forces (§18), so such a proof is built
+   per branch from the branch's binders.
+6. `(tm-delegate-of g)` — for a `many` function `g` whose body is a
+   `delegate` call to `f` (§9). `def-fns` births the proof
+   `(Transmute (Fn ...) g (Fn ...) f)` anonymously, as `def-adts`
+   births a `Matchable` (§19), and this form fetches it from ambient
+   scope by naming `g`, as `matchable-of` does. `g` is `Dyn` within its
+   own block (§34), so `g`'s body cannot use its own proof.
+
+Only non-phantom constructors and `many` functions appear in items 4–6:
+a `transmute` produces a non-erased value, which by §20's rule 2 none
+of the others can head.
+
+Proofs over containers — every element of a list wrapped, say — are
+built by recursion, in an `erased` function returning the proof (§20),
+checked for termination like any other (§7) and never run.
+
+**Tail and delegate.** A transmute erases to nothing, so §9's `tail` and
+`delegate` checks read the post-erasure AST with erased positions,
+types and transmutes gone (§23): a call still counts as `tail` when its
+returns are bound by a `let` and repackaged in a `values` in the same
+order, transmuted or not, and as `delegate` when its arguments likewise
+pass straight through.
