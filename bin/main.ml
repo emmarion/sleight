@@ -11,7 +11,6 @@ let report path f =
   | Reader.Syntax (line, msg) -> Printf.eprintf "%s:%d: syntax error: %s\n%!" path line msg; None
   | Env.Error (line, msg) -> Printf.eprintf "%s:%d: error: %s\n%!" path line msg; None
   | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n%!" path msg; None
-  | Elab.BranchAbsurd _ -> Printf.eprintf "%s: error: comptime-match contradicts the facts in force\n%!" path; None
   | Eval.Runtime msg -> Printf.eprintf "%s: runtime error: %s\n%!" path msg; None
 
 let run env path =

@@ -7,7 +7,7 @@
   (values b a))
 
 (def-lvl Y)
-(let (erased p) (prove-predates swap Y))
+(let (erased p) (prove-predates X Y))
 
 (def-fns Y $ many second : (many (Nat) a) (many (Nat) b) -> (many (Nat) d)
   (let (many c) (many d) (swap (predates p) a b))

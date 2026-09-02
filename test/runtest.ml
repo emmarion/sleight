@@ -30,7 +30,6 @@ let run_test name =
     | Reader.Syntax (l, m) -> Error (Printf.sprintf "line %d: syntax error: %s" l m)
     | Env.Error (l, m) -> Error (Printf.sprintf "line %d: error: %s" l m)
     | Env.Contradiction m -> Error ("contradiction: " ^ m)
-    | Elab.BranchAbsurd _ -> Error "comptime-match contradicts the facts in force"
     | Eval.Runtime m -> Error ("runtime error: " ^ m)
   in
   let contains hay needle =

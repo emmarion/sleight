@@ -25,15 +25,15 @@ let special_term = App (Var special, [])
 let env =
   let ctor env (sp, n) =
     let c, env = Env.bind env ~rigid:true (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
-    let env = Env.set_state env c (Env.Const (V.VCtorFn c)) in
-    Hashtbl.replace V.ctors c { V.cname = "%" ^ n; adt = special; fields = []; phantom = false; repr = V.Tagged };
+    let ctor = { V.cname = "%" ^ n; cid = c; tagged = true } in
+    let env = Env.set_state env c (Env.Const (V.VCtorFn ctor)) in
     Hashtbl.replace Special.table c sp;
-    (env, (sp, n, c))
+    (env, (sp, n, c, ctor))
   in
   let env, ctors = List.fold_left_map ctor env Special.all in
-  let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c) -> (Many, Var c)) ctors) in
+  let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
   let _, env = Env.bind env None Erased token matchable in
   List.fold_left
-    (fun env (_, n, c) ->
-      snd (Env.bind env ~rule:(Some (App (Var c, []))) (Some n) Many (Env.Const (V.VCtor (c, []))) special_term))
+    (fun env (_, n, c, ctor) ->
+      snd (Env.bind env ~rule:(Some (App (Var c, []))) (Some n) Many (Env.Const (V.VCtor (ctor, []))) special_term))
     env ctors

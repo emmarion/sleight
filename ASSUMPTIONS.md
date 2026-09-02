@@ -74,15 +74,20 @@ ground.
     calls such a `let` useless as the language stands.
 16. **A match in an erased position** elaborates its scrutinee erased
     whatever the keyword says, per section 12's "unconstrained".
-17. **Tail position** for `tail`/`delegate` (section 9): the marked
-    call is the body's final expression, or its results are bound by a
-    `let` and returned in order by a final `values`; between the call
-    and the return only `let`s whose right-hand side is erased may
-    appear; before the call, any statements for `tail`, none but erased
-    `let`s for `delegate`; a match in tail position puts its branches in
-    tail position. A `delegate` callee must be a named variable, and
-    `coercible-of` returns the first anonymous `Coercible` proof about
-    the function found in scope.
+17. **Tail position** for `tail`/`delegate` (section 9) is judged on
+    the post-erasure code after every `let` that only renames (which is
+    what a `coerce`, or a `let` of a variable, erases to) is resolved
+    away: the marked call is then the body's final expression, or its
+    results are bound by a `let` and returned in order by a final
+    `values`; before a `tail` call any code may run, before a `delegate`
+    call none; a match in tail position puts its branches in tail
+    position. A `delegate` callee must be a named variable, and its
+    arguments must resolve to the function's non-erased parameters in
+    order. `coercible-of` returns the newest anonymous `Coercible` proof
+    about the function found in scope, so an anonymous proof born later
+    (a `(let (erased _) (coercible-refl g))`, say) shadows the delegate
+    proof; harmless, any such proof being true, but not what section 38
+    says it fetches. Open.
 18. **Warnings** (a phantom constructor with a `many` field) go to
     stderr and do not stop elaboration.
 
@@ -104,27 +109,26 @@ ground.
     appear exactly once, in any order (SR 17). A present branch whose
     forced unification contradicts is an error telling the programmer
     to write `(absurd C)`; an `(absurd C)` whose unification succeeds is
-    an error. A `comptime-match` inside a branch that contradicts the
-    branch's facts stops elaborating that branch and counts it as
-    absurd (SR 7).
+    an error.
 22. **An absurd-by-proof branch body, and an `absurd` function body,
     are erased positions** (SR 18); they must produce one value of a
     type with an empty `Matchable`.
 23. **Proof arguments** to `predates`, `subterm`, the transitivity
     forms and the `coercible-*` forms are elaborated as erased
     expressions, so they may be calls to erased functions (SR 18).
-24. **`(predates p)` accepts both shapes** (SR 15): the proof's subject
-    may be the callee's level or the callee itself, compared after
-    canonicalization; its level must be the current one.
+24. **`(predates p)` accepts the level shape only** (SR 15; settled by
+    the owner, section 9): the proof's subject must canonicalize to the
+    callee's level and its level to the current one. A `Predates` about
+    the function value, which `predates-subterm` can produce, is
+    rejected at a call.
 25. **`(subterm p)`** must sit before an argument whose parameter is
     `subterm`-marked; the enclosing function must have a subterm
     parameter at the same subterm index, and the proof's second subject
     must be that parameter (SR 16). Fewer enclosing subterm parameters
     than the index is an error.
-26. **Top-level calls**: a decrease annotation written at the top level
-    is elaborated (so the proof must exist) but not checked against any
-    level, since there is none (section 24); the `_` sugar forms are
-    simply ignored there.
+26. **Top-level calls**: a decrease annotation written at the top level,
+    the `_` sugar forms included, is an error (settled by the owner,
+    section 24).
 27. **Atom-vs-atom unification** makes the newer entry an alias of the
     older one (SR 21). Unifying a variable with a term that mentions a
     telescope binder (something inside an `Fn` type, say) is a hard
@@ -138,12 +142,16 @@ ground.
     they mention entries that went out of scope; only match branches
     restore the fact table on exit. The design's "a fact dies with the
     scope it was born in" is not enforced for right-hand sides. The
-    facts in question come from `comptime-match` verifications, which
-    are unconditionally true, so this looked harmless.
-30. **Constructors are `Const` even when born inside a body**, holding
-    the unapplied constructor as their value; section 34 says nested
-    definitions birth `Dyn`. No observable difference was found, since
-    constructor application never consults the state.
+    facts in question come from `comptime-match` verifications in a
+    run-position right-hand side, which are unconditionally true, so
+    this looked harmless.
+30. **Nested definitions birth `Dyn`**, as section 34 says: a
+    `def-adts`, `def-lvl` or delegate proof inside a body births `Dyn`
+    entries, and the body's code binds each nested constructor's value.
+    In run position the same births are `Const`, and the values of
+    `Const` entries form the runtime environment every closure and
+    run-position statement runs in (section 34's "embedded into the
+    code").
 31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
     print it that way. A `many` parameter or field of type `Type` (SR
     22) is accepted at its declaration and simply cannot be supplied in
@@ -160,16 +168,20 @@ ground.
     `many` binders. The token value stands in only where elaboration
     needs a Const for an erased entry (an erased `let` binder in run
     position, an erased `comptime-match` field, a `Level`).
-33. **Transparent types are represented as their `many` field**
-    (section 38's requirement), so `coerce` is the identity at runtime.
-    A value built by another constructor of a transparent type is the
-    token (SR 23, "unspecified bits"). Since a match may go through a
-    first-class constructor whose identity is only known at runtime
-    (section 17), the evaluator looks up the representation when the
-    match runs, from the constructors the branches name.
-34. **Union values carry a constructor tag** in the interpreter, since
-    nothing observes its absence; matches on unions with one real
-    branch dispatch on it, which agrees with the one branch that can run.
+33. **Representation is decided at elaboration**, per section 38: a
+    value is the tuple of its `many` fields, one field bare and none the
+    token (SR 23's "unspecified bits"), and it carries a tag only when
+    its type is an enum with more than one non-phantom constructor. A
+    constructor's runtime value carries its tag flag, so applying a
+    first-class constructor needs no lookup; a match reads whether to
+    dispatch off the `Matchable` in scope (its type plus the listed
+    constructors' `ValCtor` types), so a first-class match compiles the
+    same way as a named one. `coerce` is the identity at runtime.
+34. **Unions are never tagged**, so a match on one binds its single
+    real branch's fields from the tuple without inspecting anything;
+    the interpreter prints an untagged value as its fields, with no
+    constructor name. A transparent union's other non-phantom
+    constructors build the token.
 35. **An absurd function's code raises** if ever reached; a match whose
     real branches are all absurd or phantom likewise compiles to code
     that raises.
@@ -198,10 +210,10 @@ A later autonomous session, asked to check that nothing false (in
 particular `(False)`) can be proved, probed the checker and changed the
 interpreter in four places. Items 38-41 record those changes. As
 elsewhere in this file, each is the implementation's reading, offered as
-a candidate question, not a settled decision; item 41 in particular
-appears to touch DESIGN.md's actual text and is flagged for the owner.
-The reasoning is a Claude session's and may be wrong (CLAUDE.md rule 1);
-where possible it was checked by compiling (rule 2).
+a candidate question, not a settled decision, except item 41, which the
+owner has since settled. The reasoning is a Claude session's and may be
+wrong (CLAUDE.md rule 1); where possible it was checked by compiling
+(rule 2).
 
 38. **`comptime-match` rejects a phantom constructor pattern.** §15 has
     `comptime-match` read a non-erased scrutinee with a non-erased
@@ -241,35 +253,14 @@ where possible it was checked by compiling (rule 2).
     non-rigid entry; two rigids still contradict. A correctness fix, not
     a design choice.
 
-41. **A phantom-constructor branch under an *erased* scrutinee is
-    treated as a real branch (FLAGGED FOR OWNER).** This one appears to
-    contradict DESIGN.md §12 as written and is the session's *proposed*
-    resolution to what looks like a genuine gap, not something to take
-    as settled. §12's list of the branches allowed alongside the single
-    "real" branch of an erased-discriminant match includes "a branch
-    matching a phantom constructor ... so it needs no runtime dispatch
-    of its own" — categorically, with no scrutinee-erasure condition.
-    SPEC-REVIEW item 9 already noted that the phantom-branch exemption
-    rests on the unstated invariant that no non-erased value is ever
-    headed by a phantom constructor. That invariant (from §20 rule 2)
-    holds for a *non-erased* scrutinee, where a phantom-headed value
-    cannot occur and the phantom branch really is dead. It does **not**
-    hold for an *erased* scrutinee: an erased value may perfectly well
-    be phantom-headed (that is all a phantom constructor builds). With
-    the phantom branch dropped and the lone non-phantom branch compiled
-    as "the one that always runs," a match on such a value returns a
-    value built by the wrong constructor, of the wrong type — a
-    type-safety break, and a plausible route to `(False)`.
-
-    The implementation now makes a phantom branch count as dead only
-    when the scrutinee is non-erased; under an erased scrutinee it is an
-    ordinary real branch, subject to the one-real-branch rule and
-    producing the match's declared result (its fields stay erased per
-    §12). So a match that genuinely cannot dispatch is rejected, while
-    one whose only non-absurd branch is the phantom (the rest refuted by
-    proof/structure) still compiles to that single branch soundly.
-    Other resolutions are possible — e.g. rejecting any such match with
-    a non-erased result and a not-provably-absurd phantom branch — and
-    the choice is the owner's; §12's point 3 would need a matching edit
-    whichever way it goes. Recorded as an open question, per CLAUDE.md
-    rule 11.
+41. **A phantom-constructor branch under an *erased* scrutinee is an
+    ordinary branch** (settled by the owner; §12 now says so). §12's
+    exemption of a phantom branch from the match's result erasures, and
+    its exclusion from the one-real-branch count, rested on the
+    invariant that no non-erased value is headed by a phantom
+    constructor (§20 rule 2, SPEC-REVIEW 9). That holds for a `many`
+    scrutinee only: an erased value may well be phantom-headed. So a
+    phantom branch counts as dead only under a `many` scrutinee; under
+    an `erased` one it is a real branch, subject to the one-real-branch
+    rule and producing the match's declared result, its fields erased
+    like every other branch's.

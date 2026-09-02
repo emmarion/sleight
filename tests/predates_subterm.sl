@@ -1,19 +1,22 @@
 ; needs: list
 ; expect: (Succ (Succ (Zero)))
-; Predates through Subterm: a function taken out of a list that predates the level.
+; Predates through Subterm: a function's level is an erased field of a value that predates the caller's level.
+
+(def-adts $ Packed : -> Type
+  enum
+  (many Pack : (erased (Level) l) (many (Fn l (many (Nat) n) -> (many (Nat) m)) f) -> (Packed)))
 
 (def-lvl L0)
 (def-fns L0 $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))
-(let (many fs) (Cons (Fn L0 (many (Nat) n) -> (many (Nat) m)) inc (Nil (Fn L0 (many (Nat) n) -> (many (Nat) m)))))
+(let (many p) (Pack L0 inc))
 
 (def-lvl L1)
-(let (erased p) (prove-predates fs L1))
+(let (erased pp) (prove-predates p L1))
 
-(def-fns L1 $ many apply-head : (many (Nat) x) -> (many (Nat) y)
-  (match many fs (((Nat) r))
-    (absurd Nil)
-    ((Cons a g rest)
-      (let (erased q) (prove-subterm g fs))
-      (g (predates (predates-subterm p q)) (g (predates (predates-subterm p q)) x)))))
+(def-fns L1 $ many apply-packed : (many (Nat) x) -> (many (Nat) y)
+  (match many p (((Nat) r))
+    ((Pack l f)
+      (let (erased q) (prove-subterm l p))
+      (f (predates (predates-subterm pp q)) (f (predates (predates-subterm pp q)) x)))))
 
-(apply-head (Zero))
+(apply-packed (Zero))

@@ -231,8 +231,7 @@ There are also two ways for these to be "born" (introduced):
   instead and its binders are born `Const` (§34). Inheritance is one of
   the ways a `Const` reaches into a function body — a special form or
   macro renamed locally (§4) — the others being a direct reference to
-  the entry, `comptime-match` (§15), and a macro expansion that
-  mentions it.
+  the entry and a macro expansion that mentions it.
 - **`let` binders.** Each binder carries a mandatory multiplicity and
   an optional type-or-`is` clause, in telescope-entry shape with the
   type omissible (§30): `(many x)`, `(erased (Nat) x)`, `(many c is d)`.
@@ -263,7 +262,10 @@ There are also two ways for these to be "born" (introduced):
   discharged, and it differs by whether the call is a level-decreasing
   call or a same-level call:
   - A call to a strictly-lower-level function needs a `Predates` proof,
-    and no `Subterm` proof.
+    and no `Subterm` proof. The proof relates the callee's level, read
+    from its `Fn` type (§29), to the current level (§3); a `Predates`
+    about the function value itself, though §8's axiom 3 can produce
+    one, is not a call-site proof.
   - A same-level call needs no `Predates` proof, but needs exactly one
     `Subterm` proof instead. The `(subterm p)` annotation marks which
     argument is the subterm-decreasing one by sitting immediately before
@@ -288,7 +290,11 @@ There are also two ways for these to be "born" (introduced):
   requirement is just that the (non-erased) return value(s) and their
   order match what the called function itself returns, which includes
   binding them with a `let` and repackaging them, coerced or not, in
-  a `values` in the same order.
+  a `values` in the same order. The check reads the post-erasure form
+  with `let`s that merely rename resolved away — a `coerce` erases to
+  exactly such a renaming (§38), so a non-erased `let` of a coerced
+  result is fine — and the same reading applies to a `delegate`'s
+  arguments.
 - **`delegate` marker.** Same idea as `tail`, plus the same restriction
   applied to the call's arguments: the non-erased arguments must also
   pass straight through, on the same post-erasure AST. The consequence
@@ -407,17 +413,23 @@ variables a branch introduces follows from the scrutinee's declared
 multiplicity (§11, §20) — each field at its declared multiplicity under
 `many`, all erased under `erased`.
 
-But: when evaluating a branch reached through a **phantom** constructor
-(one whose own `def-adts` declaration is marked erased, as against a
-binding elsewhere that merely holds a constructor at multiplicity
-`erased`, §3), everything in scope is erased — the variables the branch
-introduces included, whatever their fields' annotations say — and, more
-importantly, so is the expected type of the branch's own result.
-Concretely: such a branch's body can, and in fact must, return entirely
-erased values, and that's considered valid even when the match's
-position (§20) calls for non-erased result(s) — this branch is exempted
-from the match's result erasures. §20 covers the underlying erasure
-model; an `erased` function's body is the same situation.
+But: a branch reached through a **phantom** constructor (one whose own
+`def-adts` declaration is marked erased, as against a binding elsewhere
+that merely holds a constructor at multiplicity `erased`, §3) under a
+`many` scrutinee can never run, since no non-erased value is headed by
+a phantom constructor (§20's rule 2). So everything in scope there is
+erased — the variables the branch introduces included, whatever their
+fields' annotations say — and, more importantly, so is the expected
+type of the branch's own result. Concretely: such a branch's body can,
+and in fact must, return entirely erased values, and that's considered
+valid even when the match's position (§20) calls for non-erased
+result(s) — this branch is exempted from the match's result erasures.
+Under an `erased` scrutinee the exemption does not apply: an erased
+value may well be phantom-headed, so a phantom constructor's branch is
+an ordinary branch there, its fields erased like every other branch's,
+and it must produce the match's declared result. §20 covers the
+underlying erasure model; an `erased` function's body is the same
+situation as the exempted branch.
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
@@ -445,8 +457,10 @@ results is non-erased:
   regardless of the keyword — there can be at most one "real" branch. Every
   other branch must be one of: 1) automatically absurd (the rewrite rules
   derive a contradiction), 2) absurd by proof, or 3) a branch matching a
-  phantom constructor (its body is already fully erased per the
-  phantom-branch rule above, so it needs no runtime dispatch of its own).
+  phantom constructor under a `many` scrutinee — a union matched at
+  `many` — which can never run per the phantom-branch rule above and so
+  needs no runtime dispatch of its own. Under an `erased` scrutinee a
+  phantom constructor's branch counts as real.
 
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
@@ -511,7 +525,11 @@ proves heavy.
 A special form, `comptime-match`, works specifically on a `Const`,
 itself non-erased (§34) scrutinee whose discriminant is also non-erased
 — i.e. an enum, never a union (§12): it asserts the value has a given
-discriminant, and is a compile error if it doesn't. It consults the
+discriminant, and is a compile error if it doesn't. It is the one
+statement confined to run position (§16): every binding inside a
+function body or a match branch is `Dyn`, so any `Const` it could
+inspect there is a run-position one anyway, and asserting it in run
+position, before the body, records the same fact unconditionally (§18). It consults the
 type's `Matchable` (§17) for both the enum/union tag and the
 discriminant's position in the constructors' declared order. It binds
 the matched constructor's fields as `Const` at their declared
@@ -557,8 +575,9 @@ names enter the expression containing it, visible to the rest of that
 expression and gone once it ends. Statements produce no values.
 
 The statements are `let`, `def-lvl`, `def-fns`, `def-adts` and
-`comptime-match`. Every one can appear at top level or nested inside a
-function body; nothing here is top-level-only. `def-fns` and `def-adts`
+`comptime-match`. All but `comptime-match` can appear at top level or
+nested inside a function body; `comptime-match` is confined to run
+position (below, §15). `def-fns` and `def-adts`
 do both at once — the defined names go outward, while each definition's
 own parameters stay inward — and it is only the outward half that makes
 them statements.
@@ -675,23 +694,21 @@ how entering a match branch updates it:
 - One table suffices because the only code run at compile time is a
   run-position statement (§16, §24), and its own match branches run
   under the same gating as any other's: a branch's facts hold in exactly
-  the branch that runs. The two elaboration-time effects that can occur
-  inside a branch consult no branch hypothesis for what they compute —
-  macro expansion runs on `Raw` (§9), and `comptime-match` verifies
-  against the stored value (§15). An earlier formulation kept a second,
+  the branch that runs. The one elaboration-time effect that can occur
+  inside a branch, macro expansion, consults no branch hypothesis for
+  what it computes, running on `Raw` (§9); `comptime-match` is confined
+  to run position (§15, §16). An earlier formulation kept a second,
   hypothesis-free database for a `comptime` form that could run code
   inside a branch regardless of the branch's reachability; that form is
   deferred to v2 (§16, §36).
 - Two consequences, recorded as decisions: compile-time effects in
-  runtime-dead code still happen — a failing `comptime-match` in an
-  unreachable branch still fails the build, elaboration-time effects
-  being unconditional by nature. And a `comptime-match` inside a branch
-  has two stages, which is what lets it double as a sound dead-branch
-  prover with no dedicated mechanism: verification reads the stored
-  value, and a mismatch there is a genuine compile error; recording the
-  verified fact then canonicalizes it against the branch's forced rules,
-  and a contradiction there (verified `Nil` meets forced `Cons`) *is*
-  the branch being proven absurd (§12).
+  runtime-dead code still happen — a macro expansion in an unreachable
+  branch still runs, elaboration-time effects being unconditional by
+  nature. And a `comptime-match`'s verified fact, recorded in run
+  position, holds unconditionally afterwards, so a later match on the
+  same `Const` finds the contradicting branches refuted structurally
+  (verified `Nil` meets a `Cons` pattern, §12): that is how a branch is
+  proven dead from a stored value, with no dedicated mechanism.
 - Before an occurs-check, and before recursing into any equation's LHS or
   RHS, both sides are first canonicalized/rewritten to normal form via
   the applicable `is` statements.
@@ -787,7 +804,8 @@ there taking its own binder's multiplicity; the scrutinee of an
 `erased` match; the proof argument of a `coerce` and every argument
 of a `coercible-*` form (§38); and every sub-expression of an erased
 expression. The
-body of a phantom constructor's branch is erased throughout (§12), and
+body of a phantom constructor's branch under a `many` scrutinee is
+erased throughout (§12), and
 so is the body of an `erased` function: it is checked with every return
 entry `erased`, whatever its signature says — the analogue of the
 phantom branch — so such a function can only ever be held or called at
@@ -861,7 +879,8 @@ At the file's top level (§16, §20) — anywhere outside a function body,
 a match branch of a top-level statement included — any type or value
 constructor can be invoked (unsurprising, since constructors have no
 level, §7), and so can any function, with no `Predates` or `Subterm`
-proof required at all.
+proof required at all. A decrease annotation written there is an
+error, not ignored: there is no level to check it against.
 In a sense, the top level sits at the "highest" level, above every
 ordinary function level.
 
@@ -911,9 +930,10 @@ actually specified.
    index variables aren't shared across constructors (§12, §16); births
    each type's `Matchable` (§19).
 5. `comptime-match` — compile-time discriminant assertion on a `Const`,
-   itself non-erased scrutinee with a non-erased discriminant; binds the
-   matched fields as `Const` at their declared multiplicities; a
-   mismatch is a compile error printing the actual value (§15, §34).
+   itself non-erased scrutinee with a non-erased discriminant, in run
+   position only (§16); binds the matched fields as `Const` at their
+   declared multiplicities; a mismatch is a compile error printing the
+   actual value (§15, §34).
 
 **Type formers:**
 6. `Fn` — the function-type former (§7, §11, §16, §29).
@@ -940,8 +960,9 @@ or an `is` expression, not only at a declaration site.
     earlier `def-lvl`, birthing the `Predates` proof (§8).
 15. Function call — the callee, its arguments, and a decrease
     annotation: `(subterm p)` immediately before the decreasing argument
-    for a same-level call, or `(predates p)` immediately after the callee
-    for a lower-level one (§9, §32); the v2 multi-proof form is TBD
+    for a same-level call, or `(predates p)`, `p` about the callee's
+    level, immediately after the callee for a lower-level one (§9, §32);
+    the v2 multi-proof form is TBD
     (§13). Can be marked `tail` and/or `delegate` (§9). A call's item
     count therefore exceeds the callee's arity.
 16. Type-constructor application (§5, §12).
@@ -1453,9 +1474,11 @@ checked entirely at elaboration time:
 4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **transparent** type.
    An enum is transparent when it has exactly one non-phantom
    constructor and that constructor has exactly one `many` field; a
-   union is transparent when every constructor but one has only
-   `erased` fields and the remaining one is non-phantom with exactly one
-   `many` field. `C` is that constructor, and the arguments are its
+   union is transparent when, among its non-phantom constructors, every
+   one but one has only `erased` fields and the remaining one has
+   exactly one `many` field. Phantom constructors never head a
+   non-erased value (§20) and do not count either way. `C` is that
+   constructor, and the arguments are its
    telescope in order, so exactly one of them, `f`, sits at the `many`
    field. The proof is `(Coercible F f T (C arg1 ... argn))`, unwrapping
    being its `coercible-sym`.
@@ -1480,13 +1503,24 @@ checked entirely at elaboration time:
 
 **Representation requirement.** Coercion is zero-cost only if the
 representations really coincide, so the following is a requirement on
-the implementation, not an optimization it may choose. Every
+the implementation, not an optimization it may choose. Values have a
+uniform representation, OCaml-style: every value is one word, an
+immediate or a pointer to a block, whatever its type — a `List` cell
+holds a `(Meters)` and a `(Nat)` alike, and a wrapper's field may be
+existentially typed. A value is the tuple of its constructor's `many`
+fields, one field standing bare and none at all being an unspecified
+word, and carries a tag only when its type is an enum with more than
+one non-phantom constructor — all a tag ever distinguishes. A union
+never carries one, its discriminant being erased (§12). So every
 transparent type, as item 4 defines it, is represented exactly as its
 one `many` field — no tag, no wrapper — the newtype treatment applied
-to every datatype that qualifies. An enum's tag, where it has one,
-distinguishes only its non-phantom constructors. Erased fields occupy
-no space (§34). A `delegate`-bodied function's pointer is
-interchangeable with its callee's (§9).
+to every datatype that qualifies; a value built by one of a transparent
+union's other non-phantom constructors is an unspecified word, which
+nothing ever reads as the field: a `many` match on the union has a
+single real branch, and unwrapping needs the value to canonicalize to
+the wrapper's application. Erased fields occupy no space (§34). A
+`delegate`-bodied function's pointer is interchangeable with its
+callee's (§9).
 
 Only non-phantom constructors and `many` functions appear in items 4–6:
 a `coerce` produces a non-erased value, which by §20's rule 2 none

@@ -14,7 +14,7 @@
     (absurd ItIsZero)))
 
 (def-lvl Z)
-(let (erased pz) (prove-predates succ-not-zero Z))
+(let (erased pz) (prove-predates Y Z))
 
 (def-fns Z $ many get : (many (Nat) n) (erased (IsZero n) p) -> (many (Nat) m)
   (match many n (((Nat) r))

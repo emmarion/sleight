@@ -35,10 +35,12 @@ produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
 statement in run position is elaborated, run at once by the evaluator,
 and its binders are born Const with the resulting values (sections 16
-and 34); inside function bodies and match branches statements compile
-to code instead. The evaluator is a plain recursive interpreter over
-that code; values are constructor trees, closures and a token standing
-for anything erased. Nothing is optimized.
+and 34), which form the environment later code runs in; inside function
+bodies and match branches statements compile to code instead. The
+evaluator is a plain recursive interpreter over that code; a value is
+its constructor's `many` fields, tagged only where section 38 says an
+enum carries a tag, or a closure, or a token standing for anything
+erased. Nothing is optimized.
 
 ## Layout
 

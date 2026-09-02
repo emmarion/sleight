@@ -5,7 +5,7 @@
 (def-lvl L0)
 (def-fns L0 $ many f : (many (Nat) n) -> (many (Nat) m) (Succ n))
 (def-lvl L1)
-(let (erased p) (prove-predates f L1))
+(let (erased p) (prove-predates L0 L1))
 (def-lvl L2)
 (let (erased q) (prove-predates L1 L2))
 (def-fns L2 $ many g : (many (Nat) n) -> (many (Nat) m)

@@ -6,7 +6,7 @@
 (def-fns X $ many nothing : (many (Nat) n) -> (values))
 (let (nothing (Zero)))
 (def-lvl Y)
-(let (erased p) (prove-predates nothing Y))
+(let (erased p) (prove-predates X Y))
 (def-fns Y $ many use : (many (Nat) n) -> (many (Nat) m)
   (let (nothing (predates p) n))
   n)

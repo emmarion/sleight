@@ -6,7 +6,7 @@
 (def-fns M $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))
 
 (def-lvl V)
-(let (erased p) (prove-predates inc V))
+(let (erased p) (prove-predates M V))
 
 (def-fns V $ many vmap : (erased (Nat) n) (subterm many (Vec (Nat) n) v) -> (many (Vec (Nat) n) r)
   (match many v (((Vec (Nat) n) r))

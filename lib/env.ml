@@ -19,9 +19,10 @@ type t = {
   level : level;
   subterms : id list;
   run_pos : bool;
+  values : Value.venv;
 }
 
-let empty = { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true }
+let empty = { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -30,15 +31,15 @@ let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
 let name_of env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
 
-let register x = function Const v -> Hashtbl.replace Value.consts x v | Dyn -> ()
+let set_state env x state =
+  let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
+  { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
 let bind env ?(rigid = false) ?(level_born = false) ?(rule = None) name mult state ty =
   let x = fresh () in
-  register x state;
-  let entries = IntMap.add x { name; mult; state; level_born; rigid } env.entries in
-  (x, { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts })
-
-let set_state env x state = register x state; { env with entries = IntMap.add x { (entry env x) with state } env.entries }
+  let entries = IntMap.add x { name; mult; state = Dyn; level_born; rigid } env.entries in
+  let env = { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
+  (x, set_state env x state)
 let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
 
 let lookup env name = List.find_opt (fun x -> (entry env x).name = Some name) env.scope

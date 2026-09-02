@@ -4,8 +4,6 @@ open Env
 module V = Value
 module Sp = Special
 
-exception BranchAbsurd of Env.t
-
 type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg }
 type res = { term : term; ty : term; erasure : mult }
 
@@ -21,7 +19,7 @@ let special_of env raw =
   match raw with
   | Atom (_, n) -> (
       match Option.map (fun x -> entry env x) (lookup env n) with
-      | Some { state = Const (V.VCtor (c, [])); mult = Many; _ } -> Hashtbl.find_opt Sp.table c
+      | Some { state = Const (V.VCtor (c, [])); mult = Many; _ } -> Hashtbl.find_opt Sp.table c.cid
       | _ -> None)
   | List _ -> None
 
@@ -76,6 +74,22 @@ let check_empty env loc ty =
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (name_of env c)
 
+let tid_of env loc c = match canon env (snd (ctor_type env loc c)) with App (Var t, _) -> t | _ -> assert false
+let marker ctors c = Option.map fst (List.find_opt (fun (_, c') -> c' = Var c) ctors)
+let phantom env loc c = let _, _, ctors = find_matchable env loc (tid_of env loc c) in marker ctors c = Some Erased
+
+(* Each constructor of a Matchable with its phantom marker and its number of many fields; the representation follows (section 38). *)
+let shapes env loc ctors =
+  List.map (fun (m, c) -> match c with Var c -> (m, c, List.length (List.filter (fun e -> e.mult = Many) (fst (ctor_type env loc c)))) | _ -> assert false) ctors
+
+let tagged disc shapes = disc = Enum && List.length (List.filter (fun (m, _, _) -> m = Many) shapes) > 1
+
+let wrapper disc shapes =
+  match List.filter (fun (m, _, n) -> m = Many && n = 1) shapes with
+  | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
+  | _ -> None
+
+let const env v = if env.run_pos then Const v else Dyn
 let proof_type ctor args = App (Var ctor, args)
 
 let expect_proof env loc ctor arity p =
@@ -313,7 +327,8 @@ and elab_call cc env expect l callee hcode lv params rets args =
     | Some (`Subterm (i, Atom (_, "_"))), At _ ->
         let env, p = prove_subterm env l (List.nth arg_terms i) (Var (counterpart (subterm_index i))) in
         (env, Some (`Subterm (i, p.term)))
-    | Some (`Predates (Atom (_, "_")) | `Subterm (_, Atom (_, "_"))), Top | None, _ -> (env, None)
+    | Some _, Top -> error l "the top level calls without proofs; drop the decrease annotation (section 24)"
+    | None, _ -> (env, None)
     | Some (`Predates p), _ -> let env, p = elab_erased env p in (env, Some (`Predates p))
     | Some (`Subterm (i, p)), _ -> let env, p = elab_erased env p in (env, Some (`Subterm (i, p)))
   in
@@ -336,9 +351,8 @@ and elab_call cc env expect l callee hcode lv params rets args =
            match expect_proof env l Prelude.predates 3 p with
            | [ _; x; l2 ] ->
                check_equal env l l2 (Var cur);
-               let x = canon env x in
-               if not (equal x (canon env lv) || equal x (canon env callee.term)) then
-                 error l "%s : %s does not relate the callee %s or its level %s" (show env p) (show env (infer env l p)) (show env callee.term) (show env lv)
+               if not (equal (canon env x) (canon env lv)) then
+                 error l "%s : %s does not relate the callee's level %s" (show env p) (show env (infer env l p)) (show env lv)
            | _ -> assert false)
        | _ -> error l "lower-level call to %s needs a (predates p) annotation" (show env callee.term)));
   let env, ids = open_tele env ~named:false ~mults:(List.map (fun e -> if pos = Erased then Erased else e.mult) rets) ~ids:acc rets in
@@ -458,17 +472,16 @@ and elab_special tele env expect l sp args =
       ignore (one ());
       let c = var env l (atom_or l c "a constructor") in
       let tele, ret = ctor_type env l c in
-      match Hashtbl.find_opt V.ctors c with
-      | Some { V.repr = V.Field; _ } ->
-          let acc = elab_term_args env l tele args in
-          let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
-          born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ])
-      | _ -> error l "%s is not the wrapping constructor of a transparent type" (name_of env c))
+      let _, disc, ctors = find_matchable env l (tid_of env l c) in
+      if wrapper disc (shapes env l ctors) <> Some c then error l "%s is not the wrapping constructor of a transparent type" (name_of env c);
+      let acc = elab_term_args env l tele args in
+      let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
+      born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
   | Sp.CoercibleCtor, c :: args ->
       ignore (one ());
       let c = var env l (atom_or l c "a constructor") in
       let tele, ret = ctor_type env l c in
-      if (Hashtbl.find V.ctors c).phantom then error l "%s is phantom" (name_of env c);
+      if phantom env l c then error l "%s is phantom" (name_of env c);
       let check env side e ty t = check_sg env l (map_sg (instantiate side) e.sg) { term = t; ty; erasure = Erased } in
       let rec go env src tgt tele args =
         match (tele, args) with
@@ -507,6 +520,7 @@ and elab_match tele env expect l args =
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
       let _, disc, ctors = find_matchable env l tid in
+      let tagged = tagged disc (shapes env l ctors) in
       let env, ann_tele =
         match (ann, tele) with
         | Atom (_, "_"), Some tele -> (env, tele)
@@ -535,9 +549,7 @@ and elab_match tele env expect l args =
         in
         let c = var env bl c in
         let phantom =
-          match List.find_opt (fun (_, c') -> c' = Var c) ctors with
-          | Some (m, _) -> m = Erased
-          | None -> error bl "%s is not a constructor of %s" (name_of env c) (name_of env tid)
+          match marker ctors c with Some m -> m = Erased | None -> error bl "%s is not a constructor of %s" (name_of env c) (name_of env tid)
         in
         let tele, ret = ctor_type env bl c in
         if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
@@ -556,12 +568,10 @@ and elab_match tele env expect l args =
           | `Auto, None -> `Absurd
           | `Auto, Some _ -> error bl "branch %s is not refuted" (name_of env c)
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
-          | `Present, Some envb -> (
-              try
-                let envb, ress, code = elab_body ~tele:ann_tele envb (if dead then List.map (fun _ -> Erased) expect else expect) bl body in
-                check_results envb bl ann_tele ress;
-                `Present code
-              with BranchAbsurd _ -> `Absurd)
+          | `Present, Some envb ->
+              let envb, ress, code = elab_body ~tele:ann_tele envb (if dead then List.map (fun _ -> Erased) expect else expect) bl body in
+              check_results envb bl ann_tele ress;
+              `Present code
           | `Proof, Some envb ->
               let envb, ress, _ = elab_body envb [ Erased ] bl body in
               check_empty envb bl (single bl ress).ty;
@@ -582,14 +592,14 @@ and elab_match tele env expect l args =
           (fun (c, fids, dead, r) -> match r with `Present code when not dead -> Some (V.CVar c, fids, code) | _ -> None)
           branches
       in
-      if pos = Many && (disc = Union || smult = Erased) && List.length real > 1 then
+      if pos = Many && ((not tagged) || smult = Erased) && List.length real > 1 then
         error l "a match without a runtime discriminant can have only one real branch";
       let code =
         match real with
         | _ when pos = Erased -> V.CErased
         | [] -> V.CAbsurd
         | [ (_, _, body) ] when smult = Erased -> body
-        | _ -> V.CMatch (scode, real)
+        | _ -> V.CMatch (scode, tagged, real)
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
@@ -609,7 +619,7 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       match (special_of env head, args) with
       | Some Sp.Let, _ -> elab_let env l args
       | Some Sp.DefLvl, [ n ] ->
-          let _, env = bind env ~level_born:true (name_or_anon (atom_or l n "a name")) Erased (Const V.VToken) Prelude.level_term in
+          let _, env = bind env ~level_born:true (name_or_anon (atom_or l n "a name")) Erased (const env V.VToken) Prelude.level_term in
           (env, Fun.id)
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
@@ -617,14 +627,14 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | _ -> error l "%s is not a statement" (Reader.show raw))
   | _ -> error (loc raw) "%s is not a statement" (Reader.show raw)
 
-and run_code code = Eval.eval V.IntMap.empty code
+and run_code env code = Eval.eval env.values code
 
 and elab_let env l args =
   let binders, rhs = split_returns env args in
   let binders = List.concat_map (parse_entry env) binders in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
   let inner, ress, code = elab_body env expect l rhs in
-  let values = ref (if env.run_pos && pos_of expect = Many then run_code code else []) in
+  let values = ref (if env.run_pos && pos_of expect = Many then run_code env code else []) in
   let next_value () = match !values with v :: rest -> values := rest; v | [] -> V.VToken in
   let bind_one (env, ids) (b, r) =
     Option.iter (fun t -> check_type env b.s_loc r.ty (elab_type env t)) b.s_ty;
@@ -643,21 +653,23 @@ and elab_let env l args =
 and elab_comptime_match env l args =
   match args with
   | [ x; List (pl, c :: fields) ] ->
+      if not env.run_pos then error l "comptime-match is a run-position statement (section 15)";
       let x = var env l (atom_or l x "a variable") in
       let value = match entry env x with { state = Const v; mult = Many; _ } -> v | _ -> error l "comptime-match needs a Const, non-erased scrutinee" in
       let c = var env pl (atom_or pl c "a constructor") in
       let tele, ret = ctor_type env pl c in
-      let info = match Hashtbl.find_opt V.ctors c with Some i -> i | None -> error pl "%s is not a declared constructor" (name_of env c) in
-      if info.phantom then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" info.cname;
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
-      let _, disc, _ = find_matchable env l tid in
+      let _, disc, ctors = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
+      (match marker ctors c with
+       | Some Erased -> error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c)
+       | Some Many -> ()
+       | None -> error pl "%s is not a constructor of %s" (name_of env c) (name_of env tid));
       let many_values =
-        match (info.repr, value) with
-        | V.Tagged, V.VCtor (c', vs) when c' = c -> vs
-        | V.Tagged, _ -> error l "comptime-match: expected %s, got %s" info.cname (V.show value)
-        | V.Field, v -> [ v ]
-        | V.Unspecified, _ -> []
+        if not (tagged disc (shapes env l ctors)) then V.untuple (List.length (List.filter (fun e -> e.mult = Many) tele)) value
+        else match value with
+          | V.VCtor (c', vs) when c'.cid = c -> vs
+          | _ -> error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value)
       in
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
@@ -666,7 +678,7 @@ and elab_comptime_match env l args =
       let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
       let fvars = List.rev_map (fun x -> Var x) fids in
       (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
-       | Contradiction _ -> raise (BranchAbsurd env)
+       | Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg
        | Error (0, msg) -> error l "%s" msg)
   | _ -> error l "malformed comptime-match: expected (comptime-match x (C field ...))"
 
@@ -720,32 +732,50 @@ and elab_def_fns env l args =
       let env =
         List.fold_left
           (fun env -> function
-            | Some (g, gty, callee) -> snd (bind env None Erased (Const V.VToken) (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ]))
+            | Some (g, gty, callee) -> snd (bind env None Erased (const env V.VToken) (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ]))
             | None -> env)
           env proofs
       in
       if env.run_pos then
-        (List.fold_left (fun env (x, (fname, params, body)) -> set_state env x (Const (V.VFn { V.fname; params; body; env = lazy IntMap.empty }))) env fns, Fun.id)
+        let values = Eval.close env.values fns in
+        (List.fold_left (fun env (x, _) -> set_state env x (Const (IntMap.find x values))) env fns, Fun.id)
       else (env, fun rest -> V.CLetRec (fns, rest))
 
-(* Validates every tail/delegate-marked call in a compiled body (section 9); returns the delegated callee, if any. *)
+(* Validates every tail/delegate-marked call in a compiled body (section 9) and returns the delegated callee, if any.
+   Read after erasure and after resolving lets that only rename, which is all a coerce leaves behind. *)
 and check_marks env l pids code =
   let non_erased = non_erased env in
+  let rec resolve sub x = match List.assoc_opt x sub with Some y -> resolve sub y | None -> x in
+  let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
+  let rec norm sub = function
+    | V.CVar x -> V.CVar (resolve sub x)
+    | V.CLet (ids, rhs, rest) -> (
+        match norm sub rhs with
+        | V.CVar y when List.length ids = 1 -> norm ((List.hd ids, y) :: sub) rest
+        | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
+            norm (List.combine ids (vars_of cs) @ sub) rest
+        | rhs -> V.CLet (ids, rhs, norm sub rest))
+    | V.CValues cs -> V.CValues (List.map (norm sub) cs)
+    | V.CApp (f, args, cc) -> V.CApp (norm sub f, List.map (norm sub) args, cc)
+    | V.CLetRec (fns, rest) -> V.CLetRec (List.map (fun (x, (n, ps, c)) -> (x, (n, ps, norm sub c))) fns, norm sub rest)
+    | V.CMatch (s, t, brs) -> V.CMatch (norm sub s, t, List.map (fun (c, ids, b) -> (norm sub c, ids, norm sub b)) brs)
+    | (V.CConst _ | V.CErased | V.CAbsurd) as c -> c
+  in
+  let code = norm [] code in
   let rec marked acc = function
     | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (if cc = V.Plain then acc else c :: acc) f) args
     | V.CLet (_, a, b) -> marked (marked acc a) b
     | V.CLetRec (fns, b) -> List.fold_left (fun acc (_, (_, _, c)) -> marked acc c) (marked acc b) fns
-    | V.CMatch (s, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
+    | V.CMatch (s, _, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
     | V.CValues cs -> List.fold_left marked acc cs
-    | V.CVar _ | V.CErased | V.CAbsurd -> acc
+    | V.CVar _ | V.CConst _ | V.CErased | V.CAbsurd -> acc
   in
-  let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
   let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (ids, (V.CApp (_, _, (V.Tail | V.Delegate)) as c), rest) -> if returns ids rest then [ c ] else []
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
-    | V.CMatch (_, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
+    | V.CMatch (_, _, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
     | _ -> []
   in
   match marked [] code with
@@ -778,11 +808,11 @@ and elab_def_adts env adts =
       (fun env (al, name, ps, ty, _, _) ->
         let env', _, tele = elab_tele env ~mults:(no_mults al) ps in
         check_equal env' al (elab_term env' ty) type_term;
-        let x, env = bind env ~rigid:true (Some name) Erased (Const V.VToken) (TyCtor tele) in
+        let x, env = bind env ~rigid:true (Some name) Erased (const env V.VToken) (TyCtor tele) in
         (env, x))
       env headers
   in
-  let define env tid (_, _, _, _, disc, ctors) =
+  let define (env, cids) tid (_, _, _, _, disc, ctors) =
     let ctor env raw =
       match raw with
       | List (cl, m :: n :: colon :: rest) when is_special env colon Sp.Colon ->
@@ -792,43 +822,27 @@ and elab_def_adts env adts =
           let env', ids, tele = elab_tele env ps in
           let ret = match ret with [ r ] -> elab_type env' r | _ -> error cl "constructor returns one type" in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
-          let fields = List.map (fun e -> e.mult) tele in
-          if mult = Erased && List.mem Many fields then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
-          let c, env = bind env ~rigid:true (Some name) mult (Const V.VToken) (ValCtor (tele, abstract (List.rev ids) ret)) in
-          let env = set_state env c (Const (V.VCtorFn c)) in
-          Hashtbl.replace V.ctors c { V.cname = name; adt = tid; fields; phantom = mult = Erased; repr = V.Tagged };
+          if mult = Erased && List.exists (fun e -> e.mult = Many) tele then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
+          let c, env = bind env ~rigid:true (Some name) mult Dyn (ValCtor (tele, abstract (List.rev ids) ret)) in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"
     in
     let env, ctors = List.fold_left_map ctor env ctors in
-    let info c = Hashtbl.find V.ctors c in
-    let many_fields c = List.length (List.filter (( = ) Many) (info c).fields) in
-    let transparent =
-      match List.filter (fun (m, c) -> m = Many && many_fields c = 1) ctors with
-      | [ (_, w) ] ->
-          let others = List.filter (fun (_, c) -> c <> w) ctors in
-          if (match disc with Enum -> List.for_all (fun (m, _) -> m = Erased) others | Union -> List.for_all (fun (_, c) -> many_fields c = 0) others)
-          then Some w else None
-      | _ -> None
-    in
-    Option.iter
-      (fun w ->
-        List.iter
-          (fun (_, c) ->
-            let repr = if c = w then V.Field else V.Unspecified in
-            Hashtbl.replace V.ctors c { (info c) with repr })
-          ctors)
-      transparent;
-    snd (bind env None Erased (Const V.VToken) (Matchable (disc, Var tid, List.map (fun (m, c) -> (m, Var c)) ctors)))
+    let tagged = tagged disc (shapes env 0 (List.map (fun (m, c) -> (m, Var c)) ctors)) in
+    let values = List.map (fun (_, c) -> (c, V.VCtorFn { V.cname = name_of env c; cid = c; tagged })) ctors in
+    let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
+    let env = snd (bind env None Erased (const env V.VToken) (Matchable (disc, Var tid, List.map (fun (m, c) -> (m, Var c)) ctors))) in
+    (env, cids @ values)
   in
-  (List.fold_left2 define env tids headers, Fun.id)
+  let env, cids = List.fold_left2 define (env, []) tids headers in
+  (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
 let run_toplevel ?(print = print_endline) env items =
   let rec go env = function
     | [] -> env
     | [ item ] when not (is_statement env item) ->
         let env, _, code = elab_expr env [ Many ] item in
-        List.iter (fun v -> print (V.show v)) (run_code code);
+        List.iter (fun v -> print (V.show v)) (run_code env code);
         env
     | item :: rest ->
         if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";

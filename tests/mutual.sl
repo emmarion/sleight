@@ -21,7 +21,7 @@
       (Succ (add (subterm p) k b)))))
 
 (def-lvl X)
-(let (erased pa) (prove-predates add X))
+(let (erased pa) (prove-predates W X))
 
 (def-fns X
   (many size : (subterm many (Tree) t) -> (many (Nat) n)
