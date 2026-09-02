@@ -317,8 +317,14 @@ and elab_call cc env expect l callee hcode lv params rets args =
         env := env';
         (r, code))
   in
-  let env = !env in
   let arg_terms = List.rev acc in
+  let proof_arg raw =
+    let env', r, _ = elab_expr1 !env Erased raw in
+    env := env';
+    r.term
+  in
+  let annotation = Option.map (function `Predates p -> `Predates (proof_arg p) | `Subterm (i, p) -> `Subterm (i, proof_arg p)) annotation in
+  let env = !env in
   (match env.level with
    | Top -> ()
    | At cur ->
@@ -333,7 +339,6 @@ and elab_call cc env expect l callee hcode lv params rets args =
                (fun j pi ->
                  if j < k then check_equal env l (List.nth arg_terms pi) (Var (List.nth env.subterms j)))
                subterm_params;
-             let p = elab_term env p in
              (match expect_proof env l Prelude.subterm 4 p with
               | [ _; a; _; b ] ->
                   check_equal env l a (List.nth arg_terms i);
@@ -343,7 +348,6 @@ and elab_call cc env expect l callee hcode lv params rets args =
        else
          match annotation with
          | Some (`Predates p) -> (
-             let p = elab_term env p in
              match expect_proof env l Prelude.predates 3 p with
              | [ _; x; l2 ] ->
                  check_equal env l l2 (Var cur);
@@ -411,7 +415,7 @@ and elab_special _cc env expect l sp args =
       erased_result (proof_type Prelude.subterm [ infer a; a; infer b; b ])
   | Sp.ProvePredates, [ x; lv ] -> (
       ignore (one ());
-      let x = var env l (atom_or l x "a variable") in
+      let x = match canon env (Var (var env l (atom_or l x "a variable"))) with Var x -> x | t -> error l "%s is not a variable" (show env t) in
       match canon env (term_arg lv) with
       | Var lvl when (entry env lvl).level_born ->
           if x >= lvl then error l "%s was not in scope when level %s was born" (name_of env x) (name_of env lvl);
@@ -858,12 +862,12 @@ and elab_def_adts env _ adts =
 
 (* ---- top level ---- *)
 
-let run_toplevel env items =
+let run_toplevel ?(print = print_endline) env items =
   let rec go env = function
     | [] -> env
     | [ item ] when not (is_statement env item) ->
         let env, _, code = elab_expr env [ Many ] item in
-        List.iter (fun v -> print_endline (V.show v)) (run_code code);
+        List.iter (fun v -> print (V.show v)) (run_code code);
         env
     | item :: rest ->
         if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";

@@ -1,3 +1,4 @@
+; expect: (Succ (Succ (Zero)))
 ; DESIGN.md sections 31 and 32: List, Nat, length.
 
 (def-adts

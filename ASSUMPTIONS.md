@@ -60,7 +60,9 @@ ground.
     order.
 13. **A `def-fns` level** may be any variable whose type is `(Level)`,
     not only a `def-lvl`-born one; only `prove-predates` insists on the
-    birth marker, after canonicalizing its argument (SR 20).
+    birth marker. `prove-predates` canonicalizes both its arguments
+    first, so an alias made by `let ... is` works, and the proof is
+    about the canonical variable (SR 20).
 
 ## Type checking
 

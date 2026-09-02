@@ -10,7 +10,7 @@ interpreter makes about them.
 ```sh
 apt-get install -y ocaml ocaml-dune
 dune build
-dune exec bin/main.exe examples/list.sl examples/map.sl examples/coerce.sl
+dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
 ```
 
@@ -27,4 +27,4 @@ is printed.
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements
 - `bin/main.ml` — command line driver
-- `examples/` — DESIGN.md's worked examples and further tests
+- `tests/` — DESIGN.md's worked examples and further tests

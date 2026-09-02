@@ -1,3 +1,4 @@
+; expect: <function explode>
 ; DESIGN.md section 39: an absurd function.
 
 (def-adts $ False : -> Type

@@ -1,0 +1,18 @@
+; needs: list
+; expect: (Zero)
+; A phantom constructor's branch is fully erased and exempt from the match's result erasure.
+
+(def-adts
+  (Opt : -> Type
+    enum
+    (many Some : (many (Nat) n) -> (Opt))
+    (erased Ghost : (erased (Nat) n) -> (Opt))))
+
+(def-lvl X)
+
+(def-fns X $ many get : (many (Opt) o) -> (many (Nat) n)
+  (match many o (((Nat) r))
+    ((Some n) n)
+    ((Ghost n) n)))
+
+(get (Some (Zero)))
