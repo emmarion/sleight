@@ -223,6 +223,9 @@ and elab_valctor env l items =
   let ps, ret = split_arrow env l items in
   let env', ids, tele = elab_tele env ps in
   let ret = match ret with [ r ] -> elab_type env' r | _ -> error l "a constructor returns one type" in
+  (match canon env' ret with
+  | App (Var t, _) when (match type_of env' t with TyCtor _ -> true | _ -> false) -> ()
+  | _ -> error l "a constructor returns an application of a type constructor, not %s" (show env' ret));
   (env', tele, ret, ValCtor (tele, abstract (List.rev ids) ret))
 
 and disc_of env l d = match special_of env d with Some Sp.Enum -> Enum | Some Sp.Union -> Union | _ -> error l "expected enum or union"
@@ -422,7 +425,12 @@ and elab_special tele env expect l sp args =
   | Sp.Match, _ -> elab_match tele env expect l args
   | (Sp.Tail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (Sp.name sp);
-      elab_expr ~cc:(if sp = Sp.Tail then V.Tail else V.Delegate) env expect call
+      let cc = if sp = Sp.Tail then V.Tail else V.Delegate in
+      let env, ress, code = elab_expr ~cc env expect call in
+      (match code with
+      | V.CApp (_, _, cc') | V.CLet (_, V.CApp (_, _, cc'), _) when cc' = cc -> ()
+      | _ -> error l "%s marks a function call, not %s" (Sp.name sp) (Reader.show call));
+      (env, ress, code)
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
       erased (env, res_of env x)
@@ -711,7 +719,8 @@ and elab_def_fns env l args =
             check_results envb fl ~ids:pvars rets ress;
             (envb, if mult = Erased then V.CErased else code)
         in
-        ((x, { V.fname = name; params = non_erased envb pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))
+        let code, delegated = check_marks envb fl pids code in
+        ((x, { V.fname = name; params = non_erased envb pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
       in
       let fns, proofs = List.split (List.map2 define fids headers) in
       let env =
@@ -727,12 +736,15 @@ and elab_def_fns env l args =
         (List.fold_left (fun env (x, _) -> set_state env x (Const (IntMap.find x values))) env fns, Fun.id)
       else (env, fun rest -> V.CLetRec (fns, rest))
 
-(* Validates every tail/delegate-marked call in a compiled body (section 9) and returns the delegated callee, if any.
-   Read after erasure and after resolving lets that only rename, which is all a coerce leaves behind. *)
+(* Normalizes a compiled body, validates every tail/delegate-marked call in it (section 9) and returns the
+   normalized code with the delegated callee, if any. A let that only renames -- which is all a coerce leaves
+   behind -- and a let whose body returns exactly what it binds are replaced by their right-hand sides, so a
+   marked call really does stand in tail position in the code that runs. *)
 and check_marks env l pids code =
   let non_erased = non_erased env in
   let rec resolve sub x = match List.assoc_opt x sub with Some y -> resolve sub y | None -> x in
   let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
+  let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let rec norm sub = function
     | V.CVar x -> V.CVar (resolve sub x)
     | V.CLet (ids, rhs, rest) -> (
@@ -740,33 +752,32 @@ and check_marks env l pids code =
         | V.CVar y when List.length ids = 1 -> norm ((List.hd ids, y) :: sub) rest
         | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
             norm (List.combine ids (vars_of cs) @ sub) rest
-        | rhs -> V.CLet (ids, rhs, norm sub rest))
+        | rhs -> let rest = norm sub rest in if returns ids rest then rhs else V.CLet (ids, rhs, rest))
     | c -> V.map_code (norm sub) c
   in
   let code = norm [] code in
   let rec marked acc c = List.fold_left marked (match c with V.CApp (_, _, (V.Tail | V.Delegate)) -> c :: acc | _ -> acc) (V.subcodes c)
   in
-  let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
-    | V.CLet (ids, (V.CApp (_, _, (V.Tail | V.Delegate)) as c), rest) -> if returns ids rest then [ c ] else []
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
     | V.CMatch (_, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
     | _ -> []
   in
-  match marked [] code with
-  | [] -> None
-  | marks ->
-      let delegate = List.exists (function V.CApp (_, _, V.Delegate) -> true | _ -> false) marks in
-      let ok = tails ~direct:delegate code in
-      List.iter (fun c -> if not (List.memq c ok) then error l "a %s-marked call is not in tail position" (if delegate then "delegate" else "tail")) marks;
-      if not delegate then None
-      else
-        match ok with
-        | [ V.CApp (V.CVar f, args, _) ] ->
-            if vars_of args <> non_erased pids then error l "a delegate call must pass the function's non-erased parameters straight through";
-            Some (Var f)
-        | _ -> error l "delegate needs exactly one call to a named function"
+  ( code,
+    match marked [] code with
+    | [] -> None
+    | marks ->
+        let delegate = List.exists (function V.CApp (_, _, V.Delegate) -> true | _ -> false) marks in
+        let ok = tails ~direct:delegate code in
+        List.iter (fun c -> if not (List.memq c ok) then error l "a %s-marked call is not in tail position" (if delegate then "delegate" else "tail")) marks;
+        if not delegate then None
+        else
+          match ok with
+          | [ V.CApp (V.CVar f, args, _) ] ->
+              if vars_of args <> non_erased pids then error l "a delegate call must pass the function's non-erased parameters straight through";
+              Some (Var f)
+          | _ -> error l "delegate needs exactly one call to a named function" )
 
 and elab_def_adts env adts =
   let header raw =

@@ -679,3 +679,58 @@ in both modes.
     (Zero) n)` to a `(MkBox (Succ (Zero)) n)`), which the session read as
     harmless, the field carrying nothing at runtime and its replacement
     being typed.
+
+## Three fixes from a bug-hunting session
+
+A session asked to look for bugs, soundness ones especially, reported
+its findings in chat; the owner picked three to fix and settled how the
+first of them should be fixed. Items 70-72 record the changes. A fourth
+finding, that unifying a free variable with a telescope binder writes a
+dangling de Bruijn index into the fact table instead of being caught by
+`has_dangling`, was left open, its resolution (refute the branch, or
+error) being the owner's to make.
+
+70. **A `ValCtor`'s return is a type-constructor application.** The
+    owner's decision, in chat: the former may not be invoked with a bare
+    return type. `def-adts` already required each constructor's return
+    to be an application of the type constructor it is declared under
+    (section 12), but the first-class former (section 29) accepted a
+    return of any type-sorted expression, a bare type variable included,
+    as in `(ValCtor (many (Nat) n) -> A)` for a parameter `A`. Such a
+    type has no `Matchable` to be found, and `coercible-ctor` over a
+    constructor of one crashed the elaborator on an assertion rather
+    than reporting an error. `elab_valctor` now checks that the return
+    canonicalizes to an application whose head is a type constructor,
+    which is where both spellings pass.
+
+71. **A `tail` or `delegate` mark applies to a call and nothing else.**
+    The marks set the calling convention of the call they wrap, so a
+    mark on a constructor application, a `values` or a `match` had no
+    effect at all and was silently accepted, `(tail (Succ n))` among
+    them; only a later `coercible-of` revealed that `def-fns` had
+    birthed no proof. Both forms now reject anything whose compiled code
+    is not the marked call. This looks like plugging an implementation
+    gap rather than a design choice: section 9 describes both marks as
+    claims about a call.
+
+72. **A `let` that returns exactly what it binds is replaced by its
+    right-hand side.** Section 9 counts a call as `tail` when its
+    returns are bound by a `let` and repackaged in a `values` in the
+    same order, and requires a hard compile error where the compiler
+    cannot honor a mark. The check honored that reading, but the code
+    did not: the `let` survived into the compiled body, so the call ran
+    with the `let`'s continuation still on the stack, in the
+    interpreter and in the extracted OCaml alike. A recursion of that
+    shape 200000 deep overflowed an 8MB stack in both, while the same
+    recursion written as a direct `(tail ...)` ran in constant space.
+    `check_marks` already normalized the code to read the marks through
+    renaming `let`s; it now also drops a `let` whose body returns
+    exactly its binders, and returns the normalized code as the
+    function's body, so both readings agree. Believed
+    semantics-preserving, the two forms producing the same values in the
+    same order, and applied to every compiled body rather than only to
+    marked ones, which keeps one path instead of two. The depth check
+    above was run by hand: `tests/tail_values.sl` covers the form at a
+    depth the test suite can also extract and compile, since embedding a
+    Peano numeral that large in the extracted OCaml (section 41's
+    stripped mode) is not something extraction handles quickly.
