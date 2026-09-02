@@ -432,8 +432,9 @@ constructor is itself erased; names all tentative, see CLAUDE.md §10):
 3. **absurd, by proof** — a branch that, instead of producing the match's
    expected result, must produce a value of the empty ADT (§7's
    zero-variant type, e.g. `False`) — the programmer supplies a proof of
-   impossibility rather than relying on automatic refutation. §37 gives
-   a function body the same option.
+   impossibility rather than relying on automatic refutation. The token
+   `absurd` heads the branch, before its pattern (§27). §37 gives a
+   function body the same option, with the same token.
 
 **When a non-erased result is on the line.** If a match sits in an
 erased position (§20), it's unconstrained. But if at least one of its
@@ -902,7 +903,8 @@ actually specified.
    functions at a shared level, written on the form itself, each
    function carrying its own `erased`/`many` marker (§20); a single
    function is just the one-element case. Possibly nested inside another
-   function's body (§9, §16). A body may be absurd (§37). Births a
+   function's body (§9, §16). A body may be marked `absurd` (§37).
+   Births a
    `Coercible` proof for each `delegate`-bodied function (§38).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
@@ -991,6 +993,9 @@ they annotate a form rather than heading a list):
     call's non-erased arguments (§9).
 35. `predates` — heads the call-site annotation carrying a lower-level
     call's proof (§9).
+36. `absurd` — marks a function, on its `def-fns` line, or a match
+    branch, before its pattern, as producing a value of a
+    zero-constructor type in place of its declared result (§12, §37).
 
 ## 28. ASCII only
 
@@ -1397,10 +1402,13 @@ caching/closing over its value.
 
 ## 37. Absurd functions
 
-A function body may, instead of producing its declared return
-telescope, produce a single value of a type with no constructors (§7's
-zero-variant ADTs, e.g. `False`) — the function-level counterpart of
-§12's absurd-by-proof branch. Assuming §10's consistency, such a
+A function marked `absurd` on its `def-fns` line, next to its name and
+multiplicity — `(def-fns L $ many absurd explode : ...)` — has a body
+that, instead of producing its declared return telescope, produces a
+single value of a type with no constructors (§7's zero-variant ADTs,
+e.g. `False`), read off the type's `Matchable` (§19). It is the
+function-level counterpart of §12's absurd-by-proof branch, which
+carries the same token. Assuming §10's consistency, such a
 function can never be called at runtime, since a call would need the
 values from which its body derives the contradiction, so it compiles to
 no code: its function pointer may be null, or anything at all.
@@ -1409,9 +1417,6 @@ The owner's expectation, not yet applied to the rest of the design:
 with absurd functions available, a non-erased `match` with no branches
 — the previous route from an empty type to an arbitrary result — is no
 longer needed.
-
-Open: whether an absurd body needs a marker beyond the type of what it
-returns, a question shared with §12's absurd-by-proof branch.
 
 ## 38. `coerce`
 
