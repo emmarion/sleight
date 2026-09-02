@@ -482,26 +482,33 @@ shape below is the session's.
 
 ## A second soundness probe
 
-61. **Levels born by `def-lvl` are rigid.** A session asked to look for
-    soundness issues probed the checker with a type indexed by a level,
-    `(Foo : ((Level) L) -> Type)` with one constructor returning
-    `(Foo P)`. Matching a `(Foo Q)` against it unified `Q` with `P`:
-    both were ordinary non-rigid entries, so section 18's atom rule
-    aliased one to the other instead of contradicting, and inside the
-    branch a `Q`-level body could call an `R`-level function born after
-    `Q` with the proof `(Predates R P)`. The branch is dead, `(Foo Q)`
-    having no values at any multiplicity, so no run or proof of `False`
-    was found to follow; but the alias is false, two `def-lvl` births
-    being distinct levels by construction, in the same way two
-    constructors are. Level-born entries are now rigid, so the branch is
-    refuted (`tests/level_alias.sl`); a level parameter stays non-rigid
-    and may still be forced equal to a level, which is truthful. Recorded
-    as a candidate fix in the spirit of items 38-41, not a decision. The
-    same session tried, and the checker rejected: a Curry-style negative
-    type whose stored function is applied to the value holding it; a
-    function at an older level, defined later, calling a newer level; a
-    forged erased proof field under `coercible-ctor`; and deriving
-    `False` from a user relation's phantom constructor. An erased data
-    field may change under `coercible-ctor` (a `(MkBox (Zero) n)` to a
-    `(MkBox (Succ (Zero)) n)`), which the session read as harmless, the
-    field carrying nothing at runtime and its replacement being typed.
+61. **Two `def-lvl` levels may unify, and that is left as it was.** A
+    session asked to look for soundness issues probed the checker with a
+    type indexed by a level, `(Foo : ((Level) L) -> Type)` with one
+    constructor returning `(Foo P)`. Matching a `(Foo Q)` against it
+    unifies `Q` with `P`, both being ordinary non-rigid entries, and
+    inside the branch a `Q`-level body may call an `R`-level function
+    born after `Q` under the proof `(Predates R P)`. The branch is dead,
+    `(Foo Q)` having no values at any multiplicity, and no run or proof
+    of `False` was found to follow. The session first made level-born
+    entries rigid so that the branch was refuted, then reverted that at
+    the owner's prompting: section 23 lets the stripped program represent
+    `Level` as `Unit`, under which every level is equal, so a branch
+    refuted by two levels differing would be live in the stripped
+    program and its `(absurd C)` rejected there, breaking section 23's
+    invariant. Aliasing is what the `Unit` reading gives. The load
+    bearing part is elsewhere: `prove-predates` demands strict birth
+    order and the three axioms keep a proof's subject older than its
+    level, so no `(Predates Z Z)` could be built, which is what keeps a
+    diagonal `(MkBar K) : (Bar K K)` forcing two level parameters equal
+    from licensing a same-level call that could ever run. Open for the
+    owner: whether that irreflexivity deserves a stated invariant.
+    The same session tried, and the checker rejected: a Curry-style
+    negative type whose stored function is applied to the value holding
+    it; a function at an older level, defined later, calling a newer
+    level; a forged erased proof field under `coercible-ctor`; and
+    deriving `False` from a user relation's phantom constructor. An
+    erased data field may change under `coercible-ctor` (a `(MkBox
+    (Zero) n)` to a `(MkBox (Succ (Zero)) n)`), which the session read as
+    harmless, the field carrying nothing at runtime and its replacement
+    being typed.
