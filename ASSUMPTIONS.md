@@ -479,3 +479,115 @@ shape below is the session's.
     character literal (`tests/string_literal.sl`). Interned by content.
     The hoisted `let` builds the value by consing, quadratic under the
     FFI, which only matters for very long literals.
+
+## OCaml extraction (extract.ml)
+
+Written by a session working autonomously at the owner's request, in
+chat: extraction "in the sense of Coq's extraction", needed for the final
+`String -> String` or `IO` value, not for the constants computed while
+compiling the rest of the file. Everything below is that session's
+reading; the representation choices in particular are Claude's and may
+be wrong, though `dune test` checks them on every test in both modes.
+
+61. **What is extracted is a trace, not the source.** The elaborator
+    records each run-position statement as it runs it (`Env.trace`): a
+    `let` with its `many` binders and post-erasure code, a `def-fns`
+    group's compiled functions, and a `comptime-match` as a `let` whose
+    code is a one-branch match projecting the `many` fields; and each
+    final expression with its type. Literal hoists (items 51-60) are
+    run-position statements too, so they are traced where they ran.
+    `--extract out.ml` writes the trace out in order: a `let` becomes a
+    top-level `let`, a `def-fns` a `let rec ... and ...`, a nested one a
+    local `let rec`, a match an OCaml `match`, a final expression a call
+    of the driver. Top-level constants are thus *recomputed* by the
+    extracted program rather than embedded as data; the owner's remark
+    that the constants need no extraction was read as leaving either
+    choice open, and recomputation was chosen because a constant may be
+    a closure returned by a factory (`tests/compose.sl`), which has no
+    literal form. Only constants born outside any statement, the
+    built-ins of `lib/prelude.ml` (the `Special` values a `let` or
+    `match` entry holds), are embedded as literal data when code
+    mentions them.
+62. **Every extracted value is an `Obj.t`**, with `Obj.repr`/`Obj.obj`
+    at every construction, application and pattern, the way Coq's
+    extraction reaches for `Obj.magic`. A typed extraction was not
+    attempted: dependent indices, existential erased fields, first-class
+    `Matchable`s and level polymorphism have no direct OCaml types, and
+    section 38's zero-cost `coerce` between distinct types would need
+    the same escape anyway. The runtime shape is section 38's: an ADT is
+    an OCaml type, a variant when the interpreter tags it (every
+    constructor listed, phantom ones included, with one `Obj.t` per
+    `many` field) and otherwise an abbreviation for its one non-phantom
+    constructor's field tuple (`unit`, `Obj.t`, or `Obj.t * ...`; a
+    union, whose constructors may differ in arity, is `Obj.t`); a value
+    of such a type is that tuple, one field bare and none `()`, exactly
+    as `Value.tuple` has it, so `coerce` is the identity and a newtype
+    is its field. An extern type under the FFI is `Z.t` or
+    `Ffi_core.slice`. Several return values are an OCaml tuple boxed as
+    one `Obj.t`; a function with no `many` parameter takes `()`. Names
+    are `v<id>_<name>`, `C<id>_<name>` and `t<n>_<name>`, the id being
+    the entry's, so shadowed names stay distinct; the source names come
+    from a table `Env.bind` fills (`Env.names`).
+63. **Each type gets a construct/destruct pair** (`con_n`, `des_n`),
+    over constructor index and `Obj.t` field list, mirroring
+    `Value.construct`/`destruct`: for a variant an OCaml constructor
+    application and match, for an untagged type the tuple, for an
+    extern type the pair `lib/ffi_core.ml` returns. A first-class
+    constructor value is a descriptor record `{ ix; cname; con; des }`
+    over that pair. So that the extractor can tell a constructor
+    application from a call, the elaborator now marks one with the call
+    kind `Value.Ctor` in the post-erasure code (the interpreter ignores
+    the mark, dispatching on the value as before). A match whose
+    constructors are statically known compiles to an OCaml `match` (or a
+    `let` on an untagged type); one through first-class constructors
+    (`tests/first_class.sl`) destructs through the first branch's
+    descriptor and compares indices, as `Eval` does. Unmatched
+    constructors fall through to `absurd ()`, unreachable by the
+    elaborator's checks.
+64. **The FFI is shared by embedding.** `lib/ffi_core.ml` holds the
+    implementations over raw zarith integers and slices, generic in the
+    value type through injection/projection arguments; `ffi.ml`
+    instantiates them with `Value` constructors and a dune rule embeds
+    the file's text into the interpreter (`Ffi_core_source`), which the
+    extractor pastes into every output as `module Ffi_core`, instantiated
+    with `Obj.repr`/`Obj.obj`. An extern function extracts to a wrapper
+    around `Ffi_core.<name with - as _>` of the same arity; under
+    `--no-extern` the extern types are ordinary variants and the extern
+    functions' compiled models are extracted instead, so section 41's
+    invariant is checked on the extracted programs too. `Value.payload`'s
+    `Slice` now carries `Ffi_core.slice`.
+65. **The driver is `program.ml` transliterated** over descriptors of the
+    prelude's constructors, dispatching `IO` requests by constructor
+    name as `run_io` does, flushing after every write, taking the
+    program's arguments after `--`, and exiting with the `U8` counted in
+    unary through destruct as `Program.u8` does. Under the FFI stdin is
+    turned into a slice directly, as `Ffi.str` does; without it, into a
+    cons list. An `absurd` reached at runtime prints `runtime error:
+    absurd code reached` to stderr and exits 1, without the file name
+    `bin/main.ml` would print. Every final expression of every file on
+    the command line is consumed in order, as the interpreter would;
+    `--extract` stops the interpreter from running the final values
+    itself (elaboration still evaluates them, the language being pure).
+66. **A printed final value goes through a generated printer**, since
+    an extracted value does not know its constructor names: for the
+    final expression's type, each constructor's return type is unified
+    with it (as entering a match branch does) to find the `many` fields'
+    types, and one printer per type is emitted, following `Value.show`:
+    constructor and fields for a tagged value, the bare fields for an
+    untagged one. Limits, honestly: a closure prints as `<function ?>`
+    unless the final expression is itself a named top-level function
+    (`tests/absurd.sl`), since OCaml closures carry no name; a field
+    whose type stays unknown (an existential) prints `?`; an untagged
+    union whose index is not forced prints through its first candidate
+    constructor. No test hits these.
+67. **Testing.** For every test that runs (69 of 116; those expecting an
+    error need no extraction) and each extern mode, `test/runtest.ml`
+    extracts the elaborated program, drops the final expressions of the
+    `needs:` files from the trace (the interpreter runner discards their
+    output too), compiles with `ocamlfind ocamlopt -package zarith
+    -linkpkg` into `_build/default/test/extract/`, runs the binary with
+    the test's stdin and arguments, and requires the directives' stdout,
+    stderr and exit code. A missing `ocamlfind` fails those tests rather
+    than skipping them. The suite takes about thirty seconds. Every
+    test passes in both modes; the extraction has no known failing case
+    among them, which says nothing about programs outside the tests.

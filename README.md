@@ -12,6 +12,8 @@ apt-get install -y ocaml ocaml-dune libzarith-ocaml-dev
 dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
+dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
+ocamlfind ocamlopt -package zarith -linkpkg echo.ml -o echo && ./echo
 ```
 
 Files given on one command line share a scope, in order; with no file
@@ -28,8 +30,21 @@ prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `--no-extern` strips those implementations and runs the source models. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
+`--extract out.ml` elaborates the files as usual but, instead of
+running their final values, writes the program out as standalone OCaml,
+in the sense of Coq's extraction, to be compiled with ocamlfind against
+zarith: the run-position statements become top-level definitions, each
+ADT an OCaml type tagged only where the interpreter tags, each match
+an OCaml match, extern types and functions the same `lib/ffi_core.ml`
+implementations the interpreter uses (or their source models under
+`--no-extern`), and the driver reproduces `lib/program.ml`. The result
+is meant to behave as the interpreter does on the same files, which
+`dune test` checks (ASSUMPTIONS.md 61-67); every value is an `Obj.t`,
+so the output is not typed OCaml.
+
 `dune test` runs every `tests/*.sl`, once with the FFI and once
-without. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
+without, and extracts, compiles and runs every test that runs, both
+ways, against the same directives. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is a line the test must print, `; stdin: text` a
 line of its input, `; args: a b` its arguments, `; stderr: text` a line
 it must write to stderr, `; exit: n` the code an `IO` program must exit
@@ -61,9 +76,11 @@ erased. Nothing is optimized.
 - `lib/env.ml` — scope entries, the fact table, canonicalization, forced unification (sections 3, 18)
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
-- `lib/prelude.sl`, `lib/ffi.ml` — the source prelude and the extern implementations (section 41)
+- `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 41)
 - `lib/literal.ml` — numeral and character literals and what they expand to
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
 - `lib/program.ml` — running a `String -> String` or `IO` final value against the world
+- `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
 - `bin/main.ml` — command line driver
+- `test/runtest.ml` — the test runner, interpreting and extracting each test
 - `tests/` — DESIGN.md's worked examples and further tests
