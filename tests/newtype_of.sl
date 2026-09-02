@@ -1,5 +1,5 @@
 ; expect: (Succ (Zero))
-; newtype-of fetches a marked type's Newtype, and a first-class coercible-wrap works through it.
+; newtype-of fetches the Newtype naming a marked type's wrapping constructor, and a first-class coercible-wrap works through it.
 
 (def-adts $ Meters : -> Type
   enum newtype
@@ -8,9 +8,9 @@
 (def-lvl X)
 (def-fns X $ many wrap : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
-    (erased (Newtype T) nt)
+    (erased (Newtype C) nt)
     (many (Nat) n) -> (many (T) t)
   (coerce n (coercible-wrap C n)))
 
-(let (many m) (wrap Meters MkMeters (newtype-of Meters) (Succ (Zero))))
+(let (many m) (wrap Meters MkMeters (newtype-of MkMeters) (Succ (Zero))))
 (match many m (((Nat) r)) ((MkMeters n) n))

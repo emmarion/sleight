@@ -99,7 +99,7 @@ let wrapper disc shapes =
   | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
   | _ -> None
 
-let newtype_of env tid = List.find_opt (fun x -> match type_of env x with Newtype (Var t) -> t = tid | _ -> false) env.scope
+let newtype_of env c = List.find_opt (fun x -> match type_of env x with Newtype (Var c') -> c' = c | _ -> false) env.scope
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
 let ctor_var env loc raw =
@@ -205,7 +205,7 @@ and elab_type_form env l sp args =
         | r -> error (loc r) "expected (multiplicity Constructor)"
       in
       Matchable (disc_of env l d, Var (tyname env l t), List.map ctor cs)
-  | Sp.Newtype, [ t ] -> Newtype (Var (tyname env l t))
+  | Sp.Newtype, [ c ] -> let c = ctor_var env l c in ignore (ctor_type env l c); Newtype (Var c)
   | (Sp.Fn | Sp.Matchable | Sp.Newtype), _ -> error l "malformed %s" (Sp.name sp)
   | _ -> error l "%s cannot appear in a type" (Sp.name sp)
 
@@ -426,11 +426,11 @@ and elab_special tele env expect l sp args =
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
       erased (env, res_of env x)
-  | Sp.NewtypeOf, [ t ] -> (
-      let tid = tyname env l t in
-      match newtype_of env tid with
+  | Sp.NewtypeOf, [ c ] -> (
+      let c = ctor_var env l c in
+      match newtype_of env c with
       | Some x -> erased (env, res_of env x)
-      | None -> error l "%s has no Newtype in scope" (name_of env tid))
+      | None -> error l "%s has no Newtype in scope" (name_of env c))
   | Sp.NumeralOf, [ e ] -> (
       let e = canon env (elab_term env e) in
       match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
@@ -475,9 +475,8 @@ and elab_special tele env expect l sp args =
   | Sp.CoercibleWrap, c :: args -> (
       let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
-      if newtype_of env (tid_of env l c) = None then error l "%s has no Newtype in scope" (name_of env (tid_of env l c));
-      let many = List.filter (fun e -> e.mult = Many) tele in
-      if List.length many <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
+      if newtype_of env c = None then error l "%s has no Newtype in scope: only a marked newtype's wrapping constructor has one" (name_of env c);
+      if List.length (List.filter (fun e -> e.mult = Many) tele) <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
       let acc = elab_term_args env l tele args in
       let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
       born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
@@ -810,8 +809,7 @@ and elab_def_adts env adts =
     let env = witness env (Matchable (disc, Var tid, ctors)) in
     let env =
       if not (List.mem Sp.NewtypeMark ms) then env
-      else if wrapper disc shapes = None then error al "%s is not of newtype shape (section 38)" name
-      else witness env (Newtype (Var tid))
+      else match wrapper disc shapes with Some w -> witness env (Newtype (Var w)) | None -> error al "%s is not of newtype shape (section 38)" name
     in
     (env, cids @ values)
   in

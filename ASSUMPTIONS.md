@@ -226,11 +226,10 @@ ground.
     instead; `dune test` runs every test both ways and requires the
     same outcome, which is how section 41's invariant is checked. The
     prelude is re-elaborated per mode.
-45. **`Newtype` has no ambiguity case**: `(Newtype T)` carries nothing
-    but `T`, so `newtype-of` and `coercible-wrap` take the first one
-    found in scope. `coercible-wrap` still requires the named
-    constructor to have exactly one `many` field, the only check left
-    after trusting the mark.
+45. **`Newtype` has no ambiguity case**: `(Newtype C)` carries nothing
+    but `C`, so `newtype-of` and `coercible-wrap` take the first one
+    found in scope; the mark having named `C` is what makes `C` the
+    wrapper, the only check left after trusting the mark.
 46. **The prelude's proofs are erased fields and erased functions**:
     `Lt`, `Double` and `Pow2` carry their sub-proofs at `erased`, and
     the lemmas `lt-pos` and `double-pos` are `erased` functions, so no

@@ -954,7 +954,7 @@ type or an `is` expression, not only at a declaration site.
     §16).
 11. `matchable-of` — yields the `Matchable` for a bare unapplied type
     constructor from ambient scope (§19); `newtype-of` does the same for
-    its `Newtype` (§38).
+    a wrapping constructor's `Newtype` (§38).
 12. `level-of` — yields the `Level` a function is defined at, read from
     its type (§7). Not strictly needed, since that level is always in
     scope anyway, but useful for sugar (SUGAR.md).
@@ -1491,16 +1491,24 @@ checked entirely at elaboration time:
    non-erased value (§20) and do not count either way. A type of that
    shape left unmarked is not a newtype: an implementation may still
    represent it as its field, but promises nothing and admits no
-   `coerce`. The mark births an erased `(Newtype T)` alongside the
-   type's `Matchable`, `T` bare and unapplied as in a `Matchable`;
+   `coerce`. The mark births an erased `(Newtype C)` alongside the
+   type's `Matchable`, `C` the wrapping constructor the shape above
+   singles out, bare and unapplied as in a `Matchable`; the type is
+   read off `C`'s return type, so the object carries nothing else.
    `Newtype` is a type former (§5), the object is first class (§17),
-   and `newtype-of` fetches it from ambient scope as `matchable-of`
-   does. `coercible-wrap` verifies that a `Newtype` for `C`'s type is in
-   ambient scope — its being born only by `def-adts` or the FFI (§41)
-   is what makes it trustworthy — so a first-class wrap goes through a
-   `(Newtype T)` parameter. `C` is the wrapping constructor, and the
-   arguments are its telescope in order, so exactly one of them, `f`,
-   sits at the `many` field. The proof is
+   and `newtype-of` fetches it from ambient scope by naming `C`, as
+   `matchable-of` does by naming the type. `coercible-wrap` verifies
+   that a `Newtype` for `C` is in ambient scope — its being born only
+   by `def-adts` or the FFI (§41) is what makes it trustworthy — so a
+   first-class wrap goes through a `(Newtype C)` parameter. That one
+   object is the proof that `C` heads inhabited values: the proof's
+   target `(C arg1 ... argn)` is what a non-erased `coerce` produces,
+   and by §20's rule 2 no non-erased value is headed by a phantom
+   constructor, so a wrap through a constructor no `Newtype` names — a
+   phantom one with a `many` field, say — would make a value with no
+   inhabitant at runtime, and a match on it would reach absurd code.
+   The arguments are `C`'s telescope in order, so exactly one of them,
+   `f`, sits at the `many` field. The proof is
    `(Coercible F f T (C arg1 ... argn))`, unwrapping being its
    `coercible-sym`.
 5. `(coercible-ctor C ...)` — the same non-phantom constructor on both sides,
