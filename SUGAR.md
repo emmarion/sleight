@@ -52,9 +52,9 @@ The same program as DESIGN.md §33, which is written without any.
 (def-fns _ $ inc : (many (Nat) n) -> (many (Nat) m)
   (Succ n))
 
-(let ML map-nat (comptime $ map-factory (level-of inc)))
+(let ML map-nat (map-factory (level-of inc)))
 
-(let xs (comptime $ Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
-(comptime $ map-nat (Nat) (Nat) inc xs)
+(map-nat (Nat) (Nat) inc xs)
 ```

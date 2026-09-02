@@ -17,24 +17,24 @@ The reader, macro expander, elaborator, eraser, interpreter and code
 generation are untrusted. So `Raw` and §27's `Special` registry are not
 kernel types, and §9's macro-expansion limit belongs to the elaborator.
 
-## The comptime round-trip
+## The compile-time round-trip
 
-§16's `comptime` and §9's macros need values only running code can
-produce, so checking is a dialogue: the kernel checks a comptime
-expression and computes its type, returning runnable code with erased
-positions removed; the interpreter runs that code outside the kernel;
-the resulting values come back to be stored (§3) and embedded as
-constants.
+§16's top-level statements and §9's macros need values only running
+code can produce, so checking is a dialogue: the kernel checks a
+top-level statement and computes its type, returning runnable code with
+erased positions removed; the interpreter runs that code outside the
+kernel; the resulting values come back to be stored (§3) and embedded
+as constants.
 
-Round-trips nest: elaborating a comptime expression can hit a macro,
+Round-trips nest: elaborating a top-level statement can hit a macro,
 itself a round-trip.
 
 The dialogue runs both ways: besides sending checked code out to the
 interpreter, the elaborator reads stored values back out of the scope
 environment — head dispatch (§4) needs the actual `Special` or `Macro`
-value of a `Const`, non-erased head. A block's boundary erasures (§34)
-are settled before it is stripped and run; nothing about a block's
-erasure depends on code after it.
+value of a `Const`, non-erased head. A statement's boundary erasures
+(§34) are settled before it is stripped and run; nothing about a
+statement's erasure depends on code after it.
 
 In v1 a macro is `List Raw -> Raw` (§9), so expanding one is that
 round-trip with result type `Raw`.
