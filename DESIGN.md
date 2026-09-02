@@ -1643,18 +1643,24 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
   `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
   `(coerce inc-noted ig)` is then `inc`'s own pointer.
 
-## 41. TBD: extern types and FFI
+## 41. TBD: extern types, `U8`, and FFI
 
-Not designed; a decision recorded so that §38 can refer to it. There
-will be extern types — `U8` and its kin — whose representation is
-foreign to §38's uniform one-word model, with their operations (`U8`
-addition, say) supplied as extern functions through an FFI. An extern
-type is not itself a newtype, and a datatype that would qualify as
-transparent (§38 item 4) with its wrapper field of an extern type is
-rejected outright rather than silently given a tagged or boxed
+Not designed; decisions recorded so that §38 can refer to them.
+
+There will be extern types, whose representation is foreign to §38's
+uniform one-word model, reached through an FFI. A datatype that would
+qualify as transparent (§38 item 4) with its wrapper field of an extern
+type is rejected outright rather than silently given a tagged or boxed
 representation. Marked for revisiting once the FFI exists.
 
-Open, not decided: how an extern type or function is declared; whether
-an extern value may sit in an ordinary container such as a `List`, or
-in a `many` field at all, given §38's uniform representation; and what
-§23's erasure invariant asks of extern functions.
+`U8` and its kin are not extern types. Each is an ordinary prelude ADT,
+transparent over `(Nat)` (§38), so a `coerce` between the two is free;
+what the FFI supplies for them is efficient implementations of their
+operations — `U8` addition, say — not their representation.
+
+Open, not decided: how an extern type or function is declared; how an
+extern implementation of an operation relates to the operation's
+definition in the language, and what guarantees they agree; whether an
+extern value may sit in an ordinary container such as a `List`, or in a
+`many` field at all, given §38's uniform representation; and what §23's
+erasure invariant asks of extern functions.
