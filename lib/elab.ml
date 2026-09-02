@@ -353,7 +353,7 @@ and elab_call cc env expect l callee hcode lv params rets args =
                  check_equal env l l2 (Var cur);
                  let x = canon env x in
                  if not (equal x lv || equal x (canon env callee.term)) then
-                   error l "%s does not relate the callee or its level %s" (show env p) (show env lv)
+                   error l "%s : %s does not relate the callee %s or its level %s" (show env p) (show env (infer env l p)) (show env callee.term) (show env lv)
              | _ -> assert false)
          | _ -> error l "lower-level call to %s needs a (predates p) annotation" (show env callee.term));
   let env, ids = open_tele env ~named:false ~mults:(List.map (fun e -> if pos = Erased then Erased else e.mult) rets) ~ids:acc rets in
@@ -561,7 +561,7 @@ and elab_match env expect l args =
         if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
         let names = if kind = `Auto then List.map (fun _ -> None) tele else List.map name_or_anon field_names in
         let mults = List.map (fun e -> if phantom || smult = Erased then Erased else e.mult) tele in
-        let envb, fids = open_tele env ~names ~mults tele in
+        let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
         let fvars = List.rev_map (fun x -> Var x) fids in
         let forced =
           try Some (unify (unify envb sres.term (App (Var c, List.rev fvars))) sres.ty (instantiate fvars ret)) with Contradiction _ -> None
