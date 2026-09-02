@@ -39,6 +39,7 @@ let set_state env x state =
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
 let bind env ?(rigid = false) ?(level_born = false) ?(rule = None) name mult state ty =
+  let rigid = rigid || level_born in
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
   let entries = IntMap.add x { name; mult; state = Dyn; level_born; rigid } env.entries in
