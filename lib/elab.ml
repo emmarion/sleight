@@ -158,20 +158,23 @@ let marks env allowed items =
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let anon tele = List.map (fun _ -> None) tele
 
-let open_tele env ?names ?mults ?(state = Dyn) ?(ids = []) tele =
-  let nth l i = Option.map (fun l -> List.nth l i) l in
+let open_tele env ?names ?mults ?states ?(ids = []) tele =
+  let nth l i default = match l with Some l -> List.nth l i | None -> default in
   let _, env, _, fresh =
     List.fold_left
       (fun (i, env, ids, fresh) e ->
         let sg = map_sg (instantiate ids) e.sg in
         let ty, rule = match sg with Ty t -> (t, None) | Is t -> (infer env 0 t, Some t) in
-        let name = match nth names i with Some n -> n | None -> e.name in
-        let mult = match nth mults i with Some m -> m | None -> e.mult in
-        let x, env = bind env name mult state ty ~rule in
+        let x, env = bind env (nth names i e.name) (nth mults i e.mult) (nth states i Dyn) ty ?rule in
         (i + 1, env, Var x :: ids, x :: fresh))
       (0, env, ids, []) tele
   in
   (env, List.rev fresh)
+
+let spread mults values =
+  snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
+
+let born_level env name = bind env ~level_born:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
   match raw with
@@ -192,9 +195,7 @@ and elab_type_form env l sp args =
       let lv = elab_term env lv in
       check_type env l (infer env l lv) Prelude.level_term;
       let ps, rs = split_arrow env l rest in
-      let env, ids, params = elab_tele env ~subterm:true ps in
-      let _, _, rets = elab_tele env ~ids:(List.rev ids) rs in
-      Fn (lv, params, rets)
+      elab_fn_type env lv ps rs
   | Sp.TyCtor, _ -> let ps, ret = split_arrow env l args in elab_tyctor env l ps ret
   | Sp.ValCtor, _ -> let _, _, _, t = elab_valctor env l args in t
   | Sp.Matchable, d :: t :: cs ->
@@ -206,6 +207,11 @@ and elab_type_form env l sp args =
   | Sp.Newtype, [ t ] -> Newtype (Var (tyname env l t))
   | (Sp.Fn | Sp.Matchable | Sp.Newtype), _ -> error l "malformed %s" (Sp.name sp)
   | _ -> error l "%s cannot appear in a type" (Sp.name sp)
+
+and elab_fn_type env lv ps rs =
+  let env, ids, params = elab_tele env ~subterm:true ps in
+  let _, _, rets = elab_tele env ~ids:(List.rev ids) rs in
+  Fn (lv, params, rets)
 
 and elab_tyctor env l ps ret =
   let env', _, tele = elab_tele env ~mults:(no_mults l) ps in
@@ -241,7 +247,7 @@ and elab_tele env ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) entries
           | None, None -> error e.s_loc "entry %s needs a type or an is clause" e.s_name
         in
         let name = name_or_anon e.s_name in
-        let x, env = bind env name mult Dyn ty ~rule:(match sg with Is t -> Some t | Ty _ -> None) in
+        let x, env = bind env name mult Dyn ty ?rule:(match sg with Is t -> Some t | Ty _ -> None) in
         (i + 1, env, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg } :: tele))
       (0, env, ids, []) entries
   in
@@ -454,7 +460,7 @@ and elab_special tele env expect l sp args =
       match p with
       | [ _; a'; b_ty; b ] ->
           check_equal env l a.term a';
-          let x, env = bind env None m Dyn b_ty ~rule:(Some b) in
+          let x, env = bind env None m Dyn b_ty ~rule:b in
           (env, [ res_of env x ], code)
       | _ -> assert false)
   | Sp.CoercibleRefl, [ e ] ->
@@ -612,7 +618,7 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       match (special_of env head, args) with
       | Some Sp.Let, _ -> elab_let env l args
       | Some Sp.DefLvl, [ n ] ->
-          let _, env = bind env ~level_born:true (name_or_anon (atom_or l n "a name")) Erased (const env V.VToken) Prelude.level_term in
+          let _, env = born_level env (name_or_anon (atom_or l n "a name")) in
           (env, Fun.id)
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
@@ -627,19 +633,15 @@ and elab_let env l args =
   let binders = List.concat_map (parse_entry env) binders in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
   let inner, ress, code = elab_body env expect l rhs in
-  let values = ref (if env.run_pos && pos_of expect = Many then run_code inner code else []) in
-  let next_value () = match !values with v :: rest -> values := rest; v | [] -> V.VToken in
-  let bind_one (env, ids) (b, r) =
+  let values = if env.run_pos && pos_of expect = Many then run_code inner code else [] in
+  let bind_one (env, ids) ((b, r), v) =
     Option.iter (fun t -> check_type env b.s_loc r.ty (elab_type env t)) b.s_ty;
     Option.iter (fun t -> check_equal env b.s_loc r.term (elab_term env t)) b.s_is;
-    let state =
-      if env.run_pos then Const (if b.s_mult = Some Many then next_value () else V.VToken)
-      else match r.term with Var y -> (entry env y).state | _ -> Dyn
-    in
-    let x, env = bind env (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:(Some r.term) in
+    let state = if env.run_pos then Const v else match r.term with Var y -> (entry env y).state | _ -> Dyn in
+    let x, env = bind env (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
     (env, x :: ids)
   in
-  let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine binders ress) in
+  let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine (List.combine binders ress) (spread expect values)) in
   let ids = non_erased env' (List.rev ids) in
   (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
 
@@ -663,9 +665,8 @@ and elab_comptime_match env l args =
       in
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
-      let env, fids = open_tele env ~names tele in
-      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env (non_erased env fids) many_values in
-      let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
+      let states = List.map (fun v -> Const v) (spread (List.map (fun e -> e.mult) tele) many_values) in
+      let env, fids = open_tele env ~names ~states tele in
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg) in
       (env, Fun.id)
   | _ -> error l "malformed comptime-match: expected (comptime-match x (C field ...))"
@@ -676,7 +677,7 @@ and elab_def_fns env l args =
   | lv :: fns ->
       let env, lvl =
         match lv with
-        | Atom (_, "_") -> let x, env = bind env ~level_born:true None Erased (Const V.VToken) Prelude.level_term in (env, x)
+        | Atom (_, "_") -> let x, env = born_level env None in (env, x)
         | _ -> (env, match canon env (elab_term env lv) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t))
       in
       let header raw =
@@ -688,12 +689,9 @@ and elab_def_fns env l args =
             | n :: colon :: sg when is_special env colon Sp.Colon ->
                 let ps, rest = split_arrow env fl sg in
                 let rs, body = split_returns env rest in
-                let _, _, params = elab_tele env ~subterm:true ps in
-                let env_p, pids = open_tele env params in
-                let _, _, rets = elab_tele env_p ~ids:(List.rev pids) rs in
                 let name = atom_or fl n "a function name" in
                 let impl = if List.mem Sp.Extern marks then Some (Ffi.claim Ffi.fns fl name) else None in
-                (fl, name, mult, List.mem Sp.Absurd marks, impl, Fn (Var lvl, params, rets), body)
+                (fl, name, mult, List.mem Sp.Absurd marks, impl, elab_fn_type env (Var lvl) ps rs, body)
             | _ -> error fl "malformed function header")
         | _ -> error (loc raw) "malformed function definition"
       in

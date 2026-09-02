@@ -43,7 +43,7 @@ let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
-let bind env ?(rigid = false) ?(level_born = false) ?(rule = None) name mult state ty =
+let bind env ?(rigid = false) ?(level_born = false) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
