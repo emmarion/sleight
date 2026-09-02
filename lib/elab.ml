@@ -762,20 +762,10 @@ and check_marks env l pids code =
         | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
             norm (List.combine ids (vars_of cs) @ sub) rest
         | rhs -> V.CLet (ids, rhs, norm sub rest))
-    | V.CValues cs -> V.CValues (List.map (norm sub) cs)
-    | V.CApp (f, args, cc) -> V.CApp (norm sub f, List.map (norm sub) args, cc)
-    | V.CLetRec (fns, rest) -> V.CLetRec (List.map (fun (x, fn) -> (x, { fn with V.body = norm sub fn.V.body })) fns, norm sub rest)
-    | V.CMatch (s, brs) -> V.CMatch (norm sub s, List.map (fun (c, ids, b) -> (norm sub c, ids, norm sub b)) brs)
-    | (V.CConst _ | V.CErased | V.CAbsurd) as c -> c
+    | c -> V.map_code (norm sub) c
   in
   let code = norm [] code in
-  let rec marked acc = function
-    | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (match cc with V.Tail | V.Delegate -> c :: acc | _ -> acc) f) args
-    | V.CLet (_, a, b) -> marked (marked acc a) b
-    | V.CLetRec (_, b) -> marked acc b
-    | V.CMatch (s, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
-    | V.CValues cs -> List.fold_left marked acc cs
-    | V.CVar _ | V.CConst _ | V.CErased | V.CAbsurd -> acc
+  let rec marked acc c = List.fold_left marked (match c with V.CApp (_, _, (V.Tail | V.Delegate)) -> c :: acc | _ -> acc) (V.subcodes c)
   in
   let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let rec tails ~direct = function

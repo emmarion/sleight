@@ -35,6 +35,22 @@ and code =
   | CMatch of code * (code * id list * code) list
   | CAbsurd
 
+let map_code f = function
+  | CValues cs -> CValues (List.map f cs)
+  | CApp (g, args, cc) -> CApp (f g, List.map f args, cc)
+  | CLet (ids, rhs, rest) -> CLet (ids, f rhs, f rest)
+  | CLetRec (fns, rest) -> CLetRec (fns, f rest)
+  | CMatch (s, brs) -> CMatch (f s, List.map (fun (c, ids, b) -> (f c, ids, f b)) brs)
+  | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
+
+let subcodes = function
+  | CValues cs -> cs
+  | CApp (g, args, _) -> g :: args
+  | CLet (_, rhs, rest) -> [ rhs; rest ]
+  | CLetRec (_, rest) -> [ rest ]
+  | CMatch (s, brs) -> s :: List.concat_map (fun (c, _, b) -> [ c; b ]) brs
+  | CVar _ | CConst _ | CErased | CAbsurd -> []
+
 (* Extern implementations run unless stripped (section 41's invariant). *)
 let use_externs = ref true
 

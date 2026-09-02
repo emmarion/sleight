@@ -190,14 +190,9 @@ let collect env items =
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VFn _ | V.VToken -> ()
-  and code = function
-    | V.CConst v -> value v
-    | V.CValues cs -> List.iter code cs
-    | V.CApp (f, cs, _) -> code f; List.iter code cs
-    | V.CLet (_, a, b) -> code a; code b
-    | V.CLetRec (fs, b) -> List.iter (fun (_, f) -> code f.V.body) fs; code b
-    | V.CMatch (s, brs) -> code s; List.iter (fun (c, _, b) -> code c; code b) brs
-    | V.CVar _ | V.CErased | V.CAbsurd -> ()
+  and code c =
+    (match c with V.CConst v -> value v | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
+    List.iter code (V.subcodes c)
   in
   IntMap.iter (fun x v -> value v; match v with V.VCtorFn c -> Hashtbl.replace ctors x c | _ -> ()) env.Env.values;
   List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
