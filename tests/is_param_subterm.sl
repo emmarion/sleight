@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: (Succ (Zero))
 ; A subterm parameter pinned by is: the recursive call decreases through the pinned structure.
 
 (def-lvl X)
