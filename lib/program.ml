@@ -51,6 +51,12 @@ let to_string env v =
   Buffer.contents buf
 
 let read_file path = In_channel.with_open_bin path In_channel.input_all
+let explain path = function
+  | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)
+  | Env.Error (l, m) -> Some (Printf.sprintf "%s:%d: error: %s" path l m)
+  | Env.Contradiction m -> Some (path ^ ": error: contradiction: " ^ m)
+  | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
+  | _ -> None
 let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
 
 (* Interprets an IO value: performs each request, applies its continuation to the answer, and loops until Exit. *)

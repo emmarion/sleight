@@ -48,6 +48,8 @@ let con cx adt = Printf.sprintf "con_%d" (adt_index cx adt)
 let des cx adt = Printf.sprintf "des_%d" (adt_index cx adt)
 
 let fields c = List.init c.V.arity (fun i -> Printf.sprintf "f%d" i)
+let case c vs body = Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " vs) body
+let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
 let pattern c fs = if fs = [] then ctor c else Printf.sprintf "%s (%s)" (ctor c) (concat ", " fs)
 
 let build cx c es =
@@ -158,15 +160,15 @@ and expr cx scope = function
       let branches = List.map branch branches in
       match branches with
       | (Some c, _, _, _) :: _ when List.for_all (fun (c, _, _, _) -> c <> None) branches -> (
-          let case (c, _, vs, body) = (Option.get c, vs, body) in
+          let branches = List.map (fun (c, _, vs, body) -> (Option.get c, vs, body)) branches in
           match shape c.adt with
           | Ext ->
               Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx c.adt) (expr cx scope s)
-                (concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " vs) body) (List.map case branches)))
+                (concat " " (List.map (fun (c, vs, body) -> case c vs body) branches))
           | Tagged ->
               Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" (expr cx scope s) (type_name cx c.adt)
-                (concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pattern c vs) body) (List.map case branches)))
-          | Untagged -> (match List.map case branches with [ (_, vs, body) ] -> untuple vs (expr cx scope s) body | _ -> assert false))
+                (concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pattern c vs) body) branches))
+          | Untagged -> (match branches with [ (_, vs, body) ] -> untuple vs (expr cx scope s) body | _ -> assert false))
       | _ ->
           let rec chain = function
             | [] -> "absurd ()"
@@ -221,16 +223,15 @@ let types cx =
     in
     Printf.sprintf "%s = %s" (type_name cx a) body
   in
-  let case c built = Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " (fields c)) built in
   let ops a =
     match shape a with
     | Ext -> Printf.sprintf "let %s, %s = %s" (con cx a) (des cx a) (List.assoc a.V.tname externs)
     | Tagged ->
         Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false\nlet %s v = match (Obj.obj v : %s) with %s" (con cx a)
-          (concat " " (List.map (fun c -> case c (Printf.sprintf "(Obj.repr (%s))" (pattern c (fields c)))) a.V.ctors))
+          (concat " " (List.map (fun c -> case c (fields c) (Printf.sprintf "(Obj.repr (%s))" (pattern c (fields c)))) a.V.ctors))
           (des cx a) (type_name cx a)
           (concat " " (List.map (fun c -> Printf.sprintf "| %s -> (%d, [%s])" (pattern c (fields c)) c.V.index (concat "; " (fields c))) a.ctors))
-    | Untagged -> Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false" (con cx a) (concat " " (List.map (fun c -> case c (tuple (fields c))) a.V.ctors))
+    | Untagged -> Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false" (con cx a) (concat " " (List.map (fun c -> case c (fields c) (tuple (fields c))) a.V.ctors))
   in
   let descriptor c =
     Printf.sprintf "let %s : Obj.t = Obj.repr { ix = %d; cname = %s; con = %s; des = (fun v -> %s) }" (var c.V.cid) c.index (quote c.cname) (con cx c.adt) (destruct cx c "v")
@@ -255,10 +256,7 @@ let rec show cx env ty =
             let env' = Env.unify env' (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty in
             let many = Elab.non_erased env' fids in
             let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
-            let text =
-              if a.V.tagged then Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " (quote c.cname :: shown))
-              else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " ss)
-            in
+            let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in
             Some (c, text)
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
       in
@@ -273,7 +271,7 @@ let rec show cx env ty =
                  | Untagged -> (match branches with (c, text) :: _ -> untuple (fields c) "v" text | [] -> "\"?\"")
                  | _ ->
                      Printf.sprintf "match %s v with %s | _ -> \"?\"" (des cx a)
-                       (concat " " (List.map (fun (c, text) -> Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " (fields c)) text) branches))))
+                       (concat " " (List.map (fun (c, text) -> case c (fields c) text) branches))))
          | Fn _ -> "\"<function ?>\""
          | ValCtor _ -> "\"<constructor \" ^ (Obj.obj v : ctor).cname ^ \">\""
          | _ -> "\"?\"");

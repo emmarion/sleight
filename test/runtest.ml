@@ -6,17 +6,12 @@
 open Speciallang
 
 let dir = "../tests"
-let read path = let ic = open_in_bin path in let s = really_input_string ic (in_channel_length ic) in close_in ic; s
-let write path s = Out_channel.with_open_bin path (fun oc -> output_string oc s)
+let read = Program.read_file and write = Program.write_file
 
 let directive src key =
-  List.filter_map
-    (fun line ->
-      let prefix = "; " ^ key ^ ": " in
-      if String.length line > String.length prefix && String.sub line 0 (String.length prefix) = prefix then
-        Some (String.sub line (String.length prefix) (String.length line - String.length prefix))
-      else None)
-    (String.split_on_char '\n' src)
+  let prefix = "; " ^ key ^ ": " in
+  let value line = if String.starts_with ~prefix line then Some (String.sub line (String.length prefix) (String.length line - String.length prefix)) else None in
+  List.filter_map value (String.split_on_char '\n' src)
 
 let ocamlfind = lazy (Sys.command "ocamlfind ocamlopt -version > /dev/null 2>&1" = 0)
 
@@ -73,11 +68,7 @@ and run_mode name externs src =
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
       let env = Elab.run_toplevel ~consume env (Reader.parse src) in
       Ok (env, Buffer.contents printed)
-    with
-    | Reader.Syntax (l, m) -> Error (Printf.sprintf "line %d: syntax error: %s" l m)
-    | Env.Error (l, m) -> Error (Printf.sprintf "line %d: error: %s" l m)
-    | Env.Contradiction m -> Error ("contradiction: " ^ m)
-    | Eval.Runtime m -> Error ("runtime error: " ^ m)
+    with e -> (match Program.explain name e with Some m -> Error m | None -> raise e)
   in
   let contains hay needle =
     let n = String.length needle and h = String.length hay in

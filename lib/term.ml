@@ -52,34 +52,24 @@ let abstract ids t =
     (fun d t -> match t with Var x -> (match index x with Some i -> Bound (i + d) | None -> t) | t -> t)
     0 t
 
-let rec fold_vars f acc t =
+let rec fold_vars f depth acc t =
   match t with
-  | Var x -> f acc x
-  | Bound _ -> acc
-  | App (h, args) -> List.fold_left (fold_vars f) (fold_vars f acc h) args
-  | Fn (l, ps, rs) -> fold_tele f (fold_tele f (fold_vars f acc l) ps) rs
-  | TyCtor ps -> fold_tele f acc ps
-  | ValCtor (ps, r) -> fold_vars f (fold_tele f acc ps) r
-  | Matchable (_, t, cs) -> List.fold_left (fun acc (_, c) -> fold_vars f acc c) (fold_vars f acc t) cs
-  | Newtype t -> fold_vars f acc t
+  | Var _ | Bound _ -> f depth acc t
+  | App (h, args) -> List.fold_left (fold_vars f depth) (fold_vars f depth acc h) args
+  | Fn (l, ps, rs) ->
+      let acc, d = fold_tele f depth (fold_vars f depth acc l) ps in
+      fst (fold_tele f d acc rs)
+  | TyCtor ps -> fst (fold_tele f depth acc ps)
+  | ValCtor (ps, r) ->
+      let acc, d = fold_tele f depth acc ps in
+      fold_vars f d acc r
+  | Matchable (_, t, cs) -> List.fold_left (fun acc (_, c) -> fold_vars f depth acc c) (fold_vars f depth acc t) cs
+  | Newtype t -> fold_vars f depth acc t
 
-and fold_tele f acc es = List.fold_left (fun acc e -> fold_vars f acc (sg_term e.sg)) acc es
+and fold_tele f depth acc es = List.fold_left (fun (acc, d) e -> (fold_vars f d acc (sg_term e.sg), d + 1)) (acc, depth) es
 
-let occurs x t = fold_vars (fun b y -> b || x = y) false t
-
-let rec has_dangling depth t =
-  match t with
-  | Var _ -> false
-  | Bound k -> k >= depth
-  | App (h, args) -> has_dangling depth h || List.exists (has_dangling depth) args
-  | Fn (l, ps, rs) -> has_dangling depth l || tele_dangling depth ps || tele_dangling (depth + List.length ps) rs
-  | TyCtor ps -> tele_dangling depth ps
-  | ValCtor (ps, r) -> tele_dangling depth ps || has_dangling (depth + List.length ps) r
-  | Matchable (_, t, cs) -> has_dangling depth t || List.exists (fun (_, c) -> has_dangling depth c) cs
-  | Newtype t -> has_dangling depth t
-
-and tele_dangling depth es =
-  snd (List.fold_left (fun (d, b) e -> (d + 1, b || has_dangling d (sg_term e.sg))) (depth, false) es)
+let occurs x t = fold_vars (fun _ b t -> b || t = Var x) 0 false t
+let has_dangling depth t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= d | _ -> false)) depth false t
 
 let rec equal a b =
   match (a, b) with
