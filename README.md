@@ -15,7 +15,8 @@ dune test
 ```
 
 Files given on one command line share a scope, in order; with no file
-the program is read from stdin. A file is a sequence of statements,
+the program is read from stdin, and `--repl` (after any files) reads
+forms interactively. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
 `dune test` runs every `tests/*.sl`. A test's leading comments say what

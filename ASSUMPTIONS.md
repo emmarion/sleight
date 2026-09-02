@@ -60,9 +60,10 @@ ground.
     order.
 13. **A `def-fns` level** may be any variable whose type is `(Level)`,
     not only a `def-lvl`-born one; only `prove-predates` insists on the
-    birth marker. `prove-predates` canonicalizes both its arguments
-    first, so an alias made by `let ... is` works, and the proof is
-    about the canonical variable (SR 20).
+    birth marker, after canonicalizing the level. Its subject stays the
+    variable named when that variable is old enough; a newer alias of an
+    older variable (a `let ... is`) is resolved to what it canonicalizes
+    to, so that the proof is about the older variable (SR 20).
 
 14. **`def-adts` ordering**: a type constructor's own telescope may
     mention types defined earlier in the same `def-adts`, not later
@@ -122,7 +123,8 @@ ground.
     than the index is an error.
 26. **Top-level calls**: a decrease annotation written at the top level
     is elaborated (so the proof must exist) but not checked against any
-    level, since there is none (section 24).
+    level, since there is none (section 24); the `_` sugar forms are
+    simply ignored there.
 27. **Atom-vs-atom unification** makes the newer entry an alias of the
     older one (SR 21). Unifying a variable with a term that mentions a
     telescope binder (something inside an `Fn` type, say) is a hard
@@ -170,9 +172,10 @@ ground.
 
 ## Not implemented
 
-36. Macros (`Macro`, `Raw`, the expansion limit). A REPL beyond
-    reading a program from stdin. `lib/kernel_input.ml` is untouched
-    and unused (SR 28).
+36. Macros (`Macro`, `Raw`, the expansion limit). `lib/kernel_input.ml`
+    is untouched and unused (SR 28). The `--repl` flag reads one form
+    at a time and prints every expression's value, which goes beyond
+    section 16's one-expression file; it is a convenience only.
 
 ## Sugar (SUGAR.md)
 

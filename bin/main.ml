@@ -6,15 +6,40 @@ let read_file path =
   close_in ic;
   s
 
-let () =
-  let files = match List.tl (Array.to_list Sys.argv) with [] -> [ "-" ] | files -> files in
-  let run env path =
-    let src = if path = "-" then In_channel.input_all stdin else read_file path in
-    try Elab.run_toplevel env (Reader.parse src) with
-    | Reader.Syntax (line, msg) -> Printf.eprintf "%s:%d: syntax error: %s\n" path line msg; exit 1
-    | Env.Error (line, msg) -> Printf.eprintf "%s:%d: error: %s\n" path line msg; exit 1
-    | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n" path msg; exit 1
-    | Elab.BranchAbsurd _ -> Printf.eprintf "%s: error: comptime-match contradicts the facts in force\n" path; exit 1
-    | Eval.Runtime msg -> Printf.eprintf "%s: runtime error: %s\n" path msg; exit 1
+let report path f =
+  try f () with
+  | Reader.Syntax (line, msg) -> Printf.eprintf "%s:%d: syntax error: %s\n%!" path line msg; None
+  | Env.Error (line, msg) -> Printf.eprintf "%s:%d: error: %s\n%!" path line msg; None
+  | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n%!" path msg; None
+  | Elab.BranchAbsurd _ -> Printf.eprintf "%s: error: comptime-match contradicts the facts in force\n%!" path; None
+  | Eval.Runtime msg -> Printf.eprintf "%s: runtime error: %s\n%!" path msg; None
+
+let run env path =
+  let src = if path = "-" then In_channel.input_all stdin else read_file path in
+  match report path (fun () -> Some (Elab.run_toplevel env (Reader.parse src))) with Some env -> env | None -> exit 1
+
+(* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
+let repl env =
+  let balance s = String.fold_left (fun n c -> match c with '(' -> n + 1 | ')' -> n - 1 | _ -> n) 0 s in
+  let rec form buf =
+    print_string (if Buffer.length buf = 0 then "> " else "  ");
+    match In_channel.input_line stdin with
+    | None -> None
+    | Some line ->
+        Buffer.add_string buf (line ^ "\n");
+        if balance (Buffer.contents buf) > 0 then form buf else Some (Buffer.contents buf)
   in
-  ignore (List.fold_left run Prelude.env files)
+  let rec loop env =
+    match form (Buffer.create 64) with
+    | None -> print_newline ()
+    | Some src -> loop (Option.value (report "repl" (fun () -> Some (Elab.run_toplevel env (Reader.parse src)))) ~default:env)
+  in
+  loop env
+
+let () =
+  match List.tl (Array.to_list Sys.argv) with
+  | [] -> ignore (run Prelude.env "-")
+  | args ->
+      let files, interactive = List.partition (( <> ) "--repl") args in
+      let env = List.fold_left run Prelude.env files in
+      if interactive <> [] then repl env
