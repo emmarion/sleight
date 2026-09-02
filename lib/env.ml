@@ -78,30 +78,7 @@ let rec unify env depth a b =
         no_binders x t;
         if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
         add_rule env x t
-    | App (h, xs), App (k, ys) when List.length xs = List.length ys ->
-        List.fold_left2 (fun env a b -> unify env depth a b) (unify env depth h k) xs ys
-    | Fn (l, ps, rs), Fn (m, qs, ss) ->
-        let env, d = unify_tele (unify env depth l m) depth ps qs in
-        fst (unify_tele env d rs ss)
-    | TyCtor ps, TyCtor qs -> fst (unify_tele env depth ps qs)
-    | ValCtor (ps, r), ValCtor (qs, s) ->
-        let env, d = unify_tele env depth ps qs in
-        unify env d r s
-    | Matchable (d, t, cs), Matchable (e, u, ds) when d = e && List.length cs = List.length ds ->
-        List.fold_left2
-          (fun env (m, c) (n, d) -> if m <> n then contradiction () else unify env depth c d)
-          (unify env depth t u) cs ds
-    | Newtype t, Newtype u -> unify env depth t u
+    | _ when blank a = blank b -> List.fold_left2 (fun env (k, x) (_, y) -> unify env (depth + k) x y) env (kids a) (kids b)
     | _ -> contradiction ()
-
-and unify_tele env depth ps qs =
-  if not (List.length ps = List.length qs && List.for_all2 (fun p q -> p.subterm = q.subterm && p.mult = q.mult) ps qs)
-  then raise (Contradiction "telescopes differ");
-  List.fold_left2
-    (fun (env, d) p q ->
-      match (p.sg, q.sg) with
-      | Ty a, Ty b | Is a, Is b -> (unify env d a b, d + 1)
-      | _ -> raise (Contradiction "type entry vs is entry"))
-    (env, depth) ps qs
 
 let unify env a b = unify env 0 a b

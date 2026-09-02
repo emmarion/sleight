@@ -52,46 +52,38 @@ let abstract ids t =
     (fun d t -> match t with Var x -> (match index x with Some i -> Bound (i + d) | None -> t) | t -> t)
     0 t
 
+let tele_kids depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
+
+let kids = function
+  | Var _ | Bound _ -> []
+  | App (h, args) -> List.map (fun t -> (0, t)) (h :: args)
+  | Fn (l, ps, rs) -> ((0, l) :: tele_kids 0 ps) @ tele_kids (List.length ps) rs
+  | TyCtor ps -> tele_kids 0 ps
+  | ValCtor (ps, r) -> tele_kids 0 ps @ [ (List.length ps, r) ]
+  | Matchable (_, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
+  | Newtype t -> [ (0, t) ]
+
+let blank t =
+  let hole = Bound 0 in
+  let tele = List.map (fun e -> { e with name = None; sg = map_sg (fun _ -> hole) e.sg }) in
+  match t with
+  | Var _ | Bound _ -> t
+  | App (_, args) -> App (hole, List.map (fun _ -> hole) args)
+  | Fn (_, ps, rs) -> Fn (hole, tele ps, tele rs)
+  | TyCtor ps -> TyCtor (tele ps)
+  | ValCtor (ps, _) -> ValCtor (tele ps, hole)
+  | Matchable (d, _, cs) -> Matchable (d, hole, List.map (fun (m, _) -> (m, hole)) cs)
+  | Newtype _ -> Newtype hole
+
 let rec fold_vars f depth acc t =
   match t with
   | Var _ | Bound _ -> f depth acc t
-  | App (h, args) -> List.fold_left (fold_vars f depth) (fold_vars f depth acc h) args
-  | Fn (l, ps, rs) ->
-      let acc, d = fold_tele f depth (fold_vars f depth acc l) ps in
-      fst (fold_tele f d acc rs)
-  | TyCtor ps -> fst (fold_tele f depth acc ps)
-  | ValCtor (ps, r) ->
-      let acc, d = fold_tele f depth acc ps in
-      fold_vars f d acc r
-  | Matchable (_, t, cs) -> List.fold_left (fun acc (_, c) -> fold_vars f depth acc c) (fold_vars f depth acc t) cs
-  | Newtype t -> fold_vars f depth acc t
-
-and fold_tele f depth acc es = List.fold_left (fun (acc, d) e -> (fold_vars f d acc (sg_term e.sg), d + 1)) (acc, depth) es
+  | _ -> List.fold_left (fun acc (k, c) -> fold_vars f (depth + k) acc c) acc (kids t)
 
 let occurs x t = fold_vars (fun _ b t -> b || t = Var x) 0 false t
 let has_dangling depth t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= d | _ -> false)) depth false t
 
-let rec equal a b =
-  match (a, b) with
-  | Var x, Var y -> x = y
-  | Bound i, Bound j -> i = j
-  | App (h, xs), App (k, ys) -> equal h k && List.length xs = List.length ys && List.for_all2 equal xs ys
-  | Fn (l, ps, rs), Fn (m, qs, ss) -> equal l m && equal_tele ps qs && equal_tele rs ss
-  | TyCtor ps, TyCtor qs -> equal_tele ps qs
-  | ValCtor (ps, r), ValCtor (qs, s) -> equal_tele ps qs && equal r s
-  | Matchable (d, t, cs), Matchable (e, u, ds) ->
-      d = e && equal t u && List.length cs = List.length ds
-      && List.for_all2 (fun (m, c) (n, d) -> m = n && equal c d) cs ds
-  | Newtype t, Newtype u -> equal t u
-  | _ -> false
-
-and equal_tele ps qs =
-  List.length ps = List.length qs
-  && List.for_all2
-       (fun p q ->
-         p.subterm = q.subterm && p.mult = q.mult
-         && match (p.sg, q.sg) with Ty a, Ty b | Is a, Is b -> equal a b | _ -> false)
-       ps qs
+let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equal x y) (kids a) (kids b)
 
 let mult_name = function Erased -> "erased" | Many -> "many"
 let disc_name = function Enum -> "enum" | Union -> "union"
