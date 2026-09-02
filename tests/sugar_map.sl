@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons _ (Succ (Zero)) (Cons _ (Succ (Succ (Zero))) (Nil _)))
+; expect: (Cons (Succ (Zero)) (Cons (Succ (Succ (Zero))) (Nil)))
 ; SUGAR.md section 4: map with _ levels, _ annotations and naive proofs.
 
 (def-fns _ $ many map-factory : (erased (Level) M) ->

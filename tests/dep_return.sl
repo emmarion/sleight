@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (SSucc _ (SZero))
+; expect: (SSucc (SZero))
 ; A return telescope whose second entry depends on the first.
 
 (def-adts

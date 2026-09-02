@@ -1,5 +1,5 @@
 ; needs: list vec
-; expect: (VCons _ _ (Succ (Zero)) (VNil _))
+; expect: (VCons (Succ (Zero)) (VNil))
 ; A dependent motive: each branch's result is checked against (Vec B n) under that branch's facts.
 
 (def-lvl M)

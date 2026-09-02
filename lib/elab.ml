@@ -52,6 +52,7 @@ let rec infer env loc t =
   | Bound _ -> error loc "internal: dangling binder"
 
 let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).mult }
+let non_erased env ids = List.filter (fun x -> (entry env x).mult = Many) ids
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 
 let matchables env tid =
@@ -215,7 +216,7 @@ and check_args env loc tele args elab =
       (fun (env, acc, codes) e arg ->
         let env, r, code = elab env e.mult arg in
         check_sg env (Reader.loc arg) (map_sg (instantiate acc) e.sg) r;
-        (env, r.term :: acc, code :: codes))
+        (env, r.term :: acc, if e.mult = Many then code :: codes else codes))
       (env, [], []) tele args
   in
   (env, acc, List.rev codes)
@@ -248,7 +249,6 @@ let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.co
   let env, ress, code = elab_form cc tele env expect raw in
   if List.length ress <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length ress);
   List.iter2 (fun m r -> if m = Many && r.erasure = Erased then error l "erased value %s : %s used in a non-erased position" (show env r.term) (show env r.ty)) expect ress;
-  let code = match code with V.CErased when List.length expect <> 1 -> V.CValues (List.map (fun _ -> V.CErased) expect) | c -> c in
   (env, ress, code)
 
 and elab_expr1 ?cc env mult raw =
@@ -361,10 +361,10 @@ and elab_special tele env expect l sp args =
       if List.length args <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length args);
       let env, ress, codes =
         List.fold_left2
-          (fun (env, ress, codes) m a -> let env, r, code = elab_expr1 env m a in (env, r :: ress, code :: codes))
+          (fun (env, ress, codes) m a -> let env, r, code = elab_expr1 env m a in (env, r :: ress, if m = Many then code :: codes else codes))
           (env, [], []) expect args
       in
-      (env, List.rev ress, V.CValues (List.rev codes))
+      (env, List.rev ress, if pos = Erased then V.CErased else V.CValues (List.rev codes))
   | Sp.Match, _ -> elab_match tele env expect l args
   | (Sp.Tail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (Sp.name sp);
@@ -451,9 +451,9 @@ and elab_special tele env expect l sp args =
       let c = var env l (atom_or l c "a constructor") in
       let tele, ret = ctor_type env l c in
       match Hashtbl.find_opt V.ctors c with
-      | Some { V.repr = V.Field i; _ } ->
+      | Some { V.repr = V.Field; _ } ->
           let acc = elab_term_args env l tele args in
-          let f = List.nth (List.rev acc) i in
+          let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
           born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ])
       | _ -> error l "%s is not the wrapping constructor of a transparent type" (name_of env c))
   | Sp.CoercibleCtor, c :: args ->
@@ -558,7 +558,7 @@ and elab_match tele env expect l args =
               check_empty envb bl (single bl ress).ty;
               `Absurd
         in
-        (c, fids, phantom, result)
+        (c, non_erased envb fids, phantom, result)
       in
       let branches = List.map branch branches in
       List.iter
@@ -568,7 +568,11 @@ and elab_match tele env expect l args =
           | 1 -> ()
           | n -> error l "constructor %s has %d branches" (name_of env c) n)
         ctors;
-      let real = List.filter_map (fun (c, fids, phantom, r) -> match r with `Present code when not phantom -> Some (V.CVar c, fids, code) | _ -> None) branches in
+      let real =
+        List.filter_map
+          (fun (c, fids, phantom, r) -> match r with `Present code when not phantom -> Some (V.CVar c, fids, code) | _ -> None)
+          branches
+      in
       if pos = Many && (disc = Union || smult = Erased) && List.length real > 1 then
         error l "a match without a runtime discriminant can have only one real branch";
       let code =
@@ -611,19 +615,21 @@ and elab_let env l args =
   let binders = List.concat_map (parse_entry env) binders in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
   let inner, ress, code = elab_body env expect l rhs in
-  let values = if env.run_pos then run_code code else List.map (fun _ -> V.VToken) ress in
-  let bind_one (env, ids) (b, (r, v)) =
+  let values = ref (if env.run_pos && pos_of expect = Many then run_code code else []) in
+  let next_value () = match !values with v :: rest -> values := rest; v | [] -> V.VToken in
+  let bind_one (env, ids) (b, r) =
     Option.iter (fun t -> check_type env b.s_loc r.ty (elab_type env t)) b.s_ty;
     Option.iter (fun t -> check_equal env b.s_loc r.term (elab_term env t)) b.s_is;
     let state =
-      if env.run_pos then Const (if b.s_mult = Some Many then v else V.VToken)
+      if env.run_pos then Const (if b.s_mult = Some Many then next_value () else V.VToken)
       else match r.term with Var y -> (entry env y).state | _ -> Dyn
     in
     let x, env = bind env (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:(Some r.term) in
     (env, x :: ids)
   in
-  let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine binders (List.combine ress values)) in
-  (env', if env.run_pos then Fun.id else fun rest -> V.CLet (List.rev ids, code, rest))
+  let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine binders ress) in
+  let ids = non_erased env' (List.rev ids) in
+  (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
 
 and elab_comptime_match env l args =
   match args with
@@ -636,17 +642,18 @@ and elab_comptime_match env l args =
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
       let _, disc, _ = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
-      let field_values =
+      let many_values =
         match (info.repr, value) with
         | V.Tagged, V.VCtor (c', vs) when c' = c -> vs
         | V.Tagged, _ -> error l "comptime-match: expected %s, got %s" info.cname (V.show value)
-        | V.Field i, v -> List.mapi (fun j _ -> if i = j then v else V.VToken) info.fields
-        | V.Unspecified, _ -> List.map (fun _ -> V.VToken) info.fields
+        | V.Field, v -> [ v ]
+        | V.Unspecified, _ -> []
       in
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
       let env, fids = open_tele env ~names tele in
-      let env = List.fold_left2 (fun env x v -> set_state env x (Const (if (entry env x).mult = Many then v else V.VToken))) env fids field_values in
+      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env (non_erased env fids) many_values in
+      let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
       let fvars = List.rev_map (fun x -> Var x) fids in
       (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
        | Contradiction _ -> raise (BranchAbsurd env)
@@ -685,19 +692,19 @@ and elab_def_fns env l args =
         let envb, pids = open_tele env params in
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
         let envb = { envb with level = At lvl; subterms; run_pos = false } in
-        let code =
+        let envb, code =
           if absurd then (
             let envb, ress, _ = elab_body envb [ Erased ] fl body in
             check_empty envb fl (single fl ress).ty;
-            V.CAbsurd)
+            (envb, V.CAbsurd))
           else
             let pvars = List.rev_map (fun x -> Var x) pids in
             let tele = List.map (fun e -> { e with sg = map_sg (instantiate pvars) e.sg }) rets in
             let envb, ress, code = elab_body ~tele envb (List.map (fun e -> if mult = Erased then Erased else e.mult) rets) fl body in
             check_results envb fl ~ids:pvars rets ress;
-            if mult = Erased then V.CErased else code
+            (envb, if mult = Erased then V.CErased else code)
         in
-        ((x, (name, pids, code)), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))
+        ((x, (name, non_erased envb pids, code)), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))
       in
       let fns, proofs = List.split (List.map2 define fids headers) in
       let env =
@@ -713,7 +720,7 @@ and elab_def_fns env l args =
 
 (* Validates every tail/delegate-marked call in a compiled body (section 9); returns the delegated callee, if any. *)
 and check_marks env l pids code =
-  let non_erased ids = List.filter (fun x -> (entry env x).mult = Many) ids in
+  let non_erased = non_erased env in
   let rec marked acc = function
     | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (if cc = V.Plain then acc else c :: acc) f) args
     | V.CLet (_, a, b) -> marked (marked acc a) b
@@ -722,17 +729,11 @@ and check_marks env l pids code =
     | V.CValues cs -> List.fold_left marked acc cs
     | V.CVar _ | V.CErased | V.CAbsurd -> acc
   in
-  let vars_of cs = List.filter_map (function V.CVar x -> Some x | V.CErased -> None | _ -> Some (-1)) cs in
-  let rec returns ids = function
-    | V.CLet (_, V.CErased, rest) -> returns ids rest
-    | V.CValues cs -> vars_of cs = non_erased ids
-    | V.CVar x -> non_erased ids = [ x ]
-    | _ -> false
-  in
+  let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
+  let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (ids, (V.CApp (_, _, (V.Tail | V.Delegate)) as c), rest) -> if returns ids rest then [ c ] else []
-    | V.CLet (_, V.CErased, rest) -> tails ~direct rest
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
     | V.CMatch (_, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
     | _ -> []
@@ -804,7 +805,7 @@ and elab_def_adts env adts =
       (fun w ->
         List.iter
           (fun (_, c) ->
-            let repr = if c = w then V.Field (Option.get (find_index (( = ) Many) (info c).fields)) else V.Unspecified in
+            let repr = if c = w then V.Field else V.Unspecified in
             Hashtbl.replace V.ctors c { (info c) with repr })
           ctors)
       transparent;

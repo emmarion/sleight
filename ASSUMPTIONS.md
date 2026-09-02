@@ -151,11 +151,15 @@ ground.
 
 ## Runtime representation
 
-32. **Erased positions still occupy a slot.** Erased arguments and
-    fields are passed and stored as a token value, printed `_`, rather
-    than physically removed; erased `let` binders and match fields are
-    left unbound. Only erasure *checking* stops non-erased code from
-    reading them.
+32. **Erased positions occupy no slot at runtime** (sections 34, 38).
+    A closure takes only its `many` parameters, a call passes only its
+    `many` arguments, a constructor value holds only its `many` fields,
+    a `values` and a function's results carry only the `many` entries,
+    and printing shows a value as its constructor over those fields.
+    An all-erased `let` compiles to nothing; a mixed one binds its
+    `many` binders. The token value stands in only where elaboration
+    needs a Const for an erased entry (an erased `let` binder in run
+    position, an erased `comptime-match` field, a `Level`).
 33. **Transparent types are represented as their `many` field**
     (section 38's requirement), so `coerce` is the identity at runtime.
     A value built by another constructor of a transparent type is the

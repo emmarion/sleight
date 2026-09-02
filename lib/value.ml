@@ -2,7 +2,7 @@ open Term
 
 module IntMap = Map.Make (Int)
 
-type repr = Tagged | Field of int | Unspecified
+type repr = Tagged | Field | Unspecified
 
 type ctor_info = { cname : string; adt : id; fields : mult list; phantom : bool; repr : repr }
 

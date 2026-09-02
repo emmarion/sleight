@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons _ (Zero) (Cons _ (Succ (Zero)) (Nil _)))
+; expect: (Cons (Zero) (Cons (Succ (Zero)) (Nil)))
 ; Pair is transparent (section 38), so a Two is represented as its list.
 ; Section 30's constructor with an is field.
 

@@ -4,7 +4,7 @@ exception Runtime of string
 
 let construct c args =
   let info = Hashtbl.find ctors c in
-  match info.repr with Tagged -> VCtor (c, args) | Field i -> List.nth args i | Unspecified -> VToken
+  match info.repr with Tagged -> VCtor (c, args) | Field -> List.hd args | Unspecified -> VToken
 
 let bind ids vs env =
   if List.length ids <> List.length vs then raise (Runtime "arity mismatch");
@@ -33,10 +33,8 @@ let rec eval env code =
       let branches = List.map (fun (c, ids, body) -> (ctor c, ids, body)) branches in
       let v = eval1 env scrut in
       match (branches, v) with
-      | [ (c, ids, body) ], _ when (Hashtbl.find ctors c).repr <> Tagged -> (
-          match (Hashtbl.find ctors c).repr with
-          | Field i -> eval (IntMap.add (List.nth ids i) v env) body
-          | _ -> eval env body)
+      | [ (c, ids, body) ], _ when (Hashtbl.find ctors c).repr <> Tagged ->
+          eval (if (Hashtbl.find ctors c).repr = Field then bind ids [ v ] env else env) body
       | _, VCtor (c, fields) -> (
           match List.find_opt (fun (c', _, _) -> c = c') branches with
           | Some (_, ids, body) -> eval (bind ids fields env) body
