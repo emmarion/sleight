@@ -544,7 +544,7 @@ and elab_match env expect l args =
           | 1 -> ()
           | n -> error l "constructor %s has %d branches" (name_of env c) n)
         ctors;
-      let real = List.filter_map (fun (c, fids, phantom, r) -> match r with `Present code when not phantom -> Some (c, fids, code) | _ -> None) branches in
+      let real = List.filter_map (fun (c, fids, phantom, r) -> match r with `Present code when not phantom -> Some (V.CVar c, fids, code) | _ -> None) branches in
       if pos = Many && (disc = Union || smult = Erased) && List.length real > 1 then
         error l "a match without a runtime discriminant can have only one real branch";
       let code =
@@ -552,8 +552,6 @@ and elab_match env expect l args =
         | _ when pos = Erased -> V.CErased
         | [] -> V.CAbsurd
         | [ (_, _, body) ] when smult = Erased -> body
-        | [ (c, fids, body) ] when (Hashtbl.find V.ctors c).repr <> V.Tagged -> (
-            match (Hashtbl.find V.ctors c).repr with V.Field i -> V.CLet ([ List.nth fids i ], scode, body) | _ -> body)
         | _ -> V.CMatch (scode, real)
       in
       (env, List.map (res_of env) result_ids, code)
@@ -610,7 +608,7 @@ and elab_comptime_match env l args =
       let value = match entry env x with { state = Const v; mult = Many; _ } -> v | _ -> error l "comptime-match needs a Const, non-erased scrutinee" in
       let c = var env pl (atom_or pl c "a constructor") in
       let tele, ret = ctor_type env pl c in
-      let info = Hashtbl.find V.ctors c in
+      let info = match Hashtbl.find_opt V.ctors c with Some i -> i | None -> error pl "%s is not a declared constructor" (name_of env c) in
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
       let _, disc, _ = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";

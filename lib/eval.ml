@@ -29,12 +29,19 @@ let rec eval env code =
       in
       eval (Lazy.force env') body
   | CMatch (scrut, branches) -> (
-      match eval1 env scrut with
-      | VCtor (c, fields) -> (
+      let ctor c = match eval1 env c with VCtorFn c -> c | v -> raise (Runtime ("not a constructor: " ^ show v)) in
+      let branches = List.map (fun (c, ids, body) -> (ctor c, ids, body)) branches in
+      let v = eval1 env scrut in
+      match (branches, v) with
+      | [ (c, ids, body) ], _ when (Hashtbl.find ctors c).repr <> Tagged -> (
+          match (Hashtbl.find ctors c).repr with
+          | Field i -> eval (IntMap.add (List.nth ids i) v env) body
+          | _ -> eval env body)
+      | _, VCtor (c, fields) -> (
           match List.find_opt (fun (c', _, _) -> c = c') branches with
           | Some (_, ids, body) -> eval (bind ids fields env) body
-          | None -> raise (Runtime ("no branch for " ^ show (VCtor (c, fields)))))
-      | v -> raise (Runtime ("match on non-constructor value " ^ show v)))
+          | None -> raise (Runtime ("no branch for " ^ show v)))
+      | _ -> raise (Runtime ("match on non-constructor value " ^ show v)))
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))

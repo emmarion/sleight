@@ -27,7 +27,7 @@ and code =
   | CApp of code * code list * cc
   | CLet of id list * code * code
   | CLetRec of (id * (string * id list * code)) list * code
-  | CMatch of code * (id * id list * code) list
+  | CMatch of code * (code * id list * code) list
   | CAbsurd
 
 (* Const entries' stored values (section 34), looked up by entry id from running code. *)

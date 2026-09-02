@@ -1,0 +1,18 @@
+; needs: list
+; expect: (Succ (Zero))
+; Matching through a first-class type constructor, constructor and Matchable (section 17).
+
+(def-adts $ Box : -> Type
+  enum
+  (many MkBox : (many (Nat) n) -> (Box)))
+
+(def-lvl X)
+
+(def-fns X $ many open : (erased (TyCtor -> Type) T)
+    (many (ValCtor (many (Nat) n) -> (T)) C)
+    (erased (Matchable enum T (many C)) m)
+    (many (T) x) -> (many (Nat) n)
+  (match many x (((Nat) r))
+    ((C n) n)))
+
+(open Box MkBox (matchable-of Box) (MkBox (Succ (Zero))))
