@@ -229,9 +229,23 @@ let check_results env loc ?(ids = []) tele ress =
   if List.length tele <> List.length ress then error loc "expected %d values, got %d" (List.length tele) (List.length ress);
   ignore (List.fold_left2 (fun acc e r -> check_sg env loc (map_sg (instantiate acc) e.sg) r; r.term :: acc) ids tele ress)
 
-let rec elab_expr ?(cc = V.Plain) env expect raw : Env.t * res list * V.code =
+let born env ty =
+  let x, env = bind env None Erased Dyn ty in
+  (env, res_of env x)
+
+let prove_subterm env l a b =
+  if not (is_strict_subterm (canon env a) (canon env b)) then error l "%s is not a strict subterm of %s" (show env a) (show env b);
+  born env (proof_type Prelude.subterm [ infer env l a; a; infer env l b; b ])
+
+let prove_predates env l x lvl =
+  if not (entry env lvl).level_born then error l "%s is not a level born by def-lvl" (name_of env lvl);
+  let x = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x in
+  if x >= lvl then error l "%s was not in scope when level %s was born" (name_of env x) (name_of env lvl);
+  born env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
+
+let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
   let l = loc raw in
-  let env, ress, code = elab_form cc env expect raw in
+  let env, ress, code = elab_form cc tele env expect raw in
   if List.length ress <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length ress);
   List.iter2 (fun m r -> if m = Many && r.erasure = Erased then error l "erased value %s used in a non-erased position" (show env r.term)) expect ress;
   let code = match code with V.CErased when List.length expect <> 1 -> V.CValues (List.map (fun _ -> V.CErased) expect) | c -> c in
@@ -245,7 +259,7 @@ and elab_erased env raw =
   let env, r, _ = elab_expr1 env Erased raw in
   (env, r.term)
 
-and elab_form cc env expect raw =
+and elab_form cc tele env expect raw =
   let pos = pos_of expect in
   let arg env m a = elab_expr1 env (if pos = Erased then Erased else m) a in
   match raw with
@@ -255,7 +269,7 @@ and elab_form cc env expect raw =
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
-      | Some sp -> elab_special env expect l sp args
+      | Some sp -> elab_special tele env expect l sp args
       | None -> (
           let env, h, hcode =
             match head with
@@ -288,25 +302,32 @@ and elab_call cc env expect l callee hcode lv params rets args =
   in
   let env, acc, codes = check_args env l params args (fun env m a -> elab_expr1 env (if pos = Erased then Erased else m) a) in
   let arg_terms = List.rev acc in
+  let subterm_params = List.filter_map (fun (i, e) -> if e.subterm then Some i else None) (List.mapi (fun i e -> (i, e)) params) in
+  let subterm_index i = match find_index (( = ) i) subterm_params with Some k -> k | None -> error l "argument %d is not a subterm parameter" i in
+  let counterpart k = match List.nth_opt env.subterms k with Some x -> x | None -> error l "the enclosing function has no subterm parameter at position %d" k in
   let env, annotation =
-    match annotation with
-    | Some (`Predates p) -> let env, p = elab_erased env p in (env, Some (`Predates p))
-    | Some (`Subterm (i, p)) -> let env, p = elab_erased env p in (env, Some (`Subterm (i, p)))
-    | None -> (env, None)
+    match (annotation, env.level) with
+    | Some (`Predates (Atom (_, "_"))), At cur ->
+        let env, p = prove_predates env l (match canon env lv with Var m -> m | t -> error l "%s is not a variable" (show env t)) cur in
+        (env, Some (`Predates p.term))
+    | Some (`Subterm (i, Atom (_, "_"))), At _ ->
+        let env, p = prove_subterm env l (List.nth arg_terms i) (Var (counterpart (subterm_index i))) in
+        (env, Some (`Subterm (i, p.term)))
+    | Some (`Predates p), _ -> let env, p = elab_erased env p in (env, Some (`Predates p))
+    | Some (`Subterm (i, p)), _ -> let env, p = elab_erased env p in (env, Some (`Subterm (i, p)))
+    | None, _ -> (env, None)
   in
   (match env.level with
    | Top -> ()
    | At cur when equal (canon env lv) (Var cur) -> (
        match annotation with
        | Some (`Subterm (i, p)) ->
-           let subterm_params = List.filter_map (fun (i, e) -> if e.subterm then Some i else None) (List.mapi (fun i e -> (i, e)) params) in
-           let k = match find_index (( = ) i) subterm_params with Some k -> k | None -> error l "argument %d is not a subterm parameter" i in
-           if k >= List.length env.subterms then error l "the enclosing function has no subterm parameter at position %d" k;
-           List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (List.nth env.subterms j))) subterm_params;
+           let k = subterm_index i in
+           List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (counterpart j))) subterm_params;
            (match expect_proof env l Prelude.subterm 4 p with
             | [ _; a; _; b ] ->
                 check_equal env l a (List.nth arg_terms i);
-                check_equal env l b (Var (List.nth env.subterms k))
+                check_equal env l b (Var (counterpart k))
             | _ -> assert false)
        | _ -> error l "same-level call to %s needs a (subterm p) annotation" (show env callee.term))
    | At cur -> (
@@ -323,17 +344,14 @@ and elab_call cc env expect l callee hcode lv params rets args =
   let env, ids = open_tele env ~named:false ~mults:(List.map (fun e -> if pos = Erased then Erased else e.mult) rets) ~ids:acc rets in
   (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CApp (hcode, codes, cc))
 
-and elab_special env expect l sp args =
+and elab_special tele env expect l sp args =
   let pos = pos_of expect in
   let one () = match expect with [ m ] -> m | _ -> error l "%s produces one value" (Sp.name sp) in
   let proof env ctor arity raw =
     let env, p = elab_erased env raw in
     (env, expect_proof env l ctor arity p)
   in
-  let born env ty =
-    let x, env = bind env None Erased Dyn ty in
-    (env, [ res_of env x ], V.CErased)
-  in
+  let born env ty = let env, r = born env ty in (env, [ r ], V.CErased) in
   match (sp, args) with
   | (Sp.Fn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable), _ ->
       ignore (one ());
@@ -347,7 +365,7 @@ and elab_special env expect l sp args =
           (env, [], []) expect args
       in
       (env, List.rev ress, V.CValues (List.rev codes))
-  | Sp.Match, _ -> elab_match env expect l args
+  | Sp.Match, _ -> elab_match tele env expect l args
   | (Sp.Tail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (Sp.name sp);
       elab_expr ~cc:(if sp = Sp.Tail then V.Tail else V.Delegate) env expect call
@@ -363,17 +381,14 @@ and elab_special env expect l sp args =
       | ty -> error l "level-of: %s : %s is not a function" (show env f) (show env ty))
   | Sp.ProveSubterm, [ a; b ] ->
       ignore (one ());
-      let a = elab_term env a and b = elab_term env b in
-      if not (is_strict_subterm (canon env a) (canon env b)) then error l "%s is not a strict subterm of %s" (show env a) (show env b);
-      born env (proof_type Prelude.subterm [ infer env l a; a; infer env l b; b ])
+      let env, r = prove_subterm env l (elab_term env a) (elab_term env b) in
+      (env, [ r ], V.CErased)
   | Sp.ProvePredates, [ x; lv ] -> (
       ignore (one ());
-      let x = var env l (atom_or l x "a variable") in
       match canon env (elab_term env lv) with
-      | Var lvl when (entry env lvl).level_born ->
-          let x = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x in
-          if x >= lvl then error l "%s was not in scope when level %s was born" (name_of env x) (name_of env lvl);
-          born env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
+      | Var lvl ->
+          let env, r = prove_predates env l (var env l (atom_or l x "a variable")) lvl in
+          (env, [ r ], V.CErased)
       | t -> error l "%s is not a level born by def-lvl" (show env t))
   | Sp.PredatesTrans, [ p; q ] -> (
       ignore (one ());
@@ -475,19 +490,26 @@ and elab_special env expect l sp args =
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
-and elab_match env expect l args =
+and elab_match tele env expect l args =
   match args with
-  | m :: scrut :: List (_, ann) :: branches ->
+  | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
       let smult = match mult_of env m with Some m -> m | None -> error l "match needs the scrutinee's multiplicity" in
       let smult = if pos = Erased then Erased else smult in
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
       let _, disc, ctors = find_matchable env l tid in
-      let outer = env in
-      let env, _, ann_tele = elab_tele env ~mults:(fun i -> function None -> List.nth_opt expect i | Some _ -> error l "a match annotation carries no multiplicities") ann in
+      let env, ann_tele =
+        match (ann, tele) with
+        | Atom (_, "_"), Some tele -> (env, tele)
+        | Atom (_, "_"), None -> error l "no telescope to inherit for _"
+        | List (_, ann), _ ->
+            let env', _, ann_tele = elab_tele env ~mults:(fun i -> function None -> List.nth_opt expect i | Some _ -> error l "a match annotation carries no multiplicities") ann in
+            ({ env' with scope = env.scope }, ann_tele)
+        | _ -> error l "malformed match annotation"
+      in
       if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
-      let env, result_ids = open_tele { env with scope = outer.scope } ~named:false ann_tele in
+      let env, result_ids = open_tele env ~named:false ann_tele in
       let branch raw =
         let kind, pat, body =
           match raw with
@@ -525,7 +547,7 @@ and elab_match env expect l args =
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
           | `Present, Some envb -> (
               try
-                let envb, ress, code = elab_body envb (if phantom then List.map (fun _ -> Erased) expect else expect) bl body in
+                let envb, ress, code = elab_body ~tele:ann_tele envb (if phantom then List.map (fun _ -> Erased) expect else expect) bl body in
                 check_results envb bl ann_tele ress;
                 `Present code
               with BranchAbsurd _ -> `Absurd)
@@ -557,13 +579,13 @@ and elab_match env expect l args =
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
 
-and elab_body env expect l items =
+and elab_body ?tele env expect l items =
   match items with
   | [] -> error l "a body needs a final expression"
-  | [ final ] -> elab_expr env expect final
+  | [ final ] -> elab_expr ?tele env expect final
   | stmt :: rest ->
       let env, wrap = elab_stmt env stmt in
-      let env, ress, code = elab_body env expect l rest in
+      let env, ress, code = elab_body ?tele env expect l rest in
       (env, ress, wrap code)
 
 and elab_stmt env raw : Env.t * (V.code -> V.code) =
@@ -632,7 +654,11 @@ and elab_def_fns env l args =
   match args with
   | [] -> error l "def-fns needs a level"
   | lv :: fns ->
-      let lvl = match canon env (elab_term env lv) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t) in
+      let env, lvl =
+        match lv with
+        | Atom (_, "_") -> let x, env = bind env ~level_born:true None Erased (Const V.VToken) Prelude.level_term in (env, x)
+        | _ -> (env, match canon env (elab_term env lv) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t))
+      in
       let header raw =
         match raw with
         | List (fl, m :: rest) -> (
@@ -662,8 +688,10 @@ and elab_def_fns env l args =
             check_empty envb fl (single fl ress).ty;
             V.CAbsurd)
           else
-            let envb, ress, code = elab_body envb (List.map (fun e -> if mult = Erased then Erased else e.mult) rets) fl body in
-            check_results envb fl ~ids:(List.rev_map (fun x -> Var x) pids) rets ress;
+            let pvars = List.rev_map (fun x -> Var x) pids in
+            let tele = List.map (fun e -> { e with sg = map_sg (instantiate pvars) e.sg }) rets in
+            let envb, ress, code = elab_body ~tele envb (List.map (fun e -> if mult = Erased then Erased else e.mult) rets) fl body in
+            check_results envb fl ~ids:pvars rets ress;
             if mult = Erased then V.CErased else code
         in
         ((x, (name, pids, code)), Option.map (fun callee -> (x, ty, callee)) (check_marks envb fl pids code))

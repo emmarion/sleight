@@ -104,9 +104,10 @@ ground.
     level, since there is none (section 24).
 22. **Atom-vs-atom unification** makes the newer entry an alias of the
     older one (SR 21). Unifying a variable with a term that mentions a
-    telescope binder is reported as a contradiction of the shape
-    "cannot unify", i.e. it refutes the branch; no realistic program
-    has hit this and it may deserve to be an error instead.
+    telescope binder (something inside an `Fn` type, say) is a hard
+    error rather than a contradiction, since treating it as a
+    contradiction would refute a branch on no evidence; no realistic
+    program has hit this.
 23. **Facts are read canonically to a fixpoint** rather than stored
     canonical at birth with re-canonicalization on every new rule (SR
     21); occurs checks on the canonical form keep the rules acyclic.
@@ -133,7 +134,10 @@ ground.
 28. **Transparent types are represented as their `many` field**
     (section 38's requirement), so `coerce` is the identity at runtime.
     A value built by another constructor of a transparent type is the
-    token (SR 23, "unspecified bits").
+    token (SR 23, "unspecified bits"). Since a match may go through a
+    first-class constructor whose identity is only known at runtime
+    (section 17), the evaluator looks up the representation when the
+    match runs, from the constructors the branches name.
 29. **Union values carry a constructor tag** in the interpreter, since
     nothing observes its absence; matches on unions with one real
     branch dispatch on it, which agrees with the one branch that can run.
@@ -143,6 +147,17 @@ ground.
 
 ## Not implemented
 
-31. Macros (`Macro`, `Raw`, the expansion limit). Surface sugar
-    (SUGAR.md). A REPL. `lib/kernel_input.ml` is untouched and unused
-    (SR 28).
+31. Macros (`Macro`, `Raw`, the expansion limit). A REPL beyond
+    reading a program from stdin. `lib/kernel_input.ml` is untouched
+    and unused (SR 28).
+
+## Sugar (SUGAR.md)
+
+32. All four forms are implemented as SUGAR.md describes them: `_` as
+    a `def-fns` level births an anonymous level; `_` as a match
+    annotation inherits the telescope of the enclosing function body or
+    match branch, and is an error elsewhere; `(predates _)` proves
+    `Predates` between the callee's level, which must canonicalize to a
+    variable, and the current level; `(subterm _)` proves `Subterm`
+    between the annotated argument and the enclosing subterm parameter
+    at the same subterm index. All naive, as SUGAR.md says.

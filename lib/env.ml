@@ -54,8 +54,7 @@ let rec unify env depth a b =
   if equal a b then env
   else
     let no_binders x t =
-      if has_dangling depth t then
-        raise (Contradiction ("cannot unify " ^ name_of env x ^ " with a term mentioning a telescope binder"))
+      if has_dangling depth t then error 0 "cannot unify %s with %s, which mentions a telescope binder" (name_of env x) (show env t)
     in
     let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
     match (a, b) with
