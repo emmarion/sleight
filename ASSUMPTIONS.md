@@ -640,3 +640,42 @@ in both modes.
     whether it should be is open. `Value.show` prints the result as it
     would any value, so a function from no arguments can no longer be
     printed as `<function name>`.
+
+## A second soundness probe
+
+69. **Two `def-lvl` levels may unify, and that is left as it was.** A
+    session asked to look for soundness issues probed the checker with a
+    type indexed by a level, `(Foo : ((Level) L) -> Type)` with one
+    constructor returning `(Foo P)`. Matching a `(Foo Q)` against it
+    unifies `Q` with `P`, both being ordinary non-rigid entries, and
+    inside the branch a `Q`-level body may call an `R`-level function
+    born after `Q` under the proof `(Predates R P)`. The branch is dead,
+    `(Foo Q)` having no values at any multiplicity, and no run or proof
+    of `False` was found to follow. The session first made level-born
+    entries rigid so that the branch was refuted, then reverted that:
+    it was a semantic change the owner had not approved, and it closed
+    nothing reachable. (A rationale the session offered in between, that
+    refuting on two levels differing would break section 23 because the
+    stripped program may represent `Level` as `Unit`, was wrong: the
+    stripped program keeps `P` and `Q` as distinct entries, and
+    canonicalization compares entries, not runtime bytes.) Whether
+    `def-lvl` levels should be rigid is open: for it, two births are
+    distinct constants, so the refutation is true and it forces the
+    honest `(absurd C)`; against it, section 18 states the atom rule
+    for every non-constructor atom and item 40 extended rigidity to
+    constructors only. The load bearing part is elsewhere:
+    `prove-predates` demands strict birth order and the three axioms
+    keep a proof's subject older than its level, so no `(Predates Z Z)`
+    could be built, which is what keeps a diagonal `(MkBar K) : (Bar K
+    K)` forcing two level parameters equal from licensing a same-level
+    call that could ever run. Open for the owner: whether that
+    irreflexivity deserves a stated invariant.
+    The same session tried, and the checker rejected: a Curry-style
+    negative type whose stored function is applied to the value holding
+    it; a function at an older level, defined later, calling a newer
+    level; a forged erased proof field under `coercible-ctor`; and
+    deriving `False` from a user relation's phantom constructor. An
+    erased data field may change under `coercible-ctor` (a `(MkBox
+    (Zero) n)` to a `(MkBox (Succ (Zero)) n)`), which the session read as
+    harmless, the field carrying nothing at runtime and its replacement
+    being typed.
