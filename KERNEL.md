@@ -19,15 +19,16 @@ kernel types, and §9's macro-expansion limit belongs to the elaborator.
 
 ## The compile-time round-trip
 
-§16's top-level statements and §9's macros need values only running
+§16's run-position statements and §9's macros need values only running
 code can produce, so checking is a dialogue: the kernel checks a
-top-level statement and computes its type, returning runnable code with
-erased positions removed; the interpreter runs that code outside the
-kernel; the resulting values come back to be stored (§3) and embedded
-as constants.
+statement and computes its type, returning runnable code with erased
+positions removed; the interpreter runs that code outside the kernel;
+the resulting values come back to be stored (§3) and embedded as
+constants.
 
-Round-trips nest: elaborating a top-level statement can hit a macro,
-itself a round-trip.
+Round-trips nest: elaborating a statement can hit a macro, itself a
+round-trip, or a nested statement in run position, run before the code
+after it is checked and so before the enclosing statement's own trip.
 
 The dialogue runs both ways: besides sending checked code out to the
 interpreter, the elaborator reads stored values back out of the scope

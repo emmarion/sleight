@@ -85,9 +85,10 @@ analyzing the *constantness* of the head of an s-expression:
   merely holding it as a value), the head of the s-expression must be
   constant-known.
 - Constant-known-ness is relative to where you are: a name bound inside
-  a top-level statement's right-hand side is `Dyn` while that statement
-  is elaborated, yet the statement's own binders are constant-known once
-  it has run (§15, §34).
+  a function body or a match branch is `Dyn`, and a function is `Dyn`
+  within the bodies of its own `def-fns` block, yet a statement in run
+  position (§16) has run by the time the code after it is elaborated,
+  so its binders are constant-known there (§15, §34).
 
 **The elaborator's actual head-dispatch algorithm**, elaborating a list
 by examining its head:
@@ -227,11 +228,11 @@ There are also two ways for these to be "born" (introduced):
   with `(let a b c (values x y z))`, each of `a`, `b`, `c` inherits from
   `x`, `y`, `z` respectively. Where an entry is a call or a match there is
   nothing to inherit, §15 making those results `Dyn` inside a function
-  body; at the top level the statement is run instead and its binders
-  are born `Const` (§34). Inheritance is one of the ways a `Const`
-  reaches into a function body — a top-level special form or macro
-  renamed locally (§4) — the others being a direct reference to the
-  top-level entry, `comptime-match` (§15), and a macro expansion that
+  body or a match branch; in run position (§16) the statement is run
+  instead and its binders are born `Const` (§34). Inheritance is one of
+  the ways a `Const` reaches into a function body — a special form or
+  macro renamed locally (§4) — the others being a direct reference to
+  the entry, `comptime-match` (§15), and a macro expansion that
   mentions it.
 - **Optional `let` assertions.** Each binder may independently carry an
   optional type-or-`is` clause and an optional multiplicity — the full
@@ -333,8 +334,10 @@ nothing to pass into an argument slot or match on.
 
 Multiple values are introduced by `values` and eliminated by `let`,
 which binds one variable per value: `(let q r (divmod n d))` binds both
-of `divmod`'s returns, the right-hand side being the last item and the
-binders everything before it. The binders are a flat list, not a
+of `divmod`'s returns. A `let`'s items are its binders, then any
+statements, then the final expression, which is the last item; the
+right-hand side is that expression together with the statements before
+it, an expression in §16's sense. The binders are a flat list, not a
 telescope. `let` is a statement (§16), so its binders enter the
 containing expression as ordinary scope entries, and an earlier binder
 is, to a later one, just another in-scope variable — a scope-table
@@ -356,7 +359,7 @@ what fixes the match's size (§16).
 
 Any `values` entry may likewise carry an optional multiplicity
 assertion, with the same checked-redundancy semantics. Besides its
-tripwire use, this is one of the ways a top-level statement's boundary
+tripwire use, this is one of the ways a run-position statement's boundary
 erasure is determined (§34).
 
 ## 12. Data types, erasure, and match branch kinds
@@ -492,13 +495,12 @@ into a materialized runtime value.
 For now: a function call's result, a match's result and a constructor
 application are all `Dyn` where they stand, even over `Const` arguments
 — never `Const`. No automatic constant-folding through calls, matches
-or constructors. The same holds inside a top-level statement while it is
-elaborated: a name bound within the statement's right-hand side is
-`Dyn` there. What changes is the statement's boundary: a top-level
-statement is run, and every binder it introduces is born `Const` (§34).
-So a definition wanted as `Const` is written as its own top-level
-statement (see §33's `xs`). This is deliberate; it may be relaxed later
-if it proves heavy.
+or constructors. Inside a function body or a match branch every binding
+is `Dyn`. Anywhere else — run position (§16), the file's top level
+included — a statement is run as soon as it is elaborated, and every
+binder it introduces is born `Const` (§34). So a definition wanted as
+`Const` is bound by its own `let` in run position (see §33's `xs`).
+This is deliberate; it may be relaxed later if it proves heavy.
 
 A special form, `comptime-match`, works specifically on a `Const`,
 itself non-erased (§34) scrutinee whose discriminant is also non-erased
@@ -576,14 +578,18 @@ one. What consumes its result is not yet settled: the intent is for it
 eventually to be a `String -> String` function, and for now it is simply
 the value a REPL would print.
 
-A file's top level is the one compile-time context (§24): each of its
-statements is elaborated, then run, and its binders enter scope `Const`
-(§34), so calls there need no proofs. Nothing else is run at compile
-time — a `comptime` form for compile-time evaluation inside a function
-body is deferred to v2 alongside `hoist` (§36).
+A statement is in **run position** when it sits under no function body
+and no match branch. A statement in run position is run as soon as it
+has been elaborated, before the code after it is checked, and its
+binders enter scope `Const` (§34). This nests: a `let`'s right-hand
+side may itself contain statements (§11), and those in run position
+complete their own round trips (KERNEL.md) before the enclosing `let`'s.
+A file's top level is run position, so calls there need no proofs (§24).
+Nothing under a function body or a match branch is run at compile time
+— a `comptime` form for that is deferred to v2 alongside `hoist` (§36).
 
-A top-level statement's binders must have their erasures determinable at
-the statement's boundary — see §34 for the rule and why.
+A run-position statement's binders must have their erasures determinable
+at the statement's boundary — see §34 for the rule and why.
 
 ## 17. First-class objects
 
@@ -644,13 +650,13 @@ how entering a match branch updates it:
   that hypothesis baked into its canonicalized form. The table is
   maintained self-consistently under its own canonicalization.
 - The table is written by declaration sites (`is`-declarations,
-  signatures, telescopes, `let` inference), by top-level statements
+  signatures, telescopes, `let` inference), by run-position statements
   running (§34), by `comptime-match` verifications against a real
   stored value, and by match-branch entry's forced unifications
   (below). Branch-forced rules land *even when they rewrite a `Const`
-  entry*: a runtime match may scrutinize a `Const`, and the forced rule
-  is a claim with a runtime justification, pending at elaboration time
-  since a match inside a function body never runs during elaboration.
+  entry*: a match may scrutinize a `Const`, and the forced rule is a
+  claim justified by the match running, pending at elaboration time
+  since a branch is never selected during elaboration (§34).
 - **A fact dies with the scope it was born in.** A branch-forced rule
   ends with its branch whatever entries it mentions: matching a `(Nat)`
   against `Zero` forces `n is (Zero)`, which names no branch-local
@@ -659,9 +665,9 @@ how entering a match branch updates it:
   entries in scope where it is born, so it also never outlives an entry
   it mentions.
 - One table suffices because the only code run at compile time is a
-  top-level statement (§16, §24), and its own match branches run under
-  the same gating as any other's: a branch's facts hold in exactly the
-  branch that runs. The two elaboration-time effects that can occur
+  run-position statement (§16, §24), and its own match branches run
+  under the same gating as any other's: a branch's facts hold in exactly
+  the branch that runs. The two elaboration-time effects that can occur
   inside a branch consult no branch hypothesis for what they compute —
   macro expansion runs on `Raw` (§9), and `comptime-match` verifies
   against the stored value (§15). An earlier formulation kept a second,
@@ -760,7 +766,7 @@ rather than something that has to be stated everywhere by hand.
 
 The unit of derivation is the independently-evaluated unit: a function
 body (closed over its signature's declared multiplicities) or a
-top-level statement (closed over its boundary erasures, §34). Inference
+run-position statement (closed over its boundary erasures, §34). Inference
 never crosses an evaluation event — a unit's erasure is fully settled
 from its own text plus its boundary declarations before that unit is
 ever compiled or run, which is what makes the round trip (KERNEL.md)
@@ -834,9 +840,9 @@ satisfy the invariant too.
 
 ## 24. The top level calls freely
 
-At the file's top level (§16, §20) — directly in a top-level statement,
-not inside a function defined there — any type or value constructor can
-be invoked (unsurprising, since constructors have no level, §7), and so
+At the file's top level (§16, §20) — anywhere outside a function body,
+a match branch of a top-level statement included — any type or value
+constructor can be invoked (unsurprising, since constructors have no level, §7), and so
 can any function, with no `Predates` or `Subterm` proof required at all.
 In a sense, the top level sits at the "highest" level, above every
 ordinary function level.
@@ -868,7 +874,8 @@ actually specified.
 
 **Statements** (§16):
 1. `let` — introduces zero or more bindings, one per value of the
-   right-hand side, which is the last item (§11); type/`is` and
+   right-hand side: the binders come first, then any statements, then
+   the final expression as the last item (§11); type/`is` and
    multiplicity each optional per binder, checked as assertions when
    present (§9, §14); state-inheriting per
    binder, from the corresponding right-hand-side entry when that entry
@@ -1212,9 +1219,9 @@ factory.
 - Both call flavours appear in one body: `(f (predates pml) hd)` is the
   lower-level call, `(map A B f (subterm p) tl)` the same-level
   recursion (§9, §27).
-- The usage is a sequence of top-level statements, each elaborated and
-  run in turn (§16, §24): calls need no proofs, and every binder is born
-  `Const` (§34). `xs`'s right-hand side ends in a non-erased constructor
+- The usage is a sequence of statements in run position, each elaborated
+  and run in turn (§16, §24): calls need no proofs, and every binder is
+  born `Const` (§34). `xs`'s right-hand side ends in a non-erased constructor
   application, so its boundary erasure is `many` with no annotation, and
   `map-nat`'s ends in a function call, so its boundary erasures
   (`erased`, `many`) are read off `map-factory`'s return telescope (§34).
@@ -1228,31 +1235,33 @@ The states are `Const` and `Dyn` (§3). This section collects how
 
 **Const values are born with known erasure.** The births:
 
-1. **A top-level statement** (§16, §24) — every name a top-level
-   statement introduces is `Const`. A `let` is elaborated, stripped and
-   run (KERNEL.md), and its binders take the resulting values, with
-   erasures from the statement's boundary, below. A `def-lvl`,
-   `def-fns` or `def-adts` involves no evaluation: a definition's value
-   is built by elaboration itself — a function value is its own
-   compiled code; a `Level` or a `Matchable` is an erased token. Open:
-   the multiplicity a function's own entry is born with is not recorded
-   anywhere yet.
+1. **A statement in run position** (§16, §24) — every name such a
+   statement introduces is `Const` once the statement has run. A `let`
+   is elaborated, stripped and run (KERNEL.md), and its binders take the
+   resulting values, with erasures from the statement's boundary,
+   below. A `def-lvl`, `def-fns` or `def-adts` involves no evaluation:
+   a definition's value is built by elaboration itself — a function
+   value is its own compiled code; a `Level` or a `Matchable` is an
+   erased token. Within the bodies of a `def-fns` block the block's own
+   functions are `Dyn`, their code not yet complete; they become `Const`
+   after the block. Open: the multiplicity a function's own entry is
+   born with is not recorded anywhere yet.
 2. **`comptime-match` field binding** (§15) — erasure is the field's
    declared multiplicity.
 3. **State-inheriting `let`** (§9) — strictly propagation: the settled
    erasure is inherited with the rest of the entry.
 
-Nothing else births `Const`. Inside a function body every binding is
-`Dyn`, nested definitions included: a `def-fns`, `def-adts` or
-`def-lvl` in a body births `Dyn` entries, so a `Special` or `Macro`
-that is ever invoked (§4) originates at the top level. A constructor
-application over `Const` arguments is still `Dyn` (§15) — make it a
-top-level statement of its own if `Const` is wanted.
+Nothing else births `Const`. Inside a function body or a match branch
+every binding is `Dyn`, nested definitions included: a `def-fns`,
+`def-adts` or `def-lvl` there births `Dyn` entries, so a `Special` or
+`Macro` that is ever invoked (§4) originates in run position. A
+constructor application over `Const` arguments is still `Dyn` (§15) —
+bind it with its own `let` if `Const` is wanted.
 
 **Inspection requires Const and non-erased.** A `Const` entry's stored
 value is read in three places: §4's head dispatch (invoking a `Special`
 or `Macro`), `comptime-match`'s discriminant read (§15), and the
-running of a top-level statement that references the entry — the value
+running of a run-position statement that references the entry — the value
 gets embedded into the code the interpreter runs. §18's rewrite engine
 consults no stored values. All three require the entry to be `Const`
 and non-erased: an erased `Const` entry stores only §3's existence
@@ -1269,8 +1278,8 @@ dictates; `comptime-match` *verifies* an asserted discriminant and
 projects — the programmer wrote the answer down. Selecting a match
 branch from a value would be the value steering elaboration — the first
 step of evaluation — so `match` results stay `Dyn` (§15) even on a
-`Const` scrutinee; the delimited alternative is making the match a
-top-level statement of its own, handing the branching to the
+`Const` scrutinee; the delimited alternative is binding the match with
+its own `let` in run position, handing the branching to the
 interpreter. This is also
 why the inspection sites above stay checks rather than propagation: by
 the time any of them runs, the inspected entry's erasure is already
@@ -1279,9 +1288,9 @@ been checked, stripped, and run. The same shape governs the fact table
 (§18): nothing — erasure demands, branch-hypothetical facts — crosses
 an evaluation boundary.
 
-**Top-level boundary erasure.** A top-level `let`'s binders must have
-erasures known at the statement's boundary, since the statement is
-compiled and run before the statements after it are elaborated. No new
+**Run-position boundary erasure.** A run-position `let`'s binders must
+have erasures known at the statement's boundary, since the statement is
+compiled and run before the code after it is elaborated. No new
 annotation form is introduced; the erasures are read off the `let`'s
 own per-binder multiplicity assertions (§9) when present, and otherwise
 off its right-hand side's final form, which must be one of:
@@ -1298,12 +1307,12 @@ off its right-hand side's final form, which must be one of:
    rejected here, with the `values` annotation as the fallback.
 
 Anything else in final position — an unannotated `values` — is a
-compile error at a top-level boundary, fixed by annotating. A bare
+compile error at a run-position boundary, fixed by annotating. A bare
 reference to an earlier entry inherits its state (§9), with nothing to
 run. Within the statement, erasure inference is the ordinary closed-unit
 derivation (§20) against these boundary erasures.
 
-A top-level statement thus resembles an anonymous nullary function:
+A run-position statement thus resembles an anonymous nullary function:
 erasure declared (or determined) at its boundary, like a signature. Its
 result *type* needs no annotation, though — we believe the only true
 need for declared return types on functions is self-reference
