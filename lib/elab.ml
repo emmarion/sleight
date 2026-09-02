@@ -174,6 +174,7 @@ let open_tele env ?names ?mults ?states ?(ids = []) tele =
 let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
 
+let witness env ty = snd (bind env None Erased (const env V.VToken) ty)
 let born_level env name = bind env ~level_born:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
@@ -717,7 +718,7 @@ and elab_def_fns env l args =
       let env =
         List.fold_left
           (fun env -> function
-            | Some (g, gty, callee) -> snd (bind env None Erased (const env V.VToken) (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ]))
+            | Some (g, gty, callee) -> witness env (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ])
             | None -> env)
           env proofs
       in
@@ -799,17 +800,18 @@ and elab_def_adts env adts =
       | _ -> error (loc raw) "malformed constructor"
     in
     let env, ctors = List.fold_left_map ctor env ctors in
-    let shapes = shapes env al (List.map (fun (m, c) -> (m, Var c)) ctors) in
+    let ctors = List.map (fun (m, c) -> (m, Var c)) ctors in
+    let shapes = shapes env al ctors in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
     adt.ctors <- List.mapi (fun index (_, c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) shapes;
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
-    let env = snd (bind env None Erased (const env V.VToken) (Matchable (disc, Var tid, List.map (fun (m, c) -> (m, Var c)) ctors))) in
+    let env = witness env (Matchable (disc, Var tid, ctors)) in
     let env =
       if not (List.mem Sp.NewtypeMark ms) then env
       else if wrapper disc shapes = None then error al "%s is not of newtype shape (section 38)" name
-      else snd (bind env None Erased (const env V.VToken) (Newtype (Var tid)))
+      else witness env (Newtype (Var tid))
     in
     (env, cids @ values)
   in

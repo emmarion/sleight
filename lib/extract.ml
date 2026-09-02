@@ -48,7 +48,8 @@ let con cx adt = Printf.sprintf "con_%d" (adt_index cx adt)
 let des cx adt = Printf.sprintf "des_%d" (adt_index cx adt)
 
 let fields c = List.init c.V.arity (fun i -> Printf.sprintf "f%d" i)
-let case c vs body = Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " vs) body
+let pair c vs = Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs)
+let case c vs body = Printf.sprintf "| %s -> %s" (pair c vs) body
 let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
 let pattern c fs = if fs = [] then ctor c else Printf.sprintf "%s (%s)" (ctor c) (concat ", " fs)
 
@@ -61,7 +62,7 @@ let build cx c es =
 let destruct cx c v =
   match shape c.V.adt with
   | Ext | Tagged -> Printf.sprintf "(%s %s)" (des cx c.adt) v
-  | Untagged -> Printf.sprintf "(%d, %s)" c.index (untuple (fields c) v (Printf.sprintf "[%s]" (concat "; " (fields c))))
+  | Untagged -> untuple (fields c) v (pair c (fields c))
 
 let rec value cx v =
   match v with
@@ -225,7 +226,7 @@ let types cx =
         Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false\nlet %s v = match (Obj.obj v : %s) with %s" (con cx a)
           (concat " " (List.map (fun c -> case c (fields c) (Printf.sprintf "(Obj.repr (%s))" (pattern c (fields c)))) a.V.ctors))
           (des cx a) (type_name cx a)
-          (concat " " (List.map (fun c -> Printf.sprintf "| %s -> (%d, [%s])" (pattern c (fields c)) c.V.index (concat "; " (fields c))) a.ctors))
+          (concat " " (List.map (fun c -> Printf.sprintf "| %s -> %s" (pattern c (fields c)) (pair c (fields c))) a.ctors))
     | Untagged -> Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false" (con cx a) (concat " " (List.map (fun c -> case c (fields c) (tuple (fields c))) a.V.ctors))
   in
   let descriptor c =
