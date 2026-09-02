@@ -684,11 +684,8 @@ in both modes.
 
 A session asked to look for bugs, soundness ones especially, reported
 its findings in chat; the owner picked three to fix and settled how the
-first of them should be fixed. Items 70-72 record the changes. A fourth
-finding, that unifying a free variable with a telescope binder writes a
-dangling de Bruijn index into the fact table instead of being caught by
-`has_dangling`, was left open, its resolution (refute the branch, or
-error) being the owner's to make.
+first of them should be fixed. Items 70-72 record the changes and item
+73 the one finding left open, whose resolution is the owner's to make.
 
 70. **A `ValCtor`'s return is a type-constructor application.** The
     owner's decision, in chat: the former may not be invoked with a bare
@@ -734,3 +731,64 @@ error) being the owner's to make.
     depth the test suite can also extract and compile, since embedding a
     Peano numeral that large in the extracted OCaml (section 41's
     stripped mode) is not something extraction handles quickly.
+
+73. **Unifying a free variable with a telescope binder is open.** The
+    guard meant to catch it does not: `has_dangling` starts its fold at
+    the depth being compared and counts a `Bound k` as dangling only
+    when `k >= d`, so an index bound by the very telescope under
+    comparison is never flagged and unification records the rule
+    instead. A type indexed by a function type is enough to reach it:
+
+    ```scheme
+    (def-lvl L)
+    (def-adts
+      (Tag : (Type A) -> Type
+        enum
+        (many MkTag : -> (Tag (Fn L (many (Nat) x) -> (many x is y))))))
+    (def-lvl M)
+    (def-fns M $ many probe : (erased (Nat) k)
+        (many (Tag (Fn L (many (Nat) x) -> (many k is y))) t) -> (many (Nat) r)
+      (match many t (((Nat) r))
+        ((MkTag) (Zero))))
+    ```
+
+    `MkTag`'s index is the type of functions returning their own
+    argument, the scrutinee's the type of functions returning the outer
+    `k`, so entering the branch equates `k` with `x`, a binder of the
+    `Fn` telescope. The branch is accepted as live; a body of `k` there
+    reports `erased value #0 : (Nat) used in a non-erased position`,
+    printing the dangling index the fact table now holds, and
+    `(absurd MkTag)` is rejected as not refuted. A call such as
+    `(probe (Zero) (MkTag))` is separately and correctly refused, both
+    sides being closed there, so what is reachable is the wrong fact,
+    not yet a proof of anything false.
+
+    Whether the clash should refute the branch or be an error is the
+    owner's call, and the owner offers this Lean demo as reason to think
+    it could go either way, since whether a binder occurrence and a
+    closed term may be identified is a property of the indexed type
+    rather than a structural fact about binders:
+
+    ```lean
+    -- Structure: gets definitional eta, so `b` and `MyUnit.mk` are defeq.
+    structure SUnit where
+    inductive SBox : SUnit → Type | mk : (u : SUnit) → SBox u
+
+    example : ((b : SUnit) → SBox b) = ((b : SUnit) → SBox {}) := rfl  -- ✓
+
+    -- Inductive: no eta. `b` is a variable, `IUnit.tt` is a constructor.
+    inductive IUnit | tt
+    inductive IBox : IUnit → Type | mk : (u : IUnit) → IBox u
+
+    example : ((b : IUnit) → IBox b) = ((b : IUnit) → IBox .tt) := rfl  -- ✗ fails
+    ```
+
+    Under eta the two families agree, so refuting a branch on the clash
+    alone would be refuting something true; without eta they do not, but
+    a definitional-equality failure is not by itself a refutation
+    either. This session did not run the Lean; it is recorded as the
+    owner wrote it. Section 5 has types canonicalize and then compare
+    for identity, with no eta rule stated, so nothing in the language as
+    recorded gives the `SUnit` case yet -- which is itself part of what
+    is open, and section 18's two ways for a forced unification to fail
+    would need a third if the answer is refutation.
