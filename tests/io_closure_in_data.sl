@@ -1,6 +1,6 @@
 ; exit: 9
-; A factory's parameter holds a closure, and the factory's own closure matches on it: extraction must hoist
-; both closures into one group and inline the captured data around the inner one (ASSUMPTIONS.md 61).
+; A factory's parameter holds a closure, and the factory's own closure matches on it: extraction embeds the
+; captured data as a named constant between the two closures' let recs (ASSUMPTIONS.md 61).
 
 (def-lvl F)
 (def-fns F $ many adder : (many (Nat) n) -> (erased (Level) L) (many (Fn L (many (Nat) m) -> (many (Nat) r)) add-n)

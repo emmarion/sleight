@@ -35,7 +35,6 @@ type cx = {
   ctors : (id, V.ctor) Hashtbl.t;
   defined : (id, string) Hashtbl.t;
   closures : (V.closure * string) list ref;
-  group : Buffer.t option ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
 }
@@ -59,8 +58,6 @@ let destruct cx c v =
   | Ext | Tagged -> Printf.sprintf "(%s %s)" (des cx c.adt) v
   | Untagged -> Printf.sprintf "(%d, %s)" c.index (untuple (fields c) v (Printf.sprintf "[%s]" (concat "; " (fields c))))
 
-let rec has_closure = function V.VFn _ -> true | V.VCtor (_, vs) | V.VTuple vs -> List.exists has_closure vs | _ -> false
-
 let rec value cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) vs)
   | V.VTuple vs -> tuple (List.map (value cx) vs)
@@ -74,20 +71,19 @@ and closure cx cl =
   match List.assq_opt cl !(cx.closures) with
   | Some name -> name
   | None ->
-      let name = Printf.sprintf "cl%d_%s" (List.length !(cx.closures)) (sanitize cl.fn.fname) in
-      cx.closures := (cl, name) :: !(cx.closures);
-      let outer = !(cx.group) in
-      if outer = None then cx.group := Some (Buffer.create 256);
-      let text = fn cx { capture = Lazy.force cl.env; locals = [] } name cl.fn in
-      let g = Option.get !(cx.group) in
-      Buffer.add_string g ((if Buffer.length g = 0 then "let rec " else "\nand ") ^ text);
-      if outer = None then (Buffer.add_string cx.out (Buffer.contents g ^ "\n"); cx.group := None);
-      name
+      let env = Lazy.force cl.env in
+      let siblings = IntMap.fold (fun _ v acc -> match v with V.VFn c when c.env == cl.env && not (List.memq c acc) -> c :: acc | _ -> acc) env [] in
+      let siblings = if List.memq cl siblings then siblings else cl :: siblings in
+      let n = List.length !(cx.closures) in
+      let named = List.mapi (fun i c -> (c, Printf.sprintf "cl%d_%s" (n + i) (sanitize c.V.fn.fname))) siblings in
+      cx.closures := named @ !(cx.closures);
+      let texts = List.map (fun (c, name) -> fn cx { capture = env; locals = [] } name c.V.fn) named in
+      Buffer.add_string cx.out ("let rec " ^ concat "\nand " texts ^ "\n");
+      List.assq cl named
 
 and define cx x v =
   match Hashtbl.find_opt cx.defined x with
   | Some name -> name
-  | None when !(cx.group) <> None && has_closure v -> value cx v
   | None ->
       let e = value cx v in
       let name = var x in
@@ -193,7 +189,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; ctors; defined; closures = ref closures; group = ref None; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; ctors; defined; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
