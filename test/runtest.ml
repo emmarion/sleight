@@ -7,6 +7,7 @@ open Speciallang
 
 let dir = "../tests"
 let read path = let ic = open_in_bin path in let s = really_input_string ic (in_channel_length ic) in close_in ic; s
+let write path s = Out_channel.with_open_bin path (fun oc -> output_string oc s)
 
 let directive src key =
   List.filter_map
@@ -17,30 +18,61 @@ let directive src key =
       else None)
     (String.split_on_char '\n' src)
 
+let ocamlfind = lazy (Sys.command "ocamlfind ocamlopt -version > /dev/null 2>&1" = 0)
+
+let report out err code expect stderr exit =
+  Printf.sprintf "printed:\n%sstderr:\n%sexit %d\nexpected:\n%sstderr:\n%sexit %d" out err code expect stderr exit
+
+let extracted name externs env input args expect stderr exit =
+  if not (Lazy.force ocamlfind) then Some "ocamlfind is not available to compile the extracted program"
+  else
+    let base = Filename.concat "extract" (name ^ if externs then "_ffi" else "_src") in
+    (try Sys.mkdir "extract" 0o755 with Sys_error _ -> ());
+    let outcome =
+      try
+        write (base ^ ".ml") (Extract.emit env (List.rev !Env.trace));
+        Ok ()
+      with e -> Error (Printexc.to_string e)
+    in
+    match outcome with
+    | Error m -> Some ("extraction failed: " ^ m)
+    | Ok () ->
+        if Sys.command (Printf.sprintf "ocamlfind ocamlopt -package zarith -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
+          Some ("extracted program failed to compile, see " ^ base ^ ".log")
+        else (
+          write (base ^ ".in") input;
+          let code =
+            Sys.command
+              (Printf.sprintf "./%s.exe -- %s < %s.in > %s.out 2> %s.err" base (String.concat " " (List.map Filename.quote args)) base base base)
+          in
+          let out = read (base ^ ".out") and err = read (base ^ ".err") in
+          if out = expect && err = stderr && code = exit then None else Some ("extracted program " ^ report out err code expect stderr exit))
+
 (* Every test runs with the FFI's implementations and again with them stripped (section 41's invariant). *)
 let rec run_test name =
   let src = read (Filename.concat dir (name ^ ".sl")) in
   let modes = [ (true, "with externs"); (false, "without externs") ] in
-  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode src)) modes
+  List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src)) modes
 
-and run_mode src =
+and run_mode name externs src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 and errors = Buffer.create 64 and code = ref 0 in
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
   let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in
+  let args = List.concat_map (String.split_on_char ' ') (directive src "args") in
   let world =
-    { Program.input = (fun () -> input); read_line; out = Buffer.add_string printed; err = Buffer.add_string errors;
-      args = List.concat_map (String.split_on_char ' ') (directive src "args"); exit = (fun n -> code := n);
-      print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
+    { Program.input = (fun () -> input); read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
+      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
   in
   let consume = Program.consume world in
   let outcome =
     try
       let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
       Buffer.clear printed;
-      ignore (Elab.run_toplevel ~consume env (Reader.parse src));
-      Ok (Buffer.contents printed)
+      Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
+      let env = Elab.run_toplevel ~consume env (Reader.parse src) in
+      Ok (env, Buffer.contents printed)
     with
     | Reader.Syntax (l, m) -> Error (Printf.sprintf "line %d: syntax error: %s" l m)
     | Env.Error (l, m) -> Error (Printf.sprintf "line %d: error: %s" l m)
@@ -57,11 +89,12 @@ and run_mode src =
   let exit = match directive src "exit" with [ n ] -> int_of_string n | _ -> 0 in
   let failures = directive src "error" in
   match outcome with
-  | Ok out when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit -> None
-  | Ok out ->
+  | Ok (env, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
+      extracted name externs env input args expect stderr exit
+  | Ok (_, out) ->
       Some
-        (Printf.sprintf "ran, printed:\n%sstderr:\n%sexit %d\n%s" out (Buffer.contents errors) !code
-           (if failures = [] then Printf.sprintf "expected:\n%sstderr:\n%sexit %d" expect stderr exit
+        (Printf.sprintf "ran, %s"
+           (if failures = [] then report out (Buffer.contents errors) !code expect stderr exit
             else "expected an error mentioning " ^ String.concat ", " failures))
   | Error msg when List.for_all (contains msg) failures && failures <> [] -> None
   | Error msg -> Some ("failed: " ^ msg)

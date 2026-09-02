@@ -12,3 +12,14 @@
     (echo "let source = {|")
     (cat prelude.sl)
     (echo "|}")))))
+
+(rule
+ (targets ffi_core_source.ml)
+ (deps ffi_core.ml)
+ (action
+  (with-stdout-to
+   ffi_core_source.ml
+   (progn
+    (echo "let source = {|")
+    (cat ffi_core.ml)
+    (echo "|}")))))

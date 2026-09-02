@@ -29,6 +29,11 @@ let empty =
 
 let counter = ref 0
 let fresh () = incr counter; !counter
+let names : (id, string) Hashtbl.t = Hashtbl.create 64
+
+type item = Let of id list * Value.code | Fns of (id * Value.fn) list | Final of Value.code * term
+
+let trace : item list ref = ref []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
@@ -41,6 +46,7 @@ let set_state env x state =
 let bind env ?(rigid = false) ?(level_born = false) ?(rule = None) name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
+  Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Dyn; level_born; rigid } env.entries in
   let env = { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)

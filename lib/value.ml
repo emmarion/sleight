@@ -2,7 +2,7 @@ open Term
 
 module IntMap = Map.Make (Int)
 
-type cc = Plain | Tail | Delegate
+type cc = Plain | Tail | Delegate | Ctor
 
 (* An ADT's runtime shape: [tagged] when it is an enum with more than one non-phantom constructor (section 38);
    [ext] when the FFI implements it (section 41), its values then being [VExt] payloads. *)

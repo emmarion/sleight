@@ -44,12 +44,18 @@ let repl consume env =
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
+  let rec extract acc = function "--extract" :: p :: rest -> (Some p, List.rev_append acc rest) | a :: rest -> extract (a :: acc) rest | [] -> (None, List.rev acc) in
+  let extract, args = extract [] args in
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
-  let consume = Program.consume (world program_args) in
+  let consume = if extract = None then Program.consume (world program_args) else fun _ _ _ -> () in
   let env = Builtin.load () in
-  match List.filter (fun a -> a <> "--repl" && a <> "--no-extern") args with
-  | [] when not (flag "--repl") -> ignore (run consume env "-")
-  | files ->
-      let env = List.fold_left (run consume) env files in
-      if flag "--repl" then repl consume env
+  let env =
+    match List.filter (fun a -> a <> "--repl" && a <> "--no-extern") args with
+    | [] when not (flag "--repl") -> run consume env "-"
+    | files ->
+        let env = List.fold_left (run consume) env files in
+        if flag "--repl" then repl consume env;
+        env
+  in
+  Option.iter (fun path -> Out_channel.with_open_bin path (fun oc -> output_string oc (Extract.emit env (List.rev !Env.trace)))) extract

@@ -315,7 +315,7 @@ and elab_form cc tele env expect raw =
           | ValCtor (tele, ret) ->
               if pos = Many && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (show env h.term);
               let env, acc, codes = check_args env l tele args arg in
-              let code = if pos = Erased then V.CErased else V.CApp (hcode, codes, V.Plain) in
+              let code = if pos = Erased then V.CErased else V.CApp (hcode, codes, V.Ctor) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos } ], code)
           | Fn (lv, params, rets) -> elab_call cc env expect l h hcode lv params rets args
           | ty -> error l "%s : %s is not applicable" (show env h.term) (show env ty)))
@@ -679,6 +679,7 @@ and elab_let env l args =
   in
   let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine binders ress) in
   let ids = non_erased env' (List.rev ids) in
+  if env.run_pos && ids <> [] then trace := Let (ids, code) :: !trace;
   (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
 
 and elab_comptime_match env l args =
@@ -705,7 +706,9 @@ and elab_comptime_match env l args =
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
       let env, fids = open_tele env ~names tele in
-      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env (non_erased env fids) many_values in
+      let many = non_erased env fids in
+      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env many many_values in
+      if many <> [] then trace := Let (many, V.CMatch (V.CVar x, [ (V.CVar c, many, V.CValues (List.map (fun y -> V.CVar y) many)) ])) :: !trace;
       let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
       let fvars = List.rev_map (fun x -> Var x) fids in
       (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
@@ -777,6 +780,7 @@ and elab_def_fns env l args =
       in
       if env.run_pos then
         let values = Eval.close env.values fns in
+        trace := Fns fns :: !trace;
         (List.fold_left (fun env (x, _) -> set_state env x (Const (IntMap.find x values))) env fns, Fun.id)
       else (env, fun rest -> V.CLetRec (fns, rest))
 
@@ -802,7 +806,7 @@ and check_marks env l pids code =
   in
   let code = norm [] code in
   let rec marked acc = function
-    | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (if cc = V.Plain then acc else c :: acc) f) args
+    | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (match cc with V.Tail | V.Delegate -> c :: acc | _ -> acc) f) args
     | V.CLet (_, a, b) -> marked (marked acc a) b
     | V.CLetRec (fns, b) -> List.fold_left (fun acc (_, fn) -> marked acc fn.V.body) (marked acc b) fns
     | V.CMatch (s, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
@@ -918,6 +922,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) env items =
         try
           if rest = [] && not (is_statement env item) then (
             let env, ress, code = elab_expr env [ Many ] item in
+            trace := Final (code, (single (loc item) ress).ty) :: !trace;
             consume env (single (loc item) ress).ty (List.hd (run_code env code));
             env)
           else (
