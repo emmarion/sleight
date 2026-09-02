@@ -35,6 +35,8 @@ type cx = {
   ctors : (id, V.ctor) Hashtbl.t;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
+  seen : (int, V.value * string option ref) Hashtbl.t;
+  shared : int ref;
   closures : (V.closure * string) list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
@@ -59,7 +61,21 @@ let destruct cx c v =
   | Ext | Tagged -> Printf.sprintf "(%s %s)" (des cx c.adt) v
   | Untagged -> Printf.sprintf "(%d, %s)" c.index (untuple (fields c) v (Printf.sprintf "[%s]" (concat "; " (fields c))))
 
-let rec value cx = function
+let rec value cx v =
+  match v with
+  | V.VCtor (_, []) | V.VCtorFn _ | V.VFn _ | V.VToken -> plain cx v
+  | _ -> (
+      match List.find_opt (fun (v', _) -> v' == v) (Hashtbl.find_all cx.seen (Hashtbl.hash v)) with
+      | Some (_, { contents = Some name }) -> name
+      | Some (_, named) ->
+          incr cx.shared;
+          let name = Printf.sprintf "shared_%d" !(cx.shared) in
+          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (plain cx v));
+          named := Some name;
+          name
+      | None -> Hashtbl.add cx.seen (Hashtbl.hash v) (v, ref None); plain cx v)
+
+and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) vs)
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
@@ -91,6 +107,7 @@ and define cx x v =
       let name = if top then var x else Printf.sprintf "%s_%d" (var x) (List.length !(cx.captured)) in
       Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name e);
       if top then Hashtbl.replace cx.defined x name else cx.captured := (v, name) :: !(cx.captured);
+      Hashtbl.add cx.seen (Hashtbl.hash v) (v, ref (Some name));
       name
 
 and fn cx scope name f =
@@ -181,7 +198,7 @@ let collect env items =
     | V.CVar _ | V.CErased | V.CAbsurd -> ()
   in
   IntMap.iter (fun x v -> value v; match v with V.VCtorFn c -> Hashtbl.replace ctors x c | _ -> ()) env.Env.values;
-  List.iter (function Env.Final (v, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
+  List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace ctors c.V.cid c; Hashtbl.replace defined c.cid (var c.cid)) a.V.ctors) adts;
   let closures =
@@ -191,7 +208,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; ctors; defined; captured = ref []; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; ctors; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
@@ -317,16 +334,20 @@ let item cx = function
   | Env.Fns fns ->
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
-  | Env.Final (v, ty) ->
-      let main = Program.is_main cx.env ty and io = Program.is_io cx.env ty in
+  | Env.Final (v, ty, path) ->
+      let main = Program.is_main cx.env ty and io = Program.is_io cx.env ty and thunk = Program.thunk_result cx.env ty in
       let text =
         match v with
-        | V.VFn cl when not (main || io) -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
-        | _ ->
+        | V.VFn cl when not (main || io || thunk <> None) -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
+        | _ -> (
             let e = value cx v in
-            if main then Printf.sprintf "run_main %s" e else if io then Printf.sprintf "exit (run_io %s)" e else Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e
+            match thunk with
+            | _ when main -> Printf.sprintf "run_main %s" e
+            | _ when io -> Printf.sprintf "exit (run_io %s)" e
+            | Some t -> Printf.sprintf "print_endline (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
+            | None -> Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e)
       in
-      Buffer.add_string cx.out ("let () = " ^ text ^ "\n")
+      Buffer.add_string cx.out (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
 
 let emit env items =
   let cx = collect env items in
@@ -336,7 +357,7 @@ let emit env items =
     [ "[@@@warning \"-a\"]";
       "module Ffi_core = struct\n" ^ Ffi_core_source.source ^ "\nend";
       "type ctor = { ix : int; cname : string; con : int -> Obj.t list -> Obj.t; des : Obj.t -> int * Obj.t list }";
-      "let absurd () = prerr_endline \"runtime error: absurd code reached\"; exit 1";
+      "let source = ref \"-\"\nlet absurd () = prerr_endline (!source ^ \": runtime error: absurd code reached\"); exit 1";
       types cx;
       driver cx;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);

@@ -514,8 +514,12 @@ in both modes.
     `elab_def_fns`). So the closures sharing an environment are written
     as one `let rec ... and ...`, and every other constant is a named
     `let` in dependency order, which is birth order
-    (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). A
-    top-level entry has one value and is named once by its id; a
+    (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). Sharing
+    within embedded data is kept: a block met a second time (by
+    physical identity, found through a structural hash) becomes a
+    named constant from then on, so a value's text is linear in the
+    size of its graph, not of its unfolding (`tests/thunk_shared.sl`).
+    A top-level entry has one value and is named once by its id; a
     factory's parameter or local has one value per activation, so its
     captured values are named per value (`tests/io_factory_twice.sl`,
     which caught the id-keyed version giving both closures the last
@@ -584,10 +588,12 @@ in both modes.
     program's arguments after `--`, and exiting with the `U8` counted in
     unary through destruct as `Program.u8` does. Under the FFI stdin is
     turned into a slice directly, as `Ffi.str` does; without it, into a
-    cons list. An `absurd` reached at runtime prints `runtime error:
-    absurd code reached` to stderr and exits 1, without the file name
-    `bin/main.ml` would print. Every final expression of every file on
-    the command line is consumed in order, as the interpreter would;
+    cons list. An `absurd` reached at runtime prints `<file>: runtime
+    error: absurd code reached` to stderr and exits 1, the file being
+    the one whose final expression is running, as `bin/main.ml` prints
+    it (`-` for stdin; the test runner passes no file). Every final
+    expression of every file on the command line is consumed in order,
+    as the interpreter would;
     `--extract` stops the interpreter from running the final values
     itself (elaboration still evaluates them, the language being pure).
 66. **A printed final value goes through a generated printer**, since
@@ -604,7 +610,7 @@ in both modes.
     field whose type stays unknown (an existential) prints `?`; an
     untagged union whose index is not forced prints through its first
     candidate constructor. No test hits these.
-67. **Testing.** For every test that runs (72 of 119; those expecting an
+67. **Testing.** For every test that runs (80 of 127; those expecting an
     error need no extraction) and each extern mode, `test/runtest.ml`
     extracts the elaborated program, drops the final expressions of the
     `needs:` files from the trace (the interpreter runner discards their
@@ -614,10 +620,20 @@ in both modes.
     stderr and exit code. A missing `ocamlfind` fails those tests rather
     than skipping them. The suite takes about thirty seconds. Every
     test passes in both modes. What that shows, precisely: since final
-    values are embedded, a test printing a value checks the embedding of
-    data and closures and the printer, while only the `String ->
-    String` and `IO` tests run extracted function bodies (the others'
-    bodies are compiled by OCaml but never called). An earlier revision
-    of the extractor, in this branch's history, recomputed every
-    constant and passed the same suite, which is the evidence the code
-    generator has for the remaining bodies.
+    values are embedded, a test printing a plain value checks the
+    embedding of data and closures and the printer, while the `String
+    -> String`, `IO` and final-function tests (item 68; the
+    `tests/thunk_*.sl` files cover tagged, untagged, union, extern,
+    first-class and nested types, coerce, factory closures and shared
+    data) run extracted function bodies over embedded constants.
+68. **A final function from no arguments is applied and its result
+    printed** (the owner's decision, in chat, so that a program can ask
+    for its final value to be computed by code): the driver treats a
+    final value of type `(Fn L -> (many T v))`, no parameters and
+    exactly one `many` return, as such a request, both in the
+    interpreter and extracted, where it is the form whose code runs at
+    startup. A function with erased returns besides the one `many`
+    return, or with erased parameters, is not accepted as this form;
+    whether it should be is open. `Value.show` prints the result as it
+    would any value, so a function from no arguments can no longer be
+    printed as `<function name>`.

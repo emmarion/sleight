@@ -20,7 +20,7 @@ let world args =
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else read_file path in
-  match report path (fun () -> Some (Elab.run_toplevel ~consume env (Reader.parse src))) with Some env -> env | None -> exit 1
+  match report path (fun () -> Some (Elab.run_toplevel ~consume ~path env (Reader.parse src))) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =
@@ -36,7 +36,7 @@ let repl consume env =
   let rec loop env =
     match form (Buffer.create 64) with
     | None -> print_newline ()
-    | Some src -> loop (Option.value (report "repl" (fun () -> Some (Elab.run_toplevel ~consume env (Reader.parse src)))) ~default:env)
+    | Some src -> loop (Option.value (report "repl" (fun () -> Some (Elab.run_toplevel ~consume ~path:"repl" env (Reader.parse src)))) ~default:env)
   in
   loop env
 

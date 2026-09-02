@@ -911,7 +911,7 @@ let rec literals = function
   | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])
   | List (_, items) -> List.concat_map literals items
 
-let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) env items =
+let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env = function
     | [] -> env
     | item :: rest -> (
@@ -920,7 +920,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) env items =
           if rest = [] && not (is_statement env item) then (
             let env, ress, code = elab_expr env [ Many ] item in
             let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
-            trace := Final (v, ty) :: !trace;
+            trace := Final (v, ty, path) :: !trace;
             consume env ty v;
             env)
           else (

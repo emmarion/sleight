@@ -1,6 +1,7 @@
 (* The driver's reading of a program's final value (DESIGN.md section 16): a function from String to String is run
-   over the input and its result written out; an IO value is interpreted request by request; anything else is
-   printed. [world] is what the driver touches, so the test runner can stand one in. *)
+   over the input and its result written out; an IO value is interpreted request by request; a function from
+   nothing to one value is applied and its result printed; anything else is printed. [world] is what the driver
+   touches, so the test runner can stand one in. *)
 open Term
 module V = Value
 
@@ -25,6 +26,8 @@ let is_main env ty =
   | _ -> false
 
 let is_io env ty = match Env.canon env ty with App (Var t, [ _ ]) -> t = prelude env "IO" | _ -> false
+
+let thunk_result env ty = match Env.canon env ty with Fn (_, [], [ { mult = Many; sg = Ty t; _ } ]) -> Some t | _ -> None
 
 let of_string env s =
   if !V.use_externs then Ffi.str s
@@ -74,4 +77,5 @@ let run_io env w v =
 let consume w env ty v =
   if is_main env ty then w.out (to_string env (List.hd (Eval.apply v [ of_string env (w.input ()) ])))
   else if is_io env ty then w.exit (run_io env w v)
+  else if thunk_result env ty <> None then w.print (V.show (List.hd (Eval.apply v [])))
   else w.print (V.show v)

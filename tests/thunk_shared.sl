@@ -1,0 +1,27 @@
+; needs: list
+; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))
+; A constant with much sharing: each pair holds the previous one twice, so its extraction must name shared
+; parts rather than copy them, and the final function's code walks it.
+
+(def-adts $ Tree : -> Type
+  enum
+  (many Leaf : -> (Tree))
+  (many Node : (many (Tree) l) (many (Tree) r) -> (Tree)))
+
+(def-lvl C)
+(let (erased nc) (prove-predates nat-lvl C))
+(def-fns C $ many leaves : (subterm many (Tree) t) -> (many (Nat) n)
+  (match many t _
+    ((Leaf) (Succ (Zero)))
+    ((Node l r) (nat-add (predates nc) (leaves (subterm _) l) (leaves (subterm _) r)))))
+
+(let (many t1) (Node (Leaf) (Leaf)))
+(let (many t2) (Node t1 t1))
+(let (many t3) (Node t2 t2))
+
+(def-lvl T)
+(let (erased ct) (prove-predates C T))
+(def-fns T $ many main : -> (many (Nat) n)
+  (leaves (predates ct) t3))
+
+main

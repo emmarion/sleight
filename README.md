@@ -23,7 +23,10 @@ value is a function from `String` to `String`, when stdin is fed to it
 and its result written to stdout (`tests/main_reverse.sl`), or an `IO`
 value, when the driver performs its requests one by one
 (`tests/io_echo.sl`; arguments after `--` on the command line are the
-program's). Numerals, `#\c` character literals and `"..."` string
+program's), or a function from no arguments to one value, when it is
+applied and its result printed (`tests/thunk_list.sl`), which is how a
+program asks for its final value to be computed by code rather than at
+elaboration. Numerals, `#\c` character literals and `"..."` string
 literals are prelude-backed sugar (ASSUMPTIONS.md 47-60). Every program starts in the scope of the source
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
@@ -39,8 +42,9 @@ extern types and functions the same `lib/ffi_core.ml` implementations
 the interpreter uses (or their source models under `--no-extern`), and
 the driver reproduces `lib/program.ml`. Everything computed at
 elaboration, a run-position `let`, a literal, a `comptime-match` field
-and the final value itself, is embedded as data, closures included,
-rather than recomputed. The result is meant to behave as the
+and the final value itself, is embedded as data, closures included and
+sharing kept, rather than recomputed; a final function from no
+arguments is the form whose result is computed by the extracted code. The result is meant to behave as the
 interpreter does on the same files, which `dune test` checks
 (ASSUMPTIONS.md 61-67); every value is an `Obj.t`, so the output is not
 typed OCaml.

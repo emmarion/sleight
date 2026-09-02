@@ -31,7 +31,7 @@ let counter = ref 0
 let fresh () = incr counter; !counter
 let names : (id, string) Hashtbl.t = Hashtbl.create 64
 
-type item = Fns of (id * Value.fn) list | Final of Value.value * term
+type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
 
 let trace : item list ref = ref []
 
