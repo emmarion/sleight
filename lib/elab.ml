@@ -679,7 +679,6 @@ and elab_let env l args =
   in
   let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine binders ress) in
   let ids = non_erased env' (List.rev ids) in
-  if env.run_pos && ids <> [] then trace := Let (ids, code) :: !trace;
   (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
 
 and elab_comptime_match env l args =
@@ -706,9 +705,7 @@ and elab_comptime_match env l args =
       if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
       let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
       let env, fids = open_tele env ~names tele in
-      let many = non_erased env fids in
-      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env many many_values in
-      if many <> [] then trace := Let (many, V.CMatch (V.CVar x, [ (V.CVar c, many, V.CValues (List.map (fun y -> V.CVar y) many)) ])) :: !trace;
+      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env (non_erased env fids) many_values in
       let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
       let fvars = List.rev_map (fun x -> Var x) fids in
       (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
@@ -922,8 +919,9 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) env items =
         try
           if rest = [] && not (is_statement env item) then (
             let env, ress, code = elab_expr env [ Many ] item in
-            trace := Final (code, (single (loc item) ress).ty) :: !trace;
-            consume env (single (loc item) ress).ty (List.hd (run_code env code));
+            let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
+            trace := Final (v, ty) :: !trace;
+            consume env ty v;
             env)
           else (
             if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";

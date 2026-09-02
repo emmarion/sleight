@@ -33,14 +33,17 @@ optionally ending in an expression whose value is printed.
 `--extract out.ml` elaborates the files as usual but, instead of
 running their final values, writes the program out as standalone OCaml,
 in the sense of Coq's extraction, to be compiled with ocamlfind against
-zarith: the run-position statements become top-level definitions, each
-ADT an OCaml type tagged only where the interpreter tags, each match
-an OCaml match, extern types and functions the same `lib/ffi_core.ml`
-implementations the interpreter uses (or their source models under
-`--no-extern`), and the driver reproduces `lib/program.ml`. The result
-is meant to behave as the interpreter does on the same files, which
-`dune test` checks (ASSUMPTIONS.md 61-67); every value is an `Obj.t`,
-so the output is not typed OCaml.
+zarith: each `def-fns` becomes a `let rec`, each ADT an OCaml type
+tagged only where the interpreter tags, each match an OCaml match,
+extern types and functions the same `lib/ffi_core.ml` implementations
+the interpreter uses (or their source models under `--no-extern`), and
+the driver reproduces `lib/program.ml`. Everything computed at
+elaboration, a run-position `let`, a literal, a `comptime-match` field
+and the final value itself, is embedded as data, closures included,
+rather than recomputed. The result is meant to behave as the
+interpreter does on the same files, which `dune test` checks
+(ASSUMPTIONS.md 61-67); every value is an `Obj.t`, so the output is not
+typed OCaml.
 
 `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both

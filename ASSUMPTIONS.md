@@ -483,31 +483,39 @@ shape below is the session's.
 ## OCaml extraction (extract.ml)
 
 Written by a session working autonomously at the owner's request, in
-chat: extraction "in the sense of Coq's extraction", needed for the final
-`String -> String` or `IO` value, not for the constants computed while
-compiling the rest of the file. Everything below is that session's
-reading; the representation choices in particular are Claude's and may
-be wrong, though `dune test` checks them on every test in both modes.
+chat: extraction "in the sense of Coq's extraction", with compile-time
+computation embedded in the extracted OCaml as its result rather than
+recomputed, since compile-time calculation is meant as a performance
+construct (the owner's words, paraphrased). Everything below is that
+session's reading; the representation choices in particular are
+Claude's and may be wrong, though `dune test` checks them on every test
+in both modes.
 
-61. **What is extracted is a trace, not the source.** The elaborator
-    records each run-position statement as it runs it (`Env.trace`): a
-    `let` with its `many` binders and post-erasure code, a `def-fns`
-    group's compiled functions, and a `comptime-match` as a `let` whose
-    code is a one-branch match projecting the `many` fields; and each
-    final expression with its type. Literal hoists (items 51-60) are
-    run-position statements too, so they are traced where they ran.
-    `--extract out.ml` writes the trace out in order: a `let` becomes a
-    top-level `let`, a `def-fns` a `let rec ... and ...`, a nested one a
-    local `let rec`, a match an OCaml `match`, a final expression a call
-    of the driver. Top-level constants are thus *recomputed* by the
-    extracted program rather than embedded as data; the owner's remark
-    that the constants need no extraction was read as leaving either
-    choice open, and recomputation was chosen because a constant may be
-    a closure returned by a factory (`tests/compose.sl`), which has no
-    literal form. Only constants born outside any statement, the
-    built-ins of `lib/prelude.ml` (the `Special` values a `let` or
-    `match` entry holds), are embedded as literal data when code
-    mentions them.
+61. **Values are embedded, functions are extracted.** The elaborator
+    records each run-position `def-fns` group as it runs it, and each
+    final expression's computed value with its type (`Env.trace`).
+    `--extract out.ml` writes every `def-fns` group as a `let rec ...
+    and ...` at its position, a nested `def-fns` as a local `let rec`,
+    and a match as an OCaml `match`. Every other constant the code
+    mentions, a run-position `let`'s binder, a `comptime-match` field, a
+    hoisted literal, a built-in of `lib/prelude.ml`, is the value the
+    interpreter computed at elaboration, embedded as data on first use
+    as a top-level `let` of that entry's name. So `u8-modulus` is the
+    integer 256 (or, without the FFI, 256 nested `Succ`s), not a call
+    of `pow2`. A closure among those values, one a factory returned at
+    the top level (`tests/main_factory.sl`), is hoisted as a `let rec
+    cl<n>_<name>` over its captured environment: its free variables
+    are the values captured at closure time, embedded the same way, and
+    closures that reach one another through their environments land in
+    one `let rec` group, so mutual recursion survives (a data constant
+    holding a closure, met inside such a group, is embedded inline
+    rather than named, to keep the group well-founded; no test reaches
+    that case). A top-level `def-fns` function met as a value refers to
+    its `let rec` name. The final expression's value is embedded too,
+    being computed at elaboration like any run-position expression; so
+    a printed final value is printed from data, a `String -> String`
+    program is its `main` closure applied to stdin, and an `IO` program
+    is its first request, whose continuations are closures.
 62. **Every extracted value is an `Obj.t`**, with `Obj.repr`/`Obj.obj`
     at every construction, application and pattern, the way Coq's
     extraction reaches for `Obj.magic`. A typed extraction was not
@@ -525,9 +533,10 @@ be wrong, though `dune test` checks them on every test in both modes.
     is its field. An extern type under the FFI is `Z.t` or
     `Ffi_core.slice`. Several return values are an OCaml tuple boxed as
     one `Obj.t`; a function with no `many` parameter takes `()`. Names
-    are `v<id>_<name>`, `C<id>_<name>` and `t<n>_<name>`, the id being
-    the entry's, so shadowed names stay distinct; the source names come
-    from a table `Env.bind` fills (`Env.names`).
+    are `v<id>_<name>`, `C<id>_<name>`, `t<n>_<name>` and
+    `cl<n>_<name>`, the id being the entry's, so shadowed names stay
+    distinct; the source names come from a table `Env.bind` fills
+    (`Env.names`).
 63. **Each type gets a construct/destruct pair** (`con_n`, `des_n`),
     over constructor index and `Obj.t` field list, mirroring
     `Value.construct`/`destruct`: for a variant an OCaml constructor
@@ -555,7 +564,11 @@ be wrong, though `dune test` checks them on every test in both modes.
     `--no-extern` the extern types are ordinary variants and the extern
     functions' compiled models are extracted instead, so section 41's
     invariant is checked on the extracted programs too. `Value.payload`'s
-    `Slice` now carries `Ffi_core.slice`.
+    `Slice` now carries `Ffi_core.slice`. An embedded extern integer is
+    `Z.of_string` of its decimal spelling; an embedded string is a
+    literal. Without the FFI a large embedded numeral is that many
+    nested constructor applications, which the OCaml compiler may refuse
+    at some depth, a limit in the spirit of item 54.
 65. **The driver is `program.ml` transliterated** over descriptors of the
     prelude's constructors, dispatching `IO` requests by constructor
     name as `run_io` does, flushing after every write, taking the
@@ -574,13 +587,15 @@ be wrong, though `dune test` checks them on every test in both modes.
     with it (as entering a match branch does) to find the `many` fields'
     types, and one printer per type is emitted, following `Value.show`:
     constructor and fields for a tagged value, the bare fields for an
-    untagged one. Limits, honestly: a closure prints as `<function ?>`
-    unless the final expression is itself a named top-level function
-    (`tests/absurd.sl`), since OCaml closures carry no name; a field
-    whose type stays unknown (an existential) prints `?`; an untagged
-    union whose index is not forced prints through its first candidate
-    constructor. No test hits these.
-67. **Testing.** For every test that runs (69 of 116; those expecting an
+    untagged one. Printing the interpreter's own rendering as a string
+    literal would have been simpler and exact, but the printer applied to
+    the embedded data is what checks the embedding. Limits, honestly: a
+    closure prints as `<function ?>` unless the final value is itself a
+    closure (`tests/absurd.sl`), since OCaml closures carry no name; a
+    field whose type stays unknown (an existential) prints `?`; an
+    untagged union whose index is not forced prints through its first
+    candidate constructor. No test hits these.
+67. **Testing.** For every test that runs (70 of 117; those expecting an
     error need no extraction) and each extern mode, `test/runtest.ml`
     extracts the elaborated program, drops the final expressions of the
     `needs:` files from the trace (the interpreter runner discards their
@@ -589,5 +604,11 @@ be wrong, though `dune test` checks them on every test in both modes.
     the test's stdin and arguments, and requires the directives' stdout,
     stderr and exit code. A missing `ocamlfind` fails those tests rather
     than skipping them. The suite takes about thirty seconds. Every
-    test passes in both modes; the extraction has no known failing case
-    among them, which says nothing about programs outside the tests.
+    test passes in both modes. What that shows, precisely: since final
+    values are embedded, a test printing a value checks the embedding of
+    data and closures and the printer, while only the `String ->
+    String` and `IO` tests run extracted function bodies (the others'
+    bodies are compiled by OCaml but never called). An earlier revision
+    of the extractor, in this branch's history, recomputed every
+    constant and passed the same suite, which is the evidence the code
+    generator has for the remaining bodies.

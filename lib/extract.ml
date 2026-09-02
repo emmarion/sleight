@@ -27,12 +27,16 @@ type shape = Ext | Tagged | Untagged
 
 let shape adt = if adt.V.ext <> None && !V.use_externs then Ext else if adt.V.tagged then Tagged else Untagged
 
+type scope = { capture : V.venv; locals : id list }
+
 type cx = {
   env : Env.t;
   adts : V.adt list;
   ctors : (id, V.ctor) Hashtbl.t;
-  fns : (id, int) Hashtbl.t;
-  globals : (id, unit) Hashtbl.t;
+  defined : (id, string) Hashtbl.t;
+  closures : (V.closure * string) list ref;
+  group : Buffer.t option ref;
+  out : Buffer.t;
   shows : (term * string * string ref) list ref;
 }
 
@@ -55,75 +59,113 @@ let destruct cx c v =
   | Ext | Tagged -> Printf.sprintf "(%s %s)" (des cx c.adt) v
   | Untagged -> Printf.sprintf "(%d, %s)" c.index (untuple (fields c) v (Printf.sprintf "[%s]" (concat "; " (fields c))))
 
+let rec has_closure = function V.VFn _ -> true | V.VCtor (_, vs) | V.VTuple vs -> List.exists has_closure vs | _ -> false
+
 let rec value cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) vs)
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
-  | V.VFn cl -> failwith ("extraction: cannot embed the closure " ^ cl.fn.fname)
+  | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
 
-let rec expr cx = function
+and closure cx cl =
+  match List.assq_opt cl !(cx.closures) with
+  | Some name -> name
+  | None ->
+      let name = Printf.sprintf "cl%d_%s" (List.length !(cx.closures)) (sanitize cl.fn.fname) in
+      cx.closures := (cl, name) :: !(cx.closures);
+      let outer = !(cx.group) in
+      if outer = None then cx.group := Some (Buffer.create 256);
+      let text = fn cx { capture = Lazy.force cl.env; locals = [] } name cl.fn in
+      let g = Option.get !(cx.group) in
+      Buffer.add_string g ((if Buffer.length g = 0 then "let rec " else "\nand ") ^ text);
+      if outer = None then (Buffer.add_string cx.out (Buffer.contents g ^ "\n"); cx.group := None);
+      name
+
+and define cx x v =
+  match Hashtbl.find_opt cx.defined x with
+  | Some name -> name
+  | None when !(cx.group) <> None && has_closure v -> value cx v
+  | None ->
+      let e = value cx v in
+      let name = var x in
+      Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name e);
+      Hashtbl.replace cx.defined x name;
+      name
+
+and fn cx scope name f =
+  let body =
+    match f.V.impl with
+    | Some _ when !V.use_externs ->
+        Printf.sprintf "(Obj.repr (Ffi_core.%s %s))" (sanitize f.fname) (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
+    | _ -> expr cx scope f.body
+  in
+  Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
+
+and expr cx scope = function
+  | V.CVar x when List.mem x scope.locals -> "(Obj.repr " ^ var x ^ ")"
   | V.CVar x -> (
-      if Hashtbl.mem cx.fns x then "(Obj.repr " ^ var x ^ ")"
-      else
-        match IntMap.find_opt x cx.env.values with
-        | Some v when not (Hashtbl.mem cx.globals x) -> value cx v
-        | _ -> var x)
+      match IntMap.find_opt x scope.capture with
+      | None -> var x
+      | Some (V.VFn cl) -> "(Obj.repr " ^ closure cx cl ^ ")"
+      | Some v -> define cx x v)
   | V.CConst v -> value cx v
   | V.CErased -> "(Obj.repr ())"
-  | V.CValues cs -> tuple (List.map (expr cx) cs)
+  | V.CValues cs -> tuple (List.map (expr cx scope) cs)
   | V.CApp (f, es, V.Ctor) -> (
-      let es = List.map (expr cx) es in
+      let es = List.map (expr cx scope) es in
       match static cx f with
       | Some c -> build cx c es
-      | None -> Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx f) (concat "; " es))
+      | None -> Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es))
   | V.CApp (f, es, _) -> (
-      let es = List.map (expr cx) es in
-      match f with
-      | V.CVar g when Hashtbl.mem cx.fns g -> Printf.sprintf "(%s %s)" (var g) (args es)
-      | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx f) (arrows (List.length es)) (args es))
-  | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx rhs) (expr cx body)
-  | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx rhs) (expr cx body)
-  | V.CLetRec (fns, body) -> Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fn cx) fns)) (expr cx body)
+      let es = List.map (expr cx scope) es in
+      let direct =
+        match f with
+        | V.CVar g when List.mem g scope.locals -> Some (var g)
+        | V.CVar g -> (
+            match IntMap.find_opt g scope.capture with
+            | Some (V.VFn cl) when List.length cl.fn.params = List.length es -> Some (closure cx cl)
+            | _ -> None)
+        | _ -> None
+      in
+      match direct with
+      | Some name -> Printf.sprintf "(%s %s)" name (args es)
+      | None -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
+  | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
+  | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
+  | V.CLetRec (fns, body) ->
+      let scope = { scope with locals = List.map fst fns @ scope.locals } in
+      Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fun (x, f) -> fn cx scope (var x) f) fns)) (expr cx scope body)
   | V.CMatch (s, branches) -> (
-      let branch (c, ids, body) = (static cx c, c, List.map var ids, expr cx body) in
+      let branch (c, ids, body) = (static cx c, c, List.map var ids, expr cx scope body) in
       let branches = List.map branch branches in
       match branches with
       | (Some c, _, _, _) :: _ when List.for_all (fun (c, _, _, _) -> c <> None) branches -> (
           let case (c, _, vs, body) = (Option.get c, vs, body) in
           match shape c.adt with
           | Ext ->
-              Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx c.adt) (expr cx s)
+              Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx c.adt) (expr cx scope s)
                 (concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| (%d, [%s]) -> %s" c.V.index (concat "; " vs) body) (List.map case branches)))
           | Tagged ->
-              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" (expr cx s) (type_name cx c.adt)
+              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" (expr cx scope s) (type_name cx c.adt)
                 (concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pattern c vs) body) (List.map case branches)))
-          | Untagged -> (match List.map case branches with [ (_, vs, body) ] -> untuple vs (expr cx s) body | _ -> assert false))
+          | Untagged -> (match List.map case branches with [ (_, vs, body) ] -> untuple vs (expr cx scope s) body | _ -> assert false))
       | _ ->
           let rec chain = function
             | [] -> "absurd ()"
             | (_, c, vs, body) :: rest ->
-                Printf.sprintf "let d = (Obj.obj %s : ctor) in if i = d.ix then (match fs with [%s] -> %s | _ -> absurd ()) else %s" (expr cx c) (concat "; " vs) body (chain rest)
+                Printf.sprintf "let d = (Obj.obj %s : ctor) in if i = d.ix then (match fs with [%s] -> %s | _ -> absurd ()) else %s" (expr cx scope c) (concat "; " vs) body (chain rest)
           in
           let _, c, _, _ = List.hd branches in
-          Printf.sprintf "(let (i, fs) = (Obj.obj %s : ctor).des %s in %s)" (expr cx c) (expr cx s) (chain branches))
+          Printf.sprintf "(let (i, fs) = (Obj.obj %s : ctor).des %s in %s)" (expr cx scope c) (expr cx scope s) (chain branches))
   | V.CAbsurd -> "(absurd ())"
 
 and static cx = function V.CVar c -> Hashtbl.find_opt cx.ctors c | V.CConst (V.VCtorFn c) -> Some c | _ -> None
 
-and fn cx (x, f) =
-  let body =
-    match f.V.impl with
-    | Some _ when !V.use_externs ->
-        Printf.sprintf "(Obj.repr (Ffi_core.%s %s))" (sanitize f.fname) (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
-    | _ -> expr cx f.body
-  in
-  Printf.sprintf "%s %s : Obj.t = %s" (var x) (params (List.map var f.params)) body
-
 let collect env items =
-  let adts = ref [] and ctors = Hashtbl.create 64 and fns = Hashtbl.create 64 and globals = Hashtbl.create 64 in
+  let adts = ref [] and ctors = Hashtbl.create 64 and defined = Hashtbl.create 64 in
   let adt a = if not (List.memq a !adts) then adts := a :: !adts in
   let rec value = function
     | V.VCtor (c, vs) -> adt c.adt; List.iter value vs
@@ -136,20 +178,22 @@ let collect env items =
     | V.CValues cs -> List.iter code cs
     | V.CApp (f, cs, _) -> code f; List.iter code cs
     | V.CLet (_, a, b) -> code a; code b
-    | V.CLetRec (fs, b) -> List.iter (fun (x, f) -> Hashtbl.replace fns x (List.length f.V.params); code f.body) fs; code b
+    | V.CLetRec (fs, b) -> List.iter (fun (_, f) -> code f.V.body) fs; code b
     | V.CMatch (s, brs) -> code s; List.iter (fun (c, _, b) -> code c; code b) brs
     | V.CVar _ | V.CErased | V.CAbsurd -> ()
   in
   IntMap.iter (fun x v -> value v; match v with V.VCtorFn c -> Hashtbl.replace ctors x c | _ -> ()) env.Env.values;
-  List.iter
-    (function
-      | Env.Let (ids, c) -> List.iter (fun x -> Hashtbl.replace globals x ()) ids; code c
-      | Env.Final (c, _) -> code c
-      | Env.Fns fs -> List.iter (fun (x, f) -> Hashtbl.replace fns x (List.length f.V.params); Hashtbl.replace globals x (); code f.body) fs)
-    items;
+  List.iter (function Env.Final (v, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
-  List.iter (fun a -> List.iter (fun c -> Hashtbl.replace ctors c.V.cid c; Hashtbl.replace globals c.cid ()) a.V.ctors) adts;
-  { env; adts; ctors; fns; globals; shows = ref [] }
+  List.iter (fun a -> List.iter (fun c -> Hashtbl.replace ctors c.V.cid c; Hashtbl.replace defined c.cid (var c.cid)) a.V.ctors) adts;
+  let closures =
+    List.concat_map
+      (function
+        | Env.Fns fs -> List.filter_map (fun (x, _) -> match IntMap.find_opt x env.values with Some (V.VFn cl) -> Some (cl, var x) | _ -> None) fs
+        | Env.Final _ -> [])
+      items
+  in
+  { env; adts; ctors; defined; closures = ref closures; group = ref None; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
@@ -272,21 +316,23 @@ let run_main f = flush_to stdout (to_string ((Obj.obj f : Obj.t -> Obj.t) (of_st
 |}
 
 let item cx = function
-  | Env.Let ([ x ], code) -> Printf.sprintf "let %s : Obj.t = %s" (var x) (expr cx code)
-  | Env.Let (ids, code) -> Printf.sprintf "let (%s) : %s = Obj.obj %s" (concat ", " (List.map var ids)) (concat " * " (List.map (fun _ -> "Obj.t") ids)) (expr cx code)
-  | Env.Fns fns -> "let rec " ^ concat "\nand " (List.map (fn cx) fns)
-  | Env.Final (code, ty) ->
-      let consume =
-        if Program.is_main cx.env ty then "run_main (" else if Program.is_io cx.env ty then "exit (run_io" else "print_endline (" ^ show cx cx.env ty
+  | Env.Fns fns ->
+      let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
+      Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
+  | Env.Final (v, ty) ->
+      let main = Program.is_main cx.env ty and io = Program.is_io cx.env ty in
+      let text =
+        match v with
+        | V.VFn cl when not (main || io) -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
+        | _ ->
+            let e = value cx v in
+            if main then Printf.sprintf "run_main %s" e else if io then Printf.sprintf "exit (run_io %s)" e else Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e
       in
-      let name = match code with V.CVar x -> (match IntMap.find_opt x cx.env.values with Some (V.VFn cl) -> Some cl.fn.fname | _ -> None) | _ -> None in
-      match name with
-      | Some n when not (Program.is_main cx.env ty || Program.is_io cx.env ty) -> Printf.sprintf "let () = print_endline %s" (quote ("<function " ^ n ^ ">"))
-      | _ -> Printf.sprintf "let () = %s %s)" consume (expr cx code)
+      Buffer.add_string cx.out ("let () = " ^ text ^ "\n")
 
 let emit env items =
   let cx = collect env items in
-  let body = concat "\n" (List.map (item cx) items) in
+  List.iter (item cx) items;
   let shows = List.rev_map (fun (_, name, body) -> Printf.sprintf "%s (v : Obj.t) : string = %s" name !body) !(cx.shows) in
   concat "\n"
     [ "[@@@warning \"-a\"]";
@@ -296,5 +342,4 @@ let emit env items =
       types cx;
       driver cx;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);
-      body;
-      "" ]
+      Buffer.contents cx.out ]
