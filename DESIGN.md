@@ -499,13 +499,13 @@ into a materialized runtime value.
 For now: a function call's result, a match's result, a constructor
 application and a `coerce` (§38) are all `Dyn` where they stand, even
 over `Const` arguments — never `Const`. No automatic constant-folding
-through calls, matches
-or constructors. Inside a function body or a match branch every binding
-is `Dyn`. Anywhere else — run position (§16), the file's top level
-included — a statement is run as soon as it is elaborated, and every
-binder it introduces is born `Const` (§34). So a definition wanted as
-`Const` is bound by its own `let` in run position (see §33's `xs`).
-This is deliberate; it may be relaxed later if it proves heavy.
+through calls, matches or constructors. Inside a function body or a
+match branch every binding is `Dyn`. Anywhere else — run position (§16),
+the file's top level included — a statement is run as soon as it is
+elaborated, and every binder it introduces is born `Const` (§34). So a
+definition wanted as `Const` is bound by its own `let` in run position
+(see §33's `xs`). This is deliberate; it may be relaxed later if it
+proves heavy.
 
 A special form, `comptime-match`, works specifically on a `Const`,
 itself non-erased (§34) scrutinee whose discriminant is also non-erased
@@ -1374,19 +1374,18 @@ question.
 
 ## 36. v2 sketch: `hoist`
 
-Not settled. Compile-time evaluation is confined to the file's top
-level (§16); a `comptime` form for running code at compile time inside
-a function body is deferred to v2 together with this. In the worked
+Not settled. Compile-time evaluation is confined to the file's top level
+(§16); a `comptime` form for running code at compile time inside a
+function body is deferred to v2 together with this. In the worked
 examples the top level does pure level-hoisting: a body can only call
 into the past (nothing born during a body's execution is callable by
 that body), so manufacture must happen before the consumer's level is
 born, and a top-level statement is how manufacture runs "early". A
 special form `(hoist L body)` would name that directly: `body` may
-reference only entries introduced at or
-before the in-scope `def-lvl` that birthed `L`, and its births count as
-happening just before `L`'s — so its product predates `L` and
-everything after, callable with ordinary `Predates` proofs, and the
-factory pattern becomes writable inline.
+reference only entries introduced at or before the in-scope `def-lvl`
+that birthed `L`, and its births count as happening just before `L`'s —
+so its product predates `L` and everything after, callable with ordinary
+`Predates` proofs, and the factory pattern becomes writable inline.
 
 Much remains to litigate before this is real: the fact table would need
 caching at every `def-lvl`, with canonicalization of the body run
