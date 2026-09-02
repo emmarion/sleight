@@ -191,3 +191,85 @@ ground.
     variable, and the current level; `(subterm _)` proves `Subterm`
     between the annotated argument and the enclosing subterm parameter
     at the same subterm index. All naive, as SUGAR.md says.
+
+## Soundness fixes from an audit session
+
+A later autonomous session, asked to check that nothing false (in
+particular `(False)`) can be proved, probed the checker and changed the
+interpreter in four places. Items 38-41 record those changes. As
+elsewhere in this file, each is the implementation's reading, offered as
+a candidate question, not a settled decision; item 41 in particular
+appears to touch DESIGN.md's actual text and is flagged for the owner.
+The reasoning is a Claude session's and may be wrong (CLAUDE.md rule 1);
+where possible it was checked by compiling (rule 2).
+
+38. **`comptime-match` rejects a phantom constructor pattern.** §15 has
+    `comptime-match` read a non-erased scrutinee with a non-erased
+    discriminant, and §20 rule 2 says no non-erased value is ever headed
+    by a phantom constructor, so asserting a phantom constructor of a
+    real value can never be a legitimate use. The prior code, on a
+    transparent enum, treated the phantom (unspecified-repr) constructor
+    as having no `many` fields and skipped the discriminant check
+    entirely, so `(comptime-match x (F f))` for a phantom `F` succeeded
+    against any value and birthed `F`'s erased fields as `Const` tokens
+    — and since erased fields carry no runtime bytes (KERNEL.md), a
+    field of type `(False)` among them was forged into scope, collapsing
+    consistency. The pattern's constructor is now rejected when it is
+    phantom. This looks like plugging an implementation gap rather than
+    a design choice, but it is recorded here in case the owner reads §15
+    as permitting a phantom pattern with some other intended meaning.
+
+39. **A `let` binding a call's leading `many` returns at `erased`
+    projects the results.** Post-erasure code for a call carried every
+    one of the callee's `many` returns. A `let` (or any position) that
+    took some of those leading returns at multiplicity `erased` then
+    misaligned the rest: in run position it popped the wrong values, and
+    in a compiled body it raised an arity mismatch, both observable.
+    The call's code is now narrowed to the returns the position keeps
+    `many` before they are bound. Pure correctness as far as the session
+    could tell; the values a `let` binds should be its own.
+
+40. **An atom/atom unification never writes a rule onto a rigid entry.**
+    §18's forced unification aliases the newer of two atoms to the
+    older. Constructors and type constructors are `rigid` (born so in
+    the prelude and by `def-adts`), and two distinct rigid atoms
+    unifying is §18's second contradiction. The prior orientation went
+    purely by entry id, so a `def-adts`-born constructor whose id
+    happened to exceed a `Dyn` variable's could receive a rewrite rule,
+    aliasing one rigid constructor to another and defeating the
+    disjointness check (§19). Orientation now always lands the rule on a
+    non-rigid entry; two rigids still contradict. A correctness fix, not
+    a design choice.
+
+41. **A phantom-constructor branch under an *erased* scrutinee is
+    treated as a real branch (FLAGGED FOR OWNER).** This one appears to
+    contradict DESIGN.md §12 as written and is the session's *proposed*
+    resolution to what looks like a genuine gap, not something to take
+    as settled. §12's list of the branches allowed alongside the single
+    "real" branch of an erased-discriminant match includes "a branch
+    matching a phantom constructor ... so it needs no runtime dispatch
+    of its own" — categorically, with no scrutinee-erasure condition.
+    SPEC-REVIEW item 9 already noted that the phantom-branch exemption
+    rests on the unstated invariant that no non-erased value is ever
+    headed by a phantom constructor. That invariant (from §20 rule 2)
+    holds for a *non-erased* scrutinee, where a phantom-headed value
+    cannot occur and the phantom branch really is dead. It does **not**
+    hold for an *erased* scrutinee: an erased value may perfectly well
+    be phantom-headed (that is all a phantom constructor builds). With
+    the phantom branch dropped and the lone non-phantom branch compiled
+    as "the one that always runs," a match on such a value returns a
+    value built by the wrong constructor, of the wrong type — a
+    type-safety break, and a plausible route to `(False)`.
+
+    The implementation now makes a phantom branch count as dead only
+    when the scrutinee is non-erased; under an erased scrutinee it is an
+    ordinary real branch, subject to the one-real-branch rule and
+    producing the match's declared result (its fields stay erased per
+    §12). So a match that genuinely cannot dispatch is rejected, while
+    one whose only non-absurd branch is the phantom (the rest refuted by
+    proof/structure) still compiles to that single branch soundly.
+    Other resolutions are possible — e.g. rejecting any such match with
+    a non-erased result and a not-provably-absurd phantom branch — and
+    the choice is the owner's; §12's point 3 would need a matching edit
+    whichever way it goes. Recorded as an open question, per CLAUDE.md
+    rule 11.
