@@ -805,7 +805,7 @@ and check_marks env l pids code =
   let rec marked acc = function
     | V.CApp (f, args, cc) as c -> List.fold_left marked (marked (match cc with V.Tail | V.Delegate -> c :: acc | _ -> acc) f) args
     | V.CLet (_, a, b) -> marked (marked acc a) b
-    | V.CLetRec (fns, b) -> List.fold_left (fun acc (_, fn) -> marked acc fn.V.body) (marked acc b) fns
+    | V.CLetRec (_, b) -> marked acc b
     | V.CMatch (s, brs) -> List.fold_left (fun acc (_, _, c) -> marked acc c) (marked acc s) brs
     | V.CValues cs -> List.fold_left marked acc cs
     | V.CVar _ | V.CConst _ | V.CErased | V.CAbsurd -> acc
