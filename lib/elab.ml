@@ -96,6 +96,8 @@ let wrapper disc shapes =
 let newtype_of env tid = List.find_opt (fun x -> match type_of env x with Newtype (Var t) -> t = tid | _ -> false) env.scope
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
+let ctor_var env loc raw =
+  match canon env (Var (var env loc (atom_or loc raw "a constructor"))) with Var c -> c | t -> error loc "%s is not a constructor" (show env t)
 let proof_type ctor args = App (Var ctor, args)
 
 let expect_proof env loc ctor arity p =
@@ -184,7 +186,7 @@ let rec elab_term env raw =
           match args with
           | d :: t :: cs ->
               let ctor = function
-                | List (l, [ m; c ]) -> (Option.get (mult_of env m), Var (var env l (atom_or l c "a constructor name")))
+                | List (l, [ m; c ]) -> (Option.get (mult_of env m), Var (ctor_var env l c))
                 | r -> error (loc r) "expected (multiplicity Constructor)"
               in
               Matchable (disc_of env l d, Var (var env l (atom_or l t "a type constructor name")), List.map ctor cs)
@@ -500,7 +502,7 @@ and elab_special tele env expect l sp args =
       | _ -> assert false)
   | Sp.CoercibleWrap, c :: args -> (
       ignore (one ());
-      let c = var env l (atom_or l c "a constructor") in
+      let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
       if newtype_of env (tid_of env l c) = None then error l "%s has no Newtype in scope" (name_of env (tid_of env l c));
       let many = List.filter (fun e -> e.mult = Many) tele in
@@ -510,7 +512,7 @@ and elab_special tele env expect l sp args =
       born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
   | Sp.CoercibleCtor, c :: args ->
       ignore (one ());
-      let c = var env l (atom_or l c "a constructor") in
+      let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
       if phantom env l c then error l "%s is phantom" (name_of env c);
       let check env side e ty t = check_sg env l (map_sg (instantiate side) e.sg) { term = t; ty; erasure = Erased } in
@@ -574,11 +576,11 @@ and elab_match tele env expect l args =
         let bl = loc pat in
         let c, field_names =
           match pat with
-          | Atom (_, c) -> (c, [])
-          | List (_, c :: fs) -> (atom_or bl c "a constructor", List.map (fun f -> atom_or (loc f) f "a field name") fs)
+          | Atom _ -> (pat, [])
+          | List (_, c :: fs) -> (c, List.map (fun f -> atom_or (loc f) f "a field name") fs)
           | _ -> error bl "malformed pattern"
         in
-        let c = var env bl c in
+        let c = ctor_var env bl c in
         let phantom =
           match marker ctors c with Some m -> m = Erased | None -> error bl "%s is not a constructor of %s" (name_of env c) (name_of env tid)
         in
@@ -665,7 +667,7 @@ and elab_let env l args =
   let binders = List.concat_map (parse_entry env) binders in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
   let inner, ress, code = elab_body env expect l rhs in
-  let values = ref (if env.run_pos && pos_of expect = Many then run_code env code else []) in
+  let values = ref (if env.run_pos && pos_of expect = Many then run_code inner code else []) in
   let next_value () = match !values with v :: rest -> values := rest; v | [] -> V.VToken in
   let bind_one (env, ids) (b, r) =
     Option.iter (fun t -> check_type env b.s_loc r.ty (elab_type env t)) b.s_ty;
@@ -687,7 +689,7 @@ and elab_comptime_match env l args =
       if not env.run_pos then error l "comptime-match is a run-position statement (section 15)";
       let x = var env l (atom_or l x "a variable") in
       let value = match entry env x with { state = Const v; mult = Many; _ } -> v | _ -> error l "comptime-match needs a Const, non-erased scrutinee" in
-      let c = var env pl (atom_or pl c "a constructor") in
+      let c = ctor_var env pl c in
       let tele, ret = ctor_type env pl c in
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
       let _, disc, ctors = find_matchable env l tid in
