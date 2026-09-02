@@ -1,0 +1,78 @@
+; stdin: a
+; stdin: bb
+; expect: starting
+; expect: > bb
+; exit: 3
+; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 births the program's
+; level B and returns, erased, each value at (IO B) and the proof that coerces to it. The erased walk gives each
+; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
+; born inside, after B, so the caller supplies levels and values only.
+(def-lvl proof-lvl)
+(def-lvl lift-lvl)
+(let (erased pl) (prove-predates proof-lvl lift-lvl))
+
+(def-fns lift-lvl $ erased lift2 : (erased (Level) L1) (erased (Level) L2) (many (IO L1) io1) (many (IO L2) io2) ->
+    (erased (Level) B) (erased (IO B) o1) (erased (IO B) o2)
+    (erased (Coercible (IO L1) io1 (IO B) o1) q1) (erased (Coercible (IO L2) io2 (IO B) o2) q2)
+  (def-lvl B)
+  (let (erased pb) (prove-predates proof-lvl B))
+  (let (erased p1) (prove-predates L1 B))
+  (let (erased p2) (prove-predates L2 B))
+  (def-fns proof-lvl $ erased lift-proof : (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm many (IO A) io) ->
+      (erased (IO B) out) (erased (Coercible (IO B) out (IO A) io) p)
+    (def-fns proof-lvl $ erased lift-fn : (erased Type X) (subterm many (Fn A (many X x) -> (many (IO A) next)) k) ->
+        (erased (Fn B (many X x) -> (many (IO B) next)) o)
+        (erased (Coercible (Fn B (many X x) -> (many (IO B) next)) o (Fn A (many X x) -> (many (IO A) next)) k) p)
+      (def-fns B $ many o : (many X x) -> (many (IO B) next)
+        (let (many r) (delegate (k (predates ab) x)))
+        (let (erased o2) (erased q) (lift-proof (predates pb) A ab r))
+        (coerce r (coercible-sym q)))
+      (values o (coercible-of o)))
+    (match many io _
+      ((Exit l c) (values (Exit B c) (coercible-ctor Exit B A (coercible-refl c))))
+      ((WriteOut l t n)
+        (let (erased o) (erased q) (lift-proof A ab (subterm _) n))
+        (values (WriteOut B t o) (coercible-ctor WriteOut B A (coercible-refl t) q)))
+      ((WriteErr l t n)
+        (let (erased o) (erased q) (lift-proof A ab (subterm _) n))
+        (values (WriteErr B t o) (coercible-ctor WriteErr B A (coercible-refl t) q)))
+      ((ReadLine l k)
+        (let (erased o) (erased q) (lift-fn (Maybe (String)) (subterm _) k))
+        (values (ReadLine B o) (coercible-ctor ReadLine B A q)))
+      ((ReadFile l path k)
+        (let (erased o) (erased q) (lift-fn (Result (String)) (subterm _) k))
+        (values (ReadFile B path o) (coercible-ctor ReadFile B A (coercible-refl path) q)))
+      ((WriteFile l path t k)
+        (let (erased o) (erased q) (lift-fn (Result (Unit)) (subterm _) k))
+        (values (WriteFile B path t o) (coercible-ctor WriteFile B A (coercible-refl path) (coercible-refl t) q)))
+      ((GetArgs l k)
+        (let (erased o) (erased q) (lift-fn (List (String)) (subterm _) k))
+        (values (GetArgs B o) (coercible-ctor GetArgs B A q)))))
+  (let (erased x1) (erased q1) (lift-proof (predates pl) L1 p1 io1))
+  (let (erased x2) (erased q2) (lift-proof (predates pl) L2 p2 io2))
+  (values B x1 x2 (coercible-sym q1) (coercible-sym q2)))
+
+(def-lvl A1)
+(let (erased u8-a1) (prove-predates u8-lvl A1))
+(let (erased str-a1) (prove-predates str-lvl A1))
+(def-fns A1 $ many lib-echo : (many (Maybe (String)) line) -> (many (IO A1) next)
+  (match many line _
+    ((None a) (Exit A1 (nat-to-u8 (predates u8-a1) 3)))
+    ((Some a s) (WriteOut A1 (str-append (predates str-a1) "> " (str-append (predates str-a1) s "\n")) (ReadLine A1 lib-echo)))))
+
+(def-lvl A2)
+(let (erased u8-a2) (prove-predates u8-lvl A2))
+(def-fns A2 $ many banner : (many (List (String)) args) -> (many (IO A2) next)
+  (match many args _
+    ((Nil a) (WriteErr A2 "no args\n" (Exit A2 (nat-to-u8 (predates u8-a2) 0))))
+    ((Cons a x rest) (WriteErr A2 x (Exit A2 (nat-to-u8 (predates u8-a2) 0))))))
+
+(let (many echo-a1) (ReadLine A1 lib-echo))
+(let (many banner-a2) (GetArgs A2 banner))
+(let (erased B) (erased e) (erased b) (erased qe) (erased qb) (lift2 A1 A2 echo-a1 banner-a2))
+(def-fns B $ many user-start : (many (Maybe (String)) line) -> (many (IO B) next)
+  (match many line _
+    ((None a) (coerce banner-a2 qb))
+    ((Some a s) (WriteOut B "starting\n" (coerce echo-a1 qe)))))
+
+(ReadLine B user-start)

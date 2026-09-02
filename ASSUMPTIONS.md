@@ -457,6 +457,11 @@ shape below is the session's.
     exist, and references those functions only as values, while a
     continuation at the IO level calls the helper with a `Predates`
     proof. A cost of the design, recorded rather than smoothed over.
+    The index does not confine a program to one level, though:
+    `tests/io_lift.sl` embeds values from two levels in a program at a
+    third by coercion, at no runtime cost, and `tests/io_lift_runtime.sl`
+    does the same by rewrapping each continuation; neither is in the
+    prelude, their usefulness being an open question.
 
 58. **`Unit`, `Maybe`, `Result` and `List` join the prelude**, `List`
     exactly as section 31 defines it, so a program that defines its own
