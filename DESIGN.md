@@ -1520,7 +1520,9 @@ nothing ever reads as the field: a `many` match on the union has a
 single real branch, and unwrapping needs the value to canonicalize to
 the wrapper's application. Erased fields occupy no space (§34). A
 `delegate`-bodied function's pointer is interchangeable with its
-callee's (§9).
+callee's (§9). Extern types (§41) sit outside the uniform
+representation, so a wrapper whose `many` field has an extern type is
+not transparent: declaring one is a hard error, to be revisited.
 
 Only non-phantom constructors and `many` functions appear in items 4–6:
 a `coerce` produces a non-erased value, which by §20's rule 2 none
@@ -1640,3 +1642,19 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
   (§9), so `def-fns` births the proof and `coercible-of` fetches it:
   `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
   `(coerce inc-noted ig)` is then `inc`'s own pointer.
+
+## 41. TBD: extern types and FFI
+
+Not designed; a decision recorded so that §38 can refer to it. There
+will be extern types — `U8` and its kin — whose representation is
+foreign to §38's uniform one-word model, with their operations (`U8`
+addition, say) supplied as extern functions through an FFI. An extern
+type is not itself a newtype, and a datatype that would qualify as
+transparent (§38 item 4) with its wrapper field of an extern type is
+rejected outright rather than silently given a tagged or boxed
+representation. Marked for revisiting once the FFI exists.
+
+Open, not decided: how an extern type or function is declared; whether
+an extern value may sit in an ordinary container such as a `List`, or
+in a `many` field at all, given §38's uniform representation; and what
+§23's erasure invariant asks of extern functions.
