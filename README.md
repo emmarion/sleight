@@ -14,9 +14,14 @@ dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
 ```
 
-Files given on one command line share a scope, in order. A file is a
-sequence of statements, optionally ending in an expression whose value
-is printed.
+Files given on one command line share a scope, in order; with no file
+the program is read from stdin. A file is a sequence of statements,
+optionally ending in an expression whose value is printed.
+
+`dune test` runs every `tests/*.sl`. A test's leading comments say what
+it needs: `; needs: list vec` runs those files first in the same scope,
+`; expect: text` is the line the test must print, and `; error: text`
+means it must fail with a message mentioning that text.
 
 ## Layout
 

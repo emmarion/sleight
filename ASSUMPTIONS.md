@@ -143,7 +143,9 @@ ground.
     definitions birth `Dyn`. No observable difference was found, since
     constructor application never consults the state.
 31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
-    print it that way.
+    print it that way. A `many` parameter or field of type `Type` (SR
+    22) is accepted at its declaration and simply cannot be supplied in
+    a non-erased position.
 
 ## Runtime representation
 
