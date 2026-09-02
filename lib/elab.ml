@@ -727,7 +727,10 @@ and elab_def_fns env l args =
                 let name = atom_or fl n "a function name" in
                 let impl =
                   if not (List.mem Sp.Extern marks) then None
-                  else match List.assoc_opt name Ffi.fns with Some f -> Some f | None -> error fl "no extern implementation for %s" name
+                  else match Ffi.claim Ffi.fns name with
+                    | Some (Ok f) -> Some f
+                    | Some (Error ()) -> error fl "the extern implementation of %s is already bound" name
+                    | None -> error fl "no extern implementation for %s" name
                 in
                 (fl, name, mult, List.mem Sp.Absurd marks, impl, Fn (Var lvl, params, rets), body)
             | _ -> error fl "malformed function header")
@@ -857,7 +860,11 @@ and elab_def_adts env adts =
     let shapes = shapes env al (List.map (fun (m, c) -> (m, Var c)) ctors) in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
     if List.mem Sp.Extern ms then
-      adt.ext <- (match List.assoc_opt name Ffi.types with Some mk -> Some (mk adt) | None -> error al "no extern implementation for %s" name);
+      adt.ext <-
+        (match Ffi.claim Ffi.types name with
+         | Some (Ok mk) -> Some (mk adt)
+         | Some (Error ()) -> error al "the extern implementation of %s is already bound" name
+         | None -> error al "no extern implementation for %s" name);
     adt.ctors <- List.mapi (fun index (_, c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) shapes;
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in

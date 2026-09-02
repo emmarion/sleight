@@ -4,6 +4,15 @@ open Value
    marked extern. Integers are zarith's. Each extern-marked definition in Builtin.source is the model these stand in for. *)
 
 let registered : (string, adt) Hashtbl.t = Hashtbl.create 8
+let claimed : (string, unit) Hashtbl.t = Hashtbl.create 8
+let reset () = Hashtbl.reset registered; Hashtbl.reset claimed
+
+(* Each implementation may back one declaration per program. *)
+let claim table name =
+  match List.assoc_opt name table with
+  | None -> None
+  | Some impl -> if Hashtbl.mem claimed name then Some (Error ()) else (Hashtbl.replace claimed name (); Some (Ok impl))
+
 let z = function VExt (_, n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, n)
 

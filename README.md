@@ -17,7 +17,7 @@ dune test
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. Every program starts in the scope of the source
-prelude in `lib/builtin.ml` (`Nat`, `U8`, DESIGN.md section 41), whose
+prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
@@ -52,7 +52,7 @@ erased. Nothing is optimized.
 - `lib/env.ml` — scope entries, the fact table, canonicalization, forced unification (sections 3, 18)
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
-- `lib/builtin.ml`, `lib/ffi.ml` — the source prelude and the extern implementations (section 41)
+- `lib/prelude.sl`, `lib/ffi.ml` — the source prelude and the extern implementations (section 41)
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements
 - `bin/main.ml` — command line driver
 - `tests/` — DESIGN.md's worked examples and further tests

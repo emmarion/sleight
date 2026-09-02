@@ -205,9 +205,11 @@ ground.
 42. **The FFI is a fixed OCaml table** (`lib/ffi.ml`) keyed by name:
     an `extern`-marked type or function looks its implementation up by
     its declared name at elaboration and fails if there is none, so a
-    user definition named `nat-add` and marked `extern` picks up the
-    prelude's implementation. Section 41 leaves the source-level
-    declaration open; this is the prototype's stand-in.
+    second `extern` declaration of a name already bound in the program
+    is a hard error (settled by the owner). Section 41 leaves the
+    source-level declaration open; this is the prototype's stand-in.
+    The prelude itself is `lib/prelude.sl`, embedded into the binary by
+    a dune rule so the interpreter needs no path to it at runtime.
 43. **Extern integers.** Values of an extern type are zarith integers
     carrying their type's runtime record; an extern type's
     implementation is a pair construct/destruct over constructor

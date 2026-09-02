@@ -1,3 +1,14 @@
 (library
  (name speciallang)
  (libraries zarith))
+
+(rule
+ (targets prelude_source.ml)
+ (deps prelude.sl)
+ (action
+  (with-stdout-to
+   prelude_source.ml
+   (progn
+    (echo "let source = {|")
+    (cat prelude.sl)
+    (echo "|}")))))
