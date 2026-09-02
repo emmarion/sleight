@@ -28,8 +28,13 @@ ground.
 4. **What is built in.** `Univ`/`Type`, `Level`, `Predates`, `Subterm`,
    `Coercible`, the `Special` ADT and one entry per special form. The
    opaque types are type constructors with no `Matchable`, so they can
-   neither be matched on nor count as empty (SR 6). `List`, `Nat`,
-   `False` are not built in; the examples define them (SR 12).
+   neither be matched on nor count as empty (SR 6). On top of that a
+   source prelude (`lib/builtin.ml`, section 41) defines `Nat`, `False`,
+   `Lt`, `Double`, `Pow2`, `Dec`, `U8`, their functions, and the levels
+   `nat-lvl`, `pow-lvl`, `mod-lvl`, `u8-lvl`, all as ordinary,
+   shadowable entries; a user function calling `nat-add` proves
+   `(prove-predates nat-lvl L)`. `List` is not built in; the examples
+   define it (SR 12).
 5. **Names of the `Special` variants** are the form name prefixed with
    `%` (`%let`, `%match`, ...), so that the entry `let` — whose value is
    `(%let)` — is distinct from the constructor. Only the prefix is an
@@ -180,20 +185,50 @@ ground.
 34. **Unions are never tagged**, so a match on one binds its single
     real branch's fields from the tuple without inspecting anything;
     the interpreter prints an untagged value as its fields, with no
-    constructor name. A transparent union's other non-phantom
-    constructors build the token.
+    constructor name. A union newtype's other non-phantom constructors
+    build the token. Marking changes nothing at runtime here: an
+    unmarked type of newtype shape is represented as its field too, it
+    just gets no `coercible-wrap`.
 35. **An absurd function's code raises** if ever reached; a match whose
     real branches are all absurd or phantom likewise compiles to code
     that raises.
 
 ## Not implemented
 
-36. Macros (`Macro`, `Raw`, the expansion limit); extern types and the
-    `U8` family (section 41), so section 38's refusal of a transparent
-    type over an extern field has nothing to check yet. `lib/kernel_input.ml`
+36. Macros (`Macro`, `Raw`, the expansion limit). `lib/kernel_input.ml`
     is untouched and unused (SR 28). The `--repl` flag reads one form
     at a time and prints every expression's value, which goes beyond
     section 16's one-expression file; it is a convenience only.
+
+## Extern types and the FFI (section 41)
+
+42. **The FFI is a fixed OCaml table** (`lib/ffi.ml`) keyed by name:
+    an `extern`-marked type or function looks its implementation up by
+    its declared name at elaboration and fails if there is none, so a
+    user definition named `nat-add` and marked `extern` picks up the
+    prelude's implementation. Section 41 leaves the source-level
+    declaration open; this is the prototype's stand-in.
+43. **Extern integers.** Values of an extern type are zarith integers
+    carrying their type's runtime record; an extern type's
+    implementation is a pair construct/destruct over constructor
+    indices, so matching, `comptime-match` and printing all go through
+    destruct and see the model's constructors. `U8`'s destruct yields
+    its `Nat` field as a `Nat` integer, the erased proof field taking no
+    slot.
+44. **`--no-extern` strips every implementation** and runs the models
+    instead; `dune test` runs every test both ways and requires the
+    same outcome, which is how section 41's invariant is checked. The
+    prelude is re-elaborated per mode.
+45. **`Newtype` has no ambiguity case**: `(Newtype T)` carries nothing
+    but `T`, so `newtype-of` and `coercible-wrap` take the first one
+    found in scope. `coercible-wrap` still requires the named
+    constructor to have exactly one `many` field, the only check left
+    after trusting the mark.
+46. **The prelude's proofs are erased fields and erased functions**:
+    `Lt`, `Double` and `Pow2` carry their sub-proofs at `erased`, and
+    the lemmas `lt-pos` and `double-pos` are `erased` functions, so no
+    proof is ever built at runtime; `lt-dec` returns a `Dec` whose
+    proof field is erased. A choice of the session, not the owner's.
 
 ## Sugar (SUGAR.md)
 

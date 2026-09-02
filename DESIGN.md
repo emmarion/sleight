@@ -113,8 +113,8 @@ function invocation. A type can only be built from:
 1. variable references,
 2. application of a type constructor,
 3. application of a value constructor,
-4. application of a type former (`Fn`, `TyCtor`, `ValCtor`, §29; or
-   `Matchable`, §17).
+4. application of a type former (`Fn`, `TyCtor`, `ValCtor`, §29;
+   `Matchable`, §17; or `Newtype`, §38).
 
 The same restriction applies to "is" statements (the
 canonicalization/rewrite rules from §3). The intended consequence of this
@@ -380,9 +380,10 @@ type does not carry it, and its return position has no multiplicity of
 its own (§29). Each field (like each function argument) is individually
 annotated erased or not (sane default still TBD). Declaring a phantom
 constructor with any `many` field is a warning. Subterm recursion (§7)
-can go through an erased argument. A type with exactly one non-phantom
-constructor holding exactly one `many` field, or the union analogue, is
-required to be represented as that field alone (§38).
+can go through an erased argument. A type marked `newtype` — which
+must have exactly one non-phantom constructor holding exactly one
+`many` field, or be the union analogue — is required to be represented
+as that field alone (§38).
 
 **A constructor returns its own type.** Every value constructor is
 declared inside exactly one type constructor's entry in `def-adts`, and
@@ -626,7 +627,7 @@ Everything below can be passed around as ordinary first-class data:
 3. an ADT type constructor, unapplied
 4. an ADT value constructor, unapplied
 5. a `Matchable` object — see below
-6. a `Type`
+6. a `Type`, or a `Newtype` object (§38)
 7. an opaque object (a `Level`, a `Subterm`/`Predates` proof, §8, or a
    `Coercible` proof, §38)
 
@@ -922,13 +923,14 @@ actually specified.
    functions at a shared level, written on the form itself, each
    function carrying its own `erased`/`many` marker (§20); a single
    function is just the one-element case. Possibly nested inside another
-   function's body (§9, §16). A body may be marked `absurd` (§37).
-   Births a
+   function's body (§9, §16). A body may be marked `absurd` (§37) or
+   `extern` (§41). Births a
    `Coercible` proof for each `delegate`-bodied function (§38).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
-   each type's `Matchable` (§19).
+   each type's `Matchable` (§19), and its `Newtype` when marked (§38).
+   A type may also be marked `extern` (§41).
 5. `comptime-match` — compile-time discriminant assertion on a `Const`,
    itself non-erased scrutinee with a non-erased discriminant, in run
    position only (§16); binds the matched fields as `Const` at their
@@ -940,9 +942,10 @@ actually specified.
 7. `TyCtor` — the type-constructor-type former (§29).
 8. `ValCtor` — the value-constructor-type former (§29).
 9. `Matchable` — the `Matchable`-type former (§17).
+9a. `Newtype` — the `Newtype`-type former (§38).
 
-Items 6–9 are also §5's production 4, i.e. they may appear inside a type
-or an `is` expression, not only at a declaration site.
+Items 6–9a are also §5's production 4, i.e. they may appear inside a
+type or an `is` expression, not only at a declaration site.
 
 **Other expressions:**
 10. `match` — pattern match, its scrutinee marked `erased` or `many`
@@ -950,7 +953,8 @@ or an `is` expression, not only at a declaration site.
     (by proof) (§12); its size is fixed by its return annotation (§11,
     §16).
 11. `matchable-of` — yields the `Matchable` for a bare unapplied type
-    constructor from ambient scope (§19).
+    constructor from ambient scope (§19); `newtype-of` does the same for
+    its `Newtype` (§38).
 12. `level-of` — yields the `Level` a function is defined at, read from
     its type (§7). Not strictly needed, since that level is always in
     scope anyway, but useful for sugar (SUGAR.md).
@@ -1019,6 +1023,11 @@ they annotate a form rather than heading a list):
     zero-constructor type in place of its declared result (§12, §37);
     `(absurd C)`, a bare constructor with no fields and no body, is the
     automatically refuted branch (§12).
+37. `newtype` — marks a `def-adts` entry, after its `enum`/`union`
+    token, as a newtype (§38).
+38. `extern` — marks a `def-adts` entry, after its `enum`/`union` token
+    and any `newtype`, or a function on its `def-fns` line, as
+    implemented by the FFI, the source being its model (§41).
 
 ## 28. ASCII only
 
@@ -1471,17 +1480,29 @@ checked entirely at elaboration time:
 2. `(coercible-sym p)` — from `a` to `b`, conclude `b` to `a`.
 3. `(coercible-trans p q)` — from `a` to `b` and `b` to `c`, conclude `a` to
    `c`.
-4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **transparent** type.
-   An enum is transparent when it has exactly one non-phantom
-   constructor and that constructor has exactly one `many` field; a
-   union is transparent when, among its non-phantom constructors, every
-   one but one has only `erased` fields and the remaining one has
+4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **newtype**.
+   A type is a newtype by declaration: its `def-adts` entry carries the
+   `newtype` mark after its `enum`/`union` token (§27), and it must
+   then have the newtype shape, a hard error otherwise — an enum with
+   exactly one non-phantom constructor holding exactly one `many`
+   field, or a union in which, among the non-phantom constructors,
+   every one but one has only `erased` fields and the remaining one has
    exactly one `many` field. Phantom constructors never head a
-   non-erased value (§20) and do not count either way. `C` is that
-   constructor, and the arguments are its
-   telescope in order, so exactly one of them, `f`, sits at the `many`
-   field. The proof is `(Coercible F f T (C arg1 ... argn))`, unwrapping
-   being its `coercible-sym`.
+   non-erased value (§20) and do not count either way. A type of that
+   shape left unmarked is not a newtype: an implementation may still
+   represent it as its field, but promises nothing and admits no
+   `coerce`. The mark births an erased `(Newtype T)` alongside the
+   type's `Matchable`, `T` bare and unapplied as in a `Matchable`;
+   `Newtype` is a type former (§5), the object is first class (§17),
+   and `newtype-of` fetches it from ambient scope as `matchable-of`
+   does. `coercible-wrap` verifies that a `Newtype` for `C`'s type is in
+   ambient scope — its being born only by `def-adts` or the FFI (§41)
+   is what makes it trustworthy — so a first-class wrap goes through a
+   `(Newtype T)` parameter. `C` is the wrapping constructor, and the
+   arguments are its telescope in order, so exactly one of them, `f`,
+   sits at the `many` field. The proof is
+   `(Coercible F f T (C arg1 ... argn))`, unwrapping being its
+   `coercible-sym`.
 5. `(coercible-ctor C ...)` — the same non-phantom constructor on both sides,
    with fields that may differ. The arguments follow `C`'s telescope in
    order: an `erased` field takes two, its source and target values,
@@ -1512,17 +1533,17 @@ fields, one field standing bare and none at all being an unspecified
 word, and carries a tag only when its type is an enum with more than
 one non-phantom constructor — all a tag ever distinguishes. A union
 never carries one, its discriminant being erased (§12). So every
-transparent type, as item 4 defines it, is represented exactly as its
-one `many` field — no tag, no wrapper — the newtype treatment applied
-to every datatype that qualifies; a value built by one of a transparent
-union's other non-phantom constructors is an unspecified word, which
+newtype, as item 4 defines it, is represented exactly as its
+one `many` field — no tag, no wrapper — which is the guarantee the
+mark buys; a value built by one of a union newtype's other non-phantom
+constructors is an unspecified word, which
 nothing ever reads as the field: a `many` match on the union has a
 single real branch, and unwrapping needs the value to canonicalize to
 the wrapper's application. Erased fields occupy no space (§34). A
 `delegate`-bodied function's pointer is interchangeable with its
-callee's (§9). Extern types (§41) sit outside the uniform
-representation, so a wrapper whose `many` field has an extern type is
-not transparent: declaring one is a hard error, to be revisited.
+callee's (§9). An extern type (§41) may be marked `newtype` like any
+other, its FFI author then guaranteeing the field representation, and
+a newtype may wrap a field of an extern type.
 
 Only non-phantom constructors and `many` functions appear in items 4–6:
 a `coerce` produces a non-erased value, which by §20's rule 2 none
@@ -1643,33 +1664,56 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
   `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
   `(coerce inc-noted ig)` is then `inc`'s own pointer.
 
-## 41. TBD: extern types, `U8`, and FFI
+## 41. Extern types, the FFI, and the prelude
 
-Not designed; decisions recorded so that §38 can refer to them.
+Partly designed. Settled: the `extern` mark and what it promises, the
+invariant below, and the prelude's `Nat` and `U8`. The prototype's FFI
+is a fixed table (ASSUMPTIONS.md); a source-level way to add to it is
+not designed.
 
-There will be extern types, whose representation is foreign to §38's
-uniform one-word model, reached through an FFI. A datatype that would
-qualify as transparent (§38 item 4) with its wrapper field of an extern
-type is rejected outright rather than silently given a tagged or boxed
-representation. Marked for revisiting once the FFI exists: this blanket
-refusal is a stopgap, and something more robust — a representation
-rule that lets a wrapper over an extern field keep its cost-free
-`coerce` — may replace it.
+**The `extern` mark.** A `def-adts` entry or a `def-fns` function may
+be marked `extern` (§27). The declaration is then a *model*: for a type,
+its constructors and `Matchable` say what its values are and how they
+are taken apart, and the FFI supplies the representation together with
+construction and matching over it; for a function, the body says what
+it computes, and the FFI supplies an implementation. An extern type is
+a type like any other — it has a `Matchable`, its values are non-erased
+and one word (§38), so they sit in a `List` or a `many` field — and it
+may be marked `newtype`, the FFI author then guaranteeing that its
+representation is that of the field and that a `coerce` through it is
+safe; a newtype may equally wrap a field of an extern type.
 
 **Invariant: externs are conservative.** In the spirit of §23: every
-extern implementation stands in for an operation that has a definition
-in the language, and stripping every extern implementation — running
-those definitions instead — must leave a program that compiles and
-runs identically. Recorded as an intended invariant, not verified.
+extern implementation stands in for a declaration in the language, and
+stripping every extern implementation — running the models instead —
+must leave a program that compiles and runs identically. Recorded as an
+intended invariant; the prototype checks it on its own tests.
 
-`U8` and its kin are not extern types. Each is an ordinary prelude ADT,
-transparent over `(Nat)` (§38), so a `coerce` between the two is free;
-what the FFI supplies for them is efficient implementations of their
-operations — `U8` addition, say — not their representation.
+**`Nat`.** The prelude declares `Nat` as the Peano enum of §32, marked
+`extern`, and the FFI holds it as an arbitrary-precision integer;
+`nat-add` is likewise extern over a structural definition. There are no
+numeric literals for now.
 
-Open, not decided: how an extern type or function is declared; what
-guarantees an extern implementation agrees with the definition it
-stands in for, beyond the invariant above; whether an
-extern value may sit in an ordinary container such as a `List`, or in a
-`many` field at all, given §38's uniform representation; and what §23's
-erasure invariant asks of extern functions.
+**`U8`.** An extern enum with one constructor, `MkU8`, holding a
+`(Nat)` and an erased proof that it is below the modulus:
+
+```scheme
+(def-adts $ U8 : -> Type
+  enum extern
+  (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
+```
+
+`Lt` is the prelude's strict order on `Nat`. The modulus is a top-level
+`Const` proved to be 2^8 by construction: `Pow2 k v` relates an
+exponent to its power through a `Double` relation, `pow2` computes the
+power and returns the proof, and `(pow2 eight)` with `eight` spelled in
+unary binds `u8-modulus`. Its constructors are its API — a `U8` is taken
+apart by matching, and built by `MkU8` with a proof, obtained for a
+hand-built value by reflection (a `comptime-match` on a decided
+comparison, §15) or from `nat-to-u8`, whose model reduces modulo the
+bound structurally with the proof carried along. `u8-add` (wrapping),
+`nat-to-u8` and `u8-to-nat` are extern; `U8` is not marked `newtype`.
+
+Open, not decided: a source-level declaration of extern types and
+functions; what guarantees an extern implementation agrees with its
+model beyond the invariant above; numeric literals.
