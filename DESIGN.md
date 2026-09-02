@@ -27,12 +27,9 @@ registry. Each entry carries:
 - a **stored value**, present only if the state is `Const`. If the
   entry is erased, this isn't a real value — it's a *token* that just
   asserts the value exists/is true, not actual data.
-- an **erasure** (the `erased`/`many` multiplicity from §6) — recorded
-  only on `Const` entries, which are born with it known (§34), and on
-  function parameters, whose erasure comes from the enclosing signature
-  when the body is entered. A `Dyn` intermediate's erasure is not
-  stored here at all: it is derived later, per §20, once its enclosing
-  unit has been fully checked.
+- an **erasure** (the `erased`/`many` multiplicity from §6) — every
+  entry is born with it known, declared at its binder or fixed by its
+  kind (§20).
 - a **level-birth marker** — set when the entry was introduced by
   `def-lvl` (§8). `prove-predates` requires its `Level` argument to be
   such an entry, not merely some value of type `(Level)`.
@@ -221,11 +218,12 @@ There are also two ways for these to be "born" (introduced):
   types included.
 - **State-inheriting `let`.** A `let` binder inherits the entire variable
   state of the right-hand-side entry it corresponds to, wholesale —
-  state (§3), stored value if `Const`, settled erasure (§34), and, via
-  an alias rule recorded in the fact table (§18), its type and "is" —
+  state (§3), stored value if `Const`, and, via an alias rule recorded
+  in the fact table (§18), its type and "is" —
   whenever that entry is an expression in §5's grammar and so has a
   scope entry of its own (§3). This is per-binder:
-  with `(let a b c (values x y z))`, each of `a`, `b`, `c` inherits from
+  with `(let (many a) (many b) (many c) (values x y z))`, each of `a`,
+  `b`, `c` inherits from
   `x`, `y`, `z` respectively. Where an entry is a call or a match there is
   nothing to inherit, §15 making those results `Dyn` inside a function
   body or a match branch; in run position (§16) the statement is run
@@ -234,16 +232,16 @@ There are also two ways for these to be "born" (introduced):
   macro renamed locally (§4) — the others being a direct reference to
   the entry, `comptime-match` (§15), and a macro expansion that
   mentions it.
-- **Optional `let` assertions.** Each binder may independently carry an
-  optional type-or-`is` clause and an optional multiplicity — the full
-  2×2, per binder. Both are checked redundancies, not choices: the type
-  is compared for identity with the inferred one (§5), and the
-  multiplicity with the derived one (§20). A mismatch is a hard compile
-  error in *either* direction — asserting `many` on a binder whose
-  derived erasure is `erased` errors just as asserting `erased` on a
-  materialized one does. A programmer who does not care leaves the
-  annotation off. Deliberately strict for now; usage may argue for
-  softening later.
+- **`let` binders.** Each binder carries a mandatory multiplicity and
+  an optional type-or-`is` clause, in telescope-entry shape with the
+  type omissible (§30): `(many x)`, `(erased (Nat) x)`, `(many c is d)`.
+  The multiplicity is the binder's declaration (§20): a `many` binder
+  needs its right-hand-side value non-erased — a `many` return entry of
+  a non-erased call, a non-erased constructor application, or a `many`
+  entry — while an `erased` binder accepts anything. The type, when
+  given, is a checked redundancy, compared for identity with the
+  inferred one (§5); a mismatch is a hard compile error. Deliberately
+  strict for now; usage may argue for softening later.
 - **Special forms as data.** A special form is a nullary variant of the
   `Special` ADT (settled: an ordinary ADT, not opaque). The elaborator
   dispatches on a `Special` variant in head position, and only when that
@@ -333,7 +331,8 @@ size-one location (§16), so multiple values cannot nest, and there is
 nothing to pass into an argument slot or match on.
 
 Multiple values are introduced by `values` and eliminated by `let`,
-which binds one variable per value: `(let q r (divmod n d))` binds both
+which binds one variable per value: `(let (many q) (many r) (divmod n d))`
+binds both
 of `divmod`'s returns. A `let`'s items are its binders, then any
 statements, then the final expression, which is the last item; the
 right-hand side is that expression together with the statements before
@@ -346,21 +345,16 @@ returns lives instead in the function's own return telescope, which is
 part of a closed, first-class type (§29) and does bind positionally; a
 `let` receives that telescope already instantiated.
 
-`match` requires an explicit result-type annotation listing the return
-type(s) (plural, to match a function's possibly-multiple return
-values). The types are mandatory — they play the role of a match
-motive, and in a dependent match the branches' own result types mention
-branch-refined facts, so we believe the common generalization cannot
-reliably be inferred from the branches. Each entry's erasure, by
-contrast, is optional, per value: when present it is an assertion
-checked against the derived erasure (§20, §34), hard-erroring on
-mismatch either way, same as a `let` assertion (§9). The annotation is
+`match` carries, before its scrutinee, the scrutinee's multiplicity —
+`erased` or `many`, mandatory (§12, §20) — and after it an explicit
+result-type annotation listing the return type(s) (plural, to match a
+function's possibly-multiple return values). The types are mandatory —
+they play the role of a match motive, and in a dependent match the
+branches' own result types mention branch-refined facts, so we believe
+the common generalization cannot reliably be inferred from the
+branches. The annotation carries no multiplicities: the results'
+erasures are fixed by the match's position (§20). The annotation is
 what fixes the match's size (§16).
-
-Any `values` entry may likewise carry an optional multiplicity
-assertion, with the same checked-redundancy semantics. Besides its
-tripwire use, this is one of the ways a run-position statement's boundary
-erasure is determined (§34).
 
 ## 12. Data types, erasure, and match branch kinds
 
@@ -402,7 +396,9 @@ still differ, and that's a separate axis from canonicalization
 equality.
 
 **Matching on enums** is (mostly) straightforward: the erasure of the
-variables a branch introduces follows §20's mirror rule.
+variables a branch introduces follows from the scrutinee's declared
+multiplicity (§11, §20) — each field at its declared multiplicity under
+`many`, all erased under `erased`.
 
 But: when evaluating a branch reached through a **phantom** constructor
 (one whose own `def-adts` declaration is marked erased, as against a
@@ -411,10 +407,10 @@ binding elsewhere that merely holds a constructor at multiplicity
 introduces included, whatever their fields' annotations say — and, more
 importantly, so is the expected type of the branch's own result.
 Concretely: such a branch's body can, and in fact must, return entirely
-erased values, and that's considered valid even when the match itself
-was annotated (§11) to return some non-erased result(s) — this branch is
-exempted from matching the match's declared erasures. §20 covers the
-underlying erasure-propagation model this fits into.
+erased values, and that's considered valid even when the match's
+position (§20) calls for non-erased result(s) — this branch is exempted
+from the match's result erasures. §20 covers the underlying erasure
+model; an `erased` function's body is the same situation.
 
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
@@ -429,15 +425,16 @@ constructor is itself erased; names all tentative, see CLAUDE.md §10):
 3. **absurd, by proof** — a branch that, instead of producing the match's
    expected result, must produce a value of the empty ADT (§7's
    zero-variant type, e.g. `False`) — the programmer supplies a proof of
-   impossibility rather than relying on automatic refutation.
+   impossibility rather than relying on automatic refutation. §37 gives
+   a function body the same option.
 
-**When a non-erased result is on the line.** If a match is entirely
-erasable, it's unconstrained. But if at least one branch does non-erased
-computation (or has a non-erased return):
-- if the discriminant is non-erased (a non-erased enum), there's a real
-  runtime tag to dispatch on, and no further restriction applies;
-- if the discriminant is erased — an erased enum, or a union regardless
-  of its own erasure — there can be at most one "real" branch. Every
+**When a non-erased result is on the line.** If a match sits in an
+erased position (§20), it's unconstrained. But if at least one of its
+results is non-erased:
+- if the discriminant is non-erased (a `many` match on an enum), there's
+  a real runtime tag to dispatch on, and no further restriction applies;
+- if the discriminant is erased — an `erased` match, or a union
+  regardless of the keyword — there can be at most one "real" branch. Every
   other branch must be one of: 1) automatically absurd (the rewrite rules
   derive a contradiction), 2) absurd by proof, or 3) a branch matching a
   phantom constructor (its body is already fully erased per the
@@ -475,7 +472,7 @@ value; the variable's type is then computed from that "is" expression.
 variable references and type-/value-constructor application, no function
 invocation. `let` is the one binding site where a type (or "is" clause)
 is optional altogether, since it can be inferred from the right-hand
-side; its optional multiplicity assertion is likewise per binder (§9).
+side; its multiplicity is mandatory per binder (§9).
 
 Motivating example, given `Add : (Nat) (Nat) (Nat) -> Type`:
 
@@ -588,8 +585,9 @@ A file's top level is run position, so calls there need no proofs (§24).
 Nothing under a function body or a match branch is run at compile time
 — a `comptime` form for that is deferred to v2 alongside `hoist` (§36).
 
-A run-position statement's binders must have their erasures determinable
-at the statement's boundary — see §34 for the rule and why.
+A run-position statement's binders declare their erasures (§9), which
+is what lets it be stripped and run before the code after it is
+elaborated (§34).
 
 ## 17. First-class objects
 
@@ -750,35 +748,46 @@ A special form, `matchable-of`, takes a bare unapplied type constructor
 and yields the `Matchable` for it from ambient scope, erroring in the
 ambiguous case above. A `let` (§9) gives it a name where one is wanted.
 
-## 20. Bottom-up erasure
+## 20. Declared erasure
 
-Erasure doesn't need pervasive annotation — it's computed bottom-up.
-Explicit erasure annotation is only needed at the boundary: function
-arguments and return results, and — symmetrically — constructor fields
-together with the value constructor's own declaration marker (§12).
-Everywhere else it's derived, not declared.
+Every binder declares its multiplicity, so every name's erasure is
+known where it is bound, and an expression's erasure is fixed by the
+position it occupies. Nothing is derived from usage. The binders, and
+where each gets its multiplicity:
 
-This works because the language is immutable, effect-free, and total
-(§7–§8): there's no observable difference between computing a value and
-not computing it if the value is never needed, so "erased" just means
-"not needed," and that's decidable from how a result is actually used
-rather than something that has to be stated everywhere by hand.
+- function parameters and return entries, constructor fields: their
+  telescope entries (§29, §30);
+- a value constructor: its `def-adts` marker (§12); a function: its
+  `def-fns` marker, `erased` or `many` per function (§27), which is
+  neither part of its `Fn` type (§29) nor written at a call;
+- `let` binders: mandatory per binder (§9);
+- a match's scrutinee: mandatory on the `match`, `erased` or `many`
+  (§11), which fixes the branch fields — at their declared
+  multiplicities under `many`, all `erased` under `erased`, and all
+  `erased` in a phantom constructor's branch whatever the keyword (§12);
+- `comptime-match` fields: their declared multiplicities (§15);
+- everything born by kind — a `Level`, a proof, a `Matchable`, a type
+  constructor — is `erased` (§8, §12, §17).
 
-The unit of derivation is the independently-evaluated unit: a function
-body (closed over its signature's declared multiplicities) or a
-run-position statement (closed over its boundary erasures, §34). Inference
-never crosses an evaluation event — a unit's erasure is fully settled
-from its own text plus its boundary declarations before that unit is
-ever compiled or run, which is what makes the round trip (KERNEL.md)
-well-ordered.
+The erased positions, where an expression is erased: an argument at an
+erased-declared parameter or field; any argument of a type constructor
+(§12); a type or `is` expression (§5, §14); the right-hand side of a
+`let` whose binders are all `erased`, each entry of a final `values`
+there taking its own binder's multiplicity; the scrutinee of an
+`erased` match; and every sub-expression of an erased expression. The
+body of a phantom constructor's branch is erased throughout (§12), and
+so is the body of an `erased` function: it is checked with every return
+entry `erased`, whatever its signature says — the analogue of the
+phantom branch — so such a function can only ever be held or called at
+multiplicity `erased`. Every other position is non-erased.
 
-Multiplicity is relative to the enclosing context, not a global property
-of a value. Any function can be invoked in an erased context, and there
-its arguments may themselves be erased — so a parameter declared `many`
-may hold a value built by an erased constructor. `many` licenses runtime
-use if the enclosing invocation itself happens at runtime.
+Checking is then local. Referencing an `erased` name from a non-erased
+position is an error; referencing a `many` name from anywhere is fine —
+a non-erased value can be "copied" into an erased one for free, but
+never the reverse. Going the other way needs something like §21's
+still-undesigned coercion mechanism, or §14's `is` reification.
 
-The propagation rule for a function call or constructor application:
+The rule for a function call or constructor application:
 1. If the overall result is erased, there's no further constraint —
    any function/constructor, any argument erasures, all fine.
 2. If the overall result must be non-erased: each field/argument that's
@@ -786,32 +795,26 @@ The propagation rule for a function call or constructor application:
    non-erased at the call site, *and* the function or constructor being
    called must itself be non-erased.
 
-Phantom constructors always enter scope as erased, as do all type
-constructors (§12). Consequence of rule 2: a phantom constructor can only
-ever produce an erased result — it fails the "function/constructor itself
-must be non-erased" half of the rule. An ordinary (non-phantom)
-constructor can produce either, depending on context.
+Phantom constructors, `erased` functions and all type constructors
+enter scope as erased (§12). Consequence of rule 2: none of them can
+produce a non-erased result — each fails the "function/constructor
+itself must be non-erased" half of the rule. An ordinary constructor or
+a `many` function can produce either, depending on position.
 
-The mirror rule, for destruction — a match binding a constructor's
-fields. A variable bound by a match carries no erasure annotation; its
-erasure is derived, so what the branch body does with it settles the
-question:
-1. If evaluating the body never requires it non-erased, there's no
-   further constraint.
-2. If evaluating the body finds it required non-erased: the field must be
-   declared non-erased in the constructor's signature, and the scrutinee
-   must itself be non-erased.
+Multiplicity is relative to the enclosing position, not a global
+property of a value. Any function can be invoked in an erased position,
+and there its arguments may themselves be erased — so a parameter
+declared `many` may hold a value built by an erased constructor. `many`
+licenses runtime use if the enclosing invocation itself happens at
+runtime.
 
-A phantom constructor needs no clause of its own: its branch's results
-are all erased (§12), so clause 2's antecedent cannot arise there.
-`comptime-match` (§15) binds fields the same way.
-
-This extends down to plain variable reference, not just calls: any
-variable, erased or not, can be referred to from an erased context. One
-(perhaps confusing) mental model: a non-erased value can be "copied" into
-an erased one for free, but never the reverse — going the other way needs
-something like §21's still-undesigned coercion mechanism, or §14's `is`
-reification.
+Erasure is sound to strip because the language is immutable,
+effect-free, and total (§7–§8): there's no observable difference
+between computing a value and not computing it if the value is never
+needed, so "erased" just means "not needed." It is settled from a
+unit's text alone — a function body over its signature, a run-position
+statement over its `let` binders (§9) — before that unit is compiled or
+run, which is what makes the round trip (KERNEL.md) well-ordered.
 
 ## 21. v2 TODO: coercion and coercibility proofs
 
@@ -858,8 +861,7 @@ actually checks. Recorded as the owner's claim, not a verified result.
 The compiler does bottom-up type inference. Explicit types are required
 only at: ADT definitions, function arguments, function return results,
 and match return results (§11). Everywhere else, inference should
-suffice — the same "annotate only at the boundary" shape as §20's
-bottom-up erasure.
+suffice. Erasure, by contrast, is declared at every binder (§20).
 
 ## 26. Sugar
 
@@ -875,18 +877,18 @@ actually specified.
 **Statements** (§16):
 1. `let` — introduces zero or more bindings, one per value of the
    right-hand side: the binders come first, then any statements, then
-   the final expression as the last item (§11); type/`is` and
-   multiplicity each optional per binder, checked as assertions when
-   present (§9, §14); state-inheriting per
+   the final expression as the last item (§11); multiplicity mandatory
+   and type/`is` optional per binder (§9, §14); state-inheriting per
    binder, from the corresponding right-hand-side entry when that entry
    is in §5's grammar (§3, §9). Zero bindings is useless as the language
    stands, being pure and total, but is expected to matter once linear or
    unique types arrive (§6) — invoking a destructor, or similar.
 2. `def-lvl` — births a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
-   functions at a shared level, written on the form itself; a single
+   functions at a shared level, written on the form itself, each
+   function carrying its own `erased`/`many` marker (§20); a single
    function is just the one-element case. Possibly nested inside another
-   function's body (§9, §16).
+   function's body (§9, §16). A body may be absurd (§37).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); births
@@ -906,9 +908,10 @@ Items 6–9 are also §5's production 4, i.e. they may appear inside a type
 or an `is` expression, not only at a declaration site.
 
 **Other expressions:**
-10. `match` — pattern match; three branch kinds: present, absurd
-    (automatic), absurd (by proof) (§12); its size is fixed by its return
-    annotation (§11, §16).
+10. `match` — pattern match, its scrutinee marked `erased` or `many`
+    (§11, §20); three branch kinds: present, absurd (automatic), absurd
+    (by proof) (§12); its size is fixed by its return annotation (§11,
+    §16).
 11. `matchable-of` — yields the `Matchable` for a bare unapplied type
     constructor from ambient scope (§19).
 12. `level-of` — yields the `Level` a function is defined at, read from
@@ -928,8 +931,7 @@ or an `is` expression, not only at a declaration site.
 17. Value-constructor application (§5, §12).
 18. `values` — packages values into an expression's result; a one-entry
     `values` may be left implicit, and `(values)` is the size-zero
-    expression (§11, §16); entries may carry optional multiplicity
-    assertions (§11).
+    expression (§11, §16).
 19. The three transitivity axioms — `Predates` transitivity, `Subterm`
     transitivity, `Predates`-through-`Subterm` (§8). Special forms for
     now, rather than ordinary prelude functions.
@@ -978,7 +980,10 @@ not just semantically different:
 
 1. **Function-type former**, `Fn` — takes a level (§7), plus a
    telescope where each entry freely chooses its own multiplicity and can
-   be marked `subterm`; produces a function type.
+   be marked `subterm`; produces a function type. The function's own
+   multiplicity is not part of it, being declared on the `def-fns` line
+   (§20), just as a constructor's phantom marker is not part of its
+   `ValCtor` type (item 3).
 2. **Type-constructor-type former**, `TyCtor` — no level (§7); its
    telescope entries carry *no* multiplicity choice at all, since
    type-constructor arguments are unconditionally erased (§12, §20) —
@@ -1041,7 +1046,7 @@ the same way is still open — that's a binding (`let`-like: "give this
 name to this signature"), possibly not the same kind of thing as a
 telescope entry at all.
 
-`let` also runs the other way: `(let p rhs)` puts the names first and the
+`let` also runs the other way: `(let (many p) rhs)` puts the names first and the
 right-hand side last, where the rule above would have the names last.
 Left as is for now — worth reconsidering.
 
@@ -1130,12 +1135,12 @@ drafted (12 opens, 12 closes).
 
 (def-lvl L)
 
-(def-fns L $ length : (erased Type A) (subterm many (List A) xs) ->
+(def-fns L $ many length : (erased Type A) (subterm many (List A) xs) ->
     (many (Nat) n)
-  (match xs ((many (Nat) r))
+  (match many xs (((Nat) r))
     ((Nil a) (Zero))
     ((Cons a hd tl)
-      (let p (prove-subterm tl xs))
+      (let (erased p) (prove-subterm tl xs))
       (Succ $ length A (subterm p) tl))))
 ```
 
@@ -1144,9 +1149,14 @@ drafted (12 opens, 12 closes).
 - `$` (§2) heads both definitions and the `Succ` application, saving a
   paren pair each.
 - `(def-lvl L)` births the level `length` is defined at (§8, §27).
-- `(match xs ((many (Nat) r)) ...)` — §11's result annotation is one
-  parenthesized telescope directly after the scrutinee, so it cannot be
+- `many length` — the function's own multiplicity (§20), in the slot
+  where `many Zero` sits in the `def-adts`.
+- `(match many xs (((Nat) r)) ...)` — the scrutinee's multiplicity comes
+  first (§11, §20); §11's result annotation is one parenthesized
+  telescope of types directly after the scrutinee, so it cannot be
   mistaken for a branch.
+- `(let (erased p) ...)` — every binder declares its multiplicity (§9);
+  a proof is erased.
 - `((Cons a hd tl) ...)` — a branch is a pattern list followed by a body.
   Every field gets a binder, the erased ones included.
 - `(prove-subterm tl xs)` births the proof (§8). Entering the `Cons`
@@ -1174,7 +1184,7 @@ factory.
 ```scheme
 (def-lvl F)
 
-(def-fns F $ map-factory : (erased (Level) M) ->
+(def-fns F $ many map-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A) (erased Type B)
               (many (Fn M (many A x) -> (many B y)) f)
@@ -1182,15 +1192,15 @@ factory.
               (many (List B) ys))
           mapped)
   (def-lvl L)
-  (let pml (prove-predates M L))
-  (def-fns L $ map : (erased Type A) (erased Type B)
+  (let (erased pml) (prove-predates M L))
+  (def-fns L $ many map : (erased Type A) (erased Type B)
       (many (Fn M (many A x) -> (many B y)) f)
       (subterm many (List A) xs) ->
       (many (List B) ys)
-    (match xs ((many (List B) r))
+    (match many xs (((List B) r))
       ((Nil a) (Nil B))
       ((Cons a hd tl)
-        (let p (prove-subterm tl xs))
+        (let (erased p) (prove-subterm tl xs))
         (Cons B (f (predates pml) hd) $ map A B f (subterm p) tl))))
   (values L map))
 ```
@@ -1198,12 +1208,12 @@ factory.
 ```scheme
 (def-lvl I)
 
-(def-fns I $ inc : (many (Nat) n) -> (many (Nat) m)
+(def-fns I $ many inc : (many (Nat) n) -> (many (Nat) m)
   (Succ n))
 
-(let ML map-nat (map-factory I))
+(let (erased ML) (many map-nat) (map-factory I))
 
-(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let (many xs) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
 ```
@@ -1221,10 +1231,10 @@ factory.
   recursion (§9, §27).
 - The usage is a sequence of statements in run position, each elaborated
   and run in turn (§16, §24): calls need no proofs, and every binder is
-  born `Const` (§34). `xs`'s right-hand side ends in a non-erased constructor
-  application, so its boundary erasure is `many` with no annotation, and
-  `map-nat`'s ends in a function call, so its boundary erasures
-  (`erased`, `many`) are read off `map-factory`'s return telescope (§34).
+  born `Const` (§34). Each `let` declares its binders' multiplicities
+  (§9): `ML` and `map-nat` match the `erased`, `many` of `map-factory`'s
+  return telescope, and `xs` is a non-erased constructor application
+  bound `many`.
 - `ML` is bound only because it is the first return; it is erased and
   never used again.
 
@@ -1238,18 +1248,18 @@ The states are `Const` and `Dyn` (§3). This section collects how
 1. **A statement in run position** (§16, §24) — every name such a
    statement introduces is `Const` once the statement has run. A `let`
    is elaborated, stripped and run (KERNEL.md), and its binders take the
-   resulting values, with erasures from the statement's boundary,
-   below. A `def-lvl`, `def-fns` or `def-adts` involves no evaluation:
+   resulting values at their declared multiplicities (§9). A `def-lvl`,
+   `def-fns` or `def-adts` involves no evaluation:
    a definition's value is built by elaboration itself — a function
    value is its own compiled code; a `Level` or a `Matchable` is an
    erased token. Within the bodies of a `def-fns` block the block's own
    functions are `Dyn`, their code not yet complete; they become `Const`
-   after the block. Open: the multiplicity a function's own entry is
-   born with is not recorded anywhere yet.
+   after the block, at the multiplicity each carries on its `def-fns`
+   line (§20).
 2. **`comptime-match` field binding** (§15) — erasure is the field's
    declared multiplicity.
-3. **State-inheriting `let`** (§9) — strictly propagation: the settled
-   erasure is inherited with the rest of the entry.
+3. **State-inheriting `let`** (§9) — strictly propagation of state and
+   value; the binder's multiplicity is its own declaration (§9).
 
 Nothing else births `Const`. Inside a function body or a match branch
 every binding is `Dyn`, nested definitions included: a `def-fns`,
@@ -1288,33 +1298,12 @@ been checked, stripped, and run. The same shape governs the fact table
 (§18): nothing — erasure demands, branch-hypothetical facts — crosses
 an evaluation boundary.
 
-**Run-position boundary erasure.** A run-position `let`'s binders must
-have erasures known at the statement's boundary, since the statement is
-compiled and run before the code after it is elaborated. No new
-annotation form is introduced; the erasures are read off the `let`'s
-own per-binder multiplicity assertions (§9) when present, and otherwise
-off its right-hand side's final form, which must be one of:
-
-1. a `values` whose entries carry multiplicity assertions (§11);
-2. a `match` whose return annotation includes its optional erasures
-   (§11);
-3. a function call — the callee's declared return telescope;
-4. a value-constructor application whose head entry is non-erased — the
-   output is `many`. The requirement is on the head's *own* scope entry
-   (its §12 declaration marker, or the multiplicity of a binding
-   holding a first-class constructor), which is checkable without any
-   `Matchable` in scope; a constructor held at multiplicity `erased` is
-   rejected here, with the `values` annotation as the fallback.
-
-Anything else in final position — an unannotated `values` — is a
-compile error at a run-position boundary, fixed by annotating. A bare
-reference to an earlier entry inherits its state (§9), with nothing to
-run. Within the statement, erasure inference is the ordinary closed-unit
-derivation (§20) against these boundary erasures.
-
-A run-position statement thus resembles an anonymous nullary function:
-erasure declared (or determined) at its boundary, like a signature. Its
-result *type* needs no annotation, though — we believe the only true
+**Run-position boundary erasure.** A run-position `let` is compiled and
+run before the code after it is elaborated, so its binders' erasures
+must be known at its boundary — and they are, being declared on the
+binders (§9). A run-position statement thus resembles an anonymous
+nullary function: erasure declared at its boundary, like a signature.
+Its result *type* needs no annotation, though — we believe the only true
 need for declared return types on functions is self-reference
 (recursion, §25), and a statement, being anonymous and uncallable,
 cannot recurse into itself.
@@ -1376,3 +1365,21 @@ unsettled — one reading executes it in place with only its birth order
 fictionalized (purity arguing the difference is unobservable), while
 the top-level analogy argues for running it at the hoisted-to point and
 caching/closing over its value.
+
+## 37. Absurd functions
+
+A function body may, instead of producing its declared return
+telescope, produce a single value of a type with no constructors (§7's
+zero-variant ADTs, e.g. `False`) — the function-level counterpart of
+§12's absurd-by-proof branch. Assuming §10's consistency, such a
+function can never be called at runtime, since a call would need the
+values from which its body derives the contradiction, so it compiles to
+no code: its function pointer may be null, or anything at all.
+
+The owner's expectation, not yet applied to the rest of the design:
+with absurd functions available, a non-erased `match` with no branches
+— the previous route from an empty type to an arbitrary result — is no
+longer needed.
+
+Open: whether an absurd body needs a marker beyond the type of what it
+returns, a question shared with §12's absurd-by-proof branch.

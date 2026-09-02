@@ -30,18 +30,18 @@ a proof needs §8's transitivity axioms.
 The same program as DESIGN.md §33, which is written without any.
 
 ```scheme
-(def-fns _ $ map-factory : (erased (Level) M) ->
+(def-fns _ $ many map-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A) (erased Type B)
               (many (Fn M (many A x) -> (many B y)) f)
               (subterm many (List A) xs) ->
               (many (List B) ys))
           mapped)
-  (def-fns _ $ map : (erased Type A) (erased Type B)
+  (def-fns _ $ many map : (erased Type A) (erased Type B)
       (many (Fn M (many A x) -> (many B y)) f)
       (subterm many (List A) xs) ->
       (many (List B) ys)
-    (match xs _
+    (match many xs _
       ((Nil a) (Nil B))
       ((Cons a hd tl)
         (Cons B (f (predates _) hd) $ map A B f (subterm _) tl))))
@@ -49,12 +49,12 @@ The same program as DESIGN.md §33, which is written without any.
 ```
 
 ```scheme
-(def-fns _ $ inc : (many (Nat) n) -> (many (Nat) m)
+(def-fns _ $ many inc : (many (Nat) n) -> (many (Nat) m)
   (Succ n))
 
-(let ML map-nat (map-factory (level-of inc)))
+(let (erased ML) (many map-nat) (map-factory (level-of inc)))
 
-(let xs (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let (many xs) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
 ```

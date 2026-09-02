@@ -34,8 +34,8 @@ The dialogue runs both ways: besides sending checked code out to the
 interpreter, the elaborator reads stored values back out of the scope
 environment — head dispatch (§4) needs the actual `Special` or `Macro`
 value of a `Const`, non-erased head. A statement's boundary erasures
-(§34) are settled before it is stripped and run; nothing about a
-statement's erasure depends on code after it.
+are declared on its binders (§9, §34), so nothing about a statement's
+erasure depends on code after it.
 
 In v1 a macro is `List Raw -> Raw` (§9), so expanding one is that
 round-trip with result type `Raw`.
