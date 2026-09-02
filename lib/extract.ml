@@ -34,6 +34,7 @@ type cx = {
   adts : V.adt list;
   ctors : (id, V.ctor) Hashtbl.t;
   defined : (id, string) Hashtbl.t;
+  captured : (V.value * string) list ref;
   closures : (V.closure * string) list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
@@ -82,13 +83,14 @@ and closure cx cl =
       List.assq cl named
 
 and define cx x v =
-  match Hashtbl.find_opt cx.defined x with
+  let top = IntMap.mem x cx.env.values in
+  match if top then Hashtbl.find_opt cx.defined x else List.assq_opt v !(cx.captured) with
   | Some name -> name
   | None ->
       let e = value cx v in
-      let name = var x in
+      let name = if top then var x else Printf.sprintf "%s_%d" (var x) (List.length !(cx.captured)) in
       Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name e);
-      Hashtbl.replace cx.defined x name;
+      if top then Hashtbl.replace cx.defined x name else cx.captured := (v, name) :: !(cx.captured);
       name
 
 and fn cx scope name f =
@@ -189,7 +191,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; ctors; defined; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; ctors; defined; captured = ref []; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in

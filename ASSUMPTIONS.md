@@ -514,7 +514,12 @@ in both modes.
     `elab_def_fns`). So the closures sharing an environment are written
     as one `let rec ... and ...`, and every other constant is a named
     `let` in dependency order, which is birth order
-    (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). A top-level `def-fns` function met as a value refers to
+    (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). A
+    top-level entry has one value and is named once by its id; a
+    factory's parameter or local has one value per activation, so its
+    captured values are named per value (`tests/io_factory_twice.sl`,
+    which caught the id-keyed version giving both closures the last
+    value). A top-level `def-fns` function met as a value refers to
     its `let rec` name. The final expression's value is embedded too,
     being computed at elaboration like any run-position expression; so
     a printed final value is printed from data, a `String -> String`
@@ -599,7 +604,7 @@ in both modes.
     field whose type stays unknown (an existential) prints `?`; an
     untagged union whose index is not forced prints through its first
     candidate constructor. No test hits these.
-67. **Testing.** For every test that runs (71 of 118; those expecting an
+67. **Testing.** For every test that runs (72 of 119; those expecting an
     error need no extraction) and each extern mode, `test/runtest.ml`
     extracts the elaborated program, drops the final expressions of the
     `needs:` files from the trace (the interpreter runner discards their
