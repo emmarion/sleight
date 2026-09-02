@@ -24,6 +24,22 @@ it needs: `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is the line the test must print, and `; error: text`
 means it must fail with a message mentioning that text.
 
+## How it runs a program
+
+The reader turns the file into s-expressions. The elaborator walks
+them with a scope of entries and a fact table (types and `is` rules,
+read canonically), dispatching each form on its head as DESIGN.md
+section 4 describes: constructor and function application by the
+head's type, special forms by the head's Const value. Elaboration
+produces, for every expression, the terms and types of its values and
+a piece of post-erasure code in which erased positions are gone. A
+statement in run position is elaborated, run at once by the evaluator,
+and its binders are born Const with the resulting values (sections 16
+and 34); inside function bodies and match branches statements compile
+to code instead. The evaluator is a plain recursive interpreter over
+that code; values are constructor trees, closures and a token standing
+for anything erased. Nothing is optimized.
+
 ## Layout
 
 - `lib/reader.ml` — s-expressions with `$` (DESIGN.md section 2)
