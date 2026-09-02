@@ -507,10 +507,14 @@ in both modes.
     cl<n>_<name>` over its captured environment: its free variables
     are the values captured at closure time, embedded the same way, and
     closures that reach one another through their environments land in
-    one `let rec` group, so mutual recursion survives (a data constant
-    holding a closure, met inside such a group, is embedded inline
-    rather than named, to keep the group well-founded; no test reaches
-    that case). A top-level `def-fns` function met as a value refers to
+    one `let rec` group, so mutual recursion survives. A constant met
+    inside such a group is named and placed before the group when it is
+    closure-free, and written inline in the body when it holds a
+    closure, since that closure joins the open group and a name placed
+    before the group could not see it; `tests/io_closure_in_data.sl`
+    reaches this through a factory parameter, the only way to, since a
+    top-level constant a closure mentions is already named while its
+    factory's body is written. A top-level `def-fns` function met as a value refers to
     its `let rec` name. The final expression's value is embedded too,
     being computed at elaboration like any run-position expression; so
     a printed final value is printed from data, a `String -> String`
@@ -595,7 +599,7 @@ in both modes.
     field whose type stays unknown (an existential) prints `?`; an
     untagged union whose index is not forced prints through its first
     candidate constructor. No test hits these.
-67. **Testing.** For every test that runs (70 of 117; those expecting an
+67. **Testing.** For every test that runs (71 of 118; those expecting an
     error need no extraction) and each extern mode, `test/runtest.ml`
     extracts the elaborated program, drops the final expressions of the
     `needs:` files from the trace (the interpreter runner discards their

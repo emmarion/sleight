@@ -1,0 +1,34 @@
+; exit: 9
+; A factory's parameter holds a closure, and the factory's own closure matches on it: extraction must hoist
+; both closures into one group and inline the captured data around the inner one (ASSUMPTIONS.md 61).
+
+(def-lvl F)
+(def-fns F $ many adder : (many (Nat) n) -> (erased (Level) L) (many (Fn L (many (Nat) m) -> (many (Nat) r)) add-n)
+  (def-lvl L)
+  (let (erased nl) (prove-predates nat-lvl L))
+  (def-fns L $ many add-n : (many (Nat) m) -> (many (Nat) r)
+    (nat-add (predates nl) n m))
+  (values L add-n))
+
+(let (erased A) (many add2) (adder 2))
+
+(def-lvl G)
+(def-fns G $ many applier : (many (Nat) k) (many (Maybe (Fn A (many (Nat) m) -> (many (Nat) r))) boxed) ->
+    (erased (Level) L) (many (Fn L (many (Nat) x) -> (many (Nat) y)) g)
+  (def-lvl L)
+  (let (erased al) (prove-predates A L))
+  (let (erased nl) (prove-predates nat-lvl L))
+  (def-fns L $ many g : (many (Nat) x) -> (many (Nat) y)
+    (match many boxed (((Nat) r))
+      ((None a) x)
+      ((Some a f) (f (predates al) (nat-add (predates nl) k x)))))
+  (values L g))
+
+(let (erased B) (many g3) (applier 3 (Some (Fn A (many (Nat) m) -> (many (Nat) r)) add2)))
+(def-lvl P)
+(let (erased bp) (prove-predates B P))
+(let (erased u8p) (prove-predates u8-lvl P))
+(def-fns P $ many k : (many (Maybe (String)) line) -> (many (IO P) next)
+  (Exit P (nat-to-u8 (predates u8p) (g3 (predates bp) 4))))
+
+(ReadLine P k)
