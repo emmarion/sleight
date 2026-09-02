@@ -538,7 +538,9 @@ and elab_match tele env expect l args =
         let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
         let fvars = List.rev_map (fun x -> Var x) fids in
         let forced =
-          try Some (unify (unify envb sres.term (App (Var c, List.rev fvars))) sres.ty (instantiate fvars ret)) with Contradiction _ -> None
+          try Some (unify (unify envb sres.term (App (Var c, List.rev fvars))) sres.ty (instantiate fvars ret)) with
+          | Contradiction _ -> None
+          | Error (0, msg) -> error bl "%s" msg
         in
         let result =
           match (kind, forced) with
@@ -646,8 +648,9 @@ and elab_comptime_match env l args =
       let env, fids = open_tele env ~names tele in
       let env = List.fold_left2 (fun env x v -> set_state env x (Const (if (entry env x).mult = Many then v else V.VToken))) env fids field_values in
       let fvars = List.rev_map (fun x -> Var x) fids in
-      (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id)
-       with Contradiction _ -> raise (BranchAbsurd env))
+      (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
+       | Contradiction _ -> raise (BranchAbsurd env)
+       | Error (0, msg) -> error l "%s" msg)
   | _ -> error l "malformed comptime-match: expected (comptime-match x (C field ...))"
 
 and elab_def_fns env l args =

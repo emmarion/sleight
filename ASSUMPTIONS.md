@@ -84,8 +84,7 @@ ground.
     `coercible-of` returns the first anonymous `Coercible` proof about
     the function found in scope.
 18. **Warnings** (a phantom constructor with a `many` field) go to
-    stderr and do not stop elaboration. Errors from unification carry
-    line 0, having no source position of their own.
+    stderr and do not stop elaboration.
 
 ## Type checking
 
