@@ -203,6 +203,13 @@ ground.
     variable, and the current level; `(subterm _)` proves `Subterm`
     between the annotated argument and the enclosing subterm parameter
     at the same subterm index. All naive, as SUGAR.md says.
+    The telescope `_` inherits from a function body is the return
+    telescope with the parameters substituted in; an earlier version
+    substituted without regard to each entry's depth, so a second
+    return entry mentioning the parameters (an `(Add a b c)` proof after
+    the sum `c`, say) was checked against the wrong statement
+    (`tests/nat_add.sl`). Fixed; an explicit annotation was never
+    affected.
 
 ## Soundness fixes from an audit session
 

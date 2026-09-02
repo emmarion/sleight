@@ -36,14 +36,12 @@ and map_tele f depth es =
   List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars f d) e.sg })) depth es
 
 (* [args] are closed terms, innermost binder first. *)
-let instantiate args t =
+let subst args d t =
   let n = List.length args in
-  map_vars
-    (fun d t ->
-      match t with
-      | Bound k when k >= d -> if k - d < n then List.nth args (k - d) else Bound (k - n)
-      | t -> t)
-    0 t
+  match t with Bound k when k >= d -> if k - d < n then List.nth args (k - d) else Bound (k - n) | t -> t
+
+let instantiate args t = map_vars (subst args) 0 t
+let instantiate_tele args tele = snd (map_tele (subst args) 0 tele)
 
 (* [ids] innermost first: the head of the list becomes [Bound 0]. *)
 let abstract ids t =

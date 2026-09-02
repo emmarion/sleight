@@ -721,7 +721,7 @@ and elab_def_fns env l args =
             (envb, V.CAbsurd))
           else
             let pvars = List.rev_map (fun x -> Var x) pids in
-            let tele = List.map (fun e -> { e with sg = map_sg (instantiate pvars) e.sg }) rets in
+            let tele = instantiate_tele pvars rets in
             let envb, ress, code = elab_body ~tele envb (List.map (fun e -> if mult = Erased then Erased else e.mult) rets) fl body in
             check_results envb fl ~ids:pvars rets ress;
             (envb, if mult = Erased then V.CErased else code)
