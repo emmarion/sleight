@@ -181,9 +181,10 @@ inconsistent or silent.
     in the body, while parameter names are. Not stated.
 27. §16 requires the file to end in a size-one expression; §40's
     fragment ends in a statement.
-28. `lib/kernel_input.ml` still carries `Comptime` and `Inacc` plus
-    optional multiplicities on binders and match returns, all removed
-    by §16, §20 and §35. README.md is the dune hello-world stub.
+28. `lib/kernel_input.ml` (since deleted, having stayed unused) carried
+    `Comptime` and `Inacc` plus optional multiplicities on binders and
+    match returns, all removed by §16, §20 and §35. README.md is the
+    dune hello-world stub.
 
 The three items most likely to make a handoff fail outright appear to
 be 1, 13 and 14, since an implementer would have to invent core

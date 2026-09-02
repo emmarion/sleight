@@ -198,8 +198,7 @@ ground.
 
 ## Not implemented
 
-36. Macros (`Macro`, `Raw`, the expansion limit). `lib/kernel_input.ml`
-    is untouched and unused (SR 28). The `--repl` flag reads one form
+36. Macros (`Macro`, `Raw`, the expansion limit). The `--repl` flag reads one form
     at a time and prints every expression's value, which goes beyond
     section 16's one-expression file; it is a convenience only.
 
