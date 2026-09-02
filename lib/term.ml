@@ -114,7 +114,7 @@ let to_string name_of t =
         let bound, ps = tele bound ps in
         let _, rs = tele bound rs in
         "(Fn " ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
-    | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele bound ps) @ [ "->"; "Type" ]) ^ ")"
+    | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele ~marks:false bound ps) @ [ "->"; "Type" ]) ^ ")"
     | ValCtor (ps, r) ->
         let bound', ps = tele bound ps in
         "(ValCtor " ^ String.concat " " (ps @ [ "->"; go bound' r ]) ^ ")"
@@ -122,12 +122,12 @@ let to_string name_of t =
         "(Matchable " ^ String.concat " "
           (disc_name d :: go bound t :: List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
         ^ ")"
-  and tele bound es =
+  and tele ?(marks = true) bound es =
     List.fold_left_map
       (fun bound e ->
         let n = Option.value e.name ~default:"_" in
         let body = match e.sg with Ty t -> go bound t ^ " " ^ n | Is t -> go bound t ^ " is " ^ n in
-        let marks = (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " in
+        let marks = if marks then (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " else "" in
         (e.name :: bound, "(" ^ marks ^ body ^ ")"))
       bound es
   in

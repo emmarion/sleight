@@ -66,7 +66,7 @@ let rec unify env depth a b =
         if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
         add_rule env x t
     | App (h, xs), App (k, ys) when List.length xs = List.length ys ->
-        List.fold_left2 (unify_at depth) (unify env depth h k) xs ys
+        List.fold_left2 (fun env a b -> unify env depth a b) (unify env depth h k) xs ys
     | Fn (l, ps, rs), Fn (m, qs, ss) ->
         let env, d = unify_tele (unify env depth l m) depth ps qs in
         fst (unify_tele env d rs ss)
@@ -79,8 +79,6 @@ let rec unify env depth a b =
           (fun env (m, c) (n, d) -> if m <> n then contradiction () else unify env depth c d)
           (unify env depth t u) cs ds
     | _ -> contradiction ()
-
-and unify_at depth env a b = unify env depth a b
 
 and unify_tele env depth ps qs =
   if not (List.length ps = List.length qs && List.for_all2 (fun p q -> p.subterm = q.subterm && p.mult = q.mult) ps qs)
