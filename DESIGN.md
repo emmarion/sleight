@@ -426,9 +426,9 @@ involved.
 constructor is itself erased; names all tentative, see CLAUDE.md §10):
 1. **present** — an ordinary branch.
 2. **absurd, automatic** — a branch refuted structurally by the type
-   checker; written with special syntax, likely omitting the
-   would-be-introduced variable names (fewer parens, etc.), since there's
-   nothing to bind.
+   checker, written `(absurd C)`: the token, then the bare constructor
+   name, with no fields and no body, since there's nothing to bind
+   (§27).
 3. **absurd, by proof** — a branch that, instead of producing the match's
    expected result, must produce a value of the empty ADT (§7's
    zero-variant type, e.g. `False`) — the programmer supplies a proof of
@@ -995,7 +995,9 @@ they annotate a form rather than heading a list):
     call's proof (§9).
 36. `absurd` — marks a function, on its `def-fns` line, or a match
     branch, before its pattern, as producing a value of a
-    zero-constructor type in place of its declared result (§12, §37).
+    zero-constructor type in place of its declared result (§12, §37);
+    `(absurd C)`, a bare constructor with no fields and no body, is the
+    automatically refuted branch (§12).
 
 ## 28. ASCII only
 
