@@ -17,10 +17,12 @@ dune test
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. A file's final expression is printed, unless its
-value is a function from `String` to `String`: then stdin is fed to it
-and its result written to stdout (`tests/main_reverse.sl`). Numerals and
-`#\c` character literals are prelude-backed sugar (ASSUMPTIONS.md
-47-55). Every program starts in the scope of the source
+value is a function from `String` to `String`, when stdin is fed to it
+and its result written to stdout (`tests/main_reverse.sl`), or an `IO`
+value, when the driver performs its requests one by one
+(`tests/io_echo.sl`; arguments after `--` on the command line are the
+program's). Numerals, `#\c` character literals and `"..."` string
+literals are prelude-backed sugar (ASSUMPTIONS.md 47-60). Every program starts in the scope of the source
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models. A file is a sequence of statements,
@@ -28,9 +30,11 @@ optionally ending in an expression whose value is printed.
 
 `dune test` runs every `tests/*.sl`, once with the FFI and once
 without. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
-`; expect: text` is the line the test must print, `; stdin: text` a
-line of input for a `String -> String` program, and `; error: text`
-means it must fail with a message mentioning that text.
+`; expect: text` is a line the test must print, `; stdin: text` a
+line of its input, `; args: a b` its arguments, `; stderr: text` a line
+it must write to stderr, `; exit: n` the code an `IO` program must exit
+with, and `; error: text` means it must fail with a message mentioning
+that text.
 
 ## How it runs a program
 
@@ -60,6 +64,6 @@ erased. Nothing is optimized.
 - `lib/prelude.sl`, `lib/ffi.ml` — the source prelude and the extern implementations (section 41)
 - `lib/literal.ml` — numeral and character literals and what they expand to
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
-- `lib/program.ml` — running a `String -> String` final value over stdin
+- `lib/program.ml` — running a `String -> String` or `IO` final value against the world
 - `bin/main.ml` — command line driver
 - `tests/` — DESIGN.md's worked examples and further tests

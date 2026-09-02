@@ -1,7 +1,8 @@
 (* Runs every tests/*.sl. Directives in leading comments:
    "; needs: a b" runs tests/a.sl and tests/b.sl first in the same scope;
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
-   "; stdin: text" lines, joined by newlines, are the input a String -> String program reads. *)
+   "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
+   "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with. *)
 open Speciallang
 
 let dir = "../tests"
@@ -24,11 +25,16 @@ let rec run_test name =
 
 and run_mode src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
-  let printed = Buffer.create 64 in
-  let output = Buffer.add_string printed in
-  let print s = output (s ^ "\n") in
-  let input () = String.concat "\n" (directive src "stdin") in
-  let consume = Program.consume ~input ~output ~print in
+  let printed = Buffer.create 64 and errors = Buffer.create 64 and code = ref 0 in
+  let input = String.concat "\n" (directive src "stdin") in
+  let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
+  let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in
+  let world =
+    { Program.input = (fun () -> input); read_line; out = Buffer.add_string printed; err = Buffer.add_string errors;
+      args = List.concat_map (String.split_on_char ' ') (directive src "args"); exit = (fun n -> code := n);
+      print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
+  in
+  let consume = Program.consume world in
   let outcome =
     try
       let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
@@ -46,12 +52,18 @@ and run_mode src =
     let rec go i = i + n <= h && (String.sub hay i n = needle || go (i + 1)) in
     go 0
   in
-  let expect = String.concat "" (List.map (fun s -> s ^ "\n") (directive src "expect")) in
-  let errors = directive src "error" in
+  let lines key = String.concat "" (List.map (fun s -> s ^ "\n") (directive src key)) in
+  let expect = lines "expect" and stderr = lines "stderr" in
+  let exit = match directive src "exit" with [ n ] -> int_of_string n | _ -> 0 in
+  let failures = directive src "error" in
   match outcome with
-  | Ok out when errors = [] && out = expect -> None
-  | Ok out -> Some ("ran, printed:\n" ^ out ^ (if errors = [] then "expected:\n" ^ expect else "expected an error mentioning " ^ String.concat ", " errors))
-  | Error msg when List.for_all (contains msg) errors && errors <> [] -> None
+  | Ok out when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit -> None
+  | Ok out ->
+      Some
+        (Printf.sprintf "ran, printed:\n%sstderr:\n%sexit %d\n%s" out (Buffer.contents errors) !code
+           (if failures = [] then Printf.sprintf "expected:\n%sstderr:\n%sexit %d" expect stderr exit
+            else "expected an error mentioning " ^ String.concat ", " failures))
+  | Error msg when List.for_all (contains msg) failures && failures <> [] -> None
   | Error msg -> Some ("failed: " ^ msg)
 
 let () =

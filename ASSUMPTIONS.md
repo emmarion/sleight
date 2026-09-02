@@ -34,9 +34,10 @@ ground.
    `Lt`, `Double`, `Pow2`, `Dec`, `U8`, `Bin`, `Numeral`, `Char`,
    `String`, their functions, and the levels `nat-lvl`, `pow-lvl`,
    `mod-lvl`, `u8-lvl`, `bin-lvl`, `str-lvl`, all as ordinary,
-   shadowable entries; a user function calling `nat-add` proves
-   `(prove-predates nat-lvl L)`. `List` is not built in; the examples
-   define it (SR 12).
+   shadowable entries, and since item 58 also `Unit`, `Maybe`,
+   `Result`, `List` and `IO`; a user function calling `nat-add` proves
+   `(prove-predates nat-lvl L)`. The examples still define their own
+   `List`, shadowing the prelude's (SR 12).
 5. **Names of the `Special` variants** are the form name prefixed with
    `%` (`%let`, `%match`, ...), so that the entry `let` — whose value is
    `(%let)` — is distinct from the constructor. Only the prefix is an
@@ -420,3 +421,61 @@ literals as open.
 55. **Location-free errors** (the literal-as-name check lives in
     `Env.bind`, which has no line) are reported at the enclosing
     top-level form's line.
+
+## IO programs (section 16)
+
+Asked for by the owner in chat: an ADT read by the driver, "quasi
+monad", efficient, able to read a whole file by name, write a whole
+string to a file, write to stdout or stderr with a flush, read a line
+from stdin, read the command-line arguments and exit with a code, kept
+alongside the `String -> String` form as an optional alternative. The
+shape below is the session's.
+
+56. **`IO` is a source enum in the prelude, indexed by a level**:
+    `(IO L)`. Each constructor carries what happens next, either the
+    next `(IO L)` value outright (`WriteOut`, `WriteErr`, whose effects
+    have no answer) or a continuation `(Fn L (many answer) -> (many
+    (IO L) next))` the driver applies to the request's answer
+    (`ReadLine` with `(Maybe (String))`, `ReadFile` with `(Result
+    (String))`, `WriteFile` with `(Result (Unit))`, `GetArgs` with
+    `(List (String))`); `Exit` carries a `U8`. The driver
+    (`Program.run_io`) loops: destruct, perform, apply, repeat, flushing
+    after every write. No step recurses, so an unbounded interaction is
+    the driver's loop over a total function that returns a node holding
+    itself as the continuation, which is why nothing coinductive is
+    needed and why there is no `bind`: composing two `IO` values would
+    need a lambda and a recursion the termination discipline cannot
+    admit. Not extern, since the FFI never sees it; the driver reads it
+    through the prelude's constructors.
+
+57. **The level index is load-bearing.** A continuation's `Fn` type
+    names the level its function was defined at, and `subterm` marks
+    are part of an `Fn` type, so a recursive helper cannot itself be a
+    continuation and a same-level wrapper cannot call it. The pattern
+    the tests use (`tests/io_file_args.sl`): the helper sits at a level
+    below the IO level, is defined after that level and its functions
+    exist, and references those functions only as values, while a
+    continuation at the IO level calls the helper with a `Predates`
+    proof. A cost of the design, recorded rather than smoothed over.
+
+58. **`Unit`, `Maybe`, `Result` and `List` join the prelude**, `List`
+    exactly as section 31 defines it, so a program that defines its own
+    (every `; needs: list` test) shadows the prelude's; that changes
+    item 4's remark that `List` is not built in. `Result`'s failure
+    carries a `String` message, the operating system's for a file that
+    cannot be read or written.
+
+59. **Program arguments** are what follows `--` on the interpreter's
+    command line; `; args: a b` supplies them to a test, `; stderr:
+    text` lines are what it must write to stderr and `; exit: n` the
+    code it must exit with (0 when absent). `ReadLine` strips the
+    newline and answers `None` at end of input; the whole-stdin
+    `String -> String` form is unchanged.
+
+60. **String literals** `"..."` were added for the IO tests' paths and
+    messages: the reader accepts `\n`, `\t`, `\"` and `\\`, and a literal
+    is sugar for its characters consed up with `SCons`, each a
+    character literal hoisted first, so it is `is`-transparent like a
+    character literal (`tests/string_literal.sl`). Interned by content.
+    The hoisted `let` builds the value by consing, quadratic under the
+    FFI, which only matters for very long literals.

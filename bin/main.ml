@@ -13,14 +13,17 @@ let report path f =
   | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n%!" path msg; None
   | Eval.Runtime msg -> Printf.eprintf "%s: runtime error: %s\n%!" path msg; None
 
-let consume = Program.consume ~input:(fun () -> In_channel.input_all stdin) ~output:print_string ~print:print_endline
+let world args =
+  let flush_to oc s = output_string oc s; flush oc in
+  { Program.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
+    out = flush_to stdout; err = flush_to stderr; args; exit; print = print_endline }
 
-let run env path =
+let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else read_file path in
   match report path (fun () -> Some (Elab.run_toplevel ~consume env (Reader.parse src))) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
-let repl env =
+let repl consume env =
   let balance s = String.fold_left (fun n c -> match c with '(' -> n + 1 | ')' -> n - 1 | _ -> n) 0 s in
   let rec form buf =
     print_string (if Buffer.length buf = 0 then "> " else "  ");
@@ -37,13 +40,16 @@ let repl env =
   in
   loop env
 
+(* Arguments after "--" belong to the program (its GetArgs request); the rest are files and flags. *)
 let () =
-  let args = List.tl (Array.to_list Sys.argv) in
+  let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
+  let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
+  let consume = Program.consume (world program_args) in
   let env = Builtin.load () in
   match List.filter (fun a -> a <> "--repl" && a <> "--no-extern") args with
-  | [] when not (flag "--repl") -> ignore (run env "-")
+  | [] when not (flag "--repl") -> ignore (run consume env "-")
   | files ->
-      let env = List.fold_left run env files in
-      if flag "--repl" then repl env
+      let env = List.fold_left (run consume) env files in
+      if flag "--repl" then repl consume env

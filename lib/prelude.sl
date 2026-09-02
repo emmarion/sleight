@@ -177,3 +177,38 @@
   (match many a _
     ((SNil) b)
     ((SCons ch rest) (SCons ch (str-append (subterm _) rest b)))))
+
+(def-adts $ Unit : -> Type
+  enum
+  (many MkUnit : -> (Unit)))
+
+(def-adts
+  (Maybe : (Type A) -> Type
+    enum
+    (many None : (erased Type A) -> (Maybe A))
+    (many Some : (erased Type A) (many A a) -> (Maybe A))))
+
+(def-adts
+  (Result : (Type A) -> Type
+    enum
+    (many Ok : (erased Type A) (many A a) -> (Result A))
+    (many Fail : (erased Type A) (many (String) message) -> (Result A))))
+
+(def-adts
+  (List : (Type A) -> Type
+    enum
+    (many Nil : (erased Type A) -> (List A))
+    (many Cons : (erased Type A) (many A head) (many (List A) tail) -> (List A))))
+
+; A program's requests to the driver (ASSUMPTIONS.md): each carries what comes next, as a value or as a
+; continuation the driver applies to the request's answer, so a step never recurses and the driver loops.
+(def-adts
+  (IO : ((Level) L) -> Type
+    enum
+    (many Exit : (erased (Level) L) (many (U8) code) -> (IO L))
+    (many WriteOut : (erased (Level) L) (many (String) text) (many (IO L) next) -> (IO L))
+    (many WriteErr : (erased (Level) L) (many (String) text) (many (IO L) next) -> (IO L))
+    (many ReadLine : (erased (Level) L) (many (Fn L (many (Maybe (String)) line) -> (many (IO L) next)) k) -> (IO L))
+    (many ReadFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (String)) contents) -> (many (IO L) next)) k) -> (IO L))
+    (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))
+    (many GetArgs : (erased (Level) L) (many (Fn L (many (List (String)) args) -> (many (IO L) next)) k) -> (IO L))))

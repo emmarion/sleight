@@ -894,12 +894,14 @@ let rec hoist env lit =
   let key = Literal.key lit in
   if List.mem_assoc key env.literals then env
   else
-    let env = match lit with Literal.Char c -> hoist env (Literal.Numeral (Z.of_int c)) | Literal.Numeral _ -> env in
+    let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
+    let env = List.fold_left hoist env parts in
     let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
     let ids =
       match (lit, frame.scope) with
       | Literal.Numeral _, v :: n :: _ -> (n, v)
       | Literal.Char c, ch :: _ -> (ch, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
+      | Literal.Str _, s :: _ -> (s, s)
       | _ -> assert false
     in
     { frame with scope = env.scope; literals = (key, ids) :: frame.literals }

@@ -22,6 +22,30 @@ let tokenize src =
     if c = '\n' then (incr line; incr i)
     else if c = ' ' || c = '\t' || c = '\r' then incr i
     else if c = ';' then while !i < n && src.[!i] <> '\n' do incr i done
+    else if c = '"' then begin
+      let buf = Buffer.create 16 in
+      let rec go () =
+        if !i >= n then raise (Syntax (!line, "unterminated string literal"));
+        let c = src.[!i] in
+        incr i;
+        if c = '"' then ()
+        else if c = '\\' then begin
+          if !i >= n then raise (Syntax (!line, "unterminated string literal"));
+          let e = src.[!i] in
+          incr i;
+          (match e with
+           | 'n' -> Buffer.add_char buf '\n'
+           | 't' -> Buffer.add_char buf '\t'
+           | '"' | '\\' -> Buffer.add_char buf e
+           | _ -> raise (Syntax (!line, "unknown escape \\" ^ String.make 1 e)));
+          go ()
+        end
+        else (if c = '\n' then incr line; Buffer.add_char buf c; go ())
+      in
+      incr i;
+      go ();
+      push (Word (Literal.quote (Buffer.contents buf)))
+    end
     else if c = '(' then (push LParen; incr i)
     else if c = ')' then (push RParen; incr i)
     else begin
