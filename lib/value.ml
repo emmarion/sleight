@@ -18,7 +18,7 @@ and value =
   | VFn of closure
   | VToken
 
-and payload = Int of Z.t | Slice of string * int * int
+and payload = Int of Z.t | Slice of Ffi_core.slice
 
 and fn = { fname : string; params : id list; body : code; impl : (value list -> value list) option }
 and closure = { fn : fn; env : venv Lazy.t }
