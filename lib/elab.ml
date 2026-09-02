@@ -25,12 +25,16 @@ let special_of env raw =
 
 let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | _ -> None
+let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error loc "expected a multiplicity, got %s" (Reader.show raw)
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
+let at loc f = try f () with Error (0, msg) -> error loc "%s" msg
 let var env loc n =
   match Literal.classify n with
   | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s" n)
   | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
   | `Bad msg -> error loc "%s" msg
+
+let tyname env loc raw = var env loc (atom_or loc raw "a type constructor name")
 
 let check what env loc actual expected =
   if not (equal (canon env actual) (canon env expected)) then
@@ -77,8 +81,12 @@ let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (name_of env c)
 
 let tid_of env loc c = match canon env (snd (ctor_type env loc c)) with App (Var t, _) -> t | _ -> assert false
-let marker ctors c = Option.map fst (List.find_opt (fun (_, c') -> c' = Var c) ctors)
-let phantom env loc c = let _, _, ctors = find_matchable env loc (tid_of env loc c) in marker ctors c = Some Erased
+let marker env loc tid ctors c =
+  match List.find_opt (fun (_, c') -> c' = Var c) ctors with
+  | Some (m, _) -> m
+  | None -> error loc "%s is not a constructor of %s" (name_of env c) (name_of env tid)
+
+let phantom env loc c = let tid = tid_of env loc c in let _, _, ctors = find_matchable env loc tid in marker env loc tid ctors c = Erased
 
 (* Each constructor of a Matchable with its phantom marker and its number of many fields; the representation follows (section 38). *)
 let shapes env loc ctors =
@@ -148,14 +156,16 @@ let marks env allowed items =
   go [] items
 
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
-let open_tele env ?(named = true) ?names ?mults ?(state = Dyn) ?(ids = []) tele =
+let anon tele = List.map (fun _ -> None) tele
+
+let open_tele env ?names ?mults ?(state = Dyn) ?(ids = []) tele =
   let nth l i = Option.map (fun l -> List.nth l i) l in
   let _, env, _, fresh =
     List.fold_left
       (fun (i, env, ids, fresh) e ->
         let sg = map_sg (instantiate ids) e.sg in
         let ty, rule = match sg with Ty t -> (t, None) | Is t -> (infer env 0 t, Some t) in
-        let name = match nth names i with Some n -> n | None -> if named then e.name else None in
+        let name = match nth names i with Some n -> n | None -> e.name in
         let mult = match nth mults i with Some m -> m | None -> e.mult in
         let x, env = bind env name mult state ty ~rule in
         (i + 1, env, Var x :: ids, x :: fresh))
@@ -169,36 +179,44 @@ let rec elab_term env raw =
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
-      | Some Sp.Fn -> elab_fn_type env l args
-      | Some Sp.TyCtor ->
-          let ps, ret = split_arrow env l args in
-          let env', _, tele = elab_tele env ~mults:(no_mults l) ps in
-          (match ret with [ r ] -> check_equal env' l (elab_term env' r) type_term | _ -> error l "TyCtor returns Type");
-          TyCtor tele
-      | Some Sp.ValCtor ->
-          let ps, ret = split_arrow env l args in
-          let env', ids, tele = elab_tele env ps in
-          let ret = match ret with [ r ] -> elab_type env' r | _ -> error l "ValCtor returns one type" in
-          ValCtor (tele, abstract (List.rev ids) ret)
-      | Some Sp.Matchable -> (
-          match args with
-          | d :: t :: cs ->
-              let ctor = function
-                | List (l, [ m; c ]) -> (Option.get (mult_of env m), Var (ctor_var env l c))
-                | r -> error (loc r) "expected (multiplicity Constructor)"
-              in
-              Matchable (disc_of env l d, Var (var env l (atom_or l t "a type constructor name")), List.map ctor cs)
-          | _ -> error l "malformed Matchable")
-      | Some Sp.Newtype -> (
-          match args with
-          | [ t ] -> Newtype (Var (var env l (atom_or l t "a type constructor name")))
-          | _ -> error l "malformed Newtype")
-      | Some sp -> error l "%s cannot appear in a type" (Sp.name sp)
+      | Some sp -> elab_type_form env l sp args
       | None -> (
           let h = Var (var env l (atom_or l head "a constructor")) in
           match canon env (infer env l h) with
           | TyCtor tele | ValCtor (tele, _) -> App (h, List.rev (elab_term_args env l tele args))
           | ty -> error l "%s has type %s and cannot be applied in a type" (show env h) (show env ty)))
+
+and elab_type_form env l sp args =
+  match (sp, args) with
+  | Sp.Fn, lv :: rest ->
+      let lv = elab_term env lv in
+      check_type env l (infer env l lv) Prelude.level_term;
+      let ps, rs = split_arrow env l rest in
+      let env, ids, params = elab_tele env ~subterm:true ps in
+      let _, _, rets = elab_tele env ~ids:(List.rev ids) rs in
+      Fn (lv, params, rets)
+  | Sp.TyCtor, _ -> let ps, ret = split_arrow env l args in elab_tyctor env l ps ret
+  | Sp.ValCtor, _ -> let _, _, _, t = elab_valctor env l args in t
+  | Sp.Matchable, d :: t :: cs ->
+      let ctor = function
+        | List (l, [ m; c ]) -> (mult_or env l m, Var (ctor_var env l c))
+        | r -> error (loc r) "expected (multiplicity Constructor)"
+      in
+      Matchable (disc_of env l d, Var (tyname env l t), List.map ctor cs)
+  | Sp.Newtype, [ t ] -> Newtype (Var (tyname env l t))
+  | (Sp.Fn | Sp.Matchable | Sp.Newtype), _ -> error l "malformed %s" (Sp.name sp)
+  | _ -> error l "%s cannot appear in a type" (Sp.name sp)
+
+and elab_tyctor env l ps ret =
+  let env', _, tele = elab_tele env ~mults:(no_mults l) ps in
+  (match ret with [ r ] -> check_equal env' l (elab_term env' r) type_term | _ -> error l "TyCtor returns Type");
+  TyCtor tele
+
+and elab_valctor env l items =
+  let ps, ret = split_arrow env l items in
+  let env', ids, tele = elab_tele env ps in
+  let ret = match ret with [ r ] -> elab_type env' r | _ -> error l "a constructor returns one type" in
+  (env', tele, ret, ValCtor (tele, abstract (List.rev ids) ret))
 
 and disc_of env l d = match special_of env d with Some Sp.Enum -> Enum | Some Sp.Union -> Union | _ -> error l "expected enum or union"
 
@@ -206,17 +224,6 @@ and elab_type env raw =
   let t = elab_term env raw in
   check_type env (loc raw) (infer env (loc raw) t) type_term;
   t
-
-and elab_fn_type env l args =
-  match args with
-  | lv :: rest ->
-      let lv = elab_term env lv in
-      check_type env l (infer env l lv) Prelude.level_term;
-      let ps, rs = split_arrow env l rest in
-      let env, ids, params = elab_tele env ~subterm:true ps in
-      let _, _, rets = elab_tele env ~ids:(List.rev ids) rs in
-      Fn (lv, params, rets)
-  | [] -> error l "Fn needs a level"
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
@@ -335,45 +342,35 @@ and elab_call cc env expect l callee hcode lv params rets args arg =
   let env, acc, codes = check_args env l params args arg in
   let arg_terms = List.rev acc in
   let subterm_params = List.filter_map (fun (i, e) -> if e.subterm then Some i else None) (List.mapi (fun i e -> (i, e)) params) in
-  let subterm_index i = match find_index (( = ) i) subterm_params with Some k -> k | None -> error l "argument %d is not a subterm parameter" i in
   let counterpart k = match List.nth_opt env.subterms k with Some x -> x | None -> error l "the enclosing function has no subterm parameter at position %d" k in
-  let env, annotation =
-    match (annotation, env.level) with
-    | Some (`Predates (Atom (_, "_"))), At cur ->
-        let env, p = prove_predates env l (match canon env lv with Var m -> m | t -> error l "%s is not a variable" (show env t)) cur in
-        (env, Some (`Predates p.term))
-    | Some (`Subterm (i, Atom (_, "_"))), At _ ->
-        let env, p = prove_subterm env l (List.nth arg_terms i) (Var (counterpart (subterm_index i))) in
-        (env, Some (`Subterm (i, p.term)))
-    | Some _, Top -> error l "the top level calls without proofs; drop the decrease annotation (section 24)"
-    | None, _ -> (env, None)
-    | Some (`Predates p), _ -> let env, p = elab_erased env p in (env, Some (`Predates p))
-    | Some (`Subterm (i, p)), _ -> let env, p = elab_erased env p in (env, Some (`Subterm (i, p)))
+  let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
+  let same cur = equal (canon env lv) (Var cur) in
+  let env =
+    match (env.level, annotation) with
+    | Top, None -> env
+    | Top, Some _ -> error l "the top level calls without proofs; drop the decrease annotation (section 24)"
+    | At cur, Some (`Subterm (i, p)) when same cur -> (
+        let k = match find_index (( = ) i) subterm_params with Some k -> k | None -> error l "argument %d is not a subterm parameter" i in
+        List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (counterpart j))) subterm_params;
+        let env, p = proof env (fun env -> prove_subterm env l (List.nth arg_terms i) (Var (counterpart k))) p in
+        match expect_proof env l Prelude.subterm p with
+        | [ _; a; _; b ] -> check_equal env l a (List.nth arg_terms i); check_equal env l b (Var (counterpart k)); env
+        | _ -> assert false)
+    | At cur, Some (`Predates p) when not (same cur) -> (
+        let callee_level env = match canon env lv with Var m -> m | t -> error l "%s is not a variable" (show env t) in
+        let env, p = proof env (fun env -> prove_predates env l (callee_level env) cur) p in
+        match expect_proof env l Prelude.predates p with
+        | [ _; x; l2 ] ->
+            check_equal env l l2 (Var cur);
+            if not (equal (canon env x) (canon env lv)) then
+              error l "%s : %s does not relate the callee's level %s" (show env p) (show env (infer env l p)) (show env lv);
+            env
+        | _ -> assert false)
+    | At cur, _ ->
+        let kind, ann = if same cur then ("same", "subterm") else ("lower", "predates") in
+        error l "%s-level call to %s needs a (%s p) annotation" kind (show env callee.term) ann
   in
-  (match env.level with
-   | Top -> ()
-   | At cur when equal (canon env lv) (Var cur) -> (
-       match annotation with
-       | Some (`Subterm (i, p)) ->
-           let k = subterm_index i in
-           List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (counterpart j))) subterm_params;
-           (match expect_proof env l Prelude.subterm p with
-            | [ _; a; _; b ] ->
-                check_equal env l a (List.nth arg_terms i);
-                check_equal env l b (Var (counterpart k))
-            | _ -> assert false)
-       | _ -> error l "same-level call to %s needs a (subterm p) annotation" (show env callee.term))
-   | At cur -> (
-       match annotation with
-       | Some (`Predates p) -> (
-           match expect_proof env l Prelude.predates p with
-           | [ _; x; l2 ] ->
-               check_equal env l l2 (Var cur);
-               if not (equal (canon env x) (canon env lv)) then
-                 error l "%s : %s does not relate the callee's level %s" (show env p) (show env (infer env l p)) (show env lv)
-           | _ -> assert false)
-       | _ -> error l "lower-level call to %s needs a (predates p) annotation" (show env callee.term)));
-  let env, ids = open_tele env ~named:false ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
+  let env, ids = open_tele env ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   let code =
     let call = V.CApp (hcode, codes, cc) in
     if pos = Erased then V.CErased
@@ -406,7 +403,7 @@ and elab_special tele env expect l sp args =
   match (sp, args) with
   | (Sp.Fn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable | Sp.Newtype), _ ->
       if pos = Many then error l "a type in a non-erased position";
-      erased (env, { term = elab_term env (List (l, Atom (l, Sp.name sp) :: args)); ty = type_term; erasure = Erased })
+      erased (env, term_res env l (elab_type_form env l sp args))
   | Sp.Values, _ ->
       if List.length args <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length args);
       let env, ress, codes =
@@ -420,10 +417,10 @@ and elab_special tele env expect l sp args =
       if pos = Erased then error l "%s in an erased position" (Sp.name sp);
       elab_expr ~cc:(if sp = Sp.Tail then V.Tail else V.Delegate) env expect call
   | Sp.MatchableOf, [ t ] ->
-      let x, _, _ = find_matchable env l (var env l (atom_or l t "a type constructor name")) in
+      let x, _, _ = find_matchable env l (tyname env l t) in
       erased (env, res_of env x)
   | Sp.NewtypeOf, [ t ] -> (
-      let tid = var env l (atom_or l t "a type constructor name") in
+      let tid = tyname env l t in
       match newtype_of env tid with
       | Some x -> erased (env, res_of env x)
       | None -> error l "%s has no Newtype in scope" (name_of env tid))
@@ -513,8 +510,7 @@ and elab_match tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
-      let smult = match mult_of env m with Some m -> m | None -> error l "match needs the scrutinee's multiplicity" in
-      let smult = under pos smult in
+      let smult = under pos (mult_or env l m) in
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
       let _, disc, ctors = find_matchable env l tid in
@@ -530,7 +526,7 @@ and elab_match tele env expect l args =
         | _ -> error l "malformed match annotation"
       in
       if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
-      let env, result_ids = open_tele env ~named:false ann_tele in
+      let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       let branch raw =
         let kind, pat, body =
           match raw with
@@ -547,21 +543,14 @@ and elab_match tele env expect l args =
           | _ -> error bl "malformed pattern"
         in
         let c = ctor_var env bl c in
-        let phantom =
-          match marker ctors c with Some m -> m = Erased | None -> error bl "%s is not a constructor of %s" (name_of env c) (name_of env tid)
-        in
+        let phantom = marker env bl tid ctors c = Erased in
         let tele, ret = ctor_type env bl c in
         if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
-        let names = if kind = `Auto then List.map (fun _ -> None) tele else List.map name_or_anon field_names in
+        let names = if kind = `Auto then anon tele else List.map name_or_anon field_names in
         let dead = phantom && smult = Many in
         let mults = List.map (fun e -> if phantom then Erased else under smult e.mult) tele in
         let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
-        let fvars = List.rev_map (fun x -> Var x) fids in
-        let forced =
-          try Some (unify (unify envb sres.term (App (Var c, List.rev fvars))) sres.ty (instantiate fvars ret)) with
-          | Contradiction _ -> None
-          | Error (0, msg) -> error bl "%s" msg
-        in
+        let forced = try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None in
         let result =
           match (kind, forced) with
           | `Auto, None -> `Absurd
@@ -571,10 +560,7 @@ and elab_match tele env expect l args =
               let envb, ress, code = elab_body ~tele:ann_tele envb (if dead then List.map (fun _ -> Erased) expect else expect) bl body in
               check_results envb bl ann_tele ress;
               `Present code
-          | `Proof, Some envb ->
-              let envb, ress, _ = elab_body envb [ Erased ] bl body in
-              check_empty envb bl (single bl ress).ty;
-              `Absurd
+          | `Proof, Some envb -> ignore (elab_absurd envb bl body); `Absurd
         in
         (c, non_erased envb fids, dead, result)
       in
@@ -610,6 +596,15 @@ and elab_body ?tele env expect l items =
       let env, wrap = elab_stmt env stmt in
       let env, ress, code = elab_body ?tele env expect l rest in
       (env, ress, wrap code)
+
+and elab_absurd env l body =
+  let env, ress, _ = elab_body env [ Erased ] l body in
+  check_empty env l (single l ress).ty;
+  env
+
+and refine env scrut c fids ret =
+  let fvars = List.rev_map (fun x -> Var x) fids in
+  unify (unify env scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret)
 
 and elab_stmt env raw : Env.t * (V.code -> V.code) =
   match raw with
@@ -659,10 +654,7 @@ and elab_comptime_match env l args =
       let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
       let _, disc, ctors = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
-      (match marker ctors c with
-       | Some Erased -> error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c)
-       | Some Many -> ()
-       | None -> error pl "%s is not a constructor of %s" (name_of env c) (name_of env tid));
+      if marker env pl tid ctors c = Erased then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c);
       let many_values =
         let ct = ctor_of env pl c in
         let i, vs = V.destruct ct value in
@@ -674,10 +666,8 @@ and elab_comptime_match env l args =
       let env, fids = open_tele env ~names tele in
       let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env (non_erased env fids) many_values in
       let env = List.fold_left (fun env x -> if (entry env x).mult = Erased then set_state env x (Const V.VToken) else env) env fids in
-      let fvars = List.rev_map (fun x -> Var x) fids in
-      (try (unify (unify env (Var x) (App (Var c, List.rev fvars))) (type_of env x) (instantiate fvars ret), Fun.id) with
-       | Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg
-       | Error (0, msg) -> error l "%s" msg)
+      let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg) in
+      (env, Fun.id)
   | _ -> error l "malformed comptime-match: expected (comptime-match x (C field ...))"
 
 and elab_def_fns env l args =
@@ -692,7 +682,7 @@ and elab_def_fns env l args =
       let header raw =
         match raw with
         | List (fl, m :: rest) -> (
-            let mult = match mult_of env m with Some m -> m | None -> error fl "function needs a multiplicity" in
+            let mult = mult_or env fl m in
             let marks, rest = marks env [ Sp.Absurd; Sp.Extern ] rest in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
@@ -702,13 +692,7 @@ and elab_def_fns env l args =
                 let env_p, pids = open_tele env params in
                 let _, _, rets = elab_tele env_p ~ids:(List.rev pids) rs in
                 let name = atom_or fl n "a function name" in
-                let impl =
-                  if not (List.mem Sp.Extern marks) then None
-                  else match Ffi.claim Ffi.fns name with
-                    | Some (Ok f) -> Some f
-                    | Some (Error ()) -> error fl "the extern implementation of %s is already bound" name
-                    | None -> error fl "no extern implementation for %s" name
-                in
+                let impl = if List.mem Sp.Extern marks then Some (Ffi.claim Ffi.fns fl name) else None in
                 (fl, name, mult, List.mem Sp.Absurd marks, impl, Fn (Var lvl, params, rets), body)
             | _ -> error fl "malformed function header")
         | _ -> error (loc raw) "malformed function definition"
@@ -721,10 +705,7 @@ and elab_def_fns env l args =
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
         let envb = { envb with level = At lvl; subterms; run_pos = false } in
         let envb, code =
-          if absurd then (
-            let envb, ress, _ = elab_body envb [ Erased ] fl body in
-            check_empty envb fl (single fl ress).ty;
-            (envb, V.CAbsurd))
+          if absurd then (elab_absurd envb fl body, V.CAbsurd)
           else
             let pvars = List.rev_map (fun x -> Var x) pids in
             let tele = instantiate_tele pvars rets in
@@ -803,9 +784,7 @@ and elab_def_adts env adts =
   let env, tids =
     List.fold_left_map
       (fun env (al, name, ps, ty, _, _, _) ->
-        let env', _, tele = elab_tele env ~mults:(no_mults al) ps in
-        check_equal env' al (elab_term env' ty) type_term;
-        let x, env = bind env ~rigid:true (Some name) Erased (const env V.VToken) (TyCtor tele) in
+        let x, env = bind env ~rigid:true (Some name) Erased (const env V.VToken) (elab_tyctor env al ps [ ty ]) in
         (env, x))
       env headers
   in
@@ -813,26 +792,18 @@ and elab_def_adts env adts =
     let ctor env raw =
       match raw with
       | List (cl, m :: n :: colon :: rest) when is_special env colon Sp.Colon ->
-          let mult = match mult_of env m with Some m -> m | None -> error cl "constructor needs a multiplicity" in
-          let name = atom_or cl n "a constructor name" in
-          let ps, ret = split_arrow env cl rest in
-          let env', ids, tele = elab_tele env ps in
-          let ret = match ret with [ r ] -> elab_type env' r | _ -> error cl "constructor returns one type" in
+          let mult = mult_or env cl m and name = atom_or cl n "a constructor name" in
+          let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
           if mult = Erased && List.exists (fun e -> e.mult = Many) tele then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
-          let c, env = bind env ~rigid:true (Some name) mult Dyn (ValCtor (tele, abstract (List.rev ids) ret)) in
+          let c, env = bind env ~rigid:true (Some name) mult Dyn ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"
     in
     let env, ctors = List.fold_left_map ctor env ctors in
     let shapes = shapes env al (List.map (fun (m, c) -> (m, Var c)) ctors) in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
-    if List.mem Sp.Extern ms then
-      adt.ext <-
-        (match Ffi.claim Ffi.types name with
-         | Some (Ok mk) -> Some (mk adt)
-         | Some (Error ()) -> error al "the extern implementation of %s is already bound" name
-         | None -> error al "no extern implementation for %s" name);
+    if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
     adt.ctors <- List.mapi (fun index (_, c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) shapes;
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
@@ -873,16 +844,15 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
     | [] -> env
     | item :: rest -> (
         let env = List.fold_left hoist env (literals item) in
-        try
-          if rest = [] && not (is_statement env item) then (
-            let env, ress, code = elab_expr env [ Many ] item in
-            let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
-            trace := Final (v, ty, path) :: !trace;
-            consume env ty v;
-            env)
-          else (
-            if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
-            go (fst (elab_stmt env item)) rest)
-        with Error (0, msg) -> error (loc item) "%s" msg)
+        at (loc item) (fun () ->
+            if rest = [] && not (is_statement env item) then (
+              let env, ress, code = elab_expr env [ Many ] item in
+              let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
+              trace := Final (v, ty, path) :: !trace;
+              consume env ty v;
+              env)
+            else (
+              if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
+              go (fst (elab_stmt env item)) rest)))
   in
   go env items

@@ -18,16 +18,15 @@ type world = {
 let prelude env name = Option.get (Env.lookup { env with Env.scope = env.Env.prelude } name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Const (V.VCtorFn c) -> c | _ -> assert false
 
-let string_type env = App (Var (prelude env "String"), [])
+type final = Main | Io | Thunk of term | Plain
 
-let is_main env ty =
+let final env ty =
+  let string = App (Var (prelude env "String"), []) in
   match Env.canon env ty with
-  | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) -> equal a (string_type env) && equal b (string_type env)
-  | _ -> false
-
-let is_io env ty = match Env.canon env ty with App (Var t, [ _ ]) -> t = prelude env "IO" | _ -> false
-
-let thunk_result env ty = match Env.canon env ty with Fn (_, [], [ { mult = Many; sg = Ty t; _ } ]) -> Some t | _ -> None
+  | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) when equal a string && equal b string -> Main
+  | App (Var t, [ _ ]) when t = prelude env "IO" -> Io
+  | Fn (_, [], [ { mult = Many; sg = Ty t; _ } ]) -> Thunk t
+  | _ -> Plain
 
 let of_string env s =
   if !V.use_externs then Ffi.str s
@@ -81,7 +80,8 @@ let run_io env w v =
   loop v
 
 let consume w env ty v =
-  if is_main env ty then w.out (to_string env (List.hd (Eval.apply v [ of_string env (w.input ()) ])))
-  else if is_io env ty then w.exit (run_io env w v)
-  else if thunk_result env ty <> None then w.print (V.show (List.hd (Eval.apply v [])))
-  else w.print (V.show v)
+  match final env ty with
+  | Main -> w.out (to_string env (List.hd (Eval.apply v [ of_string env (w.input ()) ])))
+  | Io -> w.exit (run_io env w v)
+  | Thunk _ -> w.print (V.show (List.hd (Eval.apply v [])))
+  | Plain -> w.print (V.show v)

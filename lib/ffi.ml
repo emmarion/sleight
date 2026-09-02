@@ -8,10 +8,11 @@ let claimed : (string, unit) Hashtbl.t = Hashtbl.create 8
 let reset () = Hashtbl.reset registered; Hashtbl.reset claimed
 
 (* Each implementation may back one declaration per program. *)
-let claim table name =
+let claim table loc name =
   match List.assoc_opt name table with
-  | None -> None
-  | Some impl -> if Hashtbl.mem claimed name then Some (Error ()) else (Hashtbl.replace claimed name (); Some (Ok impl))
+  | None -> Env.error loc "no extern implementation for %s" name
+  | Some _ when Hashtbl.mem claimed name -> Env.error loc "the extern implementation of %s is already bound" name
+  | Some impl -> Hashtbl.replace claimed name (); impl
 
 let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))

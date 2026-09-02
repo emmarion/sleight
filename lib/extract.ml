@@ -328,17 +328,16 @@ let item cx = function
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
   | Env.Final (v, ty, path) ->
-      let main = Program.is_main cx.env ty and io = Program.is_io cx.env ty and thunk = Program.thunk_result cx.env ty in
       let text =
-        match v with
-        | V.VFn cl when not (main || io || thunk <> None) -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
-        | _ -> (
+        match (v, Program.final cx.env ty) with
+        | V.VFn cl, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
+        | _, kind -> (
             let e = value cx v in
-            match thunk with
-            | _ when main -> Printf.sprintf "run_main %s" e
-            | _ when io -> Printf.sprintf "exit (run_io %s)" e
-            | Some t -> Printf.sprintf "print_endline (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
-            | None -> Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e)
+            match kind with
+            | Program.Main -> Printf.sprintf "run_main %s" e
+            | Io -> Printf.sprintf "exit (run_io %s)" e
+            | Thunk t -> Printf.sprintf "print_endline (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
+            | Plain -> Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.out (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
 
