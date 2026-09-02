@@ -13,49 +13,38 @@ type token = LParen | RParen | Dollar | Word of string
 
 let tokenize src =
   let n = String.length src in
-  let toks = ref [] in
-  let line = ref 1 in
-  let push t = toks := (!line, t) :: !toks in
-  let i = ref 0 in
-  while !i < n do
-    let c = src.[!i] in
-    if c = '\n' then (incr line; incr i)
-    else if c = ' ' || c = '\t' || c = '\r' then incr i
-    else if c = ';' then while !i < n && src.[!i] <> '\n' do incr i done
-    else if c = '"' then begin
-      let buf = Buffer.create 16 in
-      let rec go () =
-        if !i >= n then raise (Syntax (!line, "unterminated string literal"));
-        let c = src.[!i] in
-        incr i;
-        if c = '"' then ()
-        else if c = '\\' then begin
-          if !i >= n then raise (Syntax (!line, "unterminated string literal"));
-          let e = src.[!i] in
-          incr i;
-          (match e with
-           | 'n' -> Buffer.add_char buf '\n'
-           | 't' -> Buffer.add_char buf '\t'
-           | '"' | '\\' -> Buffer.add_char buf e
-           | _ -> raise (Syntax (!line, "unknown escape \\" ^ String.make 1 e)));
-          go ()
-        end
-        else (if c = '\n' then incr line; Buffer.add_char buf c; go ())
-      in
-      incr i;
-      go ();
-      push (Word (Literal.quote (Buffer.contents buf)))
-    end
-    else if c = '(' then (push LParen; incr i)
-    else if c = ')' then (push RParen; incr i)
-    else begin
-      let start = !i in
-      while !i < n && not (String.contains " \t\r\n();" src.[!i]) do incr i done;
-      let w = String.sub src start (!i - start) in
-      push (if w = "$" then Dollar else Word w)
-    end
-  done;
-  List.rev !toks
+  let err line msg = raise (Syntax (line, msg)) in
+  let rec skip p i = if i < n && p src.[i] then skip p (i + 1) else i in
+  let rec string buf line i =
+    if i >= n then err line "unterminated string literal"
+    else
+      match src.[i] with
+      | '"' -> (line, i + 1)
+      | '\\' ->
+          let e = if i + 1 < n then src.[i + 1] else err line "unterminated string literal" in
+          Buffer.add_char buf (match e with 'n' -> '\n' | 't' -> '\t' | '"' | '\\' -> e | _ -> err line ("unknown escape \\" ^ String.make 1 e));
+          string buf line (i + 2)
+      | c -> Buffer.add_char buf c; string buf (if c = '\n' then line + 1 else line) (i + 1)
+  in
+  let rec go line i acc =
+    if i >= n then List.rev acc
+    else
+      match src.[i] with
+      | '\n' -> go (line + 1) (i + 1) acc
+      | ' ' | '\t' | '\r' -> go line (i + 1) acc
+      | ';' -> go line (skip (( <> ) '\n') i) acc
+      | '(' -> go line (i + 1) ((line, LParen) :: acc)
+      | ')' -> go line (i + 1) ((line, RParen) :: acc)
+      | '"' ->
+          let buf = Buffer.create 16 in
+          let line, j = string buf line (i + 1) in
+          go line j ((line, Word (Literal.quote (Buffer.contents buf))) :: acc)
+      | _ ->
+          let j = skip (fun c -> not (String.contains " \t\r\n();" c)) i in
+          let w = String.sub src i (j - i) in
+          go line j ((line, if w = "$" then Dollar else Word w) :: acc)
+  in
+  go 1 0 []
 
 (* [read_items] reads until the enclosing form's terminator, which it leaves in place;
    a [$] form ends at that same terminator (DESIGN.md section 2). *)

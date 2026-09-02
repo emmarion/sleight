@@ -518,7 +518,8 @@ and elab_match tele env expect l args =
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
       let _, disc, ctors = find_matchable env l tid in
-      let tagged = tagged disc (shapes env l ctors) in
+      let shapes = shapes env l ctors in
+      let tagged = tagged disc shapes in
       let env, ann_tele =
         match (ann, tele) with
         | Atom (_, "_"), Some tele -> (env, tele)
@@ -579,12 +580,11 @@ and elab_match tele env expect l args =
       in
       let branches = List.map branch branches in
       List.iter
-        (fun (_, c) ->
-          let c = match c with Var c -> c | _ -> assert false in
+        (fun (_, c, _) ->
           match List.length (List.filter (fun (c', _, _, _) -> c' = c) branches) with
           | 1 -> ()
           | n -> error l "constructor %s has %d branches" (name_of env c) n)
-        ctors;
+        shapes;
       let real =
         List.filter_map
           (fun (c, fids, dead, r) -> match r with `Present code when not dead -> Some (V.CVar c, fids, code) | _ -> None)
