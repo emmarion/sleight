@@ -5,7 +5,7 @@ module IntMap = Map.Make (Int)
 type cc = Plain | Tail | Delegate
 
 (* An ADT's runtime shape: [tagged] when it is an enum with more than one non-phantom constructor (section 38);
-   [ext] when the FFI implements it (section 41), its values then being [VExt] integers. *)
+   [ext] when the FFI implements it (section 41), its values then being [VExt] payloads. *)
 type adt = { tname : string; tagged : bool; mutable ctors : ctor list; mutable ext : ext option }
 and ctor = { cname : string; cid : id; index : int; arity : int; adt : adt }
 and ext = { construct : int -> value list -> value; destruct : value -> int * value list }
@@ -13,10 +13,12 @@ and ext = { construct : int -> value list -> value; destruct : value -> int * va
 and value =
   | VCtor of ctor * value list
   | VTuple of value list
-  | VExt of adt * Z.t
+  | VExt of adt * payload
   | VCtorFn of ctor
   | VFn of closure
   | VToken
+
+and payload = Int of Z.t | Slice of string * int * int
 
 and fn = { fname : string; params : id list; body : code; impl : (value list -> value list) option }
 and closure = { fn : fn; env : venv Lazy.t }
@@ -55,7 +57,9 @@ let destruct c v =
 let rec show = function
   | VCtor (c, fields) -> "(" ^ String.concat " " (c.cname :: List.map show fields) ^ ")"
   | VTuple vs -> "(" ^ String.concat " " (List.map show vs) ^ ")"
-  | VExt (adt, _) as v -> let i, fs = (Option.get adt.ext).destruct v in show (VCtor (List.nth adt.ctors i, fs))
+  | VExt (adt, _) as v ->
+      let i, fs = (Option.get adt.ext).destruct v in
+      if adt.tagged then show (VCtor (List.nth adt.ctors i, fs)) else show (tuple fs)
   | VCtorFn c -> "<constructor " ^ c.cname ^ ">"
   | VFn cl -> "<function " ^ cl.fn.fname ^ ">"
   | VToken -> "_"

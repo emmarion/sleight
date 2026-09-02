@@ -128,3 +128,52 @@
 (def-fns u8-lvl $ many extern u8-to-nat : (many (U8) u) -> (many (Nat) n)
   (match many u _
     ((MkU8 n p) n)))
+
+(def-adts $ Bin : -> Type
+  enum extern
+  (many BZ : -> (Bin))
+  (many B1 : (many (Bin) rest) -> (Bin))
+  (many B2 : (many (Bin) rest) -> (Bin)))
+
+(def-adts
+  (Numeral : ((Bin) b) ((Nat) n) -> Type
+    enum
+    (many NZ : -> (Numeral (BZ) (Zero)))
+    (many N1 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd) ->
+       (Numeral (B1 b) (Succ d)))
+    (many N2 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd) ->
+       (Numeral (B2 b) (Succ (Succ d))))))
+
+(def-lvl bin-lvl)
+(let (erased nat-bin) (prove-predates nat-lvl bin-lvl))
+
+(def-fns bin-lvl $ many extern bin-to-nat : (subterm many (Bin) b) -> (many (Nat) n) (erased (Numeral b n) v)
+  (match many b _
+    ((BZ) (values (Zero) (NZ)))
+    ((B1 b1)
+      (let (many m) (erased v1) (bin-to-nat (subterm _) b1))
+      (let (many d) (erased dd) (double (predates nat-bin) m))
+      (values (Succ d) (N1 b1 m d v1 dd)))
+    ((B2 b1)
+      (let (many m) (erased v1) (bin-to-nat (subterm _) b1))
+      (let (many d) (erased dd) (double (predates nat-bin) m))
+      (values (Succ (Succ d)) (N2 b1 m d v1 dd)))))
+
+(def-adts $ Char : -> Type
+  enum newtype
+  (many MkChar : (many (U8) u) -> (Char)))
+
+(def-adts $ String : -> Type
+  enum extern
+  (many SNil : -> (String))
+  (many SCons : (many (Char) c) (many (String) rest) -> (String)))
+
+(def-lvl str-lvl)
+
+(def-fns str-lvl $ many extern trim : (many (String) s) -> (many (String) t)
+  s)
+
+(def-fns str-lvl $ many str-append : (subterm many (String) a) (many (String) b) -> (many (String) c)
+  (match many a _
+    ((SNil) b)
+    ((SCons ch rest) (SCons ch (str-append (subterm _) rest b)))))

@@ -12,8 +12,9 @@ ground.
 ## Reader
 
 1. **Comments** are `;` to end of line. Atoms are any run of characters
-   other than whitespace, parens and `;`; there are no numeric or string
-   literals (SR 10).
+   other than whitespace, parens and `;`. Digit-only atoms and `#\c`
+   atoms are numeral and character literals (items 51-52); there are no
+   string literals (SR 10).
 2. **`_` as a binder name** births an anonymous entry, wherever a binder
    is expected (let binders, telescope entries, pattern fields). It is
    not special anywhere else (SR 10, SR 11).
@@ -29,9 +30,10 @@ ground.
    `Coercible`, the `Special` ADT and one entry per special form. The
    opaque types are type constructors with no `Matchable`, so they can
    neither be matched on nor count as empty (SR 6). On top of that a
-   source prelude (`lib/builtin.ml`, section 41) defines `Nat`, `False`,
-   `Lt`, `Double`, `Pow2`, `Dec`, `U8`, their functions, and the levels
-   `nat-lvl`, `pow-lvl`, `mod-lvl`, `u8-lvl`, all as ordinary,
+   source prelude (`lib/prelude.sl`, section 41) defines `Nat`, `False`,
+   `Lt`, `Double`, `Pow2`, `Dec`, `U8`, `Bin`, `Numeral`, `Char`,
+   `String`, their functions, and the levels `nat-lvl`, `pow-lvl`,
+   `mod-lvl`, `u8-lvl`, `bin-lvl`, `str-lvl`, all as ordinary,
    shadowable entries; a user function calling `nat-add` proves
    `(prove-predates nat-lvl L)`. `List` is not built in; the examples
    define it (SR 12).
@@ -210,13 +212,16 @@ ground.
     source-level declaration open; this is the prototype's stand-in.
     The prelude itself is `lib/prelude.sl`, embedded into the binary by
     a dune rule so the interpreter needs no path to it at runtime.
-43. **Extern integers.** Values of an extern type are zarith integers
+43. **Extern payloads.** Values of an extern type are zarith integers
+    (`Nat`, `U8`, `Bin`) or byte-string slices (`String`, item 48)
     carrying their type's runtime record; an extern type's
     implementation is a pair construct/destruct over constructor
     indices, so matching, `comptime-match` and printing all go through
     destruct and see the model's constructors. `U8`'s destruct yields
     its `Nat` field as a `Nat` integer, the erased proof field taking no
-    slot.
+    slot. An untagged extern value prints as its fields, the way a
+    transparent value does, so a `U8` prints the same with and without
+    the FFI.
 44. **`--no-extern` strips every implementation** and runs the models
     instead; `dune test` runs every test both ways and requires the
     same outcome, which is how section 41's invariant is checked. The
@@ -310,3 +315,108 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     an `erased` one it is a real branch, subject to the one-real-branch
     rule and producing the match's declared result, its fields erased
     like every other branch's.
+
+## Strings, literals, and the driver (sections 16 and 41)
+
+Written by a session working autonomously overnight at the owner's
+request ("make reasonable guesses when necessary and append them to the
+assumption file"). The owner's direction in chat was: a `String ->
+String` final expression run over stdin, strings held as slices of an
+ASCII byte array with a `trim` that copies, no extra erased arguments on
+that function for now, numerals as an opaque `Nat` related by a prelude
+relation to a non-opaque binary spelling computed by a prelude function,
+`Char` as a newtype over `U8`, and a form retrieving the relation.
+Everything below that goes further is a guess, and DESIGN.md sections 16
+and 41 still record the consumer of the top-level value and numeric
+literals as open.
+
+47. **The driver runs a final value as a program when its type is an
+    `Fn`, at any level, from one `many (String)` parameter, `subterm` or
+    not, to one `many (String)` return** (`lib/program.ml`): stdin is read whole into a
+    `String`, the function applied, and the result written to stdout
+    verbatim, with no newline added. Any other final value is printed
+    as before, so the existing tests are unchanged. A `; stdin: text`
+    directive in a test supplies the input, its lines joined by
+    newlines with no trailing one.
+
+48. **`String` is an extern enum modelled as a cons list of `Char`**
+    (`SNil`, `SCons`), not marked `newtype`. The FFI holds a value as a
+    slice of an OCaml string (offset and length); destructing an
+    `SCons` yields the byte and the tail slice over the same buffer, so
+    matching is structural and copies nothing, and same-level recursion
+    over a string is discharged by an ordinary `subterm` proof.
+    Constructing an `SCons` copies. `trim` is extern with the identity
+    as its model: its whole content is the copy that lets the rest of a
+    shared buffer be collected. `str-append` is plain source at
+    `str-lvl`. The alternative reading of "slice", an ADT holding a
+    buffer, a start and a length with erased bounds proofs, was not
+    taken: section 5 forbids a length function in a type, so every bound
+    would be a relation, and iteration would need a `Nat` fuel rather
+    than structural recursion.
+
+49. **`Char` is a source `newtype` over `U8`**, not extern, so a `Char`
+    at runtime is the `U8`'s integer and the slice's destruct hands the
+    byte back directly. Any byte is a `Char`; section 28's ASCII rule is
+    about the language's syntax, not its data.
+
+50. **`Bin` is bijective base 2**: `(BZ)`, `(B1 b)` meaning 2b+1 and
+    `(B2 b)` meaning 2b+2, least significant digit outermost, so every
+    number has exactly one spelling. Uniqueness is what lets the FFI's
+    destruct of a zarith integer agree with the model on the head
+    constructor; a plain bit list has trailing zeros and would break
+    section 41's invariant. `Numeral : ((Bin) b) ((Nat) n) -> Type`
+    has one constructor per digit, each carrying an erased sub-proof and
+    an erased `Double` from the prelude; `bin-to-nat` is extern (the
+    identity on zarith) over a structural model returning the number
+    and the proof, in `pow2`'s shape. Coq's `positive`/`N` pair was the
+    alternative. All names are the session's.
+
+51. **A numeral is a digit-only atom and never a name** (`Env.bind`
+    refuses one; leading zeros are rejected outright). It is sugar for
+    `(let (many _) (erased _) (bin-to-nat <spelling>))` hoisted to just
+    before the top-level form that first mentions it, run in run
+    position, and interned per program by value, so every occurrence is
+    one entry: the `Nat` is opaque, a call's result with no `is` rule,
+    and the erased `Numeral` proof relates it to the spelling. The
+    hoisted statements are elaborated in the prelude's own scope
+    (`Env.prelude`, `Elab.hoist`), so user shadowing of `let` or
+    `bin-to-nat` cannot reach them, and the born entries are not in the
+    scope list at all; resolution goes through `Env.literals`. Sound
+    because the statement depends on nothing but the prelude and the top
+    level calls freely (section 24). Consequence to note: a literal is
+    never unary-known. Using `3` where a `(Vec A n)` index is needed
+    means unfolding its `Numeral` proof by erased matches
+    (`tests/numeral.sl`, six nested matches), reasoning relationally, or
+    indexing by `Bin` instead; `(Vec A 3)` is not `(Vec A (Succ (Succ
+    (Succ (Zero)))))`.
+
+52. **Character literals** are `#\c` for a printable ASCII `c`,
+    `#\space`, `#\newline`, `#\tab` and `#\xHH`; Scheme's spelling was
+    chosen over `'c'` to leave the quote free for a future `Raw`. One is
+    sugar for its code's numeral followed by section 41's reflection
+    route, `(let (many %d) (lt-dec n u8-modulus))`,
+    `(comptime-match %d (Yes %a %b %p))` and
+    `(let (many _) (MkChar (MkU8 n %p)))`, hoisted and interned the
+    same way, the `%`-names living only in the discarded frame. The
+    state-inheriting `let` makes the literal `is (MkChar (MkU8 n p))`,
+    transparent down to its opaque `Nat` (`tests/char.sl`), so no
+    separate relation for characters is needed.
+
+53. **`(numeral-of e)`** takes any expression that canonicalizes to a
+    literal's value entry, a numeral itself or a variable a match or
+    `comptime-match` has forced equal to one, and yields that literal's
+    erased `Numeral` proof; a character literal's entry yields its
+    code's proof. It reads `Env.literals` rather than searching the
+    scope, unlike `coercible-of`. The owner suggested `nat-of`; the
+    session renamed it because the form yields a proof, not a number.
+
+54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
+    model runs `double` in unary, and `Value.show` prints a `Nat` in
+    unary, so a numeral around a million overflows the interpreter's
+    stack in either mode when printed and in the stripped mode when
+    merely computed. Section 41's invariant holds up to resources; the
+    tests keep their numerals small.
+
+55. **Location-free errors** (the literal-as-name check lives in
+    `Env.bind`, which has no line) are reported at the enclosing
+    top-level form's line.

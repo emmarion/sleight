@@ -26,7 +26,11 @@ let special_of env raw =
 let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | _ -> None
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
-let var env loc n = match lookup env n with Some x -> x | None -> error loc "unbound name %s" n
+let var env loc n =
+  match Literal.classify n with
+  | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s" n)
+  | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
+  | `Bad msg -> error loc "%s" msg
 
 let check_type env loc actual expected =
   if not (equal (canon env actual) (canon env expected)) then
@@ -415,6 +419,12 @@ and elab_special tele env expect l sp args =
       match newtype_of env tid with
       | Some x -> (env, [ res_of env x ], V.CErased)
       | None -> error l "%s has no Newtype in scope" (name_of env tid))
+  | Sp.NumeralOf, [ e ] -> (
+      ignore (one ());
+      let e = canon env (elab_term env e) in
+      match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
+      | Some (_, (_, p)) -> (env, [ res_of env p ], V.CErased)
+      | None -> error l "%s is not a literal" (show env e))
   | Sp.LevelOf, [ f ] -> (
       ignore (one ());
       let f = elab_term env f in
@@ -879,15 +889,38 @@ and elab_def_adts env adts =
   let env, cids = List.fold_left2 define (env, []) tids headers in
   (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
-let run_toplevel ?(print = print_endline) env items =
+(* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)
+let rec hoist env lit =
+  let key = Literal.key lit in
+  if List.mem_assoc key env.literals then env
+  else
+    let env = match lit with Literal.Char c -> hoist env (Literal.Numeral (Z.of_int c)) | Literal.Numeral _ -> env in
+    let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
+    let ids =
+      match (lit, frame.scope) with
+      | Literal.Numeral _, v :: n :: _ -> (n, v)
+      | Literal.Char c, ch :: _ -> (ch, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
+      | _ -> assert false
+    in
+    { frame with scope = env.scope; literals = (key, ids) :: frame.literals }
+
+let rec literals = function
+  | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])
+  | List (_, items) -> List.concat_map literals items
+
+let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) env items =
   let rec go env = function
     | [] -> env
-    | [ item ] when not (is_statement env item) ->
-        let env, _, code = elab_expr env [ Many ] item in
-        List.iter (fun v -> print (V.show v)) (run_code env code);
-        env
-    | item :: rest ->
-        if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
-        go (fst (elab_stmt env item)) rest
+    | item :: rest -> (
+        let env = List.fold_left hoist env (literals item) in
+        try
+          if rest = [] && not (is_statement env item) then (
+            let env, ress, code = elab_expr env [ Many ] item in
+            consume env (single (loc item) ress).ty (List.hd (run_code env code));
+            env)
+          else (
+            if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
+            go (fst (elab_stmt env item)) rest)
+        with Error (0, msg) -> error (loc item) "%s" msg)
   in
   go env items

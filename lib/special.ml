@@ -1,7 +1,7 @@
 type t =
   | Let | DefLvl | DefFns | DefAdts | ComptimeMatch
   | Fn | TyCtor | ValCtor | Matchable | Newtype
-  | Match | MatchableOf | NewtypeOf | LevelOf | ProveSubterm | ProvePredates | Values
+  | Match | MatchableOf | NewtypeOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
   | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf
   | Erased | Many | Colon | Is | Arrow | Subterm | Enum | Union | Tail | Delegate | Predates | Absurd | NewtypeMark | Extern
@@ -9,7 +9,7 @@ type t =
 let all =
   [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match");
     (Fn, "Fn"); (TyCtor, "TyCtor"); (ValCtor, "ValCtor"); (Matchable, "Matchable"); (Newtype, "Newtype");
-    (Match, "match"); (MatchableOf, "matchable-of"); (NewtypeOf, "newtype-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
+    (Match, "match"); (MatchableOf, "matchable-of"); (NewtypeOf, "newtype-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
     (ProvePredates, "prove-predates"); (Values, "values");
     (PredatesTrans, "predates-trans"); (SubtermTrans, "subterm-trans"); (PredatesSubterm, "predates-subterm");
     (Coerce, "coerce"); (CoercibleRefl, "coercible-refl"); (CoercibleSym, "coercible-sym");

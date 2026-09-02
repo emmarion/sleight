@@ -13,9 +13,11 @@ let report path f =
   | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n%!" path msg; None
   | Eval.Runtime msg -> Printf.eprintf "%s: runtime error: %s\n%!" path msg; None
 
+let consume = Program.consume ~input:(fun () -> In_channel.input_all stdin) ~output:print_string ~print:print_endline
+
 let run env path =
   let src = if path = "-" then In_channel.input_all stdin else read_file path in
-  match report path (fun () -> Some (Elab.run_toplevel env (Reader.parse src))) with Some env -> env | None -> exit 1
+  match report path (fun () -> Some (Elab.run_toplevel ~consume env (Reader.parse src))) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl env =
@@ -31,7 +33,7 @@ let repl env =
   let rec loop env =
     match form (Buffer.create 64) with
     | None -> print_newline ()
-    | Some src -> loop (Option.value (report "repl" (fun () -> Some (Elab.run_toplevel env (Reader.parse src)))) ~default:env)
+    | Some src -> loop (Option.value (report "repl" (fun () -> Some (Elab.run_toplevel ~consume env (Reader.parse src)))) ~default:env)
   in
   loop env
 

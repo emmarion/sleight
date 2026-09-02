@@ -1,6 +1,7 @@
 (* Runs every tests/*.sl. Directives in leading comments:
    "; needs: a b" runs tests/a.sl and tests/b.sl first in the same scope;
-   "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text. *)
+   "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
+   "; stdin: text" lines, joined by newlines, are the input a String -> String program reads. *)
 open Speciallang
 
 let dir = "../tests"
@@ -24,12 +25,15 @@ let rec run_test name =
 and run_mode src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 in
-  let print s = Buffer.add_string printed (s ^ "\n") in
+  let output = Buffer.add_string printed in
+  let print s = output (s ^ "\n") in
+  let input () = String.concat "\n" (directive src "stdin") in
+  let consume = Program.consume ~input ~output ~print in
   let outcome =
     try
-      let env = List.fold_left (fun env n -> Elab.run_toplevel ~print env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
+      let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
       Buffer.clear printed;
-      ignore (Elab.run_toplevel ~print env (Reader.parse src));
+      ignore (Elab.run_toplevel ~consume env (Reader.parse src));
       Ok (Buffer.contents printed)
     with
     | Reader.Syntax (l, m) -> Error (Printf.sprintf "line %d: syntax error: %s" l m)

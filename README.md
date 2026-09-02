@@ -16,7 +16,11 @@ dune test
 
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
-forms interactively. Every program starts in the scope of the source
+forms interactively. A file's final expression is printed, unless its
+value is a function from `String` to `String`: then stdin is fed to it
+and its result written to stdout (`tests/main_reverse.sl`). Numerals and
+`#\c` character literals are prelude-backed sugar (ASSUMPTIONS.md
+47-55). Every program starts in the scope of the source
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models. A file is a sequence of statements,
@@ -24,7 +28,8 @@ optionally ending in an expression whose value is printed.
 
 `dune test` runs every `tests/*.sl`, once with the FFI and once
 without. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
-`; expect: text` is the line the test must print, and `; error: text`
+`; expect: text` is the line the test must print, `; stdin: text` a
+line of input for a `String -> String` program, and `; error: text`
 means it must fail with a message mentioning that text.
 
 ## How it runs a program
@@ -53,6 +58,8 @@ erased. Nothing is optimized.
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
 - `lib/prelude.sl`, `lib/ffi.ml` — the source prelude and the extern implementations (section 41)
-- `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements
+- `lib/literal.ml` — numeral and character literals and what they expand to
+- `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
+- `lib/program.ml` — running a `String -> String` final value over stdin
 - `bin/main.ml` — command line driver
 - `tests/` — DESIGN.md's worked examples and further tests

@@ -20,9 +20,12 @@ type t = {
   subterms : id list;
   run_pos : bool;
   values : Value.venv;
+  prelude : id list;
+  literals : (string * (id * id)) list;
 }
 
-let empty = { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty }
+let empty =
+  { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -36,6 +39,7 @@ let set_state env x state =
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
 let bind env ?(rigid = false) ?(level_born = false) ?(rule = None) name mult state ty =
+  Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
   let entries = IntMap.add x { name; mult; state = Dyn; level_born; rigid } env.entries in
   let env = { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
