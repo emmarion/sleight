@@ -7,10 +7,10 @@ let read_file path =
   s
 
 let () =
-  let files = List.tl (Array.to_list Sys.argv) in
-  if files = [] then (prerr_endline "usage: main FILE..."; exit 2);
+  let files = match List.tl (Array.to_list Sys.argv) with [] -> [ "-" ] | files -> files in
   let run env path =
-    try Elab.run_toplevel env (Reader.parse (read_file path)) with
+    let src = if path = "-" then In_channel.input_all stdin else read_file path in
+    try Elab.run_toplevel env (Reader.parse src) with
     | Reader.Syntax (line, msg) -> Printf.eprintf "%s:%d: syntax error: %s\n" path line msg; exit 1
     | Env.Error (line, msg) -> Printf.eprintf "%s:%d: error: %s\n" path line msg; exit 1
     | Env.Contradiction msg -> Printf.eprintf "%s: error: contradiction: %s\n" path msg; exit 1

@@ -415,9 +415,10 @@ and elab_special _cc env expect l sp args =
       erased_result (proof_type Prelude.subterm [ infer a; a; infer b; b ])
   | Sp.ProvePredates, [ x; lv ] -> (
       ignore (one ());
-      let x = match canon env (Var (var env l (atom_or l x "a variable"))) with Var x -> x | t -> error l "%s is not a variable" (show env t) in
+      let x = var env l (atom_or l x "a variable") in
       match canon env (term_arg lv) with
       | Var lvl when (entry env lvl).level_born ->
+          let x = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x in
           if x >= lvl then error l "%s was not in scope when level %s was born" (name_of env x) (name_of env lvl);
           erased_result (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
       | t -> error l "%s is not a level born by def-lvl" (show env t))
