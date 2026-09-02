@@ -68,9 +68,10 @@ ground.
 14. **`def-adts` ordering**: a type constructor's own telescope may
     mention types defined earlier in the same `def-adts`, not later
     ones; every constructor may mention every type of the group.
-15. **A `let` with no binders** is an erased position (all zero of its
-    binders are erased), so its right-hand side is checked but never
-    run. Section 27 calls such a `let` useless as the language stands.
+15. **A position of size zero is erased** (all zero of its entries
+    are), so the right-hand side of a `let` with no binders, or a match
+    with an empty annotation, is checked but never run. Section 27
+    calls such a `let` useless as the language stands.
 16. **A match in an erased position** elaborates its scrutinee erased
     whatever the keyword says, per section 12's "unconstrained".
 17. **Tail position** for `tail`/`delegate` (section 9): the marked
