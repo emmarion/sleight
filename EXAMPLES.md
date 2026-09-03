@@ -34,6 +34,22 @@ that the test does not make is a mistake in this file.
   levels is as tall as the list and exists only when the program runs.
   `tests/compose_list.sl` is the defunctionalized form, the list kept as data
   under one interpreter, whose composed closure sits at one fixed level.
+- `tests/runtime_level_bad.sl` — the same composition called from a function
+  body is refused: a level born inside the call cannot be proved to predate
+  the caller's, so in this test the composed function is callable only from
+  run position.
+- `tests/stream.sl` — a stream with no coinductive type, its tail a function
+  at a level born after the producer's.
+- `tests/gmap.sl` — a map generic over every type with `List`'s constructor
+  shape, through first-class `TyCtor`, `ValCtor` and `Matchable` values; the
+  shape is fixed by the signature.
+- `tests/packed_bound.sl` and `tests/packed_list_predates.sl` — functions at
+  different levels in one list, with the levels erased: either each package
+  proves its level below a bound, or the consumer takes a proof that the list
+  predates its level and `predates-subterm` walks it down to each function.
+  `tests/packed_unbound_bad.sl` has neither, and
+  `tests/packed_runtime_list_bad.sl` builds the list after the consumer's
+  level was born, where the list-level proof is refused.
 - `tests/recursion_through_pointer.sl` — a function receiving itself inside a
   type with a negative occurrence and calling the pointer at its own level
   under a subterm decrease; `tests/ackermann.sl` for the lexicographic order
