@@ -28,6 +28,25 @@ that the test does not make is a mistake in this file.
   computed smaller `Nat`.
 - `tests/gcd.sl` — Euclid's algorithm; the recursive call is justified by
   `lt-sub` applied to the remainder's bound, so it uses the interderivation.
+- `tests/compose_list_dynamic.sl` — folding a list of functions into one
+  function, each step birthing a level at runtime above the one the recursive
+  call returned, with the `Predates` proofs born beside it. The tower of
+  levels is as tall as the list and exists only when the program runs.
+  `tests/compose_list.sl` is the defunctionalized form, the list kept as data
+  under one interpreter, whose composed closure sits at one fixed level.
+- `tests/recursion_through_pointer.sl` — a function receiving itself inside a
+  type with a negative occurrence and calling the pointer at its own level
+  under a subterm decrease; `tests/ackermann.sl` for the lexicographic order
+  across two subterm arguments.
+- `tests/nub.sl` — recursion on a computed vector rather than a subterm: the
+  filter returns an erased bound on the result's length, the recursion is on
+  the erased length index, and `lt-sub` turns the bound into the `Subterm`
+  proof, at no runtime cost.
+- `tests/type_result_is.sl` and `tests/type_result_cases.sl` — a type
+  computed by a call, made usable by an `is` return entry, and a closed
+  existential whose erased type is fixed by matching a runtime witness beside
+  a value of it. `tests/eq_transport.sl` transports along a user-defined
+  equality by matching `Refl`, with no substitution principle.
 - `tests/map.sl` — DESIGN.md section 33, level-polymorphic `map` through a
   factory that births the level and proves the relation inside.
 - `tests/coerce.sl` and `tests/delegate_coerce.sl` — section 40, unwrapping a
