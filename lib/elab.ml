@@ -354,7 +354,7 @@ and elab_call cc env expect l callee hcode lv params rets args arg =
   let subterm_params = List.filter_map (fun (i, e) -> if e.subterm then Some i else None) (List.mapi (fun i e -> (i, e)) params) in
   let counterpart k = match List.nth_opt env.subterms k with Some x -> x | None -> error l "the enclosing function has no subterm parameter at position %d" k in
   let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
-  let same cur = equal (canon env lv) (Var cur) in
+  let same cur = equal (canon env lv) (canon env (Var cur)) in
   let env =
     match (env.level, annotation) with
     | Top, None -> env
@@ -442,6 +442,8 @@ and elab_special tele env expect l sp args =
   | Sp.NumeralOf, [ e ] -> (
       let e = canon env (elab_term env e) in
       match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
+      | Some (k, _) when (match Literal.classify k with `Lit (Literal.Str _) -> true | _ -> false) ->
+          error l "%s is a string literal, which carries no Numeral proof" (show env e)
       | Some (_, (_, p)) -> erased (env, res_of env p)
       | None -> error l "%s is not a literal" (show env e))
   | Sp.LevelOf, [ f ] -> (
@@ -753,6 +755,8 @@ and check_marks env l pids code =
         | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
             norm (List.combine ids (vars_of cs) @ sub) rest
         | rhs -> let rest = norm sub rest in if returns ids rest then rhs else V.CLet (ids, rhs, rest))
+    | V.CLetRec (fns, rest) ->
+        V.CLetRec (List.map (fun (x, f) -> (x, { f with V.body = norm sub f.V.body })) fns, norm sub rest)
     | c -> V.map_code (norm sub) c
   in
   let code = norm [] code in

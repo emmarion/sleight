@@ -811,3 +811,70 @@ later session.
     requirement, which could revisit the decision.
     `tests/binder_clash.sl` and `tests/binder_clash_bad.sl` cover the
     dismissed and the written branch.
+
+## Three fixes from a second bug-hunting session
+
+A session asked to look for bugs, soundness ones especially, probed the
+checker and the compiled-code path. Items 74-76 record what it changed.
+As elsewhere in this file, each is the implementation's reading offered
+as a candidate question, not a settled decision; item 75 in particular
+changes which programs are accepted and wants the owner's word. Where a
+claim could be checked by compiling (CLAUDE.md rule 2) it was.
+
+74. **A renaming `let` that is resolved away is substituted into nested
+    function bodies too.** Item 72 has `check_marks` normalize every
+    compiled body, replacing a `let` that only renames by its right-hand
+    side. The substitution was applied through the body's own shape but
+    not into the bodies of a nested `def-fns`: `Value.map_code`, which
+    the normalizer walked with, deliberately does not descend into them,
+    which is what keeps item 71's `tail`/`delegate` marks judged per
+    function (commit "Judge tail and delegate marks per function"). A
+    nested function closing over such a binder was then left referencing
+    an id that nothing bound any more -- the interpreter raised `unbound
+    at runtime` and the extracted OCaml named a variable that does not
+    exist. Reached by a nested `def-fns` whose body mentions a binder of
+    an enclosing `(let (many k) n)`, or of a `let` whose right-hand side
+    is a `values` of plain variables. The normalizer now rewrites nested
+    bodies as well; the mark scoping is untouched. Believed
+    semantics-preserving, the binder and its right-hand side denoting the
+    same value. `tests/nested_capture.sl`.
+
+75. **A call's same-level test reads both levels canonically.** Section
+    9 splits a call by whether the callee's level is the current one,
+    and section 5's identity is canonicalize-then-compare. The test
+    canonicalized the callee's level but compared it against the current
+    level's bare variable, while the `Predates` check on the next line
+    canonicalizes both sides. So a fact equating the enclosing function's
+    own level with an older one -- which a match branch can force where a
+    constructor's return names that older level, ASSUMPTIONS 69's
+    situation -- made the function's *same-level self-call* read as a
+    lower-level call, dischargeable by the ordinary `Predates` proof
+    between the two levels and needing no `Subterm` decrease at all. That
+    is unrestricted same-level recursion, which is exactly
+    `tests/lt_subterm.sl`'s `loop`: the checker accepted an `erased`
+    function whose one branch is that self-call and whose declared return
+    is `(erased (False) f)`, so a caller able to reach it would bind a
+    `False` token and section 10 would be gone. The session
+    did not find a way to run one, agreeing with item 69: the branch
+    forcing the equation is headed by a constructor whose return puts one
+    variable in two index positions, so its values are diagonal, and
+    `coercible-ctor` retargets an index only through an erased field,
+    which is exactly the case where no equation is forced. So what was
+    reachable appears to be an accepted call rather than a live loop.
+    Both sides are now read canonically, which makes the call same-level
+    and demands the `(subterm p)` it cannot supply
+    (`tests/level_alias_bad.sl`). Open for the owner: this is the one
+    change here that alters which programs are accepted, and the
+    alternative -- reading the current level literally, so that the
+    branch keeps its recursion -- is the behavior that was there before.
+
+76. **`numeral-of` on a string literal is an error.** Item 51's literals
+    table holds a value entry and a proof entry per literal; a string
+    literal (item 60) has no `Numeral` proof, and the table stored its
+    value entry in both slots. `(numeral-of "ab")` therefore yielded the
+    string itself -- a `many` value of type `(String)`, where item 53 has
+    the form yield an erased proof. Nothing false follows, the value
+    being honestly typed, but the form did not do what it says. It is now
+    an error (`tests/numeral_of_string_bad.sl`). Whether a string literal
+    should instead relate to something -- a length, or its characters'
+    numerals -- is open; nothing in DESIGN.md asks for it.
