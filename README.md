@@ -3,7 +3,8 @@
 A prototype OCaml interpreter for the language recorded in DESIGN.md.
 KERNEL.md and SUGAR.md are further design notes; SPEC-REVIEW.md lists
 the spec's open points and ASSUMPTIONS.md the assumptions the
-interpreter makes about them.
+interpreter makes about them. EXAMPLES.md indexes the tests that show the
+features working together.
 
 ## Build and run
 
