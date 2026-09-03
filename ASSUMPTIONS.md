@@ -685,7 +685,8 @@ in both modes.
 A session asked to look for bugs, soundness ones especially, reported
 its findings in chat; the owner picked three to fix and settled how the
 first of them should be fixed. Items 70-72 record the changes and item
-73 the one finding left open, whose resolution is the owner's to make.
+73 the one finding left open at the time, settled by the owner in a
+later session.
 
 70. **A `ValCtor`'s return is a type-constructor application.** The
     owner's decision, in chat: the former may not be invoked with a bare
@@ -732,12 +733,14 @@ first of them should be fixed. Items 70-72 record the changes and item
     Peano numeral that large in the extracted OCaml (section 41's
     stripped mode) is not something extraction handles quickly.
 
-73. **Unifying a free variable with a telescope binder is open.** The
-    guard meant to catch it does not: `has_dangling` starts its fold at
-    the depth being compared and counts a `Bound k` as dangling only
-    when `k >= d`, so an index bound by the very telescope under
-    comparison is never flagged and unification records the rule
-    instead. A type indexed by a function type is enough to reach it:
+73. **Unifying a free variable with a telescope binder refutes the
+    branch.** The guard meant to catch the clash did not: `has_dangling`
+    started its fold at the depth being compared and counted a `Bound k`
+    as dangling only when `k >= d`, so it flagged only an index escaping
+    the whole pair of terms, which `refine` never produces, and never
+    one bound by the telescope under comparison; unification recorded
+    the rule instead. A type indexed by a function type is enough to
+    reach it:
 
     ```scheme
     (def-lvl L)
@@ -754,20 +757,33 @@ first of them should be fixed. Items 70-72 record the changes and item
 
     `MkTag`'s index is the type of functions returning their own
     argument, the scrutinee's the type of functions returning the outer
-    `k`, so entering the branch equates `k` with `x`, a binder of the
-    `Fn` telescope. The branch is accepted as live; a body of `k` there
-    reports `erased value #0 : (Nat) used in a non-erased position`,
-    printing the dangling index the fact table now holds, and
-    `(absurd MkTag)` is rejected as not refuted. A call such as
-    `(probe (Zero) (MkTag))` is separately and correctly refused, both
-    sides being closed there, so what is reachable is the wrong fact,
-    not yet a proof of anything false.
+    `k`, so entering the branch equated `k` with `x`, a binder of the
+    `Fn` telescope. The branch was accepted as live; a body of `k` there
+    reported `erased value #0 : (Nat) used in a non-erased position`,
+    printing the dangling index the fact table held, and `(absurd
+    MkTag)` was rejected as not refuted. A call such as `(probe (Zero)
+    (MkTag))` was separately and correctly refused, both sides being
+    closed there, so what was reachable was the wrong fact, not a proof
+    of anything false.
 
-    Whether the clash should refute the branch or be an error is the
-    owner's call, and the owner offers this Lean demo as reason to think
-    it could go either way, since whether a binder occurrence and a
-    closed term may be identified is a property of the indexed type
-    rather than a structural fact about binders:
+    The owner's decision, in a later session: the clash refutes the
+    branch, section 18's third way for a forced unification to fail. The
+    guard now asks whether the term is closed, the same fold from depth
+    zero, and a hit raises the contradiction that a `Bound` against a
+    constructor already raised through the structural mismatch, which
+    left `unify` with no use for a depth at all. The reasoning put to
+    the owner, who agreed: a rule maps a variable to a closed term and
+    canonicalizing a closed term keeps it closed, so no rule could make
+    the two types identical under section 5, and refuting the
+    free-variable case is the universal closure of what the closed case
+    already did for each particular `k`; coercion does not reach the
+    branch either, `coercible-ctor` retyping a value only to the
+    constructor's return at other closed field values. Believed sound
+    under section 5's identity, and by the same reading it holds for a
+    unit-like index type, which is where the owner's Lean demo marks the
+    boundary, since whether a binder occurrence and a closed term may be
+    identified is a property of the indexed type rather than a
+    structural fact about binders:
 
     ```lean
     -- Structure: gets definitional eta, so `b` and `MyUnit.mk` are defeq.
@@ -783,12 +799,15 @@ first of them should be fixed. Items 70-72 record the changes and item
     example : ((b : IUnit) → IBox b) = ((b : IUnit) → IBox .tt) := rfl  -- ✗ fails
     ```
 
-    Under eta the two families agree, so refuting a branch on the clash
-    alone would be refuting something true; without eta they do not, but
-    a definitional-equality failure is not by itself a refutation
-    either. This session did not run the Lean; it is recorded as the
-    owner wrote it. Section 5 has types canonicalize and then compare
-    for identity, with no eta rule stated, so nothing in the language as
-    recorded gives the `SUnit` case yet -- which is itself part of what
-    is open, and section 18's two ways for a forced unification to fail
-    would need a third if the answer is refutation.
+    Under eta the two families agree, so refuting on the clash alone
+    would refute something true there; section 5 states no eta rule, so
+    here they are distinct types that no value shares. This session did
+    not run the Lean; it is recorded as the owner wrote it. Should an eta
+    rule ever be wanted, one place it could live is `canon`,
+    eta-normalizing binder occurrences at such a type before comparison,
+    which would turn the equation into a solvable `k` against `(MkU)` and
+    leave the refutation as is; not designed. Section 42 records the
+    owner's wider open question, a rewriting engine without the atom
+    requirement, which could revisit the decision.
+    `tests/binder_clash.sl` and `tests/binder_clash_bad.sl` cover the
+    dismissed and the written branch.

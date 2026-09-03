@@ -732,13 +732,23 @@ how entering a match branch updates it:
   a real discriminant check (a runtime tag comparison for a non-erased
   enum, or `comptime-match`'s compile-time computation) — not performed
   as a free-floating comparison between two arbitrary atoms.
-- The only two ways forcing a unification fails, i.e. produces a
+- The only three ways forcing a unification fails, i.e. produces a
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
   itself is a no-op, not a contradiction); (2) two already-known, distinct
   constructors equated (arity mismatch is one easy sufficient symptom of
-  this given fixed arities and no currying, not a separate case).
+  this given fixed arities and no currying, not a separate case); (3) a
+  variable equated with an expression mentioning a binder of the
+  telescope under comparison -- `k` against `x` when
+  `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
+  A rule maps an atom to a closed expression and canonicalizing a
+  closed expression keeps it closed, so no rule could make the two
+  sides identical under §5; the closed case, `x` against a constructor
+  there, already fails as a mismatch of shape, the form (2) takes in
+  the engine. Decided at ASSUMPTIONS 73; the reading
+  leans on §5 stating no eta rule, and §42 holds an open question that
+  could revisit it.
 
 ## 19. `Matchable` and constructor disjointness
 
@@ -1725,3 +1735,18 @@ bound structurally with the proof carried along. `u8-add` (wrapping),
 Open, not decided: a source-level declaration of extern types and
 functions; what guarantees an extern implementation agrees with its
 model beyond the invariant above; numeric literals.
+
+## 42. TBD: a rewriting engine without the atom requirement
+
+§18's fact table maps an atom to an expression, and canonicalization is
+substitution through those rules. To consider: a perhaps more complex
+engine without that requirement, whose rules rewrite expression to
+expression, canonicalizing directly from one to the other. Not designed.
+What the atom requirement decides today is §18's third failure mode: an
+equation with a binder occurrence on one side and a variable on the
+other has no atom rule that could express it, so the branch is refuted
+(ASSUMPTIONS 73). Whether an engine able to record an equation between
+the two telescopes themselves should treat such a branch differently,
+given §5's identity, and what expression-level rules would do to §5's
+canonicalize-then-compare rule and to §18's occurs check and
+self-consistency of the table, are open.

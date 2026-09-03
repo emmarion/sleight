@@ -60,13 +60,10 @@ let rec canon env t =
 let type_of env x = canon env (fact env x).ty
 let show env t = to_string (name_of env) (canon env t)
 
-let rec unify env depth a b =
+let rec unify env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
-    let no_binders x t =
-      if has_dangling depth t then error 0 "cannot unify %s with %s, which mentions a telescope binder" (name_of env x) (show env t)
-    in
     let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
     match (a, b) with
     | Var x, Var y when (entry env x).rigid && (entry env y).rigid -> contradiction ()
@@ -75,10 +72,8 @@ let rec unify env depth a b =
         if rigid y || ((not (rigid x)) && x > y) then add_rule env x (Var y) else add_rule env y (Var x)
     | Var x, t | t, Var x ->
         if (entry env x).rigid then contradiction ();
-        no_binders x t;
+        if has_dangling t then contradiction ();
         if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
         add_rule env x t
-    | _ when blank a = blank b -> List.fold_left2 (fun env (k, x) (_, y) -> unify env (depth + k) x y) env (kids a) (kids b)
+    | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify env x y) env (kids a) (kids b)
     | _ -> contradiction ()
-
-let unify env a b = unify env 0 a b

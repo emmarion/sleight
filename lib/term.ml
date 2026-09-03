@@ -81,7 +81,7 @@ let rec fold_vars f depth acc t =
   | _ -> List.fold_left (fun acc (k, c) -> fold_vars f (depth + k) acc c) acc (kids t)
 
 let occurs x t = fold_vars (fun _ b t -> b || t = Var x) 0 false t
-let has_dangling depth t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= d | _ -> false)) depth false t
+let has_dangling t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= d | _ -> false)) 0 false t
 
 let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equal x y) (kids a) (kids b)
 
