@@ -49,6 +49,13 @@
     (many Yes : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Dec a b))
     (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
 
+(def-adts
+  (Cmp : ((Nat) a) ((Nat) b) -> Type
+    enum
+    (many CLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Cmp a b))
+    (many CEq : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) e) -> (Cmp a b))
+    (many CGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) q) -> (Cmp a b))))
+
 (def-lvl nat-lvl)
 
 (def-fns nat-lvl $ many extern nat-add : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c)
@@ -90,6 +97,21 @@
           (match many (lt-dec (subterm _) a1 b1) _
             ((Yes x y p) (Yes a b (LtS a1 b1 p)))
             ((No x y q) (No a b (LtS b1 (Succ a1) q)))))))))
+
+(def-fns nat-lvl $ many nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp a b) c)
+  (match many a _
+    ((Zero)
+      (match many b _
+        ((Zero) (CEq a b (Refl (Nat) a)))
+        ((Succ b1) (CLt a b (LtZ b1)))))
+    ((Succ a1)
+      (match many b _
+        ((Zero) (CGt a b (LtZ a1)))
+        ((Succ b1)
+          (match many (nat-cmp (subterm _) a1 b1) _
+            ((CLt x y p) (CLt a b (LtS a1 b1 p)))
+            ((CEq x y e) (match erased e _ ((Refl t u) (CEq a b (Refl (Nat) a)))))
+            ((CGt x y q) (CGt a b (LtS b1 a1 q)))))))))
 
 (def-lvl pow-lvl)
 (let (erased nat-pow) (prove-predates nat-lvl pow-lvl))
@@ -349,6 +371,28 @@
 (def-adts $ Char : -> Type
   enum newtype
   (many MkChar : (many (U8) u) -> (Char)))
+
+(def-lvl char-lvl)
+(let (erased nat-char) (prove-predates nat-lvl char-lvl))
+(let (erased u8-char) (prove-predates u8-lvl char-lvl))
+
+(def-fns char-lvl $ many char-to-nat : (many (Char) c) -> (many (Nat) n)
+  (let-match many c (MkChar u))
+  (let-match many u (MkU8 m p))
+  m)
+
+; Out of range wraps, as nat-to-u8 does (section 41): every Nat names a Char.
+(def-fns char-lvl $ many nat-to-char : (many (Nat) n) -> (many (Char) c)
+  (MkChar (nat-to-u8 (predates u8-char) n)))
+
+; The codes come back alongside the comparison, since section 5 keeps char-to-nat out of the result type.
+(def-fns char-lvl $ many char-cmp : (many (Char) a) (many (Char) b) ->
+    (erased (Nat) m) (erased (Nat) n) (many (Cmp m n) c)
+  (let-match many a (MkChar ua))
+  (let-match many ua (MkU8 ma pa))
+  (let-match many b (MkChar ub))
+  (let-match many ub (MkU8 nb pb))
+  (values ma nb (nat-cmp (predates nat-char) ma nb)))
 
 (def-adts $ String : -> Type
   enum extern

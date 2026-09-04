@@ -1277,3 +1277,29 @@ what it assumed while doing so.
     nodes; using a literal as a `Vec`'s length now wants a `unary` per
     literal down to zero, which is the caller's choice rather than the
     form's.
+98. **The prelude's character operations** (`lib/prelude.sl`):
+    `char-to-nat` destructures the newtype and the extern `U8` with two
+    `let-match`es; `nat-to-char` is `MkChar` over `nat-to-u8`, so a `Nat`
+    out of range **wraps**, which is the convention §41 already settles
+    for `nat-to-u8` and `u8-add` rather than a new choice — every `Nat`
+    names a `Char`. A total variant returning a `Maybe (Char)`, or one
+    demanding an erased `Lt n u8-modulus`, would be the alternative and
+    is not built; which a parser actually wants is not decided.
+    `char-cmp` returns the two codes beside a `Cmp` over them, because
+    §5 keeps `char-to-nat` out of a result type, so the comparison has
+    to be indexed by codes the caller can see. `Cmp` is the trichotomy
+    `CLt`/`CEq`/`CGt` carrying `Lt`, `Eq` and `Lt` the other way, over
+    `nat-cmp` at `nat-lvl`; the shape was proposed to the owner earlier
+    and the function-carrying alternative, whose negative case needs a
+    `Level` parameter as `IO` has, was not taken.
+99. **"Mint" in these notes means a fact or entry reaching the tables,
+    not a claim about who checked it.** For `unary` and `distinct`
+    nothing is asserted: the elaborator writes down terms — a `Bin`
+    spelling, a `BinSucc` witness, a call — and the refinement reaches
+    §18's table through the same `refine` an ordinary match branch uses.
+    A wrong term does not typecheck, which the session checked by
+    handing `numeral-succ` a witness and then a spelling that lie; both
+    are rejected. What is not checked, here as everywhere a numeral is
+    involved, is that a literal's runtime `Nat` is the number its source
+    spelled, which rests on `bin-to-nat`'s extern (§41's invariant, and
+    KERNEL.md's note on facts).
