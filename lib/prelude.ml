@@ -22,21 +22,21 @@ let coercible, env = Env.bind env ~rigid:true (Some "Coercible") Erased token (T
 let special, env = Env.bind env ~rigid:true (Some "Special") Erased token (TyCtor [])
 let special_term = App (Var special, [])
 
-let env =
+(* [specials]: each special form by its variant's constructor entry. *)
+let specials, env =
   let adt = { V.tname = "Special"; tagged = true; ctors = []; ext = None } in
   let ctor (env, index) (sp, n) =
     let c, env = Env.bind env ~rigid:true (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
     let ctor = { V.cname = "%" ^ n; cid = c; index; arity = 0; adt } in
     let env = Env.set_state env c (Env.Const (V.VCtorFn ctor)) in
-    Hashtbl.replace Special.table c sp;
     ((env, index + 1), (sp, n, c, ctor))
   in
   let (env, _), ctors = List.fold_left_map ctor (env, 0) Special.all in
   adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
   let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
-  let mid, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
-  Hashtbl.replace Env.adts mid adt;
-  List.fold_left
-    (fun env (_, n, c, ctor) ->
-      snd (Env.bind env ~rule:(App (Var c, [])) (Some n) Many (Env.Const (V.VCtor (ctor, []))) special_term))
-    env ctors
+  let _, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
+  ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,
+    List.fold_left
+      (fun env (_, n, c, ctor) ->
+        snd (Env.bind env ~rule:(App (Var c, [])) (Some n) Many (Env.Const (V.VCtor (ctor, []))) special_term))
+      env ctors )

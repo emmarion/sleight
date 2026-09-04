@@ -1049,19 +1049,17 @@ record how the prototype reads them, and item 79's restriction is gone.
 
 84. **A match carries no `Matchable` it would not read** (the owner's
     decision, in chat). A `Matchable` entry is minted `many` and its
-    value carries the type's runtime shape, but a match whose type the
-    elaborator can see -- the one `def-adts` minted, or one a
-    run-position binder holds -- takes that shape and mentions no
+    value carries the type's runtime shape, but a match whose
+    `Matchable` entry is `Const` (§34) -- minted by a `def-adts` in run
+    position, or forwarded from one -- takes that shape and mentions no
     `Matchable` at all, so a non-extern type's match is a tag read or a
     field read with nothing dynamic in front of it, in the interpreter
-    and in the extracted OCaml alike. Only a `Matchable` reaching the
-    match as a variable -- a first-class parameter (`tests/gmap.sl`,
-    `tests/first_class.sl`, `tests/thunk_matchable.sl`, whose parameters
-    are now `many`) -- is read at runtime, and the extraction emits a
-    `Matchable` value for a type only where one is really held. A
-    nested `def-adts` therefore still leaves nothing behind in a body
-    that declares only phantom constructors, which is what ASSUMPTIONS
-    77 wanted for `delegate` (`tests/delegate_erased_inner.sl`).
+    and in the extracted OCaml alike. Only a `Dyn` `Matchable` -- a
+    first-class parameter (`tests/gmap.sl`, `tests/first_class.sl`,
+    `tests/thunk_matchable.sl`, whose parameters are now `many`), or
+    one a `def-adts` inside a body minted (item 88) -- is read at
+    runtime, and the extraction emits a `Matchable` value for a type
+    only where one is really held.
     The erasure demand, by contrast, is a rule about the source rather
     than about what the implementation manages to stamp: a match whose
     position and whose scrutinee are both non-erased needs a non-erased
@@ -1121,20 +1119,54 @@ suite (CLAUDE.md rule 2), not settled decisions.
     a refusal into an acceptance, and only where a `Matchable` that
     would have served was already in scope.
 
-87. **Open: two first-class constructors of one Matchable are not
-    refuted against each other.** §19 says the disjointness judgment
-    quantifies over a `Matchable`'s constructor list, but the engine's
-    forced unification (§18) knows disjointness only through rigidity
-    (item 40), which `def-adts` confers on the constructors it mints
-    and nothing confers on a `ValCtor`-typed parameter. So with `C` and
-    `D` both parameters listed by one `(Matchable ... (many C) (many D))`
-    and of equal arity, unifying `(C k)` against a `(D n)` pattern
-    succeeds by aliasing `C` to `D` inside the branch, and the branch
-    counts as real: an `erased` match or a union match over first-class
-    constructors cannot be written unless the arities differ, since
-    `(absurd D)` is refused as "not refuted". No unsoundness was found,
-    the extra branch being unreachable and its facts ending with it, and
-    a `many` enum match still dispatches on the tag. Whether the
-    unifier should consult the `Matchable`s in scope so that two
-    constructors one lists are §18's second contradiction is for the
-    owner; the session did not change it.
+87. **Forced unification consults the Matchables in scope** (settled by
+    the owner; §§18, 19 now say so). The engine knew constructor
+    disjointness only through rigidity (item 40), which `def-adts`
+    confers on the names it mints and nothing confers on a
+    `ValCtor`-typed parameter, so with `C` and `D` both parameters
+    listed by one `(Matchable ... (many C) (many D))` and of equal
+    arity, unifying `(C k)` against a `(D n)` pattern succeeded by
+    aliasing `C` to `D` inside the branch, and `(absurd D)` was refused
+    as "not refuted": an `erased` or union match over first-class
+    constructors could not be written unless the arities differed. Two
+    atoms one `Matchable` in scope lists are now §18's second
+    contradiction (`tests/first_class_disjoint.sl`,
+    `tests/first_class_disjoint_bad.sl`). No unsoundness was found
+    before, the extra branch being unreachable and its facts ending
+    with it; the change refuses a present branch the type already
+    excludes and accepts the absurd one.
+
+88. **The elaborator keeps no record of a type beyond the scope**
+    (settled by the owner; §17 now says so). Items 83-84 had stamped
+    the `def-adts`-minted shape into a match through a global table
+    from `Matchable` entry to ADT record, filled by `def-adts` and read
+    back by the match. The owner's reading, which the session checked
+    against every use: the tag, the discriminants, the phantom markers
+    and the field arities are all in the `Matchable`'s type and the
+    constructors' `ValCtor` types, so the only thing a `Matchable`'s
+    *value* can carry is an `extern` type's FFI wrapper (§41), and that
+    value has the home every value has -- the entry's `Const` state in
+    run position, a runtime binding in a body (§34). The table is gone;
+    the `Matchable` minted inside a body is `Dyn` like the
+    constructors beside it, bound by the same code, and a match on it
+    reads it when the code runs, as a match on a parameter does. In the
+    prototype the value also names the type for the extractor, which
+    emits that type's destructor for it; the interpreter reads only the
+    wrapper. Two smaller tables went the same way: `Special`'s
+    variant-to-form map is a value the prelude builds, and the
+    `def-adts` code binds no phantom constructor at all, a phantom
+    entry holding only §3's token. What remains global is the id
+    supply, the extractor's inputs (`Env.trace` and the id-to-name map
+    it prints with), the FFI's claim tables and the `--no-extern` flag.
+
+    One consequence for `delegate`: the `Matchable` a nested `def-adts`
+    now binds would stand between a delegating body and its call, so
+    the tail-check's normalizer, which already folds a renaming `let`
+    away, also drops a `let` of constants the rest of the body never
+    mentions. That keeps item 77's guarantee for a phantom-only
+    `def-adts` (`tests/delegate_erased_inner.sl`) but reads more widely
+    than item 77 did: a nested `def-adts` whose constructors the body
+    never uses no longer blocks a `delegate` either. The session's
+    reading is that dropping a binding nothing reads changes no
+    program's meaning (§20's argument for erasure applies), offered for
+    the owner to confirm.

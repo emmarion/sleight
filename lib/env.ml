@@ -31,9 +31,6 @@ let counter = ref 0
 let fresh () = incr counter; !counter
 let names : (id, string) Hashtbl.t = Hashtbl.create 64
 
-(* The ADT behind each Matchable entry def-adts minted. *)
-let adts : (id, Value.adt) Hashtbl.t = Hashtbl.create 64
-
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
 
 let trace : item list ref = ref []
@@ -63,13 +60,18 @@ let rec canon env t =
 let type_of env x = canon env (fact env x).ty
 let show env t = to_string (name_of env) (canon env t)
 
+(* Constructors one Matchable in scope lists are distinct (section 19), first-class ones included. *)
+let listed env x y =
+  let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
+  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope
+
 let rec unify env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
     let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
     match (a, b) with
-    | Var x, Var y when (entry env x).rigid && (entry env y).rigid -> contradiction ()
+    | Var x, Var y when ((entry env x).rigid && (entry env y).rigid) || listed env x y -> contradiction ()
     | Var x, Var y ->
         let x, y = if (entry env y).rigid || ((not (entry env x).rigid) && x > y) then (x, y) else (y, x) in
         add_rule env x (Var y)

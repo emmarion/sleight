@@ -661,7 +661,12 @@ minted `many`: nearly everything it carries is in its type, but not the
 one thing an `extern` type (§41) keeps to itself — how its values are
 built and taken apart — so a `Matchable` is real data, and a match whose
 own position is non-erased needs a non-erased one. Held at `erased` it
-still serves every compile-time job below.
+still serves every compile-time job below. That wrapper is all a
+`Matchable`'s value ever holds; for a type the FFI does not hold it
+holds nothing. The elaborator keeps no record of a type beyond its
+scope entries and the fact table: the tag, each constructor's
+discriminant and phantom marker, and each field's multiplicity are all
+read off the `Matchable`'s type and the constructors' `ValCtor` types.
 
 It has three jobs: it's what lets the compiler know a type's constructors
 are disjoint (§19); it's what lets you match on a first-class object
@@ -674,12 +679,13 @@ type alone, whether the scrutinee's type carries a tag (§38) and which
 discriminant each branch's constructor has, so it stamps both into the
 match; the constructors themselves are needed only to build values, and
 a match may name ones that are `erased` where it stands. Where the
-`Matchable` is one it can see — the one `def-adts` minted for a named
-type — it stamps how the value comes apart as well, and the match then
-carries no `Matchable` at all: a non-extern type's match is a tag read
-or a field read with nothing in front of it. Only a `Matchable` held in
-a variable — a function's parameter, say — is read when the match runs,
-since its type alone cannot say whether the FFI implements the type.
+`Matchable`'s entry is `Const` (§34) — minted by a `def-adts` in run
+position — its value is known too, and the match carries no
+`Matchable` at all: a non-extern type's match is a tag read or a field
+read with nothing in front of it. Only a `Dyn` `Matchable` — a
+function's parameter, or one a `def-adts` inside a body minted — is
+read when the match runs, since its type alone cannot say whether the
+FFI implements the type.
 
 ## 18. Match-branch rewrite algorithm (working formulation)
 
@@ -758,8 +764,10 @@ how entering a match branch updates it:
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
   itself is a no-op, not a contradiction); (2) two already-known, distinct
-  constructors equated (arity mismatch is one easy sufficient symptom of
-  this given fixed arities and no currying, not a separate case); (3) a
+  constructors equated — two `def-adts`-minted names, or any two atoms
+  one `Matchable` in scope lists, first-class constructor parameters
+  included (§19); arity mismatch is one easy sufficient symptom of
+  this given fixed arities and no currying, not a separate case; (3) a
   variable equated with an expression mentioning a binder of the
   telescope under comparison -- `k` against `x` when
   `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
@@ -790,7 +798,12 @@ than staying hidden compiler bookkeeping.
 There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
-succeeds by adding the needed `is` fact(s).
+succeeds by adding the needed `is` fact(s). Forced unification consults
+the `Matchable`s in ambient scope for exactly this: two atoms one of
+them lists are known to conflict, whether they are `def-adts`-minted
+names or parameters holding first-class constructors, so a branch
+matching a `D` against a scrutinee known to be `C`-headed is refuted
+either way.
 
 A `Matchable` doesn't need to be threaded through explicitly — having one
 for the relevant type anywhere in ambient scope is enough for the
@@ -1349,8 +1362,9 @@ The states are `Const` and `Dyn` (§3). This section collects how
    resulting values at their declared multiplicities (§9). A `def-lvl`,
    `def-fns` or `def-adts` involves no evaluation:
    a definition's value is built by elaboration itself — a function
-   value is its own compiled code; a `Level` or a `Matchable` is an
-   erased token. Within the bodies of a `def-fns` block the block's own
+   value is its own compiled code; a `Level` is an erased token; a
+   `Matchable` holds the FFI's wrapper for an `extern` type and nothing
+   otherwise (§17). Within the bodies of a `def-fns` block the block's own
    functions are `Dyn`, their code not yet complete; they become `Const`
    after the block, at the multiplicity each carries on its `def-fns`
    line (§20).

@@ -21,6 +21,3 @@ let all =
 
 let name s = List.assoc s all
 let statements = [ Let; DefLvl; DefFns; DefAdts; ComptimeMatch ]
-
-(* Value-constructor entry id of each special's variant in the [Special] ADT. *)
-let table : (Term.id, t) Hashtbl.t = Hashtbl.create 64

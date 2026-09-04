@@ -18,7 +18,7 @@ let name_or_anon n = if n = "_" then None else Some n
 let special_of env raw =
   Option.bind (Option.bind (atom raw) (lookup env)) (fun x ->
       match entry env x with
-      | { state = Const (V.VCtor (c, [])); mult = Many; _ } when equal (type_of env x) Prelude.special_term -> Hashtbl.find_opt Sp.table c.cid
+      | { state = Const (V.VCtor (c, [])); mult = Many; _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
       | _ -> None)
 
 let is_special env raw s = special_of env raw = Some s
@@ -63,12 +63,8 @@ let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).m
 let non_erased env ids = List.filter (fun x -> (entry env x).mult = Many) ids
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 
-(* The ADT behind a Matchable entry where the elaborator can see one: def-adts minted it, or a run-position
-   binder holds it. A first-class Matchable has none until the code runs. *)
-let adt_of env x =
-  match Hashtbl.find_opt Env.adts x with
-  | Some adt -> Some adt
-  | None -> (match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None)
+(* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
+let adt_of env x = match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None
 
 let matchables env tid =
   List.filter_map
@@ -765,13 +761,19 @@ and elab_def_fns env l args =
         (env, if fns = [] then Fun.id else fun rest -> V.CLetRec (fns, rest))
 
 (* Validates the tail/delegate marks in a body (section 9), returning the delegated callee if any. Lets that only
-   rename (all a coerce leaves) or return exactly what they bind are first folded away, so a marked call stands
-   in tail position in the code that runs. *)
+   rename (all a coerce leaves), return exactly what they bind, or bind constants nothing mentions (a nested
+   def-adts the body never reads) are first folded away, so a marked call stands in tail position in the code
+   that runs. *)
 and check_marks env l pids code =
   let non_erased = non_erased env in
   let rec resolve sub x = match List.assoc_opt x sub with Some y -> resolve sub y | None -> x in
   let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
   let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
+  let constant = function V.CValues cs -> List.for_all (function V.CConst _ -> true | _ -> false) cs | _ -> false in
+  let rec mentions x c =
+    (match c with V.CVar y -> y = x | V.CLetRec (fns, _) -> List.exists (fun (_, f) -> mentions x f.V.body) fns | _ -> false)
+    || List.exists (mentions x) (V.subcodes c)
+  in
   let rec norm sub = function
     | V.CVar x -> V.CVar (resolve sub x)
     | V.CLet (ids, rhs, rest) -> (
@@ -779,7 +781,11 @@ and check_marks env l pids code =
         | V.CVar y when List.length ids = 1 -> norm ((List.hd ids, y) :: sub) rest
         | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
             norm (List.combine ids (vars_of cs) @ sub) rest
-        | rhs -> let rest = norm sub rest in if returns ids rest then rhs else V.CLet (ids, rhs, rest))
+        | rhs ->
+            let rest = norm sub rest in
+            if returns ids rest then rhs
+            else if constant rhs && not (List.exists (fun x -> mentions x rest) ids) then rest
+            else V.CLet (ids, rhs, rest))
     | V.CLetRec (fns, rest) ->
         V.CLetRec (List.map (fun (x, f) -> (x, { f with V.body = norm sub f.V.body })) fns, norm sub rest)
     | c -> V.map_code (norm sub) c
@@ -847,12 +853,11 @@ and elab_def_adts env adts =
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in
-    Hashtbl.replace Env.adts mid adt;
     let env =
       if not (List.mem Sp.NewtypeMark ms) then env
       else match wrapper disc shapes with Some w -> snd (witness env (Newtype (Var w))) | None -> error al "%s is not of newtype shape (section 38)" name
     in
-    (env, cids @ values)
+    (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
   (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
