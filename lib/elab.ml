@@ -840,7 +840,7 @@ and elab_def_adts env adts =
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
           if mult = Erased && List.exists (fun e -> e.mult = Many) tele then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
-          let c, env = bind env ~rigid:true (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
+          let c, env = bind env (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"
     in

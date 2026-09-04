@@ -764,10 +764,14 @@ how entering a match branch updates it:
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
   itself is a no-op, not a contradiction); (2) two already-known, distinct
-  constructors equated — two `def-adts`-minted names, or any two atoms
-  one `Matchable` in scope lists, first-class constructor parameters
-  included (§19); arity mismatch is one easy sufficient symptom of
-  this given fixed arities and no currying, not a separate case; (3) a
+  constructors equated — for value constructors, any two atoms one
+  `Matchable` in scope lists, whether `def-adts`-minted names or
+  first-class constructor parameters (§19), the `Matchable` being the
+  only thing that tells constructors apart; for type constructors, two
+  distinct declared ones, `def-adts`-minted or built in, since no
+  first-class object reifies which types are distinct; arity mismatch
+  is one easy sufficient symptom of this given fixed arities and no
+  currying, not a separate case; (3) a
   variable equated with an expression mentioning a binder of the
   telescope under comparison -- `k` against `x` when
   `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
@@ -799,11 +803,13 @@ There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
 succeeds by adding the needed `is` fact(s). Forced unification consults
-the `Matchable`s in ambient scope for exactly this: two atoms one of
-them lists are known to conflict, whether they are `def-adts`-minted
-names or parameters holding first-class constructors, so a branch
-matching a `D` against a scrutinee known to be `C`-headed is refuted
-either way.
+the `Matchable`s in ambient scope for exactly this, and for nothing
+else: two atoms one of them lists are known to conflict, whether they
+are `def-adts`-minted names or parameters holding first-class
+constructors, so a branch matching a `D` against a scrutinee known to
+be `C`-headed is refuted either way, and a declared constructor enjoys
+no distinctness its `Matchable` does not grant — that is what makes a
+first-class constructor first class.
 
 A `Matchable` doesn't need to be threaded through explicitly — having one
 for the relevant type anywhere in ambient scope is enough for the

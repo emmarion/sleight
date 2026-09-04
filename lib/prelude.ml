@@ -26,7 +26,7 @@ let special_term = App (Var special, [])
 let specials, env =
   let adt = { V.tname = "Special"; tagged = true; ctors = []; ext = None } in
   let ctor (env, index) (sp, n) =
-    let c, env = Env.bind env ~rigid:true (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
+    let c, env = Env.bind env (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
     let ctor = { V.cname = "%" ^ n; cid = c; index; arity = 0; adt } in
     let env = Env.set_state env c (Env.Const (V.VCtorFn ctor)) in
     ((env, index + 1), (sp, n, c, ctor))

@@ -1172,3 +1172,23 @@ suite (CLAUDE.md rule 2), not settled decisions.
     reading is that dropping a binding nothing reads changes no
     program's meaning (§20's argument for erasure applies), offered for
     the owner to confirm.
+
+89. **Only a `Matchable` tells value constructors apart** (settled by the
+    owner). Item 87 added the `Matchable` rule beside rigidity, leaving
+    a `def-adts`-minted constructor with a distinctness of its own that
+    a first-class constructor parameter lacked -- second class, as the
+    owner put it. Value constructors are no longer minted rigid, the
+    prelude's `Special` variants included; the `Matchable` in scope is
+    now the only source of the contradiction between two of them,
+    exactly as §19 reifies it. Nothing observable changed in the suite:
+    every declared constructor's `Matchable` is in scope wherever the
+    constructor is, and a constructor equated with a term or with a
+    constructor of another type was already refuted by the types.
+    Rigidity remains on type constructors, `def-adts`-minted and built
+    in, and that is the boundary of first-classness here: a `Matchable`
+    reifies which constructors of one type are distinct, and the design
+    offers no object saying which *types* are distinct, so two declared
+    type constructors are told apart by their minting alone, while two
+    type-constructor parameters may be the same type and are never
+    refuted against each other. Whether such an object is wanted is
+    open for the owner.
