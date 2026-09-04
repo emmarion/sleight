@@ -441,7 +441,8 @@
                   ((MkShowMemo count2 known2 defs2)
                     (values (MkShowMemo count2 known2 (Cons (Rope) (rcat4 (predates _) (RStr name) (RStr " (v : v) : string = ") body (REmpty)) defs2)) name))))))))))
 
-  ; One arm per non-phantom constructor; an untagged type has one arm reading the fields as they stand.
+  ; One arm per non-phantom constructor whose return type the instance does not refute, its fields shown
+  ; only then, as the reference's exception skips them; an untagged type has one arm reading the fields as they stand.
   (many show-arms : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty) (many (List (Ctor)) ctors) (many (ShowMemo) memo) (many (Bool) untagged) -> (many (ShowMemo) memo2) (many (Rope) arms)
     (match many fuel _
       ((Zero) (values memo (REmpty)))
@@ -457,7 +458,10 @@
                   (match many (unify-env (predates _) envb (instantiate (predates _) (tvars-rev (predates _) fids (Nil (Term))) ret) ty) (((Env) e) ((Bool) b))
                     ((UOk e2) (values e2 (BTrue)))
                     ((UContra msg) (values envb (BFalse)))))
-                (let (many memo2) (many shown) (show-fields (subterm _) k envb2 (non-erased (predates _) fids envb2) memo 0))
+                (let (many memo2) (many shown)
+                  (match many live (((ShowMemo) m) ((List (Rope)) r))
+                    ((BTrue) (show-fields (subterm _) k envb2 (non-erased (predates _) fids envb2) memo 0))
+                    ((BFalse) (values memo (Nil (Rope))))))
                 (let (many fnames) (field-names (predates _) arity 0))
                 (let (many text)
                   (match many untagged (((Rope) r))
