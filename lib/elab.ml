@@ -736,7 +736,9 @@ and elab_def_fns env l args =
         let values = Eval.close env.values fns in
         trace := Fns fns :: !trace;
         (List.fold_left (fun env (x, _) -> set_state env x (Const (IntMap.find x values))) env fns, Fun.id)
-      else (env, fun rest -> V.CLetRec (fns, rest))
+      else
+        let fns = List.filter (fun (x, _) -> (entry env x).mult = Many) fns in
+        (env, if fns = [] then Fun.id else fun rest -> V.CLetRec (fns, rest))
 
 (* Normalizes a compiled body, validates every tail/delegate-marked call in it (section 9) and returns the
    normalized code with the delegated callee, if any. A let that only renames -- which is all a coerce leaves

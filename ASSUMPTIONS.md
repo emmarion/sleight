@@ -878,3 +878,25 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     an error (`tests/numeral_of_string_bad.sl`). Whether a string literal
     should instead relate to something -- a length, or its characters'
     numerals -- is open; nothing in DESIGN.md asks for it.
+
+77. **An erased `def-fns` leaves nothing in the post-erasure code.** A
+    `def-fns` under a function body or match branch compiled to a
+    `CLetRec` binding every function of the block, an `erased` one
+    included, whose own body is already nothing -- item 32's rule applied
+    to the block's functions but not to the block itself. Section 20 has
+    an erased function only ever held or called at multiplicity `erased`,
+    so nothing at runtime can reach the closure and the residue was dead
+    code; it also stood in the way of section 9's `delegate`, whose check
+    reads the post-erasure AST and wants the body to reduce to the marked
+    call alone, so an erased proof helper defined inside a delegating
+    function made the mark a hard error (a `tail` mark was unaffected,
+    its check descending through the binding). The emitted `CLetRec` now
+    carries only the block's `many` functions and is dropped when none
+    remain, mirroring the guard `def-adts` already had for the empty
+    case. `tests/delegate_erased_inner.sl`. Believed conservative, the
+    dropped closures having no reachable use. Left as it was, and open:
+    the same reading would drop a nested `def-adts`'s *phantom*
+    constructors, erased entries by section 12 and equally unreachable,
+    from the `CLet` that statement emits; no test needs it, and a nested
+    `def-adts` declaring a non-phantom constructor binds a real value and
+    so blocks a `delegate` on either reading.
