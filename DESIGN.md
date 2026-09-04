@@ -1750,11 +1750,13 @@ numeric literals for now.
 exponent to its power through a `Double` relation, `pow2` computes the
 power and returns the proof, and `(pow2 eight)` with `eight` spelled in
 unary binds `u8-modulus`. Its constructors are its API — a `U8` is taken
-apart by matching, and built by `MkU8` with a proof, obtained for a
-hand-built value by reflection (a `comptime-match` on a decided
-comparison, §15) or from `nat-to-u8`, whose model reduces modulo the
-bound structurally with the proof carried along. `u8-add` (wrapping),
-`nat-to-u8` and `u8-to-nat` are extern; `U8` is not marked `newtype`.
+apart by matching, and built by `MkU8` with a proof: for a hand-built
+value by reflection (a `comptime-match` on a decided comparison, §15),
+and for a computed one by binding it and matching `lt-dec`, where the
+caller says what out of range means (§5 keeps the call itself out of
+the `Dec` index, so the binding is not optional). There is no
+narrowing function. `u8-add` (wrapping) and `u8-to-nat` are extern;
+`U8` is not marked `newtype`.
 
 Open, not decided: a source-level declaration of extern types and
 functions; what guarantees an extern implementation agrees with its

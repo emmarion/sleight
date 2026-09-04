@@ -1318,6 +1318,4 @@ what it assumed while doing so.
     wrapping silently (`tests/io_closure_in_data.sl`,
     `tests/io_factory_twice.sl`). `u8-add` still wraps, which is
     modular arithmetic rather than a narrowing and was not touched.
-    §41 still names `nat-to-u8` in two places; its wording is the
-    owner's (CLAUDE.md rule 12) and is recorded here as an open item
-    rather than guessed at.
+    §41 says this, in wording the owner confirmed (CLAUDE.md rule 12).
