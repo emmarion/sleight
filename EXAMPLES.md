@@ -90,8 +90,6 @@ that the test does not make is a mistake in this file.
   by a vacuous match on the resulting `Eq`, at a cost set by the spellings'
   depth rather than the numbers' difference. The second proves the spelling
   functional (`double-fn`, `numeral-fn`) and relates adjacent literals
-  (`BinSucc`, `numeral-succ`), then makes `5 is (Succ 4)` bind outward by
-  sealing the erased `Eq` into a `Const` a `comptime-match` reads, which is
-  what refutes its `VNil` branch. `seal` turning an erased proof of a
-  one-constructor type into a non-erased token appears to be what section 12's
-  one-real-branch rule licenses, but that reading is the session's.
+  (`BinSucc`, `numeral-succ`), then makes `5 is (Succ 4)` bind outward with a
+  `let-match` on the erased `Eq` (§16), which is what refutes its `VNil`
+  branch: dropping that one line makes the branch fail to refute.

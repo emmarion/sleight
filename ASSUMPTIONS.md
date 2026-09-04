@@ -1202,3 +1202,43 @@ suite (CLAUDE.md rule 2), not settled decisions.
     longer grant. The suite is unchanged. §18's second failure mode and
     §19 now say this, in wording the owner confirmed (CLAUDE.md rule
     12).
+
+## `let-match`, and reasoning about literals through their spelling
+
+The owner asked for a single-branch statement form of `match`, named it,
+and confirmed §16's wording. What follows is how the session built it and
+what it assumed while doing so.
+
+90. **`let-match` reads no value, so it is not confined to run
+    position** (`Elab.elab_let_match`). It requires the scrutinee's
+    `Matchable` to list exactly one constructor and refuses a phantom
+    one; the fields bind at `under smult` their declared multiplicities,
+    which is §20's existing rule for a match's branch fields, so an
+    erased scrutinee yields only erased fields. The refinement goes
+    through the same `refine` an ordinary `match` branch uses, so nothing
+    is asserted that a branch would not already have established — the
+    form appears to change where the refinement reaches, not what it is.
+91. **Its code depends on the scrutinee's erasure and on run position.**
+    An erased scrutinee emits nothing, matching `elab_match`'s existing
+    rule that one real branch under an erased scrutinee compiles to that
+    branch's body. In run position with a `many` scrutinee it runs the
+    scrutinee and binds the fields `Const`, as `comptime-match` does,
+    emitting nothing. Only outside run position does it emit a
+    one-branch `CMatch` wrapping the rest of the enclosing expression.
+    So a `let-match` at top level never costs the code after it its run
+    position, which was the session's worry about the form and appears
+    not to arise.
+92. **§27's registry has no entry for it yet.** The form is in §16's
+    statement list, but §27 enumerates every special form with its own
+    numbered entry, and adding one there renumbers the entries after it.
+    Recorded as an open item for the owner's wording (CLAUDE.md rule
+    12), not as a claim that the registry is complete.
+93. **The `Numeral` lemmas are tests, not prelude additions**
+    (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
+    its own `Eq`, since the prelude has none and what belongs in the
+    prelude is the owner's call. The session's reading is that these
+    lemmas make disjointness and the successor step derivable rather
+    than asserted — every fact reaching the table arrives through an
+    ordinary checked call — but whether that is worth the lemmas'
+    weight, and whether they should move into `lib/prelude.sl`, is not
+    decided.

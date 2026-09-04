@@ -575,10 +575,10 @@ no name. A **statement** is a form that binds *outward* as well: its
 names enter the expression containing it, visible to the rest of that
 expression and gone once it ends. Statements produce no values.
 
-The statements are `let`, `def-lvl`, `def-fns`, `def-adts` and
-`comptime-match`. All but `comptime-match` can appear at top level or
-nested inside a function body; `comptime-match` is confined to run
-position (below, §15). `def-fns` and `def-adts`
+The statements are `let`, `def-lvl`, `def-fns`, `def-adts`,
+`comptime-match` and `let-match`. All but `comptime-match` can appear at
+top level or nested inside a function body; `comptime-match` is confined
+to run position (below, §15). `def-fns` and `def-adts`
 do both at once — the defined names go outward, while each definition's
 own parameters stay inward — and it is only the outward half that makes
 them statements.
@@ -589,7 +589,14 @@ different branches learn different things and none of it persists past the
 match. So `match` is an ordinary expression, of the size given by its
 return annotation (§11). `comptime-match` binds outward for the
 complementary reason: having no branches, it asserts a single
-discriminant, so what it learns is unambiguous.
+discriminant, so what it learns is unambiguous. `let-match` binds
+outward for the same reason arrived at differently: its scrutinee's type
+has one constructor, so entering the branch is not a choice and what the
+branch learns holds wherever the scrutinee does. Having no discriminant
+to settle, it reads no value, so unlike `comptime-match` it needs
+neither a `Const` nor a non-erased scrutinee, and it is not confined to
+run position. Its fields take the scrutinee's own erasure, so nothing
+non-erased comes out of an erased value.
 
 Most locations require a size-one expression. The exceptions are the
 three places where a size is fixed by something written down elsewhere:

@@ -1,8 +1,8 @@
 ; needs: list vec
 ; expect: (Zero)
 ; Bijective base-2 successor is structural, carrying only through trailing B2s, so numeral-succ relates
-; adjacent literals: 5 is (Succ 4). seal makes the erased Eq a Const the comptime-match can read, which
-; binds the rewrite outward -- without it the VNil branch below is not refuted.
+; adjacent literals: 5 is (Succ 4). let-match reads the erased Eq and binds the rewrite outward --
+; without it the VNil branch below is not refuted.
 
 (def-adts
   (Eq : (Type A) (A x) (A y) -> Type
@@ -120,19 +120,13 @@
                       (match erased ed _ ((Refl t2 r2) (Refl (Nat) n))))))))
             (absurd N2)))))))
 
-(def-lvl S)
-(def-fns S $ many seal : (erased Type A) (erased A x) (erased A y) (erased (Eq A x y) e) ->
-    (many (Eq A x y) f)
-  (match erased e _ ((Refl t r) (Refl A x))))
-
 ; 4 spells (B2 (B1 (BZ))), 5 spells (B1 (B2 (BZ))); succ carries through the trailing B2
 (let (erased e5)
   (numeral-succ (B2 (B1 (BZ))) (B1 (B2 (BZ))) 4 5
     (BS2 (B1 (BZ)) (B2 (BZ)) (BS1 (BZ)))
     (numeral-of 4) (numeral-of 5)))
 
-(let (many s5) (seal (Nat) 5 (Succ 4) e5))
-(comptime-match s5 (Refl t r))
+(let-match erased e5 (Refl t r))
 
 ; 5 is now (Succ 4), so VNil is refuted with no annotation
 (def-lvl X)

@@ -658,6 +658,7 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
+      | Some Sp.LetMatch, _ -> elab_let_match env l args
       | _ -> error l "%s is not a statement" (Reader.show raw))
   | _ -> error (loc raw) "%s is not a statement" (Reader.show raw)
 
@@ -678,6 +679,42 @@ and elab_let env l args =
   let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine (List.combine binders ress) (spread expect values)) in
   let ids = non_erased env' (List.rev ids) in
   (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
+
+(* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
+   and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
+and elab_let_match env l args =
+  match args with
+  | [ m; scrut; List (pl, c :: fields) ] ->
+      let smult = mult_or env l m in
+      let env, sres, scode = elab_expr1 env smult scrut in
+      let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
+      let mid, disc, ctors = find_matchable env l tid in
+      if List.length ctors <> 1 then
+        error l "%s has %d constructors, so it needs an ordinary match" (name_of env tid) (List.length ctors);
+      let c = ctor_var env pl c in
+      if marker env pl tid ctors c = Erased then error pl "%s is phantom" (name_of env c);
+      let tele, ret = ctor_type env pl c in
+      if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
+      let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
+      let mults = List.map (fun e -> under smult e.mult) tele in
+      let shapes = shapes env l ctors in
+      let run = env.run_pos && smult = Many in
+      let states =
+        if not run then None
+        else
+          let ct = ctor_of env pl c in
+          let _, vs = V.destruct ct (List.hd (run_code env scode)) in
+          Some (List.map (fun v -> Const v) (spread mults vs))
+      in
+      let env, fids = open_tele env ~names ~mults ?states tele in
+      let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" msg) in
+      ( env,
+        if smult = Erased || run then Fun.id
+        else fun rest ->
+          V.CMatch
+            { scrut = scode; shape = match_shape env mid (tagged disc shapes);
+              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ] } )
+  | _ -> error l "malformed let-match: expected (let-match <multiplicity> x (C field ...))"
 
 and elab_comptime_match env l args =
   match args with
