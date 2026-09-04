@@ -1230,9 +1230,8 @@ what it assumed while doing so.
     not to arise.
 92. **§27 numbers it `5a`** rather than renumbering the entries after
     it, at the owner's direction, in wording the owner confirmed
-    (CLAUDE.md rule 12). §20's erasure list still describes the field
-    rule only through its match-scrutinee bullet; whether it should name
-    `let-match` there is an open item for the owner's wording.
+    (CLAUDE.md rule 12), and §20's erasure list names the form in its
+    own bullet, in wording the owner confirmed.
 93. **The `Numeral` lemmas are tests, not prelude additions**
     (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
     its own `Eq`, since the prelude has none and what belongs in the
@@ -1266,3 +1265,13 @@ what it assumed while doing so.
     but they carry no meaning of their own and are recorded in SUGAR.md,
     which is what that file is for. §27 says it lists every special
     form; the two readings are not reconciled here.
+
+97. **`unary`'s steps are not redundant.** One step relates a literal to
+    the one below it, which is enough to peel a `Succ` — a
+    `(Vec A (Succ n))` parameter takes a `(Vec A 3)` after `(unary 3 2)`
+    alone. Building a length-3 vector needs every intermediate literal
+    related, and no single `Eq` implies them all, since a rule relating
+    `3` to `(Succ (Succ (Succ (Zero))))` says nothing about the literal
+    `2`. So the walk emits one `let-match` per literal it makes
+    transparent rather than per unit of distance, and `(unary a b)` with
+    `b` one below `a` emits exactly one.

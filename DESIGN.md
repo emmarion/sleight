@@ -818,6 +818,8 @@ where each gets its multiplicity:
   (§11), which fixes the branch fields — at their declared
   multiplicities under `many`, all `erased` under `erased`, and all
   `erased` in a phantom constructor's branch whatever the keyword (§12);
+- a `let-match`'s fields: their declared multiplicities under the
+  scrutinee's own, as for a match's branch fields above (§16, §27);
 - `comptime-match` fields: their declared multiplicities (§15);
 - everything minted by kind — a `Level`, a proof, a type constructor — is
   `erased` (§8, §12); a `Matchable` is `many` (§17).
