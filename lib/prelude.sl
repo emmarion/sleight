@@ -30,7 +30,7 @@
 
 (def-adts
   (Dec : ((Nat) a) ((Nat) b) -> Type
-    enum
+    enum extern
     (many Yes : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Dec a b))
     (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
 
@@ -62,7 +62,7 @@
     ((LtZ b) (LtZ b))
     ((LtS a b p1) (LtZ b))))
 
-(def-fns nat-lvl $ many lt-dec : (subterm many (Nat) a) (many (Nat) b) -> (many (Dec a b) d)
+(def-fns nat-lvl $ many extern lt-dec : (subterm many (Nat) a) (many (Nat) b) -> (many (Dec a b) d)
   (match many a _
     ((Zero)
       (match many b _

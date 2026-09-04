@@ -30,7 +30,11 @@ let text ~z ~slice ~u8 ~str =
       | _ -> assert false),
     fun v -> let s, o, l = slice v in if l = 0 then (0, []) else (1, [ u8 (Z.of_int (Char.code s.[o])); str (s, o + 1, l - 1) ]) )
 
+(* A type whose values are their constructor index alone, every field erased. *)
+let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
+
 let nat_add = Z.add
+let lt_dec a b = if Z.lt a b then Z.zero else Z.one
 let u8_add a b = Z.rem (Z.add a b) modulus
 let nat_to_u8 n = Z.rem n modulus
 let u8_to_nat n = n
