@@ -1278,20 +1278,22 @@ what it assumed while doing so.
     literal down to zero, which is the caller's choice rather than the
     form's.
 98. **The prelude's character operations** (`lib/prelude.sl`):
-    `char-to-nat` destructures the newtype and the extern `U8` with two
-    `let-match`es; `nat-to-char` is `MkChar` over `nat-to-u8`, so a `Nat`
-    out of range **wraps**, which is the convention §41 already settles
-    for `nat-to-u8` and `u8-add` rather than a new choice — every `Nat`
-    names a `Char`. A total variant returning a `Maybe (Char)`, or one
-    demanding an erased `Lt n u8-modulus`, would be the alternative and
-    is not built; which a parser actually wants is not decided.
-    `char-cmp` returns the two codes beside a `Cmp` over them, because
-    §5 keeps `char-to-nat` out of a result type, so the comparison has
-    to be indexed by codes the caller can see. `Cmp` is the trichotomy
-    `CLt`/`CEq`/`CGt` carrying `Lt`, `Eq` and `Lt` the other way, over
-    `nat-cmp` at `nat-lvl`; the shape was proposed to the owner earlier
-    and the function-carrying alternative, whose negative case needs a
-    `Level` parameter as `IO` has, was not taken.
+    `char-cmp` alone. It returns the two codes beside a `Cmp` over them,
+    because §5 keeps a code-of function out of a result type, so the
+    comparison has to be indexed by codes the caller can see; `Cmp` is
+    the trichotomy `CLt`/`CEq`/`CGt` carrying `Lt`, `Eq` and `Lt` the
+    other way, over `nat-cmp` at `nat-lvl`. The shape was proposed to the
+    owner, and the function-carrying alternative, whose negative case
+    needs a `Level` parameter as `IO` has, was not taken.
+
+    `char-to-nat` and `nat-to-char` were written and then removed at the
+    owner's direction: converting is trivial through `U8`, which is
+    itself trivial given an `Lt`, so the prelude need not choose what a
+    `Nat` out of range becomes (`tests/char_convert.sl` writes both
+    directions out). The question of what a narrowing should return, and
+    whether §41's wrapping `nat-to-u8` is the right shape for one, is
+    left where it was rather than answered here.
+
 99. **"Mint" in these notes means a fact or entry reaching the tables,
     not a claim about who checked it.** For `unary` and `distinct`
     nothing is asserted: the elaborator writes down terms — a `Bin`

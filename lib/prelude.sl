@@ -374,18 +374,9 @@
 
 (def-lvl char-lvl)
 (let (erased nat-char) (prove-predates nat-lvl char-lvl))
-(let (erased u8-char) (prove-predates u8-lvl char-lvl))
 
-(def-fns char-lvl $ many char-to-nat : (many (Char) c) -> (many (Nat) n)
-  (let-match many c (MkChar u))
-  (let-match many u (MkU8 m p))
-  m)
-
-; Out of range wraps, as nat-to-u8 does (section 41): every Nat names a Char.
-(def-fns char-lvl $ many nat-to-char : (many (Nat) n) -> (many (Char) c)
-  (MkChar (nat-to-u8 (predates u8-char) n)))
-
-; The codes come back alongside the comparison, since section 5 keeps char-to-nat out of the result type.
+; The codes come back alongside the comparison, since section 5 keeps a code-of function out of a result
+; type. Converting between Nat and Char needs no prelude help: an Lt makes the U8 and MkChar wraps it.
 (def-fns char-lvl $ many char-cmp : (many (Char) a) (many (Char) b) ->
     (erased (Nat) m) (erased (Nat) n) (many (Cmp m n) c)
   (let-match many a (MkChar ua))
