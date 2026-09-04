@@ -1228,11 +1228,11 @@ what it assumed while doing so.
     So a `let-match` at top level never costs the code after it its run
     position, which was the session's worry about the form and appears
     not to arise.
-92. **§27's registry has no entry for it yet.** The form is in §16's
-    statement list, but §27 enumerates every special form with its own
-    numbered entry, and adding one there renumbers the entries after it.
-    Recorded as an open item for the owner's wording (CLAUDE.md rule
-    12), not as a claim that the registry is complete.
+92. **§27 numbers it `5a`** rather than renumbering the entries after
+    it, at the owner's direction, in wording the owner confirmed
+    (CLAUDE.md rule 12). §20's erasure list still describes the field
+    rule only through its match-scrutinee bullet; whether it should name
+    `let-match` there is an open item for the owner's wording.
 93. **The `Numeral` lemmas are tests, not prelude additions**
     (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
     its own `Eq`, since the prelude has none and what belongs in the
@@ -1242,3 +1242,27 @@ what it assumed while doing so.
     ordinary checked call — but whether that is worth the lemmas'
     weight, and whether they should move into `lib/prelude.sl`, is not
     decided.
+
+94. **The prelude carries `Eq`, `BinSucc` and seven erased lemmas**
+    (`lib/prelude.sl`): `double-fn` and `double-inj` for the two
+    directions of `Double`, `double-parity` for the even/odd clash,
+    `numeral-zero`, `numeral-fn` and `numeral-inj` for `Numeral`, and
+    `numeral-succ` over `BinSucc`. `Eq` is homogeneous and polymorphic,
+    `(Eq : (Type A) (A x) (A y) -> Type)` with one `Refl`; the two tests
+    that define their own shadow it without trouble. Elaborating the
+    prelude went from about 45ms to about 95ms, which the session judged
+    acceptable but did not put to the owner.
+95. **`unary` and `distinct` elaborate to prelude calls, in the
+    prelude's scope** (`Elab.elab_unary`, `Elab.elab_distinct`,
+    `Elab.in_prelude`), so user shadowing cannot reach the generated
+    forms, as with a literal's own expansion (51). The level context
+    stays the caller's, so the generated call carries `(predates _)`
+    inside a function body and nothing at top level (§24). `unary`
+    hoists every literal on the walk, which is why `Elab.hoist` moved
+    into the elaborator's recursive group. Its ceiling is 4096 steps,
+    a number the session chose and the owner has not confirmed.
+96. **Whether §27 should list a sugar form is open.** `unary` and
+    `distinct` are registered as `Special` variants like any other form,
+    but they carry no meaning of their own and are recorded in SUGAR.md,
+    which is what that file is for. §27 says it lists every special
+    form; the two readings are not reconciled here.

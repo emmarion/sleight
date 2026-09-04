@@ -58,3 +58,28 @@ The same program as DESIGN.md §33, which is written without any.
 
 (map-nat (Nat) (Nat) inc xs)
 ```
+
+## 5. `unary` and `distinct`
+
+Both reason about a numeral through the prelude's `Numeral` relation
+rather than about its opaque `Nat`, and both elaborate away into
+ordinary calls on prelude lemmas — the elaborator writes down terms it
+already knows how to spell, and the checker does the rest. Neither
+carries meaning of its own.
+
+`(unary a b)`, with `b` below `a`, would introduce `a is (Succ ...)` down
+to `b`: one `let-match` per step over `numeral-succ`, each given the
+`BinSucc` witness that the spelling of one steps to the spelling of the
+next. `(unary a)` is the same with `(Zero)` as the floor, reached through
+`numeral-zero`. So the cost is the distance walked, not the size of the
+numbers: a literal a million above its floor still costs one step, and
+what the rewrite buys is a literal usable where a `Succ` shape is wanted
+— indexing a `Vec`, refuting a `VNil`.
+
+`(distinct a b)` would yield a `(False)` in a context that has already
+equated the two literals, by a vacuous match on `numeral-inj`'s `Eq`
+between their spellings: a `Nat` has one bijective base-2 spelling, so
+two spellings for one `Nat` conflict through `Bin`'s `Matchable`. Its
+cost is the spellings' depth rather than the difference between the
+numbers, which is what it has over walking there with `unary`. Outside
+such a context it is an error, having nothing to discharge.

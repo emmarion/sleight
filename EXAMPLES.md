@@ -83,13 +83,11 @@ that the test does not make is a mistake in this file.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
-- `tests/numeral_distinct.sl`, `tests/numeral_succ.sl` — reasoning about
-  literals through the `Numeral` relation rather than about their opaque
-  `Nat`s. The first proves the spelling injective (`double-inj`,
-  `double-parity`, `numeral-inj`) and refutes a branch equating two literals
-  by a vacuous match on the resulting `Eq`, at a cost set by the spellings'
-  depth rather than the numbers' difference. The second proves the spelling
-  functional (`double-fn`, `numeral-fn`) and relates adjacent literals
-  (`BinSucc`, `numeral-succ`), then makes `5 is (Succ 4)` bind outward with a
-  `let-match` on the erased `Eq` (§16), which is what refutes its `VNil`
-  branch: dropping that one line makes the branch fail to refute.
+- `tests/numeral_distinct.sl`, `tests/numeral_succ.sl`,
+  `tests/numeral_lemmas.sl` — reasoning about literals through the prelude's
+  `Numeral` relation rather than about their opaque `Nat`s. `distinct`
+  refutes a branch that has equated two literals, at a cost set by their
+  spellings' depth rather than their difference; `unary` rewrites a literal
+  to successor form, walking only as far as the floor it is given, which is
+  what lets one index a `Vec`. The third writes out what both expand to, so
+  the sugar can be read against the calls it stands for.

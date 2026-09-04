@@ -961,6 +961,11 @@ actually specified.
    position only (§16); binds the matched fields as `Const` at their
    declared multiplicities; a mismatch is a compile error printing the
    actual value (§15, §34).
+5a. `let-match` — destructures a scrutinee whose `Matchable` lists a
+   single constructor, binding its fields outward at their declared
+   multiplicities under the scrutinee's own (§16, §20). Reads no value,
+   so it needs neither a `Const` nor a non-erased scrutinee and is not
+   confined to run position; a phantom constructor is refused.
 
 **Type formers:**
 6. `Fn` — the function-type former (§7, §11, §16, §29).
