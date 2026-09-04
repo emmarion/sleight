@@ -939,7 +939,15 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     -- are not term comparisons and canonicalization does not apply.
     Two places read a named entry deliberately *without* resolving it,
     and were left alone: `comptime-match` wants the named entry's own
-    stored value, which an alias carries in its own right (section 9),
+    state, multiplicity and stored value, which section 3 puts on the
+    entry while the fact table holds only its type and `is` -- and
+    resolving would as a rule leave nothing to read, since a run-position
+    `let`'s binder canonicalizes to the expression it bound rather than
+    to any variable (checked by patching the form to resolve, which fails
+    on the ordinary `(comptime-match two (Succ one))`); an alias reaches
+    the value through section 9's state inheritance instead, and an
+    erased alias of a non-erased `Const` is refused, which is section
+    34's requirement read on the name actually written,
     and `prove-predates` resolves only when the named variable is younger
     than the level, which is item 13's rule about birth order rather than
     about identity.
