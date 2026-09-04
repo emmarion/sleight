@@ -1266,12 +1266,14 @@ what it assumed while doing so.
     which is what that file is for. §27 says it lists every special
     form; the two readings are not reconciled here.
 
-97. **`unary`'s steps are not redundant.** One step relates a literal to
-    the one below it, which is enough to peel a `Succ` — a
-    `(Vec A (Succ n))` parameter takes a `(Vec A 3)` after `(unary 3 2)`
-    alone. Building a length-3 vector needs every intermediate literal
-    related, and no single `Eq` implies them all, since a rule relating
-    `3` to `(Succ (Succ (Succ (Zero))))` says nothing about the literal
-    `2`. So the walk emits one `let-match` per literal it makes
-    transparent rather than per unit of distance, and `(unary a b)` with
-    `b` one below `a` emits exactly one.
+97. **`unary` mints one rule, not one per step.** At the owner's
+    direction `(unary a b)` relates `a` to `b` under `a - b` successors
+    and says nothing about the literals between them, which stay opaque
+    (`tests/numeral_succ.sl` unaries `5` against `3` and then `4`
+    against `3` without conflict). The session's first reading walked
+    the range minting a rule per literal, which made every intermediate
+    transparent as a side effect nobody asked for. The fold costs
+    `a - b` erased calls in the generated term and one rule of that many
+    nodes; using a literal as a `Vec`'s length now wants a `unary` per
+    literal down to zero, which is the caller's choice rather than the
+    form's.

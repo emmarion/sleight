@@ -735,33 +735,29 @@ and elab_unary env l args =
         zb
     | _ -> error l "unary takes one or two literals"
   in
-  if Z.gt (Z.sub za lo) (Z.of_int 4096) then
-    error l "unary: %s steps is beyond the limit" (Z.to_string (Z.sub za lo));
-  let rec upto z acc = if Z.gt z za then List.rev acc else upto (Z.succ z) (z :: acc) in
-  let steps = upto lo [] in
-  let env = List.fold_left (fun env z -> hoist env (Literal.Numeral z)) env steps in
-  let src =
-    (if List.length args = 1 then
-       [ Printf.sprintf "(let-match erased (numeral-zero %s0 (numeral-of 0)) (Refl _ _))" (prelude_call env) ]
-     else [])
-    @ List.filter_map
-        (fun z ->
-          if Z.equal z za then None
-          else
-            let n = Z.succ z in
-            Some
-              (Printf.sprintf "(let-match erased (numeral-succ %s%s %s %s %s %s (numeral-of %s) (numeral-of %s)) (Refl _ _))"
-                 (prelude_call env) (Literal.bin z) (Literal.bin n) (Z.to_string z) (Z.to_string n)
-                 (Literal.bin_succ z) (Z.to_string z) (Z.to_string n)))
-        steps
+  let k = Z.sub za lo in
+  if Z.gt k (Z.of_int 4096) then error l "unary: %s successors is beyond the limit" (Z.to_string k);
+  let rec upto z acc = if Z.geq z za then List.rev acc else upto (Z.succ z) (z :: acc) in
+  let env = List.fold_left (fun env z -> hoist env (Literal.Numeral z)) env (za :: upto lo []) in
+  let p = prelude_call env in
+  (* Fold the one-step proofs into a single Eq relating the literal to [floor] under k successors, so one
+     let-match mints one rule and the literals walked over stay opaque. *)
+  let floor, acc =
+    if List.length args = 1 then ("(Zero)", Printf.sprintf "(numeral-zero %s0 (numeral-of 0))" p)
+    else (Z.to_string lo, Printf.sprintf "(Refl (Nat) %s)" (Z.to_string lo))
   in
-  in_prelude env (fun env ->
-      List.fold_left
-        (fun (env, wrap) raw ->
-          let env, w = elab_stmt env raw in
-          (env, fun rest -> wrap (w rest)))
-        (env, Fun.id)
-        (Reader.parse (String.concat " " src)))
+  let step acc z =
+    let n = Z.succ z in
+    let below = Literal.succs (Z.to_int (Z.sub z lo)) floor in
+    let stp =
+      Printf.sprintf "(numeral-succ %s%s %s %s %s %s (numeral-of %s) (numeral-of %s))" p (Literal.bin z)
+        (Literal.bin n) (Z.to_string z) (Z.to_string n) (Literal.bin_succ z) (Z.to_string z) (Z.to_string n)
+    in
+    let congd = Printf.sprintf "(eq-cong-succ %s%s %s %s)" p (Z.to_string z) below acc in
+    Printf.sprintf "(eq-trans %s(Nat) %s (Succ %s) (Succ %s) %s %s)" p (Z.to_string n) (Z.to_string z) below stp congd
+  in
+  let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
+  in_prelude env (fun env -> elab_stmt env (List.hd (Reader.parse src)))
 
 and elab_distinct env l a b =
   let za, xa = numeral_entry env l a and zb, xb = numeral_entry env l b in

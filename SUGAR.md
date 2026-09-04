@@ -67,14 +67,18 @@ ordinary calls on prelude lemmas — the elaborator writes down terms it
 already knows how to spell, and the checker does the rest. Neither
 carries meaning of its own.
 
-`(unary a b)`, with `b` below `a`, would introduce `a is (Succ ...)` down
-to `b`: one `let-match` per step over `numeral-succ`, each given the
-`BinSucc` witness that the spelling of one steps to the spelling of the
-next. `(unary a)` is the same with `(Zero)` as the floor, reached through
-`numeral-zero`. So the cost is the distance walked, not the size of the
-numbers: a literal a million above its floor still costs one step, and
-what the rewrite buys is a literal usable where a `Succ` shape is wanted
-— indexing a `Vec`, refuting a `VNil`.
+`(unary a b)`, with `b` below `a`, would mint one rule,
+`a is (Succ ... b)` under as many successors as separate them: the
+one-step proofs from `numeral-succ`, each given the `BinSucc` witness
+that one spelling steps to the next, folded together by `eq-cong-succ`
+and `eq-trans` and carried out by a single `let-match`. `(unary a)` is
+the same with `(Zero)` as the floor, reached through `numeral-zero`. The
+literals walked over are not mentioned by the rule and stay opaque, so
+`(unary 5 3)` says `5 is (Succ (Succ 3))` and nothing about `4`; a
+literal a million above its floor still costs one rule. What the rewrite
+buys is a literal usable where a `Succ` shape is wanted — peeling a
+`Vec`, or, with each literal down to zero given its own `unary`, standing
+as a `Vec`'s length.
 
 `(distinct a b)` would yield a `(False)` in a context that has already
 equated the two literals, by a vacuous match on `numeral-inj`'s `Eq`

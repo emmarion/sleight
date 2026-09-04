@@ -30,6 +30,8 @@ let rec bin z =
   if Z.equal z Z.zero then "(BZ)"
   else let d = if Z.is_odd z then 1 else 2 in Printf.sprintf "(B%d %s)" d (bin (Z.shift_right (Z.sub z (Z.of_int d)) 1))
 
+let rec succs k base = if k <= 0 then base else succs (k - 1) (Printf.sprintf "(Succ %s)" base)
+
 (* The witness that [z]'s spelling steps to [z+1]'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)). *)
 let rec bin_succ z =
   if Z.equal z Z.zero then "(BSZ)"

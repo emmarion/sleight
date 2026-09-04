@@ -14,6 +14,16 @@
     enum
     (many Refl : (erased Type A) (erased A x) -> (Eq A x x))))
 
+(def-lvl eq-lvl)
+
+(def-fns eq-lvl $ erased eq-trans : (erased Type A) (erased A x) (erased A y) (erased A z)
+    (erased (Eq A x y) e) (erased (Eq A y z) f) -> (erased (Eq A x z) g)
+  (match erased e _ ((Refl a b) (match erased f _ ((Refl c d) (Refl A x))))))
+
+(def-fns eq-lvl $ erased eq-cong-succ : (erased (Nat) x) (erased (Nat) y) (erased (Eq (Nat) x y) e) ->
+    (erased (Eq (Nat) (Succ x) (Succ y)) f)
+  (match erased e _ ((Refl a b) (Refl (Nat) (Succ x)))))
+
 (def-adts
   (Lt : ((Nat) a) ((Nat) b) -> Type
     enum
