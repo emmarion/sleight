@@ -11,6 +11,8 @@
 (let (many u4) (MkU8 4 zp4))
 
 (def-fns T $ many main : -> (many (Nat) n)
-  (u8-to-nat (predates ut) (u8-add (predates ut) u3 u4)))
+  (let (many s) (u8-add (predates ut) u3 u4))
+  (let-match many s (MkU8 sn sq))
+  (coerce s (coercible-sym (coercible-wrap MkU8 sn sq))))
 
 main

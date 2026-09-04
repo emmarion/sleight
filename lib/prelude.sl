@@ -49,12 +49,16 @@
     (many Yes : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Dec a b))
     (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
 
+; Parametric in the carrier and its strict order, every field erased, so a value is only its tag and two
+; instances differ by a coercion (section 38).
 (def-adts
-  (Cmp : ((Nat) a) ((Nat) b) -> Type
+  (Cmp : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type
     enum
-    (many CLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Cmp a b))
-    (many CEq : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) e) -> (Cmp a b))
-    (many CGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) q) -> (Cmp a b))))
+    (many CLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                (erased (R a b) p) -> (Cmp T R a b))
+    (many CEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (Cmp T R a a))
+    (many CGt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
+                (erased (R b a) q) -> (Cmp T R a b))))
 
 (def-lvl nat-lvl)
 
@@ -98,20 +102,20 @@
             ((Yes x y p) (Yes a b (LtS a1 b1 p)))
             ((No x y q) (No a b (LtS b1 (Succ a1) q)))))))))
 
-(def-fns nat-lvl $ many nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp a b) c)
+(def-fns nat-lvl $ many nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c)
   (match many a _
     ((Zero)
       (match many b _
-        ((Zero) (CEq a b (Refl (Nat) a)))
-        ((Succ b1) (CLt a b (LtZ b1)))))
+        ((Zero) (CEq (Nat) Lt a))
+        ((Succ b1) (CLt (Nat) Lt a b (LtZ b1)))))
     ((Succ a1)
       (match many b _
-        ((Zero) (CGt a b (LtZ a1)))
+        ((Zero) (CGt (Nat) Lt a b (LtZ a1)))
         ((Succ b1)
           (match many (nat-cmp (subterm _) a1 b1) _
-            ((CLt x y p) (CLt a b (LtS a1 b1 p)))
-            ((CEq x y e) (match erased e _ ((Refl t u) (CEq a b (Refl (Nat) a)))))
-            ((CGt x y q) (CGt a b (LtS b1 a1 q)))))))))
+            ((CLt t r x y p) (CLt (Nat) Lt a b (LtS a1 b1 p)))
+            ((CEq t r x) (CEq (Nat) Lt a))
+            ((CGt t r x y q) (CGt (Nat) Lt a b (LtS b1 a1 q)))))))))
 
 (def-lvl pow-lvl)
 (let (erased nat-pow) (prove-predates nat-lvl pow-lvl))
@@ -144,7 +148,7 @@
 (let (many u8-modulus) (erased u8-modulus-pow2) (erased u8-modulus-pos) (pow2 eight))
 
 (def-adts $ U8 : -> Type
-  enum extern
+  enum extern newtype
   (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
 
 (def-lvl u8-lvl)
@@ -157,10 +161,6 @@
         ((MkU8 m q)
           (let (many r) (erased pr) (mod-add (predates mod-u8) n u8-modulus p m))
           (MkU8 r pr))))))
-
-(def-fns u8-lvl $ many extern u8-to-nat : (many (U8) u) -> (many (Nat) n)
-  (match many u _
-    ((MkU8 n p) n)))
 
 (def-adts $ Bin : -> Type
   enum extern
@@ -197,6 +197,19 @@
 ; carries their conclusions outward).
 
 (def-lvl dbl-lvl)
+
+(def-fns dbl-lvl $ erased lt-unique :
+    (erased (Nat) a) (erased (Nat) b) (subterm erased (Lt a b) p) (erased (Lt a b) q) ->
+    (erased (Eq (Lt a b) p q) e)
+  (match erased p _
+    ((LtZ b1) (match erased q _ ((LtZ b2) (Refl (Lt a b) p)) (absurd LtS)))
+    ((LtS a1 b1 p1)
+      (match erased q _
+        (absurd LtZ)
+        ((LtS a2 b2 q1)
+          (let (erased sp) (prove-subterm p1 p))
+          (let (erased ih) (lt-unique a1 b1 (subterm sp) p1 q1))
+          (match erased ih _ ((Refl t r) (Refl (Lt a b) p))))))))
 
 (def-fns dbl-lvl $ erased double-fn :
     (erased (Nat) m) (erased (Nat) d1) (erased (Nat) d2)
@@ -368,18 +381,45 @@
   enum newtype
   (many MkChar : (many (U8) u) -> (Char)))
 
+(def-adts
+  (CharLt : ((Char) a) ((Char) b) -> Type
+    enum
+    (many MkCharLt : (erased (Nat) m) (erased (Nat) n)
+                     (erased (Lt m u8-modulus) pm) (erased (Lt n u8-modulus) pn)
+                     (erased (Lt m n) p) -> (CharLt (MkChar (MkU8 m pm)) (MkChar (MkU8 n pn))))))
+
 (def-lvl char-lvl)
 (let (erased nat-char) (prove-predates nat-lvl char-lvl))
+(let (erased dbl-char) (prove-predates dbl-lvl char-lvl))
 
-; The codes come back alongside the comparison, since section 5 keeps a code-of function out of a result
-; type. Converting between Nat and Char needs no prelude help: an Lt makes the U8 and MkChar wraps it.
+; A Char is its code at runtime, so this is nat-cmp: the arguments coerce down through both newtypes and
+; the result back up, the Coercible for it built by an erased match that leaves no code behind.
 (def-fns char-lvl $ many char-cmp : (many (Char) a) (many (Char) b) ->
-    (erased (Nat) m) (erased (Nat) n) (many (Cmp m n) c)
-  (let-match many a (MkChar ua))
-  (let-match many ua (MkU8 ma pa))
-  (let-match many b (MkChar ub))
-  (let-match many ub (MkU8 nb pb))
-  (values ma nb (nat-cmp (predates nat-char) ma nb)))
+    (many (Cmp (Char) CharLt a b) c)
+  (let-match erased a (MkChar ua))
+  (let-match erased ua (MkU8 ma pa))
+  (let-match erased b (MkChar ub))
+  (let-match erased ub (MkU8 nb pb))
+  (let (many ka) (coerce a (coercible-trans (coercible-sym (coercible-wrap MkChar ua))
+                                            (coercible-sym (coercible-wrap MkU8 ma pa)))))
+  (let (many kb) (coerce b (coercible-trans (coercible-sym (coercible-wrap MkChar ub))
+                                            (coercible-sym (coercible-wrap MkU8 nb pb)))))
+  (let (many r) (delegate (nat-cmp (predates nat-char) ka kb)))
+  (let (erased c2) (erased cr)
+    (match erased r (((Cmp (Char) CharLt a b) c2)
+                     ((Coercible (Cmp (Nat) Lt ka kb) r (Cmp (Char) CharLt a b) c2) cc))
+      ((CLt t rr x y p)
+        (values (CLt (Char) CharLt a b (MkCharLt ma nb pa pb p))
+                (coercible-ctor CLt (Nat) (Char) Lt CharLt ka a kb b p (MkCharLt ma nb pa pb p))))
+      ((CEq t rr x)
+        (match erased (lt-unique (predates dbl-char) ma u8-modulus pa pb) _
+          ((Refl u2 v2)
+            (values (CEq (Char) CharLt a)
+                    (coercible-ctor CEq (Nat) (Char) Lt CharLt ka a)))))
+      ((CGt t rr x y q)
+        (values (CGt (Char) CharLt a b (MkCharLt nb ma pb pa q))
+                (coercible-ctor CGt (Nat) (Char) Lt CharLt ka a kb b q (MkCharLt nb ma pb pa q))))))
+  (coerce r cr))
 
 (def-adts $ String : -> Type
   enum extern

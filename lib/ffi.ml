@@ -36,6 +36,5 @@ let binary name f = function [ a; b ] -> [ int name (f (z a) (z b)) ] | _ -> rai
 let fns : (string * (value list -> value list)) list =
   [ ("nat-add", binary "Nat" Ffi_core.nat_add);
     ("u8-add", binary "U8" Ffi_core.u8_add);
-    ("u8-to-nat", unary "Nat" Ffi_core.u8_to_nat);
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
     ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity")) ]

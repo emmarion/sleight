@@ -1278,13 +1278,21 @@ what it assumed while doing so.
     literal down to zero, which is the caller's choice rather than the
     form's.
 98. **The prelude's character operations** (`lib/prelude.sl`):
-    `char-cmp` alone. It returns the two codes beside a `Cmp` over them,
-    because §5 keeps a code-of function out of a result type, so the
-    comparison has to be indexed by codes the caller can see; `Cmp` is
-    the trichotomy `CLt`/`CEq`/`CGt` carrying `Lt`, `Eq` and `Lt` the
-    other way, over `nat-cmp` at `nat-lvl`. The shape was proposed to the
-    owner, and the function-carrying alternative, whose negative case
-    needs a `Level` parameter as `IO` has, was not taken.
+    `char-cmp`, and it is `nat-cmp`. `Cmp` is parametric in the carrier
+    and its strict order, `(Cmp T R a b)` with `R` a two-place type
+    constructor over `T`, and every field is erased, so a value is only
+    its tag and two instances differ by a coercion. `char-cmp`'s
+    arguments coerce down through `Char`'s and `U8`'s newtype wrappers
+    to their codes, the call to `nat-cmp` is a `delegate` (§38), and the
+    `Coercible` carrying the result back up is built by an erased match
+    over the three constructors — erased, so §12 puts no one-real-branch
+    limit on it and it leaves no code, which is what lets the delegate
+    mark stand. `tests/char_ops.sl` coerces `char-cmp` to `nat-cmp`'s
+    own type and runs it on `Nat`s. `CEq` repeats its index rather than
+    carrying an `Eq`, at the owner's direction, so matching it forces
+    the two sides together the way `Refl` does; the branch still wants
+    `pa` and `pb` identified before two `Char`s coincide, which is why
+    `lt-unique` is now in the prelude at `dbl-lvl`.
 
     `char-to-nat` and `nat-to-char` were written and then removed at the
     owner's direction: converting is trivial through `U8`, which is
@@ -1319,3 +1327,11 @@ what it assumed while doing so.
     `tests/io_factory_twice.sl`). `u8-add` still wraps, which is
     modular arithmetic rather than a narrowing and was not touched.
     §41 says this, in wording the owner confirmed (CLAUDE.md rule 12).
+
+101. **`U8` is marked `newtype` and `u8-to-nat` is gone.** The FFI holds
+    a `U8` as its `Nat` field is held — both are the same integer — so
+    §38's representation guarantee holds and a value coerces to and from
+    its code; the extern was doing what `coercible-wrap MkU8` does.
+    `MkU8` carries an erased bound proof beside its one `many` field,
+    which §12's newtype rule permits. §41 says this, in wording the
+    owner confirmed (CLAUDE.md rule 12).

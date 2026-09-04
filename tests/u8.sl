@@ -16,4 +16,5 @@
 (comptime-match dh (Yes ah bh ph))
 (let (many h) (MkU8 half ph))
 (let (many wrapped) (u8-add h (u8-add h x)))
-(u8-to-nat wrapped)
+(let-match many wrapped (MkU8 wn wq))
+(coerce wrapped (coercible-sym (coercible-wrap MkU8 wn wq)))

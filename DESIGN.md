@@ -1755,8 +1755,8 @@ value by reflection (a `comptime-match` on a decided comparison, §15),
 and for a computed one by binding it and matching `lt-dec`, where the
 caller says what out of range means (§5 keeps the call itself out of
 the `Dec` index, so the binding is not optional). There is no
-narrowing function. `u8-add` (wrapping) and `u8-to-nat` are extern;
-`U8` is not marked `newtype`.
+narrowing function. `u8-add` (wrapping) is extern; `U8` is marked
+`newtype`, the FFI holding a value as its `Nat` field is held.
 
 Open, not decided: a source-level declaration of extern types and
 functions; what guarantees an extern implementation agrees with its
