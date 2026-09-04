@@ -1306,13 +1306,11 @@
 ; resolved away, one whose body returns exactly what it binds is replaced by its right-hand side, and one
 ; binding constants nothing mentions is dropped, so a marked call stands in tail position in the code that runs.
 
-(def-fns _ $ many resolve-sub : (subterm many (Nat) fuel) (many (IdMap (Bin)) sub) (many (Bin) x) -> (many (Bin) r)
-  (match many fuel _
-    ((Zero) x)
-    ((Succ k)
-      (match many (idmap-get (predates _) (Bin) x sub) _
-        ((None a) x)
-        ((Some a y) (resolve-sub (subterm _) k sub y))))))
+; A renaming maps to an already normalized variable, so one lookup resolves it.
+(def-fns _ $ many resolve-sub : (many (IdMap (Bin)) sub) (many (Bin) x) -> (many (Bin) r)
+  (match many (idmap-get (predates _) (Bin) x sub) _
+    ((None a) x)
+    ((Some a y) y)))
 
 (def-fns _ $ many vars-of : (subterm many (List (Code)) cs) -> (many (Maybe (List (Bin))) r)
   (match many cs _
@@ -1395,7 +1393,7 @@
 (def-fns _
   (many norm : (subterm many (Code) c) (many (IdMap (Bin)) sub) -> (many (Code) r)
     (match many c _
-      ((CVar x) (CVar (resolve-sub (predates _) big-fuel sub x)))
+      ((CVar x) (CVar (resolve-sub (predates _) sub x)))
       ((CConst v) c) ((CErased) c) ((CAbsurd) c) ((CError m) c)
       ((CValues cs) (CValues (norm-list (subterm _) cs sub)))
       ((CApp f as cc) (CApp (norm (subterm _) f sub) (norm-list (subterm _) as sub) cc))

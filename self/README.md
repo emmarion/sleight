@@ -117,18 +117,25 @@ recorded so it can be revisited.
   digits, least significant first: `v22111222_length`.
 - **Termination is by fuel where the recursion is not structural.**
   The interpreter, the elaborator, the emitter's closure hoisting and
-  forced unification each take a `Nat` that decreases along the call
+  the generated printer each take a `Nat` that decreases along the call
   stack (not a step count), so a fuel of 100000 bounds depth, not work.
   Running out returns an error value, never a wrong answer silently.
   Where recursion is on a constructor argument (the reader, maps, term
   traversals, evaluation of sub-expressions) it is the ordinary
   `subterm` decrease.
-- **Canonicalization recurses on the rules appended after the one it
-  follows** (ASSUMPTIONS 93), so it needs no fuel: the environment keeps
-  its rewrite rules in the order they were appended, each canonical when
-  appended, and a variable's rule is found by walking that list, which
-  returns the tail after it with the `Subterm` proof the chase's call
-  annotation wants.
+- **Canonicalization and forced unification terminate by proof**
+  (ASSUMPTIONS 93 and 94). The fact table is a trie whose type index
+  counts its rule-free entries; the rewrite rules are a list in the
+  order they were appended, each canonical when appended; and erased
+  invariants on the environment say the two agree and that no rule
+  mentions a key at or before it. Canonicalization returns a proof that
+  its result mentions only rule-free entries, a chase recurses on the
+  rules after the one it follows, and the invariants make the lookup in
+  that suffix total. Unification takes the count as its measure: a step
+  is structural on canonical terms until a binding rules an entry out,
+  which the elaborator sees as the count stepping down, and the rest is
+  re-canonicalized at the smaller count. All of it is erased, so the
+  compiled compiler runs the same code as before.
 - **Errors are values.** The language has no exceptions, so an
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where

@@ -1264,23 +1264,41 @@ by the owner.
     compiler's canonicalization fuel with a structural argument. The
     environment holds its rewrite rules in the order they were appended,
     and every appended rule's right-hand side is canonical at that
-    moment: `bind` canonicalizes the term a `let`, `is` entry or
-    `coerce` records, unification binds to a term it has just
-    canonicalized, and two unified variables bind the newer to the
-    rule-free older one. The session's reading is that a canonical term
-    mentions only variables that are rule-free then, so any rule they
-    later carry was appended later, and a chase from a rule only ever
-    needs the rules after it. `canon` takes that suffix as its first
-    `subterm` parameter and the term as its second; the lookup walks the
-    suffix and returns the tail after the rule together with the
-    `Subterm` proof, so the checker accepts the chase as a lexicographic
-    decrease. Termination no longer depends on the invariant at all.
-    What does is completeness: were a rule ever appended non-canonical,
-    a variable's rule could sit before the current position and the
-    variable would come back unreduced, which the session believes can
-    only make the compiler reject a program, not accept one, though it
-    has not proven that. The id map still says whether a variable has a
-    rule, so only rule-bearing variables pay for the walk; the bootstrap
-    ran no slower than before. The owner considered and set aside a
-    stamped version with a runtime comparison and a fully verified map
-    in favour of this one.
+    moment. The session's reading is that a canonical term mentions only
+    variables that are rule-free then, so any rule they later carry was
+    appended later, and a chase from a rule only ever needs the rules
+    after it. `canon` takes that suffix as its first `subterm` parameter
+    and the term as its second; the lookup walks the suffix and returns
+    the tail after the rule together with the `Subterm` proof, so the
+    checker accepts the chase as a lexicographic decrease. A first
+    version left completeness, that the rule is in the suffix, to that
+    reading; item 94 proves it.
+
+94. **The fact table, canonicalization and unification carry erased
+    proofs.** Again at the owner's direction, and after the owner set
+    aside a stamped version with a runtime comparison, a fully verified
+    map, and an eager-substitution design, the session made the
+    invariant of item 93 a proof rather than a reading. The fact table
+    is a trie `Facts n` whose index counts its rule-free entries, with
+    sums as the relations `Plus` and `Plus3` since a type may not call a
+    function; `In` is the path to a rule-free entry and `RuledIn` to a
+    ruled one. The environment's table carries, erased, the order
+    invariant `Ord` (each rule's term avoids every key at or before it,
+    witnessed by a table in which the term is fresh and the keys are
+    ruled, so the witness never goes stale and no inequality on ids is
+    decided) and both directions of agreement between table and list
+    (`C1`: every ruled entry's rule is in the list at the key its path
+    spells; `AllRuled`: every key is ruled). `canon` returns `Fr`, that
+    its result mentions only rule-free entries, and its lookup in the
+    suffix takes a membership proof derived from those invariants, so it
+    cannot come back empty. Unification's measure is the count: a
+    binding rules the entry out by its `In` proof, which refines the
+    count to a successor, and `prove-subterm` on the predecessor is the
+    call annotation; the occurs check is the term still being fresh
+    once the variable is ruled out. What remains informal, both by the
+    session's reading: a fresh id never lands on an occupied position of
+    the table, which `bind` reports as an internal error if it ever did,
+    and the reference's own termination, which no proof here touches.
+    The verified table and the proofs together are about 1,100 lines in
+    `self/core.sl`, most of it erased; they cost elaboration time only,
+    and the bootstrap ran no slower.
