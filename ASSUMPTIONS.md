@@ -1065,12 +1065,26 @@ record how the prototype reads them, and item 79's restriction is gone.
     The erasure demand, by contrast, is a rule about the source rather
     than about what the implementation manages to stamp: a match whose
     position and whose scrutinee are both non-erased needs a non-erased
-    `Matchable` (`tests/erased_matchable_bad.sl`). It bites only on a
-    first-class `Matchable`, a minted one being `many` already, and
-    those are exactly the ones no elaborator could prove non-extern. An
-    erased scrutinee leaves a single real branch and no dispatch, and an
-    erased position compiles to nothing, so neither asks for anything
-    (`tests/erased_matchable_ok.sl`).
+    `Matchable` (`tests/erased_matchable_bad.sl`). It bites only where
+    the shape is not stamped, a minted `Matchable` being `many` already,
+    and those are exactly the cases no elaborator could prove
+    non-extern. An erased scrutinee leaves a single real branch and no
+    dispatch, and an erased position compiles to nothing, so neither
+    asks for anything (`tests/erased_matchable_ok.sl`).
+
+    Which `Matchable` a match reads therefore matters, and consistent
+    ones for a type are interchangeable (§19), so the lookup prefers one
+    whose shape the elaborator can see -- the one `def-adts` minted,
+    read through an alias as ASSUMPTIONS 78 has the other fetching forms
+    do -- over one it cannot, rather than taking the newest in scope.
+    Without that, a `Matchable` parameter whose type names a concrete
+    type shadowed that type's own, and a match on a `(List (Nat))`
+    compiled to a runtime read and demanded the parameter be non-erased,
+    though the declaration had already settled everything about it
+    (`tests/known_matchable.sl`). Reading a first-class `Matchable`
+    remains the only case that defers anything, and it defers exactly
+    one thing: an extern type's destructor, the tag or its absence being
+    settled by the `Matchable`'s type either way.
 
 85. **Phantom constructors take no discriminant.** A constructor's
     discriminant is its position among the type's non-phantom

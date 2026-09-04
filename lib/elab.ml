@@ -63,13 +63,25 @@ let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).m
 let non_erased env ids = List.filter (fun x -> (entry env x).mult = Many) ids
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 
+(* The runtime shape behind a Matchable entry, where the elaborator can see it: the one def-adts minted for a
+   named type, read through any alias (section 9), or one a run-position binder holds. A first-class
+   Matchable -- a parameter, say -- has none until the code runs. *)
+let adt_of env x =
+  let x = match canon env (Var x) with Var y -> y | _ -> x in
+  match Hashtbl.find_opt Env.adts x with
+  | Some adt -> Some adt
+  | None -> (match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None)
+
 let matchables env tid =
   List.filter_map
     (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (x, d, cs) | _ -> None)
     env.scope
 
+(* Consistent Matchables for one type are interchangeable (section 19), so one whose shape the elaborator can
+   see is preferred: a match through it needs nothing at runtime. *)
 let find_matchable env loc tid =
-  match matchables env tid with
+  let known, opaque = List.partition (fun (x, _, _) -> adt_of env x <> None) (matchables env tid) in
+  match known @ opaque with
   | [] -> error loc "%s has no Matchable in scope" (name_of env tid)
   | (x, d, cs) :: rest ->
       if List.exists (fun (y, _, _) -> not (equal (type_of env x) (type_of env y))) rest then
@@ -184,13 +196,6 @@ let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
 
 let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (const env value) ty
-
-(* The runtime shape behind a Matchable entry, where the elaborator can see it: the one def-adts minted, or one
-   a run-position binder holds. A first-class Matchable -- a parameter, say -- has none until the code runs. *)
-let adt_of env x =
-  match Hashtbl.find_opt Env.adts x with
-  | Some adt -> Some adt
-  | None -> (match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None)
 
 let matchable_code pos x =
   if pos = Erased then V.CErased
