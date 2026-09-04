@@ -1173,22 +1173,27 @@ suite (CLAUDE.md rule 2), not settled decisions.
     program's meaning (§20's argument for erasure applies), offered for
     the owner to confirm.
 
-89. **Only a `Matchable` tells value constructors apart** (settled by the
-    owner). Item 87 added the `Matchable` rule beside rigidity, leaving
-    a `def-adts`-minted constructor with a distinctness of its own that
-    a first-class constructor parameter lacked -- second class, as the
-    owner put it. Value constructors are no longer minted rigid, the
-    prelude's `Special` variants included; the `Matchable` in scope is
-    now the only source of the contradiction between two of them,
-    exactly as §19 reifies it. Nothing observable changed in the suite:
-    every declared constructor's `Matchable` is in scope wherever the
-    constructor is, and a constructor equated with a term or with a
-    constructor of another type was already refuted by the types.
-    Rigidity remains on type constructors, `def-adts`-minted and built
-    in, and that is the boundary of first-classness here: a `Matchable`
-    reifies which constructors of one type are distinct, and the design
-    offers no object saying which *types* are distinct, so two declared
-    type constructors are told apart by their minting alone, while two
-    type-constructor parameters may be the same type and are never
-    refuted against each other. Whether such an object is wanted is
-    open for the owner.
+89. **Nothing but a signature or a `Matchable` tells two atoms apart**
+    (the owner's proposal, in chat, implemented here; an earlier form of
+    this item, which kept identity-based distinctness for declared type
+    constructors, was the session's own invention and is withdrawn).
+    Item 40's `rigid` marker is gone from the scope entry altogether.
+    Forced unification of two atoms now does three things: it refuses
+    the pair where one `Matchable` in scope lists both (item 87), it
+    makes the newer an alias of the older, and it then unifies what the
+    two must share -- their signatures, where both are type or value
+    constructors, and the `Matchable`s they head, where both are type
+    constructors heading one -- so that a constructor list of a
+    different length, a phantom marker that differs, or a field of
+    another type refutes the branch. A declared name has no
+    distinctness of its own: `Nat` and `Bool` are told apart by their
+    `Matchable`s, `Succ` carrying a field `False` does not; two types of
+    identical shape are not told apart at all, and an opaque type with
+    no `Matchable`, `Level` say, unifies with any type constructor of
+    its signature. The session's reading is that every such branch is
+    unreachable and its facts hypothetical, so nothing false follows,
+    and that what is lost is only an `(absurd C)` the checker can no
+    longer grant. The suite is unchanged. The wording of §18's second
+    failure mode and of §19 that would say this is proposed to the
+    owner in chat under CLAUDE.md rule 12 and not yet written; the two
+    passages stand as the owner wrote them.

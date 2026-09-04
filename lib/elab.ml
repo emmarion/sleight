@@ -828,7 +828,7 @@ and elab_def_adts env adts =
   let env, tids =
     List.fold_left_map
       (fun env (al, name, ps, ty, _, _, _) ->
-        let x, env = bind env ~rigid:true (Some name) Erased (const env V.VToken) (elab_tyctor env al ps [ ty ]) in
+        let x, env = bind env (Some name) Erased (const env V.VToken) (elab_tyctor env al ps [ ty ]) in
         (env, x))
       env headers
   in

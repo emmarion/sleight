@@ -8,7 +8,7 @@ let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 type state = Const of Value.value | Dyn
 
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; rigid : bool }
+type entry = { name : string option; mult : mult; state : state; minted_level : bool }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -43,11 +43,11 @@ let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
-let bind env ?(rigid = false) ?(minted_level = false) ?rule name mult state ty =
+let bind env ?(minted_level = false) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; rigid } env.entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted_level } env.entries in
   let env = { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)
 let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
@@ -65,18 +65,29 @@ let listed env x y =
   let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
   List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope
 
+(* The Matchable in scope a type constructor heads, if any. *)
+let matchable_of env t =
+  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.scope
+
+(* Two atoms equated: a contradiction where one Matchable lists both; otherwise the newer becomes an alias of
+   the older, and what follows is checked -- the two must have one signature, and type constructors heading
+   Matchables must head one Matchable -- so two declared types are told apart exactly by their Matchables,
+   never by a name's identity (section 19). *)
 let rec unify env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
     let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
     match (a, b) with
-    | Var x, Var y when ((entry env x).rigid && (entry env y).rigid) || listed env x y -> contradiction ()
+    | Var x, Var y when listed env x y -> contradiction ()
     | Var x, Var y ->
-        let x, y = if (entry env y).rigid || ((not (entry env x).rigid) && x > y) then (x, y) else (y, x) in
-        add_rule env x (Var y)
+        let x, y = if x > y then (x, y) else (y, x) in
+        let signature z = match type_of env z with (TyCtor _ | ValCtor _) as s -> Some s | _ -> None in
+        let sx, sy = (signature x, signature y) and mx, my = (matchable_of env x, matchable_of env y) in
+        let env = add_rule env x (Var y) in
+        let env = match (sx, sy) with Some s, Some s' -> unify env s s' | _ -> env in
+        (match (mx, my) with Some m, Some m' -> unify env m m' | _ -> env)
     | Var x, t | t, Var x ->
-        if (entry env x).rigid then contradiction ();
         if has_dangling t then contradiction ();
         if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
         add_rule env x t
