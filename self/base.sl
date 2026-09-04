@@ -234,6 +234,26 @@
         ((B1 k1) (idmap-get V (subterm _) k1 one))
         ((B2 k1) (idmap-get V (subterm _) k1 two))))))
 
+; A lookup that also proves the value found is a subterm of the map, for a recursion that continues into it.
+(def-adts $ MapHit : (Type V) ((IdMap V) m) -> Type
+  enum
+  (many MkMapHit : (erased Type V) (erased (IdMap V) m) (many V v) (erased (Subterm V v (IdMap V) m) p) -> (MapHit V m)))
+
+(def-fns _ $ many idmap-get-sub : (erased Type V) (subterm many (Bin) k) (many (IdMap V) m) -> (many (Maybe (MapHit V m)) r)
+  (match many m _
+    ((MEmpty a) (None (MapHit V m)))
+    ((MNode a here one two)
+      (match many k _
+        ((BZ) (match many here _ ((None b) (None (MapHit V m))) ((Some b v) (Some (MapHit V m) (MkMapHit V m v (prove-subterm v m))))))
+        ((B1 k1)
+          (match many (idmap-get-sub V (subterm _) k1 one) _
+            ((None b) (None (MapHit V m)))
+            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some (MapHit V m) (MkMapHit V m v (subterm-trans p (prove-subterm one m)))))))))
+        ((B2 k1)
+          (match many (idmap-get-sub V (subterm _) k1 two) _
+            ((None b) (None (MapHit V m)))
+            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some (MapHit V m) (MkMapHit V m v (subterm-trans p (prove-subterm two m)))))))))))))
+
 (def-fns _ $ many idmap-set : (erased Type V) (subterm many (Bin) k) (many V v) (many (IdMap V) m) -> (many (IdMap V) r)
   (let (many here) (many one) (many two)
     (match many m (((Maybe V) h) ((IdMap V) o) ((IdMap V) t))

@@ -1302,3 +1302,22 @@ by the owner.
     The verified table and the proofs together are about 1,100 lines in
     `self/core.sl`, most of it erased; they cost elaboration time only,
     and the bootstrap ran no slower.
+
+95. **The emitter recurses on the closure it emits.** Its fuel is gone:
+    every function of the emitting block takes the closure being emitted
+    as its first `subterm` parameter and the piece of code as its
+    second, with an erased `Subterm` proof that the piece lies inside
+    the closure. A constant met in the code is then a subterm of the
+    closure through that proof, a captured variable's value is a
+    subterm of the closure's environment (the map lookup returns the
+    proof with the value), and a closure met inside a value is a subterm
+    of the value, so each descent is a lexicographic decrease the
+    elaborator checks. A run-position group is emitted under a closure
+    built around it, which captures nothing. While doing this the
+    session found that the compiler's own elaborator had defined
+    functions named `prove-subterm` and `prove-predates`, which shadowed
+    the special forms of the same names in the files after it; they are
+    now `mint-subterm` and `mint-predates`. The session's reading is that
+    a name bound by a program shadowing a special form is what the
+    design intends, and only the choice of names was at fault.
+

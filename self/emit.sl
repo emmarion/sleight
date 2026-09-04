@@ -11,12 +11,10 @@
 ; closure being hoisted, or empty inside a run-position function.
 (def-adts $ EmitCx : -> Type
   enum
-  (many MkEmitCx : (many (Env) env) (many (IdMap (Value)) top) (many (IdMap (Value)) capture) -> (EmitCx)))
+  (many MkEmitCx : (many (Env) env) (many (IdMap (Value)) top) -> (EmitCx)))
 
-(def-fns _ $ many cx-env : (many (EmitCx) cx) -> (many (Env) e) (match many cx _ ((MkEmitCx env top cap) env)))
-(def-fns _ $ many cx-top : (many (EmitCx) cx) -> (many (IdMap (Value)) e) (match many cx _ ((MkEmitCx env top cap) top)))
-(def-fns _ $ many cx-capture : (many (EmitCx) cx) -> (many (IdMap (Value)) e) (match many cx _ ((MkEmitCx env top cap) cap)))
-(def-fns _ $ many cx-with-capture : (many (EmitCx) cx) (many (IdMap (Value)) c) -> (many (EmitCx) e) (match many cx _ ((MkEmitCx env top cap) (MkEmitCx env top c))))
+(def-fns _ $ many cx-env : (many (EmitCx) cx) -> (many (Env) e) (match many cx _ ((MkEmitCx env top) env)))
+(def-fns _ $ many cx-top : (many (EmitCx) cx) -> (many (IdMap (Value)) e) (match many cx _ ((MkEmitCx env top) top)))
 
 (def-fns _ $ many st-names : (many (EmitSt) st) -> (many (IdMap (String)) r) (match many st _ ((MkEmitSt c d n) n)))
 (def-fns _ $ many st-with-names : (many (EmitSt) st) (many (IdMap (String)) n) -> (many (EmitSt) r) (match many st _ ((MkEmitSt c d n0) (MkEmitSt c d n))))
@@ -141,37 +139,72 @@
     ((CErased) (None (Ctor))) ((CValues cs) (None (Ctor))) ((CApp g a c) (None (Ctor))) ((CLet i r b) (None (Ctor)))
     ((CLetRec fs b) (None (Ctor))) ((CMatch s sh bs) (None (Ctor))) ((CAbsurd) (None (Ctor))) ((CError m) (None (Ctor)))))
 
-(let (many emit-fuel) 100000)
+; The closure whose code is being emitted is the recursion's first measure, and the code being emitted
+; comes with a proof that it lies inside that closure: a captured variable's value is a subterm of the
+; closure, a constant's value a subterm of the code, and a closure met inside a value a subterm of that
+; value. A run-position group is emitted under a closure built around it, which captures nothing.
+(let (many show-fuel) 100000)
+
+; Gives each member of a group about to be hoisted its closure name.
+(def-fns _ $ many name-group : (subterm many (List (Pair (Bin) (Func))) group) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Bool) ok)
+  (match many group _
+    ((Nil a) (values st (BTrue)))
+    ((Cons a p rest)
+      (match many p _
+        ((MkPair x y id fn)
+          (let (many st2) (many n) (st-fresh (predates _) st))
+          (let (many name) (str-cat (predates _) "cl" (str-cat (predates _) (bin-str (predates _) n) (str-cat (predates _) "_" (sanitize (predates _) (func-name (predates _) fn))))))
+          (name-group (subterm _) rest (st-with-names (predates _) st2 (idmap-set (predates _) (String) id name (st-names (predates _) st2)))))))))
 
 (def-fns _
-  (many emit-code : (subterm many (Nat) fuel) (subterm many (Code) code) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-code : (subterm many (Closure) cl) (subterm many (Code) code) (erased (Subterm (Code) code (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many code _
+      ; A variable: a top-level Const or function by its name, a captured value embedded once under a fresh
+      ; name, a hoisted group member by its closure name, or a local.
       ((CVar x)
-        (match many fuel _
-          ((Zero) (values st (RStr "(failwith \"out of fuel\")")))
-          ((Succ k) (emit-var (subterm _) k x cx st))))
-      ((CConst v) (emit-value fuel (subterm _) v cx st))
+        (match many (is-top (predates _) cx x) _
+          ((BTrue) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) x))))
+          ((BFalse)
+            (match many (idmap-get (predates _) (String) x (st-names (predates _) st)) _
+              ((Some a name) (values st (RStr name)))
+              ((None a)
+                (match many cl _
+                  ((MkClosure fn group cenv)
+                    (match many (idmap-get-sub (predates _) (Value) x cenv) _
+                      ((None b) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) x))))
+                      ((Some b hit)
+                        (match many hit _
+                          ((MkMapHit c d v p)
+                            (let (many st2) (many n) (st-fresh (predates _) st))
+                            (let (many name) (str-cat (predates _) "c" (str-cat (predates _) (bin-str (predates _) n) (str-cat (predates _) "_" (top-name (predates _) (cx-env (predates _) cx) x)))))
+                            (let (erased q) (subterm-trans p (prove-subterm cenv cl)))
+                            (let (many st3) (many vr) (emit-value (subterm q) v cx st2))
+                            (let (many st4) (st-push-def (predates _) st3 (rcat4 (predates _) (RStr "let ") (RStr name) (RStr " = ") (rcat (predates _) vr (RStr "\n")))))
+                            (values (st-with-names (predates _) st4 (idmap-set (predates _) (String) x name (st-names (predates _) st4))) (RStr name)))))))))))))
+      ((CConst v)
+        (let (erased q) (subterm-trans (prove-subterm v code) w))
+        (emit-value (subterm q) v cx st))
       ((CErased) (values st (RStr "U")))
       ((CValues cs)
-        (let (many st2) (many rs) (emit-codes fuel (subterm _) cs cx st))
+        (let (many st2) (many rs) (emit-codes cl (subterm _) cs (subterm-trans (prove-subterm cs code) w) cx st))
         (values st2 (tuple-rope (predates _) rs)))
       ((CApp f args cc)
-        (let (many st2) (many rs) (emit-codes fuel (subterm _) args cx st))
+        (let (many st2) (many rs) (emit-codes cl (subterm _) args (subterm-trans (prove-subterm args code) w) cx st))
         (match many (static-ctor (predates _) cx f) _
           ((Some a c) (values st2 (build-rope (predates _) c rs)))
           ((None a)
-            (let (many st3) (many fr) (emit-code fuel (subterm _) f cx st2))
+            (let (many st3) (many fr) (emit-code cl (subterm _) f (subterm-trans (prove-subterm f code) w) cx st2))
             (values st3 (rcat5 (predates _) (RStr "(app ") fr (RStr " ") (bracketed (predates _) rs) (RStr ")"))))))
       ((CLet ids rhs rest)
-        (let (many st2) (many rr) (emit-code fuel (subterm _) rhs cx st))
-        (let (many st3) (many br) (emit-code fuel (subterm _) rest cx st2))
+        (let (many st2) (many rr) (emit-code cl (subterm _) rhs (subterm-trans (prove-subterm rhs code) w) cx st))
+        (let (many st3) (many br) (emit-code cl (subterm _) rest (subterm-trans (prove-subterm rest code) w) cx st2))
         (values st3 (untuple-rope (predates _) ids rr br (cx-env (predates _) cx))))
       ((CLetRec fns rest)
-        (let (many st2) (many fr) (emit-group fuel (subterm _) fns cx st (BFalse)))
-        (let (many st3) (many br) (emit-code fuel (subterm _) rest cx st2))
+        (let (many st2) (many fr) (emit-group cl (subterm _) fns (subterm-trans (prove-subterm fns code) w) cx st (BFalse)))
+        (let (many st3) (many br) (emit-code cl (subterm _) rest (subterm-trans (prove-subterm rest code) w) cx st2))
         (values st3 (rcat5 (predates _) (RStr "(let rec ") fr (RStr " in ") br (RStr ")"))))
       ((CMatch scrut shape branches)
-        (let (many st2) (many sr) (emit-code fuel (subterm _) scrut cx st))
+        (let (many st2) (many sr) (emit-code cl (subterm _) scrut (subterm-trans (prove-subterm scrut code) w) cx st))
         (let (many arity) (match many branches (((Nat) n)) ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch d ids body) (list-length (predates _) (Bin) ids))))))
         (match many shape _
           ((ShKnown adt)
@@ -182,64 +215,43 @@
                   ((Cons a b rest)
                     (match many b _
                       ((MkBranch d ids body)
-                        (let (many st3) (many br) (emit-code fuel (subterm _) body cx st2))
+                        (let (many st3) (many br) (emit-code cl (subterm _) body (subterm-trans (prove-subterm body code) w) cx st2))
                         (values st3 (untuple-rope (predates _) ids sr br (cx-env (predates _) cx))))))))
               ((BFalse)
-                (let (many st3) (many arms) (emit-branches fuel (subterm _) branches cx st2))
+                (let (many st3) (many arms) (emit-branches cl (subterm _) branches (subterm-trans (prove-subterm branches code) w) cx st2))
                 (values st3 (rcat4 (predates _) (RStr "(match ") (des-rope (predates _) adt sr) (rcat (predates _) (RStr " with ") arms) (RStr " | _ -> absurd ())"))))))
           ((ShHeld mcode tags)
-            (let (many st3) (many mr) (emit-code fuel (subterm _) mcode cx st2))
-            (let (many st4) (many arms) (emit-branches fuel (subterm _) branches cx st3))
+            (let (many st3) (many mr) (emit-code cl (subterm _) mcode (subterm-trans (prove-subterm mcode code) w) cx st2))
+            (let (many st4) (many arms) (emit-branches cl (subterm _) branches (subterm-trans (prove-subterm branches code) w) cx st3))
             (values st4 (rcat5 (predates _) (RStr "(match (app_mat ") mr (rcat4 (predates _) (RStr " ") (nat-rope (predates _) arity) (RStr " ") sr) (rcat (predates _) (RStr ") with ") arms) (RStr " | _ -> absurd ())"))))))
       ((CAbsurd) (values st (RStr "(absurd ())")))
       ((CError m) (values st (rcat3 (predates _) (RStr "(failwith ") (quoted (predates _) m) (RStr ")"))))))
 
-  (many emit-codes : (subterm many (Nat) fuel) (subterm many (List (Code)) cs) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List (Rope)) rs)
+  (many emit-codes : (subterm many (Closure) cl) (subterm many (List (Code)) cs) (erased (Subterm (List (Code)) cs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List (Rope)) rs)
     (match many cs _
       ((Nil a) (values st (Nil (Rope))))
       ((Cons a c rest)
-        (let (many st2) (many r) (emit-code fuel (subterm _) c cx st))
-        (let (many st3) (many rs) (emit-codes fuel (subterm _) rest cx st2))
+        (let (many st2) (many r) (emit-code cl (subterm _) c (subterm-trans (prove-subterm c cs) w) cx st))
+        (let (many st3) (many rs) (emit-codes cl (subterm _) rest (subterm-trans (prove-subterm rest cs) w) cx st2))
         (values st3 (Cons (Rope) r rs)))))
 
-  (many emit-branches : (subterm many (Nat) fuel) (subterm many (List (Branch)) bs) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-branches : (subterm many (Closure) cl) (subterm many (List (Branch)) bs) (erased (Subterm (List (Branch)) bs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many bs _
       ((Nil a) (values st (REmpty)))
       ((Cons a b rest)
         (match many b _
           ((MkBranch d ids body)
-            (let (many st2) (many br) (emit-code fuel (subterm _) body cx st))
-            (let (many st3) (many more) (emit-branches fuel (subterm _) rest cx st2))
+            (let (many st2) (many br) (emit-code cl (subterm _) body (subterm-trans (prove-subterm body bs) w) cx st))
+            (let (many st3) (many more) (emit-branches cl (subterm _) rest (subterm-trans (prove-subterm rest bs) w) cx st2))
             (values st3 (rcat5 (predates _) (RStr "| (") (nat-rope (predates _) d) (rcat3 (predates _) (RStr ", ") (ids-pattern (predates _) ids (cx-env (predates _) cx)) (RStr ") -> ")) br more)))))))
 
-  ; A variable: a top-level Const or function by its name, a captured value embedded once under a fresh
-  ; name, a hoisted group member by its closure name, or a local.
-  (many emit-var : (subterm many (Nat) fuel) (many (Bin) x) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
-    (match many (is-top (predates _) cx x) _
-      ((BTrue) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) x))))
-      ((BFalse)
-        (match many (idmap-get (predates _) (String) x (st-names (predates _) st)) _
-          ((Some a name) (values st (RStr name)))
-          ((None a)
-            (match many (idmap-get (predates _) (Value) x (cx-capture (predates _) cx)) _
-              ((None b) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) x))))
-              ((Some b v)
-                (match many fuel _
-                  ((Zero) (values st (RStr "(failwith \"out of fuel\")")))
-                  ((Succ k)
-                    (let (many st2) (many n) (st-fresh (predates _) st))
-                    (let (many name) (str-cat (predates _) "c" (str-cat (predates _) (bin-str (predates _) n) (str-cat (predates _) "_" (top-name (predates _) (cx-env (predates _) cx) x)))))
-                    (let (many st3) (many vr) (emit-value (subterm _) k v cx st2))
-                    (let (many st4) (st-push-def (predates _) st3 (rcat4 (predates _) (RStr "let ") (RStr name) (RStr " = ") (rcat (predates _) vr (RStr "\n")))))
-                    (values (st-with-names (predates _) st4 (idmap-set (predates _) (String) x name (st-names (predates _) st4))) (RStr name)))))))))))
-
-  (many emit-value : (subterm many (Nat) fuel) (subterm many (Value) v) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-value : (subterm many (Value) v) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many v _
       ((VCtor c fields)
-        (let (many st2) (many rs) (emit-values fuel (subterm _) fields cx st))
+        (let (many st2) (many rs) (emit-values (subterm _) fields cx st))
         (values st2 (build-rope (predates _) c rs)))
       ((VTuple fields)
-        (let (many st2) (many rs) (emit-values fuel (subterm _) fields cx st))
+        (let (many st2) (many rs) (emit-values (subterm _) fields cx st))
         (values st2 (tuple-rope (predates _) rs)))
       ((VExt adt p) (values st (payload-rope (predates _) p)))
       ((VCtorFn c) (values st (ctor-fn-rope (predates _) c)))
@@ -251,36 +263,25 @@
               ((BTrue) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) (func-id (predates _) fn)))))
               ((BFalse)
                 (let (many saved) (st-names (predates _) st))
-                (let (many st2) (many named) (name-group fuel (subterm _) group (st-with-names (predates _) st (MEmpty (String)))))
-                (let (many st3) (many text) (emit-group fuel (subterm _) group (cx-with-capture (predates _) cx cenv) st2 (BTrue)))
+                (let (many st2) (many named) (name-group (predates _) group (st-with-names (predates _) st (MEmpty (String)))))
+                (let (many st3) (many text) (emit-group (subterm _) cl group (prove-subterm group cl) cx st2 (BTrue)))
                 (let (many st4) (st-push-def (predates _) st3 (rcat3 (predates _) (RStr "let rec ") text (RStr "\n"))))
                 (let (many mine) (match many (idmap-get (predates _) (String) (func-id (predates _) fn) (st-names (predates _) st4)) (((String) s)) ((None a) "(failwith \"closure missing\")") ((Some a s) s)))
                 (values (st-with-names (predates _) st4 saved) (RStr mine)))))))
       ((VToken) (values st (RStr "U")))
       ((VError m) (values st (rcat3 (predates _) (RStr "(failwith ") (quoted (predates _) m) (RStr ")"))))))
 
-  (many emit-values : (subterm many (Nat) fuel) (subterm many (List (Value)) vs) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List (Rope)) rs)
+  (many emit-values : (subterm many (List (Value)) vs) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List (Rope)) rs)
     (match many vs _
       ((Nil a) (values st (Nil (Rope))))
       ((Cons a v rest)
-        (let (many st2) (many r) (emit-value fuel (subterm _) v cx st))
-        (let (many st3) (many rs) (emit-values fuel (subterm _) rest cx st2))
+        (let (many st2) (many r) (emit-value (subterm _) v cx st))
+        (let (many st3) (many rs) (emit-values (subterm _) rest cx st2))
         (values st3 (Cons (Rope) r rs)))))
-
-  ; Gives each member of a group about to be hoisted its closure name.
-  (many name-group : (subterm many (Nat) fuel) (subterm many (List (Pair (Bin) (Func))) group) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Bool) ok)
-    (match many group _
-      ((Nil a) (values st (BTrue)))
-      ((Cons a p rest)
-        (match many p _
-          ((MkPair x y id fn)
-            (let (many st2) (many n) (st-fresh (predates _) st))
-            (let (many name) (str-cat (predates _) "cl" (str-cat (predates _) (bin-str (predates _) n) (str-cat (predates _) "_" (sanitize (predates _) (func-name (predates _) fn))))))
-            (name-group fuel (subterm _) rest (st-with-names (predates _) st2 (idmap-set (predates _) (String) id name (st-names (predates _) st2)))))))))
 
   ; The definitions of a group, joined by and; hoisted groups are named through the state, local ones
   ; and run-position ones by their entries.
-  (many emit-group : (subterm many (Nat) fuel) (subterm many (List (Pair (Bin) (Func))) fns) (many (EmitCx) cx) (many (EmitSt) st) (many (Bool) hoisted) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-group : (subterm many (Closure) cl) (subterm many (List (Pair (Bin) (Func))) fns) (erased (Subterm (List (Pair (Bin) (Func))) fns (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) (many (Bool) hoisted) -> (many (EmitSt) st2) (many (Rope) r)
     (match many fns _
       ((Nil a) (values st (REmpty)))
       ((Cons a p rest)
@@ -290,20 +291,26 @@
               (match many hoisted (((String) s))
                 ((BFalse) (top-name (predates _) (cx-env (predates _) cx) id))
                 ((BTrue) (match many (idmap-get (predates _) (String) id (st-names (predates _) st)) (((String) s)) ((None b) (top-name (predates _) (cx-env (predates _) cx) id)) ((Some b s) s)))))
-            (let (many st2) (many body) (emit-fn fuel (subterm _) fn cx st))
-            (let (many st3) (many more) (emit-group fuel (subterm _) rest cx st2 hoisted))
+            (let (many st2) (many body) (emit-fn cl (subterm _) fn (subterm-trans (prove-subterm fn fns) w) cx st))
+            (let (many st3) (many more) (emit-group cl (subterm _) rest (subterm-trans (prove-subterm rest fns) w) cx st2 hoisted))
             (let (many sep) (match many rest (((Rope) r)) ((Nil b) (REmpty)) ((Cons b q rest2) (RStr "\nand "))))
             (values st3 (rcat5 (predates _) (RStr name) (RStr " = ") body sep more)))))))
 
-  (many emit-fn : (subterm many (Nat) fuel) (subterm many (Func) fn) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-fn : (subterm many (Closure) cl) (subterm many (Func) fn) (erased (Subterm (Func) fn (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many fn _
       ((MkFunc name id params body impl top)
         (let (many ext) (match many impl (((Bool) b)) ((None a) (BFalse)) ((Some a n) (is-extern-fn (predates _) n))))
         (match many ext _
           ((BTrue) (values st (rcat3 (predates _) (RStr "Fn ext_") (RStr (sanitize (predates _) (match many impl (((String) s)) ((None a) "") ((Some a n) n)))) (REmpty))))
           ((BFalse)
-            (let (many st2) (many br) (emit-code fuel (subterm _) body cx st))
+            (let (many st2) (many br) (emit-code cl (subterm _) body (subterm-trans (prove-subterm body fn) w) cx st))
             (values st2 (rcat5 (predates _) (RStr "Fn (fun args -> match args with ") (ids-pattern (predates _) params (cx-env (predates _) cx)) (RStr " -> ") br (RStr " | _ -> absurd ())")))))))))
+
+; A run-position group, emitted under a closure built around it.
+(def-fns _ $ many emit-top-group : (many (List (Pair (Bin) (Func))) fns) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (let (many f0) (match many fns (((Func) f)) ((Nil a) (MkFunc "" (BZ) (Nil (Bin)) (CErased) (None (String)) (BTrue))) ((Cons a p rest) (match many p (((Func) f)) ((MkPair x y id fn) fn)))))
+  (let (many cl) (MkClosure f0 fns (MEmpty (Value))))
+  (emit-group (predates _) cl fns (prove-subterm fns cl) cx st (BFalse)))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
@@ -495,14 +502,14 @@
 (def-fns _ $ many emit-final : (many (Value) v) (many (Term) ty) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
   (match many (classify-final (predates _) (cx-env (predates _) cx) ty) _
     ((FMain)
-      (let (many st2) (many vr) (emit-value (predates _) emit-fuel v cx st))
+      (let (many st2) (many vr) (emit-value (predates _) v cx st))
       (values st2 (rcat3 (predates _) (RStr "let () = run_main ") vr (RStr "\n"))))
     ((FIo)
-      (let (many st2) (many vr) (emit-value (predates _) emit-fuel v cx st))
+      (let (many st2) (many vr) (emit-value (predates _) v cx st))
       (values st2 (rcat3 (predates _) (RStr "let () = exit (run_io ") vr (RStr ")\n"))))
     ((FThunk t)
-      (let (many st2) (many vr) (emit-value (predates _) emit-fuel v cx st))
-      (let (many memo) (many name) (show-type (predates _) emit-fuel (cx-env (predates _) cx) t (MkShowMemo 0 (Nil (Pair (Term) (String))) (Nil (Rope)))))
+      (let (many st2) (many vr) (emit-value (predates _) v cx st))
+      (let (many memo) (many name) (show-type (predates _) show-fuel (cx-env (predates _) cx) t (MkShowMemo 0 (Nil (Pair (Term) (String))) (Nil (Rope)))))
       (values st2 (rcat5 (predates _) (show-defs (predates _) memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (predates _) (RStr " (app ") vr (RStr " []))")) (RStr "\n"))))
     ((FPlain)
       (values st (rcat3 (predates _) (RStr "let () = List.iter print_string [") (rope-literals (predates _) (show-value (predates _) v) (REmpty)) (RStr "]; print_newline ()\n"))))))
@@ -514,10 +521,10 @@
       (let (many st2) (many text)
         (match many item (((EmitSt) s) ((Rope) r))
           ((TrFns fns)
-            (let (many st2) (many g) (emit-group (predates _) emit-fuel fns cx st (BFalse)))
+            (let (many st2) (many g) (emit-top-group (predates _) fns cx st))
             (values st2 (rcat3 (predates _) (RStr "let rec ") g (RStr "\n"))))
           ((TrConst x v)
-            (let (many st2) (many vr) (emit-value (predates _) emit-fuel v cx st))
+            (let (many st2) (many vr) (emit-value (predates _) v cx st))
             (values st2 (rcat4 (predates _) (RStr "let ") (RStr (top-name (predates _) (cx-env (predates _) cx) x)) (RStr " = ") (rcat (predates _) vr (RStr "\n")))))
           ((TrFinal v ty) (emit-final (predates _) v ty cx st))))
       (let (many st3) (many defs) (st-take-defs (predates _) st2))
@@ -529,6 +536,6 @@
     ((Cons a l rest) (rcat3 (predates _) (RStr l) (RStr "\n") (header-rope (subterm _) rest)))))
 
 (def-fns _ $ many emit-program : (many (Env) env) -> (many (Rope) r)
-  (let (many cx) (MkEmitCx env (env-values (predates _) env) (MEmpty (Value))))
+  (let (many cx) (MkEmitCx env (env-values (predates _) env)))
   (let (many st) (MkEmitSt (BZ) (Nil (Rope)) (MEmpty (String))))
   (rcat (predates _) (header-rope (predates _) runtime-header) (emit-items (predates _) (list-rev (predates _) (Trace) (env-trace (predates _) env)) cx st)))

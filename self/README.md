@@ -116,13 +116,14 @@ recorded so it can be revisited.
   environment's maps are tries over their digits. OCaml names carry the
   digits, least significant first: `v22111222_length`.
 - **Termination is by fuel where the recursion is not structural.**
-  The interpreter, the elaborator, the emitter's closure hoisting and
-  the generated printer each take a `Nat` that decreases along the call
-  stack (not a step count), so a fuel of 100000 bounds depth, not work.
-  Running out returns an error value, never a wrong answer silently.
-  Where recursion is on a constructor argument (the reader, maps, term
-  traversals, evaluation of sub-expressions) it is the ordinary
-  `subterm` decrease.
+  The interpreter, the elaborator and the generated printer each take
+  a `Nat` that decreases along the call stack (not a step count), so a
+  fuel of 100000 bounds depth, not work. Running out returns an error
+  value, never a wrong answer silently. Where recursion is on a
+  constructor argument (the reader, maps, term traversals, evaluation
+  of sub-expressions, the emitter) it is the ordinary `subterm`
+  decrease; the emitter's measure is the closure whose code it emits,
+  every piece of code carrying an erased proof that it lies inside it.
 - **Canonicalization and forced unification terminate by proof**
   (ASSUMPTIONS 93 and 94). The fact table is a trie whose type index
   counts its rule-free entries; the rewrite rules are a list in the

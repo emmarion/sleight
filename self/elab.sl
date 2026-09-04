@@ -909,7 +909,7 @@
 
 ; prove-subterm (section 8): the first, canonicalized, is a strict subtree of the second through constructor
 ; applications only.
-(def-fns _ $ many prove-subterm : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Env) r) (many (Res) res)
+(def-fns _ $ many mint-subterm : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Env) r) (many (Res) res)
   (let (many ca) (canon-env (predates _) env a))
   (let (many cb) (canon-env (predates _) env b))
   (let (many env2)
@@ -919,7 +919,7 @@
   (mint (predates _) env2 (proof-type (predates _) subterm-id (Cons (Term) (infer (predates _) a env2) (Cons (Term) a (Cons (Term) (infer (predates _) b env2) (Cons (Term) b (Nil (Term)))))))))
 
 ; prove-predates (section 8): the variable was in scope when the level was minted (ASSUMPTIONS 13).
-(def-fns _ $ many prove-predates : (many (Env) env) (many (Bin) x0) (many (Bin) lvl) -> (many (Env) r) (many (Res) res)
+(def-fns _ $ many mint-predates : (many (Env) env) (many (Bin) x0) (many (Bin) lvl) -> (many (Env) r) (many (Res) res)
   (let (many env2)
     (match many (entry-minted (predates _) env lvl) (((Env) e))
       ((BTrue) env)
@@ -1811,7 +1811,7 @@
                               (let (many arg) (nth-term (predates _) args i))
                               (let (many env3) (many pterm)
                                 (match many (is-underscore (predates _) p) (((Env) e) ((Term) t))
-                                  ((BTrue) (let (many env3) (many pr) (prove-subterm (predates _) env2 arg (TVar counterpart))) (values env3 (res-term (predates _) pr)))
+                                  ((BTrue) (let (many env3) (many pr) (mint-subterm (predates _) env2 arg (TVar counterpart))) (values env3 (res-term (predates _) pr)))
                                   ((BFalse) (elab-erased (subterm _) k env2 p))))
                               (let (many env4) (many pa) (expect-proof (predates _) env3 subterm-id pterm))
                               (let (many env5) (check (predates _) env4 "value" (nth-term (predates _) pa 1) arg))
@@ -1824,7 +1824,7 @@
                         (match many (is-underscore (predates _) p) (((Env) e) ((Term) t))
                           ((BTrue)
                             (match many (canon-env (predates _) env lv) (((Env) e) ((Term) t))
-                              ((TVar m) (let (many env2) (many pr) (prove-predates (predates _) env m cur)) (values env2 (res-term (predates _) pr)))
+                              ((TVar m) (let (many env2) (many pr) (mint-predates (predates _) env m cur)) (values env2 (res-term (predates _) pr)))
                               ((TBound j) (values (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env lv) " is not a variable")) (TErr "level")))
                               ((TApp h as) (values (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env lv) " is not a variable")) (TErr "level")))
                               ((TFn l ps rs) (values (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env lv) " is not a variable")) (TErr "level")))
@@ -2523,7 +2523,7 @@
                   ((TErr msg) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))))
               ((ExProveSubterm)
                 (let (many env2) (many a) (many b) (elab-two-terms (subterm _) k env0 args))
-                (let (many env3) (many r) (prove-subterm (predates _) env2 a b))
+                (let (many env3) (many r) (mint-subterm (predates _) env2 a b))
                 (values env3 (Cons (Res) r (Nil (Res))) (CErased)))
               ((ExProvePredates)
                 (match many args _
@@ -2532,7 +2532,7 @@
                     (let (many env2) (many x) (var-of-raw (predates _) env0 xraw "a variable"))
                     (let (many env3) (many lt) (elab-term (subterm _) k env2 (one-arg (predates _) rest)))
                     (let (many env4) (many lvl) (level-var-checked (predates _) env3 lt))
-                    (let (many env5) (many r) (prove-predates (predates _) env4 x lvl))
+                    (let (many env5) (many r) (mint-predates (predates _) env4 x lvl))
                     (values env5 (Cons (Res) r (Nil (Res))) (CErased)))))
               ((ExPredatesTrans)
                 (let (many env2) (many pa) (many qa) (two-proofs (subterm _) k env0 args predates-id predates-id))
