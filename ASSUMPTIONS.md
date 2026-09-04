@@ -1168,10 +1168,10 @@ suite (CLAUDE.md rule 2), not settled decisions.
     the rest of the body mentions none of its binders. That keeps item 77's guarantee for a phantom-only
     `def-adts` (`tests/delegate_erased_inner.sl`) but reads more widely
     than item 77 did: a nested `def-adts` whose constructors the body
-    never uses no longer blocks a `delegate` either. The session's
-    reading is that dropping a binding nothing reads changes no
-    program's meaning (§20's argument for erasure applies), offered for
-    the owner to confirm.
+    never uses no longer blocks a `delegate` either
+    (`tests/delegate_inner_adts.sl`). Settled by the owner: this is the
+    behaviour wanted, dropping a binding nothing reads changing no
+    program's meaning.
 
 89. **Nothing but a signature or a `Matchable` tells two atoms apart**
     (the owner's proposal, in chat, implemented here; an earlier form of
