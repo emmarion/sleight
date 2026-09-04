@@ -148,7 +148,7 @@
 (let (many u8-modulus) (erased u8-modulus-pow2) (erased u8-modulus-pos) (pow2 eight))
 
 (def-adts $ U8 : -> Type
-  enum extern newtype
+  enum newtype
   (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
 
 (def-lvl u8-lvl)

@@ -16,9 +16,6 @@ let bijective ~z ~bin =
       if Z.equal n Z.zero then (0, [])
       else let d = if Z.is_odd n then 1 else 2 in (d, [ bin (Z.shift_right (Z.sub n (Z.of_int d)) 1) ]) )
 
-(* A bounded Nat with one constructor, whose runtime field is a Nat. *)
-let bounded ~z ~nat ~u8 = ((fun _ args -> match args with [ n ] -> u8 (z n) | _ -> assert false), fun v -> (0, [ nat (z v) ]))
-
 (* A cons list of Char held as a slice of a byte string: destructing yields the tail slice over the same buffer. *)
 let text ~z ~slice ~u8 ~str =
   ( (fun i args ->

@@ -1328,10 +1328,19 @@ what it assumed while doing so.
     modular arithmetic rather than a narrowing and was not touched.
     §41 says this, in wording the owner confirmed (CLAUDE.md rule 12).
 
-101. **`U8` is marked `newtype` and `u8-to-nat` is gone.** The FFI holds
-    a `U8` as its `Nat` field is held — both are the same integer — so
-    §38's representation guarantee holds and a value coerces to and from
-    its code; the extern was doing what `coercible-wrap MkU8` does.
-    `MkU8` carries an erased bound proof beside its one `many` field,
-    which §12's newtype rule permits. §41 says this, in wording the
-    owner confirmed (CLAUDE.md rule 12).
+101. **`U8` is marked `newtype`, and needs no extern.** `MkU8` carries
+    an erased bound proof beside its one `many` field, which §12's
+    newtype rule permits, so §38 requires the value to be that field
+    alone — which is what the FFI's `bounded` was doing by hand:
+    construct was the identity on the integer and destruct handed it
+    back. With the mark, the ordinary untagged one-field path does the
+    same, so `U8`'s `extern`, `Ffi_core.bounded`, its `Ffi.types` entry
+    and its `Extract` entry are all gone, and `u8-add`'s result and the
+    `String` FFI's per-character value are built at `"Nat"`, a `U8`
+    being a `Nat` at runtime. `u8-to-nat` went too, having been the
+    extern form of `coercible-wrap MkU8`.
+
+    §41 still calls `U8` an extern enum in its prose, its code block and
+    its list of externs. The session proposed all three edits and is
+    waiting on the owner's wording (CLAUDE.md rule 12); this is recorded
+    as the open item rather than guessed at.
