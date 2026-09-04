@@ -14,13 +14,14 @@ let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (Reader.show raw)
 let name_or_anon n = if n = "_" then None else Some n
 
+(* A special form's name: a Const, non-erased entry of type (Special) holding one of its variants (section 4). *)
 let special_of env raw =
-  match raw with
-  | Atom (_, n) -> (
-      match Option.map (fun x -> entry env x) (lookup env n) with
-      | Some { state = Const (V.VCtor (c, [])); mult = Many; _ } -> Hashtbl.find_opt Sp.table c.cid
+  match Option.bind (atom raw) (lookup env) with
+  | Some x -> (
+      match entry env x with
+      | { state = Const (V.VCtor (c, [])); mult = Many; _ } when equal (type_of env x) Prelude.special_term -> Hashtbl.find_opt Sp.table c.cid
       | _ -> None)
-  | List _ -> None
+  | None -> None
 
 let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | _ -> None

@@ -1002,3 +1002,12 @@ failed on.
     was told `(False)` is not an empty type. The test now goes through
     the same lookup as a match does (`tests/absurd_dup_matchable.sl`).
     A correctness fix by the session's reading of section 19.
+
+82. **Head dispatch reads the head's type as well as its value**
+    (settled by the owner; section 4 now says so). Section 38's
+    `coerce` through a newtype wrapping `(Special)` produced a `Const`
+    whose stored value was a `Special` variant, `(%let)`, while its
+    type was the newtype's, and the dispatch, which read only the
+    stored value, ran it as `let`. A special-form head must now also
+    have type `(Special)`; such a value heads no form and elaborating
+    it as an application fails on its type (`tests/special_newtype_bad.sl`).

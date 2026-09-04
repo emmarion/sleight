@@ -94,10 +94,14 @@ by examining its head:
    (this needs no Const-known-ness at all, matching §9: any of these
    can be called through a first-class pointer).
 2. Otherwise, if the head is *additionally* Const-known **and
-   non-erased** (§34): if its value is a `Special` or a `Macro` (§9),
-   proceed — this is the constant-known-head requirement above, made
-   precise. An erased `Const` entry stores only §3's token; there is no
-   value to dispatch on.
+   non-erased** (§34): if its type is `(Special)` or `Macro` and its
+   value is a `Special` or a `Macro` (§9), proceed — this is the
+   constant-known-head requirement above, made precise. An erased
+   `Const` entry stores only §3's token; there is no value to dispatch
+   on. The type is required as well as the value: a `Const` whose
+   stored value is a `Special` variant but whose type is something
+   else — a newtype around `(Special)` reached by `coerce` (§38) — is
+   not a special form.
 3. Otherwise, it's an elaboration error.
 
 This resolves §27's open question: constructor/function application
