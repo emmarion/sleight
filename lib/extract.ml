@@ -38,6 +38,7 @@ type cx = {
   seen : (int, V.value * string option ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
+  held : V.adt list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
 }
@@ -85,7 +86,9 @@ and plain cx = function
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
-  | V.VMatchable adt -> mat cx adt
+  | V.VMatchable adt ->
+      if not (List.memq adt !(cx.held)) then cx.held := adt :: !(cx.held);
+      mat cx adt
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
 
@@ -162,20 +165,18 @@ and expr cx scope = function
       let branches = List.map (fun (i, ids, body) -> (i, List.map var ids, expr cx scope body)) m.branches in
       let scrut = expr cx scope m.scrut in
       let one () = match branches with [ (_, vs, body) ] -> (vs, body) | _ -> assert false in
-      match static_adt scope m.matchable with
-      | Some a -> (
-          match shape a with
-          | Ext ->
-              Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx a) scrut
-                (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| (%d, [%s]) -> %s" i (concat "; " vs) body) branches))
-          | Tagged ->
-              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" scrut (type_name cx a)
-                (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| %s -> %s" (pattern (V.ctor_at a i) vs) body) branches))
-          | Untagged -> let vs, body = one () in untuple vs scrut body)
-      | None ->
+      match m.shape with
+      | V.Foreign a ->
+          Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx a) scrut
+            (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| (%d, [%s]) -> %s" i (concat "; " vs) body) branches))
+      | V.Tag a ->
+          Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" scrut (type_name cx a)
+            (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| %s -> %s" (pattern (V.ctor_at a i) vs) body) branches))
+      | V.Fields _ -> let vs, body = one () in untuple vs scrut body
+      | V.Held (code, tags) ->
           let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in
-          let des = Printf.sprintf "(Obj.obj %s : matchable).mdes %d %s" (expr cx scope m.matchable) arity scrut in
-          if not m.tags then
+          let des = Printf.sprintf "(Obj.obj %s : matchable).mdes %d %s" (expr cx scope code) arity scrut in
+          if not tags then
             let vs, body = one () in
             Printf.sprintf "(match snd (%s) with [%s] -> %s | _ -> absurd ())" des (concat "; " vs) body
           else
@@ -188,13 +189,6 @@ and expr cx scope = function
   | V.CAbsurd -> "(absurd ())"
 
 and static cx = function V.CVar c -> Hashtbl.find_opt cx.ctors c | V.CConst (V.VCtorFn c) -> Some c | _ -> None
-
-(* The type a match takes apart, where the Matchable it reads is the one def-adts stamped in or a constant
-   captured from an enclosing scope; a first-class Matchable resolves only at runtime. *)
-and static_adt scope = function
-  | V.CConst (V.VMatchable a) -> Some a
-  | V.CVar x when not (List.mem x scope.locals) -> (match IntMap.find_opt x scope.capture with Some (V.VMatchable a) -> Some a | _ -> None)
-  | _ -> None
 
 let collect env items =
   let adts = ref [] and ctors = Hashtbl.create 64 and defined = Hashtbl.create 64 in
@@ -221,7 +215,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; ctors; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; ctors; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
@@ -247,8 +241,8 @@ let types cx =
   let descriptor c =
     Printf.sprintf "let %s : Obj.t = Obj.repr { ix = %d; cname = %s; con = %s; des = (fun v -> %s) }" (var c.V.cid) c.index (quote c.cname) (con cx c.adt) (destruct cx c "v")
   in
-  (* One Matchable value per type, holding what a match through a first-class Matchable needs: the FFI's
-     destructor or the tag where the type has one, and the fields as they stand where it has none. *)
+  (* A Matchable value for each type that is held as one, carrying what a match through it needs: the FFI's
+     destructor or the tag where the type has one, and the fields as they stand where it has neither. *)
   let matchable a =
     let des =
       match shape a with
@@ -265,7 +259,7 @@ let types cx =
     (("type " ^ concat "\nand " (List.map adt cx.adts))
     :: List.map ops cx.adts
     @ List.concat_map (fun a -> List.map descriptor a.V.ctors) cx.adts
-    @ List.map matchable cx.adts)
+    @ List.map matchable !(cx.held))
 
 let rec show cx env ty =
   let ty = Env.canon env ty in

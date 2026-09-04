@@ -674,9 +674,12 @@ type alone, whether the scrutinee's type carries a tag (§38) and which
 discriminant each branch's constructor has, so it stamps both into the
 match; the constructors themselves are needed only to build values, and
 a match may name ones that are `erased` where it stands. Where the
-`Matchable` is the one `def-adts` minted for a named type, the
-elaborator stamps that too, and only a `Matchable` held in a variable —
-a function's parameter, say — is read from scope when the match runs.
+`Matchable` is one it can see — the one `def-adts` minted for a named
+type — it stamps how the value comes apart as well, and the match then
+carries no `Matchable` at all: a non-extern type's match is a tag read
+or a field read with nothing in front of it. Only a `Matchable` held in
+a variable — a function's parameter, say — is read when the match runs,
+since its type alone cannot say whether the FFI implements the type.
 
 ## 18. Match-branch rewrite algorithm (working formulation)
 

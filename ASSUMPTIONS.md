@@ -1031,40 +1031,46 @@ matching (§41). DESIGN.md §§17, 20 and 38 now say all four; items 83-85
 record how the prototype reads them, and item 79's restriction is gone.
 
 83. **What a match compiles to.** The post-erasure form of a match is
-    its scrutinee, the `Matchable` to read it through, a flag saying
-    whether the type carries a tag, and one branch per real
-    constructor keyed by that constructor's discriminant. Both the flag
-    and the discriminants are settled at elaboration from the
-    `Matchable`'s *type*, which fixes the enum/union tag, the
-    constructor order and each constructor's phantom marker; nothing
-    reads a constructor value at runtime any more, so a branch may name
-    a constructor that is `erased` where it stands
-    (`tests/erased_ctor_dispatch.sl`, the program item 79 refused).
-    What is left for the `Matchable` value itself is the one fact its
-    type does not carry: whether the type is `extern`, and if so the
-    FFI's destructor. So the evaluator asks the `Matchable` for the
-    scrutinee's discriminant and fields, which the FFI answers where it
-    implements the type, the tag answers where the stamped flag says
-    there is one, and the value's own fields answer otherwise -- the
-    case where the elaborator has already checked there is a single
-    real branch (§12).
+    its scrutinee, one branch per real constructor keyed by that
+    constructor's discriminant, and a *shape* saying how the scrutinee
+    comes apart: through the FFI's destructor where it holds the type
+    (§41), off the tag where the type carries one, or as the value's
+    own fields where it carries neither -- the case the elaborator has
+    already checked leaves a single real branch (§12). All of it is
+    settled at elaboration from the `Matchable`'s *type*, which fixes
+    the enum/union tag, the constructor order and each constructor's
+    phantom marker, together with the shape `def-adts` recorded for a
+    named type. Nothing reads a constructor value at runtime any more,
+    so a branch may name a constructor that is `erased` where it stands
+    (`tests/erased_ctor_dispatch.sl`, the program item 79 refused). A
+    fourth shape, a `Matchable` held in a variable, is the only one
+    read when the code runs, and only because its type does not say
+    whether the FFI implements the type.
 
-84. **The `Matchable` is stamped where the elaborator knows it.** A
-    `Matchable` entry is minted `many` and carries the type's runtime
-    shape as its value, but a match on a named type does not read the
-    entry: `def-adts` records the shape beside the entry it mints, and
-    both a match and `matchable-of` stamp it into the code as a
-    constant. Only a `Matchable` bound to a variable -- a first-class
-    parameter (`tests/gmap.sl`, `tests/first_class.sl`, whose parameters
-    are now `many`) -- is read from scope when the code runs. A nested
-    `def-adts` therefore still leaves nothing behind in a body that
-    declares only phantom constructors, which is what ASSUMPTIONS 77
-    wanted for `delegate` (`tests/delegate_erased_inner.sl`).
-    The erasure demand is made where the code needs it: a match whose
-    position and whose scrutinee are both non-erased, the one shape
-    that compiles to a dispatch (`tests/erased_matchable_bad.sl`). An
-    erased scrutinee has a single real branch and no dispatch, and an
-    erased position compiles to nothing, so neither asks for anything.
+84. **A match carries no `Matchable` it would not read** (the owner's
+    decision, in chat). A `Matchable` entry is minted `many` and its
+    value carries the type's runtime shape, but a match whose type the
+    elaborator can see -- the one `def-adts` minted, or one a
+    run-position binder holds -- takes that shape and mentions no
+    `Matchable` at all, so a non-extern type's match is a tag read or a
+    field read with nothing dynamic in front of it, in the interpreter
+    and in the extracted OCaml alike. Only a `Matchable` reaching the
+    match as a variable -- a first-class parameter (`tests/gmap.sl`,
+    `tests/first_class.sl`, `tests/thunk_matchable.sl`, whose parameters
+    are now `many`) -- is read at runtime, and the extraction emits a
+    `Matchable` value for a type only where one is really held. A
+    nested `def-adts` therefore still leaves nothing behind in a body
+    that declares only phantom constructors, which is what ASSUMPTIONS
+    77 wanted for `delegate` (`tests/delegate_erased_inner.sl`).
+    The erasure demand, by contrast, is a rule about the source rather
+    than about what the implementation manages to stamp: a match whose
+    position and whose scrutinee are both non-erased needs a non-erased
+    `Matchable` (`tests/erased_matchable_bad.sl`). It bites only on a
+    first-class `Matchable`, a minted one being `many` already, and
+    those are exactly the ones no elaborator could prove non-extern. An
+    erased scrutinee leaves a single real branch and no dispatch, and an
+    erased position compiles to nothing, so neither asks for anything
+    (`tests/erased_matchable_ok.sl`).
 
 85. **Phantom constructors take no discriminant.** A constructor's
     discriminant is its position among the type's non-phantom

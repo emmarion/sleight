@@ -36,16 +36,25 @@ and code =
   | CMatch of matching
   | CAbsurd
 
-(* What a match compiles to: the Matchable saying how to take the scrutinee apart, whether its type carries a
-   discriminant, and one branch per real constructor keyed by that constructor's discriminant (section 38). *)
-and matching = { matchable : code; scrut : code; tags : bool; branches : (int * id list * code) list }
+(* What a match compiles to: its scrutinee, how to take it apart, and one branch per real constructor keyed by
+   that constructor's discriminant (section 38). *)
+and matching = { scrut : code; shape : shape; branches : (int * id list * code) list }
+
+(* How a value comes apart, settled at elaboration from the Matchable (section 17): through the FFI's
+   destructor where it holds the type (section 41), off the tag where the type carries one, and as the fields
+   themselves where it carries neither -- the case the elaborator has checked leaves one real branch. Only a
+   Matchable a variable holds is read when the code runs, its type saying whether values carry a tag but not
+   whether the FFI implements them. *)
+and shape = Foreign of adt | Tag of adt | Fields of adt | Held of code * bool
 
 let map_code f = function
   | CValues cs -> CValues (List.map f cs)
   | CApp (g, args, cc) -> CApp (f g, List.map f args, cc)
   | CLet (ids, rhs, rest) -> CLet (ids, f rhs, f rest)
   | CLetRec (fns, rest) -> CLetRec (fns, f rest)
-  | CMatch m -> CMatch { m with matchable = f m.matchable; scrut = f m.scrut; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches }
+  | CMatch m ->
+      let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | s -> s in
+      CMatch { scrut = f m.scrut; shape; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches }
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes = function
@@ -53,7 +62,7 @@ let subcodes = function
   | CApp (g, args, _) -> g :: args
   | CLet (_, rhs, rest) -> [ rhs; rest ]
   | CLetRec (_, rest) -> [ rest ]
-  | CMatch m -> m.matchable :: m.scrut :: List.map (fun (_, _, b) -> b) m.branches
+  | CMatch m -> (match m.shape with Held (c, _) -> [ c ] | _ -> []) @ (m.scrut :: List.map (fun (_, _, b) -> b) m.branches)
   | CVar _ | CConst _ | CErased | CAbsurd -> []
 
 (* Extern implementations run unless stripped (section 41's invariant). *)
@@ -71,16 +80,15 @@ let construct c args =
 (* [ctors] holds the non-phantom constructors, so a constructor sits at its own discriminant. *)
 let ctor_at adt i = List.nth adt.ctors i
 
-(* The discriminant and many fields of a value, read through the FFI where its type has one (section 41) and
-   off the tag otherwise; [None] where the type carries no discriminant and the value is its fields as they
-   stand, which the caller's one branch takes apart by its own arity. *)
-let dispatch adt tagged v =
-  match (adt.ext, v) with
+(* The discriminant and many fields of a value; [None] where neither the FFI nor a tag gives one and the value
+   is its fields as they stand. *)
+let dispatch ext tagged v =
+  match (ext, v) with
   | Some e, VExt _ -> Some (e.destruct v)
   | _ when not tagged -> None
   | _ -> (match v with VCtor (c, fs) -> Some (c.index, fs) | _ -> assert false)
 
-let destruct c v = match dispatch c.adt c.adt.tagged v with Some r -> r | None -> (c.index, untuple c.arity v)
+let destruct c v = match dispatch c.adt.ext c.adt.tagged v with Some r -> r | None -> (c.index, untuple c.arity v)
 
 let rec show = function
   | VCtor (c, fields) -> "(" ^ String.concat " " (c.cname :: List.map show fields) ^ ")"

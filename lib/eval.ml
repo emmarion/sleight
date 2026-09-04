@@ -20,11 +20,17 @@ let rec eval env code =
   | CApp (f, args, _) -> apply (eval1 env f) (List.map (eval1 env) args)
   | CLet (ids, rhs, body) -> eval (bind ids (eval env rhs) env) body
   | CLetRec (fns, body) -> eval (close env fns) body
-  | CMatch { matchable; scrut; tags; branches } -> (
-      let adt = match eval1 env matchable with VMatchable a -> a | v -> raise (Runtime ("not a Matchable: " ^ show v)) in
+  | CMatch { scrut; shape; branches } -> (
       let v = eval1 env scrut in
       let enter (_, ids, body) fields = eval (bind ids fields env) body in
-      match (dispatch adt tags v, branches) with
+      let read =
+        match shape with
+        | Foreign adt | Tag adt -> dispatch adt.ext adt.tagged v
+        | Fields _ -> None
+        | Held (code, tags) -> (
+            match eval1 env code with VMatchable a -> dispatch a.ext tags v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
+      in
+      match (read, branches) with
       | Some (i, fields), _ -> (
           match List.find_opt (fun (j, _, _) -> j = i) branches with
           | Some branch -> enter branch fields

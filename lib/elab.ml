@@ -185,11 +185,24 @@ let spread mults values =
 
 let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (const env value) ty
 
-(* Where a match or a matchable-of reads a Matchable: the shape def-adts minted for it is stamped in, and only
-   a first-class Matchable -- a binder holding one -- is read from the entry at runtime (section 17). *)
+(* The runtime shape behind a Matchable entry, where the elaborator can see it: the one def-adts minted, or one
+   a run-position binder holds. A first-class Matchable -- a parameter, say -- has none until the code runs. *)
+let adt_of env x =
+  match Hashtbl.find_opt Env.adts x with
+  | Some adt -> Some adt
+  | None -> (match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None)
+
 let matchable_code pos x =
   if pos = Erased then V.CErased
   else match Hashtbl.find_opt Env.adts x with Some adt -> V.CConst (V.VMatchable adt) | None -> V.CVar x
+
+(* What a match does to take its scrutinee apart (section 38). A type the elaborator can see is stamped whole,
+   so a match on it reads no Matchable at all; only where the FFI holds the type does the destructor remain. *)
+let match_shape env x tagged =
+  match adt_of env x with
+  | Some adt when adt.V.ext <> None && !V.use_externs -> V.Foreign adt
+  | Some adt -> if tagged then V.Tag adt else V.Fields adt
+  | None -> V.Held (V.CVar x, tagged)
 let mint_level env name = bind env ~minted_level:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
@@ -613,7 +626,7 @@ and elab_match tele env expect l args =
         | [ (_, _, body) ] when smult = Erased -> body
         | _ ->
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
-            V.CMatch { matchable = matchable_code Many mid; scrut = scode; tags = tagged; branches = List.map branch real }
+            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real }
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
