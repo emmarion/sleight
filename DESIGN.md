@@ -763,9 +763,11 @@ how entering a match branch updates it:
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
-  itself is a no-op, not a contradiction); (2) two already-known, distinct
-  constructors equated (arity mismatch is one easy sufficient symptom of
-  this given fixed arities and no currying, not a separate case); (3) a
+  itself is a no-op, not a contradiction); (2) two atoms equated that one
+  `Matchable` in scope lists, or whose signatures or `Matchable`s cannot
+  themselves be unified, decided recursively (arity mismatch is one easy
+  sufficient symptom of this given fixed arities and no currying, not a
+  separate case); (3) a
   variable equated with an expression mentioning a binder of the
   telescope under comparison -- `k` against `x` when
   `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
@@ -796,7 +798,9 @@ than staying hidden compiler bookkeeping.
 There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
-succeeds by adding the needed `is` fact(s).
+succeeds by adding the needed `is` fact(s). Two atoms conflict only when
+one `Matchable` in scope lists both or their signatures or `Matchable`s
+cannot unify; nothing is refuted on a name's identity.
 
 A `Matchable` doesn't need to be threaded through explicitly — having one
 for the relevant type anywhere in ambient scope is enough for the

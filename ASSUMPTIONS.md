@@ -1193,7 +1193,6 @@ suite (CLAUDE.md rule 2), not settled decisions.
     its signature. The session's reading is that every such branch is
     unreachable and its facts hypothetical, so nothing false follows,
     and that what is lost is only an `(absurd C)` the checker can no
-    longer grant. The suite is unchanged. The wording of §18's second
-    failure mode and of §19 that would say this is proposed to the
-    owner in chat under CLAUDE.md rule 12 and not yet written; the two
-    passages stand as the owner wrote them.
+    longer grant. The suite is unchanged. §18's second failure mode and
+    §19 now say this, in wording the owner confirmed (CLAUDE.md rule
+    12).
