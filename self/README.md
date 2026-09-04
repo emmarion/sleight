@@ -116,13 +116,19 @@ recorded so it can be revisited.
   environment's maps are tries over their digits. OCaml names carry the
   digits, least significant first: `v22111222_length`.
 - **Termination is by fuel where the recursion is not structural.**
-  Canonicalization, the interpreter, the elaborator, the emitter's
-  closure hoisting and forced unification each take a `Nat` that
-  decreases along the call stack (not a step count), so a fuel of
-  100000 bounds depth, not work. Running out returns an error value,
-  never a wrong answer silently. Where recursion is on a constructor
-  argument (the reader, maps, term traversals, evaluation of
-  sub-expressions) it is the ordinary `subterm` decrease.
+  The interpreter, the elaborator, the emitter's closure hoisting and
+  forced unification each take a `Nat` that decreases along the call
+  stack (not a step count), so a fuel of 100000 bounds depth, not work.
+  Running out returns an error value, never a wrong answer silently.
+  Where recursion is on a constructor argument (the reader, maps, term
+  traversals, evaluation of sub-expressions) it is the ordinary
+  `subterm` decrease.
+- **Canonicalization recurses on the rules appended after the one it
+  follows** (ASSUMPTIONS 93), so it needs no fuel: the environment keeps
+  its rewrite rules in the order they were appended, each canonical when
+  appended, and a variable's rule is found by walking that list, which
+  returns the tail after it with the `Subterm` proof the chase's call
+  annotation wants.
 - **Errors are values.** The language has no exceptions, so an
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where

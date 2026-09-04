@@ -1258,3 +1258,29 @@ by the owner.
     did not add these checks to `dune test`: running the compiler under
     the reference *interpreter* takes seconds per file and the stripped
     mode of item 44 would run its fuel counters in unary.
+
+93. **Canonicalization terminates by construction, on an append-only
+    list of rules.** At the owner's direction the session replaced the
+    compiler's canonicalization fuel with a structural argument. The
+    environment holds its rewrite rules in the order they were appended,
+    and every appended rule's right-hand side is canonical at that
+    moment: `bind` canonicalizes the term a `let`, `is` entry or
+    `coerce` records, unification binds to a term it has just
+    canonicalized, and two unified variables bind the newer to the
+    rule-free older one. The session's reading is that a canonical term
+    mentions only variables that are rule-free then, so any rule they
+    later carry was appended later, and a chase from a rule only ever
+    needs the rules after it. `canon` takes that suffix as its first
+    `subterm` parameter and the term as its second; the lookup walks the
+    suffix and returns the tail after the rule together with the
+    `Subterm` proof, so the checker accepts the chase as a lexicographic
+    decrease. Termination no longer depends on the invariant at all.
+    What does is completeness: were a rule ever appended non-canonical,
+    a variable's rule could sit before the current position and the
+    variable would come back unreduced, which the session believes can
+    only make the compiler reject a program, not accept one, though it
+    has not proven that. The id map still says whether a variable has a
+    rule, so only rule-bearing variables pay for the walk; the bootstrap
+    ran no slower than before. The owner considered and set aside a
+    stamped version with a runtime comparison and a fully verified map
+    in favour of this one.
