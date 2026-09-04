@@ -63,3 +63,14 @@ by the owner and apply to every session.
     as an explicit open question, not a candidate answer. (Rule 1's
     hedging governs claims; this rule governs decisions. Mechanical
     wording choices while applying approved edits are fine.)
+
+12. **Every change to DESIGN.md needs the owner's confirmation of its
+    exact wording first.** Before editing DESIGN.md, show the owner the
+    proposed text — the section, the passage being replaced, and the
+    replacement, verbatim — and change the file only after the owner
+    confirms that wording. A decision the owner made in chat is not
+    yet permission to write it into DESIGN.md: the words are the
+    owner's to confirm, and a session's paraphrase of a decision can
+    smuggle in a claim the owner never made. (Rule 11 governs whether a
+    decision is approved; this rule governs how it reaches DESIGN.md.
+    ASSUMPTIONS.md and the other notes stay under rules 1 and 11.)
