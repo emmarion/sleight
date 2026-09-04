@@ -1,7 +1,4 @@
-(* The driver's reading of a program's final value (DESIGN.md section 16): a function from String to String is run
-   over the input and its result written out; an IO value is interpreted request by request; a function from
-   nothing to one value is applied and its result printed; anything else is printed. [world] is what the driver
-   touches, so the test runner can stand one in. *)
+(* Runs a program's final value against a [world] (DESIGN.md section 16), which the test runner stands in for. *)
 open Term
 module V = Value
 
@@ -67,7 +64,7 @@ let run_io env w v =
   let step k x = List.hd (Eval.apply k [ x ]) in
   let rec loop v =
     let i, fields = V.destruct (c "Exit") v in
-    match ((List.nth (c "Exit").adt.ctors i).cname, fields) with
+    match ((V.ctor_at (c "Exit").adt i).cname, fields) with
     | "Exit", [ code ] -> u8 env code
     | "WriteOut", [ s; next ] -> w.out (text s); loop next
     | "WriteErr", [ s; next ] -> w.err (text s); loop next

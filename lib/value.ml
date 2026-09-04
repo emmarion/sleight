@@ -4,8 +4,8 @@ module IntMap = Map.Make (Int)
 
 type cc = Plain | Tail | Delegate | Ctor
 
-(* An ADT's runtime shape: [tagged] when it is an enum with more than one non-phantom constructor (section 38);
-   [ext] when the FFI implements it (section 41), its values then being [VExt] payloads. *)
+(* [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom ones, each
+   at its discriminant; [ext]: the FFI's implementation (section 41), its values then [VExt] payloads. *)
 type adt = { tname : string; tagged : bool; mutable ctors : ctor list; mutable ext : ext option }
 and ctor = { cname : string; cid : id; index : int; arity : int; adt : adt }
 and ext = { construct : int -> value list -> value; destruct : value -> int * value list }
@@ -36,16 +36,10 @@ and code =
   | CMatch of matching
   | CAbsurd
 
-(* What a match compiles to: its scrutinee, how to take it apart, and one branch per real constructor keyed by
-   that constructor's discriminant (section 38). *)
+(* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
+   ADT the elaborator saw, or a Matchable read at runtime, its type having settled whether values carry a tag. *)
 and matching = { scrut : code; shape : shape; branches : (int * id list * code) list }
-
-(* How a value comes apart, settled at elaboration from the Matchable (section 17): through the FFI's
-   destructor where it holds the type (section 41), off the tag where the type carries one, and as the fields
-   themselves where it carries neither -- the case the elaborator has checked leaves one real branch. Only a
-   Matchable a variable holds is read when the code runs, its type saying whether values carry a tag but not
-   whether the FFI implements them. *)
-and shape = Foreign of adt | Tag of adt | Fields of adt | Held of code * bool
+and shape = Known of adt | Held of code * bool
 
 let map_code f = function
   | CValues cs -> CValues (List.map f cs)
@@ -53,7 +47,7 @@ let map_code f = function
   | CLet (ids, rhs, rest) -> CLet (ids, f rhs, f rest)
   | CLetRec (fns, rest) -> CLetRec (fns, f rest)
   | CMatch m ->
-      let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | s -> s in
+      let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | Known _ as s -> s in
       CMatch { scrut = f m.scrut; shape; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches }
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
@@ -77,11 +71,10 @@ let construct c args =
   | Some e when !use_externs -> e.construct c.index args
   | _ -> if c.adt.tagged then VCtor (c, args) else tuple args
 
-(* [ctors] holds the non-phantom constructors, so a constructor sits at its own discriminant. *)
 let ctor_at adt i = List.nth adt.ctors i
 
-(* The discriminant and many fields of a value; [None] where neither the FFI nor a tag gives one and the value
-   is its fields as they stand. *)
+(* A value's discriminant and many fields; [None] where neither the FFI nor a tag says, the value then being its
+   fields as they stand. *)
 let dispatch ext tagged v =
   match (ext, v) with
   | Some e, VExt _ -> Some (e.destruct v)

@@ -1,7 +1,7 @@
 open Value
 
-(* The prototype's fixed FFI (section 41): extern implementations by name, consulted where a def-adts or def-fns is
-   marked extern. Integers are zarith's. Each extern-marked definition in Builtin.source is the model these stand in for. *)
+(* The prototype's fixed FFI (section 41): implementations by name for extern-marked prelude definitions, which are
+   their models. Integers are zarith's. *)
 
 let registered : (string, adt) Hashtbl.t = Hashtbl.create 8
 let claimed : (string, unit) Hashtbl.t = Hashtbl.create 8

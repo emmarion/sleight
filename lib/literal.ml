@@ -1,5 +1,5 @@
-(* Numeral and character literals: digit-only atoms and #\c atoms, never names. Each is sugar for a run-position
-   statement over the prelude, hoisted ahead of the top-level statement that first mentions it (ASSUMPTIONS.md). *)
+(* Literals are sugar for run-position statements over the prelude, hoisted ahead of the top-level statement that
+   first mentions them (ASSUMPTIONS.md). *)
 
 type t = Numeral of Z.t | Char of int | Str of string
 
@@ -30,9 +30,8 @@ let rec bin z =
   if Z.equal z Z.zero then "(BZ)"
   else let d = if Z.is_odd z then 1 else 2 in Printf.sprintf "(B%d %s)" d (bin (Z.shift_right (Z.sub z (Z.of_int d)) 1))
 
-(* What each literal stands for: a numeral binds its Nat and its Numeral proof; a character binds a Char built by
-   reflection on the decided bound (DESIGN.md section 41), sharing its code's numeral proof; a string is its
-   characters consed up, each already a literal. *)
+(* A numeral binds its Nat and Numeral proof; a character its Char, built by reflection on the decided bound
+   (DESIGN.md section 41); a string its characters, each already a literal, consed up. *)
 let source = function
   | Numeral z -> Printf.sprintf "(let (many _) (erased _) (bin-to-nat %s))" (bin z)
   | Char c -> Printf.sprintf "(let (many %%d) (lt-dec %d u8-modulus)) (comptime-match %%d (Yes %%a %%b %%p)) (let (many _) (MkChar (MkU8 %d %%p)))" c c

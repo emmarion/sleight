@@ -1096,3 +1096,45 @@ record how the prototype reads them, and item 79's restriction is gone.
     stamped discriminants make the choice load-bearing. The extracted
     OCaml follows: a phantom constructor is no longer a variant of its
     type, and a value is never headed by one (§20's rule 2).
+
+## A cleanup session's reading of the Matchable pick, and one open gap
+
+A session asked to look for bugs and to tidy the code after items
+83-85 landed found one spurious rejection and one gap it did not close.
+Both are the session's reading, checked by compiling and by the test
+suite (CLAUDE.md rule 2), not settled decisions.
+
+86. **The Matchable pick reads aliases through and prefers a non-erased
+    one.** Item 84's preference for a `Matchable` whose ADT the
+    elaborator can see was applied to the entry as found in scope, so an
+    erased `let` alias of a type's own `Matchable`, being newer, was
+    picked ahead of the `def-adts` one, and a `many` match on the type
+    was refused as reading an erased `Matchable`
+    (`tests/matchable_alias_erased.sl`); likewise an erased first-class
+    `Matchable` parameter bound after a `many` one of the same type
+    shadowed it (`tests/matchable_prefers_many.sl`). The pick now reads
+    each candidate through its alias rule, as ASSUMPTIONS 78's fetching
+    forms do, and ranks the ADT the elaborator can see first, a
+    non-erased `Matchable` second, an erased one last, still refusing
+    inconsistent candidates as before. Read as §19's interchangeability
+    of consistent `Matchable`s, not a new rule: the change can only turn
+    a refusal into an acceptance, and only where a `Matchable` that
+    would have served was already in scope.
+
+87. **Open: two first-class constructors of one Matchable are not
+    refuted against each other.** §19 says the disjointness judgment
+    quantifies over a `Matchable`'s constructor list, but the engine's
+    forced unification (§18) knows disjointness only through rigidity
+    (item 40), which `def-adts` confers on the constructors it mints
+    and nothing confers on a `ValCtor`-typed parameter. So with `C` and
+    `D` both parameters listed by one `(Matchable ... (many C) (many D))`
+    and of equal arity, unifying `(C k)` against a `(D n)` pattern
+    succeeds by aliasing `C` to `D` inside the branch, and the branch
+    counts as real: an `erased` match or a union match over first-class
+    constructors cannot be written unless the arities differ, since
+    `(absurd D)` is refused as "not refuted". No unsoundness was found,
+    the extra branch being unreachable and its facts ending with it, and
+    a `many` enum match still dispatches on the tag. Whether the
+    unifier should consult the `Matchable`s in scope so that two
+    constructors one lists are §18's second contradiction is for the
+    owner; the session did not change it.

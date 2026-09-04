@@ -22,20 +22,19 @@ let rec eval env code =
   | CLetRec (fns, body) -> eval (close env fns) body
   | CMatch { scrut; shape; branches } -> (
       let v = eval1 env scrut in
-      let enter (_, ids, body) fields = eval (bind ids fields env) body in
       let read =
         match shape with
-        | Foreign adt | Tag adt -> dispatch adt.ext adt.tagged v
-        | Fields _ -> None
+        | Known adt -> dispatch adt.ext adt.tagged v
         | Held (code, tags) -> (
             match eval1 env code with VMatchable a -> dispatch a.ext tags v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
       in
+      let enter (_, ids, body) fields = eval (bind ids fields env) body in
       match (read, branches) with
       | Some (i, fields), _ -> (
           match List.find_opt (fun (j, _, _) -> j = i) branches with
           | Some branch -> enter branch fields
           | None -> raise (Runtime ("no branch for " ^ show v)))
-      | None, ([ (_, ids, _) ] as branches) -> enter (List.hd branches) (untuple (List.length ids) v)
+      | None, [ ((_, ids, _) as branch) ] -> enter branch (untuple (List.length ids) v)
       | None, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
   | CAbsurd -> raise (Runtime "absurd code reached")
 

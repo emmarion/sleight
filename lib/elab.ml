@@ -14,14 +14,12 @@ let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (Reader.show raw)
 let name_or_anon n = if n = "_" then None else Some n
 
-(* A special form's name: a Const, non-erased entry of type (Special) holding one of its variants (section 4). *)
+(* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4). *)
 let special_of env raw =
-  match Option.bind (atom raw) (lookup env) with
-  | Some x -> (
+  Option.bind (Option.bind (atom raw) (lookup env)) (fun x ->
       match entry env x with
       | { state = Const (V.VCtor (c, [])); mult = Many; _ } when equal (type_of env x) Prelude.special_term -> Hashtbl.find_opt Sp.table c.cid
       | _ -> None)
-  | None -> None
 
 let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | _ -> None
@@ -33,6 +31,8 @@ let var env loc n =
   | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s" n)
   | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
   | `Bad msg -> error loc "%s" msg
+
+let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
 (* An atom naming an entry, read through any alias rule the fact table holds for it (section 9). *)
 let named env loc what raw =
@@ -63,39 +63,39 @@ let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).m
 let non_erased env ids = List.filter (fun x -> (entry env x).mult = Many) ids
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 
-(* The runtime shape behind a Matchable entry, where the elaborator can see it: the one def-adts minted for a
-   named type, read through any alias (section 9), or one a run-position binder holds. A first-class
-   Matchable -- a parameter, say -- has none until the code runs. *)
+(* The ADT behind a Matchable entry where the elaborator can see one: def-adts minted it, or a run-position
+   binder holds it. A first-class Matchable has none until the code runs. *)
 let adt_of env x =
-  let x = match canon env (Var x) with Var y -> y | _ -> x in
   match Hashtbl.find_opt Env.adts x with
   | Some adt -> Some adt
   | None -> (match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None)
 
 let matchables env tid =
   List.filter_map
-    (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (x, d, cs) | _ -> None)
+    (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (resolve env x, d, cs) | _ -> None)
     env.scope
 
-(* Consistent Matchables for one type are interchangeable (section 19), so one whose shape the elaborator can
-   see is preferred: a match through it needs nothing at runtime. *)
+(* Consistent Matchables for one type are interchangeable (section 19), so the pick prefers one whose ADT the
+   elaborator can see, then a non-erased one, over one a non-erased match would have to read and cannot. *)
 let find_matchable env loc tid =
-  let known, opaque = List.partition (fun (x, _, _) -> adt_of env x <> None) (matchables env tid) in
-  match known @ opaque with
+  let rank (x, _, _) = if adt_of env x <> None then 0 else if (entry env x).mult = Many then 1 else 2 in
+  match List.stable_sort (fun a b -> compare (rank a) (rank b)) (matchables env tid) with
   | [] -> error loc "%s has no Matchable in scope" (name_of env tid)
   | (x, d, cs) :: rest ->
       if List.exists (fun (y, _, _) -> not (equal (type_of env x) (type_of env y))) rest then
         error loc "ambiguous Matchables for %s" (name_of env tid);
       (x, d, cs)
 
+let type_head env ty = match canon env ty with App (Var t, _) -> Some t | _ -> None
+
 let check_empty env loc ty =
-  let empty = match canon env ty with App (Var t, _) -> matchables env t <> [] && (let _, _, cs = find_matchable env loc t in cs = []) | _ -> false in
+  let empty = match type_head env ty with Some t when matchables env t <> [] -> (let _, _, cs = find_matchable env loc t in cs = []) | _ -> false in
   if not empty then error loc "%s is not an empty type" (show env ty)
 
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (name_of env c)
 
-let tid_of env loc c = match canon env (snd (ctor_type env loc c)) with App (Var t, _) -> t | _ -> assert false
+let tid_of env loc c = Option.get (type_head env (snd (ctor_type env loc c)))
 let marker env loc tid ctors c =
   match List.find_opt (fun (_, c') -> c' = Var c) ctors with
   | Some (m, _) -> m
@@ -103,15 +103,14 @@ let marker env loc tid ctors c =
 
 let phantom env loc c = let tid = tid_of env loc c in let _, _, ctors = find_matchable env loc tid in marker env loc tid ctors c = Erased
 
-(* Each constructor of a Matchable with its phantom marker and its number of many fields; the representation follows (section 38). *)
+(* A Matchable's constructors, each with its phantom marker and its number of many fields (section 38). *)
 let shapes env loc ctors =
   List.map (fun (m, c) -> match c with Var c -> (m, c, List.length (List.filter (fun e -> e.mult = Many) (fst (ctor_type env loc c)))) | _ -> assert false) ctors
 
-let non_phantom shapes = List.filter_map (fun (m, c, _) -> if m = Many then Some c else None) shapes
+let non_phantom shapes = List.filter_map (fun (m, c, n) -> if m = Many then Some (c, n) else None) shapes
 
-(* A constructor's discriminant is its position among the non-phantom ones, a phantom constructor heading no
-   runtime value at all (section 20 rule 2) and so taking no number. *)
-let discriminant shapes c = find_index (( = ) c) (non_phantom shapes)
+(* A phantom constructor heads no runtime value (section 20 rule 2), so discriminants number the others only. *)
+let discriminant shapes c = find_index (fun (c', _) -> c' = c) (non_phantom shapes)
 
 let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
 
@@ -177,9 +176,9 @@ let marks env allowed items =
 
 let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
 
-(* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let anon tele = List.map (fun _ -> None) tele
 
+(* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let open_tele env ?names ?mults ?states ?(ids = []) tele =
   let nth l i default = match l with Some l -> List.nth l i | None -> default in
   let _, env, _, fresh =
@@ -197,17 +196,11 @@ let spread mults values =
 
 let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (const env value) ty
 
-let matchable_code pos x =
-  if pos = Erased then V.CErased
-  else match Hashtbl.find_opt Env.adts x with Some adt -> V.CConst (V.VMatchable adt) | None -> V.CVar x
+let matchable_code env pos x =
+  if pos = Erased then V.CErased else match adt_of env x with Some adt -> V.CConst (V.VMatchable adt) | None -> V.CVar x
 
-(* What a match does to take its scrutinee apart (section 38). A type the elaborator can see is stamped whole,
-   so a match on it reads no Matchable at all; only where the FFI holds the type does the destructor remain. *)
-let match_shape env x tagged =
-  match adt_of env x with
-  | Some adt when adt.V.ext <> None && !V.use_externs -> V.Foreign adt
-  | Some adt -> if tagged then V.Tag adt else V.Fields adt
-  | None -> V.Held (V.CVar x, tagged)
+(* A match on an ADT the elaborator can see reads no Matchable at runtime (section 17). *)
+let match_shape env x tagged = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, tagged)
 let mint_level env name = bind env ~minted_level:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
@@ -468,7 +461,7 @@ and elab_special tele env expect l sp args =
       (env, ress, code)
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
-      (env, [ res_of env x ], matchable_code m x)
+      (env, [ res_of env x ], matchable_code env m x)
   | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
   | Sp.NumeralOf, [ e ] -> (
       let e = canon env (elab_term env e) in
@@ -554,7 +547,7 @@ and elab_match tele env expect l args =
       let pos = pos_of expect in
       let smult = under pos (mult_or env l m) in
       let env, sres, scode = elab_expr1 env smult scrut in
-      let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
+      let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
       let mid, disc, ctors = find_matchable env l tid in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
@@ -694,7 +687,7 @@ and elab_comptime_match env l args =
       let value = match entry env x with { state = Const v; mult = Many; _ } -> v | _ -> error l "comptime-match needs a Const, non-erased scrutinee" in
       let c = ctor_var env pl c in
       let tele, ret = ctor_type env pl c in
-      let tid = match canon env (type_of env x) with App (Var t, _) -> t | _ -> error l "scrutinee is not a datatype value" in
+      let tid = match type_head env (type_of env x) with Some t -> t | None -> error l "scrutinee is not a datatype value" in
       let _, disc, ctors = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
       if marker env pl tid ctors c = Erased then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c);
@@ -771,10 +764,9 @@ and elab_def_fns env l args =
         let fns = List.filter (fun (x, _) -> (entry env x).mult = Many) fns in
         (env, if fns = [] then Fun.id else fun rest -> V.CLetRec (fns, rest))
 
-(* Normalizes a compiled body, validates every tail/delegate-marked call in it (section 9) and returns the
-   normalized code with the delegated callee, if any. A let that only renames -- which is all a coerce leaves
-   behind -- and a let whose body returns exactly what it binds are replaced by their right-hand sides, so a
-   marked call really does stand in tail position in the code that runs. *)
+(* Validates the tail/delegate marks in a body (section 9), returning the delegated callee if any. Lets that only
+   rename (all a coerce leaves) or return exactly what they bind are first folded away, so a marked call stands
+   in tail position in the code that runs. *)
 and check_marks env l pids code =
   let non_erased = non_erased env in
   let rec resolve sub x = match List.assoc_opt x sub with Some y -> resolve sub y | None -> x in
@@ -842,7 +834,7 @@ and elab_def_adts env adts =
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
           if mult = Erased && List.exists (fun e -> e.mult = Many) tele then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
-          let c, env = bind env ~rigid:true (Some name) mult Dyn ty in
+          let c, env = bind env ~rigid:true (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"
     in
@@ -851,10 +843,8 @@ and elab_def_adts env adts =
     let shapes = shapes env al ctors in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
-    let record (_, c, arity) = { V.cname = name_of env c; cid = c; index = Option.value (discriminant shapes c) ~default:(-1); arity; adt } in
-    let records = List.map record shapes in
-    adt.ctors <- List.filter (fun ct -> ct.V.index >= 0) records;
-    let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) records in
+    adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) (non_phantom shapes);
+    let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in
     Hashtbl.replace Env.adts mid adt;
@@ -865,7 +855,6 @@ and elab_def_adts env adts =
     (env, cids @ values)
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
-  let cids = List.filter (fun (c, _) -> (entry env c).mult = Many) cids in
   (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
 (* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)

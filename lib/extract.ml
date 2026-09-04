@@ -166,13 +166,14 @@ and expr cx scope = function
       let scrut = expr cx scope m.scrut in
       let one () = match branches with [ (_, vs, body) ] -> (vs, body) | _ -> assert false in
       match m.shape with
-      | V.Foreign a ->
-          Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx a) scrut
-            (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| (%d, [%s]) -> %s" i (concat "; " vs) body) branches))
-      | V.Tag a ->
-          Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" scrut (type_name cx a)
-            (concat " " (List.map (fun (i, vs, body) -> Printf.sprintf "| %s -> %s" (pattern (V.ctor_at a i) vs) body) branches))
-      | V.Fields _ -> let vs, body = one () in untuple vs scrut body
+      | V.Known a -> (
+          let arms arm = concat " " (List.map (fun (i, vs, body) -> arm (V.ctor_at a i) vs body) branches) in
+          match shape a with
+          | Ext -> Printf.sprintf "(match %s %s with %s | _ -> absurd ())" (des cx a) scrut (arms case)
+          | Tagged ->
+              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> absurd ())" scrut (type_name cx a)
+                (arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern c vs) body))
+          | Untagged -> let vs, body = one () in untuple vs scrut body)
       | V.Held (code, tags) ->
           let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in
           let des = Printf.sprintf "(Obj.obj %s : matchable).mdes %d %s" (expr cx scope code) arity scrut in
@@ -241,8 +242,7 @@ let types cx =
   let descriptor c =
     Printf.sprintf "let %s : Obj.t = Obj.repr { ix = %d; cname = %s; con = %s; des = (fun v -> %s) }" (var c.V.cid) c.index (quote c.cname) (con cx c.adt) (destruct cx c "v")
   in
-  (* A Matchable value for each type that is held as one, carrying what a match through it needs: the FFI's
-     destructor or the tag where the type has one, and the fields as they stand where it has neither. *)
+  (* The Matchable value of each type held as one: its destructor, or the fields as they stand. *)
   let matchable a =
     let des =
       match shape a with
@@ -272,15 +272,13 @@ let rec show cx env ty =
       let adt_of tid = List.find_opt (fun a -> match a.V.ctors with c :: _ -> (try Elab.tid_of env 0 c.cid = tid with _ -> false) | [] -> false) cx.adts in
       let branch a c =
         try
-          if (Env.entry env c.V.cid).mult = Erased then None
-          else
-            let tele, ret = Elab.ctor_type env 0 c.cid in
-            let env', fids = Elab.open_tele env tele in
-            let env' = Env.unify env' (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty in
-            let many = Elab.non_erased env' fids in
-            let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
-            let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in
-            Some (c, text)
+          let tele, ret = Elab.ctor_type env 0 c.V.cid in
+          let env', fids = Elab.open_tele env tele in
+          let env' = Env.unify env' (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty in
+          let many = Elab.non_erased env' fids in
+          let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
+          let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in
+          Some (c, text)
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
       in
       (body :=
