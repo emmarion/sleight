@@ -134,8 +134,7 @@
   enum
   (many LName : -> (LitKind))
   (many LNumeral : -> (LitKind))
-  (many LChar : -> (LitKind))
-  (many LString : -> (LitKind)))
+  (many LChar : -> (LitKind)))
 
 (def-fns _ $ many classify : (many (String) s) -> (many (LitKind) k)
   (match many s _
@@ -207,7 +206,6 @@
 (def-fns _ $ many literal-error : (many (String) s) -> (many (Maybe (String)) r)
   (match many (classify (predates _) s) _
     ((LName) (None (String)))
-    ((LString) (None (String)))
     ((LNumeral)
       (match many s _
         ((SNil) (None (String)))
@@ -269,8 +267,8 @@
         ((None b) (values env x (BZ)))))
     ((None a) (intern-numeral (predates _) env key))))
 
-; Interns a literal (ASSUMPTIONS 51, 52, 60): a character is (MkChar (MkU8 n p)) over its code's numeral,
-; transparent down to the opaque n; a string is its characters, holding no proof.
+; Interns a numeral or character literal (ASSUMPTIONS 51, 52): a character is (MkChar (MkU8 n p)) over its
+; code's numeral, transparent down to the opaque n.
 (def-fns _ $ many intern : (many (Env) env) (many (String) key) (many (LitKind) kind) -> (many (Env) r)
   (match many (lit-lookup (predates _) env key) _
     ((Some a x) env)
@@ -290,12 +288,17 @@
               (let (many env4) (many x) (bind (predates _) env3 (None (String)) (Many) (SConst v) (prelude-type (predates _) env3 "Char") (Some (Term) rule) coercible-id))
               (let (many env5) (env-set-literals (predates _) env4 (nm-set (predates _) (Bin) key x (env-literals (predates _) env4))))
               (env-push-lit (predates _) (env-push-trace (predates _) env5 (TrConst x v)) x (Some (Bin) np)))
-            ((LString)
-              (let (many v) (VExt str-adt (PStr (match many key (((String) s)) ((SNil) (SNil)) ((SCons q rest) rest)))))
-              (let (many env2) (many x) (bind (predates _) env (None (String)) (Many) (SConst v) (prelude-type (predates _) env "String") (None (Term)) coercible-id))
-              (let (many env3) (env-set-literals (predates _) env2 (nm-set (predates _) (Bin) key x (env-literals (predates _) env2))))
-              (env-push-lit (predates _) (env-push-trace (predates _) env3 (TrConst x v)) x (None (Bin))))
             ((LName) env)))))))
+
+; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
+(def-fns _ $ many intern-string : (many (Env) env) (many (String) key) -> (many (Env) r)
+  (match many (lit-lookup (predates _) env key) _
+    ((Some a x) env)
+    ((None a)
+      (let (many v) (VExt str-adt (PStr (match many key (((String) s)) ((SNil) (SNil)) ((SCons q rest) rest)))))
+      (let (many env2) (many x) (bind (predates _) env (None (String)) (Many) (SConst v) (prelude-type (predates _) env "String") (None (Term)) coercible-id))
+      (let (many env3) (env-set-literals (predates _) env2 (nm-set (predates _) (Bin) key x (env-literals (predates _) env2))))
+      (env-push-lit (predates _) (env-push-trace (predates _) env3 (TrConst x v)) x (None (Bin))))))
 
 (def-fns _
   (many intern-literals : (subterm many (Raw) raw) (many (Env) env) -> (many (Env) r)
@@ -304,9 +307,8 @@
         (match many (classify (predates _) s) _
           ((LName) env)
           ((LNumeral) (intern (predates _) env s (LNumeral)))
-          ((LChar) (intern (predates _) env s (LChar)))
-          ((LString) env)))
-      ((RString lq s) (intern (predates _) env (SCons #\x22 s) (LString)))
+          ((LChar) (intern (predates _) env s (LChar)))))
+      ((RString lq s) (intern-string (predates _) env (SCons #\x22 s)))
       ((RList lq items) (intern-literals-list (subterm _) items env))))
   (many intern-literals-list : (subterm many (List (Raw)) rs) (many (Env) env) -> (many (Env) r)
     (match many rs _
@@ -325,8 +327,7 @@
             ((Some b x) (values env x))
             ((None b) (values (env-error (predates _) env (str-cat (predates _) "unbound name " n)) (BZ)))))
         ((LNumeral) (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))
-        ((LChar) (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))
-        ((LString) (values (env-error (predates _) env "internal: string as name") (BZ)))))))
+        ((LChar) (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))))))
 
 (def-fns _ $ many var-of-raw : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Bin) x)
   (match many raw _
@@ -1264,11 +1265,15 @@
 (def-adts
   (Header : ((Raw) f) -> Type
     enum
-    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe (String)) impl) (many (Term) ty) (many (List (Raw)) body) (erased (Subterm (List (Raw)) body (Raw) f) p) -> (Header f)))
+    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe (String)) impl) (many (List (Entry)) params) (many (List (Entry)) rets) (many (List (Raw)) body) (erased (Subterm (List (Raw)) body (Raw) f) p) -> (Header f)))
   (Headers : ((List (Raw)) fns) -> Type
     enum
     (many HStop : (erased (List (Raw)) fns) -> (Headers fns))
     (many HCons : (erased (Raw) f) (erased (List (Raw)) rest) (many (Header f) h) (many (Headers rest) hs) -> (Headers (Cons (Raw) f rest))))
+  (Bound : ((List (Raw)) fns) ((Headers fns) hs) -> Type
+    enum
+    (many BStop : (erased (List (Raw)) fns) -> (Bound fns (HStop fns)))
+    (many BCons : (erased (Raw) f) (erased (List (Raw)) rest) (erased (Header f) h) (erased (Headers rest) hs) (many (Bin) x) (many (Bound rest hs) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs))))
   (AdtHeader : ((Raw) f) -> Type
     enum
     (many MkAdtHeader : (erased (Raw) f) (many (String) name) (many (Disc) disc) (many (Bool) newtype) (many (Bool) extern) (many (List (Raw)) ctors) (erased (Subterm (List (Raw)) ctors (Raw) f) p) -> (AdtHeader f)))
@@ -1276,6 +1281,10 @@
     enum
     (many AStop : (erased (List (Raw)) adts) -> (AdtHeaders adts))
     (many ACons : (erased (Raw) f) (erased (List (Raw)) rest) (many (AdtHeader f) h) (many (AdtHeaders rest) hs) -> (AdtHeaders (Cons (Raw) f rest))))
+  (Tids : ((List (Raw)) adts) ((AdtHeaders adts) hs) -> Type
+    enum
+    (many TStop : (erased (List (Raw)) adts) -> (Tids adts (AStop adts)))
+    (many TCons : (erased (Raw) f) (erased (List (Raw)) rest) (erased (AdtHeader f) h) (erased (AdtHeaders rest) hs) (many (Bin) x) (many (Tids rest hs) more) -> (Tids (Cons (Raw) f rest) (ACons f rest h hs))))
   (LetParts : ((List (Raw)) args) -> Type
     enum
     (many MkLetParts : (erased (List (Raw)) args) (many (List (SrcEntry args)) binders) (many (List (Raw)) rhs) (erased (Within rhs args) wr) -> (LetParts args)))
@@ -1294,15 +1303,15 @@
       (match many b _
         ((MkRealBranch c fids code) (Cons (Branch) (MkBranch (discriminant (predates _) ss c) fids code) (real-branches-code (subterm _) rest ss)))))))
 
-(def-fns _ $ many bind-headers : (erased (List (Raw)) fns) (subterm many (Headers fns) hs) (many (Env) env) -> (many (Env) r) (many (List (Bin)) ids)
+(def-fns _ $ many bind-headers : (erased (List (Raw)) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Bin) lvl) -> (many (Env) r) (many (Bound fns hs) ids)
   (match many hs _
-    ((HStop z) (values env (Nil (Bin))))
+    ((HStop z) (values env (BStop fns)))
     ((HCons f rest h more)
       (match many h _
-        ((MkHeader g name mult isabs impl ty body p)
-          (let (many env2) (many x) (bind (predates _) env (Some (String) name) mult (SDyn) ty (None (Term)) coercible-id))
-          (let (many env3) (many ids) (bind-headers rest (subterm _) more env2))
-          (values env3 (Cons (Bin) x ids)))))))
+        ((MkHeader g name mult isabs impl params rets body p)
+          (let (many env2) (many x) (bind (predates _) env (Some (String) name) mult (SDyn) (TFn (TVar lvl) params rets) (None (Term)) coercible-id))
+          (let (many env3) (many ids) (bind-headers rest (subterm _) more env2 lvl))
+          (values env3 (BCons f rest h more x ids)))))))
 
 (def-fns _ $ many many-fns : (subterm many (List (Pair (Bin) (Func))) fns) (many (Env) env) -> (many (List (Pair (Bin) (Func))) r)
   (match many fns _
@@ -1314,14 +1323,12 @@
             ((Many) (Cons (Pair (Bin) (Func)) p (many-fns (subterm _) rest env)))
             ((Erased) (many-fns (subterm _) rest env))))))))
 
-(def-fns _ $ many set-fn-states : (subterm many (List (Pair (Bin) (Func))) fns) (many (Env) env) (many (IdMap (Value)) values) -> (many (Env) r)
-  (match many fns _
+(def-fns _ $ many set-fn-states : (subterm many (List (Pair (Bin) (Value))) closed) (many (Env) env) -> (many (Env) r)
+  (match many closed _
     ((Nil a) env)
     ((Cons a p rest)
       (match many p _
-        ((MkPair x y id fn)
-          (let (many v) (match many (idmap-get (predates _) (Value) id values) (((Value) v)) ((None b) (VError "closure missing")) ((Some b v) v)))
-          (set-fn-states (subterm _) rest (set-state (predates _) env id (SConst v)) values))))))
+        ((MkPair x y id v) (set-fn-states (subterm _) rest (set-state (predates _) env id (SConst v))))))))
 
 (def-fns _ $ many set-const-states : (subterm many (List (Pair (Bin) (Value))) cs) (many (Env) env) -> (many (Env) r)
   (match many cs _
@@ -1706,16 +1713,16 @@
   (values (env-error (predates _) env (str-cat3 (predates _) "malformed " (sp-name (predates _) sp) " form")) (Nil (Res)) (CError "malformed")))
 
 ; The field at a wrapping constructor's one many position, given the arguments in order.
-(def-fns _ $ many field-at-many : (subterm many (List (Entry)) tele) (many (List (Term)) args) -> (many (Term) t)
+(def-fns _ $ many wrap-field : (subterm many (List (Entry)) tele) (many (List (Term)) args) -> (many (Maybe (Term)) t)
   (match many tele _
-    ((Nil a) (TErr "no many field"))
+    ((Nil a) (None (Term)))
     ((Cons a e rest)
       (match many args _
-        ((Nil b) (TErr "no many field"))
+        ((Nil b) (None (Term)))
         ((Cons b t trest)
           (match many (entry-mult (predates _) e) _
-            ((Many) t)
-            ((Erased) (field-at-many (subterm _) rest trest))))))))
+            ((Many) (match many (many-count (predates _) rest) _ ((Zero) (Some (Term) t)) ((Succ k) (None (Term)))))
+            ((Erased) (wrap-field (subterm _) rest trest))))))))
 
 (def-fns _ $ many trace-many-fields : (subterm many (List (Bin)) ids) (many (Env) env) -> (many (Env) r)
   (match many ids _
@@ -1946,12 +1953,11 @@
                                 (match many (find-newtype (predates _) (env-objects (predates _) env2) env2 cid) (((Env) e))
                                   ((None d) (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 cid) " has no Newtype in scope: only a marked newtype's wrapping constructor has one")))
                                   ((Some d x) env2)))
-                              (let (many env4)
-                                (match many (nat-eq (predates _) (many-count (predates _) ctele) 1) (((Env) e))
-                                  ((BTrue) env3)
-                                  ((BFalse) (env-error (predates _) env3 (str-cat (predates _) (name-of (predates _) env3 cid) " is not the wrapping constructor")))))
-                              (let (many env5) (many acc) (elab-term-args (subterm _) wargs (subs-all (predates _) wargs) env4 ctele (Nil (Term))))
-                              (let (many f) (field-at-many (predates _) ctele (list-rev (predates _) (Term) acc)))
+                              (let (many env4) (many acc) (elab-term-args (subterm _) wargs (subs-all (predates _) wargs) env3 ctele (Nil (Term))))
+                              (let (many env5) (many f)
+                                (match many (wrap-field (predates _) ctele (list-rev (predates _) (Term) acc)) (((Env) e0) ((Term) t0))
+                                  ((Some d g) (values env4 g))
+                                  ((None d) (values (env-error (predates _) env4 (str-cat (predates _) (name-of (predates _) env4 cid) " is not the wrapping constructor")) (TErr "not the wrapping constructor")))))
                               (let (many env6) (many r) (mint (predates _) env5 (proof-type (predates _) coercible-id (Cons (Term) (infer (predates _) f env5) (Cons (Term) f (Cons (Term) (instantiate (predates _) acc ret) (Cons (Term) (TApp (TVar cid) (list-rev (predates _) (Term) acc)) (Nil (Term)))))))))
                               (values env6 (Cons (Res) r (Nil (Res))) (CErased)))))
                         ((ExCoercibleCtor)
@@ -2064,7 +2070,8 @@
                     (let (many env2) (many lv) (elab-term (subterm _) lvraw env (BFalse)))
                     (let (many env3) (check (predates _) env2 "type" (infer (predates _) lv env2) level-term))
                     (let (many ps) (many after) (erased wa) (split-arrow (predates _) rest rest (WHere rest) env3))
-                    (elab-fn-type (subterm _) rest one-step (MkPair (List (Sub rest)) (List (Sub rest)) ps (subs-of (predates _) after rest wa)) env3 lv))))
+                    (let (many env4) (many params) (many rets) (elab-fn-type (subterm _) rest one-step (MkPair (List (Sub rest)) (List (Sub rest)) ps (subs-of (predates _) after rest wa)) env3))
+                    (values env4 (TFn lv params rets)))))
               ((FoTyCtor)
                 (let (many ps) (many after) (erased wa) (split-arrow (predates _) args args (WHere args) env))
                 (elab-tyctor args (subterm _) k (MkPair (List (Sub args)) (List (Sub args)) ps (subs-of (predates _) after args wa)) env))
@@ -2118,12 +2125,12 @@
         (values env3 (Cons (MCtor) (MkMCtor m (TVar cid)) mcs)))))
 
   ; The signature pieces [piece] were read from [root]; [st] pays for the parse of each telescope.
-  (many elab-fn-type : (subterm many (List (Raw)) root) (subterm many (Steps (Succ (Zero))) st) (subterm many (Pair (List (Sub root)) (List (Sub root))) piece) (many (Env) env) (many (Term) lv) -> (many (Env) r) (many (Term) t)
+  (many elab-fn-type : (subterm many (List (Raw)) root) (subterm many (Steps (Succ (Zero))) st) (subterm many (Pair (List (Sub root)) (List (Sub root))) piece) (many (Env) env) -> (many (Env) r) (many (List (Entry)) params) (many (List (Entry)) rets)
     (match many piece _
       ((MkPair x y ps rs)
         (let (many env2) (many ids) (many params) (elab-tele root st (subterm _) ps env (MMDeclared) (Nil (Term)) (BTrue)))
         (let (many env3) (many ids2) (many rets) (elab-tele root st (subterm _) rs env2 (MMDeclared) (tvars-rev (predates _) ids (Nil (Term))) (BFalse)))
-        (values (env-discard (predates _) env env3) (TFn lv params rets)))))
+        (values (env-discard (predates _) env env3) params rets))))
 
   (many elab-tyctor : (subterm many (List (Raw)) root) (subterm many (Steps (Succ (Zero))) st) (subterm many (Pair (List (Sub root)) (List (Sub root))) piece) (many (Env) env) -> (many (Env) r) (many (Term) t)
     (match many piece _
@@ -2328,12 +2335,11 @@
             ((BTrue) (mint-level (predates _) env (None (String))))
             ((BFalse) (let (many env2) (many t) (elab-term (subterm _) lvraw env (BFalse))) (level-var-checked (predates _) env2 t))))
         (let (many env3) (many headers) (elab-headers (subterm _) fns env2 lvl))
-        (let (many env4) (many fids) (bind-headers (predates _) fns headers env3))
+        (let (many env4) (many fids) (bind-headers (predates _) fns headers env3 lvl))
         (let (many env5) (many fns2) (define-fns (subterm _) fns headers env4 fids lvl (env-run-pos (predates _) env4)))
         (match many (env-run-pos (predates _) env5) _
           ((BTrue)
-            (let (many vals) (close-group (predates _) fns2 fns2 (env-values (predates _) env5)))
-            (let (many env6) (set-fn-states (predates _) fns2 env5 vals))
+            (let (many env6) (set-fn-states (predates _) (close-fns (predates _) fns2 fns2 (env-values (predates _) env5)) env5))
             (values (env-push-trace (predates _) env6 (TrFns fns2)) (SNone)))
           ((BFalse)
             (let (many kept) (many-fns (predates _) fns2 env5))
@@ -2367,13 +2373,13 @@
                         (let (erased psg) (subterm-trans (prove-subterm sg items2) (within-in (predates _) items2 items (Raw) f w2 (prove-subterm items f))))
                         (let (many ps) (many after) (erased wa) (split-arrow (predates _) sg sg (WHere sg) env1))
                         (let (many rs) (many body) (erased wb) (split-returns (predates _) after sg wa env1))
-                        (let (many env2) (many ty) (elab-fn-type (subterm (subterm-trans psg (prove-subterm f fns))) sg one-step (MkPair (List (Sub sg)) (List (Sub sg)) ps rs) env1 (TVar lvl)))
+                        (let (many env2) (many params) (many rets) (elab-fn-type (subterm (subterm-trans psg (prove-subterm f fns))) sg one-step (MkPair (List (Sub sg)) (List (Sub sg)) ps rs) env1))
                         (let (many env3) (match many isext (((Env) e0)) ((BTrue) (claim-extern (predates _) env2 name (is-extern-fn (predates _) name))) ((BFalse) env2)))
                         (let (many impl) (match many (and (predates _) isext (is-extern-fn (predates _) name)) (((Maybe (String)) i0)) ((BTrue) (Some (String) name)) ((BFalse) (None (String)))))
                         (let (many env4) (many hs) (elab-headers (subterm _) rest (env-back (predates _) env env3) lvl))
-                        (values env4 (HCons f rest (MkHeader f name mult isabs impl ty body (within-in (predates _) body sg (Raw) f wb psg)) hs)))))))))))))
+                        (values env4 (HCons f rest (MkHeader f name mult isabs impl params rets body (within-in (predates _) body sg (Raw) f wb psg)) hs)))))))))))))
 
-  (many define-fns : (subterm many (List (Raw)) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List (Bin)) fids) (many (Bin) lvl) (many (Bool) top) -> (many (Env) r) (many (List (Pair (Bin) (Func))) fns2)
+  (many define-fns : (subterm many (List (Raw)) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (Bound fns headers) fids) (many (Bin) lvl) (many (Bool) top) -> (many (Env) r) (many (List (Pair (Bin) (Func))) fns2)
     (match many fns _
       ((Nil a) (values env (Nil (Pair (Bin) (Func)))))
       ((Cons a f rest)
@@ -2381,17 +2387,12 @@
           ((HStop z) (values env (Nil (Pair (Bin) (Func)))))
           ((HCons g r h hrest)
             (match many fids _
-              ((Nil b) (values env (Nil (Pair (Bin) (Func)))))
-              ((Cons b x xrest)
+              (absurd BStop)
+              ((BCons g3 r3 h3 hs3 x xrest)
                 (match many h _
-                  ((MkHeader g2 name mult isabs impl ty body pb)
+                  ((MkHeader g2 name mult isabs impl params rets body pb)
                     (let (erased q) (subterm-trans pb (prove-subterm f fns)))
-                    (let (many params) (many rets)
-                      (match many ty (((List (Entry)) p0) ((List (Entry)) r0))
-                        ((TFn l p r2) (values p r2))
-                        ((TVar y) (values (Nil (Entry)) (Nil (Entry)))) ((TBound j) (values (Nil (Entry)) (Nil (Entry)))) ((TApp hh as) (values (Nil (Entry)) (Nil (Entry))))
-                        ((TTyCtor p) (values (Nil (Entry)) (Nil (Entry)))) ((TValCtor p r2) (values (Nil (Entry)) (Nil (Entry)))) ((TMatchable d t c) (values (Nil (Entry)) (Nil (Entry))))
-                        ((TNewtype c) (values (Nil (Entry)) (Nil (Entry)))) ((TErr m) (values (Nil (Entry)) (Nil (Entry))))))
+                    (let (many ty) (TFn (TVar lvl) params rets))
                     (let (many envb0) (many pids) (open-tele (predates _) params (env-set-run-pos (predates _) env (BFalse)) (None (List (Maybe (String)))) (None (List (Mult))) (None (List (State))) (Nil (Term))))
                     (let (many envb) (env-enter-body (predates _) envb0 lvl (subterm-params (predates _) params pids)))
                     (let (many envb2) (many code)
@@ -2420,30 +2421,30 @@
   ; def-adts (sections 12, 19, 27): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor
   ; returns its own type.
-  (many elab-adt-headers : (subterm many (List (Raw)) adts) (many (Env) env) -> (many (Env) r) (many (AdtHeaders adts) hs) (many (List (Bin)) tids)
+  (many elab-adt-headers : (subterm many (List (Raw)) adts) (many (Env) env) -> (many (Env) r) (many (AdtHeaders adts) hs) (many (Tids adts hs) tids)
     (match many adts _
-      ((Nil a) (values env (AStop adts) (Nil (Bin))))
+      ((Nil a) (values env (AStop adts) (TStop adts)))
       ((Cons a adt rest)
         (let (many envl) (env-at (predates _) env (raw-line (predates _) adt)))
         (let (many bad) (env-error (predates _) envl "malformed def-adts entry"))
         (match many adt _
-          ((RAtom lq s) (values bad (AStop adts) (Nil (Bin))))
-          ((RString lq s) (values bad (AStop adts) (Nil (Bin))))
+          ((RAtom lq s) (values bad (AStop adts) (TStop adts)))
+          ((RString lq s) (values bad (AStop adts) (TStop adts)))
           ((RList lq items)
             (match many items _
-              ((Nil b) (values bad (AStop adts) (Nil (Bin))))
+              ((Nil b) (values bad (AStop adts) (TStop adts)))
               ((Cons b nraw items1)
                 (let (many name) (raw-name (predates _) nraw))
                 (match many items1 _
-                  ((Nil c) (values bad (AStop adts) (Nil (Bin))))
+                  ((Nil c) (values bad (AStop adts) (TStop adts)))
                   ((Cons c colon sg)
                     (let (many env0) (match many (is-mark (predates _) envl colon (MkColon)) (((Env) e0)) ((BTrue) envl) ((BFalse) bad)))
                     (let (many ps) (many after) (erased wa) (split-arrow (predates _) sg sg (WHere sg) env0))
                     (match many after _
-                      ((Nil d) (values (env-error (predates _) env0 "malformed def-adts entry") (AStop adts) (Nil (Bin))))
+                      ((Nil d) (values (env-error (predates _) env0 "malformed def-adts entry") (AStop adts) (TStop adts)))
                       ((Cons d tyraw after2)
                         (match many after2 _
-                          ((Nil f) (values (env-error (predates _) env0 "malformed def-adts entry") (AStop adts) (Nil (Bin))))
+                          ((Nil f) (values (env-error (predates _) env0 "malformed def-adts entry") (AStop adts) (TStop adts)))
                           ((Cons f draw after3)
                             (let (many env1) (many disc) (disc-of-checked (predates _) env0 draw))
                             (let (many nt) (many ext) (many cs) (erased wc) (take-marks (predates _) after3 sg (within-step (predates _) after3 after sg (prove-subterm after3 after) wa) env1 (MkNewtypeMark) (MkExtern)))
@@ -2452,9 +2453,10 @@
                             (let (many st) (match many (env-run-pos (predates _) env2) (((State) s0)) ((BTrue) (SConst (VToken))) ((BFalse) (SDyn))))
                             (let (many env2b) (many x) (bind (predates _) env2 (Some (String) name) (Erased) st ty (None (Term)) coercible-id))
                             (let (many env3) (many hs) (many tids) (elab-adt-headers (subterm _) rest (env-back (predates _) env env2b)))
-                            (values env3 (ACons adt rest (MkAdtHeader adt name disc nt ext cs (within-in (predates _) cs sg (Raw) adt wc (prove-subterm sg adt))) hs) (Cons (Bin) x tids)))))))))))))))
+                            (let (many h) (MkAdtHeader adt name disc nt ext cs (within-in (predates _) cs sg (Raw) adt wc (prove-subterm sg adt))))
+                            (values env3 (ACons adt rest h hs) (TCons adt rest h hs x tids)))))))))))))))
 
-  (many define-adts : (subterm many (List (Raw)) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (List (Bin)) tids) -> (many (Env) r) (many (List (Pair (Bin) (Value))) consts)
+  (many define-adts : (subterm many (List (Raw)) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List (Pair (Bin) (Value))) consts)
     (match many adts _
       ((Nil a) (values env (Nil (Pair (Bin) (Value)))))
       ((Cons a adt rest)
@@ -2462,8 +2464,8 @@
           ((AStop z) (values env (Nil (Pair (Bin) (Value)))))
           ((ACons g r h hrest)
             (match many tids _
-              ((Nil b) (values env (Nil (Pair (Bin) (Value)))))
-              ((Cons b tid trest)
+              (absurd TStop)
+              ((TCons g3 r3 h3 hs3 tid trest)
                 (match many h _
                   ((MkAdtHeader g2 name disc nt ext ctors pc)
                     (let (many env2) (many mcpairs) (elab-ctors (subterm (subterm-trans pc (prove-subterm adt adts))) ctors env tid))

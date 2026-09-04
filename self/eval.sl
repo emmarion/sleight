@@ -62,12 +62,22 @@
         ((Cons b v vrest) (venv-bind (subterm _) rest vrest (idmap-set (predates _) (Value) x v env)))))))
 
 ; Adds the closures of a def-fns group to [env]; each closure re-closes the whole group when applied.
-(def-fns _ $ many close-group : (subterm many (List (Pair (Bin) (Func))) group) (many (List (Pair (Bin) (Func))) whole) (many (IdMap (Value)) env) -> (many (IdMap (Value)) r)
+(def-fns _ $ many close-fns : (subterm many (List (Pair (Bin) (Func))) group) (many (List (Pair (Bin) (Func))) whole) (many (IdMap (Value)) env) -> (many (List (Pair (Bin) (Value))) r)
   (match many group _
-    ((Nil a) env)
+    ((Nil a) (Nil (Pair (Bin) (Value))))
     ((Cons a p rest)
       (match many p _
-        ((MkPair x y id fn) (close-group (subterm _) rest whole (idmap-set (predates _) (Value) id (VFn (MkClosure fn whole env)) env)))))))
+        ((MkPair x y id fn)
+          (let (many v) (VFn (MkClosure fn whole env)))
+          (Cons (Pair (Bin) (Value)) (MkPair (Bin) (Value) id v) (close-fns (subterm _) rest whole (idmap-set (predates _) (Value) id v env))))))))
+
+(def-fns _ $ many venv-set-all : (subterm many (List (Pair (Bin) (Value))) vs) (many (IdMap (Value)) env) -> (many (IdMap (Value)) r)
+  (match many vs _
+    ((Nil a) env)
+    ((Cons a p rest) (match many p _ ((MkPair x y id v) (venv-set-all (subterm _) rest (idmap-set (predates _) (Value) id v env)))))))
+
+(def-fns _ $ many close-group : (many (List (Pair (Bin) (Func))) group) (many (List (Pair (Bin) (Func))) whole) (many (IdMap (Value)) env) -> (many (IdMap (Value)) r)
+  (venv-set-all (predates _) (close-fns (predates _) group whole env) env))
 
 (def-fns _ $ many find-branch : (subterm many (List (Branch)) bs) (many (Nat) i) -> (many (Maybe (Branch)) r)
   (match many bs _
