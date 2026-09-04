@@ -652,36 +652,17 @@ appear there, since the variant set belongs to the constructor, not to
 any application of it. The tag is §12's discriminant and the `ei` are
 §12's phantom markers, which between them are exactly the facts no type
 records: a `TyCtor` type carries no discriminant, and a `ValCtor` type no
-phantom marker. A `Matchable` is minted only by `def-adts` (§19), and is
-minted `many`: nearly everything it carries is in its type, but not the
-one thing an `extern` type (§41) keeps to itself — how its values are
-built and taken apart — so a `Matchable` is real data, and a match whose
-own position is non-erased needs a non-erased one. Held at `erased` it
-still serves every compile-time job below. That wrapper is all a
-`Matchable`'s value ever holds; for a type the FFI does not hold it
-holds nothing. The elaborator keeps no record of a type beyond its
-scope entries and the fact table: the tag, each constructor's
-discriminant and phantom marker, and each field's multiplicity are all
-read off the `Matchable`'s type and the constructors' `ValCtor` types.
+phantom marker. A `Matchable` is minted only by `def-adts` (§19), at
+`many`: its value holds an `extern` type's construction and matching
+(§41) and nothing else, so a non-erased match needs a non-erased one.
 
 It has three jobs: it's what lets the compiler know a type's constructors
 are disjoint (§19); it's what lets you match on a first-class object
 whose type is described only via first-class type/value constructors —
-i.e. not a syntactically fixed, named ADT; and it is what a match reads
-at runtime to take the scrutinee apart.
-
-A match reads nothing else. The elaborator knows, from the `Matchable`'s
-type alone, whether the scrutinee's type carries a tag (§38) and which
-discriminant each branch's constructor has, so it stamps both into the
-match; the constructors themselves are needed only to build values, and
-a match may name ones that are `erased` where it stands. Where the
-`Matchable`'s entry is `Const` (§34) — minted by a `def-adts` in run
-position — its value is known too, and the match carries no
-`Matchable` at all: a non-extern type's match is a tag read or a field
-read with nothing in front of it. Only a `Dyn` `Matchable` — a
-function's parameter, or one a `def-adts` inside a body minted — is
-read when the match runs, since its type alone cannot say whether the
-FFI implements the type.
+i.e. not a syntactically fixed, named ADT; and it is what a match reads:
+its type for the tag and each branch's discriminant, so the constructors
+named in a match may be `erased`, and its value only for an `extern`
+type's wrapper, stamped in where the `Matchable` is `Const` (§34).
 
 ## 18. Match-branch rewrite algorithm (working formulation)
 
@@ -832,8 +813,7 @@ where each gets its multiplicity:
   `erased` in a phantom constructor's branch whatever the keyword (§12);
 - `comptime-match` fields: their declared multiplicities (§15);
 - everything minted by kind — a `Level`, a proof, a type constructor — is
-  `erased` (§8, §12); a `Matchable`, alone among them, is minted `many`
-  (§17).
+  `erased` (§8, §12); a `Matchable` is `many` (§17).
 
 The erased positions, where an expression is erased: an argument at an
 erased-declared parameter or field; any argument of a type constructor
@@ -1579,9 +1559,7 @@ existentially typed. A value is the tuple of its constructor's `many`
 fields, one field standing bare and none at all being an unspecified
 word, and carries a tag only when its type is an enum with more than
 one non-phantom constructor — all a tag ever distinguishes. The tag is
-the constructor's position among the type's non-phantom constructors, in
-declaration order: a phantom constructor heads no runtime value (§20's
-rule 2) and so takes no number of its own. A union
+the constructor's position among the non-phantom constructors. A union
 never carries one, its discriminant being erased (§12). So every
 newtype, as item 4 defines it, is represented exactly as its
 one `many` field — no tag, no wrapper — which is the guarantee the
