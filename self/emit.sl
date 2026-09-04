@@ -251,7 +251,7 @@
               ((BTrue) (values st (RStr (top-name (predates _) (cx-env (predates _) cx) (func-id (predates _) fn)))))
               ((BFalse)
                 (let (many saved) (st-names (predates _) st))
-                (let (many st2) (many named) (name-group fuel (subterm _) group st))
+                (let (many st2) (many named) (name-group fuel (subterm _) group (st-with-names (predates _) st (MEmpty (String)))))
                 (let (many st3) (many text) (emit-group fuel (subterm _) group (cx-with-capture (predates _) cx cenv) st2 (BTrue)))
                 (let (many st4) (st-push-def (predates _) st3 (rcat3 (predates _) (RStr "let rec ") text (RStr "\n"))))
                 (let (many mine) (match many (idmap-get (predates _) (String) (func-id (predates _) fn) (st-names (predates _) st4)) (((String) s)) ((None a) "(failwith \"closure missing\")") ((Some a s) s)))

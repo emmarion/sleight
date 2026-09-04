@@ -1196,3 +1196,53 @@ suite (CLAUDE.md rule 2), not settled decisions.
     longer grant. The suite is unchanged. §18's second failure mode and
     §19 now say this, in wording the owner confirmed (CLAUDE.md rule
     12).
+
+## A compiler written in the language (self/)
+
+Written by a session working autonomously at the owner's request, in
+chat: name the language SL for now, self-host it, write in SL a program
+compiling SL to OCaml that can interpret the compile-time `Const` part,
+and use the existing OCaml interpreter and extractor to get there.
+`self/README.md` describes the result; items 90-92 record what it
+assumed and the one change it made to `lib/`. As elsewhere here, each
+is the session's reading, checked by `self/bootstrap.sh` rather than
+by the owner.
+
+90. **`lt-dec` and `Dec` are extern.** The FFI table gains an
+    implementation of the prelude's `lt-dec` (integer comparison) and
+    of `Dec`, held as its constructor index alone since both
+    constructors' fields are erased (`Ffi_core.indexed`); the source
+    models and the `Dec`-consuming prelude functions are unchanged, and
+    `dune test` still checks every test with the implementations
+    stripped. The reason is speed inside the compiler: without it,
+    comparing two characters or two small numbers is a walk down both
+    numerals, and the compiler compares characters at every name
+    lookup. This is the same kind of entry as `nat-add`'s (item 42),
+    so the session read it as an implementation matter rather than a
+    decision for the owner; the mark on `lt-dec` in `lib/prelude.sl`
+    is nonetheless the owner's to keep or revert.
+
+91. **The compiler trusts its input.** `self/` checks nothing the
+    reference checker checks: no proof is inspected, no branch refuted,
+    no type compared, no level read. It performs only the elaboration
+    code generation needs (`self/README.md` lists it) and assumes the
+    program was accepted by `lib/`. So it is not a second checker and
+    contributes nothing to section 10's consistency question; what it
+    shows is that the language, with its termination discipline, can
+    express its own elaborator, interpreter and extractor. Where the
+    reference would report an error the compiler may emit OCaml that
+    does anything.
+
+92. **What the fixpoint shows, precisely.** `self/bootstrap.sh`
+    extracts the compiler natively with the reference extractor, checks
+    that every runnable test compiles to a program whose stdout, stderr
+    and exit code match the interpreter's, compiles the compiler with
+    that binary, and compiles the compiler again with the result,
+    requiring the two OCaml outputs to be identical. Identical outputs
+    mean the compiler compiled by the reference extractor and the
+    compiler compiled by itself agree on the compiler's own source; they
+    do not mean either agrees with the reference on every program, which
+    only the test comparison speaks to, one test at a time. The session
+    did not add these checks to `dune test`: running the compiler under
+    the reference *interpreter* takes seconds per file and the stripped
+    mode of item 44 would run its fuel counters in unary.

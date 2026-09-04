@@ -106,20 +106,18 @@
   (char-of-code (predates _) (nat-add (predates _) 48 d)))
 
 (def-fns _
-  (many divmod10 : (subterm many (Nat) fuel) (many (Nat) n) -> (many (Nat) q) (many (Nat) r)
+  (many divmod10 : (subterm many (Nat) fuel) (many (Nat) n) (many (Nat) q) -> (many (Nat) q2) (many (Nat) r)
     (match many fuel _
-      ((Zero) (values (Zero) n))
+      ((Zero) (values q n))
       ((Succ k)
         (match many (nat-lt (predates _) n 10) _
-          ((BTrue) (values (Zero) n))
-          ((BFalse)
-            (let (many q1) (many r1) (divmod10 (subterm _) k (nat-sub (predates _) n 10)))
-            (values (Succ q1) r1))))))
+          ((BTrue) (values q n))
+          ((BFalse) (divmod10 (subterm _) k (nat-sub (predates _) n 10) (Succ q)))))))
   (many nat-digits : (subterm many (Nat) fuel) (many (Nat) n) (many (String) acc) -> (many (String) s)
     (match many fuel _
       ((Zero) acc)
       ((Succ k)
-        (let (many q) (many r) (divmod10 (subterm _) k n))
+        (let (many q) (many r) (divmod10 (subterm _) k n (Zero)))
         (let (many acc1) (SCons (digit-char (predates _) r) acc))
         (match many (nat-is-zero (predates _) q) _
           ((BTrue) acc1)

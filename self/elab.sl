@@ -874,9 +874,146 @@
         ((TTyCtor p) (bin-ids-of (subterm _) rest)) ((TValCtor p r) (bin-ids-of (subterm _) rest)) ((TMatchable d ty c) (bin-ids-of (subterm _) rest))
         ((TNewtype c) (bin-ids-of (subterm _) rest)) ((TErr m) (bin-ids-of (subterm _) rest))))))
 
-; Post-erasure normalization (ASSUMPTIONS 72, 74): not yet applied; the code is kept as elaborated.
+; Post-erasure normalization (ASSUMPTIONS 72, 74, 88; lib/elab.ml's check_marks): a let that only renames is
+; resolved away, one whose body returns exactly what it binds is replaced by its right-hand side, and one
+; binding constants nothing mentions is dropped, so a marked call stands in tail position in the code that runs.
+
+(def-fns _ $ many resolve-sub : (subterm many (Nat) fuel) (many (IdMap (Bin)) sub) (many (Bin) x) -> (many (Bin) r)
+  (match many fuel _
+    ((Zero) x)
+    ((Succ k)
+      (match many (idmap-get (predates _) (Bin) x sub) _
+        ((None a) x)
+        ((Some a y) (resolve-sub (subterm _) k sub y))))))
+
+(def-fns _ $ many vars-of : (subterm many (List (Code)) cs) -> (many (Maybe (List (Bin))) r)
+  (match many cs _
+    ((Nil a) (Some (List (Bin)) (Nil (Bin))))
+    ((Cons a c rest)
+      (match many c _
+        ((CVar x)
+          (match many (vars-of (subterm _) rest) _
+            ((None b) (None (List (Bin))))
+            ((Some b xs) (Some (List (Bin)) (Cons (Bin) x xs)))))
+        ((CConst v) (None (List (Bin)))) ((CErased) (None (List (Bin)))) ((CValues cs2) (None (List (Bin)))) ((CApp f as cc) (None (List (Bin))))
+        ((CLet i r b) (None (List (Bin)))) ((CLetRec fs b) (None (List (Bin)))) ((CMatch sc sh bs) (None (List (Bin)))) ((CAbsurd) (None (List (Bin)))) ((CError m) (None (List (Bin))))))))
+
+(def-fns _ $ many bins-eq : (subterm many (List (Bin)) as) (many (List (Bin)) bs) -> (many (Bool) r)
+  (match many as _
+    ((Nil a) (list-is-empty (predates _) (Bin) bs))
+    ((Cons a x rest) (match many bs _ ((Nil b) (BFalse)) ((Cons b y brest) (and (predates _) (bin-eq (predates _) x y) (bins-eq (subterm _) rest brest)))))))
+
+; Whether a body returns exactly the ids, in order.
+(def-fns _ $ many returns-ids : (many (List (Bin)) ids) (many (Code) c) -> (many (Bool) r)
+  (match many c _
+    ((CValues cs) (match many (vars-of (predates _) cs) _ ((None a) (BFalse)) ((Some a xs) (bins-eq (predates _) xs ids))))
+    ((CVar x) (bins-eq (predates _) ids (Cons (Bin) x (Nil (Bin)))))
+    ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse)) ((CLetRec fs b) (BFalse))
+    ((CMatch sc sh bs) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+
+(def-fns _ $ many all-consts : (subterm many (List (Code)) cs) -> (many (Bool) r)
+  (match many cs _
+    ((Nil a) (BTrue))
+    ((Cons a c rest)
+      (match many c _
+        ((CConst v) (all-consts (subterm _) rest))
+        ((CVar x) (BFalse)) ((CErased) (BFalse)) ((CValues cs2) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse))
+        ((CLetRec fs b) (BFalse)) ((CMatch sc sh bs) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))))
+
+(def-fns _ $ many constant-code : (many (Code) c) -> (many (Bool) r)
+  (match many c _
+    ((CValues cs) (all-consts (predates _) cs))
+    ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse))
+    ((CLetRec fs b) (BFalse)) ((CMatch sc sh bs) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+
+(def-fns _
+  (many mentions : (subterm many (Code) c) (many (Bin) x) -> (many (Bool) r)
+    (match many c _
+      ((CVar y) (bin-eq (predates _) x y))
+      ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))
+      ((CValues cs) (mentions-list (subterm _) cs x))
+      ((CApp f as cc) (or (predates _) (mentions (subterm _) f x) (mentions-list (subterm _) as x)))
+      ((CLet ids rhs rest) (or (predates _) (mentions (subterm _) rhs x) (mentions (subterm _) rest x)))
+      ((CLetRec fns rest) (or (predates _) (mentions-fns (subterm _) fns x) (mentions (subterm _) rest x)))
+      ((CMatch scrut shape bs)
+        (or (predates _) (mentions (subterm _) scrut x)
+          (or (predates _) (match many shape (((Bool) b)) ((ShKnown adt) (BFalse)) ((ShHeld mc tags) (mentions (subterm _) mc x)))
+            (mentions-branches (subterm _) bs x))))))
+  (many mentions-list : (subterm many (List (Code)) cs) (many (Bin) x) -> (many (Bool) r)
+    (match many cs _
+      ((Nil a) (BFalse))
+      ((Cons a c rest) (or (predates _) (mentions (subterm _) c x) (mentions-list (subterm _) rest x)))))
+  (many mentions-fns : (subterm many (List (Pair (Bin) (Func))) fns) (many (Bin) x) -> (many (Bool) r)
+    (match many fns _
+      ((Nil a) (BFalse))
+      ((Cons a p rest)
+        (match many p _
+          ((MkPair s t id fn) (match many fn _ ((MkFunc n i ps body impl top) (or (predates _) (mentions (subterm _) body x) (mentions-fns (subterm _) rest x)))))))))
+  (many mentions-branches : (subterm many (List (Branch)) bs) (many (Bin) x) -> (many (Bool) r)
+    (match many bs _
+      ((Nil a) (BFalse))
+      ((Cons a b rest) (match many b _ ((MkBranch d ids body) (or (predates _) (mentions (subterm _) body x) (mentions-branches (subterm _) rest x))))))))
+
+(def-fns _ $ many mentions-any : (subterm many (List (Bin)) ids) (many (Code) c) -> (many (Bool) r)
+  (match many ids _
+    ((Nil a) (BFalse))
+    ((Cons a x rest) (or (predates _) (mentions (predates _) c x) (mentions-any (subterm _) rest c)))))
+
+(def-fns _ $ many sub-all : (subterm many (List (Bin)) ids) (many (List (Bin)) ys) (many (IdMap (Bin)) sub) -> (many (IdMap (Bin)) r)
+  (match many ids _
+    ((Nil a) sub)
+    ((Cons a x rest) (match many ys _ ((Nil b) sub) ((Cons b y yrest) (sub-all (subterm _) rest yrest (idmap-set (predates _) (Bin) x y sub)))))))
+
+(def-fns _
+  (many norm : (subterm many (Code) c) (many (IdMap (Bin)) sub) -> (many (Code) r)
+    (match many c _
+      ((CVar x) (CVar (resolve-sub (predates _) big-fuel sub x)))
+      ((CConst v) c) ((CErased) c) ((CAbsurd) c) ((CError m) c)
+      ((CValues cs) (CValues (norm-list (subterm _) cs sub)))
+      ((CApp f as cc) (CApp (norm (subterm _) f sub) (norm-list (subterm _) as sub) cc))
+      ((CLet ids rhs rest)
+        (let (many rhs2) (norm (subterm _) rhs sub))
+        (let (many renaming)
+          (match many rhs2 (((Maybe (List (Bin))) r))
+            ((CVar y) (match many ids (((Maybe (List (Bin))) r)) ((Nil a) (None (List (Bin)))) ((Cons a x more) (match many more (((Maybe (List (Bin))) r)) ((Nil b) (Some (List (Bin)) (Cons (Bin) y (Nil (Bin))))) ((Cons b x2 more2) (None (List (Bin))))))))
+            ((CValues cs) (match many (vars-of (predates _) cs) (((Maybe (List (Bin))) r)) ((None a) (None (List (Bin)))) ((Some a ys) (match many (nat-eq (predates _) (list-length (predates _) (Bin) ys) (list-length (predates _) (Bin) ids)) (((Maybe (List (Bin))) r)) ((BTrue) (Some (List (Bin)) ys)) ((BFalse) (None (List (Bin))))))))
+            ((CConst v) (None (List (Bin)))) ((CErased) (None (List (Bin)))) ((CApp f as cc) (None (List (Bin)))) ((CLet i r b) (None (List (Bin))))
+            ((CLetRec fs b) (None (List (Bin)))) ((CMatch sc sh bs) (None (List (Bin)))) ((CAbsurd) (None (List (Bin)))) ((CError m) (None (List (Bin))))))
+        (match many renaming _
+          ((Some a ys) (norm (subterm _) rest (sub-all (predates _) ids ys sub)))
+          ((None a)
+            (let (many rest2) (norm (subterm _) rest sub))
+            (match many (returns-ids (predates _) ids rest2) _
+              ((BTrue) rhs2)
+              ((BFalse)
+                (match many (and (predates _) (constant-code (predates _) rhs2) (not (predates _) (mentions-any (predates _) ids rest2))) _
+                  ((BTrue) rest2)
+                  ((BFalse) (CLet ids rhs2 rest2))))))))
+      ((CLetRec fns rest) (CLetRec (norm-fns (subterm _) fns sub) (norm (subterm _) rest sub)))
+      ((CMatch scrut shape bs)
+        (CMatch (norm (subterm _) scrut sub)
+                (match many shape (((Shape) s)) ((ShKnown adt) shape) ((ShHeld mc tags) (ShHeld (norm (subterm _) mc sub) tags)))
+                (norm-branches (subterm _) bs sub)))))
+  (many norm-list : (subterm many (List (Code)) cs) (many (IdMap (Bin)) sub) -> (many (List (Code)) r)
+    (match many cs _
+      ((Nil a) (Nil (Code)))
+      ((Cons a c rest) (Cons (Code) (norm (subterm _) c sub) (norm-list (subterm _) rest sub)))))
+  (many norm-fns : (subterm many (List (Pair (Bin) (Func))) fns) (many (IdMap (Bin)) sub) -> (many (List (Pair (Bin) (Func))) r)
+    (match many fns _
+      ((Nil a) (Nil (Pair (Bin) (Func))))
+      ((Cons a p rest)
+        (match many p _
+          ((MkPair s t id fn)
+            (match many fn _
+              ((MkFunc n i ps body impl top)
+                (Cons (Pair (Bin) (Func)) (MkPair (Bin) (Func) id (MkFunc n i ps (norm (subterm _) body sub) impl top)) (norm-fns (subterm _) rest sub)))))))))
+  (many norm-branches : (subterm many (List (Branch)) bs) (many (IdMap (Bin)) sub) -> (many (List (Branch)) r)
+    (match many bs _
+      ((Nil a) (Nil (Branch)))
+      ((Cons a b rest) (match many b _ ((MkBranch d ids body) (Cons (Branch) (MkBranch d ids (norm (subterm _) body sub)) (norm-branches (subterm _) rest sub))))))))
+
 (def-fns _ $ many normalize : (many (Code) code) -> (many (Code) r)
-  code)
+  (norm (predates _) code (MEmpty (Bin))))
 
 (let (many elab-fuel) 100000)
 

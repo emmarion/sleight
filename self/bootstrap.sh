@@ -8,8 +8,10 @@
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 set -u
 cd "$(dirname "$0")/.."
+ROOT=$(pwd)
 B=${1:-_build/self}
 mkdir -p "$B"
+B=$(cd "$B" && pwd)
 SL="self/base.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/main.sl"
 REF=_build/default/bin/main.exe
 OC="ocamlfind ocamlopt -package zarith -linkpkg"
@@ -31,15 +33,15 @@ for t in tests/*.sl; do
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   args=$(directive "$t" args)
   directive "$t" stdin > "$B/$name.in"
-  # the reference run, files sharing one scope in order
-  $REF $needs "$t" -- $args < "$B/$name.in" > "$B/$name.ref.out" 2> "$B/$name.ref.err"; refcode=$?
+  # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files
+  (cd "$B" && "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
   if ! "$B/slc" -- lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; fail=$((fail+1)); continue
   fi
   if ! $OC "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; fail=$((fail+1)); continue
   fi
-  "$B/$name.exe" -- $args < "$B/$name.in" > "$B/$name.out" 2> "$B/$name.err"; code=$?
+  (cd "$B" && "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
   if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err" && [ "$code" = "$refcode" ]; then
     pass=$((pass+1))
   else
