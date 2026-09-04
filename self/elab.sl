@@ -218,25 +218,34 @@
         ((Some a n) (None (String)))
         ((None a) (Some (String) (str-cat (predates _) "malformed character literal " s)))))))
 
-(def-fns _ $ many prelude-id : (many (Env) env) (many (String) name) -> (many (Bin) x)
-  (match many (lookup (predates _) env name) _ ((None a) (BZ)) ((Some a x) x)))
+(def-fns _ $ many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Bin) x)
+  (match many (lookup (predates _) env name) _
+    ((None a) (values (env-error (predates _) env (str-cat (predates _) "unbound name " name)) (BZ)))
+    ((Some a x) (values env x))))
 
-(def-fns _ $ many prelude-type : (many (Env) env) (many (String) name) -> (many (Term) t)
-  (TApp (TVar (prelude-id (predates _) env name)) (Nil (Term))))
+(def-fns _ $ many prelude-type : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Term) t)
+  (let (many env2) (many x) (prelude-id (predates _) env name))
+  (values env2 (TApp (TVar x) (Nil (Term)))))
 
 (def-fns _ $ many bin-of-nat : (subterm many (Nat) n) (many (Bin) acc) -> (many (Bin) b)
   (match many n _
     ((Zero) acc)
     ((Succ m) (bin-of-nat (subterm _) m (bin-succ (predates _) acc)))))
 
-(def-fns _ $ many bin-term : (subterm many (Bin) b) (many (Env) env) -> (many (Term) t)
+(def-fns _ $ many bin-term : (subterm many (Bin) b) (many (Env) env) -> (many (Env) r) (many (Term) t)
   (match many b _
-    ((BZ) (TApp (TVar (prelude-id (predates _) env "BZ")) (Nil (Term))))
-    ((B1 b1) (TApp (TVar (prelude-id (predates _) env "B1")) (Cons (Term) (bin-term (subterm _) b1 env) (Nil (Term)))))
-    ((B2 b1) (TApp (TVar (prelude-id (predates _) env "B2")) (Cons (Term) (bin-term (subterm _) b1 env) (Nil (Term)))))))
+    ((BZ) (let (many env2) (many c) (prelude-id (predates _) env "BZ")) (values env2 (TApp (TVar c) (Nil (Term)))))
+    ((B1 b1)
+      (let (many env2) (many c) (prelude-id (predates _) env "B1"))
+      (let (many env3) (many t) (bin-term (subterm _) b1 env2))
+      (values env3 (TApp (TVar c) (Cons (Term) t (Nil (Term))))))
+    ((B2 b1)
+      (let (many env2) (many c) (prelude-id (predates _) env "B2"))
+      (let (many env3) (many t) (bin-term (subterm _) b1 env2))
+      (values env3 (TApp (TVar c) (Cons (Term) t (Nil (Term))))))))
 
 ; The bijective base-2 spelling of a number as a term over the prelude's Bin (ASSUMPTIONS 50).
-(def-fns _ $ many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Term) t)
+(def-fns _ $ many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t)
   (bin-term (predates _) (bin-of-nat (predates _) n (BZ)) env))
 
 (def-fns _ $ many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe (Bin)) r)
@@ -246,9 +255,12 @@
 ; relating it to its spelling (ASSUMPTIONS 51).
 (def-fns _ $ many intern-numeral : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Bin) x) (many (Bin) proof)
   (let (many n) (parse-nat (predates _) key 0))
-  (let (many env2) (many x) (bind (predates _) env (None (String)) (Many) (SConst (vnat (predates _) n)) (prelude-type (predates _) env "Nat") (None (Term)) coercible-id))
-  (let (many pty) (TApp (TVar (prelude-id (predates _) env "Numeral")) (Cons (Term) (nat-bin-term (predates _) n env) (Cons (Term) (TVar x) (Nil (Term))))))
-  (let (many env3) (many p) (bind (predates _) env2 (None (String)) (Erased) (SConst (VToken)) pty (None (Term)) coercible-id))
+  (let (many env1) (many nat-ty) (prelude-type (predates _) env "Nat"))
+  (let (many env2) (many x) (bind (predates _) env1 (None (String)) (Many) (SConst (vnat (predates _) n)) nat-ty (None (Term)) coercible-id))
+  (let (many env2b) (many numeral) (prelude-id (predates _) env2 "Numeral"))
+  (let (many env2c) (many spelled) (nat-bin-term (predates _) n env2b))
+  (let (many pty) (TApp (TVar numeral) (Cons (Term) spelled (Cons (Term) (TVar x) (Nil (Term))))))
+  (let (many env3) (many p) (bind (predates _) env2c (None (String)) (Erased) (SConst (VToken)) pty (None (Term)) coercible-id))
   (let (many env4) (env-set-literals (predates _) env3 (nm-set (predates _) (Bin) key x (env-literals (predates _) env3))))
   (values (env-push-lit (predates _) (env-push-trace (predates _) env4 (TrConst x (vnat (predates _) n))) x (Some (Bin) p)) x p))
 
@@ -281,11 +293,16 @@
             ((LChar)
               (let (many code) (match many (char-lit-code (predates _) key) (((Nat) n)) ((None c) 0) ((Some c n) n)))
               (let (many env2) (many num) (many np) (intern-numeral-once (predates _) env (nat-str (predates _) code)))
-              (let (many env3) (many lt) (bind (predates _) env2 (None (String)) (Erased) (SConst (VToken))
-                                          (TApp (TVar (prelude-id (predates _) env2 "Lt")) (Cons (Term) (TVar num) (Cons (Term) (TVar (prelude-id (predates _) env2 "u8-modulus")) (Nil (Term))))) (None (Term)) coercible-id))
-              (let (many rule) (TApp (TVar (prelude-id (predates _) env3 "MkChar")) (Cons (Term) (TApp (TVar (prelude-id (predates _) env3 "MkU8")) (Cons (Term) (TVar num) (Cons (Term) (TVar lt) (Nil (Term))))) (Nil (Term)))))
+              (let (many env2b) (many lt-id) (prelude-id (predates _) env2 "Lt"))
+              (let (many env2c) (many modulus) (prelude-id (predates _) env2b "u8-modulus"))
+              (let (many env3) (many lt) (bind (predates _) env2c (None (String)) (Erased) (SConst (VToken))
+                                          (TApp (TVar lt-id) (Cons (Term) (TVar num) (Cons (Term) (TVar modulus) (Nil (Term))))) (None (Term)) coercible-id))
+              (let (many env3b) (many mk-char) (prelude-id (predates _) env3 "MkChar"))
+              (let (many env3c) (many mk-u8) (prelude-id (predates _) env3b "MkU8"))
+              (let (many rule) (TApp (TVar mk-char) (Cons (Term) (TApp (TVar mk-u8) (Cons (Term) (TVar num) (Cons (Term) (TVar lt) (Nil (Term))))) (Nil (Term)))))
               (let (many v) (VExt u8-adt (PU8 (nat-to-u8 (predates _) code))))
-              (let (many env4) (many x) (bind (predates _) env3 (None (String)) (Many) (SConst v) (prelude-type (predates _) env3 "Char") (Some (Term) rule) coercible-id))
+              (let (many env3d) (many char-ty) (prelude-type (predates _) env3c "Char"))
+              (let (many env4) (many x) (bind (predates _) env3d (None (String)) (Many) (SConst v) char-ty (Some (Term) rule) coercible-id))
               (let (many env5) (env-set-literals (predates _) env4 (nm-set (predates _) (Bin) key x (env-literals (predates _) env4))))
               (env-push-lit (predates _) (env-push-trace (predates _) env5 (TrConst x v)) x (Some (Bin) np)))
             ((LName) env)))))))
@@ -296,7 +313,8 @@
     ((Some a x) env)
     ((None a)
       (let (many v) (VExt str-adt (PStr (match many key (((String) s)) ((SNil) (SNil)) ((SCons q rest) rest)))))
-      (let (many env2) (many x) (bind (predates _) env (None (String)) (Many) (SConst v) (prelude-type (predates _) env "String") (None (Term)) coercible-id))
+      (let (many env1) (many str-ty) (prelude-type (predates _) env "String"))
+      (let (many env2) (many x) (bind (predates _) env1 (None (String)) (Many) (SConst v) str-ty (None (Term)) coercible-id))
       (let (many env3) (env-set-literals (predates _) env2 (nm-set (predates _) (Bin) key x (env-literals (predates _) env2))))
       (env-push-lit (predates _) (env-push-trace (predates _) env3 (TrConst x v)) x (None (Bin))))))
 
@@ -808,11 +826,6 @@
       (match many ann _
         ((BTrue) (strip-annotations (subterm _) rest env))
         ((BFalse) (Cons (Raw) arg (strip-annotations (subterm _) rest env)))))))
-
-(def-fns _ $ many level-var : (many (Env) env) (many (Term) t) -> (many (Bin) x)
-  (match many (canon-env (predates _) env t) _
-    ((TVar x) x)
-    ((TBound k) (BZ)) ((TApp h a) (BZ)) ((TFn l p r) (BZ)) ((TTyCtor p) (BZ)) ((TValCtor p r) (BZ)) ((TMatchable d ty c) (BZ)) ((TNewtype c) (BZ)) ((TErr m) (BZ))))
 
 ; The delegate-marked call's callee in a body, if any (section 9); read through lets and match branches.
 (def-fns _

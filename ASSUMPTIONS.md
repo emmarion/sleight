@@ -1402,4 +1402,14 @@ by the owner.
     arguments (their number is fixed by the prelude's type constructors),
     the `comptime-match` contradiction after a value was verified, and
     the places that read an id out of a term expected to be a variable
-    and default to id zero otherwise.
+    and default to id zero otherwise. Of those last, the session made
+    the prelude-name lookups (`Nat`, `Numeral`, `Bin`'s digits, `Lt`,
+    `MkChar`, `Char`, `String`) report an unbound name rather than
+    default, since they are reachable by running slc without the
+    prelude; the reader of a Matchable's constructor slot stays as it is,
+    because the reference (`lib/env.ml`'s `unify`) treats those slots as
+    ordinary variables, ruling one out against another when two
+    Matchables disagree, so holding ids there instead of terms would
+    change what unification does; the session's reading is that a slot
+    holding anything but a variable is an invariant of well-formed terms
+    of the same kind as `infer`'s.
