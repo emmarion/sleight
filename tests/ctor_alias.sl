@@ -1,5 +1,5 @@
 ; expect: (Succ (Zero))
-; A constructor renamed by a state-inheriting let (section 9) heads a match branch and a comptime-match
+; A constructor renamed by a state-forwarding let (section 9) heads a match branch and a comptime-match
 ; pattern, and is found in the type's Matchable through its alias.
 
 (let (many Z) Zero)

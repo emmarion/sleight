@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: (Succ (Succ (Succ (Zero))))
-; A factory of factories: compose births a level above both argument levels and returns a function there.
+; A factory of factories: compose mints a level above both argument levels and returns a function there.
 
 (def-lvl F)
 

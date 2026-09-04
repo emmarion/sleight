@@ -1,7 +1,7 @@
 ; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
-; Folding a list of functions into one function: each step births a level at runtime above the level the
-; recursive call returned, so the composed closure calls the rest under a proof born beside it. The tower
-; of levels is as tall as the list and is born when compose-all runs, here in run position;
+; Folding a list of functions into one function: each step mints a level at runtime above the level the
+; recursive call returned, so the composed closure calls the rest under a proof minted beside it. The tower
+; of levels is as tall as the list and is minted when compose-all runs, here in run position;
 ; runtime_level_bad.sl is the same call from a function body.
 
 (def-lvl M)

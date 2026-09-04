@@ -28,9 +28,9 @@ registry. Each entry carries:
   entry is erased, this isn't a real value — it's a *token* that just
   asserts the value exists/is true, not actual data.
 - an **erasure** (the `erased`/`many` multiplicity from §6) — every
-  entry is born with it known, declared at its binder or fixed by its
+  entry is minted with it known, declared at its binder or fixed by its
   kind (§20).
-- a **level-birth marker** — set when the entry was introduced by
+- a **level-mint marker** — set when the entry was introduced by
   `def-lvl` (§8). `prove-predates` requires its `Level` argument to be
   such an entry, not merely some value of type `(Level)`.
 - an (implicit) **introduction order** — needed to make the `Predates`
@@ -180,35 +180,35 @@ Three core axioms/functions, each as premises and conclusion:
 3. `Predates` through `Subterm`: from `(Predates A a l)` and
    `(Subterm B b A a)`, conclude `(Predates B b l)`.
 
-There are also two ways for these to be "born" (introduced):
+There are also two ways for these to be "minted" (introduced):
 
-- **`Subterm` birth.** The special form `prove-subterm` takes two
+- **`Subterm` minting.** The special form `prove-subterm` takes two
   expressions, asserting the first is a subterm of the second. Both are
   canonicalized/rewritten first, and both are restricted to §5's
-  "is"/type grammar. The birthed claim then requires the first,
+  "is"/type grammar. The minted claim then requires the first,
   post-canonicalization, to be a strict subtree of the second, where the
-  search descends only through type- and value-constructor applications
+  search walks only through type- and value-constructor applications
   (§5's productions 2 and 3). A type former (production 4) is opaque —
   nothing inside its telescope counts as a subterm of it.
 
-- **`Level` birth.** A `def-lvl` form births a fresh `Level`. Mental
+- **`Level` minting.** A `def-lvl` form mints a fresh `Level`. Mental
   model (a model only — fully erased in practice, not a real runtime
   counter): imagine a single global counter that increments each time a
-  `def-lvl` is "invoked"; its value at that point is the birthed level.
+  `def-lvl` is "invoked"; its value at that point is the minted level.
   The language being immutable and acyclic is what makes "before"/"after"
   a well-defined ordering here: a variable in scope above (lexically
   enclosing, prior to) a `def-lvl` statement counts as "before" it.
 
-  A level born later is strictly higher than one born earlier, so a
-  function defined at a later-born level cannot be called from code at an
-  earlier one. Once there is a `main`, that includes anything born after
+  A level minted later is strictly higher than one minted earlier, so a
+  function defined at a later-minted level cannot be called from code at an
+  earlier one. Once there is a `main`, that includes anything minted after
   `main`'s own level: such a function is unreachable from `main`, though
   the top level can still call it, at compile time only (§24).
 
-  A second special form, `prove-predates`, births the `Predates` claim
+  A second special form, `prove-predates`, mints the `Predates` claim
   relating a variable to a level. It takes them in the order the type
   above puts them: 1) a variable that was in scope when some earlier
-  `def-lvl` ran, and 2) the `Level` that `def-lvl` birthed, which must be
+  `def-lvl` ran, and 2) the `Level` that `def-lvl` minted, which must be
   before the current code.
 
 ## 9. Namespaces, special forms, macros, call-site proofs
@@ -216,19 +216,19 @@ There are also two ways for these to be "born" (introduced):
 - **One namespace.** Special forms, types, and values all share a single
   namespace. Everything in it can be renamed/shadowed, special forms and
   types included.
-- **State-inheriting `let`.** A `let` binder inherits the entire variable
+- **State-forwarding `let`.** A `let` binder takes on the entire variable
   state of the right-hand-side entry it corresponds to, wholesale —
   state (§3), stored value if `Const`, and, via an alias rule recorded
   in the fact table (§18), its type and "is" —
   whenever that entry is an expression in §5's grammar and so has a
   scope entry of its own (§3). This is per-binder:
   with `(let (many a) (many b) (many c) (values x y z))`, each of `a`,
-  `b`, `c` inherits from
+  `b`, `c` takes from
   `x`, `y`, `z` respectively. Where an entry is a call, a match or a
-  `coerce` (§38) there is nothing to inherit, §15 making those results
+  `coerce` (§38) there is nothing to forward, §15 making those results
   `Dyn` inside a function body or a match branch; in run position (§16)
   the statement is run
-  instead and its binders are born `Const` (§34). Inheritance is one of
+  instead and its binders are minted `Const` (§34). Forwarding is one of
   the ways a `Const` reaches into a function body — a special form or
   macro renamed locally (§4) — the others being a direct reference to
   the entry and a macro expansion that mentions it.
@@ -518,7 +518,7 @@ over `Const` arguments — never `Const`. No automatic constant-folding
 through calls, matches or constructors. Inside a function body or a
 match branch every binding is `Dyn`. Anywhere else — run position (§16),
 the file's top level included — a statement is run as soon as it is
-elaborated, and every binder it introduces is born `Const` (§34). So a
+elaborated, and every binder it introduces is minted `Const` (§34). So a
 definition wanted as `Const` is bound by its own `let` in run position
 (see §33's `xs`). This is deliberate; it may be relaxed later if it
 proves heavy.
@@ -585,7 +585,7 @@ them statements.
 
 `match` binds inward only. Its branch-local fields, and any `is` facts
 refined by entering a branch, reach that branch and no further, since
-different branches learn different things and none of it survives the
+different branches learn different things and none of it persists past the
 match. So `match` is an ordinary expression, of the size given by its
 return annotation (§11). `comptime-match` binds outward for the
 complementary reason: having no branches, it asserts a single
@@ -653,7 +653,7 @@ any application of it. The tag is §12's discriminant and the `ei` are
 §12's phantom markers, which between them are exactly the facts no type
 records: a `TyCtor` type carries no discriminant, and a `ValCtor` type no
 phantom marker. A `Matchable` is always erased, everything it carries
-being in its type, and is born only by `def-adts` (§19).
+being in its type, and is minted only by `def-adts` (§19).
 
 It has two jobs: it's what lets the compiler know a type's constructors
 are disjoint (§19), and it's what lets you match on a first-class object
@@ -674,7 +674,7 @@ how entering a match branch updates it:
   rule, and "the" type of an entry is a scope-relative notion.
 - Rules and types are recorded after canonicalizing the proto-form
   against the rules already in force: fact *creation* depends on the
-  facts already in force, so a fact born under a branch hypothesis has
+  facts already in force, so a fact minted under a branch hypothesis has
   that hypothesis baked into its canonicalized form. The table is
   maintained self-consistently under its own canonicalization.
 - The table is written by declaration sites (`is`-declarations,
@@ -685,12 +685,12 @@ how entering a match branch updates it:
   entry*: a match may scrutinize a `Const`, and the forced rule is a
   claim justified by the match running, pending at elaboration time
   since a branch is never selected during elaboration (§34).
-- **A fact dies with the scope it was born in.** A branch-forced rule
+- **A fact ends with the scope it was minted in.** A branch-forced rule
   ends with its branch whatever entries it mentions: matching a `(Nat)`
   against `Zero` forces `n is (Zero)`, which names no branch-local
   entry and must still be gone after the match. This is what makes
-  §16's "none of it survives the match" true. A fact can only mention
-  entries in scope where it is born, so it also never outlives an entry
+  §16's "none of it persists past the match" true. A fact can only mention
+  entries in scope where it is minted, so it also never outlasts an entry
   it mentions.
 - One table suffices because the only code run at compile time is a
   run-position statement (§16, §24), and its own match branches run
@@ -703,13 +703,13 @@ how entering a match branch updates it:
   inside a branch regardless of the branch's reachability; that form is
   deferred to v2 (§16, §36).
 - Two consequences, recorded as decisions: compile-time effects in
-  runtime-dead code still happen — a macro expansion in an unreachable
+  unreachable code still happen — a macro expansion in an unreachable
   branch still runs, elaboration-time effects being unconditional by
   nature. And a `comptime-match`'s verified fact, recorded in run
   position, holds unconditionally afterwards, so a later match on the
   same `Const` finds the contradicting branches refuted structurally
   (verified `Nil` meets a `Cons` pattern, §12): that is how a branch is
-  proven dead from a stored value, with no dedicated mechanism.
+  proven unreachable from a stored value, with no dedicated mechanism.
 - Before an occurs-check, and before recursing into any equation's LHS or
   RHS, both sides are first canonicalized/rewritten to normal form via
   the applicable `is` statements.
@@ -778,7 +778,7 @@ for the same type are simultaneously in scope and it's genuinely
 ambiguous which one a match should use, that ambiguity is itself a
 compile error, not something resolved arbitrarily/silently.
 
-`def-adts` is the sole birth site: declaring an ADT births an anonymous
+`def-adts` is the sole minting site: declaring an ADT mints an anonymous
 `Matchable` describing it, from the `enum`/`union` tag and the
 constructors' declaration markers (§12). Nothing else introduces one.
 
@@ -804,7 +804,7 @@ where each gets its multiplicity:
   multiplicities under `many`, all `erased` under `erased`, and all
   `erased` in a phantom constructor's branch whatever the keyword (§12);
 - `comptime-match` fields: their declared multiplicities (§15);
-- everything born by kind — a `Level`, a proof, a `Matchable`, a type
+- everything minted by kind — a `Level`, a proof, a `Matchable`, a type
   constructor — is `erased` (§8, §12, §17).
 
 The erased positions, where an expression is erased: an argument at an
@@ -923,22 +923,22 @@ actually specified.
 1. `let` — introduces zero or more bindings, one per value of the
    right-hand side: the binders come first, then any statements, then
    the final expression as the last item (§11); multiplicity mandatory
-   and type/`is` optional per binder (§9, §14); state-inheriting per
+   and type/`is` optional per binder (§9, §14); state-forwarding per
    binder, from the corresponding right-hand-side entry when that entry
    is in §5's grammar (§3, §9). Zero bindings is useless as the language
    stands, being pure and total, but is expected to matter once linear or
    unique types arrive (§6) — invoking a destructor, or similar.
-2. `def-lvl` — births a fresh `Level` (§8).
+2. `def-lvl` — mints a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
    functions at a shared level, written on the form itself, each
    function carrying its own `erased`/`many` marker (§20); a single
    function is just the one-element case. Possibly nested inside another
    function's body (§9, §16). A body may be marked `absurd` (§37) or
-   `extern` (§41). Births a
+   `extern` (§41). Mints a
    `Coercible` proof for each `delegate`-bodied function (§38).
 4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
    same one-element-case pattern as `def-fns`; possibly nested;
-   index variables aren't shared across constructors (§12, §16); births
+   index variables aren't shared across constructors (§12, §16); mints
    each type's `Matchable` (§19), and its `Newtype` when marked (§38).
    A type may also be marked `extern` (§41).
 5. `comptime-match` — compile-time discriminant assertion on a `Const`,
@@ -969,9 +969,9 @@ type or an `is` expression, not only at a declaration site.
     its type (§7). Not strictly needed, since that level is always in
     scope anyway, but useful for sugar (SUGAR.md).
 13. `prove-subterm` — asserts one expression is a subterm of another,
-    birthing the `Subterm` proof (§8).
-14. `prove-predates` — relates a variable to a `Level` born by an
-    earlier `def-lvl`, birthing the `Predates` proof (§8).
+    minting the `Subterm` proof (§8).
+14. `prove-predates` — relates a variable to a `Level` from an
+    earlier `def-lvl`, minting the `Predates` proof (§8).
 15. Function call — the callee, its arguments, and a decrease
     annotation: `(subterm p)` immediately before the decreasing argument
     for a same-level call, or `(predates p)`, `p` about the callee's
@@ -992,13 +992,13 @@ type or an `is` expression, not only at a declaration site.
 21. `coercible-refl`, `coercible-sym`, `coercible-trans` — reflexivity,
     symmetry and transitivity of `Coercible` (§38), special forms like
     item 19.
-22. `coercible-wrap` — births the proof wrapping a value into a
+22. `coercible-wrap` — mints the proof wrapping a value into a
     transparent type's one non-phantom constructor; unwrapping is its
     `coercible-sym` (§38).
-23. `coercible-ctor` — births the proof between two applications of the
+23. `coercible-ctor` — mints the proof between two applications of the
     same non-phantom constructor, from per-field values and proofs
     (§38).
-24. `coercible-of` — yields the proof `def-fns` births for a
+24. `coercible-of` — yields the proof `def-fns` mints for a
     `delegate`-bodied function, from ambient scope (§38), as
     `matchable-of` does for a `Matchable`.
 
@@ -1224,7 +1224,7 @@ drafted (12 opens, 12 closes).
   `(Nat)`, the same shape as `Univ`/`Type` in §10.
 - `$` (§2) heads both definitions and the `Succ` application, saving a
   paren pair each.
-- `(def-lvl L)` births the level `length` is defined at (§8, §27).
+- `(def-lvl L)` mints the level `length` is defined at (§8, §27).
 - `many length` — the function's own multiplicity (§20), in the slot
   where `many Zero` sits in the `def-adts`.
 - `(match many xs (((Nat) r)) ...)` — the scrutinee's multiplicity comes
@@ -1235,7 +1235,7 @@ drafted (12 opens, 12 closes).
   a proof is erased.
 - `((Cons a hd tl) ...)` — a branch is a pattern list followed by a body.
   Every field gets a binder, the erased ones included.
-- `(prove-subterm tl xs)` births the proof (§8). Entering the `Cons`
+- `(prove-subterm tl xs)` mints the proof (§8). Entering the `Cons`
   branch forces `xs is (Cons A hd tl)` (§18), so `tl` canonicalizes to a
   strict subtree of `xs`. The form's name differs from the `Subterm` type
   it produces.
@@ -1253,8 +1253,8 @@ drafted (12 opens, 12 closes).
 strictly above that function's, and §9 wants a `Predates` proof for the
 call. The proof cannot be discharged inside `map`: the function is
 `map`'s own parameter, so it was not in scope when `map`'s level was
-born, which is what `prove-predates` requires (§8). The level relation
-has to be established where the level is born, so `map` is produced by a
+minted, which is what `prove-predates` requires (§8). The level relation
+has to be established where the level is minted, so `map` is produced by a
 factory.
 
 ```scheme
@@ -1294,7 +1294,7 @@ factory.
 (map-nat (Nat) (Nat) inc xs)
 ```
 
-- The factory births the level and returns it. Naming `L` in the return
+- The factory mints the level and returns it. Naming `L` in the return
   telescope is what lets the second return's type mention it (§11); a
   single-return factory would have had to take the level as an argument,
   since a signature is fixed before its body runs.
@@ -1307,7 +1307,7 @@ factory.
   recursion (§9, §27).
 - The usage is a sequence of statements in run position, each elaborated
   and run in turn (§16, §24): calls need no proofs, and every binder is
-  born `Const` (§34). Each `let` declares its binders' multiplicities
+  minted `Const` (§34). Each `let` declares its binders' multiplicities
   (§9): `ML` and `map-nat` match the `erased`, `many` of `map-factory`'s
   return telescope, and `xs` is a non-erased constructor application
   bound `many`.
@@ -1319,7 +1319,7 @@ factory.
 The states are `Const` and `Dyn` (§3). This section collects how
 `Const` arises and what may be done with it.
 
-**Const values are born with known erasure.** The births:
+**Const values are minted with known erasure.** The minting sites:
 
 1. **A statement in run position** (§16, §24) — every name such a
    statement introduces is `Const` once the statement has run. A `let`
@@ -1334,12 +1334,12 @@ The states are `Const` and `Dyn` (§3). This section collects how
    line (§20).
 2. **`comptime-match` field binding** (§15) — erasure is the field's
    declared multiplicity.
-3. **State-inheriting `let`** (§9) — strictly propagation of state and
+3. **State-forwarding `let`** (§9) — strictly forwarding of state and
    value; the binder's multiplicity is its own declaration (§9).
 
-Nothing else births `Const`. Inside a function body or a match branch
+Nothing else mints `Const`. Inside a function body or a match branch
 every binding is `Dyn`, nested definitions included: a `def-fns`,
-`def-adts` or `def-lvl` there births `Dyn` entries, so a `Special` or
+`def-adts` or `def-lvl` there mints `Dyn` entries, so a `Special` or
 `Macro` that is ever invoked (§4) originates in run position. A
 constructor application over `Const` arguments is still `Dyn` (§15) —
 bind it with its own `let` if `Const` is wanted.
@@ -1367,7 +1367,7 @@ step of evaluation — so `match` results stay `Dyn` (§15) even on a
 `Const` scrutinee; the delimited alternative is binding the match with
 its own `let` in run position, handing the branching to the
 interpreter. This is also
-why the inspection sites above stay checks rather than propagation: by
+why the inspection sites above stay checks rather than forwarding: by
 the time any of them runs, the inspected entry's erasure is already
 settled, so no erasure demand ever flows backwards into code that has
 been checked, stripped, and run. The same shape governs the fact table
@@ -1401,15 +1401,15 @@ so shadowing at the expansion site cannot capture them; that is the
 hygiene property.
 
 At expansion, a reference to an entry still in scope resolves directly.
-A reference to a dead entry is, for now, simply an error: the division
+A reference to an out-of-scope entry is, for now, simply an error: the division
 of labor is that expansion-site material enters through the macro's
-arguments, while captured definition-site material must still be alive.
-In principle a dead entry could instead be *grafted* into the live
-scope — a form of scope merging — but the rules for merging scopes and
+arguments, while captured definition-site material must still be in scope.
+In principle an out-of-scope entry could instead be *merged* into the
+current scope — a form of scope merging — but the rules for merging scopes and
 combining their rewrite rules are complicated and not designed.
 Recorded as an open v2 question, nothing more.
 
-This is in the lineage of syntactic closures (Bawden) more than
+This is in the tradition of syntactic closures (Bawden) more than
 Racket's scope-sets, we believe, without having verified the
 correspondence. An earlier formulation had a third entry state,
 `Inacc` (inaccessible), for a `Dyn` entry captured from an enclosing
@@ -1425,19 +1425,19 @@ Not settled. Compile-time evaluation is confined to the file's top level
 (§16); a `comptime` form for running code at compile time inside a
 function body is deferred to v2 together with this. In the worked
 examples the top level does pure level-hoisting: a body can only call
-into the past (nothing born during a body's execution is callable by
+into the past (nothing minted during a body's execution is callable by
 that body), so manufacture must happen before the consumer's level is
-born, and a top-level statement is how manufacture runs "early". A
+minted, and a top-level statement is how manufacture runs "early". A
 special form `(hoist L body)` would name that directly: `body` may
 reference only entries introduced at or before the in-scope `def-lvl`
-that birthed `L`, and its births count as happening just before `L`'s —
+that minted `L`, and its own mints count as happening just before `L`'s —
 so its product predates `L` and everything after, callable with ordinary
 `Predates` proofs, and the factory pattern becomes writable inline.
 
 Much remains to litigate before this is real: the fact table would need
 caching at every `def-lvl`, with canonicalization of the body run
 against that cached view; and where the body actually *runs* is
-unsettled — one reading executes it in place with only its birth order
+unsettled — one reading executes it in place with only its mint order
 fictionalized (purity arguing the difference is unobservable), while
 the top-level analogy argues for running it at the hoisted-to point and
 caching/closing over its value.
@@ -1482,7 +1482,7 @@ non-erased position demands `a` non-erased (§20); `p` is erased always.
 §23's invariant is stated with each `coerce` replaced by its `b`,
 which the stripped program has as a real value.
 
-**Birthing proofs.** All of the following are special forms (§27),
+**Minting proofs.** All of the following are special forms (§27),
 checked entirely at elaboration time:
 
 1. `(coercible-refl e)` — `(Coercible A e A e)`; since types canonicalize
@@ -1501,14 +1501,14 @@ checked entirely at elaboration time:
    non-erased value (§20) and do not count either way. A type of that
    shape left unmarked is not a newtype: an implementation may still
    represent it as its field, but promises nothing and admits no
-   `coerce`. The mark births an erased `(Newtype C)` alongside the
+   `coerce`. The mark mints an erased `(Newtype C)` alongside the
    type's `Matchable`, `C` the wrapping constructor the shape above
    singles out, bare and unapplied as in a `Matchable`; the type is
    read off `C`'s return type, so the object carries nothing else.
    `Newtype` is a type former (§5), the object is first class (§17),
    and `newtype-of` fetches it from ambient scope by naming `C`, as
    `matchable-of` does by naming the type. `coercible-wrap` verifies
-   that a `Newtype` for `C` is in ambient scope — its being born only
+   that a `Newtype` for `C` is in ambient scope — its being minted only
    by `def-adts` or the FFI (§41) is what makes it trustworthy — so a
    first-class wrap goes through a `(Newtype C)` parameter. That one
    object is the proof that `C` heads inhabited values: the proof's
@@ -1534,9 +1534,9 @@ checked entirely at elaboration time:
    is what entering a `C` branch forces (§18), so such a proof is built
    per branch from the branch's binders.
 6. `(coercible-of g)` — for a `many` function `g` whose body is a
-   `delegate` call to `f` (§9). `def-fns` births the proof
+   `delegate` call to `f` (§9). `def-fns` mints the proof
    `(Coercible (Fn ...) g (Fn ...) f)` anonymously, as `def-adts`
-   births a `Matchable` (§19), and this form fetches it from ambient
+   mints a `Matchable` (§19), and this form fetches it from ambient
    scope by naming `g`, as `matchable-of` does. `g` is `Dyn` within its
    own block (§34), so `g`'s body cannot use its own proof.
 
@@ -1544,7 +1544,7 @@ checked entirely at elaboration time:
 representations really coincide, so the following is a requirement on
 the implementation, not an optimization it may choose. Values have a
 uniform representation, OCaml-style: every value is one word, an
-immediate or a pointer to a block, whatever its type — a `List` cell
+immediate or a pointer to a block, whatever its type — a `Cons` block
 holds a `(Meters)` and a `(Nat)` alike, and a wrapper's field may be
 existentially typed. A value is the tuple of its constructor's `many`
 fields, one field standing bare and none at all being an unspecified
@@ -1660,7 +1660,7 @@ implements them yet.
 - Both matches are `erased`: the whole body is an erased position, and
   §12's one-real-branch rule never bites since no result is non-erased.
 - `unwrap-all` calls `unwrap-witness` from a higher level, with the
-  `Predates` proof born in run position after `def-lvl V` (§8, §9). The
+  `Predates` proof minted in run position after `def-lvl V` (§8, §9). The
   `let`'s binders are all `erased`, so the call is an erased position
   (§20) and never runs. `(coerce ms p)` is the only runtime content,
   and it erases to nothing (§38).
@@ -1678,7 +1678,7 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
 ```
 
 - After erasure `inc-noted`'s body is nothing but the call to `inc`
-  (§9), so `def-fns` births the proof and `coercible-of` fetches it:
+  (§9), so `def-fns` mints the proof and `coercible-of` fetches it:
   `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
   `(coerce inc-noted ig)` is then `inc`'s own pointer.
 

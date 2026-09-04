@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: (Succ (Zero))
-; Facts forced inside a match's branches die with the match: the second match needs both branches.
+; Facts forced inside a match's branches end with the match: the second match needs both branches.
 
 (def-lvl X)
 (def-fns X $ many f : (many (Nat) n) -> (many (Nat) m)

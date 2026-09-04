@@ -1,6 +1,6 @@
-; error: was not in scope when level Z was born
+; error: was not in scope when level Z was minted
 ; compose_list_dynamic.sl's composition called from a function at level Z: the composed function's level N is
-; born inside the call, after Z, so prove-predates refuses N against Z and h cannot be called from Z.
+; minted inside the call, after Z, so prove-predates refuses N against Z and h cannot be called from Z.
 
 (def-lvl M)
 (def-fns M $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))

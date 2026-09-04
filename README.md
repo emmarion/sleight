@@ -41,7 +41,7 @@ zarith: each `def-fns` becomes a `let rec`, each ADT an OCaml type
 tagged only where the interpreter tags, each match an OCaml match,
 extern types and functions the same `lib/ffi_core.ml` implementations
 the interpreter uses (or their source models under `--no-extern`), and
-the driver reproduces `lib/program.ml`. Everything computed at
+the driver mirrors `lib/program.ml`. Everything computed at
 elaboration, a run-position `let`, a literal, a `comptime-match` field
 and the final value itself, is embedded as data, closures included and
 sharing kept, rather than recomputed; a final function from no
@@ -69,7 +69,7 @@ head's type, special forms by the head's Const value. Elaboration
 produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
 statement in run position is elaborated, run at once by the evaluator,
-and its binders are born Const with the resulting values (sections 16
+and its binders are minted Const with the resulting values (sections 16
 and 34), which form the environment later code runs in; inside function
 bodies and match branches statements compile to code instead. The
 evaluator is a plain recursive interpreter over that code; a value is

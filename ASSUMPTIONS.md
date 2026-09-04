@@ -15,7 +15,7 @@ ground.
    other than whitespace, parens and `;`. Digit-only atoms and `#\c`
    atoms are numeral and character literals (items 51-52); there are no
    string literals (SR 10).
-2. **`_` as a binder name** births an anonymous entry, wherever a binder
+2. **`_` as a binder name** mints an anonymous entry, wherever a binder
    is expected (let binders, telescope entries, pattern fields). It is
    not special anywhere else (SR 10, SR 11).
 3. **Annotation tokens go through the namespace.** `many`, `:`, `->`,
@@ -67,8 +67,8 @@ ground.
     printed. Several files on the command line share one scope, in
     order.
 13. **A `def-fns` level** may be any variable whose type is `(Level)`,
-    not only a `def-lvl`-born one; only `prove-predates` insists on the
-    birth marker, after canonicalizing the level. Its subject stays the
+    not only a `def-lvl`-minted one; only `prove-predates` insists on the
+    mint marker, after canonicalizing the level. Its subject stays the
     variable named when that variable is old enough; a newer alias of an
     older variable (a `let ... is`) is resolved to what it canonicalizes
     to, so that the proof is about the older variable (SR 20).
@@ -92,7 +92,7 @@ ground.
     position. A `delegate` callee must be a named variable, and its
     arguments must resolve to the function's non-erased parameters in
     order. `coercible-of` returns the newest anonymous `Coercible` proof
-    about the function found in scope, so an anonymous proof born later
+    about the function found in scope, so an anonymous proof minted later
     (a `(let (erased _) (coercible-refl g))`, say) shadows the delegate
     proof; harmless, any such proof being true, but not what section 38
     says it fetches. Open.
@@ -144,19 +144,19 @@ ground.
     contradiction would refute a branch on no evidence; no realistic
     program has hit this.
 28. **Facts are read canonically to a fixpoint** rather than stored
-    canonical at birth with re-canonicalization on every new rule (SR
+    canonical when minted with re-canonicalization on every new rule (SR
     21); occurs checks on the canonical form keep the rules acyclic.
-29. **Facts born inside a `let`'s right-hand side survive it** unless
+29. **Facts minted inside a `let`'s right-hand side persist past it** unless
     they mention entries that went out of scope; only match branches
-    restore the fact table on exit. The design's "a fact dies with the
-    scope it was born in" is not enforced for right-hand sides. The
+    restore the fact table on exit. The design's "a fact ends with the
+    scope it was minted in" is not enforced for right-hand sides. The
     facts in question come from `comptime-match` verifications in a
     run-position right-hand side, which are unconditionally true, so
     this looked harmless.
-30. **Nested definitions birth `Dyn`**, as section 34 says: a
-    `def-adts`, `def-lvl` or delegate proof inside a body births `Dyn`
+30. **Nested definitions mint `Dyn`**, as section 34 says: a
+    `def-adts`, `def-lvl` or delegate proof inside a body mints `Dyn`
     entries, and the body's code binds each nested constructor's value.
-    In run position the same births are `Const`, and the values of
+    In run position the same mints are `Const`, and the values of
     `Const` entries form the runtime environment every closure and
     run-position statement runs in (section 34's "embedded into the
     code").
@@ -239,14 +239,14 @@ ground.
 ## Sugar (SUGAR.md)
 
 37. All four forms are implemented as SUGAR.md describes them: `_` as
-    a `def-fns` level births an anonymous level; `_` as a match
-    annotation inherits the telescope of the enclosing function body or
+    a `def-fns` level mints an anonymous level; `_` as a match
+    annotation reuses the telescope of the enclosing function body or
     match branch, and is an error elsewhere; `(predates _)` proves
     `Predates` between the callee's level, which must canonicalize to a
     variable, and the current level; `(subterm _)` proves `Subterm`
     between the annotated argument and the enclosing subterm parameter
     at the same subterm index. All naive, as SUGAR.md says.
-    The telescope `_` inherits from a function body is the return
+    The telescope `_` reuses from a function body is the return
     telescope with the parameters substituted in; an earlier version
     substituted without regard to each entry's depth, so a second
     return entry mentioning the parameters (an `(Add a b c)` proof after
@@ -273,7 +273,7 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     transparent enum, treated the phantom (unspecified-repr) constructor
     as having no `many` fields and skipped the discriminant check
     entirely, so `(comptime-match x (F f))` for a phantom `F` succeeded
-    against any value and birthed `F`'s erased fields as `Const` tokens
+    against any value and minted `F`'s erased fields as `Const` tokens
     — and since erased fields carry no runtime bytes (KERNEL.md), a
     field of type `(False)` among them was forged into scope, collapsing
     consistency. The pattern's constructor is now rejected when it is
@@ -293,10 +293,10 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
 
 40. **An atom/atom unification never writes a rule onto a rigid entry.**
     §18's forced unification aliases the newer of two atoms to the
-    older. Constructors and type constructors are `rigid` (born so in
+    older. Constructors and type constructors are `rigid` (minted so in
     the prelude and by `def-adts`), and two distinct rigid atoms
     unifying is §18's second contradiction. The prior orientation went
-    purely by entry id, so a `def-adts`-born constructor whose id
+    purely by entry id, so a `def-adts`-minted constructor whose id
     happened to exceed a `Dyn` variable's could receive a rewrite rule,
     aliasing one rigid constructor to another and defeating the
     disjointness check (§19). Orientation now always lands the rule on a
@@ -310,7 +310,7 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     invariant that no non-erased value is headed by a phantom
     constructor (§20 rule 2, SPEC-REVIEW 9). That holds for a `many`
     scrutinee only: an erased value may well be phantom-headed. So a
-    phantom branch counts as dead only under a `many` scrutinee; under
+    phantom branch counts as unreachable only under a `many` scrutinee; under
     an `erased` one it is a real branch, subject to the one-real-branch
     rule and producing the match's declared result, its fields erased
     like every other branch's.
@@ -379,7 +379,7 @@ literals as open.
     and the erased `Numeral` proof relates it to the spelling. The
     hoisted statements are elaborated in the prelude's own scope
     (`Env.prelude`, `Elab.hoist`), so user shadowing of `let` or
-    `bin-to-nat` cannot reach them, and the born entries are not in the
+    `bin-to-nat` cannot reach them, and the minted entries are not in the
     scope list at all; resolution goes through `Env.literals`. Sound
     because the statement depends on nothing but the prelude and the top
     level calls freely (section 24). Consequence to note: a literal is
@@ -397,7 +397,7 @@ literals as open.
     `(comptime-match %d (Yes %a %b %p))` and
     `(let (many _) (MkChar (MkU8 n %p)))`, hoisted and interned the
     same way, the `%`-names living only in the discarded frame. The
-    state-inheriting `let` makes the literal `is (MkChar (MkU8 n p))`,
+    state-forwarding `let` makes the literal `is (MkChar (MkU8 n p))`,
     transparent down to its opaque `Nat` (`tests/char.sl`), so no
     separate relation for characters is needed.
 
@@ -516,7 +516,7 @@ in both modes.
     it (the owner's observation, checked against `Eval.close` and
     `elab_def_fns`). So the closures sharing an environment are written
     as one `let rec ... and ...`, and every other constant is a named
-    `let` in dependency order, which is birth order
+    `let` in dependency order, which is mint order
     (`tests/main_factory.sl`, `tests/io_closure_in_data.sl`). Sharing
     within embedded data is kept: a block met a second time (by
     physical identity, found through a structural hash) becomes a
@@ -641,7 +641,7 @@ in both modes.
     would any value, so a function from no arguments can no longer be
     printed as `<function name>`.
 
-## A second soundness probe
+## A second soundness review
 
 69. **Two `def-lvl` levels may unify, and that is left as it was.** A
     session asked to look for soundness issues probed the checker with a
@@ -649,9 +649,9 @@ in both modes.
     constructor returning `(Foo P)`. Matching a `(Foo Q)` against it
     unifies `Q` with `P`, both being ordinary non-rigid entries, and
     inside the branch a `Q`-level body may call an `R`-level function
-    born after `Q` under the proof `(Predates R P)`. The branch is dead,
+    minted after `Q` under the proof `(Predates R P)`. The branch is uninhabited,
     `(Foo Q)` having no values at any multiplicity, and no run or proof
-    of `False` was found to follow. The session first made level-born
+    of `False` was found to follow. The session first made level-mint
     entries rigid so that the branch was refuted, then reverted that:
     it was a semantic change the owner had not approved, and it closed
     nothing reachable. (A rationale the session offered in between, that
@@ -659,12 +659,12 @@ in both modes.
     stripped program may represent `Level` as `Unit`, was wrong: the
     stripped program keeps `P` and `Q` as distinct entries, and
     canonicalization compares entries, not runtime bytes.) Whether
-    `def-lvl` levels should be rigid is open: for it, two births are
+    `def-lvl` levels should be rigid is open: for it, two mints are
     distinct constants, so the refutation is true and it forces the
     honest `(absurd C)`; against it, section 18 states the atom rule
     for every non-constructor atom and item 40 extended rigidity to
     constructors only. The load bearing part is elsewhere:
-    `prove-predates` demands strict birth order and the three axioms
+    `prove-predates` demands strict mint order and the three axioms
     keep a proof's subject older than its level, so no `(Predates Z Z)`
     could be built, which is what keeps a diagonal `(MkBar K) : (Bar K
     K)` forcing two level parameters equal from licensing a same-level
@@ -706,7 +706,7 @@ later session.
     mark on a constructor application, a `values` or a `match` had no
     effect at all and was silently accepted, `(tail (Succ n))` among
     them; only a later `coercible-of` revealed that `def-fns` had
-    birthed no proof. Both forms now reject anything whose compiled code
+    minted no proof. Both forms now reject anything whose compiled code
     is not the marked call. This looks like plugging an implementation
     gap rather than a design choice: section 9 describes both marks as
     claims about a call.
@@ -716,7 +716,7 @@ later session.
     returns are bound by a `let` and repackaged in a `values` in the
     same order, and requires a hard compile error where the compiler
     cannot honor a mark. The check honored that reading, but the code
-    did not: the `let` survived into the compiled body, so the call ran
+    did not: the `let` persisted into the compiled body, so the call ran
     with the `let`'s continuation still on the stack, in the
     interpreter and in the extracted OCaml alike. A recursion of that
     shape 200000 deep overflowed an 8MB stack in both, while the same
@@ -885,8 +885,8 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     included, whose own body is already nothing -- item 32's rule applied
     to the block's functions but not to the block itself. Section 20 has
     an erased function only ever held or called at multiplicity `erased`,
-    so nothing at runtime can reach the closure and the residue was dead
-    code; it also stood in the way of section 9's `delegate`, whose check
+    so nothing at runtime can reach the closure and the leftover binding was
+    unreachable code; it also stood in the way of section 9's `delegate`, whose check
     reads the post-erasure AST and wants the body to reduce to the marked
     call alone, so an erased proof helper defined inside a delegating
     function made the mark a hard error (a `tail` mark was unaffected,
@@ -905,7 +905,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     covers both statements inside a delegating body.
 
 78. **A form that fetches an object by naming something reads the name
-    through its alias.** Section 9's state-inheriting `let` makes a
+    through its alias.** Section 9's state-forwarding `let` makes a
     binder an alias of the entry it names, and section 5's identity is
     canonicalize-then-compare, so `(let (erased N) Nat)` should leave `N`
     usable wherever `Nat` was; `ctor_var` already resolved a constructor
@@ -913,7 +913,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     from ambient scope did not. `matchable-of` looked for a `Matchable`
     naming the alias entry itself rather than the type constructor it
     resolves to, and `coercible-of` for a `Coercible` about the alias
-    rather than about the function `def-fns` birthed the proof for, so
+    rather than about the function `def-fns` minted the proof for, so
     each reported its object missing on a renamed name. Both now resolve
     the name first, through the one helper `ctor_var` uses, which is also
     what makes `matchables` and `newtype_of` compare two canonical ids
@@ -945,9 +945,9 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     `let`'s binder canonicalizes to the expression it bound rather than
     to any variable (checked by patching the form to resolve, which fails
     on the ordinary `(comptime-match two (Succ one))`); an alias reaches
-    the value through section 9's state inheritance instead, and an
+    the value through section 9's state forwarding instead, and an
     erased alias of a non-erased `Const` is refused, which is section
     34's requirement read on the name actually written,
     and `prove-predates` resolves only when the named variable is younger
-    than the level, which is item 13's rule about birth order rather than
+    than the level, which is item 13's rule about mint order rather than
     about identity.

@@ -27,10 +27,10 @@ inconsistent or silent.
 
 3. **`Const` inside bodies.** §4, §15 and §34 say every binding inside a
    function body or match branch is `Dyn`, "nested definitions
-   included", and §34 says "nothing else births Const". §9 and §34
-   item 3 say a state-inheriting `let` births `Const` and is "one of the
+   included", and §34 says "nothing else mints Const". §9 and §34
+   item 3 say a state-forwarding `let` mints `Const` and is "one of the
    ways a Const reaches into a function body". The blanket statements
-   appear to need an inheritance carve-out.
+   appear to need a forwarding carve-out.
 
 4. **Field multiplicity default.** §12 says the default is "still TBD";
    §6 and §20 say multiplicity is always explicit. Looks stale.
@@ -147,14 +147,14 @@ inconsistent or silent.
     re-canonicalized under that branch's forced facts. That seems to be
     the only reading under which a dependent match works.
 
-20. **`def-fns` level and the level-birth marker.** Must the level on a
-    `def-fns` be a `def-lvl`-born entry, or any `(Level)`-typed
+20. **`def-fns` level and the level-mint marker.** Must the level on a
+    `def-fns` be a `def-lvl`-minted entry, or any `(Level)`-typed
     variable such as a parameter? Does `prove-predates` canonicalize its
     arguments first, so an alias made by `(let (erased L2) L)` works?
-    §3's inheritance list omits the marker, so as written an alias
+    §3's forwarding list omits the marker, so as written an alias
     apparently cannot be used there.
 
-21. **Fact table maintenance.** §18 records rules canonical at birth,
+21. **Fact table maintenance.** §18 records rules canonical when minted,
     but later branch-forced rules make earlier stored forms stale.
     Unstated whether reads canonicalize to a fixpoint or every new rule
     re-canonicalizes the table with undo on branch exit. Also unstated
@@ -175,8 +175,8 @@ inconsistent or silent.
 24. §8 refers to `main`'s level, but nothing designates a `main`; §16
     says the top-level value is what a REPL would print.
 25. §19's "multiple inconsistent Matchables for the same type" seems
-    unable to arise if `def-adts` is the sole birth site and each
-    births a fresh type constructor. Open: how can it occur?
+    unable to arise if `def-adts` is the sole minting site and each
+    mints a fresh type constructor. Open: how can it occur?
 26. Return-telescope names are positional and apparently not in scope
     in the body, while parameter names are. Not stated.
 27. §16 requires the file to end in a size-one expression; §40's

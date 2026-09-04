@@ -178,7 +178,7 @@ let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
 
 let witness env ty = snd (bind env None Erased (const env V.VToken) ty)
-let born_level env name = bind env ~level_born:true name Erased (const env V.VToken) Prelude.level_term
+let mint_level env name = bind env ~minted_level:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
   match raw with
@@ -282,19 +282,19 @@ let check_results env loc ?(ids = []) tele ress =
   if List.length tele <> List.length ress then error loc "expected %d values, got %d" (List.length tele) (List.length ress);
   ignore (List.fold_left2 (fun acc e r -> check_sg env loc (map_sg (instantiate acc) e.sg) r; r.term :: acc) ids tele ress)
 
-let born env ty =
+let mint env ty =
   let x, env = bind env None Erased Dyn ty in
   (env, res_of env x)
 
 let prove_subterm env l a b =
   if not (is_strict_subterm (canon env a) (canon env b)) then error l "%s is not a strict subterm of %s" (show env a) (show env b);
-  born env (proof_type Prelude.subterm [ infer env l a; a; infer env l b; b ])
+  mint env (proof_type Prelude.subterm [ infer env l a; a; infer env l b; b ])
 
 let prove_predates env l x lvl =
-  if not (entry env lvl).level_born then error l "%s is not a level born by def-lvl" (name_of env lvl);
+  if not (entry env lvl).minted_level then error l "%s is not a level minted by def-lvl" (name_of env lvl);
   let x = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x in
-  if x >= lvl then error l "%s was not in scope when level %s was born" (name_of env x) (name_of env lvl);
-  born env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
+  if x >= lvl then error l "%s was not in scope when level %s was minted" (name_of env x) (name_of env lvl);
+  mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
 let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
   let l = loc raw in
@@ -405,13 +405,13 @@ and elab_special tele env expect l sp args =
     (env, expect_proof env l ctor p)
   in
   let erased (env, r) = (env, [ r ], V.CErased) in
-  let born env ty = erased (born env ty) in
+  let mint env ty = erased (mint env ty) in
   let compose (c1, p) (c2, q) k =
     let env, p = proof env c1 p in
     let env, q = proof env c2 q in
     let (a, b), (ctor, args) = k (p, q) in
     check_equal env l a b;
-    born env (proof_type ctor args)
+    mint env (proof_type ctor args)
   in
   match (sp, args) with
   | (Sp.Fn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable | Sp.Newtype), _ ->
@@ -458,7 +458,7 @@ and elab_special tele env expect l sp args =
   | Sp.ProvePredates, [ x; lv ] -> (
       match canon env (elab_term env lv) with
       | Var lvl -> erased (prove_predates env l (var env l (atom_or l x "a variable")) lvl)
-      | t -> error l "%s is not a level born by def-lvl" (show env t))
+      | t -> error l "%s is not a level minted by def-lvl" (show env t))
   | Sp.PredatesTrans, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.predates, q)
         (function [ a; x; l1 ], [ _; l1'; l2 ] -> ((l1', l1), (Prelude.predates, [ a; x; l2 ])) | _ -> assert false)
@@ -479,11 +479,11 @@ and elab_special tele env expect l sp args =
       | _ -> assert false)
   | Sp.CoercibleRefl, [ e ] ->
       let e = elab_term env e in
-      born env (proof_type Prelude.coercible [ infer env l e; e; infer env l e; e ])
+      mint env (proof_type Prelude.coercible [ infer env l e; e; infer env l e; e ])
   | Sp.CoercibleSym, [ p ] -> (
       let env, p = proof env Prelude.coercible p in
       match p with
-      | [ a; x; b; y ] -> born env (proof_type Prelude.coercible [ b; y; a; x ])
+      | [ a; x; b; y ] -> mint env (proof_type Prelude.coercible [ b; y; a; x ])
       | _ -> assert false)
   | Sp.CoercibleWrap, c :: args -> (
       let c = ctor_var env l c in
@@ -492,7 +492,7 @@ and elab_special tele env expect l sp args =
       if List.length (List.filter (fun e -> e.mult = Many) tele) <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
       let acc = elab_term_args env l tele args in
       let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
-      born env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
+      mint env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
   | Sp.CoercibleCtor, c :: args ->
       let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
@@ -516,7 +516,7 @@ and elab_special tele env expect l sp args =
         | _ -> error l "coercible-ctor: wrong number of arguments for %s" (name_of env c)
       in
       let env, src, tgt = go env [] [] tele args in
-      born env (proof_type Prelude.coercible [ instantiate src ret; App (Var c, List.rev src); instantiate tgt ret; App (Var c, List.rev tgt) ])
+      mint env (proof_type Prelude.coercible [ instantiate src ret; App (Var c, List.rev src); instantiate tgt ret; App (Var c, List.rev tgt) ])
   | Sp.CoercibleOf, [ g ] -> (
       let g = named env l "a function name" g in
       match List.find_opt (fun x -> (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false)) env.scope with
@@ -538,7 +538,7 @@ and elab_match tele env expect l args =
       let env, ann_tele =
         match (ann, tele) with
         | Atom (_, "_"), Some tele -> (env, tele)
-        | Atom (_, "_"), None -> error l "no telescope to inherit for _"
+        | Atom (_, "_"), None -> error l "no telescope to reuse for _"
         | List (_, ann), _ ->
             let env', _, ann_tele = elab_tele env ~mults:(fun i -> function None -> List.nth_opt expect i | Some _ -> error l "a match annotation carries no multiplicities") ann in
             ({ env' with scope = env.scope }, ann_tele)
@@ -566,7 +566,7 @@ and elab_match tele env expect l args =
         let tele, ret = ctor_type env bl c in
         if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
         let names = if kind = `Auto then anon tele else List.map name_or_anon field_names in
-        let dead = phantom && smult = Many in
+        let unreachable = phantom && smult = Many in
         let mults = List.map (fun e -> if phantom then Erased else under smult e.mult) tele in
         let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
         let forced = try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None in
@@ -576,12 +576,12 @@ and elab_match tele env expect l args =
           | `Auto, Some _ -> error bl "branch %s is not refuted" (name_of env c)
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
           | `Present, Some envb ->
-              let envb, ress, code = elab_body ~tele:ann_tele envb (if dead then List.map (fun _ -> Erased) expect else expect) bl body in
+              let envb, ress, code = elab_body ~tele:ann_tele envb (if unreachable then List.map (fun _ -> Erased) expect else expect) bl body in
               check_results envb bl ann_tele ress;
               `Present code
           | `Proof, Some envb -> ignore (elab_absurd envb bl body); `Absurd
         in
-        (c, non_erased envb fids, dead, result)
+        (c, non_erased envb fids, unreachable, result)
       in
       let branches = List.map branch branches in
       List.iter
@@ -592,7 +592,7 @@ and elab_match tele env expect l args =
         shapes;
       let real =
         List.filter_map
-          (fun (c, fids, dead, r) -> match r with `Present code when not dead -> Some (V.CVar c, fids, code) | _ -> None)
+          (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (V.CVar c, fids, code) | _ -> None)
           branches
       in
       if pos = Many && ((not tagged) || smult = Erased) && List.length real > 1 then
@@ -631,7 +631,7 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       match (special_of env head, args) with
       | Some Sp.Let, _ -> elab_let env l args
       | Some Sp.DefLvl, [ n ] ->
-          let _, env = born_level env (name_or_anon (atom_or l n "a name")) in
+          let _, env = mint_level env (name_or_anon (atom_or l n "a name")) in
           (env, Fun.id)
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
@@ -690,7 +690,7 @@ and elab_def_fns env l args =
   | lv :: fns ->
       let env, lvl =
         match lv with
-        | Atom (_, "_") -> let x, env = born_level env None in (env, x)
+        | Atom (_, "_") -> let x, env = mint_level env None in (env, x)
         | _ -> (env, match canon env (elab_term env lv) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t))
       in
       let header raw =

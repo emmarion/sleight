@@ -1,6 +1,6 @@
 ; needs: list nat_add
 ; error: type mismatch
-; The inherited telescope must relate the proof to the parameters in order.
+; The reused telescope must relate the proof to the parameters in order.
 
 (def-fns _ $ many add2 : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p)
   (match many a _

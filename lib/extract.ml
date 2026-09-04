@@ -92,10 +92,10 @@ and closure cx cl =
   | Some name -> name
   | None ->
       let env = Lazy.force cl.env in
-      let siblings = IntMap.fold (fun _ v acc -> match v with V.VFn c when c.env == cl.env && not (List.memq c acc) -> c :: acc | _ -> acc) env [] in
-      let siblings = if List.memq cl siblings then siblings else cl :: siblings in
+      let peers = IntMap.fold (fun _ v acc -> match v with V.VFn c when c.env == cl.env && not (List.memq c acc) -> c :: acc | _ -> acc) env [] in
+      let peers = if List.memq cl peers then peers else cl :: peers in
       let n = List.length !(cx.closures) in
-      let named = List.mapi (fun i c -> (c, Printf.sprintf "cl%d_%s" (n + i) (sanitize c.V.fn.fname))) siblings in
+      let named = List.mapi (fun i c -> (c, Printf.sprintf "cl%d_%s" (n + i) (sanitize c.V.fn.fname))) peers in
       cx.closures := named @ !(cx.closures);
       let texts = List.map (fun (c, name) -> fn cx { capture = env; locals = [] } name c.V.fn) named in
       Buffer.add_string cx.out ("let rec " ^ concat "\nand " texts ^ "\n");

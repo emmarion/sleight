@@ -52,14 +52,14 @@ let abstract ids t =
     (fun d t -> match t with Var x -> (match index x with Some i -> Bound (i + d) | None -> t) | t -> t)
     0 t
 
-let tele_kids depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
+let tele_parts depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
 
-let kids = function
+let parts = function
   | Var _ | Bound _ -> []
   | App (h, args) -> List.map (fun t -> (0, t)) (h :: args)
-  | Fn (l, ps, rs) -> ((0, l) :: tele_kids 0 ps) @ tele_kids (List.length ps) rs
-  | TyCtor ps -> tele_kids 0 ps
-  | ValCtor (ps, r) -> tele_kids 0 ps @ [ (List.length ps, r) ]
+  | Fn (l, ps, rs) -> ((0, l) :: tele_parts 0 ps) @ tele_parts (List.length ps) rs
+  | TyCtor ps -> tele_parts 0 ps
+  | ValCtor (ps, r) -> tele_parts 0 ps @ [ (List.length ps, r) ]
   | Matchable (_, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
   | Newtype t -> [ (0, t) ]
 
@@ -78,12 +78,12 @@ let blank t =
 let rec fold_vars f depth acc t =
   match t with
   | Var _ | Bound _ -> f depth acc t
-  | _ -> List.fold_left (fun acc (k, c) -> fold_vars f (depth + k) acc c) acc (kids t)
+  | _ -> List.fold_left (fun acc (k, c) -> fold_vars f (depth + k) acc c) acc (parts t)
 
 let occurs x t = fold_vars (fun _ b t -> b || t = Var x) 0 false t
 let has_dangling t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= d | _ -> false)) 0 false t
 
-let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equal x y) (kids a) (kids b)
+let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equal x y) (parts a) (parts b)
 
 let mult_name = function Erased -> "erased" | Many -> "many"
 let disc_name = function Enum -> "enum" | Union -> "union"

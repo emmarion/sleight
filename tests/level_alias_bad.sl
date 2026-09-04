@@ -9,7 +9,7 @@
 (def-adts $ Absurd : -> Type
   enum)
 
-; Q is born after P, so pq is the honest proof that P predates Q.
+; Q is minted after P, so pq is the honest proof that P predates Q.
 (def-lvl P)
 (def-lvl Q)
 (let (erased pq) (prove-predates P Q))

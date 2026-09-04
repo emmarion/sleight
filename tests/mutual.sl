@@ -5,7 +5,7 @@
 (def-adts
   (Tree : -> Type
     enum
-    (many Node : (many (Forest) kids) -> (Tree)))
+    (many Node : (many (Forest) sub) -> (Tree)))
   (Forest : -> Type
     enum
     (many FNil : -> (Forest))
@@ -26,9 +26,9 @@
 (def-fns X
   (many size : (subterm many (Tree) t) -> (many (Nat) n)
     (match many t (((Nat) r))
-      ((Node kids)
-        (let (erased p) (prove-subterm kids t))
-        (Succ (fsize (subterm p) kids)))))
+      ((Node sub)
+        (let (erased p) (prove-subterm sub t))
+        (Succ (fsize (subterm p) sub)))))
   (many fsize : (subterm many (Forest) f) -> (many (Nat) n)
     (match many f (((Nat) r))
       ((FNil) (Zero))

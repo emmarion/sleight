@@ -3,10 +3,10 @@
 ; expect: starting
 ; expect: > bb
 ; exit: 3
-; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 births the program's
+; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 mints the program's
 ; level B and returns, erased, each value at (IO B) and the proof that coerces to it. The erased walk gives each
 ; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
-; born inside, after B, so the caller supplies levels and values only.
+; minted inside, after B, so the caller supplies levels and values only.
 (def-lvl proof-lvl)
 (def-lvl lift-lvl)
 (let (erased pl) (prove-predates proof-lvl lift-lvl))

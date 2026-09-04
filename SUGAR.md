@@ -8,14 +8,14 @@ sugar live here; DESIGN.md's examples use none.
 ## 1. `_` as a `def-fns` level
 
 Writing `_` where a `def-fns` block's level goes (§7, §27) would do two
-things: insert a `def-lvl` immediately above the block, birthing an
+things: insert a `def-lvl` immediately above the block, minting an
 anonymous level, and define the block's functions at it.
 
 ## 2. `_` in a match's return annotation
 
 Where a `match` is the result expression of a function body or of a match
 branch body (§16), the telescope it must produce is already fixed by that
-body. `_` in place of the annotation (§11) would inherit it.
+body. `_` in place of the annotation (§11) would reuse it.
 
 ## 3. `_` in a call's decrease annotation
 

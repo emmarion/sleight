@@ -1,4 +1,4 @@
-; error: l was not in scope when level K was born
+; error: l was not in scope when level K was minted
 ; With neither a bound in the package nor a proof about the list, a packed level has no relation to the
 ; consumer's, and prove-predates refuses to relate them there.
 

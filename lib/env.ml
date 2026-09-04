@@ -8,7 +8,7 @@ let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 type state = Const of Value.value | Dyn
 
-type entry = { name : string option; mult : mult; state : state; level_born : bool; rigid : bool }
+type entry = { name : string option; mult : mult; state : state; minted_level : bool; rigid : bool }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -43,11 +43,11 @@ let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
-let bind env ?(rigid = false) ?(level_born = false) ?rule name mult state ty =
+let bind env ?(rigid = false) ?(minted_level = false) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; level_born; rigid } env.entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; rigid } env.entries in
   let env = { env with scope = x :: env.scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)
 let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
@@ -75,5 +75,5 @@ let rec unify env a b =
         if has_dangling t then contradiction ();
         if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
         add_rule env x t
-    | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify env x y) env (kids a) (kids b)
+    | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify env x y) env (parts a) (parts b)
     | _ -> contradiction ()

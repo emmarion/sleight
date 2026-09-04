@@ -6,8 +6,8 @@ entry says what its test does, and the test is the evidence, so a claim here
 that the test does not make is a mistake in this file.
 
 - `tests/io_lift.sl` — two `IO` programs at two levels embedded in a program
-  at a third, at no runtime cost. An erased factory births the program's
-  level; `delegate` births a `Coercible` between continuations whose types
+  at a third, at no runtime cost. An erased factory mints the program's
+  level; `delegate` mints a `Coercible` between continuations whose types
   differ in level and result; `coercible-ctor` lifts it through each request
   with the erased level index differing on the two sides; the user's `coerce`
   erases to nothing, and the extracted OCaml holds only the original values.
@@ -29,17 +29,17 @@ that the test does not make is a mistake in this file.
 - `tests/gcd.sl` — Euclid's algorithm; the recursive call is justified by
   `lt-sub` applied to the remainder's bound, so it uses the interderivation.
 - `tests/compose_list_dynamic.sl` — folding a list of functions into one
-  function, each step birthing a level at runtime above the one the recursive
-  call returned, with the `Predates` proofs born beside it. The tower of
+  function, each step minting a level at runtime above the one the recursive
+  call returned, with the `Predates` proofs minted beside it. The tower of
   levels is as tall as the list and exists only when the program runs.
   `tests/compose_list.sl` is the defunctionalized form, the list kept as data
   under one interpreter, whose composed closure sits at one fixed level.
 - `tests/runtime_level_bad.sl` — the same composition called from a function
-  body is refused: a level born inside the call cannot be proved to predate
+  body is refused: a level minted inside the call cannot be proved to predate
   the caller's, so in this test the composed function is callable only from
   run position.
 - `tests/stream.sl` — a stream with no coinductive type, its tail a function
-  at a level born after the producer's.
+  at a level minted after the producer's.
 - `tests/gmap.sl` — a map generic over every type with `List`'s constructor
   shape, through first-class `TyCtor`, `ValCtor` and `Matchable` values; the
   shape is fixed by the signature.
@@ -49,7 +49,7 @@ that the test does not make is a mistake in this file.
   predates its level and `predates-subterm` walks it down to each function.
   `tests/packed_unbound_bad.sl` has neither, and
   `tests/packed_runtime_list_bad.sl` builds the list after the consumer's
-  level was born, where the list-level proof is refused.
+  level was minted, where the list-level proof is refused.
 - `tests/recursion_through_pointer.sl` — a function receiving itself inside a
   type with a negative occurrence and calling the pointer at its own level
   under a subterm decrease; `tests/ackermann.sl` for the lexicographic order
@@ -64,7 +64,7 @@ that the test does not make is a mistake in this file.
   a value of it. `tests/eq_transport.sl` transports along a user-defined
   equality by matching `Refl`, with no substitution principle.
 - `tests/map.sl` — DESIGN.md section 33, level-polymorphic `map` through a
-  factory that births the level and proves the relation inside.
+  factory that mints the level and proves the relation inside.
 - `tests/coerce.sl` and `tests/delegate_coerce.sl` — section 40, unwrapping a
   list of newtypes by an erased recursive proof and a `coerce`, and a
   `delegate` whose argument and result pass through coercions.

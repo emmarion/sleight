@@ -43,7 +43,7 @@ round-trip with result type `Raw`.
 ## Interpreter trust
 
 The interpreter is untrusted for *semantics* but currently trusted for
-*facts*: every fact born from a stored value (`comptime-match`, and
+*facts*: every fact minted from a stored value (`comptime-match`, and
 anything downstream of a value it bound) assumes the interpreter
 evaluated correctly. The assumption is not free. Consider
 
@@ -57,7 +57,7 @@ evaluated correctly. The assumption is not free. Consider
 An honest program can only ever build `(T)`. A lying interpreter
 returns the `F` tag — and the erased proof field costs nothing to
 forge, because erased positions are stripped before it runs: there are
-no bytes to be wrong. A `comptime-match` asserting `F` then births a
+no bytes to be wrong. A `comptime-match` asserting `F` then mints a
 `(False)` token into scope, and consistency (§10) is gone. Erasure
 makes the forgery undetectable by construction, so §10's goal
 ultimately requires closing this: a small reference evaluator inside
