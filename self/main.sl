@@ -13,36 +13,40 @@
 (def-fns util-lvl $ many write-errors : (subterm many (List (String)) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
   (match many es _
     ((Nil a) next)
-    ((Cons a e rest) (WriteErr io-lvl "slc: error: " (WriteErr io-lvl e (WriteErr io-lvl "\n" (write-errors (subterm _) rest next)))))))
+    ((Cons a e rest) (WriteErr io-lvl e (WriteErr io-lvl "\n" (write-errors (subterm _) rest next))))))
 
-(def-fns util-lvl $ many run-files : (subterm many (List (String)) srcs) (many (Env) env) -> (many (Env) r)
+; Each source with its path, which the messages name; a syntax error ends that file's reading.
+(def-fns util-lvl $ many run-files : (subterm many (List (Pair (String) (String))) srcs) (many (Env) env) -> (many (Env) r)
   (match many srcs _
     ((Nil a) env)
-    ((Cons a src rest)
-      (let (many items) (many err) (parse (predates _) src))
-      (match many err _
-        ((Some b m) (run-files (subterm _) rest (env-error (predates _) env (str-cat (predates _) "syntax error: " m))))
-        ((None b) (run-files (subterm _) rest (run-toplevel (predates _) items env)))))))
+    ((Cons a ps rest)
+      (match many ps _
+        ((MkPair s t path src)
+          (let (many env1) (env-at-loc (predates _) env (MkLoc path 1)))
+          (let (many items) (many err) (parse (predates _) src))
+          (match many err _
+            ((Some b e) (match many e _ ((MkSynErr line m) (run-files (subterm _) rest (env-report (predates _) env1 (located (predates _) (env-at (predates _) env1 line) ": syntax error: " m))))))
+            ((None b) (run-files (subterm _) rest (run-toplevel (predates _) items env1)))))))))
 
-(def-fns compile-lvl $ many compile : (many (List (String)) srcs) -> (many (IO io-lvl) io)
+(def-fns compile-lvl $ many compile : (many (List (Pair (String) (String))) srcs) -> (many (IO io-lvl) io)
   (let (many env) (run-files (predates _) srcs (make-builtins (predates _))))
   (match many (env-errors (predates _) env) _
     ((Cons a e rest) (write-errors (predates _) (list-rev (predates _) (String) (env-errors (predates _) env)) (Exit io-lvl exit-fail)))
     ((Nil a) (rope-io (predates _) io-lvl (emit-program (predates _) env) (Exit io-lvl exit-ok)))))
 
-(def-fns slc-lvl $ many read-files : (many (List (String)) paths) (many (List (String)) acc) -> (many (IO io-lvl) io)
+(def-fns slc-lvl $ many read-files : (many (List (String)) paths) (many (List (Pair (String) (String))) acc) -> (many (IO io-lvl) io)
   (match many paths _
-    ((Nil a) (compile (predates _) (list-rev (predates _) (String) acc)))
+    ((Nil a) (compile (predates _) (list-rev (predates _) (Pair (String) (String)) acc)))
     ((Cons a path rest)
       (def-fns io-lvl $ many after-read : (many (Result (String)) r) -> (many (IO io-lvl) next)
         (match many r _
           ((Fail b m) (WriteErr io-lvl "slc: " (WriteErr io-lvl m (WriteErr io-lvl "\n" (Exit io-lvl exit-fail)))))
-          ((Ok b src) (read-files (predates _) rest (Cons (String) src acc)))))
+          ((Ok b src) (read-files (predates _) rest (Cons (Pair (String) (String)) (MkPair (String) (String) path src) acc)))))
       (ReadFile io-lvl path after-read))))
 
 (def-fns io-lvl $ many start : (many (List (String)) args) -> (many (IO io-lvl) io)
   (match many args _
     ((Nil a) (WriteErr io-lvl "usage: slc -- prelude.sl file.sl ... > out.ml\n" (Exit io-lvl exit-fail)))
-    ((Cons a p rest) (read-files (predates _) args (Nil (String))))))
+    ((Cons a p rest) (read-files (predates _) args (Nil (Pair (String) (String)))))))
 
 (GetArgs io-lvl start)

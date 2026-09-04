@@ -1235,8 +1235,11 @@ by the owner.
     refused with its text. Two readings of the session, not the
     owner's: an error does not stop elaboration, so a program may be
     refused with more than one message where the reference gives its
-    first; and messages carry no line numbers, the compiler's
-    s-expressions not recording any. It is still not a second arbiter
+    first; and a message's line is that of the innermost form whose
+    elaboration was in progress, where the reference may name a
+    sub-form (a pattern, a field name), which on the tests and the
+    session's own multi-line cases gave the same line. It is still not
+    a second arbiter
     for section 10's consistency question, since it runs on the same
     reading of the design and trusts its own interpreter as `lib/`
     trusts its (KERNEL.md).

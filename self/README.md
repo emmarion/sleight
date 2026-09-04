@@ -24,8 +24,7 @@ literals' syntax errors. Its error messages are the reference's, and
 `self/bootstrap.sh` requires every test that expects an error to be
 refused with a message mentioning the expected text. What it does not
 do: verify that the interpreter's evaluation is honest (KERNEL.md's
-interpreter-trust obligation applies to it as much as to `lib/`), and
-report line numbers, which its s-expressions do not carry.
+interpreter-trust obligation applies to it as much as to `lib/`).
 
 The compile-time part is the "comp time / Const stuff" the owner asked
 the compiler to interpret: `self/eval.sl` is a plain recursive
@@ -128,7 +127,10 @@ recorded so it can be revisited.
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where
   the reference stops at the first error, `slc` may report a few more
-  that follow from it. A runtime error in the interpreter is a `VError`
+  that follow from it. A message names the file and the line of the
+  innermost form being elaborated, in the reference's `path:line:
+  error:` format; on every error test the first message is the
+  reference's, line included. A runtime error in the interpreter is a `VError`
   value that prints as `<error: ...>`.
 - **Sharing inside embedded data is not preserved.** `lib/extract.ml`
   names a block met twice; SL has no physical identity, so a value
@@ -153,7 +155,7 @@ recorded so it can be revisited.
   time under the FFI; the source models are unchanged.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them),
-  line numbers in messages, the reference's warning for a phantom
+  the reference's warning for a phantom
   constructor with a `many` field (recorded but not printed), and
   macros, which the reference does not implement either. A string
   literal is not `is`-transparent to its characters as the reference's
