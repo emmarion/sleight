@@ -34,7 +34,11 @@ let var env loc n =
   | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
   | `Bad msg -> error loc "%s" msg
 
-let tyname env loc raw = var env loc (atom_or loc raw "a type constructor name")
+(* An atom naming an entry, read through any alias rule the fact table holds for it (section 9). *)
+let named env loc what raw =
+  match canon env (Var (var env loc (atom_or loc raw what))) with Var x -> x | t -> error loc "%s is not %s" (show env t) what
+
+let tyname env loc = named env loc "a type constructor"
 
 let check what env loc actual expected =
   if not (equal (canon env actual) (canon env expected)) then
@@ -102,8 +106,7 @@ let wrapper disc shapes =
 let newtype_of env c = List.find_opt (fun x -> match type_of env x with Newtype (Var c') -> c' = c | _ -> false) env.scope
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
-let ctor_var env loc raw =
-  match canon env (Var (var env loc (atom_or loc raw "a constructor"))) with Var c -> c | t -> error loc "%s is not a constructor" (show env t)
+let ctor_var env loc = named env loc "a constructor"
 let proof_type ctor args = App (Var ctor, args)
 
 let expect_proof env loc ctor p =
@@ -515,7 +518,7 @@ and elab_special tele env expect l sp args =
       let env, src, tgt = go env [] [] tele args in
       born env (proof_type Prelude.coercible [ instantiate src ret; App (Var c, List.rev src); instantiate tgt ret; App (Var c, List.rev tgt) ])
   | Sp.CoercibleOf, [ g ] -> (
-      let g = var env l (atom_or l g "a function name") in
+      let g = named env l "a function name" g in
       match List.find_opt (fun x -> (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false)) env.scope with
       | Some x -> erased (env, res_of env x)
       | None -> error l "%s has no delegate proof in scope" (name_of env g))
@@ -831,6 +834,7 @@ and elab_def_adts env adts =
     (env, cids @ values)
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
+  let cids = List.filter (fun (c, _) -> (entry env c).mult = Many) cids in
   (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
 (* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)

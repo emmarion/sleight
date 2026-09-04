@@ -893,10 +893,53 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     its check descending through the binding). The emitted `CLetRec` now
     carries only the block's `many` functions and is dropped when none
     remain, mirroring the guard `def-adts` already had for the empty
-    case. `tests/delegate_erased_inner.sl`. Believed conservative, the
-    dropped closures having no reachable use. Left as it was, and open:
-    the same reading would drop a nested `def-adts`'s *phantom*
-    constructors, erased entries by section 12 and equally unreachable,
-    from the `CLet` that statement emits; no test needs it, and a nested
-    `def-adts` declaring a non-phantom constructor binds a real value and
-    so blocks a `delegate` on either reading.
+    case. Believed conservative, the dropped closures having no
+    reachable use. The owner asked for the same reading to be applied to
+    a nested `def-adts`'s *phantom* constructors, erased entries by
+    section 12 and equally unreachable, so the `CLet` that statement
+    emits now carries only the non-phantom ones and is dropped when none
+    remain. A nested `def-adts` declaring a non-phantom constructor still
+    binds a real value and so still blocks a `delegate`, which reads as
+    right: section 9 wants the body to reduce to the marked call alone,
+    and that binding does not reduce away. `tests/delegate_erased_inner.sl`
+    covers both statements inside a delegating body.
+
+78. **A form that fetches an object by naming something reads the name
+    through its alias.** Section 9's state-inheriting `let` makes a
+    binder an alias of the entry it names, and section 5's identity is
+    canonicalize-then-compare, so `(let (erased N) Nat)` should leave `N`
+    usable wherever `Nat` was; `ctor_var` already resolved a constructor
+    that way (`tests/ctor_alias.sl`). The two forms that fetch an object
+    from ambient scope did not. `matchable-of` looked for a `Matchable`
+    naming the alias entry itself rather than the type constructor it
+    resolves to, and `coercible-of` for a `Coercible` about the alias
+    rather than about the function `def-fns` birthed the proof for, so
+    each reported its object missing on a renamed name. Both now resolve
+    the name first, through the one helper `ctor_var` uses, which is also
+    what makes `matchables` and `newtype_of` compare two canonical ids
+    rather than one of each. `tests/matchable_of.sl`,
+    `tests/delegate_erased_inner.sl`. Believed a correctness fix: by
+    section 9 an alias and its target are one entry's contents, and
+    nothing else in the checker tells them apart.
+
+    The sweep behind this item, offered as a record rather than a claim
+    of completeness: every term comparison in `lib/` either canonicalizes
+    both sides (`check_type`, `check_equal`, `unify`, `Env.type_of` and
+    everything reading through it, `expect_proof`, `numeral-of`,
+    `Program.final`, `Extract.show`) or is fed canonical terms by
+    construction (`marker` and `newtype_of` over a canonicalized
+    `Matchable`; `is_strict_subterm` under `prove_subterm`, which
+    canonicalizes both arguments first and relies on `canon` being deep;
+    the rigid prelude ids `expect_proof` and `def-fns`'s level check
+    compare against). `Term.equal` and `Term.occurs` do no
+    canonicalizing of their own by design, the caller owning that.
+    Comparisons of runtime code and values -- `check_marks` matching a
+    `delegate`'s argument ids against the function's parameters,
+    `Eval`'s constructor indices, `Extract`'s physical-identity sharing
+    -- are not term comparisons and canonicalization does not apply.
+    Two places read a named entry deliberately *without* resolving it,
+    and were left alone: `comptime-match` wants the named entry's own
+    stored value, which an alias carries in its own right (section 9),
+    and `prove-predates` resolves only when the named variable is younger
+    than the level, which is item 13's rule about birth order rather than
+    about identity.
