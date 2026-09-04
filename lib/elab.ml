@@ -239,6 +239,9 @@ and elab_type env raw =
 
 and elab_sg env = function `Ty t -> Ty (elab_type env t) | `Is t -> Is (elab_term env t)
 
+and level_var env l raw =
+  match canon env (elab_term env raw) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t)
+
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
 and elab_tele env ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) entries =
@@ -446,10 +449,7 @@ and elab_special tele env expect l sp args =
       | Fn (lv, _, _) -> erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased })
       | ty -> error l "level-of: %s : %s is not a function" (show env f) (show env ty))
   | Sp.ProveSubterm, [ a; b ] -> erased (prove_subterm env l (elab_term env a) (elab_term env b))
-  | Sp.ProvePredates, [ x; lv ] -> (
-      match canon env (elab_term env lv) with
-      | Var lvl -> erased (prove_predates env l (var env l (atom_or l x "a variable")) lvl)
-      | t -> error l "%s is not a level minted by def-lvl" (show env t))
+  | Sp.ProvePredates, [ x; lv ] -> erased (prove_predates env l (var env l (atom_or l x "a variable")) (level_var env l lv))
   | Sp.PredatesTrans, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.predates, q)
         (function [ a; x; l1 ], [ _; l1'; l2 ] -> ((l1', l1), (Prelude.predates, [ a; x; l2 ])) | _ -> assert false)
@@ -523,8 +523,7 @@ and elab_match tele env expect l args =
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
       let _, disc, ctors = find_matchable env l tid in
-      let shapes = shapes env l ctors in
-      let tagged = tagged disc shapes in
+      let tagged = tagged disc (shapes env l ctors) in
       let env, ann_tele =
         match (ann, tele) with
         | Atom (_, "_"), Some tele -> (env, tele)
@@ -581,11 +580,11 @@ and elab_match tele env expect l args =
       in
       let branches = List.map branch branches in
       List.iter
-        (fun (_, c, _) ->
-          match List.length (List.filter (fun (c', _, _, _) -> c' = c) branches) with
+        (fun (_, c) ->
+          match List.length (List.filter (fun (c', _, _, _) -> Var c' = c) branches) with
           | 1 -> ()
-          | n -> error l "constructor %s has %d branches" (name_of env c) n)
-        shapes;
+          | n -> error l "constructor %s has %d branches" (show env c) n)
+        ctors;
       let real =
         List.filter_map
           (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (V.CVar c, fids, code) | _ -> None)
@@ -686,7 +685,7 @@ and elab_def_fns env l args =
       let env, lvl =
         match lv with
         | Atom (_, "_") -> let x, env = mint_level env None in (env, x)
-        | _ -> (env, match canon env (elab_term env lv) with Var x when equal (type_of env x) Prelude.level_term -> x | t -> error l "%s is not a level" (show env t))
+        | _ -> (env, level_var env l lv)
       in
       let header raw =
         match raw with
