@@ -46,11 +46,10 @@ let instantiate args t = map_vars (subst args) 0 t
 let instantiate_tele args tele = snd (map_tele (subst args) 0 tele)
 
 (* [ids] innermost first: the head of the list becomes [Bound 0]. *)
+let find_index p l = let rec go i = function [] -> None | x :: xs -> if p x then Some i else go (i + 1) xs in go 0 l
+
 let abstract ids t =
-  let index x = let rec go i = function [] -> None | y :: ys -> if x = y then Some i else go (i + 1) ys in go 0 ids in
-  map_vars
-    (fun d t -> match t with Var x -> (match index x with Some i -> Bound (i + d) | None -> t) | t -> t)
-    0 t
+  map_vars (fun d t -> match t with Var x -> (match find_index (( = ) x) ids with Some i -> Bound (i + d) | None -> t) | t -> t) 0 t
 
 let tele_parts depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
 

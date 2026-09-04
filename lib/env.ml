@@ -21,7 +21,7 @@ type t = {
   run_pos : bool;
   values : Value.venv;
   prelude : id list;
-  literals : (string * (id * id)) list;
+  literals : (string * (id * id option)) list;
 }
 
 let empty =
@@ -68,8 +68,8 @@ let rec unify env a b =
     match (a, b) with
     | Var x, Var y when (entry env x).rigid && (entry env y).rigid -> contradiction ()
     | Var x, Var y ->
-        let rigid z = (entry env z).rigid in
-        if rigid y || ((not (rigid x)) && x > y) then add_rule env x (Var y) else add_rule env y (Var x)
+        let x, y = if (entry env y).rigid || ((not (entry env x).rigid) && x > y) then (x, y) else (y, x) in
+        add_rule env x (Var y)
     | Var x, t | t, Var x ->
         if (entry env x).rigid then contradiction ();
         if has_dangling t then contradiction ();

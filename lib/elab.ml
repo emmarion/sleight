@@ -13,7 +13,6 @@ let pos_of expect = if List.for_all (( = ) Erased) expect then Erased else Many
 let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (Reader.show raw)
 let name_or_anon n = if n = "_" then None else Some n
-let find_index p l = let rec go i = function [] -> None | x :: xs -> if p x then Some i else go (i + 1) xs in go 0 l
 
 let special_of env raw =
   match raw with
@@ -77,9 +76,8 @@ let find_matchable env loc tid =
       (x, d, cs)
 
 let check_empty env loc ty =
-  match canon env ty with
-  | App (Var t, _) when (match matchables env t with [ (_, _, []) ] -> true | _ -> false) -> ()
-  | _ -> error loc "%s is not an empty type" (show env ty)
+  let empty = match canon env ty with App (Var t, _) -> matchables env t <> [] && (let _, _, cs = find_matchable env loc t in cs = []) | _ -> false in
+  if not empty then error loc "%s is not an empty type" (show env ty)
 
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (name_of env c)
@@ -117,19 +115,19 @@ let expect_proof env loc ctor p =
 let rec is_strict_subterm a b =
   match b with App (_, args) -> List.exists (fun x -> equal a x || is_strict_subterm a x) args | _ -> false
 
-type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_ty : raw option; s_is : raw option; s_name : string }
+type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string }
 
 let parse_entry env raw =
   match raw with
   | List (l, items) -> (
       let s_subterm, items = match items with t :: rest when is_special env t Sp.Subterm -> (true, rest) | _ -> (false, items) in
       let s_mult, items = match items with t :: rest when mult_of env t <> None -> (mult_of env t, rest) | _ -> (None, items) in
-      let mk s_ty s_is s_name = { s_loc = l; s_subterm; s_mult; s_ty; s_is; s_name } in
+      let mk s_sg s_name = { s_loc = l; s_subterm; s_mult; s_sg; s_name } in
       match items with
-      | [ e; i; Atom (_, n) ] when is_special env i Sp.Is -> [ mk None (Some e) n ]
-      | [ Atom (_, n) ] -> [ mk None None n ]
+      | [ e; i; Atom (_, n) ] when is_special env i Sp.Is -> [ mk (Some (`Is e)) n ]
+      | [ Atom (_, n) ] -> [ mk None n ]
       | ty :: names when names <> [] && List.for_all (fun n -> atom n <> None) names ->
-          List.map (fun n -> mk (Some ty) None (Option.get (atom n))) names
+          List.map (fun n -> mk (Some (`Ty ty)) (Option.get (atom n))) names
       | _ -> error l "malformed telescope entry %s" (Reader.show raw))
   | Atom (l, _) -> error l "expected a telescope entry, got %s" (Reader.show raw)
 
@@ -158,6 +156,8 @@ let marks env allowed items =
   in
   go [] items
 
+let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
+
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let anon tele = List.map (fun _ -> None) tele
 
@@ -166,8 +166,7 @@ let open_tele env ?names ?mults ?states ?(ids = []) tele =
   let _, env, _, fresh =
     List.fold_left
       (fun (i, env, ids, fresh) e ->
-        let sg = map_sg (instantiate ids) e.sg in
-        let ty, rule = match sg with Ty t -> (t, None) | Is t -> (infer env 0 t, Some t) in
+        let ty, rule = fact_of env 0 (map_sg (instantiate ids) e.sg) in
         let x, env = bind env (nth names i e.name) (nth mults i e.mult) (nth states i Dyn) ty ?rule in
         (i + 1, env, Var x :: ids, x :: fresh))
       (0, env, ids, []) tele
@@ -227,8 +226,8 @@ and elab_valctor env l items =
   let env', ids, tele = elab_tele env ps in
   let ret = match ret with [ r ] -> elab_type env' r | _ -> error l "a constructor returns one type" in
   (match canon env' ret with
-  | App (Var t, _) when (match type_of env' t with TyCtor _ -> true | _ -> false) -> ()
-  | _ -> error l "a constructor returns an application of a type constructor, not %s" (show env' ret));
+  | App (Var t, _) when (not (List.mem t ids)) && (match type_of env' t with TyCtor _ -> true | _ -> false) -> ()
+  | _ -> error l "a constructor returns an application of a type constructor in scope, not %s" (show env' ret));
   (env', tele, ret, ValCtor (tele, abstract (List.rev ids) ret))
 
 and disc_of env l d = match special_of env d with Some Sp.Enum -> Enum | Some Sp.Union -> Union | _ -> error l "expected enum or union"
@@ -237,6 +236,8 @@ and elab_type env raw =
   let t = elab_term env raw in
   check_type env (loc raw) (infer env (loc raw) t) type_term;
   t
+
+and elab_sg env = function `Ty t -> Ty (elab_type env t) | `Is t -> Is (elab_term env t)
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
@@ -247,14 +248,10 @@ and elab_tele env ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) entries
       (fun (i, env, ids, tele) e ->
         if e.s_subterm && not subterm then error e.s_loc "subterm is not allowed here";
         let mult = match mults i e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" e.s_name in
-        let sg, ty =
-          match (e.s_ty, e.s_is) with
-          | Some t, _ -> let t = elab_type env t in (Ty t, t)
-          | None, Some t -> let t = elab_term env t in (Is t, infer env e.s_loc t)
-          | None, None -> error e.s_loc "entry %s needs a type or an is clause" e.s_name
-        in
+        let sg = match e.s_sg with Some s -> elab_sg env s | None -> error e.s_loc "entry %s needs a type or an is clause" e.s_name in
+        let ty, rule = fact_of env e.s_loc sg in
         let name = name_or_anon e.s_name in
-        let x, env = bind env name mult Dyn ty ?rule:(match sg with Is t -> Some t | Ty _ -> None) in
+        let x, env = bind env name mult Dyn ty ?rule in
         (i + 1, env, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg } :: tele))
       (0, env, ids, []) entries
   in
@@ -406,6 +403,7 @@ and elab_special tele env expect l sp args =
   in
   let erased (env, r) = (env, [ r ], V.CErased) in
   let mint env ty = erased (mint env ty) in
+  let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s in scope" (name_of env x) what in
   let compose (c1, p) (c2, q) k =
     let env, p = proof env c1 p in
     let env, q = proof env c2 q in
@@ -434,20 +432,13 @@ and elab_special tele env expect l sp args =
       | V.CApp (_, _, cc') | V.CLet (_, V.CApp (_, _, cc'), _) when cc' = cc -> ()
       | _ -> error l "%s marks a function call, not %s" (Sp.name sp) (Reader.show call));
       (env, ress, code)
-  | Sp.MatchableOf, [ t ] ->
-      let x, _, _ = find_matchable env l (tyname env l t) in
-      erased (env, res_of env x)
-  | Sp.NewtypeOf, [ c ] -> (
-      let c = ctor_var env l c in
-      match newtype_of env c with
-      | Some x -> erased (env, res_of env x)
-      | None -> error l "%s has no Newtype in scope" (name_of env c))
+  | Sp.MatchableOf, [ t ] -> let x, _, _ = find_matchable env l (tyname env l t) in erased (env, res_of env x)
+  | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
   | Sp.NumeralOf, [ e ] -> (
       let e = canon env (elab_term env e) in
       match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
-      | Some (k, _) when (match Literal.classify k with `Lit (Literal.Str _) -> true | _ -> false) ->
-          error l "%s is a string literal, which carries no Numeral proof" (show env e)
-      | Some (_, (_, p)) -> erased (env, res_of env p)
+      | Some (_, (_, Some p)) -> erased (env, res_of env p)
+      | Some _ -> error l "%s is a string literal, which carries no Numeral proof" (show env e)
       | None -> error l "%s is not a literal" (show env e))
   | Sp.LevelOf, [ f ] -> (
       let f = elab_term env f in
@@ -517,11 +508,10 @@ and elab_special tele env expect l sp args =
       in
       let env, src, tgt = go env [] [] tele args in
       mint env (proof_type Prelude.coercible [ instantiate src ret; App (Var c, List.rev src); instantiate tgt ret; App (Var c, List.rev tgt) ])
-  | Sp.CoercibleOf, [ g ] -> (
+  | Sp.CoercibleOf, [ g ] ->
       let g = named env l "a function name" g in
-      match List.find_opt (fun x -> (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false)) env.scope with
-      | Some x -> erased (env, res_of env x)
-      | None -> error l "%s has no delegate proof in scope" (name_of env g))
+      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
+      fetch "delegate proof" g (List.find_opt about env.scope)
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
@@ -540,7 +530,11 @@ and elab_match tele env expect l args =
         | Atom (_, "_"), Some tele -> (env, tele)
         | Atom (_, "_"), None -> error l "no telescope to reuse for _"
         | List (_, ann), _ ->
-            let env', _, ann_tele = elab_tele env ~mults:(fun i -> function None -> List.nth_opt expect i | Some _ -> error l "a match annotation carries no multiplicities") ann in
+            let mults i = function
+              | Some _ -> error l "a match annotation carries no multiplicities"
+              | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
+            in
+            let env', _, ann_tele = elab_tele env ~mults ann in
             ({ env' with scope = env.scope }, ann_tele)
         | _ -> error l "malformed match annotation"
       in
@@ -576,6 +570,8 @@ and elab_match tele env expect l args =
           | `Auto, Some _ -> error bl "branch %s is not refuted" (name_of env c)
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
           | `Present, Some envb ->
+              if smult = Many && (not unreachable) && (entry env c).mult = Erased then
+                error bl "%s is erased, so a non-erased match cannot dispatch on it" (name_of env c);
               let envb, ress, code = elab_body ~tele:ann_tele envb (if unreachable then List.map (fun _ -> Erased) expect else expect) bl body in
               check_results envb bl ann_tele ress;
               `Present code
@@ -648,8 +644,7 @@ and elab_let env l args =
   let inner, ress, code = elab_body env expect l rhs in
   let values = if env.run_pos && pos_of expect = Many then run_code inner code else [] in
   let bind_one (env, ids) ((b, r), v) =
-    Option.iter (fun t -> check_type env b.s_loc r.ty (elab_type env t)) b.s_ty;
-    Option.iter (fun t -> check_equal env b.s_loc r.term (elab_term env t)) b.s_is;
+    Option.iter (fun s -> check_sg env b.s_loc (elab_sg env s) r) b.s_sg;
     let state = if env.run_pos then Const v else match r.term with Var y -> (entry env y).state | _ -> Dyn in
     let x, env = bind env (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
     (env, x :: ids)
@@ -845,14 +840,14 @@ let rec hoist env lit =
     let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
     let env = List.fold_left hoist env parts in
     let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
-    let ids =
+    let entry =
       match (lit, frame.scope) with
-      | Literal.Numeral _, v :: n :: _ -> (n, v)
-      | Literal.Char c, ch :: _ -> (ch, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
-      | Literal.Str _, s :: _ -> (s, s)
+      | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
+      | Literal.Char c, char :: _ -> (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
+      | Literal.Str _, str :: _ -> (str, None)
       | _ -> assert false
     in
-    { frame with scope = env.scope; literals = (key, ids) :: frame.literals }
+    { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 
 let rec literals = function
   | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])

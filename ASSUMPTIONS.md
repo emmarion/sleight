@@ -951,3 +951,54 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     and `prove-predates` resolves only when the named variable is younger
     than the level, which is item 13's rule about mint order rather than
     about identity.
+
+## Two checker gaps and a strictness from a third bug-hunting session
+
+A session asked to look for soundness mistakes and to tidy the code
+probed the checker again. Items 79-81 record what it changed; each is
+the session's reading, offered as a candidate question rather than a
+settled decision, and was checked by compiling and by the test suite
+(CLAUDE.md rule 2). Neither gap appeared to reach a proof of anything
+false: both were programs the checker accepted and the interpreter then
+failed on.
+
+79. **A non-erased match names non-erased constructors.** A `many` match
+    on a tagged type compiles to a dispatch that compares the value's
+    discriminant against each real branch's constructor at runtime, and
+    a first-class constructor variable bound `erased` (a parameter, say)
+    has no runtime value to compare against: the interpreter raised
+    `unbound at runtime` on an otherwise well-typed program that passed
+    its constructors erased beside a `Matchable` naming them `many`
+    (`tests/erased_ctor_dispatch_bad.sl`). The pattern's constructor is
+    now required to be non-erased in a real branch of a `many` match,
+    which reads as section 20's rule -- an erased name in a non-erased
+    position -- applied to the pattern; under an `erased` scrutinee, or
+    in a refuted or phantom branch, nothing is dispatched on and the
+    constructor may be erased as before. Whether the design would rather
+    have such a match dispatch on the constructor's index in the
+    `Matchable`, which needs no runtime constructor at all, is open;
+    the extractor would then need a shape for the value that names no
+    constructor either.
+
+80. **A `ValCtor`'s return is headed by a type constructor in scope, not
+    by the constructor's own field.** Item 70 requires the return to
+    canonicalize to a type-constructor application, and a telescope
+    binder of type `(TyCtor -> Type)` passed that test: the type
+    `(ValCtor (erased (TyCtor -> Type) T) -> (T))` was accepted, and a
+    `coercible-ctor` over a variable of it crashed the elaborator on the
+    assertion that reads a constructor's type constructor
+    (`tests/valctor_field_return_bad.sl`). No `def-adts` can declare
+    such a constructor, section 12 fixing every constructor's return to
+    the type it is declared under, so the type has no inhabitant and no
+    `Matchable` could describe it; the former now rejects it, extending
+    item 70's check to the head being a free type constructor. Read as
+    the same decision applied once more, not a new one.
+
+81. **An empty type may have several identical `Matchable`s in scope.**
+    Section 19 makes several `Matchable`s for one type an error only
+    when they disagree, and `find_matchable` reads it that way, but the
+    emptiness test behind `absurd` demanded exactly one, so an absurd
+    function taking `(erased (Matchable enum False) m)` as a parameter
+    was told `(False)` is not an empty type. The test now goes through
+    the same lookup as a match does (`tests/absurd_dup_matchable.sl`).
+    A correctness fix by the session's reading of section 19.
