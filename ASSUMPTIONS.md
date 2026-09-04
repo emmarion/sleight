@@ -1344,3 +1344,21 @@ what it assumed while doing so.
     its list of externs. The session proposed all three edits and is
     waiting on the owner's wording (CLAUDE.md rule 12); this is recorded
     as the open item rather than guessed at.
+
+102. **`U8` is no longer `extern` either.** Once it was a `newtype`, the
+    FFI's implementation for it was the identity on both sides —
+    `Ffi_core.bounded` constructed by taking its one argument and
+    destructed by handing it back — which is exactly what §38's
+    representation rule already gives an untagged one-`many`-field type.
+    The mark, its `Ffi.types` registration, `bounded` itself and its
+    `Elab`/`extract.ml` entry are gone. Two FFI call sites moved from
+    tagging their result `"U8"` to tagging it `"Nat"`: `u8-add`'s
+    result and the `String` implementation's per-character value, since
+    a `U8` at runtime is now its `Nat` field and nothing else. Only
+    `Value.show` reads that tag, and it prints the same either way.
+    `u8-add` stays extern, its model being real work (`mod-add` counts
+    up in unary) rather than an identity.
+
+    §41 still calls `U8` an extern enum, in its prose and in the
+    `def-adts` it shows; the wording is the owner's (CLAUDE.md rule 12)
+    and is recorded here as open rather than guessed at.
