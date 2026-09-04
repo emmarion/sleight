@@ -16,7 +16,7 @@
 (def-fns G $ many gmap : (erased (TyCtor (Type A) -> Type) F)
     (many (ValCtor (erased Type A) -> (F A)) NilC)
     (many (ValCtor (erased Type A) (many A head) (many (F A) tail) -> (F A)) ConsC)
-    (erased (Matchable enum F (many NilC) (many ConsC)) m)
+    (many (Matchable enum F (many NilC) (many ConsC)) m)
     (erased Type A) (erased Type B)
     (many (Fn M (many A x) -> (many B y)) f)
     (subterm many (F A) xs) -> (many (F B) ys)

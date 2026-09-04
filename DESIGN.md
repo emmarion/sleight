@@ -656,13 +656,27 @@ appear there, since the variant set belongs to the constructor, not to
 any application of it. The tag is §12's discriminant and the `ei` are
 §12's phantom markers, which between them are exactly the facts no type
 records: a `TyCtor` type carries no discriminant, and a `ValCtor` type no
-phantom marker. A `Matchable` is always erased, everything it carries
-being in its type, and is minted only by `def-adts` (§19).
+phantom marker. A `Matchable` is minted only by `def-adts` (§19), and is
+minted `many`: nearly everything it carries is in its type, but not the
+one thing an `extern` type (§41) keeps to itself — how its values are
+built and taken apart — so a `Matchable` is real data, and a match whose
+own position is non-erased needs a non-erased one. Held at `erased` it
+still serves every compile-time job below.
 
-It has two jobs: it's what lets the compiler know a type's constructors
-are disjoint (§19), and it's what lets you match on a first-class object
+It has three jobs: it's what lets the compiler know a type's constructors
+are disjoint (§19); it's what lets you match on a first-class object
 whose type is described only via first-class type/value constructors —
-i.e. not a syntactically fixed, named ADT.
+i.e. not a syntactically fixed, named ADT; and it is what a match reads
+at runtime to take the scrutinee apart.
+
+A match reads nothing else. The elaborator knows, from the `Matchable`'s
+type alone, whether the scrutinee's type carries a tag (§38) and which
+discriminant each branch's constructor has, so it stamps both into the
+match; the constructors themselves are needed only to build values, and
+a match may name ones that are `erased` where it stands. Where the
+`Matchable` is the one `def-adts` minted for a named type, the
+elaborator stamps that too, and only a `Matchable` held in a variable —
+a function's parameter, say — is read from scope when the match runs.
 
 ## 18. Match-branch rewrite algorithm (working formulation)
 
@@ -808,8 +822,9 @@ where each gets its multiplicity:
   multiplicities under `many`, all `erased` under `erased`, and all
   `erased` in a phantom constructor's branch whatever the keyword (§12);
 - `comptime-match` fields: their declared multiplicities (§15);
-- everything minted by kind — a `Level`, a proof, a `Matchable`, a type
-  constructor — is `erased` (§8, §12, §17).
+- everything minted by kind — a `Level`, a proof, a type constructor — is
+  `erased` (§8, §12); a `Matchable`, alone among them, is minted `many`
+  (§17).
 
 The erased positions, where an expression is erased: an argument at an
 erased-declared parameter or field; any argument of a type constructor
@@ -1553,7 +1568,10 @@ holds a `(Meters)` and a `(Nat)` alike, and a wrapper's field may be
 existentially typed. A value is the tuple of its constructor's `many`
 fields, one field standing bare and none at all being an unspecified
 word, and carries a tag only when its type is an enum with more than
-one non-phantom constructor — all a tag ever distinguishes. A union
+one non-phantom constructor — all a tag ever distinguishes. The tag is
+the constructor's position among the type's non-phantom constructors, in
+declaration order: a phantom constructor heads no runtime value (§20's
+rule 2) and so takes no number of its own. A union
 never carries one, its discriminant being erased (§12). So every
 newtype, as item 4 defines it, is represented exactly as its
 one `many` field — no tag, no wrapper — which is the guarantee the

@@ -34,7 +34,8 @@ let env =
   let (env, _), ctors = List.fold_left_map ctor (env, 0) Special.all in
   adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
   let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
-  let _, env = Env.bind env None Erased token matchable in
+  let mid, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
+  Hashtbl.replace Env.adts mid adt;
   List.fold_left
     (fun env (_, n, c, ctor) ->
       snd (Env.bind env ~rule:(App (Var c, [])) (Some n) Many (Env.Const (V.VCtor (ctor, []))) special_term))

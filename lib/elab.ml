@@ -95,7 +95,13 @@ let phantom env loc c = let tid = tid_of env loc c in let _, _, ctors = find_mat
 let shapes env loc ctors =
   List.map (fun (m, c) -> match c with Var c -> (m, c, List.length (List.filter (fun e -> e.mult = Many) (fst (ctor_type env loc c)))) | _ -> assert false) ctors
 
-let tagged disc shapes = disc = Enum && List.length (List.filter (fun (m, _, _) -> m = Many) shapes) > 1
+let non_phantom shapes = List.filter_map (fun (m, c, _) -> if m = Many then Some c else None) shapes
+
+(* A constructor's discriminant is its position among the non-phantom ones, a phantom constructor heading no
+   runtime value at all (section 20 rule 2) and so taking no number. *)
+let discriminant shapes c = find_index (( = ) c) (non_phantom shapes)
+
+let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
 
 let wrapper disc shapes =
   match List.filter (fun (m, _, n) -> m = Many && n = 1) shapes with
@@ -177,7 +183,13 @@ let open_tele env ?names ?mults ?states ?(ids = []) tele =
 let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
 
-let witness env ty = snd (bind env None Erased (const env V.VToken) ty)
+let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (const env value) ty
+
+(* Where a match or a matchable-of reads a Matchable: the shape def-adts minted for it is stamped in, and only
+   a first-class Matchable -- a binder holding one -- is read from the entry at runtime (section 17). *)
+let matchable_code pos x =
+  if pos = Erased then V.CErased
+  else match Hashtbl.find_opt Env.adts x with Some adt -> V.CConst (V.VMatchable adt) | None -> V.CVar x
 let mint_level env name = bind env ~minted_level:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term env raw =
@@ -436,7 +448,9 @@ and elab_special tele env expect l sp args =
       | V.CApp (_, _, cc') | V.CLet (_, V.CApp (_, _, cc'), _) when cc' = cc -> ()
       | _ -> error l "%s marks a function call, not %s" (Sp.name sp) (Reader.show call));
       (env, ress, code)
-  | Sp.MatchableOf, [ t ] -> let x, _, _ = find_matchable env l (tyname env l t) in erased (env, res_of env x)
+  | Sp.MatchableOf, [ t ] ->
+      let x, _, _ = find_matchable env l (tyname env l t) in
+      (env, [ res_of env x ], matchable_code m x)
   | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
   | Sp.NumeralOf, [ e ] -> (
       let e = canon env (elab_term env e) in
@@ -523,8 +537,11 @@ and elab_match tele env expect l args =
       let smult = under pos (mult_or env l m) in
       let env, sres, scode = elab_expr1 env smult scrut in
       let tid = match canon env sres.ty with App (Var t, _) -> t | ty -> error l "cannot match on %s : %s" (show env sres.term) (show env ty) in
-      let _, disc, ctors = find_matchable env l tid in
-      let tagged = tagged disc (shapes env l ctors) in
+      let mid, disc, ctors = find_matchable env l tid in
+      let shapes = shapes env l ctors in
+      let tagged = tagged disc shapes in
+      if pos = Many && smult = Many && (entry env mid).mult = Erased then
+        error l "the Matchable for %s is erased, so a non-erased match cannot take a value of it apart" (name_of env tid);
       let env, ann_tele =
         match (ann, tele) with
         | Atom (_, "_"), Some tele -> (env, tele)
@@ -570,8 +587,6 @@ and elab_match tele env expect l args =
           | `Auto, Some _ -> error bl "branch %s is not refuted" (name_of env c)
           | _, None -> error bl "branch %s is refuted; write (absurd %s)" (name_of env c) (name_of env c)
           | `Present, Some envb ->
-              if smult = Many && (not unreachable) && (entry env c).mult = Erased then
-                error bl "%s is erased, so a non-erased match cannot dispatch on it" (name_of env c);
               let envb, ress, code = elab_body ~tele:ann_tele envb (if unreachable then List.map (fun _ -> Erased) expect else expect) bl body in
               check_results envb bl ann_tele ress;
               `Present code
@@ -587,9 +602,7 @@ and elab_match tele env expect l args =
           | n -> error l "constructor %s has %d branches" (show env c) n)
         ctors;
       let real =
-        List.filter_map
-          (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (V.CVar c, fids, code) | _ -> None)
-          branches
+        List.filter_map (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
       if pos = Many && ((not tagged) || smult = Erased) && List.length real > 1 then
         error l "a match without a runtime discriminant can have only one real branch";
@@ -598,7 +611,9 @@ and elab_match tele env expect l args =
         | _ when pos = Erased -> V.CErased
         | [] -> V.CAbsurd
         | [ (_, _, body) ] when smult = Erased -> body
-        | _ -> V.CMatch (scode, real)
+        | _ ->
+            let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
+            V.CMatch { matchable = matchable_code Many mid; scrut = scode; tags = tagged; branches = List.map branch real }
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
@@ -726,7 +741,7 @@ and elab_def_fns env l args =
       let env =
         List.fold_left
           (fun env -> function
-            | Some (g, gty, callee) -> witness env (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ])
+            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ]))
             | None -> env)
           env proofs
       in
@@ -765,7 +780,7 @@ and check_marks env l pids code =
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
-    | V.CMatch (_, brs) -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) brs
+    | V.CMatch m -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) m.V.branches
     | _ -> []
   in
   ( code,
@@ -818,13 +833,16 @@ and elab_def_adts env adts =
     let shapes = shapes env al ctors in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
-    adt.ctors <- List.mapi (fun index (_, c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) shapes;
-    let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
+    let record (_, c, arity) = { V.cname = name_of env c; cid = c; index = Option.value (discriminant shapes c) ~default:(-1); arity; adt } in
+    let records = List.map record shapes in
+    adt.ctors <- List.filter (fun ct -> ct.V.index >= 0) records;
+    let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) records in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
-    let env = witness env (Matchable (disc, Var tid, ctors)) in
+    let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in
+    Hashtbl.replace Env.adts mid adt;
     let env =
       if not (List.mem Sp.NewtypeMark ms) then env
-      else match wrapper disc shapes with Some w -> witness env (Newtype (Var w)) | None -> error al "%s is not of newtype shape (section 38)" name
+      else match wrapper disc shapes with Some w -> snd (witness env (Newtype (Var w))) | None -> error al "%s is not of newtype shape (section 38)" name
     in
     (env, cids @ values)
   in

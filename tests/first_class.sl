@@ -10,7 +10,7 @@
 
 (def-fns X $ many open : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
-    (erased (Matchable enum T (many C)) m)
+    (many (Matchable enum T (many C)) m)
     (many (T) x) -> (many (Nat) n)
   (match many x (((Nat) r))
     ((C n) n)))

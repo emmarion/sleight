@@ -20,17 +20,17 @@ let rec eval env code =
   | CApp (f, args, _) -> apply (eval1 env f) (List.map (eval1 env) args)
   | CLet (ids, rhs, body) -> eval (bind ids (eval env rhs) env) body
   | CLetRec (fns, body) -> eval (close env fns) body
-  | CMatch (scrut, branches) -> (
-      let ctor code = match eval1 env code with VCtorFn c -> c | v -> raise (Runtime ("not a constructor: " ^ show v)) in
-      let branches = List.map (fun (c, ids, body) -> (ctor c, ids, body)) branches in
+  | CMatch { matchable; scrut; tags; branches } -> (
+      let adt = match eval1 env matchable with VMatchable a -> a | v -> raise (Runtime ("not a Matchable: " ^ show v)) in
       let v = eval1 env scrut in
-      match branches with
-      | [] -> raise (Runtime ("no branch for " ^ show v))
-      | (c, _, _) :: _ -> (
-          let i, fields = destruct c v in
-          match List.find_opt (fun (c', _, _) -> c'.index = i) branches with
-          | Some (_, ids, body) -> eval (bind ids fields env) body
-          | None -> raise (Runtime ("no branch for " ^ show v))))
+      let enter (_, ids, body) fields = eval (bind ids fields env) body in
+      match (dispatch adt tags v, branches) with
+      | Some (i, fields), _ -> (
+          match List.find_opt (fun (j, _, _) -> j = i) branches with
+          | Some branch -> enter branch fields
+          | None -> raise (Runtime ("no branch for " ^ show v)))
+      | None, ([ (_, ids, _) ] as branches) -> enter (List.hd branches) (untuple (List.length ids) v)
+      | None, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))

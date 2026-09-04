@@ -992,7 +992,13 @@ failed on.
     the type it is declared under, so the type has no inhabitant and no
     `Matchable` could describe it; the former now rejects it, extending
     item 70's check to the head being a free type constructor. Read as
-    the same decision applied once more, not a new one.
+    the same decision applied once more, not a new one. "Free" is meant
+    narrowly, the owner having asked: only the constructor's *own*
+    telescope binders are refused, so a return may name a type
+    constructor from any enclosing former -- a `Fn`'s parameter, or a
+    field of an outer `ValCtor` -- which is how a function returning a
+    type constructor beside a value constructor for it is written
+    (`tests/ctor_former_nesting.sl`, `tests/gmap.sl`).
 
 81. **An empty type may have several identical `Matchable`s in scope.**
     Section 19 makes several `Matchable`s for one type an error only
@@ -1011,3 +1017,62 @@ failed on.
     stored value, ran it as `let`. A special-form head must now also
     have type `(Special)`; such a value heads no form and elaborating
     it as an application fails on its type (`tests/special_newtype_bad.sl`).
+
+## A match reads its Matchable, not its constructors
+
+The owner's decisions, in chat, after item 79 reported that a non-erased
+match on first-class constructors passed at `erased` crashed the
+interpreter: a `Matchable` in scope is enough to match on a type, so the
+constructors need no multiplicity of their own; the elaborator should
+stamp what the `Matchable` says into the match; phantom constructors
+take no discriminant; and a non-erased match needs a non-erased
+`Matchable`, which is what carries an extern type's construction and
+matching (§41). DESIGN.md §§17, 20 and 38 now say all four; items 83-85
+record how the prototype reads them, and item 79's restriction is gone.
+
+83. **What a match compiles to.** The post-erasure form of a match is
+    its scrutinee, the `Matchable` to read it through, a flag saying
+    whether the type carries a tag, and one branch per real
+    constructor keyed by that constructor's discriminant. Both the flag
+    and the discriminants are settled at elaboration from the
+    `Matchable`'s *type*, which fixes the enum/union tag, the
+    constructor order and each constructor's phantom marker; nothing
+    reads a constructor value at runtime any more, so a branch may name
+    a constructor that is `erased` where it stands
+    (`tests/erased_ctor_dispatch.sl`, the program item 79 refused).
+    What is left for the `Matchable` value itself is the one fact its
+    type does not carry: whether the type is `extern`, and if so the
+    FFI's destructor. So the evaluator asks the `Matchable` for the
+    scrutinee's discriminant and fields, which the FFI answers where it
+    implements the type, the tag answers where the stamped flag says
+    there is one, and the value's own fields answer otherwise -- the
+    case where the elaborator has already checked there is a single
+    real branch (§12).
+
+84. **The `Matchable` is stamped where the elaborator knows it.** A
+    `Matchable` entry is minted `many` and carries the type's runtime
+    shape as its value, but a match on a named type does not read the
+    entry: `def-adts` records the shape beside the entry it mints, and
+    both a match and `matchable-of` stamp it into the code as a
+    constant. Only a `Matchable` bound to a variable -- a first-class
+    parameter (`tests/gmap.sl`, `tests/first_class.sl`, whose parameters
+    are now `many`) -- is read from scope when the code runs. A nested
+    `def-adts` therefore still leaves nothing behind in a body that
+    declares only phantom constructors, which is what ASSUMPTIONS 77
+    wanted for `delegate` (`tests/delegate_erased_inner.sl`).
+    The erasure demand is made where the code needs it: a match whose
+    position and whose scrutinee are both non-erased, the one shape
+    that compiles to a dispatch (`tests/erased_matchable_bad.sl`). An
+    erased scrutinee has a single real branch and no dispatch, and an
+    erased position compiles to nothing, so neither asks for anything.
+
+85. **Phantom constructors take no discriminant.** A constructor's
+    discriminant is its position among the type's non-phantom
+    constructors, so declaring a phantom constructor between two others
+    no longer shifts the second one's tag. Nothing observable changed in
+    the prototype -- no extern type has a phantom constructor, and the
+    FFI's own destructors already numbered the model's constructors from
+    zero -- but the two numberings had no reason to agree, and the
+    stamped discriminants make the choice load-bearing. The extracted
+    OCaml follows: a phantom constructor is no longer a variant of its
+    type, and a value is never headed by one (§20's rule 2).

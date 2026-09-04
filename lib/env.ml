@@ -31,6 +31,9 @@ let counter = ref 0
 let fresh () = incr counter; !counter
 let names : (id, string) Hashtbl.t = Hashtbl.create 64
 
+(* The runtime shape def-adts minted alongside a Matchable entry, stamped into a match on that type (section 38). *)
+let adts : (id, Value.adt) Hashtbl.t = Hashtbl.create 64
+
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
 
 let trace : item list ref = ref []
