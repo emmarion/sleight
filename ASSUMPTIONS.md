@@ -401,13 +401,19 @@ literals as open.
     transparent down to its opaque `Nat` (`tests/char.sl`), so no
     separate relation for characters is needed.
 
-53. **`(numeral-of e)`** takes any expression that canonicalizes to a
-    literal's value entry, a numeral itself or a variable a match or
-    `comptime-match` has forced equal to one, and yields that literal's
-    erased `Numeral` proof; a character literal's entry yields its
-    code's proof. It reads `Env.literals` rather than searching the
-    scope, unlike `coercible-of`. The owner suggested `nat-of`; the
-    session renamed it because the form yields a proof, not a number.
+53. **`(numeral-of lit)`** takes a numeral or character literal
+    itself, not an expression canonicalizing to one, and yields that
+    literal's erased `Numeral` proof; a character literal yields its
+    code's proof, and a string literal is an error, having none. It
+    resolves the literal by its own spelling through `Env.literals`
+    rather than searching the scope, unlike `coercible-of`. Resolving
+    by spelling rather than by canonicalized value is what keeps the
+    form usable inside a branch that has equated two literals: each
+    still fetches its own proof, so the two spellings for one `Nat`
+    refute the branch (`tests/numeral_of_branch.sl`) instead of one
+    literal's proof standing in for the other's. The owner suggested
+    `nat-of`; the session renamed it because the form yields a proof,
+    not a number.
 
 54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
     model runs `double` in unary, and `Value.show` prints a `Nat` in

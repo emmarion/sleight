@@ -460,11 +460,15 @@ and elab_special tele env expect l sp args =
       (env, [ res_of env x ], matchable_code env m x)
   | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
   | Sp.NumeralOf, [ e ] -> (
-      let e = canon env (elab_term env e) in
-      match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
-      | Some (_, (_, Some p)) -> erased (env, res_of env p)
-      | Some _ -> error l "%s is a string literal, which carries no Numeral proof" (show env e)
-      | None -> error l "%s is not a literal" (show env e))
+      let name = atom_or l e "a literal" in
+      match Literal.classify name with
+      | `Bad msg -> error l "%s" msg
+      | `Name -> error l "numeral-of takes a literal, not %s" name
+      | `Lit lit -> (
+          match List.assoc_opt (Literal.key lit) env.literals with
+          | Some (_, Some p) -> erased (env, res_of env p)
+          | Some (_, None) -> error l "%s is a string literal, which carries no Numeral proof" name
+          | None -> error l "literal %s is not in scope" name))
   | Sp.LevelOf, [ f ] -> (
       let f = elab_term env f in
       match canon env (infer env l f) with
