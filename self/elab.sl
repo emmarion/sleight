@@ -775,10 +775,6 @@
             ((BTrue) (BTrue))
             ((BFalse) (needs-projection (subterm _) rest rrest))))))))
 
-(def-fns _ $ many fresh-id : (many (Env) env) -> (many (Env) r) (many (Bin) x)
-  (let (many x) (bin-succ (predates _) (env-fresh (predates _) env)))
-  (values (env-set-fresh (predates _) env x) x))
-
 ; Binds fresh ids for the many returns and keeps those the position takes many (ASSUMPTIONS 39).
 (def-fns _ $ many projection : (subterm many (List (Mult)) expect) (many (List (Mult)) rets) (many (Env) env) -> (many (Env) r) (many (List (Bin)) bound) (many (List (Code)) kept)
   (match many expect _
@@ -790,7 +786,7 @@
           (match many rm _
             ((Erased) (projection (subterm _) rest rrest env))
             ((Many)
-              (let (many env2) (many t) (fresh-id (predates _) env))
+              (let (many env2) (many t) (env-fresh-id (predates _) env))
               (let (many env3) (many bound) (many kept) (projection (subterm _) rest rrest env2))
               (values env3 (Cons (Bin) t bound) (match many m (((List (Code)) l)) ((Many) (Cons (Code) (CVar t) kept)) ((Erased) kept))))))))))
 

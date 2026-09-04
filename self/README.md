@@ -144,8 +144,11 @@ recorded so it can be revisited.
   that suffix total. Unification takes the count as its measure: a step
   is structural on canonical terms until a binding rules an entry out,
   which the elaborator sees as the count stepping down, and the rest is
-  re-canonicalized at the smaller count. All of it is erased, so the
-  compiled compiler runs the same code as before.
+  re-canonicalized at the smaller count. The table is also indexed by
+  a bound on its keys, kept equal to the environment's id counter, so
+  binding a fresh id refutes the position being taken (ASSUMPTIONS 97).
+  All of it is erased, so the compiled compiler runs the same code as
+  before.
 - **Errors are values.** The language has no exceptions, so an
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where

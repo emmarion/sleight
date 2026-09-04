@@ -1359,3 +1359,47 @@ by the owner.
     empty signature, so the errors following the first can differ from
     before; the bootstrap's error tests all still find their message,
     and its programs and fixpoint are unchanged.
+
+97. **A fresh id is provably absent from the fact table.** The table is
+    now indexed by a bound as well as by its facts, `Table n f c`, and
+    carries an erased `Above` proof that every key it holds is at most
+    `c` (at each node, the key its path spells is, when the node holds
+    an entry); the environment keeps its id counter as that bound, so
+    the table's type is `Table nfree ffacts fresh`. Binding takes the
+    successor of the counter with a `BinLt` proof (`bin-succ-lt`), and
+    `table-insert` refutes the position being taken: a taken position
+    yields a `Taken` proof (the insertion now returns one instead of a
+    bare `IKept`), `Above` turns it into `BinLe x fresh`, and the strict
+    order refutes that, so the "internal: a fresh entry's position was
+    taken" error of item 94 is gone. `BinLt` and `BinLe` are the order
+    on ids digit by digit, with reflexivity, transitivity in its four
+    mixed forms, irreflexivity and a three-way decision with proofs.
+    The bound moves only up: ruling out preserves the keys (`above-out`),
+    inserting the fresh id keeps them at most the new counter
+    (`above-ins`), the id supply's other client weakens the table to
+    the new counter (`env-fresh-id`), and leaving a body keeps the outer
+    table with the inner counter by comparing the two and weakening
+    towards the larger, which is the inner one in every run but is
+    decided rather than assumed. Unification threads the bound through
+    its outcomes (`Outcome n c`) so that setting the table back into the
+    environment sets the counter it was read with. The session's reading
+    is that this closes the informal claim of item 94; the reference's
+    own termination remains the one thing no proof here touches. In the
+    same session the elaborator's lockstep lists went: the ids bound for
+    a `def-fns` or `def-adts` are indexed by the headers they came from
+    (`Bound fns hs`, `Tids adts hs`), headers hold their parameter and
+    return telescopes rather than a type to take apart, string literals
+    are interned by their own function so no name classifies as a
+    string, the wrapping constructor's field is found by the search that
+    checks it is the only one, and a run-position group's closures are
+    the pairs closing produced. What the session left as they were, all
+    reachable only after an error was already recorded or by the
+    interpreter's own failure: `bind-let` and `first-res` on a result
+    list whose length a reported count error already disagreed with,
+    `spread` on values the interpreter failed to produce, and the
+    interpreter's dynamic checks, which belong with its fuel. Still
+    informal by the session's reading: `nth-term` on a proof type's
+    arguments (their number is fixed by the prelude's type constructors),
+    the `comptime-match` contradiction after a value was verified, and
+    the places that read an id out of a term expected to be a variable
+    and default to id zero otherwise.
