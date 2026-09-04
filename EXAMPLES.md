@@ -83,3 +83,15 @@ that the test does not make is a mistake in this file.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
+- `tests/numeral_distinct.sl`, `tests/numeral_succ.sl` — reasoning about
+  literals through the `Numeral` relation rather than about their opaque
+  `Nat`s. The first proves the spelling injective (`double-inj`,
+  `double-parity`, `numeral-inj`) and refutes a branch equating two literals
+  by a vacuous match on the resulting `Eq`, at a cost set by the spellings'
+  depth rather than the numbers' difference. The second proves the spelling
+  functional (`double-fn`, `numeral-fn`) and relates adjacent literals
+  (`BinSucc`, `numeral-succ`), then makes `5 is (Succ 4)` bind outward by
+  sealing the erased `Eq` into a `Const` a `comptime-match` reads, which is
+  what refutes its `VNil` branch. `seal` turning an erased proof of a
+  one-constructor type into a non-erased token appears to be what section 12's
+  one-real-branch rule licenses, but that reading is the session's.
