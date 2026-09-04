@@ -1736,12 +1736,12 @@ intended invariant; the prototype checks it on its own tests.
 `nat-add` is likewise extern over a structural definition. There are no
 numeric literals for now.
 
-**`U8`.** An extern enum with one constructor, `MkU8`, holding a
+**`U8`.** An enum with one constructor, `MkU8`, holding a
 `(Nat)` and an erased proof that it is below the modulus:
 
 ```scheme
 (def-adts $ U8 : -> Type
-  enum extern
+  enum newtype
   (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
 ```
 
@@ -1756,7 +1756,8 @@ and for a computed one by binding it and matching `lt-dec`, where the
 caller says what out of range means (§5 keeps the call itself out of
 the `Dec` index, so the binding is not optional). There is no
 narrowing function. `u8-add` (wrapping) is extern; `U8` is marked
-`newtype`, the FFI holding a value as its `Nat` field is held.
+`newtype`, so it is its `Nat` field alone (§38) and needs no extern of
+its own.
 
 Open, not decided: a source-level declaration of extern types and
 functions; what guarantees an extern implementation agrees with its

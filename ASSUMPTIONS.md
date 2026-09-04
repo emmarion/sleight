@@ -1340,8 +1340,6 @@ what it assumed while doing so.
     being a `Nat` at runtime. `u8-to-nat` went too, having been the
     extern form of `coercible-wrap MkU8`.
 
-    §41 still calls `U8` an extern enum in its prose, its code block and
-    its list of externs. The session proposed all three edits and is
-    waiting on the owner's wording (CLAUDE.md rule 12); this is recorded
-    as the open item rather than guessed at.
+    §41 says this in its prose, its code block and its list of externs,
+    in wording the owner confirmed (CLAUDE.md rule 12).
 
