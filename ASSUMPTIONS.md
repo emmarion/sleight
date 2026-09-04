@@ -1162,8 +1162,10 @@ suite (CLAUDE.md rule 2), not settled decisions.
     One consequence for `delegate`: the `Matchable` a nested `def-adts`
     now binds would stand between a delegating body and its call, so
     the tail-check's normalizer, which already folds a renaming `let`
-    away, also drops a `let` of constants the rest of the body never
-    mentions. That keeps item 77's guarantee for a phantom-only
+    away, also drops a `let` whose right-hand side is values embedded
+    by elaboration -- literals in the post-erasure code, the entries
+    they bind staying `Dyn` as §34 has every binding in a body -- when
+    the rest of the body mentions none of its binders. That keeps item 77's guarantee for a phantom-only
     `def-adts` (`tests/delegate_erased_inner.sl`) but reads more widely
     than item 77 did: a nested `def-adts` whose constructors the body
     never uses no longer blocks a `delegate` either. The session's
