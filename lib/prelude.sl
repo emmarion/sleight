@@ -158,10 +158,6 @@
           (let (many r) (erased pr) (mod-add (predates mod-u8) n u8-modulus p m))
           (MkU8 r pr))))))
 
-(def-fns u8-lvl $ many extern nat-to-u8 : (many (Nat) n) -> (many (U8) u)
-  (let (many r) (erased pr) (mod-add (predates mod-u8) (Zero) u8-modulus u8-modulus-pos n))
-  (MkU8 r pr))
-
 (def-fns u8-lvl $ many extern u8-to-nat : (many (U8) u) -> (many (Nat) n)
   (match many u _
     ((MkU8 n p) n)))

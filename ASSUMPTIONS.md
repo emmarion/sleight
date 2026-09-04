@@ -1290,9 +1290,7 @@ what it assumed while doing so.
     owner's direction: converting is trivial through `U8`, which is
     itself trivial given an `Lt`, so the prelude need not choose what a
     `Nat` out of range becomes (`tests/char_convert.sl` writes both
-    directions out). The question of what a narrowing should return, and
-    whether §41's wrapping `nat-to-u8` is the right shape for one, is
-    left where it was rather than answered here.
+    directions out).
 
 99. **"Mint" in these notes means a fact or entry reaching the tables,
     not a claim about who checked it.** For `unary` and `distinct`
@@ -1305,3 +1303,21 @@ what it assumed while doing so.
     involved, is that a literal's runtime `Nat` is the number its source
     spelled, which rests on `bin-to-nat`'s extern (§41's invariant, and
     KERNEL.md's note on facts).
+
+100. **`nat-to-u8` is gone** (`lib/prelude.sl`, `lib/ffi.ml`,
+    `lib/ffi_core.ml`), removed at the owner's direction: a wrapping
+    narrowing hands back a `U8` whose value bears no stated relation to
+    its input, so what it returns is opaque exactly where a caller
+    wanted to know. Nothing replaced it, and nothing needed to. A
+    literal takes §41's reflection route at top level and is referenced
+    from a body as an ordinary value, which is what the eight tests
+    using it for an exit code now do. A computed `Nat` is narrowed where
+    it is used, by binding it and matching `lt-dec` — §5 keeps a call
+    out of the `Dec` index, so the binding is not optional — with the
+    caller saying what out of range means instead of the prelude
+    wrapping silently (`tests/io_closure_in_data.sl`,
+    `tests/io_factory_twice.sl`). `u8-add` still wraps, which is
+    modular arithmetic rather than a narrowing and was not touched.
+    §41 still names `nat-to-u8` in two places; its wording is the
+    owner's (CLAUDE.md rule 12) and is recorded here as an open item
+    rather than guessed at.

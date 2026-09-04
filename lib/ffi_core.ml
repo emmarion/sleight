@@ -32,7 +32,6 @@ let text ~z ~slice ~u8 ~str =
 
 let nat_add = Z.add
 let u8_add a b = Z.rem (Z.add a b) modulus
-let nat_to_u8 n = Z.rem n modulus
 let u8_to_nat n = n
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)

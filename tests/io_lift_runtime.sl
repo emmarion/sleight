@@ -30,11 +30,13 @@
       (GetArgs B w))))
 
 (def-lvl A)
-(let (erased u8-a) (prove-predates u8-lvl A))
+(let (many d3) (lt-dec 3 u8-modulus))
+(comptime-match d3 (Yes za3 zb3 zp3))
+(let (many code3) (MkU8 3 zp3))
 (let (erased str-a) (prove-predates str-lvl A))
 (def-fns A $ many lib-echo : (many (Maybe (String)) line) -> (many (IO A) next)
   (match many line _
-    ((None a) (Exit A (nat-to-u8 (predates u8-a) 3)))
+    ((None a) (Exit A code3))
     ((Some a s) (WriteOut A (str-append (predates str-a) "> " (str-append (predates str-a) s "\n")) (ReadLine A lib-echo)))))
 
 (def-lvl B)
