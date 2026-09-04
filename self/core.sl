@@ -303,10 +303,12 @@
     enum
     (many MkEnv : (many (NameMap (Bin)) scope) (many (IdMap (EInfo)) entries) (many (IdMap (Fact)) facts)
        (many (Bool) run-pos) (many (IdMap (Value)) values) (many (List (Bin)) objects)
-       (many (NameMap (Bin)) literals) (many (Bin) fresh) (many (List (Trace)) trace) (many (List (String)) errors) -> (Env)))
+       (many (NameMap (Bin)) literals) (many (Bin) fresh) (many (List (Trace)) trace) (many (List (String)) errors)
+       (many (Maybe (Bin)) level) (many (List (Bin)) subterms) (many (List (String)) claimed) (many (List (String)) warnings)
+       (many (List (Pair (Bin) (Maybe (Bin)))) lits) -> (Env)))
   (EInfo : -> Type
     enum
-    (many MkEInfo : (many (Maybe (String)) name) (many (Mult) mult) (many (State) state) -> (EInfo)))
+    (many MkEInfo : (many (Maybe (String)) name) (many (Mult) mult) (many (State) state) (many (Bool) minted) -> (EInfo)))
   (State : -> Type
     enum
     (many SConst : (many (Value) v) -> (State))
@@ -321,71 +323,100 @@
     (many TrFinal : (many (Value) v) (many (Term) ty) -> (Trace))))
 
 (def-fns _ $ many env-scope : (many (Env) e) -> (many (NameMap (Bin)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) sc)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) sc)))
 (def-fns _ $ many env-entries : (many (Env) e) -> (many (IdMap (EInfo)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) en)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) en)))
 (def-fns _ $ many env-facts : (many (Env) e) -> (many (IdMap (Fact)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) fa)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) fa)))
 (def-fns _ $ many env-run-pos : (many (Env) e) -> (many (Bool) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) rp)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) rp)))
 (def-fns _ $ many env-values : (many (Env) e) -> (many (IdMap (Value)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) va)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) va)))
 (def-fns _ $ many env-objects : (many (Env) e) -> (many (List (Bin)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) ob)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) ob)))
 (def-fns _ $ many env-literals : (many (Env) e) -> (many (NameMap (Bin)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) li)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) li)))
 (def-fns _ $ many env-fresh : (many (Env) e) -> (many (Bin) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) fr)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) fr)))
 (def-fns _ $ many env-trace : (many (Env) e) -> (many (List (Trace)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) tr)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) tr)))
 (def-fns _ $ many env-errors : (many (Env) e) -> (many (List (String)) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) er)))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) er)))
 
+(def-fns _ $ many env-level : (many (Env) e) -> (many (Maybe (Bin)) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) lv)))
+(def-fns _ $ many env-subterms : (many (Env) e) -> (many (List (Bin)) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) st)))
+(def-fns _ $ many env-claimed : (many (Env) e) -> (many (List (String)) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) cl)))
+(def-fns _ $ many env-warnings : (many (Env) e) -> (many (List (String)) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) wa)))
+(def-fns _ $ many env-lits : (many (Env) e) -> (many (List (Pair (Bin) (Maybe (Bin)))) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) lt)))
+(def-fns _ $ many env-enter-body : (many (Env) e) (many (Bin) level) (many (List (Bin)) subterms) -> (many (Env) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa (BFalse) va ob li fr tr er (Some (Bin) level) subterms cl wa lt))))
+(def-fns _ $ many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li fr tr er lv st (Cons (String) x cl) wa lt))))
+(def-fns _ $ many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li fr tr er lv st cl (Cons (String) x wa) lt))))
+(def-fns _ $ many env-push-lit : (many (Env) e) (many (Bin) x) (many (Maybe (Bin)) proof) -> (many (Env) r)
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li fr tr er lv st cl wa (Cons (Pair (Bin) (Maybe (Bin))) (MkPair (Bin) (Maybe (Bin)) x proof) lt)))))
 (def-fns _ $ many env-set-scope : (many (Env) e) (many (NameMap (Bin)) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv x en fa rp va ob li fr tr er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv x en fa rp va ob li fr tr er lv st cl wa lt))))
 (def-fns _ $ many env-set-facts : (many (Env) e) (many (IdMap (Fact)) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en x rp va ob li fr tr er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en x rp va ob li fr tr er lv st cl wa lt))))
 (def-fns _ $ many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en fa x va ob li fr tr er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa x va ob li fr tr er lv st cl wa lt))))
 (def-fns _ $ many env-set-literals : (many (Env) e) (many (NameMap (Bin)) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en fa rp va ob x fr tr er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob x fr tr er lv st cl wa lt))))
 (def-fns _ $ many env-set-fresh : (many (Env) e) (many (Bin) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en fa rp va ob li x tr er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li x tr er lv st cl wa lt))))
 (def-fns _ $ many env-push-trace : (many (Env) e) (many (Trace) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en fa rp va ob li fr (Cons (Trace) x tr) er))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li fr (Cons (Trace) x tr) er lv st cl wa lt))))
 (def-fns _ $ many env-error : (many (Env) e) (many (String) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er) (MkEnv sc en fa rp va ob li fr tr (Cons (String) x er)))))
+  (match many e _ ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt) (MkEnv sc en fa rp va ob li fr tr (Cons (String) x er) lv st cl wa lt))))
 
 ; Leaves a scope: keeps [inner]'s facts, values, literals, fresh ids, trace and errors, restoring [outer]'s
 ; scope and objects; run position is [outer]'s.
 (def-fns _ $ many env-restore : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
   (match many outer _
-    ((MkEnv sc en fa rp va ob li fr tr er)
+    ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt)
       (match many inner _
-        ((MkEnv sc2 en2 fa2 rp2 va2 ob2 li2 fr2 tr2 er2) (MkEnv sc en2 fa2 rp va2 ob li2 fr2 tr2 er2))))))
+        ((MkEnv sc2 en2 fa2 rp2 va2 ob2 li2 fr2 tr2 er2 lv2 st2 cl2 wa2 lt2) (MkEnv sc en2 fa2 rp va2 ob li2 fr2 tr2 er2 lv st cl2 wa2 lt2))))))
 
 ; Leaves a match branch or a body: the entries (whose names the extractor prints), the id supply, trace
 ; and errors survive; scope, facts, values and objects are the outer ones again.
 (def-fns _ $ many env-discard : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
   (match many outer _
-    ((MkEnv sc en fa rp va ob li fr tr er)
+    ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt)
       (match many inner _
-        ((MkEnv sc2 en2 fa2 rp2 va2 ob2 li2 fr2 tr2 er2) (MkEnv sc en2 fa rp va ob li fr2 tr2 er2))))))
+        ((MkEnv sc2 en2 fa2 rp2 va2 ob2 li2 fr2 tr2 er2 lv2 st2 cl2 wa2 lt2) (MkEnv sc en2 fa rp va ob li fr2 tr2 er2 lv st cl2 wa2 lt2))))))
 
 (def-fns _ $ many entry : (many (Env) env) (many (Bin) x) -> (many (EInfo) r)
   (match many (idmap-get (predates _) (EInfo) x (env-entries (predates _) env)) _
-    ((None a) (MkEInfo (None (String)) (Many) (SDyn)))
+    ((None a) (MkEInfo (None (String)) (Many) (SDyn) (BFalse)))
     ((Some a e) e)))
 
 (def-fns _ $ many entry-mult-of : (many (Env) env) (many (Bin) x) -> (many (Mult) r)
-  (match many (entry (predates _) env x) _ ((MkEInfo n m s) m)))
+  (match many (entry (predates _) env x) _ ((MkEInfo n m s mi) m)))
 
 (def-fns _ $ many entry-state : (many (Env) env) (many (Bin) x) -> (many (State) r)
-  (match many (entry (predates _) env x) _ ((MkEInfo n m s) s)))
+  (match many (entry (predates _) env x) _ ((MkEInfo n m s mi) s)))
+
+(def-fns _ $ many entry-minted : (many (Env) env) (many (Bin) x) -> (many (Bool) r)
+  (match many (entry (predates _) env x) _ ((MkEInfo n m s mi) mi)))
+
+(def-fns _ $ many mark-minted : (many (Env) env) (many (Bin) x) -> (many (Env) r)
+  (match many env _
+    ((MkEnv sc en fa rp va ob li fr tr er lv st cl wa lt)
+      (let (many info) (match many (idmap-get (predates _) (EInfo) x en) (((EInfo) i))
+                         ((None a) (MkEInfo (None (String)) (Erased) (SDyn) (BTrue)))
+                         ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi) (MkEInfo n m s (BTrue)))))))
+      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) fa rp va ob li fr tr er lv st cl wa lt))))
 
 (def-fns _ $ many name-of : (many (Env) env) (many (Bin) x) -> (many (String) r)
   (match many (entry (predates _) env x) _
-    ((MkEInfo n m s) (match many n _ ((None a) (str-cat (predates _) "_" (bin-str (predates _) x))) ((Some a s2) s2)))))
+    ((MkEInfo n m s mi) (match many n _ ((None a) (str-cat (predates _) "_" (bin-str (predates _) x))) ((Some a s2) s2)))))
 
 (def-fns _ $ many fact : (many (Env) env) (many (Bin) x) -> (many (Fact) r)
   (match many (idmap-get (predates _) (Fact) x (env-facts (predates _) env)) _
@@ -407,14 +438,14 @@
 
 (def-fns _ $ many set-state : (many (Env) env) (many (Bin) x) (many (State) st) -> (many (Env) r)
   (match many env _
-    ((MkEnv sc en fa rp va ob li fr tr er)
+    ((MkEnv sc en fa rp va ob li fr tr er lv sts cl wa lt)
       (let (many info) (match many (idmap-get (predates _) (EInfo) x en) (((EInfo) i))
-                         ((None a) (MkEInfo (None (String)) (Many) st))
-                         ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s) (MkEInfo n m st))))))
+                         ((None a) (MkEInfo (None (String)) (Many) st (BFalse)))
+                         ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi) (MkEInfo n m st mi))))))
       (let (many va2) (match many st (((IdMap (Value)) m))
                         ((SConst v) (idmap-set (predates _) (Value) x v va))
                         ((SDyn) va)))
-      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) fa rp va2 ob li fr tr er))))
+      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) fa rp va2 ob li fr tr er lv sts cl wa lt))))
 
 ; Whether a type is one the fetching forms look for in ambient scope (sections 19, 38).
 (def-fns _ $ many is-object-type : (many (Term) ty) (many (Bin) coercible) -> (many (Bool) r)
@@ -430,14 +461,15 @@
 (def-fns _ $ many bind : (many (Env) env) (many (Maybe (String)) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe (Term)) rule) (many (Bin) coercible) ->
     (many (Env) r) (many (Bin) x)
   (match many env _
-    ((MkEnv sc en fa rp va ob li fr tr er)
+    ((MkEnv sc en fa rp va ob li fr tr er0 lv sts cl wa lt)
+      (let (many er) (match many name (((List (String)) e)) ((None a) er0) ((Some a n) (match many (is-literal-name (predates _) n) (((List (String)) e)) ((BTrue) (Cons (String) (str-cat (predates _) n " is a literal, not a name") er0)) ((BFalse) er0)))))
       (let (many x) (bin-succ (predates _) fr))
       (let (many sc2) (match many name (((NameMap (Bin)) m)) ((None a) sc) ((Some a n) (nm-set (predates _) (Bin) n x sc))))
-      (let (many en2) (idmap-set (predates _) (EInfo) x (MkEInfo name mult st) en))
+      (let (many en2) (idmap-set (predates _) (EInfo) x (MkEInfo name mult st (BFalse)) en))
       (let (many fa2) (idmap-set (predates _) (Fact) x (MkFact ty rule) fa))
       (let (many va2) (match many st (((IdMap (Value)) m)) ((SConst v) (idmap-set (predates _) (Value) x v va)) ((SDyn) va)))
       (let (many ob2) (match many (is-object-type (predates _) ty coercible) (((List (Bin)) l)) ((BTrue) (Cons (Bin) x ob)) ((BFalse) ob)))
-      (values (MkEnv sc2 en2 fa2 rp va2 ob2 li x tr er) x))))
+      (values (MkEnv sc2 en2 fa2 rp va2 ob2 li x tr er lv sts cl wa lt) x))))
 
 ; ---- Instantiation and abstraction over de Bruijn binders (lib/term.ml)
 
@@ -587,7 +619,8 @@
   (MkEntry (Some (String) name) (BFalse) (Erased) (SgTy t)))
 
 (let (many empty-env)
-  (MkEnv (nm-empty (Bin)) (MEmpty (EInfo)) (MEmpty (Fact)) (BTrue) (MEmpty (Value)) (Nil (Bin)) (nm-empty (Bin)) (BZ) (Nil (Trace)) (Nil (String))))
+  (MkEnv (nm-empty (Bin)) (MEmpty (EInfo)) (MEmpty (Fact)) (BTrue) (MEmpty (Value)) (Nil (Bin)) (nm-empty (Bin)) (BZ) (Nil (Trace)) (Nil (String))
+         (None (Bin)) (Nil (Bin)) (Nil (String)) (Nil (String)) (Nil (Pair (Bin) (Maybe (Bin))))))
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) (bin-succ (BZ)))
@@ -666,102 +699,46 @@
     ((TVar x) (None (Bin))) ((TBound k) (None (Bin))) ((TFn l p r) (None (Bin))) ((TTyCtor p) (None (Bin)))
     ((TValCtor p r) (None (Bin))) ((TMatchable d t c) (None (Bin))) ((TNewtype c) (None (Bin))) ((TErr m) (None (Bin)))))
 
-; ---- Forced unification, the part that records facts (section 18); contradictions are the checker's job.
+(def-fns _ $ many bool-eq : (many (Bool) a) (many (Bool) b) -> (many (Bool) r)
+  (match many a _ ((BTrue) b) ((BFalse) (not (predates _) b))))
+
+; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
 
 (def-fns _
-  (many unify : (subterm many (Nat) fuel) (many (Term) a) (many (Term) b) (many (Env) env) -> (many (Env) r)
-    (match many fuel _
-      ((Zero) env)
-      ((Succ k)
-        (let (many a1) (canon-env (predates _) env a))
-        (let (many b1) (canon-env (predates _) env b))
-        (match many a1 _
-          ((TVar x)
-            (match many b1 _
-              ((TVar y)
-                (match many (bin-cmp (predates _) x y) _
-                  ((OEq) env)
-                  ((OLt) (add-rule (predates _) env y a1))
-                  ((OGt) (add-rule (predates _) env x b1))))
-              ((TBound j) env)
-              ((TApp h as) (add-rule (predates _) env x b1))
-              ((TFn l p r) (add-rule (predates _) env x b1))
-              ((TTyCtor p) (add-rule (predates _) env x b1))
-              ((TValCtor p r) (add-rule (predates _) env x b1))
-              ((TMatchable d t c) (add-rule (predates _) env x b1))
-              ((TNewtype c) (add-rule (predates _) env x b1))
-              ((TErr m) env)))
-          ((TBound j) env)
-          ((TApp h as)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TApp h2 as2) (unify-list (subterm _) k as as2 (unify (subterm _) k h h2 env)))
-              ((TBound j) env) ((TFn l p r) env) ((TTyCtor p) env) ((TValCtor p r) env) ((TMatchable d t c) env) ((TNewtype c) env) ((TErr m) env)))
-          ((TFn l p r)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TFn l2 p2 r2) (unify-tele (subterm _) k r r2 (unify-tele (subterm _) k p p2 (unify (subterm _) k l l2 env))))
-              ((TBound j) env) ((TApp h2 as2) env) ((TTyCtor p2) env) ((TValCtor p2 r2) env) ((TMatchable d t c) env) ((TNewtype c) env) ((TErr m) env)))
-          ((TTyCtor p)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TTyCtor p2) (unify-tele (subterm _) k p p2 env))
-              ((TBound j) env) ((TApp h2 as2) env) ((TFn l2 p2 r2) env) ((TValCtor p2 r2) env) ((TMatchable d t c) env) ((TNewtype c) env) ((TErr m) env)))
-          ((TValCtor p r)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TValCtor p2 r2) (unify (subterm _) k r r2 (unify-tele (subterm _) k p p2 env)))
-              ((TBound j) env) ((TApp h2 as2) env) ((TFn l2 p2 r2) env) ((TTyCtor p2) env) ((TMatchable d t c) env) ((TNewtype c) env) ((TErr m) env)))
-          ((TMatchable d t c)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TMatchable d2 t2 c2) (unify-mctors (subterm _) k c c2 (unify (subterm _) k t t2 env)))
-              ((TBound j) env) ((TApp h2 as2) env) ((TFn l2 p2 r2) env) ((TTyCtor p2) env) ((TValCtor p2 r2) env) ((TNewtype c2) env) ((TErr m) env)))
-          ((TNewtype c)
-            (match many b1 _
-              ((TVar y) (add-rule (predates _) env y a1))
-              ((TNewtype c2) (unify (subterm _) k c c2 env))
-              ((TBound j) env) ((TApp h2 as2) env) ((TFn l2 p2 r2) env) ((TTyCtor p2) env) ((TValCtor p2 r2) env) ((TMatchable d t c2) env) ((TErr m) env)))
-          ((TErr m) env)))))
-  (many unify-list : (subterm many (Nat) fuel) (many (List (Term)) as) (many (List (Term)) bs) (many (Env) env) -> (many (Env) r)
-    (match many fuel _
-      ((Zero) env)
-      ((Succ k)
-        (match many as _
-          ((Nil x) env)
-          ((Cons x a rest)
-            (match many bs _
-              ((Nil y) env)
-              ((Cons y b rest2) (unify-list (subterm _) k rest rest2 (unify (subterm _) k a b env)))))))))
-  (many unify-tele : (subterm many (Nat) fuel) (many (List (Entry)) as) (many (List (Entry)) bs) (many (Env) env) -> (many (Env) r)
-    (match many fuel _
-      ((Zero) env)
-      ((Succ k)
-        (match many as _
-          ((Nil x) env)
-          ((Cons x a rest)
-            (match many bs _
-              ((Nil y) env)
-              ((Cons y b rest2)
-                (unify-tele (subterm _) k rest rest2
-                  (unify (subterm _) k (sg-term (predates _) (entry-sg (predates _) a)) (sg-term (predates _) (entry-sg (predates _) b)) env)))))))))
-  (many unify-mctors : (subterm many (Nat) fuel) (many (List (MCtor)) as) (many (List (MCtor)) bs) (many (Env) env) -> (many (Env) r)
-    (match many fuel _
-      ((Zero) env)
-      ((Succ k)
-        (match many as _
-          ((Nil x) env)
-          ((Cons x a rest)
-            (match many bs _
-              ((Nil y) env)
-              ((Cons y b rest2)
-                (match many a _
-                  ((MkMCtor m t)
-                    (match many b _
-                      ((MkMCtor m2 t2) (unify-mctors (subterm _) k rest rest2 (unify (subterm _) k t t2 env))))))))))))))
-
-(def-fns _ $ many unify-env : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Env) r)
-  (unify (predates _) big-fuel a b env))
+  (many show-term : (subterm many (Term) t) (many (Env) env) -> (many (Rope) r)
+    (match many t _
+      ((TVar x) (RStr (name-of (predates _) env x)))
+      ((TBound k) (RStr (str-cat (predates _) "#" (nat-str (predates _) k))))
+      ((TApp h args) (rcat4 (predates _) (RStr "(") (show-term (subterm _) h env) (show-terms (subterm _) args env) (RStr ")")))
+      ((TFn l ps rs) (rcat5 (predates _) (RStr "(Fn ") (show-term (subterm _) l env) (show-tele (subterm _) ps env) (rcat (predates _) (RStr " ->") (show-tele (subterm _) rs env)) (RStr ")")))
+      ((TTyCtor ps) (rcat3 (predates _) (RStr "(TyCtor") (show-tele (subterm _) ps env) (RStr " -> Type)")))
+      ((TValCtor ps ret) (rcat4 (predates _) (RStr "(ValCtor") (show-tele (subterm _) ps env) (rcat (predates _) (RStr " -> ") (show-term (subterm _) ret env)) (RStr ")")))
+      ((TMatchable d ty cs) (rcat4 (predates _) (RStr (match many d (((String) s)) ((DEnum) "(Matchable enum ") ((DUnion) "(Matchable union "))) (show-term (subterm _) ty env) (show-mctors (subterm _) cs env) (RStr ")")))
+      ((TNewtype c) (rcat3 (predates _) (RStr "(Newtype ") (show-term (subterm _) c env) (RStr ")")))
+      ((TErr m) (rcat3 (predates _) (RStr "<error: ") (RStr m) (RStr ">")))))
+  (many show-terms : (subterm many (List (Term)) ts) (many (Env) env) -> (many (Rope) r)
+    (match many ts _
+      ((Nil a) (REmpty))
+      ((Cons a t rest) (rcat3 (predates _) (RStr " ") (show-term (subterm _) t env) (show-terms (subterm _) rest env)))))
+  (many show-mctors : (subterm many (List (MCtor)) cs) (many (Env) env) -> (many (Rope) r)
+    (match many cs _
+      ((Nil a) (REmpty))
+      ((Cons a c rest)
+        (match many c _
+          ((MkMCtor m t) (rcat4 (predates _) (RStr (match many m (((String) s)) ((Erased) " (erased ") ((Many) " (many "))) (show-term (subterm _) t env) (RStr ")") (show-mctors (subterm _) rest env)))))))
+  (many show-tele : (subterm many (List (Entry)) es) (many (Env) env) -> (many (Rope) r)
+    (match many es _
+      ((Nil a) (REmpty))
+      ((Cons a e rest)
+        (match many e _
+          ((MkEntry n s m sg)
+            (let (many nm) (match many n (((String) x)) ((None b) "_") ((Some b x) x)))
+            (let (many marks) (str-cat (predates _) (match many s (((String) x)) ((BTrue) "subterm ") ((BFalse) ""))
+                                                    (match many m (((String) x)) ((Erased) "erased ") ((Many) "many "))))
+            (let (many body) (match many sg (((Rope) x))
+                               ((SgTy t) (rcat3 (predates _) (show-term (subterm _) t env) (RStr " ") (RStr nm)))
+                               ((SgIs t) (rcat3 (predates _) (show-term (subterm _) t env) (RStr " is ") (RStr nm)))))
+            (rcat5 (predates _) (RStr " (") (RStr marks) body (RStr ")") (show-tele (subterm _) rest env))))))))
 
 ; ---- Structural identity of canonical terms (section 5's canonicalize-then-compare)
 
@@ -837,43 +814,313 @@
 (def-fns _ $ many equal-env : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Bool) r)
   (term-eq (predates _) (canon-env (predates _) env a) (canon-env (predates _) env b)))
 
-; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
+; ---- Forced unification (section 18): records the facts a branch forces, or reports the contradiction
+; that refutes it (lib/env.ml's unify).
 
+(def-adts $ UnifyRes : -> Type
+  enum
+  (many UOk : (many (Env) env) -> (UnifyRes))
+  (many UContra : (many (String) msg) -> (UnifyRes)))
+
+(def-fns _ $ many mctors-list : (subterm many (List (MCtor)) cs) (many (Bin) x) -> (many (Bool) r)
+  (match many cs _
+    ((Nil a) (BFalse))
+    ((Cons a c rest)
+      (match many c _
+        ((MkMCtor m t)
+          (match many t _
+            ((TVar y) (or (predates _) (bin-eq (predates _) x y) (mctors-list (subterm _) rest x)))
+            ((TBound k) (mctors-list (subterm _) rest x)) ((TApp h as) (mctors-list (subterm _) rest x)) ((TFn l p r) (mctors-list (subterm _) rest x))
+            ((TTyCtor p) (mctors-list (subterm _) rest x)) ((TValCtor p r) (mctors-list (subterm _) rest x)) ((TMatchable d t2 c2) (mctors-list (subterm _) rest x))
+            ((TNewtype c2) (mctors-list (subterm _) rest x)) ((TErr msg) (mctors-list (subterm _) rest x))))))))
+
+; Constructors one Matchable in scope lists are distinct (section 19), first-class ones included.
+(def-fns _ $ many listed : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) x) (many (Bin) y) -> (many (Bool) r)
+  (match many objects _
+    ((Nil a) (BFalse))
+    ((Cons a o rest)
+      (let (many here)
+        (match many (type-of (predates _) env o) (((Bool) b))
+          ((TMatchable d t cs) (and (predates _) (mctors-list (predates _) cs x) (mctors-list (predates _) cs y)))
+          ((TVar z) (BFalse)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse))
+          ((TValCtor p r) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+      (match many here _
+        ((BTrue) (BTrue))
+        ((BFalse) (listed (subterm _) rest env x y))))))
+
+; The Matchable in scope a type constructor heads, if any.
+(def-fns _ $ many matchable-heading : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) z) -> (many (Maybe (Term)) r)
+  (match many objects _
+    ((Nil a) (None (Term)))
+    ((Cons a o rest)
+      (let (many ty) (type-of (predates _) env o))
+      (let (many hit)
+        (match many ty (((Bool) b))
+          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar z2) (bin-eq (predates _) z z2)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse))
+                                 ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+          ((TVar y) (BFalse)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse))
+          ((TValCtor p r) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+      (match many hit _
+        ((BTrue) (Some (Term) ty))
+        ((BFalse) (matchable-heading (subterm _) rest env z))))))
+
+(def-fns _ $ many signature-of : (many (Env) env) (many (Bin) z) -> (many (Maybe (Term)) r)
+  (match many (type-of (predates _) env z) _
+    ((TTyCtor p) (Some (Term) (TTyCtor p)))
+    ((TValCtor p r) (Some (Term) (TValCtor p r)))
+    ((TVar y) (None (Term))) ((TBound k) (None (Term))) ((TApp h as) (None (Term))) ((TFn l p r) (None (Term)))
+    ((TMatchable d t c) (None (Term))) ((TNewtype c) (None (Term))) ((TErr m) (None (Term)))))
+
+; Whether a term mentions a binder no telescope of its own binds (a dangling de Bruijn index) at depth d,
+; and whether it mentions a variable.
 (def-fns _
-  (many show-term : (subterm many (Term) t) (many (Env) env) -> (many (Rope) r)
+  (many dangling : (subterm many (Term) t) (many (Nat) d) -> (many (Bool) r)
     (match many t _
-      ((TVar x) (RStr (name-of (predates _) env x)))
-      ((TBound k) (RStr (str-cat (predates _) "#" (nat-str (predates _) k))))
-      ((TApp h args) (rcat4 (predates _) (RStr "(") (show-term (subterm _) h env) (show-terms (subterm _) args env) (RStr ")")))
-      ((TFn l ps rs) (rcat5 (predates _) (RStr "(Fn ") (show-term (subterm _) l env) (show-tele (subterm _) ps env) (rcat (predates _) (RStr " ->") (show-tele (subterm _) rs env)) (RStr ")")))
-      ((TTyCtor ps) (rcat3 (predates _) (RStr "(TyCtor") (show-tele (subterm _) ps env) (RStr " -> Type)")))
-      ((TValCtor ps ret) (rcat4 (predates _) (RStr "(ValCtor") (show-tele (subterm _) ps env) (rcat (predates _) (RStr " -> ") (show-term (subterm _) ret env)) (RStr ")")))
-      ((TMatchable d ty cs) (rcat4 (predates _) (RStr (match many d (((String) s)) ((DEnum) "(Matchable enum ") ((DUnion) "(Matchable union "))) (show-term (subterm _) ty env) (show-mctors (subterm _) cs env) (RStr ")")))
-      ((TNewtype c) (rcat3 (predates _) (RStr "(Newtype ") (show-term (subterm _) c env) (RStr ")")))
-      ((TErr m) (rcat3 (predates _) (RStr "<error: ") (RStr m) (RStr ">")))))
-  (many show-terms : (subterm many (List (Term)) ts) (many (Env) env) -> (many (Rope) r)
+      ((TVar x) (BFalse))
+      ((TBound k) (not (predates _) (nat-lt (predates _) k d)))
+      ((TApp h args) (or (predates _) (dangling (subterm _) h d) (dangling-list (subterm _) args d)))
+      ((TFn l ps rs) (or (predates _) (dangling (subterm _) l d) (or (predates _) (dangling-tele (subterm _) ps d) (dangling-tele (subterm _) rs (nat-add (predates _) d (list-length (predates _) (Entry) ps))))))
+      ((TTyCtor ps) (dangling-tele (subterm _) ps d))
+      ((TValCtor ps ret) (or (predates _) (dangling-tele (subterm _) ps d) (dangling (subterm _) ret (nat-add (predates _) d (list-length (predates _) (Entry) ps)))))
+      ((TMatchable disc ty cs) (or (predates _) (dangling (subterm _) ty d) (dangling-mctors (subterm _) cs d)))
+      ((TNewtype c) (dangling (subterm _) c d))
+      ((TErr m) (BFalse))))
+  (many dangling-list : (subterm many (List (Term)) ts) (many (Nat) d) -> (many (Bool) r)
     (match many ts _
-      ((Nil a) (REmpty))
-      ((Cons a t rest) (rcat3 (predates _) (RStr " ") (show-term (subterm _) t env) (show-terms (subterm _) rest env)))))
-  (many show-mctors : (subterm many (List (MCtor)) cs) (many (Env) env) -> (many (Rope) r)
+      ((Nil a) (BFalse))
+      ((Cons a t rest) (or (predates _) (dangling (subterm _) t d) (dangling-list (subterm _) rest d)))))
+  (many dangling-mctors : (subterm many (List (MCtor)) cs) (many (Nat) d) -> (many (Bool) r)
     (match many cs _
-      ((Nil a) (REmpty))
-      ((Cons a c rest)
-        (match many c _
-          ((MkMCtor m t) (rcat4 (predates _) (RStr (match many m (((String) s)) ((Erased) " (erased ") ((Many) " (many "))) (show-term (subterm _) t env) (RStr ")") (show-mctors (subterm _) rest env)))))))
-  (many show-tele : (subterm many (List (Entry)) es) (many (Env) env) -> (many (Rope) r)
+      ((Nil a) (BFalse))
+      ((Cons a c rest) (match many c _ ((MkMCtor m t) (or (predates _) (dangling (subterm _) t d) (dangling-mctors (subterm _) rest d)))))))
+  (many dangling-tele : (subterm many (List (Entry)) es) (many (Nat) d) -> (many (Bool) r)
     (match many es _
-      ((Nil a) (REmpty))
+      ((Nil a) (BFalse))
       ((Cons a e rest)
         (match many e _
           ((MkEntry n s m sg)
-            (let (many nm) (match many n (((String) x)) ((None b) "_") ((Some b x) x)))
-            (let (many marks) (str-cat (predates _) (match many s (((String) x)) ((BTrue) "subterm ") ((BFalse) ""))
-                                                    (match many m (((String) x)) ((Erased) "erased ") ((Many) "many "))))
-            (let (many body) (match many sg (((Rope) x))
-                               ((SgTy t) (rcat3 (predates _) (show-term (subterm _) t env) (RStr " ") (RStr nm)))
-                               ((SgIs t) (rcat3 (predates _) (show-term (subterm _) t env) (RStr " is ") (RStr nm)))))
-            (rcat5 (predates _) (RStr " (") (RStr marks) body (RStr ")") (show-tele (subterm _) rest env))))))))
+            (or (predates _) (match many sg (((Bool) b)) ((SgTy t) (dangling (subterm _) t d)) ((SgIs t) (dangling (subterm _) t d)))
+              (dangling-tele (subterm _) rest (Succ d)))))))))
+
+(def-fns _
+  (many occurs : (subterm many (Term) t) (many (Bin) x) -> (many (Bool) r)
+    (match many t _
+      ((TVar y) (bin-eq (predates _) x y))
+      ((TBound k) (BFalse))
+      ((TApp h args) (or (predates _) (occurs (subterm _) h x) (occurs-list (subterm _) args x)))
+      ((TFn l ps rs) (or (predates _) (occurs (subterm _) l x) (or (predates _) (occurs-tele (subterm _) ps x) (occurs-tele (subterm _) rs x))))
+      ((TTyCtor ps) (occurs-tele (subterm _) ps x))
+      ((TValCtor ps ret) (or (predates _) (occurs-tele (subterm _) ps x) (occurs (subterm _) ret x)))
+      ((TMatchable disc ty cs) (or (predates _) (occurs (subterm _) ty x) (occurs-mctors (subterm _) cs x)))
+      ((TNewtype c) (occurs (subterm _) c x))
+      ((TErr m) (BFalse))))
+  (many occurs-list : (subterm many (List (Term)) ts) (many (Bin) x) -> (many (Bool) r)
+    (match many ts _
+      ((Nil a) (BFalse))
+      ((Cons a t rest) (or (predates _) (occurs (subterm _) t x) (occurs-list (subterm _) rest x)))))
+  (many occurs-mctors : (subterm many (List (MCtor)) cs) (many (Bin) x) -> (many (Bool) r)
+    (match many cs _
+      ((Nil a) (BFalse))
+      ((Cons a c rest) (match many c _ ((MkMCtor m t) (or (predates _) (occurs (subterm _) t x) (occurs-mctors (subterm _) rest x)))))))
+  (many occurs-tele : (subterm many (List (Entry)) es) (many (Bin) x) -> (many (Bool) r)
+    (match many es _
+      ((Nil a) (BFalse))
+      ((Cons a e rest)
+        (match many e _
+          ((MkEntry n s m sg)
+            (or (predates _) (match many sg (((Bool) b)) ((SgTy t) (occurs (subterm _) t x)) ((SgIs t) (occurs (subterm _) t x)))
+              (occurs-tele (subterm _) rest x))))))))
+
+(def-fns _ $ many contradiction : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r)
+  (UContra (rope-str (predates _) (rcat3 (predates _) (show-term (predates _) a env) (RStr " vs ") (show-term (predates _) b env)))))
+
+; A variable against a term: a dangling binder or an occurrence of the variable refutes (section 18).
+(def-fns _ $ many bind-var : (many (Env) env) (many (Bin) x) (many (Term) t) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r)
+  (match many (dangling (predates _) t 0) _
+    ((BTrue) (contradiction (predates _) env a b))
+    ((BFalse)
+      (match many (occurs (predates _) t x) _
+        ((BTrue) (UContra (rope-str (predates _) (rcat3 (predates _) (RStr (name-of (predates _) env x)) (RStr " occurs in ") (show-term (predates _) t env)))))
+        ((BFalse) (UOk (add-rule (predates _) env x t)))))))
+
+(def-fns _
+  (many unify : (subterm many (Nat) fuel) (many (Term) a) (many (Term) b) (many (Env) env) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (let (many a1) (canon-env (predates _) env a))
+        (let (many b1) (canon-env (predates _) env b))
+        (match many (term-eq (predates _) a1 b1) _
+          ((BTrue) (UOk env))
+          ((BFalse)
+            (match many a1 _
+              ((TVar x)
+                (match many b1 _
+                  ((TVar y) (unify-vars (subterm _) k x y env a1 b1))
+                  ((TBound j) (contradiction (predates _) env a1 b1))
+                  ((TApp h as) (bind-var (predates _) env x b1 a1 b1))
+                  ((TFn l p r) (bind-var (predates _) env x b1 a1 b1))
+                  ((TTyCtor p) (bind-var (predates _) env x b1 a1 b1))
+                  ((TValCtor p r) (bind-var (predates _) env x b1 a1 b1))
+                  ((TMatchable d t c) (bind-var (predates _) env x b1 a1 b1))
+                  ((TNewtype c) (bind-var (predates _) env x b1 a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TBound j) (contradiction (predates _) env a1 b1))
+              ((TApp h as)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TApp h2 as2)
+                    (match many (nat-eq (predates _) (list-length (predates _) (Term) as) (list-length (predates _) (Term) as2)) _
+                      ((BFalse) (contradiction (predates _) env a1 b1))
+                      ((BTrue) (unify-then-list (subterm _) k h h2 as as2 env))))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TFn l p r) (contradiction (predates _) env a1 b1)) ((TTyCtor p) (contradiction (predates _) env a1 b1))
+                  ((TValCtor p r) (contradiction (predates _) env a1 b1)) ((TMatchable d t c) (contradiction (predates _) env a1 b1)) ((TNewtype c) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TFn l p r)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TFn l2 p2 r2)
+                    (match many (unify (subterm _) k l l2 env) _
+                      ((UContra m) (UContra m))
+                      ((UOk env2)
+                        (match many (unify-tele (subterm _) k p p2 env2 a1 b1) _
+                          ((UContra m) (UContra m))
+                          ((UOk env3) (unify-tele (subterm _) k r r2 env3 a1 b1))))))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TApp h2 as2) (contradiction (predates _) env a1 b1)) ((TTyCtor p2) (contradiction (predates _) env a1 b1))
+                  ((TValCtor p2 r2) (contradiction (predates _) env a1 b1)) ((TMatchable d t c) (contradiction (predates _) env a1 b1)) ((TNewtype c) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TTyCtor p)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TTyCtor p2) (unify-tele (subterm _) k p p2 env a1 b1))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TApp h2 as2) (contradiction (predates _) env a1 b1)) ((TFn l2 p2 r2) (contradiction (predates _) env a1 b1))
+                  ((TValCtor p2 r2) (contradiction (predates _) env a1 b1)) ((TMatchable d t c) (contradiction (predates _) env a1 b1)) ((TNewtype c) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TValCtor p r)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TValCtor p2 r2)
+                    (match many (unify-tele (subterm _) k p p2 env a1 b1) _
+                      ((UContra m) (UContra m))
+                      ((UOk env2) (unify (subterm _) k r r2 env2))))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TApp h2 as2) (contradiction (predates _) env a1 b1)) ((TFn l2 p2 r2) (contradiction (predates _) env a1 b1))
+                  ((TTyCtor p2) (contradiction (predates _) env a1 b1)) ((TMatchable d t c) (contradiction (predates _) env a1 b1)) ((TNewtype c) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TMatchable d t c)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TMatchable d2 t2 c2)
+                    (match many (and (predates _) (disc-eq (predates _) d d2) (nat-eq (predates _) (list-length (predates _) (MCtor) c) (list-length (predates _) (MCtor) c2))) _
+                      ((BFalse) (contradiction (predates _) env a1 b1))
+                      ((BTrue)
+                        (match many (unify (subterm _) k t t2 env) _
+                          ((UContra m) (UContra m))
+                          ((UOk env2) (unify-mctors (subterm _) k c c2 env2 a1 b1))))))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TApp h2 as2) (contradiction (predates _) env a1 b1)) ((TFn l2 p2 r2) (contradiction (predates _) env a1 b1))
+                  ((TTyCtor p2) (contradiction (predates _) env a1 b1)) ((TValCtor p2 r2) (contradiction (predates _) env a1 b1)) ((TNewtype c2) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TNewtype c)
+                (match many b1 _
+                  ((TVar y) (bind-var (predates _) env y a1 a1 b1))
+                  ((TNewtype c2) (unify (subterm _) k c c2 env))
+                  ((TBound j) (contradiction (predates _) env a1 b1)) ((TApp h2 as2) (contradiction (predates _) env a1 b1)) ((TFn l2 p2 r2) (contradiction (predates _) env a1 b1))
+                  ((TTyCtor p2) (contradiction (predates _) env a1 b1)) ((TValCtor p2 r2) (contradiction (predates _) env a1 b1)) ((TMatchable d t c2) (contradiction (predates _) env a1 b1))
+                  ((TErr m) (UContra m))))
+              ((TErr m) (UContra m))))))))
+
+  ; Two atoms: a contradiction where one Matchable lists both; otherwise the newer becomes an alias of the
+  ; older, and what follows is checked: one signature, and one Matchable where both head one (section 19).
+  (many unify-vars : (subterm many (Nat) fuel) (many (Bin) x) (many (Bin) y) (many (Env) env) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (match many (listed (predates _) (env-objects (predates _) env) env x y) _
+          ((BTrue) (contradiction (predates _) env a b))
+          ((BFalse)
+            (let (many newer) (many older) (match many (bin-lt (predates _) x y) (((Bin) n) ((Bin) o)) ((BTrue) (values y x)) ((BFalse) (values x y))))
+            (let (many sx) (signature-of (predates _) env newer))
+            (let (many sy) (signature-of (predates _) env older))
+            (let (many mx) (matchable-heading (predates _) (env-objects (predates _) env) env newer))
+            (let (many my) (matchable-heading (predates _) (env-objects (predates _) env) env older))
+            (let (many env2) (add-rule (predates _) env newer (TVar older)))
+            (let (many after-sig)
+              (match many sx (((UnifyRes) r))
+                ((None c) (UOk env2))
+                ((Some c s) (match many sy (((UnifyRes) r)) ((None d) (UOk env2)) ((Some d s2) (unify (subterm _) k s s2 env2))))))
+            (match many after-sig _
+              ((UContra m) (UContra m))
+              ((UOk env3)
+                (match many mx _
+                  ((None c) (UOk env3))
+                  ((Some c m1) (match many my _ ((None d) (UOk env3)) ((Some d m2) (unify (subterm _) k m1 m2 env3))))))))))))
+
+  (many unify-then-list : (subterm many (Nat) fuel) (many (Term) h) (many (Term) h2) (many (List (Term)) as) (many (List (Term)) bs) (many (Env) env) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (match many (unify (subterm _) k h h2 env) _
+          ((UContra m) (UContra m))
+          ((UOk env2) (unify-list (subterm _) k as bs env2))))))
+
+  (many unify-list : (subterm many (Nat) fuel) (many (List (Term)) as) (many (List (Term)) bs) (many (Env) env) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (match many as _
+          ((Nil x) (UOk env))
+          ((Cons x a rest)
+            (match many bs _
+              ((Nil y) (UOk env))
+              ((Cons y b rest2)
+                (match many (unify (subterm _) k a b env) _
+                  ((UContra m) (UContra m))
+                  ((UOk env2) (unify-list (subterm _) k rest rest2 env2))))))))))
+
+  ; Telescopes unify entry by entry; a different length, multiplicity or subterm mark is a mismatch of shape.
+  (many unify-tele : (subterm many (Nat) fuel) (many (List (Entry)) as) (many (List (Entry)) bs) (many (Env) env) (many (Term) wa) (many (Term) wb) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (match many as _
+          ((Nil x) (match many bs _ ((Nil y) (UOk env)) ((Cons y b rest2) (contradiction (predates _) env wa wb))))
+          ((Cons x a rest)
+            (match many bs _
+              ((Nil y) (contradiction (predates _) env wa wb))
+              ((Cons y b rest2)
+                (match many a _
+                  ((MkEntry n s m sg)
+                    (match many b _
+                      ((MkEntry n2 s2 m2 sg2)
+                        (match many (and (predates _) (mult-eq (predates _) m m2) (bool-eq (predates _) s s2)) _
+                          ((BFalse) (contradiction (predates _) env wa wb))
+                          ((BTrue)
+                            (match many (unify (subterm _) k (sg-term (predates _) sg) (sg-term (predates _) sg2) env) _
+                              ((UContra msg) (UContra msg))
+                              ((UOk env2) (unify-tele (subterm _) k rest rest2 env2 wa wb))))))))))))))))
+
+  (many unify-mctors : (subterm many (Nat) fuel) (many (List (MCtor)) as) (many (List (MCtor)) bs) (many (Env) env) (many (Term) wa) (many (Term) wb) -> (many (UnifyRes) r)
+    (match many fuel _
+      ((Zero) (UContra "out of fuel"))
+      ((Succ k)
+        (match many as _
+          ((Nil x) (UOk env))
+          ((Cons x a rest)
+            (match many bs _
+              ((Nil y) (UOk env))
+              ((Cons y b rest2)
+                (match many a _
+                  ((MkMCtor m t)
+                    (match many b _
+                      ((MkMCtor m2 t2)
+                        (match many (mult-eq (predates _) m m2) _
+                          ((BFalse) (contradiction (predates _) env wa wb))
+                          ((BTrue)
+                            (match many (unify (subterm _) k t t2 env) _
+                              ((UContra msg) (UContra msg))
+                              ((UOk env2) (unify-mctors (subterm _) k rest rest2 env2 wa wb)))))))))))))))))
+
+(def-fns _ $ many unify-env : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r)
+  (unify (predates _) big-fuel a b env))
 
 ; Extern construction and destruction over the host's own values (section 41; lib/ffi_core.ml).
 (def-fns _ $ many ext-destruct : (many (Adt) adt) (many (Payload) p) -> (many (Nat) index) (many (List (Value)) fields)

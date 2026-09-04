@@ -1222,21 +1222,30 @@ by the owner.
     decision for the owner; the mark on `lt-dec` in `lib/prelude.sl`
     is nonetheless the owner's to keep or revert.
 
-91. **The compiler trusts its input.** `self/` checks nothing the
-    reference checker checks: no proof is inspected, no branch refuted,
-    no type compared, no level read. It performs only the elaboration
-    code generation needs (`self/README.md` lists it) and assumes the
-    program was accepted by `lib/`. So it is not a second checker and
-    contributes nothing to section 10's consistency question; what it
-    shows is that the language, with its termination discipline, can
-    express its own elaborator, interpreter and extractor. Where the
-    reference would report an error the compiler may emit OCaml that
-    does anything.
+91. **The compiler checks its input.** A first version trusted it; at
+    the owner's request ("make it not trusting") the session ported
+    every check of `lib/elab.ml` and `lib/env.ml`: the three
+    contradictions of forced unification (section 18), identity of
+    types and values, erasure by position, the call-site proofs against
+    the current level and enclosing subterm parameters, branch
+    refutation and the one-real-branch rule, `comptime-match`
+    verification, the tail and delegate marks, newtype shape, extern
+    claims, and the reader's and literals' errors, with the reference's
+    message texts. `self/bootstrap.sh` requires every error test to be
+    refused with its text. Two readings of the session, not the
+    owner's: an error does not stop elaboration, so a program may be
+    refused with more than one message where the reference gives its
+    first; and messages carry no line numbers, the compiler's
+    s-expressions not recording any. It is still not a second arbiter
+    for section 10's consistency question, since it runs on the same
+    reading of the design and trusts its own interpreter as `lib/`
+    trusts its (KERNEL.md).
 
 92. **What the fixpoint shows, precisely.** `self/bootstrap.sh`
     extracts the compiler natively with the reference extractor, checks
     that every runnable test compiles to a program whose stdout, stderr
-    and exit code match the interpreter's, compiles the compiler with
+    and exit code match the interpreter's and every error test is
+    refused with the expected text, compiles the compiler with
     that binary, and compiles the compiler again with the result,
     requiring the two OCaml outputs to be identical. Identical outputs
     mean the compiler compiled by the reference extractor and the

@@ -101,6 +101,19 @@
     ((SNil) (Zero))
     ((SCons c rest) (Succ (str-length (subterm _) rest)))))
 
+(def-fns _ $ many all-digits : (subterm many (String) s) -> (many (Bool) r)
+  (match many s _
+    ((SNil) (BTrue))
+    ((SCons c rest) (and (predates _) (char-between (predates _) c 48 57) (all-digits (subterm _) rest)))))
+
+; A numeral or a #\c character literal, which no name may spell (section 28, ASSUMPTIONS 51).
+(def-fns _ $ many is-literal-name : (many (String) s) -> (many (Bool) r)
+  (match many s _
+    ((SNil) (BFalse))
+    ((SCons c rest)
+      (or (predates _) (all-digits (predates _) s)
+        (and (predates _) (char-is (predates _) c 35) (match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is (predates _) c2 92))))))))
+
 ; Decimal digits of a Nat, by repeated subtraction of ten; the fuel is the number itself.
 (def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
   (char-of-code (predates _) (nat-add (predates _) 48 d)))
@@ -318,6 +331,14 @@
 
 (def-fns _ $ many list-is-empty : (erased Type A) (many (List A) xs) -> (many (Bool) r)
   (match many xs _ ((Nil a) (BTrue)) ((Cons a x rest) (BFalse))))
+
+(def-fns _ $ many list-mem-str : (subterm many (List (String)) xs) (many (String) x) -> (many (Bool) r)
+  (match many xs _
+    ((Nil a) (BFalse))
+    ((Cons a y rest)
+      (match many (str-eq (predates _) x y) _
+        ((BTrue) (BTrue))
+        ((BFalse) (list-mem-str (subterm _) rest x))))))
 
 (def-fns _ $ many list-mem-bin : (subterm many (List (Bin)) xs) (many (Bin) x) -> (many (Bool) r)
   (match many xs _

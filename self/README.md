@@ -11,19 +11,21 @@ tests do not make is a mistake in this file.
 
 ## What it is
 
-A *trusting* compiler. The reference interpreter in `lib/` is the
-checker: it verifies proofs, refutes branches, compares types and reads
-levels. `slc` does none of that. It assumes its input was accepted by
-the reference, and does only the elaboration that code generation
-needs: name resolution, the kind and type of every head (constructor,
-function, type, special form), erasure by position (DESIGN.md section
-20), each match's `Matchable`, tag and discriminants (sections 12, 17,
-38), the forced facts a branch adds so that a later match on a refined
-type variable finds its `Matchable` (section 18), run-position
-statements run at once (sections 16, 34), and literals. A proof is
-elaborated only for its type; a decrease annotation is stripped; an
-`(absurd C)` branch produces no code. Garbage in, garbage out: an
-unchecked program may compile to OCaml that does anything.
+A compiler that checks what it compiles. The reference interpreter in
+`lib/` is the arbiter of the language; `slc` does the same elaboration
+(DESIGN.md sections 3-5, 9, 12, 16-20, 34, 38), with every check of
+`lib/elab.ml` and `lib/env.ml` ported: canonicalize-then-compare
+identity of types and values, erasure by position, the call-site level
+and subterm proofs, forced unification that refutes a branch by
+contradiction and the one-real-branch rule, `comptime-match`
+verification against the stored value, the tail and delegate marks on
+the normalized code, newtype shape, extern claims, and the reader's and
+literals' syntax errors. Its error messages are the reference's, and
+`self/bootstrap.sh` requires every test that expects an error to be
+refused with a message mentioning the expected text. What it does not
+do: verify that the interpreter's evaluation is honest (KERNEL.md's
+interpreter-trust obligation applies to it as much as to `lib/`), and
+report line numbers, which its s-expressions do not carry.
 
 The compile-time part is the "comp time / Const stuff" the owner asked
 the compiler to interpret: `self/eval.sl` is a plain recursive
@@ -43,12 +45,14 @@ host's own `Nat`, `U8`, `Bin`, `String` and `Dec` (section 41).
 - `core.sl` — terms with de Bruijn telescopes (section 5), the
   special-form registry (section 27), runtime values and post-erasure
   code, the scope environment and fact table (sections 3, 18),
-  canonicalization, instantiation, the recording half of forced
-  unification, term identity, and the built-in entries.
+  canonicalization, instantiation, forced unification with its three
+  contradictions (section 18), term identity, and the built-in entries.
 - `eval.sl` — the compile-time interpreter.
-- `elab.sl` — the elaborator: head dispatch, calls, matches, the five
-  statements, literals, the post-erasure normalization behind `tail`
-  and `delegate` (ASSUMPTIONS 72), and the top level.
+- `elab.sl` — the elaborator and checker: head dispatch, calls with
+  their proofs, matches with refutation, the five statements, literals
+  with their `Numeral` proofs, the post-erasure normalization behind
+  `tail` and `delegate` (ASSUMPTIONS 72) and their validation, and the
+  top level.
 - `runtime.ml` — the OCaml runtime every compiled program starts with:
   `lib/ffi_core.ml`'s implementations, one type `v` of runtime values,
   the extern functions, and the driver of `lib/program.ml`.
@@ -81,14 +85,15 @@ printed.
 binary with the reference extractor (`--extract`), since running the
 compiler under the reference *interpreter* takes seconds per file where
 the native binary takes milliseconds. It compiles every `tests/*.sl`
-that runs (those without an `; error:` directive, which need the
-checker) with that binary, builds and runs the result with the test's
-stdin and arguments, and compares stdout, stderr and exit code with the
-reference interpreter run on the same files. And it compiles `slc` with
+with that binary: a test with an `; error:` directive must be refused
+with a message mentioning the text, and any other is built and run with
+the test's stdin and arguments, its stdout, stderr and exit code
+compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
 self-hosting fixpoint. At the time of writing all 116 runnable tests
-match and the fixpoint holds; the whole script takes under a minute.
+match, all 63 error tests are refused with the expected text, and the
+fixpoint holds; the whole script takes about a minute.
 
 ## Choices, and where they differ from the reference
 
@@ -120,10 +125,11 @@ recorded so it can be revisited.
   argument (the reader, maps, term traversals, evaluation of
   sub-expressions) it is the ordinary `subterm` decrease.
 - **Errors are values.** The language has no exceptions, so an
-  elaboration error is recorded in the environment and reported at the
-  end, and the offending code becomes `failwith` in the output; a
-  runtime error in the interpreter is a `VError` value that prints as
-  `<error: ...>` and embeds as `failwith`.
+  elaboration error is recorded in the environment and elaboration goes
+  on; every error is reported at the end and no OCaml is written. Where
+  the reference stops at the first error, `slc` may report a few more
+  that follow from it. A runtime error in the interpreter is a `VError`
+  value that prints as `<error: ...>`.
 - **Sharing inside embedded data is not preserved.** `lib/extract.ml`
   names a block met twice; SL has no physical identity, so a value
   reached twice inside one embedded constant is written twice. A
@@ -145,8 +151,10 @@ recorded so it can be revisited.
 - **`lt-dec` and `Dec` are extern** (ASSUMPTIONS 90), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; the source models are unchanged.
-- **Not modelled**: `numeral-of` (its erased proof is never needed for
-  code generation, so the form yields an erased placeholder), the
-  `--no-extern` mode (the compiler's interpreter always runs the FFI's
-  externs, and the output always uses them), and macros, which the
-  reference does not implement either.
+- **Not modelled**: the `--no-extern` mode (the compiler's interpreter
+  always runs the FFI's externs, and the output always uses them),
+  line numbers in messages, the reference's warning for a phantom
+  constructor with a `many` field (recorded but not printed), and
+  macros, which the reference does not implement either. A string
+  literal is not `is`-transparent to its characters as the reference's
+  is (ASSUMPTIONS 60); `numeral-of` on one is refused as there.

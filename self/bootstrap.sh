@@ -1,9 +1,9 @@
 #!/bin/sh
 # Bootstraps the self-hosted compiler (self/README.md) and checks it against the reference interpreter:
 #   1. builds the reference and extracts slc (self/*.sl) to a native binary with the reference extractor;
-#   2. compiles every tests/*.sl that runs (no "; error:" directive) with slc, builds the OCaml, runs it
-#      with the test's stdin and arguments, and compares stdout, stderr and exit code with the reference
-#      interpreter run on the same files;
+#   2. compiles every tests/*.sl with slc: a test with an "; error:" directive must be refused with a
+#      message mentioning that text; any other is built and run with the test's stdin and arguments, and
+#      its stdout, stderr and exit code compared with the reference interpreter's on the same files;
 #   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 set -u
@@ -24,13 +24,22 @@ $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 
-pass=0; fail=0; skipped=0
+pass=0; fail=0; errpass=0
 echo "== compiling the tests with slc"
 for t in tests/*.sl; do
   name=$(basename "$t" .sl)
-  if [ -n "$(directive "$t" error)" ]; then skipped=$((skipped+1)); continue; fi
   needs=""
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
+  if [ -n "$(directive "$t" error)" ]; then
+    # a test expecting an error: slc must refuse the program with a message mentioning the text
+    if "$B/slc" -- lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+      echo "FAIL $name: slc accepted a program the checker refuses"; fail=$((fail+1)); continue
+    fi
+    ok=1
+    directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done || ok=0
+    if [ "$ok" = 1 ]; then errpass=$((errpass+1)); else fail=$((fail+1)); fi
+    continue
+  fi
   args=$(directive "$t" args)
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files
@@ -48,7 +57,7 @@ for t in tests/*.sl; do
     echo "FAIL $name: output differs (exit $code vs $refcode), see $B/$name.out and $B/$name.ref.out"; fail=$((fail+1))
   fi
 done
-echo "$pass passed, $fail failed, $skipped skipped (tests expecting an error)"
+echo "$pass programs matched the interpreter, $errpass programs refused with the expected message, $fail failed"
 
 echo "== compiling slc with slc"
 "$B/slc" -- lib/prelude.sl $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }

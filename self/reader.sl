@@ -15,7 +15,8 @@
   (many TClose : -> (Tok))
   (many TDollar : -> (Tok))
   (many TWord : (many (String) s) -> (Tok))
-  (many TStrLit : (many (String) s) -> (Tok)))
+  (many TStrLit : (many (String) s) -> (Tok))
+  (many TError : (many (String) msg) -> (Tok)))
 
 (def-fns _ $ many is-delim : (many (Char) c) -> (many (Bool) r)
   (let (many n) (char-code (predates _) c))
@@ -28,6 +29,10 @@
   (match many (str-eq (predates _) w "$") _
     ((BTrue) (TDollar))
     ((BFalse) (TWord w))))
+
+(def-fns _ $ many escape-ok : (many (Char) e) -> (many (Bool) r)
+  (let (many n) (char-code (predates _) e))
+  (or (predates _) (nat-eq (predates _) n 110) (or (predates _) (nat-eq (predates _) n 116) (or (predates _) (nat-eq (predates _) n 34) (nat-eq (predates _) n 92)))))
 
 (def-fns _ $ many unescape : (many (Char) e) -> (many (Char) c)
   (let (many n) (char-code (predates _) e))
@@ -87,7 +92,7 @@
           ((BFalse) (word (subterm _) rest (SCons c rev) acc))))))
   (many string-lit : (subterm many (String) s) (many (String) rev) (many (List (Tok)) acc) -> (many (List (Tok)) toks)
     (match many s _
-      ((SNil) (list-rev (predates _) (Tok) (Cons (Tok) (TStrLit (str-rev-onto (predates _) rev (SNil))) acc)))
+      ((SNil) (list-rev (predates _) (Tok) (Cons (Tok) (TError "unterminated string literal") acc)))
       ((SCons c rest)
         (let (many n) (char-code (predates _) c))
         (match many (nat-eq (predates _) n 34) _
@@ -96,8 +101,11 @@
             (match many (nat-eq (predates _) n 92) _
               ((BTrue)
                 (match many rest _
-                  ((SNil) (list-rev (predates _) (Tok) acc))
-                  ((SCons e rest2) (string-lit (subterm _) rest2 (SCons (unescape (predates _) e) rev) acc))))
+                  ((SNil) (list-rev (predates _) (Tok) (Cons (Tok) (TError "unterminated string literal") acc)))
+                  ((SCons e rest2)
+                    (match many (escape-ok (predates _) e) _
+                      ((BTrue) (string-lit (subterm _) rest2 (SCons (unescape (predates _) e) rev) acc))
+                      ((BFalse) (list-rev (predates _) (Tok) (Cons (Tok) (TError (str-cat (predates _) "unknown escape \\" (SCons e (SNil)))) acc)))))))
               ((BFalse) (string-lit (subterm _) rest (SCons c rev) acc)))))))))
 
 ; A frame is an open form: whether $ opened it, and its items so far, reversed.
@@ -135,41 +143,45 @@
                 ((BTrue) (close-dollars (subterm _) k (close-top (predates _) stack)))))))))))
 
 ; The stack starts with a root frame; a ) closes the $ frames above the nearest ( frame and then that
-; frame; the root stays, so an unbalanced ) is ignored and an unclosed ( is closed at the end.
-(def-fns _ $ many parse-toks : (subterm many (List (Tok)) toks) (many (List (Frame)) stack) -> (many (List (Frame)) r)
+; frame; a ) with only the root open, a form still open at the end, or a bad token is a syntax error
+; (DESIGN.md section 2).
+(def-fns _ $ many parse-toks : (subterm many (List (Tok)) toks) (many (List (Frame)) stack) -> (many (List (Frame)) r) (many (Maybe (String)) err)
   (match many toks _
-    ((Nil a) stack)
+    ((Nil a) (values stack (None (String))))
     ((Cons a t rest)
       (match many t _
         ((TOpen) (parse-toks (subterm _) rest (Cons (Frame) (MkFrame (BFalse) (Nil (Raw))) stack)))
         ((TDollar) (parse-toks (subterm _) rest (Cons (Frame) (MkFrame (BTrue) (Nil (Raw))) stack)))
         ((TWord w) (parse-toks (subterm _) rest (push-item (predates _) (RAtom w) stack)))
         ((TStrLit s) (parse-toks (subterm _) rest (push-item (predates _) (RString s) stack)))
+        ((TError m) (values stack (Some (String) m)))
         ((TClose)
           (let (many s1) (close-dollars (predates _) (list-length (predates _) (Frame) stack) stack))
           (match many s1 _
-            ((Nil b) (parse-toks (subterm _) rest s1))
+            ((Nil b) (values s1 (Some (String) "unexpected )")))
             ((Cons b f s2)
               (match many s2 _
-                ((Nil c) (parse-toks (subterm _) rest s1))
+                ((Nil c) (values s1 (Some (String) "unexpected )")))
                 ((Cons c g s3) (parse-toks (subterm _) rest (close-top (predates _) s1)))))))))))
 
-; Closes whatever is still open and reads the root frame's items.
-(def-fns _ $ many finish-stack : (subterm many (Nat) fuel) (many (List (Frame)) stack) -> (many (List (Raw)) items)
+; Reads the root frame's items once nothing is open; an open form at the end is a missing ), reported
+; for the innermost, which is the $ form's when that is what is open.
+(def-fns _ $ many finish-stack : (many (List (Frame)) stack) -> (many (List (Raw)) items) (many (Maybe (String)) err)
   (match many stack _
-    ((Nil a) (Nil (Raw)))
+    ((Nil a) (values (Nil (Raw)) (None (String))))
     ((Cons a f rest)
       (match many rest _
-        ((Nil b) (match many f _ ((MkFrame d items) (list-rev (predates _) (Raw) items))))
+        ((Nil b) (match many f _ ((MkFrame d items) (values (list-rev (predates _) (Raw) items) (None (String))))))
         ((Cons b g rest2)
-          (match many fuel _
-            ((Zero) (Nil (Raw)))
-            ((Succ k) (finish-stack (subterm _) k (close-top (predates _) stack)))))))))
+          (match many f _
+            ((MkFrame d items) (values (Nil (Raw)) (Some (String) (match many d (((String) m)) ((BTrue) "missing ) after $") ((BFalse) "missing )")))))))))))
 
-(def-fns _ $ many parse : (many (String) src) -> (many (List (Raw)) items)
-  (let (many stack) (parse-toks (predates _) (tokenize (predates _) src (Nil (Tok)))
-                                (Cons (Frame) (MkFrame (BFalse) (Nil (Raw))) (Nil (Frame)))))
-  (finish-stack (predates _) (list-length (predates _) (Frame) stack) stack))
+(def-fns _ $ many parse : (many (String) src) -> (many (List (Raw)) items) (many (Maybe (String)) err)
+  (let (many stack) (many err) (parse-toks (predates _) (tokenize (predates _) src (Nil (Tok)))
+                                            (Cons (Frame) (MkFrame (BFalse) (Nil (Raw))) (Nil (Frame)))))
+  (match many err _
+    ((Some a m) (values (Nil (Raw)) err))
+    ((None a) (finish-stack (predates _) stack))))
 
 (def-fns _
   (many show-raw : (subterm many (Raw) r) -> (many (Rope) out)

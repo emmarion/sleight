@@ -18,7 +18,11 @@
 (def-fns util-lvl $ many run-files : (subterm many (List (String)) srcs) (many (Env) env) -> (many (Env) r)
   (match many srcs _
     ((Nil a) env)
-    ((Cons a src rest) (run-files (subterm _) rest (run-toplevel (predates _) (parse (predates _) src) env)))))
+    ((Cons a src rest)
+      (let (many items) (many err) (parse (predates _) src))
+      (match many err _
+        ((Some b m) (run-files (subterm _) rest (env-error (predates _) env (str-cat (predates _) "syntax error: " m))))
+        ((None b) (run-files (subterm _) rest (run-toplevel (predates _) items env)))))))
 
 (def-fns compile-lvl $ many compile : (many (List (String)) srcs) -> (many (IO io-lvl) io)
   (let (many env) (run-files (predates _) srcs (make-builtins (predates _))))
