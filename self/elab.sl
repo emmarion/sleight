@@ -1246,18 +1246,6 @@
           (let (many env3) (many ids) (bind-headers (subterm _) rest env2))
           (values env3 (Cons (Bin) x ids)))))))
 
-(def-fns _ $ many bind-adt-headers : (subterm many (List (AdtHeader)) hs) (many (Env) env) (many (List (Term)) tys) -> (many (Env) r) (many (List (Bin)) ids)
-  (match many hs _
-    ((Nil a) (values env (Nil (Bin))))
-    ((Cons a h rest)
-      (match many h _
-        ((MkAdtHeader name params disc nt ext ctors)
-          (let (many ty) (many tys2) (match many tys (((Term) t) ((List (Term)) r)) ((Nil b) (values (TErr "missing type") tys)) ((Cons b t r) (values t r))))
-          (let (many st) (match many (env-run-pos (predates _) env) (((State) s)) ((BTrue) (SConst (VToken))) ((BFalse) (SDyn))))
-          (let (many env2) (many x) (bind (predates _) env (Some (String) name) (Erased) st ty (None (Term)) coercible-id))
-          (let (many env3) (many ids) (bind-adt-headers (subterm _) rest env2 tys2))
-          (values env3 (Cons (Bin) x ids)))))))
-
 (def-fns _ $ many many-fns : (subterm many (List (Pair (Bin) (Func))) fns) (many (Env) env) -> (many (List (Pair (Bin) (Func))) r)
   (match many fns _
     ((Nil a) (Nil (Pair (Bin) (Func))))
@@ -2354,8 +2342,7 @@
     (match many fuel _
       ((Zero) (values env (SNone)))
       ((Succ k)
-        (let (many env2) (many headers) (many tys) (elab-adt-headers (subterm _) k env adts))
-        (let (many env3) (many tids) (bind-adt-headers (predates _) headers env2 tys))
+        (let (many env3) (many headers) (many tids) (elab-adt-headers (subterm _) k env adts))
         (let (many env4) (many consts) (define-adts (subterm _) k env3 headers tids))
         (match many (env-run-pos (predates _) env4) _
           ((BTrue) (values (set-const-states (predates _) consts env4) (SNone)))
@@ -2364,16 +2351,17 @@
               ((Nil a) (values env4 (SNone)))
               ((Cons a c rest) (values env4 (SConsts consts)))))))))
 
-  (many elab-adt-headers : (subterm many (Nat) fuel) (many (Env) env) (many (List (Raw)) adts) -> (many (Env) r) (many (List (AdtHeader)) hs) (many (List (Term)) tys)
+  ; Each type is bound as soon as its header is read, so a later header may mention it.
+  (many elab-adt-headers : (subterm many (Nat) fuel) (many (Env) env) (many (List (Raw)) adts) -> (many (Env) r) (many (List (AdtHeader)) hs) (many (List (Bin)) tids)
     (match many fuel _
-      ((Zero) (values env (Nil (AdtHeader)) (Nil (Term))))
+      ((Zero) (values env (Nil (AdtHeader)) (Nil (Bin))))
       ((Succ k)
         (match many adts _
-          ((Nil a) (values env (Nil (AdtHeader)) (Nil (Term))))
+          ((Nil a) (values env (Nil (AdtHeader)) (Nil (Bin))))
           ((Cons a adt rest)
             (let (many envl) (env-at (predates _) env (raw-line (predates _) adt)))
             (match many (raw-items (predates _) adt) _
-              ((Nil b) (values (env-error (predates _) envl "malformed def-adts entry") (Nil (AdtHeader)) (Nil (Term))))
+              ((Nil b) (values (env-error (predates _) envl "malformed def-adts entry") (Nil (AdtHeader)) (Nil (Bin))))
               ((Cons b nraw items)
                 (let (many name) (raw-name (predates _) nraw))
                 (let (many env0) (many sg)
@@ -2392,8 +2380,10 @@
                           (let (many nt) (many ext) (many cs) (take-marks (predates _) after3 env1 (MkNewtypeMark) (MkExtern)))
                           (values env1 (Cons (Raw) tyraw (Nil (Raw))) disc nt ext cs))))))
                 (let (many env2) (many ty) (elab-tyctor (subterm _) k env1 ps tyraws))
-                (let (many env3) (many hs) (many tys) (elab-adt-headers (subterm _) k (env-back (predates _) env env2) rest))
-                (values env3 (Cons (AdtHeader) (MkAdtHeader name ps disc nt ext ctors) hs) (Cons (Term) ty tys)))))))))
+                (let (many st) (match many (env-run-pos (predates _) env2) (((State) s)) ((BTrue) (SConst (VToken))) ((BFalse) (SDyn))))
+                (let (many env2b) (many x) (bind (predates _) env2 (Some (String) name) (Erased) st ty (None (Term)) coercible-id))
+                (let (many env3) (many hs) (many tids) (elab-adt-headers (subterm _) k (env-back (predates _) env env2b) rest))
+                (values env3 (Cons (AdtHeader) (MkAdtHeader name ps disc nt ext ctors) hs) (Cons (Bin) x tids)))))))))
 
   (many define-adts : (subterm many (Nat) fuel) (many (Env) env) (many (List (AdtHeader)) headers) (many (List (Bin)) tids) -> (many (Env) r) (many (List (Pair (Bin) (Value))) consts)
     (match many fuel _
