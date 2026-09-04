@@ -1321,3 +1321,41 @@ by the owner.
     a name bound by a program shadowing a special form is what the
     design intends, and only the choice of names was at fault.
 
+96. **The elaborator recurses on the raw it elaborates; no fuel remains
+    outside the interpreter and the generated printer.** Every function
+    of the elaborating block takes as its first `subterm` parameter the
+    raw, or list of raws, it elaborates. The structures a function parses
+    from that raw before elaborating it are indexed by the raw and carry
+    erased `Subterm` proofs for the raws they hold: telescope entries
+    (`SrcEntry root`, with `Sub root` for the raws before and after an
+    arrow and `Within b a` for a suffix, which may be the list itself),
+    function and type headers (`Headers fns`, one per raw of the list),
+    branch parts, a let's binders, a constructor's signature and a call's
+    decrease annotation. A descent into one of those raws is then a
+    checked decrease at the first position, and a loop over such a
+    structure a decrease at a later position with the raw held fixed.
+    Where a function hands its whole raw to another (a type former to
+    the TyCtor or ValCtor reader, a telescope reader to the loop over
+    its parsed entries) a `Steps` value decreases instead: its type
+    states how many hops it must pay for, `(Steps (Succ (Succ (Zero))))`
+    for a type former, so the zero case is refuted by the constructor's
+    index rather than reported, and each descent supplies a fresh budget
+    of a size the code's shape fixes. The session's reading is that this
+    is not a fuel in the sense of the earlier items: no path reports
+    exhaustion, and the checker rejects a budget too small for the hops
+    below it. Three smaller fuels went at the same time: the numeral
+    spelling counts up in `Bin` from zero and the decimal printer counts
+    up a digit list, both linear in the number (a numeral in the
+    millions costs that many steps, which the session judged acceptable
+    for the sources and tests at hand), and the reader closes `$` frames
+    by recursion on the frames below the one closed. The restructuring
+    merged the wrapper hops (`elab-expr` with `elab-form` and the
+    special-form dispatch, `elab-term` with `elab-term1` and `elab-type`
+    under a flag, the statement pair) and moved `comptime-match`, the
+    field lookup and the malformed-form error out of the block. The
+    session expects behaviour to differ only on malformed input: a
+    function or type header, or a constructor, with no signature after
+    its name is reported and then skipped rather than elaborated as an
+    empty signature, so the errors following the first can differ from
+    before; the bootstrap's error tests all still find their message,
+    and its programs and fixpoint are unchanged.

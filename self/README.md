@@ -115,15 +115,24 @@ recorded so it can be revisited.
   logarithmic under the FFI, a fresh one is a successor, and the
   environment's maps are tries over their digits. OCaml names carry the
   digits, least significant first: `v22111222_length`.
-- **Termination is by fuel where the recursion is not structural.**
-  The interpreter, the elaborator and the generated printer each take
-  a `Nat` that decreases along the call stack (not a step count), so a
-  fuel of 100000 bounds depth, not work. Running out returns an error
-  value, never a wrong answer silently. Where recursion is on a
-  constructor argument (the reader, maps, term traversals, evaluation
-  of sub-expressions, the emitter) it is the ordinary `subterm`
-  decrease; the emitter's measure is the closure whose code it emits,
-  every piece of code carrying an erased proof that it lies inside it.
+- **Termination is structural except in the interpreter and the
+  generated printer.** Those two take a `Nat` that decreases along the
+  call stack (not a step count), so a fuel of 1000000 or 100000 bounds
+  depth, not work; running out returns an error value, never a wrong
+  answer silently. Everything else recurses on a constructor argument
+  by the ordinary `subterm` decrease the reference checks: the reader on
+  its tokens and frames, maps and term traversals on their structure,
+  the emitter on the closure whose code it emits (every piece of code
+  carrying an erased proof that it lies inside it), and the elaborator
+  on the raw it elaborates. What the elaborator parses from a raw before
+  elaborating it (telescope entries, function and type headers, branch
+  parts, a call's decrease annotation) is a structure indexed by that
+  raw, whose entries carry erased proofs that the raws they hold lie
+  inside it, so descending into one of them is a checked decrease; where
+  a function hands its whole raw to another, a `Steps` budget decreases
+  instead, one step per hop, its size fixed by the code's shape and
+  stated in the type, so the zero case is refuted rather than reported
+  (ASSUMPTIONS 96).
 - **Canonicalization and forced unification terminate by proof**
   (ASSUMPTIONS 93 and 94). The fact table is a trie whose type index
   counts its rule-free entries; the rewrite rules are a list in the

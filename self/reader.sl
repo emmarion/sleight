@@ -141,19 +141,26 @@
       (match many f _
         ((MkFrame l d items) (push-item (predates _) (RList l (list-rev (predates _) (Raw) items)) rest))))))
 
-; Closes every $-opened frame on top of the stack; the fuel bounds the stack's depth.
-(def-fns _ $ many close-dollars : (subterm many (Nat) fuel) (many (List (Frame)) stack) -> (many (List (Frame)) r)
-  (match many fuel _
-    ((Zero) stack)
-    ((Succ k)
-      (match many stack _
-        ((Nil a) stack)
-        ((Cons a f rest)
-          (match many f _
-            ((MkFrame l d items)
-              (match many d _
-                ((BFalse) stack)
-                ((BTrue) (close-dollars (subterm _) k (close-top (predates _) stack)))))))))))
+; Closes every $-opened frame on top of the stack, each into the frame below it.
+(def-fns _
+  (many close-dollars : (subterm many (List (Frame)) stack) -> (many (List (Frame)) r)
+    (match many stack _
+      ((Nil a) stack)
+      ((Cons a f rest)
+        (match many f _
+          ((MkFrame l d items)
+            (match many d _
+              ((BFalse) stack)
+              ((BTrue) (close-into (subterm _) rest (RList l (list-rev (predates _) (Raw) items))))))))))
+  (many close-into : (subterm many (List (Frame)) stack) (many (Raw) item) -> (many (List (Frame)) r)
+    (match many stack _
+      ((Nil a) (push-item (predates _) item stack))
+      ((Cons a f rest)
+        (match many f _
+          ((MkFrame l d items)
+            (match many d _
+              ((BFalse) (Cons (Frame) (MkFrame l d (Cons (Raw) item items)) rest))
+              ((BTrue) (close-into (subterm _) rest (RList l (list-rev (predates _) (Raw) (Cons (Raw) item items))))))))))))
 
 ; The stack starts with a root frame; a ) closes the $ frames above the nearest ( frame and then that
 ; frame; a ) with only the root open, a form still open at the end, or a bad token is a syntax error
@@ -169,7 +176,7 @@
         ((TStrLit l s) (parse-toks (subterm _) rest (push-item (predates _) (RString l s) stack)))
         ((TError l m) (values stack (Some (SynErr) (MkSynErr l m))))
         ((TClose l)
-          (let (many s1) (close-dollars (predates _) (list-length (predates _) (Frame) stack) stack))
+          (let (many s1) (close-dollars (predates _) stack))
           (match many s1 _
             ((Nil b) (values s1 (Some (SynErr) (MkSynErr l "unexpected )"))))
             ((Cons b f s2)

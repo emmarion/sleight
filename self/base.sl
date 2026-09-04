@@ -114,30 +114,27 @@
       (or (predates _) (all-digits (predates _) s)
         (and (predates _) (char-is (predates _) c 35) (match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is (predates _) c2 92))))))))
 
-; Decimal digits of a Nat, by repeated subtraction of ten; the fuel is the number itself.
+; Decimal digits of a Nat, least significant first, counted up from zero.
 (def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
   (char-of-code (predates _) (nat-add (predates _) 48 d)))
 
-(def-fns _
-  (many divmod10 : (subterm many (Nat) fuel) (many (Nat) n) (many (Nat) q) -> (many (Nat) q2) (many (Nat) r)
-    (match many fuel _
-      ((Zero) (values q n))
-      ((Succ k)
-        (match many (nat-lt (predates _) n 10) _
-          ((BTrue) (values q n))
-          ((BFalse) (divmod10 (subterm _) k (nat-sub (predates _) n 10) (Succ q)))))))
-  (many nat-digits : (subterm many (Nat) fuel) (many (Nat) n) (many (String) acc) -> (many (String) s)
-    (match many fuel _
-      ((Zero) acc)
-      ((Succ k)
-        (let (many q) (many r) (divmod10 (subterm _) k n (Zero)))
-        (let (many acc1) (SCons (digit-char (predates _) r) acc))
-        (match many (nat-is-zero (predates _) q) _
-          ((BTrue) acc1)
-          ((BFalse) (nat-digits (subterm _) k q acc1)))))))
+(def-fns _ $ many dec-succ : (subterm many (List (Nat)) ds) -> (many (List (Nat)) r)
+  (match many ds _
+    ((Nil a) (Cons (Nat) 1 (Nil (Nat))))
+    ((Cons a d rest) (match many (nat-eq (predates _) d 9) _ ((BTrue) (Cons (Nat) 0 (dec-succ (subterm _) rest))) ((BFalse) (Cons (Nat) (Succ d) rest))))))
+
+(def-fns _ $ many count-up : (subterm many (Nat) n) (many (List (Nat)) ds) -> (many (List (Nat)) r)
+  (match many n _
+    ((Zero) ds)
+    ((Succ m) (count-up (subterm _) m (dec-succ (predates _) ds)))))
+
+(def-fns _ $ many digits-str : (subterm many (List (Nat)) ds) (many (String) acc) -> (many (String) s)
+  (match many ds _
+    ((Nil a) acc)
+    ((Cons a d rest) (digits-str (subterm _) rest (SCons (digit-char (predates _) d) acc)))))
 
 (def-fns _ $ many nat-str : (many (Nat) n) -> (many (String) s)
-  (nat-digits (predates _) (Succ n) n (SNil)))
+  (digits-str (predates _) (count-up (predates _) n (Cons (Nat) 0 (Nil (Nat)))) (SNil)))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
