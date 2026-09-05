@@ -68,6 +68,16 @@ that the test does not make is a mistake in this file.
 - `tests/coerce.sl` and `tests/delegate_coerce.sl` — section 40, unwrapping a
   list of newtypes by an erased recursive proof and a `coerce`, and a
   `delegate` whose argument and result pass through coercions.
+- `tests/char_ops.sl` — the prelude's `char-cmp`, a comparison of `Char`s
+  that is `nat-cmp` on their codes. A `Char` is its `U8` and a `U8` its
+  `Nat` at runtime, so the arguments coerce down through both newtypes
+  (`coercible-wrap` reversed with `coercible-sym`, the two steps chained),
+  the call to `nat-cmp` is marked `delegate`, and the `Coercible` carrying
+  the result back up to `Cmp (Char) CharLt a b` is built by an erased match
+  on the three outcomes, so nothing but the marked call is left to run. The
+  test fetches with `coercible-of` the proof the mark minted that `char-cmp`
+  and `nat-cmp` are one function, coerces `char-cmp` to the `Nat` signature,
+  and runs it both on characters and on numerals.
 - `tests/vec_map.sl` and `tests/binder_clash.sl` — dependent motives checked
   under each branch's forced facts, and a branch refuted because a
   constructor's index mentions its own `Fn` binder (ASSUMPTIONS 73).
