@@ -4,7 +4,7 @@ type t =
   | Match | MatchableOf | NewtypeOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
   | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf
-  | Erased | Many | Colon | Is | Arrow | Subterm | Enum | Union | Tail | Delegate | Predates | Absurd | NewtypeMark | Extern
+  | Erased | Many | Colon | Is | Arrow | Subterm | Enum | Union | Tail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
   [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match"); (Unary, "unary"); (Distinct, "distinct");
@@ -17,7 +17,7 @@ let all =
     (CoercibleOf, "coercible-of");
     (Erased, "erased"); (Many, "many"); (Colon, ":"); (Is, "is"); (Arrow, "->"); (Subterm, "subterm");
     (Enum, "enum"); (Union, "union"); (Tail, "tail"); (Delegate, "delegate"); (Predates, "predates");
-    (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern") ]
+    (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]
 
 let name s = List.assoc s all
 let statements = [ Let; DefLvl; DefFns; DefAdts; ComptimeMatch; LetMatch; Unary ]

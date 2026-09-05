@@ -627,26 +627,56 @@ and elab_match tele env expect l args =
         in
         (c, non_erased envb fids, unreachable, result)
       in
+      let elses, branches = List.partition (function List (_, a :: _) when is_special env a Sp.Else -> true | _ -> false) branches in
       let branches = List.map branch branches in
       List.iter
         (fun (_, c) ->
           match List.length (List.filter (fun (c', _, _, _) -> Var c' = c) branches) with
-          | 1 -> ()
+          | 0 | 1 -> ()
           | n -> error l "constructor %s has %d branches" (show env c) n)
         ctors;
+      let covered =
+        List.filter_map
+          (fun (m, c) ->
+            let c = match c with Var c -> c | _ -> assert false in
+            if List.exists (fun (c', _, _, _) -> c' = c) branches then None
+            else
+              let tele, ret = ctor_type env l c in
+              let mults = List.map (fun e -> if m = Erased then Erased else under smult e.mult) tele in
+              let envb, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
+              match at l (fun () -> refine envb sres c fids ret) with
+              | _ -> Some (c, m = Erased && smult = Many)
+              | exception Contradiction _ -> None)
+          ctors
+      in
+      let reachable = List.filter_map (fun (c, unreachable) -> if unreachable then None else Some c) covered in
+      let else_ =
+        match elses with
+        | [] ->
+            (match covered with [] -> () | (c, _) :: _ -> error l "constructor %s has 0 branches" (name_of env c));
+            None
+        | [ List (el, _ :: body) ] ->
+            if covered = [] then error el "else covers no constructor";
+            let envb = { env with run_pos = false } in
+            let envb, ress, code = elab_body ~tele:ann_tele envb (if reachable = [] then List.map (fun _ -> Erased) expect else expect) el body in
+            check_results envb el ann_tele ress;
+            if reachable = [] then None else Some code
+        | _ -> error l "a match has at most one else branch"
+      in
       let real =
         List.filter_map (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
-      if pos = Many && ((not tagged) || smult = Erased) && List.length real > 1 then
+      if pos = Many && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
         error l "a match without a runtime discriminant can have only one real branch";
       let code =
-        match real with
+        match (real, else_) with
         | _ when pos = Erased -> V.CErased
-        | [] -> V.CAbsurd
-        | [ (_, _, body) ] when smult = Erased -> body
+        | [], None -> V.CAbsurd
+        | [], Some body when smult = Erased || not tagged -> body
+        | [ (_, _, body) ], None when smult = Erased -> body
         | _ ->
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
-            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real }
+            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = Option.map (fun code -> (List.map (fun c -> Option.get (discriminant shapes c)) reachable, code)) else_ }
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
@@ -807,7 +837,7 @@ and elab_let_match env l args =
         else fun rest ->
           V.CMatch
             { scrut = scode; shape = match_shape env mid (tagged disc shapes);
-              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ] } )
+              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ]; default = None } )
   | _ -> error l "malformed let-match: expected (let-match <multiplicity> x (C field ...))"
 
 and elab_comptime_match env l args =
@@ -931,7 +961,7 @@ and check_marks env l pids code =
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
-    | V.CMatch m -> if direct then [] else List.concat_map (fun (_, _, c) -> tails ~direct c) m.V.branches
+    | V.CMatch m -> if direct then [] else List.concat_map (tails ~direct) (List.map (fun (_, _, c) -> c) m.V.branches @ List.map snd (Option.to_list m.V.default))
     | _ -> []
   in
   ( code,

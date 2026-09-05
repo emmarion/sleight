@@ -38,7 +38,7 @@ and code =
 
 (* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
    ADT the elaborator saw, or a Matchable read at runtime, its type having settled whether values carry a tag. *)
-and matching = { scrut : code; shape : shape; branches : (int * id list * code) list }
+and matching = { scrut : code; shape : shape; branches : (int * id list * code) list; default : (int list * code) option }
 and shape = Known of adt | Held of code * bool
 
 let map_code f = function
@@ -48,7 +48,7 @@ let map_code f = function
   | CLetRec (fns, rest) -> CLetRec (fns, f rest)
   | CMatch m ->
       let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | Known _ as s -> s in
-      CMatch { scrut = f m.scrut; shape; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches }
+      CMatch { scrut = f m.scrut; shape; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches; default = Option.map (fun (is, d) -> (is, f d)) m.default }
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes = function
@@ -56,7 +56,7 @@ let subcodes = function
   | CApp (g, args, _) -> g :: args
   | CLet (_, rhs, rest) -> [ rhs; rest ]
   | CLetRec (_, rest) -> [ rest ]
-  | CMatch m -> (match m.shape with Held (c, _) -> [ c ] | _ -> []) @ (m.scrut :: List.map (fun (_, _, b) -> b) m.branches)
+  | CMatch m -> (match m.shape with Held (c, _) -> [ c ] | _ -> []) @ (m.scrut :: List.map (fun (_, _, b) -> b) m.branches) @ List.map snd (Option.to_list m.default)
   | CVar _ | CConst _ | CErased | CAbsurd -> []
 
 (* Extern implementations run unless stripped (section 41's invariant). *)
