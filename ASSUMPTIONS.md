@@ -1398,9 +1398,7 @@ by the owner.
     list whose length a reported count error already disagreed with,
     `spread` on values the interpreter failed to produce, and the
     interpreter's dynamic checks, which belong with its fuel. Still
-    informal by the session's reading: `nth-term` on a proof type's
-    arguments (their number is fixed by the prelude's type constructors),
-    the `comptime-match` contradiction after a value was verified, and
+    informal by the session's reading: the `comptime-match` contradiction after a value was verified, and
     the places that read an id out of a term expected to be a variable
     and default to id zero otherwise. Of those last, the session made
     the prelude-name lookups (`Nat`, `Numeral`, `Bin`'s digits, `Lt`,
@@ -1413,3 +1411,21 @@ by the owner.
     change what unification does; the session's reading is that a slot
     holding anything but a variable is an invariant of well-formed terms
     of the same kind as `infer`'s.
+
+98. **A proof's arguments are read by arity, not by position.** Reading a
+    proof of `Predates`, `Subterm` or `Coercible` (`expect-proof3`,
+    `expect-proof4`) now takes the relation's argument count apart and
+    reports "expected a ... proof" on any other shape, where before the
+    head was checked and the arguments fetched by index with a placeholder
+    for a missing one; `nth-term` remains only for a call's arguments,
+    reached after an arity error was already reported. The session also
+    weighed intrinsically typed terms for the remaining well-formedness
+    invariants and set them aside: the reference (`lib/env.ml`) adds a
+    rule with no type check and makes the types agree by a second
+    unification, as `refine` does, so between the two the rewritten terms
+    are ill-typed from an intrinsic view, and slc must keep that order to
+    accept and refuse the same programs. The reference accepts the
+    inductive-inductive shape such terms would need (a type of types whose
+    constructors embed terms indexed by those types) and refuses a type
+    indexed by itself, both checked by compiling; the obstacle is the
+    metatheory, not the declaration.

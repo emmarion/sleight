@@ -734,7 +734,7 @@
     ((TValCtor ps r) (Nil (Term))) ((TMatchable d t cs) (Nil (Term))) ((TNewtype c) (Nil (Term))) ((TErr m) (Nil (Term)))))
 
 (def-fns _ $ many nth-term : (many (List (Term)) ts) (many (Nat) i) -> (many (Term) t)
-  (match many (list-nth (predates _) (Term) ts i) _ ((None a) (TErr "missing proof argument")) ((Some a t) t)))
+  (match many (list-nth (predates _) (Term) ts i) _ ((None a) (TErr "missing argument")) ((Some a t) t)))
 
 ; Values for binders, many ones from the list in order, erased ones the token.
 (def-fns _ $ many spread : (subterm many (List (Mult)) mults) (many (List (Value)) vs) -> (many (List (Value)) r)
@@ -991,18 +991,50 @@
   (mint (predates _) env3 (proof-type (predates _) predates-id (Cons (Term) (type-of (predates _) env3 x) (Cons (Term) (TVar x) (Cons (Term) (TVar lvl) (Nil (Term))))))))
 
 ; The arguments of a proof of the given kind, with an error where the term is not one.
-(def-fns _ $ many expect-proof : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r) (many (List (Term)) args)
-  (let (many ty) (canon-env (predates _) env (infer (predates _) p env)))
-  (let (many found)
-    (match many ty (((Maybe (List (Term))) r))
-      ((TApp h args) (match many h (((Maybe (List (Term))) r)) ((TVar c) (match many (bin-eq (predates _) c ctor) (((Maybe (List (Term))) r)) ((BTrue) (Some (List (Term)) args)) ((BFalse) (None (List (Term))))))
-                       ((TBound k) (None (List (Term)))) ((TApp h2 a2) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
-                       ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
-      ((TVar x) (None (List (Term)))) ((TBound k) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
-      ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
-  (match many found _
-    ((Some a args) (values env args))
-    ((None a) (values (env-error (predates _) env (str-cat3 (predates _) "expected a " (name-of (predates _) env ctor) (str-cat3 (predates _) " proof, got " (show-t (predates _) env p) (str-cat (predates _) " : " (show-t (predates _) env ty))))) (Nil (Term))))))
+(def-fns _ $ many proof-args : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Maybe (List (Term))) r)
+  (match many (canon-env (predates _) env (infer (predates _) p env)) _
+    ((TApp h args) (match many h _ ((TVar c) (match many (bin-eq (predates _) c ctor) _ ((BTrue) (Some (List (Term)) args)) ((BFalse) (None (List (Term))))))
+                     ((TBound k) (None (List (Term)))) ((TApp h2 a2) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
+                     ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
+    ((TVar x) (None (List (Term)))) ((TBound k) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
+    ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
+
+(def-fns _ $ many not-a-proof : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r)
+  (env-error (predates _) env (str-cat3 (predates _) "expected a " (name-of (predates _) env ctor) (str-cat3 (predates _) " proof, got " (show-t (predates _) env p) (str-cat (predates _) " : " (show-t (predates _) env (infer (predates _) p env)))))))
+
+; The three arguments of a Predates proof, or the four of a Subterm or Coercible proof (section 8).
+(def-fns _ $ many expect-proof3 : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2)
+  (let (many bad) (many e0) (many e1) (many e2) (values (not-a-proof (predates _) env ctor p) (TErr "proof") (TErr "proof") (TErr "proof")))
+  (match many (proof-args (predates _) env ctor p) _
+    ((None a) (values bad e0 e1 e2))
+    ((Some a args)
+      (match many args _
+        ((Nil b) (values bad e0 e1 e2))
+        ((Cons b t0 r1)
+          (match many r1 _
+            ((Nil c) (values bad e0 e1 e2))
+            ((Cons c t1 r2)
+              (match many r2 _
+                ((Nil d) (values bad e0 e1 e2))
+                ((Cons d t2 r3) (match many r3 _ ((Nil f) (values env t0 t1 t2)) ((Cons f x y) (values bad e0 e1 e2))))))))))))
+
+(def-fns _ $ many expect-proof4 : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2) (many (Term) t3)
+  (let (many bad) (many e0) (many e1) (many e2) (many e3) (values (not-a-proof (predates _) env ctor p) (TErr "proof") (TErr "proof") (TErr "proof") (TErr "proof")))
+  (match many (proof-args (predates _) env ctor p) _
+    ((None a) (values bad e0 e1 e2 e3))
+    ((Some a args)
+      (match many args _
+        ((Nil b) (values bad e0 e1 e2 e3))
+        ((Cons b t0 r1)
+          (match many r1 _
+            ((Nil c) (values bad e0 e1 e2 e3))
+            ((Cons c t1 r2)
+              (match many r2 _
+                ((Nil d) (values bad e0 e1 e2 e3))
+                ((Cons d t2 r3)
+                  (match many r3 _
+                    ((Nil f) (values bad e0 e1 e2 e3))
+                    ((Cons f t3 r4) (match many r4 _ ((Nil g) (values env t0 t1 t2 t3)) ((Cons g x y) (values bad e0 e1 e2 e3))))))))))))))
 
 (def-fns _ $ many sp-name-in : (subterm many (List (SpEntry)) es) (many (Sp) sp) -> (many (String) name)
   (match many es _
@@ -1913,24 +1945,32 @@
                               (let (many env5) (many r) (mint-predates (predates _) env4 x lvl))
                               (values env5 (Cons (Res) r (Nil (Res))) (CErased)))))
                         ((ExPredatesTrans)
-                          (let (many env2) (many pa) (many qa) (two-proofs (subterm _) args env0 predates-id predates-id))
-                          (let (many env3) (check (predates _) env2 "value" (nth-term (predates _) qa 1) (nth-term (predates _) pa 2)))
-                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) predates-id (Cons (Term) (nth-term (predates _) pa 0) (Cons (Term) (nth-term (predates _) pa 1) (Cons (Term) (nth-term (predates _) qa 2) (Nil (Term))))))))
+                          (let (many env1) (many p) (many q) (two-proofs (subterm _) args env0))
+                          (let (many env2a) (many p0) (many p1) (many p2) (expect-proof3 (predates _) env1 predates-id p))
+                          (let (many env2) (many q0) (many q1) (many q2) (expect-proof3 (predates _) env2a predates-id q))
+                          (let (many env3) (check (predates _) env2 "value" q1 p2))
+                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) predates-id (Cons (Term) p0 (Cons (Term) p1 (Cons (Term) q2 (Nil (Term))))))))
                           (values env4 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExSubtermTrans)
-                          (let (many env2) (many pa) (many qa) (two-proofs (subterm _) args env0 subterm-id subterm-id))
-                          (let (many env3) (check (predates _) env2 "value" (nth-term (predates _) qa 1) (nth-term (predates _) pa 3)))
-                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) subterm-id (Cons (Term) (nth-term (predates _) pa 0) (Cons (Term) (nth-term (predates _) pa 1) (Cons (Term) (nth-term (predates _) qa 2) (Cons (Term) (nth-term (predates _) qa 3) (Nil (Term)))))))))
+                          (let (many env1) (many p) (many q) (two-proofs (subterm _) args env0))
+                          (let (many env2a) (many p0) (many p1) (many p2) (many p3) (expect-proof4 (predates _) env1 subterm-id p))
+                          (let (many env2) (many q0) (many q1) (many q2) (many q3) (expect-proof4 (predates _) env2a subterm-id q))
+                          (let (many env3) (check (predates _) env2 "value" q1 p3))
+                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) subterm-id (Cons (Term) p0 (Cons (Term) p1 (Cons (Term) q2 (Cons (Term) q3 (Nil (Term)))))))))
                           (values env4 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExCoercibleTrans)
-                          (let (many env2) (many pa) (many qa) (two-proofs (subterm _) args env0 coercible-id coercible-id))
-                          (let (many env3) (check (predates _) env2 "value" (nth-term (predates _) qa 1) (nth-term (predates _) pa 3)))
-                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) coercible-id (Cons (Term) (nth-term (predates _) pa 0) (Cons (Term) (nth-term (predates _) pa 1) (Cons (Term) (nth-term (predates _) qa 2) (Cons (Term) (nth-term (predates _) qa 3) (Nil (Term)))))))))
+                          (let (many env1) (many p) (many q) (two-proofs (subterm _) args env0))
+                          (let (many env2a) (many p0) (many p1) (many p2) (many p3) (expect-proof4 (predates _) env1 coercible-id p))
+                          (let (many env2) (many q0) (many q1) (many q2) (many q3) (expect-proof4 (predates _) env2a coercible-id q))
+                          (let (many env3) (check (predates _) env2 "value" q1 p3))
+                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) coercible-id (Cons (Term) p0 (Cons (Term) p1 (Cons (Term) q2 (Cons (Term) q3 (Nil (Term)))))))))
                           (values env4 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExPredatesSubterm)
-                          (let (many env2) (many pa) (many qa) (two-proofs (subterm _) args env0 predates-id subterm-id))
-                          (let (many env3) (check (predates _) env2 "value" (nth-term (predates _) qa 3) (nth-term (predates _) pa 1)))
-                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) predates-id (Cons (Term) (nth-term (predates _) qa 0) (Cons (Term) (nth-term (predates _) qa 1) (Cons (Term) (nth-term (predates _) pa 2) (Nil (Term))))))))
+                          (let (many env1) (many p) (many q) (two-proofs (subterm _) args env0))
+                          (let (many env2a) (many p0) (many p1) (many p2) (expect-proof3 (predates _) env1 predates-id p))
+                          (let (many env2) (many q0) (many q1) (many q2) (many q3) (expect-proof4 (predates _) env2a subterm-id q))
+                          (let (many env3) (check (predates _) env2 "value" q3 p1))
+                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) predates-id (Cons (Term) q0 (Cons (Term) q1 (Cons (Term) p2 (Nil (Term))))))))
                           (values env4 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExCoerce)
                           (match many args (((Env) e) ((List (Res)) rs) ((Code) c))
@@ -1938,9 +1978,9 @@
                             ((Cons c araw rest)
                               (let (many env2) (many ars) (many code) (elab-expr (subterm _) araw env0 (Cons (Mult) m (Nil (Mult))) no-tele (CCPlain)))
                               (let (many env3) (many p) (elab-one-erased (subterm _) rest env2))
-                              (let (many env4) (many pa) (expect-proof (predates _) env3 coercible-id p))
-                              (let (many env5) (check (predates _) env4 "value" (res-term (predates _) (first-res (predates _) ars)) (nth-term (predates _) pa 1)))
-                              (let (many env6) (many x) (bind (predates _) env5 (None (String)) m (SDyn) (nth-term (predates _) pa 2) (Some (Term) (nth-term (predates _) pa 3)) coercible-id))
+                              (let (many env4) (many p0) (many p1) (many p2) (many p3) (expect-proof4 (predates _) env3 coercible-id p))
+                              (let (many env5) (check (predates _) env4 "value" (res-term (predates _) (first-res (predates _) ars)) p1))
+                              (let (many env6) (many x) (bind (predates _) env5 (None (String)) m (SDyn) p2 (Some (Term) p3) coercible-id))
                               (values env6 (Cons (Res) (res-of (predates _) env6 x) (Nil (Res))) code))))
                         ((ExCoercibleRefl)
                           (let (many env2) (many e) (elab-one-term (subterm _) args env0))
@@ -1949,8 +1989,8 @@
                           (values env3 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExCoercibleSym)
                           (let (many env2) (many p) (elab-one-erased (subterm _) args env0))
-                          (let (many env3) (many pa) (expect-proof (predates _) env2 coercible-id p))
-                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) coercible-id (Cons (Term) (nth-term (predates _) pa 2) (Cons (Term) (nth-term (predates _) pa 3) (Cons (Term) (nth-term (predates _) pa 0) (Cons (Term) (nth-term (predates _) pa 1) (Nil (Term)))))))))
+                          (let (many env3) (many p0) (many p1) (many p2) (many p3) (expect-proof4 (predates _) env2 coercible-id p))
+                          (let (many env4) (many r) (mint (predates _) env3 (proof-type (predates _) coercible-id (Cons (Term) p2 (Cons (Term) p3 (Cons (Term) p0 (Cons (Term) p1 (Nil (Term)))))))))
                           (values env4 (Cons (Res) r (Nil (Res))) (CErased)))
                         ((ExCoercibleWrap)
                           (match many args (((Env) e) ((List (Res)) rs) ((Code) c))
@@ -2579,18 +2619,16 @@
             (values env3 a b))))))
 
   ; Two proofs of the given kinds, elaborated erased (ASSUMPTIONS 23).
-  (many two-proofs : (subterm many (List (Raw)) args) (many (Env) env) (many (Bin) c1) (many (Bin) c2) -> (many (Env) r) (many (List (Term)) pa) (many (List (Term)) qa)
+  (many two-proofs : (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (Term) p) (many (Term) q)
     (match many args _
-      ((Nil x) (values (env-error (predates _) env "two proofs expected") (Nil (Term)) (Nil (Term))))
+      ((Nil x) (values (env-error (predates _) env "two proofs expected") (TErr "proof") (TErr "proof")))
       ((Cons x araw rest)
         (match many rest _
-          ((Nil y) (values (env-error (predates _) env "two proofs expected") (Nil (Term)) (Nil (Term))))
+          ((Nil y) (values (env-error (predates _) env "two proofs expected") (TErr "proof") (TErr "proof")))
           ((Cons y braw more)
             (let (many env2) (many prs) (many pc) (elab-expr (subterm _) araw env erased-one no-tele (CCPlain)))
-            (let (many env3) (many pa) (expect-proof (predates _) env2 c1 (erased-term (predates _) prs)))
-            (let (many env4) (many qrs) (many qc) (elab-expr (subterm _) braw env3 erased-one no-tele (CCPlain)))
-            (let (many env5) (many qa) (expect-proof (predates _) env4 c2 (erased-term (predates _) qrs)))
-            (values env5 pa qa))))))
+            (let (many env3) (many qrs) (many qc) (elab-expr (subterm _) braw env2 erased-one no-tele (CCPlain)))
+            (values env3 (erased-term (predates _) prs) (erased-term (predates _) qrs)))))))
 
   ; coercible-ctor's arguments: two terms per erased field, one proof per many field, each checked against
   ; the field's type on its side (section 38).
@@ -2617,11 +2655,9 @@
               ((Nil b) (values wrong src tgt))
               ((Cons b praw more)
                 (let (many env2) (many prs) (many pc) (elab-expr (subterm _) praw env erased-one no-tele (CCPlain)))
-                (let (many env3) (many pa) (expect-proof (predates _) env2 coercible-id (erased-term (predates _) prs)))
-                (let (many s) (nth-term (predates _) pa 1))
-                (let (many t) (nth-term (predates _) pa 3))
-                (let (many env4) (check-sg (predates _) env3 (sg-inst (predates _) src (entry-sg (predates _) e)) (MkRes s (nth-term (predates _) pa 0) (Erased))))
-                (let (many env5) (check-sg (predates _) env4 (sg-inst (predates _) tgt (entry-sg (predates _) e)) (MkRes t (nth-term (predates _) pa 2) (Erased))))
+                (let (many env3) (many sty) (many s) (many tty) (many t) (expect-proof4 (predates _) env2 coercible-id (erased-term (predates _) prs)))
+                (let (many env4) (check-sg (predates _) env3 (sg-inst (predates _) src (entry-sg (predates _) e)) (MkRes s sty (Erased))))
+                (let (many env5) (check-sg (predates _) env4 (sg-inst (predates _) tgt (entry-sg (predates _) e)) (MkRes t tty (Erased))))
                 (coercible-ctor-args (subterm _) more env5 rest (Cons (Term) s src) (Cons (Term) t tgt) c))))))))
 
   ; match (sections 11, 12, 18): the scrutinee, its Matchable, the annotation, then one branch per
@@ -2838,9 +2874,9 @@
                             ((BFalse)
                               (let (many env3) (many prs) (many pc) (elab-expr (subterm pp) p env2 erased-one no-tele (CCPlain)))
                               (values env3 (erased-term (predates _) prs)))))
-                        (let (many env4) (many pa) (expect-proof (predates _) env3 subterm-id pterm))
-                        (let (many env5) (check (predates _) env4 "value" (nth-term (predates _) pa 1) arg))
-                        (check (predates _) env5 "value" (nth-term (predates _) pa 3) (TVar counterpart)))))))))
+                        (let (many env4) (many s0) (many s1) (many s2) (many s3) (expect-proof4 (predates _) env3 subterm-id pterm))
+                        (let (many env5) (check (predates _) env4 "value" s1 arg))
+                        (check (predates _) env5 "value" s3 (TVar counterpart)))))))))
           ((AnnPredates z p pp)
             (match many same _
               ((BTrue) (env-error (predates _) env (call-needs (predates _) env callee same)))
@@ -2857,9 +2893,9 @@
                     ((BFalse)
                       (let (many env2) (many prs) (many pc) (elab-expr (subterm pp) p env erased-one no-tele (CCPlain)))
                       (values env2 (erased-term (predates _) prs)))))
-                (let (many env3) (many pa) (expect-proof (predates _) env2 predates-id pterm))
-                (let (many env4) (check (predates _) env3 "value" (nth-term (predates _) pa 2) (TVar cur)))
-                (match many (equal-env (predates _) env4 (nth-term (predates _) pa 1) lv) _
+                (let (many env3) (many p0) (many p1) (many p2) (expect-proof3 (predates _) env2 predates-id pterm))
+                (let (many env4) (check (predates _) env3 "value" p2 (TVar cur)))
+                (match many (equal-env (predates _) env4 p1 lv) _
                   ((BTrue) env4)
                   ((BFalse) (env-error (predates _) env4 (str-cat3 (predates _) (show-t (predates _) env4 pterm) " : " (str-cat3 (predates _) (show-t (predates _) env4 (infer (predates _) pterm env4)) " does not relate the callee's level " (show-t (predates _) env4 lv))))))))))))))
 
