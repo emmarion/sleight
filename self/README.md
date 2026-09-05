@@ -18,9 +18,11 @@ A compiler that checks what it compiles. The reference interpreter in
 identity of types and values, erasure by position, the call-site level
 and subterm proofs, forced unification that refutes a branch by
 contradiction and the one-real-branch rule, `comptime-match`
-verification against the stored value, the tail and delegate marks on
-the normalized code, newtype shape, extern claims, and the reader's and
-literals' syntax errors. Its error messages are the reference's, and
+verification against the stored value, `let-match` binding outward, the
+tail and delegate marks on the normalized code, newtype shape, extern
+claims, and the reader's and literals' syntax errors; `unary` and
+`distinct` (SUGAR.md 5) expand to the same prelude calls the reference
+writes down. Its error messages are the reference's, and
 `self/bootstrap.sh` requires every test that expects an error to be
 refused with a message mentioning the expected text. What it does not
 do: verify that the interpreter's evaluation is honest (KERNEL.md's
@@ -32,7 +34,8 @@ interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `U8`, `Bin`, `String` and `Dec` (section 41).
+host's own `Nat`, `Bin`, `String` and `Dec` (section 41); a `U8` or a
+`Char`, both newtypes, is its `Nat` (section 38).
 
 ## Files
 
@@ -48,10 +51,11 @@ host's own `Nat`, `U8`, `Bin`, `String` and `Dec` (section 41).
   contradictions (section 18), term identity, and the built-in entries.
 - `eval.sl` — the compile-time interpreter.
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
-  their proofs, matches with refutation, the five statements, literals
+  their proofs, matches with refutation, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
-  `tail` and `delegate` (ASSUMPTIONS 72) and their validation, and the
-  top level.
+  `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the pass
+  that writes out what `unary` and `distinct` stand for, and the top
+  level.
 - `runtime.ml` — the OCaml runtime every compiled program starts with:
   `lib/ffi_core.ml`'s implementations, one type `v` of runtime values,
   the extern functions, and the driver of `lib/program.ml`.
@@ -90,8 +94,8 @@ the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 116 runnable tests
-match, all 64 error tests are refused with the expected text, and the
+self-hosting fixpoint. At the time of writing all 125 runnable tests
+match, all 69 error tests are refused with the expected text, and the
 fixpoint holds; the whole script takes about a minute.
 
 ## Choices, and where they differ from the reference
@@ -172,10 +176,23 @@ recorded so it can be revisited.
   request each.
 - **The driver's knowledge of the prelude is fixed in `runtime.ml`**:
   the constructor indices of `IO`, `Maybe`, `Result`, `List` and `Unit`
-  and the shapes of `Nat`, `U8`, `Char` and `String` are written into
-  `run_io`, `to_string` and `of_string`, where `lib/extract.ml` reads
-  them off the prelude's constructors. A changed prelude needs a changed
-  runtime.
+  and the shapes of `Nat` and `String`, with a `Char` and an exit code's
+  `U8` each being their `Nat`, are written into `run_io`, `to_string`
+  and `of_string`, where `lib/extract.ml` reads them off the prelude's
+  constructors. A changed prelude needs a changed runtime.
+- **`unary` and `distinct` are written out before elaboration**, by a
+  pass over each top-level form, where the reference writes the call
+  down when it reaches the form and elaborates it there. The elaborator
+  here recurses on the raw it elaborates, so it cannot elaborate a raw
+  of its own making; the pass appends the generated form to the sugar's
+  own, inside a list at line 0 that the reader never produces, and
+  elaborating it is then a descent into the form. The checks and
+  messages are the reference's, made when the form is reached, and the
+  generated call is elaborated in the prelude's scope as there
+  (ASSUMPTIONS 104). The pass reads the heads through the scope in force
+  at the top-level form, so a name bound inside a body that shadows
+  `unary` or `distinct` is not seen by it, which the session did not
+  test (ASSUMPTIONS 111).
 - **`lt-dec` and `Dec` are extern** (ASSUMPTIONS 90), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; the source models are unchanged.

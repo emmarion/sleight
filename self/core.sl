@@ -88,7 +88,7 @@
   (StmtK : -> Type
     enum
     (many StLet : -> (StmtK)) (many StDefLvl : -> (StmtK)) (many StDefFns : -> (StmtK))
-    (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)))
+    (many StDefAdts : -> (StmtK)) (many StComptimeMatch : -> (StmtK)) (many StLetMatch : -> (StmtK)) (many StUnary : -> (StmtK)))
   (FormerK : -> Type
     enum
     (many FoFn : -> (FormerK)) (many FoTyCtor : -> (FormerK)) (many FoValCtor : -> (FormerK))
@@ -100,7 +100,8 @@
     (many ExProvePredates : -> (ExprK)) (many ExValues : -> (ExprK)) (many ExPredatesTrans : -> (ExprK))
     (many ExSubtermTrans : -> (ExprK)) (many ExPredatesSubterm : -> (ExprK)) (many ExCoerce : -> (ExprK))
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
-    (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)))
+    (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK))
+    (many ExDistinct : -> (ExprK)))
   (MarkK : -> Type
     enum
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
@@ -109,7 +110,7 @@
     (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK))))
 
 (def-fns _ $ many stmt-code : (many (StmtK) k) -> (many (Nat) n)
-  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4)))
+  (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6)))
 
 (def-fns _ $ many former-code : (many (FormerK) k) -> (many (Nat) n)
   (match many k _ ((FoFn) 0) ((FoTyCtor) 1) ((FoValCtor) 2) ((FoMatchable) 3) ((FoNewtype) 4)))
@@ -119,7 +120,7 @@
     ((ExMatch) 0) ((ExMatchableOf) 1) ((ExNewtypeOf) 2) ((ExNumeralOf) 3) ((ExLevelOf) 4) ((ExProveSubterm) 5)
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
-    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17)))
+    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExDistinct) 18)))
 
 (def-fns _ $ many mark-code : (many (MarkK) k) -> (many (Nat) n)
   (match many k _
@@ -148,6 +149,7 @@
 (let (many sp-table)
   (sp-cons "let" (SpStmt (StLet)) $ sp-cons "def-lvl" (SpStmt (StDefLvl)) $ sp-cons "def-fns" (SpStmt (StDefFns)) $
   sp-cons "def-adts" (SpStmt (StDefAdts)) $ sp-cons "comptime-match" (SpStmt (StComptimeMatch)) $
+  sp-cons "let-match" (SpStmt (StLetMatch)) $ sp-cons "unary" (SpStmt (StUnary)) $ sp-cons "distinct" (SpExpr (ExDistinct)) $
   sp-cons "Fn" (SpFormer (FoFn)) $ sp-cons "TyCtor" (SpFormer (FoTyCtor)) $ sp-cons "ValCtor" (SpFormer (FoValCtor)) $
   sp-cons "Matchable" (SpFormer (FoMatchable)) $ sp-cons "Newtype" (SpFormer (FoNewtype)) $
   sp-cons "match" (SpExpr (ExMatch)) $ sp-cons "matchable-of" (SpExpr (ExMatchableOf)) $ sp-cons "newtype-of" (SpExpr (ExNewtypeOf)) $
@@ -185,7 +187,6 @@
   (Payload : -> Type
     enum
     (many PNat : (many (Nat) n) -> (Payload))
-    (many PU8 : (many (U8) u) -> (Payload))
     (many PBin : (many (Bin) b) -> (Payload))
     (many PStr : (many (String) s) -> (Payload))
     (many PDec : (many (Nat) i) -> (Payload)))
@@ -1674,7 +1675,7 @@
        (many (Bool) run-pos) (many (IdMap (Value)) values) (many (List (Bin)) objects)
        (many (NameMap (Bin)) literals) (many (List (Trace)) trace) (many (List (String)) errors)
        (many (Maybe (Bin)) level) (many (List (Bin)) subterms) (many (List (String)) claimed) (many (List (String)) warnings)
-       (many (List (Pair (Bin) (Maybe (Bin)))) lits) (many (Loc) loc) -> (Env)))
+       (many (List (Pair (Bin) (Maybe (Bin)))) lits) (many (Loc) loc) (many (NameMap (Bin)) prelude) -> (Env)))
   (Loc : -> Type
     enum
     (many MkLoc : (many (String) file) (many (Nat) line) -> (Loc)))
@@ -1692,67 +1693,72 @@
     (many TrFinal : (many (Value) v) (many (Term) ty) -> (Trace))))
 
 (def-fns _ $ many env-scope : (many (Env) e) -> (many (NameMap (Bin)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) sc)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) sc)))
 (def-fns _ $ many env-entries : (many (Env) e) -> (many (IdMap (EInfo)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) en)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) en)))
 (def-fns _ $ many env-table : (many (Env) e) -> (erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (values nf ff fr tb))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (values nf ff fr tb))))
 (def-fns _ $ many env-facts : (many (Env) e) -> (erased (Nat) n) (many (Facts n) f)
   (let (erased n) (erased f) (many bnd) (many tb) (env-table (predates _) e))
   (match many tb _ ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (values n0 f0))))
 (def-fns _ $ many env-run-pos : (many (Env) e) -> (many (Bool) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) rp)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) rp)))
 (def-fns _ $ many env-values : (many (Env) e) -> (many (IdMap (Value)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) va)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) va)))
 (def-fns _ $ many env-objects : (many (Env) e) -> (many (List (Bin)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) ob)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) ob)))
 (def-fns _ $ many env-literals : (many (Env) e) -> (many (NameMap (Bin)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) li)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) li)))
 (def-fns _ $ many env-trace : (many (Env) e) -> (many (List (Trace)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) tr)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) tr)))
 (def-fns _ $ many env-errors : (many (Env) e) -> (many (List (String)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) er)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) er)))
 
 (def-fns _ $ many env-level : (many (Env) e) -> (many (Maybe (Bin)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) lv)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) lv)))
 (def-fns _ $ many env-subterms : (many (Env) e) -> (many (List (Bin)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) st)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) st)))
 (def-fns _ $ many env-claimed : (many (Env) e) -> (many (List (String)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) cl)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) cl)))
 (def-fns _ $ many env-warnings : (many (Env) e) -> (many (List (String)) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) wa)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) wa)))
 (def-fns _ $ many env-lits : (many (Env) e) -> (many (List (Pair (Bin) (Maybe (Bin)))) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) lt)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) lt)))
 (def-fns _ $ many env-enter-body : (many (Env) e) (many (Bin) level) (many (List (Bin)) subterms) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb (BFalse) va ob li tr er (Some (Bin) level) subterms cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb (BFalse) va ob li tr er (Some (Bin) level) subterms cl wa lt lo pr))))
 (def-fns _ $ many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st (Cons (String) x cl) wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st (Cons (String) x cl) wa lt lo pr))))
 (def-fns _ $ many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl (Cons (String) x wa) lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl (Cons (String) x wa) lt lo pr))))
 (def-fns _ $ many env-push-lit : (many (Env) e) (many (Bin) x) (many (Maybe (Bin)) proof) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa (Cons (Pair (Bin) (Maybe (Bin))) (MkPair (Bin) (Maybe (Bin)) x proof) lt) lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa (Cons (Pair (Bin) (Maybe (Bin))) (MkPair (Bin) (Maybe (Bin)) x proof) lt) lo pr))))
 (def-fns _ $ many env-set-scope : (many (Env) e) (many (NameMap (Bin)) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv x en nf ff fr tb rp va ob li tr er lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv x en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr))))
 (def-fns _ $ many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Bin) c) (many (Table n f c) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en n f c x rp va ob li tr er lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en n f c x rp va ob li tr er lv st cl wa lt lo pr))))
 (def-fns _ $ many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb x va ob li tr er lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb x va ob li tr er lv st cl wa lt lo pr))))
 (def-fns _ $ many env-set-literals : (many (Env) e) (many (NameMap (Bin)) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob x tr er lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob x tr er lv st cl wa lt lo pr))))
+(def-fns _ $ many env-prelude : (many (Env) e) -> (many (NameMap (Bin)) r)
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) pr)))
+; The scope the prelude left, which generated forms elaborate in (lib/elab.ml's in_prelude).
+(def-fns _ $ many env-set-prelude : (many (Env) e) (many (NameMap (Bin)) x) -> (many (Env) r)
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo x))))
 ; The next id, above every key of the table.
 (def-fns _ $ many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Bin) x)
   (match many e _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (let (many x) (erased ltp) (bin-succ-lt (predates _) fr))
-      (values (MkEnv sc en nf ff x (table-weaken (predates _) nf ff fr x tb (lt-le (predates _) fr x ltp)) rp va ob li tr er lv st cl wa lt lo) x))))
+      (values (MkEnv sc en nf ff x (table-weaken (predates _) nf ff fr x tb (lt-le (predates _) fr x ltp)) rp va ob li tr er lv st cl wa lt lo pr) x))))
 (def-fns _ $ many env-push-trace : (many (Env) e) (many (Trace) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li (Cons (Trace) x tr) er lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li (Cons (Trace) x tr) er lv st cl wa lt lo pr))))
 (def-fns _ $ many env-loc : (many (Env) e) -> (many (Loc) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) lo)))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) lo)))
 (def-fns _ $ many env-line : (many (Env) e) -> (many (Nat) r)
   (match many (env-loc (predates _) e) _ ((MkLoc f l) l)))
 (def-fns _ $ many env-at-loc : (many (Env) e) (many (Loc) x) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt x))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt x pr))))
 (def-fns _ $ many env-at : (many (Env) e) (many (Nat) line) -> (many (Env) r)
   (match many (env-loc (predates _) e) _ ((MkLoc f l) (env-at-loc (predates _) e (MkLoc f line)))))
 ; Restores [outer]'s line in [inner], on leaving the form that set it.
@@ -1763,7 +1769,7 @@
   (match many (env-loc (predates _) e) _
     ((MkLoc f l) (str-cat3 (predates _) f ":" (str-cat3 (predates _) (nat-str (predates _) l) kind x)))))
 (def-fns _ $ many env-report : (many (Env) e) (many (String) msg) -> (many (Env) r)
-  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo) (MkEnv sc en nf ff fr tb rp va ob li tr (Cons (String) msg er) lv st cl wa lt lo))))
+  (match many e _ ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr) (MkEnv sc en nf ff fr tb rp va ob li tr (Cons (String) msg er) lv st cl wa lt lo pr))))
 (def-fns _ $ many env-error : (many (Env) e) (many (String) x) -> (many (Env) r)
   (env-report (predates _) e (located (predates _) e ": error: " x)))
 
@@ -1771,21 +1777,21 @@
 ; scope and objects; run position is [outer]'s.
 (def-fns _ $ many env-restore : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
   (match many outer _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (match many inner _
-        ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2) (MkEnv sc en2 nf2 ff2 fr2 tb2 rp va2 ob li2 tr2 er2 lv st cl2 wa2 lt2 lo))))))
+        ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2 pr2) (MkEnv sc en2 nf2 ff2 fr2 tb2 rp va2 ob li2 tr2 er2 lv st cl2 wa2 lt2 lo pr))))))
 
 ; Leaves a match branch or a body: the entries (whose names the extractor prints), the id supply, trace
 ; and errors survive; scope, facts, values and objects are the outer ones again.
 (def-fns _ $ many env-discard : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
   (match many outer _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (match many inner _
-        ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2)
+        ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2 pr2)
           (match many (bin-cmp-dec (predates _) fr fr2) _
-            ((CLt x y p) (MkEnv sc en2 nf ff fr2 (table-weaken (predates _) nf ff fr fr2 tb (lt-le (predates _) fr fr2 p)) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo))
-            ((CEq x y e) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo))
-            ((CGt x y p) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo))))))))
+            ((CLt x y p) (MkEnv sc en2 nf ff fr2 (table-weaken (predates _) nf ff fr fr2 tb (lt-le (predates _) fr fr2 p)) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))
+            ((CEq x y e) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))
+            ((CGt x y p) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))))))))
 
 (def-fns _ $ many entry : (many (Env) env) (many (Bin) x) -> (many (EInfo) r)
   (match many (idmap-get (predates _) (EInfo) x (env-entries (predates _) env)) _
@@ -1803,11 +1809,11 @@
 
 (def-fns _ $ many mark-minted : (many (Env) env) (many (Bin) x) -> (many (Env) r)
   (match many env _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (let (many info) (match many (idmap-get (predates _) (EInfo) x en) (((EInfo) i))
                          ((None a) (MkEInfo (None (String)) (Erased) (SDyn) (BTrue)))
                          ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi) (MkEInfo n m s (BTrue)))))))
-      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) nf ff fr tb rp va ob li tr er lv st cl wa lt lo))))
+      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr))))
 
 (def-fns _ $ many name-of : (many (Env) env) (many (Bin) x) -> (many (String) r)
   (match many (entry (predates _) env x) _
@@ -1836,14 +1842,14 @@
 
 (def-fns _ $ many set-state : (many (Env) env) (many (Bin) x) (many (State) st) -> (many (Env) r)
   (match many env _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv sts cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er lv sts cl wa lt lo pr)
       (let (many info) (match many (idmap-get (predates _) (EInfo) x en) (((EInfo) i))
                          ((None a) (MkEInfo (None (String)) (Many) st (BFalse)))
                          ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi) (MkEInfo n m st mi))))))
       (let (many va2) (match many st (((IdMap (Value)) m))
                         ((SConst v) (idmap-set (predates _) (Value) x v va))
                         ((SDyn) va)))
-      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) nf ff fr tb rp va2 ob li tr er lv sts cl wa lt lo))))
+      (MkEnv sc (idmap-set (predates _) (EInfo) x info en) nf ff fr tb rp va2 ob li tr er lv sts cl wa lt lo pr))))
 
 ; Whether a type is one the fetching forms look for in ambient scope (sections 19, 38).
 (def-fns _ $ many is-object-type : (many (Term) ty) (many (Bin) coercible) -> (many (Bool) r)
@@ -1860,7 +1866,7 @@
     (many (Env) r) (many (Bin) x)
   (let (many bad) (match many name (((Maybe (String)) m)) ((None a) (None (String))) ((Some a n) (match many (is-literal-name (predates _) n) (((Maybe (String)) m)) ((BTrue) (Some (String) (located (predates _) env ": error: " (str-cat (predates _) n " is a literal, not a name")))) ((BFalse) (None (String)))))))
   (match many env _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er0 lv sts cl wa lt lo)
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er0 lv sts cl wa lt lo pr)
       (let (many er) (match many bad (((List (String)) e)) ((None a) er0) ((Some a m) (Cons (String) m er0))))
       (let (many x) (erased ltp) (bin-succ-lt (predates _) fr))
       (let (many sc2) (match many name (((NameMap (Bin)) m)) ((None a) sc) ((Some a n) (nm-set (predates _) (Bin) n x sc))))
@@ -1875,7 +1881,7 @@
                 (table-insert-ruled (predates _) nf ff fr tb x ltp ty t2 ft))))))
       (let (many va2) (match many st (((IdMap (Value)) m)) ((SConst v) (idmap-set (predates _) (Value) x v va)) ((SDyn) va)))
       (let (many ob2) (match many (is-object-type (predates _) ty coercible) (((List (Bin)) l)) ((BTrue) (Cons (Bin) x ob)) ((BFalse) ob)))
-      (values (MkEnv sc2 en2 nf2 ff2 x tb2 rp va2 ob2 li tr er lv sts cl wa lt lo) x))))
+      (values (MkEnv sc2 en2 nf2 ff2 x tb2 rp va2 ob2 li tr er lv sts cl wa lt lo pr) x))))
 
 ; ---- Instantiation and abstraction over de Bruijn binders (lib/term.ml)
 
@@ -1981,7 +1987,7 @@
   (MkEntry (Some (String) name) (BFalse) (Erased) (SgTy t)))
 
 (let (many empty-env)
-  (MkEnv (nm-empty (Bin)) (MEmpty (EInfo)) (Zero) (FEmpty) (BZ) empty-table (BTrue) (MEmpty (Value)) (Nil (Bin)) (nm-empty (Bin)) (Nil (Trace)) (Nil (String)) (None (Bin)) (Nil (Bin)) (Nil (String)) (Nil (String)) (Nil (Pair (Bin) (Maybe (Bin)))) (MkLoc "" 0)))
+  (MkEnv (nm-empty (Bin)) (MEmpty (EInfo)) (Zero) (FEmpty) (BZ) empty-table (BTrue) (MEmpty (Value)) (Nil (Bin)) (nm-empty (Bin)) (Nil (Trace)) (Nil (String)) (None (Bin)) (Nil (Bin)) (Nil (String)) (Nil (String)) (Nil (Pair (Bin) (Maybe (Bin)))) (MkLoc "" 0) (nm-empty (Bin))))
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) (bin-succ (BZ)))
@@ -2552,35 +2558,27 @@
 ; Extern construction and destruction over the host's own values (section 41; lib/ffi_core.ml).
 (def-fns _ $ many ext-destruct : (many (Adt) adt) (many (Payload) p) -> (many (Nat) index) (many (List (Value)) fields)
   (let (many nat-adt) (MkAdt "Nat" (BTrue) (Nil (Ctor)) (Some (String) "Nat")))
-  (let (many u8-adt) (MkAdt "U8" (BFalse) (Nil (Ctor)) (Some (String) "U8")))
   (match many p _
     ((PNat n) (match many n _ ((Zero) (values 0 (Nil (Value)))) ((Succ k) (values 1 (Cons (Value) (VExt adt (PNat k)) (Nil (Value)))))))
-    ((PU8 u) (values 0 (Cons (Value) (VExt nat-adt (PNat (u8-to-nat (predates _) u))) (Nil (Value)))))
     ((PBin b) (match many b _ ((BZ) (values 0 (Nil (Value)))) ((B1 r) (values 1 (Cons (Value) (VExt adt (PBin r)) (Nil (Value)))))
                 ((B2 r) (values 2 (Cons (Value) (VExt adt (PBin r)) (Nil (Value)))))))
     ((PStr s) (match many s _ ((SNil) (values 0 (Nil (Value))))
-                ((SCons c rest) (values 1 (Cons (Value) (VExt u8-adt (PU8 (match many c (((U8) u)) ((MkChar u) u)))) (Cons (Value) (VExt adt (PStr rest)) (Nil (Value))))))))
+                ((SCons c rest) (values 1 (Cons (Value) (VExt nat-adt (PNat (char-code (predates _) c))) (Cons (Value) (VExt adt (PStr rest)) (Nil (Value))))))))
     ((PDec i) (values i (Nil (Value))))))
 
 (def-fns _ $ many value-nat : (many (Value) v) -> (many (Nat) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) n) ((PU8 u) (u8-to-nat (predates _) u)) ((PBin b) 0) ((PStr s) 0) ((PDec i) i)))
+    ((VExt a p) (match many p _ ((PNat n) n) ((PBin b) 0) ((PStr s) 0) ((PDec i) i)))
     ((VCtor c fs) 0) ((VTuple fs) 0) ((VCtorFn c) 0) ((VMatchable a) 0) ((VFn cl) 0) ((VToken) 0) ((VError m) 0)))
-
-(def-fns _ $ many value-u8 : (many (Value) v) -> (many (U8) n)
-  (match many v _
-    ((VExt a p) (match many p _ ((PNat n) (nat-to-u8 (predates _) n)) ((PU8 u) u) ((PBin b) (nat-to-u8 (predates _) 0)) ((PStr s) (nat-to-u8 (predates _) 0)) ((PDec i) (nat-to-u8 (predates _) 0))))
-    ((VCtor c fs) (nat-to-u8 (predates _) 0)) ((VTuple fs) (nat-to-u8 (predates _) 0)) ((VCtorFn c) (nat-to-u8 (predates _) 0))
-    ((VMatchable a) (nat-to-u8 (predates _) 0)) ((VFn cl) (nat-to-u8 (predates _) 0)) ((VToken) (nat-to-u8 (predates _) 0)) ((VError m) (nat-to-u8 (predates _) 0))))
 
 (def-fns _ $ many value-bin : (many (Value) v) -> (many (Bin) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) (BZ)) ((PU8 u) (BZ)) ((PBin b) b) ((PStr s) (BZ)) ((PDec i) (BZ))))
+    ((VExt a p) (match many p _ ((PNat n) (BZ)) ((PBin b) b) ((PStr s) (BZ)) ((PDec i) (BZ))))
     ((VCtor c fs) (BZ)) ((VTuple fs) (BZ)) ((VCtorFn c) (BZ)) ((VMatchable a) (BZ)) ((VFn cl) (BZ)) ((VToken) (BZ)) ((VError m) (BZ))))
 
 (def-fns _ $ many value-str : (many (Value) v) -> (many (String) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) (SNil)) ((PU8 u) (SNil)) ((PBin b) (SNil)) ((PStr s) s) ((PDec i) (SNil))))
+    ((VExt a p) (match many p _ ((PNat n) (SNil)) ((PBin b) (SNil)) ((PStr s) s) ((PDec i) (SNil))))
     ((VCtor c fs) (SNil)) ((VTuple fs) (SNil)) ((VCtorFn c) (SNil)) ((VMatchable a) (SNil)) ((VFn cl) (SNil)) ((VToken) (SNil)) ((VError m) (SNil))))
 
 ; Builds an extern value from a constructor index and its many fields.
@@ -2590,15 +2588,12 @@
   (match many (str-eq (predates _) ext "Nat") _
     ((BTrue) (VExt adt (PNat (match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ (value-nat (predates _) f0)))))))
     ((BFalse)
-      (match many (str-eq (predates _) ext "U8") _
-        ((BTrue) (VExt adt (PU8 (nat-to-u8 (predates _) (value-nat (predates _) f0)))))
+      (match many (str-eq (predates _) ext "Bin") _
+        ((BTrue) (VExt adt (PBin (match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 (value-bin (predates _) f0))) ((Succ k2) (B2 (value-bin (predates _) f0)))))))))
         ((BFalse)
-          (match many (str-eq (predates _) ext "Bin") _
-            ((BTrue) (VExt adt (PBin (match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 (value-bin (predates _) f0))) ((Succ k2) (B2 (value-bin (predates _) f0)))))))))
-            ((BFalse)
-              (match many (str-eq (predates _) ext "String") _
-                ((BTrue) (VExt adt (PStr (match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (MkChar (value-u8 (predates _) f0)) (value-str (predates _) f1)))))))
-                ((BFalse) (VExt adt (PDec index)))))))))))
+          (match many (str-eq (predates _) ext "String") _
+            ((BTrue) (VExt adt (PStr (match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (char-of-code (predates _) (value-nat (predates _) f0)) (value-str (predates _) f1)))))))
+            ((BFalse) (VExt adt (PDec index)))))))))
 
 (def-fns _ $ many construct : (many (Ctor) c) (many (List (Value)) args) -> (many (Value) v)
   (match many c _
@@ -2677,7 +2672,6 @@
   (many show-payload : (subterm many (Payload) p) (many (Adt) adt) -> (many (Rope) r)
     (match many p _
       ((PNat n) (show-nat (predates _) n))
-      ((PU8 u) (show-nat (predates _) (u8-to-nat (predates _) u)))
       ((PBin b) (show-bin (predates _) b))
       ((PStr s) (show-str (predates _) s))
       ((PDec i) (match many i _ ((Zero) (RStr "(Yes)")) ((Succ k) (RStr "(No)")))))))

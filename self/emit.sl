@@ -110,7 +110,6 @@
 (def-fns _ $ many payload-rope : (many (Payload) p) -> (many (Rope) r)
   (match many p _
     ((PNat n) (rcat3 (predates _) (RStr "(Nat (Z.of_string \"") (nat-rope (predates _) n) (RStr "\"))")))
-    ((PU8 u) (rcat3 (predates _) (RStr "(Nat (Z.of_string \"") (nat-rope (predates _) (u8-to-nat (predates _) u)) (RStr "\"))")))
     ((PBin b)
       (let (many n) (erased pf) (bin-to-nat (predates _) b))
       (rcat3 (predates _) (RStr "(Nat (Z.of_string \"") (nat-rope (predates _) n) (RStr "\"))")))

@@ -29,7 +29,8 @@
   (many SNone : -> (StmtCode))
   (many SLet : (many (List (Bin)) ids) (many (Code) rhs) -> (StmtCode))
   (many SLetRec : (many (List (Pair (Bin) (Func))) fns) -> (StmtCode))
-  (many SConsts : (many (List (Pair (Bin) (Value))) cs) -> (StmtCode)))
+  (many SConsts : (many (List (Pair (Bin) (Value))) cs) -> (StmtCode))
+  (many SMatch : (many (Code) scrut) (many (Shape) shape) (many (Nat) disc) (many (List (Bin)) ids) -> (StmtCode)))
 
 (def-fns _ $ many consts-codes : (subterm many (List (Pair (Bin) (Value))) cs) -> (many (List (Bin)) ids) (many (List (Code)) codes)
   (match many cs _
@@ -46,7 +47,8 @@
     ((SLetRec fns) (CLetRec fns rest))
     ((SConsts cs)
       (let (many ids) (many codes) (consts-codes (predates _) cs))
-      (CLet ids (CValues codes) rest))))
+      (CLet ids (CValues codes) rest))
+    ((SMatch scrut shape disc ids) (CMatch scrut shape (Cons (Branch) (MkBranch disc ids rest) (Nil (Branch)))))))
 
 ; ---- Raw helpers and the special-form head test
 
@@ -300,7 +302,7 @@
               (let (many env3b) (many mk-char) (prelude-id (predates _) env3 "MkChar"))
               (let (many env3c) (many mk-u8) (prelude-id (predates _) env3b "MkU8"))
               (let (many rule) (TApp (TVar mk-char) (Cons (Term) (TApp (TVar mk-u8) (Cons (Term) (TVar num) (Cons (Term) (TVar lt) (Nil (Term))))) (Nil (Term)))))
-              (let (many v) (VExt u8-adt (PU8 (nat-to-u8 (predates _) code))))
+              (let (many v) (vnat (predates _) code))
               (let (many env3d) (many char-ty) (prelude-type (predates _) env3c "Char"))
               (let (many env4) (many x) (bind (predates _) env3d (None (String)) (Many) (SConst v) char-ty (Some (Term) rule) coercible-id))
               (let (many env5) (env-set-literals (predates _) env4 (nm-set (predates _) (Bin) key x (env-literals (predates _) env4))))
@@ -1210,15 +1212,87 @@
                     ((BTrue) (Some (Pair (Raw) (Pair (Raw) (List (Raw)))) (MkPair (Raw) (Pair (Raw) (List (Raw))) x (MkPair (Raw) (List (Raw)) craw fields))))
                     ((BFalse) (None (Pair (Raw) (Pair (Raw) (List (Raw))))))))))))))))
 
-(def-fns _ $ many find-literal : (subterm many (List (Pair (Bin) (Maybe (Bin)))) lits) (many (Env) env) (many (Term) e) -> (many (Maybe (Maybe (Bin))) r)
-  (match many lits _
-    ((Nil a) (None (Maybe (Bin))))
-    ((Cons a p rest)
-      (match many p _
-        ((MkPair s t x proof)
-          (match many (equal-env (predates _) env (TVar x) e) _
-            ((BTrue) (Some (Maybe (Bin)) proof))
-            ((BFalse) (find-literal (subterm _) rest env e))))))))
+; numeral-of (ASSUMPTIONS 53): a numeral or character literal by its own spelling, never an expression.
+(def-fns _ $ many numeral-of-key : (many (Env) env) (many (String) key) -> (many (Env) r) (many (List (Res)) ress) (many (Code) code)
+  (match many (lit-lookup (predates _) env key) _
+    ((None a) (values (env-error (predates _) env (str-cat3 (predates _) "literal " key " is not in scope")) (Nil (Res)) (CError "numeral-of")))
+    ((Some a x)
+      (match many (lit-proof (predates _) (env-lits (predates _) env) x) _
+        ((None b) (values (env-error (predates _) env (str-cat (predates _) key " is a string literal, which carries no Numeral proof")) (Nil (Res)) (CError "numeral-of")))
+        ((Some b p) (values env (Cons (Res) (res-of (predates _) env p) (Nil (Res))) (CErased)))))))
+
+(def-fns _ $ many numeral-of-lit : (many (Env) env) (many (Raw) arg) -> (many (Env) r) (many (List (Res)) ress) (many (Code) code)
+  (match many arg _
+    ((RList lq items) (values (env-error (predates _) env (str-cat (predates _) "expected a literal, got " (show-r (predates _) arg))) (Nil (Res)) (CError "numeral-of")))
+    ((RString lq s) (values (env-error (predates _) env (str-cat (predates _) (show-r (predates _) arg) " is a string literal, which carries no Numeral proof")) (Nil (Res)) (CError "numeral-of")))
+    ((RAtom lq s)
+      (match many (literal-error (predates _) s) _
+        ((Some a msg) (values (env-error (predates _) env msg) (Nil (Res)) (CError "numeral-of")))
+        ((None a)
+          (match many (classify (predates _) s) _
+            ((LName) (values (env-error (predates _) env (str-cat (predates _) "numeral-of takes a literal, not " s)) (Nil (Res)) (CError "numeral-of")))
+            ((LNumeral) (numeral-of-key (predates _) env s))
+            ((LChar) (numeral-of-key (predates _) env s))))))))
+
+; The number a numeral or character literal spells, if the raw is one (lib/literal.ml's classify).
+(def-fns _ $ many lit-number : (many (Raw) raw) -> (many (Maybe (Nat)) n)
+  (match many raw _
+    ((RList lq items) (None (Nat)))
+    ((RString lq s) (None (Nat)))
+    ((RAtom lq s)
+      (match many (literal-error (predates _) s) _
+        ((Some a msg) (None (Nat)))
+        ((None a)
+          (match many (classify (predates _) s) _
+            ((LName) (None (Nat)))
+            ((LNumeral) (Some (Nat) (parse-nat (predates _) s 0)))
+            ((LChar) (char-lit-code (predates _) s))))))))
+
+; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
+; (lib/elab.ml's numeral_entry).
+(def-fns _ $ many numeral-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe (Pair (Nat) (Bin))) e)
+  (match many (lit-number (predates _) raw) _
+    ((None a)
+      (values (env-error (predates _) env
+                (match many raw (((String) m))
+                  ((RAtom lq s) (str-cat (predates _) s " is not a numeral or character literal"))
+                  ((RString lq s) (str-cat (predates _) "expected a numeral or character literal, got " (show-r (predates _) raw)))
+                  ((RList lq items) (str-cat (predates _) "expected a numeral or character literal, got " (show-r (predates _) raw)))))
+              (None (Pair (Nat) (Bin)))))
+    ((Some a z)
+      (match many (lit-lookup (predates _) env (nat-str (predates _) z)) _
+        ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " (nat-str (predates _) z) " is not in scope")) (None (Pair (Nat) (Bin)))))
+        ((Some b x) (values env (Some (Pair (Nat) (Bin)) (MkPair (Nat) (Bin) z x))))))))
+
+; The floor and count of successors (unary a b) walks, when its literals allow it (SUGAR.md 5): the
+; predicate the desugar pass and elab-unary agree on, the latter reporting which check failed.
+(def-fns _ $ many unary-plan : (many (Nat) za) (many (Maybe (Raw)) b) -> (many (Maybe (Pair (Nat) (Nat))) r)
+  (let (many lo)
+    (match many b (((Maybe (Nat)) l))
+      ((None a) (Some (Nat) 0))
+      ((Some a braw)
+        (match many (lit-number (predates _) braw) (((Maybe (Nat)) l))
+          ((None c) (None (Nat)))
+          ((Some c zb) (match many (nat-lt (predates _) zb za) (((Maybe (Nat)) l)) ((BTrue) (Some (Nat) zb)) ((BFalse) (None (Nat)))))))))
+  (match many lo _
+    ((None a) (None (Pair (Nat) (Nat))))
+    ((Some a l)
+      (let (many k) (nat-sub (predates _) za l))
+      (match many (nat-lt (predates _) 4096 k) _
+        ((BTrue) (None (Pair (Nat) (Nat))))
+        ((BFalse) (Some (Pair (Nat) (Nat)) (MkPair (Nat) (Nat) l k)))))))
+
+; A form the desugar pass appended: a list at line 0, which the reader never produces, around it.
+(def-fns _ $ many is-generated : (many (Raw) r) -> (many (Bool) b)
+  (match many r _
+    ((RList l items) (nat-is-zero (predates _) l))
+    ((RAtom l s) (BFalse))
+    ((RString l s) (BFalse))))
+
+; Elaborates in the prelude's scope, so user shadowing cannot reach a generated form; the level context,
+; and so (predates _), stays the caller's (lib/elab.ml's in_prelude).
+(def-fns _ $ many leave-prelude : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
+  (env-set-scope (predates _) inner (env-scope (predates _) outer)))
 
 (def-fns _ $ many cc-eq : (many (CC) a) (many (CC) b) -> (many (Bool) r)
   (match many a _
@@ -1909,15 +1983,8 @@
                           (match many (find-newtype (predates _) (env-objects (predates _) env2) env2 c) (((Env) e) ((List (Res)) rs) ((Code) c))
                             ((None d) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " has no Newtype in scope")) (Nil (Res)) (CError "no Newtype")))
                             ((Some d x) (values env2 (Cons (Res) (res-of (predates _) env2 x) (Nil (Res))) (CErased)))))
-                        ((ExNumeralOf)
-                          (let (many env2) (many e) (elab-one-term (subterm _) args env0))
-                          (let (many ce) (canon-env (predates _) env2 e))
-                          (match many (find-literal (predates _) (env-lits (predates _) env2) env2 ce) (((Env) e) ((List (Res)) rs) ((Code) c))
-                            ((None c) (values (env-error (predates _) env2 (str-cat (predates _) (show-t (predates _) env2 e) " is not a literal")) (Nil (Res)) (CError "numeral-of")))
-                            ((Some c hit)
-                              (match many hit (((Env) e) ((List (Res)) rs) ((Code) c))
-                                ((None d) (values (env-error (predates _) env2 (str-cat (predates _) (show-t (predates _) env2 e) " is a string literal, which carries no Numeral proof")) (Nil (Res)) (CError "numeral-of")))
-                                ((Some d p) (values env2 (Cons (Res) (res-of (predates _) env2 p) (Nil (Res))) (CErased)))))))
+                        ((ExNumeralOf) (numeral-of-lit (predates _) env0 (one-arg (predates _) args)))
+                        ((ExDistinct) (elab-distinct (subterm _) args env0))
                         ((ExLevelOf)
                           (let (many env2) (many f) (elab-one-term (subterm _) args env0))
                           (let (many fty) (canon-env (predates _) env2 (infer (predates _) f env2)))
@@ -2320,8 +2387,178 @@
                               (match many consts (((Env) e0) ((StmtCode) sc0))
                                 ((Nil c) (values env4 (SNone)))
                                 ((Cons c cn rest) (values env4 (SConsts consts)))))))
-                        ((StComptimeMatch) (elab-comptime-match (predates _) envl args))))))))))))
+                        ((StComptimeMatch) (elab-comptime-match (predates _) envl args))
+                        ((StLetMatch) (elab-let-match (subterm _) args envl))
+                        ((StUnary) (elab-unary (subterm _) args envl))))))))))))
     (values (env-back (predates _) env env2) sc))
+
+  ; let-match (section 16, ASSUMPTIONS 99-100): a one-constructor match binding outward, its fields at the
+  ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
+  (many elab-let-match : (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (StmtCode) sc)
+    (let (many bad) (env-error (predates _) env "malformed let-match: expected (let-match <multiplicity> x (C field ...))"))
+    (match many args _
+      ((Nil a) (values bad (SNone)))
+      ((Cons a mraw more)
+        (match many more _
+          ((Nil b) (values bad (SNone)))
+          ((Cons b scrut more2)
+            (match many more2 _
+              ((Nil c) (values bad (SNone)))
+              ((Cons c pat more3)
+                (match many more3 _
+                  ((Cons d x more4) (values bad (SNone)))
+                  ((Nil d)
+                    (match many (raw-items (predates _) pat) _
+                      ((Nil e) (values bad (SNone)))
+                      ((Cons e craw fields)
+                        (let (many env0) (many smult) (mult-checked (predates _) env mraw))
+                        (let (many env1) (many srs) (many scode) (elab-expr (subterm _) scrut env0 (Cons (Mult) smult (Nil (Mult))) no-tele (CCPlain)))
+                        (let (many sres) (first-res (predates _) srs))
+                        (match many (type-head (predates _) env1 (res-ty (predates _) sres)) _
+                          ((None f) (values (env-error (predates _) env1 (str-cat3 (predates _) "cannot match on " (show-t (predates _) env1 (res-term (predates _) sres)) (str-cat (predates _) " : " (show-t (predates _) env1 (res-ty (predates _) sres))))) (SNone)))
+                          ((Some f tid)
+                            (let (many env2) (many found) (find-matchable (predates _) env1 tid))
+                            (match many found _
+                              ((None g) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 tid) " has no Matchable in scope")) (SNone)))
+                              ((Some g info)
+                                (match many info _
+                                  ((MkMatchInfo mid disc mctors rank)
+                                    (let (many env3)
+                                      (match many (nat-eq (predates _) (list-length (predates _) (MCtor) mctors) 1) (((Env) e0))
+                                        ((BTrue) env2)
+                                        ((BFalse) (env-error (predates _) env2 (str-cat3 (predates _) (name-of (predates _) env2 tid) " has " (str-cat (predates _) (nat-str (predates _) (list-length (predates _) (MCtor) mctors)) " constructors, so it needs an ordinary match"))))))
+                                    (let (many env4) (many c) (ctor-var (predates _) env3 craw))
+                                    (let (many env5) (many mk) (marker-checked (predates _) env4 tid mctors c))
+                                    (let (many env6) (match many mk (((Env) e0)) ((Erased) (env-error (predates _) env5 (str-cat (predates _) (name-of (predates _) env5 c) " is phantom"))) ((Many) env5)))
+                                    (let (many ctele) (many ret) (ctor-type (predates _) env6 c))
+                                    (let (many env7)
+                                      (match many (nat-eq (predates _) (list-length (predates _) (Raw) fields) (list-length (predates _) (Entry) ctele)) (((Env) e0))
+                                        ((BTrue) env6)
+                                        ((BFalse) (env-error (predates _) env6 (str-cat3 (predates _) (name-of (predates _) env6 c) " has " (str-cat (predates _) (nat-str (predates _) (list-length (predates _) (Entry) ctele)) " fields"))))))
+                                    (let (many mults) (under-list (predates _) (tele-mults (predates _) ctele) smult))
+                                    (let (many ss) (shapes (predates _) mctors env7))
+                                    (let (many run) (and (predates _) (env-run-pos (predates _) env7) (and (predates _) (mult-is-many (predates _) smult) (list-is-empty (predates _) (String) (env-errors (predates _) env7)))))
+                                    (let (many states)
+                                      (match many run (((Maybe (List (State))) st0))
+                                        ((BFalse) (None (List (State))))
+                                        ((BTrue)
+                                          (match many (ctor-of (predates _) env7 c) (((Maybe (List (State))) st0))
+                                            ((None h) (None (List (State))))
+                                            ((Some h ct)
+                                              (let (many i) (many vs) (destruct (predates _) ct (first-value (predates _) (run-code (predates _) env7 scode))))
+                                              (Some (List (State)) (states-of (predates _) (spread (predates _) mults vs))))))))
+                                    (let (many env8) (many fids) (open-tele (predates _) ctele env7 (Some (List (Maybe (String))) (raw-names (predates _) fields)) (Some (List (Mult)) mults) states (Nil (Term))))
+                                    (let (many env9) (match many run (((Env) e0)) ((BTrue) (trace-many-fields (predates _) fids env8)) ((BFalse) env8)))
+                                    (match many (refine (predates _) env9 sres c fids ret) _
+                                      ((UContra msg) (values (env-error (predates _) env9 (str-cat3 (predates _) "the scrutinee contradicts the facts in force (" msg ")")) (SNone)))
+                                      ((UOk env10)
+                                        (match many (or (predates _) run (not (predates _) (mult-is-many (predates _) smult))) _
+                                          ((BTrue) (values env10 (SNone)))
+                                          ((BFalse) (values env10 (SMatch scode (match-shape (predates _) env10 mid (tagged-of (predates _) disc ss)) (discriminant (predates _) ss c) (non-erased (predates _) fids env10))))))))))))))))))))))))
+
+  ; unary (SUGAR.md 5): the desugar pass has appended the let-match the form stands for, elaborated in
+  ; the prelude's scope once the literals pass the reference's checks, in its order.
+  (many elab-unary : (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (StmtCode) sc)
+    (let (many arity-error) (env-error (predates _) env "unary takes one or two literals"))
+    (match many args _
+      ((Nil a) (values arity-error (SNone)))
+      ((Cons a araw rest)
+        (let (many env1) (many ea) (numeral-entry (predates _) env araw))
+        (match many ea _
+          ((None b) (values env1 (SNone)))
+          ((Some b pa)
+            (match many pa _
+              ((MkPair s t za xa)
+                (let (many braw) (many gen)
+                  (match many rest (((Maybe (Raw)) b0) ((Maybe (Raw)) g0))
+                    ((Nil c) (values (None (Raw)) (None (Raw))))
+                    ((Cons c r1 rest2)
+                      (match many rest2 (((Maybe (Raw)) b0) ((Maybe (Raw)) g0))
+                        ((Nil d) (match many (is-generated (predates _) r1) (((Maybe (Raw)) b0) ((Maybe (Raw)) g0)) ((BTrue) (values (None (Raw)) (Some (Raw) r1))) ((BFalse) (values (Some (Raw) r1) (None (Raw))))))
+                        ((Cons d r2 rest3) (values (Some (Raw) r1) (Some (Raw) r2)))))))
+                (let (many env2) (many lo)
+                  (match many braw (((Env) e0) ((Maybe (Nat)) l0))
+                    ((None c) (values env1 (Some (Nat) 0)))
+                    ((Some c b)
+                      (let (many env2) (many eb) (numeral-entry (predates _) env1 b))
+                      (match many eb (((Env) e0) ((Maybe (Nat)) l0))
+                        ((None d) (values env2 (None (Nat))))
+                        ((Some d pb)
+                          (match many pb (((Env) e0) ((Maybe (Nat)) l0))
+                            ((MkPair s2 t2 zb xb)
+                              (match many (nat-lt (predates _) zb za) (((Env) e0) ((Maybe (Nat)) l0))
+                                ((BTrue) (values env2 (Some (Nat) zb)))
+                                ((BFalse) (values (env-error (predates _) env2 (str-cat3 (predates _) "unary: " (nat-str (predates _) za) (str-cat (predates _) " does not exceed " (nat-str (predates _) zb)))) (None (Nat))))))))))))
+                (match many lo _
+                  ((None c) (values env2 (SNone)))
+                  ((Some c l)
+                    (let (many k) (nat-sub (predates _) za l))
+                    (match many (nat-lt (predates _) 4096 k) _
+                      ((BTrue) (values (env-error (predates _) env2 (str-cat3 (predates _) "unary: " (nat-str (predates _) k) " successors is beyond the limit")) (SNone)))
+                      ((BFalse)
+                        (match many rest _
+                          ((Nil d) (values (env-error (predates _) env2 "internal: unary was not expanded") (SNone)))
+                          ((Cons d r1 rest2)
+                            (match many rest2 _
+                              ((Nil e) (elab-generated-stmt (subterm _) r1 env2))
+                              ((Cons e r2 rest3)
+                                (match many rest3 _
+                                  ((Nil f) (elab-generated-stmt (subterm _) r2 env2))
+                                  ((Cons f r3 rest4) (values arity-error (SNone)))))))))))))))))))
+
+  ; The statement inside a generated wrapper, in the prelude's scope.
+  (many elab-generated-stmt : (subterm many (Raw) wrapper) (many (Env) env) -> (many (Env) r) (many (StmtCode) sc)
+    (match many wrapper _
+      ((RAtom l s) (values (env-error (predates _) env "unary takes one or two literals") (SNone)))
+      ((RString l s) (values (env-error (predates _) env "unary takes one or two literals") (SNone)))
+      ((RList l items)
+        (match many items _
+          ((Nil a) (values (env-error (predates _) env "internal: unary was not expanded") (SNone)))
+          ((Cons a g more)
+            (let (many env2) (many sc) (elab-stmt (subterm _) g (env-set-scope (predates _) env (env-prelude (predates _) env))))
+            (values (leave-prelude (predates _) env env2) sc))))))
+
+  ; distinct (SUGAR.md 5): the appended match on numeral-inj's Eq, elaborated in the prelude's scope once
+  ; the two literals are checked to be different spellings of one canonical value.
+  (many elab-distinct : (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (List (Res)) ress) (many (Code) code)
+    (let (many none) (Nil (Res)))
+    (let (many bad) (CError "distinct"))
+    (match many args _
+      ((Nil a) (values (env-error (predates _) env "distinct takes two literals") none bad))
+      ((Cons a araw rest)
+        (match many rest _
+          ((Nil b) (values (env-error (predates _) env "distinct takes two literals") none bad))
+          ((Cons b braw rest2)
+            (let (many env1) (many ea) (numeral-entry (predates _) env araw))
+            (let (many env2) (many eb) (numeral-entry (predates _) env1 braw))
+            (match many ea _
+              ((None c) (values env2 none bad))
+              ((Some c pa)
+                (match many eb _
+                  ((None d) (values env2 none bad))
+                  ((Some d pb)
+                    (match many pa _
+                      ((MkPair s t za xa)
+                        (match many pb _
+                          ((MkPair s2 t2 zb xb)
+                            (match many (nat-eq (predates _) za zb) _
+                              ((BTrue) (values (env-error (predates _) env2 (str-cat3 (predates _) "distinct: " (nat-str (predates _) za) " is the same literal twice")) none bad))
+                              ((BFalse)
+                                (match many (equal-env (predates _) env2 (TVar xa) (TVar xb)) _
+                                  ((BFalse) (values (env-error (predates _) env2 (str-cat3 (predates _) "distinct: " (nat-str (predates _) za) (str-cat3 (predates _) " and " (nat-str (predates _) zb) " do not canonicalize equally here"))) none bad))
+                                  ((BTrue)
+                                    (match many rest2 _
+                                      ((Nil e) (values (env-error (predates _) env2 "internal: distinct was not expanded") none bad))
+                                      ((Cons e wrapper rest3)
+                                        (match many wrapper _
+                                          ((RAtom l s) (values (env-error (predates _) env2 "distinct takes two literals") none bad))
+                                          ((RString l s) (values (env-error (predates _) env2 "distinct takes two literals") none bad))
+                                          ((RList l gitems)
+                                            (match many gitems _
+                                              ((Nil f) (values (env-error (predates _) env2 "internal: distinct was not expanded") none bad))
+                                              ((Cons f g more)
+                                                (let (many env3) (many ress) (many code) (elab-expr (subterm _) g (env-set-scope (predates _) env2 (env-prelude (predates _) env2)) erased-one no-tele (CCPlain)))
+                                                (values (leave-prelude (predates _) env2 env3) ress code))))))))))))))))))))))))
 
   ; let (section 9): binders, then the right-hand side; run at once in run position (section 34); an
   ; annotation is a checked redundancy.
@@ -2900,13 +3137,164 @@
                   ((BFalse) (env-error (predates _) env4 (str-cat3 (predates _) (show-t (predates _) env4 pterm) " : " (str-cat3 (predates _) (show-t (predates _) env4 (infer (predates _) pterm env4)) " does not relate the callee's level " (show-t (predates _) env4 lv))))))))))))))
 
 
+; ---- Sugar (SUGAR.md 5): unary and distinct stand for calls on the prelude's Numeral lemmas. The
+; reference writes each call down when it meets the form; here a pass over the top-level form writes it
+; down first, appended to the form in a line-0 wrapper, so that elaborating it is a descent into the raw
+; being elaborated rather than a call on a raw of the elaborator's own making (ASSUMPTIONS 111).
+
+(def-fns _ $ many bin-text : (many (Nat) n) -> (many (String) s)
+  (rope-str (predates _) (show-bin (predates _) (bin-of-nat (predates _) n (BZ)))))
+
+; The witness that n's spelling steps to (n+1)'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)).
+(def-fns _ $ many bin-succ-witness : (subterm many (Bin) b) -> (many (String) s)
+  (match many b _
+    ((BZ) "(BSZ)")
+    ((B1 x) (str-cat3 (predates _) "(BS1 " (rope-str (predates _) (show-bin (predates _) x)) ")"))
+    ((B2 x) (str-cat3 (predates _) "(BS2 " (rope-str (predates _) (show-bin (predates _) x))
+              (str-cat3 (predates _) " " (rope-str (predates _) (show-bin (predates _) (bin-succ (predates _) x)))
+                (str-cat3 (predates _) " " (bin-succ-witness (subterm _) x) ")"))))))
+
+(def-fns _ $ many succs : (subterm many (Nat) k) (many (String) base) -> (many (String) s)
+  (match many k _
+    ((Zero) base)
+    ((Succ j) (succs (subterm _) j (str-cat3 (predates _) "(Succ " base ")")))))
+
+; Folds the one-step proofs from z up to z+k into one Eq relating the top literal to [floor] under k
+; successors: numeral-succ's step, eq-cong-succ under the successors so far, eq-trans joining them.
+(def-fns _ $ many unary-fold : (subterm many (Nat) k) (many (Nat) z) (many (Nat) lo) (many (String) floor) (many (String) acc) (many (String) p) -> (many (String) s)
+  (match many k _
+    ((Zero) acc)
+    ((Succ j)
+      (let (many n) (Succ z))
+      (let (many zs) (nat-str (predates _) z))
+      (let (many ns) (nat-str (predates _) n))
+      (let (many below) (succs (predates _) (nat-sub (predates _) z lo) floor))
+      (let (many stp) (str-cat3 (predates _) "(numeral-succ " p
+                        (str-cat3 (predates _) (bin-text (predates _) z) " " (str-cat3 (predates _) (bin-text (predates _) n) " "
+                          (str-cat3 (predates _) zs " " (str-cat3 (predates _) ns " " (str-cat3 (predates _) (bin-succ-witness (predates _) (bin-of-nat (predates _) z (BZ)))
+                            " (numeral-of " (str-cat3 (predates _) zs ") (numeral-of " (str-cat (predates _) ns "))")))))))))
+      (let (many congd) (str-cat3 (predates _) "(eq-cong-succ " p (str-cat3 (predates _) zs " " (str-cat3 (predates _) below " " (str-cat (predates _) acc ")")))))
+      (let (many acc2) (str-cat3 (predates _) "(eq-trans " p (str-cat3 (predates _) "(Nat) " ns
+                         (str-cat3 (predates _) " (Succ " zs (str-cat3 (predates _) ") (Succ " below (str-cat3 (predates _) ") " stp (str-cat3 (predates _) " " congd ")")))))))
+      (unary-fold (subterm _) j n lo floor acc2 p))))
+
+(def-fns _ $ many unary-source : (many (Nat) za) (many (Nat) lo) (many (Bool) floored) (many (String) p) -> (many (String) s)
+  (let (many floor) (many acc)
+    (match many floored (((String) f) ((String) a))
+      ((BFalse) (values "(Zero)" (str-cat3 (predates _) "(numeral-zero " p "0 (numeral-of 0))")))
+      ((BTrue) (values (nat-str (predates _) lo) (str-cat3 (predates _) "(Refl (Nat) " (nat-str (predates _) lo) ")")))))
+  (str-cat3 (predates _) "(let-match erased " (unary-fold (predates _) (nat-sub (predates _) za lo) lo lo floor acc p) " (Refl _ _))"))
+
+(def-fns _ $ many distinct-source : (many (Nat) za) (many (Nat) zb) (many (String) p) -> (many (String) s)
+  (str-cat3 (predates _) "(match erased (numeral-inj " p
+    (str-cat3 (predates _) (bin-text (predates _) za) " " (str-cat3 (predates _) (bin-text (predates _) zb) " "
+      (str-cat3 (predates _) (nat-str (predates _) za) " (numeral-of " (str-cat3 (predates _) (nat-str (predates _) za) ") (numeral-of "
+        (str-cat (predates _) (nat-str (predates _) zb) ")) (((False) f)) (absurd Refl))")))))))
+
+; Every line in a generated form is the sugar's own, for the messages.
+(def-fns _
+  (many relabel : (subterm many (Raw) r) (many (Nat) line) -> (many (Raw) out)
+    (match many r _
+      ((RAtom l s) (RAtom line s))
+      ((RString l s) (RString line s))
+      ((RList l items) (RList line (relabel-list (subterm _) items line)))))
+  (many relabel-list : (subterm many (List (Raw)) rs) (many (Nat) line) -> (many (List (Raw)) out)
+    (match many rs _
+      ((Nil a) (Nil (Raw)))
+      ((Cons a r rest) (Cons (Raw) (relabel (subterm _) r line) (relabel-list (subterm _) rest line))))))
+
+; The form's items with the generated source appended in its wrapper; the items unchanged if the source
+; does not read, which the elaborator then reports as unexpanded.
+(def-fns _ $ many append-generated : (many (List (Raw)) items) (many (Nat) line) (many (String) src) -> (many (List (Raw)) r)
+  (let (many gens) (many err) (parse (predates _) src))
+  (match many gens _
+    ((Nil a) items)
+    ((Cons a g more) (list-append (predates _) (Raw) items (Cons (Raw) (RList 0 (Cons (Raw) (relabel (predates _) g line) (Nil (Raw)))) (Nil (Raw)))))))
+
+(def-fns _ $ many prelude-call : (many (Bool) in-body) -> (many (String) p)
+  (match many in-body _ ((BTrue) "(predates _) ") ((BFalse) "")))
+
+; (unary a) or (unary a b), when the literals allow it; anything else is left for elab-unary to refuse.
+(def-fns _ $ many expand-unary : (many (Nat) line) (many (List (Raw)) items) (many (Bool) in-body) -> (many (List (Raw)) r)
+  (match many items _
+    ((Nil a) items)
+    ((Cons a head rest)
+      (match many rest _
+        ((Nil b) items)
+        ((Cons b araw rest2)
+          (let (many braw)
+            (match many rest2 (((Maybe (Maybe (Raw))) b0))
+              ((Nil c) (Some (Maybe (Raw)) (None (Raw))))
+              ((Cons c r1 rest3) (match many rest3 (((Maybe (Maybe (Raw))) b0)) ((Nil d) (Some (Maybe (Raw)) (Some (Raw) r1))) ((Cons d r2 rest4) (None (Maybe (Raw))))))))
+          (match many braw _
+            ((None c) items)
+            ((Some c b)
+              (match many (lit-number (predates _) araw) _
+                ((None d) items)
+                ((Some d za)
+                  (match many (unary-plan (predates _) za b) _
+                    ((None e) items)
+                    ((Some e plan)
+                      (match many plan _
+                        ((MkPair s t lo k)
+                          (let (many floored) (match many b (((Bool) f)) ((None f) (BFalse)) ((Some f x) (BTrue))))
+                          (append-generated (predates _) items line (unary-source (predates _) za lo floored (prelude-call (predates _) in-body))))))))))))))))
+
+(def-fns _ $ many expand-distinct : (many (Nat) line) (many (List (Raw)) items) (many (Bool) in-body) -> (many (List (Raw)) r)
+  (match many items _
+    ((Nil a) items)
+    ((Cons a head rest)
+      (match many rest _
+        ((Nil b) items)
+        ((Cons b araw rest2)
+          (match many rest2 _
+            ((Nil c) items)
+            ((Cons c braw rest3)
+              (match many rest3 _
+                ((Cons d x rest4) items)
+                ((Nil d)
+                  (match many (lit-number (predates _) araw) _
+                    ((None e) items)
+                    ((Some e za)
+                      (match many (lit-number (predates _) braw) _
+                        ((None f) items)
+                        ((Some f zb)
+                          (match many (nat-eq (predates _) za zb) _
+                            ((BTrue) items)
+                            ((BFalse) (append-generated (predates _) items line (distinct-source (predates _) za zb (prelude-call (predates _) in-body))))))))))))))))))
+
+; [in-body]: inside a def-fns, where a generated call carries (predates _) (section 24). The heads are
+; read as the elaborator reads them, through the scope in force at the top-level form.
+(def-fns _
+  (many desugar : (subterm many (Raw) raw) (many (Env) env) (many (Bool) in-body) -> (many (Raw) out)
+    (match many raw _
+      ((RAtom l s) raw)
+      ((RString l s) raw)
+      ((RList l items)
+        (match many items _
+          ((Nil a) raw)
+          ((Cons a head rest)
+            (let (many inner) (or (predates _) in-body (is-special (predates _) env head (SpStmt (StDefFns)))))
+            (let (many items2) (desugar-list (subterm _) items env inner))
+            (match many (is-special (predates _) env head (SpStmt (StUnary))) _
+              ((BTrue) (RList l (expand-unary (predates _) l items2 in-body)))
+              ((BFalse)
+                (match many (is-special (predates _) env head (SpExpr (ExDistinct))) _
+                  ((BTrue) (RList l (expand-distinct (predates _) l items2 in-body)))
+                  ((BFalse) (RList l items2))))))))))
+  (many desugar-list : (subterm many (List (Raw)) rs) (many (Env) env) (many (Bool) in-body) -> (many (List (Raw)) out)
+    (match many rs _
+      ((Nil a) (Nil (Raw)))
+      ((Cons a r rest) (Cons (Raw) (desugar (subterm _) r env in-body) (desugar-list (subterm _) rest env in-body))))))
+
 ; ---- The top level (section 16): statements run as they are elaborated, the final expression consumed;
 ; only the last form may be an expression (ASSUMPTIONS 12).
 
 (def-fns _ $ many run-toplevel : (subterm many (List (Raw)) items) (many (Env) env) -> (many (Env) r)
   (match many items _
     ((Nil a) env)
-    ((Cons a item rest)
+    ((Cons a item0 rest)
+      (let (many item) (desugar (predates _) item0 env (BFalse)))
       (let (many env2) (intern-literals (predates _) item (env-at (predates _) env (raw-line (predates _) item))))
       (match many (is-statement (predates _) env2 item) _
         ((BTrue)

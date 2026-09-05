@@ -3,7 +3,6 @@
 ; accepts it. Extern functions run as the host's own (section 41).
 
 (let (many nat-adt) (MkAdt "Nat" (BTrue) (Nil (Ctor)) (Some (String) "Nat")))
-(let (many u8-adt) (MkAdt "U8" (BFalse) (Nil (Ctor)) (Some (String) "U8")))
 (let (many dec-adt) (MkAdt "Dec" (BTrue) (Nil (Ctor)) (Some (String) "Dec")))
 (let (many str-adt) (MkAdt "String" (BTrue) (Nil (Ctor)) (Some (String) "String")))
 
@@ -19,15 +18,24 @@
   (or (predates _) (str-eq (predates _) name "nat-add")
     (or (predates _) (str-eq (predates _) name "lt-dec")
       (or (predates _) (str-eq (predates _) name "u8-add")
-        (or (predates _) (str-eq (predates _) name "nat-to-u8")
-          (or (predates _) (str-eq (predates _) name "u8-to-nat")
-            (or (predates _) (str-eq (predates _) name "bin-to-nat") (str-eq (predates _) name "trim"))))))))
+        (or (predates _) (str-eq (predates _) name "bin-to-nat") (str-eq (predates _) name "trim"))))))
 
 (def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
   (or (predates _) (str-eq (predates _) name "Nat")
-    (or (predates _) (str-eq (predates _) name "U8")
-      (or (predates _) (str-eq (predates _) name "Bin")
-        (or (predates _) (str-eq (predates _) name "String") (str-eq (predates _) name "Dec"))))))
+    (or (predates _) (str-eq (predates _) name "Bin")
+      (or (predates _) (str-eq (predates _) name "String") (str-eq (predates _) name "Dec")))))
+
+; A U8 is its Nat at runtime (section 38), so the prelude's u8-add takes both back under the modulus first.
+(def-fns _ $ many u8-add-value : (many (Nat) a) (many (Nat) b) -> (many (Value) v)
+  (match many (lt-dec (predates _) a u8-modulus) _
+    ((No x y q) (VError "u8-add: not a U8"))
+    ((Yes x y pa)
+      (match many (lt-dec (predates _) b u8-modulus) _
+        ((No x2 y2 q2) (VError "u8-add: not a U8"))
+        ((Yes x2 y2 pb)
+          (let (many s) (u8-add (predates _) (MkU8 a pa) (MkU8 b pb)))
+          (let-match many s (MkU8 sn sq))
+          (vnat (predates _) sn))))))
 
 (def-fns _ $ many apply-extern : (many (String) name) (many (List (Value)) args) -> (many (List (Value)) r)
   (let (many a) (arg-at (predates _) args 0))
@@ -39,19 +47,13 @@
         ((BTrue) (Cons (Value) (VExt dec-adt (PDec (match many (nat-lt (predates _) (value-nat (predates _) a) (value-nat (predates _) b)) (((Nat) i)) ((BTrue) 0) ((BFalse) 1)))) (Nil (Value))))
         ((BFalse)
           (match many (str-eq (predates _) name "u8-add") _
-            ((BTrue) (Cons (Value) (VExt u8-adt (PU8 (u8-add (predates _) (value-u8 (predates _) a) (value-u8 (predates _) b)))) (Nil (Value))))
+            ((BTrue) (Cons (Value) (u8-add-value (predates _) (value-nat (predates _) a) (value-nat (predates _) b)) (Nil (Value))))
             ((BFalse)
-              (match many (str-eq (predates _) name "nat-to-u8") _
-                ((BTrue) (Cons (Value) (VExt u8-adt (PU8 (nat-to-u8 (predates _) (value-nat (predates _) a)))) (Nil (Value))))
-                ((BFalse)
-                  (match many (str-eq (predates _) name "u8-to-nat") _
-                    ((BTrue) (Cons (Value) (vnat (predates _) (u8-to-nat (predates _) (value-u8 (predates _) a))) (Nil (Value))))
-                    ((BFalse)
-                      (match many (str-eq (predates _) name "bin-to-nat") _
-                        ((BTrue)
-                          (let (many n) (erased pf) (bin-to-nat (predates _) (value-bin (predates _) a)))
-                          (Cons (Value) (vnat (predates _) n) (Nil (Value))))
-                        ((BFalse) (Cons (Value) (VExt str-adt (PStr (trim (predates _) (value-str (predates _) a)))) (Nil (Value))))))))))))))))
+              (match many (str-eq (predates _) name "bin-to-nat") _
+                ((BTrue)
+                  (let (many n) (erased pf) (bin-to-nat (predates _) (value-bin (predates _) a)))
+                  (Cons (Value) (vnat (predates _) n) (Nil (Value))))
+                ((BFalse) (Cons (Value) (VExt str-adt (PStr (trim (predates _) (value-str (predates _) a)))) (Nil (Value))))))))))))
 
 (def-fns _ $ many venv-bind : (subterm many (List (Bin)) ids) (many (List (Value)) vs) (many (IdMap (Value)) env) -> (many (IdMap (Value)) r)
   (match many ids _

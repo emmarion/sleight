@@ -12,7 +12,6 @@ let bijective ~z ~bin =
       let n = z v in
       if Z.equal n Z.zero then (0, [])
       else let d = if Z.is_odd n then 1 else 2 in (d, [ bin (Z.shift_right (Z.sub n (Z.of_int d)) 1) ]) )
-let bounded ~z ~nat ~u8 = ((fun _ args -> match args with [ n ] -> u8 (z n) | _ -> assert false), fun v -> (0, [ nat (z v) ]))
 let text ~z ~slice ~u8 ~str =
   ( (fun i args ->
       match (i, args) with
@@ -26,8 +25,6 @@ let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []
 let nat_add = Z.add
 let lt_dec a b = if Z.lt a b then Z.zero else Z.one
 let u8_add a b = Z.rem (Z.add a b) modulus
-let nat_to_u8 n = Z.rem n modulus
-let u8_to_nat n = n
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
 end
@@ -39,7 +36,6 @@ let z = function Nat n -> n | _ -> absurd ()
 let slice = function Str s -> s | _ -> absurd ()
 let nat n = Nat n
 let (con_Nat : int -> v list -> v), (des_Nat : v -> int * v list) = Ffi_core.peano ~z ~nat
-let (con_U8 : int -> v list -> v), (des_U8 : v -> int * v list) = Ffi_core.bounded ~z ~nat ~u8:nat
 let (con_Bin : int -> v list -> v), (des_Bin : v -> int * v list) = Ffi_core.bijective ~z ~bin:nat
 let (con_String : int -> v list -> v), (des_String : v -> int * v list) = Ffi_core.text ~z ~slice ~u8:nat ~str:(fun s -> Str s)
 let (con_Dec : int -> v list -> v), (des_Dec : v -> int * v list) = Ffi_core.indexed ~z ~mk:nat
@@ -49,16 +45,13 @@ let des_tag = function Tag (i, fs) -> (i, fs) | _ -> absurd ()
 let ext_nat_add = function [ a; b ] -> Nat (Ffi_core.nat_add (z a) (z b)) | _ -> absurd ()
 let ext_lt_dec = function [ a; b ] -> Nat (Ffi_core.lt_dec (z a) (z b)) | _ -> absurd ()
 let ext_u8_add = function [ a; b ] -> Nat (Ffi_core.u8_add (z a) (z b)) | _ -> absurd ()
-let ext_nat_to_u8 = function [ a ] -> Nat (Ffi_core.nat_to_u8 (z a)) | _ -> absurd ()
-let ext_u8_to_nat = function [ a ] -> Nat (Ffi_core.u8_to_nat (z a)) | _ -> absurd ()
 let ext_bin_to_nat = function [ a ] -> Nat (Ffi_core.bin_to_nat (z a)) | _ -> absurd ()
 let ext_trim = function [ a ] -> Str (Ffi_core.trim (slice a)) | _ -> absurd ()
 let rec nat_of v = match des_Nat v with _, [ p ] -> 1 + nat_of p | _ -> 0
-let u8_of v = match des_U8 v with _, [ n ] -> nat_of n | _ -> 0
 let of_string s = Str (s, 0, String.length s)
 let to_string v =
   let buf = Buffer.create 64 in
-  let rec go v = match des_String v with _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (u8_of ch)); go rest | _ -> () in
+  let rec go v = match des_String v with _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (nat_of ch)); go rest | _ -> () in
   go v;
   Buffer.contents buf
 let read_file path = In_channel.with_open_bin path In_channel.input_all
@@ -69,7 +62,7 @@ let run_io v =
   let result f = match f () with x -> Tag (0, [ x ]) | exception Sys_error m -> Tag (1, [ of_string m ]) in
   let rec loop v =
     match des_tag v with
-    | 0, [ code ] -> u8_of code
+    | 0, [ code ] -> nat_of code
     | 1, [ s; next ] -> flush_to stdout (to_string s); loop next
     | 2, [ s; next ] -> flush_to stderr (to_string s); loop next
     | 3, [ k ] -> loop (app k [ (match In_channel.input_line stdin with Some l -> Tag (1, [ of_string l ]) | None -> Tag (0, [])) ])

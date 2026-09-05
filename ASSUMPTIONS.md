@@ -1576,3 +1576,46 @@ what it assumed while doing so.
     §41 says this in its prose, its code block and its list of externs,
     in wording the owner confirmed (CLAUDE.md rule 12).
 
+## The compiler in `self/` after `let-match`, `unary` and `distinct`
+
+A session merged the changes of items 99-110 into `self/` at the owner's
+request ("update the self hosted SL on SL to match"). What follows is
+how it read them into the compiler; `self/bootstrap.sh` is the check, and
+none of it is design.
+
+111. **`unary` and `distinct` are expanded by a pass over the top-level
+    form** (`self/elab.sl`'s `desugar`), not when the elaborator reaches
+    them as in `lib/elab.ml` (104). The compiler's elaborator recurses on
+    the raw it elaborates (96), so a raw it generated itself would be no
+    decrease; the pass instead appends the generated form to the sugar's
+    own, wrapped in a list at line 0, which the reader never produces,
+    and `elab-unary` and `elab-distinct` descend into that wrapper after
+    making the reference's checks in the reference's order, with its
+    messages. The generated source is the reference's text, built by the
+    same fold, and is elaborated in the prelude's scope (a `prelude`
+    field the `Env` gained, set by `self/main.sl` after the first file,
+    which is the prelude) with `(predates _)` inside a `def-fns` and
+    nothing at top level; the pass decides "inside a `def-fns`"
+    syntactically, reading heads through the scope in force at the
+    top-level form. The session's reading is that this is the same
+    derivation reaching the same `refine` (108), only written down
+    earlier; a name bound inside a body that shadows `unary`, `distinct`
+    or `def-fns` would fool the pass where it would not fool the
+    reference, and no test exercises that. `let-match` is ported as the
+    reference has it, with `SMatch` as the statement code of a
+    one-branch match wrapping the rest.
+112. **A `U8` is its `Nat` inside the compiler too.** With `U8` a newtype
+    (110) the compiler's value model dropped its `PU8` payload: a
+    character literal's value, the `String` FFI's per-character value
+    and `u8-add`'s result are all `Nat`s, as `lib/ffi.ml` now builds
+    them. The compile-time interpreter's `u8-add` rebuilds two `U8`s
+    from its `Nat` arguments by `lt-dec` and calls the prelude's own,
+    reporting an error value if an argument is not below the modulus,
+    which a typed program's cannot be. `char-of-code`, which the
+    compiler uses to turn a code from the FFI into a `Char`, takes the
+    same route and maps a code the modulus does not bound to the
+    character with code 0; the reference's `Char.chr` would raise there
+    instead, and no program reaching either is typed. The compiler's
+    own exit codes are built as the tests' are, by reflection at top
+    level (109).
+

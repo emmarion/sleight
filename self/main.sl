@@ -7,16 +7,21 @@
 (def-lvl slc-lvl)
 (def-lvl io-lvl)
 
-(let (many exit-ok) (nat-to-u8 0))
-(let (many exit-fail) (nat-to-u8 1))
+(let (many zero-below-modulus) (lt-dec 0 u8-modulus))
+(comptime-match zero-below-modulus (Yes ok-a ok-b ok-lt))
+(let (many exit-ok) (MkU8 0 ok-lt))
+(let (many one-below-modulus) (lt-dec 1 u8-modulus))
+(comptime-match one-below-modulus (Yes fail-a fail-b fail-lt))
+(let (many exit-fail) (MkU8 1 fail-lt))
 
 (def-fns util-lvl $ many write-errors : (subterm many (List (String)) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
   (match many es _
     ((Nil a) next)
     ((Cons a e rest) (WriteErr io-lvl e (WriteErr io-lvl "\n" (write-errors (subterm _) rest next))))))
 
-; Each source with its path, which the messages name; a syntax error ends that file's reading.
-(def-fns util-lvl $ many run-files : (subterm many (List (Pair (String) (String))) srcs) (many (Env) env) -> (many (Env) r)
+; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
+; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
+(def-fns util-lvl $ many run-files : (subterm many (List (Pair (String) (String))) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r)
   (match many srcs _
     ((Nil a) env)
     ((Cons a ps rest)
@@ -24,12 +29,14 @@
         ((MkPair s t path src)
           (let (many env1) (env-at-loc (predates _) env (MkLoc path 1)))
           (let (many items) (many err) (parse (predates _) src))
-          (match many err _
-            ((Some b e) (match many e _ ((MkSynErr line m) (run-files (subterm _) rest (env-report (predates _) env1 (located (predates _) (env-at (predates _) env1 line) ": syntax error: " m))))))
-            ((None b) (run-files (subterm _) rest (run-toplevel (predates _) items env1)))))))))
+          (let (many env2)
+            (match many err (((Env) e))
+              ((Some b e) (match many e (((Env) e)) ((MkSynErr line m) (env-report (predates _) env1 (located (predates _) (env-at (predates _) env1 line) ": syntax error: " m)))))
+              ((None b) (run-toplevel (predates _) items env1))))
+          (run-files (subterm _) rest (match many first (((Env) e)) ((BTrue) (env-set-prelude (predates _) env2 (env-scope (predates _) env2))) ((BFalse) env2)) (BFalse)))))))
 
 (def-fns compile-lvl $ many compile : (many (List (Pair (String) (String))) srcs) -> (many (IO io-lvl) io)
-  (let (many env) (run-files (predates _) srcs (make-builtins (predates _))))
+  (let (many env) (run-files (predates _) srcs (make-builtins (predates _)) (BTrue)))
   (match many (env-errors (predates _) env) _
     ((Cons a e rest) (write-errors (predates _) (list-rev (predates _) (String) (env-errors (predates _) env)) (Exit io-lvl exit-fail)))
     ((Nil a) (rope-io (predates _) io-lvl (emit-program (predates _) env) (Exit io-lvl exit-ok)))))
