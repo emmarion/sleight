@@ -34,6 +34,27 @@ let var env loc n =
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
+(* Elaborate in the prelude's scope, so user shadowing cannot reach a generated form; the level context,
+   and so [predates _], stays the caller's. *)
+let in_prelude env f =
+  let frame, r = f { env with scope = env.prelude } in
+  ({ frame with scope = env.scope }, r)
+
+let prelude_call env = if env.level = Env.Top then "" else "(predates _) "
+
+(* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
+let numeral_entry env loc raw =
+  let name = atom_or loc raw "a numeral or character literal" in
+  let z =
+    match Literal.classify name with
+    | `Lit (Literal.Numeral z) -> z
+    | `Lit (Literal.Char c) -> Z.of_int c
+    | _ -> error loc "%s is not a numeral or character literal" name
+  in
+  match List.assoc_opt (Z.to_string z) env.literals with
+  | Some (x, _) -> (z, x)
+  | None -> error loc "literal %s is not in scope" (Z.to_string z)
+
 (* An atom naming an entry, read through any alias rule the fact table holds for it (section 9). *)
 let named env loc what raw =
   match canon env (Var (var env loc (atom_or loc raw what))) with Var x -> x | t -> error loc "%s is not %s" (show env t) what
@@ -460,11 +481,16 @@ and elab_special tele env expect l sp args =
       (env, [ res_of env x ], matchable_code env m x)
   | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
   | Sp.NumeralOf, [ e ] -> (
-      let e = canon env (elab_term env e) in
-      match List.find_opt (fun (_, (x, _)) -> equal (canon env (Var x)) e) env.literals with
-      | Some (_, (_, Some p)) -> erased (env, res_of env p)
-      | Some _ -> error l "%s is a string literal, which carries no Numeral proof" (show env e)
-      | None -> error l "%s is not a literal" (show env e))
+      let name = atom_or l e "a literal" in
+      match Literal.classify name with
+      | `Bad msg -> error l "%s" msg
+      | `Name -> error l "numeral-of takes a literal, not %s" name
+      | `Lit lit -> (
+          match List.assoc_opt (Literal.key lit) env.literals with
+          | Some (_, Some p) -> erased (env, res_of env p)
+          | Some (_, None) -> error l "%s is a string literal, which carries no Numeral proof" name
+          | None -> error l "literal %s is not in scope" name))
+  | Sp.Distinct, [ a; b ] -> elab_distinct env l a b
   | Sp.LevelOf, [ f ] -> (
       let f = elab_term env f in
       match canon env (infer env l f) with
@@ -654,6 +680,8 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
+      | Some Sp.LetMatch, _ -> elab_let_match env l args
+      | Some Sp.Unary, _ -> elab_unary env l args
       | _ -> error l "%s is not a statement" (Reader.show raw))
   | _ -> error (loc raw) "%s is not a statement" (Reader.show raw)
 
@@ -674,6 +702,113 @@ and elab_let env l args =
   let env', ids = List.fold_left bind_one ({ inner with scope = env.scope }, []) (List.combine (List.combine binders ress) (spread expect values)) in
   let ids = non_erased env' (List.rev ids) in
   (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
+
+(* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
+   and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
+(* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)
+and hoist env lit =
+  let key = Literal.key lit in
+  if List.mem_assoc key env.literals then env
+  else
+    let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
+    let env = List.fold_left hoist env parts in
+    let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
+    let entry =
+      match (lit, frame.scope) with
+      | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
+      | Literal.Char c, char :: _ -> (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
+      | Literal.Str _, str :: _ -> (str, None)
+      | _ -> assert false
+    in
+    { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
+
+(* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
+   user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
+and elab_unary env l args =
+  let za, _ = numeral_entry env l (List.hd args) in
+  let lo =
+    match args with
+    | [ _ ] -> Z.zero
+    | [ _; b ] ->
+        let zb, _ = numeral_entry env l b in
+        if Z.geq zb za then error l "unary: %s does not exceed %s" (Z.to_string za) (Z.to_string zb);
+        zb
+    | _ -> error l "unary takes one or two literals"
+  in
+  let k = Z.sub za lo in
+  if Z.gt k (Z.of_int 4096) then error l "unary: %s successors is beyond the limit" (Z.to_string k);
+  let rec upto z acc = if Z.geq z za then List.rev acc else upto (Z.succ z) (z :: acc) in
+  let env = List.fold_left (fun env z -> hoist env (Literal.Numeral z)) env (za :: upto lo []) in
+  let p = prelude_call env in
+  (* Fold the one-step proofs into a single Eq relating the literal to [floor] under k successors, so one
+     let-match mints one rule and the literals walked over stay opaque. *)
+  let floor, acc =
+    if List.length args = 1 then ("(Zero)", Printf.sprintf "(numeral-zero %s0 (numeral-of 0))" p)
+    else (Z.to_string lo, Printf.sprintf "(Refl (Nat) %s)" (Z.to_string lo))
+  in
+  let step acc z =
+    let n = Z.succ z in
+    let below = Literal.succs (Z.to_int (Z.sub z lo)) floor in
+    let stp =
+      Printf.sprintf "(numeral-succ %s%s %s %s %s %s (numeral-of %s) (numeral-of %s))" p (Literal.bin z)
+        (Literal.bin n) (Z.to_string z) (Z.to_string n) (Literal.bin_succ z) (Z.to_string z) (Z.to_string n)
+    in
+    let congd = Printf.sprintf "(eq-cong-succ %s%s %s %s)" p (Z.to_string z) below acc in
+    Printf.sprintf "(eq-trans %s(Nat) %s (Succ %s) (Succ %s) %s %s)" p (Z.to_string n) (Z.to_string z) below stp congd
+  in
+  let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
+  in_prelude env (fun env -> elab_stmt env (List.hd (Reader.parse src)))
+
+and elab_distinct env l a b =
+  let za, xa = numeral_entry env l a and zb, xb = numeral_entry env l b in
+  if Z.equal za zb then error l "distinct: %s is the same literal twice" (Z.to_string za);
+  if not (equal (canon env (Var xa)) (canon env (Var xb))) then
+    error l "distinct: %s and %s do not canonicalize equally here" (Z.to_string za) (Z.to_string zb);
+  let src =
+    Printf.sprintf "(match erased (numeral-inj %s%s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
+      (prelude_call env) (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
+  in
+  let raw = match Reader.parse src with [ r ] -> r | _ -> assert false in
+  let env, (ress, code) =
+    in_prelude env (fun env ->
+        let env, ress, code = elab_expr env [ Erased ] raw in
+        (env, (ress, code)))
+  in
+  (env, ress, code)
+
+and elab_let_match env l args =
+  match args with
+  | [ m; scrut; List (pl, c :: fields) ] ->
+      let smult = mult_or env l m in
+      let env, sres, scode = elab_expr1 env smult scrut in
+      let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
+      let mid, disc, ctors = find_matchable env l tid in
+      if List.length ctors <> 1 then
+        error l "%s has %d constructors, so it needs an ordinary match" (name_of env tid) (List.length ctors);
+      let c = ctor_var env pl c in
+      if marker env pl tid ctors c = Erased then error pl "%s is phantom" (name_of env c);
+      let tele, ret = ctor_type env pl c in
+      if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
+      let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
+      let mults = List.map (fun e -> under smult e.mult) tele in
+      let shapes = shapes env l ctors in
+      let run = env.run_pos && smult = Many in
+      let states =
+        if not run then None
+        else
+          let ct = ctor_of env pl c in
+          let _, vs = V.destruct ct (List.hd (run_code env scode)) in
+          Some (List.map (fun v -> Const v) (spread mults vs))
+      in
+      let env, fids = open_tele env ~names ~mults ?states tele in
+      let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" msg) in
+      ( env,
+        if smult = Erased || run then Fun.id
+        else fun rest ->
+          V.CMatch
+            { scrut = scode; shape = match_shape env mid (tagged disc shapes);
+              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ] } )
+  | _ -> error l "malformed let-match: expected (let-match <multiplicity> x (C field ...))"
 
 and elab_comptime_match env l args =
   match args with
@@ -861,23 +996,6 @@ and elab_def_adts env adts =
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
   (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
-
-(* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)
-let rec hoist env lit =
-  let key = Literal.key lit in
-  if List.mem_assoc key env.literals then env
-  else
-    let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
-    let env = List.fold_left hoist env parts in
-    let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
-    let entry =
-      match (lit, frame.scope) with
-      | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
-      | Literal.Char c, char :: _ -> (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
-      | Literal.Str _, str :: _ -> (str, None)
-      | _ -> assert false
-    in
-    { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 
 let rec literals = function
   | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])

@@ -401,13 +401,19 @@ literals as open.
     transparent down to its opaque `Nat` (`tests/char.sl`), so no
     separate relation for characters is needed.
 
-53. **`(numeral-of e)`** takes any expression that canonicalizes to a
-    literal's value entry, a numeral itself or a variable a match or
-    `comptime-match` has forced equal to one, and yields that literal's
-    erased `Numeral` proof; a character literal's entry yields its
-    code's proof. It reads `Env.literals` rather than searching the
-    scope, unlike `coercible-of`. The owner suggested `nat-of`; the
-    session renamed it because the form yields a proof, not a number.
+53. **`(numeral-of lit)`** takes a numeral or character literal
+    itself, not an expression canonicalizing to one, and yields that
+    literal's erased `Numeral` proof; a character literal yields its
+    code's proof, and a string literal is an error, having none. It
+    resolves the literal by its own spelling through `Env.literals`
+    rather than searching the scope, unlike `coercible-of`. Resolving
+    by spelling rather than by canonicalized value is what keeps the
+    form usable inside a branch that has equated two literals: each
+    still fetches its own proof, so the two spellings for one `Nat`
+    refute the branch (`tests/numeral_of_branch.sl`) instead of one
+    literal's proof standing in for the other's. The owner suggested
+    `nat-of`; the session renamed it because the form yields a proof,
+    not a number.
 
 54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
     model runs `double` in unary, and `Value.show` prints a `Nat` in
@@ -1429,3 +1435,144 @@ by the owner.
     constructors embed terms indexed by those types) and refuses a type
     indexed by itself, both checked by compiling; the obstacle is the
     metatheory, not the declaration.
+
+## `let-match`, and reasoning about literals through their spelling
+
+The owner asked for a single-branch statement form of `match`, named it,
+and confirmed §16's wording. What follows is how the session built it and
+what it assumed while doing so.
+
+99. **`let-match` reads no value, so it is not confined to run
+    position** (`Elab.elab_let_match`). It requires the scrutinee's
+    `Matchable` to list exactly one constructor and refuses a phantom
+    one; the fields bind at `under smult` their declared multiplicities,
+    which is §20's existing rule for a match's branch fields, so an
+    erased scrutinee yields only erased fields. The refinement goes
+    through the same `refine` an ordinary `match` branch uses, so nothing
+    is asserted that a branch would not already have established — the
+    form appears to change where the refinement reaches, not what it is.
+100. **Its code depends on the scrutinee's erasure and on run position.**
+    An erased scrutinee emits nothing, matching `elab_match`'s existing
+    rule that one real branch under an erased scrutinee compiles to that
+    branch's body. In run position with a `many` scrutinee it runs the
+    scrutinee and binds the fields `Const`, as `comptime-match` does,
+    emitting nothing. Only outside run position does it emit a
+    one-branch `CMatch` wrapping the rest of the enclosing expression.
+    So a `let-match` at top level never costs the code after it its run
+    position, which was the session's worry about the form and appears
+    not to arise.
+101. **§27 numbers it `5a`** rather than renumbering the entries after
+    it, at the owner's direction, in wording the owner confirmed
+    (CLAUDE.md rule 12), and §20's erasure list names the form in its
+    own bullet, in wording the owner confirmed.
+102. **The `Numeral` lemmas are tests, not prelude additions**
+    (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
+    its own `Eq`, since the prelude has none and what belongs in the
+    prelude is the owner's call. The session's reading is that these
+    lemmas make disjointness and the successor step derivable rather
+    than asserted — every fact reaching the table arrives through an
+    ordinary checked call — but whether that is worth the lemmas'
+    weight, and whether they should move into `lib/prelude.sl`, is not
+    decided.
+
+103. **The prelude carries `Eq`, `BinSucc` and seven erased lemmas**
+    (`lib/prelude.sl`): `double-fn` and `double-inj` for the two
+    directions of `Double`, `double-parity` for the even/odd clash,
+    `numeral-zero`, `numeral-fn` and `numeral-inj` for `Numeral`, and
+    `numeral-succ` over `BinSucc`. `Eq` is homogeneous and polymorphic,
+    `(Eq : (Type A) (A x) (A y) -> Type)` with one `Refl`; the two tests
+    that define their own shadow it without trouble. Elaborating the
+    prelude went from about 45ms to about 95ms, which the session judged
+    acceptable but did not put to the owner.
+104. **`unary` and `distinct` elaborate to prelude calls, in the
+    prelude's scope** (`Elab.elab_unary`, `Elab.elab_distinct`,
+    `Elab.in_prelude`), so user shadowing cannot reach the generated
+    forms, as with a literal's own expansion (51). The level context
+    stays the caller's, so the generated call carries `(predates _)`
+    inside a function body and nothing at top level (§24). `unary`
+    hoists every literal on the walk, which is why `Elab.hoist` moved
+    into the elaborator's recursive group. Its ceiling is 4096 steps,
+    a number the session chose and the owner has not confirmed.
+105. **Whether §27 should list a sugar form is open.** `unary` and
+    `distinct` are registered as `Special` variants like any other form,
+    but they carry no meaning of their own and are recorded in SUGAR.md,
+    which is what that file is for. §27 says it lists every special
+    form; the two readings are not reconciled here.
+
+106. **`unary` mints one rule, not one per step.** At the owner's
+    direction `(unary a b)` relates `a` to `b` under `a - b` successors
+    and says nothing about the literals between them, which stay opaque
+    (`tests/numeral_succ.sl` unaries `5` against `3` and then `4`
+    against `3` without conflict). The session's first reading walked
+    the range minting a rule per literal, which made every intermediate
+    transparent as a side effect nobody asked for. The fold costs
+    `a - b` erased calls in the generated term and one rule of that many
+    nodes; using a literal as a `Vec`'s length now wants a `unary` per
+    literal down to zero, which is the caller's choice rather than the
+    form's.
+107. **The prelude's character operations** (`lib/prelude.sl`):
+    `char-cmp`, and it is `nat-cmp`. `Cmp` is parametric in the carrier
+    and its strict order, `(Cmp T R a b)` with `R` a two-place type
+    constructor over `T`, and every field is erased, so a value is only
+    its tag and two instances differ by a coercion. `char-cmp`'s
+    arguments coerce down through `Char`'s and `U8`'s newtype wrappers
+    to their codes, the call to `nat-cmp` is a `delegate` (§38), and the
+    `Coercible` carrying the result back up is built by an erased match
+    over the three constructors — erased, so §12 puts no one-real-branch
+    limit on it and it leaves no code, which is what lets the delegate
+    mark stand. `tests/char_ops.sl` coerces `char-cmp` to `nat-cmp`'s
+    own type and runs it on `Nat`s. `CEq` repeats its index rather than
+    carrying an `Eq`, at the owner's direction, so matching it forces
+    the two sides together the way `Refl` does; the branch still wants
+    `pa` and `pb` identified before two `Char`s coincide, which is why
+    `lt-unique` is now in the prelude at `dbl-lvl`.
+
+    `char-to-nat` and `nat-to-char` were written and then removed at the
+    owner's direction: converting is trivial through `U8`, which is
+    itself trivial given an `Lt`, so the prelude need not choose what a
+    `Nat` out of range becomes (`tests/char_convert.sl` writes both
+    directions out).
+
+108. **"Mint" in these notes means a fact or entry reaching the tables,
+    not a claim about who checked it.** For `unary` and `distinct`
+    nothing is asserted: the elaborator writes down terms — a `Bin`
+    spelling, a `BinSucc` witness, a call — and the refinement reaches
+    §18's table through the same `refine` an ordinary match branch uses.
+    A wrong term does not typecheck, which the session checked by
+    handing `numeral-succ` a witness and then a spelling that lie; both
+    are rejected. What is not checked, here as everywhere a numeral is
+    involved, is that a literal's runtime `Nat` is the number its source
+    spelled, which rests on `bin-to-nat`'s extern (§41's invariant, and
+    KERNEL.md's note on facts).
+
+109. **`nat-to-u8` is gone** (`lib/prelude.sl`, `lib/ffi.ml`,
+    `lib/ffi_core.ml`), removed at the owner's direction: a wrapping
+    narrowing hands back a `U8` whose value bears no stated relation to
+    its input, so what it returns is opaque exactly where a caller
+    wanted to know. Nothing replaced it, and nothing needed to. A
+    literal takes §41's reflection route at top level and is referenced
+    from a body as an ordinary value, which is what the eight tests
+    using it for an exit code now do. A computed `Nat` is narrowed where
+    it is used, by binding it and matching `lt-dec` — §5 keeps a call
+    out of the `Dec` index, so the binding is not optional — with the
+    caller saying what out of range means instead of the prelude
+    wrapping silently (`tests/io_closure_in_data.sl`,
+    `tests/io_factory_twice.sl`). `u8-add` still wraps, which is
+    modular arithmetic rather than a narrowing and was not touched.
+    §41 says this, in wording the owner confirmed (CLAUDE.md rule 12).
+
+110. **`U8` is marked `newtype`, and needs no extern.** `MkU8` carries
+    an erased bound proof beside its one `many` field, which §12's
+    newtype rule permits, so §38 requires the value to be that field
+    alone — which is what the FFI's `bounded` was doing by hand:
+    construct was the identity on the integer and destruct handed it
+    back. With the mark, the ordinary untagged one-field path does the
+    same, so `U8`'s `extern`, `Ffi_core.bounded`, its `Ffi.types` entry
+    and its `Extract` entry are all gone, and `u8-add`'s result and the
+    `String` FFI's per-character value are built at `"Nat"`, a `U8`
+    being a `Nat` at runtime. `u8-to-nat` went too, having been the
+    extern form of `coercible-wrap MkU8`.
+
+    §41 says this in its prose, its code block and its list of externs,
+    in wording the owner confirmed (CLAUDE.md rule 12).
+

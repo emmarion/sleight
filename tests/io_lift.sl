@@ -53,19 +53,23 @@
   (values B x1 x2 (coercible-sym q1) (coercible-sym q2)))
 
 (def-lvl A1)
-(let (erased u8-a1) (prove-predates u8-lvl A1))
+(let (many d3) (lt-dec 3 u8-modulus))
+(comptime-match d3 (Yes za3 zb3 zp3))
+(let (many code3) (MkU8 3 zp3))
 (let (erased str-a1) (prove-predates str-lvl A1))
 (def-fns A1 $ many lib-echo : (many (Maybe (String)) line) -> (many (IO A1) next)
   (match many line _
-    ((None a) (Exit A1 (nat-to-u8 (predates u8-a1) 3)))
+    ((None a) (Exit A1 code3))
     ((Some a s) (WriteOut A1 (str-append (predates str-a1) "> " (str-append (predates str-a1) s "\n")) (ReadLine A1 lib-echo)))))
 
 (def-lvl A2)
-(let (erased u8-a2) (prove-predates u8-lvl A2))
+(let (many d0) (lt-dec 0 u8-modulus))
+(comptime-match d0 (Yes za0 zb0 zp0))
+(let (many code0) (MkU8 0 zp0))
 (def-fns A2 $ many banner : (many (List (String)) args) -> (many (IO A2) next)
   (match many args _
-    ((Nil a) (WriteErr A2 "no args\n" (Exit A2 (nat-to-u8 (predates u8-a2) 0))))
-    ((Cons a x rest) (WriteErr A2 x (Exit A2 (nat-to-u8 (predates u8-a2) 0))))))
+    ((Nil a) (WriteErr A2 "no args\n" (Exit A2 code0)))
+    ((Cons a x rest) (WriteErr A2 x (Exit A2 code0)))))
 
 (let (many echo-a1) (ReadLine A1 lib-echo))
 (let (many banner-a2) (GetArgs A2 banner))
