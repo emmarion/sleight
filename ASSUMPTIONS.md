@@ -1583,27 +1583,31 @@ request ("update the self hosted SL on SL to match"). What follows is
 how it read them into the compiler; `self/bootstrap.sh` is the check, and
 none of it is design.
 
-111. **`unary` and `distinct` are expanded by a pass over the top-level
-    form** (`self/elab.sl`'s `desugar`), not when the elaborator reaches
-    them as in `lib/elab.ml` (104). The compiler's elaborator recurses on
-    the raw it elaborates (96), so a raw it generated itself would be no
-    decrease; the pass instead appends the generated form to the sugar's
-    own, wrapped in a list at line 0, which the reader never produces,
-    and `elab-unary` and `elab-distinct` descend into that wrapper after
-    making the reference's checks in the reference's order, with its
-    messages. The generated source is the reference's text, built by the
-    same fold, and is elaborated in the prelude's scope (a `prelude`
-    field the `Env` gained, set by `self/main.sl` after the first file,
-    which is the prelude) with `(predates _)` inside a `def-fns` and
-    nothing at top level; the pass decides "inside a `def-fns`"
-    syntactically, reading heads through the scope in force at the
-    top-level form. The session's reading is that this is the same
-    derivation reaching the same `refine` (108), only written down
-    earlier; a name bound inside a body that shadows `unary`, `distinct`
-    or `def-fns` would fool the pass where it would not fool the
-    reference, and no test exercises that. `let-match` is ported as the
-    reference has it, with `SMatch` as the statement code of a
-    one-branch match wrapping the rest.
+111. **`unary` and `distinct` are expanded where the form is reached, on
+    a budget.** `elab-unary` and `elab-distinct` make the reference's
+    checks in its order, with its messages, then write the same source
+    text by the same fold and elaborate it in the prelude's scope (a
+    `prelude` field the `Env` gained, set by `self/main.sl` after the
+    first file, which is the prelude), with `(predates _)` when a level
+    is in force and nothing at top level, as `lib/elab.ml` does (104).
+    The compiler's elaborator recurses on the raw it elaborates (96),
+    and a raw of its own making is no decrease; so every function of
+    the elaborator's group took a `Nat` budget of expansions as a new
+    first `subterm` parameter, passed unchanged on every existing call
+    and decreased on the one call that elaborates a generated form,
+    which the checker accepts as the lexicographic decrease it already
+    accepted for `canon` (93). The top level starts the budget at one,
+    since a generated form contains no sugar; the zero case is reported
+    as an internal error, as no proof here says a generated form
+    contains none. A first version instead expanded the sugar by a pass
+    over the top-level form, reading heads by name; the owner asked for
+    the reference's behaviour, under which a function shadowing
+    `distinct` or a `let` aliasing `unary` resolves as any other head
+    does, and the session checked both against the reference. The
+    session's reading is that the derivation reaching `refine` (108) is
+    the reference's own. `let-match` is ported as the reference has it,
+    with `SMatch` as the statement code of a one-branch match wrapping
+    the rest.
 112. **A `U8` is its `Nat` inside the compiler too.** With `U8` a newtype
     (110) the compiler's value model dropped its `PU8` payload: a
     character literal's value, the `String` FFI's per-character value

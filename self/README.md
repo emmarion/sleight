@@ -21,8 +21,8 @@ contradiction and the one-real-branch rule, `comptime-match`
 verification against the stored value, `let-match` binding outward, the
 tail and delegate marks on the normalized code, newtype shape, extern
 claims, and the reader's and literals' syntax errors; `unary` and
-`distinct` (SUGAR.md 5) expand to the same prelude calls the reference
-writes down. Its error messages are the reference's, and
+`distinct` (SUGAR.md 5) expand to the prelude calls the reference
+writes down, in the prelude's scope as there. Its error messages are the reference's, and
 `self/bootstrap.sh` requires every test that expects an error to be
 refused with a message mentioning the expected text. What it does not
 do: verify that the interpreter's evaluation is honest (KERNEL.md's
@@ -53,9 +53,8 @@ host's own `Nat`, `Bin`, `String` and `Dec` (section 41); a `U8` or a
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
   their proofs, matches with refutation, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
-  `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the pass
-  that writes out what `unary` and `distinct` stand for, and the top
-  level.
+  `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
+  expansion of `unary` and `distinct`, and the top level.
 - `runtime.ml` — the OCaml runtime every compiled program starts with:
   `lib/ffi_core.ml`'s implementations, one type `v` of runtime values,
   the extern functions, and the driver of `lib/program.ml`.
@@ -180,19 +179,14 @@ recorded so it can be revisited.
   `U8` each being their `Nat`, are written into `run_io`, `to_string`
   and `of_string`, where `lib/extract.ml` reads them off the prelude's
   constructors. A changed prelude needs a changed runtime.
-- **`unary` and `distinct` are written out before elaboration**, by a
-  pass over each top-level form, where the reference writes the call
-  down when it reaches the form and elaborates it there. The elaborator
-  here recurses on the raw it elaborates, so it cannot elaborate a raw
-  of its own making; the pass appends the generated form to the sugar's
-  own, inside a list at line 0 that the reader never produces, and
-  elaborating it is then a descent into the form. The checks and
-  messages are the reference's, made when the form is reached, and the
-  generated call is elaborated in the prelude's scope as there
-  (ASSUMPTIONS 104). The pass reads the heads through the scope in force
-  at the top-level form, so a name bound inside a body that shadows
-  `unary` or `distinct` is not seen by it, which the session did not
-  test (ASSUMPTIONS 111).
+- **The elaborator's group carries a budget of sugar expansions** as its
+  first `subterm` parameter, ahead of the raw. `unary` and `distinct`
+  write their prelude calls down when the form is reached, as the
+  reference does, and the raw they then elaborate is of the elaborator's
+  own making, which is no descent into the form; spending one unit of
+  the budget is the decrease the checker sees instead. A generated form
+  contains no sugar, so the budget is one and its zero case is reported
+  as an internal error, not refuted (ASSUMPTIONS 111).
 - **`lt-dec` and `Dec` are extern** (ASSUMPTIONS 90), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; the source models are unchanged.
