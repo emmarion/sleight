@@ -113,11 +113,12 @@ ground.
     `is` parameter or field, or a result landing on an `is` return, is
     written like any other and must canonicalize identically to the
     `is` expression; its erasure is that of the position.
-21. **Match branches**: every constructor of the `Matchable` must
-    appear exactly once, in any order (SR 17). A present branch whose
-    forced unification contradicts is an error telling the programmer
-    to write `(absurd C)`; an `(absurd C)` whose unification succeeds is
-    an error.
+21. **Match branches**: each constructor of the `Matchable` has at most
+    one branch, in any order, and one left unlisted must be refuted or
+    stood for by an `else` (SR 17, settled by the owner; §12 now says
+    so). A present branch whose forced unification contradicts is an
+    error telling the programmer to write `(absurd C)`; an `(absurd C)`
+    whose unification succeeds is an error.
 22. **An absurd-by-proof branch body, and an `absurd` function body,
     are erased positions** (SR 18); they must produce one value of a
     type with an empty `Matchable`.

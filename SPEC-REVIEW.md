@@ -131,7 +131,8 @@ inconsistent or silent.
 
 17. **Match exhaustiveness and order.** Not stated whether every
     constructor in the `Matchable` must appear exactly once, whether
-    branch order matters, or what a duplicate means.
+    branch order matters, or what a duplicate means. Settled:
+    ASSUMPTIONS 21, §12.
 
 18. **Erased-position list.** §20 omits the arguments of
     `prove-subterm`, `prove-predates`, `level-of`, `matchable-of` and

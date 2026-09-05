@@ -425,6 +425,11 @@ type of the branch's own result. Concretely: such a branch's body can,
 and in fact must, return entirely erased values, and that's considered
 valid even when the match's position (§20) calls for non-erased
 result(s) — this branch is exempted from the match's result erasures.
+The exemption is from the erasures, not from the result: the body still
+produces the declared values, erased. Otherwise a `many` function from a
+type whose only constructor is phantom to `False` would need no branch
+at all, and `(F)` inhabits that type in erased positions, so the
+function would prove `False` (`tests/phantom_false_bad.sl`).
 Under an `erased` scrutinee the exemption does not apply: an erased
 value may well be phantom-headed, so a phantom constructor's branch is
 an ordinary branch there, its fields erased like every other branch's,
@@ -435,7 +440,7 @@ situation as the exempted branch.
 Matching on unions, and matching on an erased enum scrutinee, is more
 involved.
 
-**Three kinds of match branch** (orthogonal to whether the matched
+**Four kinds of match branch** (orthogonal to whether the matched
 constructor is itself erased; names all tentative, see CLAUDE.md §10):
 1. **present** — an ordinary branch.
 2. **absurd, automatic** — a branch refuted structurally by the type
@@ -448,6 +453,15 @@ constructor is itself erased; names all tentative, see CLAUDE.md §10):
    impossibility rather than relying on automatic refutation. The token
    `absurd` heads the branch, before its pattern (§27). §37 gives a
    function body the same option, with the same token.
+4. **else** — written `(else body)`, at most one per match: it stands
+   for every constructor not listed by name whose forced unification
+   does not contradict, binds nothing, and its body is checked with no
+   branch-forced facts, against the match's return annotation as
+   written. It is an error when it stands for no constructor.
+
+A constructor listed by no branch must be refuted, or stood for by the
+`else`; `(absurd C)` records a refutation but is optional. Each
+constructor has at most one branch.
 
 **When a non-erased result is on the line.** If a match sits in an
 erased position (§20), it's unconstrained. But if at least one of its
@@ -461,7 +475,10 @@ results is non-erased:
   phantom constructor under a `many` scrutinee — a union matched at
   `many` — which can never run per the phantom-branch rule above and so
   needs no runtime dispatch of its own. Under an `erased` scrutinee a
-  phantom constructor's branch counts as real.
+  phantom constructor's branch counts as real. An `else` counts as one
+  real branch, unless every constructor it stands for is phantom under
+  a `many` scrutinee: then it counts as none, and its body is erased
+  throughout like such a branch's.
 
 **First-classness and type erasure.** Types, type constructors, and value
 constructors are all first class. All arguments to a type constructor are
@@ -981,8 +998,8 @@ type or an `is` expression, not only at a declaration site.
 
 **Other expressions:**
 10. `match` — pattern match, its scrutinee marked `erased` or `many`
-    (§11, §20); three branch kinds: present, absurd (automatic), absurd
-    (by proof) (§12); its size is fixed by its return annotation (§11,
+    (§11, §20); four branch kinds: present, absurd (automatic), absurd
+    (by proof), else (§12); its size is fixed by its return annotation (§11,
     §16).
 11. `matchable-of` — yields the `Matchable` for a bare unapplied type
     constructor from ambient scope (§19); `newtype-of` does the same for
@@ -1053,13 +1070,16 @@ they annotate a form rather than heading a list):
 36. `absurd` — marks a function, on its `def-fns` line, or a match
     branch, before its pattern, as producing a value of a
     zero-constructor type in place of its declared result (§12, §37);
-    `(absurd C)`, a bare constructor with no fields and no body, is the
-    automatically refuted branch (§12).
+    `(absurd C)`, a bare constructor with no fields and no body, records
+    an automatically refuted branch, which may also be left unwritten
+    (§12).
 37. `newtype` — marks a `def-adts` entry, after its `enum`/`union`
     token, as a newtype (§38).
 38. `extern` — marks a `def-adts` entry, after its `enum`/`union` token
     and any `newtype`, or a function on its `def-fns` line, as
     implemented by the FFI, the source being its model (§41).
+39. `else` — heads the branch standing for every constructor a match
+    does not list (§12).
 
 ## 28. ASCII only
 

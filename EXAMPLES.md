@@ -84,6 +84,11 @@ that the test does not make is a mistake in this file.
 - `tests/absurd.sl`, `tests/absurd_proof.sl`, `tests/transparent_union.sl` —
   absurd functions and branches, and a union whose other constructor is
   refuted by proof so the type is represented as its one field.
+- `tests/else_enum.sl`, `tests/else_phantom.sl`, `tests/absurd_implicit.sl` — an
+  `else` dispatching on a tag, one standing only for a phantom constructor
+  and so counting as no real branch, and refuted constructors left unlisted.
+  `tests/phantom_false_bad.sl` is why a phantom branch still owes its value:
+  omitted, it would prove `False`.
 - `tests/comptime.sl` and `tests/comptime_transparent.sl` — `comptime-match`
   verifying a `Const` and binding its fields `Const`, proof by reflection.
 - `tests/first_class.sl` and `tests/shadow_false_capture.sl` — matching
