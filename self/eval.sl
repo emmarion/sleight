@@ -96,6 +96,11 @@
     ((Nil a) (VError "expected one value"))
     ((Cons a v rest) v)))
 
+(def-fns _ $ many has-branch : (subterm many (List (Branch)) bs) (many (Nat) i) -> (many (Bool) r)
+  (match many bs _
+    ((Nil a) (BFalse))
+    ((Cons a b rest) (match many b _ ((MkBranch d ids body) (or (predates _) (nat-eq (predates _) d i) (has-branch (subterm _) rest i)))))))
+
 (def-fns _
   (many eval : (subterm many (Nat) fuel) (subterm many (Code) code) (many (IdMap (Value)) env) -> (many (List (Value)) vs)
     (match many code _
@@ -116,7 +121,7 @@
         (let (many vs) (eval fuel (subterm _) rhs env))
         (eval fuel (subterm _) rest (venv-bind (predates _) ids vs env)))
       ((CLetRec fns rest) (eval fuel (subterm _) rest (close-group (predates _) fns fns env)))
-      ((CMatch scrut shape branches)
+      ((CMatch scrut shape branches dfl)
         (let (many v) (first-value (predates _) (eval fuel (subterm _) scrut env)))
         (let (many read)
           (match many shape (((Maybe (Pair (Nat) (List (Value)))) r))
@@ -131,10 +136,13 @@
         (match many read _
           ((Some a p)
             (match many p _
-              ((MkPair x y i fields) (eval-branch fuel (subterm _) branches i fields env))))
+              ((MkPair x y i fields)
+                (match many (has-branch (predates _) branches i) _
+                  ((BTrue) (eval-branch fuel (subterm _) branches i fields env))
+                  ((BFalse) (match many dfl _ ((Some b d) (eval fuel (subterm _) d env)) ((None b) (eval-branch fuel (subterm _) branches i fields env))))))))
           ((None a)
             (match many branches _
-              ((Nil b) (Cons (Value) (VError "no branch") (Nil (Value))))
+              ((Nil b) (match many dfl _ ((Some c d) (eval fuel (subterm _) d env)) ((None c) (Cons (Value) (VError "no branch") (Nil (Value))))))
               ((Cons b br rest)
                 (match many br _
                   ((MkBranch d ids body) (eval fuel (subterm _) body (venv-bind (predates _) ids (untuple (predates _) (list-length (predates _) (Bin) ids) v) env)))))))))

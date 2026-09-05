@@ -51,7 +51,7 @@ host's own `Nat`, `Bin`, `String` and `Dec` (section 41); a `U8` or a
   contradictions (section 18), term identity, and the built-in entries.
 - `eval.sl` — the compile-time interpreter.
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
-  their proofs, matches with refutation, the seven statements, literals
+  their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
   expansion of `unary` and `distinct`, and the top level.

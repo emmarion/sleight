@@ -107,7 +107,7 @@
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
     (many MkArrow : -> (MarkK)) (many MkSubterm : -> (MarkK)) (many MkEnum : -> (MarkK)) (many MkUnion : -> (MarkK))
     (many MkTail : -> (MarkK)) (many MkDelegate : -> (MarkK)) (many MkPredates : -> (MarkK)) (many MkAbsurd : -> (MarkK))
-    (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK))))
+    (many MkNewtypeMark : -> (MarkK)) (many MkExtern : -> (MarkK)) (many MkElse : -> (MarkK))))
 
 (def-fns _ $ many stmt-code : (many (StmtK) k) -> (many (Nat) n)
   (match many k _ ((StLet) 0) ((StDefLvl) 1) ((StDefFns) 2) ((StDefAdts) 3) ((StComptimeMatch) 4) ((StLetMatch) 5) ((StUnary) 6)))
@@ -125,7 +125,7 @@
 (def-fns _ $ many mark-code : (many (MarkK) k) -> (many (Nat) n)
   (match many k _
     ((MkErased) 0) ((MkMany) 1) ((MkColon) 2) ((MkIs) 3) ((MkArrow) 4) ((MkSubterm) 5) ((MkEnum) 6) ((MkUnion) 7)
-    ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13)))
+    ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13) ((MkElse) 14)))
 
 (def-fns _ $ many sp-code : (many (Sp) sp) -> (many (Nat) n)
   (match many sp _
@@ -164,7 +164,7 @@
   sp-cons "is" (SpMark (MkIs)) $ sp-cons "->" (SpMark (MkArrow)) $ sp-cons "subterm" (SpMark (MkSubterm)) $
   sp-cons "enum" (SpMark (MkEnum)) $ sp-cons "union" (SpMark (MkUnion)) $ sp-cons "tail" (SpMark (MkTail)) $
   sp-cons "delegate" (SpMark (MkDelegate)) $ sp-cons "predates" (SpMark (MkPredates)) $ sp-cons "absurd" (SpMark (MkAbsurd)) $
-  sp-cons "newtype" (SpMark (MkNewtypeMark)) $ sp-cons "extern" (SpMark (MkExtern)) (Nil (SpEntry))))
+  sp-cons "newtype" (SpMark (MkNewtypeMark)) $ sp-cons "extern" (SpMark (MkExtern)) $ sp-cons "else" (SpMark (MkElse)) (Nil (SpEntry))))
 
 (def-fns _ $ many sp-of-index : (many (Nat) i) -> (many (Maybe (Sp)) r)
   (match many (list-nth (predates _) (SpEntry) sp-table i) _
@@ -215,7 +215,7 @@
     (many CApp : (many (Code) f) (many (List (Code)) args) (many (CC) cc) -> (Code))
     (many CLet : (many (List (Bin)) ids) (many (Code) rhs) (many (Code) rest) -> (Code))
     (many CLetRec : (many (List (Pair (Bin) (Func))) fns) (many (Code) rest) -> (Code))
-    (many CMatch : (many (Code) scrut) (many (Shape) shape) (many (List (Branch)) branches) -> (Code))
+    (many CMatch : (many (Code) scrut) (many (Shape) shape) (many (List (Branch)) branches) (many (Maybe (Code)) dflt) -> (Code))
     (many CAbsurd : -> (Code))
     (many CError : (many (String) msg) -> (Code)))
   (CC : -> Type

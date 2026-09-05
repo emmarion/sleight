@@ -136,7 +136,7 @@
         ((VCtor c fs) (None (Ctor))) ((VTuple fs) (None (Ctor))) ((VExt ad p) (None (Ctor))) ((VMatchable ad) (None (Ctor)))
         ((VFn cl) (None (Ctor))) ((VToken) (None (Ctor))) ((VError m) (None (Ctor)))))
     ((CErased) (None (Ctor))) ((CValues cs) (None (Ctor))) ((CApp g a c) (None (Ctor))) ((CLet i r b) (None (Ctor)))
-    ((CLetRec fs b) (None (Ctor))) ((CMatch s sh bs) (None (Ctor))) ((CAbsurd) (None (Ctor))) ((CError m) (None (Ctor)))))
+    ((CLetRec fs b) (None (Ctor))) ((CMatch s sh bs dfl) (None (Ctor))) ((CAbsurd) (None (Ctor))) ((CError m) (None (Ctor)))))
 
 ; The closure whose code is being emitted is the recursion's first measure, and the code being emitted
 ; comes with a proof that it lies inside that closure: a captured variable's value is a subterm of the
@@ -202,27 +202,32 @@
         (let (many st2) (many fr) (emit-group cl (subterm _) fns (subterm-trans (prove-subterm fns code) w) cx st (BFalse)))
         (let (many st3) (many br) (emit-code cl (subterm _) rest (subterm-trans (prove-subterm rest code) w) cx st2))
         (values st3 (rcat5 (predates _) (RStr "(let rec ") fr (RStr " in ") br (RStr ")"))))
-      ((CMatch scrut shape branches)
+      ((CMatch scrut shape branches dfl)
         (let (many st2) (many sr) (emit-code cl (subterm _) scrut (subterm-trans (prove-subterm scrut code) w) cx st))
         (let (many arity) (match many branches (((Nat) n)) ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch d ids body) (list-length (predates _) (Bin) ids))))))
+        (let (many st2b) (many dr)
+          (match many dfl (((EmitSt) s0) ((Rope) r0))
+            ((None a) (values st2 (RStr "absurd ()")))
+            ((Some a d) (emit-code cl (subterm _) d (subterm-trans (prove-subterm d code) w) cx st2))))
+        (let (many fallthrough) (rcat3 (predates _) (RStr " | _ -> ") dr (RStr ")")))
         (match many shape _
           ((ShKnown adt)
             (match many (adt-untagged (predates _) adt) _
               ((BTrue)
                 (match many branches _
-                  ((Nil a) (values st2 (RStr "(absurd ())")))
+                  ((Nil a) (values st2b (rcat3 (predates _) (RStr "(") dr (RStr ")"))))
                   ((Cons a b rest)
                     (match many b _
                       ((MkBranch d ids body)
-                        (let (many st3) (many br) (emit-code cl (subterm _) body (subterm-trans (prove-subterm body code) w) cx st2))
+                        (let (many st3) (many br) (emit-code cl (subterm _) body (subterm-trans (prove-subterm body code) w) cx st2b))
                         (values st3 (untuple-rope (predates _) ids sr br (cx-env (predates _) cx))))))))
               ((BFalse)
-                (let (many st3) (many arms) (emit-branches cl (subterm _) branches (subterm-trans (prove-subterm branches code) w) cx st2))
-                (values st3 (rcat4 (predates _) (RStr "(match ") (des-rope (predates _) adt sr) (rcat (predates _) (RStr " with ") arms) (RStr " | _ -> absurd ())"))))))
+                (let (many st3) (many arms) (emit-branches cl (subterm _) branches (subterm-trans (prove-subterm branches code) w) cx st2b))
+                (values st3 (rcat4 (predates _) (RStr "(match ") (des-rope (predates _) adt sr) (rcat (predates _) (RStr " with ") arms) fallthrough)))))
           ((ShHeld mcode tags)
-            (let (many st3) (many mr) (emit-code cl (subterm _) mcode (subterm-trans (prove-subterm mcode code) w) cx st2))
+            (let (many st3) (many mr) (emit-code cl (subterm _) mcode (subterm-trans (prove-subterm mcode code) w) cx st2b))
             (let (many st4) (many arms) (emit-branches cl (subterm _) branches (subterm-trans (prove-subterm branches code) w) cx st3))
-            (values st4 (rcat5 (predates _) (RStr "(match (app_mat ") mr (rcat4 (predates _) (RStr " ") (nat-rope (predates _) arity) (RStr " ") sr) (rcat (predates _) (RStr ") with ") arms) (RStr " | _ -> absurd ())"))))))
+            (values st4 (rcat5 (predates _) (RStr "(match (app_mat ") mr (rcat4 (predates _) (RStr " ") (nat-rope (predates _) arity) (RStr " ") sr) (rcat (predates _) (RStr ") with ") arms) fallthrough)))))
       ((CAbsurd) (values st (RStr "(absurd ())")))
       ((CError m) (values st (rcat3 (predates _) (RStr "(failwith ") (quoted (predates _) m) (RStr ")"))))))
 

@@ -1624,7 +1624,3 @@ none of it is design.
     own exit codes are built as the tests' are, by reflection at top
     level (109).
 
-113. **`slc` does not know `else`** (DESIGN.md section 12): it reads the
-    token as a pattern, so `self/bootstrap.sh` fails on the tests that
-    use one until the compiler learns the reference's rules.
-
