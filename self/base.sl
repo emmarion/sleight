@@ -198,23 +198,23 @@
 
 (def-fns _ $ many bin-cmp : (subterm many (Bin) a) (many (Bin) b) -> (many (Ord) o)
   (match many a _
-    ((BZ) (match many b _ ((BZ) (OEq)) ((B1 x) (OLt)) ((B2 x) (OLt))))
+    ((BZ) (match many b _ ((BZ) (OEq)) (else (OLt))))
     ((B1 a1)
       (match many b _
         ((BZ) (OGt))
         ((B1 b1) (bin-cmp (subterm _) a1 b1))
-        ((B2 b1) (match many (bin-cmp (subterm _) a1 b1) _ ((OLt) (OLt)) ((OEq) (OLt)) ((OGt) (OGt))))))
+        ((B2 b1) (match many (bin-cmp (subterm _) a1 b1) _ ((OGt) (OGt)) (else (OLt))))))
     ((B2 a1)
       (match many b _
         ((BZ) (OGt))
         ((B2 b1) (bin-cmp (subterm _) a1 b1))
-        ((B1 b1) (match many (bin-cmp (subterm _) a1 b1) _ ((OLt) (OLt)) ((OEq) (OGt)) ((OGt) (OGt))))))))
+        ((B1 b1) (match many (bin-cmp (subterm _) a1 b1) _ ((OLt) (OLt)) (else (OGt))))))))
 
 (def-fns _ $ many bin-eq : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (match many (bin-cmp (predates _) a b) _ ((OLt) (BFalse)) ((OEq) (BTrue)) ((OGt) (BFalse))))
+  (match many (bin-cmp (predates _) a b) _ ((OEq) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ many bin-lt : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (match many (bin-cmp (predates _) a b) _ ((OLt) (BTrue)) ((OEq) (BFalse)) ((OGt) (BFalse))))
+  (match many (bin-cmp (predates _) a b) _ ((OLt) (BTrue)) (else (BFalse))))
 
 ; The digits of a Bin, least significant first, as text: an injective spelling for OCaml names.
 (def-fns _ $ many bin-str : (subterm many (Bin) b) -> (many (String) s)

@@ -128,11 +128,7 @@
             ((ShKnown adt) (dispatch (predates _) (adt-ext (predates _) adt) (adt-tagged (predates _) adt) v))
             ((ShHeld mcode tags)
               (match many (first-value (predates _) (eval fuel (subterm _) mcode env)) (((Maybe (Pair (Nat) (List (Value)))) r))
-                ((VMatchable a) (dispatch (predates _) (adt-ext (predates _) a) tags v))
-                ((VCtor c fs) (None (Pair (Nat) (List (Value))))) ((VTuple fs) (None (Pair (Nat) (List (Value)))))
-                ((VExt a p) (None (Pair (Nat) (List (Value))))) ((VCtorFn c) (None (Pair (Nat) (List (Value)))))
-                ((VFn cl) (None (Pair (Nat) (List (Value))))) ((VToken) (None (Pair (Nat) (List (Value)))))
-                ((VError m) (None (Pair (Nat) (List (Value)))))))))
+                ((VMatchable a) (dispatch (predates _) (adt-ext (predates _) a) tags v)) (else (None (Pair (Nat) (List (Value)))))))))
         (match many read _
           ((Some a p)
             (match many p _

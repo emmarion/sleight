@@ -127,16 +127,10 @@
         ((None a) (None (Ctor)))
         ((Some a v)
           (match many v _
-            ((VCtorFn c) (Some (Ctor) c))
-            ((VCtor c fs) (None (Ctor))) ((VTuple fs) (None (Ctor))) ((VExt ad p) (None (Ctor))) ((VMatchable ad) (None (Ctor)))
-            ((VFn cl) (None (Ctor))) ((VToken) (None (Ctor))) ((VError m) (None (Ctor)))))))
+            ((VCtorFn c) (Some (Ctor) c)) (else (None (Ctor)))))))
     ((CConst v)
       (match many v _
-        ((VCtorFn c) (Some (Ctor) c))
-        ((VCtor c fs) (None (Ctor))) ((VTuple fs) (None (Ctor))) ((VExt ad p) (None (Ctor))) ((VMatchable ad) (None (Ctor)))
-        ((VFn cl) (None (Ctor))) ((VToken) (None (Ctor))) ((VError m) (None (Ctor)))))
-    ((CErased) (None (Ctor))) ((CValues cs) (None (Ctor))) ((CApp g a c) (None (Ctor))) ((CLet i r b) (None (Ctor)))
-    ((CLetRec fs b) (None (Ctor))) ((CMatch s sh bs dfl) (None (Ctor))) ((CAbsurd) (None (Ctor))) ((CError m) (None (Ctor)))))
+        ((VCtorFn c) (Some (Ctor) c)) (else (None (Ctor))))) (else (None (Ctor)))))
 
 ; The closure whose code is being emitted is the recursion's first measure, and the code being emitted
 ; comes with a proof that it lies inside that closure: a captured variable's value is a subterm of the
@@ -359,8 +353,7 @@
     ((TApp h args)
       (match many (type-head (predates _) env ty) _
         ((None a) (FPlain))
-        ((Some a t) (match many (str-eq (predates _) (name-of (predates _) env t) "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain))))))
-    ((TVar x) (FPlain)) ((TBound k) (FPlain)) ((TTyCtor p) (FPlain)) ((TValCtor p r) (FPlain)) ((TMatchable d t c) (FPlain)) ((TNewtype c) (FPlain)) ((TErr m) (FPlain))))
+        ((Some a t) (match many (str-eq (predates _) (name-of (predates _) env t) "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))))) (else (FPlain))))
 
 ; The chunks of a rope as OCaml string literals, for printing a value computed at compile time.
 (def-fns _ $ many rope-literals : (subterm many (Rope) r) (many (Rope) acc) -> (many (Rope) out)
@@ -445,9 +438,7 @@
                                             ((BTrue) (values memo3 arms))
                                             ((BFalse) (values memo3 (rcat3 (predates _) (rcat (predates _) (RStr "match ") (des-rope (predates _) adt (RStr "v"))) (rcat (predates _) (RStr " with ") arms) (RStr " | _ -> \"?\""))))))))))))))))
                     ((TFn l ps rs) (values memo1 (RStr "\"<function ?>\"")))
-                    ((TValCtor ps r) (values memo1 (RStr "\"<constructor ?>\"")))
-                    ((TVar x) (values memo1 (RStr "\"?\""))) ((TBound j) (values memo1 (RStr "\"?\""))) ((TTyCtor ps) (values memo1 (RStr "\"?\"")))
-                    ((TMatchable d t c) (values memo1 (RStr "\"?\""))) ((TNewtype c) (values memo1 (RStr "\"?\""))) ((TErr m) (values memo1 (RStr "\"?\"")))))
+                    ((TValCtor ps r) (values memo1 (RStr "\"<constructor ?>\""))) (else (values memo1 (RStr "\"?\"")))))
                 (match many memo2 _
                   ((MkShowMemo count2 known2 defs2)
                     (values (MkShowMemo count2 known2 (Cons (Rope) (rcat4 (predates _) (RStr name) (RStr " (v : v) : string = ") body (REmpty)) defs2)) name))))))))))

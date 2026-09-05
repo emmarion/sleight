@@ -288,14 +288,7 @@
         ((Zero) (Cons (Value) v (Nil (Value))))
         ((Succ k2)
           (match many v _
-            ((VTuple vs) vs)
-            ((VCtor c fs) (Nil (Value)))
-            ((VExt a p) (Nil (Value)))
-            ((VCtorFn c) (Nil (Value)))
-            ((VMatchable a) (Nil (Value)))
-            ((VFn cl) (Nil (Value)))
-            ((VToken) (Nil (Value)))
-            ((VError m) (Nil (Value)))))))))
+            ((VTuple vs) vs) (else (Nil (Value)))))))))
 
 ; ---- Decidable equality on Bin, with inequality as an inductive so a refuted branch stays refutable.
 
@@ -359,37 +352,36 @@
   (erased le-le : (erased (Bin) a) (erased (Bin) b) (erased (Bin) c) (subterm erased (BinLe a b) p) (erased (BinLe b c) q) -> (erased (BinLe a c) r)
     (match erased p _
       ((LeZ b1) (LeZ c))
-      ((Le11 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Le11 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Le12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le21) (absurd Le22)))
-      ((Le12 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Le11 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1)))) ((Le22 b2 c1 q1) (Le12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le11) (absurd Le12)))
-      ((Le21 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Le21 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Le22 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))) (absurd LeZ) (absurd Le21) (absurd Le22)))
-      ((Le22 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Le21 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Le22 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le11) (absurd Le12)))))
+      ((Le11 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Le11 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Le12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1)))))
+      ((Le12 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Le11 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1)))) ((Le22 b2 c1 q1) (Le12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1)))))
+      ((Le21 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Le21 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Le22 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))))))
+      ((Le22 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Le21 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Le22 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1)))))))
   (erased le-lt : (erased (Bin) a) (erased (Bin) b) (erased (Bin) c) (subterm erased (BinLe a b) p) (erased (BinLt b c) q) -> (erased (BinLt a c) r)
     (match erased p _
       ((LeZ b1) (match erased q _ ((LtZ1 c1) (LtZ1 c1)) ((LtZ2 c1) (LtZ2 c1)) ((Lt11 b2 c1 q1) (LtZ1 c1)) ((Lt12 b2 c1 q1) (LtZ2 c1)) ((Lt21 b2 c1 q1) (LtZ1 c1)) ((Lt22 b2 c1 q1) (LtZ2 c1))))
-      ((Le11 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) (absurd LtZ1) (absurd LtZ2) (absurd Lt21) (absurd Lt22)))
-      ((Le12 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1)))) (absurd LtZ1) (absurd LtZ2) (absurd Lt11) (absurd Lt12)))
-      ((Le21 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LtZ1) (absurd LtZ2) (absurd Lt21) (absurd Lt22)))
-      ((Le22 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt21 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt22 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LtZ1) (absurd LtZ2) (absurd Lt11) (absurd Lt12)))))
+      ((Le11 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1)))))
+      ((Le12 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))))))
+      ((Le21 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))))
+      ((Le22 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt21 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt22 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1)))))))
   (erased lt-le-lt : (erased (Bin) a) (erased (Bin) b) (erased (Bin) c) (subterm erased (BinLt a b) p) (erased (BinLe b c) q) -> (erased (BinLt a c) r)
     (match erased p _
-      ((LtZ1 b1) (match erased q _ ((Le11 b2 c1 q1) (LtZ1 c1)) ((Le12 b2 c1 q1) (LtZ2 c1)) (absurd LeZ) (absurd Le21) (absurd Le22)))
-      ((LtZ2 b1) (match erased q _ ((Le21 b2 c1 q1) (LtZ1 c1)) ((Le22 b2 c1 q1) (LtZ2 c1)) (absurd LeZ) (absurd Le11) (absurd Le12)))
-      ((Lt11 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Lt11 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))) (absurd LeZ) (absurd Le21) (absurd Le22)))
-      ((Lt12 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Lt12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le11) (absurd Le12)))
-      ((Lt21 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Lt21 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le21) (absurd Le22)))
-      ((Lt22 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LeZ) (absurd Le11) (absurd Le12)))))
+      ((LtZ1 b1) (match erased q _ ((Le11 b2 c1 q1) (LtZ1 c1)) ((Le12 b2 c1 q1) (LtZ2 c1))))
+      ((LtZ2 b1) (match erased q _ ((Le21 b2 c1 q1) (LtZ1 c1)) ((Le22 b2 c1 q1) (LtZ2 c1))))
+      ((Lt11 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Lt11 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))))))
+      ((Lt12 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Lt12 a1 c1 (le-le a1 b1 c1 (subterm _) p1 q1)))))
+      ((Lt21 a1 b1 p1) (match erased q _ ((Le11 b2 c1 q1) (Lt21 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) ((Le12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))))
+      ((Lt22 a1 b1 p1) (match erased q _ ((Le21 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Le22 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))))))
   (erased lt-lt : (erased (Bin) a) (erased (Bin) b) (erased (Bin) c) (subterm erased (BinLt a b) p) (erased (BinLt b c) q) -> (erased (BinLt a c) r)
     (match erased p _
-      ((LtZ1 b1) (match erased q _ ((Lt11 b2 c1 q1) (LtZ1 c1)) ((Lt12 b2 c1 q1) (LtZ2 c1)) (absurd LtZ1) (absurd LtZ2) (absurd Lt21) (absurd Lt22)))
-      ((LtZ2 b1) (match erased q _ ((Lt21 b2 c1 q1) (LtZ1 c1)) ((Lt22 b2 c1 q1) (LtZ2 c1)) (absurd LtZ1) (absurd LtZ2) (absurd Lt11) (absurd Lt12)))
-      ((Lt11 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt11 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))) (absurd LtZ1) (absurd LtZ2) (absurd Lt21) (absurd Lt22)))
-      ((Lt12 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1)))) (absurd LtZ1) (absurd LtZ2) (absurd Lt11) (absurd Lt12)))
-      ((Lt21 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LtZ1) (absurd LtZ2) (absurd Lt21) (absurd Lt22)))
-      ((Lt22 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt22 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) (absurd LtZ1) (absurd LtZ2) (absurd Lt11) (absurd Lt12))))))
+      ((LtZ1 b1) (match erased q _ ((Lt11 b2 c1 q1) (LtZ1 c1)) ((Lt12 b2 c1 q1) (LtZ2 c1))))
+      ((LtZ2 b1) (match erased q _ ((Lt21 b2 c1 q1) (LtZ1 c1)) ((Lt22 b2 c1 q1) (LtZ2 c1))))
+      ((Lt11 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt11 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1))))))
+      ((Lt12 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt11 a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt12 a1 c1 (lt-le (predates _) a1 c1 (le-lt a1 b1 c1 (subterm _) p1 q1))))))
+      ((Lt21 a1 b1 p1) (match erased q _ ((Lt11 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt12 b2 c1 q1) (Lt22 a1 c1 (lt-le-lt a1 b1 c1 (subterm _) p1 q1)))))
+      ((Lt22 a1 b1 p1) (match erased q _ ((Lt21 b2 c1 q1) (Lt21 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))) ((Lt22 b2 c1 q1) (Lt22 a1 c1 (lt-lt a1 b1 c1 (subterm _) p1 q1))))))))
 
 (def-fns _ $ erased lt-irrefl : (erased (Bin) a) (subterm erased (BinLt a a) p) -> (erased (False) f)
   (match erased p _
-    (absurd LtZ1) (absurd LtZ2) (absurd Lt12) (absurd Lt21)
     ((Lt11 a1 b1 q) (lt-irrefl a1 (subterm _) q))
     ((Lt22 a1 b1 q) (lt-irrefl a1 (subterm _) q))))
 
@@ -420,7 +412,6 @@
 
 (def-fns _ $ erased neq-irrefl : (subterm erased (Bin) a) (erased (Neq a a) p) -> (erased (False) f)
   (match erased p _
-    (absurd NeqZ1) (absurd NeqZ2) (absurd Neq1Z) (absurd Neq2Z) (absurd Neq12) (absurd Neq21)
     ((Neq11 a1 b1 q) (neq-irrefl (subterm _) a1 q))
     ((Neq22 a1 b1 q) (neq-irrefl (subterm _) a1 q))))
 
@@ -478,11 +469,9 @@
   (match erased m _
     ((MRHere x1 t1 rest)
       (match erased ap _
-        (absurd ApNil)
         ((ApCons a rest2 r2 res2 ap2) (MRHere x t res2))))
     ((MRThere x1 t1 r1 rest m1)
       (match erased ap _
-        (absurd ApNil)
         ((ApCons a rest2 r2 res2 ap2) (MRThere x t a res2 (mem-append x t rest2 r res2 (subterm _) m1 ap2)))))))
 
 (def-fns _ $ erased mem-last : (erased (Bin) x) (erased (Term) t) (erased (List (Rule)) rules) (erased (List (Rule)) res) (subterm erased (AppendR rules (MkRule x t) res) ap) -> (erased (MemRule x t res) m)
@@ -498,9 +487,9 @@
 
 (def-fns _ $ erased mw-unwrap : (erased (List (Digit)) ctx) (erased (Bin) a) (erased (Bin) x) (subterm erased (Wrap ctx a x) w) (erased (Term) t) (erased (List (Rule)) rules) (erased (MemRuleW ctx a t rules) m) -> (erased (MemRule x t rules) r)
   (match erased w _
-    ((WNil z) (match erased m _ ((MWNil a1 t1 r1 m1) m1) (absurd MW1) (absurd MW2)))
-    ((W1 ctx1 a1 y q) (match erased m _ (absurd MWNil) ((MW1 c2 a2 t2 r2 m1) (mw-unwrap ctx1 (B1 a) x (subterm _) q t rules m1)) (absurd MW2)))
-    ((W2 ctx1 a1 y q) (match erased m _ (absurd MWNil) (absurd MW1) ((MW2 c2 a2 t2 r2 m1) (mw-unwrap ctx1 (B2 a) x (subterm _) q t rules m1))))))
+    ((WNil z) (match erased m _ ((MWNil a1 t1 r1 m1) m1)))
+    ((W1 ctx1 a1 y q) (match erased m _ ((MW1 c2 a2 t2 r2 m1) (mw-unwrap ctx1 (B1 a) x (subterm _) q t rules m1))))
+    ((W2 ctx1 a1 y q) (match erased m _ ((MW2 c2 a2 t2 r2 m1) (mw-unwrap ctx1 (B2 a) x (subterm _) q t rules m1))))))
 
 (def-fns _ $ erased mw-append : (erased (List (Digit)) ctx) (erased (Bin) a) (erased (Term) t) (erased (List (Rule)) rules) (subterm erased (MemRuleW ctx a t rules) m) (erased (Rule) r) (erased (List (Rule)) res) (erased (AppendR rules r res) ap) -> (erased (MemRuleW ctx a t res) m2)
   (match erased m _
@@ -558,8 +547,7 @@
   (match erased p _
     ((P3Z a1 b1 c1 q)
       (match erased q _
-        ((PS a2 b2 c2 q2) (MkPred3 h a b c2 (P3Z a b c2 q2)))
-        (absurd PZ)))
+        ((PS a2 b2 c2 q2) (MkPred3 h a b c2 (P3Z a b c2 q2)))))
     ((P3S h1 a1 b1 c1 q)
       (match erased (plus3-mid (subterm _) h1 a b c1 q) _
         ((MkPred3 h2 a2 b2 c2 q2) (MkPred3 h a b (Succ c2) (P3S h1 a b c2 q2)))))))
@@ -666,19 +654,17 @@
     (many LFree : (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (erased (Bin) xg) (erased (List (Rule)) rules) (many (Term) ty) (erased (In x n f) p) -> (Looked x n f xg rules))))
 
 (def-fns _ $ erased in-empty : (erased (Bin) x) (erased (In x (Zero) (FEmpty)) p) -> (erased (False) f)
-  (match erased p _
-    (absurd InHere) (absurd In1) (absurd In2)))
+  (match erased p _))
 
 
 (def-fns _ $ erased in-empty : (erased (Bin) x) (erased (In x (Zero) (FEmpty)) p) -> (erased (False) f)
-  (match erased p _
-    (absurd InHere) (absurd In1) (absurd In2)))
+  (match erased p _))
 
 (def-fns _ $ erased in-ruled-clash : (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (subterm erased (In x n f) p) (erased (RuledIn x n f) q) -> (erased (False) r)
   (match erased p _
-    ((InHere n1 n2 m ty one two p3) (match erased q _ (absurd RHere) (absurd R1) (absurd R2)))
-    ((In1 x1 h n1 n2 m here one two p3 q1) (match erased q _ (absurd RHere) ((R1 x2 h2 a2 b2 c2 here2 one2 two2 p4 q2) (in-ruled-clash x1 n1 one (subterm _) q1 q2)) (absurd R2)))
-    ((In2 x1 h n1 n2 m here one two p3 q1) (match erased q _ (absurd RHere) (absurd R1) ((R2 x2 h2 a2 b2 c2 here2 one2 two2 p4 q2) (in-ruled-clash x1 n2 two (subterm _) q1 q2))))))
+    ((InHere n1 n2 m ty one two p3) (match erased q _))
+    ((In1 x1 h n1 n2 m here one two p3 q1) (match erased q _ ((R1 x2 h2 a2 b2 c2 here2 one2 two2 p4 q2) (in-ruled-clash x1 n1 one (subterm _) q1 q2))))
+    ((In2 x1 h n1 n2 m here one two p3 q1) (match erased q _ ((R2 x2 h2 a2 b2 c2 here2 one2 two2 p4 q2) (in-ruled-clash x1 n2 two (subterm _) q1 q2))))))
 
 ; Every key of a table is at most c: at each node, the key its path spells is, when the node holds an
 ; entry, and so on in both subtrees.
@@ -695,44 +681,36 @@
 
 (def-fns _ $ erased wrap-fun : (erased (List (Digit)) ctx) (erased (Bin) a) (erased (Bin) x) (erased (Bin) y) (subterm erased (Wrap ctx a x) w) (erased (Wrap ctx a y) v) -> (erased (Eq x y) e)
   (match erased w _
-    ((WNil z) (match erased v _ ((WNil z2) (Refl x)) (absurd W1) (absurd W2)))
-    ((W1 ctx1 a1 y1 p) (match erased v _ (absurd WNil) ((W1 ctx2 a2 y2 q) (wrap-fun ctx1 (B1 a1) x y (subterm _) p q)) (absurd W2)))
-    ((W2 ctx1 a1 y1 p) (match erased v _ (absurd WNil) (absurd W1) ((W2 ctx2 a2 y2 q) (wrap-fun ctx1 (B2 a1) x y (subterm _) p q))))))
+    ((WNil z) (match erased v _ ((WNil z2) (Refl x))))
+    ((W1 ctx1 a1 y1 p) (match erased v _ ((W1 ctx2 a2 y2 q) (wrap-fun ctx1 (B1 a1) x y (subterm _) p q))))
+    ((W2 ctx1 a1 y1 p) (match erased v _ ((W2 ctx2 a2 y2 q) (wrap-fun ctx1 (B2 a1) x y (subterm _) p q))))))
 
 (def-fns _ $ erased above-in : (erased (List (Digit)) ctx) (erased (Bin) c) (erased (Nat) n) (erased (Facts n) f) (erased (Bin) x) (erased (Bin) y) (erased (Above ctx c n f) ab) (subterm erased (In x n f) p) (erased (Wrap ctx x y) w) -> (erased (BinLe y c) le)
   (match erased p _
     ((InHere n1 n2 m ty one two p3)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            (absurd AHNone)
             ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun (predates _) ctx (BZ) y2 y w2 w) _ ((Refl z) le2)))))))
     ((In1 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-in (Cons (Digit) (D1) ctx) c n1 one x1 y a1 (subterm _) q (W1 ctx x1 y w)))))
     ((In2 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-in (Cons (Digit) (D2) ctx) c n2 two x1 y a2 (subterm _) q (W2 ctx x1 y w)))))))
 
 (def-fns _ $ erased above-ruledin : (erased (List (Digit)) ctx) (erased (Bin) c) (erased (Nat) n) (erased (Facts n) f) (erased (Bin) x) (erased (Bin) y) (erased (Above ctx c n f) ab) (subterm erased (RuledIn x n f) p) (erased (Wrap ctx x y) w) -> (erased (BinLe y c) le)
   (match erased p _
     ((RHere n1 n2 m ty t one two p3)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            (absurd AHNone)
             ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun (predates _) ctx (BZ) y2 y w2 w) _ ((Refl z) le2)))))))
     ((R1 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-ruledin (Cons (Digit) (D1) ctx) c n1 one x1 y a1 (subterm _) q (W1 ctx x1 y w)))))
     ((R2 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-ruledin (Cons (Digit) (D2) ctx) c n2 two x1 y a2 (subterm _) q (W2 ctx x1 y w)))))))
 
 (def-fns _ $ erased above-taken : (erased (Bin) c) (erased (Nat) n) (erased (Facts n) f) (erased (Bin) x) (erased (Above (Nil (Digit)) c n f) ab) (erased (Taken x n f) t) -> (erased (BinLe x c) le)
@@ -753,33 +731,26 @@
         (above-ins (Cons (Digit) (D2) ctx) c (Zero) (FEmpty) (Succ (Zero)) two x1 y (AbEmpty (Cons (Digit) (D2) ctx) c) (subterm _) q (W2 ctx x1 y w) le)))
     ((InsHere n1 n2 m ty one two p)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode ctx c (Succ (Zero)) n1 n2 (Succ m) (HFree ty) one two (P3S (Zero) n1 n2 m p) (AHKey ctx c (Succ (Zero)) (HFree ty) y w le) a1 a2))))
     ((Ins1 x1 h n1 n2 m here one two p k1 m2 one2 p2 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode ctx c h k1 n2 m2 here one2 two p2 ah (above-ins (Cons (Digit) (D1) ctx) c n1 one k1 one2 x1 y a1 (subterm _) q (W1 ctx x1 y w) le) a2))))
     ((Ins2 x1 h n1 n2 m here one two p k2 m2 two2 p2 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode ctx c h n1 k2 m2 here one two2 p2 ah a1 (above-ins (Cons (Digit) (D2) ctx) c n2 two k2 two2 x1 y a2 (subterm _) q (W2 ctx x1 y w) le)))))))
 
 (def-fns _ $ erased above-out : (erased (List (Digit)) ctx) (erased (Bin) c) (erased (Bin) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (erased (Above ctx c n f) ab) (subterm erased (Out x t n f k f2) o) -> (erased (Above ctx c k f2) ab2)
   (match erased o _
     ((OutHere n1 n2 m ty t1 one two p)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            (absurd AHNone)
             ((AHKey c4 c5 h6 here7 y w le) (AbNode ctx c (Zero) n1 n2 m (HRuled ty t1) one two p (AHKey ctx c (Zero) (HRuled ty t1) y w le) a1 a2))))))
     ((Out1 x1 t1 h n1 n2 m here one two p k1 m2 one2 p2 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode ctx c h k1 n2 m2 here one2 two p2 ah (above-out (Cons (Digit) (D1) ctx) c x1 t1 n1 one k1 one2 a1 (subterm _) q) a2))))
     ((Out2 x1 t1 h n1 n2 m here one two p k2 m2 two2 p2 q)
       (match erased ab _
-        (absurd AbEmpty)
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode ctx c h n1 k2 m2 here one two2 p2 ah a1 (above-out (Cons (Digit) (D2) ctx) c x1 t1 n2 two k2 two2 a2 (subterm _) q)))))))
 
 (def-fns _ $ erased above-weaken : (erased (List (Digit)) ctx) (erased (Bin) c) (erased (Bin) c2) (erased (Nat) n) (erased (Facts n) f) (subterm erased (Above ctx c n f) ab) (erased (BinLe c c2) le) -> (erased (Above ctx c2 n f) ab2)
@@ -794,7 +765,7 @@
 (def-fns _ $ erased taken-empty : (erased (Bin) x) (erased (Taken x (Zero) (FEmpty)) t) -> (erased (False) f)
   (match erased t _
     ((TFree z1 z2 z3 p) (in-empty (predates _) x p))
-    ((TRuled z1 z2 z3 p) (match erased p _ (absurd RHere) (absurd R1) (absurd R2)))))
+    ((TRuled z1 z2 z3 p) (match erased p _))))
 
 (def-fns _ $ erased taken-1 : (erased (Bin) x) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (Taken x n1 one) t) -> (erased (Taken (B1 x) m (FNode h n1 n2 m here one two p)) r)
   (match erased t _
@@ -815,18 +786,18 @@
           (match many here _
             ((HNone) (LNone x n f xg rules))
             ((HRuled ty t)
-              (let (erased ch) (match erased c (((C1Here ctx h here rules) ch)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) ch) (absurd C1Empty)))
-              (let (erased mw) (match erased ch (((MemRuleW ctx (BZ) t rules) mw)) ((C1Ruled c0 ty0 t0 r0 mw) mw) (absurd C1None) (absurd C1Free)))
+              (let (erased ch) (match erased c (((C1Here ctx h here rules) ch)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) ch)))
+              (let (erased mw) (match erased ch (((MemRuleW ctx (BZ) t rules) mw)) ((C1Ruled c0 ty0 t0 r0 mw) mw)))
               (LRuled x n f xg rules ty t (mw-unwrap (predates _) ctx (BZ) xg w t rules mw)))
             ((HFree ty) (LFree x n f xg rules ty (InHere n1 n2 m ty one two p3)))))
         ((B1 x1)
-          (let (erased c1) (match erased c (((C1 (Cons (Digit) (D1) ctx) n1 one rules) c1)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c1) (absurd C1Empty)))
+          (let (erased c1) (match erased c (((C1 (Cons (Digit) (D1) ctx) n1 one rules) c1)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c1)))
           (match many (facts-lookup (subterm _) x1 n1 one (Cons (Digit) (D1) ctx) xg (W1 ctx x1 xg w) rules c1) _
             ((LNone a b d e g) (LNone x n f xg rules))
             ((LRuled a b d e g ty t mr) (LRuled x n f xg rules ty t mr))
             ((LFree a b d e g ty q) (LFree x n f xg rules ty (In1 x1 h n1 n2 m here one two p3 q)))))
         ((B2 x1)
-          (let (erased c2) (match erased c (((C1 (Cons (Digit) (D2) ctx) n2 two rules) c2)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c2) (absurd C1Empty)))
+          (let (erased c2) (match erased c (((C1 (Cons (Digit) (D2) ctx) n2 two rules) c2)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c2)))
           (match many (facts-lookup (subterm _) x1 n2 two (Cons (Digit) (D2) ctx) xg (W2 ctx x1 xg w) rules c2) _
             ((LNone a b d e g) (LNone x n f xg rules))
             ((LRuled a b d e g ty t mr) (LRuled x n f xg rules ty t mr))
@@ -884,18 +855,17 @@
           (match many here _
             ((HFree ty)
               (match erased p3 _
-                ((P3S h1 a1 b1 c1 q) (MkRemoved x t c1 f (FNode (Zero) n1 n2 c1 (HRuled ty t) one two q) (OutHere n1 n2 c1 ty t one two q)))
-                (absurd P3Z)))
-            (absurd HNone (match erased p (((False) f)) (absurd InHere) (absurd In1) (absurd In2)))
-            (absurd (HRuled ty0 t0) (match erased p (((False) f)) (absurd InHere) (absurd In1) (absurd In2)))))
+                ((P3S h1 a1 b1 c1 q) (MkRemoved x t c1 f (FNode (Zero) n1 n2 c1 (HRuled ty t) one two q) (OutHere n1 n2 c1 ty t one two q)))))
+            (absurd HNone (match erased p (((False) f))))
+            (absurd (HRuled ty0 t0) (match erased p (((False) f))))))
         ((B1 x1)
-          (let (erased q) (match erased p (((In x1 n1 one) q)) ((In1 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q) (absurd InHere) (absurd In2)))
+          (let (erased q) (match erased p (((In x1 n1 one) q)) ((In1 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q)))
           (match many (facts-rule-out n1 (subterm _) one x1 q t) _
             ((MkRemoved a a0 k1 b one2 r)
               (match erased (plus3-mid (predates _) h k1 n2 m p3) _
                 ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved x t c2 f (FNode h k1 n2 c2 here one2 two q2) (Out1 x1 t h n1 n2 m here one two p3 k1 c2 one2 q2 r)))))))
         ((B2 x1)
-          (let (erased q) (match erased p (((In x1 n2 two) q)) ((In2 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q) (absurd InHere) (absurd In1)))
+          (let (erased q) (match erased p (((In x1 n2 two) q)) ((In2 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q)))
           (match many (facts-rule-out n2 (subterm _) two x1 q t) _
             ((MkRemoved a a0 k2 b two2 r)
               (match erased (plus3-right (predates _) h n1 k2 m p3) _
@@ -905,12 +875,11 @@
 
 (def-fns _ $ erased ruledin-ins : (erased (Bin) z) (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) n2) (erased (Facts n2) f2) (subterm erased (Ins x n f n2 f2) i) (erased (RuledIn z n f) r) -> (erased (RuledIn z n2 f2) r2)
   (match erased i _
-    ((InsLeaf ty p) (match erased r _ (absurd RHere) (absurd R1) (absurd R2)))
-    ((InsGrow1 x1 one q p) (match erased r _ (absurd RHere) (absurd R1) (absurd R2)))
-    ((InsGrow2 x1 two q p) (match erased r _ (absurd RHere) (absurd R1) (absurd R2)))
+    ((InsLeaf ty p) (match erased r _))
+    ((InsGrow1 x1 one q p) (match erased r _))
+    ((InsGrow2 x1 two q p) (match erased r _))
     ((InsHere n1 n2 m ty one two p)
       (match erased r _
-        (absurd RHere)
         ((R1 z1 h a b c here one1 two1 p1 q1) (R1 z1 (Succ (Zero)) n1 n2 (Succ m) (HFree ty) one two (P3S (Zero) n1 n2 m p) q1))
         ((R2 z1 h a b c here one1 two1 p1 q1) (R2 z1 (Succ (Zero)) n1 n2 (Succ m) (HFree ty) one two (P3S (Zero) n1 n2 m p) q1))))
     ((Ins1 x1 h n1 a2 m here one two p k1 m2 one2 p2 q)
@@ -928,7 +897,6 @@
   (match erased o _
     ((OutHere n1 n2 m ty t0 one two p)
       (match erased r _
-        (absurd RHere)
         ((R1 z1 h a b c here one1 two1 p1 q1) (R1 z1 (Zero) n1 n2 m (HRuled ty t0) one two p q1))
         ((R2 z1 h a b c here one1 two1 p1 q1) (R2 z1 (Zero) n1 n2 m (HRuled ty t0) one two p q1))))
     ((Out1 x1 t0 h n1 a2 m here one two p k1 m2 one2 p2 q)
@@ -985,15 +953,12 @@
         (c1-ins (Cons (Digit) (D2) ctx) x1 (Zero) (FEmpty) (Succ (Zero)) two (subterm _) q rules (C1Empty (Cons (Digit) (D2) ctx) rules))))
     ((InsHere n1 n2 m ty one two p)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node ctx (Succ (Zero)) n1 n2 (Succ m) (HFree ty) one two (P3S (Zero) n1 n2 m p) rules (C1Free ctx ty rules) c1 c2))))
     ((Ins1 x1 h n1 a2 m here one two p k1 m2 one2 p2 q)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node ctx h k1 a2 m2 here one2 two p2 rules ch (c1-ins (Cons (Digit) (D1) ctx) x1 n1 one k1 one2 (subterm _) q rules c1) c2))))
     ((Ins2 x1 h n1 a2 m here one two p k2 m2 two2 p2 q)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node ctx h n1 k2 m2 here one two2 p2 rules ch c1 (c1-ins (Cons (Digit) (D2) ctx) x1 a2 two k2 two2 (subterm _) q rules c2)))))))
 
 (def-fns _ $ erased c1-out : (erased (List (Digit)) ctx) (erased (Bin) x) (erased (Bin) xg) (erased (Wrap ctx x xg) w) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o)
@@ -1001,7 +966,6 @@
   (match erased o _
     ((OutHere n1 n2 m ty t0 one two p)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
           (C1Node ctx (Zero) n1 n2 m (HRuled ty t0) one two p res
             (C1Ruled ctx ty t0 res (wrap-mw (predates _) ctx (BZ) xg w t0 res (mem-last (predates _) xg t0 rules res ap)))
@@ -1009,14 +973,12 @@
             (c1-append (predates _) (Cons (Digit) (D2) ctx) n2 two rules c2 (MkRule xg t) res ap)))))
     ((Out1 x1 t0 h n1 a2 m here one two p k1 m2 one2 p2 q)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
           (C1Node ctx h k1 a2 m2 here one2 two p2 res (c1here-append (predates _) ctx h here rules ch (MkRule xg t) res ap)
             (c1-out (Cons (Digit) (D1) ctx) x1 xg (W1 ctx x1 xg w) t n1 one k1 one2 (subterm _) q rules c1 res ap)
             (c1-append (predates _) (Cons (Digit) (D2) ctx) a2 two rules c2 (MkRule xg t) res ap)))))
     ((Out2 x1 t0 h n1 a2 m here one two p k2 m2 two2 p2 q)
       (match erased c _
-        (absurd C1Empty)
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
           (C1Node ctx h n1 k2 m2 here one two2 p2 res (c1here-append (predates _) ctx h here rules ch (MkRule xg t) res ap)
             (c1-append (predates _) (Cons (Digit) (D1) ctx) n1 one rules c1 (MkRule xg t) res ap)
@@ -1024,10 +986,9 @@
 
 (def-fns _ $ erased keys-snoc : (erased (List (Bin)) seen) (erased (List (Rule)) rules) (erased (List (Bin)) ks) (subterm erased (Keys seen rules ks) k) (erased (Bin) x) (erased (Term) t) (erased (List (Rule)) res) (erased (AppendR rules (MkRule x t) res) ap) -> (erased (Keys seen res (Cons (Bin) x ks)) k2)
   (match erased k _
-    ((KNil s) (match erased ap _ ((ApNil r) (KCons seen x t (Nil (Rule)) (Cons (Bin) x seen) (KNil (Cons (Bin) x seen)))) (absurd ApCons)))
+    ((KNil s) (match erased ap _ ((ApNil r) (KCons seen x t (Nil (Rule)) (Cons (Bin) x seen) (KNil (Cons (Bin) x seen))))))
     ((KCons s y u rest ks1 k1)
       (match erased ap _
-        (absurd ApNil)
         ((ApCons a rest2 r res2 ap2) (KCons seen y u res2 (Cons (Bin) x ks) (keys-snoc (Cons (Bin) y seen) rest ks (subterm _) k1 x t res2 ap2)))))))
 ; ---- Freshness: every variable of a term is a rule-free entry of a table. Canonicalization returns it.
 
@@ -1086,59 +1047,49 @@
 
 (def-fns _ $ erased fr-var : (erased (Nat) n) (erased (Facts n) f) (erased (Bin) x) (erased (Fr n f (TVar x)) p) -> (erased (In x n f) q)
   (match erased p _
-    ((FrVar a b c q) q)
-    (absurd FrBound) (absurd FrApp) (absurd FrFn) (absurd FrTyCtor) (absurd FrValCtor) (absurd FrMatchable) (absurd FrNewtype) (absurd FrErr)))
+    ((FrVar a b c q) q)))
 
 (def-fns _ $ erased fr-app : (erased (Nat) n) (erased (Facts n) f) (erased (Term) h) (erased (List (Term)) args) (erased (Fr n f (TApp h args)) p) -> (erased (Fr n f h) ph) (erased (FrL n f args) pa)
   (match erased p _
-    ((FrApp a b c d ph pa) (values ph pa))
-    (absurd FrVar) (absurd FrBound) (absurd FrFn) (absurd FrTyCtor) (absurd FrValCtor) (absurd FrMatchable) (absurd FrNewtype) (absurd FrErr)))
+    ((FrApp a b c d ph pa) (values ph pa))))
 
 (def-fns _ $ erased fr-fn : (erased (Nat) n) (erased (Facts n) f) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Fr n f (TFn l ps rs)) p) -> (erased (Fr n f l) pl) (erased (FrT n f ps) pp) (erased (FrT n f rs) pr)
   (match erased p _
-    ((FrFn a b c d e pl pp pr) (values pl pp pr))
-    (absurd FrVar) (absurd FrBound) (absurd FrApp) (absurd FrTyCtor) (absurd FrValCtor) (absurd FrMatchable) (absurd FrNewtype) (absurd FrErr)))
+    ((FrFn a b c d e pl pp pr) (values pl pp pr))))
 
 (def-fns _ $ erased fr-tyctor : (erased (Nat) n) (erased (Facts n) f) (erased (List (Entry)) ps) (erased (Fr n f (TTyCtor ps)) p) -> (erased (FrT n f ps) pp)
   (match erased p _
-    ((FrTyCtor a b c pp) pp)
-    (absurd FrVar) (absurd FrBound) (absurd FrApp) (absurd FrFn) (absurd FrValCtor) (absurd FrMatchable) (absurd FrNewtype) (absurd FrErr)))
+    ((FrTyCtor a b c pp) pp)))
 
 (def-fns _ $ erased fr-valctor : (erased (Nat) n) (erased (Facts n) f) (erased (List (Entry)) ps) (erased (Term) ret) (erased (Fr n f (TValCtor ps ret)) p) -> (erased (FrT n f ps) pp) (erased (Fr n f ret) pr)
   (match erased p _
-    ((FrValCtor a b c d pp pr) (values pp pr))
-    (absurd FrVar) (absurd FrBound) (absurd FrApp) (absurd FrFn) (absurd FrTyCtor) (absurd FrMatchable) (absurd FrNewtype) (absurd FrErr)))
+    ((FrValCtor a b c d pp pr) (values pp pr))))
 
 (def-fns _ $ erased fr-matchable : (erased (Nat) n) (erased (Facts n) f) (erased (Disc) d) (erased (Term) ty) (erased (List (MCtor)) cs) (erased (Fr n f (TMatchable d ty cs)) p) -> (erased (Fr n f ty) pt) (erased (FrM n f cs) pc)
   (match erased p _
-    ((FrMatchable a b c e g pt pc) (values pt pc))
-    (absurd FrVar) (absurd FrBound) (absurd FrApp) (absurd FrFn) (absurd FrTyCtor) (absurd FrValCtor) (absurd FrNewtype) (absurd FrErr)))
+    ((FrMatchable a b c e g pt pc) (values pt pc))))
 
 (def-fns _ $ erased fr-newtype : (erased (Nat) n) (erased (Facts n) f) (erased (Term) c) (erased (Fr n f (TNewtype c)) p) -> (erased (Fr n f c) pc)
   (match erased p _
-    ((FrNewtype a b d pc) pc)
-    (absurd FrVar) (absurd FrBound) (absurd FrApp) (absurd FrFn) (absurd FrTyCtor) (absurd FrValCtor) (absurd FrMatchable) (absurd FrErr)))
+    ((FrNewtype a b d pc) pc)))
 
 (def-fns _ $ erased frl-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (List (Term)) rest) (erased (FrL n f (Cons (Term) t rest)) p) -> (erased (Fr n f t) pt) (erased (FrL n f rest) pr)
   (match erased p _
-    ((FrLCons a b c d pt pr) (values pt pr))
-    (absurd FrLNil)))
+    ((FrLCons a b c d pt pr) (values pt pr))))
 
 (def-fns _ $ erased frt-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe (String)) nm) (erased (Bool) s) (erased (Mult) mu) (erased (Sg) sg) (erased (List (Entry)) rest) (erased (FrT n f (Cons (Entry) (MkEntry nm s mu sg) rest)) p) -> (erased (FrS n f sg) ps) (erased (FrT n f rest) pr)
   (match erased p _
-    ((FrTCons a b c d e g h ps pr) (values ps pr))
-    (absurd FrTNil)))
+    ((FrTCons a b c d e g h ps pr) (values ps pr))))
 
 (def-fns _ $ erased frs-ty : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (FrS n f (SgTy t)) p) -> (erased (Fr n f t) pt)
-  (match erased p _ ((FrSTy a b c pt) pt) (absurd FrSIs)))
+  (match erased p _ ((FrSTy a b c pt) pt)))
 
 (def-fns _ $ erased frs-is : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (FrS n f (SgIs t)) p) -> (erased (Fr n f t) pt)
-  (match erased p _ ((FrSIs a b c pt) pt) (absurd FrSTy)))
+  (match erased p _ ((FrSIs a b c pt) pt)))
 
 (def-fns _ $ erased frm-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Mult) mu) (erased (Term) c) (erased (List (MCtor)) rest) (erased (FrM n f (Cons (MCtor) (MkMCtor mu c) rest)) p) -> (erased (Fr n f c) pc) (erased (FrM n f rest) pr)
   (match erased p _
-    ((FrMCons a b d e g pc pr) (values pc pr))
-    (absurd FrMNil)))
+    ((FrMCons a b d e g pc pr) (values pc pr))))
 
 (def-fns _ $ erased guard-app : (erased (Term) h) (erased (List (Term)) args) (erased (List (Bin)) seen) (erased (Guard (TApp h args) seen) g) -> (erased (Guard h seen) gh) (erased (GuardL args seen) ga)
   (match erased g _
@@ -1229,27 +1180,21 @@
   (match erased o _
     ((OrdNil s)
       (match erased k _
-        ((KNil s1) (match erased ap _ ((ApNil r) (OrdCons seen x t (Nil (Rule)) g (OrdNil (Cons (Bin) x seen)))) (absurd ApCons)))
-        (absurd KCons)))
+        ((KNil s1) (match erased ap _ ((ApNil r) (OrdCons seen x t (Nil (Rule)) g (OrdNil (Cons (Bin) x seen))))))))
     ((OrdCons s y u rest g1 o1)
       (match erased k _
-        (absurd KNil)
         ((KCons s1 y1 u1 rest1 ks1 k1)
           (match erased ap _
-            (absurd ApNil)
             ((ApCons a rest2 r res2 ap2) (OrdCons seen y u res2 g1 (ord-snoc (Cons (Bin) y seen) rest (subterm _) o1 ks k1 x t res2 ap2 g)))))))))
 
 (def-fns _ $ erased guard-weaken : (erased (Term) t) (erased (Bin) x) (erased (List (Bin)) seen) (erased (Guard t (Cons (Bin) x seen)) g) -> (erased (Guard t seen) g2)
   (match erased g _
-    (absurd GTop)
-    ((GAv t0 s n f p a) (match erased a _ (absurd ARNil) ((ARCons z ks n1 f1 r rest) (GAv t seen n f p rest))))))
+    ((GAv t0 s n f p a) (match erased a _ ((ARCons z ks n1 f1 r rest) (GAv t seen n f p rest))))))
 
 (def-fns _ $ erased guard-clash : (erased (Bin) v) (erased (List (Bin)) seen) (erased (Guard (TVar v) (Cons (Bin) v seen)) g) -> (erased (False) r)
   (match erased g _
-    (absurd GTop)
     ((GAv t0 s n f p a)
       (match erased a _
-        (absurd ARNil)
         ((ARCons z ks n1 f1 r rest) (in-ruled-clash (predates _) v n f (fr-var (predates _) n f v p) r))))))
 
 ; A ruled variable met inside a rule's term has its rule after that rule: the guard rules it out of the
@@ -1264,12 +1209,12 @@
 
 (def-fns _ $ many find-rule : (subterm many (List (Rule)) after) (many (Bin) x) (erased (List (Bin)) seen) (erased (List (Rule)) whole) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (Term) t0) (erased (MemRule x t0 after) m) -> (many (Found seen whole after) r)
   (match many after _
-    (absurd (Nil a) (match erased m (((False) f)) (absurd MRHere) (absurd MRThere)))
+    (absurd (Nil a) (match erased m (((False) f))))
     ((Cons a rule rest)
       (match many rule _
         ((MkRule y t)
-          (let (erased g) (match erased ord (((Guard t (Cons (Bin) y seen)) g)) ((OrdCons s1 y1 t1 r1 g o) g) (absurd OrdNil)))
-          (let (erased o) (match erased ord (((Ord (Cons (Bin) y seen) rest) o)) ((OrdCons s1 y1 t1 r1 g o) o) (absurd OrdNil)))
+          (let (erased g) (match erased ord (((Guard t (Cons (Bin) y seen)) g)) ((OrdCons s1 y1 t1 r1 g o) g)))
+          (let (erased o) (match erased ord (((Ord (Cons (Bin) y seen) rest) o)) ((OrdCons s1 y1 t1 r1 g o) o)))
           (let (erased pre2) (PCons seen whole y t rest pre))
           (match many (bin-eq-dec (predates _) x y) _
             ((BYes a1 b1 e) (MkFound seen whole after t rest (Cons (Bin) y seen) pre2 o g (prove-subterm rest after)))
@@ -1391,9 +1336,7 @@
     (match many t _
       ((TVar x)
         (match many (facts-lookup (predates _) x n f (Nil (Digit)) x (WNil x) rules c) _
-          ((LNone a b d e h) (None (FrBox n f t)))
-          ((LRuled a b d e h ty r0 m) (None (FrBox n f t)))
-          ((LFree a b d e h ty p) (Some (FrBox n f t) (MkFrBox n f t (FrVar n f x p))))))
+          ((LFree a b d e h ty p) (Some (FrBox n f t) (MkFrBox n f t (FrVar n f x p)))) (else (None (FrBox n f t)))))
       ((TBound k) (Some (FrBox n f t) (MkFrBox n f t (FrBound n f k))))
       ((TApp h args)
         (match many (refresh (subterm _) h n f rules c) _
@@ -1493,29 +1436,24 @@
 (def-fns _ $ erased in-ins-out : (erased (Bin) z) (erased (Bin) x) (erased (Term) t) (erased (Nat) n0) (erased (Facts n0) f0) (erased (Nat) n1) (erased (Facts n1) f1) (erased (Nat) k) (erased (Facts k) f2)
     (subterm erased (Ins x n0 f0 n1 f1) i) (erased (Out x t n1 f1 k f2) o) (erased (In z n0 f0) p) -> (erased (In z k f2) q)
   (match erased i _
-    ((InsLeaf ty pp) (match erased p _ (absurd InHere) (absurd In1) (absurd In2)))
-    ((InsGrow1 x1 one q1 pp) (match erased p _ (absurd InHere) (absurd In1) (absurd In2)))
-    ((InsGrow2 x1 two q1 pp) (match erased p _ (absurd InHere) (absurd In1) (absurd In2)))
+    ((InsLeaf ty pp) (match erased p _))
+    ((InsGrow1 x1 one q1 pp) (match erased p _))
+    ((InsGrow2 x1 two q1 pp) (match erased p _))
     ((InsHere n1 n2 m ty one two pp)
       (match erased o _
         ((OutHere a1 a2 a3 ty0 t0 one0 two0 p0)
           (match erased p _
-            (absurd InHere)
             ((In1 z1 h b1 b2 b3 here1 one1 two1 p1 q1) (In1 z1 (Zero) n1 n2 m (HRuled ty t) one two pp q1))
-            ((In2 z1 h b1 b2 b3 here1 one1 two1 p1 q1) (In2 z1 (Zero) n1 n2 m (HRuled ty t) one two pp q1))))
-        (absurd Out1) (absurd Out2)))
+            ((In2 z1 h b1 b2 b3 here1 one1 two1 p1 q1) (In2 z1 (Zero) n1 n2 m (HRuled ty t) one two pp q1))))))
     ((Ins1 x1 h n1 a2 m here one two pp k1 m2 one2 p2 q1)
       (match erased o _
-        (absurd OutHere)
         ((Out1 x2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 one3 p3 q2)
           (match erased p _
             ((InHere c1 c2 c3 ty one1 two1 p1) (InHere k3 a2 m3 ty one3 two p3))
             ((In1 z1 h1 c1 c2 c3 here1 one1 two1 p1 q3) (In1 z1 h k3 a2 m3 here one3 two p3 (in-ins-out z1 x1 t n1 one k1 one2 k3 one3 (subterm _) q1 q2 q3)))
-            ((In2 z1 h1 c1 c2 c3 here1 one1 two1 p1 q3) (In2 z1 h k3 a2 m3 here one3 two p3 q3))))
-        (absurd Out2)))
+            ((In2 z1 h1 c1 c2 c3 here1 one1 two1 p1 q3) (In2 z1 h k3 a2 m3 here one3 two p3 q3))))))
     ((Ins2 x1 h n1 a2 m here one two pp k2 m2 two2 p2 q1)
       (match erased o _
-        (absurd OutHere) (absurd Out1)
         ((Out2 x2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 two3 p3 q2)
           (match erased p _
             ((InHere c1 c2 c3 ty one1 two1 p1) (InHere n1 k3 m3 ty one two3 p3))
@@ -1636,14 +1574,14 @@
       (match erased p _
         ((InHere c1 c2 c3 ty one1 two1 p1) (InHere k1 a2 m2 ty one2 two p2))
         ((In1 z1 h1 c1 c2 c3 here1 one1 two1 p1 q1)
-          (In1 z1 h k1 a2 m2 here one2 two p2 (in-out-neq z1 x1 t0 n1 one k1 one2 (subterm _) q (match erased ne (((Neq z1 x1) r)) ((Neq11 a3 b3 q3) q3) (absurd NeqZ1) (absurd NeqZ2) (absurd Neq1Z) (absurd Neq2Z) (absurd Neq12) (absurd Neq21) (absurd Neq22)) q1)))
+          (In1 z1 h k1 a2 m2 here one2 two p2 (in-out-neq z1 x1 t0 n1 one k1 one2 (subterm _) q (match erased ne (((Neq z1 x1) r)) ((Neq11 a3 b3 q3) q3)) q1)))
         ((In2 z1 h1 c1 c2 c3 here1 one1 two1 p1 q1) (In2 z1 h k1 a2 m2 here one2 two p2 q1))))
     ((Out2 x1 t0 h n1 a2 m here one two pp k2 m2 two2 p2 q)
       (match erased p _
         ((InHere c1 c2 c3 ty one1 two1 p1) (InHere n1 k2 m2 ty one two2 p2))
         ((In1 z1 h1 c1 c2 c3 here1 one1 two1 p1 q1) (In1 z1 h n1 k2 m2 here one two2 p2 q1))
         ((In2 z1 h1 c1 c2 c3 here1 one1 two1 p1 q1)
-          (In2 z1 h n1 k2 m2 here one two2 p2 (in-out-neq z1 x1 t0 a2 two k2 two2 (subterm _) q (match erased ne (((Neq z1 x1) r)) ((Neq22 a3 b3 q3) q3) (absurd NeqZ1) (absurd NeqZ2) (absurd Neq1Z) (absurd Neq2Z) (absurd Neq12) (absurd Neq21) (absurd Neq11)) q1)))))))
+          (In2 z1 h n1 k2 m2 here one two2 p2 (in-out-neq z1 x1 t0 a2 two k2 two2 (subterm _) q (match erased ne (((Neq z1 x1) r)) ((Neq22 a3 b3 q3) q3)) q1)))))))
 
 (def-fns _ $ many rule-out-var : (erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb) (many (Bin) newer) (many (Bin) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) ne) -> (many (Added n f bnd) r)
   (match many tb _
@@ -1789,9 +1727,7 @@
       (match many inner _
         ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2 pr2)
           (match many (bin-cmp-dec (predates _) fr fr2) _
-            ((CLt x y p) (MkEnv sc en2 nf ff fr2 (table-weaken (predates _) nf ff fr fr2 tb (lt-le (predates _) fr fr2 p)) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))
-            ((CEq x y e) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))
-            ((CGt x y p) (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))))))))
+            ((CLt x y p) (MkEnv sc en2 nf ff fr2 (table-weaken (predates _) nf ff fr fr2 tb (lt-le (predates _) fr fr2 p)) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr)) (else (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))))))))
 
 (def-fns _ $ many entry : (many (Env) env) (many (Bin) x) -> (many (EInfo) r)
   (match many (idmap-get (predates _) (EInfo) x (env-entries (predates _) env)) _
@@ -1833,9 +1769,7 @@
   (match many tb _
     ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
       (match many (facts-lookup (predates _) x n0 f0 (Nil (Digit)) x (WNil x) ru c1) _
-        ((LNone a b c d e) (None (Term)))
-        ((LRuled a b c d e ty t m) (Some (Term) t))
-        ((LFree a b c d e ty p) (None (Term)))))))
+        ((LRuled a b c d e ty t m) (Some (Term) t)) (else (None (Term)))))))
 
 (def-fns _ $ many lookup : (many (Env) env) (many (String) name) -> (many (Maybe (Bin)) r)
   (nm-get (predates _) (Bin) name (env-scope (predates _) env)))
@@ -1856,10 +1790,7 @@
   (match many ty _
     ((TMatchable d t cs) (BTrue))
     ((TNewtype c) (BTrue))
-    ((TApp h args) (match many h _ ((TVar x) (bin-eq (predates _) x coercible)) ((TBound k) (BFalse)) ((TApp h2 a2) (BFalse))
-                     ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse)) ((TMatchable d t c) (BFalse))
-                     ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
-    ((TVar x) (BFalse)) ((TBound k) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse)) ((TErr m) (BFalse))))
+    ((TApp h args) (match many h _ ((TVar x) (bin-eq (predates _) x coercible)) (else (BFalse)))) (else (BFalse))))
 
 ; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3).
 (def-fns _ $ many bind : (many (Env) env) (many (Maybe (String)) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe (Term)) rule) (many (Bin) coercible) ->
@@ -1902,21 +1833,17 @@
               (let (many n) (list-length (predates _) (Term) args))
               (match many (list-nth (predates _) (Term) args (nat-sub (predates _) k d)) _
                 ((Some a s) s)
-                ((None a) (TBound (nat-sub (predates _) k n)))))))
-        ((TVar x) t) ((TApp h a) t) ((TFn l p r) t) ((TTyCtor p) t) ((TValCtor p r) t) ((TMatchable dd ty c) t) ((TNewtype c) t) ((TErr m) t)))
+                ((None a) (TBound (nat-sub (predates _) k n))))))) (else t)))
     ((OpAbs ids)
       (match many t _
         ((TVar x)
           (match many (index-of-bin (predates _) ids x 0) _
             ((Some a i) (TBound (nat-add (predates _) i d)))
-            ((None a) t)))
-        ((TBound k) t) ((TApp h a) t) ((TFn l p r) t) ((TTyCtor p) t) ((TValCtor p r) t) ((TMatchable dd ty c) t) ((TNewtype c) t) ((TErr m) t)))))
+            ((None a) t))) (else t)))))
 
 (def-fns _
   (many mapv : (subterm many (Term) t) (many (VOp) op) (many (Nat) d) -> (many (Term) r)
     (match many t _
-      ((TVar x) (op-leaf (predates _) op d t))
-      ((TBound k) (op-leaf (predates _) op d t))
       ((TApp h args) (TApp (mapv (subterm _) h op d) (mapv-list (subterm _) args op d)))
       ((TFn l ps rs)
         (let (many d2) (many ps2) (mapv-tele (subterm _) ps op d))
@@ -1930,7 +1857,7 @@
         (TValCtor ps2 (mapv (subterm _) ret op d2)))
       ((TMatchable disc ty cs) (TMatchable disc (mapv (subterm _) ty op d) (mapv-mctors (subterm _) cs op d)))
       ((TNewtype c) (TNewtype (mapv (subterm _) c op d)))
-      ((TErr m) t)))
+      ((TErr m) t) (else (op-leaf (predates _) op d t))))
   (many mapv-list : (subterm many (List (Term)) ts) (many (VOp) op) (many (Nat) d) -> (many (List (Term)) r)
     (match many ts _
       ((Nil a) (Nil (Term)))
@@ -1978,8 +1905,7 @@
 ; An entry read through its alias rule (section 9).
 (def-fns _ $ many resolve : (many (Env) env) (many (Bin) x) -> (many (Bin) r)
   (match many (canon-env (predates _) env (TVar x)) _
-    ((TVar y) y)
-    ((TBound k) x) ((TApp h a) x) ((TFn l p r) x) ((TTyCtor p) x) ((TValCtor p r) x) ((TMatchable d t c) x) ((TNewtype c) x) ((TErr m) x)))
+    ((TVar y) y) (else x)))
 
 ; ---- The built-in entries (lib/prelude.ml): Univ, Type, Level, the proof types, Special and its forms
 
@@ -2050,21 +1976,13 @@
       (match many (canon-env (predates _) env (infer (subterm _) h env)) _
         ((TTyCtor ps) type-term)
         ((TValCtor ps ret) (instantiate (predates _) (list-rev (predates _) (Term) args) ret))
-        ((TVar x) (TErr "cannot apply")) ((TBound k) (TErr "cannot apply")) ((TApp h2 a2) (TErr "cannot apply"))
-        ((TFn l p r) (TErr "cannot apply a function in a type")) ((TMatchable d ty c) (TErr "cannot apply"))
-        ((TNewtype c) (TErr "cannot apply")) ((TErr m) (TErr m))))
-    ((TBound k) (TErr "dangling binder"))
-    ((TFn l p r) type-term) ((TTyCtor p) type-term) ((TValCtor p r) type-term)
-    ((TMatchable d ty c) type-term) ((TNewtype c) type-term) ((TErr m) t)))
+        ((TFn l p r) (TErr "cannot apply a function in a type")) ((TErr m) (TErr m)) (else (TErr "cannot apply"))))
+    ((TBound k) (TErr "dangling binder")) ((TErr m) t) (else type-term)))
 
 ; The head type constructor of a canonical type, if any.
 (def-fns _ $ many type-head : (many (Env) env) (many (Term) ty) -> (many (Maybe (Bin)) r)
   (match many (canon-env (predates _) env ty) _
-    ((TApp h args) (match many h _ ((TVar x) (Some (Bin) x)) ((TBound k) (None (Bin))) ((TApp h2 a2) (None (Bin)))
-                     ((TFn l p r) (None (Bin))) ((TTyCtor p) (None (Bin))) ((TValCtor p r) (None (Bin)))
-                     ((TMatchable d t c) (None (Bin))) ((TNewtype c) (None (Bin))) ((TErr m) (None (Bin)))))
-    ((TVar x) (None (Bin))) ((TBound k) (None (Bin))) ((TFn l p r) (None (Bin))) ((TTyCtor p) (None (Bin)))
-    ((TValCtor p r) (None (Bin))) ((TMatchable d t c) (None (Bin))) ((TNewtype c) (None (Bin))) ((TErr m) (None (Bin)))))
+    ((TApp h args) (match many h _ ((TVar x) (Some (Bin) x)) (else (None (Bin))))) (else (None (Bin)))))
 
 (def-fns _ $ many bool-eq : (many (Bool) a) (many (Bool) b) -> (many (Bool) r)
   (match many a _ ((BTrue) b) ((BFalse) (not (predates _) b))))
@@ -2122,27 +2040,19 @@
 (def-fns _
   (many term-eq : (subterm many (Term) a) (many (Term) b) -> (many (Bool) r)
     (match many a _
-      ((TVar x) (match many b _ ((TVar y) (bin-eq (predates _) x y)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse))
-                  ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TBound k) (match many b _ ((TVar y) (BFalse)) ((TBound j) (nat-eq (predates _) k j)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse))
-                    ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TApp h as) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse))
-                     ((TApp h2 as2) (and (predates _) (term-eq (subterm _) h h2) (terms-eq (subterm _) as as2)))
-                     ((TFn l2 p2 r2) (BFalse)) ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TFn l p r) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse))
-                     ((TFn l2 p2 r2) (and (predates _) (term-eq (subterm _) l l2) (and (predates _) (tele-eq (subterm _) p p2) (tele-eq (subterm _) r r2))))
-                     ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TTyCtor p) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse))
-                     ((TTyCtor p2) (tele-eq (subterm _) p p2))
-                     ((TValCtor p2 r2) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TValCtor p r) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse)) ((TTyCtor p2) (BFalse))
-                        ((TValCtor p2 r2) (and (predates _) (tele-eq (subterm _) p p2) (term-eq (subterm _) r r2)))
-                        ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TMatchable d t c) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse)) ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse))
-                            ((TMatchable d2 t2 c2) (and (predates _) (disc-eq (predates _) d d2) (and (predates _) (term-eq (subterm _) t t2) (mctors-eq (subterm _) c c2))))
-                            ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-      ((TNewtype c) (match many b _ ((TVar y) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l2 p2 r2) (BFalse)) ((TTyCtor p2) (BFalse)) ((TValCtor p2 r2) (BFalse))
-                      ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (term-eq (subterm _) c c2)) ((TErr m) (BFalse))))
+      ((TVar x) (match many b _ ((TVar y) (bin-eq (predates _) x y)) (else (BFalse))))
+      ((TBound k) (match many b _ ((TBound j) (nat-eq (predates _) k j)) (else (BFalse))))
+      ((TApp h as) (match many b _
+                     ((TApp h2 as2) (and (predates _) (term-eq (subterm _) h h2) (terms-eq (subterm _) as as2))) (else (BFalse))))
+      ((TFn l p r) (match many b _
+                     ((TFn l2 p2 r2) (and (predates _) (term-eq (subterm _) l l2) (and (predates _) (tele-eq (subterm _) p p2) (tele-eq (subterm _) r r2)))) (else (BFalse))))
+      ((TTyCtor p) (match many b _
+                     ((TTyCtor p2) (tele-eq (subterm _) p p2)) (else (BFalse))))
+      ((TValCtor p r) (match many b _
+                        ((TValCtor p2 r2) (and (predates _) (tele-eq (subterm _) p p2) (term-eq (subterm _) r r2))) (else (BFalse))))
+      ((TMatchable d t c) (match many b _
+                            ((TMatchable d2 t2 c2) (and (predates _) (disc-eq (predates _) d d2) (and (predates _) (term-eq (subterm _) t t2) (mctors-eq (subterm _) c c2)))) (else (BFalse))))
+      ((TNewtype c) (match many b _ ((TNewtype c2) (term-eq (subterm _) c c2)) (else (BFalse))))
       ((TErr m) (BFalse))))
   (many terms-eq : (subterm many (List (Term)) as) (many (List (Term)) bs) -> (many (Bool) r)
     (match many as _
@@ -2210,10 +2120,7 @@
       (match many c _
         ((MkMCtor m t)
           (match many t _
-            ((TVar y) (or (predates _) (bin-eq (predates _) x y) (mctors-list (subterm _) rest x)))
-            ((TBound k) (mctors-list (subterm _) rest x)) ((TApp h as) (mctors-list (subterm _) rest x)) ((TFn l p r) (mctors-list (subterm _) rest x))
-            ((TTyCtor p) (mctors-list (subterm _) rest x)) ((TValCtor p r) (mctors-list (subterm _) rest x)) ((TMatchable d t2 c2) (mctors-list (subterm _) rest x))
-            ((TNewtype c2) (mctors-list (subterm _) rest x)) ((TErr msg) (mctors-list (subterm _) rest x))))))))
+            ((TVar y) (or (predates _) (bin-eq (predates _) x y) (mctors-list (subterm _) rest x))) (else (mctors-list (subterm _) rest x))))))))
 
 ; Constructors one Matchable in scope lists are distinct (section 19), first-class ones included.
 (def-fns _ $ many listed : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) x) (many (Bin) y) -> (many (Bool) r)
@@ -2222,9 +2129,7 @@
     ((Cons a o rest)
       (let (many here)
         (match many (type-of (predates _) env o) (((Bool) b))
-          ((TMatchable d t cs) (and (predates _) (mctors-list (predates _) cs x) (mctors-list (predates _) cs y)))
-          ((TVar z) (BFalse)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse))
-          ((TValCtor p r) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+          ((TMatchable d t cs) (and (predates _) (mctors-list (predates _) cs x) (mctors-list (predates _) cs y))) (else (BFalse))))
       (match many here _
         ((BTrue) (BTrue))
         ((BFalse) (listed (subterm _) rest env x y))))))
@@ -2237,10 +2142,7 @@
       (let (many ty) (type-of (predates _) env o))
       (let (many hit)
         (match many ty (((Bool) b))
-          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar z2) (bin-eq (predates _) z z2)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse))
-                                 ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
-          ((TVar y) (BFalse)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse))
-          ((TValCtor p r) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar z2) (bin-eq (predates _) z z2)) (else (BFalse)))) (else (BFalse))))
       (match many hit _
         ((BTrue) (Some (Term) ty))
         ((BFalse) (matchable-heading (subterm _) rest env z))))))
@@ -2248,23 +2150,19 @@
 (def-fns _ $ many signature-of : (many (Env) env) (many (Bin) z) -> (many (Maybe (Term)) r)
   (match many (type-of (predates _) env z) _
     ((TTyCtor p) (Some (Term) (TTyCtor p)))
-    ((TValCtor p r) (Some (Term) (TValCtor p r)))
-    ((TVar y) (None (Term))) ((TBound k) (None (Term))) ((TApp h as) (None (Term))) ((TFn l p r) (None (Term)))
-    ((TMatchable d t c) (None (Term))) ((TNewtype c) (None (Term))) ((TErr m) (None (Term)))))
+    ((TValCtor p r) (Some (Term) (TValCtor p r))) (else (None (Term)))))
 
 ; Whether a term mentions a binder no telescope of its own binds (a dangling de Bruijn index) at depth d.
 (def-fns _
   (many dangling : (subterm many (Term) t) (many (Nat) d) -> (many (Bool) r)
     (match many t _
-      ((TVar x) (BFalse))
       ((TBound k) (not (predates _) (nat-lt (predates _) k d)))
       ((TApp h args) (or (predates _) (dangling (subterm _) h d) (dangling-list (subterm _) args d)))
       ((TFn l ps rs) (or (predates _) (dangling (subterm _) l d) (or (predates _) (dangling-tele (subterm _) ps d) (dangling-tele (subterm _) rs (nat-add (predates _) d (list-length (predates _) (Entry) ps))))))
       ((TTyCtor ps) (dangling-tele (subterm _) ps d))
       ((TValCtor ps ret) (or (predates _) (dangling-tele (subterm _) ps d) (dangling (subterm _) ret (nat-add (predates _) d (list-length (predates _) (Entry) ps)))))
       ((TMatchable disc ty cs) (or (predates _) (dangling (subterm _) ty d) (dangling-mctors (subterm _) cs d)))
-      ((TNewtype c) (dangling (subterm _) c d))
-      ((TErr m) (BFalse))))
+      ((TNewtype c) (dangling (subterm _) c d)) (else (BFalse))))
   (many dangling-list : (subterm many (List (Term)) ts) (many (Nat) d) -> (many (Bool) r)
     (match many ts _
       ((Nil a) (BFalse))
@@ -2359,13 +2257,7 @@
                                       (let (many m4) (erased pm4) (canon-in (predates _) j f3 bnd tb3 m2))
                                       (lift (predates _) n bnd j f3 tb3 env3 (subterm-trans q p) (unify (subterm (subterm-trans q p)) j f3 bnd tb3 m3 pm3 m4 pm4 env3)))))))))))))))
               ((TBound j) (contradiction (predates _) n bnd env a b))
-              ((TApp h as) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TFn l p r) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TTyCtor p) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TValCtor p r) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TMatchable d t c) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TNewtype c) (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (bind-var (predates _) n f bnd tb env x (fr-var (predates _) n f x pa) b a b))))
           ((TBound j) (contradiction (predates _) n bnd env a b))
           ((TApp h as)
             (match many b _
@@ -2383,9 +2275,7 @@
                         (let (many bs3) (erased pbs3) (canon-list-in (predates _) k f2 bnd tb2 as2))
                         (lift (predates _) n bnd k f2 tb2 env2 p (unify-list (subterm p) k f2 bnd tb2 as3 pas3 bs3 pbs3 env2)))
                       ((Contra c cc m) (Contra n bnd m))))))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TFn l p r) (contradiction (predates _) n bnd env a b)) ((TTyCtor p) (contradiction (predates _) n bnd env a b))
-              ((TValCtor p r) (contradiction (predates _) n bnd env a b)) ((TMatchable d t c) (contradiction (predates _) n bnd env a b)) ((TNewtype c) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TFn l ps rs)
             (match many b _
               ((TVar y) (bind-var (predates _) n f bnd tb env y (fr-var (predates _) n f y pb) a a b))
@@ -2415,16 +2305,12 @@
                         (let (many rs3) (erased prs3) (canon-tele-in (predates _) j f3 bnd tb3 rs))
                         (let (many rs4) (erased prs4) (canon-tele-in (predates _) j f3 bnd tb3 rs2))
                         (lift (predates _) n bnd j f3 tb3 env3 (subterm-trans q p) (unify-tele (subterm (subterm-trans q p)) j f3 bnd tb3 rs3 prs3 rs4 prs4 env3 a b)))))))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TApp h2 as2) (contradiction (predates _) n bnd env a b)) ((TTyCtor p2) (contradiction (predates _) n bnd env a b))
-              ((TValCtor p2 r2) (contradiction (predates _) n bnd env a b)) ((TMatchable d t c) (contradiction (predates _) n bnd env a b)) ((TNewtype c) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TTyCtor ps)
             (match many b _
               ((TVar y) (bind-var (predates _) n f bnd tb env y (fr-var (predates _) n f y pb) a a b))
               ((TTyCtor ps2) (unify-tele n f bnd tb (subterm _) ps (fr-tyctor (predates _) n f ps pa) ps2 (fr-tyctor (predates _) n f ps2 pb) env a b))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TApp h2 as2) (contradiction (predates _) n bnd env a b)) ((TFn l2 p2 r2) (contradiction (predates _) n bnd env a b))
-              ((TValCtor p2 r2) (contradiction (predates _) n bnd env a b)) ((TMatchable d t c) (contradiction (predates _) n bnd env a b)) ((TNewtype c) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TValCtor ps ret)
             (match many b _
               ((TVar y) (bind-var (predates _) n f bnd tb env y (fr-var (predates _) n f y pb) a a b))
@@ -2438,9 +2324,7 @@
                     (let (many ret3) (erased pret3) (canon-in (predates _) k f2 bnd tb2 ret))
                     (let (many ret4) (erased pret4) (canon-in (predates _) k f2 bnd tb2 ret2))
                     (lift (predates _) n bnd k f2 tb2 env2 p (unify (subterm p) k f2 bnd tb2 ret3 pret3 ret4 pret4 env2)))))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TApp h2 as2) (contradiction (predates _) n bnd env a b)) ((TFn l2 p2 r2) (contradiction (predates _) n bnd env a b))
-              ((TTyCtor p2) (contradiction (predates _) n bnd env a b)) ((TMatchable d t c) (contradiction (predates _) n bnd env a b)) ((TNewtype c) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TMatchable d t cs)
             (match many b _
               ((TVar y) (bind-var (predates _) n f bnd tb env y (fr-var (predates _) n f y pb) a a b))
@@ -2457,16 +2341,12 @@
                         (let (many cs3) (erased pcs3) (canon-mctors-in (predates _) k f2 bnd tb2 cs))
                         (let (many cs4) (erased pcs4) (canon-mctors-in (predates _) k f2 bnd tb2 cs2))
                         (lift (predates _) n bnd k f2 tb2 env2 p (unify-mctors (subterm p) k f2 bnd tb2 cs3 pcs3 cs4 pcs4 env2 a b)))))))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TApp h2 as2) (contradiction (predates _) n bnd env a b)) ((TFn l2 p2 r2) (contradiction (predates _) n bnd env a b))
-              ((TTyCtor p2) (contradiction (predates _) n bnd env a b)) ((TValCtor p2 r2) (contradiction (predates _) n bnd env a b)) ((TNewtype c2) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TNewtype cn)
             (match many b _
               ((TVar y) (bind-var (predates _) n f bnd tb env y (fr-var (predates _) n f y pb) a a b))
               ((TNewtype cn2) (unify n f bnd tb (subterm _) cn (fr-newtype (predates _) n f cn pa) cn2 (fr-newtype (predates _) n f cn2 pb) env))
-              ((TBound j) (contradiction (predates _) n bnd env a b)) ((TApp h2 as2) (contradiction (predates _) n bnd env a b)) ((TFn l2 p2 r2) (contradiction (predates _) n bnd env a b))
-              ((TTyCtor p2) (contradiction (predates _) n bnd env a b)) ((TValCtor p2 r2) (contradiction (predates _) n bnd env a b)) ((TMatchable d t c2) (contradiction (predates _) n bnd env a b))
-              ((TErr m) (Contra n bnd m))))
+              ((TErr m) (Contra n bnd m)) (else (contradiction (predates _) n bnd env a b))))
           ((TErr m) (Contra n bnd m))))))
 
   (many unify-list : (subterm erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb) (subterm many (List (Term)) as) (erased (FrL n f as) pas) (many (List (Term)) bs) (erased (FrL n f bs) pbs) (many (Env) env) -> (many (Outcome n bnd) r)
@@ -2568,18 +2448,15 @@
 
 (def-fns _ $ many value-nat : (many (Value) v) -> (many (Nat) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) n) ((PBin b) 0) ((PStr s) 0) ((PDec i) i)))
-    ((VCtor c fs) 0) ((VTuple fs) 0) ((VCtorFn c) 0) ((VMatchable a) 0) ((VFn cl) 0) ((VToken) 0) ((VError m) 0)))
+    ((VExt a p) (match many p _ ((PNat n) n) ((PDec i) i) (else 0))) (else 0)))
 
 (def-fns _ $ many value-bin : (many (Value) v) -> (many (Bin) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) (BZ)) ((PBin b) b) ((PStr s) (BZ)) ((PDec i) (BZ))))
-    ((VCtor c fs) (BZ)) ((VTuple fs) (BZ)) ((VCtorFn c) (BZ)) ((VMatchable a) (BZ)) ((VFn cl) (BZ)) ((VToken) (BZ)) ((VError m) (BZ))))
+    ((VExt a p) (match many p _ ((PBin b) b) (else (BZ)))) (else (BZ))))
 
 (def-fns _ $ many value-str : (many (Value) v) -> (many (String) n)
   (match many v _
-    ((VExt a p) (match many p _ ((PNat n) (SNil)) ((PBin b) (SNil)) ((PStr s) s) ((PDec i) (SNil))))
-    ((VCtor c fs) (SNil)) ((VTuple fs) (SNil)) ((VCtorFn c) (SNil)) ((VMatchable a) (SNil)) ((VFn cl) (SNil)) ((VToken) (SNil)) ((VError m) (SNil))))
+    ((VExt a p) (match many p _ ((PStr s) s) (else (SNil)))) (else (SNil))))
 
 ; Builds an extern value from a constructor index and its many fields.
 (def-fns _ $ many ext-construct : (many (Adt) adt) (many (String) ext) (many (Nat) index) (many (List (Value)) fields) -> (many (Value) v)
@@ -2615,10 +2492,7 @@
     ((VCtor c fs)
       (match many tagged _
         ((BTrue) (Some (Pair (Nat) (List (Value))) (MkPair (Nat) (List (Value)) (ctor-index (predates _) c) fs)))
-        ((BFalse) (None (Pair (Nat) (List (Value)))))))
-    ((VTuple fs) (None (Pair (Nat) (List (Value))))) ((VCtorFn c) (None (Pair (Nat) (List (Value)))))
-    ((VMatchable a) (None (Pair (Nat) (List (Value))))) ((VFn cl) (None (Pair (Nat) (List (Value))))) ((VToken) (None (Pair (Nat) (List (Value)))))
-    ((VError m) (None (Pair (Nat) (List (Value)))))))
+        ((BFalse) (None (Pair (Nat) (List (Value))))))) (else (None (Pair (Nat) (List (Value)))))))
 
 (def-fns _ $ many destruct : (many (Ctor) c) (many (Value) v) -> (many (Nat) i) (many (List (Value)) fields)
   (match many c _

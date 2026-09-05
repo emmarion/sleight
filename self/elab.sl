@@ -53,13 +53,13 @@
 ; ---- Raw helpers and the special-form head test
 
 (def-fns _ $ many raw-atom : (many (Raw) r) -> (many (Maybe (String)) s)
-  (match many r _ ((RAtom lq s) (Some (String) s)) ((RString lq s) (None (String))) ((RList lq items) (None (String)))))
+  (match many r _ ((RAtom lq s) (Some (String) s)) (else (None (String)))))
 
 (def-fns _ $ many raw-items : (many (Raw) r) -> (many (List (Raw)) items)
-  (match many r _ ((RAtom lq s) (Nil (Raw))) ((RString lq s) (Nil (Raw))) ((RList lq items) items)))
+  (match many r _ ((RList lq items) items) (else (Nil (Raw)))))
 
 (def-fns _ $ many raw-name : (many (Raw) r) -> (many (String) s)
-  (match many r _ ((RAtom lq s) s) ((RString lq s) "_") ((RList lq items) "_")))
+  (match many r _ ((RAtom lq s) s) (else "_")))
 
 (def-fns _ $ many atoms-only : (subterm many (List (Raw)) rs) -> (many (Bool) r)
   (match many rs _
@@ -89,9 +89,7 @@
                     ((VCtor c fs)
                       (match many (and (predates _) (mult-is-many (predates _) mult) (equal-env (predates _) env (type-of (predates _) env x) special-term)) _
                         ((BTrue) (sp-of-index (predates _) (ctor-index (predates _) c)))
-                        ((BFalse) (None (Sp)))))
-                    ((VTuple fs) (None (Sp))) ((VExt ad p) (None (Sp))) ((VCtorFn c) (None (Sp))) ((VMatchable ad) (None (Sp)))
-                    ((VFn cl) (None (Sp))) ((VToken) (None (Sp))) ((VError m) (None (Sp)))))))))))))
+                        ((BFalse) (None (Sp))))) (else (None (Sp)))))))))))))
 
 (def-fns _ $ many is-special : (many (Env) env) (many (Raw) raw) (many (Sp) sp) -> (many (Bool) r)
   (match many (special-of (predates _) env raw) _
@@ -117,8 +115,7 @@
         ((None b) (None (StmtK)))
         ((Some b sp)
           (match many sp _
-            ((SpStmt k) (Some (StmtK) k))
-            ((SpFormer k) (None (StmtK))) ((SpExpr k) (None (StmtK))) ((SpMark k) (None (StmtK)))))))))
+            ((SpStmt k) (Some (StmtK) k)) (else (None (StmtK)))))))))
 
 (def-fns _ $ many is-statement : (many (Env) env) (many (Raw) raw) -> (many (Bool) r)
   (match many (stmt-of (predates _) env raw) _ ((None a) (BFalse)) ((Some a k) (BTrue))))
@@ -345,9 +342,7 @@
         ((LName)
           (match many (lookup (predates _) env n) _
             ((Some b x) (values env x))
-            ((None b) (values (env-error (predates _) env (str-cat (predates _) "unbound name " n)) (BZ)))))
-        ((LNumeral) (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))
-        ((LChar) (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))))))
+            ((None b) (values (env-error (predates _) env (str-cat (predates _) "unbound name " n)) (BZ))))) (else (match many (lit-lookup (predates _) env n) _ ((Some b x) (values env x)) ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "literal " n " outside a top-level form")) (BZ)))))))))
 
 (def-fns _ $ many var-of-raw : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Bin) x)
   (match many raw _
@@ -363,13 +358,7 @@
   (let (many env2) (many x) (var-of-raw (predates _) env raw what))
   (match many (canon-env (predates _) env2 (TVar x)) _
     ((TVar y) (values env2 y))
-    ((TBound k) (values env2 x)) ((TErr m) (values env2 x))
-    ((TApp h a) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))
-    ((TFn l p r) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))
-    ((TTyCtor p) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))
-    ((TValCtor p r) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))
-    ((TMatchable d t c) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))
-    ((TNewtype c) (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))))
+    ((TBound k) (values env2 x)) ((TErr m) (values env2 x)) (else (values (env-error (predates _) env2 (str-cat3 (predates _) (show-t (predates _) env2 (TVar x)) " is not " what)) x))))
 
 
 ; ---- Source telescopes (section 30), with erased proofs placing every raw they hold inside the raw list it
@@ -433,8 +422,6 @@
 
 (def-fns _ $ many parse-entry : (many (Env) env) (many (Raw) raw) (erased (List (Raw)) root) (erased (Subterm (Raw) raw (List (Raw)) root) pr) -> (many (List (SrcEntry root)) r)
   (match many raw _
-    ((RAtom lq s) (Nil (SrcEntry root)))
-    ((RString lq s) (Nil (SrcEntry root)))
     ((RList lq items0)
       (let (erased w0) (WIn items0 root (subterm-trans (prove-subterm items0 raw) pr)))
       (let (many sub) (many items1) (erased w1)
@@ -463,7 +450,7 @@
                   (match many (and (predates _) (is-mark (predates _) env second (MkIs)) (list-is-empty (predates _) (Raw) rest3)) _
                     ((BTrue) (Cons (SrcEntry root) (MkSrcEntry root sub mult (Some (SrcSg root) (SrcIs root first pf)) (raw-name (predates _) third)) (Nil (SrcEntry root))))
                     ((BFalse) (entries-of-names (predates _) rest sub mult root first pf))))
-                ((Nil c) (entries-of-names (predates _) rest sub mult root first pf))))))))))
+                ((Nil c) (entries-of-names (predates _) rest sub mult root first pf)))))))) (else (Nil (SrcEntry root)))))
 
 ; The items before the arrow, and those after it, which sit within the root.
 (def-fns _ $ many split-arrow : (subterm many (List (Raw)) items) (erased (List (Raw)) root) (erased (Within items root) w) (many (Env) env) -> (many (List (Sub root)) before) (many (List (Raw)) after) (erased (Within after root) wa)
@@ -513,26 +500,18 @@
     ((SDyn) (None (Adt)))
     ((SConst v)
       (match many v _
-        ((VMatchable adt) (Some (Adt) adt))
-        ((VCtor c fs) (None (Adt))) ((VTuple fs) (None (Adt))) ((VExt a p) (None (Adt))) ((VCtorFn c) (None (Adt)))
-        ((VFn cl) (None (Adt))) ((VToken) (None (Adt))) ((VError m) (None (Adt)))))))
+        ((VMatchable adt) (Some (Adt) adt)) (else (None (Adt)))))))
 
 (def-fns _ $ many ctor-of : (many (Env) env) (many (Bin) x) -> (many (Maybe (Ctor)) r)
   (match many (entry-state (predates _) env x) _
     ((SDyn) (None (Ctor)))
     ((SConst v)
       (match many v _
-        ((VCtorFn c) (Some (Ctor) c))
-        ((VCtor c fs) (None (Ctor))) ((VTuple fs) (None (Ctor))) ((VExt a p) (None (Ctor))) ((VMatchable a) (None (Ctor)))
-        ((VFn cl) (None (Ctor))) ((VToken) (None (Ctor))) ((VError m) (None (Ctor)))))))
+        ((VCtorFn c) (Some (Ctor) c)) (else (None (Ctor)))))))
 
 (def-fns _ $ many ctor-type : (many (Env) env) (many (Bin) c) -> (many (List (Entry)) tele) (many (Term) ret)
   (match many (type-of (predates _) env c) _
-    ((TValCtor tele ret) (values tele ret))
-    ((TVar x) (values (Nil (Entry)) (TErr "not a constructor"))) ((TBound k) (values (Nil (Entry)) (TErr "not a constructor")))
-    ((TApp h a) (values (Nil (Entry)) (TErr "not a constructor"))) ((TFn l p r) (values (Nil (Entry)) (TErr "not a constructor")))
-    ((TTyCtor p) (values (Nil (Entry)) (TErr "not a constructor"))) ((TMatchable d t cs) (values (Nil (Entry)) (TErr "not a constructor")))
-    ((TNewtype x) (values (Nil (Entry)) (TErr "not a constructor"))) ((TErr m) (values (Nil (Entry)) (TErr m)))))
+    ((TValCtor tele ret) (values tele ret)) ((TErr m) (values (Nil (Entry)) (TErr m))) (else (values (Nil (Entry)) (TErr "not a constructor")))))
 
 (def-fns _ $ many tid-of : (many (Env) env) (many (Bin) c) -> (many (Bin) tid)
   (let (many tele) (many ret) (ctor-type (predates _) env c))
@@ -560,11 +539,7 @@
               ((TVar t2)
                 (match many (bin-eq (predates _) t2 tid) (((Maybe (MatchInfo)) c))
                   ((BTrue) (let (many y) (resolve (predates _) env x)) (Some (MatchInfo) (MkMatchInfo y d cs (matchable-rank (predates _) env y))))
-                  ((BFalse) (None (MatchInfo)))))
-              ((TBound k) (None (MatchInfo))) ((TApp h as) (None (MatchInfo))) ((TFn l p r) (None (MatchInfo))) ((TTyCtor p) (None (MatchInfo)))
-              ((TValCtor p r) (None (MatchInfo))) ((TMatchable d2 t2 c2) (None (MatchInfo))) ((TNewtype c2) (None (MatchInfo))) ((TErr m) (None (MatchInfo)))))
-          ((TVar y) (None (MatchInfo))) ((TBound k) (None (MatchInfo))) ((TApp h as) (None (MatchInfo))) ((TFn l p r) (None (MatchInfo)))
-          ((TTyCtor p) (None (MatchInfo))) ((TValCtor p r) (None (MatchInfo))) ((TNewtype c2) (None (MatchInfo))) ((TErr m) (None (MatchInfo)))))
+                  ((BFalse) (None (MatchInfo))))) (else (None (MatchInfo))))) (else (None (MatchInfo)))))
       (let (many best2)
         (match many cand (((Maybe (MatchInfo)) c))
           ((None b) best)
@@ -586,13 +561,7 @@
       (match many (type-of (predates _) env x) _
         ((TNewtype t)
           (match many t _
-            ((TVar c2) (match many (bin-eq (predates _) c2 c) _ ((BTrue) (Some (Bin) x)) ((BFalse) (find-newtype (subterm _) rest env c))))
-            ((TBound k) (find-newtype (subterm _) rest env c)) ((TApp h as) (find-newtype (subterm _) rest env c)) ((TFn l p r) (find-newtype (subterm _) rest env c))
-            ((TTyCtor p) (find-newtype (subterm _) rest env c)) ((TValCtor p r) (find-newtype (subterm _) rest env c)) ((TMatchable d t2 cs) (find-newtype (subterm _) rest env c))
-            ((TNewtype c2) (find-newtype (subterm _) rest env c)) ((TErr m) (find-newtype (subterm _) rest env c))))
-        ((TVar y) (find-newtype (subterm _) rest env c)) ((TBound k) (find-newtype (subterm _) rest env c)) ((TApp h as) (find-newtype (subterm _) rest env c))
-        ((TFn l p r) (find-newtype (subterm _) rest env c)) ((TTyCtor p) (find-newtype (subterm _) rest env c)) ((TValCtor p r) (find-newtype (subterm _) rest env c))
-        ((TMatchable d t cs) (find-newtype (subterm _) rest env c)) ((TErr m) (find-newtype (subterm _) rest env c))))))
+            ((TVar c2) (match many (bin-eq (predates _) c2 c) _ ((BTrue) (Some (Bin) x)) ((BFalse) (find-newtype (subterm _) rest env c)))) (else (find-newtype (subterm _) rest env c)))) (else (find-newtype (subterm _) rest env c))))))
 
 ; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
 (def-fns _ $ many find-coercible : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) g) -> (many (Maybe (Bin)) r)
@@ -606,11 +575,7 @@
               ((None b) (BFalse))
               ((Some b t)
                 (match many t (((Bool) b))
-                  ((TVar g2) (and (predates _) (bin-eq (predates _) g2 g) (match many (entry (predates _) env x) (((Bool) b)) ((MkEInfo n m s mi) (match many n (((Bool) b)) ((None c) (BTrue)) ((Some c nm) (BFalse)))))))
-                  ((TBound k) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse))
-                  ((TMatchable d t2 cs) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))))
-          ((TVar y) (BFalse)) ((TBound k) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse))
-          ((TMatchable d t cs) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+                  ((TVar g2) (and (predates _) (bin-eq (predates _) g2 g) (match many (entry (predates _) env x) (((Bool) b)) ((MkEInfo n m s mi) (match many n (((Bool) b)) ((None c) (BTrue)) ((Some c nm) (BFalse))))))) (else (BFalse)))))) (else (BFalse))))
       (match many hit _
         ((BTrue) (Some (Bin) x))
         ((BFalse) (find-coercible (subterm _) rest env g))))))
@@ -626,7 +591,7 @@
     ((Cons a mc rest)
       (match many mc _
         ((MkMCtor m t)
-          (let (many c) (match many t (((Bin) x)) ((TVar x) x) ((TBound k) (BZ)) ((TApp h as) (BZ)) ((TFn l p r) (BZ)) ((TTyCtor p) (BZ)) ((TValCtor p r) (BZ)) ((TMatchable d t2 cs) (BZ)) ((TNewtype c2) (BZ)) ((TErr msg) (BZ))))
+          (let (many c) (match many t (((Bin) x)) ((TVar x) x) (else (BZ))))
           (let (many tele) (many ret) (ctor-type (predates _) env c))
           (Cons (CShape) (MkCShape m c (many-count (predates _) tele)) (shapes (subterm _) rest env)))))))
 
@@ -660,10 +625,7 @@
       (match many mc _
         ((MkMCtor m t)
           (match many t _
-            ((TVar c2) (match many (bin-eq (predates _) c c2) _ ((BTrue) m) ((BFalse) (marker (subterm _) rest c))))
-            ((TBound k) (marker (subterm _) rest c)) ((TApp h as) (marker (subterm _) rest c)) ((TFn l p r) (marker (subterm _) rest c))
-            ((TTyCtor p) (marker (subterm _) rest c)) ((TValCtor p r) (marker (subterm _) rest c)) ((TMatchable d t2 cs) (marker (subterm _) rest c))
-            ((TNewtype c2) (marker (subterm _) rest c)) ((TErr msg) (marker (subterm _) rest c))))))))
+            ((TVar c2) (match many (bin-eq (predates _) c c2) _ ((BTrue) m) ((BFalse) (marker (subterm _) rest c)))) (else (marker (subterm _) rest c))))))))
 
 
 
@@ -731,9 +693,7 @@
 ; The arguments of a proof's type, or an empty list where it is not the expected proof.
 (def-fns _ $ many proof-args : (many (Env) env) (many (Term) p) -> (many (List (Term)) args)
   (match many (canon-env (predates _) env (infer (predates _) p env)) _
-    ((TApp h args) args)
-    ((TVar x) (Nil (Term))) ((TBound k) (Nil (Term))) ((TFn l ps rs) (Nil (Term))) ((TTyCtor ps) (Nil (Term)))
-    ((TValCtor ps r) (Nil (Term))) ((TMatchable d t cs) (Nil (Term))) ((TNewtype c) (Nil (Term))) ((TErr m) (Nil (Term)))))
+    ((TApp h args) args) (else (Nil (Term)))))
 
 (def-fns _ $ many nth-term : (many (List (Term)) ts) (many (Nat) i) -> (many (Term) t)
   (match many (list-nth (predates _) (Term) ts i) _ ((None a) (TErr "missing argument")) ((Some a t) t)))
@@ -835,17 +795,13 @@
     (match many code _
       ((CApp f args cc)
         (match many cc _
-          ((CCDelegate) (match many f _ ((CVar x) (Some (Bin) x)) ((CConst v) (None (Bin))) ((CErased) (None (Bin))) ((CValues cs) (None (Bin)))
-                          ((CApp g a c) (None (Bin))) ((CLet i r b) (None (Bin))) ((CLetRec fs b) (None (Bin))) ((CMatch s sh bs dfl) (None (Bin)))
-                          ((CAbsurd) (None (Bin))) ((CError m) (None (Bin)))))
-          ((CCPlain) (None (Bin))) ((CCTail) (None (Bin))) ((CCCtor) (None (Bin)))))
+          ((CCDelegate) (match many f _ ((CVar x) (Some (Bin) x)) (else (None (Bin))))) (else (None (Bin)))))
       ((CLet ids rhs rest) (match many (find-delegate (subterm _) rhs) _ ((Some a x) (Some (Bin) x)) ((None a) (find-delegate (subterm _) rest))))
       ((CLetRec fns rest) (find-delegate (subterm _) rest))
       ((CMatch scrut shape branches dfl)
         (match many (find-delegate-branches (subterm _) branches) _
           ((Some a x) (Some (Bin) x))
-          ((None a) (match many dfl _ ((Some b d) (find-delegate (subterm _) d)) ((None b) (None (Bin)))))))
-      ((CVar x) (None (Bin))) ((CConst v) (None (Bin))) ((CErased) (None (Bin))) ((CValues cs) (None (Bin))) ((CAbsurd) (None (Bin))) ((CError m) (None (Bin)))))
+          ((None a) (match many dfl _ ((Some b d) (find-delegate (subterm _) d)) ((None b) (None (Bin))))))) (else (None (Bin)))))
   (many find-delegate-branches : (subterm many (List (Branch)) bs) -> (many (Maybe (Bin)) r)
     (match many bs _
       ((Nil a) (None (Bin)))
@@ -960,9 +916,7 @@
 (def-fns _
   (many is-strict-subterm : (subterm many (Term) b) (many (Term) a) -> (many (Bool) r)
     (match many b _
-      ((TApp h args) (subterm-in (subterm _) args a))
-      ((TVar x) (BFalse)) ((TBound k) (BFalse)) ((TFn l p rr) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p rr) (BFalse))
-      ((TMatchable d t c) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+      ((TApp h args) (subterm-in (subterm _) args a)) (else (BFalse))))
   (many subterm-in : (subterm many (List (Term)) ts) (many (Term) a) -> (many (Bool) r)
     (match many ts _
       ((Nil x) (BFalse))
@@ -988,7 +942,7 @@
   (let (many x)
     (match many (bin-lt (predates _) x0 lvl) (((Bin) y))
       ((BTrue) x0)
-      ((BFalse) (match many (canon-env (predates _) env2 (TVar x0)) (((Bin) y)) ((TVar y) y) ((TBound k) x0) ((TApp h a) x0) ((TFn l p r) x0) ((TTyCtor p) x0) ((TValCtor p r) x0) ((TMatchable d t c) x0) ((TNewtype c) x0) ((TErr m) x0)))))
+      ((BFalse) (match many (canon-env (predates _) env2 (TVar x0)) (((Bin) y)) ((TVar y) y) (else x0)))))
   (let (many env3)
     (match many (bin-lt (predates _) x lvl) (((Env) e))
       ((BTrue) env2)
@@ -998,11 +952,7 @@
 ; The arguments of a proof of the given kind, with an error where the term is not one.
 (def-fns _ $ many proof-args : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Maybe (List (Term))) r)
   (match many (canon-env (predates _) env (infer (predates _) p env)) _
-    ((TApp h args) (match many h _ ((TVar c) (match many (bin-eq (predates _) c ctor) _ ((BTrue) (Some (List (Term)) args)) ((BFalse) (None (List (Term))))))
-                     ((TBound k) (None (List (Term)))) ((TApp h2 a2) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
-                     ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
-    ((TVar x) (None (List (Term)))) ((TBound k) (None (List (Term)))) ((TFn l pp rr) (None (List (Term)))) ((TTyCtor pp) (None (List (Term))))
-    ((TValCtor pp rr) (None (List (Term)))) ((TMatchable d t c) (None (List (Term)))) ((TNewtype c) (None (List (Term)))) ((TErr m) (None (List (Term))))))
+    ((TApp h args) (match many h _ ((TVar c) (match many (bin-eq (predates _) c ctor) _ ((BTrue) (Some (List (Term)) args)) ((BFalse) (None (List (Term)))))) (else (None (List (Term)))))) (else (None (List (Term))))))
 
 (def-fns _ $ many not-a-proof : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r)
   (env-error (predates _) env (str-cat3 (predates _) "expected a " (name-of (predates _) env ctor) (str-cat3 (predates _) " proof, got " (show-t (predates _) env p) (str-cat (predates _) " : " (show-t (predates _) env (infer (predates _) p env)))))))
@@ -1057,10 +1007,7 @@
       (let (many ty) (type-of (predates _) env x))
       (let (many mine)
         (match many ty (((Bool) b))
-          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar t2) (bin-eq (predates _) t2 tid)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse))
-                                 ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse)) ((TMatchable d2 t2 c2) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
-          ((TVar y) (BFalse)) ((TBound k) (BFalse)) ((TApp h as) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse))
-          ((TValCtor p r) (BFalse)) ((TNewtype c2) (BFalse)) ((TErr m) (BFalse))))
+          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar t2) (bin-eq (predates _) t2 tid)) (else (BFalse)))) (else (BFalse))))
       (match many mine _
         ((BFalse) (agree (subterm _) rest env tid best))
         ((BTrue) (and (predates _) (term-eq (predates _) ty best) (agree (subterm _) rest env tid best)))))))
@@ -1147,14 +1094,7 @@
   (let (many env2) (many c) (named (predates _) env raw "a constructor"))
   (match many (type-of (predates _) env2 c) _
     ((TValCtor tele ret) (values env2 c))
-    ((TVar x) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TBound k) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TApp h a) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TFn l p r) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TTyCtor p) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TMatchable d t cs) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TNewtype x) (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))
-    ((TErr m) (values env2 c))))
+    ((TErr m) (values env2 c)) (else (values (env-error (predates _) env2 (str-cat (predates _) (name-of (predates _) env2 c) " is not a value constructor")) c))))
 
 (def-fns _ $ many parse-entries-checked : (erased (List (Raw)) root) (subterm many (List (Sub root)) subs) (many (Env) env) -> (many (Env) r) (many (List (SrcEntry root)) es)
   (match many subs _
@@ -1191,9 +1131,7 @@
 (def-fns _ $ many level-var-checked : (many (Env) env) (many (Term) t) -> (many (Env) r) (many (Bin) x)
   (let (many bad) (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env t) " is not a level")))
   (match many (canon-env (predates _) env t) _
-    ((TVar x) (match many (equal-env (predates _) env (type-of (predates _) env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values bad x))))
-    ((TBound k) (values bad (BZ))) ((TApp h a) (values bad (BZ))) ((TFn l p r) (values bad (BZ))) ((TTyCtor p) (values bad (BZ)))
-    ((TValCtor p r) (values bad (BZ))) ((TMatchable d ty c) (values bad (BZ))) ((TNewtype c) (values bad (BZ))) ((TErr m) (values bad (BZ)))))
+    ((TVar x) (match many (equal-env (predates _) env (type-of (predates _) env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values bad x)))) (else (values bad (BZ)))))
 
 (def-fns _ $ many one-arg : (many (List (Raw)) args) -> (many (Raw) r)
   (match many args _ ((Nil a) (RAtom 0 "_")) ((Cons a r rest) r)))
@@ -1233,15 +1171,11 @@
         ((Some a msg) (values (env-error (predates _) env msg) (Nil (Res)) (CError "numeral-of")))
         ((None a)
           (match many (classify (predates _) s) _
-            ((LName) (values (env-error (predates _) env (str-cat (predates _) "numeral-of takes a literal, not " s)) (Nil (Res)) (CError "numeral-of")))
-            ((LNumeral) (numeral-of-key (predates _) env s))
-            ((LChar) (numeral-of-key (predates _) env s))))))))
+            ((LName) (values (env-error (predates _) env (str-cat (predates _) "numeral-of takes a literal, not " s)) (Nil (Res)) (CError "numeral-of"))) (else (numeral-of-key (predates _) env s))))))))
 
 ; The number a numeral or character literal spells, if the raw is one (lib/literal.ml's classify).
 (def-fns _ $ many lit-number : (many (Raw) raw) -> (many (Maybe (Nat)) n)
   (match many raw _
-    ((RList lq items) (None (Nat)))
-    ((RString lq s) (None (Nat)))
     ((RAtom lq s)
       (match many (literal-error (predates _) s) _
         ((Some a msg) (None (Nat)))
@@ -1249,7 +1183,7 @@
           (match many (classify (predates _) s) _
             ((LName) (None (Nat)))
             ((LNumeral) (Some (Nat) (parse-nat (predates _) s 0)))
-            ((LChar) (char-lit-code (predates _) s))))))))
+            ((LChar) (char-lit-code (predates _) s)))))) (else (None (Nat)))))
 
 ; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
 ; (lib/elab.ml's numeral_entry).
@@ -1258,9 +1192,7 @@
     ((None a)
       (values (env-error (predates _) env
                 (match many raw (((String) m))
-                  ((RAtom lq s) (str-cat (predates _) s " is not a numeral or character literal"))
-                  ((RString lq s) (str-cat (predates _) "expected a numeral or character literal, got " (show-r (predates _) raw)))
-                  ((RList lq items) (str-cat (predates _) "expected a numeral or character literal, got " (show-r (predates _) raw)))))
+                  ((RAtom lq s) (str-cat (predates _) s " is not a numeral or character literal")) (else (str-cat (predates _) "expected a numeral or character literal, got " (show-r (predates _) raw)))))
               (None (Pair (Nat) (Bin)))))
     ((Some a z)
       (match many (lit-lookup (predates _) env (nat-str (predates _) z)) _
@@ -1281,10 +1213,10 @@
 
 (def-fns _ $ many cc-eq : (many (CC) a) (many (CC) b) -> (many (Bool) r)
   (match many a _
-    ((CCPlain) (match many b _ ((CCPlain) (BTrue)) ((CCTail) (BFalse)) ((CCDelegate) (BFalse)) ((CCCtor) (BFalse))))
-    ((CCTail) (match many b _ ((CCPlain) (BFalse)) ((CCTail) (BTrue)) ((CCDelegate) (BFalse)) ((CCCtor) (BFalse))))
-    ((CCDelegate) (match many b _ ((CCPlain) (BFalse)) ((CCTail) (BFalse)) ((CCDelegate) (BTrue)) ((CCCtor) (BFalse))))
-    ((CCCtor) (match many b _ ((CCPlain) (BFalse)) ((CCTail) (BFalse)) ((CCDelegate) (BFalse)) ((CCCtor) (BTrue))))))
+    ((CCPlain) (match many b _ ((CCPlain) (BTrue)) (else (BFalse))))
+    ((CCTail) (match many b _ ((CCTail) (BTrue)) (else (BFalse))))
+    ((CCDelegate) (match many b _ ((CCDelegate) (BTrue)) (else (BFalse))))
+    ((CCCtor) (match many b _ ((CCCtor) (BTrue)) (else (BFalse))))))
 
 (def-fns _ $ many sg-inst : (many (List (Term)) args) (many (Sg) sg) -> (many (Sg) r)
   (match many sg _
@@ -1310,8 +1242,6 @@
 
 (def-fns _ $ many branch-parts : (many (Env) env) (many (Raw) braw) -> (many (Maybe (BranchParts braw)) r)
   (match many braw _
-    ((RAtom lq s) (None (BranchParts braw)))
-    ((RString lq s) (None (BranchParts braw)))
     ((RList lq items)
       (match many items _
         ((Nil a) (None (BranchParts braw)))
@@ -1333,7 +1263,7 @@
                     ((Cons c x y)
                       (match many (pattern-parts (predates _) pat) _
                         ((None d) (None (BranchParts braw)))
-                        ((Some d pp) (match many pp _ ((MkPair s t cc fs) (Some (BranchParts braw) (BAbsurd braw cc fs body (prove-subterm body braw))))))))))))))))))
+                        ((Some d pp) (match many pp _ ((MkPair s t cc fs) (Some (BranchParts braw) (BAbsurd braw cc fs body (prove-subterm body braw)))))))))))))))) (else (None (BranchParts braw)))))
 
 (def-fns _ $ many marker-checked : (many (Env) env) (many (Bin) tid) (many (List (MCtor)) mctors) (many (Bin) c) -> (many (Env) r) (many (Mult) m)
   (match many (mctors-list (predates _) mctors c) _
@@ -1348,9 +1278,7 @@
 ; Every constructor of the Matchable appears exactly once (ASSUMPTIONS 21).
 (def-fns _ $ many is-else-branch : (many (Env) env) (many (Raw) braw) -> (many (Bool) r)
   (match many braw _
-    ((RAtom lq s) (BFalse))
-    ((RString lq s) (BFalse))
-    ((RList lq items) (match many items _ ((Nil a) (BFalse)) ((Cons a first more) (is-mark (predates _) env first (MkElse)))))))
+    ((RList lq items) (match many items _ ((Nil a) (BFalse)) ((Cons a first more) (is-mark (predates _) env first (MkElse))))) (else (BFalse))))
 
 ; The unlisted constructors an else stands for: those whose forced unification does not contradict; the first of
 ; them, and whether any could run (section 12).
@@ -1360,7 +1288,7 @@
     ((Cons a mc rest)
       (match many mc _
         ((MkMCtor m t)
-          (let (many c) (match many t (((Bin) x)) ((TVar x) x) ((TBound k) (BZ)) ((TApp h as) (BZ)) ((TFn l p r) (BZ)) ((TTyCtor p) (BZ)) ((TValCtor p r) (BZ)) ((TMatchable d t2 cs) (BZ)) ((TNewtype c2) (BZ)) ((TErr msg) (BZ))))
+          (let (many c) (match many t (((Bin) x)) ((TVar x) x) (else (BZ))))
           (match many (nat-eq (predates _) (count-bins (predates _) seen c) 0) _
             ((BFalse) (covered-of (subterm _) rest env seen sres smult first reachable))
             ((BTrue)
@@ -1381,7 +1309,7 @@
     ((Cons a mc rest)
       (match many mc _
         ((MkMCtor m t)
-          (let (many c) (match many t (((Bin) x)) ((TVar x) x) ((TBound k) (BZ)) ((TApp h as) (BZ)) ((TFn l p r) (BZ)) ((TTyCtor p) (BZ)) ((TValCtor p r) (BZ)) ((TMatchable d t2 cs) (BZ)) ((TNewtype c2) (BZ)) ((TErr msg) (BZ))))
+          (let (many c) (match many t (((Bin) x)) ((TVar x) x) (else (BZ))))
           (let (many n) (count-bins (predates _) seen c))
           (match many (nat-lt (predates _) 1 n) _
             ((BFalse) (check-coverage (subterm _) rest env seen))
@@ -1480,7 +1408,7 @@
   (match many pos _ ((Erased) (CErased)) ((Many) (CValues codes))))
 
 (def-fns _ $ many tail-cc : (many (Sp) sp) -> (many (CC) cc)
-  (match many (sp-eq (predates _) sp (SpExpr (ExMatch))) _ ((BTrue) (CCPlain)) ((BFalse) (CCPlain))))
+  (match many (sp-eq (predates _) sp (SpExpr (ExMatch))) _ (else (CCPlain))))
 
 (def-fns _ $ many strip-quote : (many (String) s) -> (many (String) r)
   (match many s _ ((SNil) (SNil)) ((SCons c rest) rest)))
@@ -1491,10 +1419,7 @@
     ((Nil a) (Nil (Bin)))
     ((Cons a t rest)
       (match many t _
-        ((TVar x) (Cons (Bin) x (bin-ids-of (subterm _) rest)))
-        ((TBound k) (bin-ids-of (subterm _) rest)) ((TApp h as) (bin-ids-of (subterm _) rest)) ((TFn l p r) (bin-ids-of (subterm _) rest))
-        ((TTyCtor p) (bin-ids-of (subterm _) rest)) ((TValCtor p r) (bin-ids-of (subterm _) rest)) ((TMatchable d ty c) (bin-ids-of (subterm _) rest))
-        ((TNewtype c) (bin-ids-of (subterm _) rest)) ((TErr m) (bin-ids-of (subterm _) rest))))))
+        ((TVar x) (Cons (Bin) x (bin-ids-of (subterm _) rest))) (else (bin-ids-of (subterm _) rest))))))
 
 ; Post-erasure normalization (ASSUMPTIONS 72, 74, 88; lib/elab.ml's check_marks): a let that only renames is
 ; resolved away, one whose body returns exactly what it binds is replaced by its right-hand side, and one
@@ -1514,9 +1439,7 @@
         ((CVar x)
           (match many (vars-of (subterm _) rest) _
             ((None b) (None (List (Bin))))
-            ((Some b xs) (Some (List (Bin)) (Cons (Bin) x xs)))))
-        ((CConst v) (None (List (Bin)))) ((CErased) (None (List (Bin)))) ((CValues cs2) (None (List (Bin)))) ((CApp f as cc) (None (List (Bin))))
-        ((CLet i r b) (None (List (Bin)))) ((CLetRec fs b) (None (List (Bin)))) ((CMatch sc sh bs dfl) (None (List (Bin)))) ((CAbsurd) (None (List (Bin)))) ((CError m) (None (List (Bin))))))))
+            ((Some b xs) (Some (List (Bin)) (Cons (Bin) x xs))))) (else (None (List (Bin))))))))
 
 (def-fns _ $ many bins-eq : (subterm many (List (Bin)) as) (many (List (Bin)) bs) -> (many (Bool) r)
   (match many as _
@@ -1527,30 +1450,23 @@
 (def-fns _ $ many returns-ids : (many (List (Bin)) ids) (many (Code) c) -> (many (Bool) r)
   (match many c _
     ((CValues cs) (match many (vars-of (predates _) cs) _ ((None a) (BFalse)) ((Some a xs) (bins-eq (predates _) xs ids))))
-    ((CVar x) (bins-eq (predates _) ids (Cons (Bin) x (Nil (Bin)))))
-    ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse)) ((CLetRec fs b) (BFalse))
-    ((CMatch sc sh bs dfl) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+    ((CVar x) (bins-eq (predates _) ids (Cons (Bin) x (Nil (Bin))))) (else (BFalse))))
 
 (def-fns _ $ many all-consts : (subterm many (List (Code)) cs) -> (many (Bool) r)
   (match many cs _
     ((Nil a) (BTrue))
     ((Cons a c rest)
       (match many c _
-        ((CConst v) (all-consts (subterm _) rest))
-        ((CVar x) (BFalse)) ((CErased) (BFalse)) ((CValues cs2) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse))
-        ((CLetRec fs b) (BFalse)) ((CMatch sc sh bs dfl) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))))
+        ((CConst v) (all-consts (subterm _) rest)) (else (BFalse))))))
 
 (def-fns _ $ many constant-code : (many (Code) c) -> (many (Bool) r)
   (match many c _
-    ((CValues cs) (all-consts (predates _) cs))
-    ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CApp f as cc) (BFalse)) ((CLet i r b) (BFalse))
-    ((CLetRec fs b) (BFalse)) ((CMatch sc sh bs dfl) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+    ((CValues cs) (all-consts (predates _) cs)) (else (BFalse))))
 
 (def-fns _
   (many mentions : (subterm many (Code) c) (many (Bin) x) -> (many (Bool) r)
     (match many c _
       ((CVar y) (bin-eq (predates _) x y))
-      ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))
       ((CValues cs) (mentions-list (subterm _) cs x))
       ((CApp f as cc) (or (predates _) (mentions (subterm _) f x) (mentions-list (subterm _) as x)))
       ((CLet ids rhs rest) (or (predates _) (mentions (subterm _) rhs x) (mentions (subterm _) rest x)))
@@ -1559,7 +1475,7 @@
         (or (predates _) (mentions (subterm _) scrut x)
           (or (predates _) (match many shape (((Bool) b)) ((ShKnown adt) (BFalse)) ((ShHeld mc tags) (mentions (subterm _) mc x)))
             (or (predates _) (mentions-branches (subterm _) bs x)
-              (match many dfl (((Bool) b)) ((Some a d) (mentions (subterm _) d x)) ((None a) (BFalse)))))))))
+              (match many dfl (((Bool) b)) ((Some a d) (mentions (subterm _) d x)) ((None a) (BFalse))))))) (else (BFalse))))
   (many mentions-list : (subterm many (List (Code)) cs) (many (Bin) x) -> (many (Bool) r)
     (match many cs _
       ((Nil a) (BFalse))
@@ -1589,7 +1505,6 @@
   (many norm : (subterm many (Code) c) (many (IdMap (Bin)) sub) -> (many (Code) r)
     (match many c _
       ((CVar x) (CVar (resolve-sub (predates _) sub x)))
-      ((CConst v) c) ((CErased) c) ((CAbsurd) c) ((CError m) c)
       ((CValues cs) (CValues (norm-list (subterm _) cs sub)))
       ((CApp f as cc) (CApp (norm (subterm _) f sub) (norm-list (subterm _) as sub) cc))
       ((CLet ids rhs rest)
@@ -1597,9 +1512,7 @@
         (let (many renaming)
           (match many rhs2 (((Maybe (List (Bin))) r))
             ((CVar y) (match many ids (((Maybe (List (Bin))) r)) ((Nil a) (None (List (Bin)))) ((Cons a x more) (match many more (((Maybe (List (Bin))) r)) ((Nil b) (Some (List (Bin)) (Cons (Bin) y (Nil (Bin))))) ((Cons b x2 more2) (None (List (Bin))))))))
-            ((CValues cs) (match many (vars-of (predates _) cs) (((Maybe (List (Bin))) r)) ((None a) (None (List (Bin)))) ((Some a ys) (match many (nat-eq (predates _) (list-length (predates _) (Bin) ys) (list-length (predates _) (Bin) ids)) (((Maybe (List (Bin))) r)) ((BTrue) (Some (List (Bin)) ys)) ((BFalse) (None (List (Bin))))))))
-            ((CConst v) (None (List (Bin)))) ((CErased) (None (List (Bin)))) ((CApp f as cc) (None (List (Bin)))) ((CLet i r b) (None (List (Bin))))
-            ((CLetRec fs b) (None (List (Bin)))) ((CMatch sc sh bs dfl) (None (List (Bin)))) ((CAbsurd) (None (List (Bin)))) ((CError m) (None (List (Bin))))))
+            ((CValues cs) (match many (vars-of (predates _) cs) (((Maybe (List (Bin))) r)) ((None a) (None (List (Bin)))) ((Some a ys) (match many (nat-eq (predates _) (list-length (predates _) (Bin) ys) (list-length (predates _) (Bin) ids)) (((Maybe (List (Bin))) r)) ((BTrue) (Some (List (Bin)) ys)) ((BFalse) (None (List (Bin)))))))) (else (None (List (Bin))))))
         (match many renaming _
           ((Some a ys) (norm (subterm _) rest (sub-all (predates _) ids ys sub)))
           ((None a)
@@ -1615,7 +1528,7 @@
         (CMatch (norm (subterm _) scrut sub)
                 (match many shape (((Shape) s)) ((ShKnown adt) shape) ((ShHeld mc tags) (ShHeld (norm (subterm _) mc sub) tags)))
                 (norm-branches (subterm _) bs sub)
-                (match many dfl (((Maybe (Code)) r)) ((Some a d) (Some (Code) (norm (subterm _) d sub))) ((None a) (None (Code))))))))
+                (match many dfl (((Maybe (Code)) r)) ((Some a d) (Some (Code) (norm (subterm _) d sub))) ((None a) (None (Code)))))) (else c)))
   (many norm-list : (subterm many (List (Code)) cs) (many (IdMap (Bin)) sub) -> (many (List (Code)) r)
     (match many cs _
       ((Nil a) (Nil (Code)))
@@ -1642,7 +1555,7 @@
 ; function, so a nested def-fns's marks are its own.
 
 (def-fns _ $ many cc-marked : (many (CC) cc) -> (many (Bool) r)
-  (match many cc _ ((CCPlain) (BFalse)) ((CCTail) (BTrue)) ((CCDelegate) (BTrue)) ((CCCtor) (BFalse))))
+  (match many cc _ ((CCTail) (BTrue)) ((CCDelegate) (BTrue)) (else (BFalse))))
 
 (def-fns _
   (many has-marked : (subterm many (Code) c) -> (many (Bool) r)
@@ -1651,8 +1564,7 @@
       ((CValues cs) (has-marked-list (subterm _) cs))
       ((CLet ids rhs rest) (or (predates _) (has-marked (subterm _) rhs) (has-marked (subterm _) rest)))
       ((CLetRec fns rest) (has-marked (subterm _) rest))
-      ((CMatch scrut shape bs dfl) (or (predates _) (has-marked (subterm _) scrut) (or (predates _) (match many shape (((Bool) b)) ((ShKnown a) (BFalse)) ((ShHeld mc t) (has-marked (subterm _) mc))) (or (predates _) (has-marked-branches (subterm _) bs) (match many dfl (((Bool) b)) ((Some a d) (has-marked (subterm _) d)) ((None a) (BFalse)))))))
-      ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+      ((CMatch scrut shape bs dfl) (or (predates _) (has-marked (subterm _) scrut) (or (predates _) (match many shape (((Bool) b)) ((ShKnown a) (BFalse)) ((ShHeld mc t) (has-marked (subterm _) mc))) (or (predates _) (has-marked-branches (subterm _) bs) (match many dfl (((Bool) b)) ((Some a d) (has-marked (subterm _) d)) ((None a) (BFalse))))))) (else (BFalse))))
   (many has-marked-list : (subterm many (List (Code)) cs) -> (many (Bool) r)
     (match many cs _
       ((Nil a) (BFalse))
@@ -1665,12 +1577,11 @@
 (def-fns _
   (many has-delegate : (subterm many (Code) c) -> (many (Bool) r)
     (match many c _
-      ((CApp f args cc) (or (predates _) (match many cc (((Bool) b)) ((CCDelegate) (BTrue)) ((CCPlain) (BFalse)) ((CCTail) (BFalse)) ((CCCtor) (BFalse))) (or (predates _) (has-delegate (subterm _) f) (has-delegate-list (subterm _) args))))
+      ((CApp f args cc) (or (predates _) (match many cc (((Bool) b)) ((CCDelegate) (BTrue)) (else (BFalse))) (or (predates _) (has-delegate (subterm _) f) (has-delegate-list (subterm _) args))))
       ((CValues cs) (has-delegate-list (subterm _) cs))
       ((CLet ids rhs rest) (or (predates _) (has-delegate (subterm _) rhs) (has-delegate (subterm _) rest)))
       ((CLetRec fns rest) (has-delegate (subterm _) rest))
-      ((CMatch scrut shape bs dfl) (or (predates _) (has-delegate (subterm _) scrut) (or (predates _) (match many shape (((Bool) b)) ((ShKnown a) (BFalse)) ((ShHeld mc t) (has-delegate (subterm _) mc))) (or (predates _) (has-delegate-branches (subterm _) bs) (match many dfl (((Bool) b)) ((Some a d) (has-delegate (subterm _) d)) ((None a) (BFalse)))))))
-      ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+      ((CMatch scrut shape bs dfl) (or (predates _) (has-delegate (subterm _) scrut) (or (predates _) (match many shape (((Bool) b)) ((ShKnown a) (BFalse)) ((ShHeld mc t) (has-delegate (subterm _) mc))) (or (predates _) (has-delegate-branches (subterm _) bs) (match many dfl (((Bool) b)) ((Some a d) (has-delegate (subterm _) d)) ((None a) (BFalse))))))) (else (BFalse))))
   (many has-delegate-list : (subterm many (List (Code)) cs) -> (many (Bool) r)
     (match many cs _
       ((Nil a) (BFalse))
@@ -1701,8 +1612,7 @@
                       (and (predates _) (match many shape (((Bool) b)) ((ShKnown a) (BTrue)) ((ShHeld mc t) (not (predates _) (has-marked (predates _) mc))))
                         (and (predates _) (tails-ok-branches (subterm _) bs direct)
                           (match many dfl (((Bool) b)) ((Some a d) (tails-ok (subterm _) d direct)) ((None a) (BTrue)))))))))
-      ((CValues cs) (not (predates _) (has-marked-list (predates _) cs)))
-      ((CVar x) (BTrue)) ((CConst v) (BTrue)) ((CErased) (BTrue)) ((CAbsurd) (BTrue)) ((CError m) (BTrue))))
+      ((CValues cs) (not (predates _) (has-marked-list (predates _) cs))) (else (BTrue))))
   (many tails-ok-branches : (subterm many (List (Branch)) bs) (many (Bool) direct) -> (many (Bool) r)
     (match many bs _
       ((Nil a) (BTrue))
@@ -1732,25 +1642,7 @@
                     ((Some a ids)
                       (match many (bins-eq (predates _) ids pids) _
                         ((BTrue) (values env1 code2 (Some (Bin) g)))
-                        ((BFalse) (values (env-error (predates _) env1 "a delegate call must pass the function's non-erased parameters straight through") code2 (None (Bin))))))))
-                ((CConst v) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CErased) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CValues cs) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CApp g2 a2 c2) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CLet i r b) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CLetRec fs b) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CMatch s sh bs dfl) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CAbsurd) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-                ((CError m) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))))
-            ((CVar x) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CConst v) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CErased) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CValues cs) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CLet i r b) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CLetRec fs b) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CMatch s sh bs dfl) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CAbsurd) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))
-            ((CError m) (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))))))))
+                        ((BFalse) (values (env-error (predates _) env1 "a delegate call must pass the function's non-erased parameters straight through") code2 (None (Bin)))))))) (else (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin)))))) (else (values (env-error (predates _) env1 "delegate needs exactly one call to a named function") code2 (None (Bin))))))))))
 
 
 ; A call's decrease annotation (section 9): (predates p) right after the callee, or (subterm p) right before
@@ -1763,8 +1655,6 @@
 
 (def-fns _ $ many ann-of : (many (Env) env) (many (Raw) arg) (many (Nat) i) (erased (List (Raw)) root) (erased (Subterm (Raw) arg (List (Raw)) root) pa) -> (many (Ann root) r)
   (match many arg _
-    ((RAtom lq s) (AnnNone root))
-    ((RString lq s) (AnnNone root))
     ((RList lq items)
       (match many items _
         ((Nil b) (AnnNone root))
@@ -1778,7 +1668,7 @@
                   (let (erased pp) (subterm-trans (prove-subterm p arg) pa))
                   (match many (and (predates _) (is-mark (predates _) env k (MkPredates)) (nat-is-zero (predates _) i)) _
                     ((BTrue) (AnnPredates root p pp))
-                    ((BFalse) (match many (is-mark (predates _) env k (MkSubterm)) _ ((BTrue) (AnnSubterm root i p pp)) ((BFalse) (AnnNone root))))))))))))))
+                    ((BFalse) (match many (is-mark (predates _) env k (MkSubterm)) _ ((BTrue) (AnnSubterm root i p pp)) ((BFalse) (AnnNone root)))))))))))) (else (AnnNone root))))
 
 ; The first annotation and the arguments without it; a second annotation stays an argument, as in lib/elab.ml.
 (def-fns _ $ many split-annotation : (subterm many (List (Raw)) args) (erased (List (Raw)) root) (erased (Within args root) w) (many (Env) env) (many (Nat) i) -> (many (Ann root) ann) (many (List (Sub root)) rest)
@@ -2034,11 +1924,7 @@
                     ((SpMark mk)
                       (match many mk (((Env) e) ((List (Res)) rs) ((Code) c))
                         ((MkTail) (elab-marked sugar (subterm _) args env0 expect (CCTail) sp))
-                        ((MkDelegate) (elab-marked sugar (subterm _) args env0 expect (CCDelegate) sp))
-                        ((MkErased) (malformed (predates _) env0 sp)) ((MkMany) (malformed (predates _) env0 sp)) ((MkColon) (malformed (predates _) env0 sp))
-                        ((MkIs) (malformed (predates _) env0 sp)) ((MkArrow) (malformed (predates _) env0 sp)) ((MkSubterm) (malformed (predates _) env0 sp))
-                        ((MkEnum) (malformed (predates _) env0 sp)) ((MkUnion) (malformed (predates _) env0 sp)) ((MkPredates) (malformed (predates _) env0 sp))
-                        ((MkAbsurd) (malformed (predates _) env0 sp)) ((MkNewtypeMark) (malformed (predates _) env0 sp)) ((MkExtern) (malformed (predates _) env0 sp)) ((MkElse) (malformed (predates _) env0 sp))))
+                        ((MkDelegate) (elab-marked sugar (subterm _) args env0 expect (CCDelegate) sp)) (else (malformed (predates _) env0 sp))))
                     ((SpExpr ex)
                       (match many ex (((Env) e) ((List (Res)) rs) ((Code) c))
                         ((ExValues)
@@ -2065,15 +1951,7 @@
                           (let (many env2) (many f) (elab-one-term sugar (subterm _) args env0))
                           (let (many fty) (canon-env (predates _) env2 (infer (predates _) f env2)))
                           (match many fty (((Env) e) ((List (Res)) rs) ((Code) c))
-                            ((TFn lv ps rs) (values env2 (Cons (Res) (MkRes lv level-term (Erased)) (Nil (Res))) (CErased)))
-                            ((TVar y) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TBound j) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TApp h as) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TTyCtor p) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TValCtor p r) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TMatchable d t c) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TNewtype c) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))
-                            ((TErr msg) (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))))
+                            ((TFn lv ps rs) (values env2 (Cons (Res) (MkRes lv level-term (Erased)) (Nil (Res))) (CErased))) (else (values (env-error (predates _) env2 (level-of-error (predates _) env2 f fty)) (Nil (Res)) (CError "level-of")))))
                         ((ExProveSubterm)
                           (let (many env2) (many a) (many b2) (elab-two-terms sugar (subterm _) args env0))
                           (let (many env3) (many r) (mint-subterm (predates _) env2 a b2))
@@ -2191,12 +2069,7 @@
                     ((TFn lv params rets)
                       (let (many ann) (many args2) (split-annotation (predates _) args args (WHere args) env2 0))
                       (elab-call sugar (subterm _) args (MkPair (List (Sub args)) (Ann args) args2 ann) env2 expect h hcode lv params rets cc))
-                    ((TVar x) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))
-                    ((TBound j) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))
-                    ((TApp h2 a2) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))
-                    ((TMatchable d t c) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))
-                    ((TNewtype c) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))
-                    ((TErr m) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError m)))))))))))
+                    ((TErr m) (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError m))) (else (values (env-error (predates _) env2 (not-applicable (predates _) env2 h)) (Nil (Res)) (CError "not applicable")))))))))))
     (let (many n) (list-length (predates _) (Mult) expect))
     (let (many m) (list-length (predates _) (Res) ress))
     (match many (nat-eq (predates _) n m) _
@@ -2238,19 +2111,13 @@
                     ((TValCtor ctele ret)
                       (let (many env3) (many acc) (elab-term-args sugar (subterm _) args (subs-all (predates _) args) (check-arity (predates _) env2 ctele (list-length (predates _) (Raw) args)) ctele (Nil (Term))))
                       (values env3 (TApp h (list-rev (predates _) (Term) acc))))
-                    ((TVar y) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))
-                    ((TBound j) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))
-                    ((TApp h2 a2) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))
                     ((TFn l p r) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "function in type")))
-                    ((TMatchable d t c) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))
-                    ((TNewtype c) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))
-                    ((TErr m) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr m)))))))))))
+                    ((TErr m) (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr m))) (else (values (env-error (predates _) env2 (cannot-apply-in-type (predates _) env2 h)) (TErr "not applicable")))))))))))
     (let (many env3) (match many as-type (((Env) e0)) ((BFalse) env2) ((BTrue) (check (predates _) env2 "type" (infer (predates _) t env2) type-term))))
     (values (env-back (predates _) env env3) t))
 
   (many elab-type-form : (subterm many (Nat) sugar) (subterm many (List (Raw)) args) (subterm many (Steps (Succ (Succ (Zero)))) st) (many (Env) env) (many (Sp) sp) -> (many (Env) r) (many (Term) t)
     (match many st _
-      (absurd SZ)
       ((SS sn k)
         (match many sp _
           ((SpFormer fo)
@@ -2355,12 +2222,7 @@
             ((TApp h as)
               (match many h (((Bool) b0))
                 ((TVar t) (and (predates _) (not (predates _) (list-mem-bin (predates _) ids t))
-                             (match many (type-of (predates _) env3 t) (((Bool) b0)) ((TTyCtor p) (BTrue)) ((TVar y2) (BFalse)) ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse))
-                               ((TFn l p r) (BFalse)) ((TValCtor p r) (BFalse)) ((TMatchable d ty c) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse)))))
-                ((TBound j) (BFalse)) ((TApp h2 a2) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse))
-                ((TMatchable d ty c) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
-            ((TVar y2) (BFalse)) ((TBound j) (BFalse)) ((TFn l p r) (BFalse)) ((TTyCtor p) (BFalse)) ((TValCtor p r) (BFalse))
-            ((TMatchable d ty c) (BFalse)) ((TNewtype c) (BFalse)) ((TErr m) (BFalse))))
+                             (match many (type-of (predates _) env3 t) (((Bool) b0)) ((TTyCtor p) (BTrue)) (else (BFalse))))) (else (BFalse)))) (else (BFalse))))
         (let (many env4)
           (match many ok (((Env) e0))
             ((BTrue) env3)
@@ -2371,7 +2233,6 @@
   ; [ids]: binders already in force, innermost first.
   (many elab-tele : (subterm many (Nat) sugar) (subterm many (List (Raw)) root) (subterm many (Steps (Succ (Zero))) st) (subterm many (List (Sub root)) entries) (many (Env) env) (many (MultsMode) mode) (many (List (Term)) ids) (many (Bool) subterm-ok) -> (many (Env) r) (many (List (Bin)) bound) (many (List (Entry)) tele)
     (match many st _
-      (absurd SZ)
       ((SS sn k)
         (let (many env2) (many entries2) (parse-entries-checked (predates _) root entries env))
         (elab-src-entries sugar root (subterm _) k entries2 env2 mode ids (Nil (Bin)) subterm-ok))))
@@ -2430,8 +2291,6 @@
     (let (many bad) (env-error (predates _) envl (str-cat (predates _) (show-r (predates _) raw) " is not a statement")))
     (let (many env2) (many sc)
       (match many raw (((Env) e0) ((StmtCode) sc0))
-        ((RAtom lq s) (values bad (SNone)))
-        ((RString lq s) (values bad (SNone)))
         ((RList lq items)
           (match many items (((Env) e0) ((StmtCode) sc0))
             ((Nil a) (values bad (SNone)))
@@ -2440,7 +2299,6 @@
                 ((None b) (values bad (SNone)))
                 ((Some b sp)
                   (match many sp (((Env) e0) ((StmtCode) sc0))
-                    ((SpFormer k) (values bad (SNone))) ((SpExpr k) (values bad (SNone))) ((SpMark k) (values bad (SNone)))
                     ((SpStmt st)
                       (match many st (((Env) e0) ((StmtCode) sc0))
                         ((StLet)
@@ -2465,7 +2323,7 @@
                                 ((Cons c cn rest) (values env4 (SConsts consts)))))))
                         ((StComptimeMatch) (elab-comptime-match (predates _) envl args))
                         ((StLetMatch) (elab-let-match sugar (subterm _) args envl))
-                        ((StUnary) (elab-unary sugar (subterm _) args envl))))))))))))
+                        ((StUnary) (elab-unary sugar (subterm _) args envl)))) (else (values bad (SNone))))))))) (else (values bad (SNone)))))
     (values (env-back (predates _) env env2) sc))
 
   ; let-match (section 16, ASSUMPTIONS 99-100): a one-constructor match binding outward, its fields at the
@@ -2662,9 +2520,7 @@
                 ((BTrue) (SConst v))
                 ((BFalse)
                   (match many (res-term (predates _) r) (((State) s0))
-                    ((TVar y) (entry-state (predates _) env1 y))
-                    ((TBound j) (SDyn)) ((TApp h as) (SDyn)) ((TFn l p rr) (SDyn)) ((TTyCtor p) (SDyn)) ((TValCtor p rr) (SDyn))
-                    ((TMatchable d t c) (SDyn)) ((TNewtype c) (SDyn)) ((TErr m) (SDyn))))))
+                    ((TVar y) (entry-state (predates _) env1 y)) (else (SDyn))))))
             (let (many env2) (many x) (bind (predates _) env1 (name-or-anon (predates _) name) mult st (res-ty (predates _) r) (Some (Term) (res-term (predates _) r)) coercible-id))
             (let (many env3)
               (match many (and (predates _) run (mult-is-many (predates _) mult)) (((Env) e0))
@@ -2702,8 +2558,6 @@
         (let (many envl) (env-at (predates _) env (raw-line (predates _) f)))
         (let (many bad) (env-error (predates _) envl "malformed function definition"))
         (match many f _
-          ((RAtom lq s) (values bad (HStop fns)))
-          ((RString lq s) (values bad (HStop fns)))
           ((RList lq items)
             (match many items _
               ((Nil b) (values bad (HStop fns)))
@@ -2725,7 +2579,7 @@
                         (let (many env3) (match many isext (((Env) e0)) ((BTrue) (claim-extern (predates _) env2 name (is-extern-fn (predates _) name))) ((BFalse) env2)))
                         (let (many impl) (match many (and (predates _) isext (is-extern-fn (predates _) name)) (((Maybe (String)) i0)) ((BTrue) (Some (String) name)) ((BFalse) (None (String)))))
                         (let (many env4) (many hs) (elab-headers sugar (subterm _) rest (env-back (predates _) env env3) lvl))
-                        (values env4 (HCons f rest (MkHeader f name mult isabs impl params rets body (within-in (predates _) body sg (Raw) f wb psg)) hs)))))))))))))
+                        (values env4 (HCons f rest (MkHeader f name mult isabs impl params rets body (within-in (predates _) body sg (Raw) f wb psg)) hs))))))))) (else (values bad (HStop fns)))))))
 
   (many define-fns : (subterm many (Nat) sugar) (subterm many (List (Raw)) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (Bound fns headers) fids) (many (Bin) lvl) (many (Bool) top) -> (many (Env) r) (many (List (Pair (Bin) (Func))) fns2)
     (match many fns _
@@ -2735,7 +2589,6 @@
           ((HStop z) (values env (Nil (Pair (Bin) (Func)))))
           ((HCons g r h hrest)
             (match many fids _
-              (absurd BStop)
               ((BCons g3 r3 h3 hs3 x xrest)
                 (match many h _
                   ((MkHeader g2 name mult isabs impl params rets body pb)
@@ -2776,8 +2629,6 @@
         (let (many envl) (env-at (predates _) env (raw-line (predates _) adt)))
         (let (many bad) (env-error (predates _) envl "malformed def-adts entry"))
         (match many adt _
-          ((RAtom lq s) (values bad (AStop adts) (TStop adts)))
-          ((RString lq s) (values bad (AStop adts) (TStop adts)))
           ((RList lq items)
             (match many items _
               ((Nil b) (values bad (AStop adts) (TStop adts)))
@@ -2802,7 +2653,7 @@
                             (let (many env2b) (many x) (bind (predates _) env2 (Some (String) name) (Erased) st ty (None (Term)) coercible-id))
                             (let (many env3) (many hs) (many tids) (elab-adt-headers sugar (subterm _) rest (env-back (predates _) env env2b)))
                             (let (many h) (MkAdtHeader adt name disc nt ext cs (within-in (predates _) cs sg (Raw) adt wc (prove-subterm sg adt))))
-                            (values env3 (ACons adt rest h hs) (TCons adt rest h hs x tids)))))))))))))))
+                            (values env3 (ACons adt rest h hs) (TCons adt rest h hs x tids))))))))))) (else (values bad (AStop adts) (TStop adts)))))))
 
   (many define-adts : (subterm many (Nat) sugar) (subterm many (List (Raw)) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List (Pair (Bin) (Value))) consts)
     (match many adts _
@@ -2812,7 +2663,6 @@
           ((AStop z) (values env (Nil (Pair (Bin) (Value)))))
           ((ACons g r h hrest)
             (match many tids _
-              (absurd TStop)
               ((TCons g3 r3 h3 hs3 tid trest)
                 (match many h _
                   ((MkAdtHeader g2 name disc nt ext ctors pc)
@@ -2844,8 +2694,6 @@
         (let (many bad) (env-error (predates _) envl "malformed constructor"))
         (let (many env0) (many parsed)
           (match many craw (((Env) e0) ((Maybe (CtorParts craw)) p0))
-            ((RAtom lq s) (values bad (None (CtorParts craw))))
-            ((RString lq s) (values bad (None (CtorParts craw))))
             ((RList lq items)
               (match many items (((Env) e0) ((Maybe (CtorParts craw)) p0))
                 ((Nil b) (values bad (None (CtorParts craw))))
@@ -2858,7 +2706,7 @@
                         ((Nil d) (values (env-error (predates _) env0 "malformed constructor") (None (CtorParts craw))))
                         ((Cons d colon sg)
                           (let (many env1) (match many (is-mark (predates _) env0 colon (MkColon)) (((Env) e0)) ((BTrue) env0) ((BFalse) (env-error (predates _) env0 "malformed constructor"))))
-                          (values env1 (Some (CtorParts craw) (MkCtorParts craw mult (raw-name (predates _) nraw) sg (prove-subterm sg craw)))))))))))))
+                          (values env1 (Some (CtorParts craw) (MkCtorParts craw mult (raw-name (predates _) nraw) sg (prove-subterm sg craw))))))))))) (else (values bad (None (CtorParts craw))))))
         (match many parsed _
           ((None b) (elab-ctors sugar (subterm _) rest (env-back (predates _) env env0) tid))
           ((Some b cp)
@@ -2889,8 +2737,7 @@
         (let (many ok)
           (match many code (((Bool) b0))
             ((CApp f as cc2) (cc-eq (predates _) cc cc2))
-            ((CLet ids rhs body) (match many rhs (((Bool) b0)) ((CApp f as cc2) (cc-eq (predates _) cc cc2)) ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CValues cs) (BFalse)) ((CLet i r b2) (BFalse)) ((CLetRec fs b2) (BFalse)) ((CMatch s sh bs dfl) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
-            ((CVar x) (BFalse)) ((CConst v) (BFalse)) ((CErased) (BFalse)) ((CValues cs) (BFalse)) ((CLetRec fs b2) (BFalse)) ((CMatch s sh bs dfl) (BFalse)) ((CAbsurd) (BFalse)) ((CError m) (BFalse))))
+            ((CLet ids rhs body) (match many rhs (((Bool) b0)) ((CApp f as cc2) (cc-eq (predates _) cc cc2)) (else (BFalse)))) (else (BFalse))))
         (match many ok _
           ((BTrue) (values env2 ress code))
           ((BFalse) (values (env-error (predates _) env2 (str-cat3 (predates _) (sp-name (predates _) sp) " marks a function call, not " (show-r (predates _) call))) ress code))))))
@@ -3000,9 +2847,7 @@
                                   (match many ann (((Env) e0) ((List (Entry)) t0))
                                     ((RList lq aitems)
                                       (let (many env3) (many ids) (many t) (elab-tele sugar (subterm _) aitems one-step (subs-all (predates _) aitems) env2c (MMExpect expect) (Nil (Term)) (BFalse)))
-                                      (values (env-discard (predates _) env2c env3) t))
-                                    ((RAtom lq s) (values (env-error (predates _) env2c "malformed match annotation") (Nil (Entry))))
-                                    ((RString lq s) (values (env-error (predates _) env2c "malformed match annotation") (Nil (Entry))))))))
+                                      (values (env-discard (predates _) env2c env3) t)) (else (values (env-error (predates _) env2c "malformed match annotation") (Nil (Entry))))))))
                             (let (many env3b)
                               (match many (nat-eq (predates _) (list-length (predates _) (Entry) ann-tele) (list-length (predates _) (Mult) expect)) (((Env) e0))
                                 ((BTrue) env3)
@@ -3111,8 +2956,6 @@
                     ((None b) (values (env-error (predates _) envl "else covers no constructor") found))
                     ((Some b c0)
                       (match many braw (((Env) e0) ((Maybe (Code)) f0))
-                        ((RAtom lq s) (values (env-error (predates _) envl "malformed branch") found))
-                        ((RString lq s) (values (env-error (predates _) envl "malformed branch") found))
                         ((RList lq items)
                           (match many items (((Env) e0) ((Maybe (Code)) f0))
                             ((Nil c) (values (env-error (predates _) envl "malformed branch") found))
@@ -3120,7 +2963,7 @@
                               (let (erased q) (subterm-trans (prove-subterm body braw) (prove-subterm braw branches)))
                               (let (many envb) (many ress) (many code) (elab-body sugar (subterm q) body body (WHere body) (env-set-run-pos (predates _) envl (BFalse)) (match many reachable (((List (Mult)) ms0)) ((BTrue) expect) ((BFalse) (all-erased (predates _) expect))) (Some (List (Entry)) ann-tele) (BFalse)))
                               (let (many envb2) (check-results-count (predates _) envb ann-tele ress (Nil (Term))))
-                              (values (env-discard (predates _) envl envb2) (match many reachable (((Maybe (Code)) f0)) ((BTrue) (Some (Code) code)) ((BFalse) (None (Code))))))))))))))
+                              (values (env-discard (predates _) envl envb2) (match many reachable (((Maybe (Code)) f0)) ((BTrue) (Some (Code) code)) ((BFalse) (None (Code)))))))) (else (values (env-error (predates _) envl "malformed branch") found))))))))
             (elab-else sugar (subterm _) brest (env-back (predates _) env env2) ann-tele expect first reachable (BTrue) found2))))))
 
   ; Arguments against a telescope, each at the position's multiplicity and checked against its entry
@@ -3196,9 +3039,7 @@
     (match many (env-level (predates _) env) _
       ((None a)
         (match many ann _
-          ((AnnNone z) env)
-          ((AnnPredates z p pp) (env-error (predates _) env "the top level calls without proofs; drop the decrease annotation (section 24)"))
-          ((AnnSubterm z i p pp) (env-error (predates _) env "the top level calls without proofs; drop the decrease annotation (section 24)"))))
+          ((AnnNone z) env) (else (env-error (predates _) env "the top level calls without proofs; drop the decrease annotation (section 24)"))))
       ((Some a cur)
         (let (many same) (equal-env (predates _) env lv (TVar cur)))
         (match many ann _
@@ -3235,9 +3076,7 @@
                       (let (many nv-env) (many nv-term) (values (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env lv) " is not a variable")) (TErr "level")))
                       (match many (canon-env (predates _) env lv) (((Env) e0) ((Term) t0))
                         ((TVar m) (let (many env2) (many pr) (mint-predates (predates _) env m cur)) (values env2 (res-term (predates _) pr)))
-                        ((TBound j) (values nv-env nv-term)) ((TApp h as) (values nv-env nv-term)) ((TFn l ps rs) (values nv-env nv-term)) ((TTyCtor ps) (values nv-env nv-term))
-                        ((TValCtor ps rs) (values nv-env nv-term)) ((TMatchable d t c) (values nv-env nv-term)) ((TNewtype c) (values nv-env nv-term))
-                        ((TErr m) (values (env-error (predates _) env m) (TErr m)))))
+                        ((TErr m) (values (env-error (predates _) env m) (TErr m))) (else (values nv-env nv-term))))
                     ((BFalse)
                       (let (many env2) (many prs) (many pc) (elab-expr sugar (subterm pp) p env erased-one no-tele (CCPlain)))
                       (values env2 (erased-term (predates _) prs)))))
