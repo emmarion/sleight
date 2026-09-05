@@ -164,17 +164,17 @@ and expr cx scope = function
   | V.CMatch m -> (
       let branches = List.map (fun (i, ids, body) -> (i, List.map var ids, expr cx scope body)) m.branches in
       let scrut = expr cx scope m.scrut in
-      let default arm = match m.default with Some (is, d) -> Printf.sprintf "%s -> %s" (concat " | " (List.map arm is)) (expr cx scope d) | None -> "_ -> absurd ()" in
+      let default = match m.default with Some d -> expr cx scope d | None -> "absurd ()" in
       let one () = match branches with [ (_, vs, body) ] -> (vs, body) | _ -> assert false in
       match m.shape with
       | V.Known a -> (
           let arms arm = concat " " (List.map (fun (i, vs, body) -> arm (V.ctor_at a i) vs body) branches) in
           match shape a with
-          | Ext -> Printf.sprintf "(match %s %s with %s | %s)" (des cx a) scrut (arms case) (default (fun i -> Printf.sprintf "(%d, _)" i))
+          | Ext -> Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx a) scrut (arms case) default
           | Tagged ->
-              Printf.sprintf "(match (Obj.obj %s : %s) with %s | %s)" scrut (type_name cx a)
+              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut (type_name cx a)
                 (arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern c vs) body))
-                (default (fun i -> let c = V.ctor_at a i in pattern c (List.init c.arity (fun _ -> "_"))))
+                default
           | Untagged -> let vs, body = one () in untuple vs scrut body)
       | V.Held (code, tags) ->
           let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in
@@ -184,7 +184,7 @@ and expr cx scope = function
             Printf.sprintf "(match snd (%s) with [%s] -> %s | _ -> absurd ())" des (concat "; " vs) body
           else
             let rec chain = function
-              | [] -> (match m.default with Some (is, d) -> Printf.sprintf "if %s then %s else absurd ()" (concat " || " (List.map (Printf.sprintf "i = %d") is)) (expr cx scope d) | None -> "absurd ()")
+              | [] -> default
               | (i, vs, body) :: rest ->
                   Printf.sprintf "if i = %d then (match fs with [%s] -> %s | _ -> absurd ()) else %s" i (concat "; " vs) body (chain rest)
             in

@@ -676,7 +676,7 @@ and elab_match tele env expect l args =
         | [ (_, _, body) ], None when smult = Erased -> body
         | _ ->
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
-            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = Option.map (fun code -> (List.map (fun c -> Option.get (discriminant shapes c)) reachable, code)) else_ }
+            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = else_ }
       in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
@@ -961,7 +961,7 @@ and check_marks env l pids code =
   let rec tails ~direct = function
     | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
-    | V.CMatch m -> if direct then [] else List.concat_map (tails ~direct) (List.map (fun (_, _, c) -> c) m.V.branches @ List.map snd (Option.to_list m.V.default))
+    | V.CMatch m -> if direct then [] else List.concat_map (tails ~direct) (List.map (fun (_, _, c) -> c) m.V.branches @ Option.to_list m.V.default)
     | _ -> []
   in
   ( code,

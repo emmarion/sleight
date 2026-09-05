@@ -33,10 +33,10 @@ let rec eval env code =
       | Some (i, fields), _, _ -> (
           match (List.find_opt (fun (j, _, _) -> j = i) branches, default) with
           | Some branch, _ -> enter branch fields
-          | None, Some (is, d) when List.mem i is -> eval env d
-          | None, _ -> raise (Runtime ("no branch for " ^ show v)))
+          | None, Some d -> eval env d
+          | None, None -> raise (Runtime ("no branch for " ^ show v)))
       | None, [ ((_, ids, _) as branch) ], _ -> enter branch (untuple (List.length ids) v)
-      | None, [], Some (_, d) -> eval env d
+      | None, [], Some d -> eval env d
       | None, _, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
   | CAbsurd -> raise (Runtime "absurd code reached")
 
