@@ -17,7 +17,7 @@
 (def-fns util-lvl $ many write-errors : (subterm many (List (String)) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
   (match many es _
     ((Nil a) next)
-    ((Cons a e rest) (WriteErr io-lvl e (WriteErr io-lvl "\n" (write-errors (subterm _) rest next))))))
+    ((Cons a e rest) (WriteErr io-lvl e (WriteErr io-lvl "\n" (write-errors rest next))))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
@@ -27,33 +27,33 @@
     ((Cons a ps rest)
       (match many ps _
         ((MkPair s t path src)
-          (let (many env1) (env-at-loc (predates _) env (MkLoc path 1)))
-          (let (many items) (many err) (parse (predates _) src))
+          (let (many env1) (env-at-loc env (MkLoc path 1)))
+          (let (many items) (many err) (parse src))
           (let (many env2)
             (match many err (((Env) e))
-              ((Some b e) (match many e (((Env) e)) ((MkSynErr line m) (env-report (predates _) env1 (located (predates _) (env-at (predates _) env1 line) ": syntax error: " m)))))
-              ((None b) (run-toplevel (predates _) items env1))))
-          (run-files (subterm _) rest (match many first (((Env) e)) ((BTrue) (env-set-prelude (predates _) env2 (env-scope (predates _) env2))) ((BFalse) env2)) (BFalse)))))))
+              ((Some b e) (match many e (((Env) e)) ((MkSynErr line m) (env-report env1 (located (env-at env1 line) ": syntax error: " m)))))
+              ((None b) (run-toplevel items env1))))
+          (run-files rest (match many first (((Env) e)) ((BTrue) (env-set-prelude env2 (env-scope env2))) ((BFalse) env2)) (BFalse)))))))
 
 (def-fns compile-lvl $ many compile : (many (List (Pair (String) (String))) srcs) -> (many (IO io-lvl) io)
-  (let (many env) (run-files (predates _) srcs (make-builtins (predates _)) (BTrue)))
-  (match many (env-errors (predates _) env) _
-    ((Cons a e rest) (write-errors (predates _) (list-rev (predates _) (String) (env-errors (predates _) env)) (Exit io-lvl exit-fail)))
-    ((Nil a) (rope-io (predates _) io-lvl (emit-program (predates _) env) (Exit io-lvl exit-ok)))))
+  (let (many env) (run-files srcs (make-builtins) (BTrue)))
+  (match many (env-errors env) _
+    ((Cons a e rest) (write-errors (list-rev (String) (env-errors env)) (Exit io-lvl exit-fail)))
+    ((Nil a) (rope-io io-lvl (emit-program env) (Exit io-lvl exit-ok)))))
 
 (def-fns slc-lvl $ many read-files : (many (List (String)) paths) (many (List (Pair (String) (String))) acc) -> (many (IO io-lvl) io)
   (match many paths _
-    ((Nil a) (compile (predates _) (list-rev (predates _) (Pair (String) (String)) acc)))
+    ((Nil a) (compile (list-rev (Pair (String) (String)) acc)))
     ((Cons a path rest)
       (def-fns io-lvl $ many after-read : (many (Result (String)) r) -> (many (IO io-lvl) next)
         (match many r _
           ((Fail b m) (WriteErr io-lvl "slc: " (WriteErr io-lvl m (WriteErr io-lvl "\n" (Exit io-lvl exit-fail)))))
-          ((Ok b src) (read-files (predates _) rest (Cons (Pair (String) (String)) (MkPair (String) (String) path src) acc)))))
+          ((Ok b src) (read-files rest (Cons (Pair (String) (String)) (MkPair (String) (String) path src) acc)))))
       (ReadFile io-lvl path after-read))))
 
 (def-fns io-lvl $ many start : (many (List (String)) args) -> (many (IO io-lvl) io)
   (match many args _
     ((Nil a) (WriteErr io-lvl "usage: slc -- prelude.sl file.sl ... > out.ml\n" (Exit io-lvl exit-fail)))
-    ((Cons a p rest) (read-files (predates _) args (Nil (Pair (String) (String)))))))
+    ((Cons a p rest) (read-files args (Nil (Pair (String) (String)))))))
 
 (GetArgs io-lvl start)
