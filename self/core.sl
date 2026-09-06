@@ -2233,7 +2233,7 @@
                                   ((Some d s2)
                                     (let (many s3) (erased ps3) (canon-in k f2 bnd tb2 s))
                                     (let (many s4) (erased ps4) (canon-in k f2 bnd tb2 s2))
-                                    (unify (subterm p) k f2 bnd tb2 s3 ps3 s4 ps4 env2))))))
+                                    (unify k f2 bnd tb2 s3 ps3 s4 ps4 env2))))))
                           (match many after-sig _
                             ((Contra c cc m) (Contra n bnd m))
                             ((Same c cc)
@@ -2245,7 +2245,7 @@
                                     ((Some e m2)
                                       (let (many m3) (erased pm3) (canon-in k f2 bnd tb2 m1))
                                       (let (many m4) (erased pm4) (canon-in k f2 bnd tb2 m2))
-                                      (lift n bnd k f2 tb2 env2 p (unify (subterm p) k f2 bnd tb2 m3 pm3 m4 pm4 env2)))))))
+                                      (lift n bnd k f2 tb2 env2 p (unify k f2 bnd tb2 m3 pm3 m4 pm4 env2)))))))
                             ((Less c cc j f3 tb3 env3 q)
                               (match many mx (((Outcome n bnd) r))
                                 ((None d) (Less n bnd j f3 tb3 env3 (subterm-trans q p)))
