@@ -106,3 +106,10 @@ that the test does not make is a mistake in this file.
   to successor form, walking only as far as the floor it is given, which is
   what lets one index a `Vec`. The third writes out what both expand to, so
   the sugar can be read against the calls it stands for.
+- `tests/bare_call.sl`, `tests/bare_lex.sl` — calls with no decrease
+  annotation (SUGAR.md 3): the first has a `Predates` proof and a `Subterm`
+  proof inferred beside a written `_`; the second is `tests/ackermann.sl`
+  with nothing written, the inferred position being the first `subterm`
+  argument that differs from its counterpart. `tests/bare_lex_bad.sl` shows
+  there is no search: a first argument that grows is refused although the
+  second decreases.

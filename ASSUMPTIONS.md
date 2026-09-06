@@ -1624,3 +1624,27 @@ none of it is design.
     own exit codes are built as the tests' are, by reflection at top
     level (109).
 
+113. **A call with no decrease annotation gets one inferred** (SUGAR.md
+    3; `Elab.elab_call`, `elab-call` in `self/elab.sl`). Inside a
+    function body a call carrying neither `(predates p)` nor
+    `(subterm p)` is elaborated as if it carried `(predates _)` when the
+    callee's level and the current level differ canonically (75), and
+    otherwise `(subterm _)` at the first `subterm` position whose
+    argument differs canonically from the enclosing counterpart. The
+    check itself did not change: the same minters build the proof and
+    the same comparisons read it. What changed is which programs are
+    refused, and how. A bare call is no longer "needs a (subterm p)
+    annotation"; it is refused only where the inferred proof fails, with
+    that failure's message: `prove-predates`'s where the callee's level
+    is later or was not minted by `def-lvl`, "is not a strict subterm
+    of" where the chosen argument does not decrease, and "same-level
+    call to f decreases no subterm argument" where every position
+    agrees. `tests/no_predates.sl` and `tests/no_subterm.sl` expect
+    those messages now, `tests/level_alias_bad.sl` the last of them, and
+    `tests/bare_call.sl` shows both inferred kinds and a two-position
+    lexicographic decrease without annotations. The generated prelude
+    calls of 104 and 111 carry no annotation any more. That the first
+    differing position is the only one an annotation could succeed at,
+    and so that bare calls accept exactly what `_` accepted, is the
+    session's reading, not the owner's; the tests are the evidence.
+

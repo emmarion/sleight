@@ -17,17 +17,34 @@ Where a `match` is the result expression of a function body or of a match
 branch body (§16), the telescope it must produce is already fixed by that
 body. `_` in place of the annotation (§11) would reuse it.
 
-## 3. `_` in a call's decrease annotation
+## 3. `_` in a call's decrease annotation, and no annotation at all
 
-`(predates _)` would read the callee's level (`level-of`, §27) and the
-level of the body being elaborated into, and build the `Predates` proof
-relating them. `(subterm _)` would attempt the `Subterm` proof for the
-argument it precedes. Both naive — no search, so both would fail wherever
-a proof needs §8's transitivity axioms.
+`(predates _)` reads the callee's level (`level-of`, §27) and the level
+of the body being elaborated into, and builds the `Predates` proof
+relating them. `(subterm _)` attempts the `Subterm` proof for the
+argument it precedes. Both naive — no search, so both fail wherever a
+proof needs §8's transitivity axioms, comes from a parameter or a call,
+or is carried in data; such a call writes its proof out, as DESIGN.md
+§9 has it.
+
+A call inside a function body may also carry no annotation at all. The
+elaborator then supplies one: `(predates _)` when the callee's level and
+the current level do not canonicalize equal, otherwise `(subterm _)`
+before the first `subterm`-marked argument that does not canonicalize
+equal to its counterpart among the enclosing function's `subterm`
+arguments (DESIGN.md §3, §9). As far as this note can tell that is the
+only position at which `(subterm _)` could succeed — a canonically
+equal argument is no strict subterm of its counterpart, and §9 wants
+equality at every earlier position — so a bare call should be accepted
+exactly when some `_` annotation would be. The proof is built and
+checked as before; only its spelling is gone. A same-level call whose
+`subterm` arguments all canonicalize equal to their counterparts is an
+error. At the top level a bare call is what §24 already has.
 
 ## 4. Worked example: `map` with sugar
 
-The same program as DESIGN.md §33, which is written without any.
+The same program as DESIGN.md §33, which is written without any, the
+calls with no annotation (§3).
 
 ```scheme
 (def-fns _ $ many map-factory : (erased (Level) M) ->
@@ -44,7 +61,7 @@ The same program as DESIGN.md §33, which is written without any.
     (match many xs _
       ((Nil a) (Nil B))
       ((Cons a hd tl)
-        (Cons B (f (predates _) hd) $ map A B f (subterm _) tl))))
+        (Cons B (f hd) $ map A B f tl))))
   (values (level-of map) map))
 ```
 

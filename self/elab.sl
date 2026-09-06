@@ -1081,10 +1081,10 @@
 (def-fns _ $ many cannot-apply-in-type : (many (Env) env) (many (Term) h) -> (many (String) s)
   (str-cat3 (predates _) (show-t (predates _) env h) " has type " (str-cat (predates _) (show-t (predates _) env (infer (predates _) h env)) " and cannot be applied in a type")))
 
-(def-fns _ $ many call-needs : (many (Env) env) (many (Res) callee) (many (Bool) same) -> (many (String) s)
+(def-fns _ $ many annotation-kind : (many (Env) env) (many (Res) callee) (many (Bool) same) -> (many (String) s)
   (match many same _
-    ((BTrue) (str-cat3 (predates _) "same-level call to " (show-t (predates _) env (res-term (predates _) callee)) " needs a (subterm p) annotation"))
-    ((BFalse) (str-cat3 (predates _) "lower-level call to " (show-t (predates _) env (res-term (predates _) callee)) " needs a (predates p) annotation"))))
+    ((BTrue) (str-cat3 (predates _) "same-level call to " (show-t (predates _) env (res-term (predates _) callee)) " takes a (subterm p) annotation, not (predates p)"))
+    ((BFalse) (str-cat3 (predates _) "lower-level call to " (show-t (predates _) env (res-term (predates _) callee)) " takes a (predates p) annotation, not (subterm p)"))))
 
 (def-fns _ $ many level-of-error : (many (Env) env) (many (Term) f) (many (Term) ty) -> (many (String) s)
   (str-cat3 (predates _) "level-of: " (show-t (predates _) env f) (str-cat3 (predates _) " : " (show-t (predates _) env ty) " is not a function")))
@@ -1646,12 +1646,21 @@
 
 
 ; A call's decrease annotation (section 9): (predates p) right after the callee, or (subterm p) right before
-; the decreasing argument, whose position it carries; the proof p sits inside the call's arguments root.
+; the decreasing argument, whose position it carries; a written proof p sits inside the call's arguments
+; root, and _ or no annotation at all leaves the proof to the elaborator (SUGAR.md 3).
+(def-adts $ Given : ((List (Raw)) root) -> Type
+  enum
+  (many Inferred : (erased (List (Raw)) root) -> (Given root))
+  (many Written : (erased (List (Raw)) root) (many (Raw) p) (erased (Subterm (Raw) p (List (Raw)) root) q) -> (Given root)))
+
 (def-adts $ Ann : ((List (Raw)) root) -> Type
   enum
   (many AnnNone : (erased (List (Raw)) root) -> (Ann root))
-  (many AnnPredates : (erased (List (Raw)) root) (many (Raw) p) (erased (Subterm (Raw) p (List (Raw)) root) q) -> (Ann root))
-  (many AnnSubterm : (erased (List (Raw)) root) (many (Nat) i) (many (Raw) p) (erased (Subterm (Raw) p (List (Raw)) root) q) -> (Ann root)))
+  (many AnnPredates : (erased (List (Raw)) root) (many (Given root) g) -> (Ann root))
+  (many AnnSubterm : (erased (List (Raw)) root) (many (Nat) i) (many (Given root) g) -> (Ann root)))
+
+(def-fns _ $ many given-of : (erased (List (Raw)) root) (many (Raw) p) (erased (Subterm (Raw) p (List (Raw)) root) q) -> (many (Given root) g)
+  (match many (is-underscore (predates _) p) _ ((BTrue) (Inferred root)) ((BFalse) (Written root p q))))
 
 (def-fns _ $ many ann-of : (many (Env) env) (many (Raw) arg) (many (Nat) i) (erased (List (Raw)) root) (erased (Subterm (Raw) arg (List (Raw)) root) pa) -> (many (Ann root) r)
   (match many arg _
@@ -1667,8 +1676,8 @@
                 ((Nil d)
                   (let (erased pp) (subterm-trans (prove-subterm p arg) pa))
                   (match many (and (predates _) (is-mark (predates _) env k (MkPredates)) (nat-is-zero (predates _) i)) _
-                    ((BTrue) (AnnPredates root p pp))
-                    ((BFalse) (match many (is-mark (predates _) env k (MkSubterm)) _ ((BTrue) (AnnSubterm root i p pp)) ((BFalse) (AnnNone root)))))))))))) (else (AnnNone root))))
+                    ((BTrue) (AnnPredates root (given-of (predates _) root p pp)))
+                    ((BFalse) (match many (is-mark (predates _) env k (MkSubterm)) _ ((BTrue) (AnnSubterm root i (given-of (predates _) root p pp))) ((BFalse) (AnnNone root)))))))))))) (else (AnnNone root))))
 
 ; The first annotation and the arguments without it; a second annotation stays an argument, as in lib/elab.ml.
 (def-fns _ $ many split-annotation : (subterm many (List (Raw)) args) (erased (List (Raw)) root) (erased (Within args root) w) (many (Env) env) (many (Nat) i) -> (many (Ann root) ann) (many (List (Sub root)) rest)
@@ -1681,8 +1690,8 @@
         ((AnnNone z)
           (let (many ann) (many rest) (split-annotation (subterm _) more root wm env (Succ i)))
           (values ann (Cons (Sub root) (MkSub root arg pa) rest)))
-        ((AnnPredates z p q) (values (AnnPredates root p q) (subs-of (predates _) more root wm)))
-        ((AnnSubterm z j p q) (values (AnnSubterm root j p q) (subs-of (predates _) more root wm)))))))
+        ((AnnPredates z g) (values (AnnPredates root g) (subs-of (predates _) more root wm)))
+        ((AnnSubterm z j g) (values (AnnSubterm root j g) (subs-of (predates _) more root wm)))))))
 
 (def-fns _ $ many subterm-indices : (subterm many (List (Entry)) tele) (many (Nat) i) -> (many (List (Nat)) r)
   (match many tele _
@@ -1691,6 +1700,30 @@
       (match many (entry-sub (predates _) e) _
         ((BTrue) (Cons (Nat) i (subterm-indices (subterm _) rest (Succ i))))
         ((BFalse) (subterm-indices (subterm _) rest (Succ i)))))))
+
+; A bare call's annotation (SUGAR.md 3): (predates _) where the levels differ, otherwise (subterm _) at the
+; first subterm argument that differs from its counterpart; a written annotation stays as it is.
+(def-fns _ $ many first-differing : (subterm many (List (Nat)) positions) (many (Env) env) (many (List (Term)) args) (many (Nat) j) -> (many (Maybe (Nat)) r)
+  (match many positions _
+    ((Nil a) (None (Nat)))
+    ((Cons a pi rest)
+      (match many (list-nth (predates _) (Bin) (env-subterms (predates _) env) j) _
+        ((None b) (None (Nat)))
+        ((Some b counterpart)
+          (match many (equal-env (predates _) env (nth-term (predates _) args pi) (TVar counterpart)) _
+            ((BFalse) (Some (Nat) pi))
+            ((BTrue) (first-differing (subterm _) rest env args (Succ j)))))))))
+
+(def-fns _ $ many resolve-ann : (many (Env) env) (erased (List (Raw)) root) (many (Ann root) ann) (many (Res) callee) (many (Bool) same) (many (List (Nat)) positions) (many (List (Term)) args) -> (many (Env) r) (many (Ann root) a)
+  (match many ann _
+    ((AnnNone z)
+      (match many same _
+        ((BFalse) (values env (AnnPredates root (Inferred root))))
+        ((BTrue)
+          (match many (first-differing (predates _) positions env args 0) _
+            ((Some b i) (values env (AnnSubterm root i (Inferred root))))
+            ((None b) (values (env-error (predates _) env (str-cat3 (predates _) "same-level call to " (show-t (predates _) env (res-term (predates _) callee)) " decreases no subterm argument")) (AnnNone root)))))))
+    (else (values env ann))))
 
 (def-fns _ $ many index-of-nat : (subterm many (List (Nat)) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe (Nat)) r)
   (match many xs _
@@ -1835,9 +1868,6 @@
 
 (let (many sugar-budget) 1)
 
-(def-fns _ $ many prelude-call : (many (Env) env) -> (many (String) p)
-  (match many (env-level (predates _) env) _ ((None a) "") ((Some a l) "(predates _) ")))
-
 (def-fns _ $ many bin-text : (many (Nat) n) -> (many (String) s)
   (rope-str (predates _) (show-bin (predates _) (bin-of-nat (predates _) n (BZ)))))
 
@@ -1857,7 +1887,7 @@
 
 ; Folds the one-step proofs from z up to z+k into one Eq relating the top literal to [floor] under k
 ; successors: numeral-succ's step, eq-cong-succ under the successors so far, eq-trans joining them.
-(def-fns _ $ many unary-fold : (subterm many (Nat) k) (many (Nat) z) (many (Nat) lo) (many (String) floor) (many (String) acc) (many (String) p) -> (many (String) s)
+(def-fns _ $ many unary-fold : (subterm many (Nat) k) (many (Nat) z) (many (Nat) lo) (many (String) floor) (many (String) acc) -> (many (String) s)
   (match many k _
     ((Zero) acc)
     ((Succ j)
@@ -1865,24 +1895,24 @@
       (let (many zs) (nat-str (predates _) z))
       (let (many ns) (nat-str (predates _) n))
       (let (many below) (succs (predates _) (nat-sub (predates _) z lo) floor))
-      (let (many stp) (str-cat3 (predates _) "(numeral-succ " p
+      (let (many stp) (str-cat (predates _) "(numeral-succ "
                         (str-cat3 (predates _) (bin-text (predates _) z) " " (str-cat3 (predates _) (bin-text (predates _) n) " "
                           (str-cat3 (predates _) zs " " (str-cat3 (predates _) ns " " (str-cat3 (predates _) (bin-succ-witness (predates _) (bin-of-nat (predates _) z (BZ)))
                             " (numeral-of " (str-cat3 (predates _) zs ") (numeral-of " (str-cat (predates _) ns "))")))))))))
-      (let (many congd) (str-cat3 (predates _) "(eq-cong-succ " p (str-cat3 (predates _) zs " " (str-cat3 (predates _) below " " (str-cat (predates _) acc ")")))))
-      (let (many acc2) (str-cat3 (predates _) "(eq-trans " p (str-cat3 (predates _) "(Nat) " ns
-                         (str-cat3 (predates _) " (Succ " zs (str-cat3 (predates _) ") (Succ " below (str-cat3 (predates _) ") " stp (str-cat3 (predates _) " " congd ")")))))))
-      (unary-fold (subterm _) j n lo floor acc2 p))))
+      (let (many congd) (str-cat (predates _) "(eq-cong-succ " (str-cat3 (predates _) zs " " (str-cat3 (predates _) below " " (str-cat (predates _) acc ")")))))
+      (let (many acc2) (str-cat3 (predates _) "(eq-trans (Nat) " ns
+                         (str-cat3 (predates _) " (Succ " zs (str-cat3 (predates _) ") (Succ " below (str-cat3 (predates _) ") " stp (str-cat3 (predates _) " " congd ")"))))))
+      (unary-fold (subterm _) j n lo floor acc2))))
 
-(def-fns _ $ many unary-source : (many (Nat) za) (many (Nat) lo) (many (Bool) floored) (many (String) p) -> (many (String) s)
+(def-fns _ $ many unary-source : (many (Nat) za) (many (Nat) lo) (many (Bool) floored) -> (many (String) s)
   (let (many floor) (many acc)
     (match many floored (((String) f) ((String) a))
-      ((BFalse) (values "(Zero)" (str-cat3 (predates _) "(numeral-zero " p "0 (numeral-of 0))")))
+      ((BFalse) (values "(Zero)" "(numeral-zero 0 (numeral-of 0))"))
       ((BTrue) (values (nat-str (predates _) lo) (str-cat3 (predates _) "(Refl (Nat) " (nat-str (predates _) lo) ")")))))
-  (str-cat3 (predates _) "(let-match erased " (unary-fold (predates _) (nat-sub (predates _) za lo) lo lo floor acc p) " (Refl _ _))"))
+  (str-cat3 (predates _) "(let-match erased " (unary-fold (predates _) (nat-sub (predates _) za lo) lo lo floor acc) " (Refl _ _))"))
 
-(def-fns _ $ many distinct-source : (many (Nat) za) (many (Nat) zb) (many (String) p) -> (many (String) s)
-  (str-cat3 (predates _) "(match erased (numeral-inj " p
+(def-fns _ $ many distinct-source : (many (Nat) za) (many (Nat) zb) -> (many (String) s)
+  (str-cat (predates _) "(match erased (numeral-inj "
     (str-cat3 (predates _) (bin-text (predates _) za) " " (str-cat3 (predates _) (bin-text (predates _) zb) " "
       (str-cat3 (predates _) (nat-str (predates _) za) " (numeral-of " (str-cat3 (predates _) (nat-str (predates _) za) ") (numeral-of "
         (str-cat (predates _) (nat-str (predates _) zb) ")) (((False) f)) (absurd Refl))")))))))
@@ -2430,7 +2460,7 @@
                         (match many sugar _
                           ((Zero) (values (env-error (predates _) env2 "internal: a generated form contains sugar") (SNone)))
                           ((Succ k)
-                            (let (many envp) (many g) (generated-form (predates _) (unary-source (predates _) za l floored (prelude-call (predates _) env2)) env2))
+                            (let (many envp) (many g) (generated-form (predates _) (unary-source (predates _) za l floored) env2))
                             (match many g _
                               ((None d) (values (leave-prelude (predates _) env2 envp) (SNone)))
                               ((Some d gen)
@@ -2473,7 +2503,7 @@
                                         (match many sugar (((Env) e0) ((List (Res)) rs0) ((Code) c0))
                                           ((Zero) (values (env-error (predates _) env2 "internal: a generated form contains sugar") none bad))
                                           ((Succ k)
-                                            (let (many envp) (many g) (generated-form (predates _) (distinct-source (predates _) za zb (prelude-call (predates _) env2)) env2))
+                                            (let (many envp) (many g) (generated-form (predates _) (distinct-source (predates _) za zb) env2))
                                             (match many g (((Env) e0) ((List (Res)) rs0) ((Code) c0))
                                               ((None f) (values (leave-prelude (predates _) env2 envp) none bad))
                                               ((Some f gen)
@@ -3034,7 +3064,8 @@
                   (values env5 (CLet bound call (CValues kept))))))))
         (values env5 (ress-of (predates _) ids env5) code))))
 
-  ; The call-site proof (section 9), read against the current level and enclosing subterm parameters.
+  ; The call-site proof (section 9), read against the current level and enclosing subterm parameters; a bare
+  ; call gets its annotation from resolve-ann first.
   (many check-call-proof : (subterm many (Nat) sugar) (subterm many (List (Raw)) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (Res) callee) (many (Term) lv) (many (List (Entry)) params) (many (List (Term)) args) -> (many (Env) r)
     (match many (env-level (predates _) env) _
       ((None a)
@@ -3042,50 +3073,50 @@
           ((AnnNone z) env) (else (env-error (predates _) env "the top level calls without proofs; drop the decrease annotation (section 24)"))))
       ((Some a cur)
         (let (many same) (equal-env (predates _) env lv (TVar cur)))
-        (match many ann _
-          ((AnnNone z) (env-error (predates _) env (call-needs (predates _) env callee same)))
-          ((AnnSubterm z i p pp)
+        (let (many positions) (subterm-indices (predates _) params 0))
+        (let (many env1) (many ann2) (resolve-ann (predates _) env rawargs ann callee same positions args))
+        (match many ann2 _
+          ((AnnNone z) env1)
+          ((AnnSubterm z i g)
             (match many same _
-              ((BFalse) (env-error (predates _) env (call-needs (predates _) env callee same)))
+              ((BFalse) (env-error (predates _) env1 (annotation-kind (predates _) env1 callee same)))
               ((BTrue)
-                (let (many positions) (subterm-indices (predates _) params 0))
                 (match many (index-of-nat (predates _) positions i 0) _
-                  ((None b) (env-error (predates _) env (str-cat3 (predates _) "argument " (nat-str (predates _) i) " is not a subterm parameter")))
+                  ((None b) (env-error (predates _) env1 (str-cat3 (predates _) "argument " (nat-str (predates _) i) " is not a subterm parameter")))
                   ((Some b kk)
-                    (let (many env2) (check-earlier (predates _) positions env args 0 kk))
+                    (let (many env2) (check-earlier (predates _) positions env1 args 0 kk))
                     (match many (list-nth (predates _) (Bin) (env-subterms (predates _) env2) kk) _
                       ((None c) (env-error (predates _) env2 (str-cat3 (predates _) "the enclosing function has no subterm parameter at position " (nat-str (predates _) kk) "")))
                       ((Some c counterpart)
                         (let (many arg) (nth-term (predates _) args i))
                         (let (many env3) (many pterm)
-                          (match many (is-underscore (predates _) p) (((Env) e0) ((Term) t0))
-                            ((BTrue) (let (many env3) (many pr) (mint-subterm (predates _) env2 arg (TVar counterpart))) (values env3 (res-term (predates _) pr)))
-                            ((BFalse)
+                          (match many g (((Env) e0) ((Term) t0))
+                            ((Inferred w) (let (many env3) (many pr) (mint-subterm (predates _) env2 arg (TVar counterpart))) (values env3 (res-term (predates _) pr)))
+                            ((Written w p pp)
                               (let (many env3) (many prs) (many pc) (elab-expr sugar (subterm pp) p env2 erased-one no-tele (CCPlain)))
                               (values env3 (erased-term (predates _) prs)))))
                         (let (many env4) (many s0) (many s1) (many s2) (many s3) (expect-proof4 (predates _) env3 subterm-id pterm))
                         (let (many env5) (check (predates _) env4 "value" s1 arg))
                         (check (predates _) env5 "value" s3 (TVar counterpart)))))))))
-          ((AnnPredates z p pp)
+          ((AnnPredates z g)
             (match many same _
-              ((BTrue) (env-error (predates _) env (call-needs (predates _) env callee same)))
+              ((BTrue) (env-error (predates _) env1 (annotation-kind (predates _) env1 callee same)))
               ((BFalse)
                 (let (many env2) (many pterm)
-                  (match many (is-underscore (predates _) p) (((Env) e0) ((Term) t0))
-                    ((BTrue)
-                      (let (many nv-env) (many nv-term) (values (env-error (predates _) env (str-cat (predates _) (show-t (predates _) env lv) " is not a variable")) (TErr "level")))
-                      (match many (canon-env (predates _) env lv) (((Env) e0) ((Term) t0))
-                        ((TVar m) (let (many env2) (many pr) (mint-predates (predates _) env m cur)) (values env2 (res-term (predates _) pr)))
-                        ((TErr m) (values (env-error (predates _) env m) (TErr m))) (else (values nv-env nv-term))))
-                    ((BFalse)
-                      (let (many env2) (many prs) (many pc) (elab-expr sugar (subterm pp) p env erased-one no-tele (CCPlain)))
+                  (match many g (((Env) e0) ((Term) t0))
+                    ((Inferred w)
+                      (let (many nv-env) (many nv-term) (values (env-error (predates _) env1 (str-cat (predates _) (show-t (predates _) env1 lv) " is not a variable")) (TErr "level")))
+                      (match many (canon-env (predates _) env1 lv) (((Env) e0) ((Term) t0))
+                        ((TVar m) (let (many env2) (many pr) (mint-predates (predates _) env1 m cur)) (values env2 (res-term (predates _) pr)))
+                        ((TErr m) (values (env-error (predates _) env1 m) (TErr m))) (else (values nv-env nv-term))))
+                    ((Written w p pp)
+                      (let (many env2) (many prs) (many pc) (elab-expr sugar (subterm pp) p env1 erased-one no-tele (CCPlain)))
                       (values env2 (erased-term (predates _) prs)))))
                 (let (many env3) (many p0) (many p1) (many p2) (expect-proof3 (predates _) env2 predates-id pterm))
                 (let (many env4) (check (predates _) env3 "value" p2 (TVar cur)))
                 (match many (equal-env (predates _) env4 p1 lv) _
                   ((BTrue) env4)
                   ((BFalse) (env-error (predates _) env4 (str-cat3 (predates _) (show-t (predates _) env4 pterm) " : " (str-cat3 (predates _) (show-t (predates _) env4 (infer (predates _) pterm env4)) " does not relate the callee's level " (show-t (predates _) env4 lv))))))))))))))
-
 
 ; ---- The top level (section 16): statements run as they are elaborated, the final expression consumed;
 ; only the last form may be an expression (ASSUMPTIONS 12).

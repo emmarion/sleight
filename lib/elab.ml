@@ -34,13 +34,11 @@ let var env loc n =
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
-(* Elaborate in the prelude's scope, so user shadowing cannot reach a generated form; the level context,
-   and so [predates _], stays the caller's. *)
+(* Elaborate in the prelude's scope, so user shadowing cannot reach a generated form; the level context
+   stays the caller's. *)
 let in_prelude env f =
   let frame, r = f { env with scope = env.prelude } in
   ({ frame with scope = env.scope }, r)
-
-let prelude_call env = if env.level = Env.Top then "" else "(predates _) "
 
 (* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
 let numeral_entry env loc raw =
@@ -399,6 +397,17 @@ and elab_call cc env expect l callee hcode lv params rets args arg =
   let counterpart k = match List.nth_opt env.subterms k with Some x -> x | None -> error l "the enclosing function has no subterm parameter at position %d" k in
   let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
   let same cur = equal (canon env lv) (canon env (Var cur)) in
+  let annotation =
+    let wild = Atom (l, "_") in
+    let differs j pi = match List.nth_opt env.subterms j with Some x -> not (equal (canon env (List.nth arg_terms pi)) (canon env (Var x))) | None -> false in
+    match (env.level, annotation) with
+    | At cur, None when same cur -> (
+        match List.find_opt (fun (j, pi) -> differs j pi) (List.mapi (fun j pi -> (j, pi)) subterm_params) with
+        | Some (_, i) -> Some (`Subterm (i, wild))
+        | None -> error l "same-level call to %s decreases no subterm argument" (show env callee.term))
+    | At _, None -> Some (`Predates wild)
+    | _ -> annotation
+  in
   let env =
     match (env.level, annotation) with
     | Top, None -> env
@@ -421,8 +430,8 @@ and elab_call cc env expect l callee hcode lv params rets args arg =
             env
         | _ -> assert false)
     | At cur, _ ->
-        let kind, ann = if same cur then ("same", "subterm") else ("lower", "predates") in
-        error l "%s-level call to %s needs a (%s p) annotation" kind (show env callee.term) ann
+        let kind, ann, other = if same cur then ("same", "subterm", "predates") else ("lower", "predates", "subterm") in
+        error l "%s-level call to %s takes a (%s p) annotation, not (%s p)" kind (show env callee.term) ann other
   in
   let env, ids = open_tele env ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   let code =
@@ -769,22 +778,21 @@ and elab_unary env l args =
   if Z.gt k (Z.of_int 4096) then error l "unary: %s successors is beyond the limit" (Z.to_string k);
   let rec upto z acc = if Z.geq z za then List.rev acc else upto (Z.succ z) (z :: acc) in
   let env = List.fold_left (fun env z -> hoist env (Literal.Numeral z)) env (za :: upto lo []) in
-  let p = prelude_call env in
   (* Fold the one-step proofs into a single Eq relating the literal to [floor] under k successors, so one
      let-match mints one rule and the literals walked over stay opaque. *)
   let floor, acc =
-    if List.length args = 1 then ("(Zero)", Printf.sprintf "(numeral-zero %s0 (numeral-of 0))" p)
+    if List.length args = 1 then ("(Zero)", "(numeral-zero 0 (numeral-of 0))")
     else (Z.to_string lo, Printf.sprintf "(Refl (Nat) %s)" (Z.to_string lo))
   in
   let step acc z =
     let n = Z.succ z in
     let below = Literal.succs (Z.to_int (Z.sub z lo)) floor in
     let stp =
-      Printf.sprintf "(numeral-succ %s%s %s %s %s %s (numeral-of %s) (numeral-of %s))" p (Literal.bin z)
+      Printf.sprintf "(numeral-succ %s %s %s %s %s (numeral-of %s) (numeral-of %s))" (Literal.bin z)
         (Literal.bin n) (Z.to_string z) (Z.to_string n) (Literal.bin_succ z) (Z.to_string z) (Z.to_string n)
     in
-    let congd = Printf.sprintf "(eq-cong-succ %s%s %s %s)" p (Z.to_string z) below acc in
-    Printf.sprintf "(eq-trans %s(Nat) %s (Succ %s) (Succ %s) %s %s)" p (Z.to_string n) (Z.to_string z) below stp congd
+    let congd = Printf.sprintf "(eq-cong-succ %s %s %s)" (Z.to_string z) below acc in
+    Printf.sprintf "(eq-trans (Nat) %s (Succ %s) (Succ %s) %s %s)" (Z.to_string n) (Z.to_string z) below stp congd
   in
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
   in_prelude env (fun env -> elab_stmt env (List.hd (Reader.parse src)))
@@ -795,8 +803,8 @@ and elab_distinct env l a b =
   if not (equal (canon env (Var xa)) (canon env (Var xb))) then
     error l "distinct: %s and %s do not canonicalize equally here" (Z.to_string za) (Z.to_string zb);
   let src =
-    Printf.sprintf "(match erased (numeral-inj %s%s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
-      (prelude_call env) (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
+    Printf.sprintf "(match erased (numeral-inj %s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
+      (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
   in
   let raw = match Reader.parse src with [ r ] -> r | _ -> assert false in
   let env, (ress, code) =

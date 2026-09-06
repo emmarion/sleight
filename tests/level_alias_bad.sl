@@ -1,4 +1,4 @@
-; error: needs a (subterm p) annotation
+; error: decreases no subterm argument
 ; A branch that equates the enclosing function's own level with an older one must not turn its
 ; same-level self-call into a lower-level one: both levels are read canonically (ASSUMPTIONS 75).
 ; Read literally, the call needs no Subterm decrease and bad is lt_subterm.sl's loop -- a total
@@ -23,8 +23,9 @@
     (many Diag : (erased (Level) L) -> (Pair L L))))
 
 ; bad sits at level Q and calls itself. Inside the branch Q canonicalizes to P, so comparing the
-; callee's level (canonically P) against the bare current level (Q) makes the two differ and the
-; self-call read as a lower-level call -- which pq discharges, with no decreasing argument at all.
+; callee's level (canonically P) against the bare current level (Q) would make the two differ and the
+; bare self-call read as a lower-level call -- which the inferred Predates proof between the two levels
+; would discharge, with no decreasing argument at all. tests/level_alias_predates_bad.sl writes pq out.
 (def-fns Q $ erased bad : (many (Pair Q P) t) -> (erased (Absurd) f)
   (match many t (((Absurd) r))
-    ((Diag l) (bad (predates pq) t))))
+    ((Diag l) (bad t))))
