@@ -158,7 +158,8 @@ ASSUMPTIONS.md 114-116 record the session's reading of the rest.
   `open-absurd` refuses a `Newtype`, its contradicting form being among
   the points section 2 leaves unsettled.
 - `let-match` requires the opened `Matchable`, as `match` does;
-  `coercible-of` keeps its ambient fetch.
+  `coercible-of` keeps its ambient fetch for now (a TBD for DESIGN.md
+  section 38).
 - `coercible-ctor` drops its phantom check and so consults no
   `Matchable`; the reading behind that is ASSUMPTIONS 116.
 - DESIGN.md is not yet edited.

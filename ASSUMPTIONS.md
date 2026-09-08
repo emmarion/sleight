@@ -1686,7 +1686,7 @@ and section 27 does not list the two forms.
     `match`, `let-match`, `comptime-match`, the emptiness check,
     `matchable-of`, `newtype-of`, `coercible-wrap`, section 18's
     disjointness rule and the unification of the Matchables two equated
-    type constructors head are all gated, and an unopened first-class
+    type constructors head all find only what is open, and an unopened first-class
     `TyCtor` unifies with any other (`tests/open_tyctor.sl`,
     `tests/unopened_matchable_bad.sl`, `tests/unopened_newtype_bad.sl`).
     `def-adts` and the built-in `Special` open what they mint. Section
@@ -1697,9 +1697,9 @@ and section 27 does not list the two forms.
     marks a contradiction elsewhere. The first-class tests
     (`tests/first_class.sl` and its kin) gained an `(open-adt m)`, and
     "has no Matchable in scope" became "has no Matchable open", likewise
-    for a Newtype. That gating `let-match` is right is the owner's;
-    gating the unification check is the session's reading of the
-    proposal's "unopened means opaque, upward too".
+    for a Newtype. That `let-match` reads only an opened Matchable is the
+    owner's; that the unification check does is the session's reading
+    of the proposal's "unopened means opaque, upward too".
 
 115. **A `Newtype` is recorded, not asserted, and has no contradicting
     form** (the owner's choice in chat, from the proposal's unsettled
@@ -1708,9 +1708,9 @@ and section 27 does not list the two forms.
     `open-absurd` on one is refused as undecided
     (`tests/open_absurd_newtype_bad.sl`). Still open, as the proposal
     lists them: whether an opened `Newtype` for `C` beside an opened
-    `Matchable` marking `C` phantom is a contradiction, and whether
-    `coercible-of`'s fetch, which still reads ambient scope, should be
-    gated.
+    `Matchable` marking `C` phantom is a contradiction. `coercible-of`
+    keeps its fetch from ambient scope for now, the owner's decision in
+    chat, to be recorded as a TBD in DESIGN.md section 38.
 
 116. **`coercible-ctor` no longer refuses a phantom constructor**, so
     it reads no `Matchable` and needs none opened

@@ -104,7 +104,8 @@ that the test does not make is a mistake in this file.
   constructors; and a first-class type constructor that unifies with `Nat`
   until its `Matchable` is opened and its constructors' signatures tell the
   two apart. `tests/unopened_matchable_bad.sl` and
-  `tests/open_adt_branch_bad.sl` show the gate and an open's extent.
+  `tests/open_adt_branch_bad.sl` show a match finding nothing unopened, and an
+  open's extent.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
