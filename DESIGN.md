@@ -802,8 +802,9 @@ There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
 succeeds by adding the needed `is` fact(s). Two atoms conflict only when
-one `Matchable` in scope lists both or their signatures or `Matchable`s
-cannot unify; nothing is refuted on a name's identity.
+one opened `Matchable` lists both, or their signatures cannot unify, or
+they are type constructors whose opened `Matchable`s, one each, cannot;
+nothing is refuted on a name's identity.
 
 A `Matchable` doesn't need to be threaded through explicitly — having one
 for the relevant type anywhere in ambient scope is enough for the
