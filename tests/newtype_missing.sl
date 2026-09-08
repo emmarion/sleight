@@ -1,5 +1,6 @@
-; error: has no Newtype in scope
-; coercible-wrap needs the constructor's Newtype in ambient scope (section 38); an unmarked type mints none.
+; error: has no Newtype open
+; coercible-wrap needs the constructor's Newtype opened (section 38, proposals/matchable-newtype-opening.md);
+; an unmarked type mints none.
 
 (def-adts $ Meters : -> Type
   enum

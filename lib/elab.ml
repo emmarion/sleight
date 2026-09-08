@@ -85,21 +85,35 @@ let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 (* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
 let adt_of env x = match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None
 
-let matchables env tid =
-  List.filter_map
-    (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (resolve env x, d, cs) | _ -> None)
-    env.scope
+(* Of the entries one opened group holds, the one kept: a non-erased entry where there is one
+   (proposals/matchable-newtype-opening.md), and among those one whose ADT the elaborator can see, so a match
+   reads nothing at runtime. *)
+let rank env x = if adt_of env x <> None then 0 else if (entry env x).mult = Many then 1 else 2
+let best env key xs = List.hd (List.stable_sort (fun a b -> compare (rank env (key a)) (rank env (key b))) xs)
 
-(* Consistent Matchables for one type are interchangeable (section 19), so the pick prefers one whose ADT the
-   elaborator can see, then a non-erased one, over one a non-erased match would have to read and cannot. *)
+(* Opens [x], a Matchable or Newtype entry (proposals/matchable-newtype-opening.md): its constructors must be
+   distinct after canonicalization, and it must unify with every opened object of its kind that lists one of
+   its constructors or heads its type constructor, minting the facts that takes; those then merge with it into
+   one record. Failure is a Contradiction. *)
+let open_adt env x =
+  let names env y = match type_of env y with Matchable (_, t, cs) -> t :: List.map snd cs | Newtype c -> [ c ] | _ -> [] in
+  let kind y = match type_of env y with Matchable _ -> `Matchable | Newtype _ -> `Newtype | _ -> `Other in
+  let rec dup = function [] -> None | c :: rest -> if List.mem c rest then Some c else dup rest in
+  (match type_of env x with
+  | Matchable (_, _, cs) -> Option.iter (fun c -> raise (Contradiction (show env c ^ " is listed twice"))) (dup (List.map snd cs))
+  | _ -> ());
+  let related, others = List.partition (fun y -> kind y = kind x && List.exists (fun c -> List.mem c (names env y)) (names env x)) env.opens in
+  let env = List.fold_left (fun env y -> unify env (type_of env x) (type_of env y)) env related in
+  { env with opens = best env Fun.id (related @ [ x ]) :: others }
+
+let matchables env tid =
+  List.filter_map (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (x, d, cs) | _ -> None) env.opens
+
+(* Opened Matchables for one type unify, so any serves; the pick is the best-ranked. *)
 let find_matchable env loc tid =
-  let rank (x, _, _) = if adt_of env x <> None then 0 else if (entry env x).mult = Many then 1 else 2 in
-  match List.stable_sort (fun a b -> compare (rank a) (rank b)) (matchables env tid) with
-  | [] -> error loc "%s has no Matchable in scope" (name_of env tid)
-  | (x, d, cs) :: rest ->
-      if List.exists (fun (y, _, _) -> not (equal (type_of env x) (type_of env y))) rest then
-        error loc "ambiguous Matchables for %s" (name_of env tid);
-      (x, d, cs)
+  match matchables env tid with
+  | [] -> error loc "%s has no Matchable open" (name_of env tid)
+  | ms -> best env (fun (x, _, _) -> x) ms
 
 let type_head env ty = match canon env ty with App (Var t, _) -> Some t | _ -> None
 
@@ -115,8 +129,6 @@ let marker env loc tid ctors c =
   match List.find_opt (fun (_, c') -> c' = Var c) ctors with
   | Some (m, _) -> m
   | None -> error loc "%s is not a constructor of %s" (name_of env c) (name_of env tid)
-
-let phantom env loc c = let tid = tid_of env loc c in let _, _, ctors = find_matchable env loc tid in marker env loc tid ctors c = Erased
 
 (* A Matchable's constructors, each with its phantom marker and its number of many fields (section 38). *)
 let shapes env loc ctors =
@@ -134,7 +146,7 @@ let wrapper disc shapes =
   | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
   | _ -> None
 
-let newtype_of env c = List.find_opt (fun x -> match type_of env x with Newtype (Var c') -> c' = c | _ -> false) env.scope
+let newtype_of env c = List.find_opt (fun x -> match type_of env x with Newtype (Var c') -> c' = c | _ -> false) env.opens
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
 let ctor_var env loc = named env loc "a constructor"
@@ -447,7 +459,7 @@ and elab_call cc env expect l callee hcode lv params rets args arg =
 and elab_special tele env expect l sp args =
   let pos = pos_of expect in
   let m =
-    if List.mem sp (Sp.Values :: Sp.Match :: Sp.Tail :: Sp.Delegate :: Sp.statements) then pos
+    if List.mem sp (Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.Delegate :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (Sp.name sp)
   in
   let proof env ctor raw =
@@ -456,7 +468,7 @@ and elab_special tele env expect l sp args =
   in
   let erased (env, r) = (env, [ r ], V.CErased) in
   let mint env ty = erased (mint env ty) in
-  let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s in scope" (name_of env x) what in
+  let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s" (name_of env x) what in
   let compose (c1, p) (c2, q) k =
     let env, p = proof env c1 p in
     let env, q = proof env c2 q in
@@ -488,7 +500,16 @@ and elab_special tele env expect l sp args =
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
       (env, [ res_of env x ], matchable_code env m x)
-  | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype" c (newtype_of env c)
+  | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype open" c (newtype_of env c)
+  | Sp.OpenAbsurd, [ e; ann ] ->
+      let env, x = open_target env l e in
+      (match type_of env x with Newtype _ -> error l "open-absurd: whether a Newtype has a contradicting open is undecided" | _ -> ());
+      (match open_adt env x with
+      | _ -> error l "open-absurd: opening %s contradicts nothing" (name_of env x)
+      | exception Contradiction _ -> ());
+      let env, ann_tele = result_tele tele env expect l ann in
+      let env, ids = open_tele env ~names:(anon ann_tele) ann_tele in
+      (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | Sp.NumeralOf, [ e ] -> (
       let name = atom_or l e "a literal" in
       match Literal.classify name with
@@ -536,7 +557,7 @@ and elab_special tele env expect l sp args =
   | Sp.CoercibleWrap, c :: args -> (
       let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
-      if newtype_of env c = None then error l "%s has no Newtype in scope: only a marked newtype's wrapping constructor has one" (name_of env c);
+      if newtype_of env c = None then error l "%s has no Newtype open: only a marked newtype's wrapping constructor has one" (name_of env c);
       if List.length (List.filter (fun e -> e.mult = Many) tele) <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
       let acc = elab_term_args env l tele args in
       let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult = Many) tele)) in
@@ -544,7 +565,6 @@ and elab_special tele env expect l sp args =
   | Sp.CoercibleCtor, c :: args ->
       let c = ctor_var env l c in
       let tele, ret = ctor_type env l c in
-      if phantom env l c then error l "%s is phantom" (name_of env c);
       let check env side e ty t = check_sg env l (map_sg (instantiate side) e.sg) { term = t; ty; erasure = Erased } in
       let rec go env src tgt tele args =
         match (tele, args) with
@@ -568,7 +588,7 @@ and elab_special tele env expect l sp args =
   | Sp.CoercibleOf, [ g ] ->
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
-      fetch "delegate proof" g (List.find_opt about env.scope)
+      fetch "delegate proof in scope" g (List.find_opt about env.scope)
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
@@ -584,20 +604,7 @@ and elab_match tele env expect l args =
       let tagged = tagged disc shapes in
       if pos = Many && smult = Many && (entry env mid).mult = Erased then
         error l "the Matchable for %s is erased, so a non-erased match cannot take a value of it apart" (name_of env tid);
-      let env, ann_tele =
-        match (ann, tele) with
-        | Atom (_, "_"), Some tele -> (env, tele)
-        | Atom (_, "_"), None -> error l "no telescope to reuse for _"
-        | List (_, ann), _ ->
-            let mults i = function
-              | Some _ -> error l "a match annotation carries no multiplicities"
-              | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
-            in
-            let env', _, ann_tele = elab_tele env ~mults ann in
-            ({ env' with scope = env.scope }, ann_tele)
-        | _ -> error l "malformed match annotation"
-      in
-      if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
+      let env, ann_tele = result_tele tele env expect l ann in
       let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       let branch raw =
         let kind, pat, body =
@@ -690,6 +697,31 @@ and elab_match tele env expect l args =
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
 
+(* A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one. *)
+and result_tele tele env expect l ann =
+  let env, ann_tele =
+    match (ann, tele) with
+    | Atom (_, "_"), Some tele -> (env, tele)
+    | Atom (_, "_"), None -> error l "no telescope to reuse for _"
+    | List (_, ann), _ ->
+        let mults i = function
+          | Some _ -> error l "a match annotation carries no multiplicities"
+          | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
+        in
+        let env', _, ann_tele = elab_tele env ~mults ann in
+        ({ env' with scope = env.scope }, ann_tele)
+    | _ -> error l "malformed match annotation"
+  in
+  if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
+  (env, ann_tele)
+
+(* The entry an open-adt or open-absurd names, read for its type at erased multiplicity. *)
+and open_target env l raw =
+  let env, t = elab_erased env raw in
+  match canon env t with
+  | Var x when (match type_of env x with Matchable _ | Newtype _ -> true | _ -> false) -> (env, x)
+  | t -> error l "%s : %s is not a Matchable or a Newtype" (show env t) (show env (infer env l t))
+
 and elab_body ?tele env expect l items =
   match items with
   | [] -> error l "a body needs a final expression"
@@ -721,6 +753,9 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
       | Some Sp.LetMatch, _ -> elab_let_match env l args
       | Some Sp.Unary, _ -> elab_unary env l args
+      | Some Sp.OpenAdt, [ e ] ->
+          let env, x = open_target env l e in
+          ((try open_adt env x with Contradiction msg -> error l "open-adt: %s contradicts what is open (%s)" (name_of env x) msg), Fun.id)
       | _ -> error l "%s is not a statement" (Reader.show raw))
   | _ -> error (loc raw) "%s is not a statement" (Reader.show raw)
 
@@ -1026,9 +1061,13 @@ and elab_def_adts env adts =
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in
+    let env = open_adt env mid in
     let env =
       if not (List.mem Sp.NewtypeMark ms) then env
-      else match wrapper disc shapes with Some w -> snd (witness env (Newtype (Var w))) | None -> error al "%s is not of newtype shape (section 38)" name
+      else
+        match wrapper disc shapes with
+        | Some w -> let n, env = witness env (Newtype (Var w)) in open_adt env n
+        | None -> error al "%s is not of newtype shape (section 38)" name
     in
     (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in

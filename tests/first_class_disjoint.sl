@@ -10,6 +10,7 @@
     (erased (ValCtor (erased (Nat) n) -> (T)) D)
     (many (Matchable union T (many C) (many D)) m)
     (erased (Nat) k) (many (C k) is x) -> (many (Nat) n)
+  (open-adt m)
   (match many x (((Nat) r))
     ((C n) n)
     (absurd D)))

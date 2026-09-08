@@ -1648,3 +1648,80 @@ none of it is design.
     and so that bare calls accept exactly what `_` accepted, is the
     session's reading, not the owner's; the tests are the evidence.
 
+
+## Opening a `Matchable` or `Newtype` (proposals/matchable-newtype-opening.md)
+
+Implemented by a session at the owner's request, from the proposal as
+merged. The owner settled the points marked so in chat; everything else
+is the session's reading of the proposal, with the tests as the
+evidence. DESIGN.md is not edited (CLAUDE.md rule 12): sections 17-19,
+27 and 38 still describe the ambient-scope rule the proposal replaces,
+and section 27 does not list the two forms.
+
+114. **Nothing consults a `Matchable` or a `Newtype` until it is
+    opened** (`Env.opens`, `Elab.open_adt`). The environment carries a list of opened
+    entries beside the fact table, and it shares the fact table's fate:
+    a match branch's is discarded with the branch, a `let` right-hand
+    side's is kept, which is item 29's leak, excused by the proposal on
+    the same ground (`tests/open_adt_let.sl`,
+    `tests/open_adt_branch_bad.sl`). `(open-adt e)` is a statement
+    that elaborates `e` at `erased`, requires it to canonicalize to an
+    entry of `Matchable` or `Newtype` type, runs the proposal's
+    assertion -- the listed constructors distinct after
+    canonicalization, and unification with every opened object of the
+    same kind that lists one of them or heads its type constructor,
+    minting whatever facts that takes -- and merges the group into one
+    record, keeping the best-ranked entry: one whose ADT the elaborator
+    sees, then a non-erased one, then any (`tests/open_adt_unify.sl`,
+    `tests/open_adt_clash_bad.sl`, `tests/matchable_prefers_many.sl`,
+    `tests/known_matchable.sl`). `(open-absurd e ann)` is an expression
+    whose size is its annotation's, `_` reusing the enclosing telescope
+    as a match's does; it requires the same assertion to fail, records
+    and mints nothing, and compiles to the absurd code
+    (`tests/open_absurd.sl`, `tests/open_absurd_clash.sl`,
+    `tests/open_absurd_bad.sl`, `tests/open_adt_bad.sl`). Every read of
+    a `Matchable` goes through one lookup over the opened list, so
+    `match`, `let-match`, `comptime-match`, the emptiness check,
+    `matchable-of`, `newtype-of`, `coercible-wrap`, section 18's
+    disjointness rule and the unification of the Matchables two equated
+    type constructors head are all gated, and an unopened first-class
+    `TyCtor` unifies with any other (`tests/open_tyctor.sl`,
+    `tests/unopened_matchable_bad.sl`, `tests/unopened_newtype_bad.sl`).
+    `def-adts` and the built-in `Special` open what they mint. Section
+    19's ambiguity error is gone, two opened Matchables for one type
+    having unified. The keywords are the owner's choice in chat, after a
+    round of alternatives: `open-adt` names the minting site, since one
+    form opens both objects, and `open-absurd` carries the token that
+    marks a contradiction elsewhere. The first-class tests
+    (`tests/first_class.sl` and its kin) gained an `(open-adt m)`, and
+    "has no Matchable in scope" became "has no Matchable open", likewise
+    for a Newtype. That gating `let-match` is right is the owner's;
+    gating the unification check is the session's reading of the
+    proposal's "unopened means opaque, upward too".
+
+115. **A `Newtype` is recorded, not asserted, and has no contradicting
+    form** (the owner's choice in chat, from the proposal's unsettled
+    list). `open-adt` on a `Newtype` merges it with an opened one naming
+    the same canonical constructor and checks nothing else;
+    `open-absurd` on one is refused as undecided
+    (`tests/open_absurd_newtype_bad.sl`). Still open, as the proposal
+    lists them: whether an opened `Newtype` for `C` beside an opened
+    `Matchable` marking `C` phantom is a contradiction, and whether
+    `coercible-of`'s fetch, which still reads ambient scope, should be
+    gated.
+
+116. **`coercible-ctor` no longer refuses a phantom constructor**, so
+    it reads no `Matchable` and needs none opened
+    (`tests/coercible_ctor_phantom.sl`). The owner's decision in chat,
+    on the session's reading that the check was redundant: a `coerce`
+    cashes a proof only for a non-erased source canonicalizing to
+    `(C ...)`, and the checker never lets a phantom constructor head a
+    non-erased value -- a phantom application in a non-erased position
+    is refused, and a phantom branch under a `many` scrutinee is
+    checked with everything erased, where a `coerce` yields an erased
+    value, which a phantom constructor may head. `coercible-wrap` is
+    the contrast: its source is the field, from which it manufactures a
+    `C`-headed value, so its `Newtype` stays load-bearing. Section 38's
+    "the same non-phantom constructor on both sides" then describes what
+    a usable proof relates rather than what the form checks; whether
+    and how to reword it is the owner's.

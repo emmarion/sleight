@@ -10,6 +10,7 @@
     (erased (ValCtor (many (Nat) n) -> (T)) D)
     (many (Matchable enum T (many C) (many D)) m)
     (erased (Nat) k) -> (many (Nat) n)
+  (open-adt m)
   (match erased (C k) (((Nat) r))
     ((C n) (Zero))
     ((D n) (Succ (Zero)))))

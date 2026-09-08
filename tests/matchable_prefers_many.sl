@@ -1,6 +1,6 @@
 ; expect: (Succ (Zero))
-; Of two consistent first-class Matchables for one type, a non-erased match reads the non-erased one (section 19),
-; whichever was bound later.
+; Of two consistent first-class Matchables for one type, opened in either order, the merged record keeps the
+; non-erased one (proposals/matchable-newtype-opening.md), so a non-erased match reads it.
 (def-adts $ Box : -> Type enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)
 (def-fns X $ many open : (erased (TyCtor -> Type) T)
@@ -8,5 +8,16 @@
     (many (Matchable enum T (many C)) m1)
     (erased (Matchable enum T (many C)) m2)
     (many (T) x) -> (many (Nat) n)
+  (open-adt m1)
+  (open-adt m2)
   (match many x (((Nat) r)) ((C n) n)))
-(open Box MkBox (matchable-of Box) (matchable-of Box) (MkBox (Succ (Zero))))
+(def-fns X $ many open2 : (erased (TyCtor -> Type) T)
+    (erased (ValCtor (many (Nat) n) -> (T)) C)
+    (many (Matchable enum T (many C)) m1)
+    (erased (Matchable enum T (many C)) m2)
+    (many (T) x) -> (many (Nat) n)
+  (open-adt m2)
+  (open-adt m1)
+  (match many x (((Nat) r)) ((C n) n)))
+(nat-add (open Box MkBox (matchable-of Box) (matchable-of Box) (MkBox (Zero)))
+         (open2 Box MkBox (matchable-of Box) (matchable-of Box) (MkBox (Succ (Zero)))))

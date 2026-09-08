@@ -141,3 +141,24 @@ names, which would need to admit one that emits only facts and to reckon
 with names being pruned at a right-hand side while facts are not; and
 whether the contradicting open with `_` as a whole function body makes
 §37's `absurd` marker redundant for the `Matchable`-contradiction route.
+
+## 3. Implementation notes
+
+Not normative. Implemented in `lib/` by a session at the owner's
+request; the owner settled the following in chat, and
+ASSUMPTIONS.md 114-116 record the session's reading of the rest.
+
+- The two forms are `(open-adt e)`, the statement, and
+  `(open-absurd e ann)`, the expression, `e` any erased expression
+  naming a `Matchable` or `Newtype` entry and `ann` a return telescope
+  or `_`. One form opens both objects, so the keyword names the
+  minting site rather than either kind.
+- A `Newtype` is recorded only: `open-adt` merges it with an opened one
+  naming the same constructor and asserts nothing else, and
+  `open-absurd` refuses a `Newtype`, its contradicting form being among
+  the points section 2 leaves unsettled.
+- `let-match` requires the opened `Matchable`, as `match` does;
+  `coercible-of` keeps its ambient fetch.
+- `coercible-ctor` drops its phantom check and so consults no
+  `Matchable`; the reading behind that is ASSUMPTIONS 116.
+- DESIGN.md is not yet edited.

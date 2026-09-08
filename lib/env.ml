@@ -16,6 +16,7 @@ type t = {
   scope : id list;
   entries : entry IntMap.t;
   facts : fact IntMap.t;
+  opens : id list;
   level : level;
   subterms : id list;
   run_pos : bool;
@@ -25,7 +26,7 @@ type t = {
 }
 
 let empty =
-  { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
+  { scope = []; entries = IntMap.empty; facts = IntMap.empty; opens = []; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -60,18 +61,20 @@ let rec canon env t =
 let type_of env x = canon env (fact env x).ty
 let show env t = to_string (name_of env) (canon env t)
 
-(* Constructors one Matchable in scope lists are distinct (section 19), first-class ones included. *)
+(* [opens] holds the Matchables and Newtypes opened so far (proposals/matchable-newtype-opening.md), one entry
+   per merged group; nothing below consults one that is not in it. Constructors one opened Matchable lists are
+   distinct (section 19), first-class ones included. *)
 let listed env x y =
   let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
-  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope
+  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.opens
 
-(* The Matchable in scope a type constructor heads, if any. *)
+(* The opened Matchable a type constructor heads, if any. *)
 let matchable_of env t =
-  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.scope
+  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.opens
 
-(* Two atoms equated: a contradiction where one Matchable lists both; otherwise the newer becomes an alias of
-   the older, and what follows is checked -- the two must have one signature, and type constructors heading
-   Matchables must head one Matchable -- so two declared types are told apart exactly by their Matchables,
+(* Two atoms equated: a contradiction where one opened Matchable lists both; otherwise the newer becomes an alias
+   of the older, and what follows is checked -- the two must have one signature, and type constructors heading
+   opened Matchables must head one Matchable -- so two declared types are told apart exactly by their Matchables,
    never by a name's identity (section 19). *)
 let rec unify env a b =
   let a = canon env a and b = canon env b in
