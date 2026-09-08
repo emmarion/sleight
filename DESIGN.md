@@ -765,9 +765,10 @@ how entering a match branch updates it:
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
-  itself is a no-op, not a contradiction); (2) two atoms equated that one
-  `Matchable` in scope lists, or whose signatures or `Matchable`s cannot
-  themselves be unified, decided recursively (arity mismatch is one easy
+  itself is a no-op, not a contradiction); (2) two value constructors
+  equated that one opened `Matchable` (§19) lists, or two atoms whose
+  signatures cannot be unified, or two type constructors equated whose
+  opened `Matchable`s, one each, cannot be, decided recursively (arity mismatch is one easy
   sufficient symptom of this given fixed arities and no currying, not a
   separate case); (3) a
   variable equated with an expression mentioning a binder of the
