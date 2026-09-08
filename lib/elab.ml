@@ -598,7 +598,6 @@ and elab_match tele env expect l args =
         | _ -> error l "malformed match annotation"
       in
       if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
-      let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       let branch raw =
         let kind, pat, body =
           match raw with
@@ -687,6 +686,7 @@ and elab_match tele env expect l args =
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
             V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = else_ }
       in
+      let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, code)
   | _ -> error l "malformed match"
 

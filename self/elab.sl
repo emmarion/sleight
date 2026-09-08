@@ -2882,8 +2882,7 @@
                               (match many (nat-eq (list-length (Entry) ann-tele) (list-length (Mult) expect)) (((Env) e0))
                                 ((BTrue) env3)
                                 ((BFalse) (env-error env3 (str-cat3 "match annotation has " (nat-str (list-length (Entry) ann-tele)) (str-cat " entries, position needs " (nat-str (list-length (Mult) expect))))))))
-                            (let (many env4) (many rids) (open-tele ann-tele env3b (Some (List (Maybe (String))) (anon-names ann-tele)) (None (List (Mult))) (None (List (State))) (Nil (Term))))
-                            (let (many env5) (many real) (many seen) (elab-branches sugar branches env4 tid sres smult mctors ann-tele expect (Nil (RealBranch)) (Nil (Bin))))
+                            (let (many env5) (many real) (many seen) (elab-branches sugar branches env3b tid sres smult mctors ann-tele expect (Nil (RealBranch)) (Nil (Bin))))
                             (let (many env6) (check-coverage mctors env5 seen))
                             (let (many env6b) (many first) (many reachable) (covered-of mctors env6 seen sres smult (None (Bin)) (BFalse)))
                             (let (many env6c) (many dflt) (elab-else sugar branches env6b ann-tele expect first reachable (BFalse) (None (Code))))
@@ -2908,7 +2907,8 @@
                                       (match many (and (not (mult-is-many smult)) (list-is-empty (RealBranch) more3)) (((Code) c0))
                                         ((BTrue) (match many rb (((Code) c0)) ((MkRealBranch cc fids body) body)))
                                         ((BFalse) (CMatch scode (match-shape env7 mid tagged) (real-branches-code real ss) dflt))))))))
-                            (values env7 (ress-of rids env7) code))))))))))))))
+                            (let (many env8) (many rids) (open-tele ann-tele env7 (Some (List (Maybe (String))) (anon-names ann-tele)) (None (List (Mult))) (None (List (State))) (Nil (Term))))
+                            (values env8 (ress-of rids env8) code))))))))))))))
 
   ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 12).
   (many elab-branches : (subterm many (Nat) sugar) (subterm many (List (Raw)) branches) (many (Env) env) (many (Bin) tid) (many (Res) sres) (many (Mult) smult) (many (List (MCtor)) mctors) (many (List (Entry)) ann-tele) (many (List (Mult)) expect) (many (List (RealBranch)) acc) (many (List (Bin)) seen) ->

@@ -1648,3 +1648,48 @@ none of it is design.
     and so that bare calls accept exactly what `_` accepted, is the
     session's reading, not the owner's; the tests are the evidence.
 
+## A match's results are out of scope for its own branches
+
+A session asked to fix and test a program the owner sent — a `match`
+whose `else` fetched a `Matchable` from ambient scope, and an `absurd`
+function that then returned a level as a proof of `(False)` — found the
+program accepted and changed one thing in the reference and the same
+thing in `self/`. Item 114 records it. The reasoning is the session's
+and may be wrong (CLAUDE.md rule 1); the two new tests are what was
+checked by running (rule 2).
+
+114. **A `match`'s result entries are opened after its branches**
+    (`Elab.elab_match`; `elab-match` in `self/elab.sl`). A match's
+    annotation is a telescope, and the entries it opens stand for what
+    the match produces. They were bound before the branches were
+    elaborated, so the branches ran in a scope that already held them.
+    Their names are dropped (`~names:(anon ann_tele)`), so nothing
+    reaches them by name; but the lookups that go by type scan
+    `env.scope` regardless — `find_matchable` and `matchable-of` for a
+    `Matchable` heading a type constructor (§19), `newtype-of` for a
+    `Newtype` naming a constructor (§38), `coercible-of` for an
+    anonymous `Coercible` about a function (§9). A branch could
+    therefore satisfy the annotation by fetching the entry the
+    annotation had just minted, and `check_results` then compared that
+    entry with itself. Two consequences the session could run:
+    `(match erased (Zero) (((Matchable enum Level) m)) (else
+    (matchable-of Level)))` bound an erased `Matchable` for `Level`
+    listing no constructors, which is what `check_empty` reads as
+    `(Level)` being an empty type, so an `absurd` body (§37) was
+    accepted for a `def-lvl` level and `(False)` followed
+    (`tests/match_result_matchable_bad.sl`, the owner's program); and
+    the same shape through `newtype-of` minted a `Newtype` for a
+    constructor whose `def-adts` entry carries no `newtype` mark, after
+    which `coerce` handed a tagged `(MkBox (Succ (Zero)))` to a
+    position of type `(Nat)` and it printed as one
+    (`tests/match_result_newtype_bad.sl`). The results are now opened
+    after the branches, the coverage check and the `else`, which is the
+    only change; the annotation telescope, the check of each branch's
+    results against it, and the results the match returns are as they
+    were, and all 219 prior tests still pass. DESIGN.md does not appear
+    to say either way. That a branch may not read what the match it
+    belongs to produces looks to the session like plugging a
+    circularity rather than a design choice, but it is recorded here in
+    case the owner reads §12's annotation as binding for the branches;
+    the entries are still anonymous, so the question is only about the
+    type-directed lookups.
