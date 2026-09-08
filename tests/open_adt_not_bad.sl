@@ -3,6 +3,6 @@
 
 (def-lvl X)
 (def-fns X $ many f : (many (Nat) n) -> (many (Nat) r)
-  (open-adt n)
+  (open-adt many n)
   n)
 f

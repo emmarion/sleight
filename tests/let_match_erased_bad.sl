@@ -1,10 +1,15 @@
-; error: used in a non-erased position
-; An erased scrutinee makes the bound fields erased, so nothing non-erased comes out of one.
+; error: Matchable for T is erased
+; let-match is a match: outside run position, at many, it dispatches at runtime through its Matchable, so an
+; erased opened one is refused as it is for match (ASSUMPTIONS 117). Accepted, this compiled to code reading
+; the erased m and failed when run.
 
-(def-adts $ Box : -> Type enum (many MkBox : (many (Nat) v) -> (Box)))
-(let (many b) (MkBox (Zero)))
-(let (erased eb) (values b))
-(let-match erased eb (MkBox v))
+(def-adts $ Box : -> Type enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)
-(def-fns X $ many f : -> (many (Nat) n) v)
-(Zero)
+(def-fns X $ many peel : (erased (TyCtor -> Type) T)
+    (erased (ValCtor (many (Nat) n) -> (T)) C)
+    (erased (Matchable enum T (many C)) m)
+    (many (T) x) -> (many (Nat) n)
+  (open-adt erased m)
+  (let-match many x (C n))
+  n)
+(peel Box MkBox (matchable-of Box) (MkBox (Succ (Zero))))

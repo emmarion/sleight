@@ -146,13 +146,17 @@ whether the contradicting open with `_` as a whole function body makes
 
 Not normative. Implemented in `lib/` and `self/` by a session at the
 owner's request; the owner settled the following in chat, and
-ASSUMPTIONS.md 114-116 record the session's reading of the rest.
+ASSUMPTIONS.md 114-117 record the session's reading of the rest.
 
-- The two forms are `(open-adt e)`, the statement, and
-  `(open-absurd e ann)`, the expression, `e` any erased expression
-  naming a `Matchable` or `Newtype` entry and `ann` a return telescope
-  or `_`. One form opens both objects, so the keyword names the
-  minting site rather than either kind.
+- The two forms are `(open-adt mult e)`, the statement, and
+  `(open-absurd e ann)`, the expression. The statement is an anonymous
+  `let` of `e` at the written multiplicity followed by the open of that
+  binder, so `e` is any expression of `Matchable` or `Newtype` type and
+  the binder's multiplicity is what a later match reads; a match that
+  dispatches at runtime needs that binder `Const` or still bound.
+  `open-absurd` takes `e` at `erased`, nothing of its value mattering,
+  and `ann` is a return telescope or `_`. One form opens both objects,
+  so the keyword names the minting site rather than either kind.
 - A `Newtype` is recorded only: `open-adt` merges it with an opened one
   naming the same constructor and asserts nothing else, and
   `open-absurd` refuses a `Newtype`, its contradicting form being among

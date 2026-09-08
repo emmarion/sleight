@@ -14,7 +14,7 @@
     (many (ValCtor (many (Nat) n) -> (T)) D)
     (many (Matchable enum T (many C) (many D)) m)
     (many (T) x) -> (many (Nat) n)
-  (open-adt m)
+  (open-adt many m)
   (match many x (((Nat) r))
     ((C n) n)
     (else (Zero))))

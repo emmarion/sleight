@@ -6,7 +6,7 @@
 (def-lvl X)
 (def-fns X $ many len : (erased (Matchable enum List (many Nil) (many Cons)) m)
     (subterm many (List (Nat)) xs) -> (many (Nat) n)
-  (open-adt m)
+  (open-adt erased m)
   (match many xs (((Nat) r))
     ((Nil a) (Zero))
     ((Cons a hd tl) (Succ (len m (subterm (prove-subterm tl xs)) tl)))))

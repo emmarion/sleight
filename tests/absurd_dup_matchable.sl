@@ -4,6 +4,6 @@
 
 (def-lvl X)
 (def-fns X $ many absurd boom : (erased (Matchable enum False) m) (many (False) f) -> (many (Nat) n)
-  (open-adt m)
+  (open-adt erased m)
   f)
 boom

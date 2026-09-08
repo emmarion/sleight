@@ -85,10 +85,13 @@ let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased }
 (* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
 let adt_of env x = match (entry env x).state with Const (V.VMatchable adt) -> Some adt | _ -> None
 
-(* Of the entries one opened group holds, the one kept: a non-erased entry where there is one
-   (proposals/matchable-newtype-opening.md), and among those one whose ADT the elaborator can see, so a match
-   reads nothing at runtime. *)
-let rank env x = if adt_of env x <> None then 0 else if (entry env x).mult = Many then 1 else 2
+(* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Const, else
+   read from a non-erased entry still bound, which a let's right-hand side unbinds as it does its variables. *)
+let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope)
+
+(* Of the entries one opened group holds, the one kept: a readable entry where there is one
+   (proposals/matchable-newtype-opening.md), and among those one whose ADT the elaborator can see. *)
+let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 else 2
 let best env key xs = List.hd (List.stable_sort (fun a b -> compare (rank env (key a)) (rank env (key b))) xs)
 
 (* Opens [x], a Matchable or Newtype entry (proposals/matchable-newtype-opening.md): its constructors must be
@@ -116,6 +119,10 @@ let find_matchable env loc tid =
   | ms -> best env (fun (x, _, _) -> x) ms
 
 let type_head env ty = match canon env ty with App (Var t, _) -> Some t | _ -> None
+
+let held_needs_many env loc tid mid =
+  if not (readable env mid) then
+    error loc "the Matchable for %s is erased or out of scope, so a non-erased match cannot take a value of it apart" (name_of env tid)
 
 let check_empty env loc ty =
   let empty = match type_head env ty with Some t when matchables env t <> [] -> (let _, _, cs = find_matchable env loc t in cs = []) | _ -> false in
@@ -502,10 +509,10 @@ and elab_special tele env expect l sp args =
       (env, [ res_of env x ], matchable_code env m x)
   | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype open" c (newtype_of env c)
   | Sp.OpenAbsurd, [ e; ann ] ->
-      let env, x = open_target env l e in
-      (match type_of env x with Newtype _ -> error l "open-absurd: whether a Newtype has a contradicting open is undecided" | _ -> ());
-      (match open_adt env x with
-      | _ -> error l "open-absurd: opening %s contradicts nothing" (name_of env x)
+      let env', x, t, _ = open_binding env l Erased e in
+      (match type_of env' x with Newtype _ -> error l "open-absurd: whether a Newtype has a contradicting open is undecided" | _ -> ());
+      (match open_adt env' x with
+      | _ -> error l "open-absurd: opening %s contradicts nothing" (show env' t)
       | exception Contradiction _ -> ());
       let env, ann_tele = result_tele tele env expect l ann in
       let env, ids = open_tele env ~names:(anon ann_tele) ann_tele in
@@ -602,8 +609,7 @@ and elab_match tele env expect l args =
       let mid, disc, ctors = find_matchable env l tid in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
-      if pos = Many && smult = Many && (entry env mid).mult = Erased then
-        error l "the Matchable for %s is erased, so a non-erased match cannot take a value of it apart" (name_of env tid);
+      if pos = Many && smult = Many then held_needs_many env l tid mid;
       let env, ann_tele = result_tele tele env expect l ann in
       let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       let branch raw =
@@ -715,12 +721,14 @@ and result_tele tele env expect l ann =
   if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
   (env, ann_tele)
 
-(* The entry an open-adt or open-absurd names, read for its type at erased multiplicity. *)
-and open_target env l raw =
-  let env, t = elab_erased env raw in
-  match canon env t with
-  | Var x when (match type_of env x with Matchable _ | Newtype _ -> true | _ -> false) -> (env, x)
-  | t -> error l "%s : %s is not a Matchable or a Newtype" (show env t) (show env (infer env l t))
+(* An anonymous let at [mult] of a Matchable or Newtype: the entry an open records (section 19). *)
+and open_binding env l mult raw =
+  let inner, r, code = elab_expr1 env mult raw in
+  (match canon inner r.ty with Matchable _ | Newtype _ -> () | ty -> error l "%s : %s is not a Matchable or a Newtype" (show inner r.term) (show inner ty));
+  let value = if env.run_pos && mult = Many then List.hd (run_code inner code) else V.VToken in
+  let state = if env.run_pos then Const value else match r.term with Var y -> (entry inner y).state | _ -> Dyn in
+  let x, env' = bind { inner with scope = env.scope } None mult state r.ty ~rule:r.term in
+  (env', x, r.term, code)
 
 and elab_body ?tele env expect l items =
   match items with
@@ -753,9 +761,11 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
       | Some Sp.LetMatch, _ -> elab_let_match env l args
       | Some Sp.Unary, _ -> elab_unary env l args
-      | Some Sp.OpenAdt, [ e ] ->
-          let env, x = open_target env l e in
-          ((try open_adt env x with Contradiction msg -> error l "open-adt: %s contradicts what is open (%s)" (name_of env x) msg), Fun.id)
+      | Some Sp.OpenAdt, [ m; e ] ->
+          let mult = mult_or env l m in
+          let env', x, t, code = open_binding env l mult e in
+          let env' = try open_adt env' x with Contradiction msg -> error l "open-adt: %s contradicts what is open (%s)" (show env' t) msg in
+          (env', if env.run_pos || mult = Erased then Fun.id else fun rest -> V.CLet ([ x ], code, rest))
       | _ -> error l "%s is not a statement" (Reader.show raw))
   | _ -> error (loc raw) "%s is not a statement" (Reader.show raw)
 
@@ -866,6 +876,7 @@ and elab_let_match env l args =
       let mults = List.map (fun e -> under smult e.mult) tele in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult = Many in
+      if smult = Many && not run then held_needs_many env l tid mid;
       let states =
         if not run then None
         else

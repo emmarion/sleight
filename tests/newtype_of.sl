@@ -11,7 +11,7 @@
     (many (ValCtor (many (Nat) n) -> (T)) C)
     (erased (Newtype C) nt)
     (many (Nat) n) -> (many (T) t)
-  (open-adt nt)
+  (open-adt erased nt)
   (coerce n (coercible-wrap C n)))
 
 (let (many m) (wrap Meters MkMeters (newtype-of MkMeters) (Succ (Zero))))

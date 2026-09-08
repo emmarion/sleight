@@ -16,7 +16,7 @@
     ((IsBool) (Succ (Zero)))))
 (def-fns X $ many told : (erased (TyCtor -> Type) T) (erased (ValCtor -> (T)) C) (erased (ValCtor -> (T)) D)
     (erased (Matchable enum T (many C) (many D)) m) (many (Shape (T)) s) -> (many (Nat) n)
-  (open-adt m)
+  (open-adt erased m)
   (match many s (((Nat) r))
     (absurd IsNat)
     ((IsBool) (Succ (Zero)))))

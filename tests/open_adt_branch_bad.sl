@@ -9,6 +9,6 @@
     (many (Matchable enum T (many C)) m)
     (many (Nat) g)
     (many (T) x) -> (many (Nat) n)
-  (let (many k) (match many g (((Nat) r)) ((Zero) (open-adt m) (Zero)) ((Succ j) j)))
+  (let (many k) (match many g (((Nat) r)) ((Zero) (open-adt many m) (Zero)) ((Succ j) j)))
   (match many x (((Nat) r)) ((C n) n)))
 (open Box MkBox (matchable-of Box) (Zero) (MkBox (Zero)))

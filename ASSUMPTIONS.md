@@ -1666,20 +1666,41 @@ and section 27 does not list the two forms.
     a match branch's is discarded with the branch, a `let` right-hand
     side's is kept, which is item 29's leak, excused by the proposal on
     the same ground (`tests/open_adt_let.sl`,
-    `tests/open_adt_branch_bad.sl`). `(open-adt e)` is a statement
-    that elaborates `e` at `erased`, requires it to canonicalize to an
-    entry of `Matchable` or `Newtype` type, runs the proposal's
-    assertion -- the listed constructors distinct after
-    canonicalization, and unification with every opened object of the
-    same kind that lists one of them or heads its type constructor,
-    minting whatever facts that takes -- and merges the group into one
-    record, keeping the best-ranked entry: one whose ADT the elaborator
-    sees, then a non-erased one, then any (`tests/open_adt_unify.sl`,
-    `tests/open_adt_clash_bad.sl`, `tests/matchable_prefers_many.sl`,
-    `tests/known_matchable.sl`). `(open-absurd e ann)` is an expression
-    whose size is its annotation's, `_` reusing the enclosing telescope
-    as a match's does; it requires the same assertion to fail, records
-    and mints nothing, and compiles to the absurd code
+    `tests/open_adt_branch_bad.sl`). `(open-adt mult e)` is a
+    statement (the owner's shape in chat, after a first version took a
+    bare name at `erased`): an anonymous `let` of `e` at the written
+    multiplicity, as `let-match` takes its scrutinee -- `e` any
+    expression of `Matchable` or `Newtype` type, run at once in run
+    position so the entry is `Const`, bound by code otherwise -- then
+    the open of that binder, which runs the proposal's assertion -- the
+    listed constructors distinct after canonicalization, and
+    unification with every opened object of the same kind that lists
+    one of them or heads its type constructor, minting whatever facts
+    that takes -- and merges the group into one record, keeping the
+    best-ranked entry: one whose ADT the elaborator sees, then a
+    readable one, then any (`tests/open_adt_expr.sl`,
+    `tests/open_adt_unify.sl`, `tests/open_adt_clash_bad.sl`,
+    `tests/matchable_prefers_many.sl`, `tests/known_matchable.sl`,
+    `tests/open_adt_mult_bad.sl`). A match that dispatches at runtime
+    reads its Matchable's value, stamped in where the entry is `Const`
+    and read from the entry's runtime binding otherwise, so it requires
+    the opened entry to be *readable*: `Const` with the ADT, or
+    non-erased and still in scope (`Elab.readable`; in `self/`,
+    `in-scope` reads a name through the scope map and an anonymous
+    entry through the objects list, so a shadowed name counts as gone
+    there where the reference's scope list still holds it, a
+    divergence no test reaches). A `many` parameter opened at `erased`
+    serves no such match (`tests/open_adt_erased_bad.sl`), and neither
+    does an entry the open bound inside a `let`'s right-hand side once
+    the `let` ends, the binding going out of scope with the right-hand
+    side's others while the record and the facts stay, which is the
+    reading of "retains both" above (`tests/open_adt_let.sl`,
+    `tests/open_adt_let_bad.sl`). `(open-absurd e ann)` is an
+    expression whose size is its annotation's, `_` reusing the
+    enclosing telescope as a match's does; it takes `e` at `erased`
+    (the owner's choice: no value of it could matter), requires the
+    same assertion to fail, records and mints nothing, and compiles to
+    the absurd code
     (`tests/open_absurd.sl`, `tests/open_absurd_clash.sl`,
     `tests/open_absurd_bad.sl`, `tests/open_adt_bad.sl`). Every read of
     a `Matchable` goes through one lookup over the opened list, so
@@ -1727,3 +1748,16 @@ and section 27 does not list the two forms.
     "the same non-phantom constructor on both sides" then describes what
     a usable proof relates rather than what the form checks; whether
     and how to reword it is the owner's.
+
+117. **`let-match` applies `match`'s readability check.** A `let-match`
+    at `many` outside run position compiles to a one-branch dispatch
+    that reads its Matchable at runtime, and it did so through an
+    erased first-class Matchable: `tests/let_match_erased_bad.sl`
+    elaborated and then failed when run with "unbound at runtime". This
+    predates the proposal, the ambient pick having chosen the same
+    entry. Now both forms refuse an opened entry that is not readable
+    (item 114) with one message, "is erased or out of scope". In run
+    position a `let-match` destructs through the constructor's `Const`
+    value and reads no Matchable, so it is not checked there. Found by
+    the session while making item 114's rule rigorous for the owner;
+    that `let-match` is a match for this purpose is the owner's.
