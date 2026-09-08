@@ -1659,7 +1659,9 @@ evidence. DESIGN.md is not edited (CLAUDE.md rule 12): sections 17-19,
 and section 27 does not list the two forms.
 
 114. **Nothing consults a `Matchable` or a `Newtype` until it is
-    opened** (`Env.opens`, `Elab.open_adt`). The environment carries a list of opened
+    opened** (`Env.opens`, `Elab.open_adt`; in `self/`, the `Env`'s
+    `opens` and `open-adt`, with `env-restore` keeping the inner list and
+    `env-discard` the outer, as they do the fact table). The environment carries a list of opened
     entries beside the fact table, and it shares the fact table's fate:
     a match branch's is discarded with the branch, a `let` right-hand
     side's is kept, which is item 29's leak, excused by the proposal on

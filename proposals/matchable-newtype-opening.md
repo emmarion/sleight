@@ -144,8 +144,8 @@ whether the contradicting open with `_` as a whole function body makes
 
 ## 3. Implementation notes
 
-Not normative. Implemented in `lib/` by a session at the owner's
-request; the owner settled the following in chat, and
+Not normative. Implemented in `lib/` and `self/` by a session at the
+owner's request; the owner settled the following in chat, and
 ASSUMPTIONS.md 114-116 record the session's reading of the rest.
 
 - The two forms are `(open-adt e)`, the statement, and

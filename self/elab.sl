@@ -526,10 +526,9 @@
     ((Some a adt) 0)
     ((None a) (match many (entry-mult-of env x) _ ((Many) 1) ((Erased) 2)))))
 
-; Consistent Matchables for one type are interchangeable (section 19); the pick prefers one whose ADT the
-; elaborator can see, then a non-erased one (ASSUMPTIONS 84, 86).
-(def-fns _ $ many find-matchable-in : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) tid) (many (Maybe (MatchInfo)) best) -> (many (Maybe (MatchInfo)) r)
-  (match many objects _
+; Opened Matchables for one type unify, so any serves; the pick is the best-ranked (ASSUMPTIONS 114).
+(def-fns _ $ many find-matchable-in : (subterm many (List (Bin)) opens) (many (Env) env) (many (Bin) tid) (many (Maybe (MatchInfo)) best) -> (many (Maybe (MatchInfo)) r)
+  (match many opens _
     ((Nil a) best)
     ((Cons a x rest)
       (let (many cand)
@@ -554,8 +553,8 @@
       (find-matchable-in rest env tid best2))))
 
 
-(def-fns _ $ many find-newtype : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) c) -> (many (Maybe (Bin)) r)
-  (match many objects _
+(def-fns _ $ many find-newtype : (subterm many (List (Bin)) opens) (many (Env) env) (many (Bin) c) -> (many (Maybe (Bin)) r)
+  (match many opens _
     ((Nil a) (None (Bin)))
     ((Cons a x rest)
       (match many (type-of env x) _
@@ -999,34 +998,98 @@
 (def-fns _ $ many sp-name : (many (Sp) sp) -> (many (String) name)
   (sp-name-in sp-table sp))
 
-; The candidates are ranked; several must agree (section 19), else the ambiguity is an error.
-(def-fns _ $ many agree : (subterm many (List (Bin)) objects) (many (Env) env) (many (Bin) tid) (many (Term) best) -> (many (Bool) r)
-  (match many objects _
-    ((Nil a) (BTrue))
-    ((Cons a x rest)
-      (let (many ty) (type-of env x))
-      (let (many mine)
-        (match many ty (((Bool) b))
-          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar t2) (bin-eq t2 tid)) (else (BFalse)))) (else (BFalse))))
-      (match many mine _
-        ((BFalse) (agree rest env tid best))
-        ((BTrue) (and (term-eq ty best) (agree rest env tid best)))))))
-
 (def-fns _ $ many find-matchable : (many (Env) env) (many (Bin) tid) -> (many (Env) r) (many (Maybe (MatchInfo)) info)
-  (match many (find-matchable-in (env-objects env) env tid (None (MatchInfo))) _
-    ((None a) (values env (None (MatchInfo))))
-    ((Some a info)
-      (match many info _
-        ((MkMatchInfo mid d cs rank)
-          (match many (agree (env-objects env) env tid (type-of env mid)) _
-            ((BTrue) (values env (Some (MatchInfo) info)))
-            ((BFalse) (values (env-error env (str-cat "ambiguous Matchables for " (name-of env tid))) (Some (MatchInfo) info)))))))))
+  (values env (find-matchable-in (env-opens env) env tid (None (MatchInfo)))))
 
-(def-fns _ $ many phantom : (many (Env) env) (many (Bin) c) -> (many (Bool) r)
-  (let (many env2) (many found) (find-matchable env (tid-of env c)))
-  (match many found _
-    ((None a) (BFalse))
-    ((Some a info) (match many info _ ((MkMatchInfo mid d cs rank) (match many (marker cs c) _ ((Erased) (BTrue)) ((Many) (BFalse))))))))
+; ---- Opening a Matchable or Newtype (proposals/matchable-newtype-opening.md, ASSUMPTIONS 114-115)
+
+(def-adts $ OpenKind : -> Type
+  enum
+  (many OKMatchable : -> (OpenKind)) (many OKNewtype : -> (OpenKind)) (many OKNone : -> (OpenKind)))
+
+(def-fns _ $ many open-kind : (many (Env) env) (many (Bin) x) -> (many (OpenKind) r)
+  (match many (type-of env x) _ ((TMatchable d t cs) (OKMatchable)) ((TNewtype c) (OKNewtype)) (else (OKNone))))
+
+(def-fns _ $ many open-kind-eq : (many (OpenKind) a) (many (OpenKind) b) -> (many (Bool) r)
+  (match many a _
+    ((OKMatchable) (match many b _ ((OKMatchable) (BTrue)) (else (BFalse))))
+    ((OKNewtype) (match many b _ ((OKNewtype) (BTrue)) (else (BFalse))))
+    ((OKNone) (match many b _ ((OKNone) (BTrue)) (else (BFalse))))))
+
+(def-fns _ $ many var-id : (many (Term) t) -> (many (Bin) r)
+  (match many t _ ((TVar x) x) (else (BZ))))
+
+(def-fns _ $ many mctor-ids : (subterm many (List (MCtor)) cs) -> (many (List (Bin)) r)
+  (match many cs _
+    ((Nil a) (Nil (Bin)))
+    ((Cons a mc rest) (match many mc _ ((MkMCtor m t) (Cons (Bin) (var-id t) (mctor-ids rest)))))))
+
+; The type constructor and constructors an object names, canonically: what relates two opens.
+(def-fns _ $ many open-names : (many (Env) env) (many (Bin) x) -> (many (List (Bin)) r)
+  (match many (type-of env x) _
+    ((TMatchable d t cs) (Cons (Bin) (var-id t) (mctor-ids cs)))
+    ((TNewtype c) (Cons (Bin) (var-id c) (Nil (Bin))))
+    (else (Nil (Bin)))))
+
+(def-fns _ $ many bins-share : (subterm many (List (Bin)) xs) (many (List (Bin)) ys) -> (many (Bool) r)
+  (match many xs _ ((Nil a) (BFalse)) ((Cons a x rest) (or (list-mem-bin ys x) (bins-share rest ys)))))
+
+(def-fns _ $ many bins-dup : (subterm many (List (Bin)) xs) -> (many (Maybe (Bin)) r)
+  (match many xs _
+    ((Nil a) (None (Bin)))
+    ((Cons a x rest) (match many (list-mem-bin rest x) _ ((BTrue) (Some (Bin) x)) ((BFalse) (bins-dup rest))))))
+
+(def-fns _ $ many open-related : (subterm many (List (Bin)) opens) (many (Env) env) (many (OpenKind) kind) (many (List (Bin)) names) -> (many (List (Bin)) related) (many (List (Bin)) others)
+  (match many opens _
+    ((Nil a) (values (Nil (Bin)) (Nil (Bin))))
+    ((Cons a y rest)
+      (let (many rel) (many oth) (open-related rest env kind names))
+      (match many (and (open-kind-eq (open-kind env y) kind) (bins-share names (open-names env y))) _
+        ((BTrue) (values (Cons (Bin) y rel) oth))
+        ((BFalse) (values rel (Cons (Bin) y oth)))))))
+
+(def-fns _ $ many open-unify-all : (subterm many (List (Bin)) related) (many (Env) env) (many (Bin) x) -> (many (UnifyRes) r)
+  (match many related _
+    ((Nil a) (UOk env))
+    ((Cons a y rest)
+      (match many (unify-env env (type-of env x) (type-of env y)) _
+        ((UContra m) (UContra m))
+        ((UOk env2) (open-unify-all rest env2 x))))))
+
+; The entry a merged group keeps: the first of the lowest rank, a non-erased one where there is one.
+(def-fns _ $ many open-best : (subterm many (List (Bin)) xs) (many (Env) env) (many (Bin) best) -> (many (Bin) r)
+  (match many xs _
+    ((Nil a) best)
+    ((Cons a y rest) (open-best rest env (match many (nat-lt (matchable-rank env y) (matchable-rank env best)) (((Bin) b)) ((BTrue) y) ((BFalse) best))))))
+
+; Opens x: its constructors must be distinct after canonicalization, and it must unify with every opened
+; object of its kind that lists one of them or heads its type constructor, minting the facts that takes;
+; those then merge with it into one record.
+(def-fns _ $ many open-adt : (many (Env) env) (many (Bin) x) -> (many (UnifyRes) r)
+  (let (many dup) (match many (type-of env x) (((Maybe (Bin)) d)) ((TMatchable d t cs) (bins-dup (mctor-ids cs))) (else (None (Bin)))))
+  (match many dup _
+    ((Some a c) (UContra (str-cat (name-of env c) " is listed twice")))
+    ((None a)
+      (let (many related) (many others) (open-related (env-opens env) env (open-kind env x) (open-names env x)))
+      (match many (open-unify-all related env x) _
+        ((UContra m) (UContra m))
+        ((UOk env2)
+          (let (many all) (list-append (Bin) related (Cons (Bin) x (Nil (Bin)))))
+          (let (many keep) (match many all (((Bin) b)) ((Nil b) x) ((Cons b first rest) (open-best rest env2 first))))
+          (UOk (env-set-opens env2 (Cons (Bin) keep others))))))))
+
+; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
+(def-fns _ $ many open-minted : (many (Env) env) (many (Bin) x) -> (many (Env) r)
+  (match many (open-adt env x) _ ((UOk env2) env2) ((UContra m) (env-error env (str-cat "internal: " m)))))
+
+; The entry an open-adt or open-absurd names: its argument, elaborated at erased, canonically an entry of
+; Matchable or Newtype type.
+(def-fns _ $ many open-entry : (many (Env) env) (many (Term) t0) -> (many (Env) r) (many (Maybe (Bin)) x)
+  (let (many t) (canon-env env t0))
+  (let (many bad) (env-error env (str-cat3 (show-t env t) " : " (str-cat (show-t env (infer t env)) " is not a Matchable or a Newtype"))))
+  (match many t _
+    ((TVar x) (match many (open-kind env x) _ ((OKNone) (values bad (None (Bin)))) (else (values env (Some (Bin) x)))))
+    (else (values bad (None (Bin))))))
 
 ; A type is empty when its Matchable lists no constructor (section 37).
 (def-fns _ $ many check-empty : (many (Env) env) (many (Term) ty) -> (many (Env) r)
@@ -1937,7 +2000,7 @@
             ((Cons a head args)
               (match many (special-of envl head) (((Env) e) ((List (Res)) rs) ((Code) c))
                 ((Some b sp)
-                  (let (many multi) (or (sp-eq sp (SpExpr (ExValues))) (or (sp-eq sp (SpExpr (ExMatch))) (or (sp-eq sp (SpMark (MkTail))) (sp-eq sp (SpMark (MkDelegate)))))))
+                  (let (many multi) (or (sp-eq sp (SpExpr (ExValues))) (or (sp-eq sp (SpExpr (ExMatch))) (or (sp-eq sp (SpExpr (ExOpenAbsurd))) (or (sp-eq sp (SpMark (MkTail))) (sp-eq sp (SpMark (MkDelegate))))))))
                   (let (many env0) (many m)
                     (match many multi (((Env) e) ((Mult) m))
                       ((BTrue) (values envl pos))
@@ -1968,13 +2031,38 @@
                           (let (many env2) (many tid) (named env0 (one-arg args) "a type constructor"))
                           (let (many env3) (many found) (find-matchable env2 tid))
                           (match many found (((Env) e) ((List (Res)) rs) ((Code) c))
-                            ((None c) (values (env-error env3 (str-cat (name-of env3 tid) " has no Matchable in scope")) (Nil (Res)) (CError "no Matchable")))
+                            ((None c) (values (env-error env3 (str-cat (name-of env3 tid) " has no Matchable open")) (Nil (Res)) (CError "no Matchable")))
                             ((Some c info) (match many info (((Env) e) ((List (Res)) rs) ((Code) c)) ((MkMatchInfo mid d cs rank) (values env3 (Cons (Res) (res-of env3 mid) (Nil (Res))) (matchable-code env3 m mid)))))))
                         ((ExNewtypeOf)
                           (let (many env2) (many c) (ctor-var env0 (one-arg args)))
-                          (match many (find-newtype (env-objects env2) env2 c) (((Env) e) ((List (Res)) rs) ((Code) c))
-                            ((None d) (values (env-error env2 (str-cat (name-of env2 c) " has no Newtype in scope")) (Nil (Res)) (CError "no Newtype")))
+                          (match many (find-newtype (env-opens env2) env2 c) (((Env) e) ((List (Res)) rs) ((Code) c))
+                            ((None d) (values (env-error env2 (str-cat (name-of env2 c) " has no Newtype open")) (Nil (Res)) (CError "no Newtype")))
                             ((Some d x) (values env2 (Cons (Res) (res-of env2 x) (Nil (Res))) (CErased)))))
+                        ((ExOpenAbsurd)
+                          (match many args (((Env) e) ((List (Res)) rs) ((Code) c))
+                            ((Cons c eraw more)
+                              (match many more (((Env) e) ((List (Res)) rs) ((Code) c))
+                                ((Cons d ann more2)
+                                  (match many more2 (((Env) e) ((List (Res)) rs) ((Code) c))
+                                    ((Nil f)
+                                      (let (many env1) (many ress) (many code0) (elab-expr sugar eraw env0 erased-one no-tele (CCPlain)))
+                                      (let (many env2) (many found) (open-entry env1 (erased-term ress)))
+                                      (let (many env3)
+                                        (match many found (((Env) e0))
+                                          ((None g) env2)
+                                          ((Some g x)
+                                            (match many (open-kind env2 x) (((Env) e0))
+                                              ((OKNewtype) (env-error env2 "open-absurd: whether a Newtype has a contradicting open is undecided"))
+                                              (else
+                                                (match many (open-adt env2 x) (((Env) e0))
+                                                  ((UOk e1) (env-error env2 (str-cat3 "open-absurd: opening " (name-of env2 x) " contradicts nothing")))
+                                                  ((UContra m) env2)))))))
+                                      (let (many env4) (many ann-tele) (result-tele sugar ann env3 expect tele))
+                                      (let (many env5) (many rids) (open-tele ann-tele env4 (Some (List (Maybe (String))) (anon-names ann-tele)) (None (List (Mult))) (None (List (State))) (Nil (Term))))
+                                      (values env5 (ress-of rids env5) (match many pos (((Code) c0)) ((Erased) (CErased)) ((Many) (CAbsurd)))))
+                                    (else (malformed env0 sp))))
+                                (else (malformed env0 sp))))
+                            (else (malformed env0 sp))))
                         ((ExNumeralOf) (numeral-of-lit env0 (one-arg args)))
                         ((ExDistinct) (elab-distinct sugar args env0))
                         ((ExLevelOf)
@@ -2050,8 +2138,8 @@
                               (let (many env2) (many cid) (ctor-var env0 craw))
                               (let (many ctele) (many ret) (ctor-type env2 cid))
                               (let (many env3)
-                                (match many (find-newtype (env-objects env2) env2 cid) (((Env) e))
-                                  ((None d) (env-error env2 (str-cat (name-of env2 cid) " has no Newtype in scope: only a marked newtype's wrapping constructor has one")))
+                                (match many (find-newtype (env-opens env2) env2 cid) (((Env) e))
+                                  ((None d) (env-error env2 (str-cat (name-of env2 cid) " has no Newtype open: only a marked newtype's wrapping constructor has one")))
                                   ((Some d x) env2)))
                               (let (many env4) (many acc) (elab-term-args sugar wargs (subs-all wargs) env3 ctele (Nil (Term))))
                               (let (many env5) (many f)
@@ -2066,8 +2154,7 @@
                             ((Cons c craw cargs)
                               (let (many env2) (many cid) (ctor-var env0 craw))
                               (let (many ctele) (many ret) (ctor-type env2 cid))
-                              (let (many env3) (match many (phantom env2 cid) (((Env) e)) ((BTrue) (env-error env2 (str-cat (name-of env2 cid) " is phantom"))) ((BFalse) env2)))
-                              (let (many env4) (many src) (many tgt) (coercible-ctor-args sugar cargs env3 ctele (Nil (Term)) (Nil (Term)) cid))
+                              (let (many env4) (many src) (many tgt) (coercible-ctor-args sugar cargs env2 ctele (Nil (Term)) (Nil (Term)) cid))
                               (let (many env5) (many r) (mint env4 (proof-type coercible-id (Cons (Term) (instantiate src ret) (Cons (Term) (TApp (TVar cid) (list-rev (Term) src)) (Cons (Term) (instantiate tgt ret) (Cons (Term) (TApp (TVar cid) (list-rev (Term) tgt)) (Nil (Term)))))))))
                               (values env5 (Cons (Res) r (Nil (Res))) (CErased)))))
                         ((ExCoercibleOf)
@@ -2109,6 +2196,20 @@
     (match many args _
       ((Nil a) (missing-arg env))
       ((Cons a araw rest) (elab-term sugar araw env (BFalse)))))
+
+  ; A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one.
+  (many result-tele : (subterm many (Nat) sugar) (subterm many (Raw) ann) (many (Env) env) (many (List (Mult)) expect) (many (Maybe (List (Entry))) tele) -> (many (Env) r) (many (List (Entry)) t)
+    (let (many env3) (many ann-tele)
+      (match many (is-underscore ann) (((Env) e0) ((List (Entry)) t0))
+        ((BTrue) (match many tele (((Env) e0) ((List (Entry)) t0)) ((None f) (values (env-error env "no telescope to reuse for _") (Nil (Entry)))) ((Some f t) (values env t))))
+        ((BFalse)
+          (match many ann (((Env) e0) ((List (Entry)) t0))
+            ((RList lq aitems)
+              (let (many env3) (many ids) (many t) (elab-tele sugar aitems one-step (subs-all aitems) env (MMExpect expect) (Nil (Term)) (BFalse)))
+              (values (env-discard env env3) t)) (else (values (env-error env "malformed match annotation") (Nil (Entry))))))))
+    (match many (nat-eq (list-length (Entry) ann-tele) (list-length (Mult) expect)) _
+      ((BTrue) (values env3 ann-tele))
+      ((BFalse) (values (env-error env3 (str-cat3 "match annotation has " (nat-str (list-length (Entry) ann-tele)) (str-cat " entries, position needs " (nat-str (list-length (Mult) expect))))) ann-tele))))
 
   (many elab-one-erased : (subterm many (Nat) sugar) (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (Term) t)
     (match many args _
@@ -2353,8 +2454,28 @@
                                 ((Cons c cn rest) (values env4 (SConsts consts)))))))
                         ((StComptimeMatch) (elab-comptime-match envl args))
                         ((StLetMatch) (elab-let-match sugar args envl))
-                        ((StUnary) (elab-unary sugar args envl)))) (else (values bad (SNone))))))))) (else (values bad (SNone)))))
+                        ((StUnary) (elab-unary sugar args envl))
+                        ((StOpenAdt) (elab-open-adt sugar args envl)))) (else (values bad (SNone))))))))) (else (values bad (SNone)))))
     (values (env-back env env2) sc))
+
+  ; open-adt (proposals/matchable-newtype-opening.md): a statement that binds no name, mints facts and records
+  ; the opened entry, discarded exactly when the entries minted beside it are.
+  (many elab-open-adt : (subterm many (Nat) sugar) (subterm many (List (Raw)) args) (many (Env) env) -> (many (Env) r) (many (StmtCode) sc)
+    (let (many bad) (env-error env "malformed open-adt: expected (open-adt m)"))
+    (match many args _
+      ((Cons a eraw rest)
+        (match many rest _
+          ((Nil b)
+            (let (many env1) (many ress) (many code) (elab-expr sugar eraw env erased-one no-tele (CCPlain)))
+            (let (many env2) (many found) (open-entry env1 (erased-term ress)))
+            (match many found _
+              ((None c) (values env2 (SNone)))
+              ((Some c x)
+                (match many (open-adt env2 x) _
+                  ((UOk env3) (values env3 (SNone)))
+                  ((UContra m) (values (env-error env2 (str-cat3 "open-adt: " (name-of env2 x) (str-cat3 " contradicts what is open (" m ")"))) (SNone)))))))
+          (else (values bad (SNone)))))
+      (else (values bad (SNone)))))
 
   ; let-match (section 16, ASSUMPTIONS 99-100): a one-constructor match binding outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
@@ -2383,7 +2504,7 @@
                           ((Some f tid)
                             (let (many env2) (many found) (find-matchable env1 tid))
                             (match many found _
-                              ((None g) (values (env-error env2 (str-cat (name-of env2 tid) " has no Matchable in scope")) (SNone)))
+                              ((None g) (values (env-error env2 (str-cat (name-of env2 tid) " has no Matchable open")) (SNone)))
                               ((Some g info)
                                 (match many info _
                                   ((MkMatchInfo mid disc mctors rank)
@@ -2706,13 +2827,14 @@
                     (let (many adt2) (MkAdt name tagged records extname))
                     (let (many cvals) (ctor-values records))
                     (let (many env3) (many mid) (bind env2b (None (String)) (Many) (SConst (VMatchable adt2)) (TMatchable disc (TVar tid) mctors) (None (Term)) coercible-id))
+                    (let (many env3b) (open-minted env3 mid))
                     (let (many env4)
                       (match many nt (((Env) e0))
-                        ((BFalse) env3)
+                        ((BFalse) env3b)
                         ((BTrue)
                           (match many (wrapper disc ss) (((Env) e0))
-                            ((None c) (env-error env3 (str-cat name " is not of newtype shape (section 38)")))
-                            ((Some c w) (let (many env4) (many nx) (bind env3 (None (String)) (Erased) (SDyn) (TNewtype (TVar w)) (None (Term)) coercible-id)) env4)))))
+                            ((None c) (env-error env3b (str-cat name " is not of newtype shape (section 38)")))
+                            ((Some c w) (let (many env4) (many nx) (bind env3b (None (String)) (Erased) (SDyn) (TNewtype (TVar w)) (None (Term)) coercible-id)) (open-minted env4 nx))))))
                     (let (many env5) (many more) (define-adts sugar rest hrest env4 trest))
                     (values env5 (list-append (Pair (Bin) (Value)) cvals (Cons (Pair (Bin) (Value)) (MkPair (Bin) (Value) mid (VMatchable adt2)) more))))))))))))
 
@@ -2860,7 +2982,7 @@
                   ((Some d tid)
                     (let (many env2b) (many found) (find-matchable env2 tid))
                     (match many found _
-                      ((None e) (values (env-error env2b (str-cat (name-of env2b tid) " has no Matchable in scope")) (Nil (Res)) (CError "no Matchable")))
+                      ((None e) (values (env-error env2b (str-cat (name-of env2b tid) " has no Matchable open")) (Nil (Res)) (CError "no Matchable")))
                       ((Some e info)
                         (match many info _
                           ((MkMatchInfo mid disc mctors rank)
@@ -2870,18 +2992,7 @@
                               (match many (and (mult-is-many pos) (and (mult-is-many smult) (not (mult-is-many (entry-mult-of env2b mid))))) (((Env) e0))
                                 ((BTrue) (env-error env2b (str-cat3 "the Matchable for " (name-of env2b tid) " is erased, so a non-erased match cannot take a value of it apart")))
                                 ((BFalse) env2b)))
-                            (let (many env3) (many ann-tele)
-                              (match many (is-underscore ann) (((Env) e0) ((List (Entry)) t0))
-                                ((BTrue) (match many tele (((Env) e0) ((List (Entry)) t0)) ((None f) (values (env-error env2c "no telescope to reuse for _") (Nil (Entry)))) ((Some f t) (values env2c t))))
-                                ((BFalse)
-                                  (match many ann (((Env) e0) ((List (Entry)) t0))
-                                    ((RList lq aitems)
-                                      (let (many env3) (many ids) (many t) (elab-tele sugar aitems one-step (subs-all aitems) env2c (MMExpect expect) (Nil (Term)) (BFalse)))
-                                      (values (env-discard env2c env3) t)) (else (values (env-error env2c "malformed match annotation") (Nil (Entry))))))))
-                            (let (many env3b)
-                              (match many (nat-eq (list-length (Entry) ann-tele) (list-length (Mult) expect)) (((Env) e0))
-                                ((BTrue) env3)
-                                ((BFalse) (env-error env3 (str-cat3 "match annotation has " (nat-str (list-length (Entry) ann-tele)) (str-cat " entries, position needs " (nat-str (list-length (Mult) expect))))))))
+                            (let (many env3b) (many ann-tele) (result-tele sugar ann env2c expect tele))
                             (let (many env4) (many rids) (open-tele ann-tele env3b (Some (List (Maybe (String))) (anon-names ann-tele)) (None (List (Mult))) (None (List (State))) (Nil (Term))))
                             (let (many env5) (many real) (many seen) (elab-branches sugar branches env4 tid sres smult mctors ann-tele expect (Nil (RealBranch)) (Nil (Bin))))
                             (let (many env6) (check-coverage mctors env5 seen))
