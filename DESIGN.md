@@ -1581,7 +1581,10 @@ checked entirely at elaboration time:
    `(Coercible (Fn ...) g (Fn ...) f)` anonymously, as `def-adts`
    mints a `Matchable` (§19), and this form fetches it from ambient
    scope by naming `g`, as `matchable-of` does. `g` is `Dyn` within its
-   own block (§34), so `g`'s body cannot use its own proof.
+   own block (§34), so `g`'s body cannot use its own proof. TBD: whether
+   this fetch should instead find only an opened proof, `def-fns`
+   opening what it mints and a first-class proof being opened as a
+   `Matchable` is (proposals/matchable-newtype-opening.md).
 
 **Representation requirement.** Coercion is zero-cost only if the
 representations really coincide, so the following is a requirement on
