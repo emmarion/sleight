@@ -5,7 +5,12 @@ open Value
 
 let registered : (string, adt) Hashtbl.t = Hashtbl.create 8
 let claimed : (string, unit) Hashtbl.t = Hashtbl.create 8
-let reset () = Hashtbl.reset registered; Hashtbl.reset claimed
+
+(* Every declared type by name, the first declaration winning, for an implementation that builds a plain type's
+   values (nat-cmp's Cmp). *)
+let adts : (string, adt) Hashtbl.t = Hashtbl.create 8
+let note name adt = if not (Hashtbl.mem adts name) then Hashtbl.replace adts name adt
+let reset () = Hashtbl.reset registered; Hashtbl.reset claimed; Hashtbl.reset adts
 
 (* Each implementation may back one declaration per program. *)
 let claim table loc name =
@@ -28,15 +33,16 @@ let types : (string * (adt -> ext)) list =
     (fun (name, mk) -> (name, fun adt -> Hashtbl.replace registered name adt; ext (mk adt)))
     [ ("Nat", fun adt -> Ffi_core.peano ~z ~nat:(fun n -> VExt (adt, Int n)));
       ("Bin", fun adt -> Ffi_core.bijective ~z ~bin:(fun n -> VExt (adt, Int n)));
-      ("String", fun adt -> Ffi_core.text ~z ~slice ~u8:(int "Nat") ~str:(fun s -> VExt (adt, Slice s)));
-      ("Cmp", fun adt -> Ffi_core.indexed ~z ~mk:(fun n -> VExt (adt, Int n))) ]
+      ("String", fun adt -> Ffi_core.text ~z ~slice ~u8:(int "Nat") ~str:(fun s -> VExt (adt, Slice s))) ]
+
+let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
 let unary name f = function [ a ] -> [ int name (f (z a)) ] | _ -> raise (Eval.Runtime "extern arity")
 let binary name f = function [ a; b ] -> [ int name (f (z a) (z b)) ] | _ -> raise (Eval.Runtime "extern arity")
 
 let fns : (string * (value list -> value list)) list =
   [ ("add", binary "Nat" Ffi_core.add);
-    ("nat-cmp", binary "Cmp" Ffi_core.nat_cmp);
+    ("nat-cmp", function [ a; b ] -> [ Ffi_core.nat_cmp ~con:(plain "Cmp") (z a) (z b) ] | _ -> raise (Eval.Runtime "extern arity"));
     ("nat-mod", binary "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
     ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity"));

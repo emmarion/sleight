@@ -64,7 +64,7 @@
 ; instances differ by a coercion (section 38).
 (def-adts
   (Cmp : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type
-    enum extern
+    enum
     (many CLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                 (erased (R a b) p) -> (Cmp T R a b))
     (many CEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (Cmp T R a a))

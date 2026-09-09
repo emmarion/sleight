@@ -1114,6 +1114,7 @@ and elab_def_adts env adts =
     let ctors = List.map (fun (m, c) -> (m, Var c)) ctors in
     let shapes = shapes env al ctors in
     let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
+    Ffi.note name adt;
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
     adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) (non_phantom shapes);
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in

@@ -1897,9 +1897,10 @@ judiciously with `_`. The names and the shapes below are the session's.
      the ones above it with an inferred `Predates`.
 120. **`nat-cmp` is the extern comparison; `lt-dec` is derived from it
      and `Dec` is plain source** (the owner's decision, replacing item
-     90). `Cmp` takes `Dec`'s place as the tag-only extern type
-     (`Ffi_core.indexed`), since the FFI has to construct the result,
-     and `nat-cmp` sits at an anonymous level below `nat-lvl` so that
+     90). `Cmp` took `Dec`'s place as a tag-only extern type at first,
+     since the FFI had to construct the result; since item 123 it is
+     plain source and the FFI builds it through its constructor.
+     `nat-cmp` sits at an anonymous level below `nat-lvl` so that
      `lt-dec`, which tests reach through `nat-lvl`, can call it; the
      lemmas are `lt-succ` (`Lt a (Succ a)`) for the `CEq` case and
      `lt-weaken` (`Lt x y -> Lt x (Succ y)`) for `CGt`. `Dec` is kept
@@ -1908,6 +1909,26 @@ judiciously with `_`. The names and the shapes below are the session's.
      named `nat-cmp`'s level in a type, `tests/char_ops.sl`, now
      infers it. The extern set is `add`, `nat-cmp`, `nat-mod`,
      `bin-to-nat`, `trim`.
+123. **An extern over a plain ADT takes that type's constructor or
+     destructor; nothing is extern for the FFI's convenience.** The
+     owner asked why `Cmp` was extern; the only reason was that
+     `ffi.ml`'s implementations could build values of registered extern
+     types alone. Now `Ffi.note` records every declared type by name
+     (first declaration winning, so the prelude's), `Ffi_core.nat_cmp
+     ~con` builds its `Cmp` through the interpreter's `construct`, the
+     extracted code's `con_N`, or slc's runtime `Tag`, and
+     `Ffi_core.indexed` is gone; `Cmp` is an ordinary tagged type, so
+     its `Matchable` and `coerce`s between its instances go the ordinary
+     way. This is the mirror of `flatten`'s `~des` (item 122), and the
+     extractor's special case is now one table over both names, still
+     by name since a post-erasure `fn` no longer has types. slc's
+     compile-time interpreter runs `nat-cmp`'s model instead of an
+     extern, since building a `Cmp` there would want the prelude's
+     constructor descriptors, which its extern table does not have; the
+     extracted programs and slc's emitter still use `ext_nat_cmp`, so
+     only the comptime of a compiled program compares in unary, at most
+     256 steps per character literal. The extern types are `Nat`, `Bin`
+     and `String`.
 
 ## The compiler's libraries carry evidence
 

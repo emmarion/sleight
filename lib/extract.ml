@@ -20,8 +20,7 @@ let quote s = "\"" ^ String.escaped s ^ "\""
 let externs =
   [ ("Nat", "Ffi_core.peano ~z:Obj.obj ~nat:Obj.repr");
     ("Bin", "Ffi_core.bijective ~z:Obj.obj ~bin:Obj.repr");
-    ("String", "Ffi_core.text ~z:Obj.obj ~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr");
-    ("Cmp", "Ffi_core.indexed ~z:Obj.obj ~mk:Obj.repr") ]
+    ("String", "Ffi_core.text ~z:Obj.obj ~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr") ]
 
 type shape = Ext | Tagged | Untagged
 
@@ -122,8 +121,15 @@ and fn cx scope name f =
   let body =
     match f.V.impl with
     | Some _ when !V.use_externs ->
-        (* flatten walks a Rope, a plain ADT, so it takes that type's destructor. *)
-        let extra = if f.fname = "flatten" then Printf.sprintf "~des:%s ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " (des cx (List.find (fun a -> a.V.tname = "Rope") cx.adts)) else "" in
+        (* An extern over a plain ADT takes that type's destructor or constructor: flatten walks a Rope, nat-cmp
+           builds a Cmp. *)
+        let plain tname = List.find (fun a -> a.V.tname = tname) cx.adts in
+        let extra =
+          match f.fname with
+          | "flatten" -> Printf.sprintf "~des:%s ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " (des cx (plain "Rope"))
+          | "nat-cmp" -> Printf.sprintf "~con:%s " (con cx (plain "Cmp"))
+          | _ -> ""
+        in
         Printf.sprintf "(Obj.repr (Ffi_core.%s %s%s))" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
     | _ -> expr cx scope f.body
   in

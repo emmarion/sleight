@@ -25,11 +25,9 @@ let text ~z ~slice ~u8 ~str =
       | _ -> assert false),
     fun v -> let s, o, l = slice v in if l = 0 then (0, []) else (1, [ u8 (Z.of_int (Char.code s.[o])); str (s, o + 1, l - 1) ]) )
 
-(* A type whose values are their constructor index alone, every field erased. *)
-let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
-
 let add = Z.add
-let nat_cmp a b = Z.of_int (if Z.lt a b then 0 else if Z.equal a b then 1 else 2)
+(* [con] builds the Cmp result, a plain type, from its constructor index: less, equal, greater. *)
+let nat_cmp ~con a b = con (if Z.lt a b then 0 else if Z.equal a b then 1 else 2) []
 let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)

@@ -3,7 +3,6 @@
 ; accepts it. Extern functions run as the host's own (section 41).
 
 (let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ "Nat")
-(let (many cmp-adt) $ MkAdt "Cmp" (BTrue) (Nil _) $ Some _ "Cmp")
 (let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ "String")
 
 (def-fns _ $ many vnat : (many (Nat) n) -> (many (Value) v)
@@ -23,7 +22,7 @@
 (def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
   (or (str-eq name "Nat")
     (or (str-eq name "Bin")
-      $ or (str-eq name "String") $ str-eq name "Cmp")))
+      $ str-eq name "String")))
 
 (def-fns _ $ many nat-mod-value : (many (Nat) s) (many (Nat) c) -> (many (Value) v)
   (match many (lt-dec (Zero) c) _
@@ -57,10 +56,7 @@
     ((CEq eq-t eq-r eq-x) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
     (else
       (match many (str-cmp name "nat-cmp") _
-        ((CEq eq-t eq-r eq-x)
-          (let (many x) $ value-nat a)
-          (let (many y) $ value-nat b)
-          (Cons _ (VExt cmp-adt $ PDec $ match many (nat-lt x y) (((Nat) i)) ((BTrue) 0) ((BFalse) (match many (nat-lt y x) _ ((BTrue) 2) ((BFalse) 1)))) $ Nil _))
+        ((CEq eq-t eq-r eq-x) (Cons _ (VError "nat-cmp runs as its model at compile time") $ Nil _))
         (else
           (match many (str-cmp name "nat-mod") _
             ((CEq eq-t eq-r eq-x) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
@@ -186,7 +182,7 @@
           ((MkClosure fn group cenv)
             (match many fn _
               ((MkFunc name id params body impl top)
-                (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
+                (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (and (is-extern-fn n) $ not $ str-eq n "nat-cmp")))
                 (match many ext _
                   ((BTrue) (apply-extern (match many impl (((String) s)) ((None a) (SNil)) ((Some a n) n)) args))
                   ((BFalse)

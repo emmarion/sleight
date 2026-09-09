@@ -20,9 +20,8 @@ let text ~z ~slice ~u8 ~str =
           str (String.make 1 (Char.chr (Z.to_int (z c))) ^ String.sub s o l, 0, l + 1)
       | _ -> assert false),
     fun v -> let s, o, l = slice v in if l = 0 then (0, []) else (1, [ u8 (Z.of_int (Char.code s.[o])); str (s, o + 1, l - 1) ]) )
-let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
 let add = Z.add
-let nat_cmp a b = Z.of_int (if Z.lt a b then 0 else if Z.equal a b then 1 else 2)
+let nat_cmp ~con a b = con (if Z.lt a b then 0 else if Z.equal a b then 1 else 2) []
 let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
@@ -56,12 +55,11 @@ let nat n = Nat n
 let (con_Nat : int -> v list -> v), (des_Nat : v -> int * v list) = Ffi_core.peano ~z ~nat
 let (con_Bin : int -> v list -> v), (des_Bin : v -> int * v list) = Ffi_core.bijective ~z ~bin:nat
 let (con_String : int -> v list -> v), (des_String : v -> int * v list) = Ffi_core.text ~z ~slice ~u8:nat ~str:(fun s -> Str s)
-let (con_Cmp : int -> v list -> v), (des_Cmp : v -> int * v list) = Ffi_core.indexed ~z ~mk:nat
 let tuple = function [] -> U | [ v ] -> v | vs -> Tup vs
 let untuple n v = match (n, v) with 1, v -> [ v ] | 0, _ -> [] | _, Tup vs -> vs | _ -> absurd ()
 let des_tag = function Tag (i, fs) -> (i, fs) | _ -> absurd ()
 let ext_add = function [ a; b ] -> Nat (Ffi_core.add (z a) (z b)) | _ -> absurd ()
-let ext_nat_cmp = function [ a; b ] -> Nat (Ffi_core.nat_cmp (z a) (z b)) | _ -> absurd ()
+let ext_nat_cmp = function [ a; b ] -> Ffi_core.nat_cmp ~con:(fun i args -> Tag (i, args)) (z a) (z b) | _ -> absurd ()
 let ext_nat_mod = function [ a; b ] -> Nat (Ffi_core.nat_mod (z a) (z b)) | _ -> absurd ()
 let ext_bin_to_nat = function [ a ] -> Nat (Ffi_core.bin_to_nat (z a)) | _ -> absurd ()
 let ext_trim = function [ a ] -> Str (Ffi_core.trim (slice a)) | _ -> absurd ()
