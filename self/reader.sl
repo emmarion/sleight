@@ -32,8 +32,8 @@
     (or (nat-eq n 40)
       $ or (nat-eq n 41) $ nat-eq n 59)))
 
-(def-fns _ $ many word-tok : (many (Nat) line) (many (String) rev) -> (many (Tok) t)
-  (let (many w) $ str-rev-onto rev $ SNil)
+(def-fns _ $ many word-tok : (many (Nat) line) (many (Rope) chars) -> (many (Tok) t)
+  (let (many w) $ rope-str chars)
   (match many (str-cmp w "$") _
     ((CEq eq-t eq-r eq-x) (TDollar line))
     (else (TWord line w))))
@@ -54,7 +54,7 @@
         ((CEq eq-t eq-r eq-x) #\tab)
         (else e)))))
 
-; Tokens accumulate reversed in [acc]; an atom's characters accumulate reversed in [word]; [line] counts
+; Tokens accumulate reversed in [acc]; an atom's or a literal's characters accumulate as a rope; [line] counts
 ; the newlines passed, and a string literal's token carries the line of its closing quote as the
 ; reference reader's does.
 (def-fns _
@@ -76,8 +76,8 @@
                       ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TClose line) acc))
                       (else
                         (match many (nat-cmp n 34) _
-                          ((CEq eq-t eq-r eq-x) (string-lit rest line (SNil) acc))
-                          (else (word rest line (SCons c $ SNil) acc))))))))))))))
+                          ((CEq eq-t eq-r eq-x) (string-lit rest line (REmpty) acc))
+                          (else (word rest line (RChar c) acc))))))))))))))
   (many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ acc))
@@ -85,7 +85,7 @@
         (match many (char-is c 10) _
           ((BTrue) (tokenize rest (Succ line) acc))
           ((BFalse) (skip-comment rest line acc))))))
-  (many word : (subterm many (String) s) (many (Nat) line) (many (String) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
+  (many word : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ $ Cons _ (word-tok line rev) acc))
       ((SCons c rest)
@@ -102,14 +102,14 @@
                     (match many (nat-cmp n 41) _
                       ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TClose line) acc1))
                       (else (tokenize rest (next-line line c) acc1))))))))
-          ((BFalse) (word rest line (SCons c rev) acc))))))
-  (many string-lit : (subterm many (String) s) (many (Nat) line) (many (String) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
+          ((BFalse) (word rest line (RCat rev $ RChar c) acc))))))
+  (many string-lit : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ $ Cons _ (TError line "unterminated string literal") acc))
       ((SCons c rest)
         (let (many n) $ char-code c)
         (match many (nat-cmp n 34) _
-          ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TStrLit line $ str-rev-onto rev $ SNil) acc))
+          ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TStrLit line $ rope-str rev) acc))
           (else
             (match many (nat-cmp n 92) _
               ((CEq eq-t eq-r eq-x)
@@ -117,9 +117,9 @@
                   ((SNil) (list-rev _ $ Cons _ (TError line "unterminated string literal") acc))
                   ((SCons e rest2)
                     (match many (escape-ok e) _
-                      ((BTrue) (string-lit rest2 line (SCons (unescape e) rev) acc))
+                      ((BTrue) (string-lit rest2 line (RCat rev $ RChar $ unescape e) acc))
                       ((BFalse) (list-rev _ $ Cons _ (TError line $ str-cat "unknown escape \\" $ SCons e $ SNil) acc))))))
-              (else (string-lit rest (next-line line c) (SCons c rev) acc)))))))))
+              (else (string-lit rest (next-line line c) (RCat rev $ RChar c) acc)))))))))
 
 ; A frame is an open form: the line it opened on, whether $ opened it, and its items so far, reversed.
 (def-adts $ Frame : -> Type
@@ -207,7 +207,7 @@
   (many show-raw : (subterm many (Raw) r) -> (many (Rope) out)
     (match many r _
       ((RAtom l s) (RStr s))
-      ((RString l s) (rcat3 (RStr "\"") (RStr $ ocaml-escape s) $ RStr "\""))
+      ((RString l s) (rcat3 (RStr "\"") (ocaml-escape s) $ RStr "\""))
       ((RList l items) (rcat3 (RStr "(") (show-raws items) $ RStr ")"))))
   (many show-raws : (subterm many (List $ Raw) rs) -> (many (Rope) out)
     (match many rs _

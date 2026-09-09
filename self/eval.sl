@@ -39,7 +39,10 @@
         ((Nil a) (SNil))
         ((Cons a f rest)
           (match many rest _
-            ((Nil b) (value-str f))
+            ((Nil b)
+              (match many f _
+                ((VExt adt p) (match many p _ ((PStr s) s) ((PNat n) (SCons (char-of-code n) $ SNil)) (else (SNil))))
+                (else (SNil))))
             ((Cons b g rest2) (str-append (flatten-value f) $ flatten-value g))))))
     (else (SNil))))
 

@@ -1961,7 +1961,7 @@ one `String`, since `WriteFile` takes the whole file as one; the session
 had noted that an `SCons` copies its tail, so building a string by
 `append` is quadratic even under the FFI. Shapes are the session's.
 
-122. **`Rope` is a prelude enum (`REmpty`, `RStr`, `RCat`) and
+122. **`Rope` is a prelude enum (`REmpty`, `RStr`, `RCat`, `RChar`) and
      `flatten` an extern over a structural model**, returning the
      string with `(Flat r s)`, a relation whose `RCat` case carries the
      two halves' `Flat`s and the prelude's `Append`; `append` is extern
@@ -1974,7 +1974,16 @@ had noted that an `SCons` copies its tail, so building a string by
      extractor special-cases the name to pass the `Rope` type's
      destructor (`Extract.fn`). slc's `base.sl` drops its own `Rope` for
      the prelude's, `rope-str` delegates to `flatten`, `rope-io` is gone
-     and `main.sl` writes its output as one string. `tests/rope.sl` is
+     and `main.sl` writes its output as one string. `RChar`, a character leaf (the owner's
+     question, the session's yes), is what anything built character by
+     character uses: slc's tokenizer accumulates a word or a string
+     literal as a rope of `RChar`s and flattens it once, where it used to
+     cons each character onto a copied string and then reverse it, and
+     `base.sl`'s `nat-str`, `bin-str`, `sanitize` and `ocaml-escape`
+     build ropes the same way; `str-of-chars` and `str-rev-onto` are
+     gone. The owner's alternative, an extern splitting a string at a
+     position so tokens would be slices of the file, was set aside as
+     needing a new FFI for the same linear cost. `tests/rope.sl` is
      the evidence, in both modes and extracted. Not done: length
      caching, which would want a `Length`-style proof beside the cached
      field; and `IO` still takes `String`s, the driver never seeing a

@@ -55,7 +55,8 @@ the host (section 41); a `U8` or a
   `list-length` and friends are forgetful wrappers over those, for the
   sites that combine several decisions with `and`/`or`.
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
-  tokenizer and a fold over the tokens with a stack of open forms.
+  tokenizer, accumulating each token as a `Rope` of characters flattened
+  once, and a fold over the tokens with a stack of open forms.
 - `core.sl` — terms with de Bruijn telescopes (section 5), the
   special-form registry (section 27), runtime values and post-erasure
   code, the scope environment and fact table (sections 3, 18),

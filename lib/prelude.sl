@@ -506,7 +506,8 @@
   enum
   (many REmpty : -> (Rope))
   (many RStr : (many (String) s) -> (Rope))
-  (many RCat : (many (Rope) a) (many (Rope) b) -> (Rope)))
+  (many RCat : (many (Rope) a) (many (Rope) b) -> (Rope))
+  (many RChar : (many (Char) c) -> (Rope)))
 
 (def-adts
   (Flat : ((Rope) r) ((String) s) -> Type
@@ -514,7 +515,8 @@
     (many FlatEmpty : -> (Flat (REmpty) (SNil)))
     (many FlatStr : (erased (String) s) -> (Flat (RStr s) s))
     (many FlatCat : (erased (Rope) a) (erased (Rope) b) (erased (String) s1) (erased (String) s2) (erased (String) s)
-                    (erased (Flat a s1) p) (erased (Flat b s2) q) (erased (Append s1 s2 s) ap) -> (Flat (RCat a b) s))))
+                    (erased (Flat a s1) p) (erased (Flat b s2) q) (erased (Append s1 s2 s) ap) -> (Flat (RCat a b) s))
+    (many FlatChar : (erased (Char) c) -> (Flat (RChar c) (SCons c (SNil))))))
 
 (def-fns _ $ many extern flatten : (subterm many (Rope) r) -> (many (String) s) (erased (Flat r s) p)
   (match many r _
@@ -524,7 +526,8 @@
       (let (many s1) (erased p) (flatten a))
       (let (many s2) (erased q) (flatten b))
       (let (many s) (erased ap) (append s1 s2))
-      (values s (FlatCat a b s1 s2 s p q ap)))))
+      (values s (FlatCat a b s1 s2 s p q ap)))
+    ((RChar c) (values (SCons c (SNil)) (FlatChar c)))))
 
 (def-adts $ Unit : -> Type
   enum

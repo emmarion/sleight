@@ -41,4 +41,4 @@ let fns : (string * (value list -> value list)) list =
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
     ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity"));
     ("append", function [ a; b ] -> [ text (Ffi_core.append (slice a) (slice b)) ] | _ -> raise (Eval.Runtime "extern arity"));
-    ("flatten", function [ r ] -> [ Ffi_core.flatten ~des ~slice ~str:text r ] | _ -> raise (Eval.Runtime "extern arity")) ]
+    ("flatten", function [ r ] -> [ Ffi_core.flatten ~des ~slice ~z ~str:text r ] | _ -> raise (Eval.Runtime "extern arity")) ]

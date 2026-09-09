@@ -35,9 +35,10 @@ let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
 
-(* A rope (constructors 0 empty, 1 a string, 2 a pair) flattened in two passes: its leaves in order, then one
-   buffer of their total length. [des] takes a value apart, [slice] reads a leaf, [str] makes the result. *)
-let flatten ~des ~slice ~str root =
+(* A rope (constructors 0 empty, 1 a string, 2 a pair, 3 a character) flattened in two passes: its leaves in
+   order, then one buffer of their total length. [des] takes a value apart, [slice] and [z] read the two kinds of
+   leaf, [str] makes the result. *)
+let flatten ~des ~slice ~z ~str root =
   let rec leaves acc = function
     | [] -> acc
     | v :: rest -> (
@@ -45,6 +46,7 @@ let flatten ~des ~slice ~str root =
         | 0, [] -> leaves acc rest
         | 1, [ s ] -> leaves (slice s :: acc) rest
         | 2, [ a; b ] -> leaves acc (a :: b :: rest)
+        | 3, [ c ] -> leaves ((String.make 1 (Char.chr (Z.to_int (z c))), 0, 1) :: acc) rest
         | _ -> assert false)
   in
   let ls = List.rev (leaves [] [ root ]) in

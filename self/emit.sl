@@ -28,7 +28,7 @@
   (str-cat "v" $ str-cat (bin-str x) $ str-cat "_" $ sanitize $ name-of env x))
 
 (def-fns _ $ many quoted : (many (String) s) -> (many (Rope) r)
-  (rcat3 (RStr "\"") (RStr $ ocaml-escape s) $ RStr "\""))
+  (rcat3 (RStr "\"") (ocaml-escape s) $ RStr "\""))
 
 (def-fns _ $ many nat-rope : (many (Nat) n) -> (many (Rope) r)
   (RStr $ nat-str n))
@@ -358,6 +358,7 @@
   (match many r _
     ((REmpty) acc)
     ((RStr s) (rcat3 (quoted s) (RStr "; ") acc))
+    ((RChar c) (rcat3 (quoted $ SCons c $ SNil) (RStr "; ") acc))
     ((RCat a b) (rope-literals a $ rope-literals b acc))))
 
 ; ---- A printer per type for a final function's result (lib/extract.ml's show): each constructor's return

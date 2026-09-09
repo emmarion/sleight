@@ -91,21 +91,15 @@
                 ((CGt st sr sx sy q) (CGt _ _ a b $ SLtTail c t s q))))
             ((CGt ct cr cx cy p) (CGt _ _ a b $ SLtHead d c t s p))))))))
 
+(def-fns _ $ many rope-str : (many (Rope) r) -> (many (String) s)
+  (let (many s) (erased p) (delegate (flatten r)))
+  s)
+
 (def-fns _ $ many str-eq : (many (String) a) (many (String) b) -> (many (Bool) r)
   (match many (str-cmp a b) _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
 
 (def-fns _ $ many str-is-empty : (many (String) s) -> (many (Bool) r)
   (match many s _ ((SNil) (BTrue)) ((SCons c r) (BFalse))))
-
-(def-fns _ $ many str-of-chars : (subterm many (List $ Char) cs) -> (many (String) s)
-  (match many cs _
-    ((Nil a) (SNil))
-    ((Cons a c rest) (SCons c $ str-of-chars rest))))
-
-(def-fns _ $ many str-rev-onto : (subterm many (String) s) (many (String) acc) -> (many (String) r)
-  (match many s _
-    ((SNil) acc)
-    ((SCons c rest) (str-rev-onto rest $ SCons c acc))))
 
 (def-fns _ $ many str-cat : (many (String) a) (many (String) b) -> (many (String) c)
   (str-append a b))
@@ -145,56 +139,59 @@
     ((Zero) ds)
     ((Succ m) (count-up m $ dec-succ ds))))
 
-(def-fns _ $ many digits-str : (subterm many (List $ Nat) ds) (many (String) acc) -> (many (String) s)
+(def-fns _ $ many digits-rope : (subterm many (List $ Nat) ds) (many (Rope) acc) -> (many (Rope) r)
   (match many ds _
     ((Nil a) acc)
-    ((Cons a d rest) (digits-str rest $ SCons (digit-char d) acc))))
+    ((Cons a d rest) (digits-rope rest $ RCat (RChar $ digit-char d) acc))))
 
 (def-fns _ $ many nat-str : (many (Nat) n) -> (many (String) s)
-  (digits-str (count-up n $ Cons _ 0 $ Nil _) $ SNil))
+  (rope-str $ digits-rope (count-up n $ Cons _ 0 $ Nil _) $ REmpty))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
-(def-fns _ $ many ocaml-escape : (subterm many (String) s) -> (many (String) r)
+(def-fns _ $ many ocaml-escape : (subterm many (String) s) -> (many (Rope) r)
   (match many s _
-    ((SNil) (SNil))
+    ((SNil) (REmpty))
     ((SCons c rest)
       (let (many tail) $ ocaml-escape rest)
       (let (many n) $ char-code c)
-      (match many (nat-cmp n 34) (((String) r))
-        ((CEq eq-t eq-r eq-x) (SCons #\x5c $ SCons #\x22 tail))
+      (match many (nat-cmp n 34) (((Rope) r))
+        ((CEq eq-t eq-r eq-x) (RCat (RChar #\x5c) $ RCat (RChar #\x22) tail))
         (else
-          (match many (nat-cmp n 92) (((String) r))
-            ((CEq eq-t eq-r eq-x) (SCons #\x5c $ SCons #\x5c tail))
+          (match many (nat-cmp n 92) (((Rope) r))
+            ((CEq eq-t eq-r eq-x) (RCat (RChar #\x5c) $ RCat (RChar #\x5c) tail))
             (else
-              (match many (nat-cmp n 10) (((String) r))
-                ((CEq eq-t eq-r eq-x) (SCons #\x5c $ SCons #\n tail))
+              (match many (nat-cmp n 10) (((Rope) r))
+                ((CEq eq-t eq-r eq-x) (RCat (RChar #\x5c) $ RCat (RChar #\n) tail))
                 (else
-                  (match many (nat-cmp n 9) (((String) r))
-                    ((CEq eq-t eq-r eq-x) (SCons #\x5c $ SCons #\t tail))
+                  (match many (nat-cmp n 9) (((Rope) r))
+                    ((CEq eq-t eq-r eq-x) (RCat (RChar #\x5c) $ RCat (RChar #\t) tail))
                     (else
-                      (match many (or (nat-lt n 32) $ nat-lt 126 n) (((String) r))
+                      (match many (or (nat-lt n 32) $ nat-lt 126 n) (((Rope) r))
                         ((BTrue)
-                          (let (many d) $ nat-str n)
-                          (let (many (String) d3) (match many (nat-lt n 10) _
-                                           ((BTrue) (SCons #\0 $ SCons #\0 d))
-                                           ((BFalse) (match many (nat-lt n 100) (((String) p))
-                                                       ((BTrue) (SCons #\0 d))
+                          (let (many d) $ RStr $ nat-str n)
+                          (let (many (Rope) d3) (match many (nat-lt n 10) _
+                                           ((BTrue) (RCat (RChar #\0) $ RCat (RChar #\0) d))
+                                           ((BFalse) (match many (nat-lt n 100) (((Rope) p))
+                                                       ((BTrue) (RCat (RChar #\0) d))
                                                        ((BFalse) d)))))
-                          (SCons #\x5c $ str-cat d3 tail))
-                        ((BFalse) (SCons c tail))))))))))))))
+                          (RCat (RChar #\x5c) $ RCat d3 tail))
+                        ((BFalse) (RCat (RChar c) tail))))))))))))))
 
 ; An SL name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
-(def-fns _ $ many sanitize : (subterm many (String) s) -> (many (String) r)
+(def-fns _ $ many sanitize-rope : (subterm many (String) s) -> (many (Rope) r)
   (match many s _
-    ((SNil) (SNil))
+    ((SNil) (REmpty))
     ((SCons c rest)
-      (let (many tail) $ sanitize rest)
+      (let (many tail) $ sanitize-rope rest)
       (let (many ok) (or (char-between c 48 57)
                         $ or (char-between c 65 90) $ char-between c 97 122))
-      (match many ok (((String) r))
-        ((BTrue) (SCons c tail))
-        ((BFalse) (SCons #\_ tail))))))
+      (match many ok (((Rope) r))
+        ((BTrue) (RCat (RChar c) tail))
+        ((BFalse) (RCat (RChar #\_) tail))))))
+
+(def-fns _ $ many sanitize : (many (String) s) -> (many (String) r)
+  (rope-str $ sanitize-rope s))
 
 ; ---- Bin identifiers
 
@@ -257,11 +254,14 @@
   (match many (bin-cmp a b) _ ((CLt eq-t eq-r eq-x eq-y eq-p) (BTrue)) (else (BFalse))))
 
 ; The digits of a Bin, least significant first, as text: an injective spelling for OCaml names.
-(def-fns _ $ many bin-str : (subterm many (Bin) b) -> (many (String) s)
+(def-fns _ $ many bin-rope : (subterm many (Bin) b) -> (many (Rope) r)
   (match many b _
-    ((BZ) (SNil))
-    ((B1 b1) (SCons #\1 $ bin-str b1))
-    ((B2 b1) (SCons #\2 $ bin-str b1))))
+    ((BZ) (REmpty))
+    ((B1 b1) (RCat (RChar #\1) $ bin-rope b1))
+    ((B2 b1) (RCat (RChar #\2) $ bin-rope b1))))
+
+(def-fns _ $ many bin-str : (many (Bin) b) -> (many (String) s)
+  (rope-str $ bin-rope b))
 
 ; ---- IdMap: a persistent trie keyed by a Bin's digits
 
@@ -543,6 +543,3 @@
     ((Nil a) (REmpty))
     ((Cons a r rest) (RCat r $ rlist rest))))
 
-(def-fns _ $ many rope-str : (many (Rope) r) -> (many (String) s)
-  (let (many s) (erased p) (delegate (flatten r)))
-  s)
