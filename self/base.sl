@@ -515,13 +515,7 @@
         ((CEq eq-t eq-r eq-x) (Some _ i))
         (else (index-of-bin rest x $ Succ i))))))
 
-; ---- Rope: output built as a tree of chunks, never by appending long strings
-
-(def-adts $ Rope : -> Type
-  enum
-  (many REmpty : -> (Rope))
-  (many RStr : (many (String) s) -> (Rope))
-  (many RCat : (many (Rope) a) (many (Rope) b) -> (Rope)))
+; ---- Rope: output built as a tree of chunks (the prelude's), flattened once
 
 (def-fns _ $ many rcat : (many (Rope) a) (many (Rope) b) -> (many (Rope) r)
   (RCat a b))
@@ -549,16 +543,6 @@
     ((Nil a) (REmpty))
     ((Cons a r rest) (RCat r $ rlist rest))))
 
-;  A rope as one string, for short diagnostics only.
-(def-fns _ $ many rope-str : (subterm many (Rope) r) -> (many (String) s)
-  (match many r _
-    ((REmpty) (SNil))
-    ((RStr s) s)
-    ((RCat a b) (str-append (rope-str a) $ rope-str b))))
-
-; Flattens a rope into an IO chain writing each chunk, ending in [next].
-(def-fns _ $ many rope-io : (erased (Level) L) (subterm many (Rope) r) (many (IO L) next) -> (many (IO L) io)
-  (match many r _
-    ((REmpty) next)
-    ((RStr s) (WriteOut _ s next))
-    ((RCat a b) (rope-io _ a $ rope-io _ b next))))
+(def-fns _ $ many rope-str : (many (Rope) r) -> (many (String) s)
+  (let (many s) (erased p) (delegate (flatten r)))
+  s)

@@ -20,6 +20,7 @@ let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
 let str s = text (s, 0, String.length s)
 
+let des = function VCtor (c, fs) -> (c.index, fs) | v -> raise (Eval.Runtime ("not a constructor: " ^ show v))
 let ext (construct, destruct) = { construct; destruct }
 
 let types : (string * (adt -> ext)) list =
@@ -38,4 +39,6 @@ let fns : (string * (value list -> value list)) list =
     ("nat-cmp", binary "Cmp" Ffi_core.nat_cmp);
     ("nat-mod", binary "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
-    ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity")) ]
+    ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity"));
+    ("append", function [ a; b ] -> [ text (Ffi_core.append (slice a) (slice b)) ] | _ -> raise (Eval.Runtime "extern arity"));
+    ("flatten", function [ r ] -> [ Ffi_core.flatten ~des ~slice ~str:text r ] | _ -> raise (Eval.Runtime "extern arity")) ]

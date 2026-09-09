@@ -37,15 +37,16 @@ interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `Bin`, `String` and `Cmp` (section 41); a `U8` or a
+host's own `Nat`, `Bin`, `String` and `Cmp`, and a `Rope` is flattened by
+the host (section 41); a `U8` or a
 `Char`, both newtypes, is its `Nat` (section 38).
 
 ## Files
 
 - `base.sl` — booleans, pairs, `Nat`/`Char`/`String` helpers over the
   prelude's externs, `Bin`-keyed identifiers with a trie map over them,
-  a trie map keyed by names, list helpers, and a rope of output chunks.
-  Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
+  a trie map keyed by names, list helpers, and helpers over the
+  prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
   orders on `Bin` and `String` are relations decided into the prelude's
   `Cmp`, so a match on `CEq` forces the two equal; a trie lookup returns
   `Hit` with a `MapsTo` proof or `Miss` with an `Absent` one; `list-nth`

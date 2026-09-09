@@ -26,6 +26,24 @@ let nat_cmp a b = Z.of_int (if Z.lt a b then 0 else if Z.equal a b then 1 else 2
 let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
+let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
+
+let flatten ~des ~slice ~str root =
+  let rec leaves acc = function
+    | [] -> acc
+    | v :: rest -> (
+        match des v with
+        | 0, [] -> leaves acc rest
+        | 1, [ s ] -> leaves (slice s :: acc) rest
+        | 2, [ a; b ] -> leaves acc (a :: b :: rest)
+        | _ -> assert false)
+  in
+  let ls = List.rev (leaves [] [ root ]) in
+  let total = List.fold_left (fun n (_, _, l) -> n + l) 0 ls in
+  let buf = Bytes.create total in
+  ignore (List.fold_left (fun pos (s, o, l) -> Bytes.blit_string s o buf pos l; pos + l) 0 ls);
+  str (Bytes.unsafe_to_string buf, 0, total)
+
 end
 type v = Tag of int * v list | Tup of v list | Nat of Z.t | Str of Ffi_core.slice | Fn of (v list -> v) | Mat of (int -> v -> int * v list) | U
 let absurd () = prerr_endline "runtime error: absurd code reached"; exit 1
@@ -46,6 +64,8 @@ let ext_nat_cmp = function [ a; b ] -> Nat (Ffi_core.nat_cmp (z a) (z b)) | _ ->
 let ext_nat_mod = function [ a; b ] -> Nat (Ffi_core.nat_mod (z a) (z b)) | _ -> absurd ()
 let ext_bin_to_nat = function [ a ] -> Nat (Ffi_core.bin_to_nat (z a)) | _ -> absurd ()
 let ext_trim = function [ a ] -> Str (Ffi_core.trim (slice a)) | _ -> absurd ()
+let ext_append = function [ a; b ] -> Str (Ffi_core.append (slice a) (slice b)) | _ -> absurd ()
+let ext_flatten = function [ r ] -> Ffi_core.flatten ~des:des_tag ~slice ~str:(fun s -> Str s) r | _ -> absurd ()
 let rec nat_of v = match des_Nat v with _, [ p ] -> 1 + nat_of p | _ -> 0
 let of_string s = Str (s, 0, String.length s)
 let to_string v =

@@ -33,3 +33,22 @@ let nat_cmp a b = Z.of_int (if Z.lt a b then 0 else if Z.equal a b then 1 else 2
 let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
+let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
+
+(* A rope (constructors 0 empty, 1 a string, 2 a pair) flattened in two passes: its leaves in order, then one
+   buffer of their total length. [des] takes a value apart, [slice] reads a leaf, [str] makes the result. *)
+let flatten ~des ~slice ~str root =
+  let rec leaves acc = function
+    | [] -> acc
+    | v :: rest -> (
+        match des v with
+        | 0, [] -> leaves acc rest
+        | 1, [ s ] -> leaves (slice s :: acc) rest
+        | 2, [ a; b ] -> leaves acc (a :: b :: rest)
+        | _ -> assert false)
+  in
+  let ls = List.rev (leaves [] [ root ]) in
+  let total = List.fold_left (fun n (_, _, l) -> n + l) 0 ls in
+  let buf = Bytes.create total in
+  ignore (List.fold_left (fun pos (s, o, l) -> Bytes.blit_string s o buf pos l; pos + l) 0 ls);
+  str (Bytes.unsafe_to_string buf, 0, total)

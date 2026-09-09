@@ -1,6 +1,6 @@
 ; self/main.sl -- the compiler's entry point: an IO program (ASSUMPTIONS 56) reading the files named on its
 ; command line, prelude first, elaborating them in one scope in order, and writing the extracted OCaml to
-; stdout; elaboration errors go to stderr with exit code 1.
+; stdout as one string; elaboration errors go to stderr with exit code 1.
 
 (def-lvl util-lvl)
 (def-lvl compile-lvl)
@@ -39,7 +39,9 @@
   (let (many env) $ run-files srcs (make-builtins) $ BTrue)
   (match many (env-errors env) _
     ((Cons a e rest) (write-errors (list-rev _ $ env-errors env) $ Exit _ exit-fail))
-    ((Nil a) (rope-io _ (emit-program env) $ Exit _ exit-ok))))
+    ((Nil a)
+      (let (many out) (erased flat) $ flatten $ emit-program env)
+      (WriteOut _ out $ Exit _ exit-ok))))
 
 (def-fns slc-lvl $ many read-files : (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
   (match many paths _

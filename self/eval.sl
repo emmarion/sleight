@@ -18,7 +18,7 @@
   (or (str-eq name "add")
     (or (str-eq name "nat-cmp")
       (or (str-eq name "nat-mod")
-        $ or (str-eq name "bin-to-nat") $ str-eq name "trim"))))
+        $ or (str-eq name "bin-to-nat") $ or (str-eq name "trim") $ or (str-eq name "append") $ str-eq name "flatten"))))
 
 (def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
   (or (str-eq name "Nat")
@@ -31,6 +31,17 @@
       (let (many m) (erased p) (erased q) $ nat-mod s c pos)
       (vnat m))
     ((No x y q) (VError "nat-mod: zero modulus"))))
+
+(def-fns _ $ many flatten-value : (subterm many (Value) v) -> (many (String) s)
+  (match many v _
+    ((VCtor c fields)
+      (match many fields _
+        ((Nil a) (SNil))
+        ((Cons a f rest)
+          (match many rest _
+            ((Nil b) (value-str f))
+            ((Cons b g rest2) (str-append (flatten-value f) $ flatten-value g))))))
+    (else (SNil))))
 
 (def-fns _ $ many apply-extern : (many (String) name) (many (List $ Value) args) -> (many (List $ Value) r)
   (let (many a) $ arg-at args 0)
@@ -51,7 +62,13 @@
                 ((CEq eq-t eq-r eq-x)
                   (let (many n) (erased pf) $ bin-to-nat $ value-bin a)
                   (Cons _ (vnat n) $ Nil _))
-                (else (Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))))))))))
+                (else
+                  (match many (str-cmp name "trim") _
+                    ((CEq eq-t eq-r eq-x) (Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))
+                    (else
+                      (match many (str-cmp name "append") _
+                        ((CEq eq-t eq-r eq-x) (Cons _ (VExt str-adt $ PStr $ str-append (value-str a) $ value-str b) $ Nil _))
+                        (else (Cons _ (VExt str-adt $ PStr $ flatten-value a) $ Nil _))))))))))))))
 
 (def-fns _ $ many venv-bind : (subterm many (List $ Bin) ids) (many (List $ Value) vs) (many (IdMap $ Value) env) -> (many (IdMap $ Value) r)
   (match many ids _

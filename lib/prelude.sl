@@ -486,7 +486,7 @@
     (many AppCons : (erased (Char) ch) (erased (String) a) (erased (String) b) (erased (String) c) (erased (Append a b c) q) ->
        (Append (SCons ch a) b (SCons ch c)))))
 
-(def-fns _ $ many append : (subterm many (String) a) (many (String) b) -> (many (String) c) (erased (Append a b c) p)
+(def-fns _ $ many extern append : (subterm many (String) a) (many (String) b) -> (many (String) c) (erased (Append a b c) p)
   (match many a _
     ((SNil) (values b (AppNil b)))
     ((SCons ch rest)
@@ -501,6 +501,30 @@
 (def-fns str-lvl $ many str-append : (many (String) a) (many (String) b) -> (many (String) c)
   (let (many c) (erased p) (delegate (append a b)))
   c)
+
+(def-adts $ Rope : -> Type
+  enum
+  (many REmpty : -> (Rope))
+  (many RStr : (many (String) s) -> (Rope))
+  (many RCat : (many (Rope) a) (many (Rope) b) -> (Rope)))
+
+(def-adts
+  (Flat : ((Rope) r) ((String) s) -> Type
+    enum
+    (many FlatEmpty : -> (Flat (REmpty) (SNil)))
+    (many FlatStr : (erased (String) s) -> (Flat (RStr s) s))
+    (many FlatCat : (erased (Rope) a) (erased (Rope) b) (erased (String) s1) (erased (String) s2) (erased (String) s)
+                    (erased (Flat a s1) p) (erased (Flat b s2) q) (erased (Append s1 s2 s) ap) -> (Flat (RCat a b) s))))
+
+(def-fns _ $ many extern flatten : (subterm many (Rope) r) -> (many (String) s) (erased (Flat r s) p)
+  (match many r _
+    ((REmpty) (values (SNil) (FlatEmpty)))
+    ((RStr s) (values s (FlatStr s)))
+    ((RCat a b)
+      (let (many s1) (erased p) (flatten a))
+      (let (many s2) (erased q) (flatten b))
+      (let (many s) (erased ap) (append s1 s2))
+      (values s (FlatCat a b s1 s2 s p q ap)))))
 
 (def-adts $ Unit : -> Type
   enum

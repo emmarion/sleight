@@ -1953,3 +1953,30 @@ session's.
      table's `In`/`RuledIn`/`Taken` family, which resembles `MapsTo`,
      was left alone. `self/bootstrap.sh` is the evidence.
 
+## `Rope`, and strings built in one pass
+
+Asked for by the owner in chat: a prelude tree for string appends,
+without length caching for now, and an FFI function flattening it to
+one `String`, since `WriteFile` takes the whole file as one; the session
+had noted that an `SCons` copies its tail, so building a string by
+`append` is quadratic even under the FFI. Shapes are the session's.
+
+122. **`Rope` is a prelude enum (`REmpty`, `RStr`, `RCat`) and
+     `flatten` an extern over a structural model**, returning the
+     string with `(Flat r s)`, a relation whose `RCat` case carries the
+     two halves' `Flat`s and the prelude's `Append`; `append` is extern
+     too now, a blit over its unchanged model. The FFI flattens in two
+     passes, leaves then one buffer, walking the tree with an explicit
+     stack (`Ffi_core.flatten ~des ~slice ~str`, parametric in how a
+     value is taken apart so the interpreter, the extractor and slc's
+     runtime share it). It is the first extern taking a plain ADT: the
+     interpreter hands it `VCtor`s, slc's runtime its `Tag`s, and the
+     extractor special-cases the name to pass the `Rope` type's
+     destructor (`Extract.fn`). slc's `base.sl` drops its own `Rope` for
+     the prelude's, `rope-str` delegates to `flatten`, `rope-io` is gone
+     and `main.sl` writes its output as one string. `tests/rope.sl` is
+     the evidence, in both modes and extracted. Not done: length
+     caching, which would want a `Length`-style proof beside the cached
+     field; and `IO` still takes `String`s, the driver never seeing a
+     `Rope`.
+

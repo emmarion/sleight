@@ -122,7 +122,9 @@ and fn cx scope name f =
   let body =
     match f.V.impl with
     | Some _ when !V.use_externs ->
-        Printf.sprintf "(Obj.repr (Ffi_core.%s %s))" (sanitize f.fname) (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
+        (* flatten walks a Rope, a plain ADT, so it takes that type's destructor. *)
+        let extra = if f.fname = "flatten" then Printf.sprintf "~des:%s ~slice:Obj.obj ~str:Obj.repr " (des cx (List.find (fun a -> a.V.tname = "Rope") cx.adts)) else "" in
+        Printf.sprintf "(Obj.repr (Ffi_core.%s %s%s))" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
