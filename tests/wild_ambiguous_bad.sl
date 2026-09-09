@@ -1,4 +1,4 @@
 ; needs: list
-; error: argument 1 is _ and cannot be inferred
+; error: cannot infer the _ in (Nil _)
 (let (many xs) (Nil _))
 xs

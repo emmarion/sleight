@@ -123,7 +123,10 @@ that the test does not make is a mistake in this file.
   `Fn` binder, `tests/wild_erased_many.sl` puts one at a `many` parameter
   in an erased position, `tests/wild_match_ann.sl` writes a match's `_`
   annotation at an argument position, and `tests/wild_let.sl` lets typed
-  `let` binders solve the right-hand side. The refusals: `tests/wild_nested_bad.sl`
+  `let` binders solve the right-hand side. `tests/wild_open.sl` has a
+  constructor's `_` solved by the argument after it in the enclosing call,
+  and `tests/wild_partial_ann.sl` a match annotation and a let binder type
+  with `_`s inside them. The refusals: `tests/wild_nested_bad.sl`
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.

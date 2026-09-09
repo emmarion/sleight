@@ -43,16 +43,6 @@ let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
-(* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
-   type, and it is solved by unification alone. *)
-let bind env ?(minted_level = false) ?(meta = false) ?rule name mult state ty =
-  Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
-  let x = fresh () in
-  Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta } env.entries in
-  let scope = if meta then env.scope else x :: env.scope in
-  let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
-  (x, set_state env x state)
 let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
 
 let lookup env name = List.find_opt (fun x -> (entry env x).name = Some name) env.scope
@@ -69,6 +59,21 @@ let has_meta env t = fold_vars (fun _ b t -> b || (match t with Var x -> is_meta
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
 let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x && (fact env x).rule <> None -> canon env t | t -> t) 0 t
+
+(* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
+   type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
+   -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
+let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name mult state ty =
+  Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
+  if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
+    error 0 "cannot infer the _ in %s" (show env (match rule with Some r when has_meta env r -> r | _ -> ty));
+  let x = fresh () in
+  Option.iter (Hashtbl.replace names x) name;
+  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta } env.entries in
+  let scope = if meta then env.scope else x :: env.scope in
+  let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
+  (x, set_state env x state)
+
 
 (* Constructors one Matchable in scope lists are distinct (section 19), first-class ones included. *)
 let listed env x y =

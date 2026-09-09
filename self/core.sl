@@ -1795,34 +1795,6 @@
     ((TNewtype c) (BTrue))
     ((TApp h args) (match many h _ ((TVar x) (bin-eq x coercible)) (else (BFalse)))) (else (BFalse))))
 
-; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
-; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
-; name or by type, and unification alone solves it.
-(def-fns _ $ many bind-as : (many (Env) env) (many (Bool) meta) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
-    (many (Env) r) (many (Bin) x)
-  (let (many (Maybe $ String) bad) $ match many name _ ((None a) (None _)) ((Some a n) (match many (is-literal-name n) (((Maybe $ String) m)) ((BTrue) (Some _ $ located env ": error: " $ str-cat n " is a literal, not a name")) ((BFalse) (None _)))))
-  (match many env _
-    ((MkEnv sc en nf ff fr tb rp va ob li tr er0 lv sts cl wa lt lo pr)
-      (let (many (List $ String) er) $ match many bad _ ((None a) er0) ((Some a m) (Cons _ m er0)))
-      (let (many x) (erased ltp) $ bin-succ-lt fr)
-      (let (many (NameMap $ Bin) sc2) $ match many name _ ((None a) sc) ((Some a n) (nm-set _ n x sc)))
-      (let (many en2) $ idmap-set _ x (MkEInfo name mult st (BFalse) meta) en)
-      (let (erased (Nat) nf2) (erased (Facts nf2) ff2) (many (Table nf2 ff2 x) tb2)
-        (match many rule _
-          ((None a) (table-insert _ _ _ tb x ltp ty))
-          ((Some a t)
-            (match many tb (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) t2))
-              ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
-                (let (many t2) (erased ft) $ canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1)
-                (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))))
-      (let (many (IdMap $ Value) va2) $ match many st _ ((SConst v) (idmap-set _ x v va)) ((SDyn) va))
-      (let (many (List $ Bin) ob2) $ match many (and (not meta) $ is-object-type ty coercible) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-      (values (MkEnv sc2 en2 _ _ x tb2 rp va2 ob2 li tr er lv sts cl wa lt lo pr) x))))
-
-(def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
-    (many (Env) r) (many (Bin) x)
-  (bind-as env (BFalse) name mult st ty rule coercible))
-
 (def-fns _ $ many canon-env : (many (Env) env) (many (Term) t) -> (many (Term) r)
   (let (erased n) (erased f) (many bnd) (many tb) $ env-table env)
   (let (many r) (erased fr) $ canon-in _ _ bnd tb t)
@@ -1856,6 +1828,81 @@
 
 (def-fns _ $ many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r)
   (has-meta (canon-env env t) env))
+
+; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
+
+(def-fns _
+  (many show-term : (subterm many (Term) t) (many (Env) env) -> (many (Rope) r)
+    (match many t _
+      ((TVar x) (RStr $ name-of env x))
+      ((TBound k) (RStr $ str-cat "#" $ nat-str k))
+      ((TApp h args) (rcat4 (RStr "(") (show-term h env) (show-terms args env) $ RStr ")"))
+      ((TFn l ps rs) (rcat5 (RStr "(Fn ") (show-term l env) (show-tele ps env) (rcat (RStr " ->") $ show-tele rs env) $ RStr ")"))
+      ((TTyCtor ps) (rcat3 (RStr "(TyCtor") (show-tele ps env) $ RStr " -> Type)"))
+      ((TValCtor ps ret) (rcat4 (RStr "(ValCtor") (show-tele ps env) (rcat (RStr " -> ") $ show-term ret env) $ RStr ")"))
+      ((TMatchable d ty cs) (rcat4 (RStr $ match many d (((String) s)) ((DEnum) "(Matchable enum ") ((DUnion) "(Matchable union ")) (show-term ty env) (show-mctors cs env) $ RStr ")"))
+      ((TNewtype c) (rcat3 (RStr "(Newtype ") (show-term c env) $ RStr ")"))
+      ((TErr m) (rcat3 (RStr "<error: ") (RStr m) $ RStr ">"))))
+  (many show-terms : (subterm many (List $ Term) ts) (many (Env) env) -> (many (Rope) r)
+    (match many ts _
+      ((Nil a) (REmpty))
+      ((Cons a t rest) (rcat3 (RStr " ") (show-term t env) $ show-terms rest env))))
+  (many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) -> (many (Rope) r)
+    (match many cs _
+      ((Nil a) (REmpty))
+      ((Cons a c rest)
+        (match many c _
+          ((MkMCtor m t) (rcat4 (RStr $ match many m (((String) s)) ((Erased) " (erased ") ((Many) " (many ")) (show-term t env) (RStr ")") $ show-mctors rest env))))))
+  (many show-tele : (subterm many (List $ Entry) es) (many (Env) env) -> (many (Rope) r)
+    (match many es _
+      ((Nil a) (REmpty))
+      ((Cons a e rest)
+        (match many e _
+          ((MkEntry n s m sg)
+            (let (many (String) nm) $ match many n _ ((None b) "_") ((Some b x) x))
+            (let (many marks) (str-cat (match many s (((String) x)) ((BTrue) "subterm ") ((BFalse) ""))
+                                                    $ match many m (((String) x)) ((Erased) "erased ") ((Many) "many ")))
+            (let (many (Rope) body) (match many sg _
+                               ((SgTy t) (rcat3 (show-term t env) (RStr " ") $ RStr nm))
+                               ((SgIs t) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
+            (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
+
+; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
+; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
+; name or by type, and unification alone solves it. No other entry's type or rule may mention one still
+; unsolved -- the invariant behind the sugar -- except while a telescope with holes is being built [holes].
+(def-fns _ $ many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
+    (many (Env) r) (many (Bin) x)
+  (let (many (Maybe $ String) bad) $ match many name _ ((None a) (None _)) ((Some a n) (match many (is-literal-name n) (((Maybe $ String) m)) ((BTrue) (Some _ $ located env ": error: " $ str-cat n " is a literal, not a name")) ((BFalse) (None _)))))
+  (let (many (Maybe $ Term) open)
+    (match many (or meta holes) _
+      ((BTrue) (None _))
+      ((BFalse)
+        (match many (has-meta-env env ty) _
+          ((BTrue) (Some _ ty))
+          ((BFalse) (match many rule _ ((None a) (None _)) ((Some a t) (match many (has-meta-env env t) _ ((BTrue) (Some _ t)) ((BFalse) (None _))))))))))
+  (let (many (Maybe $ String) bad2) $ match many open _ ((None a) bad) ((Some a t) (Some _ $ located env ": error: " $ str-cat "cannot infer the _ in " $ rope-str $ show-term t env)))
+  (match many env _
+    ((MkEnv sc en nf ff fr tb rp va ob li tr er0 lv sts cl wa lt lo pr)
+      (let (many (List $ String) er) $ match many bad2 _ ((None a) er0) ((Some a m) (Cons _ m er0)))
+      (let (many x) (erased ltp) $ bin-succ-lt fr)
+      (let (many (NameMap $ Bin) sc2) $ match many name _ ((None a) sc) ((Some a n) (nm-set _ n x sc)))
+      (let (many en2) $ idmap-set _ x (MkEInfo name mult st (BFalse) meta) en)
+      (let (erased (Nat) nf2) (erased (Facts nf2) ff2) (many (Table nf2 ff2 x) tb2)
+        (match many rule _
+          ((None a) (table-insert _ _ _ tb x ltp ty))
+          ((Some a t)
+            (match many tb (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) t2))
+              ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+                (let (many t2) (erased ft) $ canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1)
+                (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))))
+      (let (many (IdMap $ Value) va2) $ match many st _ ((SConst v) (idmap-set _ x v va)) ((SDyn) va))
+      (let (many (List $ Bin) ob2) $ match many (and (not meta) $ is-object-type ty coercible) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
+      (values (MkEnv sc2 en2 _ _ x tb2 rp va2 ob2 li tr er lv sts cl wa lt lo pr) x))))
+
+(def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
+    (many (Env) r) (many (Bin) x)
+  (bind-as env (BFalse) (BFalse) name mult st ty rule coercible))
 
 ; ---- Instantiation and abstraction over de Bruijn binders (lib/term.ml)
 
@@ -2036,44 +2083,6 @@
 
 (def-fns _ $ many bool-eq : (many (Bool) a) (many (Bool) b) -> (many (Bool) r)
   (match many a _ ((BTrue) b) ((BFalse) (not b))))
-
-; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
-
-(def-fns _
-  (many show-term : (subterm many (Term) t) (many (Env) env) -> (many (Rope) r)
-    (match many t _
-      ((TVar x) (RStr $ name-of env x))
-      ((TBound k) (RStr $ str-cat "#" $ nat-str k))
-      ((TApp h args) (rcat4 (RStr "(") (show-term h env) (show-terms args env) $ RStr ")"))
-      ((TFn l ps rs) (rcat5 (RStr "(Fn ") (show-term l env) (show-tele ps env) (rcat (RStr " ->") $ show-tele rs env) $ RStr ")"))
-      ((TTyCtor ps) (rcat3 (RStr "(TyCtor") (show-tele ps env) $ RStr " -> Type)"))
-      ((TValCtor ps ret) (rcat4 (RStr "(ValCtor") (show-tele ps env) (rcat (RStr " -> ") $ show-term ret env) $ RStr ")"))
-      ((TMatchable d ty cs) (rcat4 (RStr $ match many d (((String) s)) ((DEnum) "(Matchable enum ") ((DUnion) "(Matchable union ")) (show-term ty env) (show-mctors cs env) $ RStr ")"))
-      ((TNewtype c) (rcat3 (RStr "(Newtype ") (show-term c env) $ RStr ")"))
-      ((TErr m) (rcat3 (RStr "<error: ") (RStr m) $ RStr ">"))))
-  (many show-terms : (subterm many (List $ Term) ts) (many (Env) env) -> (many (Rope) r)
-    (match many ts _
-      ((Nil a) (REmpty))
-      ((Cons a t rest) (rcat3 (RStr " ") (show-term t env) $ show-terms rest env))))
-  (many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) -> (many (Rope) r)
-    (match many cs _
-      ((Nil a) (REmpty))
-      ((Cons a c rest)
-        (match many c _
-          ((MkMCtor m t) (rcat4 (RStr $ match many m (((String) s)) ((Erased) " (erased ") ((Many) " (many ")) (show-term t env) (RStr ")") $ show-mctors rest env))))))
-  (many show-tele : (subterm many (List $ Entry) es) (many (Env) env) -> (many (Rope) r)
-    (match many es _
-      ((Nil a) (REmpty))
-      ((Cons a e rest)
-        (match many e _
-          ((MkEntry n s m sg)
-            (let (many (String) nm) $ match many n _ ((None b) "_") ((Some b x) x))
-            (let (many marks) (str-cat (match many s (((String) x)) ((BTrue) "subterm ") ((BFalse) ""))
-                                                    $ match many m (((String) x)) ((Erased) "erased ") ((Many) "many ")))
-            (let (many (Rope) body) (match many sg _
-                               ((SgTy t) (rcat3 (show-term t env) (RStr " ") $ RStr nm))
-                               ((SgIs t) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
-            (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
 
 ; ---- Structural identity of canonical terms (section 5's canonicalize-then-compare)
 

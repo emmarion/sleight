@@ -1786,3 +1786,42 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     binder a later type mentions, or a statement before the match — for
     another 930 bytes; the erased arguments that pass had left written
     were tried again under the new expectations, and one more is solved.
+
+117. **Pure terms stay open; boundaries settle** (`Elab.check_args
+    ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,
+    `bind-as` in `self/`). The owner's second round on SUGAR.md 6: the
+    invariant is that no fact in the table mentions an unsolved meta,
+    and the forms are sorted by it. A constructor or type constructor
+    application, in an expression or in §5's grammar, is no boundary:
+    `check_args` runs without its closing checks there, the term and
+    type it returns may hold open metas, and `elab_expr` substitutes the
+    solved ones into every result it returns (`Env.metaless`). A call is
+    a boundary for its arguments, as before. Everything that records a
+    fact settles first: a `let`'s values before they are bound, a
+    `match`'s scrutinee, the results of a body (`check_results`), the
+    arguments of the special forms (`elab_erased`, the `coerce` value,
+    `coercible-*` terms and proofs, `level-of`, `prove-subterm`), the
+    final expression in run position, and `let-match`'s scrutinee.
+    `Env.bind` enforces the invariant as a backstop: a type or rule with
+    an open meta is refused with "cannot infer the _ in ...", so any
+    form that let one leak is caught where it leaks; the one exception,
+    `~holes`, is a telescope under construction. A match annotation is
+    elaborated with holes allowed, unified with the expected telescope
+    (`solve_tele ~strict`) when there is one of the same length, and
+    settled before the branches, so `(((List _) r))` and `((_ r))` are
+    written forms of §2's `_`; a bare `_` in a type is a meta of type
+    `Type` (`elab_term`, which now threads the environment for this).
+    A typed `let`'s binders are likewise elaborated with holes and each
+    value is checked against its binder's entry of that telescope rather
+    than a second elaboration of the clause (`bind_one`; `bind-let`),
+    so `(let (many (List _) xs) ...)` is solved by the right-hand side.
+    In `self/` the two telescopes keep their metas' facts through
+    `env-restore` rather than `env-discard`. Consequences: `(f _ (Nil _)
+    xs)` is accepted, `(len _ (Nil _))` still refused at the call's paren
+    (`tests/wild_open.sl`, `tests/wild_open_bad.sl`); a `_` in a
+    signature is refused where its entry is bound
+    (`tests/wild_sig_bad.sl`); an unsolved `_` at a let reads "cannot
+    infer the _ in (Nil _)" now (`tests/wild_ambiguous_bad.sl`);
+    `tests/wild_partial_ann.sl` and `tests/wild_partial_ann_bad.sl` are
+    the annotation. Whether a meta solved inside a match branch may
+    escape it was raised and left out at the owner's request.
