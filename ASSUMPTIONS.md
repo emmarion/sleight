@@ -2015,3 +2015,43 @@ had noted that an `SCons` copies its tail, so building a string by
      field; and `IO` still takes `String`s, the driver never seeing a
      `Rope`.
 
+## Lockstep evidence
+
+124. **Lists the elaborator walks together carry a `Lockstep` proof, and
+     generated forms are built as raws.** At the owner's direction, from
+     a review of where the compiler reports internal errors that a type
+     could refute. `base.sl` gains `Lockstep A B xs ys`, that two lists
+     have one length entry by entry, with `lockstep-trans` and
+     `list-fit`, which cuts or pads a list to another's length and
+     returns the proof. `open-tele`, `src-mults` and `spread` return the
+     proof beside the list they build, and `elab-expr` mints one at its
+     tail, where the count of results against the expectation was
+     already decided: the results are fitted to the expectation with a
+     `no-res` placeholder, the count error is reported exactly as
+     before, and the proof is a fourth return that `elab-body` threads
+     through. `first-res` and `erased-term` take the proof and refute
+     the empty list, `bind-let` takes proofs for its results and values
+     (composed from the binders' by `lockstep-trans`) and refutes both
+     empty cases, `erased-in-many` walks under the proof, and
+     `check-args-go` takes the proof relating the telescope to its
+     metas, so the "internal: a parameter without its meta" error and
+     the placeholders of `first-res` and `bind-let` are gone.
+     `elab-body`'s `absurd` flag went with it: its two absurd sites apply
+     `check-empty` to the returned results themselves, which the
+     session reads as the same environment the flag acted on. `unary`
+     and `distinct` build their generated forms as `Raw` values
+     (`gen-of`, `bin-raw`) instead of text read back by the reader, so
+     the "internal: a generated form does not read" error is gone by
+     construction; the forms are the same s-expressions as before, at
+     line 1 as the reader gave them. Not done: the sugar budget's zero
+     case (111) stays reported. The session first thought a
+     sugar-freeness relation on the generated raw could refute it, but
+     the sugar forms are dispatched by resolving a head in the prelude's
+     scope, not by its spelling, so such a proof would have to speak
+     about that scope. The session's reading, not a proof, is that the
+     case is unreachable anyway: both forms check their arguments are
+     literals before spending the budget, no expression in a generated
+     form has exactly two literal arguments, and the one statement's
+     arguments are not literals. Also left: `bind-let`'s `tele`, whose
+     empty case silently stops checking rather than reporting.
+     `self/bootstrap.sh` is the evidence.

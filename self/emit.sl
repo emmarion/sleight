@@ -454,7 +454,7 @@
             (match many c _
               ((MkCtor cname cid index arity tagged ext)
                 (let (many ctele) (many ret) $ ctor-type env cid)
-                (let (many envb) (many fids) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
+                (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
                 (let (many (Env) envb2) (many (Bool) live)
                   (match many (unify-env envb (instantiate (tvars-rev fids $ Nil _) ret) ty $ BTrue) _
                     ((UOk e2) (values e2 $ BTrue))

@@ -197,9 +197,20 @@ recorded so it can be revisited.
   write their prelude calls down when the form is reached, as the
   reference does, and the raw they then elaborate is of the elaborator's
   own making, which is no descent into the form; spending one unit of
-  the budget is the decrease the checker sees instead. A generated form
-  contains no sugar, so the budget is one and its zero case is reported
-  as an internal error, not refuted (ASSUMPTIONS 111).
+  the budget is the decrease the checker sees instead. The forms are
+  built as raws rather than text read back (ASSUMPTIONS 124). A
+  generated form contains no sugar, so the budget is one; its zero case
+  is reported as an internal error, not refuted, since the sugar forms
+  are found by resolving a head in the prelude's scope, which no proof
+  here speaks about (ASSUMPTIONS 111, 124).
+- **Lists walked together carry evidence.** Where the elaborator walks
+  two lists in step, a telescope and the metas opened for it, a `let`'s
+  binders and the results and values they bind, an expectation and the
+  results checked against it, the second list comes with a `Lockstep`
+  proof relating it to the first (ASSUMPTIONS 124), minted where the
+  count was decided: `elab-expr` fits its results to the expectation
+  after reporting a count error, so a consumer refutes the short list
+  rather than filling in a placeholder.
 - **The sources write `_` and `$` wherever the checker allows** (SUGAR.md
   6, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
   unification where a later argument or the expected telescope fixes it,

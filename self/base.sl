@@ -462,6 +462,30 @@
   (let (many n) (erased p) (delegate (length _ xs)))
   n)
 
+; Two lists of one length, entry by entry.
+(def-adts
+  (Lockstep : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
+    enum
+    (many LsNil : (erased Type A) (erased Type B) -> (Lockstep A B (Nil A) (Nil B)))
+    (many LsCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (Lockstep A B xs ys) p) ->
+       (Lockstep A B (Cons A x xs) (Cons B y ys)))))
+
+(def-fns _ $ erased lockstep-trans : (erased Type A) (erased Type B) (erased Type C) (erased (List A) xs) (erased (List B) ys) (erased (List C) zs)
+    (subterm erased (Lockstep A B xs ys) p) (erased (Lockstep B C ys zs) q) -> (erased (Lockstep A C xs zs) r)
+  (match erased p _
+    ((LsNil a b) (match erased q _ ((LsNil c d) (LsNil _ _))))
+    ((LsCons a b x y xs2 ys2 p2)
+      (match erased q _
+        ((LsCons c d y2 z ys3 zs2 q2) (LsCons _ _ x z xs2 zs2 $ lockstep-trans _ _ _ _ _ _ p2 q2))))))
+
+(def-fns _ $ many list-fit : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) (many B filler) -> (many (List B) r) (erased (Lockstep A B xs r) p)
+  (match many xs _
+    ((Nil a) (values (Nil _) (LsNil _ _)))
+    ((Cons a x rest)
+      (let (many y) (many yrest) $ match many ys ((B y0) ((List B) ys0)) ((Nil b) (values filler $ Nil _)) ((Cons b y yrest) (values y yrest)))
+      (let (many r) (erased p) $ list-fit _ _ rest yrest filler)
+      (values (Cons _ y r) (LsCons _ _ x y rest r p)))))
+
 (def-fns _ $ many list-rev-onto : (erased Type A) (subterm many (List A) xs) (many (List A) acc) -> (many (List A) r)
   (match many xs _
     ((Nil a) acc)
