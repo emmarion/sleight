@@ -817,19 +817,19 @@
             ((IGrew a b d one r q1)
               (let (erased p0) $ plus-zero-right $ Succ $ Zero)
               (IGrew _ _ _ (FNode _ _ _ _ (HNone) one (FEmpty) _) (InsGrow1 x1 one r p0)
-                $ In1 x1 (Zero) (Succ $ Zero) (Zero) (Succ $ Zero) (HNone) one (FEmpty) (P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p0) q1))))
+                $ In1 x1 (Zero) (Succ _) (Zero) (Succ _) (HNone) one (FEmpty) (P3Z (Succ _) (Zero) (Succ _) p0) q1))))
         ((B2 x1)
           (match many (facts-insert x1 _ (FEmpty) ty) _
             (absurd (IKept a b d q) (taken-empty _ q))
             ((IGrew a b d two r q1)
               (let (erased p0) $ PZ $ Succ $ Zero)
               (IGrew _ _ _ (FNode _ _ _ _ (HNone) (FEmpty) two _) (InsGrow2 x1 two r p0)
-                $ In2 x1 (Zero) (Zero) (Succ $ Zero) (Succ $ Zero) (HNone) (FEmpty) two (P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p0) q1))))))
+                $ In2 x1 (Zero) (Zero) (Succ _) (Succ _) (HNone) (FEmpty) two (P3Z (Zero) (Succ _) (Succ _) p0) q1))))))
     ((FNode h n1 n2 m here one two p3)
       (match many x _
         ((BZ)
           (match many here _
-            ((HNone) (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) one two _) (InsHere n1 n2 m ty one two p3) $ InHere n1 n2 (Succ m) ty one two $ P3S (Zero) n1 n2 m p3))
+            ((HNone) (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) one two _) (InsHere n1 n2 m ty one two p3) $ InHere n1 n2 (Succ _) ty one two $ P3S (Zero) n1 n2 m p3))
             ((HRuled ty0 t0) (IKept _ _ _ $ TRuled x n f $ RHere n1 n2 m ty0 t0 one two p3))
             ((HFree ty0) (IKept _ _ _ $ TFree x n f $ InHere n1 n2 m ty0 one two p3))))
         ((B1 x1)
@@ -837,13 +837,13 @@
             ((IKept a b d q) (IKept _ _ _ $ taken-1 x1 h n1 n2 m here one two p3 q))
             ((IGrew a b d one2 r q1)
               (let (erased p4) $ plus3-mid-succ _ _ _ _ p3)
-              (IGrew _ _ _ (FNode _ _ _ _ here one2 two _) (Ins1 x1 h n1 n2 m here one two p3 (Succ n1) (Succ m) one2 p4 r) $ In1 x1 h (Succ n1) n2 (Succ m) here one2 two p4 q1))))
+              (IGrew _ _ _ (FNode _ _ _ _ here one2 two _) (Ins1 x1 h n1 n2 m here one two p3 (Succ _) (Succ _) one2 p4 r) $ In1 x1 h (Succ _) n2 (Succ _) here one2 two p4 q1))))
         ((B2 x1)
           (match many (facts-insert x1 _ two ty) _
             ((IKept a b d q) (IKept _ _ _ $ taken-2 x1 h n1 n2 m here one two p3 q))
             ((IGrew a b d two2 r q1)
               (let (erased p4) $ plus3-right-succ _ _ _ _ p3)
-              (IGrew _ _ _ (FNode _ _ _ _ here one two2 _) (Ins2 x1 h n1 n2 m here one two p3 (Succ n2) (Succ m) two2 p4 r) $ In2 x1 h n1 (Succ n2) (Succ m) here one two2 p4 q1))))))))
+              (IGrew _ _ _ (FNode _ _ _ _ here one two2 _) (Ins2 x1 h n1 n2 m here one two p3 (Succ _) (Succ _) two2 p4 r) $ In2 x1 h n1 (Succ _) (Succ _) here one two2 p4 q1))))))))
 
 ; Rules a rule-free entry out, at the path its proof gives.
 (def-fns _ $ many facts-rule-out : (erased (Nat) n) (subterm many (Facts n) f) (many (Bin) x) (erased (In x n f) p) (many (Term) t) -> (many (Removed x t n f) r)
@@ -942,24 +942,24 @@
 
 (def-fns _ $ erased c1-ins : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) n2) (erased (Facts n2) f2) (subterm erased (Ins x n f n2 f2) i) (erased (List $ Rule) rules) (erased (C1 ctx n f rules) c) -> (erased (C1 ctx n2 f2 rules) c2)
   (match erased i _
-    ((InsLeaf ty p) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) (C1Empty (Cons (Digit) _ ctx) rules) $ C1Empty (Cons (Digit) (D2) ctx) rules))
+    ((InsLeaf ty p) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) (C1Empty (Cons (Digit) _ _) rules) $ C1Empty (Cons (Digit) (D2) _) rules))
     ((InsGrow1 x1 one q p)
       (C1Node _ _ _ _ _ _ _ _ _ _ (C1None ctx rules)
-        (c1-ins (Cons (Digit) (D1) ctx) x1 (Zero) (FEmpty) (Succ $ Zero) one q rules $ C1Empty (Cons (Digit) (D1) ctx) rules)
-        $ C1Empty (Cons (Digit) (D2) ctx) rules))
+        (c1-ins (Cons (Digit) (D1) _) x1 (Zero) (FEmpty) (Succ _) one q rules $ C1Empty (Cons (Digit) (D1) ctx) rules)
+        $ C1Empty (Cons (Digit) (D2) _) rules))
     ((InsGrow2 x1 two q p)
       (C1Node _ _ _ _ _ _ _ _ _ _ (C1None ctx rules)
-        (C1Empty (Cons (Digit) (D1) ctx) rules)
-        $ c1-ins (Cons (Digit) (D2) ctx) x1 (Zero) (FEmpty) (Succ $ Zero) two q rules $ C1Empty (Cons (Digit) (D2) ctx) rules))
+        (C1Empty (Cons (Digit) (D1) _) rules)
+        $ c1-ins (Cons (Digit) (D2) _) x1 (Zero) (FEmpty) (Succ _) two q rules $ C1Empty (Cons (Digit) (D2) ctx) rules))
     ((InsHere n1 n2 m ty one two p)
       (match erased c _
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) c1 c2))))
     ((Ins1 x1 h n1 a2 m here one two p k1 m2 one2 p2 q)
       (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch (c1-ins (Cons (Digit) (D1) ctx) x1 n1 one k1 one2 q rules c1) c2))))
+        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch (c1-ins (Cons (Digit) (D1) _) x1 n1 one k1 one2 q rules c1) c2))))
     ((Ins2 x1 h n1 a2 m here one two p k2 m2 two2 p2 q)
       (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch c1 $ c1-ins (Cons (Digit) (D2) ctx) x1 a2 two k2 two2 q rules c2))))))
+        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch c1 $ c1-ins (Cons (Digit) (D2) _) x1 a2 two k2 two2 q rules c2))))))
 
 (def-fns _ $ erased c1-out : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Bin) xg) (erased (Wrap ctx x xg) w) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o)
     (erased (List $ Rule) rules) (erased (C1 ctx n f rules) c) (erased (List $ Rule) res) (erased (AppendR rules (MkRule xg t) res) ap) -> (erased (C1 ctx k f2 res) c2)

@@ -1794,7 +1794,12 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     that nothing else mentions, which no unification in any order could
     supply -- and a few data-typed indices the batch script had dropped
     along with a failing neighbour, which a final one-at-a-time pass
-    over the data-typed leftovers picked up.
+    over the data-typed leftovers picked up (nine erased, and 27 of 31
+    `many` ones in erased positions). The four data-typed sites still
+    written are two shapes: a `(Succ (Zero))` under an untyped erased
+    `let` that only the bound proof's later use fixes, and a pair of
+    occurrences of one index in a call that determine each other and
+    nothing else mentions, so one of the two must be written.
 
 117. **Pure terms stay open; boundaries settle** (`Elab.check_args
     ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,
