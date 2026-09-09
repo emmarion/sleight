@@ -31,10 +31,11 @@ ground.
    opaque types are type constructors with no `Matchable`, so they can
    neither be matched on nor count as empty (SR 6). On top of that a
    source prelude (`lib/prelude.sl`, section 41) defines `Nat`, `False`,
-   `Lt`, `Double`, `Pow2`, `Dec`, `U8`, `Bin`, `Numeral`, `Char`,
-   `String`, their functions, and the levels `nat-lvl`, `pow-lvl`,
-   `mod-lvl`, `u8-lvl`, `bin-lvl`, `str-lvl`, all as ordinary,
-   shadowable entries, and since item 58 also `Unit`, `Maybe`,
+   `Eq`, `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `Dec`, `Cmp`, `U8`,
+   `U8Add`, `Bin`, `Numeral`, `Char`, `String`, `Append`, their
+   functions, and the levels `nat-lvl`, `u8-lvl`, `char-lvl` and
+   `str-lvl`, the tests' names for them, every other level being
+   anonymous (item 118), all as ordinary, shadowable entries, and since item 58 also `Unit`, `Maybe`,
    `Result`, `List` and `IO`; a user function calling `nat-add` proves
    `(prove-predates nat-lvl L)`. The examples still define their own
    `List`, shadowing the prelude's (SR 12).
@@ -232,8 +233,9 @@ ground.
     found in scope; the mark having named `C` is what makes `C` the
     wrapper, the only check left after trusting the mark.
 46. **The prelude's proofs are erased fields and erased functions**:
-    `Lt`, `Double` and `Pow2` carry their sub-proofs at `erased`, and
-    the lemmas `lt-pos` and `double-pos` are `erased` functions, so no
+    `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `U8Add` and `Append` carry
+    their sub-proofs at `erased`, and the lemmas (`double-pos`,
+    `add-succ-left`, `mod-succ-lt`, ...) are `erased` functions, so no
     proof is ever built at runtime; `lt-dec` returns a `Dec` whose
     proof field is erased. A choice of the session, not the owner's.
 
@@ -347,7 +349,9 @@ literals as open.
     over a string is discharged by an ordinary `subterm` proof.
     Constructing an `SCons` copies. `trim` is extern with the identity
     as its model: its whole content is the copy that lets the rest of a
-    shared buffer be collected. `str-append` is plain source at
+    shared buffer be collected, and since item 118 its return is
+    declared `(many s is t)`, so the checker sees the identity it
+    models. `str-append` is plain source at
     `str-lvl`. The alternative reading of "slice", an ADT holding a
     buffer, a start and a length with erased bounds proofs, was not
     taken: section 5 forbids a length function in a type, so every bound
@@ -417,7 +421,7 @@ literals as open.
     not a number.
 
 54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
-    model runs `double` in unary, and `Value.show` prints a `Nat` in
+    model runs `add` in unary, and `Value.show` prints a `Nat` in
     unary, so a numeral around a million overflows the interpreter's
     stack in either mode when printed and in the stripped mode when
     merely computed. Section 41's invariant holds up to resources; the
@@ -1839,3 +1843,55 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     `tests/wild_partial_ann.sl` and `tests/wild_partial_ann_bad.sl` are
     the annotation. Whether a meta solved inside a match branch may
     escape it was raised and left out at the owner's request.
+
+## A proof-carrying prelude
+
+Asked for by the owner in chat: the prelude's primitives should return
+proofs of their specifications, CPDT-style, since a function that returns
+a bare value is opaque to every later type (section 5 keeps calls out of
+types, so a returned relation is the only channel). The owner decided
+that the FFI adder returns an `Add` proof with a plain adder as a
+`delegate` over it, that `double` is derived from it, that `trim` is
+transparent, that `str-append` gets a relation, that `u8-add` gets the
+specification sketched to them, and that levels should be used
+judiciously with `_`. The names and the shapes below are the session's.
+
+118. **Primitives return their relations; the old names are forgetful
+     wrappers.** `add`, extern, returns `(erased (Add a b c) p)` beside
+     the sum; `nat-mod`, extern over a structural model, returns the
+     residue with `(Lt r c)` and `(Mod s c r)`, given `(Lt (Zero) c)`;
+     `add-u8` is plain source over the two and returns a `U8Add`
+     relating the three `U8`s' fields through `Add` and `Mod`;
+     `append` returns an `Append`. `nat-add`, `u8-add` and `str-append`
+     keep their names and one-value signatures as `delegate` wrappers
+     (so `coercible-of` relates each to its primitive), chosen so that
+     no test or `self/` call site changes; `u8-add` is therefore no
+     longer extern and the FFI's `u8_add` is gone, `nat_mod` (`Z.rem`)
+     taking its place. `double` is `(add a a)` with the erased lemma
+     `add-diag-double`, so the modulus is eight FFI additions rather
+     than unary doubling; `Double` stays as the relation the `Numeral`
+     lemmas invert. `Add` recurses on its second argument (`AddZero :
+     Add a Zero a`), which is what lets `nat-mod`'s step lemmas build
+     their `Add`s without a shift lemma; `add-succ-left` is the one
+     lemma about it. `Mod s c r` is `ModLt` (already below `c`) or
+     `ModSub` (one more `c` subtracted), with `mod-succ-lt` and
+     `mod-succ-wrap` the two cases of the successor step decided by
+     `nat-cmp`, whose `CEq` forces `c is (Succ r)`; `lt-asym` refutes
+     the third. `mod-add`, `succ-mod`'s old form and `lt-pos` are gone.
+     `trim`'s return is `(many s is t)`. Whether `Dec` earns its place
+     beside `Cmp` was raised by the owner and is open: `lt-dec` could
+     be derived from `nat-cmp` with two small lemmas, and `Dec` then
+     needs no extern, but the character-literal sugar (item 52) and 23
+     test sites name it. `tests/prelude_proofs.sl` is the evidence.
+119. **Levels in the prelude are anonymous** (`_`, SUGAR.md 1) and its
+     calls bare (SUGAR.md 3), except `nat-lvl`, `u8-lvl`, `char-lvl`
+     and `str-lvl`, which tests prove `Predates` against; the functions
+     the tests reach through them (`nat-add`, `double`, `lt-dec`,
+     `nat-cmp`; `u8-add`; `char-cmp`; `trim`, `str-append`) sit at
+     those. Two things the session learned writing the lemmas, recorded
+     as its reading: a lemma cannot recurse on a proof another lemma's
+     call produced, since that is not a subterm of anything, so
+     `add-diag-double` recurses on the `Nat` instead; and two lemmas at
+     one level can only call each other under section 9's positional
+     subterm discipline, so each lemma is its own `def-fns _` and calls
+     the ones above it with an inferred `Predates`.

@@ -15,9 +15,9 @@
     ((Some a v) v)))
 
 (def-fns _ $ many is-extern-fn : (many (String) name) -> (many (Bool) r)
-  (or (str-eq name "nat-add")
+  (or (str-eq name "add")
     (or (str-eq name "lt-dec")
-      (or (str-eq name "u8-add")
+      (or (str-eq name "nat-mod")
         $ or (str-eq name "bin-to-nat") $ str-eq name "trim"))))
 
 (def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
@@ -25,29 +25,24 @@
     (or (str-eq name "Bin")
       $ or (str-eq name "String") $ str-eq name "Dec")))
 
-; A U8 is its Nat at runtime (section 38), so the prelude's u8-add takes both back under the modulus first.
-(def-fns _ $ many u8-add-value : (many (Nat) a) (many (Nat) b) -> (many (Value) v)
-  (match many (lt-dec a u8-modulus) _
-    ((No x y q) (VError "u8-add: not a U8"))
-    ((Yes x y pa)
-      (match many (lt-dec b u8-modulus) _
-        ((No x2 y2 q2) (VError "u8-add: not a U8"))
-        ((Yes x2 y2 pb)
-          (let (many s) $ u8-add (MkU8 a pa) $ MkU8 b pb)
-          (let-match many s (MkU8 sn sq))
-          (vnat sn))))))
+(def-fns _ $ many nat-mod-value : (many (Nat) s) (many (Nat) c) -> (many (Value) v)
+  (match many (lt-dec (Zero) c) _
+    ((Yes x y pos)
+      (let (many m) (erased p) (erased q) $ nat-mod s c pos)
+      (vnat m))
+    ((No x y q) (VError "nat-mod: zero modulus"))))
 
 (def-fns _ $ many apply-extern : (many (String) name) (many (List $ Value) args) -> (many (List $ Value) r)
   (let (many a) $ arg-at args 0)
   (let (many b) $ arg-at args 1)
-  (match many (str-eq name "nat-add") _
+  (match many (str-eq name "add") _
     ((BTrue) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
     ((BFalse)
       (match many (str-eq name "lt-dec") _
         ((BTrue) (Cons _ (VExt dec-adt $ PDec $ match many (nat-lt (value-nat a) $ value-nat b) (((Nat) i)) ((BTrue) 0) ((BFalse) 1)) $ Nil _))
         ((BFalse)
-          (match many (str-eq name "u8-add") _
-            ((BTrue) (Cons _ (u8-add-value (value-nat a) $ value-nat b) $ Nil _))
+          (match many (str-eq name "nat-mod") _
+            ((BTrue) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
             ((BFalse)
               (match many (str-eq name "bin-to-nat") _
                 ((BTrue)

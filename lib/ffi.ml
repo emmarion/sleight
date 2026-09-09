@@ -34,8 +34,8 @@ let unary name f = function [ a ] -> [ int name (f (z a)) ] | _ -> raise (Eval.R
 let binary name f = function [ a; b ] -> [ int name (f (z a) (z b)) ] | _ -> raise (Eval.Runtime "extern arity")
 
 let fns : (string * (value list -> value list)) list =
-  [ ("nat-add", binary "Nat" Ffi_core.nat_add);
+  [ ("add", binary "Nat" Ffi_core.add);
     ("lt-dec", binary "Dec" Ffi_core.lt_dec);
-    ("u8-add", binary "Nat" Ffi_core.u8_add);
+    ("nat-mod", binary "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
     ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity")) ]

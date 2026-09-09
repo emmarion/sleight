@@ -1,7 +1,6 @@
 [@@@warning "-a"]
 module Ffi_core = struct
 type slice = string * int * int
-let modulus = Z.of_int 256
 let peano ~z ~nat =
   ( (fun i args -> match (i, args) with 0, [] -> nat Z.zero | 1, [ n ] -> nat (Z.succ (z n)) | _ -> assert false),
     fun v -> let n = z v in if Z.equal n Z.zero then (0, []) else (1, [ nat (Z.pred n) ]) )
@@ -22,9 +21,9 @@ let text ~z ~slice ~u8 ~str =
       | _ -> assert false),
     fun v -> let s, o, l = slice v in if l = 0 then (0, []) else (1, [ u8 (Z.of_int (Char.code s.[o])); str (s, o + 1, l - 1) ]) )
 let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
-let nat_add = Z.add
+let add = Z.add
 let lt_dec a b = if Z.lt a b then Z.zero else Z.one
-let u8_add a b = Z.rem (Z.add a b) modulus
+let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
 end
@@ -42,9 +41,9 @@ let (con_Dec : int -> v list -> v), (des_Dec : v -> int * v list) = Ffi_core.ind
 let tuple = function [] -> U | [ v ] -> v | vs -> Tup vs
 let untuple n v = match (n, v) with 1, v -> [ v ] | 0, _ -> [] | _, Tup vs -> vs | _ -> absurd ()
 let des_tag = function Tag (i, fs) -> (i, fs) | _ -> absurd ()
-let ext_nat_add = function [ a; b ] -> Nat (Ffi_core.nat_add (z a) (z b)) | _ -> absurd ()
+let ext_add = function [ a; b ] -> Nat (Ffi_core.add (z a) (z b)) | _ -> absurd ()
 let ext_lt_dec = function [ a; b ] -> Nat (Ffi_core.lt_dec (z a) (z b)) | _ -> absurd ()
-let ext_u8_add = function [ a; b ] -> Nat (Ffi_core.u8_add (z a) (z b)) | _ -> absurd ()
+let ext_nat_mod = function [ a; b ] -> Nat (Ffi_core.nat_mod (z a) (z b)) | _ -> absurd ()
 let ext_bin_to_nat = function [ a ] -> Nat (Ffi_core.bin_to_nat (z a)) | _ -> absurd ()
 let ext_trim = function [ a ] -> Str (Ffi_core.trim (slice a)) | _ -> absurd ()
 let rec nat_of v = match des_Nat v with _, [ p ] -> 1 + nat_of p | _ -> 0

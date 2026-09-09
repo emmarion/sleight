@@ -1,7 +1,5 @@
 type slice = string * int * int
 
-let modulus = Z.of_int 256
-
 (* A Peano-declared type held as an integer: constructor 0 is zero, constructor 1 the successor. *)
 let peano ~z ~nat =
   ( (fun i args -> match (i, args) with 0, [] -> nat Z.zero | 1, [ n ] -> nat (Z.succ (z n)) | _ -> assert false),
@@ -30,8 +28,8 @@ let text ~z ~slice ~u8 ~str =
 (* A type whose values are their constructor index alone, every field erased. *)
 let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
 
-let nat_add = Z.add
+let add = Z.add
 let lt_dec a b = if Z.lt a b then Z.zero else Z.one
-let u8_add a b = Z.rem (Z.add a b) modulus
+let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
