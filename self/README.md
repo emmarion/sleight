@@ -22,7 +22,10 @@ verification against the stored value, `let-match` binding outward, the
 tail and delegate marks on the normalized code, newtype shape, extern
 claims, and the reader's and literals' syntax errors; `unary` and
 `distinct` (SUGAR.md 5) expand to the prelude calls the reference
-writes down, in the prelude's scope as there. Its error messages are the reference's, and
+writes down, in the prelude's scope as there; a `_` argument (SUGAR.md 6)
+is solved as the reference solves it, by a meta the scope and the
+type-directed lookups never see, and the unifier's forcing mode is a
+flag. Its error messages are the reference's, and
 `self/bootstrap.sh` requires every test that expects an error to be
 refused with a message mentioning the expected text. What it does not
 do: verify that the interpreter's evaluation is honest (KERNEL.md's
@@ -93,9 +96,9 @@ the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 135 runnable tests
-match, all 86 error tests are refused with the expected text, and the
-fixpoint holds; the whole script takes about a minute.
+self-hosting fixpoint. At the time of writing all 141 runnable tests
+match, all 92 error tests are refused with the expected text, and the
+fixpoint holds; the whole script takes about two minutes.
 
 ## Choices, and where they differ from the reference
 

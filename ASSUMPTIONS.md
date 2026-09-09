@@ -1693,3 +1693,57 @@ checked by running (rule 2).
     case the owner reads §12's annotation as binding for the branches;
     the entries are still anonymous, so the question is only about the
     type-directed lookups.
+
+## `_` for an erased argument
+
+The owner proposed `_` for an erased argument of a type constructor, a
+value constructor or a function call, solved by unification against an
+expectation and the other arguments, naive and left to right, with every
+expression's type settled when the elaborator leaves it (SUGAR.md 6
+records the proposal). Items 115 and 116 are the implementing session's
+reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
+
+115. **A `_` argument is a meta, solved by `Env.unify` in its solving
+    mode** (`Elab.check_args`, `Env.bind ~meta`, `Env.unify ~force`;
+    `check-args`, `bind-as` and `unify` in `self/`). A meta is a scope
+    entry with the `meta` flag that `bind` leaves out of `env.scope`
+    (and, in `self/`, out of the objects list), so nothing reaches it by
+    name and none of the type-directed lookups of item 114 can fetch it;
+    it prints as `_`. `unify` without `~force` binds only metas — a meta
+    against a meta binds the newer, a meta against a term binds the meta
+    after the occurs and dangling-binder checks of §18 — and requires the
+    two sides identical otherwise; `refine` and the extractor's printer
+    pass `~force:true` and are as they were, and `check`/`check_sg` now
+    go through the solving unifier, which on meta-free terms is the
+    identity check they were. `check_args` mints one meta per parameter,
+    at the parameter's type over the metas before it (an `is`-entry's
+    meta is solved by its rule at once); an argument written `_` is
+    refused unless erased where it stands (`under pos e.mult`) and
+    otherwise left to its meta; any other argument is elaborated with
+    the parameter's instantiated signature as its expectation, checked
+    against it, and bound to its meta. Where some argument is `_`, the
+    application's result over the metas — `(C metas)` for a constructor,
+    the return telescope instantiated for a call — is unified with the
+    expected telescope before any argument is read, as a transaction
+    (a failure leaves the environment as it was); at the closing paren,
+    if a `_` is still open, the same unification is run again reporting
+    the mismatch (`type mismatch: expected (Maybe (Nat)), got (List
+    _)`), and a `_` still open after that is refused (`argument 1 is _
+    and cannot be inferred`). The solutions replace the metas in the
+    argument terms (`Env.metaless`), so no meta outlives the
+    application that minted it. The expectation is the telescope
+    `elab_expr` already carried for §2's `_` annotation — a function
+    body's return telescope, a match's annotation — now handed down
+    through `values` (entrywise, instantiated with the entries before),
+    `tail`, `delegate` and every argument position; a `_` annotation
+    refuses an expectation with a meta in it (`tests/wild_match_ann_bad.sl`).
+    Consequences the session chose without the owner: `(f _ (Nil _))`
+    is refused, the inner application closing before anything settles
+    the outer `_` (`tests/wild_nested_bad.sl`); a `let` binder's type is
+    not an expectation, so `(let (many xs) (Nil _))` and a `(Nil _)`
+    scrutinee are refused; a type constructor application's `_` is
+    solved only through an `is` expectation, so `(many (List _) xs)` in
+    a signature is refused (`tests/wild_type_bad.sl`); §3's decrease
+    annotation is inferred after the arguments are solved, as the
+    proposal asks, which is the order `elab_call` already had. All prior
+    tests pass unchanged, and no error message of a prior test changed.

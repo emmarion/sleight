@@ -113,3 +113,16 @@ that the test does not make is a mistake in this file.
   argument that differs from its counterpart. `tests/bare_lex_bad.sl` shows
   there is no search: a first argument that grows is refused although the
   second decreases.
+- `tests/wild_ctor.sl`, `tests/wild_call.sl` and `tests/wild_is.sl` — `_`
+  for an erased argument (SUGAR.md 6): a constructor's type argument solved
+  from the field after it, from the telescope a body returns into through
+  `values`, and from a match's annotation; a call's type argument solved
+  from a later argument or from the results' expected telescope; an
+  `is`-entry's value taken by `_`, and a `_` inside a pinned field solved
+  through the value expected. `tests/wild_fn_binder.sl` solves one under a
+  `Fn` binder, `tests/wild_erased_many.sl` puts one at a `many` parameter
+  in an erased position, `tests/wild_match_ann.sl` writes a match's `_`
+  annotation at an argument position. The refusals: `tests/wild_nested_bad.sl`
+  (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
+  `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
+  `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.
