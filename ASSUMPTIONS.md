@@ -2055,3 +2055,47 @@ had noted that an `SCons` copies its tail, so building a string by
      arguments are not literals. Also left: `bind-let`'s `tele`, whose
      empty case silently stops checking rather than reporting.
      `self/bootstrap.sh` is the evidence.
+
+## Code indexed by its erasures
+
+125. **Post-erasure code is indexed by the erasures of the values it
+     produces.** At the owner's direction, the next item of the same
+     review. `Code` in `core.sl` is `Code ms`, `ms` the list of
+     multiplicities the expression was elaborated at: `many-one` for a
+     variable or a constant, and for a function body, a let's right-hand
+     side, a match's branches and the whole of `elab-expr`'s result the
+     expectation they were checked against. The evaluator returns
+     `Vals ms`, a value at each many position and nothing at an erased
+     one. The lists a node holds in step with its index, a `values`'
+     codes and a let's non-erased ids, carry an erased `Picked` proof
+     that they sit at the many positions, so the evaluator binds a
+     let's ids to its values, reads the one value of a scrutinee, a
+     callee or a `values` entry, and spreads a run-position let's
+     values over its binders without a dynamic check: `first-value`,
+     the interpreter's "expected one value" and its "arity mismatch"
+     for a let, and `spread`'s placeholder for a let are gone. What
+     stays dynamic is fitted once at a boundary: the values a closure
+     returns are cut or padded to the call's index by `vals-fit`, a
+     closure's arity being a runtime property, and a constructor's
+     fields and a closure's parameters still bind by count. A node that
+     has to make values on its own, an erased position, an application,
+     a match, `absurd` and an error, holds its list as data for that.
+     The elaborator's dispatch returns `AnyCode`, code at whatever index
+     its case has, and `fit-code` decides that index against the
+     expectation at `elab-expr`'s tail, where the count was already
+     reported, with `CError` at the expectation as the placeholder when
+     they differ; a call's projection of many results onto an
+     expectation with fewer takes a decided `Lockstep` and builds both
+     `Picked` proofs. The normalizer's dropping of a `let` whose body
+     returns its ids needed care: the right-hand side's index differs
+     from the body's in erased entries, as `nat-add`'s `delegate` over
+     `add` shows, so `returns-same` decides that the two lists agree on
+     their many entries, returning a `ManySame` proof, and `recast`
+     rebuilds the code at the body's index, which changes only the
+     lists the nodes hold; for that, `CLet` and `MkFunc` carry their
+     erasures as data. The emitter reads the same lists as before, and
+     the extracted OCaml still builds and takes apart tuples by arity.
+     The session's reading is that no message changed: every placeholder
+     sits behind an error already recorded. `self/bootstrap.sh` is the
+     evidence.
+

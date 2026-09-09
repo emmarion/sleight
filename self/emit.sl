@@ -120,7 +120,7 @@
   (idmap-mem _ x $ cx-top cx))
 
 ; A constructor a code names statically: a Const entry holding it, or the constant itself.
-(def-fns _ $ many static-ctor : (many (EmitCx) cx) (many (Code) f) -> (many (Maybe $ Ctor) r)
+(def-fns _ $ many static-ctor : (many (EmitCx) cx) (many (Code many-one) f) -> (many (Maybe $ Ctor) r)
   (match many f _
     ((CVar x)
       (match many (idmap-get _ x $ cx-top cx) _
@@ -150,7 +150,7 @@
           (name-group rest $ st-with-names st2 $ idmap-set _ id name $ st-names st2))))))
 
 (def-fns _
-  (many emit-code : (subterm many (Closure) cl) (subterm many (Code) code) (erased (Subterm (Code) code (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-code : (subterm many (Closure) cl) (erased (List $ Mult) ms) (subterm many (Code ms) code) (erased (Subterm (Code ms) code (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many code _
       ; A variable: a top-level Const or function by its name, a captured value embedded once under a fresh
       ; name, a hoisted group member by its closure name, or a local.
@@ -175,32 +175,32 @@
       ((CConst v)
         (let (erased q) $ subterm-trans (prove-subterm v code) w)
         (emit-value (subterm q) v cx st))
-      ((CErased) (values st $ RStr "U"))
-      ((CValues cs)
+      ((CErased ms2) (values st $ RStr "U"))
+      ((CValues ms2 cs pk)
         (let (many st2) (many rs) $ emit-codes cl cs (subterm-trans (prove-subterm cs code) w) cx st)
         (values st2 $ tuple-rope rs))
-      ((CApp f args cc)
+      ((CApp ms2 f args cc)
         (let (many st2) (many rs) $ emit-codes cl args (subterm-trans (prove-subterm args code) w) cx st)
         (match many (static-ctor cx f) _
           ((Some a c) (values st2 $ build-rope c rs))
           ((None a)
-            (let (many st3) (many fr) $ emit-code cl f (subterm-trans (prove-subterm f code) w) cx st2)
+            (let (many st3) (many fr) $ emit-code cl _ f (subterm-trans (prove-subterm f code) w) cx st2)
             (values st3 $ rcat5 (RStr "(app ") fr (RStr " ") (bracketed rs) $ RStr ")"))))
-      ((CLet ids rhs rest)
-        (let (many st2) (many rr) $ emit-code cl rhs (subterm-trans (prove-subterm rhs code) w) cx st)
-        (let (many st3) (many br) $ emit-code cl rest (subterm-trans (prove-subterm rest code) w) cx st2)
+      ((CLet ms2 ns ids pk rhs rest)
+        (let (many st2) (many rr) $ emit-code cl _ rhs (subterm-trans (prove-subterm rhs code) w) cx st)
+        (let (many st3) (many br) $ emit-code cl _ rest (subterm-trans (prove-subterm rest code) w) cx st2)
         (values st3 $ untuple-rope ids rr br $ cx-env cx))
-      ((CLetRec fns rest)
+      ((CLetRec ns fns rest)
         (let (many st2) (many fr) $ emit-group cl fns (subterm-trans (prove-subterm fns code) w) cx st $ BFalse)
-        (let (many st3) (many br) $ emit-code cl rest (subterm-trans (prove-subterm rest code) w) cx st2)
+        (let (many st3) (many br) $ emit-code cl _ rest (subterm-trans (prove-subterm rest code) w) cx st2)
         (values st3 $ rcat5 (RStr "(let rec ") fr (RStr " in ") br $ RStr ")"))
-      ((CMatch scrut shape branches dfl)
-        (let (many st2) (many sr) $ emit-code cl scrut (subterm-trans (prove-subterm scrut code) w) cx st)
-        (let (many (Nat) arity) $ match many branches _ ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch d ids body) (list-length _ ids)))))
+      ((CMatch ns scrut shape branches dfl)
+        (let (many st2) (many sr) $ emit-code cl _ scrut (subterm-trans (prove-subterm scrut code) w) cx st)
+        (let (many (Nat) arity) $ match many branches _ ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch n0 d ids body) (list-length _ ids)))))
         (let (many (EmitSt) st2b) (many (Rope) dr)
           (match many dfl _
             ((None a) (values st2 $ RStr "absurd ()"))
-            ((Some a d) (emit-code cl d (subterm-trans (prove-subterm d code) w) cx st2))))
+            ((Some a d) (emit-code cl _ d (subterm-trans (prove-subterm d code) w) cx st2))))
         (let (many fallthrough) $ rcat3 (RStr " | _ -> ") dr $ RStr ")")
         (match many shape _
           ((ShKnown adt)
@@ -210,35 +210,35 @@
                   ((Nil a) (values st2b $ rcat3 (RStr "(") dr $ RStr ")"))
                   ((Cons a b rest)
                     (match many b _
-                      ((MkBranch d ids body)
-                        (let (many st3) (many br) $ emit-code cl body (subterm-trans (prove-subterm body code) w) cx st2b)
+                      ((MkBranch n0 d ids body)
+                        (let (many st3) (many br) $ emit-code cl _ body (subterm-trans (prove-subterm body code) w) cx st2b)
                         (values st3 $ untuple-rope ids sr br $ cx-env cx))))))
               ((BFalse)
-                (let (many st3) (many arms) $ emit-branches cl branches (subterm-trans (prove-subterm branches code) w) cx st2b)
+                (let (many st3) (many arms) $ emit-branches cl _ branches (subterm-trans (prove-subterm branches code) w) cx st2b)
                 (values st3 $ rcat4 (RStr "(match ") (des-rope adt sr) (rcat (RStr " with ") arms) fallthrough))))
           ((ShHeld mcode tags)
-            (let (many st3) (many mr) $ emit-code cl mcode (subterm-trans (prove-subterm mcode code) w) cx st2b)
-            (let (many st4) (many arms) $ emit-branches cl branches (subterm-trans (prove-subterm branches code) w) cx st3)
+            (let (many st3) (many mr) $ emit-code cl _ mcode (subterm-trans (prove-subterm mcode code) w) cx st2b)
+            (let (many st4) (many arms) $ emit-branches cl _ branches (subterm-trans (prove-subterm branches code) w) cx st3)
             (values st4 $ rcat5 (RStr "(match (app_mat ") mr (rcat4 (RStr " ") (nat-rope arity) (RStr " ") sr) (rcat (RStr ") with ") arms) fallthrough))))
-      ((CAbsurd) (values st $ RStr "(absurd ())"))
-      ((CError m) (values st $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
+      ((CAbsurd ms2) (values st $ RStr "(absurd ())"))
+      ((CError ms2 m) (values st $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
-  (many emit-codes : (subterm many (Closure) cl) (subterm many (List $ Code) cs) (erased (Subterm (List $ Code) cs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List $ Rope) rs)
+  (many emit-codes : (subterm many (Closure) cl) (subterm many (List $ Code many-one) cs) (erased (Subterm (List $ Code many-one) cs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List $ Rope) rs)
     (match many cs _
       ((Nil a) (values st $ Nil _))
       ((Cons a c rest)
-        (let (many st2) (many r) $ emit-code cl c (subterm-trans (prove-subterm c cs) w) cx st)
+        (let (many st2) (many r) $ emit-code cl _ c (subterm-trans (prove-subterm c cs) w) cx st)
         (let (many st3) (many rs) $ emit-codes cl rest (subterm-trans (prove-subterm rest cs) w) cx st2)
         (values st3 $ Cons _ r rs))))
 
-  (many emit-branches : (subterm many (Closure) cl) (subterm many (List $ Branch) bs) (erased (Subterm (List $ Branch) bs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+  (many emit-branches : (subterm many (Closure) cl) (erased (List $ Mult) ns) (subterm many (List $ Branch ns) bs) (erased (Subterm (List $ Branch ns) bs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many bs _
       ((Nil a) (values st $ REmpty))
       ((Cons a b rest)
         (match many b _
-          ((MkBranch d ids body)
-            (let (many st2) (many br) $ emit-code cl body (subterm-trans (prove-subterm body bs) w) cx st)
-            (let (many st3) (many more) $ emit-branches cl rest (subterm-trans (prove-subterm rest bs) w) cx st2)
+          ((MkBranch n0 d ids body)
+            (let (many st2) (many br) $ emit-code cl _ body (subterm-trans (prove-subterm body bs) w) cx st)
+            (let (many st3) (many more) $ emit-branches cl _ rest (subterm-trans (prove-subterm rest bs) w) cx st2)
             (values st3 $ rcat5 (RStr "| (") (nat-rope d) (rcat3 (RStr ", ") (ids-pattern ids $ cx-env cx) $ RStr ") -> ") br more))))))
 
   (many emit-value : (subterm many (Value) v) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
@@ -294,17 +294,17 @@
 
   (many emit-fn : (subterm many (Closure) cl) (subterm many (Func) fn) (erased (Subterm (Func) fn (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many fn _
-      ((MkFunc name id params body impl top)
+      ((MkFunc rets name id params body impl top)
         (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
         (match many ext _
           ((BTrue) (values st $ rcat3 (RStr "Fn ext_") (RStr $ sanitize $ match many impl (((String) s)) ((None a) "") ((Some a n) n)) $ REmpty))
           ((BFalse)
-            (let (many st2) (many br) $ emit-code cl body (subterm-trans (prove-subterm body fn) w) cx st)
+            (let (many st2) (many br) $ emit-code cl _ body (subterm-trans (prove-subterm body fn) w) cx st)
             (values st2 $ rcat5 (RStr "Fn (fun args -> match args with ") (ids-pattern params $ cx-env cx) (RStr " -> ") br $ RStr " | _ -> absurd ())")))))))
 
 ; A run-position group, emitted under a closure built around it.
 (def-fns _ $ many emit-top-group : (many (List $ Pair (Bin) $ Func) fns) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
-  (let (many (Func) f0) $ match many fns _ ((Nil a) (MkFunc "" (BZ) (Nil _) (CErased) (None _) $ BTrue)) ((Cons a p rest) (match many p (((Func) f)) ((MkPair x y id fn) fn))))
+  (let (many (Func) f0) $ match many fns _ ((Nil a) (MkFunc (Nil _) "" (BZ) (Nil _) (CErased $ Nil _) (None _) $ BTrue)) ((Cons a p rest) (match many p (((Func) f)) ((MkPair x y id fn) fn))))
   (let (many cl) $ MkClosure f0 fns $ MEmpty _)
   (emit-group cl fns (prove-subterm fns cl) cx st $ BFalse))
 

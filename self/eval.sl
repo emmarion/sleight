@@ -99,96 +99,139 @@
 (def-fns _ $ many close-group : (many (List $ Pair (Bin) $ Func) group) (many (List $ Pair (Bin) $ Func) whole) (many (IdMap $ Value) env) -> (many (IdMap $ Value) r)
   (venv-set-all (close-fns group whole env) env))
 
-(def-fns _ $ many find-branch : (subterm many (List $ Branch) bs) (many (Nat) i) -> (many (Maybe $ Branch) r)
-  (match many bs _
-    ((Nil a) (None _))
-    ((Cons a b rest)
-      (match many b _
-        ((MkBranch d ids body)
-          (match many (nat-cmp d i) _
-            ((CEq eq-t eq-r eq-x) (Some _ b))
-            (else (find-branch rest i))))))))
+(def-fns _ $ many vals-of : (subterm many (List $ Mult) ms) (many (Value) v) -> (many (Vals ms) r)
+  (match many ms _
+    ((Nil a) (ValsNil))
+    ((Cons a m rest) (match many m _ ((Many) (ValsMany _ v $ vals-of rest v)) ((Erased) (ValsErased _ $ vals-of rest v))))))
 
-(def-fns _ $ many first-value : (many (List $ Value) vs) -> (many (Value) v)
+(def-fns _ $ many vals-fit : (subterm many (List $ Mult) ms) (many (List $ Value) vs) -> (many (Vals ms) r)
+  (match many ms _
+    ((Nil a) (ValsNil))
+    ((Cons a m rest)
+      (match many m _
+        ((Erased) (ValsErased _ $ vals-fit rest vs))
+        ((Many)
+          (match many vs _
+            ((Nil b) (ValsMany _ (VError "arity mismatch") $ vals-fit rest vs))
+            ((Cons b v vrest) (ValsMany _ v $ vals-fit rest vrest))))))))
+
+(def-fns _ $ many vals-list : (erased (List $ Mult) ms) (subterm many (Vals ms) vs) -> (many (List $ Value) r)
   (match many vs _
-    ((Nil a) (VError "expected one value"))
-    ((Cons a v rest) v)))
+    ((ValsNil) (Nil _))
+    ((ValsMany m v rest) (Cons _ v $ vals-list _ rest))
+    ((ValsErased m rest) (vals-list _ rest))))
 
-(def-fns _ $ many has-branch : (subterm many (List $ Branch) bs) (many (Nat) i) -> (many (Bool) r)
+(def-fns _ $ many vals-spread : (erased (List $ Mult) ms) (subterm many (Vals ms) vs) -> (many (List $ Value) r) (erased (Lockstep (Mult) (Value) ms r) lock)
+  (match many vs _
+    ((ValsNil) (values (Nil _) (LsNil _ _)))
+    ((ValsMany m v rest)
+      (let (many r) (erased p) $ vals-spread _ rest)
+      (values (Cons _ v r) (LsCons _ _ (Many) v m r p)))
+    ((ValsErased m rest)
+      (let (many r) (erased p) $ vals-spread _ rest)
+      (values (Cons _ (VToken) r) (LsCons _ _ (Erased) (VToken) m r p)))))
+
+(def-fns _ $ many vals-one : (many (Vals many-one) vs) -> (many (Value) v)
+  (match many vs _ ((ValsMany m v rest) v)))
+
+(def-fns _ $ many venv-bind-picked : (erased (List $ Mult) ms) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (subterm many (Vals ms) vs) (many (IdMap $ Value) env) -> (many (IdMap $ Value) r)
+  (match many vs _
+    ((ValsNil) env)
+    ((ValsMany m v rest)
+      (match erased pk _
+        ((PkMany ta ms2 x xs p) (match many ids _ ((Cons a y idrest) (venv-bind-picked _ idrest p rest $ idmap-set _ y v env))))))
+    ((ValsErased m rest)
+      (match erased pk _
+        ((PkErased ta ms2 xs p) (venv-bind-picked _ ids p rest env))))))
+
+(def-fns _ $ many has-branch : (erased (List $ Mult) ns) (subterm many (List $ Branch ns) bs) (many (Nat) i) -> (many (Bool) r)
   (match many bs _
     ((Nil a) (BFalse))
-    ((Cons a b rest) (match many b _ ((MkBranch d ids body) (or (nat-eq d i) $ has-branch rest i))))))
+    ((Cons a b rest) (match many b _ ((MkBranch n0 d ids body) (or (nat-eq d i) $ has-branch _ rest i))))))
 
 (def-fns _
-  (many eval : (subterm many (Nat) fuel) (subterm many (Code) code) (many (IdMap $ Value) env) -> (many (List $ Value) vs)
+  (many eval : (subterm many (Nat) fuel) (erased (List $ Mult) ms) (subterm many (Code ms) code) (many (IdMap $ Value) env) -> (many (Vals ms) vs)
     (match many code _
       ((CVar x)
         (match many (idmap-get _ x env) _
-          ((Miss lt lk lm lp) (Cons _ (VError $ str-cat "unbound at runtime: " $ bin-str x) $ Nil _))
-          ((Hit lt lk lm v lp) (Cons _ v $ Nil _))))
-      ((CConst v) (Cons _ v $ Nil _))
-      ((CErased) (Cons _ (VToken) $ Nil _))
-      ((CValues cs) (eval-list fuel cs env))
-      ((CApp f args cc)
-        (let (many fv) $ first-value $ eval fuel f env)
+          ((Miss lt lk lm lp) (ValsMany _ (VError $ str-cat "unbound at runtime: " $ bin-str x) $ ValsNil))
+          ((Hit lt lk lm v lp) (ValsMany _ v $ ValsNil))))
+      ((CConst v) (ValsMany _ v $ ValsNil))
+      ((CErased ms2) (vals-of ms2 $ VToken))
+      ((CValues ms2 cs pk) (eval-picked fuel cs ms2 pk env))
+      ((CApp ms2 f args cc)
+        (let (many fv) $ vals-one $ eval fuel _ f env)
         (let (many avs) $ eval-list fuel args env)
         (match many fuel _
-          ((Zero) (Cons _ (VError "out of fuel") $ Nil _))
-          ((Succ k) (apply k fv avs))))
-      ((CLet ids rhs rest)
-        (let (many vs) $ eval fuel rhs env)
-        (eval fuel rest $ venv-bind ids vs env))
-      ((CLetRec fns rest) (eval fuel rest $ close-group fns fns env))
-      ((CMatch scrut shape branches dfl)
-        (let (many v) $ first-value $ eval fuel scrut env)
+          ((Zero) (vals-of ms2 $ VError "out of fuel"))
+          ((Succ k) (vals-fit ms2 $ apply k fv avs))))
+      ((CLet ms2 ns ids pk rhs rest)
+        (let (many vs) $ eval fuel _ rhs env)
+        (eval fuel _ rest $ venv-bind-picked _ ids pk vs env))
+      ((CLetRec ns fns rest) (eval fuel _ rest $ close-group fns fns env))
+      ((CMatch ns scrut shape branches dfl)
+        (let (many v) $ vals-one $ eval fuel _ scrut env)
         (let (many (Maybe $ Pair (Nat) $ List $ Value) read)
           (match many shape _
             ((ShKnown adt) (dispatch (adt-ext adt) (adt-tagged adt) v))
             ((ShHeld mcode tags)
-              (match many (first-value $ eval fuel mcode env) (((Maybe $ Pair (Nat) $ List $ Value) r))
+              (match many (vals-one $ eval fuel _ mcode env) (((Maybe $ Pair (Nat) $ List $ Value) r))
                 ((VMatchable a) (dispatch (adt-ext a) tags v)) (else (None $ Pair (Nat) $ List $ Value))))))
         (match many read _
           ((Some a p)
             (match many p _
               ((MkPair x y i fields)
-                (match many (has-branch branches i) _
-                  ((BTrue) (eval-branch fuel branches i fields env))
-                  ((BFalse) (match many dfl _ ((Some b d) (eval fuel d env)) ((None b) (eval-branch fuel branches i fields env))))))))
+                (match many (has-branch _ branches i) _
+                  ((BTrue) (eval-branch fuel ns branches i fields env))
+                  ((BFalse) (match many dfl _ ((Some b d) (eval fuel _ d env)) ((None b) (eval-branch fuel ns branches i fields env))))))))
           ((None a)
             (match many branches _
-              ((Nil b) (match many dfl _ ((Some c d) (eval fuel d env)) ((None c) (Cons _ (VError "no branch") $ Nil _))))
+              ((Nil b) (match many dfl _ ((Some c d) (eval fuel _ d env)) ((None c) (vals-of ns $ VError "no branch"))))
               ((Cons b br rest)
                 (match many br _
-                  ((MkBranch d ids body) (eval fuel body $ venv-bind ids (untuple (list-length _ ids) v) env))))))))
-      ((CAbsurd) (Cons _ (VError "absurd code reached") $ Nil _))
-      ((CError m) (Cons _ (VError m) $ Nil _))))
-  (many eval-list : (subterm many (Nat) fuel) (subterm many (List $ Code) cs) (many (IdMap $ Value) env) -> (many (List $ Value) vs)
+                  ((MkBranch n0 d ids body) (eval fuel _ body $ venv-bind ids (untuple (list-length _ ids) v) env))))))))
+      ((CAbsurd ms2) (vals-of ms2 $ VError "absurd code reached"))
+      ((CError ms2 m) (vals-of ms2 $ VError m))))
+  (many eval-list : (subterm many (Nat) fuel) (subterm many (List $ Code many-one) cs) (many (IdMap $ Value) env) -> (many (List $ Value) vs)
     (match many cs _
       ((Nil a) (Nil _))
-      ((Cons a c rest) (Cons _ (first-value $ eval fuel c env) $ eval-list fuel rest env))))
-  (many eval-branch : (subterm many (Nat) fuel) (subterm many (List $ Branch) bs) (many (Nat) i) (many (List $ Value) fields) (many (IdMap $ Value) env) -> (many (List $ Value) vs)
+      ((Cons a c rest) (Cons _ (vals-one $ eval fuel _ c env) $ eval-list fuel rest env))))
+  (many eval-picked : (subterm many (Nat) fuel) (subterm many (List $ Code many-one) cs) (subterm many (List $ Mult) ms) (erased (Picked (Code many-one) ms cs) pk) (many (IdMap $ Value) env) -> (many (Vals ms) vs)
+    (match many ms _
+      ((Nil a) (ValsNil))
+      ((Cons a m rest)
+        (match many m _
+          ((Many)
+            (match erased pk _
+              ((PkMany ta ms2 c0 cs2 p)
+                (match many cs _
+                  ((Cons b c crest) (ValsMany _ (vals-one $ eval fuel _ c env) $ eval-picked fuel crest rest p env))))))
+          ((Erased)
+            (match erased pk _
+              ((PkErased ta ms2 cs2 p) (ValsErased _ $ eval-picked fuel cs rest p env))))))))
+  (many eval-branch : (subterm many (Nat) fuel) (many (List $ Mult) ns) (subterm many (List $ Branch ns) bs) (many (Nat) i) (many (List $ Value) fields) (many (IdMap $ Value) env) -> (many (Vals ns) vs)
     (match many bs _
-      ((Nil a) (Cons _ (VError $ str-cat "no branch for discriminant " $ nat-str i) $ Nil _))
+      ((Nil a) (vals-of ns $ VError $ str-cat "no branch for discriminant " $ nat-str i))
       ((Cons a b rest)
         (match many b _
-          ((MkBranch d ids body)
+          ((MkBranch n0 d ids body)
             (match many (nat-cmp d i) _
-              ((CEq eq-t eq-r eq-x) (eval fuel body $ venv-bind ids fields env))
-              (else (eval-branch fuel rest i fields env))))))))
+              ((CEq eq-t eq-r eq-x) (eval fuel _ body $ venv-bind ids fields env))
+              (else (eval-branch fuel ns rest i fields env))))))))
   (many apply : (subterm many (Nat) fuel) (many (Value) f) (many (List $ Value) args) -> (many (List $ Value) vs)
     (match many f _
       ((VFn cl)
         (match many cl _
           ((MkClosure fn group cenv)
             (match many fn _
-              ((MkFunc name id params body impl top)
+              ((MkFunc rets name id params body impl top)
                 (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (and (is-extern-fn n) $ not $ str-eq n "nat-cmp")))
                 (match many ext _
                   ((BTrue) (apply-extern (match many impl (((String) s)) ((None a) (SNil)) ((Some a n) n)) args))
                   ((BFalse)
                     (match many fuel _
                       ((Zero) (Cons _ (VError "out of fuel") $ Nil _))
-                      ((Succ k) (eval k body $ venv-bind params args $ close-group group group cenv))))))))))
+                      ((Succ k) (vals-list _ $ eval k _ body $ venv-bind params args $ close-group group group cenv))))))))))
       ((VCtorFn c) (Cons _ (construct c args) $ Nil _))
       ((VCtor c fs) (Cons _ (VError "cannot apply a constructor value") $ Nil _))
       ((VTuple fs) (Cons _ (VError "cannot apply a tuple") $ Nil _))
@@ -199,8 +242,8 @@
 
 (let (many eval-fuel) 1000000)
 
-(def-fns _ $ many run-code : (many (Env) env) (many (Code) code) -> (many (List $ Value) vs)
-  (eval eval-fuel code $ env-values env))
+(def-fns _ $ many run-code : (many (Env) env) (erased (List $ Mult) ms) (many (Code ms) code) -> (many (Vals ms) vs)
+  (eval eval-fuel _ code $ env-values env))
 
 (def-fns _ $ many apply-value : (many (Value) f) (many (List $ Value) args) -> (many (List $ Value) vs)
   (apply eval-fuel f args))

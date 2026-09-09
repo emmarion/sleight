@@ -478,6 +478,28 @@
       (match erased q _
         ((LsCons c d y2 z ys3 zs2 q2) (LsCons _ _ x z xs2 zs2 $ lockstep-trans _ _ _ _ _ _ p2 q2))))))
 
+(def-fns _ $ erased lockstep-sym : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (subterm erased (Lockstep A B xs ys) p) -> (erased (Lockstep B A ys xs) q)
+  (match erased p _
+    ((LsNil a b) (LsNil _ _))
+    ((LsCons a b x y xs2 ys2 p2) (LsCons _ _ y x ys2 xs2 $ lockstep-sym _ _ _ _ p2))))
+
+(def-adts
+  (LockstepDec : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
+    enum
+    (many LdYes : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (Lockstep A B xs ys) p) -> (LockstepDec A B xs ys))
+    (many LdNo : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) -> (LockstepDec A B xs ys))))
+
+(def-fns _ $ many lockstep-dec : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) -> (many (LockstepDec A B xs ys) r)
+  (match many xs _
+    ((Nil a) (match many ys _ ((Nil b) (LdYes _ _ _ _ $ LsNil _ _)) ((Cons b y yrest) (LdNo _ _ _ _))))
+    ((Cons a x xrest)
+      (match many ys _
+        ((Nil b) (LdNo _ _ _ _))
+        ((Cons b y yrest)
+          (match many (lockstep-dec _ _ xrest yrest) _
+            ((LdYes c d e f p) (LdYes _ _ _ _ $ LsCons _ _ x y xrest yrest p))
+            ((LdNo c d e f) (LdNo _ _ _ _))))))))
+
 (def-fns _ $ many list-fit : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) (many B filler) -> (many (List B) r) (erased (Lockstep A B xs r) p)
   (match many xs _
     ((Nil a) (values (Nil _) (LsNil _ _)))

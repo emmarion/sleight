@@ -203,6 +203,13 @@ recorded so it can be revisited.
   is reported as an internal error, not refuted, since the sugar forms
   are found by resolving a head in the prelude's scope, which no proof
   here speaks about (ASSUMPTIONS 111, 124).
+- **Post-erasure code carries its erasures.** `Code ms` is indexed by
+  the multiplicities of the values it produces, and the lists a node
+  holds in step with that, a `values`' codes and a `let`'s ids, come
+  with a proof that they sit at the many positions (ASSUMPTIONS 125);
+  the interpreter returns `Vals ms` and binds a `let` without a count
+  check. What it cannot know statically, a closure's arity and a
+  constructor's fields, is fitted once at the boundary.
 - **Lists walked together carry evidence.** Where the elaborator walks
   two lists in step, a telescope and the metas opened for it, a `let`'s
   binders and the results and values they bind, an expectation and the
