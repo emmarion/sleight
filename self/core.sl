@@ -482,8 +482,8 @@
 (def-fns _ $ erased wrap-mw : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Bin) x) (subterm erased (Wrap ctx a x) w) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRule x t rules) m) -> (erased (MemRuleW ctx a t rules) r)
   (match erased w _
     ((WNil z) (MWNil _ _ _ m))
-    ((W1 ctx1 a1 y q) (MW1 _ _ _ _ $ wrap-mw ctx1 (B1 a) x q t rules m))
-    ((W2 ctx1 a1 y q) (MW2 _ _ _ _ $ wrap-mw ctx1 (B2 a) x q t rules m))))
+    ((W1 ctx1 a1 y q) (MW1 _ _ _ _ $ wrap-mw ctx1 (B1 _) x q t rules m))
+    ((W2 ctx1 a1 y q) (MW2 _ _ _ _ $ wrap-mw ctx1 (B2 _) x q t rules m))))
 
 (def-fns _ $ erased mw-unwrap : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Bin) x) (subterm erased (Wrap ctx a x) w) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRuleW ctx a t rules) m) -> (erased (MemRule x t rules) r)
   (match erased w _
@@ -494,8 +494,8 @@
 (def-fns _ $ erased mw-append : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Term) t) (erased (List $ Rule) rules) (subterm erased (MemRuleW ctx a t rules) m) (erased (Rule) r) (erased (List $ Rule) res) (erased (AppendR rules r res) ap) -> (erased (MemRuleW ctx a t res) m2)
   (match erased m _
     ((MWNil a1 t1 r1 m1) (MWNil _ _ _ $ mem-append a t rules r res m1 ap))
-    ((MW1 c1 a1 t1 r1 m1) (MW1 _ _ _ _ $ mw-append c1 (B1 a) t rules m1 r res ap))
-    ((MW2 c1 a1 t1 r1 m1) (MW2 _ _ _ _ $ mw-append c1 (B2 a) t rules m1 r res ap))))
+    ((MW1 c1 a1 t1 r1 m1) (MW1 _ _ _ _ $ mw-append c1 (B1 _) t rules m1 r res ap))
+    ((MW2 c1 a1 t1 r1 m1) (MW2 _ _ _ _ $ mw-append c1 (B2 _) t rules m1 r res ap))))
 ; ---- The fact table, indexed by its number of rule-free entries (ASSUMPTIONS 94). Sums are relations,
 ; since a type may not call a function; [In] is the path to a rule-free entry, and ruling one out returns
 ; the table at the predecessor count, which is what unification's measure steps down on.
@@ -556,7 +556,7 @@
   (match erased p _
     ((P3Z a1 b1 c1 q)
       (match erased (plus-right _ _ _ q) _
-        ((MkPred a2 b2 c2 q2) (MkPred3 _ _ _ c2 $ P3Z a b c2 q2))))
+        ((MkPred a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3Z a b c2 q2))))
     ((P3S h1 a1 b1 c1 q)
       (match erased (plus3-right _ _ _ _ q) _
         ((MkPred3 h2 a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3S h1 a b c2 q2))))))
@@ -720,24 +720,24 @@
 
 (def-fns _ $ erased above-ins : (erased (List $ Digit) ctx) (erased (Bin) c) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) n2) (erased (Facts n2) f2) (erased (Bin) x) (erased (Bin) y) (erased (Above ctx c n f) ab) (subterm erased (Ins x n f n2 f2) i) (erased (Wrap ctx x y) w) (erased (BinLe y c) le) -> (erased (Above ctx c n2 f2) ab2)
   (match erased i _
-    ((InsLeaf ty p) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ $ Zero) (HFree ty) y w le) (AbEmpty (Cons (Digit) (D1) ctx) c) $ AbEmpty (Cons (Digit) (D2) ctx) c))
+    ((InsLeaf ty p) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ _) (HFree _) y w le) (AbEmpty (Cons (Digit) _ _) c) $ AbEmpty (Cons (Digit) _ _) c))
     ((InsGrow1 x1 one q p)
       (AbNode _ _ _ _ _ _ _ _ _ _ (AHNone ctx c)
-        (above-ins (Cons (Digit) (D1) ctx) c (Zero) (FEmpty) (Succ $ Zero) one x1 y (AbEmpty (Cons (Digit) (D1) ctx) c) q (W1 ctx x1 y w) le)
-        $ AbEmpty (Cons (Digit) (D2) ctx) c))
+        (above-ins (Cons (Digit) _ _) c (Zero) (FEmpty) (Succ _) one x1 y (AbEmpty (Cons (Digit) _ _) c) q (W1 ctx x1 y w) le)
+        $ AbEmpty (Cons (Digit) _ _) c))
     ((InsGrow2 x1 two q p)
       (AbNode _ _ _ _ _ _ _ _ _ _ (AHNone ctx c)
-        (AbEmpty (Cons (Digit) (D1) ctx) c)
-        $ above-ins (Cons (Digit) (D2) ctx) c (Zero) (FEmpty) (Succ $ Zero) two x1 y (AbEmpty (Cons (Digit) (D2) ctx) c) q (W2 ctx x1 y w) le))
+        (AbEmpty (Cons (Digit) _ _) c)
+        $ above-ins (Cons (Digit) _ _) c (Zero) (FEmpty) (Succ _) two x1 y (AbEmpty (Cons (Digit) _ _) c) q (W2 ctx x1 y w) le))
     ((InsHere n1 n2 m ty one two p)
       (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ $ Zero) (HFree ty) y w le) a1 a2))))
+        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ _) (HFree _) y w le) a1 a2))))
     ((Ins1 x1 h n1 n2 m here one two p k1 m2 one2 p2 q)
       (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-ins (Cons (Digit) (D1) ctx) c n1 one k1 one2 x1 y a1 q (W1 ctx x1 y w) le) a2))))
+        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-ins (Cons (Digit) _ _) c n1 one k1 one2 x1 y a1 q (W1 ctx x1 y w) le) a2))))
     ((Ins2 x1 h n1 n2 m here one two p k2 m2 two2 p2 q)
       (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-ins (Cons (Digit) (D2) ctx) c n2 two k2 two2 x1 y a2 q (W2 ctx x1 y w) le))))))
+        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-ins (Cons (Digit) _ _) c n2 two k2 two2 x1 y a2 q (W2 ctx x1 y w) le))))))
 
 (def-fns _ $ erased above-out : (erased (List $ Digit) ctx) (erased (Bin) c) (erased (Bin) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (erased (Above ctx c n f) ab) (subterm erased (Out x t n f k f2) o) -> (erased (Above ctx c k f2) ab2)
   (match erased o _
@@ -745,13 +745,13 @@
       (match erased ab _
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            ((AHKey c4 c5 h6 here7 y w le) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Zero) (HRuled ty t1) y w le) a1 a2))))))
+            ((AHKey c4 c5 h6 here7 y w le) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Zero) (HRuled _ _) y w le) a1 a2))))))
     ((Out1 x1 t1 h n1 n2 m here one two p k1 m2 one2 p2 q)
       (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-out (Cons (Digit) (D1) ctx) c x1 t1 n1 one k1 one2 a1 q) a2))))
+        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-out (Cons (Digit) _ _) c x1 t1 n1 one k1 one2 a1 q) a2))))
     ((Out2 x1 t1 h n1 n2 m here one two p k2 m2 two2 p2 q)
       (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-out (Cons (Digit) (D2) ctx) c x1 t1 n2 two k2 two2 a2 q))))))
+        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-out (Cons (Digit) _ _) c x1 t1 n2 two k2 two2 a2 q))))))
 
 (def-fns _ $ erased above-weaken : (erased (List $ Digit) ctx) (erased (Bin) c) (erased (Bin) c2) (erased (Nat) n) (erased (Facts n) f) (subterm erased (Above ctx c n f) ab) (erased (BinLe c c2) le) -> (erased (Above ctx c2 n f) ab2)
   (match erased ab _
@@ -759,8 +759,8 @@
     ((AbNode z1 z2 h n1 n2 m here one two p ah a1 a2)
       (AbNode _ _ _ _ _ _ _ _ _ _
         (match erased ah (((AboveHere ctx c2 h here) r)) ((AHNone y1 y2) (AHNone ctx c2)) ((AHKey y1 y2 y3 y4 y w le0) (AHKey ctx c2 h here y w $ le-le y c c2 le0 le)))
-        (above-weaken (Cons (Digit) (D1) ctx) c c2 n1 one a1 le)
-        $ above-weaken (Cons (Digit) (D2) ctx) c c2 n2 two a2 le))))
+        (above-weaken (Cons (Digit) _ _) c c2 n1 one a1 le)
+        $ above-weaken (Cons (Digit) _ _) c c2 n2 two a2 le))))
 
 (def-fns _ $ erased taken-empty : (erased (Bin) x) (erased (Taken x (Zero) $ FEmpty) t) -> (erased (False) f)
   (match erased t _
@@ -794,13 +794,13 @@
           (let (erased (C1 (Cons _ (D1) ctx) n1 one rules) c1) $ match erased c _ ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c1))
           (match many (facts-lookup x1 _ one _ _ (W1 ctx x1 xg w) _ c1) _
             ((LNone a b d e g) (LNone _ _ _ _ _))
-            ((LRuled a b d e g ty t mr) (LRuled _ _ _ xg _ ty t mr))
+            ((LRuled a b d e g ty t mr) (LRuled _ _ _ _ _ ty t mr))
             ((LFree a b d e g ty q) (LFree _ _ _ _ _ ty $ In1 x1 h n1 n2 m here one two p3 q))))
         ((B2 x1)
           (let (erased (C1 (Cons _ (D2) ctx) n2 two rules) c2) $ match erased c _ ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c2))
           (match many (facts-lookup x1 _ two _ _ (W2 ctx x1 xg w) _ c2) _
             ((LNone a b d e g) (LNone _ _ _ _ _))
-            ((LRuled a b d e g ty t mr) (LRuled _ _ _ xg _ ty t mr))
+            ((LRuled a b d e g ty t mr) (LRuled _ _ _ _ _ ty t mr))
             ((LFree a b d e g ty q) (LFree _ _ _ _ _ ty $ In2 x1 h n1 n2 m here one two p3 q))))))))
 
 ; A new rule-free entry; an occupied position is left as it is.
@@ -810,26 +810,26 @@
       (match many x _
         ((BZ)
           (let (erased p0) $ P3S _ _ _ _ $ P3Z (Zero) (Zero) (Zero) $ PZ $ Zero)
-          (IGrew _ _ _ (FNode _ (Zero) _ _ (HFree ty) (FEmpty) (FEmpty) p0) (InsLeaf ty p0) $ InHere (Zero) (Zero) (Succ $ Zero) ty (FEmpty) (FEmpty) p0))
+          (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) (FEmpty) (FEmpty) _) (InsLeaf ty p0) $ InHere (Zero) (Zero) (Succ _) ty (FEmpty) (FEmpty) p0))
         ((B1 x1)
           (match many (facts-insert x1 _ (FEmpty) ty) _
             (absurd (IKept a b d q) (taken-empty _ q))
             ((IGrew a b d one r q1)
               (let (erased p0) $ plus-zero-right $ Succ $ Zero)
-              (IGrew _ _ _ (FNode _ _ _ _ (HNone) one (FEmpty) $ P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p0) (InsGrow1 x1 one r p0)
+              (IGrew _ _ _ (FNode _ _ _ _ (HNone) one (FEmpty) _) (InsGrow1 x1 one r p0)
                 $ In1 x1 (Zero) (Succ $ Zero) (Zero) (Succ $ Zero) (HNone) one (FEmpty) (P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p0) q1))))
         ((B2 x1)
           (match many (facts-insert x1 _ (FEmpty) ty) _
             (absurd (IKept a b d q) (taken-empty _ q))
             ((IGrew a b d two r q1)
               (let (erased p0) $ PZ $ Succ $ Zero)
-              (IGrew _ _ _ (FNode _ _ _ _ (HNone) (FEmpty) two $ P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p0) (InsGrow2 x1 two r p0)
+              (IGrew _ _ _ (FNode _ _ _ _ (HNone) (FEmpty) two _) (InsGrow2 x1 two r p0)
                 $ In2 x1 (Zero) (Zero) (Succ $ Zero) (Succ $ Zero) (HNone) (FEmpty) two (P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p0) q1))))))
     ((FNode h n1 n2 m here one two p3)
       (match many x _
         ((BZ)
           (match many here _
-            ((HNone) (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) one two $ P3S (Zero) n1 n2 m p3) (InsHere n1 n2 m ty one two p3) $ InHere n1 n2 (Succ m) ty one two $ P3S (Zero) n1 n2 m p3))
+            ((HNone) (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) one two _) (InsHere n1 n2 m ty one two p3) $ InHere n1 n2 (Succ m) ty one two $ P3S (Zero) n1 n2 m p3))
             ((HRuled ty0 t0) (IKept _ _ _ $ TRuled x n f $ RHere n1 n2 m ty0 t0 one two p3))
             ((HFree ty0) (IKept _ _ _ $ TFree x n f $ InHere n1 n2 m ty0 one two p3))))
         ((B1 x1)
@@ -837,13 +837,13 @@
             ((IKept a b d q) (IKept _ _ _ $ taken-1 x1 h n1 n2 m here one two p3 q))
             ((IGrew a b d one2 r q1)
               (let (erased p4) $ plus3-mid-succ _ _ _ _ p3)
-              (IGrew _ _ _ (FNode _ _ _ _ here one2 two p4) (Ins1 x1 h n1 n2 m here one two p3 (Succ n1) (Succ m) one2 p4 r) $ In1 x1 h (Succ n1) n2 (Succ m) here one2 two p4 q1))))
+              (IGrew _ _ _ (FNode _ _ _ _ here one2 two _) (Ins1 x1 h n1 n2 m here one two p3 (Succ n1) (Succ m) one2 p4 r) $ In1 x1 h (Succ n1) n2 (Succ m) here one2 two p4 q1))))
         ((B2 x1)
           (match many (facts-insert x1 _ two ty) _
             ((IKept a b d q) (IKept _ _ _ $ taken-2 x1 h n1 n2 m here one two p3 q))
             ((IGrew a b d two2 r q1)
               (let (erased p4) $ plus3-right-succ _ _ _ _ p3)
-              (IGrew _ _ _ (FNode _ _ _ _ here one two2 p4) (Ins2 x1 h n1 n2 m here one two p3 (Succ n2) (Succ m) two2 p4 r) $ In2 x1 h n1 (Succ n2) (Succ m) here one two2 p4 q1))))))))
+              (IGrew _ _ _ (FNode _ _ _ _ here one two2 _) (Ins2 x1 h n1 n2 m here one two p3 (Succ n2) (Succ m) two2 p4 r) $ In2 x1 h n1 (Succ n2) (Succ m) here one two2 p4 q1))))))))
 
 ; Rules a rule-free entry out, at the path its proof gives.
 (def-fns _ $ many facts-rule-out : (erased (Nat) n) (subterm many (Facts n) f) (many (Bin) x) (erased (In x n f) p) (many (Term) t) -> (many (Removed x t n f) r)
@@ -855,7 +855,7 @@
           (match many here _
             ((HFree ty)
               (match erased p3 _
-                ((P3S h1 a1 b1 c1 q) (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two q) $ OutHere n1 n2 c1 ty t one two q))))
+                ((P3S h1 a1 b1 c1 q) (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two _) $ OutHere n1 n2 c1 ty t one two q))))
             (absurd HNone (match erased p (((False) f))))
             (absurd (HRuled ty0 t0) (match erased p (((False) f))))))
         ((B1 x1)
@@ -863,13 +863,13 @@
           (match many (facts-rule-out _ one x1 q t) _
             ((MkRemoved a a0 k1 b one2 r)
               (match erased (plus3-mid _ _ _ _ p3) _
-                ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved _ _ _ _ (FNode h _ _ _ here one2 two q2) $ Out1 x1 t h n1 n2 m here one two p3 k1 c2 one2 q2 r))))))
+                ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved _ _ _ _ (FNode _ _ _ _ here one2 two _) $ Out1 x1 t h n1 n2 m here one two p3 k1 c2 one2 q2 r))))))
         ((B2 x1)
           (let (erased (In x1 n2 two) q) $ match erased p _ ((In2 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q))
           (match many (facts-rule-out _ two x1 q t) _
             ((MkRemoved a a0 k2 b two2 r)
               (match erased (plus3-right _ _ _ _ p3) _
-                ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved _ _ _ _ (FNode h _ _ _ here one two2 q2) $ Out2 x1 t h n1 n2 m here one two p3 k2 c2 two2 q2 r))))))))))
+                ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved _ _ _ _ (FNode _ _ _ _ here one two2 _) $ Out2 x1 t h n1 n2 m here one two p3 k2 c2 two2 q2 r))))))))))
 
 ; ---- Transport of the agreement proofs through an insert, a rule-out and an append.
 
@@ -937,12 +937,12 @@
     ((C1Empty c0 r0) (C1Empty _ _))
     ((C1Node c0 h n1 n2 m here one two p r0 ch c1 c2)
       (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch r res ap)
-        (c1-append (Cons (Digit) (D1) ctx) n1 one rules c1 r res ap)
-        $ c1-append (Cons (Digit) (D2) ctx) n2 two rules c2 r res ap))))
+        (c1-append (Cons (Digit) _ _) n1 one rules c1 r res ap)
+        $ c1-append (Cons (Digit) _ _) n2 two rules c2 r res ap))))
 
 (def-fns _ $ erased c1-ins : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) n2) (erased (Facts n2) f2) (subterm erased (Ins x n f n2 f2) i) (erased (List $ Rule) rules) (erased (C1 ctx n f rules) c) -> (erased (C1 ctx n2 f2 rules) c2)
   (match erased i _
-    ((InsLeaf ty p) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) (C1Empty (Cons (Digit) (D1) ctx) rules) $ C1Empty (Cons (Digit) (D2) ctx) rules))
+    ((InsLeaf ty p) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) (C1Empty (Cons (Digit) _ ctx) rules) $ C1Empty (Cons (Digit) (D2) ctx) rules))
     ((InsGrow1 x1 one q p)
       (C1Node _ _ _ _ _ _ _ _ _ _ (C1None ctx rules)
         (c1-ins (Cons (Digit) (D1) ctx) x1 (Zero) (FEmpty) (Succ $ Zero) one q rules $ C1Empty (Cons (Digit) (D1) ctx) rules)
@@ -969,27 +969,27 @@
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
           (C1Node _ _ _ _ _ _ _ _ _ _
             (C1Ruled ctx ty t0 res $ wrap-mw ctx (BZ) xg w t0 res $ mem-last xg t0 rules res ap)
-            (c1-append (Cons (Digit) (D1) ctx) n1 one rules c1 (MkRule xg t) res ap)
-            $ c1-append (Cons (Digit) (D2) ctx) n2 two rules c2 (MkRule xg t) res ap))))
+            (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
+            $ c1-append (Cons (Digit) _ _) n2 two rules c2 (MkRule _ _) res ap))))
     ((Out1 x1 t0 h n1 a2 m here one two p k1 m2 one2 p2 q)
       (match erased c _
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
-          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule xg t) res ap)
-            (c1-out (Cons (Digit) (D1) ctx) x1 xg (W1 ctx x1 xg w) t n1 one k1 one2 q rules c1 res ap)
-            $ c1-append (Cons (Digit) (D2) ctx) a2 two rules c2 (MkRule xg t) res ap))))
+          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
+            (c1-out (Cons (Digit) _ _) x1 xg (W1 ctx x1 xg w) t n1 one k1 one2 q rules c1 res ap)
+            $ c1-append (Cons (Digit) _ _) a2 two rules c2 (MkRule _ _) res ap))))
     ((Out2 x1 t0 h n1 a2 m here one two p k2 m2 two2 p2 q)
       (match erased c _
         ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
-          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule xg t) res ap)
-            (c1-append (Cons (Digit) (D1) ctx) n1 one rules c1 (MkRule xg t) res ap)
-            $ c1-out (Cons (Digit) (D2) ctx) x1 xg (W2 ctx x1 xg w) t a2 two k2 two2 q rules c2 res ap))))))
+          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
+            (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
+            $ c1-out (Cons (Digit) _ _) x1 xg (W2 ctx x1 xg w) t a2 two k2 two2 q rules c2 res ap))))))
 
 (def-fns _ $ erased keys-snoc : (erased (List $ Bin) seen) (erased (List $ Rule) rules) (erased (List $ Bin) ks) (subterm erased (Keys seen rules ks) k) (erased (Bin) x) (erased (Term) t) (erased (List $ Rule) res) (erased (AppendR rules (MkRule x t) res) ap) -> (erased (Keys seen res $ Cons (Bin) x ks) k2)
   (match erased k _
-    ((KNil s) (match erased ap _ ((ApNil r) (KCons _ _ _ _ _ $ KNil $ Cons (Bin) x seen))))
+    ((KNil s) (match erased ap _ ((ApNil r) (KCons _ _ _ _ _ $ KNil $ Cons (Bin) _ _))))
     ((KCons s y u rest ks1 k1)
       (match erased ap _
-        ((ApCons a rest2 r res2 ap2) (KCons _ _ _ _ _ $ keys-snoc (Cons (Bin) y seen) rest ks k1 x t res2 ap2))))))
+        ((ApCons a rest2 r res2 ap2) (KCons _ _ _ _ _ $ keys-snoc (Cons (Bin) _ _) rest ks k1 x t res2 ap2))))))
 ; ---- Freshness: every variable of a term is a rule-free entry of a table. Canonicalization returns it.
 
 (def-adts
@@ -1180,12 +1180,12 @@
   (match erased o _
     ((OrdNil s)
       (match erased k _
-        ((KNil s1) (match erased ap _ ((ApNil r) (OrdCons _ _ _ _ g $ OrdNil $ Cons (Bin) x seen))))))
+        ((KNil s1) (match erased ap _ ((ApNil r) (OrdCons _ _ _ _ g $ OrdNil $ Cons (Bin) _ _))))))
     ((OrdCons s y u rest g1 o1)
       (match erased k _
         ((KCons s1 y1 u1 rest1 ks1 k1)
           (match erased ap _
-            ((ApCons a rest2 r res2 ap2) (OrdCons _ _ _ _ g1 $ ord-snoc (Cons (Bin) y seen) rest o1 ks k1 x t res2 ap2 g))))))))
+            ((ApCons a rest2 r res2 ap2) (OrdCons _ _ _ _ g1 $ ord-snoc (Cons (Bin) _ _) rest o1 ks k1 x t res2 ap2 g))))))))
 
 (def-fns _ $ erased guard-weaken : (erased (Term) t) (erased (Bin) x) (erased (List $ Bin) seen) (erased (Guard t $ Cons (Bin) x seen) g) -> (erased (Guard t seen) g2)
   (match erased g _
@@ -1203,7 +1203,7 @@
   (match erased pre _
     ((PNil w) m)
     ((PCons s w x u after0 pre1)
-      (match erased (mem-after _ _ _ pre1 _ _ m $ guard-weaken (TVar v) x s g) _
+      (match erased (mem-after _ _ _ pre1 _ _ m $ guard-weaken (TVar _) x s g) _
         (absurd (MRHere v1 t1 rest1) (guard-clash _ _ g))
         ((MRThere v1 t1 r1 rest1 m1) m1)))))
 
@@ -1221,7 +1221,7 @@
             ((BNo a1 b1 ne)
               (let (erased (MemRule x t0 rest) m2) $ match erased m _ ((MRThere x1 t1 r1 rest1 m2) m2) (absurd (MRHere x1 t1 rest1) (neq-irrefl _ ne)))
               (match many (find-rule rest x _ _ pre2 o _ m2) _
-                ((MkFound s2 w2 a2 t2 after3 seen3 pre3 ord3 g3 sub) (MkFound _ _ after t2 after3 _ pre3 ord3 g3 $ subterm-trans sub $ prove-subterm rest after))))))))))
+                ((MkFound s2 w2 a2 t2 after3 seen3 pre3 ord3 g3 sub) (MkFound _ _ _ t2 after3 _ pre3 ord3 g3 $ subterm-trans sub $ prove-subterm rest after))))))))))
 ; ---- Canonicalization (sections 5, 18): a chase continues along the rules after the one followed, the
 ; guard and the agreement proofs saying the rule is there; the result comes with its freshness.
 
@@ -1508,7 +1508,7 @@
   (let (many ru2) (erased ap) $ append-rule ru $ MkRule x t)
   (let (erased ar2) $ ARCons _ _ _ _ (ruledin-out-new x t n f k f2 o) $ allruled-out ks x t n f k f2 o ar)
   (MkTable _ f2 _ ru2 _
-    (ord-snoc (Nil $ Bin) ru ord ks keys x t ru2 ap $ GAv t (Cons (Bin) x ks) k f2 ft ar2)
+    (ord-snoc (Nil $ Bin) ru ord ks keys x t ru2 ap $ GAv t (Cons (Bin) _ _) k f2 ft ar2)
     (keys-snoc (Nil $ Bin) ru ks keys x t ru2 ap)
     ar2
     (c1-out (Nil $ Digit) x x (WNil x) t n f k f2 o ru c1 ru2 ap)
@@ -1535,8 +1535,8 @@
       (match many (facts-insert x _ f0 ty) (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) tb2))
         (absurd (IKept a b d q) (le-lt-absurd _ _ (above-taken c n f0 x ab q) lt))
         ((IGrew a b d f1 i q)
-          (values (Succ n) f1 (MkTable _ f1 _ ru _ ord keys (allruled-ins ks x n f0 (Succ n) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ n) f1 i ru c1)
-                                 $ above-ins (Nil $ Digit) x n f0 (Succ n) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-le c x lt) i (WNil x) $ le-refl x)))))))
+          (values (Succ n) f1 (MkTable _ f1 _ ru _ ord keys (allruled-ins ks x n f0 (Succ _) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ _) f1 i ru c1)
+                                 $ above-ins (Nil $ Digit) x n f0 (Succ _) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-le c x lt) i (WNil x) $ le-refl x)))))))
 
 ; A new entry with a rule, its term canonical: inserted rule-free and ruled out at once.
 (def-fns _ $ many table-insert-ruled : (erased (Nat) n) (erased (Facts n) f) (erased (Bin) c) (many (Table n f c) tb) (many (Bin) x) (erased (BinLt c x) lt) (many (Term) ty) (many (Term) t) (erased (Fr n f t) ft) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 x) tb2)
@@ -1547,9 +1547,9 @@
         ((IGrew a b d f1 i q)
           (match many (facts-rule-out _ f1 x q t) (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) tb2))
             ((MkRemoved a2 b2 k d2 f2 o)
-              (values k f2 (rule-into _ _ _ (above-ins (Nil $ Digit) x n f0 (Succ n) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-le c x lt) i (WNil x) $ le-refl x)
-                              ru _ ord keys (allruled-ins ks x n f0 (Succ n) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ n) f1 i ru c1)
-                              x t _ f2 o $ fresh-ins-out x t n f0 (Succ n) f1 k f2 i o t ft)))))))))
+              (values k f2 (rule-into _ _ _ (above-ins (Nil $ Digit) x n f0 (Succ _) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-le c x lt) i (WNil x) $ le-refl x)
+                              ru _ ord keys (allruled-ins ks x n f0 (Succ _) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ _) f1 i ru c1)
+                              x t _ f2 o $ fresh-ins-out x t n f0 (Succ _) f1 k f2 i o t ft)))))))))
 
 (def-fns _ $ many table-weaken : (erased (Nat) n) (erased (Facts n) f) (erased (Bin) c) (erased (Bin) c2) (many (Table n f c) tb) (erased (BinLe c c2) le) -> (many (Table n f c2) tb2)
   (match many tb _
@@ -1588,7 +1588,7 @@
     ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
       (match many (facts-rule-out _ f0 newer pn $ TVar older) _
         ((MkRemoved a b k d f2 o)
-          (MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 newer (TVar older) _ f2 o $ FrVar k f2 older $ in-out-neq older newer (TVar older) n f0 k f2 o ne po))))))
+          (MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 newer (TVar older) _ f2 o $ FrVar k f2 older $ in-out-neq older newer (TVar _) n f0 k f2 o ne po))))))
 
 (def-fns _ $ many canon-in : (erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb) (many (Term) t) -> (many (Term) r) (erased (Fr n f r) fr)
   (match many tb _

@@ -1786,6 +1786,10 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     binder a later type mentions, or a statement before the match — for
     another 930 bytes; the erased arguments that pass had left written
     were tried again under the new expectations, and one more is solved.
+    Under 117's boundary rule both passes ran once more: 116 erased
+    arguments and 45 `many` ones in erased positions became `_`, all in
+    core.sl's proof code, about 300 bytes; what stays written is an
+    index only the proof before it mentions, or one nothing mentions.
 
 117. **Pure terms stay open; boundaries settle** (`Elab.check_args
     ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,

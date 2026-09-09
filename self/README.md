@@ -96,8 +96,8 @@ the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 145 runnable tests
-match, all 95 error tests are refused with the expected text, and the
+self-hosting fixpoint. At the time of writing all 147 runnable tests
+match, all 96 error tests are refused with the expected text, and the
 fixpoint holds; the whole script takes about two minutes.
 
 ## Choices, and where they differ from the reference

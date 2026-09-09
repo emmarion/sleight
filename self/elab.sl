@@ -440,7 +440,7 @@
           ((Nil a) (values (BFalse) items0 w0))
           ((Cons a t rest)
             (match many (is-mark env t $ MkSubterm) (((Bool) b) ((List $ Raw) l) ((Within l root) w))
-              ((BTrue) (values (BTrue) rest $ within-step _ _ root (prove-subterm rest items0) w0))
+              ((BTrue) (values (BTrue) rest $ within-step _ _ _ (prove-subterm rest items0) w0))
               ((BFalse) (values (BFalse) items0 w0))))))
       (let (many (Maybe $ Mult) mult) (many (List $ Raw) items) (erased (Within items root) w2)
         (match many items1 _
@@ -1741,8 +1741,8 @@
         ((AnnNone z)
           (let (many ann) (many rest) $ split-annotation more _ wm env $ Succ i)
           (values ann $ Cons _ (MkSub _ arg pa) rest))
-        ((AnnPredates z g) (values (AnnPredates _ g) $ subs-of more root wm))
-        ((AnnSubterm z j g) (values (AnnSubterm _ j g) $ subs-of more root wm))))))
+        ((AnnPredates z g) (values (AnnPredates _ g) $ subs-of more _ wm))
+        ((AnnSubterm z j g) (values (AnnSubterm _ j g) $ subs-of more _ wm))))))
 
 (def-fns _ $ many subterm-indices : (subterm many (List $ Entry) tele) (many (Nat) i) -> (many (List $ Nat) r)
   (match many tele _
@@ -2853,7 +2853,7 @@
                             (let (many env2b) (many x) $ bind env2 (Some _ name) (Erased) st ty (None _) coercible-id)
                             (let (many env3) (many hs) (many tids) $ elab-adt-headers sugar rest $ env-back env env2b)
                             (let (many h) $ MkAdtHeader _ name disc nt ext cs $ within-in cs sg (Raw) adt wc $ prove-subterm sg adt)
-                            (values env3 (ACons _ rest h hs) $ TCons _ _ _ _ x tids)))))))))) (else (values bad (AStop adts) $ TStop adts))))))
+                            (values env3 (ACons _ _ h hs) $ TCons _ _ _ _ x tids)))))))))) (else (values bad (AStop adts) $ TStop adts))))))
 
   (many define-adts : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List $ Pair (Bin) $ Value) consts)
     (match many adts _

@@ -39,7 +39,7 @@
   (let (many env) $ run-files srcs (make-builtins) $ BTrue)
   (match many (env-errors env) _
     ((Cons a e rest) (write-errors (list-rev (String) $ env-errors env) $ Exit _ exit-fail))
-    ((Nil a) (rope-io io-lvl (emit-program env) $ Exit _ exit-ok))))
+    ((Nil a) (rope-io _ (emit-program env) $ Exit _ exit-ok))))
 
 (def-fns slc-lvl $ many read-files : (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
   (match many paths _
