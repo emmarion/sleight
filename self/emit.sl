@@ -198,9 +198,9 @@
         (values st3 $ rcat5 (RStr "(let rec ") fr (RStr " in ") br $ RStr ")"))
       ((CMatch scrut shape branches dfl)
         (let (many st2) (many sr) $ emit-code cl scrut (subterm-trans (prove-subterm scrut code) w) cx st)
-        (let (many arity) $ match many branches (((Nat) n)) ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch d ids body) (list-length _ ids)))))
-        (let (many st2b) (many dr)
-          (match many dfl (((EmitSt) s0) ((Rope) r0))
+        (let (many (Nat) arity) $ match many branches _ ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch d ids body) (list-length _ ids)))))
+        (let (many (EmitSt) st2b) (many (Rope) dr)
+          (match many dfl _
             ((None a) (values st2 $ RStr "absurd ()"))
             ((Some a d) (emit-code cl d (subterm-trans (prove-subterm d code) w) cx st2))))
         (let (many fallthrough) $ rcat3 (RStr " | _ -> ") dr $ RStr ")")
@@ -264,7 +264,7 @@
                 (let (many st2) (many named) $ name-group group $ st-with-names st $ MEmpty _)
                 (let (many st3) (many text) $ emit-group cl group (prove-subterm group cl) cx st2 $ BTrue)
                 (let (many st4) $ st-push-def st3 $ rcat3 (RStr "let rec ") text $ RStr "\n")
-                (let (many mine) $ match many (idmap-get _ (func-id fn) $ st-names st4) (((String) s)) ((None a) "(failwith \"closure missing\")") ((Some a s) s))
+                (let (many (String) mine) $ match many (idmap-get _ (func-id fn) $ st-names st4) _ ((None a) "(failwith \"closure missing\")") ((Some a s) s))
                 (values (st-with-names st4 saved) $ RStr mine))))))
       ((VToken) (values st $ RStr "U"))
       ((VError m) (values st $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
@@ -285,19 +285,19 @@
       ((Cons a p rest)
         (match many p _
           ((MkPair x y id fn)
-            (let (many name)
-              (match many hoisted (((String) s))
+            (let (many (String) name)
+              (match many hoisted _
                 ((BFalse) (top-name (cx-env cx) id))
                 ((BTrue) (match many (idmap-get _ id $ st-names st) (((String) s)) ((None b) (top-name (cx-env cx) id)) ((Some b s) s)))))
             (let (many st2) (many body) $ emit-fn cl fn (subterm-trans (prove-subterm fn fns) w) cx st)
             (let (many st3) (many more) $ emit-group cl rest (subterm-trans (prove-subterm rest fns) w) cx st2 hoisted)
-            (let (many sep) $ match many rest (((Rope) r)) ((Nil b) (REmpty)) ((Cons b q rest2) (RStr "\nand ")))
+            (let (many (Rope) sep) $ match many rest _ ((Nil b) (REmpty)) ((Cons b q rest2) (RStr "\nand ")))
             (values st3 $ rcat5 (RStr name) (RStr " = ") body sep more))))))
 
   (many emit-fn : (subterm many (Closure) cl) (subterm many (Func) fn) (erased (Subterm (Func) fn (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many fn _
       ((MkFunc name id params body impl top)
-        (let (many ext) $ match many impl (((Bool) b)) ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
+        (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
         (match many ext _
           ((BTrue) (values st $ rcat3 (RStr "Fn ext_") (RStr $ sanitize $ match many impl (((String) s)) ((None a) "") ((Some a n) n)) $ REmpty))
           ((BFalse)
@@ -306,7 +306,7 @@
 
 ; A run-position group, emitted under a closure built around it.
 (def-fns _ $ many emit-top-group : (many (List $ Pair (Bin) $ Func) fns) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
-  (let (many f0) $ match many fns (((Func) f)) ((Nil a) (MkFunc "" (BZ) (Nil _) (CErased) (None _) $ BTrue)) ((Cons a p rest) (match many p (((Func) f)) ((MkPair x y id fn) fn))))
+  (let (many (Func) f0) $ match many fns _ ((Nil a) (MkFunc "" (BZ) (Nil _) (CErased) (None _) $ BTrue)) ((Cons a p rest) (match many p (((Func) f)) ((MkPair x y id fn) fn))))
   (let (many cl) $ MkClosure f0 fns $ MEmpty _)
   (emit-group cl fns (prove-subterm fns cl) cx st $ BFalse))
 
@@ -416,8 +416,8 @@
               ((None a)
                 (let (many name) $ str-cat "show_" $ nat-str count)
                 (let (many memo1) $ MkShowMemo (Succ count) (Cons _ (MkPair _ _ ty name) known) defs)
-                (let (many memo2) (many body)
-                  (match many ty (((ShowMemo) m) ((Rope) r))
+                (let (many (ShowMemo) memo2) (many (Rope) body)
+                  (match many ty _
                     ((TApp h args)
                       (match many (type-head env ty) (((ShowMemo) m) ((Rope) r))
                         ((None b) (values memo1 $ RStr "\"?\""))
@@ -456,21 +456,21 @@
               ((MkCtor cname cid index arity tagged ext)
                 (let (many ctele) (many ret) $ ctor-type env cid)
                 (let (many envb) (many fids) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
-                (let (many envb2) (many live)
-                  (match many (unify-env envb (instantiate (tvars-rev fids $ Nil _) ret) ty $ BTrue) (((Env) e) ((Bool) b))
+                (let (many (Env) envb2) (many (Bool) live)
+                  (match many (unify-env envb (instantiate (tvars-rev fids $ Nil _) ret) ty $ BTrue) _
                     ((UOk e2) (values e2 $ BTrue))
                     ((UContra msg) (values envb $ BFalse))))
-                (let (many memo2) (many shown)
-                  (match many live (((ShowMemo) m) ((List $ Rope) r))
+                (let (many (ShowMemo) memo2) (many (List $ Rope) shown)
+                  (match many live _
                     ((BTrue) (show-fields k envb2 (non-erased fids envb2) memo 0))
                     ((BFalse) (values memo $ Nil _))))
                 (let (many fnames) $ field-names arity 0)
-                (let (many text)
-                  (match many untagged (((Rope) r))
+                (let (many (Rope) text)
+                  (match many untagged _
                     ((BTrue) (match many shown (((Rope) r)) ((Nil b) (RStr "\"_\"")) ((Cons b s more) (match many more (((Rope) r)) ((Nil d) s) ((Cons d s2 more2) (rcat3 (RStr "\"(\" ^ ") (spaced shown) $ RStr " ^ \")\""))))))
                     ((BFalse) (rcat3 (RStr "\"(\" ^ ") (spaced $ Cons _ (quoted cname) shown) $ RStr " ^ \")\""))))
-                (let (many arm)
-                  (match many untagged (((Rope) r))
+                (let (many (Rope) arm)
+                  (match many untagged _
                     ((BTrue) (untuple-rope-names fnames (RStr "v") text))
                     ((BFalse) (rcat5 (RStr "| (") (nat-rope index) (rcat3 (RStr ", ") (bracketed fnames) $ RStr ") -> ") text $ REmpty))))
                 (let (many memo3) (many more) $ show-arms k env ty rest memo2 untagged)
@@ -513,8 +513,8 @@
   (match many items _
     ((Nil a) (REmpty))
     ((Cons a item rest)
-      (let (many st2) (many text)
-        (match many item (((EmitSt) s) ((Rope) r))
+      (let (many (EmitSt) st2) (many (Rope) text)
+        (match many item _
           ((TrFns fns)
             (let (many st2) (many g) $ emit-top-group fns cx st)
             (values st2 $ rcat3 (RStr "let rec ") g $ RStr "\n"))

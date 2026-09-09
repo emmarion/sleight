@@ -122,7 +122,8 @@ that the test does not make is a mistake in this file.
   through the value expected. `tests/wild_fn_binder.sl` solves one under a
   `Fn` binder, `tests/wild_erased_many.sl` puts one at a `many` parameter
   in an erased position, `tests/wild_match_ann.sl` writes a match's `_`
-  annotation at an argument position. The refusals: `tests/wild_nested_bad.sl`
+  annotation at an argument position, and `tests/wild_let.sl` lets typed
+  `let` binders solve the right-hand side. The refusals: `tests/wild_nested_bad.sl`
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.

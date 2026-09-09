@@ -123,8 +123,8 @@
       ((CLetRec fns rest) (eval fuel rest $ close-group fns fns env))
       ((CMatch scrut shape branches dfl)
         (let (many v) $ first-value $ eval fuel scrut env)
-        (let (many read)
-          (match many shape (((Maybe $ Pair (Nat) $ List $ Value) r))
+        (let (many (Maybe $ Pair (Nat) $ List $ Value) read)
+          (match many shape _
             ((ShKnown adt) (dispatch (adt-ext adt) (adt-tagged adt) v))
             ((ShHeld mcode tags)
               (match many (first-value $ eval fuel mcode env) (((Maybe $ Pair (Nat) $ List $ Value) r))
@@ -164,7 +164,7 @@
           ((MkClosure fn group cenv)
             (match many fn _
               ((MkFunc name id params body impl top)
-                (let (many ext) $ match many impl (((Bool) b)) ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
+                (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
                 (match many ext _
                   ((BTrue) (apply-extern (match many impl (((String) s)) ((None a) (SNil)) ((Some a n) n)) args))
                   ((BFalse)

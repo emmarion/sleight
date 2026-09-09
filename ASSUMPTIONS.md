@@ -1737,11 +1737,17 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     through `values` (entrywise, instantiated with the entries before),
     `tail`, `delegate` and every argument position; a `_` annotation
     refuses an expectation with a meta in it (`tests/wild_match_ann_bad.sl`).
-    Consequences the session chose without the owner: `(f _ (Nil _))`
-    is refused, the inner application closing before anything settles
-    the outer `_` (`tests/wild_nested_bad.sl`); a `let` binder's type is
-    not an expectation, so `(let (many xs) (Nil _))` and a `(Nil _)`
-    scrutinee are refused; a type constructor application's `_` is
+    A `let` whose binders all carry a type or an `is` clause (the
+    owner's addition) elaborates them as a telescope, `Elab.elab_tele`
+    over the binder forms and `elab-src-entries` over the parsed
+    binders in `self/`, and hands it to the right-hand side as its
+    expectation; the check of each binder against its value is as it
+    was (`tests/wild_let.sl`). Consequences the session chose without
+    the owner: `(f _ (Nil _))` is refused, the inner application closing
+    before anything settles the outer `_` (`tests/wild_nested_bad.sl`);
+    an untyped binder hands nothing down, so `(let (many xs) (Nil _))`
+    and a `(Nil _)` scrutinee are refused; a type constructor
+    application's `_` is
     solved only through an `is` expectation, so `(many (List _) xs)` in
     a signature is refused (`tests/wild_type_bad.sl`); §3's decrease
     annotation is inferred after the arguments are solved, as the
@@ -1773,4 +1779,10 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     Multi-line last items (a body's final `match`, a `let`'s right-hand
     side over several lines: 1339 sites) were left as they are, a `$` at
     the start of a continuation line being a style the owner has not
-    written, and are the remaining `$` savings if wanted.
+    written, and are the remaining `$` savings if wanted. With typed
+    `let` binders an expectation (115), a third script moved the
+    annotation of every `let`-bound `match` onto the binders and wrote
+    `_` for it — 151 of 164, the rest having an `is` entry, an anonymous
+    binder a later type mentions, or a statement before the match — for
+    another 930 bytes; the erased arguments that pass had left written
+    were tried again under the new expectations, and one more is solved.

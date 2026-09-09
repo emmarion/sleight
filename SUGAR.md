@@ -125,8 +125,10 @@ elaborator leaves it.
   in place of a variable, a meta — a unification variable — may stand,
   with no user-facing syntax for it. §2's `_` annotation reuses the
   expectation, and is an error if the expectation still holds a meta.
-  Function and match returns set the expectation initially; a function
-  still spells out its whole type.
+  Function and match returns set the expectation initially, and so does a
+  `let` whose binders all carry a type or an `is` clause (added by the
+  owner after the first implementation); a function still spells out its
+  whole type.
 - **Solving.** Each `_` mints a fresh meta, unified at once with what is
   known and eagerly from then on. When the call or constructor
   application closes, at its `)`, its `_`s are solved; one still
@@ -137,29 +139,53 @@ elaborator leaves it.
 - **Then the decrease annotation.** Only after this is §3's `predates` or
   `subterm` proof inferred where none is written.
 
+**Naive by design.** The constraints, spelled out, since they decide what
+is refused:
+
+- Arguments are read once, left to right: what a later argument would
+  settle is not known while an earlier one is elaborated, and an
+  expression's own arguments are never revisited.
+- An application's `_`s are solved at its own `)` and not later: no
+  constraint is carried past it to be solved by what follows, and there
+  is no search or backtracking. What can solve a `_` is the expectation
+  the position hands down, the arguments before it, and — through the
+  eager step below — the arguments after it in the same application, but
+  nothing outside the application.
+- The expectation flows downward only, from the enclosing position into
+  an expression, never up from an expression into its context or across
+  to a sibling. So an outer `_` is settled by an inner expression only
+  once that expression is complete, and an inner `_` is never settled by
+  the outer application's later arguments.
+- A `_` is never solved by computation: the unifier compares canonical
+  terms and binds metas, nothing more (DESIGN.md §5's grammar has no
+  function calls to run anyway).
+
 As implemented (ASSUMPTIONS 115): the expectation is the telescope a body
-returns into or a match's annotation, handed down through `values`,
-`tail`, `delegate` and every argument position, where it is the parameter's
-signature instantiated with the arguments before it. An application with a
-`_` first unifies its result, over metas for all its parameters, with the
-expectation; each written argument is then checked against its parameter
-and bound to its meta; at the `)` a mismatch with the expectation is
-reported before an unsolved `_` is. So `(Cons _ hd tl)` is solved by `hd`,
-`(Nil _)` by the telescope it is returned into or the parameter it is
-passed at, `(list-length _ xs)` by `xs`, and `(Cons _ (Nil _) rest)` by an
-expectation naming the element type — but `(f _ (Nil _))` is refused,
-the inner `)` coming before anything settles the outer `_`.
+returns into, a match's annotation, or — the owner's addition — the
+binders of a `let` when every one of them carries a type or an `is`
+clause; it is handed down through `values`, `tail`, `delegate` and every
+argument position, where it is the parameter's signature instantiated with
+the arguments before it. An application with a `_` first unifies its
+result, over metas for all its parameters, with the expectation; each
+written argument is then checked against its parameter and bound to its
+meta; at the `)` a mismatch with the expectation is reported before an
+unsolved `_` is. So `(Cons _ hd tl)` is solved by `hd`, `(Nil _)` by the
+telescope it is returned into, the parameter it is passed at or the typed
+binder it is bound to, `(list-length _ xs)` by `xs`, and
+`(Cons _ (Nil _) rest)` by an expectation naming the element type. Refused,
+by the constraints above: `(f _ (Nil _))`, the inner `)` coming before
+anything settles the outer `_`; `(Cons _ (Nil _) rest)` with no
+expectation, `rest` coming too late for the inner `)`; `(let (many xs)
+(Nil _))`, the untyped binder handing nothing down; and `(List _)` in a
+signature, a type constructor application with no `is` expectation to
+solve against.
 
 Open, for the owner (the implementation's choices are the session's):
 
 1. Whether the refusal of `(f _ (Nil _))` is the intended reading of
    "naive left to right" or whether the inner `_` should be allowed to
    wait for the outer application's `)`.
-2. Whether a `let` binder's declared type should be an expectation for
-   its right-hand side, so that `(let (many (List (Nat)) xs) (Nil _))` is
-   accepted; today it is refused, the proposal naming only function and
-   match returns.
-3. Whether a `_` should be accepted at an entry of a `values` or at the
+2. Whether a `_` should be accepted at an entry of a `values` or at the
    scrutinee of a `let-match` — positions with an expectation but no
    application of their own to solve at.
-4. Whether §27 should list the sugar (ASSUMPTIONS 105).
+3. Whether §27 should list the sugar (ASSUMPTIONS 105).

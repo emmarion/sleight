@@ -786,18 +786,18 @@
           (match many here _
             ((HNone) (LNone _ _ _ _ _))
             ((HRuled ty t)
-              (let (erased ch) $ match erased c (((C1Here ctx h here rules) ch)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) ch))
-              (let (erased mw) $ match erased ch (((MemRuleW ctx (BZ) t rules) mw)) ((C1Ruled c0 ty0 t0 r0 mw) mw))
+              (let (erased (C1Here ctx h here rules) ch) $ match erased c _ ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) ch))
+              (let (erased (MemRuleW ctx (BZ) t rules) mw) $ match erased ch _ ((C1Ruled c0 ty0 t0 r0 mw) mw))
               (LRuled _ _ _ _ _ ty t $ mw-unwrap ctx (BZ) xg w t rules mw))
             ((HFree ty) (LFree _ _ _ _ _ ty $ InHere n1 n2 m ty one two p3))))
         ((B1 x1)
-          (let (erased c1) $ match erased c (((C1 (Cons _ (D1) ctx) n1 one rules) c1)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c1))
+          (let (erased (C1 (Cons _ (D1) ctx) n1 one rules) c1) $ match erased c _ ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c1))
           (match many (facts-lookup x1 _ one _ _ (W1 ctx x1 xg w) _ c1) _
             ((LNone a b d e g) (LNone _ _ _ _ _))
             ((LRuled a b d e g ty t mr) (LRuled _ _ _ xg _ ty t mr))
             ((LFree a b d e g ty q) (LFree _ _ _ _ _ ty $ In1 x1 h n1 n2 m here one two p3 q))))
         ((B2 x1)
-          (let (erased c2) $ match erased c (((C1 (Cons _ (D2) ctx) n2 two rules) c2)) ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c2))
+          (let (erased (C1 (Cons _ (D2) ctx) n2 two rules) c2) $ match erased c _ ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) c2))
           (match many (facts-lookup x1 _ two _ _ (W2 ctx x1 xg w) _ c2) _
             ((LNone a b d e g) (LNone _ _ _ _ _))
             ((LRuled a b d e g ty t mr) (LRuled _ _ _ xg _ ty t mr))
@@ -859,13 +859,13 @@
             (absurd HNone (match erased p (((False) f))))
             (absurd (HRuled ty0 t0) (match erased p (((False) f))))))
         ((B1 x1)
-          (let (erased q) $ match erased p (((In x1 n1 one) q)) ((In1 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q))
+          (let (erased (In x1 n1 one) q) $ match erased p _ ((In1 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q))
           (match many (facts-rule-out _ one x1 q t) _
             ((MkRemoved a a0 k1 b one2 r)
               (match erased (plus3-mid _ _ _ _ p3) _
                 ((MkPred3 h2 a2 b2 c2 q2) (MkRemoved _ _ _ _ (FNode h _ _ _ here one2 two q2) $ Out1 x1 t h n1 n2 m here one two p3 k1 c2 one2 q2 r))))))
         ((B2 x1)
-          (let (erased q) $ match erased p (((In x1 n2 two) q)) ((In2 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q))
+          (let (erased (In x1 n2 two) q) $ match erased p _ ((In2 x2 h2 a2 b2 c2 here2 one2 two2 p2 q) q))
           (match many (facts-rule-out _ two x1 q t) _
             ((MkRemoved a a0 k2 b two2 r)
               (match erased (plus3-right _ _ _ _ p3) _
@@ -1213,13 +1213,13 @@
     ((Cons a rule rest)
       (match many rule _
         ((MkRule y t)
-          (let (erased g) $ match erased ord (((Guard t $ Cons _ y seen) g)) ((OrdCons s1 y1 t1 r1 g o) g))
-          (let (erased o) $ match erased ord (((Ord (Cons _ y seen) rest) o)) ((OrdCons s1 y1 t1 r1 g o) o))
+          (let (erased (Guard t $ Cons _ y seen) g) $ match erased ord _ ((OrdCons s1 y1 t1 r1 g o) g))
+          (let (erased (Ord (Cons _ y seen) rest) o) $ match erased ord _ ((OrdCons s1 y1 t1 r1 g o) o))
           (let (erased pre2) $ PCons _ _ _ _ _ pre)
           (match many (bin-eq-dec x y) _
             ((BYes a1 b1 e) (MkFound _ _ _ t rest _ pre2 o g $ prove-subterm rest after))
             ((BNo a1 b1 ne)
-              (let (erased m2) $ match erased m (((MemRule x t0 rest) m2)) ((MRThere x1 t1 r1 rest1 m2) m2) (absurd (MRHere x1 t1 rest1) (neq-irrefl _ ne)))
+              (let (erased (MemRule x t0 rest) m2) $ match erased m _ ((MRThere x1 t1 r1 rest1 m2) m2) (absurd (MRHere x1 t1 rest1) (neq-irrefl _ ne)))
               (match many (find-rule rest x _ _ pre2 o _ m2) _
                 ((MkFound s2 w2 a2 t2 after3 seen3 pre3 ord3 g3 sub) (MkFound _ _ after t2 after3 _ pre3 ord3 g3 $ subterm-trans sub $ prove-subterm rest after))))))))))
 ; ---- Canonicalization (sections 5, 18): a chase continues along the rules after the one followed, the
@@ -1749,7 +1749,7 @@
 (def-fns _ $ many mark-minted : (many (Env) env) (many (Bin) x) -> (many (Env) r)
   (match many env _
     ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
-      (let (many info) (match many (idmap-get _ x en) (((EInfo) i))
+      (let (many (EInfo) info) (match many (idmap-get _ x en) _
                          ((None a) (MkEInfo (None _) (Erased) (SDyn) (BTrue) $ BFalse))
                          ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m s (BTrue) me))))))
       (MkEnv sc (idmap-set _ x info en) _ _ fr tb rp va ob li tr er lv st cl wa lt lo pr))))
@@ -1780,10 +1780,10 @@
 (def-fns _ $ many set-state : (many (Env) env) (many (Bin) x) (many (State) st) -> (many (Env) r)
   (match many env _
     ((MkEnv sc en nf ff fr tb rp va ob li tr er lv sts cl wa lt lo pr)
-      (let (many info) (match many (idmap-get _ x en) (((EInfo) i))
+      (let (many (EInfo) info) (match many (idmap-get _ x en) _
                          ((None a) (MkEInfo (None _) (Many) st (BFalse) $ BFalse))
                          ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m st mi me))))))
-      (let (many va2) (match many st (((IdMap $ Value) m))
+      (let (many (IdMap $ Value) va2) (match many st _
                         ((SConst v) (idmap-set _ x v va))
                         ((SDyn) va)))
       (MkEnv sc (idmap-set _ x info en) _ _ fr tb rp va2 ob li tr er lv sts cl wa lt lo pr))))
@@ -1800,23 +1800,23 @@
 ; name or by type, and unification alone solves it.
 (def-fns _ $ many bind-as : (many (Env) env) (many (Bool) meta) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
     (many (Env) r) (many (Bin) x)
-  (let (many bad) $ match many name (((Maybe $ String) m)) ((None a) (None _)) ((Some a n) (match many (is-literal-name n) (((Maybe $ String) m)) ((BTrue) (Some _ $ located env ": error: " $ str-cat n " is a literal, not a name")) ((BFalse) (None _)))))
+  (let (many (Maybe $ String) bad) $ match many name _ ((None a) (None _)) ((Some a n) (match many (is-literal-name n) (((Maybe $ String) m)) ((BTrue) (Some _ $ located env ": error: " $ str-cat n " is a literal, not a name")) ((BFalse) (None _)))))
   (match many env _
     ((MkEnv sc en nf ff fr tb rp va ob li tr er0 lv sts cl wa lt lo pr)
-      (let (many er) $ match many bad (((List $ String) e)) ((None a) er0) ((Some a m) (Cons _ m er0)))
+      (let (many (List $ String) er) $ match many bad _ ((None a) er0) ((Some a m) (Cons _ m er0)))
       (let (many x) (erased ltp) $ bin-succ-lt fr)
-      (let (many sc2) $ match many name (((NameMap $ Bin) m)) ((None a) sc) ((Some a n) (nm-set _ n x sc)))
+      (let (many (NameMap $ Bin) sc2) $ match many name _ ((None a) sc) ((Some a n) (nm-set _ n x sc)))
       (let (many en2) $ idmap-set _ x (MkEInfo name mult st (BFalse) meta) en)
-      (let (erased nf2) (erased ff2) (many tb2)
-        (match many rule (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) t2))
+      (let (erased (Nat) nf2) (erased (Facts nf2) ff2) (many (Table nf2 ff2 x) tb2)
+        (match many rule _
           ((None a) (table-insert _ _ _ tb x ltp ty))
           ((Some a t)
             (match many tb (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) t2))
               ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
                 (let (many t2) (erased ft) $ canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1)
                 (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))))
-      (let (many va2) $ match many st (((IdMap $ Value) m)) ((SConst v) (idmap-set _ x v va)) ((SDyn) va))
-      (let (many ob2) $ match many (and (not meta) $ is-object-type ty coercible) (((List $ Bin) l)) ((BTrue) (Cons _ x ob)) ((BFalse) ob))
+      (let (many (IdMap $ Value) va2) $ match many st _ ((SConst v) (idmap-set _ x v va)) ((SDyn) va))
+      (let (many (List $ Bin) ob2) $ match many (and (not meta) $ is-object-type ty coercible) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
       (values (MkEnv sc2 en2 _ _ x tb2 rp va2 ob2 li tr er lv sts cl wa lt lo pr) x))))
 
 (def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (State) st) (many (Term) ty) (many (Maybe $ Term) rule) (many (Bin) coercible) ->
@@ -1923,7 +1923,7 @@
     (match many es _
       ((Nil a) (values d $ Nil _))
       ((Cons a e rest)
-        (let (many e2) (match many e (((Entry) x))
+        (let (many (Entry) e2) (match many e _
                          ((MkEntry n s m sg)
                            (MkEntry n s m $ match many sg (((Sg) y)) ((SgTy t) (SgTy $ mapv t op d)) ((SgIs t) (SgIs $ mapv t op d))))))
         (let (many d3) (many rest2) $ mapv-tele rest op $ Succ d)
@@ -2067,10 +2067,10 @@
       ((Cons a e rest)
         (match many e _
           ((MkEntry n s m sg)
-            (let (many nm) $ match many n (((String) x)) ((None b) "_") ((Some b x) x))
+            (let (many (String) nm) $ match many n _ ((None b) "_") ((Some b x) x))
             (let (many marks) (str-cat (match many s (((String) x)) ((BTrue) "subterm ") ((BFalse) ""))
                                                     $ match many m (((String) x)) ((Erased) "erased ") ((Many) "many ")))
-            (let (many body) (match many sg (((Rope) x))
+            (let (many (Rope) body) (match many sg _
                                ((SgTy t) (rcat3 (show-term t env) (RStr " ") $ RStr nm))
                                ((SgIs t) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
             (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
@@ -2123,7 +2123,7 @@
                 (match many b _
                   ((MkEntry n2 s2 m2 sg2)
                     (let (many t2) $ sg-term sg2)
-                    (let (many same) $ match many sg (((Bool) r)) ((SgTy t) (term-eq t t2)) ((SgIs t) (term-eq t t2)))
+                    (let (many (Bool) same) $ match many sg _ ((SgTy t) (term-eq t t2)) ((SgIs t) (term-eq t t2)))
                     (and (mult-eq m m2)
                       $ and same $ tele-eq rest rest2))))))))))
   (many mctors-eq : (subterm many (List $ MCtor) as) (many (List $ MCtor) bs) -> (many (Bool) r)
@@ -2177,8 +2177,8 @@
   (match many objects _
     ((Nil a) (BFalse))
     ((Cons a o rest)
-      (let (many here)
-        (match many (type-of env o) (((Bool) b))
+      (let (many (Bool) here)
+        (match many (type-of env o) _
           ((TMatchable d t cs) (and (mctors-list cs x) $ mctors-list cs y)) (else (BFalse))))
       (match many here _
         ((BTrue) (BTrue))
@@ -2190,8 +2190,8 @@
     ((Nil a) (None _))
     ((Cons a o rest)
       (let (many ty) $ type-of env o)
-      (let (many hit)
-        (match many ty (((Bool) b))
+      (let (many (Bool) hit)
+        (match many ty _
           ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar z2) (bin-eq z z2)) (else (BFalse)))) (else (BFalse))))
       (match many hit _
         ((BTrue) (Some _ ty))
@@ -2259,14 +2259,14 @@
               (match many (bin-eq-dec x y) _
                 ((BYes c1 c2 e) (Same _ _))
                 ((BNo c1 c2 ne)
-                  (let (many newer) (many older) (erased pn) (erased po) (erased neq)
-                    (match many (bin-lt x y) (((Bin) nw) ((Bin) ol) ((In nw n f) p1) ((In ol n f) p2) ((Neq ol nw) q))
+                  (let (many (Bin) newer) (many (Bin) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) neq)
+                    (match many (bin-lt x y) _
                       ((BTrue) (values y x py px ne))
                       ((BFalse) (values x y px py $ neq-sym _ _ ne))))
                   (match many (or (is-meta env x) $ is-meta env y) _
                     ((BTrue)
-                      (let (many m) (many o) (erased pm) (erased po2) (erased neq2)
-                        (match many (and (is-meta env x) $ or (not $ is-meta env y) $ bin-eq x newer) (((Bin) mm) ((Bin) oo) ((In mm n f) p1) ((In oo n f) p2) ((Neq oo mm) q))
+                      (let (many (Bin) m) (many (Bin) o) (erased (In m n f) pm) (erased (In o n f) po2) (erased (Neq o m) neq2)
+                        (match many (and (is-meta env x) $ or (not $ is-meta env y) $ bin-eq x newer) _
                           ((BTrue) (values x y px py $ neq-sym _ _ ne))
                           ((BFalse) (values y x py px ne))))
                       (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
@@ -2283,8 +2283,8 @@
                         ((MkAdded k f0 f2 tb2c tb2)
                           (let (many env2) $ env-set-table env _ _ bnd tb2)
                           (let (erased p) $ prove-subterm k n)
-                          (let (many after-sig)
-                            (match many sx (((Outcome k bnd) r))
+                          (let (many (Outcome k bnd) after-sig)
+                            (match many sx _
                               ((None c) (Same _ _))
                               ((Some c s)
                                 (match many sy (((Outcome k bnd) r))
@@ -2519,8 +2519,8 @@
 
 ; Builds an extern value from a constructor index and its many fields.
 (def-fns _ $ many ext-construct : (many (Adt) adt) (many (String) ext) (many (Nat) index) (many (List $ Value) fields) -> (many (Value) v)
-  (let (many f0) $ match many fields (((Value) x)) ((Nil a) (VToken)) ((Cons a f rest) f))
-  (let (many f1) $ match many fields (((Value) x)) ((Nil a) (VToken)) ((Cons a f rest) (match many rest (((Value) y)) ((Nil b) (VToken)) ((Cons b g rest2) g))))
+  (let (many (Value) f0) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) f))
+  (let (many (Value) f1) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) (match many rest (((Value) y)) ((Nil b) (VToken)) ((Cons b g rest2) g))))
   (match many (str-eq ext "Nat") _
     ((BTrue) (VExt adt $ PNat $ match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ $ value-nat f0))))
     ((BFalse)

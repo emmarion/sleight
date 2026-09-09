@@ -29,8 +29,8 @@
         ((MkPair s t path src)
           (let (many env1) $ env-at-loc env $ MkLoc path 1)
           (let (many items) (many err) $ parse src)
-          (let (many env2)
-            (match many err (((Env) e))
+          (let (many (Env) env2)
+            (match many err _
               ((Some b e) (match many e (((Env) e)) ((MkSynErr line m) (env-report env1 $ located (env-at env1 line) ": syntax error: " m))))
               ((None b) (run-toplevel items env1))))
           (run-files rest (match many first (((Env) e)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))

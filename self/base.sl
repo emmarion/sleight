@@ -168,7 +168,7 @@
                       (match many (or (nat-lt n 32) $ nat-lt 126 n) (((String) r))
                         ((BTrue)
                           (let (many d) $ nat-str n)
-                          (let (many d3) (match many (nat-lt n 10) (((String) p))
+                          (let (many (String) d3) (match many (nat-lt n 10) _
                                            ((BTrue) (SCons #\0 $ SCons #\0 d))
                                            ((BFalse) (match many (nat-lt n 100) (((String) p))
                                                        ((BTrue) (SCons #\0 d))
@@ -261,8 +261,8 @@
             ((Some b h) (match many h _ ((MkMapHit c d v p) (Some _ $ MkMapHit _ _ v $ subterm-trans p $ prove-subterm two m))))))))))
 
 (def-fns _ $ many idmap-set : (erased Type V) (subterm many (Bin) k) (many V v) (many (IdMap V) m) -> (many (IdMap V) r)
-  (let (many here) (many one) (many two)
-    (match many m (((Maybe V) h) ((IdMap V) o) ((IdMap V) t))
+  (let (many (Maybe V) here) (many (IdMap V) one) (many (IdMap V) two)
+    (match many m _
       ((MEmpty a) (values (None _) (MEmpty _) $ MEmpty _))
       ((MNode a h o t) (values h o t))))
   (match many k _
@@ -322,7 +322,7 @@
       (match many name _
         ((SNil) (NMNode _ (Some _ v) kids))
         ((SCons c rest)
-          (let (many sub) (match many (nm-kid _ kids c) (((NameMap V) s))
+          (let (many (NameMap V) sub) (match many (nm-kid _ kids c) _
                             ((None b) (nm-empty _))
                             ((Some b s) s)))
           (NMNode _ here $ nm-replace-kid _ kids c $ nm-set _ rest v sub))))))

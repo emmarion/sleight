@@ -768,11 +768,14 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
 
 and run_code env code = Eval.eval env.values code
 
+(* Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
+   produce (SUGAR.md 6); the check of each binder against its value stays as it was. *)
 and elab_let env l args =
-  let binders, rhs = split_returns env args in
-  let binders = List.concat_map (parse_entry env) binders in
+  let binder_raws, rhs = split_returns env args in
+  let binders = List.concat_map (parse_entry env) binder_raws in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
-  let inner, ress, code = elab_body env expect l rhs in
+  let tele = if binders <> [] && List.for_all (fun b -> b.s_sg <> None) binders then Some (let _, _, t = elab_tele env binder_raws in t) else None in
+  let inner, ress, code = elab_body ?tele env expect l rhs in
   let values = if env.run_pos && pos_of expect = Many then run_code inner code else [] in
   let bind_one (env, ids) ((b, r), v) =
     Option.iter (fun s -> check_sg env b.s_loc (elab_sg env s) r) b.s_sg;
