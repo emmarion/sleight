@@ -36,7 +36,7 @@
 (def-fns _ $ many nat-eq : (many (Nat) a) (many (Nat) b) -> (many (Bool) r)
   (match many (nat-lt a b) _
     ((BTrue) (BFalse))
-    ((BFalse) (not (nat-lt b a)))))
+    ((BFalse) (not $ nat-lt b a))))
 
 (def-fns _ $ many nat-pred : (many (Nat) n) -> (many (Nat) m)
   (match many n _ ((Zero) (Zero)) ((Succ k) k)))
@@ -49,9 +49,9 @@
 
 ; ---- Char and String
 
-(let (many zero-below-modulus) (lt-dec 0 u8-modulus))
+(let (many zero-below-modulus) $ lt-dec 0 u8-modulus)
 (comptime-match zero-below-modulus (Yes zero-lt-a zero-lt-b zero-lt))
-(let (many char-zero) (MkChar (MkU8 0 zero-lt)))
+(let (many char-zero) $ MkChar $ MkU8 0 zero-lt)
 
 (def-fns _ $ many char-code : (many (Char) c) -> (many (Nat) n)
   (let-match many c (MkChar u))
@@ -61,19 +61,19 @@
 ; A code the modulus does not bound, which no Char holds, becomes char-zero.
 (def-fns _ $ many char-of-code : (many (Nat) n) -> (many (Char) c)
   (match many (lt-dec n u8-modulus) _
-    ((Yes a b p) (MkChar (MkU8 n p)))
+    ((Yes a b p) (MkChar $ MkU8 n p))
     ((No a b q) char-zero)))
 
 (def-fns _ $ many char-eq : (many (Char) a) (many (Char) b) -> (many (Bool) r)
-  (nat-eq (char-code a) (char-code b)))
+  (nat-eq (char-code a) $ char-code b))
 
 (def-fns _ $ many char-is : (many (Char) c) (many (Nat) code) -> (many (Bool) r)
   (nat-eq (char-code c) code))
 
 ; code in [lo, hi]
 (def-fns _ $ many char-between : (many (Char) c) (many (Nat) lo) (many (Nat) hi) -> (many (Bool) r)
-  (let (many n) (char-code c))
-  (and (not (nat-lt n lo)) (not (nat-lt hi n))))
+  (let (many n) $ char-code c)
+  (and (not $ nat-lt n lo) $ not $ nat-lt hi n))
 
 (def-fns _ $ many str-eq : (subterm many (String) a) (many (String) b) -> (many (Bool) r)
   (match many a _
@@ -89,31 +89,31 @@
 (def-fns _ $ many str-is-empty : (many (String) s) -> (many (Bool) r)
   (match many s _ ((SNil) (BTrue)) ((SCons c r) (BFalse))))
 
-(def-fns _ $ many str-of-chars : (subterm many (List (Char)) cs) -> (many (String) s)
+(def-fns _ $ many str-of-chars : (subterm many (List $ Char) cs) -> (many (String) s)
   (match many cs _
     ((Nil a) (SNil))
-    ((Cons a c rest) (SCons c (str-of-chars rest)))))
+    ((Cons a c rest) (SCons c $ str-of-chars rest))))
 
 (def-fns _ $ many str-rev-onto : (subterm many (String) s) (many (String) acc) -> (many (String) r)
   (match many s _
     ((SNil) acc)
-    ((SCons c rest) (str-rev-onto rest (SCons c acc)))))
+    ((SCons c rest) (str-rev-onto rest $ SCons c acc))))
 
 (def-fns _ $ many str-cat : (many (String) a) (many (String) b) -> (many (String) c)
   (str-append a b))
 
 (def-fns _ $ many str-cat3 : (many (String) a) (many (String) b) (many (String) c) -> (many (String) d)
-  (str-append a (str-append b c)))
+  (str-append a $ str-append b c))
 
 (def-fns _ $ many str-length : (subterm many (String) s) -> (many (Nat) n)
   (match many s _
     ((SNil) (Zero))
-    ((SCons c rest) (Succ (str-length rest)))))
+    ((SCons c rest) (Succ $ str-length rest))))
 
 (def-fns _ $ many all-digits : (subterm many (String) s) -> (many (Bool) r)
   (match many s _
     ((SNil) (BTrue))
-    ((SCons c rest) (and (char-between c 48 57) (all-digits rest)))))
+    ((SCons c rest) (and (char-between c 48 57) $ all-digits rest))))
 
 ; A numeral or a #\c character literal, which no name may spell (section 28, ASSUMPTIONS 51).
 (def-fns _ $ many is-literal-name : (many (String) s) -> (many (Bool) r)
@@ -121,29 +121,29 @@
     ((SNil) (BFalse))
     ((SCons c rest)
       (or (all-digits s)
-        (and (char-is c 35) (match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is c2 92))))))))
+        $ and (char-is c 35) $ match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is c2 92))))))
 
 ; Decimal digits of a Nat, least significant first, counted up from zero.
 (def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
-  (char-of-code (nat-add 48 d)))
+  (char-of-code $ nat-add 48 d))
 
-(def-fns _ $ many dec-succ : (subterm many (List (Nat)) ds) -> (many (List (Nat)) r)
+(def-fns _ $ many dec-succ : (subterm many (List $ Nat) ds) -> (many (List $ Nat) r)
   (match many ds _
-    ((Nil a) (Cons (Nat) 1 (Nil (Nat))))
-    ((Cons a d rest) (match many (nat-eq d 9) _ ((BTrue) (Cons (Nat) 0 (dec-succ rest))) ((BFalse) (Cons (Nat) (Succ d) rest))))))
+    ((Nil a) (Cons _ 1 $ Nil _))
+    ((Cons a d rest) (match many (nat-eq d 9) _ ((BTrue) (Cons _ 0 $ dec-succ rest)) ((BFalse) (Cons _ (Succ d) rest))))))
 
-(def-fns _ $ many count-up : (subterm many (Nat) n) (many (List (Nat)) ds) -> (many (List (Nat)) r)
+(def-fns _ $ many count-up : (subterm many (Nat) n) (many (List $ Nat) ds) -> (many (List $ Nat) r)
   (match many n _
     ((Zero) ds)
-    ((Succ m) (count-up m (dec-succ ds)))))
+    ((Succ m) (count-up m $ dec-succ ds))))
 
-(def-fns _ $ many digits-str : (subterm many (List (Nat)) ds) (many (String) acc) -> (many (String) s)
+(def-fns _ $ many digits-str : (subterm many (List $ Nat) ds) (many (String) acc) -> (many (String) s)
   (match many ds _
     ((Nil a) acc)
-    ((Cons a d rest) (digits-str rest (SCons (digit-char d) acc)))))
+    ((Cons a d rest) (digits-str rest $ SCons (digit-char d) acc))))
 
 (def-fns _ $ many nat-str : (many (Nat) n) -> (many (String) s)
-  (digits-str (count-up n (Cons (Nat) 0 (Nil (Nat)))) (SNil)))
+  (digits-str (count-up n $ Cons _ 0 $ Nil _) $ SNil))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
@@ -151,29 +151,29 @@
   (match many s _
     ((SNil) (SNil))
     ((SCons c rest)
-      (let (many tail) (ocaml-escape rest))
-      (let (many n) (char-code c))
+      (let (many tail) $ ocaml-escape rest)
+      (let (many n) $ char-code c)
       (match many (nat-eq n 34) (((String) r))
-        ((BTrue) (SCons #\x5c (SCons #\x22 tail)))
+        ((BTrue) (SCons #\x5c $ SCons #\x22 tail))
         ((BFalse)
           (match many (nat-eq n 92) (((String) r))
-            ((BTrue) (SCons #\x5c (SCons #\x5c tail)))
+            ((BTrue) (SCons #\x5c $ SCons #\x5c tail))
             ((BFalse)
               (match many (nat-eq n 10) (((String) r))
-                ((BTrue) (SCons #\x5c (SCons #\n tail)))
+                ((BTrue) (SCons #\x5c $ SCons #\n tail))
                 ((BFalse)
                   (match many (nat-eq n 9) (((String) r))
-                    ((BTrue) (SCons #\x5c (SCons #\t tail)))
+                    ((BTrue) (SCons #\x5c $ SCons #\t tail))
                     ((BFalse)
-                      (match many (or (nat-lt n 32) (nat-lt 126 n)) (((String) r))
+                      (match many (or (nat-lt n 32) $ nat-lt 126 n) (((String) r))
                         ((BTrue)
-                          (let (many d) (nat-str n))
+                          (let (many d) $ nat-str n)
                           (let (many d3) (match many (nat-lt n 10) (((String) p))
-                                           ((BTrue) (SCons #\0 (SCons #\0 d)))
+                                           ((BTrue) (SCons #\0 $ SCons #\0 d))
                                            ((BFalse) (match many (nat-lt n 100) (((String) p))
                                                        ((BTrue) (SCons #\0 d))
                                                        ((BFalse) d)))))
-                          (SCons #\x5c (str-cat d3 tail)))
+                          (SCons #\x5c $ str-cat d3 tail))
                         ((BFalse) (SCons c tail))))))))))))))
 
 ; An SL name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
@@ -181,9 +181,9 @@
   (match many s _
     ((SNil) (SNil))
     ((SCons c rest)
-      (let (many tail) (sanitize rest))
+      (let (many tail) $ sanitize rest)
       (let (many ok) (or (char-between c 48 57)
-                        (or (char-between c 65 90) (char-between c 97 122))))
+                        $ or (char-between c 65 90) $ char-between c 97 122))
       (match many ok (((String) r))
         ((BTrue) (SCons c tail))
         ((BFalse) (SCons #\_ tail))))))
@@ -192,9 +192,9 @@
 
 (def-fns _ $ many bin-succ : (subterm many (Bin) b) -> (many (Bin) c)
   (match many b _
-    ((BZ) (B1 (BZ)))
+    ((BZ) (B1 $ BZ))
     ((B1 b1) (B2 b1))
-    ((B2 b1) (B1 (bin-succ b1)))))
+    ((B2 b1) (B1 $ bin-succ b1))))
 
 (def-fns _ $ many bin-cmp : (subterm many (Bin) a) (many (Bin) b) -> (many (Ord) o)
   (match many a _
@@ -220,8 +220,8 @@
 (def-fns _ $ many bin-str : (subterm many (Bin) b) -> (many (String) s)
   (match many b _
     ((BZ) (SNil))
-    ((B1 b1) (SCons #\1 (bin-str b1)))
-    ((B2 b1) (SCons #\2 (bin-str b1)))))
+    ((B1 b1) (SCons #\1 $ bin-str b1))
+    ((B2 b1) (SCons #\2 $ bin-str b1))))
 
 ; ---- IdMap: a persistent trie keyed by a Bin's digits
 
@@ -233,68 +233,68 @@
 
 (def-fns _ $ many idmap-get : (erased Type V) (subterm many (Bin) k) (many (IdMap V) m) -> (many (Maybe V) r)
   (match many m _
-    ((MEmpty a) (None V))
+    ((MEmpty a) (None _))
     ((MNode a here one two)
       (match many k _
         ((BZ) here)
-        ((B1 k1) (idmap-get V k1 one))
-        ((B2 k1) (idmap-get V k1 two))))))
+        ((B1 k1) (idmap-get _ k1 one))
+        ((B2 k1) (idmap-get _ k1 two))))))
 
 ; A lookup that also proves the value found is a subterm of the map, for a recursion that continues into it.
 (def-adts $ MapHit : (Type V) ((IdMap V) m) -> Type
   enum
   (many MkMapHit : (erased Type V) (erased (IdMap V) m) (many V v) (erased (Subterm V v (IdMap V) m) p) -> (MapHit V m)))
 
-(def-fns _ $ many idmap-get-sub : (erased Type V) (subterm many (Bin) k) (many (IdMap V) m) -> (many (Maybe (MapHit V m)) r)
+(def-fns _ $ many idmap-get-sub : (erased Type V) (subterm many (Bin) k) (many (IdMap V) m) -> (many (Maybe $ MapHit V m) r)
   (match many m _
-    ((MEmpty a) (None (MapHit V m)))
+    ((MEmpty a) (None _))
     ((MNode a here one two)
       (match many k _
-        ((BZ) (match many here _ ((None b) (None (MapHit V m))) ((Some b v) (Some (MapHit V m) (MkMapHit V m v (prove-subterm v m))))))
+        ((BZ) (match many here _ ((None b) (None _)) ((Some b v) (Some _ $ MkMapHit _ _ v $ prove-subterm v m))))
         ((B1 k1)
-          (match many (idmap-get-sub V k1 one) _
-            ((None b) (None (MapHit V m)))
-            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some (MapHit V m) (MkMapHit V m v (subterm-trans p (prove-subterm one m)))))))))
+          (match many (idmap-get-sub _ k1 one) _
+            ((None b) (None _))
+            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some _ $ MkMapHit _ _ v $ subterm-trans p $ prove-subterm one m))))))
         ((B2 k1)
-          (match many (idmap-get-sub V k1 two) _
-            ((None b) (None (MapHit V m)))
-            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some (MapHit V m) (MkMapHit V m v (subterm-trans p (prove-subterm two m)))))))))))))
+          (match many (idmap-get-sub _ k1 two) _
+            ((None b) (None _))
+            ((Some b h) (match many h _ ((MkMapHit c d v p) (Some _ $ MkMapHit _ _ v $ subterm-trans p $ prove-subterm two m))))))))))
 
 (def-fns _ $ many idmap-set : (erased Type V) (subterm many (Bin) k) (many V v) (many (IdMap V) m) -> (many (IdMap V) r)
   (let (many here) (many one) (many two)
     (match many m (((Maybe V) h) ((IdMap V) o) ((IdMap V) t))
-      ((MEmpty a) (values (None V) (MEmpty V) (MEmpty V)))
+      ((MEmpty a) (values (None _) (MEmpty _) $ MEmpty _))
       ((MNode a h o t) (values h o t))))
   (match many k _
-    ((BZ) (MNode V (Some V v) one two))
-    ((B1 k1) (MNode V here (idmap-set V k1 v one) two))
-    ((B2 k1) (MNode V here one (idmap-set V k1 v two)))))
+    ((BZ) (MNode _ (Some _ v) one two))
+    ((B1 k1) (MNode _ here (idmap-set _ k1 v one) two))
+    ((B2 k1) (MNode _ here one $ idmap-set _ k1 v two))))
 
 (def-fns _ $ many idmap-mem : (erased Type V) (many (Bin) k) (many (IdMap V) m) -> (many (Bool) r)
-  (match many (idmap-get V k m) _ ((None a) (BFalse)) ((Some a v) (BTrue))))
+  (match many (idmap-get _ k m) _ ((None a) (BFalse)) ((Some a v) (BTrue))))
 
 ; ---- NameMap: a persistent trie keyed by a string's characters
 
 (def-adts
   (NameMap : (Type V) -> Type
     enum
-    (many NMNode : (erased Type V) (many (Maybe V) here) (many (List (NMKid V)) kids) -> (NameMap V)))
+    (many NMNode : (erased Type V) (many (Maybe V) here) (many (List $ NMKid V) kids) -> (NameMap V)))
   (NMKid : (Type V) -> Type
     enum
     (many MkKid : (erased Type V) (many (Char) c) (many (NameMap V) sub) -> (NMKid V))))
 
 (def-fns _ $ many nm-empty : (erased Type V) -> (many (NameMap V) m)
-  (NMNode V (None V) (Nil (NMKid V))))
+  (NMNode _ (None _) $ Nil _))
 
-(def-fns _ $ many nm-kid : (erased Type V) (subterm many (List (NMKid V)) kids) (many (Char) c) -> (many (Maybe (NameMap V)) r)
+(def-fns _ $ many nm-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) -> (many (Maybe $ NameMap V) r)
   (match many kids _
-    ((Nil a) (None (NameMap V)))
+    ((Nil a) (None _))
     ((Cons a k rest)
       (match many k _
         ((MkKid b c1 sub)
           (match many (char-eq c c1) _
-            ((BTrue) (Some (NameMap V) sub))
-            ((BFalse) (nm-kid V rest c))))))))
+            ((BTrue) (Some _ sub))
+            ((BFalse) (nm-kid _ rest c))))))))
 
 (def-fns _ $ many nm-get : (erased Type V) (subterm many (String) name) (many (NameMap V) m) -> (many (Maybe V) r)
   (match many m _
@@ -302,63 +302,63 @@
       (match many name _
         ((SNil) here)
         ((SCons c rest)
-          (match many (nm-kid V kids c) _
-            ((None b) (None V))
-            ((Some b sub) (nm-get V rest sub))))))))
+          (match many (nm-kid _ kids c) _
+            ((None b) (None _))
+            ((Some b sub) (nm-get _ rest sub))))))))
 
-(def-fns _ $ many nm-replace-kid : (erased Type V) (subterm many (List (NMKid V)) kids) (many (Char) c) (many (NameMap V) sub) -> (many (List (NMKid V)) r)
+(def-fns _ $ many nm-replace-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (NameMap V) sub) -> (many (List $ NMKid V) r)
   (match many kids _
-    ((Nil a) (Cons (NMKid V) (MkKid V c sub) (Nil (NMKid V))))
+    ((Nil a) (Cons _ (MkKid _ c sub) $ Nil _))
     ((Cons a k rest)
       (match many k _
         ((MkKid b c1 old)
           (match many (char-eq c c1) _
-            ((BTrue) (Cons (NMKid V) (MkKid V c sub) rest))
-            ((BFalse) (Cons (NMKid V) k (nm-replace-kid V rest c sub)))))))))
+            ((BTrue) (Cons _ (MkKid _ c sub) rest))
+            ((BFalse) (Cons _ k $ nm-replace-kid _ rest c sub))))))))
 
 (def-fns _ $ many nm-set : (erased Type V) (subterm many (String) name) (many V v) (many (NameMap V) m) -> (many (NameMap V) r)
   (match many m _
     ((NMNode a here kids)
       (match many name _
-        ((SNil) (NMNode V (Some V v) kids))
+        ((SNil) (NMNode _ (Some _ v) kids))
         ((SCons c rest)
-          (let (many sub) (match many (nm-kid V kids c) (((NameMap V) s))
-                            ((None b) (nm-empty V))
+          (let (many sub) (match many (nm-kid _ kids c) (((NameMap V) s))
+                            ((None b) (nm-empty _))
                             ((Some b s) s)))
-          (NMNode V here (nm-replace-kid V kids c (nm-set V rest v sub))))))))
+          (NMNode _ here $ nm-replace-kid _ kids c $ nm-set _ rest v sub))))))
 
 ; ---- Lists
 
 (def-fns _ $ many list-length : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n)
   (match many xs _
     ((Nil a) (Zero))
-    ((Cons a x rest) (Succ (list-length A rest)))))
+    ((Cons a x rest) (Succ $ list-length _ rest))))
 
 (def-fns _ $ many list-rev-onto : (erased Type A) (subterm many (List A) xs) (many (List A) acc) -> (many (List A) r)
   (match many xs _
     ((Nil a) acc)
-    ((Cons a x rest) (list-rev-onto A rest (Cons A x acc)))))
+    ((Cons a x rest) (list-rev-onto _ rest $ Cons _ x acc))))
 
 (def-fns _ $ many list-rev : (erased Type A) (many (List A) xs) -> (many (List A) r)
-  (list-rev-onto A xs (Nil A)))
+  (list-rev-onto _ xs $ Nil _))
 
 (def-fns _ $ many list-append : (erased Type A) (subterm many (List A) xs) (many (List A) ys) -> (many (List A) r)
   (match many xs _
     ((Nil a) ys)
-    ((Cons a x rest) (Cons A x (list-append A rest ys)))))
+    ((Cons a x rest) (Cons _ x $ list-append _ rest ys))))
 
 (def-fns _ $ many list-nth : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (Maybe A) r)
   (match many xs _
-    ((Nil a) (None A))
+    ((Nil a) (None _))
     ((Cons a x rest)
       (match many i _
-        ((Zero) (Some A x))
-        ((Succ k) (list-nth A rest k))))))
+        ((Zero) (Some _ x))
+        ((Succ k) (list-nth _ rest k))))))
 
 (def-fns _ $ many list-is-empty : (erased Type A) (many (List A) xs) -> (many (Bool) r)
   (match many xs _ ((Nil a) (BTrue)) ((Cons a x rest) (BFalse))))
 
-(def-fns _ $ many list-mem-str : (subterm many (List (String)) xs) (many (String) x) -> (many (Bool) r)
+(def-fns _ $ many list-mem-str : (subterm many (List $ String) xs) (many (String) x) -> (many (Bool) r)
   (match many xs _
     ((Nil a) (BFalse))
     ((Cons a y rest)
@@ -366,7 +366,7 @@
         ((BTrue) (BTrue))
         ((BFalse) (list-mem-str rest x))))))
 
-(def-fns _ $ many list-mem-bin : (subterm many (List (Bin)) xs) (many (Bin) x) -> (many (Bool) r)
+(def-fns _ $ many list-mem-bin : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Bool) r)
   (match many xs _
     ((Nil a) (BFalse))
     ((Cons a y rest)
@@ -374,13 +374,13 @@
         ((BTrue) (BTrue))
         ((BFalse) (list-mem-bin rest x))))))
 
-(def-fns _ $ many index-of-bin : (subterm many (List (Bin)) xs) (many (Bin) x) (many (Nat) i) -> (many (Maybe (Nat)) r)
+(def-fns _ $ many index-of-bin : (subterm many (List $ Bin) xs) (many (Bin) x) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many xs _
-    ((Nil a) (None (Nat)))
+    ((Nil a) (None _))
     ((Cons a y rest)
       (match many (bin-eq x y) _
-        ((BTrue) (Some (Nat) i))
-        ((BFalse) (index-of-bin rest x (Succ i)))))))
+        ((BTrue) (Some _ i))
+        ((BFalse) (index-of-bin rest x $ Succ i))))))
 
 ; ---- Rope: output built as a tree of chunks, never by appending long strings
 
@@ -394,38 +394,38 @@
   (RCat a b))
 
 (def-fns _ $ many rcat3 : (many (Rope) a) (many (Rope) b) (many (Rope) c) -> (many (Rope) r)
-  (RCat a (RCat b c)))
+  (RCat a $ RCat b c))
 
 (def-fns _ $ many rcat4 : (many (Rope) a) (many (Rope) b) (many (Rope) c) (many (Rope) d) -> (many (Rope) r)
-  (RCat a (RCat b (RCat c d))))
+  (RCat a $ RCat b $ RCat c d))
 
 (def-fns _ $ many rcat5 : (many (Rope) a) (many (Rope) b) (many (Rope) c) (many (Rope) d) (many (Rope) e) -> (many (Rope) r)
-  (RCat a (RCat b (RCat c (RCat d e)))))
+  (RCat a $ RCat b $ RCat c $ RCat d e))
 
 ; Ropes joined by a separator.
-(def-fns _ $ many rjoin : (subterm many (List (Rope)) rs) (many (String) sep) -> (many (Rope) r)
+(def-fns _ $ many rjoin : (subterm many (List $ Rope) rs) (many (String) sep) -> (many (Rope) r)
   (match many rs _
     ((Nil a) (REmpty))
     ((Cons a r rest)
       (match many rest _
         ((Nil b) r)
-        ((Cons b r2 rest2) (RCat r (RCat (RStr sep) (rjoin rest sep))))))))
+        ((Cons b r2 rest2) (RCat r $ RCat (RStr sep) $ rjoin rest sep))))))
 
-(def-fns _ $ many rlist : (subterm many (List (Rope)) rs) -> (many (Rope) r)
+(def-fns _ $ many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r)
   (match many rs _
     ((Nil a) (REmpty))
-    ((Cons a r rest) (RCat r (rlist rest)))))
+    ((Cons a r rest) (RCat r $ rlist rest))))
 
 ;  A rope as one string, for short diagnostics only.
 (def-fns _ $ many rope-str : (subterm many (Rope) r) -> (many (String) s)
   (match many r _
     ((REmpty) (SNil))
     ((RStr s) s)
-    ((RCat a b) (str-append (rope-str a) (rope-str b)))))
+    ((RCat a b) (str-append (rope-str a) $ rope-str b))))
 
 ; Flattens a rope into an IO chain writing each chunk, ending in [next].
 (def-fns _ $ many rope-io : (erased (Level) L) (subterm many (Rope) r) (many (IO L) next) -> (many (IO L) io)
   (match many r _
     ((REmpty) next)
-    ((RStr s) (WriteOut L s next))
-    ((RCat a b) (rope-io L a (rope-io L b next)))))
+    ((RStr s) (WriteOut _ s next))
+    ((RCat a b) (rope-io _ a $ rope-io _ b next))))

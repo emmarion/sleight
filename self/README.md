@@ -96,7 +96,7 @@ the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 141 runnable tests
+self-hosting fixpoint. At the time of writing all 142 runnable tests
 match, all 92 error tests are refused with the expected text, and the
 fixpoint holds; the whole script takes about two minutes.
 
@@ -190,6 +190,10 @@ recorded so it can be revisited.
   the budget is the decrease the checker sees instead. A generated form
   contains no sugar, so the budget is one and its zero case is reported
   as an internal error, not refuted (ASSUMPTIONS 111).
+- **The sources write `_` and `$` wherever the checker allows** (SUGAR.md
+  6, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
+  unification where a later argument or the expected telescope fixes it,
+  and a last argument on one line opens with `$`.
 - **`lt-dec` and `Dec` are extern** (ASSUMPTIONS 90), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; the source models are unchanged.

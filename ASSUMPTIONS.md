@@ -1747,3 +1747,30 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     annotation is inferred after the arguments are solved, as the
     proposal asks, which is the order `elab_call` already had. All prior
     tests pass unchanged, and no error message of a prior test changed.
+
+116. **`self/*.sl` writes `_` wherever slc accepts it, and `$` for a
+    last argument on one line.** A script tried every erased argument
+    of a known constructor or function as `_` (4052 of them, patterns,
+    signatures and `let` binders left alone) and kept the 3225 that
+    slc accepts, reverting the rest by the line slc reported: 459 KB
+    became 447 KB, 2.5% fewer bytes, most of it in `core.sl`'s
+    proof-carrying code, where a lemma's erased indices are read off
+    the proof after them, and in `elab.sl`'s `(Nil _)`, `(None _)`,
+    `(Cons _ x xs)` and `(list-length _ xs)`. What stayed written is
+    what the reading of 115 cannot solve: a `(Nil (T))` as a `let`'s
+    right-hand side or a scrutinee, an erased index no later argument or
+    expectation mentions, and a `_` under a still-open `_`. A second
+    script then rewrote each subform that is the last item of its parent
+    and sits on one line, `(f a (g b c))`, as `(f a $ g b c)` (DESIGN.md
+    §2), where the parent is headed by a name rather than a
+    multiplicity, a type former, `match`, `def-fns` or `def-adts`, and
+    the subform by a name: 4211 sites, byte-neutral (`(`+`)` and `$ `
+    are two characters each), 18% fewer closing parens overall. Both
+    rewrites are syntactic and meaning-preserving by construction, the
+    first because a solved `_` is canonically what was written, the
+    second by §2's definition of `$`; `self/bootstrap.sh` is the check,
+    and the compiled compiler is byte-for-byte the fixpoint it was.
+    Multi-line last items (a body's final `match`, a `let`'s right-hand
+    side over several lines: 1339 sites) were left as they are, a `$` at
+    the start of a continuation line being a style the owner has not
+    written, and are the remaining `$` savings if wanted.
