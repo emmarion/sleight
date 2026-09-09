@@ -1983,7 +1983,12 @@ had noted that an `SCons` copies its tail, so building a string by
      build ropes the same way; `str-of-chars` and `str-rev-onto` are
      gone. The owner's alternative, an extern splitting a string at a
      position so tokens would be slices of the file, was set aside as
-     needing a new FFI for the same linear cost. `tests/rope.sl` is
+     needing a new FFI for the same linear cost. slc's compile-time
+     interpreter turns a `Rope` value back into a prelude `Rope` and
+     calls the prelude's `flatten` (`value-rope`, `eval.sl`), so its
+     comptime path is the FFI's too; a first version joined the pieces
+     with `str-append`, quadratic on a left-deep rope, which the owner
+     caught. `tests/rope.sl` is
      the evidence, in both modes and extracted. Not done: length
      caching, which would want a `Length`-style proof beside the cached
      field; and `IO` still takes `String`s, the driver never seeing a

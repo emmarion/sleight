@@ -32,19 +32,23 @@
       (vnat m))
     ((No x y q) (VError "nat-mod: zero modulus"))))
 
-(def-fns _ $ many flatten-value : (subterm many (Value) v) -> (many (String) s)
+(def-fns _ $ many value-rope : (subterm many (Value) v) -> (many (Rope) r)
   (match many v _
     ((VCtor c fields)
       (match many fields _
-        ((Nil a) (SNil))
+        ((Nil a) (REmpty))
         ((Cons a f rest)
           (match many rest _
             ((Nil b)
               (match many f _
-                ((VExt adt p) (match many p _ ((PStr s) s) ((PNat n) (SCons (char-of-code n) $ SNil)) (else (SNil))))
-                (else (SNil))))
-            ((Cons b g rest2) (str-append (flatten-value f) $ flatten-value g))))))
-    (else (SNil))))
+                ((VExt adt p) (match many p _ ((PStr s) (RStr s)) ((PNat n) (RChar $ char-of-code n)) (else (REmpty))))
+                (else (REmpty))))
+            ((Cons b g rest2) (RCat (value-rope f) $ value-rope g))))))
+    (else (REmpty))))
+
+(def-fns _ $ many flatten-value : (many (Value) v) -> (many (String) s)
+  (let (many s) (erased p) $ flatten $ value-rope v)
+  s)
 
 (def-fns _ $ many apply-extern : (many (String) name) (many (List $ Value) args) -> (many (List $ Value) r)
   (let (many a) $ arg-at args 0)
