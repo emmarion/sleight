@@ -3,7 +3,7 @@
 ; accepts it. Extern functions run as the host's own (section 41).
 
 (let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ "Nat")
-(let (many dec-adt) $ MkAdt "Dec" (BTrue) (Nil _) $ Some _ "Dec")
+(let (many cmp-adt) $ MkAdt "Cmp" (BTrue) (Nil _) $ Some _ "Cmp")
 (let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ "String")
 
 (def-fns _ $ many vnat : (many (Nat) n) -> (many (Value) v)
@@ -16,14 +16,14 @@
 
 (def-fns _ $ many is-extern-fn : (many (String) name) -> (many (Bool) r)
   (or (str-eq name "add")
-    (or (str-eq name "lt-dec")
+    (or (str-eq name "nat-cmp")
       (or (str-eq name "nat-mod")
         $ or (str-eq name "bin-to-nat") $ str-eq name "trim"))))
 
 (def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
   (or (str-eq name "Nat")
     (or (str-eq name "Bin")
-      $ or (str-eq name "String") $ str-eq name "Dec")))
+      $ or (str-eq name "String") $ str-eq name "Cmp")))
 
 (def-fns _ $ many nat-mod-value : (many (Nat) s) (many (Nat) c) -> (many (Value) v)
   (match many (lt-dec (Zero) c) _
@@ -38,8 +38,11 @@
   (match many (str-eq name "add") _
     ((BTrue) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
     ((BFalse)
-      (match many (str-eq name "lt-dec") _
-        ((BTrue) (Cons _ (VExt dec-adt $ PDec $ match many (nat-lt (value-nat a) $ value-nat b) (((Nat) i)) ((BTrue) 0) ((BFalse) 1)) $ Nil _))
+      (match many (str-eq name "nat-cmp") _
+        ((BTrue)
+          (let (many x) $ value-nat a)
+          (let (many y) $ value-nat b)
+          (Cons _ (VExt cmp-adt $ PDec $ match many (nat-lt x y) (((Nat) i)) ((BTrue) 0) ((BFalse) (match many (nat-lt y x) _ ((BTrue) 2) ((BFalse) 1)))) $ Nil _))
         ((BFalse)
           (match many (str-eq name "nat-mod") _
             ((BTrue) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))

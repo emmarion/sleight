@@ -28,14 +28,14 @@ let types : (string * (adt -> ext)) list =
     [ ("Nat", fun adt -> Ffi_core.peano ~z ~nat:(fun n -> VExt (adt, Int n)));
       ("Bin", fun adt -> Ffi_core.bijective ~z ~bin:(fun n -> VExt (adt, Int n)));
       ("String", fun adt -> Ffi_core.text ~z ~slice ~u8:(int "Nat") ~str:(fun s -> VExt (adt, Slice s)));
-      ("Dec", fun adt -> Ffi_core.indexed ~z ~mk:(fun n -> VExt (adt, Int n))) ]
+      ("Cmp", fun adt -> Ffi_core.indexed ~z ~mk:(fun n -> VExt (adt, Int n))) ]
 
 let unary name f = function [ a ] -> [ int name (f (z a)) ] | _ -> raise (Eval.Runtime "extern arity")
 let binary name f = function [ a; b ] -> [ int name (f (z a) (z b)) ] | _ -> raise (Eval.Runtime "extern arity")
 
 let fns : (string * (value list -> value list)) list =
   [ ("add", binary "Nat" Ffi_core.add);
-    ("lt-dec", binary "Dec" Ffi_core.lt_dec);
+    ("nat-cmp", binary "Cmp" Ffi_core.nat_cmp);
     ("nat-mod", binary "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
     ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity")) ]

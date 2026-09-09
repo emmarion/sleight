@@ -56,7 +56,7 @@
 
 (def-adts
   (Dec : ((Nat) a) ((Nat) b) -> Type
-    enum extern
+    enum
     (many Yes : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (Dec a b))
     (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
 
@@ -64,7 +64,7 @@
 ; instances differ by a coercion (section 38).
 (def-adts
   (Cmp : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type
-    enum
+    enum extern
     (many CLt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                 (erased (R a b) p) -> (Cmp T R a b))
     (many CEq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) -> (Cmp T R a a))
@@ -137,31 +137,17 @@
       (let (many c) (erased q) (add k b))
       (values (Succ c) (AddSucc k b c q)))))
 
-(def-lvl nat-lvl)
+(def-fns _ $ erased lt-succ : (subterm erased (Nat) a) -> (erased (Lt a (Succ a)) p)
+  (match erased a _
+    ((Zero) (LtZ (Zero)))
+    ((Succ a1) (LtS a1 (Succ a1) (lt-succ a1)))))
 
-(def-fns nat-lvl $ many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)
-  (let (many c) (erased p) (delegate (add a b)))
-  c)
+(def-fns _ $ erased lt-weaken : (erased (Nat) x) (erased (Nat) y) (subterm erased (Lt x y) p) -> (erased (Lt x (Succ y)) q)
+  (match erased p _
+    ((LtZ b) (LtZ (Succ b)))
+    ((LtS a b p1) (LtS a (Succ b) (lt-weaken a b p1)))))
 
-(def-fns nat-lvl $ many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d)
-  (let (many b) (erased p) (add a a))
-  (values b (add-diag-double a b p)))
-
-(def-fns nat-lvl $ many extern lt-dec : (subterm many (Nat) a) (many (Nat) b) -> (many (Dec a b) d)
-  (match many a _
-    ((Zero)
-      (match many b _
-        ((Zero) (No a b (LtZ (Zero))))
-        ((Succ b1) (Yes a b (LtZ b1)))))
-    ((Succ a1)
-      (match many b _
-        ((Zero) (No a b (LtZ (Succ a1))))
-        ((Succ b1)
-          (match many (lt-dec a1 b1) _
-            ((Yes x y p) (Yes a b (LtS a1 b1 p)))
-            ((No x y q) (No a b (LtS b1 (Succ a1) q)))))))))
-
-(def-fns nat-lvl $ many nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c)
+(def-fns _ $ many extern nat-cmp : (subterm many (Nat) a) (many (Nat) b) -> (many (Cmp (Nat) Lt a b) c)
   (match many a _
     ((Zero)
       (match many b _
@@ -175,6 +161,22 @@
             ((CLt t r x y p) (CLt (Nat) Lt a b (LtS a1 b1 p)))
             ((CEq t r x) (CEq (Nat) Lt a))
             ((CGt t r x y q) (CGt (Nat) Lt a b (LtS b1 a1 q)))))))))
+
+(def-lvl nat-lvl)
+
+(def-fns nat-lvl $ many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)
+  (let (many c) (erased p) (delegate (add a b)))
+  c)
+
+(def-fns nat-lvl $ many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d)
+  (let (many b) (erased p) (add a a))
+  (values b (add-diag-double a b p)))
+
+(def-fns nat-lvl $ many lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec a b) d)
+  (match many (nat-cmp a b) _
+    ((CLt t r x y p) (Yes a b p))
+    ((CEq t r x) (No a b (lt-succ a)))
+    ((CGt t r x y q) (No a b (lt-weaken b a q)))))
 
 (def-fns _ $ many succ-mod : (many (Nat) r) (many (Nat) c) (erased (Nat) s) (erased (Lt r c) p) (erased (Mod s c r) q) ->
     (many (Nat) r1) (erased (Lt r1 c) p1) (erased (Mod (Succ s) c r1) q1)

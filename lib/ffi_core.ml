@@ -29,7 +29,7 @@ let text ~z ~slice ~u8 ~str =
 let indexed ~z ~mk = ((fun i _ -> mk (Z.of_int i)), fun v -> (Z.to_int (z v), []))
 
 let add = Z.add
-let lt_dec a b = if Z.lt a b then Z.zero else Z.one
+let nat_cmp a b = Z.of_int (if Z.lt a b then 0 else if Z.equal a b then 1 else 2)
 let nat_mod = Z.rem
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)

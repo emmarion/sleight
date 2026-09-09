@@ -1219,7 +1219,8 @@ assumed and the one change it made to `lib/`. As elsewhere here, each
 is the session's reading, checked by `self/bootstrap.sh` rather than
 by the owner.
 
-90. **`lt-dec` and `Dec` are extern.** The FFI table gains an
+90. **`lt-dec` and `Dec` are extern** (superseded by item 120: the
+    extern is `nat-cmp` over `Cmp` now). The FFI table gains an
     implementation of the prelude's `lt-dec` (integer comparison) and
     of `Dec`, held as its constructor index alone since both
     constructors' fields are erased (`Ffi_core.indexed`); the source
@@ -1880,11 +1881,8 @@ judiciously with `_`. The names and the shapes below are the session's.
      `mod-succ-wrap` the two cases of the successor step decided by
      `nat-cmp`, whose `CEq` forces `c is (Succ r)`; `lt-asym` refutes
      the third. `mod-add`, `succ-mod`'s old form and `lt-pos` are gone.
-     `trim`'s return is `(many s is t)`. Whether `Dec` earns its place
-     beside `Cmp` was raised by the owner and is open: `lt-dec` could
-     be derived from `nat-cmp` with two small lemmas, and `Dec` then
-     needs no extern, but the character-literal sugar (item 52) and 23
-     test sites name it. `tests/prelude_proofs.sl` is the evidence.
+     `trim`'s return is `(many s is t)`. `tests/prelude_proofs.sl` is the
+     evidence.
 119. **Levels in the prelude are anonymous** (`_`, SUGAR.md 1) and its
      calls bare (SUGAR.md 3), except `nat-lvl`, `u8-lvl`, `char-lvl`
      and `str-lvl`, which tests prove `Predates` against; the functions
@@ -1897,3 +1895,16 @@ judiciously with `_`. The names and the shapes below are the session's.
      one level can only call each other under section 9's positional
      subterm discipline, so each lemma is its own `def-fns _` and calls
      the ones above it with an inferred `Predates`.
+120. **`nat-cmp` is the extern comparison; `lt-dec` is derived from it
+     and `Dec` is plain source** (the owner's decision, replacing item
+     90). `Cmp` takes `Dec`'s place as the tag-only extern type
+     (`Ffi_core.indexed`), since the FFI has to construct the result,
+     and `nat-cmp` sits at an anonymous level below `nat-lvl` so that
+     `lt-dec`, which tests reach through `nat-lvl`, can call it; the
+     lemmas are `lt-succ` (`Lt a (Succ a)`) for the `CEq` case and
+     `lt-weaken` (`Lt x y -> Lt x (Succ y)`) for `CGt`. `Dec` is kept
+     because the character-literal sugar (item 52) and the tests name
+     it; whether it stays is a separate question. The one test that
+     named `nat-cmp`'s level in a type, `tests/char_ops.sl`, now
+     infers it. The extern set is `add`, `nat-cmp`, `nat-mod`,
+     `bin-to-nat`, `trim`.

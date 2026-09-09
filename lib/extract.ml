@@ -21,7 +21,7 @@ let externs =
   [ ("Nat", "Ffi_core.peano ~z:Obj.obj ~nat:Obj.repr");
     ("Bin", "Ffi_core.bijective ~z:Obj.obj ~bin:Obj.repr");
     ("String", "Ffi_core.text ~z:Obj.obj ~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr");
-    ("Dec", "Ffi_core.indexed ~z:Obj.obj ~mk:Obj.repr") ]
+    ("Cmp", "Ffi_core.indexed ~z:Obj.obj ~mk:Obj.repr") ]
 
 type shape = Ext | Tagged | Untagged
 

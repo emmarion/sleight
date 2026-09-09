@@ -37,7 +37,7 @@ interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `Bin`, `String` and `Dec` (section 41); a `U8` or a
+host's own `Nat`, `Bin`, `String` and `Cmp` (section 41); a `U8` or a
 `Char`, both newtypes, is its `Nat` (section 38).
 
 ## Files
@@ -194,8 +194,8 @@ recorded so it can be revisited.
   6, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
   unification where a later argument or the expected telescope fixes it,
   and a last argument on one line opens with `$`.
-- **`lt-dec` and `Dec` are extern** (ASSUMPTIONS 90), so that the
-  compiler's comparisons of characters, digits and tags are constant
+- **`nat-cmp` and `Cmp` are extern** (ASSUMPTIONS 90, 120), so that
+  the compiler's comparisons of characters, digits and tags are constant
   time under the FFI; the source models are unchanged.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them),
