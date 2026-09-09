@@ -2010,7 +2010,7 @@
   (MkEntry (Some _ name) (BFalse) (Erased) $ SgTy t))
 
 (let (many empty-env)
-  $ MkEnv (nm-empty _) (MEmpty _) _ _ (BZ) empty-table (BTrue) (MEmpty $ Value) (Nil $ Bin) (nm-empty $ Bin) (Nil $ Trace) (Nil $ String) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
+  $ MkEnv (nm-empty _) (MEmpty _) _ _ (BZ) empty-table (BTrue) (MEmpty _) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) $ bin-succ $ BZ)

@@ -1788,8 +1788,13 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     were tried again under the new expectations, and one more is solved.
     Under 117's boundary rule both passes ran once more: 116 erased
     arguments and 45 `many` ones in erased positions became `_`, all in
-    core.sl's proof code, about 300 bytes; what stays written is an
-    index only the proof before it mentions, or one nothing mentions.
+    core.sl's proof code, about 300 bytes. What stays written is, by a
+    check of each remaining site one at a time, almost entirely erased
+    *proof* arguments -- evidence such as an `Ord`, a `Fr` or a `Subterm`
+    that nothing else mentions, which no unification in any order could
+    supply -- and a few data-typed indices the batch script had dropped
+    along with a failing neighbour, which a final one-at-a-time pass
+    over the data-typed leftovers picked up.
 
 117. **Pure terms stay open; boundaries settle** (`Elab.check_args
     ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,

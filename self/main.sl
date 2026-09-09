@@ -38,7 +38,7 @@
 (def-fns compile-lvl $ many compile : (many (List $ Pair (String) $ String) srcs) -> (many (IO io-lvl) io)
   (let (many env) $ run-files srcs (make-builtins) $ BTrue)
   (match many (env-errors env) _
-    ((Cons a e rest) (write-errors (list-rev (String) $ env-errors env) $ Exit _ exit-fail))
+    ((Cons a e rest) (write-errors (list-rev _ $ env-errors env) $ Exit _ exit-fail))
     ((Nil a) (rope-io _ (emit-program env) $ Exit _ exit-ok))))
 
 (def-fns slc-lvl $ many read-files : (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
@@ -47,13 +47,13 @@
     ((Cons a path rest)
       (def-fns io-lvl $ many after-read : (many (Result $ String) r) -> (many (IO io-lvl) next)
         (match many r _
-          ((Fail b m) (WriteErr io-lvl "slc: " $ WriteErr _ m $ WriteErr _ "\n" $ Exit _ exit-fail))
+          ((Fail b m) (WriteErr _ "slc: " $ WriteErr _ m $ WriteErr _ "\n" $ Exit _ exit-fail))
           ((Ok b src) (read-files rest $ Cons _ (MkPair _ _ path src) acc))))
       (ReadFile _ path after-read))))
 
 (def-fns io-lvl $ many start : (many (List $ String) args) -> (many (IO io-lvl) io)
   (match many args _
-    ((Nil a) (WriteErr io-lvl "usage: slc -- prelude.sl file.sl ... > out.ml\n" $ Exit _ exit-fail))
+    ((Nil a) (WriteErr _ "usage: slc -- prelude.sl file.sl ... > out.ml\n" $ Exit _ exit-fail))
     ((Cons a p rest) (read-files args $ Nil _))))
 
 (GetArgs _ start)
