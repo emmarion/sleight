@@ -25,8 +25,8 @@
 (def-adts
   (Add : ((Nat) a) ((Nat) b) ((Nat) c) -> Type
     enum
-    (many AddZero : (erased (Nat) a) -> (Add a (Zero) a))
-    (many AddSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a b c) q) -> (Add a (Succ b) (Succ c)))))
+    (many AddZero : (erased (Nat) b) -> (Add (Zero) b b))
+    (many AddSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a b c) q) -> (Add (Succ a) b (Succ c)))))
 
 (def-adts
   (Lt : ((Nat) a) ((Nat) b) -> Type
@@ -71,22 +71,33 @@
     (many CGt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b)
                 (erased (R b a) q) -> (Cmp T R a b))))
 
-(def-fns _ $ erased add-succ-left : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add (Succ a) b c) p) ->
+(def-fns _ $ erased add-zero-right : (subterm erased (Nat) a) -> (erased (Add a (Zero) a) p)
+  (match erased a _
+    ((Zero) (AddZero (Zero)))
+    ((Succ a1) (AddSucc a1 (Zero) a1 (add-zero-right a1)))))
+
+(def-fns _ $ erased add-succ-right : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) ->
+    (erased (Add a (Succ b) (Succ c)) q)
+  (match erased p _
+    ((AddZero b0) (AddZero (Succ b)))
+    ((AddSucc a1 b1 c0 q0) (AddSucc a1 (Succ b) (Succ c0) (add-succ-right a1 b c0 q0)))))
+
+(def-fns _ $ erased add-succ-right-inv : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a (Succ b) c) p) ->
     (erased (Nat) c1) (erased (Eq (Nat) c (Succ c1)) e) (erased (Add a b c1) q)
   (match erased p _
-    ((AddZero a0) (values a (Refl (Nat) c) (AddZero a)))
-    ((AddSucc a0 b1 c0 q0)
-      (let (erased c1) (erased e1) (erased q1) (add-succ-left a b1 c0 q0))
+    ((AddZero b0) (values b (Refl (Nat) c) (AddZero b)))
+    ((AddSucc a1 b1 c0 q0)
+      (let (erased c1) (erased e1) (erased q1) (add-succ-right-inv a1 b c0 q0))
       (match erased e1 _
-        ((Refl t r) (values (Succ c1) (Refl (Nat) c) (AddSucc a b1 c1 q1)))))))
+        ((Refl t r) (values (Succ c1) (Refl (Nat) c) (AddSucc a1 b c1 q1)))))))
 
 (def-fns _ $ erased add-diag-double : (subterm erased (Nat) a) (erased (Nat) b) (erased (Add a a b) p) -> (erased (Double a b) d)
   (match erased p _
-    ((AddZero a0) (D0))
-    ((AddSucc a0 b1 c0 q0)
-      (let (erased c1) (erased e1) (erased q1) (add-succ-left b1 b1 c0 q0))
+    ((AddZero b0) (D0))
+    ((AddSucc a1 b1 c0 q0)
+      (let (erased c1) (erased e1) (erased q1) (add-succ-right-inv a1 a1 c0 q0))
       (match erased e1 _
-        ((Refl t r) (DS b1 c1 (add-diag-double b1 c1 q1)))))))
+        ((Refl t r) (DS a1 c1 (add-diag-double a1 c1 q1)))))))
 
 (def-fns _ $ erased double-pos : (erased (Nat) v) (erased (Nat) w) (erased (Lt (Zero) v) q) (erased (Double v w) d) ->
     (erased (Lt (Zero) w) r)
@@ -112,19 +123,19 @@
     (erased (Mod (Succ s) c (Succ r)) q1)
   (match erased q _
     ((ModLt x y p0) (ModLt (Succ s) c lt))
-    ((ModSub s1 c0 s0 r0 a m) (ModSub (Succ s1) c (Succ s) (Succ r) (AddSucc c s1 s a) (mod-succ-lt s1 c r m lt)))))
+    ((ModSub s1 c0 s0 r0 a m) (ModSub (Succ s1) c (Succ s) (Succ r) (add-succ-right c s1 s a) (mod-succ-lt s1 c r m lt)))))
 
 (def-fns _ $ erased mod-succ-wrap : (erased (Nat) s) (erased (Nat) r) (subterm erased (Mod s (Succ r) r) q) -> (erased (Mod (Succ s) (Succ r) (Zero)) q1)
   (match erased q _
-    ((ModLt x y p0) (ModSub (Zero) (Succ r) (Succ s) (Zero) (AddZero (Succ r)) (ModLt (Zero) (Succ r) (LtZ r))))
-    ((ModSub s1 c0 s0 r0 a m) (ModSub (Succ s1) (Succ r) (Succ s) (Zero) (AddSucc (Succ r) s1 s a) (mod-succ-wrap s1 r m)))))
+    ((ModLt x y p0) (ModSub (Zero) (Succ r) (Succ s) (Zero) (add-zero-right (Succ r)) (ModLt (Zero) (Succ r) (LtZ r))))
+    ((ModSub s1 c0 s0 r0 a m) (ModSub (Succ s1) (Succ r) (Succ s) (Zero) (add-succ-right (Succ r) s1 s a) (mod-succ-wrap s1 r m)))))
 
-(def-fns _ $ many extern add : (many (Nat) a) (subterm many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p)
-  (match many b _
-    ((Zero) (values a (AddZero a)))
+(def-fns _ $ many extern add : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p)
+  (match many a _
+    ((Zero) (values b (AddZero b)))
     ((Succ k)
-      (let (many c) (erased q) (add a k))
-      (values (Succ c) (AddSucc a k c q)))))
+      (let (many c) (erased q) (add k b))
+      (values (Succ c) (AddSucc k b c q)))))
 
 (def-lvl nat-lvl)
 

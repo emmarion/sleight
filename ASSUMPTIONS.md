@@ -235,7 +235,7 @@ ground.
 46. **The prelude's proofs are erased fields and erased functions**:
     `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `U8Add` and `Append` carry
     their sub-proofs at `erased`, and the lemmas (`double-pos`,
-    `add-succ-left`, `mod-succ-lt`, ...) are `erased` functions, so no
+    `add-succ-right`, `mod-succ-lt`, ...) are `erased` functions, so no
     proof is ever built at runtime; `lt-dec` returns a `Dec` whose
     proof field is erased. A choice of the session, not the owner's.
 
@@ -1870,10 +1870,12 @@ judiciously with `_`. The names and the shapes below are the session's.
      taking its place. `double` is `(add a a)` with the erased lemma
      `add-diag-double`, so the modulus is eight FFI additions rather
      than unary doubling; `Double` stays as the relation the `Numeral`
-     lemmas invert. `Add` recurses on its second argument (`AddZero :
-     Add a Zero a`), which is what lets `nat-mod`'s step lemmas build
-     their `Add`s without a shift lemma; `add-succ-left` is the one
-     lemma about it. `Mod s c r` is `ModLt` (already below `c`) or
+     lemmas invert. `Add` is Coq's (`AddZero : Add (Zero) b b`,
+     recursion on the first argument; the owner's choice over a
+     second-argument variant that needed fewer lemmas), and
+     `add-zero-right`, `add-succ-right` (Coq's `plus_n_O`, `plus_n_Sm`)
+     and the inversion `add-succ-right-inv` are the lemmas the `Mod`
+     step and `add-diag-double` need. `Mod s c r` is `ModLt` (already below `c`) or
      `ModSub` (one more `c` subtracted), with `mod-succ-lt` and
      `mod-succ-wrap` the two cases of the successor step decided by
      `nat-cmp`, whose `CEq` forces `c is (Succ r)`; `lt-asym` refutes

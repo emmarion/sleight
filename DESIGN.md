@@ -1753,7 +1753,9 @@ intended invariant; the prototype checks it on its own tests.
 
 **`Nat`.** The prelude declares `Nat` as the Peano enum of §32, marked
 `extern`, and the FFI holds it as an arbitrary-precision integer;
-`nat-add` is likewise extern over a structural definition. There are no
+`add` is likewise extern over a structural definition, returning an
+`Add` proof beside the sum; `nat-add` is a `delegate` over it that
+drops the proof. There are no
 numeric literals for now.
 
 **`U8`.** An enum with one constructor, `MkU8`, holding a
@@ -1775,7 +1777,9 @@ value by reflection (a `comptime-match` on a decided comparison, §15),
 and for a computed one by binding it and matching `lt-dec`, where the
 caller says what out of range means (§5 keeps the call itself out of
 the `Dec` index, so the binding is not optional). There is no
-narrowing function. `u8-add` (wrapping) is extern; `U8` is marked
+narrowing function. `u8-add` (wrapping) delegates to `add-u8`, plain source over `add` and
+the extern `nat-mod`, which returns a `U8Add` relating the fields
+through `Add` and `Mod`; `U8` is marked
 `newtype`, so it is its `Nat` field alone (§38) and needs no extern of
 its own.
 
