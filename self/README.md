@@ -45,6 +45,14 @@ host's own `Nat`, `Bin`, `String` and `Cmp` (section 41); a `U8` or a
 - `base.sl` — booleans, pairs, `Nat`/`Char`/`String` helpers over the
   prelude's externs, `Bin`-keyed identifiers with a trie map over them,
   a trie map keyed by names, list helpers, and a rope of output chunks.
+  Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
+  orders on `Bin` and `String` are relations decided into the prelude's
+  `Cmp`, so a match on `CEq` forces the two equal; a trie lookup returns
+  `Hit` with a `MapsTo` proof or `Miss` with an `Absent` one; `list-nth`
+  returns `Nth` or `OutOfRange` evidence, `length` a `Length` proof and
+  `list-append` a `Concat` proof. `nat-eq`, `bin-eq`, `str-eq`,
+  `list-length` and friends are forgetful wrappers over those, for the
+  sites that combine several decisions with `and`/`or`.
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
   tokenizer and a fold over the tokens with a stack of open forms.
 - `core.sl` — terms with de Bruijn telescopes (section 5), the

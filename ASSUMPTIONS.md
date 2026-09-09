@@ -1908,3 +1908,48 @@ judiciously with `_`. The names and the shapes below are the session's.
      named `nat-cmp`'s level in a type, `tests/char_ops.sl`, now
      infers it. The extern set is `add`, `nat-cmp`, `nat-mod`,
      `bin-to-nat`, `trim`.
+
+## The compiler's libraries carry evidence
+
+Asked for by the owner in chat, after a survey of `self/`: its proofs
+were all termination-driven, and its library layer returned `Bool`s and
+`Maybe`s that discarded what the checker could have used. The owner chose
+the first three of the session's proposals — deciders return evidence,
+lookups return evidence, lists carry specs — and left moving the
+libraries into the prelude aside. Shapes and names below are the
+session's.
+
+121. **Deciders decide into the prelude's `Cmp`; lookups return
+     `Hit`/`Miss` with proofs.** `bin-cmp` (formerly `core.sl`'s
+     `bin-cmp-dec`, moved to `base.sl` with `BinLt`, `BinLe`, `le-refl`
+     and `lt-le`) returns `(Cmp (Bin) BinLt a b)`, and `str-cmp` returns
+     `(Cmp (String) StrLt a b)` over a new lexicographic `StrLt`, built
+     on the prelude's `char-cmp`; `nat-cmp` and `char-cmp` are the
+     prelude's. Every direct `(match (X-eq a b) ((BTrue) ..) ((BFalse) ..))`
+     in `self/` became `(match (X-cmp a b) ((CEq ..) ..) (else ..))`, so
+     the equal branch runs with `b is a` forced (58 sites, rewritten
+     mechanically); `nat-eq`, `bin-eq`, `str-eq`, `char-eq`, `nat-lt`
+     and `bin-lt` remain as `Bool` wrappers for the `and`/`or` chains,
+     and `base.sl`'s `Ord` is gone. `idmap-get` returns `(Lookup V k m)`:
+     `Hit` carries the value and a `MapsTo` proof, `Miss` an `Absent`
+     proof; `mapsto-subterm` derives the subterm proof the emitter's
+     recursion needs, replacing `MapHit` and `idmap-get-sub`. `nm-get`
+     likewise returns `NLookup` over `NMapsTo`/`NAbsent`, through
+     `nm-kid`'s `KidLookup` over `KidIs`/`NoKid`, the latter carrying
+     `CharLt` evidence for each kid passed over. `list-nth` returns
+     `NthLookup` (`Nth` or `OutOfRange`), `length` returns a `Length`
+     proof with `list-length` its `delegate` wrapper, and `list-append`
+     returns a `Concat` proof (its two sites bind it). `core.sl`'s own
+     `Eq`, `Cmp` and `Plus` are gone in favour of the prelude's `Eq`,
+     `Cmp` and `Add`, with `plus-zero-right` and `plus-succ-right` now
+     the prelude's `add-zero-right` and `add-succ-right`. Not done: a
+     `Vec` where a length is statically known — the one candidate,
+     `check-args-go`'s arity mismatch branches, reports a count error
+     that `check-arity` has already recorded rather than being
+     unreachable, so replacing it with a refuted branch would change the
+     messages; `list-mem-*` and `index-of-bin` still return `Bool` and
+     `Maybe`, an absence proof for them wanting a `Bin` inequality the
+     `Neq` in `core.sl` provides only after `base.sl`; and the fact
+     table's `In`/`RuledIn`/`Taken` family, which resembles `MapsTo`,
+     was left alone. `self/bootstrap.sh` is the evidence.
+

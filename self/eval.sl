@@ -11,8 +11,8 @@
 
 (def-fns _ $ many arg-at : (many (List $ Value) args) (many (Nat) i) -> (many (Value) v)
   (match many (list-nth _ args i) _
-    ((None a) (VError "extern arity"))
-    ((Some a v) v)))
+    ((NthMiss nt nl ni np) (VError "extern arity"))
+    ((NthHit nt nl ni v np) v)))
 
 (def-fns _ $ many is-extern-fn : (many (String) name) -> (many (Bool) r)
   (or (str-eq name "add")
@@ -35,23 +35,23 @@
 (def-fns _ $ many apply-extern : (many (String) name) (many (List $ Value) args) -> (many (List $ Value) r)
   (let (many a) $ arg-at args 0)
   (let (many b) $ arg-at args 1)
-  (match many (str-eq name "add") _
-    ((BTrue) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
-    ((BFalse)
-      (match many (str-eq name "nat-cmp") _
-        ((BTrue)
+  (match many (str-cmp name "add") _
+    ((CEq eq-t eq-r eq-x) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
+    (else
+      (match many (str-cmp name "nat-cmp") _
+        ((CEq eq-t eq-r eq-x)
           (let (many x) $ value-nat a)
           (let (many y) $ value-nat b)
           (Cons _ (VExt cmp-adt $ PDec $ match many (nat-lt x y) (((Nat) i)) ((BTrue) 0) ((BFalse) (match many (nat-lt y x) _ ((BTrue) 2) ((BFalse) 1)))) $ Nil _))
-        ((BFalse)
-          (match many (str-eq name "nat-mod") _
-            ((BTrue) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
-            ((BFalse)
-              (match many (str-eq name "bin-to-nat") _
-                ((BTrue)
+        (else
+          (match many (str-cmp name "nat-mod") _
+            ((CEq eq-t eq-r eq-x) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
+            (else
+              (match many (str-cmp name "bin-to-nat") _
+                ((CEq eq-t eq-r eq-x)
                   (let (many n) (erased pf) $ bin-to-nat $ value-bin a)
                   (Cons _ (vnat n) $ Nil _))
-                ((BFalse) (Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))))))))))
+                (else (Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))))))))))
 
 (def-fns _ $ many venv-bind : (subterm many (List $ Bin) ids) (many (List $ Value) vs) (many (IdMap $ Value) env) -> (many (IdMap $ Value) r)
   (match many ids _
@@ -85,9 +85,9 @@
     ((Cons a b rest)
       (match many b _
         ((MkBranch d ids body)
-          (match many (nat-eq d i) _
-            ((BTrue) (Some _ b))
-            ((BFalse) (find-branch rest i))))))))
+          (match many (nat-cmp d i) _
+            ((CEq eq-t eq-r eq-x) (Some _ b))
+            (else (find-branch rest i))))))))
 
 (def-fns _ $ many first-value : (many (List $ Value) vs) -> (many (Value) v)
   (match many vs _
@@ -104,8 +104,8 @@
     (match many code _
       ((CVar x)
         (match many (idmap-get _ x env) _
-          ((None a) (Cons _ (VError $ str-cat "unbound at runtime: " $ bin-str x) $ Nil _))
-          ((Some a v) (Cons _ v $ Nil _))))
+          ((Miss lt lk lm lp) (Cons _ (VError $ str-cat "unbound at runtime: " $ bin-str x) $ Nil _))
+          ((Hit lt lk lm v lp) (Cons _ v $ Nil _))))
       ((CConst v) (Cons _ v $ Nil _))
       ((CErased) (Cons _ (VToken) $ Nil _))
       ((CValues cs) (eval-list fuel cs env))
@@ -152,9 +152,9 @@
       ((Cons a b rest)
         (match many b _
           ((MkBranch d ids body)
-            (match many (nat-eq d i) _
-              ((BTrue) (eval fuel body $ venv-bind ids fields env))
-              ((BFalse) (eval-branch fuel rest i fields env))))))))
+            (match many (nat-cmp d i) _
+              ((CEq eq-t eq-r eq-x) (eval fuel body $ venv-bind ids fields env))
+              (else (eval-branch fuel rest i fields env))))))))
   (many apply : (subterm many (Nat) fuel) (many (Value) f) (many (List $ Value) args) -> (many (List $ Value) vs)
     (match many f _
       ((VFn cl)

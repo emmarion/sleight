@@ -168,8 +168,8 @@
 
 (def-fns _ $ many sp-of-index : (many (Nat) i) -> (many (Maybe $ Sp) r)
   (match many (list-nth _ sp-table i) _
-    ((None a) (None _))
-    ((Some a e) (match many e _ ((MkSpEntry n sp) (Some _ sp))))))
+    ((NthMiss nt nl ni np) (None _))
+    ((NthHit nt nl ni e np) (match many e _ ((MkSpEntry n sp) (Some _ sp))))))
 
 ; ---- Runtime values and post-erasure code (lib/value.ml)
 
@@ -293,9 +293,6 @@
 ; ---- Decidable equality on Bin, with inequality as an inductive so a refuted branch stays refutable.
 
 (def-adts
-  (Eq : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many Refl : (erased (Bin) x) -> (Eq x x)))
   (Neq : ((Bin) a) ((Bin) b) -> Type
     enum
     (many NeqZ1 : (erased (Bin) b) -> (Neq (BZ) $ B1 b))
@@ -308,45 +305,8 @@
     (many Neq22 : (erased (Bin) a) (erased (Bin) b) (erased (Neq a b) p) -> (Neq (B2 a) $ B2 b)))
   (BinDec : ((Bin) a) ((Bin) b) -> Type
     enum
-    (many BYes : (erased (Bin) a) (erased (Bin) b) (erased (Eq a b) p) -> (BinDec a b))
+    (many BYes : (erased (Bin) a) (erased (Bin) b) (erased (Eq (Bin) a b) p) -> (BinDec a b))
     (many BNo : (erased (Bin) a) (erased (Bin) b) (erased (Neq a b) p) -> (BinDec a b))))
-
-; The order on ids, digit by digit (B1 a is 2a+1, B2 a is 2a+2), and its decision with proofs.
-(def-adts
-  (BinLt : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many LtZ1 : (erased (Bin) b) -> (BinLt (BZ) $ B1 b))
-    (many LtZ2 : (erased (Bin) b) -> (BinLt (BZ) $ B2 b))
-    (many Lt11 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B1 a) $ B1 b))
-    (many Lt12 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLt (B1 a) $ B2 b))
-    (many Lt21 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B2 a) $ B1 b))
-    (many Lt22 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B2 a) $ B2 b)))
-  (BinLe : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many LeZ : (erased (Bin) b) -> (BinLe (BZ) b))
-    (many Le11 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B1 a) $ B1 b))
-    (many Le12 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B1 a) $ B2 b))
-    (many Le21 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLe (B2 a) $ B1 b))
-    (many Le22 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B2 a) $ B2 b)))
-  (Cmp : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many CLt : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (Cmp a b))
-    (many CEq : (erased (Bin) a) (erased (Bin) b) (erased (Eq a b) p) -> (Cmp a b))
-    (many CGt : (erased (Bin) a) (erased (Bin) b) (erased (BinLt b a) p) -> (Cmp a b))))
-
-(def-fns _ $ erased le-refl : (subterm erased (Bin) a) -> (erased (BinLe a a) r)
-  (match erased a _
-    ((BZ) (LeZ _))
-    ((B1 a1) (Le11 _ _ $ le-refl a1))
-    ((B2 a1) (Le22 _ _ $ le-refl a1))))
-
-(def-fns _ $ erased lt-le : (erased (Bin) a) (erased (Bin) b) (subterm erased (BinLt a b) p) -> (erased (BinLe a b) r)
-  (match erased p _
-    ((LtZ1 b1) (LeZ _)) ((LtZ2 b1) (LeZ _))
-    ((Lt11 a1 b1 q) (Le11 _ _ $ lt-le a1 b1 q))
-    ((Lt12 a1 b1 q) (Le12 _ _ q))
-    ((Lt21 a1 b1 q) (Le21 _ _ q))
-    ((Lt22 a1 b1 q) (Le22 _ _ $ lt-le a1 b1 q))))
 
 (def-fns _
   (erased le-le : (erased (Bin) a) (erased (Bin) b) (erased (Bin) c) (subterm erased (BinLe a b) p) (erased (BinLe b c) q) -> (erased (BinLe a c) r)
@@ -396,20 +356,6 @@
       (let (many c1) (erased q) $ bin-succ-lt b1)
       (values (B1 c1) $ Lt21 _ _ q))))
 
-(def-fns _ $ many bin-cmp-dec : (subterm many (Bin) a) (many (Bin) b) -> (many (Cmp a b) r)
-  (match many a _
-    ((BZ) (match many b _ ((BZ) (CEq _ _ $ Refl a)) ((B1 b1) (CLt _ _ $ LtZ1 b1)) ((B2 b1) (CLt _ _ $ LtZ2 b1))))
-    ((B1 a1)
-      (match many b _
-        ((BZ) (CGt _ _ $ LtZ1 a1))
-        ((B1 b1) (match many (bin-cmp-dec a1 b1) _ ((CLt x y p) (CLt _ _ $ Lt11 a1 b1 p)) ((CEq x y e) (match erased e _ ((Refl z) (CEq _ _ $ Refl a)))) ((CGt x y p) (CGt _ _ $ Lt11 b1 a1 p))))
-        ((B2 b1) (match many (bin-cmp-dec a1 b1) _ ((CLt x y p) (CLt _ _ $ Lt12 a1 b1 $ lt-le a1 b1 p)) ((CEq x y e) (match erased e _ ((Refl z) (CLt _ _ $ Lt12 a1 a1 $ le-refl a1)))) ((CGt x y p) (CGt _ _ $ Lt21 b1 a1 p))))))
-    ((B2 a1)
-      (match many b _
-        ((BZ) (CGt _ _ $ LtZ2 a1))
-        ((B1 b1) (match many (bin-cmp-dec a1 b1) _ ((CLt x y p) (CLt _ _ $ Lt21 a1 b1 p)) ((CEq x y e) (match erased e _ ((Refl z) (CGt _ _ $ Lt12 a1 a1 $ le-refl a1)))) ((CGt x y p) (CGt _ _ $ Lt12 b1 a1 $ lt-le b1 a1 p))))
-        ((B2 b1) (match many (bin-cmp-dec a1 b1) _ ((CLt x y p) (CLt _ _ $ Lt22 a1 b1 p)) ((CEq x y e) (match erased e _ ((Refl z) (CEq _ _ $ Refl a)))) ((CGt x y p) (CGt _ _ $ Lt22 b1 a1 p))))))))
-
 (def-fns _ $ erased neq-irrefl : (subterm erased (Bin) a) (erased (Neq a a) p) -> (erased (False) f)
   (match erased p _
     ((Neq11 a1 b1 q) (neq-irrefl _ q))
@@ -417,17 +363,17 @@
 
 (def-fns _ $ many bin-eq-dec : (subterm many (Bin) a) (many (Bin) b) -> (many (BinDec a b) r)
   (match many a _
-    ((BZ) (match many b _ ((BZ) (BYes _ _ $ Refl a)) ((B1 b1) (BNo _ _ $ NeqZ1 b1)) ((B2 b1) (BNo _ _ $ NeqZ2 b1))))
+    ((BZ) (match many b _ ((BZ) (BYes _ _ $ Refl _ a)) ((B1 b1) (BNo _ _ $ NeqZ1 b1)) ((B2 b1) (BNo _ _ $ NeqZ2 b1))))
     ((B1 a1)
       (match many b _
         ((BZ) (BNo _ _ $ Neq1Z a1))
-        ((B1 b1) (match many (bin-eq-dec a1 b1) _ ((BYes x y e) (match erased e _ ((Refl z) (BYes _ _ $ Refl a)))) ((BNo x y ne) (BNo _ _ $ Neq11 a1 b1 ne))))
+        ((B1 b1) (match many (bin-eq-dec a1 b1) _ ((BYes x y e) (match erased e _ ((Refl zt z) (BYes _ _ $ Refl _ a)))) ((BNo x y ne) (BNo _ _ $ Neq11 a1 b1 ne))))
         ((B2 b1) (BNo _ _ $ Neq12 a1 b1))))
     ((B2 a1)
       (match many b _
         ((BZ) (BNo _ _ $ Neq2Z a1))
         ((B1 b1) (BNo _ _ $ Neq21 a1 b1))
-        ((B2 b1) (match many (bin-eq-dec a1 b1) _ ((BYes x y e) (match erased e _ ((Refl z) (BYes _ _ $ Refl a)))) ((BNo x y ne) (BNo _ _ $ Neq22 a1 b1 ne))))))))
+        ((B2 b1) (match many (bin-eq-dec a1 b1) _ ((BYes x y e) (match erased e _ ((Refl zt z) (BYes _ _ $ Refl _ a)))) ((BNo x y ne) (BNo _ _ $ Neq22 a1 b1 ne))))))))
 
 ; ---- The rules list: membership, appending at the end as a relation, and membership through a path context.
 
@@ -501,53 +447,39 @@
 ; the table at the predecessor count, which is what unification's measure steps down on.
 
 (def-adts
-  (Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type
-    enum
-    (many PZ : (erased (Nat) b) -> (Plus (Zero) b b))
-    (many PS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) p) -> (Plus (Succ a) b $ Succ c)))
   (Plus3 : ((Nat) h) ((Nat) a) ((Nat) b) ((Nat) c) -> Type
     enum
-    (many P3Z : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) p) -> (Plus3 (Zero) a b c))
+    (many P3Z : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a b c) p) -> (Plus3 (Zero) a b c))
     (many P3S : (erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h a b c) p) -> (Plus3 (Succ h) a b $ Succ c)))
   (Pred : ((Nat) a) ((Nat) b) ((Nat) c) -> Type
     enum
-    (many MkPred : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) q) -> (Pred a b $ Succ c)))
+    (many MkPred : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a b c) q) -> (Pred a b $ Succ c)))
   (Pred3 : ((Nat) h) ((Nat) a) ((Nat) b) ((Nat) c) -> Type
     enum
     (many MkPred3 : (erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h a b c) q) -> (Pred3 h a b $ Succ c))))
 
-(def-fns _ $ erased plus-zero-right : (subterm erased (Nat) a) -> (erased (Plus a (Zero) a) r)
-  (match erased a _
-    ((Zero) (PZ _))
-    ((Succ a1) (PS _ _ _ $ plus-zero-right a1))))
-
-(def-fns _ $ erased plus-succ-right : (subterm erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) p) -> (erased (Plus a (Succ b) $ Succ c) r)
+(def-fns _ $ erased plus-right : (subterm erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a (Succ b) c) p) -> (erased (Pred a b c) r)
   (match erased p _
-    ((PZ b1) (PZ _))
-    ((PS a1 b1 c1 q) (PS _ _ _ $ plus-succ-right a1 b c1 q))))
-
-(def-fns _ $ erased plus-right : (subterm erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a (Succ b) c) p) -> (erased (Pred a b c) r)
-  (match erased p _
-    ((PZ b1) (MkPred _ _ _ $ PZ b))
-    ((PS a1 b1 c1 q)
+    ((AddZero b1) (MkPred _ _ _ $ AddZero b))
+    ((AddSucc a1 b1 c1 q)
       (match erased (plus-right _ _ _ q) _
-        ((MkPred a2 b2 c2 q2) (MkPred _ _ _ $ PS a1 b c2 q2))))))
+        ((MkPred a2 b2 c2 q2) (MkPred _ _ _ $ AddSucc a1 b c2 q2))))))
 
 (def-fns _ $ erased plus3-mid-succ : (subterm erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h a b c) p) -> (erased (Plus3 h (Succ a) b $ Succ c) r)
   (match erased p _
-    ((P3Z a1 b1 c1 q) (P3Z _ _ _ $ PS a b c q))
+    ((P3Z a1 b1 c1 q) (P3Z _ _ _ $ AddSucc a b c q))
     ((P3S h1 a1 b1 c1 q) (P3S _ _ _ _ $ plus3-mid-succ h1 a b c1 q))))
 
 (def-fns _ $ erased plus3-right-succ : (subterm erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h a b c) p) -> (erased (Plus3 h a (Succ b) $ Succ c) r)
   (match erased p _
-    ((P3Z a1 b1 c1 q) (P3Z _ _ _ $ plus-succ-right a b c q))
+    ((P3Z a1 b1 c1 q) (P3Z _ _ _ $ add-succ-right a b c q))
     ((P3S h1 a1 b1 c1 q) (P3S _ _ _ _ $ plus3-right-succ h1 a b c1 q))))
 
 (def-fns _ $ erased plus3-mid : (subterm erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h (Succ a) b c) p) -> (erased (Pred3 h a b c) r)
   (match erased p _
     ((P3Z a1 b1 c1 q)
       (match erased q _
-        ((PS a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3Z a b c2 q2))))
+        ((AddSucc a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3Z a b c2 q2))))
     ((P3S h1 a1 b1 c1 q)
       (match erased (plus3-mid _ _ _ _ q) _
         ((MkPred3 h2 a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3S h1 a b c2 q2))))))
@@ -591,9 +523,9 @@
     enum
     (many InsLeaf : (erased (Term) ty) (erased (Plus3 (Succ $ Zero) (Zero) (Zero) $ Succ $ Zero) p) ->
        (Ins (BZ) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Succ $ Zero) (Zero) (Zero) (Succ $ Zero) (HFree ty) (FEmpty) (FEmpty) p))
-    (many InsGrow1 : (erased (Bin) x) (erased (Facts $ Succ $ Zero) one) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) one) q) (erased (Plus (Succ $ Zero) (Zero) $ Succ $ Zero) p) ->
+    (many InsGrow1 : (erased (Bin) x) (erased (Facts $ Succ $ Zero) one) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) one) q) (erased (Add (Succ $ Zero) (Zero) $ Succ $ Zero) p) ->
        (Ins (B1 x) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Succ $ Zero) (Zero) (Succ $ Zero) (HNone) one (FEmpty) $ P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p))
-    (many InsGrow2 : (erased (Bin) x) (erased (Facts $ Succ $ Zero) two) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) two) q) (erased (Plus (Zero) (Succ $ Zero) $ Succ $ Zero) p) ->
+    (many InsGrow2 : (erased (Bin) x) (erased (Facts $ Succ $ Zero) two) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) two) q) (erased (Add (Zero) (Succ $ Zero) $ Succ $ Zero) p) ->
        (Ins (B2 x) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Zero) (Succ $ Zero) (Succ $ Zero) (HNone) (FEmpty) two $ P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p))
     (many InsHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p) ->
        (Ins (BZ) m (FNode (Zero) n1 n2 m (HNone) one two p) (Succ m) $ FNode (Succ $ Zero) n1 n2 (Succ m) (HFree ty) one two $ P3S (Zero) n1 n2 m p))
@@ -657,9 +589,6 @@
   (match erased p _))
 
 
-(def-fns _ $ erased in-empty : (erased (Bin) x) (erased (In x (Zero) $ FEmpty) p) -> (erased (False) f)
-  (match erased p _))
-
 (def-fns _ $ erased in-ruled-clash : (erased (Bin) x) (erased (Nat) n) (erased (Facts n) f) (subterm erased (In x n f) p) (erased (RuledIn x n f) q) -> (erased (False) r)
   (match erased p _
     ((InHere n1 n2 m ty one two p3) (match erased q _))
@@ -679,9 +608,9 @@
     (many AbNode : (erased (List $ Digit) ctx) (erased (Bin) c) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p)
        (erased (AboveHere ctx c h here) ah) (erased (Above (Cons (Digit) (D1) ctx) c n1 one) a1) (erased (Above (Cons (Digit) (D2) ctx) c n2 two) a2) -> (Above ctx c m $ FNode h n1 n2 m here one two p))))
 
-(def-fns _ $ erased wrap-fun : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Bin) x) (erased (Bin) y) (subterm erased (Wrap ctx a x) w) (erased (Wrap ctx a y) v) -> (erased (Eq x y) e)
+(def-fns _ $ erased wrap-fun : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Bin) x) (erased (Bin) y) (subterm erased (Wrap ctx a x) w) (erased (Wrap ctx a y) v) -> (erased (Eq (Bin) x y) e)
   (match erased w _
-    ((WNil z) (match erased v _ ((WNil z2) (Refl _))))
+    ((WNil z) (match erased v _ ((WNil z2) (Refl _ _))))
     ((W1 ctx1 a1 y1 p) (match erased v _ ((W1 ctx2 a2 y2 q) (wrap-fun _ _ _ _ p q))))
     ((W2 ctx1 a1 y1 p) (match erased v _ ((W2 ctx2 a2 y2 q) (wrap-fun _ _ _ _ p q))))))
 
@@ -691,7 +620,7 @@
       (match erased ab _
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun _ _ _ _ w2 w) _ ((Refl z) le2)))))))
+            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun _ _ _ _ w2 w) _ ((Refl zt z) le2)))))))
     ((In1 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-in _ _ _ _ _ _ a1 q $ W1 ctx x1 y w))))
@@ -705,7 +634,7 @@
       (match erased ab _
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
           (match erased ah _
-            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun _ _ _ _ w2 w) _ ((Refl z) le2)))))))
+            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fun _ _ _ _ w2 w) _ ((Refl zt z) le2)))))))
     ((R1 x1 h n1 n2 m here one two p3 q)
       (match erased ab _
         ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-ruledin _ _ _ _ _ _ a1 q $ W1 ctx x1 y w))))
@@ -809,20 +738,20 @@
     ((FEmpty)
       (match many x _
         ((BZ)
-          (let (erased p0) $ P3S _ _ _ _ $ P3Z (Zero) (Zero) (Zero) $ PZ $ Zero)
+          (let (erased p0) $ P3S _ _ _ _ $ P3Z (Zero) (Zero) (Zero) $ AddZero $ Zero)
           (IGrew _ _ _ (FNode _ _ _ _ (HFree ty) (FEmpty) (FEmpty) _) (InsLeaf ty p0) $ InHere (Zero) (Zero) (Succ _) ty (FEmpty) (FEmpty) p0))
         ((B1 x1)
           (match many (facts-insert x1 _ (FEmpty) ty) _
             (absurd (IKept a b d q) (taken-empty _ q))
             ((IGrew a b d one r q1)
-              (let (erased p0) $ plus-zero-right $ Succ $ Zero)
+              (let (erased p0) $ add-zero-right $ Succ $ Zero)
               (IGrew _ _ _ (FNode _ _ _ _ (HNone) one (FEmpty) _) (InsGrow1 x1 one r p0)
                 $ In1 x1 (Zero) (Succ _) (Zero) (Succ _) (HNone) one (FEmpty) (P3Z (Succ _) (Zero) (Succ _) p0) q1))))
         ((B2 x1)
           (match many (facts-insert x1 _ (FEmpty) ty) _
             (absurd (IKept a b d q) (taken-empty _ q))
             ((IGrew a b d two r q1)
-              (let (erased p0) $ PZ $ Succ $ Zero)
+              (let (erased p0) $ AddZero $ Succ $ Zero)
               (IGrew _ _ _ (FNode _ _ _ _ (HNone) (FEmpty) two _) (InsGrow2 x1 two r p0)
                 $ In2 x1 (Zero) (Zero) (Succ _) (Succ _) (HNone) (FEmpty) two (P3Z (Zero) (Succ _) (Succ _) p0) q1))))))
     ((FNode h n1 n2 m here one two p3)
@@ -1726,13 +1655,13 @@
     ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (match many inner _
         ((MkEnv sc2 en2 nf2 ff2 fr2 tb2 rp2 va2 ob2 li2 tr2 er2 lv2 st2 cl2 wa2 lt2 lo2 pr2)
-          (match many (bin-cmp-dec fr fr2) _
-            ((CLt x y p) (MkEnv sc en2 _ _ fr2 (table-weaken _ _ _ _ tb $ lt-le fr fr2 p) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr)) (else (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))))))))
+          (match many (bin-cmp fr fr2) _
+            ((CLt ct cr x y p) (MkEnv sc en2 _ _ fr2 (table-weaken _ _ _ _ tb $ lt-le fr fr2 p) rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr)) (else (MkEnv sc en2 nf ff fr tb rp va ob li tr2 er2 lv st cl2 wa2 lt2 lo pr))))))))
 
 (def-fns _ $ many entry : (many (Env) env) (many (Bin) x) -> (many (EInfo) r)
   (match many (idmap-get _ x $ env-entries env) _
-    ((None a) (MkEInfo (None _) (Many) (SDyn) (BFalse) $ BFalse))
-    ((Some a e) e)))
+    ((Miss lt lk lm lp) (MkEInfo (None _) (Many) (SDyn) (BFalse) $ BFalse))
+    ((Hit lt lk lm e lp) e)))
 
 (def-fns _ $ many entry-mult-of : (many (Env) env) (many (Bin) x) -> (many (Mult) r)
   (match many (entry env x) _ ((MkEInfo n m s mi me) m)))
@@ -1750,8 +1679,8 @@
   (match many env _
     ((MkEnv sc en nf ff fr tb rp va ob li tr er lv st cl wa lt lo pr)
       (let (many (EInfo) info) (match many (idmap-get _ x en) _
-                         ((None a) (MkEInfo (None _) (Erased) (SDyn) (BTrue) $ BFalse))
-                         ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m s (BTrue) me))))))
+                         ((Miss lt lk lm lp) (MkEInfo (None _) (Erased) (SDyn) (BTrue) $ BFalse))
+                         ((Hit lt lk lm e lp) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m s (BTrue) me))))))
       (MkEnv sc (idmap-set _ x info en) _ _ fr tb rp va ob li tr er lv st cl wa lt lo pr))))
 
 (def-fns _ $ many name-of : (many (Env) env) (many (Bin) x) -> (many (String) r)
@@ -1775,14 +1704,14 @@
         ((LRuled a b c d e ty t m) (Some _ t)) (else (None $ Term))))))
 
 (def-fns _ $ many lookup : (many (Env) env) (many (String) name) -> (many (Maybe $ Bin) r)
-  (nm-get _ name $ env-scope env))
+  (match many (nm-get _ name $ env-scope env) _ ((NHit lt ln lm x lp) (Some _ x)) ((NMiss lt ln lm lp) (None _))))
 
 (def-fns _ $ many set-state : (many (Env) env) (many (Bin) x) (many (State) st) -> (many (Env) r)
   (match many env _
     ((MkEnv sc en nf ff fr tb rp va ob li tr er lv sts cl wa lt lo pr)
       (let (many (EInfo) info) (match many (idmap-get _ x en) _
-                         ((None a) (MkEInfo (None _) (Many) st (BFalse) $ BFalse))
-                         ((Some a e) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m st mi me))))))
+                         ((Miss lt lk lm lp) (MkEInfo (None _) (Many) st (BFalse) $ BFalse))
+                         ((Hit lt lk lm e lp) (match many e (((EInfo) i)) ((MkEInfo n m s mi me) (MkEInfo n m st mi me))))))
       (let (many (IdMap $ Value) va2) (match many st _
                         ((SConst v) (idmap-set _ x v va))
                         ((SDyn) va)))
@@ -1923,8 +1852,8 @@
             ((BFalse)
               (let (many n) $ list-length _ args)
               (match many (list-nth _ args $ nat-sub k d) _
-                ((Some a s) s)
-                ((None a) (TBound $ nat-sub k n)))))) (else t)))
+                ((NthHit nt nl ni s np) s)
+                ((NthMiss nt nl ni np) (TBound $ nat-sub k n)))))) (else t)))
     ((OpAbs ids)
       (match many t _
         ((TVar x)
@@ -2331,9 +2260,9 @@
             (match many b _
               ((TVar y) (bind-var _ _ bnd tb env y (fr-var n f y pb) a a b force))
               ((TApp h2 as2)
-                (match many (nat-eq (list-length _ as) $ list-length _ as2) _
-                  ((BFalse) (contradiction _ bnd env a b))
-                  ((BTrue)
+                (match many (nat-cmp (list-length _ as) $ list-length _ as2) _
+                  (else (contradiction _ bnd env a b))
+                  ((CEq eq-t eq-r eq-x)
                     (let (erased ph) (erased pas) $ fr-app _ _ _ _ pa)
                     (let (erased ph2) (erased pas2) $ fr-app _ _ _ _ pb)
                     (match many (unify _ _ bnd tb h ph h2 ph2 env force) _
@@ -2530,15 +2459,15 @@
 (def-fns _ $ many ext-construct : (many (Adt) adt) (many (String) ext) (many (Nat) index) (many (List $ Value) fields) -> (many (Value) v)
   (let (many (Value) f0) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) f))
   (let (many (Value) f1) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) (match many rest (((Value) y)) ((Nil b) (VToken)) ((Cons b g rest2) g))))
-  (match many (str-eq ext "Nat") _
-    ((BTrue) (VExt adt $ PNat $ match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ $ value-nat f0))))
-    ((BFalse)
-      (match many (str-eq ext "Bin") _
-        ((BTrue) (VExt adt $ PBin $ match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 $ value-bin f0)) ((Succ k2) (B2 $ value-bin f0))))))
-        ((BFalse)
-          (match many (str-eq ext "String") _
-            ((BTrue) (VExt adt $ PStr $ match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (char-of-code $ value-nat f0) $ value-str f1))))
-            ((BFalse) (VExt adt $ PDec index))))))))
+  (match many (str-cmp ext "Nat") _
+    ((CEq eq-t eq-r eq-x) (VExt adt $ PNat $ match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ $ value-nat f0))))
+    (else
+      (match many (str-cmp ext "Bin") _
+        ((CEq eq-t eq-r eq-x) (VExt adt $ PBin $ match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 $ value-bin f0)) ((Succ k2) (B2 $ value-bin f0))))))
+        (else
+          (match many (str-cmp ext "String") _
+            ((CEq eq-t eq-r eq-x) (VExt adt $ PStr $ match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (char-of-code $ value-nat f0) $ value-str f1))))
+            (else (VExt adt $ PDec index))))))))
 
 (def-fns _ $ many construct : (many (Ctor) c) (many (List $ Value) args) -> (many (Value) v)
   (match many c _
@@ -2570,7 +2499,7 @@
         ((None a) (values index $ untuple arity v))))))
 
 (def-fns _ $ many ctor-at : (many (Adt) adt) (many (Nat) i) -> (many (Maybe $ Ctor) c)
-  (list-nth _ (adt-ctors adt) i))
+  (match many (list-nth _ (adt-ctors adt) i) _ ((NthHit nt nl ni c np) (Some _ c)) ((NthMiss nt nl ni np) (None _))))
 
 (def-fns _ $ many show-nat : (subterm many (Nat) n) -> (many (Rope) r)
     (match many n _

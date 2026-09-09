@@ -70,7 +70,7 @@
   (match many (raw-atom r) _ ((None a) (BFalse)) ((Some a s) (str-eq s "_"))))
 
 (def-fns _ $ many name-or-anon : (many (String) n) -> (many (Maybe $ String) r)
-  (match many (str-eq n "_") _ ((BTrue) (None _)) ((BFalse) (Some _ n))))
+  (match many (str-cmp n "_") _ ((CEq eq-t eq-r eq-x) (None _)) (else (Some _ n))))
 
 ; A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4).
 (def-fns _ $ many special-of : (many (Env) env) (many (Raw) raw) -> (many (Maybe $ Sp) r)
@@ -179,15 +179,15 @@
 ; The code of #\c, #\space, #\newline, #\tab or #\xHH, or None where the literal is malformed.
 (def-fns _ $ many char-lit-code : (many (String) s) -> (many (Maybe $ Nat) n)
   (let (many body) $ char-lit-body s)
-  (match many (str-eq body "space") _
-    ((BTrue) (Some _ 32))
-    ((BFalse)
-      (match many (str-eq body "newline") _
-        ((BTrue) (Some _ 10))
-        ((BFalse)
-          (match many (str-eq body "tab") _
-            ((BTrue) (Some _ 9))
-            ((BFalse)
+  (match many (str-cmp body "space") _
+    ((CEq eq-t eq-r eq-x) (Some _ 32))
+    (else
+      (match many (str-cmp body "newline") _
+        ((CEq eq-t eq-r eq-x) (Some _ 10))
+        (else
+          (match many (str-cmp body "tab") _
+            ((CEq eq-t eq-r eq-x) (Some _ 9))
+            (else
               (match many body _
                 ((SNil) (None _))
                 ((SCons c rest)
@@ -248,7 +248,7 @@
   (bin-term (bin-of-nat n $ BZ) env))
 
 (def-fns _ $ many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Bin) r)
-  (nm-get _ key $ env-literals env))
+  (match many (nm-get _ key $ env-literals env) _ ((NHit lt ln lm x lp) (Some _ x)) ((NMiss lt ln lm lp) (None _))))
 
 ; Interns a numeral: a Const Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
@@ -268,7 +268,7 @@
     ((Nil a) (None _))
     ((Cons a p rest)
       (match many p _
-        ((MkPair s t y proof) (match many (bin-eq x y) _ ((BTrue) proof) ((BFalse) (lit-proof rest x))))))))
+        ((MkPair s t y proof) (match many (bin-cmp x y) _ ((CEq eq-t eq-r eq-x) proof) (else (lit-proof rest x))))))))
 
 (def-fns _ $ many intern-numeral-once : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Bin) x) (many (Bin) proof)
   (match many (lit-lookup env key) _
@@ -548,9 +548,9 @@
           ((TMatchable d t cs)
             (match many t (((Maybe $ MatchInfo) c))
               ((TVar t2)
-                (match many (bin-eq t2 tid) (((Maybe $ MatchInfo) c))
-                  ((BTrue) (let (many y) $ resolve env x) (Some _ $ MkMatchInfo y d cs $ matchable-rank env y))
-                  ((BFalse) (None _)))) (else (None $ MatchInfo)))) (else (None $ MatchInfo))))
+                (match many (bin-cmp t2 tid) (((Maybe $ MatchInfo) c))
+                  ((CEq eq-t eq-r eq-x) (let (many y) $ resolve env x) (Some _ $ MkMatchInfo y d cs $ matchable-rank env y))
+                  (else (None _)))) (else (None $ MatchInfo)))) (else (None $ MatchInfo))))
       (let (many (Maybe $ MatchInfo) best2)
         (match many cand _
           ((None b) best)
@@ -572,7 +572,7 @@
       (match many (type-of env x) _
         ((TNewtype t)
           (match many t _
-            ((TVar c2) (match many (bin-eq c2 c) _ ((BTrue) (Some _ x)) ((BFalse) (find-newtype rest env c)))) (else (find-newtype rest env c)))) (else (find-newtype rest env c))))))
+            ((TVar c2) (match many (bin-cmp c2 c) _ ((CEq eq-t eq-r eq-x) (Some _ x)) (else (find-newtype rest env c)))) (else (find-newtype rest env c)))) (else (find-newtype rest env c))))))
 
 ; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
 (def-fns _ $ many find-coercible : (subterm many (List $ Bin) objects) (many (Env) env) (many (Bin) g) -> (many (Maybe $ Bin) r)
@@ -583,8 +583,8 @@
         (match many (type-of env x) _
           ((TApp h args)
             (match many (list-nth _ args 1) (((Bool) b))
-              ((None b) (BFalse))
-              ((Some b t)
+              ((NthMiss nt nl ni np) (BFalse))
+              ((NthHit nt nl ni t np)
                 (match many t (((Bool) b))
                   ((TVar g2) (and (bin-eq g2 g) $ match many (entry env x) (((Bool) b)) ((MkEInfo n m s mi me) (match many n (((Bool) b)) ((None c) (BTrue)) ((Some c nm) (BFalse)))))) (else (BFalse)))))) (else (BFalse))))
       (match many hit _
@@ -618,7 +618,7 @@
     ((Nil a) (None _))
     ((Cons a s rest)
       (match many s _
-        ((MkCShape m c2 n) (match many (bin-eq c c2) _ ((BTrue) (Some _ i)) ((BFalse) (shape-index rest c $ Succ i))))))))
+        ((MkCShape m c2 n) (match many (bin-cmp c c2) _ ((CEq eq-t eq-r eq-x) (Some _ i)) (else (shape-index rest c $ Succ i))))))))
 
 ; A phantom constructor heads no runtime value (section 20 rule 2), so discriminants number the others only.
 (def-fns _ $ many discriminant : (many (List $ CShape) ss) (many (Bin) c) -> (many (Nat) r)
@@ -636,7 +636,7 @@
       (match many mc _
         ((MkMCtor m t)
           (match many t _
-            ((TVar c2) (match many (bin-eq c c2) _ ((BTrue) m) ((BFalse) (marker rest c)))) (else (marker rest c))))))))
+            ((TVar c2) (match many (bin-cmp c c2) _ ((CEq eq-t eq-r eq-x) m) (else (marker rest c)))) (else (marker rest c))))))))
 
 
 
@@ -707,7 +707,7 @@
     ((TApp h args) args) (else (Nil $ Term))))
 
 (def-fns _ $ many nth-term : (many (List $ Term) ts) (many (Nat) i) -> (many (Term) t)
-  (match many (list-nth _ ts i) _ ((None a) (TErr "missing argument")) ((Some a t) t)))
+  (match many (list-nth _ ts i) _ ((NthMiss nt nl ni np) (TErr "missing argument")) ((NthHit nt nl ni t np) t)))
 
 ; Values for binders, many ones from the list in order, erased ones the token.
 (def-fns _ $ many spread : (subterm many (List $ Mult) mults) (many (List $ Value) vs) -> (many (List $ Value) r)
@@ -960,9 +960,9 @@
 (def-fns _ $ many check-results-count : (many (Env) env) (many (List $ Entry) tele) (many (List $ Res) ress) (many (List $ Term) ids) -> (many (Env) r)
   (let (many n) $ list-length _ tele)
   (let (many m) $ list-length _ ress)
-  (match many (nat-eq n m) _
-    ((BTrue) (check-results tele env ress ids))
-    ((BFalse) (count-error env " values" n m))))
+  (match many (nat-cmp n m) _
+    ((CEq eq-t eq-r eq-x) (check-results tele env ress ids))
+    (else (count-error env " values" n m))))
 
 (def-fns _
   (many is-strict-subterm : (subterm many (Term) b) (many (Term) a) -> (many (Bool) r)
@@ -1003,7 +1003,7 @@
 ; The arguments of a proof of the given kind, with an error where the term is not one.
 (def-fns _ $ many proof-args : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Maybe $ List $ Term) r)
   (match many (canon-env env $ infer p env) _
-    ((TApp h args) (match many h _ ((TVar c) (match many (bin-eq c ctor) _ ((BTrue) (Some _ args)) ((BFalse) (None _)))) (else (None $ List $ Term)))) (else (None $ List $ Term))))
+    ((TApp h args) (match many h _ ((TVar c) (match many (bin-cmp c ctor) _ ((CEq eq-t eq-r eq-x) (Some _ args)) (else (None _)))) (else (None $ List $ Term)))) (else (None $ List $ Term))))
 
 (def-fns _ $ many not-a-proof : (many (Env) env) (many (Bin) ctor) (many (Term) p) -> (many (Env) r)
   (env-error env $ str-cat3 "expected a " (name-of env ctor) $ str-cat3 " proof, got " (show-t env p) $ str-cat " : " $ show-t env $ infer p env))
@@ -1162,7 +1162,8 @@
                   ((Nil c) (values (env-error env $ str-cat "malformed telescope entry " $ show-r r) es))
                   ((Cons c x more) (values env es))))))))
       (let (many env2) (many more) $ parse-entries-checked _ rest env1)
-      (values env2 $ list-append _ here more))))
+      (let (many all) (erased cat) $ list-append _ here more)
+        (values env2 all))))
 
 (def-fns _ $ many check-binder-mults : (erased (List $ Raw) root) (subterm many (List $ SrcEntry root) es) (many (Env) env) -> (many (Env) r)
   (match many es _
@@ -1324,7 +1325,7 @@
 (def-fns _ $ many count-bins : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Nat) n)
   (match many xs _
     ((Nil a) 0)
-    ((Cons a y rest) (match many (bin-eq x y) _ ((BTrue) (Succ $ count-bins rest x)) ((BFalse) (count-bins rest x))))))
+    ((Cons a y rest) (match many (bin-cmp x y) _ ((CEq eq-t eq-r eq-x) (Succ $ count-bins rest x)) (else (count-bins rest x))))))
 
 ; Every constructor of the Matchable appears exactly once (ASSUMPTIONS 21).
 (def-fns _ $ many is-else-branch : (many (Env) env) (many (Raw) braw) -> (many (Bool) r)
@@ -1340,9 +1341,9 @@
       (match many mc _
         ((MkMCtor m t)
           (let (many (Bin) c) $ match many t _ ((TVar x) x) (else (BZ)))
-          (match many (nat-eq (count-bins seen c) 0) _
-            ((BFalse) (covered-of rest env seen sres smult first reachable))
-            ((BTrue)
+          (match many (nat-cmp (count-bins seen c) 0) _
+            (else (covered-of rest env seen sres smult first reachable))
+            ((CEq eq-t eq-r eq-x)
               (let (many (Bool) phantom) $ match many m _ ((Erased) (BTrue)) ((Many) (BFalse)))
               (let (many ctele) (many ret) $ ctor-type env c)
               (let (many (List $ Mult) mults) $ match many phantom _ ((BTrue) (all-erased $ tele-mults ctele)) ((BFalse) (under-list (tele-mults ctele) smult)))
@@ -1479,8 +1480,8 @@
 ; A renaming maps to an already normalized variable, so one lookup resolves it.
 (def-fns _ $ many resolve-sub : (many (IdMap $ Bin) sub) (many (Bin) x) -> (many (Bin) r)
   (match many (idmap-get _ x sub) _
-    ((None a) x)
-    ((Some a y) y)))
+    ((Miss lt lk lm lp) x)
+    ((Hit lt lk lm y lp) y)))
 
 (def-fns _ $ many vars-of : (subterm many (List $ Code) cs) -> (many (Maybe $ List $ Bin) r)
   (match many cs _
@@ -1563,7 +1564,7 @@
         (let (many (Maybe $ List $ Bin) renaming)
           (match many rhs2 _
             ((CVar y) (match many ids (((Maybe $ List $ Bin) r)) ((Nil a) (None _)) ((Cons a x more) (match many more (((Maybe $ List $ Bin) r)) ((Nil b) (Some _ $ Cons _ y $ Nil _)) ((Cons b x2 more2) (None _))))))
-            ((CValues cs) (match many (vars-of cs) (((Maybe $ List $ Bin) r)) ((None a) (None _)) ((Some a ys) (match many (nat-eq (list-length _ ys) $ list-length _ ids) (((Maybe $ List $ Bin) r)) ((BTrue) (Some _ ys)) ((BFalse) (None _)))))) (else (None $ List $ Bin))))
+            ((CValues cs) (match many (vars-of cs) (((Maybe $ List $ Bin) r)) ((None a) (None _)) ((Some a ys) (match many (nat-cmp (list-length _ ys) $ list-length _ ids) (((Maybe $ List $ Bin) r)) ((CEq eq-t eq-r eq-x) (Some _ ys)) (else (None _)))))) (else (None $ List $ Bin))))
         (match many renaming _
           ((Some a ys) (norm rest $ sub-all ids ys sub))
           ((None a)
@@ -1759,8 +1760,8 @@
     ((Nil a) (None _))
     ((Cons a pi rest)
       (match many (list-nth _ (env-subterms env) j) _
-        ((None b) (None _))
-        ((Some b counterpart)
+        ((NthMiss nt nl ni np) (None _))
+        ((NthHit nt nl ni counterpart np)
           (match many (equal-env env (nth-term args pi) $ TVar counterpart) _
             ((BFalse) (Some _ pi))
             ((BTrue) (first-differing rest env args $ Succ j))))))))
@@ -1779,7 +1780,7 @@
 (def-fns _ $ many index-of-nat : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many xs _
     ((Nil a) (None _))
-    ((Cons a y rest) (match many (nat-eq x y) _ ((BTrue) (Some _ i)) ((BFalse) (index-of-nat rest x $ Succ i))))))
+    ((Cons a y rest) (match many (nat-cmp x y) _ ((CEq eq-t eq-r eq-x) (Some _ i)) (else (index-of-nat rest x $ Succ i))))))
 
 ; Earlier subterm arguments must equal their counterparts (section 9's lexicographic discipline).
 (def-fns _ $ many check-earlier : (subterm many (List $ Nat) positions) (many (Env) env) (many (List $ Term) args) (many (Nat) j) (many (Nat) k) -> (many (Env) r)
@@ -1791,8 +1792,8 @@
         ((BTrue)
           (let (many (Env) env2)
             (match many (list-nth _ (env-subterms env) j) _
-              ((None b) (env-error env $ str-cat3 "the enclosing function has no subterm parameter at position " (nat-str j) ""))
-              ((Some b counterpart) (check env "value" (nth-term args pi) $ TVar counterpart))))
+              ((NthMiss nt nl ni np) (env-error env $ str-cat3 "the enclosing function has no subterm parameter at position " (nat-str j) ""))
+              ((NthHit nt nl ni counterpart np) (check env "value" (nth-term args pi) $ TVar counterpart))))
           (check-earlier rest env2 args (Succ j) k))))))
 
 (def-fns _ $ many erased-in-many : (subterm many (List $ Mult) expect) (many (List $ Res) ress) (many (Env) env) -> (many (Env) r)
@@ -1811,9 +1812,9 @@
 ; A call's or application's argument count against its telescope (lib/elab.ml's check_args).
 (def-fns _ $ many check-arity : (many (Env) env) (many (List $ Entry) tele) (many (Nat) m) -> (many (Env) r)
   (let (many n) $ list-length _ tele)
-  (match many (nat-eq n m) _
-    ((BTrue) env)
-    ((BFalse) (count-error env " arguments" n m))))
+  (match many (nat-cmp n m) _
+    ((CEq eq-t eq-r eq-x) env)
+    (else (count-error env " arguments" n m))))
 
 (def-fns _ $ many malformed : (many (Env) env) (many (Sp) sp) -> (many (Env) r) (many (List $ Res) ress) (many (Code) code)
   (values (env-error env $ str-cat3 "malformed " (sp-name sp) " form") (Nil _) $ CError "malformed"))
@@ -1914,9 +1915,9 @@
           (let (many res) $ result-tele result mvars)
           (let (many n) $ list-length _ tele)
           (let (many m) $ list-length _ res)
-          (match many (nat-eq n m) _
-            ((BFalse) (match many strict _ ((BTrue) (count-error env " values" n m)) ((BFalse) env)))
-            ((BTrue)
+          (match many (nat-cmp n m) _
+            (else (match many strict _ ((BTrue) (count-error env " values" n m)) ((BFalse) env)))
+            ((CEq eq-t eq-r eq-x)
               (let (many env2) (many ok) $ solve-tele tele res env strict)
               (match many (or ok strict) _ ((BTrue) env2) ((BFalse) env)))))))))
 
@@ -1992,13 +1993,13 @@
                     ((None d) (values (env-error env6 $ str-cat (name-of env6 c) " is not a run-position constructor") $ Nil _))
                     ((Some d ct)
                       (let (many i) (many vs) $ destruct ct value)
-                      (match many (nat-eq i $ ctor-index ct) (((Env) e) ((List $ Value) vs))
-                        ((BTrue) (values env6 vs))
-                        ((BFalse) (values (env-error env6 $ str-cat3 "comptime-match: expected " (name-of env6 c) $ str-cat ", got " $ rope-str $ show-value value) vs))))))
+                      (match many (nat-cmp i $ ctor-index ct) (((Env) e) ((List $ Value) vs))
+                        ((CEq eq-t eq-r eq-x) (values env6 vs))
+                        (else (values (env-error env6 $ str-cat3 "comptime-match: expected " (name-of env6 c) $ str-cat ", got " $ rope-str $ show-value value) vs))))))
                 (let (many (Env) env8)
-                  (match many (nat-eq (list-length _ fields) $ list-length _ tele) _
-                    ((BTrue) env7)
-                    ((BFalse) (env-error env7 $ str-cat3 (name-of env7 c) " has " $ str-cat (nat-str $ list-length _ tele) " fields"))))
+                  (match many (nat-cmp (list-length _ fields) $ list-length _ tele) _
+                    ((CEq eq-t eq-r eq-x) env7)
+                    (else (env-error env7 $ str-cat3 (name-of env7 c) " has " $ str-cat (nat-str $ list-length _ tele) " fields"))))
                 (let (many states) $ states-of $ spread (tele-mults tele) vs)
                 (let (many env9) (many fids) $ open-tele tele env8 (Some _ $ raw-names fields) (None _) (Some _ states) (Nil _) $ BFalse)
                 (let (many env10) $ trace-many-fields fids env9)
@@ -2253,9 +2254,9 @@
     (let (many n) $ list-length _ expect)
     (let (many m) $ list-length _ ress)
     (let (many ress2) $ metaless-ress ress env2)
-    (match many (nat-eq n m) _
-      ((BFalse) (values (env-back env $ count-error env2 " values" n m) ress2 code))
-      ((BTrue) (values (env-back env $ erased-in-many expect ress2 env2) ress2 code))))
+    (match many (nat-cmp n m) _
+      (else (values (env-back env $ count-error env2 " values" n m) ress2 code))
+      ((CEq eq-t eq-r eq-x) (values (env-back env $ erased-in-many expect ress2 env2) ress2 code))))
   (many elab-one-term : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) -> (many (Env) r) (many (Term) t)
     (match many args _
       ((Nil a) (missing-arg env))
@@ -2275,9 +2276,9 @@
     (let (many (Env) env2) (many (Term) t)
       (match many raw _
         ((RAtom lq n)
-          (match many (str-eq n "_") (((Env) e0) ((Term) t0))
-            ((BTrue) (let (many env2) (many x) $ bind-as envl (BTrue) (BFalse) (None _) (Erased) (SDyn) type-term (None _) coercible-id) (values env2 $ TVar x))
-            ((BFalse) (let (many env2) (many x) $ var envl n) (values env2 $ TVar x))))
+          (match many (str-cmp n "_") (((Env) e0) ((Term) t0))
+            ((CEq eq-t eq-r eq-x) (let (many env2) (many x) $ bind-as envl (BTrue) (BFalse) (None _) (Erased) (SDyn) type-term (None _) coercible-id) (values env2 $ TVar x))
+            (else (let (many env2) (many x) $ var envl n) (values env2 $ TVar x))))
         ((RString lq s) (let (many env2) (many x) $ var-of-raw envl raw "a name") (values env2 $ TVar x))
         ((RList lq items)
           (match many items (((Env) e0) ((Term) t0))
@@ -2549,17 +2550,17 @@
                                 (match many info _
                                   ((MkMatchInfo mid disc mctors rank)
                                     (let (many (Env) env3)
-                                      (match many (nat-eq (list-length _ mctors) 1) _
-                                        ((BTrue) env2)
-                                        ((BFalse) (env-error env2 $ str-cat3 (name-of env2 tid) " has " $ str-cat (nat-str $ list-length _ mctors) " constructors, so it needs an ordinary match"))))
+                                      (match many (nat-cmp (list-length _ mctors) 1) _
+                                        ((CEq eq-t eq-r eq-x) env2)
+                                        (else (env-error env2 $ str-cat3 (name-of env2 tid) " has " $ str-cat (nat-str $ list-length _ mctors) " constructors, so it needs an ordinary match"))))
                                     (let (many env4) (many c) $ ctor-var env3 craw)
                                     (let (many env5) (many mk) $ marker-checked env4 tid mctors c)
                                     (let (many (Env) env6) $ match many mk _ ((Erased) (env-error env5 $ str-cat (name-of env5 c) " is phantom")) ((Many) env5))
                                     (let (many ctele) (many ret) $ ctor-type env6 c)
                                     (let (many (Env) env7)
-                                      (match many (nat-eq (list-length _ fields) $ list-length _ ctele) _
-                                        ((BTrue) env6)
-                                        ((BFalse) (env-error env6 $ str-cat3 (name-of env6 c) " has " $ str-cat (nat-str $ list-length _ ctele) " fields"))))
+                                      (match many (nat-cmp (list-length _ fields) $ list-length _ ctele) _
+                                        ((CEq eq-t eq-r eq-x) env6)
+                                        (else (env-error env6 $ str-cat3 (name-of env6 c) " has " $ str-cat (nat-str $ list-length _ ctele) " fields"))))
                                     (let (many mults) $ under-list (tele-mults ctele) smult)
                                     (let (many ss) $ shapes mctors env7)
                                     (let (many run) $ and (env-run-pos env7) $ and (mult-is-many smult) $ list-is-empty _ $ env-errors env7)
@@ -2655,9 +2656,9 @@
                           ((MkPair s t za xa)
                             (match many pb _
                               ((MkPair s2 t2 zb xb)
-                                (match many (nat-eq za zb) _
-                                  ((BTrue) (values (env-error env2 $ str-cat3 "distinct: " (nat-str za) " is the same literal twice") none bad))
-                                  ((BFalse)
+                                (match many (nat-cmp za zb) _
+                                  ((CEq eq-t eq-r eq-x) (values (env-error env2 $ str-cat3 "distinct: " (nat-str za) " is the same literal twice") none bad))
+                                  (else
                                     (match many (equal-env env2 (TVar xa) $ TVar xb) _
                                       ((BFalse) (values (env-error env2 $ str-cat3 "distinct: " (nat-str za) $ str-cat3 " and " (nat-str zb) " do not canonicalize equally here") none bad))
                                       ((BTrue)
@@ -2884,7 +2885,8 @@
                             ((None c) (env-error env3 $ str-cat name " is not of newtype shape (section 38)"))
                             ((Some c w) (let (many env4) (many nx) $ bind env3 (None _) (Erased) (SDyn) (TNewtype $ TVar w) (None _) coercible-id) env4)))))
                     (let (many env5) (many more) $ define-adts sugar rest hrest env4 trest)
-                    (values env5 $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ VMatchable adt2) more))))))))))
+                    (let (many all) (erased cat) $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ VMatchable adt2) more)
+                    (values env5 all))))))))))
 
   (many elab-ctors : (subterm many (Nat) sugar) (subterm many (List $ Raw) ctors) (many (Env) env) (many (Bin) tid) -> (many (Env) r) (many (List $ Pair (Mult) $ Bin) cs)
     (match many ctors _
@@ -2917,7 +2919,7 @@
                 (let (many (Env) env2b)
                   (match many (type-head env2 ret) _
                     ((None c) (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))
-                    ((Some c t) (match many (bin-eq t tid) (((Env) e0)) ((BTrue) env2) ((BFalse) (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
+                    ((Some c t) (match many (bin-cmp t tid) (((Env) e0)) ((CEq eq-t eq-r eq-x) env2) (else (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
                 (let (many (Env) env2c)
                   (match many (and (not $ mult-is-many mult) $ not $ nat-is-zero $ many-count tele) _
                     ((BTrue) (env-warn env2b $ str-cat3 "warning: phantom constructor " name " has a many field"))
@@ -3068,15 +3070,15 @@
                                         (match many tele _
                                           ((None g) env3b)
                                           ((Some g et)
-                                            (match many (nat-eq (list-length _ et) $ list-length _ t) _
-                                              ((BFalse) env3b)
-                                              ((BTrue) (let (many env3c) (many ok) $ solve-tele et t env3b $ BTrue) env3c)))))
+                                            (match many (nat-cmp (list-length _ et) $ list-length _ t) _
+                                              (else env3b)
+                                              ((CEq eq-t eq-r eq-x) (let (many env3c) (many ok) $ solve-tele et t env3b $ BTrue) env3c)))))
                                       (let (many env3d) $ settle-tele t env3c)
                                       (values env3d $ metaless-tele t env3d)) (else (values (env-error env2c "malformed match annotation") $ Nil $ Entry))))))
                             (let (many (Env) env3b)
-                              (match many (nat-eq (list-length _ ann-tele) $ list-length _ expect) _
-                                ((BTrue) env3)
-                                ((BFalse) (env-error env3 $ str-cat3 "match annotation has " (nat-str $ list-length _ ann-tele) $ str-cat " entries, position needs " $ nat-str $ list-length _ expect))))
+                              (match many (nat-cmp (list-length _ ann-tele) $ list-length _ expect) _
+                                ((CEq eq-t eq-r eq-x) env3)
+                                (else (env-error env3 $ str-cat3 "match annotation has " (nat-str $ list-length _ ann-tele) $ str-cat " entries, position needs " $ nat-str $ list-length _ expect))))
                             (let (many env5) (many real) (many seen) $ elab-branches sugar branches env3b tid sres smult mctors ann-tele expect (Nil _) $ Nil _)
                             (let (many env6) $ check-coverage mctors env5 seen)
                             (let (many env6b) (many first) (many reachable) $ covered-of mctors env6 seen sres smult (None _) $ BFalse)
@@ -3300,8 +3302,8 @@
                   ((Some b kk)
                     (let (many env2) $ check-earlier positions env1 args 0 kk)
                     (match many (list-nth _ (env-subterms env2) kk) _
-                      ((None c) (env-error env2 $ str-cat3 "the enclosing function has no subterm parameter at position " (nat-str kk) ""))
-                      ((Some c counterpart)
+                      ((NthMiss nt nl ni np) (env-error env2 $ str-cat3 "the enclosing function has no subterm parameter at position " (nat-str kk) ""))
+                      ((NthHit nt nl ni counterpart np)
                         (let (many arg) $ nth-term args i)
                         (let (many (Env) env3) (many (Term) pterm)
                           (match many g _

@@ -34,9 +34,9 @@
 
 (def-fns _ $ many word-tok : (many (Nat) line) (many (String) rev) -> (many (Tok) t)
   (let (many w) $ str-rev-onto rev $ SNil)
-  (match many (str-eq w "$") _
-    ((BTrue) (TDollar line))
-    ((BFalse) (TWord line w))))
+  (match many (str-cmp w "$") _
+    ((CEq eq-t eq-r eq-x) (TDollar line))
+    (else (TWord line w))))
 
 (def-fns _ $ many next-line : (many (Nat) line) (many (Char) c) -> (many (Nat) r)
   (match many (char-is c 10) _ ((BTrue) (Succ line)) ((BFalse) line)))
@@ -47,12 +47,12 @@
 
 (def-fns _ $ many unescape : (many (Char) e) -> (many (Char) c)
   (let (many n) $ char-code e)
-  (match many (nat-eq n 110) _
-    ((BTrue) #\newline)
-    ((BFalse)
-      (match many (nat-eq n 116) _
-        ((BTrue) #\tab)
-        ((BFalse) e)))))
+  (match many (nat-cmp n 110) _
+    ((CEq eq-t eq-r eq-x) #\newline)
+    (else
+      (match many (nat-cmp n 116) _
+        ((CEq eq-t eq-r eq-x) #\tab)
+        (else e)))))
 
 ; Tokens accumulate reversed in [acc]; an atom's characters accumulate reversed in [word]; [line] counts
 ; the newlines passed, and a string literal's token carries the line of its closing quote as the
@@ -66,18 +66,18 @@
         (match many (nat-lt n 33) _
           ((BTrue) (tokenize rest (next-line line c) acc))
           ((BFalse)
-            (match many (nat-eq n 59) _
-              ((BTrue) (skip-comment rest line acc))
-              ((BFalse)
-                (match many (nat-eq n 40) _
-                  ((BTrue) (tokenize rest line $ Cons _ (TOpen line) acc))
-                  ((BFalse)
-                    (match many (nat-eq n 41) _
-                      ((BTrue) (tokenize rest line $ Cons _ (TClose line) acc))
-                      ((BFalse)
-                        (match many (nat-eq n 34) _
-                          ((BTrue) (string-lit rest line (SNil) acc))
-                          ((BFalse) (word rest line (SCons c $ SNil) acc))))))))))))))
+            (match many (nat-cmp n 59) _
+              ((CEq eq-t eq-r eq-x) (skip-comment rest line acc))
+              (else
+                (match many (nat-cmp n 40) _
+                  ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TOpen line) acc))
+                  (else
+                    (match many (nat-cmp n 41) _
+                      ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TClose line) acc))
+                      (else
+                        (match many (nat-cmp n 34) _
+                          ((CEq eq-t eq-r eq-x) (string-lit rest line (SNil) acc))
+                          (else (word rest line (SCons c $ SNil) acc))))))))))))))
   (many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ acc))
@@ -93,33 +93,33 @@
           ((BTrue)
             (let (many acc1) $ Cons _ (word-tok line rev) acc)
             (let (many n) $ char-code c)
-            (match many (nat-eq n 59) _
-              ((BTrue) (skip-comment rest line acc1))
-              ((BFalse)
-                (match many (nat-eq n 40) _
-                  ((BTrue) (tokenize rest line $ Cons _ (TOpen line) acc1))
-                  ((BFalse)
-                    (match many (nat-eq n 41) _
-                      ((BTrue) (tokenize rest line $ Cons _ (TClose line) acc1))
-                      ((BFalse) (tokenize rest (next-line line c) acc1))))))))
+            (match many (nat-cmp n 59) _
+              ((CEq eq-t eq-r eq-x) (skip-comment rest line acc1))
+              (else
+                (match many (nat-cmp n 40) _
+                  ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TOpen line) acc1))
+                  (else
+                    (match many (nat-cmp n 41) _
+                      ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TClose line) acc1))
+                      (else (tokenize rest (next-line line c) acc1))))))))
           ((BFalse) (word rest line (SCons c rev) acc))))))
   (many string-lit : (subterm many (String) s) (many (Nat) line) (many (String) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ $ Cons _ (TError line "unterminated string literal") acc))
       ((SCons c rest)
         (let (many n) $ char-code c)
-        (match many (nat-eq n 34) _
-          ((BTrue) (tokenize rest line $ Cons _ (TStrLit line $ str-rev-onto rev $ SNil) acc))
-          ((BFalse)
-            (match many (nat-eq n 92) _
-              ((BTrue)
+        (match many (nat-cmp n 34) _
+          ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TStrLit line $ str-rev-onto rev $ SNil) acc))
+          (else
+            (match many (nat-cmp n 92) _
+              ((CEq eq-t eq-r eq-x)
                 (match many rest _
                   ((SNil) (list-rev _ $ Cons _ (TError line "unterminated string literal") acc))
                   ((SCons e rest2)
                     (match many (escape-ok e) _
                       ((BTrue) (string-lit rest2 line (SCons (unescape e) rev) acc))
                       ((BFalse) (list-rev _ $ Cons _ (TError line $ str-cat "unknown escape \\" $ SCons e $ SNil) acc))))))
-              ((BFalse) (string-lit rest (next-line line c) (SCons c rev) acc)))))))))
+              (else (string-lit rest (next-line line c) (SCons c rev) acc)))))))))
 
 ; A frame is an open form: the line it opened on, whether $ opened it, and its items so far, reversed.
 (def-adts $ Frame : -> Type

@@ -124,8 +124,8 @@
   (match many f _
     ((CVar x)
       (match many (idmap-get _ x $ cx-top cx) _
-        ((None a) (None _))
-        ((Some a v)
+        ((Miss lt lk lm lp) (None _))
+        ((Hit lt lk lm v lp)
           (match many v _
             ((VCtorFn c) (Some _ c)) (else (None $ Ctor))))))
     ((CConst v)
@@ -159,21 +159,19 @@
           ((BTrue) (values st $ RStr $ top-name (cx-env cx) x))
           ((BFalse)
             (match many (idmap-get _ x $ st-names st) _
-              ((Some a name) (values st $ RStr name))
-              ((None a)
+              ((Hit lt lk lm name lp) (values st $ RStr name))
+              ((Miss lt lk lm lp)
                 (match many cl _
                   ((MkClosure fn group cenv)
-                    (match many (idmap-get-sub _ x cenv) _
-                      ((None b) (values st $ RStr $ top-name (cx-env cx) x))
-                      ((Some b hit)
-                        (match many hit _
-                          ((MkMapHit c d v p)
-                            (let (many st2) (many n) $ st-fresh st)
-                            (let (many name) $ str-cat "c" $ str-cat (bin-str n) $ str-cat "_" $ top-name (cx-env cx) x)
-                            (let (erased q) $ subterm-trans p $ prove-subterm cenv cl)
-                            (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
-                            (let (many st4) $ st-push-def st3 $ rcat4 (RStr "let ") (RStr name) (RStr " = ") $ rcat vr $ RStr "\n")
-                            (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))))))))))))
+                    (match many (idmap-get _ x cenv) _
+                      ((Miss lt2 lk2 lm2 lp2) (values st $ RStr $ top-name (cx-env cx) x))
+                      ((Hit lt2 lk2 lm2 v mp)
+                        (let (many st2) (many n) $ st-fresh st)
+                        (let (many name) $ str-cat "c" $ str-cat (bin-str n) $ str-cat "_" $ top-name (cx-env cx) x)
+                        (let (erased q) $ subterm-trans (mapsto-subterm _ _ _ _ mp) $ prove-subterm cenv cl)
+                        (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
+                        (let (many st4) $ st-push-def st3 $ rcat4 (RStr "let ") (RStr name) (RStr " = ") $ rcat vr $ RStr "\n")
+                        (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))))))))))
       ((CConst v)
         (let (erased q) $ subterm-trans (prove-subterm v code) w)
         (emit-value (subterm q) v cx st))
@@ -264,7 +262,7 @@
                 (let (many st2) (many named) $ name-group group $ st-with-names st $ MEmpty _)
                 (let (many st3) (many text) $ emit-group cl group (prove-subterm group cl) cx st2 $ BTrue)
                 (let (many st4) $ st-push-def st3 $ rcat3 (RStr "let rec ") text $ RStr "\n")
-                (let (many (String) mine) $ match many (idmap-get _ (func-id fn) $ st-names st4) _ ((None a) "(failwith \"closure missing\")") ((Some a s) s))
+                (let (many (String) mine) $ match many (idmap-get _ (func-id fn) $ st-names st4) _ ((Miss lt lk lm lp) "(failwith \"closure missing\")") ((Hit lt lk lm s lp) s))
                 (values (st-with-names st4 saved) $ RStr mine))))))
       ((VToken) (values st $ RStr "U"))
       ((VError m) (values st $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
@@ -288,7 +286,7 @@
             (let (many (String) name)
               (match many hoisted _
                 ((BFalse) (top-name (cx-env cx) id))
-                ((BTrue) (match many (idmap-get _ id $ st-names st) (((String) s)) ((None b) (top-name (cx-env cx) id)) ((Some b s) s)))))
+                ((BTrue) (match many (idmap-get _ id $ st-names st) (((String) s)) ((Miss lt lk lm lp) (top-name (cx-env cx) id)) ((Hit lt lk lm s lp) s)))))
             (let (many st2) (many body) $ emit-fn cl fn (subterm-trans (prove-subterm fn fns) w) cx st)
             (let (many st3) (many more) $ emit-group cl rest (subterm-trans (prove-subterm rest fns) w) cx st2 hoisted)
             (let (many (Rope) sep) $ match many rest _ ((Nil b) (REmpty)) ((Cons b q rest2) (RStr "\nand ")))
@@ -353,7 +351,7 @@
     ((TApp h args)
       (match many (type-head env ty) _
         ((None a) (FPlain))
-        ((Some a t) (match many (str-eq (name-of env t) "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))))) (else (FPlain))))
+        ((Some a t) (match many (str-cmp (name-of env t) "IO") _ ((CEq eq-t eq-r eq-x) (FIo)) (else (FPlain)))))) (else (FPlain))))
 
 ; The chunks of a rope as OCaml string literals, for printing a value computed at compile time.
 (def-fns _ $ many rope-literals : (subterm many (Rope) r) (many (Rope) acc) -> (many (Rope) out)
