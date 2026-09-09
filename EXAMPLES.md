@@ -126,7 +126,10 @@ that the test does not make is a mistake in this file.
   `let` binders solve the right-hand side. `tests/wild_open.sl` has a
   constructor's `_` solved by the argument after it in the enclosing call,
   and `tests/wild_partial_ann.sl` a match annotation and a let binder type
-  with `_`s inside them. The refusals: `tests/wild_nested_bad.sl`
+  with `_`s inside them, `tests/wild_bare_hole.sl` a bare `_` entry,
+  `tests/wild_later_arg.sl` a `_` at a `many` parameter of an erased call
+  solved by the proof argument after it, and `tests/wild_special_bad.sl`
+  a special form refusing an open `_`. The refusals: `tests/wild_nested_bad.sl`
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.
