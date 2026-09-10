@@ -226,6 +226,12 @@ recorded so it can be revisited.
   that every non-erased entry in scope has one is not yet a proof, so
   a miss there is an internal error at elaboration, no longer a value
   at runtime.
+- **Code is built at the expectation.** Each case of the expression
+  elaborator returns `Code ctx expect` (ASSUMPTIONS 129): a one-value
+  case builds at its position and `single` identifies that shape with
+  the expectation under `pos-of`'s `PosOf` proof, a call is projected
+  onto the expectation whenever its returns lockstep with it, and the
+  count of an expression's values is still reported once at its end.
 - **Types travel with their terms.** `elab-term` returns the type it
   computed beside the term, `check-args` the types of the arguments,
   and an `is` entry keeps the type computed when its clause was

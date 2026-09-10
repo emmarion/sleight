@@ -2220,3 +2220,28 @@ had noted that an `SCons` copies its tail, so building a string by
      not yet consumed, and no arity check was added at the mark, the
      reference's FFI checking arity at the call only. `self/bootstrap.sh`
      is the evidence.
+
+## Code built at the expectation
+
+129. **Every case of the expression elaborator builds its code at the
+     expectation.** At the owner's direction, the fourth rung of the
+     same ladder. `elab-expr` returns `Code ctx expect` from each
+     case rather than code at whatever shape the case had, so `AnyCode`,
+     `fit-code` and the `mults-eq` decision at its tail are gone. A
+     case producing one value, a variable, a constructor application, a
+     `coerce`, a `matchable-of`, hands its `Code ctx (Cons pos Nil)` to
+     `single`, which reads the expectation's shape and, under a proof
+     `PosOf expect pos` that `pos-of` now returns beside the position,
+     has the two shapes identical rather than compared; an expectation
+     of another count gets a placeholder, its count being reported at
+     the expression's end as before. A special form producing one
+     value elaborates its argument at the position rather than at the
+     expectation's first entry, which differ only where the count error
+     has already been reported. A call whose returns lockstep with the
+     expectation is always projected onto it, `needs-projection` being
+     gone: the normalizer already turns a projection that repackages
+     the call's returns in order back into the call, so a body's code
+     is as before, and only run-position code carries the let. A
+     `distinct` returns no code, its value being erased. The session's
+     reading is that no message changes; `self/bootstrap.sh` is the
+     evidence.

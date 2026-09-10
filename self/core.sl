@@ -103,10 +103,25 @@
   (match many pos _ ((Erased) (Erased)) ((Many) m)))
 
 ; The position of a list of expected multiplicities: erased when every entry is.
-(def-fns _ $ many pos-of : (subterm many (List $ Mult) ms) -> (many (Mult) r)
+(def-adts $ PosOf : ((List $ Mult) ms) ((Mult) pos) -> Type
+  enum
+  (many PoNil : -> (PosOf (Nil (Mult)) (Erased)))
+  (many PoMany : (erased (List $ Mult) rest) -> (PosOf (Cons (Mult) (Many) rest) (Many)))
+  (many PoErased : (erased (List $ Mult) rest) (erased (Mult) p) (erased (PosOf rest p) q) -> (PosOf (Cons (Mult) (Erased) rest) p)))
+
+(def-fns _ $ many pos-of : (subterm many (List $ Mult) ms) -> (many (Mult) r) (erased (PosOf ms r) pf)
   (match many ms _
-    ((Nil a) (Erased))
-    ((Cons a m rest) (match many m _ ((Many) (Many)) ((Erased) (pos-of rest))))))
+    ((Nil a) (values (Erased) (PoNil)))
+    ((Cons a m rest)
+      (match many m _
+        ((Many) (values (Many) (PoMany _)))
+        ((Erased)
+          (let (many p) (erased q) $ pos-of rest)
+          (values p (PoErased _ _ q)))))))
+
+(def-fns _ $ many pos-mult : (many (List $ Mult) ms) -> (many (Mult) r)
+  (let (many r) (erased pf) (delegate (pos-of ms)))
+  r)
 
 (def-fns _ $ many many-count : (subterm many (List $ Entry) es) -> (many (Nat) n)
   (match many es _
