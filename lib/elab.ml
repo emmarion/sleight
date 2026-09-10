@@ -199,6 +199,11 @@ let marks env allowed items =
 let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
 
 let anon tele = List.map (fun _ -> None) tele
+let count_check l expect got = if List.length expect <> List.length got then error l "expected %d values, got %d" (List.length expect) (List.length got)
+let ctor_result head mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (head, List.rev mvars)) } ]
+let field_names env l c tele fields =
+  if List.length fields <> List.length tele then error l "%s has %d fields" (name_of env c) (List.length tele);
+  List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields
 
 (* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
 let open_tele env ?names ?mults ?states ?(ids = []) ?meta tele =
@@ -215,6 +220,10 @@ let open_tele env ?names ?mults ?states ?(ids = []) ?meta tele =
 
 let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
+let const_fields env l c mults value =
+  let ct = ctor_of env l c in
+  let i, vs = V.destruct ct value in
+  (i = ct.V.index, List.map (fun v -> Const v) (spread mults vs))
 
 let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (const env value) ty
 
@@ -344,7 +353,7 @@ and check_args env loc ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundar
    failure leaves the environment as it was. *)
 and solve_tele ~strict env loc expect result =
   let attempt () =
-    if List.length expect <> List.length result then error loc "expected %d values, got %d" (List.length expect) (List.length result);
+    count_check loc expect result;
     List.fold_left2
       (fun env e r ->
         let env = match (e.sg, r.sg) with Is a, Is b -> solve "value" env loc b a | _ -> env in
@@ -357,9 +366,8 @@ and solve_tele ~strict env loc expect result =
 (* A constructor application is a pure term (DESIGN.md section 5), so it is no boundary: its holes may stay
    open past its paren for the arguments after it, or the position, to solve. *)
 and elab_term_args env loc ?expect tele ret args =
-  let result mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (ret, List.rev mvars)) } ] in
   let env, acc, _ =
-    check_args env loc ?expect ~result ~boundary:false tele args (fun env _ a expect ->
+    check_args env loc ?expect ~result:(ctor_result ret) ~boundary:false tele args (fun env _ a expect ->
         let env, t = elab_term ?expect env a in
         (env, term_res env (Reader.loc a) t, V.CErased))
   in
@@ -367,7 +375,7 @@ and elab_term_args env loc ?expect tele ret args =
 
 (* [ids] as in [open_tele]. *)
 let check_results env loc ?(ids = []) tele ress =
-  if List.length tele <> List.length ress then error loc "expected %d values, got %d" (List.length tele) (List.length ress);
+  count_check loc tele ress;
   let env = List.fold_left2 (fun (env, acc) e r -> (solve_sg env loc (map_sg (instantiate acc) e.sg) r, r.term :: acc)) (env, ids) tele ress |> fst in
   List.iter (settle_res env loc) ress
 
@@ -389,7 +397,7 @@ let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.co
   let l = loc raw in
   let env, ress, code = elab_form cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
-  if List.length ress <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length ress);
+  count_check l expect ress;
   List.iter2 (fun m r -> if m = Many && r.erasure = Erased then error l "erased value %s : %s used in a non-erased position" (show env r.term) (show env r.ty)) expect ress;
   (env, ress, code)
 
@@ -426,8 +434,7 @@ and elab_form cc expect_tele env expect raw =
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased } ], V.CErased)
           | ValCtor (tele, ret) ->
               if pos = Many && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (show env h.term);
-              let result mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (h.term, List.rev mvars)) } ] in
-              let env, acc, codes = check_args env l ?expect:expect_tele ~result ~pos ~boundary:false tele args arg in
+              let env, acc, codes = check_args env l ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args arg in
               let code = if pos = Erased then V.CErased else V.CApp (hcode, codes, V.Ctor) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos } ], code)
           | Fn (lv, params, rets) -> elab_call cc env ?tele:expect_tele expect l h hcode lv params rets args arg
@@ -524,7 +531,7 @@ and elab_special tele env expect l sp args =
       let env, t = elab_type_form env l sp args in
       erased (env, term_res env l t)
   | Sp.Values, _ ->
-      if List.length args <> List.length expect then error l "expected %d values, got %d" (List.length expect) (List.length args);
+      count_check l expect args;
       let entry i = Option.map (fun t -> List.nth t i) tele in
       let env, ress, codes =
         List.fold_left2
@@ -641,15 +648,19 @@ and elab_special tele env expect l sp args =
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
+and scrutinee env l smult scrut =
+  let env, sres, scode = elab_expr1 env smult scrut in
+  settle_res env l sres;
+  let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
+  let mid, disc, ctors = find_matchable env l tid in
+  (env, sres, scode, tid, mid, disc, ctors)
+
 and elab_match tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
       let smult = under pos (mult_or env l m) in
-      let env, sres, scode = elab_expr1 env smult scrut in
-      settle_res env l sres;
-      let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
-      let mid, disc, ctors = find_matchable env l tid in
+      let env, sres, scode, tid, mid, disc, ctors = scrutinee env l smult scrut in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
       if pos = Many && smult = Many && (entry env mid).mult = Erased then
@@ -673,6 +684,13 @@ and elab_match tele env expect l args =
         | _ -> error l "malformed match annotation"
       in
       if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
+      let enter bl c names =
+        let phantom = marker env bl tid ctors c = Erased in
+        let tele, ret = ctor_type env bl c in
+        let mults = List.map (fun e -> if phantom then Erased else under smult e.mult) tele in
+        let envb, fids = open_tele { env with run_pos = false } ~names:(names tele) ~mults tele in
+        (phantom, fids, envb, try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None)
+      in
       let branch raw =
         let kind, pat, body =
           match raw with
@@ -682,21 +700,10 @@ and elab_match tele env expect l args =
           | _ -> error (loc raw) "malformed branch"
         in
         let bl = loc pat in
-        let c, field_names =
-          match pat with
-          | Atom _ -> (pat, [])
-          | List (_, c :: fs) -> (c, List.map (fun f -> atom_or (loc f) f "a field name") fs)
-          | _ -> error bl "malformed pattern"
-        in
+        let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern" in
         let c = ctor_var env bl c in
-        let phantom = marker env bl tid ctors c = Erased in
-        let tele, ret = ctor_type env bl c in
-        if kind <> `Auto && List.length field_names <> List.length tele then error bl "%s has %d fields" (name_of env c) (List.length tele);
-        let names = if kind = `Auto then anon tele else List.map name_or_anon field_names in
+        let phantom, fids, envb, forced = enter bl c (fun tele -> if kind = `Auto then anon tele else field_names env bl c tele fs) in
         let unreachable = phantom && smult = Many in
-        let mults = List.map (fun e -> if phantom then Erased else under smult e.mult) tele in
-        let envb, fids = open_tele { env with run_pos = false } ~names ~mults tele in
-        let forced = try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None in
         let result =
           match (kind, forced) with
           | `Auto, None -> `Absurd
@@ -720,16 +727,12 @@ and elab_match tele env expect l args =
         ctors;
       let covered =
         List.filter_map
-          (fun (m, c) ->
+          (fun (_, c) ->
             let c = match c with Var c -> c | _ -> assert false in
             if List.exists (fun (c', _, _, _) -> c' = c) branches then None
             else
-              let tele, ret = ctor_type env l c in
-              let mults = List.map (fun e -> if m = Erased then Erased else under smult e.mult) tele in
-              let envb, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
-              match at l (fun () -> refine envb sres c fids ret) with
-              | _ -> Some (c, m = Erased && smult = Many)
-              | exception Contradiction _ -> None)
+              let phantom, _, _, forced = enter l c anon in
+              if Option.is_none forced then None else Some (c, phantom && smult = Many))
           ctors
       in
       let reachable = List.filter_map (fun (c, unreachable) -> if unreachable then None else Some c) covered in
@@ -910,26 +913,20 @@ and elab_let_match env l args =
   match args with
   | [ m; scrut; List (pl, c :: fields) ] ->
       let smult = mult_or env l m in
-      let env, sres, scode = elab_expr1 env smult scrut in
-      settle_res env l sres;
-      let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (show env sres.term) (show env sres.ty) in
-      let mid, disc, ctors = find_matchable env l tid in
+      let env, sres, scode, tid, mid, disc, ctors = scrutinee env l smult scrut in
       if List.length ctors <> 1 then
         error l "%s has %d constructors, so it needs an ordinary match" (name_of env tid) (List.length ctors);
       let c = ctor_var env pl c in
       if marker env pl tid ctors c = Erased then error pl "%s is phantom" (name_of env c);
       let tele, ret = ctor_type env pl c in
-      if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
-      let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
+      let names = field_names env pl c tele fields in
       let mults = List.map (fun e -> under smult e.mult) tele in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult = Many in
       let states =
         if not run then None
         else
-          let ct = ctor_of env pl c in
-          let _, vs = V.destruct ct (List.hd (run_code env scode)) in
-          Some (List.map (fun v -> Const v) (spread mults vs))
+          Some (snd (const_fields env pl c mults (List.hd (run_code env scode))))
       in
       let env, fids = open_tele env ~names ~mults ?states tele in
       let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" msg) in
@@ -953,15 +950,9 @@ and elab_comptime_match env l args =
       let _, disc, ctors = find_matchable env l tid in
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
       if marker env pl tid ctors c = Erased then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c);
-      let many_values =
-        let ct = ctor_of env pl c in
-        let i, vs = V.destruct ct value in
-        if i <> ct.index then error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value);
-        vs
-      in
-      if List.length fields <> List.length tele then error pl "%s has %d fields" (name_of env c) (List.length tele);
-      let names = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields in
-      let states = List.map (fun v -> Const v) (spread (List.map (fun e -> e.mult) tele) many_values) in
+      let matched, states = const_fields env pl c (List.map (fun e -> e.mult) tele) value in
+      if not matched then error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value);
+      let names = field_names env pl c tele fields in
       let env, fids = open_tele env ~names ~states tele in
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg) in
       (env, Fun.id)

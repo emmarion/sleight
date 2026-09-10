@@ -55,17 +55,14 @@ let parse src =
   let rec read_items acc =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
-    | Some (l, LParen) ->
+    | Some (l, ((LParen | Dollar) as opener)) ->
         advance ();
         let items = read_items [] in
-        (match peek () with
-         | Some (_, RParen) -> advance ()
-         | _ -> raise (Syntax (l, "missing )")));
-        read_items (List (l, items) :: acc)
-    | Some (l, Dollar) ->
-        advance ();
-        let items = read_items [] in
-        if peek () = None then raise (Syntax (l, "missing ) after $"));
+        (match (opener, peek ()) with
+         | LParen, Some (_, RParen) -> advance ()
+         | LParen, _ -> raise (Syntax (l, "missing )"))
+         | _, None -> raise (Syntax (l, "missing ) after $"))
+         | _ -> ());
         read_items (List (l, items) :: acc)
     | Some (l, Word w) -> advance (); read_items (Atom (l, w) :: acc)
   in

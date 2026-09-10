@@ -45,14 +45,16 @@ let types : (string * (adt -> ext)) list =
 
 let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
-let unary name f = function [ a ] -> [ int name (f (z a)) ] | _ -> raise (Eval.Runtime "extern arity")
-let binary name f = function [ a; b ] -> [ int name (f (z a) (z b)) ] | _ -> raise (Eval.Runtime "extern arity")
+let arity = Eval.Runtime "extern arity"
+let unary f = function [ a ] -> [ f a ] | _ -> raise arity
+let binary f = function [ a; b ] -> [ f a b ] | _ -> raise arity
+let nats name f = binary (fun a b -> int name (f (z a) (z b)))
 
 let fns : (string * (value list -> value list)) list =
-  [ ("add", binary "Nat" Ffi_core.add);
-    ("nat-cmp", function [ a; b ] -> [ Ffi_core.nat_cmp ~con:(plain "Cmp") (z a) (z b) ] | _ -> raise (Eval.Runtime "extern arity"));
-    ("nat-mod", binary "Nat" Ffi_core.nat_mod);
-    ("bin-to-nat", unary "Nat" Ffi_core.bin_to_nat);
-    ("trim", function [ s ] -> [ text (Ffi_core.trim (slice s)) ] | _ -> raise (Eval.Runtime "extern arity"));
-    ("append", function [ a; b ] -> [ text (Ffi_core.append (slice a) (slice b)) ] | _ -> raise (Eval.Runtime "extern arity"));
-    ("flatten", function [ r ] -> [ Ffi_core.flatten ~des ~slice ~z ~str:text r ] | _ -> raise (Eval.Runtime "extern arity")) ]
+  [ ("add", nats "Nat" Ffi_core.add);
+    ("nat-cmp", binary (fun a b -> Ffi_core.nat_cmp ~con:(plain "Cmp") (z a) (z b)));
+    ("nat-mod", nats "Nat" Ffi_core.nat_mod);
+    ("bin-to-nat", unary (fun a -> int "Nat" (Ffi_core.bin_to_nat (z a))));
+    ("trim", unary (fun s -> text (Ffi_core.trim (slice s))));
+    ("append", binary (fun a b -> text (Ffi_core.append (slice a) (slice b))));
+    ("flatten", unary (Ffi_core.flatten ~des ~slice ~z ~str:text)) ]

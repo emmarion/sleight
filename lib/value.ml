@@ -43,21 +43,20 @@ and shape = Known of adt | Held of code * bool
 
 let map_code f = function
   | CValues cs -> CValues (List.map f cs)
-  | CApp (g, args, cc) -> CApp (f g, List.map f args, cc)
-  | CLet (ids, rhs, rest) -> CLet (ids, f rhs, f rest)
+  | CApp (g, args, cc) -> let g = f g in CApp (g, List.map f args, cc)
+  | CLet (ids, rhs, rest) -> let rhs = f rhs in CLet (ids, rhs, f rest)
   | CLetRec (fns, rest) -> CLetRec (fns, f rest)
   | CMatch m ->
       let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | Known _ as s -> s in
-      CMatch { scrut = f m.scrut; shape; branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches; default = Option.map f m.default }
+      let scrut = f m.scrut in
+      let branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches in
+      CMatch { scrut; shape; branches; default = Option.map f m.default }
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
-let subcodes = function
-  | CValues cs -> cs
-  | CApp (g, args, _) -> g :: args
-  | CLet (_, rhs, rest) -> [ rhs; rest ]
-  | CLetRec (_, rest) -> [ rest ]
-  | CMatch m -> (match m.shape with Held (c, _) -> [ c ] | _ -> []) @ (m.scrut :: List.map (fun (_, _, b) -> b) m.branches) @ Option.to_list m.default
-  | CVar _ | CConst _ | CErased | CAbsurd -> []
+let subcodes c =
+  let seen = ref [] in
+  ignore (map_code (fun c -> seen := c :: !seen; c) c);
+  List.rev !seen
 
 (* Extern implementations run unless stripped (section 41's invariant). *)
 let use_externs = ref true

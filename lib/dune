@@ -23,3 +23,14 @@
     (echo "let source = {|")
     (cat ffi_core.ml)
     (echo "|}")))))
+
+(rule
+ (targets driver_core_source.ml)
+ (deps driver_core.ml)
+ (action
+  (with-stdout-to
+   driver_core_source.ml
+   (progn
+    (echo "let source = {|")
+    (cat driver_core.ml)
+    (echo "|}")))))

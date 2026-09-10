@@ -89,7 +89,7 @@ erased. Nothing is optimized.
 - `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 41)
 - `lib/literal.ml` — numeral and character literals and what they expand to
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
-- `lib/program.ml` — running a `String -> String` or `IO` final value against the world
+- `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
 - `bin/main.ml` — command line driver
 - `test/runtest.ml` — the test runner, interpreting and extracting each test

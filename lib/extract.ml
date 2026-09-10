@@ -43,12 +43,12 @@ type cx = {
 }
 
 let adt_index cx adt = let rec go i = function a :: rest -> if a == adt then i else go (i + 1) rest | [] -> assert false in go 0 cx.adts
-let type_name cx adt = Printf.sprintf "t%d_%s" (adt_index cx adt) (sanitize adt.V.tname)
-let mat cx adt = Printf.sprintf "m%d_%s" (adt_index cx adt) (sanitize adt.V.tname)
-let con cx adt = Printf.sprintf "con_%d" (adt_index cx adt)
-let des cx adt = Printf.sprintf "des_%d" (adt_index cx adt)
+let numbered cx p adt = p ^ string_of_int (adt_index cx adt)
+let named cx p adt = numbered cx p adt ^ "_" ^ sanitize adt.V.tname
+let type_name cx = named cx "t" and mat cx = named cx "m" and con cx = numbered cx "con_" and des cx = numbered cx "des_"
 
-let fields c = List.init c.V.arity (fun i -> Printf.sprintf "f%d" i)
+let field_names n = List.init n (fun i -> Printf.sprintf "f%d" i)
+let fields c = field_names c.V.arity
 let pair c vs = Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs)
 let case c vs body = Printf.sprintf "| %s -> %s" (pair c vs) body
 let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
@@ -258,7 +258,7 @@ let types cx =
       match shape a with
       | Ext | Tagged -> Printf.sprintf "(fun _ v -> %s v)" (des cx a)
       | Untagged ->
-          let arm n = let vs = List.init n (fun i -> Printf.sprintf "f%d" i) in
+          let arm n = let vs = field_names n in
             Printf.sprintf "| %d -> %s" n (untuple vs "v" (Printf.sprintf "(0, [%s])" (concat "; " vs))) in
           let arities = List.fold_left (fun n c -> max n c.V.arity) 0 a.V.ctors + 1 in
           Printf.sprintf "(fun arity v -> match arity with %s | _ -> assert false)" (concat " " (List.init arities arm))
@@ -312,51 +312,18 @@ let prelude_ctor cx name = var (Program.ctor cx.env name).cid
 
 let driver cx =
   let io = (Program.ctor cx.env "Exit").adt in
-  let of_string =
-    if !V.use_externs then "Obj.repr ((s, 0, String.length s) : Ffi_core.slice)"
-    else
-      "let rec nat n = if n = 0 then build ctor_Zero [] else build ctor_Succ [ nat (n - 1) ] in\n\
-      \  let char b = build ctor_MkChar [ build ctor_MkU8 [ nat b ] ] in\n\
-      \  String.fold_right (fun ch acc -> build ctor_SCons [ char (Char.code ch); acc ]) s (build ctor_SNil [])"
-  in
-  concat "\n"
-    (List.map (fun n -> Printf.sprintf "let ctor_%s = %s" n (prelude_ctor cx n)) [ "Zero"; "Succ"; "MkU8"; "MkChar"; "SNil"; "SCons"; "Some"; "None"; "Ok"; "Fail"; "MkUnit"; "Cons"; "Nil"; "Exit" ])
-  ^ Printf.sprintf "\nlet io_names = [| %s |]\n" (concat "; " (List.map (fun c -> quote c.V.cname) io.ctors))
-  ^ {|let build (c : Obj.t) args = let c = (Obj.obj c : ctor) in c.con c.ix args
-let des (c : Obj.t) v = (Obj.obj c : ctor).des v
-let rec nat v = match des ctor_Zero v with _, [ p ] -> 1 + nat p | _ -> 0
-let u8 v = match des ctor_MkU8 v with _, [ n ] -> nat n | _ -> assert false
-let of_string s = |} ^ of_string ^ {|
-let to_string v =
-  let buf = Buffer.create 64 in
-  let rec go v =
-    match des ctor_SNil v with
-    | _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (u8 (List.hd (snd (des ctor_MkChar ch))))); go rest
-    | _ -> ()
-  in
-  go v;
-  Buffer.contents buf
-let read_file path = In_channel.with_open_bin path In_channel.input_all
-let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
+  let str = if !V.use_externs then "(Some (fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)))" else "None" in
+  Printf.sprintf "let ctor_of = function %s | _ -> assert false\n"
+    (concat " " (List.map (fun n -> Printf.sprintf "| %s -> %s" (quote n) (prelude_ctor cx n)) [ "Zero"; "Succ"; "MkU8"; "MkChar"; "SNil"; "SCons"; "Some"; "None"; "Ok"; "Fail"; "MkUnit"; "Cons"; "Nil"; "Exit" ]))
+  ^ Printf.sprintf "let io_names = [| %s |]\n" (concat "; " (List.map (fun c -> quote c.V.cname) io.ctors))
+  ^ {|let driver =
+  Driver_core.make ~build:(fun n args -> let c = (Obj.obj (ctor_of n) : ctor) in c.con c.ix args) ~des:(fun n v -> (Obj.obj (ctor_of n) : ctor).des v)
+    ~io_name:(fun i -> io_names.(i)) ~apply:(fun k x -> (Obj.obj k : Obj.t -> Obj.t) x) ~str:|} ^ str ^ {|
 let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
-let run_io v =
-  let result f = match f () with x -> build ctor_Ok [ x ] | exception Sys_error m -> build ctor_Fail [ of_string m ] in
-  let step k x = (Obj.obj k : Obj.t -> Obj.t) x in
-  let rec loop v =
-    let i, fields = des ctor_Exit v in
-    match (io_names.(i), fields) with
-    | "Exit", [ code ] -> u8 code
-    | "WriteOut", [ s; next ] -> flush_to stdout (to_string s); loop next
-    | "WriteErr", [ s; next ] -> flush_to stderr (to_string s); loop next
-    | "ReadLine", [ k ] -> loop (step k (match In_channel.input_line stdin with Some l -> build ctor_Some [ of_string l ] | None -> build ctor_None []))
-    | "ReadFile", [ path; k ] -> loop (step k (result (fun () -> of_string (read_file (to_string path)))))
-    | "WriteFile", [ path; s; k ] -> loop (step k (result (fun () -> write_file (to_string path) (to_string s); build ctor_MkUnit [])))
-    | "GetArgs", [ k ] -> loop (step k (List.fold_right (fun a acc -> build ctor_Cons [ of_string a; acc ]) program_args (build ctor_Nil [])))
-    | _ -> assert false
-  in
-  loop v
-let run_main f = flush_to stdout (to_string ((Obj.obj f : Obj.t -> Obj.t) (of_string (In_channel.input_all stdin))))
+let world = { Driver_core.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; exit; print = print_endline }
+let run_io = driver.run_io world
+let run_main = driver.run_main world
 |}
 
 let item cx = function
@@ -384,6 +351,7 @@ let emit env items =
   concat "\n"
     [ "[@@@warning \"-a\"]";
       "module Ffi_core = struct\n" ^ Ffi_core_source.source ^ "\nend";
+      "module Driver_core = struct\n" ^ Driver_core_source.source ^ "\nend";
       "type ctor = { ix : int; cname : string; con : int -> Obj.t list -> Obj.t; des : Obj.t -> int * Obj.t list }";
       "type matchable = { mdes : int -> Obj.t -> int * Obj.t list }";
       "let source = ref \"-\"\nlet absurd () = prerr_endline (!source ^ \": runtime error: absurd code reached\"); exit 1";

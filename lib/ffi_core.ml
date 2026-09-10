@@ -6,13 +6,14 @@ let peano ~z ~nat =
     fun v -> let n = z v in if Z.equal n Z.zero then (0, []) else (1, [ nat (Z.pred n) ]) )
 
 (* Bijective base 2 held as an integer: constructor 1 is 2b+1, constructor 2 is 2b+2, so every integer has one spelling. *)
+let bin_digit n = let d = if Z.is_odd n then 1 else 2 in (d, Z.shift_right (Z.sub n (Z.of_int d)) 1)
 let bijective ~z ~bin =
   let digit d b = bin (Z.add (Z.shift_left (z b) 1) (Z.of_int d)) in
   ( (fun i args -> match (i, args) with 0, [] -> bin Z.zero | (1 | 2), [ b ] -> digit i b | _ -> assert false),
     fun v ->
       let n = z v in
       if Z.equal n Z.zero then (0, [])
-      else let d = if Z.is_odd n then 1 else 2 in (d, [ bin (Z.shift_right (Z.sub n (Z.of_int d)) 1) ]) )
+      else let d, b = bin_digit n in (d, [ bin b ]) )
 
 (* A cons list of Char held as a slice of a byte string: destructing yields the tail slice over the same buffer. *)
 let text ~z ~slice ~u8 ~str =
