@@ -305,6 +305,11 @@
       ((CEq eq-t eq-r eq-x) (Some _ $ ExtBin))
       (else (match many (str-cmp name "String") _ ((CEq eq-t eq-r eq-x) (Some _ $ ExtString)) (else (None _))))))))
 
+(def-fns _ $ many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m)
+  (match many e _
+    ((ExAdd) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
+    ((ExBinToNat) 1) ((ExTrim) 1) ((ExFlatten) 1)))
+
 (def-fns _ $ many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s)
   (match many e _
     ((ExAdd) "add") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
@@ -375,6 +380,7 @@
     enum
     (many CVar : (erased (List $ List $ Bin) ctx) (many (Bin) id) (many (Mem id ctx) p) -> (Code ctx many-one))
     (many CConst : (erased (List $ List $ Bin) ctx) (many (Bin) id) (many (Value) v) -> (Code ctx many-one))
+    (many CValue : (erased (List $ List $ Bin) ctx) (many (Value) v) -> (Code ctx many-one))
     (many CErased : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
     (many CValues : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ms cs) pk) -> (Code ctx ms))
     (many CApp : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
@@ -469,6 +475,7 @@
     (match many c _
       ((CVar c0 x p) (CValues _ ns (Cons _ (CVar _ x p) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CVar _ x p) (Nil _) $ PkNil _))
       ((CConst c0 x v) (CValues _ ns (Cons _ (CConst _ x v) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CConst _ x v) (Nil _) $ PkNil _))
+      ((CValue c0 v) (CValues _ ns (Cons _ (CValue _ v) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CValue _ v) (Nil _) $ PkNil _))
       ((CErased c0 ms2) (CErased _ ns))
       ((CValues c0 ms2 cs pk) (CValues _ ns cs $ picked-same _ _ _ _ same pk))
       ((CApp c0 ms2 f args cc) (CApp _ ns f args cc))

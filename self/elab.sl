@@ -53,7 +53,7 @@
     ((Cons a p rest)
       (let (many ms) (many ids) (erased ipk) (many codes) (erased cpk) $ consts-codes ctx rest)
       (match many p _
-        ((MkPair x y id v) (values (Cons _ (Many) ms) (Cons _ id ids) (PkMany _ ms id ids ipk) (Cons _ (CConst _ id v) codes) (PkMany _ ms (CConst _ id v) codes cpk)))))))
+        ((MkPair x y id v) (values (Cons _ (Many) ms) (Cons _ id ids) (PkMany _ ms id ids ipk) (Cons _ (CValue _ v) codes) (PkMany _ ms (CValue _ v) codes cpk)))))))
 
 (def-fns _ $ many wrap-stmt : (erased (List $ List $ Bin) ctx) (erased (List $ List $ Bin) ctx2) (many (List $ Mult) ns) (many (StmtCode ctx ctx2) sc) (many (Code ctx2 ns) rest) -> (many (Code ctx ns) r)
   (match many sc _
@@ -703,7 +703,7 @@
 (def-fns _ $ many matchable-code : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Mult) pos) (many (Bin) x) -> (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) r)
   (match many pos _
     ((Erased) (CErased _ $ Cons _ pos $ Nil _))
-    ((Many) (match many (adt-of env x) _ ((Some a adt) (CConst _ x $ VMatchable adt)) ((None a) (var-code env ctx x))))))
+    ((Many) (match many (adt-of env x) _ ((Some a adt) (CValue _ $ VMatchable adt)) ((None a) (var-code env ctx x))))))
 
 ; A match on an ADT the elaborator can see reads no Matchable at runtime (section 17).
 (def-fns _ $ many match-shape : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Bin) x) (many (Bool) tagged) -> (many (Shape ctx) r)
@@ -1672,11 +1672,137 @@
                                         (else (None _))))
                                     (else (None _))))))))))))))))))))
 
+; Dropping a frame nothing mentions (lib/elab.ml's constant let): the code rebuilt one frame shorter, or None
+; where some variable sits in that frame.
+(def-adts
+  (Drop : ((List $ List $ Bin) from) ((List $ List $ Bin) ctx) -> Type
+    enum
+    (many DHere : (erased (List $ Bin) f) (erased (List $ List $ Bin) ctx) -> (Drop (Cons (List (Bin)) f ctx) ctx))
+    (many DUnder : (erased (List $ Bin) g) (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (Drop from ctx) d) -> (Drop (Cons (List (Bin)) g from) (Cons (List (Bin)) g ctx))))
+  (Kept : (Type A) (Type B) ((List A) xs) -> Type
+    enum
+    (many KNo : (erased Type A) (erased Type B) (erased (List A) xs) -> (Kept A B xs))
+    (many KYes : (erased Type A) (erased Type B) (erased (List A) xs) (many (List B) ys) (erased (Lockstep A B xs ys) lk) -> (Kept A B xs))))
+
+(def-fns _ $ many mem-drop : (erased (Bin) x) (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (Mem x from) p) (many (Drop from ctx) d) -> (many (Maybe $ Mem x ctx) r)
+  (match many d _
+    ((DHere f c) (match many p _ ((MHere y f2 c2 at) (None _)) ((MThere y f2 c2 q) (Some _ q))))
+    ((DUnder g fr c d2)
+      (match many p _
+        ((MHere y f2 c2 at) (Some _ $ MHere _ _ _ at))
+        ((MThere y f2 c2 q) (match many (mem-drop _ _ _ q d2) _ ((Some a q2) (Some _ $ MThere _ _ _ q2)) ((None a) (None _))))))))
+
+(def-fns _
+  (many strengthen : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code from ms) c) (many (Drop from ctx) d) -> (many (Maybe $ Code ctx ms) r)
+    (match many c _
+      ((CVar c0 x p) (match many (mem-drop _ _ _ p d) _ ((Some a q) (Some _ $ CVar _ x q)) ((None a) (None _))))
+      ((CConst c0 x v) (Some _ $ CConst _ x v))
+      ((CValue c0 v) (Some _ $ CValue _ v))
+      ((CErased c0 ms2) (Some _ $ CErased _ ms2))
+      ((CValues c0 ms2 cs pk)
+        (match many (strengthen-list _ _ cs d) _
+          ((KNo a b e) (None _))
+          ((KYes a b e cs2 lk) (Some _ $ CValues _ ms2 cs2 $ picked-along _ _ _ _ _ pk lk))))
+      ((CApp c0 ms2 f args cc)
+        (match many (strengthen _ _ _ f d) _
+          ((None a) (None _))
+          ((Some a f2)
+            (match many (strengthen-list _ _ args d) _
+              ((KNo x y z) (None _))
+              ((KYes x y z args2 lk) (Some _ $ CApp _ ms2 f2 args2 cc))))))
+      ((CLet c0 ms2 ns ids pk rhs rest)
+        (match many (strengthen _ _ _ rhs d) _
+          ((None a) (None _))
+          ((Some a rhs2)
+            (match many (strengthen _ _ _ rest $ DUnder _ _ _ d) _
+              ((None b) (None _))
+              ((Some b rest2) (Some _ $ CLet _ ms2 _ ids pk rhs2 rest2))))))
+      ((CLetRec c0 ns gids g rest)
+        (match many g _
+          ((MkGroup c1 ids fns lk)
+            (match many (strengthen-fns _ _ ids fns d) _
+              ((KNo x y z) (None _))
+              ((KYes x y z fns2 lk2)
+                (match many (strengthen _ _ _ rest $ DUnder _ _ _ d) _
+                  ((None b) (None _))
+                  ((Some b rest2) (Some _ $ CLetRec _ _ _ (MkGroup _ ids fns2 $ lockstep-trans _ _ _ _ _ _ lk lk2) rest2))))))))
+      ((CMatch c0 ns scrut shape bs dfl)
+        (match many (strengthen _ _ _ scrut d) _
+          ((None a) (None _))
+          ((Some a scrut2)
+            (let (many (Maybe $ Shape ctx) shape2)
+              (match many shape _
+                ((ShKnown c1 adt) (Some _ $ ShKnown _ adt))
+                ((ShNone c1) (Some _ $ ShNone _))
+                ((ShHeld c1 mc tags) (match many (strengthen _ _ _ mc d) _ ((None b) (None _)) ((Some b mc2) (Some _ $ ShHeld _ mc2 tags))))))
+            (match many shape2 _
+              ((None b) (None _))
+              ((Some b sh)
+                (match many (strengthen-branches _ _ ns bs d) _
+                  ((None e) (None _))
+                  ((Some e bs2)
+                    (match many dfl _
+                      ((None f) (Some _ $ CMatch _ ns scrut2 sh bs2 $ None _))
+                      ((Some f dd)
+                        (match many (strengthen _ _ _ dd $ DUnder _ _ _ d) _
+                          ((None h) (None _))
+                          ((Some h dd2) (Some _ $ CMatch _ ns scrut2 sh bs2 $ Some _ dd2))))))))))))
+      ((CAbsurd c0 ms2) (Some _ $ CAbsurd _ ms2))
+      ((CError c0 ms2 m) (Some _ $ CError _ ms2 m))))
+  (many strengthen-list : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r)
+    (match many cs _
+      ((Nil a) (KYes _ _ _ (Nil _) (LsNil _ _)))
+      ((Cons a c rest)
+        (match many (strengthen _ _ _ c d) _
+          ((None b) (KNo _ _ _))
+          ((Some b c2)
+            (match many (strengthen-list _ _ rest d) _
+              ((KNo x y z) (KNo _ _ _))
+              ((KYes x y z r lk) (KYes _ _ _ (Cons _ c2 r) (LsCons _ _ c c2 rest r lk)))))))))
+  (many strengthen-fns : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Bin) gids) (subterm many (List $ Pair (Bin) $ Func gids from) fns) (many (Drop from ctx) d) -> (many (Kept (Pair (Bin) $ Func gids from) (Pair (Bin) $ Func gids ctx) fns) r)
+    (match many fns _
+      ((Nil a) (KYes _ _ _ (Nil _) (LsNil _ _)))
+      ((Cons a p rest)
+        (match many p _
+          ((MkPair s t id fn)
+            (match many fn _
+              ((MkFunc g c rets n i ps body impl top)
+                (match many (strengthen _ _ _ body $ DUnder _ _ _ $ DUnder _ _ _ d) _
+                  ((None b) (KNo _ _ _))
+                  ((Some b body2)
+                    (match many (strengthen-fns _ _ gids rest d) _
+                      ((KNo x y z) (KNo _ _ _))
+                      ((KYes x y z r lk)
+                        (let (many p2) $ MkPair _ _ id $ MkFunc _ _ rets n i ps body2 impl top)
+                        (KYes _ _ _ (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))))))
+  (many strengthen-branches : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Drop from ctx) d) -> (many (Maybe $ List $ Branch ctx ns) r)
+    (match many bs _
+      ((Nil a) (Some _ $ Nil _))
+      ((Cons a b rest)
+        (match many b _
+          ((MkBranch c0 n0 dsc ids body)
+            (match many (strengthen _ _ _ body $ DUnder _ _ _ d) _
+              ((None x) (None _))
+              ((Some x body2)
+                (match many (strengthen-branches _ _ ns rest d) _
+                  ((None y) (None _))
+                  ((Some y r) (Some _ $ Cons _ (MkBranch _ _ dsc ids body2) r)))))))))))
+
+; A let's right-hand side of values embedded by elaboration alone, as lib/elab.ml's constant.
+(def-fns _ $ many all-values : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Bool) r)
+  (match many cs _
+    ((Nil a) (BTrue))
+    ((Cons a c rest) (match many c _ ((CValue c0 v) (all-values _ rest)) (else (BFalse))))))
+
+(def-fns _ $ many constant-rhs : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (many (Code ctx ms) c) -> (many (Bool) r)
+  (match many c _ ((CValues c0 ms2 cs pk) (all-values _ cs)) (else (BFalse))))
+
 (def-fns _
   (many norm : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (subterm many (Code from ms) c) (many (Ren from ctx) ren) -> (many (Code ctx ms) r)
     (match many c _
       ((CVar c0 x p) (atom-code _ $ ren-get _ _ _ p ren))
       ((CConst c0 x v) (CConst _ x v))
+      ((CValue c0 v) (CValue _ v))
       ((CErased c0 ms2) (CErased _ ms2))
       ((CValues c0 ms2 cs pk)
         (let (many cs2) (erased lk) $ norm-list _ _ cs ren)
@@ -1704,7 +1830,11 @@
                 (else (None _))))
             (match many same _
               ((Some b p) (recast _ ms ms2 p rhs2))
-              ((None b) (CLet _ ms2 _ ids pk rhs2 rest2))))))
+              ((None b)
+                (let (many (Maybe $ Code ctx ms) gone) $ match many (constant-rhs _ _ rhs2) _ ((BTrue) (strengthen _ _ _ rest2 $ DHere _ _)) ((BFalse) (None _)))
+                (match many gone _
+                  ((Some e r) r)
+                  ((None e) (CLet _ ms2 _ ids pk rhs2 rest2))))))))
       ((CLetRec c0 ns gids g rest) (match many g _ ((MkGroup c1 ids fns lk) (CLetRec _ _ _ (norm-group _ _ _ g ren) $ norm _ _ ms rest $ ren-weaken _ _ ids ren))))
       ((CMatch c0 ns scrut shape bs dfl)
         (let (many (Maybe $ Code ctx ns) dropped)
@@ -2971,7 +3101,16 @@
                         (let (many rs) (many body) (erased wb) $ split-returns after _ wa env1)
                         (let (many env2) (many params) (many rets) $ elab-fn-type sugar (subterm (subterm-trans psg $ prove-subterm f fns)) sg one-step (MkPair _ _ ps rs) env1)
                         (let (many found) $ extern-of name)
-                        (let (many (Env) env3) $ match many isext _ ((BTrue) (claim-extern env2 name $ is-some _ found)) ((BFalse) env2))
+                        (let (many (Env) env2b)
+                          (match many found _
+                            ((None z) env2)
+                            ((Some z se)
+                              (match many se _
+                                ((MkSomeExtern n e)
+                                  (match many (and isext $ not $ nat-eq (many-count params) $ ext-arity _ e) _
+                                    ((BFalse) env2)
+                                    ((BTrue) (env-error env2 $ str-cat3 "the extern implementation of " name $ str-cat3 " takes " (nat-str $ ext-arity _ e) $ str-cat3 " arguments, its model " (nat-str $ many-count params) ""))))))))
+                        (let (many (Env) env3) $ match many isext _ ((BTrue) (claim-extern env2b name $ is-some _ found)) ((BFalse) env2b))
                         (let (many (Maybe $ SomeExtern) impl) $ match many isext _ ((BTrue) found) ((BFalse) (None _)))
                         (let (many env4) (many hs) $ elab-headers sugar rest (env-back env env3) lvl)
                         (values env4 $ HCons _ _ (MkHeader _ name mult isabs impl params rets body $ within-in body sg (Raw) f wb psg) hs)))))))) (else (values bad $ HStop fns))))))

@@ -122,9 +122,8 @@
 ; A constructor a code names statically: a Const entry holding it, or the constant itself.
 (def-fns _ $ many static-ctor : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) f) -> (many (Maybe $ Ctor) r)
   (match many f _
-    ((CConst c0 x v)
-      (match many v _
-        ((VCtorFn c) (Some _ c)) (else (None $ Ctor)))) (else (None $ Ctor))))
+    ((CConst c0 x v) (match many v _ ((VCtorFn c) (Some _ c)) (else (None $ Ctor))))
+    ((CValue c0 v) (match many v _ ((VCtorFn c) (Some _ c)) (else (None $ Ctor)))) (else (None $ Ctor))))
 
 ; The closure whose code is being emitted is the recursion's first measure, and the code being emitted
 ; comes with a proof that it lies inside that closure: a captured variable's value is a subterm of the
@@ -180,6 +179,9 @@
                 (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
                 (let (many st4) $ st-push-def st3 $ rcat4 (RStr "let ") (RStr name) (RStr " = ") $ rcat vr $ RStr "\n")
                 (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))))))
+      ((CValue c0 v)
+        (let (erased q) $ subterm-trans (prove-subterm v code) w)
+        (emit-value (subterm q) v cx st))
       ((CErased c0 ms2) (values st $ RStr "U"))
       ((CValues c0 ms2 cs pk)
         (let (many st2) (many rs) $ emit-codes cl _ cs (subterm-trans (prove-subterm cs code) w) cx st)

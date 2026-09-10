@@ -2173,11 +2173,17 @@ had noted that an `SCons` copies its tail, so building a string by
      The normalizer's substitution is a `Ren from ctx`, a frame of
      atoms (a variable with its place, or a constant) per frame of
      the source, weakened under each binder (`ren-weaken`), so a let
-     whose right-hand side is atoms is substituted away rather than
-     resolved through an id map; the reading is that this also covers
-     the former dropping of a constant `let` nothing mentions, since a
-     mentioned constant is now substituted and the emitter names a
-     non-top-level constant once. A `projection` builds the places of
+     whose right-hand side is atoms, variables or Const entries, is
+     substituted away rather than resolved through an id map. A value
+     elaboration embeds, a `matchable-of` or a nested `def-adts`'s
+     binding, is `CValue`, which is no atom, so lib/elab.ml's three
+     cases are kept exactly: a let of such values that nothing mentions
+     is dropped by `strengthen`, which rebuilds the body one frame
+     shorter and fails where a variable sits in that frame, deciding
+     "mentions" by construction; any other let stays. A first version
+     substituted every constant, which the owner questioned; the
+     session then found the reference keeps a mentioned one and
+     matched it, checked on probes the tests do not cover. A `projection` builds the places of
      its bound ids from `at-ins` before referring to them. The group
      frame holds the `many` functions of a `def-fns`; an erased one is
      checked and leaves nothing behind, as item 77 has it, `Bound`
@@ -2218,9 +2224,13 @@ had noted that an `SCons` copies its tail, so building a string by
      rung was set aside: the arguments reach an extern as a list the
      elaborator counted against the model's telescope, and
      `apply-extern` takes its one or two from that list, an absent one
-     being the error value it was; the arity in the type is recorded,
-     not yet consumed, and no arity check was added at the mark, the
-     reference's FFI checking arity at the call only. `self/bootstrap.sh`
+     being the error value it was; the arity in the type is read back
+     by `ext-arity`, whose return `is` the index, and the owner asked
+     for the check at the mark: a model whose `many` parameters do not
+     number the implementation's arity is refused with "the extern
+     implementation of NAME takes N arguments, its model M", a refusal
+     the reference does not make, its FFI checking arity at the call
+     only, so no test carries it. `self/bootstrap.sh`
      is the evidence.
 
 ## Code built at the expectation

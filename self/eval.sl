@@ -135,6 +135,7 @@
     (match many code _
       ((CVar c x p) (ValsMany _ (venv-get _ _ p env) $ ValsNil))
       ((CConst c x v) (ValsMany _ v $ ValsNil))
+      ((CValue c v) (ValsMany _ v $ ValsNil))
       ((CErased c ms2) (vals-of ms2 $ VToken))
       ((CValues c ms2 cs pk) (eval-picked fuel _ cs ms2 pk env))
       ((CApp c ms2 f args cc)
