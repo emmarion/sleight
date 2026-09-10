@@ -1416,11 +1416,6 @@
         ((Cons b x xrest) (match many m _ ((Many) (Cons _ x $ many-of rest xrest)) ((Erased) (many-of rest xrest))))))))
 
 ; Whether a def-fns group binds a many function; a group of erased ones leaves nothing behind (ASSUMPTIONS 77).
-(def-fns _ $ many any-many : (subterm many (List $ Bin) ids) (many (Env) env) -> (many (Bool) r)
-  (match many ids _
-    ((Nil a) (BFalse))
-    ((Cons a x rest) (match many (entry-mult-of env x) _ ((Many) (BTrue)) ((Erased) (any-many rest env))))))
-
 ; ---- The elaborator proper: one block recursing on the raws it elaborates (self/README.md)
 
 ; What the statements read from their raws, holding the parts they elaborate later inside those raws.
@@ -1432,10 +1427,13 @@
     enum
     (many HStop : (erased (List $ Raw) fns) -> (Headers fns))
     (many HCons : (erased (Raw) f) (erased (List $ Raw) rest) (many (Header f) h) (many (Headers rest) hs) -> (Headers $ Cons (Raw) f rest)))
+  ; [gids]: the frame the group binds, its many functions' ids; an erased function is checked and leaves nothing
+  ; behind (ASSUMPTIONS 77).
   (Bound : ((List $ Raw) fns) ((Headers fns) hs) ((List $ Bin) gids) -> Type
     enum
     (many BStop : (erased (List $ Raw) fns) -> (Bound fns (HStop fns) (Nil (Bin))))
-    (many BCons : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Bin) gids) (many (Bin) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) (Cons (Bin) x gids))))
+    (many BMany : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Bin) gids) (many (Bin) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) (Cons (Bin) x gids)))
+    (many BErased : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Bin) gids) (many (Bin) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) gids)))
   (AdtHeader : ((Raw) f) -> Type
     enum
     (many MkAdtHeader : (erased (Raw) f) (many (String) name) (many (Disc) disc) (many (Bool) newtype) (many (Bool) extern) (many (List $ Raw) ctors) (erased (Subterm (List $ Raw) ctors (Raw) f) p) -> (AdtHeader f)))
@@ -1473,7 +1471,9 @@
         ((MkHeader g name mult isabs impl params rets body p)
           (let (many env2) (many x) $ bind env (Some _ name) mult (SDyn) (TFn (TVar lvl) params rets) (None _) coercible-id)
           (let (many env3) (many gids) (many ids) $ bind-headers _ more env2 lvl)
-          (values env3 (Cons _ x gids) (BCons _ _ _ _ _ x ids)))))))
+          (match many mult _
+            ((Many) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
+            ((Erased) (values env3 gids (BErased _ _ _ _ _ x ids)))))))))
 
 (def-fns _ $ many set-fn-states : (subterm many (List $ Bin) ids) (many (List $ Value) vs) (erased (Lockstep (Bin) (Value) ids vs) lk) (many (Env) env) -> (many (Env) r)
   (match many ids _
@@ -2934,16 +2934,16 @@
         (let (many env4) (many gids) (many fids) $ bind-headers _ headers env3 lvl)
         (let (many env5) (many fns2) (erased lk) $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
         (let (many group) $ MkGroup _ gids fns2 lk)
-        (match many ctx _
-          ((Nil z1)
-            (match many (close-group _ _ group $ VNil) _
-              ((VFrame z2 ids vs lkv rest)
-                (let (many env6) $ set-fn-states ids vs lkv env5)
-                (values (env-push-trace env6 $ TrFns _ group) ctx $ SNone _))))
-          ((Cons z1 z2 z3)
-            (match many (any-many gids env5) _
-              ((BFalse) (values env5 ctx $ SNone _))
-              ((BTrue) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))))))
+        (match many gids _
+          ((Nil z0) (values env5 ctx $ SNone _))
+          ((Cons z0 g0 grest)
+            (match many ctx _
+              ((Nil z1)
+                (match many (close-group _ _ group $ VNil) _
+                  ((VFrame z2 ids vs lkv rest)
+                    (let (many env6) $ set-fn-states ids vs lkv env5)
+                    (values (env-push-trace env6 $ TrFns _ group) ctx $ SNone _))))
+              ((Cons z1 z2 z3) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))))))
 
   (many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Bin) lvl) -> (many (Env) r) (many (Headers fns) hs)
     (match many fns _
@@ -2985,41 +2985,49 @@
           ((HStop z) (match many fids _ ((BStop z2) (values env (Nil _) (LsNil _ _)))))
           ((HCons g r h hrest)
             (match many fids _
-              ((BCons g3 r3 h3 hs3 grest0 x xrest)
+              ((BMany g3 r3 h3 hs3 grest0 x xrest)
                 (match many gids _
                   ((Cons zg xg grest)
-                (match many h _
-                  ((MkHeader g2 name mult isabs impl params rets body pb)
-                    (let (erased q) $ subterm-trans pb $ prove-subterm f fns)
-                    (let (many ty) $ TFn (TVar lvl) params rets)
-                    (let (many envb0) (many pids) (erased lock) $ open-tele params (env-set-run-pos env $ BFalse) (None _) (None _) (None _) (Nil _) $ BFalse)
-                    (let (many envb) $ env-enter-body envb0 lvl $ subterm-params params pids)
-                    (let (many rms) $ under-list (tele-mults rets) mult)
-                    (let (many mps) $ many-of (tele-mults params) pids)
-                    (let (many bctx) $ Cons _ mps $ Cons _ gall ctx)
-                    (let (many (Env) envb2) (many (Code bctx rms) code)
-                      (match many isabs _
-                        ((BTrue)
-                          (let (many envb1) (many ress) (many code) (erased lock) $ elab-body sugar (subterm q) body body (WHere _) envb bctx erased-one no-tele)
-                          (let (many envb2) $ check-empty (settle-res envb1 $ first-res _ _ ress lock) $ res-ty $ first-res _ _ ress lock)
-                          (values envb2 $ CAbsurd _ rms))
-                        ((BFalse)
-                          (let (many pvars) $ tvars-rev pids $ Nil _)
-                          (let (many tele) $ instantiate-tele pvars rets)
-                          (let (many envb1) (many ress) (many code) (erased lock) $ elab-body sugar (subterm q) body body (WHere _) envb bctx rms (Some _ tele))
-                          (let (many envb2) $ check-results-count envb1 rets ress pvars)
-                          (values envb2 $ match many mult (((Code bctx rms) c0)) ((Erased) (CErased _ rms)) ((Many) code)))))
-                    (let (many envb3) (many code2) (many delegated) $ check-marks envb2 bctx mps rms code)
-                    (let (many env2) $ env-discard env envb3)
-                    (let (many (Env) env3)
-                      (match many delegated _
-                        ((None c) env2)
-                        ((Some c callee)
-                          (let (many env3) (many px) $ bind env2 (None _) (Erased) (SDyn) (proof-type coercible-id $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) coercible-id)
-                          env3)))
-                    (let (many fn) $ MkFunc _ _ rms name x mps code2 impl top)
+                    (let (many env3) (many fn) $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
                     (let (many env4) (many more) (erased lk) $ define-fns sugar rest hrest env3 ctx gall grest xrest lvl top)
-                    (values env4 (Cons _ (MkPair _ _ x fn) more) (LsCons _ _ x (MkPair _ _ x fn) grest more lk)))))))))))))
+                    (values env4 (Cons _ (MkPair _ _ x fn) more) (LsCons _ _ x (MkPair _ _ x fn) grest more lk)))))
+              ((BErased g3 r3 h3 hs3 grest0 x xrest)
+                (let (many env3) (many fn) $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
+                (define-fns sugar rest hrest env3 ctx gall gids xrest lvl top))))))))
+
+  ; One function's body checked at its level under its parameters, the group's frame and the defining scope,
+  ; its marks validated, and its delegate proof bound where it has one.
+  (many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Bin) gall) (many (Bin) x) (many (Bin) lvl) (many (Bool) top) ->
+      (many (Env) r) (many (Func gall ctx) fn)
+    (match many h _
+      ((MkHeader g2 name mult isabs impl params rets body pb)
+        (let (many ty) $ TFn (TVar lvl) params rets)
+        (let (many envb0) (many pids) (erased lock) $ open-tele params (env-set-run-pos env $ BFalse) (None _) (None _) (None _) (Nil _) $ BFalse)
+        (let (many envb) $ env-enter-body envb0 lvl $ subterm-params params pids)
+        (let (many rms) $ under-list (tele-mults rets) mult)
+        (let (many mps) $ many-of (tele-mults params) pids)
+        (let (many bctx) $ Cons _ mps $ Cons _ gall ctx)
+        (let (many (Env) envb2) (many (Code bctx rms) code)
+          (match many isabs _
+            ((BTrue)
+              (let (many envb1) (many ress) (many code) (erased lock) $ elab-body sugar (subterm pb) body body (WHere _) envb bctx erased-one no-tele)
+              (let (many envb2) $ check-empty (settle-res envb1 $ first-res _ _ ress lock) $ res-ty $ first-res _ _ ress lock)
+              (values envb2 $ CAbsurd _ rms))
+            ((BFalse)
+              (let (many pvars) $ tvars-rev pids $ Nil _)
+              (let (many tele) $ instantiate-tele pvars rets)
+              (let (many envb1) (many ress) (many code) (erased lock) $ elab-body sugar (subterm pb) body body (WHere _) envb bctx rms (Some _ tele))
+              (let (many envb2) $ check-results-count envb1 rets ress pvars)
+              (values envb2 $ match many mult (((Code bctx rms) c0)) ((Erased) (CErased _ rms)) ((Many) code)))))
+        (let (many envb3) (many code2) (many delegated) $ check-marks envb2 bctx mps rms code)
+        (let (many env2) $ env-discard env envb3)
+        (let (many (Env) env3)
+          (match many delegated _
+            ((None c) env2)
+            ((Some c callee)
+              (let (many env3) (many px) $ bind env2 (None _) (Erased) (SDyn) (proof-type coercible-id $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) coercible-id)
+              env3)))
+        (values env3 $ MkFunc _ _ rms name x mps code2 impl top))))
 
   ; def-adts (sections 12, 19, 27): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor

@@ -2179,9 +2179,11 @@ had noted that an `SCons` copies its tail, so building a string by
      mentioned constant is now substituted and the emitter names a
      non-top-level constant once. A `projection` builds the places of
      its bound ids from `at-ins` before referring to them. The group
-     frame holds every function of a `def-fns`, erased ones included,
-     except that a group with no `many` function leaves no code, as
-     item 77 has it. What stays dynamic: the elaborator decides a
+     frame holds the `many` functions of a `def-fns`; an erased one is
+     checked and leaves nothing behind, as item 77 has it, `Bound`
+     skipping it so the frame's ids and the group's `Lockstep` are by
+     construction, and an empty group binds nothing (a first version
+     bound erased members too, which the owner caught). What stays dynamic: the elaborator decides a
      variable's place with `mem-dec` when it emits it, and a `Dyn`
      entry it cannot place is an internal error at elaboration, so the
      invariant that the scope's non-erased entries are the context's
