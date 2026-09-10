@@ -2259,3 +2259,18 @@ had noted that an `SCons` copies its tail, so building a string by
      `distinct` returns no code, its value being erased. The session's
      reading is that no message changes; `self/bootstrap.sh` is the
      evidence.
+
+## A held Matchable over an untagged type
+
+130. **`slc` read the discriminant of a held untagged Matchable.** A
+     `many` match through a first-class `Matchable` of a union, or of
+     an enum with one non-phantom constructor, compiled to a branch
+     pattern carrying the constructor's discriminant, while the
+     runtime's untagged `Mat` answers `0` for every value, so a real
+     branch on any constructor but the first reached `absurd`
+     (`tests/held_union.sl`; the reference and the compile-time
+     interpreter both ignore the discriminant there, as
+     `lib/extract.ml`'s `Held` case does). The emitter now writes `_`
+     for the discriminant when the held shape carries no tag. The
+     session's reading is that this is the only site that read it;
+     the test is the evidence.
