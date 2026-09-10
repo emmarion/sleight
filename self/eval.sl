@@ -2,9 +2,6 @@
 ; evaluator over post-erasure code, bounded by a fuel that decreases along the call stack so the checker
 ; accepts it. Extern functions run as the host's own (section 41).
 
-(let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ $ ExtNat)
-(let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ $ ExtString)
-
 (def-fns _ $ many vnat : (many (Nat) n) -> (many (Value) v)
   (VExt nat-adt $ PNat n))
 
@@ -37,22 +34,18 @@
 ; ADT (ASSUMPTIONS 120). The arguments are counted against the arity here, the call having been checked
 ; against the model's telescope.
 (def-fns _ $ many apply-extern : (erased (Nat) n) (many (Extern n) e) (many (List $ Value) args) -> (many (Maybe $ List $ Value) r)
-  (let (many (Maybe $ Value) a1) (many (Maybe $ Value) a2)
-    (match many args _
-      ((Nil x) (values (None _) (None _)))
-      ((Cons x a rest) (values (Some _ a) $ match many rest (((Maybe $ Value) m)) ((Nil y) (None _)) ((Cons y b rest2) (Some _ b))))))
-  (let (many (Value) a) $ match many a1 _ ((None x) (VError "extern arity")) ((Some x v) v))
-  (let (many (Value) b) $ match many a2 _ ((None x) (VError "extern arity")) ((Some x v) v))
+  (let (many a) $ list-nth-or _ args 0 $ VError "extern arity")
+  (let (many b) $ list-nth-or _ args 1 $ VError "extern arity")
   (match many e _
-    ((ExAdd) (Some _ $ Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
+    ((ExAdd) (Some _ $ list1 _ $ vnat $ nat-add (value-nat a) $ value-nat b))
     ((ExNatCmp) (None _))
-    ((ExNatMod) (Some _ $ Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
+    ((ExNatMod) (Some _ $ list1 _ $ nat-mod-value (value-nat a) $ value-nat b))
     ((ExBinToNat)
       (let (many n2) (erased pf) $ bin-to-nat $ value-bin a)
-      (Some _ $ Cons _ (vnat n2) $ Nil _))
-    ((ExTrim) (Some _ $ Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))
-    ((ExAppend) (Some _ $ Cons _ (VExt str-adt $ PStr $ str-append (value-str a) $ value-str b) $ Nil _))
-    ((ExFlatten) (Some _ $ Cons _ (VExt str-adt $ PStr $ flatten-value a) $ Nil _))))
+      (Some _ $ list1 _ $ vnat n2))
+    ((ExTrim) (Some _ $ list1 _ $ VExt str-adt $ PStr $ trim $ value-str a))
+    ((ExAppend) (Some _ $ list1 _ $ VExt str-adt $ PStr $ str-append (value-str a) $ value-str b))
+    ((ExFlatten) (Some _ $ list1 _ $ VExt str-adt $ PStr $ flatten-value a))))
 
 ; The closures of a group over [env], each re-closing the whole group when applied, as the frame the group binds.
 (def-fns _ $ many close-fns : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Func gids ctx) fns) (many (Group gids ctx) whole) (many (VEnv ctx) env) ->
@@ -210,15 +203,15 @@
                   ((Some a r) r)
                   ((None a)
                     (match many fuel _
-                      ((Zero) (Cons _ (VError "out of fuel") $ Nil _))
+                      ((Zero) (list1 _ $ VError "out of fuel"))
                       ((Succ k) (vals-list _ $ eval k _ _ body $ bind-frame _ params args $ close-group _ _ group cenv))))))))))
-      ((VCtorFn c) (Cons _ (construct c args) $ Nil _))
-      ((VCtor c fs) (Cons _ (VError "cannot apply a constructor value") $ Nil _))
-      ((VTuple fs) (Cons _ (VError "cannot apply a tuple") $ Nil _))
-      ((VExt a p) (Cons _ (VError "cannot apply an extern value") $ Nil _))
-      ((VMatchable a) (Cons _ (VError "cannot apply a Matchable") $ Nil _))
-      ((VToken) (Cons _ (VError "cannot apply the token") $ Nil _))
-      ((VError m) (Cons _ (VError m) $ Nil _)))))
+      ((VCtorFn c) (list1 _ $ construct c args))
+      ((VCtor c fs) (list1 _ $ VError "cannot apply a constructor value"))
+      ((VTuple fs) (list1 _ $ VError "cannot apply a tuple"))
+      ((VExt a p) (list1 _ $ VError "cannot apply an extern value"))
+      ((VMatchable a) (list1 _ $ VError "cannot apply a Matchable"))
+      ((VToken) (list1 _ $ VError "cannot apply the token"))
+      ((VError m) (list1 _ $ VError m)))))
 
 (let (many eval-fuel) 1000000)
 

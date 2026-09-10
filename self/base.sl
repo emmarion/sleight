@@ -24,11 +24,17 @@
 
 ; ---- Nat
 
+(def-fns _ $ many cmp-is-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r)
+  (match many c _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
+
+(def-fns _ $ many cmp-is-lt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r)
+  (match many c _ ((CLt lt-t lt-r lt-x lt-y lt-p) (BTrue)) (else (BFalse))))
+
 (def-fns _ $ many nat-lt : (many (Nat) a) (many (Nat) b) -> (many (Bool) r)
-  (match many (nat-cmp a b) _ ((CLt eq-t eq-r eq-x eq-y eq-p) (BTrue)) (else (BFalse))))
+  (cmp-is-lt _ _ _ _ $ nat-cmp a b))
 
 (def-fns _ $ many nat-eq : (many (Nat) a) (many (Nat) b) -> (many (Bool) r)
-  (match many (nat-cmp a b) _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
+  (cmp-is-eq _ _ _ _ $ nat-cmp a b))
 
 (def-fns _ $ many nat-pred : (many (Nat) n) -> (many (Nat) m)
   (match many n _ ((Zero) (Zero)) ((Succ k) k)))
@@ -57,7 +63,7 @@
     ((No a b q) char-zero)))
 
 (def-fns _ $ many char-eq : (many (Char) a) (many (Char) b) -> (many (Bool) r)
-  (match many (char-cmp a b) _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
+  (cmp-is-eq _ _ _ _ $ char-cmp a b))
 
 (def-fns _ $ many char-is : (many (Char) c) (many (Nat) code) -> (many (Bool) r)
   (nat-eq (char-code c) code))
@@ -96,7 +102,7 @@
   s)
 
 (def-fns _ $ many str-eq : (many (String) a) (many (String) b) -> (many (Bool) r)
-  (match many (str-cmp a b) _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
+  (cmp-is-eq _ _ _ _ $ str-cmp a b))
 
 (def-fns _ $ many str-is-empty : (many (String) s) -> (many (Bool) r)
   (match many s _ ((SNil) (BTrue)) ((SCons c r) (BFalse))))
@@ -248,10 +254,10 @@
         ((B2 b1) (match many (bin-cmp a1 b1) _ ((CLt t r x y p) (CLt _ _ a b $ Lt22 a1 b1 p)) ((CEq t r x) (CEq _ _ a)) ((CGt t r x y p) (CGt _ _ a b $ Lt22 b1 a1 p))))))))
 
 (def-fns _ $ many bin-eq : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (match many (bin-cmp a b) _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
+  (cmp-is-eq _ _ _ _ $ bin-cmp a b))
 
 (def-fns _ $ many bin-lt : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (match many (bin-cmp a b) _ ((CLt eq-t eq-r eq-x eq-y eq-p) (BTrue)) (else (BFalse))))
+  (cmp-is-lt _ _ _ _ $ bin-cmp a b))
 
 ; The digits of a Bin, least significant first, as text: an injective spelling for OCaml names.
 (def-fns _ $ many bin-rope : (subterm many (Bin) b) -> (many (Rope) r)
@@ -534,6 +540,12 @@
             ((NthHit t l j y p) (NthHit _ _ _ y $ NthThere _ x rest k y p))
             ((NthMiss t l j p) (NthMiss _ _ _ $ OOCons _ x rest k p))))))))
 
+(def-fns _ $ many list-nth-or : (erased Type A) (many (List A) xs) (many (Nat) i) (many A dflt) -> (many A r)
+  (match many (list-nth _ xs i) _ ((NthHit t l j x p) x) ((NthMiss t l j p) dflt)))
+
+(def-fns _ $ many list1 : (erased Type A) (many A x) -> (many (List A) r)
+  (Cons _ x $ Nil _))
+
 (def-fns _ $ many list-is-empty : (erased Type A) (many (List A) xs) -> (many (Bool) r)
   (match many xs _ ((Nil a) (BTrue)) ((Cons a x rest) (BFalse))))
 
@@ -543,26 +555,18 @@
 (def-fns _ $ many list-mem-str : (subterm many (List $ String) xs) (many (String) x) -> (many (Bool) r)
   (match many xs _
     ((Nil a) (BFalse))
-    ((Cons a y rest)
-      (match many (str-cmp x y) _
-        ((CEq eq-t eq-r eq-x) (BTrue))
-        (else (list-mem-str rest x))))))
-
-(def-fns _ $ many list-mem-bin : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Bool) r)
-  (match many xs _
-    ((Nil a) (BFalse))
-    ((Cons a y rest)
-      (match many (bin-cmp x y) _
-        ((CEq eq-t eq-r eq-x) (BTrue))
-        (else (list-mem-bin rest x))))))
+    ((Cons a y rest) (match many (str-eq x y) _ ((BTrue) (BTrue)) ((BFalse) (list-mem-str rest x))))))
 
 (def-fns _ $ many index-of-bin : (subterm many (List $ Bin) xs) (many (Bin) x) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many xs _
     ((Nil a) (None _))
     ((Cons a y rest)
-      (match many (bin-cmp x y) _
-        ((CEq eq-t eq-r eq-x) (Some _ i))
-        (else (index-of-bin rest x $ Succ i))))))
+      (match many (bin-eq x y) _
+        ((BTrue) (Some _ i))
+        ((BFalse) (index-of-bin rest x $ Succ i))))))
+
+(def-fns _ $ many list-mem-bin : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Bool) r)
+  (is-some _ $ index-of-bin xs x 0))
 
 ; ---- Rope: output built as a tree of chunks (the prelude's), flattened once
 
@@ -577,6 +581,9 @@
 
 (def-fns _ $ many rcat5 : (many (Rope) a) (many (Rope) b) (many (Rope) c) (many (Rope) d) (many (Rope) e) -> (many (Rope) r)
   (RCat a $ RCat b $ RCat c $ RCat d e))
+
+(def-fns _ $ many rwrap : (many (String) open) (many (Rope) body) (many (String) close) -> (many (Rope) r)
+  (rcat3 (RStr open) body $ RStr close))
 
 ; Ropes joined by a separator.
 (def-fns _ $ many rjoin : (subterm many (List $ Rope) rs) (many (String) sep) -> (many (Rope) r)
