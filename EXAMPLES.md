@@ -128,7 +128,10 @@ that the test does not make is a mistake in this file.
   and `tests/wild_partial_ann.sl` a match annotation and a let binder type
   with `_`s inside them, `tests/wild_bare_hole.sl` a bare `_` entry,
   `tests/wild_later_arg.sl` a `_` at a `many` parameter of an erased call
-  solved by the proof argument after it, and `tests/wild_special_bad.sl`
+  solved by the proof argument after it, `tests/wild_is_alias.sl` an
+  `is` return instantiated with an alias-typed argument and fed to a `_`
+  solved through an `is` field, with `tests/wild_is_alias_bad.sl` showing
+  the canonical type printed for such a value, and `tests/wild_special_bad.sl`
   a special form refusing an open `_`. The refusals: `tests/wild_nested_bad.sl`
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
