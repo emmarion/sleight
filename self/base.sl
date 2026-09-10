@@ -537,6 +537,9 @@
 (def-fns _ $ many list-is-empty : (erased Type A) (many (List A) xs) -> (many (Bool) r)
   (match many xs _ ((Nil a) (BTrue)) ((Cons a x rest) (BFalse))))
 
+(def-fns _ $ many is-some : (erased Type A) (many (Maybe A) m) -> (many (Bool) r)
+  (match many m _ ((Some a x) (BTrue)) ((None a) (BFalse))))
+
 (def-fns _ $ many list-mem-str : (subterm many (List $ String) xs) (many (String) x) -> (many (Bool) r)
   (match many xs _
     ((Nil a) (BFalse))

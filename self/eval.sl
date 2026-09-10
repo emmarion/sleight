@@ -2,27 +2,11 @@
 ; evaluator over post-erasure code, bounded by a fuel that decreases along the call stack so the checker
 ; accepts it. Extern functions run as the host's own (section 41).
 
-(let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ "Nat")
-(let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ "String")
+(let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ $ ExtNat)
+(let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ $ ExtString)
 
 (def-fns _ $ many vnat : (many (Nat) n) -> (many (Value) v)
   (VExt nat-adt $ PNat n))
-
-(def-fns _ $ many arg-at : (many (List $ Value) args) (many (Nat) i) -> (many (Value) v)
-  (match many (list-nth _ args i) _
-    ((NthMiss nt nl ni np) (VError "extern arity"))
-    ((NthHit nt nl ni v np) v)))
-
-(def-fns _ $ many is-extern-fn : (many (String) name) -> (many (Bool) r)
-  (or (str-eq name "add")
-    (or (str-eq name "nat-cmp")
-      (or (str-eq name "nat-mod")
-        $ or (str-eq name "bin-to-nat") $ or (str-eq name "trim") $ or (str-eq name "append") $ str-eq name "flatten"))))
-
-(def-fns _ $ many is-extern-type : (many (String) name) -> (many (Bool) r)
-  (or (str-eq name "Nat")
-    (or (str-eq name "Bin")
-      $ str-eq name "String")))
 
 (def-fns _ $ many nat-mod-value : (many (Nat) s) (many (Nat) c) -> (many (Value) v)
   (match many (lt-dec (Zero) c) _
@@ -49,29 +33,26 @@
   (let (many s) (erased p) $ flatten $ value-rope v)
   s)
 
-(def-fns _ $ many apply-extern : (many (String) name) (many (List $ Value) args) -> (many (List $ Value) r)
-  (let (many a) $ arg-at args 0)
-  (let (many b) $ arg-at args 1)
-  (match many (str-cmp name "add") _
-    ((CEq eq-t eq-r eq-x) (Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
-    (else
-      (match many (str-cmp name "nat-cmp") _
-        ((CEq eq-t eq-r eq-x) (Cons _ (VError "nat-cmp runs as its model at compile time") $ Nil _))
-        (else
-          (match many (str-cmp name "nat-mod") _
-            ((CEq eq-t eq-r eq-x) (Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
-            (else
-              (match many (str-cmp name "bin-to-nat") _
-                ((CEq eq-t eq-r eq-x)
-                  (let (many n) (erased pf) $ bin-to-nat $ value-bin a)
-                  (Cons _ (vnat n) $ Nil _))
-                (else
-                  (match many (str-cmp name "trim") _
-                    ((CEq eq-t eq-r eq-x) (Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))
-                    (else
-                      (match many (str-cmp name "append") _
-                        ((CEq eq-t eq-r eq-x) (Cons _ (VExt str-adt $ PStr $ str-append (value-str a) $ value-str b) $ Nil _))
-                        (else (Cons _ (VExt str-adt $ PStr $ flatten-value a) $ Nil _))))))))))))))
+; An extern function over its arguments, or None where the model runs instead: nat-cmp builds a plain
+; ADT (ASSUMPTIONS 120). The arguments are counted against the arity here, the call having been checked
+; against the model's telescope.
+(def-fns _ $ many apply-extern : (erased (Nat) n) (many (Extern n) e) (many (List $ Value) args) -> (many (Maybe $ List $ Value) r)
+  (let (many (Maybe $ Value) a1) (many (Maybe $ Value) a2)
+    (match many args _
+      ((Nil x) (values (None _) (None _)))
+      ((Cons x a rest) (values (Some _ a) $ match many rest (((Maybe $ Value) m)) ((Nil y) (None _)) ((Cons y b rest2) (Some _ b))))))
+  (let (many (Value) a) $ match many a1 _ ((None x) (VError "extern arity")) ((Some x v) v))
+  (let (many (Value) b) $ match many a2 _ ((None x) (VError "extern arity")) ((Some x v) v))
+  (match many e _
+    ((ExAdd) (Some _ $ Cons _ (vnat $ nat-add (value-nat a) $ value-nat b) $ Nil _))
+    ((ExNatCmp) (None _))
+    ((ExNatMod) (Some _ $ Cons _ (nat-mod-value (value-nat a) $ value-nat b) $ Nil _))
+    ((ExBinToNat)
+      (let (many n2) (erased pf) $ bin-to-nat $ value-bin a)
+      (Some _ $ Cons _ (vnat n2) $ Nil _))
+    ((ExTrim) (Some _ $ Cons _ (VExt str-adt $ PStr $ trim $ value-str a) $ Nil _))
+    ((ExAppend) (Some _ $ Cons _ (VExt str-adt $ PStr $ str-append (value-str a) $ value-str b) $ Nil _))
+    ((ExFlatten) (Some _ $ Cons _ (VExt str-adt $ PStr $ flatten-value a) $ Nil _))))
 
 ; The closures of a group over [env], each re-closing the whole group when applied, as the frame the group binds.
 (def-fns _ $ many close-fns : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Func gids ctx) fns) (many (Group gids ctx) whole) (many (VEnv ctx) env) ->
@@ -223,10 +204,10 @@
           ((MkClosure gids ctx fn group cenv)
             (match many fn _
               ((MkFunc g c rets name id params body impl top)
-                (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (and (is-extern-fn n) $ not $ str-eq n "nat-cmp")))
-                (match many ext _
-                  ((BTrue) (apply-extern (match many impl (((String) s)) ((None a) (SNil)) ((Some a n) n)) args))
-                  ((BFalse)
+                (let (many (Maybe $ List $ Value) done) $ match many impl _ ((None a) (None _)) ((Some a se) (match many se (((Maybe $ List $ Value) r)) ((MkSomeExtern n e) (apply-extern _ e args)))))
+                (match many done _
+                  ((Some a r) r)
+                  ((None a)
                     (match many fuel _
                       ((Zero) (Cons _ (VError "out of fuel") $ Nil _))
                       ((Succ k) (vals-list _ $ eval k _ _ body $ bind-frame _ params args $ close-group _ _ group cenv))))))))))

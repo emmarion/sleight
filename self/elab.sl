@@ -697,7 +697,7 @@
             ((BTrue) (Some _ w))
             ((BFalse) (None _))))))))
 
-(def-fns _ $ many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ String) ext) -> (many (List $ Ctor) r)
+(def-fns _ $ many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ ExtType) ext) -> (many (List $ Ctor) r)
   (match many ss _
     ((Nil a) (Nil _))
     ((Cons a s rest)
@@ -1453,7 +1453,7 @@
 (def-adts
   (Header : ((Raw) f) -> Type
     enum
-    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe $ String) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
+    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe $ SomeExtern) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
   (Headers : ((List $ Raw) fns) -> Type
     enum
     (many HStop : (erased (List $ Raw) fns) -> (Headers fns))
@@ -2998,8 +2998,9 @@
                         (let (many ps) (many after) (erased wa) $ split-arrow sg _ (WHere sg) env1)
                         (let (many rs) (many body) (erased wb) $ split-returns after _ wa env1)
                         (let (many env2) (many params) (many rets) $ elab-fn-type sugar (subterm (subterm-trans psg $ prove-subterm f fns)) sg one-step (MkPair _ _ ps rs) env1)
-                        (let (many (Env) env3) $ match many isext _ ((BTrue) (claim-extern env2 name $ is-extern-fn name)) ((BFalse) env2))
-                        (let (many (Maybe $ String) impl) $ match many (and isext $ is-extern-fn name) _ ((BTrue) (Some _ name)) ((BFalse) (None _)))
+                        (let (many found) $ extern-of name)
+                        (let (many (Env) env3) $ match many isext _ ((BTrue) (claim-extern env2 name $ is-some _ found)) ((BFalse) env2))
+                        (let (many (Maybe $ SomeExtern) impl) $ match many isext _ ((BTrue) found) ((BFalse) (None _)))
                         (let (many env4) (many hs) $ elab-headers sugar rest (env-back env env3) lvl)
                         (values env4 $ HCons _ _ (MkHeader _ name mult isabs impl params rets body $ within-in body sg (Raw) f wb psg) hs)))))))) (else (values bad $ HStop fns))))))
 
@@ -3099,8 +3100,9 @@
                     (let (many mctors) $ mctors-of mcpairs)
                     (let (many ss) $ shapes mctors env2)
                     (let (many tagged) $ tagged-of disc ss)
-                    (let (many (Env) env2b) $ match many ext _ ((BTrue) (claim-extern env2 name $ is-extern-type name)) ((BFalse) env2))
-                    (let (many (Maybe $ String) extname) $ match many (and ext $ is-extern-type name) _ ((BTrue) (Some _ name)) ((BFalse) (None _)))
+                    (let (many found) $ ext-type-of name)
+                    (let (many (Env) env2b) $ match many ext _ ((BTrue) (claim-extern env2 name $ is-some _ found)) ((BFalse) env2))
+                    (let (many (Maybe $ ExtType) extname) $ match many ext _ ((BTrue) found) ((BFalse) (None _)))
                     (let (many records) $ ctor-records (non-phantom ss) env2b 0 tagged extname)
                     (let (many adt2) $ MkAdt name tagged records extname)
                     (let (many cvals) $ ctor-values records)

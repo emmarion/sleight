@@ -2192,3 +2192,31 @@ had noted that an `SCons` copies its tail, so building a string by
      subterm the emitter's measure needs. `self/bootstrap.sh` is the
      evidence: the tests match and are refused as before, and the
      fixpoint holds.
+
+## The FFI's names decided once
+
+128. **An extern mark is decided into an enum where it is read, and
+     the compiler dispatches on the enum from then on.** At the owner's
+     direction, the second item of the same ladder. `core.sl` declares
+     `Extern`, one constructor per implementation the FFI has with its
+     arity as the type's index, `ExtType` for the three types it holds,
+     and `SomeExtern` packing an `Extern` with its arity; `extern-of`
+     and `ext-type-of` are the only functions that compare a name to
+     the FFI's, called once by `elab-headers` and `define-adts` at the
+     `extern` mark, where `claim-extern` reports the unknown name as
+     before. `Func`, `Header`, `Adt` and `Ctor` carry the enum in place
+     of the name, so the interpreter's `apply-extern` is one match on
+     it, `ext-construct` one on the type, and the emitter recovers the
+     runtime's `ext_` and `con_`/`des_` names through `ext-name` and
+     `ext-type-name`; the `or` chains `is-extern-fn` and
+     `is-extern-type`, the string chain of `apply-extern` with its
+     unreachable `nat-cmp` arm, and `arg-at` are gone, `nat-cmp`'s
+     running as its model at compile time being `apply-extern`'s `None`
+     for `ExNatCmp` (item 120). What stays dynamic, since the second
+     rung was set aside: the arguments reach an extern as a list the
+     elaborator counted against the model's telescope, and
+     `apply-extern` takes its one or two from that list, an absent one
+     being the error value it was; the arity in the type is recorded,
+     not yet consumed, and no arity check was added at the mark, the
+     reference's FFI checking arity at the call only. `self/bootstrap.sh`
+     is the evidence.

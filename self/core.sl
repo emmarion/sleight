@@ -266,6 +266,52 @@
       (let (many shifted) (erased ls) $ at-ins-there-lock x rest more)
       (values (Cons _ (MkAtIn _ x $ AtHere _ _) shifted) (LsCons _ _ x (MkAtIn _ x $ AtHere _ _) rest shifted $ lockstep-trans _ _ _ _ _ _ lk ls)))))
 
+; ---- The FFI's types and functions (section 41; lib/ffi.ml), each decided from its name once, at its extern mark.
+
+(def-adts
+  (ExtType : -> Type
+    enum
+    (many ExtNat : -> (ExtType)) (many ExtBin : -> (ExtType)) (many ExtString : -> (ExtType)))
+  (Extern : ((Nat) arity) -> Type
+    enum
+    (many ExAdd : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
+    (many ExBinToNat : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1)))
+  (SomeExtern : -> Type
+    enum
+    (many MkSomeExtern : (erased (Nat) n) (many (Extern n) e) -> (SomeExtern))))
+
+(def-fns _ $ many ext-type-name : (many (ExtType) t) -> (many (String) s)
+  (match many t _ ((ExtNat) "Nat") ((ExtBin) "Bin") ((ExtString) "String")))
+
+(def-fns _ $ many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r)
+  (match many (str-cmp name "Nat") _
+    ((CEq eq-t eq-r eq-x) (Some _ $ ExtNat))
+    (else (match many (str-cmp name "Bin") _
+      ((CEq eq-t eq-r eq-x) (Some _ $ ExtBin))
+      (else (match many (str-cmp name "String") _ ((CEq eq-t eq-r eq-x) (Some _ $ ExtString)) (else (None _))))))))
+
+(def-fns _ $ many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s)
+  (match many e _
+    ((ExAdd) "add") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
+    ((ExBinToNat) "bin-to-nat") ((ExTrim) "trim") ((ExFlatten) "flatten")))
+
+(def-fns _ $ many extern-of : (many (String) name) -> (many (Maybe $ SomeExtern) r)
+  (match many (str-cmp name "add") _
+    ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExAdd))
+    (else (match many (str-cmp name "nat-cmp") _
+      ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExNatCmp))
+      (else (match many (str-cmp name "nat-mod") _
+        ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExNatMod))
+        (else (match many (str-cmp name "append") _
+          ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExAppend))
+          (else (match many (str-cmp name "bin-to-nat") _
+            ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExBinToNat))
+            (else (match many (str-cmp name "trim") _
+              ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExTrim))
+              (else (match many (str-cmp name "flatten") _
+                ((CEq eq-t eq-r eq-x) (Some _ $ MkSomeExtern _ $ ExFlatten))
+                (else (None _))))))))))))))))
+
 ; ---- Runtime values and post-erasure code (lib/value.ml)
 
 (def-adts
@@ -289,10 +335,10 @@
   ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 41).
   (Adt : -> Type
     enum
-    (many MkAdt : (many (String) name) (many (Bool) tagged) (many (List $ Ctor) ctors) (many (Maybe $ String) ext) -> (Adt)))
+    (many MkAdt : (many (String) name) (many (Bool) tagged) (many (List $ Ctor) ctors) (many (Maybe $ ExtType) ext) -> (Adt)))
   (Ctor : -> Type
     enum
-    (many MkCtor : (many (String) name) (many (Bin) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ String) ext) -> (Ctor)))
+    (many MkCtor : (many (String) name) (many (Bin) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) -> (Ctor)))
   ; A closure re-closes its group over [env] when applied, which is how the group recurses; [env] holds the
   ; frames of the scope the group was defined in.
   (Closure : -> Type
@@ -306,7 +352,7 @@
   ; the parameters over the group over the defining scope.
   (Func : ((List $ Bin) gids) ((List $ List $ Bin) ctx) -> Type
     enum
-    (many MkFunc : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (List $ Mult) rets) (many (String) name) (many (Bin) id) (many (List $ Bin) params) (many (Code (Cons (List (Bin)) params (Cons (List (Bin)) gids ctx)) rets) body) (many (Maybe $ String) impl) (many (Bool) top) -> (Func gids ctx)))
+    (many MkFunc : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (List $ Mult) rets) (many (String) name) (many (Bin) id) (many (List $ Bin) params) (many (Code (Cons (List (Bin)) params (Cons (List (Bin)) gids ctx)) rets) body) (many (Maybe $ SomeExtern) impl) (many (Bool) top) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
   ; what runs (section 16); a node that has to make values on its own holds them as data. A Const entry's
   ; value is embedded with the entry that named it (section 34).
@@ -394,7 +440,7 @@
 (def-fns _ $ many adt-tagged : (many (Adt) a) -> (many (Bool) t)
   (match many a _ ((MkAdt n tg cs ext) tg)))
 
-(def-fns _ $ many adt-ext : (many (Adt) a) -> (many (Maybe $ String) e)
+(def-fns _ $ many adt-ext : (many (Adt) a) -> (many (Maybe $ ExtType) e)
   (match many a _ ((MkAdt n tg cs ext) ext)))
 
 (def-fns _ $ many adt-ctors : (many (Adt) a) -> (many (List $ Ctor) cs)
@@ -432,7 +478,7 @@
 (def-fns _ $ many func-id : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Bin) b)
   (match many f _ ((MkFunc g c rets n id ps body impl top) id)))
 
-(def-fns _ $ many func-impl : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Maybe $ String) b)
+(def-fns _ $ many func-impl : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Maybe $ SomeExtern) b)
   (match many f _ ((MkFunc g c rets n id ps body impl top) impl)))
 
 (def-fns _ $ many func-top : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Bool) b)
@@ -2591,7 +2637,7 @@
 
 ; Extern construction and destruction over the host's own values (section 41; lib/ffi_core.ml).
 (def-fns _ $ many ext-destruct : (many (Adt) adt) (many (Payload) p) -> (many (Nat) index) (many (List $ Value) fields)
-  (let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ "Nat")
+  (let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ $ ExtNat)
   (match many p _
     ((PNat n) (match many n _ ((Zero) (values 0 $ Nil _)) ((Succ k) (values 1 $ Cons _ (VExt adt $ PNat k) $ Nil _))))
     ((PBin b) (match many b _ ((BZ) (values 0 $ Nil _)) ((B1 r) (values 1 $ Cons _ (VExt adt $ PBin r) $ Nil _))
@@ -2613,18 +2659,13 @@
     ((VExt a p) (match many p _ ((PStr s) s) (else (SNil)))) (else (SNil))))
 
 ; Builds an extern value from a constructor index and its many fields.
-(def-fns _ $ many ext-construct : (many (Adt) adt) (many (String) ext) (many (Nat) index) (many (List $ Value) fields) -> (many (Value) v)
+(def-fns _ $ many ext-construct : (many (Adt) adt) (many (ExtType) ext) (many (Nat) index) (many (List $ Value) fields) -> (many (Value) v)
   (let (many (Value) f0) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) f))
   (let (many (Value) f1) $ match many fields _ ((Nil a) (VToken)) ((Cons a f rest) (match many rest (((Value) y)) ((Nil b) (VToken)) ((Cons b g rest2) g))))
-  (match many (str-cmp ext "Nat") _
-    ((CEq eq-t eq-r eq-x) (VExt adt $ PNat $ match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ $ value-nat f0))))
-    (else
-      (match many (str-cmp ext "Bin") _
-        ((CEq eq-t eq-r eq-x) (VExt adt $ PBin $ match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 $ value-bin f0)) ((Succ k2) (B2 $ value-bin f0))))))
-        (else
-          (match many (str-cmp ext "String") _
-            ((CEq eq-t eq-r eq-x) (VExt adt $ PStr $ match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (char-of-code $ value-nat f0) $ value-str f1))))
-            (else (VExt adt $ PDec index))))))))
+  (match many ext _
+    ((ExtNat) (VExt adt $ PNat $ match many index (((Nat) n)) ((Zero) (Zero)) ((Succ k) (Succ $ value-nat f0))))
+    ((ExtBin) (VExt adt $ PBin $ match many index (((Bin) b)) ((Zero) (BZ)) ((Succ k) (match many k (((Bin) b)) ((Zero) (B1 $ value-bin f0)) ((Succ k2) (B2 $ value-bin f0))))))
+    ((ExtString) (VExt adt $ PStr $ match many index (((String) s)) ((Zero) (SNil)) ((Succ k) (SCons (char-of-code $ value-nat f0) $ value-str f1))))))
 
 (def-fns _ $ many construct : (many (Ctor) c) (many (List $ Value) args) -> (many (Value) v)
   (match many c _
@@ -2635,7 +2676,7 @@
 
 ; A value's discriminant and many fields where the FFI holds the type or a tag says (section 38); None
 ; otherwise, the value then being its fields as they stand.
-(def-fns _ $ many dispatch : (many (Maybe $ String) ext) (many (Bool) tagged) (many (Value) v) -> (many (Maybe $ Pair (Nat) $ List $ Value) r)
+(def-fns _ $ many dispatch : (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (Value) v) -> (many (Maybe $ Pair (Nat) $ List $ Value) r)
   (match many v _
     ((VExt adt p)
       (match many ext _

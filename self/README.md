@@ -248,6 +248,13 @@ recorded so it can be revisited.
   time under the FFI; `Cmp` itself is plain source, built by the FFI
   through its constructor, and the compile-time interpreter runs the
   model instead.
+- **The FFI's names are decided once.** An `extern` mark is looked up
+  in the FFI's table where it is read and kept as an `Extern` or
+  `ExtType` constructor (ASSUMPTIONS 128), the former indexed by its
+  arity, so the interpreter's `apply-extern` and `ext-construct` and
+  the emitter's runtime names dispatch on an enum rather than compare
+  strings; the arguments still reach an extern as the list the
+  elaborator counted against its model.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them),
   the reference's warning for a phantom

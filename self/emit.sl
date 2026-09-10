@@ -68,7 +68,7 @@
   (match many c _
     ((MkCtor name id index arity tagged ext)
       (match many ext _
-        ((Some a e) (rcat5 (RStr "(con_") (RStr e) (rcat3 (RStr " ") (nat-rope index) $ RStr " ") (bracketed args) $ RStr ")"))
+        ((Some a e) (rcat5 (RStr "(con_") (RStr $ ext-type-name e) (rcat3 (RStr " ") (nat-rope index) $ RStr " ") (bracketed args) $ RStr ")"))
         ((None a)
           (match many tagged _
             ((BTrue) (rcat5 (RStr "(Tag (") (nat-rope index) (RStr ", ") (bracketed args) $ RStr "))"))
@@ -78,7 +78,7 @@
   (match many c _
     ((MkCtor name id index arity tagged ext)
       (match many ext _
-        ((Some a e) (rcat5 (RStr "(Fn (con_") (RStr e) (RStr " ") (nat-rope index) $ RStr "))"))
+        ((Some a e) (rcat5 (RStr "(Fn (con_") (RStr $ ext-type-name e) (RStr " ") (nat-rope index) $ RStr "))"))
         ((None a)
           (match many tagged _
             ((BTrue) (rcat3 (RStr "(Fn (fun args -> Tag (") (nat-rope index) $ RStr ", args)))"))
@@ -88,7 +88,7 @@
   (match many adt _
     ((MkAdt name tagged ctors ext)
       (match many ext _
-        ((Some a e) (rcat3 (RStr "(Mat (fun _ v -> des_") (RStr e) $ RStr " v))"))
+        ((Some a e) (rcat3 (RStr "(Mat (fun _ v -> des_") (RStr $ ext-type-name e) $ RStr " v))"))
         ((None a)
           (match many tagged _
             ((BTrue) (RStr "(Mat (fun _ v -> des_tag v))"))
@@ -99,7 +99,7 @@
   (match many adt _
     ((MkAdt name tagged ctors ext)
       (match many ext _
-        ((Some a e) (rcat4 (RStr "(des_") (RStr e) (RStr " ") $ rcat scrut $ RStr ")"))
+        ((Some a e) (rcat4 (RStr "(des_") (RStr $ ext-type-name e) (RStr " ") $ rcat scrut $ RStr ")"))
         ((None a) (rcat3 (RStr "(des_tag ") scrut $ RStr ")"))))))
 
 (def-fns _ $ many adt-untagged : (many (Adt) adt) -> (many (Bool) r)
@@ -306,10 +306,9 @@
   (many emit-fn : (subterm many (Closure) cl) (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (Func gids ctx) fn) (erased (Subterm (Func gids ctx) fn (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
     (match many fn _
       ((MkFunc g c rets name id params body impl top)
-        (let (many (Bool) ext) $ match many impl _ ((None a) (BFalse)) ((Some a n) (is-extern-fn n)))
-        (match many ext _
-          ((BTrue) (values st $ rcat3 (RStr "Fn ext_") (RStr $ sanitize $ match many impl (((String) s)) ((None a) "") ((Some a n) n)) $ REmpty))
-          ((BFalse)
+        (match many impl _
+          ((Some a se) (match many se _ ((MkSomeExtern n e) (values st $ rcat3 (RStr "Fn ext_") (RStr $ sanitize $ ext-name _ e) $ REmpty))))
+          ((None a)
             (let (many st2) (many br) $ emit-code cl _ _ body (subterm-trans (prove-subterm body fn) w) cx st)
             (values st2 $ rcat5 (RStr "Fn (fun args -> match args with ") (ids-pattern params $ cx-env cx) (RStr " -> ") br $ RStr " | _ -> absurd ())")))))))
 
@@ -404,7 +403,7 @@
     ((Zero) (Nil _))
     ((Succ k) (Cons _ (RStr $ str-cat "f" $ nat-str i) $ field-names k $ Succ i))))
 
-(def-fns _ $ many adt-untagged-ext : (many (Maybe $ String) ext) (many (Bool) tagged) -> (many (Bool) r)
+(def-fns _ $ many adt-untagged-ext : (many (Maybe $ ExtType) ext) (many (Bool) tagged) -> (many (Bool) r)
   (match many ext _ ((Some a e) (BFalse)) ((None a) (not tagged))))
 
 (def-fns _ $ many untuple-rope-names : (many (List $ Rope) names) (many (Rope) e) (many (Rope) body) -> (many (Rope) r)
