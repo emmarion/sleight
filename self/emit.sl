@@ -33,6 +33,12 @@
 (def-fns _ $ many nat-rope : (many (Nat) n) -> (many (Rope) r)
   (RStr $ nat-str n))
 
+(def-fns _ $ many nat-literal : (many (Nat) n) -> (many (Rope) r)
+  (rcat3 (RStr "(Nat (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
+
+(def-fns _ $ many let-rope : (many (String) name) (many (Rope) e) -> (many (Rope) r)
+  (rcat5 (RStr "let ") (RStr name) (RStr " = ") e $ RStr "\n"))
+
 (def-fns _ $ many bracketed : (subterm many (List $ Rope) rs) -> (many (Rope) r)
   (rcat3 (RStr "[") (rjoin rs "; ") $ RStr "]"))
 
@@ -54,14 +60,14 @@
         ((Nil b) r)
         ((Cons b r2 rest2) (rcat3 (RStr "(Tup ") (bracketed rs) $ RStr ")"))))))
 
-; Binding the ids to a value of that shape.
-(def-fns _ $ many untuple-rope : (many (List $ Bin) ids) (many (Rope) e) (many (Rope) body) (many (Env) env) -> (many (Rope) r)
-  (match many ids _
+; Binding the names to a value of that shape.
+(def-fns _ $ many untuple-rope : (many (List $ Rope) names) (many (Rope) e) (many (Rope) body) -> (many (Rope) r)
+  (match many names _
     ((Nil a) (rcat5 (RStr "(let _ = ") e (RStr " in ") body $ RStr ")"))
     ((Cons a x rest)
       (match many rest _
-        ((Nil b) (rcat5 (rcat3 (RStr "(let ") (RStr $ top-name env x) $ RStr " = ") e (RStr " in ") body $ RStr ")"))
-        ((Cons b y rest2) (rcat5 (RStr "(match ") e (rcat3 (RStr " with Tup ") (ids-pattern ids env) $ RStr " -> ") body $ RStr " | _ -> absurd ())"))))))
+        ((Nil b) (rcat5 (RStr "(let ") x (RStr " = ") (rcat3 e (RStr " in ") body) $ RStr ")"))
+        ((Cons b y rest2) (rcat5 (RStr "(match ") e (rcat3 (RStr " with Tup ") (bracketed names) $ RStr " -> ") body $ RStr " | _ -> absurd ())"))))))
 
 ; Constructing a value from a constructor and the code of its many fields.
 (def-fns _ $ many build-rope : (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r)
@@ -99,22 +105,21 @@
   (match many adt _
     ((MkAdt name tagged ctors ext)
       (match many ext _
-        ((Some a e) (rcat4 (RStr "(des_") (RStr $ ext-type-name e) (RStr " ") $ rcat scrut $ RStr ")"))
+        ((Some a e) (rcat5 (RStr "(des_") (RStr $ ext-type-name e) (RStr " ") scrut $ RStr ")"))
         ((None a) (rcat3 (RStr "(des_tag ") scrut $ RStr ")"))))))
 
 (def-fns _ $ many adt-untagged : (many (Adt) adt) -> (many (Bool) r)
   (match many adt _
-    ((MkAdt name tagged ctors ext)
-      (match many ext _ ((Some a e) (BFalse)) ((None a) (not tagged))))))
+    ((MkAdt name tagged ctors ext) (match many ext _ ((Some a e) (BFalse)) ((None a) (not tagged))))))
 
 (def-fns _ $ many payload-rope : (many (Payload) p) -> (many (Rope) r)
   (match many p _
-    ((PNat n) (rcat3 (RStr "(Nat (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
+    ((PNat n) (nat-literal n))
     ((PBin b)
       (let (many n) (erased pf) $ bin-to-nat b)
-      (rcat3 (RStr "(Nat (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
+      (nat-literal n))
     ((PStr s) (rcat5 (RStr "(Str (") (quoted s) (RStr ", 0, ") (nat-rope $ str-length s) $ RStr "))"))
-    ((PDec i) (rcat3 (RStr "(Nat (Z.of_string \"") (nat-rope i) $ RStr "\"))"))))
+    ((PDec i) (nat-literal i))))
 
 (def-fns _ $ many is-top : (many (EmitCx) cx) (many (Bin) x) -> (many (Bool) r)
   (idmap-mem _ x $ cx-top cx))
@@ -158,13 +163,7 @@
                   ((MkClosure gids cctx fn group cenv)
                     (match many (venv-find x _ cenv) _
                       ((NotFound z1 z2) (values st $ RStr $ top-name (cx-env cx) x))
-                      ((FoundAt z1 z2 v mp)
-                        (let (many st2) (many n) $ st-fresh st)
-                        (let (many name) $ str-cat "c" $ str-cat (bin-str n) $ str-cat "_" $ top-name (cx-env cx) x)
-                        (let (erased q) $ subterm-trans mp $ prove-subterm cenv cl)
-                        (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
-                        (let (many st4) $ st-push-def st3 $ rcat4 (RStr "let ") (RStr name) (RStr " = ") $ rcat vr $ RStr "\n")
-                        (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))))))))))
+                      ((FoundAt z1 z2 v mp) (embed-value cl x v (subterm-trans mp $ prove-subterm cenv cl) cx st))))))))))
       ; A Const entry's value: a top-level one by its name, any other embedded once under a fresh name.
       ((CConst c0 x v)
         (match many (is-top cx x) _
@@ -172,13 +171,7 @@
           ((BFalse)
             (match many (idmap-get _ x $ st-names st) _
               ((Hit lt lk lm name lp) (values st $ RStr name))
-              ((Miss lt lk lm lp)
-                (let (many st2) (many n) $ st-fresh st)
-                (let (many name) $ str-cat "c" $ str-cat (bin-str n) $ str-cat "_" $ top-name (cx-env cx) x)
-                (let (erased q) $ subterm-trans (prove-subterm v code) w)
-                (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
-                (let (many st4) $ st-push-def st3 $ rcat4 (RStr "let ") (RStr name) (RStr " = ") $ rcat vr $ RStr "\n")
-                (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))))))
+              ((Miss lt lk lm lp) (embed-value cl x v (subterm-trans (prove-subterm v code) w) cx st))))))
       ((CValue c0 v)
         (let (erased q) $ subterm-trans (prove-subterm v code) w)
         (emit-value (subterm q) v cx st))
@@ -196,7 +189,7 @@
       ((CLet c0 ms2 ns ids pk rhs rest)
         (let (many st2) (many rr) $ emit-code cl _ _ rhs (subterm-trans (prove-subterm rhs code) w) cx st)
         (let (many st3) (many br) $ emit-code cl _ _ rest (subterm-trans (prove-subterm rest code) w) cx st2)
-        (values st3 $ untuple-rope ids rr br $ cx-env cx))
+        (values st3 $ untuple-rope (names-of-ids ids $ cx-env cx) rr br))
       ((CLetRec c0 ns gids g rest)
         (match many g _
           ((MkGroup c1 ids fns lk)
@@ -220,7 +213,7 @@
                 (match many b _
                   ((MkBranch c1 n0 d ids body)
                     (let (many st3) (many br) $ emit-code cl _ _ body (subterm-trans (prove-subterm body code) w) cx st2b)
-                    (values st3 $ untuple-rope ids sr br $ cx-env cx))))))
+                    (values st3 $ untuple-rope (names-of-ids ids $ cx-env cx) sr br))))))
           ((BFalse)
             (match many shape _
               ((ShKnown c1 adt)
@@ -233,6 +226,13 @@
               ((ShNone c1) (values st2b $ rcat3 (RStr "(") dr $ RStr ")"))))))
       ((CAbsurd c0 ms2) (values st $ RStr "(absurd ())"))
       ((CError c0 ms2 m) (values st $ rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
+
+  (many embed-value : (subterm many (Closure) cl) (subterm many (Bin) x) (many (Value) v) (erased (Subterm (Value) v (Closure) cl) q) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (Rope) r)
+    (let (many st2) (many n) $ st-fresh st)
+    (let (many name) $ str-cat "c" $ str-cat (bin-str n) $ str-cat "_" $ top-name (cx-env cx) x)
+    (let (many st3) (many vr) $ emit-value (subterm q) v cx st2)
+    (let (many st4) $ st-push-def st3 $ let-rope name vr)
+    (values (st-with-names st4 $ idmap-set _ x name $ st-names st4) $ RStr name))
 
   (many emit-codes : (subterm many (Closure) cl) (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) (erased (Subterm (List $ Code ctx many-one) cs (Closure) cl) w) (many (EmitCx) cx) (many (EmitSt) st) -> (many (EmitSt) st2) (many (List $ Rope) rs)
     (match many cs _
@@ -405,17 +405,6 @@
     ((Zero) (Nil _))
     ((Succ k) (Cons _ (RStr $ str-cat "f" $ nat-str i) $ field-names k $ Succ i))))
 
-(def-fns _ $ many adt-untagged-ext : (many (Maybe $ ExtType) ext) (many (Bool) tagged) -> (many (Bool) r)
-  (match many ext _ ((Some a e) (BFalse)) ((None a) (not tagged))))
-
-(def-fns _ $ many untuple-rope-names : (many (List $ Rope) names) (many (Rope) e) (many (Rope) body) -> (many (Rope) r)
-  (match many names _
-    ((Nil a) body)
-    ((Cons a x rest)
-      (match many rest _
-        ((Nil b) (rcat5 (RStr "(let ") x (RStr " = ") (rcat3 e (RStr " in ") body) $ RStr ")"))
-        ((Cons b y rest2) (rcat5 (RStr "(match ") e (rcat3 (RStr " with Tup ") (bracketed names) $ RStr " -> ") body $ RStr " | _ -> absurd ())"))))))
-
 (def-fns _
   (many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) -> (many (ShowMemo) memo2) (many (String) name)
     (match many fuel _
@@ -446,8 +435,9 @@
                                     ((Some d adt)
                                       (match many adt (((ShowMemo) m) ((Rope) r))
                                         ((MkAdt aname tagged ctors ext)
-                                          (let (many memo3) (many arms) $ show-arms k env ty ctors memo1 $ adt-untagged-ext ext tagged)
-                                          (match many (adt-untagged-ext ext tagged) (((ShowMemo) m) ((Rope) r))
+                                          (let (many untagged) $ adt-untagged adt)
+                                          (let (many memo3) (many arms) $ show-arms k env ty ctors memo1 untagged)
+                                          (match many untagged (((ShowMemo) m) ((Rope) r))
                                             ((BTrue) (values memo3 arms))
                                             ((BFalse) (values memo3 $ rcat3 (rcat (RStr "match ") $ des-rope adt $ RStr "v") (rcat (RStr " with ") arms) $ RStr " | _ -> \"?\""))))))))))))))
                     ((TFn l ps rs) (values memo1 $ RStr "\"<function ?>\""))
@@ -484,7 +474,7 @@
                     ((BFalse) (rcat3 (RStr "\"(\" ^ ") (spaced $ Cons _ (quoted cname) shown) $ RStr " ^ \")\""))))
                 (let (many (Rope) arm)
                   (match many untagged _
-                    ((BTrue) (untuple-rope-names fnames (RStr "v") text))
+                    ((BTrue) (untuple-rope fnames (RStr "v") text))
                     ((BFalse) (rcat5 (RStr "| (") (nat-rope index) (rcat3 (RStr ", ") (bracketed fnames) $ RStr ") -> ") text $ REmpty))))
                 (let (many memo3) (many more) $ show-arms k env ty rest memo2 untagged)
                 (values memo3 $ match many live (((Rope) r)) ((BTrue) (rcat3 arm (RStr " ") more)) ((BFalse) more)))))))))
@@ -533,17 +523,12 @@
             (values st2 $ rcat3 (RStr "let rec ") gr $ RStr "\n"))
           ((TrConst x v)
             (let (many st2) (many vr) $ emit-value v cx st)
-            (values st2 $ rcat4 (RStr "let ") (RStr $ top-name (cx-env cx) x) (RStr " = ") $ rcat vr $ RStr "\n"))
+            (values st2 $ let-rope (top-name (cx-env cx) x) vr))
           ((TrFinal v ty) (emit-final v ty cx st))))
       (let (many st3) (many defs) $ st-take-defs st2)
       (rcat3 defs text $ emit-items rest cx st3))))
 
-(def-fns _ $ many header-rope : (subterm many (List $ String) lines) -> (many (Rope) r)
-  (match many lines _
-    ((Nil a) (REmpty))
-    ((Cons a l rest) (rcat3 (RStr l) (RStr "\n") $ header-rope rest))))
-
 (def-fns _ $ many emit-program : (many (Env) env) -> (many (Rope) r)
   (let (many cx) $ MkEmitCx env $ env-values env)
   (let (many st) $ MkEmitSt (BZ) (Nil _) $ MEmpty _)
-  (rcat (header-rope runtime-header) $ emit-items (list-rev _ $ env-trace env) cx st))
+  (rcat runtime-header $ emit-items (list-rev _ $ env-trace env) cx st))
