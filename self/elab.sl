@@ -1,8 +1,8 @@
-; self/elab.sl -- the trusting elaborator (self/README.md): head dispatch (DESIGN.md section 4), erasure by
-; position (section 20), calls, matches compiled against their Matchable (sections 12, 17, 38), the five
-; statements with run-position statements run at once (sections 16, 34), and literals. It mirrors
-; lib/elab.ml with the checks left out: it assumes its input was accepted by the reference checker, so a
-; proof is never inspected, a branch never refuted, and a type never compared.
+; self/elab.sl -- the elaborator and checker (self/README.md): head dispatch (DESIGN.md section 4), erasure
+; by position (section 20), calls with their proofs, matches with refutation and else (sections 12, 17, 38),
+; the seven statements with run-position statements run at once (sections 16, 34), literals, and the sugar
+; expansions. It mirrors lib/elab.ml with every check ported (ASSUMPTIONS 91); an error is recorded as a
+; value and elaboration goes on, so a program may be refused with more than one message.
 
 (def-adts $ Res : -> Type
   enum
