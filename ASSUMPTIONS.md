@@ -2228,9 +2228,11 @@ had noted that an `SCons` copies its tail, so building a string by
      by `ext-arity`, whose return `is` the index, and the owner asked
      for the check at the mark: a model whose `many` parameters do not
      number the implementation's arity is refused with "the extern
-     implementation of NAME takes N arguments, its model M", a refusal
-     the reference does not make, its FFI checking arity at the call
-     only, so no test carries it. `self/bootstrap.sh`
+     implementation of NAME takes N arguments, its model M", and the
+     owner then had the reference refuse it too: `Ffi.arities` lists
+     each implementation's arity, `Ffi.check_arity` compares it with
+     the model's `many` parameters before the claim, and
+     `tests/extern_arity_bad.sl` carries the message. `self/bootstrap.sh`
      is the evidence.
 
 ## Code built at the expectation

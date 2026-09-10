@@ -260,8 +260,8 @@ recorded so it can be revisited.
   arity, so the interpreter's `apply-extern` and `ext-construct` and
   the emitter's runtime names dispatch on an enum rather than compare
   strings, and a model whose `many` parameters do not number the
-  implementation's arity is refused at the mark, which the reference
-  does not do; the arguments still reach an extern as the list the
+  implementation's arity is refused at the mark, as the reference
+  does; the arguments still reach an extern as the list the
   elaborator counted against its model.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them),

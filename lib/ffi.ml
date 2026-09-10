@@ -19,6 +19,14 @@ let claim table loc name =
   | Some _ when Hashtbl.mem claimed name -> Env.error loc "the extern implementation of %s is already bound" name
   | Some impl -> Hashtbl.replace claimed name (); impl
 
+let arities = [ ("add", 2); ("nat-cmp", 2); ("nat-mod", 2); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
+
+(* A function's model must take as many non-erased arguments as its implementation does. *)
+let check_arity loc name n =
+  match List.assoc_opt name arities with
+  | Some m when m <> n -> Env.error loc "the extern implementation of %s takes %d arguments, its model %d" name m n
+  | _ -> ()
+
 let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)

@@ -986,8 +986,12 @@ and elab_def_fns env l args =
                 let ps, rest = split_arrow env fl sg in
                 let rs, body = split_returns env rest in
                 let name = atom_or fl n "a function name" in
-                let impl = if List.mem Sp.Extern marks then Some (Ffi.claim Ffi.fns fl name) else None in
-                (fl, name, mult, List.mem Sp.Absurd marks, impl, elab_fn_type env (Var lvl) ps rs, body)
+                let ty = elab_fn_type env (Var lvl) ps rs in
+                let many_params = match ty with Fn (_, ps, _) -> List.length (List.filter (fun e -> e.mult = Many) ps) | _ -> 0 in
+                let impl =
+                  if List.mem Sp.Extern marks then (Ffi.check_arity fl name many_params; Some (Ffi.claim Ffi.fns fl name)) else None
+                in
+                (fl, name, mult, List.mem Sp.Absurd marks, impl, ty, body)
             | _ -> error fl "malformed function header")
         | _ -> error (loc raw) "malformed function definition"
       in
