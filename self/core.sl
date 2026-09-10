@@ -216,6 +216,56 @@
     ((NthMiss nt nl ni np) (None _))
     ((NthHit nt nl ni e np) (match many e _ ((MkSpEntry n sp) (Some _ sp))))))
 
+; ---- Scopes of the post-erasure code: a context is the frames of non-erased ids the code binds, innermost
+; first; a variable carries the path to its frame and its place there, and a runtime environment holds
+; one list of values per frame, in step with the frame's ids.
+
+(def-adts
+  (At : ((Bin) x) ((List $ Bin) f) -> Type
+    enum
+    (many AtHere : (erased (Bin) x) (erased (List $ Bin) rest) -> (At x (Cons (Bin) x rest)))
+    (many AtThere : (erased (Bin) x) (erased (Bin) y) (erased (List $ Bin) rest) (many (At x rest) p) -> (At x (Cons (Bin) y rest))))
+  (Mem : ((Bin) x) ((List $ List $ Bin) ctx) -> Type
+    enum
+    (many MHere : (erased (Bin) x) (erased (List $ Bin) f) (erased (List $ List $ Bin) ctx) (many (At x f) p) -> (Mem x (Cons (List (Bin)) f ctx)))
+    (many MThere : (erased (Bin) x) (erased (List $ Bin) f) (erased (List $ List $ Bin) ctx) (many (Mem x ctx) p) -> (Mem x (Cons (List (Bin)) f ctx)))))
+
+(def-fns _ $ many at-dec : (many (Bin) x) (subterm many (List $ Bin) f) -> (many (Maybe $ At x f) r)
+  (match many f _
+    ((Nil a) (None _))
+    ((Cons a y rest)
+      (match many (bin-cmp x y) _
+        ((CEq eq-t eq-r eq-x) (Some _ $ AtHere _ _))
+        (else (match many (at-dec x rest) _ ((Some b p) (Some _ $ AtThere _ _ _ p)) ((None b) (None _))))))))
+
+(def-fns _ $ many mem-dec : (many (Bin) x) (subterm many (List $ List $ Bin) ctx) -> (many (Maybe $ Mem x ctx) r)
+  (match many ctx _
+    ((Nil a) (None _))
+    ((Cons a f rest)
+      (match many (at-dec x f) _
+        ((Some b p) (Some _ $ MHere _ _ _ p))
+        ((None b) (match many (mem-dec x rest) _ ((Some c p) (Some _ $ MThere _ _ _ p)) ((None c) (None _))))))))
+
+; The place of each id of a frame, for code that refers to the frame's binders in turn.
+(def-adts $ AtIn : ((List $ Bin) f) -> Type
+  enum
+  (many MkAtIn : (erased (List $ Bin) f) (many (Bin) x) (many (At x f) p) -> (AtIn f)))
+
+(def-fns _ $ many at-ins-there-lock : (erased (Bin) y) (erased (List $ Bin) rest) (subterm many (List $ AtIn rest) ps) -> (many (List $ AtIn (Cons (Bin) y rest)) r) (erased (Lockstep (AtIn rest) (AtIn (Cons (Bin) y rest)) ps r) lk)
+  (match many ps _
+    ((Nil a) (values (Nil _) (LsNil _ _)))
+    ((Cons a p more)
+      (let (many r) (erased lk) $ at-ins-there-lock y rest more)
+      (match many p _ ((MkAtIn g x q) (values (Cons _ (MkAtIn _ x $ AtThere _ _ _ q) r) (LsCons _ _ p (MkAtIn _ x $ AtThere _ _ _ q) more r lk)))))))
+
+(def-fns _ $ many at-ins : (subterm many (List $ Bin) f) -> (many (List $ AtIn f) r) (erased (Lockstep (Bin) (AtIn f) f r) lk)
+  (match many f _
+    ((Nil a) (values (Nil _) (LsNil _ _)))
+    ((Cons a x rest)
+      (let (many more) (erased lk) $ at-ins rest)
+      (let (many shifted) (erased ls) $ at-ins-there-lock x rest more)
+      (values (Cons _ (MkAtIn _ x $ AtHere _ _) shifted) (LsCons _ _ x (MkAtIn _ x $ AtHere _ _) rest shifted $ lockstep-trans _ _ _ _ _ _ lk ls)))))
+
 ; ---- Runtime values and post-erasure code (lib/value.ml)
 
 (def-adts
@@ -243,28 +293,35 @@
   (Ctor : -> Type
     enum
     (many MkCtor : (many (String) name) (many (Bin) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ String) ext) -> (Ctor)))
-  ; A closure re-closes its group over [env] when applied, which is how the group recurses.
+  ; A closure re-closes its group over [env] when applied, which is how the group recurses; [env] holds the
+  ; frames of the scope the group was defined in.
   (Closure : -> Type
     enum
-    (many MkClosure : (many (Func) fn) (many (List $ Pair (Bin) $ Func) group) (many (IdMap $ Value) env) -> (Closure)))
-  ; [top]: defined by a run-position def-fns, so the extracted program names it at top level.
-  (Func : -> Type
+    (many MkClosure : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) fn) (many (Group gids ctx) group) (many (VEnv ctx) env) -> (Closure)))
+  ; [gids]: the frame the group binds, its functions' ids in order.
+  (Group : ((List $ Bin) gids) ((List $ List $ Bin) ctx) -> Type
     enum
-    (many MkFunc : (many (List $ Mult) rets) (many (String) name) (many (Bin) id) (many (List $ Bin) params) (many (Code rets) body) (many (Maybe $ String) impl) (many (Bool) top) -> (Func)))
-  ; [ms]: the multiplicities of the values the code produces, the many ones being what runs (section 16);
-  ; a node that has to make values on its own holds them as data.
-  (Code : ((List $ Mult) ms) -> Type
+    (many MkGroup : (erased (List $ List $ Bin) ctx) (many (List $ Bin) gids) (many (List $ Pair (Bin) $ Func gids ctx) fns) (erased (Lockstep (Bin) (Pair (Bin) $ Func gids ctx) gids fns) lk) -> (Group gids ctx)))
+  ; [top]: defined by a run-position def-fns, so the extracted program names it at top level; the body binds
+  ; the parameters over the group over the defining scope.
+  (Func : ((List $ Bin) gids) ((List $ List $ Bin) ctx) -> Type
     enum
-    (many CVar : (many (Bin) id) -> (Code many-one))
-    (many CConst : (many (Value) v) -> (Code many-one))
-    (many CErased : (many (List $ Mult) ms) -> (Code ms))
-    (many CValues : (many (List $ Mult) ms) (many (List $ Code many-one) cs) (erased (Picked (Code many-one) ms cs) pk) -> (Code ms))
-    (many CApp : (many (List $ Mult) ms) (many (Code many-one) f) (many (List $ Code many-one) args) (many (CC) cc) -> (Code ms))
-    (many CLet : (many (List $ Mult) ms) (erased (List $ Mult) ns) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (many (Code ms) rhs) (many (Code ns) rest) -> (Code ns))
-    (many CLetRec : (erased (List $ Mult) ns) (many (List $ Pair (Bin) $ Func) fns) (many (Code ns) rest) -> (Code ns))
-    (many CMatch : (many (List $ Mult) ns) (many (Code many-one) scrut) (many (Shape) shape) (many (List $ Branch ns) branches) (many (Maybe $ Code ns) dflt) -> (Code ns))
-    (many CAbsurd : (many (List $ Mult) ms) -> (Code ms))
-    (many CError : (many (List $ Mult) ms) (many (String) msg) -> (Code ms)))
+    (many MkFunc : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (List $ Mult) rets) (many (String) name) (many (Bin) id) (many (List $ Bin) params) (many (Code (Cons (List (Bin)) params (Cons (List (Bin)) gids ctx)) rets) body) (many (Maybe $ String) impl) (many (Bool) top) -> (Func gids ctx)))
+  ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
+  ; what runs (section 16); a node that has to make values on its own holds them as data. A Const entry's
+  ; value is embedded with the entry that named it (section 34).
+  (Code : ((List $ List $ Bin) ctx) ((List $ Mult) ms) -> Type
+    enum
+    (many CVar : (erased (List $ List $ Bin) ctx) (many (Bin) id) (many (Mem id ctx) p) -> (Code ctx many-one))
+    (many CConst : (erased (List $ List $ Bin) ctx) (many (Bin) id) (many (Value) v) -> (Code ctx many-one))
+    (many CErased : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
+    (many CValues : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ms cs) pk) -> (Code ctx ms))
+    (many CApp : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
+    (many CLet : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (erased (List $ Mult) ns) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (many (Code ctx ms) rhs) (many (Code (Cons (List (Bin)) ids ctx) ns) rest) -> (Code ctx ns))
+    (many CLetRec : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (erased (List $ Bin) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Bin)) gids ctx) ns) rest) -> (Code ctx ns))
+    (many CMatch : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) dflt) -> (Code ctx ns))
+    (many CAbsurd : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
+    (many CError : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (String) msg) -> (Code ctx ms)))
   (Vals : ((List $ Mult) ms) -> Type
     enum
     (many ValsNil : -> (Vals (Nil (Mult))))
@@ -273,13 +330,54 @@
   (CC : -> Type
     enum
     (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)))
-  (Shape : -> Type
+  (Shape : ((List $ List $ Bin) ctx) -> Type
     enum
-    (many ShKnown : (many (Adt) adt) -> (Shape))
-    (many ShHeld : (many (Code many-one) c) (many (Bool) tagged) -> (Shape)))
-  (Branch : ((List $ Mult) ns) -> Type
+    (many ShKnown : (erased (List $ List $ Bin) ctx) (many (Adt) adt) -> (Shape ctx))
+    (many ShHeld : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) c) (many (Bool) tagged) -> (Shape ctx))
+    (many ShNone : (erased (List $ List $ Bin) ctx) -> (Shape ctx)))
+  (Branch : ((List $ List $ Bin) ctx) ((List $ Mult) ns) -> Type
     enum
-    (many MkBranch : (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Bin) ids) (many (Code ns) body) -> (Branch ns))))
+    (many MkBranch : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Bin) ids) (many (Code (Cons (List (Bin)) ids ctx) ns) body) -> (Branch ctx ns)))
+  (VEnv : ((List $ List $ Bin) ctx) -> Type
+    enum
+    (many VNil : -> (VEnv (Nil (List (Bin)))))
+    (many VFrame : (erased (List $ List $ Bin) ctx) (many (List $ Bin) f) (many (List $ Value) vs) (erased (Lockstep (Bin) (Value) f vs) lk) (many (VEnv ctx) rest) -> (VEnv (Cons (List (Bin)) f ctx)))))
+
+(def-fns _ $ many at-get : (erased Type B) (erased (Bin) x) (erased (List $ Bin) f) (subterm many (At x f) p) (many (List B) vs) (erased (Lockstep (Bin) B f vs) lk) -> (many B v) (erased (Subterm B v (List B) vs) q)
+  (match many p _
+    ((AtHere y rest) (match erased lk _ ((LsCons ta tb x0 v0 xs vs0 q) (match many vs _ ((Cons a v more) (values v $ prove-subterm v vs))))))
+    ((AtThere y z rest q)
+      (match erased lk _
+        ((LsCons ta tb x0 v0 xs vs0 q2)
+          (match many vs _
+            ((Cons a v more)
+              (let (many w) (erased sq) $ at-get _ _ _ q more q2)
+              (values w $ subterm-trans sq $ prove-subterm more vs))))))))
+
+(def-fns _ $ many venv-get : (erased (Bin) x) (erased (List $ List $ Bin) ctx) (subterm many (Mem x ctx) p) (many (VEnv ctx) env) -> (many (Value) v)
+  (match many p _
+    ((MHere y f c q) (match many env _ ((VFrame c2 f2 vs lk rest) (let (many v) (erased sq) $ at-get _ _ _ q vs lk) v)))
+    ((MThere y f c q) (match many env _ ((VFrame c2 f2 vs lk rest) (venv-get _ _ q rest))))))
+
+; The value of an id in an environment, by its name rather than its place, for the emitter, with its place
+; inside the environment.
+(def-adts $ Found : ((List $ List $ Bin) ctx) ((VEnv ctx) env) -> Type
+  enum
+  (many NotFound : (erased (List $ List $ Bin) ctx) (erased (VEnv ctx) env) -> (Found ctx env))
+  (many FoundAt : (erased (List $ List $ Bin) ctx) (erased (VEnv ctx) env) (many (Value) v) (erased (Subterm (Value) v (VEnv ctx) env) p) -> (Found ctx env)))
+
+(def-fns _ $ many venv-find : (many (Bin) x) (erased (List $ List $ Bin) ctx) (subterm many (VEnv ctx) env) -> (many (Found ctx env) r)
+  (match many env _
+    ((VNil) (NotFound _ _))
+    ((VFrame c f vs lk rest)
+      (match many (at-dec x f) _
+        ((Some a p)
+          (let (many v) (erased sq) $ at-get _ _ _ p vs lk)
+          (FoundAt _ _ v $ subterm-trans sq $ prove-subterm vs env))
+        ((None a)
+          (match many (venv-find x _ rest) _
+            ((NotFound c2 e2) (NotFound _ _))
+            ((FoundAt c2 e2 v q) (FoundAt _ _ v $ subterm-trans q $ prove-subterm rest env))))))))
 
 (def-fns _ $ many ctor-index : (many (Ctor) c) -> (many (Nat) i)
   (match many c _ ((MkCtor n id ix ar tg ext) ix)))
@@ -306,39 +404,39 @@
   (match many a _ ((MkAdt n tg cs ext) n)))
 
 (def-fns _
-  (many recast : (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (Code ms) c) -> (many (Code ns) r)
+  (many recast : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (Code ctx ms) c) -> (many (Code ctx ns) r)
     (match many c _
-      ((CVar x) (CValues ns (Cons _ (CVar x) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CVar x) (Nil _) $ PkNil _))
-      ((CConst v) (CValues ns (Cons _ (CConst v) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CConst v) (Nil _) $ PkNil _))
-      ((CErased ms2) (CErased ns))
-      ((CValues ms2 cs pk) (CValues ns cs $ picked-same _ _ _ _ same pk))
-      ((CApp ms2 f args cc) (CApp ns f args cc))
-      ((CLet ms2 ns2 ids pk rhs rest) (CLet ms2 _ ids pk rhs $ recast ns ms same rest))
-      ((CLetRec ns2 fns rest) (CLetRec _ fns $ recast ns ms same rest))
-      ((CMatch ns2 scrut shape branches dfl)
-        (CMatch ns scrut shape (recast-branches ns ms same branches)
-          $ match many dfl (((Maybe $ Code ns) r)) ((Some a d) (Some _ $ recast ns ms same d)) ((None a) (None _))))
-      ((CAbsurd ms2) (CAbsurd ns))
-      ((CError ms2 m) (CError ns m))))
-  (many recast-branches : (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (List $ Branch ms) bs) -> (many (List $ Branch ns) r)
+      ((CVar c0 x p) (CValues _ ns (Cons _ (CVar _ x p) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CVar _ x p) (Nil _) $ PkNil _))
+      ((CConst c0 x v) (CValues _ ns (Cons _ (CConst _ x v) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CConst _ x v) (Nil _) $ PkNil _))
+      ((CErased c0 ms2) (CErased _ ns))
+      ((CValues c0 ms2 cs pk) (CValues _ ns cs $ picked-same _ _ _ _ same pk))
+      ((CApp c0 ms2 f args cc) (CApp _ ns f args cc))
+      ((CLet c0 ms2 ns2 ids pk rhs rest) (CLet _ ms2 _ ids pk rhs $ recast _ ns ms same rest))
+      ((CLetRec c0 ns2 gids g rest) (CLetRec _ _ _ g $ recast _ ns ms same rest))
+      ((CMatch c0 ns2 scrut shape branches dfl)
+        (CMatch _ ns scrut shape (recast-branches _ ns ms same branches)
+          $ match many dfl (((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) r)) ((Some a d) (Some _ $ recast _ ns ms same d)) ((None a) (None _))))
+      ((CAbsurd c0 ms2) (CAbsurd _ ns))
+      ((CError c0 ms2 m) (CError _ ns m))))
+  (many recast-branches : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (List $ Branch ctx ms) bs) -> (many (List $ Branch ctx ns) r)
     (match many bs _
       ((Nil a) (Nil _))
-      ((Cons a b rest) (match many b _ ((MkBranch n0 d ids body) (Cons _ (MkBranch _ d ids $ recast ns ms same body) $ recast-branches ns ms same rest)))))))
+      ((Cons a b rest) (match many b _ ((MkBranch c0 n0 d ids body) (Cons _ (MkBranch _ _ d ids $ recast _ ns ms same body) $ recast-branches _ ns ms same rest)))))))
 
-(def-fns _ $ many func-params : (many (Func) f) -> (many (List $ Bin) ps)
-  (match many f _ ((MkFunc rets n id ps body impl top) ps)))
+(def-fns _ $ many func-params : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (List $ Bin) ps)
+  (match many f _ ((MkFunc g c rets n id ps body impl top) ps)))
 
-(def-fns _ $ many func-name : (many (Func) f) -> (many (String) b)
-  (match many f _ ((MkFunc rets n id ps body impl top) n)))
+(def-fns _ $ many func-name : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (String) b)
+  (match many f _ ((MkFunc g c rets n id ps body impl top) n)))
 
-(def-fns _ $ many func-id : (many (Func) f) -> (many (Bin) b)
-  (match many f _ ((MkFunc rets n id ps body impl top) id)))
+(def-fns _ $ many func-id : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Bin) b)
+  (match many f _ ((MkFunc g c rets n id ps body impl top) id)))
 
-(def-fns _ $ many func-impl : (many (Func) f) -> (many (Maybe $ String) b)
-  (match many f _ ((MkFunc rets n id ps body impl top) impl)))
+(def-fns _ $ many func-impl : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Maybe $ String) b)
+  (match many f _ ((MkFunc g c rets n id ps body impl top) impl)))
 
-(def-fns _ $ many func-top : (many (Func) f) -> (many (Bool) b)
-  (match many f _ ((MkFunc rets n id ps body impl top) top)))
+(def-fns _ $ many func-top : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Func gids ctx) f) -> (many (Bool) b)
+  (match many f _ ((MkFunc g c rets n id ps body impl top) top)))
 
 ; An untagged value is its many fields: one of them bare, none the token (section 38).
 (def-fns _ $ many tuple : (many (List $ Value) vs) -> (many (Value) v)
@@ -1624,7 +1722,7 @@
     (many SDyn : -> (State)))
   (Trace : -> Type
     enum
-    (many TrFns : (many (List $ Pair (Bin) $ Func) fns) -> (Trace))
+    (many TrFns : (erased (List $ Bin) gids) (many (Group gids (Nil (List (Bin)))) g) -> (Trace))
     (many TrConst : (many (Bin) id) (many (Value) v) -> (Trace))
     (many TrFinal : (many (Value) v) (many (Term) ty) -> (Trace))))
 
@@ -2584,7 +2682,7 @@
       ((VExt adt p) (show-payload p adt))
       ((VCtorFn c) (rcat3 (RStr "<constructor ") (RStr $ ctor-name c) $ RStr ">"))
       ((VMatchable adt) (rcat3 (RStr "<matchable ") (RStr $ adt-name adt) $ RStr ">"))
-      ((VFn cl) (match many cl _ ((MkClosure fn g e) (rcat3 (RStr "<function ") (RStr $ func-name fn) $ RStr ">"))))
+      ((VFn cl) (match many cl _ ((MkClosure gi cx fn g e) (rcat3 (RStr "<function ") (RStr $ func-name _ _ fn) $ RStr ">"))))
       ((VToken) (RStr "_"))
       ((VError m) (rcat3 (RStr "<error: ") (RStr m) $ RStr ">"))))
   (many show-values : (subterm many (List $ Value) vs) -> (many (Rope) r)

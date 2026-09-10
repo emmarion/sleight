@@ -2129,3 +2129,66 @@ had noted that an `SCons` copies its tail, so building a string by
      18's third contradiction and whether a `_` may be solved against
      an `is` entry. `self/bootstrap.sh` is the evidence.
 
+## Code indexed by its scope
+
+127. **Post-erasure code is indexed by the frames it binds, and the
+     interpreter's environment by the same frames.** At the owner's
+     direction, the first rung of a ladder the session proposed after
+     reading DESIGN.md with CPDT's dependent de Bruijn representation
+     in mind (`member` and `hlist`); the owner set the second rung
+     (arity-indexed application) aside as common-case special casing
+     (CLAUDE.md 6), and the session withdrew the third (shape-indexed
+     values) on the owner's question about branch refinement: a
+     binder's shape is decided by canonicalization at its binding site
+     and a use site's by canonicalization under the branch's facts, and
+     a polymorphic field is read at a type its construction site never
+     saw, so a shape index would only move the interpreter's dynamic
+     checks into narrowing nodes. Shapes and names below are the
+     session's. `Code ctx ms` in `core.sl` takes the context as a list
+     of frames, each a list of the non-erased ids a binder introduces;
+     `CVar` carries a `Mem` proof, a path to a frame and an `At` place
+     in it, both `many` since the interpreter walks them; `VEnv ctx`
+     holds one list of values per frame with an erased `Lockstep` to
+     the frame's ids, so `venv-get` is total and the interpreter's
+     "unbound at runtime" is gone, as are its `IdMap` and the id-keyed
+     binding of a `let`'s values (`vals-frame` picks them from the
+     `Picked` proof). `Func gids ctx` and `Group gids ctx` bind a
+     body over its parameters, its group and the scope the group was
+     defined in, and a `Closure` packs those; `Bound` in `elab.sl`
+     carries the group's ids as an index so `define-fns` returns the
+     group's `Lockstep` by construction. A Const entry's value is
+     embedded with its entry (`CConst id v`, section 34's wording), so
+     the top level binds no frame, a top-level closure captures
+     nothing, and run position is the empty context: `elab-let`,
+     `elab-let-match` and `elab-def-fns` run code or mint a top-level
+     group only under a match on the context being `Nil`, where
+     `run-code` takes `Code (Nil) ms`; the environment's run-position
+     flag stays for minting states. For that to hold, every branch
+     body sits under a frame, the `else` body under an empty one, and
+     a match with no runtime discriminant, an erased scrutinee or an
+     untagged type, is a `CMatch` with the new `ShNone` shape rather
+     than its branch's bare body; the normalizer drops it when its one
+     branch binds nothing. `StmtCode ctx ctx2` says what frame a
+     statement pushes, and `elab-stmt` returns the context after it.
+     The normalizer's substitution is a `Ren from ctx`, a frame of
+     atoms (a variable with its place, or a constant) per frame of
+     the source, weakened under each binder (`ren-weaken`), so a let
+     whose right-hand side is atoms is substituted away rather than
+     resolved through an id map; the reading is that this also covers
+     the former dropping of a constant `let` nothing mentions, since a
+     mentioned constant is now substituted and the emitter names a
+     non-top-level constant once. A `projection` builds the places of
+     its bound ids from `at-ins` before referring to them. The group
+     frame holds every function of a `def-fns`, erased ones included,
+     except that a group with no `many` function leaves no code, as
+     item 77 has it. What stays dynamic: the elaborator decides a
+     variable's place with `mem-dec` when it emits it, and a `Dyn`
+     entry it cannot place is an internal error at elaboration, so the
+     invariant that the scope's non-erased entries are the context's
+     is not yet in the types; a closure's arity and a branch's fields
+     are still fitted to their frame by count (`bind-frame`), the
+     second rung. The emitter reads a captured value by name through
+     `venv-find`, which returns its place in the environment as the
+     subterm the emitter's measure needs. `self/bootstrap.sh` is the
+     evidence: the tests match and are refused as before, and the
+     fixpoint holds.

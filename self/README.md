@@ -210,6 +210,22 @@ recorded so it can be revisited.
   the interpreter returns `Vals ms` and binds a `let` without a count
   check. What it cannot know statically, a closure's arity and a
   constructor's fields, is fitted once at the boundary.
+- **Post-erasure code is indexed by its scope.** `Code ctx ms` names,
+  beside its erasures, the frames of non-erased ids the code binds:
+  one frame per function's parameters, per group, per `let` and per
+  branch, innermost first. A variable carries the path to its frame
+  and place (`Mem`, `At`), so the interpreter's environment is one list
+  of values per frame and a lookup is total; a `let` extends the
+  environment with the values picked from the same positions as its
+  ids. A Const entry's value is embedded in the code with the entry
+  that named it (section 34), so the top level binds no frames and run
+  position is the empty context: a statement runs at compile time
+  exactly when its context is empty, and a branch body, an `else` body
+  included, always sits under a frame. The elaborator decides each
+  variable's place when it emits it (ASSUMPTIONS 127); the invariant
+  that every non-erased entry in scope has one is not yet a proof, so
+  a miss there is an internal error at elaboration, no longer a value
+  at runtime.
 - **Types travel with their terms.** `elab-term` returns the type it
   computed beside the term, `check-args` the types of the arguments,
   and an `is` entry keeps the type computed when its clause was
