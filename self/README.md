@@ -68,11 +68,12 @@ host (section 41); a `U8` or a
   with their `Numeral` proofs, the post-erasure normalization behind
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
   expansion of `unary` and `distinct`, and the top level.
-- `runtime.ml` — the OCaml runtime every compiled program starts with:
-  `lib/ffi_core.ml`'s implementations, one type `v` of runtime values,
-  the extern functions, and the driver of `lib/program.ml`.
-  `gen_header.py` turns it into `header.sl`, the same text as SL string
-  literals; regenerate `header.sl` after editing `runtime.ml`.
+- `runtime.ml` — what the OCaml runtime every compiled program starts
+  with adds to `lib/ffi_core.ml`: one type `v` of runtime values, the
+  extern functions, and the driver of `lib/program.ml`.
+  `gen_header.py` turns the two files into `header.sl`, the same text
+  as one `Rope` of SL string literals; regenerate `header.sl` after
+  editing either.
 - `emit.sl` — extraction to OCaml, and a generated printer per type for
   a final function's result.
 - `main.sl` — the entry point, an `IO` program (ASSUMPTIONS 56).
