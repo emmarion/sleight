@@ -210,6 +210,11 @@ recorded so it can be revisited.
   the interpreter returns `Vals ms` and binds a `let` without a count
   check. What it cannot know statically, a closure's arity and a
   constructor's fields, is fitted once at the boundary.
+- **Types travel with their terms.** `elab-term` returns the type it
+  computed beside the term, `check-args` the types of the arguments,
+  and an `is` entry keeps the type computed when its clause was
+  elaborated (ASSUMPTIONS 126), so nothing reads a type off a term
+  after the fact and there is no `infer`.
 - **Lists walked together carry evidence.** Where the elaborator walks
   two lists in step, a telescope and the metas opened for it, a `let`'s
   binders and the results and values they bind, an expectation and the

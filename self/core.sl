@@ -76,13 +76,13 @@
   (Sg : -> Type
     enum
     (many SgTy : (many (Term) t) -> (Sg))
-    (many SgIs : (many (Term) t) -> (Sg)))
+    (many SgIs : (many (Term) t) (many (Term) ty) -> (Sg)))
   (MCtor : -> Type
     enum
     (many MkMCtor : (many (Mult) m) (many (Term) c) -> (MCtor))))
 
 (def-fns _ $ many sg-term : (many (Sg) sg) -> (many (Term) t)
-  (match many sg _ ((SgTy t) t) ((SgIs t) t)))
+  (match many sg _ ((SgTy t) t) ((SgIs t t-ty) t)))
 
 (def-fns _ $ many entry-mult : (many (Entry) e) -> (many (Mult) m)
   (match many e _ ((MkEntry n s m sg) m)))
@@ -1013,7 +1013,7 @@
   (FrS : ((Nat) n) ((Facts n) f) ((Sg) sg) -> Type
     enum
     (many FrSTy : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (Fr n f t) p) -> (FrS n f $ SgTy t))
-    (many FrSIs : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (Fr n f t) p) -> (FrS n f $ SgIs t)))
+    (many FrSIs : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (Term) ty) (erased (Fr n f t) p) -> (FrS n f $ SgIs t ty)))
   (FrM : ((Nat) n) ((Facts n) f) ((List $ MCtor) cs) -> Type
     enum
     (many FrMNil : (erased (Nat) n) (erased (Facts n) f) -> (FrM n f $ Nil $ MCtor))
@@ -1082,8 +1082,8 @@
 (def-fns _ $ erased frs-ty : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (FrS n f $ SgTy t) p) -> (erased (Fr n f t) pt)
   (match erased p _ ((FrSTy a b c pt) pt)))
 
-(def-fns _ $ erased frs-is : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (FrS n f $ SgIs t) p) -> (erased (Fr n f t) pt)
-  (match erased p _ ((FrSIs a b c pt) pt)))
+(def-fns _ $ erased frs-is : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (Term) ty) (erased (FrS n f $ SgIs t ty) p) -> (erased (Fr n f t) pt)
+  (match erased p _ ((FrSIs a b c d pt) pt)))
 
 (def-fns _ $ erased frm-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest) p) -> (erased (Fr n f c) pc) (erased (FrM n f rest) pr)
   (match erased p _
@@ -1146,10 +1146,10 @@
     ((GSTop sg) (GTop _))
     ((GSAv sg s n f p a) (GAv _ _ _ _ (frs-ty n f t p) a))))
 
-(def-fns _ $ erased guards-is : (erased (Term) t) (erased (List $ Bin) seen) (erased (GuardS (SgIs t) seen) g) -> (erased (Guard t seen) gt)
+(def-fns _ $ erased guards-is : (erased (Term) t) (erased (Term) ty) (erased (List $ Bin) seen) (erased (GuardS (SgIs t ty) seen) g) -> (erased (Guard t seen) gt)
   (match erased g _
     ((GSTop sg) (GTop _))
-    ((GSAv sg s n f p a) (GAv _ _ _ _ (frs-is n f t p) a))))
+    ((GSAv sg s n f p a) (GAv _ _ _ _ (frs-is n f t ty p) a))))
 
 (def-fns _ $ erased guardm-cons : (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (List $ Bin) seen) (erased (GuardM (Cons (MCtor) (MkMCtor mu c) rest) seen) g) -> (erased (Guard c seen) gc) (erased (GuardM rest seen) gr)
   (match erased g _
@@ -1294,10 +1294,10 @@
         (let (erased gt) $ guards-ty _ _ g)
         (let (many t2) (erased ft) $ canon after t _ f _ _ pre ord gt c)
         (values (SgTy t2) $ FrSTy _ _ _ ft))
-      ((SgIs t)
-        (let (erased gt) $ guards-is _ _ g)
+      ((SgIs t ty)
+        (let (erased gt) $ guards-is _ _ _ g)
         (let (many t2) (erased ft) $ canon after t _ f _ _ pre ord gt c)
-        (values (SgIs t2) $ FrSIs _ _ _ ft))))
+        (values (SgIs t2 ty) $ FrSIs _ _ _ _ ft))))
   (many canon-mctors : (subterm many (List $ Rule) after) (subterm many (List $ MCtor) cs) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Bin) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardM cs seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (List $ MCtor) r) (erased (FrM n f r) fr)
     (match many cs _
@@ -1410,10 +1410,10 @@
         (match many (refresh t _ f _ c) _
           ((None a) (None _))
           ((Some a bt) (match many bt _ ((MkFrBox a2 b2 c2 pt) (Some _ $ MkFrSBox _ _ _ $ FrSTy n f t pt))))))
-      ((SgIs t)
+      ((SgIs t t-ty)
         (match many (refresh t _ f _ c) _
           ((None a) (None _))
-          ((Some a bt) (match many bt _ ((MkFrBox a2 b2 c2 pt) (Some _ $ MkFrSBox _ _ _ $ FrSIs n f t pt))))))))
+          ((Some a bt) (match many bt _ ((MkFrBox a2 b2 c2 pt) (Some _ $ MkFrSBox _ _ _ $ FrSIs n f t t-ty pt))))))))
   (many refresh-mctors : (subterm many (List $ MCtor) cs) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) rules) (erased (C1 (Nil $ Digit) n f rules) c) -> (many (Maybe $ FrMBox n f cs) r)
     (match many cs _
       ((Nil a) (Some _ $ MkFrMBox _ _ _ $ FrMNil n f))
@@ -1481,7 +1481,7 @@
   (erased fresh-ins-out-sg : (erased (Bin) x) (erased (Term) t) (erased (Nat) n0) (erased (Facts n0) f0) (erased (Nat) n1) (erased (Facts n1) f1) (erased (Nat) k) (erased (Facts k) f2) (erased (Ins x n0 f0 n1 f1) i) (erased (Out x t n1 f1 k f2) o) (erased (Sg) sg) (subterm erased (FrS n0 f0 sg) p) -> (erased (FrS k f2 sg) q)
     (match erased p _
       ((FrSTy a b u pu) (FrSTy _ _ _ $ fresh-ins-out x t n0 f0 n1 f1 k f2 i o u pu))
-      ((FrSIs a b u pu) (FrSIs _ _ _ $ fresh-ins-out x t n0 f0 n1 f1 k f2 i o u pu))))
+      ((FrSIs a b u uty pu) (FrSIs _ _ _ _ $ fresh-ins-out x t n0 f0 n1 f1 k f2 i o u pu))))
   (erased fresh-ins-out-mctors : (erased (Bin) x) (erased (Term) t) (erased (Nat) n0) (erased (Facts n0) f0) (erased (Nat) n1) (erased (Facts n1) f1) (erased (Nat) k) (erased (Facts k) f2) (erased (Ins x n0 f0 n1 f1) i) (erased (Out x t n1 f1 k f2) o) (erased (List $ MCtor) cs) (subterm erased (FrM n0 f0 cs) p) -> (erased (FrM k f2 cs) q)
     (match erased p _
       ((FrMNil a b) (FrMNil _ _))
@@ -1822,7 +1822,7 @@
       ((Nil a) (BFalse))
       ((Cons a e rest)
         (match many e _
-          ((MkEntry n s m sg) (or (match many sg (((Bool) b)) ((SgTy t) (has-meta t env)) ((SgIs t) (has-meta t env))) $ has-meta-tele rest env)))))))
+          ((MkEntry n s m sg) (or (match many sg (((Bool) b)) ((SgTy t) (has-meta t env)) ((SgIs t t-ty) (has-meta t env))) $ has-meta-tele rest env)))))))
 
 (def-fns _ $ many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r)
   (has-meta (canon-env env t) env))
@@ -1862,7 +1862,7 @@
                                                     $ match many m (((String) x)) ((Erased) "erased ") ((Many) "many ")))
             (let (many (Rope) body) (match many sg _
                                ((SgTy t) (rcat3 (show-term t env) (RStr " ") $ RStr nm))
-                               ((SgIs t) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
+                               ((SgIs t t-ty) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
             (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
 
 ; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
@@ -1970,7 +1970,7 @@
       ((Cons a e rest)
         (let (many (Entry) e2) (match many e _
                          ((MkEntry n s m sg)
-                           (MkEntry n s m $ match many sg (((Sg) y)) ((SgTy t) (SgTy $ mapv t op d)) ((SgIs t) (SgIs $ mapv t op d))))))
+                           (MkEntry n s m $ match many sg (((Sg) y)) ((SgTy t) (SgTy $ mapv t op d)) ((SgIs t ty) (SgIs (mapv t op d) $ mapv ty op d))))))
         (let (many d3) (many rest2) $ mapv-tele rest op $ Succ d)
         (values d3 $ Cons _ e2 rest2)))))
 
@@ -1991,7 +1991,7 @@
 (def-fns _ $ many abstract-sg : (many (List $ Bin) ids) (many (Sg) sg) -> (many (Sg) r)
   (match many sg _
     ((SgTy t) (SgTy $ abstract ids t))
-    ((SgIs t) (SgIs $ abstract ids t))))
+    ((SgIs t ty) (SgIs (abstract ids t) $ abstract ids ty))))
 
 
 (def-fns _ $ many type-of : (many (Env) env) (many (Bin) x) -> (many (Term) r)
@@ -2064,16 +2064,6 @@
 
 ; ---- Inference over the grammar (lib/elab.ml's infer)
 
-(def-fns _ $ many infer : (subterm many (Term) t) (many (Env) env) -> (many (Term) r)
-  (match many t _
-    ((TVar x) (type-of env x))
-    ((TApp h args)
-      (match many (canon-env env $ infer h env) _
-        ((TTyCtor ps) type-term)
-        ((TValCtor ps ret) (instantiate (list-rev _ args) ret))
-        ((TFn l p r) (TErr "cannot apply a function in a type")) ((TErr m) (TErr m)) (else (TErr "cannot apply"))))
-    ((TBound k) (TErr "dangling binder")) ((TErr m) t) (else type-term)))
-
 ; The head type constructor of a canonical type, if any.
 (def-fns _ $ many type-head : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Bin) r)
   (match many (canon-env env ty) _
@@ -2130,7 +2120,7 @@
                 (match many b _
                   ((MkEntry n2 s2 m2 sg2)
                     (let (many t2) $ sg-term sg2)
-                    (let (many (Bool) same) $ match many sg _ ((SgTy t) (term-eq t t2)) ((SgIs t) (term-eq t t2)))
+                    (let (many (Bool) same) $ match many sg _ ((SgTy t) (term-eq t t2)) ((SgIs t t-ty) (term-eq t t2)))
                     (and (mult-eq m m2)
                       $ and same $ tele-eq rest rest2))))))))))
   (many mctors-eq : (subterm many (List $ MCtor) as) (many (List $ MCtor) bs) -> (many (Bool) r)
@@ -2234,7 +2224,7 @@
       ((Cons a e rest)
         (match many e _
           ((MkEntry n s m sg)
-            (or (match many sg (((Bool) b)) ((SgTy t) (dangling t d)) ((SgIs t) (dangling t d)))
+            (or (match many sg (((Bool) b)) ((SgTy t) (dangling t d)) ((SgIs t t-ty) (dangling t d)))
               $ dangling-tele rest $ Succ d)))))))
 
 (def-fns _ $ many contradiction : (erased (Nat) n) (many (Bin) bnd) (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r)
@@ -2462,11 +2452,11 @@
       ((SgTy t)
         (match many sg2 _
           ((SgTy t2) (unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-ty n f t2 psg2) env force))
-          ((SgIs t2) (unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-is n f t2 psg2) env force))))
-      ((SgIs t)
+          ((SgIs t2 ty2) (unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-is n f t2 ty2 psg2) env force))))
+      ((SgIs t ty)
         (match many sg2 _
-          ((SgTy t2) (unify _ _ bnd tb t (frs-is n f t psg) t2 (frs-ty n f t2 psg2) env force))
-          ((SgIs t2) (unify _ _ bnd tb t (frs-is n f t psg) t2 (frs-is n f t2 psg2) env force))))))
+          ((SgTy t2) (unify _ _ bnd tb t (frs-is n f t ty psg) t2 (frs-ty n f t2 psg2) env force))
+          ((SgIs t2 ty2) (unify _ _ bnd tb t (frs-is n f t ty psg) t2 (frs-is n f t2 ty2 psg2) env force))))))
 
   (many unify-mctors : (subterm erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb) (subterm many (List $ MCtor) as) (erased (FrM n f as) pas) (many (List $ MCtor) bs) (erased (FrM n f bs) pbs) (many (Env) env) (many (Term) wa) (many (Term) wb) (many (Bool) force) -> (many (Outcome n bnd) r)
     (match many as _

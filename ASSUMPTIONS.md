@@ -2099,3 +2099,33 @@ had noted that an `SCons` copies its tail, so building a string by
      sits behind an error already recorded. `self/bootstrap.sh` is the
      evidence.
 
+## Types travel with their terms
+
+126. **The elaborator never reads a type off a term after the fact.**
+     At the owner's direction, in place of the depth-indexed `Term`
+     that had been the review's fourth item. An extrinsic scopedness
+     proof beside each closed term was the plan, but a stored type's
+     natural home is the fact table, whose `In` family indexes on the
+     type a node holds, so the proof would have reached the proof
+     family after all. Instead the one consumer that needed closedness,
+     `infer`, is gone. `elab-term` returns the type it computes beside
+     the term: a variable's from the table, a constructor application's
+     by instantiating the constructor's return, a type former's `Type`.
+     `check-args` returns the arguments' types beside their terms. An
+     `is` entry's `SgIs` carries the type computed when the clause was
+     elaborated, instantiated, abstracted and freed of metas along with
+     its term but neither canonicalized nor unified, since it is read
+     only when the entry is bound, where the table canonicalizes on
+     read. The application result entry a `_` is solved against takes
+     its type from the head's constructor, `ARApp` carrying the return.
+     The proof helpers take the `Res` a proof came from. The session's
+     reading is that every type this hands over is the one `infer`
+     computed, a variable's being `type-of` and a constructor
+     application's the same instantiation, so no message changes.
+     `FrSIs` and the guard for an `is` entry gain the type as an erased
+     index; nothing else in the proof family moved. The "dangling
+     binder" case is not refuted but absent: no function reads a type
+     off a term any more. `dangling` itself stays, deciding section
+     18's third contradiction and whether a `_` may be solved against
+     an `is` entry. `self/bootstrap.sh` is the evidence.
+
