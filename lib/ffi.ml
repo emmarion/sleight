@@ -31,7 +31,6 @@ let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
-let str s = text (s, 0, String.length s)
 
 let des = function VCtor (c, fs) -> (c.index, fs) | v -> raise (Eval.Runtime ("not a constructor: " ^ show v))
 let ext (construct, destruct) = { construct; destruct }

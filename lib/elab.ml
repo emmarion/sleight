@@ -498,7 +498,7 @@ and elab_call cc env ?tele expect l callee hcode lv params rets args arg =
   let code =
     let call = V.CApp (hcode, codes, cc) in
     if pos = Erased then V.CErased
-    else if List.length expect <> List.length rets || List.for_all2 (fun m e -> m = Many || e.mult = Erased) expect rets then call
+    else if List.length expect <> List.length rets then call
     else
       let kept = List.filter_map (fun (m, e) -> if e.mult = Many then Some (fresh (), m) else None) (List.combine expect rets) in
       V.CLet (List.map fst kept, call, V.CValues (List.filter_map (fun (t, m) -> if m = Many then Some (V.CVar t) else None) kept))
@@ -931,7 +931,7 @@ and elab_let_match env l args =
       let env, fids = open_tele env ~names ~mults ?states tele in
       let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" msg) in
       ( env,
-        if smult = Erased || run then Fun.id
+        if smult = Erased then Fun.id
         else fun rest ->
           V.CMatch
             { scrut = scode; shape = match_shape env mid (tagged disc shapes);
@@ -1122,7 +1122,7 @@ and elab_def_adts env adts =
     (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
-  (env, if env.run_pos || cids = [] then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
+  (env, if env.run_pos then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
 let rec literals = function
   | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])

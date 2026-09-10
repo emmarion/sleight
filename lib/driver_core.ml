@@ -13,16 +13,13 @@ type 'v t = { of_string : string -> 'v; to_string : 'v -> string; run_io : world
 let read_file path = In_channel.with_open_bin path In_channel.input_all
 let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
 
-let make ~build ~des ~io_name ~apply ~str =
+let make ~build ~des ~io_name ~apply =
   let rec nat v = match des "Zero" v with _, [ p ] -> 1 + nat p | _ -> 0 in
   let u8 v = match des "MkU8" v with _, [ n ] -> nat n | _ -> assert false in
   let of_string s =
-    match str with
-    | Some str -> str s
-    | None ->
-        let rec nat n = if n = 0 then build "Zero" [] else build "Succ" [ nat (n - 1) ] in
-        let char b = build "MkChar" [ build "MkU8" [ nat b ] ] in
-        String.fold_right (fun ch acc -> build "SCons" [ char (Char.code ch); acc ]) s (build "SNil" [])
+    let rec nat n = if n = 0 then build "Zero" [] else build "Succ" [ nat (n - 1) ] in
+    let char b = build "MkChar" [ build "MkU8" [ nat b ] ] in
+    String.fold_right (fun ch acc -> build "SCons" [ char (Char.code ch); acc ]) s (build "SNil" [])
   in
   let to_string v =
     let buf = Buffer.create 64 in

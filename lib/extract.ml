@@ -31,7 +31,6 @@ type scope = { capture : V.venv; locals : id list }
 type cx = {
   env : Env.t;
   adts : V.adt list;
-  ctors : (id, V.ctor) Hashtbl.t;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
   seen : (int, V.value * string option ref) Hashtbl.t;
@@ -67,7 +66,6 @@ let destruct cx c v =
 
 let rec value cx v =
   match v with
-  | V.VCtor (_, []) | V.VCtorFn _ | V.VMatchable _ | V.VFn _ | V.VToken -> plain cx v
   | _ -> (
       match List.find_opt (fun (v', _) -> v' == v) (Hashtbl.find_all cx.seen (Hashtbl.hash v)) with
       | Some (_, { contents = Some name }) -> name
@@ -145,25 +143,12 @@ and expr cx scope = function
   | V.CConst v -> value cx v
   | V.CErased -> "(Obj.repr ())"
   | V.CValues cs -> tuple (List.map (expr cx scope) cs)
-  | V.CApp (f, es, V.Ctor) -> (
+  | V.CApp (f, es, V.Ctor) ->
       let es = List.map (expr cx scope) es in
-      match static cx f with
-      | Some c -> build cx c es
-      | None -> Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es))
-  | V.CApp (f, es, _) -> (
+      Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es)
+  | V.CApp (f, es, _) ->
       let es = List.map (expr cx scope) es in
-      let direct =
-        match f with
-        | V.CVar g when List.mem g scope.locals -> Some (var g)
-        | V.CVar g -> (
-            match IntMap.find_opt g scope.capture with
-            | Some (V.VFn cl) when List.length cl.fn.params = List.length es -> Some (closure cx cl)
-            | _ -> None)
-        | _ -> None
-      in
-      match direct with
-      | Some name -> Printf.sprintf "(%s %s)" name (args es)
-      | None -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
+      Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es)
   | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
   | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
   | V.CLetRec (fns, body) ->
@@ -199,10 +184,9 @@ and expr cx scope = function
             Printf.sprintf "(let (i, fs) = %s in %s)" des (chain branches))
   | V.CAbsurd -> "(absurd ())"
 
-and static cx = function V.CVar c -> Hashtbl.find_opt cx.ctors c | V.CConst (V.VCtorFn c) -> Some c | _ -> None
 
 let collect env items =
-  let adts = ref [] and ctors = Hashtbl.create 64 and defined = Hashtbl.create 64 in
+  let adts = ref [] and defined = Hashtbl.create 64 in
   let adt a = if not (List.memq a !adts) then adts := a :: !adts in
   let rec value = function
     | V.VCtor (c, vs) -> adt c.adt; List.iter value vs
@@ -215,10 +199,10 @@ let collect env items =
     (match c with V.CConst v -> value v | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
     List.iter code (V.subcodes c)
   in
-  IntMap.iter (fun x v -> value v; match v with V.VCtorFn c -> Hashtbl.replace ctors x c | _ -> ()) env.Env.values;
+  IntMap.iter (fun _ v -> value v) env.Env.values;
   List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
-  List.iter (fun a -> List.iter (fun c -> Hashtbl.replace ctors c.V.cid c; Hashtbl.replace defined c.cid (var c.cid)) a.V.ctors) adts;
+  List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
     List.concat_map
       (function
@@ -226,7 +210,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; ctors; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
@@ -235,7 +219,7 @@ let types cx =
       match shape a with
       | Ext -> if a.tname = "String" then "Ffi_core.slice" else "Z.t"
       | Tagged -> concat " | " (List.map fields_type a.ctors)
-      | Untagged -> (match a.ctors with [ c ] -> (match c.V.arity with 0 -> "unit" | 1 -> "Obj.t" | n -> concat " * " (List.init n (fun _ -> "Obj.t"))) | _ -> "Obj.t")
+      | Untagged -> (match a.ctors with [ c ] -> (match c.V.arity with 0 -> "unit" | n -> concat " * " (List.init n (fun _ -> "Obj.t"))) | _ -> "Obj.t")
     in
     Printf.sprintf "%s = %s" (type_name cx a) body
   in
@@ -312,13 +296,12 @@ let prelude_ctor cx name = var (Program.ctor cx.env name).cid
 
 let driver cx =
   let io = (Program.ctor cx.env "Exit").adt in
-  let str = if !V.use_externs then "(Some (fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)))" else "None" in
   Printf.sprintf "let ctor_of = function %s | _ -> assert false\n"
     (concat " " (List.map (fun n -> Printf.sprintf "| %s -> %s" (quote n) (prelude_ctor cx n)) [ "Zero"; "Succ"; "MkU8"; "MkChar"; "SNil"; "SCons"; "Some"; "None"; "Ok"; "Fail"; "MkUnit"; "Cons"; "Nil"; "Exit" ]))
   ^ Printf.sprintf "let io_names = [| %s |]\n" (concat "; " (List.map (fun c -> quote c.V.cname) io.ctors))
   ^ {|let driver =
   Driver_core.make ~build:(fun n args -> let c = (Obj.obj (ctor_of n) : ctor) in c.con c.ix args) ~des:(fun n v -> (Obj.obj (ctor_of n) : ctor).des v)
-    ~io_name:(fun i -> io_names.(i)) ~apply:(fun k x -> (Obj.obj k : Obj.t -> Obj.t) x) ~str:|} ^ str ^ {|
+    ~io_name:(fun i -> io_names.(i)) ~apply:(fun k x -> (Obj.obj k : Obj.t -> Obj.t) x)
 let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
 let world = { Driver_core.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; exit; print = print_endline }

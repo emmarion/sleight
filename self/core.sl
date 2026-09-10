@@ -2098,7 +2098,7 @@
         (TValCtor ps2 $ mapv ret op d2))
       ((TMatchable disc ty cs) (TMatchable disc (mapv ty op d) $ mapv-mctors cs op d))
       ((TNewtype c) (TNewtype $ mapv c op d))
-      ((TErr m) t) (else (op-leaf op d t))))
+      (else (op-leaf op d t))))
   (many mapv-list : (subterm many (List $ Term) ts) (many (VOp) op) (many (Nat) d) -> (many (List $ Term) r)
     (match many ts _
       ((Nil a) (Nil _))

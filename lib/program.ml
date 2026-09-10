@@ -20,7 +20,6 @@ let driver env =
   let c = ctor env in
   make ~build:(fun n args -> V.construct (c n) args) ~des:(fun n v -> V.destruct (c n) v)
     ~io_name:(fun i -> (V.ctor_at (c "Exit").adt i).cname) ~apply:(fun k x -> List.hd (Eval.apply k [ x ]))
-    ~str:(if !V.use_externs then Some Ffi.str else None)
 
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)

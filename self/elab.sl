@@ -337,11 +337,7 @@
 (def-fns _
   (many intern-literals : (subterm many (Raw) raw) (many (Env) env) -> (many (Env) r)
     (match many raw _
-      ((RAtom lq s)
-        (match many (classify s) _
-          ((LName) env)
-          ((LNumeral) (intern env s $ LNumeral))
-          ((LChar) (intern env s $ LChar))))
+      ((RAtom lq s) (intern env s $ classify s))
       ((RString lq s) (intern-string env $ SCons #\x22 s))
       ((RList lq items) (intern-literals-list items env))))
   (many intern-literals-list : (subterm many (List $ Raw) rs) (many (Env) env) -> (many (Env) r)
@@ -708,7 +704,7 @@
 (def-fns _ $ many matchable-code : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Mult) pos) (many (Bin) x) -> (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) r)
   (match many pos _
     ((Erased) (CErased _ $ Cons _ pos $ Nil _))
-    ((Many) (match many (adt-of env x) _ ((Some a adt) (CValue _ $ VMatchable adt)) ((None a) (var-code env ctx x))))))
+    ((Many) (var-code env ctx x))))
 
 ; A match on an ADT the elaborator can see reads no Matchable at runtime (section 17).
 (def-fns _ $ many match-shape : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Bin) x) (many (Bool) tagged) -> (many (Shape ctx) r)
@@ -1485,8 +1481,6 @@
     ((Nil a) (Nil _))
     ((Cons a p rest) (match many p _ ((MkPair x y m c) (Cons _ (MkMCtor m $ TVar c) $ mctors-of rest))))))
 
-(def-fns _ $ many code-of-values : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk) (many (Mult) pos) -> (many (Code ctx ms) r)
-  (match many pos _ ((Erased) (CErased _ ms)) ((Many) (CValues _ ms codes pk))))
 
 (def-fns _ $ many codes-missing : (erased (List $ List $ Bin) ctx) (subterm many (List $ Mult) ms) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk)
   (match many ms _
@@ -1926,13 +1920,10 @@
 ; Validates the marks in a body and returns the normalized code and, for a delegate, the callee (section 9).
 (def-fns _ $ many check-marks : (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Bin) pids) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Env) r) (many (Code ctx ms) code2) (many (Maybe $ Bin) delegated)
   (let (many code2) $ normalize ctx ms code)
-  (match many (has-marked _ _ code2 $ BFalse) _
-    ((BFalse) (values env code2 $ None _))
-    ((BTrue)
-      (let (many delegate) $ has-marked _ _ code2 $ BTrue)
-      (let (many (String) kind) $ match many delegate _ ((BTrue) "delegate") ((BFalse) "tail"))
-      (let (many env1) $ error-unless env (tails-ok _ _ code2 delegate) $ str-cat3 "a " kind "-marked call is not in tail position")
-      (match many delegate _
+  (let (many delegate) $ has-marked _ _ code2 $ BTrue)
+  (let (many (String) kind) $ match many delegate _ ((BTrue) "delegate") ((BFalse) "tail"))
+  (let (many env1) $ error-unless env (tails-ok _ _ code2 delegate) $ str-cat3 "a " kind "-marked call is not in tail position")
+  (match many delegate _
         ((BFalse) (values env1 code2 $ None _))
         ((BTrue)
           (let (many (Maybe $ Pair (Bin) $ List $ Code ctx many-one) call)
@@ -1946,7 +1937,7 @@
                   (let (many straight) $ match many (vars-of _ args) (((Bool) b)) ((None b) (BFalse)) ((Some b ids) (bins-eq ids pids)))
                   (match many straight _
                     ((BTrue) (values env1 code2 $ Some _ g))
-                    ((BFalse) (values (env-error env1 "a delegate call must pass the function's non-erased parameters straight through") code2 $ None _))))))))))))
+                    ((BFalse) (values (env-error env1 "a delegate call must pass the function's non-erased parameters straight through") code2 $ None _))))))))))
 
 
 ; A call's decrease annotation (section 9): (predates p) right after the callee, or (subterm p) right before
@@ -2358,7 +2349,7 @@
                           (let (many na) $ list-length _ args)
                           (let (many env1) $ count-check env0 " values" n na)
                           (let (many env2) (many ress) (many codes) (erased pk) $ elab-values sugar args env1 ctx expect tele $ Nil _)
-                          (values env2 ress $ code-of-values _ expect codes pk pos))
+                          (values env2 ress $ CValues _ expect codes pk))
                         ((ExMatch)
                           (let (many env2) (many ress) (many code) $ elab-match sugar args env0 ctx expect tele)
                           (values env2 ress code))
@@ -3200,7 +3191,6 @@
         (let (many env2) (many ress) (many code) (erased lock) $ elab-expr sugar call env1 ctx expect tele cc)
         (let (many (Bool) ok)
           (match many code _
-            ((CApp c0 ms f as cc2) (cc-eq cc cc2))
             ((CLet c0 ms ns ids pk rhs body) (match many rhs (((Bool) b0)) ((CApp c0 ms2 f as cc2) (cc-eq cc cc2)) (else (BFalse)))) (else (BFalse))))
         (match many ok _
           ((BTrue) (values env2 ress code))

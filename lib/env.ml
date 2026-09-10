@@ -58,7 +58,7 @@ let is_meta env x = (entry env x).meta
 let has_meta env t = fold_vars (fun _ b t -> b || (match t with Var x -> is_meta env x | _ -> false)) 0 false (canon env t)
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
-let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x && (fact env x).rule <> None -> canon env t | t -> t) 0 t
+let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x -> canon env t | t -> t) 0 t
 
 (* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
