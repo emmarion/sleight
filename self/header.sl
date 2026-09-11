@@ -71,6 +71,7 @@
   $ RCat (RStr "let (con_String : int -> v list -> v), (des_String : v -> int * v list) = Ffi_core.text ~z ~slice ~u8:nat ~str:(fun s -> Str s)\n")
   $ RCat (RStr "let tuple = function [] -> U | [ v ] -> v | vs -> Tup vs\n")
   $ RCat (RStr "let untuple n v = match (n, v) with 1, v -> [ v ] | 0, _ -> [] | _, Tup vs -> vs | _ -> absurd ()\n")
+  $ RCat (RStr "let member g i = match g with Tup fs -> List.nth fs i | f -> f\n")
   $ RCat (RStr "let des_tag = function Tag (i, fs) -> (i, fs) | _ -> absurd ()\n")
   $ RCat (RStr "let ext_add = function [ a; b ] -> Nat (Ffi_core.add (z a) (z b)) | _ -> absurd ()\n")
   $ RCat (RStr "let ext_nat_cmp = function [ a; b ] -> Ffi_core.nat_cmp ~con:(fun i args -> Tag (i, args)) (z a) (z b) | _ -> absurd ()\n")

@@ -259,11 +259,15 @@
       (let (many next2) (erased step) $ bin-step next)
       (values (MkHeap _ _ next2 (numeral-step next next2 size step sp) (alloc-at _ _ _ tree next sp next (WNil next) size sp b)) (MkAddr _ size next sp (lt-succ size))))))
 
-(def-fns _ $ many deref : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Addr size) at) -> (erased (Nat) a) (many (B a) b)
+(def-fns _ $ many deref : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Addr size) at) -> (erased (Nat) a) (erased (Lt a size) lt) (many (B a) b)
   (match many h _
     ((MkHeap tb sz next sp tree)
       (match many at _
-        ((MkAddr bd n path psp lt) (values n $ deref-at _ _ _ tree path n psp lt path (WNil path) n psp))))))
+        ((MkAddr bd n path psp lt) (values n lt $ deref-at _ _ _ tree path n psp lt path (WNil path) n psp))))))
+
+(def-fns _ $ many deref-path : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Bin) p) (erased (Nat) n) (erased (Numeral p n) sp) (erased (Lt n size) lt) -> (many (B n) b)
+  (match many h _
+    ((MkHeap tb sz next nsp tree) (deref-at _ _ _ tree p n sp lt p (WNil p) n sp))))
 
 ; Every address of a heap, oldest first, counted up from zero.
 (def-fns _ $ many addrs-from : (subterm many (Nat) remaining) (erased (Nat) size) (erased (Nat) n) (many (Bin) p) (erased (Numeral p n) sp) (erased (Add n remaining size) sum) -> (many (List $ Addr size) r)
