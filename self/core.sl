@@ -614,15 +614,6 @@
     enum
     (many ApNil : (erased (Rule) r) -> (AppendR (Nil $ Rule) r $ Cons (Rule) r $ Nil $ Rule))
     (many ApCons : (erased (Rule) a) (erased (List $ Rule) rest) (erased (Rule) r) (erased (List $ Rule) res) (erased (AppendR rest r res) p) -> (AppendR (Cons (Rule) a rest) r $ Cons (Rule) a res)))
-  (Digit : -> Type
-    enum
-    (many D1 : -> (Digit))
-    (many D2 : -> (Digit)))
-  (Wrap : ((List $ Digit) ctx) ((Bin) inner) ((Bin) outer) -> Type
-    enum
-    (many WNil : (erased (Bin) x) -> (Wrap (Nil $ Digit) x x))
-    (many W1 : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Bin) y) (erased (Wrap ctx (B1 x) y) p) -> (Wrap (Cons (Digit) (D1) ctx) x y))
-    (many W2 : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Bin) y) (erased (Wrap ctx (B2 x) y) p) -> (Wrap (Cons (Digit) (D2) ctx) x y)))
   (MemRuleW : ((List $ Digit) ctx) ((Bin) inner) ((Term) t) ((List $ Rule) rules) -> Type
     enum
     (many MWNil : (erased (Bin) x) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRule x t rules) m) -> (MemRuleW (Nil $ Digit) x t rules))

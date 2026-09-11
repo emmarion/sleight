@@ -54,6 +54,14 @@ host (section 41); a `U8` or a
   `list-append` a `Concat` proof. `nat-eq`, `bin-eq`, `str-eq`,
   `list-length` and friends are forgetful wrappers over those, for the
   sites that combine several decisions with `and`/`or`.
+- `heap.sl` — a store for the compile-time interpreter, parametric in
+  its block type: addresses below a bound, carried as their bijective
+  spelling with erased `Numeral` and `Lt` proofs, widened by a `coerce`;
+  and a Braun tree of blocks sized by its count (the LSB-first trie on
+  the spelling), whose `alloc` and `deref` the session reads as total by
+  the size alone, the lemmas over the prelude's `Double` and `Numeral`
+  doing the work. Not yet used by the compiler; the switch of values to
+  addresses is the next stage.
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
   tokenizer, accumulating each token as a `Rope` of characters flattened
   once, and a fold over the tokens with a stack of open forms.
