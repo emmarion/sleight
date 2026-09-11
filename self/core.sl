@@ -1856,6 +1856,8 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (values hs en))))
 (def-fns _ $ many env-table : (many (Env) e) -> (erased (Nat) n) (erased (Facts n) f) (many (Bin) bnd) (many (Table n f bnd) tb)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (values nf ff fr tb))))
+(def-fns _ $ many env-fresh-bound : (many (Env) e) -> (many (Bin) r)
+  (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) fr)))
 (def-fns _ $ many env-facts : (many (Env) e) -> (erased (Nat) n) (many (Facts n) f)
   (let (erased n) (erased f) (many bnd) (many tb) $ env-table e)
   (match many tb _ ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (values n0 f0))))
@@ -2163,7 +2165,8 @@
   enum
   (many OpInst : (many (List $ Term) args) -> (VOp))
   (many OpAbs : (many (List $ Bin) ids) -> (VOp))
-  (many OpMeta : (many (Env) env) -> (VOp)))
+  (many OpMeta : (many (Env) env) -> (VOp))
+  (many OpWild : (many (Bin) fresh) -> (VOp)))
 
 ; [args] are closed terms, innermost binder first; [ids] likewise, the head becoming Bound 0.
 (def-fns _ $ many op-leaf : (many (VOp) op) (many (Nat) d) (many (Term) t) -> (many (Term) r)
@@ -2190,7 +2193,10 @@
           (let (many ty) (many rule) $ fact-at env x)
           (match many rule _
             ((None a) t)
-            ((Some a r) (match many (is-meta env x) _ ((BTrue) (canon-env env t)) ((BFalse) t))))) (else t)))))
+            ((Some a r) (match many (is-meta env x) _ ((BTrue) (canon-env env t)) ((BFalse) t))))) (else t)))
+    ((OpWild f)
+      (match many t _
+        ((TVar x) (match many (bin-lt x f) _ ((BTrue) t) ((BFalse) (TVar $ BZ)))) (else t)))))
 
 (def-fns _
   (many mapv : (subterm many (Term) t) (many (VOp) op) (many (Nat) d) -> (many (Term) r)

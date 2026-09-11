@@ -369,7 +369,7 @@
 
 (def-adts $ ShowMemo : -> Type
   enum
-  (many MkShowMemo : (many (Nat) count) (many (List $ Pair (Term) $ String) known) (many (List $ Rope) defs) -> (ShowMemo)))
+  (many MkShowMemo : (many (Bin) fresh) (many (Nat) count) (many (List $ Pair (Term) $ String) known) (many (List $ Rope) defs) -> (ShowMemo)))
 
 (def-fns _ $ many memo-find : (subterm many (List $ Pair (Term) $ String) known) (many (Env) env) (many (Term) ty) -> (many (Maybe $ String) r)
   (match many known _
@@ -401,12 +401,13 @@
       ((Succ k)
         (let (many ty) $ canon-env env ty0)
         (match many memo _
-          ((MkShowMemo count known defs)
-            (match many (memo-find known env ty) _
+          ((MkShowMemo fresh count known defs)
+            (let (many key) $ mapv ty (OpWild fresh) 0)
+            (match many (memo-find known env key) _
               ((Some a name) (values memo name))
               ((None a)
                 (let (many name) $ str-cat "show_" $ nat-str count)
-                (let (many memo1) $ MkShowMemo (Succ count) (Cons _ (MkPair _ _ ty name) known) defs)
+                (let (many memo1) $ MkShowMemo fresh (Succ count) (Cons _ (MkPair _ _ key name) known) defs)
                 (let (many (ShowMemo) memo2) (many (Rope) body)
                   (match many ty _
                     ((TApp h args)
@@ -432,8 +433,8 @@
                     ((TFn l ps rs) (values memo1 $ RStr "\"<function ?>\""))
                     ((TValCtor ps r) (values memo1 $ RStr "\"<constructor ?>\"")) (else (values memo1 $ RStr "\"?\""))))
                 (match many memo2 _
-                  ((MkShowMemo count2 known2 defs2)
-                    (values (MkShowMemo count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : v) : string = ") body $ REmpty) defs2) name))))))))))
+                  ((MkShowMemo fresh2 count2 known2 defs2)
+                    (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : v) : string = ") body $ REmpty) defs2) name))))))))))
 
   ; One arm per non-phantom constructor whose return type the instance does not refute, its fields shown
   ; only then, as the reference's exception skips them; an untagged type has one arm reading the fields as they stand.
@@ -481,30 +482,48 @@
 
 (def-fns _ $ many show-defs : (many (ShowMemo) memo) -> (many (Rope) r)
   (match many memo _
-    ((MkShowMemo count known defs)
+    ((MkShowMemo fresh count known defs)
       (match many defs _
         ((Nil a) (REmpty))
         ((Cons a d rest) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))))
 
-(def-fns _ $ many final-rope : (many (Env) env) (erased (Nat) hs) (many (Addr hs) v) (many (Term) ty) -> (many (Rope) r)
+(def-fns _ $ many fn-name-at : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) -> (many (Maybe $ String) r)
+  (let (erased a) (erased lt) (many b) $ deref Block _ hp v)
+  (match many b _
+    ((BFn z g i)
+      (let (erased a2) (erased lt2) (many gb) $ deref Block _ hp $ addr-weaken _ _ (lt-weaken _ _ lt) g)
+      (match many gb _
+        ((BGroup z2 gids ctx grp env2)
+          (match many grp _
+            ((MkGroup c ids fns lk)
+              (match many (list-nth _ fns i) _
+                ((NthHit nt nl ni p np) (match many p _ ((MkPair x y id fn) (Some _ $ func-name _ _ fn))))
+                ((NthMiss nt nl ni np) (None _))))))
+        (else (None $ String))))
+    (else (None $ String))))
+
+(def-fns _ $ many final-rope : (many (Env) env) (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Term) ty) -> (many (Rope) r)
   (let (many vr) $ addr-rope _ v)
   (match many (classify-final env ty) _
     ((FMain) (rcat3 (RStr "let () = run_main ") vr $ RStr "\n"))
     ((FIo) (rcat3 (RStr "let () = exit (run_io ") vr $ RStr ")\n"))
     ((FThunk t)
-      (let (many memo) (many name) $ show-type show-fuel env t $ MkShowMemo 0 (Nil _) $ Nil _)
+      (let (many memo) (many name) $ show-type show-fuel env t $ MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _)
       (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " (app ") vr $ RStr " []))") $ RStr "\n"))
     ((FPlain)
-      (let (many memo) (many name) $ show-type show-fuel env ty $ MkShowMemo 0 (Nil _) $ Nil _)
-      (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))
+      (match many (fn-name-at _ hp v) _
+        ((Some a fname) (rcat3 (RStr "let () = print_endline ") (quoted $ str-cat3 "<function " fname ">") $ RStr "\n"))
+        ((None a)
+          (let (many memo) (many name) $ show-type show-fuel env ty $ MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _)
+          (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))))
 
-(def-fns _ $ many emit-finals : (erased (Nat) hs) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (Env) env) -> (many (Rope) r)
+(def-fns _ $ many emit-finals : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (Env) env) -> (many (Rope) r)
   (match many fs _
     ((Nil t) (REmpty))
-    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ v ty) $ emit-finals _ rest env))))))
+    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ hp v ty) $ emit-finals _ hp rest env))))))
 
 (def-fns _ $ many emit-program : (many (Env) env) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
   (let (many addrs) $ heap-addrs Block _ hp)
   (let (many marks) $ mark-pass _ hp (list-rev _ addrs) $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
-  (rcat3 runtime-header (emit-blocks _ hp addrs marks env) $ emit-finals _ (list-rev _ fi) env))
+  (rcat3 runtime-header (emit-blocks _ hp addrs marks env) $ emit-finals _ hp (list-rev _ fi) env))
