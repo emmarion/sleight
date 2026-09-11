@@ -60,8 +60,7 @@ host (section 41); a `U8` or a
   and a Braun tree of blocks sized by its count (the LSB-first trie on
   the spelling), whose `alloc` and `deref` the session reads as total by
   the size alone, the lemmas over the prelude's `Double` and `Numeral`
-  doing the work. Not yet used by the compiler; the switch of values to
-  addresses is the next stage.
+  doing the work.
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
   tokenizer, accumulating each token as a `Rope` of characters flattened
   once, and a fold over the tokens with a stack of open forms.
@@ -70,7 +69,11 @@ host (section 41); a `U8` or a
   code, the scope environment and fact table (sections 3, 18),
   canonicalization, instantiation, forced unification with its three
   contradictions (section 18), term identity, and the built-in entries.
-- `eval.sl` — the compile-time interpreter.
+- `eval.sl` — the compile-time interpreter over the store: every value
+  is an address, every step returns the grown store with a proof of the
+  growth by which what was held before is widened, and a run-position
+  statement is a session that reads the store out of the environment
+  and puts it back (ASSUMPTIONS 131).
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
@@ -181,16 +184,20 @@ recorded so it can be revisited.
   that follow from it. A message names the file and the line of the
   innermost form being elaborated, in the reference's `path:line:
   error:` format; on every error test the first message is the
-  reference's, line included. A runtime error in the interpreter is a `VError`
-  value that prints as `<error: ...>`.
-- **Sharing inside embedded data is not preserved.** `lib/extract.ml`
-  names a block met twice; SL has no physical identity, so a value
-  reached twice inside one embedded constant is written twice. A
-  top-level Const is still emitted once and referenced by name.
-- **A final value printed at compile time is printed from its text**,
-  not through a generated printer as ASSUMPTIONS 66 chose; the
-  generated printer exists only for a final function's result, which is
-  computed by the compiled code.
+  reference's, line included. A runtime error in the interpreter is an error
+  block that prints as `<error: ...>`.
+- **Sharing is the store's.** `lib/extract.ml` names a block met twice
+  by physical identity, which SL lacks; here every value the compile-time
+  interpreter makes is a block in `heap.sl`'s store, and the emitter
+  writes each block a Const or a final reaches once, in address order,
+  each block's addresses being below its own (ASSUMPTIONS 131). A group
+  is one block, its members projections from it, so a group's code is
+  written once however many closures name it.
+- **A final value printed at compile time goes through the generated
+  printer**, as ASSUMPTIONS 66 chose, a block carrying no constructor
+  names; a function-valued final prints its name as the reference does,
+  and the printer's memo keys a type with the variables minted during
+  printing made a wildcard, as `lib/extract.ml` does.
 - **Output is a rope written chunk by chunk.** Consing a `String`
   copies under the FFI, so the compiler never builds a long string; the
   OCaml text is a tree of small chunks flushed through one `WriteOut`

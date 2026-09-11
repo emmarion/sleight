@@ -2274,3 +2274,82 @@ had noted that an `SCons` copies its tail, so building a string by
      for the discriminant when the held shape carries no tag. The
      session's reading is that this is the only site that read it;
      the test is the evidence.
+
+## The compile-time interpreter's values live in a store
+
+Proposed by the session after measuring that `self/emit.sl` copied a
+value at each reference and a function's group at each closure
+reference, with the `is-top`/`func-top` shortcuts as its only sharing
+(without them the self-compilation was 202 MB of OCaml), and agreed by
+the owner in chat, who chose Nat addresses over Bin ones, weakening as
+a coerce, and dropped a list of addresses the first version kept in the
+heap. Everything below is the session's reading of that agreement and
+of what the code does; `self/bootstrap.sh` is the evidence, and the
+bootstrap runs in the same time as before (about four minutes here).
+
+131. **A value is an address into a size-indexed store; a block holds
+     section 38's representation with every address in it below its
+     own.** `self/heap.sl` declares `Addr bound`, a Nat below the bound
+     carried at runtime as its bijective spelling (the prelude's `Bin`,
+     related by `Numeral`), and `Heap B size`, a Braun tree of blocks
+     sized by its count: the LSB-first trie on the spelling, in which
+     address 2k+1 is the one-child and 2k+2 the two-child of address k,
+     so the spelling is the path and the size fixes the shape. `alloc`
+     and `deref` are total by the size alone, the session's reading
+     being that the lemmas over the prelude's `Double` and `Numeral`
+     (`half-lt-one`, `half-lt-two`, `double-lt-inv`, `double-le-inv`,
+     `numeral-step`) carry the arithmetic; the Bin appears nowhere but
+     as the spelling, since the FFI's Nat has no digits. Widening the
+     bound of an address, or of any holder of addresses (a list, a
+     `Maybe`, an `IdMap`, the interpreter's frames, the environment's
+     entries and finals), is a `coerce` whose proof an erased function
+     builds by recursion, so it extracts to the identity; `Addr` needs
+     no `newtype` mark for that (section 38's `coercible-ctor` with the
+     erased bound differing). `core.sl`'s `Block a` is a tag with
+     fields, a tuple of fields, a host payload, a held constructor, a
+     Matchable, a group over the frames it closed, a closure as a group
+     block's address and member index, the token, or an error; its
+     addresses are `Addr a`, `a` its own address, which is what makes
+     the emitter's walk a single pass in address order and lets every
+     walker over values (the printer for section 15's message, the
+     Rope read back for `flatten`) recurse on an erased bound that a
+     field's smaller number refines, with no fuel that can run out.
+     `eval` keeps its fuel; every step returns the grown store with an
+     erased `Lt hs (Succ hs2)` by which the frames, the Const entries and
+     the values in hand are widened. A group frame in the interpreter's
+     environment holds the group block's address, and reading a member
+     allocates its closure block, so `apply` re-closes nothing. Code
+     holds no address: `CConst id` names the entry and is resolved
+     through the entries when the code runs, and a value elaboration
+     embeds (`CValue`) is a closed block allocated when reached. The
+     environment carries the store with its size existential; since
+     two reads of it cannot be typed as one size, every run-position
+     statement that stores an address is one session in `eval.sl` or
+     `core.sl` that reads the store out, runs or allocates, widens the
+     entries and finals, sets the states and puts the store back
+     (`env-run-let`, `env-run-final`, `env-close-group`,
+     `env-set-fields`, `env-run-fields`, `set-state-closed`), and the
+     elaborator itself never holds an address; `bind` takes no state,
+     `bind-closed`/`bind-token`/`bind-erased` allocate afterwards, and an
+     erased Const is a fresh token block. The environment's `values`
+     map and the `Trace` are gone: the emitter marks what every Const
+     entry and every final reaches, walking the addresses newest first
+     (a block's addresses being below it, one pass suffices), then
+     writes each marked block oldest first as `let a<path> = ...`, a
+     group block as its members' `let rec` packed in a tuple that
+     `member` projects from, and a Const in code as the name of its
+     address; the addresses are enumerated from the counter at emission
+     (`heap-addrs`), the heap keeping no list. `alloc` always allocates,
+     as the reference's physical identity does; interning was set aside
+     for now. What stays dynamic: a `BFn`'s member index against the
+     group block found at its address (an error block on a miss), and
+     that every `CConst` the code names has a Const entry when it runs
+     and is emitted. Measured with an instrumented reference before the
+     switch: slc's own sources allocate about 20k blocks at compile
+     time, the largest test about 7k. Two printer issues surfaced by
+     the switch, since a plain final now prints through the generated
+     printer rather than from its text: its memo keyed types exactly and
+     looped on a dependent type minting a fresh index per level, now
+     keyed as `lib/extract.ml` does with a wildcard for variables minted
+     during printing (`OpWild`); and a closure-valued plain final prints
+     `<function NAME>` as the reference interpreter does.
