@@ -337,22 +337,23 @@
     (many PBin : (many (Bin) b) -> (Payload))
     (many PStr : (many (String) s) -> (Payload)))
   ; [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom
-  ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 41).
+  ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 41); a
+  ; constructor's [shape] is its type's many-field arities in order, which fixes the representation.
   (Adt : -> Type
     enum
     (many MkAdt : (many (String) name) (many (Bool) tagged) (many (List $ Ctor) ctors) (many (Maybe $ ExtType) ext) -> (Adt)))
   (Ctor : -> Type
     enum
-    (many MkCtor : (many (String) name) (many (Bin) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) -> (Ctor)))
+    (many MkCtor : (many (String) name) (many (Bin) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) -> (Ctor)))
   (Block : ((Nat) a) -> Type
     enum
-    (many BTag : (erased (Nat) a) (many (Nat) tag) (many (List $ Addr a) fields) -> (Block a))
+    (many BTag : (erased (Nat) a) (many (Ctor) c) (many (List $ Addr a) fields) -> (Block a))
     (many BTup : (erased (Nat) a) (many (List $ Addr a) fields) -> (Block a))
     (many BExt : (erased (Nat) a) (many (Payload) p) -> (Block a))
     (many BCtorFn : (erased (Nat) a) (many (Ctor) c) -> (Block a))
     (many BMat : (erased (Nat) a) (many (Adt) adt) -> (Block a))
     (many BGroup : (erased (Nat) a) (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (many (Group gids ctx) g) (many (Frames a ctx) env) -> (Block a))
-    (many BFn : (erased (Nat) a) (many (Addr a) group) (many (Nat) member) -> (Block a))
+    (many BFn : (erased (Nat) a) (many (Addr a) group) (many (Nat) member) (many (Bin) id) -> (Block a))
     (many BToken : (erased (Nat) a) -> (Block a))
     (many BError : (erased (Nat) a) (many (String) msg) -> (Block a)))
   ; [ctx]: the frames in scope, innermost first; a group's frame holds its block's address, a member being
@@ -385,7 +386,7 @@
     (many CApp : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
     (many CLet : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (erased (List $ Mult) ns) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (many (Code ctx ms) rhs) (many (Code (Cons (List (Bin)) ids ctx) ns) rest) -> (Code ctx ns))
     (many CLetRec : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (erased (List $ Bin) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Bin)) gids ctx) ns) rest) -> (Code ctx ns))
-    (many CMatch : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) dflt) -> (Code ctx ns))
+    (many CMatch : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) dflt) (many (List $ Nat) live) -> (Code ctx ns))
     (many CAbsurd : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
     (many CError : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (String) msg) -> (Code ctx ms)))
   (CC : -> Type
@@ -394,7 +395,7 @@
   (Shape : ((List $ List $ Bin) ctx) -> Type
     enum
     (many ShKnown : (erased (List $ List $ Bin) ctx) (many (Adt) adt) -> (Shape ctx))
-    (many ShHeld : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) c) (many (Bool) tagged) -> (Shape ctx))
+    (many ShHeld : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) c) (many (Adt) adt) -> (Shape ctx))
     (many ShNone : (erased (List $ List $ Bin) ctx) -> (Shape ctx)))
   (Branch : ((List $ List $ Bin) ctx) ((List $ Mult) ns) -> Type
     enum
@@ -426,9 +427,9 @@
 
 (def-fns _ $ erased block-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Block b) blk) -> (erased (Block c) blk2) (erased (Coercible (Block b) blk (Block c) blk2) p)
   (match erased blk _
-    ((BTag a tag fields)
+    ((BTag a ct fields)
       (let (erased fs2) (erased pf) (addrs-widen b c le fields))
-      (values (BTag _ tag fs2) (coercible-ctor BTag b c (coercible-refl tag) pf)))
+      (values (BTag _ ct fs2) (coercible-ctor BTag b c (coercible-refl ct) pf)))
     ((BTup a fields)
       (let (erased fs2) (erased pf) (addrs-widen b c le fields))
       (values (BTup _ fs2) (coercible-ctor BTup b c pf)))
@@ -438,9 +439,9 @@
     ((BGroup a gids cx g env)
       (let (erased env2) (erased pe) (frames-widen b c le cx env))
       (values (BGroup _ _ _ g env2) (coercible-ctor BGroup b c gids gids cx cx (coercible-refl g) pe)))
-    ((BFn a g i)
+    ((BFn a g i id)
       (let (erased g2) (erased pg) (addr-widen b c le g))
-      (values (BFn _ g2 i) (coercible-ctor BFn b c pg (coercible-refl i))))
+      (values (BFn _ g2 i id) (coercible-ctor BFn b c pg (coercible-refl i) (coercible-refl id))))
     ((BToken a) (values (BToken _) (coercible-ctor BToken b c)))
     ((BError a m) (values (BError _ m) (coercible-ctor BError b c (coercible-refl m))))))
 
@@ -475,16 +476,19 @@
               (values w $ subterm-trans sq $ prove-subterm more vs))))))))
 
 (def-fns _ $ many ctor-index : (many (Ctor) c) -> (many (Nat) i)
-  (match many c _ ((MkCtor n id ix ar tg ext) ix)))
+  (match many c _ ((MkCtor n id ix ar tg ext sh) ix)))
 
 (def-fns _ $ many ctor-arity : (many (Ctor) c) -> (many (Nat) i)
-  (match many c _ ((MkCtor n id ix ar tg ext) ar)))
+  (match many c _ ((MkCtor n id ix ar tg ext sh) ar)))
 
 (def-fns _ $ many ctor-name : (many (Ctor) c) -> (many (String) s)
-  (match many c _ ((MkCtor n id ix ar tg ext) n)))
+  (match many c _ ((MkCtor n id ix ar tg ext sh) n)))
 
 (def-fns _ $ many ctor-id : (many (Ctor) c) -> (many (Bin) s)
-  (match many c _ ((MkCtor n id ix ar tg ext) id)))
+  (match many c _ ((MkCtor n id ix ar tg ext sh) id)))
+
+(def-fns _ $ many ctor-shape : (many (Ctor) c) -> (many (List $ Nat) s)
+  (match many c _ ((MkCtor n id ix ar tg ext sh) sh)))
 
 (def-fns _ $ many adt-tagged : (many (Adt) a) -> (many (Bool) t)
   (match many a _ ((MkAdt n tg cs ext) tg)))
@@ -509,9 +513,9 @@
       ((CApp c0 ms2 f args cc) (CApp _ ns f args cc))
       ((CLet c0 ms2 ns2 ids pk rhs rest) (CLet _ ms2 _ ids pk rhs $ recast _ ns ms same rest))
       ((CLetRec c0 ns2 gids g rest) (CLetRec _ _ _ g $ recast _ ns ms same rest))
-      ((CMatch c0 ns2 scrut shape branches dfl)
+      ((CMatch c0 ns2 scrut shape branches dfl live)
         (CMatch _ ns scrut shape (recast-branches _ ns ms same branches)
-          $ match many dfl (((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) r)) ((Some a d) (Some _ $ recast _ ns ms same d)) ((None a) (None _))))
+          (match many dfl (((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) r)) ((Some a d) (Some _ $ recast _ ns ms same d)) ((None a) (None _))) live))
       ((CAbsurd c0 ms2) (CAbsurd _ ns))
       ((CError c0 ms2 m) (CError _ ns m))))
   (many recast-branches : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (List $ Branch ctx ms) bs) -> (many (List $ Branch ctx ns) r)
@@ -2290,7 +2294,7 @@
 
 ; Binds each form's %-constructor (ASSUMPTIONS 5) and the form's own entry holding that constructor's value;
 ; returns the constructors for the Special Matchable.
-(def-fns _ $ many bind-specials : (subterm many (List $ SpEntry) sps) (many (Env) env) (many (Nat) index) -> (many (Env) r) (many (List $ Ctor) ctors) (many (List $ MCtor) mctors)
+(def-fns _ $ many bind-specials : (subterm many (List $ SpEntry) sps) (many (Env) env) (many (Nat) index) (many (List $ Nat) shape) -> (many (Env) r) (many (List $ Ctor) ctors) (many (List $ MCtor) mctors)
   (match many sps _
     ((Nil a) (values env (Nil _) $ Nil _))
     ((Cons a sp rest)
@@ -2298,10 +2302,10 @@
         ((MkSpEntry name k)
           (let (many cname) $ str-cat "%" name)
           (let (many env2) (many c) $ bind env (Some _ cname) (Many) (TValCtor (Nil _) special-term) (None _) coercible-id)
-          (let (many ctor) $ MkCtor cname c index 0 (BTrue) $ None _)
+          (let (many ctor) $ MkCtor cname c index 0 (BTrue) (None _) shape)
           (let (many env3) $ set-state-closed env2 c $ BCtorFn _ ctor)
-          (let (many env4) (many x) $ bind-closed env3 (Some _ name) (Many) (BTag _ index $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) coercible-id)
-          (let (many env5) (many ctors) (many mctors) $ bind-specials rest env4 $ Succ index)
+          (let (many env4) (many x) $ bind-closed env3 (Some _ name) (Many) (BTag _ ctor $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) coercible-id)
+          (let (many env5) (many ctors) (many mctors) $ bind-specials rest env4 (Succ index) shape)
           (values env5 (Cons _ ctor ctors) $ Cons _ (MkMCtor (Many) $ TVar c) mctors))))))
 
 (def-fns _ $ many make-builtins : -> (many (Env) env)
@@ -2316,7 +2320,7 @@
   (let (many e5) $ bind-builtin e4 "Subterm" (TTyCtor hetero) $ None _)
   (let (many e6) $ bind-builtin e5 "Coercible" (TTyCtor hetero) $ None _)
   (let (many e7) $ bind-builtin e6 "Special" (TTyCtor $ Nil _) $ None _)
-  (let (many e8) (many ctors) (many mctors) $ bind-specials sp-table e7 0)
+  (let (many e8) (many ctors) (many mctors) $ bind-specials sp-table e7 0 $ list-replicate _ (list-length _ sp-table) 0)
   (let (many adt) $ MkAdt "Special" (BTrue) ctors $ None _)
   (let (many e9) (many m) $ bind-closed e8 (None _) (Many) (BMat _ adt) (TMatchable (DEnum) (TVar special-id) mctors) (None _) coercible-id)
   e9)

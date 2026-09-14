@@ -80,13 +80,16 @@ host (section 41); a `U8` or a
   `tail` and `delegate` (ASSUMPTIONS 72) and their validation, the
   expansion of `unary` and `distinct`, and the top level.
 - `runtime.ml` — what the OCaml runtime every compiled program starts
-  with adds to `lib/ffi_core.ml`: one type `v` of runtime values, the
-  extern functions, and the driver of `lib/program.ml`.
-  `gen_header.py` turns the two files into `header.sl`, the same text
-  as one `Rope` of SL string literals; regenerate `header.sl` after
-  editing either.
-- `emit.sl` — extraction to OCaml, and a generated printer per type for
-  a final function's result.
+  with adds to `lib/ffi_core.ml` and `lib/driver_core.ml`: `absurd`,
+  the phantom indices of narrowing, the identity `Matchable`, the
+  extern types' list-shaped con/des, and the `world` the driver runs
+  in. `gen_header.py` turns the three files into `header.sl`, the same
+  text as one `Rope` of SL string literals; regenerate `header.sl`
+  after editing any of them.
+- `emit.sl` — extraction to OCaml in the reference's scheme: a walk
+  collecting the shapes and narrowings a program needs, the blocks and
+  groups as OCaml, the driver's operations, and a generated printer
+  per type for a final function's result.
 - `main.sl` — the entry point, an `IO` program (ASSUMPTIONS 56).
 - `bootstrap.sh` — builds and checks everything, below.
 
@@ -118,27 +121,46 @@ the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
-self-hosting fixpoint. At the time of writing all 147 runnable tests
-match, all 96 error tests are refused with the expected text, and the
-fixpoint holds; the whole script takes about two minutes.
+self-hosting fixpoint. At the time of writing all 151 runnable tests
+match, all 98 error tests are refused with the expected text, and the
+fixpoint holds; the whole script takes about three minutes.
 
 ## Choices, and where they differ from the reference
 
-Each of these is this session's choice, made without the owner, and
-recorded so it can be revisited.
+Each of these is a session's choice, made without the owner unless
+the entry says otherwise, and recorded so it can be revisited.
 
-- **One OCaml type for every value.** `type v = Tag of int * v list |
-  Tup of v list | Nat of Z.t | Str of slice | Fn of (v list -> v) | Mat
-  of ... | U`. `lib/extract.ml` emits an OCaml variant type per ADT
-  under `Obj.t`; this emitter keeps section 38's representation
-  (a value is the tuple of its many fields, one bare, none `U`, a tag
-  only for an enum with more than one non-phantom constructor, so
-  `coerce` is the identity and a newtype is its field) but through
-  typed constructors, so a wrong extraction is an OCaml type error or
-  an `absurd ()` rather than a segmentation fault. Every function,
-  first-class constructor and top-level definition is an `Fn`, and every
-  call is `app f [args]`, which OCaml compiles to a tail call in tail
-  position: three million `tail`-marked frames run in constant stack.
+- **The reference extractor's scheme, by the owner's decision** that
+  `lib/extract.ml` is the specification of this emitter and the two
+  back-ends agree; the purpose the owner stated is the runtime cost of
+  the extracted program. Every value is an `Obj.t`, the casts free.
+  A tagged type (an enum with more than one non-phantom constructor)
+  is an OCaml variant declared once per *shape*, the sequence of
+  `many`-field arities of its non-phantom constructors, so every ADT of
+  one shape shares one type; an untagged type, a union and a newtype
+  are their fields as they stand, `()`, the field, or a tuple, with no
+  declaration; an extern type is its `Z.t` or slice, built and read
+  through the FFI's `con_Nat`/`des_Nat` and kin. A constructor
+  application whose head the elaborator sees is the direct build; a
+  call whose head is a named function is a direct OCaml call; a match
+  on a tagged type is a direct `match` on the shape, and when the
+  elaborator's `live` set (the branches present and the constructors an
+  `else` stands for) leaves constructors out, on a phantom-index GADT
+  copy of the shape declared once per shape and live set, so that OCaml
+  tests nothing for the refuted ones and a match with one live
+  constructor is a bare projection; an exhaustive match without `else`
+  has no default arm. A first-class constructor is its curried builder,
+  a constant one the constant; a `Matchable` at runtime is an
+  `Obj.t -> Obj.t`, the identity for a plain type and for an extern
+  type the unwrap into the shape its constructors describe, so a match
+  through a held `Matchable` is the same direct match on the unwrapped
+  value; the elaborator mints that shape from the `Matchable`'s type.
+  `absurd ()` remains where the elaborator refuted every branch, on the
+  extern paths, and in the driver. A wrong refutation would misdispatch
+  silently here, as ASSUMPTIONS 63 records for the reference; the
+  interpreter is the checked path. Function calls in tail position are
+  OCaml tail calls, so three million `tail`-marked frames run in
+  constant stack.
 - **Identifiers are `Bin` numbers**, not `Nat`s: comparing two is
   logarithmic under the FFI, a fresh one is a successor, and the
   environment's maps are tries over their digits. OCaml names carry the
@@ -191,8 +213,11 @@ recorded so it can be revisited.
   interpreter makes is a block in `heap.sl`'s store, and the emitter
   writes each block a Const or a final reaches once, in address order,
   each block's addresses being below its own (ASSUMPTIONS 131). A group
-  is one block, its members projections from it, so a group's code is
-  written once however many closures name it.
+  is one top-level `let rec`, its members named by their entries
+  qualified by the group's address, so a group's code is written once
+  however many closures name it, and a function value is its member's
+  closure; a group's captured frames are the names of the blocks and
+  members it closed over.
 - **A final value printed at compile time goes through the generated
   printer**, as ASSUMPTIONS 66 chose, a block carrying no constructor
   names; a function-valued final prints its name as the reference does,
@@ -202,12 +227,12 @@ recorded so it can be revisited.
   copies under the FFI, so the compiler never builds a long string; the
   OCaml text is a tree of small chunks flushed through one `WriteOut`
   request each.
-- **The driver's knowledge of the prelude is fixed in `runtime.ml`**:
-  the constructor indices of `IO`, `Maybe`, `Result`, `List` and `Unit`
-  and the shapes of `Nat` and `String`, with a `Char` and an exit code's
-  `U8` each being their `Nat`, are written into `run_io`, `to_string`
-  and `of_string`, where `lib/extract.ml` reads them off the prelude's
-  constructors. A changed prelude needs a changed runtime.
+- **The driver's operations are emitted per program**, as
+  `lib/extract.ml` does: `lib/driver_core.ml` takes a record of direct
+  builds and matches over the prelude's `Nat`, `U8`, `Char`, `String`,
+  `Maybe`, `Result`, `Unit`, `List` and `IO`, found by name in the
+  prelude's scope, so no name is looked up while a program runs. A
+  prelude renaming those needs a changed emitter.
 - **The elaborator's group carries a budget of sugar expansions** as its
   first `subterm` parameter, ahead of the raw. `unary` and `distinct`
   write their prelude calls down when the form is reached, as the

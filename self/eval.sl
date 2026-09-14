@@ -109,7 +109,7 @@
 
 (def-fns _ $ many construct : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Ctor) c) (many (List $ Addr hs) args) -> (erased (Nat) hs2) (many (Heap Block hs2) hp2) (erased (Lt hs (Succ hs2)) le) (many (Addr hs2) v)
   (match many c _
-    ((MkCtor name id index arity tagged ext)
+    ((MkCtor name id index arity tagged ext shape)
       (match many ext _
         ((Some a e)
           (let (many hp2) (many v) $ ext-construct _ hp e index args)
@@ -117,7 +117,7 @@
         ((None a)
           (match many tagged _
             ((BTrue)
-              (let (many hp2) (many v) $ alloc Block _ hp $ BTag _ index args)
+              (let (many hp2) (many v) $ alloc Block _ hp $ BTag _ c args)
               (values (Succ hs) hp2 (le-step _ _ $ le-refl hs) v))
             ((BFalse) (tuple _ hp args))))))))
 
@@ -132,15 +132,15 @@
         ((Some e t)
           (let (erased hs2) (many hp2) (erased le) (many i) (many fs) $ ext-destruct _ hp p)
           (values hs2 hp2 le $ Some _ $ MkPair _ _ i fs))))
-    ((BTag z i fs)
+    ((BTag z ct fs)
       (match many tagged _
-        ((BTrue) (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ i $ addrs-weaken _ _ (lt-weaken _ _ lt) fs))
+        ((BTrue) (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ (ctor-index ct) $ addrs-weaken _ _ (lt-weaken _ _ lt) fs))
         ((BFalse) (values hs hp (le-refl hs) $ None _))))
     (else (values hs hp (le-refl hs) $ None _))))
 
 (def-fns _ $ many destruct : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Ctor) c) (many (Addr hs) v) -> (erased (Nat) hs2) (many (Heap Block hs2) hp2) (erased (Lt hs (Succ hs2)) le) (many (Nat) i) (many (List $ Addr hs2) fields)
   (match many c _
-    ((MkCtor name id index arity tagged ext)
+    ((MkCtor name id index arity tagged ext shape)
       (let (erased hs2) (many hp2) (erased le) (many read) $ dispatch _ hp ext tagged v)
       (match many read _
         ((Some a p) (match many p _ ((MkPair x y i fs) (values hs2 hp2 le i fs))))
@@ -161,7 +161,7 @@
       ((Succ k)
         (match many (deref-path Block _ hp path n sp lt) _
           ((BExt z p) (match many p _ ((PStr s) (RStr s)) ((PNat m) (RChar $ char-of-code m)) (else (REmpty))))
-          ((BTag z i fields) (rope-fields k _ hp n lt lf fields))
+          ((BTag z ct fields) (rope-fields k _ hp n lt lf fields))
           (else (REmpty))))))
   (many rope-fields : (subterm erased (Nat) fuel) (erased (Nat) hs) (many (Heap Block hs) hp) (erased (Nat) a) (erased (Lt a hs) lt) (erased (Lt a (Succ fuel)) lf) (subterm many (List $ Addr a) fs) -> (many (Rope) r)
     (match many fs _
@@ -283,7 +283,8 @@
           (let (many v) (erased sq) $ at-get _ _ _ q vs lk)
           (values hs hp (le-refl hs) v))
         ((FrGroup a c2 gids g rest)
-          (let (many hp2) (many v) $ alloc Block _ hp $ BFn _ g $ at-index _ _ q)
+          (let (many i) $ at-index _ _ q)
+          (let (many hp2) (many v) $ alloc Block _ hp $ BFn _ g i $ list-nth-or _ gids i (BZ))
           (values (Succ hs) hp2 (le-step _ _ $ le-refl hs) v))))
     ((MThere y f c q)
       (match many env _
@@ -350,7 +351,7 @@
                 (let (erased le1) (le-step _ _ $ le-refl hs))
                 (let (erased h2) (many hp2) (erased le2) (many r) $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (entries-weaken _ _ le1 cs) (FrGroup _ _ ids ga $ frames-weaken _ _ le1 _ env))
                 (values h2 hp2 (le-trans _ _ _ le1 le2) r))))))
-      ((CMatch c ns scrut shape branches dfl)
+      ((CMatch c ns scrut shape branches dfl live)
         (let (erased h1) (many hp1) (erased le1) (many svs) $ eval fuel _ hp _ _ scrut st)
         (let (many v) $ vals-one _ svs)
         (let (many st1) $ st-weaken _ _ le1 _ st)
@@ -358,12 +359,12 @@
           (match many shape _
             ((ShKnown c2 adt) (dispatch _ hp1 (adt-ext adt) (adt-tagged adt) v))
             ((ShNone c2) (values h1 hp1 (le-refl h1) $ None _))
-            ((ShHeld c2 mcode tags)
+            ((ShHeld c2 mcode held)
               (let (erased h1b) (many hp1b) (erased le1b) (many mvs) $ eval fuel _ hp1 _ _ mcode st1)
               (let (erased ma) (erased mlt) (many mb) $ deref Block _ hp1b $ vals-one _ mvs)
               (match many mb (((Nat) h) ((Heap Block h) p) ((Lt h1 (Succ h)) l) ((Maybe $ Pair (Nat) $ List $ Addr h) r))
                 ((BMat z a)
-                  (let (erased h1c) (many hp1c) (erased le1c) (many r) $ dispatch _ hp1b (adt-ext a) tags $ addr-weaken _ _ le1b v)
+                  (let (erased h1c) (many hp1c) (erased le1c) (many r) $ dispatch _ hp1b (adt-ext a) (adt-tagged held) $ addr-weaken _ _ le1b v)
                   (values h1c hp1c (le-trans _ _ _ le1b le1c) r))
                 (else (values h1b hp1b le1b $ None _))))))
         (let (many st2) $ st-weaken _ _ le2 _ st1)
@@ -438,7 +439,7 @@
       (erased (Nat) hs2) (many (Heap Block hs2) hp2) (erased (Lt hs (Succ hs2)) le) (many (List $ Addr hs2) vs)
     (let (erased fa) (erased flt) (many fb) $ deref Block _ hp f)
     (match many fb _
-      ((BFn z ga i)
+      ((BFn z ga i id)
         (let (many g) $ addr-weaken _ _ (lt-weaken _ _ flt) ga)
         (let (erased gn) (erased glt) (many gb) $ deref Block _ hp g)
         (match many gb _
@@ -508,7 +509,7 @@
   (match many ids _
     ((Nil a) (env-with-store e _ hp en fi))
     ((Cons a x rest)
-      (let (many hp2) (many v) $ alloc Block _ hp $ BFn _ g i)
+      (let (many hp2) (many v) $ alloc Block _ hp $ BFn _ g i x)
       (let (erased le) (le-step _ _ $ le-refl hs))
       (let (many en2) (many fi2) $ store-grow _ _ le en fi)
       (close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 rest (addr-weaken _ _ le g) $ Succ i))))

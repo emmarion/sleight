@@ -1,7 +1,7 @@
 ; self/emit.sl -- OCaml extraction of the elaborated program (self/README.md; lib/extract.ml): every block of
 ; the store that a Const or a final value reaches becomes one let in address order, so that sharing is the
-; store's; a group's block is a let rec over its members; and each final value is consumed as lib/program.ml
-; would.
+; store's; a group's block is a top-level let rec over its members; and each final value is consumed as
+; lib/program.ml would.
 
 (def-fns _ $ many top-name : (many (Env) env) (many (Bin) x) -> (many (String) s)
   (str-cat "v" $ str-cat (bin-str x) $ str-cat "_" $ sanitize $ name-of env x))
@@ -15,83 +15,274 @@
   (RStr $ nat-str n))
 
 (def-fns _ $ many nat-literal : (many (Nat) n) -> (many (Rope) r)
-  (rcat3 (RStr "(Nat (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
-
-(def-fns _ $ many let-rope : (many (String) name) (many (Rope) e) -> (many (Rope) r)
-  (rcat5 (RStr "let ") (RStr name) (RStr " = ") e $ RStr "\n"))
+  (rcat3 (RStr "(Obj.repr (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
 
 (def-fns _ $ many bracketed : (subterm many (List $ Rope) rs) -> (many (Rope) r)
   (rcat3 (RStr "[") (rjoin rs "; ") $ RStr "]"))
+
+(def-fns _ $ many commas : (subterm many (List $ Rope) rs) -> (many (Rope) r)
+  (rjoin rs ", "))
 
 (def-fns _ $ many names-of-ids : (subterm many (List $ Bin) ids) (many (Env) env) -> (many (List $ Rope) r)
   (match many ids _
     ((Nil a) (Nil _))
     ((Cons a x rest) (Cons _ (RStr $ top-name env x) $ names-of-ids rest env))))
 
-; An OCaml pattern binding the ids: a list pattern of their names.
-(def-fns _ $ many ids-pattern : (many (List $ Bin) ids) (many (Env) env) -> (many (Rope) r)
-  (bracketed $ names-of-ids ids env))
+(def-fns _ $ many field-names : (subterm many (Nat) n) (many (Nat) i) -> (many (List $ Rope) r)
+  (match many n _
+    ((Zero) (Nil _))
+    ((Succ k) (Cons _ (RStr $ str-cat "f" $ nat-str i) $ field-names k $ Succ i))))
 
-; A tuple of values as the runtime keeps it: none is U, one is bare, more a Tup.
+(def-fns _ $ many nat-range : (subterm many (Nat) n) (many (Nat) i) -> (many (List $ Nat) r)
+  (match many n _
+    ((Zero) (Nil _))
+    ((Succ k) (Cons _ i $ nat-range k $ Succ i))))
+
+; A tuple of values as the runtime keeps it: none is unit, one is bare, more an OCaml tuple.
 (def-fns _ $ many tuple-rope : (many (List $ Rope) rs) -> (many (Rope) r)
   (match many rs _
-    ((Nil a) (RStr "U"))
+    ((Nil a) (RStr "(Obj.repr ())"))
     ((Cons a r rest)
       (match many rest _
         ((Nil b) r)
-        ((Cons b r2 rest2) (rcat3 (RStr "(Tup ") (bracketed rs) $ RStr ")"))))))
+        ((Cons b r2 rest2) (rcat3 (RStr "(Obj.repr (") (commas rs) $ RStr "))"))))))
+
+(def-fns _ $ many obj-tuple : (subterm many (List $ Rope) rs) -> (many (Rope) r)
+  (match many rs _
+    ((Nil a) (REmpty))
+    ((Cons a r rest) (match many rest _ ((Nil b) (RStr "Obj.t")) ((Cons b r2 rest2) (rcat (RStr "Obj.t * ") $ obj-tuple rest))))))
 
 ; Binding the names to a value of that shape.
 (def-fns _ $ many untuple-rope : (many (List $ Rope) names) (many (Rope) e) (many (Rope) body) -> (many (Rope) r)
   (match many names _
-    ((Nil a) (rcat5 (RStr "(let _ = ") e (RStr " in ") body $ RStr ")"))
+    ((Nil a) body)
     ((Cons a x rest)
       (match many rest _
         ((Nil b) (rcat5 (RStr "(let ") x (RStr " = ") (rcat3 e (RStr " in ") body) $ RStr ")"))
-        ((Cons b y rest2) (rcat5 (RStr "(match ") e (rcat3 (RStr " with Tup ") (bracketed names) $ RStr " -> ") body $ RStr " | _ -> absurd ())"))))))
+        ((Cons b y rest2) (rcat5 (RStr "(let (") (commas names) (rcat5 (RStr ") = (Obj.obj ") e (RStr " : ") (obj-tuple names) $ RStr ") in ") body $ RStr ")"))))))
 
-; Constructing a value from a constructor and the code of its many fields.
-(def-fns _ $ many build-rope : (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r)
+(def-fns _ $ many params-rope : (many (List $ Rope) ps) -> (many (Rope) r)
+  (match many ps _
+    ((Nil a) (RStr "()"))
+    ((Cons a p rest) (rcat3 (RStr "(") (rjoin ps " : Obj.t) (") $ RStr " : Obj.t)"))))
+
+(def-fns _ $ many arrows-tail : (subterm many (List $ Rope) args) -> (many (Rope) r)
+  (match many args _
+    ((Nil a) (RStr "Obj.t"))
+    ((Cons a x rest) (rcat (RStr "Obj.t -> ") $ arrows-tail rest))))
+
+(def-fns _ $ many arrows-rope : (many (List $ Rope) args) -> (many (Rope) r)
+  (match many args _
+    ((Nil a) (RStr "unit -> Obj.t"))
+    ((Cons a x rest) (arrows-tail args))))
+
+(def-fns _ $ many args-rope : (many (List $ Rope) args) -> (many (Rope) r)
+  (match many args _
+    ((Nil a) (RStr "()"))
+    ((Cons a x rest) (rjoin args " "))))
+
+; A call of a value whose OCaml name is unknown: the closure coerced to the call's arity.
+(def-fns _ $ many dyn-call : (many (Rope) f) (many (List $ Rope) args) -> (many (Rope) r)
+  (rcat5 (RStr "((Obj.obj ") f (rcat3 (RStr " : ") (arrows-rope args) $ RStr ") ") (args-rope args) $ RStr ")"))
+
+(def-fns _ $ many lambda-rope : (many (List $ Rope) ps) (many (Rope) body) -> (many (Rope) r)
+  (rcat5 (RStr "(fun ") (params-rope ps) (RStr " -> ") body $ RStr ")"))
+
+; ---- The declarations a program needs (lib/extract.ml's shape table): the tagged shapes met, numbered by
+; first sight; the shapes an extern function takes list-shaped con/des for; and the phantom-index copies
+; narrowing a shape to a match's live constructors.
+
+(def-adts $ Narrow : -> Type
+  enum
+  (many MkNarrow : (many (List $ Nat) shape) (many (List $ Nat) live) -> (Narrow)))
+
+(def-adts $ Decls : -> Type
+  enum
+  (many MkDecls : (many (List $ List $ Nat) shapes) (many (List $ List $ Nat) ops) (many (List $ Narrow) narrows) -> (Decls)))
+
+(def-fns _ $ many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r)
+  (match many a _
+    ((Nil t) (list-is-empty _ b))
+    ((Cons t x rest) (match many b _ ((Nil u) (BFalse)) ((Cons u y rest2) (and (nat-eq x y) $ nat-list-eq rest rest2))))))
+
+(def-fns _ $ many shape-index : (subterm many (List $ List $ Nat) ss) (many (List $ Nat) s) (many (Nat) i) -> (many (Maybe $ Nat) r)
+  (match many ss _
+    ((Nil t) (None _))
+    ((Cons t x rest) (match many (nat-list-eq x s) _ ((BTrue) (Some _ i)) ((BFalse) (shape-index rest s $ Succ i))))))
+
+(def-fns _ $ many narrow-index : (subterm many (List $ Narrow) ns) (many (List $ Nat) s) (many (List $ Nat) live) (many (Nat) i) -> (many (Maybe $ Nat) r)
+  (match many ns _
+    ((Nil t) (None _))
+    ((Cons t n rest)
+      (match many n _
+        ((MkNarrow s2 live2) (match many (and (nat-list-eq s2 s) $ nat-list-eq live2 live) _ ((BTrue) (Some _ i)) ((BFalse) (narrow-index rest s live $ Succ i))))))))
+
+(def-fns _ $ many index-str : (many (Maybe $ Nat) i) -> (many (String) s)
+  (match many i _ ((Some a n) (nat-str n)) ((None a) "missing")))
+
+(def-fns _ $ many shape-name : (many (Decls) d) (many (List $ Nat) s) -> (many (String) r)
+  (match many d _ ((MkDecls shapes ops narrows) (str-cat "t" $ index-str $ shape-index shapes s 0))))
+
+(def-fns _ $ many ctor-name-at : (many (Decls) d) (many (List $ Nat) s) (many (Nat) i) -> (many (String) r)
+  (match many d _ ((MkDecls shapes ops narrows) (str-cat3 "K" (index-str $ shape-index shapes s 0) $ str-cat "_" $ nat-str i))))
+
+(def-fns _ $ many op-name : (many (Decls) d) (many (String) op) (many (List $ Nat) s) -> (many (String) r)
+  (match many d _ ((MkDecls shapes ops narrows) (str-cat3 op "_" $ index-str $ shape-index shapes s 0))))
+
+(def-fns _ $ many narrow-name : (many (Decls) d) (many (List $ Nat) s) (many (List $ Nat) live) -> (many (String) r)
+  (match many d _ ((MkDecls shapes ops narrows) (str-cat3 (shape-name d s) "_n" $ index-str $ narrow-index narrows s live 0))))
+
+(def-fns _ $ many add-shape : (many (List $ List $ Nat) ss) (many (List $ Nat) s) -> (many (List $ List $ Nat) r)
+  (match many (shape-index ss s 0) _
+    ((Some a i) ss)
+    ((None a) (let (many r) (erased p) $ list-append _ ss $ Cons _ s $ Nil _) r)))
+
+(def-fns _ $ many decl-shape : (many (Decls) d) (many (List $ Nat) s) -> (many (Decls) r)
+  (match many d _ ((MkDecls shapes ops narrows) (MkDecls (add-shape shapes s) ops narrows))))
+
+(def-fns _ $ many decl-op : (many (Decls) d) (many (List $ Nat) s) -> (many (Decls) r)
+  (match many d _ ((MkDecls shapes ops narrows) (MkDecls (add-shape shapes s) (add-shape ops s) narrows))))
+
+(def-fns _ $ many decl-narrow : (many (Decls) d) (many (List $ Nat) s) (many (List $ Nat) live) -> (many (Decls) r)
+  (match many d _
+    ((MkDecls shapes ops narrows)
+      (match many (narrow-index narrows s live 0) _
+        ((Some a i) d)
+        ((None a)
+          (let (many r) (erased p) $ list-append _ narrows $ Cons _ (MkNarrow s live) $ Nil _)
+          (MkDecls (add-shape shapes s) ops r))))))
+
+(def-fns _ $ many nat-insert : (many (Nat) x) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r)
+  (match many xs _
+    ((Nil a) (Cons _ x $ Nil _))
+    ((Cons a y rest)
+      (match many (nat-cmp x y) _
+        ((CLt lt-t lt-r lt-x lt-y lt-p) (Cons _ x xs))
+        ((CEq eq-t eq-r eq-x) xs)
+        ((CGt gt-t gt-r gt-x gt-y gt-p) (Cons _ y $ nat-insert x rest))))))
+
+; The key of a narrowing: the live discriminants sorted, each once.
+(def-fns _ $ many live-key : (subterm many (List $ Nat) live) -> (many (List $ Nat) r)
+  (match many live _
+    ((Nil a) (Nil _))
+    ((Cons a x rest) (nat-insert x $ live-key rest))))
+
+(def-fns _ $ many ctor-arities : (subterm many (List $ Ctor) cs) -> (many (List $ Nat) r)
+  (match many cs _
+    ((Nil a) (Nil _))
+    ((Cons a c rest) (Cons _ (ctor-arity c) $ ctor-arities rest))))
+
+(def-fns _ $ many adt-shape : (many (Adt) adt) -> (many (List $ Nat) r)
+  (ctor-arities $ adt-ctors adt))
+
+; Whether the live set leaves a constructor out, so the match is on a narrowed copy of the shape.
+(def-fns _ $ many narrowed : (many (Adt) adt) (many (List $ Nat) live) -> (many (Bool) r)
+  (nat-lt (list-length _ $ live-key live) $ list-length _ $ adt-ctors adt))
+
+(def-fns _ $ many adt-plain-tagged : (many (Adt) adt) -> (many (Bool) r)
+  (match many (adt-ext adt) _ ((Some a e) (BFalse)) ((None a) (adt-tagged adt))))
+
+; ---- Constructing, taking apart, and the runtime forms of constructors and Matchables
+
+(def-fns _ $ many pattern-rope : (many (Decls) d) (many (List $ Nat) s) (many (Nat) i) (many (List $ Rope) fs) -> (many (Rope) r)
+  (match many fs _
+    ((Nil a) (RStr $ ctor-name-at d s i))
+    ((Cons a f rest) (rcat3 (RStr $ str-cat (ctor-name-at d s i) " (") (commas fs) $ RStr ")"))))
+
+(def-fns _ $ many build-rope : (many (Decls) d) (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r)
   (match many c _
-    ((MkCtor name id index arity tagged ext)
+    ((MkCtor name id index arity tagged ext shape)
       (match many ext _
         ((Some a e) (rcat5 (RStr "(con_") (RStr $ ext-type-name e) (rcat3 (RStr " ") (nat-rope index) $ RStr " ") (bracketed args) $ RStr ")"))
         ((None a)
           (match many tagged _
-            ((BTrue) (rcat5 (RStr "(Tag (") (nat-rope index) (RStr ", ") (bracketed args) $ RStr "))"))
+            ((BTrue) (rcat3 (RStr "(Obj.repr (") (pattern-rope d shape index args) $ RStr "))"))
             ((BFalse) (tuple-rope args))))))))
 
-(def-fns _ $ many ctor-fn-rope : (many (Ctor) c) -> (many (Rope) r)
-  (match many c _
-    ((MkCtor name id index arity tagged ext)
-      (match many ext _
-        ((Some a e) (rcat5 (RStr "(Fn (con_") (RStr $ ext-type-name e) (RStr " ") (nat-rope index) $ RStr "))"))
-        ((None a)
-          (match many tagged _
-            ((BTrue) (rcat3 (RStr "(Fn (fun args -> Tag (") (nat-rope index) $ RStr ", args)))"))
-            ((BFalse) (RStr "(Fn tuple)"))))))))
+; A first-class constructor is its curried builder; a constant one is the constant.
+(def-fns _ $ many ctor-fn-rope : (many (Decls) d) (many (Ctor) c) -> (many (Rope) r)
+  (let (many fs) $ field-names (ctor-arity c) 0)
+  (match many fs _
+    ((Nil a) (build-rope d c fs))
+    ((Cons a f rest) (rcat5 (RStr "(Obj.repr (fun ") (params-rope fs) (RStr " : Obj.t -> ") (build-rope d c fs) $ RStr "))"))))
 
-(def-fns _ $ many matchable-rope : (many (Adt) adt) -> (many (Rope) r)
-  (match many adt _
-    ((MkAdt name tagged ctors ext)
-      (match many ext _
-        ((Some a e) (rcat3 (RStr "(Mat (fun _ v -> des_") (RStr $ ext-type-name e) $ RStr " v))"))
-        ((None a)
-          (match many tagged _
-            ((BTrue) (RStr "(Mat (fun _ v -> des_tag v))"))
-            ((BFalse) (RStr "(Mat (fun n v -> (0, untuple n v)))"))))))))
+(def-adts $ Arm : -> Type
+  enum
+  (many MkArm : (many (Nat) d) (many (List $ Rope) fs) (many (Rope) body) -> (Arm)))
 
-; The destructor a known shape reads a value through: the FFI's, the tag's, or the fields themselves.
-(def-fns _ $ many des-rope : (many (Adt) adt) (many (Rope) scrut) -> (many (Rope) r)
-  (match many adt _
-    ((MkAdt name tagged ctors ext)
-      (match many ext _
-        ((Some a e) (rcat5 (RStr "(des_") (RStr $ ext-type-name e) (RStr " ") scrut $ RStr ")"))
-        ((None a) (rcat3 (RStr "(des_tag ") scrut $ RStr ")"))))))
+(def-fns _ $ many ext-arms : (subterm many (List $ Arm) arms) -> (many (Rope) r)
+  (match many arms _
+    ((Nil a) (REmpty))
+    ((Cons a arm rest) (match many arm _ ((MkArm d fs body) (rcat5 (RStr "| (") (nat-rope d) (rcat3 (RStr ", ") (bracketed fs) $ RStr ") -> ") body $ rcat (RStr " ") $ ext-arms rest))))))
 
-(def-fns _ $ many adt-untagged : (many (Adt) adt) -> (many (Bool) r)
-  (match many adt _
-    ((MkAdt name tagged ctors ext) (match many ext _ ((Some a e) (BFalse)) ((None a) (not tagged))))))
+(def-fns _ $ many tagged-arms : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Arm) arms) -> (many (Rope) r)
+  (match many arms _
+    ((Nil a) (REmpty))
+    ((Cons a arm rest) (match many arm _ ((MkArm i fs body) (rcat5 (RStr "| ") (pattern-rope d s i fs) (RStr " -> ") body $ rcat (RStr " ") $ tagged-arms d s rest))))))
+
+(def-fns _ $ many default-rope : (many (Maybe $ Rope) dflt) -> (many (Rope) r)
+  (match many dflt _ ((Some a d) d) ((None a) (RStr "(absurd ())"))))
+
+; A match over an ADT's constructors (lib/extract.ml's dispatch): the FFI's destructor for an extern type; a
+; direct match for a tagged one, on the copy narrowed to the live constructors when some are refuted, so
+; that OCaml tests nothing for them; the fields as they stand for an untagged one.
+(def-fns _ $ many dispatch-rope : (many (Decls) d) (many (Adt) adt) (many (List $ Nat) live) (many (Rope) scrut) (many (List $ Arm) arms) (many (Maybe $ Rope) dflt) -> (many (Rope) r)
+  (match many (adt-ext adt) _
+    ((Some a e) (rcat5 (RStr $ str-cat3 "(match des_" (ext-type-name e) " ") scrut (rcat (RStr " with ") $ ext-arms arms) (rcat (RStr " | _ -> ") $ default-rope dflt) $ RStr ")"))
+    ((None a)
+      (match many (adt-tagged adt) _
+        ((BTrue)
+          (let (many s) $ adt-shape adt)
+          (let (many (String) ty) $ match many (narrowed adt live) _ ((BTrue) (str-cat "yes " $ narrow-name d s $ live-key live)) ((BFalse) (shape-name d s)))
+          (let (many (Rope) inner)
+            (match many arms _
+              ((Nil b) (match many dflt _ ((None c) (RStr "| _ -> .")) ((Some c dr) (rcat (RStr "| _ -> ") dr))))
+              ((Cons b arm rest) (rcat (tagged-arms d s arms) $ match many dflt (((Rope) r)) ((None c) (REmpty)) ((Some c dr) (rcat (RStr "| _ -> ") dr))))))
+          (rcat5 (RStr "(match (Obj.obj ") scrut (RStr $ str-cat3 " : " ty ") with ") inner $ RStr ")"))
+        ((BFalse)
+          (match many arms _
+            ((Nil b) (default-rope dflt))
+            ((Cons b arm rest) (match many arm _ ((MkArm i fs body) (untuple-rope fs scrut body))))))))))
+
+; What an arm over a whole ADT does with a constructor's fields: rebuilds it in a plain shape (an extern
+; type's unwrap), wraps them in Some for one constructor and None for the rest, takes the first, or makes
+; the driver's request of them.
+(def-adts $ ArmKind : -> Type
+  enum
+  (many AkBuild : (many (List $ Nat) shape) -> (ArmKind))
+  (many AkOption : (many (String) cname) -> (ArmKind))
+  (many AkField : -> (ArmKind))
+  (many AkRequest : -> (ArmKind)))
+
+(def-fns _ $ many arm-body : (many (Decls) d) (many (ArmKind) k) (many (Ctor) c) (many (List $ Rope) fs) -> (many (Rope) r)
+  (match many k _
+    ((AkBuild shape) (rcat3 (RStr "(Obj.repr (") (pattern-rope d shape (ctor-index c) fs) $ RStr "))"))
+    ((AkOption cname)
+      (match many (str-cmp (ctor-name c) cname) _
+        ((CEq eq-t eq-r eq-x) (rcat3 (RStr "(Some (") (commas fs) $ RStr "))"))
+        (else (RStr "None"))))
+    ((AkField) (match many fs _ ((Nil a) (RStr "(absurd ())")) ((Cons a f rest) f)))
+    ((AkRequest) (rcat3 (RStr $ str-cat3 "(Driver_core." (ctor-name c) " (") (commas fs) $ RStr "))"))))
+
+(def-fns _ $ many ctor-arms : (many (Decls) d) (subterm many (List $ Ctor) cs) (many (ArmKind) k) -> (many (List $ Arm) r)
+  (match many cs _
+    ((Nil a) (Nil _))
+    ((Cons a c rest)
+      (let (many fs) $ field-names (ctor-arity c) 0)
+      (Cons _ (MkArm (ctor-index c) fs $ arm-body d k c fs) $ ctor-arms d rest k))))
+
+(def-fns _ $ many all-live : (many (Adt) adt) -> (many (List $ Nat) r)
+  (nat-range (list-length _ $ adt-ctors adt) 0))
+
+; A Matchable at runtime: the identity for a plain type, for an extern type the unwrap into the shape its
+; constructors describe, which a held match then matches on directly.
+(def-fns _ $ many matchable-rope : (many (Decls) d) (many (Adt) adt) -> (many (Rope) r)
+  (match many (adt-ext adt) _
+    ((None a) (RStr "m_plain"))
+    ((Some a e)
+      (rcat3 (RStr "(Obj.repr (fun (v : Obj.t) : Obj.t -> ")
+        (dispatch-rope d adt (all-live adt) (RStr "v") (ctor-arms d (adt-ctors adt) $ AkBuild $ adt-shape adt) $ None _)
+        $ RStr "))"))))
 
 (def-fns _ $ many payload-rope : (many (Payload) p) -> (many (Rope) r)
   (match many p _
@@ -99,34 +290,57 @@
     ((PBin b)
       (let (many n) (erased pf) $ bin-to-nat b)
       (nat-literal n))
-    ((PStr s) (rcat5 (RStr "(Str (") (quoted s) (RStr ", 0, ") (nat-rope $ str-length s) $ RStr "))"))))
+    ((PStr s) (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope $ str-length s) $ RStr ") : Ffi_core.slice))"))))
 
-; ---- Names for the frames code binds: a rope per id, in step with the frames (ASSUMPTIONS 127)
+; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function
+; bound by a group is named, so a call of it is direct, a value use its closure.
+
+(def-adts $ Named : -> Type
+  enum
+  (many NmVal : (many (Rope) r) -> (Named))
+  (many NmFn : (many (String) name) -> (Named)))
+
+(def-fns _ $ many named-rope : (many (Named) n) -> (many (Rope) r)
+  (match many n _
+    ((NmVal r) r)
+    ((NmFn name) (RStr $ str-cat3 "(Obj.repr " name ")"))))
 
 (def-adts $ Names : ((List $ List $ Bin) ctx) -> Type
   enum
   (many NmNil : -> (Names (Nil (List (Bin)))))
-  (many NmFrame : (erased (List $ List $ Bin) ctx) (many (List $ Bin) f) (many (List $ Rope) rs) (erased (Lockstep (Bin) (Rope) f rs) lk) (many (Names ctx) rest) -> (Names (Cons (List (Bin)) f ctx))))
+  (many NmFrame : (erased (List $ List $ Bin) ctx) (many (List $ Bin) f) (many (List $ Named) rs) (erased (Lockstep (Bin) (Named) f rs) lk) (many (Names ctx) rest) -> (Names (Cons (List (Bin)) f ctx))))
 
-(def-fns _ $ many names-get : (erased (Bin) x) (erased (List $ List $ Bin) ctx) (subterm many (Mem x ctx) p) (many (Names ctx) ns) -> (many (Rope) r)
+(def-fns _ $ many names-get : (erased (Bin) x) (erased (List $ List $ Bin) ctx) (subterm many (Mem x ctx) p) (many (Names ctx) ns) -> (many (Named) r)
   (match many p _
     ((MHere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (let (many r) (erased sq) $ at-get _ _ _ q rs lk) r)))
     ((MThere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (names-get _ _ q rest))))))
 
-(def-fns _ $ many top-names : (subterm many (List $ Bin) ids) (many (Env) env) -> (many (List $ Rope) r) (erased (Lockstep (Bin) (Rope) ids r) lk)
+(def-fns _ $ many addr-str : (erased (Nat) a) (many (Addr a) at) -> (many (String) r)
+  (str-cat "a" $ bin-str $ addr-path _ at))
+
+(def-fns _ $ many addr-rope : (erased (Nat) a) (many (Addr a) at) -> (many (Rope) r)
+  (RStr $ addr-str _ at))
+
+; The OCaml name of a group's member: its entry's name qualified by the group's address, since a group
+; allocated twice is emitted twice.
+(def-fns _ $ many member-name : (erased (Nat) a) (many (Env) env) (many (Bin) id) (many (Addr a) g) -> (many (String) r)
+  (str-cat3 (top-name env id) "_" $ addr-str _ g))
+
+(def-fns _ $ many top-names : (subterm many (List $ Bin) ids) (many (Env) env) (many (Maybe $ String) suffix) -> (many (List $ Named) r) (erased (Lockstep (Bin) (Named) ids r) lk)
   (match many ids _
     ((Nil a) (values (Nil _) (LsNil _ _)))
     ((Cons a x rest)
-      (let (many rs) (erased lk) $ top-names rest env)
-      (let (many r) $ RStr $ top-name env x)
+      (let (many rs) (erased lk) $ top-names rest env suffix)
+      (let (many (Named) r) $ match many suffix _ ((None b) (NmVal $ RStr $ top-name env x)) ((Some b s) (NmFn $ str-cat (top-name env x) s)))
       (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))))
 
 (def-fns _ $ many push-names : (erased (List $ List $ Bin) ctx) (many (List $ Bin) ids) (many (Env) env) (many (Names ctx) ns) -> (many (Names (Cons (List (Bin)) ids ctx)) r)
-  (let (many rs) (erased lk) $ top-names ids env)
+  (let (many rs) (erased lk) $ top-names ids env $ None _)
   (NmFrame _ ids rs lk ns))
 
-(def-fns _ $ many addr-rope : (erased (Nat) a) (many (Addr a) at) -> (many (Rope) r)
-  (rcat (RStr "a") $ bin-rope $ addr-path _ at))
+(def-fns _ $ many push-fn-names : (erased (List $ List $ Bin) ctx) (many (List $ Bin) ids) (many (Env) env) (many (String) suffix) (many (Names ctx) ns) -> (many (Names (Cons (List (Bin)) ids ctx)) r)
+  (let (many rs) (erased lk) $ top-names ids env $ Some _ suffix)
+  (NmFrame _ ids rs lk ns))
 
 (def-fns _ $ many addr-ropes : (erased (Nat) a) (subterm many (List $ Addr a) vs) -> (many (List $ Rope) rs)
   (match many vs _
@@ -141,119 +355,323 @@
       (match many info _
         ((MkEInfo z n m s mi me) (match many s _ ((SDyn z2) (RStr "(failwith \"a Dyn constant\")")) ((SConst z2 v) (addr-rope _ v))))))))
 
-; The names of a group block's captured frames: an address's block by name, a group's member by projection.
-(def-fns _ $ many frame-ropes : (erased (Nat) a) (erased (List $ Bin) f) (subterm many (List $ Addr a) vs) (erased (Lockstep (Bin) (Addr a) f vs) lk) -> (many (List $ Rope) rs) (erased (Lockstep (Bin) (Rope) f rs) lk2)
+; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
+(def-fns _ $ many frame-named : (erased (Nat) a) (erased (List $ Bin) f) (subterm many (List $ Addr a) vs) (erased (Lockstep (Bin) (Addr a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Bin) (Named) f rs) lk2)
   (match many vs _
     ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (LsNil _ _)))))
     ((Cons t v rest)
       (match erased lk _
         ((LsCons ta tb x y xs ys p)
-          (let (many rs) (erased lk2) $ frame-ropes _ _ rest p)
-          (let (many r) $ addr-rope _ v)
+          (let (many rs) (erased lk2) $ frame-named _ _ rest p)
+          (let (many r) $ NmVal $ addr-rope _ v)
           (values (Cons _ r rs) (LsCons _ _ x r xs rs lk2)))))))
 
-(def-fns _ $ many member-ropes : (subterm many (List $ Bin) gids) (many (Rope) g) (many (Nat) i) -> (many (List $ Rope) rs) (erased (Lockstep (Bin) (Rope) gids rs) lk)
+(def-fns _ $ many member-named : (erased (Nat) a) (subterm many (List $ Bin) gids) (many (Env) env) (many (Addr a) g) -> (many (List $ Named) rs) (erased (Lockstep (Bin) (Named) gids rs) lk)
   (match many gids _
     ((Nil t) (values (Nil _) (LsNil _ _)))
     ((Cons t x rest)
-      (let (many rs) (erased lk) $ member-ropes rest g $ Succ i)
-      (let (many r) $ rcat5 (RStr "(member ") g (RStr " ") (nat-rope i) $ RStr ")")
+      (let (many rs) (erased lk) $ member-named _ rest env g)
+      (let (many r) $ NmFn $ member-name _ env x g)
       (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))))
 
-(def-fns _ $ many frame-names : (erased (Nat) a) (erased (List $ List $ Bin) ctx) (subterm many (Frames a ctx) env) -> (many (Names ctx) r)
-  (match many env _
+(def-fns _ $ many frame-names : (erased (Nat) a) (erased (List $ List $ Bin) ctx) (subterm many (Frames a ctx) fr) (many (Env) env) -> (many (Names ctx) r)
+  (match many fr _
     ((FrNil z) (NmNil))
     ((FrVals z c f vs lk rest)
-      (let (many rs) (erased lk2) $ frame-ropes _ _ vs lk)
-      (NmFrame _ f rs lk2 $ frame-names _ _ rest))
+      (let (many rs) (erased lk2) $ frame-named _ _ vs lk)
+      (NmFrame _ f rs lk2 $ frame-names _ _ rest env))
     ((FrGroup z c gids g rest)
-      (let (many rs) (erased lk2) $ member-ropes gids (addr-rope _ g) 0)
-      (NmFrame _ gids rs lk2 $ frame-names _ _ rest))))
+      (let (many rs) (erased lk2) $ member-named _ gids env g)
+      (NmFrame _ gids rs lk2 $ frame-names _ _ rest env))))
+
+; ---- The head of a call: a constructor the elaborator saw, a function with an OCaml name, or a value.
+
+(def-adts $ Head : -> Type
+  enum
+  (many HCtor : (many (Ctor) c) -> (Head))
+  (many HFn : (many (String) name) -> (Head))
+  (many HDyn : -> (Head)))
+
+(def-fns _ $ many block-head : (erased (Nat) a) (many (Block a) b) (many (Env) env) -> (many (Head) h)
+  (match many b _
+    ((BCtorFn z c) (HCtor c))
+    ((BFn z g i id) (HFn $ member-name _ env id g))
+    (else (HDyn))))
+
+(def-fns _ $ many head-of : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) f) (many (Env) env) (many (Names ctx) ns) -> (many (Head) h)
+  (match many f _
+    ((CVar c0 x p) (match many (names-get _ _ p ns) _ ((NmFn name) (HFn name)) ((NmVal r) (HDyn))))
+    ((CConst c0 x)
+      (let (erased a) (many blk) $ env-block env x)
+      (match many blk _ ((None t) (HDyn)) ((Some t b) (block-head _ b env))))
+    ((CValue c0 v) (block-head _ v env))
+    (else (HDyn))))
+
+; The prelude's ADT of a type name, and the destructor or constructor of it an extern function takes.
+; The prelude's names are found in its scope, as lib/program.ml's driver finds them, however the program
+; shadows them.
+(def-fns _ $ many prelude-adt : (many (Env) env) (many (String) name) -> (many (Maybe $ Adt) r)
+  (let (many env2) (many ty) $ prelude-type (env-set-scope env $ env-prelude env) name)
+  (type-adt env2 ty))
+
+(def-fns _ $ many prelude-op : (many (Decls) d) (many (Env) env) (many (String) op) (many (String) tname) -> (many (String) r)
+  (match many (prelude-adt env tname) _
+    ((None a) "missing")
+    ((Some a adt) (op-name d op $ adt-shape adt))))
+
+(def-fns _ $ many extern-extra : (many (Decls) d) (many (Env) env) (many (String) name) -> (many (Rope) r)
+  (match many (str-cmp name "flatten") _
+    ((CEq eq-t eq-r eq-x) (RStr $ str-cat3 "~des:" (prelude-op d env "des" "Rope") " ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr "))
+    (else
+      (match many (str-cmp name "nat-cmp") _
+        ((CEq eq-t eq-r eq-x) (RStr $ str-cat3 "~con:" (prelude-op d env "con" "Cmp") " "))
+        (else (REmpty))))))
+
+(def-fns _ $ many objs : (subterm many (List $ Rope) ps) -> (many (List $ Rope) r)
+  (match many ps _
+    ((Nil a) (Nil _))
+    ((Cons a p rest) (Cons _ (rcat3 (RStr "(Obj.obj ") p $ RStr ")") $ objs rest))))
 
 ; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
 
 (def-fns _
-  (many emit-code : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) -> (many (Rope) r)
+  (many emit-code : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (Rope) r)
     (match many code _
-      ((CVar c0 x p) (names-get _ _ p ns))
+      ((CVar c0 x p) (named-rope $ names-get _ _ p ns))
       ((CConst c0 x) (const-rope env x))
-      ((CValue c0 v) (block-rope _ v env))
-      ((CErased c0 ms2) (RStr "U"))
-      ((CValues c0 ms2 cs pk) (tuple-rope $ emit-codes _ cs env ns))
-      ((CApp c0 ms2 f args cc) (rcat5 (RStr "(app ") (emit-code _ _ f env ns) (RStr " ") (bracketed $ emit-codes _ args env ns) $ RStr ")"))
-      ((CLet c0 ms2 ns2 ids pk rhs rest) (untuple-rope (names-of-ids ids env) (emit-code _ _ rhs env ns) $ emit-code _ _ rest env $ push-names _ ids env ns))
+      ((CValue c0 v) (block-rope _ v env d))
+      ((CErased c0 ms2) (RStr "(Obj.repr ())"))
+      ((CValues c0 ms2 cs pk) (tuple-rope $ emit-codes _ cs env ns d))
+      ((CApp c0 ms2 f args cc)
+        (let (many ars) $ emit-codes _ args env ns d)
+        (match many (head-of _ f env ns) _
+          ((HCtor c) (build-rope d c ars))
+          ((HFn name) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")"))
+          ((HDyn)
+            (let (many fr) $ emit-code _ _ f env ns d)
+            (match many ars _
+              ((Nil a) (match many cc _ ((CCCtor) fr) (else (dyn-call fr ars))))
+              ((Cons a r rest) (dyn-call fr ars))))))
+      ((CLet c0 ms2 ns2 ids pk rhs rest)
+        (let (many rr) $ emit-code _ _ rhs env ns d)
+        (let (many body) $ emit-code _ _ rest env (push-names _ ids env ns) d)
+        (match many ids _
+          ((Nil a) (rcat5 (RStr "(let _ = ") rr (RStr " in ") body $ RStr ")"))
+          ((Cons a x more) (untuple-rope (names-of-ids ids env) rr body))))
       ((CLetRec c0 ns2 gids g rest)
         (match many g _
           ((MkGroup c1 ids fns lk)
-            (rcat5 (RStr "(let rec ") (emit-group _ _ fns env $ push-names _ ids env ns) (RStr " in ") (emit-code _ _ rest env $ push-names _ ids env ns) $ RStr ")"))))
-      ((CMatch c0 ns2 scrut shape branches dfl)
-        (let (many sr) $ emit-code _ _ scrut env ns)
-        (let (many (Nat) arity) $ match many branches _ ((Nil a) 0) ((Cons a b rest) (match many b (((Nat) n)) ((MkBranch c1 n0 d ids body) (list-length _ ids)))))
-        (let (many (Rope) dr) (match many dfl _ ((None a) (RStr "absurd ()")) ((Some a d) (emit-code _ _ d env $ push-names _ (Nil _) env ns))))
-        (let (many fallthrough) $ rcat3 (RStr " | _ -> ") dr $ RStr ")")
-        (let (many (Bool) untagged) $ match many shape _ ((ShKnown c1 adt) (adt-untagged adt)) ((ShNone c1) (BTrue)) ((ShHeld c1 mc t) (BFalse)))
-        (match many untagged _
-          ((BTrue)
-            (match many branches _
-              ((Nil a) (rcat3 (RStr "(") dr $ RStr ")"))
-              ((Cons a b rest)
-                (match many b _
-                  ((MkBranch c1 n0 d ids body) (untuple-rope (names-of-ids ids env) sr $ emit-code _ _ body env $ push-names _ ids env ns))))))
-          ((BFalse)
-            (match many shape _
-              ((ShKnown c1 adt) (rcat4 (RStr "(match ") (des-rope adt sr) (rcat (RStr " with ") $ emit-branches _ _ branches env ns $ BTrue) fallthrough))
-              ((ShHeld c1 mcode tags) (rcat5 (RStr "(match (app_mat ") (emit-code _ _ mcode env ns) (rcat4 (RStr " ") (nat-rope arity) (RStr " ") sr) (rcat (RStr ") with ") $ emit-branches _ _ branches env ns tags) fallthrough))
-              ((ShNone c1) (rcat3 (RStr "(") dr $ RStr ")"))))))
+            (let (many ns2) $ push-fn-names _ ids env "" ns)
+            (rcat5 (RStr "(let rec ") (emit-group _ _ fns env ns2 d "") (RStr " in ") (emit-code _ _ rest env ns2 d) $ RStr ")"))))
+      ((CMatch c0 ns2 scrut shape branches dfl live)
+        (let (many sr) $ emit-code _ _ scrut env ns d)
+        (let (many (Maybe $ Rope) dr) (match many dfl _ ((None a) (None _)) ((Some a dd) (Some _ $ emit-code _ _ dd env (push-names _ (Nil _) env ns) d))))
+        (let (many arms) $ emit-arms _ _ branches env ns d)
+        (match many shape _
+          ((ShKnown c1 adt) (dispatch-rope d adt live sr arms dr))
+          ((ShHeld c1 mcode adt)
+            (let (many mr) $ emit-code _ _ mcode env ns d)
+            (let (many (Rope) sr2) $ match many (adt-tagged adt) _ ((BTrue) (rcat5 (RStr "((Obj.obj ") mr (RStr " : Obj.t -> Obj.t) ") sr $ RStr ")")) ((BFalse) sr))
+            (dispatch-rope d adt live sr2 arms dr))
+          ((ShNone c1) (default-rope dr))))
       ((CAbsurd c0 ms2) (RStr "(absurd ())"))
       ((CError c0 ms2 m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
-  (many emit-codes : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Env) env) (many (Names ctx) ns) -> (many (List $ Rope) rs)
+  (many emit-codes : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Rope) rs)
     (match many cs _
       ((Nil a) (Nil _))
-      ((Cons a c rest) (Cons _ (emit-code _ _ c env ns) $ emit-codes _ rest env ns))))
+      ((Cons a c rest) (Cons _ (emit-code _ _ c env ns d) $ emit-codes _ rest env ns d))))
 
-  (many emit-branches : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Names ctx) ns) (many (Bool) tags) -> (many (Rope) r)
+  (many emit-arms : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Arm) r)
     (match many bs _
-      ((Nil a) (REmpty))
+      ((Nil a) (Nil _))
       ((Cons a b rest)
         (match many b _
-          ((MkBranch c1 n0 d ids body)
-            (let (many (Rope) disc) $ match many tags _ ((BTrue) (nat-rope d)) ((BFalse) (RStr "_")))
-            (rcat5 (RStr "| (") disc (rcat3 (RStr ", ") (ids-pattern ids env) $ RStr ") -> ") (emit-code _ _ body env $ push-names _ ids env ns) $ emit-branches _ _ rest env ns tags))))))
+          ((MkBranch c1 n0 disc ids body)
+            (Cons _ (MkArm disc (names-of-ids ids env) $ emit-code _ _ body env (push-names _ ids env ns) d) $ emit-arms _ _ rest env ns d))))))
 
-  ; The definitions of a group, joined by and, each named by its entry.
-  (many emit-group : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Func gids ctx) fns) (many (Env) env) (many (Names (Cons (List (Bin)) gids ctx)) ns) -> (many (Rope) r)
+  ; The definitions of a group, joined by and, each named by its entry and the suffix.
+  (many emit-group : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Func gids ctx) fns) (many (Env) env) (many (Names (Cons (List (Bin)) gids ctx)) ns) (many (Decls) d) (many (String) suffix) -> (many (Rope) r)
     (match many fns _
       ((Nil a) (REmpty))
       ((Cons a p rest)
         (match many p _
           ((MkPair x y id fn)
             (let (many (Rope) sep) $ match many rest _ ((Nil b) (REmpty)) ((Cons b q rest2) (RStr "\nand ")))
-            (rcat5 (RStr $ top-name env id) (RStr " = ") (emit-fn _ _ fn env ns) sep $ emit-group _ _ rest env ns))))))
+            (rcat5 (RStr $ str-cat (top-name env id) suffix) (RStr " ") (emit-fn _ _ fn env ns d) sep $ emit-group _ _ rest env ns d suffix))))))
 
-  (many emit-fn : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (Func gids ctx) fn) (many (Env) env) (many (Names (Cons (List (Bin)) gids ctx)) ns) -> (many (Rope) r)
+  ; A function's parameters and body; an extern one is the host's, over its parameters unboxed.
+  (many emit-fn : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (Func gids ctx) fn) (many (Env) env) (many (Names (Cons (List (Bin)) gids ctx)) ns) (many (Decls) d) -> (many (Rope) r)
     (match many fn _
       ((MkFunc g c rets name id params body impl top)
-        (match many impl _
-          ((Some a se) (match many se _ ((MkSomeExtern n e) (rcat (RStr "Fn ext_") $ RStr $ sanitize $ ext-name _ e))))
-          ((None a) (rcat5 (RStr "Fn (fun args -> match args with ") (ids-pattern params env) (RStr " -> ") (emit-code _ _ body env $ push-names _ params env ns) $ RStr " | _ -> absurd ())"))))))
+        (let (many ps) $ names-of-ids params env)
+        (let (many (Rope) b)
+          (match many impl _
+            ((Some a se) (match many se (((Rope) r)) ((MkSomeExtern n e) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize $ ext-name _ e) (rcat (RStr " ") $ extern-extra d env $ ext-name _ e) (rjoin (objs ps) " ") $ RStr "))"))))
+            ((None a) (emit-code _ _ body env (push-names _ params env ns) d))))
+        (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))))
 
-  ; A block as one OCaml value, its addresses by name; a group's block is its members' let rec over the
-  ; names of the frames it closed over, packed as a tuple a member projects from.
-  (many block-rope : (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) -> (many (Rope) r)
+  ; A block as one OCaml value, its addresses by name; a function value is its member's closure.
+  (many block-rope : (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
     (match many b _
-      ((BTag z tag fields) (rcat5 (RStr "(Tag (") (nat-rope tag) (RStr ", ") (bracketed $ addr-ropes _ fields) $ RStr "))"))
+      ((BTag z c fields) (build-rope d c $ addr-ropes _ fields))
       ((BTup z fields) (tuple-rope $ addr-ropes _ fields))
       ((BExt z p) (payload-rope p))
-      ((BCtorFn z c) (ctor-fn-rope c))
-      ((BMat z adt) (matchable-rope adt))
-      ((BGroup z gids ctx g env2)
-        (match many g _
-          ((MkGroup c1 ids fns lk)
-            (rcat5 (RStr "(let rec ") (emit-group _ _ fns env $ push-names _ ids env $ frame-names _ _ env2) (RStr " in ") (tuple-rope $ names-of-ids ids env) $ RStr ")"))))
-      ((BFn z g i) (rcat5 (RStr "(member ") (addr-rope _ g) (RStr " ") (nat-rope i) $ RStr ")"))
-      ((BToken z) (RStr "U"))
+      ((BCtorFn z c) (ctor-fn-rope d c))
+      ((BMat z adt) (matchable-rope d adt))
+      ((BGroup z gids ctx g env2) (RStr "(failwith \"a group as a closed value\")"))
+      ((BFn z g i id) (RStr $ str-cat3 "(Obj.repr " (member-name _ env id g) ")"))
+      ((BToken z) (RStr "(Obj.repr ())"))
       ((BError z m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")")))))
+
+; ---- The declarations: found by a walk over every block of the store and the code it holds, then written
+; ahead of the blocks; the narrowed copies come before the shapes, so a bare constructor names the shape's.
+
+(def-fns _ $ many collect-ctor : (many (Ctor) c) (many (Decls) d) -> (many (Decls) r)
+  (match many c _
+    ((MkCtor name id index arity tagged ext shape) (match many tagged _ ((BTrue) (decl-shape d shape)) ((BFalse) d)))))
+
+; An extern type's shape is declared too, as the target of its Matchable's unwrap.
+(def-fns _ $ many collect-adt : (many (Adt) adt) (many (Decls) d) -> (many (Decls) r)
+  (match many (adt-tagged adt) _ ((BTrue) (decl-shape d $ adt-shape adt)) ((BFalse) d)))
+
+(def-fns _ $ many collect-match : (many (Adt) adt) (many (List $ Nat) live) (many (Decls) d) -> (many (Decls) r)
+  (match many (adt-plain-tagged adt) _
+    ((BFalse) d)
+    ((BTrue)
+      (match many (narrowed adt live) _
+        ((BTrue) (decl-narrow d (adt-shape adt) $ live-key live))
+        ((BFalse) (decl-shape d $ adt-shape adt))))))
+
+(def-fns _ $ many collect-prelude-op : (many (String) tname) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+  (match many (prelude-adt env tname) _
+    ((None a) d)
+    ((Some a adt) (decl-op d $ adt-shape adt))))
+
+(def-fns _ $ many collect-extern : (many (String) name) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+  (match many (str-cmp name "flatten") _
+    ((CEq eq-t eq-r eq-x) (collect-prelude-op "Rope" env d))
+    (else (match many (str-cmp name "nat-cmp") _ ((CEq eq-t eq-r eq-x) (collect-prelude-op "Cmp" env d)) (else d)))))
+
+(def-fns _ $ many nat-list-mem : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r)
+  (match many xs _
+    ((Nil a) (BFalse))
+    ((Cons a y rest) (or (nat-eq x y) $ nat-list-mem rest x))))
+
+(def-fns _
+  (many collect-code : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+    (match many code _
+      ((CValue c0 v) (collect-block _ v env d))
+      ((CValues c0 ms2 cs pk) (collect-codes _ cs env d))
+      ((CApp c0 ms2 f args cc) (collect-codes _ args env $ collect-code _ _ f env d))
+      ((CLet c0 ms2 ns2 ids pk rhs rest) (collect-code _ _ rest env $ collect-code _ _ rhs env d))
+      ((CLetRec c0 ns2 gids g rest) (match many g _ ((MkGroup c1 ids fns lk) (collect-code _ _ rest env $ collect-group _ _ fns env d))))
+      ((CMatch c0 ns2 scrut shape branches dfl live)
+        (let (many d1) $ collect-code _ _ scrut env d)
+        (let (many (Decls) d2)
+          (match many shape _
+            ((ShKnown c1 adt) (collect-match adt live d1))
+            ((ShHeld c1 mcode adt) (collect-match adt live $ collect-code _ _ mcode env d1))
+            ((ShNone c1) d1)))
+        (let (many d3) $ collect-branches _ _ branches env d2)
+        (match many dfl _ ((None a) d3) ((Some a dd) (collect-code _ _ dd env d3))))
+      (else d)))
+
+  (many collect-codes : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+    (match many cs _
+      ((Nil a) d)
+      ((Cons a c rest) (collect-codes _ rest env $ collect-code _ _ c env d))))
+
+  (many collect-branches : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+    (match many bs _
+      ((Nil a) d)
+      ((Cons a b rest) (match many b _ ((MkBranch c1 n0 disc ids body) (collect-branches _ _ rest env $ collect-code _ _ body env d))))))
+
+  (many collect-group : (erased (List $ Bin) gids) (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Func gids ctx) fns) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+    (match many fns _
+      ((Nil a) d)
+      ((Cons a p rest)
+        (match many p _
+          ((MkPair x y id fn)
+            (match many fn _
+              ((MkFunc g c rets name fid params body impl top)
+                (let (many (Decls) d1)
+                  (match many impl _
+                    ((None b) (collect-code _ _ body env d))
+                    ((Some b se) (match many se (((Decls) r)) ((MkSomeExtern n e) (collect-extern (ext-name _ e) env d))))))
+                (collect-group _ _ rest env d1))))))))
+
+  (many collect-block : (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+    (match many b _
+      ((BTag z c fields) (collect-ctor c d))
+      ((BCtorFn z c) (collect-ctor c d))
+      ((BMat z adt) (collect-adt adt d))
+      ((BGroup z gids ctx g env2) (match many g _ ((MkGroup c1 ids fns lk) (collect-group _ _ fns env d))))
+      (else d))))
+
+
+
+(def-fns _ $ many collect-heap : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) addrs) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+  (match many addrs _
+    ((Nil t) d)
+    ((Cons t at rest)
+      (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
+      (collect-heap _ hp rest env $ collect-block _ b env d))))
+
+(def-fns _ $ many ctor-decls : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Nat) arities) (many (Nat) i) -> (many (Rope) r)
+  (match many arities _
+    ((Nil a) (REmpty))
+    ((Cons a n rest)
+      (let (many (Rope) sep) $ match many rest _ ((Nil b) (REmpty)) ((Cons b m rest2) (RStr " | ")))
+      (let (many (Rope) fields) $ match many n _ ((Zero) (REmpty)) ((Succ k) (rcat (RStr " of ") $ obj-tuple $ field-names n 0)))
+      (rcat4 (RStr $ ctor-name-at d s i) fields sep $ ctor-decls d s rest $ Succ i))))
+
+(def-fns _ $ many shape-decls : (many (Decls) d) (subterm many (List $ List $ Nat) ss) (many (Bool) first) -> (many (Rope) r)
+  (match many ss _
+    ((Nil a) (REmpty))
+    ((Cons a s rest)
+      (rcat5 (RStr $ match many first (((String) x)) ((BTrue) "type ") ((BFalse) "and ")) (RStr $ shape-name d s) (RStr " = ") (ctor-decls d s s 0) $ rcat (RStr "\n") $ shape-decls d rest $ BFalse))))
+
+(def-fns _ $ many narrow-ctors : (many (Decls) d) (many (List $ Nat) s) (many (List $ Nat) live) (many (String) name) (subterm many (List $ Nat) arities) (many (Nat) i) -> (many (Rope) r)
+  (match many arities _
+    ((Nil a) (REmpty))
+    ((Cons a n rest)
+      (let (many (Rope) sep) $ match many rest _ ((Nil b) (REmpty)) ((Cons b m rest2) (RStr " | ")))
+      (let (many (String) idx) $ match many (nat-list-mem live i) _ ((BTrue) "yes ") ((BFalse) "no "))
+      (let (many (Rope) fields) $ match many n _ ((Zero) (REmpty)) ((Succ k) (rcat (obj-tuple $ field-names n 0) $ RStr " -> ")))
+      (rcat5 (RStr $ str-cat (ctor-name-at d s i) " : ") fields (RStr $ str-cat idx name) sep $ narrow-ctors d s live name rest $ Succ i))))
+
+(def-fns _ $ many narrow-decls : (many (Decls) d) (subterm many (List $ Narrow) ns) -> (many (Rope) r)
+  (match many ns _
+    ((Nil a) (REmpty))
+    ((Cons a n rest)
+      (match many n _
+        ((MkNarrow s live)
+          (let (many name) $ narrow-name d s live)
+          (rcat4 (RStr $ str-cat3 "type _ " name " = ") (narrow-ctors d s live name s 0) (RStr "\n") $ narrow-decls d rest))))))
+
+(def-fns _ $ many op-arms : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Nat) arities) (many (Nat) i) (many (Bool) con) -> (many (Rope) r)
+  (match many arities _
+    ((Nil a) (REmpty))
+    ((Cons a n rest)
+      (let (many fs) $ field-names n 0)
+      (let (many listed) $ rcat5 (RStr "(") (nat-rope i) (RStr ", ") (bracketed fs) $ RStr ")")
+      (let (many built) $ rcat3 (RStr "(Obj.repr (") (pattern-rope d s i fs) $ RStr "))")
+      (let (many (Rope) arm) $ match many con _ ((BTrue) (rcat3 listed (RStr " -> ") built)) ((BFalse) (rcat3 (pattern-rope d s i fs) (RStr " -> ") listed)))
+      (rcat3 (RStr "| ") arm $ rcat (RStr " ") $ op-arms d s rest (Succ i) con))))
+
+; The list-shaped constructor and destructor of a shape, for the FFI's flatten and nat-cmp.
+(def-fns _ $ many op-decls : (many (Decls) d) (subterm many (List $ List $ Nat) ss) -> (many (Rope) r)
+  (match many ss _
+    ((Nil a) (REmpty))
+    ((Cons a s rest)
+      (let (many con) $ op-arms d s s 0 $ BTrue)
+      (let (many des) $ op-arms d s s 0 $ BFalse)
+      (rcat5 (RStr $ str-cat3 "let " (op-name d "con" s) " i args = match (i, args) with ") con (RStr $ str-cat3 " | _ -> absurd ()\nlet " (op-name d "des" s) $ str-cat3 " v = match (Obj.obj v : " (shape-name d s) ") with ") des $ rcat (RStr "\n") $ op-decls d rest))))
+
+(def-fns _ $ many decls-rope : (many (Decls) d) -> (many (Rope) r)
+  (match many d _
+    ((MkDecls shapes ops narrows) (rcat3 (narrow-decls d narrows) (shape-decls d shapes $ BTrue) $ op-decls d ops))))
 
 ; ---- The walk over the store: what a Const or a final reaches is marked from the newest address down,
 ; each block's addresses being below it, and then written from the oldest up.
@@ -300,14 +718,24 @@
           ((BTrue)
             (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
             (match many b (((IdMap $ Unit) m))
-              ((BTag z tag fields) (mark-addrs _ fields marks))
+              ((BTag z c fields) (mark-addrs _ fields marks))
               ((BTup z fields) (mark-addrs _ fields marks))
-              ((BFn z g i) (mark _ g marks))
+              ((BFn z g i id) (mark _ g marks))
               ((BGroup z gids ctx g env) (mark-frames _ _ env marks))
               (else marks)))))
       (mark-pass _ hp rest marks2))))
 
-(def-fns _ $ many emit-blocks : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) oldest) (many (IdMap $ Unit) marks) (many (Env) env) -> (many (Rope) r)
+; A group's block is its members' top-level let rec over the names of the frames it closed over.
+(def-fns _ $ many block-let : (erased (Nat) hs) (many (Addr hs) at) (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
+  (match many b _
+    ((BGroup z gids ctx g env2)
+      (match many g _
+        ((MkGroup c1 ids fns lk)
+          (let (many suffix) $ str-cat "_" $ addr-str _ at)
+          (rcat3 (RStr "let rec ") (emit-group _ _ fns env (push-fn-names _ ids env suffix $ frame-names _ _ env2 env) d suffix) $ RStr "\n"))))
+    (else (rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
+
+(def-fns _ $ many emit-blocks : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) oldest) (many (IdMap $ Unit) marks) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
   (match many oldest _
     ((Nil t) (REmpty))
     ((Cons t at rest)
@@ -316,8 +744,44 @@
           ((BFalse) (REmpty))
           ((BTrue)
             (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
-            (rcat5 (RStr "let ") (addr-rope _ at) (RStr " = ") (block-rope _ b env) $ RStr "\n"))))
-      (rcat this $ emit-blocks _ hp rest marks env))))
+            (block-let _ at _ b env d))))
+      (rcat this $ emit-blocks _ hp rest marks env d))))
+
+; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
+
+(def-fns _ $ many prelude-ctor : (many (Env) env) (many (String) name) -> (many (Maybe $ Ctor) r)
+  (let (many env2) (many x) $ prelude-id (env-set-scope env $ env-prelude env) name)
+  (ctor-of env2 x))
+
+(def-fns _ $ many driver-make : (many (Decls) d) (many (Env) env) (many (String) name) -> (many (Rope) r)
+  (match many (prelude-ctor env name) _
+    ((None a) (RStr "(absurd ())"))
+    ((Some a c)
+      (let (many fs) $ field-names (ctor-arity c) 0)
+      (match many fs _
+        ((Nil b) (build-rope d c fs))
+        ((Cons b f rest) (lambda-rope fs $ build-rope d c fs))))))
+
+(def-fns _ $ many driver-un : (many (Decls) d) (many (Env) env) (many (String) tname) (many (ArmKind) k) -> (many (Rope) r)
+  (match many (prelude-adt env tname) _
+    ((None a) (RStr "(absurd ())"))
+    ((Some a adt) (lambda-rope (Cons _ (RStr "v") $ Nil _) $ dispatch-rope d adt (all-live adt) (RStr "v") (ctor-arms d (adt-ctors adt) k) $ None _))))
+
+(def-fns _ $ many driver-op : (many (String) field) (many (Rope) r) -> (many (Rope) r2)
+  (rcat3 (RStr $ str-cat3 "Driver_core." field " = ") r $ RStr "; "))
+
+(def-fns _ $ many driver-rope : (many (Decls) d) (many (Env) env) -> (many (Rope) r)
+  (rcat5 (RStr "let driver = Driver_core.make { ")
+    (rcat5 (driver-op "zero" $ driver-make d env "Zero") (driver-op "succ" $ driver-make d env "Succ") (driver-op "pred" $ driver-un d env "Nat" $ AkOption "Succ")
+      (driver-op "u8" $ driver-make d env "MkU8") $ driver-op "un_u8" $ driver-un d env "U8" $ AkField)
+    (rcat5 (driver-op "char" $ driver-make d env "MkChar") (driver-op "un_char" $ driver-un d env "Char" $ AkField) (driver-op "snil" $ driver-make d env "SNil")
+      (driver-op "scons" $ driver-make d env "SCons") $ driver-op "un_str" $ driver-un d env "String" $ AkOption "SCons")
+    (rcat5 (driver-op "some" $ driver-make d env "Some") (driver-op "none" $ driver-make d env "None") (driver-op "ok" $ driver-make d env "Ok")
+      (driver-op "fail" $ driver-make d env "Fail") $ driver-op "unit" $ driver-make d env "MkUnit")
+    (rcat5 (driver-op "cons" $ driver-make d env "Cons") (driver-op "nil" $ driver-make d env "Nil")
+      (driver-op "request" $ driver-un d env "IO" $ AkRequest)
+      (RStr "Driver_core.apply = (fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)")
+      $ RStr " }\n")))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
@@ -389,13 +853,8 @@
         ((Nil b) p)
         ((Cons b q rest2) (rcat3 p (RStr " ^ \" \" ^ ") $ spaced rest))))))
 
-(def-fns _ $ many field-names : (subterm many (Nat) n) (many (Nat) i) -> (many (List $ Rope) r)
-  (match many n _
-    ((Zero) (Nil _))
-    ((Succ k) (Cons _ (RStr $ str-cat "f" $ nat-str i) $ field-names k $ Succ i))))
-
 (def-fns _
-  (many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) -> (many (ShowMemo) memo2) (many (String) name)
+  (many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) (many (Decls) d) -> (many (ShowMemo) memo2) (many (String) name)
     (match many fuel _
       ((Zero) (values memo "show_any"))
       ((Succ k)
@@ -411,42 +870,28 @@
                 (let (many (ShowMemo) memo2) (many (Rope) body)
                   (match many ty _
                     ((TApp h args)
-                      (match many (type-head env ty) (((ShowMemo) m) ((Rope) r))
+                      (match many (type-adt env ty) (((ShowMemo) m) ((Rope) r))
                         ((None b) (values memo1 $ RStr "\"?\""))
-                        ((Some b tid)
-                          (let (many envf) (many foundm) $ find-matchable env tid)
-                          (match many foundm (((ShowMemo) m) ((Rope) r))
-                            ((None c) (values memo1 $ RStr "\"?\""))
-                            ((Some c info)
-                              (match many info (((ShowMemo) m) ((Rope) r))
-                                ((MkMatchInfo mid disc mctors rank)
-                                  (match many (adt-of env mid) (((ShowMemo) m) ((Rope) r))
-                                    ((None d) (values memo1 $ RStr "\"?\""))
-                                    ((Some d adt)
-                                      (match many adt (((ShowMemo) m) ((Rope) r))
-                                        ((MkAdt aname tagged ctors ext)
-                                          (let (many untagged) $ adt-untagged adt)
-                                          (let (many memo3) (many arms) $ show-arms k env ty ctors memo1 untagged)
-                                          (match many untagged (((ShowMemo) m) ((Rope) r))
-                                            ((BTrue) (values memo3 arms))
-                                            ((BFalse) (values memo3 $ rcat3 (rcat (RStr "match ") $ des-rope adt $ RStr "v") (rcat (RStr " with ") arms) $ RStr " | _ -> \"?\""))))))))))))))
+                        ((Some b adt)
+                          (let (many memo3) (many arms) $ show-arms k env ty (adt-ctors adt) memo1 (adt-tagged adt) d)
+                          (values memo3 $ dispatch-rope d adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"?\""))))
                     ((TFn l ps rs) (values memo1 $ RStr "\"<function ?>\""))
                     ((TValCtor ps r) (values memo1 $ RStr "\"<constructor ?>\"")) (else (values memo1 $ RStr "\"?\""))))
                 (match many memo2 _
                   ((MkShowMemo fresh2 count2 known2 defs2)
-                    (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : v) : string = ") body $ REmpty) defs2) name))))))))))
+                    (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))
 
   ; One arm per non-phantom constructor whose return type the instance does not refute, its fields shown
-  ; only then, as the reference's exception skips them; an untagged type has one arm reading the fields as they stand.
-  (many show-arms : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty) (many (List $ Ctor) ctors) (many (ShowMemo) memo) (many (Bool) untagged) -> (many (ShowMemo) memo2) (many (Rope) arms)
+  ; only then, as the reference's exception skips them.
+  (many show-arms : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty) (many (List $ Ctor) ctors) (many (ShowMemo) memo) (many (Bool) tagged) (many (Decls) d) -> (many (ShowMemo) memo2) (many (List $ Arm) arms)
     (match many fuel _
-      ((Zero) (values memo $ REmpty))
+      ((Zero) (values memo $ Nil _))
       ((Succ k)
         (match many ctors _
-          ((Nil a) (values memo $ REmpty))
+          ((Nil a) (values memo $ Nil _))
           ((Cons a c rest)
             (match many c _
-              ((MkCtor cname cid index arity tagged ext)
+              ((MkCtor cname cid index arity ctagged ext shape)
                 (let (many ctele) (many ret) $ ctor-type env cid)
                 (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
                 (let (many (Env) envb2) (many (Bool) live)
@@ -455,29 +900,24 @@
                     ((UContra msg) (values envb $ BFalse))))
                 (let (many (ShowMemo) memo2) (many (List $ Rope) shown)
                   (match many live _
-                    ((BTrue) (show-fields k envb2 (non-erased fids envb2) memo 0))
+                    ((BTrue) (show-fields k envb2 (non-erased fids envb2) memo 0 d))
                     ((BFalse) (values memo $ Nil _))))
-                (let (many fnames) $ field-names arity 0)
                 (let (many (Rope) text)
-                  (match many untagged _
-                    ((BTrue) (match many shown (((Rope) r)) ((Nil b) (RStr "\"_\"")) ((Cons b s more) (match many more (((Rope) r)) ((Nil d) s) ((Cons d s2 more2) (rcat3 (RStr "\"(\" ^ ") (spaced shown) $ RStr " ^ \")\""))))))
-                    ((BFalse) (rcat3 (RStr "\"(\" ^ ") (spaced $ Cons _ (quoted cname) shown) $ RStr " ^ \")\""))))
-                (let (many (Rope) arm)
-                  (match many untagged _
-                    ((BTrue) (untuple-rope fnames (RStr "v") text))
-                    ((BFalse) (rcat5 (RStr "| (") (nat-rope index) (rcat3 (RStr ", ") (bracketed fnames) $ RStr ") -> ") text $ REmpty))))
-                (let (many memo3) (many more) $ show-arms k env ty rest memo2 untagged)
-                (values memo3 $ match many live (((Rope) r)) ((BTrue) (rcat3 arm (RStr " ") more)) ((BFalse) more)))))))))
+                  (match many tagged _
+                    ((BFalse) (match many shown (((Rope) r)) ((Nil b) (RStr "\"_\"")) ((Cons b s more) (match many more (((Rope) r)) ((Nil e) s) ((Cons e s2 more2) (rcat3 (RStr "\"(\" ^ ") (spaced shown) $ RStr " ^ \")\""))))))
+                    ((BTrue) (rcat3 (RStr "\"(\" ^ ") (spaced $ Cons _ (quoted cname) shown) $ RStr " ^ \")\""))))
+                (let (many memo3) (many more) $ show-arms k env ty rest memo2 tagged d)
+                (values memo3 $ match many live (((List $ Arm) r)) ((BTrue) (Cons _ (MkArm index (field-names arity 0) text) more)) ((BFalse) more)))))))))
 
-  (many show-fields : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Bin) fids) (many (ShowMemo) memo) (many (Nat) i) -> (many (ShowMemo) memo2) (many (List $ Rope) shown)
+  (many show-fields : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Bin) fids) (many (ShowMemo) memo) (many (Nat) i) (many (Decls) d) -> (many (ShowMemo) memo2) (many (List $ Rope) shown)
     (match many fuel _
       ((Zero) (values memo $ Nil _))
       ((Succ k)
         (match many fids _
           ((Nil a) (values memo $ Nil _))
           ((Cons a x rest)
-            (let (many memo2) (many name) $ show-type k env (type-of env x) memo)
-            (let (many memo3) (many more) $ show-fields k env rest memo2 $ Succ i)
+            (let (many memo2) (many name) $ show-type k env (type-of env x) memo d)
+            (let (many memo3) (many more) $ show-fields k env rest memo2 (Succ i) d)
             (values memo3 $ Cons _ (rcat3 (RStr name) (RStr " f") $ nat-rope i) more)))))))
 
 (def-fns _ $ many show-defs : (many (ShowMemo) memo) -> (many (Rope) r)
@@ -487,43 +927,43 @@
         ((Nil a) (REmpty))
         ((Cons a d rest) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))))
 
-(def-fns _ $ many fn-name-at : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) -> (many (Maybe $ String) r)
+; A final that is a function or a constructor prints its name, as the reference does.
+(def-fns _ $ many named-final : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Env) env) -> (many (Maybe $ String) r)
   (let (erased a) (erased lt) (many b) $ deref Block _ hp v)
   (match many b _
-    ((BFn z g i)
-      (let (erased a2) (erased lt2) (many gb) $ deref Block _ hp $ addr-weaken _ _ (lt-weaken _ _ lt) g)
-      (match many gb _
-        ((BGroup z2 gids ctx grp env2)
-          (match many grp _
-            ((MkGroup c ids fns lk)
-              (match many (list-nth _ fns i) _
-                ((NthHit nt nl ni p np) (match many p _ ((MkPair x y id fn) (Some _ $ func-name _ _ fn))))
-                ((NthMiss nt nl ni np) (None _))))))
-        (else (None $ String))))
+    ((BFn z g i id) (Some _ $ str-cat3 "<function " (name-of env id) ">"))
+    ((BCtorFn z c) (Some _ $ str-cat3 "<constructor " (ctor-name c) ">"))
     (else (None $ String))))
 
-(def-fns _ $ many final-rope : (many (Env) env) (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Term) ty) -> (many (Rope) r)
+(def-fns _ $ many final-rope : (many (Env) env) (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Term) ty) (many (Decls) d) -> (many (Rope) r)
   (let (many vr) $ addr-rope _ v)
   (match many (classify-final env ty) _
-    ((FMain) (rcat3 (RStr "let () = run_main ") vr $ RStr "\n"))
-    ((FIo) (rcat3 (RStr "let () = exit (run_io ") vr $ RStr ")\n"))
+    ((FMain) (rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
+    ((FIo) (rcat3 (RStr "let () = exit (driver.run_io world ") vr $ RStr ")\n"))
     ((FThunk t)
-      (let (many memo) (many name) $ show-type show-fuel env t $ MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _)
-      (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " (app ") vr $ RStr " []))") $ RStr "\n"))
+      (let (many memo) (many name) $ show-type show-fuel env t (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
+      (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ((Obj.obj ") vr $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
     ((FPlain)
-      (match many (fn-name-at _ hp v) _
-        ((Some a fname) (rcat3 (RStr "let () = print_endline ") (quoted $ str-cat3 "<function " fname ">") $ RStr "\n"))
+      (match many (named-final _ hp v env) _
+        ((Some a text) (rcat3 (RStr "let () = print_endline ") (quoted text) $ RStr "\n"))
         ((None a)
-          (let (many memo) (many name) $ show-type show-fuel env ty $ MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _)
+          (let (many memo) (many name) $ show-type show-fuel env ty (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
           (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))))
 
-(def-fns _ $ many emit-finals : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (Env) env) -> (many (Rope) r)
+(def-fns _ $ many emit-finals : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
   (match many fs _
     ((Nil t) (REmpty))
-    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ hp v ty) $ emit-finals _ hp rest env))))))
+    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ hp v ty d) $ emit-finals _ hp rest env d))))))
+
+; The prelude's types the driver and any printer may name, declared whether or not the program reaches them.
+(def-fns _ $ many collect-prelude : (subterm many (List $ String) names) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+  (match many names _
+    ((Nil a) d)
+    ((Cons a n rest) (collect-prelude rest env $ match many (prelude-adt env n) (((Decls) r)) ((None b) d) ((Some b adt) (collect-adt adt d))))))
 
 (def-fns _ $ many emit-program : (many (Env) env) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
   (let (many addrs) $ heap-addrs Block _ hp)
   (let (many marks) $ mark-pass _ hp (list-rev _ addrs) $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
-  (rcat3 runtime-header (emit-blocks _ hp addrs marks env) $ emit-finals _ hp (list-rev _ fi) env))
+  (let (many d) $ collect-heap _ hp addrs env $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ Nil _)
+  (rcat5 runtime-header (decls-rope d) (emit-blocks _ hp addrs marks env d) (driver-rope d env) $ emit-finals _ hp (list-rev _ fi) env d))

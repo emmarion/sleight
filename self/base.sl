@@ -460,6 +460,11 @@
       (let (many n) (erased p) (length _ rest))
       (values (Succ n) (LCons _ x rest n p)))))
 
+(def-fns _ $ many list-replicate : (erased Type A) (subterm many (Nat) n) (many A x) -> (many (List A) r)
+  (match many n _
+    ((Zero) (Nil _))
+    ((Succ k) (Cons _ x $ list-replicate _ k x))))
+
 (def-fns _ $ many list-length : (erased Type A) (many (List A) xs) -> (many (Nat) n)
   (let (many n) (erased p) (delegate (length _ xs)))
   n)
