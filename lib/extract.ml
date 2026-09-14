@@ -39,6 +39,7 @@ type cx = {
   held : V.adt list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
+  narrows : ((string * int list) * (string * V.adt)) list ref;
 }
 
 let adt_index cx adt = let rec go i = function a :: rest -> if a == adt then i else go (i + 1) rest | [] -> assert false in go 0 cx.adts
@@ -52,6 +53,14 @@ let pair c vs = Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs)
 let case c vs body = Printf.sprintf "| %s -> %s" (pair c vs) body
 let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
 let pattern c fs = if fs = [] then ctor c else Printf.sprintf "%s (%s)" (ctor c) (concat ", " fs)
+let narrow cx a present =
+  let key = (type_name cx a, present) in
+  match List.assoc_opt key !(cx.narrows) with
+  | Some (name, _) -> name
+  | None ->
+      let name = Printf.sprintf "%s_n%d" (type_name cx a) (List.length !(cx.narrows)) in
+      cx.narrows := (key, (name, a)) :: !(cx.narrows);
+      name
 
 let build cx c es =
   match shape c.V.adt with
@@ -165,9 +174,12 @@ and expr cx scope = function
           match shape a with
           | Ext -> Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx a) scrut (arms case) default
           | Tagged ->
-              Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut (type_name cx a)
-                (arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern c vs) body))
-                default
+              let present = List.sort compare (List.map (fun (i, _, _) -> i) branches) in
+              let cases = arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern c vs) body) in
+              if m.default = None then
+                let ty = if List.length present < List.length a.V.ctors then "yes " ^ narrow cx a present else type_name cx a in
+                Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if branches = [] then "_ -> ." else cases)
+              else Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut (type_name cx a) cases default
           | Untagged -> let vs, body = one () in untuple vs scrut body)
       | V.Held (code, tags) ->
           let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in
@@ -210,7 +222,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref [] }
+  { env; adts; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
 
 let types cx =
   let fields_type c = if c.V.arity = 0 then ctor c else ctor c ^ " of " ^ concat " * " (List.map (fun _ -> "Obj.t") (fields c)) in
@@ -327,6 +339,17 @@ let item cx = function
       in
       Buffer.add_string cx.out (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
 
+let narrows cx =
+  let one ((_, present), (name, a)) =
+    let decl i c =
+      let idx = if List.mem i present then "yes" else "no" in
+      if c.V.arity = 0 then Printf.sprintf "%s : %s %s" (ctor c) idx name
+      else Printf.sprintf "%s : %s -> %s %s" (ctor c) (concat " * " (List.map (fun _ -> "Obj.t") (fields c))) idx name
+    in
+    Printf.sprintf "type _ %s = %s" name (concat " | " (List.mapi decl a.V.ctors))
+  in
+  concat "\n" (List.rev_map one !(cx.narrows))
+
 let emit env items =
   let cx = collect env items in
   List.iter (item cx) items;
@@ -338,6 +361,8 @@ let emit env items =
       "type ctor = { ix : int; cname : string; con : int -> Obj.t list -> Obj.t; des : Obj.t -> int * Obj.t list }";
       "type matchable = { mdes : int -> Obj.t -> int * Obj.t list }";
       "let source = ref \"-\"\nlet absurd () = prerr_endline (!source ^ \": runtime error: absurd code reached\"); exit 1";
+      "type yes = Yes_ and no = No_";
+      narrows cx;
       types cx;
       driver cx;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);
