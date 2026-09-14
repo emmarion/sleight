@@ -47,20 +47,16 @@
 
 ; ---- Char and String
 
-(let (many zero-below-modulus) $ lt-dec 0 u8-modulus)
-(comptime-match zero-below-modulus (Yes zero-lt-a zero-lt-b zero-lt))
-(let (many char-zero) $ MkChar $ MkU8 0 zero-lt)
-
 (def-fns _ $ many char-code : (many (Char) c) -> (many (Nat) n)
   (let-match many c (MkChar u))
   (let-match many u (MkU8 k p))
   k)
 
-; A code the modulus does not bound, which no Char holds, becomes char-zero.
+; A code the modulus does not bound, which no Char holds, becomes NUL.
 (def-fns _ $ many char-of-code : (many (Nat) n) -> (many (Char) c)
   (match many (lt-dec n u8-modulus) _
     ((Yes a b p) (MkChar $ MkU8 n p))
-    ((No a b q) char-zero)))
+    ((No a b q) #\x00)))
 
 (def-fns _ $ many char-eq : (many (Char) a) (many (Char) b) -> (many (Bool) r)
   (cmp-is-eq _ _ _ _ $ char-cmp a b))

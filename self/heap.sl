@@ -62,17 +62,8 @@
               (match erased lt1 _
                 ((LtS x2 y2 lt2) (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))))))
 
-(def-fns _ $ erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (subterm erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res)
-  (match erased p _
-    ((D0) (LtZ r))
-    ((DS m1 d1 p1)
-      (match erased q _
-        (absurd (D0) (match erased lt (((False) f)) ((LtS x y lt1) (lt-zero (Succ d1) lt1))))
-        ((DS r1 s1 q1)
-          (match erased lt _
-            ((LtS x y lt1)
-              (match erased lt1 _
-                ((LtS x2 y2 lt2) (LtS m1 (Succ r1) (double-le-inv m1 d1 r1 s1 p1 q1 lt2)))))))))))
+(def-fns _ $ erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res)
+  (double-lt-inv m d (Succ r) (Succ (Succ s)) p (DS r s q) (lt-weaken d (Succ s) lt)))
 
 (def-adts $ Braun : ((Nat) l) ((Nat) r) -> Type
   enum
