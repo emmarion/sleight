@@ -3,7 +3,8 @@
 A prototype OCaml interpreter for the language recorded in DESIGN.md.
 KERNEL.md and SUGAR.md are further design notes; SPEC-REVIEW.md lists
 the spec's open points and ASSUMPTIONS.md the assumptions the
-interpreter makes about them. EXAMPLES.md indexes the tests that show the
+interpreter makes about them. HANDOFF.md records work in progress
+handed from one session to the next. EXAMPLES.md indexes the tests that show the
 features working together. `self/` is a compiler from the language to
 OCaml written in the language itself, bootstrapped through this
 interpreter's extractor (`self/README.md`, `self/bootstrap.sh`).
