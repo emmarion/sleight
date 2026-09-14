@@ -187,15 +187,12 @@
     ((MkErased) 0) ((MkMany) 1) ((MkColon) 2) ((MkIs) 3) ((MkArrow) 4) ((MkSubterm) 5) ((MkEnum) 6) ((MkUnion) 7)
     ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13) ((MkElse) 14)))
 
-(def-fns _ $ many sp-code : (many (Sp) sp) -> (many (Nat) n)
-  (match many sp _
-    ((SpStmt k) (stmt-code k))
-    ((SpFormer k) (nat-add 10 $ former-code k))
-    ((SpExpr k) (nat-add 20 $ expr-code k))
-    ((SpMark k) (nat-add 40 $ mark-code k))))
-
 (def-fns _ $ many sp-eq : (many (Sp) a) (many (Sp) b) -> (many (Bool) r)
-  (nat-eq (sp-code a) $ sp-code b))
+  (match many a _
+    ((SpStmt ka) (match many b _ ((SpStmt kb) (nat-eq (stmt-code ka) $ stmt-code kb)) (else (BFalse))))
+    ((SpFormer ka) (match many b _ ((SpFormer kb) (nat-eq (former-code ka) $ former-code kb)) (else (BFalse))))
+    ((SpExpr ka) (match many b _ ((SpExpr kb) (nat-eq (expr-code ka) $ expr-code kb)) (else (BFalse))))
+    ((SpMark ka) (match many b _ ((SpMark kb) (nat-eq (mark-code ka) $ mark-code kb)) (else (BFalse))))))
 
 (def-adts $ SpEntry : -> Type
   enum
