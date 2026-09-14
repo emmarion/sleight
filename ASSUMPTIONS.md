@@ -577,9 +577,21 @@ in both modes.
     constructors are statically known compiles to an OCaml `match` (or a
     `let` on an untagged type); one through first-class constructors
     (`tests/first_class.sl`) destructs through the first branch's
-    descriptor and compares indices, as `Eval` does. Unmatched
-    constructors fall through to `absurd ()`, unreachable by the
-    elaborator's checks.
+    descriptor and compares indices, as `Eval` does. A statically known
+    match extracts against a phantom-index copy of its variant: the
+    constructors that can reach it (its real branches and those its
+    `else` stands for, recorded as the code's `live` set) are indexed
+    `yes` and the rest `no`, and the scrutinee is coerced to the `yes`
+    instance, so OCaml's exhaustiveness checker accepts the match
+    without the refuted arms and emits no default; an `else` stays as
+    `_` under that type. The interpreter still raises on a reached
+    absurd, extraction being the path that trusts the checker (the
+    owner's reading: interpretation is the checked path, extraction is
+    opted into for speed). The first-class and extern paths keep their
+    `absurd ()` guards, matching on an index no type narrows. The copy
+    keeps every constructor at its arity, which is what keeps its
+    representation the base type's; this session saw a copy that
+    changed a constant constructor's arity renumber the ones after it.
 64. **The FFI is shared by embedding.** `lib/ffi_core.ml` holds the
     implementations over raw zarith integers and slices, generic in the
     value type through injection/projection arguments; `ffi.ml`
