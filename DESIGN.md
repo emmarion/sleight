@@ -1590,10 +1590,11 @@ uniform representation, OCaml-style: every value is one word, an
 immediate or a pointer to a block, whatever its type — a `Cons` block
 holds a `(Meters)` and a `(Nat)` alike, and a wrapper's field may be
 existentially typed. A value is the tuple of its constructor's `many`
-fields, one field standing bare and none at all being an unspecified
-word, and carries a tag only when its type is an enum with more than
-one non-phantom constructor — all a tag ever distinguishes. The tag is
-the constructor's position among the non-phantom constructors. A union
+fields, one field standing bare; it carries a tag only when its type
+is an enum with more than one non-phantom constructor, the tag being
+the constructor's position among them and all a tag ever
+distinguishes. With no `many` fields a value is therefore the tag alone
+when its type is tagged, and an unspecified word otherwise. A union
 never carries one, its discriminant being erased (§12). So every
 newtype, as item 4 defines it, is represented exactly as its
 one `many` field — no tag, no wrapper — which is the guarantee the
