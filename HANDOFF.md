@@ -140,6 +140,20 @@ whose match node needs a `live` field mirroring `Value.matching`;
 `V.CMatch` there: `real` plus `reachable` for a match, the single
 constructor for a let-match); `self/eval.sl` ignores it.
 
+The port includes the elision of refuted match arms, not only the
+type scheme: `emit.sl` must do what `lib/extract.ml`'s `narrow`,
+`narrows` and the `Tagged` match case do. For each match whose `live`
+set is smaller than its shape's constructor set, declare (once per
+shape and live set, ahead of the base types) a phantom-index GADT copy
+with the live constructors indexed `yes` and the rest `no`, every
+constructor at its base arity; coerce the scrutinee to the `yes`
+instance; list only the live branches, keeping an `else` as `_`; and
+emit no default. An exhaustive match with no `else` drops its
+catch-all as well. `CAbsurd`, the first-class (`Held`) path and the
+extern path keep `absurd ()`. This is what turns the 728 catch-alls in
+`slc3.ml` into the guard count, and it is the reason the `live` field
+has to reach `emit.sl` through `core.sl` and `elab.sl`.
+
 Under per-shape the port is smaller than per-ADT would have been: 47
 types rather than 178, and closer in spirit to the uniform type slc
 has now. Direct curried closures and bare zarith are independent of
