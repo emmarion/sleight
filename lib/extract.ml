@@ -28,7 +28,7 @@ let shape adt =
   if adt.V.ext <> None && !V.use_externs then Ext adt.tname else if adt.V.tagged then Tagged arities else Untagged arities
 let arities = function Ext _ -> [] | Tagged ns | Untagged ns -> ns
 
-type scope = { capture : V.venv; locals : id list }
+type scope = { capture : V.venv; locals : (id * int) list }
 
 type cx = {
   env : Env.t;
@@ -149,7 +149,7 @@ and fn cx scope name f =
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
 
 and expr cx scope = function
-  | V.CVar x when List.mem x scope.locals -> "(Obj.repr " ^ var x ^ ")"
+  | V.CVar x when List.mem_assoc x scope.locals -> "(Obj.repr " ^ var x ^ ")"
   | V.CVar x -> (
       match IntMap.find_opt x scope.capture with
       | None -> var x
@@ -158,16 +158,25 @@ and expr cx scope = function
   | V.CConst v -> value cx v
   | V.CErased -> "(Obj.repr ())"
   | V.CValues cs -> tuple (List.map (expr cx scope) cs)
-  | V.CApp (f, es, V.Ctor) ->
+  | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
-      Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es)
-  | V.CApp (f, es, _) ->
-      let es = List.map (expr cx scope) es in
-      Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es)
+      let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
+      let head =
+        match f with
+        | V.CVar x when List.mem_assoc x scope.locals -> `Fn (var x, List.assoc x scope.locals)
+        | V.CVar x -> (match captured x with Some (V.VCtorFn c) -> `Ctor c | Some (V.VFn cl) -> `Fn (closure cx cl, List.length cl.fn.params) | _ -> `Dyn)
+        | V.CConst (V.VCtorFn c) -> `Ctor c
+        | _ -> `Dyn
+      in
+      match (cc, head) with
+      | V.Ctor, `Ctor c -> build cx c es
+      | V.Ctor, _ -> Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es)
+      | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
+      | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
   | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
   | V.CLet (ids, rhs, body) -> untuple (List.map var ids) (expr cx scope rhs) (expr cx scope body)
   | V.CLetRec (fns, body) ->
-      let scope = { scope with locals = List.map fst fns @ scope.locals } in
+      let scope = { scope with locals = List.map (fun (x, f) -> (x, List.length f.V.params)) fns @ scope.locals } in
       Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fun (x, f) -> fn cx scope (var x) f) fns)) (expr cx scope body)
   | V.CMatch m -> (
       let branches = List.map (fun (i, ids, body) -> (i, List.map var ids, expr cx scope body)) m.branches in
