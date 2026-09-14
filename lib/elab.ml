@@ -230,8 +230,14 @@ let witness env ?(mult = Erased) ?(value = V.VToken) ty = bind env None mult (co
 let matchable_code env pos x =
   if pos = Erased then V.CErased else match adt_of env x with Some adt -> V.CConst (V.VMatchable adt) | None -> V.CVar x
 
-(* A match on an ADT the elaborator can see reads no Matchable at runtime (section 17). *)
-let match_shape env x tagged = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, tagged)
+let mint_adt env name disc shapes =
+  let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
+  adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) (non_phantom shapes);
+  adt
+
+(* A match on an ADT the elaborator can see reads no Matchable at runtime (section 17); one on a held Matchable
+   reads it as the shape the Matchable's type gives its values. *)
+let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, mint_adt env (name_of env tid) disc shapes)
 let mint_level env name = bind env ~minted_level:true name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term ?expect env raw =
@@ -763,7 +769,7 @@ and elab_match tele env expect l args =
         | _ ->
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
             V.CMatch
-              { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = else_;
+              { scrut = scode; shape = match_shape env mid tid disc shapes; branches = List.map branch real; default = else_;
                 live = List.filter_map (fun (c, _, _) -> discriminant shapes c) real @ List.filter_map (discriminant shapes) reachable }
       in
       let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
@@ -936,7 +942,7 @@ and elab_let_match env l args =
         if smult = Erased then Fun.id
         else fun rest ->
           V.CMatch
-            { scrut = scode; shape = match_shape env mid (tagged disc shapes);
+            { scrut = scode; shape = match_shape env mid tid disc shapes;
               branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ]; default = None;
               live = Option.to_list (discriminant shapes c) } )
   | _ -> error l "malformed let-match: expected (let-match <multiplicity> x (C field ...))"
@@ -1111,10 +1117,9 @@ and elab_def_adts env adts =
     let env, ctors = List.fold_left_map ctor env ctors in
     let ctors = List.map (fun (m, c) -> (m, Var c)) ctors in
     let shapes = shapes env al ctors in
-    let adt = { V.tname = name; tagged = tagged disc shapes; ctors = []; ext = None } in
+    let adt = mint_adt env name disc shapes in
     Ffi.note name adt;
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
-    adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) (non_phantom shapes);
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in

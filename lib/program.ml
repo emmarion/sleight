@@ -18,8 +18,26 @@ let final env ty =
 
 let driver env =
   let c = ctor env in
-  make ~build:(fun n args -> V.construct (c n) args) ~des:(fun n v -> V.destruct (c n) v)
-    ~io_name:(fun i -> (V.ctor_at (c "Exit").adt i).cname) ~apply:(fun k x -> List.hd (Eval.apply k [ x ]))
+  let build n args = V.construct (c n) args and des n v = V.destruct (c n) v in
+  let one n v = match des n v with _, [ x ] -> x | _ -> assert false in
+  let request v =
+    let i, fs = des "Exit" v in
+    match ((V.ctor_at (c "Exit").adt i).cname, fs) with
+    | "Exit", [ x ] -> Exit x
+    | "WriteOut", [ s; k ] -> WriteOut (s, k)
+    | "WriteErr", [ s; k ] -> WriteErr (s, k)
+    | "ReadLine", [ k ] -> ReadLine k
+    | "ReadFile", [ p; k ] -> ReadFile (p, k)
+    | "WriteFile", [ p; s; k ] -> WriteFile (p, s, k)
+    | "GetArgs", [ k ] -> GetArgs k
+    | _ -> assert false
+  in
+  make
+    { zero = build "Zero" []; succ = (fun n -> build "Succ" [ n ]); pred = (fun v -> match des "Zero" v with 1, [ p ] -> Some p | _ -> None);
+      u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
+      snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);
+      some = (fun x -> build "Some" [ x ]); none = build "None" []; ok = (fun x -> build "Ok" [ x ]); fail = (fun x -> build "Fail" [ x ]); unit = build "MkUnit" [];
+      cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; request; apply = (fun k x -> List.hd (Eval.apply k [ x ])) }
 
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)

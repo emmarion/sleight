@@ -8,12 +8,13 @@ let concat = String.concat
 let params vs = if vs = [] then "()" else concat " " (List.map (fun v -> "(" ^ v ^ " : Obj.t)") vs)
 let arrows n = concat " -> " (List.init (max n 1) (fun _ -> if n = 0 then "unit" else "Obj.t") @ [ "Obj.t" ])
 let args es = if es = [] then "()" else concat " " es
+let obj_tuple n = concat " * " (List.init n (fun _ -> "Obj.t"))
 let tuple = function [] -> "(Obj.repr ())" | [ e ] -> e | es -> Printf.sprintf "(Obj.repr (%s))" (concat ", " es)
 let untuple vs e body =
   match vs with
   | [] -> body
   | [ v ] -> Printf.sprintf "(let %s = %s in %s)" v e body
-  | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (concat " * " (List.map (fun _ -> "Obj.t") vs)) body
+  | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
 
 let externs =
@@ -23,48 +24,52 @@ let externs =
 
 type shape = Ext of string | Tagged of int list | Untagged of int list
 
-let shape adt =
-  let arities = List.map (fun c -> c.V.arity) adt.V.ctors in
-  if adt.V.ext <> None && !V.use_externs then Ext adt.tname else if adt.V.tagged then Tagged arities else Untagged arities
-let arities = function Ext _ -> [] | Tagged ns | Untagged ns -> ns
+let arities adt = List.map (fun c -> c.V.arity) adt.V.ctors
+let plain_shape adt = if adt.V.tagged then Tagged (arities adt) else Untagged (arities adt)
+let shape adt = if adt.V.ext <> None && !V.use_externs then Ext adt.tname else plain_shape adt
 
 type scope = { capture : V.venv; locals : (id * int) list }
 
 type cx = {
   env : Env.t;
   adts : V.adt list;
-  shapes : shape list;
+  shapes : int list list ref;
+  ops : int list list ref;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
   seen : (int, V.value * string option ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
-  held : shape list ref;
+  held : V.adt list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
-  narrows : ((string * int list) * (string * shape)) list ref;
+  narrows : ((int list * int list) * string) list ref;
 }
 
-let shape_index cx s = let rec go i = function s' :: rest -> if s' = s then i else go (i + 1) rest | [] -> assert false in go 0 cx.shapes
-let numbered cx p s = p ^ string_of_int (shape_index cx s)
-let type_name cx = numbered cx "t" and mat cx = numbered cx "m_" and con cx = numbered cx "con_" and des cx = numbered cx "des_"
-let ctor_at cx s i = Printf.sprintf "%s_%d" (numbered cx "K" s) i
-let ctor cx c = ctor_at cx (shape c.V.adt) c.V.index
+let shape_index cx ns =
+  let rec go i = function s :: rest -> if s = ns then i else go (i + 1) rest | [] -> cx.shapes := !(cx.shapes) @ [ ns ]; i in
+  go 0 !(cx.shapes)
+let type_name cx ns = "t" ^ string_of_int (shape_index cx ns)
+let ctor_at cx ns i = Printf.sprintf "K%d_%d" (shape_index cx ns) i
+let ops cx p ns =
+  let i = shape_index cx ns in
+  if not (List.mem ns !(cx.ops)) then cx.ops := ns :: !(cx.ops);
+  Printf.sprintf "%s_%d" p i
+let con cx = function Ext name -> "con_" ^ name | Tagged ns -> ops cx "con" ns | Untagged _ -> assert false
+let des cx = function Ext name -> "des_" ^ name | Tagged ns -> ops cx "des" ns | Untagged _ -> assert false
 
 let field_names n = List.init n (fun i -> Printf.sprintf "f%d" i)
 let fields c = field_names c.V.arity
-let pair c vs = Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs)
-let case c vs body = Printf.sprintf "| %s -> %s" (pair c vs) body
 let spaced parts = Printf.sprintf "\"(\" ^ %s ^ \")\"" (concat " ^ \" \" ^ " parts)
 let pattern_at name fs = if fs = [] then name else Printf.sprintf "%s (%s)" name (concat ", " fs)
-let pattern cx c fs = pattern_at (ctor cx c) fs
-let narrow cx s present =
-  let key = (type_name cx s, present) in
+let pattern cx c fs = pattern_at (ctor_at cx (arities c.V.adt) c.index) fs
+let narrow cx ns live =
+  let key = (ns, live) in
   match List.assoc_opt key !(cx.narrows) with
-  | Some (name, _) -> name
+  | Some name -> name
   | None ->
-      let name = Printf.sprintf "%s_n%d" (type_name cx s) (List.length !(cx.narrows)) in
-      cx.narrows := (key, (name, s)) :: !(cx.narrows);
+      let name = Printf.sprintf "%s_n%d" (type_name cx ns) (List.length !(cx.narrows)) in
+      cx.narrows := (key, name) :: !(cx.narrows);
       name
 
 let build cx c es =
@@ -73,10 +78,19 @@ let build cx c es =
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
   | Untagged _ -> tuple es
 
-let destruct cx c v =
-  match shape c.V.adt with
-  | (Ext _ | Tagged _) as s -> Printf.sprintf "(%s %s)" (des cx s) v
-  | Untagged _ -> untuple (fields c) v (pair c (fields c))
+(* A match over [a]'s constructors: [arms] pair each constructor with its field names and body, [live] the
+   discriminants that can occur, which narrows a tagged type so OCaml drops the others. *)
+let dispatch cx a live scrut arms default =
+  let cases pat = concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pat c vs) body) arms) in
+  match shape a with
+  | Ext _ as s ->
+      Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx s) scrut (cases (fun c vs -> Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs))) (Option.value default ~default:"absurd ()")
+  | Tagged ns ->
+      let live = List.sort_uniq compare live in
+      let ty = if List.length live < List.length ns then "yes " ^ narrow cx ns live else type_name cx ns in
+      let body = cases (pattern cx) ^ match default with Some d -> " | _ -> " ^ d | None -> "" in
+      Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
+  | Untagged _ -> (match arms with [ (_, vs, body) ] -> untuple vs scrut body | [] -> Option.get default | _ -> assert false)
 
 let rec value cx v =
   match v with
@@ -97,10 +111,12 @@ and plain cx = function
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
-  | V.VMatchable adt ->
-      let s = shape adt in
-      if not (List.mem s !(cx.held)) then cx.held := s :: !(cx.held);
-      mat cx s
+  | V.VMatchable adt -> (
+      match shape adt with
+      | Ext _ ->
+          if not (List.memq adt !(cx.held)) then cx.held := adt :: !(cx.held);
+          "m_" ^ sanitize adt.tname
+      | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
 
@@ -170,7 +186,7 @@ and expr cx scope = function
       in
       match (cc, head) with
       | V.Ctor, `Ctor c -> build cx c es
-      | V.Ctor, _ -> Printf.sprintf "(let d = (Obj.obj %s : ctor) in d.con d.ix [%s])" (expr cx scope f) (concat "; " es)
+      | V.Ctor, _ when es = [] -> expr cx scope f
       | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
       | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
   | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
@@ -178,39 +194,15 @@ and expr cx scope = function
   | V.CLetRec (fns, body) ->
       let scope = { scope with locals = List.map (fun (x, f) -> (x, List.length f.V.params)) fns @ scope.locals } in
       Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fun (x, f) -> fn cx scope (var x) f) fns)) (expr cx scope body)
-  | V.CMatch m -> (
-      let branches = List.map (fun (i, ids, body) -> (i, List.map var ids, expr cx scope body)) m.branches in
+  | V.CMatch m ->
       let scrut = expr cx scope m.scrut in
-      let default = match m.default with Some d -> expr cx scope d | None -> "absurd ()" in
-      let one () = match branches with [ (_, vs, body) ] -> (vs, body) | _ -> assert false in
-      match m.shape with
-      | V.Known a -> (
-          let arms arm = concat " " (List.map (fun (i, vs, body) -> arm (V.ctor_at a i) vs body) branches) in
-          match shape a with
-          | Ext _ as s -> Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx s) scrut (arms case) default
-          | Tagged _ as s ->
-              let live = List.sort_uniq compare m.live in
-              let cases = arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern cx c vs) body) in
-              let ty = if List.length live < List.length a.V.ctors then "yes " ^ narrow cx s live else type_name cx s in
-              (match m.default with
-               | None -> Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if branches = [] then "_ -> ." else cases)
-               | Some _ -> Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut ty cases default)
-          | Untagged _ -> let vs, body = one () in untuple vs scrut body)
-      | V.Held (code, tags) ->
-          let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in
-          let des = Printf.sprintf "(Obj.obj %s : matchable).mdes %d %s" (expr cx scope code) arity scrut in
-          if not tags then
-            let vs, body = one () in
-            Printf.sprintf "(match snd (%s) with [%s] -> %s | _ -> absurd ())" des (concat "; " vs) body
-          else
-            let rec chain = function
-              | [] -> default
-              | (i, vs, body) :: rest ->
-                  Printf.sprintf "if i = %d then (match fs with [%s] -> %s | _ -> absurd ()) else %s" i (concat "; " vs) body (chain rest)
-            in
-            Printf.sprintf "(let (i, fs) = %s in %s)" des (chain branches))
+      let a, scrut =
+        match m.shape with
+        | V.Known a -> (a, scrut)
+        | V.Held (code, a) -> (a, if a.tagged then Printf.sprintf "((Obj.obj %s : Obj.t -> Obj.t) %s)" (expr cx scope code) scrut else scrut)
+      in
+      dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CAbsurd -> "(absurd ())"
-
 
 let collect env items =
   let adts = ref [] and defined = Hashtbl.create 64 in
@@ -229,7 +221,6 @@ let collect env items =
   IntMap.iter (fun _ v -> value v) env.Env.values;
   List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
-  let shapes = List.fold_left (fun acc a -> let s = shape a in if List.mem s acc then acc else acc @ [ s ]) [] adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
   let closures =
     List.concat_map
@@ -238,54 +229,45 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; shapes; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
+  { env; adts; shapes = ref []; ops = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
 
+let all a = List.init (List.length a.V.ctors) Fun.id
+
+(* The type of each shape met, the list-shaped con/des an extern function takes, every constructor as its
+   builder, and the unwrap into its shape that is an extern type's Matchable. *)
 let types cx =
-  let ctors s = List.mapi (fun i n -> (ctor_at cx s i, field_names n)) (arities s) in
-  let obj_tuple fs = concat " * " (List.map (fun _ -> "Obj.t") fs) in
-  let decl s =
-    let body =
-      match s with
-      | Ext "String" -> "Ffi_core.slice"
-      | Ext _ -> "Z.t"
-      | Tagged _ -> concat " | " (List.map (fun (k, fs) -> if fs = [] then k else k ^ " of " ^ obj_tuple fs) (ctors s))
-      | Untagged [ 0 ] -> "unit"
-      | Untagged [ n ] -> obj_tuple (field_names n)
-      | Untagged _ -> "Obj.t"
+  let builder c =
+    let fs = fields c in
+    Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (if fs = [] then build cx c [] else Printf.sprintf "(Obj.repr (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
+  in
+  let unwrap a =
+    Printf.sprintf "let m_%s : Obj.t = Obj.repr (fun (v : Obj.t) : Obj.t -> %s)" (sanitize a.V.tname)
+      (dispatch cx a (all a) "v" (List.map (fun c -> (c, fields c, Printf.sprintf "(Obj.repr (%s))" (pattern cx c (fields c)))) a.V.ctors) None)
+  in
+  let extern a = match shape a with Ext name -> Some (Printf.sprintf "let con_%s, des_%s = %s" name name (List.assoc name externs)) | _ -> None in
+  let builders = List.concat_map (fun a -> List.map builder a.V.ctors) cx.adts in
+  let unwraps = List.map unwrap !(cx.held) in
+  let narrow ((ns, live), name) =
+    let decl i n =
+      let idx = if List.mem i live then "yes" else "no" in
+      if n = 0 then Printf.sprintf "%s : %s %s" (ctor_at cx ns i) idx name else Printf.sprintf "%s : %s -> %s %s" (ctor_at cx ns i) (obj_tuple n) idx name
     in
-    Printf.sprintf "%s = %s" (type_name cx s) body
+    Printf.sprintf "type _ %s = %s" name (concat " | " (List.mapi decl ns))
   in
-  let case_at i fs body = Printf.sprintf "| (%d, [%s]) -> %s" i (concat "; " fs) body in
-  let ops s =
-    let constructor arm = Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false" (con cx s) (concat " " (List.mapi (fun i (k, fs) -> case_at i fs (arm k fs)) (ctors s))) in
-    match s with
-    | Ext name -> Printf.sprintf "let %s, %s = %s" (con cx s) (des cx s) (List.assoc name externs)
-    | Tagged _ ->
-        constructor (fun k fs -> Printf.sprintf "(Obj.repr (%s))" (pattern_at k fs))
-        ^ Printf.sprintf "\nlet %s v = match (Obj.obj v : %s) with %s" (des cx s) (type_name cx s)
-            (concat " " (List.mapi (fun i (k, fs) -> Printf.sprintf "| %s -> (%d, [%s])" (pattern_at k fs) i (concat "; " fs)) (ctors s)))
-    | Untagged _ -> constructor (fun _ fs -> tuple fs)
-  in
-  let descriptor c =
-    Printf.sprintf "let %s : Obj.t = Obj.repr { ix = %d; cname = %s; con = %s; des = (fun v -> %s) }" (var c.V.cid) c.index (quote c.cname) (con cx (shape c.adt)) (destruct cx c "v")
-  in
-  (* The Matchable value of each shape held as one: its destructor, or the fields as they stand. *)
-  let matchable s =
-    let des =
-      match s with
-      | Ext _ | Tagged _ -> Printf.sprintf "(fun _ v -> %s v)" (des cx s)
-      | Untagged ns ->
-          let arm n = let vs = field_names n in
-            Printf.sprintf "| %d -> %s" n (untuple vs "v" (Printf.sprintf "(0, [%s])" (concat "; " vs))) in
-          Printf.sprintf "(fun arity v -> match arity with %s | _ -> assert false)" (concat " " (List.init (List.fold_left max 0 ns + 1) arm))
-    in
-    Printf.sprintf "let %s : Obj.t = Obj.repr ({ mdes = %s } : matchable)" (mat cx s) des
+  let decl ns = Printf.sprintf "%s = %s" (type_name cx ns) (concat " | " (List.mapi (fun i n -> let k = ctor_at cx ns i in if n = 0 then k else k ^ " of " ^ obj_tuple n) ns)) in
+  let ops ns =
+    let ctors = List.mapi (fun i n -> (ctor_at cx ns i, field_names n)) ns in
+    Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false\nlet %s v = match (Obj.obj v : %s) with %s" (con cx (Tagged ns))
+      (concat " " (List.mapi (fun i (k, fs) -> Printf.sprintf "| (%d, [%s]) -> (Obj.repr (%s))" i (concat "; " fs) (pattern_at k fs)) ctors))
+      (des cx (Tagged ns)) (type_name cx ns)
+      (concat " " (List.mapi (fun i (k, fs) -> Printf.sprintf "| %s -> (%d, [%s])" (pattern_at k fs) i (concat "; " fs)) ctors))
   in
   concat "\n"
-    (("type " ^ concat "\nand " (List.map decl cx.shapes))
-    :: List.map ops cx.shapes
-    @ List.concat_map (fun a -> List.map descriptor a.V.ctors) cx.adts
-    @ List.map matchable !(cx.held))
+    (List.rev_map narrow !(cx.narrows)
+    @ [ (match !(cx.shapes) with [] -> "" | shapes -> "type " ^ concat "\nand " (List.map decl shapes)) ]
+    @ List.map ops !(cx.ops)
+    @ List.filter_map extern cx.adts
+    @ builders @ unwraps)
 
 let rec show cx env ty =
   let ty = Env.canon env ty in
@@ -304,7 +286,7 @@ let rec show cx env ty =
           let many = Elab.non_erased env' fids in
           let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
           let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in
-          Some (c, text)
+          Some (c, fields c, text)
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
       in
       (body :=
@@ -312,29 +294,33 @@ let rec show cx env ty =
          | App (Var tid, _) -> (
              match adt_of tid with
              | None -> "\"?\""
-             | Some a -> (
-                 let branches = List.filter_map (branch a) a.V.ctors in
-                 match shape a with
-                 | Untagged _ -> (match branches with (c, text) :: _ -> untuple (fields c) "v" text | [] -> "\"?\"")
-                 | s ->
-                     Printf.sprintf "match %s v with %s | _ -> \"?\"" (des cx s)
-                       (concat " " (List.map (fun (c, text) -> case c (fields c) text) branches))))
+             | Some a ->
+                 let arms = List.filter_map (branch a) a.V.ctors in
+                 dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"?\""))
          | Fn _ -> "\"<function ?>\""
-         | ValCtor _ -> "\"<constructor \" ^ (Obj.obj v : ctor).cname ^ \">\""
+         | ValCtor _ -> "\"<constructor ?>\""
          | _ -> "\"?\"");
       name
 
-let prelude_ctor cx name = var (Program.ctor cx.env name).cid
-
+(* The driver's operations on the prelude's values, each direct (lib/driver_core.ml). *)
 let driver cx =
-  let io = (Program.ctor cx.env "Exit").adt in
-  Printf.sprintf "let ctor_of = function %s | _ -> assert false\n"
-    (concat " " (List.map (fun n -> Printf.sprintf "| %s -> %s" (quote n) (prelude_ctor cx n)) [ "Zero"; "Succ"; "MkU8"; "MkChar"; "SNil"; "SCons"; "Some"; "None"; "Ok"; "Fail"; "MkUnit"; "Cons"; "Nil"; "Exit" ]))
-  ^ Printf.sprintf "let io_names = [| %s |]\n" (concat "; " (List.map (fun c -> quote c.V.cname) io.ctors))
-  ^ {|let driver =
-  Driver_core.make ~build:(fun n args -> let c = (Obj.obj (ctor_of n) : ctor) in c.con c.ix args) ~des:(fun n v -> (Obj.obj (ctor_of n) : ctor).des v)
-    ~io_name:(fun i -> io_names.(i)) ~apply:(fun k x -> (Obj.obj k : Obj.t -> Obj.t) x)
-let flush_to oc s = output_string oc s; flush oc
+  let c = Program.ctor cx.env in
+  let lam fs body = Printf.sprintf "(fun %s -> %s)" (params fs) body in
+  let make n = let fs = fields (c n) in if fs = [] then build cx (c n) [] else lam fs (build cx (c n) fs) in
+  let un n arm = let a = (c n).adt in lam [ "v" ] (dispatch cx a (all a) "v" (List.map (fun ct -> let fs = fields ct in (ct, fs, arm ct fs)) a.V.ctors) None) in
+  let option n = un n (fun ct fs -> if ct.V.cname = n then Printf.sprintf "(Some (%s))" (concat ", " fs) else "None") in
+  let field n = un n (fun _ fs -> List.hd fs) in
+  let ops =
+    [ ("zero", make "Zero"); ("succ", make "Succ"); ("pred", option "Succ");
+      ("u8", make "MkU8"); ("un_u8", field "MkU8"); ("char", make "MkChar"); ("un_char", field "MkChar");
+      ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons");
+      ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
+      ("cons", make "Cons"); ("nil", make "Nil");
+      ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
+      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)") ]
+  in
+  Printf.sprintf "let driver = Driver_core.make { %s }\n" (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
+  ^ {|let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
 let world = { Driver_core.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; exit; print = print_endline }
 let run_io = driver.run_io world
@@ -349,6 +335,7 @@ let item cx = function
       let text =
         match (v, Program.final cx.env ty) with
         | V.VFn cl, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
+        | V.VCtorFn c, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<constructor " ^ c.cname ^ ">"))
         | _, kind -> (
             let e = value cx v in
             match kind with
@@ -359,31 +346,19 @@ let item cx = function
       in
       Buffer.add_string cx.out (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
 
-let narrows cx =
-  let one ((_, present), (name, s)) =
-    let decl i n =
-      let idx = if List.mem i present then "yes" else "no" in
-      if n = 0 then Printf.sprintf "%s : %s %s" (ctor_at cx s i) idx name
-      else Printf.sprintf "%s : %s -> %s %s" (ctor_at cx s i) (concat " * " (List.init n (fun _ -> "Obj.t"))) idx name
-    in
-    Printf.sprintf "type _ %s = %s" name (concat " | " (List.mapi decl (arities s)))
-  in
-  concat "\n" (List.rev_map one !(cx.narrows))
-
 let emit env items =
   let cx = collect env items in
   List.iter (item cx) items;
+  let driver = driver cx in
   let shows = List.rev_map (fun (_, name, body) -> Printf.sprintf "%s (v : Obj.t) : string = %s" name !body) !(cx.shows) in
+  let types = types cx in
   concat "\n"
     [ "[@@@warning \"-a\"]";
       "module Ffi_core = struct\n" ^ Ffi_core_source.source ^ "\nend";
       "module Driver_core = struct\n" ^ Driver_core_source.source ^ "\nend";
-      "type ctor = { ix : int; cname : string; con : int -> Obj.t list -> Obj.t; des : Obj.t -> int * Obj.t list }";
-      "type matchable = { mdes : int -> Obj.t -> int * Obj.t list }";
       "let source = ref \"-\"\nlet absurd () = prerr_endline (!source ^ \": runtime error: absurd code reached\"); exit 1";
-      "type yes = Yes_ and no = No_";
-      narrows cx;
-      types cx;
-      driver cx;
+      "type yes = Yes_ and no = No_\nlet m_plain : Obj.t = Obj.repr (fun (v : Obj.t) : Obj.t -> v)";
+      types;
+      driver;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);
       Buffer.contents cx.out ]

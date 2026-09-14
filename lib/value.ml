@@ -37,9 +37,9 @@ and code =
   | CAbsurd
 
 (* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
-   ADT the elaborator saw, or a Matchable read at runtime, its type having settled whether values carry a tag. *)
+   ADT the elaborator saw, or a Matchable read at runtime, its type having settled the shape its values take. *)
 and matching = { scrut : code; shape : shape; branches : (int * id list * code) list; default : code option; live : int list }
-and shape = Known of adt | Held of code * bool
+and shape = Known of adt | Held of code * adt
 
 let map_code f = function
   | CValues cs -> CValues (List.map f cs)
@@ -47,7 +47,7 @@ let map_code f = function
   | CLet (ids, rhs, rest) -> let rhs = f rhs in CLet (ids, rhs, f rest)
   | CLetRec (fns, rest) -> CLetRec (fns, f rest)
   | CMatch m ->
-      let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | Known _ as s -> s in
+      let shape = match m.shape with Held (c, a) -> Held (f c, a) | Known _ as s -> s in
       let scrut = f m.scrut in
       let branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches in
       CMatch { scrut; shape; branches; default = Option.map f m.default; live = m.live }

@@ -25,8 +25,8 @@ let rec eval env code =
       let read =
         match shape with
         | Known adt -> dispatch adt.ext adt.tagged v
-        | Held (code, tags) -> (
-            match eval1 env code with VMatchable a -> dispatch a.ext tags v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
+        | Held (code, held) -> (
+            match eval1 env code with VMatchable a -> dispatch a.ext held.tagged v | x -> raise (Runtime ("not a Matchable: " ^ show x)))
       in
       let enter (_, ids, body) fields = eval (bind ids fields env) body in
       match (read, branches, default) with
