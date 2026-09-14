@@ -38,7 +38,7 @@ and code =
 
 (* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
    ADT the elaborator saw, or a Matchable read at runtime, its type having settled whether values carry a tag. *)
-and matching = { scrut : code; shape : shape; branches : (int * id list * code) list; default : code option }
+and matching = { scrut : code; shape : shape; branches : (int * id list * code) list; default : code option; live : int list }
 and shape = Known of adt | Held of code * bool
 
 let map_code f = function
@@ -50,7 +50,7 @@ let map_code f = function
       let shape = match m.shape with Held (c, tags) -> Held (f c, tags) | Known _ as s -> s in
       let scrut = f m.scrut in
       let branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches in
-      CMatch { scrut; shape; branches; default = Option.map f m.default }
+      CMatch { scrut; shape; branches; default = Option.map f m.default; live = m.live }
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes c =

@@ -174,12 +174,12 @@ and expr cx scope = function
           match shape a with
           | Ext -> Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx a) scrut (arms case) default
           | Tagged ->
-              let present = List.sort compare (List.map (fun (i, _, _) -> i) branches) in
+              let live = List.sort_uniq compare m.live in
               let cases = arms (fun c vs body -> Printf.sprintf "| %s -> %s" (pattern c vs) body) in
-              if m.default = None then
-                let ty = if List.length present < List.length a.V.ctors then "yes " ^ narrow cx a present else type_name cx a in
-                Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if branches = [] then "_ -> ." else cases)
-              else Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut (type_name cx a) cases default
+              let ty = if List.length live < List.length a.V.ctors then "yes " ^ narrow cx a live else type_name cx a in
+              (match m.default with
+               | None -> Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if branches = [] then "_ -> ." else cases)
+               | Some _ -> Printf.sprintf "(match (Obj.obj %s : %s) with %s | _ -> %s)" scrut ty cases default)
           | Untagged -> let vs, body = one () in untuple vs scrut body)
       | V.Held (code, tags) ->
           let arity = match branches with (_, vs, _) :: _ -> List.length vs | [] -> 0 in

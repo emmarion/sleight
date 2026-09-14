@@ -762,7 +762,9 @@ and elab_match tele env expect l args =
         | [ (_, _, body) ], None when smult = Erased -> body
         | _ ->
             let branch (c, fids, body) = (Option.get (discriminant shapes c), fids, body) in
-            V.CMatch { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = else_ }
+            V.CMatch
+              { scrut = scode; shape = match_shape env mid tagged; branches = List.map branch real; default = else_;
+                live = List.filter_map (fun (c, _, _) -> discriminant shapes c) real @ List.filter_map (discriminant shapes) reachable }
       in
       let env, result_ids = open_tele env ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, code)
@@ -935,7 +937,8 @@ and elab_let_match env l args =
         else fun rest ->
           V.CMatch
             { scrut = scode; shape = match_shape env mid (tagged disc shapes);
-              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ]; default = None } )
+              branches = [ (Option.get (discriminant shapes c), non_erased env fids, rest) ]; default = None;
+              live = Option.to_list (discriminant shapes c) } )
   | _ -> error l "malformed let-match: expected (let-match <multiplicity> x (C field ...))"
 
 and elab_comptime_match env l args =

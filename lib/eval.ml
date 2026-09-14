@@ -20,7 +20,7 @@ let rec eval env code =
   | CApp (f, args, _) -> apply (eval1 env f) (List.map (eval1 env) args)
   | CLet (ids, rhs, body) -> eval (bind ids (eval env rhs) env) body
   | CLetRec (fns, body) -> eval (close env fns) body
-  | CMatch { scrut; shape; branches; default } -> (
+  | CMatch { scrut; shape; branches; default; _ } -> (
       let v = eval1 env scrut in
       let read =
         match shape with
