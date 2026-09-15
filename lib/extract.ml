@@ -44,7 +44,14 @@ type cx = {
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
   narrows : ((int list * int list) * string) list ref;
+  temps : int ref;
 }
+
+(* An extern type's match and builds are its templates (lib/ffi_templates.txt) unless stripped, or where it
+   has none, its runtime view; a template's temporaries are numbered per instantiation. *)
+let templates = ref true
+let template key = if !templates then Ffi_templates.find key else None
+let stamp cx = incr cx.temps; !(cx.temps)
 
 let shape_index cx ns =
   let rec go i = function s :: rest -> if s = ns then i else go (i + 1) rest | [] -> cx.shapes := !(cx.shapes) @ [ ns ]; i in
@@ -68,7 +75,15 @@ let narrow cx ns live =
 
 let build cx c es =
   match shape c.V.adt with
-  | Ext name -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
+  | Ext name -> (
+      match template (Ffi_templates.Build (name, c.index)) with
+      | None -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
+      | Some ps ->
+          let n = stamp cx in
+          let args = List.mapi (fun i e -> if Ffi_templates.is_name e then (e, None) else (Printf.sprintf "x%d_a%d" n i, Some e)) es in
+          let binds = List.filter_map (fun (x, e) -> Option.map (fun e -> x ^ " = " ^ e) e) args in
+          let text = Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(fun i -> fst (List.nth args i)) in
+          if binds = [] then "(" ^ text ^ ")" else Printf.sprintf "(let %s in %s)" (concat " and " binds) text)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
   | Untagged _ -> tuple es
 
@@ -77,7 +92,25 @@ let build cx c es =
    unwrapped one level first. *)
 let dispatch cx a live scrut arms default =
   let cases pat = concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pat c vs) body) arms) in
-  let scrut = match shape a with Ext name -> Printf.sprintf "(des_%s %s)" name scrut | _ -> scrut in
+  let templated = match shape a with Ext name -> template (Ffi_templates.Match name) | _ -> None in
+  let scrut = match shape a with Ext name when templated = None -> Printf.sprintf "(des_%s %s)" name scrut | _ -> scrut in
+  match templated with
+  | Some ps ->
+      let n = stamp cx in
+      let live = List.sort_uniq compare live in
+      let arm i = List.find_opt (fun (c, _, _) -> c.V.index = i) arms in
+      let defaulted = List.filter (fun i -> arm i = None && List.mem i live) (List.init (List.length a.V.ctors) Fun.id) in
+      let dflt, thunk =
+        match default with
+        | Some d when List.length defaulted > 1 -> (Printf.sprintf "(x%d_d ())" n, fun t -> Printf.sprintf "(let x%d_d () = %s in %s)" n d t)
+        | Some d -> (d, Fun.id)
+        | None -> ("(absurd ())", Fun.id)
+      in
+      let body i = match arm i with Some (_, _, b) -> b | None -> if List.mem i live then dflt else "(absurd ())" in
+      let field i j = match arm i with Some (_, vs, _) -> List.nth vs j | None -> Printf.sprintf "x%d_f%d_%d" n i j in
+      let s, bind = if Ffi_templates.is_name scrut then (scrut, Fun.id) else (Printf.sprintf "x%d" n, fun t -> Printf.sprintf "(let x%d = %s in %s)" n scrut t) in
+      bind (thunk ("(" ^ Ffi_templates.fill ps ~scrut:(fun () -> s) ~temp:(Printf.sprintf "x%d_t%d" n) ~field ~body ~arg:(fun _ -> assert false) ^ ")"))
+  | None ->
   match plain_shape a with
   | Ext _ -> assert false
   | Tagged ns ->
@@ -211,7 +244,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; shapes = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
+  { env; adts; shapes = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref []; narrows = ref []; temps = ref 0 }
 
 let all a = List.init (List.length a.V.ctors) Fun.id
 

@@ -169,13 +169,18 @@
     (many MulSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d) (erased (Mul a b c) m) (erased (Add c b d) p) ->
        (Mul (Succ a) b d))))
 
+(def-fns _ $ erased add-comm : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) -> (erased (Add b a c) q)
+  (match erased p _
+    ((AddZero b0) (add-zero-right b))
+    ((AddSucc a1 b1 c1 p1) (add-succ-right b a1 c1 (add-comm a1 b c1 p1)))))
+
 (def-fns _ $ many extern mul : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Mul a b c) p)
   (match many a _
     ((Zero) (values (Zero) (MulZero b)))
     ((Succ a1)
       (let (many c1) (erased m) (mul a1 b))
-      (let (many c) (erased q) (add c1 b))
-      (values c (MulSucc a1 b c1 c m q)))))
+      (let (many c) (erased q) (add b c1))
+      (values c (MulSucc a1 b c1 c m (add-comm b c1 c q))))))
 
 (def-fns _ $ many extern sub : (many (Nat) a) (subterm many (Nat) b) (erased (Lt b (Succ a)) le) -> (many (Nat) c) (erased (Add b c a) p)
   (match many b _

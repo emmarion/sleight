@@ -34,3 +34,14 @@
     (echo "let source = {|")
     (cat driver_core.ml)
     (echo "|}")))))
+
+(rule
+ (targets ffi_templates_source.ml)
+ (deps ffi_templates.txt)
+ (action
+  (with-stdout-to
+   ffi_templates_source.ml
+   (progn
+    (echo "let source = {|")
+    (cat ffi_templates.txt)
+    (echo "|}")))))

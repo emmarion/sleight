@@ -2413,3 +2413,45 @@ bootstrap runs in the same time as before (about four minutes here).
      a numeral's cost no longer grows with its value (measured: a
      literal of thirty million compiled in the time of a literal of
      three, where the count-up took seconds).
+133. **An extern type's extraction goes through templates; its view stays
+     for held values** (the owner's decision, after this session proposed
+     it, with the owner's hole discipline: every hole but a branch body
+     is filled with a variable name). `lib/ffi_templates.txt` holds, per
+     extern type, a match template and per constructor a build template:
+     OCaml over `Obj.t` with holes `{s}` the scrutinee, `{bI}` the body
+     of constructor I's arm, `{fI.J}` the binder of its field J, `{aI}`
+     a build argument and `{tK}` a temporary. A template mentions no
+     program name, only holes and library names. The engine fills `{s}`
+     and every `{a}` with a variable, binding the expression to a
+     temporary first unless it already is a name, so nothing is
+     evaluated twice; `{f}` holes take the branch's own binders, or a
+     dummy for an arm without one; `{t}` holes take the instantiation's
+     temporaries `x<n>_t<k>`; a body hole takes its arm's body, a live
+     arm without one the `else`, bound once as a thunk `x<n>_d` when it
+     stands for more than one constructor so its text is written once,
+     and a refuted arm `absurd ()`. The reference numbers instantiations
+     with a counter; `slc` uses the code's nesting depth (`names-depth`),
+     which the session reads as sufficient because a body sits in tail
+     position, so no template text follows a body in its scope, and
+     every other hole is a name bound before the template's text; no
+     program name starts with `x`, so a temporary captures nothing.
+     `lib/ffi.ml` checks a template against the model's shape at the
+     `extern` mark (each body and field binder once, each argument
+     read, no hole beyond the shape); that a body sits in tail position
+     is not checked, `tests/extern_tail.sl` being the evidence for the
+     shipped ones, and `tests/extern_nested.sl` covers a match in
+     scrutinee position, an `else` over two constructors, a build inside
+     a build and matches under matches. A type without a template is
+     extracted through its view as before; `--no-templates` strips them
+     all, the test runner extracts every FFI-mode test both ways, `slc`
+     takes the same flag as its first argument and `self/bootstrap.sh`
+     compiles a subset without them. Held constructors and Matchables
+     still go through the view (`tests/thunk_extern_first_class.sl`).
+     The file is embedded in the interpreter by a dune rule and in `slc`
+     through `header.sl`, one text parsed by both, though only the
+     reference checks it. Measured in the session's scratchpad: the
+     Ackermann benchmark 58 ms through the views, 35 ms through the
+     templates, 24 ms hand-written on zarith; a million-iteration tail
+     loop over `Nat` 21 ms to 6 ms; and the pinned `slc` self-compile
+     32.8 s to 32.0 s, its time being in the String copying (item 132's
+     profile), which no template touches.

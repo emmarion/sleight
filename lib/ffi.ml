@@ -32,7 +32,7 @@ let check_shape loc name adt =
   match List.assoc_opt name shapes with
   | Some want when (not adt.tagged) || ns <> want ->
       Env.error loc "the extern implementation of %s has the tagged shape (%s), its declaration %s(%s)" name (spell want) (if adt.tagged then "" else "the untagged ") (spell ns)
-  | _ -> ()
+  | _ -> ( try Ffi_templates.check name ns with Failure m -> Env.error loc "%s" m)
 
 (* A function's model must take as many non-erased arguments as its implementation does, and the plain types
    the implementation builds or reads must be declared already in the implementation's shape. *)

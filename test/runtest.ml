@@ -18,10 +18,11 @@ let ocamlfind = lazy (Sys.command "ocamlfind ocamlopt -version > /dev/null 2>&1"
 let report out err code expect stderr exit =
   Printf.sprintf "printed:\n%sstderr:\n%sexit %d\nexpected:\n%sstderr:\n%sexit %d" out err code expect stderr exit
 
-let extracted name externs env input args expect stderr exit =
+let extracted name externs templates env input args expect stderr exit =
   if not (Lazy.force ocamlfind) then Some "ocamlfind is not available to compile the extracted program"
   else
-    let base = Filename.concat "extract" (name ^ if externs then "_ffi" else "_src") in
+    let base = Filename.concat "extract" (name ^ if not externs then "_src" else if templates then "_ffi" else "_ffi_view") in
+    Extract.templates := templates;
     (try Sys.mkdir "extract" 0o755 with Sys_error _ -> ());
     let outcome =
       try
@@ -81,7 +82,10 @@ and run_mode name externs src =
   let failures = directive src "error" in
   match outcome with
   | Ok (env, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
-      extracted name externs env input args expect stderr exit
+      (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
+      (match extracted name externs true env input args expect stderr exit with
+       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false env input args expect stderr exit)
+       | r -> r)
   | Ok (_, out) ->
       Some
         (Printf.sprintf "ran, %s"

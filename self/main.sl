@@ -35,27 +35,30 @@
               ((None b) (run-toplevel items env1))))
           (run-files rest (match many first (((Env) e)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 
-(def-fns compile-lvl $ many compile : (many (List $ Pair (String) $ String) srcs) -> (many (IO io-lvl) io)
+(def-fns compile-lvl $ many compile : (many (Bool) templates) (many (List $ Pair (String) $ String) srcs) -> (many (IO io-lvl) io)
   (let (many env) $ run-files srcs (make-builtins) $ BTrue)
   (match many (env-errors env) _
     ((Cons a e rest) (write-errors (list-rev _ $ env-errors env) $ Exit _ exit-fail))
     ((Nil a)
-      (let (many out) (erased flat) $ flatten $ emit-program env)
+      (let (many out) (erased flat) $ flatten $ emit-program templates env)
       (WriteOut _ out $ Exit _ exit-ok))))
 
-(def-fns slc-lvl $ many read-files : (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
+(def-fns slc-lvl $ many read-files : (many (Bool) templates) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
   (match many paths _
-    ((Nil a) (compile $ list-rev _ acc))
+    ((Nil a) (compile templates $ list-rev _ acc))
     ((Cons a path rest)
       (def-fns io-lvl $ many after-read : (many (Result $ String) r) -> (many (IO io-lvl) next)
         (match many r _
           ((Fail b m) (WriteErr _ "slc: " $ WriteErr _ m $ WriteErr _ "\n" $ Exit _ exit-fail))
-          ((Ok b src) (read-files rest $ Cons _ (MkPair _ _ path src) acc))))
+          ((Ok b src) (read-files templates rest $ Cons _ (MkPair _ _ path src) acc))))
       (ReadFile _ path after-read))))
 
 (def-fns io-lvl $ many start : (many (List $ String) args) -> (many (IO io-lvl) io)
   (match many args _
-    ((Nil a) (WriteErr _ "usage: slc -- prelude.sl file.sl ... > out.ml\n" $ Exit _ exit-fail))
-    ((Cons a p rest) (read-files args $ Nil _))))
+    ((Nil a) (WriteErr _ "usage: slc -- [--no-templates] prelude.sl file.sl ... > out.ml\n" $ Exit _ exit-fail))
+    ((Cons a p rest)
+      (match many (str-eq p "--no-templates") _
+        ((BTrue) (read-files (BFalse) rest $ Nil _))
+        ((BFalse) (read-files (BTrue) args $ Nil _))))))
 
 (GetArgs _ start)

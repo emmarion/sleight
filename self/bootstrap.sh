@@ -4,6 +4,7 @@
 #   2. compiles every tests/*.sl with slc: a test with an "; error:" directive must be refused with a
 #      message mentioning that text; any other is built and run with the test's stdin and arguments, and
 #      its stdout, stderr and exit code compared with the reference interpreter's on the same files;
+#      the extern, thunk, main, char and nat tests are compiled again with --no-templates (ASSUMPTIONS 133);
 #   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 set -u
@@ -25,30 +26,30 @@ $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
 directive() { sed -n "s/^; $2: //p" "$1"; }
 
 pass=0; fail=0; errpass=0
-echo "== compiling the tests with slc"
-for t in tests/*.sl; do
-  name=$(basename "$t" .sl)
+# check_test <file> <slc flags> <tag>: compiles one test with slc and compares it with the reference.
+check_test() {
+  t=$1; flags=$2; name=$(basename "$t" .sl)$3
   needs=""
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
-    if "$B/slc" -- lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
-      echo "FAIL $name: slc accepted a program the checker refuses"; fail=$((fail+1)); continue
+    if "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+      echo "FAIL $name: slc accepted a program the checker refuses"; fail=$((fail+1)); return
     fi
     ok=1
     directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done || ok=0
     if [ "$ok" = 1 ]; then errpass=$((errpass+1)); else fail=$((fail+1)); fi
-    continue
+    return
   fi
   args=$(directive "$t" args)
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files
   (cd "$B" && "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
-  if ! "$B/slc" -- lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
-    echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; fail=$((fail+1)); continue
+  if ! "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+    echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; fail=$((fail+1)); return
   fi
   if ! $OC "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
-    echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; fail=$((fail+1)); continue
+    echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; fail=$((fail+1)); return
   fi
   (cd "$B" && "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
   if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err" && [ "$code" = "$refcode" ]; then
@@ -56,7 +57,12 @@ for t in tests/*.sl; do
   else
     echo "FAIL $name: output differs (exit $code vs $refcode), see $B/$name.out and $B/$name.ref.out"; fail=$((fail+1))
   fi
-done
+}
+
+echo "== compiling the tests with slc"
+for t in tests/*.sl; do check_test "$t" "" ""; done
+echo "== compiling the extern, thunk, main, char and nat tests with slc --no-templates"
+for t in tests/extern_*.sl tests/thunk_*.sl tests/main_*.sl tests/char*.sl tests/nat_*.sl; do check_test "$t" "--no-templates" "_view"; done
 echo "$pass programs matched the interpreter, $errpass programs refused with the expected message, $fail failed"
 
 echo "== compiling slc with slc"

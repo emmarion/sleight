@@ -34,7 +34,8 @@ elaboration. Numerals, `#\c` character literals and `"..."` string
 literals are prelude-backed sugar (ASSUMPTIONS.md 47-60). Every program starts in the scope of the source
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
-`--no-extern` strips those implementations and runs the source models. A file is a sequence of statements,
+`--no-extern` strips those implementations and runs the source models, and `--no-templates` extracts extern types
+through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
 `--extract out.ml` elaborates the files as usual but, instead of
