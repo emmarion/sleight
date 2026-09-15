@@ -154,7 +154,8 @@ ground.
     scope it was minted in" is not enforced for right-hand sides. The
     facts in question come from `comptime-match` verifications in a
     run-position right-hand side, which are unconditionally true, so
-    this looked harmless.
+    this looked harmless. Superseded by item 138: the right-hand side's
+    entries now stay in scope, so no fact outlives an entry it mentions.
 30. **Nested definitions mint `Dyn`**, as section 34 says: a
     `def-adts`, `def-lvl` or delegate proof inside a body mints `Dyn`
     entries, and the body's code binds each nested constructor's value.
@@ -2542,3 +2543,130 @@ bootstrap runs in the same time as before (about four minutes here).
      noise), as the audit expected of these. Gate: dune test 253
      passed; bootstrap 175 matched, 103 refused, fixpoint reached.
 
+
+## Opening a `Matchable` or `Newtype` (proposals/matchable-newtype-opening.md)
+
+Implemented from the proposal as the owner settled it in chat, on this
+branch afresh rather than by merging `claude/matchables-proposal-ekulyk`,
+whose implementation predates the `_` metas and the evidence-carrying
+`self/`. The owner decided the points marked so; everything else is the
+session's reading, with the tests as the evidence.
+
+138. **A `let`'s right-hand side statements are statements of the
+     enclosing expression** (the owner's decision in chat, proposed by
+     the session while placing an open's extent). Everything a
+     right-hand side binds enters the expression after the `let`,
+     anonymously: the entries keep their ids in scope with their names
+     dropped (`Env.hide`; in `self/`, `env-hide` keeps the inner
+     objects and clears the added entries' names), so no fact, and no
+     open record, outlives an entry it mentions, which is what item 29
+     had excused. A `many` binder there stays `many`, the owner's rule,
+     which the code composition makes honest: the statements before the
+     right-hand side's final expression wrap the `let`'s own binding
+     (`Elab.elab_stmts`; in `self/`, `elab-stmts` and the `SSeq` code a
+     `let` returns), so their code is emitted whether or not the `let`'s
+     binders are erased, and only the final expression is the position
+     section 20 calls the right-hand side. Run position is unchanged,
+     nested statements having run first (section 16).
+     `tests/let_nested_scope.sl` still refuses the name; the entry's
+     survival is what `tests/open_adt_let.sl` reads.
+
+139. **Nothing consults a `Matchable` or a `Newtype` until it is opened**
+     (`Env.opens`, `Elab.open_adt`, `Env.merge_opens`; in `self/`, the
+     `Env`'s `opens`, `open-adt` and `merge-opens`). The environment
+     carries the opened entries beside the fact table, and they share
+     its fate: a match branch's are discarded with the branch, a `let`
+     right-hand side's kept (item 138). The invariant, the owner's
+     choice over the proposal's merge-at-open: at most one opened
+     `Matchable` names a given type constructor or value constructor,
+     and at most one opened `Newtype` a given constructor, canonically;
+     two that would name one thing are unified, forcing, and the
+     better-ranked entry kept, the older on a tie, until no two name one
+     thing, and a contradiction anywhere in that cascade is the
+     forcing's. The invariant is restored after every forcing, a branch
+     entered (`Elab.refine`), a `let-match` or `comptime-match` as much
+     as an open, rather than inside the unifier, which the session
+     reads as equivalent for what is accepted (every equation is
+     canonicalized before its atoms are compared, and an opened
+     Matchable's constructor list is read canonically) and which keeps
+     `self/`'s unifier and its termination evidence untouched; the
+     unifier's own check that two aliased type constructors head one
+     Matchable is subsumed. `(open-adt mult e)` is a statement, the
+     owner's shape: an anonymous `let` of `e` at the written
+     multiplicity, checked as a `let` binder is, run at once in run
+     position so the entry is `Const` and bound by code otherwise, then
+     the open of that binder, whose constructors must be distinct after
+     canonicalization (`tests/open_adt_bad.sl`) and which then merges
+     with whatever open names one of them or its type constructor
+     (`tests/open_adt_unify.sl`, `tests/open_adt_clash_bad.sl`,
+     `tests/open_adt_expr.sl`, `tests/matchable_prefers_many.sl`,
+     `tests/known_matchable.sl`, `tests/open_adt_mult_bad.sl`,
+     `tests/open_adt_not_bad.sl`). A match that dispatches at runtime
+     reads its Matchable's value, stamped in where the entry is `Const`
+     with its ADT and read from the entry's binding otherwise, so it
+     requires the opened entry to be *readable*: `Const` with the ADT,
+     or non-erased and still bound (`Env.readable`; in `self/`,
+     `readable` reads the objects list, which `env-hide` keeps).
+     Readability is judged at the match, not the open: a `many`
+     parameter opened at `erased` serves no such match
+     (`tests/open_adt_erased_bad.sl`), while an open inside a `let`'s
+     right-hand side does, its entry staying bound (item 138,
+     `tests/open_adt_let.sl`). `(open-absurd e ann)` is an expression
+     of its annotation's size, `_` reusing the enclosing telescope as a
+     match's does (`Elab.result_tele`, shared with `match`); it takes
+     `e` at `erased`, the owner's choice, requires the same open to
+     contradict, records and mints nothing, and compiles to the absurd
+     code (`tests/open_absurd.sl`, `tests/open_absurd_clash.sl`,
+     `tests/open_absurd_bad.sl`). Every read of a `Matchable` goes
+     through the opened list: `match`, `let-match`, `comptime-match`,
+     the emptiness check, `matchable-of`, `newtype-of`, `coercible-wrap`
+     and section 18's disjointness rule, so an unopened first-class
+     `TyCtor` unifies with any other (`tests/open_tyctor.sl`,
+     `tests/unopened_matchable_bad.sl`,
+     `tests/unopened_newtype_bad.sl`, `tests/open_adt_branch_bad.sl`).
+     `def-adts` and the built-in `Special` open what they mint. Section
+     19's ambiguity error is gone, two opened Matchables for one type
+     being one. The keywords are the owner's: `open-adt` names the
+     minting site, one form opening both objects, and `open-absurd`
+     carries the token that marks a contradiction elsewhere. The
+     first-class tests gained an `(open-adt m)` at their parameter's
+     multiplicity, and "has no Matchable in scope" became "has no
+     Matchable open", likewise for a Newtype.
+
+140. **A `Newtype` is recorded, not asserted, and has no contradicting
+     form** (the owner's choice, from the proposal's unsettled list).
+     `open-adt` on a `Newtype` merges it with an opened one naming the
+     same canonical constructor and checks nothing else; `open-absurd`
+     on one is refused as undecided
+     (`tests/open_absurd_newtype_bad.sl`). Still open, as the proposal
+     lists it: whether an opened `Newtype` for `C` beside an opened
+     `Matchable` marking `C` phantom is a contradiction. `coercible-of`
+     keeps its fetch from ambient scope for now, the owner's decision,
+     recorded as a TBD in DESIGN.md section 38.
+
+141. **`coercible-ctor` no longer refuses a phantom constructor**, so it
+     reads no `Matchable` and needs none opened
+     (`tests/coercible_ctor_phantom.sl`). The owner's decision, on the
+     session's reading that the check was redundant: a `coerce` cashes a
+     proof only for a non-erased source canonicalizing to `(C ...)`,
+     and the checker never lets a phantom constructor head a non-erased
+     value, a phantom application in a non-erased position being
+     refused and a phantom branch under a `many` scrutinee checked with
+     everything erased, where a `coerce` yields an erased value, which
+     a phantom constructor may head. `coercible-wrap` is the contrast:
+     its source is the field, from which it manufactures a `C`-headed
+     value, so its `Newtype` stays load-bearing. Section 38's "the same
+     non-phantom constructor on both sides" then describes what a usable
+     proof relates rather than what the form checks.
+
+142. **`let-match` applies `match`'s readability check.** A `let-match`
+     at `many` outside run position compiles to a one-branch dispatch
+     that reads its Matchable at runtime, and before the opening it did
+     so through an erased first-class Matchable, which elaborated and
+     then failed when run (`tests/let_match_erased_bad.sl`, found by
+     the session that wrote the other branch). Both forms now refuse an
+     opened entry that is not readable (item 139) with one message, "is
+     erased or out of scope". In run position a `let-match` destructs
+     through the constructor's `Const` value and reads no Matchable, so
+     it is not checked there. That `let-match` is a match for this
+     purpose is the owner's.

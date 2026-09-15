@@ -20,7 +20,9 @@ and subterm proofs, forced unification that refutes a branch by
 contradiction and the one-real-branch rule, `comptime-match`
 verification against the stored value, `let-match` binding outward, the
 tail and delegate marks on the normalized code, newtype shape, extern
-claims, and the reader's and literals' syntax errors; `unary` and
+claims, the opening of a `Matchable` or `Newtype` that every read of one
+requires and the contradiction `open-absurd` cashes in (ASSUMPTIONS
+139-142), and the reader's and literals' syntax errors; `unary` and
 `distinct` (SUGAR.md 5) expand to the prelude calls the reference
 writes down, in the prelude's scope as there; a `_` argument (SUGAR.md 6)
 is solved as the reference solves it, by a meta the scope and the
@@ -68,7 +70,8 @@ host (section 41); a `U8` or a
   once, and a fold over the tokens with a stack of open forms.
 - `core.sl` — terms with de Bruijn telescopes (section 5), the
   special-form registry (section 27), runtime values and post-erasure
-  code, the scope environment and fact table (sections 3, 18),
+  code, the scope environment with its fact table and its list of opened
+  objects (sections 3, 18; ASSUMPTIONS 139),
   canonicalization, instantiation, forced unification with its three
   contradictions (section 18), term identity, and the built-in entries.
 - `eval.sl` — the compile-time interpreter over the store: every value

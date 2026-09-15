@@ -92,9 +92,21 @@ that the test does not make is a mistake in this file.
 - `tests/comptime.sl` and `tests/comptime_transparent.sl` — `comptime-match`
   verifying a `Const` and binding its fields `Const`, proof by reflection.
 - `tests/first_class.sl` and `tests/shadow_false_capture.sl` — matching
-  through first-class type and value constructors and a `Matchable`, and a
-  function keeping the empty `False` it was defined against after the name is
-  shadowed by an inhabited one.
+  through first-class type and value constructors and a `Matchable`, opened
+  first, and a function keeping the empty `False` it was defined against
+  after the name is shadowed by an inhabited one.
+- `tests/open_absurd.sl`, `tests/open_adt_unify.sl`, `tests/open_tyctor.sl` —
+  opening a `Matchable` (proposals/matchable-newtype-opening.md): a
+  contradiction between two constructors held as a fact until the
+  `Matchable` listing both is opened, cashed in by `open-absurd` or refuting
+  the branch when the open comes first; two `Matchable`s sharing a
+  constructor unified by opening both, which equates their type
+  constructors; and a first-class type constructor that unifies with `Nat`
+  until its `Matchable` is opened and its constructors' signatures tell the
+  two apart. `tests/unopened_matchable_bad.sl` and
+  `tests/open_adt_branch_bad.sl` show a match finding nothing unopened and an
+  open ending with its branch, and `tests/open_adt_let.sl` an open inside a
+  `let`'s right-hand side serving the matches after it.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
