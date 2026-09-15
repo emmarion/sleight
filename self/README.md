@@ -198,7 +198,12 @@ the entry says otherwise, and recorded so it can be revisited.
   mentions a key at or before it. Canonicalization returns a proof that
   its result mentions only rule-free entries, a chase recurses on the
   rules after the one it follows, and the invariants make the lookup in
-  that suffix total. Unification takes the count as its measure: a step
+  that suffix total. The rules list itself is erased: a chase reads the
+  rule's term from the trie, and the position in the list that its
+  decrease is measured by is found by following the membership proof,
+  so the compiled compiler never builds or walks the list (before this
+  it appended to and scanned it, which a profile of the self-compile
+  put at about a fifth of the time). Unification takes the count as its measure: a step
   is structural on canonical terms until a binding rules an entry out,
   which the elaborator sees as the count stepping down, and the rest is
   re-canonicalized at the smaller count. The table is also indexed by
