@@ -26,19 +26,16 @@ let key = function Numeral z -> Z.to_string z | Char c -> char c | Str s -> quot
 let chars s = List.init (String.length s) (fun i -> Char (Char.code s.[i]))
 
 (* The bijective base-2 spelling of [z] as source: (B1 b) is 2b+1, (B2 b) is 2b+2. *)
-let rec bin z =
-  if Z.equal z Z.zero then "(BZ)"
-  else let d, x = Ffi_core.bin_digit z in Printf.sprintf "(B%d %s)" d (bin x)
+let rec bin z = match Ffi_core.bin_view ~z:Fun.id ~bin:Fun.id z with BZ -> "(BZ)" | B1 b -> "(B1 " ^ bin b ^ ")" | B2 b -> "(B2 " ^ bin b ^ ")"
 
 let rec succs k base = if k <= 0 then base else succs (k - 1) (Printf.sprintf "(Succ %s)" base)
 
 (* The witness that [z]'s spelling steps to [z+1]'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)). *)
 let rec bin_succ z =
-  if Z.equal z Z.zero then "(BSZ)"
-  else
-    let d, x = Ffi_core.bin_digit z in
-    if d = 1 then Printf.sprintf "(BS1 %s)" (bin x)
-    else Printf.sprintf "(BS2 %s %s %s)" (bin x) (bin (Z.succ x)) (bin_succ x)
+  match Ffi_core.bin_view ~z:Fun.id ~bin:Fun.id z with
+  | BZ -> "(BSZ)"
+  | B1 x -> Printf.sprintf "(BS1 %s)" (bin x)
+  | B2 x -> Printf.sprintf "(BS2 %s %s %s)" (bin x) (bin (Z.succ x)) (bin_succ x)
 
 (* A numeral binds its Nat and Numeral proof; a character its Char, built by reflection on the decided bound
    (DESIGN.md section 41); a string its characters, each already a literal, consed up. *)

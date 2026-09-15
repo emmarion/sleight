@@ -19,41 +19,69 @@ let claim table loc name =
   | Some _ when Hashtbl.mem claimed name -> Env.error loc "the extern implementation of %s is already bound" name
   | Some impl -> Hashtbl.replace claimed name (); impl
 
+(* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
+   the many-field arities of the non-phantom constructors in order, since the extracted program lays the view
+   out as the model's own type. *)
+let shapes = [ ("Nat", [ 0; 1 ]); ("Bin", [ 0; 1; 1 ]); ("String", [ 0; 2 ]); ("Rope", [ 0; 1; 2; 1 ]); ("Cmp", [ 0; 0; 0 ]) ]
 let arities = [ ("add", 2); ("nat-cmp", 2); ("nat-mod", 2); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
+let needs = [ ("nat-cmp", [ "Cmp" ]); ("flatten", [ "Rope" ]) ]
 
-(* A function's model must take as many non-erased arguments as its implementation does. *)
-let check_arity loc name n =
-  match List.assoc_opt name arities with
-  | Some m when m <> n -> Env.error loc "the extern implementation of %s takes %d arguments, its model %d" name m n
+let spell ns = String.concat " " (List.map string_of_int ns)
+let check_shape loc name adt =
+  let ns = List.map (fun c -> c.arity) adt.ctors in
+  match List.assoc_opt name shapes with
+  | Some want when (not adt.tagged) || ns <> want ->
+      Env.error loc "the extern implementation of %s has the tagged shape (%s), its declaration %s(%s)" name (spell want) (if adt.tagged then "" else "the untagged ") (spell ns)
   | _ -> ()
 
+(* A function's model must take as many non-erased arguments as its implementation does, and the plain types
+   the implementation builds or reads must be declared already in the implementation's shape. *)
+let check_arity loc name n =
+  (match List.assoc_opt name arities with
+   | Some m when m <> n -> Env.error loc "the extern implementation of %s takes %d arguments, its model %d" name m n
+   | _ -> ());
+  List.iter
+    (fun t -> match Hashtbl.find_opt adts t with Some adt -> check_shape loc t adt | None -> Env.error loc "the extern implementation of %s needs %s declared before it" name t)
+    (Option.value (List.assoc_opt name needs) ~default:[])
+
+let arity = Eval.Runtime "extern arity"
 let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
 
-let des = function VCtor (c, fs) -> (c.index, fs) | v -> raise (Eval.Runtime ("not a constructor: " ^ show v))
-let ext (construct, destruct) = { construct; destruct }
-
-let types : (string * (adt -> ext)) list =
-  List.map
-    (fun (name, mk) -> (name, fun adt -> Hashtbl.replace registered name adt; ext (mk adt)))
-    [ ("Nat", fun adt -> Ffi_core.peano ~z ~nat:(fun n -> VExt (adt, Int n)));
-      ("Bin", fun adt -> Ffi_core.bijective ~z ~bin:(fun n -> VExt (adt, Int n)));
-      ("String", fun adt -> Ffi_core.text ~z ~slice ~u8:(int "Nat") ~str:(fun s -> VExt (adt, Slice s))) ]
-
 let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
-let arity = Eval.Runtime "extern arity"
+(* The interpreter's construction and matching of an extern type, through lib/ffi_core.ml's one-level view. *)
+let bad name v = raise (Eval.Runtime (Printf.sprintf "not a %s: %s" name (show v)))
+let des = function VCtor (c, fs) -> (c.index, fs) | v -> bad "constructor" v
+let types : (string * (adt -> ext)) list =
+  let nat adt n = VExt (adt, Int n) in
+  List.map
+    (fun (name, mk) -> (name, fun adt -> Hashtbl.replace registered name adt; mk adt))
+    [ ( "Nat",
+        fun adt ->
+          { construct = (fun i args -> Ffi_core.nat_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> Zero | 1, [ p ] -> Succ p | _ -> raise arity));
+            destruct = (fun v -> match Ffi_core.nat_view ~z ~nat:(nat adt) v with Zero -> (0, []) | Succ p -> (1, [ p ])) } );
+      ( "Bin",
+        fun adt ->
+          { construct = (fun i args -> Ffi_core.bin_of ~z ~bin:(nat adt) (match (i, args) with 0, [] -> BZ | 1, [ b ] -> B1 b | 2, [ b ] -> B2 b | _ -> raise arity));
+            destruct = (fun v -> match Ffi_core.bin_view ~z ~bin:(nat adt) v with BZ -> (0, []) | B1 b -> (1, [ b ]) | B2 b -> (2, [ b ])) } );
+      ( "String",
+        fun adt ->
+          let str s = VExt (adt, Slice s) in
+          { construct = (fun i args -> Ffi_core.str_of ~z ~slice ~str (match (i, args) with 0, [] -> SNil | 1, [ c; r ] -> SCons (c, r) | _ -> raise arity));
+            destruct = (fun v -> match Ffi_core.str_view ~slice ~u8:(int "Nat") ~str v with SNil -> (0, []) | SCons (c, r) -> (1, [ c; r ])) } ) ]
+
 let unary f = function [ a ] -> [ f a ] | _ -> raise arity
 let binary f = function [ a; b ] -> [ f a b ] | _ -> raise arity
 let nats name f = binary (fun a b -> int name (f (z a) (z b)))
 
 let fns : (string * (value list -> value list)) list =
   [ ("add", nats "Nat" Ffi_core.add);
-    ("nat-cmp", binary (fun a b -> Ffi_core.nat_cmp ~con:(plain "Cmp") (z a) (z b)));
+    ("nat-cmp", binary (fun a b -> plain "Cmp" (match Ffi_core.nat_cmp (z a) (z b) with CLt -> 0 | CEq -> 1 | CGt -> 2) []));
     ("nat-mod", nats "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary (fun a -> int "Nat" (Ffi_core.bin_to_nat (z a))));
     ("trim", unary (fun s -> text (Ffi_core.trim (slice s))));
     ("append", binary (fun a b -> text (Ffi_core.append (slice a) (slice b))));
-    ("flatten", unary (Ffi_core.flatten ~des ~slice ~z ~str:text)) ]
+    ("flatten", unary (Ffi_core.flatten ~slice ~z ~str:text ~rope:(fun v -> match des v with 0, [] -> REmpty | 1, [ s ] -> RStr s | 2, [ a; b ] -> RCat (a, b) | 3, [ c ] -> RChar c | _ -> bad "rope node" v))) ]

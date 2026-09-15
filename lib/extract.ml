@@ -17,10 +17,12 @@ let untuple vs e body =
   | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
 
+(* An extern type's unwrap into its model's shape and the wrap back (lib/ffi_core.ml's views), over Obj.t. *)
 let externs =
-  [ ("Nat", "Ffi_core.peano ~z:Obj.obj ~nat:Obj.repr");
-    ("Bin", "Ffi_core.bijective ~z:Obj.obj ~bin:Obj.repr");
-    ("String", "Ffi_core.text ~z:Obj.obj ~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr") ]
+  let view name lower args args' = Printf.sprintf "let des_%s v = Obj.repr (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (Obj.obj v)" name lower args name lower args' in
+  [ ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
+    ("Bin", view "Bin" "bin" "~z:Obj.obj ~bin:Obj.repr" "~z:Obj.obj ~bin:Obj.repr");
+    ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list
 
@@ -34,13 +36,11 @@ type cx = {
   env : Env.t;
   adts : V.adt list;
   shapes : int list list ref;
-  ops : int list list ref;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
   seen : (int, V.value * string option ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
-  held : V.adt list ref;
   out : Buffer.t;
   shows : (term * string * string ref) list ref;
   narrows : ((int list * int list) * string) list ref;
@@ -51,12 +51,6 @@ let shape_index cx ns =
   go 0 !(cx.shapes)
 let type_name cx ns = "t" ^ string_of_int (shape_index cx ns)
 let ctor_at cx ns i = Printf.sprintf "K%d_%d" (shape_index cx ns) i
-let ops cx p ns =
-  let i = shape_index cx ns in
-  if not (List.mem ns !(cx.ops)) then cx.ops := ns :: !(cx.ops);
-  Printf.sprintf "%s_%d" p i
-let con cx = function Ext name -> "con_" ^ name | Tagged ns -> ops cx "con" ns | Untagged _ -> assert false
-let des cx = function Ext name -> "des_" ^ name | Tagged ns -> ops cx "des" ns | Untagged _ -> assert false
 
 let field_names n = List.init n (fun i -> Printf.sprintf "f%d" i)
 let fields c = field_names c.V.arity
@@ -74,17 +68,18 @@ let narrow cx ns live =
 
 let build cx c es =
   match shape c.V.adt with
-  | Ext _ as s -> Printf.sprintf "(%s %d [%s])" (con cx s) c.index (concat "; " es)
+  | Ext name -> Printf.sprintf "(con_%s (Obj.repr (%s)))" name (pattern cx c es)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
   | Untagged _ -> tuple es
 
 (* A match over [a]'s constructors: [arms] pair each constructor with its field names and body, [live] the
-   discriminants that can occur, which narrows a tagged type so OCaml drops the others. *)
+   discriminants that can occur, which narrows a tagged type so OCaml drops the others; an extern value is
+   unwrapped one level first. *)
 let dispatch cx a live scrut arms default =
   let cases pat = concat " " (List.map (fun (c, vs, body) -> Printf.sprintf "| %s -> %s" (pat c vs) body) arms) in
-  match shape a with
-  | Ext _ as s ->
-      Printf.sprintf "(match %s %s with %s | _ -> %s)" (des cx s) scrut (cases (fun c vs -> Printf.sprintf "(%d, [%s])" c.V.index (concat "; " vs))) (Option.value default ~default:"absurd ()")
+  let scrut = match shape a with Ext name -> Printf.sprintf "(des_%s %s)" name scrut | _ -> scrut in
+  match plain_shape a with
+  | Ext _ -> assert false
   | Tagged ns ->
       let live = List.sort_uniq compare live in
       let ty = if List.length live < List.length ns then "yes " ^ narrow cx ns live else type_name cx ns in
@@ -111,12 +106,7 @@ and plain cx = function
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
-  | V.VMatchable adt -> (
-      match shape adt with
-      | Ext _ ->
-          if not (List.memq adt !(cx.held)) then cx.held := adt :: !(cx.held);
-          "m_" ^ sanitize adt.tname
-      | _ -> "m_plain")
+  | V.VMatchable adt -> (match shape adt with Ext name -> "(Obj.repr des_" ^ name ^ ")" | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
 
@@ -150,15 +140,7 @@ and fn cx scope name f =
   let body =
     match f.V.impl with
     | Some _ when !V.use_externs ->
-        (* An extern over a plain ADT takes that type's destructor or constructor: flatten walks a Rope, nat-cmp
-           builds a Cmp. *)
-        let plain tname = List.find (fun a -> a.V.tname = tname) cx.adts in
-        let extra =
-          match f.fname with
-          | "flatten" -> Printf.sprintf "~des:%s ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " (des cx (shape (plain "Rope")))
-          | "nat-cmp" -> Printf.sprintf "~con:%s " (con cx (shape (plain "Cmp")))
-          | _ -> ""
-        in
+        let extra = if f.fname = "flatten" then "~rope:Obj.obj ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else "" in
         Printf.sprintf "(Obj.repr (Ffi_core.%s %s%s))" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
     | _ -> expr cx scope f.body
   in
@@ -229,24 +211,18 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; shapes = ref []; ops = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; held = ref []; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
+  { env; adts; shapes = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref []; narrows = ref [] }
 
 let all a = List.init (List.length a.V.ctors) Fun.id
 
-(* The type of each shape met, the list-shaped con/des an extern function takes, every constructor as its
-   builder, and the unwrap into its shape that is an extern type's Matchable. *)
+(* The type of each shape met, the extern types' unwraps and wraps, and every constructor as its builder. *)
 let types cx =
   let builder c =
     let fs = fields c in
     Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (if fs = [] then build cx c [] else Printf.sprintf "(Obj.repr (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
   in
-  let unwrap a =
-    Printf.sprintf "let m_%s : Obj.t = Obj.repr (fun (v : Obj.t) : Obj.t -> %s)" (sanitize a.V.tname)
-      (dispatch cx a (all a) "v" (List.map (fun c -> (c, fields c, Printf.sprintf "(Obj.repr (%s))" (pattern cx c (fields c)))) a.V.ctors) None)
-  in
-  let extern a = match shape a with Ext name -> Some (Printf.sprintf "let con_%s, des_%s = %s" name name (List.assoc name externs)) | _ -> None in
+  let extern a = match shape a with Ext name -> Some (List.assoc name externs) | _ -> None in
   let builders = List.concat_map (fun a -> List.map builder a.V.ctors) cx.adts in
-  let unwraps = List.map unwrap !(cx.held) in
   let narrow ((ns, live), name) =
     let decl i n =
       let idx = if List.mem i live then "yes" else "no" in
@@ -255,19 +231,11 @@ let types cx =
     Printf.sprintf "type _ %s = %s" name (concat " | " (List.mapi decl ns))
   in
   let decl ns = Printf.sprintf "%s = %s" (type_name cx ns) (concat " | " (List.mapi (fun i n -> let k = ctor_at cx ns i in if n = 0 then k else k ^ " of " ^ obj_tuple n) ns)) in
-  let ops ns =
-    let ctors = List.mapi (fun i n -> (ctor_at cx ns i, field_names n)) ns in
-    Printf.sprintf "let %s i args = match (i, args) with %s | _ -> assert false\nlet %s v = match (Obj.obj v : %s) with %s" (con cx (Tagged ns))
-      (concat " " (List.mapi (fun i (k, fs) -> Printf.sprintf "| (%d, [%s]) -> (Obj.repr (%s))" i (concat "; " fs) (pattern_at k fs)) ctors))
-      (des cx (Tagged ns)) (type_name cx ns)
-      (concat " " (List.mapi (fun i (k, fs) -> Printf.sprintf "| %s -> (%d, [%s])" (pattern_at k fs) i (concat "; " fs)) ctors))
-  in
   concat "\n"
     (List.rev_map narrow !(cx.narrows)
     @ [ (match !(cx.shapes) with [] -> "" | shapes -> "type " ^ concat "\nand " (List.map decl shapes)) ]
-    @ List.map ops !(cx.ops)
     @ List.filter_map extern cx.adts
-    @ builders @ unwraps)
+    @ builders)
 
 let rec show cx env ty =
   let ty = Env.canon env ty in

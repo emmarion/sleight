@@ -1119,7 +1119,7 @@ and elab_def_adts env adts =
     let shapes = shapes env al ctors in
     let adt = mint_adt env name disc shapes in
     Ffi.note name adt;
-    if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim Ffi.types al name adt);
+    if List.mem Sp.Extern ms then (Ffi.check_shape al name adt; adt.ext <- Some (Ffi.claim Ffi.types al name adt));
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in

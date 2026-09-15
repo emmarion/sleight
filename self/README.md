@@ -81,9 +81,9 @@ host (section 41); a `U8` or a
   expansion of `unary` and `distinct`, and the top level.
 - `runtime.ml` — what the OCaml runtime every compiled program starts
   with adds to `lib/ffi_core.ml` and `lib/driver_core.ml`: `absurd`,
-  the phantom indices of narrowing, the identity `Matchable`, the
-  extern types' list-shaped con/des, and the `world` the driver runs
-  in. `gen_header.py` turns the three files into `header.sl`, the same
+  the phantom indices of narrowing, the identity `Matchable`, each
+  extern type's unwrap and wrap over `Obj.t`, and the `world` the
+  driver runs in. `gen_header.py` turns the three files into `header.sl`, the same
   text as one `Rope` of SL string literals; regenerate `header.sl`
   after editing any of them.
 - `emit.sl` — extraction to OCaml in the reference's scheme: a walk
@@ -139,8 +139,11 @@ the entry says otherwise, and recorded so it can be revisited.
   `many`-field arities of its non-phantom constructors, so every ADT of
   one shape shares one type; an untagged type, a union and a newtype
   are their fields as they stand, `()`, the field, or a tuple, with no
-  declaration; an extern type is its `Z.t` or slice, built and read
-  through the FFI's `con_Nat`/`des_Nat` and kin. A constructor
+  declaration; an extern type is its `Z.t` or slice under `Obj.t`,
+  which the FFI unwraps one level into the shape its model's
+  constructors describe and wraps back (`lib/ffi_core.ml`'s views,
+  laid out as the model's own type, which the reference checks at the
+  `extern` claim), so it is matched and built like any tagged type. A constructor
   application whose head the elaborator sees is the direct build; a
   call whose head is a named function is a direct OCaml call; a match
   on a tagged type is a direct `match` on the shape, and when the
@@ -155,8 +158,7 @@ the entry says otherwise, and recorded so it can be revisited.
   type the unwrap into the shape its constructors describe, so a match
   through a held `Matchable` is the same direct match on the unwrapped
   value; the elaborator mints that shape from the `Matchable`'s type.
-  `absurd ()` remains where the elaborator refuted every branch, on the
-  extern paths, and in the driver. A wrong refutation would misdispatch
+  `absurd ()` remains only where the elaborator refuted every branch. A wrong refutation would misdispatch
   silently here, as ASSUMPTIONS 63 records for the reference; the
   interpreter is the checked path. Function calls in tail position are
   OCaml tail calls, so three million `tail`-marked frames run in
