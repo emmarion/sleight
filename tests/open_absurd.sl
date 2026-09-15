@@ -1,5 +1,5 @@
 ; expect: <function held>
-; Facts can be held before they explode (proposals/matchable-newtype-opening.md): with m unopened, matching
+; Facts can be held before they explode (DESIGN.md section 19): with m unopened, matching
 ; Refl equates C with D by minting a fact, and open-absurd then cashes the contradiction in, producing the
 ; branch's declared result from no value. With m opened first, the same branch is refuted structurally.
 

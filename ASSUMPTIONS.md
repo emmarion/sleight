@@ -2544,9 +2544,9 @@ bootstrap runs in the same time as before (about four minutes here).
      passed; bootstrap 175 matched, 103 refused, fixpoint reached.
 
 
-## Opening a `Matchable` or `Newtype` (proposals/matchable-newtype-opening.md)
+## Opening a `Matchable` or `Newtype` (DESIGN.md section 19)
 
-Implemented from the proposal as the owner settled it in chat, on this
+Implemented from proposals/matchable-newtype-opening.md, since folded into DESIGN.md section 19, as the owner settled it in chat, on this
 branch afresh rather than by merging `claude/matchables-proposal-ekulyk`,
 whose implementation predates the `_` metas and the evidence-carrying
 `self/`. The owner decided the points marked so; everything else is the

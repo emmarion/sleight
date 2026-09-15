@@ -1,7 +1,7 @@
 ; needs: list
 ; expect: (Succ (Zero))
 ; Matching through a first-class type constructor, constructor and Matchable (section 17), once the Matchable
-; is opened (proposals/matchable-newtype-opening.md).
+; is opened (DESIGN.md section 19).
 
 (def-adts $ Box : -> Type
   enum

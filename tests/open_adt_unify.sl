@@ -1,6 +1,6 @@
 ; expect: (A)
 ; Opening a Matchable unifies it with every opened one that lists one of its constructors or heads its type
-; constructor, minting the facts that takes (proposals/matchable-newtype-opening.md): m1 and m2 share C, so
+; constructor, minting the facts that takes (DESIGN.md section 19): m1 and m2 share C, so
 ; opening both equates T with U and D with E, and a (T) value is returned where a (U) is declared.
 
 (def-adts $ Two : -> Type enum (many A : -> (Two)) (many B : -> (Two)))

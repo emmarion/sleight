@@ -1,5 +1,5 @@
 ; error: has no Newtype open
-; coercible-wrap needs the constructor's Newtype opened (section 38, proposals/matchable-newtype-opening.md);
+; coercible-wrap needs the constructor's Newtype opened (DESIGN.md sections 19 and 38);
 ; an unmarked type mints none.
 
 (def-adts $ Meters : -> Type

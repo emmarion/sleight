@@ -96,7 +96,7 @@ that the test does not make is a mistake in this file.
   first, and a function keeping the empty `False` it was defined against
   after the name is shadowed by an inhabited one.
 - `tests/open_absurd.sl`, `tests/open_adt_unify.sl`, `tests/open_tyctor.sl` —
-  opening a `Matchable` (proposals/matchable-newtype-opening.md): a
+  opening a `Matchable` (DESIGN.md section 19): a
   contradiction between two constructors held as a fact until the
   `Matchable` listing both is opened, cashed in by `open-absurd` or refuting
   the branch when the open comes first; two `Matchable`s sharing a

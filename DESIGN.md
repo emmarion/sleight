@@ -1661,7 +1661,7 @@ checked entirely at elaboration time:
    own block (§34), so `g`'s body cannot use its own proof. TBD: whether
    this fetch should instead find only an opened proof, `def-fns`
    opening what it mints and a first-class proof being opened as a
-   `Matchable` is (proposals/matchable-newtype-opening.md).
+   `Matchable` is (§19).
 
 **Representation requirement.** Coercion is zero-cost only if the
 representations really coincide, so the following is a requirement on

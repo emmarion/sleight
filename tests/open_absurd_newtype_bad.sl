@@ -1,5 +1,5 @@
 ; error: undecided
-; Whether a Newtype has a contradicting open is not settled (proposals/matchable-newtype-opening.md), so
+; Whether a Newtype has a contradicting open is not settled (DESIGN.md section 19), so
 ; open-absurd refuses one; open-adt records a Newtype and asserts nothing of it.
 
 (def-lvl X)

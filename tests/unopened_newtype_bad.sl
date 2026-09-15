@@ -1,5 +1,5 @@
 ; error: has no Newtype open
-; A Newtype parameter is no different: coercible-wrap wants it opened (proposals/matchable-newtype-opening.md).
+; A Newtype parameter is no different: coercible-wrap wants it opened (DESIGN.md section 19).
 ; tests/newtype_of.sl is this with the open.
 
 (def-adts $ Meters : -> Type
