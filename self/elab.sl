@@ -164,15 +164,10 @@
             ((BTrue) (LChar))
             ((BFalse) (LName))))))))
 
-(def-fns _ $ many nat-times : (subterm many (Nat) k) (many (Nat) n) -> (many (Nat) r)
-  (match many k _
-    ((Zero) 0)
-    ((Succ j) (nat-add n $ nat-times j n))))
-
 (def-fns _ $ many parse-nat : (subterm many (String) s) (many (Nat) acc) -> (many (Nat) n)
   (match many s _
     ((SNil) acc)
-    ((SCons c rest) (parse-nat rest $ nat-add (nat-times 10 acc) $ nat-sub (char-code c) 48))))
+    ((SCons c rest) (parse-nat rest $ nat-add (nat-mul 10 acc) $ nat-sub (char-code c) 48))))
 
 (def-fns _ $ many is-hex : (many (Char) c) -> (many (Bool) r)
   (or (char-between c 48 57) $ or (char-between c 97 102) $ char-between c 65 70))
@@ -211,7 +206,7 @@
                         ((SNil) (None _))
                         ((SCons h2 rest3)
                           (match many (and (char-is c 120) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
-                            ((BTrue) (Some _ $ nat-add (nat-times 16 $ hex-digit h1) $ hex-digit h2))
+                            ((BTrue) (Some _ $ nat-add (nat-mul 16 $ hex-digit h1) $ hex-digit h2))
                             ((BFalse) (None _))))))))))))))))
 
 ; What is wrong with a literal's spelling, if anything (lib/literal.ml's classify).
@@ -239,10 +234,23 @@
   (let (many env2) (many x) $ prelude-id env name)
   (values env2 $ TApp (TVar x) $ Nil _))
 
-(def-fns _ $ many bin-of-nat : (subterm many (Nat) n) (many (Bin) acc) -> (many (Bin) b)
+(let (many two-dec) (lt-dec (Zero) 2))
+(comptime-match two-dec (Yes tda tdb two-positive))
+(let (many two-dec2) (lt-dec (Succ (Zero)) 2))
+(comptime-match two-dec2 (Yes tea teb two-above-one))
+
+; The bijective spelling by halving: n is B1 of the spelling of q when n - 1 is 2q, B2 of it when 2q + 1.
+(def-fns _ $ many bin-of-nat : (subterm many (Nat) n) -> (many (Bin) b)
   (match many n _
-    ((Zero) acc)
-    ((Succ m) (bin-of-nat m $ bin-succ acc))))
+    ((Zero) (BZ))
+    ((Succ n1)
+      (match many n1 _
+        ((Zero) (B1 $ BZ))
+        ((Succ n2)
+          (let (many q) (many r) (erased m) (erased mm) (erased a) (erased p) (divmod n1 2 two-positive))
+          (let (erased lt) (lt-weaken q n1 $ divmod-lt n2 2 q r m mm a two-above-one))
+          (let (many b) (bin-of-nat (subterm (lt-subterm q n lt)) q))
+          (match many r _ ((Zero) (B1 b)) ((Succ r1) (B2 b))))))))
 
 (def-fns _ $ many bin-ctor : (many (Bin) b) -> (many (String) name)
   (match many b _ ((BZ) "BZ") ((B1 x) "B1") ((B2 x) "B2")))
@@ -258,7 +266,7 @@
 
 ; The bijective base-2 spelling of a number as a term over the prelude's Bin (ASSUMPTIONS 50).
 (def-fns _ $ many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t)
-  (bin-term (bin-of-nat n $ BZ) env))
+  (bin-term (bin-of-nat n) env))
 
 (def-fns _ $ many record-literal : (many (Env) env) (many (String) key) (many (Bin) x) (many (Maybe $ Bin) proof) -> (many (Env) r)
   (let (many env2) $ env-set-literals env $ nm-set _ key x $ env-literals env)
@@ -2354,7 +2362,7 @@
   (gen-of (bin-ctor b) $ match many b (((List $ Raw) l)) ((BZ) (Nil _)) ((B1 x) (Cons _ (bin-raw x) $ Nil _)) ((B2 x) (Cons _ (bin-raw x) $ Nil _))))
 
 (def-fns _ $ many bin-text : (many (Nat) n) -> (many (Raw) r)
-  (bin-raw $ bin-of-nat n $ BZ))
+  (bin-raw $ bin-of-nat n))
 
 ; The witness that n's spelling steps to (n+1)'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)).
 (def-fns _ $ many bin-succ-witness : (subterm many (Bin) b) -> (many (Raw) r)
@@ -2375,7 +2383,7 @@
       (let (many n) $ Succ z)
       (let (many below) $ succs (nat-sub z lo) floor)
       (let (many stp) $ gen-of "numeral-succ" $ Cons _ (bin-text z) $ Cons _ (bin-text n) $ Cons _ (gen-nat z) $ Cons _ (gen-nat n)
-                          $ Cons _ (bin-succ-witness $ bin-of-nat z $ BZ) $ Cons _ (gen-numeral-of z) $ Cons _ (gen-numeral-of n) $ Nil _)
+                          $ Cons _ (bin-succ-witness $ bin-of-nat z) $ Cons _ (gen-numeral-of z) $ Cons _ (gen-numeral-of n) $ Nil _)
       (let (many congd) $ gen-of "eq-cong-succ" $ Cons _ (gen-nat z) $ Cons _ below $ Cons _ acc $ Nil _)
       (let (many acc2) $ gen-of "eq-trans" $ Cons _ (gen-of "Nat" $ Nil _) $ Cons _ (gen-nat n) $ Cons _ (gen-of "Succ" $ Cons _ (gen-nat z) $ Nil _)
                           $ Cons _ (gen-of "Succ" $ Cons _ below $ Nil _) $ Cons _ stp $ Cons _ congd $ Nil _)

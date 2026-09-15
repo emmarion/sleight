@@ -209,6 +209,55 @@
   (let (many q) (many r) (erased m) (erased mm) (erased a) (erased p) (divmod s c pos))
   (values q m r mm a p))
 
+(def-fns _ $ erased lt-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Lt a b) p) (erased (Lt b c) q) -> (erased (Lt a c) r)
+  (match erased p _
+    ((LtZ b1) (match erased q _ ((LtS x y q1) (LtZ y))))
+    ((LtS a1 b1 p1) (match erased q _ ((LtS x y q1) (LtS a1 y (lt-trans a1 b1 y p1 q1)))))))
+
+(def-fns _ $ erased lt-le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Lt a b) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a c) r)
+  (match erased p _
+    ((LtZ b1)
+      (match erased q _
+        ((LtS x y q1) (match erased q1 _ ((LtZ z) (LtZ z)) ((LtS x2 y2 q2) (LtZ y2))))))
+    ((LtS a1 b1 p1)
+      (match erased q _
+        ((LtS x y q1)
+          (match erased q1 _
+            (absurd (LtZ z) (match erased p1 (((False) f)) (absurd LtZ) (absurd LtS)))
+            ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))))
+
+(def-fns _ $ erased lt-subterm : (erased (Nat) a) (subterm erased (Nat) b) (erased (Lt a b) p) -> (erased (Subterm (Nat) a (Nat) b) s)
+  (match erased b _
+    ((Zero) (match erased p _ (absurd LtZ) (absurd LtS)))
+    ((Succ b1)
+      (match erased (nat-cmp a b1) _
+        ((CLt t r x y q) (subterm-trans (lt-subterm a b1 q) (prove-subterm b1 b)))
+        ((CEq t r x) (prove-subterm a b))
+        (absurd (CGt t r x y g) (lt-asym b1 a g p))))))
+
+(def-fns _ $ erased add-le-left : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) -> (erased (Lt a (Succ c)) q)
+  (match erased p _
+    ((AddZero b0) (LtZ b))
+    ((AddSucc a1 b1 c1 p1) (LtS a1 (Succ c1) (add-le-left a1 b c1 p1)))))
+
+(def-fns _ $ erased add-lt-left : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) (erased (Lt (Succ (Zero)) b) two) -> (erased (Lt (Succ a) c) q)
+  (match erased p _
+    ((AddZero b0) two)
+    ((AddSucc a1 b1 c1 p1) (LtS (Succ a1) c1 (add-lt-left a1 b c1 p1 two)))))
+
+(def-fns _ $ erased mul-lt : (erased (Nat) q) (erased (Nat) c) (erased (Nat) m) (subterm erased (Mul (Succ q) c m) mm) (erased (Lt (Succ (Zero)) c) two) -> (erased (Lt (Succ q) m) l)
+  (match erased mm _
+    ((MulSucc q0 c0 m0 d0 mm0 p0)
+      (match erased q _
+        ((Zero) (match erased mm0 _ ((MulZero b0) (match erased p0 _ ((AddZero b1) two)))))
+        ((Succ q1) (lt-trans (Succ q) (Succ m0) m (LtS q m0 (mul-lt q1 c m0 mm0 two)) (add-lt-left m0 c m p0 two)))))))
+
+(def-fns _ $ erased divmod-lt : (erased (Nat) s) (erased (Nat) c) (erased (Nat) q) (erased (Nat) r) (erased (Nat) m)
+    (erased (Mul q c m) mm) (erased (Add m r (Succ s)) a) (erased (Lt (Succ (Zero)) c) two) -> (erased (Lt q (Succ s)) l)
+  (match erased q _
+    ((Zero) (LtZ s))
+    ((Succ q1) (lt-le-trans q m (Succ s) (mul-lt q1 c m mm two) (add-le-left m r (Succ s) a)))))
+
 (def-lvl nat-lvl)
 
 (def-fns nat-lvl $ many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)

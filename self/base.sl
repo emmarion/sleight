@@ -39,8 +39,10 @@
 (def-fns _ $ many nat-pred : (many (Nat) n) -> (many (Nat) m)
   (match many n _ ((Zero) (Zero)) ((Succ k) k)))
 
-(def-fns _ $ many nat-sub : (many (Nat) a) (subterm many (Nat) b) -> (many (Nat) c)
-  (match many b _ ((Zero) a) ((Succ b1) (nat-sub (nat-pred a) b1))))
+(def-fns _ $ many nat-sub : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)
+  (match many (lt-dec b (Succ a)) _
+    ((Yes x y le) (let (many c) (erased p) (sub a b le)) c)
+    ((No x y q) (Zero))))
 
 (def-fns _ $ many nat-is-zero : (many (Nat) n) -> (many (Bool) r)
   (match many n _ ((Zero) (BTrue)) ((Succ k) (BFalse))))
@@ -127,27 +129,27 @@
       (or (all-digits s)
         $ and (char-is c 35) $ match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is c2 92))))))
 
-; Decimal digits of a Nat, least significant first, counted up from zero.
+; Decimal digits of a Nat by division, the quotient a subterm of a positive dividend (the prelude's divmod-lt).
 (def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
   (char-of-code $ nat-add 48 d))
 
-(def-fns _ $ many dec-succ : (subterm many (List $ Nat) ds) -> (many (List $ Nat) r)
-  (match many ds _
-    ((Nil a) (Cons _ 1 $ Nil _))
-    ((Cons a d rest) (match many (nat-cmp d 9) _ ((CEq eq-t eq-r eq-x) (Cons _ 0 $ dec-succ rest)) (else (Cons _ (Succ d) rest))))))
+(let (many ten-dec) (lt-dec (Zero) 10))
+(comptime-match ten-dec (Yes tda tdb ten-positive))
+(let (many ten-dec2) (lt-dec (Succ (Zero)) 10))
+(comptime-match ten-dec2 (Yes tea teb ten-above-one))
 
-(def-fns _ $ many count-up : (subterm many (Nat) n) (many (List $ Nat) ds) -> (many (List $ Nat) r)
+(def-fns _ $ many nat-digits : (subterm many (Nat) n) (many (Rope) acc) -> (many (Rope) r)
   (match many n _
-    ((Zero) ds)
-    ((Succ m) (count-up m $ dec-succ ds))))
-
-(def-fns _ $ many digits-rope : (subterm many (List $ Nat) ds) (many (Rope) acc) -> (many (Rope) r)
-  (match many ds _
-    ((Nil a) acc)
-    ((Cons a d rest) (digits-rope rest $ RCat (RChar $ digit-char d) acc))))
+    ((Zero) acc)
+    ((Succ n1)
+      (let (many q) (many d) (erased m) (erased mm) (erased a) (erased p) (divmod n 10 ten-positive))
+      (let (erased lt) (divmod-lt n1 10 q d m mm a ten-above-one))
+      (nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))))
 
 (def-fns _ $ many nat-str : (many (Nat) n) -> (many (String) s)
-  (rope-str $ digits-rope (count-up n $ Cons _ 0 $ Nil _) $ REmpty))
+  (match many n _
+    ((Zero) "0")
+    ((Succ n1) (rope-str $ nat-digits n $ REmpty))))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.

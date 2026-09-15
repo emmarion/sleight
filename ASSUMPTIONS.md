@@ -2398,3 +2398,18 @@ bootstrap runs in the same time as before (about four minutes here).
      does for `nat-mod`. `tests/nat_arith.sl` runs each once at
      elaboration and once inside a thunk, so the extracted program
      exercises the implementations.
+     The prelude also gains the lemmas `slc` needs to recurse on a
+     quotient: `lt-trans`, `lt-le-trans` (moved from `self/heap.sl`),
+     `add-le-left`, `add-lt-left`, `mul-lt`, `divmod-lt` (the quotient
+     of a positive dividend by a divisor above one is below the
+     dividend) and `lt-subterm`, which turns `Lt a b` on `Nat` into the
+     `Subterm` the checker's decrease wants, by deciding `a` against
+     the predecessor of `b` with `nat-cmp` in an erased position and
+     chaining `prove-subterm` through `subterm-trans`. `slc` then uses
+     the externs (the owner's request): `nat-sub` is `sub` under
+     `lt-dec`, `nat-times` is gone for `nat-mul`, and `nat-str` and
+     `bin-of-nat`, which counted up to the value one step at a time,
+     divide by ten and by two under `divmod-lt` and `lt-subterm`, so
+     a numeral's cost no longer grows with its value (measured: a
+     literal of thirty million compiled in the time of a literal of
+     three, where the count-up took seconds).

@@ -22,18 +22,6 @@
 (def-fns _ $ erased lt-drop : (erased (Nat) d) (erased (Nat) s) (erased (Lt (Succ d) s) p) -> (erased (Lt d s) q)
   (match erased p _ ((LtS x y q) (lt-weaken d y q))))
 
-(def-fns _ $ erased lt-le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Lt a b) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a c) r)
-  (match erased p _
-    ((LtZ b1)
-      (match erased q _
-        ((LtS x y q1) (match erased q1 _ ((LtZ z) (LtZ z)) ((LtS x2 y2 q2) (LtZ y2))))))
-    ((LtS a1 b1 p1)
-      (match erased q _
-        ((LtS x y q1)
-          (match erased q1 _
-            (absurd (LtZ z) (lt-zero a1 p1))
-            ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))))
-
 (def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
 
