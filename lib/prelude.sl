@@ -130,6 +130,22 @@
     ((ModLt x y p0) (ModSub (Zero) (Succ r) (Succ s) (Zero) (add-zero-right (Succ r)) (ModLt (Zero) (Succ r) (LtZ r))))
     ((ModSub s1 c0 s0 r0 a m) (ModSub (Succ s1) (Succ r) (Succ s) (Zero) (add-succ-right (Succ r) s1 s a) (mod-succ-wrap s1 r m)))))
 
+(def-adts
+  (Half : ((Nat) n) -> Type
+    enum extern
+    (many HZ : -> (Half (Zero)))
+    (many H1 : (many (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (Half (Succ d)))
+    (many H2 : (many (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (Half (Succ (Succ d))))))
+
+(def-fns _ $ many extern nat-halve : (subterm many (Nat) n) -> (many (Half n) h)
+  (match many n _
+    ((Zero) (HZ))
+    ((Succ k)
+      (match many (nat-halve k) _
+        ((HZ) (H1 (Zero) (Zero) (D0)))
+        ((H1 m d dd) (H2 m d dd))
+        ((H2 m d dd) (H1 (Succ m) (Succ (Succ d)) (DS m d dd)))))))
+
 (def-fns _ $ many extern add : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p)
   (match many a _
     ((Zero) (values b (AddZero b)))

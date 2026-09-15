@@ -283,38 +283,40 @@
 (def-adts
   (ExtType : -> Type
     enum
-    (many ExtNat : -> (ExtType)) (many ExtBin : -> (ExtType)) (many ExtString : -> (ExtType)))
+    (many ExtNat : -> (ExtType)) (many ExtBin : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)))
   (Extern : ((Nat) arity) -> Type
     enum
     (many ExAdd : -> (Extern 2)) (many ExSub : -> (Extern 2)) (many ExMul : -> (Extern 2)) (many ExDiv : -> (Extern 2)) (many ExDivmod : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
-    (many ExBinToNat : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1)))
+    (many ExNatHalve : -> (Extern 1)) (many ExBinToNat : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1)))
   (SomeExtern : -> Type
     enum
     (many MkSomeExtern : (erased (Nat) n) (many (Extern n) e) -> (SomeExtern))))
 
 (def-fns _ $ many ext-type-name : (many (ExtType) t) -> (many (String) s)
-  (match many t _ ((ExtNat) "Nat") ((ExtBin) "Bin") ((ExtString) "String")))
+  (match many t _ ((ExtNat) "Nat") ((ExtBin) "Bin") ((ExtHalf) "Half") ((ExtString) "String")))
 
 (def-fns _ $ many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r)
   (match many (str-cmp name "Nat") _
     ((CEq eq-t eq-r eq-x) (Some _ $ ExtNat))
     (else (match many (str-cmp name "Bin") _
       ((CEq eq-t eq-r eq-x) (Some _ $ ExtBin))
-      (else (match many (str-cmp name "String") _ ((CEq eq-t eq-r eq-x) (Some _ $ ExtString)) (else (None _))))))))
+      (else (match many (str-cmp name "Half") _
+        ((CEq eq-t eq-r eq-x) (Some _ $ ExtHalf))
+        (else (match many (str-cmp name "String") _ ((CEq eq-t eq-r eq-x) (Some _ $ ExtString)) (else (None _))))))))))
 
 (def-fns _ $ many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m)
   (match many e _
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
-    ((ExBinToNat) 1) ((ExTrim) 1) ((ExFlatten) 1)))
+    ((ExNatHalve) 1) ((ExBinToNat) 1) ((ExTrim) 1) ((ExFlatten) 1)))
 
 (def-fns _ $ many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s)
   (match many e _
     ((ExAdd) "add") ((ExSub) "sub") ((ExMul) "mul") ((ExDiv) "div") ((ExDivmod) "divmod") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
-    ((ExBinToNat) "bin-to-nat") ((ExTrim) "trim") ((ExFlatten) "flatten")))
+    ((ExNatHalve) "nat-halve") ((ExBinToNat) "bin-to-nat") ((ExTrim) "trim") ((ExFlatten) "flatten")))
 
 (let (many externs)
   (Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
-  Cons _ (MkSomeExtern _ $ ExBinToNat) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) (Nil _)))
+  Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExBinToNat) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) (Nil _)))
 
 (def-fns _ $ many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r)
   (match many es _
@@ -335,6 +337,7 @@
     enum
     (many PNat : (many (Nat) n) -> (Payload))
     (many PBin : (many (Bin) b) -> (Payload))
+    (many PHalf : (many (Nat) n) -> (Payload))
     (many PStr : (many (String) s) -> (Payload)))
   ; [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom
   ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 41); a

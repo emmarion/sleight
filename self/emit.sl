@@ -513,6 +513,7 @@
     ((PBin b)
       (let (many n) (erased pf) $ bin-to-nat b)
       (nat-literal n))
+    ((PHalf n) (nat-literal n))
     ((PStr s) (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope $ str-length s) $ RStr ") : Ffi_core.slice))"))))
 
 ; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function

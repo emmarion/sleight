@@ -22,6 +22,7 @@ let externs =
   let view name lower args args' = Printf.sprintf "let des_%s v = Obj.repr (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (Obj.obj v)" name lower args name lower args' in
   [ ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Bin", view "Bin" "bin" "~z:Obj.obj ~bin:Obj.repr" "~z:Obj.obj ~bin:Obj.repr");
+    ("Half", view "Half" "bin" "~z:Obj.obj ~bin:Obj.repr" "~z:Obj.obj ~bin:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list

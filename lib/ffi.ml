@@ -22,9 +22,9 @@ let claim table loc name =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the many-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. *)
-let shapes = [ ("Nat", [ 0; 1 ]); ("Bin", [ 0; 1; 1 ]); ("String", [ 0; 2 ]); ("Rope", [ 0; 1; 2; 1 ]); ("Cmp", [ 0; 0; 0 ]) ]
-let arities = [ ("add", 2); ("sub", 2); ("mul", 2); ("div", 2); ("divmod", 2); ("nat-cmp", 2); ("nat-mod", 2); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
-let needs = [ ("nat-cmp", [ "Cmp" ]); ("flatten", [ "Rope" ]) ]
+let shapes = [ ("Nat", [ 0; 1 ]); ("Bin", [ 0; 1; 1 ]); ("String", [ 0; 2 ]); ("Rope", [ 0; 1; 2; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Half", [ 0; 1; 1 ]) ]
+let arities = [ ("add", 2); ("sub", 2); ("mul", 2); ("div", 2); ("divmod", 2); ("nat-cmp", 2); ("nat-mod", 2); ("nat-halve", 1); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
+let needs = [ ("nat-cmp", [ "Cmp" ]); ("nat-halve", [ "Half" ]); ("flatten", [ "Rope" ]) ]
 
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
@@ -67,6 +67,10 @@ let types : (string * (adt -> ext)) list =
         fun adt ->
           { construct = (fun i args -> Ffi_core.bin_of ~z ~bin:(nat adt) (match (i, args) with 0, [] -> BZ | 1, [ b ] -> B1 b | 2, [ b ] -> B2 b | _ -> raise arity));
             destruct = (fun v -> match Ffi_core.bin_view ~z ~bin:(nat adt) v with BZ -> (0, []) | B1 b -> (1, [ b ]) | B2 b -> (2, [ b ])) } );
+      ( "Half",
+        fun adt ->
+          { construct = (fun i args -> Ffi_core.bin_of ~z ~bin:(nat adt) (match (i, args) with 0, [] -> BZ | 1, [ m ] -> B1 m | 2, [ m ] -> B2 m | _ -> raise arity));
+            destruct = (fun v -> match Ffi_core.bin_view ~z ~bin:(int "Nat") v with BZ -> (0, []) | B1 m -> (1, [ m ]) | B2 m -> (2, [ m ])) } );
       ( "String",
         fun adt ->
           let str s = VExt (adt, Slice s) in
@@ -85,6 +89,7 @@ let fns : (string * (value list -> value list)) list =
     ("divmod", function [ a; b ] -> let q, r = Ffi_core.divmod (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity);
     ("nat-cmp", binary (fun a b -> plain "Cmp" (match Ffi_core.nat_cmp (z a) (z b) with CLt -> 0 | CEq -> 1 | CGt -> 2) []));
     ("nat-mod", nats "Nat" Ffi_core.nat_mod);
+    ("nat-halve", unary (fun a -> int "Half" (Ffi_core.nat_halve (z a))));
     ("bin-to-nat", unary (fun a -> int "Nat" (Ffi_core.bin_to_nat (z a))));
     ("trim", unary (fun s -> text (Ffi_core.trim (slice s))));
     ("append", binary (fun a b -> text (Ffi_core.append (slice a) (slice b))));

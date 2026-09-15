@@ -2479,4 +2479,21 @@ bootstrap runs in the same time as before (about four minutes here).
      remains of the self-compile is elaboration (fact-table lookups,
      structural `bin-cmp`, the rules list); the session's audit report
      lists it.
+135. **`Half` is an extern type over a `Nat`, and `nat-halve` the identity
+     into it** (the owner's suggestion, during a probe of whether `slc`'s
+     ids could be `Nat`s with the bijective spelling erased). `Half n`
+     has the constructors `HZ`, `H1 m` and `H2 m` for n = 0, 2m+1 and
+     2m+2, `m` at `many` with an erased `Double m d` fixing the index;
+     `nat-halve` models it structurally and the FFI holds a `Half` as
+     the `Nat` itself, matched and built through `Bin`'s views and
+     templates (`lib/ffi.ml`, `lib/ffi_templates.txt`), so a trie keyed
+     by a `Nat` can walk its digits at the cost `Bin`'s template has.
+     `slc` carries it as `ExtHalf` with a `PHalf` payload in its
+     compile-time interpreter. The probe (a `Nat`-keyed twin of
+     `base.sl`'s `IdMap` with the same evidence, kept in the session's
+     scratchpad, not the repo) type-checked with the spelling hidden and
+     ran 200k inserts and lookups in the time of the `Bin`-keyed map;
+     as an extern *function* returning a plain block it had been about
+     20% slower. Whether ids become `Nat`s is not decided; nothing in
+     `slc` uses `Half` yet.
 

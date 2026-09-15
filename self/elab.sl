@@ -2197,6 +2197,12 @@
     ((B1 r) (rwrap "(B1 " (show-bin r) ")"))
     ((B2 r) (rwrap "(B2 " (show-bin r) ")"))))
 
+(def-fns _ $ many show-half : (many (Nat) n) -> (many (Rope) r)
+  (match many (nat-halve n) _
+    ((HZ) (RStr "(HZ)"))
+    ((H1 m d dd) (rwrap "(H1 " (show-nat m) ")"))
+    ((H2 m d dd) (rwrap "(H2 " (show-nat m) ")"))))
+
 (def-fns _ $ many show-str : (subterm many (String) s) -> (many (Rope) r)
   (match many s _
     ((SNil) (RStr "(SNil)"))
@@ -2204,7 +2210,7 @@
 
 (def-fns _ $ many show-plain : (erased (Nat) a) (many (Block a) b) -> (many (Rope) r)
   (match many b _
-    ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PBin x) (show-bin x)) ((PStr x) (show-str x))))
+    ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PBin x) (show-bin x)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
     ((BCtorFn z c) (rwrap "<constructor " (RStr $ ctor-name c) ">"))
     ((BMat z adt) (rwrap "<matchable " (RStr $ adt-name adt) ">"))
     ((BToken z) (RStr "_"))

@@ -30,6 +30,7 @@ let div = Z.div
 let divmod = Z.div_rem
 let nat_cmp a b = if Z.lt a b then CLt else if Z.equal a b then CEq else CGt
 let nat_mod = Z.rem
+let nat_halve n = n
 let bin_to_nat n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
