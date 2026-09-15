@@ -48,8 +48,8 @@ inconsistent or silent.
    contradiction. Open: do opaque types have no `Matchable`, and are
    they therefore neither matchable nor empty? Narrowed by §19's
    opening: nothing is matchable or empty until a `Matchable` for it
-   is opened, and the built-ins have none to open. Whether that is the
-   owner's answer, or a `Matchable` for them is wanted, is still open.
+   is opened, and the built-ins have none to open. Settled: §19 now
+   says so, the owner's decision.
 
 7. **Contradiction discovered in a present branch.** §12 says the
    automatically refuted branch is written `(absurd C)`. Unstated: is a
@@ -194,14 +194,19 @@ inconsistent or silent.
     dune hello-world stub.
 29. Whether an opened `Newtype` for `C` beside an opened `Matchable`
     marking `C` phantom is a contradiction (§19, §38): the proposal
-    left it unsettled, and §19 records only that a `Newtype` is
-    asserted nothing of.
+    left it unsettled. Settled: it is not, the owner's decision; §19's
+    "a `Newtype` is only recorded" stands, and
+    `tests/open_newtype_phantom.sl` shows the pair recorded. The
+    argument that such a pair is dead code by inhabitation is not one
+    this language admits, a `many` parameter holding a phantom
+    constructor in an erased call (§20), which the same test shows.
 30. §23's erasure invariant has no clause for `open-absurd` (§19),
     which compiles to absurd code and never runs; the proposal listed
     the clause as unsettled.
 31. Whether `open-absurd` with `_` as a whole function body makes
     §37's `absurd` marker redundant for the route through a
     `Matchable` contradiction; listed as unsettled by the proposal.
+    Settled: §37 now names the division, the owner's decision.
 
 The three items most likely to make a handoff fail outright appear to
 be 1, 13 and 14, since an implementer would have to invent core

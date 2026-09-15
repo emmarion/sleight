@@ -879,7 +879,10 @@ constructors are told apart only by their opened `Matchable`s, so an
 unopened first-class one unifies with any other.
 
 `def-adts` opens what it mints, as does the FFI (§41) for the built-in
-`Special`.
+`Special`. The opaque built-ins, `Level`, `Predates`, `Subterm` and
+`Coercible` (§8, §38), have no `Matchable` and are never opened, so they
+are neither matchable nor empty (§37): no `absurd` function can hand
+back one of their proofs as its contradiction.
 
 `def-adts` is the sole minting site: declaring an ADT mints an anonymous
 `Matchable` describing it, from the `enum`/`union` tag and the
@@ -1576,6 +1579,13 @@ consistency, such a function can never be called at runtime, since a
 call would need the values from which its body derives the
 contradiction, so it compiles to no code: its function pointer may be
 null, or anything at all.
+
+Its counterpart for a contradiction that lives in the fact table rather
+than in a value, two constructors of one opened `Matchable` equated, is
+`open-absurd` (§19): it produces the declared result directly, with no
+empty type in between, and the marker is not needed on that route. Where
+a scrutinee is at hand, neither is: a match whose branches are all
+refuted produces its declared result (§12).
 
 The owner's expectation, not yet applied to the rest of the design:
 with absurd functions available, a non-erased `match` with no branches
