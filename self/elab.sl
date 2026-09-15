@@ -1051,12 +1051,12 @@
         ((BTrue) (and (term-eq ty best) $ agree rest env tid best))))))
 
 (def-fns _ $ many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info)
-  (match many (find-matchable-in (env-objects env) env tid $ None _) _
+  (match many (find-matchable-in (objects-by-head env tid) env tid $ None _) _
     ((None a) (values env $ None _))
     ((Some a info)
       (match many info _
         ((MkMatchInfo mid d cs rank)
-          (match many (agree (env-objects env) env tid $ type-of env mid) _
+          (match many (agree (objects-by-head env tid) env tid $ type-of env mid) _
             ((BTrue) (values env $ Some _ info))
             ((BFalse) (values (env-error env $ str-cat "ambiguous Matchables for " $ name-of env tid) $ Some _ info))))))))
 

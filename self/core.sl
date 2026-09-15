@@ -1625,17 +1625,17 @@
 (def-adts
   (Table : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type
     enum
-    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) -> (Table n f c)))
+    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Bool) dirty) -> (Table n f c)))
   (Added : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type
     enum
     (many MkAdded : (erased (Nat) k) (erased (Facts $ Succ k) f) (erased (Facts k) f2) (erased (Nat) c) (many (Table k f2 c) tb) -> (Added (Succ k) f c))))
 
-(let (many empty-table) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) $ AbEmpty (Nil $ Digit) $ Zero)
+(let (many empty-table) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (BFalse))
 
 ; The table after a variable is ruled out with a term fresh in the result: the rule is appended, the
 ; keys and the order extended, and both agreements carried across.
 (def-fns _ $ many rule-into : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Above (Nil $ Digit) c n f) ab) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1)
-    (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb)
+    (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) (many (Bool) dirty) (many (Bool) keyed) -> (many (Table k f2 c) tb)
   (let (erased ru2) (erased ap) $ append-rule ru $ MkRule x t)
   (let (erased ar2) $ ARCons _ _ _ _ (ruledin-out-new x t n f k f2 o) $ allruled-out ks x t n f k f2 o ar)
   (MkTable _ f2 _ ru2 _
@@ -1643,12 +1643,13 @@
     (keys-snoc (Nil $ Nat) ru ks keys x t ru2 ap)
     ar2
     (c1-out (Nil $ Digit) x x (WNil x) t n f k f2 o ru c1 ru2 ap)
-    $ above-out (Nil $ Digit) c x t n f k f2 ab o))
+    (above-out (Nil $ Digit) c x t n f k f2 ab o)
+    $ or dirty keyed))
 
 ; Unification's binding: rule the variable out, and the occurs check is the term still being fresh.
-(def-fns _ $ many rule-out-refresh : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) x) (erased (In x n f) p) (many (Term) t) -> (many (Maybe $ Added n f bnd) r)
+(def-fns _ $ many rule-out-refresh : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) x) (erased (In x n f) p) (many (Term) t) (many (Bool) keyed) -> (many (Maybe $ Added n f bnd) r)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
       (match many (facts-rule-out _ f0 x p t) _
         ((MkRemoved a b k d f2 o)
           (let (erased ru2) (erased ap) $ append-rule ru $ MkRule x t)
@@ -1657,22 +1658,22 @@
             ((None e) (None _))
             ((Some e box)
               (match many box _
-                ((MkFrBox a2 b2 c3 ft) (Some _ $ MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 x t _ f2 o ft))))))))))
+                ((MkFrBox a2 b2 c3 ft) (Some _ $ MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 x t _ f2 o ft dirty keyed))))))))))
 
 ; A new entry, rule-free, at the fresh id x above every key of the table: the count grows.
 (def-fns _ $ many table-insert : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (erased (Lt c x) lt) (many (Term) ty) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 x) tb2)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
       (match many (facts-insert x _ f0 ty) (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) tb2))
         (absurd (IKept a b d q) (le-lt-absurd _ _ (above-taken c n f0 x ab q) lt))
         ((IGrew a b d f1 i q)
           (values (Succ n) f1 (MkTable _ f1 _ ru _ ord keys (allruled-ins ks x n f0 (Succ _) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ _) f1 i ru c1)
-                                 $ above-ins (Nil $ Digit) x n f0 (Succ _) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-weaken c x lt) i (WNil x) $ lt-succ x)))))))
+                                 (above-ins (Nil $ Digit) x n f0 (Succ _) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-weaken c x lt) i (WNil x) $ lt-succ x) dirty)))))))
 
 ; A new entry with a rule, its term canonical: inserted rule-free and ruled out at once.
 (def-fns _ $ many table-insert-ruled : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (erased (Lt c x) lt) (many (Term) ty) (many (Term) t) (erased (Fr n f t) ft) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 x) tb2)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
       (match many (facts-insert x _ f0 ty) (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) tb2))
         (absurd (IKept a b d q) (le-lt-absurd _ _ (above-taken c n f0 x ab q) lt))
         ((IGrew a b d f1 i q)
@@ -1680,11 +1681,11 @@
             ((MkRemoved a2 b2 k d2 f2 o)
               (values k f2 (rule-into _ _ _ (above-ins (Nil $ Digit) x n f0 (Succ _) f1 x x (above-weaken (Nil $ Digit) c x n f0 ab $ lt-weaken c x lt) i (WNil x) $ lt-succ x)
                               ru _ ord keys (allruled-ins ks x n f0 (Succ _) f1 i ar) (c1-ins (Nil $ Digit) x n f0 (Succ _) f1 i ru c1)
-                              x t _ f2 o $ fresh-ins-out x t n f0 (Succ _) f1 k f2 i o t ft)))))))))
+                              x t _ f2 o (fresh-ins-out x t n f0 (Succ _) f1 k f2 i o t ft) dirty (BFalse))))))))))
 
 (def-fns _ $ many table-weaken : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Nat) c2) (many (Table n f c) tb) (erased (Lt c (Succ c2)) le) -> (many (Table n f c2) tb2)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (MkTable _ f0 _ ru _ ord keys ar c1 $ above-weaken (Nil $ Digit) c c2 n0 f0 ab le))))
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (MkTable _ f0 _ ru _ ord keys ar c1 (above-weaken (Nil $ Digit) c c2 n0 f0 ab le) dirty))))
 
 ; Two distinct variables: ruling the newer out leaves the older rule-free, so the alias is fresh.
 (def-fns _ $ erased in-out-neq : (erased (Nat) z) (erased (Nat) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o) (erased (Neq z x) ne) (erased (In z n f) p) -> (erased (In z k f2) q)
@@ -1707,25 +1708,25 @@
         ((In2 z1 dz ddz h1 c1 c2 c3 here1 one1 two1 p1 q1)
           (In2 _ _ ddz _ _ _ _ _ _ _ _ $ in-out-neq z1 x1 t0 a2 two k2 two2 q (neq-half z1 dz x1 dx ddz ddx $ neq-pred dz dx $ neq-pred (Succ dz) (Succ dx) ne) q1))))))
 
-(def-fns _ $ many rule-out-var : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) ne) -> (many (Added n f bnd) r)
+(def-fns _ $ many rule-out-var : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) ne) (many (Bool) keyed) -> (many (Added n f bnd) r)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
       (match many (facts-rule-out _ f0 newer pn $ TVar older) _
         ((MkRemoved a b k d f2 o)
-          (MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 newer (TVar older) _ f2 o $ FrVar k f2 older $ in-out-neq older newer (TVar _) n f0 k f2 o ne po))))))
+          (MkAdded _ _ _ _ $ rule-into _ _ _ ab ru _ ord keys ar c1 newer (TVar older) _ f2 o (FrVar k f2 older $ in-out-neq older newer (TVar _) n f0 k f2 o ne po) dirty keyed))))))
 
 (def-fns _ $ many canon-in : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Term) t) -> (many (Term) r) (erased (Fr n f r) fr)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1))))
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1))))
 (def-fns _ $ many canon-list-in : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (List $ Term) ts) -> (many (List $ Term) r) (erased (FrL n f r) fr)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (canon-list ru ts _ f0 _ _ (PNil ru) ord (GLTop ts) c1))))
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (canon-list ru ts _ f0 _ _ (PNil ru) ord (GLTop ts) c1))))
 (def-fns _ $ many canon-tele-in : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (List $ Entry) es) -> (many (List $ Entry) r) (erased (FrT n f r) fr)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (canon-tele ru es _ f0 _ _ (PNil ru) ord (GTTop es) c1))))
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (canon-tele ru es _ f0 _ _ (PNil ru) ord (GTTop es) c1))))
 (def-fns _ $ many canon-mctors-in : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (List $ MCtor) cs) -> (many (List $ MCtor) r) (erased (FrM n f r) fr)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (canon-mctors ru cs _ f0 _ _ (PNil ru) ord (GMTop cs) c1))))
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (canon-mctors ru cs _ f0 _ _ (PNil ru) ord (GMTop cs) c1))))
 
 
 ; ---- The scope environment (section 3) and fact table (section 18); [heap] the store every Const's value
@@ -1735,13 +1736,16 @@
   (Env : -> Type
     enum
     (many MkEnv : (erased (Nat) hs) (many (Heap Block hs) heap) (many (NameMap $ Nat) scope) (many (IdMap $ EInfo hs) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
-       (many (Bool) run-pos) (many (List $ Nat) objects)
+       (many (Bool) run-pos) (many (Objects) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Addr hs) $ Term) finals) (many (List $ String) errors)
        (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ String) claimed) (many (List $ String) warnings)
        (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) -> (Env)))
   (Loc : -> Type
     enum
     (many MkLoc : (many (String) file) (many (Nat) line) -> (Loc)))
+  (Objects : -> Type
+    enum
+    (many MkObjects : (many (List $ Nat) all) (many (IdMap $ List $ Nat) by-head) (many (IdMap $ List $ Nat) by-ctor) -> (Objects)))
   (EInfo : ((Nat) a) -> Type
     enum
     (many MkEInfo : (erased (Nat) a) (many (Maybe $ String) name) (many (Mult) mult) (many (State a) state) (many (Bool) minted) (many (Bool) meta) -> (EInfo a)))
@@ -1825,11 +1829,34 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) fr)))
 (def-fns _ $ many env-facts : (many (Env) e) -> (erased (Nat) n) (many (Facts n) f)
   (let (erased n) (erased f) (many bnd) (many tb) $ env-table e)
-  (match many tb _ ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab) (values n0 f0))))
+  (match many tb _ ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (values n0 f0))))
 (def-fns _ $ many env-run-pos : (many (Env) e) -> (many (Bool) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) rp)))
-(def-fns _ $ many env-objects : (many (Env) e) -> (many (List $ Nat) r)
+(def-fns _ $ many env-objs : (many (Env) e) -> (many (Objects) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) ob)))
+(def-fns _ $ many env-objects : (many (Env) e) -> (many (List $ Nat) r)
+  (match many (env-objs e) _ ((MkObjects all heads ctors) all)))
+(def-fns _ $ many env-dirty : (many (Env) e) -> (many (Bool) r)
+  (let (erased n) (erased f) (many bnd) (many tb) $ env-table e)
+  (match many tb _ ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) dirty)))
+(def-fns _ $ many index-get : (many (Nat) k) (many (IdMap $ List $ Nat) m) -> (many (List $ Nat) r)
+  (match many (idmap-get _ k m) _ ((Hit t kk mm xs p) xs) ((Miss t kk mm p) (Nil _))))
+(def-fns _ $ many index-add : (many (Nat) k) (many (Nat) x) (many (IdMap $ List $ Nat) m) -> (many (IdMap $ List $ Nat) r)
+  (idmap-set _ k (Cons _ x $ index-get k m) m))
+(def-fns _ $ many objects-by-head : (many (Env) e) (many (Nat) z) -> (many (List $ Nat) r)
+  (match many (env-dirty e) _
+    ((BTrue) (env-objects e))
+    ((BFalse) (match many (env-objs e) _ ((MkObjects all heads ctors) (index-get z heads))))))
+(def-fns _ $ many objects-by-ctor : (many (Env) e) (many (Nat) x) -> (many (List $ Nat) r)
+  (match many (env-dirty e) _
+    ((BTrue) (env-objects e))
+    ((BFalse) (match many (env-objs e) _ ((MkObjects all heads ctors) (index-get x ctors))))))
+(def-fns _ $ many env-keyed : (many (Env) e) (many (Nat) x) -> (many (Bool) r)
+  (match many (env-objs e) _
+    ((MkObjects all heads ctors)
+      (match many (idmap-get _ x heads) _
+        ((Hit t kk mm xs p) (BTrue))
+        ((Miss t kk mm p) (match many (idmap-get _ x ctors) _ ((Hit t2 kk2 mm2 xs2 p2) (BTrue)) ((Miss t2 kk2 mm2 p2) (BFalse))))))))
 (def-fns _ $ many env-literals : (many (Env) e) -> (many (NameMap $ Nat) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) li)))
 (def-fns _ $ many env-errors : (many (Env) e) -> (many (List $ String) r)
@@ -1981,7 +2008,7 @@
 (def-fns _ $ many fact-at : (many (Env) env) (many (Nat) x) -> (many (Term) ty) (many (Maybe $ Term) rule)
   (let (erased n) (erased f) (many bnd) (many tb) $ env-table env)
   (match many tb _
-    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
       (match many (facts-lookup x _ f0 _ _ (WNil x) _ c1) _
         ((LNone a b c d e) (values (TErr $ str-cat "no fact for " $ nat-str x) $ None _))
         ((LRuled a b c d e ty t m) (values ty $ Some _ t))
@@ -2070,6 +2097,43 @@
                                ((SgIs t t-ty) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
             (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
 
+(def-fns _ $ many table-ruled : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Bool) r)
+  (match many tb _
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
+      (match many (facts-lookup x _ f0 _ _ (WNil x) _ c1) _
+        ((LRuled a b d e h ty t m) (BTrue)) (else (BFalse))))))
+
+(def-fns _ $ many table-dirty : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Bool) more) -> (many (Table n f c) r)
+  (match many tb _
+    ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty) (MkTable _ f0 _ ru _ ord keys ar c1 ab $ or dirty more))))
+
+(def-fns _ $ many index-ctors : (subterm many (List $ MCtor) cs) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (IdMap $ List $ Nat) m) -> (many (IdMap $ List $ Nat) r) (many (Bool) clean)
+  (match many cs _
+    ((Nil a) (values m (BTrue)))
+    ((Cons a mc rest)
+      (match many mc _
+        ((MkMCtor mu t)
+          (match many t _
+            ((TVar y)
+              (let (many m2) (many clean) $ index-ctors rest _ _ _ tb x $ index-add y x m)
+              (values m2 $ and clean $ not $ table-ruled _ _ _ tb y))
+            (else
+              (let (many m2) (many clean) $ index-ctors rest _ _ _ tb x m)
+              (values m2 (BFalse)))))))))
+
+(def-fns _ $ many register-object : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Term) ty) (many (Objects) ob) -> (many (Table n f c) tb2) (many (Objects) ob2)
+  (match many ob _
+    ((MkObjects all heads ctors)
+      (let (many all2) $ Cons _ x all)
+      (match many ty _
+        ((TMatchable d t cs)
+          (match many t _
+            ((TVar h)
+              (let (many ctors2) (many clean) $ index-ctors cs _ _ _ tb x ctors)
+              (values (table-dirty _ _ _ tb $ not $ and clean $ not $ table-ruled _ _ _ tb h) (MkObjects all2 (index-add h x heads) ctors2)))
+            (else (values (table-dirty _ _ _ tb (BTrue)) (MkObjects all2 heads ctors)))))
+        (else (values tb (MkObjects all2 heads ctors)))))))
+
 ; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
 ; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
 ; name or by type, and unification alone solves it. No other entry's type or rule may mention one still
@@ -2096,11 +2160,14 @@
           ((None a) (table-insert _ _ _ tb x ltp ty))
           ((Some a t)
             (match many tb (((Nat) n2) ((Facts n2) f2) ((Table n2 f2 x) t2))
-              ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab)
+              ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab dirty)
                 (let (many t2) (erased ft) $ canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1)
                 (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))))
-      (let (many (List $ Nat) ob2) $ match many (and (not meta) $ is-object-type ty coercible) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-      (values (MkEnv _ hp sc2 en2 _ _ x tb2 rp ob2 li fi er lv sts cl wa lt lo pr) x))))
+      (let (many (Table nf2 ff2 x) tb3) (many (Objects) ob2)
+        (match many (and (not meta) $ is-object-type ty coercible) _
+          ((BTrue) (register-object _ _ _ tb2 x ty ob))
+          ((BFalse) (values tb2 ob))))
+      (values (MkEnv _ hp sc2 en2 _ _ x tb3 rp ob2 li fi er lv sts cl wa lt lo pr) x))))
 
 (def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
     (many (Env) r) (many (Nat) x)
@@ -2236,7 +2303,7 @@
   (MkEntry (Some _ name) (BFalse) (Erased) $ SgTy t))
 
 (let (many empty-env)
-  $ MkEnv _ (heap-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
+  $ MkEnv _ (heap-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (MkObjects (Nil _) (MEmpty _) (MEmpty _)) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) (Succ (Zero)))
@@ -2462,7 +2529,7 @@
   (match many (or (dangling t 0) $ not $ or force $ is-meta env x) _
     ((BTrue) (contradiction _ bnd env a b))
     ((BFalse)
-      (match many (rule-out-refresh _ _ bnd tb x p t) _
+      (match many (rule-out-refresh _ _ bnd tb x p t $ env-keyed env x) _
         ((None c) (Contra _ _ $ rope-str $ rcat3 (RStr $ name-of env x) (RStr " occurs in ") $ show-term t env))
         ((Some c added)
           (match many added _
@@ -2492,17 +2559,17 @@
                         (match many (and (is-meta env x) $ or (not $ is-meta env y) $ nat-eq x newer) _
                           ((BTrue) (values x y px py $ neq-sym _ _ ne))
                           ((BFalse) (values y x py px ne))))
-                      (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
+                      (match many (rule-out-var _ _ bnd tb m o pm po2 neq2 $ env-keyed env m) _
                         ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
                     ((BFalse)
-                  (match many (or (not force) $ listed (env-objects env) env x y) _
+                  (match many (or (not force) $ listed (objects-by-ctor env x) env x y) _
                     ((BTrue) (contradiction _ bnd env a b))
                     ((BFalse)
                       (let (many sx) $ signature-of env newer)
                       (let (many sy) $ signature-of env older)
-                      (let (many mx) $ matchable-heading (env-objects env) env newer)
-                      (let (many my) $ matchable-heading (env-objects env) env older)
-                      (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
+                      (let (many mx) $ matchable-heading (objects-by-head env newer) env newer)
+                      (let (many my) $ matchable-heading (objects-by-head env older) env older)
+                      (match many (rule-out-var _ _ bnd tb newer older pn po neq $ env-keyed env newer) _
                         ((MkAdded k f0 f2 tb2c tb2)
                           (let (many env2) $ env-set-table env _ _ bnd tb2)
                           (let (erased p) $ prove-subterm k n)

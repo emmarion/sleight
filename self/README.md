@@ -211,6 +211,27 @@ the entry says otherwise, and recorded so it can be revisited.
   binding a fresh id refutes the position being taken (ASSUMPTIONS 97).
   All of it is erased, so the compiled compiler runs the same code as
   before.
+- **The objects in scope are indexed by the raw head and constructors
+  of their Matchable types** (`Objects` in `core.sl`). Section 19's
+  disjointness rule and the fetch of a type's Matchable used to walk
+  every object in scope and canonicalize each one's type, which a
+  profile of the self-compile put at most of its time (about two
+  million type reads for ten thousand lines). Now `listed` reads the
+  objects whose declared constructor list names the atom and
+  `matchable-heading`, `find-matchable-in` and `agree` the objects whose
+  declared head is the type constructor, in the order the scan would
+  have met them, and the same predicates run over those candidates.
+  The session's reading of why this is exact: an object's canonical type
+  differs from its declared one only through a rule on an id the
+  declared type mentions, so the table carries a `dirty` flag, set when
+  a rule is minted on an indexed id or an object registers with one
+  already ruled, and while it is set the four fall back to the full
+  scan. Compiling slc never sets it. A `Newtype` or `Coercible` object
+  is only listed, `find-newtype` and `find-coercible` still scanning.
+  Should proposals/matchable-newtype-opening.md land, the index is the
+  natural shape of its record of opened objects, keyed as that
+  proposal's assertion keys them; the flag stands in for the merge that
+  a rule equating two opened heads would then perform.
 - **Errors are values.** The language has no exceptions, so an
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where
