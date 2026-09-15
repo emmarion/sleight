@@ -962,7 +962,7 @@
   (rcat3 (RStr $ str-cat3 "Driver_core." field " = ") r $ RStr "; "))
 
 (def-fns _ $ many driver-rope : (many (Decls) d) (many (Env) env) -> (many (Rope) r)
-  (rcat5 (RStr "let driver = Driver_core.make { ")
+  (rcat5 (RStr "let driver = Driver_core.make ~of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) { ")
     (rcat5 (driver-op "zero" $ driver-make d env "Zero") (driver-op "succ" $ driver-make d env "Succ") (driver-op "pred" $ driver-un d env "Nat" $ AkOption "Succ")
       (driver-op "u8" $ driver-make d env "MkU8") $ driver-op "un_u8" $ driver-un d env "U8" $ AkField)
     (rcat5 (driver-op "char" $ driver-make d env "MkChar") (driver-op "un_char" $ driver-un d env "Char" $ AkField) (driver-op "snil" $ driver-make d env "SNil")

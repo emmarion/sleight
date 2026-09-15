@@ -32,7 +32,10 @@ let driver env =
     | "GetArgs", [ k ] -> GetArgs k
     | _ -> assert false
   in
-  make
+  let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
+  let of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
+  let to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
+  make ?of_host ?to_host
     { zero = build "Zero" []; succ = (fun n -> build "Succ" [ n ]); pred = (fun v -> match des "Zero" v with 1, [ p ] -> Some p | _ -> None);
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
       snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);

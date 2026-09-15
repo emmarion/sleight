@@ -303,7 +303,10 @@ let rec show cx env ty =
          | _ -> "\"?\"");
       name
 
-(* The driver's operations on the prelude's values, each direct (lib/driver_core.ml). *)
+(* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the
+   FFI's slice converts to and from the host's string directly. *)
+let host_conversions =
+  "~of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) "
 let driver cx =
   let c = Program.ctor cx.env in
   let lam fs body = Printf.sprintf "(fun %s -> %s)" (params fs) body in
@@ -320,7 +323,8 @@ let driver cx =
       ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
       ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)") ]
   in
-  Printf.sprintf "let driver = Driver_core.make { %s }\n" (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
+  let host = match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "" in
+  Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ {|let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
 let world = { Driver_core.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; exit; print = print_endline }

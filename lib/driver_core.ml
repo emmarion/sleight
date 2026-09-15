@@ -38,18 +38,24 @@ type 'v t = { of_string : string -> 'v; to_string : 'v -> string; run_io : world
 let read_file path = In_channel.with_open_bin path In_channel.input_all
 let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
 
-let make o =
+let make ?of_host ?to_host o =
   let rec nat v = match o.pred v with Some p -> 1 + nat p | None -> 0 in
   let u8 v = nat (o.un_u8 v) in
   let of_string s =
-    let rec nat n = if n = 0 then o.zero else o.succ (nat (n - 1)) in
-    String.fold_right (fun ch acc -> o.scons (o.char (o.u8 (nat (Char.code ch)))) acc) s o.snil
+    match of_host with
+    | Some f -> f s
+    | None ->
+        let rec nat n = if n = 0 then o.zero else o.succ (nat (n - 1)) in
+        String.fold_right (fun ch acc -> o.scons (o.char (o.u8 (nat (Char.code ch)))) acc) s o.snil
   in
   let to_string v =
-    let buf = Buffer.create 64 in
-    let rec go v = match o.un_str v with Some (ch, rest) -> Buffer.add_char buf (Char.chr (u8 (o.un_char ch))); go rest | None -> () in
-    go v;
-    Buffer.contents buf
+    match to_host with
+    | Some f -> f v
+    | None ->
+        let buf = Buffer.create 64 in
+        let rec go v = match o.un_str v with Some (ch, rest) -> Buffer.add_char buf (Char.chr (u8 (o.un_char ch))); go rest | None -> () in
+        go v;
+        Buffer.contents buf
   in
   let run_io w v =
     let result f = match f () with x -> o.ok x | exception Sys_error m -> o.fail (of_string m) in

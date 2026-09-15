@@ -2462,3 +2462,21 @@ bootstrap runs in the same time as before (about four minutes here).
      every value that fits an `int` as an immediate (`z.mli`'s first
      lines); a walk over sixty million `Bin` digits went from 0.37 s to
      0.19 s with the parity fast path.
+134. **The driver converts a `String` held as the FFI's slice to and from
+     the host's string directly** (the owner's request, after a
+     performance audit). `Driver_core.make` takes optional `of_host`
+     and `to_host`; `lib/program.ml` supplies them when `String` is the
+     FFI's slice, `lib/extract.ml` emits them when `String` extracts as
+     an extern, and `self/emit.sl` always does, `slc`'s `String` being
+     the slice; without them `of_string` and `to_string` fold over
+     `scons` and `un_str` as before, which is what `--no-extern` gets.
+     The folds consed a read file one `SCons` at a time, and under the
+     FFI each `SCons` copies its tail, so a `ReadFile` of n bytes copied
+     about n^2/2 bytes, every copy going to the major heap: measured on
+     a pinned self-compile, 32.4 s to 3.8 s wall with 21 s of system
+     time (heap compactions) gone, and a program echoing a 240 KB file
+     from 17 s extracted and 565 s interpreted to milliseconds. What
+     remains of the self-compile is elaboration (fact-table lookups,
+     structural `bin-cmp`, the rules list); the session's audit report
+     lists it.
+
