@@ -62,7 +62,9 @@ host (section 41); a `U8` or a
   the size alone, the lemmas over the prelude's `Double` and `Numeral`
   doing the work.
 - `reader.sl` — s-expressions with `$` (sections 1-2): a structural
-  tokenizer, accumulating each token as a `Rope` of characters flattened
+  tokenizer, a word being a slice of the source cut by the prelude's
+  `str-split` under an `Add` invariant counting the characters taken
+  and remaining, a string literal a `Rope` of characters flattened
   once, and a fold over the tokens with a stack of open forms.
 - `core.sl` — terms with de Bruijn telescopes (section 5), the
   special-form registry (section 27), runtime values and post-erasure

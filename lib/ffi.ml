@@ -23,8 +23,8 @@ let claim table loc name =
    the many-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. *)
 let shapes = [ ("Nat", [ 0; 1 ]); ("String", [ 0; 2 ]); ("Rope", [ 0; 1; 2; 1 ]); ("Cmp", [ 0; 0; 0 ]); ("Half", [ 0; 1; 1 ]) ]
-let arities = [ ("add", 2); ("sub", 2); ("mul", 2); ("div", 2); ("divmod", 2); ("nat-cmp", 2); ("nat-mod", 2); ("nat-halve", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
-let needs = [ ("nat-cmp", [ "Cmp" ]); ("nat-halve", [ "Half" ]); ("flatten", [ "Rope" ]) ]
+let arities = [ ("add", 2); ("sub", 2); ("mul", 2); ("div", 2); ("divmod", 2); ("nat-cmp", 2); ("nat-mod", 2); ("nat-halve", 1); ("trim", 1); ("append", 2); ("flatten", 1); ("str-cmp", 2); ("str-length", 1); ("str-split", 2); ("nat-str", 1) ]
+let needs = [ ("nat-cmp", [ "Cmp" ]); ("str-cmp", [ "Cmp" ]); ("nat-halve", [ "Half" ]); ("flatten", [ "Rope" ]) ]
 
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
@@ -76,6 +76,7 @@ let types : (string * (adt -> ext)) list =
 let unary f = function [ a ] -> [ f a ] | _ -> raise arity
 let binary f = function [ a; b ] -> [ f a b ] | _ -> raise arity
 let nats name f = binary (fun a b -> int name (f (z a) (z b)))
+let cmp get f = binary (fun a b -> plain "Cmp" (match f (get a) (get b) with Ffi_core.CLt -> 0 | CEq -> 1 | CGt -> 2) [])
 
 let fns : (string * (value list -> value list)) list =
   [ ("add", nats "Nat" Ffi_core.add);
@@ -83,7 +84,11 @@ let fns : (string * (value list -> value list)) list =
     ("mul", nats "Nat" Ffi_core.mul);
     ("div", nats "Nat" Ffi_core.div);
     ("divmod", function [ a; b ] -> let q, r = Ffi_core.divmod (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity);
-    ("nat-cmp", binary (fun a b -> plain "Cmp" (match Ffi_core.nat_cmp (z a) (z b) with CLt -> 0 | CEq -> 1 | CGt -> 2) []));
+    ("nat-cmp", cmp z Ffi_core.nat_cmp);
+    ("str-cmp", cmp slice Ffi_core.str_cmp);
+    ("str-length", unary (fun a -> int "Nat" (Ffi_core.str_length (slice a))));
+    ("str-split", function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity);
+    ("nat-str", unary (fun a -> text (Ffi_core.nat_str (z a))));
     ("nat-mod", nats "Nat" Ffi_core.nat_mod);
     ("nat-halve", unary (fun a -> int "Half" (Ffi_core.nat_halve (z a))));
     ("trim", unary (fun s -> text (Ffi_core.trim (slice s))));

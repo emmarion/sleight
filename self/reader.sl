@@ -32,8 +32,8 @@
     (or (nat-eq n 40)
       $ or (nat-eq n 41) $ nat-eq n 59)))
 
-(def-fns _ $ many word-tok : (many (Nat) line) (many (Rope) chars) -> (many (Tok) t)
-  (let (many w) $ rope-str chars)
+(def-fns _ $ many word-tok : (many (Nat) line) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t)
+  (let (many w) (many after) (erased p) (erased la) (str-split start k len l (add-le-left k rl len sum)))
   (match many (str-cmp w "$") _
     ((CEq eq-t eq-r eq-x) (TDollar line))
     (else (TWord line w))))
@@ -87,7 +87,10 @@
           ((BFalse)
             (match many (char-is c 34) _
               ((BTrue) (string-lit rest line (REmpty) acc))
-              ((BFalse) (word rest line (RChar c) acc))))))))
+              ((BFalse)
+                (let (many len) (erased l) (str-length s))
+                (match erased l _
+                  ((SLenCons c0 s0 rl lr) (word rest line s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) acc))))))))))
   (many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ acc))
@@ -95,15 +98,17 @@
         (match many (char-is c 10) _
           ((BTrue) (tokenize rest (Succ line) acc))
           ((BFalse) (skip-comment rest line acc))))))
-  (many word : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
+  (many word : (subterm many (String) s) (many (Nat) line) (many (String) start) (erased (Nat) len) (erased (StrLength start len) l) (many (Nat) k) (erased (Nat) rl) (erased (StrLength s rl) lr) (erased (Add k rl len) sum) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
-      ((SNil) (end-toks (word-tok line rev) acc))
+      ((SNil) (end-toks (word-tok line start k len l rl sum) acc))
       ((SCons c rest)
         (match many (is-delim c) _
           ((BTrue)
-            (let (many comment) (many line2) (many acc2) $ delim-step c line $ Cons _ (word-tok line rev) acc)
+            (let (many comment) (many line2) (many acc2) $ delim-step c line $ Cons _ (word-tok line start k len l rl sum) acc)
             (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 acc2))))
-          ((BFalse) (word rest line (RCat rev $ RChar c) acc))))))
+          ((BFalse)
+            (match erased lr _
+              ((SLenCons c0 s0 rl1 lr1) (word rest line start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) acc))))))))
   (many string-lit : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (unterminated line acc))

@@ -71,30 +71,6 @@
   (let (many n) $ char-code c)
   (and (not $ nat-lt n lo) $ not $ nat-lt hi n))
 
-; The lexicographic order on strings, and its decision with proofs: CEq forces the two strings equal.
-(def-adts
-  (StrLt : ((String) a) ((String) b) -> Type
-    enum
-    (many SLtNil : (erased (Char) d) (erased (String) t) -> (StrLt (SNil) (SCons d t)))
-    (many SLtHead : (erased (Char) c) (erased (Char) d) (erased (String) s) (erased (String) t) (erased (CharLt c d) p) -> (StrLt (SCons c s) (SCons d t)))
-    (many SLtTail : (erased (Char) c) (erased (String) s) (erased (String) t) (erased (StrLt s t) p) -> (StrLt (SCons c s) (SCons c t)))))
-
-(def-fns _ $ many str-cmp : (subterm many (String) a) (many (String) b) -> (many (Cmp (String) StrLt a b) r)
-  (match many a _
-    ((SNil) (match many b _ ((SNil) (CEq _ _ a)) ((SCons d t) (CLt _ _ a b $ SLtNil d t))))
-    ((SCons c s)
-      (match many b _
-        ((SNil) (CGt _ _ a b $ SLtNil c s))
-        ((SCons d t)
-          (match many (char-cmp c d) _
-            ((CLt ct cr cx cy p) (CLt _ _ a b $ SLtHead c d s t p))
-            ((CEq ct cr cx)
-              (match many (str-cmp s t) _
-                ((CLt st sr sx sy q) (CLt _ _ a b $ SLtTail c s t q))
-                ((CEq st sr sx) (CEq _ _ a))
-                ((CGt st sr sx sy q) (CGt _ _ a b $ SLtTail c t s q))))
-            ((CGt ct cr cx cy p) (CGt _ _ a b $ SLtHead d c t s p))))))))
-
 (def-fns _ $ many rope-str : (many (Rope) r) -> (many (String) s)
   (let (many s) (erased p) (delegate (flatten r)))
   s)
@@ -111,11 +87,6 @@
 (def-fns _ $ many str-cat3 : (many (String) a) (many (String) b) (many (String) c) -> (many (String) d)
   (str-append a $ str-append b c))
 
-(def-fns _ $ many str-length : (subterm many (String) s) -> (many (Nat) n)
-  (match many s _
-    ((SNil) (Zero))
-    ((SCons c rest) (Succ $ str-length rest))))
-
 (def-fns _ $ many all-digits : (subterm many (String) s) -> (many (Bool) r)
   (match many s _
     ((SNil) (BTrue))
@@ -128,28 +99,6 @@
     ((SCons c rest)
       (or (all-digits s)
         $ and (char-is c 35) $ match many rest (((Bool) b)) ((SNil) (BFalse)) ((SCons c2 rest2) (char-is c2 92))))))
-
-; Decimal digits of a Nat by division, the quotient a subterm of a positive dividend (the prelude's divmod-lt).
-(def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
-  (char-of-code $ nat-add 48 d))
-
-(let (many ten-dec) (lt-dec (Zero) 10))
-(comptime-match ten-dec (Yes tda tdb ten-positive))
-(let (many ten-dec2) (lt-dec (Succ (Zero)) 10))
-(comptime-match ten-dec2 (Yes tea teb ten-above-one))
-
-(def-fns _ $ many nat-digits : (subterm many (Nat) n) (many (Rope) acc) -> (many (Rope) r)
-  (match many n _
-    ((Zero) acc)
-    ((Succ n1)
-      (let (many q) (many d) (erased m) (erased mm) (erased a) (erased p) (divmod n 10 ten-positive))
-      (let (erased lt) (divmod-lt n1 10 q d m mm a ten-above-one))
-      (nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))))
-
-(def-fns _ $ many nat-str : (many (Nat) n) -> (many (String) s)
-  (match many n _
-    ((Zero) "0")
-    ((Succ n1) (rope-str $ nat-digits n $ REmpty))))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.

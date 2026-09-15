@@ -32,6 +32,18 @@ let nat_cmp a b = if Z.lt a b then CLt else if Z.equal a b then CEq else CGt
 let nat_mod = Z.rem
 let nat_halve n = n
 let trim (s, o, l) = (String.sub s o l, 0, l)
+let str_cmp (s1, o1, l1) (s2, o2, l2) =
+  let n = min l1 l2 in
+  let rec go i =
+    if i = n then if l1 < l2 then CLt else if l1 = l2 then CEq else CGt
+    else if s1.[o1 + i] < s2.[o2 + i] then CLt
+    else if s1.[o1 + i] > s2.[o2 + i] then CGt
+    else go (i + 1)
+  in
+  go 0
+let str_length (_, _, l) = Z.of_int l
+let str_split (s, o, l) k = let k = Z.to_int k in ((s, o, k), (s, o + k, l - k))
+let nat_str n = let s = Z.to_string n in (s, 0, String.length s)
 let append (s1, o1, l1) (s2, o2, l2) = (String.sub s1 o1 l1 ^ String.sub s2 o2 l2, 0, l1 + l2)
 
 (* A rope flattened in two passes: its leaves in order, then one buffer of their total length. [rope] views a

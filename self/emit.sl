@@ -136,8 +136,9 @@
         ((Zero) (Cons _ b $ Nil _))
         ((Succ f) (Cons _ b $ str-split-fuel f rest code))))))
 
-(def-fns _ $ many str-split : (many (String) s) (many (Nat) code) -> (many (List $ String) r)
-  (str-split-fuel (str-length s) s code))
+(def-fns _ $ many split-on : (many (String) s) (many (Nat) code) -> (many (List $ String) r)
+  (let (many n) (erased p) (str-length s))
+  (str-split-fuel n s code))
 
 (def-fns _ $ many digits-of : (many (String) s) -> (many (Maybe $ Nat) r)
   (match many (and (not $ str-is-empty s) $ all-digits s) _
@@ -153,7 +154,7 @@
         ((BFalse)
           (match many (char-is c 102) _
             ((BTrue)
-              (match many (str-split rest 46) _
+              (match many (split-on rest 46) _
                 ((Cons a i more)
                   (match many more _
                     ((Cons b j none)
@@ -198,8 +199,9 @@
   (match many after _
     ((None t) (None _))
     ((Some t text)
-      (let (many pieces) $ parse-pieces (str-length text) text $ Nil _)
-      (match many (str-split head 32) _
+      (let (many n) (erased p) (str-length text))
+      (let (many pieces) $ parse-pieces n text $ Nil _)
+      (match many (split-on head 32) _
         ((Cons a kind more)
           (match many more _
             ((Cons b type rest)
@@ -511,7 +513,9 @@
   (match many p _
     ((PNat n) (nat-literal n))
     ((PHalf n) (nat-literal n))
-    ((PStr s) (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope $ str-length s) $ RStr ") : Ffi_core.slice))"))))
+    ((PStr s)
+      (let (many n) (erased p) (str-length s))
+      (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))))
 
 ; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function
 ; bound by a group is named, so a call of it is direct, a value use its closure.
@@ -1155,5 +1159,5 @@
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
   (let (many addrs) $ heap-addrs Block _ hp)
   (let (many marks) $ mark-pass _ hp (list-rev _ addrs) $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
-  (let (many d) $ collect-heap _ hp addrs env $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ str-split (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
+  (let (many d) $ collect-heap _ hp addrs env $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
   (rcat5 runtime-header (decls-rope d) (emit-blocks _ hp addrs marks env d) (driver-rope d env) $ emit-finals _ hp (list-rev _ fi) env d))

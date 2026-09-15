@@ -623,6 +623,57 @@
   (let (many c) (erased p) (delegate (append a b)))
   c)
 
+(def-adts
+  (StrLt : ((String) a) ((String) b) -> Type
+    enum
+    (many SLtNil : (erased (Char) d) (erased (String) t) -> (StrLt (SNil) (SCons d t)))
+    (many SLtHead : (erased (Char) c) (erased (Char) d) (erased (String) s) (erased (String) t) (erased (CharLt c d) p) -> (StrLt (SCons c s) (SCons d t)))
+    (many SLtTail : (erased (Char) c) (erased (String) s) (erased (String) t) (erased (StrLt s t) p) -> (StrLt (SCons c s) (SCons c t)))))
+
+(def-fns _ $ many extern str-cmp : (subterm many (String) a) (many (String) b) -> (many (Cmp (String) StrLt a b) r)
+  (match many a _
+    ((SNil) (match many b _ ((SNil) (CEq _ _ a)) ((SCons d t) (CLt _ _ a b $ SLtNil d t))))
+    ((SCons c s)
+      (match many b _
+        ((SNil) (CGt _ _ a b $ SLtNil c s))
+        ((SCons d t)
+          (match many (char-cmp c d) _
+            ((CLt ct cr cx cy p) (CLt _ _ a b $ SLtHead c d s t p))
+            ((CEq ct cr cx)
+              (match many (str-cmp s t) _
+                ((CLt st sr sx sy q) (CLt _ _ a b $ SLtTail c s t q))
+                ((CEq st sr sx) (CEq _ _ a))
+                ((CGt st sr sx sy q) (CGt _ _ a b $ SLtTail c t s q))))
+            ((CGt ct cr cx cy p) (CGt _ _ a b $ SLtHead d c t s p))))))))
+
+(def-adts
+  (StrLength : ((String) s) ((Nat) n) -> Type
+    enum
+    (many SLenNil : -> (StrLength (SNil) (Zero)))
+    (many SLenCons : (erased (Char) c) (erased (String) s) (erased (Nat) n) (erased (StrLength s n) p) -> (StrLength (SCons c s) (Succ n)))))
+
+(def-fns _ $ many extern str-length : (subterm many (String) s) -> (many (Nat) n) (erased (StrLength s n) p)
+  (match many s _
+    ((SNil) (values (Zero) (SLenNil)))
+    ((SCons c rest)
+      (let (many n) (erased p) (str-length rest))
+      (values (Succ n) (SLenCons c rest n p)))))
+
+(def-fns _ $ many extern str-split : (many (String) s) (subterm many (Nat) k) (erased (Nat) len) (erased (StrLength s len) l) (erased (Lt k (Succ len)) le) ->
+    (many (String) a) (many (String) b) (erased (Append a b s) p) (erased (StrLength a k) la)
+  (match many k _
+    ((Zero) (values (SNil) s (AppNil s) (SLenNil)))
+    ((Succ k1)
+      (match many s _
+        ((SNil) (match erased l _ ((SLenNil) (match erased le _ (absurd LtZ) ((LtS x y q) (match erased q _ (absurd LtZ) (absurd LtS)))))))
+        ((SCons c rest)
+          (match erased l _
+            ((SLenCons c0 s0 len1 l1)
+              (match erased le _
+                ((LtS x y q)
+                  (let (many a1) (many b) (erased p) (erased la1) (str-split rest k1 len1 l1 q))
+                  (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))))))))))
+
 (def-adts $ Rope : -> Type
   enum
   (many REmpty : -> (Rope))
@@ -649,6 +700,34 @@
       (let (many s) (erased ap) (append s1 s2))
       (values s (FlatCat a b s1 s2 s p q ap)))
     ((RChar c) (values (SCons c (SNil)) (FlatChar c)))))
+
+(let (many ten) (Succ (Succ eight)))
+(let (many ten-dec) (lt-dec (Zero) ten))
+(comptime-match ten-dec (Yes tda tdb ten-positive))
+(let (many ten-dec2) (lt-dec (Succ (Zero)) ten))
+(comptime-match ten-dec2 (Yes tea teb ten-above-one))
+(let (many forty-eight) (nat-add (nat-mul (Succ (Succ (Succ (Succ (Zero))))) ten) eight))
+
+(def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
+  (let (many code) (nat-add forty-eight d))
+  (match many (lt-dec code u8-modulus) _
+    ((Yes a b p) (MkChar $ MkU8 code p))
+    ((No a b q) (MkChar $ MkU8 (Zero) u8-modulus-pos))))
+
+(def-fns _ $ many nat-digits : (subterm many (Nat) n) (many (Rope) acc) -> (many (Rope) r)
+  (match many n _
+    ((Zero) acc)
+    ((Succ n1)
+      (let (many q) (many d) (erased m) (erased mm) (erased a) (erased p) (divmod n ten ten-positive))
+      (let (erased lt) (divmod-lt n1 ten q d m mm a ten-above-one))
+      (nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))))
+
+(def-fns _ $ many extern nat-str : (subterm many (Nat) n) -> (many (String) s)
+  (match many n _
+    ((Zero) (SCons (digit-char (Zero)) (SNil)))
+    ((Succ n1)
+      (let (many s) (erased p) (flatten $ nat-digits n $ REmpty))
+      s)))
 
 (def-adts $ Unit : -> Type
   enum

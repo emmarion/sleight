@@ -2520,4 +2520,25 @@ bootstrap runs in the same time as before (about four minutes here).
      names ids in decimal (`v1234_length`) and the self-compile's
      output shrinks from 1.02 MB to 0.74 MB. Gate: dune test 253
      passed; bootstrap 175 matched, 103 refused, fixpoint reached.
+137. **Four string externs: `str-cmp`, `str-length`, `str-split` and
+     `nat-str`** (the owner's decision, with the caller supplying
+     `str-split`'s bound). `str-cmp` decides `StrLt`, the lexicographic
+     order by character code that was `slc`'s, into `Cmp` as `nat-cmp`
+     does, its model the structural comparison; `str-length` returns
+     the length with a `StrLength s n` relation; `str-split` takes the
+     string, a count `k`, and erased `StrLength s len` and
+     `Lt k (Succ len)`, returning the first `k` characters and the rest
+     with `Append a b s` and `StrLength a k`; `nat-str` spells in
+     decimal, its model the division by ten `slc` had, with the digit
+     characters built by reflection since the prelude uses no literals.
+     The implementations are a byte comparison of the two slices, the
+     slice's stored length, two sub-slices, and `Z.to_string`. `slc`
+     drops its own copies, and its tokenizer cuts a word out of the
+     source with `str-split`, carrying `Add k rl len` (characters taken
+     plus remaining) so `add-le-left` gives the bound, where it used to
+     accumulate a rope of characters; a string literal still does, for
+     its escapes. Measured on the compiler's own sources with the
+     machine idle: no change (3.15 s before, 3.2 s after, within the
+     noise), as the audit expected of these. Gate: dune test 253
+     passed; bootstrap 175 matched, 103 refused, fixpoint reached.
 
