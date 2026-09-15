@@ -589,11 +589,12 @@ Every form binds within its own sub-expressions — a function's
 parameters in its body, a match branch's fields in that branch, a
 telescope entry in the entries after it. That is unremarkable and gets
 no name. A **statement** is a form that binds *outward* as well: its
-names enter the expression containing it, visible to the rest of that
-expression and gone once it ends. Statements produce no values.
+names, and the facts it mints, enter the expression containing it,
+visible to the rest of that expression and gone once it ends. Statements
+produce no values.
 
 The statements are `let`, `def-lvl`, `def-fns`, `def-adts`,
-`comptime-match` and `let-match`. All but `comptime-match` can appear at
+`comptime-match`, `let-match` and `open-adt` (§19). All but `comptime-match` can appear at
 top level or nested inside a function body; `comptime-match` is confined
 to run position (below, §15). `def-fns` and `def-adts`
 do both at once — the defined names go outward, while each definition's
@@ -764,9 +765,10 @@ how entering a match branch updates it:
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x = x`
-  itself is a no-op, not a contradiction); (2) two atoms equated that one
-  `Matchable` in scope lists, or whose signatures or `Matchable`s cannot
-  themselves be unified, decided recursively (arity mismatch is one easy
+  itself is a no-op, not a contradiction); (2) two value constructors
+  equated that one opened `Matchable` (§19) lists, or two atoms whose
+  signatures cannot be unified, or two type constructors equated whose
+  opened `Matchable`s, one each, cannot be, decided recursively (arity mismatch is one easy
   sufficient symptom of this given fixed arities and no currying, not a
   separate case); (3) a
   variable equated with an expression mentioning a binder of the
@@ -800,8 +802,9 @@ There's no third "stuck/indeterminate" outcome for comparing two
 constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
 succeeds by adding the needed `is` fact(s). Two atoms conflict only when
-one `Matchable` in scope lists both or their signatures or `Matchable`s
-cannot unify; nothing is refuted on a name's identity.
+one opened `Matchable` lists both, or their signatures cannot unify, or
+they are type constructors whose opened `Matchable`s, one each, cannot;
+nothing is refuted on a name's identity.
 
 A `Matchable` doesn't need to be threaded through explicitly — having one
 for the relevant type anywhere in ambient scope is enough for the
@@ -1581,7 +1584,10 @@ checked entirely at elaboration time:
    `(Coercible (Fn ...) g (Fn ...) f)` anonymously, as `def-adts`
    mints a `Matchable` (§19), and this form fetches it from ambient
    scope by naming `g`, as `matchable-of` does. `g` is `Dyn` within its
-   own block (§34), so `g`'s body cannot use its own proof.
+   own block (§34), so `g`'s body cannot use its own proof. TBD: whether
+   this fetch should instead find only an opened proof, `def-fns`
+   opening what it mints and a first-class proof being opened as a
+   `Matchable` is (proposals/matchable-newtype-opening.md).
 
 **Representation requirement.** Coercion is zero-cost only if the
 representations really coincide, so the following is a requirement on
