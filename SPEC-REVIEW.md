@@ -46,7 +46,10 @@ inconsistent or silent.
    "empty" off a `Matchable`. If those types had one, an `absurd`
    function could apparently return a `Predates` proof as its
    contradiction. Open: do opaque types have no `Matchable`, and are
-   they therefore neither matchable nor empty?
+   they therefore neither matchable nor empty? Narrowed by §19's
+   opening: nothing is matchable or empty until a `Matchable` for it
+   is opened, and the built-ins have none to open. Whether that is the
+   owner's answer, or a `Matchable` for them is wanted, is still open.
 
 7. **Contradiction discovered in a present branch.** §12 says the
    automatically refuted branch is written `(absurd C)`. Unstated: is a
@@ -177,7 +180,10 @@ inconsistent or silent.
     says the top-level value is what a REPL would print.
 25. §19's "multiple inconsistent Matchables for the same type" seems
     unable to arise if `def-adts` is the sole minting site and each
-    mints a fresh type constructor. Open: how can it occur?
+    mints a fresh type constructor. Open: how can it occur? Settled by
+    §19's invariant (the owner's decision): two opened `Matchable`s
+    naming one thing are unified and merged, or contradict, so the
+    ambiguity error is gone.
 26. Return-telescope names are positional and apparently not in scope
     in the body, while parameter names are. Not stated.
 27. §16 requires the file to end in a size-one expression; §40's
@@ -186,6 +192,16 @@ inconsistent or silent.
     `Comptime` and `Inacc` plus optional multiplicities on binders and
     match returns, all removed by §16, §20 and §35. README.md is the
     dune hello-world stub.
+29. Whether an opened `Newtype` for `C` beside an opened `Matchable`
+    marking `C` phantom is a contradiction (§19, §38): the proposal
+    left it unsettled, and §19 records only that a `Newtype` is
+    asserted nothing of.
+30. §23's erasure invariant has no clause for `open-absurd` (§19),
+    which compiles to absurd code and never runs; the proposal listed
+    the clause as unsettled.
+31. Whether `open-absurd` with `_` as a whole function body makes
+    §37's `absurd` marker redundant for the route through a
+    `Matchable` contradiction; listed as unsettled by the proposal.
 
 The three items most likely to make a handoff fail outright appear to
 be 1, 13 and 14, since an implementer would have to invent core
