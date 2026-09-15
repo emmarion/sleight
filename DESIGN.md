@@ -601,6 +601,18 @@ do both at once — the defined names go outward, while each definition's
 own parameters stay inward — and it is only the outward half that makes
 them statements.
 
+A `let`'s right-hand side is itself an expression (§11), so the
+statements before its final expression are statements of the expression
+containing the `let`: their names are visible within the right-hand side
+only, but their entries, and the facts and opened objects (§19) they
+mint, enter the expression after the `let`, anonymously, at the
+multiplicities they were declared with. The names a `let` hides are all
+it hides, so nothing a right-hand side minted outlives an entry it
+mentions, and a `many` binder there stays `many`: those statements run,
+or their code is emitted, whether or not the `let`'s own binders are
+erased. Only the final expression is the position §20 calls the
+right-hand side.
+
 `match` binds inward only. Its branch-local fields, and any `is` facts
 refined by entering a branch, reach that branch and no further, since
 different branches learn different things and none of it persists past the
@@ -667,19 +679,21 @@ as opposed to merely having `Type` as its own type, which is true of many
 entries; or marking which `Matchable` is the canonical one describing
 `Special`'s own shape. Not yet worked out mechanically.
 
-Item 5 is typed `(Matchable enum T (e1 C1) ... (en Cn))`, the first token
-being `enum` or `union`: a tag for union-vs-enum, the type constructor
-being described, and its value constructors in declared order with each
-one's multiplicity — so `List`'s is
-`(Matchable enum List (many Nil) (many Cons))`. `T` and the
-`Ci` are bare and unapplied — an applied type such as `(List (Nat))` cannot
-appear there, since the variant set belongs to the constructor, not to
-any application of it. The tag is §12's discriminant and the `ei` are
-§12's phantom markers, which between them are exactly the facts no type
-records: a `TyCtor` type carries no discriminant, and a `ValCtor` type no
-phantom marker. A `Matchable` is minted only by `def-adts` (§19), at
-`many`: its value holds an `extern` type's construction and matching
-(§41) and nothing else, so a non-erased match needs a non-erased one.
+Item 5 is typed `(Matchable enum T (e1 C1) ... (en Cn))`, the first
+token being `enum` or `union`: a tag for union-vs-enum, the type
+constructor being described, and its value constructors in declared
+order with each one's multiplicity — so `List`'s is `(Matchable enum
+List (many Nil) (many Cons))`. `T` and the `Ci` are bare and unapplied —
+an applied type such as `(List (Nat))` cannot appear there, since the
+variant set belongs to the constructor, not to any application of it.
+The tag is §12's discriminant and the `ei` are §12's phantom markers,
+which between them are exactly the facts no type records: a `TyCtor`
+type carries no discriminant, and a `ValCtor` type no phantom marker. A
+`Matchable` is minted only by `def-adts` (§19), at `many`: its value
+holds an `extern` type's construction and matching (§41) and nothing
+else, so a match that dispatches at runtime needs one it can read (§19).
+It does nothing by being in scope: nothing consults it until it is
+opened (§19).
 
 It has three jobs: it's what lets the compiler know a type's constructors
 are disjoint (§19); it's what lets you match on a first-class object
@@ -714,6 +728,13 @@ how entering a match branch updates it:
   entry*: a match may scrutinize a `Const`, and the forced rule is a
   claim justified by the match running, pending at elaboration time
   since a branch is never selected during elaboration (§34).
+- An open (§19) also writes the table: unifying two opened objects mints
+  `T is T'` and `Ci is Ci'` into the scope of the open. These facts are
+  not branch-gated, and the soundness argument below for forcing does
+  not cover them; what justifies them is that `def-adts` is the sole
+  minting site (§19), so two `Matchable`s naming one constructor
+  describe one declaration. Recorded as the owner's justification from
+  the proposal, not a verified result.
 - **A fact ends with the scope it was minted in.** A branch-forced rule
   ends with its branch whatever entries it mentions: matching a `(Nat)`
   against `Zero` forces `n is (Zero)`, which names no branch-local
@@ -761,26 +782,25 @@ how entering a match branch updates it:
   a real discriminant check (a runtime tag comparison for a non-erased
   enum, or `comptime-match`'s compile-time computation) — not performed
   as a free-floating comparison between two arbitrary atoms.
-- The only three ways forcing a unification fails, i.e. produces a
+- - The only three ways forcing a unification fails, i.e. produces a
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
-  chains, not just against a new equation's literal surface form; `x = x`
-  itself is a no-op, not a contradiction); (2) two value constructors
+  chains, not just against a new equation's literal surface form; `x =
+  x` itself is a no-op, not a contradiction); (2) two value constructors
   equated that one opened `Matchable` (§19) lists, or two atoms whose
-  signatures cannot be unified, or two type constructors equated whose
-  opened `Matchable`s, one each, cannot be, decided recursively (arity mismatch is one easy
-  sufficient symptom of this given fixed arities and no currying, not a
-  separate case); (3) a
+  signatures cannot be unified, or two atoms equated whose opened
+  objects would then name one thing and cannot be (§19's invariant),
+  decided recursively (arity mismatch is one easy sufficient symptom of
+  this given fixed arities and no currying, not a separate case); (3) a
   variable equated with an expression mentioning a binder of the
-  telescope under comparison -- `k` against `x` when
-  `(Fn L ((Nat) x) -> (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`.
-  A rule maps an atom to a closed expression and canonicalizing a
-  closed expression keeps it closed, so no rule could make the two
-  sides identical under §5; the closed case, `x` against a constructor
-  there, already fails as a mismatch of shape, the form (2) takes in
-  the engine. Decided at ASSUMPTIONS 73; the reading
-  leans on §5 stating no eta rule, and §42 holds an open question that
-  could revisit it.
+  telescope under comparison -- `k` against `x` when `(Fn L ((Nat) x) ->
+  (k is y))` meets `(Fn L ((Nat) x) -> (x is y))`. A rule maps an atom
+  to a closed expression and canonicalizing a closed expression keeps it
+  closed, so no rule could make the two sides identical under §5; the
+  closed case, `x` against a constructor there, already fails as a
+  mismatch of shape, the form (2) takes in the engine. Decided at
+  ASSUMPTIONS 73; the reading leans on §5 stating no eta rule, and §42
+  holds an open question that could revisit it.
 
 ## 19. `Matchable` and constructor disjointness
 
@@ -803,23 +823,71 @@ constructor-headed terms, only §18's forced-unify-or-contradict: if
 neither side is yet known to conflict with the other, unification simply
 succeeds by adding the needed `is` fact(s). Two atoms conflict only when
 one opened `Matchable` lists both, or their signatures cannot unify, or
-they are type constructors whose opened `Matchable`s, one each, cannot;
-nothing is refuted on a name's identity.
+the opened objects that would then name one thing cannot (the invariant
+below); nothing is refuted on a name's identity.
 
-A `Matchable` doesn't need to be threaded through explicitly — having one
-for the relevant type anywhere in ambient scope is enough for the
-compiler to consult it. If multiple, mutually-inconsistent `Matchable`s
-for the same type are simultaneously in scope and it's genuinely
-ambiguous which one a match should use, that ambiguity is itself a
-compile error, not something resolved arbitrarily/silently.
+A `Matchable`, or a `Newtype` (§38), does nothing by being in scope:
+nothing consults it until it is **opened**. Two forms open one, each
+taking an expression of `Matchable` or `Newtype` type and reading it for
+its type, not its value:
+
+- `(open-adt mult e)`, a statement (§16): an anonymous `let` of `e` at
+  the multiplicity `mult`, checked as a `let` binder is (§9), then the
+  open of that binder. The open asserts that the `Matchable`'s listed
+  constructors are pairwise distinct after canonicalization, and that
+  the invariant below holds, minting whatever facts that takes;
+  otherwise it is an error. Its extent is that of the entries minted
+  beside it: a match branch discards it with the branch's facts, a
+  `let`'s right-hand side retains it (§16).
+- `(open-absurd e ann)`, an expression whose size and result types `ann`
+  gives, a return telescope as a `match`'s or `_` for the enclosing one
+  (§11). It takes `e` at `erased`, records and mints nothing, and
+  requires the open to *fail*: it cashes in a contradiction between the
+  facts in force and the `Matchable`, as an absurd branch does one with
+  a pattern (§12).
+
+**The invariant.** At most one opened `Matchable` names a given type
+constructor or value constructor, and at most one opened `Newtype` a
+given constructor, canonically. Whenever two opened objects of one kind
+would name one thing — at an open, or when entering a branch, a
+`let-match` or a `comptime-match` forces two type constructors or two
+value constructors equal (§18) — they are unified, forcing, through the
+`enum`/`union` tag, the constructor count, each constructor's
+multiplicity marker, the constructors and the type constructor, hence
+their signatures. Two that cannot be unified contradict; two that can
+become one, the entry kept being the one the elaborator can best read:
+`Const` with the type's own declaration, else non-erased and still bound
+(§34). So two opened `Matchable`s for one type are never ambiguous: they
+are one, or they contradict. A `Newtype` is only recorded: opening one
+merges it with an opened `Newtype` naming the same constructor and
+asserts nothing else, and `open-absurd` refuses one, its contradicting
+form being undecided.
+
+**What requires an open.** §18's disjointness rule; `match`, `let-match`
+and `comptime-match`; §12's and §37's emptiness check; `matchable-of`
+and `newtype-of`, which find only an opened object; and
+`coercible-wrap`, which needs an opened `Newtype` for its constructor.
+`coercible-of` still fetches from ambient scope (§38, TBD). §18's occurs
+check and its refutation by signature are not gated. A match that
+dispatches at runtime — a `many` match on a `many` scrutinee, or a
+`let-match` at `many` outside run position — reads its `Matchable`'s
+value and so requires the opened entry to be readable: `Const` with the
+type's declaration, or non-erased and still bound. Readability is judged
+at the match, so a `many` parameter opened at `erased` serves no such
+match. An unopened `Matchable` leaves its type constructor opaque: type
+constructors are told apart only by their opened `Matchable`s, so an
+unopened first-class one unifies with any other.
+
+`def-adts` opens what it mints, as does the FFI (§41) for the built-in
+`Special`.
 
 `def-adts` is the sole minting site: declaring an ADT mints an anonymous
 `Matchable` describing it, from the `enum`/`union` tag and the
 constructors' declaration markers (§12). Nothing else introduces one.
 
 A special form, `matchable-of`, takes a bare unapplied type constructor
-and yields the `Matchable` for it from ambient scope, erroring in the
-ambiguous case above. A `let` (§9) gives it a name where one is wanted.
+and yields the opened `Matchable` for it, an error when none is open. A
+`let` (§9) gives it a name where one is wanted.
 
 ## 20. Declared erasure
 
@@ -846,18 +914,18 @@ where each gets its multiplicity:
 
 The erased positions, where an expression is erased: an argument at an
 erased-declared parameter or field; any argument of a type constructor
-(§12); a type or `is` expression (§5, §14); the right-hand side of a
-`let` whose binders are all `erased`, each entry of a final `values`
-there taking its own binder's multiplicity; the scrutinee of an
-`erased` match; the proof argument of a `coerce` and every argument
-of a `coercible-*` form (§38); and every sub-expression of an erased
-expression. The
-body of a phantom constructor's branch under a `many` scrutinee is
-erased throughout (§12), and
-so is the body of an `erased` function: it is checked with every return
-entry `erased`, whatever its signature says — the analogue of the
-phantom branch — so such a function can only ever be held or called at
-multiplicity `erased`. Every other position is non-erased.
+(§12); a type or `is` expression (§5, §14); the final expression of the
+right-hand side of a `let` whose binders are all `erased`, each entry of
+a `values` there taking its own binder's multiplicity (the statements
+before it are the enclosing expression's, §16); the scrutinee of an
+`erased` match; the proof argument of a `coerce` and every argument of a
+`coercible-*` form (§38); and every sub-expression of an erased
+expression. The body of a phantom constructor's branch under a `many`
+scrutinee is erased throughout (§12), and so is the body of an `erased`
+function: it is checked with every return entry `erased`, whatever its
+signature says — the analogue of the phantom branch — so such a function
+can only ever be held or called at multiplicity `erased`. Every other
+position is non-erased.
 
 Checking is then local. Referencing an `erased` name from a non-erased
 position is an error; referencing a `many` name from anywhere is fine —
@@ -973,11 +1041,11 @@ actually specified.
    function's body (§9, §16). A body may be marked `absurd` (§37) or
    `extern` (§41). Mints a
    `Coercible` proof for each `delegate`-bodied function (§38).
-4. `def-adts` — defines one or more (possibly mutually recursive) ADTs,
-   same one-element-case pattern as `def-fns`; possibly nested;
-   index variables aren't shared across constructors (§12, §16); mints
-   each type's `Matchable` (§19), and its `Newtype` when marked (§38).
-   A type may also be marked `extern` (§41).
+4. 4. `def-adts` — defines one or more (possibly mutually recursive)
+   ADTs, same one-element-case pattern as `def-fns`; possibly nested;
+   index variables aren't shared across constructors (§12, §16); mints,
+   and opens, each type's `Matchable` (§19), and its `Newtype` when
+   marked (§38). A type may also be marked `extern` (§41).
 5. `comptime-match` — compile-time discriminant assertion on a `Const`,
    itself non-erased scrutinee with a non-erased discriminant, in run
    position only (§16); binds the matched fields as `Const` at their
@@ -988,6 +1056,10 @@ actually specified.
    multiplicities under the scrutinee's own (§16, §20). Reads no value,
    so it needs neither a `Const` nor a non-erased scrutinee and is not
    confined to run position; a phantom constructor is refused.
+5b. `open-adt` — opens a `Matchable` or `Newtype`: an anonymous `let` of
+   its argument at the written multiplicity, then the open of that
+   binder, asserting §19's invariant and minting the facts it takes
+   (§16, §19).
 
 **Type formers:**
 6. `Fn` — the function-type former (§7, §11, §16, §29).
@@ -1004,9 +1076,12 @@ type or an `is` expression, not only at a declaration site.
     (§11, §20); four branch kinds: present, absurd (automatic), absurd
     (by proof), else (§12); its size is fixed by its return annotation (§11,
     §16).
-11. `matchable-of` — yields the `Matchable` for a bare unapplied type
-    constructor from ambient scope (§19); `newtype-of` does the same for
-    a wrapping constructor's `Newtype` (§38).
+11. `matchable-of` — yields the opened `Matchable` for a bare unapplied
+    type constructor (§19); `newtype-of` does the same for a wrapping
+    constructor's `Newtype` (§38).
+11a. `open-absurd` — the contradicting open: an expression of its return
+    annotation's size, or `_`'s, requiring the open of its argument to
+    contradict the facts in force (§19).
 12. `level-of` — yields the `Level` a function is defined at, read from
     its type (§7). Not strictly needed, since that level is always in
     scope anyway, but useful for sugar (SUGAR.md).
@@ -1034,9 +1109,9 @@ type or an `is` expression, not only at a declaration site.
 21. `coercible-refl`, `coercible-sym`, `coercible-trans` — reflexivity,
     symmetry and transitivity of `Coercible` (§38), special forms like
     item 19.
-22. `coercible-wrap` — mints the proof wrapping a value into a
-    transparent type's one non-phantom constructor; unwrapping is its
-    `coercible-sym` (§38).
+22. 22. `coercible-wrap` — mints the proof wrapping a value into a
+    transparent type's one non-phantom constructor, whose `Newtype` must
+    be open (§38); unwrapping is its `coercible-sym` (§38).
 23. `coercible-ctor` — mints the proof between two applications of the
     same non-phantom constructor, from per-field values and proofs
     (§38).
@@ -1536,38 +1611,37 @@ checked entirely at elaboration time:
 2. `(coercible-sym p)` — from `a` to `b`, conclude `b` to `a`.
 3. `(coercible-trans p q)` — from `a` to `b` and `b` to `c`, conclude `a` to
    `c`.
-4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **newtype**.
+4. 4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **newtype**.
    A type is a newtype by declaration: its `def-adts` entry carries the
-   `newtype` mark after its `enum`/`union` token (§27), and it must
-   then have the newtype shape, a hard error otherwise — an enum with
-   exactly one non-phantom constructor holding exactly one `many`
-   field, or a union in which, among the non-phantom constructors,
-   every one but one has only `erased` fields and the remaining one has
-   exactly one `many` field. Phantom constructors never head a
-   non-erased value (§20) and do not count either way. A type of that
-   shape left unmarked is not a newtype: an implementation may still
-   represent it as its field, but promises nothing and admits no
-   `coerce`. The mark mints an erased `(Newtype C)` alongside the
-   type's `Matchable`, `C` the wrapping constructor the shape above
-   singles out, bare and unapplied as in a `Matchable`; the type is
-   read off `C`'s return type, so the object carries nothing else.
-   `Newtype` is a type former (§5), the object is first class (§17),
-   and `newtype-of` fetches it from ambient scope by naming `C`, as
-   `matchable-of` does by naming the type. `coercible-wrap` verifies
-   that a `Newtype` for `C` is in ambient scope — its being minted only
-   by `def-adts` or the FFI (§41) is what makes it trustworthy — so a
-   first-class wrap goes through a `(Newtype C)` parameter. That one
-   object is the proof that `C` heads inhabited values: the proof's
-   target `(C arg1 ... argn)` is what a non-erased `coerce` produces,
-   and by §20's rule 2 no non-erased value is headed by a phantom
-   constructor, so a wrap through a constructor no `Newtype` names — a
-   phantom one with a `many` field, say — would make a value with no
-   inhabitant at runtime, and a match on it would reach absurd code.
-   The arguments are `C`'s telescope in order, so exactly one of them,
-   `f`, sits at the `many` field. The proof is
+   `newtype` mark after its `enum`/`union` token (§27), and it must then
+   have the newtype shape, a hard error otherwise — an enum with exactly
+   one non-phantom constructor holding exactly one `many` field, or a
+   union in which, among the non-phantom constructors, every one but one
+   has only `erased` fields and the remaining one has exactly one `many`
+   field. Phantom constructors never head a non-erased value (§20) and
+   do not count either way. A type of that shape left unmarked is not a
+   newtype: an implementation may still represent it as its field, but
+   promises nothing and admits no `coerce`. The mark mints an erased
+   `(Newtype C)` alongside the type's `Matchable`, `C` the wrapping
+   constructor the shape above singles out, bare and unapplied as in a
+   `Matchable`; the type is read off `C`'s return type, so the object
+   carries nothing else. `Newtype` is a type former (§5), the object is
+   first class (§17), and `newtype-of` fetches the opened one by naming
+   `C`, as `matchable-of` does by naming the type (§19).
+   `coercible-wrap` verifies that a `Newtype` for `C` is open — its
+   being minted only by `def-adts` or the FFI (§41) is what makes it
+   trustworthy — so a first-class wrap goes through a `(Newtype C)`
+   parameter, opened first. That one object is the proof that `C` heads
+   inhabited values: the proof's target `(C arg1 ... argn)` is what a
+   non-erased `coerce` produces, and by §20's rule 2 no non-erased value
+   is headed by a phantom constructor, so a wrap through a constructor
+   no `Newtype` names — a phantom one with a `many` field, say — would
+   make a value with no inhabitant at runtime, and a match on it would
+   reach absurd code. The arguments are `C`'s telescope in order, so
+   exactly one of them, `f`, sits at the `many` field. The proof is
    `(Coercible F f T (C arg1 ... argn))`, unwrapping being its
    `coercible-sym`.
-5. `(coercible-ctor C ...)` — the same non-phantom constructor on both sides,
+5. `(coercible-ctor C ...)` — the same constructor on both sides,
    with fields that may differ. The arguments follow `C`'s telescope in
    order: an `erased` field takes two, its source and target values,
    and a `many` field takes one, a `Coercible` proof between the values
@@ -1614,9 +1688,12 @@ callee's (§9). An extern type (§41) may be marked `newtype` like any
 other, its FFI author then guaranteeing the field representation, and
 a newtype may wrap a field of an extern type.
 
-Only non-phantom constructors and `many` functions appear in items 4–6:
-a `coerce` produces a non-erased value, which by §20's rule 2 none
-of the others can head.
+Only non-phantom constructors and `many` functions matter in items 4–6:
+a `coerce` produces a non-erased value, which by §20's rule 2 none of
+the others can head. So `coercible-ctor` consults no `Matchable` and
+does not refuse a phantom `C`, a proof between two phantom-headed values
+never being cashed, while `coercible-wrap` manufactures its target and
+must.
 
 Proofs over containers — every element of a list wrapped, say — are
 built by recursion, in an `erased` function returning the proof (§20),
