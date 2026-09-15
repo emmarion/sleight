@@ -2455,3 +2455,10 @@ bootstrap runs in the same time as before (about four minutes here).
      loop over `Nat` 21 ms to 6 ms; and the pinned `slc` self-compile
      32.8 s to 32.0 s, its time being in the String copying (item 132's
      profile), which no template touches.
+     The `Bin` template tests parity and halves through `Obj.is_int` on
+     the small-integer case, since zarith's `is_odd` is a C call with no
+     fast path where `pred` and `shift_right` have one, and a zero test
+     is physical equality with `Z.zero`, sound because zarith keeps
+     every value that fits an `int` as an immediate (`z.mli`'s first
+     lines); a walk over sixty million `Bin` digits went from 0.37 s to
+     0.19 s with the parity fast path.

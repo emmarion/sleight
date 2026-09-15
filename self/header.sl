@@ -151,7 +151,7 @@
   $ RCat (RStr "match Nat: if (Obj.obj {s} : Z.t) == Z.zero then {b0} else let {f1.0} = Obj.repr (Z.pred (Obj.obj {s} : Z.t)) in {b1}\n")
   $ RCat (RStr "build Nat 0: Obj.repr Z.zero\n")
   $ RCat (RStr "build Nat 1: Obj.repr (Z.succ (Obj.obj {a0} : Z.t))\n")
-  $ RCat (RStr "match Bin: let {t0} = (Obj.obj {s} : Z.t) in if {t0} == Z.zero then {b0} else if Z.is_odd {t0} then let {f1.0} = Obj.repr (Z.shift_right (Z.pred {t0}) 1) in {b1} else let {f2.0} = Obj.repr (Z.shift_right (Z.pred {t0}) 1) in {b2}\n")
+  $ RCat (RStr "match Bin: let {t0} = (Obj.obj {s} : Z.t) in if {t0} == Z.zero then {b0} else let {t1} = (if Obj.is_int {s} then Obj.repr (((Obj.obj {s} : int) - 1) asr 1) else Obj.repr (Z.shift_right (Z.pred {t0}) 1)) in if (if Obj.is_int {s} then (Obj.obj {s} : int) land 1 = 1 else Z.is_odd {t0}) then let {f1.0} = {t1} in {b1} else let {f2.0} = {t1} in {b2}\n")
   $ RCat (RStr "build Bin 0: Obj.repr Z.zero\n")
   $ RCat (RStr "build Bin 1: Obj.repr (Z.succ (Z.shift_left (Obj.obj {a0} : Z.t) 1))\n")
   $ RCat (RStr "build Bin 2: Obj.repr (Z.add (Z.shift_left (Obj.obj {a0} : Z.t) 1) (Z.of_int 2))\n")
