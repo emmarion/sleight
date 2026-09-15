@@ -116,15 +116,16 @@
   enum
   (many MkTemplate : (many (Bool) building) (many (String) type) (many (Nat) index) (many (List $ Piece) pieces) -> (Template)))
 
-(def-fns _ $ many str-until : (subterm many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after)
+(def-fns _ $ many str-until-onto : (many (Rope) acc) (subterm many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after)
   (match many s _
-    ((SNil) (values (SNil) (None _)))
+    ((SNil) (values (rope-str acc) (None _)))
     ((SCons c rest)
       (match many (char-is c code) _
-        ((BTrue) (values (SNil) (Some _ rest)))
-        ((BFalse)
-          (let (many b) (many a) (str-until rest code))
-          (values (SCons c b) a))))))
+        ((BTrue) (values (rope-str acc) (Some _ rest)))
+        ((BFalse) (tail (str-until-onto (RCat acc $ RChar c) rest code)))))))
+
+(def-fns _ $ many str-until : (many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after)
+  (str-until-onto (REmpty) s code))
 
 (def-fns _ $ many str-split-fuel : (subterm many (Nat) fuel) (many (String) s) (many (Nat) code) -> (many (List $ String) r)
   (let (many b) (many a) (str-until s code))
