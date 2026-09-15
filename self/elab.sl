@@ -12,7 +12,7 @@
 (def-fns _ $ many res-ty : (many (Res) r) -> (many (Term) t) (match many r _ ((MkRes t ty e) ty)))
 (def-fns _ $ many res-erasure : (many (Res) r) -> (many (Mult) t) (match many r _ ((MkRes t ty e) e)))
 
-(def-fns _ $ many res-of : (many (Env) env) (many (Bin) x) -> (many (Res) r)
+(def-fns _ $ many res-of : (many (Env) env) (many (Nat) x) -> (many (Res) r)
   (MkRes (TVar x) (type-of env x) $ entry-mult-of env x))
 
 (def-fns _ $ many term-res : (many (Env) env) (many (Term) t) (many (Term) ty) -> (many (Res) r)
@@ -23,7 +23,7 @@
 
 ; One value's code at the shape the position expects, that position read from the shape; a shape of another
 ; count has its count reported at the expression's end.
-(def-fns _ $ many single : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (erased (Mult) pos) (erased (PosOf expect pos) pf) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) c) -> (many (Code ctx expect) r)
+(def-fns _ $ many single : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (erased (Mult) pos) (erased (PosOf expect pos) pf) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) c) -> (many (Code ctx expect) r)
   (match many expect _
     ((Nil a) (CError _ expect "size"))
     ((Cons a m rest)
@@ -39,15 +39,15 @@
     ((LsCons a b x y xs ys p) (match many rs _ ((Cons c r rest) r)))))
 
 ; What a statement leaves in the code after it (lib/elab.ml's wrap functions), and the frame it binds.
-(def-adts $ StmtCode : ((List $ List $ Bin) ctx) ((List $ List $ Bin) ctx2) -> Type
+(def-adts $ StmtCode : ((List $ List $ Nat) ctx) ((List $ List $ Nat) ctx2) -> Type
   enum
-  (many SNone : (erased (List $ List $ Bin) ctx) -> (StmtCode ctx ctx))
-  (many SLet : (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (many (Code ctx ms) rhs) -> (StmtCode ctx (Cons (List (Bin)) ids ctx)))
-  (many SLetRec : (erased (List $ List $ Bin) ctx) (erased (List $ Bin) gids) (many (Group gids ctx) g) -> (StmtCode ctx (Cons (List (Bin)) gids ctx)))
-  (many SMatch : (erased (List $ List $ Bin) ctx) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (Nat) disc) (many (List $ Bin) ids) -> (StmtCode ctx (Cons (List (Bin)) ids ctx))))
+  (many SNone : (erased (List $ List $ Nat) ctx) -> (StmtCode ctx ctx))
+  (many SLet : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (many (Code ctx ms) rhs) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
+  (many SLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) gids) (many (Group gids ctx) g) -> (StmtCode ctx (Cons (List (Nat)) gids ctx)))
+  (many SMatch : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (Nat) disc) (many (List $ Nat) ids) -> (StmtCode ctx (Cons (List (Nat)) ids ctx))))
 
-(def-fns _ $ many consts-codes : (erased (List $ List $ Bin) ctx) (subterm many (List $ Pair (Bin) $ Block (Zero)) cs) ->
-    (many (List $ Mult) ms) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) ipk) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) cpk)
+(def-fns _ $ many consts-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Block (Zero)) cs) ->
+    (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) ipk) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) cpk)
   (match many cs _
     ((Nil a) (values (Nil _) (Nil _) (PkNil _) (Nil _) (PkNil _)))
     ((Cons a p rest)
@@ -55,7 +55,7 @@
       (match many p _
         ((MkPair x y id v) (values (Cons _ (Many) ms) (Cons _ id ids) (PkMany _ ms id ids ipk) (Cons _ (CValue _ v) codes) (PkMany _ ms (CValue _ v) codes cpk)))))))
 
-(def-fns _ $ many wrap-stmt : (erased (List $ List $ Bin) ctx) (erased (List $ List $ Bin) ctx2) (many (List $ Mult) ns) (many (StmtCode ctx ctx2) sc) (many (Code ctx2 ns) rest) -> (many (Code ctx ns) r)
+(def-fns _ $ many wrap-stmt : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx2) (many (List $ Mult) ns) (many (StmtCode ctx ctx2) sc) (many (Code ctx2 ns) rest) -> (many (Code ctx ns) r)
   (match many sc _
     ((SNone c) rest)
     ((SLet c ms ids pk rhs) (CLet _ ms _ ids pk rhs rest))
@@ -81,8 +81,8 @@
 (def-fns _ $ many is-underscore : (many (Raw) r) -> (many (Bool) b)
   (match many (raw-atom r) _ ((None a) (BFalse)) ((Some a s) (str-eq s "_"))))
 
-(def-fns _ $ many term-var : (many (Term) t) -> (many (Bin) x)
-  (match many t _ ((TVar x) x) (else (BZ))))
+(def-fns _ $ many term-var : (many (Term) t) -> (many (Nat) x)
+  (match many t _ ((TVar x) x) (else (Zero))))
 
 (def-fns _ $ many name-or-anon : (many (String) n) -> (many (Maybe $ String) r)
   (match many (str-cmp n "_") _ ((CEq eq-t eq-r eq-x) (None _)) (else (Some _ n))))
@@ -225,9 +225,9 @@
         ((Some a n) (None _))
         ((None a) (Some _ $ str-cat "malformed character literal " s))))))
 
-(def-fns _ $ many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Nat) x)
   (match many (lookup env name) _
-    ((None a) (values (env-error env $ str-cat "unbound name " name) $ BZ))
+    ((None a) (values (env-error env $ str-cat "unbound name " name) $ Zero))
     ((Some a x) (values env x))))
 
 (def-fns _ $ many prelude-type : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Term) t)
@@ -268,16 +268,16 @@
 (def-fns _ $ many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t)
   (bin-term (bin-of-nat n) env))
 
-(def-fns _ $ many record-literal : (many (Env) env) (many (String) key) (many (Bin) x) (many (Maybe $ Bin) proof) -> (many (Env) r)
+(def-fns _ $ many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) -> (many (Env) r)
   (let (many env2) $ env-set-literals env $ nm-set _ key x $ env-literals env)
   (env-push-lit env2 x proof))
 
-(def-fns _ $ many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Bin) r)
+(def-fns _ $ many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r)
   (match many (nm-get _ key $ env-literals env) _ ((NHit lt ln lm x lp) (Some _ x)) ((NMiss lt ln lm lp) (None _))))
 
 ; Interns a numeral: a Const Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
-(def-fns _ $ many intern-numeral : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Bin) x) (many (Bin) proof)
+(def-fns _ $ many intern-numeral : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof)
   (let (many n) $ parse-nat key 0)
   (let (many env1) (many nat-ty) $ prelude-type env "Nat")
   (let (many env2) (many x) $ bind-closed env1 (None _) (Many) (BExt _ $ PNat n) nat-ty (None _) coercible-id)
@@ -287,19 +287,19 @@
   (let (many env3) (many p) $ bind-token env2c (None _) (Erased) pty (None _) coercible-id)
   (values (record-literal env3 key x $ Some _ p) x p))
 
-(def-fns _ $ many lit-proof : (subterm many (List $ Pair (Bin) $ Maybe $ Bin) lits) (many (Bin) x) -> (many (Maybe $ Bin) r)
+(def-fns _ $ many lit-proof : (subterm many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Nat) x) -> (many (Maybe $ Nat) r)
   (match many lits _
     ((Nil a) (None _))
     ((Cons a p rest)
       (match many p _
-        ((MkPair s t y proof) (match many (bin-cmp x y) _ ((CEq eq-t eq-r eq-x) proof) (else (lit-proof rest x))))))))
+        ((MkPair s t y proof) (match many (nat-cmp x y) _ ((CEq eq-t eq-r eq-x) proof) (else (lit-proof rest x))))))))
 
-(def-fns _ $ many intern-numeral-once : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Bin) x) (many (Bin) proof)
+(def-fns _ $ many intern-numeral-once : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof)
   (match many (lit-lookup env key) _
     ((Some a x)
       (match many (lit-proof (env-lits env) x) _
         ((Some b p) (values env x p))
-        ((None b) (values env x $ BZ))))
+        ((None b) (values env x $ Zero))))
     ((None a) (intern-numeral env key))))
 
 ; Interns a numeral or character literal (ASSUMPTIONS 51, 52): a character is (MkChar (MkU8 n p)) over its
@@ -351,27 +351,27 @@
 
 ; The entry an atom names: a literal's, or the newest of that name in scope; id zero, which nothing binds,
 ; stands for an error already recorded.
-(def-fns _ $ many var : (many (Env) env) (many (String) n) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many var : (many (Env) env) (many (String) n) -> (many (Env) r) (many (Nat) x)
   (match many (literal-error n) _
-    ((Some a msg) (values (env-error env msg) $ BZ))
+    ((Some a msg) (values (env-error env msg) $ Zero))
     ((None a)
       (match many (classify n) _
         ((LName)
           (match many (lookup env n) _
             ((Some b x) (values env x))
-            ((None b) (values (env-error env $ str-cat "unbound name " n) $ BZ)))) (else (match many (lit-lookup env n) _ ((Some b x) (values env x)) ((None b) (values (env-error env $ str-cat3 "literal " n " outside a top-level form") $ BZ))))))))
+            ((None b) (values (env-error env $ str-cat "unbound name " n) $ Zero)))) (else (match many (lit-lookup env n) _ ((Some b x) (values env x)) ((None b) (values (env-error env $ str-cat3 "literal " n " outside a top-level form") $ Zero))))))))
 
-(def-fns _ $ many var-of-raw : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many var-of-raw : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Nat) x)
   (match many raw _
     ((RAtom lq s) (var env s))
     ((RString lq s)
       (match many (lit-lookup env $ SCons #\x22 s) _
         ((Some a x) (values env x))
-        ((None a) (values (env-error env "string literal outside a top-level form") $ BZ))))
-    ((RList lq items) (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ rope-str $ show-raw raw) $ BZ))))
+        ((None a) (values (env-error env "string literal outside a top-level form") $ Zero))))
+    ((RList lq items) (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ rope-str $ show-raw raw) $ Zero))))
 
 ; A name read through its alias (ASSUMPTIONS 78), which must resolve to a variable.
-(def-fns _ $ many named : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many named : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Nat) x)
   (let (many env2) (many x) $ var-of-raw env raw what)
   (match many (canon-env env2 $ TVar x) _
     ((TVar y) (values env2 y))
@@ -523,38 +523,38 @@
 
 ; ---- Constructors, Matchables and shapes (sections 17, 19, 38)
 
-(def-fns _ $ many adt-of : (many (Env) env) (many (Bin) x) -> (many (Maybe $ Adt) r)
+(def-fns _ $ many adt-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Adt) r)
   (let (erased a) (many blk) $ env-block env x)
   (match many blk _
     ((None t) (None _))
     ((Some t b) (match many b _ ((BMat z adt) (Some _ adt)) (else (None $ Adt))))))
 
-(def-fns _ $ many ctor-of : (many (Env) env) (many (Bin) x) -> (many (Maybe $ Ctor) r)
+(def-fns _ $ many ctor-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Ctor) r)
   (let (erased a) (many blk) $ env-block env x)
   (match many blk _
     ((None t) (None _))
     ((Some t b) (match many b _ ((BCtorFn z c) (Some _ c)) (else (None $ Ctor))))))
 
-(def-fns _ $ many ctor-type : (many (Env) env) (many (Bin) c) -> (many (List $ Entry) tele) (many (Term) ret)
+(def-fns _ $ many ctor-type : (many (Env) env) (many (Nat) c) -> (many (List $ Entry) tele) (many (Term) ret)
   (match many (type-of env c) _
     ((TValCtor tele ret) (values tele ret)) ((TErr m) (values (Nil _) $ TErr m)) (else (values (Nil $ Entry) $ TErr "not a constructor"))))
 
-(def-fns _ $ many tid-of : (many (Env) env) (many (Bin) c) -> (many (Bin) tid)
+(def-fns _ $ many tid-of : (many (Env) env) (many (Nat) c) -> (many (Nat) tid)
   (let (many tele) (many ret) $ ctor-type env c)
-  (match many (type-head env ret) _ ((None a) (BZ)) ((Some a t) t)))
+  (match many (type-head env ret) _ ((None a) (Zero)) ((Some a t) t)))
 
 (def-adts $ MatchInfo : -> Type
   enum
-  (many MkMatchInfo : (many (Bin) mid) (many (Disc) disc) (many (List $ MCtor) ctors) (many (Nat) rank) -> (MatchInfo)))
+  (many MkMatchInfo : (many (Nat) mid) (many (Disc) disc) (many (List $ MCtor) ctors) (many (Nat) rank) -> (MatchInfo)))
 
-(def-fns _ $ many matchable-rank : (many (Env) env) (many (Bin) x) -> (many (Nat) r)
+(def-fns _ $ many matchable-rank : (many (Env) env) (many (Nat) x) -> (many (Nat) r)
   (match many (adt-of env x) _
     ((Some a adt) 0)
     ((None a) (match many (entry-mult-of env x) _ ((Many) 1) ((Erased) 2)))))
 
 ; Consistent Matchables for one type are interchangeable (section 19); the pick prefers one whose ADT the
 ; elaborator can see, then a non-erased one (ASSUMPTIONS 84, 86).
-(def-fns _ $ many find-matchable-in : (subterm many (List $ Bin) objects) (many (Env) env) (many (Bin) tid) (many (Maybe $ MatchInfo) best) -> (many (Maybe $ MatchInfo) r)
+(def-fns _ $ many find-matchable-in : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) tid) (many (Maybe $ MatchInfo) best) -> (many (Maybe $ MatchInfo) r)
   (match many objects _
     ((Nil a) best)
     ((Cons a x rest)
@@ -563,7 +563,7 @@
           ((TMatchable d t cs)
             (match many t (((Maybe $ MatchInfo) c))
               ((TVar t2)
-                (match many (bin-cmp t2 tid) (((Maybe $ MatchInfo) c))
+                (match many (nat-cmp t2 tid) (((Maybe $ MatchInfo) c))
                   ((CEq eq-t eq-r eq-x) (let (many y) $ resolve env x) (Some _ $ MkMatchInfo y d cs $ matchable-rank env y))
                   (else (None _)))) (else (None $ MatchInfo)))) (else (None $ MatchInfo))))
       (let (many (Maybe $ MatchInfo) best2)
@@ -580,17 +580,17 @@
       (find-matchable-in rest env tid best2))))
 
 
-(def-fns _ $ many find-newtype : (subterm many (List $ Bin) objects) (many (Env) env) (many (Bin) c) -> (many (Maybe $ Bin) r)
+(def-fns _ $ many find-newtype : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r)
   (match many objects _
     ((Nil a) (None _))
     ((Cons a x rest)
       (match many (type-of env x) _
         ((TNewtype t)
           (match many t _
-            ((TVar c2) (match many (bin-cmp c2 c) _ ((CEq eq-t eq-r eq-x) (Some _ x)) (else (find-newtype rest env c)))) (else (find-newtype rest env c)))) (else (find-newtype rest env c))))))
+            ((TVar c2) (match many (nat-cmp c2 c) _ ((CEq eq-t eq-r eq-x) (Some _ x)) (else (find-newtype rest env c)))) (else (find-newtype rest env c)))) (else (find-newtype rest env c))))))
 
 ; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
-(def-fns _ $ many find-coercible : (subterm many (List $ Bin) objects) (many (Env) env) (many (Bin) g) -> (many (Maybe $ Bin) r)
+(def-fns _ $ many find-coercible : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) g) -> (many (Maybe $ Nat) r)
   (match many objects _
     ((Nil a) (None _))
     ((Cons a x rest)
@@ -601,7 +601,7 @@
               ((NthMiss nt nl ni np) (BFalse))
               ((NthHit nt nl ni t np)
                 (match many t (((Bool) b))
-                  ((TVar g2) (and (bin-eq g2 g) $ match many (entry-name env x) (((Bool) b)) ((None c) (BTrue)) ((Some c nm) (BFalse)))) (else (BFalse)))))) (else (BFalse))))
+                  ((TVar g2) (and (nat-eq g2 g) $ match many (entry-name env x) (((Bool) b)) ((None c) (BTrue)) ((Some c nm) (BFalse)))) (else (BFalse)))))) (else (BFalse))))
       (match many hit _
         ((BTrue) (Some _ x))
         ((BFalse) (find-coercible rest env g))))))
@@ -609,7 +609,7 @@
 ; A Matchable's constructors, each with its phantom marker, id and number of many fields (section 38).
 (def-adts $ CShape : -> Type
   enum
-  (many MkCShape : (many (Mult) m) (many (Bin) c) (many (Nat) arity) -> (CShape)))
+  (many MkCShape : (many (Mult) m) (many (Nat) c) (many (Nat) arity) -> (CShape)))
 
 (def-fns _ $ many shapes : (subterm many (List $ MCtor) ctors) (many (Env) env) -> (many (List $ CShape) r)
   (match many ctors _
@@ -628,15 +628,15 @@
       (match many s _
         ((MkCShape m c n) (match many m _ ((Many) (Cons _ s $ non-phantom rest)) ((Erased) (non-phantom rest))))))))
 
-(def-fns _ $ many shape-index : (subterm many (List $ CShape) ss) (many (Bin) c) (many (Nat) i) -> (many (Maybe $ Nat) r)
+(def-fns _ $ many shape-index : (subterm many (List $ CShape) ss) (many (Nat) c) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many ss _
     ((Nil a) (None _))
     ((Cons a s rest)
       (match many s _
-        ((MkCShape m c2 n) (match many (bin-cmp c c2) _ ((CEq eq-t eq-r eq-x) (Some _ i)) (else (shape-index rest c $ Succ i))))))))
+        ((MkCShape m c2 n) (match many (nat-cmp c c2) _ ((CEq eq-t eq-r eq-x) (Some _ i)) (else (shape-index rest c $ Succ i))))))))
 
 ; A phantom constructor heads no runtime value (section 20 rule 2), so discriminants number the others only.
-(def-fns _ $ many discriminant : (many (List $ CShape) ss) (many (Bin) c) -> (many (Nat) r)
+(def-fns _ $ many discriminant : (many (List $ CShape) ss) (many (Nat) c) -> (many (Nat) r)
   (match many (shape-index (non-phantom ss) c 0) _ ((None a) 0) ((Some a i) i)))
 
 (def-fns _ $ many tagged-of : (many (Disc) disc) (many (List $ CShape) ss) -> (many (Bool) r)
@@ -644,19 +644,19 @@
     ((DUnion) (BFalse))
     ((DEnum) (nat-lt 1 $ list-length _ $ non-phantom ss))))
 
-(def-fns _ $ many marker : (subterm many (List $ MCtor) ctors) (many (Bin) c) -> (many (Mult) m)
+(def-fns _ $ many marker : (subterm many (List $ MCtor) ctors) (many (Nat) c) -> (many (Mult) m)
   (match many ctors _
     ((Nil a) (Many))
     ((Cons a mc rest)
       (match many mc _
         ((MkMCtor m t)
           (match many t _
-            ((TVar c2) (match many (bin-cmp c c2) _ ((CEq eq-t eq-r eq-x) m) (else (marker rest c)))) (else (marker rest c))))))))
+            ((TVar c2) (match many (nat-cmp c c2) _ ((CEq eq-t eq-r eq-x) m) (else (marker rest c)))) (else (marker rest c))))))))
 
 
 
 ; The wrapping constructor of a type of newtype shape (section 38), if any.
-(def-fns _ $ many wrappers : (subterm many (List $ CShape) ss) -> (many (List $ Bin) r)
+(def-fns _ $ many wrappers : (subterm many (List $ CShape) ss) -> (many (List $ Nat) r)
   (match many ss _
     ((Nil a) (Nil _))
     ((Cons a s rest)
@@ -666,16 +666,16 @@
             ((BTrue) (Cons _ c $ wrappers rest))
             ((BFalse) (wrappers rest))))))))
 
-(def-fns _ $ many others-bare : (subterm many (List $ CShape) ss) (many (Bin) w) -> (many (Bool) r)
+(def-fns _ $ many others-bare : (subterm many (List $ CShape) ss) (many (Nat) w) -> (many (Bool) r)
   (match many ss _
     ((Nil a) (BTrue))
     ((Cons a s rest)
       (match many s _
         ((MkCShape m c n)
-          (and (or (not $ mult-is-many m) $ or (bin-eq c w) $ nat-is-zero n)
+          (and (or (not $ mult-is-many m) $ or (nat-eq c w) $ nat-is-zero n)
             $ others-bare rest w))))))
 
-(def-fns _ $ many wrapper : (many (Disc) disc) (many (List $ CShape) ss) -> (many (Maybe $ Bin) r)
+(def-fns _ $ many wrapper : (many (Disc) disc) (many (List $ CShape) ss) -> (many (Maybe $ Nat) r)
   (match many (wrappers ss) _
     ((Nil a) (None _))
     ((Cons a w rest)
@@ -699,13 +699,13 @@
         ((MkCShape m c n) (Cons _ (MkCtor (name-of env c) c index n tagged ext shape) $ ctor-records rest env (Succ index) tagged ext shape))))))
 
 ; The ADT a Matchable's type describes (section 17): the non-phantom constructors at their discriminants.
-(def-fns _ $ many mint-adt : (many (Env) env) (many (Bin) tid) (many (Disc) disc) (many (List $ CShape) ss) (many (Maybe $ ExtType) ext) -> (many (Adt) r)
+(def-fns _ $ many mint-adt : (many (Env) env) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) (many (Maybe $ ExtType) ext) -> (many (Adt) r)
   (let (many tagged) $ tagged-of disc ss)
   (MkAdt (name-of env tid) tagged (ctor-records (non-phantom ss) env 0 tagged ext $ cshape-arities $ non-phantom ss) ext))
 
 ; A variable in a non-erased position: a Const entry's value embedded with its entry (section 34), or a
 ; Dyn entry's place in the frames the code binds.
-(def-fns _ $ many var-code : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Bin) x) -> (many (Code ctx many-one) r)
+(def-fns _ $ many var-code : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) x) -> (many (Code ctx many-one) r)
   (match many (is-const env x) _
     ((BTrue) (CConst _ x))
     ((BFalse)
@@ -713,14 +713,14 @@
         ((Some a p) (CVar _ x p))
         ((None a) (CError _ many-one $ str-cat "internal: not bound at runtime: " $ name-of env x))))))
 
-(def-fns _ $ many matchable-code : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Mult) pos) (many (Bin) x) -> (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) r)
+(def-fns _ $ many matchable-code : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) pos) (many (Nat) x) -> (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) r)
   (match many pos _
     ((Erased) (CErased _ $ Cons _ pos $ Nil _))
     ((Many) (var-code env ctx x))))
 
 ; A match on an ADT the elaborator can see reads no Matchable at runtime (section 17); one on a held
 ; Matchable reads it as the ADT its type describes.
-(def-fns _ $ many match-shape : (many (Env) env) (many (List $ List $ Bin) ctx) (many (Bin) x) (many (Bin) tid) (many (Disc) disc) (many (List $ CShape) ss) -> (many (Shape ctx) r)
+(def-fns _ $ many match-shape : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) x) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) -> (many (Shape ctx) r)
   (match many (adt-of env x) _ ((Some a adt) (ShKnown _ adt)) ((None a) (ShHeld _ (var-code env ctx x) $ mint-adt env tid disc ss $ None _))))
 
 (def-fns _ $ many mint : (many (Env) env) (many (Term) ty) -> (many (Env) r) (many (Res) res)
@@ -738,14 +738,14 @@
     ((SgTy t) (values t $ None _))
     ((SgIs t ty) (values ty $ Some _ t))))
 
-(def-fns _ $ many proof-type : (many (Bin) ctor) (many (List $ Term) args) -> (many (Term) t)
+(def-fns _ $ many proof-type : (many (Nat) ctor) (many (List $ Term) args) -> (many (Term) t)
   (TApp (TVar ctor) args))
 
 (def-fns _ $ many nth-term : (many (List $ Term) ts) (many (Nat) i) -> (many (Term) t)
   (match many (list-nth _ ts i) _ ((NthMiss nt nl ni np) (TErr "missing argument")) ((NthHit nt nl ni t np) t)))
 
 ; Values for binders, many ones from the list in order, erased ones the token.
-(def-fns _ $ many non-erased : (subterm many (List $ Bin) ids) (many (Env) env) -> (many (List $ Bin) r)
+(def-fns _ $ many non-erased : (subterm many (List $ Nat) ids) (many (Env) env) -> (many (List $ Nat) r)
   (match many ids _
     ((Nil a) (Nil _))
     ((Cons a x rest)
@@ -753,12 +753,12 @@
         ((Many) (Cons _ x $ non-erased rest env))
         ((Erased) (non-erased rest env))))))
 
-(def-fns _ $ many ress-of : (subterm many (List $ Bin) ids) (many (Env) env) -> (many (List $ Res) r)
+(def-fns _ $ many ress-of : (subterm many (List $ Nat) ids) (many (Env) env) -> (many (List $ Res) r)
   (match many ids _
     ((Nil a) (Nil _))
     ((Cons a x rest) (Cons _ (res-of env x) $ ress-of rest env))))
 
-(def-fns _ $ many tvars-rev : (subterm many (List $ Bin) ids) (many (List $ Term) acc) -> (many (List $ Term) r)
+(def-fns _ $ many tvars-rev : (subterm many (List $ Nat) ids) (many (List $ Term) acc) -> (many (List $ Term) r)
   (match many ids _
     ((Nil a) acc)
     ((Cons a x rest) (tvars-rev rest $ Cons _ (TVar x) acc))))
@@ -773,12 +773,12 @@
     ((Nil a) (Nil _))
     ((Cons a m rest) (Cons _ (Erased) $ all-erased rest))))
 
-(def-fns _ $ many no-code : (erased (List $ List $ Bin) ctx) -> (many (Code ctx many-one) c)
+(def-fns _ $ many no-code : (erased (List $ List $ Nat) ctx) -> (many (Code ctx many-one) c)
   (CError _ many-one "no value"))
 
 ; Binds fresh ids for the many returns and keeps those the position takes many (ASSUMPTIONS 39): the ids
 ; first, then each one's place in the frame they form, then the code referring to them there.
-(def-fns _ $ many fresh-bound : (subterm many (List $ Mult) rets) (many (Env) env) -> (many (Env) r) (many (List $ Bin) bound) (erased (Picked (Bin) rets bound) bpk)
+(def-fns _ $ many fresh-bound : (subterm many (List $ Mult) rets) (many (Env) env) -> (many (Env) r) (many (List $ Nat) bound) (erased (Picked (Nat) rets bound) bpk)
   (match many rets _
     ((Nil a) (values env (Nil _) (PkNil _)))
     ((Cons a m rest)
@@ -791,8 +791,8 @@
           (let (many env3) (many bound) (erased bpk) $ fresh-bound rest env2)
           (values env3 (Cons _ t bound) (PkMany _ rest t bound bpk)))))))
 
-(def-fns _ $ many kept-of : (erased (List $ List $ Bin) ctx) (erased (List $ Bin) frame) (subterm many (List $ Mult) expect) (many (List $ Mult) rets) (erased (Lockstep (Mult) (Mult) expect rets) lock) (erased (List $ Bin) bound) (erased (Picked (Bin) rets bound) bpk) (many (List $ AtIn frame) ats) (erased (Lockstep (Bin) (AtIn frame) bound ats) lk) ->
-    (many (List $ Code (Cons (List (Bin)) frame ctx) many-one) kept) (erased (Picked (Code (Cons (List (Bin)) frame ctx) many-one) expect kept) kpk)
+(def-fns _ $ many kept-of : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) frame) (subterm many (List $ Mult) expect) (many (List $ Mult) rets) (erased (Lockstep (Mult) (Mult) expect rets) lock) (erased (List $ Nat) bound) (erased (Picked (Nat) rets bound) bpk) (many (List $ AtIn frame) ats) (erased (Lockstep (Nat) (AtIn frame) bound ats) lk) ->
+    (many (List $ Code (Cons (List (Nat)) frame ctx) many-one) kept) (erased (Picked (Code (Cons (List (Nat)) frame ctx) many-one) expect kept) kpk)
   (match many expect _
     ((Nil a) (values (Nil _) (PkNil _)))
     ((Cons a m rest)
@@ -805,7 +805,7 @@
                   (match erased bpk _
                     ((PkErased tb rr bb bp)
                       (let (many kept) (erased kpk) $ kept-of ctx frame rest rrest lp _ bp ats lk)
-                      (let (many (Code (Cons (List (Bin)) frame ctx) many-one) missing) $ no-code _)
+                      (let (many (Code (Cons (List (Nat)) frame ctx) many-one) missing) $ no-code _)
                       (match many m _
                         ((Erased) (values kept (PkErased _ rest kept kpk)))
                         ((Many) (values (Cons _ missing kept) (PkMany _ rest missing kept kpk)))))))
@@ -817,13 +817,13 @@
                           (match many ats _
                             ((Cons c at arest)
                               (let (many kept) (erased kpk) $ kept-of ctx frame rest rrest lp _ bp arest lq)
-                              (let (many (Code (Cons (List (Bin)) frame ctx) many-one) code) $ match many at _ ((MkAtIn f z p) (CVar _ z $ MHere _ _ _ p)))
+                              (let (many (Code (Cons (List (Nat)) frame ctx) many-one) code) $ match many at _ ((MkAtIn f z p) (CVar _ z $ MHere _ _ _ p)))
                               (match many m _
                                 ((Many) (values (Cons _ code kept) (PkMany _ rest code kept kpk)))
                                 ((Erased) (values kept (PkErased _ rest kept kpk)))))))))))))))))))
 
-(def-fns _ $ many projection : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (List $ Mult) rets) (erased (Lockstep (Mult) (Mult) expect rets) lock) (many (Env) env) ->
-    (many (Env) r) (many (List $ Bin) bound) (erased (Picked (Bin) rets bound) bpk) (many (List $ Code (Cons (List (Bin)) bound ctx) many-one) kept) (erased (Picked (Code (Cons (List (Bin)) bound ctx) many-one) expect kept) kpk)
+(def-fns _ $ many projection : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (List $ Mult) rets) (erased (Lockstep (Mult) (Mult) expect rets) lock) (many (Env) env) ->
+    (many (Env) r) (many (List $ Nat) bound) (erased (Picked (Nat) rets bound) bpk) (many (List $ Code (Cons (List (Nat)) bound ctx) many-one) kept) (erased (Picked (Code (Cons (List (Nat)) bound ctx) many-one) expect kept) kpk)
   (let (many env2) (many bound) (erased bpk) $ fresh-bound rets env)
   (let (many ats) (erased lk) $ at-ins bound)
   (let (many kept) (erased kpk) $ kept-of ctx bound expect rets lock bound bpk ats lk)
@@ -840,7 +840,7 @@
   (many MMExpect : (many (List $ Mult) ms) -> (MultsMode)))
 
 (def-fns _ $ many open-tele : (subterm many (List $ Entry) tele) (many (Env) env) (many (Maybe $ List $ Maybe $ String) names) (many (Maybe $ List $ Mult) mults) (many (List $ Term) ids) (many (Bool) meta) ->
-    (many (Env) r) (many (List $ Bin) fresh) (erased (Lockstep (Entry) (Bin) tele fresh) lock)
+    (many (Env) r) (many (List $ Nat) fresh) (erased (Lockstep (Entry) (Nat) tele fresh) lock)
   (match many tele _
     ((Nil a) (values env (Nil _) (LsNil _ _)))
     ((Cons a e rest)
@@ -871,7 +871,7 @@
 
 ; Entering a branch forces the scrutinee equal to the constructor over its fields (section 18).
 
-(def-fns _ $ many subterm-params : (subterm many (List $ Entry) tele) (many (List $ Bin) ids) -> (many (List $ Bin) r)
+(def-fns _ $ many subterm-params : (subterm many (List $ Entry) tele) (many (List $ Nat) ids) -> (many (List $ Nat) r)
   (match many tele _
     ((Nil a) (Nil _))
     ((Cons a e rest)
@@ -980,28 +980,28 @@
   (mint env2 $ proof-type subterm-id $ Cons _ aty $ Cons _ a $ Cons _ bty $ Cons _ b $ Nil _))
 
 ; prove-predates (section 8): the variable was in scope when the level was minted (ASSUMPTIONS 13).
-(def-fns _ $ many mint-predates : (many (Env) env) (many (Bin) x0) (many (Bin) lvl) -> (many (Env) r) (many (Res) res)
+(def-fns _ $ many mint-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Env) r) (many (Res) res)
   (let (many env2) $ error-unless env (entry-minted env lvl) $ str-cat (name-of env lvl) " is not a level minted by def-lvl")
-  (let (many (Bin) x)
-    (match many (bin-lt x0 lvl) _
+  (let (many (Nat) x)
+    (match many (nat-lt x0 lvl) _
       ((BTrue) x0)
-      ((BFalse) (match many (canon-env env2 $ TVar x0) (((Bin) y)) ((TVar y) y) (else x0)))))
-  (let (many env3) $ error-unless env2 (bin-lt x lvl) $ str-cat3 (name-of env2 x) " was not in scope when level " $ str-cat (name-of env2 lvl) " was minted")
+      ((BFalse) (match many (canon-env env2 $ TVar x0) (((Nat) y)) ((TVar y) y) (else x0)))))
+  (let (many env3) $ error-unless env2 (nat-lt x lvl) $ str-cat3 (name-of env2 x) " was not in scope when level " $ str-cat (name-of env2 lvl) " was minted")
   (mint env3 $ proof-type predates-id $ Cons _ (type-of env3 x) $ Cons _ (TVar x) $ Cons _ (TVar lvl) $ Nil _))
 
 ; The arguments of a proof of the given kind, with an error where the term is not one.
-(def-fns _ $ many proof-args : (many (Env) env) (many (Bin) ctor) (many (Res) p) -> (many (Maybe $ List $ Term) r)
+(def-fns _ $ many proof-args : (many (Env) env) (many (Nat) ctor) (many (Res) p) -> (many (Maybe $ List $ Term) r)
   (match many (canon-env env $ res-ty p) _
-    ((TApp h args) (match many h _ ((TVar c) (match many (bin-cmp c ctor) _ ((CEq eq-t eq-r eq-x) (Some _ args)) (else (None _)))) (else (None $ List $ Term)))) (else (None $ List $ Term))))
+    ((TApp h args) (match many h _ ((TVar c) (match many (nat-cmp c ctor) _ ((CEq eq-t eq-r eq-x) (Some _ args)) (else (None _)))) (else (None $ List $ Term)))) (else (None $ List $ Term))))
 
-(def-fns _ $ many not-a-proof : (many (Env) env) (many (Bin) ctor) (many (Res) p) -> (many (Env) r)
+(def-fns _ $ many not-a-proof : (many (Env) env) (many (Nat) ctor) (many (Res) p) -> (many (Env) r)
   (env-error env $ str-cat3 "expected a " (name-of env ctor) $ str-cat3 " proof, got " (show-t env $ res-term p) $ str-cat " : " $ show-t env $ res-ty p))
 
 (def-fns _ $ many proof-errs : (subterm many (Nat) n) -> (many (List $ Term) ts)
   (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ (TErr "proof") $ proof-errs k))))
 
 ; The three arguments of a Predates proof, or the four of a Subterm or Coercible proof (section 8).
-(def-fns _ $ many proof-terms : (many (Env) env) (many (Bin) ctor) (many (Res) p) (many (Nat) n) -> (many (Env) r) (many (List $ Term) args)
+(def-fns _ $ many proof-terms : (many (Env) env) (many (Nat) ctor) (many (Res) p) (many (Nat) n) -> (many (Env) r) (many (List $ Term) args)
   (let (many (Maybe $ List $ Term) args)
     (match many (proof-args env ctor p) _
       ((None a) (None _))
@@ -1010,11 +1010,11 @@
     ((None a) (values (not-a-proof env ctor p) $ proof-errs n))
     ((Some a ts) (values env ts))))
 
-(def-fns _ $ many expect-proof3 : (many (Env) env) (many (Bin) ctor) (many (Res) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2)
+(def-fns _ $ many expect-proof3 : (many (Env) env) (many (Nat) ctor) (many (Res) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2)
   (let (many env2) (many args) $ proof-terms env ctor p 3)
   (values env2 (nth-term args 0) (nth-term args 1) $ nth-term args 2))
 
-(def-fns _ $ many expect-proof4 : (many (Env) env) (many (Bin) ctor) (many (Res) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2) (many (Term) t3)
+(def-fns _ $ many expect-proof4 : (many (Env) env) (many (Nat) ctor) (many (Res) p) -> (many (Env) r) (many (Term) t0) (many (Term) t1) (many (Term) t2) (many (Term) t3)
   (let (many env2) (many args) $ proof-terms env ctor p 4)
   (values env2 (nth-term args 0) (nth-term args 1) (nth-term args 2) $ nth-term args 3))
 
@@ -1023,7 +1023,7 @@
     ((Zero) xs)
     ((Succ k) (match many xs _ ((Nil a) (Nil _)) ((Cons a x rest) (list-drop _ k rest))))))
 
-(def-fns _ $ many trans-proofs : (many (Env) env) (many (Bin) ctor) (many (Nat) n) (many (Res) p) (many (Res) q) -> (many (Env) r) (many (Res) res)
+(def-fns _ $ many trans-proofs : (many (Env) env) (many (Nat) ctor) (many (Nat) n) (many (Res) p) (many (Res) q) -> (many (Env) r) (many (Res) res)
   (let (many env2) (many pa) $ proof-terms env ctor p n)
   (let (many env3) (many qa) $ proof-terms env2 ctor q n)
   (let (many env4) $ check env3 "value" (nth-term qa 1) $ nth-term pa $ nat-pred n)
@@ -1038,19 +1038,19 @@
   (sp-name-in sp-table sp))
 
 ; The candidates are ranked; several must agree (section 19), else the ambiguity is an error.
-(def-fns _ $ many agree : (subterm many (List $ Bin) objects) (many (Env) env) (many (Bin) tid) (many (Term) best) -> (many (Bool) r)
+(def-fns _ $ many agree : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) tid) (many (Term) best) -> (many (Bool) r)
   (match many objects _
     ((Nil a) (BTrue))
     ((Cons a x rest)
       (let (many ty) $ type-of env x)
       (let (many (Bool) mine)
         (match many ty _
-          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar t2) (bin-eq t2 tid)) (else (BFalse)))) (else (BFalse))))
+          ((TMatchable d t cs) (match many t (((Bool) b)) ((TVar t2) (nat-eq t2 tid)) (else (BFalse)))) (else (BFalse))))
       (match many mine _
         ((BFalse) (agree rest env tid best))
         ((BTrue) (and (term-eq ty best) $ agree rest env tid best))))))
 
-(def-fns _ $ many find-matchable : (many (Env) env) (many (Bin) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info)
+(def-fns _ $ many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info)
   (match many (find-matchable-in (env-objects env) env tid $ None _) _
     ((None a) (values env $ None _))
     ((Some a info)
@@ -1060,7 +1060,7 @@
             ((BTrue) (values env $ Some _ info))
             ((BFalse) (values (env-error env $ str-cat "ambiguous Matchables for " $ name-of env tid) $ Some _ info))))))))
 
-(def-fns _ $ many phantom : (many (Env) env) (many (Bin) c) -> (many (Bool) r)
+(def-fns _ $ many phantom : (many (Env) env) (many (Nat) c) -> (many (Bool) r)
   (let (many env2) (many found) $ find-matchable env $ tid-of env c)
   (match many found _
     ((None a) (BFalse))
@@ -1078,20 +1078,20 @@
           ((Some b info) (match many info (((Bool) b)) ((MkMatchInfo mid d cs rank) (list-is-empty _ cs))))))))
   (error-unless env empty $ str-cat (show-t env ty) " is not an empty type"))
 
-(def-fns _ $ many mint-level : (many (Env) env) (many (Maybe $ String) name) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many mint-level : (many (Env) env) (many (Maybe $ String) name) -> (many (Env) r) (many (Nat) x)
   (let (many env2) (many x) $ bind-erased env name (Erased) level-term (None _) coercible-id)
   (values (mark-minted env2 x) x))
 
 ; Entering a branch forces the scrutinee equal to the constructor over its fields, and its type to the
 ; constructor's return (section 18).
-(def-fns _ $ many refine : (many (Env) env) (many (Res) scrut) (many (Bin) c) (many (List $ Bin) fids) (many (Term) ret) -> (many (UnifyRes) r)
+(def-fns _ $ many refine : (many (Env) env) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Term) ret) -> (many (UnifyRes) r)
   (let (many fvars) $ tvars-rev fids $ Nil _)
   (match many (unify-env env (res-term scrut) (TApp (TVar c) $ list-rev _ fvars) $ BTrue) _
     ((UContra m) (UContra m))
     ((UOk env2) (unify-env env2 (res-ty scrut) (instantiate fvars ret) $ BTrue))))
 
-(def-fns _ $ many open-fields : (many (Env) env) (many (List $ Entry) tele) (many (List $ Maybe $ String) names) (many (Maybe $ List $ Mult) mults) (many (Res) sres) (many (Bin) c) (many (Term) ret) ->
-    (many (Env) r) (many (List $ Bin) fids) (many (UnifyRes) u)
+(def-fns _ $ many open-fields : (many (Env) env) (many (List $ Entry) tele) (many (List $ Maybe $ String) names) (many (Maybe $ List $ Mult) mults) (many (Res) sres) (many (Nat) c) (many (Term) ret) ->
+    (many (Env) r) (many (List $ Nat) fids) (many (UnifyRes) u)
   (let (many env2) (many fids) (erased lock) $ open-tele tele env (Some _ names) mults (Nil _) $ BFalse)
   (values env2 fids $ refine env2 sres c fids ret))
 
@@ -1129,14 +1129,14 @@
 (def-fns _ $ many level-of-error : (many (Env) env) (many (Term) f) (many (Term) ty) -> (many (String) s)
   (str-cat3 "level-of: " (show-t env f) $ str-cat3 " : " (show-t env ty) " is not a function"))
 
-(def-fns _ $ many expr-error : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Env) env) (many (String) msg) (many (String) tag) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
+(def-fns _ $ many expr-error : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (String) msg) (many (String) tag) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
   (values (env-error env msg) (Nil _) $ CError _ expect tag))
 
-(def-fns _ $ many erased-result : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Res) r) -> (many (Env) r2) (many (List $ Res) ress) (many (Code ctx expect) code)
+(def-fns _ $ many erased-result : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Res) r) -> (many (Env) r2) (many (List $ Res) ress) (many (Code ctx expect) code)
   (values env (Cons _ r $ Nil _) $ CErased _ expect))
 
 ; A constructor named in source, read through its alias, which must hold a value constructor.
-(def-fns _ $ many ctor-var : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Bin) c)
+(def-fns _ $ many ctor-var : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Nat) c)
   (let (many env2) (many c) $ named env raw "a constructor")
   (match many (type-of env2 c) _
     ((TValCtor tele ret) (values env2 c))
@@ -1178,10 +1178,10 @@
     ((Some a m) (values env m))
     ((None a) (values (env-error env $ str-cat "expected a multiplicity, got " $ show-r raw) $ Many))))
 
-(def-fns _ $ many level-var-checked : (many (Env) env) (many (Term) t) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many level-var-checked : (many (Env) env) (many (Term) t) -> (many (Env) r) (many (Nat) x)
   (let (many bad) $ env-error env $ str-cat (show-t env t) " is not a level")
   (match many (canon-env env t) _
-    ((TVar x) (match many (equal-env env (type-of env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values bad x)))) (else (values bad $ BZ))))
+    ((TVar x) (match many (equal-env env (type-of env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values bad x)))) (else (values bad $ Zero))))
 
 (def-fns _ $ many one-arg : (many (List $ Raw) args) -> (many (Raw) r)
   (match many args _ ((Nil a) (RAtom 0 "_")) ((Cons a r rest) r)))
@@ -1204,7 +1204,7 @@
                     ((BFalse) (None _))))))))))))
 
 ; numeral-of (ASSUMPTIONS 53): a numeral or character literal by its own spelling, never an expression.
-(def-fns _ $ many numeral-of-key : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Env) env) (many (String) key) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
+(def-fns _ $ many numeral-of-key : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (String) key) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
   (match many (lit-lookup env key) _
     ((None a) (expr-error _ expect env (str-cat3 "literal " key " is not in scope") "numeral-of"))
     ((Some a x)
@@ -1212,7 +1212,7 @@
         ((None b) (expr-error _ expect env (str-cat key " is a string literal, which carries no Numeral proof") "numeral-of"))
         ((Some b p) (values env (Cons _ (res-of env p) $ Nil _) $ CErased _ expect))))))
 
-(def-fns _ $ many numeral-of-lit : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Raw) arg) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
+(def-fns _ $ many numeral-of-lit : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Raw) arg) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
   (match many arg _
     ((RList lq items) (expr-error _ expect env (str-cat "expected a literal, got " $ show-r arg) "numeral-of"))
     ((RString lq s) (expr-error _ expect env (str-cat (show-r arg) " is a string literal, which carries no Numeral proof") "numeral-of"))
@@ -1237,7 +1237,7 @@
 
 ; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
 ; (lib/elab.ml's numeral_entry).
-(def-fns _ $ many numeral-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Bin) e)
+(def-fns _ $ many numeral-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e)
   (match many (lit-number raw) _
     ((None a)
       (values (env-error env
@@ -1306,12 +1306,12 @@
                         ((None d) (None _))
                         ((Some d pp) (match many pp _ ((MkPair s t cc fs) (Some _ $ BAbsurd _ cc fs body $ prove-subterm body braw)))))))))))))) (else (None $ BranchParts braw))))
 
-(def-fns _ $ many marker-checked : (many (Env) env) (many (Bin) tid) (many (List $ MCtor) mctors) (many (Bin) c) -> (many (Env) r) (many (Mult) m)
+(def-fns _ $ many marker-checked : (many (Env) env) (many (Nat) tid) (many (List $ MCtor) mctors) (many (Nat) c) -> (many (Env) r) (many (Mult) m)
   (match many (mctors-list mctors c) _
     ((BTrue) (values env $ marker mctors c))
     ((BFalse) (values (env-error env $ str-cat3 (name-of env c) " is not a constructor of " $ name-of env tid) $ Many))))
 
-(def-fns _ $ many scrutinee-matchable : (many (Env) env) (many (Res) sres) -> (many (Env) r) (many (Maybe $ Pair (Bin) $ MatchInfo) found)
+(def-fns _ $ many scrutinee-matchable : (many (Env) env) (many (Res) sres) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ MatchInfo) found)
   (let (many env1) $ settle-res env sres)
   (match many (type-head env1 $ res-ty sres) _
     ((None a) (values (env-error env1 $ str-cat3 "cannot match on " (show-t env1 $ res-term sres) $ str-cat " : " $ show-t env1 $ res-ty sres) $ None _))
@@ -1321,15 +1321,15 @@
         ((None b) (values (env-error env2 $ str-cat (name-of env2 tid) " has no Matchable in scope") $ None _))
         ((Some b info) (values env2 $ Some _ $ MkPair _ _ tid info))))))
 
-(def-fns _ $ many check-field-count : (many (Env) env) (many (Bin) c) (many (List $ Raw) fields) (many (List $ Entry) tele) -> (many (Env) r)
+(def-fns _ $ many check-field-count : (many (Env) env) (many (Nat) c) (many (List $ Raw) fields) (many (List $ Entry) tele) -> (many (Env) r)
   (match many (nat-cmp (list-length _ fields) $ list-length _ tele) _
     ((CEq eq-t eq-r eq-x) env)
     (else (env-error env $ str-cat3 (name-of env c) " has " $ str-cat (nat-str $ list-length _ tele) " fields"))))
 
-(def-fns _ $ many count-bins : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Nat) n)
+(def-fns _ $ many count-bins : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Nat) n)
   (match many xs _
     ((Nil a) 0)
-    ((Cons a y rest) (match many (bin-cmp x y) _ ((CEq eq-t eq-r eq-x) (Succ $ count-bins rest x)) (else (count-bins rest x))))))
+    ((Cons a y rest) (match many (nat-cmp x y) _ ((CEq eq-t eq-r eq-x) (Succ $ count-bins rest x)) (else (count-bins rest x))))))
 
 ; Every constructor of the Matchable appears exactly once (ASSUMPTIONS 21).
 (def-fns _ $ many is-else-branch : (many (Env) env) (many (Raw) braw) -> (many (Bool) r)
@@ -1338,7 +1338,7 @@
 
 ; The unlisted constructors an else stands for: those whose forced unification does not contradict; the first of
 ; them, and whether any could run (section 12).
-(def-fns _ $ many covered-of : (subterm many (List $ MCtor) mctors) (many (Env) env) (many (List $ Bin) seen) (many (Res) sres) (many (Mult) smult) (many (Maybe $ Bin) first) (many (Bool) reachable) (many (List $ Bin) covered) -> (many (Env) r) (many (Maybe $ Bin) first2) (many (Bool) reachable2) (many (List $ Bin) covered2)
+(def-fns _ $ many covered-of : (subterm many (List $ MCtor) mctors) (many (Env) env) (many (List $ Nat) seen) (many (Res) sres) (many (Mult) smult) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (List $ Nat) covered) -> (many (Env) r) (many (Maybe $ Nat) first2) (many (Bool) reachable2) (many (List $ Nat) covered2)
   (match many mctors _
     ((Nil a) (values env first reachable covered))
     ((Cons a mc rest)
@@ -1356,16 +1356,16 @@
                 ((UContra msg) (covered-of rest (env-discard env envb) seen sres smult first reachable covered))
                 ((UOk envb2)
                   (covered-of rest (env-discard env envb2) seen sres smult
-                    (match many first (((Maybe $ Bin) f)) ((None b) (Some _ c)) ((Some b x) first))
+                    (match many first (((Maybe $ Nat) f)) ((None b) (Some _ c)) ((Some b x) first))
                     (or reachable $ not $ and phantom $ mult-is-many smult)
-                    $ match many phantom (((List $ Bin) l)) ((BTrue) covered) ((BFalse) (Cons _ c covered))))))))))))
+                    $ match many phantom (((List $ Nat) l)) ((BTrue) covered) ((BFalse) (Cons _ c covered))))))))))))
 
-(def-fns _ $ many discs-of : (subterm many (List $ Bin) cs) (many (List $ CShape) ss) -> (many (List $ Nat) r)
+(def-fns _ $ many discs-of : (subterm many (List $ Nat) cs) (many (List $ CShape) ss) -> (many (List $ Nat) r)
   (match many cs _
     ((Nil a) (Nil _))
     ((Cons a c rest) (Cons _ (discriminant ss c) $ discs-of rest ss))))
 
-(def-fns _ $ many check-coverage : (subterm many (List $ MCtor) mctors) (many (Env) env) (many (List $ Bin) seen) -> (many (Env) r)
+(def-fns _ $ many check-coverage : (subterm many (List $ MCtor) mctors) (many (Env) env) (many (List $ Nat) seen) -> (many (Env) r)
   (match many mctors _
     ((Nil a) env)
     ((Cons a mc rest)
@@ -1379,7 +1379,7 @@
 
 
 ; The ids at the many positions of a list of multiplicities, in step, as the frame a binder list makes.
-(def-fns _ $ many many-of : (subterm many (List $ Mult) ms) (many (List $ Bin) ids) -> (many (List $ Bin) r)
+(def-fns _ $ many many-of : (subterm many (List $ Mult) ms) (many (List $ Nat) ids) -> (many (List $ Nat) r)
   (match many ms _
     ((Nil a) (Nil _))
     ((Cons a m rest)
@@ -1401,11 +1401,11 @@
     (many HCons : (erased (Raw) f) (erased (List $ Raw) rest) (many (Header f) h) (many (Headers rest) hs) -> (Headers $ Cons (Raw) f rest)))
   ; [gids]: the frame the group binds, its many functions' ids; an erased function is checked and leaves nothing
   ; behind (ASSUMPTIONS 77).
-  (Bound : ((List $ Raw) fns) ((Headers fns) hs) ((List $ Bin) gids) -> Type
+  (Bound : ((List $ Raw) fns) ((Headers fns) hs) ((List $ Nat) gids) -> Type
     enum
-    (many BStop : (erased (List $ Raw) fns) -> (Bound fns (HStop fns) (Nil (Bin))))
-    (many BMany : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Bin) gids) (many (Bin) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) (Cons (Bin) x gids)))
-    (many BErased : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Bin) gids) (many (Bin) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) gids)))
+    (many BStop : (erased (List $ Raw) fns) -> (Bound fns (HStop fns) (Nil (Nat))))
+    (many BMany : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Nat) gids) (many (Nat) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) (Cons (Nat) x gids)))
+    (many BErased : (erased (Raw) f) (erased (List $ Raw) rest) (erased (Header f) h) (erased (Headers rest) hs) (erased (List $ Nat) gids) (many (Nat) x) (many (Bound rest hs gids) more) -> (Bound (Cons (Raw) f rest) (HCons f rest h hs) gids)))
   (AdtHeader : ((Raw) f) -> Type
     enum
     (many MkAdtHeader : (erased (Raw) f) (many (String) name) (many (Disc) disc) (many (Bool) newtype) (many (Bool) extern) (many (List $ Raw) ctors) (erased (Subterm (List $ Raw) ctors (Raw) f) p) -> (AdtHeader f)))
@@ -1416,7 +1416,7 @@
   (Tids : ((List $ Raw) adts) ((AdtHeaders adts) hs) -> Type
     enum
     (many TStop : (erased (List $ Raw) adts) -> (Tids adts $ AStop adts))
-    (many TCons : (erased (Raw) f) (erased (List $ Raw) rest) (erased (AdtHeader f) h) (erased (AdtHeaders rest) hs) (many (Bin) x) (many (Tids rest hs) more) -> (Tids (Cons (Raw) f rest) $ ACons f rest h hs)))
+    (many TCons : (erased (Raw) f) (erased (List $ Raw) rest) (erased (AdtHeader f) h) (erased (AdtHeaders rest) hs) (many (Nat) x) (many (Tids rest hs) more) -> (Tids (Cons (Raw) f rest) $ ACons f rest h hs)))
   (LetParts : ((List $ Raw) args) -> Type
     enum
     (many MkLetParts : (erased (List $ Raw) args) (many (List $ SrcEntry args) binders) (many (List $ Raw) rhs) (erased (Within rhs args) wr) -> (LetParts args)))
@@ -1424,23 +1424,23 @@
     enum
     (many MkCtorParts : (erased (Raw) c) (many (Mult) mult) (many (String) name) (many (List $ Raw) sg) (erased (Subterm (List $ Raw) sg (Raw) c) p) -> (CtorParts c))))
 
-(def-adts $ RealBranch : ((List $ List $ Bin) ctx) ((List $ Mult) ns) -> Type
+(def-adts $ RealBranch : ((List $ List $ Nat) ctx) ((List $ Mult) ns) -> Type
   enum
-  (many MkRealBranch : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (many (Bin) c) (many (List $ Bin) fids) (many (Code (Cons (List (Bin)) fids ctx) ns) code) -> (RealBranch ctx ns)))
+  (many MkRealBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) c) (many (List $ Nat) fids) (many (Code (Cons (List (Nat)) fids ctx) ns) code) -> (RealBranch ctx ns)))
 
-(def-fns _ $ many real-ctors : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (subterm many (List $ RealBranch ctx ns) bs) -> (many (List $ Bin) r)
+(def-fns _ $ many real-ctors : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ RealBranch ctx ns) bs) -> (many (List $ Nat) r)
   (match many bs _
     ((Nil a) (Nil _))
     ((Cons a b rest) (match many b _ ((MkRealBranch c0 n0 c fids code) (Cons _ c $ real-ctors _ _ rest))))))
 
-(def-fns _ $ many real-branches-code : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (subterm many (List $ RealBranch ctx ns) bs) (many (List $ CShape) ss) -> (many (List $ Branch ctx ns) r)
+(def-fns _ $ many real-branches-code : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ RealBranch ctx ns) bs) (many (List $ CShape) ss) -> (many (List $ Branch ctx ns) r)
   (match many bs _
     ((Nil a) (Nil _))
     ((Cons a b rest)
       (match many b _
         ((MkRealBranch c0 n0 c fids code) (Cons _ (MkBranch _ _ (discriminant ss c) fids code) $ real-branches-code _ _ rest ss))))))
 
-(def-fns _ $ many bind-headers : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Bin) lvl) -> (many (Env) r) (many (List $ Bin) gids) (many (Bound fns hs gids) ids)
+(def-fns _ $ many bind-headers : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (List $ Nat) gids) (many (Bound fns hs gids) ids)
   (match many hs _
     ((HStop z) (values env (Nil _) (BStop _)))
     ((HCons f rest h more)
@@ -1452,25 +1452,25 @@
             ((Many) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
             ((Erased) (values env3 gids (BErased _ _ _ _ _ x ids)))))))))
 
-(def-fns _ $ many set-const-states : (subterm many (List $ Pair (Bin) $ Block (Zero)) cs) (many (Env) env) -> (many (Env) r)
+(def-fns _ $ many set-const-states : (subterm many (List $ Pair (Nat) $ Block (Zero)) cs) (many (Env) env) -> (many (Env) r)
   (match many cs _
     ((Nil a) env)
     ((Cons a p rest)
       (match many p _
         ((MkPair x y id v) (set-const-states rest $ set-state-closed env id v))))))
 
-(def-fns _ $ many ctor-values : (subterm many (List $ Ctor) cs) -> (many (List $ Pair (Bin) $ Block (Zero)) r)
+(def-fns _ $ many ctor-values : (subterm many (List $ Ctor) cs) -> (many (List $ Pair (Nat) $ Block (Zero)) r)
   (match many cs _
     ((Nil a) (Nil _))
     ((Cons a c rest) (Cons _ (MkPair _ _ (ctor-id c) $ BCtorFn _ c) $ ctor-values rest))))
 
-(def-fns _ $ many mctors-of : (subterm many (List $ Pair (Mult) $ Bin) cs) -> (many (List $ MCtor) r)
+(def-fns _ $ many mctors-of : (subterm many (List $ Pair (Mult) $ Nat) cs) -> (many (List $ MCtor) r)
   (match many cs _
     ((Nil a) (Nil _))
     ((Cons a p rest) (match many p _ ((MkPair x y m c) (Cons _ (MkMCtor m $ TVar c) $ mctors-of rest))))))
 
 
-(def-fns _ $ many codes-missing : (erased (List $ List $ Bin) ctx) (subterm many (List $ Mult) ms) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk)
+(def-fns _ $ many codes-missing : (erased (List $ List $ Nat) ctx) (subterm many (List $ Mult) ms) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk)
   (match many ms _
     ((Nil a) (values (Nil _) (PkNil _)))
     ((Cons a m rest)
@@ -1480,7 +1480,7 @@
         ((Many) (values (Cons _ missing codes) (PkMany _ rest missing codes pk)))
         ((Erased) (values codes (PkErased _ rest codes pk)))))))
 
-(def-fns _ $ many bin-ids-of : (subterm many (List $ Term) ts) -> (many (List $ Bin) r)
+(def-fns _ $ many bin-ids-of : (subterm many (List $ Term) ts) -> (many (List $ Nat) r)
   (match many ts _
     ((Nil a) (Nil _))
     ((Cons a t rest)
@@ -1494,22 +1494,22 @@
 ; rewritten into.
 
 (def-adts
-  (Atom : ((List $ List $ Bin) ctx) -> Type
+  (Atom : ((List $ List $ Nat) ctx) -> Type
     enum
-    (many AVar : (erased (List $ List $ Bin) ctx) (many (Bin) x) (many (Mem x ctx) p) -> (Atom ctx))
-    (many AConst : (erased (List $ List $ Bin) ctx) (many (Bin) x) -> (Atom ctx)))
-  (Ren : ((List $ List $ Bin) from) ((List $ List $ Bin) ctx) -> Type
+    (many AVar : (erased (List $ List $ Nat) ctx) (many (Nat) x) (many (Mem x ctx) p) -> (Atom ctx))
+    (many AConst : (erased (List $ List $ Nat) ctx) (many (Nat) x) -> (Atom ctx)))
+  (Ren : ((List $ List $ Nat) from) ((List $ List $ Nat) ctx) -> Type
     enum
-    (many RNil : (erased (List $ List $ Bin) ctx) -> (Ren (Nil (List (Bin))) ctx))
-    (many RFrame : (erased (List $ Bin) f) (erased (List $ List $ Bin) rest) (erased (List $ List $ Bin) ctx) (many (List $ Atom ctx) atoms) (erased (Lockstep (Bin) (Atom ctx) f atoms) lk) (many (Ren rest ctx) r) -> (Ren (Cons (List (Bin)) f rest) ctx))))
+    (many RNil : (erased (List $ List $ Nat) ctx) -> (Ren (Nil (List (Nat))) ctx))
+    (many RFrame : (erased (List $ Nat) f) (erased (List $ List $ Nat) rest) (erased (List $ List $ Nat) ctx) (many (List $ Atom ctx) atoms) (erased (Lockstep (Nat) (Atom ctx) f atoms) lk) (many (Ren rest ctx) r) -> (Ren (Cons (List (Nat)) f rest) ctx))))
 
-(def-fns _ $ many atom-code : (erased (List $ List $ Bin) ctx) (many (Atom ctx) a) -> (many (Code ctx many-one) r)
+(def-fns _ $ many atom-code : (erased (List $ List $ Nat) ctx) (many (Atom ctx) a) -> (many (Code ctx many-one) r)
   (match many a _ ((AVar c x p) (CVar _ x p)) ((AConst c x) (CConst _ x))))
 
-(def-fns _ $ many atom-there : (erased (List $ List $ Bin) ctx) (erased (List $ Bin) f) (many (Atom ctx) a) -> (many (Atom (Cons (List (Bin)) f ctx)) r)
+(def-fns _ $ many atom-there : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (many (Atom ctx) a) -> (many (Atom (Cons (List (Nat)) f ctx)) r)
   (match many a _ ((AVar c x p) (AVar _ x $ MThere _ _ _ p)) ((AConst c x) (AConst _ x))))
 
-(def-fns _ $ many atoms-there : (erased (List $ List $ Bin) ctx) (erased (List $ Bin) f) (subterm many (List $ Atom ctx) as) -> (many (List $ Atom (Cons (List (Bin)) f ctx)) r) (erased (Lockstep (Atom ctx) (Atom (Cons (List (Bin)) f ctx)) as r) lk)
+(def-fns _ $ many atoms-there : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (List $ Atom ctx) as) -> (many (List $ Atom (Cons (List (Nat)) f ctx)) r) (erased (Lockstep (Atom ctx) (Atom (Cons (List (Nat)) f ctx)) as r) lk)
   (match many as _
     ((Nil a) (values (Nil _) (LsNil _ _)))
     ((Cons a x rest)
@@ -1517,38 +1517,38 @@
       (let (many y) $ atom-there _ f x)
       (values (Cons _ y r) (LsCons _ _ x y rest r lk)))))
 
-(def-fns _ $ many self-atoms : (erased (List $ List $ Bin) ctx) (erased (List $ Bin) f) (subterm many (List $ AtIn f) ats) -> (many (List $ Atom (Cons (List (Bin)) f ctx)) r) (erased (Lockstep (AtIn f) (Atom (Cons (List (Bin)) f ctx)) ats r) lk)
+(def-fns _ $ many self-atoms : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (List $ AtIn f) ats) -> (many (List $ Atom (Cons (List (Nat)) f ctx)) r) (erased (Lockstep (AtIn f) (Atom (Cons (List (Nat)) f ctx)) ats r) lk)
   (match many ats _
     ((Nil a) (values (Nil _) (LsNil _ _)))
     ((Cons a at rest)
       (let (many r) (erased lk) $ self-atoms ctx f rest)
-      (let (many (Atom (Cons (List (Bin)) f ctx)) atom) $ match many at _ ((MkAtIn g x p) (AVar _ x $ MHere _ _ _ p)))
+      (let (many (Atom (Cons (List (Nat)) f ctx)) atom) $ match many at _ ((MkAtIn g x p) (AVar _ x $ MHere _ _ _ p)))
       (values (Cons _ atom r) (LsCons _ _ at atom rest r lk)))))
 
-(def-fns _ $ many ren-under : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (erased (List $ Bin) f) (subterm many (Ren from ctx) ren) -> (many (Ren from (Cons (List (Bin)) f ctx)) r)
+(def-fns _ $ many ren-under : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (Ren from ctx) ren) -> (many (Ren from (Cons (List (Nat)) f ctx)) r)
   (match many ren _
     ((RNil c) (RNil _))
     ((RFrame g rest c atoms lk r)
       (let (many atoms2) (erased lk2) $ atoms-there _ f atoms)
       (RFrame _ _ _ atoms2 (lockstep-trans _ _ _ _ _ _ lk lk2) $ ren-under _ _ f r))))
 
-(def-fns _ $ many ren-weaken : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Bin) f) (many (Ren from ctx) ren) -> (many (Ren (Cons (List (Bin)) f from) (Cons (List (Bin)) f ctx)) r)
+(def-fns _ $ many ren-weaken : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (Ren from ctx) ren) -> (many (Ren (Cons (List (Nat)) f from) (Cons (List (Nat)) f ctx)) r)
   (let (many ats) (erased lk) $ at-ins f)
   (let (many atoms) (erased lk2) $ self-atoms ctx _ ats)
   (RFrame _ _ _ atoms (lockstep-trans _ _ _ _ _ _ lk lk2) $ ren-under _ _ f ren))
 
-(def-fns _ $ many ren-id : (subterm many (List $ List $ Bin) ctx) -> (many (Ren ctx ctx) r)
+(def-fns _ $ many ren-id : (subterm many (List $ List $ Nat) ctx) -> (many (Ren ctx ctx) r)
   (match many ctx _
     ((Nil a) (RNil _))
     ((Cons a f rest) (ren-weaken _ _ f $ ren-id rest))))
 
-(def-fns _ $ many ren-get : (erased (Bin) x) (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (Mem x from) p) (many (Ren from ctx) ren) -> (many (Atom ctx) r)
+(def-fns _ $ many ren-get : (erased (Nat) x) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (Mem x from) p) (many (Ren from ctx) ren) -> (many (Atom ctx) r)
   (match many p _
     ((MHere y f c q) (match many ren _ ((RFrame g rest c2 atoms lk r) (let (many a) (erased sq) $ at-get _ _ _ q atoms lk) a)))
     ((MThere y f c q) (match many ren _ ((RFrame g rest c2 atoms lk r) (ren-get _ _ _ q r))))))
 
 ; The atoms a let binds, if its right-hand side is nothing but variables and constants.
-(def-fns _ $ many atoms-of : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Maybe $ List $ Atom ctx) r)
+(def-fns _ $ many atoms-of : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Maybe $ List $ Atom ctx) r)
   (match many cs _
     ((Nil a) (Some _ $ Nil _))
     ((Cons a c rest)
@@ -1559,14 +1559,14 @@
             ((CVar c0 x p) (Some _ $ Cons _ (AVar _ x p) more))
             ((CConst c0 x) (Some _ $ Cons _ (AConst _ x) more)) (else (None $ List $ Atom ctx))))))))
 
-(def-fns _ $ many rhs-atoms : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (many (Code ctx ms) c) -> (many (Maybe $ List $ Atom ctx) r)
+(def-fns _ $ many rhs-atoms : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (many (Code ctx ms) c) -> (many (Maybe $ List $ Atom ctx) r)
   (match many c _
     ((CVar c0 x p) (Some _ $ Cons _ (AVar _ x p) $ Nil _))
     ((CConst c0 x) (Some _ $ Cons _ (AConst _ x) $ Nil _))
     ((CErased c0 ms2) (Some _ $ Nil _))
     ((CValues c0 ms2 cs pk) (atoms-of _ cs)) (else (None $ List $ Atom ctx))))
 
-(def-fns _ $ many vars-of : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Maybe $ List $ Bin) r)
+(def-fns _ $ many vars-of : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Maybe $ List $ Nat) r)
   (match many cs _
     ((Nil a) (Some _ $ Nil _))
     ((Cons a c rest)
@@ -1574,15 +1574,15 @@
         ((CVar c0 x p)
           (match many (vars-of _ rest) _
             ((None b) (None _))
-            ((Some b xs) (Some _ $ Cons _ x xs)))) (else (None $ List $ Bin))))))
+            ((Some b xs) (Some _ $ Cons _ x xs)))) (else (None $ List $ Nat))))))
 
-(def-fns _ $ many bins-eq : (subterm many (List $ Bin) as) (many (List $ Bin) bs) -> (many (Bool) r)
+(def-fns _ $ many bins-eq : (subterm many (List $ Nat) as) (many (List $ Nat) bs) -> (many (Bool) r)
   (match many as _
     ((Nil a) (list-is-empty _ bs))
-    ((Cons a x rest) (match many bs _ ((Nil b) (BFalse)) ((Cons b y brest) (and (bin-eq x y) $ bins-eq rest brest))))))
+    ((Cons a x rest) (match many bs _ ((Nil b) (BFalse)) ((Cons b y brest) (and (nat-eq x y) $ bins-eq rest brest))))))
 
 ; Whether a body returns exactly the let's ids, in order, with the two erasure lists then agreeing on their many entries.
-(def-fns _ $ many returns-same : (erased (List $ List $ Bin) ctx) (subterm many (List $ Mult) ms) (many (List $ Bin) ids) (erased (Picked (Bin) ms ids) pk) (subterm many (List $ Mult) ns) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ns cs) qk) -> (many (Maybe $ ManySame ms ns) r)
+(def-fns _ $ many returns-same : (erased (List $ List $ Nat) ctx) (subterm many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (subterm many (List $ Mult) ns) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ns cs) qk) -> (many (Maybe $ ManySame ms ns) r)
   (match many ms _
     ((Nil a)
       (match many ns _
@@ -1626,7 +1626,7 @@
                                 ((Cons d c crest)
                                   (match many c _
                                     ((CVar c0 y p0)
-                                      (match many (bin-cmp x2 y) _
+                                      (match many (nat-cmp x2 y) _
                                         ((CEq eq-t eq-r eq-x)
                                           (match many (returns-same _ mrest idrest p2 nrest crest q2) _
                                             ((Some e p) (Some _ $ MsMany _ _ p))
@@ -1637,16 +1637,16 @@
 ; Dropping a frame nothing mentions (lib/elab.ml's constant let): the code rebuilt one frame shorter, or None
 ; where some variable sits in that frame.
 (def-adts
-  (Drop : ((List $ List $ Bin) from) ((List $ List $ Bin) ctx) -> Type
+  (Drop : ((List $ List $ Nat) from) ((List $ List $ Nat) ctx) -> Type
     enum
-    (many DHere : (erased (List $ Bin) f) (erased (List $ List $ Bin) ctx) -> (Drop (Cons (List (Bin)) f ctx) ctx))
-    (many DUnder : (erased (List $ Bin) g) (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (Drop from ctx) d) -> (Drop (Cons (List (Bin)) g from) (Cons (List (Bin)) g ctx))))
+    (many DHere : (erased (List $ Nat) f) (erased (List $ List $ Nat) ctx) -> (Drop (Cons (List (Nat)) f ctx) ctx))
+    (many DUnder : (erased (List $ Nat) g) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (Drop from ctx) d) -> (Drop (Cons (List (Nat)) g from) (Cons (List (Nat)) g ctx))))
   (Kept : (Type A) (Type B) ((List A) xs) -> Type
     enum
     (many KNo : (erased Type A) (erased Type B) (erased (List A) xs) -> (Kept A B xs))
     (many KYes : (erased Type A) (erased Type B) (erased (List A) xs) (many (List B) ys) (erased (Lockstep A B xs ys) lk) -> (Kept A B xs))))
 
-(def-fns _ $ many mem-drop : (erased (Bin) x) (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (Mem x from) p) (many (Drop from ctx) d) -> (many (Maybe $ Mem x ctx) r)
+(def-fns _ $ many mem-drop : (erased (Nat) x) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (Mem x from) p) (many (Drop from ctx) d) -> (many (Maybe $ Mem x ctx) r)
   (match many d _
     ((DHere f c) (match many p _ ((MHere y f2 c2 at) (None _)) ((MThere y f2 c2 q) (Some _ q))))
     ((DUnder g fr c d2)
@@ -1655,7 +1655,7 @@
         ((MThere y f2 c2 q) (match many (mem-drop _ _ _ q d2) _ ((Some a q2) (Some _ $ MThere _ _ _ q2)) ((None a) (None _))))))))
 
 (def-fns _
-  (many strengthen : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code from ms) c) (many (Drop from ctx) d) -> (many (Maybe $ Code ctx ms) r)
+  (many strengthen : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code from ms) c) (many (Drop from ctx) d) -> (many (Maybe $ Code ctx ms) r)
     (match many c _
       ((CVar c0 x p) (match many (mem-drop _ _ _ p d) _ ((Some a q) (Some _ $ CVar _ x q)) ((None a) (None _))))
       ((CConst c0 x) (Some _ $ CConst _ x))
@@ -1711,7 +1711,7 @@
                           ((Some h dd2) (Some _ $ CMatch _ ns scrut2 sh bs2 (Some _ dd2) live))))))))))))
       ((CAbsurd c0 ms2) (Some _ $ CAbsurd _ ms2))
       ((CError c0 ms2 m) (Some _ $ CError _ ms2 m))))
-  (many strengthen-list : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r)
+  (many strengthen-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r)
     (match many cs _
       ((Nil a) (KYes _ _ _ (Nil _) (LsNil _ _)))
       ((Cons a c rest)
@@ -1721,7 +1721,7 @@
             (match many (strengthen-list _ _ rest d) _
               ((KNo x y z) (KNo _ _ _))
               ((KYes x y z r lk) (KYes _ _ _ (Cons _ c2 r) (LsCons _ _ c c2 rest r lk)))))))))
-  (many strengthen-fns : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Bin) gids) (subterm many (List $ Pair (Bin) $ Func gids from) fns) (many (Drop from ctx) d) -> (many (Kept (Pair (Bin) $ Func gids from) (Pair (Bin) $ Func gids ctx) fns) r)
+  (many strengthen-fns : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (subterm many (List $ Pair (Nat) $ Func gids from) fns) (many (Drop from ctx) d) -> (many (Kept (Pair (Nat) $ Func gids from) (Pair (Nat) $ Func gids ctx) fns) r)
     (match many fns _
       ((Nil a) (KYes _ _ _ (Nil _) (LsNil _ _)))
       ((Cons a p rest)
@@ -1737,7 +1737,7 @@
                       ((KYes x y z r lk)
                         (let (many p2) $ MkPair _ _ id $ MkFunc _ _ rets n i ps body2 impl top)
                         (KYes _ _ _ (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))))))
-  (many strengthen-branches : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Drop from ctx) d) -> (many (Maybe $ List $ Branch ctx ns) r)
+  (many strengthen-branches : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Drop from ctx) d) -> (many (Maybe $ List $ Branch ctx ns) r)
     (match many bs _
       ((Nil a) (Some _ $ Nil _))
       ((Cons a b rest)
@@ -1751,16 +1751,16 @@
                   ((Some y r) (Some _ $ Cons _ (MkBranch _ _ dsc ids body2) r)))))))))))
 
 ; A let's right-hand side of values embedded by elaboration alone, as lib/elab.ml's constant.
-(def-fns _ $ many all-values : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Bool) r)
+(def-fns _ $ many all-values : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Bool) r)
   (match many cs _
     ((Nil a) (BTrue))
     ((Cons a c rest) (match many c _ ((CValue c0 v) (all-values _ rest)) (else (BFalse))))))
 
-(def-fns _ $ many constant-rhs : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (many (Code ctx ms) c) -> (many (Bool) r)
+(def-fns _ $ many constant-rhs : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (many (Code ctx ms) c) -> (many (Bool) r)
   (match many c _ ((CValues c0 ms2 cs pk) (all-values _ cs)) (else (BFalse))))
 
 (def-fns _
-  (many norm : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Mult) ms) (subterm many (Code from ms) c) (many (Ren from ctx) ren) -> (many (Code ctx ms) r)
+  (many norm : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (subterm many (Code from ms) c) (many (Ren from ctx) ren) -> (many (Code ctx ms) r)
     (match many c _
       ((CVar c0 x p) (atom-code _ $ ren-get _ _ _ p ren))
       ((CConst c0 x) (CConst _ x))
@@ -1774,7 +1774,7 @@
         (CApp _ ms2 (norm _ _ many-one f ren) as2 cc))
       ((CLet c0 ms2 ns ids pk rhs rest)
         (let (many rhs2) $ norm _ _ ms2 rhs ren)
-        (let (many (Maybe $ Ren (Cons (List (Bin)) ids from) ctx) dropped)
+        (let (many (Maybe $ Ren (Cons (List (Nat)) ids from) ctx) dropped)
           (match many (rhs-atoms _ _ rhs2) _
             ((None a) (None _))
             ((Some a atoms)
@@ -1820,23 +1820,23 @@
         (CMatch _ ns (norm _ _ many-one scrut ren)
                 (match many shape (((Shape ctx) s)) ((ShKnown c1 adt) (ShKnown _ adt)) ((ShNone c1) (ShNone _)) ((ShHeld c1 mc tags) (ShHeld _ (norm _ _ many-one mc ren) tags)))
                 (norm-branches _ _ ns bs ren)
-                (match many dfl (((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) ns) r)) ((Some a d) (Some _ $ norm _ _ ns d $ ren-weaken _ _ (Nil _) ren)) ((None a) (None _)))
+                (match many dfl (((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) r)) ((Some a d) (Some _ $ norm _ _ ns d $ ren-weaken _ _ (Nil _) ren)) ((None a) (None _)))
                 live))))
       ((CAbsurd c0 ms2) (CAbsurd _ ms2))
       ((CError c0 ms2 m) (CError _ ms2 m))))
-  (many norm-list : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (subterm many (List $ Code from many-one) cs) (many (Ren from ctx) ren) -> (many (List $ Code ctx many-one) r) (erased (Lockstep (Code from many-one) (Code ctx many-one) cs r) lock)
+  (many norm-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Ren from ctx) ren) -> (many (List $ Code ctx many-one) r) (erased (Lockstep (Code from many-one) (Code ctx many-one) cs r) lock)
     (match many cs _
       ((Nil a) (values (Nil _) (LsNil _ _)))
       ((Cons a c rest)
         (let (many r) (erased p) $ norm-list _ _ rest ren)
         (let (many c2) $ norm _ _ many-one c ren)
         (values (Cons _ c2 r) (LsCons _ _ c c2 rest r p)))))
-  (many norm-group : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (erased (List $ Bin) gids) (subterm many (Group gids from) g) (many (Ren from ctx) ren) -> (many (Group gids ctx) r)
+  (many norm-group : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (erased (List $ Nat) gids) (subterm many (Group gids from) g) (many (Ren from ctx) ren) -> (many (Group gids ctx) r)
     (match many g _
       ((MkGroup c ids fns lk)
         (let (many fns2) (erased lk2) $ norm-fns _ _ ids fns ren)
         (MkGroup _ ids fns2 $ lockstep-trans _ _ _ _ _ _ lk lk2))))
-  (many norm-fns : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Bin) gids) (subterm many (List $ Pair (Bin) $ Func gids from) fns) (many (Ren from ctx) ren) -> (many (List $ Pair (Bin) $ Func gids ctx) r) (erased (Lockstep (Pair (Bin) $ Func gids from) (Pair (Bin) $ Func gids ctx) fns r) lk)
+  (many norm-fns : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (subterm many (List $ Pair (Nat) $ Func gids from) fns) (many (Ren from ctx) ren) -> (many (List $ Pair (Nat) $ Func gids ctx) r) (erased (Lockstep (Pair (Nat) $ Func gids from) (Pair (Nat) $ Func gids ctx) fns r) lk)
     (match many fns _
       ((Nil a) (values (Nil _) (LsNil _ _)))
       ((Cons a p rest)
@@ -1847,12 +1847,12 @@
               ((MkFunc g c rets n i ps body impl top)
                 (let (many p2) $ MkPair _ _ id $ MkFunc _ _ rets n i ps (norm _ _ rets body $ ren-weaken _ _ ps $ ren-weaken _ _ gids ren) impl top)
                 (values (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))
-  (many norm-branches : (erased (List $ List $ Bin) from) (erased (List $ List $ Bin) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Ren from ctx) ren) -> (many (List $ Branch ctx ns) r)
+  (many norm-branches : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Ren from ctx) ren) -> (many (List $ Branch ctx ns) r)
     (match many bs _
       ((Nil a) (Nil _))
       ((Cons a b rest) (match many b _ ((MkBranch c0 n0 d ids body) (Cons _ (MkBranch _ _ d ids $ norm _ _ ns body $ ren-weaken _ _ ids ren) $ norm-branches _ _ ns rest ren)))))))
 
-(def-fns _ $ many normalize : (many (List $ List $ Bin) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r)
+(def-fns _ $ many normalize : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r)
   (norm _ _ ms code $ ren-id ctx))
 
 
@@ -1863,18 +1863,18 @@
   (match many cc _ ((CCTail) (not only-delegate)) ((CCDelegate) (BTrue)) (else (BFalse))))
 
 (def-fns _
-  (many has-marked : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) c) (many (Bool) only) -> (many (Bool) r)
+  (many has-marked : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) c) (many (Bool) only) -> (many (Bool) r)
     (match many c _
       ((CApp c0 ms2 f args cc) (or (cc-marked cc only) $ or (has-marked _ _ f only) $ has-marked-list _ args only))
       ((CValues c0 ms2 cs pk) (has-marked-list _ cs only))
       ((CLet c0 ms2 ns ids pk rhs rest) (or (has-marked _ _ rhs only) $ has-marked _ _ rest only))
       ((CLetRec c0 ns gids g rest) (has-marked _ _ rest only))
       ((CMatch c0 ns scrut shape bs dfl live) (or (has-marked _ _ scrut only) $ or (match many shape (((Bool) b)) ((ShKnown c1 a) (BFalse)) ((ShNone c1) (BFalse)) ((ShHeld c1 mc t) (has-marked _ _ mc only))) $ or (has-marked-branches _ _ bs only) $ match many dfl (((Bool) b)) ((Some a d) (has-marked _ _ d only)) ((None a) (BFalse)))) (else (BFalse))))
-  (many has-marked-list : (erased (List $ List $ Bin) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Bool) only) -> (many (Bool) r)
+  (many has-marked-list : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Bool) only) -> (many (Bool) r)
     (match many cs _
       ((Nil a) (BFalse))
       ((Cons a c rest) (or (has-marked _ _ c only) $ has-marked-list _ rest only))))
-  (many has-marked-branches : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) only) -> (many (Bool) r)
+  (many has-marked-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) only) -> (many (Bool) r)
     (match many bs _
       ((Nil a) (BFalse))
       ((Cons a b rest) (match many b _ ((MkBranch c0 n0 d ids body) (or (has-marked _ _ body only) $ has-marked-branches _ _ rest only)))))))
@@ -1882,7 +1882,7 @@
 ; Every marked call sits in tail position: the body's final call, through lets, let recs and match branches
 ; for tail, directly for delegate.
 (def-fns _
-  (many tails-ok : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) c) (many (Bool) direct) -> (many (Bool) r)
+  (many tails-ok : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) c) (many (Bool) direct) -> (many (Bool) r)
     (match many c _
       ((CApp c0 ms2 f args cc) (and (not $ has-marked _ _ f $ BFalse) $ not $ has-marked-list _ args $ BFalse))
       ((CLet c0 ms2 ns ids pk rhs rest)
@@ -1901,13 +1901,13 @@
                         (and (tails-ok-branches _ _ bs direct)
                           $ match many dfl (((Bool) b)) ((Some a d) (tails-ok _ _ d direct)) ((None a) (BTrue))))))))
       ((CValues c0 ms2 cs pk) (not $ has-marked-list _ cs $ BFalse)) (else (BTrue))))
-  (many tails-ok-branches : (erased (List $ List $ Bin) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r)
+  (many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r)
     (match many bs _
       ((Nil a) (BTrue))
       ((Cons a b rest) (match many b _ ((MkBranch c0 n0 d ids body) (and (tails-ok _ _ body direct) $ tails-ok-branches _ _ rest direct)))))))
 
 ; Validates the marks in a body and returns the normalized code and, for a delegate, the callee (section 9).
-(def-fns _ $ many check-marks : (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Bin) pids) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Env) r) (many (Code ctx ms) code2) (many (Maybe $ Bin) delegated)
+(def-fns _ $ many check-marks : (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) pids) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Env) r) (many (Code ctx ms) code2) (many (Maybe $ Nat) delegated)
   (let (many code2) $ normalize ctx ms code)
   (let (many delegate) $ has-marked _ _ code2 $ BTrue)
   (let (many (String) kind) $ match many delegate _ ((BTrue) "delegate") ((BFalse) "tail"))
@@ -1915,7 +1915,7 @@
   (match many delegate _
         ((BFalse) (values env1 code2 $ None _))
         ((BTrue)
-          (let (many (Maybe $ Pair (Bin) $ List $ Code ctx many-one) call)
+          (let (many (Maybe $ Pair (Nat) $ List $ Code ctx many-one) call)
             (match many code2 _
               ((CApp c0 ms2 f args cc) (match many f _ ((CVar c1 g p) (Some _ $ MkPair _ _ g args)) ((CConst c1 g) (Some _ $ MkPair _ _ g args)) (else (None _)))) (else (None _))))
           (match many call _
@@ -2048,7 +2048,7 @@
 (def-fns _ $ many check-arity : (many (Env) env) (many (List $ Entry) tele) (many (Nat) m) -> (many (Env) r)
   (count-check env " arguments" (list-length _ tele) m))
 
-(def-fns _ $ many malformed : (erased (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Sp) sp) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
+(def-fns _ $ many malformed : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Sp) sp) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
   (expr-error _ expect env (str-cat3 "malformed " (sp-name sp) " form") "malformed"))
 
 ; The field at a wrapping constructor's one many position, given the arguments in order.
@@ -2066,7 +2066,7 @@
                 ((Many) (match many (many-count rest) _ ((Zero) (Some _ $ MkPair _ _ t ty)) ((Succ k) (None _))))
                 ((Erased) (wrap-field rest trest tyrest))))))))))
 
-(def-fns _ $ many missing-arg : (many (Env) env) -> (many (Env) r) (many (Bin) x)
+(def-fns _ $ many missing-arg : (many (Env) env) -> (many (Env) r) (many (Nat) x)
   (let (many env2) (many x) $ var (env-at env 0) "_")
   (values (env-back env env2) x))
 
@@ -2191,12 +2191,6 @@
     ((Zero) (RStr "(Zero)"))
     ((Succ k) (rwrap "(Succ " (show-nat k) ")"))))
 
-(def-fns _ $ many show-bin : (subterm many (Bin) b) -> (many (Rope) r)
-  (match many b _
-    ((BZ) (RStr "(BZ)"))
-    ((B1 r) (rwrap "(B1 " (show-bin r) ")"))
-    ((B2 r) (rwrap "(B2 " (show-bin r) ")"))))
-
 (def-fns _ $ many show-half : (many (Nat) n) -> (many (Rope) r)
   (match many (nat-halve n) _
     ((HZ) (RStr "(HZ)"))
@@ -2210,14 +2204,14 @@
 
 (def-fns _ $ many show-plain : (erased (Nat) a) (many (Block a) b) -> (many (Rope) r)
   (match many b _
-    ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PBin x) (show-bin x)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
+    ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
     ((BCtorFn z c) (rwrap "<constructor " (RStr $ ctor-name c) ">"))
     ((BMat z adt) (rwrap "<matchable " (RStr $ adt-name adt) ">"))
     ((BToken z) (RStr "_"))
     ((BError z m) (rwrap "<error: " (RStr m) ">"))
     (else (RStr "?"))))
 
-(def-fns _ $ many types-of : (many (Env) env) (subterm many (List $ Bin) xs) -> (many (List $ Term) r)
+(def-fns _ $ many types-of : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Term) r)
   (match many xs _
     ((Nil a) (Nil _))
     ((Cons a x rest) (Cons _ (type-of env x) $ types-of env rest))))
@@ -2240,12 +2234,12 @@
         ((Some b info) (match many info _ ((MkMatchInfo mid disc mctors rank) (adt-of env mid))))))))
 
 (def-fns _
-  (many show-at : (subterm erased (Nat) fuel) (subterm many (Bin) path) (subterm many (Nat) depth) (many (Env) env) (many (Term) ty0) (erased (Nat) hs) (many (Heap Block hs) hp) (erased (Nat) n) (erased (Numeral path n) sp) (erased (Lt n hs) lt) (erased (Lt n fuel) lf) -> (many (Rope) r)
+  (many show-at : (subterm erased (Nat) fuel) (subterm many (Nat) n) (subterm many (Nat) depth) (many (Env) env) (many (Term) ty0) (erased (Nat) hs) (many (Heap Block hs) hp) (erased (Lt n hs) lt) (erased (Lt n fuel) lf) -> (many (Rope) r)
     (match erased fuel _
       (absurd (Zero) (lt-zero n lf))
       ((Succ k)
         (let (many ty) $ canon-env env ty0)
-        (let (many blk) $ deref-path Block _ hp path n sp lt)
+        (let (many blk) $ deref-path Block _ hp n lt)
         (match many (type-adt env ty) _
           ((None a) (show-plain _ blk))
           ((Some a adt)
@@ -2267,7 +2261,7 @@
                               ((Nil d) (RStr "_"))
                               ((Cons d fty frest)
                                 (match many frest _
-                                  ((Nil f) (match many depth (((Rope) r0)) ((Zero) (RStr "?")) ((Succ d) (show-at fuel path d env fty _ hp n sp lt lf))))
+                                  ((Nil f) (match many depth (((Rope) r0)) ((Zero) (RStr "?")) ((Succ d) (show-at fuel n d env fty _ hp lt lf))))
                                   ((Cons f fty2 frest2)
                                     (match many blk _
                                       ((BTup z fields) (rwrap "(" (rjoin (show-fields k env (Cons _ fty frest) _ hp n lt lf fields) " ") ")"))
@@ -2276,11 +2270,11 @@
     (match many fs _
       ((Nil t) (Nil _))
       ((Cons t f rest)
-        (let-match many f (MkAddr bd nf pf spf ltf))
+        (let-match many f (MkAddr bd nf ltf))
         (let (many (Term) fty) (many (List $ Term) trest) $ match many tys _ ((Nil u) (values (TErr "?") $ Nil _)) ((Cons u x xs) (values x xs)))
-        (Cons _ (show-at fuel pf 100 env fty _ hp nf spf (lt-le-trans nf a hs ltf (lt-weaken a hs lt)) (lt-le-trans nf a fuel ltf lf)) $ show-fields fuel env trest _ hp a lt lf rest)))))
+        (Cons _ (show-at fuel nf 100 env fty _ hp (lt-le-trans nf a hs ltf (lt-weaken a hs lt)) (lt-le-trans nf a fuel ltf lf)) $ show-fields fuel env trest _ hp a lt lf rest)))))
 
-(def-fns _ $ many show-typed : (many (Env) env) (many (Term) ty) (many (Bin) x) -> (many (Rope) r)
+(def-fns _ $ many show-typed : (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
   (match many (idmap-get _ x en) _
     ((Miss ht hk hm hq) (RStr "?"))
@@ -2290,10 +2284,10 @@
           (match many s _
             ((SDyn z2) (RStr "?"))
             ((SConst z2 v)
-              (let-match many v (MkAddr bd vn path sp lt))
-              (show-at _ path 100 env ty _ hp vn sp lt (lt-succ vn)))))))))
+              (let-match many v (MkAddr bd vn lt))
+              (show-at _ vn 100 env ty _ hp lt (lt-succ vn)))))))))
 
-(def-fns _ $ many elab-comptime-match : (erased (List $ List $ Bin) ctx) (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (StmtCode ctx ctx) sc)
+(def-fns _ $ many elab-comptime-match : (erased (List $ List $ Nat) ctx) (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (StmtCode ctx ctx) sc)
     (let (many shape) $ comptime-shape args)
     (match many shape _
       ((None a) (values (env-error env "malformed comptime-match: expected (comptime-match x (C field ...))") $ SNone _))
@@ -2311,7 +2305,7 @@
                 (let (many env4) (many c) $ ctor-var env3 craw)
                 (let (many tele) (many ret) $ ctor-type env4 c)
                 (let (many head) $ type-head env4 $ type-of env4 x)
-                (let (many (Bin) tid) $ match many head _ ((None b) (BZ)) ((Some b t) t))
+                (let (many (Nat) tid) $ match many head _ ((None b) (Zero)) ((Some b t) t))
                 (let (many (Env) env5) (many (Maybe $ MatchInfo) found)
                   (match many head _
                     ((None b) (values (env-error env4 "scrutinee is not a datatype value") $ None _))
@@ -2370,6 +2364,9 @@
 (def-fns _ $ many bin-text : (many (Nat) n) -> (many (Raw) r)
   (bin-raw $ bin-of-nat n))
 
+(def-fns _ $ many bin-succ : (subterm many (Bin) b) -> (many (Bin) c)
+  (match many b _ ((BZ) (B1 $ BZ)) ((B1 b1) (B2 b1)) ((B2 b1) (B1 $ bin-succ b1))))
+
 ; The witness that n's spelling steps to (n+1)'s: (B1 x) steps to (B2 x), and (B2 x) to (B1 (succ x)).
 (def-fns _ $ many bin-succ-witness : (subterm many (Bin) b) -> (many (Raw) r)
   (match many b _
@@ -2411,7 +2408,7 @@
 
 (def-fns _
   ; An expression of the given size and erasures (sections 16, 20); [tele] is the telescope a bare _ reuses.
-  (many elab-expr : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) ->
+  (many elab-expr : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock)
     (let (many envl) $ env-at env $ raw-line raw)
     (let (many pos) (erased pf) $ pos-of expect)
@@ -2590,7 +2587,7 @@
       ((Nil a) (let (many env2) (many x) $ missing-arg env) (values env2 (TVar x) $ type-of env2 x))
       ((Cons a araw rest) (let (many env2) (many t) (many ty) $ elab-term sugar araw env (BFalse) no-tele) (values (settle env2 t) t ty))))
 
-  (many elab-one-erased : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (Res) p)
+  (many elab-one-erased : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (Res) p)
     (match many args _
       ((Nil a) (let (many env2) (many x) $ missing-arg env) (values env2 $ res-of env2 x))
       ((Cons a araw rest)
@@ -2744,13 +2741,13 @@
 
   ; Source entries into a closed telescope, each name bound for the entries after it (section 30).
   ; [ids]: binders already in force, innermost first.
-  (many elab-tele : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (List $ Sub root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (Bool) subterm-ok) (many (Bool) holes) -> (many (Env) r) (many (List $ Bin) bound) (many (List $ Entry) tele)
+  (many elab-tele : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (List $ Sub root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (Bool) subterm-ok) (many (Bool) holes) -> (many (Env) r) (many (List $ Nat) bound) (many (List $ Entry) tele)
     (match many st _
       ((SS sn k)
         (let (many env2) (many entries2) $ parse-entries-checked _ entries env)
         (elab-src-entries sugar root k entries2 env2 mode ids (Nil _) subterm-ok holes))))
 
-  (many elab-src-entries : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Zero) st) (subterm many (List $ SrcEntry root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (List $ Bin) bound) (many (Bool) subterm-ok) (many (Bool) holes) -> (many (Env) r) (many (List $ Bin) bound2) (many (List $ Entry) tele)
+  (many elab-src-entries : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Zero) st) (subterm many (List $ SrcEntry root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (List $ Nat) bound) (many (Bool) subterm-ok) (many (Bool) holes) -> (many (Env) r) (many (List $ Nat) bound2) (many (List $ Entry) tele)
     (match many entries _
       ((Nil a) (values env (list-rev _ bound) $ Nil _))
       ((Cons a e rest)
@@ -2778,7 +2775,7 @@
             (let (many env4) (many bound2) (many tele) $ elab-src-entries sugar root st rest env3 mode2 (Cons _ (TVar x) ids) (Cons _ x bound) subterm-ok holes)
             (values env4 bound2 $ Cons _ entry tele))))))
   ; A body: statements then the final expression (section 16); [items] sits within [root].
-  (many elab-body : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) ->
+  (many elab-body : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock)
     (match many items _
       ((Nil a)
@@ -2793,21 +2790,21 @@
             (let (many env3) (many ress) (many code) (erased lock) $ elab-body sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 expect tele)
             (values env3 ress (wrap-stmt _ _ expect sc code) lock))))))
 
-  (many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many envl) $ env-at env $ raw-line raw)
     (let (many bad) $ env-error envl $ str-cat (show-r raw) " is not a statement")
-    (let (many (Env) env2) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+    (let (many (Env) env2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
       (match many raw _
         ((RList lq items)
-          (match many items (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+          (match many items (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
             ((Nil a) (values bad ctx $ SNone _))
             ((Cons a head args)
-              (match many (special-of envl head) (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+              (match many (special-of envl head) (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                 ((None b) (values bad ctx $ SNone _))
                 ((Some b sp)
-                  (match many sp (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                  (match many sp (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                     ((SpStmt st)
-                      (match many st (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                      (match many st (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                         ((StLet)
                           (let (many braws) (many rhs) (erased wr) $ split-returns args _ (WHere args) envl)
                           (let (many env0) (many binders) $ parse-entries-checked _ braws envl)
@@ -2819,7 +2816,7 @@
                                 (values (env-restore env0 env1) $ Some _ t))))
                           (elab-let sugar args (MkLetParts _ binders rhs wr) env0b ctx tele))
                         ((StDefLvl)
-                          (match many args (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                          (match many args (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                             ((Nil c) (values (env-error envl "def-lvl needs a name") ctx $ SNone _))
                             ((Cons c n more)
                               (let (many env2) (many x) $ mint-level envl $ name-or-anon $ raw-name n)
@@ -2828,7 +2825,7 @@
                         ((StDefAdts)
                           (let (many env3) (many headers) (many tids) $ elab-adt-headers sugar args envl)
                           (let (many env4) (many consts) $ define-adts sugar args headers env3 tids)
-                          (match many (env-run-pos env4) (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                          (match many (env-run-pos env4) (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                             ((BTrue) (values (set-const-states consts env4) ctx $ SNone _))
                             ((BFalse)
                               (let (many ms) (many ids) (erased ipk) (many codes) (erased cpk) $ consts-codes ctx consts)
@@ -2840,7 +2837,7 @@
 
   ; let-match (section 16, ASSUMPTIONS 99-100): a one-constructor match binding outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
-  (many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many bad) $ env-error env "malformed let-match: expected (let-match <multiplicity> x (C field ...))")
     (match many args _
       ((Nil a) (values bad ctx $ SNone _))
@@ -2889,10 +2886,10 @@
                                           ((Many)
                                             (match many run _
                                               ((BTrue)
-                                                (match many ctx (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                                                (match many ctx (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                                                   ((Cons z1 z2 z3) (values env10 ctx $ SNone _))
                                                   ((Nil z1)
-                                                    (match many (ctor-of env10 c) (((Env) e0) ((List $ List $ Bin) c0) ((StmtCode ctx c0) sc0))
+                                                    (match many (ctor-of env10 c) (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                                                       ((None h) (values env10 ctx $ SNone _))
                                                       ((Some h ct) (values (env-run-fields env10 scode ct fids mults) ctx $ SNone _))))))
                                               ((BFalse)
@@ -2901,7 +2898,7 @@
 
   ; unary (SUGAR.md 5): the literals checked in the reference's order, then the let-match the form stands
   ; for, written out as there.
-  (many elab-unary : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-unary : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many arity-error) $ env-error env "unary takes one or two literals")
     (match many args _
       ((Nil a) (values arity-error ctx $ SNone _))
@@ -2945,7 +2942,7 @@
 
   ; distinct (SUGAR.md 5): a match on numeral-inj's Eq, once the two literals are checked to be different
   ; spellings of one canonical value.
-  (many elab-distinct : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (List $ Res) ress)
+  (many elab-distinct : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ Res) ress)
     (let (many none) $ Nil $ Res)
     (let (many arity-error) $ env-error env "distinct takes two literals")
     (match many args _
@@ -2986,7 +2983,7 @@
   ; annotation is a checked redundancy.
   ; Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
   ; produce (SUGAR.md 6); the check of each binder against its value stays as it was.
-  (many elab-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (LetParts args) parts) (many (Env) env0) (many (List $ List $ Bin) ctx) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (LetParts args) parts) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (match many parts _
       ((MkLetParts z binders rhs wr)
         (let (many env1) $ check-binder-mults _ binders env0)
@@ -3010,7 +3007,7 @@
           ((BFalse) (values env3 (Cons _ many-ids ctx) $ SLet _ expect many-ids pk code))))))
 
   (many bind-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ SrcEntry root) binders) (many (Env) env) (many (List $ Res) ress) (erased (Lockstep (SrcEntry root) (Res) binders ress) lr) (many (Bool) run) (many (Maybe $ List $ Entry) tele) (many (List $ Term) done) ->
-      (many (Env) r) (many (List $ Bin) ids) (erased (Lockstep (SrcEntry root) (Bin) binders ids) lids)
+      (many (Env) r) (many (List $ Nat) ids) (erased (Lockstep (SrcEntry root) (Nat) binders ids) lids)
     (match many binders _
       ((Nil a) (values env (Nil _) (LsNil _ _)))
       ((Cons a b brest)
@@ -3043,11 +3040,11 @@
 
   ; def-fns (sections 7, 27): headers bound Dyn, each body elaborated at the block's level under its own
   ; subterm parameters and checked against its return telescope; closures minted Const in run position.
-  (many elab-def-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (List $ List $ Bin) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-def-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (match many args _
       ((Nil a) (values (env-error env "def-fns needs a level") ctx $ SNone _))
       ((Cons a lvraw fns)
-        (let (many (Env) env2) (many (Bin) lvl)
+        (let (many (Env) env2) (many (Nat) lvl)
           (match many (is-underscore lvraw) _
             ((BTrue) (mint-level env $ None _))
             ((BFalse) (let (many env2) (many t) (many ty) $ elab-term sugar lvraw env (BFalse) no-tele) (level-var-checked env2 t))))
@@ -3062,7 +3059,7 @@
               ((Nil z1) (values (env-close-group env5 _ group) ctx $ SNone _))
               ((Cons z1 z2 z3) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))))))
 
-  (many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Bin) lvl) -> (many (Env) r) (many (Headers fns) hs)
+  (many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (Headers fns) hs)
     (match many fns _
       ((Nil a) (values env $ HStop _))
       ((Cons a f rest)
@@ -3101,8 +3098,8 @@
                         (let (many env4) (many hs) $ elab-headers sugar rest (env-back env env3) lvl)
                         (values env4 $ HCons _ _ (MkHeader _ name mult isabs impl params rets body $ within-in body sg (Raw) f wb psg) hs)))))))) (else (values bad $ HStop fns))))))
 
-  (many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Bin) gall) (many (List $ Bin) gids) (many (Bound fns headers gids) fids) (many (Bin) lvl) (many (Bool) top) ->
-      (many (Env) r) (many (List $ Pair (Bin) $ Func gall ctx) fns2) (erased (Lockstep (Bin) (Pair (Bin) $ Func gall ctx) gids fns2) lk)
+  (many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
+      (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk)
     (match many fns _
       ((Nil a) (match many fids _ ((BStop z) (values env (Nil _) (LsNil _ _)))))
       ((Cons a f rest)
@@ -3122,7 +3119,7 @@
 
   ; One function's body checked at its level under its parameters, the group's frame and the defining scope,
   ; its marks validated, and its delegate proof bound where it has one.
-  (many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Bin) gall) (many (Bin) x) (many (Bin) lvl) (many (Bool) top) ->
+  (many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (Nat) x) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (Func gall ctx) fn)
     (match many h _
       ((MkHeader g2 name mult isabs impl params rets body pb)
@@ -3190,7 +3187,7 @@
                             (let (many h) $ MkAdtHeader _ name disc nt ext cs $ within-in cs sg (Raw) adt wc $ prove-subterm sg adt)
                             (values env3 (ACons _ _ h hs) $ TCons _ _ _ _ x tids)))))))))) (else (values bad (AStop adts) $ TStop adts))))))
 
-  (many define-adts : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List $ Pair (Bin) $ Block (Zero)) consts)
+  (many define-adts : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List $ Pair (Nat) $ Block (Zero)) consts)
     (match many adts _
       ((Nil a) (values env $ Nil _))
       ((Cons a adt rest)
@@ -3223,7 +3220,7 @@
                     (let (many all) (erased cat) $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ BMat _ adt2) more)
                     (values env5 all))))))))))
 
-  (many elab-ctors : (subterm many (Nat) sugar) (subterm many (List $ Raw) ctors) (many (Env) env) (many (Bin) tid) -> (many (Env) r) (many (List $ Pair (Mult) $ Bin) cs)
+  (many elab-ctors : (subterm many (Nat) sugar) (subterm many (List $ Raw) ctors) (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (List $ Pair (Mult) $ Nat) cs)
     (match many ctors _
       ((Nil a) (values env $ Nil _))
       ((Cons a craw rest)
@@ -3255,17 +3252,17 @@
                 (let (many (Env) env2b)
                   (match many (type-head env2 ret) _
                     ((None c) (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))
-                    ((Some c t) (match many (bin-cmp t tid) (((Env) e0)) ((CEq eq-t eq-r eq-x) env2) (else (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
+                    ((Some c t) (match many (nat-cmp t tid) (((Env) e0)) ((CEq eq-t eq-r eq-x) env2) (else (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
                 (let (many (Env) env2c)
                   (match many (and (not $ mult-is-many mult) $ not $ nat-is-zero $ many-count tele) _
                     ((BTrue) (env-warn env2b $ str-cat3 "warning: phantom constructor " name " has a many field"))
                     ((BFalse) env2b)))
                 (let (many env3) $ env-discard env0 env2c)
-                (let (many (Env) env4) (many (Bin) c) $ match many mult _ ((Erased) (bind-erased env3 (Some _ name) mult ty (None _) coercible-id)) ((Many) (bind env3 (Some _ name) mult ty (None _) coercible-id)))
+                (let (many (Env) env4) (many (Nat) c) $ match many mult _ ((Erased) (bind-erased env3 (Some _ name) mult ty (None _) coercible-id)) ((Many) (bind env3 (Some _ name) mult ty (None _) coercible-id)))
                 (let (many env5) (many cs) $ elab-ctors sugar rest (env-back env env4) tid)
                 (values env5 $ Cons _ (MkPair _ _ mult c) cs))))))))
   ; tail and delegate wrap a call (section 9, ASSUMPTIONS 9); the compiled code must be that call.
-  (many elab-marked : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (Sp) sp) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
+  (many elab-marked : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (Sp) sp) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
     (let (many env1) $ error-unless env (mult-is-many $ pos-mult expect) $ str-cat (sp-name sp) " in an erased position")
     (match many args _
       ((Nil a) (expr-error _ expect env1 (str-cat (sp-name sp) " marks a function call, not nothing") "mark"))
@@ -3279,7 +3276,7 @@
           ((BFalse) (values (env-error env2 $ str-cat3 (sp-name sp) " marks a function call, not " $ show-r call) ress code))))))
 
   ; Each entry of a values against its entry of the telescope expected, instantiated with the entries before it.
-  (many elab-values : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (List $ Term) done) -> (many (Env) r) (many (List $ Res) ress) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) expect codes) pk)
+  (many elab-values : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (List $ Term) done) -> (many (Env) r) (many (List $ Res) ress) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) expect codes) pk)
     (match many expect _
       ((Nil a) (values env (Nil _) (Nil _) (PkNil _)))
       ((Cons a m mrest)
@@ -3316,7 +3313,7 @@
             (values (settle (settle env3 a) b) a aty b bty))))))
 
   ; Two proofs of the given kinds, elaborated erased (ASSUMPTIONS 23).
-  (many two-proofs : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) -> (many (Env) r) (many (Res) p) (many (Res) q)
+  (many two-proofs : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (Res) p) (many (Res) q)
     (let (many bad) $ env-error env "two proofs expected")
     (match many args _
       ((Nil x) (values bad no-res no-res))
@@ -3330,7 +3327,7 @@
 
   ; coercible-ctor's arguments: two terms per erased field, one proof per many field, each checked against
   ; the field's type on its side (section 38).
-  (many coercible-ctor-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Entry) tele) (many (List $ Term) src) (many (List $ Term) tgt) (many (Bin) c) -> (many (Env) r) (many (List $ Term) src2) (many (List $ Term) tgt2)
+  (many coercible-ctor-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (List $ Term) src) (many (List $ Term) tgt) (many (Nat) c) -> (many (Env) r) (many (List $ Term) src2) (many (List $ Term) tgt2)
     (let (many wrong) $ env-error env $ str-cat "coercible-ctor: wrong number of arguments for " $ name-of env c)
     (match many tele _
       ((Nil a) (match many args _ ((Nil b) (values env src tgt)) ((Cons b x more) (values wrong src tgt))))
@@ -3361,7 +3358,7 @@
 
   ; match (sections 11, 12, 18): the scrutinee, its Matchable, the annotation, then one branch per
   ; constructor, each refined by its forced facts or refuted by them.
-  (many elab-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) ->
+  (many elab-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
     (let (many bad) (many bad-ress) (many bad-code) $ expr-error ctx expect env "malformed match" "match")
     (match many args _
@@ -3448,14 +3445,14 @@
                             (let (many env8) (many rids) (erased lock) $ open-tele ann-tele env7 (Some _ $ anon-names ann-tele) (None _) (Nil _) $ BFalse)
                             (values env8 (ress-of rids env8) code))))))))))))))
 
-  (many elab-branch-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Bin) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) ->
+  (many elab-branch-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) ->
       (many (Env) r) (many (Code bctx ex) code)
     (let (many envb) (many ress) (many code) (erased lock) $ elab-body sugar (subterm p) body body (WHere _) env bctx ex $ Some _ ann-tele)
     (values (check-results-count envb ann-tele ress $ Nil _) code))
 
   ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 12).
-  (many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Bin) ctx) (many (Bin) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Bin) seen) ->
-      (many (Env) r) (many (List $ RealBranch ctx expect) real) (many (List $ Bin) seen2)
+  (many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Nat) seen) ->
+      (many (Env) r) (many (List $ RealBranch ctx expect) real) (many (List $ Nat) seen2)
     (match many branches _
       ((Nil a) (values env (list-rev _ acc) seen))
       ((Cons a braw brest)
@@ -3508,8 +3505,8 @@
 
   ; The else branch (section 12): at most one, standing for at least one constructor, its body under no forced
   ; facts and erased throughout when none of them could run.
-  (many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Bin) first) (many (Bool) reachable) (many (Bool) seen-else) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) found) ->
-      (many (Env) r) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) code)
+  (many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Bool) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) ->
+      (many (Env) r) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) code)
     (match many branches _
       ((Nil a)
         (match many seen-else _
@@ -3523,19 +3520,19 @@
           ((BFalse) (elab-else sugar brest env ctx ann-tele expect first reachable seen-else found))
           ((BTrue)
             (let (many envl) $ env-at env $ raw-line braw)
-            (let (many (Env) env2) (many (Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) found2)
+            (let (many (Env) env2) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found2)
               (match many seen-else _
                 ((BTrue) (values (env-error envl "a match has at most one else branch") found))
                 ((BFalse)
-                  (match many first (((Env) e0) ((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) f0))
+                  (match many first (((Env) e0) ((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) f0))
                     ((None b) (values (env-error envl "else covers no constructor") found))
                     ((Some b c0)
-                      (match many braw (((Env) e0) ((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) f0))
+                      (match many braw (((Env) e0) ((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) f0))
                         ((RList lq items)
-                          (match many items (((Env) e0) ((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) f0))
+                          (match many items (((Env) e0) ((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) f0))
                             ((Nil c) (values (env-error envl "malformed branch") found))
                             ((Cons c token body)
-                              (match many reachable (((Env) e0) ((Maybe $ Code (Cons (List (Bin)) (Nil (Bin)) ctx) expect) f0))
+                              (match many reachable (((Env) e0) ((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) f0))
                                 ((BTrue)
                                   (let (many envb2) (many code) $ elab-branch-body sugar braw body (prove-subterm body braw) (env-set-run-pos envl $ BFalse) (Cons _ (Nil _) ctx) expect ann-tele)
                                   (values (env-discard envl envb2) $ Some _ code))
@@ -3552,7 +3549,7 @@
   ; expression otherwise. [result], over the metas, is solved against [expect] eagerly, where a `_` is present,
   ; before any argument is read, and again, reporting the mismatch, when a `_` would otherwise stay unsolved
   ; at the closing paren; every `_` is solved by then or refused. Returns the argument terms innermost first.
-  (many check-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Succ $ Zero) st) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Entry) tele) (many (Mult) pos) (many (Maybe $ List $ Entry) expect) (many (AppResult) result) (many (Bool) as-term) (many (Bool) boundary) ->
+  (many check-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Succ $ Zero) st) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (Mult) pos) (many (Maybe $ List $ Entry) expect) (many (AppResult) result) (many (Bool) as-term) (many (Bool) boundary) ->
       (many (Env) r) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Code ctx many-one) codes)
     (match many st _
       ((SS sn k)
@@ -3565,7 +3562,7 @@
         (let (many (Env) env5) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) env4 1)) ((BFalse) env4))
         (values env5 (metaless-list acc env5) (metaless-list tys env5) codes))))
 
-  (many check-args-go : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Entry) tele) (many (List $ Bin) metas) (erased (Lockstep (Entry) (Bin) tele metas) lock) (many (Mult) pos) (many (Bool) as-term) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Code ctx many-one) codes) ->
+  (many check-args-go : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Mult) pos) (many (Bool) as-term) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Code ctx many-one) codes) ->
       (many (Env) r) (many (List $ Term) acc2) (many (List $ Term) tys2) (many (List $ Code ctx many-one) codes2)
     (match many tele _
       ((Nil a)
@@ -3607,7 +3604,7 @@
 
   ; A function call (section 9): a lower-level call carries a Predates proof about the callee's level, a
   ; same-level call a Subterm proof for its decreasing argument; the top level carries neither (section 24).
-  (many elab-call : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Pair (List $ Sub rawargs) $ Ann rawargs) parts) (many (Env) env) (many (List $ List $ Bin) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Res) callee) (many (Mult) pos) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hcode) (many (Term) lv) (many (List $ Entry) params) (many (List $ Entry) rets) (many (CC) cc) ->
+  (many elab-call : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Pair (List $ Sub rawargs) $ Ann rawargs) parts) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Res) callee) (many (Mult) pos) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hcode) (many (Term) lv) (many (List $ Entry) params) (many (List $ Entry) rets) (many (CC) cc) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code)
     (match many parts _
       ((MkPair x y args ann)
@@ -3631,7 +3628,7 @@
 
   ; The call-site proof (section 9), read against the current level and enclosing subterm parameters; a bare
   ; call gets its annotation from resolve-ann first.
-  (many check-call-proof : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (List $ List $ Bin) ctx) (many (Res) callee) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) (many (List $ Term) arg-tys) -> (many (Env) r)
+  (many check-call-proof : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Res) callee) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) (many (List $ Term) arg-tys) -> (many (Env) r)
     (match many (env-level env) _
       ((None a)
         (match many ann _

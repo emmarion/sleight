@@ -1,20 +1,20 @@
-; self/heap.sl -- a store for the compile-time interpreter: addresses below a bound, carried as their bijective
-; spelling, and a Braun tree of blocks sized by its count, so that reading and appending are total by the
-; size alone (the address 2k+1 sits in the one-child and 2k+2 in the two-child of the node at k, so the
-; spelling is the path). Parametric in the block type, which core.sl supplies. Nothing here is settled design.
+; self/heap.sl -- a store for the compile-time interpreter: addresses below a bound, and a Braun tree of blocks
+; sized by its count, so that reading and appending are total by the size alone (the address 2k+1 sits in
+; the one-child and 2k+2 in the two-child of the node at k, so the halves of an address are its path).
+; Parametric in the block type, which core.sl supplies. Nothing here is settled design.
 
 (def-adts
   (Digit : -> Type
     enum
     (many D1 : -> (Digit))
     (many D2 : -> (Digit)))
-  (Wrap : ((List $ Digit) ctx) ((Bin) inner) ((Bin) outer) -> Type
+  (Wrap : ((List $ Digit) ctx) ((Nat) inner) ((Nat) outer) -> Type
     enum
-    (many WNil : (erased (Bin) x) -> (Wrap (Nil $ Digit) x x))
-    (many W1 : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Bin) y) (erased (Wrap ctx (B1 x) y) p) -> (Wrap (Cons (Digit) (D1) ctx) x y))
-    (many W2 : (erased (List $ Digit) ctx) (erased (Bin) x) (erased (Bin) y) (erased (Wrap ctx (B2 x) y) p) -> (Wrap (Cons (Digit) (D2) ctx) x y))))
+    (many WNil : (erased (Nat) x) -> (Wrap (Nil $ Digit) x x))
+    (many W1 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ d) y) p) -> (Wrap (Cons (Digit) (D1) ctx) x y))
+    (many W2 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ (Succ d)) y) p) -> (Wrap (Cons (Digit) (D2) ctx) x y))))
 
-; ---- lemmas over the prelude's Lt, Double and Numeral
+; ---- lemmas over the prelude's Lt and Double
 
 (def-fns _ $ erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f)
   (match erased p _ (absurd LtZ) (absurd LtS)))
@@ -76,42 +76,32 @@
           (match erased lt _
             ((LtS x y lt1) (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))))))))
 
-(def-fns _ $ erased wrap-fn : (erased (List $ Digit) ctx) (erased (Bin) a) (erased (Bin) x) (erased (Bin) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Bin) x y) e)
+(def-fns _ $ erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e)
   (match erased p _
-    ((WNil z) (match erased q _ ((WNil z2) (Refl (Bin) x))))
-    ((W1 c1 a1 x1 p1) (match erased q _ ((W1 c2 a2 y1 q1) (wrap-fn c1 (B1 a) x y p1 q1))))
-    ((W2 c1 a1 x1 p1) (match erased q _ ((W2 c2 a2 y1 q1) (wrap-fn c1 (B2 a) x y p1 q1))))))
+    ((WNil z) (match erased q _ ((WNil z2) (Refl (Nat) x))))
+    ((W1 c1 a1 d1 dd1 x1 p1)
+      (match erased q _
+        ((W1 c2 a2 d2 dd2 y1 q1)
+          (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ d1) x y p1 q1))))))
+    ((W2 c1 a1 d1 dd1 x1 p1)
+      (match erased q _
+        ((W2 c2 a2 d2 dd2 y1 q1)
+          (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))))
 
-(def-fns _ $ erased numeral-step : (erased (Bin) b) (erased (Bin) c) (erased (Nat) m) (subterm erased (BinSucc b c) s) (erased (Numeral b m) v) -> (erased (Numeral c (Succ m)) w)
-  (match erased s _
-    ((BSZ) (match erased v _ ((NZ) (N1 (BZ) (Zero) (Zero) (NZ) (D0)))))
-    ((BS1 b0) (match erased v _ ((N1 b1 m0 d v0 dd) (N2 b0 m0 d v0 dd))))
-    ((BS2 b0 c0 s0)
-      (match erased v _
-        ((N2 b1 m0 d v0 dd) (N1 c0 (Succ m0) (Succ (Succ d)) (numeral-step b0 c0 m0 s0 v0) (DS m0 d dd)))))))
-
-(def-fns _ $ many bin-step : (subterm many (Bin) b) -> (many (Bin) c) (erased (BinSucc b c) s)
-  (match many b _
-    ((BZ) (values (B1 $ BZ) (BSZ)))
-    ((B1 b1) (values (B2 b1) (BS1 b1)))
-    ((B2 b1)
-      (let (many c1) (erased s1) $ bin-step b1)
-      (values (B1 c1) (BS2 b1 c1 s1)))))
-
-; ---- addresses: a number below a bound, carried as its spelling; widening the bound is a coerce
+; ---- addresses: a number below a bound; widening the bound is a coerce
 
 (def-adts $ Addr : ((Nat) bound) -> Type
   enum
-  (many MkAddr : (erased (Nat) bound) (erased (Nat) n) (many (Bin) path) (erased (Numeral path n) sp) (erased (Lt n bound) lt) -> (Addr bound)))
+  (many MkAddr : (erased (Nat) bound) (many (Nat) n) (erased (Lt n bound) lt) -> (Addr bound)))
 
-(def-fns _ $ many addr-path : (erased (Nat) bound) (many (Addr bound) a) -> (many (Bin) p)
-  (match many a _ ((MkAddr bd n path sp lt) path)))
+(def-fns _ $ many addr-path : (erased (Nat) bound) (many (Addr bound) a) -> (many (Nat) p)
+  (match many a _ ((MkAddr bd n lt) n)))
 
 (def-fns _ $ erased addr-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Addr b) a) -> (erased (Addr c) a2) (erased (Coercible (Addr b) a (Addr c) a2) p)
   (match erased a _
-    ((MkAddr bd n path sp lt)
+    ((MkAddr bd n lt)
       (let (erased lt2) (lt-le-trans n b c lt le))
-      (values (MkAddr c n path sp lt2) (coercible-ctor MkAddr b c n n (coercible-refl path) sp sp lt lt2)))))
+      (values (MkAddr c n lt2) (coercible-ctor MkAddr b c (coercible-refl n) lt lt2)))))
 
 (def-fns _ $ many addr-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (Addr b) a) -> (many (Addr c) r)
   (let (erased a2) (erased p) (addr-widen b c le a))
@@ -129,8 +119,8 @@
   (let (erased ys) (erased p) (addrs-widen b c le xs))
   (coerce xs p))
 
-(def-fns _ $ erased addrs-widen-lk : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ Bin) f) (subterm erased (List $ Addr b) xs) (erased (Lockstep (Bin) (Addr b) f xs) lk) ->
-    (erased (List $ Addr c) ys) (erased (Coercible (List $ Addr b) xs (List $ Addr c) ys) p) (erased (Lockstep (Bin) (Addr c) f ys) lk2)
+(def-fns _ $ erased addrs-widen-lk : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ Nat) f) (subterm erased (List $ Addr b) xs) (erased (Lockstep (Nat) (Addr b) f xs) lk) ->
+    (erased (List $ Addr c) ys) (erased (Coercible (List $ Addr b) xs (List $ Addr c) ys) p) (erased (Lockstep (Nat) (Addr c) f ys) lk2)
   (match erased xs _
     ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (coercible-ctor Nil (Addr b) (Addr c)) (LsNil _ _)))))
     ((Cons t x rest)
@@ -166,99 +156,78 @@
   (Tree : ((TyCtor ((Nat) a) -> Type) B) ((List $ Digit) up) ((Nat) size) -> Type
     enum
     (many TLeaf : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) -> (Tree B up (Zero)))
-    (many TNode : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Bin) key) (erased (Nat) a) (erased (Wrap up (BZ) key) k) (erased (Numeral key a) sp)
+    (many TNode : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) a) (erased (Wrap up (Zero) a) k)
                   (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Add l r s) sum) (erased (Braun l r) bal)
                   (many (B a) block) (many (Tree B (Cons (Digit) (D1) up) l) one) (many (Tree B (Cons (Digit) (D2) up) r) two) -> (Tree B up (Succ s))))
   (Heap : ((TyCtor ((Nat) a) -> Type) B) ((Nat) size) -> Type
     enum
-    (many MkHeap : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Bin) next) (erased (Numeral next size) sp) (many (Tree B (Nil (Digit)) size) tree) -> (Heap B size))))
+    (many MkHeap : (erased (TyCtor ((Nat) a) -> Type) B) (many (Nat) size) (many (Tree B (Nil (Digit)) size) tree) -> (Heap B size))))
 
-(def-fns _ $ many deref-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) size) (subterm many (Tree B up size) t) (many (Bin) p) (erased (Nat) i) (erased (Numeral p i) sp) (erased (Lt i size) lt)
-    (erased (Bin) key) (erased (Wrap up p key) w) (erased (Nat) a) (erased (Numeral key a) ksp) -> (many (B a) b)
+(def-fns _ $ many deref-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) size) (subterm many (Tree B up size) t) (many (Nat) p) (erased (Lt p size) lt)
+    (erased (Nat) key) (erased (Wrap up p key) w) -> (many (B key) b)
   (match many t _
-    (absurd (TLeaf tb u) (lt-zero i lt))
-    ((TNode tb u key2 a2 k2 sp2 l r s sum bal block one two)
-      (match many p _
-        ((BZ)
-          (match erased (wrap-fn up (BZ) key2 key k2 w) _
-            ((Refl t1 x1)
-              (match erased (numeral-fn key a2 a sp2 ksp) _
-                ((Refl t2 x2) block)))))
-        ((B1 k)
-          (match erased sp _
-            ((N1 b1 m d v dd)
-              (match erased lt _
-                ((LtS x y lt1) (deref-at _ _ _ one k m v (half-lt-one m d l r s dd sum bal lt1) key (W1 _ _ _ w) a ksp))))))
-        ((B2 k)
-          (match erased sp _
-            ((N2 b1 m d v dd)
-              (match erased lt _
-                ((LtS x y lt1) (deref-at _ _ _ two k m v (half-lt-two m d l r s dd sum bal lt1) key (W2 _ _ _ w) a ksp))))))))))
+    (absurd (TLeaf tb u) (lt-zero p lt))
+    ((TNode tb u key2 k2 l r s sum bal block one two)
+      (match many (nat-halve p) _
+        ((HZ) (match erased (wrap-fn up (Zero) key2 key k2 w) _ ((Refl t1 x1) block)))
+        ((H1 m d dd)
+          (match erased lt _
+            ((LtS x y lt1) (deref-at _ _ _ one m (half-lt-one m d l r s dd sum bal lt1) key (W1 _ m d dd _ w)))))
+        ((H2 m d dd)
+          (match erased lt _
+            ((LtS x y lt1) (deref-at _ _ _ two m (half-lt-two m d l r s dd sum bal lt1) key (W2 _ m d dd _ w)))))))))
 
-(def-fns _ $ many alloc-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) size) (subterm many (Tree B up size) t) (many (Bin) p) (erased (Numeral p size) sp)
-    (erased (Bin) key) (erased (Wrap up p key) w) (erased (Nat) a) (erased (Numeral key a) ksp) (many (B a) b) -> (many (Tree B up (Succ size)) t2)
+(def-fns _ $ many alloc-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (many (Nat) size) (subterm many (Tree B up size) t)
+    (erased (Nat) key) (erased (Wrap up size key) w) (many (B key) b) -> (many (Tree B up (Succ size)) t2)
   (match many t _
-    ((TLeaf tb u)
-      (match erased sp _
-        ((NZ) (TNode _ _ key a w ksp (Zero) (Zero) (Zero) (AddZero (Zero)) (BrEq (Zero)) b (TLeaf _ _) (TLeaf _ _)))))
-    ((TNode tb u key2 a2 k2 sp2 l r s sum bal block one two)
-      (match many p _
-        (absurd (BZ) (match erased sp (((False) f)) (absurd NZ) (absurd N1) (absurd N2)))
-        ((B1 k)
-          (match erased sp _
-            ((N1 b1 m d v dd)
-              (match erased bal _
-                ((BrEq n)
-                  (match erased (double-inj m n d dd (add-diag-double n s sum)) _
+    ((TLeaf tb u) (TNode _ _ key w (Zero) (Zero) (Zero) (AddZero (Zero)) (BrEq (Zero)) b (TLeaf _ _) (TLeaf _ _)))
+    ((TNode tb u key2 k2 l r s sum bal block one two)
+      (match many (nat-halve size) _
+        ((H1 m d dd)
+          (match erased bal _
+            ((BrEq n)
+              (match erased (double-inj m n d dd (add-diag-double n s sum)) _
+                ((Refl t1 x1)
+                  (TNode _ _ key2 k2 (Succ n) n (Succ s) (AddSucc n n s sum) (BrOne n) block
+                    (alloc-at _ _ m one key (W1 _ m d dd _ w) b) two))))
+            (absurd (BrOne n)
+              (match erased sum (((False) f))
+                ((AddSucc a1 b1 c1 q) (double-parity m n c1 dd (add-diag-double n c1 q)))))))
+        ((H2 m d dd)
+          (match erased bal _
+            (absurd (BrEq n) (double-parity n m d (add-diag-double n s sum) dd))
+            ((BrOne n)
+              (match erased sum _
+                ((AddSucc a1 b1 c1 q)
+                  (match erased (double-inj m n d dd (add-diag-double n c1 q)) _
                     ((Refl t1 x1)
-                      (TNode _ _ key2 a2 k2 sp2 (Succ n) n (Succ s) (AddSucc n n s sum) (BrOne n) block
-                        (alloc-at _ _ _ one k v key (W1 _ _ _ w) a ksp b) two))))
-                (absurd (BrOne n)
-                  (match erased sum (((False) f))
-                    ((AddSucc a1 b1 c1 q) (double-parity m n c1 dd (add-diag-double n c1 q)))))))))
-        ((B2 k)
-          (match erased sp _
-            ((N2 b1 m d v dd)
-              (match erased bal _
-                (absurd (BrEq n) (double-parity n m d (add-diag-double n s sum) dd))
-                ((BrOne n)
-                  (match erased sum _
-                    ((AddSucc a1 b1 c1 q)
-                      (match erased (double-inj m n d dd (add-diag-double n c1 q)) _
-                        ((Refl t1 x1)
-                          (TNode _ _ key2 a2 k2 sp2 (Succ n) (Succ n) (Succ s) (AddSucc n (Succ n) s (add-succ-right n n c1 q)) (BrEq (Succ n)) block one
-                            (alloc-at _ _ _ two k v key (W2 _ _ _ w) a ksp b)))))))))))))))
+                      (TNode _ _ key2 k2 (Succ n) (Succ n) (Succ s) (AddSucc n (Succ n) s (add-succ-right n n c1 q)) (BrEq (Succ n)) block one
+                        (alloc-at _ _ m two key (W2 _ m d dd _ w) b)))))))))))))
 
 (def-fns _ $ many heap-empty : (erased (TyCtor ((Nat) a) -> Type) B) -> (many (Heap B (Zero)) h)
-  (MkHeap _ _ (BZ) (NZ) (TLeaf _ _)))
+  (MkHeap _ (Zero) (TLeaf _ _)))
 
 (def-fns _ $ many alloc : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (B size) b) -> (many (Heap B (Succ size)) h2) (many (Addr (Succ size)) at)
   (match many h _
-    ((MkHeap tb sz next sp tree)
-      (let (many next2) (erased step) $ bin-step next)
-      (values (MkHeap _ _ next2 (numeral-step next next2 size step sp) (alloc-at _ _ _ tree next sp next (WNil next) size sp b)) (MkAddr _ size next sp (lt-succ size))))))
+    ((MkHeap tb sz tree)
+      (values (MkHeap _ (Succ sz) (alloc-at _ _ sz tree sz (WNil sz) b)) (MkAddr _ sz (lt-succ sz))))))
 
 (def-fns _ $ many deref : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Addr size) at) -> (erased (Nat) a) (erased (Lt a size) lt) (many (B a) b)
   (match many h _
-    ((MkHeap tb sz next sp tree)
+    ((MkHeap tb sz tree)
       (match many at _
-        ((MkAddr bd n path psp lt) (values n lt $ deref-at _ _ _ tree path n psp lt path (WNil path) n psp))))))
+        ((MkAddr bd n lt) (values n lt $ deref-at _ _ _ tree n lt n (WNil n)))))))
 
-(def-fns _ $ many deref-path : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Bin) p) (erased (Nat) n) (erased (Numeral p n) sp) (erased (Lt n size) lt) -> (many (B n) b)
+(def-fns _ $ many deref-path : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Nat) p) (erased (Lt p size) lt) -> (many (B p) b)
   (match many h _
-    ((MkHeap tb sz next nsp tree) (deref-at _ _ _ tree p n sp lt p (WNil p) n sp))))
+    ((MkHeap tb sz tree) (deref-at _ _ _ tree p lt p (WNil p)))))
 
 ; Every address of a heap, oldest first, counted up from zero.
-(def-fns _ $ many addrs-from : (subterm many (Nat) remaining) (erased (Nat) size) (erased (Nat) n) (many (Bin) p) (erased (Numeral p n) sp) (erased (Add n remaining size) sum) -> (many (List $ Addr size) r)
+(def-fns _ $ many addrs-from : (subterm many (Nat) remaining) (erased (Nat) size) (many (Nat) n) (erased (Add n remaining size) sum) -> (many (List $ Addr size) r)
   (match many remaining _
     ((Zero) (Nil _))
-    ((Succ k)
-      (let (many p2) (erased st) $ bin-step p)
-      (Cons _ (MkAddr _ n p sp (lt-of-add n k size sum)) $ addrs-from k _ (Succ n) p2 (numeral-step p p2 n st sp) (add-shift n k size sum)))))
+    ((Succ k) (Cons _ (MkAddr _ n (lt-of-add n k size sum)) $ addrs-from k _ (Succ n) (add-shift n k size sum)))))
 
 (def-fns _ $ many heap-addrs : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) -> (many (List $ Addr size) r)
   (match many h _
-    ((MkHeap tb sz next sp tree)
-      (let (many count) (erased cp) $ bin-to-nat next)
-      (match erased (numeral-fn next count size cp sp) _
-        ((Refl t x) (addrs-from count _ (Zero) (BZ) (NZ) (AddZero size)))))))
+    ((MkHeap tb sz tree) (addrs-from sz _ (Zero) (AddZero sz)))))

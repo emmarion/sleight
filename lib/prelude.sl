@@ -351,7 +351,7 @@
   c)
 
 (def-adts $ Bin : -> Type
-  enum extern
+  enum
   (many BZ : -> (Bin))
   (many B1 : (many (Bin) rest) -> (Bin))
   (many B2 : (many (Bin) rest) -> (Bin)))
@@ -365,7 +365,7 @@
     (many N2 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd) ->
        (Numeral (B2 b) (Succ (Succ d))))))
 
-(def-fns _ $ many extern bin-to-nat : (subterm many (Bin) b) -> (many (Nat) n) (erased (Numeral b n) v)
+(def-fns _ $ many bin-to-nat : (subterm many (Bin) b) -> (many (Nat) n) (erased (Numeral b n) v)
   (match many b _
     ((BZ) (values (Zero) (NZ)))
     ((B1 b1)

@@ -2496,4 +2496,28 @@ bootstrap runs in the same time as before (about four minutes here).
      as an extern *function* returning a plain block it had been about
      20% slower. Whether ids become `Nat`s is not decided; nothing in
      `slc` uses `Half` yet.
+136. **`Bin` is a plain type, and `slc`'s ids are `Nat`s** (the owner's
+     decision: every use of `Bin` erased in `slc`, the conversion through
+     `Half`). The prelude's `Bin` and `bin-to-nat` lose their `extern`
+     marks, so the FFI holds no `Bin`: its views, its templates and
+     `bin-to-nat`'s identity go, `Half` keeps the halving view under
+     its own name (`half_view`, `half_of`), and `lib/literal.ml` spells
+     a numeral through it. In `slc` an id is a `Nat`: `nat-cmp` compares,
+     `Succ` mints, `nat-eq-dec` decides equality with `Neq` as the
+     order either way, and every trie (`base.sl`'s `IdMap`, `heap.sl`'s
+     store, `core.sl`'s fact table) walks the id's halves by
+     `nat-halve`. The evidence is restated the way the probe of item
+     135 did it: where a constructor's index was `(B1 k)` it is
+     `(Succ d)` with an erased `Double k d` field beside `k`, `(B2 k)`
+     is `(Succ (Succ d))`, `(BZ)` is `(Zero)`, `Numeral` fields drop
+     since the key is the number, and `BinLt`/`BinLe`/`Neq`'s digit
+     lemmas become the prelude's `Lt`. A branch the digits refuted by
+     shape is refuted by `double-parity`, and two keys under one digit
+     meet through `double-inj`/`double-fn`. The `Bin` type still spells
+     numerals into their `Numeral` proofs in `elab.sl`, as a plain
+     enum. Measured on the compiler's own sources with the machine
+     idle: the previous `slc` 3.9 s, this one 3.1 s; the emitted OCaml
+     names ids in decimal (`v1234_length`) and the self-compile's
+     output shrinks from 1.02 MB to 0.74 MB. Gate: dune test 253
+     passed; bootstrap 175 matched, 103 refused, fixpoint reached.
 

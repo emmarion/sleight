@@ -37,21 +37,21 @@ interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `Bin` and `String`, and a `Rope` is flattened by the
+host's own `Nat`, `Half` and `String`, and a `Rope` is flattened by the
 host (section 41); a `U8` or a
 `Char`, both newtypes, is its `Nat` (section 38).
 
 ## Files
 
 - `base.sl` — booleans, pairs, `Nat`/`Char`/`String` helpers over the
-  prelude's externs, `Bin`-keyed identifiers with a trie map over them,
-  a trie map keyed by names, list helpers, and helpers over the
-  prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
-  orders on `Bin` and `String` are relations decided into the prelude's
+  prelude's externs, a trie map over `Nat` identifiers walked by the
+  prelude's `Half`, a trie map keyed by names, list helpers, and helpers
+  over the prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
+  orders on `Nat` and `String` are relations decided into the prelude's
   `Cmp`, so a match on `CEq` forces the two equal; a trie lookup returns
   `Hit` with a `MapsTo` proof or `Miss` with an `Absent` one; `list-nth`
   returns `Nth` or `OutOfRange` evidence, `length` a `Length` proof and
-  `list-append` a `Concat` proof. `nat-eq`, `bin-eq`, `str-eq`,
+  `list-append` a `Concat` proof. `nat-eq`, `str-eq`,
   `list-length` and friends are forgetful wrappers over those, for the
   sites that combine several decisions with `and`/`or`.
 - `heap.sl` — a store for the compile-time interpreter, parametric in
@@ -163,10 +163,13 @@ the entry says otherwise, and recorded so it can be revisited.
   interpreter is the checked path. Function calls in tail position are
   OCaml tail calls, so three million `tail`-marked frames run in
   constant stack.
-- **Identifiers are `Bin` numbers**, not `Nat`s: comparing two is
-  logarithmic under the FFI, a fresh one is a successor, and the
-  environment's maps are tries over their digits. OCaml names carry the
-  digits, least significant first: `v22111222_length`.
+- **Identifiers are `Nat`s**: comparing two is `nat-cmp`, a fresh one
+  is `Succ`, and the environment's maps and the store are tries over
+  their halves (the prelude's `Half`, whose `nat-halve` is the identity
+  under the FFI), with `Double` in the evidence where the digits used
+  to be; the bijective spelling (`Bin`, a plain type now) appears only
+  where a numeral literal is spelled into its `Numeral` proof. OCaml
+  names carry the id in decimal: `v1234_length`.
 - **Termination is structural except in the interpreter and the
   generated printer.** Those two take a `Nat` that decreases along the
   call stack (not a step count), so a fuel of 1000000 or 100000 bounds

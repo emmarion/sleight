@@ -1,5 +1,5 @@
 ; self/base.sl -- foundations for the self-hosted compiler (self/README.md): booleans, pairs, orders and
-; their decisions, Nat/Char/String helpers over the prelude's externs, Bin-keyed identifiers and a trie map over them, a
+; their decisions, Nat/Char/String helpers over the prelude's externs, Nat identifiers and a trie map over them, a
 ; trie map keyed by names, list helpers and a rope of output chunks. Everything here is plain SL checked
 ; by the reference interpreter; nothing is settled design.
 
@@ -197,77 +197,12 @@
 (def-fns _ $ many sanitize : (many (String) s) -> (many (String) r)
   (rope-str $ sanitize-rope s))
 
-; ---- Bin identifiers
+; ---- IdMap: a persistent trie keyed by the halves of a Nat (the prelude's Half)
 
-(def-fns _ $ many bin-succ : (subterm many (Bin) b) -> (many (Bin) c)
-  (match many b _
-    ((BZ) (B1 $ BZ))
-    ((B1 b1) (B2 b1))
-    ((B2 b1) (B1 $ bin-succ b1))))
-
-; The order on ids, digit by digit (B1 a is 2a+1, B2 a is 2a+2), and its decision with proofs.
-(def-adts
-  (BinLt : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many LtZ1 : (erased (Bin) b) -> (BinLt (BZ) $ B1 b))
-    (many LtZ2 : (erased (Bin) b) -> (BinLt (BZ) $ B2 b))
-    (many Lt11 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B1 a) $ B1 b))
-    (many Lt12 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLt (B1 a) $ B2 b))
-    (many Lt21 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B2 a) $ B1 b))
-    (many Lt22 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLt (B2 a) $ B2 b)))
-  (BinLe : ((Bin) a) ((Bin) b) -> Type
-    enum
-    (many LeZ : (erased (Bin) b) -> (BinLe (BZ) b))
-    (many Le11 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B1 a) $ B1 b))
-    (many Le12 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B1 a) $ B2 b))
-    (many Le21 : (erased (Bin) a) (erased (Bin) b) (erased (BinLt a b) p) -> (BinLe (B2 a) $ B1 b))
-    (many Le22 : (erased (Bin) a) (erased (Bin) b) (erased (BinLe a b) p) -> (BinLe (B2 a) $ B2 b))))
-
-(def-fns _ $ erased le-refl : (subterm erased (Bin) a) -> (erased (BinLe a a) r)
-  (match erased a _
-    ((BZ) (LeZ _))
-    ((B1 a1) (Le11 _ _ $ le-refl a1))
-    ((B2 a1) (Le22 _ _ $ le-refl a1))))
-
-(def-fns _ $ erased lt-le : (erased (Bin) a) (erased (Bin) b) (subterm erased (BinLt a b) p) -> (erased (BinLe a b) r)
-  (match erased p _
-    ((LtZ1 b1) (LeZ _)) ((LtZ2 b1) (LeZ _))
-    ((Lt11 a1 b1 q) (Le11 _ _ $ lt-le a1 b1 q))
-    ((Lt12 a1 b1 q) (Le12 _ _ q))
-    ((Lt21 a1 b1 q) (Le21 _ _ q))
-    ((Lt22 a1 b1 q) (Le22 _ _ $ lt-le a1 b1 q))))
-
-(def-fns _ $ many bin-cmp : (subterm many (Bin) a) (many (Bin) b) -> (many (Cmp (Bin) BinLt a b) r)
-  (match many a _
-    ((BZ) (match many b _ ((BZ) (CEq _ _ a)) ((B1 b1) (CLt _ _ a b $ LtZ1 b1)) ((B2 b1) (CLt _ _ a b $ LtZ2 b1))))
-    ((B1 a1)
-      (match many b _
-        ((BZ) (CGt _ _ a b $ LtZ1 a1))
-        ((B1 b1) (match many (bin-cmp a1 b1) _ ((CLt t r x y p) (CLt _ _ a b $ Lt11 a1 b1 p)) ((CEq t r x) (CEq _ _ a)) ((CGt t r x y p) (CGt _ _ a b $ Lt11 b1 a1 p))))
-        ((B2 b1) (match many (bin-cmp a1 b1) _ ((CLt t r x y p) (CLt _ _ a b $ Lt12 a1 b1 $ lt-le a1 b1 p)) ((CEq t r x) (CLt _ _ a b $ Lt12 a1 a1 $ le-refl a1)) ((CGt t r x y p) (CGt _ _ a b $ Lt21 b1 a1 p))))))
-    ((B2 a1)
-      (match many b _
-        ((BZ) (CGt _ _ a b $ LtZ2 a1))
-        ((B1 b1) (match many (bin-cmp a1 b1) _ ((CLt t r x y p) (CLt _ _ a b $ Lt21 a1 b1 p)) ((CEq t r x) (CGt _ _ a b $ Lt12 a1 a1 $ le-refl a1)) ((CGt t r x y p) (CGt _ _ a b $ Lt12 b1 a1 $ lt-le b1 a1 p))))
-        ((B2 b1) (match many (bin-cmp a1 b1) _ ((CLt t r x y p) (CLt _ _ a b $ Lt22 a1 b1 p)) ((CEq t r x) (CEq _ _ a)) ((CGt t r x y p) (CGt _ _ a b $ Lt22 b1 a1 p))))))))
-
-(def-fns _ $ many bin-eq : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (cmp-is-eq _ _ _ _ $ bin-cmp a b))
-
-(def-fns _ $ many bin-lt : (many (Bin) a) (many (Bin) b) -> (many (Bool) r)
-  (cmp-is-lt _ _ _ _ $ bin-cmp a b))
-
-; The digits of a Bin, least significant first, as text: an injective spelling for OCaml names.
-(def-fns _ $ many bin-rope : (subterm many (Bin) b) -> (many (Rope) r)
-  (match many b _
-    ((BZ) (REmpty))
-    ((B1 b1) (RCat (RChar #\1) $ bin-rope b1))
-    ((B2 b1) (RCat (RChar #\2) $ bin-rope b1))))
-
-(def-fns _ $ many bin-str : (many (Bin) b) -> (many (String) s)
-  (rope-str $ bin-rope b))
-
-; ---- IdMap: a persistent trie keyed by a Bin's digits
+(def-fns _ $ erased double-lt : (erased (Nat) m) (erased (Nat) d) (subterm erased (Double m d) dd) -> (erased (Lt m (Succ d)) p)
+  (match erased dd _
+    ((D0) (LtZ (Zero)))
+    ((DS m1 d1 dd1) (LtS m1 (Succ (Succ d1)) (lt-weaken m1 (Succ d1) (double-lt m1 d1 dd1))))))
 
 (def-adts
   (IdMap : (Type V) -> Type
@@ -275,60 +210,62 @@
     (many MEmpty : (erased Type V) -> (IdMap V))
     (many MNode : (erased Type V) (many (Maybe V) here) (many (IdMap V) one) (many (IdMap V) two) -> (IdMap V))))
 
-; A lookup's evidence: the key's digits lead to the value, or to an empty map or an empty slot.
+; A lookup's evidence: the key's halves lead to the value, or to an empty map or an empty slot.
 (def-adts
-  (MapsTo : (Type V) ((Bin) k) (V v) ((IdMap V) m) -> Type
+  (MapsTo : (Type V) ((Nat) k) (V v) ((IdMap V) m) -> Type
     enum
-    (many MTHere : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two) -> (MapsTo V (BZ) v $ MNode V (Some V v) one two))
-    (many MT1 : (erased Type V) (erased (Bin) k) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v one) p) ->
-       (MapsTo V (B1 k) v $ MNode V here one two))
-    (many MT2 : (erased Type V) (erased (Bin) k) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v two) p) ->
-       (MapsTo V (B2 k) v $ MNode V here one two)))
-  (Absent : (Type V) ((Bin) k) ((IdMap V) m) -> Type
+    (many MTHere : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two) -> (MapsTo V (Zero) v $ MNode V (Some V v) one two))
+    (many MT1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v one) p) ->
+       (MapsTo V (Succ d) v $ MNode V here one two))
+    (many MT2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v two) p) ->
+       (MapsTo V (Succ (Succ d)) v $ MNode V here one two)))
+  (Absent : (Type V) ((Nat) k) ((IdMap V) m) -> Type
     enum
-    (many ABEmpty : (erased Type V) (erased (Bin) k) -> (Absent V k $ MEmpty V))
-    (many ABHere : (erased Type V) (erased (IdMap V) one) (erased (IdMap V) two) -> (Absent V (BZ) $ MNode V (None V) one two))
-    (many AB1 : (erased Type V) (erased (Bin) k) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k one) p) -> (Absent V (B1 k) $ MNode V here one two))
-    (many AB2 : (erased Type V) (erased (Bin) k) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k two) p) -> (Absent V (B2 k) $ MNode V here one two)))
-  (Lookup : (Type V) ((Bin) k) ((IdMap V) m) -> Type
+    (many ABEmpty : (erased Type V) (erased (Nat) k) -> (Absent V k $ MEmpty V))
+    (many ABHere : (erased Type V) (erased (IdMap V) one) (erased (IdMap V) two) -> (Absent V (Zero) $ MNode V (None V) one two))
+    (many AB1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k one) p) ->
+       (Absent V (Succ d) $ MNode V here one two))
+    (many AB2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k two) p) ->
+       (Absent V (Succ (Succ d)) $ MNode V here one two)))
+  (Lookup : (Type V) ((Nat) k) ((IdMap V) m) -> Type
     enum
-    (many Hit : (erased Type V) (erased (Bin) k) (erased (IdMap V) m) (many V v) (erased (MapsTo V k v m) p) -> (Lookup V k m))
-    (many Miss : (erased Type V) (erased (Bin) k) (erased (IdMap V) m) (erased (Absent V k m) p) -> (Lookup V k m))))
+    (many Hit : (erased Type V) (erased (Nat) k) (erased (IdMap V) m) (many V v) (erased (MapsTo V k v m) p) -> (Lookup V k m))
+    (many Miss : (erased Type V) (erased (Nat) k) (erased (IdMap V) m) (erased (Absent V k m) p) -> (Lookup V k m))))
 
-(def-fns _ $ many idmap-get : (erased Type V) (subterm many (Bin) k) (many (IdMap V) m) -> (many (Lookup V k m) r)
+(def-fns _ $ many idmap-get : (erased Type V) (many (Nat) k) (subterm many (IdMap V) m) -> (many (Lookup V k m) r)
   (match many m _
     ((MEmpty a) (Miss _ _ _ $ ABEmpty _ k))
     ((MNode a here one two)
-      (match many k _
-        ((BZ) (match many here _ ((None b) (Miss _ _ _ $ ABHere _ one two)) ((Some b v) (Hit _ _ _ v $ MTHere _ v one two))))
-        ((B1 k1)
+      (match many (nat-halve k) _
+        ((HZ) (match many here _ ((None b) (Miss _ _ _ $ ABHere _ one two)) ((Some b v) (Hit _ _ _ v $ MTHere _ v one two))))
+        ((H1 k1 d dd)
           (match many (idmap-get _ k1 one) _
-            ((Hit t kk mm v p) (Hit _ _ _ v $ MT1 _ k1 v here one two p))
-            ((Miss t kk mm p) (Miss _ _ _ $ AB1 _ k1 here one two p))))
-        ((B2 k1)
+            ((Hit t kk mm v p) (Hit _ _ _ v $ MT1 _ k1 d dd v here one two p))
+            ((Miss t kk mm p) (Miss _ _ _ $ AB1 _ k1 d dd here one two p))))
+        ((H2 k1 d dd)
           (match many (idmap-get _ k1 two) _
-            ((Hit t kk mm v p) (Hit _ _ _ v $ MT2 _ k1 v here one two p))
-            ((Miss t kk mm p) (Miss _ _ _ $ AB2 _ k1 here one two p))))))))
+            ((Hit t kk mm v p) (Hit _ _ _ v $ MT2 _ k1 d dd v here one two p))
+            ((Miss t kk mm p) (Miss _ _ _ $ AB2 _ k1 d dd here one two p))))))))
 
 ; A value a map holds is a subterm of it, for a recursion that continues into it.
-(def-fns _ $ erased mapsto-subterm : (erased Type V) (erased (Bin) k) (erased V v) (erased (IdMap V) m) (subterm erased (MapsTo V k v m) p) ->
+(def-fns _ $ erased mapsto-subterm : (erased Type V) (erased (Nat) k) (erased V v) (erased (IdMap V) m) (subterm erased (MapsTo V k v m) p) ->
     (erased (Subterm V v (IdMap V) m) s)
   (match erased p _
     ((MTHere t w one two) (prove-subterm v m))
-    ((MT1 t k1 w here one two q) (subterm-trans (mapsto-subterm _ _ _ _ q) $ prove-subterm one m))
-    ((MT2 t k1 w here one two q) (subterm-trans (mapsto-subterm _ _ _ _ q) $ prove-subterm two m))))
+    ((MT1 t k1 d dd w here one two q) (subterm-trans (mapsto-subterm _ _ _ _ q) $ prove-subterm one m))
+    ((MT2 t k1 d dd w here one two q) (subterm-trans (mapsto-subterm _ _ _ _ q) $ prove-subterm two m))))
 
-(def-fns _ $ many idmap-set : (erased Type V) (subterm many (Bin) k) (many V v) (many (IdMap V) m) -> (many (IdMap V) r)
+(def-fns _ $ many idmap-set : (erased Type V) (subterm many (Nat) k) (many V v) (many (IdMap V) m) -> (many (IdMap V) r)
   (let (many (Maybe V) here) (many (IdMap V) one) (many (IdMap V) two)
     (match many m _
       ((MEmpty a) (values (None _) (MEmpty _) $ MEmpty _))
       ((MNode a h o t) (values h o t))))
-  (match many k _
-    ((BZ) (MNode _ (Some _ v) one two))
-    ((B1 k1) (MNode _ here (idmap-set _ k1 v one) two))
-    ((B2 k1) (MNode _ here one $ idmap-set _ k1 v two))))
+  (match many (nat-halve k) _
+    ((HZ) (MNode _ (Some _ v) one two))
+    ((H1 k1 d dd) (MNode _ here (idmap-set _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one) two))
+    ((H2 k1 d dd) (MNode _ here one $ idmap-set _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two))))
 
-(def-fns _ $ many idmap-mem : (erased Type V) (many (Bin) k) (many (IdMap V) m) -> (many (Bool) r)
+(def-fns _ $ many idmap-mem : (erased Type V) (many (Nat) k) (many (IdMap V) m) -> (many (Bool) r)
   (match many (idmap-get _ k m) _ ((Miss t k2 m2 p) (BFalse)) ((Hit t k2 m2 v p) (BTrue))))
 
 ; ---- NameMap: a persistent trie keyed by a string's characters
@@ -560,15 +497,15 @@
     ((Nil a) (BFalse))
     ((Cons a y rest) (match many (str-eq x y) _ ((BTrue) (BTrue)) ((BFalse) (list-mem-str rest x))))))
 
-(def-fns _ $ many index-of-bin : (subterm many (List $ Bin) xs) (many (Bin) x) (many (Nat) i) -> (many (Maybe $ Nat) r)
+(def-fns _ $ many index-of-bin : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many xs _
     ((Nil a) (None _))
     ((Cons a y rest)
-      (match many (bin-eq x y) _
+      (match many (nat-eq x y) _
         ((BTrue) (Some _ i))
         ((BFalse) (index-of-bin rest x $ Succ i))))))
 
-(def-fns _ $ many list-mem-bin : (subterm many (List $ Bin) xs) (many (Bin) x) -> (many (Bool) r)
+(def-fns _ $ many list-mem-bin : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r)
   (is-some _ $ index-of-bin xs x 0))
 
 ; ---- Rope: output built as a tree of chunks (the prelude's), flattened once
