@@ -47,6 +47,12 @@ let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule 
 
 let lookup env name = List.find_opt (fun x -> (entry env x).name = Some name) env.scope
 
+(* Leaving a let's right-hand side: the entries it added since [outer] stay in scope, anonymously (section 16),
+   so no fact or open record outlives an entry it mentions. *)
+let hide env outer =
+  let added = List.filteri (fun i _ -> i < List.length env.scope - List.length outer.scope) env.scope in
+  { env with entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added }
+
 let rec canon env t =
   map_vars (fun _ t -> match t with Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t) | t -> t) 0 t
 

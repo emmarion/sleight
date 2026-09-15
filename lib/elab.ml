@@ -777,13 +777,18 @@ and elab_match tele env expect l args =
   | _ -> error l "malformed match"
 
 and elab_body ?tele env expect l items =
-  match items with
+  let env, wrap, final = elab_stmts env l items in
+  let env, ress, code = elab_expr ?tele env expect final in
+  (env, ress, wrap code)
+
+(* The statements before a body's final expression, and the code they wrap around what follows them. *)
+and elab_stmts env l = function
   | [] -> error l "a body needs a final expression"
-  | [ final ] -> elab_expr ?tele env expect final
+  | [ final ] -> (env, Fun.id, final)
   | stmt :: rest ->
       let env, wrap = elab_stmt env stmt in
-      let env, ress, code = elab_body ?tele env expect l rest in
-      (env, ress, wrap code)
+      let env, wrap', final = elab_stmts env l rest in
+      (env, (fun code -> wrap (wrap' code)), final)
 
 and elab_absurd env l body =
   let env, ress, _ = elab_body env [ Erased ] l body in
@@ -814,7 +819,9 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
 and run_code env code = Eval.eval env.values code
 
 (* Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
-   produce (SUGAR.md 6); the check of each binder against its value stays as it was. *)
+   produce (SUGAR.md 6); the check of each binder against its value stays as it was. The right-hand side's
+   statements are statements of the enclosing expression: their code wraps the let's own, and their entries
+   stay in scope after it, anonymously (section 16). *)
 and elab_let env l args =
   let binder_raws, rhs = split_returns env args in
   let binders = List.concat_map (parse_entry env) binder_raws in
@@ -825,7 +832,8 @@ and elab_let env l args =
       ({ env' with scope = env.scope }, Some t)
     else (env, None)
   in
-  let inner, ress, code = elab_body ?tele env expect l rhs in
+  let after, wrap, final = elab_stmts env l rhs in
+  let inner, ress, code = elab_expr ?tele after expect final in
   let values = if env.run_pos && pos_of expect = Many then run_code inner code else [] in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
     let env =
@@ -840,10 +848,10 @@ and elab_let env l args =
     (env, x :: ids, r.term :: acc)
   in
   let env', ids, _ =
-    List.fold_left bind_one ({ inner with scope = env.scope }, [], []) (List.mapi (fun i x -> (i, x)) (List.combine (List.combine binders ress) (spread expect values)))
+    List.fold_left bind_one (hide inner env, [], []) (List.mapi (fun i x -> (i, x)) (List.combine (List.combine binders ress) (spread expect values)))
   in
   let ids = non_erased env' (List.rev ids) in
-  (env', if env.run_pos || ids = [] then Fun.id else fun rest -> V.CLet (ids, code, rest))
+  (env', if env.run_pos then Fun.id else fun rest -> wrap (if ids = [] then rest else V.CLet (ids, code, rest)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
