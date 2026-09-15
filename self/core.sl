@@ -286,7 +286,7 @@
     (many ExtNat : -> (ExtType)) (many ExtBin : -> (ExtType)) (many ExtString : -> (ExtType)))
   (Extern : ((Nat) arity) -> Type
     enum
-    (many ExAdd : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
+    (many ExAdd : -> (Extern 2)) (many ExSub : -> (Extern 2)) (many ExMul : -> (Extern 2)) (many ExDiv : -> (Extern 2)) (many ExDivmod : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
     (many ExBinToNat : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1)))
   (SomeExtern : -> Type
     enum
@@ -304,16 +304,16 @@
 
 (def-fns _ $ many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m)
   (match many e _
-    ((ExAdd) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
+    ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
     ((ExBinToNat) 1) ((ExTrim) 1) ((ExFlatten) 1)))
 
 (def-fns _ $ many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s)
   (match many e _
-    ((ExAdd) "add") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
+    ((ExAdd) "add") ((ExSub) "sub") ((ExMul) "mul") ((ExDiv) "div") ((ExDivmod) "divmod") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
     ((ExBinToNat) "bin-to-nat") ((ExTrim) "trim") ((ExFlatten) "flatten")))
 
 (let (many externs)
-  (Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
+  (Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
   Cons _ (MkSomeExtern _ $ ExBinToNat) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) (Nil _)))
 
 (def-fns _ $ many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r)

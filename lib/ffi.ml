@@ -23,7 +23,7 @@ let claim table loc name =
    the many-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. *)
 let shapes = [ ("Nat", [ 0; 1 ]); ("Bin", [ 0; 1; 1 ]); ("String", [ 0; 2 ]); ("Rope", [ 0; 1; 2; 1 ]); ("Cmp", [ 0; 0; 0 ]) ]
-let arities = [ ("add", 2); ("nat-cmp", 2); ("nat-mod", 2); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
+let arities = [ ("add", 2); ("sub", 2); ("mul", 2); ("div", 2); ("divmod", 2); ("nat-cmp", 2); ("nat-mod", 2); ("bin-to-nat", 1); ("trim", 1); ("append", 2); ("flatten", 1) ]
 let needs = [ ("nat-cmp", [ "Cmp" ]); ("flatten", [ "Rope" ]) ]
 
 let spell ns = String.concat " " (List.map string_of_int ns)
@@ -79,6 +79,10 @@ let nats name f = binary (fun a b -> int name (f (z a) (z b)))
 
 let fns : (string * (value list -> value list)) list =
   [ ("add", nats "Nat" Ffi_core.add);
+    ("sub", nats "Nat" Ffi_core.sub);
+    ("mul", nats "Nat" Ffi_core.mul);
+    ("div", nats "Nat" Ffi_core.div);
+    ("divmod", function [ a; b ] -> let q, r = Ffi_core.divmod (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity);
     ("nat-cmp", binary (fun a b -> plain "Cmp" (match Ffi_core.nat_cmp (z a) (z b) with CLt -> 0 | CEq -> 1 | CGt -> 2) []));
     ("nat-mod", nats "Nat" Ffi_core.nat_mod);
     ("bin-to-nat", unary (fun a -> int "Nat" (Ffi_core.bin_to_nat (z a))));

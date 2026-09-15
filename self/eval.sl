@@ -178,7 +178,7 @@
 ; An extern function over its arguments, or None where the model runs instead: nat-cmp builds a plain
 ; ADT (ASSUMPTIONS 120). The arguments are counted against the arity here, the call having been checked
 ; against the model's telescope.
-(def-fns _ $ many apply-extern : (erased (Nat) n) (many (Extern n) e) (erased (Nat) hs) (many (Heap Block hs) hp) (many (List $ Addr hs) args) -> (many (Heap Block (Succ hs)) hp2) (many (Maybe $ Addr (Succ hs)) r)
+(def-fns _ $ many apply-extern : (erased (Nat) n) (many (Extern n) e) (erased (Nat) hs) (many (Heap Block hs) hp) (many (List $ Addr hs) args) -> (erased (Nat) hs2) (many (Heap Block hs2) hp2) (erased (Lt hs (Succ hs2)) le) (many (Maybe $ List $ Addr hs2) r)
   (let (many (Maybe $ Addr hs) a) $ match many (list-nth _ args 0) _ ((NthHit nt nl ni x np) (Some _ x)) ((NthMiss nt nl ni np) (None _)))
   (let (many (Maybe $ Addr hs) b) $ match many (list-nth _ args 1) _ ((NthHit nt nl ni x np) (Some _ x)) ((NthMiss nt nl ni np) (None _)))
   (let (many (Nat) na) $ match many a _ ((Some t x) (heap-nat _ hp x)) ((None t) 0))
@@ -188,7 +188,17 @@
   (let (many (Payload) p)
     (match many e _
       ((ExAdd) (PNat $ nat-add na nb))
+      ((ExSub)
+        (match many (lt-dec nb (Succ na)) (((Payload) q))
+          ((Yes x y le) (let (many c) (erased pf) $ sub na nb le) (PNat c))
+          ((No x y q) (PStr "sub: negative result"))))
+      ((ExMul) (PNat $ nat-mul na nb))
+      ((ExDiv)
+        (match many (lt-dec (Zero) nb) (((Payload) q))
+          ((Yes x y pos) (let (many d) (erased m) (erased r) (erased mm) (erased a) (erased p) $ div na nb pos) (PNat d))
+          ((No x y q) (PStr "div: zero divisor"))))
       ((ExNatCmp) (PNat 0))
+      ((ExDivmod) (PNat 0))
       ((ExNatMod)
         (match many (lt-dec (Zero) nb) (((Payload) q))
           ((Yes x y pos) (let (many m) (erased pf) (erased pq) $ nat-mod na nb pos) (PNat m))
@@ -199,8 +209,22 @@
       ((ExTrim) (PStr $ trim sa))
       ((ExAppend) (PStr $ str-append sa sb))
       ((ExFlatten) (PStr $ match many a (((String) r)) ((Some t x) (flatten-value _ hp x)) ((None t) (SNil))))))
-  (let (many hp2) (many v) $ alloc-ext _ hp p)
-  (values hp2 $ match many e (((Maybe $ Addr (Succ hs)) r)) ((ExNatCmp) (None _)) (else (Some _ v))))
+  (match many e _
+    ((ExNatCmp) (values hs hp (le-refl hs) (None _)))
+    ((ExDivmod)
+      (match many (lt-dec (Zero) nb) _
+        ((Yes x y pos)
+          (let (many q) (many r) (erased m) (erased mm) (erased a) (erased pr) $ divmod na nb pos)
+          (let (many hp2) (many aq) $ alloc-ext _ hp $ PNat q)
+          (let (many hp3) (many ar) $ alloc-ext _ hp2 $ PNat r)
+          (values (Succ (Succ hs)) hp3 (le-step _ _ $ le-step _ _ $ le-refl hs)
+            (Some _ $ Cons _ (addr-weaken _ _ (le-step _ _ $ le-refl (Succ hs)) aq) $ Cons _ ar $ Nil _)))
+        ((No x y q)
+          (let (many hp2) (many v) $ alloc-ext _ hp $ PStr "divmod: zero divisor")
+          (values (Succ hs) hp2 (le-step _ _ $ le-refl hs) (Some _ $ Cons _ v $ Nil _)))))
+    (else
+      (let (many hp2) (many v) $ alloc-ext _ hp p)
+      (values (Succ hs) hp2 (le-step _ _ $ le-refl hs) (Some _ $ Cons _ v $ Nil _)))))
 
 ; ---- Values at every position of a code's index (ASSUMPTIONS 125)
 
@@ -458,10 +482,7 @@
                                 ((None a) (values hs hp (le-refl hs) $ None _))
                                 ((Some a se)
                                   (match many se _
-                                    ((MkSomeExtern n e)
-                                      (let (many hp2) (many r) $ apply-extern _ e _ hp args)
-                                      (let (many (Maybe $ List $ Addr (Succ hs)) r2) $ match many r _ ((Some t v) (Some _ $ Cons _ v $ Nil _)) ((None t) (None _)))
-                                      (values (Succ hs) hp2 (le-step _ _ $ le-refl hs) r2))))))
+                                    ((MkSomeExtern n e) (apply-extern _ e _ hp args))))))
                             (match many done _
                               ((Some a r) (values h1 hp1 le1 r))
                               ((None a)

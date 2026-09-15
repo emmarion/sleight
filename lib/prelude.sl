@@ -162,10 +162,61 @@
             ((CEq t r x) (CEq (Nat) Lt a))
             ((CGt t r x y q) (CGt (Nat) Lt a b (LtS b1 a1 q)))))))))
 
+(def-adts
+  (Mul : ((Nat) a) ((Nat) b) ((Nat) c) -> Type
+    enum
+    (many MulZero : (erased (Nat) b) -> (Mul (Zero) b (Zero)))
+    (many MulSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d) (erased (Mul a b c) m) (erased (Add c b d) p) ->
+       (Mul (Succ a) b d))))
+
+(def-fns _ $ many extern mul : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Mul a b c) p)
+  (match many a _
+    ((Zero) (values (Zero) (MulZero b)))
+    ((Succ a1)
+      (let (many c1) (erased m) (mul a1 b))
+      (let (many c) (erased q) (add c1 b))
+      (values c (MulSucc a1 b c1 c m q)))))
+
+(def-fns _ $ many extern sub : (many (Nat) a) (subterm many (Nat) b) (erased (Lt b (Succ a)) le) -> (many (Nat) c) (erased (Add b c a) p)
+  (match many b _
+    ((Zero) (values a (AddZero a)))
+    ((Succ b1)
+      (match many a _
+        ((Zero) (match erased le _ (absurd LtZ) ((LtS x y l1) (match erased l1 _ (absurd LtZ) (absurd LtS)))))
+        ((Succ a1)
+          (let (erased le1) (match erased le (((Lt b1 (Succ a1)) l)) (absurd LtZ) ((LtS x y l1) l1)))
+          (let (many c) (erased q) (sub a1 b1 le1))
+          (values c (AddSucc b1 c a1 q)))))))
+
+(def-fns _ $ many succ-div : (many (Nat) q) (many (Nat) r) (many (Nat) c) (erased (Nat) m) (erased (Nat) s)
+    (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p) ->
+    (many (Nat) q1) (many (Nat) r1) (erased (Nat) m1) (erased (Mul q1 c m1) mm1) (erased (Add m1 r1 (Succ s)) a1) (erased (Lt r1 c) p1)
+  (match many (nat-cmp (Succ r) c) _
+    ((CLt t rr x y lt) (values q (Succ r) m mm (add-succ-right m r s a) lt))
+    ((CEq t rr x) (values (Succ q) (Zero) (Succ s) (MulSucc q c m (Succ s) mm (add-succ-right m r s a)) (add-zero-right (Succ s)) (LtZ r)))
+    (absurd (CGt t rr x y gt) (lt-asym r c p gt))))
+
+(def-fns _ $ many extern divmod : (subterm many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
+    (many (Nat) q) (many (Nat) r) (erased (Nat) m) (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p)
+  (match many s _
+    ((Zero) (values (Zero) (Zero) (Zero) (MulZero c) (AddZero (Zero)) pos))
+    ((Succ s1)
+      (let (many q1) (many r1) (erased m1) (erased mm1) (erased a1) (erased p1) (divmod s1 c pos))
+      (succ-div q1 r1 c m1 s1 mm1 a1 p1))))
+
+(def-fns _ $ many extern div : (many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
+    (many (Nat) q) (erased (Nat) m) (erased (Nat) r) (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p)
+  (let (many q) (many r) (erased m) (erased mm) (erased a) (erased p) (divmod s c pos))
+  (values q m r mm a p))
+
 (def-lvl nat-lvl)
 
 (def-fns nat-lvl $ many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)
   (let (many c) (erased p) (delegate (add a b)))
+  c)
+
+(def-fns nat-lvl $ many nat-mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)
+  (let (many c) (erased p) (delegate (mul a b)))
   c)
 
 (def-fns nat-lvl $ many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d)

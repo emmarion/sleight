@@ -24,6 +24,10 @@ let str_of ~z ~slice ~str = function
   | SCons (c, rest) -> let s, o, l = slice rest in str (String.make 1 (Char.chr (Z.to_int (z c))) ^ String.sub s o l, 0, l + 1)
 
 let add = Z.add
+let sub = Z.sub
+let mul = Z.mul
+let div = Z.div
+let divmod = Z.div_rem
 let nat_cmp a b = if Z.lt a b then CLt else if Z.equal a b then CEq else CGt
 let nat_mod = Z.rem
 let bin_to_nat n = n

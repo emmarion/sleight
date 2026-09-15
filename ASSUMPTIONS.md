@@ -2365,3 +2365,36 @@ bootstrap runs in the same time as before (about four minutes here).
      keyed as `lib/extract.ml` does with a wildcard for variables minted
      during printing (`OpWild`); and a closure-valued plain final prints
      `<function NAME>` as the reference interpreter does.
+132. **`sub`, `mul`, `div` and `divmod` are extern over `Nat`** (the owner asked
+     for the low-hanging Nat arithmetic; the shapes below are the
+     session's, chosen to mirror `add` and `nat-mod`, and open to
+     change). `mul` is structural on its first argument and returns an
+     erased `Mul a b c` beside the product, `Mul` being a new relation
+     in the shape of `Add` (`MulZero`, `MulSucc` through an `Add` of
+     the partial product and `b`). `sub` is exact, not truncating: it
+     takes an erased `Lt b (Succ a)` as `nat-mod` takes its positivity
+     proof, and returns the difference with an erased `Add b c a`, so
+     no new relation is needed; a truncating subtraction is left to be
+     written over `lt-dec` where wanted. `div` takes the same
+     positivity proof as `nat-mod` and returns the quotient with, all
+     erased, `m`, `r`, `Mul q c m`, `Add m r s` and `Lt r c`, which is
+     the session's reading of what characterises the quotient; the
+     model is a wrapper dropping the remainder of `divmod`, itself
+     extern over the same model shape as `nat-mod` and `succ-mod`
+     (`succ-div` steps the remainder against `c` with `nat-cmp`) and
+     returning the quotient and the remainder both `many`, with the
+     erased characterisation once. The reference FFI returns the pair
+     as two values and the extracted body is `Obj.repr` of zarith's
+     pair, which is the tuple a two-value `let` takes apart; the
+     self-hosted interpreter's `apply-extern` now returns its
+     addresses as a list over an existentially sized store, as
+     `apply` does, so that `divmod` can allocate two payloads. `nat-mod` and its `Mod`
+     relation stay as they were; whether `Mod` should be restated
+     through `Mul` and `Add` is open. `nat-mul` is a `delegate` at
+     `nat-lvl` as `nat-add` is. The implementations are zarith's
+     `sub`, `mul`, `div` and `div_rem`; the interpreter of `self/eval.sl` runs
+     the models, deciding the proofs with `lt-dec` and returning an
+     error block where `sub` would go negative or `div` or `divmod` by zero, as it
+     does for `nat-mod`. `tests/nat_arith.sl` runs each once at
+     elaboration and once inside a thunk, so the extracted program
+     exercises the implementations.
