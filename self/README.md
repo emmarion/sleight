@@ -154,7 +154,12 @@ the entry says otherwise, and recorded so it can be revisited.
   copy of the shape declared once per shape and live set, so that OCaml
   tests nothing for the refuted ones and a match with one live
   constructor is a bare projection; an exhaustive match without `else`
-  has no default arm. A first-class constructor is its curried builder,
+  has no default arm; and a match on a plain type with no `else` whose
+  every arm rebuilds the arm's own constructor from its fields in order
+  (the shape a GADT takes on when only its indices change, as in
+  `facts-lookup` and `idmap-get` at every level of the trie) is the
+  scrutinee itself, the session's reading being that nothing the
+  emitted code does can tell the copy from the original. A first-class constructor is its curried builder,
   a constant one the constant; a `Matchable` at runtime is an
   `Obj.t -> Obj.t`, the identity for a plain type and for an extern
   type the unwrap into the shape its constructors describe, so a match

@@ -655,6 +655,42 @@
     ((Nil a) (Nil _))
     ((Cons a p rest) (Cons _ (rcat3 (RStr "(Obj.obj ") p $ RStr ")") $ objs rest))))
 
+(def-fns _ $ many args-are-ids : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) args) (many (List $ Nat) ids) -> (many (Bool) r)
+  (match many args _
+    ((Nil a) (match many ids _ ((Nil b) (BTrue)) ((Cons b y more) (BFalse))))
+    ((Cons a c rest)
+      (match many ids _
+        ((Nil b) (BFalse))
+        ((Cons b y more)
+          (match many c _
+            ((CVar c0 x p) (and (nat-eq x y) $ args-are-ids _ rest more))
+            (else (BFalse))))))))
+
+(def-fns _ $ many rebuilds : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Adt) adt) (many (Env) env) (many (Names ctx) ns) -> (many (Bool) r)
+  (match many bs _
+    ((Nil a) (BTrue))
+    ((Cons a b rest)
+      (match many b _
+        ((MkBranch c1 n0 disc ids body)
+          (let (many (Bool) here)
+            (match many body _
+              ((CApp c2 ms2 f args cc)
+                (match many cc _
+                  ((CCCtor)
+                    (match many (head-of _ f env $ push-names _ ids env ns) _
+                      ((HCtor c)
+                        (match many c _
+                          ((MkCtor nm cid idx ar tg ext sh)
+                            (match many (list-nth _ (adt-ctors adt) disc) _
+                              ((NthHit t xs i c2 p) (match many c2 _ ((MkCtor nm2 cid2 idx2 ar2 tg2 ext2 sh2) (and (nat-eq cid cid2) $ args-are-ids _ args ids))))
+                              ((NthMiss t xs i p) (BFalse))))))
+                      (else (BFalse))))
+                  (else (BFalse))))
+              (else (BFalse))))
+          (match many here _
+            ((BTrue) (rebuilds _ _ rest adt env ns))
+            ((BFalse) (BFalse))))))))
+
 ; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
 
 (def-fns _
@@ -688,15 +724,28 @@
             (rcat5 (RStr "(let rec ") (emit-group _ _ fns env ns2 d "") (RStr " in ") (emit-code _ _ rest env ns2 d) $ RStr ")"))))
       ((CMatch c0 ns2 scrut shape branches dfl live)
         (let (many sr) $ emit-code _ _ scrut env ns d)
-        (let (many (Maybe $ Rope) dr) (match many dfl _ ((None a) (None _)) ((Some a dd) (Some _ $ emit-code _ _ dd env (push-names _ (Nil _) env ns) d))))
-        (let (many arms) $ emit-arms _ _ branches env ns d)
-        (match many shape _
-          ((ShKnown c1 adt) (dispatch-rope d (names-depth _ ns) adt live sr arms dr))
-          ((ShHeld c1 mcode adt)
-            (let (many mr) $ emit-code _ _ mcode env ns d)
-            (let (many (Rope) sr2) $ match many (adt-tagged adt) _ ((BTrue) (rcat5 (RStr "((Obj.obj ") mr (RStr " : Obj.t -> Obj.t) ") sr $ RStr ")")) ((BFalse) sr))
-            (dispatch-rope d (names-depth _ ns) adt live sr2 arms dr))
-          ((ShNone c1) (default-rope dr))))
+        (let (many (Bool) same)
+          (match many shape _
+            ((ShKnown c1 adt)
+              (match many (adt-ext adt) _
+                ((Some t e) (BFalse))
+                ((None t)
+                  (match many dfl _
+                    ((Some t2 dd) (BFalse))
+                    ((None t2) (match many branches _ ((Nil t3) (BFalse)) ((Cons t3 b0 more) (rebuilds _ _ branches adt env ns))))))))
+            (else (BFalse))))
+        (match many same _
+          ((BTrue) sr)
+          ((BFalse)
+            (let (many (Maybe $ Rope) dr) (match many dfl _ ((None a) (None _)) ((Some a dd) (Some _ $ emit-code _ _ dd env (push-names _ (Nil _) env ns) d))))
+            (let (many arms) $ emit-arms _ _ branches env ns d)
+            (match many shape _
+              ((ShKnown c1 adt) (dispatch-rope d (names-depth _ ns) adt live sr arms dr))
+              ((ShHeld c1 mcode adt)
+                (let (many mr) $ emit-code _ _ mcode env ns d)
+                (let (many (Rope) sr2) $ match many (adt-tagged adt) _ ((BTrue) (rcat5 (RStr "((Obj.obj ") mr (RStr " : Obj.t -> Obj.t) ") sr $ RStr ")")) ((BFalse) sr))
+                (dispatch-rope d (names-depth _ ns) adt live sr2 arms dr))
+              ((ShNone c1) (default-rope dr))))))
       ((CAbsurd c0 ms2) (RStr "(absurd ())"))
       ((CError c0 ms2 m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 

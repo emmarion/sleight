@@ -209,15 +209,32 @@ and expr cx scope = function
   | V.CLetRec (fns, body) ->
       let scope = { scope with locals = List.map (fun (x, f) -> (x, List.length f.V.params)) fns @ scope.locals } in
       Printf.sprintf "(let rec %s in %s)" (concat " and " (List.map (fun (x, f) -> fn cx scope (var x) f) fns)) (expr cx scope body)
-  | V.CMatch m ->
+  | V.CMatch m -> (
       let scrut = expr cx scope m.scrut in
+      match (m.shape, m.default, m.branches) with
+      | V.Known a, None, _ :: _ when shape a <> Ext a.tname && List.for_all (rebuilds scope a) m.branches -> scrut
+      | _ ->
       let a, scrut =
         match m.shape with
         | V.Known a -> (a, scrut)
         | V.Held (code, a) -> (a, if a.tagged then Printf.sprintf "((Obj.obj %s : Obj.t -> Obj.t) %s)" (expr cx scope code) scrut else scrut)
       in
-      dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
+      dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default))
   | V.CAbsurd -> "(absurd ())"
+
+and ctor_head scope = function
+  | V.CVar x when List.mem_assoc x scope.locals -> None
+  | V.CVar x -> (match IntMap.find_opt x scope.capture with Some (V.VCtorFn c) -> Some c | _ -> None)
+  | V.CConst (V.VCtorFn c) -> Some c
+  | _ -> None
+
+and rebuilds scope a (i, ids, body) =
+  match body with
+  | V.CApp (f, es, V.Ctor) -> (
+      match ctor_head scope f with
+      | Some c -> c.V.adt == a && c.index = i && List.length es = List.length ids && List.for_all2 (fun e x -> match e with V.CVar y -> y = x | _ -> false) es ids
+      | None -> false)
+  | _ -> false
 
 let collect env items =
   let adts = ref [] and defined = Hashtbl.create 64 in
