@@ -11,6 +11,7 @@
     (erased (ValCtor (many (Nat) n) -> (T)) C)
     (erased (Matchable enum T (many C)) m)
     (erased (T) x) -> (many (Nat) n)
+  (open-adt erased m)
   (match erased x (((Nat) r))
     ((C n) (Zero))))
 

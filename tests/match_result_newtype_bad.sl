@@ -1,4 +1,4 @@
-; error: MkBox has no Newtype in scope
+; error: MkBox has no Newtype open
 ; The same rule through newtype-of, where what a branch could have read itself out of the air is a Newtype for
 ; a constructor whose def-adts entry carries no newtype mark (section 38). (Box) is a tagged enum, so the
 ; coerce below would hand a (MkBox (Succ (Zero))) to a position of type (Nat).

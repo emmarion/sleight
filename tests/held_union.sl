@@ -8,6 +8,7 @@
     (erased (ValCtor (many (Nat) n) -> (T)) D)
     (many (Matchable union T (many C) (many D)) m)
     (erased (Nat) k) (many (D k) is x) -> (many (Nat) n)
+  (open-adt many m)
   (match many x (((Nat) r))
     (absurd C)
     ((D n) n)))

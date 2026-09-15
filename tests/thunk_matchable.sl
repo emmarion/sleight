@@ -20,6 +20,7 @@
     (erased (ValCtor (many (T) p) -> (T)) S)
     (many (Matchable enum T (many Z) (many S)) m)
     (many (T) x) -> (many (T) p)
+  (open-adt many m)
   (match many x (((T) r))
     ((Z) x)
     ((S p) p)))

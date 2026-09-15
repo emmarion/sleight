@@ -20,6 +20,7 @@
     (erased Type A) (erased Type B)
     (many (Fn M (many A x) -> (many B y)) f)
     (subterm many (F A) xs) -> (many (F B) ys)
+  (open-adt many m)
   (match many xs (((F B) r))
     ((NilC a) (NilC B))
     ((ConsC a hd tl) (ConsC B (f (predates mg) hd) (gmap F NilC ConsC m A B f (subterm (prove-subterm tl xs)) tl)))))

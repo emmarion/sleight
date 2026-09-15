@@ -16,6 +16,7 @@ type t = {
   scope : id list;
   entries : entry IntMap.t;
   facts : fact IntMap.t;
+  opens : id list;
   level : level;
   subterms : id list;
   run_pos : bool;
@@ -25,7 +26,7 @@ type t = {
 }
 
 let empty =
-  { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
+  { scope = []; entries = IntMap.empty; facts = IntMap.empty; opens = []; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -81,20 +82,31 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
   (x, set_state env x state)
 
 
-(* Constructors one Matchable in scope lists are distinct (section 19), first-class ones included. *)
+(* [opens] holds the Matchables and Newtypes opened so far (section 19), one entry per merged group; nothing
+   consults one that is not in it. Constructors one opened Matchable lists are distinct, first-class ones
+   included. *)
 let listed env x y =
   let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
-  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope
+  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.opens
 
-(* The Matchable in scope a type constructor heads, if any. *)
-let matchable_of env t =
-  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.scope
+(* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
+let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -> Some adt | _ -> None
 
-(* Two atoms equated, forcing (section 18): a contradiction where one Matchable lists both; otherwise the
-   newer becomes an alias of the older, and what follows is checked -- the two must have one signature, and
-   type constructors heading Matchables must head one Matchable -- so two declared types are told apart
-   exactly by their Matchables, never by a name's identity (section 19). Solving (not forcing): only a meta
-   may be bound, and the two sides must otherwise be identical; a meta against a meta binds the newer. *)
+(* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Const, else read
+   from a non-erased entry still bound. Of the entries one opened group holds, the record keeps the best-ranked:
+   one whose ADT the elaborator sees, then a readable one, then any. *)
+let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope)
+let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 else 2
+
+(* The type constructor and constructors an opened object names, canonically: what relates two opens. *)
+let opened_names env x =
+  match type_of env x with Matchable (_, t, cs) -> `Matchable (t :: List.map snd cs) | Newtype c -> `Newtype [ c ] | _ -> `Other []
+
+(* Two atoms equated, forcing (section 18): a contradiction where one opened Matchable lists both; otherwise the
+   newer becomes an alias of the older, and the two must have one signature. Whoever forces then restores
+   [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
+   by a name's identity (section 19). Solving (not forcing): only a meta may be bound, and the two sides must
+   otherwise be identical; a meta against a meta binds the newer. *)
 let rec unify ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
@@ -113,11 +125,28 @@ let rec unify ?(force = false) env a b =
     | Var x, Var y when force ->
         let x, y = if x > y then (x, y) else (y, x) in
         let signature z = match type_of env z with (TyCtor _ | ValCtor _) as s -> Some s | _ -> None in
-        let sx, sy = (signature x, signature y) and mx, my = (matchable_of env x, matchable_of env y) in
+        let sx, sy = (signature x, signature y) in
         let env = add_rule env x (Var y) in
-        let env = match (sx, sy) with Some s, Some s' -> unify ~force env s s' | _ -> env in
-        (match (mx, my) with Some m, Some m' -> unify ~force env m m' | _ -> env)
+        (match (sx, sy) with Some s, Some s' -> unify ~force env s s' | _ -> env)
     | Var x, t when force || is_meta env x -> assign x t
     | t, Var x when force || is_meta env x -> assign x t
     | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify ~force env x y) env (parts a) (parts b)
     | _ -> contradiction ()
+
+(* At most one opened Matchable names a given type constructor or value constructor, and at most one opened
+   Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
+   kept, the older on a tie, until no two name one thing. Restored after every forcing (Elab.refine, Elab.open_adt).
+   Failure is a Contradiction. *)
+let rec merge_opens env =
+  let shares x y =
+    match (opened_names env x, opened_names env y) with
+    | `Matchable nx, `Matchable ny | `Newtype nx, `Newtype ny -> List.exists (fun n -> List.mem n ny) nx
+    | _ -> false
+  in
+  let rec pair = function [] -> None | x :: rest -> (match List.find_opt (shares x) rest with Some y -> Some (x, y) | None -> pair rest) in
+  match pair env.opens with
+  | None -> env
+  | Some (newer, older) ->
+      let env = unify ~force:true env (type_of env newer) (type_of env older) in
+      let drop = if rank env newer < rank env older then older else newer in
+      merge_opens { env with opens = List.filter (( <> ) drop) env.opens }

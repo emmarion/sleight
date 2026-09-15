@@ -1,5 +1,5 @@
 type t =
-  | Let | DefLvl | DefFns | DefAdts | ComptimeMatch | LetMatch | Unary | Distinct
+  | Let | DefLvl | DefFns | DefAdts | ComptimeMatch | LetMatch | Unary | Distinct | OpenAdt | OpenAbsurd
   | Fn | TyCtor | ValCtor | Matchable | Newtype
   | Match | MatchableOf | NewtypeOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
@@ -8,6 +8,7 @@ type t =
 
 let all =
   [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match"); (Unary, "unary"); (Distinct, "distinct");
+    (OpenAdt, "open-adt"); (OpenAbsurd, "open-absurd");
     (Fn, "Fn"); (TyCtor, "TyCtor"); (ValCtor, "ValCtor"); (Matchable, "Matchable"); (Newtype, "Newtype");
     (Match, "match"); (MatchableOf, "matchable-of"); (NewtypeOf, "newtype-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");
     (ProvePredates, "prove-predates"); (Values, "values");
@@ -20,4 +21,4 @@ let all =
     (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]
 
 let name s = List.assoc s all
-let statements = [ Let; DefLvl; DefFns; DefAdts; ComptimeMatch; LetMatch; Unary ]
+let statements = [ Let; DefLvl; DefFns; DefAdts; ComptimeMatch; LetMatch; Unary; OpenAdt ]
