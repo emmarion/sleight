@@ -12,20 +12,31 @@ type entry = { name : string option; mult : mult; state : state; minted_level : 
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
+module StrMap = Map.Make (String)
+
+type scope = { ids : id list; names : id StrMap.t; objects : id list }
+
 type t = {
-  scope : id list;
+  scope : scope;
   entries : entry IntMap.t;
   facts : fact IntMap.t;
   level : level;
   subterms : id list;
   run_pos : bool;
   values : Value.venv;
-  prelude : id list;
+  prelude : scope;
   literals : (string * (id * id option)) list;
 }
 
+let no_scope = { ids = []; names = StrMap.empty; objects = [] }
+let may_be_object = function Matchable _ | Newtype _ | Var _ -> true | _ -> false
+let push scope x name ty =
+  { ids = x :: scope.ids;
+    names = (match name with Some n -> StrMap.add n x scope.names | None -> scope.names);
+    objects = (if may_be_object ty then x :: scope.objects else scope.objects) }
+
 let empty =
-  { scope = []; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
+  { scope = no_scope; entries = IntMap.empty; facts = IntMap.empty; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = no_scope; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -45,7 +56,7 @@ let set_state env x state =
 
 let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
 
-let lookup env name = List.find_opt (fun x -> (entry env x).name = Some name) env.scope
+let lookup env name = StrMap.find_opt name env.scope.names
 
 let rec canon env t =
   map_vars (fun _ t -> match t with Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t) | t -> t) 0 t
@@ -70,7 +81,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta } env.entries in
-  let scope = if meta then env.scope else x :: env.scope in
+  let scope = if meta then env.scope else push env.scope x name ty in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)
 
@@ -78,11 +89,11 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
 (* Constructors one Matchable in scope lists are distinct (section 19), first-class ones included. *)
 let listed env x y =
   let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
-  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope
+  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.scope.objects
 
 (* The Matchable in scope a type constructor heads, if any. *)
 let matchable_of env t =
-  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.scope
+  List.find_map (fun m -> match type_of env m with Matchable (_, Var t', _) as ty when t' = t -> Some ty | _ -> None) env.scope.objects
 
 (* Two atoms equated, forcing (section 18): a contradiction where one Matchable lists both; otherwise the
    newer becomes an alias of the older, and what follows is checked -- the two must have one signature, and
