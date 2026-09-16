@@ -12,7 +12,7 @@ interpreter's extractor (`self/README.md`, `self/bootstrap.sh`).
 ## Build and run
 
 ```sh
-apt-get install -y ocaml ocaml-dune libzarith-ocaml-dev
+apt-get install -y ocaml ocaml-dune ocaml-findlib libzarith-ocaml-dev python3 time
 dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
