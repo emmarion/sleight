@@ -219,23 +219,28 @@ the entry says otherwise, and recorded so it can be revisited.
   error:` format; on every error test the first message is the
   reference's, line included. A runtime error in the interpreter is an error
   block that prints as `<error: ...>`.
-- **The opened objects carry their canonical names.** An entry of the
-  environment's opened list (ASSUMPTIONS 139) holds, beside the entry
-  opened, the kind and the names its type holds canonically, the type
-  constructor first; an index from name to the objects naming it and a
-  list of the objects *touched* since section 19's invariant was last
-  restored sit beside the list. Ruling a variable out (unification's
-  one binding site) refreshes the names of the objects naming it and
-  touches them, so the names are canonical under the table in force
-  wherever an environment holds both, and `listed`, `find-matchable`
-  and `find-newtype` read them without canonicalizing. The invariant is
-  restored for the touched objects alone: a pair sharing a name after a
-  forcing has a touched member, the rest having been disjoint before,
-  and the pair chosen is the one the full search chose (the newest
-  object sharing with an older one, and the newest such older one), so
-  the output is the same. The session that made this measured the
-  compiler compiling itself going from about 66 seconds to under 3;
-  `bench/bench.sh` repeats the measurement.
+- **The opened objects live in the fact table with their canonical
+  names.** The table (`Table n f c`) holds, beside its proofs, the
+  opened list (ASSUMPTIONS 139): each entry with its kind and the names
+  its type holds canonically, the type constructor first, an index from
+  name to the objects naming it, and the objects *touched* since section
+  19's invariant was last restored. The list is indexed by the table's
+  facts, `Opens n f`, and only the functions that change the facts mint
+  one at a new index, each from the proof of the change (`Ins` for a
+  fresh entry, `Out` for a ruling out), so the checker refuses a table
+  whose opened objects are another table's; ruling a variable out
+  (`rule-into`) refreshes the objects naming it and touches them. The
+  invariant is then restored for the touched objects alone: a pair
+  sharing a name after a forcing has a touched member, the rest having
+  been disjoint before, and the pair chosen is the one the full search
+  chose (the newest object sharing with an older one, and the newest
+  such older one), so the output is unchanged; `listed`,
+  `find-matchable` and `find-newtype` read the cached names. What the
+  index does not prove is that a cached name is canonical: `MkOpens` can
+  be applied anywhere, so the discipline is that it appears only in the
+  transports and the table functions of core.sl. The session that made
+  this measured the compiler compiling itself going from about 66
+  seconds to under 3; `bench/bench.sh` repeats the measurement.
 - **Sharing is the store's.** `lib/extract.ml` names a block met twice
   by physical identity, which SL lacks; here every value the compile-time
   interpreter makes is a block in `heap.sl`'s store, and the emitter

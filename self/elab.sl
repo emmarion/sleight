@@ -1119,15 +1119,15 @@
                 ((UContra m) (UContra m))
                 ((UOk env2)
                   (let (many drop) $ match many (nat-lt (matchable-rank env2 newer) $ matchable-rank env2 older) (((Nat) d)) ((BTrue) older) ((BFalse) newer))
-                  (let (many env3) $ opens-drop env2 drop)
+                  (let (many env3) $ env-unopen env2 drop)
                   (let (many all) (erased cat) $ list-append _ (env-touched env3) $ nats-remove touched drop)
-                  (merge-opens f (env-clear-touched env3) all))))))))))
+                  (merge-opens f (env-settled env3) all))))))))))
 
 ; The invariant restored after a forcing (refine, open-adt), for the objects it touched.
 (def-fns _ $ many merge-all : (many (Env) env) -> (many (UnifyRes) r)
   (match many (env-touched env) _
     ((Nil a) (UOk env))
-    ((Cons a x rest) (merge-opens (Succ $ list-length _ $ env-opens env) (env-clear-touched env) $ env-touched env))))
+    ((Cons a x rest) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
 
 ; Opens x (section 19): its constructors must be distinct after canonicalization, and it then merges with
 ; whatever open names one of them or its type constructor.
@@ -1135,7 +1135,7 @@
   (let (many dup) $ match many (type-of env x) (((Maybe $ Nat) d)) ((TMatchable d t cs) (nats-dup $ mctor-ids cs)) (else (None _)))
   (match many dup _
     ((Some a c) (UContra $ str-cat (name-of env c) " is listed twice"))
-    ((None a) (merge-all $ opens-add env x))))
+    ((None a) (merge-all $ env-open env x))))
 
 ; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
 (def-fns _ $ many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r)
@@ -2583,7 +2583,8 @@
                                     ((Nil f)
                                       (let (many env1) (many ress) (many code0) (erased lock) $ elab-expr sugar eraw env0 ctx erased-one no-tele $ CCPlain)
                                       (let (many env2) (many x) (many t) $ open-bind ctx env0 env1 (first-res _ _ ress lock) (Erased) code0)
-                                      (let (many kind) (many names) $ open-names env2 x)
+                                      (let (erased on) (erased of) (many obnd) (many otb) $ env-table env2)
+                                      (let (many kind) (many names) $ open-names _ _ obnd otb x)
                                       (let (many (Env) env3)
                                         (match many kind _
                                           ((OKNewtype) (env-error env2 "open-absurd: whether a Newtype has a contradicting open is undecided"))
