@@ -132,7 +132,7 @@ let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 el
    [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
    by a name's identity (section 19). Solving (not forcing): only a meta may be bound, and the two sides must
    otherwise be identical; a meta against a meta binds the newer. *)
-let rec unify ?(force = false) env a b =
+let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
@@ -152,11 +152,21 @@ let rec unify ?(force = false) env a b =
         let signature z = match type_of env z with (TyCtor _ | ValCtor _) as s -> Some s | _ -> None in
         let sx, sy = (signature x, signature y) in
         let env = add_rule env x (Var y) in
-        (match (sx, sy) with Some s, Some s' -> unify ~force env s s' | _ -> env)
+        (match (sx, sy) with Some s, Some s' -> unify_in ~force env s s' | _ -> env)
     | Var x, t when force || is_meta env x -> assign x t
     | t, Var x when force || is_meta env x -> assign x t
-    | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify ~force env x y) env (parts a) (parts b)
+    | _ when blank a = blank b -> List.fold_left2 (fun env (_, x) (_, y) -> unify_in ~force env x y) env (parts a) (parts b)
     | _ -> contradiction ()
+
+(* Solving, for a check. *)
+let unify env a b = unify_in env a b
+
+(* A forcing leaves the opened objects it touched to be merged, so its environment comes back as [forced], which
+   only [merge_opens] reads an environment out of; the next forcing is on the [forced]. *)
+type forced = Forcing of t
+
+let forcing env = Forcing env
+let unify_force (Forcing env) a b = Forcing (unify_in ~force:true env a b)
 
 (* At most one opened Matchable names a given type constructor or value constructor, and at most one opened
    Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
@@ -164,7 +174,7 @@ let rec unify ?(force = false) env a b =
    Failure is a Contradiction. Only a pair with a touched object can share, the rest having been disjoint when
    the invariant last held, so the pair sought is the newest object sharing a name with an older one (of a
    smaller id, the objects being opened in id order) and the newest such older one, among those pairs. *)
-let rec merge_opens env =
+let rec merge_opens (Forcing env) =
   match env.opens.touched with
   | [] -> env
   | touched -> (
@@ -181,6 +191,6 @@ let rec merge_opens env =
       match pair env.opens.opened with
       | None -> env
       | Some (newer, older) ->
-          let env = unify ~force:true env (type_of env newer) (type_of env older) in
+          let (Forcing env) = unify_force (Forcing env) (type_of env newer) (type_of env older) in
           let drop = if rank env newer < rank env older then older else newer in
-          merge_opens (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop))
+          merge_opens (Forcing (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop)))

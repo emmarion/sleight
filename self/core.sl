@@ -2894,7 +2894,9 @@
                             (let (many rest4) (erased prest4) $ canon-mctors-in _ _ bnd tb2 rest2)
                             (lift _ bnd _ _ tb2 env2 p $ unify-mctors (subterm p) k f2 bnd tb2 rest3 prest3 rest4 prest4 env2 wa wb force)))))))))))))))
 
-(def-fns _ $ many unify-env : (many (Env) env) (many (Term) a) (many (Term) b) (many (Bool) force) -> (many (UnifyRes) r)
+; Unification against the environment's table: solving, for a check; forcing, for a branch entry or an open,
+; through unify-force alone.
+(def-fns _ $ many unify-in : (many (Env) env) (many (Term) a) (many (Term) b) (many (Bool) force) -> (many (UnifyRes) r)
   (let (erased n) (erased f) (many bnd) (many tb) $ env-table env)
   (let (many a1) (erased pa) $ canon-in _ _ bnd tb a)
   (let (many b1) (erased pb) $ canon-in _ _ bnd tb b)
@@ -2902,6 +2904,22 @@
     ((Same c cc) (UOk env))
     ((Less c cc k f2 tb2 env2 p) (UOk env2))
     ((Contra c cc m) (UContra m))))
+
+(def-fns _ $ many unify-solve : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r)
+  (unify-in env a b $ BFalse))
+
+; A forcing (section 18) leaves the opened objects it touched to be merged (section 19), so its environment
+; is handed back as Forced, which only the restorers, merge-all and merge-opens, read an environment out of;
+; a contradiction is carried along, and the next forcing is on the Forced.
+(def-adts $ Forced : -> Type
+  enum
+  (many Forcing : (many (Env) e) -> (Forced))
+  (many Refuted : (many (String) m) -> (Forced)))
+
+(def-fns _ $ many unify-force : (many (Forced) fe) (many (Term) a) (many (Term) b) -> (many (Forced) r)
+  (match many fe _
+    ((Refuted m) fe)
+    ((Forcing env) (match many (unify-in env a b $ BTrue) _ ((UOk env2) (Forcing env2)) ((UContra m) (Refuted m))))))
 
 (let (many nat-adt) $ MkAdt "Nat" (BTrue) (Nil _) $ Some _ $ ExtNat)
 (let (many str-adt) $ MkAdt "String" (BTrue) (Nil _) $ Some _ $ ExtString)

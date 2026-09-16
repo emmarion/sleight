@@ -97,7 +97,7 @@ let open_adt env x =
   (match type_of env x with
   | Matchable (_, _, cs) -> Option.iter (fun c -> raise (Contradiction (show env c ^ " is listed twice"))) (dup (List.map snd cs))
   | _ -> ());
-  merge_opens (opens_add env x)
+  merge_opens (forcing (opens_add env x))
 
 (* The opened Matchable for a type, at most one (Env.merge_opens). *)
 let matchables env tid =
@@ -821,7 +821,7 @@ and elab_absurd env l body =
 
 and refine env scrut c fids ret =
   let fvars = List.rev_map (fun x -> Var x) fids in
-  merge_opens (unify ~force:true (unify ~force:true env scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
+  merge_opens (unify_force (unify_force (forcing env) scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
 
 and elab_stmt env raw : Env.t * (V.code -> V.code) =
   match raw with

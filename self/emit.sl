@@ -1075,8 +1075,8 @@
                   ((MkShowMemo fresh2 count2 known2 defs2)
                     (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))
 
-  ; One arm per non-phantom constructor whose return type the instance does not refute, its fields shown
-  ; only then, as the reference's exception skips them.
+  ; One arm per non-phantom constructor whose return type the instance does not refute, the opened objects
+  ; merged as entering a branch does, its fields shown only then, as the reference's exception skips them.
   (many show-arms : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty) (many (List $ Ctor) ctors) (many (ShowMemo) memo) (many (Bool) tagged) (many (Decls) d) -> (many (ShowMemo) memo2) (many (List $ Arm) arms)
     (match many fuel _
       ((Zero) (values memo $ Nil _))
@@ -1089,7 +1089,7 @@
                 (let (many ctele) (many ret) $ ctor-type env cid)
                 (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
                 (let (many (Env) envb2) (many (Bool) live)
-                  (match many (unify-env envb (instantiate (tvars-rev fids $ Nil _) ret) ty $ BTrue) _
+                  (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
                     ((UOk e2) (values e2 $ BTrue))
                     ((UContra msg) (values envb $ BFalse))))
                 (let (many (ShowMemo) memo2) (many (List $ Rope) shown)

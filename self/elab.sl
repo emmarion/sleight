@@ -915,7 +915,7 @@
 ; Identity after canonicalization (section 5), solving any metas either side holds (unify-env); a mismatch
 ; is reported only when asked to.
 (def-fns _ $ many solve : (many (Env) env) (many (String) what) (many (Term) actual) (many (Term) expected) (many (Bool) report) -> (many (Env) r) (many (Bool) ok)
-  (match many (unify-env env actual expected $ BFalse) _
+  (match many (unify-solve env actual expected) _
     ((UOk env2) (values env2 $ BTrue))
     ((UContra m)
       (match many report _
@@ -1115,19 +1115,22 @@
         ((Some a pr)
           (match many pr _
             ((MkPair t1 t2 newer older)
-              (match many (unify-env env (type-of env newer) (type-of env older) $ BTrue) _
-                ((UContra m) (UContra m))
-                ((UOk env2)
+              (match many (unify-force (Forcing env) (type-of env newer) (type-of env older)) _
+                ((Refuted m) (UContra m))
+                ((Forcing env2)
                   (let (many drop) $ match many (nat-lt (matchable-rank env2 newer) $ matchable-rank env2 older) (((Nat) d)) ((BTrue) older) ((BFalse) newer))
                   (let (many env3) $ env-unopen env2 drop)
                   (let (many all) (erased cat) $ list-append _ (env-touched env3) $ nats-remove touched drop)
                   (merge-opens f (env-settled env3) all))))))))))
 
-; The invariant restored after a forcing (refine, open-adt), for the objects it touched.
-(def-fns _ $ many merge-all : (many (Env) env) -> (many (UnifyRes) r)
-  (match many (env-touched env) _
-    ((Nil a) (UOk env))
-    ((Cons a x rest) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
+; The invariant restored after a forcing (refine, open-adt, the printers), for the objects it touched.
+(def-fns _ $ many merge-all : (many (Forced) fe) -> (many (UnifyRes) r)
+  (match many fe _
+    ((Refuted m) (UContra m))
+    ((Forcing env)
+      (match many (env-touched env) _
+        ((Nil a) (UOk env))
+        ((Cons a x rest) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))))
 
 ; Opens x (section 19): its constructors must be distinct after canonicalization, and it then merges with
 ; whatever open names one of them or its type constructor.
@@ -1135,7 +1138,7 @@
   (let (many dup) $ match many (type-of env x) (((Maybe $ Nat) d)) ((TMatchable d t cs) (nats-dup $ mctor-ids cs)) (else (None _)))
   (match many dup _
     ((Some a c) (UContra $ str-cat (name-of env c) " is listed twice"))
-    ((None a) (merge-all $ env-open env x))))
+    ((None a) (merge-all $ Forcing $ env-open env x))))
 
 ; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
 (def-fns _ $ many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r)
@@ -1189,12 +1192,7 @@
 ; constructor's return (section 18).
 (def-fns _ $ many refine : (many (Env) env) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Term) ret) -> (many (UnifyRes) r)
   (let (many fvars) $ tvars-rev fids $ Nil _)
-  (match many (unify-env env (res-term scrut) (TApp (TVar c) $ list-rev _ fvars) $ BTrue) _
-    ((UContra m) (UContra m))
-    ((UOk env2)
-      (match many (unify-env env2 (res-ty scrut) (instantiate fvars ret) $ BTrue) _
-        ((UContra m) (UContra m))
-        ((UOk env3) (merge-all env3))))))
+  (merge-all $ unify-force (unify-force (Forcing env) (res-term scrut) $ TApp (TVar c) $ list-rev _ fvars) (res-ty scrut) $ instantiate fvars ret))
 
 (def-fns _ $ many open-fields : (many (Env) env) (many (List $ Entry) tele) (many (List $ Maybe $ String) names) (many (Maybe $ List $ Mult) mults) (many (Res) sres) (many (Nat) c) (many (Term) ret) ->
     (many (Env) r) (many (List $ Nat) fids) (many (UnifyRes) u)
@@ -2326,7 +2324,7 @@
 (def-fns _ $ many field-types : (many (Env) env) (many (Term) ty) (many (Ctor) c) -> (many (List $ Term) tys)
   (let (many ctele) (many ret) $ ctor-type env $ ctor-id c)
   (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
-  (match many (unify-env envb (instantiate (tvars-rev fids $ Nil _) ret) ty $ BTrue) _
+  (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
     ((UOk e2) (types-of e2 $ non-erased fids e2))
     ((UContra msg) (Nil _))))
 

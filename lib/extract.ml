@@ -283,7 +283,7 @@ let rec show cx env ty =
         try
           let tele, ret = Elab.ctor_type env 0 c.V.cid in
           let env', fids = Elab.open_tele env tele in
-          let env' = Env.unify ~force:true env' (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty in
+          let env' = Env.merge_opens (Env.unify_force (Env.forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
           let many = Elab.non_erased env' fids in
           let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
           let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in

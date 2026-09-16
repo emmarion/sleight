@@ -120,16 +120,18 @@ printed.
 binary with the reference extractor (`--extract`), since running the
 compiler under the reference *interpreter* takes seconds per file where
 the native binary takes milliseconds. It compiles every `tests/*.sl`
-with that binary: a test with an `; error:` directive must be refused
-with a message mentioning the text, and any other is built and run with
+with that binary, the tests in parallel: a test with an `; error:` directive must be refused
+with a message mentioning the text, and any other is built (to bytecode,
+whose compiler is the faster one at that size) and run with
 the test's stdin and arguments, its stdout, stderr and exit code
 compared with the reference interpreter run on the same files. And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
 self-hosting fixpoint. At the time of writing all 151 runnable tests
 match, all 98 error tests are refused with the expected text, and the
-fixpoint holds; the whole script took about a minute and a half on the
-machine the last session measured it on.
+fixpoint holds; the whole script took under half a minute on the
+machine the last session measured it on, most of it the bytecode
+compiles of the tests' output.
 
 ## Choices, and where they differ from the reference
 
@@ -235,7 +237,11 @@ the entry says otherwise, and recorded so it can be revisited.
   been disjoint before, and the pair chosen is the one the full search
   chose (the newest object sharing with an older one, and the newest
   such older one), so the output is unchanged; `listed`,
-  `find-matchable` and `find-newtype` read the cached names. What the
+  `find-matchable` and `find-newtype` read the cached names. A forcing
+  hands its environment back as a `Forced`, which only `merge-all` and
+  `merge-opens` read an environment out of, so a forcing without the
+  merge after it does not type-check; the printers force too and merge
+  before reading (the reference's `Env.forced` is the same shape). What the
   index does not prove is that a cached name is canonical: `MkOpens` can
   be applied anywhere, so the discipline is that it appears only in the
   transports and the table functions of core.sl. The session that made
