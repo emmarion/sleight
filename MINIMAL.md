@@ -79,14 +79,19 @@ bottom-up inference (section 25).
 - A `def-lvl` inside a body still mints a fresh atom at elaboration and
   needs no runtime counter, every level being unit at runtime.
 
+## Decided about the semantics
+
+- Evaluation and typing are relations, not functions.
+- The metalanguage is the full language, not the minimal fragment.
+- The relations follow an algorithm, the simplest one that can be
+  written down, however slow: what will later be proved about them is
+  expected to be erased, so readability and simplicity outrank
+  everything else.
+- The three transitivity axioms stay special forms.
+
 ## Open
 
-- Whether the three transitivity axioms stay special forms or become
-  constructors of `Predates` and `Subterm`, those types staying
-  unmatchable either way.
 - SPEC-REVIEW 7: whether a listed branch whose entry unification
-  contradicts is an error.
-- Whether the semantics is written in the full language or in the
-  minimal fragment of it.
-- The semantics itself: which relations, over which ADTs. Decided so far
-  only that evaluation is a relation, not a function.
+  contradicts is an error, as the interpreter has it today, or is
+  accepted as refuted.
+- Which relations, over which ADTs.
