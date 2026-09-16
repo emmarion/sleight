@@ -89,9 +89,14 @@ bottom-up inference (section 25).
   everything else.
 - The three transitivity axioms stay special forms.
 
+- SPEC-REVIEW 7: a listed branch whose entry unification contradicts is
+  an error, as the interpreter has it today.
+- A positive `Fails` relation records why a program is refused, beside
+  the relation that types it.
+- `Term`, the type of types and `is` expressions, and `Val`, the type of
+  runtime values, are separate ADTs.
+
 ## Open
 
-- SPEC-REVIEW 7: whether a listed branch whose entry unification
-  contradicts is an error, as the interpreter has it today, or is
-  accepted as refuted.
-- Which relations, over which ADTs.
+- Which relations, over which ADTs: the session working on it records
+  its choices in `mini/`, as proposals.
