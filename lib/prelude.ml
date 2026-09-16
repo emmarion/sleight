@@ -35,7 +35,7 @@ let specials, env =
   adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
   let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
   let m, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
-  let env = { env with Env.opens = [ m ] } in
+  let env = Env.merge_opens (Env.opens_add env m) in
   ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,
     List.fold_left
       (fun env (_, n, c, ctor) ->

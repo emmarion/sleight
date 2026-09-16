@@ -54,7 +54,10 @@ interpreter does on the same files, which `dune test` checks
 (ASSUMPTIONS.md 61-67); every value is an `Obj.t`, so the output is not
 typed OCaml.
 
-`dune test` runs every `tests/*.sl`, once with the FFI and once
+`bench/bench.sh` times the self-hosted compiler on a pinned copy of its
+own sources and on the sample programs under `bench/`, and
+`bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
+`bench/gen.py` writes the samples. `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both
 ways, against the same directives. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is a line the test must print, `; stdin: text` a

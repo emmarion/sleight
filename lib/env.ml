@@ -12,21 +12,32 @@ type entry = { name : string option; mult : mult; state : state; minted_level : 
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
+module StringMap = Map.Make (String)
+
+(* The scope (section 3): its entries newest first, and the newest named entry of each name, for lookup. *)
+type scope = { ids : id list; named : id StringMap.t }
+
+(* An opened Matchable or Newtype (section 19) with the names its type holds canonically, the type constructor
+   first. The names are read again whenever a variable is ruled out ([add_rule]), so they are current under the
+   facts in force; [touched] holds the objects whose names changed since [merge_opens] last ran. *)
+type opened = { obj : id; kind : [ `Matchable | `Newtype | `Other ]; names : term list }
+type opens = { opened : opened list; touched : id list }
+
 type t = {
-  scope : id list;
+  scope : scope;
   entries : entry IntMap.t;
   facts : fact IntMap.t;
-  opens : id list;
+  opens : opens;
   level : level;
   subterms : id list;
   run_pos : bool;
   values : Value.venv;
-  prelude : id list;
+  prelude : scope;
   literals : (string * (id * id option)) list;
 }
 
 let empty =
-  { scope = []; entries = IntMap.empty; facts = IntMap.empty; opens = []; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = []; literals = [] }
+  { scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -44,20 +55,39 @@ let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
 
-let add_rule env x t = { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts }
 
-let lookup env name = List.find_opt (fun x -> (entry env x).name = Some name) env.scope
+let lookup env name = StringMap.find_opt name env.scope.named
 
 (* Leaving a let's right-hand side: the entries it added since [outer] stay in scope, anonymously (section 16),
    so no fact or open record outlives an entry it mentions. *)
 let hide env outer =
-  let added = List.filteri (fun i _ -> i < List.length env.scope - List.length outer.scope) env.scope in
-  { env with entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added }
+  let n = List.length env.scope.ids - List.length outer.scope.ids in
+  let added = List.filteri (fun i _ -> i < n) env.scope.ids in
+  let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added in
+  { env with entries; scope = { env.scope with named = outer.scope.named } }
 
 let rec canon env t =
   map_vars (fun _ t -> match t with Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t) | t -> t) 0 t
 
 let type_of env x = canon env (fact env x).ty
+
+let opened_of env x =
+  match type_of env x with
+  | Matchable (_, t, cs) -> { obj = x; kind = `Matchable; names = t :: List.map snd cs }
+  | Newtype c -> { obj = x; kind = `Newtype; names = [ c ] }
+  | _ -> { obj = x; kind = `Other; names = [] }
+
+let opens_add env x = { env with opens = { opened = opened_of env x :: env.opens.opened; touched = x :: env.opens.touched } }
+let opens_drop env x = { env with opens = { opened = List.filter (fun o -> o.obj <> x) env.opens.opened; touched = List.filter (( <> ) x) env.opens.touched } }
+
+(* A variable ruled out is canonical no longer, so every opened object naming it reads its names again. *)
+let opens_ruled env v =
+  let names_v o = List.mem (Var v) o.names in
+  let opened = List.map (fun o -> if names_v o then opened_of env o.obj else o) env.opens.opened in
+  let touched = List.filter_map (fun o -> if names_v o then Some o.obj else None) env.opens.opened in
+  { env with opens = { opened; touched = touched @ env.opens.touched } }
+
+let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts } x
 let show env t = to_string (name_of env) (canon env t)
 let is_meta env x = (entry env x).meta
 
@@ -77,7 +107,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta } env.entries in
-  let scope = if meta then env.scope else x :: env.scope in
+  let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)
 
@@ -86,8 +116,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
    consults one that is not in it. Constructors one opened Matchable lists are distinct, first-class ones
    included. *)
 let listed env x y =
-  let lists cs z = List.exists (fun (_, c) -> c = Var z) cs in
-  List.exists (fun m -> match type_of env m with Matchable (_, _, cs) -> lists cs x && lists cs y | _ -> false) env.opens
+  List.exists (fun o -> match (o.kind, o.names) with `Matchable, _ :: cs -> List.mem (Var x) cs && List.mem (Var y) cs | _ -> false) env.opens.opened
 
 (* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
 let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -> Some adt | _ -> None
@@ -95,12 +124,8 @@ let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -
 (* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Const, else read
    from a non-erased entry still bound. Of the entries one opened group holds, the record keeps the best-ranked:
    one whose ADT the elaborator sees, then a readable one, then any. *)
-let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope)
+let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope.ids)
 let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 else 2
-
-(* The type constructor and constructors an opened object names, canonically: what relates two opens. *)
-let opened_names env x =
-  match type_of env x with Matchable (_, t, cs) -> `Matchable (t :: List.map snd cs) | Newtype c -> `Newtype [ c ] | _ -> `Other []
 
 (* Two atoms equated, forcing (section 18): a contradiction where one opened Matchable lists both; otherwise the
    newer becomes an alias of the older, and the two must have one signature. Whoever forces then restores
@@ -136,17 +161,26 @@ let rec unify ?(force = false) env a b =
 (* At most one opened Matchable names a given type constructor or value constructor, and at most one opened
    Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
    kept, the older on a tie, until no two name one thing. Restored after every forcing (Elab.refine, Elab.open_adt).
-   Failure is a Contradiction. *)
+   Failure is a Contradiction. Only a pair with a touched object can share, the rest having been disjoint when
+   the invariant last held, so the pair sought is the newest object sharing a name with an older one (of a
+   smaller id, the objects being opened in id order) and the newest such older one, among those pairs. *)
 let rec merge_opens env =
-  let shares x y =
-    match (opened_names env x, opened_names env y) with
-    | `Matchable nx, `Matchable ny | `Newtype nx, `Newtype ny -> List.exists (fun n -> List.mem n ny) nx
-    | _ -> false
-  in
-  let rec pair = function [] -> None | x :: rest -> (match List.find_opt (shares x) rest with Some y -> Some (x, y) | None -> pair rest) in
-  match pair env.opens with
-  | None -> env
-  | Some (newer, older) ->
-      let env = unify ~force:true env (type_of env newer) (type_of env older) in
-      let drop = if rank env newer < rank env older then older else newer in
-      merge_opens { env with opens = List.filter (( <> ) drop) env.opens }
+  match env.opens.touched with
+  | [] -> env
+  | touched -> (
+      let env = { env with opens = { env.opens with touched = [] } } in
+      let shares x y = x.kind = y.kind && x.kind <> `Other && List.exists (fun n -> List.mem n y.names) x.names in
+      let is_touched o = List.mem o.obj touched in
+      let touched_objs = List.filter is_touched env.opens.opened in
+      let rec pair = function
+        | [] -> None
+        | x :: rest -> (
+            let among = if is_touched x then rest else List.filter (fun y -> y.obj < x.obj) touched_objs in
+            match List.find_opt (shares x) among with Some y -> Some (x.obj, y.obj) | None -> pair rest)
+      in
+      match pair env.opens.opened with
+      | None -> env
+      | Some (newer, older) ->
+          let env = unify ~force:true env (type_of env newer) (type_of env older) in
+          let drop = if rank env newer < rank env older then older else newer in
+          merge_opens (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop))

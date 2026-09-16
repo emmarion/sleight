@@ -570,30 +570,42 @@
 (def-fns _ $ many held-needs-many : (many (Env) env) (many (Nat) tid) (many (Nat) mid) -> (many (Env) r)
   (error-unless env (readable env mid) $ str-cat3 "the Matchable for " (name-of env tid) " is erased or out of scope, so a non-erased match cannot take a value of it apart"))
 
-; The opened Matchable for a type, at most one (merge-opens).
-(def-fns _ $ many find-matchable-in : (subterm many (List $ Nat) opens) (many (Env) env) (many (Nat) tid) -> (many (Maybe $ MatchInfo) r)
+; The opened Matchable for a type, at most one (merge-opens): among the objects the index names for it, the
+; first whose canonical type confirms it.
+(def-fns _ $ many find-matchable-in : (subterm many (List $ Opened) opens) (many (Env) env) (many (Nat) tid) (many (List $ Nat) cands) -> (many (Maybe $ MatchInfo) r)
   (match many opens _
     ((Nil a) (None _))
-    ((Cons a x rest)
-      (match many (type-of env x) _
-        ((TMatchable d t cs)
-          (match many t (((Maybe $ MatchInfo) c))
-            ((TVar t2)
-              (match many (nat-cmp t2 tid) (((Maybe $ MatchInfo) c))
-                ((CEq eq-t eq-r eq-x) (Some _ $ MkMatchInfo x d cs $ matchable-rank env x))
-                (else (find-matchable-in rest env tid))))
-            (else (find-matchable-in rest env tid))))
-        (else (find-matchable-in rest env tid))))))
+    ((Cons a o rest)
+      (let (many x) $ opened-x o)
+      (match many (list-mem-bin cands x) _
+        ((BFalse) (find-matchable-in rest env tid cands))
+        ((BTrue)
+          (match many (type-of env x) _
+            ((TMatchable d t cs)
+              (match many t (((Maybe $ MatchInfo) c))
+                ((TVar t2)
+                  (match many (nat-cmp t2 tid) (((Maybe $ MatchInfo) c))
+                    ((CEq eq-t eq-r eq-x) (Some _ $ MkMatchInfo x d cs $ matchable-rank env x))
+                    (else (find-matchable-in rest env tid cands))))
+                (else (find-matchable-in rest env tid cands))))
+            (else (find-matchable-in rest env tid cands))))))))
 
 
-(def-fns _ $ many find-newtype : (subterm many (List $ Nat) opens) (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r)
+(def-fns _ $ many find-newtype-in : (subterm many (List $ Opened) opens) (many (Env) env) (many (Nat) c) (many (List $ Nat) cands) -> (many (Maybe $ Nat) r)
   (match many opens _
     ((Nil a) (None _))
-    ((Cons a x rest)
-      (match many (type-of env x) _
-        ((TNewtype t)
-          (match many t _
-            ((TVar c2) (match many (nat-cmp c2 c) _ ((CEq eq-t eq-r eq-x) (Some _ x)) (else (find-newtype rest env c)))) (else (find-newtype rest env c)))) (else (find-newtype rest env c))))))
+    ((Cons a o rest)
+      (let (many x) $ opened-x o)
+      (match many (list-mem-bin cands x) _
+        ((BFalse) (find-newtype-in rest env c cands))
+        ((BTrue)
+          (match many (type-of env x) _
+            ((TNewtype t)
+              (match many t _
+                ((TVar c2) (match many (nat-cmp c2 c) _ ((CEq eq-t eq-r eq-x) (Some _ x)) (else (find-newtype-in rest env c cands)))) (else (find-newtype-in rest env c cands)))) (else (find-newtype-in rest env c cands))))))))
+
+(def-fns _ $ many find-newtype : (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r)
+  (find-newtype-in (env-opens env) env c $ index-of c $ env-index env))
 
 ; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
 (def-fns _ $ many find-coercible : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) g) -> (many (Maybe $ Nat) r)
@@ -1044,70 +1056,61 @@
   (sp-name-in sp-table sp))
 
 (def-fns _ $ many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info)
-  (values env $ find-matchable-in (env-opens env) env tid))
+  (values env $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env))
 
 ; ---- Opening a Matchable or Newtype (section 19, ASSUMPTIONS 139)
 
-(def-adts $ OpenKind : -> Type
-  enum
-  (many OKMatchable : -> (OpenKind)) (many OKNewtype : -> (OpenKind)) (many OKNone : -> (OpenKind)))
-
-(def-fns _ $ many open-kind-code : (many (OpenKind) k) -> (many (Nat) n)
-  (match many k _ ((OKMatchable) 0) ((OKNewtype) 1) ((OKNone) 2)))
-
-(def-fns _ $ many var-id : (many (Term) t) -> (many (Nat) r)
-  (match many t _ ((TVar x) x) (else 0)))
-
-(def-fns _ $ many mctor-ids : (subterm many (List $ MCtor) cs) -> (many (List $ Nat) r)
-  (match many cs _
+; The entries of [os] whose ids are in [ids], in order.
+(def-fns _ $ many opened-among : (subterm many (List $ Opened) os) (many (List $ Nat) ids) -> (many (List $ Opened) r)
+  (match many os _
     ((Nil a) (Nil _))
-    ((Cons a mc rest) (match many mc _ ((MkMCtor m t) (Cons _ (var-id t) $ mctor-ids rest))))))
-
-; The kind of an opened object and the type constructor and constructors it names, canonically.
-(def-fns _ $ many open-names : (many (Env) env) (many (Nat) x) -> (many (OpenKind) k) (many (List $ Nat) names)
-  (match many (type-of env x) _
-    ((TMatchable d t cs) (values (OKMatchable) $ Cons _ (var-id t) $ mctor-ids cs))
-    ((TNewtype c) (values (OKNewtype) $ Cons _ (var-id c) $ Nil _))
-    (else (values (OKNone) $ Nil _))))
-
-(def-fns _ $ many nats-share : (subterm many (List $ Nat) xs) (many (List $ Nat) ys) -> (many (Bool) r)
-  (match many xs _ ((Nil a) (BFalse)) ((Cons a x rest) (or (list-mem-bin ys x) $ nats-share rest ys))))
-
-(def-fns _ $ many nats-remove : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (List $ Nat) r)
-  (match many xs _
-    ((Nil a) (Nil _))
-    ((Cons a y rest) (match many (nat-eq x y) _ ((BTrue) (nats-remove rest x)) ((BFalse) (Cons _ y $ nats-remove rest x))))))
-
-(def-fns _ $ many nats-dup : (subterm many (List $ Nat) xs) -> (many (Maybe $ Nat) r)
-  (match many xs _
-    ((Nil a) (None _))
-    ((Cons a x rest) (match many (list-mem-bin rest x) _ ((BTrue) (Some _ x)) ((BFalse) (nats-dup rest))))))
+    ((Cons a o rest) (match many (list-mem-bin ids $ opened-x o) _ ((BTrue) (Cons _ o $ opened-among rest ids)) ((BFalse) (opened-among rest ids))))))
 
 ; Two opened objects of one kind naming one thing.
-(def-fns _ $ many opens-share : (many (Env) env) (many (Nat) x) (many (Nat) y) -> (many (Bool) r)
-  (let (many kx) (many nx) $ open-names env x)
-  (let (many ky) (many ny) $ open-names env y)
-  (and (nat-eq (open-kind-code kx) $ open-kind-code ky) $ and (nat-lt (open-kind-code kx) 2) $ nats-share nx ny))
+(def-fns _ $ many opened-share : (many (Opened) x) (many (Opened) y) -> (many (Bool) r)
+  (match many x _
+    ((MkOpened xi kx nx)
+      (match many y _
+        ((MkOpened yi ky ny)
+          (and (nat-eq (open-kind-code kx) $ open-kind-code ky) $ and (nat-lt (open-kind-code kx) 2) $ nats-share nx ny))))))
 
-(def-fns _ $ many sharing-in : (subterm many (List $ Nat) rest) (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r)
-  (match many rest _
+; The first of [ys] sharing a name with x; only one older than x, of a smaller id (an object is opened after
+; the entries it may share with were bound), when [older-only].
+(def-fns _ $ many first-sharing : (subterm many (List $ Opened) ys) (many (Opened) x) (many (Bool) older-only) -> (many (Maybe $ Nat) r)
+  (match many ys _
     ((Nil a) (None _))
-    ((Cons a y more) (match many (opens-share env x y) _ ((BTrue) (Some _ y)) ((BFalse) (sharing-in more env x))))))
+    ((Cons a y rest)
+      (match many (and (or (not older-only) $ nat-lt (opened-x y) $ opened-x x) $ opened-share x y) _
+        ((BTrue) (Some _ $ opened-x y))
+        ((BFalse) (first-sharing rest x older-only))))))
 
-; A newer opened object and an older one naming one thing, if any; the list holds the newer first.
-(def-fns _ $ many open-pair : (subterm many (List $ Nat) opens) (many (Env) env) -> (many (Maybe $ Pair (Nat) (Nat)) r)
+; A newer opened object and an older one naming one thing, if any: the newest such object, and the newest
+; older one it shares with; the list holds the newer first. Only a pair with a [touched] object, one whose
+; names changed since the invariant last held, can share, the others having been disjoint then, so an
+; untouched object is compared with the touched ones [tos] alone.
+(def-fns _ $ many open-pair : (subterm many (List $ Opened) opens) (many (List $ Nat) touched) (many (List $ Opened) tos) -> (many (Maybe $ Pair (Nat) (Nat)) r)
   (match many opens _
     ((Nil a) (None _))
-    ((Cons a x rest) (match many (sharing-in rest env x) _ ((Some b y) (Some _ $ MkPair _ _ x y)) ((None b) (open-pair rest env))))))
+    ((Cons a x rest)
+      (let (many (Maybe $ Nat) y)
+        (match many (list-mem-bin touched $ opened-x x) _
+          ((BTrue) (first-sharing rest x $ BFalse))
+          ((BFalse) (first-sharing tos x $ BTrue))))
+      (match many y _
+        ((Some b yy) (Some _ $ MkPair _ _ (opened-x x) yy))
+        ((None b) (open-pair rest touched tos))))))
 
 ; At most one opened Matchable names a given type constructor or value constructor, and at most one opened
 ; Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
-; kept, the older on a tie, until no two name one thing; [fuel] bounds the merges by the list's length.
-(def-fns _ $ many merge-opens : (subterm many (Nat) fuel) (many (Env) env) -> (many (UnifyRes) r)
+; kept, the older on a tie, until no two name one thing; [fuel] bounds the merges by the list's length, and
+; [touched] holds the objects whose names changed since the invariant last held, the unification adding to
+; the environment's own those it changes.
+(def-fns _ $ many merge-opens : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) touched) -> (many (UnifyRes) r)
   (match many fuel _
     ((Zero) (UOk env))
     ((Succ f)
-      (match many (open-pair (env-opens env) env) _
+      (let (many opens) $ env-opens env)
+      (match many (open-pair opens touched $ opened-among opens touched) _
         ((None a) (UOk env))
         ((Some a pr)
           (match many pr _
@@ -1116,11 +1119,15 @@
                 ((UContra m) (UContra m))
                 ((UOk env2)
                   (let (many drop) $ match many (nat-lt (matchable-rank env2 newer) $ matchable-rank env2 older) (((Nat) d)) ((BTrue) older) ((BFalse) newer))
-                  (merge-opens f $ env-set-opens env2 $ nats-remove (env-opens env2) drop))))))))))
+                  (let (many env3) $ opens-drop env2 drop)
+                  (let (many all) (erased cat) $ list-append _ (env-touched env3) $ nats-remove touched drop)
+                  (merge-opens f (env-clear-touched env3) all))))))))))
 
-; The invariant restored after a forcing (refine, open-adt).
+; The invariant restored after a forcing (refine, open-adt), for the objects it touched.
 (def-fns _ $ many merge-all : (many (Env) env) -> (many (UnifyRes) r)
-  (merge-opens (Succ $ list-length _ $ env-opens env) env))
+  (match many (env-touched env) _
+    ((Nil a) (UOk env))
+    ((Cons a x rest) (merge-opens (Succ $ list-length _ $ env-opens env) (env-clear-touched env) $ env-touched env))))
 
 ; Opens x (section 19): its constructors must be distinct after canonicalization, and it then merges with
 ; whatever open names one of them or its type constructor.
@@ -1128,7 +1135,7 @@
   (let (many dup) $ match many (type-of env x) (((Maybe $ Nat) d)) ((TMatchable d t cs) (nats-dup $ mctor-ids cs)) (else (None _)))
   (match many dup _
     ((Some a c) (UContra $ str-cat (name-of env c) " is listed twice"))
-    ((None a) (merge-all $ env-set-opens env $ Cons _ x $ env-opens env))))
+    ((None a) (merge-all $ opens-add env x))))
 
 ; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
 (def-fns _ $ many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r)
@@ -2559,7 +2566,7 @@
                             ((Some c info) (match many info (((Env) e) ((List $ Res) rs) ((Code ctx expect) c)) ((MkMatchInfo mid d cs rank) (values env3 (Cons _ (res-of env3 mid) $ Nil _) $ single _ expect pos pf $ matchable-code env3 ctx pos mid))))))
                         ((ExNewtypeOf)
                           (let (many env2) (many c) $ ctor-var env0 $ one-arg args)
-                          (match many (find-newtype (env-opens env2) env2 c) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
+                          (match many (find-newtype env2 c) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
                             ((None d) (expr-error _ expect env2 (str-cat (name-of env2 c) " has no Newtype open") "no Newtype"))
                             ((Some d x) (erased-result _ expect env2 $ res-of env2 x))))
                         ((ExNumeralOf) (numeral-of-lit _ expect env0 $ one-arg args))
@@ -2652,7 +2659,7 @@
                               (let (many env2) (many cid) $ ctor-var env0 craw)
                               (let (many ctele) (many ret) $ ctor-type env2 cid)
                               (let (many env3)
-                                (match many (find-newtype (env-opens env2) env2 cid) (((Env) e))
+                                (match many (find-newtype env2 cid) (((Env) e))
                                   ((None d) (env-error env2 $ str-cat (name-of env2 cid) " has no Newtype open: only a marked newtype's wrapping constructor has one"))
                                   ((Some d x) env2)))
                               (let (many env4a) (many acc) (many tys) (many codes) $ check-args sugar wargs (subs-all wargs) one-step env3 ctx ctele (Erased) no-tele (ARApp (TVar cid) ret) (BTrue) $ BFalse)

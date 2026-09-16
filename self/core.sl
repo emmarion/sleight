@@ -1738,6 +1738,79 @@
 ; ---- The scope environment (section 3) and fact table (section 18); [heap] the store every Const's value
 ; lives in, and [entries] and [finals] hold its addresses.
 
+(def-adts $ OpenKind : -> Type
+  enum
+  (many OKMatchable : -> (OpenKind)) (many OKNewtype : -> (OpenKind)) (many OKNone : -> (OpenKind)))
+
+(def-fns _ $ many open-kind-code : (many (OpenKind) k) -> (many (Nat) n)
+  (match many k _ ((OKMatchable) 0) ((OKNewtype) 1) ((OKNone) 2)))
+
+; An opened Matchable or Newtype (section 19): its entry, its kind, and the names its type holds canonically,
+; the type constructor first.
+(def-adts $ Opened : -> Type
+  enum
+  (many MkOpened : (many (Nat) x) (many (OpenKind) kind) (many (List $ Nat) names) -> (Opened)))
+
+(def-fns _ $ many opened-x : (many (Opened) o) -> (many (Nat) x)
+  (match many o _ ((MkOpened x k ns) x)))
+
+(def-fns _ $ many opened-names : (many (Opened) o) -> (many (List $ Nat) ns)
+  (match many o _ ((MkOpened x k ns) ns)))
+
+; The opened objects, newest first, indexed by the names they hold, and those [touched] since the
+; elaborator last restored section 19's invariant: the names are read again whenever a variable is ruled out
+; (opens-ruled), so they are canonical under the table in force wherever an environment holds both.
+(def-adts $ Opens : -> Type
+  enum
+  (many MkOpens : (many (List $ Opened) list) (many (IdMap $ List $ Nat) index) (many (List $ Nat) touched) -> (Opens)))
+
+(def-fns _ $ many nats-share : (subterm many (List $ Nat) xs) (many (List $ Nat) ys) -> (many (Bool) r)
+  (match many xs _ ((Nil a) (BFalse)) ((Cons a x rest) (or (list-mem-bin ys x) $ nats-share rest ys))))
+
+(def-fns _ $ many nats-remove : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (List $ Nat) r)
+  (match many xs _
+    ((Nil a) (Nil _))
+    ((Cons a y rest) (match many (nat-eq x y) _ ((BTrue) (nats-remove rest x)) ((BFalse) (Cons _ y $ nats-remove rest x))))))
+
+(def-fns _ $ many nats-dup : (subterm many (List $ Nat) xs) -> (many (Maybe $ Nat) r)
+  (match many xs _
+    ((Nil a) (None _))
+    ((Cons a x rest) (match many (list-mem-bin rest x) _ ((BTrue) (Some _ x)) ((BFalse) (nats-dup rest))))))
+
+(def-fns _ $ many index-of : (many (Nat) n) (many (IdMap $ List $ Nat) ix) -> (many (List $ Nat) r)
+  (match many (idmap-get _ n ix) _ ((Hit t k m os p) os) ((Miss t k m p) (Nil _))))
+
+(def-fns _ $ many index-add : (subterm many (List $ Nat) names) (many (Nat) o) (many (IdMap $ List $ Nat) ix) -> (many (IdMap $ List $ Nat) r)
+  (match many names _
+    ((Nil a) ix)
+    ((Cons a n rest) (index-add rest o $ idmap-set _ n (Cons _ o $ index-of n ix) ix))))
+
+(def-fns _ $ many index-drop : (subterm many (List $ Nat) names) (many (Nat) o) (many (IdMap $ List $ Nat) ix) -> (many (IdMap $ List $ Nat) r)
+  (match many names _
+    ((Nil a) ix)
+    ((Cons a n rest) (index-drop rest o $ idmap-set _ n (nats-remove (index-of n ix) o) ix))))
+
+; The object of id x replaced, with the names it held.
+(def-fns _ $ many opened-swap : (subterm many (List $ Opened) os) (many (Opened) o) -> (many (List $ Opened) r) (many (List $ Nat) old)
+  (match many os _
+    ((Nil a) (values (Nil _) (Nil _)))
+    ((Cons a p rest)
+      (match many (nat-eq (opened-x p) $ opened-x o) _
+        ((BTrue) (values (Cons _ o rest) $ opened-names p))
+        ((BFalse)
+          (let (many r) (many old) $ opened-swap rest o)
+          (values (Cons _ p r) old))))))
+
+(def-fns _ $ many opened-take : (subterm many (List $ Opened) os) (many (Nat) x) -> (many (List $ Opened) r) (many (List $ Nat) names)
+  (match many os _
+    ((Nil a) (values (Nil _) (Nil _)))
+    ((Cons a p rest)
+      (match many (nat-eq (opened-x p) x) _
+        ((BTrue) (values rest $ opened-names p))
+        ((BFalse)
+          (let (many r) (many names) $ opened-take rest x)
+          (values (Cons _ p r) names))))))
+
 (def-adts
   (Env : -> Type
     enum
@@ -1745,7 +1818,7 @@
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Addr hs) $ Term) finals) (many (List $ String) errors)
        (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ String) claimed) (many (List $ String) warnings)
-       (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (List $ Nat) opens) -> (Env)))
+       (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (Opens) opens) -> (Env)))
   (Loc : -> Type
     enum
     (many MkLoc : (many (String) file) (many (Nat) line) -> (Loc)))
@@ -1837,10 +1910,18 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr op) rp)))
 (def-fns _ $ many env-objects : (many (Env) e) -> (many (List $ Nat) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr op) ob)))
-(def-fns _ $ many env-opens : (many (Env) e) -> (many (List $ Nat) r)
+(def-fns _ $ many env-opened : (many (Env) e) -> (many (Opens) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr op) op)))
-(def-fns _ $ many env-set-opens : (many (Env) e) (many (List $ Nat) x) -> (many (Env) r)
+(def-fns _ $ many env-set-opened : (many (Env) e) (many (Opens) x) -> (many (Env) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr op) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr x))))
+(def-fns _ $ many env-opens : (many (Env) e) -> (many (List $ Opened) r)
+  (match many (env-opened e) _ ((MkOpens os ix tc) os)))
+(def-fns _ $ many env-index : (many (Env) e) -> (many (IdMap $ List $ Nat) r)
+  (match many (env-opened e) _ ((MkOpens os ix tc) ix)))
+(def-fns _ $ many env-touched : (many (Env) e) -> (many (List $ Nat) r)
+  (match many (env-opened e) _ ((MkOpens os ix tc) tc)))
+(def-fns _ $ many env-clear-touched : (many (Env) e) -> (many (Env) r)
+  (match many (env-opened e) _ ((MkOpens os ix tc) (env-set-opened e $ MkOpens os ix $ Nil _))))
 (def-fns _ $ many env-literals : (many (Env) e) -> (many (NameMap $ Nat) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr op) li)))
 (def-fns _ $ many env-errors : (many (Env) e) -> (many (List $ String) r)
@@ -2264,13 +2345,62 @@
   (match many (canon-env env $ TVar x) _
     ((TVar y) y) (else x)))
 
+(def-fns _ $ many var-id : (many (Term) t) -> (many (Nat) r)
+  (match many t _ ((TVar x) x) (else 0)))
+
+(def-fns _ $ many mctor-ids : (subterm many (List $ MCtor) cs) -> (many (List $ Nat) r)
+  (match many cs _
+    ((Nil a) (Nil _))
+    ((Cons a mc rest) (match many mc _ ((MkMCtor m t) (Cons _ (var-id t) $ mctor-ids rest))))))
+
+; The kind of an opened object and the type constructor and constructors it names, canonically.
+(def-fns _ $ many open-names : (many (Env) env) (many (Nat) x) -> (many (OpenKind) k) (many (List $ Nat) names)
+  (match many (type-of env x) _
+    ((TMatchable d t cs) (values (OKMatchable) $ Cons _ (var-id t) $ mctor-ids cs))
+    ((TNewtype c) (values (OKNewtype) $ Cons _ (var-id c) $ Nil _))
+    (else (values (OKNone) $ Nil _))))
+
+(def-fns _ $ many opened-of : (many (Env) env) (many (Nat) x) -> (many (Opened) o)
+  (let (many k) (many names) $ open-names env x)
+  (MkOpened x k names))
+
+; Opens x: listed newest first, indexed by its names, and touched.
+(def-fns _ $ many opens-add : (many (Env) e) (many (Nat) x) -> (many (Env) r)
+  (let (many o) $ opened-of e x)
+  (match many (env-opened e) _
+    ((MkOpens os ix tc) (env-set-opened e $ MkOpens (Cons _ o os) (index-add (opened-names o) x ix) $ Cons _ x tc))))
+
+(def-fns _ $ many opens-drop : (many (Env) e) (many (Nat) x) -> (many (Env) r)
+  (match many (env-opened e) _
+    ((MkOpens os ix tc)
+      (let (many os2) (many names) $ opened-take os x)
+      (env-set-opened e $ MkOpens os2 (index-drop names x ix) $ nats-remove tc x))))
+
+; Each of [xs] reads its names again under the table in force, is indexed by them, and is touched.
+(def-fns _ $ many opens-refresh : (many (Env) e) (subterm many (List $ Nat) xs) -> (many (Env) r)
+  (match many xs _
+    ((Nil a) e)
+    ((Cons a x rest)
+      (let (many o) $ opened-of e x)
+      (match many (env-opened e) _
+        ((MkOpens os ix tc)
+          (let (many os2) (many old) $ opened-swap os o)
+          (opens-refresh (env-set-opened e $ MkOpens os2 (index-add (opened-names o) x $ index-drop old x ix) $ Cons _ x tc) rest))))))
+
+; A variable ruled out is canonical no longer, so every opened object naming it is refreshed.
+(def-fns _ $ many opens-ruled : (many (Env) e) (many (Nat) v) -> (many (Env) r)
+  (opens-refresh e $ index-of v $ env-index e))
+
+(def-fns _ $ many env-rule-out : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) tb) (many (Nat) v) -> (many (Env) r)
+  (opens-ruled (env-set-table e _ _ c tb) v))
+
 ; ---- The built-in entries (lib/prelude.ml): Univ, Type, Level, the proof types, Special and its forms
 
 (def-fns _ $ many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e)
   (MkEntry (Some _ name) (BFalse) (Erased) $ SgTy t))
 
 (let (many empty-env)
-  $ MkEnv _ (heap-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) (nm-empty _) $ Nil _)
+  $ MkEnv _ (heap-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) (nm-empty _) $ MkOpens (Nil _) (MEmpty _) $ Nil _)
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) (Succ (Zero)))
@@ -2321,7 +2451,7 @@
   (let (many e8) (many ctors) (many mctors) $ bind-specials sp-table e7 0 $ list-replicate _ (list-length _ sp-table) 0)
   (let (many adt) $ MkAdt "Special" (BTrue) ctors $ None _)
   (let (many e9) (many m) $ bind-closed e8 (None _) (Many) (BMat _ adt) (TMatchable (DEnum) (TVar special-id) mctors) (None _) coercible-id)
-  (env-set-opens e9 $ Cons _ m $ Nil _))
+  (env-clear-touched $ opens-add e9 m))
 
 
 ; ---- Inference over the grammar (lib/elab.ml's infer)
@@ -2429,18 +2559,25 @@
           (match many t _
             ((TVar y) (or (nat-eq x y) $ mctors-list rest x)) (else (mctors-list rest x))))))))
 
-; Constructors one opened Matchable lists are distinct (section 19), first-class ones included; [opens] is
-; the environment's opened list, one entry per type or value constructor it names (ASSUMPTIONS 139).
-(def-fns _ $ many listed : (subterm many (List $ Nat) opens) (many (Env) env) (many (Nat) x) (many (Nat) y) -> (many (Bool) r)
-  (match many opens _
+; Constructors one opened Matchable lists are distinct (section 19), first-class ones included: the objects
+; naming x, found through the index, are those whose canonical constructors, the names after the type
+; constructor, may hold both (ASSUMPTIONS 139).
+(def-fns _ $ many listed-in : (subterm many (List $ Opened) os) (many (List $ Nat) cands) (many (Nat) x) (many (Nat) y) -> (many (Bool) r)
+  (match many os _
     ((Nil a) (BFalse))
     ((Cons a o rest)
-      (let (many (Bool) here)
-        (match many (type-of env o) _
-          ((TMatchable d t cs) (and (mctors-list cs x) $ mctors-list cs y)) (else (BFalse))))
-      (match many here _
-        ((BTrue) (BTrue))
-        ((BFalse) (listed rest env x y))))))
+      (match many o _
+        ((MkOpened ox k names)
+          (let (many (Bool) here)
+            (match many (and (list-mem-bin cands ox) $ nat-eq (open-kind-code k) 0) _
+              ((BFalse) (BFalse))
+              ((BTrue) (match many names (((Bool) b)) ((Nil b) (BFalse)) ((Cons b tid ctors) (and (list-mem-bin ctors x) $ list-mem-bin ctors y))))))
+          (match many here _
+            ((BTrue) (BTrue))
+            ((BFalse) (listed-in rest cands x y))))))))
+
+(def-fns _ $ many listed : (many (Env) env) (many (Nat) x) (many (Nat) y) -> (many (Bool) r)
+  (listed-in (env-opens env) (index-of x $ env-index env) x y))
 
 (def-fns _ $ many signature-of : (many (Env) env) (many (Nat) z) -> (many (Maybe $ Term) r)
   (match many (type-of env z) _
@@ -2488,7 +2625,7 @@
         ((None c) (Contra _ _ $ rope-str $ rcat3 (RStr $ name-of env x) (RStr " occurs in ") $ show-term t env))
         ((Some c added)
           (match many added _
-            ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))))))
+            ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-rule-out env _ _ bnd tb2 x) $ prove-subterm k n))))))))
 
 (def-fns _
   (many unify : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (Term) a) (erased (Fr n f a) pa) (many (Term) b) (erased (Fr n f b) pb) (many (Env) env) (many (Bool) force) -> (many (Outcome n bnd) r)
@@ -2515,16 +2652,16 @@
                           ((BTrue) (values x y px py $ neq-sym _ _ ne))
                           ((BFalse) (values y x py px ne))))
                       (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
-                        ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
+                        ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-rule-out env _ _ bnd tb2 m) $ prove-subterm k n))))
                     ((BFalse)
-                  (match many (or (not force) $ listed (env-opens env) env x y) _
+                  (match many (or (not force) $ listed env x y) _
                     ((BTrue) (contradiction _ bnd env a b))
                     ((BFalse)
                       (let (many sx) $ signature-of env newer)
                       (let (many sy) $ signature-of env older)
                       (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
                         ((MkAdded k f0 f2 tb2c tb2)
-                          (let (many env2) $ env-set-table env _ _ bnd tb2)
+                          (let (many env2) $ env-rule-out env _ _ bnd tb2 newer)
                           (let (erased p) $ prove-subterm k n)
                           (let (many (Outcome k bnd) after-sig)
                             (match many sx _

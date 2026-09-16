@@ -97,11 +97,12 @@ let open_adt env x =
   (match type_of env x with
   | Matchable (_, _, cs) -> Option.iter (fun c -> raise (Contradiction (show env c ^ " is listed twice"))) (dup (List.map snd cs))
   | _ -> ());
-  merge_opens { env with opens = x :: env.opens }
+  merge_opens (opens_add env x)
 
 (* The opened Matchable for a type, at most one (Env.merge_opens). *)
 let matchables env tid =
-  List.filter_map (fun x -> match type_of env x with Matchable (d, Var t, cs) when t = tid -> Some (x, d, cs) | _ -> None) env.opens
+  let of_type o = match (o.Env.names, type_of env o.obj) with Var t :: _, Matchable (d, _, cs) when t = tid -> Some (o.obj, d, cs) | _ -> None in
+  List.filter_map of_type env.opens.opened
 
 let find_matchable env loc tid =
   match matchables env tid with [] -> error loc "%s has no Matchable open" (name_of env tid) | m :: _ -> m
@@ -141,7 +142,7 @@ let wrapper disc shapes =
   | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
   | _ -> None
 
-let newtype_of env c = List.find_opt (fun x -> match type_of env x with Newtype (Var c') -> c' = c | _ -> false) env.opens
+let newtype_of env c = Option.map (fun o -> o.Env.obj) (List.find_opt (fun o -> o.Env.kind = `Newtype && o.names = [ Var c ]) env.opens.opened)
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
 let ctor_var env loc = named env loc "a constructor"
@@ -658,7 +659,7 @@ and elab_special tele env expect l sp args =
   | Sp.CoercibleOf, [ g ] ->
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
-      fetch "delegate proof in scope" g (List.find_opt about env.scope)
+      fetch "delegate proof in scope" g (List.find_opt about env.scope.ids)
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
@@ -891,7 +892,7 @@ and hoist env lit =
     let env = List.fold_left hoist env parts in
     let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
     let entry =
-      match (lit, frame.scope) with
+      match (lit, frame.scope.ids) with
       | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
       | Literal.Char c, char :: _ -> (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
       | Literal.Str _, str :: _ -> (str, None)

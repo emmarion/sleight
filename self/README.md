@@ -128,7 +128,8 @@ compared with the reference interpreter run on the same files. And it compiles `
 requires the two outputs to be byte-for-byte identical, which is the
 self-hosting fixpoint. At the time of writing all 151 runnable tests
 match, all 98 error tests are refused with the expected text, and the
-fixpoint holds; the whole script takes about three minutes.
+fixpoint holds; the whole script took about a minute and a half on the
+machine the last session measured it on.
 
 ## Choices, and where they differ from the reference
 
@@ -218,6 +219,23 @@ the entry says otherwise, and recorded so it can be revisited.
   error:` format; on every error test the first message is the
   reference's, line included. A runtime error in the interpreter is an error
   block that prints as `<error: ...>`.
+- **The opened objects carry their canonical names.** An entry of the
+  environment's opened list (ASSUMPTIONS 139) holds, beside the entry
+  opened, the kind and the names its type holds canonically, the type
+  constructor first; an index from name to the objects naming it and a
+  list of the objects *touched* since section 19's invariant was last
+  restored sit beside the list. Ruling a variable out (unification's
+  one binding site) refreshes the names of the objects naming it and
+  touches them, so the names are canonical under the table in force
+  wherever an environment holds both, and `listed`, `find-matchable`
+  and `find-newtype` read them without canonicalizing. The invariant is
+  restored for the touched objects alone: a pair sharing a name after a
+  forcing has a touched member, the rest having been disjoint before,
+  and the pair chosen is the one the full search chose (the newest
+  object sharing with an older one, and the newest such older one), so
+  the output is the same. The session that made this measured the
+  compiler compiling itself going from about 66 seconds to under 3;
+  `bench/bench.sh` repeats the measurement.
 - **Sharing is the store's.** `lib/extract.ml` names a block met twice
   by physical identity, which SL lacks; here every value the compile-time
   interpreter makes is a block in `heap.sl`'s store, and the emitter
