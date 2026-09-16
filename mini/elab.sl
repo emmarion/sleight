@@ -132,8 +132,8 @@
 (def-adts
   (Same : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
-    (many SameBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Ent)) ents) (erased (List (Rule)) rules)
-       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Check) ents rules (Cons (Eqn) (MkEqn t u) (Nil (Eqn))) (UOk rules)) p) -> (Same ctx t u)))
+    (many SameBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Rule)) rules2)
+       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Check) ents rules (Cons (Eqn) (MkEqn t u) (Nil (Eqn))) (UOk rules2)) p) -> (Same ctx t u)))
   (Differ : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
     (many DifferBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Ent)) ents) (erased (List (Rule)) rules)
@@ -573,6 +573,28 @@
     (many NLKPlain : -> (NotLevelKind (KPlain)))
     (many NLKDecl : -> (NotLevelKind (KDecl)))))
 
+; A canonical type as a Predates or Subterm application, or evidence that it is neither, for the three
+; transitivity axioms of section 8, special forms by the owner's decision.
+(def-adts
+  (PredatesShape : ((Ctx) ctx) ((Term) c) ((Term) ty) ((Term) a) ((Term) lv) -> Type
+    enum
+    (many PSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Same ctx h (Ref (Succ (Zero)))) sh) ->
+       (PredatesShape ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) ty a lv)))
+  (NotPredatesShape : ((Ctx) ctx) ((Term) c) -> Type
+    enum
+    (many NPSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotApp c) n) -> (NotPredatesShape ctx c))
+    (many NPSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Zero)))) d) -> (NotPredatesShape ctx (App h as)))
+    (many NPSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Zero)))) as) n) -> (NotPredatesShape ctx (App h as))))
+  (SubtermShape : ((Ctx) ctx) ((Term) c) ((Term) ta) ((Term) a) ((Term) tb) ((Term) b) -> Type
+    enum
+    (many SSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Same ctx h (Ref (Succ (Succ (Zero))))) sh) ->
+       (SubtermShape ctx (App h (Cons (Term) ta (Cons (Term) a (Cons (Term) tb (Cons (Term) b (Nil (Term))))))) ta a tb b)))
+  (NotSubtermShape : ((Ctx) ctx) ((Term) c) -> Type
+    enum
+    (many NSSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotApp c) n) -> (NotSubtermShape ctx c))
+    (many NSSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Succ (Zero))))) d) -> (NotSubtermShape ctx (App h as)))
+    (many NSSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Succ (Zero))))) as) n) -> (NotSubtermShape ctx (App h as)))))
+
 ; The initial context: Level, Predates and Subterm as built-in type constructors, and Type, whose rule is
 ; the universe (section 10). (Predates A a l) takes a type, a value of it and a level; (Subterm A a B b)
 ; two typed values.
@@ -701,7 +723,73 @@
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EErr (RNotLevel))))
     (many EXProvePredatesAfter : (erased (Ctx) ctx) (erased (String) xs) (erased (String) ls) (erased (List (Name)) scope) (erased (Nat) x) (erased (Nat) l)
        (erased (Scope ctx scope) sc) (erased (NameOf scope xs x) nx) (erased (NameOf scope ls l) nl) (erased (KindOf ctx l (KLevel)) k) (erased (Lt l (Succ x)) le) ->
-       (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EErr (RBadProof)))))
+       (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EErr (RBadProof))))
+    ; the three axioms (section 8): each takes two proofs, of size one, whose canonical types have the
+    ; shapes below with the shared parts the same, and mints the conclusion; a proof of the wrong shape, or
+    ; shared parts that differ, is RBadProof
+    (many EXPredatesTrans : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ty) (erased (Term) a) (erased (Term) l1)
+       (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2) (erased (Nat) e) (erased (Ctx) out)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (PredatesShape ctx1 cp ty a l1) s1)
+       (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2)
+       (erased (Same ctx2 ty2 (App (Ref (Zero)) (Nil (Term)))) st) (erased (Same ctx2 l1b l1) sl)
+       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Zero))) (Cons (Term) ty (Cons (Term) a (Cons (Term) l2 (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey (KPredatesTrans)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
+    (many EXSubtermTrans : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b)
+       (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) tb2) (erased (Term) b2) (erased (Term) tc) (erased (Term) c) (erased (Nat) e) (erased (Ctx) out)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (SubtermShape ctx1 cp ta a tb b) s1)
+       (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (SubtermShape ctx2 cq tb2 b2 tc c) s2)
+       (erased (Same ctx2 tb2 tb) st) (erased (Same ctx2 b2 b) sb)
+       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Succ (Zero)))) (Cons (Term) ta (Cons (Term) a (Cons (Term) tc (Cons (Term) c (Nil (Term))))))) (KPlain) (None (Term)) e out) m) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey (KSubtermTrans)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
+    (many EXPredatesSubterm : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ty) (erased (Term) a) (erased (Term) l)
+       (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) tb) (erased (Term) b) (erased (Term) ty2) (erased (Term) a2) (erased (Nat) e) (erased (Ctx) out)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (PredatesShape ctx1 cp ty a l) s1)
+       (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (SubtermShape ctx2 cq tb b ty2 a2) s2)
+       (erased (Same ctx2 ty2 ty) st) (erased (Same ctx2 a2 a) sa)
+       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Zero))) (Cons (Term) tb (Cons (Term) b (Cons (Term) l (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey (KPredatesSubterm)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
+    ; and the ways an axiom fails, the same for all three
+    (many EXAxiomErrP : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Reason) r) (erased (AxiomKey k) ak) (erased (ElabExpr ctx pr (EErr r)) ep) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey k) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EErr r)))
+    (many EXAxiomSizeP : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (List (Nat)) pids) (erased (AxiomKey k) ak)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc pids)) ep) (erased (NotOne pids) n) -> (ElabExpr ctx (RList (Cons (Raw) (RKey k) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EErr (RSize))))
+    (many EXAxiomErrQ : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Reason) r) (erased (AxiomKey k) ak)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (ElabExpr ctx1 qr (EErr r)) eq) -> (ElabExpr ctx (RList (Cons (Raw) (RKey k) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EErr r)))
+    (many EXAxiomSizeQ : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Ctx) ctx2) (erased (Core) qc) (erased (List (Nat)) qids) (erased (AxiomKey k) ak)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (ElabExpr ctx1 qr (EOk ctx2 qc qids)) eq) (erased (NotOne qids) n) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey k) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EErr (RSize))))
+    ; a proof of the wrong shape, or shared parts that differ: the axiom's premises are named by [AxiomBad]
+    (many EXAxiomBad : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp)
+       (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq)
+       (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1)
+       (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (AxiomBad k ctx1 cp ctx2 cq) bad) ->
+       (ElabExpr ctx (RList (Cons (Raw) (RKey k) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EErr (RBadProof)))))
+  (AxiomKey : ((Key) k) -> Type
+    enum
+    (many AKPredatesTrans : -> (AxiomKey (KPredatesTrans)))
+    (many AKSubtermTrans : -> (AxiomKey (KSubtermTrans)))
+    (many AKPredatesSubterm : -> (AxiomKey (KPredatesSubterm))))
+  ; Why an axiom's two canonical proof types do not fit it.
+  (AxiomBad : ((Key) k) ((Ctx) ctx1) ((Term) cp) ((Ctx) ctx2) ((Term) cq) -> Type
+    enum
+    (many ABPredatesTransP : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotPredatesShape ctx1 cp) n) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
+    (many ABPredatesTransQ : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotPredatesShape ctx2 cq) n) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
+    (many ABPredatesTransType : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2)
+       (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Differ ctx2 ty2 (App (Ref (Zero)) (Nil (Term)))) d) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
+    (many ABPredatesTransLink : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l1) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2)
+       (erased (PredatesShape ctx1 cp ty a l1) s1) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Differ ctx2 l1b l1) d) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
+    (many ABSubtermTransP : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotSubtermShape ctx1 cp) n) -> (AxiomBad (KSubtermTrans) ctx1 cp ctx2 cq))
+    (many ABSubtermTransQ : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotSubtermShape ctx2 cq) n) -> (AxiomBad (KSubtermTrans) ctx1 cp ctx2 cq))
+    (many ABSubtermTransType : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Term) tb2) (erased (Term) b2) (erased (Term) tc) (erased (Term) c)
+       (erased (SubtermShape ctx1 cp ta a tb b) s1) (erased (SubtermShape ctx2 cq tb2 b2 tc c) s2) (erased (Differ ctx2 tb2 tb) d) -> (AxiomBad (KSubtermTrans) ctx1 cp ctx2 cq))
+    (many ABSubtermTransLink : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Term) tb2) (erased (Term) b2) (erased (Term) tc) (erased (Term) c)
+       (erased (SubtermShape ctx1 cp ta a tb b) s1) (erased (SubtermShape ctx2 cq tb2 b2 tc c) s2) (erased (Differ ctx2 b2 b) d) -> (AxiomBad (KSubtermTrans) ctx1 cp ctx2 cq))
+    (many ABPredatesSubtermP : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotPredatesShape ctx1 cp) n) -> (AxiomBad (KPredatesSubterm) ctx1 cp ctx2 cq))
+    (many ABPredatesSubtermQ : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotSubtermShape ctx2 cq) n) -> (AxiomBad (KPredatesSubterm) ctx1 cp ctx2 cq))
+    (many ABPredatesSubtermType : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l) (erased (Term) tb) (erased (Term) b) (erased (Term) ty2) (erased (Term) a2)
+       (erased (PredatesShape ctx1 cp ty a l) s1) (erased (SubtermShape ctx2 cq tb b ty2 a2) s2) (erased (Differ ctx2 ty2 ty) d) -> (AxiomBad (KPredatesSubterm) ctx1 cp ctx2 cq))
+    (many ABPredatesSubtermLink : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l) (erased (Term) tb) (erased (Term) b) (erased (Term) ty2) (erased (Term) a2)
+       (erased (PredatesShape ctx1 cp ty a l) s1) (erased (SubtermShape ctx2 cq tb b ty2 a2) s2) (erased (Differ ctx2 a2 a) d) -> (AxiomBad (KPredatesSubterm) ctx1 cp ctx2 cq)))
   (FormerKey : ((Key) k) -> Type
     enum
     (many FKFn : -> (FormerKey (KFn)))
@@ -779,9 +867,11 @@
     (many DTopSubterm : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Raw) p) (erased (Level ctx (None (Term))) lv) ->
        (Decrease ctx l ps ids (ASubterm i p) (DErr (RBadProof))))
     (many DNone : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Term) cur) (erased (Level ctx (Some (Term) cur)) lv) -> (Decrease ctx l ps ids (ANone) (DErr (RNoProof))))
-    (many DPredates : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Raw) pr) (erased (Term) cur) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) ty)
+    (many DPredates : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Raw) pr) (erased (Term) cur) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty)
+       (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv2)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t)
-       (erased (Canonical ctx1 pty (App (Ref (Succ (Zero))) (Cons (Term) ty (Cons (Term) l (Cons (Term) cur (Nil (Term))))))) c) ->
+       (erased (Canonical ctx1 pty (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv2 (Nil (Term))))))) c)
+       (erased (Same ctx1 h (Ref (Succ (Zero)))) sh) (erased (Same ctx1 ty (App (Ref (Zero)) (Nil (Term)))) sty) (erased (Same ctx1 a l) sa) (erased (Same ctx1 lv2 cur) sc) ->
        (Decrease ctx l ps ids (APredates pr) (DOk ctx1)))
     (many DPredatesErr : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Raw) pr) (erased (Term) cur) (erased (Reason) r)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EErr r)) ep) -> (Decrease ctx l ps ids (APredates pr) (DErr r)))
@@ -791,11 +881,12 @@
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t) (erased (Canonical ctx1 pty c) cn) (erased (NotPredates ctx1 c l cur) np) ->
        (Decrease ctx l ps ids (APredates pr) (DErr (RBadProof))))
     (many DSubterm : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Raw) pr) (erased (Term) cur) (erased (Nat) j) (erased (Nat) xi) (erased (List (Term)) cargs)
-       (erased (List (Term)) subargs) (erased (Term) b) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) ta) (erased (Term) tb)
+       (erased (List (Term)) subargs) (erased (Term) b) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) h) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (Same ctx l cur) sl) (erased (MarkedIndex ps i j) mi) (erased (Nth (Nat) ids i xi) ni) (erased (Marked ps ids cargs) mk)
        (erased (SubArgs ctx subargs) sa) (erased (SamePrefix ctx j cargs subargs b) sp)
        (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t)
-       (erased (Canonical ctx1 pty (App (Ref (Succ (Succ (Zero)))) (Cons (Term) ta (Cons (Term) (Ref xi) (Cons (Term) tb (Cons (Term) b (Nil (Term)))))))) c) ->
+       (erased (Canonical ctx1 pty (App h (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term)))))))) c)
+       (erased (Same ctx1 h (Ref (Succ (Succ (Zero))))) sh) (erased (Same ctx1 a0 (Ref xi)) sa0) (erased (Same ctx1 b0 b) sb0) ->
        (Decrease ctx l ps ids (ASubterm i pr) (DOk ctx1)))
     (many DSubtermLevel : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Raw) pr) (erased (Term) cur)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (Differ ctx l cur) d) -> (Decrease ctx l ps ids (ASubterm i pr) (DErr (RBadProof))))

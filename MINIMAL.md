@@ -96,7 +96,20 @@ bottom-up inference (section 25).
 - `Term`, the type of types and `is` expressions, and `Val`, the type of
   runtime values, are separate ADTs.
 
+## Where it stands
+
+`mini/` holds the semantics as relations in the full language, with a
+function deriving each relation, and `mini/README.md` records the shapes
+that session chose and the syntax it gave the minimal language, all open
+for the owner to confirm or change. `tests/mini_*.sl` run programs of the
+minimal language through them.
+
 ## Open
 
-- Which relations, over which ADTs: the session working on it records
-  its choices in `mini/`, as proposals.
+- The surface syntax of the minimal language, chosen by the session that
+  wrote `mini/` because the full language's telescopes and binders are
+  told apart by their multiplicity tokens, which the minimal language
+  lacks.
+- The metatheory to state: determinism of elaboration, totality of
+  unification, confluence of canonicalization, and every well-typed
+  program evaluating, section 10's claim.
