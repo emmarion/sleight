@@ -98,15 +98,17 @@
     enum
     (many ShRef : (erased (Nat) x) -> (ShapeOf (Ref x) (Zero)))
     (many ShBound : (erased (Nat) k) -> (ShapeOf (Bound k) (Succ (Zero))))
-    (many ShApp : (erased (Term) h) (erased (List (Term)) as) -> (ShapeOf (App h as) (Succ (Succ (Zero)))))
+    (many ShTyApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (ShapeOf (TyApp h ps as) (Succ (Succ (Zero)))))
     (many ShUniv : -> (ShapeOf (Univ) (Succ (Succ (Succ (Zero))))))
     (many ShFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (ShapeOf (Fn l ps rs) (Succ (Succ (Succ (Succ (Zero)))))))
     (many ShTyCtor : (erased (List (Entry)) ps) -> (ShapeOf (TyCtor ps) (Succ (Succ (Succ (Succ (Succ (Zero))))))))
-    (many ShValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (ShapeOf (ValCtor ps r) (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))
+    (many ShValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (ShapeOf (ValCtor ps r) (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))
+    (many ShValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (ShapeOf (ValApp h ps r as) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))
   (NonRef : ((Term) t) -> Type
     enum
     (many NRBound : (erased (Nat) k) -> (NonRef (Bound k)))
-    (many NRApp : (erased (Term) h) (erased (List (Term)) as) -> (NonRef (App h as)))
+    (many NRTyApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (NonRef (TyApp h ps as)))
+    (many NRValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (NonRef (ValApp h ps r as)))
     (many NRUniv : -> (NonRef (Univ)))
     (many NRFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NonRef (Fn l ps rs)))
     (many NRTyCtor : (erased (List (Entry)) ps) -> (NonRef (TyCtor ps)))
@@ -120,7 +122,8 @@
   (match many t _
     ((Ref x) (values (Zero) (ShRef x)))
     ((Bound k) (values (Succ (Zero)) (ShBound k)))
-    ((App h as) (values (Succ (Succ (Zero))) (ShApp h as)))
+    ((TyApp h ps as) (values (Succ (Succ (Zero))) (ShTyApp h ps as)))
+    ((ValApp h ps r as) (values (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) (ShValApp h ps r as)))
     ((Univ) (values (Succ (Succ (Succ (Zero)))) (ShUniv)))
     ((Fn l ps rs) (values (Succ (Succ (Succ (Succ (Zero))))) (ShFn l ps rs)))
     ((TyCtor ps) (values (Succ (Succ (Succ (Succ (Succ (Zero)))))) (ShTyCtor ps)))
@@ -133,11 +136,9 @@
 (def-adts $ TypeOfTerm : ((List (Ent)) ents) ((List (Rule)) rules) ((Term) t) ((Term) ty) -> Type
   enum
   (many TotRef : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (EntOf ents x ty k) p) -> (TypeOfTerm ents rules (Ref x) ty))
-  (many TotTyApp : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Term)) as) (erased (Term) hty) (erased (List (Entry)) ps)
-     (erased (TypeOfTerm ents rules h hty) p) (erased (Canon rules hty (TyCtor ps)) c) -> (TypeOfTerm ents rules (App h as) (Univ)))
-  (many TotValApp : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Term)) as) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Term) ret)
-     (erased (List (Maybe (Term))) sub) (erased (Term) ty)
-     (erased (TypeOfTerm ents rules h hty) p) (erased (Canon rules hty (ValCtor ps ret)) c) (erased (Somes as sub) s) (erased (Subst sub ret ty) q) -> (TypeOfTerm ents rules (App h as) ty))
+  (many TotTyApp : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (TypeOfTerm ents rules (TyApp h ps as) (Univ)))
+  (many TotValApp : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) ret) (erased (List (Term)) as)
+     (erased (List (Maybe (Term))) sub) (erased (Term) ty) (erased (Somes as sub) s) (erased (Subst sub ret ty) q) -> (TypeOfTerm ents rules (ValApp h ps ret as) ty))
   (many TotUniv : (erased (List (Ent)) ents) (erased (List (Rule)) rules) -> (TypeOfTerm ents rules (Univ) (Univ)))
   (many TotFn : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (TypeOfTerm ents rules (Fn l ps rs) (Univ)))
   (many TotTyCtor : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Entry)) ps) -> (TypeOfTerm ents rules (TyCtor ps) (Univ)))
@@ -170,13 +171,20 @@
     (many UBoundNeq : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest) (erased (Nat) j) (erased (Nat) k)
        (erased (Canon rules l (Bound j)) cl) (erased (Canon rules r (Bound k)) cr) (erased (Neq j k) n) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) (UFail)))
     ; applications and formers split into their parts
-    (many UApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
-       (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Eqn)) eqs) (erased (UOut) out)
-       (erased (Canon rules l (App h as)) cl) (erased (Canon rules r (App h2 as2)) cr) (erased (Zip as as2 rest eqs) z)
+    (many UTyApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
+       (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Eqn)) eqs) (erased (UOut) out)
+       (erased (Canon rules l (TyApp h ps as)) cl) (erased (Canon rules r (TyApp h2 ps2 as2)) cr) (erased (Zip as as2 rest eqs) z)
        (erased (Unify m ents rules (Cons (Eqn) (MkEqn h h2) eqs) out) p) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) out))
-    (many UAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
-       (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2)
-       (erased (Canon rules l (App h as)) cl) (erased (Canon rules r (App h2 as2)) cr) (erased (ZipFail as as2) z) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) (UFail)))
+    (many UTyAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
+       (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (Canon rules l (TyApp h ps as)) cl) (erased (Canon rules r (TyApp h2 ps2 as2)) cr) (erased (ZipFail as as2) z) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) (UFail)))
+    (many UValApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
+       (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) ret) (erased (Term) ret2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Eqn)) eqs) (erased (UOut) out)
+       (erased (Canon rules l (ValApp h ps ret as)) cl) (erased (Canon rules r (ValApp h2 ps2 ret2 as2)) cr) (erased (Zip as as2 rest eqs) z)
+       (erased (Unify m ents rules (Cons (Eqn) (MkEqn h h2) eqs) out) p) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) out))
+    (many UValAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
+       (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) ret) (erased (Term) ret2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (Canon rules l (ValApp h ps ret as)) cl) (erased (Canon rules r (ValApp h2 ps2 ret2 as2)) cr) (erased (ZipFail as as2) z) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) (UFail)))
     (many UUniv : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest) (erased (UOut) out)
        (erased (Canon rules l (Univ)) cl) (erased (Canon rules r (Univ)) cr) (erased (Unify m ents rules rest out) p) -> (Unify m ents rules (Cons (Eqn) (MkEqn l r) rest) out))
     (many UFn : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest)
@@ -262,10 +270,17 @@
     (many UCBound : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) k) -> (UnifyC m ents rules (Bound k) (Bound k) (UOk rules)))
     (many UCBoundNeq : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) j) (erased (Nat) k) (erased (Neq j k) n) -> (UnifyC m ents rules (Bound j) (Bound k) (UFail)))
     (many UCUniv : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) -> (UnifyC m ents rules (Univ) (Univ) (UOk rules)))
-    (many UCApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (UOut) o1) (erased (UOut) out)
-       (erased (SameLen as as2) sl) (erased (UnifyC m ents rules h h2 o1) p) (erased (AfterList m ents rules o1 as as2 out) q) -> (UnifyC m ents rules (App h as) (App h2 as2) out))
-    (many UCAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2)
-       (erased (ZipFail as as2) z) -> (UnifyC m ents rules (App h as) (App h2 as2) (UFail)))
+    (many UCTyApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (UOut) o1) (erased (UOut) out)
+       (erased (SameLen as as2) sl) (erased (UnifyC m ents rules h h2 o1) p) (erased (AfterList m ents rules o1 as as2 out) q) -> (UnifyC m ents rules (TyApp h ps as) (TyApp h2 ps2 as2) out))
+    (many UCTyAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (ZipFail as as2) z) -> (UnifyC m ents rules (TyApp h ps as) (TyApp h2 ps2 as2) (UFail)))
+    (many UCValApp : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) ret) (erased (Term) ret2)
+       (erased (List (Term)) as) (erased (List (Term)) as2) (erased (UOut) o1) (erased (UOut) out)
+       (erased (SameLen as as2) sl) (erased (UnifyC m ents rules h h2 o1) p) (erased (AfterList m ents rules o1 as as2 out) q) -> (UnifyC m ents rules (ValApp h ps ret as) (ValApp h2 ps2 ret2 as2) out))
+    (many UCValAppArity : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) ret) (erased (Term) ret2)
+       (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (ZipFail as as2) z) -> (UnifyC m ents rules (ValApp h ps ret as) (ValApp h2 ps2 ret2 as2) (UFail)))
     (many UCFn : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) lv) (erased (Term) lv2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2) (erased (UOut) o1) (erased (UOut) o2) (erased (UOut) out)
        (erased (SameTele rs rs2) st1) (erased (SameTele ps ps2) st2) (erased (UnifyC m ents rules lv lv2 o1) p) (erased (AfterTele m ents rules o1 ps ps2 o2) q) (erased (AfterTele m ents rules o2 rs rs2 out) r) ->
@@ -368,14 +383,22 @@
       ((UCBound a b c j) (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) (UBound m ents rules l r rest j out cl cr kk))))
       ((UCBoundNeq a b c j j2 n) (match erased k _ ((ContFail a2 b2 d2) (UBoundNeq m ents rules l r rest j j2 cl cr n))))
       ((UCUniv a b c) (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) (UUniv m ents rules l r rest out cl cr kk))))
-      ((UCApp a b c h h2 as as2 o oo sl p q)
+      ((UCTyApp a b c h h2 ps ps2 as as2 o oo sl p q)
         (let (erased eqs) (erased z) (zip-of-samelen as as2 rest sl))
         (match erased (canon-canonical rules l l2 cl) _
-          ((CnApp a3 h3 as3 ch cas)
+          ((CnTyApp a3 h3 ps3 as3 ch cas)
             (match erased (canon-canonical rules r r2 cr) _
-              ((CnApp a4 h4 as4 ch2 cas2)
-                (UApp m ents rules l r rest h h2 as as2 eqs out cl cr z (conv m ents rules h h2 h h2 o eqs out p (canonical-fix rules h ch) (canonical-fix rules h2 ch2) (conv-after-list m ents rules o as as2 oo rest eqs out q z k))))))))
-      ((UCAppArity a b c h h2 as as2 z) (match erased k _ ((ContFail a2 b2 d2) (UAppArity m ents rules l r rest h h2 as as2 cl cr z))))
+              ((CnTyApp a4 h4 ps4 as4 ch2 cas2)
+                (UTyApp m ents rules l r rest h h2 ps ps2 as as2 eqs out cl cr z (conv m ents rules h h2 h h2 o eqs out p (canonical-fix rules h ch) (canonical-fix rules h2 ch2) (conv-after-list m ents rules o as as2 oo rest eqs out q z k))))))))
+      ((UCTyAppArity a b c h h2 ps ps2 as as2 z) (match erased k _ ((ContFail a2 b2 d2) (UTyAppArity m ents rules l r rest h h2 ps ps2 as as2 cl cr z))))
+      ((UCValApp a b c h h2 ps ps2 ret ret2 as as2 o oo sl p q)
+        (let (erased eqs) (erased z) (zip-of-samelen as as2 rest sl))
+        (match erased (canon-canonical rules l l2 cl) _
+          ((CnValApp a3 h3 ps3 r3 as3 ch cas)
+            (match erased (canon-canonical rules r r2 cr) _
+              ((CnValApp a4 h4 ps4 r4 as4 ch2 cas2)
+                (UValApp m ents rules l r rest h h2 ps ps2 ret ret2 as as2 eqs out cl cr z (conv m ents rules h h2 h h2 o eqs out p (canonical-fix rules h ch) (canonical-fix rules h2 ch2) (conv-after-list m ents rules o as as2 oo rest eqs out q z k))))))))
+      ((UCValAppArity a b c h h2 ps ps2 ret ret2 as as2 z) (match erased k _ ((ContFail a2 b2 d2) (UValAppArity m ents rules l r rest h h2 ps ps2 ret ret2 as as2 cl cr z))))
       ((UCFn a b c lv lv2 ps ps2 rs rs2 o o2 oo st1 st2 p q rr)
         (let (erased e1) (erased z1) (zip-tele-of-same rs rs2 rest st1))
         (let (erased e2) (erased z2) (zip-tele-of-same ps ps2 e1 st2))
@@ -528,7 +551,8 @@
           ((NDDiff e g n) (BlFree _ _ z (Succ k) (NoRuleCons z x s rules n p)))))
       ((BlRuled a c z d r j p lt) (BlRuled _ _ z (Succ k) r (Succ j) (RRThere z x r s (Succ j) (Zero) rules ranks2 (rule-neq rules z r x (rule-rank-of rules ranks z r j p) nr) (rule-rank-shift rules ranks ranks2 z r j p sh)) (LtS j k lt)))
       ((BlBound a c i d) (BlBound _ _ i (Succ k)))
-      ((BlApp a c h as d p q) (BlApp _ _ h as (Succ k) (below-shift rules ranks ranks2 h k x s nr sh p) (below-shift-list rules ranks ranks2 as k x s nr sh q)))
+      ((BlTyApp a c h ps as d p q) (BlTyApp _ _ h ps as (Succ k) (below-shift rules ranks ranks2 h k x s nr sh p) (below-shift-list rules ranks ranks2 as k x s nr sh q)))
+      ((BlValApp a c h ps r as d p q) (BlValApp _ _ h ps r as (Succ k) (below-shift rules ranks ranks2 h k x s nr sh p) (below-shift-list rules ranks ranks2 as k x s nr sh q)))
       ((BlUniv a c d) (BlUniv _ _ (Succ k)))
       ((BlFn a c l ps rs d p q r) (BlFn _ _ l ps rs (Succ k) (below-shift rules ranks ranks2 l k x s nr sh p) (below-shift-tele rules ranks ranks2 ps k x s nr sh q) (below-shift-tele rules ranks ranks2 rs k x s nr sh r)))
       ((BlTyCtor a c ps d q) (BlTyCtor _ _ ps (Succ k) (below-shift-tele rules ranks ranks2 ps k x s nr sh q)))
@@ -557,7 +581,8 @@
     (match erased c _
       ((CnRef e z p) (match erased a _ ((AsgRef d2 x2 z2 n) (BlFree _ _ z (Zero) (NoRuleCons z x s rules (neq-sym x z n) p)))))
       ((CnBound e k) (BlBound _ _ k (Zero)))
-      ((CnApp e h as p q) (match erased a _ ((AsgApp d2 x2 h2 as2 pa qa) (BlApp _ _ h as (Zero) (below-zero rules ranks2 x s h d pa p) (below-zero-list rules ranks2 x s as d qa q)))))
+      ((CnTyApp e h ps as p q) (match erased a _ ((AsgTyApp d2 x2 h2 ps2 as2 d1 pa ta qa) (BlTyApp _ _ h ps as (Zero) (below-zero rules ranks2 x s h d pa p) (below-zero-list rules ranks2 x s as d qa q)))))
+      ((CnValApp e h ps r as p q) (match erased a _ ((AsgValApp d2 x2 h2 ps2 r2 as2 d1 pa ta ra qa) (BlValApp _ _ h ps r as (Zero) (below-zero rules ranks2 x s h d pa p) (below-zero-list rules ranks2 x s as d qa q)))))
       ((CnUniv e) (BlUniv _ _ (Zero)))
       ((CnFn e l ps rs p q r)
         (match erased a _ ((AsgFn d2 x2 l2 ps2 rs2 d1 d3 pa qa ra) (BlFn _ _ l ps rs (Zero) (below-zero rules ranks2 x s l d pa p) (below-zero-tele rules ranks2 x s ps d d1 qa q) (below-zero-tele rules ranks2 x s rs d1 d3 ra r)))))
@@ -593,8 +618,7 @@
   (match erased tb _ ((MkTable a b ranks top v al sr rp) sr)))
 
 ; ---- The walk. Each function answers the outcome with its derivation and a [Step]: the table unchanged,
-; The type of a closed term, or stuck: an application whose head's canonical type is no former of the
-; application's arity has no derivation (mini/README.md).
+; The type of a closed term.
 ; Two telescopes of one shape at one depth end at one depth.
 (def-fns _ $ erased stele-same-out : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (Nat) out) (erased (Nat) out2) (subterm erased (SameTele es fs) st)
     (erased (ScopedTele ents d es out) p) (erased (ScopedTele ents d fs out2) q) -> (erased (Eq (Nat) out out2) e)
@@ -604,8 +628,7 @@
 
 (def-adts $ TypeOfTermDec : ((List (Ent)) ents) ((List (Rule)) rules) ((Term) t) -> Type
   enum
-  (many TotIs : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) t) (many (Term) ty) (erased (TypeOfTerm ents rules t ty) p) (erased (Scoped ents (Zero) ty) sc) -> (TypeOfTermDec ents rules t))
-  (many TotStuck : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) t) -> (TypeOfTermDec ents rules t)))
+  (many TotIs : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) t) (many (Term) ty) (erased (TypeOfTerm ents rules t ty) p) (erased (Scoped ents (Zero) ty) sc) -> (TypeOfTermDec ents rules t)))
 (def-fns _ $ many type-of-term : (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (subterm many (Term) t) (erased (Scoped ents (Zero) t) st) ->
     (many (TypeOfTermDec ents rules t) r)
   (match many t _
@@ -616,24 +639,12 @@
             (absurd (EntMiss a2 b2 ne) (has-ent-no-ent ents x hx ne))
             ((EntHit a2 b2 ty k e) (TotIs _ _ _ ty (TotRef ents rules x ty k e) (ent-of-scoped ents ents x ty k se e)))))))
     ((Bound k) (match erased st _ ((ScBound a d0 k0 lt) (match erased lt _))))
-    ((App h as)
+    ((TyApp h ps as) (TotIs _ _ _ (Univ) (TotTyApp ents rules h ps as) (ScUniv ents (Zero))))
+    ((ValApp h ps ret as)
       (match erased st _
-        ((ScApp a d0 h0 as0 sh sas)
-          (match many (type-of-term ents se rules tb h sh) _
-            ((TotStuck a2 b2 c2) (TotStuck _ _ _))
-            ((TotIs a2 b2 c2 hty p shty)
-              (let (many hc) (erased cn) (canon-tb ents rules tb hty))
-              (match many hc _
-                ((TyCtor ps) (TotIs _ _ _ (Univ) (TotTyApp ents rules h as hty ps p cn) (ScUniv ents (Zero))))
-                ((ValCtor ps ret)
-                  (match many (len-dec _ _ as ps) _
-                    ((LenDiff x1 x2 x3 x4 lm) (TotStuck _ _ _))
-                    ((LenSame x1 x2 x3 x4 le)
-                      (match erased (canon-scoped ents rules (Zero) hty hc (table-scoped ents rules tb) shty cn) _
-                        ((ScValCtor a3 d3 ps3 r3 out sps sret)
-                          (let (many sub) (erased so) (many ty) (erased q) (erased sty) (inst-ret ents out ps ret as sps sret sas le))
-                          (TotIs _ _ _ ty (TotValApp ents rules h as hty ps ret sub ty p cn so q) sty))))))
-                (else (TotStuck _ _ _))))))))
+        ((ScValApp a d0 h0 ps0 r0 as0 out sh sps sret sas le)
+          (let (many sub) (erased so) (many ty) (erased q) (erased sty) (inst-ret ents out ps ret as sps sret sas le))
+          (TotIs _ _ _ ty (TotValApp ents rules h ps ret as sub ty so q) sty))))
     ((Univ) (TotIs _ _ _ (Univ) (TotUniv ents rules) (ScUniv ents (Zero))))
     ((Fn l ps rs) (TotIs _ _ _ (Univ) (TotFn ents rules l ps rs) (ScUniv ents (Zero))))
     ((TyCtor ps) (TotIs _ _ _ (Univ) (TotTyCtor ents rules ps) (ScUniv ents (Zero))))
@@ -673,7 +684,8 @@
   (match many t _
     ((Ref x) (IsRef x))
     ((Bound k) (IsNonRef _ (NRBound k)))
-    ((App h as) (IsNonRef _ (NRApp h as)))
+    ((TyApp h ps as) (IsNonRef _ (NRTyApp h ps as)))
+    ((ValApp h ps r as) (IsNonRef _ (NRValApp h ps r as)))
     ((Univ) (IsNonRef _ (NRUniv)))
     ((Fn l ps rs) (IsNonRef _ (NRFn l ps rs)))
     ((TyCtor ps) (IsNonRef _ (NRTyCtor ps)))
@@ -745,9 +757,8 @@
     ((OrNewerL a b c d e g h i lt) sy)
     ((OrNewerR a b c d e g h i lt) sx)))
 
-; A variable against a term that is not one.
-; A variable against a term, in [Force] mode: refused, or the rule minted with what unifying the two types
-; next needs, or stuck for want of the term's type.
+; A variable against a term that is not one, in [Force] mode: refused, or the rule minted with what unifying
+; the two types next needs.
 (def-adts $ RefStep : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((Term) l) ((Term) r) -> Type
   enum
   (many RefDone : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (UOut) o) (many (Step n ents rules o) st)
@@ -755,8 +766,7 @@
   (many RefMint : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r)
      (many (Nat) x) (many (Term) t) (many (Term) ty) (many (Term) tt) (many (Table ents (Cons (Rule) (MkRule x t) rules)) tb1) (erased (Nat) n1) (erased (Lt n1 n) lt)
      (erased (FreeCount ents (Cons (Rule) (MkRule x t) rules) n1) fc) (erased (Side) s) (erased (Kind) k) (erased (Sided s (Ref x) t l r) sd) (erased (NonRef t) nt) (erased (EntOf ents x ty k) e) (erased (NotDecl k) nd)
-     (erased (Assignable (Zero) x t) a) (erased (TypeOfTerm ents rules t tt) tp) (erased (Scoped ents (Zero) ty) sty) (erased (Scoped ents (Zero) tt) stt) -> (RefStep (Force) n ents rules l r))
-  (many RefStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) -> (RefStep (Force) n ents rules l r)))
+     (erased (Assignable (Zero) x t) a) (erased (TypeOfTerm ents rules t tt) tp) (erased (Scoped ents (Zero) ty) sty) (erased (Scoped ents (Zero) tt) stt) -> (RefStep (Force) n ents rules l r)))
 
 (def-fns _ $ many assign : (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (erased (Nat) n) (erased (FreeCount ents rules n) fc) (many (Side) s) (many (Nat) x) (many (Term) t)
       (erased (Term) l) (erased (Term) r) (many (Term) ty) (erased (Kind) k) (erased (Sided s (Ref x) t l r) sd) (erased (NonRef t) nt) (erased (EntOf ents x ty k) e) (erased (NotDecl k) nd)
@@ -766,7 +776,6 @@
       ((ADYes a2 b2 c2 ok)
         (let (erased st0) (scoped-tighten ents d (Zero) t st (assignable-closed (Zero) x t ok)))
         (match many (type-of-term ents se rules tb t st0) _
-          ((TotStuck a3 b3 c3) (RefStuck _ _ _ _ _))
           ((TotIs a3 b3 c3 tt tp stt)
             (let (erased n1) (erased lt) (erased fc1) (assign-count ents rules n x ty k t fc e nx))
             (RefMint _ _ _ _ _ x t ty tt (table-mint ents rules tb x t nx ct ok st0 ty k e nd) n1 lt fc1 s k sd nt e nd ok tp (ent-of-scoped ents ents x ty k se e) stt))))))
@@ -811,39 +820,32 @@
                   (table-mint ents rules tb z (Ref w) nz (CnRef rules w nw) (AsgRef (Zero) z w (orient-neq x tx kx y ty ky z tz w tw o nq)) (ScRef ents (Zero) w (orient-has ents x tx kx y ty ky z tz w tw o hx hy)) tz kz ez ndz)
                   n1 lt fc1 tx kx ty ky kz ex ey ez ndz o))))))))
 
-; What the walk answers: a step with its derivation, or stuck, which only [Force] mode can be, for want of an
-; assigned term's type.
+; What the walk answers: a step with its derivation.
 (def-adts
   (WalkDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((Term) l) ((Term) r) -> Type
     enum
     (many MkWalk : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (UOut) o) (many (Step n ents rules o) st)
-       (erased (UnifyC m ents rules l r o) p) -> (WalkDec m n ents rules l r))
-    (many WalkStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) -> (WalkDec (Force) n ents rules l r)))
+       (erased (UnifyC m ents rules l r o) p) -> (WalkDec m n ents rules l r)))
   (ListDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((List (Term)) as) ((List (Term)) bs) -> Type
     enum
     (many MkList : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Term)) as) (erased (List (Term)) bs) (erased (UOut) o) (many (Step n ents rules o) st)
-       (erased (UnifyListC m ents rules as bs o) p) -> (ListDec m n ents rules as bs))
-    (many ListStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Term)) as) (erased (List (Term)) bs) -> (ListDec (Force) n ents rules as bs)))
+       (erased (UnifyListC m ents rules as bs o) p) -> (ListDec m n ents rules as bs)))
   (TeleDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((List (Entry)) es) ((List (Entry)) fs) -> Type
     enum
     (many MkTele : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (UOut) o) (many (Step n ents rules o) st)
-       (erased (UnifyTeleC m ents rules es fs o) p) -> (TeleDec m n ents rules es fs))
-    (many TeleStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) -> (TeleDec (Force) n ents rules es fs)))
+       (erased (UnifyTeleC m ents rules es fs o) p) -> (TeleDec m n ents rules es fs)))
   (AfterDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((UOut) o1) ((Term) t) ((Term) u) -> Type
     enum
     (many MkAfter : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (Term) t) (erased (Term) u) (erased (UOut) o) (many (Step n ents rules o) st)
-       (erased (After m ents rules o1 t u o) p) -> (AfterDec m n ents rules o1 t u))
-    (many AfterStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (Term) t) (erased (Term) u) -> (AfterDec (Force) n ents rules o1 t u)))
+       (erased (After m ents rules o1 t u o) p) -> (AfterDec m n ents rules o1 t u)))
   (AfterListDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((UOut) o1) ((List (Term)) as) ((List (Term)) bs) -> Type
     enum
     (many MkAfterList : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (List (Term)) as) (erased (List (Term)) bs) (erased (UOut) o)
-       (many (Step n ents rules o) st) (erased (AfterList m ents rules o1 as bs o) p) -> (AfterListDec m n ents rules o1 as bs))
-    (many AfterListStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (List (Term)) as) (erased (List (Term)) bs) -> (AfterListDec (Force) n ents rules o1 as bs)))
+       (many (Step n ents rules o) st) (erased (AfterList m ents rules o1 as bs o) p) -> (AfterListDec m n ents rules o1 as bs)))
   (AfterTeleDec : ((Mode) m) ((Nat) n) ((List (Ent)) ents) ((List (Rule)) rules) ((UOut) o1) ((List (Entry)) es) ((List (Entry)) fs) -> Type
     enum
     (many MkAfterTele : (erased (Mode) m) (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (UOut) o)
-       (many (Step n ents rules o) st) (erased (AfterTele m ents rules o1 es fs o) p) -> (AfterTeleDec m n ents rules o1 es fs))
-    (many AfterTeleStuck : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o1) (erased (List (Entry)) es) (erased (List (Entry)) fs) -> (AfterTeleDec (Force) n ents rules o1 es fs))))
+       (many (Step n ents rules o) st) (erased (AfterTele m ents rules o1 es fs o) p) -> (AfterTeleDec m n ents rules o1 es fs))))
 
 (def-fns _
   (many unify-canon : (many (Mode) m) (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (subterm erased (Nat) n) (erased (FreeCount ents rules n) fc)
@@ -876,7 +878,6 @@
                                         (let (erased stw) (orient-scoped-w ents x tx kx y ty ky z tz w tw o (ent-of-scoped ents ents x tx kx se ex) (ent-of-scoped ents ents y ty ky se ey)))
                                         (match many (unify-canon m ents se (Cons _ (MkRule z (Ref w)) rules) tb1 (subterm (lt-subterm n1 n lt)) n1 fc1 tz2 tw2
                                             (canon-canonical _ tz tz2 ctz) (canon-canonical _ tw tw2 ctw) (Zero) (canon-scoped ents _ (Zero) tz tz2 (table-scoped ents _ tb1) stz ctz) (canon-scoped ents _ (Zero) tw tw2 (table-scoped ents _ tb1) stw ctw) phase) _
-          ((WalkStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o2 st2 q)
                                         (MkWalk _ _ _ _ _ _ o2 (step-seq n ents rules _ (StMint _ _ _ (Cons _ (MkRule z (Ref w)) rules) tb1 n1 lt fc1) n1 (lt-weaken n1 n lt) o2 st2)
                                           (UCAlias ents rules x y tx kx ty ky z tz w tw tz2 tw2 o2 nq ex ey o ctz ctw q)))))))))))))))
@@ -899,32 +900,54 @@
                             (match many (nat-dec j k) _
                               ((NDSame z2) (MkWalk _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (UCBound m ents rules j)))
                               ((NDDiff z2 w2 nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCBoundNeq m ents rules j k nq)))))))))))
-              ((App h as)
+              ((TyApp h ps as)
                 (match many (nat-dec (Succ (Succ (Zero))) b) _
-                  ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Zero))) b nl nr (ShApp h as) sb nq)))
+                  ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Zero))) b nl nr (ShTyApp h ps as) sb nq)))
                   ((NDSame z)
                     (match erased sb _
-                      ((ShApp h0 as0)
+                      ((ShTyApp h0 ps0 as0)
                         (match many r _
-                          ((App h2 as2)
+                          ((TyApp h2 ps2 as2)
                             (match erased cl _
-                              ((CnApp a1 h1 as1 ch cas)
+                              ((CnTyApp a1 h1 ps1 as1 ch cas)
                                 (match erased cr _
-                                  ((CnApp a2 h3 as3 ch2 cas2)
+                                  ((CnTyApp a2 h3 ps3 as3 ch2 cas2)
                                     (match erased sl _
-                                      ((ScApp a3 d3 h4 as4 sh sas)
+                                      ((ScTyApp a3 d3 h4 ps4 as4 o4 sh st4 sas n4)
                                         (match erased sr _
-                                          ((ScApp a4 d4 h5 as5 sh2 sas2)
+                                          ((ScTyApp a4 d4 h5 ps5 as5 o5 sh2 st5 sas2 n5)
                                             (match many (zip-dec as as2 (Nil _)) _
-                                              ((ZDFail a5 b5 c5 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCAppArity m ents rules h h2 as as2 zf)))
+                                              ((ZDFail a5 b5 c5 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCTyAppArity m ents rules h h2 ps ps2 as as2 zf)))
                                               ((ZDOk a5 b5 c5 eqs z)
                                                 (match many (unify-canon m ents se rules tb n fc h h2 ch ch2 d sh sh2 phase) _
-          ((WalkStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _ ))
-          ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 p)
-                                                (match many (after-list m ents se rules tb n fc _ l o1 st1 as as2 as as2 (canonical-fix-list rules as cas) (canonical-fix-list rules as2 cas2) (prove-subterm as l) d sas sas2 (zip-samelen as as2 (Nil _) eqs z) (PInner)) _
-          ((AfterListStuck z0 z1 z2 z3 z4 z5) (WalkStuck _ _ _ _ _ ))
-          ((MkAfterList y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
-                                                (MkWalk _ _ _ _ _ _ o2 st2 (UCApp m ents rules h h2 as as2 o1 o2 (zip-samelen as as2 (Nil _) eqs z) p q)))))))))))))))))))))))
+                                                  ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 p)
+                                                    (match many (after-list m ents se rules tb n fc _ l o1 st1 as as2 as as2 (canonical-fix-list rules as cas) (canonical-fix-list rules as2 cas2) (prove-subterm as l) d sas sas2 (zip-samelen as as2 (Nil _) eqs z) (PInner)) _
+                                                      ((MkAfterList y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
+                                                        (MkWalk _ _ _ _ _ _ o2 st2 (UCTyApp m ents rules h h2 ps ps2 as as2 o1 o2 (zip-samelen as as2 (Nil _) eqs z) p q)))))))))))))))))))))))
+              ((ValApp h ps ret as)
+                (match many (nat-dec (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) b) _
+                  ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))) b nl nr (ShValApp h ps ret as) sb nq)))
+                  ((NDSame z)
+                    (match erased sb _
+                      ((ShValApp h0 ps0 r0 as0)
+                        (match many r _
+                          ((ValApp h2 ps2 ret2 as2)
+                            (match erased cl _
+                              ((CnValApp a1 h1 ps1 r1 as1 ch cas)
+                                (match erased cr _
+                                  ((CnValApp a2 h3 ps3 r3 as3 ch2 cas2)
+                                    (match erased sl _
+                                      ((ScValApp a3 d3 h4 ps4 r4 as4 o4 sh st4 sr4 sas n4)
+                                        (match erased sr _
+                                          ((ScValApp a4 d4 h5 ps5 r5 as5 o5 sh2 st5 sr5 sas2 n5)
+                                            (match many (zip-dec as as2 (Nil _)) _
+                                              ((ZDFail a5 b5 c5 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCValAppArity m ents rules h h2 ps ps2 ret ret2 as as2 zf)))
+                                              ((ZDOk a5 b5 c5 eqs z)
+                                                (match many (unify-canon m ents se rules tb n fc h h2 ch ch2 d sh sh2 phase) _
+                                                  ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 p)
+                                                    (match many (after-list m ents se rules tb n fc _ l o1 st1 as as2 as as2 (canonical-fix-list rules as cas) (canonical-fix-list rules as2 cas2) (prove-subterm as l) d sas sas2 (zip-samelen as as2 (Nil _) eqs z) (PInner)) _
+                                                      ((MkAfterList y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
+                                                        (MkWalk _ _ _ _ _ _ o2 st2 (UCValApp m ents rules h h2 ps ps2 ret ret2 as as2 o1 o2 (zip-samelen as as2 (Nil _) eqs z) p q)))))))))))))))))))))))
               ((Univ)
                 (match many (nat-dec (Succ (Succ (Succ (Zero)))) b) _
                   ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Succ (Zero)))) b nl nr (ShUniv) sb nq)))
@@ -952,14 +975,11 @@
                                                   ((ZTDFail a6 b6 c6 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCFnParams m ents rules lv lv2 ps ps2 rs rs2 (zip-tele-same rs rs2 (Nil _) e1 z1) zf)))
                                                   ((ZTDOk a6 b6 c6 e2 z2)
                                                     (match many (unify-canon m ents se rules tb n fc lv lv2 clv clv2 d slv slv2 phase) _
-          ((WalkStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 p)
                                                     (match many (after-tele m ents se rules tb n fc _ l o1 st1 ps ps2 ps ps2 (canonical-fix-tele rules ps cps) (canonical-fix-tele rules ps2 cps2) (prove-subterm ps l) d _ _ sps sps2 (zip-tele-same ps ps2 (Nil _) e2 z2) (PInner)) _
-          ((AfterTeleStuck z0 z1 z2 z3 z4 z5) (WalkStuck _ _ _ _ _ ))
           ((MkAfterTele y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
                                                     (let-match erased (stele-same-out ents d ps ps2 e3 e4 (zip-tele-same ps ps2 (Nil _) e2 z2) sps sps2) (Refl w1 w2))
                                                     (match many (after-tele m ents se rules tb n fc _ l o2 st2 rs rs2 rs rs2 (canonical-fix-tele rules rs crs) (canonical-fix-tele rules rs2 crs2) (prove-subterm rs l) e3 _ _ srs srs2 (zip-tele-same rs rs2 (Nil _) e1 z1) (PInner)) _
-          ((AfterTeleStuck z0 z1 z2 z3 z4 z5) (WalkStuck _ _ _ _ _ ))
           ((MkAfterTele y0 y1 y2 y3 y4 y5 y6 o3 st3 q2)
                                                     (MkWalk _ _ _ _ _ _ o3 st3 (UCFn m ents rules lv lv2 ps ps2 rs rs2 o1 o2 o3 (zip-tele-same rs rs2 (Nil _) e1 z1) (zip-tele-same ps ps2 (Nil _) e2 z2) p q q2)))))))))))))))))))))))))))
               ((TyCtor ps)
@@ -982,7 +1002,6 @@
                                               ((ZTDFail a5 b5 c5 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCTyCtorFail m ents rules ps ps2 zf)))
                                               ((ZTDOk a5 b5 c5 e1 z1)
                                                 (match many (unify-tele m ents se rules tb n fc ps ps2 ps ps2 (canonical-fix-tele rules ps cps) (canonical-fix-tele rules ps2 cps2) d _ _ sps sps2 (zip-tele-same ps ps2 (Nil _) e1 z1) phase) _
-          ((TeleStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _ ))
           ((MkTele y0 y1 y2 y3 y4 y5 o1 st1 p)
                                                 (MkWalk _ _ _ _ _ _ o1 st1 (UCTyCtor m ents rules ps ps2 o1 (zip-tele-same ps ps2 (Nil _) e1 z1) p)))))))))))))))))))))
               ((ValCtor ps ret)
@@ -1005,11 +1024,9 @@
                                               ((ZTDFail a5 b5 c5 zf) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCValCtorFail m ents rules ps ps2 ret ret2 zf)))
                                               ((ZTDOk a5 b5 c5 e1 z1)
                                                 (match many (unify-tele m ents se rules tb n fc ps ps2 ps ps2 (canonical-fix-tele rules ps cps) (canonical-fix-tele rules ps2 cps2) d _ _ sps sps2 (zip-tele-same ps ps2 (Nil _) e1 z1) phase) _
-          ((TeleStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _ ))
           ((MkTele y0 y1 y2 y3 y4 y5 o1 st1 p)
                                                 (let-match erased (stele-same-out ents d ps ps2 e3 e4 (zip-tele-same ps ps2 (Nil _) e1 z1) sps sps2) (Refl w1 w2))
                                                 (match many (after m ents se rules tb n fc _ l o1 st1 ret ret2 (prove-subterm ret l) cret cret2 e3 sret sret2 (PInner)) _
-          ((AfterStuck z0 z1 z2 z3 z4 z5) (WalkStuck _ _ _ _ _ ))
           ((MkAfter y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
                                                 (MkWalk _ _ _ _ _ _ o2 st2 (UCValCtor m ents rules ps ps2 ret ret2 o1 o2 (zip-tele-same ps ps2 (Nil _) e1 z1) p q)))))))))))))))))))))))))))))
   ; a variable against a term: the rule's types unified next, under the bound the mint lowered to
@@ -1017,13 +1034,11 @@
       (subterm many (Term) l) (many (Term) r) (many (RefStep m n ents rules l r) rs) (subterm many (PInner) is phase) -> (many (WalkDec m n ents rules l r) w)
     (match many rs _
       ((RefDone a b c d e g o st p) (MkWalk _ _ _ _ _ _ o st p))
-      ((RefStuck a b c d e) (WalkStuck _ _ _ _ _))
       ((RefMint a b c d e x t ty tt tb1 n1 lt fc1 s k sd nt ent nd asg tp sty stt)
         (let (many ty2) (erased cty) (canon-tb ents (Cons _ (MkRule x t) rules) tb1 ty))
         (let (many tt2) (erased ctt) (canon-tb ents (Cons _ (MkRule x t) rules) tb1 tt))
         (match many (unify-canon (Force) ents se (Cons _ (MkRule x t) rules) tb1 (subterm (lt-subterm n1 n lt)) n1 fc1 ty2 tt2 (canon-canonical _ ty ty2 cty) (canon-canonical _ tt tt2 ctt)
                       (Zero) (canon-scoped ents _ (Zero) ty ty2 (table-scoped ents _ tb1) sty cty) (canon-scoped ents _ (Zero) tt tt2 (table-scoped ents _ tb1) stt ctt) (POuter (PInner))) _
-          ((WalkStuck z0 z1 z2 z3 z4) (WalkStuck _ _ _ _ _))
           ((MkWalk y0 y1 y2 y3 y4 y5 o2 st2 q)
             (MkWalk _ _ _ _ _ _ o2 (step-seq n ents rules _ (StMint _ _ _ (Cons _ (MkRule x t) rules) tb1 n1 lt fc1) n1 (lt-weaken n1 n lt) o2 st2)
               (UCAssign ents rules s x t l r ty k tt ty2 tt2 o2 sd nt ent nd asg tp cty ctt q)))))))
@@ -1053,10 +1068,8 @@
                                       ((ScCons b5 d6 b6 b7 sb1 sb2)
                                         (match many (unify-canon m ents se rules tb n fc a2 b2 (canon-canonical rules a a2 pa) (canon-canonical rules b b2 pb)
                                             d (canon-scoped ents rules d a a2 (table-scoped ents rules tb) sa1 pa) (canon-scoped ents rules d b b2 (table-scoped ents rules tb) sb1 pb) phase) _
-          ((WalkStuck z0 z1 z2 z3 z4) (ListStuck _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 p)
                                         (match many (after-list m ents se rules tb n fc _ as2 o1 st1 rest brest rest2 brest2m qa qb (prove-subterm rest2 as2) d sa2 sb2 sl2 (PInner)) _
-          ((AfterListStuck z0 z1 z2 z3 z4 z5) (ListStuck _ _ _ _ _ ))
           ((MkAfterList y0 y1 y2 y3 y4 y5 y6 o2 st2 q)
                                         (MkList _ _ _ _ _ _ o2 st2 (ULCons m ents rules a b a2 b2 rest brest o1 o2 pa pb p q)))))))))))))))))))))))))
   (many unify-tele : (many (Mode) m) (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (subterm erased (Nat) n) (erased (FreeCount ents rules n) fc)
@@ -1092,10 +1105,8 @@
                                                       ((ScTCons b5 d6 s9 i9 u9 fs9 o9 su1 sd2)
                                                         (match many (unify-canon m ents se rules tb n fc t2 u2 (canon-canonical rules t t2 pt) (canon-canonical rules u u2 pu)
                                                             d (canon-scoped ents rules d t t2 (table-scoped ents rules tb) st1 pt) (canon-scoped ents rules d u u2 (table-scoped ents rules tb) su1 pu) phase) _
-          ((WalkStuck z0 z1 z2 z3 z4) (TeleStuck _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o1 stp1 p)
                                                         (match many (after-tele m ents se rules tb n fc _ es2 o1 stp1 rest frest rest2 frest2m qt qu (prove-subterm rest2 es2) (Succ d) _ _ sc2 sd2 st2 (PInner)) _
-          ((AfterTeleStuck z0 z1 z2 z3 z4 z5) (TeleStuck _ _ _ _ _ ))
           ((MkAfterTele y0 y1 y2 y3 y4 y5 y6 o2 stp2 q)
                                                         (MkTele _ _ _ _ _ _ o2 stp2 (UTCons m ents rules s i t u t2 u2 rest frest o1 o2 pt pu p q)))))))))))))))))))))))))))))))))
   ; After a step: nothing when it left no table; the parts as they are when it left the table alone; the
@@ -1108,7 +1119,6 @@
       ((StFail a b c) (MkAfter _ _ _ _ _ _ _ (UFail) (StFail _ _ _) (AFail m ents rules t u)))
       ((StSame a b c)
         (match many (unify-canon m ents se rules tb n fc (subterm sub) t u ct cu d st su (POuter (PInner))) _
-          ((WalkStuck z0 z1 z2 z3 z4) (AfterStuck _ _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o stp q)
         (MkAfter _ _ _ _ _ _ _ o stp (AOk m ents rules rules t u t u o (canonical-fix rules t ct) (canonical-fix rules u cu) q)))))
       ((StMint a b c rules1 tb1 n1 lt fc1)
@@ -1116,7 +1126,6 @@
         (let (many u2) (erased c2) (canon-tb ents rules1 tb1 u))
         (match many (unify-canon m ents se rules1 tb1 (subterm (lt-subterm n1 n lt)) n1 fc1 t2 u2 (canon-canonical rules1 t t2 c1) (canon-canonical rules1 u u2 c2)
             d (canon-scoped ents rules1 d t t2 (table-scoped ents rules1 tb1) st c1) (canon-scoped ents rules1 d u u2 (table-scoped ents rules1 tb1) su c2) (POuter (PInner))) _
-          ((WalkStuck z0 z1 z2 z3 z4) (AfterStuck _ _ _ _ _ _ ))
           ((MkWalk y0 y1 y2 y3 y4 y5 o stp2 q)
         (MkAfter _ _ _ _ _ _ _ o (step-seq n ents rules rules1 st1 n1 (lt-weaken n1 n lt) o stp2) (AOk m ents rules rules1 t u t2 u2 o c1 c2 q)))))))
   (many after-list : (many (Mode) m) (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (subterm erased (Nat) n) (erased (FreeCount ents rules n) fc)
@@ -1127,14 +1136,12 @@
       ((StFail a b c) (MkAfterList _ _ _ _ _ _ _ (UFail) (StFail _ _ _) (ALFail m ents rules as bs)))
       ((StSame a b c)
         (match many (unify-list m ents se rules tb n fc as bs (subterm sub) as2 bs2 ca cb d sa sb sl (POuter (PInner))) _
-          ((ListStuck z0 z1 z2 z3 z4) (AfterListStuck _ _ _ _ _ _ ))
           ((MkList y0 y1 y2 y3 y4 y5 o stp q)
         (MkAfterList _ _ _ _ _ _ _ o stp (ALOk m ents rules rules as bs o q)))))
       ((StMint a b c rules1 tb1 n1 lt fc1)
         (let (many as3) (erased c1) (canon-list-tb ents rules1 tb1 as))
         (let (many bs3) (erased c2) (canon-list-tb ents rules1 tb1 bs))
         (match many (unify-list m ents se rules1 tb1 (subterm (lt-subterm n1 n lt)) n1 fc1 as bs as3 bs3 c1 c2 d sa sb sl (POuter (PInner))) _
-          ((ListStuck z0 z1 z2 z3 z4) (AfterListStuck _ _ _ _ _ _ ))
           ((MkList y0 y1 y2 y3 y4 y5 o stp2 q)
         (MkAfterList _ _ _ _ _ _ _ o (step-seq n ents rules rules1 st1 n1 (lt-weaken n1 n lt) o stp2) (ALOk m ents rules rules1 as bs o q)))))))
   (many after-tele : (many (Mode) m) (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (subterm erased (Nat) n) (erased (FreeCount ents rules n) fc)
@@ -1145,14 +1152,12 @@
       ((StFail a b c) (MkAfterTele _ _ _ _ _ _ _ (UFail) (StFail _ _ _) (ATFail m ents rules es fs)))
       ((StSame a b c)
         (match many (unify-tele m ents se rules tb n fc es fs (subterm sub) es2 fs2 ce cf d _ _ se2 sf st (POuter (PInner))) _
-          ((TeleStuck z0 z1 z2 z3 z4) (AfterTeleStuck _ _ _ _ _ _ ))
           ((MkTele y0 y1 y2 y3 y4 y5 o stp q)
         (MkAfterTele _ _ _ _ _ _ _ o stp (ATOk m ents rules rules es fs o q)))))
       ((StMint a b c rules1 tb1 n1 lt fc1)
         (let (many es3) (erased c1) (canon-tele-tb ents rules1 tb1 es))
         (let (many fs3) (erased c2) (canon-tele-tb ents rules1 tb1 fs))
         (match many (unify-tele m ents se rules1 tb1 (subterm (lt-subterm n1 n lt)) n1 fc1 es fs es3 fs3 c1 c2 d _ _ se2 sf st (POuter (PInner))) _
-          ((TeleStuck z0 z1 z2 z3 z4) (AfterTeleStuck _ _ _ _ _ _ ))
           ((MkTele y0 y1 y2 y3 y4 y5 o stp2 q)
         (MkAfterTele _ _ _ _ _ _ _ o (step-seq n ents rules rules1 st1 n1 (lt-weaken n1 n lt) o stp2) (ATOk m ents rules rules1 es fs o q))))))))
 
@@ -1171,8 +1176,7 @@
 
 (def-adts $ EqsDec : ((Mode) m) ((List (Ent)) ents) ((List (Rule)) rules) ((List (Eqn)) eqs) -> Type
   enum
-  (many MkEqs : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Eqn)) eqs) (many (UOut) o) (many (OutTable ents o) ot) (erased (Unify m ents rules eqs o) p) -> (EqsDec m ents rules eqs))
-  (many EqsStuck : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Eqn)) eqs) -> (EqsDec (Force) ents rules eqs)))
+  (many MkEqs : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Eqn)) eqs) (many (UOut) o) (many (OutTable ents o) ot) (erased (Unify m ents rules eqs o) p) -> (EqsDec m ents rules eqs)))
 (def-fns _ $ many unify-eqs : (many (Mode) m) (many (List (Ent)) ents) (erased (ScopedEnts ents ents) se) (many (List (Rule)) rules) (many (Table ents rules) tb) (erased (Nat) n) (erased (FreeCount ents rules n) fc)
     (subterm many (List (Eqn)) eqs) (erased (ScopedEqs ents eqs) sq) -> (many (EqsDec m ents rules eqs) r)
   (match many eqs _
@@ -1185,16 +1189,13 @@
               (let (many l2) (erased cl) (canon-tb ents rules tb l))
               (let (many r2) (erased cr) (canon-tb ents rules tb r))
               (match many (unify-canon m ents se rules tb n fc l2 r2 (canon-canonical rules l l2 cl) (canon-canonical rules r r2 cr) (Zero) (canon-scoped ents rules (Zero) l l2 (table-scoped ents rules tb) sl cl) (canon-scoped ents rules (Zero) r r2 (table-scoped ents rules tb) sr cr) (POuter (PInner))) _
-                ((WalkStuck z0 z1 z2 z3 z4) (EqsStuck _ _ _))
                 ((MkWalk y0 y1 y2 y3 y4 y5 o1 st1 d)
                   (match many st1 _
                     ((StFail b2 c2 d2) (MkEqs _ _ _ _ (UFail) (OTFail _) (conv m ents rules l r l2 r2 (UFail) rest (UFail) d cl cr (ContFail m ents rest))))
                     ((StSame b2 c2 d2)
                       (match many (unify-eqs m ents se rules tb n fc rest sq2) _
-                        ((EqsStuck z0 z1 z2) (EqsStuck _ _ _))
                         ((MkEqs y0 y1 y2 y3 o ot q) (MkEqs _ _ _ _ o ot (conv m ents rules l r l2 r2 (UOk rules) rest o d cl cr (ContOk m ents rules rest o q))))))
                     ((StMint b2 c2 d2 rules1 tb1 n1 lt fc1)
                       (match many (unify-eqs m ents se rules1 tb1 n1 fc1 rest sq2) _
-                        ((EqsStuck z0 z1 z2) (EqsStuck _ _ _))
                         ((MkEqs y0 y1 y2 y3 o ot q) (MkEqs _ _ _ _ o ot (conv m ents rules l r l2 r2 (UOk rules1) rest o d cl cr (ContOk m ents rules1 rest o q))))))))))))))))
 (MkUnit)

@@ -59,6 +59,13 @@
 
 ; The length of a list, and the layout of a substitution or abstraction list: [r] leading [None]s, then
 ; [Some]s only, [n] items in all. Addition, for the depth a telescope ends at.
+; Two lists of one length.
+(def-adts
+  (LenEq : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
+    enum
+    (many LENil : (erased Type A) (erased Type B) -> (LenEq A B (Nil A) (Nil B)))
+    (many LECons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenEq A B xs ys) p) -> (LenEq A B (Cons A x xs) (Cons B y ys)))))
+
 (def-adts
   (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
     enum

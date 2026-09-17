@@ -43,8 +43,8 @@ structurally, with the relations kept as they were:
   reject: `Subst`'s `SubBeyond` (since removed, below) and `Unify`'s
   `Sided` merge of the left/right twin rules. The function-side
   `Oriented` lost its `OrStuck`.
-- One non-syntax stuck remains, the type of a closed term
-  (`type-of-term`, now in `mini/unify.sl`; see `mini/README.md`). A later
+- One non-syntax stuck remained, the type of a closed term
+  (`type-of-term`, now in `mini/unify.sl`; since closed, below). A later
   session, funded to close it by a preservation argument, found the
   argument false as the relations then stood: a program reached the
   stuck (`tests/mini_untyped_rule.sl`, with the reading of why in its
@@ -111,3 +111,34 @@ Next, in the session's estimation: the head-type stuck, by one of the
 routes discussed with the owner (a well-typedness invariant carried
 through unification, or recording an application's former or type on the
 term as DESIGN.md section 3's entries do).
+
+## The head-type stuck closed by `TyApp` and `ValApp` (one session)
+
+Done, at the owner's word after a chat comparison of the two routes
+above: `Term`'s one `App` became `TyApp head params args` and
+`ValApp head params ret args`, DESIGN.md section 5's productions 2 and 3
+each with the former it applies recorded on the node, so that
+`TypeOfTerm` needs no head type and `type-of-term` is total;
+`mini/README.md` has the shape and what it leaves to the metatheory (the
+recorded former's agreement with the head's type is checked nowhere).
+
+- Every relation over `Term` gained the twin rules; `Canon` and `Unify`
+  ignore the record, `Scoped` also asks arity (`LenEq`, now in
+  `base.sl`). `ShapeOf` gives `ValApp` the code 7, after the formers.
+- With `type-of-term` total, the `Stuck` constructors that only it fed
+  are gone: `TotStuck`, `RefStuck` and the walk's `WalkStuck` family
+  and `EqsStuck` in `unify.sl`; `TypedStuck`, `MTStuck`, `RDStuck`,
+  `RefStuck` and `CovStuck` in `elabfn.sl`. The `Stuck` answers for
+  malformed syntax stay, as `mini/README.md` says they should.
+- `elab.sl`'s rules that build an application record the head's
+  canonical former; the built-ins' telescopes are `predates-ps` and
+  `subterm-ps`, shared with `init-ctx`. The rules that read a type's
+  shape match `TyApp` and count a `ValApp` as not having the shape
+  (`NotTyApp`); `StrictSub` walks through either kind by `AppParts`,
+  as section 8 says. New erased fields on these rules (the params
+  read, `hps`/`tps`/`aps`) are the only other change to the relations.
+- `tests/mini_term.sl` and `tests/mini_unify.sl` build the split terms
+  by hand; every test and the bootstrap pass.
+
+Next, in the session's estimation: the owner's verdict on the `Sided`
+merge, then the metatheory (MINIMAL.md's list and the agreement above).

@@ -165,17 +165,48 @@
 (def-fns _ $ erased sc-ref : (erased (Ctx) ctx) (erased (Nat) x) (erased (Has ctx x) h) -> (erased (Sc ctx (Zero) (Ref x)) p)
   (let-match erased h (MkHas q1 q2 q3 q4 q5 q6 q7 q8 he))
   (MkSc _ _ _ _ _ _ _ _ (Ref x) (ScRef _ _ x he)))
-(def-fns _ $ erased sc-app : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Sc ctx (Zero) h) p) (erased (ScL ctx (Zero) as) q) -> (erased (Sc ctx (Zero) (App h as)) r)
+(def-fns _ $ erased sc-tyapp : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Nat) pd) (erased (Sc ctx (Zero) h) p) (erased (ScT ctx (Zero) ps pd) t)
+    (erased (ScL ctx (Zero) as) q) (erased (LenEq (Term) (Entry) as ps) n) -> (erased (Sc ctx (Zero) (TyApp h ps as)) r)
   (let-match erased p (MkSc q1 q2 q3 q4 q5 q6 q7 dq q8 sh))
+  (let-match erased t (MkScT y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 sps))
   (let-match erased q (MkScL z1 z2 z3 z4 z5 z6 z7 dq z8 sas))
-  (MkSc _ _ _ _ _ _ _ _ (App h as) (ScApp _ _ h as sh sas)))
+  (MkSc _ _ _ _ _ _ _ _ (TyApp h ps as) (ScTyApp _ _ h ps as _ sh sps sas n)))
+(def-fns _ $ erased sc-valapp : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) pd) (erased (Sc ctx (Zero) h) p) (erased (ScT ctx (Zero) ps pd) t)
+    (erased (Sc ctx pd r) pr) (erased (ScL ctx (Zero) as) q) (erased (LenEq (Term) (Entry) as ps) n) -> (erased (Sc ctx (Zero) (ValApp h ps r as)) s)
+  (let-match erased p (MkSc q1 q2 q3 q4 q5 q6 q7 dq q8 sh))
+  (let-match erased t (MkScT y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 sps))
+  (let-match erased pr (MkSc x1 x2 x3 x4 x5 x6 x7 x8 x9 sr))
+  (let-match erased q (MkScL z1 z2 z3 z4 z5 z6 z7 dq z8 sas))
+  (MkSc _ _ _ _ _ _ _ _ (ValApp h ps r as) (ScValApp _ _ h ps r as _ sh sps sr sas n)))
 (def-fns _ $ erased sc-univ : (erased (Ctx) ctx) -> (erased (Sc ctx (Zero) (Univ)) p)
   (let-match erased ctx (MkCtx n s e r a l sa))
   (MkSc _ _ _ _ _ _ _ _ (Univ) (ScUniv _ _)))
-(def-fns _ $ erased sc-level-ty : (erased (Ctx) ctx) (many (WF ctx) wf) -> (erased (Sc ctx (Zero) (App (Ref (Zero)) (Nil (Term)))) p)
+(def-fns _ $ erased sc-level-ty : (erased (Ctx) ctx) (many (WF ctx) wf) -> (erased (Sc ctx (Zero) level-ty) p)
   (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 h1 h2))
-  (MkSc _ _ _ _ _ _ _ _ _ (ScApp _ _ _ _ (ScRef _ _ _ h0) (ScNil _ _))))
+  (MkSc _ _ _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ h0) (ScTNil _ _) (ScNil _ _) (LENil _ _))))
+(def-fns _ $ erased sc-predates : (erased (Ctx) ctx) (many (WF ctx) wf) (erased (Term) ty) (erased (Term) av) (erased (Term) lv) (erased (Sc ctx (Zero) ty) pty) (erased (Sc ctx (Zero) av) pav) (erased (Sc ctx (Zero) lv) plv) ->
+    (erased (Sc ctx (Zero) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) ty (Cons (Term) av (Cons (Term) lv (Nil (Term))))))) p)
+  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased bi (MkBuiltins z h0 h1 h2))
+  (let-match erased pty (MkSc q1 q2 q3 q4 q5 q6 q7 q8 q9 sty))
+  (let-match erased pav (MkSc y1 y2 y3 y4 y5 y6 y7 y8 y9 sav))
+  (let-match erased plv (MkSc z1 z2 z3 z4 z5 z6 z7 z8 z9 slv))
+  (MkSc _ _ _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ h1)
+    (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ h0) (ScTNil _ _) (ScNil _ _) (LENil _ _)) (ScTNil _ _))))
+    (ScCons _ _ _ _ sty (ScCons _ _ _ _ sav (ScCons _ _ _ _ slv (ScNil _ _)))) (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LENil _ _)))))))
+(def-fns _ $ erased sc-subterm : (erased (Ctx) ctx) (many (WF ctx) wf) (erased (Term) ta) (erased (Term) av) (erased (Term) tb) (erased (Term) bv) (erased (Sc ctx (Zero) ta) pta) (erased (Sc ctx (Zero) av) pav)
+    (erased (Sc ctx (Zero) tb) ptb) (erased (Sc ctx (Zero) bv) pbv) ->
+    (erased (Sc ctx (Zero) (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons (Term) ta (Cons (Term) av (Cons (Term) tb (Cons (Term) bv (Nil (Term)))))))) p)
+  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased bi (MkBuiltins z h0 h1 h2))
+  (let-match erased pta (MkSc q1 q2 q3 q4 q5 q6 q7 q8 q9 sta))
+  (let-match erased pav (MkSc y1 y2 y3 y4 y5 y6 y7 y8 y9 sav))
+  (let-match erased ptb (MkSc z1 z2 z3 z4 z5 z6 z7 z8 z9 stb))
+  (let-match erased pbv (MkSc x1 x2 x3 x4 x5 x6 x7 x8 x9 sbv))
+  (MkSc _ _ _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ h2)
+    (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTNil _ _)))))
+    (ScCons _ _ _ _ sta (ScCons _ _ _ _ sav (ScCons _ _ _ _ stb (ScCons _ _ _ _ sbv (ScNil _ _))))) (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LENil _ _))))))))
 (def-fns _ $ erased sc-builtin : (erased (Ctx) ctx) (many (WF ctx) wf) -> (erased (Has ctx (Succ (Zero))) h1) (erased (Has ctx (Succ (Succ (Zero)))) h2)
   (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 hh1 hh2))
@@ -203,9 +234,11 @@
 (def-fns _ $ erased sc-valctor-parts : (erased (Ctx) ctx) (erased (List (Entry)) ps) (erased (Term) r) (erased (Sc ctx (Zero) (ValCtor ps r)) s) -> (erased (Nat) d1) (erased (ScT ctx (Zero) ps d1) q) (erased (Sc ctx d1 r) p)
   (let-match erased s (MkSc q1 q2 q3 q4 q5 q6 q7 q8 q9 sf))
   (match erased sf _ ((ScValCtor a dq ps0 r0 e1 sps sr) (values e1 (MkScT _ _ _ _ _ _ _ _ _ ps sps) (MkSc _ _ _ _ _ _ _ _ r sr)))))
-(def-fns _ $ erased sc-app-parts : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Sc ctx (Zero) (App h as)) s) -> (erased (Sc ctx (Zero) h) p) (erased (ScL ctx (Zero) as) q)
+(def-fns _ $ erased sc-app-parts : (erased (Ctx) ctx) (erased (Term) b) (erased (Term) h) (erased (List (Term)) as) (erased (AppParts b h as) ap) (erased (Sc ctx (Zero) b) s) -> (erased (Sc ctx (Zero) h) p) (erased (ScL ctx (Zero) as) q)
   (let-match erased s (MkSc q1 q2 q3 q4 q5 q6 q7 dq q8 sf))
-  (match erased sf _ ((ScApp a dq h0 as0 sh sas) (values (MkSc _ _ _ _ _ _ _ _ h sh) (MkScL _ _ _ _ _ _ _ _ as sas)))))
+  (match erased ap _
+    ((APTy h0 ps as0) (match erased sf _ ((ScTyApp a dq h1 ps1 as1 o1 sh st sas n) (values (MkSc _ _ _ _ _ _ _ _ h sh) (MkScL _ _ _ _ _ _ _ _ as sas)))))
+    ((APVal h0 ps r as0) (match erased sf _ ((ScValApp a dq h1 ps1 r1 as1 o1 sh st sr sas n) (values (MkSc _ _ _ _ _ _ _ _ h sh) (MkScL _ _ _ _ _ _ _ _ as sas)))))))
 (def-fns _ $ erased scl-parts : (erased (Ctx) ctx) (erased (Term) t) (erased (List (Term)) ts) (erased (ScL ctx (Zero) (Cons (Term) t ts)) s) -> (erased (Sc ctx (Zero) t) p) (erased (ScL ctx (Zero) ts) q)
   (let-match erased s (MkScL q1 q2 q3 q4 q5 q6 q7 dq q8 sf))
   (match erased sf _ ((ScCons a dq t0 ts0 st sts) (values (MkSc _ _ _ _ _ _ _ _ t st) (MkScL _ _ _ _ _ _ _ _ ts sts)))))
@@ -559,8 +592,7 @@
   (RefineDec : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
     (many RDRefined : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (many (Ctx) out) (many (WF out) wf) (erased (Grew ctx out) g) (erased (Refine ctx t u out) p) -> (RefineDec ctx t u))
-    (many RDContradicted : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (Contradict ctx t u) p) -> (RefineDec ctx t u))
-    (many RDStuck : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) -> (RefineDec ctx t u))))
+    (many RDContradicted : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (Contradict ctx t u) p) -> (RefineDec ctx t u))))
 (def-fns _ $ many same-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) t) (many (Term) u) (erased (Sc ctx (Zero) t) st) (erased (Sc ctx (Zero) u) su) -> (many (SameDec ctx t u) r)
   (let-match many ctx (MkCtx n s e r a l sa))
   (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
@@ -579,7 +611,6 @@
   (let-match erased su (MkSc z1 z2 z3 z4 z5 z6 z7 dq z8 scu))
   (let (many cnt) (erased fc) (free-count e r))
   (match many (unify-eqs (Force) e se r (MkTable _ _ ranks top v al sr rp) cnt fc (Cons _ (MkEqn t u) (Nil _)) (SqCons _ _ _ _ sct scu (SqNil _))) _
-    ((EqsStuck z0 z1 z2) (RDStuck _ _ _))
     ((MkEqs y0 y1 y2 y3 o ot p)
       (match many o _
         ((UFail) (RDContradicted _ _ _ (ContradictBy ctx t u e r (EntsOf n s e r a l sa) (RulesOf n s e r a l sa) p)))
@@ -592,17 +623,15 @@
                     (GrewBy n s e r a l sa n s e rules2 a l sa (lt-succ n) (ExtRefl n e))
                     (RefineBy ctx t u (MkCtx n s e rules2 a l sa) e r rules2 (EntsOf n s e r a l sa) (RulesOf n s e r a l sa) p (WithRulesTo n s e r a l sa rules2))))))))))))
 
-; The type of a closed term of the grammar, through the context; the stuck answer is mini/unify.sl's.
+; The type of a closed term of the grammar, through the context.
 (def-adts $ TypedDec : ((Ctx) ctx) ((Term) t) -> Type
   enum
-  (many TypedIs : (erased (Ctx) ctx) (erased (Term) t) (many (Term) ty) (erased (Typed ctx t ty) p) (erased (Sc ctx (Zero) ty) sc) -> (TypedDec ctx t))
-  (many TypedStuck : (erased (Ctx) ctx) (erased (Term) t) -> (TypedDec ctx t)))
+  (many TypedIs : (erased (Ctx) ctx) (erased (Term) t) (many (Term) ty) (erased (Typed ctx t ty) p) (erased (Sc ctx (Zero) ty) sc) -> (TypedDec ctx t)))
 (def-fns _ $ many typed-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) t) (erased (Sc ctx (Zero) t) st) -> (many (TypedDec ctx t) r)
   (let-match many ctx (MkCtx n s e r a l sa))
   (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased st (MkSc q1 q2 q3 q4 q5 q6 q7 dq q8 sct))
   (match many (type-of-term e se r (MkTable _ _ ranks top v al sr rp) t sct) _
-    ((TotStuck w1 w2 w3) (TypedStuck _ _))
     ((TotIs w1 w2 w3 ty p sc) (TypedIs _ _ ty (TypedBy ctx t ty e r (EntsOf n s e r a l sa) (RulesOf n s e r a l sa) p) (MkSc _ _ _ _ _ _ _ _ ty sc)))))
 
 ; Minting a telescope's entries with the names given.
@@ -610,8 +639,7 @@
   (MintTeleDec : ((Ctx) ctx) ((List (Maybe (Term))) acc) ((List (Entry)) tele) ((List (Maybe (String))) names) -> Type
     enum
     (many MTMinted : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) (erased (List (Entry)) tele) (erased (List (Maybe (String))) names) (many (Ctx) out) (many (List (Nat)) ids)
-       (many (WF out) wf) (erased (Grew ctx out) g) (erased (HasAll out ids) h) (erased (LenEq (Entry) (Nat) tele ids) le) (erased (MintTele ctx acc tele names out ids) p) -> (MintTeleDec ctx acc tele names))
-    (many MTStuck : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) (erased (List (Entry)) tele) (erased (List (Maybe (String))) names) -> (MintTeleDec ctx acc tele names))))
+       (many (WF out) wf) (erased (Grew ctx out) g) (erased (HasAll out ids) h) (erased (LenEq (Entry) (Nat) tele ids) le) (erased (MintTele ctx acc tele names out ids) p) -> (MintTeleDec ctx acc tele names))))
 (def-fns _ $ many mint-tele : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Maybe (Term))) acc) (erased (Nat) m) (erased (ScS ctx acc m) sacc) (subterm many (List (Entry)) tele) (erased (Nat) out) (erased (ScT ctx m tele out) stele)
     (many (List (Maybe (String))) names) (erased (LenEq (Entry) (Maybe (String)) tele names) len) -> (many (MintTeleDec ctx acc tele names) r)
   (match many tele _
@@ -634,17 +662,14 @@
                     ((BFalse)
                       (let (many x) (many ctx1) (erased mnt) (many wf1) (erased g1) (erased hx) (mint ctx wf name t2 (KPlain) (None _) st2 (scm-none ctx) (ROkNone _)))
                       (match many (mint-tele ctx1 wf1 (Cons _ (Some _ (Ref x)) acc) _ (scs-cons ctx1 (Ref x) acc _ (sc-ref ctx1 x (entis-has ctx1 x _ _ hx)) (scs-grew ctx ctx1 acc _ g1 sacc)) es _ (sct-grew ctx ctx1 _ es _ g1 ses) ns len2) _
-                        ((MTStuck g2 h2 k2 l2) (MTStuck _ _ _ _))
                         ((MTMinted g2 h2 k2 l2 out ids wf2 g3 hids le p)
                           (MTMinted _ _ _ _ out (Cons _ x ids) wf2 (grew-trans ctx ctx1 out g1 g3) (has-all-cons out x ids (has-grew ctx1 out x g3 (entis-has ctx1 x _ _ hx)) hids) (LECons _ _ e x es ids le)
                             (MTTy ctx acc s t es name ns t2 x ctx1 out ids sb mnt p)))))
                     ((BTrue)
                       (match many (typed-dec ctx wf t2 st2) _
-                        ((TypedStuck g2 h2) (MTStuck _ _ _ _))
                         ((TypedIs g2 h2 ty tt sty)
                           (let (many x) (many ctx1) (erased mnt) (many wf1) (erased g1) (erased hx) (mint ctx wf name ty (KPlain) (Some _ t2) sty (scm-some ctx t2 st2) (ROkSome _ _ (NDPlain))))
                           (match many (mint-tele ctx1 wf1 (Cons _ (Some _ (Ref x)) acc) _ (scs-cons ctx1 (Ref x) acc _ (sc-ref ctx1 x (entis-has ctx1 x _ _ hx)) (scs-grew ctx ctx1 acc _ g1 sacc)) es _ (sct-grew ctx ctx1 _ es _ g1 ses) ns len2) _
-                            ((MTStuck g3 h3 k3 l3) (MTStuck _ _ _ _))
                             ((MTMinted g3 h3 k3 l3 out ids wf2 g4 hids le p)
                               (MTMinted _ _ _ _ out (Cons _ x ids) wf2 (grew-trans ctx ctx1 out g1 g4) (has-all-cons out x ids (has-grew ctx1 out x g4 (entis-has ctx1 x _ _ hx)) hids) (LECons _ _ e x es ids le)
                                 (MTIs ctx acc s t es name ns t2 ty x ctx1 out ids sb tt mnt p)))))))))))))))))
@@ -659,17 +684,23 @@
     enum
     (many SubLYes : (erased (Ctx) ctx) (erased (Term) a) (erased (List (Term)) as) (erased (SubOfList ctx a as) p) -> (SubListDec ctx a as))
     (many SubLNo : (erased (Ctx) ctx) (erased (Term) a) (erased (List (Term)) as) (erased (NotSubList ctx a as) p) -> (SubListDec ctx a as))))
+(def-fns _ $ many sub-parts : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) a) (erased (Term) b) (many (Term) h) (erased (List (Term)) as) (erased (AppParts b h as) ap) (erased (Sc ctx (Zero) a) sa) (erased (Sc ctx (Zero) h) sh)
+    (many (SubListDec ctx a as) sl) -> (many (SubDec ctx a b) r)
+  (match many (same-dec ctx wf a h sa sh) _
+    ((SDSame c d e s) (SubYes _ _ _ (SSHead ctx a b h as ap s)))
+    ((SDDiffer c d e df)
+      (match many sl _
+        ((SubLYes c2 d2 e2 p) (SubYes _ _ _ (SSArg ctx a b h as ap p)))
+        ((SubLNo c2 d2 e2 p) (SubNo _ _ _ (NSApp ctx a b h as ap df p)))))))
 (def-fns _
   (many sub-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) a) (erased (Sc ctx (Zero) a) sa) (subterm many (Term) b) (erased (Sc ctx (Zero) b) sb) -> (many (SubDec ctx a b) r)
     (match many b _
-      ((App h as)
-        (let (erased sh) (erased sas) (sc-app-parts ctx h as sb))
-        (match many (same-dec ctx wf a h sa sh) _
-          ((SDSame c d e s) (SubYes _ _ _ (SSHead ctx a h as s)))
-          ((SDDiffer c d e df)
-            (match many (sub-list-dec ctx wf a sa as sas) _
-              ((SubLYes c2 d2 e2 p) (SubYes _ _ _ (SSArg ctx a h as p)))
-              ((SubLNo c2 d2 e2 p) (SubNo _ _ _ (NSApp ctx a h as df p)))))))
+      ((TyApp h ps as)
+        (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APTy h ps as) sb))
+        (sub-parts ctx wf a _ h as (APTy h ps as) sa sh (sub-list-dec ctx wf a sa as sas)))
+      ((ValApp h ps rt as)
+        (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APVal h ps rt as) sb))
+        (sub-parts ctx wf a _ h as (APVal h ps rt as) sa sh (sub-list-dec ctx wf a sa as sas)))
       ((Ref x) (SubNo _ _ _ (NSNotApp ctx a (Ref x) (NotAppRef x))))
       ((Bound k) (SubNo _ _ _ (NSNotApp ctx a (Bound k) (NotAppBound k))))
       ((Univ) (SubNo _ _ _ (NSNotApp ctx a (Univ) (NotAppUniv))))
@@ -787,55 +818,57 @@
 ; A ValCtor former's return (ASSUMPTIONS 80): the four ways the canonical return is not an application of a
 ; type constructor other than the former's own binders.
 (def-adts
-  (NotAppDec : ((Term) c) -> Type
+  (TyAppDec : ((Term) c) -> Type
     enum
-    (many IsApp : (many (Term) h) (many (List (Term)) as) -> (NotAppDec (App h as)))
-    (many IsNotApp : (erased (Term) c) (erased (NotApp c) p) -> (NotAppDec c)))
+    (many IsTyApp : (many (Term) h) (many (List (Entry)) ps) (many (List (Term)) as) -> (TyAppDec (TyApp h ps as)))
+    (many IsNotTyApp : (erased (Term) c) (erased (NotTyApp c) p) -> (TyAppDec c)))
   (TyCtorDec : ((Term) u) -> Type
     enum
     (many TDIs : (many (List (Entry)) ps) -> (TyCtorDec (TyCtor ps)))
     (many TDNot : (erased (Term) u) (erased (NotTyCtor u) p) -> (TyCtorDec u)))
   (FormerRetDec : ((Ctx) ctx) ((List (Nat)) pids) ((Term) c) -> Type
     enum
-    (many FROk : (erased (Ctx) ctx) (erased (List (Nat)) pids) (many (Nat) t) (many (List (Term)) args) (many (Term) tty) (many (List (Entry)) tps)
-       (erased (NotMem t pids) nm) (erased (TypeOf ctx t tty) tt) (erased (Canonical ctx tty (TyCtor tps)) ct) -> (FormerRetDec ctx pids (App (Ref t) args)))
+    (many FROk : (erased (Ctx) ctx) (erased (List (Nat)) pids) (many (Nat) t) (many (List (Entry)) aps) (many (List (Term)) args) (many (Term) tty) (many (List (Entry)) tps)
+       (erased (NotMem t pids) nm) (erased (TypeOf ctx t tty) tt) (erased (Canonical ctx tty (TyCtor tps)) ct) -> (FormerRetDec ctx pids (TyApp (Ref t) aps args)))
     (many FRBad : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) c) (erased (BadFormerRet ctx pids c) br) -> (FormerRetDec ctx pids c))))
-(def-fns _ $ many not-app-dec : (many (Term) c) -> (many (NotAppDec c) r)
+(def-fns _ $ many tyapp-dec : (many (Term) c) -> (many (TyAppDec c) r)
   (match many c _
-    ((App h as) (IsApp h as))
-    ((Ref x) (IsNotApp _ (NotAppRef x)))
-    ((Bound k) (IsNotApp _ (NotAppBound k)))
-    ((Univ) (IsNotApp _ (NotAppUniv)))
-    ((Fn l ps rs) (IsNotApp _ (NotAppFn l ps rs)))
-    ((TyCtor ps) (IsNotApp _ (NotAppTyCtor ps)))
-    ((ValCtor ps r) (IsNotApp _ (NotAppValCtor ps r)))))
+    ((TyApp h ps as) (IsTyApp h ps as))
+    ((ValApp h ps r as) (IsNotTyApp _ (NTAValApp h ps r as)))
+    ((Ref x) (IsNotTyApp _ (NTAOther _ (NotAppRef x))))
+    ((Bound k) (IsNotTyApp _ (NTAOther _ (NotAppBound k))))
+    ((Univ) (IsNotTyApp _ (NTAOther _ (NotAppUniv))))
+    ((Fn l ps rs) (IsNotTyApp _ (NTAOther _ (NotAppFn l ps rs))))
+    ((TyCtor ps) (IsNotTyApp _ (NTAOther _ (NotAppTyCtor ps))))
+    ((ValCtor ps r) (IsNotTyApp _ (NTAOther _ (NotAppValCtor ps r))))))
 (def-fns _ $ many tyctor-dec : (many (Term) u) -> (many (TyCtorDec u) r)
   (match many u _
     ((TyCtor ps) (TDIs ps))
     ((Ref x) (TDNot _ (NTCRef x)))
     ((Bound k) (TDNot _ (NTCBound k)))
-    ((App h as) (TDNot _ (NTCApp h as)))
+    ((TyApp h ps as) (TDNot _ (NTCTyApp h ps as)))
+    ((ValApp h ps r as) (TDNot _ (NTCValApp h ps r as)))
     ((Univ) (TDNot _ (NTCUniv)))
     ((Fn l ps rs) (TDNot _ (NTCFn l ps rs)))
     ((ValCtor ps r) (TDNot _ (NTCValCtor ps r)))))
 (def-fns _ $ erased sc-ref-has : (erased (Ctx) ctx) (erased (Nat) x) (erased (Sc ctx (Zero) (Ref x)) s) -> (erased (Has ctx x) h)
   (match erased s _ ((MkSc q1 q2 q3 q4 q5 q6 q7 dq q8 sc) (match erased sc _ ((ScRef a dq x0 hx) (MkHas _ _ _ _ _ _ _ x hx))))))
 (def-fns _ $ many former-ret-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Nat)) pids) (many (Term) c) (erased (Sc ctx (Zero) c) sc) -> (many (FormerRetDec ctx pids c) r)
-  (match many (not-app-dec c) _
-    ((IsNotApp a na) (FRBad _ _ _ (BFNotApp ctx pids c na)))
-    ((IsApp h args)
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp a na) (FRBad _ _ _ (BFNotApp ctx pids c na)))
+    ((IsTyApp h hps args)
       (match many (nonref-dec h) _
-        ((IsNonRef a nr) (FRBad _ _ _ (BFHead ctx pids h args nr)))
+        ((IsNonRef a nr) (FRBad _ _ _ (BFHead ctx pids h hps args nr)))
         ((IsRef t)
           (match many (mem-dec t pids) _
-            ((MemYes a b m) (FRBad _ _ _ (BFOwn ctx pids t args m)))
+            ((MemYes a b m) (FRBad _ _ _ (BFOwn ctx pids t hps args m)))
             ((MemNo a b nm)
-              (let (erased sh) (erased sargs) (sc-app-parts ctx (Ref t) args sc))
+              (let (erased sh) (erased sargs) (sc-app-parts ctx _ (Ref t) args (APTy (Ref t) hps args) sc))
               (let (many tty) (many kk) (erased tt) (erased kq) (erased stty) (erased e2) (erased ee) (erased eo) (type-of ctx wf t (sc-ref-has ctx t sh)))
               (let (many u) (erased cu) (erased su) (canonical ctx wf tty stty))
               (match many (tyctor-dec u) _
-                ((TDIs tps) (FROk _ _ t args tty tps nm tt cu))
-                ((TDNot a nt) (FRBad _ _ _ (BFNotTycon ctx pids t args tty u tt cu nt)))))))))))
+                ((TDIs tps) (FROk _ _ t hps args tty tps nm tt cu))
+                ((TDNot a nt) (FRBad _ _ _ (BFNotTycon ctx pids t hps args tty u tt cu nt)))))))))))
 
 (def-fns _
   (many elab-term : (many (Ctx) ctx) (many (WF ctx) wf) (subterm many (Raw) raw) (subterm many (POuter (PInner)) is ph) -> (many (TermDec ctx raw) r)
@@ -879,7 +912,7 @@
                           ((ArgsErr r) (MkTermDec _ _ (TErr r) (ETAppArgsErr ctx h args ht hty ps r p (HeadTy ctx hty ps cn) ap) (TSErr _ _)))
                           ((ArgsOk ts)
                             (match erased asc _
-                              ((ASOk e2 g2 sts) (MkTermDec _ _ (TOk (App ht ts) (Univ)) (ETTyApp ctx h args ht hty ps ts p cn ap) (TSOk _ _ _ (sc-app ctx ht ts sht sts) (sc-univ ctx))))))))))
+                              ((ASOk e2 g2 sts) (MkTermDec _ _ (TOk (TyApp ht ps ts) (Univ)) (ETTyApp ctx h args ht hty ps ts p cn ap) (TSOk _ _ _ (sc-tyapp ctx ht ps ts _ sht sps sts (args-len-eq ctx (Nil _) ps args ts ap)) (sc-univ ctx))))))))))
                   ((ValCtor ps ret)
                     (let (erased pd) (erased sps) (erased sret) (sc-valctor-parts ctx ps ret shc))
                     (match many (elab-term-args ctx wf (Nil _) _ (scs-nil ctx) ps _ sps args (POuter (PInner))) _
@@ -891,11 +924,12 @@
                             (match erased asc _
                               ((ASOk e2 g2 sts)
                                 (let (many sub) (erased so) (many ty) (erased sb) (erased sty) (inst-ret-sc ctx pd ps ret ts sps sret sts (args-len-eq ctx (Nil _) ps args ts ap)))
-                                (MkTermDec _ _ (TOk (App ht ts) ty) (ETValApp ctx h args ht hty ps ret ts sub ty p cn ap so sb)
-                                  (TSOk _ _ _ (sc-app ctx ht ts sht sts) sty)))))))))
+                                (MkTermDec _ _ (TOk (ValApp ht ps ret ts) ty) (ETValApp ctx h args ht hty ps ret ts sub ty p cn ap so sb)
+                                  (TSOk _ _ _ (sc-valapp ctx ht ps ret ts _ sht sps sret sts (args-len-eq ctx (Nil _) ps args ts ap)) sty)))))))))
                   ((Ref x) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (Ref x) p cn (NoTeleRef x)) (TSErr _ _)))
                   ((Bound k) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (Bound k) p cn (NoTeleBound k)) (TSErr _ _)))
-                  ((App h2 as2) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (App h2 as2) p cn (NoTeleApp h2 as2)) (TSErr _ _)))
+                  ((TyApp h2 ps2 as2) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (TyApp h2 ps2 as2) p cn (NoTeleTyApp h2 ps2 as2)) (TSErr _ _)))
+                  ((ValApp h2 ps2 r2 as2) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (ValApp h2 ps2 r2 as2) p cn (NoTeleValApp h2 ps2 r2 as2)) (TSErr _ _)))
                   ((Univ) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (Univ) p cn (NoTeleUniv)) (TSErr _ _)))
                   ((Fn l ps rs) (MkTermDec _ _ (TErr (RNotApplicable)) (ETNotApplicable ctx h args ht hty (Fn l ps rs) p cn (NoTeleFn l ps rs)) (TSErr _ _)))))))))))
   ; the formers: (Fn L (params) (rets)), (TyCtor (params)), (ValCtor (params) ret)
@@ -963,7 +997,7 @@
           ((TOk l lty)
             (match erased sc _
               ((TSOk a2 b2 c2 sl slty)
-                (match many (same-dec ctx wf lty (App (Ref (Zero)) (Nil _)) slty (sc-level-ty ctx wf)) _
+                (match many (same-dec ctx wf lty level-ty slty (sc-level-ty ctx wf)) _
                   ((SDDiffer c d e df) (MkTermDec _ _ (TErr (RNotLevel)) (ETFnNotLevel ctx lr ps rs l lty p df) (TSErr _ _)))
                   ((SDSame c d e sm)
                     (match many (elab-tele ctx ctx wf (Nil _) _ (cov-refl ctx) ps (POuter (PInner))) _
@@ -1006,10 +1040,10 @@
                             (let (many c) (erased cn) (erased scn) (canonical ctx1 wf1 ret sret))
                             (match many (former-ret-dec ctx1 wf1 pids c scn) _
                               ((FRBad d1 d2 d3 br) (MkTermDec _ _ (TErr (RBadReturn)) (ETValCtorBadRet ctx ps rr ctx1 pt pids pn ret rty c ep er cn br) (TSErr _ _)))
-                              ((FROk d1 d2 t args tty tps nm tt ct)
+                              ((FROk d1 d2 t aps args tty tps nm tt ct)
                                 (let (many acc) (erased bd) (binders pids))
                                 (let (many ret2) (erased ab) (abstract acc ret))
-                                (MkTermDec _ _ (TOk (ValCtor pt ret2) (Univ)) (ETValCtor ctx ps rr ctx1 pt pids pn acc ret rty t args tty tps ret2 ep er cn nm tt ct bd ab)
+                                (MkTermDec _ _ (TOk (ValCtor pt ret2) (Univ)) (ETValCtor ctx ps rr ctx1 pt pids pn acc ret rty t aps args tty tps ret2 ep er cn nm tt ct bd ab)
                                   (TSOk _ _ _ (sc-valctor ctx pt ret2 _ spt (sc-abstract ctx acc ctx1 _ ret ret2 (cov-binders ctx pids ctx1 acc _ pt cr bd spt li) sret ab)) (sc-univ ctx))))))))))))))))))
   (many elab-term-args : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Maybe (Term))) acc) (erased (Nat) m) (erased (ScS ctx acc m) sacc) (many (List (Entry)) tele) (erased (Nat) out) (erased (ScT ctx m tele out) stele) (subterm many (List (Raw)) args)
       (subterm many (POuter (PInner)) is ph) -> (many (ArgsDec ctx acc tele args) r)
@@ -1305,24 +1339,24 @@
 (def-adts
   (PredatesDec : ((Ctx) ctx) ((Term) c) ((Term) l) ((Term) cur) -> Type
     enum
-    (many PDYes : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) l) (erased (Term) cur) (many (Term) h) (many (Term) ty) (many (Term) a) (many (Term) lv)
-       (erased (Same ctx h (Ref (Succ (Zero)))) sh) (erased (Same ctx ty (App (Ref (Zero)) (Nil (Term)))) sty) (erased (Same ctx a l) sa) (erased (Same ctx lv cur) sc) ->
-       (PredatesDec ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
+    (many PDYes : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) l) (erased (Term) cur) (many (Term) h) (many (List (Entry)) hps) (many (Term) ty) (many (Term) a) (many (Term) lv)
+       (erased (Same ctx h (Ref (Succ (Zero)))) sh) (erased (Same ctx ty level-ty) sty) (erased (Same ctx a l) sa) (erased (Same ctx lv cur) sc) ->
+       (PredatesDec ctx (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
     (many PDNo : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) l) (erased (Term) cur) (erased (NotPredates ctx c l cur) p) -> (PredatesDec ctx c l cur)))
   (SubtermDec : ((Ctx) ctx) ((Term) c) ((Term) a) ((Term) b) -> Type
     enum
-    (many STYes : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) a) (erased (Term) b) (many (Term) h) (many (Term) ta) (many (Term) a0) (many (Term) tb) (many (Term) b0)
+    (many STYes : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) a) (erased (Term) b) (many (Term) h) (many (List (Entry)) hps) (many (Term) ta) (many (Term) a0) (many (Term) tb) (many (Term) b0)
        (erased (Same ctx h (Ref (Succ (Succ (Zero))))) sh) (erased (Same ctx a0 a) sa) (erased (Same ctx b0 b) sb) ->
-       (SubtermDec ctx (App h (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b))
+       (SubtermDec ctx (TyApp h hps (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b))
     (many STNo : (erased (Ctx) ctx) (erased (Term) c) (erased (Term) a) (erased (Term) b) (erased (NotSubtermOf ctx c a b) p) -> (SubtermDec ctx c a b))))
 (def-fns _ $ many predates-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) c) (many (Term) l) (many (Term) cur) (erased (Sc ctx (Zero) c) scc) (erased (Sc ctx (Zero) l) sl) (erased (Sc ctx (Zero) cur) scur) -> (many (PredatesDec ctx c l cur) r)
   (let (erased h1) (erased h2) (sc-builtin ctx wf))
-  (match many (not-app-dec c) _
-    ((IsNotApp a na) (PDNo _ _ _ _ (NPNotApp ctx c l cur na)))
-    ((IsApp h as)
-      (let (erased sh) (erased sas) (sc-app-parts ctx h as scc))
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp a na) (PDNo _ _ _ _ (NPNotApp ctx c l cur na)))
+    ((IsTyApp h hps as)
+      (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APTy h hps as) scc))
       (match many (not-len-dec (Succ (Succ (Succ (Zero)))) as) _
-        ((LenIsNot b d nl) (PDNo _ _ _ _ (NPArity ctx h as l cur nl)))
+        ((LenIsNot b d nl) (PDNo _ _ _ _ (NPArity ctx h hps as l cur nl)))
         ((LenIs b d ln)
           (match erased (len3 as ln) _
             ((MkAs3 x1 x2 x3)
@@ -1336,25 +1370,25 @@
                           (let (erased sa) (erased srest2) (scl-parts ctx a rest2 srest1))
                           (let (erased slv) (erased srest3) (scl-parts ctx lv rest3 srest2))
                           (match many (same-dec ctx wf h (Ref (Succ (Zero))) sh (sc-ref ctx _ h1)) _
-                            ((SDDiffer a1 b1 c1 df) (PDNo _ _ _ _ (NPHead ctx h as l cur df)))
+                            ((SDDiffer a1 b1 c1 df) (PDNo _ _ _ _ (NPHead ctx h hps as l cur df)))
                             ((SDSame a1 b1 c1 ssh)
-                              (match many (same-dec ctx wf ty (App (Ref (Zero)) (Nil _)) sty (sc-level-ty ctx wf)) _
-                                ((SDDiffer a2 b2 c2 df) (PDNo _ _ _ _ (NPType ctx h ty a lv l cur df)))
+                              (match many (same-dec ctx wf ty level-ty sty (sc-level-ty ctx wf)) _
+                                ((SDDiffer a2 b2 c2 df) (PDNo _ _ _ _ (NPType ctx h hps ty a lv l cur df)))
                                 ((SDSame a2 b2 c2 ssty)
                                   (match many (same-dec ctx wf a l sa sl) _
-                                    ((SDDiffer a3 b3 c3 df) (PDNo _ _ _ _ (NPLevel ctx h ty a lv l cur df)))
+                                    ((SDDiffer a3 b3 c3 df) (PDNo _ _ _ _ (NPLevel ctx h hps ty a lv l cur df)))
                                     ((SDSame a3 b3 c3 ssa)
                                       (match many (same-dec ctx wf lv cur slv scur) _
-                                        ((SDDiffer a4 b4 c4 df) (PDNo _ _ _ _ (NPCur ctx h ty a lv l cur df)))
-                                        ((SDSame a4 b4 c4 ssc) (PDYes ctx c l cur h ty a lv ssh ssty ssa ssc))))))))))))))))))))))
+                                        ((SDDiffer a4 b4 c4 df) (PDNo _ _ _ _ (NPCur ctx h hps ty a lv l cur df)))
+                                        ((SDSame a4 b4 c4 ssc) (PDYes ctx c l cur h hps ty a lv ssh ssty ssa ssc))))))))))))))))))))))
 (def-fns _ $ many subterm-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) c) (many (Term) a) (many (Term) b) (erased (Sc ctx (Zero) c) scc) (erased (Sc ctx (Zero) a) sa) (erased (Sc ctx (Zero) b) sb) -> (many (SubtermDec ctx c a b) r)
   (let (erased h1) (erased h2) (sc-builtin ctx wf))
-  (match many (not-app-dec c) _
-    ((IsNotApp x na) (STNo _ _ _ _ (NTNotApp ctx c a b na)))
-    ((IsApp h as)
-      (let (erased sh) (erased sas) (sc-app-parts ctx h as scc))
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp x na) (STNo _ _ _ _ (NTNotApp ctx c a b na)))
+    ((IsTyApp h hps as)
+      (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APTy h hps as) scc))
       (match many (not-len-dec (Succ (Succ (Succ (Succ (Zero))))) as) _
-        ((LenIsNot x d nl) (STNo _ _ _ _ (NTArity ctx h as a b nl)))
+        ((LenIsNot x d nl) (STNo _ _ _ _ (NTArity ctx h hps as a b nl)))
         ((LenIs x d ln)
           (match erased (len4 as ln) _
             ((MkAs4 x1 x2 x3 x4)
@@ -1371,14 +1405,14 @@
                               (let (erased stb) (erased srest3) (scl-parts ctx tb rest3 srest2))
                               (let (erased sb0) (erased srest4) (scl-parts ctx b0 rest4 srest3))
                               (match many (same-dec ctx wf h (Ref (Succ (Succ (Zero)))) sh (sc-ref ctx _ h2)) _
-                                ((SDDiffer a1 b1 c1 df) (STNo _ _ _ _ (NTHead ctx h as a b df)))
+                                ((SDDiffer a1 b1 c1 df) (STNo _ _ _ _ (NTHead ctx h hps as a b df)))
                                 ((SDSame a1 b1 c1 ssh)
                                   (match many (same-dec ctx wf a0 a sa0 sa) _
-                                    ((SDDiffer a3 b3 c3 df) (STNo _ _ _ _ (NTSmall ctx h ta a0 tb b0 a b df)))
+                                    ((SDDiffer a3 b3 c3 df) (STNo _ _ _ _ (NTSmall ctx h hps ta a0 tb b0 a b df)))
                                     ((SDSame a3 b3 c3 ssa)
                                       (match many (same-dec ctx wf b0 b sb0 sb) _
-                                        ((SDDiffer a4 b4 c4 df) (STNo _ _ _ _ (NTBig ctx h ta a0 tb b0 a b df)))
-                                        ((SDSame a4 b4 c4 ssb) (STYes ctx c a b h ta a0 tb b0 ssh ssa ssb))))))))))))))))))))))
+                                        ((SDDiffer a4 b4 c4 df) (STNo _ _ _ _ (NTBig ctx h hps ta a0 tb b0 a b df)))
+                                        ((SDSame a4 b4 c4 ssb) (STYes ctx c a b h hps ta a0 tb b0 ssh ssa ssb))))))))))))))))))))))
 
 ; A declared type constructor and a declared constructor, read through the entry each was minted with.
 (def-fns _ $ erased tycon-grew : (erased (Ctx) c1) (erased (Ctx) c2) (erased (Nat) tid) (many (WF c1) wf) (erased (Grew c1 c2) g) (erased (Tycon c1 tid) p) -> (erased (Tycon c2 tid) q)
@@ -1424,7 +1458,7 @@
 (def-adts
   (RetDec : ((Ctx) ctx) ((Nat) tid) ((Nat) n) ((Term) c) -> Type
     enum
-    (many RetYes : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (many (List (Term)) args) (erased (Length (Term) args n) ln) -> (RetDec ctx tid n (App (Ref tid) args)))
+    (many RetYes : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (many (List (Entry)) tps) (many (List (Term)) args) (erased (Length (Term) args n) ln) -> (RetDec ctx tid n (TyApp (Ref tid) tps args)))
     (many RetNo : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) c) (erased (BadRet ctx tid n c) p) -> (RetDec ctx tid n c))))
 (def-fns _ $ erased head-differ : (erased (Ctx) ctx) (erased (Term) h) (erased (Nat) tid) (erased (List (Ent)) e) (erased (Ents ctx e) ee) (erased (List (Rule)) r) (erased (Rules ctx r) rr) (erased (Canon r h h) chh)
     (erased (NonRef h) nr) (erased (NoRule r tid) nt) -> (erased (Differ ctx h (Ref tid)) d)
@@ -1438,55 +1472,57 @@
   (let (erased cc) (canon-canonical r ret c can))
   (let (erased nt) (decl-no-rule e r tid (TyCtor pt) eo rp))
   (let (erased ee) (EntsOf nx s e r a l sa))
-  (match many (not-app-dec c) _
-    ((IsNotApp x na) (RetNo _ _ _ _ (BRNotApp ctx tid n c na)))
-    ((IsApp h as)
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp x na) (RetNo _ _ _ _ (BRNotApp ctx tid n c na)))
+    ((IsTyApp h hps as)
       (match erased cc _
-        ((CnApp b h0 as0 ch cas)
+        ((CnTyApp b h0 ps0 as0 ch cas)
           (match many h _
             ((Ref y)
               (match many (nat-dec y tid) _
                 ((NDSame z)
                   (match many (not-len-dec n as) _
-                    ((LenIsNot b2 d nl) (RetNo _ _ _ _ (BRArity ctx tid n (Ref y) as nl)))
-                    ((LenIs b2 d ln) (RetYes _ _ _ as ln))))
+                    ((LenIsNot b2 d nl) (RetNo _ _ _ _ (BRArity ctx tid n (Ref y) hps as nl)))
+                    ((LenIs b2 d ln) (RetYes _ _ _ hps as ln))))
                 ((NDDiff z w nq)
                   (match erased ch _
                     ((CnRef b2 y0 ny)
-                      (RetNo _ _ _ _ (BRHead ctx tid n (Ref y) as (DifferBy ctx (Ref y) (Ref tid) e r ee (RulesOf nx s e r a l sa) (UCheckRefRef e r (Ref y) (Ref tid) (Nil _) y tid (CanFree r y ny) (CanFree r tid nt) nq)))))))))
-            ((Bound k) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRBound k) nt))))
-            ((App h2 as2) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRApp h2 as2) nt))))
-            ((Univ) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRUniv) nt))))
-            ((Fn lv ps rs) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRFn lv ps rs) nt))))
-            ((TyCtor ps) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRTyCtor ps) nt))))
-            ((ValCtor ps rt) (RetNo _ _ _ _ (BRHead ctx tid n h as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRValCtor ps rt) nt))))))))))
+                      (RetNo _ _ _ _ (BRHead ctx tid n (Ref y) hps as (DifferBy ctx (Ref y) (Ref tid) e r ee (RulesOf nx s e r a l sa) (UCheckRefRef e r (Ref y) (Ref tid) (Nil _) y tid (CanFree r y ny) (CanFree r tid nt) nq)))))))))
+            ((Bound k) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRBound k) nt))))
+            ((TyApp h2 ps2 as2) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRTyApp h2 ps2 as2) nt))))
+            ((ValApp h2 ps2 r2 as2) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRValApp h2 ps2 r2 as2) nt))))
+            ((Univ) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRUniv) nt))))
+            ((Fn lv ps rs) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRFn lv ps rs) nt))))
+            ((TyCtor ps) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRTyCtor ps) nt))))
+            ((ValCtor ps rt) (RetNo _ _ _ _ (BRHead ctx tid n h hps as (head-differ ctx h tid e ee r (RulesOf nx s e r a l sa) (canonical-fix r h ch) (NRValCtor ps rt) nt))))))))))
 
 ; Why a canonical scrutinee type cannot be matched, or the declared type constructor at its head.
 (def-adts
   (MatchableDec : ((Ctx) ctx) ((Term) c) -> Type
     enum
-    (many MatchableYes : (erased (Ctx) ctx) (many (Nat) tc) (many (List (Term)) targs) (many (List (Adt)) adts) (many (List (Nat)) ctors) (erased (Adts ctx adts) ad) (erased (AdtOf adts tc ctors) ao)
-       (erased (Ctors ctx ctors) cs) -> (MatchableDec ctx (App (Ref tc) targs)))
+    (many MatchableYes : (erased (Ctx) ctx) (many (Nat) tc) (many (List (Entry)) tps) (many (List (Term)) targs) (many (List (Adt)) adts) (many (List (Nat)) ctors) (erased (Adts ctx adts) ad) (erased (AdtOf adts tc ctors) ao)
+       (erased (Ctors ctx ctors) cs) -> (MatchableDec ctx (TyApp (Ref tc) tps targs)))
     (many MatchableNo : (erased (Ctx) ctx) (erased (Term) c) (erased (Unmatchable ctx c) p) -> (MatchableDec ctx c))))
 (def-fns _ $ many matchable-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) c) -> (many (MatchableDec ctx c) r)
   (let-match many ctx (MkCtx nx s e r a l sa))
   (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
-  (match many (not-app-dec c) _
-    ((IsNotApp x na) (MatchableNo _ _ (UmNotApp ctx c na)))
-    ((IsApp h as)
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp x na) (MatchableNo _ _ (UmNotApp ctx c na)))
+    ((IsTyApp h hps as)
       (match many h _
         ((Ref tc)
           (match many (adt-dec a tc) _
-            ((AdtMiss b d n) (MatchableNo _ _ (UmNoAdt ctx tc as a (AdtsOf nx s e r a l sa) n)))
+            ((AdtMiss b d n) (MatchableNo _ _ (UmNoAdt ctx tc hps as a (AdtsOf nx s e r a l sa) n)))
             ((AdtHit b d ctors ao)
               (let (erased ht) (erased acs) (adt-of-scoped e a tc ctors sa2 ao))
-              (MatchableYes _ tc as a ctors (AdtsOf nx s e r a l sa) ao (MkCtors _ _ _ _ _ _ _ ctors acs)))))
-        ((Bound k) (MatchableNo _ _ (UmHeadVar ctx (Bound k) as (NRBound k))))
-        ((App h2 as2) (MatchableNo _ _ (UmHeadVar ctx (App h2 as2) as (NRApp h2 as2))))
-        ((Univ) (MatchableNo _ _ (UmHeadVar ctx (Univ) as (NRUniv))))
-        ((Fn lv ps rs) (MatchableNo _ _ (UmHeadVar ctx (Fn lv ps rs) as (NRFn lv ps rs))))
-        ((TyCtor ps) (MatchableNo _ _ (UmHeadVar ctx (TyCtor ps) as (NRTyCtor ps))))
-        ((ValCtor ps rt) (MatchableNo _ _ (UmHeadVar ctx (ValCtor ps rt) as (NRValCtor ps rt))))))))
+              (MatchableYes _ tc hps as a ctors (AdtsOf nx s e r a l sa) ao (MkCtors _ _ _ _ _ _ _ ctors acs)))))
+        ((Bound k) (MatchableNo _ _ (UmHeadVar ctx (Bound k) hps as (NRBound k))))
+        ((TyApp h2 ps2 as2) (MatchableNo _ _ (UmHeadVar ctx (TyApp h2 ps2 as2) hps as (NRTyApp h2 ps2 as2))))
+        ((ValApp h2 ps2 r2 as2) (MatchableNo _ _ (UmHeadVar ctx (ValApp h2 ps2 r2 as2) hps as (NRValApp h2 ps2 r2 as2))))
+        ((Univ) (MatchableNo _ _ (UmHeadVar ctx (Univ) hps as (NRUniv))))
+        ((Fn lv ps rs) (MatchableNo _ _ (UmHeadVar ctx (Fn lv ps rs) hps as (NRFn lv ps rs))))
+        ((TyCtor ps) (MatchableNo _ _ (UmHeadVar ctx (TyCtor ps) hps as (NRTyCtor ps))))
+        ((ValCtor ps rt) (MatchableNo _ _ (UmHeadVar ctx (ValCtor ps rt) hps as (NRValCtor ps rt))))))))
 
 ; A canonical proof type as a Predates or Subterm application, or why not.
 (def-adts
@@ -1502,15 +1538,15 @@
     (many SSNo : (erased (Ctx) ctx) (erased (Term) c) (erased (NotSubtermShape ctx c) p) -> (SShapeDec ctx c))))
 (def-fns _ $ many predates-shape : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) c) (erased (Sc ctx (Zero) c) scc) -> (many (PShapeDec ctx c) r)
   (let (erased h1) (erased h2) (sc-builtin ctx wf))
-  (match many (not-app-dec c) _
-    ((IsNotApp x na) (PSNo _ _ (NPSNotApp ctx c na)))
-    ((IsApp h as)
-      (let (erased sh) (erased sas) (sc-app-parts ctx h as scc))
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp x na) (PSNo _ _ (NPSNotApp ctx c na)))
+    ((IsTyApp h hps as)
+      (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APTy h hps as) scc))
       (match many (not-len-dec (Succ (Succ (Succ (Zero)))) as) _
-        ((LenIsNot b d nl) (PSNo _ _ (NPSArity ctx h as nl)))
+        ((LenIsNot b d nl) (PSNo _ _ (NPSArity ctx h hps as nl)))
         ((LenIs b d ln)
           (match many (same-dec ctx wf h (Ref (Succ (Zero))) sh (sc-ref ctx _ h1)) _
-            ((SDDiffer a1 b1 c1 df) (PSNo _ _ (NPSHead ctx h as df)))
+            ((SDDiffer a1 b1 c1 df) (PSNo _ _ (NPSHead ctx h hps as df)))
             ((SDSame a1 b1 c1 ssh)
               (match erased (len3 as ln) _
                 ((MkAs3 x1 x2 x3)
@@ -1523,18 +1559,18 @@
                               (let (erased sty) (erased srest1) (scl-parts ctx ty rest1 sas))
                               (let (erased sa) (erased srest2) (scl-parts ctx a rest2 srest1))
                               (let (erased slv) (erased srest3) (scl-parts ctx lv rest3 srest2))
-                              (PSYes ctx c ty a lv (PSBy ctx h ty a lv ssh) sty sa slv))))))))))))))))
+                              (PSYes ctx c ty a lv (PSBy ctx h hps ty a lv ssh) sty sa slv))))))))))))))))
 (def-fns _ $ many subterm-shape : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) c) (erased (Sc ctx (Zero) c) scc) -> (many (SShapeDec ctx c) r)
   (let (erased h1) (erased h2) (sc-builtin ctx wf))
-  (match many (not-app-dec c) _
-    ((IsNotApp x na) (SSNo _ _ (NSSNotApp ctx c na)))
-    ((IsApp h as)
-      (let (erased sh) (erased sas) (sc-app-parts ctx h as scc))
+  (match many (tyapp-dec c) _
+    ((IsNotTyApp x na) (SSNo _ _ (NSSNotApp ctx c na)))
+    ((IsTyApp h hps as)
+      (let (erased sh) (erased sas) (sc-app-parts ctx _ h as (APTy h hps as) scc))
       (match many (not-len-dec (Succ (Succ (Succ (Succ (Zero))))) as) _
-        ((LenIsNot b d nl) (SSNo _ _ (NSSArity ctx h as nl)))
+        ((LenIsNot b d nl) (SSNo _ _ (NSSArity ctx h hps as nl)))
         ((LenIs b d ln)
           (match many (same-dec ctx wf h (Ref (Succ (Succ (Zero)))) sh (sc-ref ctx _ h2)) _
-            ((SDDiffer a1 b1 c1 df) (SSNo _ _ (NSSHead ctx h as df)))
+            ((SDDiffer a1 b1 c1 df) (SSNo _ _ (NSSHead ctx h hps as df)))
             ((SDSame a1 b1 c1 ssh)
               (match erased (len4 as ln) _
                 ((MkAs4 x1 x2 x3 x4)
@@ -1550,7 +1586,7 @@
                                   (let (erased sa) (erased srest2) (scl-parts ctx a rest2 srest1))
                                   (let (erased stb) (erased srest3) (scl-parts ctx tb rest3 srest2))
                                   (let (erased sb) (erased srest4) (scl-parts ctx b rest4 srest3))
-                                  (SSYes ctx c ta a tb b (SSBy ctx h ta a tb b ssh) sta sa stb sb))))))))))))))))))
+                                  (SSYes ctx c ta a tb b (SSBy ctx h hps ta a tb b ssh) sta sa stb sb))))))))))))))))))
 
 ; What each axiom concludes from two canonical proof types, with the evidence its rule wants; the
 ; derivation itself is assembled by [axiom-derivation], one case per axiom.
@@ -1558,14 +1594,14 @@
   (AxiomOk : ((Key) k) ((Ctx) ctx1) ((Term) cp) ((Ctx) ctx2) ((Term) cq) ((Term) concl) -> Type
     enum
     (many AOPredatesTrans : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l1) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2)
-       (erased (PredatesShape ctx1 cp ty a l1) s1) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Same ctx2 ty2 (App (Ref (Zero)) (Nil (Term)))) st) (erased (Same ctx2 l1b l1) sl) ->
-       (AxiomOk (KPredatesTrans) ctx1 cp ctx2 cq (App (Ref (Succ (Zero))) (Cons (Term) ty (Cons (Term) a (Cons (Term) l2 (Nil (Term))))))))
+       (erased (PredatesShape ctx1 cp ty a l1) s1) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Same ctx2 ty2 level-ty) st) (erased (Same ctx2 l1b l1) sl) ->
+       (AxiomOk (KPredatesTrans) ctx1 cp ctx2 cq (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) ty (Cons (Term) a (Cons (Term) l2 (Nil (Term))))))))
     (many AOSubtermTrans : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Term) tb2) (erased (Term) b2) (erased (Term) tc) (erased (Term) c)
        (erased (SubtermShape ctx1 cp ta a tb b) s1) (erased (SubtermShape ctx2 cq tb2 b2 tc c) s2) (erased (Same ctx2 tb2 tb) st) (erased (Same ctx2 b2 b) sb) ->
-       (AxiomOk (KSubtermTrans) ctx1 cp ctx2 cq (App (Ref (Succ (Succ (Zero)))) (Cons (Term) ta (Cons (Term) a (Cons (Term) tc (Cons (Term) c (Nil (Term)))))))))
+       (AxiomOk (KSubtermTrans) ctx1 cp ctx2 cq (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons (Term) ta (Cons (Term) a (Cons (Term) tc (Cons (Term) c (Nil (Term)))))))))
     (many AOPredatesSubterm : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l) (erased (Term) tb) (erased (Term) b) (erased (Term) ty2) (erased (Term) a2)
        (erased (PredatesShape ctx1 cp ty a l) s1) (erased (SubtermShape ctx2 cq tb b ty2 a2) s2) (erased (Same ctx2 ty2 ty) st) (erased (Same ctx2 a2 a) sa) ->
-       (AxiomOk (KPredatesSubterm) ctx1 cp ctx2 cq (App (Ref (Succ (Zero))) (Cons (Term) tb (Cons (Term) b (Cons (Term) l (Nil (Term)))))))))
+       (AxiomOk (KPredatesSubterm) ctx1 cp ctx2 cq (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) tb (Cons (Term) b (Cons (Term) l (Nil (Term)))))))))
   (AxiomDec : ((Key) k) ((Ctx) ctx1) ((Term) cp) ((Ctx) ctx2) ((Term) cq) -> Type
     enum
     (many AxOk : (erased (Key) k) (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (many (Term) concl) (erased (AxiomOk k ctx1 cp ctx2 cq concl) p) (erased (Sc ctx2 (Zero) concl) sc) ->
@@ -1582,14 +1618,14 @@
           (match many (predates-shape ctx2 wf2 cq scq) _
             ((PSNo c d n) (AxBad _ _ _ _ _ (ABPredatesTransQ ctx1 cp ctx2 cq n)))
             ((PSYes c d ty2 l1b l2 s2 sty2 sl1b sl2)
-              (match many (same-dec ctx2 wf2 ty2 (App (Ref (Zero)) (Nil _)) sty2 (sc-level-ty ctx2 wf2)) _
+              (match many (same-dec ctx2 wf2 ty2 level-ty sty2 (sc-level-ty ctx2 wf2)) _
                 ((SDDiffer e g2 h df) (AxBad _ _ _ _ _ (ABPredatesTransType ctx1 cp ctx2 cq ty2 l1b l2 s2 df)))
                 ((SDSame e g2 h st)
                   (match many (same-dec ctx2 wf2 l1b l1 sl1b (sc-grew ctx1 ctx2 _ l1 g sl1)) _
                     ((SDDiffer e2 g3 h3 df) (AxBad _ _ _ _ _ (ABPredatesTransLink ctx1 cp ctx2 cq ty a1 l1 ty2 l1b l2 s1 s2 df)))
                     ((SDSame e2 g3 h3 sl)
-                      (AxOk _ _ _ _ _ (App (Ref (Succ (Zero))) (Cons _ ty (Cons _ a1 (Cons _ l2 (Nil _))))) (AOPredatesTrans ctx1 cp ctx2 cq ty a1 l1 ty2 l1b l2 s1 s2 st sl)
-                        (sc-app ctx2 _ _ (sc-ref ctx2 _ h1) (scl-cons ctx2 _ _ (sc-grew ctx1 ctx2 _ ty g sty) (scl-cons ctx2 _ _ (sc-grew ctx1 ctx2 _ a1 g sa1) (scl-cons ctx2 _ _ sl2 (scl-nil ctx2)))))))))))))))
+                      (AxOk _ _ _ _ _ (TyApp (Ref (Succ (Zero))) predates-ps (Cons _ ty (Cons _ a1 (Cons _ l2 (Nil _))))) (AOPredatesTrans ctx1 cp ctx2 cq ty a1 l1 ty2 l1b l2 s1 s2 st sl)
+                        (sc-predates ctx2 wf2 _ _ _ (sc-grew ctx1 ctx2 _ ty g sty) (sc-grew ctx1 ctx2 _ a1 g sa1) sl2)))))))))))
     ((KSubtermTrans)
       (match many (subterm-shape ctx1 wf1 cp scp) _
         ((SSNo a b n) (AxBad _ _ _ _ _ (ABSubtermTransP ctx1 cp ctx2 cq n)))
@@ -1603,8 +1639,8 @@
                   (match many (same-dec ctx2 wf2 b2 b1 sb2 (sc-grew ctx1 ctx2 _ b1 g sb1)) _
                     ((SDDiffer e2 g3 h3 df) (AxBad _ _ _ _ _ (ABSubtermTransLink ctx1 cp ctx2 cq ta a1 tb b1 tb2 b2 tc c1 s1 s2 df)))
                     ((SDSame e2 g3 h3 sb)
-                      (AxOk _ _ _ _ _ (App (Ref (Succ (Succ (Zero)))) (Cons _ ta (Cons _ a1 (Cons _ tc (Cons _ c1 (Nil _)))))) (AOSubtermTrans ctx1 cp ctx2 cq ta a1 tb b1 tb2 b2 tc c1 s1 s2 st sb)
-                        (sc-app ctx2 _ _ (sc-ref ctx2 _ h2) (scl-cons ctx2 _ _ (sc-grew ctx1 ctx2 _ ta g sta) (scl-cons ctx2 _ _ (sc-grew ctx1 ctx2 _ a1 g sa1) (scl-cons ctx2 _ _ stc (scl-cons ctx2 _ _ sc1 (scl-nil ctx2))))))))))))))))
+                      (AxOk _ _ _ _ _ (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons _ ta (Cons _ a1 (Cons _ tc (Cons _ c1 (Nil _)))))) (AOSubtermTrans ctx1 cp ctx2 cq ta a1 tb b1 tb2 b2 tc c1 s1 s2 st sb)
+                        (sc-subterm ctx2 wf2 _ _ _ _ (sc-grew ctx1 ctx2 _ ta g sta) (sc-grew ctx1 ctx2 _ a1 g sa1) stc sc1)))))))))))
     ((KPredatesSubterm)
       (match many (predates-shape ctx1 wf1 cp scp) _
         ((PSNo a b n) (AxBad _ _ _ _ _ (ABPredatesSubtermP ctx1 cp ctx2 cq n)))
@@ -1618,8 +1654,8 @@
                   (match many (same-dec ctx2 wf2 a2 a1 sa2 (sc-grew ctx1 ctx2 _ a1 g sa1)) _
                     ((SDDiffer e2 g3 h3 df) (AxBad _ _ _ _ _ (ABPredatesSubtermLink ctx1 cp ctx2 cq ty a1 l tb b1 ty2 a2 s1 s2 df)))
                     ((SDSame e2 g3 h3 sa)
-                      (AxOk _ _ _ _ _ (App (Ref (Succ (Zero))) (Cons _ tb (Cons _ b1 (Cons _ l (Nil _))))) (AOPredatesSubterm ctx1 cp ctx2 cq ty a1 l tb b1 ty2 a2 s1 s2 st sa)
-                        (sc-app ctx2 _ _ (sc-ref ctx2 _ h1) (scl-cons ctx2 _ _ stb (scl-cons ctx2 _ _ sb1 (scl-cons ctx2 _ _ (sc-grew ctx1 ctx2 _ l g sl) (scl-nil ctx2)))))))))))))))
+                      (AxOk _ _ _ _ _ (TyApp (Ref (Succ (Zero))) predates-ps (Cons _ tb (Cons _ b1 (Cons _ l (Nil _))))) (AOPredatesSubterm ctx1 cp ctx2 cq ty a1 l tb b1 ty2 a2 s1 s2 st sa)
+                        (sc-predates ctx2 wf2 _ _ _ stb sb1 (sc-grew ctx1 ctx2 _ l g sl))))))))))))
     ((KFn) (match erased ak _)) ((KTyCtor) (match erased ak _)) ((KValCtor) (match erased ak _)) ((KIs) (match erased ak _)) ((KSubterm) (match erased ak _)) ((KPredates) (match erased ak _)) ((KLet) (match erased ak _)) ((KDefLvl) (match erased ak _)) ((KDefFns) (match erased ak _)) ((KDefAdts) (match erased ak _)) ((KMatch) (match erased ak _)) ((KValues) (match erased ak _)) ((KProveSubterm) (match erased ak _)) ((KProvePredates) (match erased ak _))))
 
 (def-fns _ $ erased axiom-derivation : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp)
@@ -1723,13 +1759,11 @@
   (CoveredDec : ((Ctx) ctx) ((Nat) s) ((List (Nat)) ctors) ((List (Nat)) seen) -> Type
     enum
     (many CovYes : (erased (Ctx) ctx) (erased (Nat) s) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (Covered ctx s ctors seen) p) -> (CoveredDec ctx s ctors seen))
-    (many CovNo : (erased (Ctx) ctx) (erased (Nat) s) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (Uncovered ctx s ctors seen) p) -> (CoveredDec ctx s ctors seen))
-    (many CovStuck : (erased (Ctx) ctx) (erased (Nat) s) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) -> (CoveredDec ctx s ctors seen)))
+    (many CovNo : (erased (Ctx) ctx) (erased (Nat) s) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (Uncovered ctx s ctors seen) p) -> (CoveredDec ctx s ctors seen)))
   (RefutedDec : ((Ctx) ctx) ((Nat) s) ((Nat) c) -> Type
     enum
     (many RefYes : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) (erased (Refuted ctx s c) p) -> (RefutedDec ctx s c))
-    (many RefNo : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) (erased (Reachable ctx s c) p) -> (RefutedDec ctx s c))
-    (many RefStuck : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) -> (RefutedDec ctx s c)))
+    (many RefNo : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) (erased (Reachable ctx s c) p) -> (RefutedDec ctx s c)))
   (BodyDec : ((Ctx) ctx) ((List (Raw)) items) -> Type
     enum
     (many MkBodyDec : (erased (Ctx) ctx) (erased (List (Raw)) items) (many (EOut) out) (erased (ElabBody ctx items out) p) (many (ESc ctx out) sc) -> (BodyDec ctx items))
@@ -1889,12 +1923,10 @@
   (let (many fs) (many ret) (many cty) (erased t) (erased cn) (erased fd) (erased sfs) (erased sret) (ctor-of ctx wf c cc))
   (let (many names) (erased nn) (erased ln) (nones fs))
   (match many (mint-tele ctx wf (Nil _) _ (scs-nil ctx) fs _ sfs names ln) _
-    ((MTStuck a2 b2 c2 d2) (RefStuck _ _ _))
     ((MTMinted a2 b2 c2 d2 ctxF fids wfF gF hfids le mt)
       (let (many frefs) (erased rf) (refs fids))
       (let (erased sfrefs) (refs-scoped ctxF fids frefs hfids rf))
-      (match many (refine ctxF wfF (Ref s) (App (Ref c) frefs) (sc-ref ctxF s (has-grew ctx ctxF s gF hs)) (sc-app ctxF (Ref c) frefs (sc-ref ctxF c (has-grew ctx ctxF c gF (ctor-has ctx c cc))) sfrefs)) _
-        ((RDStuck a5 b5 c5) (RefStuck _ _ _))
+      (match many (refine ctxF wfF (Ref s) (ValApp (Ref c) fs ret frefs) (sc-ref ctxF s (has-grew ctx ctxF s gF hs)) (sc-valapp ctxF (Ref c) fs ret frefs _ (sc-ref ctxF c (has-grew ctx ctxF c gF (ctor-has ctx c cc))) (sct-grew ctx ctxF _ fs _ gF sfs) (sc-grew ctx ctxF _ ret gF sret) sfrefs (refs-len-eq fs fids frefs le rf))) _
         ((RDContradicted a5 b5 c5 cd) (RefYes _ _ _ (RefutedBy ctx s c cty fs ret names ctxF fids frefs t cn nn mt rf cd)))
         ((RDRefined a5 b5 c5 ctxR wfR gR rf2) (RefNo _ _ _ (ReachableBy ctx s c cty fs ret names ctxF fids frefs ctxR t cn nn mt rf rf2)))))))
 (def-fns _ $ many covered : (many (Ctx) ctx) (many (WF ctx) wf) (many (Nat) s) (erased (Has ctx s) hs) (subterm many (List (Nat)) ctors) (erased (Ctors ctx ctors) cs) (many (List (Nat)) seen) -> (many (CoveredDec ctx s ctors seen) r)
@@ -1904,16 +1936,13 @@
       (match many (mem-dec c seen) _
         ((MemYes b d m)
           (match many (covered ctx wf s hs rest (ctors-parts ctx c rest cs) seen) _
-            ((CovStuck e g h k) (CovStuck _ _ _ _))
             ((CovYes e g h k p) (CovYes _ _ _ _ (CvSeen ctx s c rest seen m p)))
             ((CovNo e g h k p) (CovNo _ _ _ _ (UcThere ctx s c rest seen p)))))
         ((MemNo b d nm)
           (match many (refuted ctx wf s hs c (ctors-head ctx c rest cs)) _
-            ((RefStuck e g h) (CovStuck _ _ _ _))
             ((RefNo e g h rc) (CovNo _ _ _ _ (UcHere ctx s c rest seen nm rc)))
             ((RefYes e g h rf)
               (match many (covered ctx wf s hs rest (ctors-parts ctx c rest cs) seen) _
-                ((CovStuck e2 g2 h2 k2) (CovStuck _ _ _ _))
                 ((CovYes e2 g2 h2 k2 p) (CovYes _ _ _ _ (CvRefuted ctx s c rest seen nm rf p)))
                 ((CovNo e2 g2 h2 k2 p) (CovNo _ _ _ _ (UcThere ctx s c rest seen p)))))))))))
 
@@ -2028,7 +2057,7 @@
                             (let (many c) (erased crn) (erased scc) (canonical ctxF wfF ret sret))
                             (match many (ret-dec ctxF wfF tid (tycon-grew ctx ctxF tid wf gF tc) n ret c crn) _
                               ((RetNo a1 b1 c1 d1 br) (MkDeclCtorsDec _ _ _ _ (FErrT (RBadReturn)) (MDBadRet ctx tid n cn fs rr rest ctxF ft fids fn ret rty c ef er crn br) (DCErr _ _)))
-                              ((RetYes a1 b1 c1 args lnn)
+                              ((RetYes a1 b1 c1 tps args lnn)
                                 (let (many acc) (erased bd) (binders fids))
                                 (let (many ret2) (erased ab) (abstract acc ret))
                                 (let (erased sret2) (sc-abstract ctx acc ctxF _ ret ret2 (cov-binders ctx fids ctxF acc _ ft cr bd sft li) sret ab))
@@ -2037,11 +2066,11 @@
                                   ((DeclCtorsStuck a3 b3 c3 d3) (DeclCtorsStuck _ _ _ _))
                                   ((MkDeclCtorsDec a3 b3 c3 d3 dout q dsc)
                                     (match many dout _
-                                      ((FErrT r) (MkDeclCtorsDec _ _ _ _ (FErrT r) (MDRestErr ctx tid n cn fs rr rest ctxF ft fids fn ret rty args acc ret2 cid ctx1 r ef er crn lnn bd ab m q) (DCErr _ _)))
+                                      ((FErrT r) (MkDeclCtorsDec _ _ _ _ (FErrT r) (MDRestErr ctx tid n cn fs rr rest ctxF ft fids fn ret rty tps args acc ret2 cid ctx1 r ef er crn lnn bd ab m q) (DCErr _ _)))
                                       ((FOkT out cids)
                                         (match many dsc _
                                           ((DCOk x1 x2 x3 wf2 g2 ccids)
-                                            (MkDeclCtorsDec _ _ _ _ (FOkT out (Cons _ cid cids)) (MDCons ctx tid n cn fs rr rest ctxF ft fids fn ret rty args acc ret2 cid ctx1 out cids ef er crn lnn bd ab m q)
+                                            (MkDeclCtorsDec _ _ _ _ (FOkT out (Cons _ cid cids)) (MDCons ctx tid n cn fs rr rest ctxF ft fids fn ret rty tps args acc ret2 cid ctx1 out cids ef er crn lnn bd ab m q)
                                               (DCOk _ _ _ wf2 (grew-trans ctx ctx1 out g1 g2) (ctors-cons out cid cids (ctor-grew ctx1 out cid wf1 g2 (ctor-of-entis ctx1 cid ft ret2 eis)) ccids)))))))))))))))))))))))))
 (def-fns _ $ many mint-tycons : (many (Ctx) ctx) (many (WF ctx) wf) (subterm many (List (Raw)) decls) -> (many (TyconsDec ctx decls) r)
   (match many decls _
@@ -2178,8 +2207,8 @@
                             ((SubNo a1 b1 c4 ns) (MkExprDec _ _ (EErr (RBadProof)) (EXProveSubtermNot ctx ar br at aty bt bty ca cb p q c1 c2 ns) (ESErr _ _)))
                             ((SubYes a1 b1 c4 ss)
                               (let (many e3) (many out) (erased m) (many wf2) (erased g2) (erased eis)
-                                (mint ctx wf (None _) (App (Ref (Succ (Succ (Zero)))) (Cons _ aty (Cons _ at (Cons _ bty (Cons _ bt (Nil _)))))) (KPlain) (None _)
-                                  (sc-app ctx _ _ (sc-ref ctx _ h2) (scl-cons ctx _ _ saty (scl-cons ctx _ _ sat (scl-cons ctx _ _ sbty (scl-cons ctx _ _ sbt (scl-nil ctx)))))) (scm-none ctx) (ROkNone _)))
+                                (mint ctx wf (None _) (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons _ aty (Cons _ at (Cons _ bty (Cons _ bt (Nil _)))))) (KPlain) (None _)
+                                  (sc-subterm ctx wf _ _ _ _ saty sat sbty sbt) (scm-none ctx) (ROkNone _)))
                               (MkExprDec _ _ (EOk out (CToken) (Cons _ e3 (Nil _))) (EXProveSubterm ctx ar br at aty bt bty ca cb e3 out p q c1 c2 ss m)
                                 (ESOk _ _ _ _ wf2 g2 (has-all-cons out e3 (Nil _) (entis-has out e3 _ _ eis) (has-all-nil out)))))))))))))))))))
 (def-fns _ $ many elab-prove-predates : (many (Ctx) ctx) (many (WF ctx) wf) (many (String) xs) (many (String) ls) ->
@@ -2203,8 +2232,8 @@
               (match many (nat-cmp x l) _
                 ((CLt a1 b1 c1 d1 lt)
                   (let (many e4) (many out) (erased m) (many wf2) (erased g2) (erased eis)
-                    (mint ctx wf (None _) (App (Ref (Succ (Zero))) (Cons _ tx (Cons _ (Ref x) (Cons _ (Ref l) (Nil _))))) (KPlain) (None _)
-                      (sc-app ctx _ _ (sc-ref ctx _ h1) (scl-cons ctx _ _ stx (scl-cons ctx _ _ (sc-ref ctx x hx) (scl-cons ctx _ _ (sc-ref ctx l hl) (scl-nil ctx))))) (scm-none ctx) (ROkNone _)))
+                    (mint ctx wf (None _) (TyApp (Ref (Succ (Zero))) predates-ps (Cons _ tx (Cons _ (Ref x) (Cons _ (Ref l) (Nil _))))) (KPlain) (None _)
+                      (sc-predates ctx wf _ _ _ stx (sc-ref ctx x hx) (sc-ref ctx l hl)) (scm-none ctx) (ROkNone _)))
                   (MkExprDec _ _ (EOk out (CToken) (Cons _ e4 (Nil _))) (EXProvePredates ctx xs ls scope x l tx e4 out sc nx nl t kd lt m)
                     (ESOk _ _ _ _ wf2 g2 (has-all-cons out e4 (Nil _) (entis-has out e4 _ _ eis) (has-all-nil out)))))
                 ((CEq a1 b1 c1) (MkExprDec _ _ (EErr (RBadProof)) (EXProvePredatesAfter ctx xs ls scope x l sc nx nl kd (lt-succ x)) (ESErr _ _)))
@@ -2373,8 +2402,8 @@
                                   ((AOOk a3 b3 c3 d3 wf2 g2 hids2)
                                     (let (many ts) (erased rf) (refs ids))
                                     (let (many e3) (many out) (erased m) (many wf3) (erased g3) (erased eis)
-                                      (mint ctx2 wf2 (None _) (Univ) (KPlain) (Some _ (App (Ref x) ts)) (sc-univ ctx2)
-                                        (scm-some ctx2 _ (sc-app ctx2 (Ref x) ts (sc-ref ctx2 x (has-grew ctx1 ctx2 x g2 hx)) (refs-scoped ctx2 ids ts hids2 rf))) (ROkSome _ _ (NDPlain))))
+                                      (mint ctx2 wf2 (None _) (Univ) (KPlain) (Some _ (TyApp (Ref x) ps ts)) (sc-univ ctx2)
+                                        (scm-some ctx2 _ (sc-tyapp ctx2 (Ref x) ps ts _ (sc-ref ctx2 x (has-grew ctx1 ctx2 x g2 hx)) (sct-grew ctx1 ctx2 _ ps _ g2 sps) (refs-scoped ctx2 ids ts hids2 rf) (refs-len-eq ps ids ts (arglen-ok ps ctx2 cores ids al) rf))) (ROkSome _ _ (NDPlain))))
                                     (MkExprDec _ _ (EOk out (CApp hc cores) (Cons _ e3 (Nil _))) (EXTyApp ctx h items ctx1 hc x hty ps ctx2 cores ids ts e3 out hr p t cn ap rf m)
                                       (ESOk _ _ _ _ wf3 (grew-trans ctx ctx2 out (grew-trans ctx ctx1 ctx2 g1 g2) g3) (has-all-cons out e3 (Nil _) (entis-has out e3 _ _ eis) (has-all-nil out)))))))))))
                       ((ValCtor ps ret)
@@ -2392,8 +2421,8 @@
                                     (let (erased le) (arglen-ok ps ctx2 cores ids al))
                                     (let (many sub) (erased so) (many ty) (erased sb) (erased sty) (inst-ret-sc ctx2 pd ps ret ts (sct-grew ctx1 ctx2 _ ps _ g2 sps) (sc-grew ctx1 ctx2 _ ret g2 sret) sts (refs-len-eq ps ids ts le rf)))
                                     (let (many e3) (many out) (erased m) (many wf3) (erased g3) (erased eis)
-                                      (mint ctx2 wf2 (None _) ty (KPlain) (Some _ (App (Ref x) ts)) sty
-                                        (scm-some ctx2 _ (sc-app ctx2 (Ref x) ts (sc-ref ctx2 x (has-grew ctx1 ctx2 x g2 hx)) sts)) (ROkSome _ _ (NDPlain))))
+                                      (mint ctx2 wf2 (None _) ty (KPlain) (Some _ (ValApp (Ref x) ps ret ts)) sty
+                                        (scm-some ctx2 _ (sc-valapp ctx2 (Ref x) ps ret ts _ (sc-ref ctx2 x (has-grew ctx1 ctx2 x g2 hx)) (sct-grew ctx1 ctx2 _ ps _ g2 sps) (sc-grew ctx1 ctx2 _ ret g2 sret) sts (refs-len-eq ps ids ts le rf))) (ROkSome _ _ (NDPlain))))
                                     (MkExprDec _ _ (EOk out (CApp hc cores) (Cons _ e3 (Nil _))) (EXValApp ctx h items ctx1 hc x hty ps ret ctx2 cores ids ts sub ty e3 out hr p t cn ap rf so sb m)
                                       (ESOk _ _ _ _ wf3 (grew-trans ctx ctx2 out (grew-trans ctx ctx1 ctx2 g1 g2) g3) (has-all-cons out e3 (Nil _) (entis-has out e3 _ _ eis) (has-all-nil out)))))))))))
                       ((Fn l ps rs)
@@ -2425,13 +2454,13 @@
                                                         (let (erased g13) (grew-trans ctx1 ctx2 ctx3 g2 g3))
                                                         (let (erased sts) (refs-scoped ctx3 ids ts (has-all-grew ctx2 ctx3 ids g3 hids2) rf))
                                                         (match many (mint-tele ctx3 wf3 sub _ (sc-somes ctx3 ts sub _ (refs-length ids ts _ rf (tele-ids-length ctx1 ps ids _ sps le)) sts so) rs _ (sct-grew ctx1 ctx3 _ rs _ g13 srs) names ln) _
-                                                          ((MTStuck a7 b7 c7 d7) (ExprStuck _ _))
                                                           ((MTMinted a7 b7 c7 d7 out rids wf4 g4 hrids le2 m)
                                                             (MkExprDec _ _ (EOk out (CCall hc cores) rids) (EXCall ctx h items ctx1 hc x hty l ps rs ann args ctx2 cores ids ctx3 ts sub names out rids hr p t cn cr ap dp rf so nn m)
                                                               (ESOk _ _ _ _ wf4 (grew-trans ctx ctx3 out (grew-trans ctx ctx1 ctx3 g1 g13) g4) hrids)))))))))))))))))))))
                       ((Ref y) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (Ref y) hr p t cn (NTNRef y)) (ESErr _ _)))
                       ((Bound kk) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (Bound kk) hr p t cn (NTNBound kk)) (ESErr _ _)))
-                      ((App h2 as2) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (App h2 as2) hr p t cn (NTNApp h2 as2)) (ESErr _ _)))
+                      ((TyApp h2 ps2 as2) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (TyApp h2 ps2 as2) hr p t cn (NTNTyApp h2 ps2 as2)) (ESErr _ _)))
+                      ((ValApp h2 ps2 r2 as2) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (ValApp h2 ps2 r2 as2) hr p t cn (NTNValApp h2 ps2 r2 as2)) (ESErr _ _)))
                       ((Univ) (MkExprDec _ _ (EErr (RNotApplicable)) (EXNotApplicable ctx h items ctx1 hc x hty (Univ) hr p t cn (NTNUniv)) (ESErr _ _)))))))))))))
   ; Arguments, expressions of size one, against a telescope, each a part of the call's items.
   (many elab-expr-args : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Maybe (Term))) acc) (erased (Nat) m) (erased (ScS ctx acc m) sacc) (many (List (Entry)) tele) (erased (Nat) out) (erased (ScT ctx m tele out) stele)
@@ -2534,8 +2563,8 @@
                                 (let (many c) (erased cn) (erased scc) (canonical ctx1 wf1 pty spty))
                                 (match many (predates-dec ctx1 wf1 c l cur scc (sc-grew ctx ctx1 _ l g1 sl) (sc-grew ctx ctx1 _ cur g1 scur)) _
                                   ((PDNo a1 b2 c2 d2 np) (MkDecreaseDec _ _ _ _ _ (DErr (RBadProof)) (DPredatesBad ctx l ps ids pr cur ctx1 pc p pty c lv ep t cn np) (DSErr _ _)))
-                                  ((PDYes a1 b2 c2 d2 hh ty aa lv2 sh sty sa scc2)
-                                    (MkDecreaseDec _ _ _ _ _ (DOk ctx1) (DPredates ctx l ps ids pr cur ctx1 pc p pty hh ty aa lv2 lv ep t cn sh sty sa scc2) (DSOk _ _ wf1 g1)))))))))))))))
+                                  ((PDYes a1 b2 c2 d2 hh hps ty aa lv2 sh sty sa scc2)
+                                    (MkDecreaseDec _ _ _ _ _ (DOk ctx1) (DPredates ctx l ps ids pr cur ctx1 pc p pty hh hps ty aa lv2 lv ep t cn sh sty sa scc2) (DSOk _ _ wf1 g1)))))))))))))))
           ((ASubterm i pr)
             (match many (same-dec ctx wf l cur sl scur) _
               ((SDDiffer b c d df) (MkDecreaseDec _ _ _ _ _ (DErr (RBadProof)) (DSubtermLevel ctx l ps ids i pr cur lv df) (DSErr _ _)))
@@ -2569,8 +2598,8 @@
                                                 (let (many c) (erased cn) (erased scc) (canonical ctx1 wf1 pty spty))
                                                 (match many (subterm-dec ctx1 wf1 c (Ref xi) bb scc (sc-ref ctx1 xi (has-grew ctx ctx1 xi g1 (nth-has ctx ids i xi hids ni))) (sc-grew ctx ctx1 _ bb g1 sbb)) _
                                                   ((STNo a7 b7 c7 d7 ns) (MkDecreaseDec _ _ _ _ _ (DErr (RBadProof)) (DSubtermBad ctx l ps ids i pr cur j xi cargs subargs bb ctx1 pc p pty c lv sl2 mi ni mk sa sp ep t cn ns) (DSErr _ _)))
-                                                  ((STYes a7 b7 c7 d7 hh ta a0 tb b0 sh sa0 sb0)
-                                                    (MkDecreaseDec _ _ _ _ _ (DOk ctx1) (DSubterm ctx l ps ids i pr cur j xi cargs subargs bb ctx1 pc p pty hh ta a0 tb b0 lv sl2 mi ni mk sa sp ep t cn sh sa0 sb0) (DSOk _ _ wf1 g1)))))))))))))))))))))))))))
+                                                  ((STYes a7 b7 c7 d7 hh hps ta a0 tb b0 sh sa0 sb0)
+                                                    (MkDecreaseDec _ _ _ _ _ (DOk ctx1) (DSubterm ctx l ps ids i pr cur j xi cargs subargs bb ctx1 pc p pty hh hps ta a0 tb b0 lv sl2 mi ni mk sa sp ep t cn sh sa0 sb0) (DSOk _ _ wf1 g1)))))))))))))))))))))))))))
   ; (match s (rets) branches...)
   (many elab-match : (many (Ctx) ctx) (many (WF ctx) wf) (many (Raw) sr) (many (List (Raw)) ann) (many (List (Raw)) brs) (subterm many (Cons (Raw) sr (Cons (Raw) (RList ann) brs)) is rest)
       (subterm many (POuter (PInner)) is ph) (subterm many (Nil (Raw)) is tl) -> (many (ExprDec ctx (RList (Cons (Raw) (RKey (KMatch)) rest))) r)
@@ -2590,7 +2619,7 @@
                     (let (many cs) (erased cn) (erased scs) (canonical ctx1 wf1 sty ssty))
                     (match many (matchable-dec ctx1 wf1 cs) _
                       ((MatchableNo a2 b2 um) (MkExprDec _ _ (EErr (RNotMatchable)) (EXNotMatchable ctx sr ann brs ctx1 sc s sty cs p t cn um) (ESErr _ _)))
-                      ((MatchableYes a2 tc targs adts ctors ad ao cctors)
+                      ((MatchableYes a2 tc tps targs adts ctors ad ao cctors)
                         (match many (elab-tele ctx1 ctx1 wf1 (Nil _) _ (cov-refl ctx1) ann (POuter (PInner))) _
                           ((TeleStuck a3 b3 c3 d3 mq) (ExprStuck _ _))
                           ((MkTeleDec a3 b3 c3 d3 mq tout et tsc)
@@ -2604,20 +2633,18 @@
                                       ((BranchesStuck a4 b4 c4 d4 e4 g4 h4) (ExprStuck _ _))
                                       ((MkBranchesDec a4 b4 c4 d4 e4 g4 h4 bout eb bsc)
                                         (match many bout _
-                                          ((BrErr r) (MkExprDec _ _ (EErr r) (EXMatchBranchesErr ctx sr ann brs ctx1 sc s sty tc targs adts ctors ctxA rt rids rn ctx2 r p t cn ad ao et lv eb) (ESErr _ _)))
+                                          ((BrErr r) (MkExprDec _ _ (EErr r) (EXMatchBranchesErr ctx sr ann brs ctx1 sc s sty tc tps targs adts ctors ctxA rt rids rn ctx2 r p t cn ad ao et lv eb) (ESErr _ _)))
                                           ((BrOk ctx3 cbs seen)
                                             (match many bsc _
                                               ((BrSOk a5 b5 c5 d5 wf3 g23)
                                                 (let (erased g13) (grew-trans ctx1 ctx2 ctx3 g12 g23))
                                                 (match many (covered ctx3 wf3 s (has-grew ctx1 ctx3 s g13 hss) ctors (ctors-grew ctx1 ctx3 ctors wf1 g13 cctors) seen) _
-                                                  ((CovStuck a6 b6 c6 d6) (ExprStuck _ _))
-                                                  ((CovNo a6 b6 c6 d6 uc) (MkExprDec _ _ (EErr (RMissingBranch)) (EXMatchUncovered ctx sr ann brs ctx1 sc s sty tc targs adts ctors ctxA rt rids rn ctx2 ctx3 cbs seen p t cn ad ao et lv eb uc) (ESErr _ _)))
+                                                  ((CovNo a6 b6 c6 d6 uc) (MkExprDec _ _ (EErr (RMissingBranch)) (EXMatchUncovered ctx sr ann brs ctx1 sc s sty tc tps targs adts ctors ctxA rt rids rn ctx2 ctx3 cbs seen p t cn ad ao et lv eb uc) (ESErr _ _)))
                                                   ((CovYes a6 b6 c6 d6 cv)
                                                     (let (many names) (erased nn) (erased ln2) (nones rt))
                                                     (match many (mint-tele ctx3 wf3 (Nil _) _ (scs-nil ctx3) rt _ (sct-grew ctx1 ctx3 _ rt _ g13 srt) names ln2) _
-                                                      ((MTStuck a7 b7 c7 d7) (ExprStuck _ _))
                                                       ((MTMinted a7 b7 c7 d7 out ids wf4 g34 hids le m)
-                                                        (MkExprDec _ _ (EOk out (CMatch sc cbs) ids) (EXMatch ctx sr ann brs ctx1 sc s sty tc targs adts ctors ctxA rt rids rn ctx2 ctx3 cbs seen names out ids p t cn ad ao et lv eb cv nn m)
+                                                        (MkExprDec _ _ (EOk out (CMatch sc cbs) ids) (EXMatch ctx sr ann brs ctx1 sc s sty tc tps targs adts ctors ctxA rt rids rn ctx2 ctx3 cbs seen names out ids p t cn ad ao et lv eb cv nn m)
                                                           (ESOk _ _ _ _ wf4 (grew-trans ctx ctx3 out (grew-trans ctx ctx1 ctx3 g1 g13) g34) hids)))))))))))))))))))))))))))))
   (many elab-branches : (many (Ctx) ctx) (many (WF ctx) wf) (many (Nat) s) (erased (Has ctx s) hs) (many (Nat) tc) (many (List (Nat)) ctors) (erased (Ctors ctx ctors) cctors) (many (List (Nat)) seen) (many (List (Entry)) rt)
       (erased (Nat) rout) (erased (ScT ctx (Zero) rt rout) srt) (subterm many (List (Raw)) brs) (subterm many (POuter (PInner)) is ph) (subterm many (Nil (Raw)) is tl) -> (many (BranchesDec ctx s tc ctors seen rt brs) r)
@@ -2662,12 +2689,10 @@
                       ((LenDiff x1 x2 x3 x4 lm) (BranchesStuck _ _ _ _ _ _ _))
                       ((LenSame x1 x2 x3 x4 lfs)
                         (match many (mint-tele ctx wf (Nil _) _ (scs-nil ctx) fs _ sfs names (len-eq-trans _ _ _ fs fnames names lfs lfn)) _
-                          ((MTStuck a2 b2 c2 d2) (BranchesStuck _ _ _ _ _ _ _))
                           ((MTMinted a2 b2 c2 d2 ctxF fids wfF gF hfids le mt)
                             (let (many frefs) (erased rf) (refs fids))
                             (let (erased sfrefs) (refs-scoped ctxF fids frefs hfids rf))
-                            (match many (refine ctxF wfF (Ref s) (App (Ref c) frefs) (sc-ref ctxF s (has-grew ctx ctxF s gF hs)) (sc-app ctxF (Ref c) frefs (sc-ref ctxF c (has-grew ctx ctxF c gF (ctor-has ctx c cc))) sfrefs)) _
-                              ((RDStuck a5 b5 c5) (BranchesStuck _ _ _ _ _ _ _))
+                            (match many (refine ctxF wfF (Ref s) (ValApp (Ref c) fs ret frefs) (sc-ref ctxF s (has-grew ctx ctxF s gF hs)) (sc-valapp ctxF (Ref c) fs ret frefs _ (sc-ref ctxF c (has-grew ctx ctxF c gF (ctor-has ctx c cc))) (sct-grew ctx ctxF _ fs _ gF sfs) (sc-grew ctx ctxF _ ret gF sret) sfrefs (refs-len-eq fs fids frefs le rf))) _
                               ((RDContradicted a5 b5 c5 cd)
                                 (MkBranchesDec _ _ _ _ _ _ _ (BrErr (RRefutedBranch)) (EBRefuted ctx s tc ctors seen rt cs fnames items rest scope c cty fs ret names ctxF fids frefs sc n mc ns t cn an mt rf cd) (BrSErr _ _)))
                               ((RDRefined a5 b5 c5 ctxR wfR gR rf2)
@@ -2772,7 +2797,7 @@
                           ((Nil c)
                             (match many lr _
                               ((RAtom ls)
-                                (let (many x) (many out) (erased m) (many wf2) (erased g2) (erased eis) (mint ctx wf (Some _ ls) (App (Ref (Zero)) (Nil _)) (KLevel) (None _) (sc-level-ty ctx wf) (scm-none ctx) (ROkNone _)))
+                                (let (many x) (many out) (erased m) (many wf2) (erased g2) (erased eis) (mint ctx wf (Some _ ls) level-ty (KLevel) (None _) (sc-level-ty ctx wf) (scm-none ctx) (ROkNone _)))
                                 (MkStmtDec _ _ (SOk out (SDefLvl x)) (STDefLvl ctx ls x out m) (SSOk _ _ _ wf2 g2)))
                               (else (StmtStuck _ _))))
                           (else (StmtStuck _ _))))
@@ -2818,7 +2843,7 @@
           ((TOk l lty)
             (match erased tsc _
               ((TSOk a2 b2 c2 sl slty)
-                (match many (same-dec ctx wf lty (App (Ref (Zero)) (Nil _)) slty (sc-level-ty ctx wf)) _
+                (match many (same-dec ctx wf lty level-ty slty (sc-level-ty ctx wf)) _
                   ((SDDiffer c d e df) (MkStmtDec _ _ (SErr (RNotLevel)) (STDefFnsNotLevel ctx lr defs l lty p df) (SSErr _ _)))
                   ((SDSame c d e sm)
                     (match many (mint-fns ctx wf l sl defs (POuter (PInner))) _
@@ -2880,7 +2905,6 @@
       (subterm many (Cons (Raw) (RList (Cons (Raw) (RAtom fn) (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) items)))) rest) is defs) (subterm many (PInner) is ph) (subterm many (Nil (Raw)) is tl) ->
       (many (BodiesDec ctx l (Cons (Sig) (MkSig fid pt pn rt) sigs) defs) r)
     (match many (mint-tele ctx wf (Nil _) _ (scs-nil ctx) pt _ spt pn lpn) _
-      ((MTStuck a b c d) (BodiesStuck _ _ _ _))
       ((MTMinted a b c d ctxP pids wfP gP hpids le2 m)
         (let (many subargs) (erased mk) (marked pt pids le2))
         (let (many ctxE) (erased en) (many wfE) (erased gE) (enter ctxP wfP l subargs (sc-grew ctx ctxP _ l gP sl) (marked-scoped ctxP pt pids subargs hpids mk)))
@@ -2918,7 +2942,7 @@
     (BECons _ _ _ _ _ (LtS _ _ (LtS _ _ (LtS _ _ (LtZ _)))) (BECons _ _ _ _ _ (LtS _ _ (LtS _ _ (LtZ _))) (BECons _ _ _ _ _ (LtS _ _ (LtZ _)) (BECons _ _ _ _ _ (LtZ _) (BENil _)))))
     (SECons _ _ _ _ _ (ScUniv _ _)
       (SECons _ _ _ _ _ (ScTyCtor _ _ _ _ (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTNil _ _))))))
-        (SECons _ _ _ _ _ (ScTyCtor _ _ _ _ (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScApp _ _ _ _ (ScRef _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEHere _ _ _ _))))) (ScNil _ _)) (ScTNil _ _)))))
+        (SECons _ _ _ _ _ (ScTyCtor _ _ _ _ (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEHere _ _ _ _))))) (ScTNil _ _) (ScNil _ _) (LENil _ _)) (ScTNil _ _)))))
           (SECons _ _ _ _ _ (ScTyCtor _ _ _ _ (ScTNil _ _)) (SENil _)))))
     (SSCons _ _ _ _ (HEHere _ _ _ _) (SSCons _ _ _ _ (HEThere _ _ _ (HEHere _ _ _ _)) (SSCons _ _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEHere _ _ _ _))) (SSCons _ _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEThere _ _ _ (HEHere _ _ _ _)))) (SSNil _)))))
     (SRCons _ _ _ _ (ScUniv _ _) (SRNil _)) (SANil _) (SMNone _) (ScNil _ _)

@@ -133,7 +133,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
 
 20. **A `_` in an unannotated top-level `let` has nothing to solve it.**
     Test files that build evidence by hand had to spell out every depth
-    (`(ScApp ents (Zero) ...)`) where the same term inside a function
+    (`(ScTyApp ents (Zero) ...)`) where the same term inside a function
     body infers it from the expected type. Letting a run-position `let`
     take an expectation from a later use, or reporting which `_` is
     unsolved with its expected type, would help.

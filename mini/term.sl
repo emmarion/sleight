@@ -13,7 +13,8 @@
     enum
     (many Ref : (many (Nat) id) -> (Term))
     (many Bound : (many (Nat) k) -> (Term))
-    (many App : (many (Term) head) (many (List (Term)) args) -> (Term))
+    (many TyApp : (many (Term) head) (many (List (Entry)) params) (many (List (Term)) args) -> (Term))
+    (many ValApp : (many (Term) head) (many (List (Entry)) params) (many (Term) ret) (many (List (Term)) args) -> (Term))
     (many Univ : -> (Term))
     (many Fn : (many (Term) level) (many (List (Entry)) params) (many (List (Entry)) rets) -> (Term))
     (many TyCtor : (many (List (Entry)) params) -> (Term))
@@ -29,7 +30,10 @@
     enum
     (many ClRef : (erased (Nat) d) (erased (Nat) x) -> (Closed d (Ref x)))
     (many ClBound : (erased (Nat) d) (erased (Nat) k) (erased (Lt k d) p) -> (Closed d (Bound k)))
-    (many ClApp : (erased (Nat) d) (erased (Term) h) (erased (List (Term)) as) (erased (Closed d h) p) (erased (ClosedList d as) q) -> (Closed d (App h as)))
+    (many ClTyApp : (erased (Nat) d) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Nat) out)
+       (erased (Closed d h) p) (erased (ClosedTele d ps out) t) (erased (ClosedList d as) q) -> (Closed d (TyApp h ps as)))
+    (many ClValApp : (erased (Nat) d) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) out)
+       (erased (Closed d h) p) (erased (ClosedTele d ps out) t) (erased (Closed out r) pr) (erased (ClosedList d as) q) -> (Closed d (ValApp h ps r as)))
     (many ClUniv : (erased (Nat) d) -> (Closed d (Univ)))
     (many ClFn : (erased (Nat) d) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Closed d l) p) (erased (ClosedTele d ps d1) q) (erased (ClosedTele d1 rs d2) r) -> (Closed d (Fn l ps rs)))
@@ -59,8 +63,11 @@
        (Subst sub (Bound k) a))
     (many SubSkip : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Nth (Maybe (Term)) sub k (None (Term))) p) ->
        (Subst sub (Bound k) (Bound k)))
-    (many SubApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2)
-       (erased (Subst sub h h2) p) (erased (SubstList sub as as2) q) -> (Subst sub (App h as) (App h2 as2)))
+    (many SubTyApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (List (Maybe (Term))) sub1) (erased (Subst sub h h2) p) (erased (SubstTele sub ps ps2 sub1) t) (erased (SubstList sub as as2) q) -> (Subst sub (TyApp h ps as) (TyApp h2 ps2 as2)))
+    (many SubValApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
+       (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Maybe (Term))) sub1)
+       (erased (Subst sub h h2) p) (erased (SubstTele sub ps ps2 sub1) t) (erased (Subst sub1 r r2) pr) (erased (SubstList sub as as2) q) -> (Subst sub (ValApp h ps r as) (ValApp h2 ps2 r2 as2)))
     (many SubUniv : (erased (List (Maybe (Term))) sub) -> (Subst sub (Univ) (Univ)))
     (many SubFn : (erased (List (Maybe (Term))) sub) (erased (Term) l) (erased (Term) l2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2) (erased (List (Maybe (Term))) sub1) (erased (List (Maybe (Term))) sub2)
@@ -96,12 +103,21 @@
               ((Some b v) (values v (SubHit sub k v p)))
               ((None b) (values (Bound k) (SubSkip sub k p)))))
           (absurd (NthMiss a l i p) (match erased ct (((False) f)) ((ClBound c k0 lt) (no-nth-lt _ sub n k ln lt p))))))
-      ((App h as)
+      ((TyApp h ps as)
         (match erased ct _
-          ((ClApp c h0 as0 ch cas)
+          ((ClTyApp c h0 ps0 as0 out ch cps cas)
             (let (many h2) (erased p) (subst sub n ln h ch))
+            (let (many ps2) (many sub1) (erased t) (erased ln1) (subst-tele sub n ln ps out cps))
             (let (many as2) (erased q) (subst-list sub n ln as cas))
-            (values (App h2 as2) (SubApp sub h h2 as as2 p q)))))
+            (values (TyApp h2 ps2 as2) (SubTyApp sub h h2 ps ps2 as as2 sub1 p t q)))))
+      ((ValApp h ps r as)
+        (match erased ct _
+          ((ClValApp c h0 ps0 r0 as0 out ch cps cr cas)
+            (let (many h2) (erased p) (subst sub n ln h ch))
+            (let (many ps2) (many sub1) (erased t) (erased ln1) (subst-tele sub n ln ps out cps))
+            (let (many r2) (erased pr) (subst sub1 out ln1 r cr))
+            (let (many as2) (erased q) (subst-list sub n ln as cas))
+            (values (ValApp h2 ps2 r2 as2) (SubValApp sub h h2 ps ps2 r r2 as as2 sub1 p t pr q)))))
       ((Univ) (values (Univ) (SubUniv sub)))
       ((Fn l ps rs)
         (match erased ct _
@@ -218,8 +234,11 @@
     (many AbsFree : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (NotIn ids x) p) -> (Abstract ids (Ref x) (Ref x)))
     (many AbsHit : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (Nat) k) (erased (IndexOf ids x k) p) -> (Abstract ids (Ref x) (Bound k)))
     (many AbsBound : (erased (List (Maybe (Nat))) ids) (erased (Nat) k) -> (Abstract ids (Bound k) (Bound k)))
-    (many AbsApp : (erased (List (Maybe (Nat))) ids) (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2)
-       (erased (Abstract ids h h2) p) (erased (AbstractList ids as as2) q) -> (Abstract ids (App h as) (App h2 as2)))
+    (many AbsTyApp : (erased (List (Maybe (Nat))) ids) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
+       (erased (List (Maybe (Nat))) ids1) (erased (Abstract ids h h2) p) (erased (AbstractTele ids ps ps2 ids1) t) (erased (AbstractList ids as as2) q) -> (Abstract ids (TyApp h ps as) (TyApp h2 ps2 as2)))
+    (many AbsValApp : (erased (List (Maybe (Nat))) ids) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
+       (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Maybe (Nat))) ids1)
+       (erased (Abstract ids h h2) p) (erased (AbstractTele ids ps ps2 ids1) t) (erased (Abstract ids1 r r2) pr) (erased (AbstractList ids as as2) q) -> (Abstract ids (ValApp h ps r as) (ValApp h2 ps2 r2 as2)))
     (many AbsUniv : (erased (List (Maybe (Nat))) ids) -> (Abstract ids (Univ) (Univ)))
     (many AbsFn : (erased (List (Maybe (Nat))) ids) (erased (Term) l) (erased (Term) l2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2) (erased (List (Maybe (Nat))) ids1) (erased (List (Maybe (Nat))) ids2)
@@ -251,10 +270,17 @@
           ((IdxHit l y k p) (values (Bound k) (AbsHit ids x k p)))
           ((IdxMiss l y p) (values (Ref x) (AbsFree ids x p)))))
       ((Bound k) (values (Bound k) (AbsBound ids k)))
-      ((App h as)
+      ((TyApp h ps as)
         (let (many h2) (erased p) (abstract ids h))
+        (let (many ps2) (many ids1) (erased t) (abstract-tele ids ps))
         (let (many as2) (erased q) (abstract-list ids as))
-        (values (App h2 as2) (AbsApp ids h h2 as as2 p q)))
+        (values (TyApp h2 ps2 as2) (AbsTyApp ids h h2 ps ps2 as as2 ids1 p t q)))
+      ((ValApp h ps r as)
+        (let (many h2) (erased p) (abstract ids h))
+        (let (many ps2) (many ids1) (erased t) (abstract-tele ids ps))
+        (let (many r2) (erased pr) (abstract ids1 r))
+        (let (many as2) (erased q) (abstract-list ids as))
+        (values (ValApp h2 ps2 r2 as2) (AbsValApp ids h h2 ps ps2 r r2 as as2 ids1 p t pr q)))
       ((Univ) (values (Univ) (AbsUniv ids)))
       ((Fn l ps rs)
         (let (many l2) (erased p) (abstract ids l))
@@ -302,8 +328,10 @@
     enum
     (many AsgRef : (erased (Nat) d) (erased (Nat) x) (erased (Nat) y) (erased (Neq x y) n) -> (Assignable d x (Ref y)))
     (many AsgBound : (erased (Nat) d) (erased (Nat) x) (erased (Nat) k) (erased (Lt k d) p) -> (Assignable d x (Bound k)))
-    (many AsgApp : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Term)) as) (erased (Assignable d x h) p) (erased (AssignableList d x as) q) ->
-       (Assignable d x (App h as)))
+    (many AsgTyApp : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Nat) d1)
+       (erased (Assignable d x h) p) (erased (AssignableTele d x ps d1) t) (erased (AssignableList d x as) q) -> (Assignable d x (TyApp h ps as)))
+    (many AsgValApp : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) d1)
+       (erased (Assignable d x h) p) (erased (AssignableTele d x ps d1) t) (erased (Assignable d1 x r) pr) (erased (AssignableList d x as) q) -> (Assignable d x (ValApp h ps r as)))
     (many AsgUniv : (erased (Nat) d) (erased (Nat) x) -> (Assignable d x (Univ)))
     (many AsgFn : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Assignable d x l) p) (erased (AssignableTele d x ps d1) q) (erased (AssignableTele d1 x rs d2) r) -> (Assignable d x (Fn l ps rs)))
@@ -325,8 +353,17 @@
     enum
     (many UnRef : (erased (Nat) d) (erased (Nat) x) -> (Unassignable d x (Ref x)))
     (many UnBound : (erased (Nat) d) (erased (Nat) x) (erased (Nat) k) (erased (Lt d (Succ k)) p) -> (Unassignable d x (Bound k)))
-    (many UnAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Term)) as) (erased (Unassignable d x h) p) -> (Unassignable d x (App h as)))
-    (many UnAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Term)) as) (erased (UnassignableList d x as) p) -> (Unassignable d x (App h as)))
+    (many UnTyAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Unassignable d x h) p) -> (Unassignable d x (TyApp h ps as)))
+    (many UnTyAppParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (UnassignableTele d x ps) p) -> (Unassignable d x (TyApp h ps as)))
+    (many UnTyAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (UnassignableList d x as) p) -> (Unassignable d x (TyApp h ps as)))
+    (many UnValAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Unassignable d x h) p) ->
+       (Unassignable d x (ValApp h ps r as)))
+    (many UnValAppParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableTele d x ps) p) ->
+       (Unassignable d x (ValApp h ps r as)))
+    (many UnValAppRet : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) d1)
+       (erased (TeleDepth d ps d1) q) (erased (Unassignable d1 x r) p) -> (Unassignable d x (ValApp h ps r as)))
+    (many UnValAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableList d x as) p) ->
+       (Unassignable d x (ValApp h ps r as)))
     (many UnFnLevel : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Unassignable d x l) p) ->
        (Unassignable d x (Fn l ps rs)))
     (many UnFnParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (UnassignableTele d x ps) p) ->
@@ -376,13 +413,29 @@
           ((CLt a b c e p) (ADYes _ _ _ $ AsgBound d x k p))
           ((CEq a b c) (ADNo _ _ _ $ UnBound d x k $ lt-succ d))
           ((CGt a b c e q) (ADNo _ _ _ $ UnBound d x k $ lt-weaken d k q))))
-      ((App h as)
+      ((TyApp h ps as)
         (match many (assign-dec d x h) _
-          ((ADNo a b c p) (ADNo _ _ _ $ UnAppHead d x h as p))
+          ((ADNo a b c p) (ADNo _ _ _ $ UnTyAppHead d x h ps as p))
           ((ADYes a b c p)
-            (match many (assign-dec-list d x as) _
-              ((ADLNo a2 b2 c2 q) (ADNo _ _ _ $ UnAppArgs d x h as q))
-              ((ADLYes a2 b2 c2 q) (ADYes _ _ _ $ AsgApp d x h as p q))))))
+            (match many (assign-dec-tele d x ps) _
+              ((ADTNo a2 b2 c2 t) (ADNo _ _ _ $ UnTyAppParams d x h ps as t))
+              ((ADTYes a2 b2 c2 d1 t td)
+                (match many (assign-dec-list d x as) _
+                  ((ADLNo a3 b3 c3 q) (ADNo _ _ _ $ UnTyAppArgs d x h ps as q))
+                  ((ADLYes a3 b3 c3 q) (ADYes _ _ _ $ AsgTyApp d x h ps as d1 p t q))))))))
+      ((ValApp h ps r as)
+        (match many (assign-dec d x h) _
+          ((ADNo a b c p) (ADNo _ _ _ $ UnValAppHead d x h ps r as p))
+          ((ADYes a b c p)
+            (match many (assign-dec-tele d x ps) _
+              ((ADTNo a2 b2 c2 t) (ADNo _ _ _ $ UnValAppParams d x h ps r as t))
+              ((ADTYes a2 b2 c2 d1 t td)
+                (match many (assign-dec d1 x r) _
+                  ((ADNo a3 b3 c3 pr) (ADNo _ _ _ $ UnValAppRet d x h ps r as d1 td pr))
+                  ((ADYes a3 b3 c3 pr)
+                    (match many (assign-dec-list d x as) _
+                      ((ADLNo a4 b4 c4 q) (ADNo _ _ _ $ UnValAppArgs d x h ps r as q))
+                      ((ADLYes a4 b4 c4 q) (ADYes _ _ _ $ AsgValApp d x h ps r as d1 p t pr q))))))))))
       ((Univ) (ADYes _ _ _ $ AsgUniv d x))
       ((Fn l ps rs)
         (match many (assign-dec d x l) _
@@ -432,7 +485,8 @@
     (match erased a _
       ((AsgRef b y z n) (ClRef d z))
       ((AsgBound b y k p) (ClBound d k p))
-      ((AsgApp b y h as p q) (ClApp d h as (assignable-closed d x h p) (assignable-closed-list d x as q)))
+      ((AsgTyApp b y h ps as d1 p t q) (ClTyApp d h ps as d1 (assignable-closed d x h p) (assignable-closed-tele d x ps d1 t) (assignable-closed-list d x as q)))
+      ((AsgValApp b y h ps r as d1 p t pr q) (ClValApp d h ps r as d1 (assignable-closed d x h p) (assignable-closed-tele d x ps d1 t) (assignable-closed d1 x r pr) (assignable-closed-list d x as q)))
       ((AsgUniv b y) (ClUniv d))
       ((AsgFn b y l ps rs d1 d2 p q r) (ClFn d l ps rs d1 d2 (assignable-closed d x l p) (assignable-closed-tele d x ps d1 q) (assignable-closed-tele d1 x rs d2 r)))
       ((AsgTyCtor b y ps d1 q) (ClTyCtor d ps d1 (assignable-closed-tele d x ps d1 q)))

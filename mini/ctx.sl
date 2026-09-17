@@ -138,7 +138,10 @@
     enum
     (many ScRef : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Nat) x) (erased (HasEnt ents x) p) -> (Scoped ents d (Ref x)))
     (many ScBound : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Nat) k) (erased (Lt k d) p) -> (Scoped ents d (Bound k)))
-    (many ScApp : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) h) (erased (List (Term)) as) (erased (Scoped ents d h) p) (erased (ScopedList ents d as) q) -> (Scoped ents d (App h as)))
+    (many ScTyApp : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Nat) out)
+       (erased (Scoped ents d h) p) (erased (ScopedTele ents d ps out) t) (erased (ScopedList ents d as) q) (erased (LenEq (Term) (Entry) as ps) n) -> (Scoped ents d (TyApp h ps as)))
+    (many ScValApp : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) out)
+       (erased (Scoped ents d h) p) (erased (ScopedTele ents d ps out) t) (erased (Scoped ents out r) pr) (erased (ScopedList ents d as) q) (erased (LenEq (Term) (Entry) as ps) n) -> (Scoped ents d (ValApp h ps r as)))
     (many ScUniv : (erased (List (Ent)) ents) (erased (Nat) d) -> (Scoped ents d (Univ)))
     (many ScFn : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Scoped ents d l) p) (erased (ScopedTele ents d ps d1) q) (erased (ScopedTele ents d1 rs d2) r) -> (Scoped ents d (Fn l ps rs)))
@@ -168,12 +171,34 @@
     (many SRCons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) (erased (Scoped ents (Zero) r) p) (erased (ScopedRules ents rest) q) ->
        (ScopedRules ents (Cons (Rule) (MkRule x r) rest)))))
 
+; Substitution, abstraction and canonicalization keep an application's arity.
+(def-fns _ $ erased subst-len-eq : (erased (List (Maybe (Term))) sub) (erased (List (Maybe (Term))) sub2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
+    (erased (List (Maybe (Term))) out) (erased (SubstList sub as as2) q) (erased (SubstTele sub2 ps ps2 out) t) (subterm erased (LenEq (Term) (Entry) as ps) n) -> (erased (LenEq (Term) (Entry) as2 ps2) m)
+  (match erased n _
+    ((LENil a b) (match erased q _ ((SubNil c) (match erased t _ ((SubTNil d) (LENil _ _))))))
+    ((LECons a b x y xs ys n2)
+      (match erased q _
+        ((SubCons c x0 u xs0 us p q2) (match erased t _ ((SubTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (subst-len-eq sub (Cons _ (None _) sub2) xs us ys fs out2 q2 t2 n2)))))))))
+(def-fns _ $ erased abstract-len-eq : (erased (List (Maybe (Nat))) ids) (erased (List (Maybe (Nat))) ids2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
+    (erased (List (Maybe (Nat))) out) (erased (AbstractList ids as as2) q) (erased (AbstractTele ids2 ps ps2 out) t) (subterm erased (LenEq (Term) (Entry) as ps) n) -> (erased (LenEq (Term) (Entry) as2 ps2) m)
+  (match erased n _
+    ((LENil a b) (match erased q _ ((AbsNil c) (match erased t _ ((AbsTNil d) (LENil _ _))))))
+    ((LECons a b x y xs ys n2)
+      (match erased q _
+        ((AbsCons c x0 u xs0 us p q2) (match erased t _ ((AbsTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (abstract-len-eq ids (Cons _ (None _) ids2) xs us ys fs out2 q2 t2 n2)))))))))
+(def-fns _ $ erased canon-len-eq : (erased (List (Rule)) rules) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (CanonList rules as as2) q) (subterm erased (LenEq (Term) (Entry) as ps) n) ->
+    (erased (LenEq (Term) (Entry) as2 ps) m)
+  (match erased n _
+    ((LENil a b) (match erased q _ ((CanNil c) (LENil _ _))))
+    ((LECons a b x y xs ys n2) (match erased q _ ((CanCons c x0 u xs0 us p q2) (LECons _ _ u y us ys (canon-len-eq rules xs us ys q2 n2)))))))
+
 (def-fns _
   (erased scoped-weaken : (erased (List (Ent)) ents) (erased (Ent) e) (erased (Nat) d) (erased (Term) t) (subterm erased (Scoped ents d t) b) -> (erased (Scoped (Cons (Ent) e ents) d t) c)
     (match erased b _
       ((ScRef a d0 x p) (ScRef _ d x (HEThere x e ents p)))
       ((ScBound a d0 k p) (ScBound _ d k p))
-      ((ScApp a d0 h as p q) (ScApp _ d h as (scoped-weaken ents e d h p) (scoped-weaken-list ents e d as q)))
+      ((ScTyApp a d0 h ps as out p t q n) (ScTyApp _ d h ps as out (scoped-weaken ents e d h p) (scoped-weaken-tele ents e d ps out t) (scoped-weaken-list ents e d as q) n))
+      ((ScValApp a d0 h ps r as out p t pr q n) (ScValApp _ d h ps r as out (scoped-weaken ents e d h p) (scoped-weaken-tele ents e d ps out t) (scoped-weaken ents e out r pr) (scoped-weaken-list ents e d as q) n))
       ((ScUniv a d0) (ScUniv _ d))
       ((ScFn a d0 l ps rs d1 d2 p q r) (ScFn _ d l ps rs d1 d2 (scoped-weaken ents e d l p) (scoped-weaken-tele ents e d ps d1 q) (scoped-weaken-tele ents e d1 rs d2 r)))
       ((ScTyCtor a d0 ps d1 q) (ScTyCtor _ d ps d1 (scoped-weaken-tele ents e d ps d1 q)))
@@ -205,7 +230,12 @@
     (match erased b _
       ((ScRef a d0 x p) (ScRef ents d2 x p))
       ((ScBound a d0 k p) (ScBound ents d2 k (lt-le k d d2 p le)))
-      ((ScApp a d0 h as p q) (ScApp ents d2 h as (scoped-mono ents d d2 h le p) (scoped-mono-list ents d d2 as le q)))
+      ((ScTyApp a d0 h ps as out p t q n)
+        (let (erased o2) (erased le2) (erased t2) (scoped-mono-tele ents d d2 ps out le t))
+        (ScTyApp ents d2 h ps as o2 (scoped-mono ents d d2 h le p) t2 (scoped-mono-list ents d d2 as le q) n))
+      ((ScValApp a d0 h ps r as out p t pr q n)
+        (let (erased o2) (erased le2) (erased t2) (scoped-mono-tele ents d d2 ps out le t))
+        (ScValApp ents d2 h ps r as o2 (scoped-mono ents d d2 h le p) t2 (scoped-mono ents out o2 r le2 pr) (scoped-mono-list ents d d2 as le q) n))
       ((ScUniv a d0) (ScUniv ents d2))
       ((ScFn a d0 l ps rs d1 dd2 p q r)
         (let (erased e1) (erased le1) (erased q2) (scoped-mono-tele ents d d2 ps d1 le q))
@@ -236,7 +266,8 @@
     (match erased b _
       ((ScRef a d0 x p) (ClRef d x))
       ((ScBound a d0 k p) (ClBound d k p))
-      ((ScApp a d0 h as p q) (ClApp d h as (scoped-closed ents d h p) (scoped-closed-list ents d as q)))
+      ((ScTyApp a d0 h ps as out p t q n) (ClTyApp d h ps as out (scoped-closed ents d h p) (scoped-closed-tele ents d ps out t) (scoped-closed-list ents d as q)))
+      ((ScValApp a d0 h ps r as out p t pr q n) (ClValApp d h ps r as out (scoped-closed ents d h p) (scoped-closed-tele ents d ps out t) (scoped-closed ents out r pr) (scoped-closed-list ents d as q)))
       ((ScUniv a d0) (ClUniv d))
       ((ScFn a d0 l ps rs d1 d2 p q r) (ClFn d l ps rs d1 d2 (scoped-closed ents d l p) (scoped-closed-tele ents d ps d1 q) (scoped-closed-tele ents d1 rs d2 r)))
       ((ScTyCtor a d0 ps d1 q) (ClTyCtor d ps d1 (scoped-closed-tele ents d ps d1 q)))
@@ -254,7 +285,12 @@
     (match erased c _
       ((ClRef a x) (match erased b _ ((ScRef a2 d0 x0 p) (ScRef ents d2 x p))))
       ((ClBound a k p) (ScBound ents d2 k p))
-      ((ClApp a h as p q) (match erased b _ ((ScApp a2 d0 h0 as0 bh bas) (ScApp ents d2 h as (scoped-tighten ents d d2 h bh p) (scoped-tighten-list ents d d2 as bas q)))))
+      ((ClTyApp a h ps as e1 p t q)
+        (match erased b _ ((ScTyApp a2 d0 h0 ps0 as0 out0 bh bt bas n) (ScTyApp ents d2 h ps as e1 (scoped-tighten ents d d2 h bh p) (scoped-tighten-tele ents d d2 ps out0 e1 bt t) (scoped-tighten-list ents d d2 as bas q) n))))
+      ((ClValApp a h ps r as e1 p t pr q)
+        (match erased b _
+          ((ScValApp a2 d0 h0 ps0 r0 as0 out0 bh bt br bas n)
+            (ScValApp ents d2 h ps r as e1 (scoped-tighten ents d d2 h bh p) (scoped-tighten-tele ents d d2 ps out0 e1 bt t) (scoped-tighten ents out0 e1 r br pr) (scoped-tighten-list ents d d2 as bas q) n))))
       ((ClUniv a) (ScUniv ents d2))
       ((ClFn a l ps rs e1 e2 p q r)
         (match erased b _
@@ -302,7 +338,16 @@
       ((SubRef a x) (match erased bt _ ((ScRef b n0 x0 p) (ScRef ents r x p))))
       ((SubHit a k v p) (scoped-mono ents (Zero) r v (LtZ r) (nth-scoped ents sub k v bs p)))
       ((SubSkip a k p) (ScBound ents r k (nth-none-lt _ sub r n k ly p)))
-      ((SubApp a h h2 as as2 p q) (match erased bt _ ((ScApp b n0 h0 as0 bh bas) (ScApp ents r h2 as2 (subst-scoped ents sub r n h h2 bs ly bh p) (subst-scoped-list ents sub r n as as2 bs ly bas q)))))
+      ((SubTyApp a h h2 ps ps2 as as2 sub1 p t q)
+        (match erased bt _
+          ((ScTyApp b n0 h0 ps0 as0 nout bh bps bas ln)
+            (let (erased r1) (erased bps2) (erased bs1) (erased ly1) (subst-scoped-tele ents sub r n ps ps2 sub1 nout bs ly bps t))
+            (ScTyApp ents r h2 ps2 as2 r1 (subst-scoped ents sub r n h h2 bs ly bh p) bps2 (subst-scoped-list ents sub r n as as2 bs ly bas q) (subst-len-eq sub sub as as2 ps ps2 sub1 q t ln)))))
+      ((SubValApp a h h2 ps ps2 rt rt2 as as2 sub1 p t pr q)
+        (match erased bt _
+          ((ScValApp b n0 h0 ps0 rt0 as0 nout bh bps brt bas ln)
+            (let (erased r1) (erased bps2) (erased bs1) (erased ly1) (subst-scoped-tele ents sub r n ps ps2 sub1 nout bs ly bps t))
+            (ScValApp ents r h2 ps2 rt2 as2 r1 (subst-scoped ents sub r n h h2 bs ly bh p) bps2 (subst-scoped ents sub1 r1 nout rt rt2 bs1 ly1 brt pr) (subst-scoped-list ents sub r n as as2 bs ly bas q) (subst-len-eq sub sub as as2 ps ps2 sub1 q t ln)))))
       ((SubUniv a) (ScUniv ents r))
       ((SubFn a l l2 ps ps2 rs rs2 sub1 sub2 p q r2)
         (match erased bt _
@@ -349,7 +394,10 @@
       ((CanRule a x r u2 p q) (canon-scoped ents rules d r u br (scoped-mono ents (Zero) d r (LtZ d) (rule-of-scoped ents rules x r br p)) q))
       ((CanFree a x p) bt)
       ((CanBound a k) bt)
-      ((CanApp a h h2 as as2 p q) (match erased bt _ ((ScApp b d0 h0 as0 bh bas) (ScApp ents d h2 as2 (canon-scoped ents rules d h h2 br bh p) (canon-scoped-list ents rules d as as2 br bas q)))))
+      ((CanTyApp a h h2 ps as as2 p q)
+        (match erased bt _ ((ScTyApp b d0 h0 ps0 as0 out bh bps bas n) (ScTyApp ents d h2 ps as2 out (canon-scoped ents rules d h h2 br bh p) bps (canon-scoped-list ents rules d as as2 br bas q) (canon-len-eq rules as as2 ps q n)))))
+      ((CanValApp a h h2 ps r as as2 p q)
+        (match erased bt _ ((ScValApp b d0 h0 ps0 r0 as0 out bh bps bpr bas n) (ScValApp ents d h2 ps r as2 out (canon-scoped ents rules d h h2 br bh p) bps bpr (canon-scoped-list ents rules d as as2 br bas q) (canon-len-eq rules as as2 ps q n)))))
       ((CanUniv a) (ScUniv ents d))
       ((CanFn a l l2 ps ps2 rs rs2 p q r)
         (match erased bt _
@@ -488,11 +536,6 @@
        (erased (Nat) n1) (erased (List (Name)) s1) (erased (List (Ent)) e1) (erased (List (Rule)) r1) (erased (List (Adt)) a1) (erased (Maybe (Term)) l1) (erased (List (Term)) sa1)
        (erased (List (Maybe (Nat))) acc) (erased (Nat) m) (erased (Lt n0 (Succ n1)) le) (erased (Covers n0 e0 acc e1) c) (erased (Layout (Nat) acc (Zero) m) ly) ->
        (Cov (MkCtx n0 s0 e0 r0 a0 l0 sa0) acc (MkCtx n1 s1 e1 r1 a1 l1 sa1) m)))
-  ; Two lists of one length.
-  (LenEq : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
-    enum
-    (many LENil : (erased Type A) (erased Type B) -> (LenEq A B (Nil A) (Nil B)))
-    (many LECons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenEq A B xs ys) p) -> (LenEq A B (Cons A x xs) (Cons B y ys))))
   (SameEnt : ((Term) ty) ((Kind) k) ((Term) ty2) ((Kind) k2) -> Type
     enum
     (many SameEntRefl : (erased (Term) ty) (erased (Kind) k) -> (SameEnt ty k ty k))))
@@ -689,7 +732,16 @@
       ((AbsFree a x p) (match erased bt _ ((ScRef b d0 x0 h) (ScRef e0 m x (covers-has n0 e0 ids e1 x p c h)))))
       ((AbsHit a x k p) (ScBound e0 m k (index-of-lt ids x k m p (layout-length _ ids d m ly))))
       ((AbsBound a k) (match erased bt _ ((ScBound b d0 k0 lt) (ScBound e0 m k (lt-le k d m lt (layout-le _ ids d m ly))))))
-      ((AbsApp a h h2 as as2 p q) (match erased bt _ ((ScApp b d0 h0 as0 bh bas) (ScApp e0 m h2 as2 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q)))))
+      ((AbsTyApp a h h2 ps ps2 as as2 ids1 p t q)
+        (match erased bt _
+          ((ScTyApp b d0 h0 ps0 as0 dout bh bps bas n)
+            (let (erased m1) (erased sps) (erased c1) (erased ly1) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t))
+            (ScTyApp e0 m h2 ps2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t n)))))
+      ((AbsValApp a h h2 ps ps2 r r2 as as2 ids1 p t pr q)
+        (match erased bt _
+          ((ScValApp b d0 h0 ps0 r0 as0 dout bh bps br bas n)
+            (let (erased m1) (erased sps) (erased c1) (erased ly1) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t))
+            (ScValApp e0 m h2 ps2 r2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers n0 e0 ids1 e1 dout m1 r r2 c1 ly1 br pr) (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t n)))))
       ((AbsUniv a) (ScUniv e0 m))
       ((AbsFn a l l2 ps ps2 rs rs2 ids1 ids2 p q r)
         (match erased bt _
@@ -730,7 +782,8 @@
       ((BlFree a c x d2 p) (match erased bt _ ((ScRef e d0 g h) (BlFree _ _ x k (NoRuleCons x n s rules (lt-neq x n (has-ent-lt n ents x be h)) p)))))
       ((BlRuled a c x d2 r j p lt) (match erased bt _ ((ScRef e d0 g h) (BlRuled _ _ x k r j (RRThere x n r s j top rules ranks (lt-neq x n (has-ent-lt n ents x be h)) p) lt))))
       ((BlBound a c i d2) (BlBound _ _ i k))
-      ((BlApp a c h as d2 p q) (match erased bt _ ((ScApp e d0 h0 as0 bh bas) (BlApp _ _ h as k (below-cons n ents rules ranks h k s top be d bh p) (below-cons-list n ents rules ranks as k s top be d bas q)))))
+      ((BlTyApp a c h ps as d2 p q) (match erased bt _ ((ScTyApp e d0 h0 ps0 as0 out bh bps bas ln) (BlTyApp _ _ h ps as k (below-cons n ents rules ranks h k s top be d bh p) (below-cons-list n ents rules ranks as k s top be d bas q)))))
+      ((BlValApp a c h ps r as d2 p q) (match erased bt _ ((ScValApp e d0 h0 ps0 r0 as0 out bh bps br bas ln) (BlValApp _ _ h ps r as k (below-cons n ents rules ranks h k s top be d bh p) (below-cons-list n ents rules ranks as k s top be d bas q)))))
       ((BlUniv a c d2) (BlUniv _ _ k))
       ((BlFn a c l ps rs d2 p q r)
         (match erased bt _
@@ -764,7 +817,8 @@
       ((BlFree a c x d p) (BlFree rules ranks x (Succ k) p))
       ((BlRuled a c x d r j p lt) (BlRuled rules ranks x (Succ k) r j p (lt-weaken j k lt)))
       ((BlBound a c i d) (BlBound rules ranks i (Succ k)))
-      ((BlApp a c h as d p q) (BlApp rules ranks h as (Succ k) (below-lift rules ranks h k p) (below-lift-list rules ranks as k q)))
+      ((BlTyApp a c h ps as d p q) (BlTyApp rules ranks h ps as (Succ k) (below-lift rules ranks h k p) (below-lift-list rules ranks as k q)))
+      ((BlValApp a c h ps r as d p q) (BlValApp rules ranks h ps r as (Succ k) (below-lift rules ranks h k p) (below-lift-list rules ranks as k q)))
       ((BlUniv a c d) (BlUniv rules ranks (Succ k)))
       ((BlFn a c l ps rs d p q r) (BlFn rules ranks l ps rs (Succ k) (below-lift rules ranks l k p) (below-lift-tele rules ranks ps k q) (below-lift-tele rules ranks rs k r)))
       ((BlTyCtor a c ps d q) (BlTyCtor rules ranks ps (Succ k) (below-lift-tele rules ranks ps k q)))
