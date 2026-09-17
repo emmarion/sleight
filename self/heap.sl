@@ -16,13 +16,7 @@
     (many W1 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ d) y) p) -> (Wrap (Cons (Digit) (D1) ctx) x y))
     (many W2 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ (Succ d)) y) p) -> (Wrap (Cons (Digit) (D2) ctx) x y))))
 
-; ---- lemmas over the prelude's Lt and Double, shared with core.sl's fact table
-
-(def-fns _ $ erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f)
-  (match erased p _ (absurd LtZ) (absurd LtS)))
-
-(def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
-  (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
+; ---- lemmas over the prelude's Lt and Double
 
 (def-fns _ $ erased add-shift : (erased (Nat) n) (erased (Nat) k) (erased (Nat) size) (subterm erased (Add n (Succ k) size) sum) -> (erased (Add (Succ n) k size) r)
   (match erased sum _
@@ -31,21 +25,6 @@
 
 (def-fns _ $ erased lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f)
   (lt-asym a a p (lt-succ a)))
-
-(def-fns _ $ erased double-lt-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) s) (subterm erased (Double m d) p) (erased (Double l s) q) (erased (Lt d s) lt) -> (erased (Lt m l) r)
-  (match erased p _
-    ((D0)
-      (match erased q _
-        (absurd (D0) (lt-zero d lt))
-        ((DS l1 s1 q1) (LtZ l1))))
-    ((DS m1 d1 p1)
-      (match erased q _
-        (absurd (D0) (lt-zero d lt))
-        ((DS l1 s1 q1)
-          (match erased lt _
-            ((LtS x y lt1)
-              (match erased lt1 _
-                ((LtS x2 y2 lt2) (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))))))
 
 (def-fns _ $ erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e)
   (match erased p _
@@ -165,6 +144,16 @@
 (def-fns _ $ erased ref-suffix : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (erased (Value B s) v) (erased (Suffix B l (HAdd B s v)) p) -> (erased (Suffix B l s) r)
   (suffix-trans _ l (HAdd _ s v) s p (suffix-one _ s v)))
+
+; a reference's stamp, with the proof that it sits below the store's next stamp
+(def-fns _ $ many ref-key : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) bound)
+    (erased (Len B l bound) lb) (many (Ref B l) r) -> (many (Nat) k) (erased (Lt k bound) lt)
+  (match many r _
+    ((MkRef tb l0 s v p)
+      (match many v _
+        ((MkValue tb2 s0 pos lp body)
+          (values pos (lt-succ-inv pos bound
+            (suffix-len _ l (HAdd _ s v) p (Succ pos) (LenAdd _ s v pos lp) bound lb))))))))
 
 (def-fns _ $ many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p)
   (match many r _ ((MkRef tb l0 s v p) (match many v _ ((MkValue tb2 s0 pos lp body) pos)))))

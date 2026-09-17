@@ -488,6 +488,250 @@
     ((Nil a) (REmpty))
     ((Cons a r rest) (RCat r $ rlist rest))))
 
+; ---- lemmas over the prelude's Lt and Double, shared with heap.sl and core.sl's fact table
+
+(def-fns _ $ erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f)
+  (match erased p _ (absurd LtZ) (absurd LtS)))
+
+(def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
+  (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
+
+(def-fns _ $ erased double-lt-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) s) (subterm erased (Double m d) p) (erased (Double l s) q) (erased (Lt d s) lt) -> (erased (Lt m l) r)
+  (match erased p _
+    ((D0)
+      (match erased q _
+        (absurd (D0) (lt-zero d lt))
+        ((DS l1 s1 q1) (LtZ l1))))
+    ((DS m1 d1 p1)
+      (match erased q _
+        (absurd (D0) (lt-zero d lt))
+        ((DS l1 s1 q1)
+          (match erased lt _
+            ((LtS x y lt1)
+              (match erased lt1 _
+                ((LtS x2 y2 lt2) (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))))))
+
+
+; ---- a trie's size against a bound on its keys, the measure a walk over one recurses on
+
+(def-fns _ $ erased lt-drop : (erased (Nat) d) (erased (Nat) s) (erased (Lt (Succ d) s) p) -> (erased (Lt d s) q)
+  (match erased p _ ((LtS x y q) (lt-weaken d y q))))
+
+(def-fns _ $ erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res)
+  (double-lt-inv m d (Succ r) (Succ (Succ s)) p (DS r s q) (lt-weaken d (Succ s) lt)))
+
+(def-adts $ Braun : ((Nat) l) ((Nat) r) -> Type
+  enum
+  (many BrEq : (erased (Nat) n) -> (Braun n n))
+  (many BrOne : (erased (Nat) n) -> (Braun (Succ n) n)))
+
+(def-fns _ $ erased half-lt-one : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt d s) lt) -> (erased (Lt m l) res)
+  (match erased bal _
+    ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) lt))
+    ((BrOne n)
+      (match erased sum _
+        ((AddSucc a1 b1 c1 q) (double-le-inv m d n c1 dd (add-diag-double n c1 q) lt))))))
+
+(def-fns _ $ erased half-lt-two : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt (Succ d) s) lt) -> (erased (Lt m r) res)
+  (match erased bal _
+    ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) (lt-drop d s lt)))
+    ((BrOne n)
+      (match erased sum _
+        ((AddSucc a1 b1 c1 q)
+          (match erased lt _
+            ((LtS x y lt1) (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))))))))
+
+; [size] how many entries a trie holds, [max] a bound every key in it is below. The node case splits
+; max the way the trie splits keys: key 0 sits here, 2m+1 in one, 2m+2 in two, so a node bounded by
+; Succ m1 has children bounded by l and r with l + r = m1 and l either r or r + 1.
+(def-adts $ Bounded : (Type V) ((IdMap V) m) ((Nat) size) ((Nat) max) -> Type
+  enum
+  (many BdEmpty : (erased Type V) (erased (Nat) max) -> (Bounded V (MEmpty V) (Zero) max))
+  (many BdNone : (erased Type V) (erased (IdMap V) one) (erased (IdMap V) two)
+     (erased (Nat) l) (erased (Nat) r) (erased (Nat) m1) (erased (Add l r m1) sum) (erased (Braun l r) bal)
+     (erased (Nat) so) (erased (Bounded V one so l) bo) (erased (Nat) st) (erased (Bounded V two st r) bt)
+     (erased (Nat) sot) (erased (Add so st sot) ssum) -> (Bounded V (MNode V (None V) one two) sot (Succ m1)))
+  (many BdSome : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two)
+     (erased (Nat) l) (erased (Nat) r) (erased (Nat) m1) (erased (Add l r m1) sum) (erased (Braun l r) bal)
+     (erased (Nat) so) (erased (Bounded V one so l) bo) (erased (Nat) st) (erased (Bounded V two st r) bt)
+     (erased (Nat) sot) (erased (Add so st sot) ssum) -> (Bounded V (MNode V (Some V v) one two) (Succ sot) (Succ m1))))
+
+(def-fns _ $ erased add-le-right : (erased (Nat) x) (erased (Nat) y) (erased (Nat) z)
+    (subterm erased (Add x y z) p) -> (erased (Lt y (Succ z)) r)
+  (match erased p _
+    ((AddZero b) (lt-succ y))
+    ((AddSucc a b c q) (lt-weaken y (Succ c) (add-le-right a b c q)))))
+
+; sums are monotone: a <= x and b <= y give a + b <= x + y
+(def-fns _ $ erased add-mono : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p)
+    (erased (Nat) x) (erased (Nat) y) (erased (Nat) z) (erased (Add x y z) q)
+    (erased (Lt a (Succ x)) la) (erased (Lt b (Succ y)) lb) -> (erased (Lt c (Succ z)) r)
+  (match erased p _
+    ((AddZero b0) (le-trans b y z lb (add-le-right x y z q)))
+    ((AddSucc a0 b0 c0 p0)
+      (match erased q _
+        (absurd (AddZero y0)
+          (match erased la (((False) f)) ((LtS u v la0) (lt-zero a0 la0))))
+        ((AddSucc x0 y0 z0 q0)
+          (match erased la _
+            ((LtS u v la0) (LtS c0 (Succ z0) (add-mono a0 b0 c0 p0 x0 y0 z0 q0 la0 lb)))))))))
+
+; the point: a trie bounded by max holds at most max entries
+(def-fns _ $ erased bounded-le : (erased Type V) (erased (IdMap V) m) (erased (Nat) size) (erased (Nat) max)
+    (subterm erased (Bounded V m size max) b) -> (erased (Lt size (Succ max)) r)
+  (match erased b _
+    ((BdEmpty t mx) (LtZ mx))
+    ((BdNone t one two l r m1 sum bal so bo st bt sot ssum)
+      (lt-weaken sot (Succ m1) (add-mono so st sot ssum l r m1 sum (bounded-le _ one so l bo) (bounded-le _ two st r bt))))
+    ((BdSome t v one two l r m1 sum bal so bo st bt sot ssum)
+      (LtS sot (Succ m1) (add-mono so st sot ssum l r m1 sum (bounded-le _ one so l bo) (bounded-le _ two st r bt))))))
+
+; ---- reading an Absent witness at the child the key's halving leads to
+
+(def-fns _ $ erased absent-not-some : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two)
+    (erased (Absent V (Zero) (MNode V (Some V v) one two)) ab) -> (erased (False) f)
+  (match erased ab (((False) f))))
+
+(def-fns _ $ erased absent-one : (erased Type V) (erased (Nat) k1) (erased (Nat) d) (erased (Double k1 d) dd)
+    (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two)
+    (erased (Absent V (Succ d) (MNode V here one two)) ab) -> (erased (Absent V k1 one) r)
+  (match erased ab _
+    ((AB1 t k2 d2 dd2 h2 o2 t2 sub)
+      (match erased (double-inj k1 k2 d dd dd2) _ ((Refl ty x) sub)))
+    (absurd (AB2 t k2 d2 dd2 h2 o2 t2 sub) (double-parity k1 k2 d2 dd dd2))))
+
+(def-fns _ $ erased absent-two : (erased Type V) (erased (Nat) k1) (erased (Nat) d) (erased (Double k1 d) dd)
+    (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two)
+    (erased (Absent V (Succ (Succ d)) (MNode V here one two)) ab) -> (erased (Absent V k1 two) r)
+  (match erased ab _
+    (absurd (AB1 t k2 d2 dd2 h2 o2 t2 sub) (double-parity k2 k1 d dd2 dd))
+    ((AB2 t k2 d2 dd2 h2 o2 t2 sub)
+      (match erased (double-inj k1 k2 d dd dd2) _ ((Refl ty x) sub)))))
+
+; ---- splitting a bound the way the trie splits keys
+(def-fns _ $ erased split-bound : (subterm erased (Nat) m1) ->
+    (erased (Nat) l) (erased (Nat) r) (erased (Add l r m1) sum) (erased (Braun l r) bal)
+  (match erased m1 _
+    ((Zero) (values (Zero) (Zero) (AddZero (Zero)) (BrEq (Zero))))
+    ((Succ m0)
+      (let (erased l0) (erased r0) (erased sum0) (erased bal0) (split-bound m0))
+      (values (Succ r0) l0 (AddSucc r0 l0 m0 (add-comm l0 r0 m0 sum0))
+        (match erased bal0 (((Braun (Succ r0) l0) b))
+          ((BrEq n) (BrOne n))
+          ((BrOne n) (BrEq (Succ n))))))))
+
+(def-fns _ $ erased lt-succ-inv : (erased (Nat) a) (erased (Nat) b) (erased (Lt (Succ a) (Succ b)) p) ->
+    (erased (Lt a b) q)
+  (match erased p _ ((LtS x y q) q)))
+
+; a bound a key sits under is a successor, and splits the way the trie does
+(def-fns _ $ erased bound-split : (erased (Nat) max) (erased (Nat) k) (erased (Lt k max) lk) ->
+    (erased (Nat) m1) (erased (Eq (Nat) max (Succ m1)) e)
+    (erased (Nat) l) (erased (Nat) r) (erased (Add l r m1) sum) (erased (Braun l r) bal)
+  (match erased lk _
+    ((LtZ b)
+      (let (erased l) (erased r) (erased s) (erased ba) (split-bound b))
+      (values b (Refl (Nat) (Succ b)) l r s ba))
+    ((LtS x y p)
+      (let (erased l) (erased r) (erased s) (erased ba) (split-bound y))
+      (values y (Refl (Nat) (Succ y)) l r s ba))))
+
+; inserting a key the trie lacks, below its bound: the size goes up by exactly one
+(def-fns _ $ many idmap-set-bd : (erased Type V) (subterm many (Nat) k) (many V v) (many (IdMap V) m)
+    (erased (Nat) size) (erased (Nat) max) (erased (Bounded V m size max) bd)
+    (erased (Absent V k m) ab) (erased (Lt k max) lk) ->
+    (many (IdMap V) m2) (erased (Bounded V m2 (Succ size) max) bd2)
+  (match many m _
+    ((MEmpty ta)
+      (let (erased m1) (erased eqm) (erased l) (erased r) (erased sum) (erased bal) (bound-split max k lk))
+      (match erased eqm (((IdMap V) r2) ((Bounded V r2 (Succ size) max) b2))
+        ((Refl ty xx)
+          (match erased bd (((IdMap V) r2) ((Bounded V r2 (Succ size) max) b2))
+            ((BdEmpty t2 mx)
+              (match many (nat-halve k) (((IdMap V) r2) ((Bounded V r2 (Succ (Zero)) (Succ m1)) b2))
+                ((HZ)
+                  (values (MNode _ (Some _ v) (MEmpty _) (MEmpty _))
+                    (BdSome _ v _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Zero) (BdEmpty _ r) (Zero) (AddZero (Zero)))))
+                ((H1 k1 d dd)
+                  (let (many o2) (erased bo2)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) l
+                      (BdEmpty _ l) (ABEmpty _ k1) (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+                  (values (MNode _ (None _) o2 (MEmpty _))
+                    (BdNone _ _ _ l r m1 sum bal (Succ (Zero)) bo2 (Zero) (BdEmpty _ r) (Succ (Zero))
+                      (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero))))))
+                ((H2 k1 d dd)
+                  (let (many t2b) (erased bt2)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) r
+                      (BdEmpty _ r) (ABEmpty _ k1) (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+                  (values (MNode _ (None _) (MEmpty _) t2b)
+                    (BdNone _ _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Succ (Zero)) bt2 (Succ (Zero))
+                      (AddZero (Succ (Zero))))))))))))
+    ((MNode ta here one two)
+      (match many here (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
+        ((None tb)
+          (match erased bd (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
+            ((BdNone t2 oo tt l r m1 sum bal so bo st bt sot ssum)
+              (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ sot) (Succ m1)) b2))
+                ((HZ)
+                  (values (MNode _ (Some _ v) one two)
+                    (BdSome _ v _ _ l r m1 sum bal so bo st bt sot ssum)))
+                ((H1 k1 d dd)
+                  (let (many onew) (erased bonew)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
+                      (absent-one _ k1 d dd here one two ab)
+                      (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+                  (values (MNode _ (None _) onew two)
+                    (BdNone _ _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
+                ((H2 k1 d dd)
+                  (let (many tnew) (erased btnew)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
+                      (absent-two _ k1 d dd here one two ab)
+                      (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+                  (values (MNode _ (None _) one tnew)
+                    (BdNone _ _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))))
+        ((Some tb v0)
+          (match erased bd (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
+            ((BdSome t2 v2 oo tt l r m1 sum bal so bo st bt sot ssum)
+              (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ (Succ sot)) (Succ m1)) b2))
+                (absurd (HZ) (absent-not-some _ v0 one two ab))
+                ((H1 k1 d dd)
+                  (let (many onew) (erased bonew)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
+                      (absent-one _ k1 d dd here one two ab)
+                      (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+                  (values (MNode _ (Some _ v0) onew two)
+                    (BdSome _ v0 _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
+                ((H2 k1 d dd)
+                  (let (many tnew) (erased btnew)
+                    (idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
+                      (absent-two _ k1 d dd here one two ab)
+                      (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+                  (values (MNode _ (Some _ v0) one tnew)
+                    (BdSome _ v0 _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))))))))
+
+; size + rest = max with size < max: rest is a successor, so it is what a walk can recurse on
+(def-fns _ $ erased add-room : (erased (Nat) size) (erased (Nat) rest) (erased (Nat) max)
+    (subterm erased (Add size rest max) sum) (erased (Lt size max) lt) ->
+    (erased (Nat) rest2) (erased (Add (Succ size) rest2 max) sum2) (erased (Lt rest2 rest) less)
+  (match erased sum _
+    ((AddZero b)
+      (match erased lt _
+        ((LtZ b2) (values b2 (AddSucc (Zero) b2 b2 (AddZero b2)) (lt-succ b2)))))
+    ((AddSucc a b c q)
+      (let (erased rest2) (erased sum2) (erased less) (add-room a b c q (lt-succ-inv a c lt)))
+      (values rest2 (AddSucc (Succ a) rest2 c sum2) less))))
+
+; the whole step: insert a fresh key and hand back the strictly smaller measure
+(def-fns _ $ many seen-add : (erased Type V) (many (Nat) k) (many V v) (many (IdMap V) m)
+    (erased (Nat) size) (erased (Nat) rest) (erased (Nat) max) (erased (Bounded V m size max) bd)
+    (erased (Add size rest max) sum) (erased (Absent V k m) ab) (erased (Lt k max) lk) ->
+    (many (IdMap V) m2) (erased (Nat) rest2) (erased (Bounded V m2 (Succ size) max) bd2)
+    (erased (Add (Succ size) rest2 max) sum2) (erased (Lt rest2 rest) less)
+  (let (many m2) (erased bd2) (idmap-set-bd _ k v m size max bd ab lk))
+  (let (erased rest2) (erased sum2) (erased less)
+    (add-room size rest max sum (lt-succ-inv size max (bounded-le _ m2 (Succ size) max bd2))))
+  (values m2 rest2 bd2 sum2 less))
+
 ; ---- A generic merge sort, in the shape of tests/map.sl's factory: the comparison is a parameter,
 ; so the sort sits above its level and the factory mints the level relating them. The split is a
 ; Braun-shaped pile built by insertion, so every recursion here is structural.

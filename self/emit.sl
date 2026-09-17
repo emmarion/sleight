@@ -860,102 +860,72 @@
   (match many d _
     ((MkDecls shapes narrows ts) (rcat (narrow-decls d narrows) $ shape-decls d shapes $ BTrue))))
 
-; ---- The walk from the roots: what a Const or a final reaches, each value once. The seen set is
-; keyed by the stamp, so a value met a second time is tested and not descended into; a value is
-; added after the ones it names, so reversing the result puts every block after its dependencies.
-; [ls] the history a reference is into, [hs] the one the result is at, [sf] that hs extends ls.
+; ---- The walk from the roots: what a Const or a final reaches, each value once. The worklist is
+; tail recursive, which the seen set pays for: a stamp is below the store's next stamp, the trie
+; holds at most that many keys (base.sl's bounded-le), so the keys it still lacks is a measure that
+; strictly drops every time a fresh value is enqueued. That measure and the worklist are the two
+; components of the decrease, in that order.
 
-(def-fns _
-  (many trace-ref : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
-      (subterm many (Ref Block ls) at) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
-      (many (Env) env) (many (Decls) d) ->
-      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
-    (match many (idmap-mem _ (ref-pos Block _ at) seen) _
-      ((BTrue) (values seen acc d))
-      ((BFalse)
-        (let-match many at (MkRef _ _ rs rv rp))
-        (let-match many rv (MkValue _ _ pos lp blk))
-        (let (erased rsf) (ref-suffix _ _ rs rv rp))
-        (let (erased tsf) (suffix-trans Block hs ls rs sf rsf))
-        (let (erased pb) (prove-subterm blk at))
-        (let (many seen2) (many acc2) (many d2)
-          $ trace-block _ _ tsf (subterm pb) blk (idmap-set _ pos (MkUnit) seen) acc env $ collect-block _ blk env d)
-        (let (erased at2) (erased pat) (ref-widen Block ls hs sf at))
-        (values seen2 (Cons _ (coerce at pat) acc2) d2))))
-  (many trace-block : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
-      (subterm many (Block (Ref Block ls)) blk) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
-      (many (Env) env) (many (Decls) d) ->
-      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
-    (match many blk _
-      ((BTag z c fields)
-        (let (erased p) (prove-subterm fields blk))
-        (trace-refs _ _ sf (subterm p) fields seen acc env d))
-      ((BTup z fields)
-        (let (erased p) (prove-subterm fields blk))
-        (trace-refs _ _ sf (subterm p) fields seen acc env d))
-      ((BFn z g i id)
-        (let (erased p) (prove-subterm g blk))
-        (trace-ref _ _ sf (subterm p) g seen acc env d))
-      ((BGroup z gids ctx g fr)
-        (let (erased p) (prove-subterm fr blk))
-        (trace-frames _ _ sf _ (subterm p) fr seen acc env d))
-      (else (values seen acc d))))
-  (many trace-refs : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
-      (subterm many (List $ Ref Block ls) fs) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
-      (many (Env) env) (many (Decls) d) ->
-      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
-    (match many fs _
-      ((Nil t) (values seen acc d))
-      ((Cons t f rest)
-        (let (erased pf) (prove-subterm f fs))
-        (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ sf (subterm pf) f seen acc env d)
-        (let (erased pr) (prove-subterm rest fs))
-        (tail (trace-refs _ _ sf (subterm pr) rest seen1 acc1 env d1)))))
-  (many trace-frames : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
-      (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block ls) ctx) fr) (many (IdMap $ Unit) seen)
-      (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
-      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
-    (match many fr _
-      ((FrNil z) (values seen acc d))
-      ((FrVals z c f vs lk rest)
-        (let (erased pv) (prove-subterm vs fr))
-        (let (many seen1) (many acc1) (many d1) $ trace-refs _ _ sf (subterm pv) vs seen acc env d)
-        (let (erased pr) (prove-subterm rest fr))
-        (tail (trace-frames _ _ sf _ (subterm pr) rest seen1 acc1 env d1)))
-      ((FrGroup z c gids g rest)
-        (let (erased pg) (prove-subterm g fr))
-        (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ sf (subterm pg) g seen acc env d)
-        (let (erased pr) (prove-subterm rest fr))
-        (tail (trace-frames _ _ sf _ (subterm pr) rest seen1 acc1 env d1))))))
+(def-fns _ $ many frames-refs : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx)
+    (subterm many (Frames (Ref Block a) ctx) fr) (many (List $ Ref Block a) acc) -> (many (List $ Ref Block a) r)
+  (match many fr _
+    ((FrNil z) acc)
+    ((FrVals z c f vs lk rest) (tail (frames-refs _ _ rest (rev-onto _ vs acc))))
+    ((FrGroup z c gids g rest) (tail (frames-refs _ _ rest (Cons _ g acc))))))
 
-(def-fns _ $ many trace-entries : (erased (Hist Block) hs) (subterm many (IdMap $ EInfo hs) en) (many (IdMap $ Unit) seen)
-    (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
-    (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+(def-fns _ $ many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (List $ Ref Block a) r)
+  (match many b _
+    ((BTag z c fields) fields)
+    ((BTup z fields) fields)
+    ((BFn z g i id) (Cons _ g $ Nil _))
+    ((BGroup z gids ctx g fr) (frames-refs _ _ fr (Nil _)))
+    (else (Nil _))))
+
+(def-fns _ $ many roots-of-entries : (erased (Hist Block) hs) (subterm many (IdMap $ EInfo hs) en)
+    (many (List $ Ref Block hs) acc) -> (many (List $ Ref Block hs) r)
   (match many en _
-    ((MEmpty t) (values seen acc d))
+    ((MEmpty t) acc)
     ((MNode t here one two)
-      (let (many seen1) (many acc1) (many d1)
-        (match many here (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
-          ((None u) (values seen acc d))
+      (let (many acc1)
+        (match many here (((List $ Ref Block hs) r))
+          ((None u) acc)
           ((Some u info)
-            (match many info (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
+            (match many info (((List $ Ref Block hs) r))
               ((MkEInfo z n mu st mi me)
-                (match many st (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
-                  ((SDyn z2) (values seen acc d))
-                  ((SConst z2 v) (trace-ref _ _ (SfHere Block hs) v seen acc env d))))))))
-      (let (many seen2) (many acc2) (many d2) $ trace-entries _ one seen1 acc1 env d1)
-      (trace-entries _ two seen2 acc2 env d2))))
+                (match many st (((List $ Ref Block hs) r))
+                  ((SDyn z2) acc)
+                  ((SConst z2 v) (Cons _ v acc))))))))
+      (roots-of-entries _ two (roots-of-entries _ one acc1)))))
 
-(def-fns _ $ many trace-finals : (erased (Hist Block) hs) (subterm many (List $ Pair (Ref Block hs) $ Term) fs)
-    (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
-    (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+(def-fns _ $ many roots-of-finals : (erased (Hist Block) hs) (subterm many (List $ Pair (Ref Block hs) $ Term) fs)
+    (many (List $ Ref Block hs) acc) -> (many (List $ Ref Block hs) r)
   (match many fs _
-    ((Nil t) (values seen acc d))
-    ((Cons t p rest)
-      (match many p _
-        ((MkPair x y v ty)
-          (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ (SfHere Block hs) v seen acc env d)
-          (tail (trace-finals _ rest seen1 acc1 env d1)))))))
+    ((Nil t) acc)
+    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (tail (roots-of-finals _ rest (Cons _ v acc))))))))
+
+; [rest] the stamps the seen set still lacks, [work] the worklist; the call in each branch decreases
+; the first of those two that it can.
+(def-fns _ $ many trace-loop : (erased (Hist Block) hs) (erased (Nat) bound) (erased (Len Block hs bound) lb)
+    (erased (Nat) size) (subterm erased (Nat) rest) (erased (Add size rest bound) sum)
+    (many (IdMap $ Unit) seen) (erased (Bounded (Unit) seen size bound) bd)
+    (subterm many (List $ Ref Block hs) work) (many (List $ Ref Block hs) acc)
+    (many (Env) env) (many (Decls) d) -> (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+  (match many work _
+    ((Nil t) (values acc d))
+    ((Cons t at wrest)
+      (let (many k) (erased lk) (ref-key Block _ bound lb at))
+      (match many (idmap-get _ k seen) _
+        ((Hit t2 k2 m2 u p) (tail (trace-loop _ bound lb size rest sum seen bd wrest acc env d)))
+        ((Miss t2 k2 m2 ab)
+          (let (many seen2) (erased rest2) (erased bd2) (erased sum2) (erased less)
+            (seen-add (Unit) k (MkUnit) seen size rest bound bd sum ab lk))
+          (let-match many at (MkRef _ _ rs rv rp))
+          (let-match many rv (MkValue _ _ pos lp blk))
+          (let (erased tsf) (ref-suffix _ _ rs rv rp))
+          (let (many kids) (block-refs _ blk))
+          (let (erased kids2) (erased pk) (refs-widen Block rs hs tsf kids))
+          (tail (trace-loop _ bound lb (Succ size) (subterm (lt-subterm rest2 rest less)) rest2 sum2 seen2 bd2
+                  (rev-onto _ (coerce kids pk) wrest) (Cons _ at acc) env (collect-block _ blk env d))))))))
 
 ; A group's block is its members' top-level let rec over the names of the frames it closed over.
 (def-fns _ $ many block-let : (erased (Hist Block) hs) (many (Ref Block hs) at) (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
@@ -1206,8 +1176,10 @@
 (def-fns _ $ many emit-program : (many (Bool) templates) (many (Env) env) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
   (let (many d0) $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
-  (let (many seen1) (many acc1) (many d1) $ trace-entries _ en (MEmpty _) (Nil _) env d0)
-  (let (many seen2) (many acc2) (many d2) $ trace-finals _ fi seen1 acc1 env d1)
+  (let-match many hp (MkStore _ _ bound lb))
+  (let (many roots) $ roots-of-finals _ fi (roots-of-entries _ en (Nil _)))
+  (let (many acc2) (many d2)
+    $ trace-loop _ bound lb (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env d0)
   (def-fns REF-CMP $ many ref-le : (many (Ref Block hs) x) (many (Ref Block hs) y) -> (many (Bool) b)
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let (many order) $ ref-sort (Ref Block hs) ref-le acc2)
