@@ -74,3 +74,7 @@ by the owner and apply to every session.
     smuggle in a claim the owner never made. (Rule 11 governs whether a
     decision is approved; this rule governs how it reaches DESIGN.md.
     ASSUMPTIONS.md and the other notes stay under rules 1 and 11.)
+
+13. **`origin/main` is the only main.** A local `main` may be the
+    pre-restart history (`simply-typed-archive/main`), which shares no
+    ancestor with it — never merge or rebase across the two.
