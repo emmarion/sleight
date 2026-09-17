@@ -42,10 +42,19 @@ structurally, with the relations kept as they were:
 - The relations changed in two places, both for the owner to confirm or
   reject: `Subst`'s `SubBeyond` and `Unify`'s `Sided` merge of the
   left/right twin rules. The function-side `Oriented` lost its `OrStuck`.
-- One non-syntax stuck remains, in `type-of-term` (see `mini/README.md`);
-  the session judged closing it to need a type-preservation argument and
-  did not attempt one. Whether the owner wants that argument, a change to
-  `MintTele`, or the hole left as is, is an open question.
+- One non-syntax stuck remains, in `type-of-term` (see `mini/README.md`).
+  A later session, funded to close it by a preservation argument, found
+  the argument false as the relations then stood: a program reached the
+  stuck (`tests/mini_untyped_rule.sl`, with the reading of why in its
+  header). The cause was `ETValCtor` accepting any type as a `ValCtor`
+  former's return, which `lib/` refuses (ASSUMPTIONS 70 and 80); the owner
+  had item 80 restored in `mini/`, which refuses the program. Neither
+  `lib/` nor `self/` equates a variable's type with its term's when
+  forcing assigns a rule (only atom-against-atom unifies signatures, and
+  only where both are formers, ASSUMPTIONS 89); the owner's hunch is that
+  under item 80 that equation is derivable, so `UAssign` needs no change.
+  Unverified: the session's reading is that verifying it is exactly the
+  typed-rules lemma the preservation argument needs.
 - `TOOLING-WISHLIST.md` logs the friction met writing `.sl` by hand at
   this scale, as the owner asked.
 - The self-hosted `slc` (`self/`) accepts every file and all eight

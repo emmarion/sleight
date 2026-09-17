@@ -50,13 +50,21 @@ claim in this file that the tests do not make is a mistake in this file.
   value-constructor formers, every ruled entry non-rigid) and returning
   it for the context it produces. Results are ADTs holding the derived
   data and the erased derivation, or a `Stuck` constructor, which the
-  functions reach only on a malformed shape — with one exception the
-  session could not close: `type-of-term`, which `MintTele`'s `is`
-  entries need, has no derivation for a `Bound` outside its binder or an
-  application whose head's canonical type is not a former, and the
-  carried invariants do not exclude those inputs (excluding them looks to
-  the session like a type-preservation argument about elaborated
-  telescopes under substitution and refinement, which is not attempted).
+  functions reach only on a malformed shape, with one exception:
+  `type-of-term`, which `MintTele`'s `is` entries need, has no
+  derivation for a `Bound` outside its binder or an application whose
+  head's canonical type is not a former, and the carried invariants do
+  not exclude those inputs. One session found a program that reached it
+  (`tests/mini_untyped_rule.sl`): `ETValCtor` then accepted any type as
+  a `ValCtor` former's return, so an application could stand as a head,
+  and `UAssign`, which relates a variable to a term with no check on
+  their types, gave a former-typed variable a term of another type. The
+  owner restored ASSUMPTIONS 80 (the return canonicalizes to an
+  application of a type constructor not among the former's own binders),
+  which refuses that program. Whether any program still reaches the
+  stuck is open: the owner's hunch is none, the session's reading is
+  that showing it needs the lemma that every rule unification mints
+  relates terms of equal canonical types, which is not attempted.
   Two relations changed for this, both flagged for the owner: `Subst`
   gained `SubBeyond` (a `Bound` past the end of the substitution stays,
   making substitution total), and `Unify`'s twin left/right rules for a
@@ -84,7 +92,8 @@ claim in this file that the tests do not make is a mistake in this file.
 - **Surface syntax of the minimal language.** With no multiplicities to
   mark them, telescopes and binders are grouped in lists, which the full
   language does not do: `(Fn L (params) (rets))`, `(TyCtor (params))`,
-  `(ValCtor (params) ret)`, `(def-fns L (f (params) (rets) items...)...)`,
+  `(ValCtor (params) ret)` (the return an application of a type
+  constructor other than the former's own binders, ASSUMPTIONS 80), `(def-fns L (f (params) (rets) items...)...)`,
   `(def-adts (T (params) (C (fields) ret)...)...)`,
   `(let (binders) items...)`, `(match s (rets) ((C fields...) items...)...)`;
   an entry is `(T x)`, `(subterm T x)` or `(e is x)`; a binder `x`, `(T x)`

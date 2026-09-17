@@ -794,6 +794,59 @@
   (let-match erased c (MkCovRev n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 acc2 ids2 le cv))
   (MkCovRev _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ le (CvRCons n0 e0 acc x ids e1 cv)))
 
+; A ValCtor former's return (ASSUMPTIONS 80): the four ways the canonical return is not an application of a
+; type constructor other than the former's own binders.
+(def-adts
+  (NotAppDec : ((Term) c) -> Type
+    enum
+    (many IsApp : (many (Term) h) (many (List (Term)) as) -> (NotAppDec (App h as)))
+    (many IsNotApp : (erased (Term) c) (erased (NotApp c) p) -> (NotAppDec c)))
+  (TyCtorDec : ((Term) u) -> Type
+    enum
+    (many TDIs : (many (List (Entry)) ps) -> (TyCtorDec (TyCtor ps)))
+    (many TDNot : (erased (Term) u) (erased (NotTyCtor u) p) -> (TyCtorDec u)))
+  (FormerRetDec : ((Ctx) ctx) ((List (Nat)) pids) ((Term) c) -> Type
+    enum
+    (many FROk : (erased (Ctx) ctx) (erased (List (Nat)) pids) (many (Nat) t) (many (List (Term)) args) (many (Term) tty) (many (List (Entry)) tps)
+       (erased (NotMem t pids) nm) (erased (TypeOf ctx t tty) tt) (erased (Canonical ctx tty (TyCtor tps)) ct) -> (FormerRetDec ctx pids (App (Ref t) args)))
+    (many FRBad : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) c) (erased (BadFormerRet ctx pids c) br) -> (FormerRetDec ctx pids c))))
+(def-fns _ $ many not-app-dec : (many (Term) c) -> (many (NotAppDec c) r)
+  (match many c _
+    ((App h as) (IsApp h as))
+    ((Ref x) (IsNotApp _ (NotAppRef x)))
+    ((Bound k) (IsNotApp _ (NotAppBound k)))
+    ((Univ) (IsNotApp _ (NotAppUniv)))
+    ((Fn l ps rs) (IsNotApp _ (NotAppFn l ps rs)))
+    ((TyCtor ps) (IsNotApp _ (NotAppTyCtor ps)))
+    ((ValCtor ps r) (IsNotApp _ (NotAppValCtor ps r)))))
+(def-fns _ $ many tyctor-dec : (many (Term) u) -> (many (TyCtorDec u) r)
+  (match many u _
+    ((TyCtor ps) (TDIs ps))
+    ((Ref x) (TDNot _ (NTCRef x)))
+    ((Bound k) (TDNot _ (NTCBound k)))
+    ((App h as) (TDNot _ (NTCApp h as)))
+    ((Univ) (TDNot _ (NTCUniv)))
+    ((Fn l ps rs) (TDNot _ (NTCFn l ps rs)))
+    ((ValCtor ps r) (TDNot _ (NTCValCtor ps r)))))
+(def-fns _ $ erased sc-ref-has : (erased (Ctx) ctx) (erased (Nat) x) (erased (Sc ctx (Ref x)) s) -> (erased (Has ctx x) h)
+  (match erased s _ ((MkSc q1 q2 q3 q4 q5 q6 q7 q8 sc) (match erased sc _ ((ScRef a x0 hx) (MkHas _ _ _ _ _ _ _ x hx))))))
+(def-fns _ $ many former-ret-dec : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Nat)) pids) (many (Term) c) (erased (Sc ctx c) sc) -> (many (FormerRetDec ctx pids c) r)
+  (match many (not-app-dec c) _
+    ((IsNotApp a na) (FRBad _ _ _ (BFNotApp ctx pids c na)))
+    ((IsApp h args)
+      (match many (nonref-dec h) _
+        ((IsNonRef a nr) (FRBad _ _ _ (BFHead ctx pids h args nr)))
+        ((IsRef t)
+          (match many (mem-dec t pids) _
+            ((MemYes a b m) (FRBad _ _ _ (BFOwn ctx pids t args m)))
+            ((MemNo a b nm)
+              (let (erased sh) (erased sargs) (sc-app-parts ctx (Ref t) args sc))
+              (let (many tty) (many kk) (erased tt) (erased kq) (erased stty) (erased e2) (erased ee) (erased eo) (type-of ctx wf t (sc-ref-has ctx t sh)))
+              (let (many u) (erased cu) (erased su) (canonical ctx wf tty stty))
+              (match many (tyctor-dec u) _
+                ((TDIs tps) (FROk _ _ t args tty tps nm tt cu))
+                ((TDNot a nt) (FRBad _ _ _ (BFNotTycon ctx pids t args tty u tt cu nt)))))))))))
+
 (def-fns _
   (many elab-term : (many (Ctx) ctx) (many (WF ctx) wf) (subterm many (Raw) raw) (subterm many (POuter (PInner)) is ph) -> (many (TermDec ctx raw) r)
     (match many raw _
@@ -960,12 +1013,13 @@
                       ((TOk ret rty)
                         (match erased sc _
                           ((TSOk a2 b2 c2 sret srty)
-                            (match many (same-dec ctx1 wf1 rty (Univ) srty (sc-univ ctx1)) _
-                              ((SDDiffer c d e du) (MkTermDec _ _ (TErr (RMismatch)) (ETValCtorRetNotType ctx ps rr ctx1 pt pids pn ret rty ep er du) (TSErr _ _)))
-                              ((SDSame c d e su)
+                            (let (many c) (erased cn) (erased scn) (canonical ctx1 wf1 ret sret))
+                            (match many (former-ret-dec ctx1 wf1 pids c scn) _
+                              ((FRBad d1 d2 d3 br) (MkTermDec _ _ (TErr (RBadReturn)) (ETValCtorBadRet ctx ps rr ctx1 pt pids pn ret rty c ep er cn br) (TSErr _ _)))
+                              ((FROk d1 d2 t args tty tps nm tt ct)
                                 (let (many acc) (erased bd) (binders pids))
                                 (let (many ret2) (erased ab) (abstract acc ret))
-                                (MkTermDec _ _ (TOk (ValCtor pt ret2) (Univ)) (ETValCtor ctx ps rr ctx1 pt pids pn acc ret rty ret2 ep er su bd ab)
+                                (MkTermDec _ _ (TOk (ValCtor pt ret2) (Univ)) (ETValCtor ctx ps rr ctx1 pt pids pn acc ret rty t args tty tps ret2 ep er cn nm tt ct bd ab)
                                   (TSOk _ _ _ (sc-valctor ctx pt ret2 spt (sc-abstract ctx acc ctx1 ret ret2 (cov-binders ctx pids ctx1 acc cr bd) sret ab)) (sc-univ ctx))))))))))))))))))
   (many elab-term-args : (many (Ctx) ctx) (many (WF ctx) wf) (many (List (Maybe (Term))) acc) (erased (ScS ctx acc) sacc) (many (List (Entry)) tele) (erased (ScT ctx tele) stele) (subterm many (List (Raw)) args)
       (subterm many (POuter (PInner)) is ph) -> (many (ArgsDec ctx acc tele args) r)
@@ -1210,10 +1264,6 @@
     enum
     (many PrefixYes : (erased (Ctx) ctx) (erased (Nat) j) (erased (List (Term)) as) (erased (List (Term)) bs) (many (Term) b) (erased (SamePrefix ctx j as bs b) p) (erased (Sc ctx b) sb) -> (PrefixDec ctx j as bs))
     (many PrefixNo : (erased (Ctx) ctx) (erased (Nat) j) (erased (List (Term)) as) (erased (List (Term)) bs) (erased (DifferPrefix ctx j as bs) p) -> (PrefixDec ctx j as bs)))
-  (NotAppDec : ((Term) c) -> Type
-    enum
-    (many IsApp : (many (Term) h) (many (List (Term)) as) -> (NotAppDec (App h as)))
-    (many IsNotApp : (erased (Term) c) (erased (NotApp c) p) -> (NotAppDec c)))
   ; A list of three or four terms, from its length.
   (As3 : ((List (Term)) as) -> Type
     enum
@@ -1254,15 +1304,6 @@
                   (match many (prefix-dec ctx wf j2 xs ys sxs sys) _
                     ((PrefixNo c2 d2 e2 g2 p) (PrefixNo _ _ _ _ (DPThere ctx j2 x xs y ys sm p)))
                     ((PrefixYes c2 d2 e2 g2 bb p sb) (PrefixYes _ _ _ _ bb (SPSucc ctx j2 x xs y ys bb sm p) sb))))))))))))
-(def-fns _ $ many not-app-dec : (many (Term) c) -> (many (NotAppDec c) r)
-  (match many c _
-    ((App h as) (IsApp h as))
-    ((Ref x) (IsNotApp _ (NotAppRef x)))
-    ((Bound k) (IsNotApp _ (NotAppBound k)))
-    ((Univ) (IsNotApp _ (NotAppUniv)))
-    ((Fn l ps rs) (IsNotApp _ (NotAppFn l ps rs)))
-    ((TyCtor ps) (IsNotApp _ (NotAppTyCtor ps)))
-    ((ValCtor ps r) (IsNotApp _ (NotAppValCtor ps r)))))
 (def-fns _ $ erased len3 : (erased (List (Term)) as) (erased (Length (Term) as (Succ (Succ (Succ (Zero))))) ln) -> (erased (As3 as) p)
   (match erased ln _ ((LenCons a x rest n l1) (match erased l1 _ ((LenCons b y rest2 n2 l2) (match erased l2 _ ((LenCons c z rest3 n3 l3) (match erased l3 _ ((LenNil d) (MkAs3 x y z))))))))))
 (def-fns _ $ erased len4 : (erased (List (Term)) as) (erased (Length (Term) as (Succ (Succ (Succ (Succ (Zero)))))) ln) -> (erased (As4 as) p)

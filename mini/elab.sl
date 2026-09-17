@@ -231,6 +231,24 @@
     (many ArgsErr : (many (Reason) r) -> (ArgsOut))))
 
 (def-adts
+  (Mem : ((Nat) x) ((List (Nat)) xs) -> Type
+    enum
+    (many MemHere : (erased (Nat) x) (erased (List (Nat)) xs) -> (Mem x (Cons (Nat) x xs)))
+    (many MemThere : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Mem x xs) p) -> (Mem x (Cons (Nat) y xs))))
+  (NotMem : ((Nat) x) ((List (Nat)) xs) -> Type
+    enum
+    (many NotMemNil : (erased (Nat) x) -> (NotMem x (Nil (Nat))))
+    (many NotMemCons : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Neq x y) n) (erased (NotMem x xs) p) -> (NotMem x (Cons (Nat) y xs))))
+  (NotApp : ((Term) t) -> Type
+    enum
+    (many NotAppRef : (erased (Nat) x) -> (NotApp (Ref x)))
+    (many NotAppBound : (erased (Nat) k) -> (NotApp (Bound k)))
+    (many NotAppUniv : -> (NotApp (Univ)))
+    (many NotAppFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotApp (Fn l ps rs)))
+    (many NotAppTyCtor : (erased (List (Entry)) ps) -> (NotApp (TyCtor ps)))
+    (many NotAppValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotApp (ValCtor ps r)))))
+
+(def-adts
   (ElabTerm : ((Ctx) ctx) ((Raw) raw) ((TOut) out) -> Type
     enum
     (many ETName : (erased (Ctx) ctx) (erased (String) s) (erased (Nat) x) (erased (Term) ty) (erased (List (Name)) scope)
@@ -276,8 +294,9 @@
     (many ETTyCtorErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Reason) r) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KTyCtor)) (Cons (Raw) (RList ps) (Nil (Raw))))) (TErr r)))
     (many ETValCtor : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
-       (erased (List (Maybe (Nat))) acc) (erased (Term) ret) (erased (Term) rty) (erased (Term) ret2)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Same ctx1 rty (Univ)) su)
+       (erased (List (Maybe (Nat))) acc) (erased (Term) ret) (erased (Term) rty) (erased (Nat) t) (erased (List (Term)) args) (erased (Term) tty) (erased (List (Entry)) tps) (erased (Term) ret2)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er)
+       (erased (Canonical ctx1 ret (App (Ref t) args)) cr) (erased (NotMem t pids) nm) (erased (TypeOf ctx1 t tty) tt) (erased (Canonical ctx1 tty (TyCtor tps)) ct)
        (erased (Binders pids acc) b) (erased (Abstract acc ret ret2) ab) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TOk (ValCtor pt ret2) (Univ))))
     (many ETValCtorParamsErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Reason) r) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
@@ -285,10 +304,27 @@
     (many ETValCtorRetErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn) (erased (Reason) r)
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TErr r)) er) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr r)))
-    (many ETValCtorRetNotType : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
-       (erased (Term) ret) (erased (Term) rty)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Differ ctx1 rty (Univ)) du) ->
-       (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr (RMismatch)))))
+    (many ETValCtorBadRet : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
+       (erased (Term) ret) (erased (Term) rty) (erased (Term) c)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Canonical ctx1 ret c) cr) (erased (BadFormerRet ctx1 pids c) br) ->
+       (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr (RBadReturn)))))
+  ; A ValCtor former's return is an application of a type constructor in scope, not of one of the former's own
+  ; binders (ASSUMPTIONS 80); the four ways it is not.
+  (BadFormerRet : ((Ctx) ctx) ((List (Nat)) pids) ((Term) c) -> Type
+    enum
+    (many BFNotApp : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) c) (erased (NotApp c) p) -> (BadFormerRet ctx pids c))
+    (many BFHead : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) h) (erased (List (Term)) as) (erased (NonRef h) p) -> (BadFormerRet ctx pids (App h as)))
+    (many BFOwn : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Nat) t) (erased (List (Term)) as) (erased (Mem t pids) p) -> (BadFormerRet ctx pids (App (Ref t) as)))
+    (many BFNotTycon : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Nat) t) (erased (List (Term)) as) (erased (Term) tty) (erased (Term) c)
+       (erased (TypeOf ctx t tty) p) (erased (Canonical ctx tty c) q) (erased (NotTyCtor c) n) -> (BadFormerRet ctx pids (App (Ref t) as))))
+  (NotTyCtor : ((Term) t) -> Type
+    enum
+    (many NTCRef : (erased (Nat) x) -> (NotTyCtor (Ref x)))
+    (many NTCBound : (erased (Nat) k) -> (NotTyCtor (Bound k)))
+    (many NTCApp : (erased (Term) h) (erased (List (Term)) as) -> (NotTyCtor (App h as)))
+    (many NTCUniv : -> (NotTyCtor (Univ)))
+    (many NTCFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotTyCtor (Fn l ps rs)))
+    (many NTCValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotTyCtor (ValCtor ps r))))
   ; The head's telescope, for the error rules that do not care which former it is; and a canonical type
   ; that is no former's, for the rule that refuses the application.
   (HeadTele : ((Ctx) ctx) ((Term) hty) ((List (Entry)) ps) -> Type
@@ -446,14 +482,6 @@
     enum
     (many NotOneNil : -> (NotOne (Nil (Nat))))
     (many NotOneMore : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) ids) -> (NotOne (Cons (Nat) x (Cons (Nat) y ids)))))
-  (Mem : ((Nat) x) ((List (Nat)) xs) -> Type
-    enum
-    (many MemHere : (erased (Nat) x) (erased (List (Nat)) xs) -> (Mem x (Cons (Nat) x xs)))
-    (many MemThere : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Mem x xs) p) -> (Mem x (Cons (Nat) y xs))))
-  (NotMem : ((Nat) x) ((List (Nat)) xs) -> Type
-    enum
-    (many NotMemNil : (erased (Nat) x) -> (NotMem x (Nil (Nat))))
-    (many NotMemCons : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Neq x y) n) (erased (NotMem x xs) p) -> (NotMem x (Cons (Nat) y xs))))
   (AtomNames : ((List (Raw)) raws) ((List (Maybe (String))) names) -> Type
     enum
     (many ANNil : -> (AtomNames (Nil (Raw)) (Nil (Maybe (String)))))
@@ -506,14 +534,6 @@
     (many SPZero : (erased (Ctx) ctx) (erased (List (Term)) as) (erased (Term) b) (erased (List (Term)) bs) -> (SamePrefix ctx (Zero) as (Cons (Term) b bs) b))
     (many SPSucc : (erased (Ctx) ctx) (erased (Nat) j) (erased (Term) a) (erased (List (Term)) as) (erased (Term) b0) (erased (List (Term)) bs) (erased (Term) b)
        (erased (Same ctx a b0) sm) (erased (SamePrefix ctx j as bs b) p) -> (SamePrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b0 bs) b)))
-  (NotApp : ((Term) t) -> Type
-    enum
-    (many NotAppRef : (erased (Nat) x) -> (NotApp (Ref x)))
-    (many NotAppBound : (erased (Nat) k) -> (NotApp (Bound k)))
-    (many NotAppUniv : -> (NotApp (Univ)))
-    (many NotAppFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotApp (Fn l ps rs)))
-    (many NotAppTyCtor : (erased (List (Entry)) ps) -> (NotApp (TyCtor ps)))
-    (many NotAppValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotApp (ValCtor ps r))))
   (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
     enum
     (many LenNil : (erased Type A) -> (Length A (Nil A) (Zero)))
