@@ -206,10 +206,14 @@ structurally, with the relations kept as they were:
   `self/` should follow, and the sentence section 18 of DESIGN.md would
   need, are for the owner. For the function side this moved the stuck
   into unification (`RefStuck`, propagated as the `Stuck` constructors
-  of the walk's result types, which only `Force` mode can be); closing it
-  would need the invariant that every application head in play has a
-  former's type, carried through the elaborator and unification, in the
-  session's reading. `mini/preserve.sl` holds groundwork for that.
+  of the walk's result types, which only `Force` mode can be). This
+  paragraph used to add that closing it would need the invariant that
+  every application head in play has a former's type, carried through
+  the elaborator and unification; the two sessions below took the other
+  route, recording the former on the application itself, so
+  `type-of-term` is total and `RefStuck` and that family are gone.
+  `mini/preserve.sl` holds groundwork for the preservation argument
+  `mini/README.md` still leaves open.
 - `TOOLING-WISHLIST.md` logs the friction met writing `.sl` by hand at
   this scale, as the owner asked.
 - The self-hosted `slc` (`self/`) accepts every file and all eight
@@ -221,7 +225,8 @@ structurally, with the relations kept as they were:
   session below fixed it.
 
 Next, in the session's estimation: the owner's verdict on the `Sided`
-merge and on the `type-of-term` hole, then the items above.
+merge and on the `type-of-term` hole (since closed, below), then the
+items above.
 
 ## The three `mini/` tests `slc` refused (one session, at the owner's request)
 
