@@ -369,8 +369,14 @@ Open, in the session's estimation, none of it decided:
   than a stack overflow at 60000. Raising it costs nothing at runtime
   now that the stack does not bound such a loop, but the constant is
   user-visible and the session did not touch it.
-- `lib/eval.ml` was not touched, so the reference interpreter still
-  grows its stack on a compile-time tail call. Only `slc` changed.
+- `lib/eval.ml` was not touched and needs nothing: its `eval` and
+  `apply` both return a plain `value list`, so every tail position was
+  already an OCaml tail call and the reference runs four million
+  compile-time tail-recursive steps in a 256KB stack. This branch is
+  `slc` catching up to that shape. An earlier draft of this section
+  claimed the reference grew its stack too; it does not, and the
+  measurement behind the claim was the unary printer, not the
+  evaluator (ASSUMPTIONS 150).
 - `apply-extern` returns `None` for `ExNatCmp` and `ExStrCmp`, so `slc`
   runs those two models at compile time where the reference runs the
   extern; `nat-cmp`'s model recurses once per unit of its smaller

@@ -104,7 +104,14 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     function nor the depth, and the wrong guess stood in two files for
     a session. A runtime that named the deepest frame, or a compiler
     flag that reported which recursions are not in tail position, would
-    have answered it directly.
+    have answered it directly. It happened a second time, to a later
+    session: asked whether the *reference* interpreter overflowed too,
+    it measured a program whose result was a 200000-deep `Nat` and read
+    the overflow as the evaluator's, when the backtrace put it in
+    `Ffi_core.nat_view` spelling that `Nat` in unary to print it
+    (ASSUMPTIONS 150). Both times the fix was to look at a backtrace
+    instead of at the source, and both times the wrong guess was
+    written down first.
 
 16. **A way to ask for a tail call and be told when it is not one.**
     The `tail` mark does this for a call the programmer suspects, and

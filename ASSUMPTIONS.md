@@ -2923,10 +2923,21 @@ rest below is the session's.
      resident size from 11MB to 9MB.
 
      Two things this did not touch, neither of them new. `lib/eval.ml`
-     recurses as before, so the reference interpreter still grows its
-     stack on a compile-time tail call, at roughly twice `slc`'s old
-     depth; only `slc` changed, and the two agreeing on every test is
-     what `bootstrap.sh` checks. And `self/eval.sl`'s `apply-extern`
+     needed nothing, and reading it afterwards is what shows this item
+     to be `slc` catching up rather than breaking new ground: its `eval`
+     and `apply` both hand back a plain `value list`, so `CLet`,
+     `CLetRec`, a match branch, `CApp`'s `apply` and `apply`'s own
+     `eval` are already OCaml tail calls, and the reference runs four
+     million compile-time tail-recursive steps in a 256KB stack. The
+     `Vals` index of item 125 is what had put a conversion on either
+     side of `slc`'s call boundary; the reference never had one.
+     (An earlier draft of this item said the reference grew its stack
+     too, at about twice `slc`'s old depth. That was the same
+     misattribution TOOLING-WISHLIST 15 records: the program measured
+     returned a 200000-deep `Nat`, and the overflow was
+     `Ffi_core.nat_view` unfolding it into unary Peano form to print
+     it, with `eval` nowhere in the backtrace.) And `self/eval.sl`'s
+     `apply-extern`
      returns `None` for `ExNatCmp` and `ExStrCmp`, the two externs whose
      result is a `Cmp` rather than a payload (item 123), so `slc` runs
      their source models at compile time; `nat-cmp`'s recurses once per
