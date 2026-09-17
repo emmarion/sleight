@@ -72,18 +72,21 @@ left to `_` inside the body, or the factory cannot relate it. `emit.sl`
 mints `REF-CMP` and builds the sort there; `ref-le` is defined at that
 level inside `emit-program`, closing over the history.
 
+Widening is now an erased `*-widen` and a `coerce` at each call site,
+the owner having pointed out that a call to a `many` wrapper extracts to
+a real call where the inline `coerce` extracts to nothing. The eight
+wrappers are gone and none of their names appears in the compiled
+compiler. `st-widen` was added to match; the awkward part was placement,
+a `coerce` needing a two-binder `let` before it, so a site nested in an
+argument had to grow a statement in the nearest enclosing statement
+position rather than be rewritten where it stood.
+
 Open, none of it decided:
 
 1. The trace itself descends by value depth rather than being tail
    recursive. The owner asked for tail recursion where a reasonable
    measure exists; the session did not find one that is both erased and
    proof-free, the seen set bounding the walk rather than any structure.
-2. The `-weaken` wrappers in `heap.sl` are marked TEMPORARY. The owner
-   asked that widening be an erased proof and a `coerce` at the call
-   site, a call to a `many` wrapper extracting to a real call where the
-   inline `coerce` extracts to nothing; that pass is not done, and the
-   nested call sites need hoisting for it.
-
 ## The minimal language and its semantics (`mini/`)
 
 Done, in one autonomous session at the owner's request:

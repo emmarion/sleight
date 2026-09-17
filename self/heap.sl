@@ -219,20 +219,3 @@
       (let (erased one2) (erased p1) (idmap-widen _ b c le one))
       (let (erased two2) (erased p2) (idmap-widen _ b c le two))
       (values (MNode _ here2 one2 two2) (coercible-ctor MNode (Ref B b) (Ref B c) ph p1 p2)))))
-
-; TEMPORARY: the weaken wrappers, to be removed in favour of an inline coerce at each call site.
-
-(def-fns _ $ many ref-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
-    (erased (Suffix B c b) le) (many (Ref B b) r) -> (many (Ref B c) r2)
-  (let (erased r2) (erased p) (ref-widen _ b c le r))
-  (coerce r p))
-
-(def-fns _ $ many refs-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
-    (erased (Suffix B c b) le) (many (List $ Ref B b) xs) -> (many (List $ Ref B c) r)
-  (let (erased ys) (erased p) (refs-widen _ b c le xs))
-  (coerce xs p))
-
-(def-fns _ $ many idmap-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
-    (erased (Suffix B c b) le) (many (IdMap $ Ref B b) m) -> (many (IdMap $ Ref B c) r)
-  (let (erased m2) (erased p) (idmap-widen _ b c le m))
-  (coerce m p))

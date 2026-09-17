@@ -426,10 +426,6 @@
       (let (erased rest2) (erased pr) (frames-widen b c le cx rest))
       (values (FrGroup _ _ gids g2 rest2) (coercible-ctor FrGroup (Ref Block b) (Ref Block c) cx cx (coercible-refl gids) pg pr)))))
 
-(def-fns _ $ many frames-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ List $ Nat) ctx) (many (Frames (Ref Block b) ctx) env) -> (many (Frames (Ref Block c) ctx) r)
-  (let (erased env2) (erased p) (frames-widen b c le ctx env))
-  (coerce env p))
-
 (def-fns _ $ erased block-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Block (Ref Block b)) blk) -> (erased (Block (Ref Block c)) blk2) (erased (Coercible (Block (Ref Block b)) blk (Block (Ref Block c)) blk2) p)
   (match erased blk _
     ((BTag a ct fields)
@@ -450,10 +446,6 @@
     ((BToken a) (values (BToken _) (coercible-ctor BToken (Ref Block b) (Ref Block c))))
     ((BError a m) (values (BError _ m) (coercible-ctor BError (Ref Block b) (Ref Block c) (coercible-refl m))))))
 
-(def-fns _ $ many block-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (many (Block (Ref Block b)) blk) -> (many (Block (Ref Block c)) r)
-  (let (erased blk2) (erased p) (block-widen b c le blk))
-  (coerce blk p))
-
 (def-fns _ $ erased vals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ Mult) ms) (subterm erased (Vals b ms) vs) -> (erased (Vals c ms) vs2) (erased (Coercible (Vals b ms) vs (Vals c ms) vs2) p)
   (match erased vs _
     ((ValsNil a) (values (ValsNil _) (coercible-ctor ValsNil b c)))
@@ -464,10 +456,6 @@
     ((ValsErased a ms2 rest)
       (let (erased rest2) (erased pr) (vals-widen b c le ms2 rest))
       (values (ValsErased _ _ rest2) (coercible-ctor ValsErased b c ms2 ms2 pr)))))
-
-(def-fns _ $ many vals-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ Mult) ms) (many (Vals b ms) vs) -> (many (Vals c ms) r)
-  (let (erased vs2) (erased p) (vals-widen b c le ms vs))
-  (coerce vs p))
 
 (def-fns _ $ many at-get : (erased Type B) (erased (Nat) x) (erased (List $ Nat) f) (subterm many (At x f) p) (many (List B) vs) (erased (Lockstep (Nat) B f vs) lk) -> (many B v) (erased (Subterm B v (List B) vs) q)
   (match many p _
@@ -1950,10 +1938,6 @@
       (let (erased two2) (erased p2) (entries-widen b c le two))
       (values (MNode _ here2 one2 two2) (coercible-ctor MNode (EInfo b) (EInfo c) ph p1 p2)))))
 
-(def-fns _ $ many entries-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (many (IdMap $ EInfo b) m) -> (many (IdMap $ EInfo c) r)
-  (let (erased m2) (erased p) (entries-widen b c le m))
-  (coerce m p))
-
 (def-fns _ $ erased finals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (subterm erased (List $ Pair (Ref Block b) $ Term) xs) -> (erased (List $ Pair (Ref Block c) $ Term) ys) (erased (Coercible (List $ Pair (Ref Block b) $ Term) xs (List $ Pair (Ref Block c) $ Term) ys) p)
   (match erased xs _
     ((Nil t) (values (Nil _) (coercible-ctor Nil (Pair (Ref Block b) $ Term) (Pair (Ref Block c) $ Term))))
@@ -1982,7 +1966,8 @@
 ; A closed block, one holding no reference, allocated as the value of [x]: a descriptor, a payload, the token.
 (def-fns _ $ many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r)
   (let (erased hl) (many hp) (many en) (many fi) $ env-store e)
-  (let (erased hl2) (many hp2) (erased sf) (many a) $ alloc Block _ hp $ block-weaken _ _ (empty-suffix _ hl) b)
+  (let (erased wb0) (erased pb0) (block-widen _ _ (empty-suffix _ hl) b))
+  (let (erased hl2) (many hp2) (erased sf) (many a) $ alloc Block _ hp (coerce b pb0))
   (let (many en2) (many fi2) $ store-grow _ _ sf en fi)
   (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a) fi2))
 
