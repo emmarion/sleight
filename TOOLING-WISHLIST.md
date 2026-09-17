@@ -99,3 +99,26 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     heap-allocated continuation, or at least a message naming the limit,
     would keep `self/bootstrap.sh` honest on programs that evaluate
     deeply at compile time.
+
+16. **A result type's new constructor ripples through every caller.**
+    Giving unification's walk a stuck answer meant turning each
+    `(let (erased o) (many st) (erased p) (call ...))` in six mutually
+    recursive functions into a two-armed `match` whose second arm wraps
+    the rest of the body, fifteen times, by script. Either a refactoring
+    tool for "this call's result gained a case" or a language form that
+    threads a `Stuck`-like case through a sequence of `let`s (the shape
+    an error monad has) would make such a change a one-liner per site.
+
+17. **Pattern variables silently shadow outer bindings.** `(TotIs a b c
+    ty p sc)` inside a function that had already matched its context as
+    `(MkCtx n s e r a l sa)` rebound `a`, and the error was a type
+    mismatch on a later use of `a`, three lines away. A warning on a
+    pattern variable that shadows a binding of the enclosing function
+    would name the problem at its source.
+
+18. **No forward references between `def-adts` groups.** A relation may
+    mention one declared later in the same group but not in a later
+    group, so adding a premise that used `Mem` and `NotApp` meant moving
+    those two out of their groups to above the user. Either allowing
+    a file's groups to refer to each other or reporting the fix
+    ("declared below, at line N") would save the shuffle.

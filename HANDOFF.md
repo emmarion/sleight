@@ -42,19 +42,27 @@ structurally, with the relations kept as they were:
 - The relations changed in two places, both for the owner to confirm or
   reject: `Subst`'s `SubBeyond` and `Unify`'s `Sided` merge of the
   left/right twin rules. The function-side `Oriented` lost its `OrStuck`.
-- One non-syntax stuck remains, in `type-of-term` (see `mini/README.md`).
-  A later session, funded to close it by a preservation argument, found
-  the argument false as the relations then stood: a program reached the
+- One non-syntax stuck remains, the type of a closed term
+  (`type-of-term`, now in `mini/unify.sl`; see `mini/README.md`). A later
+  session, funded to close it by a preservation argument, found the
+  argument false as the relations then stood: a program reached the
   stuck (`tests/mini_untyped_rule.sl`, with the reading of why in its
-  header). The cause was `ETValCtor` accepting any type as a `ValCtor`
-  former's return, which `lib/` refuses (ASSUMPTIONS 70 and 80); the owner
-  had item 80 restored in `mini/`, which refuses the program. Neither
-  `lib/` nor `self/` equates a variable's type with its term's when
-  forcing assigns a rule (only atom-against-atom unifies signatures, and
-  only where both are formers, ASSUMPTIONS 89); the owner's hunch is that
-  under item 80 that equation is derivable, so `UAssign` needs no change.
-  Unverified: the session's reading is that verifying it is exactly the
-  typed-rules lemma the preservation argument needs.
+  header). Two owner decisions followed. `ETValCtor` now requires
+  ASSUMPTIONS 80 of a `ValCtor` former's return, which `lib/` and `self/`
+  already did. And `UAssign` equates the assigned variable's type with
+  the term's, pushed as the next equation, which neither `lib/` nor
+  `self/` does (their forcing assigns without a type check, and their
+  atom-against-atom case unifies signatures only where both are formers,
+  ASSUMPTIONS 89); `Refine` and `Contradict` take one equation, the
+  scrutinee against the pattern, the type equation following from it.
+  So `mini/` is now stricter than the reference: whether `lib/` and
+  `self/` should follow, and the sentence section 18 of DESIGN.md would
+  need, are for the owner. For the function side this moved the stuck
+  into unification (`RefStuck`, propagated as the `Stuck` constructors
+  of the walk's result types, which only `Force` mode can be); closing it
+  would need the invariant that every application head in play has a
+  former's type, carried through the elaborator and unification, in the
+  session's reading. `mini/preserve.sl` holds groundwork for that.
 - `TOOLING-WISHLIST.md` logs the friction met writing `.sl` by hand at
   this scale, as the owner asked.
 - The self-hosted `slc` (`self/`) accepts every file and all eight

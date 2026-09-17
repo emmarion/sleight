@@ -107,6 +107,28 @@
             (let (many fs) (many out) (erased q) (subst-tele (Cons _ (None _) sub) rest))
             (values (Cons _ (MkEntry s i u) fs) out (SubTCons sub s i t u rest fs out p q))))))))
 
+; The substitution that instantiates a telescope with a list of arguments: the last argument innermost.
+(def-adts
+  (Somes : ((List (Term)) as) ((List (Maybe (Term))) sub) -> Type
+    enum
+    (many SomesNil : -> (Somes (Nil (Term)) (Nil (Maybe (Term)))))
+    (many SomesCons : (erased (Term) a) (erased (List (Term)) as) (erased (List (Maybe (Term))) sub) (erased (List (Maybe (Term))) out)
+       (erased (Somes as sub) p) (erased (Snoc sub (Some (Term) a) out) q) -> (Somes (Cons (Term) a as) out)))
+  (Snoc : ((List (Maybe (Term))) xs) ((Maybe (Term)) x) ((List (Maybe (Term))) out) -> Type
+    enum
+    (many SnocNil : (erased (Maybe (Term)) x) -> (Snoc (Nil (Maybe (Term))) x (Cons (Maybe (Term)) x (Nil (Maybe (Term))))))
+    (many SnocCons : (erased (Maybe (Term)) y) (erased (List (Maybe (Term))) ys) (erased (Maybe (Term)) x) (erased (List (Maybe (Term))) out) (erased (Snoc ys x out) p) ->
+       (Snoc (Cons (Maybe (Term)) y ys) x (Cons (Maybe (Term)) y out)))))
+
+(def-fns _ $ many snoc : (subterm many (List (Maybe (Term))) xs) (many (Maybe (Term)) x) -> (many (List (Maybe (Term))) out) (erased (Snoc xs x out) p)
+  (match many xs _
+    ((Nil a) (values (Cons _ x (Nil _)) (SnocNil x)))
+    ((Cons a y ys) (let (many out) (erased p) (snoc ys x)) (values (Cons _ y out) (SnocCons y ys x out p)))))
+(def-fns _ $ many somes : (subterm many (List (Term)) as) -> (many (List (Maybe (Term))) sub) (erased (Somes as sub) p)
+  (match many as _
+    ((Nil a) (values (Nil _) (SomesNil)))
+    ((Cons a t ts) (let (many sub) (erased p) (somes ts)) (let (many out) (erased q) (snoc sub (Some _ t))) (values out (SomesCons t ts sub out p q)))))
+
 ; ---- Abstraction, the inverse of substitution: the entries a telescope was elaborated with become its
 ; binders. The list is indexed by [Bound] like a substitution: a [Some] is the entry the binder stands for, a
 ; [None] a binder of an inner telescope passed on the way.

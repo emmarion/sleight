@@ -53,21 +53,24 @@ claim in this file that the tests do not make is a mistake in this file.
   value-constructor formers, every ruled entry non-rigid) and returning
   it for the context it produces. Results are ADTs holding the derived
   data and the erased derivation, or a `Stuck` constructor, which the
-  functions reach only on a malformed shape, with one exception:
-  `type-of-term`, which `MintTele`'s `is` entries need, has no
-  derivation for a `Bound` outside its binder or an application whose
-  head's canonical type is not a former, and the carried invariants do
-  not exclude those inputs. One session found a program that reached it
-  (`tests/mini_untyped_rule.sl`): `ETValCtor` then accepted any type as
-  a `ValCtor` former's return, so an application could stand as a head,
-  and `UAssign`, which relates a variable to a term with no check on
-  their types, gave a former-typed variable a term of another type. The
-  owner restored ASSUMPTIONS 80 (the return canonicalizes to an
-  application of a type constructor not among the former's own binders),
-  which refuses that program. Whether any program still reaches the
-  stuck is open: the owner's hunch is none, the session's reading is
-  that showing it needs the lemma that every rule unification mints
-  relates terms of equal canonical types, which is not attempted.
+  functions reach only on a malformed shape, with one exception: the
+  type of a closed term (`type-of-term` in `unify.sl`), which `UAssign`
+  and `MintTele`'s `is` entries need, has no derivation for a `Bound`
+  outside its binder or an application whose head's canonical type is
+  not a former, and the carried invariants do not exclude those inputs.
+  One session found a program that reached it while `ETValCtor`
+  accepted any type as a `ValCtor` former's return and `UAssign` related
+  a variable to a term with no check on their types
+  (`tests/mini_untyped_rule.sl`). The owner then restored ASSUMPTIONS 80
+  (the return canonicalizes to an application of a type constructor not
+  among the former's own binders), which refuses that program, and had
+  `UAssign` equate the variable's type with the term's next, as `UAlias`
+  already did, so that every rule unification mints relates terms whose
+  types it has unified; `Refine` then forces one equation, the type
+  equation following from it. Whether any program still reaches the
+  stuck is open: the session's reading is that showing it needs the
+  invariant that every application head in play has a former's type,
+  carried through the elaborator and unification, which is not attempted.
   Two relations changed for this, both flagged for the owner: `Subst`
   gained `SubBeyond` (a `Bound` past the end of the substitution stays,
   making substitution total), and `Unify`'s twin left/right rules for a

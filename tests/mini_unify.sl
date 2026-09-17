@@ -3,7 +3,7 @@
 ; Unification in mini/: over Nat's declaration (2 the type constructor, 3 Zero, 4 Succ) and two variables 5 and
 ; 6, in order: a variable takes an application; Zero against Succ is refused, both rigid; the occurs check;
 ; Check mode refuses two variables; Check mode accepts identical terms; Force aliases two variables; a variable
-; with a rule is read through it.
+; with a rule is read through it. The helper reports a stuck answer, which none of these reach, as a failure.
 
 (let (many nat) (App (Ref 2) (Nil _)))
 (let (many ents)
@@ -26,8 +26,9 @@
 (def-fns _ $ many run : (many (Mode) m) (many (List (Rule)) rules) (many (Table ents rules) tb) (many (Term) l) (many (Term) r) (erased (Scoped ents l) sl) (erased (Scoped ents r) sr) ->
     (many (UOut) o) (many (OutTable ents o) ot)
   (let (many n) (erased fc) (free-count ents rules))
-  (let (many o) (many ot) (erased p) (unify-eqs m ents se rules tb n fc (Cons _ (MkEqn l r) (Nil _)) (SqCons _ _ _ _ sl sr (SqNil _))))
-  (values o ot))
+  (match many (unify-eqs m ents se rules tb n fc (Cons _ (MkEqn l r) (Nil _)) (SqCons _ _ _ _ sl sr (SqNil _))) _
+    ((EqsStuck z0 z1 z2) (values (UFail) (OTFail _)))
+    ((MkEqs y0 y1 y2 y3 o ot p) (values o ot))))
 
 (def-fns _ $ many ok : (many (UOut) o) -> (many (Bool) b)
   (match many o _ ((UOk rs) (BTrue)) ((UFail) (BFalse))))

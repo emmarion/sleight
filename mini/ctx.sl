@@ -199,6 +199,19 @@
     ((NthHere a x rest) (match erased b _ ((ScSSome a2 t rest2 q r) q)))
     ((NthThere a y rest i x q) (match erased b _ ((ScSNone a2 rest2 r) (nth-scoped ents rest2 i v r q)) ((ScSSome a2 t rest2 r s) (nth-scoped ents rest2 i v s q))))))
 
+(def-fns _ $ erased snoc-scoped : (erased (List (Ent)) e) (erased (List (Maybe (Term))) sub) (erased (Term) t) (erased (List (Maybe (Term))) out) (erased (ScopedSub e sub) p) (erased (Scoped e t) st)
+    (subterm erased (Snoc sub (Some (Term) t) out) sn) -> (erased (ScopedSub e out) q)
+  (match erased sn _
+    ((SnocNil x) (ScSSome e t (Nil _) st (ScSNil e)))
+    ((SnocCons y ys x out2 p2)
+      (match erased p _
+        ((ScSNone a rest q2) (ScSNone e out2 (snoc-scoped e ys t out2 q2 st p2)))
+        ((ScSSome a t2 rest st2 q2) (ScSSome e t2 out2 st2 (snoc-scoped e ys t out2 q2 st p2)))))))
+(def-fns _ $ erased somes-scoped : (erased (List (Ent)) ents) (erased (List (Term)) as) (erased (List (Maybe (Term))) sub) (erased (ScopedList ents as) p) (subterm erased (Somes as sub) so) -> (erased (ScopedSub ents sub) q)
+  (match erased so _
+    ((SomesNil) (ScSNil ents))
+    ((SomesCons a as2 sub2 out p2 sn) (match erased p _ ((ScCons b t0 ts0 st sts) (snoc-scoped ents sub2 a out (somes-scoped ents as2 sub2 sts p2) st sn))))))
+
 (def-fns _
   (erased subst-scoped : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) sub) (erased (Term) t) (erased (Term) u) (erased (ScopedSub ents sub) bs) (erased (Scoped ents t) bt) (subterm erased (Subst sub t u) d) ->
       (erased (Scoped ents u) c)
