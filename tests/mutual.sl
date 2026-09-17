@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; Mutually recursive ADTs and functions.
 
 (def-adts

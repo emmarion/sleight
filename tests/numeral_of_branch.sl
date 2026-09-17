@@ -1,4 +1,4 @@
-; expect: (Zero)
+; expect: 0
 ; Resolving by spelling holds inside a branch that has equated two literals: each still fetches its own
 ; proof, and two spellings for one Nat refute the branch.
 

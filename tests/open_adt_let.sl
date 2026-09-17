@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; An open's extent is the rest of the containing expression: a let's right-hand side statements are
 ; statements of the enclosing expression, their entries staying in scope anonymously (section 16), so the
 ; open inside the right-hand side still serves the matches after the let, the second of which dispatches at

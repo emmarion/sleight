@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; newtype-of fetches the Newtype naming a marked type's wrapping constructor, and a first-class coercible-wrap
 ; works through it once it is opened (DESIGN.md section 19).
 

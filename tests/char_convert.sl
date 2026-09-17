@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; Nat and Char convert without prelude help: an Lt makes the U8, MkChar wraps it, and two let-matches
 ; take it back apart.
 

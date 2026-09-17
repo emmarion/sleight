@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))
+; expect: 7
 ; Functions at different levels in one list built inside a function body: each Pack carries its level erased
 ; with a proof that the level predates K0, fixed when Packed was declared, and a consumer above K0 composes
 ; that proof with its own by predates-trans.

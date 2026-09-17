@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; comptime-match on a Const of a transparent type projects the value itself as the field.
 
 (def-adts $ Meters : -> Type

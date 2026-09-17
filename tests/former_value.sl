@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A function type built by Fn and named by a let, then used as a parameter type.
 
 (def-lvl L)

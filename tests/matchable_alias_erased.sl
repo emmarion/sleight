@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; An erased alias of a type's own Matchable does not stand in for it: the lookup reads the alias through to the
 ; def-adts one, whose ADT the elaborator sees, so a non-erased match on the type still needs nothing at runtime.
 (let (erased m) (matchable-of List))

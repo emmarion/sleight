@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A special form renamed through a state-forwarding let (sections 4, 9).
 
 (let (many define) let)

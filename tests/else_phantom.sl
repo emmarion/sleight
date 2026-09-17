@@ -1,5 +1,5 @@
 ; needs: absurd
-; expect: (Succ (Zero))
+; expect: 1
 ; An else covering only phantom constructors under a many scrutinee can never run: it counts as no real branch and
 ; its body is erased throughout, so returning an erased variable is accepted.
 

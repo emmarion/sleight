@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Matching through a first-class type constructor, constructor and Matchable (section 17), once the Matchable
 ; is opened (DESIGN.md section 19).
 

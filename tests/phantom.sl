@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; A phantom constructor's branch is fully erased and exempt from the match's result erasure.
 
 (def-adts

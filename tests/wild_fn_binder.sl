@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A `_` solved under a Fn binder: apply's A is read off the function argument's parameter type.
 
 (def-lvl I)

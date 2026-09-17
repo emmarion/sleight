@@ -1,5 +1,5 @@
 ; needs: list absurd
-; expect: (Succ (Zero))
+; expect: 1
 ; A transparent union: the other constructor has only erased fields and is refuted by proof.
 
 (def-adts

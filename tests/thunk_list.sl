@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A final function from no arguments: the driver applies it and prints the result, so the value is computed by
 ; code (at runtime once extracted) over the embedded constant xs.
 

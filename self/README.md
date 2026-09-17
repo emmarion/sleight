@@ -268,7 +268,13 @@ the entry says otherwise, and recorded so it can be revisited.
   printer**, as ASSUMPTIONS 66 chose, a block carrying no constructor
   names; a function-valued final prints its name as the reference does,
   and the printer's memo keys a type with the variables minted during
-  printing made a wildcard, as `lib/extract.ml` does.
+  printing made a wildcard, as `lib/extract.ml` does. A `Nat`, `Char` or
+  `String` prints as the literal it reads back from, the emitted OCaml
+  spelling it through `Ffi_core` and `elab.sl`'s compile-time printer in
+  the language (ASSUMPTIONS 154); that printer takes an extern value
+  apart with one case per extern implementation and no `else`, so a
+  fourth extern type is refused there rather than printing through the
+  untyped spelling.
 - **Output is a rope written chunk by chunk.** Consing a `String`
   copies under the FFI, so the compiler never builds a long string; the
   OCaml text is a tree of small chunks flushed through one `WriteOut`

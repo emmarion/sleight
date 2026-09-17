@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))
+; expect: 7
 ; Functions at different levels in one list, the levels erased and the package naming no bound: the consumer
 ; takes a proof that the list predates its level, and predates-subterm walks that proof down through each
 ; Cons and each Pack to the level inside.

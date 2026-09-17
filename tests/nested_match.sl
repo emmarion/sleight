@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Nested matches on the same variable: the inner match sees the outer branch's facts.
 
 (def-lvl X)

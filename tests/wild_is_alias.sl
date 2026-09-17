@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; An is return instantiated with an argument of an alias type, then fed to a `_` solved through a
 ; constructor's is field: the entries' types are read canonically wherever they were computed.
 

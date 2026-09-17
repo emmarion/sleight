@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))
+; expect: 9
 ; tests/ackermann.sl with no annotations: the outer call's first subterm argument differs from its
 ; counterpart, so the inferred proof decreases there; the inner call keeps the first and so decreases the second.
 

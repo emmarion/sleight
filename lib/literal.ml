@@ -25,6 +25,10 @@ let char c = Printf.sprintf "#\\x%02x" c
 let key = function Numeral z -> Z.to_string z | Char c -> char c | Str s -> quote s
 let chars s = List.init (String.length s) (fun i -> Char (Char.code s.[i]))
 
+(* The source spelling a literal reads back from, [classify]'s inverse: a numeral in decimal, a character bare
+   where the reader's word syntax admits it, and a string escaped the way [Reader.tokenize] unescapes. *)
+let spell = function Numeral z -> Z.to_string z | Char c -> Ffi_core.lit_char c | Str s -> Ffi_core.lit_string s
+
 (* The bijective base-2 spelling of [z] as source: (B1 b) is 2b+1, (B2 b) is 2b+2. *)
 let rec bin z = match Ffi_core.half_view ~z:Fun.id ~nat:Fun.id z with HZ -> "(BZ)" | H1 b -> "(B1 " ^ bin b ^ ")" | H2 b -> "(B2 " ^ bin b ^ ")"
 

@@ -1,4 +1,4 @@
-; expect: (Zero)
+; expect: 0
 ; A tail-marked loop counting a Nat down a million times, the count computed at runtime so nothing is
 ; embedded: the extracted program runs it through the extern match in constant stack, which holds only
 ; if the FFI's match keeps a branch body in tail position (ASSUMPTIONS 133).

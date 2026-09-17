@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A special form renamed inside a function body still dispatches (section 9's forwarding into bodies).
 
 (def-lvl X)

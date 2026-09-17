@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; Branches refute through a chain of let aliases.
 
 (def-lvl X)

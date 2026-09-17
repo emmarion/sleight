@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A length-indexed vector: head needs the VNil branch refuted automatically.
 
 (def-adts

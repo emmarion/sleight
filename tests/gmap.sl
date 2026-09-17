@@ -1,4 +1,4 @@
-; expect: (SCons (Succ (Zero)) (SNil))
+; expect: (SCons 1 (SNil))
 ; Generic over a shape: gmap maps over any type whose constructors have List's, taking the type constructor,
 ; both constructors and the Matchable as arguments, and runs at the prelude's List and at Seq. The shape is
 ; spelled out in the signature, so a type with other constructors does not fit it.

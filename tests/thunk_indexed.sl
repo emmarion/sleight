@@ -1,4 +1,4 @@
-; expect: (VCons (Succ (Zero)) (VNil))
+; expect: (VCons 1 (VNil))
 ; A final function returning a value of an indexed type: the generated printer keeps an arm for each
 ; constructor whose return type unifies with the type, the opened objects merged as entering a branch does,
 ; so VNil is refuted at length one and VCons at length zero, and the fields print through their types at the

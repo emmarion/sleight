@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; DESIGN.md sections 31 and 32: List and length; Nat comes from the prelude.
 
 (def-adts

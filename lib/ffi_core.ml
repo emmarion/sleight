@@ -23,6 +23,23 @@ let str_of ~z ~slice ~str = function
   | SNil -> str ("", 0, 0)
   | SCons (c, rest) -> let s, o, l = slice rest in str (String.make 1 (Char.chr (Z.to_int (z c))) ^ String.sub s o l, 0, l + 1)
 
+(* The source spelling a printed literal reads back from (lib/literal.ml), shared with extracted programs: a
+   character bare where the reader's word syntax admits it, hexadecimal otherwise, and a string escaped the way
+   the reader unescapes. A Nat spells as Z.to_string. *)
+let lit_char c =
+  if c = 32 then "#\\space"
+  else if c = 10 then "#\\newline"
+  else if c = 9 then "#\\tab"
+  else if c >= 0x21 && c <= 0x7e && not (String.contains "();" (Char.chr c)) then Printf.sprintf "#\\%c" (Char.chr c)
+  else Printf.sprintf "#\\x%02x" c
+
+let lit_string s =
+  let buf = Buffer.create (String.length s + 2) in
+  Buffer.add_char buf '"';
+  String.iter (fun c -> Buffer.add_string buf (match c with '"' -> "\\\"" | '\\' -> "\\\\" | '\n' -> "\\n" | '\t' -> "\\t" | c -> String.make 1 c)) s;
+  Buffer.add_char buf '"';
+  Buffer.contents buf
+
 let add = Z.add
 let sub = Z.sub
 let mul = Z.mul

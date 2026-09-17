@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; A nested def-adts with non-phantom constructors does not block a delegate either: its constructors and
 ; Matchable are embedded constants the body never mentions, so the binding is dropped (ASSUMPTIONS 88, settled).
 (def-lvl L)

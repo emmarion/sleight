@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))
+; expect: 7
 ; Extern functions over numerals in the final function's code: with the FFI stripped, the prelude's models run.
 
 (def-lvl T)

@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A run-position let whose right-hand side carries its own statements: those run first, and its code runs
 ; in the scope they leave behind (section 16).
 

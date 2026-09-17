@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; A match's _ annotation reuses an argument's expected type once that type is settled.
 (def-lvl A)
 (def-fns A $ many len : (erased Type X) (many (List X) xs) -> (many (Nat) n) (Zero))

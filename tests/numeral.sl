@@ -1,5 +1,5 @@
 ; needs: list vec
-; expect: (VCons (Zero) (VCons (Zero) (VCons (Zero) (VNil))))
+; expect: (VCons 0 (VCons 0 (VCons 0 (VNil))))
 ; A numeral is an opaque Nat with a Numeral proof relating it to its bijective base-2 spelling; unfolding
 ; that proof by erased matches makes the literal unary-known inside the branch, here to index a Vec by 3.
 

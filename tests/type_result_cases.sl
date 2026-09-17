@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; A call returning a type it cannot name in an is entry returns instead a runtime witness that the type is
 ; one of a few, beside a value of it: a closed existential. The type is erased and the witness is not, so
 ; matching the witness forces the type equal to that branch's and the value can be read there; two real

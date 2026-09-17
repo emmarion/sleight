@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; A factory of factories: compose mints a level above both argument levels and returns a function there.
 
 (def-lvl F)

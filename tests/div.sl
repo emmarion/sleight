@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; Division by repeated subtraction, recursing on the subtraction's result: sub-pos returns n - (Succ d)
 ; with an erased proof that the result is a strict subterm of n, built along its recursion with
 ; subterm-trans, and div recurses under that proof. (div n d1) divides n by (Succ d1).

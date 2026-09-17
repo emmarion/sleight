@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; A character literal is (MkChar (MkU8 n p)) over its code's numeral, transparent down to the opaque n:
 ; comptime-match reaches n, and the character's own Numeral proof serves it.
 

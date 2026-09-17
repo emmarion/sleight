@@ -422,11 +422,12 @@ literals as open.
     not a number.
 
 54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
-    model runs `add` in unary, and `Value.show` prints a `Nat` in
-    unary, so a numeral around a million overflows the interpreter's
-    stack in either mode when printed and in the stripped mode when
-    merely computed. Section 41's invariant holds up to resources; the
-    tests keep their numerals small.
+    model runs `add` in unary, so a numeral around a million overflows
+    the interpreter's stack when merely computed. Printing one no
+    longer walks it: a printed `Nat` spells through `Z.to_string` under
+    the FFI and counts the model's chain down without it (item 154).
+    Section 41's invariant holds up to resources; the tests keep their
+    numerals small.
 
 55. **Location-free errors** (the literal-as-name check lives in
     `Env.bind`, which has no line) are reported at the enclosing
@@ -630,7 +631,8 @@ in both modes.
     with it (as entering a match branch does) to find the `many` fields'
     types, and one printer per type is emitted, following `Value.show`:
     constructor and fields for a tagged value, the bare fields for an
-    untagged one. Printing the interpreter's own rendering as a string
+    untagged one, and, for one of the three literal types, the literal
+    it reads back from (item 154). Printing the interpreter's own rendering as a string
     literal would have been simpler and exact, but the printer applied to
     the embedded data is what checks the embedding. Limits, honestly: a
     closure prints as `<function ?>` unless the final value is itself a
@@ -662,9 +664,9 @@ in both modes.
     interpreter and extracted, where it is the form whose code runs at
     startup. A function with erased returns besides the one `many`
     return, or with erased parameters, is not accepted as this form;
-    whether it should be is open. `Value.show` prints the result as it
-    would any value, so a function from no arguments can no longer be
-    printed as `<function name>`.
+    whether it should be is open. The result prints as any value of its
+    type does (item 154), so a function from no arguments can no longer
+    be printed as `<function name>`.
 
 ## A second soundness review
 
@@ -3025,3 +3027,55 @@ to look for a guard, are the owner's.
      other test comparing numbers still exercises under `--no-extern`.
      `self/bootstrap.sh` needs no directive of its own, running the
      reference with the FFI as `slc` always does.
+
+154. **A `Nat`, `Char` or `String` prints as the literal it reads back
+     from** (the owner's decision, in chat: all three of items 51-52's
+     literal forms, a `Nat` in decimal being the case that prompted it).
+     `Literal.spell` is `Literal.classify`'s inverse -- decimal; `#\c`
+     bare where the reader's word syntax admits it, `#\space`,
+     `#\newline`, `#\tab` and `#\xHH` otherwise; and a string quoted
+     with the four escapes the reader unescapes. Its character and
+     string cases live in `lib/ffi_core.ml`, which the interpreter, an
+     extracted program and `slc`'s output all paste in, so one
+     definition serves the three back ends. Run over all 256 codes, it
+     round-trips through the reader and `classify`.
+
+     Printing in the interpreter is therefore type-directed
+     (`Elab.show_value`), as item 66's generated printer already was.
+     What forces that: a `Char` and a `U8` are their `Nat` at runtime
+     (section 38), so nothing but the type tells those three apart, and
+     a `(Half)` is a zarith integer too and must not be spelled as a
+     numeral. The three are recognised as the prelude's own entries, as
+     item 65's driver finds its constructors, rather than by name, so a
+     program's own `Zero` or `SNil` (`tests/gmap.sl`) is untouched. A
+     node whose type the walk cannot resolve falls back to `Value.show`,
+     which leaves item 34's untagged rendering and item 66's limits as
+     they were.
+
+     Where the value is extern-backed the spelling reads the payload,
+     `Z.to_string` or the slice's bytes, rather than walking the view;
+     the models are walked instead. The session's reading is that this
+     is the representation's own spelling rather than an optimization
+     (CLAUDE.md 6): the old printer built an n-deep nest by
+     concatenation, which the session reads as quadratic in the value,
+     and printing 1000000 overflowed the stack where
+     `(nat-mul 1000000000 1000000000)` now prints at once.
+
+     `comptime-match`'s diagnostic (section 15) goes through the same
+     printer, so the wrapper-payload channel that section describes
+     reports a `String` payload as its text. `slc`'s counterpart is
+     `show-at`, which spells a literal type off the block's payload and
+     otherwise takes an extern value apart with one case per extern
+     implementation and no `else`, so a fourth extern type is refused
+     there rather than silently printing through the untyped spelling.
+     `ExtHalf` is the only one of those arms that runs: item 42 makes a
+     second `extern` declaration of a name the program has already bound
+     a hard error, so `ExtNat` and `ExtString` can only ever tag the
+     prelude's own `Nat` and `String`, which the literal spelling
+     catches first. They are kept as the total fallback rather than
+     refuted, since what makes them unreachable is the FFI's claim
+     table and not anything the checker knows.
+
+     `tests/literal_print.sl` pins the two spellings the other tests
+     only touch: every character form, and the four escapes. Each
+     spelling it prints, fed back as a program, prints as itself.

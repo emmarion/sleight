@@ -1054,6 +1054,20 @@
         ((Nil b) p)
         ((Cons b q rest2) (rcat3 p (RStr " ^ \" \" ^ ") $ spaced rest))))))
 
+; A literal type's printer, which prints the literal its value reads back from: the emitted OCaml spells it
+; through Ffi_core (lib/extract.ml's literal_show). slc always compiles against the FFI, so a Nat is its
+; integer and a String its slice; a Char and a U8 are their Nat (section 38), unwrapped by neither.
+(def-fns _ $ many lit-show : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Rope) r)
+  (match many (prelude-nullary env ty "Nat") (((Maybe $ Rope) r1))
+    ((BTrue) (Some _ $ RStr "(Z.to_string (Obj.obj v : Z.t))"))
+    ((BFalse)
+      (match many (prelude-nullary env ty "Char") (((Maybe $ Rope) r2))
+        ((BTrue) (Some _ $ RStr "(Ffi_core.lit_char (Z.to_int (Obj.obj v : Z.t)))"))
+        ((BFalse)
+          (match many (prelude-nullary env ty "String") (((Maybe $ Rope) r3))
+            ((BTrue) (Some _ $ RStr "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"))
+            ((BFalse) (None $ Rope))))))))
+
 (def-fns _
   (many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) (many (Decls) d) -> (many (ShowMemo) memo2) (many (String) name)
     (match many fuel _
@@ -1069,6 +1083,9 @@
                 (let (many name) $ str-cat "show_" $ nat-str count)
                 (let (many memo1) $ MkShowMemo fresh (Succ count) (Cons _ (MkPair _ _ key name) known) defs)
                 (let (many (ShowMemo) memo2) (many (Rope) body)
+                  (match many (lit-show env ty) (((ShowMemo) m0) ((Rope) r0))
+                    ((Some lz text) (values memo1 text))
+                    ((None lz)
                   (match many ty _
                     ((TApp h args)
                       (match many (type-adt env ty) (((ShowMemo) m) ((Rope) r))
@@ -1077,7 +1094,7 @@
                           (let (many memo3) (many arms) $ show-arms k env ty (adt-ctors adt) memo1 (adt-tagged adt) d)
                           (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"?\""))))
                     ((TFn l ps rs) (values memo1 $ RStr "\"<function ?>\""))
-                    ((TValCtor ps r) (values memo1 $ RStr "\"<constructor ?>\"")) (else (values memo1 $ RStr "\"?\""))))
+                    ((TValCtor ps r) (values memo1 $ RStr "\"<constructor ?>\"")) (else (values memo1 $ RStr "\"?\""))))))
                 (match many memo2 _
                   ((MkShowMemo fresh2 count2 known2 defs2)
                     (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))

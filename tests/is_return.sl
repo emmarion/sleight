@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Reifying an erased index through an is return (section 14).
 
 (def-adts

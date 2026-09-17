@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons (Zero) (Cons (Succ (Zero)) (Nil)))
+; expect: (Cons 0 (Cons 1 (Nil)))
 ; A refuted constructor may be left unlisted, under a many or an erased scrutinee; (absurd C) remains optional.
 
 (def-adts

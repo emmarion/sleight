@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; Subterm recursion through an erased argument (section 12).
 
 (def-adts

@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; A run-position comptime-match records an unconditional fact, which refutes a branch inside a later function.
 
 (def-lvl W)

@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; comptime-match facts persist at the top level: a later let can pin a binder by is.
 
 (def-lvl W)

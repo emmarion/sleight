@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Subterm transitivity, and skipping two elements at a time.
 
 (def-lvl X)

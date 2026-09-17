@@ -1,5 +1,5 @@
 ; needs: absurd
-; expect: (Succ (Zero))
+; expect: 1
 ; A type whose only constructor is phantom: an else standing for it alone is the match's only branch, counts as
 ; no real branch, is checked erased, and the match compiles to no code. The function is callable at erased only.
 

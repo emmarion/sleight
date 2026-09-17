@@ -1,4 +1,4 @@
-; expect: (Zero)
+; expect: 0
 ; An erased Matchable still serves a match that compiles to no dispatch: an erased scrutinee has one real
 ; branch, and an erased position leaves no code at all.
 

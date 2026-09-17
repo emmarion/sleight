@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; coercible-ctor reads no Matchable, so it needs none opened and refuses no phantom constructor: a coerce
 ; cashes its proof only for a non-erased source, which no phantom constructor heads (sections 20, 38; the
 ; owner's decision in chat, ASSUMPTIONS 141). The first proof is built through a first-class C with no

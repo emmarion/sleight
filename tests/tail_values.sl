@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A multi-return tail call bound by a let and repackaged in a values (section 9): the returns must
 ; keep their order, and the call must really be in tail position, so 2000 frames do not accumulate.
 

@@ -1,4 +1,4 @@
-; expect: (Cons (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) (Cons (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Cons (Succ (Succ (Succ (Zero)))) (Cons (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))))) (Cons (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Cons (Succ (Succ (Succ (Zero)))) (Cons (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))))))))) (Cons (Succ (Succ (Succ (Zero)))) (Cons (Succ (Succ (Zero))) (Cons (Succ (Succ (Succ (Zero)))) (Cons (Succ (Succ (Zero))) (Nil))))))))))))
+; expect: (Cons 12 (Cons 5 (Cons 3 (Cons 12 (Cons 5 (Cons 3 (Cons 15 (Cons 3 (Cons 2 (Cons 3 (Cons 2 (Nil))))))))))))
 ; The extern Nat arithmetic beyond add and nat-mod: mul, sub under a bound proof, div and divmod under a
 ; positive divisor, each once at elaboration, where the value is embedded, and once inside a thunk, where the
 ; implementation runs.

@@ -1,4 +1,4 @@
-; expect: (Zero)
+; expect: 0
 ; Lt a b and Subterm (Nat) a (Nat) b each derive the other as erased functions, so on Nat the subterm
 ; order is the strict order. lt-sub recurses on b through le-split, which splits Lt a (Succ b1) into
 ; a = b1 or Lt a b1; sub-lt decides a < b and refutes the other case through loop, whose self-call

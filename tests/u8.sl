@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; U8 (section 41): a Nat below the modulus with an erased bound proof. The proof for a value built by hand
 ; comes by reflection, a comptime-match on the decided comparison; addition wraps at 256.
 

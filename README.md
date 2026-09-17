@@ -33,7 +33,9 @@ program's), or a function from no arguments to one value, when it is
 applied and its result printed (`tests/thunk_list.sl`), which is how a
 program asks for its final value to be computed by code rather than at
 elaboration. Numerals, `#\c` character literals and `"..."` string
-literals are prelude-backed sugar (ASSUMPTIONS.md 47-60). Every program starts in the scope of the source
+literals are prelude-backed sugar (ASSUMPTIONS.md 47-60), and a printed
+value of one of those three types is spelled as the literal it reads back
+from (ASSUMPTIONS.md 154) rather than as its prelude model. Every program starts in the scope of the source
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models, and `--no-templates` extracts extern types

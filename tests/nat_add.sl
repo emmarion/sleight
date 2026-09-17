@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
+; expect: 5
 ; A second return entry mentioning the parameters, reused by _ (SUGAR.md section 2).
 (def-adts
   (Add : ((Nat) a) ((Nat) b) ((Nat) c) -> Type

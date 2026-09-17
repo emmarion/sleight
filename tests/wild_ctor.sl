@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons (Succ (Zero)) (Cons (Zero) (Nil)))
+; expect: (Cons 1 (Cons 0 (Nil)))
 ; A `_` argument (SUGAR.md 6) is solved from the arguments after it, from the telescope a body returns into,
 ; through values, and from a match's annotation.
 

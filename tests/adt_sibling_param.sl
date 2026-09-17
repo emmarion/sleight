@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; A later type in a def-adts block may take an earlier sibling as a parameter: each header is bound before the next is read.
 
 (def-adts

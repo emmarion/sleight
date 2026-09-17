@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; Unopened means opaque, upward too (DESIGN.md section 19): two type constructors are told
 ; apart by their Matchables, so with m unopened T unifies with (Nat) and the IsNat branch must be written,
 ; while with m opened T's constructors meet Nat's, D's signature differs from Succ's, and IsNat is refuted.

@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A delegate whose argument and result pass through coerces: both erase to renamings (section 9).
 
 (def-adts $ Meters : -> Type

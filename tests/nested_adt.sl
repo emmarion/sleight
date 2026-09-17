@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A def-adts inside a body: a constructor's return mentions a parameter, and the constructors are Dyn,
 ; built and matched at runtime.
 

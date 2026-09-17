@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
+; expect: 5
 ; The same composition defunctionalized: the list of functions stays data, one interpreter at level C walks
 ; it, and the composed function is a closure one level up that hands the list to the interpreter.
 

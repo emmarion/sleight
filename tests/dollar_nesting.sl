@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; $ nests: each one runs to its enclosing form's close paren (section 2).
 
 (def-fns _ $ many f : (many (Nat) a) (many (Nat) b) -> (many (Nat) c)

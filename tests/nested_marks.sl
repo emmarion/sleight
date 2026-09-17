@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Zero)))))
+; expect: 4
 ; tail and delegate inside functions a factory produces: each nested function's marks are judged against its
 ; own tail positions, not the factory's.
 

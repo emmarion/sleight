@@ -1,5 +1,5 @@
 ; needs: list union
-; expect: (Succ (Zero))
+; expect: 1
 ; An indexed union marked newtype: its other non-phantom constructors have only erased fields (section 38).
 ; MkA wraps a Nat at no cost, and a NoB value is the null.
 

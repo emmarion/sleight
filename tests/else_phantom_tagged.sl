@@ -1,5 +1,5 @@
 ; needs: absurd
-; expect: (Succ (Zero))
+; expect: 1
 ; An else standing only for a phantom constructor beside two listed non-phantom ones: the enum stays tagged on the
 ; two, the else adds no real branch and is checked erased.
 

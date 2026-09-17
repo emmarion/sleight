@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; The same quotient by structural recursion on the dividend alone, counting the divisor down beside it,
 ; so no proof is returned or composed. (div n m) divides n by (Succ m).
 

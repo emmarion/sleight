@@ -1,4 +1,4 @@
-; expect: (Cons (Zero) (Cons (Succ (Zero)) (Cons (Succ (Succ (Zero))) (Nil))))
+; expect: (Cons 0 (Cons 1 (Cons 2 (Nil))))
 ; A stream with no coinductive type: its tail is a function at level K, minted after the producer's level P,
 ; so the thunk's body calls nats-from under Predates P K and is checked like any other body. take unfolds
 ; three elements under a subterm decrease on its count.

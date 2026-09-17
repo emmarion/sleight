@@ -1,5 +1,5 @@
 ; needs: list map
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A delegate whose result is bound by a let and returned still counts (section 9).
 
 (def-lvl V)

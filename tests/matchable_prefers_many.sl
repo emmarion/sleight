@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; Of two consistent first-class Matchables for one type, opened in either order, the merged record keeps the
 ; non-erased one (DESIGN.md section 19), so a non-erased match reads it.
 (def-adts $ Box : -> Type enum (many MkBox : (many (Nat) n) -> (Box)))

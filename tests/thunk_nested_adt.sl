@@ -1,5 +1,5 @@
 ; needs: list nested_adt
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A nested def-adts built and matched by the final function's code.
 
 (def-lvl T)

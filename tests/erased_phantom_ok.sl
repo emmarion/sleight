@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; With an erased scrutinee a phantom branch is an ordinary branch: here it is the only one that is not refuted.
 
 (def-adts

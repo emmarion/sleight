@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A constructor with an erased field between two many fields: match and comptime-match
 ; project the many fields by position, skipping the erased one.
 

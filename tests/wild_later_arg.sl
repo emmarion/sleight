@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; In an erased call a `_` may stand at a many parameter, and a pure argument's `_` is solved by the proof
 ; argument after it in the same call, whose type mentions the value.
 (def-adts $ Wrapped : ((Nat) n) -> Type

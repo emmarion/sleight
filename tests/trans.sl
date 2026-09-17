@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Predates transitivity: g at L2 calls f at L0 through a proof built from two hops.
 
 (def-lvl L0)

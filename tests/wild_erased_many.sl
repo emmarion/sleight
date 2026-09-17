@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; In an erased position a `_` may stand at a parameter declared many, the whole call being erased there;
 ; here the second parameter's is-entry solves it.
 

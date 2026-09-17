@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons (Succ (Zero)) (Cons (Zero) (Nil)))
+; expect: (Cons 1 (Cons 0 (Nil)))
 ; An else through a first-class Matchable dispatches on the constructor's position, naming no constructor.
 
 (def-adts $ Two : -> Type

@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; `_` for a call's erased type argument, solved from a later argument and, for a multi-return callee, from
 ; the telescope its results are returned into.
 

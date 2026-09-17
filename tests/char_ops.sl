@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; A Char is its code at runtime, so char-cmp delegates to nat-cmp (section 38): its arguments coerce
 ; down through both newtypes, and the Coercible carrying the result back up is built by an erased match
 ; that leaves no code, so the delegate mark still stands. coercible-of then fetches the proof that the

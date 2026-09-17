@@ -1,5 +1,5 @@
 ; needs: lt_subterm div
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))
+; expect: 6
 ; Euclid's algorithm. nat-mod returns the remainder with an erased proof that it is below the divisor,
 ; and lt-sub turns that bound into the Subterm proof gcd's recursive call needs.
 

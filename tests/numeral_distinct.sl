@@ -1,4 +1,4 @@
-; expect: (Zero)
+; expect: 0
 ; distinct refutes a branch that has equated two literals, through the prelude's numeral-inj: a Nat has
 ; one bijective base-2 spelling, so two spellings for one Nat contradict. Its cost is the spellings'
 ; depth, not the difference between the numbers (ASSUMPTIONS 54 keeps a test's numerals small).

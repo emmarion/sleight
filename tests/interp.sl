@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
+; expect: 5
 ; A small expression evaluator over Nats with an environment: 2 * 2 + 1 with x = 2.
 
 (def-fns _ $ many add : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c)

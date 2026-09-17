@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; A function returning no values, and a let binding none (sections 11, 16).
 
 (def-lvl X)

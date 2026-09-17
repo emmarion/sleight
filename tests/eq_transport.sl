@@ -1,5 +1,5 @@
 ; needs: list vec
-; expect: (VCons (Zero) (VNil))
+; expect: (VCons 0 (VNil))
 ; Transport along a user-defined equality needs no substitution principle: matching Refl forces the two
 ; indices to canonicalize together, and v's type becomes the result type in that branch.
 

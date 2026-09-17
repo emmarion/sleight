@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A union indexed by a Bool: matching in a non-erased position needs one real branch.
 
 (def-adts $ Bool : -> Type

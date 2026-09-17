@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; An else forces no facts, so a match on the same scrutinee inside it keeps every branch.
 
 (def-lvl X)

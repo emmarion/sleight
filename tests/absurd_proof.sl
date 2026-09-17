@@ -1,5 +1,5 @@
 ; needs: list absurd
-; expect: (Zero)
+; expect: 0
 ; An absurd-by-proof branch produces a False from a refuting function.
 
 (def-adts

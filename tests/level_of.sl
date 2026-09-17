@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 
 (def-lvl L0)
 (def-fns L0 $ many f : (many (Nat) n) -> (many (Nat) m) (Succ n))

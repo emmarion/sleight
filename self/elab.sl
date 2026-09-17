@@ -2333,6 +2333,87 @@
     ((SNil) (RStr "(SNil)"))
     ((SCons c rest) (rwrap "(SCons " (rcat3 (show-nat $ char-code c) (RStr " ") $ show-str rest) ")"))))
 
+; ---- The source spelling of a literal, which a printed Nat, Char or String reads back from
+; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
+; the language; an emitted printer calls Ffi_core (emit.sl).
+
+; Whether [ty] applies the prelude's [name] type constructor, found in the prelude's scope however the program
+; shadows the name, as lib/elab.ml's nullary finds it.
+(def-fns _ $ many prelude-nullary : (many (Env) env) (many (Term) ty) (many (String) name) -> (many (Bool) b)
+  (match many (type-head env ty) _
+    ((None a) (BFalse))
+    ((Some a tid)
+      (let (many env2) (many x) $ prelude-id (env-set-scope env $ env-prelude env) name)
+      (nat-eq tid x))))
+
+(let (many sixteen-dec) (lt-dec (Zero) 16))
+(comptime-match sixteen-dec (Yes sda sdb sixteen-positive))
+
+(def-fns _ $ many hex-digit : (many (Nat) n) -> (many (Rope) r)
+  (RChar $ char-of-code $ match many (nat-lt n 10) (((Nat) k)) ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
+
+; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
+(def-fns _ $ many lit-char-rope : (many (Nat) c) -> (many (Rope) r)
+  (match many (nat-eq c 32) _
+    ((BTrue) (RStr "#\\space"))
+    ((BFalse)
+      (match many (nat-eq c 10) _
+        ((BTrue) (RStr "#\\newline"))
+        ((BFalse)
+          (match many (nat-eq c 9) _
+            ((BTrue) (RStr "#\\tab"))
+            ((BFalse)
+              (match many (and (and (nat-lt 32 c) (nat-lt c 127)) $ not $ or (nat-eq c 40) $ or (nat-eq c 41) $ nat-eq c 59) _
+                ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c))
+                ((BFalse)
+                  (let (many hi) (many lo) (erased dm) (erased dmm) (erased da) (erased dp) (divmod c 16 sixteen-positive))
+                  (rcat3 (RStr "#\\x") (hex-digit hi) $ hex-digit lo))))))))))
+
+; The four escapes the reader unescapes; every other byte stands as itself.
+(def-fns _ $ many escape-char : (many (Char) c) -> (many (Rope) r)
+  (let (many k) $ char-code c)
+  (match many (nat-eq k 34) _
+    ((BTrue) (RStr "\\\""))
+    ((BFalse)
+      (match many (nat-eq k 92) _
+        ((BTrue) (RStr "\\\\"))
+        ((BFalse)
+          (match many (nat-eq k 10) _
+            ((BTrue) (RStr "\\n"))
+            ((BFalse)
+              (match many (nat-eq k 9) _
+                ((BTrue) (RStr "\\t"))
+                ((BFalse) (RChar c))))))))))
+
+(def-fns _ $ many str-escape : (subterm many (String) s) -> (many (Rope) r)
+  (match many s _
+    ((SNil) (REmpty))
+    ((SCons c rest) (rcat (escape-char c) $ str-escape rest))))
+
+(def-fns _ $ many lit-string-rope : (many (String) s) -> (many (Rope) r)
+  (rwrap "\"" (str-escape s) "\""))
+
+; The literal a value of one of the three literal types spells as, read off the block: a Char and a U8 are their
+; Nat (section 38), so neither is unwrapped first. None where the type is not one of the three, or the block does
+; not carry the payload it would need.
+(def-fns _ $ many lit-rope : (erased (Hist Block) hs) (many (Env) env) (many (Term) ty) (many (Block (Ref Block hs)) blk) -> (many (Maybe $ Rope) r)
+  (match many blk _
+    ((BExt z p)
+      (match many p (((Maybe $ Rope) r0))
+        ((PNat n)
+          (match many (prelude-nullary env ty "Nat") (((Maybe $ Rope) r1))
+            ((BTrue) (Some _ $ RStr $ nat-str n))
+            ((BFalse)
+              (match many (prelude-nullary env ty "Char") (((Maybe $ Rope) r2))
+                ((BTrue) (Some _ $ lit-char-rope n))
+                ((BFalse) (None $ Rope))))))
+        ((PStr st)
+          (match many (prelude-nullary env ty "String") (((Maybe $ Rope) r3))
+            ((BTrue) (Some _ $ lit-string-rope st))
+            ((BFalse) (None $ Rope))))
+        ((PHalf n) (None $ Rope))))
+    (else (None $ Rope))))
+
 (def-fns _ $ many show-plain : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (Rope) r)
   (match many b _
     ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
@@ -2341,6 +2422,28 @@
     ((BToken z) (RStr "_"))
     ((BError z m) (rwrap "<error: " (RStr m) ">"))
     (else (RStr "?"))))
+
+; A Half at its own type. Its field is a Nat, so it spells in decimal, as the reference's typed printer reaches
+; it; show-plain above keeps the unary spelling, which is what the untyped fallback prints.
+(def-fns _ $ many show-half-typed : (many (Nat) n) -> (many (Rope) r)
+  (match many (nat-halve n) _
+    ((HZ) (RStr "(HZ)"))
+    ((H1 m d dd) (rwrap "(H1 " (RStr $ nat-str m) ")"))
+    ((H2 m d dd) (rwrap "(H2 " (RStr $ nat-str m) ")"))))
+
+; An extern value at its own type, which the reference's printer reaches through the FFI's destruct whatever the
+; type. Here there is one case per extern implementation and no else, so a fourth extern type stops the compiler
+; at this line rather than silently falling back to the untyped spelling. ExtHalf is the only arm that runs:
+; a second extern declaration of an already bound name is refused (ASSUMPTIONS 42), so ExtNat and ExtString
+; tag the prelude's own types alone, which lit-rope spells before this is reached.
+(def-fns _ $ many show-ext-typed : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (ExtType) e) -> (many (Rope) r)
+  (match many e _
+    ((ExtHalf)
+      (match many b (((Rope) r0))
+        ((BExt z p) (match many p (((Rope) r1)) ((PHalf n) (show-half-typed n)) (else (show-plain _ b))))
+        (else (show-plain _ b))))
+    ((ExtNat) (show-plain _ b))
+    ((ExtString) (show-plain _ b))))
 
 (def-fns _ $ many types-of : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Term) r)
   (match many xs _
@@ -2372,13 +2475,16 @@
     (let (many ty) $ canon-env env ty0)
     (let-match many r (MkRef _ _ rs rv rp))
     (let-match many rv (MkValue _ _ rpos rlp blk))
+    (match many (lit-rope _ env ty blk) (((Rope) lr))
+      ((Some lz text) text)
+      ((None lz)
     (match many (type-adt env ty) _
       ((None a) (show-plain _ blk))
       ((Some a adt)
         (match many adt _
           ((MkAdt aname tagged ctors ext)
             (match many ext _
-              ((Some b e) (show-plain _ blk))
+              ((Some b e) (show-ext-typed _ blk e))
               ((None b)
                 (match many tagged _
                   ((BTrue)
@@ -2406,7 +2512,7 @@
                                   ((BTup z fields)
                                     (let (erased pf) (prove-subterm fields r))
                                     (rwrap "(" (rjoin (show-fields _ (subterm pf) fields depth env (Cons _ fty frest)) " ") ")"))
-                                  (else (show-plain _ blk))))))))))))))))))
+                                  (else (show-plain _ blk))))))))))))))))))))
   (many show-fields : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fs) (subterm many (Nat) depth)
       (many (Env) env) (many (List $ Term) tys) -> (many (List $ Rope) rs)
     (match many fs _

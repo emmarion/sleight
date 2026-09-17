@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A string literal is its characters consed up, transparent like a character literal.
 
 (def-fns _ $ many len : (subterm many (String) s) -> (many (Nat) n)

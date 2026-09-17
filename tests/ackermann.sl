@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))
+; expect: 9
 ; Ackermann under the lexicographic order: the outer call decreases the first subterm argument and leaves
 ; the second unconstrained, the inner call keeps the first and decreases the second.
 

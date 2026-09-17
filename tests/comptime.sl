@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; comptime-match verifies a Const value and binds its fields Const.
 
 (let (many two) (Succ (Succ (Zero))))

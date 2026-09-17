@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; Matching on a transparent enum binds the field to the value itself.
 
 (def-adts $ Meters : -> Type

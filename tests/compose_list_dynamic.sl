@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
+; expect: 5
 ; Folding a list of functions into one function: each step mints a level at runtime above the level the
 ; recursive call returned, so the composed closure calls the rest under a proof minted beside it. The tower
 ; of levels is as tall as the list and is minted when compose-all runs, here in run position;

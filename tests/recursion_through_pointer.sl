@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; Self-recursion through a pointer: g receives itself inside Packed, a type with a negative occurrence,
 ; and calls the pointer at its own level under a subterm decrease, which is what bounds the call.
 

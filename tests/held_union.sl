@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 (def-adts $ U : -> Type union
   (many UA : (erased (Nat) n) -> (U))
   (many UB : (many (Nat) n) -> (U)))

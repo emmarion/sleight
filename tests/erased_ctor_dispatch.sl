@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; A match reads its Matchable, not its constructors: the branches' discriminants are stamped in at
 ; elaboration from the Matchable's type, so first-class constructors may be passed erased. Only the
 ; Matchable itself must be non-erased, since it is what says how an extern type is taken apart.

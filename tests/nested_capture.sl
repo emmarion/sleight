@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A nested def-fns closes over binders that the enclosing body's lets only rename, which
 ; ASSUMPTIONS 72's normalization resolves away: the renaming has to reach the nested body too.
 

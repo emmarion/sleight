@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
-; expect: (Cons (VCon (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Cons (VCon (Succ (Succ (Succ (Succ (Succ (Zero)))))) (Nil)) (Nil))) (Nil))
+; expect: (Cons (VCon 6 (Cons (VCon 5 (Nil)) (Nil))) (Nil))
 ; The minimal language end to end: a program declaring Nat, a level, a predecessor function matching on its
 ; argument, and a call, built as raw syntax, elaborated by mini/elabfn.sl to core code, and evaluated by
 ; mini/eval.sl. The program is

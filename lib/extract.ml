@@ -277,6 +277,33 @@ let types cx =
     @ List.filter_map extern cx.adts
     @ builders)
 
+(* A Nat as a Z.t: its own integer under the FFI, else the Peano chain counted down one constructor at a time. *)
+let nat_z cx =
+  let a = (Program.ctor cx.env "Zero").V.adt in
+  match shape a with
+  | Ext _ -> "(fun (v : Obj.t) -> (Obj.obj v : Z.t))"
+  | _ ->
+      let arms = [ (Program.ctor cx.env "Zero", [], "n"); (Program.ctor cx.env "Succ", [ "p" ], "(go (Z.succ n) p)") ] in
+      Printf.sprintf "(let rec go n (v : Obj.t) = %s in go Z.zero)" (dispatch cx a (all a) "v" arms None)
+
+(* The printer for a literal type, which prints the literal its value reads back from (Literal.spell): a Char and
+   a U8 are their Nat (section 38), so neither is unwrapped first. *)
+let literal_show cx ty =
+  let named name = match (ty, Env.lookup { cx.env with Env.scope = cx.env.Env.prelude } name) with App (Var t, []), Some p -> t = p | _ -> false in
+  let string_body () =
+    let a = (Program.ctor cx.env "SNil").V.adt in
+    match shape a with
+    | Ext _ -> "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"
+    | _ ->
+        let cons = Printf.sprintf "(Buffer.add_char b (Char.chr (Z.to_int (%s c))); go r)" (nat_z cx) in
+        let arms = [ (Program.ctor cx.env "SNil", [], "()"); (Program.ctor cx.env "SCons", [ "c"; "r" ], cons) ] in
+        Printf.sprintf "(let b = Buffer.create 16 in let rec go (v : Obj.t) = %s in go v; Ffi_core.lit_string (Buffer.contents b))" (dispatch cx a (all a) "v" arms None)
+  in
+  if named "Nat" then Some (Printf.sprintf "(Z.to_string (%s v))" (nat_z cx))
+  else if named "Char" then Some (Printf.sprintf "(Ffi_core.lit_char (Z.to_int (%s v)))" (nat_z cx))
+  else if named "String" then Some (string_body ())
+  else None
+
 let rec show cx env ty =
   let ty = Env.canon env ty in
   let key = map_vars (fun _ t -> match t with Var x when not (IntMap.mem x cx.env.entries) -> Var (-1) | t -> t) 0 ty in
@@ -298,6 +325,9 @@ let rec show cx env ty =
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
       in
       (body :=
+         match literal_show cx ty with
+         | Some text -> text
+         | None -> (
          match ty with
          | App (Var tid, _) -> (
              match adt_of tid with
@@ -307,7 +337,7 @@ let rec show cx env ty =
                  dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"?\""))
          | Fn _ -> "\"<function ?>\""
          | ValCtor _ -> "\"<constructor ?>\""
-         | _ -> "\"?\"");
+         | _ -> "\"?\""));
       name
 
 (* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the

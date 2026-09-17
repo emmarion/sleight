@@ -1,4 +1,4 @@
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; Every occurrence of a numeral is one entry, so the literal's proof serves an alias of it,
 ; and a numeral inside a body is an embedded Const.
 

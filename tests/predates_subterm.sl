@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; Predates through Subterm: a function's level is an erased field of a value that predates the caller's level.
 
 (def-adts $ Packed : -> Type

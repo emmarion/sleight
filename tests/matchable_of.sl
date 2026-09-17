@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 
 (let (erased (Matchable enum Nat (many Zero) (many Succ)) m) (matchable-of Nat))
 (let (erased m is m2) (matchable-of Nat))

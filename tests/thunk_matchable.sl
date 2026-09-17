@@ -1,4 +1,4 @@
-; expect: ((Succ (Zero)) (PS (PZ)))
+; expect: (1 (PS (PZ)))
 ; One function matching through nothing but a first-class Matchable, run over two types: Nat, which the FFI
 ; holds, and a Peano copy declared here, which it does not. Both calls enter the same code, so what tells the
 ; two apart is only the Matchable each is given -- for Nat the FFI's destructor, for Peano the tag. The

@@ -1,5 +1,5 @@
 ; needs: list first_class
-; expect: (Succ (Zero))
+; expect: 1
 ; A first-class match performed by the final function's code.
 
 (def-lvl T)

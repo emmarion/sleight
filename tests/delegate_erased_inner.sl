@@ -1,4 +1,4 @@
-; expect: (Succ (Zero))
+; expect: 1
 ; Erased definitions leave nothing behind, so neither an erased def-fns nor a def-adts declaring
 ; only phantom constructors stands between a delegating body and its one call (ASSUMPTIONS 77).
 ; The proof is then fetched through an alias of the function's name (ASSUMPTIONS 78).

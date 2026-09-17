@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Zero))))
+; expect: 3
 ; Calls with no decrease annotation (SUGAR.md 3): where the levels differ the elaborator supplies
 ; (predates _), where they agree it supplies (subterm _) at the first subterm argument that differs from
 ; its counterpart; a written (subterm _) still reads the same.

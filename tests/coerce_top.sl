@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; coerce in run position, with a proof by reflexivity and by wrapping.
 
 (def-adts $ Meters : -> Type

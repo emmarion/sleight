@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero)))))))))
+; expect: 8
 ; A constant with much sharing: each pair holds the previous one twice, so its extraction must name shared
 ; parts rather than copy them, and the final function's code walks it.
 

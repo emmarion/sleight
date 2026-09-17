@@ -219,6 +219,75 @@ let open_tele env ?names ?mults ?states ?(ids = []) ?meta tele =
   in
   (env, List.rev fresh)
 
+(* Printing a value against its type (section 16's printed final; ASSUMPTIONS 66's printer follows this one).
+   The three literal types print as the literals they read back from (Literal.spell); every other value prints as
+   its constructor over its many fields, the type supplying each field's own type. Total: anything the walk cannot
+   resolve falls back to Value.show's untyped rendering. *)
+let prelude_id env name = Env.lookup { env with scope = env.prelude } name
+
+let nullary env name ty = match (type_head env ty, prelude_id env name) with Some t, Some p -> t = p | _ -> false
+
+(* An extern Nat is its integer; the model's is the Peano chain, walked one constructor at a time. A Char and a
+   U8 are their Nat (section 38), so neither needs unwrapping. *)
+let nat_z env loc v =
+  let c = ctor_of env loc (Option.get (prelude_id env "Zero")) in
+  let rec go acc v =
+    match v with
+    | V.VExt (_, V.Int n) -> Z.add acc n
+    | v -> ( match V.destruct c v with 0, _ -> acc | _, [ p ] -> go (Z.succ acc) p | _ -> raise Not_found)
+  in
+  go Z.zero v
+
+(* An extern String is its slice; the model's is a cons list of characters. *)
+let str_host env loc v =
+  let c = ctor_of env loc (Option.get (prelude_id env "SNil")) in
+  let buf = Buffer.create 16 in
+  let rec go v =
+    match v with
+    | V.VExt (_, V.Slice (s, o, l)) -> Buffer.add_string buf (String.sub s o l)
+    | v -> ( match V.destruct c v with 0, _ -> () | _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (Z.to_int (nat_z env loc ch))); go rest | _ -> raise Not_found)
+  in
+  go v;
+  Buffer.contents buf
+
+(* The constructors whose return type the instance does not refute, each at its discriminant with the types of its
+   many fields, as entering a branch computes them (ASSUMPTIONS 66). *)
+let candidates env loc ty =
+  let of_ctor c =
+    try
+      let ct = ctor_of env loc c in
+      let tele, ret = ctor_type env loc c in
+      let env', fids = open_tele env tele in
+      let env' = merge_opens (unify_force (forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
+      Some (ct.V.index, (ct, env', List.map (type_of env') (non_erased env' fids)))
+    with Contradiction _ | Error _ | Not_found -> None
+  in
+  let _, _, cs = find_matchable env loc (Option.get (type_head env ty)) in
+  List.filter_map (fun (_, c) -> match c with Var c -> of_ctor c | _ -> None) cs
+
+(* Each node degrades on its own, as the generated printer's arms do: a type or constructor the walk cannot
+   resolve prints through Value.show rather than discarding the rendering around it. *)
+let rec show_value env loc ty v =
+  try
+    let ty = canon env ty in
+    if nullary env "Nat" ty then Literal.spell (Literal.Numeral (nat_z env loc v))
+    else if nullary env "Char" ty then Literal.spell (Literal.Char (Z.to_int (nat_z env loc v)))
+    else if nullary env "String" ty then Literal.spell (Literal.Str (str_host env loc v))
+    else
+      match v with
+      | V.VCtor _ | V.VTuple _ | V.VExt _ | V.VToken ->
+          let cands = candidates env loc ty in
+          let first = match cands with (_, (c, _, _)) :: _ -> c | [] -> raise Not_found in
+          let i = match V.dispatch first.V.adt.V.ext first.V.adt.V.tagged v with Some (i, _) -> i | None -> first.V.index in
+          let ct, env', tys = List.assoc i cands in
+          let _, fs = V.destruct ct v in
+          (* a field's type is the branch env's, where the constructor's telescope was opened *)
+          let shown = List.map2 (fun t f -> show_value env' loc t f) tys fs in
+          if ct.V.adt.V.tagged then "(" ^ String.concat " " (ct.V.cname :: shown) ^ ")"
+          else ( match shown with [] -> "_" | [ one ] -> one | many -> "(" ^ String.concat " " many ^ ")")
+      | v -> V.show v
+  with Contradiction _ | Error _ | Not_found | Invalid_argument _ -> V.show v
+
 let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with Many, v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
 let const_fields env l c mults value =
@@ -997,7 +1066,7 @@ and elab_comptime_match env l args =
       if disc = Union then error l "comptime-match needs a non-erased discriminant";
       if marker env pl tid ctors c = Erased then error pl "comptime-match: %s is phantom, so no non-erased value is headed by it" (name_of env c);
       let matched, states = const_fields env pl c (List.map (fun e -> e.mult) tele) value in
-      if not matched then error l "comptime-match: expected %s, got %s" (name_of env c) (V.show value);
+      if not matched then error l "comptime-match: expected %s, got %s" (name_of env c) (show_value env l (type_of env x) value);
       let names = field_names env pl c tele fields in
       let env, fids = open_tele env ~names ~states tele in
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg) in

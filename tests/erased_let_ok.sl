@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Zero)
+; expect: 0
 ; An erased let may mention erased names; it compiles to nothing.
 
 (def-lvl X)

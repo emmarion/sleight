@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Succ (Zero)))
+; expect: 2
 ; A nested def-fns closes over its enclosing function's parameter.
 
 (def-lvl F)

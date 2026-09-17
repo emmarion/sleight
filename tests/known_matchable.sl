@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A Matchable parameter whose type names a concrete type says nothing the declaration did not: opened, it merges
 ; with the type's own Matchable, which def-adts opened (DESIGN.md section 19), and the record keeps
 ; that one, so the match reads neither the parameter nor anything else at runtime and the parameter may be erased.

@@ -1,5 +1,5 @@
 ; needs: list map
-; expect: (Cons (Succ (Zero)) (Cons (Zero) (Nil)))
+; expect: (Cons 1 (Cons 0 (Nil)))
 ; DESIGN.md section 40: unwrapping a list with coerce, and a delegate proof. Needs list.sl and map.sl first.
 
 (def-adts $ Meters : -> Type

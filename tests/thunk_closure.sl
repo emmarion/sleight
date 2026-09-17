@@ -1,5 +1,5 @@
 ; needs: list closure compose
-; expect: (Succ (Succ (Succ (Succ (Succ (Zero))))))
+; expect: 5
 ; Closures returned by factories at the top level, applied by the final function's code: inc4 holds inc3,
 ; which holds inc and inc2, and add-one closes over its factory's argument.
 

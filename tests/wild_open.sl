@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons (Zero) (Cons (Zero) (Nil)))
+; expect: (Cons 0 (Cons 0 (Nil)))
 ; A constructor application is a pure term, so its `_`s may stay open past its own paren: the argument after
 ; it in the same call, or in the enclosing constructor, solves them (SUGAR.md 6); a call is the boundary.
 

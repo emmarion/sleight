@@ -1,5 +1,5 @@
 ; needs: list map coerce
-; expect: (Cons (Succ (Succ (Zero))) (Cons (Succ (Zero)) (Nil)))
+; expect: (Cons 2 (Cons 1 (Nil)))
 ; A coerce, a delegate and a factory-made map in the final function's code.
 
 (def-lvl T)

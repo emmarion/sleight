@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Succ (Zero))
+; expect: 1
 ; A let binding a many return erased still receives the later returns in order, at the top level and in a body.
 
 (def-lvl L)
