@@ -507,6 +507,11 @@
     ((Nil a) t)
     ((Cons a x rest) (tail (pile-of A rest (pile-add A x t))))))
 
+(def-fns _ $ many rev-onto : (erased Type A) (subterm many (List A) acc) (many (List A) ys) -> (many (List A) r)
+  (match many acc _
+    ((Nil a) ys)
+    ((Cons a x rest) (tail (rev-onto A rest (Cons A x ys))))))
+
 (def-fns _ $ many sort-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A)
@@ -515,25 +520,26 @@
               (many (List A) ys))
           sorted)
   ; lexicographic: the first list shrinks, or it passes on unchanged and the second shrinks
+  ; [acc] the output so far, newest first, so the merge itself runs in constant stack
   (def-fns _ $ many merge : (erased Type A)
       (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
-      (subterm many (List A) xs) (subterm many (List A) ys) -> (many (List A) zs)
+      (subterm many (List A) xs) (subterm many (List A) ys) (many (List A) acc) -> (many (List A) zs)
     (match many xs (((List A) r))
-      ((Nil a) ys)
+      ((Nil a) (tail (rev-onto A acc ys)))
       ((Cons a x xr)
         (match many ys (((List A) r))
-          ((Nil b) xs)
+          ((Nil b) (tail (rev-onto A acc xs)))
           ((Cons b y yr)
             (match many (leq x y) (((List A) r))
-              ((BTrue) (Cons A x $ merge A leq xr ys))
-              ((BFalse) (Cons A y $ merge A leq xs yr))))))))
+              ((BTrue) (tail (merge A leq xr ys (Cons A x acc))))
+              ((BFalse) (tail (merge A leq xs yr (Cons A y acc))))))))))
   (def-fns _ $ many pile-sort : (erased Type A)
       (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
       (subterm many (Pile A) t) -> (many (List A) r)
     (match many t _
       ((PLeaf a) (Nil A))
       ((PNode a x l rr)
-        (merge A leq (Cons A x $ Nil A) (merge A leq (pile-sort A leq l) (pile-sort A leq rr))))))
+        (merge A leq (Cons A x $ Nil A) (merge A leq (pile-sort A leq l) (pile-sort A leq rr) (Nil A)) (Nil A)))))
   (def-fns _ $ many sort : (erased Type A)
       (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
       (many (List A) xs) -> (many (List A) ys)

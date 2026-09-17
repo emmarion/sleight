@@ -58,7 +58,13 @@ factory. `merge` recurses lexicographically on the two lists -- the
 first shrinks, or it is passed on unchanged and the second shrinks --
 which is DESIGN 7's order directly, so it needs no fuel; the split is a
 Braun-shaped pile built by insertion, so that recursion is structural
-too. Applying it to a type carrying an erased index took two things the
+too. `merge` carries the output as an accumulator, newest first, and
+hands it to `rev-onto` at the end, so it and `pile-of` are `tail` and
+run in constant stack; what is left recursing is `pile-add` and
+`pile-sort`, both down the pile, so the session reads the depth as the
+pile's height rather than the list's length. The emitted OCaml for
+`merge` and `rev-onto` is tail calls, which the `tail` marks require
+anyway (DESIGN 9 makes an unhonoured claim a hard error). Applying it to a type carrying an erased index took two things the
 session got wrong first: the index has to be closed over rather than
 taken as a parameter, a first-class `Fn` having to match arity exactly,
 and the comparison's level has to be minted at the top level rather than
