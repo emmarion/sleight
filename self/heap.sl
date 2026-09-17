@@ -222,12 +222,12 @@
   (match many h _
     ((MkHeap tb sz tree) (deref-at _ _ _ tree p lt p (WNil p)))))
 
-; Every address of a heap, oldest first, counted up from zero.
-(def-fns _ $ many addrs-from : (subterm many (Nat) remaining) (erased (Nat) size) (many (Nat) n) (erased (Add n remaining size) sum) -> (many (List $ Addr size) r)
+; Every address of a heap, newest first, counted up from zero onto the addresses already taken.
+(def-fns _ $ many addrs-onto : (subterm many (Nat) remaining) (erased (Nat) size) (many (Nat) n) (erased (Add n remaining size) sum) (many (List $ Addr size) acc) -> (many (List $ Addr size) r)
   (match many remaining _
-    ((Zero) (Nil _))
-    ((Succ k) (Cons _ (MkAddr _ n (lt-of-add n k size sum)) $ addrs-from k _ (Succ n) (add-shift n k size sum)))))
+    ((Zero) acc)
+    ((Succ k) (tail (addrs-onto k _ (Succ n) (add-shift n k size sum) $ Cons _ (MkAddr _ n (lt-of-add n k size sum)) acc)))))
 
 (def-fns _ $ many heap-addrs : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) -> (many (List $ Addr size) r)
   (match many h _
-    ((MkHeap tb sz tree) (addrs-from sz _ (Zero) (AddZero sz)))))
+    ((MkHeap tb sz tree) (addrs-onto sz _ (Zero) (AddZero sz) (Nil _)))))

@@ -38,7 +38,7 @@ type cx = {
   shapes : int list list ref;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
-  seen : (int, V.value * string option ref) Hashtbl.t;
+  seen : (int, (V.value * string option ref) list ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
   out : Buffer.t;
@@ -120,10 +120,17 @@ let dispatch cx a live scrut arms default =
       Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
   | Untagged _ -> (match arms with [ (_, vs, body) ] -> untuple vs scrut body | [] -> Option.get default | _ -> assert false)
 
+let bucket cx v =
+  let h = Hashtbl.hash v in
+  match Hashtbl.find_opt cx.seen h with Some b -> b | None -> let b = ref [] in Hashtbl.add cx.seen h b; b
+
+let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
+
 let rec value cx v =
   match v with
   | _ -> (
-      match List.find_opt (fun (v', _) -> v' == v) (Hashtbl.find_all cx.seen (Hashtbl.hash v)) with
+      let b = bucket cx v in
+      match List.find_opt (fun (v', _) -> v' == v) !b with
       | Some (_, { contents = Some name }) -> name
       | Some (_, named) ->
           incr cx.shared;
@@ -131,7 +138,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (plain cx v));
           named := Some name;
           name
-      | None -> Hashtbl.add cx.seen (Hashtbl.hash v) (v, ref None); plain cx v)
+      | None -> b := (v, ref None) :: !b; plain cx v)
 
 and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) vs)
@@ -166,7 +173,7 @@ and define cx x v =
       let name = if top then var x else Printf.sprintf "%s_%d" (var x) (List.length !(cx.captured)) in
       Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name e);
       if top then Hashtbl.replace cx.defined x name else cx.captured := (v, name) :: !(cx.captured);
-      Hashtbl.add cx.seen (Hashtbl.hash v) (v, ref (Some name));
+      remember cx v (ref (Some name));
       name
 
 and fn cx scope name f =

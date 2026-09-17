@@ -2670,3 +2670,44 @@ session's reading, with the tests as the evidence.
      through the constructor's `Const` value and reads no Matchable, so
      it is not checked there. That `let-match` is a match for this
      purpose is the owner's.
+
+143. **The emitters walk the compile-time store in tail position.**
+     `slc` refused three of the `mini/` end-to-end tests
+     (`mini_dependent`, `mini_recursion`, `mini_axioms`) with an OCaml
+     stack overflow under the default 8MB limit, which HANDOFF and
+     TOOLING-WISHLIST 15 had placed in the compile-time interpreter.
+     Backtraces at the overflow put it in the emitter instead, reached
+     after `main.sl`'s `compile` has run every file and found no error:
+     `emit-blocks` (`self/emit.sl`) and `addrs-from` (`self/heap.sl`)
+     each stepped once per address the store holds, the recursive call
+     sitting inside a `Cons` or an `rcat`, so the stack held a frame per
+     compile-time allocation — 157418, 162987 and 665800 blocks for the
+     three, against 44797 for `mini_elab`, which passed. Both take an
+     accumulator now and are marked `tail`, so the elaborator checks the
+     property rather than it holding by accident; `heap-addrs` hands its
+     addresses back newest first, the order `mark-pass` already wanted,
+     and `emit-program` reverses once for the two passes wanting them
+     oldest first. Believed semantics-preserving — the accumulated rope
+     should flatten to the same string and the reversed list hold the
+     same addresses — with the evidence being that all 193 test
+     programs' emitted OCaml is byte-identical to what the old code
+     produced with the stack raised, `slc`'s own output differing only
+     as its own sources changed. The three then compile under the
+     default limit, and the largest one's requirement falls from between
+     32MB and 64MB to about 256KB.
+
+     `lib/extract.ml`'s sharing table was the same shape of fault.
+     `Hashtbl.hash` reads a bounded prefix, so every suffix of a long
+     self-similar value shares one bucket, and `Hashtbl.find_all`'s scan
+     of that bucket is not in tail position; the bucket is now a list
+     scanned by `List.find_opt`, which is, and extracting a 20000-deep
+     list needs 2MB rather than 4MB with unchanged output. Two things
+     there are untouched and open, neither of them failing anything
+     today: `value`/`plain` still recurses once per node of the value it
+     walks, which an accumulator cannot fix and an explicit worklist
+     could, at the cost of reordering the `shared_N` definitions it
+     emits; and the lookup is linear in its bucket, so extracting such a
+     value is quadratic in its depth (measured at about 2.6s, 8s, 46s
+     and 237s for 5000, 10000, 20000 and 40000 elements). A deeper hash
+     would not help the second, the suffixes of such a value differing
+     only in length.

@@ -92,10 +92,23 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     matches and omitted impossible branches behaved exactly as guessed.
     The cost was almost entirely in bookkeeping, not in the type system.
 
-15. **Stack depth in `slc`'s compile-time interpreter.** Three of the
-    `mini/` end-to-end programs overflow the OCaml stack inside `slc`
-    under the default 8MB limit (before and after this change), while the
-    reference interpreter runs them; `ulimit -s unlimited` is enough. A
-    heap-allocated continuation, or at least a message naming the limit,
-    would keep `self/bootstrap.sh` honest on programs that evaluate
-    deeply at compile time.
+15. **A stack overflow says nothing about where it came from.** Three
+    of the `mini/` end-to-end programs overflowed the OCaml stack inside
+    `slc` under the default 8MB limit. This item used to read that the
+    overflow was in the compile-time interpreter and wanted a
+    heap-allocated continuation for it; both were wrong. The overflow
+    was in the emitter, in two walks over the compile-time store that
+    recursed once per allocated block, and an accumulator in each was
+    the whole fix (ASSUMPTIONS 143). Finding that took a debugger,
+    because `Fatal error: exception Stack overflow` names neither the
+    function nor the depth, and the wrong guess stood in two files for
+    a session. A runtime that named the deepest frame, or a compiler
+    flag that reported which recursions are not in tail position, would
+    have answered it directly.
+
+16. **A way to ask for a tail call and be told when it is not one.**
+    The `tail` mark does this for a call the programmer suspects, and
+    marking the two walks above pins them against a later edit. What is
+    missing is the other direction: nothing lists the recursions in a
+    program that are *not* in tail position, so a walk whose depth grows
+    with the input is found by overflowing rather than by reading.

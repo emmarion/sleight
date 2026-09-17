@@ -929,9 +929,9 @@
           (rcat3 (RStr "let rec ") (emit-group _ _ fns env (push-fn-names _ ids env suffix $ frame-names _ _ env2 env) d suffix) $ RStr "\n"))))
     (else (rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
 
-(def-fns _ $ many emit-blocks : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) oldest) (many (IdMap $ Unit) marks) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
+(def-fns _ $ many emit-blocks : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) oldest) (many (IdMap $ Unit) marks) (many (Env) env) (many (Decls) d) (many (Rope) acc) -> (many (Rope) r)
   (match many oldest _
-    ((Nil t) (REmpty))
+    ((Nil t) acc)
     ((Cons t at rest)
       (let (many (Rope) this)
         (match many (marked _ at marks) _
@@ -939,7 +939,7 @@
           ((BTrue)
             (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
             (block-let _ at _ b env d))))
-      (rcat this $ emit-blocks _ hp rest marks env d))))
+      (tail (emit-blocks _ hp rest marks env d $ rcat acc this)))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
 
@@ -1157,7 +1157,8 @@
 
 (def-fns _ $ many emit-program : (many (Bool) templates) (many (Env) env) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
-  (let (many addrs) $ heap-addrs Block _ hp)
-  (let (many marks) $ mark-pass _ hp (list-rev _ addrs) $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
+  (let (many newest) $ heap-addrs Block _ hp)
+  (let (many addrs) $ list-rev _ newest)
+  (let (many marks) $ mark-pass _ hp newest $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
   (let (many d) $ collect-heap _ hp addrs env $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
-  (rcat5 runtime-header (decls-rope d) (emit-blocks _ hp addrs marks env d) (driver-rope d env) $ emit-finals _ hp (list-rev _ fi) env d))
+  (rcat5 runtime-header (decls-rope d) (emit-blocks _ hp addrs marks env d (REmpty)) (driver-rope d env) $ emit-finals _ hp (list-rev _ fi) env d))

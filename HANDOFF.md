@@ -50,12 +50,40 @@ structurally, with the relations kept as they were:
   this scale, as the owner asked.
 - The self-hosted `slc` (`self/`) accepts every file and all eight
   `tests/mini_*.sl` match the interpreter through it, but three of them
-  (`mini_dependent`, `mini_axioms`, `mini_recursion`) overflow the OCaml
-  stack inside `slc`'s compile-time interpreter under the default 8MB
-  limit; `ulimit -s unlimited` fixes it, and the fuel-based `mini/`
-  before this change overflowed the same way, so it is a limit of `slc`
-  rather than a regression. `self/bootstrap.sh` runs with the default
-  limit and will report these three as failures.
+  (`mini_dependent`, `mini_axioms`, `mini_recursion`) overflowed the
+  OCaml stack under the default 8MB limit, so `self/bootstrap.sh`
+  reported them as failures. This paragraph used to place the overflow
+  in `slc`'s compile-time interpreter; it was in the emitter, and the
+  session below fixed it.
 
 Next, in the session's estimation: the owner's verdict on the two relation
 changes and on the `type-of-term` hole, then the items above.
+
+## The three `mini/` tests `slc` refused (one session, at the owner's request)
+
+Done. The overflow was in the emitter, not the compile-time interpreter:
+`emit-blocks` (`self/emit.sl`) and `addrs-from` (`self/heap.sl`) each
+recursed once per address the compile-time store holds, and the store is
+as long as the compile-time run is (157418, 162987 and 665800 blocks for
+the three tests, against 44797 for `mini_elab`, which passed). Both take
+an accumulator now and are marked `tail`. `lib/extract.ml`'s sharing
+table had a related non-tail scan, also fixed. ASSUMPTIONS 143 records
+the measurements and TOOLING-WISHLIST 15-16 what would have found it
+sooner. `self/bootstrap.sh` is green at the default stack limit.
+
+Open, in the session's estimation, none of it urgent and none of it
+decided:
+
+1. `lib/extract.ml`'s `value`/`plain` still recurses once per node of the
+   value it walks, which no accumulator fixes; an explicit worklist
+   would, at the cost of reordering the `shared_N` definitions it emits.
+   Whether that reordering is acceptable is the owner's call.
+2. The same file's sharing lookup is linear in its bucket, so extracting
+   a deep self-similar value is quadratic in its depth. Whether to keep
+   the structural hash (which cannot tell the suffixes of such a value
+   apart, so no deeper hash helps) or key the table some other way is a
+   design question this session did not attempt.
+3. Nothing bounds the compile-time store: every value the interpreter
+   allocates keeps an address, so the emitter's walk is as long as the
+   whole run, not as long as the result. The walks are flat now, so
+   nothing fails for it; it is why they were the deepest thing in `slc`.
