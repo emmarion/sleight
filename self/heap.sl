@@ -162,12 +162,9 @@
       (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln)) (suffix-one _ l v)
               (MkRef _ _ l v (SfHere _ (HAdd _ l v)))))))
 
-(def-fns _ $ many deref : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) ->
-    (erased (Hist B) s) (erased (Suffix B l s) sf) (many (B (Ref B s)) body)
-  (match many r _
-    ((MkRef tb l0 s v p)
-      (match many v _
-        ((MkValue tb2 s0 pos lp body) (values s (suffix-trans _ l (HAdd _ s v) s p (suffix-one _ s v)) body))))))
+(def-fns _ $ erased ref-suffix : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
+    (erased (Value B s) v) (erased (Suffix B l (HAdd B s v)) p) -> (erased (Suffix B l s) r)
+  (suffix-trans _ l (HAdd _ s v) s p (suffix-one _ s v)))
 
 (def-fns _ $ many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p)
   (match many r _ ((MkRef tb l0 s v p) (match many v _ ((MkValue tb2 s0 pos lp body) pos)))))

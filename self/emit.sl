@@ -545,15 +545,15 @@
     ((MHere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (let (many r) (erased sq) $ at-get _ _ _ q rs lk) r)))
     ((MThere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (names-get _ _ q rest))))))
 
-(def-fns _ $ many addr-str : (erased (Nat) a) (many (Addr a) at) -> (many (String) r)
-  (str-cat "a" $ nat-str $ addr-path _ at))
+(def-fns _ $ many addr-str : (erased (Hist Block) a) (many (Ref Block a) at) -> (many (String) r)
+  (str-cat "a" $ nat-str $ ref-pos Block _ at))
 
-(def-fns _ $ many addr-rope : (erased (Nat) a) (many (Addr a) at) -> (many (Rope) r)
+(def-fns _ $ many addr-rope : (erased (Hist Block) a) (many (Ref Block a) at) -> (many (Rope) r)
   (RStr $ addr-str _ at))
 
 ; The OCaml name of a group's member: its entry's name qualified by the group's address, since a group
 ; allocated twice is emitted twice.
-(def-fns _ $ many member-name : (erased (Nat) a) (many (Env) env) (many (Nat) id) (many (Addr a) g) -> (many (String) r)
+(def-fns _ $ many member-name : (erased (Hist Block) a) (many (Env) env) (many (Nat) id) (many (Ref Block a) g) -> (many (String) r)
   (str-cat3 (top-name env id) "_" $ addr-str _ g))
 
 (def-fns _ $ many top-names : (subterm many (List $ Nat) ids) (many (Env) env) (many (Maybe $ String) suffix) -> (many (List $ Named) r) (erased (Lockstep (Nat) (Named) ids r) lk)
@@ -572,7 +572,7 @@
   (let (many rs) (erased lk) $ top-names ids env $ Some _ suffix)
   (NmFrame _ ids rs lk ns))
 
-(def-fns _ $ many addr-ropes : (erased (Nat) a) (subterm many (List $ Addr a) vs) -> (many (List $ Rope) rs)
+(def-fns _ $ many addr-ropes : (erased (Hist Block) a) (subterm many (List $ Ref Block a) vs) -> (many (List $ Rope) rs)
   (match many vs _
     ((Nil t) (Nil _))
     ((Cons t v rest) (Cons _ (addr-rope _ v) $ addr-ropes _ rest))))
@@ -586,7 +586,7 @@
         ((MkEInfo z n m s mi me) (match many s _ ((SDyn z2) (RStr "(failwith \"a Dyn constant\")")) ((SConst z2 v) (addr-rope _ v))))))))
 
 ; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
-(def-fns _ $ many frame-named : (erased (Nat) a) (erased (List $ Nat) f) (subterm many (List $ Addr a) vs) (erased (Lockstep (Nat) (Addr a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2)
+(def-fns _ $ many frame-named : (erased (Hist Block) a) (erased (List $ Nat) f) (subterm many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2)
   (match many vs _
     ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (LsNil _ _)))))
     ((Cons t v rest)
@@ -596,7 +596,7 @@
           (let (many r) $ NmVal $ addr-rope _ v)
           (values (Cons _ r rs) (LsCons _ _ x r xs rs lk2)))))))
 
-(def-fns _ $ many member-named : (erased (Nat) a) (subterm many (List $ Nat) gids) (many (Env) env) (many (Addr a) g) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) gids rs) lk)
+(def-fns _ $ many member-named : (erased (Hist Block) a) (subterm many (List $ Nat) gids) (many (Env) env) (many (Ref Block a) g) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) gids rs) lk)
   (match many gids _
     ((Nil t) (values (Nil _) (LsNil _ _)))
     ((Cons t x rest)
@@ -604,7 +604,7 @@
       (let (many r) $ NmFn $ member-name _ env x g)
       (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))))
 
-(def-fns _ $ many frame-names : (erased (Nat) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames a ctx) fr) (many (Env) env) -> (many (Names ctx) r)
+(def-fns _ $ many frame-names : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block a) ctx) fr) (many (Env) env) -> (many (Names ctx) r)
   (match many fr _
     ((FrNil z) (NmNil))
     ((FrVals z c f vs lk rest)
@@ -622,7 +622,7 @@
   (many HFn : (many (String) name) -> (Head))
   (many HDyn : -> (Head)))
 
-(def-fns _ $ many block-head : (erased (Nat) a) (many (Block a) b) (many (Env) env) -> (many (Head) h)
+(def-fns _ $ many block-head : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Env) env) -> (many (Head) h)
   (match many b _
     ((BCtorFn z c) (HCtor c))
     ((BFn z g i id) (HFn $ member-name _ env id g))
@@ -735,7 +735,7 @@
         (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))))
 
   ; A block as one OCaml value, its addresses by name; a function value is its member's closure.
-  (many block-rope : (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
+  (many block-rope : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
     (match many b _
       ((BTag z c fields) (build-rope d 0 c $ addr-ropes _ fields))
       ((BTup z fields) (tuple-rope $ addr-ropes _ fields))
@@ -814,7 +814,7 @@
                     ((Some b se) d)))
                 (collect-group _ _ rest env d1))))))))
 
-  (many collect-block : (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
+  (many collect-block : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
     (match many b _
       ((BTag z c fields) (collect-ctor c d))
       ((BCtorFn z c) (collect-ctor c d))
@@ -823,13 +823,6 @@
       (else d))))
 
 
-
-(def-fns _ $ many collect-heap : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) addrs) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
-  (match many addrs _
-    ((Nil t) d)
-    ((Cons t at rest)
-      (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
-      (collect-heap _ hp rest env $ collect-block _ b env d))))
 
 (def-fns _ $ many ctor-decls : (many (Decls) d) (many (List $ Nat) s) (subterm many (List $ Nat) arities) (many (Nat) i) -> (many (Rope) r)
   (match many arities _
@@ -867,60 +860,105 @@
   (match many d _
     ((MkDecls shapes narrows ts) (rcat (narrow-decls d narrows) $ shape-decls d shapes $ BTrue))))
 
-; ---- The walk over the store: what a Const or a final reaches is marked from the newest address down,
-; each block's addresses being below it, and then written from the oldest up.
+; ---- The walk from the roots: what a Const or a final reaches, each value once. The seen set is
+; keyed by the stamp, so a value met a second time is tested and not descended into; a value is
+; added after the ones it names, so reversing the result puts every block after its dependencies.
+; [ls] the history a reference is into, [hs] the one the result is at, [sf] that hs extends ls.
 
-(def-fns _ $ many mark : (erased (Nat) a) (many (Addr a) at) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
-  (idmap-set _ (addr-path _ at) (MkUnit) marks))
+(def-fns _
+  (many trace-ref : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
+      (subterm many (Ref Block ls) at) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
+      (many (Env) env) (many (Decls) d) ->
+      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+    (match many (idmap-mem _ (ref-pos Block _ at) seen) _
+      ((BTrue) (values seen acc d))
+      ((BFalse)
+        (let-match many at (MkRef _ _ rs rv rp))
+        (let-match many rv (MkValue _ _ pos lp blk))
+        (let (erased rsf) (ref-suffix _ _ rs rv rp))
+        (let (erased tsf) (suffix-trans Block hs ls rs sf rsf))
+        (let (erased pb) (prove-subterm blk at))
+        (let (many seen2) (many acc2) (many d2)
+          $ trace-block _ _ tsf (subterm pb) blk (idmap-set _ pos (MkUnit) seen) acc env $ collect-block _ blk env d)
+        (let (erased at2) (erased pat) (ref-widen Block ls hs sf at))
+        (values seen2 (Cons _ (coerce at pat) acc2) d2))))
+  (many trace-block : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
+      (subterm many (Block (Ref Block ls)) blk) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
+      (many (Env) env) (many (Decls) d) ->
+      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+    (match many blk _
+      ((BTag z c fields)
+        (let (erased p) (prove-subterm fields blk))
+        (trace-refs _ _ sf (subterm p) fields seen acc env d))
+      ((BTup z fields)
+        (let (erased p) (prove-subterm fields blk))
+        (trace-refs _ _ sf (subterm p) fields seen acc env d))
+      ((BFn z g i id)
+        (let (erased p) (prove-subterm g blk))
+        (trace-ref _ _ sf (subterm p) g seen acc env d))
+      ((BGroup z gids ctx g fr)
+        (let (erased p) (prove-subterm fr blk))
+        (trace-frames _ _ sf _ (subterm p) fr seen acc env d))
+      (else (values seen acc d))))
+  (many trace-refs : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
+      (subterm many (List $ Ref Block ls) fs) (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc)
+      (many (Env) env) (many (Decls) d) ->
+      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+    (match many fs _
+      ((Nil t) (values seen acc d))
+      ((Cons t f rest)
+        (let (erased pf) (prove-subterm f fs))
+        (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ sf (subterm pf) f seen acc env d)
+        (let (erased pr) (prove-subterm rest fs))
+        (tail (trace-refs _ _ sf (subterm pr) rest seen1 acc1 env d1)))))
+  (many trace-frames : (erased (Hist Block) hs) (erased (Hist Block) ls) (erased (Suffix Block hs ls) sf)
+      (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block ls) ctx) fr) (many (IdMap $ Unit) seen)
+      (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
+      (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
+    (match many fr _
+      ((FrNil z) (values seen acc d))
+      ((FrVals z c f vs lk rest)
+        (let (erased pv) (prove-subterm vs fr))
+        (let (many seen1) (many acc1) (many d1) $ trace-refs _ _ sf (subterm pv) vs seen acc env d)
+        (let (erased pr) (prove-subterm rest fr))
+        (tail (trace-frames _ _ sf _ (subterm pr) rest seen1 acc1 env d1)))
+      ((FrGroup z c gids g rest)
+        (let (erased pg) (prove-subterm g fr))
+        (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ sf (subterm pg) g seen acc env d)
+        (let (erased pr) (prove-subterm rest fr))
+        (tail (trace-frames _ _ sf _ (subterm pr) rest seen1 acc1 env d1))))))
 
-(def-fns _ $ many marked : (erased (Nat) a) (many (Addr a) at) (many (IdMap $ Unit) marks) -> (many (Bool) r)
-  (idmap-mem _ (addr-path _ at) marks))
-
-(def-fns _ $ many mark-addrs : (erased (Nat) a) (subterm many (List $ Addr a) vs) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
-  (match many vs _
-    ((Nil t) marks)
-    ((Cons t v rest) (mark-addrs _ rest $ mark _ v marks))))
-
-(def-fns _ $ many mark-frames : (erased (Nat) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames a ctx) env) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
-  (match many env _
-    ((FrNil z) marks)
-    ((FrVals z c f vs lk rest) (mark-frames _ _ rest $ mark-addrs _ vs marks))
-    ((FrGroup z c gids g rest) (mark-frames _ _ rest $ mark _ g marks))))
-
-(def-fns _ $ many mark-entries : (erased (Nat) hs) (subterm many (IdMap $ EInfo hs) en) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
+(def-fns _ $ many trace-entries : (erased (Hist Block) hs) (subterm many (IdMap $ EInfo hs) en) (many (IdMap $ Unit) seen)
+    (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
+    (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
   (match many en _
-    ((MEmpty t) marks)
+    ((MEmpty t) (values seen acc d))
     ((MNode t here one two)
-      (let (many (IdMap $ Unit) marks2)
-        (match many here _
-          ((None u) marks)
-          ((Some u info) (match many info (((IdMap $ Unit) m)) ((MkEInfo z n m s mi me) (match many s (((IdMap $ Unit) m)) ((SDyn z2) marks) ((SConst z2 v) (mark _ v marks))))))))
-      (mark-entries _ two $ mark-entries _ one marks2))))
+      (let (many seen1) (many acc1) (many d1)
+        (match many here (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
+          ((None u) (values seen acc d))
+          ((Some u info)
+            (match many info (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
+              ((MkEInfo z n mu st mi me)
+                (match many st (((IdMap $ Unit) m) ((List $ Ref Block hs) l) ((Decls) dd))
+                  ((SDyn z2) (values seen acc d))
+                  ((SConst z2 v) (trace-ref _ _ (SfHere Block hs) v seen acc env d))))))))
+      (let (many seen2) (many acc2) (many d2) $ trace-entries _ one seen1 acc1 env d1)
+      (trace-entries _ two seen2 acc2 env d2))))
 
-(def-fns _ $ many mark-finals : (erased (Nat) hs) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
+(def-fns _ $ many trace-finals : (erased (Hist Block) hs) (subterm many (List $ Pair (Ref Block hs) $ Term) fs)
+    (many (IdMap $ Unit) seen) (many (List $ Ref Block hs) acc) (many (Env) env) (many (Decls) d) ->
+    (many (IdMap $ Unit) seen2) (many (List $ Ref Block hs) acc2) (many (Decls) d2)
   (match many fs _
-    ((Nil t) marks)
-    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (mark-finals _ rest $ mark _ v marks))))))
-
-(def-fns _ $ many mark-pass : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) newest) (many (IdMap $ Unit) marks) -> (many (IdMap $ Unit) r)
-  (match many newest _
-    ((Nil t) marks)
-    ((Cons t at rest)
-      (let (many (IdMap $ Unit) marks2)
-        (match many (marked _ at marks) _
-          ((BFalse) marks)
-          ((BTrue)
-            (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
-            (match many b (((IdMap $ Unit) m))
-              ((BTag z c fields) (mark-addrs _ fields marks))
-              ((BTup z fields) (mark-addrs _ fields marks))
-              ((BFn z g i id) (mark _ g marks))
-              ((BGroup z gids ctx g env) (mark-frames _ _ env marks))
-              (else marks)))))
-      (mark-pass _ hp rest marks2))))
+    ((Nil t) (values seen acc d))
+    ((Cons t p rest)
+      (match many p _
+        ((MkPair x y v ty)
+          (let (many seen1) (many acc1) (many d1) $ trace-ref _ _ (SfHere Block hs) v seen acc env d)
+          (tail (trace-finals _ rest seen1 acc1 env d1)))))))
 
 ; A group's block is its members' top-level let rec over the names of the frames it closed over.
-(def-fns _ $ many block-let : (erased (Nat) hs) (many (Addr hs) at) (erased (Nat) a) (subterm many (Block a) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
+(def-fns _ $ many block-let : (erased (Hist Block) hs) (many (Ref Block hs) at) (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
   (match many b _
     ((BGroup z gids ctx g env2)
       (match many g _
@@ -929,17 +967,31 @@
           (rcat3 (RStr "let rec ") (emit-group _ _ fns env (push-fn-names _ ids env suffix $ frame-names _ _ env2 env) d suffix) $ RStr "\n"))))
     (else (rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
 
-(def-fns _ $ many emit-blocks : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Addr hs) oldest) (many (IdMap $ Unit) marks) (many (Env) env) (many (Decls) d) (many (Rope) acc) -> (many (Rope) r)
-  (match many oldest _
+; The traced set is written in stamp order, which orders every dependency: a block's own references
+; and the Consts its code names were all allocated before it.
+(def-fns _ $ many order-insert : (erased (Hist Block) hs) (many (Ref Block hs) x) (many (Nat) xp)
+    (subterm many (List $ Ref Block hs) xs) -> (many (List $ Ref Block hs) r)
+  (match many xs _
+    ((Nil t) (Cons _ x $ Nil _))
+    ((Cons t y rest)
+      (match many (nat-lt (ref-pos Block _ y) xp) _
+        ((BTrue) (Cons _ y $ order-insert _ x xp rest))
+        ((BFalse) (Cons _ x xs))))))
+
+(def-fns _ $ many order-sort : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) xs) ->
+    (many (List $ Ref Block hs) r)
+  (match many xs _
+    ((Nil t) (Nil _))
+    ((Cons t x rest) (order-insert _ x (ref-pos Block _ x) $ order-sort _ rest))))
+
+(def-fns _ $ many emit-blocks : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) order)
+    (many (Env) env) (many (Decls) d) (many (Rope) acc) -> (many (Rope) r)
+  (match many order _
     ((Nil t) acc)
     ((Cons t at rest)
-      (let (many (Rope) this)
-        (match many (marked _ at marks) _
-          ((BFalse) (REmpty))
-          ((BTrue)
-            (let (erased a) (erased lt) (many b) $ deref Block _ hp at)
-            (block-let _ at _ b env d))))
-      (tail (emit-blocks _ hp rest marks env d $ rcat acc this)))))
+      (let-match many at (MkRef _ _ rs rv rp))
+      (let-match many rv (MkValue _ _ pos lp blk))
+      (tail (emit-blocks _ rest env d $ rcat acc $ block-let _ at _ blk env d)))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
 
@@ -1127,14 +1179,15 @@
         ((Cons a d rest) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))))
 
 ; A final that is a function or a constructor prints its name, as the reference does.
-(def-fns _ $ many named-final : (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Env) env) -> (many (Maybe $ String) r)
-  (let (erased a) (erased lt) (many b) $ deref Block _ hp v)
+(def-fns _ $ many named-final : (erased (Hist Block) hs) (many (Ref Block hs) v) (many (Env) env) -> (many (Maybe $ String) r)
+  (let-match many v (MkRef _ _ ns nv np))
+  (let-match many nv (MkValue _ _ npos nlp b))
   (match many b _
     ((BFn z g i id) (Some _ $ str-cat3 "<function " (name-of env id) ">"))
     ((BCtorFn z c) (Some _ $ str-cat3 "<constructor " (ctor-name c) ">"))
     (else (None $ String))))
 
-(def-fns _ $ many final-rope : (many (Env) env) (erased (Nat) hs) (many (Heap Block hs) hp) (many (Addr hs) v) (many (Term) ty) (many (Decls) d) -> (many (Rope) r)
+(def-fns _ $ many final-rope : (many (Env) env) (erased (Hist Block) hs) (many (Ref Block hs) v) (many (Term) ty) (many (Decls) d) -> (many (Rope) r)
   (let (many vr) $ addr-rope _ v)
   (match many (classify-final env ty) _
     ((FMain) (rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
@@ -1143,16 +1196,16 @@
       (let (many memo) (many name) $ show-type show-fuel env t (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
       (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ((Obj.obj ") vr $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
     ((FPlain)
-      (match many (named-final _ hp v env) _
+      (match many (named-final _ v env) _
         ((Some a text) (rcat3 (RStr "let () = print_endline ") (quoted text) $ RStr "\n"))
         ((None a)
           (let (many memo) (many name) $ show-type show-fuel env ty (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
           (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))))
 
-(def-fns _ $ many emit-finals : (erased (Nat) hs) (many (Heap Block hs) hp) (subterm many (List $ Pair (Addr hs) $ Term) fs) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
+(def-fns _ $ many emit-finals : (erased (Hist Block) hs) (subterm many (List $ Pair (Ref Block hs) $ Term) fs) (many (Env) env) (many (Decls) d) -> (many (Rope) r)
   (match many fs _
     ((Nil t) (REmpty))
-    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ hp v ty d) $ emit-finals _ hp rest env d))))))
+    ((Cons t p rest) (match many p _ ((MkPair x y v ty) (rcat (final-rope env _ v ty d) $ emit-finals _ rest env d))))))
 
 ; The prelude's types the driver and any printer may name, declared whether or not the program reaches them.
 (def-fns _ $ many collect-prelude : (subterm many (List $ String) names) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
@@ -1162,8 +1215,8 @@
 
 (def-fns _ $ many emit-program : (many (Bool) templates) (many (Env) env) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
-  (let (many newest) $ heap-addrs Block _ hp)
-  (let (many addrs) $ list-rev _ newest)
-  (let (many marks) $ mark-pass _ hp newest $ mark-finals _ fi $ mark-entries _ en $ MEmpty _)
-  (let (many d) $ collect-heap _ hp addrs env $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
-  (rcat5 runtime-header (decls-rope d) (emit-blocks _ hp addrs marks env d (REmpty)) (driver-rope d env) $ emit-finals _ hp (list-rev _ fi) env d))
+  (let (many d0) $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
+  (let (many seen1) (many acc1) (many d1) $ trace-entries _ en (MEmpty _) (Nil _) env d0)
+  (let (many seen2) (many acc2) (many d2) $ trace-finals _ fi seen1 acc1 env d1)
+  (let (many order) $ order-sort _ acc2)
+  (rcat5 runtime-header (decls-rope d2) (emit-blocks _ order env d2 (REmpty)) (driver-rope d2 env) $ emit-finals _ (list-rev _ fi) env d2))

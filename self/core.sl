@@ -2177,7 +2177,9 @@
           (match many s _
             ((SDyn z2) (values (HEmpty Block) $ None _))
             ((SConst z2 v)
-              (let (erased a) (erased sf) (many b) $ deref Block _ v)
+              (let-match many v (MkRef _ _ a rv8 rp8))
+              (let-match many rv8 (MkValue _ _ pos8 lp8 b))
+              (let (erased sf) (ref-suffix _ _ a rv8 rp8))
               (values a $ Some _ b))))))))
 
 ; Forwards [y]'s state to [x] (section 9's state-forwarding let).

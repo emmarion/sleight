@@ -3,6 +3,74 @@
 Work in progress handed from one session to the next. Written by a
 Claude session; nothing here is a design decision.
 
+## The compile-time store: stamped values, a ghost history (`self/`)
+
+Done, at the owner's direction and to the owner's design. `slc`'s
+compile-time interpreter no longer addresses its values into a Braun-tree
+store: a value refers to other values directly and carries a stamp, and
+what makes the stamp trustworthy is an erased ghost history, the owner's
+idea. `self/heap.sl` holds it -- `Hist`, `Value`, `Len`, `Suffix` and
+`Ref` as one mutual (inductive-inductive) block, parametric in the block
+type, which takes the *reference* type as its parameter so that it never
+mentions the history; that is what keeps the block generic rather than
+forcing it into `core.sl`. A `Store` is the next stamp alone and a `Ref`
+is its target, both being newtypes over their one `many` field.
+
+`suffix-unique` derives that a history has one suffix of each length, and
+`ref-unique` that two references into one history at one position name
+one value. That is this session's reading of what makes the emitter's
+memo sound, and the reason the ghost history is there; nothing calls
+either lemma. Measured rather than assumed: the reference and `slc` both
+accept the shape, and `ref-widen`, the lemmas and `empty-suffix` extract
+to no OCaml at all.
+
+What this bought, on the session's reading: the host reclaims what is
+unreachable, where the old store held every block for the whole run;
+reading a reference is a projection rather than a tree walk, and `alloc`
+a constructor rather than a rebuilt path; and the emitter walks only what
+a Const or a final reaches. Measured with an instrumented reference
+extractor before the change, reachable values against the blocks
+ASSUMPTIONS 148 counts: 1570 against about 20000 for `slc`'s own sources,
+and 197, 181, 227 and 126 against 665800, 157418, 162987 and 44797 for
+`mini_recursion`, `mini_axioms`, `mini_dependent` and `mini_elab`. Max
+value depth was 226 and 13-19 respectively.
+
+Things the session had to change course on, recorded so they are not
+rediscovered:
+
+- `deref` was deleted rather than kept. A call's result is `Dyn`, so
+  calling it destroys the subterm relation, which is what stopped
+  `rope-walk` and the printer recursing structurally. Both now match
+  through `MkRef`/`MkValue` and need neither the store nor a fuel, and
+  `ref-suffix`, erased, replaces what `deref` computed.
+- Post-order DFS alone does not order the output. A group's body also
+  names other Consts, and that edge is not in the value graph; today's
+  emitter got the ordering from address order instead. Emission is now in
+  stamp order, which orders every edge, since anything a block names was
+  allocated before it. Adding those edges to the trace was considered and
+  set aside: they jump to arbitrary Consts, so the walk would stop being
+  structural.
+
+Open, none of it decided:
+
+1. The stamp sort is an insertion sort, quadratic in the blocks emitted
+   (4372 when `slc` compiles itself, 2668 for `mini_recursion`). Whether
+   the traced order is near-sorted, which would keep it cheap, was not
+   measured. An MSB-first trie over the bijective spelling would sort in
+   one structural pass, in-order traversal being sorted because a shorter
+   bijective spelling is always the smaller number; a balanced tree and a
+   merge sort were the other two the session weighed, the latter needing
+   a measure `merge` does not have.
+2. The trace itself descends by value depth rather than being tail
+   recursive. The owner asked for tail recursion where a reasonable
+   measure exists; the session did not find one that is both erased and
+   proof-free, the seen set bounding the walk rather than any structure.
+3. The `-weaken` wrappers in `heap.sl` are marked TEMPORARY. The owner
+   asked that widening be an erased proof and a `coerce` at the call
+   site, a call to a `many` wrapper extracting to a real call where the
+   inline `coerce` extracts to nothing; that pass is not done, and the
+   nested call sites need hoisting for it.
+
 ## The minimal language and its semantics (`mini/`)
 
 Done, in one autonomous session at the owner's request:

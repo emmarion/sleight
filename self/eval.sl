@@ -28,11 +28,15 @@
 ; ---- Extern values (section 41; lib/ffi_core.ml): payload blocks, read and made through the store
 
 (def-fns _ $ many heap-nat : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (Nat) n)
-  (let (erased x) (erased lt) (many b) $ deref Block _ a)
+  (let-match many a (MkRef _ _ x rv1 rp1))
+  (let-match many rv1 (MkValue _ _ pos1 lp1 b))
+  (let (erased lt) (ref-suffix _ _ x rv1 rp1))
   (match many b _ ((BExt z p) (match many p _ ((PNat n) n) (else 0))) (else 0)))
 
 (def-fns _ $ many heap-str : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (String) n)
-  (let (erased x) (erased lt) (many b) $ deref Block _ a)
+  (let-match many a (MkRef _ _ x rv2 rp2))
+  (let-match many rv2 (MkValue _ _ pos2 lp2 b))
+  (let (erased lt) (ref-suffix _ _ x rv2 rp2))
   (match many b _ ((BExt z p) (match many p _ ((PStr s) s) (else (SNil)))) (else (SNil))))
 
 (def-fns _ $ many alloc-ext : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a)
@@ -100,16 +104,18 @@
       (match many k _
         ((Zero) (Cons _ v $ Nil _))
         ((Succ k2)
-          (let (erased a) (erased lt) (many b) $ deref Block _ v)
+          (let-match many v (MkRef _ _ a rv3 rp3))
+          (let-match many rv3 (MkValue _ _ pos3 lp3 b))
+          (let (erased lt) (ref-suffix _ _ a rv3 rp3))
           (match many b _
-            ((BTup z fs) (refs-weaken _ _ _ (lt-weaken _ _ lt) fs)) (else (Nil $ Ref Block hs))))))))
+            ((BTup z fs) (refs-weaken _ _ _ lt fs)) (else (Nil $ Ref Block hs))))))))
 
 (def-fns _ $ many construct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ctor) c) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v)
   (match many c _
     ((MkCtor name id index arity tagged ext shape)
       (match many ext _
         ((Some a e)
-          (let (many hp2) (many v) $ ext-construct _ hp e index args)
+          (let (erased hl2) (many hp2) (erased sf2) (many v) $ ext-construct _ hp e index args)
           (values hl2 hp2 sf2 v))
         ((None a)
           (match many tagged _
@@ -121,7 +127,9 @@
 ; A value's discriminant and many fields where the FFI holds the type or a tag says (section 38); None
 ; otherwise, the value then being its fields as they stand.
 (def-fns _ $ many dispatch : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Pair (Nat) $ List $ Ref Block hs2) r)
-  (let (erased a) (erased lt) (many b) $ deref Block _ v)
+  (let-match many v (MkRef _ _ a rv4 rp4))
+  (let-match many rv4 (MkValue _ _ pos4 lp4 b))
+  (let (erased lt) (ref-suffix _ _ a rv4 rp4))
   (match many b _
     ((BExt z p)
       (match many ext _
@@ -131,7 +139,7 @@
           (values hs2 hp2 le $ Some _ $ MkPair _ _ i fs))))
     ((BTag z ct fs)
       (match many tagged _
-        ((BTrue) (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ (ctor-index ct) $ refs-weaken _ _ _ (lt-weaken _ _ lt) fs))
+        ((BTrue) (values hs hp (le-refl hs) $ Some _ $ MkPair _ _ (ctor-index ct) $ refs-weaken _ _ _ lt fs))
         ((BFalse) (values hs hp (le-refl hs) $ None _))))
     (else (values hs hp (le-refl hs) $ None _))))
 
@@ -150,27 +158,24 @@
   (alloc-ext _ hp $ PNat n))
 
 ; A Rope value read back for the host's flatten (ASSUMPTIONS 122); the recursion into a block's fields is
-; bounded by the address, which a field's smaller number refines.
 (def-fns _
-  (many rope-walk : (subterm erased (Nat) fuel) (subterm many (Nat) n) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (Lt n hs) lt) (erased (Lt n fuel) lf) -> (many (Rope) r)
-    (match erased fuel _
-      (absurd (Zero) (lt-zero n lf))
-      ((Succ k)
-        (match many (deref-path Block _ hp n lt) _
-          ((BExt z p) (match many p _ ((PStr s) (RStr s)) ((PNat m) (RChar $ char-of-code m)) (else (REmpty))))
-          ((BTag z ct fields) (rope-fields k _ hp n lt lf fields))
-          (else (REmpty))))))
-  (many rope-fields : (subterm erased (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (Nat) a) (erased (Lt a hs) lt) (erased (Suffix Block fuel a) lf) (subterm many (List $ Ref Block a) fs) -> (many (Rope) r)
+  (many rope-walk : (erased (Hist Block) hs) (subterm many (Ref Block hs) r) -> (many (Rope) rope)
+    (match many r _
+      ((MkRef tb l0 s v p)
+        (match many v _
+          ((MkValue tb2 s0 pos lp body)
+            (match many body _
+              ((BExt z pp) (match many pp _ ((PStr str) (RStr str)) ((PNat m) (RChar $ char-of-code m)) (else (REmpty))))
+              ((BTag z ct fields) (rope-fields _ fields))
+              (else (REmpty))))))))
+  (many rope-fields : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fs) -> (many (Rope) rope)
     (match many fs _
       ((Nil t) (REmpty))
-      ((Cons t f rest)
-        (let-match many f (MkAddr bd nf ltf))
-        (RCat (rope-walk fuel nf _ hp (lt-le-trans nf a hs ltf (lt-weaken a hs lt)) (lt-le-trans nf a fuel ltf lf)) (rope-fields fuel _ hp a lt lf rest))))))
+      ((Cons t f rest) (RCat (rope-walk _ f) (rope-fields _ rest))))))
 
-(def-fns _ $ many flatten-value : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (String) s)
-  (let-match many a (MkAddr bd n lt))
-  (let (many s) (erased p) $ flatten $ rope-walk _ n _ hp lt (lt-succ n))
-  s)
+(def-fns _ $ many flatten-value : (erased (Hist Block) hs) (many (Ref Block hs) r) -> (many (String) s)
+  (let (many str) (erased p) $ flatten $ rope-walk _ r)
+  str)
 
 ; An extern function over its arguments, or None where the model runs instead: nat-cmp builds a plain
 ; ADT (ASSUMPTIONS 120). The arguments are counted against the arity here, the call having been checked
@@ -207,7 +212,7 @@
           ((No x y q) (PStr "nat-mod: zero modulus"))))
       ((ExTrim) (PStr $ trim sa))
       ((ExAppend) (PStr $ str-append sa sb))
-      ((ExFlatten) (PStr $ match many a (((String) r)) ((Some t x) (flatten-value _ hp x)) ((None t) (SNil))))))
+      ((ExFlatten) (PStr $ match many a (((String) r)) ((Some t x) (flatten-value _ x)) ((None t) (SNil))))))
   (match many e _
     ((ExNatCmp) (values hs hp (le-refl hs) (None _)))
     ((ExStrCmp) (values hs hp (le-refl hs) (None _)))
@@ -240,7 +245,7 @@
 
 ; ---- Values at every position of a code's index (ASSUMPTIONS 125)
 
-(def-fns _ $ many vals-of : (erased (Nat) hs) (subterm many (List $ Mult) ms) (many (Ref Block hs) v) -> (many (Vals hs ms) r)
+(def-fns _ $ many vals-of : (erased (Hist Block) hs) (subterm many (List $ Mult) ms) (many (Ref Block hs) v) -> (many (Vals hs ms) r)
   (match many ms _
     ((Nil a) (ValsNil _))
     ((Cons a m rest) (match many m _ ((Many) (ValsMany _ _ v $ vals-of _ rest v)) ((Erased) (ValsErased _ _ $ vals-of _ rest v))))))
@@ -268,17 +273,17 @@
               (let (erased hs2) (many hp2) (erased le) (many r) $ vals-fit _ hp rest vrest)
               (values hs2 hp2 le $ ValsMany _ _ (ref-weaken _ _ _ le v) r))))))))
 
-(def-fns _ $ many vals-list : (erased (Nat) hs) (erased (List $ Mult) ms) (subterm many (Vals hs ms) vs) -> (many (List $ Ref Block hs) r)
+(def-fns _ $ many vals-list : (erased (Hist Block) hs) (erased (List $ Mult) ms) (subterm many (Vals hs ms) vs) -> (many (List $ Ref Block hs) r)
   (match many vs _
     ((ValsNil a) (Nil _))
     ((ValsMany a m v rest) (Cons _ v $ vals-list _ _ rest))
     ((ValsErased a m rest) (vals-list _ _ rest))))
 
-(def-fns _ $ many vals-one : (erased (Nat) hs) (many (Vals hs many-one) vs) -> (many (Ref Block hs) v)
+(def-fns _ $ many vals-one : (erased (Hist Block) hs) (many (Vals hs many-one) vs) -> (many (Ref Block hs) v)
   (match many vs _ ((ValsMany a m v rest) v)))
 
 ; The many values of [vs] as the frame of the ids picked from the same positions.
-(def-fns _ $ many vals-frame : (erased (Nat) hs) (erased (List $ Mult) ms) (erased (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (subterm many (Vals hs ms) vs) -> (many (List $ Ref Block hs) r) (erased (Lockstep (Nat) (Ref Block hs) ids r) lk)
+(def-fns _ $ many vals-frame : (erased (Hist Block) hs) (erased (List $ Mult) ms) (erased (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (subterm many (Vals hs ms) vs) -> (many (List $ Ref Block hs) r) (erased (Lockstep (Nat) (Ref Block hs) ids r) lk)
   (match many vs _
     ((ValsNil a) (match erased pk _ ((PkNil t) (values (Nil _) (LsNil _ _)))))
     ((ValsMany a m v rest)
@@ -355,7 +360,7 @@
                   ((SDyn z2) (error-vals _ hp many-one "a Dyn constant"))))))
           ((Miss ht hk hm hq) (error-vals _ hp many-one "unbound constant"))))
       ((CValue c v)
-        (let (erased hl2) (many hp2) (erased sf2) (many a) $ alloc Block _ hp $ block-weaken _ _ (LtZ hs) v)
+        (let (erased hl2) (many hp2) (erased sf2) (many a) $ alloc Block _ hp $ block-weaken _ _ (empty-suffix _ hs) v)
         (values hl2 hp2 sf2 $ ValsMany _ _ a $ ValsNil _))
       ((CErased c ms2)
         (let (erased hl2) (many hp2) (erased sf2) (many a) $ alloc Block _ hp $ BToken _)
@@ -384,7 +389,7 @@
             (match many g _
               ((MkGroup c1 ids fns lk)
                 (let (erased hl1) (many hp1) (erased sf1) (many ga) $ alloc Block _ hp $ BGroup _ _ _ g env)
-                (let (erased le1) (le-step _ _ $ le-refl hs))
+                (let (erased le1) sf1)
                 (let (erased h2) (many hp2) (erased le2) (many r) $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (entries-weaken _ _ le1 cs) (FrGroup _ _ ids ga $ frames-weaken _ _ le1 _ env))
                 (values h2 hp2 (le-trans _ _ _ le1 le2) r))))))
       ((CMatch c ns scrut shape branches dfl live)
@@ -397,7 +402,10 @@
             ((ShNone c2) (values h1 hp1 (le-refl h1) $ None _))
             ((ShHeld c2 mcode held)
               (let (erased h1b) (many hp1b) (erased le1b) (many mvs) $ eval fuel _ hp1 _ _ mcode st1)
-              (let (erased ma) (erased mlt) (many mb) $ deref Block _ $ vals-one _ mvs)
+              (let (many mref) $ vals-one _ mvs)
+              (let-match many mref (MkRef _ _ ma rv5 rp5))
+              (let-match many rv5 (MkValue _ _ pos5 lp5 mb))
+              (let (erased mlt) (ref-suffix _ _ ma rv5 rp5))
               (match many mb (((Hist Block) h) ((Store Block h) p) ((Suffix Block h h1) l) ((Maybe $ Pair (Nat) $ List $ Ref Block h) r))
                 ((BMat z a)
                   (let (erased h1c) (many hp1c) (erased le1c) (many r) $ dispatch _ hp1b (adt-ext a) (adt-tagged held) $ ref-weaken _ _ _ le1b v)
@@ -473,11 +481,15 @@
   ; and the frames the group closed over. A missing member is an error block (ASSUMPTIONS 127).
   (many apply : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Ref Block hs) f) (many (List $ Ref Block hs) args) ->
       (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs)
-    (let (erased fa) (erased flt) (many fb) $ deref Block _ f)
+    (let-match many f (MkRef _ _ fa rv6 rp6))
+    (let-match many rv6 (MkValue _ _ pos6 lp6 fb))
+    (let (erased flt) (ref-suffix _ _ fa rv6 rp6))
     (match many fb _
       ((BFn z ga i id)
-        (let (many g) $ ref-weaken _ _ _ (lt-weaken _ _ flt) ga)
-        (let (erased gn) (erased glt) (many gb) $ deref Block _ g)
+        (let (many g) $ ref-weaken _ _ _ flt ga)
+        (let-match many g (MkRef _ _ gn rv7 rp7))
+        (let-match many rv7 (MkValue _ _ pos7 lp7 gb))
+        (let (erased glt) (ref-suffix _ _ gn rv7 rp7))
         (match many gb _
           ((BGroup z2 gids ctx group cenv)
             (match many group _
@@ -505,7 +517,7 @@
                                   ((Succ k)
                                     (let (erased h2) (many hp2) (erased le2) (many vs) (erased lkp) $ fit-addrs _ hp1 params $ refs-weaken _ _ _ le1 args)
                                     (let (erased le12) (le-trans _ _ _ le1 le2))
-                                    (let (many env) $ FrVals _ _ params vs lkp $ FrGroup _ _ ids (ref-weaken _ _ _ le12 g) $ frames-weaken _ _ (le-trans _ _ _ (lt-weaken _ _ glt) le12) _ cenv)
+                                    (let (many env) $ FrVals _ _ params vs lkp $ FrGroup _ _ ids (ref-weaken _ _ _ le12 g) $ frames-weaken _ _ (le-trans _ _ _ glt le12) _ cenv)
                                     (let (erased h3) (many hp3) (erased le3) (many r) $ eval k _ hp2 _ _ body $ MkSt _ _ (entries-weaken _ _ le12 cs) env)
                                     (values h3 hp3 (le-trans _ _ _ le12 le3) $ vals-list _ _ r))))))))))))))
           (else (error-list _ hp "not a group"))))
@@ -523,7 +535,7 @@
 ; ---- Run-position statements against the environment (section 34): each reads the store out, runs or
 ; allocates, and puts it back with what holds its addresses widened.
 
-(def-fns _ $ many set-states : (erased (Nat) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (List $ Ref Block hs) vs) (erased (Lockstep (Nat) (Ref Block hs) ids vs) lk) -> (many (IdMap $ EInfo hs) r)
+(def-fns _ $ many set-states : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (List $ Ref Block hs) vs) (erased (Lockstep (Nat) (Ref Block hs) ids vs) lk) -> (many (IdMap $ EInfo hs) r)
   (match many ids _
     ((Nil a) en)
     ((Cons a x rest)
@@ -543,7 +555,7 @@
     ((Nil a) (env-with-store e _ hp en fi))
     ((Cons a x rest)
       (let (erased hl2) (many hp2) (erased sf2) (many v) $ alloc Block _ hp $ BFn _ g i x)
-      (let (erased le) (le-step _ _ $ le-refl hs))
+      (let (erased le) sf2)
       (let (many en2) (many fi2) $ store-grow _ _ le en fi)
       (close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 rest (ref-weaken _ _ _ le g) $ Succ i))))
 
@@ -551,7 +563,7 @@
 (def-fns _ $ many env-close-group : (many (Env) e) (erased (List $ Nat) gids) (many (Group gids (Nil (List (Nat)))) g) -> (many (Env) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store e)
   (let (erased hl1) (many hp1) (erased sf1) (many ga) $ alloc Block _ hp $ BGroup _ _ _ g $ FrNil _)
-  (let (many en1) (many fi1) $ store-grow _ _ (le-step _ _ $ le-refl hs) en fi)
+  (let (many en1) (many fi1) $ store-grow _ _ sf1 en fi)
   (match many g _ ((MkGroup c ids fns lk) (close-members e _ hp1 en1 fi1 ids ga 0))))
 
 ; The Const fields of a value bound to their ids at their declared multiplicities (section 15): a many
@@ -562,14 +574,14 @@
     ((Nil a) (values hs hp en fi))
     ((Cons a x rest)
       (let (many (Mult) m) (many (List $ Mult) mrest) $ match many mults _ ((Nil b) (values (Many) $ Nil _)) ((Cons b m0 mr) (values m0 mr)))
-      (let (many (Block hs) filler) $ match many m _ ((Many) (BError _ "missing value")) ((Erased) (BToken _)))
+      (let (many (Block (Ref Block hs)) filler) $ match many m _ ((Many) (BError _ "missing value")) ((Erased) (BToken _)))
       (let (many (Maybe $ Ref Block hs) have) $ match many m _ ((Erased) (None _)) ((Many) (match many vs (((Maybe $ Ref Block hs) r)) ((Nil b) (None _)) ((Cons b v vrest) (Some _ v)))))
       (let (many (List $ Ref Block hs) vrest) $ match many m _ ((Erased) vs) ((Many) (match many vs (((List $ Ref Block hs) r)) ((Nil b) (Nil _)) ((Cons b v vr) vr))))
       (match many have _
         ((Some b v) (set-field-states _ hp (entries-set-state _ en x $ SConst _ v) fi rest mrest vrest))
         ((None b)
           (let (erased hl2) (many hp2) (erased sf2) (many t) $ alloc Block _ hp filler)
-          (let (erased le) (le-step _ _ $ le-refl hs))
+          (let (erased le) sf2)
           (let (many en2) (many fi2) $ store-grow _ _ le en fi)
           (set-field-states _ hp2 (entries-set-state _ en2 x $ SConst _ t) fi2 rest mrest $ refs-weaken _ _ _ le vrest))))))
 

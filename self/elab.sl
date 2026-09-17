@@ -47,7 +47,7 @@
   (many SMatch : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (Nat) disc) (many (List $ Nat) ids) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
   (many SSeq : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx1) (erased (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx1) first) (many (StmtCode ctx1 ctx2) then) -> (StmtCode ctx ctx2)))
 
-(def-fns _ $ many consts-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Block (Zero)) cs) ->
+(def-fns _ $ many consts-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) cs) ->
     (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) ipk) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) cpk)
   (match many cs _
     ((Nil a) (values (Nil _) (Nil _) (PkNil _) (Nil _) (PkNil _)))
@@ -1556,14 +1556,14 @@
             ((Many) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
             ((Erased) (values env3 gids (BErased _ _ _ _ _ x ids)))))))))
 
-(def-fns _ $ many set-const-states : (subterm many (List $ Pair (Nat) $ Block (Zero)) cs) (many (Env) env) -> (many (Env) r)
+(def-fns _ $ many set-const-states : (subterm many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) cs) (many (Env) env) -> (many (Env) r)
   (match many cs _
     ((Nil a) env)
     ((Cons a p rest)
       (match many p _
         ((MkPair x y id v) (set-const-states rest $ set-state-closed env id v))))))
 
-(def-fns _ $ many ctor-values : (subterm many (List $ Ctor) cs) -> (many (List $ Pair (Nat) $ Block (Zero)) r)
+(def-fns _ $ many ctor-values : (subterm many (List $ Ctor) cs) -> (many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) r)
   (match many cs _
     ((Nil a) (Nil _))
     ((Cons a c rest) (Cons _ (MkPair _ _ (ctor-id c) $ BCtorFn _ c) $ ctor-values rest))))
@@ -2306,7 +2306,7 @@
     ((SNil) (RStr "(SNil)"))
     ((SCons c rest) (rwrap "(SCons " (rcat3 (show-nat $ char-code c) (RStr " ") $ show-str rest) ")"))))
 
-(def-fns _ $ many show-plain : (erased (Nat) a) (many (Block a) b) -> (many (Rope) r)
+(def-fns _ $ many show-plain : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (Rope) r)
   (match many b _
     ((BExt z p) (match many p _ ((PNat n) (show-nat n)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
     ((BCtorFn z c) (rwrap "<constructor " (RStr $ ctor-name c) ">"))
@@ -2338,45 +2338,57 @@
         ((Some b info) (match many info _ ((MkMatchInfo mid disc mctors rank) (adt-of env mid))))))))
 
 (def-fns _
-  (many show-at : (subterm erased (Nat) fuel) (subterm many (Nat) n) (subterm many (Nat) depth) (many (Env) env) (many (Term) ty0) (erased (Nat) hs) (many (Heap Block hs) hp) (erased (Lt n hs) lt) (erased (Lt n fuel) lf) -> (many (Rope) r)
-    (match erased fuel _
-      (absurd (Zero) (lt-zero n lf))
-      ((Succ k)
-        (let (many ty) $ canon-env env ty0)
-        (let (many blk) $ deref-path Block _ hp n lt)
-        (match many (type-adt env ty) _
-          ((None a) (show-plain _ blk))
-          ((Some a adt)
-            (match many adt _
-              ((MkAdt aname tagged ctors ext)
-                (match many ext _
-                  ((Some b e) (show-plain _ blk))
-                  ((None b)
-                    (match many tagged _
-                      ((BTrue)
-                        (match many blk _
-                          ((BTag z ct fields) (rwrap "(" (rjoin (Cons _ (RStr $ ctor-name ct) $ show-fields k env (field-types env ty ct) _ hp n lt lf fields) " ") ")"))
-                          (else (show-plain _ blk))))
-                      ((BFalse)
-                        (match many ctors _
-                          ((Nil c) (RStr "_"))
-                          ((Cons c ct more)
-                            (match many (field-types env ty ct) _
-                              ((Nil d) (RStr "_"))
-                              ((Cons d fty frest)
-                                (match many frest _
-                                  ((Nil f) (match many depth (((Rope) r0)) ((Zero) (RStr "?")) ((Succ d) (show-at fuel n d env fty _ hp lt lf))))
-                                  ((Cons f fty2 frest2)
-                                    (match many blk _
-                                      ((BTup z fields) (rwrap "(" (rjoin (show-fields k env (Cons _ fty frest) _ hp n lt lf fields) " ") ")"))
-                                      (else (show-plain _ blk))))))))))))))))))))
-  (many show-fields : (subterm erased (Nat) fuel) (many (Env) env) (many (List $ Term) tys) (erased (Nat) hs) (many (Heap Block hs) hp) (erased (Nat) a) (erased (Lt a hs) lt) (erased (Lt a (Succ fuel)) lf) (subterm many (List $ Addr a) fs) -> (many (List $ Rope) r)
+  ; structural over the value, matching through the reference so a field is a subterm; [depth] bounds
+  ; the descent through an untagged type's single field, where the value itself does not shrink.
+  (many show-at : (erased (Hist Block) hs) (subterm many (Ref Block hs) r) (subterm many (Nat) depth)
+      (many (Env) env) (many (Term) ty0) -> (many (Rope) rope)
+    (let (many ty) $ canon-env env ty0)
+    (let-match many r (MkRef _ _ rs rv rp))
+    (let-match many rv (MkValue _ _ rpos rlp blk))
+    (match many (type-adt env ty) _
+      ((None a) (show-plain _ blk))
+      ((Some a adt)
+        (match many adt _
+          ((MkAdt aname tagged ctors ext)
+            (match many ext _
+              ((Some b e) (show-plain _ blk))
+              ((None b)
+                (match many tagged _
+                  ((BTrue)
+                    (match many blk _
+                      ((BTag z ct fields)
+                        (let (erased pf) (prove-subterm fields r))
+                        (rwrap "(" (rjoin (Cons _ (RStr $ ctor-name ct) $ show-fields _ (subterm pf) fields depth env (field-types env ty ct)) " ") ")"))
+                      (else (show-plain _ blk))))
+                  ((BFalse)
+                    (match many ctors _
+                      ((Nil c) (RStr "_"))
+                      ((Cons c ct more)
+                        (match many (field-types env ty ct) _
+                          ((Nil d) (RStr "_"))
+                          ((Cons d fty frest)
+                            (match many frest _
+                              ((Nil f)
+                                (match many depth (((Rope) r0))
+                                  ((Zero) (RStr "?"))
+                                  ((Succ dd)
+                                    (let (erased pd) (prove-subterm dd depth))
+                                    (show-at _ r (subterm pd) dd env fty))))
+                              ((Cons f fty2 frest2)
+                                (match many blk _
+                                  ((BTup z fields)
+                                    (let (erased pf) (prove-subterm fields r))
+                                    (rwrap "(" (rjoin (show-fields _ (subterm pf) fields depth env (Cons _ fty frest)) " ") ")"))
+                                  (else (show-plain _ blk))))))))))))))))))
+  (many show-fields : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fs) (subterm many (Nat) depth)
+      (many (Env) env) (many (List $ Term) tys) -> (many (List $ Rope) rs)
     (match many fs _
       ((Nil t) (Nil _))
       ((Cons t f rest)
-        (let-match many f (MkAddr bd nf ltf))
         (let (many (Term) fty) (many (List $ Term) trest) $ match many tys _ ((Nil u) (values (TErr "?") $ Nil _)) ((Cons u x xs) (values x xs)))
-        (Cons _ (show-at fuel nf 100 env fty _ hp (lt-le-trans nf a hs ltf (lt-weaken a hs lt)) (lt-le-trans nf a fuel ltf lf)) $ show-fields fuel env trest _ hp a lt lf rest)))))
+        (let (erased pf) (prove-subterm f fs))
+        (let (erased pr) (prove-subterm rest fs))
+        (Cons _ (show-at _ (subterm pf) f 100 env fty) $ show-fields _ (subterm pr) rest depth env trest)))))
 
 (def-fns _ $ many show-typed : (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store env)
@@ -2387,9 +2399,7 @@
         ((MkEInfo z n m s mi me)
           (match many s _
             ((SDyn z2) (RStr "?"))
-            ((SConst z2 v)
-              (let-match many v (MkAddr bd vn lt))
-              (show-at _ vn 100 env ty _ hp lt (lt-succ vn)))))))))
+            ((SConst z2 v) (show-at _ v 100 env ty))))))))
 
 (def-fns _ $ many elab-comptime-match : (erased (List $ List $ Nat) ctx) (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (StmtCode ctx ctx) sc)
     (let (many shape) $ comptime-shape args)
@@ -3371,7 +3381,7 @@
                             (let (many h) $ MkAdtHeader _ name disc nt ext cs $ within-in cs sg (Raw) adt wc $ prove-subterm sg adt)
                             (values env3 (ACons _ _ h hs) $ TCons _ _ _ _ x tids)))))))))) (else (values bad (AStop adts) $ TStop adts))))))
 
-  (many define-adts : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List $ Pair (Nat) $ Block (Zero)) consts)
+  (many define-adts : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (subterm many (AdtHeaders adts) headers) (many (Env) env) (many (Tids adts headers) tids) -> (many (Env) r) (many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) consts)
     (match many adts _
       ((Nil a) (values env $ Nil _))
       ((Cons a adt rest)
