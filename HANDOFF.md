@@ -48,6 +48,14 @@ structurally, with the relations kept as they were:
   `MintTele`, or the hole left as is, is an open question.
 - `TOOLING-WISHLIST.md` logs the friction met writing `.sl` by hand at
   this scale, as the owner asked.
+- The self-hosted `slc` (`self/`) accepts every file and all eight
+  `tests/mini_*.sl` match the interpreter through it, but three of them
+  (`mini_dependent`, `mini_axioms`, `mini_recursion`) overflow the OCaml
+  stack inside `slc`'s compile-time interpreter under the default 8MB
+  limit; `ulimit -s unlimited` fixes it, and the fuel-based `mini/`
+  before this change overflowed the same way, so it is a limit of `slc`
+  rather than a regression. `self/bootstrap.sh` runs with the default
+  limit and will report these three as failures.
 
 Next, in the session's estimation: the owner's verdict on the two relation
 changes and on the `type-of-term` hole, then the items above.

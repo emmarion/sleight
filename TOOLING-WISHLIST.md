@@ -91,3 +91,11 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     first try; the checker's GADT refinement through erased single-branch
     matches and omitted impossible branches behaved exactly as guessed.
     The cost was almost entirely in bookkeeping, not in the type system.
+
+15. **Stack depth in `slc`'s compile-time interpreter.** Three of the
+    `mini/` end-to-end programs overflow the OCaml stack inside `slc`
+    under the default 8MB limit (before and after this change), while the
+    reference interpreter runs them; `ulimit -s unlimited` is enough. A
+    heap-allocated continuation, or at least a message naming the limit,
+    would keep `self/bootstrap.sh` honest on programs that evaluate
+    deeply at compile time.
