@@ -24,8 +24,8 @@
 
 ; ---- Substitution. A substitution is a list indexed by [Bound]: a [Some] is the closed term the binder
 ; takes, a [None] a binder that stays, which is how going under a telescope entry is recorded, by prepending
-; a [None]. Nothing is shifted, since the terms substituted are closed. A binder beyond the list stays too,
-; so that the relation is total.
+; a [None]. Nothing is shifted, since the terms substituted are closed. A binder beyond the list stays too
+; ([SubBeyond]), which makes the relation total; elaboration never builds such a term.
 
 (def-adts
   (Subst : ((List (Maybe (Term))) sub) ((Term) t) ((Term) u) -> Type

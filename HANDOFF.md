@@ -28,3 +28,26 @@ Next, in the session's estimation:
 3. State the metatheory as types in `mini/` (theorems as erased functions
    with `absurd`-free bodies are the natural shape, but nothing is
    started).
+
+## Fuel removed from `mini/` except `eval` (one session, autonomous)
+
+Done, at the owner's request that everything in `mini/` but `eval` recurse
+structurally, with the relations kept as they were:
+
+- `term.sl`, `canon.sl`, `unify.sl`, `elabfn.sl` derive their relations
+  without fuel; `mini/README.md` describes the measures and the
+  well-formedness carried. `ctx.sl` grew the scope and growth machinery
+  the elaborator threads (`Scoped`, `Ext`, `Grew`, `Covers`, and wrappers
+  over `Ctx`).
+- The relations changed in two places, both for the owner to confirm or
+  reject: `Subst`'s `SubBeyond` and `Unify`'s `Sided` merge of the
+  left/right twin rules. The function-side `Oriented` lost its `OrStuck`.
+- One non-syntax stuck remains, in `type-of-term` (see `mini/README.md`);
+  the session judged closing it to need a type-preservation argument and
+  did not attempt one. Whether the owner wants that argument, a change to
+  `MintTele`, or the hole left as is, is an open question.
+- `TOOLING-WISHLIST.md` logs the friction met writing `.sl` by hand at
+  this scale, as the owner asked.
+
+Next, in the session's estimation: the owner's verdict on the two relation
+changes and on the `type-of-term` hole, then the items above.

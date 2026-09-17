@@ -20,7 +20,7 @@
 
 ; Elaborate and run a program, or answer the empty list.
 (def-fns _ $ many run : (many (List (Raw)) program) -> (many (List (Val)) vs)
-  (match many (elab-program 500 program) _
+  (match many (elab-program program) _
     ((ProgramStuck x) (Nil _))
     ((MkProgramDec x out p)
       (match many out _
@@ -32,7 +32,7 @@
 
 ; Elaborate a program and report only the outcome's shape.
 (def-fns _ $ many outcome : (many (List (Raw)) program) -> (many (Maybe (Reason)) r)
-  (match many (elab-program 500 program) _
+  (match many (elab-program program) _
     ((ProgramStuck x) (Some _ (RSize)))
     ((MkProgramDec x out p)
       (match many out _

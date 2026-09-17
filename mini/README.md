@@ -2,8 +2,9 @@
 
 `mini/` writes down the semantics of the minimal language of MINIMAL.md in
 the full language: each judgment is an ADT whose constructors are its
-rules, and beside each relation stands a function that, given fuel, either
-derives it or answers "stuck". Everything here is one session's proposal
+rules, and beside each relation stands a function that derives it by
+structural recursion, or answers "stuck" on a shape the rules have no
+derivation for (evaluation alone still burns fuel). Everything here is one session's proposal
 made autonomously at the owner's request; the decisions in MINIMAL.md are
 the owner's, the shapes below are the session's and open to revision. A
 claim in this file that the tests do not make is a mistake in this file.
@@ -20,7 +21,10 @@ claim in this file that the tests do not make is a mistake in this file.
   rules in force, structurally (sections 5, 18).
 - `ctx.sl` — the context: entries with a kind (`KDecl` for constructors
   and type constructors, rigid; `KLevel` for `def-lvl`'s entries), names,
-  declared ADTs, rules, the ambient level and subterm arguments (section 3).
+  declared ADTs, rules, the ambient level and subterm arguments (section 3);
+  then, for the functions only, what it means for terms, rules, names and
+  ADTs to mention only the context's entries, and for one context to have
+  grown from another.
 - `unify.sl` — `Unify`: section 18's forced unification as a walk over
   equations, in `Force` mode minting rules and in `Check` mode comparing
   for identity, with the three contradictions as its `UFail` rules.
@@ -34,10 +38,29 @@ claim in this file that the tests do not make is a mistake in this file.
 
 ## Shapes chosen here, for the owner to confirm or change
 
-- **Fuel everywhere.** Every function recurses on a `Nat` it burns at each
-  call, so termination never needs a structural argument, at the price of
-  answering "stuck" on too little fuel. Results are ADTs holding the
-  derived data and the erased derivation, or a `Stuck` constructor.
+- **Structural recursion, with the invariants it needs carried beside the
+  data.** Only `eval` burns fuel. Canonicalization recurses on a rank
+  bound then the term, the ranks ordering the rules so that following one
+  strictly lowers the bound (`canon.sl`); unification walks the two terms
+  of an equation and, when it mints a rule, restarts on a count of the
+  rule-free entries that the mint lowers (`unify.sl`); elaboration
+  recurses on the raw syntax alone, every function carrying the
+  context's well-formedness (`WF` in `elabfn.sl`: the ranking, ids below
+  the next one, everything scoped, declared constructors' types being
+  value-constructor formers, every ruled entry non-rigid) and returning
+  it for the context it produces. Results are ADTs holding the derived
+  data and the erased derivation, or a `Stuck` constructor, which the
+  functions reach only on a malformed shape — with one exception the
+  session could not close: `type-of-term`, which `MintTele`'s `is`
+  entries need, has no derivation for a `Bound` outside its binder or an
+  application whose head's canonical type is not a former, and the
+  carried invariants do not exclude those inputs (excluding them looks to
+  the session like a type-preservation argument about elaborated
+  telescopes under substitution and refinement, which is not attempted).
+  Two relations changed for this, both flagged for the owner: `Subst`
+  gained `SubBeyond` (a `Bound` past the end of the substitution stays,
+  making substitution total), and `Unify`'s twin left/right rules for a
+  variable against a non-variable were merged through `Sided`.
 - **`Univ` is a term.** Section 10 makes the universe a nullary type
   constructor with `Type` an entry rewriting to it; here `Univ` is a
   constructor of `Term`, `Type` an entry whose rule is `Univ`, and
@@ -69,7 +92,8 @@ claim in this file that the tests do not make is a mistake in this file.
   are reserved and never names.
 - **Malformed syntax has no derivation.** `Fails` records why a
   well-formed program is refused; a shape the rules do not recognize
-  derives nothing, and the functions answer "stuck" on it.
+  derives nothing, and the functions answer "stuck" on it. A branch
+  pattern with the wrong number of field names counts as such a shape.
 - **The axioms** (section 8) read both proofs' canonical types through
   `PredatesShape` and `SubtermShape`, compare the shared parts with
   `Same`, and mint the conclusion; the three ways they fail are one

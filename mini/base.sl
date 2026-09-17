@@ -1,5 +1,5 @@
-; mini/base.sl -- booleans, decided equality on Nat and Bool, list indexing, lengths and appending with
-; evidence, for the relations of mini/. Plain SL over the prelude; nothing here is settled design.
+; mini/base.sl -- booleans, decided equality on Nat and Bool, and list indexing with evidence, for the
+; relations of mini/. Plain SL over the prelude; nothing here is settled design.
 
 (def-adts $ Bool : -> Type
   enum
@@ -26,6 +26,21 @@
   (match erased n _
     ((NeqLt a b p) (lt-asym x x p (lt-succ x)))
     ((NeqGt a b q) (lt-asym x x q (lt-succ x)))))
+
+(def-fns _ $ erased neq-sym : (erased (Nat) x) (erased (Nat) y) (erased (Neq x y) n) -> (erased (Neq y x) m)
+  (match erased n _
+    ((NeqLt a b p) (NeqGt y x p))
+    ((NeqGt a b q) (NeqLt y x q))))
+
+(def-fns _ $ erased lt-neq : (erased (Nat) x) (erased (Nat) y) (erased (Lt x y) p) -> (erased (Neq x y) n)
+  (NeqLt x y p))
+
+; a <= b is written (Lt a (Succ b)), as the prelude does.
+(def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
+  (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
+
+(def-fns _ $ erased lt-le : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a b) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a c) r)
+  (lt-le-trans a b c p q))
 
 (def-adts
   (BoolNeq : ((Bool) a) ((Bool) b) -> Type
@@ -68,47 +83,5 @@
           (match many (nth-dec _ rest j) _
             ((NthHit b l k x p) (NthHit _ _ _ x $ NthThere _ y rest j x p))
             ((NthMiss b l k p) (NthMiss _ _ _ $ NoNthCons _ y rest j p))))))))
-
-; Appending one element, a list's length, and two lists of one length or evidence that they differ.
-(def-adts
-  (Snoc : (Type A) ((List A) xs) (A x) ((List A) out) -> Type
-    enum
-    (many SnocNil : (erased Type A) (erased A x) -> (Snoc A (Nil A) x (Cons A x (Nil A))))
-    (many SnocCons : (erased Type A) (erased A y) (erased (List A) ys) (erased A x) (erased (List A) out) (erased (Snoc A ys x out) p) -> (Snoc A (Cons A y ys) x (Cons A y out))))
-  (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
-    enum
-    (many LenNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LenCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n) (erased (Length A xs n) p) -> (Length A (Cons A x xs) (Succ n))))
-  (LenMismatch : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
-    enum
-    (many LMNilCons : (erased Type A) (erased Type B) (erased B y) (erased (List B) ys) -> (LenMismatch A B (Nil A) (Cons B y ys)))
-    (many LMConsNil : (erased Type A) (erased Type B) (erased A x) (erased (List A) xs) -> (LenMismatch A B (Cons A x xs) (Nil B)))
-    (many LMCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) ->
-       (LenMismatch A B (Cons A x xs) (Cons B y ys))))
-  (LenDec : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
-    enum
-    (many LenSame : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) -> (LenDec A B xs ys))
-    (many LenDiff : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) -> (LenDec A B xs ys))))
-
-(def-fns _ $ many snoc : (erased Type A) (subterm many (List A) xs) (many A x) -> (many (List A) out) (erased (Snoc A xs x out) p)
-  (match many xs _
-    ((Nil a) (values (Cons _ x (Nil _)) (SnocNil _ x)))
-    ((Cons a y ys) (let (many out) (erased p) (snoc _ ys x)) (values (Cons _ y out) (SnocCons _ y ys x out p)))))
-
-(def-fns _ $ many list-len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p)
-  (match many xs _
-    ((Nil a) (values (Zero) (LenNil _)))
-    ((Cons a x rest) (let (many n) (erased p) (list-len _ rest)) (values (Succ n) (LenCons _ x rest n p)))))
-
-(def-fns _ $ many len-dec : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) -> (many (LenDec A B xs ys) r)
-  (match many xs _
-    ((Nil a) (match many ys _ ((Nil b) (LenSame _ _ _ _)) ((Cons b y ys2) (LenDiff _ _ _ _ (LMNilCons _ _ y ys2)))))
-    ((Cons a x xs2)
-      (match many ys _
-        ((Nil b) (LenDiff _ _ _ _ (LMConsNil _ _ x xs2)))
-        ((Cons b y ys2)
-          (match many (len-dec _ _ xs2 ys2) _
-            ((LenSame c d e f) (LenSame _ _ _ _))
-            ((LenDiff c d e f p) (LenDiff _ _ _ _ (LMCons _ _ x y xs2 ys2 p)))))))))
 
 (MkUnit)
