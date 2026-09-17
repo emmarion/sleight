@@ -78,7 +78,12 @@ host (section 41); a `U8` or a
   is an address, every step returns the grown store with a proof of the
   growth by which what was held before is widened, and a run-position
   statement is a session that reads the store out of the environment
-  and puts it back (ASSUMPTIONS 131).
+  and puts it back (ASSUMPTIONS 131). A tail position of the code being
+  interpreted -- a `let`'s body, a match branch, a call's own tail call
+  -- is reached by a tail call, so interpreting a tail call costs no
+  host stack and the fuel, not the stack, is what bounds such a loop
+  (ASSUMPTIONS 150). A non-tail call in interpreted code still holds a
+  host frame, as the standing exception below says.
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
@@ -182,7 +187,9 @@ the entry says otherwise, and recorded so it can be revisited.
   generated printer.** Those two take a `Nat` that decreases along the
   call stack (not a step count), so a fuel of 1000000 or 100000 bounds
   depth, not work; running out returns an error value, never a wrong
-  answer silently. Everything else recurses on a constructor argument
+  answer silently. The fuel decreases on a tail call too, so it, rather
+  than the host stack, is what a long compile-time loop now meets
+  (ASSUMPTIONS 150). Everything else recurses on a constructor argument
   by the ordinary `subterm` decrease the reference checks: the reader on
   its tokens and frames, maps and term traversals on their structure,
   the emitter on the closure whose code it emits (every piece of code
@@ -288,9 +295,14 @@ the entry says otherwise, and recorded so it can be revisited.
   the multiplicities of the values it produces, and the lists a node
   holds in step with that, a `values`' codes and a `let`'s ids, come
   with a proof that they sit at the many positions (ASSUMPTIONS 125);
-  the interpreter returns `Vals ms` and binds a `let` without a count
-  check. What it cannot know statically, a closure's arity and a
-  constructor's fields, is fitted once at the boundary.
+  the interpreter returns the many values as a list beside an erased
+  `Picked` reading it back against the index, and binds a `let` without
+  a count check. What it cannot know statically, a closure's arity and
+  a constructor's fields, is fitted once at the boundary. Because the
+  index travels as a proof rather than as the shape of the values, a
+  call and its callee hand back the same data and nothing converts
+  between them along a call, which is what lets the interpreter reach a
+  call in tail position by a tail call (ASSUMPTIONS 150).
 - **Post-erasure code is indexed by its scope.** `Code ctx ms` names,
   beside its erasures, the frames of non-erased ids the code binds:
   one frame per function's parameters, per group, per `let` and per

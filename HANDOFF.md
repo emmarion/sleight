@@ -139,7 +139,8 @@ emission: at a list of 60000 both the old and the new binary overflow
 the stack, and equally so when the list is unreachable and emission does
 nothing. That is `self/README`'s standing exception -- structural
 termination everywhere but the interpreter and the generated printer --
-and this branch does not touch it.
+and this branch does not touch it. A later session did, for the tail
+call half of it; see the last section.
 
 Open, none of it decided:
 
@@ -321,3 +322,58 @@ recorded former's agreement with the head's type is checked nowhere).
 
 Next, in the session's estimation: the owner's verdict on the `Sided`
 merge, then the metatheory (MINIMAL.md's list and the agreement above).
+
+## Interpreting a tail call as a tail call (`self/eval.sl`)
+
+Done, at the owner's request: `slc`'s compile-time evaluation should not
+grow the stack, or at the least interpreting a tail call should be a
+tail call. It is now the second of those, and the paragraph above about
+a list of 60000 is out of date -- that program, and the two `bench/`
+compile-time samples at 60000, run in constant stack.
+
+The emitted OCaml was where the diagnosis came from rather than reading
+the source: `eval`'s `CLet`, `CLetRec` and `CMatch` were already bare
+tail calls, the normalizer having dropped the `let` that bound their
+results, and only two places were not. `eval` returned `Vals ms` and
+`apply` a plain list of addresses, so `CApp` fitted `apply`'s result to
+the call's index *after* the call and `apply` stripped `eval`'s result
+to a list *after* the call. Each conversion held a host frame per
+interpreted call, and that was the whole of it.
+
+The fix is to have the two hand back the same thing: the list of many
+results, with the index carried as an erased `Picked` beside it rather
+than as the shape of the data. `Vals` and `vals-widen` are gone from
+`core.sl`; `mults-same` and `picked-lockstep` join `picked-same` and
+`picked-along` there. Where a call's index and the callee's declared
+returns differ in erased entries, which the normalizer makes possible,
+`apply` decides `ManySame` *before* running the body and moves the proof
+across with `picked-same` after, which is erased and so does not disturb
+the tail call. ASSUMPTIONS 150 has the details and the measurements:
+400000 compile-time iterations in a 256KB stack against 60000
+overflowing 8MB, benches unchanged within noise, `bootstrap.sh` green
+and at its fixpoint.
+
+Open, in the session's estimation, none of it decided:
+
+- The remaining half of the owner's ask. A *non-tail* call in
+  interpreted code still holds a host frame, which is correct as the
+  interpreter stands and can only be removed by making `eval` a machine
+  over an explicit, heap-allocated continuation -- the shape
+  TOOLING-WISHLIST 15 once wanted for the wrong reason. That is a much
+  larger change than this one: the continuation would need its own
+  indexed type and its own widening as the store grows, as `St` has.
+  Whether it is worth it is the owner's call; the session's reading is
+  that the tail case was the one carrying the practical cost.
+- `eval-fuel` is still 1000000, two per interpreted call, so a
+  compile-time loop now meets "out of fuel" at about 500000 calls rather
+  than a stack overflow at 60000. Raising it costs nothing at runtime
+  now that the stack does not bound such a loop, but the constant is
+  user-visible and the session did not touch it.
+- `lib/eval.ml` was not touched, so the reference interpreter still
+  grows its stack on a compile-time tail call. Only `slc` changed.
+- `apply-extern` returns `None` for `ExNatCmp` and `ExStrCmp`, so `slc`
+  runs those two models at compile time where the reference runs the
+  extern; `nat-cmp`'s model recurses once per unit of its smaller
+  argument, in a match scrutinee, so `(nat-cmp 200000 200000)` alone
+  overflows `slc`'s stack. Pre-existing and untouched here, and the one
+  thing that bit the session while testing.

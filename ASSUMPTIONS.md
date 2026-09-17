@@ -2872,3 +2872,68 @@ rest below is the session's.
      (item 89); whether they should follow, and whether under item 80 the
      added equation can ever change an outcome, are open, in the
      session's reading.
+
+150. **The compile-time interpreter reaches a call in tail position by a
+     tail call.** At the owner's request, who asked that `slc`'s
+     compile-time evaluation not grow the stack, or at the least that
+     interpreting a tail call be a tail call. It was neither: a
+     `tail`-marked countdown of 60000 steps run at elaboration
+     overflowed the default 8MB stack, which is the standing exception
+     HANDOFF and `self/README` record. Reading the emitted OCaml showed
+     `eval`'s `CLet`, `CLetRec` and `CMatch` already reaching their
+     continuations by a tail call, the normalizer (item 125) having
+     dropped the `let` that bound them; the only two that did not were
+     the two that converted between representations. `eval` returned
+     `Vals ms` and `apply` a plain list, so `CApp` fitted `apply`'s
+     result to the call's index afterwards and `apply` stripped
+     `eval`'s result to a list afterwards, and each conversion held a
+     host frame per interpreted call.
+
+     Both now carry the same values. `eval` and `apply` return the list
+     of many results together with an erased `Picked` reading it back
+     against the index, so what was a conversion is a proof rather than
+     data and `Vals` is gone from `core.sl`. Where a call's index and
+     the member's declared returns differ -- they differ in erased
+     entries, as item 125 records for the normalizer -- `apply` decides
+     `ManySame` before the body runs, by a new `mults-same` whose
+     recursion is lexicographic on the two lists, and `picked-same`,
+     which `core.sl` already had, carries the proof across afterwards;
+     being erased, it does not disturb the tail call. A new
+     `picked-lockstep` derives the `Lockstep` a `let` needs from the two
+     `Picked`s, in place of `vals-frame`; `vals-one` refutes the empty
+     list from its `Picked` rather than from the shape of `Vals`; and
+     `eval-picked` builds its `Picked` as it walks. `vals-fit` survives
+     only where arity is genuinely a runtime property and no recursion
+     follows it: an extern's results, a constructor's one value.
+
+     A tail call in interpreted code now costs no host stack. 400000
+     compile-time iterations run in a 256KB stack where 60000 overflowed
+     8MB, and what bounds them is the interpreter's fuel (`eval-fuel`,
+     1000000, two per interpreted call), which reports "out of fuel" as
+     a value at about 500000 calls rather than killing the process; the
+     session did not change that constant. A non-tail call in
+     interpreted code still holds host frames, as it must without the
+     heap-allocated continuation TOOLING-WISHLIST 15 once wanted;
+     measured, it reaches about four times the depth it did, the removed
+     conversions being part of what each frame held. `self/bootstrap.sh`
+     is the evidence that nothing else changed: 200 programs match the
+     interpreter, 114 are refused with the expected message, and `slc`
+     reaches its own fixpoint. The `bench/` samples are unchanged within
+     noise, with `comptime_garbage`'s minor words down about 4% and its
+     resident size from 11MB to 9MB.
+
+     Two things this did not touch, neither of them new. `lib/eval.ml`
+     recurses as before, so the reference interpreter still grows its
+     stack on a compile-time tail call, at roughly twice `slc`'s old
+     depth; only `slc` changed, and the two agreeing on every test is
+     what `bootstrap.sh` checks. And `self/eval.sl`'s `apply-extern`
+     returns `None` for `ExNatCmp` and `ExStrCmp`, the two externs whose
+     result is a `Cmp` rather than a payload (item 123), so `slc` runs
+     their source models at compile time; `nat-cmp`'s recurses once per
+     unit of the smaller argument, with the recursive call in a match
+     scrutinee, so `(nat-cmp 200000 200000)` alone overflows `slc`'s
+     stack where the reference answers at once. That is a non-tail
+     recursion in the model being interpreted rather than in the
+     interpreter, and this item leaves it as it was; whether
+     `apply-extern` should build a `Cmp`, as `lib/ffi.ml` does through
+     the type's constructor, is open.

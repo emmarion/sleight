@@ -37,6 +37,15 @@
     ((PkMany a ms2 x xs2 p2) (match erased q _ ((LsCons c d x3 y xs3 ys2 q2) (PkMany _ ms2 y ys2 $ picked-along _ _ _ _ _ p2 q2))))
     ((PkErased a ms2 xs2 p2) (PkErased _ ms2 ys $ picked-along _ _ _ _ _ p2 q))))
 
+; Two lists picked from one erasure list walk in lockstep.
+(def-fns _ $ erased picked-lockstep : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Picked B ms ys) q) -> (erased (Lockstep A B xs ys) lk)
+  (match erased p _
+    ((PkNil a) (match erased q _ ((PkNil b) (LsNil _ _))))
+    ((PkMany a ms2 x xs2 p2)
+      (match erased q _ ((PkMany b ms3 y ys2 q2) (LsCons _ _ x y xs2 ys2 $ picked-lockstep _ _ _ _ _ p2 q2))))
+    ((PkErased a ms2 xs2 p2)
+      (match erased q _ ((PkErased b ms3 ys2 q2) (picked-lockstep _ _ _ _ _ p2 q2))))))
+
 ; Two erasure lists with the same many entries.
 (def-adts
   (ManySame : ((List $ Mult) a) ((List $ Mult) b) -> Type
@@ -52,6 +61,39 @@
     ((MsMany a2 b2 p2) (match erased q _ ((PkMany t a3 x xs2 q2) (PkMany _ b2 x xs2 $ picked-same _ _ _ _ p2 q2))))
     ((MsErasedL a2 b2 p2) (match erased q _ ((PkErased t a3 xs2 q2) (picked-same _ _ _ _ p2 q2))))
     ((MsErasedR a2 b2 p2) (PkErased _ b2 xs $ picked-same _ _ _ _ p2 q))))
+
+; A decider for two erasure lists having the same many entries, its recursion lexicographic on the two.
+(def-fns _ $ many mults-same : (subterm many (List $ Mult) a) (subterm many (List $ Mult) b) -> (many (Maybe $ ManySame a b) r)
+  (match many a _
+    ((Nil x)
+      (match many b _
+        ((Nil y) (Some _ (MsNil)))
+        ((Cons y m brest)
+          (match many m _
+            ((Many) (None _))
+            ((Erased)
+              (match many (mults-same a brest) _
+                ((Some z p) (Some _ $ MsErasedR _ _ p))
+                ((None z) (None _))))))))
+    ((Cons x m arest)
+      (match many m _
+        ((Erased)
+          (match many (mults-same arest b) _
+            ((Some z p) (Some _ $ MsErasedL _ _ p))
+            ((None z) (None _))))
+        ((Many)
+          (match many b _
+            ((Nil y) (None _))
+            ((Cons y n brest)
+              (match many n _
+                ((Many)
+                  (match many (mults-same arest brest) _
+                    ((Some z p) (Some _ $ MsMany _ _ p))
+                    ((None z) (None _))))
+                ((Erased)
+                  (match many (mults-same a brest) _
+                    ((Some z p) (Some _ $ MsErasedR _ _ p))
+                    ((None z) (None _))))))))))))
 
 (def-adts $ Disc : -> Type
   enum
@@ -406,12 +448,6 @@
     enum
     (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
 
-(def-adts $ Vals : ((Hist Block) l) ((List $ Mult) ms) -> Type
-  enum
-  (many ValsNil : (erased (Hist Block) l) -> (Vals l (Nil (Mult))))
-  (many ValsMany : (erased (Hist Block) l) (erased (List $ Mult) ms) (many (Ref Block l) v) (many (Vals l ms) rest) -> (Vals l (Cons (Mult) (Many) ms)))
-  (many ValsErased : (erased (Hist Block) l) (erased (List $ Mult) ms) (many (Vals l ms) rest) -> (Vals l (Cons (Mult) (Erased) ms))))
-
 ; Widening the bound of every holder of addresses is a coerce (section 38).
 
 (def-fns _ $ erased frames-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ List $ Nat) ctx) (subterm erased (Frames (Ref Block b) ctx) env) -> (erased (Frames (Ref Block c) ctx) env2) (erased (Coercible (Frames (Ref Block b) ctx) env (Frames (Ref Block c) ctx) env2) p)
@@ -445,17 +481,6 @@
       (values (BFn _ g2 i id) (coercible-ctor BFn (Ref Block b) (Ref Block c) pg (coercible-refl i) (coercible-refl id))))
     ((BToken a) (values (BToken _) (coercible-ctor BToken (Ref Block b) (Ref Block c))))
     ((BError a m) (values (BError _ m) (coercible-ctor BError (Ref Block b) (Ref Block c) (coercible-refl m))))))
-
-(def-fns _ $ erased vals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ Mult) ms) (subterm erased (Vals b ms) vs) -> (erased (Vals c ms) vs2) (erased (Coercible (Vals b ms) vs (Vals c ms) vs2) p)
-  (match erased vs _
-    ((ValsNil a) (values (ValsNil _) (coercible-ctor ValsNil b c)))
-    ((ValsMany a ms2 v rest)
-      (let (erased v2) (erased pv) (ref-widen _ b c le v))
-      (let (erased rest2) (erased pr) (vals-widen b c le ms2 rest))
-      (values (ValsMany _ _ v2 rest2) (coercible-ctor ValsMany b c ms2 ms2 pv pr)))
-    ((ValsErased a ms2 rest)
-      (let (erased rest2) (erased pr) (vals-widen b c le ms2 rest))
-      (values (ValsErased _ _ rest2) (coercible-ctor ValsErased b c ms2 ms2 pr)))))
 
 (def-fns _ $ many at-get : (erased Type B) (erased (Nat) x) (erased (List $ Nat) f) (subterm many (At x f) p) (many (List B) vs) (erased (Lockstep (Nat) B f vs) lk) -> (many B v) (erased (Subterm B v (List B) vs) q)
   (match many p _
