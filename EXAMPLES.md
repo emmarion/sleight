@@ -91,6 +91,14 @@ that the test does not make is a mistake in this file.
   omitted, it would prove `False`.
 - `tests/comptime.sl` and `tests/comptime_transparent.sl` — `comptime-match`
   verifying a `Const` and binding its fields `Const`, proof by reflection.
+- `tests/comptime_tail.sl` — a loop run at elaboration whose measure is
+  erased. A non-erased binary counter drives the dispatch, while the
+  `subterm` decrease is taken on an erased `Nat` tied to that counter by the
+  prelude's `Numeral`, stepped by `numeral-succ` and cashed in through the
+  `Eq` it returns — DESIGN.md section 12's subterm recursion through an
+  erased argument — so the iterations build no unary `Nat` and cost the same
+  with the extern `Nat` as without it. `tests/extern_tail.sl` is a loop of
+  the same shape run by the extracted program rather than at elaboration.
 - `tests/first_class.sl` and `tests/shadow_false_capture.sl` — matching
   through first-class type and value constructors and a `Matchable`, opened
   first, and a function keeping the empty `False` it was defined against

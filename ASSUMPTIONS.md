@@ -2113,6 +2113,15 @@ had noted that an `SCons` copies its tail, so building a string by
      sits behind an error already recorded. `self/bootstrap.sh` is the
      evidence.
 
+     Item 150 has since removed `Vals` itself: the evaluator returns the
+     many values as a plain list with the index beside it as an erased
+     `Picked`, because the two conversions at a call boundary described
+     above -- `vals-fit` on the way out, the strip to a list on the way
+     in -- were what kept the interpreter from reaching a call in tail
+     position by a tail call. The `Picked` proofs on a node's lists, and
+     everything else this item records, stand; `vals-fit` survives only
+     where arity is genuinely dynamic and nothing recurses after it.
+
 ## Types travel with their terms
 
 126. **The elaborator never reads a type off a term after the fact.**
@@ -2916,9 +2925,16 @@ rest below is the session's.
      heap-allocated continuation TOOLING-WISHLIST 15 once wanted;
      measured, it reaches about four times the depth it did, the removed
      conversions being part of what each frame held. `self/bootstrap.sh`
-     is the evidence that nothing else changed: 200 programs match the
+     is the evidence that nothing else changed: 201 programs match the
      interpreter, 114 are refused with the expected message, and `slc`
-     reaches its own fixpoint. The `bench/` samples are unchanged within
+     reaches its own fixpoint. `tests/comptime_tail.sl` is the guard,
+     and it discriminates: the `slc` from before this item refuses it
+     with a stack overflow. Its 131071 iterations decrease an *erased*
+     `Nat` tied to a non-erased binary counter by the prelude's
+     `Numeral`, which is what keeps the loop from building a unary
+     `Nat`; a first draft counted a `Nat` down instead and wanted 80MB
+     under `--no-extern` against 7MB with the FFI, where this one costs
+     7MB either way. The owner suggested that shape. The `bench/` samples are unchanged within
      noise, with `comptime_garbage`'s minor words down about 4% and its
      resident size from 11MB to 9MB.
 

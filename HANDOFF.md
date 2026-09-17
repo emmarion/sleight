@@ -353,6 +353,15 @@ the tail call. ASSUMPTIONS 150 has the details and the measurements:
 overflowing 8MB, benches unchanged within noise, `bootstrap.sh` green
 and at its fixpoint.
 
+`tests/comptime_tail.sl` guards it, and the `slc` from before refuses it
+with a stack overflow. An earlier draft of this section said no test
+could: that reasoning rested on the reference growing its stack too,
+which it does not. The test decreases an erased `Nat` tied to a
+non-erased binary counter by the prelude's `Numeral`, to the owner's
+suggestion, so its 131071 iterations build no unary `Nat` and it costs
+7MB with the extern `Nat` or without; counting a `Nat` down instead
+wanted 80MB under `--no-extern`.
+
 Open, in the session's estimation, none of it decided:
 
 - The remaining half of the owner's ask. A *non-tail* call in
