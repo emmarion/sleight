@@ -64,7 +64,9 @@ run in constant stack; what is left recursing is `pile-add` and
 `pile-sort`, both down the pile, so the session reads the depth as the
 pile's height rather than the list's length. The emitted OCaml for
 `merge` and `rev-onto` is tail calls, which the `tail` marks require
-anyway (DESIGN 9 makes an unhonoured claim a hard error). Applying it to a type carrying an erased index took two things the
+anyway (DESIGN 9 makes an unhonoured claim a hard error).
+
+Applying it to a type carrying an erased index took two things the
 session got wrong first: the index has to be closed over rather than
 taken as a parameter, a first-class `Fn` having to match arity exactly,
 and the comparison's level has to be minted at the top level rather than
@@ -81,12 +83,72 @@ a `coerce` needing a two-binder `let` before it, so a site nested in an
 argument had to grow a statement in the nearest enclosing statement
 position rather than be rewritten where it stood.
 
+The trace is a tail recursive worklist, to the owner's design, who
+supplied both moves the session had failed to find. Termination may rest
+on erased state, which can be as inefficient as it likes: `base.sl`
+gains `Bounded V m size max`, relating a trie to its size and a bound
+its keys sit under, splitting that bound the way the trie splits keys
+(0 here, 2m+1 in one, 2m+2 in two, so l + r = m1 with `Braun l r`). That
+split is what makes `bounded-le` -- a trie bounded by max holds at most
+max entries -- plain addition monotonicity rather than a counting
+argument, and it is why the `Braun` arithmetic the old store carried is
+exactly what this wanted: `half-lt-one` and `half-lt-two` already say a
+halved key lands inside its child's bound. `idmap-set-bd` inserts a key
+the trie lacks and returns the proof the size went up by one; `seen-add`
+reads `bounded-le` off the *new* trie, which is the owner's second move,
+so `Succ size <= max` gives `size < max` and no strict pigeonhole is
+needed. `add-room` turns that into a strictly smaller `rest` in
+`Add size rest bound`, and `lt-subterm` -- which `idmap-set` already
+used this way -- into the `Subterm` the call wants. `ref-key` supplies
+the side condition, every stamp being below the store's next, off
+`suffix-len`.
+
+The loop decreases on `rest` first and the worklist second: a fresh
+value shrinks `rest` and may grow the worklist, an already seen one
+passes `rest` through untouched and pops. In the compiled compiler
+`trace-loop` takes five runtime arguments, both its self calls are OCaml
+tail calls, and `bounded-le`, `add-mono`, `add-room`, `split-bound`,
+`absent-one` and `absent-two` emit no code at all.
+
+Measured against the binary from before the change (50097cf), best of
+three runs each on this machine, wall and maxrss: `mini_axioms`
+2.98s/139MB against 1.05s/36MB, `mini_dependent` 1.38/58 against
+0.92/37, `mini_recursion` 1.26/61 against 1.03/35,
+`bench/comptime_live` 0.16/38 against 0.12/33, `bench/comptime_garbage`
+0.11/21 against 0.04/12. Two go the other way or level: `mini_elab` 0.98
+against 1.03, and both compilers on the same (old) sources 1.32 against
+1.28. The session reads the win as being in what a compile-time run
+throws away rather than in compilation at large, the memory drop being
+the steadier of the two. `bench/gen.py` writes the two samples: the same
+list built at compile time, folded away in one and kept in the other,
+emitting 361 and 24358 blocks.
+
+The walks that scale with the number of blocks are tail recursive:
+`trace-loop`, `emit-blocks`, `merge`, `rev-onto`, `pile-of`,
+`roots-of-finals`, `frames-refs`. The rest of `emit.sl` recurses without
+a `tail` mark, but on things that do not grow with the store: code depth
+(`emit-code`, `collect-code`, `block-rope`), trie depth (`idmap-get`,
+`idmap-set-bd`, `roots-of-entries`), pile height (`pile-add`,
+`pile-sort`), a constructor's arity, or the declarations. The session
+found none whose depth follows the block count, but that is an audit by
+reading plus one measurement (24358 blocks emitted, 40358 in a larger
+run off the bench), not a proof.
+
+Where a big compile-time run still breaks is the interpreter, not
+emission: at a list of 60000 both the old and the new binary overflow
+the stack, and equally so when the list is unreachable and emission does
+nothing. That is `self/README`'s standing exception -- structural
+termination everywhere but the interpreter and the generated printer --
+and this branch does not touch it.
+
 Open, none of it decided:
 
-1. The trace itself descends by value depth rather than being tail
-   recursive. The owner asked for tail recursion where a reasonable
-   measure exists; the session did not find one that is both erased and
-   proof-free, the seen set bounding the walk rather than any structure.
+1. `bench/bench.sh`'s pinned sources no longer compile. `PINNED` is
+   4fda15f, which predates 52d869a and 193f2fd changing the prelude's IO
+   shape, so `self/main.sl` at that commit is refused against today's
+   prelude, by the old binary as much as the new one. Re-pinning would
+   change what the benchmark measures, so the session left it.
+
 ## The minimal language and its semantics (`mini/`)
 
 Done, in one autonomous session at the owner's request:
