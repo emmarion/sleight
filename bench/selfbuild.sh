@@ -8,5 +8,5 @@ OUT=${2:-_build/self/slc_new}
 SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/main.sl"
 python3 self/gen_header.py
 "$IN" -- lib/prelude.sl $SL > "$OUT.ml"
-ocamlfind ocamlopt -package zarith -linkpkg "$OUT.ml" -o "$OUT"
+ocamlfind ocamlopt -package zarith,unix -linkpkg "$OUT.ml" -o "$OUT"
 echo "built $OUT"

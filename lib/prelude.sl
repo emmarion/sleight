@@ -751,6 +751,23 @@
     (many Nil : (erased Type A) -> (List A))
     (many Cons : (erased Type A) (many A head) (many (List A) tail) -> (List A))))
 
+(def-adts
+  (Pair : (Type A) (Type B) -> Type
+    enum
+    (many MkPair : (erased Type A) (erased Type B) (many A first) (many B second) -> (Pair A B))))
+
+(def-adts $ EntryKind : -> Type
+  enum
+  (many IsFile : -> (EntryKind))
+  (many IsDir : -> (EntryKind))
+  (many IsOther : -> (EntryKind))
+  (many Missing : -> (EntryKind)))
+
+(def-adts $ Change : -> Type
+  enum
+  (many Changed : -> (Change))
+  (many Unchanged : -> (Change)))
+
 ; A program's requests to the driver (ASSUMPTIONS.md): each carries what comes next, as a value or as a
 ; continuation the driver applies to the request's answer, so a step never recurses and the driver loops.
 (def-adts
@@ -762,4 +779,14 @@
     (many ReadLine : (erased (Level) L) (many (Fn L (many (Maybe (String)) line) -> (many (IO L) next)) k) -> (IO L))
     (many ReadFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (String)) contents) -> (many (IO L) next)) k) -> (IO L))
     (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))
-    (many GetArgs : (erased (Level) L) (many (Fn L (many (List (String)) args) -> (many (IO L) next)) k) -> (IO L))))
+    (many GetArgs : (erased (Level) L) (many (Fn L (many (List (String)) args) -> (many (IO L) next)) k) -> (IO L))
+    (many GetEnv : (erased (Level) L) (many (String) name) (many (Fn L (many (Maybe (String)) value) -> (many (IO L) next)) k) -> (IO L))
+    (many GetEnvs : (erased (Level) L) (many (Fn L (many (List (Pair (String) (String))) vars) -> (many (IO L) next)) k) -> (IO L))
+    (many AppendFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))
+    (many ReadRemaining : (erased (Level) L) (many (Fn L (many (String) rest) -> (many (IO L) next)) k) -> (IO L))
+    (many ListDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (List (String))) entries) -> (many (IO L) next)) k) -> (IO L))
+    (many GetCwd : (erased (Level) L) (many (Fn L (many (String) path) -> (many (IO L) next)) k) -> (IO L))
+    (many Stat : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (EntryKind)) kind) -> (many (IO L) next)) k) -> (IO L))
+    (many MkDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
+    (many DeleteFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
+    (many DeleteDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))))

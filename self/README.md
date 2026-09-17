@@ -104,7 +104,7 @@ host (section 41); a `U8` or a
 dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
 _build/self/slc -- lib/prelude.sl tests/list.sl > list.ml
-ocamlfind ocamlopt -package zarith -linkpkg list.ml -o list && ./list
+ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
 ```
 
 `slc` takes the files to compile as its program arguments, the prelude
@@ -269,7 +269,8 @@ the entry says otherwise, and recorded so it can be revisited.
 - **The driver's operations are emitted per program**, as
   `lib/extract.ml` does: `lib/driver_core.ml` takes a record of direct
   builds and matches over the prelude's `Nat`, `U8`, `Char`, `String`,
-  `Maybe`, `Result`, `Unit`, `List` and `IO`, found by name in the
+  `Maybe`, `Result`, `Unit`, `List`, `Pair`, `EntryKind`, `Change` and
+  `IO`, found by name in the
   prelude's scope, so no name is looked up while a program runs. A
   prelude renaming those needs a changed emitter.
 - **The elaborator's group carries a budget of sugar expansions** as its

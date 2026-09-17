@@ -30,6 +30,16 @@ let driver env =
     | "ReadFile", [ p; k ] -> ReadFile (p, k)
     | "WriteFile", [ p; s; k ] -> WriteFile (p, s, k)
     | "GetArgs", [ k ] -> GetArgs k
+    | "GetEnv", [ n; k ] -> GetEnv (n, k)
+    | "GetEnvs", [ k ] -> GetEnvs k
+    | "AppendFile", [ p; s; k ] -> AppendFile (p, s, k)
+    | "ReadRemaining", [ k ] -> ReadRemaining k
+    | "ListDir", [ p; k ] -> ListDir (p, k)
+    | "GetCwd", [ k ] -> GetCwd k
+    | "Stat", [ p; k ] -> Stat (p, k)
+    | "MkDir", [ p; k ] -> MkDir (p, k)
+    | "DeleteFile", [ p; k ] -> DeleteFile (p, k)
+    | "DeleteDir", [ p; k ] -> DeleteDir (p, k)
     | _ -> assert false
   in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
@@ -40,7 +50,10 @@ let driver env =
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
       snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);
       some = (fun x -> build "Some" [ x ]); none = build "None" []; ok = (fun x -> build "Ok" [ x ]); fail = (fun x -> build "Fail" [ x ]); unit = build "MkUnit" [];
-      cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; request; apply = (fun k x -> List.hd (Eval.apply k [ x ])) }
+      cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
+      is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
+      changed = build "Changed" []; unchanged = build "Unchanged" [];
+      request; apply = (fun k x -> List.hd (Eval.apply k [ x ])) }
 
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)

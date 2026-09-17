@@ -1,6 +1,6 @@
 (library
  (name speciallang)
- (libraries zarith))
+ (libraries zarith unix))
 
 (rule
  (targets prelude_source.ml)
