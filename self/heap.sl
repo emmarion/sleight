@@ -1,7 +1,9 @@
-; self/heap.sl -- a store for the compile-time interpreter: addresses below a bound, and a Braun tree of blocks
-; sized by its count, so that reading and appending are total by the size alone (the address 2k+1 sits in
-; the one-child and 2k+2 in the two-child of the node at k, so the halves of an address are its path).
-; Parametric in the block type, which core.sl supplies. Nothing here is settled design.
+; self/heap.sl -- the compile-time store: a value is stamped with its position in an erased ghost
+; history, and refers to other values directly rather than through an address. The history makes
+; position -> value a function (suffix-unique below), which is what lets the emitter name a value
+; it has already written; at runtime a Store is the next stamp alone and a Ref is its target.
+; Parametric in the block type, which takes the reference type as its parameter so that it never
+; mentions the history. Nothing here is settled design.
 
 (def-adts
   (Digit : -> Type
@@ -14,26 +16,21 @@
     (many W1 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ d) y) p) -> (Wrap (Cons (Digit) (D1) ctx) x y))
     (many W2 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) y) (erased (Wrap ctx (Succ (Succ d)) y) p) -> (Wrap (Cons (Digit) (D2) ctx) x y))))
 
-; ---- lemmas over the prelude's Lt and Double
+; ---- lemmas over the prelude's Lt and Double, shared with core.sl's fact table
 
 (def-fns _ $ erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f)
   (match erased p _ (absurd LtZ) (absurd LtS)))
 
-(def-fns _ $ erased lt-drop : (erased (Nat) d) (erased (Nat) s) (erased (Lt (Succ d) s) p) -> (erased (Lt d s) q)
-  (match erased p _ ((LtS x y q) (lt-weaken d y q))))
-
 (def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
-
-(def-fns _ $ erased lt-of-add : (erased (Nat) n) (erased (Nat) k) (erased (Nat) size) (subterm erased (Add n (Succ k) size) sum) -> (erased (Lt n size) lt)
-  (match erased sum _
-    ((AddZero b) (LtZ k))
-    ((AddSucc a b c q) (LtS a c (lt-of-add a k c q)))))
 
 (def-fns _ $ erased add-shift : (erased (Nat) n) (erased (Nat) k) (erased (Nat) size) (subterm erased (Add n (Succ k) size) sum) -> (erased (Add (Succ n) k size) r)
   (match erased sum _
     ((AddZero b) (AddSucc (Zero) k k (AddZero k)))
     ((AddSucc a b c q) (AddSucc (Succ a) k c (add-shift a k c q)))))
+
+(def-fns _ $ erased lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f)
+  (lt-asym a a p (lt-succ a)))
 
 (def-fns _ $ erased double-lt-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) s) (subterm erased (Double m d) p) (erased (Double l s) q) (erased (Lt d s) lt) -> (erased (Lt m l) r)
   (match erased p _
@@ -50,32 +47,6 @@
               (match erased lt1 _
                 ((LtS x2 y2 lt2) (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))))))
 
-(def-fns _ $ erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res)
-  (double-lt-inv m d (Succ r) (Succ (Succ s)) p (DS r s q) (lt-weaken d (Succ s) lt)))
-
-(def-adts $ Braun : ((Nat) l) ((Nat) r) -> Type
-  enum
-  (many BrEq : (erased (Nat) n) -> (Braun n n))
-  (many BrOne : (erased (Nat) n) -> (Braun (Succ n) n)))
-
-; The one-child of a node of size l + r + 1 holds the odd local indices: 2m+1 < l + r + 1 gives m < l.
-(def-fns _ $ erased half-lt-one : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt d s) lt) -> (erased (Lt m l) res)
-  (match erased bal _
-    ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) lt))
-    ((BrOne n)
-      (match erased sum _
-        ((AddSucc a1 b1 c1 q) (double-le-inv m d n c1 dd (add-diag-double n c1 q) lt))))))
-
-; The two-child holds the even ones: 2m+2 < l + r + 1 gives m < r.
-(def-fns _ $ erased half-lt-two : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt (Succ d) s) lt) -> (erased (Lt m r) res)
-  (match erased bal _
-    ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) (lt-drop d s lt)))
-    ((BrOne n)
-      (match erased sum _
-        ((AddSucc a1 b1 c1 q)
-          (match erased lt _
-            ((LtS x y lt1) (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))))))))
-
 (def-fns _ $ erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e)
   (match erased p _
     ((WNil z) (match erased q _ ((WNil z2) (Refl (Nat) x))))
@@ -88,146 +59,183 @@
         ((W2 c2 a2 d2 dd2 y1 q1)
           (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))))
 
-; ---- addresses: a number below a bound; widening the bound is a coerce
+; ---- the ghost history: an erased list of every value allocated so far, newest first
 
-(def-adts $ Addr : ((Nat) bound) -> Type
-  enum
-  (many MkAddr : (erased (Nat) bound) (many (Nat) n) (erased (Lt n bound) lt) -> (Addr bound)))
+(def-adts
+  ; [B] the block type at a value; [l] the allocations before a point; [s] the ones before a
+  ; value the reference names, so a Ref is valid in l and its target was made at s.
+  (Hist : ((TyCtor (Type R) -> Type) B) -> Type
+    enum
+    (many HEmpty : (erased (TyCtor (Type R) -> Type) B) -> (Hist B))
+    (many HAdd : (erased (TyCtor (Type R) -> Type) B) (many (Hist B) rest) (many (Value B rest) v) -> (Hist B)))
+  (Value : ((TyCtor (Type R) -> Type) B) ((Hist B) l) -> Type
+    enum
+    (many MkValue : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Nat) pos) (erased (Len B l pos) lp) (many (B (Ref B l)) body) -> (Value B l)))
+  (Len : ((TyCtor (Type R) -> Type) B) ((Hist B) l) ((Nat) n) -> Type
+    enum
+    (many LenNil : (erased (TyCtor (Type R) -> Type) B) -> (Len B (HEmpty B) (Zero)))
+    (many LenAdd : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) rest) (erased (Value B rest) v) (erased (Nat) n) (erased (Len B rest n) p) -> (Len B (HAdd B rest v) (Succ n))))
+  (Suffix : ((TyCtor (Type R) -> Type) B) ((Hist B) l) ((Hist B) s) -> Type
+    enum
+    (many SfHere : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) h) -> (Suffix B h h))
+    (many SfThere : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) rest) (erased (Value B rest) w) (erased (Hist B) s) (erased (Suffix B rest s) p) -> (Suffix B (HAdd B rest w) s)))
+  (Ref : ((TyCtor (Type R) -> Type) B) ((Hist B) l) -> Type
+    enum newtype
+    (many MkRef : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s) (many (Value B s) v) (erased (Suffix B l (HAdd B s v)) p) -> (Ref B l))))
 
-(def-fns _ $ many addr-path : (erased (Nat) bound) (many (Addr bound) a) -> (many (Nat) p)
-  (match many a _ ((MkAddr bd n lt) n)))
+(def-adts $ Store : ((TyCtor (Type R) -> Type) B) ((Hist B) l) -> Type
+  enum newtype
+  (many MkStore : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Nat) next) (erased (Len B l next) ln) -> (Store B l)))
 
-(def-fns _ $ erased addr-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Addr b) a) -> (erased (Addr c) a2) (erased (Coercible (Addr b) a (Addr c) a2) p)
-  (match erased a _
-    ((MkAddr bd n lt)
-      (let (erased lt2) (lt-le-trans n b c lt le))
-      (values (MkAddr c n lt2) (coercible-ctor MkAddr b c (coercible-refl n) lt lt2)))))
+; ---- a position names one value: the history has one suffix of each length, and a value sits at
+; the head of the suffix it was allocated onto. Nothing calls these; they are the obligation.
 
-(def-fns _ $ many addr-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (Addr b) a) -> (many (Addr c) r)
-  (let (erased a2) (erased p) (addr-widen b c le a))
-  (coerce a p))
+(def-fns _ $ erased len-fn : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) n) (erased (Nat) m)
+    (subterm erased (Len B l n) p) (erased (Len B l m) q) -> (erased (Eq (Nat) n m) e)
+  (match erased p _
+    ((LenNil tb) (match erased q _ ((LenNil tb2) (Refl (Nat) (Zero)))))
+    ((LenAdd tb r1 v1 n1 p1)
+      (match erased q _
+        ((LenAdd tb2 r2 v2 m1 q1)
+          (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl t x) (Refl (Nat) (Succ n1)))))))))
 
-(def-fns _ $ erased addrs-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (subterm erased (List $ Addr b) xs) -> (erased (List $ Addr c) ys) (erased (Coercible (List $ Addr b) xs (List $ Addr c) ys) p)
+(def-fns _ $ erased suffix-len : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
+    (subterm erased (Suffix B l s) p) (erased (Nat) n) (erased (Len B s n) ls) (erased (Nat) m) (erased (Len B l m) ll) ->
+    (erased (Lt n (Succ m)) r)
+  (match erased p _
+    ((SfHere tb h) (match erased (len-fn _ l n m ls ll) _ ((Refl t x) (lt-succ n))))
+    ((SfThere tb rest w s1 p1)
+      (match erased ll _
+        ((LenAdd tb2 r2 v2 m1 ll1) (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))))))
+
+(def-fns _ $ erased suffix-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s1)
+    (erased (Hist B) s2) (erased (Nat) n) (subterm erased (Suffix B l s1) p1) (erased (Suffix B l s2) p2)
+    (erased (Len B s1 n) l1) (erased (Len B s2 n) l2) -> (erased (Eq (Hist B) s1 s2) e)
+  (match erased p1 _
+    ((SfHere tb h)
+      (match erased p2 _
+        ((SfHere tb2 h2) (Refl (Hist B) s1))
+        (absurd (SfThere tb2 rest w s0 q)
+          (match erased l1 (((False) f))
+            ((LenAdd tb3 r3 v3 n0 l1b) (lt-irrefl n (suffix-len _ rest s2 q n l2 n0 l1b)))))))
+    ((SfThere tb rest w s0 q)
+      (match erased p2 _
+        (absurd (SfHere tb2 h2)
+          (match erased l2 (((False) f))
+            ((LenAdd tb3 r3 v3 n0 l2b) (lt-irrefl n (suffix-len _ rest s1 q n l1 n0 l2b)))))
+        ((SfThere tb2 rest2 w2 s02 q2) (suffix-unique _ rest s1 s2 n q q2 l1 l2))))))
+
+(def-fns _ $ erased ref-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
+    (erased (Hist B) s1) (erased (Value B s1) v1) (erased (Suffix B l (HAdd B s1 v1)) p1)
+    (erased (Hist B) s2) (erased (Value B s2) v2) (erased (Suffix B l (HAdd B s2 v2)) p2)
+    (erased (Nat) n) (erased (Len B s1 n) n1) (erased (Len B s2 n) n2) ->
+    (erased (Eq (Hist B) (HAdd B s1 v1) (HAdd B s2 v2)) e)
+  (suffix-unique _ l (HAdd B s1 v1) (HAdd B s2 v2) (Succ n) p1 p2 (LenAdd _ s1 v1 n n1) (LenAdd _ s2 v2 n n2)))
+
+; ---- the operations
+
+(def-fns _ $ erased suffix-trans : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) a) (erased (Hist B) b)
+    (erased (Hist B) c) (subterm erased (Suffix B a b) p) (erased (Suffix B b c) q) -> (erased (Suffix B a c) r)
+  (match erased p _
+    ((SfHere tb h) q)
+    ((SfThere tb rest w s p1) (SfThere _ rest w c (suffix-trans _ rest b c p1 q)))))
+
+(def-fns _ $ erased suffix-one : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) s) (erased (Value B s) v) ->
+    (erased (Suffix B (HAdd B s v) s) r)
+  (SfThere _ s v s (SfHere _ s)))
+
+(def-fns _ $ erased empty-suffix : (erased (TyCtor (Type R) -> Type) B) (subterm erased (Hist B) l) ->
+    (erased (Suffix B l (HEmpty B)) r)
+  (match erased l _
+    ((HEmpty tb) (SfHere _ _))
+    ((HAdd tb rest v) (SfThere _ rest v (HEmpty B) (empty-suffix _ rest)))))
+
+(def-fns _ $ many store-empty : (erased (TyCtor (Type R) -> Type) B) -> (many (Store B (HEmpty B)) s)
+  (MkStore _ _ (Zero) (LenNil _)))
+
+(def-fns _ $ many alloc : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Store B l) st)
+    (many (B (Ref B l)) body) ->
+    (erased (Hist B) l2) (many (Store B l2) st2) (erased (Suffix B l2 l) sf) (many (Ref B l2) at)
+  (match many st _
+    ((MkStore tb l0 next ln)
+      (let (many (Value B l) v) (MkValue _ _ next ln body))
+      (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln)) (suffix-one _ l v)
+              (MkRef _ _ l v (SfHere _ (HAdd _ l v)))))))
+
+(def-fns _ $ many deref : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) ->
+    (erased (Hist B) s) (erased (Suffix B l s) sf) (many (B (Ref B s)) body)
+  (match many r _
+    ((MkRef tb l0 s v p)
+      (match many v _
+        ((MkValue tb2 s0 pos lp body) (values s (suffix-trans _ l (HAdd _ s v) s p (suffix-one _ s v)) body))))))
+
+(def-fns _ $ many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p)
+  (match many r _ ((MkRef tb l0 s v p) (match many v _ ((MkValue tb2 s0 pos lp body) pos)))))
+
+; ---- growth: an erased function builds the proof and the call site coerces, so widening runs no code
+
+(def-fns _ $ erased ref-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (erased (Ref B b) r) -> (erased (Ref B c) r2) (erased (Coercible (Ref B b) r (Ref B c) r2) p)
+  (match erased r _
+    ((MkRef tb b0 s v p)
+      (let (erased p2) (suffix-trans _ c b (HAdd _ s v) le p))
+      (values (MkRef _ _ s v p2) (coercible-ctor MkRef B B b c s s (coercible-refl v) p p2)))))
+
+(def-fns _ $ erased refs-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (subterm erased (List $ Ref B b) xs) ->
+    (erased (List $ Ref B c) ys) (erased (Coercible (List $ Ref B b) xs (List $ Ref B c) ys) p)
   (match erased xs _
-    ((Nil t) (values (Nil _) (coercible-ctor Nil (Addr b) (Addr c))))
+    ((Nil t) (values (Nil _) (coercible-ctor Nil (Ref B b) (Ref B c))))
     ((Cons t x rest)
-      (let (erased x2) (erased px) (addr-widen b c le x))
-      (let (erased rest2) (erased pr) (addrs-widen b c le rest))
-      (values (Cons _ x2 rest2) (coercible-ctor Cons (Addr b) (Addr c) px pr)))))
+      (let (erased x2) (erased px) (ref-widen _ b c le x))
+      (let (erased rest2) (erased pr) (refs-widen _ b c le rest))
+      (values (Cons _ x2 rest2) (coercible-ctor Cons (Ref B b) (Ref B c) px pr)))))
 
-(def-fns _ $ many addrs-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (List $ Addr b) xs) -> (many (List $ Addr c) r)
-  (let (erased ys) (erased p) (addrs-widen b c le xs))
-  (coerce xs p))
-
-(def-fns _ $ erased addrs-widen-lk : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ Nat) f) (subterm erased (List $ Addr b) xs) (erased (Lockstep (Nat) (Addr b) f xs) lk) ->
-    (erased (List $ Addr c) ys) (erased (Coercible (List $ Addr b) xs (List $ Addr c) ys) p) (erased (Lockstep (Nat) (Addr c) f ys) lk2)
+(def-fns _ $ erased refs-widen-lk : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (erased (List $ Nat) f) (subterm erased (List $ Ref B b) xs) (erased (Lockstep (Nat) (Ref B b) f xs) lk) ->
+    (erased (List $ Ref B c) ys) (erased (Coercible (List $ Ref B b) xs (List $ Ref B c) ys) p) (erased (Lockstep (Nat) (Ref B c) f ys) lk2)
   (match erased xs _
-    ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (coercible-ctor Nil (Addr b) (Addr c)) (LsNil _ _)))))
+    ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (coercible-ctor Nil (Ref B b) (Ref B c)) (LsNil _ _)))))
     ((Cons t x rest)
       (match erased lk _
         ((LsCons ta tb x0 y0 xs0 ys0 lk1)
-          (let (erased x2) (erased px) (addr-widen b c le x))
-          (let (erased rest2) (erased pr) (erased lk2) (addrs-widen-lk b c le xs0 rest lk1))
-          (values (Cons _ x2 rest2) (coercible-ctor Cons (Addr b) (Addr c) px pr) (LsCons _ _ x0 x2 xs0 rest2 lk2)))))))
+          (let (erased x2) (erased px) (ref-widen _ b c le x))
+          (let (erased rest2) (erased pr) (erased lk2) (refs-widen-lk _ b c le xs0 rest lk1))
+          (values (Cons _ x2 rest2) (coercible-ctor Cons (Ref B b) (Ref B c) px pr) (LsCons _ _ x0 x2 xs0 rest2 lk2)))))))
 
-(def-fns _ $ erased maybe-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Maybe $ Addr b) m) -> (erased (Maybe $ Addr c) m2) (erased (Coercible (Maybe $ Addr b) m (Maybe $ Addr c) m2) p)
+(def-fns _ $ erased maybe-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (erased (Maybe $ Ref B b) m) ->
+    (erased (Maybe $ Ref B c) m2) (erased (Coercible (Maybe $ Ref B b) m (Maybe $ Ref B c) m2) p)
   (match erased m _
-    ((None t) (values (None _) (coercible-ctor None (Addr b) (Addr c))))
+    ((None t) (values (None _) (coercible-ctor None (Ref B b) (Ref B c))))
     ((Some t x)
-      (let (erased x2) (erased px) (addr-widen b c le x))
-      (values (Some _ x2) (coercible-ctor Some (Addr b) (Addr c) px)))))
+      (let (erased x2) (erased px) (ref-widen _ b c le x))
+      (values (Some _ x2) (coercible-ctor Some (Ref B b) (Ref B c) px)))))
 
-(def-fns _ $ erased idmap-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (subterm erased (IdMap $ Addr b) m) -> (erased (IdMap $ Addr c) m2) (erased (Coercible (IdMap $ Addr b) m (IdMap $ Addr c) m2) p)
+(def-fns _ $ erased idmap-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (subterm erased (IdMap $ Ref B b) m) ->
+    (erased (IdMap $ Ref B c) m2) (erased (Coercible (IdMap $ Ref B b) m (IdMap $ Ref B c) m2) p)
   (match erased m _
-    ((MEmpty t) (values (MEmpty _) (coercible-ctor MEmpty (Addr b) (Addr c))))
+    ((MEmpty t) (values (MEmpty _) (coercible-ctor MEmpty (Ref B b) (Ref B c))))
     ((MNode t here one two)
-      (let (erased here2) (erased ph) (maybe-widen b c le here))
-      (let (erased one2) (erased p1) (idmap-widen b c le one))
-      (let (erased two2) (erased p2) (idmap-widen b c le two))
-      (values (MNode _ here2 one2 two2) (coercible-ctor MNode (Addr b) (Addr c) ph p1 p2)))))
+      (let (erased here2) (erased ph) (maybe-widen _ b c le here))
+      (let (erased one2) (erased p1) (idmap-widen _ b c le one))
+      (let (erased two2) (erased p2) (idmap-widen _ b c le two))
+      (values (MNode _ here2 one2 two2) (coercible-ctor MNode (Ref B b) (Ref B c) ph p1 p2)))))
 
-(def-fns _ $ many idmap-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (IdMap $ Addr b) m) -> (many (IdMap $ Addr c) r)
-  (let (erased m2) (erased p) (idmap-widen b c le m))
+; TEMPORARY: the weaken wrappers, to be removed in favour of an inline coerce at each call site.
+
+(def-fns _ $ many ref-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (many (Ref B b) r) -> (many (Ref B c) r2)
+  (let (erased r2) (erased p) (ref-widen _ b c le r))
+  (coerce r p))
+
+(def-fns _ $ many refs-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (many (List $ Ref B b) xs) -> (many (List $ Ref B c) r)
+  (let (erased ys) (erased p) (refs-widen _ b c le xs))
+  (coerce xs p))
+
+(def-fns _ $ many idmap-weaken : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
+    (erased (Suffix B c b) le) (many (IdMap $ Ref B b) m) -> (many (IdMap $ Ref B c) r)
+  (let (erased m2) (erased p) (idmap-widen _ b c le m))
   (coerce m p))
-
-; ---- the heap: [B] the block type at an address, [up] the digits from a node to the root
-
-(def-adts
-  (Tree : ((TyCtor ((Nat) a) -> Type) B) ((List $ Digit) up) ((Nat) size) -> Type
-    enum
-    (many TLeaf : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) -> (Tree B up (Zero)))
-    (many TNode : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) a) (erased (Wrap up (Zero) a) k)
-                  (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Add l r s) sum) (erased (Braun l r) bal)
-                  (many (B a) block) (many (Tree B (Cons (Digit) (D1) up) l) one) (many (Tree B (Cons (Digit) (D2) up) r) two) -> (Tree B up (Succ s))))
-  (Heap : ((TyCtor ((Nat) a) -> Type) B) ((Nat) size) -> Type
-    enum
-    (many MkHeap : (erased (TyCtor ((Nat) a) -> Type) B) (many (Nat) size) (many (Tree B (Nil (Digit)) size) tree) -> (Heap B size))))
-
-(def-fns _ $ many deref-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (erased (Nat) size) (subterm many (Tree B up size) t) (many (Nat) p) (erased (Lt p size) lt)
-    (erased (Nat) key) (erased (Wrap up p key) w) -> (many (B key) b)
-  (match many t _
-    (absurd (TLeaf tb u) (lt-zero p lt))
-    ((TNode tb u key2 k2 l r s sum bal block one two)
-      (match many (nat-halve p) _
-        ((HZ) (match erased (wrap-fn up (Zero) key2 key k2 w) _ ((Refl t1 x1) block)))
-        ((H1 m d dd)
-          (match erased lt _
-            ((LtS x y lt1) (deref-at _ _ _ one m (half-lt-one m d l r s dd sum bal lt1) key (W1 _ m d dd _ w)))))
-        ((H2 m d dd)
-          (match erased lt _
-            ((LtS x y lt1) (deref-at _ _ _ two m (half-lt-two m d l r s dd sum bal lt1) key (W2 _ m d dd _ w)))))))))
-
-(def-fns _ $ many alloc-at : (erased (TyCtor ((Nat) a) -> Type) B) (erased (List $ Digit) up) (many (Nat) size) (subterm many (Tree B up size) t)
-    (erased (Nat) key) (erased (Wrap up size key) w) (many (B key) b) -> (many (Tree B up (Succ size)) t2)
-  (match many t _
-    ((TLeaf tb u) (TNode _ _ key w (Zero) (Zero) (Zero) (AddZero (Zero)) (BrEq (Zero)) b (TLeaf _ _) (TLeaf _ _)))
-    ((TNode tb u key2 k2 l r s sum bal block one two)
-      (match many (nat-halve size) _
-        ((H1 m d dd)
-          (match erased bal _
-            ((BrEq n)
-              (match erased (double-inj m n d dd (add-diag-double n s sum)) _
-                ((Refl t1 x1)
-                  (TNode _ _ key2 k2 (Succ n) n (Succ s) (AddSucc n n s sum) (BrOne n) block
-                    (alloc-at _ _ m one key (W1 _ m d dd _ w) b) two))))
-            (absurd (BrOne n)
-              (match erased sum (((False) f))
-                ((AddSucc a1 b1 c1 q) (double-parity m n c1 dd (add-diag-double n c1 q)))))))
-        ((H2 m d dd)
-          (match erased bal _
-            (absurd (BrEq n) (double-parity n m d (add-diag-double n s sum) dd))
-            ((BrOne n)
-              (match erased sum _
-                ((AddSucc a1 b1 c1 q)
-                  (match erased (double-inj m n d dd (add-diag-double n c1 q)) _
-                    ((Refl t1 x1)
-                      (TNode _ _ key2 k2 (Succ n) (Succ n) (Succ s) (AddSucc n (Succ n) s (add-succ-right n n c1 q)) (BrEq (Succ n)) block one
-                        (alloc-at _ _ m two key (W2 _ m d dd _ w) b)))))))))))))
-
-(def-fns _ $ many heap-empty : (erased (TyCtor ((Nat) a) -> Type) B) -> (many (Heap B (Zero)) h)
-  (MkHeap _ (Zero) (TLeaf _ _)))
-
-(def-fns _ $ many alloc : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (B size) b) -> (many (Heap B (Succ size)) h2) (many (Addr (Succ size)) at)
-  (match many h _
-    ((MkHeap tb sz tree)
-      (values (MkHeap _ (Succ sz) (alloc-at _ _ sz tree sz (WNil sz) b)) (MkAddr _ sz (lt-succ sz))))))
-
-(def-fns _ $ many deref : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Addr size) at) -> (erased (Nat) a) (erased (Lt a size) lt) (many (B a) b)
-  (match many h _
-    ((MkHeap tb sz tree)
-      (match many at _
-        ((MkAddr bd n lt) (values n lt $ deref-at _ _ _ tree n lt n (WNil n)))))))
-
-(def-fns _ $ many deref-path : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) (many (Nat) p) (erased (Lt p size) lt) -> (many (B p) b)
-  (match many h _
-    ((MkHeap tb sz tree) (deref-at _ _ _ tree p lt p (WNil p)))))
-
-; Every address of a heap, newest first, counted up from zero onto the addresses already taken.
-(def-fns _ $ many addrs-onto : (subterm many (Nat) remaining) (erased (Nat) size) (many (Nat) n) (erased (Add n remaining size) sum) (many (List $ Addr size) acc) -> (many (List $ Addr size) r)
-  (match many remaining _
-    ((Zero) acc)
-    ((Succ k) (tail (addrs-onto k _ (Succ n) (add-shift n k size sum) $ Cons _ (MkAddr _ n (lt-of-add n k size sum)) acc)))))
-
-(def-fns _ $ many heap-addrs : (erased (TyCtor ((Nat) a) -> Type) B) (erased (Nat) size) (many (Heap B size) h) -> (many (List $ Addr size) r)
-  (match many h _
-    ((MkHeap tb sz tree) (addrs-onto sz _ (Zero) (AddZero sz) (Nil _)))))

@@ -350,24 +350,24 @@
   (Ctor : -> Type
     enum
     (many MkCtor : (many (String) name) (many (Nat) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) -> (Ctor)))
-  (Block : ((Nat) a) -> Type
+  (Block : (Type R) -> Type
     enum
-    (many BTag : (erased (Nat) a) (many (Ctor) c) (many (List $ Addr a) fields) -> (Block a))
-    (many BTup : (erased (Nat) a) (many (List $ Addr a) fields) -> (Block a))
-    (many BExt : (erased (Nat) a) (many (Payload) p) -> (Block a))
-    (many BCtorFn : (erased (Nat) a) (many (Ctor) c) -> (Block a))
-    (many BMat : (erased (Nat) a) (many (Adt) adt) -> (Block a))
-    (many BGroup : (erased (Nat) a) (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Group gids ctx) g) (many (Frames a ctx) env) -> (Block a))
-    (many BFn : (erased (Nat) a) (many (Addr a) group) (many (Nat) member) (many (Nat) id) -> (Block a))
-    (many BToken : (erased (Nat) a) -> (Block a))
-    (many BError : (erased (Nat) a) (many (String) msg) -> (Block a)))
+    (many BTag : (erased Type R) (many (Ctor) c) (many (List R) fields) -> (Block R))
+    (many BTup : (erased Type R) (many (List R) fields) -> (Block R))
+    (many BExt : (erased Type R) (many (Payload) p) -> (Block R))
+    (many BCtorFn : (erased Type R) (many (Ctor) c) -> (Block R))
+    (many BMat : (erased Type R) (many (Adt) adt) -> (Block R))
+    (many BGroup : (erased Type R) (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Group gids ctx) g) (many (Frames R ctx) env) -> (Block R))
+    (many BFn : (erased Type R) (many R group) (many (Nat) member) (many (Nat) id) -> (Block R))
+    (many BToken : (erased Type R) -> (Block R))
+    (many BError : (erased Type R) (many (String) msg) -> (Block R)))
   ; [ctx]: the frames in scope, innermost first; a group's frame holds its block's address, a member being
   ; made when read.
-  (Frames : ((Nat) a) ((List $ List $ Nat) ctx) -> Type
+  (Frames : (Type R) ((List $ List $ Nat) ctx) -> Type
     enum
-    (many FrNil : (erased (Nat) a) -> (Frames a (Nil (List (Nat)))))
-    (many FrVals : (erased (Nat) a) (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (List $ Addr a) vs) (erased (Lockstep (Nat) (Addr a) f vs) lk) (many (Frames a ctx) rest) -> (Frames a (Cons (List (Nat)) f ctx)))
-    (many FrGroup : (erased (Nat) a) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many (Addr a) group) (many (Frames a ctx) rest) -> (Frames a (Cons (List (Nat)) gids ctx))))
+    (many FrNil : (erased Type R) -> (Frames R (Nil (List (Nat)))))
+    (many FrVals : (erased Type R) (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (List R) vs) (erased (Lockstep (Nat) R f vs) lk) (many (Frames R ctx) rest) -> (Frames R (Cons (List (Nat)) f ctx)))
+    (many FrGroup : (erased Type R) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many R group) (many (Frames R ctx) rest) -> (Frames R (Cons (List (Nat)) gids ctx))))
   ; [gids]: the frame the group binds, its functions' ids in order.
   (Group : ((List $ Nat) gids) ((List $ List $ Nat) ctx) -> Type
     enum
@@ -385,7 +385,7 @@
     enum
     (many CVar : (erased (List $ List $ Nat) ctx) (many (Nat) id) (many (Mem id ctx) p) -> (Code ctx many-one))
     (many CConst : (erased (List $ List $ Nat) ctx) (many (Nat) id) -> (Code ctx many-one))
-    (many CValue : (erased (List $ List $ Nat) ctx) (many (Block (Zero)) v) -> (Code ctx many-one))
+    (many CValue : (erased (List $ List $ Nat) ctx) (many (Block (Ref Block (HEmpty Block))) v) -> (Code ctx many-one))
     (many CErased : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
     (many CValues : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ms cs) pk) -> (Code ctx ms))
     (many CApp : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
@@ -406,66 +406,66 @@
     enum
     (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
 
-(def-adts $ Vals : ((Nat) a) ((List $ Mult) ms) -> Type
+(def-adts $ Vals : ((Hist Block) l) ((List $ Mult) ms) -> Type
   enum
-  (many ValsNil : (erased (Nat) a) -> (Vals a (Nil (Mult))))
-  (many ValsMany : (erased (Nat) a) (erased (List $ Mult) ms) (many (Addr a) v) (many (Vals a ms) rest) -> (Vals a (Cons (Mult) (Many) ms)))
-  (many ValsErased : (erased (Nat) a) (erased (List $ Mult) ms) (many (Vals a ms) rest) -> (Vals a (Cons (Mult) (Erased) ms))))
+  (many ValsNil : (erased (Hist Block) l) -> (Vals l (Nil (Mult))))
+  (many ValsMany : (erased (Hist Block) l) (erased (List $ Mult) ms) (many (Ref Block l) v) (many (Vals l ms) rest) -> (Vals l (Cons (Mult) (Many) ms)))
+  (many ValsErased : (erased (Hist Block) l) (erased (List $ Mult) ms) (many (Vals l ms) rest) -> (Vals l (Cons (Mult) (Erased) ms))))
 
 ; Widening the bound of every holder of addresses is a coerce (section 38).
 
-(def-fns _ $ erased frames-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ List $ Nat) ctx) (subterm erased (Frames b ctx) env) -> (erased (Frames c ctx) env2) (erased (Coercible (Frames b ctx) env (Frames c ctx) env2) p)
+(def-fns _ $ erased frames-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ List $ Nat) ctx) (subterm erased (Frames (Ref Block b) ctx) env) -> (erased (Frames (Ref Block c) ctx) env2) (erased (Coercible (Frames (Ref Block b) ctx) env (Frames (Ref Block c) ctx) env2) p)
   (match erased env _
-    ((FrNil a) (values (FrNil _) (coercible-ctor FrNil b c)))
+    ((FrNil a) (values (FrNil _) (coercible-ctor FrNil (Ref Block b) (Ref Block c))))
     ((FrVals a cx f vs lk rest)
-      (let (erased vs2) (erased pv) (erased lk2) (addrs-widen-lk b c le f vs lk))
+      (let (erased vs2) (erased pv) (erased lk2) (refs-widen-lk _ b c le f vs lk))
       (let (erased rest2) (erased pr) (frames-widen b c le cx rest))
-      (values (FrVals _ _ f vs2 lk2 rest2) (coercible-ctor FrVals b c cx cx (coercible-refl f) pv lk lk2 pr)))
+      (values (FrVals _ _ f vs2 lk2 rest2) (coercible-ctor FrVals (Ref Block b) (Ref Block c) cx cx (coercible-refl f) pv lk lk2 pr)))
     ((FrGroup a cx gids g rest)
-      (let (erased g2) (erased pg) (addr-widen b c le g))
+      (let (erased g2) (erased pg) (ref-widen _ b c le g))
       (let (erased rest2) (erased pr) (frames-widen b c le cx rest))
-      (values (FrGroup _ _ gids g2 rest2) (coercible-ctor FrGroup b c cx cx (coercible-refl gids) pg pr)))))
+      (values (FrGroup _ _ gids g2 rest2) (coercible-ctor FrGroup (Ref Block b) (Ref Block c) cx cx (coercible-refl gids) pg pr)))))
 
-(def-fns _ $ many frames-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ List $ Nat) ctx) (many (Frames b ctx) env) -> (many (Frames c ctx) r)
+(def-fns _ $ many frames-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ List $ Nat) ctx) (many (Frames (Ref Block b) ctx) env) -> (many (Frames (Ref Block c) ctx) r)
   (let (erased env2) (erased p) (frames-widen b c le ctx env))
   (coerce env p))
 
-(def-fns _ $ erased block-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Block b) blk) -> (erased (Block c) blk2) (erased (Coercible (Block b) blk (Block c) blk2) p)
+(def-fns _ $ erased block-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Block (Ref Block b)) blk) -> (erased (Block (Ref Block c)) blk2) (erased (Coercible (Block (Ref Block b)) blk (Block (Ref Block c)) blk2) p)
   (match erased blk _
     ((BTag a ct fields)
-      (let (erased fs2) (erased pf) (addrs-widen b c le fields))
-      (values (BTag _ ct fs2) (coercible-ctor BTag b c (coercible-refl ct) pf)))
+      (let (erased fs2) (erased pf) (refs-widen _ b c le fields))
+      (values (BTag _ ct fs2) (coercible-ctor BTag (Ref Block b) (Ref Block c) (coercible-refl ct) pf)))
     ((BTup a fields)
-      (let (erased fs2) (erased pf) (addrs-widen b c le fields))
-      (values (BTup _ fs2) (coercible-ctor BTup b c pf)))
-    ((BExt a p) (values (BExt _ p) (coercible-ctor BExt b c (coercible-refl p))))
-    ((BCtorFn a ct) (values (BCtorFn _ ct) (coercible-ctor BCtorFn b c (coercible-refl ct))))
-    ((BMat a adt) (values (BMat _ adt) (coercible-ctor BMat b c (coercible-refl adt))))
+      (let (erased fs2) (erased pf) (refs-widen _ b c le fields))
+      (values (BTup _ fs2) (coercible-ctor BTup (Ref Block b) (Ref Block c) pf)))
+    ((BExt a p) (values (BExt _ p) (coercible-ctor BExt (Ref Block b) (Ref Block c) (coercible-refl p))))
+    ((BCtorFn a ct) (values (BCtorFn _ ct) (coercible-ctor BCtorFn (Ref Block b) (Ref Block c) (coercible-refl ct))))
+    ((BMat a adt) (values (BMat _ adt) (coercible-ctor BMat (Ref Block b) (Ref Block c) (coercible-refl adt))))
     ((BGroup a gids cx g env)
       (let (erased env2) (erased pe) (frames-widen b c le cx env))
-      (values (BGroup _ _ _ g env2) (coercible-ctor BGroup b c gids gids cx cx (coercible-refl g) pe)))
+      (values (BGroup _ _ _ g env2) (coercible-ctor BGroup (Ref Block b) (Ref Block c) gids gids cx cx (coercible-refl g) pe)))
     ((BFn a g i id)
-      (let (erased g2) (erased pg) (addr-widen b c le g))
-      (values (BFn _ g2 i id) (coercible-ctor BFn b c pg (coercible-refl i) (coercible-refl id))))
-    ((BToken a) (values (BToken _) (coercible-ctor BToken b c)))
-    ((BError a m) (values (BError _ m) (coercible-ctor BError b c (coercible-refl m))))))
+      (let (erased g2) (erased pg) (ref-widen _ b c le g))
+      (values (BFn _ g2 i id) (coercible-ctor BFn (Ref Block b) (Ref Block c) pg (coercible-refl i) (coercible-refl id))))
+    ((BToken a) (values (BToken _) (coercible-ctor BToken (Ref Block b) (Ref Block c))))
+    ((BError a m) (values (BError _ m) (coercible-ctor BError (Ref Block b) (Ref Block c) (coercible-refl m))))))
 
-(def-fns _ $ many block-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (Block b) blk) -> (many (Block c) r)
+(def-fns _ $ many block-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (many (Block (Ref Block b)) blk) -> (many (Block (Ref Block c)) r)
   (let (erased blk2) (erased p) (block-widen b c le blk))
   (coerce blk p))
 
-(def-fns _ $ erased vals-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ Mult) ms) (subterm erased (Vals b ms) vs) -> (erased (Vals c ms) vs2) (erased (Coercible (Vals b ms) vs (Vals c ms) vs2) p)
+(def-fns _ $ erased vals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ Mult) ms) (subterm erased (Vals b ms) vs) -> (erased (Vals c ms) vs2) (erased (Coercible (Vals b ms) vs (Vals c ms) vs2) p)
   (match erased vs _
     ((ValsNil a) (values (ValsNil _) (coercible-ctor ValsNil b c)))
     ((ValsMany a ms2 v rest)
-      (let (erased v2) (erased pv) (addr-widen b c le v))
+      (let (erased v2) (erased pv) (ref-widen _ b c le v))
       (let (erased rest2) (erased pr) (vals-widen b c le ms2 rest))
       (values (ValsMany _ _ v2 rest2) (coercible-ctor ValsMany b c ms2 ms2 pv pr)))
     ((ValsErased a ms2 rest)
       (let (erased rest2) (erased pr) (vals-widen b c le ms2 rest))
       (values (ValsErased _ _ rest2) (coercible-ctor ValsErased b c ms2 ms2 pr)))))
 
-(def-fns _ $ many vals-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (List $ Mult) ms) (many (Vals b ms) vs) -> (many (Vals c ms) r)
+(def-fns _ $ many vals-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ Mult) ms) (many (Vals b ms) vs) -> (many (Vals c ms) r)
   (let (erased vs2) (erased p) (vals-widen b c le ms vs))
   (coerce vs p))
 
@@ -554,9 +554,6 @@
     enum
     (many BYes : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) p) -> (NatDec a b))
     (many BNo : (erased (Nat) a) (erased (Nat) b) (erased (Neq a b) p) -> (NatDec a b))))
-
-(def-fns _ $ erased lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f)
-  (lt-asym a a p (lt-succ a)))
 
 (def-fns _ $ erased le-lt-absurd : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) (erased (Lt b a) q) -> (erased (False) f)
   (lt-asym b a q p))
@@ -1902,49 +1899,49 @@
 
 
 
-; ---- The scope environment (section 3) and fact table (section 18); [heap] the store every Const's value
-; lives in, and [entries] and [finals] hold its addresses.
+; ---- The scope environment (section 3) and fact table (section 18); [hl] the ghost history every
+; Const's value was allocated into, [store] the next stamp, and [entries] and [finals] hold its references.
 
 (def-adts
   (Env : -> Type
     enum
-    (many MkEnv : (erased (Nat) hs) (many (Heap Block hs) heap) (many (NameMap $ Nat) scope) (many (IdMap $ EInfo hs) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
+    (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (NameMap $ Nat) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Bool) run-pos) (many (List $ Nat) objects)
-       (many (NameMap $ Nat) literals) (many (List $ Pair (Addr hs) $ Term) finals) (many (List $ String) errors)
+       (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals) (many (List $ String) errors)
        (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ String) claimed) (many (List $ String) warnings)
        (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) -> (Env)))
   (Loc : -> Type
     enum
     (many MkLoc : (many (String) file) (many (Nat) line) -> (Loc)))
-  (EInfo : ((Nat) a) -> Type
+  (EInfo : ((Hist Block) l) -> Type
     enum
-    (many MkEInfo : (erased (Nat) a) (many (Maybe $ String) name) (many (Mult) mult) (many (State a) state) (many (Bool) minted) (many (Bool) meta) -> (EInfo a)))
-  (State : ((Nat) a) -> Type
+    (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) -> (EInfo l)))
+  (State : ((Hist Block) l) -> Type
     enum
-    (many SConst : (erased (Nat) a) (many (Addr a) v) -> (State a))
-    (many SDyn : (erased (Nat) a) -> (State a))))
+    (many SConst : (erased (Hist Block) l) (many (Ref Block l) v) -> (State l))
+    (many SDyn : (erased (Hist Block) l) -> (State l))))
 
-(def-fns _ $ erased state-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (State b) s) -> (erased (State c) s2) (erased (Coercible (State b) s (State c) s2) p)
+(def-fns _ $ erased state-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (State b) s) -> (erased (State c) s2) (erased (Coercible (State b) s (State c) s2) p)
   (match erased s _
     ((SConst a v)
-      (let (erased v2) (erased pv) (addr-widen b c le v))
+      (let (erased v2) (erased pv) (ref-widen _ b c le v))
       (values (SConst _ v2) (coercible-ctor SConst b c pv)))
     ((SDyn a) (values (SDyn _) (coercible-ctor SDyn b c)))))
 
-(def-fns _ $ erased einfo-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (EInfo b) e) -> (erased (EInfo c) e2) (erased (Coercible (EInfo b) e (EInfo c) e2) p)
+(def-fns _ $ erased einfo-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (EInfo b) e) -> (erased (EInfo c) e2) (erased (Coercible (EInfo b) e (EInfo c) e2) p)
   (match erased e _
     ((MkEInfo a n m s mi me)
       (let (erased s2) (erased ps) (state-widen b c le s))
       (values (MkEInfo _ n m s2 mi me) (coercible-ctor MkEInfo b c (coercible-refl n) (coercible-refl m) ps (coercible-refl mi) (coercible-refl me))))))
 
-(def-fns _ $ erased maybe-einfo-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (erased (Maybe $ EInfo b) m) -> (erased (Maybe $ EInfo c) m2) (erased (Coercible (Maybe $ EInfo b) m (Maybe $ EInfo c) m2) p)
+(def-fns _ $ erased maybe-einfo-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Maybe $ EInfo b) m) -> (erased (Maybe $ EInfo c) m2) (erased (Coercible (Maybe $ EInfo b) m (Maybe $ EInfo c) m2) p)
   (match erased m _
     ((None t) (values (None _) (coercible-ctor None (EInfo b) (EInfo c))))
     ((Some t x)
       (let (erased x2) (erased px) (einfo-widen b c le x))
       (values (Some _ x2) (coercible-ctor Some (EInfo b) (EInfo c) px)))))
 
-(def-fns _ $ erased entries-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (subterm erased (IdMap $ EInfo b) m) -> (erased (IdMap $ EInfo c) m2) (erased (Coercible (IdMap $ EInfo b) m (IdMap $ EInfo c) m2) p)
+(def-fns _ $ erased entries-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (subterm erased (IdMap $ EInfo b) m) -> (erased (IdMap $ EInfo c) m2) (erased (Coercible (IdMap $ EInfo b) m (IdMap $ EInfo c) m2) p)
   (match erased m _
     ((MEmpty t) (values (MEmpty _) (coercible-ctor MEmpty (EInfo b) (EInfo c))))
     ((MNode t here one two)
@@ -1953,45 +1950,45 @@
       (let (erased two2) (erased p2) (entries-widen b c le two))
       (values (MNode _ here2 one2 two2) (coercible-ctor MNode (EInfo b) (EInfo c) ph p1 p2)))))
 
-(def-fns _ $ many entries-weaken : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (many (IdMap $ EInfo b) m) -> (many (IdMap $ EInfo c) r)
+(def-fns _ $ many entries-weaken : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (many (IdMap $ EInfo b) m) -> (many (IdMap $ EInfo c) r)
   (let (erased m2) (erased p) (entries-widen b c le m))
   (coerce m p))
 
-(def-fns _ $ erased finals-widen : (erased (Nat) b) (erased (Nat) c) (erased (Lt b (Succ c)) le) (subterm erased (List $ Pair (Addr b) $ Term) xs) -> (erased (List $ Pair (Addr c) $ Term) ys) (erased (Coercible (List $ Pair (Addr b) $ Term) xs (List $ Pair (Addr c) $ Term) ys) p)
+(def-fns _ $ erased finals-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (subterm erased (List $ Pair (Ref Block b) $ Term) xs) -> (erased (List $ Pair (Ref Block c) $ Term) ys) (erased (Coercible (List $ Pair (Ref Block b) $ Term) xs (List $ Pair (Ref Block c) $ Term) ys) p)
   (match erased xs _
-    ((Nil t) (values (Nil _) (coercible-ctor Nil (Pair (Addr b) $ Term) (Pair (Addr c) $ Term))))
+    ((Nil t) (values (Nil _) (coercible-ctor Nil (Pair (Ref Block b) $ Term) (Pair (Ref Block c) $ Term))))
     ((Cons t x rest)
       (let (erased rest2) (erased pr) (finals-widen b c le rest))
       (match erased x _
         ((MkPair ta tb v ty)
-          (let (erased v2) (erased pv) (addr-widen b c le v))
-          (values (Cons _ (MkPair _ _ v2 ty) rest2) (coercible-ctor Cons (Pair (Addr b) $ Term) (Pair (Addr c) $ Term) (coercible-ctor MkPair (Addr b) (Addr c) (Term) (Term) pv (coercible-refl ty)) pr)))))))
+          (let (erased v2) (erased pv) (ref-widen _ b c le v))
+          (values (Cons _ (MkPair _ _ v2 ty) rest2) (coercible-ctor Cons (Pair (Ref Block b) $ Term) (Pair (Ref Block c) $ Term) (coercible-ctor MkPair (Ref Block b) (Ref Block c) (Term) (Term) pv (coercible-refl ty)) pr)))))))
 
 ; The store with what holds its addresses, and the same put back; the caller keeps them consistent.
-(def-fns _ $ many env-store : (many (Env) e) -> (erased (Nat) hs) (many (Heap Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Addr hs) $ Term) fi)
+(def-fns _ $ many env-store : (many (Env) e) -> (erased (Hist Block) hl) (many (Store Block hl) hp) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (values hs hp en fi))))
-(def-fns _ $ many env-with-store : (many (Env) e) (erased (Nat) hs2) (many (Heap Block hs2) hp2) (many (IdMap $ EInfo hs2) en2) (many (List $ Pair (Addr hs2) $ Term) fi2) -> (many (Env) r)
+(def-fns _ $ many env-with-store : (many (Env) e) (erased (Hist Block) hl2) (many (Store Block hl2) hp2) (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Ref Block hl2) $ Term) fi2) -> (many (Env) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (MkEnv _ hp2 sc en2 _ _ fr tb rp ob li fi2 er lv st cl wa lt lo pr))))
-(def-fns _ $ many store-grow : (erased (Nat) hs) (erased (Nat) hs2) (erased (Lt hs (Succ hs2)) le) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Addr hs) $ Term) fi) -> (many (IdMap $ EInfo hs2) en2) (many (List $ Pair (Addr hs2) $ Term) fi2)
-  (let (erased en2) (erased pe) (entries-widen hs hs2 le en))
-  (let (erased fi2) (erased pf) (finals-widen hs hs2 le fi))
+(def-fns _ $ many store-grow : (erased (Hist Block) hl) (erased (Hist Block) hl2) (erased (Suffix Block hl2 hl) le) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Ref Block hl2) $ Term) fi2)
+  (let (erased en2) (erased pe) (entries-widen hl hl2 le en))
+  (let (erased fi2) (erased pf) (finals-widen hl hl2 le fi))
   (values (coerce en pe) (coerce fi pf)))
 
-(def-fns _ $ many entries-set-state : (erased (Nat) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) (many (State hs) st) -> (many (IdMap $ EInfo hs) r)
+(def-fns _ $ many entries-set-state : (erased (Hist Block) hl) (many (IdMap $ EInfo hl) en) (many (Nat) x) (many (State hl) st) -> (many (IdMap $ EInfo hl) r)
   (match many (idmap-get _ x en) _
     ((Miss lt lk lm lp) (idmap-set _ x (MkEInfo _ (None _) (Many) st (BFalse) (BFalse)) en))
     ((Hit lt lk lm info lp) (match many info _ ((MkEInfo a n m s mi me) (idmap-set _ x (MkEInfo _ n m st mi me) en))))))
 
-; A closed block, one holding no address, allocated as the value of [x]: a descriptor, a payload, the token.
-(def-fns _ $ many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Zero)) b) -> (many (Env) r)
-  (let (erased hs) (many hp) (many en) (many fi) $ env-store e)
-  (let (many hp2) (many a) $ alloc Block _ hp $ block-weaken _ _ (LtZ hs) b)
-  (let (many en2) (many fi2) $ store-grow _ _ (lt-weaken _ _ $ lt-succ hs) en fi)
+; A closed block, one holding no reference, allocated as the value of [x]: a descriptor, a payload, the token.
+(def-fns _ $ many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r)
+  (let (erased hl) (many hp) (many en) (many fi) $ env-store e)
+  (let (erased hl2) (many hp2) (erased sf) (many a) $ alloc Block _ hp $ block-weaken _ _ (empty-suffix _ hl) b)
+  (let (many en2) (many fi2) $ store-grow _ _ sf en fi)
   (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a) fi2))
 
 (def-fns _ $ many env-scope : (many (Env) e) -> (many (NameMap $ Nat) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) sc)))
-(def-fns _ $ many env-entries : (many (Env) e) -> (erased (Nat) hs) (many (IdMap $ EInfo hs) r)
+(def-fns _ $ many env-entries : (many (Env) e) -> (erased (Hist Block) hs) (many (IdMap $ EInfo hs) r)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (values hs en))))
 (def-fns _ $ many env-table : (many (Env) e) -> (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb)
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr) (values nf ff fr tb))))
@@ -2085,7 +2082,7 @@
   (env-report e $ located e ": error: " x))
 
 ; The names of the entries minted after [stop], up to [x], dropped (lib/env.ml's hide).
-(def-fns _ $ many entries-anonymize : (erased (Nat) hs) (many (IdMap $ EInfo hs) en) (subterm many (Nat) x) (many (Nat) stop) -> (many (IdMap $ EInfo hs) r)
+(def-fns _ $ many entries-anonymize : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (Nat) x) (many (Nat) stop) -> (many (IdMap $ EInfo hs) r)
   (match many x _
     ((Zero) en)
     ((Succ p)
@@ -2125,7 +2122,7 @@
           (match many (nat-cmp fr fr2) _
             ((CLt ct cr x y p) (MkEnv _ hp2 sc en2 _ _ fr2 (table-weaken _ _ _ _ tb $ lt-weaken fr fr2 p) rp ob li fi2 er2 lv st cl2 wa2 lt2 lo pr)) (else (MkEnv _ hp2 sc en2 nf ff fr tb rp ob li fi2 er2 lv st cl2 wa2 lt2 lo pr))))))))
 
-(def-fns _ $ many entry : (many (Env) env) (many (Nat) x) -> (erased (Nat) hs) (many (EInfo hs) r)
+(def-fns _ $ many entry : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (EInfo hs) r)
   (let (erased hs) (many en) $ env-entries env)
   (match many (idmap-get _ x en) _
     ((Miss lt lk lm lp) (values hs $ MkEInfo _ (None _) (Many) (SDyn _) (BFalse) (BFalse)))
@@ -2139,7 +2136,7 @@
   (let (erased hs) (many e) $ entry env x)
   (match many e _ ((MkEInfo a n m s mi me) m)))
 
-(def-fns _ $ many entry-state : (many (Env) env) (many (Nat) x) -> (erased (Nat) hs) (many (State hs) r)
+(def-fns _ $ many entry-state : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (State hs) r)
   (let (erased hs) (many e) $ entry env x)
   (match many e _ ((MkEInfo a n m s mi me) (values hs s))))
 
@@ -2169,18 +2166,18 @@
   (match many e _
     ((MkEInfo a n m s mi me) (match many n _ ((None b) (match many me _ ((BTrue) "_") ((BFalse) (str-cat "_" $ nat-str x)))) ((Some b s2) s2)))))
 
-; The block a Const entry's value is, read from the store.
-(def-fns _ $ many env-block : (many (Env) e) (many (Nat) x) -> (erased (Nat) a) (many (Maybe $ Block a) r)
+; The block a Const entry's value is, read through its reference.
+(def-fns _ $ many env-block : (many (Env) e) (many (Nat) x) -> (erased (Hist Block) a) (many (Maybe $ Block (Ref Block a)) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store e)
   (match many (idmap-get _ x en) _
-    ((Miss lt lk lm lp) (values (Zero) $ None _))
+    ((Miss lt lk lm lp) (values (HEmpty Block) $ None _))
     ((Hit lt lk lm info lp)
       (match many info _
         ((MkEInfo z n m s mi me)
           (match many s _
-            ((SDyn z2) (values (Zero) $ None _))
+            ((SDyn z2) (values (HEmpty Block) $ None _))
             ((SConst z2 v)
-              (let (erased a) (erased lt) (many b) $ deref Block _ hp v)
+              (let (erased a) (erased sf) (many b) $ deref Block _ v)
               (values a $ Some _ b))))))))
 
 ; Forwards [y]'s state to [x] (section 9's state-forwarding let).
@@ -2318,7 +2315,7 @@
 
 ; A binder that is Const at once: over a closed block, over the token, or over the token only in run
 ; position (section 34).
-(def-fns _ $ many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Block (Zero)) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
     (many (Env) r) (many (Nat) x)
   (let (many env2) (many x) $ bind env name mult ty rule coercible)
   (values (set-state-closed env2 x b) x))
@@ -2446,7 +2443,7 @@
   (MkEntry (Some _ name) (BFalse) (Erased) $ SgTy t))
 
 (let (many empty-env)
-  $ MkEnv _ (heap-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
+  $ MkEnv _ (store-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) $ nm-empty _)
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let (many univ-id) (Succ (Zero)))
