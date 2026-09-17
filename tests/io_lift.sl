@@ -6,9 +6,10 @@
 ; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 mints the program's
 ; level B and returns, erased, each value at (IO B) and the proof that coerces to it. The erased walk gives each
 ; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
-; minted inside, after B, so the caller supplies levels and values only. B is opened from lift2's
-; existential rather than minted by def-lvl, so prove-predates cannot reach it and the prelude's thunk is
-; unavailable at B; the nullary continuation there is a named function instead.
+; minted inside, after B, so the caller supplies levels and values only. The caller cannot mint a level
+; relation about B itself, B reaching it opened from an existential rather than from def-lvl, so lift2
+; discharges Predates thunk-lvl B where B is minted and returns it (DESIGN section 31), which is what lets
+; the prelude's thunk hold the nullary continuation at B.
 (def-lvl proof-lvl)
 (def-lvl lift-lvl)
 (let (erased pl) (prove-predates proof-lvl lift-lvl))
@@ -16,8 +17,10 @@
 (def-fns lift-lvl $ erased lift2 : (erased (Level) L1) (erased (Level) L2) (many (IO L1) io1) (many (IO L2) io2) ->
     (erased (Level) B) (erased (IO B) o1) (erased (IO B) o2)
     (erased (Coercible (IO L1) io1 (IO B) o1) q1) (erased (Coercible (IO L2) io2 (IO B) o2) q2)
+    (erased (Predates (Level) thunk-lvl B) tb)
   (def-lvl B)
   (let (erased pb) (prove-predates proof-lvl B))
+  (let (erased tb) (prove-predates thunk-lvl B))
   (let (erased p1) (prove-predates L1 B))
   (let (erased p2) (prove-predates L2 B))
   (def-fns proof-lvl $ erased lift-proof : (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm many (IO A) io) ->
@@ -93,7 +96,7 @@
         (values (DeleteDir B path o) (coercible-ctor DeleteDir B A (coercible-refl path) q)))))
   (let (erased x1) (erased q1) (lift-proof (predates pl) L1 p1 io1))
   (let (erased x2) (erased q2) (lift-proof (predates pl) L2 p2 io2))
-  (values B x1 x2 (coercible-sym q1) (coercible-sym q2)))
+  (values B x1 x2 (coercible-sym q1) (coercible-sym q2) tb))
 
 (def-lvl A1)
 (let (many d3) (lt-dec 3 u8-modulus))
@@ -120,13 +123,10 @@
 
 (let (many echo-a1) (ReadLine A1 lib-echo))
 (let (many banner-a2) (GetArgs A2 banner))
-(let (erased B) (erased e) (erased b) (erased qe) (erased qb) (lift2 A1 A2 echo-a1 banner-a2))
-(def-fns B $ many then-echo : -> (many (IO B) next)
-  (coerce echo-a1 qe))
-
+(let (erased B) (erased e) (erased b) (erased qe) (erased qb) (erased th-b) (lift2 A1 A2 echo-a1 banner-a2))
 (def-fns B $ many user-start : (many (Maybe (String)) line) -> (many (IO B) next)
   (match many line _
     ((None a) (coerce banner-a2 qb))
-    ((Some a s) (WriteOut B "starting\n" then-echo))))
+    ((Some a s) (WriteOut B "starting\n" (thunk (predates th-b) _ _ (coerce echo-a1 qe))))))
 
 (ReadLine B user-start)

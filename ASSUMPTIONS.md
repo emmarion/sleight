@@ -2798,8 +2798,16 @@ rest below is the session's.
      being particular to `IO`; its body is the captured value alone, so
      the closure it returns needs no `Predates` proof of its own, and
      `def-fns` accepts the erased level parameter as the level to define
-     at, which the session checked before relying on it. Its one limit
-     is that reaching it at all needs `prove-predates thunk-lvl L`,
-     which wants a level minted by `def-lvl`: at a level opened from an
-     existential, as `tests/io_lift.sl` has, the continuation must be a
-     named nullary function instead, which always works.
+     at, which the session checked before relying on it.
+
+     Reaching `thunk` at a level `L` needs `Predates thunk-lvl L`, which
+     a caller holding `L` only as an existential cannot mint for itself,
+     `prove-predates` wanting a level minted by `def-lvl` with the other
+     in scope (section 8). That is section 31's factory rule rather than
+     a limit on `thunk`: the relation is established where the level is
+     minted, so a function that mints a level and hands it back returns
+     the relation with it, as `lift2` in `tests/io_lift.sl` now returns
+     `Predates thunk-lvl B` beside `B` and its coercions. A session
+     first recorded this as `thunk` being unreachable at such a level,
+     with a named nullary function in its place; the owner doubted it,
+     and the doubt was right.
