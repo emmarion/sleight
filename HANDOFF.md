@@ -51,21 +51,28 @@ rediscovered:
   set aside: they jump to arbitrary Consts, so the walk would stop being
   structural.
 
+The stamp sort is a generic merge sort, at the owner's request, and is
+the first higher-order function in `self/`: `base.sl`'s `sort-factory`
+takes the comparison as a parameter in the shape of `tests/map.sl`'s
+factory. `merge` recurses lexicographically on the two lists -- the
+first shrinks, or it is passed on unchanged and the second shrinks --
+which is DESIGN 7's order directly, so it needs no fuel; the split is a
+Braun-shaped pile built by insertion, so that recursion is structural
+too. Applying it to a type carrying an erased index took two things the
+session got wrong first: the index has to be closed over rather than
+taken as a parameter, a first-class `Fn` having to match arity exactly,
+and the comparison's level has to be minted at the top level rather than
+left to `_` inside the body, or the factory cannot relate it. `emit.sl`
+mints `REF-CMP` and builds the sort there; `ref-le` is defined at that
+level inside `emit-program`, closing over the history.
+
 Open, none of it decided:
 
-1. The stamp sort is an insertion sort, quadratic in the blocks emitted
-   (4372 when `slc` compiles itself, 2668 for `mini_recursion`). Whether
-   the traced order is near-sorted, which would keep it cheap, was not
-   measured. An MSB-first trie over the bijective spelling would sort in
-   one structural pass, in-order traversal being sorted because a shorter
-   bijective spelling is always the smaller number; a balanced tree and a
-   merge sort were the other two the session weighed, the latter needing
-   a measure `merge` does not have.
-2. The trace itself descends by value depth rather than being tail
+1. The trace itself descends by value depth rather than being tail
    recursive. The owner asked for tail recursion where a reasonable
    measure exists; the session did not find one that is both erased and
    proof-free, the seen set bounding the walk rather than any structure.
-3. The `-weaken` wrappers in `heap.sl` are marked TEMPORARY. The owner
+2. The `-weaken` wrappers in `heap.sl` are marked TEMPORARY. The owner
    asked that widening be an erased proof and a `coerce` at the call
    site, a call to a `many` wrapper extracting to a real call where the
    inline `coerce` extracts to nothing; that pass is not done, and the

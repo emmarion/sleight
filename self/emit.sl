@@ -968,21 +968,11 @@
     (else (rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
 
 ; The traced set is written in stamp order, which orders every dependency: a block's own references
-; and the Consts its code names were all allocated before it.
-(def-fns _ $ many order-insert : (erased (Hist Block) hs) (many (Ref Block hs) x) (many (Nat) xp)
-    (subterm many (List $ Ref Block hs) xs) -> (many (List $ Ref Block hs) r)
-  (match many xs _
-    ((Nil t) (Cons _ x $ Nil _))
-    ((Cons t y rest)
-      (match many (nat-lt (ref-pos Block _ y) xp) _
-        ((BTrue) (Cons _ y $ order-insert _ x xp rest))
-        ((BFalse) (Cons _ x xs))))))
+; and the Consts its code names were all allocated before it. The comparison's level is minted here
+; so the factory can be built here, the comparison itself closing over the history in emit-program.
+(def-lvl REF-CMP)
 
-(def-fns _ $ many order-sort : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) xs) ->
-    (many (List $ Ref Block hs) r)
-  (match many xs _
-    ((Nil t) (Nil _))
-    ((Cons t x rest) (order-insert _ x (ref-pos Block _ x) $ order-sort _ rest))))
+(let (erased REF-SORT-L) (many ref-sort) (sort-factory REF-CMP))
 
 (def-fns _ $ many emit-blocks : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) order)
     (many (Env) env) (many (Decls) d) (many (Rope) acc) -> (many (Rope) r)
@@ -1218,5 +1208,7 @@
   (let (many d0) $ collect-prelude (Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) ts)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
   (let (many seen1) (many acc1) (many d1) $ trace-entries _ en (MEmpty _) (Nil _) env d0)
   (let (many seen2) (many acc2) (many d2) $ trace-finals _ fi seen1 acc1 env d1)
-  (let (many order) $ order-sort _ acc2)
+  (def-fns REF-CMP $ many ref-le : (many (Ref Block hs) x) (many (Ref Block hs) y) -> (many (Bool) b)
+    (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
+  (let (many order) $ ref-sort (Ref Block hs) ref-le acc2)
   (rcat5 runtime-header (decls-rope d2) (emit-blocks _ order env d2 (REmpty)) (driver-rope d2 env) $ emit-finals _ (list-rev _ fi) env d2))

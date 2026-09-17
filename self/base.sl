@@ -488,3 +488,54 @@
     ((Nil a) (REmpty))
     ((Cons a r rest) (RCat r $ rlist rest))))
 
+; ---- A generic merge sort, in the shape of tests/map.sl's factory: the comparison is a parameter,
+; so the sort sits above its level and the factory mints the level relating them. The split is a
+; Braun-shaped pile built by insertion, so every recursion here is structural.
+
+(def-adts $ Pile : (Type A) -> Type
+  enum
+  (many PLeaf : (erased Type A) -> (Pile A))
+  (many PNode : (erased Type A) (many A x) (many (Pile A) l) (many (Pile A) r) -> (Pile A)))
+
+(def-fns _ $ many pile-add : (erased Type A) (many A x) (subterm many (Pile A) t) -> (many (Pile A) r)
+  (match many t _
+    ((PLeaf a) (PNode A x (PLeaf A) (PLeaf A)))
+    ((PNode a y l rr) (PNode A x (pile-add A y rr) l))))
+
+(def-fns _ $ many pile-of : (erased Type A) (subterm many (List A) xs) (many (Pile A) t) -> (many (Pile A) r)
+  (match many xs _
+    ((Nil a) t)
+    ((Cons a x rest) (tail (pile-of A rest (pile-add A x t))))))
+
+(def-fns _ $ many sort-factory : (erased (Level) M) ->
+    (erased (Level) L)
+    (many (Fn L (erased Type A)
+              (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
+              (many (List A) xs) ->
+              (many (List A) ys))
+          sorted)
+  ; lexicographic: the first list shrinks, or it passes on unchanged and the second shrinks
+  (def-fns _ $ many merge : (erased Type A)
+      (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
+      (subterm many (List A) xs) (subterm many (List A) ys) -> (many (List A) zs)
+    (match many xs (((List A) r))
+      ((Nil a) ys)
+      ((Cons a x xr)
+        (match many ys (((List A) r))
+          ((Nil b) xs)
+          ((Cons b y yr)
+            (match many (leq x y) (((List A) r))
+              ((BTrue) (Cons A x $ merge A leq xr ys))
+              ((BFalse) (Cons A y $ merge A leq xs yr))))))))
+  (def-fns _ $ many pile-sort : (erased Type A)
+      (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
+      (subterm many (Pile A) t) -> (many (List A) r)
+    (match many t _
+      ((PLeaf a) (Nil A))
+      ((PNode a x l rr)
+        (merge A leq (Cons A x $ Nil A) (merge A leq (pile-sort A leq l) (pile-sort A leq rr))))))
+  (def-fns _ $ many sort : (erased Type A)
+      (many (Fn M (many A x) (many A y) -> (many (Bool) b)) leq)
+      (many (List A) xs) -> (many (List A) ys)
+    (pile-sort A leq (pile-of A xs (PLeaf A))))
+  (values (level-of sort) sort))
