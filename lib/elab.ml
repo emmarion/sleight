@@ -238,6 +238,13 @@ let nat_z env loc v =
   in
   go Z.zero v
 
+(* The byte a Char's code and a String's elements are, by the Lt proof MkU8 carries (section 41). A Nat outside
+   that range has no literal spelling, so the walk falls back rather than spelling it back unreadably; it also
+   keeps Z.to_int, whose Z.Overflow the fallback below does not catch, off an unbounded value. *)
+let nat_byte env loc v =
+  let n = nat_z env loc v in
+  if Z.leq Z.zero n && Z.lt n (Z.of_int 256) then Z.to_int n else raise Not_found
+
 (* An extern String is its slice; the model's is a cons list of characters. *)
 let str_host env loc v =
   let c = ctor_of env loc (Option.get (prelude_id env "SNil")) in
@@ -245,7 +252,7 @@ let str_host env loc v =
   let rec go v =
     match v with
     | V.VExt (_, V.Slice (s, o, l)) -> Buffer.add_string buf (String.sub s o l)
-    | v -> ( match V.destruct c v with 0, _ -> () | _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (Z.to_int (nat_z env loc ch))); go rest | _ -> raise Not_found)
+    | v -> ( match V.destruct c v with 0, _ -> () | _, [ ch; rest ] -> Buffer.add_char buf (Char.chr (nat_byte env loc ch)); go rest | _ -> raise Not_found)
   in
   go v;
   Buffer.contents buf
@@ -271,7 +278,7 @@ let rec show_value env loc ty v =
   try
     let ty = canon env ty in
     if nullary env "Nat" ty then Literal.spell (Literal.Numeral (nat_z env loc v))
-    else if nullary env "Char" ty then Literal.spell (Literal.Char (Z.to_int (nat_z env loc v)))
+    else if nullary env "Char" ty then Literal.spell (Literal.Char (nat_byte env loc v))
     else if nullary env "String" ty then Literal.spell (Literal.Str (str_host env loc v))
     else
       match v with

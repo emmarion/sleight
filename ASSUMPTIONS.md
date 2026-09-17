@@ -3050,7 +3050,12 @@ to look for a guard, are the owner's.
      program's own `Zero` or `SNil` (`tests/gmap.sl`) is untouched. A
      node whose type the walk cannot resolve falls back to `Value.show`,
      which leaves item 34's untagged rendering and item 66's limits as
-     they were.
+     they were. A `Char`'s code and a `String`'s elements fall back the
+     same way when the `Nat` is not a byte, since `Literal.spell` has no
+     reading for one: the session could not construct such a value, the
+     `Lt` proof `MkU8` carries bounding both (section 41), so the guard
+     is read as covering a case the checker already rules out rather
+     than one the printer meets.
 
      Where the value is extern-backed the spelling reads the payload,
      `Z.to_string` or the slice's bytes, rather than walking the view;
@@ -3079,3 +3084,8 @@ to look for a guard, are the owner's.
      `tests/literal_print.sl` pins the two spellings the other tests
      only touch: every character form, and the four escapes. Each
      spelling it prints, fed back as a program, prints as itself.
+     `tests/literal_diag.sl` pins the same two through the diagnostic
+     above, which `tests/comptime_bad.sl` reaches for a `Nat` alone;
+     they are the only tests that reach `slc`'s own compile-time
+     spelling of a `Char` or a `String`, the emitted printer covering
+     the rest.
