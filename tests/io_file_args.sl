@@ -19,23 +19,25 @@
 (let (many code2) (MkU8 2 zp2))
 (let (erased str-p0) (prove-predates str-lvl P0))
 (let (erased p0-p) (prove-predates P0 P))
+(let (erased thunk-p) (prove-predates thunk-lvl P))
+(let (erased thunk-p0) (prove-predates thunk-lvl P0))
 
 (def-fns P0 $ many list-args : (subterm many (List (String)) args) -> (many (IO P) next)
   (match many args _
     ((Nil a) (Exit P code0))
-    ((Cons a x rest) (WriteErr P (str-append (predates str-p0) x "\n") (list-args (subterm _) rest)))))
+    ((Cons a x rest) (WriteErr P (str-append (predates str-p0) x "\n") (thunk (predates thunk-p0) _ _ (list-args (subterm _) rest))))))
 
 (def-fns P $ many all-args : (many (List (String)) args) -> (many (IO P) next)
   (list-args (predates p0-p) args))
 
 (def-fns P $ many after-read : (many (Result (String)) r) -> (many (IO P) next)
   (match many r _
-    ((Ok a s) (WriteOut P s (GetArgs P all-args)))
-    ((Fail a m) (WriteErr P m (Exit P code1)))))
+    ((Ok a s) (WriteOut P s (thunk (predates thunk-p) _ _ (GetArgs P all-args))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-fns P $ many after-write : (many (Result (Unit)) r) -> (many (IO P) next)
   (match many r _
     ((Ok a u) (ReadFile P "io-test.txt" after-read))
-    ((Fail a m) (WriteErr P m (Exit P code2)))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code2))))))
 
 (WriteFile P "io-test.txt" "file contents\n" after-write)

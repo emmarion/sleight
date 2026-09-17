@@ -4,8 +4,9 @@ let report path f = try Some (f ()) with e -> (match Program.explain path e with
 
 let world args =
   let flush_to oc s = output_string oc s; flush oc in
-  { Program.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
-    out = flush_to stdout; err = flush_to stderr; args; exit; print = print_endline }
+  { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
+    out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
+    exit; print = print_endline }
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in

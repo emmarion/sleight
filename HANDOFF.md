@@ -67,7 +67,7 @@ recursed once per address the compile-time store holds, and the store is
 as long as the compile-time run is (157418, 162987 and 665800 blocks for
 the three tests, against 44797 for `mini_elab`, which passed). Both take
 an accumulator now and are marked `tail`. `lib/extract.ml`'s sharing
-table had a related non-tail scan, also fixed. ASSUMPTIONS 143 records
+table had a related non-tail scan, also fixed. ASSUMPTIONS 148 records
 the measurements and TOOLING-WISHLIST 15-16 what would have found it
 sooner. `self/bootstrap.sh` is green at the default stack limit.
 

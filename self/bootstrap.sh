@@ -14,8 +14,8 @@ ROOT=$(pwd)
 if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
 SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/main.sl"
 REF=_build/default/bin/main.exe
-OC="ocamlfind ocamlopt -package zarith -linkpkg"
-OCB="ocamlfind ocamlc -package zarith -linkpkg"
+OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
+OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 

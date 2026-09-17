@@ -110,6 +110,13 @@ that the test does not make is a mistake in this file.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
+- `tests/io_step.sl` — iterating without recursing. Every `IO` request but
+  `Exit` carries a continuation, so a loop hands its next request to the
+  driver instead of calling itself: `Step` performs nothing and loops
+  silently, and `WriteOut` loops on output alone. The continuation is a
+  closure at the IO level, which comes after the looping function's own,
+  so no function in the program can call it and the unbounded iteration
+  stays the driver's.
 - `tests/numeral_distinct.sl`, `tests/numeral_succ.sl`,
   `tests/numeral_lemmas.sl` — reasoning about literals through the prelude's
   `Numeral` relation rather than about their opaque `Nat`s. `distinct`

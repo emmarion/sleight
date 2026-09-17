@@ -19,7 +19,7 @@ dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
-ocamlfind ocamlopt -package zarith -linkpkg echo.ml -o echo && ./echo
+ocamlfind ocamlopt -package zarith,unix -linkpkg echo.ml -o echo && ./echo
 ```
 
 Files given on one command line share a scope, in order; with no file
@@ -63,10 +63,11 @@ own sources and on the sample programs under `bench/`, and
 without, and extracts, compiles and runs every test that runs, both
 ways, against the same directives. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is a line the test must print, `; stdin: text` a
-line of its input, `; args: a b` its arguments, `; stderr: text` a line
-it must write to stderr, `; exit: n` the code an `IO` program must exit
-with, and `; error: text` means it must fail with a message mentioning
-that text.
+line of its input, `; args: a b` its arguments, `; env: NAME=value` a
+variable of the environment it runs with, which holds those alone,
+`; stderr: text` a line it must write to stderr, `; exit: n` the code an
+`IO` program must exit with, and `; error: text` means it must fail with
+a message mentioning that text.
 
 ## How it runs a program
 

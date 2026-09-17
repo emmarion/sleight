@@ -326,15 +326,18 @@ let driver cx =
       ("u8", make "MkU8"); ("un_u8", field "MkU8"); ("char", make "MkChar"); ("un_char", field "MkChar");
       ("snil", make "SNil"); ("scons", make "SCons"); ("un_str", option "SCons");
       ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
-      ("cons", make "Cons"); ("nil", make "Nil");
+      ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
+      ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
+      ("changed", make "Changed"); ("unchanged", make "Unchanged");
       ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
-      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)") ]
+      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)");
+      ("apply0", "(fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())") ]
   in
   let host = match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "" in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ {|let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
-let world = { Driver_core.input = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; exit; print = print_endline }
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = program_args; env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline }
 let run_io = driver.run_io world
 let run_main = driver.run_main world
 |}

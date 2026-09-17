@@ -444,7 +444,8 @@ shape below is the session's.
 56. **`IO` is a source enum in the prelude, indexed by a level**:
     `(IO L)`. Each constructor carries what happens next, either the
     next `(IO L)` value outright (`WriteOut`, `WriteErr`, whose effects
-    have no answer) or a continuation `(Fn L (many answer) -> (many
+    have no answer -- superseded by item 146, which makes these carry a
+    nullary function too) or a continuation `(Fn L (many answer) -> (many
     (IO L) next))` the driver applies to the request's answer
     (`ReadLine` with `(Maybe (String))`, `ReadFile` with `(Result
     (String))`, `WriteFile` with `(Result (Unit))`, `GetArgs` with
@@ -2671,7 +2672,149 @@ session's reading, with the tests as the evidence.
      it is not checked there. That `let-match` is a match for this
      purpose is the owner's.
 
-143. **The emitters walk the compile-time store in tail position.**
+## More IO requests (section 16)
+
+Asked for by the owner in chat, as a batch to prepare and then add:
+environment variables in Java's two shapes, appending to a file,
+reading what is left of stdin, listing a directory in Java's shape,
+the working directory, and one query for what a path holds. The owner
+then asked for `MkDir` and the two deletes as well, after the session
+reported that without them a test had no way to build a directory to
+list. The owner chose the general `Pair`, sorted listings, the `world`
+for the environment and the working directory, single-level `MkDir`,
+deletion that reports `Unchanged` rather than failing on an absent
+path, and the `unix` dependency; the shapes below are the session's.
+
+143. **Ten more requests join `IO`**, each in item 56's shape: `GetEnv`
+     answering `(Maybe (String))` and `GetEnvs` `(List (Pair (String)
+     (String)))`, `AppendFile` and `ReadRemaining`, `ListDir` answering
+     `(Result (List (String)))`, `GetCwd`, `Stat` answering `(Result
+     (EntryKind))`, and `MkDir`, `DeleteFile` and `DeleteDir` answering
+     `(Result (Change))`. Three prelude types come with them. `Pair` is
+     general rather than an environment-specific record, the owner's
+     choice over a two-field `EnvVar`. `EntryKind` (`IsFile`, `IsDir`,
+     `IsOther`, `Missing`) makes absence an ordinary answer and keeps
+     `Fail` for a path the driver could not read at all, on the reading
+     that a program checking whether something is there is not handling
+     an error. `Change` (`Changed`, `Unchanged`) is shared by the three
+     requests that ask for a state rather than an action, so that one
+     answer says both that the request was met and whether this call is
+     what met it; the session's argument for it, which the owner took,
+     is that `mkdir` is atomic, so collapsing the two into a plain
+     success would throw away the only race-free way to learn which
+     caller created a directory, while failing on an existing one (as
+     POSIX and Java 6 both do) would make the ordinary case awkward.
+     `ListDir` sorts and omits `.` and `..`; `Sys.readdir` already
+     omits them, and sorting is so that a test may compare its output
+     byte for byte, which the harness does between the interpreter and
+     the compiled program. `AppendFile` creates the file if it is
+     absent and, like `WriteFile`, takes no mode, the language having
+     no permissions model.
+
+144. **`GetEnv`, `GetEnvs` and `GetCwd` go through the `world`** as
+     `GetArgs` does, the owner's choice, so that `test/runtest.ml` can
+     supply them from `; env:` directives and a test can pin what it
+     prints; the file system requests stay direct, as `ReadFile` and
+     `WriteFile` already were. The harness runs an extracted program
+     under `env -i` with the same variables, so the interpreter's world
+     and the compiled program's agree on what a program reads; the
+     working directory is the real one in both, which is why
+     `tests/io_stat.sl` asks `Stat` what `GetCwd` named rather than
+     printing it. `ReadRemaining` reuses the world's stdin field, which
+     is renamed `read_rest`: for `bin/main.ml` and for an extracted
+     program the field was already `In_channel.input_all stdin`, which
+     is what the channel has left, while the test world returned the
+     whole input however much `read_line` had taken, so the test world
+     now drains its pending lines instead. The session checked the two
+     against each other across trailing newlines and blank lines before
+     relying on it.
+
+145. **The driver uses `unix` rather than `Sys` alone.** The owner
+     first chose the stdlib, to avoid the dependency, at the price of
+     `IsOther`, since `Sys.is_regular_file` arrived only in OCaml 5.1.
+     Implementing it turned up a second price the choice had not been
+     weighed against: `Sys.file_exists` answers false for a path whose
+     parent denies access exactly as for an absent one, so `Stat` would
+     have reported a denied path as `Missing` and its `Result` would
+     have had no reachable `Fail` at all. On that the owner took the
+     dependency. The classification now reads the errno: `ENOENT` is
+     `Missing` for `Stat` and `Unchanged` for the deletes, `EEXIST` on
+     a directory is `Unchanged` for `MkDir`, and anything else is a
+     `Fail` carrying the message. `MkDir` is the one that still asks a
+     second question, whether what is in the way is a directory, so its
+     `Unchanged` is the one answer here that a concurrent change could
+     in principle turn into the wrong report; `Changed` never can, being
+     the syscall's own success. Extracted programs, the bootstrap and
+     the benchmark compile with `-package zarith,unix`.
+
+## Every request but Exit carries a function (section 16)
+
+Asked for by the owner in chat: every `IO` entry except `Exit` should be
+a function, possibly nullary, and an entry that does nothing should join
+them, named `Step` unless a better name turned up. The owner proposed
+the in-language helper that thunks a value rather than an anonymous
+function form, and accepted the extra verbosity at the call sites; the
+rest below is the session's.
+
+146. **`WriteOut` and `WriteErr` carry `(Fn L -> (many (IO L) next))`**
+     rather than the next `(IO L)` outright, superseding that part of
+     item 56, and `Step` joins them with the same field and no effect of
+     its own. Every constructor but `Exit` then reads as one signature —
+     arguments, an answer type, and a continuation from the answer to
+     the next request — with `WriteOut`'s answer type empty rather than
+     absent. The driver gains `apply0` beside `apply`; a nullary SL
+     function extracts to an OCaml `unit -> _` (`lib/extract.ml`'s
+     `params`), so both back-ends apply one directly.
+
+     What the change buys beyond uniformity is that a loop no longer
+     needs a request that answers. Before, `(WriteOut L t next)` wanted
+     `next` already built, so a self-referential one would have had to
+     call itself: a same-level call with no decrease, which the checker
+     refuses. Passing a function instead defers the next request to the
+     driver, so an output-only loop is writable, as is a silent one
+     through `Step` (`tests/io_step.sl`). The termination discipline
+     does not move: the continuation is a closure at the IO level, which
+     comes after the looping function's own level, so no SL function may
+     call it, and the unbounded iteration is still the driver's (item
+     56). One consequence is worth naming: a program may now diverge
+     with nothing observable, where before it had to read or write to
+     keep going. That is not new unsoundness, the driver's loop having
+     been unbounded from the start, but it is a new observable
+     behaviour.
+
+     The uniformity is less than it looks for a walk over `IO` written
+     in SL. Nothing here abstracts over a telescope, so a nullary
+     continuation and a unary one are different types, and
+     `tests/io_lift.sl` needs `lift-fn0` beside `lift-fn`: the walk goes
+     from three shapes to two, not to one. What does collapse is the
+     driver's side and the reading of the type.
+
+147. **`thunk` is a prelude function rather than a form**: it takes a
+     value and returns a nullary function holding it, at any type and
+     any level, so a call site writes `(thunk (predates p) _ _ e)` where
+     a bare `e` used to sit. The owner preferred this to an anonymous
+     function expression, which would have been the larger language
+     change. It is general rather than IO-specific, nothing about it
+     being particular to `IO`; its body is the captured value alone, so
+     the closure it returns needs no `Predates` proof of its own, and
+     `def-fns` accepts the erased level parameter as the level to define
+     at, which the session checked before relying on it.
+
+     Reaching `thunk` at a level `L` needs `Predates thunk-lvl L`, which
+     a caller holding `L` only as an existential cannot mint for itself,
+     `prove-predates` wanting a level minted by `def-lvl` with the other
+     in scope (section 8). That is section 31's factory rule rather than
+     a limit on `thunk`: the relation is established where the level is
+     minted, so a function that mints a level and hands it back returns
+     the relation with it, as `lift2` in `tests/io_lift.sl` now returns
+     `Predates thunk-lvl B` beside `B` and its coercions. A session
+     first recorded this as `thunk` being unreachable at such a level,
+     with a named nullary function in its place; the owner doubted it,
+     and the doubt was right.
+
+## The emitters' walks over the store (sections 16, 34)
+
+148. **The emitters walk the compile-time store in tail position.**
      `slc` refused three of the `mini/` end-to-end tests
      (`mini_dependent`, `mini_recursion`, `mini_axioms`) with an OCaml
      stack overflow under the default 8MB limit, which HANDOFF and

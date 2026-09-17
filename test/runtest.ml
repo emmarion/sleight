@@ -2,6 +2,7 @@
    "; needs: a b" runs tests/a.sl and tests/b.sl first in the same scope;
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
+   "; env: NAME=value" a variable in its environment, which holds those alone;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with. *)
 open Speciallang
 
@@ -18,7 +19,9 @@ let ocamlfind = lazy (Sys.command "ocamlfind ocamlopt -version > /dev/null 2>&1"
 let report out err code expect stderr exit =
   Printf.sprintf "printed:\n%sstderr:\n%sexit %d\nexpected:\n%sstderr:\n%sexit %d" out err code expect stderr exit
 
-let extracted name externs templates env input args expect stderr exit =
+let split_env s = Option.map (fun i -> (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))) (String.index_opt s '=')
+
+let extracted name externs templates env input args envs expect stderr exit =
   if not (Lazy.force ocamlfind) then Some "ocamlfind is not available to compile the extracted program"
   else
     let base = Filename.concat "extract" (name ^ if not externs then "_src" else if templates then "_ffi" else "_ffi_view") in
@@ -33,13 +36,15 @@ let extracted name externs templates env input args expect stderr exit =
     match outcome with
     | Error m -> Some ("extraction failed: " ^ m)
     | Ok () ->
-        if Sys.command (Printf.sprintf "ocamlfind ocamlopt -package zarith -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
+        if Sys.command (Printf.sprintf "ocamlfind ocamlopt -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
           Some ("extracted program failed to compile, see " ^ base ^ ".log")
         else (
           write (base ^ ".in") input;
           let code =
             Sys.command
-              (Printf.sprintf "./%s.exe -- %s < %s.in > %s.out 2> %s.err" base (String.concat " " (List.map Filename.quote args)) base base base)
+              (Printf.sprintf "env -i %s ./%s.exe -- %s < %s.in > %s.out 2> %s.err"
+                 (String.concat " " (List.map (fun (n, v) -> Filename.quote (n ^ "=" ^ v)) envs))
+                 base (String.concat " " (List.map Filename.quote args)) base base base)
           in
           let out = read (base ^ ".out") and err = read (base ^ ".err") in
           if out = expect && err = stderr && code = exit then None else Some ("extracted program " ^ report out err code expect stderr exit))
@@ -56,9 +61,12 @@ and run_mode name externs src =
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
   let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in
+  let read_rest () = let rest = String.concat "\n" !lines in lines := []; rest in
   let args = List.concat_map (String.split_on_char ' ') (directive src "args") in
+  let envs = List.filter_map split_env (directive src "env") in
   let world =
-    { Program.input = (fun () -> input); read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
+    { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
+      env = (fun n -> List.assoc_opt n envs); envs = (fun () -> envs); cwd = Sys.getcwd;
       exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
   in
   let consume = Program.consume world in
@@ -83,8 +91,8 @@ and run_mode name externs src =
   match outcome with
   | Ok (env, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
-      (match extracted name externs true env input args expect stderr exit with
-       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false env input args expect stderr exit)
+      (match extracted name externs true env input args envs expect stderr exit with
+       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false env input args envs expect stderr exit)
        | r -> r)
   | Ok (_, out) ->
       Some

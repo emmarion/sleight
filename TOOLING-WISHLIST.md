@@ -99,7 +99,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     heap-allocated continuation for it; both were wrong. The overflow
     was in the emitter, in two walks over the compile-time store that
     recursed once per allocated block, and an accumulator in each was
-    the whole fix (ASSUMPTIONS 143). Finding that took a debugger,
+    the whole fix (ASSUMPTIONS 148). Finding that took a debugger,
     because `Fatal error: exception Stack overflow` names neither the
     function nor the depth, and the wrong guess stood in two files for
     a session. A runtime that named the deepest frame, or a compiler

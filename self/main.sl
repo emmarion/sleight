@@ -7,6 +7,10 @@
 (def-lvl slc-lvl)
 (def-lvl io-lvl)
 
+(let (erased th-util) (prove-predates thunk-lvl util-lvl))
+(let (erased th-compile) (prove-predates thunk-lvl compile-lvl))
+(let (erased th-io) (prove-predates thunk-lvl io-lvl))
+
 (let (many zero-below-modulus) $ lt-dec 0 u8-modulus)
 (comptime-match zero-below-modulus (Yes ok-a ok-b ok-lt))
 (let (many exit-ok) $ MkU8 0 ok-lt)
@@ -17,7 +21,8 @@
 (def-fns util-lvl $ many write-errors : (subterm many (List $ String) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
   (match many es _
     ((Nil a) next)
-    ((Cons a e rest) (WriteErr _ e $ WriteErr _ "\n" $ write-errors rest next))))
+    ((Cons a e rest)
+      (WriteErr _ e $ thunk (predates th-util) _ _ $ WriteErr _ "\n" $ thunk (predates th-util) _ _ $ write-errors rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
@@ -41,7 +46,7 @@
     ((Cons a e rest) (write-errors (list-rev _ $ env-errors env) $ Exit _ exit-fail))
     ((Nil a)
       (let (many out) (erased flat) $ flatten $ emit-program templates env)
-      (WriteOut _ out $ Exit _ exit-ok))))
+      (WriteOut _ out $ thunk (predates th-compile) _ _ $ Exit _ exit-ok))))
 
 (def-fns slc-lvl $ many read-files : (many (Bool) templates) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
   (match many paths _
@@ -49,13 +54,17 @@
     ((Cons a path rest)
       (def-fns io-lvl $ many after-read : (many (Result $ String) r) -> (many (IO io-lvl) next)
         (match many r _
-          ((Fail b m) (WriteErr _ "slc: " $ WriteErr _ m $ WriteErr _ "\n" $ Exit _ exit-fail))
+          ((Fail b m)
+            (WriteErr _ "slc: " $ thunk (predates th-io) _ _ $ WriteErr _ m $ thunk (predates th-io) _ _
+              $ WriteErr _ "\n" $ thunk (predates th-io) _ _ $ Exit _ exit-fail))
           ((Ok b src) (read-files templates rest $ Cons _ (MkPair _ _ path src) acc))))
       (ReadFile _ path after-read))))
 
 (def-fns io-lvl $ many start : (many (List $ String) args) -> (many (IO io-lvl) io)
   (match many args _
-    ((Nil a) (WriteErr _ "usage: slc -- [--no-templates] prelude.sl file.sl ... > out.ml\n" $ Exit _ exit-fail))
+    ((Nil a)
+      (WriteErr _ "usage: slc -- [--no-templates] prelude.sl file.sl ... > out.ml\n"
+        $ thunk (predates th-io) _ _ $ Exit _ exit-fail))
     ((Cons a p rest)
       (match many (str-eq p "--no-templates") _
         ((BTrue) (read-files (BFalse) rest $ Nil _))
