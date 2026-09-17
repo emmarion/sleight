@@ -18,11 +18,11 @@
 (comptime-match one-below-modulus (Yes fail-a fail-b fail-lt))
 (let (many exit-fail) $ MkU8 1 fail-lt)
 
-(def-fns util-lvl $ many write-errors : (subterm many (List $ String) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
+(def-fns util-lvl $ many write-lines : (subterm many (List $ String) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)
   (match many es _
     ((Nil a) next)
     ((Cons a e rest)
-      (WriteErr _ e $ thunk (predates th-util) _ _ $ WriteErr _ "\n" $ thunk (predates th-util) _ _ $ write-errors rest next))))
+      (WriteErr _ e $ thunk (predates th-util) _ _ $ WriteErr _ "\n" $ thunk (predates th-util) _ _ $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
@@ -42,11 +42,14 @@
 
 (def-fns compile-lvl $ many compile : (many (Bool) templates) (many (List $ Pair (String) $ String) srcs) -> (many (IO io-lvl) io)
   (let (many env) $ run-files srcs (make-builtins) $ BTrue)
-  (match many (env-errors env) _
-    ((Cons a e rest) (write-errors (list-rev _ $ env-errors env) $ Exit _ exit-fail))
-    ((Nil a)
-      (let (many out) (erased flat) $ flatten $ emit-program templates env)
-      (WriteOut _ out $ thunk (predates th-compile) _ _ $ Exit _ exit-ok))))
+  ; A warning stands whether or not the program is refused, so it is written ahead of either outcome, in the
+  ; order elaboration minted it, as the reference writes one where it meets it.
+  (write-lines (list-rev _ $ env-warnings env)
+    (match many (env-errors env) (((IO io-lvl) io))
+      ((Cons a e rest) (write-lines (list-rev _ $ env-errors env) $ Exit _ exit-fail))
+      ((Nil a)
+        (let (many out) (erased flat) $ flatten $ emit-program templates env)
+        (WriteOut _ out $ thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))
 
 (def-fns slc-lvl $ many read-files : (many (Bool) templates) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (many (IO io-lvl) io)
   (match many paths _

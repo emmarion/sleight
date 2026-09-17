@@ -1,4 +1,5 @@
 ; error: has no Newtype open
+; warns: warning (line 9): phantom constructor Ghost has a many field
 ; A phantom constructor with a many field is not the newtype's wrapper, so no Newtype names it (section 38): no non-erased
 ; value is headed by it, and wrapping through it would let coerce produce one, whose match would reach absurd code.
 

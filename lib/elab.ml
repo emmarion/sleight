@@ -8,6 +8,12 @@ type entry = Term.entry = { name : string option; subterm : bool; mult : mult; s
 type res = { term : term; ty : term; erasure : mult }
 
 let type_term = Prelude.type_term
+
+(* Elaboration's third output channel, beside a program's own stdout and stderr and the message a refusal
+   carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
+   what lets the runner capture one, stderr being the process's own here rather than the world's. *)
+let warn = ref prerr_string
+
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
 let pos_of expect = if List.for_all (( = ) Erased) expect then Erased else Many
 let atom = function Atom (_, n) -> Some n | List _ -> None
@@ -1222,7 +1228,7 @@ and elab_def_adts env adts =
           let mult = mult_or env cl m and name = atom_or cl n "a constructor name" in
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
-          if mult = Erased && List.exists (fun e -> e.mult = Many) tele then Printf.eprintf "warning (line %d): phantom constructor %s has a many field\n" cl name;
+          if mult = Erased && List.exists (fun e -> e.mult = Many) tele then !warn (Printf.sprintf "warning (line %d): phantom constructor %s has a many field\n" cl name);
           let c, env = bind env (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"

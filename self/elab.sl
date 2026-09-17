@@ -3602,7 +3602,7 @@
                     ((Some c t) (match many (nat-cmp t tid) (((Env) e0)) ((CEq eq-t eq-r eq-x) env2) (else (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
                 (let (many (Env) env2c)
                   (match many (and (not $ mult-is-many mult) $ not $ nat-is-zero $ many-count tele) _
-                    ((BTrue) (env-warn env2b $ str-cat3 "warning: phantom constructor " name " has a many field"))
+                    ((BTrue) (env-warn env2b $ str-cat3 "warning (line " (nat-str $ env-line env2b) $ str-cat3 "): phantom constructor " name " has a many field"))
                     ((BFalse) env2b)))
                 (let (many env3) $ env-discard env0 env2c)
                 (let (many (Env) env4) (many (Nat) c) $ match many mult _ ((Erased) (bind-erased env3 (Some _ name) mult ty (None _) coercible-id)) ((Many) (bind env3 (Some _ name) mult ty (None _) coercible-id)))

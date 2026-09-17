@@ -4,6 +4,7 @@
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
+   "; warns: text" a line elaborating it must warn with, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run. *)
 open Speciallang
 
@@ -59,7 +60,8 @@ let rec run_test name =
 
 and run_mode name externs src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
-  let printed = Buffer.create 64 and errors = Buffer.create 64 and code = ref 0 in
+  let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and code = ref 0 in
+  Elab.warn := Buffer.add_string warnings;
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
   let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in
@@ -76,6 +78,7 @@ and run_mode name externs src =
     try
       let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
       Buffer.clear printed;
+      Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
       let env = Elab.run_toplevel ~consume env (Reader.parse src) in
       Ok (env, Buffer.contents printed)
@@ -90,7 +93,13 @@ and run_mode name externs src =
   let expect = lines "expect" and stderr = lines "stderr" in
   let exit = match directive src "exit" with [ n ] -> int_of_string n | _ -> 0 in
   let failures = directive src "error" in
+  (* A warning is checked whichever way elaboration went, a refused program warning as readily as one that runs. *)
+  let warned = Buffer.contents warnings in
+  let mismatched_warnings =
+    if warned = lines "warns" then None else Some (Printf.sprintf "warned:\n%sexpected:\n%s" warned (lines "warns"))
+  in
   match outcome with
+  | _ when mismatched_warnings <> None -> mismatched_warnings
   | Ok (env, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
       (match extracted name externs true env input args envs expect stderr exit with

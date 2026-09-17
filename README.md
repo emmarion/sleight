@@ -67,7 +67,9 @@ ways, against the same directives. A test's leading comments say what it needs: 
 `; expect: text` is a line the test must print, `; stdin: text` a
 line of its input, `; args: a b` its arguments, `; env: NAME=value` a
 variable of the environment it runs with, which holds those alone,
-`; stderr: text` a line it must write to stderr, `; exit: n` the code an
+`; stderr: text` a line it must write to stderr, `; warns: text` a line
+elaborating it must warn with, whether or not it is then refused,
+`; exit: n` the code an
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, and `; error: text`
 means it must fail with a message mentioning that text.

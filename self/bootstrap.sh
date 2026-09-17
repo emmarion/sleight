@@ -19,6 +19,14 @@ OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 
+# check_warns <file> <name>: every "; warns:" line must appear in slc's own stderr, where it writes a warning,
+# the reference writing one as it elaborates. Fails the test, and the caller, when one does not.
+check_warns() {
+  directive "$1" warns | while IFS= read -r want; do
+    grep -qF -- "$want" "$B/$2.slc.err" || { echo "FAIL $2: expected a warning mentioning: $want; got: $(head -c 300 "$B/$2.slc.err" | tr '\n' ' ')"; exit 1; }
+  done
+}
+
 # check_test <file> <slc flags or -> <tag or ->: compiles one test with slc and compares it with the reference,
 # printing one line: "ok name", "refused name" or "FAIL name: why".
 check_test() {
@@ -33,7 +41,8 @@ check_test() {
     if "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
       echo "FAIL $name: slc accepted a program the checker refuses"; return
     fi
-    directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done && echo "refused $name"
+    directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
+      check_warns "$t" "$name" && echo "refused $name"
     return
   fi
   args=$(directive "$t" args)
@@ -46,8 +55,12 @@ check_test() {
   if ! $OCB "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
   fi
+  check_warns "$t" "$name" || return
   (cd "$B" && "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
-  if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err" && [ "$code" = "$refcode" ]; then
+  # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
+  # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
+  grep -v '^warning (line ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
+  if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err.run" && [ "$code" = "$refcode" ]; then
     echo "ok $name"
   else
     echo "FAIL $name: output differs (exit $code vs $refcode), see $B/$name.out and $B/$name.ref.out"

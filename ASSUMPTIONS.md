@@ -3089,3 +3089,40 @@ to look for a guard, are the owner's.
      they are the only tests that reach `slc`'s own compile-time
      spelling of a `Char` or a `String`, the emitted printer covering
      the rest.
+
+155. **A warning is an output channel of its own, and is tested as one.**
+     `slc` recorded warnings through `env-warn` and never wrote them:
+     `env-warnings` had no caller, so every warning it minted was
+     dropped. `self/main.sl` now writes them, ahead of either outcome,
+     since a warning stands whether or not the program is then refused,
+     which is the order the reference produces them in; and the message
+     carries the line, as the reference's does, rather than the bare
+     text `slc` built before.
+
+     What hid this is that a warning is neither of the two streams the
+     harnesses compared. It is not a program's stdout or stderr -- the
+     reference writes one while elaborating, through the process's own
+     stderr rather than the world's (`lib/program.ml`), so `; stderr:`
+     never saw it and `dune test` printed it to the console instead --
+     and it is not a refusal, so `; error:` did not either. The one
+     test in the suite that warned, `tests/wrap_phantom_bad.sl`, was
+     an `; error:` test, which is the case where `self/bootstrap.sh`
+     greps for the message and compares nothing, so neither harness had
+     a way to notice a whole channel going missing.
+
+     The directive `; warns:` (name proposed by the session, CLAUDE.md
+     10) now checks it in both. `test/runtest.ml` captures the
+     reference's warnings through `Elab.warn`, a hook whose default is
+     the same stderr write as before, and requires them whichever way
+     elaboration went. `self/bootstrap.sh` greps `slc`'s own stderr,
+     on the refused path as well as the compiled one. It also drops the
+     reference's warning lines before comparing a program's stderr with
+     `slc`'s: the reference elaborates and runs in one process, so a
+     warning of its own lands in the stream the program then writes to,
+     where `slc` wrote it at compile time. That filter reads the prefix
+     `warning (line `, which the session notes is a claim on the
+     message's shape and not something the harness can check.
+
+     `tests/phantom_warn.sl` warns and then compiles and runs, the case
+     the existing test does not reach. Both directives were checked by
+     corrupting them and watching each harness fail.
