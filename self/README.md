@@ -345,17 +345,20 @@ the entry says otherwise, and recorded so it can be revisited.
 - **`nat-cmp` is extern** (ASSUMPTIONS 90, 120, 123), so that the
   compiler's comparisons of characters, digits and tags are constant
   time under the FFI; `Cmp` itself is plain source, built by the FFI
-  through its constructor, and the compile-time interpreter runs the
-  model instead.
+  through its constructor, which since ASSUMPTIONS 151 the compile-time
+  interpreter builds too, finding the constructors on the model's own
+  return type rather than running the model.
 - **The FFI's names are decided once.** An `extern` mark is looked up
   in the FFI's table where it is read and kept as an `Extern` or
   `ExtType` constructor (ASSUMPTIONS 128), the former indexed by its
   arity, so the interpreter's `apply-extern` and `ext-construct` and
   the emitter's runtime names dispatch on an enum rather than compare
   strings, and a model whose `many` parameters do not number the
-  implementation's arity is refused at the mark, as the reference
+  implementation's arity, or whose shape is not the one the
+  implementation's view has, is refused at the mark, as the reference
   does; the arguments still reach an extern as the list the
-  elaborator counted against its model.
+  elaborator counted against its model. `apply-extern` is total
+  (ASSUMPTIONS 151), so a claimed extern always runs.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them),
   the reference's warning for a phantom

@@ -340,6 +340,23 @@
 (def-fns _ $ many ext-type-name : (many (ExtType) t) -> (many (String) s)
   (match many t _ ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String")))
 
+; The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: the many-field
+; arities of the non-phantom constructors in order, every one of them tagged. An extern function that builds
+; a plain type's values records that type's shape the same way; one that builds none records nothing.
+(def-fns _ $ many ext-type-shape : (many (ExtType) t) -> (many (List $ Nat) s)
+  (match many t _
+    ((ExtNat) (Cons _ 0 $ Cons _ 1 $ Nil _))
+    ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
+    ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))))
+
+(def-fns _ $ many ext-result-shape : (erased (Nat) n) (many (Extern n) e) -> (many (Maybe $ List $ Nat) s)
+  (let (many (List $ Nat) cmp) (Cons _ 0 $ Cons _ 0 $ Cons _ 0 $ Nil _))
+  (match many e _
+    ((ExNatCmp) (Some _ cmp)) ((ExStrCmp) (Some _ cmp))
+    ((ExAdd) (None _)) ((ExSub) (None _)) ((ExMul) (None _)) ((ExDiv) (None _)) ((ExDivmod) (None _))
+    ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
+    ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExNatStr) (None _))))
+
 (def-fns _ $ many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r)
   (match many (str-cmp name "Nat") _
     ((CEq eq-t eq-r eq-x) (Some _ $ ExtNat))
@@ -415,10 +432,14 @@
     enum
     (many MkGroup : (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many (List $ Pair (Nat) $ Func gids ctx) fns) (erased (Lockstep (Nat) (Pair (Nat) $ Func gids ctx) gids fns) lk) -> (Group gids ctx)))
   ; [top]: defined by a run-position def-fns; the body binds the parameters over the group over the
-  ; defining scope.
+  ; defining scope. [impl]: the FFI's implementation with the constructors of the plain type it builds,
+  ; read off the model's return type at the extern mark (section 41).
+  (Impl : -> Type
+    enum
+    (many MkImpl : (many (SomeExtern) e) (many (List $ Ctor) cs) -> (Impl)))
   (Func : ((List $ Nat) gids) ((List $ List $ Nat) ctx) -> Type
     enum
-    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ SomeExtern) impl) (many (Bool) top) -> (Func gids ctx)))
+    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
   ; what runs (section 16); a node that has to make values on its own holds them as data. A Const entry is
   ; named by its id and read from the store when the code runs (section 34); a value elaboration embeds is
@@ -508,6 +529,11 @@
 (def-fns _ $ many ctor-shape : (many (Ctor) c) -> (many (List $ Nat) s)
   (match many c _ ((MkCtor n id ix ar tg ext sh) sh)))
 
+(def-fns _ $ many ctor-arities : (subterm many (List $ Ctor) cs) -> (many (List $ Nat) r)
+  (match many cs _
+    ((Nil a) (Nil _))
+    ((Cons a c rest) (Cons _ (ctor-arity c) $ ctor-arities rest))))
+
 (def-fns _ $ many adt-tagged : (many (Adt) a) -> (many (Bool) t)
   (match many a _ ((MkAdt n tg cs ext) tg)))
 
@@ -550,7 +576,7 @@
 (def-fns _ $ many func-id : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Nat) b)
   (match many f _ ((MkFunc g c rets n id ps body impl top) id)))
 
-(def-fns _ $ many func-impl : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Maybe $ SomeExtern) b)
+(def-fns _ $ many func-impl : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Maybe $ Impl) b)
   (match many f _ ((MkFunc g c rets n id ps body impl top) impl)))
 
 (def-fns _ $ many func-top : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Bool) b)

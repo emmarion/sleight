@@ -3,7 +3,8 @@
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
-   "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with. *)
+   "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
+   "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run. *)
 open Speciallang
 
 let dir = "../tests"
@@ -53,6 +54,7 @@ let extracted name externs templates env input args envs expect stderr exit =
 let rec run_test name =
   let src = read (Filename.concat dir (name ^ ".sl")) in
   let modes = [ (true, "with externs"); (false, "without externs") ] in
+  let modes = if directive src "externs" = [ "only" ] then [ List.hd modes ] else modes in
   List.find_map (fun (externs, mode) -> Value.use_externs := externs; Option.map (fun m -> mode ^ ": " ^ m) (run_mode name externs src)) modes
 
 and run_mode name externs src =

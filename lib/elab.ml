@@ -1026,7 +1026,7 @@ and elab_def_fns env l args =
                 let ty = elab_fn_type env (Var lvl) ps rs in
                 let many_params = match ty with Fn (_, ps, _) -> List.length (List.filter (fun e -> e.mult = Many) ps) | _ -> 0 in
                 let impl =
-                  if List.mem Sp.Extern marks then (Ffi.check_arity fl name many_params; Some (Ffi.claim Ffi.fns fl name)) else None
+                  if List.mem Sp.Extern marks then Some (Ffi.claim_fn fl name many_params) else None
                 in
                 (fl, name, mult, List.mem Sp.Absurd marks, impl, ty, body)
             | _ -> error fl "malformed function header")
@@ -1156,7 +1156,7 @@ and elab_def_adts env adts =
     let shapes = shapes env al ctors in
     let adt = mint_adt env name disc shapes in
     Ffi.note name adt;
-    if List.mem Sp.Extern ms then (Ffi.check_shape al name adt; adt.ext <- Some (Ffi.claim Ffi.types al name adt));
+    if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim_type al name adt);
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in

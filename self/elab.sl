@@ -1058,6 +1058,33 @@
 (def-fns _ $ many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info)
   (values env $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env))
 
+; The constructors an extern function builds its result with, read off its model's return type (section 41):
+; the implementation's view and the declaration must agree on the shape, as they must for an extern type.
+(def-fns _ $ many extern-ctors : (many (Env) env) (many (String) name) (many (List $ Entry) rets) (many (List $ Nat) want) -> (many (Env) r) (many (List $ Ctor) cs)
+  (let (many (Maybe $ Nat) head)
+    (match many rets _
+      ((Nil a) (None _))
+      ((Cons a e rest)
+        (let (many ty) (many rule) $ fact-of env $ entry-sg e)
+        (type-head env ty))))
+  (match many head _
+    ((None a) (values (env-error env $ str-cat3 "the extern implementation of " name " builds no declared type") (Nil _)))
+    ((Some a tid)
+      (let (many env2) (many found) $ find-matchable env tid)
+      (let (many (Maybe $ Adt) got)
+        (match many found _
+          ((None b) (None _))
+          ((Some b info) (match many info _ ((MkMatchInfo mid disc cs2 rank) (adt-of env2 mid))))))
+      (match many got _
+        ((None b) (values (env-error env2 $ str-cat3 "the extern implementation of " name $ str-cat3 " needs " (name-of env2 tid) " declared before it") (Nil _)))
+        ((Some b adt)
+          (let (many records) $ adt-ctors adt)
+          (let (many ns) $ ctor-arities records)
+          (let (many (String) how) $ match many (adt-tagged adt) _ ((BTrue) "(") ((BFalse) "the untagged ("))
+          (let (many (String) msg)
+            (str-cat3 "the extern implementation of " name $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))
+          (values (error-unless env2 (and (adt-tagged adt) $ nat-list-eq ns want) msg) records))))))
+
 ; ---- Opening a Matchable or Newtype (section 19, ASSUMPTIONS 139)
 
 ; The entries of [os] whose ids are in [ids], in order.
@@ -1498,7 +1525,7 @@
 (def-adts
   (Header : ((Raw) f) -> Type
     enum
-    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe $ SomeExtern) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
+    (many MkHeader : (erased (Raw) f) (many (String) name) (many (Mult) mult) (many (Bool) absurd) (many (Maybe $ Impl) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
   (Headers : ((List $ Raw) fns) -> Type
     enum
     (many HStop : (erased (List $ Raw) fns) -> (Headers fns))
@@ -3288,8 +3315,19 @@
                                 ((MkSomeExtern n e)
                                   (error-when env2 (and isext $ not $ nat-eq (many-count params) $ ext-arity _ e) $ str-cat3 "the extern implementation of " name $ str-cat3 " takes " (nat-str $ ext-arity _ e) $ str-cat3 " arguments, its model " (nat-str $ many-count params) ""))))))
                         (let (many (Env) env3) $ match many isext _ ((BTrue) (claim-extern env2b name $ is-some _ found)) ((BFalse) env2b))
-                        (let (many (Maybe $ SomeExtern) impl) $ match many isext _ ((BTrue) found) ((BFalse) (None _)))
-                        (let (many env4) (many hs) $ elab-headers sugar rest (env-back env env3) lvl)
+                        (let (many (Maybe $ SomeExtern) se) $ match many isext _ ((BTrue) found) ((BFalse) (None _)))
+                        (let (many (Env) env3b) (many (Maybe $ Impl) impl)
+                          (match many se _
+                            ((None z) (values env3 (None _)))
+                            ((Some z e2)
+                              (match many e2 _
+                                ((MkSomeExtern n e)
+                                  (match many (ext-result-shape _ e) _
+                                    ((None y) (values env3 (Some _ $ MkImpl e2 $ Nil _)))
+                                    ((Some y want)
+                                      (let (many env3a) (many cs) $ extern-ctors env3 name rets want)
+                                      (values env3a (Some _ $ MkImpl e2 cs)))))))))
+                        (let (many env4) (many hs) $ elab-headers sugar rest (env-back env env3b) lvl)
                         (values env4 $ HCons _ _ (MkHeader _ name mult isabs impl params rets body $ within-in body sg (Raw) f wb psg) hs)))))))) (else (values bad $ HStop fns))))))
 
   (many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
@@ -3399,10 +3437,18 @@
                     (let (many found) $ ext-type-of name)
                     (let (many (Env) env2b) $ match many ext _ ((BTrue) (claim-extern env2 name $ is-some _ found)) ((BFalse) env2))
                     (let (many (Maybe $ ExtType) extname) $ match many ext _ ((BTrue) found) ((BFalse) (None _)))
-                    (let (many adt2) $ mint-adt env2b tid disc ss extname)
+                    (let (many (Env) env2c)
+                      (match many extname _
+                        ((None y) env2b)
+                        ((Some y et)
+                          (let (many ns) $ cshape-arities $ non-phantom ss)
+                          (let (many want) $ ext-type-shape et)
+                          (let (many (String) how) $ match many tagged _ ((BTrue) "(") ((BFalse) "the untagged ("))
+                          (error-unless env2b (and tagged $ nat-list-eq ns want) $ str-cat3 "the extern implementation of " name $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))))
+                    (let (many adt2) $ mint-adt env2c tid disc ss extname)
                     (let (many records) $ adt-ctors adt2)
                     (let (many cvals) $ ctor-values records)
-                    (let (many env3) (many mid) $ bind-closed env2b (None _) (Many) (BMat _ adt2) (TMatchable disc (TVar tid) mctors) (None _) coercible-id)
+                    (let (many env3) (many mid) $ bind-closed env2c (None _) (Many) (BMat _ adt2) (TMatchable disc (TVar tid) mctors) (None _) coercible-id)
                     (let (many env3b) $ open-minted env3 mid)
                     (let (many (Env) env4)
                       (match many nt _

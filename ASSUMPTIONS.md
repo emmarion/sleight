@@ -1936,9 +1936,11 @@ judiciously with `_`. The names and the shapes below are the session's.
      way. This is the mirror of `flatten`'s `~des` (item 122), and the
      extractor's special case is now one table over both names, still
      by name since a post-erasure `fn` no longer has types. slc's
-     compile-time interpreter runs `nat-cmp`'s model instead of an
-     extern, since building a `Cmp` there would want the prelude's
-     constructor descriptors, which its extern table does not have; the
+     compile-time interpreter ran `nat-cmp`'s model instead of an
+     extern (superseded by item 151, which finds the descriptors on the
+     model's return type), since building a `Cmp` there would want the
+     prelude's
+     constructor descriptors, which its extern table did not have; the
      extracted programs and slc's emitter still use `ext_nat_cmp`, so
      only the comptime of a compiled program compares in unary, at most
      256 steps per character literal. The extern types are `Nat`, `Bin`
@@ -2952,9 +2954,10 @@ rest below is the session's.
      misattribution TOOLING-WISHLIST 15 records: the program measured
      returned a 200000-deep `Nat`, and the overflow was
      `Ffi_core.nat_view` unfolding it into unary Peano form to print
-     it, with `eval` nowhere in the backtrace.) And `self/eval.sl`'s
-     `apply-extern`
-     returns `None` for `ExNatCmp` and `ExStrCmp`, the two externs whose
+     it, with `eval` nowhere in the backtrace.) The paragraph below is
+     superseded by item 151, which closes the question it leaves open.
+     `self/eval.sl`'s `apply-extern`
+     returned `None` for `ExNatCmp` and `ExStrCmp`, the two externs whose
      result is a `Cmp` rather than a payload (item 123), so `slc` runs
      their source models at compile time; `nat-cmp`'s recurses once per
      unit of the smaller argument, with the recursive call in a match
@@ -2964,3 +2967,61 @@ rest below is the session's.
      interpreter, and this item leaves it as it was; whether
      `apply-extern` should build a `Cmp`, as `lib/ffi.ml` does through
      the type's constructor, is open.
+
+## An extern is run wherever it is claimed (section 41)
+
+The owner asked why `nat-cmp` ran its source model rather than the FFI
+when `slc` interpreted it, and then for a guard so that an extern
+claimed outside `--no-extern` with nothing callable behind it is an
+error rather than a silent fall-back. The shapes and the messages below
+are the session's; the decision to close item 150's open question, and
+to look for a guard, are the owner's.
+
+151. **`apply-extern` is total, and the constructors it builds with come
+     from the model's return type.** This closes the question item 150
+     left open. `self/eval.sl`'s `apply-extern` no longer returns a
+     `Maybe`: what it produces is an `ExtResult` — a payload, a pair of
+     them, or a constructor at its discriminant — decided by one match
+     over `Extern` with a case each and no `else`, so an extern with
+     nothing callable behind it is no longer expressible and a new
+     variant is refused until it says which of the three it is (measured
+     rather than assumed: adding one is refused with "constructor
+     ExNewThing has 0 branches"). `ExNatCmp` and `ExStrCmp` take the
+     third route, so `slc` now compares at compile time in the time the
+     reference takes; `(nat-cmp 100000000 100000001)` in run position,
+     which overflowed `slc`'s stack above about 35000 before, compiles
+     as fast as any other numeral. The constructors are found by reading
+     the type constructor off the model's own return type and taking the
+     `Adt` of its opened `Matchable`, rather than by a table of names as
+     `lib/ffi.ml` uses: the session's reason is that the model names the
+     type it builds, so no name can be shadowed out from under the
+     lookup. What the FFI still has to record per extern is the shape
+     that type must have (`ext-result-shape`), checked as `Ffi.check_shape`
+     checks an extern type's, which `slc` did not check before and does
+     now (`ext-type-shape`). The reference is unchanged in behaviour
+     here: `lib/eval.ml`'s `apply` always ran the implementation.
+152. **The FFI's tables are one record per extern.** `lib/ffi.ml` kept
+     an implementation's arity, the plain types it builds, and the
+     shape its view has in assoc lists beside the implementation, and
+     `check_arity`/`check_shape` read them with `List.assoc_opt` and
+     passed silently when a name was missing — so an implementation
+     could be registered with no arity recorded and go unchecked. They
+     are now one `fn_spec` per function and one `ty_spec` per type, and
+     a missing shape for a plain type a `needs` entry names is an error
+     rather than a skip, so half-registering one is a type error
+     (measured: dropping a `takes` field is "Some record fields are
+     undefined"). `claim_fn` and `claim_type` are the single entry
+     points, ordered so that an arity or shape mismatch is still
+     reported ahead of the already-bound check, which is what
+     `tests/extern_arity_bad.sl` depends on, `trim` being bound by the
+     prelude already.
+153. **A test may ask for the FFI alone.** `; externs: only` runs a test
+     with the implementations and not again with them stripped, for one
+     whose source model is too slow to run;
+     `tests/extern_comptime.sl` is the first, comparing two `Nat`s far
+     beyond what the model reaches. The session's reading is that this
+     is a hole in section 41's conservativity check and should stay
+     rare: nothing is lost for `nat-cmp` in particular, whose model every
+     other test comparing numbers still exercises under `--no-extern`.
+     `self/bootstrap.sh` needs no directive of its own, running the
+     reference with the FFI as `slc` always does.

@@ -27,6 +27,9 @@
 (def-fns _ $ many cmp-is-eq : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r)
   (match many c _ ((CEq eq-t eq-r eq-x) (BTrue)) (else (BFalse))))
 
+(def-fns _ $ many cmp-index : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Nat) i)
+  (match many c _ ((CLt t r x y p) 0) ((CEq t r x) 1) ((CGt t r x y q) 2)))
+
 (def-fns _ $ many cmp-is-lt : (erased Type T) (erased (TyCtor (T x) (T y) -> Type) R) (erased T a) (erased T b) (many (Cmp T R a b) c) -> (many (Bool) r)
   (match many c _ ((CLt lt-t lt-r lt-x lt-y lt-p) (BTrue)) (else (BFalse))))
 
@@ -86,6 +89,20 @@
 
 (def-fns _ $ many str-cat3 : (many (String) a) (many (String) b) (many (String) c) -> (many (String) d)
   (str-append a $ str-append b c))
+
+(def-fns _ $ many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r)
+  (match many a _
+    ((Nil t) (match many b _ ((Nil u) (BTrue)) ((Cons u y rest) (BFalse))))
+    ((Cons t x rest) (match many b _ ((Nil u) (BFalse)) ((Cons u y rest2) (and (nat-eq x y) $ nat-list-eq rest rest2))))))
+
+; A shape as the FFI's error messages spell it, its arities separated by spaces.
+(def-fns _ $ many spell-nats : (subterm many (List $ Nat) ns) -> (many (String) s)
+  (match many ns _
+    ((Nil a) "")
+    ((Cons a n rest)
+      (match many rest _
+        ((Nil b) (nat-str n))
+        ((Cons b m more) (str-cat3 (nat-str n) " " $ spell-nats rest))))))
 
 (def-fns _ $ many all-digits : (subterm many (String) s) -> (many (Bool) r)
   (match many s _

@@ -254,11 +254,6 @@
 (def-fns _ $ many decl-templates : (many (Decls) d) -> (many (List $ Template) ts)
   (match many d _ ((MkDecls shapes narrows ts) ts)))
 
-(def-fns _ $ many nat-list-eq : (subterm many (List $ Nat) a) (many (List $ Nat) b) -> (many (Bool) r)
-  (match many a _
-    ((Nil t) (list-is-empty _ b))
-    ((Cons t x rest) (match many b _ ((Nil u) (BFalse)) ((Cons u y rest2) (and (nat-eq x y) $ nat-list-eq rest rest2))))))
-
 (def-fns _ $ many shape-index : (subterm many (List $ List $ Nat) ss) (many (List $ Nat) s) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many ss _
     ((Nil t) (None _))
@@ -314,11 +309,6 @@
   (match many live _
     ((Nil a) (Nil _))
     ((Cons a x rest) (nat-insert x $ live-key rest))))
-
-(def-fns _ $ many ctor-arities : (subterm many (List $ Ctor) cs) -> (many (List $ Nat) r)
-  (match many cs _
-    ((Nil a) (Nil _))
-    ((Cons a c rest) (Cons _ (ctor-arity c) $ ctor-arities rest))))
 
 (def-fns _ $ many adt-shape : (many (Adt) adt) -> (many (List $ Nat) r)
   (ctor-arities $ adt-ctors adt))
@@ -730,7 +720,7 @@
         (let (many ps) $ names-of-ids params env)
         (let (many (Rope) b)
           (match many impl _
-            ((Some a se) (match many se (((Rope) r)) ((MkSomeExtern n e) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize $ ext-name _ e) (rcat (RStr " ") $ flatten-extra $ ext-name _ e) (rjoin (objs ps) " ") $ RStr "))"))))
+            ((Some a im) (match many im (((Rope) r)) ((MkImpl se ecs) (match many se (((Rope) r)) ((MkSomeExtern n e) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize $ ext-name _ e) (rcat (RStr " ") $ flatten-extra $ ext-name _ e) (rjoin (objs ps) " ") $ RStr "))"))))))
             ((None a) (emit-code _ _ body env (push-names _ params env ns) d))))
         (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))))
 
