@@ -12,19 +12,25 @@ claim in this file that the tests do not make is a mistake in this file.
 ## Files, bottom up
 
 - `base.sl` — booleans, decided equality on `Nat` and `Bool` with
-  inequality evidence, list indexing with evidence.
+  inequality evidence, list indexing and length with evidence, two lists
+  of one length, the layout of a substitution list (leading `None`s,
+  then `Some`s), addition.
 - `term.sl` — `Term`, DESIGN.md section 5's grammar with de Bruijn
-  telescopes, and three relations with their functions: `Subst`
-  (instantiating binders), `Abstract` (turning entries into binders) and
-  `Assignable` (section 18's occurs check and third contradiction).
+  telescopes, an application recording the former it applies (`TyApp`
+  and `ValApp`, below); `Closed`, a term under a depth mentioning no
+  binder beyond it; and three relations with their functions: `Subst` (instantiating
+  binders, requiring the term closed under the list's length), `Abstract`
+  (turning entries into binders) and `Assignable` (section 18's occurs
+  check and third contradiction).
 - `canon.sl` — `Rule` and `Canon`: a term's canonical form under the
   rules in force, structurally (sections 5, 18).
 - `ctx.sl` — the context: entries with a kind (`KDecl` for constructors
   and type constructors, rigid; `KLevel` for `def-lvl`'s entries), names,
   declared ADTs, rules, the ambient level and subterm arguments (section 3);
   then, for the functions only, what it means for terms, rules, names and
-  ADTs to mention only the context's entries, and for one context to have
-  grown from another.
+  ADTs to mention only the context's entries and, at a depth, only the
+  binders above it (`Scoped ents d t`), and for one context to have grown
+  from another.
 - `unify.sl` — `Unify`: section 18's forced unification as a walk over
   equations, in `Force` mode minting rules and in `Check` mode comparing
   for identity, with the three contradictions as its `UFail` rules.
@@ -34,6 +40,9 @@ claim in this file that the tests do not make is a mistake in this file.
   helpers, each judgment total with an `Ok` or `Err` outcome; `Fails` is
   the `Err` outcome of a program.
 - `elabfn.sl` — the deriving functions for `elab.sl`.
+- `preserve.sl` — groundwork for the open preservation argument below:
+  canonicalization is a function of the rules, and `ElabTerm` forms only
+  what `TypeOfTerm` types. Not needed by the elaborator.
 - `tests/mini_*.sl` — what runs, under `dune test`.
 
 ## Shapes chosen here, for the owner to confirm or change
@@ -50,17 +59,53 @@ claim in this file that the tests do not make is a mistake in this file.
   value-constructor formers, every ruled entry non-rigid) and returning
   it for the context it produces. Results are ADTs holding the derived
   data and the erased derivation, or a `Stuck` constructor, which the
-  functions reach only on a malformed shape — with one exception the
-  session could not close: `type-of-term`, which `MintTele`'s `is`
-  entries need, has no derivation for a `Bound` outside its binder or an
-  application whose head's canonical type is not a former, and the
-  carried invariants do not exclude those inputs (excluding them looks to
-  the session like a type-preservation argument about elaborated
-  telescopes under substitution and refinement, which is not attempted).
-  Two relations changed for this, both flagged for the owner: `Subst`
-  gained `SubBeyond` (a `Bound` past the end of the substitution stays,
-  making substitution total), and `Unify`'s twin left/right rules for a
-  variable against a non-variable were merged through `Sided`.
+  functions reach only on a malformed shape. Two shapes of the grammar
+  had no derivation until the owner closed them. A `Bound` outside its
+  binder, until every scoping invariant took the depth it holds at:
+  `Scoped ents d t` says a term under `d` binders mentions only entries
+  of the context and binders below `d`, the walk of unification and the
+  telescope-threading functions of the elaborator carry that depth, and
+  `subst` requires its term closed under the substitution's length (the
+  owner's decision, reversing a `SubBeyond` rule an earlier session had
+  added to `Subst` to make it total on a binder past the list, which
+  stated a dangling index rather than a substitution). So `Subst`
+  derives nothing for such a term, and `type-of-term` refutes the
+  `Bound` case from `Assignable` at an assignment and from the
+  closedness of a substituted `is` entry. And the type of a closed term
+  (`type-of-term` in `unify.sl`, which `UAssign` and `MintTele`'s `is`
+  entries need) for an application whose head's canonical type is not a
+  former of the application's arity, until `Term` took `TyApp` and
+  `ValApp` in place of one `App`, after DESIGN.md section 5's
+  productions 2 and 3 (the owner's decision): `(TyApp head params args)`
+  and `(ValApp head params ret args)` record the former they apply, so
+  `TypeOfTerm` reads an application's type off the node, `Univ` or the
+  recorded return instantiated with the arguments, and asks nothing of
+  the head. `Canon` and `Unify` pass over the record; `Subst`,
+  `Abstract`, `Assignable` and `Scoped` cover it, and `Scoped` also
+  asks the arguments to be as many as the parameters (`LenEq`), which
+  the instantiation needs. Elaboration records the head's canonical
+  former where it forms an application (`ETTyApp`, `ETValApp`,
+  `EXTyApp`, `EXValApp`, the pattern `Refine` unifies a scrutinee with,
+  the built-ins' telescopes in the proofs and axioms), and the relations
+  that read a type's shape (`PredatesShape`, `BadRet`, `Unmatchable` and
+  the like) read `TyApp` only, a `ValApp` in their place being one more
+  way not to have the shape. Not checked anywhere, and so owed to the
+  metatheory in the session's reading: that under the rules in force the
+  recorded former agrees with the head's canonical type, without which
+  `TypeOfTerm` types a `ValApp` by a return its head does not have.
+  History: one session found a program that reached the head-type
+  stuck while `ETValCtor` accepted any type as a `ValCtor` former's
+  return and `UAssign` related a variable to a term with no check on
+  their types (`tests/mini_untyped_rule.sl`). The owner then restored
+  ASSUMPTIONS 80 (the return canonicalizes to an application of a type
+  constructor not among the former's own binders), which refuses that
+  program, and had `UAssign` equate the variable's type with the term's
+  next, as `UAlias` already did, so that every rule unification mints
+  relates terms whose types it has unified; `Refine` then forces one
+  equation, the type equation following from it. One relation change
+  from the fuel removal is still flagged for the owner: `Unify`'s twin
+  left/right rules for a variable against a non-variable were merged
+  through `Sided`.
 - **`Univ` is a term.** Section 10 makes the universe a nullary type
   constructor with `Type` an entry rewriting to it; here `Univ` is a
   constructor of `Term`, `Type` an entry whose rule is `Univ`, and
@@ -84,7 +129,8 @@ claim in this file that the tests do not make is a mistake in this file.
 - **Surface syntax of the minimal language.** With no multiplicities to
   mark them, telescopes and binders are grouped in lists, which the full
   language does not do: `(Fn L (params) (rets))`, `(TyCtor (params))`,
-  `(ValCtor (params) ret)`, `(def-fns L (f (params) (rets) items...)...)`,
+  `(ValCtor (params) ret)` (the return an application of a type
+  constructor other than the former's own binders, ASSUMPTIONS 80), `(def-fns L (f (params) (rets) items...)...)`,
   `(def-adts (T (params) (C (fields) ret)...)...)`,
   `(let (binders) items...)`, `(match s (rets) ((C fields...) items...)...)`;
   an entry is `(T x)`, `(subterm T x)` or `(e is x)`; a binder `x`, `(T x)`
@@ -114,4 +160,5 @@ claim in this file that the tests do not make is a mistake in this file.
 - A reader from text to `Raw` is not written; tests build `Raw` by hand.
 - The metatheory MINIMAL.md anticipates (determinism of elaboration,
   totality of unification, confluence of canonicalization, evaluation of
-  every well-typed program) is stated nowhere yet.
+  every well-typed program) is stated nowhere yet, nor is the agreement
+  of an application's recorded former with its head's type (above).

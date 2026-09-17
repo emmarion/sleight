@@ -127,8 +127,8 @@
     (many AddRuleSome : (erased (List (Rule)) r) (erased (Term) t) (erased (Nat) id) -> (AddRule r (Some (Term) t) id (Cons (Rule) (MkRule id t) r)))))
 
 ; ---- Identity and refinement, through mini/unify.sl: two terms are the same when their canonical forms
-; are identical (section 5); a branch refines the facts by forcing its equations (section 18), or
-; contradicts them.
+; are identical (section 5); a branch refines the facts by forcing one equation (section 18), or contradicts
+; them.
 (def-adts
   (Same : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
@@ -138,17 +138,16 @@
     enum
     (many DifferBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Ent)) ents) (erased (List (Rule)) rules)
        (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Check) ents rules (Cons (Eqn) (MkEqn t u) (Nil (Eqn))) (UFail)) p) -> (Differ ctx t u)))
-  (Refine : ((Ctx) ctx) ((List (Eqn)) eqs) ((Ctx) out) -> Type
+  (Refine : ((Ctx) ctx) ((Term) t) ((Term) u) ((Ctx) out) -> Type
     enum
-    (many RefineBy : (erased (Ctx) ctx) (erased (List (Eqn)) eqs) (erased (Ctx) out) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Rule)) rules2)
-       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Force) ents rules eqs (UOk rules2)) p) (erased (WithRules ctx rules2 out) w) -> (Refine ctx eqs out)))
-  (Contradict : ((Ctx) ctx) ((List (Eqn)) eqs) -> Type
+    (many RefineBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (Ctx) out) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Rule)) rules2)
+       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Force) ents rules (Cons (Eqn) (MkEqn t u) (Nil (Eqn))) (UOk rules2)) p) (erased (WithRules ctx rules2 out) w) -> (Refine ctx t u out)))
+  (Contradict : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
-    (many ContradictBy : (erased (Ctx) ctx) (erased (List (Eqn)) eqs) (erased (List (Ent)) ents) (erased (List (Rule)) rules)
-       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Force) ents rules eqs (UFail)) p) -> (Contradict ctx eqs))))
+    (many ContradictBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Ent)) ents) (erased (List (Rule)) rules)
+       (erased (Ents ctx ents) e) (erased (Rules ctx rules) r) (erased (Unify (Force) ents rules (Cons (Eqn) (MkEqn t u) (Nil (Eqn))) (UFail)) p) -> (Contradict ctx t u))))
 
-; The type of an entry, and of a closed term of the grammar: an application's is its head's return
-; instantiated with its arguments, a former's is the universe, and so is the universe's (section 10).
+; The type of an entry, and of a closed term of the grammar (mini/unify.sl), through the context.
 (def-adts
   (TypeOf : ((Ctx) ctx) ((Nat) x) ((Term) ty) -> Type
     enum
@@ -159,28 +158,10 @@
   (Canonical : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type
     enum
     (many CanonicalBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) u) (erased (List (Rule)) rules) (erased (Rules ctx rules) r) (erased (Canon rules t u) p) -> (Canonical ctx t u)))
-  (TypeOfTerm : ((Ctx) ctx) ((Term) t) ((Term) ty) -> Type
+  (Typed : ((Ctx) ctx) ((Term) t) ((Term) ty) -> Type
     enum
-    (many TotRef : (erased (Ctx) ctx) (erased (Nat) x) (erased (Term) ty) (erased (TypeOf ctx x ty) p) -> (TypeOfTerm ctx (Ref x) ty))
-    (many TotTyApp : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) hty) (erased (List (Entry)) ps)
-       (erased (TypeOfTerm ctx h hty) p) (erased (Canonical ctx hty (TyCtor ps)) c) -> (TypeOfTerm ctx (App h as) (Univ)))
-    (many TotValApp : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Term) ret) (erased (List (Maybe (Term))) sub) (erased (Term) ty)
-       (erased (TypeOfTerm ctx h hty) p) (erased (Canonical ctx hty (ValCtor ps ret)) c) (erased (Somes as sub) s) (erased (Subst sub ret ty) q) -> (TypeOfTerm ctx (App h as) ty))
-    (many TotUniv : (erased (Ctx) ctx) -> (TypeOfTerm ctx (Univ) (Univ)))
-    (many TotFn : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (TypeOfTerm ctx (Fn l ps rs) (Univ)))
-    (many TotTyCtor : (erased (Ctx) ctx) (erased (List (Entry)) ps) -> (TypeOfTerm ctx (TyCtor ps) (Univ)))
-    (many TotValCtor : (erased (Ctx) ctx) (erased (List (Entry)) ps) (erased (Term) r) -> (TypeOfTerm ctx (ValCtor ps r) (Univ))))
-  ; The substitution that instantiates a telescope with a list of arguments: the last argument innermost.
-  (Somes : ((List (Term)) as) ((List (Maybe (Term))) sub) -> Type
-    enum
-    (many SomesNil : -> (Somes (Nil (Term)) (Nil (Maybe (Term)))))
-    (many SomesCons : (erased (Term) a) (erased (List (Term)) as) (erased (List (Maybe (Term))) sub) (erased (List (Maybe (Term))) out)
-       (erased (Somes as sub) p) (erased (Snoc sub (Some (Term) a) out) q) -> (Somes (Cons (Term) a as) out)))
-  (Snoc : ((List (Maybe (Term))) xs) ((Maybe (Term)) x) ((List (Maybe (Term))) out) -> Type
-    enum
-    (many SnocNil : (erased (Maybe (Term)) x) -> (Snoc (Nil (Maybe (Term))) x (Cons (Maybe (Term)) x (Nil (Maybe (Term))))))
-    (many SnocCons : (erased (Maybe (Term)) y) (erased (List (Maybe (Term))) ys) (erased (Maybe (Term)) x) (erased (List (Maybe (Term))) out) (erased (Snoc ys x out) p) ->
-       (Snoc (Cons (Maybe (Term)) y ys) x (Cons (Maybe (Term)) y out)))))
+    (many TypedBy : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) ty) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Ents ctx ents) e) (erased (Rules ctx rules) r)
+       (erased (TypeOfTerm ents rules t ty) p) -> (Typed ctx t ty))))
 
 ; ---- Minting a telescope's entries: each entry's term instantiated with the entries before it, a type
 ; entry giving its entry that type, an is entry giving its entry the rule and the rule's type (section 14).
@@ -194,7 +175,7 @@
        (MintTele ctx acc (Cons (Entry) (MkEntry s (BFalse) t) es) (Cons (Maybe (String)) name names) out (Cons (Nat) x ids)))
     (many MTIs : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) (erased (Bool) s) (erased (Term) t) (erased (List (Entry)) es) (erased (Maybe (String)) name) (erased (List (Maybe (String))) names)
        (erased (Term) t2) (erased (Term) ty) (erased (Nat) x) (erased (Ctx) ctx1) (erased (Ctx) out) (erased (List (Nat)) ids)
-       (erased (Subst acc t t2) sb) (erased (TypeOfTerm ctx t2 ty) tt) (erased (Mint ctx name ty (KPlain) (Some (Term) t2) x ctx1) m)
+       (erased (Subst acc t t2) sb) (erased (Typed ctx t2 ty) tt) (erased (Mint ctx name ty (KPlain) (Some (Term) t2) x ctx1) m)
        (erased (MintTele ctx1 (Cons (Maybe (Term)) (Some (Term) (Ref x)) acc) es names out ids) p) ->
        (MintTele ctx acc (Cons (Entry) (MkEntry s (BTrue) t) es) (Cons (Maybe (String)) name names) out (Cons (Nat) x ids))))
   (Nones : ((List (Entry)) tele) ((List (Maybe (String))) names) -> Type
@@ -231,6 +212,31 @@
     (many ArgsErr : (many (Reason) r) -> (ArgsOut))))
 
 (def-adts
+  (Mem : ((Nat) x) ((List (Nat)) xs) -> Type
+    enum
+    (many MemHere : (erased (Nat) x) (erased (List (Nat)) xs) -> (Mem x (Cons (Nat) x xs)))
+    (many MemThere : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Mem x xs) p) -> (Mem x (Cons (Nat) y xs))))
+  (NotMem : ((Nat) x) ((List (Nat)) xs) -> Type
+    enum
+    (many NotMemNil : (erased (Nat) x) -> (NotMem x (Nil (Nat))))
+    (many NotMemCons : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Neq x y) n) (erased (NotMem x xs) p) -> (NotMem x (Cons (Nat) y xs))))
+  (NotApp : ((Term) t) -> Type
+    enum
+    (many NotAppRef : (erased (Nat) x) -> (NotApp (Ref x)))
+    (many NotAppBound : (erased (Nat) k) -> (NotApp (Bound k)))
+    (many NotAppUniv : -> (NotApp (Univ)))
+    (many NotAppFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotApp (Fn l ps rs)))
+    (many NotAppTyCtor : (erased (List (Entry)) ps) -> (NotApp (TyCtor ps)))
+    (many NotAppValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotApp (ValCtor ps r))))
+  (NotTyApp : ((Term) t) -> Type
+    enum
+    (many NTAOther : (erased (Term) t) (erased (NotApp t) p) -> (NotTyApp t))
+    (many NTAValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (NotTyApp (ValApp h ps r as)))))
+
+(let (many level-ty) (TyApp (Ref (Zero)) (Nil _) (Nil _)))
+(let (many predates-ps) (Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Cons _ (MkEntry (BFalse) (BFalse) level-ty) $ Nil _))
+(let (many subterm-ps) (Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Nil _))
+(def-adts
   (ElabTerm : ((Ctx) ctx) ((Raw) raw) ((TOut) out) -> Type
     enum
     (many ETName : (erased (Ctx) ctx) (erased (String) s) (erased (Nat) x) (erased (Term) ty) (erased (List (Name)) scope)
@@ -239,11 +245,11 @@
     ; an application of a type constructor or a value constructor
     (many ETTyApp : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) args) (erased (Term) ht) (erased (Term) hty) (erased (List (Entry)) ps) (erased (List (Term)) ts)
        (erased (ElabTerm ctx h (TOk ht hty)) p) (erased (Canonical ctx hty (TyCtor ps)) c) (erased (ElabTermArgs ctx (Nil (Maybe (Term))) ps args (ArgsOk ts)) a) ->
-       (ElabTerm ctx (RList (Cons (Raw) h args)) (TOk (App ht ts) (Univ))))
+       (ElabTerm ctx (RList (Cons (Raw) h args)) (TOk (TyApp ht ps ts) (Univ))))
     (many ETValApp : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) args) (erased (Term) ht) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Term) ret) (erased (List (Term)) ts)
        (erased (List (Maybe (Term))) sub) (erased (Term) ty)
        (erased (ElabTerm ctx h (TOk ht hty)) p) (erased (Canonical ctx hty (ValCtor ps ret)) c) (erased (ElabTermArgs ctx (Nil (Maybe (Term))) ps args (ArgsOk ts)) a)
-       (erased (Somes ts sub) s) (erased (Subst sub ret ty) q) -> (ElabTerm ctx (RList (Cons (Raw) h args)) (TOk (App ht ts) ty)))
+       (erased (Somes ts sub) s) (erased (Subst sub ret ty) q) -> (ElabTerm ctx (RList (Cons (Raw) h args)) (TOk (ValApp ht ps ret ts) ty)))
     (many ETAppHeadErr : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) args) (erased (Reason) r) (erased (ElabTerm ctx h (TErr r)) p) ->
        (ElabTerm ctx (RList (Cons (Raw) h args)) (TErr r)))
     (many ETAppArgsErr : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) args) (erased (Term) ht) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Reason) r)
@@ -254,20 +260,20 @@
     ; the formers
     (many ETFn : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) ps) (erased (List (Raw)) rs) (erased (Term) l) (erased (Term) lty) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids)
        (erased (List (Maybe (String))) pn) (erased (List (Maybe (Nat))) acc) (erased (Ctx) ctx2) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl)
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl)
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (Binders pids acc) b) (erased (ElabTele ctx1 acc rs (TeleOk ctx2 rt rids rn)) er) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KFn)) (Cons (Raw) lr (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) (Nil (Raw))))))) (TOk (Fn l pt rt) (Univ))))
     (many ETFnLevelErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) ps) (erased (List (Raw)) rs) (erased (Reason) r) (erased (ElabTerm ctx lr (TErr r)) p) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KFn)) (Cons (Raw) lr (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) (Nil (Raw))))))) (TErr r)))
     (many ETFnNotLevel : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) ps) (erased (List (Raw)) rs) (erased (Term) l) (erased (Term) lty)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Differ ctx lty (App (Ref (Zero)) (Nil (Term)))) d) ->
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Differ ctx lty level-ty) d) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KFn)) (Cons (Raw) lr (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) (Nil (Raw))))))) (TErr (RNotLevel))))
     (many ETFnParamsErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) ps) (erased (List (Raw)) rs) (erased (Term) l) (erased (Term) lty) (erased (Reason) r)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KFn)) (Cons (Raw) lr (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) (Nil (Raw))))))) (TErr r)))
     (many ETFnRetsErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) ps) (erased (List (Raw)) rs) (erased (Term) l) (erased (Term) lty) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids)
        (erased (List (Maybe (String))) pn) (erased (List (Maybe (Nat))) acc) (erased (Reason) r)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl)
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl)
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (Binders pids acc) b) (erased (ElabTele ctx1 acc rs (TeleErr r)) er) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KFn)) (Cons (Raw) lr (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) (Nil (Raw))))))) (TErr r)))
     (many ETTyCtor : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
@@ -276,8 +282,9 @@
     (many ETTyCtorErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Reason) r) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KTyCtor)) (Cons (Raw) (RList ps) (Nil (Raw))))) (TErr r)))
     (many ETValCtor : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
-       (erased (List (Maybe (Nat))) acc) (erased (Term) ret) (erased (Term) rty) (erased (Term) ret2)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Same ctx1 rty (Univ)) su)
+       (erased (List (Maybe (Nat))) acc) (erased (Term) ret) (erased (Term) rty) (erased (Nat) t) (erased (List (Entry)) aps) (erased (List (Term)) args) (erased (Term) tty) (erased (List (Entry)) tps) (erased (Term) ret2)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er)
+       (erased (Canonical ctx1 ret (TyApp (Ref t) aps args)) cr) (erased (NotMem t pids) nm) (erased (TypeOf ctx1 t tty) tt) (erased (Canonical ctx1 tty (TyCtor tps)) ct)
        (erased (Binders pids acc) b) (erased (Abstract acc ret ret2) ab) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TOk (ValCtor pt ret2) (Univ))))
     (many ETValCtorParamsErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Reason) r) (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleErr r)) ep) ->
@@ -285,10 +292,28 @@
     (many ETValCtorRetErr : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn) (erased (Reason) r)
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TErr r)) er) ->
        (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr r)))
-    (many ETValCtorRetNotType : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
-       (erased (Term) ret) (erased (Term) rty)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Differ ctx1 rty (Univ)) du) ->
-       (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr (RMismatch)))))
+    (many ETValCtorBadRet : (erased (Ctx) ctx) (erased (List (Raw)) ps) (erased (Raw) rr) (erased (Ctx) ctx1) (erased (List (Entry)) pt) (erased (List (Nat)) pids) (erased (List (Maybe (String))) pn)
+       (erased (Term) ret) (erased (Term) rty) (erased (Term) c)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctx1 pt pids pn)) ep) (erased (ElabTerm ctx1 rr (TOk ret rty)) er) (erased (Canonical ctx1 ret c) cr) (erased (BadFormerRet ctx1 pids c) br) ->
+       (ElabTerm ctx (RList (Cons (Raw) (RKey (KValCtor)) (Cons (Raw) (RList ps) (Cons (Raw) rr (Nil (Raw)))))) (TErr (RBadReturn)))))
+  ; A ValCtor former's return is an application of a type constructor in scope, not of one of the former's own
+  ; binders (ASSUMPTIONS 80); the four ways it is not.
+  (BadFormerRet : ((Ctx) ctx) ((List (Nat)) pids) ((Term) c) -> Type
+    enum
+    (many BFNotApp : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) c) (erased (NotTyApp c) p) -> (BadFormerRet ctx pids c))
+    (many BFHead : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (NonRef h) p) -> (BadFormerRet ctx pids (TyApp h hps as)))
+    (many BFOwn : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Nat) t) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Mem t pids) p) -> (BadFormerRet ctx pids (TyApp (Ref t) hps as)))
+    (many BFNotTycon : (erased (Ctx) ctx) (erased (List (Nat)) pids) (erased (Nat) t) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Term) tty) (erased (Term) c)
+       (erased (TypeOf ctx t tty) p) (erased (Canonical ctx tty c) q) (erased (NotTyCtor c) n) -> (BadFormerRet ctx pids (TyApp (Ref t) hps as))))
+  (NotTyCtor : ((Term) t) -> Type
+    enum
+    (many NTCRef : (erased (Nat) x) -> (NotTyCtor (Ref x)))
+    (many NTCBound : (erased (Nat) k) -> (NotTyCtor (Bound k)))
+    (many NTCTyApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (NotTyCtor (TyApp h ps as)))
+    (many NTCValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (NotTyCtor (ValApp h ps r as)))
+    (many NTCUniv : -> (NotTyCtor (Univ)))
+    (many NTCFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotTyCtor (Fn l ps rs)))
+    (many NTCValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotTyCtor (ValCtor ps r))))
   ; The head's telescope, for the error rules that do not care which former it is; and a canonical type
   ; that is no former's, for the rule that refuses the application.
   (HeadTele : ((Ctx) ctx) ((Term) hty) ((List (Entry)) ps) -> Type
@@ -299,7 +324,8 @@
     enum
     (many NoTeleRef : (erased (Nat) x) -> (NoTele (Ref x)))
     (many NoTeleBound : (erased (Nat) k) -> (NoTele (Bound k)))
-    (many NoTeleApp : (erased (Term) h) (erased (List (Term)) as) -> (NoTele (App h as)))
+    (many NoTeleTyApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (NoTele (TyApp h ps as)))
+    (many NoTeleValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (NoTele (ValApp h ps r as)))
     (many NoTeleUniv : -> (NoTele (Univ)))
     (many NoTeleFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NoTele (Fn l ps rs))))
   ; The binders a telescope's entries become, innermost first.
@@ -343,12 +369,6 @@
        (erased (Term) at) (erased (Term) aty) (erased (Reason) r)
        (erased (ElabTerm ctx a (TOk at aty)) p) (erased (ElabTermArgs ctx (Cons (Maybe (Term)) (Some (Term) at) acc) es args (ArgsErr r)) q) ->
        (ElabTermArgs ctx acc (Cons (Entry) (MkEntry s i t) es) (Cons (Raw) a args) (ArgsErr r))))
-  (LenMismatch : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
-    enum
-    (many LMNilCons : (erased Type A) (erased Type B) (erased B y) (erased (List B) ys) -> (LenMismatch A B (Nil A) (Cons B y ys)))
-    (many LMConsNil : (erased Type A) (erased Type B) (erased A x) (erased (List A) xs) -> (LenMismatch A B (Cons A x xs) (Nil B)))
-    (many LMCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) ->
-       (LenMismatch A B (Cons A x xs) (Cons B y ys))))
   ; A telescope written as entries: each entry's term is elaborated with the earlier entries in scope, a
   ; type entry's must be a type, and the entry is minted and then abstracted into a binder.
   (EntryRaw : ((Raw) raw) ((Bool) sub) ((Bool) is) ((Raw) term) ((String) name) -> Type
@@ -446,14 +466,6 @@
     enum
     (many NotOneNil : -> (NotOne (Nil (Nat))))
     (many NotOneMore : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) ids) -> (NotOne (Cons (Nat) x (Cons (Nat) y ids)))))
-  (Mem : ((Nat) x) ((List (Nat)) xs) -> Type
-    enum
-    (many MemHere : (erased (Nat) x) (erased (List (Nat)) xs) -> (Mem x (Cons (Nat) x xs)))
-    (many MemThere : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Mem x xs) p) -> (Mem x (Cons (Nat) y xs))))
-  (NotMem : ((Nat) x) ((List (Nat)) xs) -> Type
-    enum
-    (many NotMemNil : (erased (Nat) x) -> (NotMem x (Nil (Nat))))
-    (many NotMemCons : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) xs) (erased (Neq x y) n) (erased (NotMem x xs) p) -> (NotMem x (Cons (Nat) y xs))))
   (AtomNames : ((List (Raw)) raws) ((List (Maybe (String))) names) -> Type
     enum
     (many ANNil : -> (AtomNames (Nil (Raw)) (Nil (Maybe (String)))))
@@ -506,25 +518,18 @@
     (many SPZero : (erased (Ctx) ctx) (erased (List (Term)) as) (erased (Term) b) (erased (List (Term)) bs) -> (SamePrefix ctx (Zero) as (Cons (Term) b bs) b))
     (many SPSucc : (erased (Ctx) ctx) (erased (Nat) j) (erased (Term) a) (erased (List (Term)) as) (erased (Term) b0) (erased (List (Term)) bs) (erased (Term) b)
        (erased (Same ctx a b0) sm) (erased (SamePrefix ctx j as bs b) p) -> (SamePrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b0 bs) b)))
-  (NotApp : ((Term) t) -> Type
-    enum
-    (many NotAppRef : (erased (Nat) x) -> (NotApp (Ref x)))
-    (many NotAppBound : (erased (Nat) k) -> (NotApp (Bound k)))
-    (many NotAppUniv : -> (NotApp (Univ)))
-    (many NotAppFn : (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) -> (NotApp (Fn l ps rs)))
-    (many NotAppTyCtor : (erased (List (Entry)) ps) -> (NotApp (TyCtor ps)))
-    (many NotAppValCtor : (erased (List (Entry)) ps) (erased (Term) r) -> (NotApp (ValCtor ps r))))
-  (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
-    enum
-    (many LenNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LenCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n) (erased (Length A xs n) p) -> (Length A (Cons A x xs) (Succ n)))))
+)
 
 ; A strict subterm through constructor applications (section 8), on canonical terms, and its absence.
 (def-adts
   (StrictSub : ((Ctx) ctx) ((Term) a) ((Term) b) -> Type
     enum
-    (many SSHead : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) h) (erased (List (Term)) as) (erased (Same ctx a h) s) -> (StrictSub ctx a (App h as)))
-    (many SSArg : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) h) (erased (List (Term)) as) (erased (SubOfList ctx a as) p) -> (StrictSub ctx a (App h as))))
+    (many SSHead : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) b) (erased (Term) h) (erased (List (Term)) as) (erased (AppParts b h as) ap) (erased (Same ctx a h) s) -> (StrictSub ctx a b))
+    (many SSArg : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) b) (erased (Term) h) (erased (List (Term)) as) (erased (AppParts b h as) ap) (erased (SubOfList ctx a as) p) -> (StrictSub ctx a b)))
+  (AppParts : ((Term) t) ((Term) h) ((List (Term)) as) -> Type
+    enum
+    (many APTy : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (AppParts (TyApp h ps as) h as))
+    (many APVal : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (AppParts (ValApp h ps r as) h as)))
   (SubOfList : ((Ctx) ctx) ((Term) a) ((List (Term)) as) -> Type
     enum
     (many SLSame : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) b) (erased (List (Term)) as) (erased (Same ctx a b) s) -> (SubOfList ctx a (Cons (Term) b as)))
@@ -533,7 +538,7 @@
   (NotSub : ((Ctx) ctx) ((Term) a) ((Term) b) -> Type
     enum
     (many NSNotApp : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) b) (erased (NotApp b) n) -> (NotSub ctx a b))
-    (many NSApp : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx a h) d) (erased (NotSubList ctx a as) p) -> (NotSub ctx a (App h as))))
+    (many NSApp : (erased (Ctx) ctx) (erased (Term) a) (erased (Term) b) (erased (Term) h) (erased (List (Term)) as) (erased (AppParts b h as) ap) (erased (Differ ctx a h) d) (erased (NotSubList ctx a as) p) -> (NotSub ctx a b)))
   (NotSubList : ((Ctx) ctx) ((Term) a) ((List (Term)) as) -> Type
     enum
     (many NSLNil : (erased (Ctx) ctx) (erased (Term) a) -> (NotSubList ctx a (Nil (Term))))
@@ -545,24 +550,24 @@
 (def-adts
   (NotPredates : ((Ctx) ctx) ((Term) t) ((Term) l) ((Term) cur) -> Type
     enum
-    (many NPNotApp : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) l) (erased (Term) cur) (erased (NotApp t) n) -> (NotPredates ctx t l cur))
-    (many NPHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx h (Ref (Succ (Zero)))) d) -> (NotPredates ctx (App h as) l cur))
-    (many NPArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) l) (erased (Term) cur) (erased (NotLen (Succ (Succ (Succ (Zero)))) as) n) -> (NotPredates ctx (App h as) l cur))
-    (many NPType : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx ty (App (Ref (Zero)) (Nil (Term)))) d) ->
-       (NotPredates ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
-    (many NPLevel : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx a l) d) ->
-       (NotPredates ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
-    (many NPCur : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx lv cur) d) ->
-       (NotPredates ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur)))
+    (many NPNotApp : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) l) (erased (Term) cur) (erased (NotTyApp t) n) -> (NotPredates ctx t l cur))
+    (many NPHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx h (Ref (Succ (Zero)))) d) -> (NotPredates ctx (TyApp h hps as) l cur))
+    (many NPArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Term) l) (erased (Term) cur) (erased (NotLen (Succ (Succ (Succ (Zero)))) as) n) -> (NotPredates ctx (TyApp h hps as) l cur))
+    (many NPType : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx ty level-ty) d) ->
+       (NotPredates ctx (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
+    (many NPLevel : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx a l) d) ->
+       (NotPredates ctx (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur))
+    (many NPCur : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Term) l) (erased (Term) cur) (erased (Differ ctx lv cur) d) ->
+       (NotPredates ctx (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) l cur)))
   (NotSubtermOf : ((Ctx) ctx) ((Term) t) ((Term) a) ((Term) b) -> Type
     enum
-    (many NTNotApp : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) a) (erased (Term) b) (erased (NotApp t) n) -> (NotSubtermOf ctx t a b))
-    (many NTHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) a) (erased (Term) b) (erased (Differ ctx h (Ref (Succ (Succ (Zero))))) d) -> (NotSubtermOf ctx (App h as) a b))
-    (many NTArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Term) a) (erased (Term) b) (erased (NotLen (Succ (Succ (Succ (Succ (Zero))))) as) n) -> (NotSubtermOf ctx (App h as) a b))
-    (many NTSmall : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0) (erased (Term) a) (erased (Term) b) (erased (Differ ctx a0 a) d) ->
-       (NotSubtermOf ctx (App h (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b))
-    (many NTBig : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0) (erased (Term) a) (erased (Term) b) (erased (Differ ctx b0 b) d) ->
-       (NotSubtermOf ctx (App h (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b)))
+    (many NTNotApp : (erased (Ctx) ctx) (erased (Term) t) (erased (Term) a) (erased (Term) b) (erased (NotTyApp t) n) -> (NotSubtermOf ctx t a b))
+    (many NTHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Term) a) (erased (Term) b) (erased (Differ ctx h (Ref (Succ (Succ (Zero))))) d) -> (NotSubtermOf ctx (TyApp h hps as) a b))
+    (many NTArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Term) a) (erased (Term) b) (erased (NotLen (Succ (Succ (Succ (Succ (Zero))))) as) n) -> (NotSubtermOf ctx (TyApp h hps as) a b))
+    (many NTSmall : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0) (erased (Term) a) (erased (Term) b) (erased (Differ ctx a0 a) d) ->
+       (NotSubtermOf ctx (TyApp h hps (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b))
+    (many NTBig : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0) (erased (Term) a) (erased (Term) b) (erased (Differ ctx b0 b) d) ->
+       (NotSubtermOf ctx (TyApp h hps (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term))))))) a b)))
   (NotLen : ((Nat) n) ((List (Term)) as) -> Type
     enum
     (many NLNilSucc : (erased (Nat) n) -> (NotLen (Succ n) (Nil (Term))))
@@ -578,33 +583,32 @@
 (def-adts
   (PredatesShape : ((Ctx) ctx) ((Term) c) ((Term) ty) ((Term) a) ((Term) lv) -> Type
     enum
-    (many PSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Same ctx h (Ref (Succ (Zero)))) sh) ->
-       (PredatesShape ctx (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) ty a lv)))
+    (many PSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ty) (erased (Term) a) (erased (Term) lv) (erased (Same ctx h (Ref (Succ (Zero)))) sh) ->
+       (PredatesShape ctx (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv (Nil (Term)))))) ty a lv)))
   (NotPredatesShape : ((Ctx) ctx) ((Term) c) -> Type
     enum
-    (many NPSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotApp c) n) -> (NotPredatesShape ctx c))
-    (many NPSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Zero)))) d) -> (NotPredatesShape ctx (App h as)))
-    (many NPSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Zero)))) as) n) -> (NotPredatesShape ctx (App h as))))
+    (many NPSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotTyApp c) n) -> (NotPredatesShape ctx c))
+    (many NPSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Zero)))) d) -> (NotPredatesShape ctx (TyApp h hps as)))
+    (many NPSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Zero)))) as) n) -> (NotPredatesShape ctx (TyApp h hps as))))
   (SubtermShape : ((Ctx) ctx) ((Term) c) ((Term) ta) ((Term) a) ((Term) tb) ((Term) b) -> Type
     enum
-    (many SSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Same ctx h (Ref (Succ (Succ (Zero))))) sh) ->
-       (SubtermShape ctx (App h (Cons (Term) ta (Cons (Term) a (Cons (Term) tb (Cons (Term) b (Nil (Term))))))) ta a tb b)))
+    (many SSBy : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b) (erased (Same ctx h (Ref (Succ (Succ (Zero))))) sh) ->
+       (SubtermShape ctx (TyApp h hps (Cons (Term) ta (Cons (Term) a (Cons (Term) tb (Cons (Term) b (Nil (Term))))))) ta a tb b)))
   (NotSubtermShape : ((Ctx) ctx) ((Term) c) -> Type
     enum
-    (many NSSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotApp c) n) -> (NotSubtermShape ctx c))
-    (many NSSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Succ (Zero))))) d) -> (NotSubtermShape ctx (App h as)))
-    (many NSSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Succ (Zero))))) as) n) -> (NotSubtermShape ctx (App h as)))))
+    (many NSSNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotTyApp c) n) -> (NotSubtermShape ctx c))
+    (many NSSHead : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Differ ctx h (Ref (Succ (Succ (Zero))))) d) -> (NotSubtermShape ctx (TyApp h hps as)))
+    (many NSSArity : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (NotLen (Succ (Succ (Succ (Succ (Zero))))) as) n) -> (NotSubtermShape ctx (TyApp h hps as)))))
 
 ; The initial context: Level, Predates and Subterm as built-in type constructors, and Type, whose rule is
 ; the universe (section 10). (Predates A a l) takes a type, a value of it and a level; (Subterm A a B b)
 ; two typed values.
-(let (many level-ty) (App (Ref (Zero)) (Nil _)))
 (let (many init-ctx)
   (MkCtx (Succ (Succ (Succ (Succ (Zero)))))
     (Cons _ (MkName "Type" (Succ (Succ (Succ (Zero))))) $ Cons _ (MkName "Subterm" (Succ (Succ (Zero)))) $ Cons _ (MkName "Predates" (Succ (Zero))) $ Cons _ (MkName "Level" (Zero)) $ Nil _)
     (Cons _ (MkEnt (Succ (Succ (Succ (Zero)))) (Univ) (KPlain))
-      $ Cons _ (MkEnt (Succ (Succ (Zero))) (TyCtor (Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Nil _)) (KDecl))
-      $ Cons _ (MkEnt (Succ (Zero)) (TyCtor (Cons _ (MkEntry (BFalse) (BFalse) (Univ)) $ Cons _ (MkEntry (BFalse) (BFalse) (Bound (Zero))) $ Cons _ (MkEntry (BFalse) (BFalse) level-ty) $ Nil _)) (KDecl))
+      $ Cons _ (MkEnt (Succ (Succ (Zero))) (TyCtor subterm-ps) (KDecl))
+      $ Cons _ (MkEnt (Succ (Zero)) (TyCtor predates-ps) (KDecl))
       $ Cons _ (MkEnt (Zero) (TyCtor (Nil _)) (KDecl)) $ Nil _)
     (Cons _ (MkRule (Succ (Succ (Succ (Zero)))) (Univ)) (Nil _))
     (Nil _) (None _) (Nil _)))
@@ -634,13 +638,13 @@
     (many EXTyApp : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) items) (erased (Ctx) ctx1) (erased (Core) hc) (erased (Nat) x) (erased (Term) hty) (erased (List (Entry)) ps)
        (erased (Ctx) ctx2) (erased (List (Core)) cores) (erased (List (Nat)) ids) (erased (List (Term)) ts) (erased (Nat) e) (erased (Ctx) out)
        (erased (HeadRaw h) hr) (erased (ElabExpr ctx h (EOk ctx1 hc (Cons (Nat) x (Nil (Nat))))) p) (erased (TypeOf ctx1 x hty) t) (erased (Canonical ctx1 hty (TyCtor ps)) c)
-       (erased (ElabExprArgs ctx1 (Nil (Maybe (Term))) ps items (AOk ctx2 cores ids)) a) (erased (Refs ids ts) rf) (erased (Mint ctx2 (None (String)) (Univ) (KPlain) (Some (Term) (App (Ref x) ts)) e out) m) ->
+       (erased (ElabExprArgs ctx1 (Nil (Maybe (Term))) ps items (AOk ctx2 cores ids)) a) (erased (Refs ids ts) rf) (erased (Mint ctx2 (None (String)) (Univ) (KPlain) (Some (Term) (TyApp (Ref x) ps ts)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) h items)) (EOk out (CApp hc cores) (Cons (Nat) e (Nil (Nat))))))
     (many EXValApp : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) items) (erased (Ctx) ctx1) (erased (Core) hc) (erased (Nat) x) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Term) ret)
        (erased (Ctx) ctx2) (erased (List (Core)) cores) (erased (List (Nat)) ids) (erased (List (Term)) ts) (erased (List (Maybe (Term))) sub) (erased (Term) ty) (erased (Nat) e) (erased (Ctx) out)
        (erased (HeadRaw h) hr) (erased (ElabExpr ctx h (EOk ctx1 hc (Cons (Nat) x (Nil (Nat))))) p) (erased (TypeOf ctx1 x hty) t) (erased (Canonical ctx1 hty (ValCtor ps ret)) c)
        (erased (ElabExprArgs ctx1 (Nil (Maybe (Term))) ps items (AOk ctx2 cores ids)) a) (erased (Refs ids ts) rf) (erased (Somes ts sub) s) (erased (Subst sub ret ty) sb)
-       (erased (Mint ctx2 (None (String)) ty (KPlain) (Some (Term) (App (Ref x) ts)) e out) m) ->
+       (erased (Mint ctx2 (None (String)) ty (KPlain) (Some (Term) (ValApp (Ref x) ps ret ts)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) h items)) (EOk out (CApp hc cores) (Cons (Nat) e (Nil (Nat))))))
     (many EXAppArgsErr : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) items) (erased (Ctx) ctx1) (erased (Core) hc) (erased (Nat) x) (erased (Term) hty) (erased (List (Entry)) ps) (erased (Reason) r)
        (erased (HeadRaw h) hr) (erased (ElabExpr ctx h (EOk ctx1 hc (Cons (Nat) x (Nil (Nat))))) p) (erased (TypeOf ctx1 x hty) t) (erased (HeadTele ctx1 hty ps) c)
@@ -666,9 +670,9 @@
        (ElabExpr ctx (RList (Cons (Raw) h items)) (EErr (RNotApplicable))))
     ; match (sections 11, 12, 18): the scrutinee's type must be a declared type constructor's application
     (many EXMatch : (erased (Ctx) ctx) (erased (Raw) sr) (erased (List (Raw)) ann) (erased (List (Raw)) brs) (erased (Ctx) ctx1) (erased (Core) sc) (erased (Nat) s) (erased (Term) sty) (erased (Nat) tc)
-       (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
+       (erased (List (Entry)) tps) (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
        (erased (Ctx) ctx2) (erased (Ctx) ctx3) (erased (List (Branch)) cbs) (erased (List (Nat)) seen) (erased (List (Maybe (String))) names) (erased (Ctx) out) (erased (List (Nat)) ids)
-       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (App (Ref tc) targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
+       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (TyApp (Ref tc) tps targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
        (erased (ElabTele ctx1 (Nil (Maybe (Nat))) ann (TeleOk ctxA rt rids rn)) et) (erased (Leave ctxA ctx1 ctx2) lv)
        (erased (ElabBranches ctx2 s tc ctors (Nil (Nat)) rt brs (BrOk ctx3 cbs seen)) eb) (erased (Covered ctx3 s ctors seen) cv)
        (erased (Nones rt names) nn) (erased (MintTele ctx3 (Nil (Maybe (Term))) rt names out ids) m) ->
@@ -684,23 +688,23 @@
        (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (ElabTele ctx1 (Nil (Maybe (Nat))) ann (TeleErr r)) et) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KMatch)) (Cons (Raw) sr (Cons (Raw) (RList ann) brs)))) (EErr r)))
     (many EXMatchBranchesErr : (erased (Ctx) ctx) (erased (Raw) sr) (erased (List (Raw)) ann) (erased (List (Raw)) brs) (erased (Ctx) ctx1) (erased (Core) sc) (erased (Nat) s) (erased (Term) sty) (erased (Nat) tc)
-       (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
+       (erased (List (Entry)) tps) (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
        (erased (Ctx) ctx2) (erased (Reason) r)
-       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (App (Ref tc) targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
+       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (TyApp (Ref tc) tps targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
        (erased (ElabTele ctx1 (Nil (Maybe (Nat))) ann (TeleOk ctxA rt rids rn)) et) (erased (Leave ctxA ctx1 ctx2) lv)
        (erased (ElabBranches ctx2 s tc ctors (Nil (Nat)) rt brs (BrErr r)) eb) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KMatch)) (Cons (Raw) sr (Cons (Raw) (RList ann) brs)))) (EErr r)))
     (many EXMatchUncovered : (erased (Ctx) ctx) (erased (Raw) sr) (erased (List (Raw)) ann) (erased (List (Raw)) brs) (erased (Ctx) ctx1) (erased (Core) sc) (erased (Nat) s) (erased (Term) sty) (erased (Nat) tc)
-       (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
+       (erased (List (Entry)) tps) (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
        (erased (Ctx) ctx2) (erased (Ctx) ctx3) (erased (List (Branch)) cbs) (erased (List (Nat)) seen)
-       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (App (Ref tc) targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
+       (erased (ElabExpr ctx sr (EOk ctx1 sc (Cons (Nat) s (Nil (Nat))))) p) (erased (TypeOf ctx1 s sty) t) (erased (Canonical ctx1 sty (TyApp (Ref tc) tps targs)) c) (erased (Adts ctx1 adts) ad) (erased (AdtOf adts tc ctors) ao)
        (erased (ElabTele ctx1 (Nil (Maybe (Nat))) ann (TeleOk ctxA rt rids rn)) et) (erased (Leave ctxA ctx1 ctx2) lv)
        (erased (ElabBranches ctx2 s tc ctors (Nil (Nat)) rt brs (BrOk ctx3 cbs seen)) eb) (erased (Uncovered ctx3 s ctors seen) uc) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KMatch)) (Cons (Raw) sr (Cons (Raw) (RList ann) brs)))) (EErr (RMissingBranch))))
     ; (prove-subterm a b): both terms of the grammar, the first a strict subterm of the second, canonically
     (many EXProveSubterm : (erased (Ctx) ctx) (erased (Raw) ar) (erased (Raw) br) (erased (Term) a) (erased (Term) aty) (erased (Term) b) (erased (Term) bty) (erased (Term) ca) (erased (Term) cb) (erased (Nat) e) (erased (Ctx) out)
        (erased (ElabTerm ctx ar (TOk a aty)) p) (erased (ElabTerm ctx br (TOk b bty)) q) (erased (Canonical ctx a ca) c1) (erased (Canonical ctx b cb) c2) (erased (StrictSub ctx ca cb) ss)
-       (erased (Mint ctx (None (String)) (App (Ref (Succ (Succ (Zero)))) (Cons (Term) aty (Cons (Term) a (Cons (Term) bty (Cons (Term) b (Nil (Term))))))) (KPlain) (None (Term)) e out) m) ->
+       (erased (Mint ctx (None (String)) (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons (Term) aty (Cons (Term) a (Cons (Term) bty (Cons (Term) b (Nil (Term))))))) (KPlain) (None (Term)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KProveSubterm)) (Cons (Raw) ar (Cons (Raw) br (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
     (many EXProveSubtermErrA : (erased (Ctx) ctx) (erased (Raw) ar) (erased (Raw) br) (erased (Reason) r) (erased (ElabTerm ctx ar (TErr r)) p) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KProveSubterm)) (Cons (Raw) ar (Cons (Raw) br (Nil (Raw)))))) (EErr r)))
@@ -712,7 +716,7 @@
     ; (prove-predates x L): x in scope before the def-lvl that minted L (section 8)
     (many EXProvePredates : (erased (Ctx) ctx) (erased (String) xs) (erased (String) ls) (erased (List (Name)) scope) (erased (Nat) x) (erased (Nat) l) (erased (Term) tx) (erased (Nat) e) (erased (Ctx) out)
        (erased (Scope ctx scope) sc) (erased (NameOf scope xs x) nx) (erased (NameOf scope ls l) nl) (erased (TypeOf ctx x tx) t) (erased (KindOf ctx l (KLevel)) k) (erased (Lt x l) lt)
-       (erased (Mint ctx (None (String)) (App (Ref (Succ (Zero))) (Cons (Term) tx (Cons (Term) (Ref x) (Cons (Term) (Ref l) (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
+       (erased (Mint ctx (None (String)) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) tx (Cons (Term) (Ref x) (Cons (Term) (Ref l) (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
     (many EXProvePredatesUnboundX : (erased (Ctx) ctx) (erased (String) xs) (erased (String) ls) (erased (List (Name)) scope) (erased (Scope ctx scope) sc) (erased (NoName scope xs) n) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EErr (RUnbound))))
@@ -731,22 +735,22 @@
        (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2) (erased (Nat) e) (erased (Ctx) out)
        (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (PredatesShape ctx1 cp ty a l1) s1)
        (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2)
-       (erased (Same ctx2 ty2 (App (Ref (Zero)) (Nil (Term)))) st) (erased (Same ctx2 l1b l1) sl)
-       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Zero))) (Cons (Term) ty (Cons (Term) a (Cons (Term) l2 (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
+       (erased (Same ctx2 ty2 level-ty) st) (erased (Same ctx2 l1b l1) sl)
+       (erased (Mint ctx2 (None (String)) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) ty (Cons (Term) a (Cons (Term) l2 (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KPredatesTrans)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
     (many EXSubtermTrans : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ta) (erased (Term) a) (erased (Term) tb) (erased (Term) b)
        (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) tb2) (erased (Term) b2) (erased (Term) tc) (erased (Term) c) (erased (Nat) e) (erased (Ctx) out)
        (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (SubtermShape ctx1 cp ta a tb b) s1)
        (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (SubtermShape ctx2 cq tb2 b2 tc c) s2)
        (erased (Same ctx2 tb2 tb) st) (erased (Same ctx2 b2 b) sb)
-       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Succ (Zero)))) (Cons (Term) ta (Cons (Term) a (Cons (Term) tc (Cons (Term) c (Nil (Term))))))) (KPlain) (None (Term)) e out) m) ->
+       (erased (Mint ctx2 (None (String)) (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons (Term) ta (Cons (Term) a (Cons (Term) tc (Cons (Term) c (Nil (Term))))))) (KPlain) (None (Term)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KSubtermTrans)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
     (many EXPredatesSubterm : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ty) (erased (Term) a) (erased (Term) l)
        (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Term) tb) (erased (Term) b) (erased (Term) ty2) (erased (Term) a2) (erased (Nat) e) (erased (Ctx) out)
        (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) tp) (erased (Canonical ctx1 pty cp) c1) (erased (PredatesShape ctx1 cp ty a l) s1)
        (erased (ElabExpr ctx1 qr (EOk ctx2 qc (Cons (Nat) q (Nil (Nat))))) eq) (erased (TypeOf ctx2 q qty) tq) (erased (Canonical ctx2 qty cq) c2) (erased (SubtermShape ctx2 cq tb b ty2 a2) s2)
        (erased (Same ctx2 ty2 ty) st) (erased (Same ctx2 a2 a) sa)
-       (erased (Mint ctx2 (None (String)) (App (Ref (Succ (Zero))) (Cons (Term) tb (Cons (Term) b (Cons (Term) l (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
+       (erased (Mint ctx2 (None (String)) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) tb (Cons (Term) b (Cons (Term) l (Nil (Term)))))) (KPlain) (None (Term)) e out) m) ->
        (ElabExpr ctx (RList (Cons (Raw) (RKey (KPredatesSubterm)) (Cons (Raw) pr (Cons (Raw) qr (Nil (Raw)))))) (EOk out (CToken) (Cons (Nat) e (Nil (Nat))))))
     ; and the ways an axiom fails, the same for all three
     (many EXAxiomErrP : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Reason) r) (erased (AxiomKey k) ak) (erased (ElabExpr ctx pr (EErr r)) ep) ->
@@ -775,7 +779,7 @@
     (many ABPredatesTransP : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotPredatesShape ctx1 cp) n) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
     (many ABPredatesTransQ : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotPredatesShape ctx2 cq) n) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
     (many ABPredatesTransType : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2)
-       (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Differ ctx2 ty2 (App (Ref (Zero)) (Nil (Term)))) d) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
+       (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Differ ctx2 ty2 level-ty) d) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
     (many ABPredatesTransLink : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (Term) ty) (erased (Term) a) (erased (Term) l1) (erased (Term) ty2) (erased (Term) l1b) (erased (Term) l2)
        (erased (PredatesShape ctx1 cp ty a l1) s1) (erased (PredatesShape ctx2 cq ty2 l1b l2) s2) (erased (Differ ctx2 l1b l1) d) -> (AxiomBad (KPredatesTrans) ctx1 cp ctx2 cq))
     (many ABSubtermTransP : (erased (Ctx) ctx1) (erased (Term) cp) (erased (Ctx) ctx2) (erased (Term) cq) (erased (NotSubtermShape ctx1 cp) n) -> (AxiomBad (KSubtermTrans) ctx1 cp ctx2 cq))
@@ -804,14 +808,15 @@
     enum
     (many NTNRef : (erased (Nat) x) -> (NoTeleNoFn (Ref x)))
     (many NTNBound : (erased (Nat) k) -> (NoTeleNoFn (Bound k)))
-    (many NTNApp : (erased (Term) h) (erased (List (Term)) as) -> (NoTeleNoFn (App h as)))
+    (many NTNTyApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) -> (NoTeleNoFn (TyApp h ps as)))
+    (many NTNValApp : (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) -> (NoTeleNoFn (ValApp h ps r as)))
     (many NTNUniv : -> (NoTeleNoFn (Univ))))
   ; A canonical type no match can read: not an application, or one headed by no declared type constructor.
   (Unmatchable : ((Ctx) ctx) ((Term) c) -> Type
     enum
-    (many UmNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotApp c) n) -> (Unmatchable ctx c))
-    (many UmHeadVar : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Term)) as) (erased (NonRef h) n) -> (Unmatchable ctx (App h as)))
-    (many UmNoAdt : (erased (Ctx) ctx) (erased (Nat) x) (erased (List (Term)) as) (erased (List (Adt)) adts) (erased (Adts ctx adts) ad) (erased (NoAdt adts x) n) -> (Unmatchable ctx (App (Ref x) as))))
+    (many UmNotApp : (erased (Ctx) ctx) (erased (Term) c) (erased (NotTyApp c) n) -> (Unmatchable ctx c))
+    (many UmHeadVar : (erased (Ctx) ctx) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (NonRef h) n) -> (Unmatchable ctx (TyApp h hps as)))
+    (many UmNoAdt : (erased (Ctx) ctx) (erased (Nat) x) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (List (Adt)) adts) (erased (Adts ctx adts) ad) (erased (NoAdt adts x) n) -> (Unmatchable ctx (TyApp (Ref x) hps as))))
   ; Items each of size one, the context threaded through.
   (ElabItems : ((Ctx) ctx) ((List (Raw)) raws) ((AOut) out) -> Type
     enum
@@ -868,10 +873,10 @@
        (Decrease ctx l ps ids (ASubterm i p) (DErr (RBadProof))))
     (many DNone : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Term) cur) (erased (Level ctx (Some (Term) cur)) lv) -> (Decrease ctx l ps ids (ANone) (DErr (RNoProof))))
     (many DPredates : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Raw) pr) (erased (Term) cur) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty)
-       (erased (Term) h) (erased (Term) ty) (erased (Term) a) (erased (Term) lv2)
+       (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ty) (erased (Term) a) (erased (Term) lv2)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t)
-       (erased (Canonical ctx1 pty (App h (Cons (Term) ty (Cons (Term) a (Cons (Term) lv2 (Nil (Term))))))) c)
-       (erased (Same ctx1 h (Ref (Succ (Zero)))) sh) (erased (Same ctx1 ty (App (Ref (Zero)) (Nil (Term)))) sty) (erased (Same ctx1 a l) sa) (erased (Same ctx1 lv2 cur) sc) ->
+       (erased (Canonical ctx1 pty (TyApp h hps (Cons (Term) ty (Cons (Term) a (Cons (Term) lv2 (Nil (Term))))))) c)
+       (erased (Same ctx1 h (Ref (Succ (Zero)))) sh) (erased (Same ctx1 ty level-ty) sty) (erased (Same ctx1 a l) sa) (erased (Same ctx1 lv2 cur) sc) ->
        (Decrease ctx l ps ids (APredates pr) (DOk ctx1)))
     (many DPredatesErr : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Raw) pr) (erased (Term) cur) (erased (Reason) r)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EErr r)) ep) -> (Decrease ctx l ps ids (APredates pr) (DErr r)))
@@ -881,11 +886,11 @@
        (erased (Level ctx (Some (Term) cur)) lv) (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t) (erased (Canonical ctx1 pty c) cn) (erased (NotPredates ctx1 c l cur) np) ->
        (Decrease ctx l ps ids (APredates pr) (DErr (RBadProof))))
     (many DSubterm : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Raw) pr) (erased (Term) cur) (erased (Nat) j) (erased (Nat) xi) (erased (List (Term)) cargs)
-       (erased (List (Term)) subargs) (erased (Term) b) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) h) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0)
+       (erased (List (Term)) subargs) (erased (Term) b) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) h) (erased (List (Entry)) hps) (erased (Term) ta) (erased (Term) a0) (erased (Term) tb) (erased (Term) b0)
        (erased (Level ctx (Some (Term) cur)) lv) (erased (Same ctx l cur) sl) (erased (MarkedIndex ps i j) mi) (erased (Nth (Nat) ids i xi) ni) (erased (Marked ps ids cargs) mk)
        (erased (SubArgs ctx subargs) sa) (erased (SamePrefix ctx j cargs subargs b) sp)
        (erased (ElabExpr ctx pr (EOk ctx1 pc (Cons (Nat) p (Nil (Nat))))) ep) (erased (TypeOf ctx1 p pty) t)
-       (erased (Canonical ctx1 pty (App h (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term)))))))) c)
+       (erased (Canonical ctx1 pty (TyApp h hps (Cons (Term) ta (Cons (Term) a0 (Cons (Term) tb (Cons (Term) b0 (Nil (Term)))))))) c)
        (erased (Same ctx1 h (Ref (Succ (Succ (Zero))))) sh) (erased (Same ctx1 a0 (Ref xi)) sa0) (erased (Same ctx1 b0 b) sb0) ->
        (Decrease ctx l ps ids (ASubterm i pr) (DOk ctx1)))
     (many DSubtermLevel : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Raw) pr) (erased (Term) cur)
@@ -943,10 +948,10 @@
     (many EBNil : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) -> (ElabBranches ctx s tc ctors seen rt (Nil (Raw)) (BrOk ctx (Nil (Branch)) seen)))
     (many EBCons : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) (erased (String) cs) (erased (List (Raw)) fnames) (erased (List (Raw)) items) (erased (List (Raw)) rest)
        (erased (List (Name)) scope) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids) (erased (List (Term)) frefs)
-       (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty) (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Ctx) ctx1) (erased (Ctx) out) (erased (List (Branch)) cbs) (erased (List (Nat)) seen2)
+       (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Ctx) ctx1) (erased (Ctx) out) (erased (List (Branch)) cbs) (erased (List (Nat)) seen2)
        (erased (Scope ctx scope) sc) (erased (NameOf scope cs c) n) (erased (Mem c ctors) mc) (erased (NotMem c seen) ns) (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn)
-       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf) (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb)
-       (erased (TypeOf ctx s sty) st) (erased (Refine ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn)))) ctxR) rf2)
+       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
+       (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2)
        (erased (ElabBody ctxR items (EOk ctxB core ids)) eb) (erased (CheckRets ctxB (Nil (Maybe (Term))) rt ids (ROk)) cr) (erased (Leave ctxB ctx ctx1) lv)
        (erased (ElabBranches ctx1 s tc ctors (Cons (Nat) c seen) rt rest (BrOk out cbs seen2)) q) ->
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrOk out (Cons (Branch) (MkBranch c fids core) cbs) seen2)))
@@ -961,33 +966,32 @@
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr (RDuplicateBranch))))
     (many EBRefuted : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) (erased (String) cs) (erased (List (Raw)) fnames) (erased (List (Raw)) items) (erased (List (Raw)) rest)
        (erased (List (Name)) scope) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids) (erased (List (Term)) frefs)
-       (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty)
        (erased (Scope ctx scope) sc) (erased (NameOf scope cs c) n) (erased (Mem c ctors) mc) (erased (NotMem c seen) ns) (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn)
-       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf) (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb)
-       (erased (TypeOf ctx s sty) st) (erased (Contradict ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn))))) cd) ->
+       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
+       (erased (Contradict ctxF (Ref s) (ValApp (Ref c) fs ret frefs)) cd) ->
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr (RRefutedBranch))))
     (many EBBodyErr : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) (erased (String) cs) (erased (List (Raw)) fnames) (erased (List (Raw)) items) (erased (List (Raw)) rest)
        (erased (List (Name)) scope) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids) (erased (List (Term)) frefs)
-       (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty) (erased (Ctx) ctxR) (erased (Reason) r)
+       (erased (Ctx) ctxR) (erased (Reason) r)
        (erased (Scope ctx scope) sc) (erased (NameOf scope cs c) n) (erased (Mem c ctors) mc) (erased (NotMem c seen) ns) (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn)
-       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf) (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb)
-       (erased (TypeOf ctx s sty) st) (erased (Refine ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn)))) ctxR) rf2)
+       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
+       (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2)
        (erased (ElabBody ctxR items (EErr r)) eb) ->
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr r)))
     (many EBRetsErr : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) (erased (String) cs) (erased (List (Raw)) fnames) (erased (List (Raw)) items) (erased (List (Raw)) rest)
        (erased (List (Name)) scope) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids) (erased (List (Term)) frefs)
-       (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty) (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Reason) r)
+       (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Reason) r)
        (erased (Scope ctx scope) sc) (erased (NameOf scope cs c) n) (erased (Mem c ctors) mc) (erased (NotMem c seen) ns) (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn)
-       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf) (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb)
-       (erased (TypeOf ctx s sty) st) (erased (Refine ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn)))) ctxR) rf2)
+       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
+       (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2)
        (erased (ElabBody ctxR items (EOk ctxB core ids)) eb) (erased (CheckRets ctxB (Nil (Maybe (Term))) rt ids (RErr r)) cr) ->
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr r)))
     (many EBRestErr : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) tc) (erased (List (Nat)) ctors) (erased (List (Nat)) seen) (erased (List (Entry)) rt) (erased (String) cs) (erased (List (Raw)) fnames) (erased (List (Raw)) items) (erased (List (Raw)) rest)
        (erased (List (Name)) scope) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids) (erased (List (Term)) frefs)
-       (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty) (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Ctx) ctx1) (erased (Reason) r)
+       (erased (Ctx) ctxR) (erased (Ctx) ctxB) (erased (Core) core) (erased (List (Nat)) ids) (erased (Ctx) ctx1) (erased (Reason) r)
        (erased (Scope ctx scope) sc) (erased (NameOf scope cs c) n) (erased (Mem c ctors) mc) (erased (NotMem c seen) ns) (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn)
-       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf) (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb)
-       (erased (TypeOf ctx s sty) st) (erased (Refine ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn)))) ctxR) rf2)
+       (erased (AtomNames fnames names) an) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
+       (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2)
        (erased (ElabBody ctxR items (EOk ctxB core ids)) eb) (erased (CheckRets ctxB (Nil (Maybe (Term))) rt ids (ROk)) cr) (erased (Leave ctxB ctx ctx1) lv)
        (erased (ElabBranches ctx1 s tc ctors (Cons (Nat) c seen) rt rest (BrErr r)) q) ->
        (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr r))))
@@ -1005,17 +1009,15 @@
   (Refuted : ((Ctx) ctx) ((Nat) s) ((Nat) c) -> Type
     enum
     (many RefutedBy : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids)
-       (erased (List (Term)) frefs) (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty)
+       (erased (List (Term)) frefs)
        (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn) (erased (Nones fs names) nn) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
-       (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb) (erased (TypeOf ctx s sty) st)
-       (erased (Contradict ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn))))) cd) -> (Refuted ctx s c)))
+       (erased (Contradict ctxF (Ref s) (ValApp (Ref c) fs ret frefs)) cd) -> (Refuted ctx s c)))
   (Reachable : ((Ctx) ctx) ((Nat) s) ((Nat) c) -> Type
     enum
     (many ReachableBy : (erased (Ctx) ctx) (erased (Nat) s) (erased (Nat) c) (erased (Term) cty) (erased (List (Entry)) fs) (erased (Term) ret) (erased (List (Maybe (String))) names) (erased (Ctx) ctxF) (erased (List (Nat)) fids)
-       (erased (List (Term)) frefs) (erased (List (Maybe (Term))) sub) (erased (Term) ret2) (erased (Term) sty) (erased (Ctx) ctxR)
+       (erased (List (Term)) frefs) (erased (Ctx) ctxR)
        (erased (TypeOf ctx c cty) t) (erased (Canonical ctx cty (ValCtor fs ret)) cn) (erased (Nones fs names) nn) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
-       (erased (Somes frefs sub) so) (erased (Subst sub ret ret2) sb) (erased (TypeOf ctx s sty) st)
-       (erased (Refine ctxF (Cons (Eqn) (MkEqn (Ref s) (App (Ref c) frefs)) (Cons (Eqn) (MkEqn sty ret2) (Nil (Eqn)))) ctxR) rf2) -> (Reachable ctx s c)))
+       (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2) -> (Reachable ctx s c)))
   ; A body: statements, then the final expression (section 16).
   (ElabBody : ((Ctx) ctx) ((List (Raw)) items) ((EOut) out) -> Type
     enum
@@ -1039,21 +1041,21 @@
        (erased (ElabBody ctx items (EOk ctx1 core ids)) p) (erased (Scope ctx scope) sc) (erased (Hide ctx1 scope ctxH) h) (erased (BindLet ctxH binders ids (AErr r)) b) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KLet)) (Cons (Raw) (RList binders) items))) (SErr r)))
     ; (def-lvl L)
-    (many STDefLvl : (erased (Ctx) ctx) (erased (String) ls) (erased (Nat) x) (erased (Ctx) out) (erased (Mint ctx (Some (String) ls) (App (Ref (Zero)) (Nil (Term))) (KLevel) (None (Term)) x out) m) ->
+    (many STDefLvl : (erased (Ctx) ctx) (erased (String) ls) (erased (Nat) x) (erased (Ctx) out) (erased (Mint ctx (Some (String) ls) level-ty (KLevel) (None (Term)) x out) m) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefLvl)) (Cons (Raw) (RAtom ls) (Nil (Raw))))) (SOk out (SDefLvl x))))
     ; (def-fns L (f (params) (rets) items...)...): the signatures minted first, then each body at level L
     (many STDefFns : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Term) l) (erased (Term) lty) (erased (Ctx) ctx1) (erased (List (Sig)) sigs) (erased (Ctx) out) (erased (List (FnDef)) fds)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl) (erased (MintFns ctx l defs (FOk ctx1 sigs)) mf) (erased (ElabBodies ctx1 l sigs defs (BsOk out fds)) eb) ->
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl) (erased (MintFns ctx l defs (FOk ctx1 sigs)) mf) (erased (ElabBodies ctx1 l sigs defs (BsOk out fds)) eb) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefFns)) (Cons (Raw) lr defs))) (SOk out (SDefFns fds))))
     (many STDefFnsLevelErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Reason) r) (erased (ElabTerm ctx lr (TErr r)) p) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefFns)) (Cons (Raw) lr defs))) (SErr r)))
-    (many STDefFnsNotLevel : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Term) l) (erased (Term) lty) (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Differ ctx lty (App (Ref (Zero)) (Nil (Term)))) d) ->
+    (many STDefFnsNotLevel : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Term) l) (erased (Term) lty) (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Differ ctx lty level-ty) d) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefFns)) (Cons (Raw) lr defs))) (SErr (RNotLevel))))
     (many STDefFnsSigErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Term) l) (erased (Term) lty) (erased (Reason) r)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl) (erased (MintFns ctx l defs (FErr r)) mf) ->
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl) (erased (MintFns ctx l defs (FErr r)) mf) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefFns)) (Cons (Raw) lr defs))) (SErr r)))
     (many STDefFnsBodyErr : (erased (Ctx) ctx) (erased (Raw) lr) (erased (List (Raw)) defs) (erased (Term) l) (erased (Term) lty) (erased (Ctx) ctx1) (erased (List (Sig)) sigs) (erased (Reason) r)
-       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty (App (Ref (Zero)) (Nil (Term)))) sl) (erased (MintFns ctx l defs (FOk ctx1 sigs)) mf) (erased (ElabBodies ctx1 l sigs defs (BsErr r)) eb) ->
+       (erased (ElabTerm ctx lr (TOk l lty)) p) (erased (Same ctx lty level-ty) sl) (erased (MintFns ctx l defs (FOk ctx1 sigs)) mf) (erased (ElabBodies ctx1 l sigs defs (BsErr r)) eb) ->
        (ElabStmt ctx (RList (Cons (Raw) (RKey (KDefFns)) (Cons (Raw) lr defs))) (SErr r)))
     ; (def-adts (T (params) (C (fields) ret)...)...), at the top level only (MINIMAL.md): the type
     ; constructors minted first, then every constructor, whose return must be its own type applied
@@ -1188,9 +1190,9 @@
     enum
     (many MDNil : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) -> (MintDeclCtors ctx tid n (Nil (Raw)) (FOkT ctx (Nil (Nat)))))
     (many MDCons : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (String) cn) (erased (List (Raw)) fs) (erased (Raw) rr) (erased (List (Raw)) rest)
-       (erased (Ctx) ctxF) (erased (List (Entry)) ft) (erased (List (Nat)) fids) (erased (List (Maybe (String))) fn) (erased (Term) ret) (erased (Term) rty) (erased (List (Term)) args) (erased (List (Maybe (Nat))) acc) (erased (Term) ret2)
+       (erased (Ctx) ctxF) (erased (List (Entry)) ft) (erased (List (Nat)) fids) (erased (List (Maybe (String))) fn) (erased (Term) ret) (erased (Term) rty) (erased (List (Entry)) tps) (erased (List (Term)) args) (erased (List (Maybe (Nat))) acc) (erased (Term) ret2)
        (erased (Nat) cid) (erased (Ctx) ctx1) (erased (Ctx) out) (erased (List (Nat)) cids)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) fs (TeleOk ctxF ft fids fn)) ef) (erased (ElabTerm ctxF rr (TOk ret rty)) er) (erased (Canonical ctxF ret (App (Ref tid) args)) cr) (erased (Length (Term) args n) ln)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) fs (TeleOk ctxF ft fids fn)) ef) (erased (ElabTerm ctxF rr (TOk ret rty)) er) (erased (Canonical ctxF ret (TyApp (Ref tid) tps args)) cr) (erased (Length (Term) args n) ln)
        (erased (Binders fids acc) b) (erased (Abstract acc ret ret2) ab) (erased (Mint ctx (Some (String) cn) (ValCtor ft ret2) (KDecl) (None (Term)) cid ctx1) m) (erased (MintDeclCtors ctx1 tid n rest (FOkT out cids)) q) ->
        (MintDeclCtors ctx tid n (Cons (Raw) (RList (Cons (Raw) (RAtom cn) (Cons (Raw) (RList fs) (Cons (Raw) rr (Nil (Raw)))))) rest) (FOkT out (Cons (Nat) cid cids))))
     (many MDFieldsErr : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (String) cn) (erased (List (Raw)) fs) (erased (Raw) rr) (erased (List (Raw)) rest) (erased (Reason) r)
@@ -1204,16 +1206,16 @@
        (erased (ElabTele ctx (Nil (Maybe (Nat))) fs (TeleOk ctxF ft fids fn)) ef) (erased (ElabTerm ctxF rr (TOk ret rty)) er) (erased (Canonical ctxF ret c) cr) (erased (BadRet ctxF tid n c) br) ->
        (MintDeclCtors ctx tid n (Cons (Raw) (RList (Cons (Raw) (RAtom cn) (Cons (Raw) (RList fs) (Cons (Raw) rr (Nil (Raw)))))) rest) (FErrT (RBadReturn))))
     (many MDRestErr : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (String) cn) (erased (List (Raw)) fs) (erased (Raw) rr) (erased (List (Raw)) rest)
-       (erased (Ctx) ctxF) (erased (List (Entry)) ft) (erased (List (Nat)) fids) (erased (List (Maybe (String))) fn) (erased (Term) ret) (erased (Term) rty) (erased (List (Term)) args) (erased (List (Maybe (Nat))) acc) (erased (Term) ret2)
+       (erased (Ctx) ctxF) (erased (List (Entry)) ft) (erased (List (Nat)) fids) (erased (List (Maybe (String))) fn) (erased (Term) ret) (erased (Term) rty) (erased (List (Entry)) tps) (erased (List (Term)) args) (erased (List (Maybe (Nat))) acc) (erased (Term) ret2)
        (erased (Nat) cid) (erased (Ctx) ctx1) (erased (Reason) r)
-       (erased (ElabTele ctx (Nil (Maybe (Nat))) fs (TeleOk ctxF ft fids fn)) ef) (erased (ElabTerm ctxF rr (TOk ret rty)) er) (erased (Canonical ctxF ret (App (Ref tid) args)) cr) (erased (Length (Term) args n) ln)
+       (erased (ElabTele ctx (Nil (Maybe (Nat))) fs (TeleOk ctxF ft fids fn)) ef) (erased (ElabTerm ctxF rr (TOk ret rty)) er) (erased (Canonical ctxF ret (TyApp (Ref tid) tps args)) cr) (erased (Length (Term) args n) ln)
        (erased (Binders fids acc) b) (erased (Abstract acc ret ret2) ab) (erased (Mint ctx (Some (String) cn) (ValCtor ft ret2) (KDecl) (None (Term)) cid ctx1) m) (erased (MintDeclCtors ctx1 tid n rest (FErrT r)) q) ->
        (MintDeclCtors ctx tid n (Cons (Raw) (RList (Cons (Raw) (RAtom cn) (Cons (Raw) (RList fs) (Cons (Raw) rr (Nil (Raw)))))) rest) (FErrT r))))
   (BadRet : ((Ctx) ctx) ((Nat) tid) ((Nat) n) ((Term) c) -> Type
     enum
-    (many BRNotApp : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) c) (erased (NotApp c) na) -> (BadRet ctx tid n c))
-    (many BRHead : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) h) (erased (List (Term)) as) (erased (Differ ctx h (Ref tid)) d) -> (BadRet ctx tid n (App h as)))
-    (many BRArity : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) h) (erased (List (Term)) as) (erased (NotLen n as) nl) -> (BadRet ctx tid n (App h as))))
+    (many BRNotApp : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) c) (erased (NotTyApp c) na) -> (BadRet ctx tid n c))
+    (many BRHead : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (Differ ctx h (Ref tid)) d) -> (BadRet ctx tid n (TyApp h hps as)))
+    (many BRArity : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) (erased (Term) h) (erased (List (Entry)) hps) (erased (List (Term)) as) (erased (NotLen n as) nl) -> (BadRet ctx tid n (TyApp h hps as))))
   (Append : ((List (Nat)) xs) ((List (Nat)) ys) ((List (Nat)) out) -> Type
     enum
     (many AppendNil : (erased (List (Nat)) ys) -> (Append (Nil (Nat)) ys ys))

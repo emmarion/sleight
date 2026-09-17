@@ -112,3 +112,41 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     missing is the other direction: nothing lists the recursions in a
     program that are *not* in tail position, so a walk whose depth grows
     with the input is found by overflowing rather than by reading.
+
+17. **A result type's new constructor ripples through every caller.**
+    Giving unification's walk a stuck answer meant turning each
+    `(let (erased o) (many st) (erased p) (call ...))` in six mutually
+    recursive functions into a two-armed `match` whose second arm wraps
+    the rest of the body, fifteen times, by script. Either a refactoring
+    tool for "this call's result gained a case" or a language form that
+    threads a `Stuck`-like case through a sequence of `let`s (the shape
+    an error monad has) would make such a change a one-liner per site.
+
+18. **Pattern variables silently shadow outer bindings.** `(TotIs a b c
+    ty p sc)` inside a function that had already matched its context as
+    `(MkCtx n s e r a l sa)` rebound `a`, and the error was a type
+    mismatch on a later use of `a`, three lines away. A warning on a
+    pattern variable that shadows a binding of the enclosing function
+    would name the problem at its source.
+
+19. **No forward references between `def-adts` groups.** A relation may
+    mention one declared later in the same group but not in a later
+    group, so adding a premise that used `Mem` and `NotApp` meant moving
+    those two out of their groups to above the user. Either allowing
+    a file's groups to refer to each other or reporting the fix
+    ("declared below, at line N") would save the shuffle.
+
+20. **Adding an index to a relation edits every constructor site.**
+    Giving `Scoped` a depth meant one more positional erased argument at
+    each of about 170 applications and patterns of its eleven
+    constructors across three files, nearly all of them `_` or a dummy
+    binder, done by script and checked by the compiler. Named or
+    optional erased arguments, or a pattern form that names only the
+    fields it uses, would make such a change local to the definition.
+
+21. **A `_` in an unannotated top-level `let` has nothing to solve it.**
+    Test files that build evidence by hand had to spell out every depth
+    (`(ScTyApp ents (Zero) ...)`) where the same term inside a function
+    body infers it from the expected type. Letting a run-position `let`
+    take an expectation from a later use, or reporting which `_` is
+    unsolved with its expected type, would help.

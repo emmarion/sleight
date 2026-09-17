@@ -2854,3 +2854,21 @@ rest below is the session's.
      and 237s for 5000, 10000, 20000 and 40000 elements). A deeper hash
      would not help the second, the suffixes of such a value differing
      only in length.
+
+149. **Forcing a rule onto an atom then unifies the atom's type with its
+     term's.** The owner's decision, in chat, for the minimal language
+     (`mini/unify.sl`'s `UAssign`), after a session found that without
+     it an atom of a former's type could be given a term of another type
+     and a later telescope had no type for an `is` entry mentioning it
+     (`tests/mini_untyped_rule.sl`; that program is also refused by
+     item 80, restored to `mini/` at the same time). Whenever forcing
+     gives an atom a rule, the atom's type is then unified with the type
+     of the term it now rewrites to, as the next equation; an atom
+     aliased to another is the case of this that item 89's signature
+     check already covered, and the type equation a branch entry forces
+     (section 18) follows from the scrutinee's, so `mini/`'s `Refine`
+     forces the one. `lib/` and `self/` still assign with no type check,
+     and unify signatures only where both atoms' types are formers
+     (item 89); whether they should follow, and whether under item 80 the
+     added equation can ever change an outcome, are open, in the
+     session's reading.
