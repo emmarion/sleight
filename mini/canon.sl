@@ -1,18 +1,21 @@
 ; mini/canon.sl -- the fact table's rewrite rules and canonicalization (DESIGN.md sections 3, 5 and 18) for
 ; the minimal language: a rule maps an entry to a term, and a term's canonical form replaces every entry
-; that has a rule by the canonical form of that rule's term, structurally. One session's proposal.
+; that has a rule by the canonical form of that rule's term, structurally. Rules are kept oldest first and
+; a rule's term is canonical against the rules older than it when minted (section 18), so canonicalizing
+; it needs only the rules after it, which is what makes canonicalization structural on the rules and the
+; term together. One session's proposal.
 
 (def-adts $ Rule : -> Type
   enum
   (many MkRule : (many (Nat) id) (many (Term) rhs) -> (Rule)))
 
-; The rule an entry has, the newest first, or evidence that it has none.
+; The rule an entry has, the oldest first, with the rules after it, or evidence that it has none.
 (def-adts
-  (RuleOf : ((List (Rule)) rules) ((Nat) x) ((Term) r) -> Type
+  (RuleOf : ((List (Rule)) rules) ((Nat) x) ((Term) r) ((List (Rule)) rest) -> Type
     enum
-    (many RuleHere : (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) -> (RuleOf (Cons (Rule) (MkRule x r) rest) x r))
-    (many RuleThere : (erased (Nat) x) (erased (Nat) y) (erased (Term) r) (erased (Term) s) (erased (List (Rule)) rest) (erased (Neq x y) n) (erased (RuleOf rest x r) p) ->
-       (RuleOf (Cons (Rule) (MkRule y s) rest) x r)))
+    (many RuleHere : (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) -> (RuleOf (Cons (Rule) (MkRule x r) rest) x r rest))
+    (many RuleThere : (erased (Nat) x) (erased (Nat) y) (erased (Term) r) (erased (Term) s) (erased (List (Rule)) rest) (erased (List (Rule)) after) (erased (Neq x y) n)
+       (erased (RuleOf rest x r after) p) -> (RuleOf (Cons (Rule) (MkRule y s) rest) x r after)))
   (NoRule : ((List (Rule)) rules) ((Nat) x) -> Type
     enum
     (many NoRuleNil : (erased (Nat) x) -> (NoRule (Nil (Rule)) x))
@@ -20,7 +23,8 @@
        (NoRule (Cons (Rule) (MkRule y s) rest) x)))
   (RuleDec : ((List (Rule)) rules) ((Nat) x) -> Type
     enum
-    (many RuleHit : (erased (List (Rule)) rules) (erased (Nat) x) (many (Term) r) (erased (RuleOf rules x r) p) -> (RuleDec rules x))
+    (many RuleHit : (erased (List (Rule)) rules) (erased (Nat) x) (many (Term) r) (many (List (Rule)) rest) (erased (RuleOf rules x r rest) p)
+       (erased (Subterm (List (Rule)) rest (List (Rule)) rules) s) -> (RuleDec rules x))
     (many RuleMiss : (erased (List (Rule)) rules) (erased (Nat) x) (erased (NoRule rules x) p) -> (RuleDec rules x))))
 
 (def-fns _ $ many rule-dec : (subterm many (List (Rule)) rules) (many (Nat) x) -> (many (RuleDec rules x) r)
@@ -30,16 +34,16 @@
       (match many rule _
         ((MkRule y s)
           (match many (nat-dec x y) _
-            ((NDSame z) (RuleHit _ _ s $ RuleHere x s rest))
+            ((NDSame z) (RuleHit _ _ s rest (RuleHere x s rest) (prove-subterm rest rules)))
             ((NDDiff z w n)
               (match many (rule-dec rest x) _
-                ((RuleHit l z2 r p) (RuleHit _ _ r $ RuleThere x y r s rest n p))
+                ((RuleHit l z2 r after p sb) (RuleHit _ _ r after (RuleThere x y r s rest after n p) (subterm-trans sb (prove-subterm rest rules))))
                 ((RuleMiss l z2 p) (RuleMiss _ _ $ NoRuleCons x y s rest n p))))))))))
 
 (def-adts
   (Canon : ((List (Rule)) rules) ((Term) t) ((Term) u) -> Type
     enum
-    (many CanRule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (Term) u) (erased (RuleOf rules x r) p) (erased (Canon rules r u) q) ->
+    (many CanRule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) (erased (Term) u) (erased (RuleOf rules x r rest) p) (erased (Canon rest r u) q) ->
        (Canon rules (Ref x) u))
     (many CanFree : (erased (List (Rule)) rules) (erased (Nat) x) (erased (NoRule rules x) p) -> (Canon rules (Ref x) (Ref x)))
     (many CanBound : (erased (List (Rule)) rules) (erased (Nat) k) -> (Canon rules (Bound k) (Bound k)))
@@ -64,90 +68,48 @@
     (many CanTCons : (erased (List (Rule)) rules) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (Term) u) (erased (List (Entry)) es) (erased (List (Entry)) fs)
        (erased (Canon rules t u) p) (erased (CanonTele rules es fs) q) -> (CanonTele rules (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs)))))
 
-(def-adts
-  (Canoned : ((List (Rule)) rules) ((Term) t) -> Type
-    enum
-    (many MkCanoned : (erased (List (Rule)) rules) (erased (Term) t) (many (Term) u) (erased (Canon rules t u) p) -> (Canoned rules t))
-    (many CanonStuck : (erased (List (Rule)) rules) (erased (Term) t) -> (Canoned rules t)))
-  (CanonedList : ((List (Rule)) rules) ((List (Term)) ts) -> Type
-    enum
-    (many MkCanonedList : (erased (List (Rule)) rules) (erased (List (Term)) ts) (many (List (Term)) us) (erased (CanonList rules ts us) p) -> (CanonedList rules ts))
-    (many CanonListStuck : (erased (List (Rule)) rules) (erased (List (Term)) ts) -> (CanonedList rules ts)))
-  (CanonedTele : ((List (Rule)) rules) ((List (Entry)) es) -> Type
-    enum
-    (many MkCanonedTele : (erased (List (Rule)) rules) (erased (List (Entry)) es) (many (List (Entry)) fs) (erased (CanonTele rules es fs) p) -> (CanonedTele rules es))
-    (many CanonTeleStuck : (erased (List (Rule)) rules) (erased (List (Entry)) es) -> (CanonedTele rules es))))
-
 (def-fns _
-  (many canon : (subterm many (Nat) fuel) (many (List (Rule)) rules) (many (Term) t) -> (many (Canoned rules t) r)
-    (match many fuel _
-      ((Zero) (CanonStuck _ _))
-      ((Succ f)
-        (match many t _
-          ((Ref x)
-            (match many (rule-dec rules x) _
-              ((RuleMiss l y p) (MkCanoned _ _ (Ref x) $ CanFree rules x p))
-              ((RuleHit l y r p)
-                (match many (canon f rules r) _
-                  ((CanonStuck s1 t1) (CanonStuck _ _))
-                  ((MkCanoned s1 t1 u q) (MkCanoned _ _ u $ CanRule rules x r u p q))))))
-          ((Bound k) (MkCanoned _ _ (Bound k) $ CanBound rules k))
-          ((App h as)
-            (match many (canon f rules h) _
-              ((CanonStuck s1 t1) (CanonStuck _ _))
-              ((MkCanoned s1 t1 h2 p)
-                (match many (canon-list f rules as) _
-                  ((CanonListStuck s2 t2) (CanonStuck _ _))
-                  ((MkCanonedList s2 t2 as2 q) (MkCanoned _ _ (App h2 as2) $ CanApp rules h h2 as as2 p q))))))
-          ((Univ) (MkCanoned _ _ (Univ) $ CanUniv rules))
-          ((Fn l ps rs)
-            (match many (canon f rules l) _
-              ((CanonStuck s1 t1) (CanonStuck _ _))
-              ((MkCanoned s1 t1 l2 p)
-                (match many (canon-tele f rules ps) _
-                  ((CanonTeleStuck s2 t2) (CanonStuck _ _))
-                  ((MkCanonedTele s2 t2 ps2 q)
-                    (match many (canon-tele f rules rs) _
-                      ((CanonTeleStuck s3 t3) (CanonStuck _ _))
-                      ((MkCanonedTele s3 t3 rs2 r) (MkCanoned _ _ (Fn l2 ps2 rs2) $ CanFn rules l l2 ps ps2 rs rs2 p q r))))))))
-          ((TyCtor ps)
-            (match many (canon-tele f rules ps) _
-              ((CanonTeleStuck s2 t2) (CanonStuck _ _))
-              ((MkCanonedTele s2 t2 ps2 q) (MkCanoned _ _ (TyCtor ps2) $ CanTyCtor rules ps ps2 q))))
-          ((ValCtor ps r)
-            (match many (canon-tele f rules ps) _
-              ((CanonTeleStuck s2 t2) (CanonStuck _ _))
-              ((MkCanonedTele s2 t2 ps2 q)
-                (match many (canon f rules r) _
-                  ((CanonStuck s1 t1) (CanonStuck _ _))
-                  ((MkCanoned s1 t1 r2 p) (MkCanoned _ _ (ValCtor ps2 r2) $ CanValCtor rules ps ps2 r r2 q p))))))))))
-  (many canon-list : (subterm many (Nat) fuel) (many (List (Rule)) rules) (many (List (Term)) ts) -> (many (CanonedList rules ts) r)
-    (match many fuel _
-      ((Zero) (CanonListStuck _ _))
-      ((Succ f)
-        (match many ts _
-          ((Nil a) (MkCanonedList _ _ (Nil _) $ CanNil rules))
-          ((Cons a t rest)
-            (match many (canon f rules t) _
-              ((CanonStuck s1 t1) (CanonListStuck _ _))
-              ((MkCanoned s1 t1 u p)
-                (match many (canon-list f rules rest) _
-                  ((CanonListStuck s2 t2) (CanonListStuck _ _))
-                  ((MkCanonedList s2 t2 us q) (MkCanonedList _ _ (Cons _ u us) $ CanCons rules t u rest us p q))))))))))
-  (many canon-tele : (subterm many (Nat) fuel) (many (List (Rule)) rules) (many (List (Entry)) es) -> (many (CanonedTele rules es) r)
-    (match many fuel _
-      ((Zero) (CanonTeleStuck _ _))
-      ((Succ f)
-        (match many es _
-          ((Nil a) (MkCanonedTele _ _ (Nil _) $ CanTNil rules))
-          ((Cons a e rest)
-            (match many e _
-              ((MkEntry s i t)
-                (match many (canon f rules t) _
-                  ((CanonStuck s1 t1) (CanonTeleStuck _ _))
-                  ((MkCanoned s1 t1 u p)
-                    (match many (canon-tele f rules rest) _
-                      ((CanonTeleStuck s2 t2) (CanonTeleStuck _ _))
-                      ((MkCanonedTele s2 t2 fs q) (MkCanonedTele _ _ (Cons _ (MkEntry s i u) fs) $ CanTCons rules s i t u rest fs p q)))))))))))))
+  (many canon : (subterm many (List (Rule)) rules) (subterm many (Term) t) -> (many (Term) u) (erased (Canon rules t u) p)
+    (match many t _
+      ((Ref x)
+        (match many (rule-dec rules x) _
+          ((RuleMiss l y p) (values (Ref x) (CanFree rules x p)))
+          ((RuleHit l y r rest p sb)
+            (let (many u) (erased q) (canon (subterm sb) rest r))
+            (values u (CanRule rules x r rest u p q)))))
+      ((Bound k) (values (Bound k) (CanBound rules k)))
+      ((App h as)
+        (let (many h2) (erased p) (canon rules h))
+        (let (many as2) (erased q) (canon-list rules as))
+        (values (App h2 as2) (CanApp rules h h2 as as2 p q)))
+      ((Univ) (values (Univ) (CanUniv rules)))
+      ((Fn l ps rs)
+        (let (many l2) (erased p) (canon rules l))
+        (let (many ps2) (erased q) (canon-tele rules ps))
+        (let (many rs2) (erased r) (canon-tele rules rs))
+        (values (Fn l2 ps2 rs2) (CanFn rules l l2 ps ps2 rs rs2 p q r)))
+      ((TyCtor ps)
+        (let (many ps2) (erased q) (canon-tele rules ps))
+        (values (TyCtor ps2) (CanTyCtor rules ps ps2 q)))
+      ((ValCtor ps r)
+        (let (many ps2) (erased q) (canon-tele rules ps))
+        (let (many r2) (erased p) (canon rules r))
+        (values (ValCtor ps2 r2) (CanValCtor rules ps ps2 r r2 q p)))))
+  (many canon-list : (subterm many (List (Rule)) rules) (subterm many (List (Term)) ts) -> (many (List (Term)) us) (erased (CanonList rules ts us) p)
+    (match many ts _
+      ((Nil a) (values (Nil _) (CanNil rules)))
+      ((Cons a t rest)
+        (let (many u) (erased p) (canon rules t))
+        (let (many us) (erased q) (canon-list rules rest))
+        (values (Cons _ u us) (CanCons rules t u rest us p q)))))
+  (many canon-tele : (subterm many (List (Rule)) rules) (subterm many (List (Entry)) es) -> (many (List (Entry)) fs) (erased (CanonTele rules es fs) p)
+    (match many es _
+      ((Nil a) (values (Nil _) (CanTNil rules)))
+      ((Cons a e rest)
+        (match many e _
+          ((MkEntry s i t)
+            (let (many u) (erased p) (canon rules t))
+            (let (many fs) (erased q) (canon-tele rules rest))
+            (values (Cons _ (MkEntry s i u) fs) (CanTCons rules s i t u rest fs p q))))))))
 
 (MkUnit)
