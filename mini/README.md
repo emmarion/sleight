@@ -34,6 +34,9 @@ claim in this file that the tests do not make is a mistake in this file.
   helpers, each judgment total with an `Ok` or `Err` outcome; `Fails` is
   the `Err` outcome of a program.
 - `elabfn.sl` — the deriving functions for `elab.sl`.
+- `preserve.sl` — groundwork for the open preservation argument below:
+  canonicalization is a function of the rules, and `ElabTerm` forms only
+  what `TypeOfTerm` types. Not needed by the elaborator.
 - `tests/mini_*.sl` — what runs, under `dune test`.
 
 ## Shapes chosen here, for the owner to confirm or change
