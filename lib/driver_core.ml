@@ -13,6 +13,7 @@ type world = {
 
 type 'v request =
   | Exit of 'v
+  | Step of 'v
   | WriteOut of 'v * 'v
   | WriteErr of 'v * 'v
   | ReadLine of 'v
@@ -58,6 +59,7 @@ type 'v ops = {
   unchanged : 'v;
   request : 'v -> 'v request;
   apply : 'v -> 'v -> 'v;
+  apply0 : 'v -> 'v;
 }
 
 type 'v t = { of_string : string -> 'v; to_string : 'v -> string; run_io : world -> 'v -> int; run_main : world -> 'v -> unit }
@@ -104,8 +106,9 @@ let make ?of_host ?to_host o =
     let rec loop v =
       match o.request v with
       | Exit code -> u8 code
-      | WriteOut (s, next) -> w.out (to_string s); loop next
-      | WriteErr (s, next) -> w.err (to_string s); loop next
+      | Step k -> loop (o.apply0 k)
+      | WriteOut (s, k) -> w.out (to_string s); loop (o.apply0 k)
+      | WriteErr (s, k) -> w.err (to_string s); loop (o.apply0 k)
       | ReadLine k -> loop (o.apply k (match w.read_line () with Some l -> o.some (of_string l) | None -> o.none))
       | ReadFile (path, k) -> loop (o.apply k (result (fun () -> of_string (read_file (to_string path)))))
       | WriteFile (path, s, k) -> loop (o.apply k (result (fun () -> write_file (to_string path) (to_string s); o.unit)))

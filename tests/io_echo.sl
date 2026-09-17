@@ -11,10 +11,13 @@
 (comptime-match d3 (Yes za3 zb3 zp3))
 (let (many code3) (MkU8 3 zp3))
 (let (erased str-p) (prove-predates str-lvl P))
+(let (erased thunk-p) (prove-predates thunk-lvl P))
 
 (def-fns P $ many echo : (many (Maybe (String)) line) -> (many (IO P) next)
   (match many line _
     ((None a) (Exit P code3))
-    ((Some a s) (WriteOut P (str-append (predates str-p) "> " (str-append (predates str-p) s "\n")) (ReadLine P echo)))))
+    ((Some a s)
+      (WriteOut P (str-append (predates str-p) "> " (str-append (predates str-p) s "\n"))
+        (thunk (predates thunk-p) _ _ (ReadLine P echo))))))
 
 (ReadLine P echo)

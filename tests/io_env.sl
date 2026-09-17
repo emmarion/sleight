@@ -14,6 +14,8 @@
 (let (erased str-p0) (prove-predates str-lvl P0))
 (let (erased str-p) (prove-predates str-lvl P))
 (let (erased p0-p) (prove-predates P0 P))
+(let (erased thunk-p) (prove-predates thunk-lvl P))
+(let (erased thunk-p0) (prove-predates thunk-lvl P0))
 
 (def-fns P0 $ many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (many (IO P) next)
   (match many vars _
@@ -23,19 +25,19 @@
         ((MkPair b c name value)
           (WriteOut P
             (str-append (predates str-p0) name (str-append (predates str-p0) "=" (str-append (predates str-p0) value "\n")))
-            (show-vars (subterm _) rest)))))))
+            (thunk (predates thunk-p0) _ _ (show-vars (subterm _) rest))))))))
 
 (def-fns P $ many after-envs : (many (List (Pair (String) (String))) vars) -> (many (IO P) next)
   (show-vars (predates p0-p) vars))
 
 (def-fns P $ many after-absent : (many (Maybe (String)) value) -> (many (IO P) next)
   (match many value _
-    ((None a) (WriteOut P "absent\n" (GetEnvs P after-envs)))
-    ((Some a s) (WriteOut P "present\n" (GetEnvs P after-envs)))))
+    ((None a) (WriteOut P "absent\n" (thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))
+    ((Some a s) (WriteOut P "present\n" (thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))))
 
 (def-fns P $ many after-a : (many (Maybe (String)) value) -> (many (IO P) next)
   (match many value _
-    ((None a) (WriteOut P "absent\n" (GetEnv P "SL_NONE" after-absent)))
-    ((Some a s) (WriteOut P (str-append (predates str-p) s "\n") (GetEnv P "SL_NONE" after-absent)))))
+    ((None a) (WriteOut P "absent\n" (thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))
+    ((Some a s) (WriteOut P (str-append (predates str-p) s "\n") (thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))))
 
 (GetEnv P "SL_A" after-a)

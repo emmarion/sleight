@@ -768,14 +768,21 @@
   (many Changed : -> (Change))
   (many Unchanged : -> (Change)))
 
-; A program's requests to the driver (ASSUMPTIONS.md): each carries what comes next, as a value or as a
-; continuation the driver applies to the request's answer, so a step never recurses and the driver loops.
+(def-lvl thunk-lvl)
+
+(def-fns thunk-lvl $ many thunk : (erased Type A) (erased (Level) L) (many A a) -> (many (Fn L -> (many A r)) k)
+  (def-fns L $ many held : -> (many A r) a)
+  held)
+
+; A program's requests to the driver (ASSUMPTIONS.md): every entry but Exit carries a continuation the
+; driver applies to the request's answer, so a step never recurses and the driver loops.
 (def-adts
   (IO : ((Level) L) -> Type
     enum
     (many Exit : (erased (Level) L) (many (U8) code) -> (IO L))
-    (many WriteOut : (erased (Level) L) (many (String) text) (many (IO L) next) -> (IO L))
-    (many WriteErr : (erased (Level) L) (many (String) text) (many (IO L) next) -> (IO L))
+    (many Step : (erased (Level) L) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
+    (many WriteOut : (erased (Level) L) (many (String) text) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
+    (many WriteErr : (erased (Level) L) (many (String) text) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
     (many ReadLine : (erased (Level) L) (many (Fn L (many (Maybe (String)) line) -> (many (IO L) next)) k) -> (IO L))
     (many ReadFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (String)) contents) -> (many (IO L) next)) k) -> (IO L))
     (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))

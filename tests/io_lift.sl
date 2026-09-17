@@ -6,7 +6,9 @@
 ; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 mints the program's
 ; level B and returns, erased, each value at (IO B) and the proof that coerces to it. The erased walk gives each
 ; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
-; minted inside, after B, so the caller supplies levels and values only.
+; minted inside, after B, so the caller supplies levels and values only. B is opened from lift2's
+; existential rather than minted by def-lvl, so prove-predates cannot reach it and the prelude's thunk is
+; unavailable at B; the nullary continuation there is a named function instead.
 (def-lvl proof-lvl)
 (def-lvl lift-lvl)
 (let (erased pl) (prove-predates proof-lvl lift-lvl))
@@ -28,13 +30,24 @@
         (let (erased o2) (erased q) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
       (values o (coercible-of o)))
+    (def-fns proof-lvl $ erased lift-fn0 : (subterm many (Fn A -> (many (IO A) next)) k) ->
+        (erased (Fn B -> (many (IO B) next)) o)
+        (erased (Coercible (Fn B -> (many (IO B) next)) o (Fn A -> (many (IO A) next)) k) p)
+      (def-fns B $ many o : -> (many (IO B) next)
+        (let (many r) (delegate (k (predates ab))))
+        (let (erased o2) (erased q) (lift-proof (predates pb) A ab r))
+        (coerce r (coercible-sym q)))
+      (values o (coercible-of o)))
     (match many io _
       ((Exit l c) (values (Exit B c) (coercible-ctor Exit B A (coercible-refl c))))
-      ((WriteOut l t n)
-        (let (erased o) (erased q) (lift-proof A ab (subterm _) n))
+      ((Step l k)
+        (let (erased o) (erased q) (lift-fn0 (subterm _) k))
+        (values (Step B o) (coercible-ctor Step B A q)))
+      ((WriteOut l t k)
+        (let (erased o) (erased q) (lift-fn0 (subterm _) k))
         (values (WriteOut B t o) (coercible-ctor WriteOut B A (coercible-refl t) q)))
-      ((WriteErr l t n)
-        (let (erased o) (erased q) (lift-proof A ab (subterm _) n))
+      ((WriteErr l t k)
+        (let (erased o) (erased q) (lift-fn0 (subterm _) k))
         (values (WriteErr B t o) (coercible-ctor WriteErr B A (coercible-refl t) q)))
       ((ReadLine l k)
         (let (erased o) (erased q) (lift-fn (Maybe (String)) (subterm _) k))
@@ -87,26 +100,33 @@
 (comptime-match d3 (Yes za3 zb3 zp3))
 (let (many code3) (MkU8 3 zp3))
 (let (erased str-a1) (prove-predates str-lvl A1))
+(let (erased th-a1) (prove-predates thunk-lvl A1))
 (def-fns A1 $ many lib-echo : (many (Maybe (String)) line) -> (many (IO A1) next)
   (match many line _
     ((None a) (Exit A1 code3))
-    ((Some a s) (WriteOut A1 (str-append (predates str-a1) "> " (str-append (predates str-a1) s "\n")) (ReadLine A1 lib-echo)))))
+    ((Some a s)
+      (WriteOut A1 (str-append (predates str-a1) "> " (str-append (predates str-a1) s "\n"))
+        (thunk (predates th-a1) _ _ (ReadLine A1 lib-echo))))))
 
 (def-lvl A2)
 (let (many d0) (lt-dec 0 u8-modulus))
 (comptime-match d0 (Yes za0 zb0 zp0))
 (let (many code0) (MkU8 0 zp0))
+(let (erased th-a2) (prove-predates thunk-lvl A2))
 (def-fns A2 $ many banner : (many (List (String)) args) -> (many (IO A2) next)
   (match many args _
-    ((Nil a) (WriteErr A2 "no args\n" (Exit A2 code0)))
-    ((Cons a x rest) (WriteErr A2 x (Exit A2 code0)))))
+    ((Nil a) (WriteErr A2 "no args\n" (thunk (predates th-a2) _ _ (Exit A2 code0))))
+    ((Cons a x rest) (WriteErr A2 x (thunk (predates th-a2) _ _ (Exit A2 code0))))))
 
 (let (many echo-a1) (ReadLine A1 lib-echo))
 (let (many banner-a2) (GetArgs A2 banner))
 (let (erased B) (erased e) (erased b) (erased qe) (erased qb) (lift2 A1 A2 echo-a1 banner-a2))
+(def-fns B $ many then-echo : -> (many (IO B) next)
+  (coerce echo-a1 qe))
+
 (def-fns B $ many user-start : (many (Maybe (String)) line) -> (many (IO B) next)
   (match many line _
     ((None a) (coerce banner-a2 qb))
-    ((Some a s) (WriteOut B "starting\n" (coerce echo-a1 qe)))))
+    ((Some a s) (WriteOut B "starting\n" then-echo))))
 
 (ReadLine B user-start)

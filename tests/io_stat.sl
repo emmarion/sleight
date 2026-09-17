@@ -15,6 +15,7 @@
 (let (many code1) (MkU8 1 zp1))
 (let (erased str-p) (prove-predates str-lvl P))
 (let (erased p0-p) (prove-predates P0 P))
+(let (erased thunk-p) (prove-predates thunk-lvl P))
 
 (def-fns P0 $ many kind-name : (many (EntryKind) k) -> (many (String) s)
   (match many k _
@@ -30,26 +31,26 @@
   (match many r _
     ((Ok a k)
       (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates p0-p) k) "\n"))
-        (DeleteFile P "io-stat-test.txt" cleaned)))
-    ((Fail a m) (WriteErr P m (Exit P code1)))))
+        (thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-fns P $ many got-cwd : (many (String) path) -> (many (IO P) next)
   (Stat P path cwd-kind))
 
 (def-fns P $ many none-kind : (many (Result (EntryKind)) r) -> (many (IO P) next)
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (GetCwd P got-cwd)))
-    ((Fail a m) (WriteErr P m (Exit P code1)))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-fns P $ many file-kind : (many (Result (EntryKind)) r) -> (many (IO P) next)
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (Stat P "io-stat-test-none" none-kind)))
-    ((Fail a m) (WriteErr P m (Exit P code1)))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-fns P $ many read-back : (many (Result (String)) r) -> (many (IO P) next)
   (match many r _
-    ((Ok a s) (WriteOut P (str-append (predates str-p) s "\n") (Stat P "io-stat-test.txt" file-kind)))
-    ((Fail a m) (WriteErr P m (Exit P code1)))))
+    ((Ok a s) (WriteOut P (str-append (predates str-p) s "\n") (thunk (predates thunk-p) _ _ (Stat P "io-stat-test.txt" file-kind))))
+    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-fns P $ many appended : (many (Result (Unit)) o) -> (many (IO P) next)
   (ReadFile P "io-stat-test.txt" read-back))

@@ -24,6 +24,7 @@ let driver env =
     let i, fs = des "Exit" v in
     match ((V.ctor_at (c "Exit").adt i).cname, fs) with
     | "Exit", [ x ] -> Exit x
+    | "Step", [ k ] -> Step k
     | "WriteOut", [ s; k ] -> WriteOut (s, k)
     | "WriteErr", [ s; k ] -> WriteErr (s, k)
     | "ReadLine", [ k ] -> ReadLine k
@@ -53,7 +54,7 @@ let driver env =
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
       changed = build "Changed" []; unchanged = build "Unchanged" [];
-      request; apply = (fun k x -> List.hd (Eval.apply k [ x ])) }
+      request; apply = (fun k x -> List.hd (Eval.apply k [ x ])); apply0 = (fun k -> List.hd (Eval.apply k [])) }
 
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)

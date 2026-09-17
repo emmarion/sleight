@@ -444,7 +444,8 @@ shape below is the session's.
 56. **`IO` is a source enum in the prelude, indexed by a level**:
     `(IO L)`. Each constructor carries what happens next, either the
     next `(IO L)` value outright (`WriteOut`, `WriteErr`, whose effects
-    have no answer) or a continuation `(Fn L (many answer) -> (many
+    have no answer -- superseded by item 146, which makes these carry a
+    nullary function too) or a continuation `(Fn L (many answer) -> (many
     (IO L) next))` the driver applies to the request's answer
     (`ReadLine` with `(Maybe (String))`, `ReadFile` with `(Result
     (String))`, `WriteFile` with `(Result (Unit))`, `GetArgs` with
@@ -2745,3 +2746,60 @@ path, and the `unix` dependency; the shapes below are the session's.
      in principle turn into the wrong report; `Changed` never can, being
      the syscall's own success. Extracted programs, the bootstrap and
      the benchmark compile with `-package zarith,unix`.
+
+## Every request but Exit carries a function (section 16)
+
+Asked for by the owner in chat: every `IO` entry except `Exit` should be
+a function, possibly nullary, and an entry that does nothing should join
+them, named `Step` unless a better name turned up. The owner proposed
+the in-language helper that thunks a value rather than an anonymous
+function form, and accepted the extra verbosity at the call sites; the
+rest below is the session's.
+
+146. **`WriteOut` and `WriteErr` carry `(Fn L -> (many (IO L) next))`**
+     rather than the next `(IO L)` outright, superseding that part of
+     item 56, and `Step` joins them with the same field and no effect of
+     its own. Every constructor but `Exit` then reads as one signature —
+     arguments, an answer type, and a continuation from the answer to
+     the next request — with `WriteOut`'s answer type empty rather than
+     absent. The driver gains `apply0` beside `apply`; a nullary SL
+     function extracts to an OCaml `unit -> _` (`lib/extract.ml`'s
+     `params`), so both back-ends apply one directly.
+
+     What the change buys beyond uniformity is that a loop no longer
+     needs a request that answers. Before, `(WriteOut L t next)` wanted
+     `next` already built, so a self-referential one would have had to
+     call itself: a same-level call with no decrease, which the checker
+     refuses. Passing a function instead defers the next request to the
+     driver, so an output-only loop is writable, as is a silent one
+     through `Step` (`tests/io_step.sl`). The termination discipline
+     does not move: the continuation is a closure at the IO level, which
+     comes after the looping function's own level, so no SL function may
+     call it, and the unbounded iteration is still the driver's (item
+     56). One consequence is worth naming: a program may now diverge
+     with nothing observable, where before it had to read or write to
+     keep going. That is not new unsoundness, the driver's loop having
+     been unbounded from the start, but it is a new observable
+     behaviour.
+
+     The uniformity is less than it looks for a walk over `IO` written
+     in SL. Nothing here abstracts over a telescope, so a nullary
+     continuation and a unary one are different types, and
+     `tests/io_lift.sl` needs `lift-fn0` beside `lift-fn`: the walk goes
+     from three shapes to two, not to one. What does collapse is the
+     driver's side and the reading of the type.
+
+147. **`thunk` is a prelude function rather than a form**: it takes a
+     value and returns a nullary function holding it, at any type and
+     any level, so a call site writes `(thunk (predates p) _ _ e)` where
+     a bare `e` used to sit. The owner preferred this to an anonymous
+     function expression, which would have been the larger language
+     change. It is general rather than IO-specific, nothing about it
+     being particular to `IO`; its body is the captured value alone, so
+     the closure it returns needs no `Predates` proof of its own, and
+     `def-fns` accepts the erased level parameter as the level to define
+     at, which the session checked before relying on it. Its one limit
+     is that reaching it at all needs `prove-predates thunk-lvl L`,
+     which wants a level minted by `def-lvl`: at a level opened from an
+     existential, as `tests/io_lift.sl` has, the continuation must be a
+     named nullary function instead, which always works.

@@ -978,7 +978,8 @@
         $ driver-op "missing" $ driver-make d env "Missing")
       (rcat3 (driver-op "changed" $ driver-make d env "Changed") (driver-op "unchanged" $ driver-make d env "Unchanged")
         $ driver-op "request" $ driver-un d env "IO" $ AkRequest)
-      (rcat (RStr "Driver_core.apply = (fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)")
+      (rcat3 (RStr "Driver_core.apply = (fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x); ")
+        (RStr "Driver_core.apply0 = (fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())")
         $ RStr " }\n"))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value

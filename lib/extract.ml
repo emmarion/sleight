@@ -323,7 +323,8 @@ let driver cx =
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
       ("changed", make "Changed"); ("unchanged", make "Unchanged");
       ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
-      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)") ]
+      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)");
+      ("apply0", "(fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())") ]
   in
   let host = match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "" in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
