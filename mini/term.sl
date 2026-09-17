@@ -22,10 +22,34 @@
     enum
     (many MkEntry : (many (Bool) sub) (many (Bool) is) (many (Term) t) -> (Entry))))
 
+; ---- Closedness: a term under [d] binders mentions no binder beyond them. [ClosedTele d es out] threads
+; the depth through a telescope and gives the depth after it.
+(def-adts
+  (Closed : ((Nat) d) ((Term) t) -> Type
+    enum
+    (many ClRef : (erased (Nat) d) (erased (Nat) x) -> (Closed d (Ref x)))
+    (many ClBound : (erased (Nat) d) (erased (Nat) k) (erased (Lt k d) p) -> (Closed d (Bound k)))
+    (many ClApp : (erased (Nat) d) (erased (Term) h) (erased (List (Term)) as) (erased (Closed d h) p) (erased (ClosedList d as) q) -> (Closed d (App h as)))
+    (many ClUniv : (erased (Nat) d) -> (Closed d (Univ)))
+    (many ClFn : (erased (Nat) d) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
+       (erased (Closed d l) p) (erased (ClosedTele d ps d1) q) (erased (ClosedTele d1 rs d2) r) -> (Closed d (Fn l ps rs)))
+    (many ClTyCtor : (erased (Nat) d) (erased (List (Entry)) ps) (erased (Nat) d1) (erased (ClosedTele d ps d1) q) -> (Closed d (TyCtor ps)))
+    (many ClValCtor : (erased (Nat) d) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1) (erased (ClosedTele d ps d1) q) (erased (Closed d1 r) p) ->
+       (Closed d (ValCtor ps r))))
+  (ClosedList : ((Nat) d) ((List (Term)) ts) -> Type
+    enum
+    (many ClNil : (erased (Nat) d) -> (ClosedList d (Nil (Term))))
+    (many ClCons : (erased (Nat) d) (erased (Term) t) (erased (List (Term)) ts) (erased (Closed d t) p) (erased (ClosedList d ts) q) -> (ClosedList d (Cons (Term) t ts))))
+  (ClosedTele : ((Nat) d) ((List (Entry)) es) ((Nat) out) -> Type
+    enum
+    (many ClTNil : (erased (Nat) d) -> (ClosedTele d (Nil (Entry)) d))
+    (many ClTCons : (erased (Nat) d) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Nat) out)
+       (erased (Closed d t) p) (erased (ClosedTele (Succ d) es out) q) -> (ClosedTele d (Cons (Entry) (MkEntry s i t) es) out))))
+
 ; ---- Substitution. A substitution is a list indexed by [Bound]: a [Some] is the closed term the binder
 ; takes, a [None] a binder that stays, which is how going under a telescope entry is recorded, by prepending
-; a [None]. Nothing is shifted, since the terms substituted are closed. A binder beyond the list stays too
-; ([SubBeyond]), which makes the relation total; elaboration never builds such a term.
+; a [None]. Nothing is shifted, since the terms substituted are closed. A binder beyond the list has no
+; rule: the function requires the term closed under the list's length.
 
 (def-adts
   (Subst : ((List (Maybe (Term))) sub) ((Term) t) ((Term) u) -> Type
@@ -35,7 +59,6 @@
        (Subst sub (Bound k) a))
     (many SubSkip : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Nth (Maybe (Term)) sub k (None (Term))) p) ->
        (Subst sub (Bound k) (Bound k)))
-    (many SubBeyond : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (NoNth (Maybe (Term)) sub k) p) -> (Subst sub (Bound k) (Bound k)))
     (many SubApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Term)) as) (erased (List (Term)) as2)
        (erased (Subst sub h h2) p) (erased (SubstList sub as as2) q) -> (Subst sub (App h as) (App h2 as2)))
     (many SubUniv : (erased (List (Maybe (Term))) sub) -> (Subst sub (Univ) (Univ)))
@@ -63,7 +86,7 @@
        (SubstTele sub (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs) out))))
 
 (def-fns _
-  (many subst : (many (List (Maybe (Term))) sub) (subterm many (Term) t) -> (many (Term) u) (erased (Subst sub t u) p)
+  (many subst : (many (List (Maybe (Term))) sub) (erased (Nat) n) (erased (Length (Maybe (Term)) sub n) ln) (subterm many (Term) t) (erased (Closed n t) ct) -> (many (Term) u) (erased (Subst sub t u) p)
     (match many t _
       ((Ref x) (values (Ref x) (SubRef sub x)))
       ((Bound k)
@@ -72,40 +95,54 @@
             (match many m _
               ((Some b v) (values v (SubHit sub k v p)))
               ((None b) (values (Bound k) (SubSkip sub k p)))))
-          ((NthMiss a l i p) (values (Bound k) (SubBeyond sub k p)))))
+          (absurd (NthMiss a l i p) (match erased ct (((False) f)) ((ClBound c k0 lt) (no-nth-lt _ sub n k ln lt p))))))
       ((App h as)
-        (let (many h2) (erased p) (subst sub h))
-        (let (many as2) (erased q) (subst-list sub as))
-        (values (App h2 as2) (SubApp sub h h2 as as2 p q)))
+        (match erased ct _
+          ((ClApp c h0 as0 ch cas)
+            (let (many h2) (erased p) (subst sub n ln h ch))
+            (let (many as2) (erased q) (subst-list sub n ln as cas))
+            (values (App h2 as2) (SubApp sub h h2 as as2 p q)))))
       ((Univ) (values (Univ) (SubUniv sub)))
       ((Fn l ps rs)
-        (let (many l2) (erased p) (subst sub l))
-        (let (many ps2) (many sub1) (erased q) (subst-tele sub ps))
-        (let (many rs2) (many sub2) (erased r) (subst-tele sub1 rs))
-        (values (Fn l2 ps2 rs2) (SubFn sub l l2 ps ps2 rs rs2 sub1 sub2 p q r)))
+        (match erased ct _
+          ((ClFn c l0 ps0 rs0 d1 d2 cl cps crs)
+            (let (many l2) (erased p) (subst sub n ln l cl))
+            (let (many ps2) (many sub1) (erased q) (erased ln1) (subst-tele sub n ln ps d1 cps))
+            (let (many rs2) (many sub2) (erased r) (erased ln2) (subst-tele sub1 d1 ln1 rs d2 crs))
+            (values (Fn l2 ps2 rs2) (SubFn sub l l2 ps ps2 rs rs2 sub1 sub2 p q r)))))
       ((TyCtor ps)
-        (let (many ps2) (many sub1) (erased q) (subst-tele sub ps))
-        (values (TyCtor ps2) (SubTyCtor sub ps ps2 sub1 q)))
+        (match erased ct _
+          ((ClTyCtor c ps0 d1 cps)
+            (let (many ps2) (many sub1) (erased q) (erased ln1) (subst-tele sub n ln ps d1 cps))
+            (values (TyCtor ps2) (SubTyCtor sub ps ps2 sub1 q)))))
       ((ValCtor ps r)
-        (let (many ps2) (many sub1) (erased q) (subst-tele sub ps))
-        (let (many r2) (erased p) (subst sub1 r))
-        (values (ValCtor ps2 r2) (SubValCtor sub ps ps2 r r2 sub1 q p)))))
-  (many subst-list : (many (List (Maybe (Term))) sub) (subterm many (List (Term)) ts) -> (many (List (Term)) us) (erased (SubstList sub ts us) p)
+        (match erased ct _
+          ((ClValCtor c ps0 r0 d1 cps cr)
+            (let (many ps2) (many sub1) (erased q) (erased ln1) (subst-tele sub n ln ps d1 cps))
+            (let (many r2) (erased p) (subst sub1 d1 ln1 r cr))
+            (values (ValCtor ps2 r2) (SubValCtor sub ps ps2 r r2 sub1 q p)))))))
+  (many subst-list : (many (List (Maybe (Term))) sub) (erased (Nat) n) (erased (Length (Maybe (Term)) sub n) ln) (subterm many (List (Term)) ts) (erased (ClosedList n ts) ct) ->
+      (many (List (Term)) us) (erased (SubstList sub ts us) p)
     (match many ts _
       ((Nil a) (values (Nil _) (SubNil sub)))
       ((Cons a t rest)
-        (let (many u) (erased p) (subst sub t))
-        (let (many us) (erased q) (subst-list sub rest))
-        (values (Cons _ u us) (SubCons sub t u rest us p q)))))
-  (many subst-tele : (many (List (Maybe (Term))) sub) (subterm many (List (Entry)) es) -> (many (List (Entry)) fs) (many (List (Maybe (Term))) out) (erased (SubstTele sub es fs out) p)
+        (match erased ct _
+          ((ClCons c t0 ts0 c1 c2)
+            (let (many u) (erased p) (subst sub n ln t c1))
+            (let (many us) (erased q) (subst-list sub n ln rest c2))
+            (values (Cons _ u us) (SubCons sub t u rest us p q)))))))
+  (many subst-tele : (many (List (Maybe (Term))) sub) (erased (Nat) n) (erased (Length (Maybe (Term)) sub n) ln) (subterm many (List (Entry)) es) (erased (Nat) out) (erased (ClosedTele n es out) ce) ->
+      (many (List (Entry)) fs) (many (List (Maybe (Term))) sub2) (erased (SubstTele sub es fs sub2) p) (erased (Length (Maybe (Term)) sub2 out) ln2)
     (match many es _
-      ((Nil a) (values (Nil _) sub (SubTNil sub)))
+      ((Nil a) (match erased ce _ ((ClTNil c) (values (Nil _) sub (SubTNil sub) ln))))
       ((Cons a e rest)
         (match many e _
           ((MkEntry s i t)
-            (let (many u) (erased p) (subst sub t))
-            (let (many fs) (many out) (erased q) (subst-tele (Cons _ (None _) sub) rest))
-            (values (Cons _ (MkEntry s i u) fs) out (SubTCons sub s i t u rest fs out p q))))))))
+            (match erased ce _
+              ((ClTCons c s0 i0 t0 es0 out0 c1 c2)
+                (let (many u) (erased p) (subst sub n ln t c1))
+                (let (many fs) (many sub2) (erased q) (erased ln2) (subst-tele (Cons _ (None _) sub) (Succ n) (LenCons _ (None _) sub n ln) rest out c2))
+                (values (Cons _ (MkEntry s i u) fs) sub2 (SubTCons sub s i t u rest fs sub2 p q) ln2)))))))))
 
 ; The substitution that instantiates a telescope with a list of arguments: the last argument innermost.
 (def-adts
@@ -168,6 +205,12 @@
               (match many (index-dec rest x) _
                 ((IdxHit l z2 k p) (IdxHit _ _ (Succ k) $ IdxOther x y rest k n p))
                 ((IdxMiss l z2 p) (IdxMiss _ _ $ NotInSome x y rest n p))))))))))
+
+(def-fns _ $ erased index-of-lt : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (Nat) k) (erased (Nat) n) (subterm erased (IndexOf ids x k) p) (erased (Length (Maybe (Nat)) ids n) ln) -> (erased (Lt k n) q)
+  (match erased p _
+    ((IdxHere a rest) (match erased ln _ ((LenCons b y rest2 m l2) (LtZ m))))
+    ((IdxNone a rest k2 p2) (match erased ln _ ((LenCons b y rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))
+    ((IdxOther a y rest k2 nq p2) (match erased ln _ ((LenCons b y2 rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))))
 
 (def-adts
   (Abstract : ((List (Maybe (Nat))) ids) ((Term) t) ((Term) u) -> Type
@@ -384,4 +427,23 @@
                 (match many (assign-dec-tele (Succ d) x rest) _
                   ((ADTNo a3 b3 c3 q) (ADTNo _ _ _ $ UnTThere d x (MkEntry s i t) rest q))
                   ((ADTYes a3 b3 c3 out q td) (ADTYes _ _ _ out (AsgTCons d x s i t rest out p q) (TDCons d (MkEntry s i t) rest out td))))))))))))
+(def-fns _
+  (erased assignable-closed : (erased (Nat) d) (erased (Nat) x) (erased (Term) t) (subterm erased (Assignable d x t) a) -> (erased (Closed d t) c)
+    (match erased a _
+      ((AsgRef b y z n) (ClRef d z))
+      ((AsgBound b y k p) (ClBound d k p))
+      ((AsgApp b y h as p q) (ClApp d h as (assignable-closed d x h p) (assignable-closed-list d x as q)))
+      ((AsgUniv b y) (ClUniv d))
+      ((AsgFn b y l ps rs d1 d2 p q r) (ClFn d l ps rs d1 d2 (assignable-closed d x l p) (assignable-closed-tele d x ps d1 q) (assignable-closed-tele d1 x rs d2 r)))
+      ((AsgTyCtor b y ps d1 q) (ClTyCtor d ps d1 (assignable-closed-tele d x ps d1 q)))
+      ((AsgValCtor b y ps r d1 q p) (ClValCtor d ps r d1 (assignable-closed-tele d x ps d1 q) (assignable-closed d1 x r p)))))
+  (erased assignable-closed-list : (erased (Nat) d) (erased (Nat) x) (erased (List (Term)) ts) (subterm erased (AssignableList d x ts) a) -> (erased (ClosedList d ts) c)
+    (match erased a _
+      ((AsgNil b y) (ClNil d))
+      ((AsgCons b y t ts2 p q) (ClCons d t ts2 (assignable-closed d x t p) (assignable-closed-list d x ts2 q)))))
+  (erased assignable-closed-tele : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) es) (erased (Nat) out) (subterm erased (AssignableTele d x es out) a) -> (erased (ClosedTele d es out) c)
+    (match erased a _
+      ((AsgTNil b y) (ClTNil d))
+      ((AsgTCons b y s i t es2 out2 p q) (ClTCons d s i t es2 out (assignable-closed d x t p) (assignable-closed-tele (Succ d) x es2 out q))))))
+
 (MkUnit)

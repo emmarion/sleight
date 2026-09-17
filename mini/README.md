@@ -12,19 +12,23 @@ claim in this file that the tests do not make is a mistake in this file.
 ## Files, bottom up
 
 - `base.sl` — booleans, decided equality on `Nat` and `Bool` with
-  inequality evidence, list indexing with evidence.
+  inequality evidence, list indexing and length with evidence, the
+  layout of a substitution list (leading `None`s, then `Some`s), addition.
 - `term.sl` — `Term`, DESIGN.md section 5's grammar with de Bruijn
-  telescopes, and three relations with their functions: `Subst`
-  (instantiating binders), `Abstract` (turning entries into binders) and
-  `Assignable` (section 18's occurs check and third contradiction).
+  telescopes; `Closed`, a term under a depth mentioning no binder beyond
+  it; and three relations with their functions: `Subst` (instantiating
+  binders, requiring the term closed under the list's length), `Abstract`
+  (turning entries into binders) and `Assignable` (section 18's occurs
+  check and third contradiction).
 - `canon.sl` — `Rule` and `Canon`: a term's canonical form under the
   rules in force, structurally (sections 5, 18).
 - `ctx.sl` — the context: entries with a kind (`KDecl` for constructors
   and type constructors, rigid; `KLevel` for `def-lvl`'s entries), names,
   declared ADTs, rules, the ambient level and subterm arguments (section 3);
   then, for the functions only, what it means for terms, rules, names and
-  ADTs to mention only the context's entries, and for one context to have
-  grown from another.
+  ADTs to mention only the context's entries and, at a depth, only the
+  binders above it (`Scoped ents d t`), and for one context to have grown
+  from another.
 - `unify.sl` — `Unify`: section 18's forced unification as a walk over
   equations, in `Force` mode minting rules and in `Check` mode comparing
   for identity, with the three contradictions as its `UFail` rules.
@@ -55,12 +59,24 @@ claim in this file that the tests do not make is a mistake in this file.
   data and the erased derivation, or a `Stuck` constructor, which the
   functions reach only on a malformed shape, with one exception: the
   type of a closed term (`type-of-term` in `unify.sl`), which `UAssign`
-  and `MintTele`'s `is` entries need, has no derivation for a `Bound`
-  outside its binder or an application whose head's canonical type is
-  not a former, and the carried invariants do not exclude those inputs.
-  One session found a program that reached it while `ETValCtor`
-  accepted any type as a `ValCtor` former's return and `UAssign` related
-  a variable to a term with no check on their types
+  and `MintTele`'s `is` entries need, has no derivation for an
+  application whose head's canonical type is not a value- or
+  type-constructor former of the application's arity, and the carried
+  invariants do not exclude that input. A `Bound` outside its binder
+  was the other shape with no derivation until every scoping invariant
+  took the depth it holds at: `Scoped ents d t` says a term under `d`
+  binders mentions only entries of the context and binders below `d`,
+  the walk of unification and the telescope-threading functions of the
+  elaborator carry that depth, and `subst` requires its term closed
+  under the substitution's length (the owner's decision, reversing a
+  `SubBeyond` rule an earlier session had added to `Subst` to make it
+  total on a binder past the list, which stated a dangling index rather
+  than a substitution). So `Subst` derives nothing for such a term, and
+  `type-of-term` refutes the `Bound` case from `Assignable` at an
+  assignment and from the closedness of a substituted `is` entry.
+  One session found a program that reached the head-type stuck while
+  `ETValCtor` accepted any type as a `ValCtor` former's return and
+  `UAssign` related a variable to a term with no check on their types
   (`tests/mini_untyped_rule.sl`). The owner then restored ASSUMPTIONS 80
   (the return canonicalizes to an application of a type constructor not
   among the former's own binders), which refuses that program, and had
@@ -71,10 +87,9 @@ claim in this file that the tests do not make is a mistake in this file.
   stuck is open: the session's reading is that showing it needs the
   invariant that every application head in play has a former's type,
   carried through the elaborator and unification, which is not attempted.
-  Two relations changed for this, both flagged for the owner: `Subst`
-  gained `SubBeyond` (a `Bound` past the end of the substitution stays,
-  making substitution total), and `Unify`'s twin left/right rules for a
-  variable against a non-variable were merged through `Sided`.
+  One relation change from the fuel removal is still flagged for the
+  owner: `Unify`'s twin left/right rules for a variable against a
+  non-variable were merged through `Sided`.
 - **`Univ` is a term.** Section 10 makes the universe a nullary type
   constructor with `Type` an entry rewriting to it; here `Univ` is a
   constructor of `Term`, `Type` an entry whose rule is `Univ`, and

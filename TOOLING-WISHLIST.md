@@ -122,3 +122,18 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     those two out of their groups to above the user. Either allowing
     a file's groups to refer to each other or reporting the fix
     ("declared below, at line N") would save the shuffle.
+
+19. **Adding an index to a relation edits every constructor site.**
+    Giving `Scoped` a depth meant one more positional erased argument at
+    each of about 170 applications and patterns of its eleven
+    constructors across three files, nearly all of them `_` or a dummy
+    binder, done by script and checked by the compiler. Named or
+    optional erased arguments, or a pattern form that names only the
+    fields it uses, would make such a change local to the definition.
+
+20. **A `_` in an unannotated top-level `let` has nothing to solve it.**
+    Test files that build evidence by hand had to spell out every depth
+    (`(ScApp ents (Zero) ...)`) where the same term inside a function
+    body infers it from the expected type. Letting a run-position `let`
+    take an expectation from a later use, or reporting which `_` is
+    unsolved with its expected type, would help.

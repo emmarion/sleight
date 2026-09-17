@@ -40,8 +40,9 @@ structurally, with the relations kept as they were:
   the elaborator threads (`Scoped`, `Ext`, `Grew`, `Covers`, and wrappers
   over `Ctx`).
 - The relations changed in two places, both for the owner to confirm or
-  reject: `Subst`'s `SubBeyond` and `Unify`'s `Sided` merge of the
-  left/right twin rules. The function-side `Oriented` lost its `OrStuck`.
+  reject: `Subst`'s `SubBeyond` (since removed, below) and `Unify`'s
+  `Sided` merge of the left/right twin rules. The function-side
+  `Oriented` lost its `OrStuck`.
 - One non-syntax stuck remains, the type of a closed term
   (`type-of-term`, now in `mini/unify.sl`; see `mini/README.md`). A later
   session, funded to close it by a preservation argument, found the
@@ -74,5 +75,39 @@ structurally, with the relations kept as they were:
   rather than a regression. `self/bootstrap.sh` runs with the default
   limit and will report these three as failures.
 
-Next, in the session's estimation: the owner's verdict on the two relation
-changes and on the `type-of-term` hole, then the items above.
+Next, in the session's estimation: the owner's verdict on the `Sided`
+merge and on the `type-of-term` hole, then the items above.
+
+## `SubBeyond` removed and the `Bound` stuck closed (one session)
+
+Done, at the owner's word after a chat analysis of `SubBeyond`: a binder
+past the substitution list is not a case substitution has an answer to,
+the rule kept the index unshifted where a shifted one would have been
+right, and it was harmless only because elaboration never builds such a
+term. So the rule is gone and the closedness that made it harmless is
+carried:
+
+- `Scoped` gained a depth index (`Scoped ents d t`, with `ScopedTele`
+  giving the depth a telescope ends at); `Closed d t` in `term.sl` is its
+  entry-free half, which `subst` requires and refutes the missing index
+  from. `base.sl` holds `Length`, `Layout` (the shape of a substitution
+  list) and `Plus`, which the depth bookkeeping needs.
+- The unification walk carries the depth of the equation it is on;
+  `assign` tightens to depth zero from `Assignable`; the elaborator's
+  telescope-threading functions (`mint-tele`, `elab-term-args`,
+  `check-rets`, `elab-expr-args`, `elab-tele`) carry the depth their
+  remaining entries sit at, `Cov` and `ScS` record their lists' layout,
+  and `inst-ret` in `ctx.sl` instantiates a former's return from
+  arguments of its arity. `LenMismatch`, `LenDec` and `len-dec` moved to
+  `ctx.sl` so that `type-of-term` can decide arity.
+- `type-of-term`'s `Bound` case is an empty match; its one remaining
+  stuck is an application whose head's canonical type is not a former of
+  the application's arity, the head-type hole above unchanged. No
+  relation of the semantics changed except the removal of `SubBeyond`.
+- `tests/mini_term.sl` and `tests/mini_unify.sl` build the new evidence
+  by hand; the other `mini_*` tests are unchanged and pass.
+
+Next, in the session's estimation: the head-type stuck, by one of the
+routes discussed with the owner (a well-typedness invariant carried
+through unification, or recording an application's former or type on the
+term as DESIGN.md section 3's entries do).

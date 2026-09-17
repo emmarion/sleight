@@ -16,14 +16,15 @@
 (let (erased (HasEnt ents 4) h4) (HEThere _ _ _ $ HEThere _ _ _ $ HEHere _ _ _ _))
 (let (erased (HasEnt ents 3) h3) (HEThere _ _ _ $ HEThere _ _ _ $ HEThere _ _ _ $ HEHere _ _ _ _))
 (let (erased (HasEnt ents 2) h2) (HEThere _ _ _ $ HEThere _ _ _ $ HEThere _ _ _ $ HEThere _ _ _ $ HEHere _ _ _ _))
-(let (erased s-nat) (ScApp ents (Ref 2) (Nil _) (ScRef _ 2 h2) (ScNil _)))
+(let (erased s-nat) (ScApp ents (Zero) (Ref 2) (Nil _) (ScRef _ (Zero) 2 h2) (ScNil _ (Zero))))
+(let (erased s-nat1) (ScApp ents (Succ (Zero)) (Ref 2) (Nil _) (ScRef _ (Succ (Zero)) 2 h2) (ScNil _ (Succ (Zero)))))
 (let (erased (ScopedEnts ents ents) se)
-  (SECons _ _ _ _ _ s-nat $ SECons _ _ _ _ _ s-nat $ SECons _ _ _ _ _ (ScValCtor _ _ _ (ScTCons _ _ _ _ _ s-nat (ScTNil _)) s-nat)
-    $ SECons _ _ _ _ _ (ScValCtor _ _ _ (ScTNil _) s-nat) $ SECons _ _ _ _ _ (ScTyCtor _ _ (ScTNil _)) $ SENil _))
+  (SECons _ _ _ _ _ s-nat $ SECons _ _ _ _ _ s-nat $ SECons _ _ _ _ _ (ScValCtor _ (Zero) _ _ (Succ (Zero)) (ScTCons _ (Zero) _ _ _ _ (Succ (Zero)) s-nat (ScTNil _ (Succ (Zero)))) s-nat1)
+    $ SECons _ _ _ _ _ (ScValCtor _ (Zero) _ _ (Zero) (ScTNil _ (Zero)) s-nat) $ SECons _ _ _ _ _ (ScTyCtor _ (Zero) _ (Zero) (ScTNil _ (Zero))) $ SENil _))
 (let (many none) (Nil (Rule)))
 (let (many tb0) (MkTable ents none (Nil _) (Zero) (VFNil _ _) (ALNil _) (SRNil _) (RPNil _)))
 
-(def-fns _ $ many run : (many (Mode) m) (many (List (Rule)) rules) (many (Table ents rules) tb) (many (Term) l) (many (Term) r) (erased (Scoped ents l) sl) (erased (Scoped ents r) sr) ->
+(def-fns _ $ many run : (many (Mode) m) (many (List (Rule)) rules) (many (Table ents rules) tb) (many (Term) l) (many (Term) r) (erased (Scoped ents (Zero) l) sl) (erased (Scoped ents (Zero) r) sr) ->
     (many (UOut) o) (many (OutTable ents o) ot)
   (let (many n) (erased fc) (free-count ents rules))
   (match many (unify-eqs m ents se rules tb n fc (Cons _ (MkEqn l r) (Nil _)) (SqCons _ _ _ _ sl sr (SqNil _))) _
@@ -35,16 +36,16 @@
 
 (let (many succ-m) (App (Ref 4) (Cons _ (Ref 6) (Nil _))))
 (let (many succ-n) (App (Ref 4) (Cons _ (Ref 5) (Nil _))))
-(let (erased s-succ-m) (ScApp ents _ _ (ScRef _ 4 h4) (ScCons _ _ _ (ScRef _ 6 h6) (ScNil _))))
-(let (erased s-succ-n) (ScApp ents _ _ (ScRef _ 4 h4) (ScCons _ _ _ (ScRef _ 5 h5) (ScNil _))))
-(let (erased s-zero) (ScApp ents _ _ (ScRef _ 3 h3) (ScNil _)))
+(let (erased s-succ-m) (ScApp ents (Zero) _ _ (ScRef _ (Zero) 4 h4) (ScCons _ (Zero) _ _ (ScRef _ (Zero) 6 h6) (ScNil _ (Zero)))))
+(let (erased s-succ-n) (ScApp ents (Zero) _ _ (ScRef _ (Zero) 4 h4) (ScCons _ (Zero) _ _ (ScRef _ (Zero) 5 h5) (ScNil _ (Zero)))))
+(let (erased s-zero) (ScApp ents (Zero) _ _ (ScRef _ (Zero) 3 h3) (ScNil _ (Zero))))
 
-(let (many o1) (many t1) (run (Force) none tb0 (Ref 5) succ-m (ScRef _ 5 h5) s-succ-m))
+(let (many o1) (many t1) (run (Force) none tb0 (Ref 5) succ-m (ScRef _ (Zero) 5 h5) s-succ-m))
 (let (many o2) (many t2) (run (Force) none tb0 (App (Ref 3) (Nil _)) succ-m s-zero s-succ-m))
-(let (many o3) (many t3) (run (Force) none tb0 (Ref 5) succ-n (ScRef _ 5 h5) s-succ-n))
-(let (many o4) (many t4) (run (Check) none tb0 (Ref 5) (Ref 6) (ScRef _ 5 h5) (ScRef _ 6 h6)))
+(let (many o3) (many t3) (run (Force) none tb0 (Ref 5) succ-n (ScRef _ (Zero) 5 h5) s-succ-n))
+(let (many o4) (many t4) (run (Check) none tb0 (Ref 5) (Ref 6) (ScRef _ (Zero) 5 h5) (ScRef _ (Zero) 6 h6)))
 (let (many o5) (many t5) (run (Check) none tb0 succ-n succ-n s-succ-n s-succ-n))
-(let (many o6) (many t6) (run (Force) none tb0 (Ref 5) (Ref 6) (ScRef _ 5 h5) (ScRef _ 6 h6)))
+(let (many o6) (many t6) (run (Force) none tb0 (Ref 5) (Ref 6) (ScRef _ (Zero) 5 h5) (ScRef _ (Zero) 6 h6)))
 
 ; The alias lands on the newer variable, 6.
 (let (many aliased)
@@ -59,12 +60,12 @@
 (comptime-match aliased (BTrue))
 
 ; With 6 ruled to be Succ 5 by the first run, 6 against Succ 5 is read through the rule and accepted in Check mode.
-(let (many o7) (many t7) (run (Force) none tb0 (Ref 6) succ-n (ScRef _ 6 h6) s-succ-n))
+(let (many o7) (many t7) (run (Force) none tb0 (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))
 (let (many r7)
   (match many t7 (((Bool) b))
     ((OTFail e) (BFalse))
     ((OTOk e rules tb)
-      (let (many o) (many t) (run (Check) rules tb (Ref 6) succ-n (ScRef _ 6 h6) s-succ-n))
+      (let (many o) (many t) (run (Check) rules tb (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))
       (ok o))))
 
 (Cons _ (ok o1) $ Cons _ (ok o2) $ Cons _ (ok o3) $ Cons _ (ok o4) $ Cons _ (ok o5) $ Cons _ (ok o6) $ Cons _ r7 $ Nil _)

@@ -360,12 +360,6 @@
        (erased (Term) at) (erased (Term) aty) (erased (Reason) r)
        (erased (ElabTerm ctx a (TOk at aty)) p) (erased (ElabTermArgs ctx (Cons (Maybe (Term)) (Some (Term) at) acc) es args (ArgsErr r)) q) ->
        (ElabTermArgs ctx acc (Cons (Entry) (MkEntry s i t) es) (Cons (Raw) a args) (ArgsErr r))))
-  (LenMismatch : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type
-    enum
-    (many LMNilCons : (erased Type A) (erased Type B) (erased B y) (erased (List B) ys) -> (LenMismatch A B (Nil A) (Cons B y ys)))
-    (many LMConsNil : (erased Type A) (erased Type B) (erased A x) (erased (List A) xs) -> (LenMismatch A B (Cons A x xs) (Nil B)))
-    (many LMCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) ->
-       (LenMismatch A B (Cons A x xs) (Cons B y ys))))
   ; A telescope written as entries: each entry's term is elaborated with the earlier entries in scope, a
   ; type entry's must be a type, and the entry is minted and then abstracted into a binder.
   (EntryRaw : ((Raw) raw) ((Bool) sub) ((Bool) is) ((Raw) term) ((String) name) -> Type
@@ -515,10 +509,7 @@
     (many SPZero : (erased (Ctx) ctx) (erased (List (Term)) as) (erased (Term) b) (erased (List (Term)) bs) -> (SamePrefix ctx (Zero) as (Cons (Term) b bs) b))
     (many SPSucc : (erased (Ctx) ctx) (erased (Nat) j) (erased (Term) a) (erased (List (Term)) as) (erased (Term) b0) (erased (List (Term)) bs) (erased (Term) b)
        (erased (Same ctx a b0) sm) (erased (SamePrefix ctx j as bs b) p) -> (SamePrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b0 bs) b)))
-  (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
-    enum
-    (many LenNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LenCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n) (erased (Length A xs n) p) -> (Length A (Cons A x xs) (Succ n)))))
+)
 
 ; A strict subterm through constructor applications (section 8), on canonical terms, and its absence.
 (def-adts
