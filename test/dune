@@ -3,4 +3,5 @@
  (libraries speciallang)
  (deps
   (glob_files %{project_root}/tests/*.sl)
-  (glob_files %{project_root}/mini/*.sl)))
+  (glob_files %{project_root}/mini/*.sl)
+  (glob_files %{project_root}/self/*.sl)))
