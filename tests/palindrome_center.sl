@@ -1,4 +1,4 @@
-; needs: palindrome_relations
+; needs: palindrome_relations palindrome
 ; expect: (Cons 0 (Cons 1 (Cons 3 (Cons 4 (Cons 3 (Nil))))))
 
 (def-adts
@@ -228,18 +228,289 @@
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
   (best-from (Nil (Nat)) xs xs (RevFlat xs)))
 
+(def-fns _ $ erased drop-succ : (erased (Nat) n) (erased (List (Nat)) l) (erased (Nat) x)
+    (erased (List (Nat)) rest) (subterm erased (Drop n l (Cons (Nat) x rest)) d) ->
+    (erased (Drop (Succ n) l rest) d2)
+  (match erased d _
+    ((DropZero a) (DropSucc (Zero) x rest rest (DropZero rest)))
+    ((DropSucc n1 y ys zs d1)
+      (DropSucc (Succ n1) y ys rest (drop-succ n1 ys x rest d1)))))
+
+(def-fns _ $ erased mirror-extend : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (Nat) k) (subterm erased (Mirror l r k) m) (erased (Nat) x)
+    (erased (List (Nat)) l1) (erased (List (Nat)) r1)
+    (erased (Drop k l (Cons (Nat) x l1)) dl) (erased (Drop k r (Cons (Nat) x r1)) dr) ->
+    (erased (Mirror l r (Succ k)) m2)
+  (match erased m _
+    ((MirrorZ l0 r0)
+      (match erased dl _
+        ((DropZero a)
+          (match erased dr _
+            ((DropZero b) (MirrorS x l1 r1 (Zero) (MirrorZ l1 r1)))))))
+    ((MirrorS y la ra k1 m1)
+      (match erased dl _
+        ((DropSucc n1 y1 ys1 zs1 dl1)
+          (match erased dr _
+            ((DropSucc n2 y2 ys2 zs2 dr1)
+              (MirrorS y la ra (Succ k1)
+                       (mirror-extend la ra k1 m1 x l1 r1 dl1 dr1)))))))))
+
+(def-fns _ $ erased mirror-stop : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (Nat) j) (erased (Mirror l r j) m)
+    (erased (Nat) k) (erased (List (Nat)) l2) (erased (List (Nat)) r2)
+    (subterm erased (Drop k l l2) dl) (erased (Drop k r r2) dr)
+    (erased (Stop l2 r2) st) -> (erased (Lt j (Succ k)) lt)
+  (match erased m _
+    ((MirrorZ l0 r0) (LtZ k))
+    ((MirrorS x l1 r1 j1 m1)
+      (match erased dl _
+        ((DropZero a)
+          (match erased dr _
+            ((DropZero b)
+              (match erased st _
+                (absurd (StopNe x0 y0 la ra d) (apart-irrefl x d))))))
+        ((DropSucc k1 x1 xs1 ys1 dl1)
+          (match erased dr _
+            ((DropSucc k2 y2 ys2 zs2 dr1)
+              (LtS j1 (Succ k1)
+                   (mirror-stop l1 r1 j1 m1 k1 l2 r2 dl1 dr1 st)))))))))
+
+(def-adts
+  (CentreBound : ((List (Nat)) l) ((List (Nat)) r) ((Nat) cn) ((Nat) n) -> Type
+    enum
+    (many MkCentreBound : (erased (List (Nat)) l) (erased (List (Nat)) r)
+        (erased (Nat) cn) (erased (Nat) n)
+        (erased (Nat) k) (erased (List (Nat)) l2) (erased (List (Nat)) r2)
+        (erased (Drop k l l2) dl) (erased (Drop k r r2) dr) (erased (Stop l2 r2) st)
+        (erased (Nat) dk) (erased (Double k dk) ddk)
+        (erased (Nat) lc) (erased (Add cn dk lc) adc) (erased (Lt lc (Succ n)) le) ->
+       (CentreBound l r cn n))))
+
+(def-adts
+  (Walk : ((List (Nat)) l0) ((List (Nat)) r0) ((List (Nat)) l) ((List (Nat)) r)
+          ((Nat) cn) -> Type
+    enum
+    (many WalkHere : (erased (List (Nat)) l) (erased (List (Nat)) r) ->
+       (Walk l r l r (Zero)))
+    (many WalkOdd : (erased (List (Nat)) l) (erased (Nat) c) (erased (List (Nat)) r1) ->
+       (Walk l (Cons (Nat) c r1) l r1 (Succ (Zero))))
+    (many WalkNext : (erased (List (Nat)) l) (erased (Nat) c) (erased (List (Nat)) r1)
+        (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (Nat) cn)
+        (erased (Walk (Cons (Nat) c l) r1 l2 r2 cn) p) ->
+       (Walk l (Cons (Nat) c r1) l2 r2 cn))))
+
+(def-adts
+  (AllBounded : ((List (Nat)) l) ((List (Nat)) r) ((Nat) n) -> Type
+    enum
+    (many AllBEnd : (erased (List (Nat)) l) (erased (Nat) n)
+        (erased (CentreBound l (Nil (Nat)) (Zero) n) cb) ->
+       (AllBounded l (Nil (Nat)) n))
+    (many AllBStep : (erased (List (Nat)) l) (erased (Nat) c) (erased (List (Nat)) r1)
+        (erased (Nat) n)
+        (erased (CentreBound l (Cons (Nat) c r1) (Zero) n) cbe)
+        (erased (CentreBound l r1 (Succ (Zero)) n) cbo)
+        (erased (AllBounded (Cons (Nat) c l) r1 n) rest) ->
+       (AllBounded l (Cons (Nat) c r1) n))))
+
+(def-fns _ $ erased find-bound : (erased (List (Nat)) l0) (erased (List (Nat)) r0)
+    (erased (List (Nat)) l) (erased (List (Nat)) r) (erased (Nat) cn) (erased (Nat) n)
+    (subterm erased (Walk l0 r0 l r cn) wk) (erased (AllBounded l0 r0 n) ab) ->
+    (erased (CentreBound l r cn n) cb)
+  (match erased wk _
+    ((WalkHere la ra)
+      (match erased ab _
+        ((AllBEnd l1 k1 cb) cb)
+        ((AllBStep l1 c1 r1 k1 cbe cbo rest) cbe)))
+    ((WalkOdd la c1 r1)
+      (match erased ab _
+        (absurd AllBEnd)
+        ((AllBStep l2 c2 r2 k2 cbe cbo rest) cbo)))
+    ((WalkNext la c1 r1 l2 r2 cn2 pw)
+      (match erased ab _
+        (absurd AllBEnd)
+        ((AllBStep l3 c3 r3 k3 cbe cbo rest)
+          (find-bound (Cons (Nat) c1 la) r1 l r cn n pw rest))))))
+
+(def-fns _ $ erased cat-assoc2 : (erased (List (Nat)) a) (erased (Nat) x)
+    (erased (List (Nat)) ab) (erased (List (Nat)) c) (erased (List (Nat)) abc)
+    (subterm erased (Concat (Nat) a (Cons (Nat) x (Nil (Nat))) ab) p)
+    (erased (Concat (Nat) ab c abc) q) ->
+    (erased (Concat (Nat) a (Cons (Nat) x c) abc) r)
+  (match erased p _
+    ((CatNil a1 ys1)
+      (match erased q _
+        ((CatCons a2 h2 t2 ys2 zs2 q2)
+          (match erased q2 _
+            ((CatNil a3 ys3) (CatNil (Nat) (Cons (Nat) x c)))))))
+    ((CatCons a1 h1 t1 ys1 zs1 p1)
+      (match erased q _
+        ((CatCons a2 h2 t2 ys2 zs2 q2)
+          (CatCons (Nat) h1 t1 (Cons (Nat) x c) zs2
+                   (cat-assoc2 t1 x zs1 c zs2 p1 q2)))))))
+
+(def-fns _ $ erased snoc-len : (erased (List (Nat)) a) (erased (Nat) x)
+    (erased (List (Nat)) ab) (subterm erased (Concat (Nat) a (Cons (Nat) x (Nil (Nat))) ab) p)
+    (erased (Nat) n) (erased (Length (Nat) a n) ln) ->
+    (erased (Length (Nat) ab (Succ n)) lab)
+  (match erased p _
+    ((CatNil a1 ys1)
+      (match erased ln _
+        ((LNil b1) (LCons (Nat) x (Nil (Nat)) (Zero) (LNil (Nat))))))
+    ((CatCons a1 h1 t1 ys1 zs1 p1)
+      (match erased ln _
+        ((LCons b1 x1 r1 n1 ln1)
+          (LCons (Nat) h1 zs1 (Succ n1) (snoc-len t1 x zs1 p1 n1 ln1)))))))
+
+(def-fns _ $ erased length-fn : (erased (List (Nat)) xs) (erased (Nat) n1) (erased (Nat) n2)
+    (subterm erased (Length (Nat) xs n1) p) (erased (Length (Nat) xs n2) q) ->
+    (erased (Eq (Nat) n1 n2) e)
+  (match erased p _
+    ((LNil a) (match erased q _ ((LNil b) (Refl (Nat) n1)) (absurd LCons)))
+    ((LCons a x rest k p1)
+      (match erased q _
+        (absurd LNil)
+        ((LCons b y rest2 k2 q1)
+          (match erased (length-fn rest k k2 p1 q1) _
+            ((Refl t r) (Refl (Nat) n1))))))))
+
+(def-fns _ $ erased pal-mirror :
+    (erased (List (Nat)) w) (subterm erased (Palindrome (Nat) w) p)
+    (erased (List (Nat)) lcur) (erased (List (Nat)) rcur) (erased (List (Nat)) src)
+    (erased (Concat (Nat) w rcur src) cw) ->
+    (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (Nat) h)
+    (erased (Mirror l2 r2 h) mm)
+    (erased (Drop h l2 lcur) dl) (erased (Drop h r2 rcur) dr)
+    (erased (Nat) cn) (erased (Walk lcur src l2 r2 cn) wk)
+    (erased (Nat) m2) (erased (Length (Nat) w m2) lw2)
+    (erased (Nat) dh) (erased (Double h dh) ddh) (erased (Add cn dh m2) adm)
+  (match erased p _
+    ((PalNil a1)
+      (match erased cw _
+        ((CatNil a2 ys2)
+          (values lcur rcur (Zero) (MirrorZ lcur rcur)
+                  (DropZero lcur) (DropZero rcur)
+                  (Zero) (WalkHere lcur rcur)
+                  (Zero) (LNil (Nat)) (Zero) (D0) (AddZero (Zero))))))
+    ((PalOne a1 x)
+      (match erased cw _
+        ((CatCons a2 h2 t2 ys2 zs2 q2)
+          (match erased q2 _
+            ((CatNil a3 ys3)
+              (values lcur rcur (Zero) (MirrorZ lcur rcur)
+                      (DropZero lcur) (DropZero rcur)
+                      (Succ (Zero)) (WalkOdd lcur x rcur)
+                      (Succ (Zero))
+                      (LCons (Nat) x (Nil (Nat)) (Zero) (LNil (Nat)))
+                      (Zero) (D0)
+                      (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero)))))))))
+    ((PalWrap a1 x inner withx pi q)
+      (match erased cw _
+        ((CatCons a2 h2 t2 ys2 zs2 cwz)
+          (let (erased ci) (cat-assoc2 inner x withx rcur zs2 q cwz))
+          (let (erased l2) (erased r2) (erased h1) (erased mm1) (erased dl1) (erased dr1)
+               (erased cn) (erased wk1) (erased mi) (erased lwi) (erased dh1)
+               (erased ddh1) (erased adm1)
+            (pal-mirror inner pi (Cons (Nat) x lcur) (Cons (Nat) x rcur) zs2 ci))
+          (values l2 r2 (Succ h1)
+                  (mirror-extend l2 r2 h1 mm1 x lcur rcur dl1 dr1)
+                  (drop-succ h1 l2 x lcur dl1) (drop-succ h1 r2 x rcur dr1)
+                  cn (WalkNext lcur x zs2 l2 r2 cn wk1)
+                  (Succ (Succ mi))
+                  (LCons (Nat) x withx (Succ mi) (snoc-len inner x withx q mi lwi))
+                  (Succ (Succ dh1)) (DS h1 dh1 ddh1)
+                  (add-succ-right cn (Succ dh1) (Succ mi)
+                    (add-succ-right cn dh1 mi adm1))))))))
+
+(def-fns _ $ erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c)
+    (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r)
+  (match erased p _
+    ((LtZ b1) (LtZ c))
+    ((LtS a1 b1 p1) (LtS a1 c (lt-le-trans a1 b c p1 q)))))
+
+(def-fns _ $ erased double-mono : (erased (Nat) h) (erased (Nat) k)
+    (erased (Nat) dh) (erased (Nat) dk)
+    (subterm erased (Double h dh) dd1) (erased (Double k dk) dd2)
+    (erased (Lt h (Succ k)) le) -> (erased (Lt dh (Succ dk)) r)
+  (match erased dd1 _
+    ((D0) (LtZ dk))
+    ((DS h1 d1 dd1a)
+      (match erased le _
+        ((LtS a1 b1 le1)
+          (match erased dd2 _
+            (absurd (D0) (match erased le1 (((False) f))))
+            ((DS k1 dk1 dd2a)
+              (LtS (Succ d1) (Succ (Succ dk1))
+                   (LtS d1 (Succ dk1)
+                        (double-mono h1 k1 d1 dk1 dd1a dd2a le1))))))))))
+
+(def-fns _ $ erased add-mono : (erased (Nat) cn) (erased (Nat) d1) (erased (Nat) d2)
+    (erased (Nat) m1) (erased (Nat) m2)
+    (subterm erased (Add cn d1 m1) p) (erased (Add cn d2 m2) q)
+    (erased (Lt d1 (Succ d2)) le) -> (erased (Lt m1 (Succ m2)) r)
+  (match erased p _
+    ((AddZero b1) (match erased q _ ((AddZero b2) le) (absurd AddSucc)))
+    ((AddSucc a1 b1 c1 p1)
+      (match erased q _
+        (absurd AddZero)
+        ((AddSucc a2 b2 c2 q1)
+          (LtS c1 (Succ c2) (add-mono a1 d1 d2 c1 c2 p1 q1 le)))))))
+
+(def-fns _ $ erased take-concat : (erased (Nat) n) (erased (List (Nat)) src)
+    (erased (List (Nat)) w) (subterm erased (Take (Nat) n src w) tk) ->
+    (erased (List (Nat)) rem) (erased (Concat (Nat) w rem src) c)
+  (match erased tk _
+    ((TakeZero a xs) (values src (CatNil (Nat) src)))
+    ((TakeSucc a n1 x xs1 w1 tk1)
+      (let (erased rem) (erased c) (take-concat n1 xs1 w1 tk1))
+      (values rem (CatCons (Nat) x w1 rem xs1 c)))))
+
+(def-fns _ $ erased revcat-walk : (erased (List (Nat)) lcur) (erased (List (Nat)) src)
+    (erased (List (Nat)) xs) (subterm erased (RevCat lcur src xs) rc)
+    (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (Nat) cn)
+    (erased (Walk lcur src l2 r2 cn) wk) ->
+    (erased (Walk (Nil (Nat)) xs l2 r2 cn) wk2)
+  (match erased rc _
+    ((RevFlat a) wk)
+    ((RevStep x l1 r1 xs1 pr)
+      (revcat-walk l1 (Cons (Nat) x src) xs pr l2 r2 cn
+                   (WalkNext l1 x src l2 r2 cn wk)))))
+
+(def-fns _ $ erased too-long : (erased (List (Nat)) xs) (erased (Nat) n)
+    (erased (AllBounded (Nil (Nat)) xs n) ab)
+    (erased (List (Nat)) lcur) (erased (List (Nat)) src)
+    (erased (RevCat lcur src xs) rc)
+    (erased (List (Nat)) w) (erased (Palindrome (Nat) w) pw)
+    (erased (Nat) m) (erased (Length (Nat) w m) lw)
+    (erased (List (Nat)) rem) (erased (Concat (Nat) w rem src) cw)
+    (erased (Lt n m) big) -> (erased (False) f)
+  (let (erased l2) (erased r2) (erased h) (erased mm) (erased dl) (erased dr)
+       (erased cn) (erased wk) (erased m2) (erased lw2) (erased dh) (erased ddh)
+       (erased adm)
+    (pal-mirror w pw lcur rem src cw))
+  (match erased (length-fn w m m2 lw lw2) _
+    ((Refl t0 r0)
+      (match erased (find-bound (Nil (Nat)) xs l2 r2 cn n
+                                (revcat-walk lcur src xs rc l2 r2 cn wk) ab) _
+        ((MkCentreBound bl br bcn bn k l3 r3 dl3 dr3 st dk ddk lc adc le)
+          (lt-asym n m big
+            (le-trans m lc n
+              (add-mono cn dh dk m lc adm adc
+                (double-mono h k dh dk ddh ddk
+                  (mirror-stop l2 r2 h mm k l3 r3 dl3 dr3 st)))
+              le)))))))
+
 (def-fns _ $ many radius : (many (List (Nat)) l) (many (List (Nat)) r) -> (many (Nat) k)
   (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
        (expand l r))
   k)
 
-(def-fns _ $ many lp : (many (List (Nat)) xs) -> (many (Nat) n)
+(def-fns _ $ many lpc : (many (List (Nat)) xs) -> (many (Nat) n)
   (let (many n) (erased h) (longest-has xs))
   n)
 
-(Cons (Nat) (lp (Nil (Nat)))
-  $ Cons (Nat) (lp $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Nil (Nat))
-  $ Cons (Nat) (lp $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 2 $ Cons (Nat) 5 $ Nil (Nat))
-  $ Cons (Nat) (lp $ Cons (Nat) 9 $ Cons (Nat) 4 $ Cons (Nat) 5 $ Cons (Nat) 5 $ Cons (Nat) 4 $ Cons (Nat) 8 $ Nil (Nat))
-  $ Cons (Nat) (lp $ Cons (Nat) 7 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Nil (Nat))
+(Cons (Nat) (lpc (Nil (Nat)))
+  $ Cons (Nat) (lpc $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Nil (Nat))
+  $ Cons (Nat) (lpc $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 2 $ Cons (Nat) 5 $ Nil (Nat))
+  $ Cons (Nat) (lpc $ Cons (Nat) 9 $ Cons (Nat) 4 $ Cons (Nat) 5 $ Cons (Nat) 5 $ Cons (Nat) 4 $ Cons (Nat) 8 $ Nil (Nat))
+  $ Cons (Nat) (lpc $ Cons (Nat) 7 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Nil (Nat))
   $ Nil (Nat))
