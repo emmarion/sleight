@@ -174,6 +174,17 @@
       (match erased (add-fn cn d0 n0 nrt ad0 adrt) _
         ((Refl t2 r2) lw)))))
 
+(def-adts
+  (CentreBound : ((List (Nat)) l) ((List (Nat)) r) ((Nat) cn) ((Nat) n) -> Type
+    enum
+    (many MkCentreBound : (erased (List (Nat)) l) (erased (List (Nat)) r)
+        (erased (Nat) cn) (erased (Nat) n)
+        (erased (Nat) k) (erased (List (Nat)) l2) (erased (List (Nat)) r2)
+        (erased (Drop k l l2) dl) (erased (Drop k r r2) dr) (erased (Stop l2 r2) st)
+        (erased (Nat) dk) (erased (Double k dk) ddk)
+        (erased (Nat) lc) (erased (Add cn dk lc) adc) (erased (Lt lc (Succ n)) le) ->
+       (CentreBound l r cn n))))
+
 (def-fns _ $ many centre-has :
     (many (List (Nat)) l) (many (List (Nat)) rm) (many (Nat) cn)
     (erased (List (Nat)) core) (erased (Palindrome (Nat) core) pc)
@@ -181,6 +192,7 @@
     (erased (List (Nat)) src) (erased (Concat (Nat) core rm src) cc)
     (erased (List (Nat)) xs) (erased (RevCat l src xs) rc) ->
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
+    (erased (CentreBound l rm cn n) cb)
   (let (many k) (erased m) (erased le) (erased re) (erased dl) (erased dr) (erased st)
        (expand l rm))
   (let (erased w) (erased pw) (erased n0) (erased lw) (erased d0) (erased dd0) (erased ad0)
@@ -190,43 +202,19 @@
   (let (many nrt) (erased adrt) (add cn drt))
   (let (erased lw2) (fix-length w cn k d0 n0 drt nrt dd0 ad0 ddrt adrt lw))
   (values nrt (revcat-has l2 src2 xs rc2 nrt
-                (HasHere src2 nrt w (concat-take w r2 src2 cc2 nrt lw2) pw))))
+                (HasHere src2 nrt w (concat-take w r2 src2 cc2 nrt lw2) pw))
+              (MkCentreBound l rm cn nrt k le re dl dr st drt ddrt nrt adrt
+                             (lt-succ nrt))))
 
 (def-fns _ $ many pick : (erased (List (Nat)) xs)
     (many (Nat) n1) (erased (HasPalindromeOfLength xs n1) h1)
     (many (Nat) n2) (erased (HasPalindromeOfLength xs n2) h2) ->
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
+    (erased (Lt n1 (Succ n)) b1) (erased (Lt n2 (Succ n)) b2)
   (match many (nat-cmp n1 n2) _
-    ((CLt t r a b p) (values n2 h2))
-    ((CEq t r a) (values n1 h1))
-    ((CGt t r a b p) (values n1 h1))))
-
-(def-fns _ $ many best-from : (many (List (Nat)) l) (subterm many (List (Nat)) r)
-    (erased (List (Nat)) xs) (erased (RevCat l r xs) rc) ->
-    (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
-  (match many r _
-    ((Nil a)
-      (values (Zero)
-              (revcat-has l r xs rc (Zero)
-                (HasHere r (Zero) (Nil (Nat)) (TakeZero (Nat) r) (PalNil (Nat))))))
-    ((Cons a c r1)
-      (let (many ne) (erased he)
-        (centre-has l r (Zero) (Nil (Nat)) (PalNil (Nat)) (LNil (Nat))
-                    r (CatNil (Nat) r) xs rc))
-      (let (many no) (erased ho)
-        (centre-has l r1 (Succ (Zero))
-                    (Cons (Nat) c (Nil (Nat))) (PalOne (Nat) c)
-                    (LCons (Nat) c (Nil (Nat)) (Zero) (LNil (Nat)))
-                    r (CatCons (Nat) c (Nil (Nat)) r1 r1 (CatNil (Nat) r1))
-                    xs rc))
-      (let (many nr) (erased hr)
-        (best-from (Cons (Nat) c l) r1 xs (RevStep c l r1 xs rc)))
-      (let (many n1) (erased h1) (pick xs ne he no ho))
-      (pick xs n1 h1 nr hr))))
-
-(def-fns _ $ many longest-has : (many (List (Nat)) xs) ->
-    (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
-  (best-from (Nil (Nat)) xs xs (RevFlat xs)))
+    ((CLt t r a b p) (values n2 h2 (lt-weaken n1 n2 p) (lt-succ n2)))
+    ((CEq t r a) (values n1 h1 (lt-succ n1) (lt-succ n1)))
+    ((CGt t r a b p) (values n1 h1 (lt-succ n1) (lt-weaken n2 n1 p)))))
 
 (def-fns _ $ erased drop-succ : (erased (Nat) n) (erased (List (Nat)) l) (erased (Nat) x)
     (erased (List (Nat)) rest) (subterm erased (Drop n l (Cons (Nat) x rest)) d) ->
@@ -274,17 +262,6 @@
             ((DropSucc k2 y2 ys2 zs2 dr1)
               (LtS j1 (Succ k1)
                    (mirror-stop l1 r1 j1 m1 k1 l2 r2 dl1 dr1 st)))))))))
-
-(def-adts
-  (CentreBound : ((List (Nat)) l) ((List (Nat)) r) ((Nat) cn) ((Nat) n) -> Type
-    enum
-    (many MkCentreBound : (erased (List (Nat)) l) (erased (List (Nat)) r)
-        (erased (Nat) cn) (erased (Nat) n)
-        (erased (Nat) k) (erased (List (Nat)) l2) (erased (List (Nat)) r2)
-        (erased (Drop k l l2) dl) (erased (Drop k r r2) dr) (erased (Stop l2 r2) st)
-        (erased (Nat) dk) (erased (Double k dk) ddk)
-        (erased (Nat) lc) (erased (Add cn dk lc) adc) (erased (Lt lc (Succ n)) le) ->
-       (CentreBound l r cn n))))
 
 (def-adts
   (Walk : ((List (Nat)) l0) ((List (Nat)) r0) ((List (Nat)) l) ((List (Nat)) r)
@@ -499,13 +476,127 @@
                   (mirror-stop l2 r2 h mm k l3 r3 dl3 dr3 st)))
               le)))))))
 
+(def-fns _ $ erased cb-weaken : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (Nat) cn) (erased (Nat) n1) (erased (Nat) n2)
+    (erased (CentreBound l r cn n1) cb) (erased (Lt n1 (Succ n2)) le) ->
+    (erased (CentreBound l r cn n2) cb2)
+  (match erased cb _
+    ((MkCentreBound bl br bcn bn k l2 r2 dl dr st dk ddk lc adc le0)
+      (MkCentreBound l r cn n2 k l2 r2 dl dr st dk ddk lc adc
+                     (le-trans lc n1 n2 le0 le)))))
+
+(def-fns _ $ erased allb-weaken : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (Nat) n1) (erased (Nat) n2) (subterm erased (AllBounded l r n1) ab)
+    (erased (Lt n1 (Succ n2)) le) -> (erased (AllBounded l r n2) ab2)
+  (match erased ab _
+    ((AllBEnd l1 k1 cb)
+      (AllBEnd l n2 (cb-weaken l (Nil (Nat)) (Zero) n1 n2 cb le)))
+    ((AllBStep l1 c1 r1 k1 cbe cbo rest)
+      (AllBStep l c1 r1 n2
+        (cb-weaken l r (Zero) n1 n2 cbe le)
+        (cb-weaken l r1 (Succ (Zero)) n1 n2 cbo le)
+        (allb-weaken (Cons (Nat) c1 l) r1 n1 n2 rest le)))))
+
+(def-fns _ $ many best-from : (many (List (Nat)) l) (subterm many (List (Nat)) r)
+    (erased (List (Nat)) xs) (erased (RevCat l r xs) rc) ->
+    (many (Nat) n) (erased (HasPalindromeOfLength xs n) h)
+    (erased (AllBounded l r n) ab)
+  (match many r _
+    ((Nil a)
+      (let (many ne) (erased he) (erased cbe)
+        (centre-has l r (Zero) (Nil (Nat)) (PalNil (Nat)) (LNil (Nat))
+                    r (CatNil (Nat) r) xs rc))
+      (values ne he (AllBEnd l ne cbe)))
+    ((Cons a c r1)
+      (let (many ne) (erased he) (erased cbe)
+        (centre-has l r (Zero) (Nil (Nat)) (PalNil (Nat)) (LNil (Nat))
+                    r (CatNil (Nat) r) xs rc))
+      (let (many no) (erased ho) (erased cbo)
+        (centre-has l r1 (Succ (Zero))
+                    (Cons (Nat) c (Nil (Nat))) (PalOne (Nat) c)
+                    (LCons (Nat) c (Nil (Nat)) (Zero) (LNil (Nat)))
+                    r (CatCons (Nat) c (Nil (Nat)) r1 r1 (CatNil (Nat) r1))
+                    xs rc))
+      (let (many nr) (erased hr) (erased abr)
+        (best-from (Cons (Nat) c l) r1 xs (RevStep c l r1 xs rc)))
+      (let (many n1) (erased h1) (erased be1) (erased be2) (pick xs ne he no ho))
+      (let (many n) (erased h) (erased be3) (erased be4) (pick xs n1 h1 nr hr))
+      (values n h
+        (AllBStep l c r1 n
+          (cb-weaken l r (Zero) ne n cbe (le-trans ne n1 n be1 be3))
+          (cb-weaken l r1 (Succ (Zero)) no n cbo (le-trans no n1 n be2 be3))
+          (allb-weaken (Cons (Nat) c l) r1 nr n abr be4))))))
+
+(def-fns _ $ erased take-len : (erased (Nat) n) (erased (List (Nat)) src)
+    (erased (List (Nat)) w) (subterm erased (Take (Nat) n src w) tk) ->
+    (erased (Length (Nat) w n) lw)
+  (match erased tk _
+    ((TakeZero a xs) (LNil (Nat)))
+    ((TakeSucc a n1 x xs1 w1 tk1) (LCons (Nat) x w1 n1 (take-len n1 xs1 w1 tk1)))))
+
+(def-fns _ $ erased add-unshift : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c)
+    (erased (Add a (Succ b) c) p) -> (erased (Add (Succ a) b c) q)
+  (let (erased c1) (erased e) (erased q1) (add-succ-right-inv a b c p))
+  (match erased e _ ((Refl t r) (AddSucc a b c1 q1))))
+
+(def-fns _ $ erased no-pal : (erased (List (Nat)) xs0) (erased (Nat) n)
+    (erased (AllBounded (Nil (Nat)) xs0 n) ab)
+    (erased (List (Nat)) lcur) (subterm erased (List (Nat)) src)
+    (erased (RevCat lcur src xs0) rc)
+    (erased (Nat) m) (erased (Lt n m) big) ->
+    (erased (NoPalindromeOfLengthF src m) np)
+  (match erased (take-dec m src) _
+    ((TakeNo n0 xs1 len l short) (SlideShort src m len l short))
+    ((TakeYes n0 xs1 w tk)
+      (match erased (pal-dec m w (take-len m src w tk)) _
+        ((InL s0 s1 pww)
+          (let (erased rem) (erased cw) (take-concat m src w tk))
+          (match erased
+            (too-long xs0 n ab lcur src rc w pww m (take-len m src w tk) rem cw big) _))
+        ((InR s0 s1 npw)
+          (match erased src _
+            ((Nil a2)
+              (match erased tk _ ((TakeZero a3 xs3) (match erased big _))))
+            ((Cons a2 x xs2)
+              (SlideStep m x xs2 w tk npw
+                (no-pal xs0 n ab (Cons (Nat) x lcur) xs2
+                        (RevStep x lcur xs2 xs0 rc) m big)))))))))
+
+(def-fns _ $ erased no-larger : (erased (List (Nat)) xs) (erased (Nat) n)
+    (erased (AllBounded (Nil (Nat)) xs n) ab)
+    (erased (Nat) len) (erased (Length (Nat) xs len) lxs)
+    (erased (Nat) m) (subterm erased (Nat) c) (erased (Add m c len) adc)
+    (erased (Lt n (Succ m)) ge) -> (erased (NoLargerPalindromeF xs m) nl)
+  (match erased c _
+    ((Zero)
+      (match erased (add-fn m (Zero) len m adc (add-zero-right m)) _
+        ((Refl t r) (NoLargerDoneF xs m len lxs (lt-succ len)))))
+    ((Succ c1)
+      (NoLargerStepF xs m
+        (no-pal xs n ab (Nil (Nat)) xs (RevFlat xs) (Succ m) ge)
+        (no-larger xs n ab len lxs (Succ m) c1 (add-unshift m c1 len adc)
+                   (lt-weaken n (Succ m) ge))))))
+
+(def-fns _ $ many longest-fast : (many (List (Nat)) xs) ->
+    (many (Nat) n) (erased (LongestPalindrome xs n) p)
+  (let (many n) (erased h) (erased ab) (best-from (Nil (Nat)) xs xs (RevFlat xs)))
+  (let (many len) (erased lxs) (list-length xs))
+  (let (erased nle)
+    (match many (lt-dec len n) (((Lt n (Succ len)) z))
+      (absurd (Yes a b p) (has-short-absurd xs n h len lxs p))
+      ((No a b q) q)))
+  (let (many c) (erased adc) (sub len n nle))
+  (let (erased nl) (no-larger xs n ab len lxs n c adc (lt-succ n)))
+  (let (erased xss) (erased ww) (erased ee) (has-windows xs n h))
+  (values n (IsLongest xs n xss ww ee (nolarger-spec xs n nl))))
+
 (def-fns _ $ many radius : (many (List (Nat)) l) (many (List (Nat)) r) -> (many (Nat) k)
   (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
        (expand l r))
   k)
 
 (def-fns _ $ many lpc : (many (List (Nat)) xs) -> (many (Nat) n)
-  (let (many n) (erased h) (longest-has xs))
+  (let (many n) (erased p) (longest-fast xs))
   n)
 
 (Cons (Nat) (lpc (Nil (Nat)))
