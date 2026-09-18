@@ -1,5 +1,5 @@
 ; needs: ../self/base palindrome_relations palindrome palindrome_center
-; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Cons 2 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Cons 0 (Cons 1 (Cons 3 (Cons 4 (Cons 3 (Cons 8 (Nil)))))))))))))))))))
+; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Cons 2 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Cons 0 (Cons 1 (Cons 3 (Cons 4 (Cons 3 (Cons 8 (Nil))))))))))))))))))))
 
 (def-fns _ $ erased revcat-unique : (erased (List (Nat)) l1) (erased (List (Nat)) r1)
     (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (List (Nat)) xs)
