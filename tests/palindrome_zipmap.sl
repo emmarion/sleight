@@ -186,6 +186,88 @@
             ((NotFound a2 b2) (Zero))
             ((FoundAt a2 b2 l2 dr) (list-length (Nat) l2))))))))
 
+(def-fns _ $ erased mirror-cons : (erased (Nat) c) (erased (List (Nat)) a)
+    (erased (List (Nat)) b) (erased (Nat) j) (erased (Mirror a b j) m) ->
+    (erased (Mirror (Cons (Nat) c a) (Cons (Nat) c b) j) m2)
+  (match erased j _
+    ((Zero) (MirrorZ (Cons (Nat) c a) (Cons (Nat) c b)))
+    ((Succ j1) (MirrorS c a b j1 (mirror-pred a b j1 m)))))
+
+; The radii already computed, indexed by the zipper each was computed at, so the
+; mirror centre reads them by walking left exactly as it walks.
+(def-adts
+  (RadList : ((List (Nat)) lm) ((List (Nat)) rm) -> Type
+    enum
+    (many RadNone : (erased (List (Nat)) lm) (erased (List (Nat)) rm) -> (RadList lm rm))
+    (many RadSome : (erased (Nat) c) (erased (List (Nat)) lm1) (erased (List (Nat)) rm)
+        (many (Nat) k) (erased (Mirror (Cons (Nat) c lm1) rm k) mk)
+        (many (RadList lm1 (Cons (Nat) c rm)) rest) ->
+       (RadList (Cons (Nat) c lm1) rm))))
+
+; The enclosing palindrome, as a budget b and a mirror centre (lm, rm) whose own
+; radii are to hand. invA and invB are the two reflections: everything right of
+; the current centre matches everything left of the mirror centre to depth b, and
+; vice versa. b is the old reach minus the distance walked, so a radius exceeding
+; it is exactly a centre reaching further right than the enclosing palindrome.
+(def-adts
+  (Tracker : ((List (Nat)) l) ((List (Nat)) r) -> Type
+    enum
+    (many NoTrack : (erased (List (Nat)) l) (erased (List (Nat)) r) -> (Tracker l r))
+    (many MkTrack : (erased (List (Nat)) l) (erased (List (Nat)) r) (many (Nat) b)
+        (erased (List (Nat)) lm) (erased (List (Nat)) rm)
+        (erased (Mirror r lm b) invA) (erased (Mirror l rm b) invB)
+        (many (RadList lm rm) rads) -> (Tracker l r))))
+
+(def-fns _ $ many track-new : (many (List (Nat)) l) (many (List (Nat)) r) (many (Nat) k)
+    (erased (Mirror l r k) mk) (many (RadList l r) rads) -> (many (Tracker l r) t)
+  (MkTrack l r k l r (mirror-sym l r k mk) mk rads))
+
+; The lower bound a centre inherits: the mirror centre's radius, clipped to the
+; budget. Composing the two reflections with the mirror centre's own mirror is
+; what carries it across, and costs nothing at runtime.
+(def-fns _ $ many transport : (many (List (Nat)) l) (many (List (Nat)) r)
+    (many (Tracker l r) t) -> (many (Nat) k0) (erased (Mirror l r k0) m0)
+  (match many t _
+    ((NoTrack a b) (values (Zero) (MirrorZ l r)))
+    ((MkTrack a b budget lm rm invA invB rads)
+      (match many rads _
+        ((RadNone c d) (values (Zero) (MirrorZ l r)))
+        ((RadSome c lm1 rm0 k mk rest)
+          (let (many k0) (erased lek) (erased leb)
+            (match many (nat-cmp k budget)
+                         (((Nat) kk) ((Lt kk (Succ k)) e1) ((Lt kk (Succ budget)) e2))
+              ((CLt t1 r1 a1 b1 p1) (values k (lt-succ k) (lt-weaken k budget p1)))
+              ((CEq t1 r1 a1) (values k (lt-succ k) (lt-succ k)))
+              ((CGt t1 r1 a1 b1 p1) (values budget (lt-weaken budget k p1) (lt-succ budget)))))
+          (values k0
+            (mirror-trans l rm r k0
+              (mirror-weaken l rm k0 budget invB leb)
+              (mirror-trans rm lm r k0
+                (mirror-sym lm rm k0 (mirror-weaken lm rm k0 k mk lek))
+                (mirror-sym r lm k0 (mirror-weaken r lm k0 budget invA leb))))))))))
+
+; Walking the centre one place right walks the mirror centre one place left. The
+; heads agree by invA, which is what lets both reflections be rebuilt one shorter.
+(def-fns _ $ many track-step : (many (List (Nat)) l) (many (Nat) c) (many (List (Nat)) r1)
+    (many (Tracker l (Cons (Nat) c r1)) t) ->
+    (many (Tracker (Cons (Nat) c l) r1) t2)
+  (match many t _
+    ((NoTrack a b) (NoTrack (Cons (Nat) c l) r1))
+    ((MkTrack a b budget lm rm invA invB rads)
+      (match many budget _
+        ((Zero) (NoTrack (Cons (Nat) c l) r1))
+        ((Succ b1)
+          (match erased invA (((Tracker (Cons (Nat) c l) r1) z))
+            ((MirrorS x r2 lm1 b2 mA)
+              (MkTrack (Cons (Nat) c l) r1 b1 lm1 (Cons (Nat) c rm)
+                       mA
+                       (mirror-cons c l rm b1
+                         (mirror-weaken l rm b1 budget invB
+                                        (lt-weaken b1 budget (lt-succ b1))))
+                       (match many rads _
+                         ((RadNone d1 d2) (RadNone lm1 (Cons (Nat) c rm)))
+                         ((RadSome c2 lm2 rm2 k2 mk2 rest) rest))))))))))
+
 (def-fns _ $ many radius-from : (many (List (Nat)) l) (many (List (Nat)) r) ->
     (many (Nat) k)
   (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
