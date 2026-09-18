@@ -176,3 +176,16 @@ that the test does not make is a mistake in this file.
   spec: `Windows` is total and `Take` functional, a window found is an
   `Exists` over the windows, and a slide finding none is an `All`. Nothing
   but the decisions' tags and the input's length survives erasure.
+- `tests/manacher.sl` — the same answer in linear time, with the same proof.
+  Manacher's algorithm with lists alone: a zipper for the left end of the
+  current palindrome, a suffix for its right end, and a suffix of the
+  radius list (`Back`, whose entries carry erased certificates) for the
+  mirror centre, each moving monotonically or by the amount just compared.
+  The mirror step is an erased lemma (`mirror-agree`) that peels the deepest
+  element of two reversed prefixes at once; the certificates are read back
+  forwards (`FwdB`) to refute every longer window, and the found-window
+  evidence is built by walking the zipper back. `tests/palindrome_bridge.sl`
+  holds what the two searches share: a `Take` decider and the bridge from
+  the fused relations to the spec. On this session's measurement the
+  extracted program handles four hundred thousand elements in well under a
+  second; the reading of it as linear is the session's, not verified.
