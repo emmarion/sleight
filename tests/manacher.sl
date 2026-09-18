@@ -523,7 +523,6 @@
           (let (erased ys) (erased q) (erased r) (drop-split A a1 b c1 xs1 zs p1 ad1))
           (values ys (DropS A a1 x xs1 ys q) r))))))
 
-; drop m after drop d is drop d after drop m
 (def-fns _ $ erased drop-swap : (erased (Nat) d) (erased (Nat) m) (erased (List (Nat)) w) (erased (List (Nat)) ri) (erased (List (Nat)) arm) (erased (List (Nat)) armc)
     (erased (Drop (Nat) d w ri) p) (erased (Drop (Nat) m ri arm) q) (erased (Drop (Nat) m w armc) r) -> (erased (Drop (Nat) d armc arm) s)
   (let (erased dm) (erased adm) (add d m))
@@ -595,8 +594,6 @@
     ((AgreeS k x xs ys ag0)
       (let (erased d) (erased dr) (agree-drop-ex k xs ys ag0))
       (values d (DropS (Nat) k x ys d dr)))))
-
-; The evidence that the window of radius p around the centre at (l, ri) is a palindrome of length n.
 
 (def-fns _ $ erased has-at-centre : (erased (List (Nat)) xs) (erased (List (Nat)) l) (erased (List (Nat)) ri) (erased (List (Nat)) arm)
     (erased (Nat) m) (erased (Nat) p) (erased (List (Nat)) s) (erased (Nat) pp) (erased (Nat) n)
@@ -1022,8 +1019,6 @@
   (match erased dk _
     ((D0) (LtZ n1))
     ((DS k1 kk1 dk1) (lt-le-trans k kk (Succ n1) (LtS k1 (Succ kk1) (double-le k1 kk1 dk1)) (add-le-left kk m (Succ n1) an)))))
-
-; No window of length n2 = 2k+m in r is a palindrome, when every certified centre's window is shorter.
 
 (def-fns _ $ erased slide : (erased (Nat) m) (erased (Nat) b) (erased (List (Nat)) l) (erased (List (Nat)) r)
     (erased (Nat) k) (erased (Nat) kk) (erased (Nat) n2)
