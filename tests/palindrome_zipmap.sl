@@ -1,5 +1,5 @@
 ; needs: palindrome_relations palindrome palindrome_center ../self/base
-; expect: (Cons 0 (Cons 2 (Cons 4 (Nil))))
+; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Nil))))))))
 
 (def-fns _ $ erased revcat-unique : (erased (List (Nat)) l1) (erased (List (Nat)) r1)
     (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (List (Nat)) xs)
@@ -103,6 +103,73 @@
         ((CLt ct cr ca cb cp) (NotFound l1 d))
         ((CGt ct cr ca cb cp) (NotFound l1 d))))))
 
+(def-fns _ $ erased mirror-sym : (erased (List (Nat)) a) (erased (List (Nat)) b)
+    (erased (Nat) k) (subterm erased (Mirror a b k) m) -> (erased (Mirror b a k) m2)
+  (match erased m _
+    ((MirrorZ l0 r0) (MirrorZ b a))
+    ((MirrorS x a1 b1 k1 m1) (MirrorS x b1 a1 k1 (mirror-sym a1 b1 k1 m1)))))
+
+(def-fns _ $ erased mirror-trans : (erased (List (Nat)) a) (erased (List (Nat)) b)
+    (erased (List (Nat)) c) (erased (Nat) k)
+    (subterm erased (Mirror a b k) m1) (erased (Mirror b c k) m2) ->
+    (erased (Mirror a c k) m3)
+  (match erased m1 _
+    ((MirrorZ l0 r0) (MirrorZ a c))
+    ((MirrorS x a1 b1 k1 p1)
+      (match erased m2 _
+        ((MirrorS y b2 c1 k2 q1)
+          (MirrorS x a1 c1 k1 (mirror-trans a1 b1 c1 k1 p1 q1)))))))
+
+(def-fns _ $ erased mirror-pred : (erased (List (Nat)) a) (erased (List (Nat)) b)
+    (erased (Nat) k) (subterm erased (Mirror a b (Succ k)) m) ->
+    (erased (Mirror a b k) m2)
+  (match erased m _
+    ((MirrorS x a1 b1 k1 m1)
+      (match erased k _
+        ((Zero) (MirrorZ a b))
+        ((Succ k2) (MirrorS x a1 b1 k2 (mirror-pred a1 b1 k2 m1)))))))
+
+(def-fns _ $ erased mirror-weaken : (erased (List (Nat)) a) (erased (List (Nat)) b)
+    (erased (Nat) j) (subterm erased (Nat) k) (erased (Mirror a b k) m)
+    (erased (Lt j (Succ k)) le) -> (erased (Mirror a b j) m2)
+  (match erased k _
+    ((Zero)
+      (match erased le _
+        ((LtZ b1) m)
+        (absurd (LtS a1 b1 p1) (match erased p1 (((False) f))))))
+    ((Succ k1)
+      (match erased (nat-cmp j (Succ k1)) _
+        ((CEq t r x) m)
+        ((CLt t r x y p) (mirror-weaken a b j k1 (mirror-pred a b k1 m) p))
+        (absurd (CGt t r x y q) (lt-asym (Succ k1) j q le))))))
+
+; Expansion resumed at a radius already known to hold, rather than from zero:
+; the caller supplies the Mirror and the two tails at that depth, which is what
+; drop-at fetches in log time.
+(def-fns _ $ many expand-from : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (many (Nat) k0) (erased (Mirror l r k0) m)
+    (subterm many (List (Nat)) l0) (many (List (Nat)) r0)
+    (erased (Drop k0 l l0) dl) (erased (Drop k0 r r0) dr) ->
+    (many (Nat) k) (erased (Mirror l r k) mk)
+    (erased (List (Nat)) l2) (erased (List (Nat)) r2)
+    (erased (Drop k l l2) dl2) (erased (Drop k r r2) dr2) (erased (Stop l2 r2) st)
+  (match many l0 _
+    ((Nil a) (values k0 m l0 r0 dl dr (StopL r0)))
+    ((Cons a x l1)
+      (match many r0 _
+        ((Nil b) (values k0 m l0 r0 dl dr (StopR l0)))
+        ((Cons b y r1)
+          (match many (nat-cmp x y) _
+            ((CEq t rr x0)
+              (expand-from l r (Succ k0)
+                           (mirror-extend l r k0 m x l1 r1 dl dr)
+                           (subterm (prove-subterm l1 l0)) l1 r1
+                           (drop-succ k0 l x l1 dl) (drop-succ k0 r x r1 dr)))
+            ((CLt t rr a0 b0 p0)
+              (values k0 m l0 r0 dl dr (StopNe x y l1 r1 (ApartLt x y p0))))
+            ((CGt t rr a0 b0 p0)
+              (values k0 m l0 r0 dl dr (StopNe x y l1 r1 (ApartGt x y p0))))))))))
+
 (def-fns _ $ many depth-probe : (many (List (Nat)) xs) (many (Nat) p) (many (Nat) d) ->
     (many (Nat) n)
   (let (many m) (states-of xs))
@@ -119,8 +186,32 @@
             ((NotFound a2 b2) (Zero))
             ((FoundAt a2 b2 l2 dr) (list-length (Nat) l2))))))))
 
+(def-fns _ $ many radius-from : (many (List (Nat)) l) (many (List (Nat)) r) ->
+    (many (Nat) k)
+  (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
+    (expand-from l r (Zero) (MirrorZ l r) l r (DropZero l) (DropZero r)))
+  k)
+
+; The same expansion resumed one step in: l and r share a head, so Mirror l r 1
+; and the two Drops are writable by hand, and the answer must not change.
+(def-fns _ $ many radius-resumed : (many (Nat) x) (many (List (Nat)) l1)
+    (many (List (Nat)) r1) -> (many (Nat) k)
+  (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
+    (expand-from (Cons (Nat) x l1) (Cons (Nat) x r1) (Succ (Zero))
+                 (MirrorS x l1 r1 (Zero) (MirrorZ l1 r1))
+                 l1 r1
+                 (DropSucc (Zero) x l1 l1 (DropZero l1))
+                 (DropSucc (Zero) x r1 r1 (DropZero r1))))
+  k)
+
+(let (many la) (Cons (Nat) 2 $ Cons (Nat) 1 $ Nil (Nat)))
+(let (many ra) (Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 9 $ Nil (Nat)))
 (let (many s) (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 4 $ Nil (Nat)))
 (Cons (Nat) (depth-probe s (Zero) (Zero))
   $ Cons (Nat) (depth-probe s (Succ (Succ (Succ (Zero)))) (Succ (Zero)))
   $ Cons (Nat) (depth-probe s (Succ (Succ (Succ (Succ (Zero))))) (Zero))
+  $ Cons (Nat) (radius-from (Nil (Nat)) ra)
+  $ Cons (Nat) (radius-from la ra)
+  $ Cons (Nat) (radius-from (Cons (Nat) 3 la) (Cons (Nat) 3 ra))
+  $ Cons (Nat) (radius-resumed 3 la ra)
   $ Nil (Nat))
