@@ -1,5 +1,5 @@
 ; needs: palindrome_relations palindrome_bridge
-; expect: (Cons 0 (Cons 1 (Cons 1 (Cons 5 (Cons 4 (Cons 1 (Cons 5 (Nil))))))))
+; expect: (Cons 0 (Cons 1 (Cons 1 (Cons 5 (Cons 4 (Cons 1 (Cons 5 (Cons 7 (Cons 4 (Cons 5 (Cons 6 (Cons 11 (Nil)))))))))))))
 ; Manacher's algorithm over a List (Nat), with lists alone (two zippers and a
 ; suffix of the radius list stand in for the arrays), returning the spec's
 ; LongestPalindrome proof of palindrome_relations.sl. Written by a Claude
@@ -1095,4 +1095,55 @@
               ((POdd) (slide (Succ (Zero)) b1 (Nil (Nat)) xs k kk (Succ n) pr fwd1 dk an (lt-le-trans b1 (Succ best) (Succ n) le1 (LtS best (Succ n) lbn))))))
           (NoLargerStepF xs n here (nolarger-from xs b0 b1 best len fwd0 fwd1 le0 le1 ln (Succ n) d1 (AddSucc n d1 c1 ad1) (lt-weaken best (Succ n) lbn))))))))
 
-(Zero)
+
+(def-fns _ $ many manacher-par : (many (List (Nat)) xs) (many (Nat) m) (erased (Par m) pr) ->
+    (many (Nat) best) (erased (HasPalindromeOfLength xs best) has) (erased (List (Nat)) lend) (erased (Zip (Nat) xs lend (Nil (Nat))) zend)
+    (many (Back m xs lend (Nil (Nat))) acc) (erased (Bound m best xs lend (Nil (Nat)) acc) bd)
+  (let (erased has0) (HasHere xs (Zero) (Nil (Nat)) (TakeZero (Nat) xs) (PalNil (Nat))))
+  (match many xs _
+    ((Nil a) (values (Zero) has0 (Nil (Nat)) (ZipZ (Nat) xs) (BackZ m xs) (BoundZ m (Zero) xs)))
+    ((Cons a x xs1)
+      (match many m _
+        ((Zero)
+          (scan xs m pr (Nil (Nat)) xs (Zero) xs (DropZ (Nat) xs) (ZipZ (Nat) xs) (Zero) (Nil (Nat)) xs xs
+                (DropZ (Nat) (Nil (Nat))) (RevZ (Nat) (Nil (Nat)) xs) (DropZ (Nat) xs) (Out m xs (Nil (Nat)) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs)))
+        ((Succ m1)
+          (match erased pr _
+            ((POdd)
+              (scan xs m pr (Nil (Nat)) xs (Zero) xs1 (DropS (Nat) (Zero) x xs1 xs1 (DropZ (Nat) xs1)) (ZipZ (Nat) xs) (Zero) (Nil (Nat)) xs xs1
+                    (DropZ (Nat) (Nil (Nat))) (RevZ (Nat) (Nil (Nat)) xs) (DropZ (Nat) xs1) (Out m xs (Nil (Nat)) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs)))))))))
+
+(def-fns _ $ many manacher : (many (List (Nat)) xs) -> (many (Nat) best) (erased (LongestPalindromeF xs best) p)
+  (let (many b0) (erased h0) (erased le0) (erased z0) (many acc0) (erased bd0) (manacher-par xs (Zero) (PEven)))
+  (let (many b1) (erased h1) (erased le1) (erased z1) (many acc1) (erased bd1) (manacher-par xs (Succ (Zero)) (POdd)))
+  (let (erased fwd0) (back-fwd (Zero) b0 xs le0 (Nil (Nat)) acc0 bd0 (FwdNil (Zero) b0 le0)))
+  (let (erased fwd1) (back-fwd (Succ (Zero)) b1 xs le1 (Nil (Nat)) acc1 bd1 (FwdNil (Succ (Zero)) b1 le1)))
+  (let (many best) (erased has) (erased lt0) (erased lt1)
+    (match many (lt-dec b0 b1) (((Nat) b) ((HasPalindromeOfLength xs b) h) ((Lt b0 (Succ b)) l0) ((Lt b1 (Succ b)) l1))
+      ((Yes a c lt) (values b1 h1 (lt-weaken b0 b1 lt) (lt-succ b1)))
+      ((No a c ge) (values b0 h0 (lt-succ b0) ge))))
+  (let (many len) (erased ln) (list-length (Nat) xs))
+  (let (erased d) (erased ad)
+    (match many (lt-dec len best) (((Nat) d) ((Add best d len) a))
+      (absurd (Yes a c lt) (has-not-short xs best len has ln lt))
+      ((No a c ge) (sub len best ge))))
+  (values best (IsLongestF xs best has (nolarger-from xs b0 b1 best len fwd0 fwd1 lt0 lt1 ln best d ad (lt-succ best)))))
+
+(def-fns _ $ many longest-palindrome-linear : (many (List (Nat)) xs) -> (many (Nat) n) (erased (LongestPalindrome xs n) q)
+  (let (many n) (erased p) (manacher xs))
+  (values n (longest-bridge xs n p)))
+
+(let (many n0) (erased q0) (longest-palindrome-linear (Nil (Nat))))
+(let (many n1) (erased q1) (longest-palindrome-linear (Cons (Nat) 7 $ Nil (Nat))))
+(let (many n2) (erased q2) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Nil (Nat))))
+(let (many n3) (erased q3) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 4 $ Nil (Nat))))
+(let (many n4) (erased q4) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Nil (Nat))))
+(let (many n5) (erased q5) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 4 $ Cons (Nat) 5 $ Nil (Nat))))
+(let (many n6) (erased q6) (longest-palindrome-linear (Cons (Nat) 3 $ Cons (Nat) 1 $ Cons (Nat) 1 $ Cons (Nat) 3 $ Cons (Nat) 1 $ Cons (Nat) 1 $ Nil (Nat))))
+(let (many n7) (erased q7) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 3 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Nil (Nat))))
+(let (many n8) (erased q8) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 1 $ Cons (Nat) 1 $ Cons (Nat) 1 $ Nil (Nat))))
+(let (many n9) (erased q9) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Nil (Nat))))
+(let (many n10) (erased q10) (longest-palindrome-linear (Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Nil (Nat))))
+(let (many n11) (erased q11) (longest-palindrome-linear (Cons (Nat) 4 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 4 $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 4 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Nil (Nat))))
+
+(Cons (Nat) n0 $ Cons (Nat) n1 $ Cons (Nat) n2 $ Cons (Nat) n3 $ Cons (Nat) n4 $ Cons (Nat) n5 $ Cons (Nat) n6 $ Cons (Nat) n7 $ Cons (Nat) n8 $ Cons (Nat) n9 $ Cons (Nat) n10 $ Cons (Nat) n11 $ Nil (Nat))
