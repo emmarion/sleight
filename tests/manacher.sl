@@ -430,4 +430,72 @@
                         ((Zero) (AgreeZ a b))
                         ((Succ q2) (AgreeS q2 lx a1 b1 (agree-weaken q2 a1 b1 (agree-weaken (Succ q2) a1 b1 ih))))))))))))))))
 
+
+; A centre's certificate: its radius is exact. Back is the runtime list of radii of the centres
+; before a zipper, each with its certificate; Bound says every radius there gives a window no longer than b.
+
+(def-adts
+  (Cert : ((Nat) m) ((List (Nat)) l) ((List (Nat)) r) ((Nat) p) -> Type
+    enum
+    (many MkCert : (erased (Nat) m) (erased (List (Nat)) l) (erased (List (Nat)) r) (erased (Nat) p) (erased (List (Nat)) arm)
+        (erased (Drop (Nat) m r arm) dr) (erased (Agree p l arm) ag) (erased (Disagree (Succ p) l arm) dis) -> (Cert m l r p))))
+
+(def-adts
+  (Back : ((Nat) m) ((List (Nat)) l) ((List (Nat)) r) -> Type
+    enum
+    (many BackZ : (erased (Nat) m) (erased (List (Nat)) r) -> (Back m (Nil (Nat)) r))
+    (many BackS : (erased (Nat) m) (erased (List (Nat)) l) (erased (Nat) x) (erased (List (Nat)) r) (many (Nat) p)
+        (erased (Cert m l (Cons (Nat) x r) p) c) (many (Back m l (Cons (Nat) x r)) rest) -> (Back m (Cons (Nat) x l) r))))
+
+(def-adts
+  (Bound : ((Nat) m) ((Nat) b) ((List (Nat)) l) ((List (Nat)) r) ((Back m l r) bk) -> Type
+    enum
+    (many BoundZ : (erased (Nat) m) (erased (Nat) b) (erased (List (Nat)) r) -> (Bound m b (Nil (Nat)) r (BackZ m r)))
+    (many BoundS : (erased (Nat) m) (erased (Nat) b) (erased (List (Nat)) l) (erased (Nat) x) (erased (List (Nat)) r) (erased (Nat) p)
+        (erased (Cert m l (Cons (Nat) x r) p) c) (erased (Back m l (Cons (Nat) x r)) rest)
+        (erased (Nat) pp) (erased (Nat) n) (erased (Double p pp) dd) (erased (Add pp m n) an) (erased (Lt n (Succ b)) le)
+        (erased (Bound m b l (Cons (Nat) x r) rest) bd) ->
+       (Bound m b (Cons (Nat) x l) r (BackS m l x r p c rest)))))
+
+; The mirror gives a certificate for the current centre when the mirror centre's radius p2 falls
+; short of the reach q: la/ra are the current arms, lm/rm the mirror's.
+
+(def-fns _ $ erased mirror-cert : (erased (Nat) q) (erased (Nat) p2) (erased (List (Nat)) la) (erased (List (Nat)) ra)
+    (erased (List (Nat)) lm) (erased (List (Nat)) rm)
+    (erased (Agree q la rm) x1) (erased (Agree q lm ra) x2) (erased (Agree p2 lm rm) ag) (erased (Disagree (Succ p2) lm rm) dis)
+    (erased (Lt p2 q) lt) ->
+    (erased (Agree p2 la ra) ag2) (erased (Disagree (Succ p2) la ra) dis2)
+  (let (erased le) (lt-weaken p2 q lt))
+  (let (erased a1) (agree-weaken-to q p2 la rm x1 le))
+  (let (erased a2) (agree-weaken-to q p2 lm ra x2 le))
+  (let (erased ag2) (agree-trans p2 la rm ra a1 (agree-trans p2 rm lm ra (agree-sym p2 lm rm ag) a2)))
+  (let (erased x) (erased nlm) (erased nra) (agree-nth-ex q p2 lm ra x2 lt))
+  (let (erased y) (erased nla) (erased nrm) (agree-nth-ex q p2 la rm x1 lt))
+  (let (erased d) (disagree-nth p2 lm rm x y ag dis nlm nrm))
+  (values ag2 (disagree-at p2 la ra y x ag2 nla nra (apart-sym x y d))))
+
+; --- the runtime expansion around a centre ---
+; lp is the rest of the left arm below radius k and rp the suffix it was popped into, so (lp, rp) is
+; a zipper of the input at the window's left end; rd is the rest of the right arm.
+
+(def-fns _ $ many expand : (many (Nat) k) (subterm many (List (Nat)) lp) (many (List (Nat)) rp) (many (List (Nat)) rd)
+    (erased (List (Nat)) l) (erased (List (Nat)) ri) (erased (List (Nat)) r)
+    (erased (Drop (Nat) k l lp) dl) (erased (RevOnto (Nat) k l ri rp) rv) (erased (Drop (Nat) k r rd) dr) (erased (Agree k l r) ag) ->
+    (many (Nat) p) (many (List (Nat)) lp2) (many (List (Nat)) rp2) (many (List (Nat)) rd2)
+    (erased (Drop (Nat) p l lp2) dl2) (erased (RevOnto (Nat) p l ri rp2) rv2) (erased (Drop (Nat) p r rd2) dr2)
+    (erased (Agree p l r) ag2) (erased (Disagree (Succ p) l r) dis)
+  (match many lp _
+    ((Nil a) (values k lp rp rd dl rv dr ag (disagree-short k l r ag dl)))
+    ((Cons a x lp1)
+      (match many rd _
+        ((Nil a2) (values k lp rp rd dl rv dr ag (disagree-short-r k l r ag dr)))
+        ((Cons a2 y rd1)
+          (let (erased nx) (erased dl1) (drop-nth (Nat) k l x lp1 dl))
+          (let (erased ny) (erased dr1) (drop-nth (Nat) k r y rd1 dr))
+          (match many (nat-cmp x y) _
+            ((CLt t rr a3 b3 lt) (values k lp rp rd dl rv dr ag (disagree-at k l r x y ag nx ny (ApartLt x y lt))))
+            ((CGt t rr a3 b3 gt) (values k lp rp rd dl rv dr ag (disagree-at k l r x y ag nx ny (ApartGt x y gt))))
+            ((CEq t rr a3)
+              (expand (Succ k) lp1 (Cons (Nat) x rp) rd1 l ri r dl1 (RevS (Nat) k l ri rp x rv nx) dr1 (agree-snoc k l r x ag nx ny)))))))))
+
 (Zero)
