@@ -1,5 +1,5 @@
-; needs: palindrome_relations palindrome palindrome_center ../self/base
-; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Nil))))))))
+; needs: ../self/base palindrome_relations palindrome palindrome_center
+; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Cons 2 (Nil)))))))))
 
 (def-fns _ $ erased revcat-unique : (erased (List (Nat)) l1) (erased (List (Nat)) r1)
     (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (List (Nat)) xs)
@@ -56,6 +56,68 @@
                   (DropSucc d1 x1 t1b l2
                     (revcat-drop t1b (Cons (Nat) x1 r1) l2 r2 xs aa b n1 q d1
                                  pp1 lq ad1)))))))))))
+
+(def-fns _ $ erased revcat-add : (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (List (Nat)) xs) (subterm erased (RevCat l r xs) rc)
+    (erased (Nat) a) (erased (Nat) b) (erased (Nat) c)
+    (erased (Length (Nat) l a) la) (erased (Length (Nat) r b) lb)
+    (erased (Length (Nat) xs c) lc) -> (erased (Add a b c) ad)
+  (match erased rc _
+    ((RevFlat z)
+      (match erased la _
+        ((LNil z1)
+          (match erased (length-fn r b c lb lc) _ ((Refl t1 r1) (AddZero b))))))
+    ((RevStep x l1 r1 xs1 p1)
+      (match erased la _
+        ((LCons z1 x1 t1 a1 la1)
+          (add-unshift a1 b c
+            (revcat-add l1 (Cons (Nat) x r1) xs p1 a1 (Succ b) c la1
+                        (LCons (Nat) x r1 b lb) lc)))))))
+
+(def-fns _ $ erased revcat-drop-r : (erased (List (Nat)) l1) (erased (List (Nat)) r1)
+    (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (List (Nat)) xs)
+    (erased (RevCat l1 r1 xs) a) (erased (RevCat l2 r2 xs) b)
+    (erased (Nat) p) (erased (Nat) q) (subterm erased (Nat) d)
+    (erased (Length (Nat) l1 p) lp) (erased (Length (Nat) l2 q) lq)
+    (erased (Add p d q) ad)
+    (erased (Nat) cn) (erased (Length (Nat) xs cn) lxs) ->
+    (erased (Drop d r1 r2) dr)
+  (match erased d _
+    ((Zero)
+      (match erased (add-fn p (Zero) q p ad (add-zero-right p)) _
+        ((Refl t0 r0)
+          (let (erased el) (erased er) (revcat-unique l1 r1 l2 r2 xs a b p lp lq))
+          (match erased er _ ((Refl u v) (DropZero r1))))))
+    ((Succ d1)
+      (match erased r1 _
+        ((Nil z)
+          (let (erased b2) (erased lr2) (list-length r2))
+          (match erased
+            (match erased (add-fn p (Zero) cn p
+                            (revcat-add l1 r1 xs a p (Zero) cn lp (LNil (Nat)) lxs)
+                            (add-zero-right p)) (((False) ff))
+              ((Refl t1 r1x)
+                (let (erased q1) (erased eq1) (erased ad1)
+                  (add-succ-right-inv p d1 q ad))
+                (match erased eq1 (((False) ff2))
+                  ((Refl t2 r2x)
+                    (lt-asym p q (add-le-left p d1 q1 ad1)
+                      (add-le-left q b2 cn
+                        (revcat-add l2 r2 xs b q b2 cn lq lr2 lxs)))))))
+            _))
+        ((Cons z c1 r1b)
+          (DropSucc d1 c1 r1b r2
+            (revcat-drop-r (Cons (Nat) c1 l1) r1b l2 r2 xs
+                           (RevStep c1 l1 r1b xs a) b
+                           (Succ p) q d1 (LCons (Nat) c1 l1 p lp) lq
+                           (add-unshift p d1 q ad) cn lxs)))))))
+
+(def-adts
+  (DropAtR : ((List (Nat)) r1) ((Nat) d) -> Type
+    enum
+    (many FoundR : (erased (List (Nat)) r1) (erased (Nat) d)
+        (many (List (Nat)) r2) (erased (Drop d r1 r2) dr) -> (DropAtR r1 d))
+    (many NotFoundR : (erased (List (Nat)) r1) (erased (Nat) d) -> (DropAtR r1 d))))
 
 (def-adts
   (Zip : ((List (Nat)) xs) -> Type
@@ -170,6 +232,32 @@
             ((CGt t rr a0 b0 p0)
               (values k0 m l0 r0 dl dr (StopNe x y l1 r1 (ApartGt x y p0))))))))))
 
+(def-fns _ $ many drop-at-r : (erased (List (Nat)) xs) (many (IdMap (Zip xs)) m)
+    (many (List (Nat)) l1) (many (List (Nat)) r1) (erased (RevCat l1 r1 xs) a)
+    (many (Nat) p) (erased (Length (Nat) l1 p) lp)
+    (many (Nat) q) (many (Nat) d) (erased (Add p d q) ad)
+    (erased (Nat) cn) (erased (Length (Nat) xs cn) lxs) ->
+    (many (DropAtR r1 d) out)
+  (match many (idmap-get (Zip xs) q m) _
+    ((Miss t k mm pr) (NotFoundR r1 d))
+    ((Hit t k mm z pr)
+      (let-match many z (MkZip zxs zl zr zq zrc zlq))
+      (match many (nat-cmp zq q) _
+        ((CEq ct cr cx)
+          (FoundR r1 d zr
+                  (revcat-drop-r l1 r1 zl zr xs a zrc p q d lp zlq ad cn lxs)))
+        ((CLt ct cr ca cb cp) (NotFoundR r1 d))
+        ((CGt ct cr ca cb cp) (NotFoundR r1 d))))))
+
+(def-fns _ $ many right-probe : (many (List (Nat)) xs) (many (Nat) d) -> (many (Nat) n)
+  (let (many m) (states-of xs))
+  (let (many cn) (erased lxs) (list-length xs))
+  (match many (drop-at-r xs m (Nil (Nat)) xs (RevFlat xs) (Zero) (LNil (Nat))
+                         d d (AddZero d) cn lxs)
+               (((Nat) rr))
+    ((NotFoundR a b) (Zero))
+    ((FoundR a b r2 dr) (let (many k) (erased lk) (list-length r2)) k)))
+
 (def-fns _ $ many depth-probe : (many (List (Nat)) xs) (many (Nat) p) (many (Nat) d) ->
     (many (Nat) n)
   (let (many m) (states-of xs))
@@ -184,7 +272,7 @@
           (match many (drop-at xs m zl zr zrc zq zlq q d (add-comm d q zq adq))
                        (((Nat) rr3))
             ((NotFound a2 b2) (Zero))
-            ((FoundAt a2 b2 l2 dr) (list-length (Nat) l2))))))))
+            ((FoundAt a2 b2 l2 dr) (let (many kk) (erased lkk) (list-length l2)) kk)))))))
 
 (def-fns _ $ erased mirror-cons : (erased (Nat) c) (erased (List (Nat)) a)
     (erased (List (Nat)) b) (erased (Nat) j) (erased (Mirror a b j) m) ->
@@ -296,4 +384,5 @@
   $ Cons (Nat) (radius-from la ra)
   $ Cons (Nat) (radius-from (Cons (Nat) 3 la) (Cons (Nat) 3 ra))
   $ Cons (Nat) (radius-resumed 3 la ra)
+  $ Cons (Nat) (right-probe s (Succ (Succ (Zero))))
   $ Nil (Nat))
