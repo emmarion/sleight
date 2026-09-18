@@ -3154,7 +3154,7 @@
                           ((BTrue) (values env3 ctx $ SNone _))
                           ((BFalse) (values env3 (Cons _ (Cons _ x $ Nil _) ctx) $ SLet _ (Cons _ (Many) $ Nil _) (Cons _ x $ Nil _) (PkMany _ (Nil _) x (Nil _) $ PkNil _) code))))))))))))))
 
-  ; let-match (section 16, ASSUMPTIONS 99-100): a one-constructor match binding outward, its fields at the
+  ; let-match (section 16, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
   (many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many bad) $ env-error env "malformed let-match: expected (let-match <multiplicity> x (C field ...))")
@@ -3188,15 +3188,21 @@
                                       (match many (and (mult-is-many smult) $ not $ env-run-pos env2) _
                                         ((BTrue) (held-needs-many env2 tid mid))
                                         ((BFalse) env2)))
-                                    (let (many (Env) env3)
-                                      (match many (nat-cmp (list-length _ mctors) 1) _
-                                        ((CEq eq-t eq-r eq-x) env2h)
-                                        (else (env-error env2h $ str-cat3 (name-of env2h tid) " has " $ str-cat (nat-str $ list-length _ mctors) " constructors, so it needs an ordinary match"))))
-                                    (let (many env4) (many c) $ ctor-var env3 craw)
+                                    (let (many env4) (many c) $ ctor-var env2h craw)
                                     (let (many env5) (many mk) $ marker-checked env4 tid mctors c)
-                                    (let (many env6) $ error-unless env5 (mult-is-many mk) $ str-cat (name-of env5 c) " is phantom")
-                                    (let (many ctele) (many ret) $ ctor-type env6 c)
-                                    (let (many env7) $ check-field-count env6 c fields ctele)
+                                    (let (many env6) $ error-unless env5 (or (not $ mult-is-many smult) $ mult-is-many mk) $ str-cat (name-of env5 c) " is phantom")
+                                    ; covered-of tests each alternative in an independent branch environment;
+                                    ; phantom alternatives count too, even when they cannot run.
+                                    (let (many env6a) (many other) (many reachable) (many covered)
+                                      $ covered-of mctors env6 (Cons _ c $ Nil _) sres smult (None _) (BFalse) $ Nil _)
+                                    (let (many (Env) env6b)
+                                      (match many other _
+                                        ((None a) env6a)
+                                        ((Some a alternative)
+                                          (env-error env6a $ str-cat3 "constructor " (name-of env6a alternative)
+                                            $ str-cat3 " is not refuted, so " (name-of env6a tid) " needs an ordinary match"))))
+                                    (let (many ctele) (many ret) $ ctor-type env6b c)
+                                    (let (many env7) $ check-field-count env6b c fields ctele)
                                     (let (many mults) $ under-list (tele-mults ctele) smult)
                                     (let (many ss) $ shapes mctors env7)
                                     (let (many run) $ and (env-run-pos env7) $ and (mult-is-many smult) $ list-is-empty _ $ env-errors env7)

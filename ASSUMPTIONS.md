@@ -1466,8 +1466,13 @@ what it assumed while doing so.
 
 99. **`let-match` reads no value, so it is not confined to run
     position** (`Elab.elab_let_match`). It requires the scrutinee's
-    `Matchable` to list exactly one constructor and refuses a phantom
-    one; the fields bind at `under smult` their declared multiplicities,
+    `Matchable` originally had to list exactly one non-phantom constructor.
+    Following the approved §16 extension, it now requires every alternative
+    to be automatically refuted in an independent branch environment, and
+    permits the selected constructor to be phantom at `erased`. Both
+    compilers use ordinary match refinement for these checks; phantom
+    alternatives are not skipped. The fields bind at `under smult` their
+    declared multiplicities,
     which is §20's existing rule for a match's branch fields, so an
     erased scrutinee yields only erased fields. The refinement goes
     through the same `refine` an ordinary `match` branch uses, so nothing

@@ -27,6 +27,8 @@ Nothing here is a design decision; it is a log of friction, in the order met.
    what makes these functions 20 levels deep. Accepting a `let-match` when
    the index leaves one constructor possible would flatten most of
    `elabfn.sl`.
+   Implemented in DESIGN.md §16: `let-match` now accepts the unique
+   structurally unrefuted constructor, including a phantom at `erased`.
 
 5. **`else` does not refine.** After `(else ...)` the scrutinee is not known
    to differ from the listed constructors, so an empty erased match there is

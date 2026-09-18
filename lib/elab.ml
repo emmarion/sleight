@@ -1040,10 +1040,21 @@ and elab_let_match env l args =
   | [ m; scrut; List (pl, c :: fields) ] ->
       let smult = mult_or env l m in
       let env, sres, scode, tid, mid, disc, ctors = scrutinee env l smult scrut in
-      if List.length ctors <> 1 then
-        error l "%s has %d constructors, so it needs an ordinary match" (name_of env tid) (List.length ctors);
       let c = ctor_var env pl c in
-      if marker env pl tid ctors c = Erased then error pl "%s is phantom" (name_of env c);
+      if marker env pl tid ctors c = Erased && smult = Many then error pl "%s is phantom" (name_of env c);
+      (* Test each alternative before introducing the selected constructor's facts.
+         Trial fields and refinements stay local, exactly as for omitted match branches. *)
+      List.iter
+        (fun (cmult, other) ->
+          let other = match other with Var x -> x | _ -> assert false in
+          if other <> c then (
+            let tele, ret = ctor_type env l other in
+            let mults = List.map (fun e -> if cmult = Erased then Erased else under smult e.mult) tele in
+            let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
+            let possible = try ignore (at l (fun () -> refine trial sres other fids ret)); true with Contradiction _ -> false in
+            if possible then
+              error l "constructor %s is not refuted, so %s needs an ordinary match" (name_of env other) (name_of env tid)))
+        ctors;
       let tele, ret = ctor_type env pl c in
       let names = field_names env pl c tele fields in
       let mults = List.map (fun e -> under smult e.mult) tele in

@@ -620,13 +620,33 @@ match. So `match` is an ordinary expression, of the size given by its
 return annotation (§11). `comptime-match` binds outward for the
 complementary reason: having no branches, it asserts a single
 discriminant, so what it learns is unambiguous. `let-match` binds
-outward for the same reason arrived at differently: its scrutinee's type
-has one constructor, so entering the branch is not a choice and what the
-branch learns holds wherever the scrutinee does. Having no discriminant
-to settle, it reads no value, so unlike `comptime-match` it needs
-neither a `Const` nor a non-erased scrutinee, and it is not confined to
-run position. Its fields take the scrutinee's own erasure, so nothing
-non-erased comes out of an erased value.
+outward when the facts in force leave exactly one possible constructor of
+the scrutinee. The named constructor must be that constructor. Its fields
+and the facts learned by entering its branch remain in scope for the rest
+of the containing expression.
+
+Possibility is determined by the same automatic structural refutation used
+by ordinary `match` (§12, §18). Each constructor is checked independently
+from the environment before the `let-match`, with fresh fields. Facts
+learned while checking one constructor must not influence the checks of
+the others. Once exactly one constructor survives, its fields and
+refinements are introduced outward.
+
+It is an error if no constructor survives, if more than one survives, or
+if the pattern names a refuted constructor. The surviving constructor may
+be phantom when the scrutinee is matched at `erased`; all its fields are
+then bound erased. A `many` `let-match` refuses a phantom constructor.
+Being phantom does not itself refute an alternative: every other
+constructor must still be automatically structurally refuted. `let-match`
+has no form for supplying an absurd-by-proof branch.
+
+No inspection of the scrutinee's stored value is used to establish which
+constructor is possible. Consequently, `let-match` requires neither a
+`Const` nor a non-erased scrutinee and is not confined to run position.
+Its fields retain their declared multiplicities under the scrutinee's
+matched multiplicity (§20); nothing non-erased comes out of an erased
+value. The existing requirements for an opened and, where applicable,
+readable `Matchable` remain unchanged (§19).
 
 Most locations require a size-one expression. The exceptions are the
 three places where a size is fixed by something written down elsewhere:
@@ -777,11 +797,12 @@ how entering a match branch updates it:
   impossible. A freshly-introduced (atom) variable, or a pre-existing
   atom with no conflicting `is` fact, always succeeds this way, with no
   recursion needed for that step.
-- This is sound because a branch's unification only ever happens as the
-  consequence of a branch that was actually, genuinely entered — gated by
-  a real discriminant check (a runtime tag comparison for a non-erased
-  enum, or `comptime-match`'s compile-time computation) — not performed
-  as a free-floating comparison between two arbitrary atoms.
+- A constructor's forced facts hold conditionally while checking its
+  branch. Ordinary `match` keeps those facts inside that branch;
+  `comptime-match` exports them after verifying the constructor against
+  the stored value. `let-match` exports them only after independently
+  refuting every other constructor (§16). Hypothetical facts introduced
+  while testing a constructor do not escape that test.
 - - The only three ways forcing a unification fails, i.e. produces a
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
@@ -1054,11 +1075,15 @@ actually specified.
    position only (§16); binds the matched fields as `Const` at their
    declared multiplicities; a mismatch is a compile error printing the
    actual value (§15, §34).
-5a. `let-match` — destructures a scrutinee whose `Matchable` lists a
-   single constructor, binding its fields outward at their declared
-   multiplicities under the scrutinee's own (§16, §20). Reads no value,
-   so it needs neither a `Const` nor a non-erased scrutinee and is not
-   confined to run position; a phantom constructor is refused.
+5a. `let-match` — destructures a scrutinee for which exactly one
+   constructor survives automatic structural refutation, binding that
+   constructor's fields and refinements outward (§16, §18). The pattern
+   must name the surviving constructor; a phantom constructor is permitted
+   only when the scrutinee is matched at `erased`. Fields retain their
+   declared multiplicities under the scrutinee's matched multiplicity
+   (§20). Constructor selection does not inspect a stored value, so the
+   scrutinee need not be `Const` or non-erased, and the form is not confined
+   to run position.
 5b. `open-adt` — opens a `Matchable` or `Newtype`: an anonymous `let` of
    its argument at the written multiplicity, then the open of that
    binder, asserting §19's invariant and minting the facts it takes
