@@ -15,7 +15,7 @@ if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; mkdir -p
 SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/main.sl"
 REF=_build/default/bin/main.exe
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
-OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
+OCB="ocamlfind ocamlc -custom -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 
@@ -46,9 +46,11 @@ check_test() {
     return
   fi
   args=$(directive "$t" args)
+  envs=$(directive "$t" env)
   directive "$t" stdin > "$B/$name.in"
-  # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files
-  (cd "$B" && "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
+  # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program
+  (cd "$B" && env -i $envs "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
   if ! "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
@@ -56,7 +58,7 @@ check_test() {
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
   fi
   check_warns "$t" "$name" || return
-  (cd "$B" && "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
+  (cd "$B" && env -i $envs "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
   # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
   # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
   grep -v '^warning (line ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
@@ -77,7 +79,7 @@ $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
 echo "== compiling the tests with slc, and the extern, thunk, main, char and nat tests again with --no-templates"
 { for t in tests/*.sl; do echo "$t - -"; done
   for t in tests/extern_*.sl tests/thunk_*.sl tests/main_*.sl tests/char*.sl tests/nat_*.sl; do echo "$t --no-templates _view"; done
-} | BOOTSTRAP_B=$B xargs -P "$(nproc)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
+} | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
 echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"
