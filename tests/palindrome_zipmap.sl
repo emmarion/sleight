@@ -356,6 +356,83 @@
                          ((RadNone d1 d2) (RadNone lm1 (Cons (Nat) c rm)))
                          ((RadSome c2 lm2 rm2 k2 mk2 rest) rest))))))))))
 
+(def-adts
+  (RadListO : ((List (Nat)) lm) ((List (Nat)) rm) -> Type
+    enum
+    (many RadNoneO : (erased (List (Nat)) lm) (erased (List (Nat)) rm) ->
+       (RadListO lm rm))
+    (many RadSomeO : (erased (Nat) c) (erased (List (Nat)) lm1)
+        (erased (List (Nat)) rm) (many (Nat) k) (erased (Mirror lm1 rm k) mk)
+        (many (RadListO lm1 (Cons (Nat) c rm)) rest) ->
+       (RadListO (Cons (Nat) c lm1) rm))))
+
+(def-adts
+  (TrackerO : ((List (Nat)) l) ((List (Nat)) r) -> Type
+    enum
+    (many NoTrackO : (erased (List (Nat)) l) (erased (List (Nat)) r) -> (TrackerO l r))
+    (many MkTrackO : (erased (List (Nat)) l) (erased (List (Nat)) r) (many (Nat) b)
+        (erased (List (Nat)) lm) (erased (List (Nat)) rm)
+        (erased (Mirror r lm b) invA) (erased (Mirror l rm b) invB)
+        (many (RadListO lm rm) rads) -> (TrackerO l r))))
+
+(def-fns _ $ many track-new-o : (many (List (Nat)) l) (many (Nat) c)
+    (many (List (Nat)) r1) (many (Nat) k) (erased (Mirror l r1 k) mk)
+    (many (RadListO (Cons (Nat) c l) r1) rads) ->
+    (many (TrackerO l (Cons (Nat) c r1)) t)
+  (MkTrackO l (Cons (Nat) c r1) k (Cons (Nat) c l) r1
+            (mirror-cons c r1 l k (mirror-sym l r1 k mk)) mk rads))
+
+(def-fns _ $ many transport-o : (many (List (Nat)) l) (many (Nat) c)
+    (many (List (Nat)) r1) (many (TrackerO l (Cons (Nat) c r1)) t) ->
+    (many (Nat) k0) (erased (Mirror l r1 k0) m0)
+  (match many t _
+    ((NoTrackO a b) (values (Zero) (MirrorZ l r1)))
+    ((MkTrackO a b budget lm rm invA invB rads)
+      (match many budget _
+        ((Zero) (values (Zero) (MirrorZ l r1)))
+        ((Succ b1)
+          (match many rads _
+            ((RadNoneO d1 d2) (values (Zero) (MirrorZ l r1)))
+            ((RadSomeO cc lm1 rm0 k mk rest)
+              (let (erased pa)
+                (match erased invA (((Mirror r1 lm1 b1) z))
+                  ((MirrorS x r2 lz b2 mA) mA)))
+              (let (many k0) (erased lek) (erased leb)
+                (match many (nat-cmp k b1)
+                            (((Nat) kk) ((Lt kk (Succ k)) e1) ((Lt kk (Succ b1)) e2))
+                  ((CLt t1 r2 a1 b2 p1) (values k (lt-succ k) (lt-weaken k b1 p1)))
+                  ((CEq t1 r2 a1) (values k (lt-succ k) (lt-succ k)))
+                  ((CGt t1 r2 a1 b2 p1)
+                    (values b1 (lt-weaken b1 k p1) (lt-succ b1)))))
+              (values k0
+                (mirror-trans l rm r1 k0
+                  (mirror-weaken l rm k0 budget invB
+                                 (lt-weaken k0 budget (lt-le-trans k0 (Succ b1) budget leb (lt-succ budget))))
+                  (mirror-trans rm lm1 r1 k0
+                    (mirror-sym lm1 rm k0 (mirror-weaken lm1 rm k0 k mk lek))
+                    (mirror-sym r1 lm1 k0
+                                (mirror-weaken r1 lm1 k0 b1 pa leb))))))))))))
+
+(def-fns _ $ many track-step-o : (many (List (Nat)) l) (many (Nat) c)
+    (many (List (Nat)) r1) (many (TrackerO l (Cons (Nat) c r1)) t) ->
+    (many (TrackerO (Cons (Nat) c l) r1) t2)
+  (match many t _
+    ((NoTrackO a b) (NoTrackO (Cons (Nat) c l) r1))
+    ((MkTrackO a b budget lm rm invA invB rads)
+      (match many budget _
+        ((Zero) (NoTrackO (Cons (Nat) c l) r1))
+        ((Succ b1)
+          (match erased invA (((TrackerO (Cons (Nat) c l) r1) z))
+            ((MirrorS x r2 lm1 b2 mA)
+              (MkTrackO (Cons (Nat) c l) r1 b1 lm1 (Cons (Nat) c rm)
+                        mA
+                        (mirror-cons c l rm b1
+                          (mirror-weaken l rm b1 budget invB
+                                         (lt-weaken b1 budget (lt-succ b1))))
+                        (match many rads _
+                          ((RadNoneO d1 d2) (RadNoneO lm1 (Cons (Nat) c rm)))
+                          ((RadSomeO c2 lm2 rm2 k2 mk2 rest) rest))))))))))
+
 ; The radii already found, packaged for a position that may have none before it.
 (def-adts
   (Hist : ((List (Nat)) l) ((List (Nat)) r) -> Type
@@ -436,6 +513,76 @@
     ((Nil a) (Cons (Nat) k (Nil (Nat))))
     ((Cons a c r1) (Cons (Nat) k (naive-radii (Cons (Nat) c l) r1)))))
 
+(def-fns _ $ many track-update-o : (many (List (Nat)) l) (many (Nat) c)
+    (many (List (Nat)) r1) (many (TrackerO l (Cons (Nat) c r1)) tr)
+    (many (Nat) k) (erased (Mirror l r1 k) mk)
+    (many (RadListO (Cons (Nat) c l) r1) rl) ->
+    (many (TrackerO (Cons (Nat) c l) r1) t2)
+  (match many tr _
+    ((NoTrackO a b) (track-step-o l c r1 (track-new-o l c r1 k mk rl)))
+    ((MkTrackO a b budget lm rm invA invB rads)
+      (match many (nat-cmp budget k) _
+        ((CLt t1 r2 a1 b1 p1) (track-step-o l c r1 (track-new-o l c r1 k mk rl)))
+        ((CEq t1 r2 a1) (track-step-o l c r1 tr))
+        ((CGt t1 r2 a1 b1 p1) (track-step-o l c r1 tr))))))
+
+(def-fns _ $ many manacher-odd : (many (List (Nat)) l) (subterm many (List (Nat)) r)
+    (erased (List (Nat)) xs) (erased (RevCat l r xs) rc)
+    (many (IdMap (Zip xs)) states)
+    (many (Nat) p) (erased (Length (Nat) l p) lp)
+    (erased (Nat) cn) (erased (Length (Nat) xs cn) lxs)
+    (many (TrackerO l r) tr) (many (RadListO l r) rads) ->
+    (many (List (Nat)) out)
+  (match many r _
+    ((Nil a) (Nil (Nat)))
+    ((Cons a c r1)
+      (let (many k0) (erased m0) (transport-o l c r1 tr))
+      (let (many kk) (erased mkk) (many l0) (many r0) (erased dl0) (erased dr0)
+        (match many (lt-dec k0 (Succ p))
+                    (((Nat) a1) ((Mirror l r1 a1) a2) ((List (Nat)) a3)
+                     ((List (Nat)) a4) ((Drop a1 l a3) a5) ((Drop a1 r1 a4) a6))
+          ((No za zb ge) (values (Zero) (MirrorZ l r1) l r1 (DropZero l) (DropZero r1)))
+          ((Yes za zb le)
+            (let (many q) (erased adq) (sub p k0 le))
+            (let (many q2) (erased adq2) (add (Succ p) k0))
+            (match many (drop-at xs states l r rc p lp q k0 (add-comm k0 q p adq))
+                        (((Nat) b1) ((Mirror l r1 b1) b2) ((List (Nat)) b3)
+                         ((List (Nat)) b4) ((Drop b1 l b3) b5) ((Drop b1 r1 b4) b6))
+              ((NotFound wa wb)
+                (values (Zero) (MirrorZ l r1) l r1 (DropZero l) (DropZero r1)))
+              ((FoundAt wa wb ll dll)
+                (match many (drop-at-r xs states (Cons (Nat) c l) r1
+                                       (RevStep c l r1 xs rc) (Succ p)
+                                       (LCons (Nat) c l p lp) q2 k0 adq2 cn lxs)
+                            (((Nat) c1) ((Mirror l r1 c1) c2) ((List (Nat)) c3)
+                             ((List (Nat)) c4) ((Drop c1 l c3) c5) ((Drop c1 r1 c4) c6))
+                  ((NotFoundR va vb)
+                    (values (Zero) (MirrorZ l r1) l r1 (DropZero l) (DropZero r1)))
+                  ((FoundR va vb rr drr) (values k0 m0 ll rr dll drr))))))))
+      (let (many k) (erased mk) (erased l2) (erased r2) (erased dl2) (erased dr2)
+           (erased st) (expand-from l r1 kk mkk l0 r0 dl0 dr0))
+      (let (many rl) (RadSomeO c l r1 k mk rads))
+      (Cons (Nat) k
+        (manacher-odd (Cons (Nat) c l) r1 xs (RevStep c l r1 xs rc) states
+                      (Succ p) (LCons (Nat) c l p lp) cn lxs
+                      (track-update-o l c r1 tr k mk rl) rl)))))
+
+(def-fns _ $ many manacher-odd-radii : (many (List (Nat)) xs) ->
+    (many (List (Nat)) out)
+  (let (many m) (states-of xs))
+  (let (many cn) (erased lxs) (list-length xs))
+  (manacher-odd (Nil (Nat)) xs xs (RevFlat xs) m (Zero) (LNil (Nat)) cn lxs
+                (NoTrackO (Nil (Nat)) xs) (RadNoneO (Nil (Nat)) xs)))
+
+(def-fns _ $ many naive-odd : (many (List (Nat)) l) (subterm many (List (Nat)) r) ->
+    (many (List (Nat)) out)
+  (match many r _
+    ((Nil a) (Nil (Nat)))
+    ((Cons a c r1)
+      (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr)
+           (erased st) (expand l r1))
+      (Cons (Nat) k (naive-odd (Cons (Nat) c l) r1)))))
+
 (def-fns _ $ many nats-agree : (subterm many (List (Nat)) a) (many (List (Nat)) b) ->
     (many (Nat) r)
   (match many a _
@@ -451,7 +598,9 @@
 
 ; The skipping search must agree with full expansion at every centre.
 (def-fns _ $ many agree : (many (List (Nat)) xs) -> (many (Nat) r)
-  (nats-agree (manacher-radii xs) (naive-radii (Nil (Nat)) xs)))
+  (match many (nats-agree (manacher-radii xs) (naive-radii (Nil (Nat)) xs)) (((Nat) z))
+    ((Zero) (Zero))
+    ((Succ w) (nats-agree (manacher-odd-radii xs) (naive-odd (Nil (Nat)) xs)))))
 
 (def-fns _ $ many radius-from : (many (List (Nat)) l) (many (List (Nat)) r) ->
     (many (Nat) k)
