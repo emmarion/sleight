@@ -1,5 +1,5 @@
 ; needs: ../self/base palindrome_relations palindrome palindrome_center
-; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Cons 2 (Nil)))))))))
+; expect: (Cons 0 (Cons 2 (Cons 4 (Cons 0 (Cons 2 (Cons 3 (Cons 3 (Cons 2 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Cons 1 (Nil))))))))))))))
 
 (def-fns _ $ erased revcat-unique : (erased (List (Nat)) l1) (erased (List (Nat)) r1)
     (erased (List (Nat)) l2) (erased (List (Nat)) r2) (erased (List (Nat)) xs)
@@ -356,6 +356,103 @@
                          ((RadNone d1 d2) (RadNone lm1 (Cons (Nat) c rm)))
                          ((RadSome c2 lm2 rm2 k2 mk2 rest) rest))))))))))
 
+; The radii already found, packaged for a position that may have none before it.
+(def-adts
+  (Hist : ((List (Nat)) l) ((List (Nat)) r) -> Type
+    enum
+    (many HistNil : (erased (List (Nat)) r) -> (Hist (Nil (Nat)) r))
+    (many HistCons : (erased (Nat) c) (erased (List (Nat)) l1) (erased (List (Nat)) r)
+        (many (RadList l1 (Cons (Nat) c r)) prev) ->
+       (Hist (Cons (Nat) c l1) r))))
+
+(def-fns _ $ many track-update : (many (List (Nat)) l) (many (Nat) c)
+    (many (List (Nat)) r1) (many (Tracker l (Cons (Nat) c r1)) tr)
+    (many (Nat) k) (erased (Mirror l (Cons (Nat) c r1) k) mk)
+    (many (RadList l (Cons (Nat) c r1)) rl) ->
+    (many (Tracker (Cons (Nat) c l) r1) t2)
+  (match many tr _
+    ((NoTrack a b)
+      (track-step l c r1 (track-new l (Cons (Nat) c r1) k mk rl)))
+    ((MkTrack a b budget lm rm invA invB rads)
+      (match many (nat-cmp budget k) _
+        ((CLt t1 r2 a1 b1 p1)
+          (track-step l c r1 (track-new l (Cons (Nat) c r1) k mk rl)))
+        ((CEq t1 r2 a1) (track-step l c r1 tr))
+        ((CGt t1 r2 a1 b1 p1) (track-step l c r1 tr))))))
+
+(def-fns _ $ many manacher-even : (many (List (Nat)) l) (subterm many (List (Nat)) r)
+    (erased (List (Nat)) xs) (erased (RevCat l r xs) rc)
+    (many (IdMap (Zip xs)) states)
+    (many (Nat) p) (erased (Length (Nat) l p) lp)
+    (erased (Nat) cn) (erased (Length (Nat) xs cn) lxs)
+    (many (Tracker l r) tr) (many (Hist l r) hist) ->
+    (many (List (Nat)) out)
+  (let (many k0) (erased m0) (transport l r tr))
+  (let (many kk) (erased mkk) (many l0) (many r0) (erased dl0) (erased dr0)
+    (match many (lt-dec k0 (Succ p))
+                (((Nat) a1) ((Mirror l r a1) a2) ((List (Nat)) a3) ((List (Nat)) a4)
+                 ((Drop a1 l a3) a5) ((Drop a1 r a4) a6))
+      ((No za zb ge) (values (Zero) (MirrorZ l r) l r (DropZero l) (DropZero r)))
+      ((Yes za zb le)
+        (let (many q) (erased adq) (sub p k0 le))
+        (let (many q2) (erased adq2) (add p k0))
+        (match many (drop-at xs states l r rc p lp q k0 (add-comm k0 q p adq))
+                    (((Nat) b1) ((Mirror l r b1) b2) ((List (Nat)) b3) ((List (Nat)) b4)
+                     ((Drop b1 l b3) b5) ((Drop b1 r b4) b6))
+          ((NotFound wa wb) (values (Zero) (MirrorZ l r) l r (DropZero l) (DropZero r)))
+          ((FoundAt wa wb ll dll)
+            (match many (drop-at-r xs states l r rc p lp q2 k0 adq2 cn lxs)
+                        (((Nat) c1) ((Mirror l r c1) c2) ((List (Nat)) c3)
+                         ((List (Nat)) c4) ((Drop c1 l c3) c5) ((Drop c1 r c4) c6))
+              ((NotFoundR va vb)
+                (values (Zero) (MirrorZ l r) l r (DropZero l) (DropZero r)))
+              ((FoundR va vb rr drr) (values k0 m0 ll rr dll drr))))))))
+  (let (many k) (erased mk) (erased l2) (erased r2) (erased dl2) (erased dr2) (erased st)
+    (expand-from l r kk mkk l0 r0 dl0 dr0))
+  (match many r _
+    ((Nil a) (Cons (Nat) k (Nil (Nat))))
+    ((Cons a c r1)
+      (let (many rl)
+        (match many hist (((RadList l r) z))
+          ((HistNil h1) (RadNone l r))
+          ((HistCons hc hl1 hr prev) (RadSome hc hl1 r k mk prev))))
+      (Cons (Nat) k
+        (manacher-even (Cons (Nat) c l) r1 xs (RevStep c l r1 xs rc) states
+                       (Succ p) (LCons (Nat) c l p lp) cn lxs
+                       (track-update l c r1 tr k mk rl)
+                       (HistCons c l r1 rl))))))
+
+(def-fns _ $ many manacher-radii : (many (List (Nat)) xs) -> (many (List (Nat)) out)
+  (let (many m) (states-of xs))
+  (let (many cn) (erased lxs) (list-length xs))
+  (manacher-even (Nil (Nat)) xs xs (RevFlat xs) m (Zero) (LNil (Nat)) cn lxs
+                 (NoTrack (Nil (Nat)) xs) (HistNil xs)))
+
+(def-fns _ $ many naive-radii : (many (List (Nat)) l) (subterm many (List (Nat)) r) ->
+    (many (List (Nat)) out)
+  (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
+    (expand l r))
+  (match many r _
+    ((Nil a) (Cons (Nat) k (Nil (Nat))))
+    ((Cons a c r1) (Cons (Nat) k (naive-radii (Cons (Nat) c l) r1)))))
+
+(def-fns _ $ many nats-agree : (subterm many (List (Nat)) a) (many (List (Nat)) b) ->
+    (many (Nat) r)
+  (match many a _
+    ((Nil z) (match many b _ ((Nil z2) 1) ((Cons z2 y ys) (Zero))))
+    ((Cons z x xs)
+      (match many b _
+        ((Nil z2) (Zero))
+        ((Cons z2 y ys)
+          (match many (nat-cmp x y) _
+            ((CEq t r w) (nats-agree xs ys))
+            ((CLt t r w1 w2 w3) (Zero))
+            ((CGt t r w1 w2 w3) (Zero))))))))
+
+; The skipping search must agree with full expansion at every centre.
+(def-fns _ $ many agree : (many (List (Nat)) xs) -> (many (Nat) r)
+  (nats-agree (manacher-radii xs) (naive-radii (Nil (Nat)) xs)))
+
 (def-fns _ $ many radius-from : (many (List (Nat)) l) (many (List (Nat)) r) ->
     (many (Nat) k)
   (let (many k) (erased m) (erased l2) (erased r2) (erased dl) (erased dr) (erased st)
@@ -385,4 +482,9 @@
   $ Cons (Nat) (radius-from (Cons (Nat) 3 la) (Cons (Nat) 3 ra))
   $ Cons (Nat) (radius-resumed 3 la ra)
   $ Cons (Nat) (right-probe s (Succ (Succ (Zero))))
+  $ Cons (Nat) (agree s)
+  $ Cons (Nat) (agree (Nil (Nat)))
+  $ Cons (Nat) (agree $ Cons (Nat) 7 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Cons (Nat) 7 $ Nil (Nat))
+  $ Cons (Nat) (agree $ Cons (Nat) 4 $ Cons (Nat) 4 $ Cons (Nat) 1 $ Cons (Nat) 4 $ Cons (Nat) 4 $ Cons (Nat) 1 $ Cons (Nat) 4 $ Cons (Nat) 4 $ Nil (Nat))
+  $ Cons (Nat) (agree $ Cons (Nat) 1 $ Cons (Nat) 2 $ Cons (Nat) 3 $ Cons (Nat) 2 $ Cons (Nat) 1 $ Cons (Nat) 5 $ Nil (Nat))
   $ Nil (Nat))
