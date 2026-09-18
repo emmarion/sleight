@@ -182,3 +182,10 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     generated OCaml. A report of retained functions and runtime fields,
     optionally with call counts, would make both proof erasure and the
     linear number of expansion steps easier to audit.
+
+25. **Show what an inference hole resolved to.** Cleaning up the palindrome
+    proofs replaced repeated erased indices and whole `Cons`/`Succ` trees
+    with `_`, as well as type arguments. An editor hover or elaboration
+    report showing each hole's resolved term would make these shorter calls
+    easier to review. A refactoring preview of inferable arguments would
+    also help choose which explicit terms still explain the proof.

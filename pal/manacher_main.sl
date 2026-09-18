@@ -4,17 +4,17 @@
     (many (List (Nat)) acc) -> (many (List (Nat)) out)
   (match many xs _
     ((Nil a) acc)
-    ((Cons a x rest) (tail (manacher-reverse rest (Cons (Nat) x acc))))))
+    ((Cons a x rest) (tail (manacher-reverse rest (Cons _ x acc))))))
 
 (def-fns _ $ many manacher-input-acc : (subterm many (String) s)
     (many (List (Nat)) acc) -> (many (List (Nat)) xs)
   (match many s _
-    ((SNil) (tail (manacher-reverse acc (Nil (Nat)))))
+    ((SNil) (tail (manacher-reverse acc (Nil _))))
     ((SCons c rest)
-      (tail (manacher-input-acc rest (Cons (Nat) (char-code c) acc))))))
+      (tail (manacher-input-acc rest (Cons _ (char-code c) acc))))))
 
 (def-fns _ $ many manacher-input : (many (String) s) -> (many (List (Nat)) xs)
-  (tail (manacher-input-acc s (Nil (Nat)))))
+  (tail (manacher-input-acc s (Nil _))))
 
 (def-fns _ $ many manacher-main : (many (String) s) -> (many (String) out)
   (let (many xs) (manacher-input s))

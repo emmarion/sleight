@@ -16,10 +16,10 @@
 (def-fns _ $ many pal-length : (subterm many (List (Nat)) xs) ->
     (many (Nat) n) (erased (Length (Nat) xs n) p)
   (match many xs _
-    ((Nil a) (values (Zero) (LNil (Nat))))
+    ((Nil a) (values (Zero) (LNil _)))
     ((Cons a x rest)
       (let (many n) (erased p) (pal-length rest))
-      (values (Succ n) (LCons (Nat) x rest n p)))))
+      (values (Succ n) (LCons _ x _ _ p)))))
 
 ; Remove the last element of a nonempty list. The length certificate
 ; supplies the strict decrease for the later onion-peeling recursion.
@@ -31,22 +31,19 @@
   (match many xs _
     (absurd (Nil a) (match erased len (((False) f))))
     ((Cons a x rest)
-      (match erased len _
-        ((LCons b y tail k plen)
-          (match many rest _
-            ((Nil b)
-              (match erased plen _
-                ((LNil c)
-                  (values (Nil (Nat)) x (LNil (Nat))
-                    (CatNil (Nat) (Cons (Nat) x (Nil (Nat))))))))
-            ((Cons b y tail)
-              (match erased plen _
-                ((LCons c z tail2 k2 plen2)
-                  (let (many inner) (many last) (erased ilen) (erased cat)
-                    (pal-unsnoc rest k2 plen))
-                  (values (Cons (Nat) x inner) last
-                    (LCons (Nat) x inner k2 ilen)
-                    (CatCons (Nat) x inner (Cons (Nat) last (Nil (Nat))) rest cat)))))))))))
+      (let-match erased len (LCons b y tail k plen))
+      (match many rest _
+        ((Nil b)
+          (let-match erased plen (LNil c))
+          (values (Nil _) x (LNil _)
+            (CatNil _ _)))
+        ((Cons b y tail)
+          (let-match erased plen (LCons c z tail2 k2 plen2))
+          (let (many inner) (many last) (erased ilen) (erased cat)
+            (pal-unsnoc rest k2 plen))
+          (values (Cons _ x inner) last
+            (LCons _ x _ _ ilen)
+            (CatCons _ x _ _ _ cat)))))))
 
 (def-adts
   (PalDecision : ((List (Nat)) xs) -> Type enum
@@ -59,26 +56,24 @@
     (many (List (Nat)) xs) (erased (Length (Nat) xs n) len) ->
     (many (PalDecision xs) decision)
   (match many xs _
-    ((Nil a) (PalYes xs (PalNil (Nat))))
+    ((Nil a) (PalYes xs (PalNil _)))
     ((Cons a x rest)
-      (match erased len _
-        ((LCons b y tail k plen)
-          (match many rest _
-            ((Nil b) (PalYes xs (PalOne (Nat) x)))
-            ((Cons b y tail)
-              (match erased plen _
-                ((LCons c z tail2 k2 plen2)
-                  (let (many inner) (many last) (erased ilen) (erased cat)
-                    (pal-unsnoc rest k2 plen))
-                  (match many (nat-cmp x last) _
-                    ((CLt t r v w lt)
-                      (PalNo xs (NotPalEnds x last inner rest cat (ApartLt x last lt))))
-                    ((CGt t r v w gt)
-                      (PalNo xs (NotPalEnds x last inner rest cat (ApartGt x last gt))))
-                    ((CEq t r v)
-                      (match many (pal-decide k2 inner ilen) _
-                        ((PalYes w p) (PalYes xs (PalWrap (Nat) x inner rest p cat)))
-                        ((PalNo w p) (PalNo xs (NotPalInner x inner rest cat p)))))))))))))))
+      (let-match erased len (LCons b y tail k plen))
+      (match many rest _
+        ((Nil b) (PalYes xs (PalOne _ x)))
+        ((Cons b y tail)
+          (let-match erased plen (LCons c z tail2 k2 plen2))
+          (let (many inner) (many last) (erased ilen) (erased cat)
+            (pal-unsnoc rest k2 plen))
+          (match many (nat-cmp x last) _
+            ((CLt t r v w lt)
+              (PalNo xs (NotPalEnds x last _ _ cat (ApartLt _ _ lt))))
+            ((CGt t r v w gt)
+              (PalNo xs (NotPalEnds x last _ _ cat (ApartGt _ _ gt))))
+            ((CEq t r v)
+              (match many (pal-decide k2 inner ilen) _
+                ((PalYes w p) (PalYes xs (PalWrap _ x _ _ p cat)))
+                ((PalNo w p) (PalNo xs (NotPalInner x _ _ cat p)))))))))))
 
 ; Either take a complete window with its length, or certify that the
 ; suffix is too short. No partial window is ever tested as a full one.
@@ -94,18 +89,18 @@
 (def-fns _ $ many pal-take : (subterm many (Nat) n)
     (many (List (Nat)) xs) -> (many (PalTake n xs) result)
   (match many n _
-    ((Zero) (PalTaken n xs (Nil (Nat)) (TakeZero (Nat) xs) (LNil (Nat))))
+    ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (LNil _)))
     ((Succ k)
       (match many xs _
-        ((Nil a) (PalShort n xs (Zero) (LNil (Nat)) (LtZ k)))
+        ((Nil a) (PalShort n xs (Zero) (LNil _) (LtZ k)))
         ((Cons a x rest)
           (match many (pal-take k rest) _
             ((PalTaken m tail w tk len)
-              (PalTaken n xs (Cons (Nat) x w)
-                (TakeSucc (Nat) k x rest w tk) (LCons (Nat) x w k len)))
+              (PalTaken n xs (Cons _ x w)
+                (TakeSucc _ _ x _ _ tk) (LCons _ x _ _ len)))
             ((PalShort m tail len p short)
-              (PalShort n xs (Succ len) (LCons (Nat) x rest len p)
-                (LtS len k short)))))))))
+              (PalShort n xs _ (LCons _ x _ _ p)
+                (LtS _ _ short)))))))))
 
 (def-adts
   (PalWindowsDecision : ((List (List (Nat))) xss) -> Type enum
@@ -123,28 +118,28 @@
     (many (PalWindowsDecision xss) decision)
   (match many xs _
     ((Nil a)
-      (values (Nil (List (Nat)))
-        (WinStop (Nat) (Succ k) xs (Zero) (LNil (Nat)) (LtZ k))
-        (PalAbsent (Nil (List (Nat))) (AllNil (List (Nat)) NotPalindrome))))
+      (values (Nil _)
+        (WinStop _ _ xs (Zero) (LNil _) (LtZ k))
+        (PalAbsent (Nil _) (AllNil _ NotPalindrome))))
     ((Cons a x rest)
       (match many (pal-take (Succ k) xs) _
         ((PalShort m tail len p short)
-          (values (Nil (List (Nat))) (WinStop (Nat) (Succ k) xs len p short)
-            (PalAbsent (Nil (List (Nat))) (AllNil (List (Nat)) NotPalindrome))))
+          (values (Nil _) (WinStop _ _ xs len p short)
+            (PalAbsent (Nil _) (AllNil _ NotPalindrome))))
         ((PalTaken m tail w tk len)
           (let (erased ws) (erased wins) (many result) (pal-windows k rest))
-          (let (erased xss) (Cons (List (Nat)) w ws))
-          (let (erased windows) (WinStep (Nat) (Succ k) x rest w tk ws wins))
+          (let (erased xss) (Cons _ w ws))
+          (let (erased windows) (WinStep _ _ x rest w tk ws wins))
           (values xss windows
-            (match many (pal-decide (Succ k) w len) (((PalWindowsDecision xss) d))
+            (match many (pal-decide _ w len) (((PalWindowsDecision xss) d))
               ((PalYes v p)
-                (PalFound xss (ExHere (List (Nat)) NatPalindrome w ws (IsNatPalindrome w p))))
+                (PalFound xss (ExHere _ NatPalindrome w ws (IsNatPalindrome w p))))
               ((PalNo v p)
                 (match many result _
                   ((PalFound vs found)
-                    (PalFound xss (ExThere (List (Nat)) NatPalindrome w ws found)))
+                    (PalFound xss (ExThere _ NatPalindrome w ws found)))
                   ((PalAbsent vs absent)
-                    (PalAbsent xss (AllCons (List (Nat)) NotPalindrome w ws p absent))))))))))))
+                    (PalAbsent xss (AllCons _ NotPalindrome w ws p absent))))))))))))
 
 ; Zero has one empty window at each suffix, including the empty suffix.
 (def-fns _ $ erased pal-zero-windows : (subterm erased (List (Nat)) xs) ->
@@ -153,16 +148,16 @@
     (erased (Exists (List (Nat)) NatPalindrome xss) found)
   (match erased xs _
     ((Nil a)
-      (values (Cons (List (Nat)) (Nil (Nat)) (Nil (List (Nat))))
-        (WinEmpty (Nat))
-        (ExHere (List (Nat)) NatPalindrome (Nil (Nat)) (Nil (List (Nat)))
-          (IsNatPalindrome (Nil (Nat)) (PalNil (Nat))))))
+      (values (Cons _ (Nil _) (Nil _))
+        (WinEmpty _)
+        (ExHere _ NatPalindrome (Nil _) (Nil _)
+          (IsNatPalindrome (Nil _) (PalNil _)))))
     ((Cons a x rest)
       (let (erased ws) (erased wins) (erased found) (pal-zero-windows rest))
-      (values (Cons (List (Nat)) (Nil (Nat)) ws)
-        (WinStep (Nat) (Zero) x rest (Nil (Nat)) (TakeZero (Nat) xs) ws wins)
-        (ExHere (List (Nat)) NatPalindrome (Nil (Nat)) ws
-          (IsNatPalindrome (Nil (Nat)) (PalNil (Nat))))))))
+      (values (Cons _ (Nil _) ws)
+        (WinStep _ (Zero) x rest (Nil _) (TakeZero _ xs) ws wins)
+        (ExHere _ NatPalindrome (Nil _) ws
+          (IsNatPalindrome (Nil _) (PalNil _)))))))
 
 ; The invariant says all lengths above n have already been ruled out.
 (def-fns _ $ many pal-search : (many (List (Nat)) xs)
