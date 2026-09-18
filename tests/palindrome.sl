@@ -218,6 +218,53 @@
       (let (erased xss) (erased w) (erased e) (has-windows xs n h))
       (values n (IsLongest xs n xss w e (nolarger-spec xs n nl))))))
 
+(def-fns _ $ erased concat-nil-absurd : (erased (List (Nat)) inner) (erased (Nat) a)
+    (erased (Concat (Nat) inner (Cons (Nat) a (Nil (Nat))) (Nil (Nat))) q) ->
+    (erased (False) f)
+  (match erased q _))
+
+(def-fns _ $ erased apart-irrefl : (erased (Nat) a) (erased (NatApart a a) d) ->
+    (erased (False) f)
+  (match erased d _
+    ((ApartLt a1 b1 p1) (lt-asym a a p1 (lt-succ a)))
+    ((ApartGt a1 b1 p1) (lt-asym a a p1 (lt-succ a)))))
+
+(def-fns _ $ erased concat-snoc-inj : (erased (List (Nat)) inner1) (erased (Nat) a)
+    (erased (List (Nat)) inner2) (erased (Nat) b) (erased (List (Nat)) zs)
+    (subterm erased (Concat (Nat) inner1 (Cons (Nat) a (Nil (Nat))) zs) q1)
+    (erased (Concat (Nat) inner2 (Cons (Nat) b (Nil (Nat))) zs) q2) ->
+    (erased (Eq (List (Nat)) inner1 inner2) ei) (erased (Eq (Nat) a b) ea)
+  (match erased q1 _
+    ((CatNil c1 ys1)
+      (match erased q2 _
+        ((CatNil c2 ys2) (values (Refl (List (Nat)) inner1) (Refl (Nat) a)))
+        (absurd (CatCons c2 x2 rest2 ys2 zs2 p2) (concat-nil-absurd rest2 b p2))))
+    ((CatCons c1 x1 rest1 ys1 zs1 p1)
+      (match erased q2 _
+        (absurd (CatNil c2 ys2) (concat-nil-absurd rest1 a p1))
+        ((CatCons c2 x2 rest2 ys2 zs2 p2)
+          (let (erased ei) (erased ea) (concat-snoc-inj rest1 a rest2 b zs1 p1 p2))
+          (match erased ei _
+            ((Refl t r) (values (Refl (List (Nat)) inner1) ea))))))))
+
+(def-fns _ $ erased pal-not-pal : (erased (List (Nat)) w)
+    (subterm erased (Palindrome (Nat) w) p) (erased (NotPalindrome w) np) ->
+    (erased (False) f)
+  (match erased p _
+    ((PalNil c1) (match erased np _))
+    ((PalOne c1 x1)
+      (match erased np _
+        (absurd (NotPalEnds x2 y2 inner2 withx2 q2 d2) (concat-nil-absurd inner2 y2 q2))
+        (absurd (NotPalInner x2 inner2 withx2 q2 np2) (concat-nil-absurd inner2 x2 q2))))
+    ((PalWrap c1 x1 inner1 withx1 pi1 q1)
+      (match erased np _
+        ((NotPalEnds x2 y2 inner2 withx2 q2 d2)
+          (let (erased ei) (erased ea) (concat-snoc-inj inner1 x1 inner2 y2 withx1 q1 q2))
+          (match erased ea _ ((Refl t r) (apart-irrefl x1 d2))))
+        ((NotPalInner x2 inner2 withx2 q2 np2)
+          (let (erased ei) (erased ea) (concat-snoc-inj inner1 x1 inner2 x2 withx1 q1 q2))
+          (match erased ei _ ((Refl t r) (pal-not-pal inner1 pi1 np2))))))))
+
 (def-fns _ $ many lp : (many (List (Nat)) xs) -> (many (Nat) n)
   (let (many n) (erased p) (longest xs))
   n)
