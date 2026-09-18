@@ -532,8 +532,12 @@
 
 (def-fns _ $ many names-get : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (many (Names ctx) ns) -> (many (Named) r)
   (match many p _
-    ((MHere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (let (many r) (erased sq) $ at-get _ _ _ q rs lk) r)))
-    ((MThere y f c q) (match many ns _ ((NmFrame c2 f2 rs lk rest) (names-get _ _ q rest))))))
+    ((MHere y f c q)
+      (let-match many ns (NmFrame c2 f2 rs lk rest))
+      (let (many r) (erased sq) $ at-get _ _ _ q rs lk) r)
+    ((MThere y f c q)
+      (let-match many ns (NmFrame c2 f2 rs lk rest))
+      (names-get _ _ q rest))))
 
 (def-fns _ $ many addr-str : (erased (Hist Block) a) (many (Ref Block a) at) -> (many (String) r)
   (str-cat "a" $ nat-str $ ref-pos Block _ at))
@@ -578,13 +582,14 @@
 ; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
 (def-fns _ $ many frame-named : (erased (Hist Block) a) (erased (List $ Nat) f) (subterm many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2)
   (match many vs _
-    ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (LsNil _ _)))))
+    ((Nil t)
+      (let-match erased lk (LsNil ta tb))
+      (values (Nil _) (LsNil _ _)))
     ((Cons t v rest)
-      (match erased lk _
-        ((LsCons ta tb x y xs ys p)
-          (let (many rs) (erased lk2) $ frame-named _ _ rest p)
-          (let (many r) $ NmVal $ addr-rope _ v)
-          (values (Cons _ r rs) (LsCons _ _ x r xs rs lk2)))))))
+      (let-match erased lk (LsCons ta tb x y xs ys p))
+      (let (many rs) (erased lk2) $ frame-named _ _ rest p)
+      (let (many r) $ NmVal $ addr-rope _ v)
+      (values (Cons _ r rs) (LsCons _ _ x r xs rs lk2)))))
 
 (def-fns _ $ many member-named : (erased (Hist Block) a) (subterm many (List $ Nat) gids) (many (Env) env) (many (Ref Block a) g) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) gids rs) lk)
   (match many gids _

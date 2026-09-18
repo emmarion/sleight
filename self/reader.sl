@@ -89,8 +89,8 @@
               ((BTrue) (string-lit rest line (REmpty) acc))
               ((BFalse)
                 (let (many len) (erased l) (str-length s))
-                (match erased l _
-                  ((SLenCons c0 s0 rl lr) (word rest line s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) acc))))))))))
+                (let-match erased l (SLenCons c0 s0 rl lr))
+                (word rest line s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) acc))))))))
   (many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (list-rev _ acc))
@@ -107,8 +107,8 @@
             (let (many comment) (many line2) (many acc2) $ delim-step c line $ Cons _ (word-tok line start k len l rl sum) acc)
             (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 acc2))))
           ((BFalse)
-            (match erased lr _
-              ((SLenCons c0 s0 rl1 lr1) (word rest line start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) acc))))))))
+            (let-match erased lr (SLenCons c0 s0 rl1 lr1))
+            (word rest line start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) acc))))))
   (many string-lit : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks)
     (match many s _
       ((SNil) (unterminated line acc))

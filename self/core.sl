@@ -22,29 +22,35 @@
   (match many ms _
     ((Nil a) (values (Nil _) (PkNil _)))
     ((Cons a m rest)
-      (match erased lock _
-        ((LsCons ta tb x0 y0 xs0 ys0 p)
-          (match many xs _
-            ((Cons b x xrest)
-              (let (many r) (erased pk) $ picked-of _ rest xrest p)
-              (match many m _
-                ((Many) (values (Cons _ x r) (PkMany _ rest x r pk)))
-                ((Erased) (values r (PkErased _ rest r pk)))))))))))
+      (let-match erased lock (LsCons ta tb x0 y0 xs0 ys0 p))
+      (let-match many xs (Cons b x xrest))
+      (let (many r) (erased pk) $ picked-of _ rest xrest p)
+      (match many m _
+        ((Many) (values (Cons _ x r) (PkMany _ rest x r pk)))
+        ((Erased) (values r (PkErased _ rest r pk)))))))
 
 (def-fns _ $ erased picked-along : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Lockstep A B xs ys) q) -> (erased (Picked B ms ys) r)
   (match erased p _
-    ((PkNil a) (match erased q _ ((LsNil c d) (PkNil _))))
-    ((PkMany a ms2 x xs2 p2) (match erased q _ ((LsCons c d x3 y xs3 ys2 q2) (PkMany _ ms2 y ys2 $ picked-along _ _ _ _ _ p2 q2))))
+    ((PkNil a)
+      (let-match erased q (LsNil c d))
+      (PkNil _))
+    ((PkMany a ms2 x xs2 p2)
+      (let-match erased q (LsCons c d x3 y xs3 ys2 q2))
+      (PkMany _ ms2 y ys2 $ picked-along _ _ _ _ _ p2 q2))
     ((PkErased a ms2 xs2 p2) (PkErased _ ms2 ys $ picked-along _ _ _ _ _ p2 q))))
 
 ; Two lists picked from one erasure list walk in lockstep.
 (def-fns _ $ erased picked-lockstep : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Picked B ms ys) q) -> (erased (Lockstep A B xs ys) lk)
   (match erased p _
-    ((PkNil a) (match erased q _ ((PkNil b) (LsNil _ _))))
+    ((PkNil a)
+      (let-match erased q (PkNil b))
+      (LsNil _ _))
     ((PkMany a ms2 x xs2 p2)
-      (match erased q _ ((PkMany b ms3 y ys2 q2) (LsCons _ _ x y xs2 ys2 $ picked-lockstep _ _ _ _ _ p2 q2))))
+      (let-match erased q (PkMany b ms3 y ys2 q2))
+      (LsCons _ _ x y xs2 ys2 $ picked-lockstep _ _ _ _ _ p2 q2))
     ((PkErased a ms2 xs2 p2)
-      (match erased q _ ((PkErased b ms3 ys2 q2) (picked-lockstep _ _ _ _ _ p2 q2))))))
+      (let-match erased q (PkErased b ms3 ys2 q2))
+      (picked-lockstep _ _ _ _ _ p2 q2))))
 
 ; Two erasure lists with the same many entries.
 (def-adts
@@ -58,8 +64,12 @@
 (def-fns _ $ erased picked-same : (erased Type A) (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (List A) xs) (subterm erased (ManySame a b) p) (erased (Picked A a xs) q) -> (erased (Picked A b xs) r)
   (match erased p _
     ((MsNil) q)
-    ((MsMany a2 b2 p2) (match erased q _ ((PkMany t a3 x xs2 q2) (PkMany _ b2 x xs2 $ picked-same _ _ _ _ p2 q2))))
-    ((MsErasedL a2 b2 p2) (match erased q _ ((PkErased t a3 xs2 q2) (picked-same _ _ _ _ p2 q2))))
+    ((MsMany a2 b2 p2)
+      (let-match erased q (PkMany t a3 x xs2 q2))
+      (PkMany _ b2 x xs2 $ picked-same _ _ _ _ p2 q2))
+    ((MsErasedL a2 b2 p2)
+      (let-match erased q (PkErased t a3 xs2 q2))
+      (picked-same _ _ _ _ p2 q2))
     ((MsErasedR a2 b2 p2) (PkErased _ b2 xs $ picked-same _ _ _ _ p2 q))))
 
 ; A decider for two erasure lists having the same many entries, its recursion lexicographic on the two.
@@ -505,14 +515,15 @@
 
 (def-fns _ $ many at-get : (erased Type B) (erased (Nat) x) (erased (List $ Nat) f) (subterm many (At x f) p) (many (List B) vs) (erased (Lockstep (Nat) B f vs) lk) -> (many B v) (erased (Subterm B v (List B) vs) q)
   (match many p _
-    ((AtHere y rest) (match erased lk _ ((LsCons ta tb x0 v0 xs vs0 q) (match many vs _ ((Cons a v more) (values v $ prove-subterm v vs))))))
+    ((AtHere y rest)
+      (let-match erased lk (LsCons ta tb x0 v0 xs vs0 q))
+      (let-match many vs (Cons a v more))
+      (values v $ prove-subterm v vs))
     ((AtThere y z rest q)
-      (match erased lk _
-        ((LsCons ta tb x0 v0 xs vs0 q2)
-          (match many vs _
-            ((Cons a v more)
-              (let (many w) (erased sq) $ at-get _ _ _ q more q2)
-              (values w $ subterm-trans sq $ prove-subterm more vs))))))))
+      (let-match erased lk (LsCons ta tb x0 v0 xs vs0 q2))
+      (let-match many vs (Cons a v more))
+      (let (many w) (erased sq) $ at-get _ _ _ q more q2)
+      (values w $ subterm-trans sq $ prove-subterm more vs))))
 
 (def-fns _ $ many ctor-index : (many (Ctor) c) -> (many (Nat) i)
   (match many c _ ((MkCtor n id ix ar tg ext sh) ix)))
@@ -605,8 +616,12 @@
 
 (def-fns _ $ erased neq-pred : (erased (Nat) a) (erased (Nat) b) (erased (Neq (Succ a) (Succ b)) p) -> (erased (Neq a b) q)
   (match erased p _
-    ((NeqLt x y q) (match erased q _ ((LtS x2 y2 q2) (NeqLt _ _ q2))))
-    ((NeqGt x y q) (match erased q _ ((LtS x2 y2 q2) (NeqGt _ _ q2))))))
+    ((NeqLt x y q)
+      (let-match erased q (LtS x2 y2 q2))
+      (NeqLt _ _ q2))
+    ((NeqGt x y q)
+      (let-match erased q (LtS x2 y2 q2))
+      (NeqGt _ _ q2))))
 
 (def-fns _ $ erased neq-half : (erased (Nat) a) (erased (Nat) da) (erased (Nat) b) (erased (Nat) db) (erased (Double a da) dda) (erased (Double b db) ddb) (erased (Neq da db) p) -> (erased (Neq a b) q)
   (match erased p _
@@ -649,11 +664,11 @@
 (def-fns _ $ erased mem-append : (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) rules) (erased (Rule) r) (erased (List $ Rule) res) (subterm erased (MemRule x t rules) m) (erased (AppendR rules r res) ap) -> (erased (MemRule x t res) m2)
   (match erased m _
     ((MRHere x1 t1 rest)
-      (match erased ap _
-        ((ApCons a rest2 r2 res2 ap2) (MRHere _ _ _))))
+      (let-match erased ap (ApCons a rest2 r2 res2 ap2))
+      (MRHere _ _ _))
     ((MRThere x1 t1 r1 rest m1)
-      (match erased ap _
-        ((ApCons a rest2 r2 res2 ap2) (MRThere _ _ _ _ $ mem-append x t rest2 r res2 m1 ap2))))))
+      (let-match erased ap (ApCons a rest2 r2 res2 ap2))
+      (MRThere _ _ _ _ $ mem-append x t rest2 r res2 m1 ap2))))
 
 (def-fns _ $ erased mem-last : (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) rules) (erased (List $ Rule) res) (subterm erased (AppendR rules (MkRule x t) res) ap) -> (erased (MemRule x t res) m)
   (match erased ap _
@@ -668,11 +683,15 @@
 
 (def-fns _ $ erased mw-unwrap : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (subterm erased (Wrap ctx a x) w) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRuleW ctx a t rules) m) -> (erased (MemRule x t rules) r)
   (match erased w _
-    ((WNil z) (match erased m _ ((MWNil a1 t1 r1 m1) m1)))
+    ((WNil z)
+      (let-match erased m (MWNil a1 t1 r1 m1))
+      m1)
     ((W1 ctx1 a1 d1 dd1 y q)
-      (match erased m _ ((MW1 c2 a2 d2 dd2 t2 r2 m1) (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t3 x3) (mw-unwrap _ _ _ q _ _ m1))))))
+      (let-match erased m (MW1 c2 a2 d2 dd2 t2 r2 m1))
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t3 x3) (mw-unwrap _ _ _ q _ _ m1))))
     ((W2 ctx1 a1 d1 dd1 y q)
-      (match erased m _ ((MW2 c2 a2 d2 dd2 t2 r2 m1) (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t3 x3) (mw-unwrap _ _ _ q _ _ m1))))))))
+      (let-match erased m (MW2 c2 a2 d2 dd2 t2 r2 m1))
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t3 x3) (mw-unwrap _ _ _ q _ _ m1))))))
 
 (def-fns _ $ erased mw-append : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Term) t) (erased (List $ Rule) rules) (subterm erased (MemRuleW ctx a t rules) m) (erased (Rule) r) (erased (List $ Rule) res) (erased (AppendR rules r res) ap) -> (erased (MemRuleW ctx a t res) m2)
   (match erased m _
@@ -715,8 +734,8 @@
 (def-fns _ $ erased plus3-mid : (subterm erased (Nat) h) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus3 h (Succ a) b c) p) -> (erased (Pred3 h a b c) r)
   (match erased p _
     ((P3Z a1 b1 c1 q)
-      (match erased q _
-        ((AddSucc a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3Z a b c2 q2))))
+      (let-match erased q (AddSucc a2 b2 c2 q2))
+      (MkPred3 _ _ _ _ $ P3Z a b c2 q2))
     ((P3S h1 a1 b1 c1 q)
       (match erased (plus3-mid _ _ _ _ q) _
         ((MkPred3 h2 a2 b2 c2 q2) (MkPred3 _ _ _ _ $ P3S h1 a b c2 q2))))))
@@ -854,30 +873,28 @@
 (def-fns _ $ erased above-in : (erased (List $ Digit) ctx) (erased (Nat) c) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) x) (erased (Nat) y) (erased (Above ctx c n f) ab) (subterm erased (In x n f) p) (erased (Wrap ctx x y) w) -> (erased (Lt y (Succ c)) le)
   (match erased p _
     ((InHere n1 n2 m ty one two p3)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
-          (match erased ah _
-            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fn _ _ _ _ w2 w) _ ((Refl zt z) le2)))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (let-match erased ah (AHKey c4 c5 h6 here7 y2 w2 le2))
+      (match erased (wrap-fn _ _ _ _ w2 w) _ ((Refl zt z) le2)))
     ((In1 x1 d1 dd1 h n1 n2 m here one two p3 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-in _ _ _ _ _ _ a1 q $ W1 ctx x1 d1 dd1 y w))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (above-in _ _ _ _ _ _ a1 q $ W1 ctx x1 d1 dd1 y w))
     ((In2 x1 d1 dd1 h n1 n2 m here one two p3 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-in _ _ _ _ _ _ a2 q $ W2 ctx x1 d1 dd1 y w))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (above-in _ _ _ _ _ _ a2 q $ W2 ctx x1 d1 dd1 y w))))
 
 (def-fns _ $ erased above-ruledin : (erased (List $ Digit) ctx) (erased (Nat) c) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) x) (erased (Nat) y) (erased (Above ctx c n f) ab) (subterm erased (RuledIn x n f) p) (erased (Wrap ctx x y) w) -> (erased (Lt y (Succ c)) le)
   (match erased p _
     ((RHere n1 n2 m ty t one two p3)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
-          (match erased ah _
-            ((AHKey c4 c5 h6 here7 y2 w2 le2) (match erased (wrap-fn _ _ _ _ w2 w) _ ((Refl zt z) le2)))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (let-match erased ah (AHKey c4 c5 h6 here7 y2 w2 le2))
+      (match erased (wrap-fn _ _ _ _ w2 w) _ ((Refl zt z) le2)))
     ((R1 x1 d1 dd1 h n1 n2 m here one two p3 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-ruledin _ _ _ _ _ _ a1 q $ W1 ctx x1 d1 dd1 y w))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (above-ruledin _ _ _ _ _ _ a1 q $ W1 ctx x1 d1 dd1 y w))
     ((R2 x1 d1 dd1 h n1 n2 m here one two p3 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (above-ruledin _ _ _ _ _ _ a2 q $ W2 ctx x1 d1 dd1 y w))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (above-ruledin _ _ _ _ _ _ a2 q $ W2 ctx x1 d1 dd1 y w))))
 
 (def-fns _ $ erased above-taken : (erased (Nat) c) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) x) (erased (Above (Nil $ Digit) c n f) ab) (erased (Taken x n f) t) -> (erased (Lt x (Succ c)) le)
   (match erased t _
@@ -896,28 +913,27 @@
         (AbEmpty (Cons (Digit) _ _) c)
         $ above-ins (Cons (Digit) _ _) c (Zero) (FEmpty) (Succ _) two x1 y (AbEmpty (Cons (Digit) _ _) c) q (W2 ctx x1 d1 dd1 y w) le))
     ((InsHere n1 n2 m ty one two p)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ _) (HFree _) y w le) a1 a2))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ _) (HFree _) y w le) a1 a2))
     ((Ins1 x1 d1 dd1 h n1 n2 m here one two p k1 m2 one2 p2 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-ins (Cons (Digit) _ _) c n1 one k1 one2 x1 y a1 q (W1 ctx x1 d1 dd1 y w) le) a2))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-ins (Cons (Digit) _ _) c n1 one k1 one2 x1 y a1 q (W1 ctx x1 d1 dd1 y w) le) a2))
     ((Ins2 x1 d1 dd1 h n1 n2 m here one two p k2 m2 two2 p2 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-ins (Cons (Digit) _ _) c n2 two k2 two2 x1 y a2 q (W2 ctx x1 d1 dd1 y w) le))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-ins (Cons (Digit) _ _) c n2 two k2 two2 x1 y a2 q (W2 ctx x1 d1 dd1 y w) le))))
 
 (def-fns _ $ erased above-out : (erased (List $ Digit) ctx) (erased (Nat) c) (erased (Nat) x) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (erased (Above ctx c n f) ab) (subterm erased (Out x t n f k f2) o) -> (erased (Above ctx c k f2) ab2)
   (match erased o _
     ((OutHere n1 n2 m ty t1 one two p)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2)
-          (match erased ah _
-            ((AHKey c4 c5 h6 here7 y w le) (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Zero) (HRuled _ _) y w le) a1 a2))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (let-match erased ah (AHKey c4 c5 h6 here7 y w le))
+      (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Zero) (HRuled _ _) y w le) a1 a2))
     ((Out1 x1 d1 dd1 t1 h n1 n2 m here one two p k1 m2 one2 p2 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-out (Cons (Digit) _ _) c x1 t1 n1 one k1 one2 a1 q) a2))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-out (Cons (Digit) _ _) c x1 t1 n1 one k1 one2 a1 q) a2))
     ((Out2 x1 d1 dd1 t1 h n1 n2 m here one two p k2 m2 two2 p2 q)
-      (match erased ab _
-        ((AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2) (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-out (Cons (Digit) _ _) c x1 t1 n2 two k2 two2 a2 q))))))
+      (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
+      (AbNode _ _ _ _ _ _ _ _ _ _ ah a1 $ above-out (Cons (Digit) _ _) c x1 t1 n2 two k2 two2 a2 q))))
 
 (def-fns _ $ erased above-weaken : (erased (List $ Digit) ctx) (erased (Nat) c) (erased (Nat) c2) (erased (Nat) n) (erased (Facts n) f) (subterm erased (Above ctx c n f) ab) (erased (Lt c (Succ c2)) le) -> (erased (Above ctx c2 n f) ab2)
   (match erased ab _
@@ -1020,8 +1036,8 @@
         ((HZ)
           (match many here _
             ((HFree ty)
-              (match erased p3 _
-                ((P3S h1 a1 b1 c1 q) (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two _) $ OutHere n1 n2 c1 ty t one two q))))
+              (let-match erased p3 (P3S h1 a1 b1 c1 q))
+              (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two _) $ OutHere n1 n2 c1 ty t one two q))
             (absurd HNone (match erased p (((False) f))))
             (absurd (HRuled ty0 t0) (match erased p (((False) f))))))
         ((H1 x1 d dd)
@@ -1122,44 +1138,43 @@
         (C1Empty (Cons (Digit) (D1) _) rules)
         $ c1-ins (Cons (Digit) (D2) _) x1 (Zero) (FEmpty) (Succ _) two q rules $ C1Empty (Cons (Digit) (D2) ctx) rules))
     ((InsHere n1 n2 m ty one two p)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) c1 c2))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) c1 c2))
     ((Ins1 x1 d1 dd1 h n1 a2 m here one two p k1 m2 one2 p2 q)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch (c1-ins (Cons (Digit) (D1) _) x1 n1 one k1 one2 q rules c1) c2))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _ ch (c1-ins (Cons (Digit) (D1) _) x1 n1 one k1 one2 q rules c1) c2))
     ((Ins2 x1 d1 dd1 h n1 a2 m here one two p k2 m2 two2 p2 q)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2) (C1Node _ _ _ _ _ _ _ _ _ _ ch c1 $ c1-ins (Cons (Digit) (D2) _) x1 a2 two k2 two2 q rules c2))))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _ ch c1 $ c1-ins (Cons (Digit) (D2) _) x1 a2 two k2 two2 q rules c2))))
 
 (def-fns _ $ erased c1-out : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) xg) (erased (Wrap ctx x xg) w) (erased (Term) t) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) k) (erased (Facts k) f2) (subterm erased (Out x t n f k f2) o)
     (erased (List $ Rule) rules) (erased (C1 ctx n f rules) c) (erased (List $ Rule) res) (erased (AppendR rules (MkRule xg t) res) ap) -> (erased (C1 ctx k f2 res) c2)
   (match erased o _
     ((OutHere n1 n2 m ty t0 one two p)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
-          (C1Node _ _ _ _ _ _ _ _ _ _
-            (C1Ruled ctx ty t0 res $ wrap-mw ctx (Zero) xg w t0 res $ mem-last xg t0 rules res ap)
-            (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
-            $ c1-append (Cons (Digit) _ _) n2 two rules c2 (MkRule _ _) res ap))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _
+        (C1Ruled ctx ty t0 res $ wrap-mw ctx (Zero) xg w t0 res $ mem-last xg t0 rules res ap)
+        (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
+        $ c1-append (Cons (Digit) _ _) n2 two rules c2 (MkRule _ _) res ap))
     ((Out1 x1 d1 dd1 t0 h n1 a2 m here one two p k1 m2 one2 p2 q)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
-          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
-            (c1-out (Cons (Digit) _ _) x1 xg (W1 ctx x1 d1 dd1 xg w) t n1 one k1 one2 q rules c1 res ap)
-            $ c1-append (Cons (Digit) _ _) a2 two rules c2 (MkRule _ _) res ap))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
+        (c1-out (Cons (Digit) _ _) x1 xg (W1 ctx x1 d1 dd1 xg w) t n1 one k1 one2 q rules c1 res ap)
+        $ c1-append (Cons (Digit) _ _) a2 two rules c2 (MkRule _ _) res ap))
     ((Out2 x1 d1 dd1 t0 h n1 a2 m here one two p k2 m2 two2 p2 q)
-      (match erased c _
-        ((C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2)
-          (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
-            (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
-            $ c1-out (Cons (Digit) _ _) x1 xg (W2 ctx x1 d1 dd1 xg w) t a2 two k2 two2 q rules c2 res ap))))))
+      (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
+      (C1Node _ _ _ _ _ _ _ _ _ _ (c1here-append ctx h here rules ch (MkRule _ _) res ap)
+        (c1-append (Cons (Digit) _ _) n1 one rules c1 (MkRule _ _) res ap)
+        $ c1-out (Cons (Digit) _ _) x1 xg (W2 ctx x1 d1 dd1 xg w) t a2 two k2 two2 q rules c2 res ap))))
 
 (def-fns _ $ erased keys-snoc : (erased (List $ Nat) seen) (erased (List $ Rule) rules) (erased (List $ Nat) ks) (subterm erased (Keys seen rules ks) k) (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) res) (erased (AppendR rules (MkRule x t) res) ap) -> (erased (Keys seen res $ Cons (Nat) x ks) k2)
   (match erased k _
-    ((KNil s) (match erased ap _ ((ApNil r) (KCons _ _ _ _ _ $ KNil $ Cons (Nat) _ _))))
+    ((KNil s)
+      (let-match erased ap (ApNil r))
+      (KCons _ _ _ _ _ $ KNil $ Cons (Nat) _ _))
     ((KCons s y u rest ks1 k1)
-      (match erased ap _
-        ((ApCons a rest2 r res2 ap2) (KCons _ _ _ _ _ $ keys-snoc (Cons (Nat) _ _) rest ks k1 x t res2 ap2))))))
+      (let-match erased ap (ApCons a rest2 r res2 ap2))
+      (KCons _ _ _ _ _ $ keys-snoc (Cons (Nat) _ _) rest ks k1 x t res2 ap2))))
 ; ---- Freshness: every variable of a term is a rule-free entry of a table. Canonicalization returns it.
 
 (def-adts
@@ -1216,50 +1231,52 @@
     (many GMAv : (erased (List $ MCtor) cs) (erased (List $ Nat) seen) (erased (Nat) n) (erased (Facts n) f) (erased (FrM n f cs) p) (erased (AllRuled seen n f) a) -> (GuardM cs seen))))
 
 (def-fns _ $ erased fr-var : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) x) (erased (Fr n f $ TVar x) p) -> (erased (In x n f) q)
-  (match erased p _
-    ((FrVar a b c q) q)))
+  (let-match erased p (FrVar a b c q))
+  q)
 
 (def-fns _ $ erased fr-app : (erased (Nat) n) (erased (Facts n) f) (erased (Term) h) (erased (List $ Term) args) (erased (Fr n f $ TApp h args) p) -> (erased (Fr n f h) ph) (erased (FrL n f args) pa)
-  (match erased p _
-    ((FrApp a b c d ph pa) (values ph pa))))
+  (let-match erased p (FrApp a b c d ph pa))
+  (values ph pa))
 
 (def-fns _ $ erased fr-fn : (erased (Nat) n) (erased (Facts n) f) (erased (Term) l) (erased (List $ Entry) ps) (erased (List $ Entry) rs) (erased (Fr n f $ TFn l ps rs) p) -> (erased (Fr n f l) pl) (erased (FrT n f ps) pp) (erased (FrT n f rs) pr)
-  (match erased p _
-    ((FrFn a b c d e pl pp pr) (values pl pp pr))))
+  (let-match erased p (FrFn a b c d e pl pp pr))
+  (values pl pp pr))
 
 (def-fns _ $ erased fr-tyctor : (erased (Nat) n) (erased (Facts n) f) (erased (List $ Entry) ps) (erased (Fr n f $ TTyCtor ps) p) -> (erased (FrT n f ps) pp)
-  (match erased p _
-    ((FrTyCtor a b c pp) pp)))
+  (let-match erased p (FrTyCtor a b c pp))
+  pp)
 
 (def-fns _ $ erased fr-valctor : (erased (Nat) n) (erased (Facts n) f) (erased (List $ Entry) ps) (erased (Term) ret) (erased (Fr n f $ TValCtor ps ret) p) -> (erased (FrT n f ps) pp) (erased (Fr n f ret) pr)
-  (match erased p _
-    ((FrValCtor a b c d pp pr) (values pp pr))))
+  (let-match erased p (FrValCtor a b c d pp pr))
+  (values pp pr))
 
 (def-fns _ $ erased fr-matchable : (erased (Nat) n) (erased (Facts n) f) (erased (Disc) d) (erased (Term) ty) (erased (List $ MCtor) cs) (erased (Fr n f $ TMatchable d ty cs) p) -> (erased (Fr n f ty) pt) (erased (FrM n f cs) pc)
-  (match erased p _
-    ((FrMatchable a b c e g pt pc) (values pt pc))))
+  (let-match erased p (FrMatchable a b c e g pt pc))
+  (values pt pc))
 
 (def-fns _ $ erased fr-newtype : (erased (Nat) n) (erased (Facts n) f) (erased (Term) c) (erased (Fr n f $ TNewtype c) p) -> (erased (Fr n f c) pc)
-  (match erased p _
-    ((FrNewtype a b d pc) pc)))
+  (let-match erased p (FrNewtype a b d pc))
+  pc)
 
 (def-fns _ $ erased frl-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (List $ Term) rest) (erased (FrL n f $ Cons (Term) t rest) p) -> (erased (Fr n f t) pt) (erased (FrL n f rest) pr)
-  (match erased p _
-    ((FrLCons a b c d pt pr) (values pt pr))))
+  (let-match erased p (FrLCons a b c d pt pr))
+  (values pt pr))
 
 (def-fns _ $ erased frt-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe $ String) nm) (erased (Bool) s) (erased (Mult) mu) (erased (Sg) sg) (erased (List $ Entry) rest) (erased (FrT n f $ Cons (Entry) (MkEntry nm s mu sg) rest) p) -> (erased (FrS n f sg) ps) (erased (FrT n f rest) pr)
-  (match erased p _
-    ((FrTCons a b c d e g h ps pr) (values ps pr))))
+  (let-match erased p (FrTCons a b c d e g h ps pr))
+  (values ps pr))
 
 (def-fns _ $ erased frs-ty : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (FrS n f $ SgTy t) p) -> (erased (Fr n f t) pt)
-  (match erased p _ ((FrSTy a b c pt) pt)))
+  (let-match erased p (FrSTy a b c pt))
+  pt)
 
 (def-fns _ $ erased frs-is : (erased (Nat) n) (erased (Facts n) f) (erased (Term) t) (erased (Term) ty) (erased (FrS n f $ SgIs t ty) p) -> (erased (Fr n f t) pt)
-  (match erased p _ ((FrSIs a b c d pt) pt)))
+  (let-match erased p (FrSIs a b c d pt))
+  pt)
 
 (def-fns _ $ erased frm-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest) p) -> (erased (Fr n f c) pc) (erased (FrM n f rest) pr)
-  (match erased p _
-    ((FrMCons a b d e g pc pr) (values pc pr))))
+  (let-match erased p (FrMCons a b d e g pc pr))
+  (values pc pr))
 
 (def-fns _ $ erased guard-app : (erased (Term) h) (erased (List $ Term) args) (erased (List $ Nat) seen) (erased (Guard (TApp h args) seen) g) -> (erased (Guard h seen) gh) (erased (GuardL args seen) ga)
   (match erased g _
@@ -1349,23 +1366,23 @@
 (def-fns _ $ erased ord-snoc : (erased (List $ Nat) seen) (erased (List $ Rule) rules) (subterm erased (Ord seen rules) o) (erased (List $ Nat) ks) (erased (Keys seen rules ks) k) (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) res) (erased (AppendR rules (MkRule x t) res) ap) (erased (Guard t $ Cons (Nat) x ks) g) -> (erased (Ord seen res) o2)
   (match erased o _
     ((OrdNil s)
-      (match erased k _
-        ((KNil s1) (match erased ap _ ((ApNil r) (OrdCons _ _ _ _ g $ OrdNil $ Cons (Nat) _ _))))))
+      (let-match erased k (KNil s1))
+      (let-match erased ap (ApNil r))
+      (OrdCons _ _ _ _ g $ OrdNil $ Cons (Nat) _ _))
     ((OrdCons s y u rest g1 o1)
-      (match erased k _
-        ((KCons s1 y1 u1 rest1 ks1 k1)
-          (match erased ap _
-            ((ApCons a rest2 r res2 ap2) (OrdCons _ _ _ _ g1 $ ord-snoc (Cons (Nat) _ _) rest o1 ks k1 x t res2 ap2 g))))))))
+      (let-match erased k (KCons s1 y1 u1 rest1 ks1 k1))
+      (let-match erased ap (ApCons a rest2 r res2 ap2))
+      (OrdCons _ _ _ _ g1 $ ord-snoc (Cons (Nat) _ _) rest o1 ks k1 x t res2 ap2 g))))
 
 (def-fns _ $ erased guard-weaken : (erased (Term) t) (erased (Nat) x) (erased (List $ Nat) seen) (erased (Guard t $ Cons (Nat) x seen) g) -> (erased (Guard t seen) g2)
-  (match erased g _
-    ((GAv t0 s n f p a) (match erased a _ ((ARCons z ks n1 f1 r rest) (GAv _ _ _ _ p rest))))))
+  (let-match erased g (GAv t0 s n f p a))
+  (let-match erased a (ARCons z ks n1 f1 r rest))
+  (GAv _ _ _ _ p rest))
 
 (def-fns _ $ erased guard-clash : (erased (Nat) v) (erased (List $ Nat) seen) (erased (Guard (TVar v) $ Cons (Nat) v seen) g) -> (erased (False) r)
-  (match erased g _
-    ((GAv t0 s n f p a)
-      (match erased a _
-        ((ARCons z ks n1 f1 r rest) (in-ruled-clash _ _ _ (fr-var n f v p) r))))))
+  (let-match erased g (GAv t0 s n f p a))
+  (let-match erased a (ARCons z ks n1 f1 r rest))
+  (in-ruled-clash _ _ _ (fr-var n f v p) r))
 
 ; A ruled variable met inside a rule's term has its rule after that rule: the guard rules it out of the
 ; keys before, and agreement puts it somewhere.
@@ -1610,11 +1627,10 @@
     ((InsGrow1 x1 d1 dd1 one q1 pp) (match erased p _))
     ((InsGrow2 x1 d1 dd1 two q1 pp) (match erased p _))
     ((InsHere n1 n2 m ty one two pp)
-      (match erased o _
-        ((OutHere a1 a2 a3 ty0 t0 one0 two0 p0)
-          (match erased p _
-            ((In1 z1 dz ddz h b1 b2 b3 here1 one1 two1 p1 q1) (In1 _ _ ddz _ _ _ _ _ _ _ _ q1))
-            ((In2 z1 dz ddz h b1 b2 b3 here1 one1 two1 p1 q1) (In2 _ _ ddz _ _ _ _ _ _ _ _ q1))))))
+      (let-match erased o (OutHere a1 a2 a3 ty0 t0 one0 two0 p0))
+      (match erased p _
+        ((In1 z1 dz ddz h b1 b2 b3 here1 one1 two1 p1 q1) (In1 _ _ ddz _ _ _ _ _ _ _ _ q1))
+        ((In2 z1 dz ddz h b1 b2 b3 here1 one1 two1 p1 q1) (In2 _ _ ddz _ _ _ _ _ _ _ _ q1))))
     ((Ins1 x1 d1 dd1 h n1 a2 m here one two pp k1 m2 one2 p2 q1)
       (match erased o _
         ((Out1 x2 d2 dd2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 one3 p3 q2)

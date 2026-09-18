@@ -28,15 +28,15 @@
 
 (def-fns _ $ erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e)
   (match erased p _
-    ((WNil z) (match erased q _ ((WNil z2) (Refl (Nat) x))))
+    ((WNil z)
+      (let-match erased q (WNil z2))
+      (Refl (Nat) x))
     ((W1 c1 a1 d1 dd1 x1 p1)
-      (match erased q _
-        ((W1 c2 a2 d2 dd2 y1 q1)
-          (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ d1) x y p1 q1))))))
+      (let-match erased q (W1 c2 a2 d2 dd2 y1 q1))
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ d1) x y p1 q1))))
     ((W2 c1 a1 d1 dd1 x1 p1)
-      (match erased q _
-        ((W2 c2 a2 d2 dd2 y1 q1)
-          (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))))
+      (let-match erased q (W2 c2 a2 d2 dd2 y1 q1))
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))
 
 ; ---- the ghost history: an erased list of every value allocated so far, newest first
 
@@ -72,11 +72,12 @@
 (def-fns _ $ erased len-fn : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) n) (erased (Nat) m)
     (subterm erased (Len B l n) p) (erased (Len B l m) q) -> (erased (Eq (Nat) n m) e)
   (match erased p _
-    ((LenNil tb) (match erased q _ ((LenNil tb2) (Refl (Nat) (Zero)))))
+    ((LenNil tb)
+      (let-match erased q (LenNil tb2))
+      (Refl (Nat) (Zero)))
     ((LenAdd tb r1 v1 n1 p1)
-      (match erased q _
-        ((LenAdd tb2 r2 v2 m1 q1)
-          (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl t x) (Refl (Nat) (Succ n1)))))))))
+      (let-match erased q (LenAdd tb2 r2 v2 m1 q1))
+      (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl t x) (Refl (Nat) (Succ n1)))))))
 
 (def-fns _ $ erased suffix-len : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (subterm erased (Suffix B l s) p) (erased (Nat) n) (erased (Len B s n) ls) (erased (Nat) m) (erased (Len B l m) ll) ->
@@ -84,8 +85,8 @@
   (match erased p _
     ((SfHere tb h) (match erased (len-fn _ l n m ls ll) _ ((Refl t x) (lt-succ n))))
     ((SfThere tb rest w s1 p1)
-      (match erased ll _
-        ((LenAdd tb2 r2 v2 m1 ll1) (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))))))
+      (let-match erased ll (LenAdd tb2 r2 v2 m1 ll1))
+      (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))))
 
 (def-fns _ $ erased suffix-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s1)
     (erased (Hist B) s2) (erased (Nat) n) (subterm erased (Suffix B l s1) p1) (erased (Suffix B l s2) p2)
@@ -181,13 +182,14 @@
     (erased (Suffix B c b) le) (erased (List $ Nat) f) (subterm erased (List $ Ref B b) xs) (erased (Lockstep (Nat) (Ref B b) f xs) lk) ->
     (erased (List $ Ref B c) ys) (erased (Coercible (List $ Ref B b) xs (List $ Ref B c) ys) p) (erased (Lockstep (Nat) (Ref B c) f ys) lk2)
   (match erased xs _
-    ((Nil t) (match erased lk _ ((LsNil ta tb) (values (Nil _) (coercible-ctor Nil (Ref B b) (Ref B c)) (LsNil _ _)))))
+    ((Nil t)
+      (let-match erased lk (LsNil ta tb))
+      (values (Nil _) (coercible-ctor Nil (Ref B b) (Ref B c)) (LsNil _ _)))
     ((Cons t x rest)
-      (match erased lk _
-        ((LsCons ta tb x0 y0 xs0 ys0 lk1)
-          (let (erased x2) (erased px) (ref-widen _ b c le x))
-          (let (erased rest2) (erased pr) (erased lk2) (refs-widen-lk _ b c le xs0 rest lk1))
-          (values (Cons _ x2 rest2) (coercible-ctor Cons (Ref B b) (Ref B c) px pr) (LsCons _ _ x0 x2 xs0 rest2 lk2)))))))
+      (let-match erased lk (LsCons ta tb x0 y0 xs0 ys0 lk1))
+      (let (erased x2) (erased px) (ref-widen _ b c le x))
+      (let (erased rest2) (erased pr) (erased lk2) (refs-widen-lk _ b c le xs0 rest lk1))
+      (values (Cons _ x2 rest2) (coercible-ctor Cons (Ref B b) (Ref B c) px pr) (LsCons _ _ x0 x2 xs0 rest2 lk2)))))
 
 (def-fns _ $ erased maybe-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (erased (Maybe $ Ref B b) m) ->

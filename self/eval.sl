@@ -478,22 +478,19 @@
       ((Cons a m rest)
         (match many m _
           ((Many)
-            (match erased pk _
-              ((PkMany ta ms2 c0 cs2 p)
-                (match many cs _
-                  ((Cons b c crest)
-                    (let (erased h1) (many hp1) (erased le1) (many vs1) (erased pk1) $ eval fuel _ hp _ _ c st)
-                    (let (many vo1) $ vals-one _ vs1 pk1)
-                    (let (erased ws7) (erased ps7) (st-widen _ _ le1 _ st))
-                    (let (erased h2) (many hp2) (erased le2) (many vs) (erased rpk) $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
-                    (let (erased wo2) (erased po2) (ref-widen _ _ _ le2 vo1))
-                    (let (many vo) (coerce vo1 po2))
-                    (values h2 hp2 (le-trans _ _ _ le1 le2) (Cons _ vo vs) (PkMany _ rest vo vs rpk)))))))
+            (let-match erased pk (PkMany ta ms2 c0 cs2 p))
+            (let-match many cs (Cons b c crest))
+            (let (erased h1) (many hp1) (erased le1) (many vs1) (erased pk1) $ eval fuel _ hp _ _ c st)
+            (let (many vo1) $ vals-one _ vs1 pk1)
+            (let (erased ws7) (erased ps7) (st-widen _ _ le1 _ st))
+            (let (erased h2) (many hp2) (erased le2) (many vs) (erased rpk) $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
+            (let (erased wo2) (erased po2) (ref-widen _ _ _ le2 vo1))
+            (let (many vo) (coerce vo1 po2))
+            (values h2 hp2 (le-trans _ _ _ le1 le2) (Cons _ vo vs) (PkMany _ rest vo vs rpk)))
           ((Erased)
-            (match erased pk _
-              ((PkErased ta ms2 cs2 p)
-                (let (erased h2) (many hp2) (erased le2) (many vs) (erased rpk) $ eval-picked fuel _ hp _ cs rest p st)
-                (values h2 hp2 le2 vs (PkErased _ rest vs rpk)))))))))
+            (let-match erased pk (PkErased ta ms2 cs2 p))
+            (let (erased h2) (many hp2) (erased le2) (many vs) (erased rpk) $ eval-picked fuel _ hp _ cs rest p st)
+            (values h2 hp2 le2 vs (PkErased _ rest vs rpk)))))))
 
   (many eval-branch : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) (many (List $ Ref Block hs) fields) (many (St hs ctx) st) ->
       (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ns vs) pk)
@@ -582,10 +579,9 @@
   (match many ids _
     ((Nil a) en)
     ((Cons a x rest)
-      (match erased lk _
-        ((LsCons ta tb x0 v0 xs vrest0 p)
-          (match many vs _
-            ((Cons b v vrest) (set-states _ (entries-set-state _ en x $ SConst _ v) rest vrest p))))))))
+      (let-match erased lk (LsCons ta tb x0 v0 xs vrest0 p))
+      (let-match many vs (Cons b v vrest))
+      (set-states _ (entries-set-state _ en x $ SConst _ v) rest vrest p))))
 
 (def-fns _ $ many env-run-final : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Term) ty) -> (many (Env) r)
   (let (erased hs) (many hp) (many en) (many fi) $ env-store e)

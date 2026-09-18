@@ -385,10 +385,12 @@
 (def-fns _ $ erased lockstep-trans : (erased Type A) (erased Type B) (erased Type C) (erased (List A) xs) (erased (List B) ys) (erased (List C) zs)
     (subterm erased (Lockstep A B xs ys) p) (erased (Lockstep B C ys zs) q) -> (erased (Lockstep A C xs zs) r)
   (match erased p _
-    ((LsNil a b) (match erased q _ ((LsNil c d) (LsNil _ _))))
+    ((LsNil a b)
+      (let-match erased q (LsNil c d))
+      (LsNil _ _))
     ((LsCons a b x y xs2 ys2 p2)
-      (match erased q _
-        ((LsCons c d y2 z ys3 zs2 q2) (LsCons _ _ x z xs2 zs2 $ lockstep-trans _ _ _ _ _ _ p2 q2))))))
+      (let-match erased q (LsCons c d y2 z ys3 zs2 q2))
+      (LsCons _ _ x z xs2 zs2 $ lockstep-trans _ _ _ _ _ _ p2 q2))))
 
 (def-fns _ $ erased lockstep-sym : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (subterm erased (Lockstep A B xs ys) p) -> (erased (Lockstep B A ys xs) q)
   (match erased p _
@@ -523,16 +525,16 @@
       (match erased q _
         (absurd (D0) (lt-zero d lt))
         ((DS l1 s1 q1)
-          (match erased lt _
-            ((LtS x y lt1)
-              (match erased lt1 _
-                ((LtS x2 y2 lt2) (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))))))
+          (let-match erased lt (LtS x y lt1))
+          (let-match erased lt1 (LtS x2 y2 lt2))
+          (LtS m1 l1 (double-lt-inv m1 d1 l1 s1 p1 q1 lt2)))))))
 
 
 ; ---- a trie's size against a bound on its keys, the measure a walk over one recurses on
 
 (def-fns _ $ erased lt-drop : (erased (Nat) d) (erased (Nat) s) (erased (Lt (Succ d) s) p) -> (erased (Lt d s) q)
-  (match erased p _ ((LtS x y q) (lt-weaken d y q))))
+  (let-match erased p (LtS x y q))
+  (lt-weaken d y q))
 
 (def-fns _ $ erased double-le-inv : (erased (Nat) m) (erased (Nat) d) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) p) (erased (Double r s) q) (erased (Lt d (Succ s)) lt) -> (erased (Lt m (Succ r)) res)
   (double-lt-inv m d (Succ r) (Succ (Succ s)) p (DS r s q) (lt-weaken d (Succ s) lt)))
@@ -546,17 +548,16 @@
   (match erased bal _
     ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) lt))
     ((BrOne n)
-      (match erased sum _
-        ((AddSucc a1 b1 c1 q) (double-le-inv m d n c1 dd (add-diag-double n c1 q) lt))))))
+      (let-match erased sum (AddSucc a1 b1 c1 q))
+      (double-le-inv m d n c1 dd (add-diag-double n c1 q) lt))))
 
 (def-fns _ $ erased half-lt-two : (erased (Nat) m) (erased (Nat) d) (erased (Nat) l) (erased (Nat) r) (erased (Nat) s) (erased (Double m d) dd) (erased (Add l r s) sum) (erased (Braun l r) bal) (erased (Lt (Succ d) s) lt) -> (erased (Lt m r) res)
   (match erased bal _
     ((BrEq n) (double-lt-inv m d n s dd (add-diag-double n s sum) (lt-drop d s lt)))
     ((BrOne n)
-      (match erased sum _
-        ((AddSucc a1 b1 c1 q)
-          (match erased lt _
-            ((LtS x y lt1) (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))))))))
+      (let-match erased sum (AddSucc a1 b1 c1 q))
+      (let-match erased lt (LtS x y lt1))
+      (double-lt-inv m d n c1 dd (add-diag-double n c1 q) lt1))))
 
 ; [size] how many entries a trie holds, [max] a bound every key in it is below. The node case splits
 ; max the way the trie splits keys: key 0 sits here, 2m+1 in one, 2m+2 in two, so a node bounded by
@@ -590,8 +591,8 @@
         (absurd (AddZero y0)
           (match erased la (((False) f)) ((LtS u v la0) (lt-zero a0 la0))))
         ((AddSucc x0 y0 z0 q0)
-          (match erased la _
-            ((LtS u v la0) (LtS c0 (Succ z0) (add-mono a0 b0 c0 p0 x0 y0 z0 q0 la0 lb)))))))))
+          (let-match erased la (LtS u v la0))
+          (LtS c0 (Succ z0) (add-mono a0 b0 c0 p0 x0 y0 z0 q0 la0 lb)))))))
 
 ; the point: a trie bounded by max holds at most max entries
 (def-fns _ $ erased bounded-le : (erased Type V) (erased (IdMap V) m) (erased (Nat) size) (erased (Nat) max)
@@ -639,7 +640,8 @@
 
 (def-fns _ $ erased lt-succ-inv : (erased (Nat) a) (erased (Nat) b) (erased (Lt (Succ a) (Succ b)) p) ->
     (erased (Lt a b) q)
-  (match erased p _ ((LtS x y q) q)))
+  (let-match erased p (LtS x y q))
+  q)
 
 ; a bound a key sits under is a successor, and splits the way the trie does
 (def-fns _ $ erased bound-split : (erased (Nat) max) (erased (Nat) k) (erased (Lt k max) lk) ->
@@ -732,8 +734,8 @@
     (erased (Nat) rest2) (erased (Add (Succ size) rest2 max) sum2) (erased (Lt rest2 rest) less)
   (match erased sum _
     ((AddZero b)
-      (match erased lt _
-        ((LtZ b2) (values b2 (AddSucc (Zero) b2 b2 (AddZero b2)) (lt-succ b2)))))
+      (let-match erased lt (LtZ b2))
+      (values b2 (AddSucc (Zero) b2 b2 (AddZero b2)) (lt-succ b2)))
     ((AddSucc a b c q)
       (let (erased rest2) (erased sum2) (erased less) (add-room a b c q (lt-succ-inv a c lt)))
       (values rest2 (AddSucc (Succ a) rest2 c sum2) less))))
