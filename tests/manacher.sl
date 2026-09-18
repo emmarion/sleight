@@ -292,4 +292,142 @@
                 (concat-snoc-shift (Nat) w0 y wy d s0 q
                   (win-prefix k0 l mid r w0 mr s0 (Cons (Nat) y d) win0 cm rv0 (drop-unstep (Nat) k0 r y d dr ny)))))))))))
 
+
+(def-fns _ $ erased apart-sym : (erased (Nat) x) (erased (Nat) y) (erased (NatApart x y) d) -> (erased (NatApart y x) d2)
+  (match erased d _
+    ((ApartLt a b lt) (ApartGt y x lt))
+    ((ApartGt a b lt) (ApartLt y x lt))))
+
+(def-fns _ $ erased mid-length : (erased (Nat) m) (erased (List (Nat)) mid) (erased (Mid m mid) md) -> (erased (Length (Nat) mid m) l)
+  (match erased md _
+    ((MidEven) (LNil (Nat)))
+    ((MidOdd z) (LCons (Nat) z (Nil (Nat)) (Zero) (LNil (Nat))))))
+
+(def-fns _ $ erased mid-pal : (erased (Nat) m) (erased (List (Nat)) mid) (erased (Mid m mid) md) -> (erased (Palindrome (Nat) mid) p)
+  (match erased md _
+    ((MidEven) (PalNil (Nat)))
+    ((MidOdd z) (PalOne (Nat) z))))
+
+(def-fns _ $ erased agree-weaken-to : (erased (Nat) k) (erased (Nat) j) (erased (List (Nat)) xs) (erased (List (Nat)) ys)
+    (subterm erased (Agree k xs ys) p) (erased (Lt j (Succ k)) le) -> (erased (Agree j xs ys) q)
+  (match erased p _
+    ((AgreeZ a b) (match erased le _ ((LtZ b1) (AgreeZ xs ys)) ((LtS a1 b1 l1) (match erased l1 _))))
+    ((AgreeS k0 x xs0 ys0 p0)
+      (match erased j _
+        ((Zero) (AgreeZ xs ys))
+        ((Succ j1) (match erased le _ ((LtS a1 b1 l1) (AgreeS j1 x xs0 ys0 (agree-weaken-to k0 j1 xs0 ys0 p0 l1)))))))))
+
+(def-fns _ $ erased agree-nth-ex : (erased (Nat) k) (erased (Nat) i) (erased (List (Nat)) xs) (erased (List (Nat)) ys)
+    (subterm erased (Agree k xs ys) p) (erased (Lt i k) lt) -> (erased (Nat) x) (erased (Nth (Nat) i xs x) nx) (erased (Nth (Nat) i ys x) ny)
+  (match erased p _
+    ((AgreeZ a b) (match erased lt _))
+    ((AgreeS k0 x0 xs0 ys0 p0)
+      (match erased i _
+        ((Zero) (values x0 (NthHere (Nat) x0 xs0) (NthHere (Nat) x0 ys0)))
+        ((Succ i1)
+          (match erased lt _
+            ((LtS a1 b1 l1)
+              (let (erased x) (erased nx) (erased ny) (agree-nth-ex k0 i1 xs0 ys0 p0 l1))
+              (values x (NthThere (Nat) i1 x0 xs0 x nx) (NthThere (Nat) i1 x0 ys0 x ny)))))))))
+
+(def-fns _ $ erased agree-drop : (erased (Nat) p) (erased (Nat) d) (erased (Nat) q) (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (List (Nat)) ld) (erased (List (Nat)) rd)
+    (subterm erased (Drop (Nat) d l ld) dl) (erased (Drop (Nat) d r rd) dr) (erased (Add d q p) ad) (erased (Agree p l r) ag) ->
+    (erased (Agree q ld rd) ag2)
+  (match erased dl _
+    ((DropZ a e) (match erased dr _ ((DropZ a2 e2) (match erased ad _ ((AddZero b) ag)))))
+    ((DropS a d1 x l1 e dl1)
+      (match erased dr _
+        ((DropS a2 d2 y r1 e2 dr1)
+          (match erased ad _
+            ((AddSucc a3 b3 c3 ad1)
+              (match erased ag _
+                ((AgreeS k0 x0 xs0 ys0 ag0) (agree-drop c3 d1 q l1 r1 ld rd dl1 dr1 ad1 ag0))))))))))
+
+(def-fns _ $ erased nth-concat-after : (erased (List (Nat)) mid) (erased (List (Nat)) r) (erased (List (Nat)) w) (erased (Nat) m) (erased (Nat) e)
+    (erased (Nat) s) (erased (Nat) x)
+    (subterm erased (Concat (Nat) mid r w) cm) (erased (Length (Nat) mid m) lm) (erased (Add m e s) ad) (erased (Nth (Nat) e r x) n) ->
+    (erased (Nth (Nat) s w x) n2)
+  (match erased cm _
+    ((CatNil a e1) (match erased lm _ ((LNil a2) (match erased ad _ ((AddZero b) n)))))
+    ((CatCons a z mid1 e1 w1 cm1)
+      (match erased lm _
+        ((LCons a2 e2 e3 m1 lm1)
+          (match erased ad _
+            ((AddSucc a3 b3 s1 ad1) (NthThere (Nat) s1 z w1 x (nth-concat-after mid1 r w1 m1 e s1 x cm1 lm1 ad1 n)))))))))
+
+(def-fns _ $ erased revonto-drop-mid : (erased (Nat) m) (erased (List (Nat)) mid) (erased (Nat) d) (erased (Nat) e) (erased (List (Nat)) l)
+    (erased (List (Nat)) w) (erased (List (Nat)) b) (erased (List (Nat)) b2)
+    (erased (Mid m mid) md) (erased (Add m e d) ad) (erased (RevOnto (Nat) d l w b) rv) (erased (Drop (Nat) m b b2) dr) ->
+    (erased (RevOnto (Nat) e l w b2) rv2)
+  (match erased md _
+    ((MidEven) (match erased ad _ ((AddZero b1) (match erased dr _ ((DropZ a1 e1) rv)))))
+    ((MidOdd z)
+      (match erased ad _
+        ((AddSucc a1 b1 c1 ad1)
+          (match erased ad1 _
+            ((AddZero b2)
+              (match erased rv _
+                ((RevS a2 k2 e2 e3 res x rv1 n)
+                  (match erased dr _
+                    ((DropS a3 k3 x3 xs3 e4 dr1) (match erased dr1 _ ((DropZ a4 e5) rv1)))))))))))))
+
+; The mirror lemma: inside a palindrome of radius p at (l, r) with middle mid, the left arm of the
+; centre e+m steps to the right (RevOnto (e+m) w l a) agrees with the right arm of the centre e+m
+; steps to the left (RevOnto e l w b) on the first q elements, q + (e+m) = p.
+
+(def-fns _ $ erased mirror-agree : (erased (Nat) p) (erased (Nat) m) (erased (Nat) e) (erased (Nat) em) (erased (Nat) q)
+    (erased (List (Nat)) l) (erased (List (Nat)) r) (erased (List (Nat)) mid) (erased (List (Nat)) w) (erased (List (Nat)) a) (erased (List (Nat)) b)
+    (erased (Agree p l r) ag) (erased (Mid m mid) md) (erased (Concat (Nat) mid r w) cm)
+    (subterm erased (RevOnto (Nat) e l w b) rb) (erased (Add m e em) aem) (erased (RevOnto (Nat) em w l a) ra) (erased (Add em q p) aq) ->
+    (erased (Agree q a b) ag2)
+  (match erased rb _
+    ((RevZ a1 e1 e2)
+      (match erased md _
+        ((MidEven)
+          (match erased aem _
+            ((AddZero b1)
+              (match erased ra _
+                ((RevZ a2 e3 e4) (match erased cm _ ((CatNil a3 e5) (match erased aq _ ((AddZero b2) ag)))))))))
+        ((MidOdd z)
+          (match erased aem _
+            ((AddSucc a1 b1 c1 aem1)
+              (match erased aem1 _
+                ((AddZero b2)
+                  (match erased ra _
+                    ((RevS a2 k2 e3 e4 res x ra1 n)
+                      (match erased ra1 _
+                        ((RevZ a3 e5 e6)
+                          (match erased cm _
+                            ((CatCons a4 z4 e7 e8 zs cm1)
+                              (match erased cm1 _
+                                ((CatNil a5 e9)
+                                  (match erased n _
+                                    ((NthHere a6 e10 e11)
+                                      (match erased aq _
+                                        ((AddSucc a7 b7 c7 aq1)
+                                          (match erased aq1 _
+                                            ((AddZero b8)
+                                              (match erased q _
+                                                ((Zero) (AgreeZ a b))
+                                                ((Succ q1)
+                                                  (AgreeS q1 z l r (agree-weaken q1 l r (agree-weaken (Succ q1) l r ag))))))))))))))))))))))))))
+    ((RevS a1 k1 e1 e2 b1 lx rb1 nl)
+      (let (erased em1) (erased eem) (erased aem1) (add-succ-right-inv m k1 em aem))
+      (match erased eem _
+        ((Refl t1 r1)
+          (match erased ra _
+            ((RevS a2 k2 e3 e4 a1 wx ra1 nw)
+              (match erased aq _
+                ((AddSucc a3 b3 c3 aq1)
+                  (let (erased ltk) (lt-le-trans k1 (Succ em1) p (add-le-left k1 m em1 (add-comm m k1 em1 aem1)) (LtS em1 p (add-le-left em1 q c3 aq1))))
+                  (let (erased nr) (agree-nth k1 p l r lx ag ltk nl))
+                  (let (erased nw2) (nth-concat-after mid r w m k1 em1 lx cm (mid-length m mid md) aem1 nr))
+                  (match erased (nth-fn (Nat) em1 w wx lx nw nw2) _
+                    ((Refl t2 r2)
+                      (let (erased ih) (mirror-agree p m k1 em1 (Succ q) l r mid w a1 b1 ag md cm rb1 aem1 ra1 (add-succ-right em1 q c3 aq1)))
+                      (match erased q _
+                        ((Zero) (AgreeZ a b))
+                        ((Succ q2) (AgreeS q2 lx a1 b1 (agree-weaken q2 a1 b1 (agree-weaken (Succ q2) a1 b1 ih))))))))))))))))
+
 (Zero)
