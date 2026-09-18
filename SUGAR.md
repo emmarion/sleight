@@ -109,6 +109,10 @@ such a context it is an error, having nothing to discharge.
 
 ## 6. `_` for an erased argument
 
+Note (owner, via a later session): the `_` implementation is more powerful
+than this section says, and the section needs updating from the
+implementation itself; until then read it as a lower bound.
+
 The owner's proposal, recorded by the session that implemented it: the
 decisions are the owner's, the wording and the reading of the gaps the
 session's, and `tests/wild_*.sl` are the evidence for what the
