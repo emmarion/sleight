@@ -14,12 +14,12 @@
       (match erased l _
         ((LCons a2 x2 rest2 n2 p)
           (match many rest _
-            ((Nil a3) (match erased p _ ((LNil a4) (values (Nil A) x (CatNil A (Cons _ x (Nil A))) (LNil A)))))
+            ((Nil a3) (match erased p _ ((LNil a4) (values (Nil _) x (CatNil _ (Cons _ x (Nil _))) (LNil _)))))
             ((Cons a3 x3 rest3)
               (match erased p _
                 ((LCons a4 x4 rest4 n1 p1)
                   (let (many inner) (many y) (erased q) (erased li) (unsnoc _ rest _ p))
-                  (values (Cons _ x inner) y (CatCons A x inner (Cons _ y (Nil A)) rest q) (LCons A x inner n1 li)))))))))))
+                  (values (Cons _ x inner) y (CatCons _ x inner (Cons _ y (Nil _)) rest q) (LCons _ x inner n1 li)))))))))))
 
 (def-adts
   (PalDec : ((List (Nat)) w) -> Type
@@ -29,10 +29,10 @@
 
 (def-fns _ $ many pal-dec : (subterm many (Nat) n) (many (List (Nat)) w) (erased (Length (Nat) w n) l) -> (many (PalDec w) d)
   (match many n _
-    ((Zero) (match erased l _ ((LNil a) (IsPal _ (PalNil (Nat))))))
+    ((Zero) (match erased l _ ((LNil a) (IsPal _ (PalNil _)))))
     ((Succ n1)
       (match many n1 _
-        ((Zero) (match erased l _ ((LCons a x rest n2 p) (match erased p _ ((LNil a2) (IsPal _ (PalOne (Nat) x)))))))
+        ((Zero) (match erased l _ ((LCons a x rest n2 p) (match erased p _ ((LNil a2) (IsPal _ (PalOne _ x)))))))
         ((Succ n2)
           (match many w _
             ((Nil a) (match erased l _))
@@ -45,7 +45,7 @@
                     ((CGt t r a3 b gt) (IsNotPal _ (NotPalEnds x y inner withx q (ApartGt x y gt))))
                     ((CEq t r a3)
                       (match many (pal-dec n2 inner li) _
-                        ((IsPal w2 p2) (IsPal _ (PalWrap (Nat) x inner withx p2 q)))
+                        ((IsPal w2 p2) (IsPal _ (PalWrap _ x inner withx p2 q)))
                         ((IsNotPal w2 np2) (IsNotPal _ (NotPalInner x inner withx q np2)))))))))))))))
 
 (def-adts
@@ -71,7 +71,7 @@
 (def-fns _ $ many search : (subterm many (Nat) k) (many (List (Nat)) xs) (erased (NoLargerPalindromeF xs k) nl) ->
     (many (Nat) n) (erased (LongestPalindromeF xs n) p)
   (match many k _
-    ((Zero) (values (Zero) (IsLongestF xs (Zero) (HasHere xs (Zero) (Nil (Nat)) (TakeZero (Nat) xs) (PalNil (Nat))) nl)))
+    ((Zero) (values (Zero) (IsLongestF xs (Zero) (HasHere xs (Zero) (Nil _) (TakeZero _ xs) (PalNil _)) nl)))
     ((Succ k1)
       (match many (has-dec k xs) _
         ((Has xs0 k0 h) (values k (IsLongestF xs k h nl)))
@@ -85,12 +85,12 @@
   (let (many n) (erased p) (longest-palindrome-f xs))
   (values n (longest-bridge _ _ p)))
 
-(let (many n0) (erased q0) (longest-palindrome (Nil (Nat))))
-(let (many n1) (erased q1) (longest-palindrome (Cons _ 7 $ Nil (Nat))))
-(let (many n2) (erased q2) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Nil (Nat))))
-(let (many n3) (erased q3) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Nil (Nat))))
-(let (many n4) (erased q4) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Nil (Nat))))
-(let (many n5) (erased q5) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 4 $ Cons _ 5 $ Nil (Nat))))
-(let (many n6) (erased q6) (longest-palindrome (Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Nil (Nat))))
+(let (many n0) (erased q0) (longest-palindrome (Nil _)))
+(let (many n1) (erased q1) (longest-palindrome (Cons _ 7 $ Nil _)))
+(let (many n2) (erased q2) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Nil _)))
+(let (many n3) (erased q3) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Nil _)))
+(let (many n4) (erased q4) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Nil _)))
+(let (many n5) (erased q5) (longest-palindrome (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 4 $ Cons _ 5 $ Nil _)))
+(let (many n6) (erased q6) (longest-palindrome (Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Nil _)))
 
-(Cons _ n0 $ Cons _ n1 $ Cons _ n2 $ Cons _ n3 $ Cons _ n4 $ Cons _ n5 $ Cons _ n6 $ Nil (Nat))
+(Cons _ n0 $ Cons _ n1 $ Cons _ n2 $ Cons _ n3 $ Cons _ n4 $ Cons _ n5 $ Cons _ n6 $ Nil _)

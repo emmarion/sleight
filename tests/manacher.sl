@@ -168,26 +168,26 @@
 (def-fns _ $ erased concat-total : (erased Type A) (subterm erased (List A) xs) (erased (List A) ys) ->
     (erased (List A) zs) (erased (Concat A xs ys zs) p)
   (match erased xs _
-    ((Nil a) (values ys (CatNil A ys)))
+    ((Nil a) (values ys (CatNil _ ys)))
     ((Cons a x rest)
       (let (erased zs) (erased p) (concat-total _ rest ys))
-      (values (Cons _ x zs) (CatCons A x rest ys zs p)))))
+      (values (Cons _ x zs) (CatCons _ x rest ys zs p)))))
 
 (def-fns _ $ erased concat-length-snoc : (erased Type A) (erased (List A) xs) (erased A y) (erased (List A) xy) (erased (Nat) n)
     (subterm erased (Concat A xs (Cons _ y (Nil A)) xy) p) (erased (Length A xs n) l) -> (erased (Length A xy (Succ n)) l2)
   (match erased p _
-    ((CatNil a e) (match erased l _ ((LNil a2) (LCons A y (Nil A) (Zero) (LNil A)))))
+    ((CatNil a e) (match erased l _ ((LNil a2) (LCons _ y (Nil _) (Zero) (LNil _)))))
     ((CatCons a x rest e zs p1)
       (match erased l _
-        ((LCons a2 e2 e3 n1 l1) (LCons A x zs (Succ n1) (concat-length-snoc _ _ _ _ _ p1 l1)))))))
+        ((LCons a2 e2 e3 n1 l1) (LCons _ x zs (Succ n1) (concat-length-snoc _ _ _ _ _ p1 l1)))))))
 
 (def-fns _ $ erased concat-snoc-shift : (erased Type A) (erased (List A) xs) (erased A y) (erased (List A) xy) (erased (List A) d) (erased (List A) s)
     (subterm erased (Concat A xs (Cons _ y (Nil A)) xy) p) (erased (Concat A xs (Cons _ y d) s) q) -> (erased (Concat A xy d s) r)
   (match erased p _
-    ((CatNil a e) (match erased q _ ((CatNil a2 e2) (CatCons A y (Nil A) d d (CatNil A d)))))
+    ((CatNil a e) (match erased q _ ((CatNil a2 e2) (CatCons _ y (Nil _) d d (CatNil _ d)))))
     ((CatCons a x rest e zs p1)
       (match erased q _
-        ((CatCons a2 x2 rest2 e2 zs2 q1) (CatCons A x zs d zs2 (concat-snoc-shift _ _ _ _ _ _ p1 q1)))))))
+        ((CatCons a2 x2 rest2 e2 zs2 q1) (CatCons _ x zs d zs2 (concat-snoc-shift _ _ _ _ _ _ p1 q1)))))))
 
 (def-fns _ $ erased drop-unstep : (erased Type A) (erased (Nat) k) (erased (List A) xs) (erased A y) (erased (List A) d)
     (subterm erased (Drop A (Succ k) xs d) dr) (erased (Nth A k xs y) n) -> (erased (Drop A k xs (Cons _ y d)) dr2)
@@ -225,7 +225,7 @@
     ((WinZ a b c) pm)
     ((WinS k0 l0 m0 r0 w0 x y wy win0 nx ny q)
       (let-match erased (nth-fn _ _ _ _ _ (agree-nth _ _ _ _ _ ag (lt-succ k0) nx) ny) (Refl t e))
-      (PalWrap (Nat) x w0 wy (win-pal _ _ _ _ _ win0 (agree-weaken _ _ _ ag) pm) q))))
+      (PalWrap _ x w0 wy (win-pal _ _ _ _ _ win0 (agree-weaken _ _ _ ag) pm) q))))
 
 (def-fns _ $ erased win-notpal : (erased (Nat) k) (erased (Nat) p) (erased (List (Nat)) l) (erased (List (Nat)) mid) (erased (List (Nat)) r) (erased (List (Nat)) w)
     (subterm erased (Win k l mid r w) win) (erased (Agree p l r) ag) (erased (Disagree (Succ p) l r) dis) (erased (Lt p k) lt) -> (erased (NotPalindrome w) np)
@@ -258,7 +258,7 @@
   (match erased ag _
     ((AgreeZ a b) (values mid (WinZ l mid r)))
     ((AgreeS k0 x xs ys ag0)
-      (let (erased midx) (erased cm) (concat-total _ mid (Cons _ x (Nil (Nat)))))
+      (let (erased midx) (erased cm) (concat-total _ mid (Cons _ x (Nil _))))
       (let (erased w) (erased win) (agree-win _ _ _ (Cons _ x midx) ag0))
       (values w (win-inner _ _ _ _ _ _ _ win cm)))))
 
@@ -275,7 +275,7 @@
             ((AddSucc a2 b2 c2 ad1)
               (match erased ad1 _
                 ((AddSucc a3 b3 n0 ad0)
-                  (LCons (Nat) x wy (Succ n0) (concat-length-snoc _ _ _ _ _ q (win-length _ _ _ _ _ _ _ _ win0 lm dk0 ad0))))))))))))
+                  (LCons _ x wy (Succ n0) (concat-length-snoc _ _ _ _ _ q (win-length _ _ _ _ _ _ _ _ win0 lm dk0 ad0))))))))))))
 
 (def-fns _ $ erased win-prefix : (erased (Nat) k) (erased (List (Nat)) l) (erased (List (Nat)) mid) (erased (List (Nat)) r) (erased (List (Nat)) w)
     (erased (List (Nat)) mr) (erased (List (Nat)) s) (erased (List (Nat)) d)
@@ -287,7 +287,7 @@
       (match erased rv _
         ((RevS a2 k2 e2 e3 s0 x2 rv0 nx2)
           (let-match erased (nth-fn _ _ _ _ _ nx nx2) (Refl t e))
-          (CatCons (Nat) x wy d s0
+          (CatCons _ x wy d s0
                 (concat-snoc-shift _ _ _ _ _ _ q
                   (win-prefix _ _ _ _ _ _ _ _ win0 cm rv0 (drop-unstep _ _ _ _ _ dr ny)))))))))
 
@@ -299,13 +299,13 @@
 
 (def-fns _ $ erased mid-length : (erased (Nat) m) (erased (List (Nat)) mid) (erased (Mid m mid) md) -> (erased (Length (Nat) mid m) l)
   (match erased md _
-    ((MidEven) (LNil (Nat)))
-    ((MidOdd z) (LCons (Nat) z (Nil (Nat)) (Zero) (LNil (Nat))))))
+    ((MidEven) (LNil _))
+    ((MidOdd z) (LCons _ z (Nil _) (Zero) (LNil _)))))
 
 (def-fns _ $ erased mid-pal : (erased (Nat) m) (erased (List (Nat)) mid) (erased (Mid m mid) md) -> (erased (Palindrome (Nat) mid) p)
   (match erased md _
-    ((MidEven) (PalNil (Nat)))
-    ((MidOdd z) (PalOne (Nat) z))))
+    ((MidEven) (PalNil _))
+    ((MidOdd z) (PalOne _ z))))
 
 (def-fns _ $ erased agree-weaken-to : (erased (Nat) k) (erased (Nat) j) (erased (List (Nat)) xs) (erased (List (Nat)) ys)
     (subterm erased (Agree k xs ys) p) (erased (Lt j (Succ k)) le) -> (erased (Agree j xs ys) q)
@@ -536,12 +536,12 @@
 (def-fns _ $ erased mid-of : (erased (Nat) m) (erased (List (Nat)) w) (erased (List (Nat)) arm) (erased (Par m) pr) (erased (Drop (Nat) m w arm) dr) ->
     (erased (List (Nat)) mid) (erased (Mid m mid) md) (erased (Concat (Nat) mid arm w) c)
   (match erased pr _
-    ((PEven) (match erased dr _ ((DropZ a e) (values (Nil (Nat)) (MidEven) (CatNil (Nat) w)))))
+    ((PEven) (match erased dr _ ((DropZ a e) (values (Nil _) (MidEven) (CatNil _ w)))))
     ((POdd)
       (match erased dr _
         ((DropS a k x xs e dr1)
           (match erased dr1 _
-            ((DropZ a2 e2) (values (Cons _ x (Nil (Nat))) (MidOdd x) (CatCons (Nat) x (Nil (Nat)) xs xs (CatNil (Nat) xs))))))))))
+            ((DropZ a2 e2) (values (Cons _ x (Nil _)) (MidOdd x) (CatCons _ x (Nil _) xs xs (CatNil _ xs))))))))))
 
 (def-fns _ $ erased drop-nth-head : (erased Type A) (erased (Nat) k) (erased (List A) l) (erased A x) (erased (List A) l0)
     (subterm erased (Drop A k l l0) d) (erased (Nth A k l x) n) -> (erased (List A) l1) (erased (Eq (List A) l0 (Cons _ x l1)) e) (erased (Drop A (Succ k) l l1) d2)
@@ -573,9 +573,9 @@
 (def-fns _ $ erased concat-take : (erased Type A) (erased (List A) w) (erased (List A) d) (erased (List A) s) (erased (Nat) n)
     (subterm erased (Concat A w d s) c) (erased (Length A w n) l) -> (erased (Take A n s w) t)
   (match erased c _
-    ((CatNil a e) (match erased l _ ((LNil a2) (TakeZero A s))))
+    ((CatNil a e) (match erased l _ ((LNil a2) (TakeZero _ s))))
     ((CatCons a x rest e zs c1)
-      (match erased l _ ((LCons a2 e2 e3 n1 l1) (TakeSucc A n1 x zs rest (concat-take _ _ _ _ _ c1 l1)))))))
+      (match erased l _ ((LCons a2 e2 e3 n1 l1) (TakeSucc _ n1 x zs rest (concat-take _ _ _ _ _ c1 l1)))))))
 
 (def-fns _ $ erased bound-weaken : (erased (Nat) m) (erased (Nat) b) (erased (Nat) b2) (erased (List (Nat)) xs) (erased (List (Nat)) l) (erased (List (Nat)) r)
     (erased (Back m xs l r) bk) (subterm erased (Bound m b xs l r bk) bd) (erased (Lt b (Succ b2)) le) -> (erased (Bound m b2 xs l r bk) bd2)
@@ -922,10 +922,10 @@
 
 (def-fns _ $ erased length-ex : (erased Type A) (subterm erased (List A) l) -> (erased (Nat) n) (erased (Length A l n) len)
   (match erased l _
-    ((Nil a) (values (Zero) (LNil A)))
+    ((Nil a) (values (Zero) (LNil _)))
     ((Cons a x rest)
       (let (erased n) (erased len) (length-ex _ rest))
-      (values (Succ n) (LCons A x rest n len)))))
+      (values (Succ n) (LCons _ x rest n len)))))
 
 (def-fns _ $ erased revonto-length : (erased Type A) (erased (Nat) t) (erased (List A) s) (erased (List A) acc) (erased (List A) res)
     (erased (Nat) la) (erased (Nat) lr)
@@ -934,7 +934,7 @@
     ((RevZ a e1 e2) (match erased ad _ ((AddZero b) len)))
     ((RevS a t1 e1 e2 res0 x rv1 n)
       (match erased ad _
-        ((AddSucc a2 b2 lr0 ad1) (LCons A x res0 lr0 (revonto-length _ _ _ _ _ _ _ rv1 len ad1)))))))
+        ((AddSucc a2 b2 lr0 ad1) (LCons _ x res0 lr0 (revonto-length _ _ _ _ _ _ _ rv1 len ad1)))))))
 
 (def-fns _ $ erased nth-ex : (erased Type A) (erased (List A) l) (erased (Nat) len) (erased (Nat) k)
     (subterm erased (Length A l len) ln) (erased (Lt k len) lt) -> (erased A x) (erased (Nth A k l x) n)
@@ -961,7 +961,7 @@
           (let (erased y) (erased dr1) (drop-succ-split _ _ _ _ dr))
           (let (erased ny) (erased dr2) (drop-nth _ _ _ _ _ dr1))
           (let (erased w0) (erased win0) (win-total _ _ mid _ _ _ ln (lt-weaken _ _ lt1) dr1))
-          (let (erased wy) (erased q) (concat-total _ w0 (Cons _ y (Nil (Nat)))))
+          (let (erased wy) (erased q) (concat-total _ w0 (Cons _ y (Nil _))))
           (values (Cons _ x wy) (WinS _ _ _ _ _ _ _ _ win0 nx ny q)))))))
 
 (def-fns _ $ erased double-add : (erased (Nat) a) (erased (Nat) b) (subterm erased (Double a b) d) -> (erased (Add a a b) p)
@@ -1086,19 +1086,19 @@
 (def-fns _ $ many manacher-par : (many (List (Nat)) xs) (many (Nat) m) (erased (Par m) pr) ->
     (many (Nat) best) (erased (HasPalindromeOfLength xs best) has) (erased (List (Nat)) lend) (erased (Zip (Nat) xs lend (Nil (Nat))) zend)
     (many (Back m xs lend (Nil (Nat))) acc) (erased (Bound m best xs lend (Nil (Nat)) acc) bd)
-  (let (erased has0) (HasHere xs (Zero) (Nil (Nat)) (TakeZero (Nat) xs) (PalNil (Nat))))
+  (let (erased has0) (HasHere xs (Zero) (Nil _) (TakeZero _ xs) (PalNil _)))
   (match many xs _
-    ((Nil a) (values (Zero) has0 (Nil (Nat)) (ZipZ _ xs) (BackZ m xs) (BoundZ m (Zero) xs)))
+    ((Nil a) (values (Zero) has0 (Nil _) (ZipZ _ xs) (BackZ m xs) (BoundZ m (Zero) xs)))
     ((Cons a x xs1)
       (match many m _
         ((Zero)
-          (tail (scan _ m pr _ xs (Zero) _ (DropZ _ xs) (ZipZ _ xs) (Zero) (Nil (Nat)) xs xs
-                (DropZ _ (Nil (Nat))) (RevZ _ (Nil (Nat)) xs) (DropZ _ xs) (Out m xs (Nil (Nat)) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs))))
+          (tail (scan _ m pr _ xs (Zero) _ (DropZ _ xs) (ZipZ _ xs) (Zero) (Nil _) xs xs
+                (DropZ _ (Nil _)) (RevZ _ (Nil _) xs) (DropZ _ xs) (Out m xs (Nil _) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs))))
         ((Succ m1)
           (match erased pr _
             ((POdd)
-              (tail (scan _ m pr _ xs (Zero) _ (DropS _ _ x _ _ (DropZ _ xs1)) (ZipZ _ xs) (Zero) (Nil (Nat)) xs xs1
-                    (DropZ _ (Nil (Nat))) (RevZ _ (Nil (Nat)) xs) (DropZ _ xs1) (Out m xs (Nil (Nat)) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs))))))))))
+              (tail (scan _ m pr _ xs (Zero) _ (DropS _ _ x _ _ (DropZ _ xs1)) (ZipZ _ xs) (Zero) (Nil _) xs xs1
+                    (DropZ _ (Nil _)) (RevZ _ (Nil _) xs) (DropZ _ xs1) (Out m xs (Nil _) xs) (BackZ m xs) (Zero) has0 (BoundZ m (Zero) xs))))))))))
 
 (def-fns _ $ many manacher : (many (List (Nat)) xs) -> (many (Nat) best) (erased (LongestPalindromeF xs best) p)
   (let (many b0) (erased h0) (erased le0) (erased z0) (many acc0) (erased bd0) (manacher-par xs (Zero) (PEven)))
@@ -1120,17 +1120,17 @@
   (let (many n) (erased p) (manacher xs))
   (values n (longest-bridge _ _ p)))
 
-(let (many n0) (erased q0) (longest-palindrome-linear (Nil (Nat))))
-(let (many n1) (erased q1) (longest-palindrome-linear (Cons _ 7 $ Nil (Nat))))
-(let (many n2) (erased q2) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Nil (Nat))))
-(let (many n3) (erased q3) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Nil (Nat))))
-(let (many n4) (erased q4) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Nil (Nat))))
-(let (many n5) (erased q5) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 4 $ Cons _ 5 $ Nil (Nat))))
-(let (many n6) (erased q6) (longest-palindrome-linear (Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Nil (Nat))))
-(let (many n7) (erased q7) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Nil (Nat))))
-(let (many n8) (erased q8) (longest-palindrome-linear (Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Nil (Nat))))
-(let (many n9) (erased q9) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil (Nat))))
-(let (many n10) (erased q10) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Nil (Nat))))
-(let (many n11) (erased q11) (longest-palindrome-linear (Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Cons _ 7 $ Cons _ 7 $ Nil (Nat))))
+(let (many n0) (erased q0) (longest-palindrome-linear (Nil _)))
+(let (many n1) (erased q1) (longest-palindrome-linear (Cons _ 7 $ Nil _)))
+(let (many n2) (erased q2) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Nil _)))
+(let (many n3) (erased q3) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Nil _)))
+(let (many n4) (erased q4) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Nil _)))
+(let (many n5) (erased q5) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 4 $ Cons _ 5 $ Nil _)))
+(let (many n6) (erased q6) (longest-palindrome-linear (Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 1 $ Nil _)))
+(let (many n7) (erased q7) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Nil _)))
+(let (many n8) (erased q8) (longest-palindrome-linear (Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Cons _ 1 $ Nil _)))
+(let (many n9) (erased q9) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil _)))
+(let (many n10) (erased q10) (longest-palindrome-linear (Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Nil _)))
+(let (many n11) (erased q11) (longest-palindrome-linear (Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 4 $ Cons _ 7 $ Cons _ 7 $ Nil _)))
 
-(Cons _ n0 $ Cons _ n1 $ Cons _ n2 $ Cons _ n3 $ Cons _ n4 $ Cons _ n5 $ Cons _ n6 $ Cons _ n7 $ Cons _ n8 $ Cons _ n9 $ Cons _ n10 $ Cons _ n11 $ Nil (Nat))
+(Cons _ n0 $ Cons _ n1 $ Cons _ n2 $ Cons _ n3 $ Cons _ n4 $ Cons _ n5 $ Cons _ n6 $ Cons _ n7 $ Cons _ n8 $ Cons _ n9 $ Cons _ n10 $ Cons _ n11 $ Nil _)
