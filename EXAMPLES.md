@@ -163,3 +163,16 @@ that the test does not make is a mistake in this file.
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.
+- `tests/longest_palindrome.sl` — a naive search for the longest palindromic
+  window of a `List (Nat)`, returning beside the length an erased proof of
+  the spec `tests/palindrome_relations.sl` states (the owner's relations;
+  the test runs against a copy of the file the owner supplied). Deciders
+  return evidence either way, as the prelude's `lt-dec` does: `take-dec`
+  a `Take` or a length bound, `pal-dec` a `Palindrome` or a `NotPalindrome`
+  by peeling both ends with `unsnoc`, `has-dec` the fused
+  `HasPalindromeOfLength` or `NoPalindromeOfLengthF`. The search walks the
+  candidate length down from the input's, carrying `NoLargerPalindromeF`
+  as its invariant, and erased lemmas bridge the fused relations to the
+  spec: `Windows` is total and `Take` functional, a window found is an
+  `Exists` over the windows, and a slide finding none is an `All`. Nothing
+  but the decisions' tags and the input's length survives erasure.
