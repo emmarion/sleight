@@ -498,4 +498,117 @@
             ((CEq t rr a3)
               (expand (Succ k) lp1 (Cons (Nat) x rp) rd1 l ri r dl1 (RevS (Nat) k l ri rp x rv nx) dr1 (agree-snoc k l r x ag nx ny)))))))))
 
+
+(def-fns _ $ erased drop-fn : (erased Type A) (erased (Nat) k) (erased (List A) xs) (erased (List A) ys) (erased (List A) zs)
+    (subterm erased (Drop A k xs ys) p) (erased (Drop A k xs zs) q) -> (erased (Eq (List A) ys zs) e)
+  (match erased p _
+    ((DropZ a e1) (match erased q _ ((DropZ a2 e2) (Refl (List A) ys))))
+    ((DropS a k1 x xs1 e1 p1) (match erased q _ ((DropS a2 k2 x2 xs2 e2 q1) (drop-fn A k1 xs1 ys zs p1 q1))))))
+
+(def-fns _ $ erased drop-compose : (erased Type A) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (List A) xs) (erased (List A) ys) (erased (List A) zs)
+    (subterm erased (Drop A a xs ys) p) (erased (Drop A b ys zs) q) (erased (Add a b c) ad) -> (erased (Drop A c xs zs) r)
+  (match erased p _
+    ((DropZ a1 e1) (match erased ad _ ((AddZero b1) q)))
+    ((DropS a1 k1 x xs1 e1 p1)
+      (match erased ad _
+        ((AddSucc a2 b2 c2 ad1) (DropS A c2 x xs1 zs (drop-compose A k1 b c2 xs1 ys zs p1 q ad1)))))))
+
+(def-fns _ $ erased drop-split : (erased Type A) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (List A) xs) (erased (List A) zs)
+    (subterm erased (Drop A c xs zs) p) (erased (Add a b c) ad) -> (erased (List A) ys) (erased (Drop A a xs ys) q) (erased (Drop A b ys zs) r)
+  (match erased ad _
+    ((AddZero b1) (values xs (DropZ A xs) p))
+    ((AddSucc a1 b1 c1 ad1)
+      (match erased p _
+        ((DropS a2 k2 x xs1 e2 p1)
+          (let (erased ys) (erased q) (erased r) (drop-split A a1 b c1 xs1 zs p1 ad1))
+          (values ys (DropS A a1 x xs1 ys q) r))))))
+
+; drop m after drop d is drop d after drop m
+(def-fns _ $ erased drop-swap : (erased (Nat) d) (erased (Nat) m) (erased (List (Nat)) w) (erased (List (Nat)) ri) (erased (List (Nat)) arm) (erased (List (Nat)) armc)
+    (erased (Drop (Nat) d w ri) p) (erased (Drop (Nat) m ri arm) q) (erased (Drop (Nat) m w armc) r) -> (erased (Drop (Nat) d armc arm) s)
+  (let (erased dm) (erased adm) (add d m))
+  (let (erased ys) (erased q2) (erased r2) (drop-split (Nat) m d dm w arm (drop-compose (Nat) d m dm w ri arm p q adm) (add-comm d m dm adm)))
+  (match erased (drop-fn (Nat) m w ys armc q2 r) _ ((Refl t e) r2)))
+
+(def-adts
+  (Par : ((Nat) m) -> Type
+    enum
+    (many PEven : -> (Par (Zero)))
+    (many POdd : -> (Par (Succ (Zero))))))
+
+(def-fns _ $ erased mid-of : (erased (Nat) m) (erased (List (Nat)) w) (erased (List (Nat)) arm) (erased (Par m) pr) (erased (Drop (Nat) m w arm) dr) ->
+    (erased (List (Nat)) mid) (erased (Mid m mid) md) (erased (Concat (Nat) mid arm w) c)
+  (match erased pr _
+    ((PEven) (match erased dr _ ((DropZ a e) (values (Nil (Nat)) (MidEven) (CatNil (Nat) w)))))
+    ((POdd)
+      (match erased dr _
+        ((DropS a k x xs e dr1)
+          (match erased dr1 _
+            ((DropZ a2 e2) (values (Cons (Nat) x (Nil (Nat))) (MidOdd x) (CatCons (Nat) x (Nil (Nat)) xs xs (CatNil (Nat) xs))))))))))
+
+(def-fns _ $ erased drop-nth-head : (erased Type A) (erased (Nat) k) (erased (List A) l) (erased A x) (erased (List A) l0)
+    (subterm erased (Drop A k l l0) d) (erased (Nth A k l x) n) -> (erased (List A) l1) (erased (Eq (List A) l0 (Cons A x l1)) e) (erased (Drop A (Succ k) l l1) d2)
+  (match erased d _
+    ((DropZ a e1) (match erased n _ ((NthHere a2 e2 rest) (values rest (Refl (List A) l0) (DropS A (Zero) x rest rest (DropZ A rest))))))
+    ((DropS a k1 y l2 e1 d1)
+      (match erased n _
+        ((NthThere a2 i2 y2 r2 e2 n1)
+          (let (erased l1) (erased e) (erased d2) (drop-nth-head A k1 l2 x l0 d1 n1))
+          (values l1 e (DropS A (Succ k1) y l2 l1 d2)))))))
+
+(def-fns _ $ erased zip-back : (erased Type A) (erased (Nat) k) (erased (List A) xs) (erased (List A) l) (erased (List A) r) (erased (List A) s)
+    (subterm erased (RevOnto A k l r s) rv) (erased (Zip A xs l r) z) -> (erased (List A) l0) (erased (Drop A k l l0) d) (erased (Zip A xs l0 s) z2)
+  (match erased rv _
+    ((RevZ a e1 e2) (values l (DropZ A l) z))
+    ((RevS a k1 e1 e2 s0 x rv1 n)
+      (let (erased l0) (erased d) (erased z2) (zip-back A k1 xs l r s0 rv1 z))
+      (let (erased l1) (erased e) (erased d2) (drop-nth-head A k1 l x l0 d n))
+      (match erased e _
+        ((Refl t e3)
+          (match erased z2 _
+            ((ZipS a2 e4 l2 x2 e5 z3) (values l1 d2 z3))))))))
+
+(def-fns _ $ erased zip-has : (erased (List (Nat)) xs) (erased (List (Nat)) l) (erased (List (Nat)) s) (erased (Nat) n)
+    (subterm erased (Zip (Nat) xs l s) z) (erased (HasPalindromeOfLength s n) h) -> (erased (HasPalindromeOfLength xs n) h2)
+  (match erased z _
+    ((ZipZ a e) h)
+    ((ZipS a e l1 x r z1) (zip-has xs l1 (Cons (Nat) x s) n z1 (HasThere x s n h)))))
+
+(def-fns _ $ erased concat-take : (erased Type A) (erased (List A) w) (erased (List A) d) (erased (List A) s) (erased (Nat) n)
+    (subterm erased (Concat A w d s) c) (erased (Length A w n) l) -> (erased (Take A n s w) t)
+  (match erased c _
+    ((CatNil a e) (match erased l _ ((LNil a2) (TakeZero A s))))
+    ((CatCons a x rest e zs c1)
+      (match erased l _ ((LCons a2 e2 e3 n1 l1) (TakeSucc A n1 x zs rest (concat-take A rest d zs n1 c1 l1)))))))
+
+(def-fns _ $ erased bound-weaken : (erased (Nat) m) (erased (Nat) b) (erased (Nat) b2) (erased (List (Nat)) l) (erased (List (Nat)) r)
+    (erased (Back m l r) bk) (subterm erased (Bound m b l r bk) bd) (erased (Lt b (Succ b2)) le) -> (erased (Bound m b2 l r bk) bd2)
+  (match erased bd _
+    ((BoundZ a e r0) (BoundZ m b2 r))
+    ((BoundS a e l0 x r0 p c rest pp n dd an lt bd1)
+      (BoundS m b2 l0 x r0 p c rest pp n dd an (lt-le-trans n (Succ b) (Succ b2) lt (LtS b (Succ b2) le)) (bound-weaken m b b2 l0 (Cons (Nat) x r0) rest bd1 le)))))
+
+(def-fns _ $ erased agree-drop-ex : (erased (Nat) p) (erased (List (Nat)) l) (erased (List (Nat)) arm)
+    (subterm erased (Agree p l arm) ag) -> (erased (List (Nat)) d) (erased (Drop (Nat) p arm d) dr)
+  (match erased ag _
+    ((AgreeZ a b) (values arm (DropZ (Nat) arm)))
+    ((AgreeS k x xs ys ag0)
+      (let (erased d) (erased dr) (agree-drop-ex k xs ys ag0))
+      (values d (DropS (Nat) k x ys d dr)))))
+
+; The evidence that the window of radius p around the centre at (l, ri) is a palindrome of length n.
+
+(def-fns _ $ erased has-at-centre : (erased (List (Nat)) xs) (erased (List (Nat)) l) (erased (List (Nat)) ri) (erased (List (Nat)) arm)
+    (erased (Nat) m) (erased (Nat) p) (erased (List (Nat)) s) (erased (Nat) pp) (erased (Nat) n)
+    (erased (Zip (Nat) xs l ri) z) (erased (Par m) pr) (erased (Drop (Nat) m ri arm) dr) (erased (Agree p l arm) ag)
+    (erased (RevOnto (Nat) p l ri s) rv) (erased (Double p pp) dd) (erased (Add pp m n) an) -> (erased (HasPalindromeOfLength xs n) h)
+  (let (erased mid) (erased md) (erased cm) (mid-of m ri arm pr dr))
+  (let (erased w) (erased win) (agree-win p l arm mid ag))
+  (let (erased pal) (win-pal p l mid arm w win ag (mid-pal m mid md)))
+  (let (erased lw) (win-length p l mid arm w m pp n win (mid-length m mid md) dd an))
+  (let (erased d) (erased dr2) (agree-drop-ex p l arm ag))
+  (let (erased pre) (win-prefix p l mid arm w ri s d win cm rv dr2))
+  (let (erased l0) (erased dl0) (erased z2) (zip-back (Nat) p xs l ri s rv z))
+  (zip-has xs l0 s n z2 (HasHere s n w (concat-take (Nat) w d s n pre lw) pal)))
+
 (Zero)
