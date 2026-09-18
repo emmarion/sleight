@@ -157,3 +157,26 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     body infers it from the expected type. Letting a run-position `let`
     take an expectation from a later use, or reporting which `_` is
     unsolved with its expected type, would help.
+
+22. **Unannotated result binders look like grouped binders.** While writing
+    the palindrome proofs, `(let (erased before) (erased after) ...)` was
+    accidentally shortened to `(let (erased before after) ...)`. The latter
+    means a binder named `after` with type `before`, unlike the explicitly
+    typed groups in signatures. A diagnostic suggesting separate result
+    binders when the supposed type names a value would identify the typo.
+
+23. **A library-only check mode with explicit success.** The palindrome
+    development repeatedly checked a growing library with both the reference
+    checker and `slc`. Successful reference checks print nothing; `slc`
+    produces OCaml even when only checking is wanted. A shared `--check`
+    mode reporting files checked and elapsed time would make this workflow
+    clearer. A String-to-String final expression instead makes the driver
+    wait for stdin; reporting that transition would distinguish waiting for
+    input from a slow checker.
+
+24. **An erasure report for proof-heavy programs.** The Manacher proof uses
+    recursive list decompositions and enumerates excluded window lengths in
+    erased code. Confirming these costs disappear currently means reading
+    generated OCaml. A report of retained functions and runtime fields,
+    optionally with call counts, would make both proof erasure and the
+    linear number of expansion steps easier to audit.
