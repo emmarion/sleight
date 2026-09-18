@@ -611,4 +611,241 @@
   (let (erased l0) (erased dl0) (erased z2) (zip-back (Nat) p xs l ri s rv z))
   (zip-has xs l0 s n z2 (HasHere s n w (concat-take (Nat) w d s n pre lw) pal)))
 
+
+; --- the main loop ---
+; Reach is what the loop knows about the rightmost palindrome seen so far, at the centre (li, ri): nothing
+; (Out), or (In) the palindrome of radius pc at (lc, w), the current centre d steps past it with q more
+; steps inside it, and the radius list from the mirror centre (mp).
+
+(def-adts
+  (Reach : ((Nat) m) ((List (Nat)) li) ((List (Nat)) ri) ((Nat) q) -> Type
+    enum
+    (many Out : (erased (Nat) m) (erased (List (Nat)) li) (erased (List (Nat)) ri) -> (Reach m li ri (Zero)))
+    (many In : (erased (Nat) m) (erased (List (Nat)) li) (erased (List (Nat)) ri) (erased (Nat) q1)
+        (erased (List (Nat)) lc) (erased (List (Nat)) w) (erased (List (Nat)) armc) (erased (Nat) pc) (erased (Nat) d) (erased (Nat) e)
+        (erased (Nat) x) (erased (List (Nat)) lm) (erased (List (Nat)) rm1)
+        (erased (Drop (Nat) m w armc) drc) (erased (Agree pc lc armc) agc)
+        (erased (RevOnto (Nat) d w lc li) rvl) (erased (Drop (Nat) d w ri) drr)
+        (erased (Add d (Succ q1) pc) aq) (erased (Add m e d) aem)
+        (erased (Drop (Nat) d lc lm) dlm) (erased (RevOnto (Nat) d lc w (Cons (Nat) x rm1)) rvm)
+        (many (Back m (Cons (Nat) x lm) rm1) mp) ->
+       (Reach m li ri (Succ q1)))))
+
+(def-adts
+  (PredZ : ((Nat) k) ((Nat) qn) -> Type
+    enum
+    (many PZ : -> (PredZ (Zero) (Zero)))
+    (many PS : (erased (Nat) k) -> (PredZ (Succ k) k))))
+
+(def-fns _ $ erased agree-drop-cons : (erased (Nat) p) (erased (Nat) d) (erased (List (Nat)) l) (erased (List (Nat)) r) (erased (List (Nat)) ld)
+    (erased (Agree p l r) ag) (subterm erased (Drop (Nat) d l ld) dr) (erased (Lt d p) lt) ->
+    (erased (Nat) y) (erased (List (Nat)) ld2) (erased (Eq (List (Nat)) ld (Cons (Nat) y ld2)) e)
+  (match erased dr _
+    ((DropZ a e1) (match erased lt _ ((LtZ b) (match erased ag _ ((AgreeS k x xs ys ag0) (values x xs (Refl (List (Nat)) ld)))))))
+    ((DropS a k1 x xs e1 dr1)
+      (match erased lt _
+        ((LtS a2 b2 lt1) (match erased ag _ ((AgreeS k x2 xs2 ys ag0) (agree-drop-cons b2 k1 xs2 ys ld ag0 dr1 lt1))))))))
+
+(def-fns _ $ erased next-arm : (erased (Nat) m) (erased (Nat) w) (erased (Nat) y) (erased (List (Nat)) rest2) (erased (List (Nat)) arm)
+    (erased (Par m) pr) (erased (Drop (Nat) m (Cons (Nat) w (Cons (Nat) y rest2)) arm) dr) ->
+    (erased (Nat) h) (erased (List (Nat)) arm2) (erased (Eq (List (Nat)) arm (Cons (Nat) h arm2)) e) (erased (Drop (Nat) m (Cons (Nat) y rest2) arm2) dr2)
+  (match erased pr _
+    ((PEven) (match erased dr _ ((DropZ a e1) (values w (Cons (Nat) y rest2) (Refl (List (Nat)) arm) (DropZ (Nat) (Cons (Nat) y rest2))))))
+    ((POdd)
+      (match erased dr _
+        ((DropS a k x xs e1 dr1)
+          (match erased dr1 _
+            ((DropZ a2 e2) (values y rest2 (Refl (List (Nat)) arm) (DropS (Nat) (Zero) y rest2 rest2 (DropZ (Nat) rest2))))))))))
+
+(def-fns _ $ erased par-e : (erased (Nat) m) (erased (Par m) pr) -> (erased (Nat) e) (erased (Add m e (Succ (Zero))) a)
+  (match erased pr _
+    ((PEven) (values (Succ (Zero)) (AddZero (Succ (Zero)))))
+    ((POdd) (values (Zero) (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero)))))))
+
+(def-fns _ $ erased agree-revonto-ex : (erased (Nat) p) (erased (List (Nat)) l) (erased (List (Nat)) r) (erased (List (Nat)) acc)
+    (subterm erased (Agree p l r) ag) -> (erased (List (Nat)) s) (erased (RevOnto (Nat) p l acc s) rv)
+  (match erased ag _
+    ((AgreeZ a b) (values acc (RevZ (Nat) l acc)))
+    ((AgreeS k x xs ys ag0)
+      (let (erased s) (erased rv) (agree-revonto-ex k xs ys (Cons (Nat) x acc) ag0))
+      (values s (revonto-shift (Nat) k xs x acc s rv)))))
+
+(def-fns _ $ erased add-lt-succ : (erased (Nat) d) (erased (Nat) k) (erased (Nat) p) (erased (Add d (Succ k) p) a) -> (erased (Lt d p) lt)
+  (let (erased c1) (erased e) (erased a1) (add-succ-right-inv d k p a))
+  (match erased e _ ((Refl t r) (add-le-left d k c1 a1))))
+
+(def-fns _
+  (many after-expand : (erased (List (Nat)) xs) (many (Nat) m) (erased (Par m) pr) (erased (List (Nat)) li)
+      (many (Nat) w) (subterm many (List (Nat)) rest) (subterm erased (Nat) ph) (erased (Eq (Nat) ph (Succ (Succ (Zero)))) eph)
+      (erased (List (Nat)) arm) (erased (Drop (Nat) m (Cons (Nat) w rest) arm) dra) (erased (Zip (Nat) xs li (Cons (Nat) w rest)) z)
+      (many (Nat) p) (many (List (Nat)) lp) (many (List (Nat)) rp) (many (List (Nat)) rd)
+      (erased (Drop (Nat) p li lp) dlp) (erased (RevOnto (Nat) p li (Cons (Nat) w rest) rp) rvp) (erased (Drop (Nat) p arm rd) drd)
+      (erased (Agree p li arm) ag) (erased (Disagree (Succ p) li arm) dis)
+      (many (Back m li (Cons (Nat) w rest)) acc)
+      (many (Nat) best) (erased (HasPalindromeOfLength xs best) has) (erased (Bound m best li (Cons (Nat) w rest) acc) bd) ->
+      (many (Nat) best2) (erased (HasPalindromeOfLength xs best2) has2)
+      (erased (List (Nat)) lend) (erased (Zip (Nat) xs lend (Nil (Nat))) zend) (many (Back m lend (Nil (Nat))) accend)
+      (erased (Bound m best2 lend (Nil (Nat)) accend) bdend)
+    (match erased eph _
+      ((Refl t e0)
+        (match many p _
+          ((Zero)
+            (finish xs m pr li w rest (Succ (Zero)) (Refl (Nat) (Succ (Zero))) arm dra z p ag dis p lp rp rd dlp rvp drd
+                    (Zero) (PZ) (Out m (Cons (Nat) w li) rest) acc best has bd))
+          ((Succ p1)
+            (match many p1 _
+              ((Zero)
+                (finish xs m pr li w rest (Succ (Zero)) (Refl (Nat) (Succ (Zero))) arm dra z p ag dis p lp rp rd dlp rvp drd
+                        p1 (PS p1) (Out m (Cons (Nat) w li) rest) acc best has bd))
+              ((Succ p2)
+                (match erased ag _
+                  ((AgreeS k x lm ys ag0)
+                    (let (erased e) (erased aem) (par-e m pr))
+                    (finish xs m pr li w rest (Succ (Zero)) (Refl (Nat) (Succ (Zero))) arm dra z p ag dis p lp rp rd dlp rvp drd
+                            p1 (PS p1)
+                            (In m (Cons (Nat) w li) rest p2 li (Cons (Nat) w rest) arm p (Succ (Zero)) e x lm (Cons (Nat) w rest)
+                                dra ag
+                                (RevS (Nat) (Zero) (Cons (Nat) w rest) li li w (RevZ (Nat) (Cons (Nat) w rest) li) (NthHere (Nat) w rest))
+                                (DropS (Nat) (Zero) w rest rest (DropZ (Nat) rest))
+                                (AddSucc (Zero) p1 p1 (AddZero p1)) aem
+                                (DropS (Nat) (Zero) x lm lm (DropZ (Nat) lm))
+                                (RevS (Nat) (Zero) li (Cons (Nat) w rest) (Cons (Nat) w rest) x (RevZ (Nat) li (Cons (Nat) w rest)) (NthHere (Nat) x lm))
+                                acc)
+                            acc best has bd))))))))))
+
+  (many finish : (erased (List (Nat)) xs) (many (Nat) m) (erased (Par m) pr) (erased (List (Nat)) li)
+      (many (Nat) w) (subterm many (List (Nat)) rest) (subterm erased (Nat) ph) (erased (Eq (Nat) ph (Succ (Zero))) eph)
+      (erased (List (Nat)) arm) (erased (Drop (Nat) m (Cons (Nat) w rest) arm) dra) (erased (Zip (Nat) xs li (Cons (Nat) w rest)) z)
+      (many (Nat) p) (erased (Agree p li arm) ag) (erased (Disagree (Succ p) li arm) dis)
+      (many (Nat) ki) (many (List (Nat)) lp) (many (List (Nat)) rp) (many (List (Nat)) rd)
+      (erased (Drop (Nat) ki li lp) dlp) (erased (RevOnto (Nat) ki li (Cons (Nat) w rest) rp) rvp) (erased (Drop (Nat) ki arm rd) drd)
+      (many (Nat) qn) (erased (PredZ ki qn) pz) (many (Reach m (Cons (Nat) w li) rest qn) reach)
+      (many (Back m li (Cons (Nat) w rest)) acc)
+      (many (Nat) best) (erased (HasPalindromeOfLength xs best) has) (erased (Bound m best li (Cons (Nat) w rest) acc) bd) ->
+      (many (Nat) best2) (erased (HasPalindromeOfLength xs best2) has2)
+      (erased (List (Nat)) lend) (erased (Zip (Nat) xs lend (Nil (Nat))) zend) (many (Back m lend (Nil (Nat))) accend)
+      (erased (Bound m best2 lend (Nil (Nat)) accend) bdend)
+    (let (many pp) (erased dd) (double p))
+    (let (many n) (erased an) (add pp m))
+    (let (many best2) (erased has2) (erased le) (erased bd2)
+      (match many (lt-dec best n) (((Nat) b2) ((HasPalindromeOfLength xs b2) h2) ((Lt n (Succ b2)) l2) ((Bound m b2 li (Cons (Nat) w rest) acc) d2))
+        ((Yes a b lt)
+          (let (erased s) (erased rvs) (agree-revonto-ex p li arm (Cons (Nat) w rest) ag))
+          (values n (has-at-centre xs li (Cons (Nat) w rest) arm m p s pp n z pr dra ag rvs dd an) (lt-succ n)
+                  (bound-weaken m best n li (Cons (Nat) w rest) acc bd (lt-weaken best n lt))))
+        ((No a b ge) (values best has ge bd))))
+    (let (many acc2) (BackS m li w rest p (MkCert m li (Cons (Nat) w rest) p arm dra ag dis) acc))
+    (let (erased bd3) (BoundS m best2 li w rest p (MkCert m li (Cons (Nat) w rest) p arm dra ag dis) acc pp n dd an le bd2))
+    (let (erased z2) (ZipS (Nat) xs li w rest z))
+    (match erased eph _
+      ((Refl t e0)
+        (match many rest _
+          ((Nil a) (values best2 has2 (Cons (Nat) w li) z2 acc2 bd3))
+          ((Cons a y rest2)
+            (let (erased h) (erased arm2) (erased earm) (erased dra2) (next-arm m w y rest2 arm pr dra))
+            (match erased earm _
+              ((Refl t2 e2)
+                (match many ki _
+                  ((Zero)
+                    (match erased pz _
+                      ((PZ)
+                        (match erased dlp _
+                          ((DropZ a3 e3)
+                            (match erased rvp _
+                              ((RevZ a4 e4 e5)
+                                (match erased drd _
+                                  ((DropZ a5 e5b)
+                                    (match many rd _
+                                      ((Cons a6 h2 rd2)
+                                        (scan xs m pr (Cons (Nat) w li) rest (Zero) arm2 dra2 z2 (Zero) (Cons (Nat) w lp) rest rd2
+                                              (DropZ (Nat) (Cons (Nat) w li)) (RevZ (Nat) (Cons (Nat) w li) rest) (DropZ (Nat) arm2)
+                                              reach acc2 best2 has2 bd3))))))))))))
+                  ((Succ k1)
+                    (match erased pz _
+                      ((PS e6)
+                        (match erased rvp _
+                          ((RevS a7 e7 e8 e9 rp1 x1 rvp1 nx1)
+                            (let (erased d0) (drop-unstep (Nat) k1 li x1 lp dlp nx1))
+                            (match erased drd _
+                              ((DropS a8 e10 e11 e12 e13 drd1)
+                                (match many rp _
+                                  ((Cons a9 x1b rp1b)
+                                    (match many k1 _
+                                      ((Zero)
+                                        (match erased d0 _
+                                          ((DropZ a10 e14)
+                                            (match erased rvp1 _
+                                              ((RevZ a11 e15 e16)
+                                                (match many rp1b _
+                                                  ((Cons a12 wb restb)
+                                                    (scan xs m pr (Cons (Nat) w li) rest (Zero) arm2 dra2 z2 (Zero) (Cons (Nat) w (Cons (Nat) x1b lp)) restb rd
+                                                          (DropZ (Nat) (Cons (Nat) w li)) (RevZ (Nat) (Cons (Nat) w li) rest) drd1
+                                                          reach acc2 best2 has2 bd3))))))))
+                                      ((Succ k2)
+                                        (match erased rvp1 _
+                                          ((RevS a13 e17 e18 e19 rp2 x2 rvp2 nx2)
+                                            (match many rp1b _
+                                              ((Cons a14 x2b rp2b)
+                                                (scan xs m pr (Cons (Nat) w li) rest (Zero) arm2 dra2 z2 k1 (Cons (Nat) x2b (Cons (Nat) x1b lp)) rp2b rd
+                                                      (DropS (Nat) k2 w li (Cons (Nat) x2 (Cons (Nat) x1 lp)) (drop-unstep (Nat) k2 li x2 (Cons (Nat) x1 lp) d0 nx2))
+                                                      (revonto-shift (Nat) k2 li w rest rp2 rvp2) drd1
+                                                      reach acc2 best2 has2 bd3))))))))))))))))))))))))
+
+  (many scan : (erased (List (Nat)) xs) (many (Nat) m) (erased (Par m) pr) (erased (List (Nat)) li)
+      (subterm many (List (Nat)) ri) (subterm erased (Nat) ph)
+      (erased (List (Nat)) arm) (erased (Drop (Nat) m ri arm) dra) (erased (Zip (Nat) xs li ri) z)
+      (many (Nat) q) (many (List (Nat)) lp) (many (List (Nat)) rp) (many (List (Nat)) rd)
+      (erased (Drop (Nat) q li lp) dlp) (erased (RevOnto (Nat) q li ri rp) rvp) (erased (Drop (Nat) q arm rd) drd)
+      (many (Reach m li ri q) reach) (many (Back m li ri) acc)
+      (many (Nat) best) (erased (HasPalindromeOfLength xs best) has) (erased (Bound m best li ri acc) bd) ->
+      (many (Nat) best2) (erased (HasPalindromeOfLength xs best2) has2)
+      (erased (List (Nat)) lend) (erased (Zip (Nat) xs lend (Nil (Nat))) zend) (many (Back m lend (Nil (Nat))) accend)
+      (erased (Bound m best2 lend (Nil (Nat)) accend) bdend)
+    (match many ri _
+      ((Nil a) (values best has li z acc bd))
+      ((Cons a w rest)
+        (match many reach _
+          ((Out e1 e2 e3)
+            (let (many p) (many lp2) (many rp2) (many rd2) (erased dl2) (erased rv2) (erased dr2) (erased ag2) (erased dis2)
+              (expand q lp rp rd li ri arm dlp rvp drd (AgreeZ li arm)))
+            (after-expand xs m pr li w rest (Succ (Succ (Zero))) (Refl (Nat) (Succ (Succ (Zero)))) arm dra z p lp2 rp2 rd2 dl2 rv2 dr2 ag2 dis2 acc best has bd))
+          ((In e1 e2 e3 q1 lc wc armc pc d e x lm rm1 drc agc rvl drr aq aem dlm rvm mp)
+            (match many mp _
+              ((BackS e4 e5 e6 e7 p2 c mp2)
+                (let-match erased c (MkCert e8 e9 e10 e11 armm dram agm dism))
+                (let (erased midc) (erased mdc) (erased cmc) (mid-of m wc armc pr drc))
+                (let (erased rvarm) (revonto-drop-mid m midc d e lc wc (Cons (Nat) x rm1) armm mdc aem rvm dram))
+                (let (erased x1) (mirror-agree pc m e d q lc armc midc wc li armm agc mdc cmc rvarm aem rvl aq))
+                (let (erased x2) (agree-drop pc d q lc armc lm arm dlm (drop-swap d m wc ri arm armc drr dra drc) aq agc))
+                (match many (lt-dec p2 q) _
+                  ((Yes a1 b1 lt)
+                    (let (erased agi) (erased disi) (mirror-cert q p2 li arm lm armm x1 x2 agm dism lt))
+                    (let (erased nw) (erased drr2) (drop-nth (Nat) d wc w rest drr))
+                    (let (erased rvl2) (RevS (Nat) d wc lc li w rvl nw))
+                    (match many q _
+                      ((Succ q1b)
+                        (match many q1b _
+                          ((Zero)
+                            (finish xs m pr li w rest (Succ (Zero)) (Refl (Nat) (Succ (Zero))) arm dra z p2 agi disi q lp rp rd dlp rvp drd
+                                    q1b (PS q1b) (Out m (Cons (Nat) w li) rest) acc best has bd))
+                          ((Succ q2)
+                            (let (erased x3) (erased lm2) (erased elm) (agree-drop-cons pc d lc armc lm agc dlm (add-lt-succ d (Succ q2) pc aq)))
+                            (match erased elm _
+                              ((Refl t3 e3b)
+                                (let (erased nx3) (erased dlm2) (drop-nth (Nat) d lc x3 lm2 dlm))
+                                (let (erased c1) (erased epc) (erased aq1) (add-succ-right-inv d (Succ q2) pc aq))
+                                (match erased epc _
+                                  ((Refl t4 e4b)
+                                    (finish xs m pr li w rest (Succ (Zero)) (Refl (Nat) (Succ (Zero))) arm dra z p2 agi disi q lp rp rd dlp rvp drd
+                                            q1b (PS q1b)
+                                            (In m (Cons (Nat) w li) rest q2 lc wc armc pc (Succ d) (Succ e) x3 lm2 (Cons (Nat) x rm1)
+                                                drc agc rvl2 drr2 (AddSucc d (Succ q2) c1 aq1) (add-succ-right m e d aem) dlm2
+                                                (RevS (Nat) d lc wc (Cons (Nat) x rm1) x3 rvm nx3) mp2)
+                                            acc best has bd))))))))))
+                  ((No a1 b1 ge)
+                    (let (erased agq) (agree-trans q li armm arm x1 (agree-trans q armm lm arm (agree-sym q lm armm (agree-weaken-to p2 q lm armm agm ge)) x2)))
+                    (let (many p) (many lp2) (many rp2) (many rd2) (erased dl2) (erased rv2) (erased dr2) (erased ag2) (erased dis2)
+                      (expand q lp rp rd li ri arm dlp rvp drd agq))
+                    (after-expand xs m pr li w rest (Succ (Succ (Zero))) (Refl (Nat) (Succ (Succ (Zero)))) arm dra z p lp2 rp2 rd2 dl2 rv2 dr2 ag2 dis2 acc best has bd)))))))))))
+
 (Zero)
