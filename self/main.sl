@@ -12,10 +12,10 @@
 (let (erased th-io) (prove-predates thunk-lvl io-lvl))
 
 (let (many zero-below-modulus) $ lt-dec 0 u8-modulus)
-(comptime-match zero-below-modulus (Yes ok-a ok-b ok-lt))
+(comptime-match many zero-below-modulus (Yes ok-a ok-b ok-lt))
 (let (many exit-ok) $ MkU8 0 ok-lt)
 (let (many one-below-modulus) $ lt-dec 1 u8-modulus)
-(comptime-match one-below-modulus (Yes fail-a fail-b fail-lt))
+(comptime-match many one-below-modulus (Yes fail-a fail-b fail-lt))
 (let (many exit-fail) $ MkU8 1 fail-lt)
 
 (def-fns util-lvl $ many write-lines : (subterm many (List $ String) es) (many (IO io-lvl) next) -> (many (IO io-lvl) io)

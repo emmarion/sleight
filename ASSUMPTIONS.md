@@ -3206,13 +3206,16 @@ to look for a guard, are the owner's.
     side. This is the intended application of U4's table to U7's constructor
     congruence. A delegated UniqueFn-to-Fn proof records Unique-to-Shared.
 
-162. Ordinary source constructors now use mutable blocks regardless of arity;
-    only marked newtypes use their field's word. The ML interpreter stores
-    constructor fields in arrays. Extracted ordinary blocks reserve a tag word
-    for tagged enums, and use a dummy word for otherwise empty blocks so empty
-    cells have allocated storage. Nullary constructor functions allocate when
-    called, including first-class calls. Held extern Matchables convert their
-    views to this ordinary-block layout before dispatch.
+162. Tagged unmarked datatypes use OCaml variants with mutable Obj.t fields;
+    the host constructor tag supplies the discriminant. Phantom constructors
+    do not participate in discriminant numbering. Narrowed GADT views retain
+    the prior extraction's refutation of impossible branches. Untagged unmarked
+    constructors use one-constructor OCaml variants with the same mutable fields;
+    their statically known match needs no discriminant test. Marked newtypes
+    keep their field's word. Empty constructors need no mutable storage. The earlier
+    dummy-word/fresh-allocation requirement and extra-tag layout were unnecessary
+    assumptions, corrected following the owner's clarification. Held extern
+    Matchables expose the same ordinary tagged constructor layout.
 
 163. Captured mutable blocks are emitted by assigning each an identity before
     following its fields, then filling those fields. This is intended to preserve
@@ -3255,3 +3258,97 @@ to look for a guard, are the owner's.
     Outside extern model bodies, unique Array patterns have no cell binder even
     when extern implementations are stripped. Four examples agree in interpreter
     and extracted code with externs, stripped models, and non-template views.
+
+168. The owner's clarification confirms that nullary values need no allocation
+    and proof-indexed array get/set may use unsafe operations. Distinct logical
+    location classes need not imply distinct physical words; no at fact is
+    inferred just because nullary values share an immediate representation.
+    Multi-result extracted expressions evaluate their components left to right
+    through explicit lets, to match interpreter ordering for cell effects.
+
+169. The self port separates semantic multiplicity from physical result shape:
+    singleton Once remains unique for checking, while a runtime aggregate is
+    physically Many. SlotHolds and return places use a separate location
+    partition; their identities need not remain canonical in the ordinary fact
+    table after consumption. A unification outcome may therefore retain a
+    changed environment without decreasing the ordinary fact count. The existing
+    erased history and freshness proofs still govern ordinary fact traversal.
+
+170. The self heap keeps immutable allocation snapshots and overlays current
+    block bodies in the Store. Reads consult the overlay first; an untouched
+    reference falls back to its allocation snapshot. This appears to preserve
+    the existing erased history proofs while permitting cycles and shared array
+    slices. Allocation identity proofs concern snapshots, not mutable contents.
+    The diagnostic printer reads current bodies and bounds recursive traversal
+    at depth 100000, matching the existing bounded-evaluation approach.
+
+171. Argument preparation retains the source expression's location through an
+    anonymous runtime binder. Physical calls omit at-annotated results; caller
+    reconstruction uses an available word in that location class. Discarding an
+    erased result does not require reconstructing a word. Branches independently
+    check uses, then join their usage states by maximum; branch-local facts and
+    location refinements do not escape without the written result annotation.
+
+172. A computed application head is first checked in a discarded environment
+    with runtime evaluation disabled and usage accounting erased. The probe
+    uses an erased result position; match annotations retain at metadata under
+    contextual erasure, while explicitly erased function return declarations
+    still forbid at. Its canonical result type selects unique demand
+    for Cell and UniqueFn, many for other callable types; a second pass performs
+    the actual multiplicity and usage checks. An already erased application
+    needs no probe. The ML probe restores fresh-name state, declaration traces,
+    FFI registration and claim tables, and the warning hook, including when
+    checking raises; the self probe discards its persistent environment and
+    store. Neither probe runs code against existing mutable values. The
+    computed-match head tests cover Cell and UniqueFn results and refusal of an
+    explicitly shared UniqueFn result.
+
+173. Ordinary unions use one-constructor native variants, one shape per payload
+    arity, rather than a separate raw-array representation. Since union matching
+    already knows its constructor, this shares mutable-field extraction with
+    enums without a discriminant test. Phantom cells use the same inert storage
+    shape, and nullary constructors remain immediate. A standalone emitted
+    union mutation/projection check returns 40; cell, array, captured-cycle and
+    final-at examples also agree with the reference through the self compiler.
+
+174. The self normalizer removes singleton physical value wrappers and unused
+    erased or constant bindings using its existing context-strengthening proof.
+    This is intended to retain the pre-existing tail/delegate rules after
+    argument preparation and at-return projection. A UniqueFn's own name is
+    erased only while its body is checked; its outer declared multiplicity is
+    restored afterwards. Telescope identities remain marked throughout their
+    signatures, including earlier parameters, and are restored on leaving the
+    signature so ordinary body variables remain legal SlotHolds arguments.
+
+175. Captured cells and Array backings may point to a closure that captures the
+    same allocation through SlotHolds. The ML extractor therefore buffers field
+    initialization and final actions until all captured definitions have been
+    emitted, with final actions retaining source order; allocation skeletons
+    still precede every reference to them. This preserves field identity and closes cycles through functions as
+    well as direct cell/array cycles. The self extractor already separates
+    skeletons, definitions and fills. Cell and Array closure-cycle regressions
+    fail OCaml compilation before this change and match the reference afterwards.
+
+176. UNIQUE U2 excludes a phantom constructor's branch from usage checking
+    under a many or unique scrutinee. An erased scrutinee does not by itself
+    erase its branch body: when that body is non-erased and not refuted, its
+    uses participate in the branch join. Fully erased bodies and absurd branches
+    still contribute no uses. A phantom constructor's fields remain erased.
+    The self port now follows this existing ML rule. The regression accepts one
+    use of an outer unique variable through an erased phantom match and refuses
+    another use afterwards.
+
+    UNIQUE U9 also reads cell eligibility from the opened Matchable listing the
+    constructor. The self port now checks that membership, as ML already did,
+    and refuses Cell for an unlisted abstract constructor. These are conformance
+    fixes, not additional language assumptions.
+
+177. Validation at this checkpoint observed 375 ML tests passing, including
+    interpreter, extracted, extern-model and template-view modes. The self
+    bootstrap checks covered 248 successful programs (including 27 extra
+    template-disabled runs) and 154 expected refusals. The cell closure-cycle
+    case was rechecked after splitting its initial final expression into a
+    dependency file. Two successive self-generated compiler sources were
+    byte-for-byte identical. There are 66 new test files relative to the
+    pre-uniqueness 309-test checkpoint. U15 remains excluded, and these examples
+    do not constitute a general proof of U14's erasure invariants.

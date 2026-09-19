@@ -1,6 +1,7 @@
 # special-lang
 
-A prototype OCaml interpreter for the language recorded in DESIGN.md.
+A prototype OCaml interpreter for the language recorded in DESIGN.md
+and UNIQUE.md (excluding the deferred forms in U15).
 KERNEL.md and SUGAR.md are further design notes; SPEC-REVIEW.md lists
 the spec's open points and ASSUMPTIONS.md the assumptions the
 interpreter makes about them. HANDOFF.md records work in progress
@@ -104,10 +105,11 @@ statement in run position is elaborated, run at once by the evaluator,
 and its binders are minted Const with the resulting values (sections 16
 and 34), which form the environment later code runs in; inside function
 bodies and match branches statements compile to code instead. The
-evaluator is a plain recursive interpreter over that code; a value is
-its constructor's `many` fields, tagged only where section 38 says an
+evaluator is a plain recursive interpreter over that code; a value contains
+its constructor's non-erased fields, tagged only where section 38 says an
 enum carries a tag, or a closure, or a token standing for anything
-erased. Nothing is optimized.
+erased. Unique cells permit in-place updates, while `at` returns reuse
+an existing word instead of returning it physically.
 
 ## Layout
 

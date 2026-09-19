@@ -1,6 +1,7 @@
 # slc: a compiler from SL to OCaml, written in SL
 
-`self/` holds a compiler for the language of DESIGN.md (tentatively
+`self/` holds a compiler for the language of DESIGN.md and UNIQUE.md
+(excluding U15; tentatively
 "SL"), written in that language and compiling it to OCaml. It was
 written by a Claude session working autonomously at the owner's request
 ("let's self host"); everything here is that session's reading of the
@@ -11,6 +12,13 @@ tests do not make is a mistake in this file.
 
 ## What it is
 
+The uniqueness extension adds `def-unique`, explicit `share`, per-branch use
+checking, a separate location partition, mutable cells, and proof-indexed
+arrays. `at` results are checked logically and omitted physically. The port
+retains erased proofs for code contexts, fact-table traversals, and heap
+histories; current mutable contents are stored separately from allocation
+snapshots.
+
 A compiler that checks what it compiles. The reference interpreter in
 `lib/` is the arbiter of the language; `slc` does the same elaboration
 (DESIGN.md sections 3-5, 9, 12, 16-20, 34, 38), with every check of
@@ -20,7 +28,7 @@ and subterm proofs, forced unification that refutes a branch by
 contradiction and the one-real-branch rule, `comptime-match`
 verification against the stored value, `let-match` binding outward, the
 tail and delegate marks on the normalized code, newtype shape, extern
-claims, the opening of a `Matchable` or `Newtype` that every read of one
+claims, the opening of a marked `Matchable` that every read of one
 requires and the contradiction `open-absurd` cashes in (ASSUMPTIONS
 139-142), and the reader's and literals' syntax errors; `unary` and
 `distinct` (SUGAR.md 5) expand to the prelude calls the reference
@@ -39,7 +47,7 @@ interpreter over the post-erasure code, run on every run-position
 statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
-host's own `Nat`, `Half` and `String`, and a `Rope` is flattened by the
+host's own `Nat`, `Half`, `String`, and mutable `Array` slices, and a `Rope` is flattened by the
 host (section 41); a `U8` or a
 `Char`, both newtypes, is its `Nat` (section 38).
 
@@ -149,10 +157,12 @@ the entry says otherwise, and recorded so it can be revisited.
   the extracted program. Every value is an `Obj.t`, the casts free.
   A tagged type (an enum with more than one non-phantom constructor)
   is an OCaml variant declared once per *shape*, the sequence of
-  `many`-field arities of its non-phantom constructors, so every ADT of
-  one shape shares one type; an untagged type, a union and a newtype
-  are their fields as they stand, `()`, the field, or a tuple, with no
-  declaration; an extern type is its `Z.t` or slice under `Obj.t`,
+  non-erased field arities of its non-phantom constructors, so every ADT of
+  one shape shares one type. Payloads are mutable inline records of `Obj.t`
+  fields; the OCaml constructor tag supplies the discriminant. An untagged
+  ordinary constructor uses a one-constructor variant with the same mutable
+  fields, with no discriminant test. Nullary constructors are immediate;
+  a marked newtype keeps its field's word. An extern type is its `Z.t` or slice under `Obj.t`,
   which the FFI unwraps one level into the shape its model's
   constructors describe and wraps back (`lib/ffi_core.ml`'s views,
   laid out as the model's own type, which the reference checks at the

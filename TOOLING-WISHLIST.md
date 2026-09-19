@@ -256,3 +256,11 @@ files are not in this tree; they are at commit `4912ada`
     file, some 60 lemmas, extracts to unit stubs. As in item 14, the
     checker was never the obstacle; the rounds went to arithmetic,
     parens and positional arguments.
+
+32. **Inspect post-erasure code around a failed mark.** The uniqueness port
+    exposed tail/delegate failures caused by singleton result wrappers and
+    unused erased bindings. A bounded dump of one function before and after
+    normalization, including physical result multiplicities and binder IDs,
+    would likely make these failures easier to diagnose than temporary source
+    instrumentation. Showing logical versus physical at returns alongside it
+    would help check that stores remain before the exposed tail call.

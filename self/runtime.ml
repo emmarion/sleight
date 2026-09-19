@@ -7,6 +7,8 @@ let des_Half v = Obj.repr (Ffi_core.half_view ~z:Obj.obj ~nat:Obj.repr v)
 let con_Half v = Ffi_core.half_of ~z:Obj.obj ~nat:Obj.repr (Obj.obj v)
 let des_String v = Obj.repr (Ffi_core.str_view ~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr v)
 let con_String v = Ffi_core.str_of ~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr (Obj.obj v)
+let des_Array v = Obj.repr (Ffi_core.array_view ~array:Obj.obj ~wrap:Obj.repr v)
+let con_Array v = Ffi_core.array_of ~array:Obj.obj ~wrap:Obj.repr (Obj.obj v)
 let show_any (v : Obj.t) : string = "?"
 let flush_to oc s = output_string oc s; flush oc
 let program_args = let rec go = function [] -> [] | "--" :: rest -> rest | _ :: rest -> go rest in go (Array.to_list Sys.argv)
