@@ -49,9 +49,9 @@ analogue. `match`, `let-match` and `comptime-match` gain two modes,
 
 Each binder is checked by the uses it has on each path through the
 code, with no order among them. On one path a `unique` binder must
-either have exactly one non-erased use, at unique, or have any number,
-zero included, of erased uses and of degraded many uses (§U3) and none
-at unique. A unique use beside any other non-erased use of the same
+either have exactly one non-erased use, at unique, beside any erased
+mentions, or have any number, zero included, of erased uses and of
+degraded many uses (§U3) and none at unique. A unique use beside any other non-erased use of the same
 binder is an error, whichever the elaborator meets first, and the order
 in which such errors are reported is implementation-dependent. An
 erased mention is never a use and is allowed anywhere, before or after
@@ -74,8 +74,9 @@ A `unique` value need not be used: GC reclaims it (the proposal's
 ## U3. Born unique, degraded explicitly
 
 A `unique` value is born unique: a fresh constructor application in a
-unique position, a `unique` return of a call, a `unique` field taken by
-a `unique` destructure (§U4), or an extern that mints one (§U12).
+unique position, a return of a call whose entry is declared `unique`,
+a `unique`-labelled field taken by a `unique` destructure (§U4), or an
+extern function whose return entry is `unique` (§U12's `array-new`).
 Nothing turns a `many` or erased value unique, except as §20 already
 has it in an erased position or a phantom branch, where nothing runs.
 
@@ -116,20 +117,22 @@ a `many` field covers a `unique` one too.
 
 `(match unique x ann branches)` consumes `x` and binds each branch's
 fields per §U4's `unique` column. `(match peek x ann branches)` is also
-a use of `x` at unique, and gives the value back: each branch binds a
-fresh `unique` binder that `is x` and is `at x` (§U8), so the
+a use of `x` at unique, and gives the value back as a new binder: each
+branch binds a fresh `unique` binder that `is x` and is `at x` (§U8),
+the scrutinee itself staying consumed, so the
 discipline stays order-free (a peek after the binder is consumed is the
 usual conflict) and nothing restores a consumed binder in place.
 
 Both modes add one binder to every pattern, after the fields, mandatory
 and `_` when unwanted (§U16): at `unique` it names the cell the
-constructor occupied, a UniqueCstr at `x` (§U9); at `peek` it names the
-returned value. A branch gets it out of the match through an `at`
-entry of the annotation (§U8). At `peek` the `else` branch binds it
-too, `(else x2 body)`, the value being the same whichever constructor
-the else stands for; this is the first `else` that binds anything. At
-`unique` an `else` binds nothing, the cell's constructor being unknown,
-and the consumed cell is dropped.
+constructor occupied, a UniqueCstr at `x` whose slots hold the fields
+just bound (§U9); at `peek` it names the scrutinee given back. A branch
+gets that binder out of the match by returning it into an entry of the
+match's annotation marked `at x` (§U8). At `peek` the `else` branch
+binds it too, `(else x2 body)`, the value being the same whichever
+constructor the else stands for; this is the first `else` that binds
+anything. At `unique` an `else` binds nothing, the cell's constructor
+being unknown, and the cell the scrutinee occupied is left to GC.
 
 `let-match` takes the same modes and the same extra binder, binding
 outward as before (§16). `comptime-match` at `unique` is a destructure
@@ -156,18 +159,22 @@ mention a `unique` binder of that scope only erased or degraded, the
 `def-unique` defines one function, not a block, whose type is built by
 a new former, `(UniqueFn L params -> returns)`, and whose body may
 close over `unique` binders as unique: each such binder the body uses
-at unique is used once by the definition, once modulo match branches
-as §U2 has it. The defined binder is born unique; calling it is a use
-of that binder at unique, or erased, so a shared UniqueFn is callable
-only erased and `share` on one leaves a dead value; a UniqueFn-typed
-head is applicable in §4's tier 1 as an `Fn`-typed one is, with that
-one difference. Its level is
+at unique is consumed by the definition itself, where the `def-unique`
+is elaborated and not at each call, once modulo match branches as §U2
+has it. The defined function binder is born unique; calling the
+function is a use of that binder at unique, or erased, so a shared
+UniqueFn is callable only erased and `share` on one leaves a dead
+value; a UniqueFn-typed head is applicable in §4's tier 1 as an
+`Fn`-typed one is, the one difference being that the call uses the
+head at unique. Its level is
 written as on a `def-fns` and may be shared with ordinary functions;
 its parameters may be marked `subterm` and its body may make
 same-level calls under `subterm` proofs; it may be marked `erased` or
-`absurd`; its own name is in scope in its body as an erased entry; its
-body supports `tail` and `delegate`, and `coercible-of` fetches a
-delegate's proof as for a `def-fns` function.
+`absurd`; its own name is in scope in its body as an erased entry, so
+a self call is refused as any call through an erased head is and
+recursion goes through a `def-fns` function taking the values as
+parameters; its body supports `tail` and `delegate`, and `coercible-of`
+fetches a delegate's proof as for a `def-fns` function.
 
 *Reading.* The former is what a `unique` binder of `Fn` type cannot
 express: after `share` a many `Fn` binder could be called repeatedly,
@@ -194,11 +201,12 @@ an ordinary ADT with a Matchable and nothing special about it:
 ```
 
 There is no erased side: a `coerce` is never cashed erased and its
-proof is always erased, so a side describes a non-erased use. A
-minting form chooses the target side, and the source side
-of each field is the multiplicity a constructor application at the
-target side would use that argument at, the meet of the target side and
-the field's label (§U4's construction table). So `coercible-wrap` over
+proof is always erased, so a side describes a non-erased use. The
+target side is fixed at the minting form, by the expected type where
+the position names one and by the rule below otherwise, and the source
+side of each field is the multiplicity a constructor application at
+the target side would use that argument at, the meet of the target side
+and the field's label (§U4's construction table). So `coercible-wrap` over
 a many-labelled field yields `(Shared)` to `(Shared)` or `(Shared)` to
 `(Unique)`, over a unique-labelled field `(Shared)` to `(Shared)` or
 `(Unique)` to `(Unique)`; `coercible-ctor`
@@ -209,13 +217,16 @@ one (§U6), so a UniqueFn delegating to a plain function is `(Unique)`
 to `(Shared)`.
 Where nothing in a form fixes its sides, `coercible-ctor` and
 `coercible-refl` mint `(Unique)` on both. `coercible-sym` is unconditional,
-every mintable shape being uniform or the harmless "unique wrapper of
-a many field to its field at many"; `coercible-trans` requires the
-middle multiplicities equal; and a new form, `coercible-share`, weakens
-any proof to `(Shared)` on both sides (the proposal's 1j). `(coerce a
-p)` in a position of multiplicity `m` uses `a` at `m_a` and yields its
-result at `m_b`, an error where `m_b` is `(Shared)` and `m` is
-`unique`.
+every mintable shape being uniform or the harmless one: the sym of
+`(Shared)` `x` to `(Unique)` `(MkBox x)` consumes a unique wrapper and
+gives its many-labelled field back shared; `coercible-trans` requires
+the middle multiplicities equal; and a new form, `coercible-share`,
+weakens any proof to `(Shared)` on both sides (the proposal's 1j).
+`(coerce a p)` in a position of multiplicity `m` uses `a` at `m_a`,
+consuming it when that is `(Unique)`, and yields its result at `m_b`:
+an error where `m_b` is `(Shared)` and `m` is `unique`, and where
+`m_b` is `(Unique)` and `m` is `many` the result is a unique value in
+a many position, which §U3 has needing a written `share`.
 
 `coercible-wrap` reads a newtype's mark off the opened Matchable
 (§U9); the `Newtype` object, its former and `newtype-of` are gone. A
@@ -233,7 +244,9 @@ annotation, may add `at v`: the value returned is at the same location
 as `v`, a non-erased argument or a non-erased closed-over variable, for
 `def-fns` and `def-unique` alike, the only restriction being §18's,
 that no fact outlasts an entry it mentions, which keeps a function
-whose type names a closed-over variable inside that variable's scope.
+whose type names a closed-over variable inside that variable's scope:
+a factory cannot return it, its return telescope being unable to name
+the variable.
 The promise is verified where the function or branch returns; a
 phantom branch under a non-erased scrutinee, an absurd branch, a
 refuted branch and an `erased` or `absurd` function are exempt. An
@@ -246,7 +259,9 @@ and nothing else: a destructure at `unique` by `match`, `let-match` or
 `comptime-match` (the minted UniqueCstr with the scrutinee), a
 placement invocation (the new value with its UniqueCstr), `coerce` and
 `share` (the result with the source, the same word), a forwarding `let`
-(§9), a call's `at` return, a match's `at` result, and a forcing
+(§9), a call's `at` return (the binder bound to it with the caller's
+argument the promise names), a match's `at` result (the entry with the
+variable its annotation names), and a forcing
 unification (§18: entering a branch, a `let-match`, a `comptime-match`,
 an open) wherever it meets two `SlotHolds` terms or two `at`
 annotations in the types it unifies, which merges the classes of their
@@ -267,8 +282,9 @@ does not change when contents do.
 
 An `at` return is absent from a call's physical values in every
 implementation, as an erased return is; a `let` binds it as any
-return, and the elaborator supplies its word from the argument the
-promise names. The `tail` and `delegate` checks (§9) read the
+return, and the elaborator supplies its word from the caller's own
+binder for the argument the promise names, which the caller still
+holds physically whether or not the call consumed it. The `tail` and `delegate` checks (§9) read the
 post-erasure code with `at` returns dropped from a call's results, as
 they read coerces as renamings, so a call whose only non-erased results
 are `at` returns is a tail call from a function returning none, and
@@ -307,9 +323,10 @@ occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
 
 **Writing.** `(cstr-write u i1 ... in)` is an expression taking the
-cell at `unique` and yielding it reissued, at `u`, one item per
-non-erased field, a `(Slot)` expression at many or `_` to leave the
-slot alone, its type recording the slots written. A write is a
+cell at `unique` and yielding the same cell under a new type, at `u`,
+one item per non-erased field, a `(Slot)` expression at many or `_` to
+leave the slot alone, the new type's index for each written slot being
+that item's value, `(SlotHolds v)` for a `(SlotHolds v)` item. A write is a
 physical store into memory the cell's eventual invocation will
 re-mint; it does no usage accounting, whatever its slot refers to, the
 UniqueCstr invocation below being the semantic mint.
@@ -318,14 +335,18 @@ UniqueCstr invocation below being the semantic mint.
 as a UniqueFn-typed one is (§U6): `(u a1 ... an)` is a constructor
 application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
-as `(C a1 ... an)` would, and consuming `u` at `unique` whatever the
-position's multiplicity, so a `many` value may be built this way. An
-`(at)` immediately before an argument, as `(subterm p)` sits before its
-argument (§32), asserts that the slot already holds it, the argument's
+as `(C a1 ... an)` would, erased arguments included, which have no
+slot and are written as in any constructor application, and consuming
+`u` at `unique` whatever the position's multiplicity, so a `many`
+value may be built this way; the value's type is `C`'s return type
+instantiated, as for the plain application. An `(at)` immediately
+before an argument, as `(subterm p)` sits before its argument (§32),
+asserts that the slot already holds that argument, the argument's
 variable being in the slot's `SlotHolds` class, and the store is
 skipped; a hard error otherwise, as for `tail`. `(at (u a1 ... an))`,
-wrapping the invocation as `tail` wraps a call, asserts it of every
-non-erased argument, performs nothing, and is treated as erased by the
+wrapping the invocation as `tail` wraps a call, asserts the same of
+every non-erased argument, performs nothing, and is treated as erased
+by the
 `tail` and `delegate` checks, as a `coerce` is, so it may follow a tail
 call.
 
@@ -344,7 +365,8 @@ handled by the at-database and not the fact table: its argument is not
 rewritten by `is` rules, canonicalizing it takes the argument to its
 at-class, two `SlotHolds` are equal exactly when their arguments share a
 class, and a forcing unification merges the classes. `Slot` is not
-matchable. At runtime a slot's value is the word in it. `(SlotHolds v)`
+matchable and has no Matchable to open. At runtime a slot's value is
+the word the slot holds, a pointer or an immediate. `(SlotHolds v)`
 is an ordinary expression, mentioning `v` erased, so a consumed binder
 is fine, but its word must exist, so `v` must have been declared
 non-erased; in a type index, a `SlotHolds` may name an erased variable,
@@ -611,7 +633,8 @@ compiles and runs identically, both intended and unverified as §23 is:
   match, a UniqueFn a `Fn`, an extern update allocates and its `at`
   return is an ordinary return, a placement invocation allocates, a
   write returns its cell unchanged, `(at)` marks are plain arguments,
-  `share` is the identity, and the at-database is vacuous.
+  `at` annotations are dropped from telescopes, `share` is the
+  identity, and the at-database is vacuous.
 - **Tier 2** is §23 applied after tier 1, erased to many.
 
 In both, a collapsed multiplicity is not deleted but kept as an inert
@@ -638,7 +661,8 @@ the restrictions are the owner's.
 **A `Coercible` from the at-database.** `(at-coercible x y)`, say,
 mints `(Coercible (Shared) X x (Shared) Y y)` for two variables `x` and
 `y` in
-one at-class. It is minted only when both are live: with one consumed,
+one at-class. It is minted only when both are live, neither consumed:
+with one consumed,
 its contents may have changed while its address has not, and a `coerce`
 through the proof would give a value whose `is` refutes branches its
 bits reach. Two live variables at one address are both many, whose
