@@ -60,7 +60,9 @@ has it in an erased position or a phantom branch, where nothing runs.
 Degradation from `unique` to `many` is explicit: a `unique` binder in a
 `many` position is an error unless written `(share x)`. The written
 degradation is a many use of `x`, after which `x` is usable at many
-everywhere and never again at unique.
+everywhere and never again at unique. Its result `is x`, as a
+`coerce`'s result `is` the value its proof names (§38), so a binder of
+it forwards `x`'s type and facts, and it is at `x` (§U8).
 
 ## U4. Fields
 
