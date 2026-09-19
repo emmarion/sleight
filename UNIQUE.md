@@ -24,7 +24,9 @@ UniqueCstr head is the placement invocation, with `(at)` before an
 argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
 match annotation entry (§U8); an extra binder in every `unique` or
 `peek` pattern, and in an `else` at `peek` (§U5). Built-in type: `Slot`
-with `SlotVacant` and `(SlotHolds v)` (§U10). Changed: `Coercible`
+with `SlotVacant` and `(SlotHolds v)` (§U10). Elaboration state: an
+at-database beside §18's fact table, partitioning entries by location
+(§U8). Changed: `Coercible`
 takes a multiplicity on each side (§U7); `Matchable` carries the
 `newtype` and `extern` marks (§U9); `_` as a binder name (§U16); §23's
 invariant is two tiers (§U14). Removed: `Newtype`, `newtype-of` (§U7).
