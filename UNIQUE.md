@@ -23,8 +23,9 @@ UniqueFn head is a call using the head at unique or erased (§U6); a
 UniqueCstr head is the placement invocation, with `(at)` before an
 argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
 match annotation entry (§U8); an extra binder in every `unique` or
-`peek` pattern, and in an `else` at `peek` (§U5). Built-in type: `Slot`
-with `SlotVacant` and `(SlotHolds v)` (§U10). Elaboration state: an
+`peek` pattern, and in an `else` at `peek` (§U5). Built-in types: `Slot`
+with `SlotVacant` and `(SlotHolds v)` (§U10), `Sharing` with `Unique`
+and `Shared` (§U7). Elaboration state: an
 at-database beside §18's fact table, partitioning entries by location
 (§U8). Changed: `Coercible`
 takes a multiplicity on each side (§U7); `Matchable` carries the
@@ -180,23 +181,38 @@ or a Matchable a match reads, is degraded to many by that read;
 
 ## U7. `Coercible` with multiplicities
 
-`Coercible` (§38) gains a multiplicity on each side: `Coercible m_a A a
-m_b B b`. A minting form chooses the target side, and the source side
+`Coercible` (§38) gains a side on each end, `Coercible m_a A a m_b B
+b`, each a value of a new built-in enum in the manner of `Special`,
+an ordinary ADT with a Matchable and nothing special about it:
+
+```scheme
+(def-adts $ Sharing : -> Type
+  enum
+  (many Unique : -> (Sharing))
+  (many Shared : -> (Sharing)))
+```
+
+There is no erased side: a `coerce` is never cashed erased and its
+proof is always erased, so a side describes a non-erased use. A
+minting form chooses the target side, and the source side
 of each field is the multiplicity a constructor application at the
 target side would use that argument at, the meet of the target side and
 the field's label (§U4's construction table). So `coercible-wrap` over
-a many-labelled field yields Many to Many or Many to Unique, over a
-unique-labelled field Many to Many or Unique to Unique; `coercible-ctor`
+a many-labelled field yields `(Shared)` to `(Shared)` or `(Shared)` to
+`(Unique)`, over a unique-labelled field `(Shared)` to `(Shared)` or
+`(Unique)` to `(Unique)`; `coercible-ctor`
 applies the meet per field on each side; `coercible-refl` is uniform;
-`coercible-of` is Many to Many, a function value never being unique.
+`coercible-of` is `(Shared)` to `(Shared)`, a function value never
+being unique.
 Where nothing in a form fixes its sides, `coercible-ctor` and
-`coercible-refl` mint Unique on both. `coercible-sym` is unconditional,
+`coercible-refl` mint `(Unique)` on both. `coercible-sym` is unconditional,
 every mintable shape being uniform or the harmless "unique wrapper of
 a many field to its field at many"; `coercible-trans` requires the
 middle multiplicities equal; and a new form, `coercible-share`, weakens
-any proof to Many on both sides (the proposal's 1j). `(coerce a p)` in a
-position of multiplicity `m` uses `a` at `m_a` and yields its result at
-`m_b`, an error where `m_b` is Many and `m` is Unique.
+any proof to `(Shared)` on both sides (the proposal's 1j). `(coerce a
+p)` in a position of multiplicity `m` uses `a` at `m_a` and yields its
+result at `m_b`, an error where `m_b` is `(Shared)` and `m` is
+`unique`.
 
 `coercible-wrap` reads a newtype's mark off the opened Matchable
 (§U9); the `Newtype` object, its former and `newtype-of` are gone. A
@@ -550,7 +566,7 @@ extracting to a call where the inline `coerce` extracts to nothing:
 (def-fns _ $ erased init-witness : (erased Type A) (erased (Nat) n)
     (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->
     (erased (Array A n) b)
-    (erased (Coercible Unique (Array (MaybeUninit A) n) a Unique (Array A n) b) c)
+    (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c)
   (match erased all _
     ((AINil t)
       (values (ANil _) (coercible-ctor ANil (MaybeUninit A) A)))
@@ -601,7 +617,8 @@ and proposed as a second change after the rest of this file lands;
 the restrictions are the owner's.
 
 **A `Coercible` from the at-database.** `(at-coercible x y)`, say,
-mints `(Coercible Many X x Many Y y)` for two variables `x` and `y` in
+mints `(Coercible (Shared) X x (Shared) Y y)` for two variables `x` and
+`y` in
 one at-class. It is minted only when both are live: with one consumed,
 its contents may have changed while its address has not, and a `coerce`
 through the proof would give a value whose `is` refutes branches its
@@ -645,8 +662,9 @@ and §U15's `at-coercible` and `slot-eq`, names open; a UniqueFn or
 UniqueCstr head is an applicable type in §4's tier 1, not a special
 form. Annotation tokens:
 `unique`, `peek`, and `at` before an argument or after a telescope
-entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
-§17's opaque objects though not opaque; `Coercible` changed. Removed:
+entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, and
+`Sharing` with `Unique` and `Shared`, beside §17's opaque objects
+though not opaque; `Coercible` changed. Removed:
 `Newtype`, `newtype-of` and §27's item 9a; `Matchable`'s type gains the
 `newtype` and `extern` marks.
 
