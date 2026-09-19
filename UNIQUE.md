@@ -243,12 +243,22 @@ and nothing else: a destructure at `unique` by `match`, `let-match` or
 `comptime-match` (the minted UniqueCstr with the scrutinee), a
 placement invocation (the new value with its UniqueCstr), `coerce` and
 `share` (the result with the source, the same word), a forwarding `let`
-(§9), a call's `at` return, and a match's `at` result. A forced atom rule from entering a branch
-does not merge classes, and neither does canonical equality: two
-separately built cells with equal contents are `is`-equal and are two
-blocks. It is read by binder, before canonicalization, and a
-membership ends with the scope that minted it. A class may hold
-consumed entries; address equality does not change when contents do.
+(§9), a call's `at` return, a match's `at` result, and a forcing
+unification (§18: entering a branch, a `let-match`, a `comptime-match`,
+an open) wherever it meets two `SlotHolds` terms or two `at`
+annotations in the types it unifies, which merges the classes of their
+variables (§U10, the proposal's 3g) as matching `Refl` on an `(Eq
+(Slot) a b)` does (§U15). An `at v` in a telescope entry is part of the
+type and is compared through the at-database like a `SlotHolds`, not
+through `is`. A forced rule between two ordinary atoms, `x is y`, says
+nothing about location and merges nothing, and neither does canonical
+equality: two separately built cells with equal contents are
+`is`-equal and are two blocks. A non-forcing check, an argument against
+a parameter, only asks whether the classes already coincide, an
+abstract `(Slot)` parameter being instantiated instead. It is read by
+binder, before canonicalization, and a membership ends with the scope
+that minted it. A class may hold consumed entries; address equality
+does not change when contents do.
 
 An `at` return is absent from a call's physical values in every
 implementation, as an erased return is; a `let` binds it as any
