@@ -19,9 +19,9 @@ binders, and a match's scrutinee. A `unique` binder is the only
 reference to its value, which is what lets an operation on it run in
 place; the guarantee is the binder's, not the type's, so there is no
 unique type, no unique type or value constructor, and no phantom
-analogue. `match`, `let-match`, `comptime-match` and `cstr-read` (§U10)
-gain two modes, `unique` and `peek` (§U5); `peek` is a match mode only,
-never a binder's multiplicity.
+analogue. `match`, `let-match` and `comptime-match` gain two modes,
+`unique` and `peek` (§U5), and `cstr-read` (§U10) has `many` and
+`peek`; `peek` is a match mode only, never a binder's multiplicity.
 
 ## U2. Uses
 
@@ -283,8 +283,9 @@ class, and a forcing unification merges the classes. `Slot` is not
 matchable. At runtime a slot's value is the word in it. `(SlotHolds v)`
 is an ordinary expression, mentioning `v` erased, so a consumed binder
 is fine, but its word must exist, so `v` must have been declared
-non-erased. A slot value is inert and may sit in a field or a list like
-any other value.
+non-erased; in a type index, a `SlotHolds` may name an erased variable,
+as a type may name anything. A slot value is inert and may sit in a
+field or a list like any other value.
 
 `cstr-read` reads a cell's words out, a statement binding outward:
 `(cstr-read many u (C s1 ... sn))` with `u` at many, never degrading it
@@ -557,6 +558,12 @@ keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
 
+Open (§U17): where §U15's two forms stand under tier 1. Keeping the
+at-database as inert designators too would let `at-coercible` still
+mint, and its `coerce` stays sound since a copy has its original's
+contents; `slot-eq` observes addresses at runtime, and once every
+invocation allocates, two slots that held one cell may hold two.
+
 ## U15. Two further forms, proposed
 
 The proposal's part 5 adds two special forms, both new, names open;
@@ -612,7 +619,8 @@ entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
 `newtype` and `extern` marks.
 
 Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
-unequal case carries a refutation; placement on an
+unequal case carries a refutation; whether those forms fall under
+tier 1 (§U14); placement on an
 extern type (TBD, for now not allowed); the shadowing sugar the
 proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
 the idiom until then.
