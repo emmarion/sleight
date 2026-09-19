@@ -1,13 +1,15 @@
 # Uniqueness: a supplement to DESIGN.md
 
-Read after DESIGN.md. It records what the owner decided, in a design
-session over the owner's proposal for unique types, on top of the
+Read after DESIGN.md. It records what the owner decided, in design
+sessions over the owner's proposal for unique types, on top of the
 language DESIGN.md describes; DESIGN.md itself is unchanged, and where
 it says linear or unique types are punted (§6) this file is the
 continuation. Section references with `§` are to DESIGN.md. A passage
 marked *reading* is a session's inference from the decisions, not a
-decision; §U15 lists what is not decided, as questions. Names are
-tentative throughout, as CLAUDE.md rule 10 has them.
+decision; §U17 lists what is not decided, as questions. Names are
+tentative throughout, as CLAUDE.md rule 10 has them. The worked
+example of §U13 is written against the rules as recorded, not
+machine-checked, as §40 is.
 
 ## U1. A third multiplicity, and a fourth match mode
 
@@ -17,9 +19,9 @@ binders, and a match's scrutinee. A `unique` binder is the only
 reference to its value, which is what lets an operation on it run in
 place; the guarantee is the binder's, not the type's, so there is no
 unique type, no unique type or value constructor, and no phantom
-analogue. `match`, `let-match` and `comptime-match` gain two modes,
-`unique` and `peek` (§U5); `peek` is a match mode only, never a
-binder's multiplicity.
+analogue. `match`, `let-match`, `comptime-match` and `cstr-read` (§U10)
+gain two modes, `unique` and `peek` (§U5); `peek` is a match mode only,
+never a binder's multiplicity.
 
 ## U2. Uses
 
@@ -57,8 +59,8 @@ has it in an erased position or a phantom branch, where nothing runs.
 
 Degradation from `unique` to `many` is explicit: a `unique` binder in a
 `many` position is an error unless written `(share x)`. The written
-degradation is a many use of `x`, after which
-`x` is usable at many everywhere and never again at unique.
+degradation is a many use of `x`, after which `x` is usable at many
+everywhere and never again at unique.
 
 ## U4. Fields
 
@@ -116,14 +118,29 @@ a full-at reinvocation of the same constructor at the scrutinee (§U9),
 which costs nothing; on an extern type it is primitive, through the
 FFI's peek unwrap (§U12).
 
-## U6. Closures and the top level
+## U6. Closures, `def-unique`, and the top level
 
 A function defined by `def-fns` is a closure over its scope and may
 mention a `unique` binder of that scope only erased or degraded, the
-`(share x)` written inline in the body or earlier; the proposal's `def-unique` defines a
-function of a new former, UniqueFn, that may close over `unique`
-binders as unique, consuming them, and is itself callable only from a
-`unique` binder, or erased. Its shape and level are open (§U15).
+`(share x)` written inline in the body or earlier.
+
+`def-unique` defines one function, not a block, whose type is built by
+a new former, `(UniqueFn L params -> returns)`, and whose body may
+close over `unique` binders as unique: each such binder the body uses
+at unique is used once by the definition, once modulo match branches
+as §U2 has it. The defined binder is born unique; calling it is a use
+of that binder at unique, or erased, so a shared UniqueFn is callable
+only erased and `share` on one leaves a dead value. Its level is
+written as on a `def-fns` and may be shared with ordinary functions;
+its parameters may be marked `subterm` and its body may make
+same-level calls under `subterm` proofs; it may be marked `erased` or
+`absurd`; its own name is in scope in its body as an erased entry; its
+body supports `tail` and `delegate`, and `coercible-of` fetches a
+delegate's proof as for a `def-fns` function.
+
+*Reading.* The former is what a `unique` binder of `Fn` type cannot
+express: after `share` a many `Fn` binder could be called repeatedly,
+running the captured uniques again; a UniqueFn held at many cannot.
 
 A top-level binder, and so a Const (§34), may be `unique` under the same
 rules, run-position statements being sequential. A unique Const the
@@ -142,42 +159,50 @@ a many-labelled field yields Many to Many or Many to Unique, over a
 unique-labelled field Many to Many or Unique to Unique; `coercible-ctor`
 applies the meet per field on each side; `coercible-refl` is uniform;
 `coercible-of` is Many to Many, a function value never being unique.
-`coercible-sym` is unconditional, every mintable shape being uniform or
-the harmless "unique wrapper of a many field to its field at many";
-`coercible-trans` requires the middle multiplicities equal; and any
-proof weakens to Many on both sides (the proposal's 1j). `(coerce a p)`
-in a position of multiplicity `m` uses `a` at `m_a` and yields its
-result at `m_b`, an error where `m_b` is Many and `m` is Unique.
+Where nothing in a form fixes its sides, `coercible-ctor` and
+`coercible-refl` mint Unique on both. `coercible-sym` is unconditional,
+every mintable shape being uniform or the harmless "unique wrapper of
+a many field to its field at many"; `coercible-trans` requires the
+middle multiplicities equal; and a new form, `coercible-share`, weakens
+any proof to Many on both sides (the proposal's 1j). `(coerce a p)` in a
+position of multiplicity `m` uses `a` at `m_a` and yields its result at
+`m_b`, an error where `m_b` is Many and `m` is Unique.
+
+`coercible-wrap` reads a newtype's mark off the opened Matchable
+(§U9); the `Newtype` object, its former and `newtype-of` are gone. A
+newtype's shape (§38) reads "exactly one non-erased field".
 
 *Reading.* Without the sides, a proof composed through two newtypes of
 one field type, one labelled `many` and one `unique`, would carry a
 many value into a unique-labelled wrapper; the sides refuse it at
-`coercible-trans`. A newtype's shape (§38) reads "exactly one
-non-erased field".
+`coercible-trans`.
 
 ## U8. `at`
 
 A return entry of a function's telescope, or an entry of a match's
 annotation, may add `at v`: the value returned is at the same location
-as `v`, a non-erased argument for a function, a non-erased closed-over
-variable for a match or a UniqueFn. The promise is verified where the
-function or branch returns; a phantom branch under a non-erased
-scrutinee, an absurd branch, a refuted branch and an `erased` or
-`absurd` function are exempt. An `at` return may be `many`, and may
-combine with `is`: a read of a unique array is `(unique a is r at a)`.
+as `v`, a non-erased argument or a non-erased closed-over variable, for
+`def-fns` and `def-unique` alike, the only restriction being §18's,
+that no fact outlasts an entry it mentions, which keeps a function
+whose type names a closed-over variable inside that variable's scope.
+The promise is verified where the function or branch returns; a
+phantom branch under a non-erased scrutinee, an absurd branch, a
+refuted branch and an `erased` or `absurd` function are exempt. An
+`at` return may be `many`, and may combine with `is`: a read of a
+unique array is `(unique a is r at a)`.
 
 Beside the fact table the elaborator keeps the **at-database**, a
 partition of scope entries into classes of one location. Its writers,
-and nothing else: a destructure at `unique` (the minted UniqueCstr with
-the scrutinee), a placement invocation (the new value with its
-UniqueCstr), `coerce` (its result with its source), a forwarding `let`
-(§9), a call's `at` return, and a match's `at` result. A forced atom
-rule from entering a branch does not merge classes, and neither does
-canonical equality: two separately built cells with equal contents are
-`is`-equal and are two blocks. It is read by binder, before
-canonicalization, and a membership ends with the scope that minted it.
-A class may hold consumed entries; address equality does not change
-when contents do.
+and nothing else: a destructure at `unique` by `match`, `let-match` or
+`comptime-match` (the minted UniqueCstr with the scrutinee), a
+placement invocation (the new value with its UniqueCstr), `coerce` (its
+result with its source), a forwarding `let` (§9), a call's `at` return,
+and a match's `at` result. A forced atom rule from entering a branch
+does not merge classes, and neither does canonical equality: two
+separately built cells with equal contents are `is`-equal and are two
+blocks. It is read by binder, before canonicalization, and a
+membership ends with the scope that minted it. A class may hold
+consumed entries; address equality does not change when contents do.
 
 An `at` return is absent from a call's physical values in every
 implementation, as an erased return is; a `let` binds it as any
@@ -187,43 +212,62 @@ post-erasure code with `at` returns dropped from a call's results, as
 they read coerces as renamings, so a call whose only non-erased results
 are `at` returns is a tail call from a function returning none.
 
+*Reading, an idiom.* A function that may fail and still promises its
+result at its argument returns an erased `Type T`, a `(unique T val at
+a)`, and an erased constraint relating `T` to the outcome; the caller
+matches the constraint and in each branch `T` is forced to the concrete
+type, the intended one on success and the argument's own on failure,
+the one word being at `a` either way (the pattern of
+`tests/type_result_is.sl`). §38's newtype shape stays as it is.
+
 ## U9. Placement: UniqueCstr and the invocation
 
 For a type that is neither `newtype` nor `extern`, a value constructor
 `C` has a cell type `(UniqueCstr C s1 ... sn)`, a type former (§5) with
-one `Slot` (§U10) per non-erased field of `C`. A cell is obtained by an
-allocation form (open, §U15), every slot `SlotVacant`, or by a
-destructure at `unique` (§U5), each slot `(SlotHolds f)` for the
-field's binder `f`, the cell being at the scrutinee. The newtype
+one `Slot` (§U10) per non-erased field of `C`. The newtype
 representation (§38) is mandatory for a type marked `newtype` and
 forbidden for one that is not, whatever its shape: an unmarked type of
 newtype shape is a block, so §38's leeway is withdrawn. A constructor
-with no non-erased field has an empty cell.
+with no non-erased field has an empty cell. The `newtype` and `extern`
+marks live in the type's `Matchable`, beside its `enum`/`union` tag
+(§17), so eligibility is read off the opened Matchable listing the
+constructor (§19), which unifying two opened Matchables forces equal
+too.
+
+**Obtaining a cell.** `(cstr-alloc C)` is an expression yielding a
+fresh cell at unique with every slot `SlotVacant`; `(cstr-alloc C i1
+... in)` lists every non-erased field as a write does, no partial list.
+A destructure at `unique` (§U5) yields the cell the constructor
+occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
+binder `f`.
+
+**Writing.** `(cstr-write u i1 ... in)` is an expression taking the
+cell at `unique` and yielding it reissued, at `u`, one item per
+non-erased field, a `(Slot)` expression at many or `_` to leave the
+slot alone, its type recording the slots written. A write is a
+physical store into memory the invocation will re-mint; it does no
+usage accounting, whatever its slot refers to, the invocation being the
+semantic mint.
 
 **Invocation.** A UniqueCstr-typed head is a fourth applicable type in
 §4's tier 1: `(u a1 ... an)` is a constructor application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
 as `(C a1 ... an)` would, and consuming `u` at `unique` whatever the
 position's multiplicity, so a `many` value may be built this way. An
-argument followed by `(at)` asserts that the slot already holds it,
-its variable being in the slot's `SlotHolds` class, and the store is
-skipped; a hard error otherwise, as for `tail`. A full-at invocation,
-every argument so marked (its spelling is open), performs nothing and
-is treated as erased by the `tail` and `delegate` checks, as a `coerce`
-is, so it may follow a tail call.
-
-**Writes.** A write form (spelling open) takes the cell at `unique` and,
-per non-erased field, a `Slot` value or an omission, and returns at
-`unique` a cell whose type records the slots written. A write is a
-physical store into memory the invocation will re-mint; it does no
-usage accounting, whatever its raw refers to, the invocation being the
-semantic mint.
+`(at)` immediately before an argument, as `(subterm p)` sits before its
+argument (§32), asserts that the slot already holds it, the argument's
+variable being in the slot's `SlotHolds` class, and the store is
+skipped; a hard error otherwise, as for `tail`. `(at (u a1 ... an))`,
+wrapping the invocation as `tail` wraps a call, asserts it of every
+non-erased argument, performs nothing, and is treated as erased by the
+`tail` and `delegate` checks, as a `coerce` is, so it may follow a tail
+call.
 
 *Reading.* Under these rules a slot can never end up referencing a cell
 owned elsewhere in a minted value: the invocation supplies each field
 at its multiplicity, so a consumed unique cannot be named there.
 
-## U10. `Slot` and `cstr-let`
+## U10. `Slot` and `cstr-read`
 
 `Slot` is a nullary type with two value constructors, `SlotVacant` and
 `(SlotHolds v)`, `v` a fact-table variable (§3), never a telescope
@@ -234,30 +278,35 @@ handled by the at-database and not the fact table: its argument is not
 rewritten by `is` rules, canonicalizing it takes the argument to its
 at-class, two `SlotHolds` are equal exactly when their arguments share a
 class, and a forcing unification merges the classes. `Slot` is not
-matchable. At runtime a slot's value is the word in it.
+matchable. At runtime a slot's value is the word in it. `(SlotHolds v)`
+is an ordinary expression, mentioning `v` erased, so a consumed binder
+is fine, but its word must exist, so `v` must have been declared
+non-erased. A slot value is inert and may sit in a field or a list like
+any other value.
 
-`cstr-let` reads a cell's words out, a statement binding outward:
-`(cstr-let many u (C s1 ... sn))` with `u` at many, never degrading it
+`cstr-read` reads a cell's words out, a statement binding outward:
+`(cstr-read many u (C s1 ... sn))` with `u` at many, never degrading it
 (degradation being explicit, `u` must already be many), and
-`(cstr-let peek u (C s1 ... sn u2))` with `u` at unique, `u2` the cell
+`(cstr-read peek u (C s1 ... sn u2))` with `u` at unique, `u2` the cell
 given back as §U5's peek does. The `si` are fresh `many` binders of
 type `(Slot)`; one forced unification of `(UniqueCstr C s1 ... sn)`
 against `u`'s type mints their `is` rules, as entering a branch unifies
 a scrutinee's type (§18). It decides nothing about a slot: an `si` is
 whatever `u`'s type said, a `SlotHolds`, a `SlotVacant`, or an abstract
-slot. What the words are for is a write into another cell and §U14's
+slot. What the words are for is a write into another cell and §U15's
 comparison.
 
 ## U11. Tail call modulo cons, a reading
 
-*Reading.* `map` over a list allocates a cell, writes the head, and
-calls a helper in destination-passing style with the cell and the tail,
-the helper's return being `at` the cell; the helper allocates the next
-cell, writes it into the tail slot, tail-calls itself, and follows the
-call with a full-at invocation, which is erased for the check. The
-helper holds the head at `many`, since the invocation uses it there, so
-a cell's slot type in a signature says nothing the helper cannot supply.
-The outer `map` is a plain call and returns the value.
+*Reading.* `map` over a list allocates a cell with the head written,
+`(cstr-alloc Cons (SlotHolds h) _)`, and calls a helper in
+destination-passing style with the cell and the tail, the helper's
+return being `at` the cell; the helper allocates the next cell, writes
+it into the tail slot, tail-calls itself, and follows the call with a
+full-at invocation, which is erased for the check. The helper holds the
+head at `many`, since the invocation uses it there, so a cell's slot
+type in a signature says nothing the helper cannot supply. The outer
+`map` is a plain call and returns the value.
 
 ## U12. Extern types and functions
 
@@ -268,10 +317,12 @@ many-labelled fields and sharing nothing mutable (today's String view
 shares its buffer, which a mutable type may not); and an `at` return
 promised by an extern's signature is honoured physically, the model's
 body being checked against the promise like any body, so such a model
-is written with §U9's placement over its own cells. Part 1 of the
-proposal is useful before parts 2 to 4 exist: an update `(unique (Array
-A) a) ... -> (unique (Array A) r)` is O(1) and returns one word the
-caller already holds. Placement is not available on an extern type.
+is written with §U9's placement over its own cells. §41's shape check
+compares the non-erased arities of the model's constructors, not the
+many ones. Part 1 of the proposal is useful before parts 2 to 4 exist:
+an update `(unique (Array A n) a) ... -> (unique (Array A n) r)` is
+O(1) and returns one word the caller already holds. Placement on an
+extern type is TBD and for now not allowed.
 
 *Reading.* In the prototype an extern type's construction and matching
 live in its ADT record and run through one dispatch for a Const-known
@@ -282,7 +333,158 @@ its runtime unwrap. A peek unwrap adds an operation to the record, a
 Matchable's runtime value a record of unwraps; the held path's cost is
 an accepted edge case.
 
-## U13. Erasure is conservative, in two tiers
+## U13. Worked example: arrays
+
+The owner's array API, length-indexed, elements owned, uninitialised
+slots through a union newtype in the manner of Rust's `MaybeUninit`,
+and one extern primitive per element operation with the rest plain
+source over it. `_` is SUGAR.md 6's.
+
+```scheme
+(def-adts $ Array : (Type A) ((Nat) n) -> Type
+  enum extern
+  (many ANil : (erased Type A) -> (Array A (Zero)))
+  (many ACons : (erased Type A) (erased (Nat) n)
+                (unique A head) (unique (Array A n) tail) ->
+     (Array A (Succ n))))
+
+(def-adts $ MaybeUninit : (Type A) -> Type
+  union newtype
+  (many Uninit : (erased Type A) -> (MaybeUninit A))
+  (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+```
+
+A `(MaybeUninit A)` is one word, `A`'s own under `Init` and an
+unspecified one under `Uninit`, so an `(Array (MaybeUninit A) n)` is
+the memory of the `(Array A n)` it becomes. Reading an `Init` out is a
+`unique` match whose `Uninit` branch must be refuted, by a fact or by
+proof, §12's one-real-branch rule making that Rust's `assume_init`
+with evidence in place of `unsafe`. Under `peek` both of `ACons`'s
+fields are erased, so the FFI's peek unwrap yields the discriminant
+alone.
+
+The relations, every field erased:
+
+```scheme
+(def-adts
+  (AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+    enum
+    (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
+    (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
+                   (erased (AllUninit A n tl) p) ->
+       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
+  (AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+    enum
+    (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
+    (many AICons : (erased Type A) (erased (Nat) n) (erased A x)
+                   (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p) ->
+       (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
+  (ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type
+    enum
+    (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
+       (ANth A (Succ n) (ACons A n x tl) (Zero) x))
+    (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
+                 (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p) ->
+       (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
+  (ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type
+    enum
+    (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
+       (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
+    (many SetS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
+                 (erased (Nat) i) (erased A y) (erased (Array A n) tl2)
+                 (erased (ASet A n tl i y tl2) p) ->
+       (ASet A (Succ n) (ACons A n h tl) (Succ i) y (ACons A n h tl2)))))
+```
+
+`ANth` carries the bound, so no `Lt` accompanies an index. The
+functions, each `extern` with a source model, the FFI's implementation
+shedding the argument its model does not use:
+
+```scheme
+(def-fns _ $ many extern array-new : (erased Type A) (subterm many (Nat) n) ->
+    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p)
+  (match many n _
+    ((Zero) (values (ANil _) (AUNil _)))
+    ((Succ n1)
+      (let (unique tl) (erased q) (array-new _ n1))
+      (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
+
+(def-fns _ $ many extern array-swap : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) ->
+    (unique m is old) (unique (Array A n) r at a)
+    (erased (ASet A n a i x r) p)
+  (match unique a _
+    (absurd (ANil t u) (match erased nth (((False) f))))
+    ((ACons t n1 hd tl u)
+      (match many i _
+        ((Zero)
+          (match erased nth _
+            ((NthZ t2 n2 x2 tl2)
+              (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
+            (absurd NthS)))
+        ((Succ i1)
+          (match erased nth _
+            (absurd NthZ)
+            ((NthS t2 n2 h2 tl2 i2 x2 q)
+              (let (unique old) (unique tl3) (erased p1) (tail (array-swap _ _ tl i1 x _ q)))
+              (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))))
+
+(def-fns _ $ many extern array-pluck : (erased Type A) (erased (Nat) n)
+    (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
+    (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
+    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p)
+  (tail (array-swap _ _ a i (Uninit _) _ nth)))
+
+(def-fns _ $ many extern array-place : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) ->
+    (unique (Array A n) r at a) (erased (ASet A n a i x r) p)
+  (let (unique old) (unique r) (erased p) (array-swap _ _ a i x _ nth))
+  (values r p))
+```
+
+In `array-swap`'s `ANil` branch the bound refutes itself, `nth` having
+no constructor at length `(Zero)`; in its `NthZ` branch the forced
+facts make `hd` canonically `m`, so it is returned as `old` with no
+coerce, the head slot takes `x`, one store, and the tail is skipped; in
+its `NthS` branch the recursion returns `tl3 at tl`, the reinvocation
+is full-at and erased, and with `old` the only physical result on
+either side the recursive call is a valid `tail`. `array-pluck` is a
+`tail` and not a `delegate`, `(Uninit _)` being an argument it does not
+take; its FFI reads and stores nothing, the old word staying under a
+slot typed `Uninit`, which nothing can read. `array-place` drops `old`,
+as at-most-one-use allows, so it is a plain call. The FFI's `array-new`
+is a block of `n` words, the model's `ACons` view its first word and a
+slice of the rest sharing the block.
+
+The conversion to a plain array is an erased witness in §40's shape,
+and the `coerce` is written where it is used, a wrapper function
+extracting to a call where the inline `coerce` extracts to nothing:
+
+```scheme
+(def-fns _ $ erased init-witness : (erased Type A) (erased (Nat) n)
+    (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->
+    (erased (Array A n) b)
+    (erased (Coercible Unique (Array (MaybeUninit A) n) a Unique (Array A n) b) c)
+  (match erased all _
+    ((AINil t)
+      (values (ANil _) (coercible-ctor ANil (MaybeUninit A) A)))
+    ((AICons t n1 x tl q)
+      (let (erased b1) (erased c1) (init-witness _ _ tl q))
+      (values (ACons _ _ x b1)
+              (coercible-ctor ACons (MaybeUninit A) A n1 n1
+                 (coercible-sym (coercible-wrap Init x))
+                 c1)))))
+
+(let (erased b0) (erased c) (init-witness _ _ a all))
+(let (unique arr) (coerce a c))
+```
+
+`arr` is at `a` by the `coerce` rule, and nothing runs.
+
+## U14. Erasure is conservative, in two tiers
 
 §23's invariant becomes two claims, each that the transformed program
 compiles and runs identically, both intended and unverified as §23 is:
@@ -291,7 +493,7 @@ compiles and runs identically, both intended and unverified as §23 is:
   match, a UniqueFn a `Fn`, an extern update allocates and its `at`
   return is an ordinary return, a placement invocation allocates, a
   write returns its cell unchanged, `(at)` marks are plain arguments,
-  degradation is the identity, and the at-database is vacuous.
+  `share` is the identity, and the at-database is vacuous.
 - **Tier 2** is §23 applied after tier 1, erased to many.
 
 In both, a collapsed multiplicity is not deleted but kept as an inert
@@ -303,7 +505,7 @@ keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
 
-## U14. The risky forms
+## U15. The risky forms
 
 - A `Coercible` from two variables in one at-class is minted only when
   both are live: with one consumed, its contents may have changed while
@@ -314,23 +516,29 @@ erased mention of a consumed unique into a second use.
   proof, matched through the at-database (§U10), so `Refl` puts the two
   in one class and never forces an `is`.
 
-## U15. Open
-
-Questions, not proposals: the spelling of the allocation form, of the write form and its omission marker, of `(at)`
-(after the argument) and of the full-at invocation; `def-unique` and
-UniqueFn (its level, what it closes over, its type former in §5);
-whether an `at` return may name a closed-over variable of a `def-fns`
-function; the extern array API; `cstr-let`'s name; whether `Slot`
-values may sit in fields and lists; the `Maybe`-shaped `at` return
-through a returned type (the proposal's part 3); the shadowing sugar
-(deferred by the proposal); §27's registry entries for the new forms;
-KERNEL.md's interpreter-trust note against in-place mutation; and the
-FFI on an extern UniqueCstr (not allowed for now).
-
 ## U16. `_` as a binder name
 
 Promoted here from ASSUMPTIONS 2, the owner's decision: `_` as a binder
 name mints an anonymous entry wherever a binder is expected, a `let`
 binder, a telescope entry, a pattern field, and now §U5's extra pattern
 binder; it is not special anywhere else, `_` in an argument (SUGAR.md
-6) and as an annotation (SUGAR.md 2) being their own things.
+6), as an annotation (SUGAR.md 2), and as a `cstr-write` or
+`cstr-alloc` item (§U9) being their own things.
+
+## U17. Registry additions and open questions
+
+Additions to §27's registry. Statements: `def-unique`, `cstr-read`.
+Type formers: `UniqueFn`, `UniqueCstr`. Other expressions: `share`,
+`cstr-alloc`, `cstr-write`, the full-at wrapper `at`, `coercible-share`,
+and §U15's two forms, names open; the placement invocation is not a
+special form, being §4's fourth applicable type. Annotation tokens:
+`unique`, `peek`, and `at` before an argument or after a telescope
+entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
+§17's opaque objects though not opaque; `Coercible` changed. Removed:
+`Newtype`, `newtype-of` and §27's item 9a; `Matchable`'s type gains the
+`newtype` and `extern` marks.
+
+Open, as questions: the names of §U15's two forms; placement on an
+extern type (TBD, for now not allowed); the shadowing sugar the
+proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
+the idiom until then.
