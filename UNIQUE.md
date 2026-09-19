@@ -14,13 +14,13 @@ machine-checked, as §40 is.
 ## U0. What is new, in one place
 
 Multiplicity: `unique` (§U1). Match modes: `unique`, `peek` (§U5).
-Statements: `def-unique` (§U6), `cstr-read` (§U10). Type formers:
-`UniqueFn` (§U6), `UniqueCstr` (§U9). Expressions: `share` (§U3),
-`cstr-alloc`, `cstr-write` (§U9), `coercible-share` (§U7), and, as a
+Statements: `def-unique` (§U6), `cell-read` (§U10). Type formers:
+`UniqueFn` (§U6), `Cell` (§U9). Expressions: `share` (§U3),
+`cell-alloc`, `cell-write` (§U9), `coercible-share` (§U7), and, as a
 later second change, `at-coercible` and `slot-eq` (§U15, names open).
 Head position: a
 UniqueFn head is a call using the head at unique or erased (§U6); a
-UniqueCstr head is the placement invocation, with `(at)` before an
+Cell head is the placement invocation, with `(at)` before an
 argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
 match annotation entry (§U8); an extra binder in every `unique` or
 `peek` pattern, and in an `else` at `peek` (§U5). Built-in types: `Slot`
@@ -42,7 +42,7 @@ reference to its value, which is what lets an operation on it run in
 place; the guarantee is the binder's, not the type's, so there is no
 unique type, no unique type or value constructor, and no phantom
 analogue. `match`, `let-match` and `comptime-match` gain two modes,
-`unique` and `peek` (§U5), and `cstr-read` (§U10) has `many` and
+`unique` and `peek` (§U5), and `cell-read` (§U10) has `many` and
 `peek`; `peek` is a match mode only, never a binder's multiplicity.
 
 ## U2. Uses
@@ -125,7 +125,7 @@ usual conflict) and nothing restores a consumed binder in place.
 
 Both modes add one binder to every pattern, after the fields, mandatory
 and `_` when unwanted (§U16): at `unique` it names the cell the
-constructor occupied, a UniqueCstr at `x` whose slots hold the fields
+constructor occupied, a Cell at `x` whose slots hold the fields
 just bound (§U9); at `peek` it names the scrutinee given back. A branch
 gets that binder out of the match by returning it into an entry of the
 match's annotation marked `at x` (§U8). At `peek` the `else` branch
@@ -256,8 +256,8 @@ unique array is `(unique a is r at a)`.
 Beside the fact table the elaborator keeps the **at-database**, a
 partition of scope entries into classes of one location. Its writers,
 and nothing else: a destructure at `unique` by `match`, `let-match` or
-`comptime-match` (the minted UniqueCstr with the scrutinee), a
-placement invocation (the new value with its UniqueCstr), `coerce` and
+`comptime-match` (the minted Cell with the scrutinee), a
+placement invocation (the new value with its Cell), `coerce` and
 `share` (the result with the source, the same word), a forwarding `let`
 (§9), a call's `at` return (the binder bound to it with the caller's
 argument the promise names), a match's `at` result (the entry with the
@@ -299,10 +299,10 @@ type, the intended one on success and the argument's own on failure,
 the one word being at `a` either way (the pattern of
 `tests/type_result_is.sl`). §38's newtype shape stays as it is.
 
-## U9. Placement: UniqueCstr and the invocation
+## U9. Placement: Cell and the invocation
 
 For a type that is neither `newtype` nor `extern`, a value constructor
-`C` has a cell type `(UniqueCstr C s1 ... sn)`, a type former (§5) with
+`C` has a cell type `(Cell C s1 ... sn)`, a type former (§5) with
 one `Slot` (§U10) per non-erased field of `C`. The newtype
 representation (§38) is mandatory for a type marked `newtype` and
 forbidden for one that is not, whatever its shape: an unmarked type of
@@ -313,8 +313,8 @@ marks live in the type's `Matchable`, beside its `enum`/`union` tag
 constructor (§19), which unifying two opened Matchables forces equal
 too.
 
-**Obtaining a cell.** `(cstr-alloc C)` is an expression yielding a
-fresh cell at unique with every slot `SlotVacant`; `(cstr-alloc C i1
+**Obtaining a cell.** `(cell-alloc C)` is an expression yielding a
+fresh cell at unique with every slot `SlotVacant`; `(cell-alloc C i1
 ... in)` lists every non-erased field as a write does, a `(Slot)`
 expression at many or `_` for a slot left `SlotVacant`, no partial
 list.
@@ -322,16 +322,16 @@ A destructure at `unique` (§U5) yields the cell the constructor
 occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
 
-**Writing.** `(cstr-write u i1 ... in)` is an expression taking the
+**Writing.** `(cell-write u i1 ... in)` is an expression taking the
 cell at `unique` and yielding the same cell under a new type, at `u`,
 one item per non-erased field, a `(Slot)` expression at many or `_` to
 leave the slot alone, the new type's index for each written slot being
 that item's value, `(SlotHolds v)` for a `(SlotHolds v)` item. A write is a
 physical store into memory the cell's eventual invocation will
 re-mint; it does no usage accounting, whatever its slot refers to, the
-UniqueCstr invocation below being the semantic mint.
+Cell invocation below being the semantic mint.
 
-**Invocation.** A UniqueCstr-typed head is applicable in §4's tier 1,
+**Invocation.** A Cell-typed head is applicable in §4's tier 1,
 as a UniqueFn-typed one is (§U6): `(u a1 ... an)` is a constructor
 application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
@@ -354,12 +354,12 @@ call.
 owned elsewhere in a minted value: the invocation supplies each field
 at its multiplicity, so a consumed unique cannot be named there.
 
-## U10. `Slot` and `cstr-read`
+## U10. `Slot` and `cell-read`
 
 `Slot` is a nullary type with two value constructors, `SlotVacant` and
 `(SlotHolds v)`, `v` a fact-table variable (§3), never a telescope
 binder; a signature that speaks of a slot abstracts over it as an
-erased `(Slot)` parameter, `(erased (Slot) s) (unique (UniqueCstr Pair2
+erased `(Slot)` parameter, `(erased (Slot) s) (unique (Cell Pair2
 s s) u)` saying its two slots hold one thing. A `SlotHolds` term is
 handled by the at-database and not the fact table: its argument is not
 rewritten by `is` rules, canonicalizing it takes the argument to its
@@ -373,12 +373,12 @@ non-erased; in a type index, a `SlotHolds` may name an erased variable,
 as a type may name anything. A slot value is inert and may sit in a
 field or a list like any other value.
 
-`cstr-read` reads a cell's words out, a statement binding outward:
-`(cstr-read many u (C s1 ... sn))` with `u` at many, never degrading it
+`cell-read` reads a cell's words out, a statement binding outward:
+`(cell-read many u (C s1 ... sn))` with `u` at many, never degrading it
 (degradation being explicit, `u` must already be many), and
-`(cstr-read peek u (C s1 ... sn u2))` with `u` at unique, `u2` the cell
+`(cell-read peek u (C s1 ... sn u2))` with `u` at unique, `u2` the cell
 given back as §U5's peek does. The `si` are fresh `many` binders of
-type `(Slot)`; one forced unification of `(UniqueCstr C s1 ... sn)`
+type `(Slot)`; one forced unification of `(Cell C s1 ... sn)`
 against `u`'s type mints their `is` rules, as entering a branch unifies
 a scrutinee's type (§18). It decides nothing about a slot: an `si` is
 whatever `u`'s type said, a `SlotHolds`, a `SlotVacant`, or an abstract
@@ -404,14 +404,14 @@ promises its result at the cell:
 
 ```scheme
 (def-fns _ $ many append-into : (erased Type A)
-    (unique (UniqueCstr Cons (SlotVacant) (SlotVacant)) cell)
+    (unique (Cell Cons (SlotVacant) (SlotVacant)) cell)
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->
     (many (List A) r at cell)
   (match many xs _
     ((Nil a) (cell _ h ys))
     ((Cons a hd tl)
-      (let (unique next) (cstr-alloc Cons))
-      (let (unique cell2) (cstr-write cell (Cons (SlotHolds h) (SlotHolds next))))
+      (let (unique next) (cell-alloc Cons))
+      (let (unique cell2) (cell-write cell (Cons (SlotHolds h) (SlotHolds next))))
       (let (many r2) (tail (append-into _ next hd tl ys)))
       (at (cell2 _ h r2)))))
 
@@ -420,7 +420,7 @@ promises its result at the cell:
   (match many xs _
     ((Nil a) ys)
     ((Cons a hd tl)
-      (let (unique cell) (cstr-alloc Cons))
+      (let (unique cell) (cell-alloc Cons))
       (append-into _ cell hd tl ys))))
 ```
 
@@ -693,16 +693,16 @@ Promoted here from ASSUMPTIONS 2, the owner's decision: `_` as a binder
 name mints an anonymous entry wherever a binder is expected, a `let`
 binder, a telescope entry, a pattern field, and now §U5's extra pattern
 binder; it is not special anywhere else, `_` in an argument (SUGAR.md
-6), as an annotation (SUGAR.md 2), and as a `cstr-write` or
-`cstr-alloc` item (§U9) being their own things.
+6), as an annotation (SUGAR.md 2), and as a `cell-write` or
+`cell-alloc` item (§U9) being their own things.
 
 ## U17. Registry additions and open questions
 
-Additions to §27's registry. Statements: `def-unique`, `cstr-read`.
-Type formers: `UniqueFn`, `UniqueCstr`. Other expressions: `share`,
-`cstr-alloc`, `cstr-write`, the full-at wrapper `at`, `coercible-share`,
+Additions to §27's registry. Statements: `def-unique`, `cell-read`.
+Type formers: `UniqueFn`, `Cell`. Other expressions: `share`,
+`cell-alloc`, `cell-write`, the full-at wrapper `at`, `coercible-share`,
 and §U15's `at-coercible` and `slot-eq`, names open; a UniqueFn or
-UniqueCstr head is an applicable type in §4's tier 1, not a special
+Cell head is an applicable type in §4's tier 1, not a special
 form. Annotation tokens:
 `unique`, `peek`, and `at` before an argument or after a telescope
 entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, and
@@ -713,8 +713,8 @@ though not opaque; `Coercible` changed. Removed:
 
 Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
 unequal case carries a refutation; whether those forms fall under
-tier 1 (§U14); whether `cstr-read` should be an expression returning
-its slots as `is` entries, `(cstr-read peek u)` bound by a `let`,
+tier 1 (§U14); whether `cell-read` should be an expression returning
+its slots as `is` entries, `(cell-read peek u)` bound by a `let`,
 rather than a statement, nothing it mints needing to bind outward as
 `let-match`'s facts do; placement on an
 extern type (TBD, for now not allowed); the shadowing sugar the
