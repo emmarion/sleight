@@ -797,6 +797,11 @@ how entering a match branch updates it:
   impossible. A freshly-introduced (atom) variable, or a pre-existing
   atom with no conflicting `is` fact, always succeeds this way, with no
   recursion needed for that step.
+- This is sound because a branch's unification only ever happens as the
+  consequence of a branch that was actually, genuinely entered — gated by
+  a real discriminant check (a runtime tag comparison for a non-erased
+  enum, or `comptime-match`'s compile-time computation) — not performed
+  as a free-floating comparison between two arbitrary atoms.
 - A constructor's forced facts hold conditionally while checking its
   branch. Ordinary `match` keeps those facts inside that branch;
   `comptime-match` exports them after verifying the constructor against
