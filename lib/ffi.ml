@@ -27,7 +27,7 @@ let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
 (* The interpreter's construction and matching of an extern type, through lib/ffi_core.ml's one-level view. *)
 let bad name v = raise (Eval.Runtime (Printf.sprintf "not a %s: %s" name (show v)))
-let des = function VCtor (c, fs) -> (c.index, fs) | v -> bad "constructor" v
+let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | v -> bad "constructor" v
 let view shape view = { shape; view }
 let types : (string * ty_spec) list =
   let nat adt n = VExt (adt, Int n) in

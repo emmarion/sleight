@@ -8,7 +8,7 @@ let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 type state = Const of Value.value | Dyn
 
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool }
+type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -28,6 +28,7 @@ type use = Shared | Consumed
 type t = {
   locations : id IntMap.t;
   signature : id list;
+  in_extern : bool;
   uses : use IntMap.t;
   captures : id list;
   usage_erased : bool;
@@ -44,7 +45,7 @@ type t = {
 }
 
 let empty =
-  { locations = IntMap.empty; signature = []; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
+  { locations = IntMap.empty; signature = []; in_extern = false; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -70,7 +71,7 @@ let lookup env name = StringMap.find_opt name env.scope.named
 let hide env outer =
   let n = List.length env.scope.ids - List.length outer.scope.ids in
   let added = List.filteri (fun i _ -> i < n) env.scope.ids in
-  let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added in
+  let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None; word = (let e = IntMap.find x es in e.word && not e.temporary) } es) env.entries added in
   { env with entries; scope = { env.scope with named = outer.scope.named } }
 
 let rec location env x = match IntMap.find_opt x env.locations with Some y -> location env y | None -> x
@@ -118,13 +119,13 @@ let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x 
 (* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name mult state ty =
+let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error 0 "%s is a literal, not a name" n) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     error 0 "cannot infer the _ in %s" (show env (match rule with Some r when has_meta env r -> r | _ -> ty));
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta } env.entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary } env.entries in
   let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)

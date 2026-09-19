@@ -1,5 +1,5 @@
 ; error: has no opened newtype Matchable
-; warns: warning (line 9): phantom constructor Ghost has a many field
+; warns: warning (line 7): phantom constructor Ghost has a many field
 
 (def-adts $ T : -> Type
   enum newtype

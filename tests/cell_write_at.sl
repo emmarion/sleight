@@ -1,0 +1,9 @@
+; expect: 2
+(def-adts $ Pair2 : -> Type enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))
+(let (many a) (Zero))
+(let (many b) (Succ (Succ (Zero))))
+(let (unique u) (cell-alloc P))
+(let (unique u2) (cell-write u (P (SlotHolds a) (SlotHolds b))))
+(let (many p) (at (u2 a b)))
+(let-match many p (P x y))
+y

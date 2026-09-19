@@ -35,9 +35,17 @@ let rec eval env code =
           | Some branch, _ -> enter branch fields
           | None, Some d -> eval env d
           | None, None -> raise (Runtime ("no branch for " ^ show v)))
-      | None, [ ((_, ids, _) as branch) ], _ -> enter branch (untuple (List.length ids) v)
+      | None, [ ((_, ids, _) as branch) ], _ -> enter branch (let a = match shape with Known a | Held (_, a) -> a in if a.newtype then untuple (List.length ids) v else match v with VCtor (_, fs) -> Array.to_list fs | _ -> assert false)
       | None, [], Some d -> eval env d
       | None, _, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
+  | CCellAlloc (c, ss) -> [ VCtor (c, Array.of_list (List.map (eval1 env) ss)) ]
+  | CCellWrite (_, c, ss) ->
+      let v = eval1 env c in
+      let fs = match v with VCtor (_, fs) -> fs | _ -> raise (Runtime "not a cell") in
+      let ss = List.map (fun (i,s) -> i, eval1 env s) ss in
+      List.iter (fun (i,s) -> fs.(i) <- s) ss;
+      [v]
+  | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))

@@ -24,10 +24,10 @@ let externs =
     ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
 
-type shape = Ext of string | Tagged of int list | Untagged of int list
+type shape = Ext of string | Tagged of int list | Untagged of int list | Block of bool * int list
 
 let arities adt = List.map (fun c -> c.V.arity) adt.V.ctors
-let plain_shape adt = if adt.V.tagged then Tagged (arities adt) else Untagged (arities adt)
+let plain_shape adt = if adt.V.ext <> None && !V.use_externs then Tagged (arities adt) else if adt.V.newtype then Untagged (arities adt) else Block (adt.V.tagged, arities adt)
 let shape adt = if adt.V.ext <> None && !V.use_externs then Ext adt.tname else plain_shape adt
 
 type scope = { capture : V.venv; locals : (id * int) list }
@@ -73,6 +73,10 @@ let narrow cx ns live =
       cx.narrows := (key, name) :: !(cx.narrows);
       name
 
+let block tagged index es =
+  let es = if tagged then ("(Obj.repr " ^ string_of_int index ^ ")") :: es else es in
+  Printf.sprintf "(Obj.repr [|%s|])" (concat "; " (if es = [] then ["(Obj.repr ())"] else es))
+
 let build cx c es =
   match shape c.V.adt with
   | Ext name -> (
@@ -86,6 +90,7 @@ let build cx c es =
           if binds = [] then "(" ^ text ^ ")" else Printf.sprintf "(let %s in %s)" (concat " and " binds) text)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
   | Untagged _ -> tuple es
+  | Block (tagged, _) -> block tagged c.index es
 
 (* A match over [a]'s constructors: [arms] pair each constructor with its field names and body, [live] the
    discriminants that can occur, which narrows a tagged type so OCaml drops the others; an extern value is
@@ -119,6 +124,16 @@ let dispatch cx a live scrut arms default =
       let body = cases (pattern cx) ^ match default with Some d -> " | _ -> " ^ d | None -> "" in
       Printf.sprintf "(match (Obj.obj %s : %s) with %s)" scrut ty (if body = "" then "_ -> ." else body)
   | Untagged _ -> (match arms with [ (_, vs, body) ] -> untuple vs scrut body | [] -> Option.get default | _ -> assert false)
+  | Block (tagged, _) ->
+      let n = stamp cx in
+      let v = Printf.sprintf "block%d" n in
+      let arm (_, vs, body) = List.fold_right (fun (i,x) b -> Printf.sprintf "(let %s = Obj.field %s %d in %s)" x v (i + if tagged then 1 else 0) b) (List.mapi (fun i x -> i,x) vs) body in
+      let body = if tagged then
+        "(match (Obj.obj (Obj.field " ^ v ^ " 0) : int) with " ^
+        concat " " (List.map (fun ((c,_,_) as a) -> Printf.sprintf "| %d -> %s" c.V.index (arm a)) arms) ^
+        " | _ -> " ^ Option.value default ~default:"(absurd ())" ^ ")"
+        else match arms with [a] -> arm a | [] -> Option.value default ~default:"(absurd ())" | _ -> assert false in
+      Printf.sprintf "(let %s = %s in %s)" v scrut body
 
 let bucket cx v =
   let h = Hashtbl.hash v in
@@ -128,6 +143,19 @@ let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 
 let rec value cx v =
   match v with
+  | V.VCtor (c, vs) when (match shape c.adt with Block _ -> true | _ -> false) -> (
+      let b = bucket cx v in
+      match List.find_opt (fun (v', _) -> v' == v) !b with
+      | Some (_, { contents = Some name }) -> name
+      | _ ->
+          incr cx.shared;
+          let name = Printf.sprintf "block_%d" !(cx.shared) in
+          b := (v, ref (Some name)) :: !b;
+          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (block c.adt.tagged c.index (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
+          Array.iteri (fun i v ->
+            let rhs = value cx v in
+            Buffer.add_string cx.out (Printf.sprintf "let () = Obj.set_field %s %d %s\n" name (i + if c.adt.tagged then 1 else 0) rhs)) vs;
+          name)
   | _ -> (
       let b = bucket cx v in
       match List.find_opt (fun (v', _) -> v' == v) !b with
@@ -141,12 +169,16 @@ let rec value cx v =
       | None -> b := (v, ref None) :: !b; plain cx v)
 
 and plain cx = function
-  | V.VCtor (c, vs) -> build cx c (List.map (value cx) vs)
+  | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
-  | V.VMatchable adt -> (match shape adt with Ext name -> "(Obj.repr des_" ^ name ^ ")" | _ -> "m_plain")
+  | V.VMatchable adt -> (match shape adt with
+      | Ext _ ->
+          let arms = List.map (fun c -> let fs = fields c in (c, fs, block adt.tagged c.index fs)) adt.ctors in
+          "(Obj.repr (fun held -> " ^ dispatch cx adt (List.init (List.length adt.ctors) Fun.id) "held" arms None ^ "))"
+      | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
 
@@ -180,8 +212,14 @@ and fn cx scope name f =
   let body =
     match f.V.impl with
     | Some _ when !V.use_externs ->
-        let extra = if f.fname = "flatten" then "~rope:Obj.obj ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else "" in
-        Printf.sprintf "(Obj.repr (Ffi_core.%s %s%s))" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params))
+        let extra = if f.fname = "flatten" then
+          let a = (Program.ctor cx.env "REmpty").V.adt in
+          let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
+          "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else "" in
+        let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
+        if f.fname = "nat-cmp" || f.fname = "str-cmp" then
+          "(match " ^ call ^ " with " ^ concat " | " (List.map (fun n -> "Ffi_core." ^ n ^ " -> " ^ build cx (Program.ctor cx.env n) []) ["CLt";"CEq";"CGt"]) ^ ")"
+        else "(Obj.repr (" ^ call ^ "))"
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
@@ -208,7 +246,6 @@ and expr cx scope = function
       in
       match (cc, head) with
       | V.Ctor, `Ctor c -> build cx c es
-      | V.Ctor, _ when es = [] -> expr cx scope f
       | _, `Fn (name, arity) when arity = List.length es -> Printf.sprintf "(%s %s)" name (args es)
       | _ -> Printf.sprintf "((Obj.obj %s : %s) %s)" (expr cx scope f) (arrows (List.length es)) (args es))
   | V.CLet ([], rhs, body) -> Printf.sprintf "(let _ = %s in %s)" (expr cx scope rhs) (expr cx scope body)
@@ -224,20 +261,34 @@ and expr cx scope = function
         | V.Held (code, a) -> (a, if a.tagged then Printf.sprintf "((Obj.obj %s : Obj.t -> Obj.t) %s)" (expr cx scope code) scrut else scrut)
       in
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
+  | V.CCellAlloc (c, ss) -> block c.adt.tagged c.index (List.map (expr cx scope) ss)
+  | V.CCellRead (tagged, i, c) -> Printf.sprintf "(Obj.field %s %d)" (expr cx scope c) (i + if tagged then 1 else 0)
+  | V.CCellWrite (tagged, c, ss) ->
+      let n = stamp cx in
+      let name = Printf.sprintf "cell%d" n in
+      let ss = List.map (fun (i,s) -> i, expr cx scope s) ss in
+      let stores = List.map (fun (i,s) -> Printf.sprintf "Obj.set_field %s %d %s; " name (i + if tagged then 1 else 0) s) ss in
+      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) (concat "" stores) name
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =
   let adts = ref [] and defined = Hashtbl.create 64 in
   let adt a = if not (List.memq a !adts) then adts := a :: !adts in
-  let rec value = function
-    | V.VCtor (c, vs) -> adt c.adt; List.iter value vs
+  let seen = Hashtbl.create 64 in
+  let rec value v =
+    let h = Hashtbl.hash v in
+    let bucket = Option.value (Hashtbl.find_opt seen h) ~default:[] in
+    if List.exists (fun w -> w == v) bucket then () else (
+    Hashtbl.replace seen h (v :: bucket);
+    match v with
+    | V.VCtor (c, vs) -> adt c.adt; Array.iter value vs
     | V.VTuple vs -> List.iter value vs
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
-    | V.VFn _ | V.VToken -> ()
+    | V.VFn _ | V.VToken -> ())
   and code c =
-    (match c with V.CConst v -> value v | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
+    (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
     List.iter code (V.subcodes c)
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
@@ -259,7 +310,7 @@ let all a = List.init (List.length a.V.ctors) Fun.id
 let types cx =
   let builder c =
     let fs = fields c in
-    Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (if fs = [] then build cx c [] else Printf.sprintf "(Obj.repr (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
+    Printf.sprintf "let %s : Obj.t = %s" (var c.V.cid) (Printf.sprintf "(Obj.repr (fun %s : Obj.t -> %s))" (params fs) (build cx c fs))
   in
   let extern a = match shape a with Ext name -> Some (List.assoc name externs) | _ -> None in
   let builders = List.concat_map (fun a -> List.map builder a.V.ctors) cx.adts in
@@ -329,6 +380,8 @@ let rec show cx env ty =
          | Some text -> text
          | None -> (
          match ty with
+         | Cell _ -> "\"<cell>\""
+         | t when equal t Prelude.slot_term -> "\"<slot>\""
          | App (Var tid, _) -> (
              match adt_of tid with
              | None -> "\"?\""

@@ -7,6 +7,6 @@
                        (Unique) (Holder (Owned)) (Hold (Owned) (Own n))) p)
   (coercible-ctor _ Hold (Nat) (Owned) (coercible-wrap _ Own n)))
 (let (unique h) (coerce (Hold (Nat) n) p))
-(let-match unique h (Hold _ b))
+(let-match unique h (Hold _ b _))
 (let (unique r) (coerce b (coercible-sym (coercible-wrap (Unique) Own n))))
 (share r)

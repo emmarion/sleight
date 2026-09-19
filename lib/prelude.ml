@@ -24,7 +24,7 @@ let subterm, env = Env.bind env (Some "Subterm") Erased token (TyCtor heterogene
 let sharing, env = Env.bind env (Some "Sharing") Erased token (TyCtor [])
 let sharing_term = App (Var sharing, [])
 let sharing_ctors, env =
-  let adt = { V.tname = "Sharing"; tagged = true; ctors = []; ext = None } in
+  let adt = { V.tname = "Sharing"; tagged = true; newtype = false; ctors = []; ext = None } in
   let env, cs = List.fold_left_map (fun env (index, name) ->
     let x, env = Env.bind env (Some name) Many token (ValCtor ([], sharing_term)) in
     let c = { V.cname = name; cid = x; index; arity = 0; adt } in
@@ -44,7 +44,7 @@ let special_term = App (Var special, [])
 
 (* [specials]: each special form by its variant's constructor entry. *)
 let specials, env =
-  let adt = { V.tname = "Special"; tagged = true; ctors = []; ext = None } in
+  let adt = { V.tname = "Special"; tagged = true; newtype = false; ctors = []; ext = None } in
   let ctor (env, index) (sp, n) =
     let c, env = Env.bind env (Some ("%" ^ n)) Many token (ValCtor ([], special_term)) in
     let ctor = { V.cname = "%" ^ n; cid = c; index; arity = 0; adt } in
@@ -59,5 +59,5 @@ let specials, env =
   ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,
     List.fold_left
       (fun env (_, n, c, ctor) ->
-        snd (Env.bind env ~rule:(App (Var c, [])) (Some n) Many (Env.Const (V.VCtor (ctor, []))) special_term))
+        snd (Env.bind env ~rule:(App (Var c, [])) (Some n) Many (Env.Const (V.VCtor (ctor, [||]))) special_term))
       env ctors )

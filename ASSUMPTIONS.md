@@ -3205,3 +3205,42 @@ to look for a guard, are the owner's.
     constructor proof. A unique-labelled field uses the constructor proof's
     side. This is the intended application of U4's table to U7's constructor
     congruence. A delegated UniqueFn-to-Fn proof records Unique-to-Shared.
+
+162. Ordinary source constructors now use mutable blocks regardless of arity;
+    only marked newtypes use their field's word. The ML interpreter stores
+    constructor fields in arrays. Extracted ordinary blocks reserve a tag word
+    for tagged enums, and use a dummy word for otherwise empty blocks so empty
+    cells have allocated storage. Nullary constructor functions allocate when
+    called, including first-class calls. Held extern Matchables convert their
+    views to this ordinary-block layout before dispatch.
+
+163. Captured mutable blocks are emitted by assigning each an identity before
+    following its fields, then filling those fields. This is intended to preserve
+    sharing and cycles through inert Slot words. A Slot or Cell printed as a
+    final/debug value is opaque (`<slot>` or `<cell>`); its arbitrary held word
+    is not recursively interpreted as an ordinary datatype value.
+
+164. Compiler-created result placeholders and expression-local temporaries are
+    distinguished from caller words still available after a let. An at-class
+    representative need not itself be available at runtime: reconstruction uses
+    an available member, including the forwarding let's binder. Nested let
+    normalization moves binding continuations into the producing expression;
+    this exposes actual tail calls after location returns have been dropped.
+    The U11 append helper's emitted recursive branch ends in its recursive call,
+    with the cell stores before that call.
+
+165. Unique patterns retain their mandatory extra binder even where their body
+    is erased. Generated Cell types in phantom branches may mention the branch's
+    erased field identities as location terms, but no field word is produced
+    there and user-written SlotHolds still refuses erased binders. Extern-model
+    context is lexical, including nested local function bodies. Cell write
+    constructor checks use canonical constructor identity. Slot argument
+    expressions are evaluated before the corresponding physical stores.
+
+166. A phantom constructor's cell may hold inert storage, but invoking that
+    constructor at runtime is refused, as ordinary phantom construction is.
+    Cell-write evaluates its input expression before its slot expressions.
+    The ordinary-block representation also requires conversions at the fixed
+    FFI boundary: comparison results build the declared Cmp blocks, and flatten
+    reads Rope blocks through their constructor view. The cell checkpoint passes
+    362 tests with interpreter/extracted, extern/model and template/view checks.
