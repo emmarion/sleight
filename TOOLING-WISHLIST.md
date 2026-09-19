@@ -9,6 +9,8 @@ Nothing here is a design decision; it is a log of friction, in the order met.
    error like `line N: syntax error: missing )` names the end of the file; a
    per-form report ("form starting at line N opened 3 more than it closed")
    would have found each of the five imbalances met so far at once.
+   Closed by `bin/shape`, which reports each form's opening `line:col` and
+   the line it closes on; see item 26.
 
 2. **Error locations inside a form.** Type errors report the line of the
    enclosing `def-fns` (e.g. `expected 3 arguments, got 2` on a 20-line
@@ -192,30 +194,23 @@ Nothing here is a design decision; it is a log of friction, in the order met.
 
 Items 26 onward are from a session writing `tests/longest_palindrome.sl`,
 `tests/palindrome_bridge.sl` and `tests/manacher.sl` (a linear-time search
-with its correctness proof, about 1100 lines), in the order met.
+with its correctness proof, about 1100 lines), in the order met. Those three
+files are not in this tree; they are at commit `4912ada`
+(`origin/palindrome-archive/fable` at the time of writing).
 
-Open question for the owner, recorded rather than resolved: items 26
-onward came over from `origin/palindrome-archive/fable`, where those
-three paths and item 26's "on another branch" were both accurate. On
-this branch neither appears to be: the three files are not in the tree
-(this branch carries `pal/*.sl` instead), and a copy of `shape.ml` is at
-this repo's root, though it is in no dune file and not in `bin/`. The
-text is left exactly as that session wrote it until the owner says how
-each should read.
-
-26. **Item 1 exists, on another branch.** `shape.ml` on
-    `origin/simply-typed-archive/main` is the paren-depth locator item 1
-    asks for: `shape file` lists every form spanning more than one line
-    with the line it closes on, `shape --closers file` says what each run
-    of `)` closes, and a diff of two runs reduces a stray paren to one
-    hunk. It found all four imbalances this session met, including the
-    branch-nested-in-a-branch case of item 12, from the `--closers` view.
-    Two caveats: it knows neither `;` comments nor string literals (the
-    archive's language had none), so an `.sl` file must be stripped of
-    comments first (`sed 's/;.*$//'`), and a surplus `)` at the top level
-    pops an empty stack silently, so for that case the checker's
-    `line N: unexpected )` is the sharper report. Porting it into `bin/`
-    with comment and string awareness would close item 1.
+26. **Item 1, closed.** `shape.ml` came over from the pre-restart history
+    (`simply-typed-archive/main`, tip `06b9f3e`, last touched there by
+    `56d9a2f`) and now builds as `bin/shape`: `shape file` lists every form
+    spanning more than one line with the line it closes on, `shape --closers
+    file` says what each run of `)` closes, and a diff of two runs reduces a
+    stray paren to one hunk. It found all four imbalances the originating
+    session met, including the branch-nested-in-a-branch case of item 12,
+    from the `--closers` view. It now reads the checker's own lexer, so the
+    comment and string caveat recorded here is gone; on this session's check
+    the text-scanning version it replaced had been reporting `final depth 6`
+    for the balanced `self/emit.sl`. One caveat stands: a surplus `)` at the
+    top level pops an empty stack silently, so for that case the checker's
+    `line N: unexpected )` is the sharper report.
 
 27. **Arithmetic again, now on `Add`.** Item 6's `Lt` chains recurred
     (`lt-le-trans` wanting its middle term as `(Succ x)`, `add-le-left`
