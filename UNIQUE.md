@@ -24,14 +24,15 @@ binder's multiplicity.
 ## U2. Uses
 
 Each binder is checked by the uses it has on each path through the
-code, with no order among them. On one path a `unique` binder may have
-at most one non-erased use, and that use is either the one unique use
-or any number of `many` uses; a unique use beside any other non-erased
-use of the same binder is an error, whichever the elaborator meets
-first. The order in which such errors are reported is implementation-
-dependent. An erased mention is never a use and is allowed anywhere,
-before or after the binder is consumed (§20's erased positions): a
-proof or a type may name a consumed value.
+code, with no order among them. On one path a `unique` binder must
+either have exactly one non-erased use, at unique, or have any number,
+zero included, of erased uses and of degraded many uses (§U3) and none
+at unique. A unique use beside any other non-erased use of the same
+binder is an error, whichever the elaborator meets first, and the order
+in which such errors are reported is implementation-dependent. An
+erased mention is never a use and is allowed anywhere, before or after
+the binder is consumed (§20's erased positions): a proof or a type may
+name a consumed value.
 
 Over the branches of a match, a binder's state afterwards is the
 maximum of its states after each branch in the order unused, then used
@@ -55,10 +56,9 @@ Nothing turns a `many` or erased value unique, except as §20 already
 has it in an erased position or a phantom branch, where nothing runs.
 
 Degradation from `unique` to `many` is explicit: a `unique` binder in a
-`many` position is an error unless the degradation is written (the
-form's name is open, §U15). The written degradation is that binder's
-many use, after which it is usable at many everywhere and never again
-at unique.
+`many` position is an error unless written `(degrade x)` (name
+tentative). The written degradation is a many use of `x`, after which
+`x` is usable at many everywhere and never again at unique.
 
 ## U4. Fields
 
@@ -119,8 +119,8 @@ FFI's peek unwrap (§U12).
 ## U6. Closures and the top level
 
 A function defined by `def-fns` is a closure over its scope and may
-mention a `unique` binder of that scope only erased or, after an
-explicit degradation, at many; the proposal's `def-unique` defines a
+mention a `unique` binder of that scope only erased or degraded, the
+`(degrade x)` written inline in the body or earlier; the proposal's `def-unique` defines a
 function of a new former, UniqueFn, that may close over `unique`
 binders as unique, consuming them, and is itself callable only from a
 `unique` binder, or erased. Its shape and level are open (§U15).
@@ -315,8 +315,7 @@ erased mention of a consumed unique into a second use.
 
 ## U15. Open
 
-Questions, not proposals: the spelling of the degradation form, of the
-allocation form, of the write form and its omission marker, of `(at)`
+Questions, not proposals: the spelling of the allocation form, of the write form and its omission marker, of `(at)`
 (after the argument) and of the full-at invocation; `def-unique` and
 UniqueFn (its level, what it closes over, its type former in §5);
 whether an `at` return may name a closed-over variable of a `def-fns`
