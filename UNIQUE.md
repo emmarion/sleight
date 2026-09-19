@@ -299,7 +299,9 @@ too.
 
 **Obtaining a cell.** `(cstr-alloc C)` is an expression yielding a
 fresh cell at unique with every slot `SlotVacant`; `(cstr-alloc C i1
-... in)` lists every non-erased field as a write does, no partial list.
+... in)` lists every non-erased field as a write does, a `(Slot)`
+expression at many or `_` for a slot left `SlotVacant`, no partial
+list.
 A destructure at `unique` (§U5) yields the cell the constructor
 occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
