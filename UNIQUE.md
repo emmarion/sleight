@@ -136,7 +136,7 @@ outward as before (§16). `comptime-match` at `unique` is a destructure
 like any other and does not degrade a unique Const, but merely consumes
 it at unique, binding its fields Const at their labels; the
 elaborator's other reads of a Const (a special form or macro at the
-head, a Matchable read, §U6) do degrade. Readability requirements for a dispatching
+head, a Matchable read, §U6) are many uses. Readability requirements for a dispatching
 match are as in §19.
 
 *Reading.* On a source type `peek` is a `unique` destructure followed by
@@ -174,9 +174,10 @@ express: after `share` a many `Fn` binder could be called repeatedly,
 running the captured uniques again; a UniqueFn held at many cannot.
 
 A top-level binder, and so a Const (§34), may be `unique` under the same
-rules, run-position statements being sequential. A unique Const the
-elaborator must read as a value, a special form or macro at a head (§4)
-or a Matchable a match reads, is degraded to many by that read;
+rules, run-position statements being sequential. Where the elaborator
+must read a Const as a value, a special form or macro at a head (§4) or
+a Matchable a match reads, that read is a many use, so a unique Const
+there is an error until it is written `(share x)`, as anywhere else;
 `comptime-match` is not such a read (§U5).
 
 ## U7. `Coercible` with multiplicities
