@@ -24,7 +24,7 @@ Cell head is the placement invocation, with `(at)` before an
 argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
 match annotation entry (§U8); an extra binder in every `unique` or
 `peek` pattern, and in an `else` at `peek` (§U5). Built-in types: `Slot`
-with `SlotVacant` and `(SlotHolds v)` (§U10), `Sharing` with `Unique`
+with `(SlotVacant)` and `(SlotHolds v)` (§U10), `Sharing` with `Unique`
 and `Shared` (§U7). Elaboration state: an
 at-database beside §18's fact table, partitioning entries by location
 (§U8). Changed: `Coercible`
@@ -317,9 +317,9 @@ constructor (§19), which unifying two opened Matchables forces equal
 too.
 
 **Obtaining a cell.** `(cell-alloc C)` is an expression yielding a
-fresh cell at unique with every slot `SlotVacant`; `(cell-alloc C i1
+fresh cell at unique with every slot `(SlotVacant)`; `(cell-alloc C i1
 ... in)` lists every non-erased field as a write does, a `(Slot)`
-expression at many or `_` for a slot left `SlotVacant`, no partial
+expression at many or `_` for a slot left `(SlotVacant)`, no partial
 list.
 A `unique` `match`, `let-match` or `comptime-match` on a value (§U5)
 yields, through its extra pattern binder, the cell the constructor
@@ -365,8 +365,8 @@ at its multiplicity, so a consumed unique cannot be named there.
 ## U10. `Slot` and `cell-read`
 
 `Slot` is a nullary type with two value constructors, `SlotVacant` and
-`(SlotHolds v)`, `v` a fact-table variable (§3), never a telescope
-binder; a signature that speaks of a slot abstracts over it as an
+`SlotHolds`, a slot's content being `(SlotVacant)` or `(SlotHolds v)`
+with `v` a fact-table variable (§3), never a telescope binder; a signature that speaks of a slot abstracts over it as an
 erased `(Slot)` parameter, `(erased (Slot) s) (unique (Cell Pair2
 s s) u)` saying its two slots hold one thing. A `SlotHolds` term is
 handled by the at-database and not the fact table: its argument is not
@@ -389,7 +389,7 @@ given back as §U5's peek does. The `si` are fresh `many` binders of
 type `(Slot)`; one forced unification of `(Cell C s1 ... sn)`
 against `u`'s type mints their `is` rules, as entering a branch unifies
 a scrutinee's type (§18). It decides nothing about a slot: an `si` is
-whatever `u`'s type said, a `SlotHolds`, a `SlotVacant`, or an abstract
+whatever `u`'s type said, a `(SlotHolds v)`, a `(SlotVacant)`, or an abstract
 slot. What the words are for is a write into another cell and §U15's
 comparison.
 
