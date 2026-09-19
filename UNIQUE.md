@@ -336,7 +336,7 @@ re-mint; it does no usage accounting, whatever its slot refers to, the
 Cell invocation below being the semantic mint.
 
 **Invocation.** A Cell-typed head is applicable in §4's tier 1,
-as a UniqueFn-typed one is (§U6): `(u a1 ... an)` is a constructor
+beside the three types §4 lists: `(u a1 ... an)` is a constructor
 application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
 as `(C a1 ... an)` would, erased arguments included, which have no
