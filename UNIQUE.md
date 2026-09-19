@@ -723,20 +723,12 @@ binder; it is not special anywhere else, `_` in an argument (SUGAR.md
 6), as an annotation (SUGAR.md 2), and as a `cell-write` or
 `cell-alloc` item (§U9) being their own things.
 
-## U17. Registry additions and open questions
+## U17. Open questions
 
-Additions to §27's registry. Statements: `def-unique`, `cell-read`.
-Type formers: `UniqueFn`, `Cell`. Other expressions: `share`,
-`cell-alloc`, `cell-write`, the full-at wrapper `at`, `coercible-share`,
-and §U15's `at-coercible` and `slot-eq`, names open; a UniqueFn or
-Cell head is an applicable type in §4's tier 1, not a special
-form. Annotation tokens:
-`unique`, `peek`, and `at` before an argument or after a telescope
-entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, and
-`Sharing` with `Unique` and `Shared`, beside §17's opaque objects
-though not opaque; `Coercible` changed. Removed:
-`Newtype`, `newtype-of` and §27's item 9a; `Matchable`'s type gains the
-`newtype` and `extern` marks.
+§27's registry gains what §U0 lists, `share` and the `cell-*` forms as
+expressions, `def-unique` and `cell-read` as statements, `unique`,
+`peek` and `at` as annotation tokens, and loses `Newtype`,
+`newtype-of` and its item 9a.
 
 Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
 unequal case carries a refutation; whether those forms fall under
