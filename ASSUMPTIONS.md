@@ -3299,19 +3299,20 @@ to look for a guard, are the owner's.
     check uses, then join their usage states by maximum; branch-local facts and
     location refinements do not escape without the written result annotation.
 
-172. A computed application head is first checked in a discarded environment
-    with runtime evaluation disabled and usage accounting erased. The probe
-    uses an erased result position; match annotations retain at metadata under
-    contextual erasure, while explicitly erased function return declarations
-    still forbid at. Its canonical result type selects unique demand
-    for Cell and UniqueFn, many for other callable types; a second pass performs
-    the actual multiplicity and usage checks. An already erased application
-    needs no probe. The ML probe restores fresh-name state, declaration traces,
-    FFI registration and claim tables, and the warning hook, including when
-    checking raises; the self probe discards its persistent environment and
-    store. Neither probe runs code against existing mutable values. The
-    computed-match head tests cover Cell and UniqueFn results and refusal of an
-    explicitly shared UniqueFn result.
+172. Known implementation defect: a computed application head is checked
+    first in a discarded erased context to discover whether its type requires
+    unique or many demand, then checked again at that demand. This was a
+    workaround for the elaborator requiring a multiplicity before synthesizing
+    the head's type; it is not a language rule. The erased probe can reject
+    otherwise valid heads: a unique match with a non-erased field n and an
+    erased (SlotHolds n) proof in its branch is refused because the probe makes
+    n erased. Binding the identical head expression with let unique before
+    applying it succeeds. The ML bound version returned 1. Self accepted and extracted the direct
+    version, which also returned 1: its probe errors are accumulated in the
+    discarded environment rather than raised as in ML. Restoring ML's global
+    tables does not repair that contextual mismatch. The
+    probe needs replacement with head-type synthesis and multiplicity checking
+    in the actual context; the previous computed-head tests missed this case.
 
 173. Ordinary unions use one-constructor native variants, one shape per payload
     arity, rather than a separate raw-array representation. Since union matching
