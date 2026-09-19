@@ -375,10 +375,13 @@ at-class, two `SlotHolds` are equal exactly when their arguments share a
 class, and a forcing unification merges the classes. `Slot` is not
 matchable and has no Matchable to open. At runtime a slot's value is
 the word the slot holds, a pointer or an immediate. `(SlotHolds v)`
-is an ordinary expression, mentioning `v` erased, so a consumed binder
-is fine, but its word must exist, so `v` must have been declared
-non-erased; in a type index, a `SlotHolds` may name an erased variable,
-as a type may name anything. A slot value is inert and may sit in a
+is an ordinary expression producing a `(Slot)` at many, and it mentions
+`v` erased: it is not a use of `v`, so `v` may be a unique binder that
+is still live, which stays live, or one already consumed, and either
+way the result is a many slot holding `v`'s word (the proposal's 4f
+and 4g). What `v` must be is declared non-erased, so that the word
+exists; in a type index, a `SlotHolds` may name an erased variable, as
+a type may name anything. A slot value is inert and may sit in a
 field or a list like any other value.
 
 `cell-read` reads a cell's words out, a statement binding outward:
