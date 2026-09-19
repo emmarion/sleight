@@ -7,7 +7,7 @@
     ((SCons c rest) (Succ (len (subterm _) rest)))))
 
 (let (many s) "a\"")
-(comptime-match s (SCons c rest))
-(comptime-match rest (SCons d tail))
-(comptime-match tail (SNil))
+(comptime-match many s (SCons c rest))
+(comptime-match many rest (SCons d tail))
+(comptime-match many tail (SNil))
 (len s)

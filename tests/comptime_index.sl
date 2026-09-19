@@ -11,7 +11,7 @@
 
 (def-fns _ $ many id : (many (Nat) n) -> (many (Nat) m) n)
 (let (many one) (id (Succ (Zero))))
-(comptime-match one (Succ zero))
-(comptime-match zero (Zero))
+(comptime-match many one (Succ zero))
+(comptime-match many zero (Zero))
 (let (many (Sing one) s) (SSucc zero (SZero)))
 s

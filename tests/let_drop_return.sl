@@ -11,5 +11,5 @@
   b)
 
 (let (erased a) (many b) (two (Zero)))
-(comptime-match b (Succ z))
+(comptime-match many b (Succ z))
 (second z)

@@ -8,7 +8,7 @@
 
 (def-lvl P)
 (let (many d3) (lt-dec 3 u8-modulus))
-(comptime-match d3 (Yes za3 zb3 zp3))
+(comptime-match many d3 (Yes za3 zb3 zp3))
 (let (many code3) (MkU8 3 zp3))
 (let (erased str-p) (prove-predates str-lvl P))
 (let (erased thunk-p) (prove-predates thunk-lvl P))

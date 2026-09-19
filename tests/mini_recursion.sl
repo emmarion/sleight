@@ -27,10 +27,10 @@
 (let (many bare) (Cons _ (a "k") (Nil _)))
 
 (let (many no-proof) (outcome (double-prog marked bare)))
-(comptime-match no-proof (Some t r))
-(comptime-match r (RNoProof))
+(comptime-match many no-proof (Some t r))
+(comptime-match many r (RNoProof))
 (let (many not-marked) (outcome (double-prog unmarked with-proof)))
-(comptime-match not-marked (Some t2 r2))
-(comptime-match r2 (RBadProof))
+(comptime-match many not-marked (Some t2 r2))
+(comptime-match many r2 (RBadProof))
 
 (run (double-prog marked with-proof))

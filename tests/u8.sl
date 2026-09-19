@@ -4,7 +4,7 @@
 
 (let (many three) (Succ (Succ (Succ (Zero)))))
 (let (many d) (lt-dec three u8-modulus))
-(comptime-match d (Yes a b p))
+(comptime-match many d (Yes a b p))
 (let (many x) (MkU8 three p))
 
 (let (many two) (Succ (Succ (Zero))))
@@ -13,7 +13,7 @@
 (let (many half) (nat-add (nat-add (nat-add sixteen sixteen) (nat-add sixteen sixteen))
                           (nat-add (nat-add sixteen sixteen) (nat-add sixteen sixteen))))
 (let (many dh) (lt-dec half u8-modulus))
-(comptime-match dh (Yes ah bh ph))
+(comptime-match many dh (Yes ah bh ph))
 (let (many h) (MkU8 half ph))
 (let (many wrapped) (u8-add h (u8-add h x)))
 (let-match many wrapped (MkU8 wn wq))

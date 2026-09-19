@@ -12,4 +12,4 @@
 
 (let (many n) (NoteBad #\x28 "a\"b\\c\nd\te"))
 
-(comptime-match n (NoteOk))
+(comptime-match many n (NoteOk))

@@ -23,10 +23,10 @@
 (let (many none) (Nil (Raw)))
 
 (let (many refuted) (outcome (prog both)))
-(comptime-match refuted (Some t r))
-(comptime-match r (RRefutedBranch))
+(comptime-match many refuted (Some t r))
+(comptime-match many r (RRefutedBranch))
 (let (many missing) (outcome (prog none)))
-(comptime-match missing (Some t2 r2))
-(comptime-match r2 (RMissingBranch))
+(comptime-match many missing (Some t2 r2))
+(comptime-match many r2 (RMissingBranch))
 
 (run (prog zero-only))

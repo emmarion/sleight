@@ -59,7 +59,7 @@
         ((Cons e rule rest)
           (match many rule (((Bool) b))
             ((MkRule x t) (match many (nat-dec x 6) (((Bool) b)) ((NDSame f) (BTrue)) ((NDDiff f g n) (BFalse))))))))))
-(comptime-match aliased (BTrue))
+(comptime-match many aliased (BTrue))
 
 ; With 6 ruled to be Succ 5 by the first run, 6 against Succ 5 is read through the rule and accepted in Check mode.
 (let (many o7) (many t7) (run (Force) none tb0 (Ref 6) succ-n (ScRef _ (Zero) 6 h6) s-succ-n))

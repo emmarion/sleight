@@ -7,7 +7,7 @@
   (many T3 : (many (Nat) a) (erased (Nat) b) (many (Nat) c) -> (Tri)))
 
 (let (many v) (T3 (Zero) (Succ (Zero)) (Succ (Succ (Zero)))))
-(comptime-match v (T3 a b c))
+(comptime-match many v (T3 a b c))
 
 (def-lvl X)
 (def-fns X $ many third : (many (Tri) t) -> (many (Nat) r)

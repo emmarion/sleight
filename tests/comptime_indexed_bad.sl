@@ -9,4 +9,4 @@
     (many VCons : (erased Type A) (erased (Nat) n) (many A x) (many (Vec A n) rest) -> (Vec A (Succ n)))))
 
 (let (many v) (VNil (Nat)))
-(comptime-match v (VCons a n x rest))
+(comptime-match many v (VCons a n x rest))

@@ -4,9 +4,9 @@
 ; implementation runs.
 
 (let (many bound) (lt-dec 4 (Succ 9)))
-(comptime-match bound (Yes ba bb le))
+(comptime-match many bound (Yes ba bb le))
 (let (many positive) (lt-dec (Zero) 5))
-(comptime-match positive (Yes pa pb pos))
+(comptime-match many positive (Yes pa pb pos))
 
 (let (many twelve) (erased mp) (mul 3 4))
 (let (many five) (erased sp) (sub 9 4 le))

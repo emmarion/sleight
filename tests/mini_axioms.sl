@@ -20,10 +20,10 @@
     $ Cons _ final $ Nil _))
 
 (let (many backwards) (outcome (prog (l3 (k (KPredatesTrans)) (a "q") (a "p")))))
-(comptime-match backwards (Some ty r))
-(comptime-match r (RBadProof))
+(comptime-match many backwards (Some ty r))
+(comptime-match many r (RBadProof))
 (let (many wrong-link) (outcome (prog (l3 (k (KPredatesSubterm)) (a "pn") (a "s1")))))
-(comptime-match wrong-link (Some ty2 r2))
-(comptime-match r2 (RBadProof))
+(comptime-match many wrong-link (Some ty2 r2))
+(comptime-match many r2 (RBadProof))
 
 (run (prog (l3 (k (KPredatesSubterm)) (a "pn") (a "s2"))))

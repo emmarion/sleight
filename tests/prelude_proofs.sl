@@ -8,7 +8,7 @@
 (let (many two) (erased (Lt two three) lt) (erased (Mod eight three two) pm) (nat-mod eight three (LtZ (Succ (Succ (Zero))))))
 
 (let (many d) (lt-dec three u8-modulus))
-(comptime-match d (Yes a b p3))
+(comptime-match many d (Yes a b p3))
 (let (many u3) (MkU8 three p3))
 (let (many u6) (erased (U8Add u3 u3 u6) w) (add-u8 u3 u3))
 (let-match many u6 (MkU8 six p6))

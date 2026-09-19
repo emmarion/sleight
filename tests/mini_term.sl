@@ -24,7 +24,7 @@
 
 ; 7 occurs in the substituted term, so it cannot be assigned; 9 may be, its only binder being the return's own.
 (let (many no7) (match many (assign-dec 0 7 s) (((Bool) r)) ((ADNo c d e q) (BTrue)) ((ADYes c d e q) (BFalse))))
-(comptime-match no7 (BTrue))
+(comptime-match many no7 (BTrue))
 (let (many yes9) (match many (assign-dec 0 9 s) (((Bool) r)) ((ADNo c d e q) (BFalse)) ((ADYes c d e q) (BTrue))))
-(comptime-match yes9 (BTrue))
+(comptime-match many yes9 (BTrue))
 (Cons _ u $ Cons _ s $ Nil _)

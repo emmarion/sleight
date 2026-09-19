@@ -3,8 +3,8 @@
 ; comptime-match verifies a Const value and binds its fields Const.
 
 (let (many two) (Succ (Succ (Zero))))
-(comptime-match two (Succ one))
-(comptime-match one (Succ zero))
+(comptime-match many two (Succ one))
+(comptime-match many one (Succ zero))
 
 (def-lvl X)
 

@@ -6,5 +6,5 @@
 
 (def-lvl X)
 (def-fns X $ many f : (many (Nat) n) -> (many (Nat) m)
-  (comptime-match two (Succ one))
+  (comptime-match many two (Succ one))
   (Succ one))

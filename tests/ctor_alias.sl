@@ -10,5 +10,5 @@
     ((Z) n)
     ((S k) k)))
 (let (many two) (S (S (Z))))
-(comptime-match two (S one))
+(comptime-match many two (S one))
 (pred (S one))

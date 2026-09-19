@@ -100,7 +100,7 @@
 
 (def-lvl A1)
 (let (many d3) (lt-dec 3 u8-modulus))
-(comptime-match d3 (Yes za3 zb3 zp3))
+(comptime-match many d3 (Yes za3 zb3 zp3))
 (let (many code3) (MkU8 3 zp3))
 (let (erased str-a1) (prove-predates str-lvl A1))
 (let (erased th-a1) (prove-predates thunk-lvl A1))
@@ -113,7 +113,7 @@
 
 (def-lvl A2)
 (let (many d0) (lt-dec 0 u8-modulus))
-(comptime-match d0 (Yes za0 zb0 zp0))
+(comptime-match many d0 (Yes za0 zb0 zp0))
 (let (many code0) (MkU8 0 zp0))
 (let (erased th-a2) (prove-predates thunk-lvl A2))
 (def-fns A2 $ many banner : (many (List (String)) args) -> (many (IO A2) next)

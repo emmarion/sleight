@@ -2,7 +2,7 @@ open Term
 module V = Value
 
 let token = Env.Const V.VToken
-let ty name sg = { name = Some name; subterm = false; mult = Erased; sg = Ty sg }
+let ty name sg = { name = Some name; subterm = false; mult = Erased; sg = Ty sg; place = None }
 
 let env = Env.empty
 let univ, env = Env.bind env (Some "Univ") Erased token (TyCtor [])
@@ -10,6 +10,10 @@ let type_term = App (Var univ, [])
 let type_, env = Env.bind env ~rule:type_term (Some "Type") Erased token type_term
 let level, env = Env.bind env (Some "Level") Erased token (TyCtor [])
 let level_term = App (Var level, [])
+
+let slot, env = Env.bind env (Some "Slot") Erased token (TyCtor [])
+let slot_term = App (Var slot, [])
+let null, env = Env.bind env None Many token type_term
 
 let heterogeneous = [ ty "A" type_term; ty "a" (Bound 0); ty "B" type_term; ty "b" (Bound 0) ]
 

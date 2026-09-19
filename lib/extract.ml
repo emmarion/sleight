@@ -377,6 +377,7 @@ let item cx = function
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
   | Env.Final (v, ty, path) ->
+      let v = Program.adapt_final cx.env ty v in
       let text =
         match (v, Program.final cx.env ty) with
         | V.VFn cl, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))

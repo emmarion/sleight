@@ -5,9 +5,9 @@
 ; written; and the four escapes the reader unescapes.
 
 (let (many s) "();")
-(comptime-match s (SCons op rest1))
-(comptime-match rest1 (SCons cl rest2))
-(comptime-match rest2 (SCons semi rest3))
+(comptime-match many s (SCons op rest1))
+(comptime-match many rest1 (SCons cl rest2))
+(comptime-match many rest2 (SCons semi rest3))
 
 (let (many chars)
   (Cons (Char) #\A $ Cons (Char) #\space $ Cons (Char) #\newline $ Cons (Char) #\tab

@@ -45,7 +45,7 @@ let rec bin_succ z =
    (DESIGN.md section 41); a string its characters, each already a literal, consed up. *)
 let source = function
   | Numeral z -> Printf.sprintf "(let (many _) (erased _) (bin-to-nat %s))" (bin z)
-  | Char c -> Printf.sprintf "(let (many %%d) (lt-dec %d u8-modulus)) (comptime-match %%d (Yes %%a %%b %%p)) (let (many _) (MkChar (MkU8 %d %%p)))" c c
+  | Char c -> Printf.sprintf "(let (many %%d) (lt-dec %d u8-modulus)) (comptime-match many %%d (Yes %%a %%b %%p)) (let (many _) (MkChar (MkU8 %d %%p)))" c c
   | Str s ->
       let cons c rest = Printf.sprintf "(SCons %s %s)" (char (Char.code c)) rest in
       "(let (many _) " ^ String.fold_right cons s "(SNil)" ^ ")"

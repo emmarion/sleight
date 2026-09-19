@@ -6,4 +6,4 @@
   (many A : -> (T))
   (many B : -> (T)))
 (let (many z) (Zero))
-(comptime-match z (A))
+(comptime-match many z (A))

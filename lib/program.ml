@@ -63,7 +63,19 @@ let explain path = function
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
 
+let adapt_final env ty v =
+  match final env ty, Env.canon env ty with
+  | (Main | Thunk _), Fn (_, ps, [ { place = Some (SlotHolds p); _ } ]) ->
+      let ids = List.map (fun _ -> Env.fresh ()) ps in
+      let p = instantiate (List.rev_map (fun x -> Var x) ids) p in
+      let source = match p with Var x -> V.CVar x | _ -> assert false in
+      let fn = { V.fname = "at-final"; params = ids;
+        body = V.CLet ([], V.CApp (V.CConst v, List.map (fun x -> V.CVar x) ids, V.Plain), source); impl = None } in
+      V.VFn { fn; env = lazy env.Env.values }
+  | _ -> v
+
 let consume w env ty v =
+  let v = adapt_final env ty v in
   match final env ty with
   | Main -> (driver env).run_main w v
   | Io -> w.exit ((driver env).run_io w v)

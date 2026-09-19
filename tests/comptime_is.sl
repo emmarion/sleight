@@ -5,8 +5,8 @@
 (def-lvl W)
 (def-fns W $ many id : (many (Nat) n) -> (many (Nat) m) n)
 (let (many two) (id (Succ (Succ (Zero)))))
-(comptime-match two (Succ one))
-(comptime-match one (Succ zero))
+(comptime-match many two (Succ one))
+(comptime-match many one (Succ zero))
 (let (many (Succ (Succ zero)) is two2) two)
 (let (many zero is z) zero)
 z

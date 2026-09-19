@@ -12,32 +12,36 @@ type term =
   | ValCtor of tele * term
   | Matchable of disc * term * (mult * term) list
   | Newtype of term
+  | SlotHolds of term
+  | Cell of term * term list
 
 and tele = entry list
-and entry = { name : string option; subterm : bool; mult : mult; sg : sg }
+and entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option }
 and sg = Ty of term | Is of term
 
 let sg_term = function Ty t | Is t -> t
 let map_sg f = function Ty t -> Ty (f t) | Is t -> Is (f t)
 
-let rec map_vars f depth t =
+let rec map_vars ?location f depth t =
   match t with
   | Var _ | Bound _ -> f depth t
-  | App (h, args) -> App (map_vars f depth h, List.map (map_vars f depth) args)
+  | App (h, args) -> App (map_vars ?location f depth h, List.map (map_vars ?location f depth) args)
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
-      let d, ps = map_tele f depth ps in
-      let l = map_vars f depth l and rs = snd (map_tele f d rs) in
+      let d, ps = map_tele ?location f depth ps in
+      let l = map_vars ?location f depth l and rs = snd (map_tele ?location f d rs) in
       (match kind with UniqueFn _ -> UniqueFn (l, ps, rs) | _ -> Fn (l, ps, rs))
-  | TyCtor ps -> TyCtor (snd (map_tele f depth ps))
+  | TyCtor ps -> TyCtor (snd (map_tele ?location f depth ps))
   | ValCtor (ps, r) ->
-      let d, ps = map_tele f depth ps in
-      ValCtor (ps, map_vars f d r)
+      let d, ps = map_tele ?location f depth ps in
+      ValCtor (ps, map_vars ?location f d r)
   | Matchable (d, t, cs) ->
-      Matchable (d, map_vars f depth t, List.map (fun (m, c) -> (m, map_vars f depth c)) cs)
-  | Newtype t -> Newtype (map_vars f depth t)
+      Matchable (d, map_vars ?location f depth t, List.map (fun (m, c) -> (m, map_vars ?location f depth c)) cs)
+  | Newtype t -> Newtype (map_vars ?location f depth t)
+  | SlotHolds t -> SlotHolds (match location with Some g -> g depth t | None -> map_vars f depth t)
+  | Cell (c, ss) -> Cell (map_vars ?location f depth c, List.map (map_vars ?location f depth) ss)
 
-and map_tele f depth es =
-  List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars f d) e.sg })) depth es
+and map_tele ?location f depth es =
+  List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars ?location f d) e.sg; place = Option.map (map_vars ?location f d) e.place })) depth es
 
 (* [args] are closed terms, innermost binder first. *)
 let subst args d t =
@@ -53,7 +57,7 @@ let find_index p l = let rec go i = function [] -> None | x :: xs -> if p x then
 let abstract ids t =
   map_vars (fun d t -> match t with Var x -> (match find_index (( = ) x) ids with Some i -> Bound (i + d) | None -> t) | t -> t) 0 t
 
-let tele_parts depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
+let tele_parts depth es = List.concat (List.mapi (fun i e -> (depth + i, sg_term e.sg) :: List.map (fun p -> (depth + i, p)) (Option.to_list e.place)) es)
 
 let parts = function
   | Var _ | Bound _ -> []
@@ -62,11 +66,12 @@ let parts = function
   | TyCtor ps -> tele_parts 0 ps
   | ValCtor (ps, r) -> tele_parts 0 ps @ [ (List.length ps, r) ]
   | Matchable (_, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
-  | Newtype t -> [ (0, t) ]
+  | Newtype t | SlotHolds t -> [ (0, t) ]
+  | Cell (c, ss) -> List.map (fun t -> (0, t)) (c :: ss)
 
 let blank t =
   let hole = Bound 0 in
-  let tele = List.map (fun e -> { e with name = None; sg = map_sg (fun _ -> hole) e.sg }) in
+  let tele = List.map (fun e -> { e with name = None; sg = map_sg (fun _ -> hole) e.sg; place = Option.map (fun _ -> hole) e.place }) in
   match t with
   | Var _ | Bound _ -> t
   | App (_, args) -> App (hole, List.map (fun _ -> hole) args)
@@ -76,6 +81,8 @@ let blank t =
   | ValCtor (ps, _) -> ValCtor (tele ps, hole)
   | Matchable (d, _, cs) -> Matchable (d, hole, List.map (fun (m, _) -> (m, hole)) cs)
   | Newtype _ -> Newtype hole
+  | SlotHolds _ -> SlotHolds hole
+  | Cell (_, ss) -> Cell (hole, List.map (fun _ -> hole) ss)
 
 let rec fold_vars f depth acc t =
   match t with
@@ -110,13 +117,15 @@ let to_string name_of t =
           (disc_name d :: go bound t :: List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
         ^ ")"
     | Newtype t -> "(Newtype " ^ go bound t ^ ")"
+    | SlotHolds t -> "(SlotHolds " ^ go bound t ^ ")"
+    | Cell (c, ss) -> "(Cell " ^ String.concat " " (List.map (go bound) (c :: ss)) ^ ")"
   and tele ?(marks = true) bound es =
     List.fold_left_map
       (fun bound e ->
         let n = Option.value e.name ~default:"_" in
         let body = match e.sg with Ty t -> go bound t ^ " " ^ n | Is t -> go bound t ^ " is " ^ n in
         let marks = if marks then (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " else "" in
-        (e.name :: bound, "(" ^ marks ^ body ^ ")"))
+        (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " at " ^ go bound p | None -> "" | _ -> assert false) ^ ")"))
       bound es
   in
   go [] t

@@ -10,5 +10,5 @@
 (def-lvl W)
 (def-fns W $ many id : (many (Maybe) m) -> (many (Maybe) r) m)
 (let (many x) (id (T (Zero))))
-(comptime-match x (F f))
+(comptime-match many x (F f))
 f

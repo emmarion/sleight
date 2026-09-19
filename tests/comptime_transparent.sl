@@ -7,5 +7,5 @@
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (let (many m) (MkMeters (Succ (Zero))))
-(comptime-match m (MkMeters n))
+(comptime-match many m (MkMeters n))
 n

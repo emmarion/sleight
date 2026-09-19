@@ -26,6 +26,8 @@ type opens = { opened : opened list; touched : id list }
 type use = Shared | Consumed
 
 type t = {
+  locations : id IntMap.t;
+  signature : id list;
   uses : use IntMap.t;
   captures : id list;
   usage_erased : bool;
@@ -42,7 +44,7 @@ type t = {
 }
 
 let empty =
-  { uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
+  { locations = IntMap.empty; signature = []; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -71,8 +73,20 @@ let hide env outer =
   let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added in
   { env with entries; scope = { env.scope with named = outer.scope.named } }
 
+let rec location env x = match IntMap.find_opt x env.locations with Some y -> location env y | None -> x
+let rec location_term env = function
+  | Var x when (entry env x).meta -> (match (fact env x).rule with Some r -> location_term env r | None -> Var x)
+  | Var x -> Var (location env x)
+  | t -> t
+let at_merge env a b =
+  match location_term env a, location_term env b with
+  | Var x, Var y when x <> y -> { env with locations = IntMap.add (max x y) (min x y) env.locations }
+  | a, b when equal a b -> env
+  | _ -> raise (Contradiction "locations must be variables")
+let at_equal env a b = equal (location_term env a) (location_term env b)
+
 let rec canon env t =
-  map_vars (fun _ t -> match t with Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t) | t -> t) 0 t
+  map_vars ~location:(fun _ t -> location_term env t) (fun _ t -> match t with Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t) | t -> t) 0 t
 
 let type_of env x = canon env (fact env x).ty
 
@@ -148,6 +162,7 @@ let rec unify_in ?(force = false) env a b =
       add_rule env x t
     in
     match (a, b) with
+    | SlotHolds a, SlotHolds b -> if force then at_merge env a b else contradiction ()
     | Var x, Var y when is_meta env x || is_meta env y ->
         let x, y = if is_meta env x && ((not (is_meta env y)) || x > y) then (x, y) else (y, x) in
         assign x (Var y)
@@ -200,7 +215,6 @@ let rec merge_opens (Forcing env) =
           let drop = if rank env newer < rank env older then older else newer in
           merge_opens (Forcing (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop)))
 
-(* Usage follows binder identity, never its canonical value. Branches join by maximum. *)
 let join_uses a b = IntMap.union (fun _ x y -> Some (if x = Consumed || y = Consumed then Consumed else Shared)) a b
 
 let use env loc ?(sharing = false) mult x =

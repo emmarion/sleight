@@ -4,10 +4,10 @@
 (def-lvl T)
 (let (erased ut) (prove-predates u8-lvl T))
 (let (many d3) (lt-dec 3 u8-modulus))
-(comptime-match d3 (Yes za3 zb3 zp3))
+(comptime-match many d3 (Yes za3 zb3 zp3))
 (let (many u3) (MkU8 3 zp3))
 (let (many d4) (lt-dec 4 u8-modulus))
-(comptime-match d4 (Yes za4 zb4 zp4))
+(comptime-match many d4 (Yes za4 zb4 zp4))
 (let (many u4) (MkU8 4 zp4))
 
 (def-fns T $ many main : -> (many (Nat) n)

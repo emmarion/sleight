@@ -3157,3 +3157,31 @@ to look for a guard, are the owner's.
      Erased and unreachable bodies contribute no usage, including statements
      preceding their results. Ordinary let RHS statements retain DESIGN 16's
      existing independent multiplicities.
+
+157. UNIQUE.md locations are represented separately from ordinary value rules.
+    Location terms retain the original binder when `is` canonicalization runs;
+    only location equality and the listed location-producing operations merge
+    that partition. Argument temporaries preserve the caller's physical word
+    before a call consumes it. An `at` result is checked semantically, omitted
+    from the callee's physical results, and reconstructed from that caller word.
+    Dropping a physical result must retain computations in its expression.
+    The same lowering applies in the interpreter and extracted code, including
+    tail/delegate validation. For this checkpoint the old Newtype object still
+    supplies newtype location information; its removal follows separately.
+
+158. The mandatory comptime-match multiplicity is `many` or `unique`;
+    `erased` is refused because verification still requires a runtime Const
+    discriminant. Existing non-self source uses are migrated to `many`; self's
+    syntax and generated literal forms will migrate with its implementation.
+    A SlotHolds operand must be a declared non-erased runtime-scope variable,
+    including a consumed one, never a signature's telescope binder. An `at`
+    target must name a non-erased argument or closed-over variable, not another
+    return entry; an erased return cannot carry an `at` annotation. These last
+    restrictions interpret U8's description of the promise's source and word.
+    Phantom/absurd bodies bypass both usage and multiplicity-promotion checks,
+    as their runtime expressions are erased.
+
+159. The top-level driver's implicit calls of a final thunk or String-to-String
+    function use an adapter when its result has an `at` promise. This is intended
+    to give those calls the same physical-return reconstruction as an explicit
+    source call, including calls from the extracted driver's code.

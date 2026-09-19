@@ -6,7 +6,7 @@
   n)
 
 (let (many c) #\x03)
-(comptime-match c (MkChar u))
-(comptime-match u (MkU8 n p))
+(comptime-match many c (MkChar u))
+(comptime-match many u (MkU8 n p))
 (let (erased r) (three n (numeral-of #\x03)))
 n

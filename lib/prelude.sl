@@ -703,9 +703,9 @@
 
 (let (many ten) (Succ (Succ eight)))
 (let (many ten-dec) (lt-dec (Zero) ten))
-(comptime-match ten-dec (Yes tda tdb ten-positive))
+(comptime-match many ten-dec (Yes tda tdb ten-positive))
 (let (many ten-dec2) (lt-dec (Succ (Zero)) ten))
-(comptime-match ten-dec2 (Yes tea teb ten-above-one))
+(comptime-match many ten-dec2 (Yes tea teb ten-above-one))
 (let (many forty-eight) (nat-add (nat-mul (Succ (Succ (Succ (Succ (Zero))))) ten) eight))
 
 (def-fns _ $ many digit-char : (many (Nat) d) -> (many (Char) c)
