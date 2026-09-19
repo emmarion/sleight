@@ -194,10 +194,11 @@ For a type that is neither `newtype` nor `extern`, a value constructor
 one `Slot` (§U10) per non-erased field of `C`. A cell is obtained by an
 allocation form (open, §U15), every slot `SlotVacant`, or by a
 destructure at `unique` (§U5), each slot `(SlotHolds f)` for the
-field's binder `f`, the cell being at the scrutinee. Since every such
-type must be a real block for this, an unmarked type of newtype shape is
-no longer represented as its field (§38's leeway is withdrawn), and a
-constructor with no non-erased field has an empty cell.
+field's binder `f`, the cell being at the scrutinee. The newtype
+representation (§38) is mandatory for a type marked `newtype` and
+forbidden for one that is not, whatever its shape: an unmarked type of
+newtype shape is a block, so §38's leeway is withdrawn. A constructor
+with no non-erased field has an empty cell.
 
 **Invocation.** A UniqueCstr-typed head is a fourth applicable type in
 §4's tier 1: `(u a1 ... an)` is a constructor application that mints
