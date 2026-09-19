@@ -370,9 +370,10 @@ many-labelled fields and sharing nothing mutable (today's String view
 shares its buffer, which a mutable type may not); and an `at` return
 promised by an extern's signature is honoured physically, the model's
 body being checked against the promise like any body, so such a model
-is written with §U9's placement over its own cells. §41's shape check
-compares the non-erased arities of the model's constructors, not the
-many ones. Part 1 of the proposal is useful before parts 2 to 4 exist:
+is written with §U9's placement over its own cells. (*Reading*: §41's
+shape check then compares the non-erased arities of the model's
+constructors, not the many ones.) Part 1 of the proposal is useful
+before parts 2 to 4 exist:
 an update `(unique (Array A n) a) ... -> (unique (Array A n) r)` is
 O(1) and returns one word the caller already holds. Placement on an
 extern type is TBD and for now not allowed.
