@@ -341,8 +341,9 @@ application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
 as `(C a1 ... an)` would, erased arguments included, which have no
 slot and are written as in any constructor application, and consuming
-`u` at `unique` whatever the position's multiplicity, so a `many`
-value may be built this way; the value's type is `C`'s return type
+`u` at `unique` in a `many` position as in a `unique` one, so a `many`
+value may be built this way; in an erased position nothing is used, as
+§20 has it for every application. The value's type is `C`'s return type
 instantiated, as for the plain application. An `(at)` immediately
 before an argument, as `(subterm p)` sits before its argument (§32),
 asserts that the slot already holds that argument, the argument's
