@@ -486,8 +486,10 @@ and a held Matchable alike; extraction of a Const-known one goes
 through its template (ASSUMPTIONS 133), the hint, a held one through
 its runtime unwrap. A peek unwrap adds an operation to the record, a
 `peek` template key, a mode on the match node, and makes a held
-Matchable's runtime value a record of unwraps; the held path's cost is
-an accepted edge case.
+Matchable's runtime value a record of two unwraps, a *match unwrap*
+serving `many` and `unique` alike, which hand out the same fields at
+different multiplicities, and a *peek unwrap* serving `peek`; the held
+path's cost is an accepted edge case.
 
 ## U13. Worked example: arrays
 
