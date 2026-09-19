@@ -296,17 +296,68 @@ whatever `u`'s type said, a `SlotHolds`, a `SlotVacant`, or an abstract
 slot. What the words are for is a write into another cell and §U15's
 comparison.
 
-## U11. Tail call modulo cons, a reading
+## U11. Worked example: tail call modulo cons
 
-*Reading.* `map` over a list allocates a cell with the head written,
-`(cstr-alloc Cons (SlotHolds h) _)`, and calls a helper in
-destination-passing style with the cell and the tail, the helper's
-return being `at` the cell; the helper allocates the next cell, writes
-it into the tail slot, tail-calls itself, and follows the call with a
-full-at invocation, which is erased for the check. The helper holds the
-head at `many`, since the invocation uses it there, so a cell's slot
-type in a signature says nothing the helper cannot supply. The outer
-`map` is a plain call and returns the value.
+`append` copying `xs` onto `ys` in destination-passing style, over the
+prelude's `List` of §31, whose fields are both `many`:
+
+```scheme
+(def-adts
+  (List : (Type A) -> Type
+    enum
+    (many Nil : (erased Type A) -> (List A))
+    (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
+       (List A))))
+```
+
+The helper takes a vacant cell and the head that belongs in it, and
+promises its result at the cell:
+
+```scheme
+(def-fns _ $ many append-into : (erased Type A)
+    (unique (UniqueCstr Cons (SlotVacant) (SlotVacant)) cell)
+    (many A h) (subterm many (List A) xs) (many (List A) ys) ->
+    (unique (List A) r at cell)
+  (match many xs _
+    ((Nil a) (cell _ h ys))
+    ((Cons a hd tl)
+      (let (unique next) (cstr-alloc Cons))
+      (let (unique cell2) (cstr-write cell (Cons (SlotHolds h) (SlotHolds next))))
+      (let (unique r2) (tail (append-into _ next hd tl ys)))
+      (at (cell2 _ h r2)))))
+
+(def-fns _ $ many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
+    (many (List A) r)
+  (match many xs _
+    ((Nil a) ys)
+    ((Cons a hd tl)
+      (let (unique cell) (cstr-alloc Cons))
+      (let (unique r) (append-into _ cell hd tl ys))
+      (share r))))
+```
+
+- In the `Nil` branch the invocation mints `(Cons A h ys)` at `cell`,
+  `h` and `ys` at many into the many-labelled fields (§U4), the cell
+  consumed; the result is at `cell`, the promise.
+- In the `Cons` branch the write stores `h` and the pointer to the
+  fresh `next` into `cell`, two stores, mentioning both erased, so
+  `next` is still live for the call; the call consumes `next` and
+  returns `r2 at next`, physically nothing.
+- The call is a tail call: with `at` returns dropped the callee returns
+  nothing and so does this function, and what follows the call is
+  erased, the invocation being full-at since `h` is in the first
+  slot's class and `r2` is at `next`, which the second slot holds. Its
+  result is at `cell2`, at `cell`. Leaving `h` to the invocation
+  instead of the write would put a store after the call and the claim
+  would fail.
+- Each of `cell`, `cell2`, `next` and `r2` is used once at unique; `h`
+  is many throughout. Per element, one allocation and two stores, in
+  constant stack.
+- `unique` on the helper's result promises only that `r` is the sole
+  reference to its top cell: `Cons`'s tail is labelled `many`, so `r2`
+  enters `cell2` at many and the spine below is shared, as the type
+  says. The outer `append` returns `many`, its `Nil` branch returning
+  `ys` itself.
 
 ## U12. Extern types and functions
 
