@@ -283,7 +283,11 @@ unique array is `(unique a is r at a)`.
 Beside the fact table the elaborator keeps the **at-database**, a
 partition of scope entries into classes of one location. Its writers,
 and nothing else: a destructure at `unique` by `match`, `let-match` or
-`comptime-match` (the minted Cell with the scrutinee), a
+`comptime-match` (the minted Cell with the scrutinee), an `else` at
+`unique` and a `cell-match` at `unique` (what each gives back with the
+scrutinee, §U5, §U10), a `unique` or `many` destructure of a newtype
+(its non-erased field with the scrutinee) and a newtype constructor
+application (the value with its non-erased argument, §U9), a
 placement invocation (the new value with its Cell), `coerce` and
 `share` (the result with the source, the same word), a forwarding `let`
 (§9), a call's `at` return (the binder bound to it with the caller's
@@ -310,8 +314,9 @@ does not change when contents do.
 An `at` return is absent from a call's physical values in every
 implementation, as an erased return is; a `let` binds it as any
 return, and the elaborator supplies its word from the caller's own
-binder for the argument the promise names, which the caller still
-holds physically whether or not the call consumed it. The `tail` and `delegate` checks (§9) read the
+binder for the argument the promise names, an argument that is not a
+variable being bound to an anonymous one first (§U2a), which the
+caller still holds physically whether or not the call consumed it. The `tail` and `delegate` checks (§9) read the
 post-erasure code with `at` returns dropped from a call's results, as
 they read coerces as renamings, so a call whose only non-erased results
 are `at` returns is a tail call from a function returning none, and
@@ -328,9 +333,11 @@ the one word being at `a` either way (the pattern of
 
 ## U9. Placement: Cell and the invocation
 
-For a type that is neither `newtype` nor `extern`, a value constructor
-`C` has a cell type `(Cell C s1 ... sn)`, a type former (§5) with
-one `Slot` (§U10) per non-erased field of `C`. The newtype
+A value constructor `C` of a type that is neither `newtype` nor
+`extern` has a cell type `(Cell C s1 ... sn)`, a type former (§5) with
+one `Slot` (§U10) per non-erased field of `C`; inside an extern
+function's body the `extern` mark does not count, so an extern type's
+constructors have cells there too (§U12). The newtype
 representation (§38) is mandatory for a type marked `newtype` and
 forbidden for one that is not, whatever its shape: an unmarked type of
 newtype shape is a block, so §38's leeway is withdrawn. A constructor
@@ -340,9 +347,14 @@ marks live in the type's `Matchable`, beside its `enum`/`union` tag
 constructor (§19), which unifying two opened Matchables forces equal
 too.
 
+**Newtypes.** A newtype has no cell, its representation being its
+non-erased field's word (§38). A `unique` or `many` destructure of one
+at-unifies the scrutinee with the non-erased field it binds, and an
+application of its constructor is at its non-erased argument.
+
 **Obtaining a cell.** `(cell-alloc C)` is an expression yielding a
-fresh cell at unique with every slot `(SlotVacant)`; `(cell-alloc C i1
-... in)` lists every non-erased field as a write does, a `(Slot)`
+fresh cell at unique with every slot `(SlotVacant)`; `(cell-alloc (C i1
+... in))` lists every non-erased field as a write does, a `(Slot)`
 expression at many or `_` for a slot left `(SlotVacant)`, no partial
 list.
 A `unique` `match`, `let-match` or `comptime-match` on a value (§U5)
@@ -350,7 +362,7 @@ yields, through its extra pattern binder, the cell the constructor
 occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
 
-**Writing.** `(cell-write u i1 ... in)` is an expression taking the
+**Writing.** `(cell-write u (C i1 ... in))` is an expression taking the
 cell at `unique` and yielding the same cell under a new type, at `u`,
 one item per non-erased field, a `(Slot)` expression at many or `_` to
 leave the slot alone, the new type's index for each written slot being
@@ -386,22 +398,27 @@ the fact table, exactly as one that stores does.
 owned elsewhere in a minted value: the invocation supplies each field
 at its multiplicity, so a consumed unique cannot be named there.
 
-## U10. `Slot` and `cell-read`
+## U10. `Slot` and `cell-match`
 
 `Slot` is a nullary type with two value constructors, `SlotVacant` and
 `SlotHolds`, a slot's content being `(SlotVacant)` or `(SlotHolds v)`
 with `v` a fact-table variable (§3), never a telescope binder; a signature that speaks of a slot abstracts over it as an
 erased `(Slot)` parameter, `(erased (Slot) s) (unique (Cell Pair2
-s s) u)` saying its two slots hold one thing. A `SlotHolds` term is
-handled by the at-database and not the fact table: its argument is not
-rewritten by `is` rules, canonicalizing it takes the argument to its
-at-class, two `SlotHolds` are equal exactly when their arguments share a
-class, and a forcing unification merges the classes. `Slot` is not
+s s) u)` saying its two slots hold one thing. `(SlotVacant)` is
+`(SlotHolds null)`, `null` a variable no program can name, with an
+at-class of its own. A `SlotHolds` term is handled by the at-database
+and not the fact table: its argument is not rewritten by `is` rules,
+canonicalizing it takes the argument to its at-class, two `SlotHolds`
+are equal exactly when their arguments share a class, and a forcing
+unification merges the classes, `(SlotVacant)` against `(SlotHolds v)`
+merging `v`'s with `null`'s, so nothing is ever refuted between two
+slots. `Slot` is not
 matchable and has no Matchable to open. At runtime a slot's value is
 the word the slot holds, a pointer or an immediate. `(SlotHolds v)`
 is an ordinary expression producing a `(Slot)`, usually at many, the
-position deciding as for any constructor application, and it mentions
-`v` erased: it is not a use of `v`, so `v` may be a unique binder that
+position deciding as for any constructor application, and its argument
+is a direct variable reference (§U2a): it is not a use of `v`, so `v`
+may be a unique binder that
 is still live, which stays live, or one already consumed, and either
 way the result is a many slot holding `v`'s word (the proposal's 4f
 and 4g). What `v` must be is declared non-erased, so that the word
@@ -410,17 +427,19 @@ expression or from a destructure's field binders, none names an erased
 variable. A slot value is inert and may sit in a
 field or a list like any other value.
 
-`cell-read` reads a cell's words out, a statement binding outward:
-`(cell-read many u (C s1 ... sn))` with `u` at many, never degrading it
-(degradation being explicit, `u` must already be many), and
-`(cell-read peek u (C s1 ... sn u2))` with `u` at unique, `u2` the cell
-given back as §U5's peek does. The `si` are fresh `many` binders of
-type `(Slot)`; one forced unification of `(Cell C s1 ... sn)`
-against `u`'s type mints their `is` rules, as entering a branch unifies
-a scrutinee's type (§18). It decides nothing about a slot: an `si` is
-whatever `u`'s type said, a `(SlotHolds v)`, a `(SlotVacant)`, or an abstract
-slot. What the words are for is a write into another cell and §U15's
-comparison.
+`cell-match` reads a cell's words out, an expression in two modes,
+`(cell-match many u ann (C s1 ... sn) body)` with `u` at `many` and
+`(cell-match unique u ann (C s1 ... sn u2) body)` with `u` at
+`unique`, `ann` being a return annotation as a `match`'s (§11). In
+either mode the `si` are fresh `many` binders of type `(Slot)`, and
+one forced unification of `(Cell C s1 ... sn)` against `u`'s type
+mints their `is` rules, as entering a branch unifies a scrutinee's
+type (§18). At `unique`, `u2` is the cell given back, a fresh `unique`
+binder `is u` and `at u` (§U8), which `body` gets out by returning it
+into an entry of `ann` marked `is u` and `at u`. It decides nothing
+about a slot: an `si` is whatever `u`'s type said, a `(SlotHolds v)`,
+a `(SlotVacant)`, or an abstract slot. What the words are for is a
+write into another cell and §U15's comparison.
 
 ## U11. Worked example: tail call modulo cons
 
@@ -486,36 +505,21 @@ promises its result at the cell:
 
 ## U12. Extern types and functions
 
-A `unique` value of an extern type is the FFI's to mutate in place. Two
-binding constraints on the FFI author, beside §41's: the FFI supplies a
-peek unwrap beside its match unwrap, returning the discriminant and the
-many-labelled fields and sharing nothing mutable (today's String view
-shares its buffer, which a mutable type may not); and an `at` return
+A `unique` value of an extern type is the FFI's to mutate in place. One
+binding constraint on the FFI author, beside §41's: an `at` return
 promised by an extern's signature is honoured physically, the model's
-body being checked against the promise like any body, so such a model
-is written with §U9's placement over its own cells. (*Reading*: §41's
-shape check then compares the non-erased arities of the model's
-constructors, not the many ones.) Part 1 of the proposal is useful
-before parts 2 to 4 exist:
-an update `(unique (Array A n) a) ... -> (unique (Array A n) r)` is
-O(1) and returns one word the caller already holds. A `Cell` for an
-extern type's constructor, and so `cell-alloc`, `cell-write`,
-`cell-read` and the invocation on one, is TBD and for now not allowed:
-an extern's in-place operations are its own functions, §U13's
-`array-swap` and kin.
-
-*Reading.* In the prototype's interpreter an extern type's ADT record
-carries the FFI's construct and destruct, and a match reads them
-through one dispatch function whether its Matchable was Const-known,
-the shape settled at elaboration, or held, read at runtime. In
-extraction a match on a Const-known extern Matchable is emitted inline
-through the type's template, the hint of ASSUMPTIONS 133, and a match
-on a held one through the runtime unwrap. A peek unwrap adds an operation to the record, a
-`peek` template key, a mode on the match node, and makes a held
-Matchable's runtime value a record of two unwraps, a *match unwrap*
-serving `many` and `unique` alike, which hand out the same fields at
-different multiplicities, and a *peek unwrap* serving `peek`; the held
-path's cost is an accepted edge case.
+body being checked against the promise like any body. Inside an extern
+function's body no type counts as marked `extern` for §U8's `at` rules
+and §U9's cells, so such a model is written with §U9's placement over
+its type's own cells. (*Reading*: §41's shape check then compares the
+non-erased arities of the model's constructors, not the many ones.)
+Part 1 of the proposal is useful before parts 2 to 4 exist: an update
+`(unique (Array A n) a) ... -> (unique (Array A n) r)` is O(1) and
+returns one word the caller already holds. Outside an extern function's
+body a `Cell` for an extern type's constructor, and so `cell-alloc`,
+`cell-write`, `cell-match` and the invocation on one, is TBD and for
+now not allowed: an extern's in-place operations are its own functions,
+§U13's `array-swap` and kin.
 
 ## U13. Worked example: arrays
 
@@ -543,9 +547,7 @@ unspecified one under `Uninit`, so an `(Array (MaybeUninit A) n)` is
 the memory of the `(Array A n)` it becomes. Reading an `Init` out is a
 `unique` match whose `Uninit` branch must be refuted, by a fact or by
 proof, §12's one-real-branch rule making that Rust's `assume_init`
-with evidence in place of `unsafe`. Under `peek` both of `ACons`'s
-fields are erased, so the FFI's peek unwrap yields the discriminant
-alone.
+with evidence in place of `unsafe`.
 
 The relations, every field erased:
 
@@ -654,12 +656,12 @@ extracting to a call where the inline `coerce` extracts to nothing:
     (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c)
   (match erased all _
     ((AINil _)
-      (values (ANil _) (coercible-ctor ANil (MaybeUninit A) A)))
+      (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A)))
     ((AICons _ n1 x tl q)
       (let (erased b1) (erased c1) (init-witness _ _ tl q))
       (values (ACons _ _ x b1)
-              (coercible-ctor ACons (MaybeUninit A) A n1 n1
-                 (coercible-sym (coercible-wrap Init x))
+              (coercible-ctor _ ACons (MaybeUninit A) A n1 n1
+                 (coercible-sym (coercible-wrap _ Init x))
                  c1)))))
 
 (let (erased b0) (erased c) (init-witness _ _ a all))
@@ -673,8 +675,7 @@ extracting to a call where the inline `coerce` extracts to nothing:
 §23's invariant becomes two claims, each that the transformed program
 compiles and runs identically, both intended and unverified as §23 is:
 
-- **Tier 1** collapses `unique` to `many`: `peek` becomes a `many`
-  match, a UniqueFn a `Fn`, an extern update allocates and its `at`
+- **Tier 1** collapses `unique` to `many`: a UniqueFn a `Fn`, an extern update allocates and its `at`
   return is an ordinary return, a placement invocation allocates, a
   write returns its cell unchanged, `(at)` marks are plain arguments,
   `at` annotations are dropped from telescopes, `share` is the
@@ -690,11 +691,12 @@ keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
 
-Open (§U17): where §U15's two forms stand under tier 1. Keeping the
-at-database as inert designators too would let `at-coercible` still
-mint, and its `coerce` stays sound since a copy has its original's
-contents; `slot-eq` observes addresses at runtime, and once every
-invocation allocates, two slots that held one cell may hold two.
+`slot-eq` falls under tier 1: it is an optimization hint and a compiler
+may always answer `SlotDiffer` (§U15), so an implementation on which
+every invocation allocates answers as it may. Open (§U17): where
+`at-coercible` stands under tier 1. Keeping the at-database as inert
+designators too would let it still mint, and its `coerce` probably
+stays sound since a copy has its original's contents.
 
 ## U15. Two further forms, proposed as a later second change
 
@@ -710,8 +712,7 @@ of both: a many binder is used at many, so a consumed one conflicts
 symmetrically as anywhere and no liveness test, which would depend on
 what came before, enters; a unique binder is used at unique, consumed,
 and given back as a fresh binder `is x` and `at x` beside the proof,
-as `peek` gives its scrutinee back (§U5), so the caller cashes the
-proof against the new binder. The restriction this enforces is that
+so the caller cashes the proof against the new binder. The restriction this enforces is that
 neither variable is consumed: a consumed variable's contents may have
 changed while its address has not, and a `coerce` through such a proof
 would give a value whose `is` refutes branches its bits reach. In
@@ -719,9 +720,11 @@ practice both variables are many, a live unique sharing an address
 with nothing live, and the unique case exists so that the rule is
 stated as uses, order-free, rather than as liveness.
 
-**Comparing two slots.** `(slot-eq a b)`, say, compares the words of
-two `(Slot)` values at many, at runtime, and answers with evidence in
-the equal case, in the shape of the prelude's `Dec`:
+**Comparing two slots.** `(slot-eq a b)`, say, is an optimization
+hint: it compares the words of two `(Slot)` values at many, at runtime,
+and answers with evidence in the equal case, in the shape of the
+prelude's `Dec`, but a compiler is allowed to always answer
+`SlotDiffer`:
 
 ```scheme
 (def-adts
@@ -735,8 +738,8 @@ Matching `Refl` on the `Eq` unifies two `SlotHolds` through the
 at-database (§U10), putting their variables in one class and forcing
 no `is`; that is what makes the equal case usable, an `(at)` or a
 full-at invocation then holding where it did not before. The unequal
-case carries no evidence for now; whether it should carry a refutation,
-a function to `(False)` at some fixed level, is open with the names.
+case carries no evidence, by decision: a refutation would be false
+evidence wherever a compiler answered `SlotDiffer` for equal words.
 
 ## U16. `_` as a binder name
 
@@ -749,17 +752,13 @@ binder; it is not special anywhere else, `_` in an argument (SUGAR.md
 
 ## U17. Open questions
 
-§27's registry gains what §U0 lists, `share` and the `cell-*` forms as
-expressions, `def-unique` and `cell-read` as statements, `unique`,
-`peek` and `at` as annotation tokens, and loses `Newtype`,
-`newtype-of` and its item 9a.
+§27's registry gains what §U0 lists, `share`, the `cell-*` forms and
+`cell-match` as expressions, `def-unique` as a statement, `unique` and
+`at` as annotation tokens, and loses `Newtype`, `newtype-of` and its
+item 9a.
 
-Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
-unequal case carries a refutation; whether those forms fall under
-tier 1 (§U14); whether `cell-read` should be an expression returning
-its slots as `is` entries, `(cell-read peek u)` bound by a `let`,
-rather than a statement, nothing it mints needing to bind outward as
-`let-match`'s facts do; a `Cell` for an extern type's constructor
-(TBD, for now not allowed); the shadowing sugar the
-proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
-the idiom until then.
+Open, as questions: the names of §U15's two forms; whether
+`at-coercible` falls under tier 1 (§U14); a `Cell` for an extern type's
+constructor outside an extern function's body (TBD, for now not
+allowed); the shadowing sugar the proposal defers, same-name rebinding,
+`(let (unique x) (f x))`, being the idiom until then.
