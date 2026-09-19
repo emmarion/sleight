@@ -310,9 +310,9 @@ binder `f`.
 cell at `unique` and yielding it reissued, at `u`, one item per
 non-erased field, a `(Slot)` expression at many or `_` to leave the
 slot alone, its type recording the slots written. A write is a
-physical store into memory the invocation will re-mint; it does no
-usage accounting, whatever its slot refers to, the invocation being the
-semantic mint.
+physical store into memory the cell's eventual invocation will
+re-mint; it does no usage accounting, whatever its slot refers to, the
+UniqueCstr invocation below being the semantic mint.
 
 **Invocation.** A UniqueCstr-typed head is applicable in §4's tier 1,
 as a UniqueFn-typed one is (§U6): `(u a1 ... an)` is a constructor
