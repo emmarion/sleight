@@ -648,7 +648,10 @@ entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
 
 Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
 unequal case carries a refutation; whether those forms fall under
-tier 1 (§U14); placement on an
+tier 1 (§U14); whether `cstr-read` should be an expression returning
+its slots as `is` entries, `(cstr-read peek u)` bound by a `let`,
+rather than a statement, nothing it mints needing to bind outward as
+`let-match`'s facts do; placement on an
 extern type (TBD, for now not allowed); the shadowing sugar the
 proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
 the idiom until then.
