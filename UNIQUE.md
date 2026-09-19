@@ -251,7 +251,9 @@ unification (§18: entering a branch, a `let-match`, a `comptime-match`,
 an open) wherever it meets two `SlotHolds` terms or two `at`
 annotations in the types it unifies, which merges the classes of their
 variables (§U10, the proposal's 3g) as matching `Refl` on an `(Eq
-(Slot) a b)` does (§U15). An `at v` in a telescope entry is part of the
+(Slot) (SlotHolds a) (SlotHolds b))` does (§U15). Such a merge puts `a`
+and `b` in one at-class and nothing more: no `is` rule between them
+reaches the fact table. An `at v` in a telescope entry is part of the
 type and is compared through the at-database like a `SlotHolds`, not
 through `is`. A forced rule between two ordinary atoms, `x is y`, says
 nothing about location and merges nothing, and neither does canonical
