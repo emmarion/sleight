@@ -189,3 +189,75 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     report showing each hole's resolved term would make these shorter calls
     easier to review. A refactoring preview of inferable arguments would
     also help choose which explicit terms still explain the proof.
+
+Items 26 onward are from a session writing `tests/longest_palindrome.sl`,
+`tests/palindrome_bridge.sl` and `tests/manacher.sl` (a linear-time search
+with its correctness proof, about 1100 lines), in the order met.
+
+Open question for the owner, recorded rather than resolved: items 26
+onward came over from `origin/palindrome-archive/fable`, where those
+three paths and item 26's "on another branch" were both accurate. On
+this branch neither appears to be: the three files are not in the tree
+(this branch carries `pal/*.sl` instead), and a copy of `shape.ml` is at
+this repo's root, though it is in no dune file and not in `bin/`. The
+text is left exactly as that session wrote it until the owner says how
+each should read.
+
+26. **Item 1 exists, on another branch.** `shape.ml` on
+    `origin/simply-typed-archive/main` is the paren-depth locator item 1
+    asks for: `shape file` lists every form spanning more than one line
+    with the line it closes on, `shape --closers file` says what each run
+    of `)` closes, and a diff of two runs reduces a stray paren to one
+    hunk. It found all four imbalances this session met, including the
+    branch-nested-in-a-branch case of item 12, from the `--closers` view.
+    Two caveats: it knows neither `;` comments nor string literals (the
+    archive's language had none), so an `.sl` file must be stripped of
+    comments first (`sed 's/;.*$//'`), and a surplus `)` at the top level
+    pops an empty stack silently, so for that case the checker's
+    `line N: unexpected )` is the sharper report. Porting it into `bin/`
+    with comment and string awareness would close item 1.
+
+27. **Arithmetic again, now on `Add`.** Item 6's `Lt` chains recurred
+    (`lt-le-trans` wanting its middle term as `(Succ x)`, `add-le-left`
+    giving `Lt a (Succ c)` where the strict form was needed), and `Add`
+    added its own: associativity, functionality, cancellation against
+    `Lt`, and `Double` as `Add a a` were each written as a lemma on the
+    spot (`add-assoc`, `add-fn`, `add-cancel-lt`, `double-add`,
+    `double-lt-inv`, `radius-lt`). About one compile round in five was
+    one of these. A prelude section for `Add`/`Lt`/`Double` algebra, or
+    the solver item 6 asks for, would have removed them.
+
+28. **A list-relation library.** `Nth`, `Drop`, `Take`, `Concat`,
+    `Length`, a reversed-prefix relation and a zipper, with the obvious
+    lemmas (functionality, existence under a length bound, composition
+    of drops, prefix from concat and length), were written from scratch
+    here and, on this session's reading, partly overlap `self/base.sl`.
+    Some forty of the file's lemmas are of this kind. Whether such a
+    library belongs in the prelude is the owner's call; the wish is for
+    it to exist once.
+
+29. **Item 9's phase trick, recorded.** Three mutually recursive
+    functions calling each other in a cycle on the same suffix were
+    accepted with a second `subterm` position that is an *erased* `Nat`
+    carried with an `Eq` proof pinning it to a literal (`2` for the
+    step, `1` for the transition, `0` for the scan); the caller passes
+    the smaller literal and the bare call infers the `Subterm` proof from
+    the pinned value. It costs nothing at runtime and no filler value,
+    which is better than item 9's `is`-typed constants, but it is still
+    a trick a reader has to be told about.
+
+30. **Item 20 again, three times.** Adding an input-list index to the
+    radius list, to its bound and to the loop's state (so that a chain of
+    certificates could be read back from a known start without a
+    uniqueness lemma about zippers) touched about fifteen sites across
+    three ADTs and one `def-fns` group, all by script. Same wish.
+
+31. **More calibration.** A runtime value as a type index
+    (`Bound m b xs l r bk`, with `bk : Back m xs l r` holding `many`
+    fields) worked on the first try, as did an erased `match` with `many`
+    results and one real branch nested four deep, `let-match` on a
+    single-constructor certificate, and calling a `many` decider
+    (`take-dec`, `nat-cmp`) from an erased lemma. The erased half of the
+    file, some 60 lemmas, extracts to unit stubs. As in item 14, the
+    checker was never the obstacle; the rounds went to arithmetic,
+    parens and positional arguments.
