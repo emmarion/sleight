@@ -484,7 +484,7 @@ and level_var env l raw =
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
-and elab_tele env ?(places = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) ?holes entries =
+and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) ?holes entries =
   let place_scope = env.scope.ids in
   let entries = List.concat_map (parse_entry env) entries in
   let _, env, ids, tele =
@@ -496,7 +496,7 @@ and elab_tele env ?(places = false) ?(subterm = false) ?(ids = []) ?(mults = fun
         let ty, rule = fact_of env e.s_loc sg in
         let place = Option.map (fun raw ->
           if not places then error e.s_loc "at is allowed only on return and match annotation entries";
-          if mult = Erased then error e.s_loc "at needs a non-erased return";
+          if mult = Erased && not contextual then error e.s_loc "at needs a non-erased return";
           let x = var env (loc raw) (atom_or (loc raw) raw "a location variable") in
           if (entry env x).mult = Erased then error (loc raw) "at needs a non-erased variable";
           if not (List.mem x place_scope) then error (loc raw) "at must name an argument or a closed-over variable";
@@ -659,6 +659,7 @@ and elab_form cc expect_tele env expect raw =
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased; place = None } ], V.CErased)
           | ValCtor (tele, ret) ->
               if pos <> Erased && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (show env h.term);
+              let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
               let env, acc, codes, wrap = check_args env l ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args (fun env _ a tele -> arg env (field_under pos (List.hd (Option.get tele)).mult) a tele) in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
               let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
@@ -671,21 +672,29 @@ and elab_form cc expect_tele env expect raw =
           (env, rs, headwrap code)))
 
 and elab_head env pos l raw =
-  let rec hint = function
-    | Atom (l,n) -> (match canon env (type_of env (var env l n)) with Cell _ | UniqueFn _ -> Unique | _ -> Many)
-    | List (_,h :: args) -> (match special_of env h, args with
-        | Some (Sp.CellAlloc | Sp.CellWrite), _ -> Unique
-        | Some Sp.Values, [a] -> hint a
-        | Some Sp.Share, _ -> Many
-        | None, _ -> (match h with
-            | Atom (l,n) -> (match canon env (type_of env (var env l n)) with Fn (_,_,[r]) | UniqueFn (_,_,[r]) -> r.mult | _ -> Many)
-            | _ -> Many)
-        | _ -> Many)
-    | _ -> Many in
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x,Fun.id)
   | _ ->
-      let env,r,code = elab_expr1 env (under pos (hint raw)) raw in
+      let demand =
+        if pos = Erased then Erased else
+        let restore_table table =
+          let saved = Hashtbl.copy table in
+          fun () -> Hashtbl.reset table; Hashtbl.iter (Hashtbl.replace table) saved in
+        let restore_names = restore_table Env.names in
+        let restore_registered = restore_table Ffi.registered in
+        let restore_claimed = restore_table Ffi.claimed in
+        let restore_adts = restore_table Ffi.adts in
+        let counter, trace, warning = !Env.counter, !Env.trace, !warn in
+        Fun.protect
+          ~finally:(fun () ->
+            restore_names (); restore_registered (); restore_claimed (); restore_adts ();
+            Env.counter := counter; Env.trace := trace; warn := warning)
+          (fun () ->
+            warn := (fun _ -> ());
+            let probe, r, _ = elab_expr1 { env with run_pos = false; usage_erased = true } Erased raw in
+            match canon probe r.ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
+      in
+      let env,r,code = elab_expr1 env demand raw in
       let state = match r.term with Var x -> (entry env x).state | _ -> Dyn in
       let x,env = bind env ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
@@ -748,16 +757,16 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
         error l "%s-level call to %s takes a (%s p) annotation, not (%s p)" kind (show env callee.term) ann other
   in
   let env, ids = open_tele env ~word:false ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
+  count_check l expect ids;
   let code =
     if pos = Erased then V.CErased else
     let _, physical, returned = List.fold_left2 (fun (acc, physical, returned) (e : entry) x ->
-      let rhs = match Option.map (instantiate acc) e.place with
-        | Some (SlotHolds p) -> V.CVar (location_var env l p)
-        | Some _ -> assert false
-        | None -> V.CVar x in
+      let place = Option.map (instantiate acc) e.place in
       (Var x :: acc, (if e.mult <> Erased && e.place = None then x :: physical else physical),
-       (e, rhs) :: returned)) (acc, [], []) rets ids in
-    let results = List.filter_map (fun (m, (_, rhs)) -> if m = Erased then None else Some rhs) (List.combine expect (List.rev returned)) in
+       (x, place) :: returned)) (acc, [], []) rets ids in
+    let results = List.filter_map (fun (m, (x, place)) -> if m = Erased then None else
+      Some (V.CVar (match place with Some (SlotHolds p) -> location_var env l p | None -> x | Some _ -> assert false)))
+      (List.combine expect (List.rev returned)) in
     V.CLet (List.rev physical, V.CApp (hcode, codes, cc), V.CValues results)
   in
   (env, List.map (res_of env) ids, wrap code)
@@ -1203,7 +1212,7 @@ and result_tele tele env expect l ann =
           | Some _ -> error l "a match annotation carries no multiplicities"
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
         in
-        let env', _, ann_tele = elab_tele env ~places:true ~mults ~holes:true ann in
+        let env', _, ann_tele = elab_tele env ~places:true ~contextual:true ~mults ~holes:true ann in
         let env = { env' with scope = env.scope } in
         let env = match tele with Some tele when List.length tele = List.length ann_tele -> solve_tele ~strict:true env l tele ann_tele | _ -> env in
         List.iter (fun e -> settle env l (sg_term e.sg)) ann_tele;
