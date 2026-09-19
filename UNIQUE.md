@@ -195,9 +195,9 @@ Beside the fact table the elaborator keeps the **at-database**, a
 partition of scope entries into classes of one location. Its writers,
 and nothing else: a destructure at `unique` by `match`, `let-match` or
 `comptime-match` (the minted UniqueCstr with the scrutinee), a
-placement invocation (the new value with its UniqueCstr), `coerce` (its
-result with its source), a forwarding `let` (§9), a call's `at` return,
-and a match's `at` result. A forced atom rule from entering a branch
+placement invocation (the new value with its UniqueCstr), `coerce` and
+`share` (the result with the source, the same word), a forwarding `let`
+(§9), a call's `at` return, and a match's `at` result. A forced atom rule from entering a branch
 does not merge classes, and neither does canonical equality: two
 separately built cells with equal contents are `is`-equal and are two
 blocks. It is read by binder, before canonicalization, and a
@@ -324,7 +324,7 @@ promises its result at the cell:
       (let (unique next) (cstr-alloc Cons))
       (let (unique cell2) (cstr-write cell (Cons (SlotHolds h) (SlotHolds next))))
       (let (unique r2) (tail (append-into _ next hd tl ys)))
-      (at (cell2 _ h r2)))))
+      (at (cell2 _ h (share r2))))))
 
 (def-fns _ $ many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r)
@@ -346,7 +346,8 @@ promises its result at the cell:
 - The call is a tail call: with `at` returns dropped the callee returns
   nothing and so does this function, and what follows the call is
   erased, the invocation being full-at since `h` is in the first
-  slot's class and `r2` is at `next`, which the second slot holds. Its
+  slot's class and `(share r2)`, the many use the many-labelled tail
+  needs, is at `r2`, at `next`, which the second slot holds. Its
   result is at `cell2`, at `cell`. Leaving `h` to the invocation
   instead of the write would put a store after the call and the claim
   would fail.
