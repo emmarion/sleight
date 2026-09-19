@@ -557,16 +557,37 @@ keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
 
-## U15. The risky forms
+## U15. Two further forms, proposed
 
-- A `Coercible` from two variables in one at-class is minted only when
-  both are live: with one consumed, its contents may have changed while
-  its address has not, and a `coerce` through the proof would give a
-  value whose `is` refutes branches its bits reach. Two live variables
-  at one address are both many, whose contents no longer change.
-- Pointer comparison of two slots yields `(Eq (Slot) a b)` with a
-  proof, matched through the at-database (§U10), so `Refl` puts the two
-  in one class and never forces an `is`.
+The proposal's part 5 adds two special forms, both new, names open;
+the restrictions are the owner's.
+
+**A `Coercible` from the at-database.** `(at-coercible x y)`, say,
+mints `(Coercible Many X x Many Y y)` for two variables `x` and `y` in
+one at-class. It is minted only when both are live: with one consumed,
+its contents may have changed while its address has not, and a `coerce`
+through the proof would give a value whose `is` refutes branches its
+bits reach. Two live variables at one address are both many, whose
+contents no longer change, so the proof is sound there.
+
+**Comparing two slots.** `(slot-eq a b)`, say, compares the words of
+two `(Slot)` values at many, at runtime, and answers with evidence in
+the equal case, in the shape of the prelude's `Dec`:
+
+```scheme
+(def-adts
+  (SlotEq : ((Slot) a) ((Slot) b) -> Type
+    enum
+    (many SlotSame : (erased (Slot) a) (erased (Slot) b) (erased (Eq (Slot) a b) e) -> (SlotEq a b))
+    (many SlotDiffer : (erased (Slot) a) (erased (Slot) b) -> (SlotEq a b))))
+```
+
+Matching `Refl` on the `Eq` unifies two `SlotHolds` through the
+at-database (§U10), putting their variables in one class and forcing
+no `is`; that is what makes the equal case usable, an `(at)` or a
+full-at invocation then holding where it did not before. The unequal
+case carries no evidence for now; whether it should carry a refutation,
+a function to `(False)` at some fixed level, is open with the names.
 
 ## U16. `_` as a binder name
 
@@ -582,7 +603,7 @@ binder; it is not special anywhere else, `_` in an argument (SUGAR.md
 Additions to §27's registry. Statements: `def-unique`, `cstr-read`.
 Type formers: `UniqueFn`, `UniqueCstr`. Other expressions: `share`,
 `cstr-alloc`, `cstr-write`, the full-at wrapper `at`, `coercible-share`,
-and §U15's two forms, names open; the placement invocation is not a
+and §U15's `at-coercible` and `slot-eq`, names open; the placement invocation is not a
 special form, being §4's fourth applicable type. Annotation tokens:
 `unique`, `peek`, and `at` before an argument or after a telescope
 entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
@@ -590,7 +611,8 @@ entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
 `Newtype`, `newtype-of` and §27's item 9a; `Matchable`'s type gains the
 `newtype` and `extern` marks.
 
-Open, as questions: the names of §U15's two forms; placement on an
+Open, as questions: the names of §U15's two forms and whether `slot-eq`'s
+unequal case carries a refutation; placement on an
 extern type (TBD, for now not allowed); the shadowing sugar the
 proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
 the idiom until then.
