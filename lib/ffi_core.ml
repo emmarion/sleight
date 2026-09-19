@@ -85,7 +85,7 @@ type 'a array_model = ANil | ACons of 'a * 'a
 
 let array_view ~array ~wrap v =
   let a, offset, length = array v in
-  if length = 0 then ANil else ACons (a.(offset), wrap (a, offset + 1, length - 1))
+  if length = 0 then ANil else ACons (Array.unsafe_get a offset, wrap (a, offset + 1, length - 1))
 
 let array_of ~array ~wrap = function
   | ANil -> wrap ([||], 0, 0)
@@ -101,9 +101,9 @@ let array_new ~blank n =
 
 let array_swap (a, offset, _) i x =
   let index = offset + Z.to_int i in
-  let old = a.(index) in
-  a.(index) <- x;
+  let old = Array.unsafe_get a index in
+  Array.unsafe_set a index x;
   old
 
-let array_pluck (a, offset, _) i = a.(offset + Z.to_int i)
-let array_place (a, offset, _) i x = a.(offset + Z.to_int i) <- x
+let array_pluck (a, offset, _) i = Array.unsafe_get a (offset + Z.to_int i)
+let array_place (a, offset, _) i x = Array.unsafe_set a (offset + Z.to_int i) x
