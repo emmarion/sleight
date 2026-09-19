@@ -675,8 +675,9 @@ invocation allocates, two slots that held one cell may hold two.
 ## U15. Two further forms, proposed as a later second change
 
 The proposal's part 5 adds two special forms, both new, names open,
-and proposed as a second change after the rest of this file lands;
-the restrictions are the owner's.
+and proposed as a second change after the rest of this file lands and
+after a more thorough investigation of their soundness than this file
+records; the restrictions are the owner's.
 
 **A `Coercible` from the at-database.** `(at-coercible x y)`, say,
 mints a `Coercible` between two variables `x` and `y` in one at-class,
