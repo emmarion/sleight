@@ -18,6 +18,8 @@ apt-get install -y ocaml ocaml-dune ocaml-findlib libzarith-ocaml-dev python3 ti
 dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
+self/bootstrap.sh
+dune exec bin/shape.exe -- tests/list.sl
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg echo.ml -o echo && ./echo
 ```
@@ -57,6 +59,18 @@ arguments is the form whose result is computed by the extracted code. The result
 interpreter does on the same files, which `dune test` checks
 (ASSUMPTIONS.md 61-67); every value is an `Obj.t`, so the output is not
 typed OCaml.
+
+`self/bootstrap.sh` extracts the self-hosted compiler with the reference
+extractor, compiles every `tests/*.sl` with it and compares what each program
+does with the interpreter on the same files, then compiles the compiler with
+itself and again with that result and requires the two outputs to be identical
+(`self/README.md`). `bin/shape` reports where a file's forms open and close:
+`shape file` lists every form spanning more than one line with the line it
+closes on, and `shape --closers file` what each run of `)` closes, which is
+for locating a misplaced paren where the checker's own error names only the
+end of the file. It reads the same `lib/reader.ml` the checker does, so
+comments and string literals are skipped rather than counted, and a file the
+lexer cannot finish is reported as far as it got.
 
 `bench/bench.sh` times the self-hosted compiler on a pinned copy of its
 own sources and on the sample programs under `bench/`, and
@@ -105,5 +119,6 @@ erased. Nothing is optimized.
 - `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
 - `bin/main.ml` — command line driver
+- `bin/shape.ml` — where a file's forms open and close, for locating a misplaced paren
 - `test/runtest.ml` — the test runner, interpreting and extracting each test
 - `tests/` — DESIGN.md's worked examples and further tests
