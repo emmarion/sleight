@@ -13,25 +13,26 @@ machine-checked, as §40 is.
 
 ## U0. What is new, in one place
 
-Multiplicity: `unique` (§U1). Match modes: `unique`, `peek` (§U5).
-Statements: `def-unique` (§U6), `cell-read` (§U10). Type formers:
-`UniqueFn` (§U6), `Cell` (§U9). Expressions: `share` (§U3),
-`cell-alloc`, `cell-write` (§U9), `coercible-share` (§U7), and, as a
-later second change, `at-coercible` and `slot-eq` (§U15, names open).
-Head position: a
-UniqueFn head is a call using the head at unique or erased (§U6); a
-Cell head is the placement invocation, with `(at)` before an
-argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
-match annotation entry (§U8); an extra binder in every `unique` or
-`peek` pattern, and in an `else` at `peek` (§U5). Built-in types: `Slot`
-with `(SlotVacant)` and `(SlotHolds v)` (§U10), `Sharing` with `Unique`
-and `Shared` (§U7). Elaboration state: an
-at-database beside §18's fact table, partitioning entries by location
-(§U8). Changed: `Coercible`
-takes a multiplicity on each side (§U7); `Matchable` carries the
+Multiplicity: `unique` (§U1). Match mode: `unique` (§U5). Statement:
+`def-unique` (§U6). Type formers: `UniqueFn` (§U6), `Cell` (§U9).
+Expressions: `share` (§U3), `cell-alloc`, `cell-write` (§U9),
+`cell-match` (§U10), `coercible-share` (§U7), and, as a later second
+change, `at-coercible` and `slot-eq` (§U15, names open). Head position:
+a UniqueFn head is a call using the head at unique or erased (§U6); a
+Cell head is the placement invocation, with `(at)` before an argument
+and the full-at `at` around it (§U9). Annotation: `at` on a return
+entry or match annotation entry (§U8); an extra binder in every
+`unique` pattern, the `else`'s included, on a type whose constructors
+have cells (§U5). Built-in types: `Slot` with `(SlotVacant)` and
+`(SlotHolds v)` (§U10), `Sharing` with `Unique` and `Shared` (§U7).
+Elaboration state: an at-database beside §18's fact table,
+partitioning entries by location (§U8). Changed: `Coercible` takes a
+multiplicity on each side, and `coercible-ctor` and `coercible-refl`
+take one as their first argument (§U7); `Matchable` carries the
 `newtype` and `extern` marks (§U9); `_` as a binder name (§U16); §23's
-invariant is two tiers (§U14). Removed: `Newtype`, `newtype-of` (§U7).
-Prelude: `Array`, `MaybeUninit` and their functions (§U13).
+invariant is two tiers (§U14); an argument is as if bound first
+(§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude: `Array`,
+`MaybeUninit` and their functions (§U13).
 
 ## U1. A third multiplicity, and a fourth match mode
 
