@@ -321,7 +321,7 @@ fresh cell at unique with every slot `SlotVacant`; `(cell-alloc C i1
 ... in)` lists every non-erased field as a write does, a `(Slot)`
 expression at many or `_` for a slot left `SlotVacant`, no partial
 list.
-A `unique` match, `let-match` or `comptime-match` on a value (§U5)
+A `unique` `match`, `let-match` or `comptime-match` on a value (§U5)
 yields, through its extra pattern binder, the cell the constructor
 occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
