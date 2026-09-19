@@ -319,14 +319,14 @@ promises its result at the cell:
 (def-fns _ $ many append-into : (erased Type A)
     (unique (UniqueCstr Cons (SlotVacant) (SlotVacant)) cell)
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->
-    (unique (List A) r at cell)
+    (many (List A) r at cell)
   (match many xs _
     ((Nil a) (cell _ h ys))
     ((Cons a hd tl)
       (let (unique next) (cstr-alloc Cons))
       (let (unique cell2) (cstr-write cell (Cons (SlotHolds h) (SlotHolds next))))
-      (let (unique r2) (tail (append-into _ next hd tl ys)))
-      (at (cell2 _ h (share r2))))))
+      (let (many r2) (tail (append-into _ next hd tl ys)))
+      (at (cell2 _ h r2)))))
 
 (def-fns _ $ many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r)
@@ -334,13 +334,13 @@ promises its result at the cell:
     ((Nil a) ys)
     ((Cons a hd tl)
       (let (unique cell) (cstr-alloc Cons))
-      (let (unique r) (append-into _ cell hd tl ys))
-      (share r))))
+      (append-into _ cell hd tl ys))))
 ```
 
 - In the `Nil` branch the invocation mints `(Cons A h ys)` at `cell`,
   `h` and `ys` at many into the many-labelled fields (§U4), the cell
-  consumed; the result is at `cell`, the promise.
+  consumed and the value many, as an invocation in a many position
+  builds (§U9); the result is at `cell`, the promise.
 - In the `Cons` branch the write stores `h` and the pointer to the
   fresh `next` into `cell`, two stores, mentioning both erased, so
   `next` is still live for the call; the call consumes `next` and
@@ -348,22 +348,17 @@ promises its result at the cell:
 - The call is a tail call: with `at` returns dropped the callee returns
   nothing and so does this function, and what follows the call is
   erased, the invocation being full-at since `h` is in the first
-  slot's class and `(share r2)`, the many use the many-labelled tail
-  needs, is at `r2`, at `next`, which the second slot holds. Its
+  slot's class and `r2` is at `next`, which the second slot holds. Its
   result is at `cell2`, at `cell`. Leaving `h` to the invocation
   instead of the write would put a store after the call and the claim
   would fail.
-- Each of `cell`, `cell2`, `next` and `r2` is used once at unique; `h`
-  is many throughout. Per element, one allocation and two stores, in
-  constant stack.
-- `unique` on the helper's result promises only that `r` is the sole
-  reference to its top cell: `Cons`'s tail is labelled `many`, so `r2`
-  enters `cell2` at many and the spine below is shared, as the type
-  says. The outer `append` returns `many`, its `Nil` branch returning
-  `ys` itself. Perhaps `List` should instead be defined with `unique`
-  on both `head` and `tail` (the owner's remark, undecided): a many
-  construction would still request them at many, and a unique one
-  would own its whole spine.
+- Each of `cell`, `cell2` and `next` is used once at unique; `h`, `r2`
+  and the result are many, the tail being labelled `many`, which is
+  why the helper returns `many` and needs no `share`. Per element, one
+  allocation and two stores, in constant stack. Perhaps `List` should
+  instead be defined with `unique` on both `head` and `tail` (the
+  owner's remark, undecided): a many construction would still request
+  them at many, and a unique one would own its whole spine.
 
 ## U12. Extern types and functions
 
