@@ -3185,3 +3185,23 @@ to look for a guard, are the owner's.
     function use an adapter when its result has an `at` promise. This is intended
     to give those calls the same physical-return reconstruction as an explicit
     source call, including calls from the extracted driver's code.
+
+160. The Matchable former accepts its marks between its discriminant and type
+    name: `(Matchable enum newtype extern T ...)`, with either mark optional
+    and their order immaterial, following def-adts' mark order. Both flags are
+    structural parts of its type, including when extern implementations are
+    stripped. Consequently an unmarked first-class Matchable parameter no
+    longer accepts an extern-marked datatype, and a single literal signature
+    cannot abstract over both marks. The affected first-class regression
+    examples now have separate marked and unmarked helpers. Contradictory
+    newtype/phantom open records now contradict as Matchables instead of
+    coexisting as separate Matchable and Newtype objects.
+
+161. Sharing sides are ordinary built-in Sharing values. Existing coercion
+    proofs migrate to Shared on both sides. `_` in the leading sharing argument
+    is inferred through an expected Coercible, including expected field-proof
+    sides and symmetry/composition; no default is guessed when unconstrained.
+    A many-labelled field requires a Shared field proof even under a Unique
+    constructor proof. A unique-labelled field uses the constructor proof's
+    side. This is the intended application of U4's table to U7's constructor
+    congruence. A delegated UniqueFn-to-Fn proof records Unique-to-Shared.

@@ -10,8 +10,7 @@ type term =
   | UniqueFn of term * tele * tele
   | TyCtor of tele
   | ValCtor of tele * term
-  | Matchable of disc * term * (mult * term) list
-  | Newtype of term
+  | Matchable of disc * bool * bool * term * (mult * term) list
   | SlotHolds of term
   | Cell of term * term list
 
@@ -34,9 +33,8 @@ let rec map_vars ?location f depth t =
   | ValCtor (ps, r) ->
       let d, ps = map_tele ?location f depth ps in
       ValCtor (ps, map_vars ?location f d r)
-  | Matchable (d, t, cs) ->
-      Matchable (d, map_vars ?location f depth t, List.map (fun (m, c) -> (m, map_vars ?location f depth c)) cs)
-  | Newtype t -> Newtype (map_vars ?location f depth t)
+  | Matchable (d, n, e, t, cs) ->
+      Matchable (d, n, e, map_vars ?location f depth t, List.map (fun (m, c) -> (m, map_vars ?location f depth c)) cs)
   | SlotHolds t -> SlotHolds (match location with Some g -> g depth t | None -> map_vars f depth t)
   | Cell (c, ss) -> Cell (map_vars ?location f depth c, List.map (map_vars ?location f depth) ss)
 
@@ -65,8 +63,8 @@ let parts = function
   | Fn (l, ps, rs) | UniqueFn (l, ps, rs) -> ((0, l) :: tele_parts 0 ps) @ tele_parts (List.length ps) rs
   | TyCtor ps -> tele_parts 0 ps
   | ValCtor (ps, r) -> tele_parts 0 ps @ [ (List.length ps, r) ]
-  | Matchable (_, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
-  | Newtype t | SlotHolds t -> [ (0, t) ]
+  | Matchable (_, _, _, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
+  | SlotHolds t -> [ (0, t) ]
   | Cell (c, ss) -> List.map (fun t -> (0, t)) (c :: ss)
 
 let blank t =
@@ -79,8 +77,7 @@ let blank t =
   | UniqueFn (_, ps, rs) -> UniqueFn (hole, tele ps, tele rs)
   | TyCtor ps -> TyCtor (tele ps)
   | ValCtor (ps, _) -> ValCtor (tele ps, hole)
-  | Matchable (d, _, cs) -> Matchable (d, hole, List.map (fun (m, _) -> (m, hole)) cs)
-  | Newtype _ -> Newtype hole
+  | Matchable (d, n, e, _, cs) -> Matchable (d, n, e, hole, List.map (fun (m, _) -> (m, hole)) cs)
   | SlotHolds _ -> SlotHolds hole
   | Cell (_, ss) -> Cell (hole, List.map (fun _ -> hole) ss)
 
@@ -112,11 +109,10 @@ let to_string name_of t =
     | ValCtor (ps, r) ->
         let bound', ps = tele bound ps in
         "(ValCtor " ^ String.concat " " (ps @ [ "->"; go bound' r ]) ^ ")"
-    | Matchable (d, t, cs) ->
+    | Matchable (d, n, e, t, cs) ->
         "(Matchable " ^ String.concat " "
-          (disc_name d :: go bound t :: List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
+          ((disc_name d :: (if n then ["newtype"] else []) @ (if e then ["extern"] else []) @ [go bound t]) @ List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
         ^ ")"
-    | Newtype t -> "(Newtype " ^ go bound t ^ ")"
     | SlotHolds t -> "(SlotHolds " ^ go bound t ^ ")"
     | Cell (c, ss) -> "(Cell " ^ String.concat " " (List.map (go bound) (c :: ss)) ^ ")"
   and tele ?(marks = true) bound es =

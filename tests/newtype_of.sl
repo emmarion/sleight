@@ -1,6 +1,4 @@
 ; expect: 1
-; newtype-of fetches the Newtype naming a marked type's wrapping constructor, and a first-class coercible-wrap
-; works through it once it is opened (DESIGN.md section 19).
 
 (def-adts $ Meters : -> Type
   enum newtype
@@ -9,10 +7,10 @@
 (def-lvl X)
 (def-fns X $ many wrap : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
-    (erased (Newtype C) nt)
+    (erased (Matchable enum newtype T (many C)) nt)
     (many (Nat) n) -> (many (T) t)
   (open-adt erased nt)
-  (coerce n (coercible-wrap C n)))
+  (coerce n (coercible-wrap (Shared) C n)))
 
-(let (many m) (wrap Meters MkMeters (newtype-of MkMeters) (Succ (Zero))))
+(let (many m) (wrap Meters MkMeters (matchable-of Meters) (Succ (Zero))))
 (match many m (((Nat) r)) ((MkMeters n) n))

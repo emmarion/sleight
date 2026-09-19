@@ -21,7 +21,23 @@ let predates, env =
   Env.bind env (Some "Predates") Erased token (TyCtor [ ty "A" type_term; ty "a" (Bound 0); ty "l" level_term ])
 
 let subterm, env = Env.bind env (Some "Subterm") Erased token (TyCtor heterogeneous)
-let coercible, env = Env.bind env (Some "Coercible") Erased token (TyCtor heterogeneous)
+let sharing, env = Env.bind env (Some "Sharing") Erased token (TyCtor [])
+let sharing_term = App (Var sharing, [])
+let sharing_ctors, env =
+  let adt = { V.tname = "Sharing"; tagged = true; ctors = []; ext = None } in
+  let env, cs = List.fold_left_map (fun env (index, name) ->
+    let x, env = Env.bind env (Some name) Many token (ValCtor ([], sharing_term)) in
+    let c = { V.cname = name; cid = x; index; arity = 0; adt } in
+    (Env.set_state env x (Env.Const (V.VCtorFn c)), c)) env [0, "Unique"; 1, "Shared"] in
+  adt.ctors <- cs;
+  let x, env = Env.bind env None Many (Env.Const (V.VMatchable adt))
+    (Matchable (Enum, false, false, Var sharing, List.map (fun c -> Many, Var c.V.cid) cs)) in
+  (cs, Env.merge_opens (Env.forcing (Env.opens_add env x)))
+let unique_term = App (Var (List.nth sharing_ctors 0).V.cid, [])
+let shared_term = App (Var (List.nth sharing_ctors 1).V.cid, [])
+let coercible, env = Env.bind env (Some "Coercible") Erased token
+  (TyCtor [ ty "sa" sharing_term; ty "A" type_term; ty "a" (Bound 0);
+            ty "sb" sharing_term; ty "B" type_term; ty "b" (Bound 0) ])
 
 let special, env = Env.bind env (Some "Special") Erased token (TyCtor [])
 let special_term = App (Var special, [])
@@ -37,7 +53,7 @@ let specials, env =
   in
   let (env, _), ctors = List.fold_left_map ctor (env, 0) Special.all in
   adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
-  let matchable = Matchable (Enum, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
+  let matchable = Matchable (Enum, false, false, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
   let m, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
   let env = Env.merge_opens (Env.forcing (Env.opens_add env m)) in
   ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,

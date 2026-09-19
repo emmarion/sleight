@@ -14,9 +14,9 @@
 (def-fns M $ many inc-meters : (many (Meters) x) -> (many (Meters) r)
   (match erased x (((Meters) r))
     ((MkMeters n)
-      (let (many k) (coerce x (coercible-sym (coercible-wrap MkMeters n))))
+      (let (many k) (coerce x (coercible-sym (coercible-wrap (Shared) MkMeters n))))
       (let (many j) (delegate (inc (predates p) k)))
-      (coerce j (coercible-wrap MkMeters j)))))
+      (coerce j (coercible-wrap (Shared) MkMeters j)))))
 
 (let (erased ig) (coercible-of inc-meters))
 (let (many (Fn L (many (Nat) a) -> (many (Nat) b)) g) (coerce inc-meters ig))

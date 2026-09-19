@@ -17,10 +17,10 @@ module StringMap = Map.Make (String)
 (* The scope (section 3): its entries newest first, and the newest named entry of each name, for lookup. *)
 type scope = { ids : id list; named : id StringMap.t }
 
-(* An opened Matchable or Newtype (section 19) with the names its type holds canonically, the type constructor
+(* An opened Matchable (section 19) with the names its type holds canonically, the type constructor
    first. The names are read again whenever a variable is ruled out ([add_rule]), so they are current under the
    facts in force; [touched] holds the objects whose names changed since [merge_opens] last ran. *)
-type opened = { obj : id; kind : [ `Matchable | `Newtype | `Other ]; names : term list }
+type opened = { obj : id; kind : [ `Matchable | `Other ]; names : term list }
 type opens = { opened : opened list; touched : id list }
 
 type use = Shared | Consumed
@@ -92,8 +92,7 @@ let type_of env x = canon env (fact env x).ty
 
 let opened_of env x =
   match type_of env x with
-  | Matchable (_, t, cs) -> { obj = x; kind = `Matchable; names = t :: List.map snd cs }
-  | Newtype c -> { obj = x; kind = `Newtype; names = [ c ] }
+  | Matchable (_, _, _, t, cs) -> { obj = x; kind = `Matchable; names = t :: List.map snd cs }
   | _ -> { obj = x; kind = `Other; names = [] }
 
 let opens_add env x = { env with opens = { opened = opened_of env x :: env.opens.opened; touched = x :: env.opens.touched } }
@@ -131,7 +130,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(holes = false) ?rule name
   (x, set_state env x state)
 
 
-(* [opens] holds the Matchables and Newtypes opened so far (section 19), one entry per merged group; nothing
+(* [opens] holds the Matchables opened so far (section 19), one entry per merged group; nothing
    consults one that is not in it. Constructors one opened Matchable lists are distinct, first-class ones
    included. *)
 let listed env x y =
@@ -188,8 +187,8 @@ type forced = Forcing of t
 let forcing env = Forcing env
 let unify_force (Forcing env) a b = Forcing (unify_in ~force:true env a b)
 
-(* At most one opened Matchable names a given type constructor or value constructor, and at most one opened
-   Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
+(* At most one opened Matchable names a given type constructor or value constructor
+   (section 19): two that would are unified, forcing, and the better-ranked entry
    kept, the older on a tie, until no two name one thing. Restored after every forcing (Elab.refine, Elab.open_adt).
    Failure is a Contradiction. Only a pair with a touched object can share, the rest having been disjoint when
    the invariant last held, so the pair sought is the newest object sharing a name with an older one (of a

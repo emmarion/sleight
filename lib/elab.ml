@@ -88,7 +88,7 @@ let rec infer env loc t =
       | TyCtor _ -> type_term
       | ValCtor (_, r) -> instantiate (List.rev args) r
       | ty -> error loc "%s has type %s and cannot be applied" (show env h) (show env ty))
-  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Newtype _ | Cell _ -> type_term
+  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> type_term
   | SlotHolds _ -> Prelude.slot_term
   | Bound _ -> error loc "internal: dangling binder"
 
@@ -97,19 +97,19 @@ let settle_res env loc r = settle env loc r.term; settle env loc r.ty
 let non_erased env ids = List.filter (fun x -> (entry env x).mult <> Erased) ids
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased; place = None }
 
-(* Opens [x], a Matchable or Newtype entry (section 19): its constructors must be distinct after canonicalization,
+(* Opens [x], a Matchable entry (section 19): its constructors must be distinct after canonicalization,
    and it then merges with whatever open names one of them or its type constructor (Env.merge_opens). Failure is
    a Contradiction. *)
 let open_adt env x =
   let rec dup = function [] -> None | c :: rest -> if List.mem c rest then Some c else dup rest in
   (match type_of env x with
-  | Matchable (_, _, cs) -> Option.iter (fun c -> raise (Contradiction (show env c ^ " is listed twice"))) (dup (List.map snd cs))
+  | Matchable (_, _, _, _, cs) -> Option.iter (fun c -> raise (Contradiction (show env c ^ " is listed twice"))) (dup (List.map snd cs))
   | _ -> ());
   merge_opens (forcing (opens_add env x))
 
 (* The opened Matchable for a type, at most one (Env.merge_opens). *)
 let matchables env tid =
-  let of_type o = match (o.Env.names, type_of env o.obj) with Var t :: _, Matchable (d, _, cs) when t = tid -> Some (o.obj, d, cs) | _ -> None in
+  let of_type o = match (o.Env.names, type_of env o.obj) with Var t :: _, Matchable (d, _, _, _, cs) when t = tid -> Some (o.obj, d, cs) | _ -> None in
   List.filter_map of_type env.opens.opened
 
 let find_matchable env loc tid =
@@ -150,11 +150,21 @@ let wrapper disc shapes =
   | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
   | _ -> None
 
-let newtype_of env c = Option.map (fun o -> o.Env.obj) (List.find_opt (fun o -> o.Env.kind = `Newtype && o.names = [ Var c ]) env.opens.opened)
+let newtype_of env c =
+  List.find_map (fun o -> match type_of env o.Env.obj with
+    | Matchable (d, true, _, _, cs) when wrapper d (shapes env 0 cs) = Some c -> Some o.obj
+    | _ -> None) env.opens.opened
+
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
 let const env v = if env.run_pos then Const v else Dyn
 let ctor_var env loc = named env loc "a constructor"
 let proof_type ctor args = App (Var ctor, args)
+
+let sharing_of_fn env t = match canon env t with UniqueFn _ -> Prelude.unique_term | Fn _ -> Prelude.shared_term | _ -> assert false
+let sharing_mult env l t =
+  let t = canon env t in
+  if equal t Prelude.unique_term then Unique else if equal t Prelude.shared_term then Many
+  else error l "coerce needs a canonical Unique or Shared side, got %s" (show env t)
 
 let expect_proof env loc ctor p =
   match canon env (infer env loc p) with
@@ -361,14 +371,16 @@ and elab_type_form env l sp args =
       (env, elab_fn_type ~unique:(sp = Sp.UniqueFn) env lv ps rs)
   | Sp.TyCtor, _ -> let ps, ret = split_arrow env l args in (env, elab_tyctor env l ps ret)
   | Sp.ValCtor, _ -> let _, _, _, t = elab_valctor env l args in (env, t)
-  | Sp.Matchable, d :: t :: cs ->
+  | Sp.Matchable, d :: rest ->
+      let ms, rest = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in
+      let t, cs = match rest with t :: cs -> (t, cs) | _ -> error l "malformed Matchable" in
       let ctor = function
-        | List (l, [ m; c ]) -> (mult_or env l m, Var (ctor_var env l c))
-        | r -> error (loc r) "expected (multiplicity Constructor)"
-      in
-      (env, Matchable (disc_of env l d, Var (tyname env l t), List.map ctor cs))
-  | Sp.Newtype, [ c ] -> let c = ctor_var env l c in ignore (ctor_type env l c); (env, Newtype (Var c))
-  | (Sp.Fn | Sp.UniqueFn | Sp.Matchable | Sp.Newtype), _ -> error l "malformed %s" (Sp.name sp)
+        | List (cl, [ m; c ]) -> let m = mult_or env cl m in
+            if m = Unique then error cl "a Matchable constructor cannot be unique";
+            (m, Var (ctor_var env cl c))
+        | raw -> error (loc raw) "expected a constructor marker" in
+      (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), List.map ctor cs))
+  | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "malformed %s" (Sp.name sp)
   | _ -> error l "%s cannot appear in a type" (Sp.name sp)
 
 and elab_fn_type ?(unique = false) env lv ps rs =
@@ -672,12 +684,33 @@ and elab_special tele env expect l sp args =
     if List.mem sp (Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.Delegate :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (Sp.name sp)
   in
-  let proof env ctor raw =
-    let env, p = elab_erased env raw in
-    (env, expect_proof env l ctor p)
-  in
+  let expected_type env = match tele with
+    | Some [ { sg = Ty t; _ } ] -> Some (canon env t)
+    | Some [ { sg = Is t; _ } ] -> Some (canon env (infer env l t))
+    | _ -> None in
+  let expected_sides env = match expected_type env with
+    | Some (App (Var c, [ sa; _; _; sb; _; _ ])) when c = Prelude.coercible -> Some (sa, sb)
+    | _ -> None in
+  let proof ?sides env ctor raw =
+    let env, tele = match sides with
+      | None -> (env, None)
+      | Some (sa, sb) ->
+          let a, env = bind env ~meta:true None Erased Dyn type_term in
+          let x, env = bind env ~meta:true None Erased Dyn (Var a) in
+          let b, env = bind env ~meta:true None Erased Dyn type_term in
+          let y, env = bind env ~meta:true None Erased Dyn (Var b) in
+          (env, Some [ { name = None; subterm = false; mult = Erased; place = None;
+            sg = Ty (proof_type ctor [sa; Var a; Var x; sb; Var b; Var y]) } ]) in
+    let env, p, _ = elab_expr1 ?tele env Erased raw in
+    settle_res env l p;
+    (env, expect_proof env l ctor p.term) in
   let erased (env, r) = (env, [ r ], V.CErased) in
-  let mint env ty = erased (mint env ty) in
+  let mint env ty =
+    let env = match expected_type env with Some want -> solve "type" env l ty want | None -> env in
+    erased (mint env (metaless env ty)) in
+  let side env raw =
+    if wild raw then let x, env = bind env ~meta:true None Erased Dyn Prelude.sharing_term in (env, Var x)
+    else let env, t = elab_term env raw in check_type env l (infer env l t) Prelude.sharing_term; (env, t) in
   let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s" (name_of env x) what in
   let compose (c1, p) (c2, q) k =
     let env, p = proof env c1 p in
@@ -687,7 +720,7 @@ and elab_special tele env expect l sp args =
     mint env (proof_type ctor args)
   in
   match (sp, args) with
-  | (Sp.Fn | Sp.UniqueFn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable | Sp.Newtype), _ ->
+  | (Sp.Fn | Sp.UniqueFn | Sp.TyCtor | Sp.ValCtor | Sp.Matchable), _ ->
       if pos <> Erased then error l "a type in a non-erased position";
       let env, t = elab_type_form env l sp args in
       erased (env, term_res env l t)
@@ -730,10 +763,8 @@ and elab_special tele env expect l sp args =
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
       (env, [ res_of env x ], matchable_code env m x)
-  | Sp.NewtypeOf, [ c ] -> let c = ctor_var env l c in fetch "Newtype open" c (newtype_of env c)
   | Sp.OpenAbsurd, [ e; ann ] ->
       let env', x, t, _ = open_binding env l Erased e in
-      (match type_of env' x with Newtype _ -> error l "open-absurd: whether a Newtype has a contradicting open is undecided" | _ -> ());
       (match open_adt env' x with
       | _ -> error l "open-absurd: opening %s contradicts nothing" (show env' t)
       | exception Contradiction _ -> ());
@@ -766,69 +797,94 @@ and elab_special tele env expect l sp args =
   | Sp.PredatesTrans, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.predates, q)
         (function [ a; x; l1 ], [ _; l1'; l2 ] -> ((l1', l1), (Prelude.predates, [ a; x; l2 ])) | _ -> assert false)
-  | (Sp.SubtermTrans | Sp.CoercibleTrans), [ p; q ] ->
-      let c = if sp = Sp.SubtermTrans then Prelude.subterm else Prelude.coercible in
+  | Sp.SubtermTrans, [ p; q ] ->
+      let c = Prelude.subterm in
       compose (c, p) (c, q) (function [ a; x; _; y ], [ _; y'; b; z ] -> ((y', y), (c, [ a; x; b; z ])) | _ -> assert false)
   | Sp.PredatesSubterm, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.subterm, q)
         (function [ _; x; lv ], [ b; y; _; x' ] -> ((x', x), (Prelude.predates, [ b; y; lv ])) | _ -> assert false)
   | Sp.Coerce, [ a; p ] -> (
-      let env, a, code = elab_expr1 env m a in
-      settle_res env l a;
       let env, p = proof env Prelude.coercible p in
       match p with
-      | [ _; a'; b_ty; b ] ->
+      | [ sa; _; a'; sb; b_ty; b ] ->
+          let src = if pos = Erased then Erased else sharing_mult env l sa in
+          let dst = if pos = Erased then Erased else sharing_mult env l sb in
+          let env, a, code = elab_expr1 env src a in
+          settle_res env l a;
           check_equal env l a.term a';
-          let x, env = bind env None m Dyn b_ty ~rule:b in
+          let x, env = bind env None dst Dyn b_ty ~rule:b in
           let env = match a.place with Some p -> at_merge env (Var x) p | None -> env in
           (env, [ { (res_of env x) with place = a.place } ], code)
       | _ -> assert false)
-  | Sp.CoercibleRefl, [ e ] ->
+  | Sp.CoercibleRefl, [ s; e ] ->
+      let env, s = side env s in
       let env, e = elab_term env e in
       settle env l e;
-      mint env (proof_type Prelude.coercible [ infer env l e; e; infer env l e; e ])
+      mint env (proof_type Prelude.coercible [ s; infer env l e; e; s; infer env l e; e ])
   | Sp.CoercibleSym, [ p ] -> (
+      let sides = Option.map (fun (a,b) -> b,a) (expected_sides env) in
+      let env, p = proof ?sides env Prelude.coercible p in
+      match p with
+      | [ sa; a; x; sb; b; y ] -> mint env (proof_type Prelude.coercible [ sb; b; y; sa; a; x ])
+      | _ -> assert false)
+  | Sp.CoercibleShare, [ p ] -> (
       let env, p = proof env Prelude.coercible p in
       match p with
-      | [ a; x; b; y ] -> mint env (proof_type Prelude.coercible [ b; y; a; x ])
+      | [ _; a; x; _; b; y ] -> mint env (proof_type Prelude.coercible [ Prelude.shared_term; a; x; Prelude.shared_term; b; y ])
       | _ -> assert false)
-  | Sp.CoercibleWrap, c :: args -> (
+  | Sp.CoercibleTrans, [ p; q ] -> (
+      let middle, env = bind env ~meta:true None Erased Dyn Prelude.sharing_term in
+      let first = Option.map (fun (a,_) -> a, Var middle) (expected_sides env) in
+      let env, p = proof ?sides:first env Prelude.coercible p in
+      let sa,a,x,sm,b,y = match p with [sa;a;x;sm;b;y] -> sa,a,x,sm,b,y | _ -> assert false in
+      let second = Some (sm, match expected_sides env with Some (_,b) -> b | None -> Var middle) in
+      let env, q = proof ?sides:second env Prelude.coercible q in
+      match q with
+      | [ sm'; b'; y'; sb; c; z ] ->
+          check_equal env l sm sm'; check_type env l b b'; check_equal env l y y';
+          mint env (proof_type Prelude.coercible [ sa;a;x;sb;c;z ])
+      | _ -> assert false)
+  | Sp.CoercibleWrap, s :: c :: args -> (
+      let env, s = side env s in
       let c = ctor_var env l c in
-      let tele, ret = ctor_type env l c in
-      if newtype_of env c = None then error l "%s has no Newtype open: only a marked newtype's wrapping constructor has one" (name_of env c);
-      if List.length (List.filter (fun e -> e.mult <> Erased) tele) <> 1 then error l "%s is not the wrapping constructor" (name_of env c);
-      let env, acc = elab_term_args env l tele (Var c) args in
+      let params, ret = ctor_type env l c in
+      if newtype_of env c = None then error l "%s has no opened newtype Matchable for its wrapping constructor" (name_of env c);
+      let env, acc = elab_term_args env l params (Var c) args in
       List.iter (settle env l) acc;
-      let f = List.nth (List.rev acc) (Option.get (find_index (fun e -> e.mult <> Erased) tele)) in
-      mint env (proof_type Prelude.coercible [ infer env l f; f; instantiate acc ret; App (Var c, List.rev acc) ]))
-  | Sp.CoercibleCtor, c :: args ->
+      let e, f = List.find (fun (e, _) -> e.mult <> Erased) (List.combine params (List.rev acc)) in
+      let src = if e.mult = Unique then s else Prelude.shared_term in
+      mint env (proof_type Prelude.coercible [ src; infer env l f; f; s; instantiate acc ret; App (Var c, List.rev acc) ]))
+  | Sp.CoercibleCtor, s :: c :: args ->
+      let env, s = side env s in
+      let env = match expected_sides env with Some (sa,_) -> solve "sharing" env l s sa | None -> env in
       let c = ctor_var env l c in
-      let tele, ret = ctor_type env l c in
+      let params, ret = ctor_type env l c in
       let check env side e ty t = check_sg env l (map_sg (instantiate side) e.sg) { term = t; ty; erasure = Erased; place = None } in
       let rec go env src tgt tele args =
         match (tele, args) with
         | [], [] -> (env, src, tgt)
-        | ({ mult = Erased; _ } as e) :: tele, s :: t :: args ->
-            let env, s = elab_term env s in
-            let env, t = elab_term env t in
-            settle env l s; settle env l t;
-            check env src e (infer env l s) s;
-            check env tgt e (infer env l t) t;
-            go env (s :: src) (t :: tgt) tele args
+        | ({ mult = Erased; _ } as e) :: tele, a :: b :: args ->
+            let env, a = elab_term env a in
+            let env, b = elab_term env b in
+            settle env l a; settle env l b;
+            check env src e (infer env l a) a;
+            check env tgt e (infer env l b) b;
+            go env (a :: src) (b :: tgt) tele args
         | ({ mult = (Many | Unique); _ } as e) :: tele, p :: args -> (
-            match proof env Prelude.coercible p with
-            | env, [ sty; s; tty; t ] ->
-                check env src e sty s;
-                check env tgt e tty t;
-                go env (s :: src) (t :: tgt) tele args
+            let fs = if e.mult = Many then Prelude.shared_term else s in
+            match proof ~sides:(fs,fs) env Prelude.coercible p with
+            | env, [ sa; sty; a; sb; tty; b ] ->
+                let env = solve "sharing" (solve "sharing" env l sa fs) l sb fs in
+                check env src e sty a;
+                check env tgt e tty b;
+                go env (a :: src) (b :: tgt) tele args
             | _ -> assert false)
-        | _ -> error l "coercible-ctor: wrong number of arguments for %s" (name_of env c)
-      in
-      let env, src, tgt = go env [] [] tele args in
-      mint env (proof_type Prelude.coercible [ instantiate src ret; App (Var c, List.rev src); instantiate tgt ret; App (Var c, List.rev tgt) ])
+        | _ -> error l "coercible-ctor: wrong number of arguments for %s" (name_of env c) in
+      let env, src, tgt = go env [] [] params args in
+      mint env (proof_type Prelude.coercible [ s; instantiate src ret; App (Var c, List.rev src); s; instantiate tgt ret; App (Var c, List.rev tgt) ])
   | Sp.CoercibleOf, [ g ] ->
       let g = named env l "a function name" g in
-      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; Var g'; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
+      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
       fetch "delegate proof in scope" g (List.find_opt about env.scope.ids)
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
@@ -964,11 +1020,11 @@ and result_tele tele env expect l ann =
   if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
   (env, ann_tele)
 
-(* An anonymous let at [mult] of a Matchable or Newtype: the entry an open records (section 19). *)
+(* An anonymous let at [mult] of a Matchable: the entry an open records (section 19). *)
 and open_binding env l mult raw =
   let inner, r, code = elab_expr1 env mult raw in
   settle_res inner l r;
-  (match canon inner r.ty with Matchable _ | Newtype _ -> () | ty -> error l "%s : %s is not a Matchable or a Newtype" (show inner r.term) (show inner ty));
+  (match canon inner r.ty with Matchable _ -> () | ty -> error l "%s : %s is not a Matchable" (show inner r.term) (show inner ty));
   let value = if env.run_pos && mult <> Erased then List.hd (run_code inner code) else V.VToken in
   let state = if env.run_pos then Const value else match r.term with Var y -> (entry inner y).state | _ -> Dyn in
   let x, env' = bind inner None mult state r.ty ~rule:r.term in
@@ -1257,7 +1313,7 @@ and elab_def_fns ?(unique = false) env l args =
       let env =
         List.fold_left
           (fun env -> function
-            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.coercible [ gty; Var g; infer env l callee; callee ]))
+            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.coercible [ sharing_of_fn env gty; gty; Var g; sharing_of_fn env (infer env l callee); infer env l callee; callee ]))
             | None -> env)
           env proofs
       in
@@ -1363,15 +1419,9 @@ and elab_def_adts env adts =
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim_type al name adt);
     let values = List.map (fun ct -> (ct.V.cid, V.VCtorFn ct)) adt.ctors in
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
-    let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, Var tid, ctors)) in
+    let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var tid, ctors)) in
     let env = open_adt env mid in
-    let env =
-      if not (List.mem Sp.NewtypeMark ms) then env
-      else
-        match wrapper disc shapes with
-        | Some w -> let n, env = witness env (Newtype (Var w)) in open_adt env n
-        | None -> error al "%s is not of newtype shape (section 38)" name
-    in
+    if List.mem Sp.NewtypeMark ms && wrapper disc shapes = None then error al "%s is not of newtype shape (section 38)" name;
     (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in

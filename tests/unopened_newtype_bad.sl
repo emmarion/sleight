@@ -1,6 +1,4 @@
-; error: has no Newtype open
-; A Newtype parameter is no different: coercible-wrap wants it opened (DESIGN.md section 19).
-; tests/newtype_of.sl is this with the open.
+; error: has no opened newtype Matchable
 
 (def-adts $ Meters : -> Type
   enum newtype
@@ -8,7 +6,7 @@
 (def-lvl X)
 (def-fns X $ many wrap : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
-    (erased (Newtype C) nt)
+    (erased (Matchable enum newtype T (many C)) nt)
     (many (Nat) n) -> (many (T) t)
-  (coerce n (coercible-wrap C n)))
-(wrap Meters MkMeters (newtype-of MkMeters) (Succ (Zero)))
+  (coerce n (coercible-wrap (Shared) C n)))
+(wrap Meters MkMeters (matchable-of Meters) (Succ (Zero)))

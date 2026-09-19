@@ -1,7 +1,4 @@
-; error: MkBox has no Newtype open
-; The same rule through newtype-of, where what a branch could have read itself out of the air is a Newtype for
-; a constructor whose def-adts entry carries no newtype mark (section 38). (Box) is a tagged enum, so the
-; coerce below would hand a (MkBox (Succ (Zero))) to a position of type (Nat).
+; error: type mismatch
 
 (def-adts $ Box : -> Type
   enum
@@ -9,9 +6,9 @@
   (many Other : -> (Box)))
 
 (let (erased w)
-  (match erased (Zero) (((Newtype MkBox) w))
-    (else (newtype-of MkBox))))
+  (match erased (Zero) (((Matchable enum newtype Box (many MkBox)) w))
+    (else (matchable-of Box))))
 
 (let (many one) (Succ (Zero)))
-(let (many n) (coerce (MkBox one) (coercible-sym (coercible-wrap MkBox one))))
+(let (many n) (coerce (MkBox one) (coercible-sym (coercible-wrap (Shared) MkBox one))))
 n

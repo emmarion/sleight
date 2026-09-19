@@ -17,4 +17,4 @@
 (let (many h) (MkU8 half ph))
 (let (many wrapped) (u8-add h (u8-add h x)))
 (let-match many wrapped (MkU8 wn wq))
-(coerce wrapped (coercible-sym (coercible-wrap MkU8 wn wq)))
+(coerce wrapped (coercible-sym (coercible-wrap (Shared) MkU8 wn wq)))

@@ -13,6 +13,6 @@
 (def-fns T $ many main : -> (many (Nat) n)
   (let (many s) (u8-add (predates ut) u3 u4))
   (let-match many s (MkU8 sn sq))
-  (coerce s (coercible-sym (coercible-wrap MkU8 sn sq))))
+  (coerce s (coercible-sym (coercible-wrap (Shared) MkU8 sn sq))))
 
 main

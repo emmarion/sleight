@@ -7,4 +7,4 @@
 
 (let (many one) (Succ (Zero)))
 (let (many two) (Succ one))
-(coerce two (coercible-wrap MkMeters one))
+(coerce two (coercible-wrap (Shared) MkMeters one))

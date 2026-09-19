@@ -6,5 +6,5 @@
   enum newtype
   (many MkW : (many (Special) s) -> (W)))
 
-(let (many w) (coerce let (coercible-wrap MkW let)))
+(let (many w) (coerce let (coercible-wrap (Shared) MkW let)))
 (w (many x) (Succ (Zero)))

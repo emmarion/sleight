@@ -13,7 +13,7 @@
 
 (def-fns M $ many inc-m : (many (Nat) n) -> (many (Meters) r)
   (let (many k) (tail (inc (predates p) n)))
-  (let (many m) (coerce k (coercible-wrap MkMeters k)))
+  (let (many m) (coerce k (coercible-wrap (Shared) MkMeters k)))
   m)
 
 (inc-m (Zero))

@@ -9,4 +9,4 @@
     (many R : (many (Bool) b) -> (Either (False)))))
 
 (let (many one) (Succ (Zero)))
-(coerce one (coercible-wrap L one))
+(coerce one (coercible-wrap (Shared) L one))

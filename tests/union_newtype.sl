@@ -16,6 +16,6 @@
     (absurd NoB)))
 
 (let (many one) (Succ (Zero)))
-(let (many (Tagged (True)) a) (coerce one (coercible-wrap MkA one)))
+(let (many (Tagged (True)) a) (coerce one (coercible-wrap (Shared) MkA one)))
 (let (many nb) (NoB))
 (get a)

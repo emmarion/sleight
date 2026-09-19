@@ -1,5 +1,4 @@
-; error: is not a Matchable or a Newtype
-; open-adt names a Matchable or a Newtype and nothing else.
+; error: is not a Matchable
 
 (def-lvl X)
 (def-fns X $ many f : (many (Nat) n) -> (many (Nat) r)
