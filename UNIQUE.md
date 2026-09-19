@@ -357,7 +357,10 @@ promises its result at the cell:
   reference to its top cell: `Cons`'s tail is labelled `many`, so `r2`
   enters `cell2` at many and the spine below is shared, as the type
   says. The outer `append` returns `many`, its `Nil` branch returning
-  `ys` itself.
+  `ys` itself. Perhaps `List` should instead be defined with `unique`
+  on both `head` and `tail` (the owner's remark, undecided): a many
+  construction would still request them at many, and a unique one
+  would own its whole spine.
 
 ## U12. Extern types and functions
 
