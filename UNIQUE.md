@@ -271,7 +271,9 @@ return, and the elaborator supplies its word from the argument the
 promise names. The `tail` and `delegate` checks (§9) read the
 post-erasure code with `at` returns dropped from a call's results, as
 they read coerces as renamings, so a call whose only non-erased results
-are `at` returns is a tail call from a function returning none.
+are `at` returns is a tail call from a function returning none, and
+vice versa, the caller's own promise being verified as always by what
+follows the call, which the check requires to be erased.
 
 *Reading, an idiom.* A function that may fail and still promises its
 result at its argument returns an erased `Type T`, a `(unique T val at
