@@ -474,8 +474,11 @@ shape check then compares the non-erased arities of the model's
 constructors, not the many ones.) Part 1 of the proposal is useful
 before parts 2 to 4 exist:
 an update `(unique (Array A n) a) ... -> (unique (Array A n) r)` is
-O(1) and returns one word the caller already holds. Placement on an
-extern type is TBD and for now not allowed.
+O(1) and returns one word the caller already holds. A `Cell` for an
+extern type's constructor, and so `cell-alloc`, `cell-write`,
+`cell-read` and the invocation on one, is TBD and for now not allowed:
+an extern's in-place operations are its own functions, §U13's
+`array-swap` and kin.
 
 *Reading.* In the prototype an extern type's construction and matching
 live in its ADT record and run through one dispatch for a Const-known
@@ -729,7 +732,7 @@ unequal case carries a refutation; whether those forms fall under
 tier 1 (§U14); whether `cell-read` should be an expression returning
 its slots as `is` entries, `(cell-read peek u)` bound by a `let`,
 rather than a statement, nothing it mints needing to bind outward as
-`let-match`'s facts do; placement on an
-extern type (TBD, for now not allowed); the shadowing sugar the
+`let-match`'s facts do; a `Cell` for an extern type's constructor
+(TBD, for now not allowed); the shadowing sugar the
 proposal defers, same-name rebinding, `(let (unique x) (f x))`, being
 the idiom until then.
