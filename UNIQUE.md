@@ -56,8 +56,8 @@ Nothing turns a `many` or erased value unique, except as §20 already
 has it in an erased position or a phantom branch, where nothing runs.
 
 Degradation from `unique` to `many` is explicit: a `unique` binder in a
-`many` position is an error unless written `(degrade x)` (name
-tentative). The written degradation is a many use of `x`, after which
+`many` position is an error unless written `(share x)`. The written
+degradation is a many use of `x`, after which
 `x` is usable at many everywhere and never again at unique.
 
 ## U4. Fields
@@ -120,7 +120,7 @@ FFI's peek unwrap (§U12).
 
 A function defined by `def-fns` is a closure over its scope and may
 mention a `unique` binder of that scope only erased or degraded, the
-`(degrade x)` written inline in the body or earlier; the proposal's `def-unique` defines a
+`(share x)` written inline in the body or earlier; the proposal's `def-unique` defines a
 function of a new former, UniqueFn, that may close over `unique`
 binders as unique, consuming them, and is itself callable only from a
 `unique` binder, or erased. Its shape and level are open (§U15).
