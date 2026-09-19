@@ -34,7 +34,7 @@ invariant is two tiers (§U14); an argument is as if bound first
 (§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude: `Array`,
 `MaybeUninit` and their functions (§U13).
 
-## U1. A third multiplicity, and a fourth match mode
+## U1. A third multiplicity, and a third match mode
 
 A binder may be declared `unique` beside `erased` and `many` (§6, §20):
 function parameters and return entries, constructor fields, `let`
@@ -42,9 +42,8 @@ binders, and a match's scrutinee. A `unique` binder is the only
 reference to its value, which is what lets an operation on it run in
 place; the guarantee is the binder's, not the type's, so there is no
 unique type, no unique type or value constructor, and no phantom
-analogue. `match`, `let-match` and `comptime-match` gain two modes,
-`unique` and `peek` (§U5), and `cell-read` (§U10) has `many` and
-`peek`; `peek` is a match mode only, never a binder's multiplicity.
+analogue. `match`, `let-match` and `comptime-match` gain a mode,
+`unique` (§U5).
 
 ## U2. Uses
 
@@ -65,43 +64,72 @@ at many, then used at unique, where "used at many" leaves the binder
 usable at many and never at unique, and "used at unique" leaves it
 usable only erased. Three kinds of branch contribute nothing, having no
 non-erased mention: an `(absurd C)` branch, an absurd-by-proof branch,
-and a phantom constructor's branch under a `many`, `unique` or `peek`
+and a phantom constructor's branch under a `many` or `unique`
 scrutinee, whose body is elaborated with everything erased (§12). An
 `else` branch has an ordinary body and takes part like any other.
 
 A `unique` value need not be used: GC reclaims it (the proposal's
 "at most one use"), and `(let (values))` needs no new meaning.
 
+## U2a. Four kinds of mention
+
+A variable occurs in code in one of four ways; §U2 counts the second
+and third as uses and the other two as none:
+
+- an **erased mention**, §20's erased position: no word is needed, and
+  it is allowed before or after the binder is consumed;
+- a **use at many**, a non-erased position at `many`; a `unique` binder
+  stands there only inside a `share`, which is what degrades it (§U3);
+- a **use at unique**, a non-erased position at `unique`, which
+  consumes it;
+- a **direct variable reference**, the argument of `SlotHolds` (§U10):
+  the variable itself, a fact-table variable (§3) and never a telescope
+  binder, declared non-erased so that its word exists; the occurrence
+  is not a use, so it neither degrades nor consumes and may follow the
+  consumption.
+
+The semantics are as if the elaborator minted an anonymous variable for
+every argument to a constructor or function first. A special form says
+what each of its arguments takes, and `SlotHolds`'s is a direct
+variable reference, the one argument that is never bound first.
+
 ## U3. Born unique, degraded explicitly
 
-A `unique` value is born unique: a fresh constructor application in a
-unique position, a return of a call whose entry is declared `unique`,
-a `unique`-labelled field taken by a `unique` destructure (§U4), or an
-extern function whose return entry is `unique` (§U12's `array-new`).
-Nothing turns a `many` or erased value unique, except as §20 already
-has it in an erased position or a phantom branch, where nothing runs.
+A `unique` value is born unique, by a fresh constructor application in
+a unique position or by `def-unique` (§U6), and reappears unique as a
+`unique`-declared return of a non-erased call, as a `unique`-labelled
+field taken by a `unique` destructure (§U4), or as the result of a
+`coerce` in a non-erased position whose target side is `(Unique)`
+(§U7). Nothing turns a `many` or erased value unique, except as §20
+already has it in an erased position or a phantom branch, where nothing
+runs.
 
-Degradation from `unique` to `many` is explicit: a `unique` binder in a
-`many` position is an error unless written `(share x)`. The written
-degradation is a many use of `x`, after which `x` is usable at many,
-as `(share x)` every time, and never again at unique. Its result
-`is x`, as a `coerce`'s result `is` the value its proof names (§38),
-so a binder of it forwards `x`'s type and facts, and it is `at x`
-(§U8).
+Degradation from `unique` to `many` is explicit: a `unique` value in a
+`many` position is an error unless written `(share e)`, `e` an
+expression yielding a unique value, as if bound to a variable `x` first
+(§U2a). The written degradation is a many use of `x`, an error beside a
+use of `x` at unique on the same path (§U2), after which `x` is usable
+at many, as `(share x)` every time, and never again at unique. Its
+result `is x`, so a binder of it forwards `x`'s type and facts, and it
+is `at x` (§U8).
 
 ## U4. Fields
 
 A field is labelled `erased`, `many` or `unique`. A destructure, here
 and below, is a `match`, `let-match` or `comptime-match` on a value,
-binding its constructor's fields; a `cell-read` (§U10) is not one,
-reading a cell's slots and binding no field. What a destructure hands
-out for a field, by the scrutinee's mode:
+binding its constructor's fields, or a `cell-match` on a cell. The two
+are governed separately: the tables and rules of the first part of
+this section are about a value's fields and say nothing about a cell,
+and a `cell-match` is described only by the second part and §U10.
 
-| field label | `erased` | `many` | `unique` | `peek` |
-|---|---|---|---|---|
-| erased | erased | erased | erased | erased |
-| many | erased | many | many | many |
-| unique | erased | many | unique | erased |
+**Destructuring and constructing a value (non-`cell-match`).** What a
+destructure of a value hands out for a field, by the scrutinee's mode:
+
+| field label | `erased` | `many` | `unique` |
+|---|---|---|---|
+| erased | erased | erased | erased |
+| many | erased | many | many |
+| unique | erased | many | unique |
 
 A unique-labelled field under a `many` scrutinee comes out `many`: a
 shared cell shares everything it owns, with no per-field bookkeeping.
@@ -117,28 +145,32 @@ A `unique` field of a constructor built at `many` is requested at
 `many` (the proposal's 1e). §12's warning for a phantom constructor with
 a `many` field covers a `unique` one too.
 
-## U5. The new match modes
+**Destructuring a cell.** A cell has slots, not fields, and no labels,
+so none of the above applies to it. A `cell-match` takes the cell at
+`many` or at `unique` and hands out every slot as a `many` binder of
+type `(Slot)`, in either mode forcing `(Cell C s1 ... sn)` against the
+cell's type as a `match` forces a scrutinee's, which mints each slot
+binder's `is` rule; at `unique` it also gives the cell back as an extra
+binder, `is` and `at` the cell (§U10).
+
+## U5. The new match mode
 
 `(match unique x ann branches)` consumes `x` and binds each branch's
-fields per §U4's `unique` column. `(match peek x ann branches)` is also
-a use of `x` at unique, and gives the value back as a new binder: each
-branch binds a fresh `unique` binder that `is x` and is `at x` (§U8),
-the scrutinee itself staying consumed, so the
-discipline stays order-free (a peek after the binder is consumed is the
-usual conflict) and nothing restores a consumed binder in place.
+fields per §U4's `unique` column.
 
-Both modes add one binder to every pattern, after the fields, mandatory
-and `_` when unwanted (§U16): at `unique` it names the cell the
-constructor occupied, a Cell at `x` whose slots hold the fields
-just bound (§U9); at `peek` it names the scrutinee given back. A branch
-gets that binder out of the match by returning it into an entry of the
-match's annotation marked `at x` (§U8). At `peek` the `else` branch
-binds it too, `(else x2 body)`, the value being the same whichever
-constructor the else stands for; this is the first `else` that binds
-anything. At `unique` an `else` binds nothing, the cell's constructor
-being unknown, and the cell the scrutinee occupied is left to GC.
+On a type whose constructors have cells (§U9), every pattern adds one
+binder after the fields, mandatory and `_` when unwanted (§U16), naming
+the cell the constructor occupied: a `unique` binder of type `(Cell C
+(SlotHolds f1) ... (SlotHolds fn))`, one slot per non-erased field `fi`
+just bound, at `x` (§U8). A branch gets that binder out of the match by
+returning it into an entry of the match's annotation marked `at x`. The
+`else` branch binds one too, `(else x2 body)`: the cell's constructor
+being unknown, `x2` is the scrutinee given back, a fresh `unique`
+binder `is x` and `at x`, the same whichever constructor the else
+stands for; this is the first `else` that binds anything. On a newtype
+or an extern type a pattern has no extra binder (§U9, §U12).
 
-`let-match` takes the same modes and the same extra binder, binding
+`let-match` takes the same mode and the same extra binder, binding
 outward as before (§16). `comptime-match` at `unique` is a destructure
 like any other and does not degrade a unique Const, but merely consumes
 it at unique, binding its fields Const at their labels; the
@@ -146,13 +178,10 @@ elaborator's other reads of a Const (a special form or macro at the
 head, a Matchable read, §U6) are many uses. Readability requirements for a dispatching
 match are as in §19.
 
-*Reading.* On a source type `peek` is a `unique` destructure followed by
-a full-at reinvocation of the same constructor at the scrutinee (§U9),
-so it does what a `many` match does, read the tag and the many-labelled
-fields, and nothing more. On an extern type the FFI's peek unwrap runs
-in place of those reads, and how it produces the fields, a view or a
-copy, is the FFI author's choice under §U12's constraint; for the array
-of §U13 it yields the discriminant alone.
+*Reading, an idiom.* A value is read without giving up its uniqueness
+by a `unique` destructure followed by a full-at reinvocation of the
+same constructor in each branch (§U9), which erases to the tag read and
+nothing else.
 
 ## U6. Closures, `def-unique`, and the top level
 
@@ -205,28 +234,22 @@ an ordinary ADT with a Matchable and nothing special about it:
 ```
 
 There is no erased side: a `coerce` is never cashed erased and its
-proof is always erased, so a side describes a non-erased use. The
-target side is fixed at the minting form, by the expected type where
-the position names one and by the rule below otherwise, and the source
-side of each field is the multiplicity a constructor application at
-the target side would use that argument at, the meet of the target side
-and the field's label (§U4's construction table). So `coercible-wrap` over
-a many-labelled field yields `(Shared)` to `(Shared)` or `(Shared)` to
-`(Unique)`, over a unique-labelled field `(Shared)` to `(Shared)` or
-`(Unique)` to `(Unique)`; `coercible-ctor`
-applies the meet per field on each side; `coercible-refl` is uniform;
-`coercible-of` takes its sides from the two functions themselves,
-`(Shared)` for a `def-fns` function and `(Unique)` for a `def-unique`
-one (§U6), so a UniqueFn delegating to a plain function is `(Unique)`
-to `(Shared)`.
-Where nothing in a form fixes its sides, `coercible-ctor` and
-`coercible-refl` mint `(Unique)` on both. `coercible-sym` is unconditional,
+proof is always erased, so a side describes a non-erased use. `coercible-ctor`, `coercible-refl` and `coercible-wrap` take a
+`(Sharing)` value `s` as their first argument, `_` under SUGAR.md 6
+solving it from the expected type. `coercible-ctor` and
+`coercible-refl` mint `s` on both sides. `coercible-wrap` mints `s` as
+its target side and, as its source side, `s` over a unique-labelled
+field and `(Shared)` over a many-labelled one. `coercible-of` takes its
+sides from the two functions' types, `(Shared)` for an `Fn` and
+`(Unique)` for a `UniqueFn` (§U6), so a UniqueFn delegating to an Fn
+is `(Unique)` to `(Shared)`. `coercible-sym` is unconditional,
 every mintable shape being uniform or the harmless one: the sym of
 `(Shared)` `x` to `(Unique)` `(MkBox x)` consumes a unique wrapper and
 gives its many-labelled field back shared; `coercible-trans` requires
 the middle multiplicities equal; and a new form, `coercible-share`,
 weakens any proof to `(Shared)` on both sides (the proposal's 1j).
-`(coerce a p)` in a position of multiplicity `m` uses `a` at `m_a`,
+`(coerce a p)` in a position of multiplicity `m`, `m_a` and `m_b`
+canonicalizing to `(Unique)` or `(Shared)` there, uses `a` at `m_a`,
 consuming it when that is `(Unique)`, and yields its result at `m_b`:
 an error where `m_b` is `(Shared)` and `m` is `unique`, and where
 `m_b` is `(Unique)` and `m` is `many` the result is a unique value in
