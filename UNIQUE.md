@@ -421,8 +421,8 @@ promises its result at the cell:
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->
     (many (List A) r at cell)
   (match many xs _
-    ((Nil a) (cell _ h ys))
-    ((Cons a hd tl)
+    ((Nil _) (cell _ h ys))
+    ((Cons _ hd tl)
       (let (unique next) (cell-alloc Cons))
       (let (unique cell2) (cell-write cell (Cons (SlotHolds h) (SlotHolds next))))
       (let (many r2) (tail (append-into _ next hd tl ys)))
@@ -431,8 +431,8 @@ promises its result at the cell:
 (def-fns _ $ many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r)
   (match many xs _
-    ((Nil a) ys)
-    ((Cons a hd tl)
+    ((Nil _) ys)
+    ((Cons _ hd tl)
       (let (unique cell) (cell-alloc Cons))
       (append-into _ cell hd tl ys))))
 ```
@@ -568,18 +568,18 @@ shedding the argument its model does not use:
     (unique m is old) (unique (Array A n) r at a)
     (erased (ASet A n a i x r) p)
   (match unique a _
-    (absurd (ANil t u) (match erased nth (((False) f))))
-    ((ACons t n1 hd tl u)
+    (absurd (ANil _ _) (match erased nth (((False) f))))
+    ((ACons _ _ hd tl u)
       (match many i _
         ((Zero)
           (match erased nth _
-            ((NthZ t2 n2 x2 tl2)
+            ((NthZ _ _ _ _)
               (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
             (absurd NthS)))
         ((Succ i1)
           (match erased nth _
             (absurd NthZ)
-            ((NthS t2 n2 h2 tl2 i2 x2 q)
+            ((NthS _ _ _ _ _ _ q)
               (let (unique old) (unique tl3) (erased p1) (tail (array-swap _ _ tl i1 x _ q)))
               (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))))
 
@@ -622,9 +622,9 @@ extracting to a call where the inline `coerce` extracts to nothing:
     (erased (Array A n) b)
     (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c)
   (match erased all _
-    ((AINil t)
+    ((AINil _)
       (values (ANil _) (coercible-ctor ANil (MaybeUninit A) A)))
-    ((AICons t n1 x tl q)
+    ((AICons _ n1 x tl q)
       (let (erased b1) (erased c1) (init-witness _ _ tl q))
       (values (ACons _ _ x b1)
               (coercible-ctor ACons (MaybeUninit A) A n1 n1
