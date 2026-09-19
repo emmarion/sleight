@@ -375,7 +375,8 @@ at-class, two `SlotHolds` are equal exactly when their arguments share a
 class, and a forcing unification merges the classes. `Slot` is not
 matchable and has no Matchable to open. At runtime a slot's value is
 the word the slot holds, a pointer or an immediate. `(SlotHolds v)`
-is an ordinary expression producing a `(Slot)` at many, and it mentions
+is an ordinary expression producing a `(Slot)`, usually at many, the
+position deciding as for any constructor application, and it mentions
 `v` erased: it is not a use of `v`, so `v` may be a unique binder that
 is still live, which stays live, or one already consumed, and either
 way the result is a many slot holding `v`'s word (the proposal's 4f
