@@ -420,6 +420,9 @@ let rec show cx env ty =
              | None -> "\"?\""
              | Some a ->
                  let arms = List.filter_map (branch a) a.V.ctors in
+                 let arms = match shape a with
+                   | Ext _ | Tagged _ -> arms
+                   | Untagged _ | Union -> (match arms with arm :: _ -> [ arm ] | [] -> []) in
                  dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"?\""))
          | Fn _ -> "\"<function ?>\""
          | ValCtor _ -> "\"<constructor ?>\""

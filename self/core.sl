@@ -157,29 +157,33 @@
 (def-fns _ $ many under : (many (Mult) pos) (many (Mult) m) -> (many (Mult) r)
   (match many pos _ ((Erased) (Erased)) ((Many) m) ((Once) m)))
 
-; The position of a list of expected multiplicities: erased when every entry is.
+; The position of a list of expected multiplicities: erased when the list is non-empty and every entry is.
 (def-adts $ PosOf : ((List $ Mult) ms) ((Mult) pos) -> Type
   enum
-  (many PoNil : -> (PosOf (Nil (Mult)) (Erased)))
+  (many PoNil : -> (PosOf (Nil (Mult)) (Many)))
   (many PoMany : (erased (List $ Mult) rest) -> (PosOf (Cons (Mult) (Many) rest) (Many)))
   (many PoOnce : (erased (List $ Mult) rest) -> (PosOf (Cons (Mult) (Once) rest) (Many)))
-  (many PoErased : (erased (List $ Mult) rest) (erased (Mult) p) (erased (PosOf rest p) q) -> (PosOf (Cons (Mult) (Erased) rest) p)))
+  (many PoOnly : -> (PosOf (Cons (Mult) (Erased) (Nil (Mult))) (Erased)))
+  (many PoErased : (erased (Mult) m) (erased (List $ Mult) rest) (erased (Mult) p) (erased (PosOf (Cons (Mult) m rest) p) q) -> (PosOf (Cons (Mult) (Erased) (Cons (Mult) m rest)) p)))
 
 (def-fns _ $ many pos-of : (subterm many (List $ Mult) ms) -> (many (Mult) r) (erased (PosOf ms r) pf)
   (match many ms _
-    ((Nil a) (values (Erased) (PoNil)))
+    ((Nil a) (values (Many) (PoNil)))
     ((Cons a m rest)
       (match many m _
         ((Many) (values (Many) (PoMany _)))
-    ((Once) (values (Many) (PoOnce _)))
+        ((Once) (values (Many) (PoOnce _)))
         ((Erased)
-          (let (many p) (erased q) $ pos-of rest)
-          (values p (PoErased _ _ q)))))))
+          (match many rest _
+            ((Nil b) (values (Erased) (PoOnly)))
+            ((Cons b m2 rest2)
+              (let (many p) (erased q) $ pos-of rest)
+              (values p (PoErased _ _ _ q)))))))))
 
 (def-fns _ $ many pos-mult : (many (List $ Mult) ms) -> (many (Mult) r)
   (match many ms _
     ((Cons a m rest) (match many m _ ((Once) (match many rest _ ((Nil b) (Once)) ((Cons b n tail) (Many)))) (else (let (many r) (erased pf) (pos-of ms)) r)))
-    ((Nil a) (Erased))))
+    ((Nil a) (Many))))
 
 (def-fns _ $ many mult-is-once : (many (Mult) m) -> (many (Bool) r)
   (match many m _ ((Once) (BTrue)) (else (BFalse))))

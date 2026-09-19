@@ -3406,3 +3406,70 @@ to look for a guard, are the owner's.
     ExprDemand and DemandBridge retain the distinction between a head's one
     physical word and its semantic many/unique demand. The whole-body follow-up
     in 180 remains outstanding; DESIGN and UNIQUE were not modified.
+
+182. **Audit of the uniqueness implementation (one session, at the owner's
+    request).** The final tree of 156-181 was checked against UNIQUE.md
+    section by section with adversarial programs, in the interpreter, the
+    extracted code and the self-hosted compiler. Seven defects were fixed;
+    the tests named record each. Two of the fixes rest on a reading this
+    session made, recorded here as the candidate question it is:
+    - A size-zero position is now non-erased (`tests/zero_size_tail.sl`,
+      `zero_size_use_bad.sl`): a `tail` mark in a body returning no value
+      was refused as erased, and a call there consumed nothing. The reading
+      is section 20's closing "every other position is non-erased", section
+      27's purpose for a zero-binder `let` (invoking a destructor), and U8's
+      "a tail call from a function returning none". The other reading, that
+      section 20's "a `let` whose binders are all `erased`" is vacuously met
+      by no binders, would keep the call unrun and the value unconsumed;
+      the owner may prefer it. A zero-binder `let` inside a body now emits
+      its right-hand side's code where it was dropped before.
+    - A type former at the head of a type expression no longer records a
+      use of the head's entry (`tests/type_head_unique_const*.sl`): the
+      reading is that a type is an erased position (section 20) and an
+      erased mention is never a use (U2). Before, the same mention counted
+      in a `let` binder's annotation and not in a `def-fns` signature. If
+      U6's rule that a Const read at a head is a many use is meant to cover
+      type formers too, the signature path is the one to change instead.
+    The other fixes follow the text without a choice this session could
+    see: an `at` return's word is supplied only from a non-erased entry, an
+    erased `let` binder in the class having no word (U8;
+    `tests/at_erased_word.sl`, which crashed the interpreter and printed a
+    wrong value extracted); a newtype application in an erased position has
+    no location (`tests/at_erased_newtype.sl`); `coercible-of` fetches the
+    oldest anonymous proof about its function, the one `def-fns` minted,
+    where a later `coercible-refl` used to shadow it
+    (`tests/coercible_of_shadowed.sl`); the self compiler's `let-match` at
+    `many` handed a unique-labelled field out at unique against U4's table,
+    which let a shared block be updated through the alias
+    (`tests/let_match_many_*_bad.sl`); the extractor asserted false when
+    printing a value of a union or newtype with several candidate
+    constructors and now renders the first, as the interpreter and the self
+    compiler do (`tests/show_union_newtype.sl`); and the untyped printer
+    stops at a value it is already inside, printing `<cycle>`, where it
+    overflowed the stack on a cycle through a slot word.
+
+183. **Questions the audit left for the owner**, none decided here:
+    - `comptime-match many` on a unique Const is refused for want of a
+      `share`, which cannot be written in place since the scrutinee must be
+      a bare variable; U5 decides only the `unique` mode. Is the `many`
+      mode's read of the value a many use of the binder?
+    - A `match unique` in an erased position still takes its cell binder
+      (U5), whose type names `SlotHolds` of binders that are erased there,
+      which U10 says never happens; no misbehaviour was found.
+    - The `newtype` and `extern` marks being structural (U9), an unmarked
+      `(Matchable enum T ...)` literal no longer accepts an extern type's
+      Matchable, and no signature abstracts over the marks (160).
+    - `coercible-wrap (Unique)` over a many-labelled field is Shared to
+      Unique (U7 as written), so a live many value yields any number of
+      unique aliases of its newtype wrapper; nothing found can exploit it,
+      the wrapper having no cell.
+    - A user type indexed by `(Slot)` reaches U10's merge of two slots'
+      classes in an unrefuted branch, so the soundness question U15 defers
+      is already live in the implemented subset
+      (`tests/at_slots_force.sl` and the audit's `slot_class_merge`).
+    - U13's text needs the two repairs of 167 to elaborate under SUGAR.md 6.
+    - What a value of a type with no runtime discriminant prints as
+      (BUGS.md), and what `array-new` beyond the host's limits does.
+    Two clarifications this session read as within the text: an `at`
+    return is verified only where U8 lists, and U8's writers were checked
+    against every merge site of the at-database, none extra found.

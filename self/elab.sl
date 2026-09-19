@@ -44,8 +44,7 @@
               (let-match erased pf (PoOnce r0))
               (recast _ expect many-one (MsManyOnce _ _ $ MsNil) c))
             ((Erased)
-              (let-match erased pf (PoErased r0 p0 q))
-              (let-match erased q (PoNil))
+              (let-match erased pf (PoOnly))
               c)))))))
 
 (def-fns _ $ many first-res : (erased (Mult) m) (erased (List $ Mult) ms) (many (List $ Res) rs) (erased (Lockstep (Mult) (Res) (Cons (Mult) m ms) rs) lock) -> (many (Res) r)
@@ -954,12 +953,12 @@
   (match many ids _
     ((Nil a) (None _))
     ((Cons a x rest)
-      (match many (and (is-const env x) $ at-equal env p $ TVar x) _
+      (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ at-equal env p $ TVar x) _
         ((BTrue) (Some _ x)) ((BFalse) (at-constant rest env p))))))
 
 (def-fns _ $ many location-var : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p) -> (many (Env) r) (many (Nat) x)
   (let (many direct) $ match many p (((Maybe $ Nat) r))
-    ((TVar x) (match many (or (is-const env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
+    ((TVar x) (match many (and (mult-is-many $ entry-mult-of env x) $ or (is-const env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
     (else (None _)))
   (let (many inframe) $ match many direct (((Maybe $ Nat) r)) ((Some a x) direct) ((None a) (at-in-frames ctx env p)))
   (let (many found) $ match many inframe (((Maybe $ Nat) r)) ((Some a x) inframe) ((None a) (at-constant (env-words env) env p)))
@@ -3522,7 +3521,7 @@
                                   (erased-result _ expect env5 r))))))
                         ((ExCoercibleOf)
                           (let (many env2) (many g) $ named env0 (one-arg args) "a function name")
-                          (match many (find-coercible (env-objects env2) env2 g) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
+                          (match many (find-coercible (list-rev _ $ env-objects env2) env2 g) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
                             ((None c) (expr-error _ expect env2 (str-cat (name-of env2 g) " has no delegate proof in scope") "no delegate proof"))
                             ((Some c x) (erased-result _ expect env2 $ res-of env2 x))))))))
                 ((None b)
@@ -3555,7 +3554,7 @@
                       (let (many env3a) (many hr) (many hid) $ prepare-argument env3 (under pos $ Many) h)
                       (let (many env4) (many acc) (many tys) (many codes) (many pairs) $ check-args sugar args (subs-all args) one-step (check-arity env3a ctele $ list-length _ args) ctx ctele mode tele (ARApp (res-term h) ret) (BFalse) (BFalse) $ BTrue)
                       (let (many wrapped) $ match many (canon-env env4 $ res-term h) (((Bool) w)) ((TVar c) (is-some _ $ find-newtype env4 c)) (else (BFalse)))
-                      (let (many place) $ match many wrapped (((Maybe $ Term) p))
+                      (let (many place) $ match many (and wrapped $ mult-is-many mode) (((Maybe $ Term) p))
                         ((BFalse) (None _))
                         ((BTrue) (match many (wrap-field ctele (list-rev _ acc) $ list-rev _ tys) (((Maybe $ Term) p)) ((None a) (None _)) ((Some a p) (match many p (((Maybe $ Term) p)) ((MkPair a b t ty) (Some _ t)))))))
                       (let (many result) $ MkRes (TApp (res-term h) $ list-rev _ acc) (instantiate acc ret) mode place)
@@ -3607,7 +3606,6 @@
             ((Cons a head args)
               (match many (special-of envl head) (((Env) e0) ((Term) t0) ((Term) ty0))
                 ((Some b sp)
-                  (let (many envl) $ read-special envl head $ BFalse)
                   (let (many env2) (many t) $ elab-type-form sugar args two-steps envl sp)
                   (values env2 t (match many t (((Term) ty)) ((TSlotHolds x) slot-term) (else type-term))))
                 ((None b)
@@ -4177,7 +4175,7 @@
                                     (let (many ctele) (many ret) $ ctor-type env6b c)
                                     (let (many extra) (and (mult-is-many mk) $ and (mult-is-once smult) (cells-allowed env6b mid)))
                                     (let (many env7) (many ordinary) (many cellname) (pattern-fields env6b c ctele fields extra))
-                                    (let (many mults) $ under-list (tele-mults ctele) smult)
+                                    (let (many mults) $ field-mults (tele-mults ctele) smult)
                                     (let (many ss) $ shapes mctors env7)
                                     (let (many run) $ and (env-run-pos env7) $ and (mult-is-many smult) $ list-is-empty _ $ env-errors env7)
                                     (let (many env9) (many fids) (many u) $ open-fields env7 ctele (raw-names ordinary) (Some _ mults) sres c ret)
@@ -4322,7 +4320,7 @@
                       (match many (and (mult-is-many $ pos-mult expect) $ list-is-empty _ $ env-errors inner) (((Env) e0))
                         ((BTrue) (env-run-let env2 expect code ids))
                         ((BFalse) (env-set-tokens env2 ids))))))))
-            (match many (or run $ list-is-empty _ many-ids) _
+            (match many (or run $ not $ mult-is-many $ pos-mult expect) _
               ((BTrue) (values env3 ctx2 sc))
               ((BFalse) (values env3 (Cons _ many-ids ctx2) $ SSeq _ _ _ sc $ SLet _ expect many-ids pk code))))))))
 

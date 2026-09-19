@@ -90,10 +90,13 @@ let destruct c v = match dispatch c.adt.ext c.adt.tagged v with
   | Some r -> r
   | None -> (c.index, if c.adt.newtype then untuple c.arity v else match v with VCtor (_, fs) -> Array.to_list fs | _ -> assert false)
 
-let rec show = function
+let rec show ?(seen = []) v =
+  let show = show ~seen:(v :: seen) in
+  if List.memq v seen then "<cycle>" else
+  match v with
   | VCtor (c, fields) -> "(" ^ String.concat " " (c.cname :: List.map show (Array.to_list fields)) ^ ")"
   | VTuple vs -> "(" ^ String.concat " " (List.map show vs) ^ ")"
-  | VExt (adt, _) as v ->
+  | VExt (adt, _) ->
       let i, fs = (Option.get adt.ext).destruct v in
       if adt.tagged then show (VCtor (ctor_at adt i, Array.of_list fs)) else show (tuple fs)
   | VCtorFn c -> "<constructor " ^ c.cname ^ ">"

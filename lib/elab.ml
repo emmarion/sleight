@@ -9,7 +9,7 @@ type res = { term : term; ty : term; erasure : mult; place : term option }
 type demand = Fixed | CallableHead
 
 let location_var env l p =
-  let readable x = (entry env x).word || IntMap.mem x env.values in
+  let readable x = (entry env x).mult <> Erased && ((entry env x).word || IntMap.mem x env.values) in
   match p with
   | Var x when readable x -> x
   | _ -> (match List.find_opt (fun x -> readable x && at_equal env p (Var x)) env.scope.ids with
@@ -24,7 +24,7 @@ let type_term = Prelude.type_term
 let warn = ref prerr_string
 
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
-let pos_of expect = if List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
+let pos_of expect = if expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
 let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (Reader.show raw)
 let name_or_anon n = if n = "_" then None else Some n
@@ -408,7 +408,7 @@ let rec elab_term ?expect env raw =
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
-      | Some sp -> elab_type_form (read_special env head) l sp args
+      | Some sp -> elab_type_form env l sp args
       | None -> (
           let h = Var (var env l (atom_or l head "a constructor")) in
           match canon env (infer env l h) with
@@ -670,7 +670,7 @@ and elab_form demand cc expect_tele env expect raw =
               let env, acc, codes, wrap = check_args env l ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args (fun env _ a tele -> arg env (field_under pos (List.hd (Option.get tele)).mult) a tele) in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
               let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
-              let place = if is_wrapper then List.find_map (fun (e, a) -> if e.mult <> Erased then Some a else None) (List.combine tele (List.rev acc)) else None in
+              let place = if is_wrapper && pos <> Erased then List.find_map (fun (e, a) -> if e.mult <> Erased then Some a else None) (List.combine tele (List.rev acc)) else None in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], wrap code)
           | Cell (c, slots) -> elab_cell_invoke env expect l h hcode c slots args
           | UniqueFn (lv, params, rets) -> elab_call ~unique:true cc env ?tele:expect_tele expect l h hcode lv params rets args arg
@@ -995,7 +995,7 @@ and elab_special demand tele env expect l sp args =
   | Sp.CoercibleOf, [ g ] ->
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
-      fetch "delegate proof in scope" g (List.find_opt about env.scope.ids)
+      fetch "delegate proof in scope" g (List.find_opt about (List.rev env.scope.ids))
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
@@ -1313,7 +1313,7 @@ and elab_let env l args =
     List.fold_left bind_one (hide inner env, [], []) (List.mapi (fun i x -> (i, x)) (List.combine (List.combine binders ress) (spread expect values)))
   in
   let ids = non_erased env' (List.rev ids) in
-  (env', if env.run_pos then Fun.id else fun rest -> wrap (if ids = [] then rest else V.CLet (ids, code, rest)))
+  (env', if env.run_pos then Fun.id else fun rest -> wrap (if pos_of expect = Erased then rest else V.CLet (ids, code, rest)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
