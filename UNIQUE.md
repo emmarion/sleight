@@ -679,14 +679,20 @@ and proposed as a second change after the rest of this file lands;
 the restrictions are the owner's.
 
 **A `Coercible` from the at-database.** `(at-coercible x y)`, say,
-mints `(Coercible (Shared) X x (Shared) Y y)` for two variables `x` and
-`y` in
-one at-class. It is minted only when both are live, neither consumed:
-with one consumed,
-its contents may have changed while its address has not, and a `coerce`
-through the proof would give a value whose `is` refutes branches its
-bits reach. Two live variables at one address are both many, whose
-contents no longer change, so the proof is sound there.
+mints a `Coercible` between two variables `x` and `y` in one at-class,
+its sides the multiplicities the form uses them at. The form is a use
+of both: a many binder is used at many, so a consumed one conflicts
+symmetrically as anywhere and no liveness test, which would depend on
+what came before, enters; a unique binder is used at unique, consumed,
+and given back as a fresh binder `is x` and `at x` beside the proof,
+as `peek` gives its scrutinee back (§U5), so the caller cashes the
+proof against the new binder. The restriction this enforces is that
+neither variable is consumed: a consumed variable's contents may have
+changed while its address has not, and a `coerce` through such a proof
+would give a value whose `is` refutes branches its bits reach. In
+practice both variables are many, a live unique sharing an address
+with nothing live, and the unique case exists so that the rule is
+stated as uses, order-free, rather than as liveness.
 
 **Comparing two slots.** `(slot-eq a b)`, say, compares the words of
 two `(Slot)` values at many, at runtime, and answers with evidence in
