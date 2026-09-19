@@ -1,0 +1,14 @@
+; expect: 2
+(def-adts $ Pair2 : -> Type enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))
+(let (many a) (Zero))
+(let (many b) (Succ (Succ (Zero))))
+(def-fns _ $ many rebuild :
+  (unique (Cell P (SlotHolds a) (SlotHolds b)) u) -> (unique (Pair2) r at u)
+  (at ((cell-match unique u (((Cell P (SlotHolds a) (SlotHolds b)) v at u))
+    (P s t back) back) a b)))
+(def-fns _ $ many run : -> (many (Nat) r)
+  (let (unique u) (cell-alloc (P (SlotHolds a) (SlotHolds b))))
+  (let (unique p) (rebuild u))
+  (let-match unique p (P x y back))
+  y)
+run

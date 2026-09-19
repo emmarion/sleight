@@ -6,6 +6,7 @@ module Sp = Special
 
 type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option }
 type res = { term : term; ty : term; erasure : mult; place : term option }
+type demand = Fixed | CallableHead
 
 let location_var env l p =
   let readable x = (entry env x).word || IntMap.mem x env.values in
@@ -616,22 +617,28 @@ let prove_predates env l x lvl =
   if x >= lvl then error l "%s was not in scope when level %s was minted" (name_of env x) (name_of env lvl);
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
-let rec elab_expr ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
+let demanded env demand mult ty =
+  match demand with
+  | Fixed -> mult
+  | CallableHead -> (match canon env ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
+
+let rec elab_expr ?(demand = Fixed) ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
   let l = loc raw in
   let outer_erased = env.usage_erased in
   let env = { env with usage_erased = outer_erased || pos_of expect = Erased } in
-  let env, ress, code = elab_form cc tele env expect raw in
+  let env, ress, code = elab_form demand cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
   count_check l expect ress;
   List.iter2 (fun m r ->
+    let m = demanded env demand m r.ty in
     if not outer_erased then (
     if m <> Erased && r.erasure = Erased then error l "erased value %s : %s used in a non-erased position" (show env r.term) (show env r.ty);
     if m = Unique && r.erasure = Many then error l "many value %s used at unique" (show env r.term);
     if m = Many && r.erasure = Unique then error l "unique value %s needs an explicit share" (show env r.term))) expect ress;
   ({ env with usage_erased = outer_erased }, ress, code)
 
-and elab_expr1 ?cc ?tele env mult raw =
-  let env, ress, code = elab_expr ?cc ?tele env [ mult ] raw in
+and elab_expr1 ?demand ?cc ?tele env mult raw =
+  let env, ress, code = elab_expr ?demand ?cc ?tele env [ mult ] raw in
   (env, List.hd ress, code)
 
 and elab_erased env raw =
@@ -639,17 +646,17 @@ and elab_erased env raw =
   settle_res env (loc raw) r;
   (env, r.term)
 
-and elab_form cc expect_tele env expect raw =
+and elab_form demand cc expect_tele env expect raw =
   let pos = pos_of expect in
   let arg env m a tele = elab_expr1 ?tele env (under pos m) a in
   match raw with
   | Atom (l, n) ->
       let x = var env l n in
-      (use env l pos x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
+      (use env l (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
-      | Some sp -> elab_special expect_tele (read_special env head) expect l sp args
+      | Some sp -> elab_special demand expect_tele (read_special env head) expect l sp args
       | None -> (
           let env, h, hcode, headwrap = elab_head env pos l head in
           let env, rs, code = match canon env h.ty with
@@ -675,26 +682,8 @@ and elab_head env pos l raw =
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x,Fun.id)
   | _ ->
-      let demand =
-        if pos = Erased then Erased else
-        let restore_table table =
-          let saved = Hashtbl.copy table in
-          fun () -> Hashtbl.reset table; Hashtbl.iter (Hashtbl.replace table) saved in
-        let restore_names = restore_table Env.names in
-        let restore_registered = restore_table Ffi.registered in
-        let restore_claimed = restore_table Ffi.claimed in
-        let restore_adts = restore_table Ffi.adts in
-        let counter, trace, warning = !Env.counter, !Env.trace, !warn in
-        Fun.protect
-          ~finally:(fun () ->
-            restore_names (); restore_registered (); restore_claimed (); restore_adts ();
-            Env.counter := counter; Env.trace := trace; warn := warning)
-          (fun () ->
-            warn := (fun _ -> ());
-            let probe, r, _ = elab_expr1 { env with run_pos = false; usage_erased = true } Erased raw in
-            match canon probe r.ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
-      in
-      let env,r,code = elab_expr1 env demand raw in
+      let demand = if pos = Erased then Fixed else CallableHead in
+      let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
       let state = match r.term with Var x -> (entry env x).state | _ -> Dyn in
       let x,env = bind env ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
@@ -771,7 +760,7 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
   in
   (env, List.map (res_of env) ids, wrap code)
 
-and elab_special tele env expect l sp args =
+and elab_special demand tele env expect l sp args =
   let pos = pos_of expect in
   let m =
     if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.Delegate :: Sp.statements) then pos
@@ -845,7 +834,7 @@ and elab_special tele env expect l sp args =
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
       (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct.V.adt.tagged, code, writes))))
-  | Sp.CellMatch, _ -> elab_cell_match tele env expect l args
+  | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
   | Sp.At, [ List (_, head :: args) ] ->
       let env, h, hcode, wrap = elab_head env pos l head in
       let env,rs,code = match canon env h.ty with
@@ -868,16 +857,16 @@ and elab_special tele env expect l sp args =
         List.fold_left2
           (fun (env, ress, codes) (i, m) a ->
             let tele = Option.map (fun e -> [ { e with sg = map_sg (instantiate (List.map (fun r -> r.term) ress)) e.sg } ]) (entry i) in
-            let env, r, code = elab_expr1 ?tele env m a in
+            let env, r, code = elab_expr1 ~demand ?tele env m a in
             (env, r :: ress, if m <> Erased then code :: codes else codes))
           (env, [], []) (List.mapi (fun i m -> (i, m)) expect) args
       in
       (env, List.rev ress, if pos = Erased then V.CErased else V.CValues (List.rev codes))
-  | Sp.Match, _ -> elab_match tele env expect l args
+  | Sp.Match, _ -> elab_match ~demand tele env expect l args
   | (Sp.Tail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (Sp.name sp);
       let cc = if sp = Sp.Tail then V.Tail else V.Delegate in
-      let env, ress, code = elab_expr ~cc ?tele env expect call in
+      let env, ress, code = elab_expr ~demand ~cc ?tele env expect call in
       let rec has_call c = (match c with V.CApp (_, _, cc') -> cc' = cc | _ -> false) || List.exists has_call (V.subcodes c) in
       if not (has_call code) then error l "%s marks a function call, not %s" (Sp.name sp) (Reader.show call);
       (env, ress, code)
@@ -889,7 +878,7 @@ and elab_special tele env expect l sp args =
       (match open_adt env' x with
       | _ -> error l "open-absurd: opening %s contradicts nothing" (show env' t)
       | exception Contradiction _ -> ());
-      let env, ann_tele = result_tele tele env expect l ann in
+      let env, ann_tele = result_tele ~demand tele env expect l ann in
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | Sp.NumeralOf, [ e ] -> (
@@ -1043,7 +1032,7 @@ and elab_cell_invoke ?(full = false) env expect l h hcode ctor slots args =
   let code = if pos = Erased then V.CErased else if writes = [] then hcode else V.CCellWrite (ct.V.adt.tagged, hcode, List.rev writes) in
   (env, [{term = App (Var c, List.rev acc); ty = instantiate acc ret; erasure = pos; place = h.place}], wrap code)
 
-and elab_cell_match tele env expect l args =
+and elab_cell_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: u :: ann :: List (pl, c :: names) :: body ->
       let pos = pos_of expect in
@@ -1056,7 +1045,8 @@ and elab_cell_match tele env expect l args =
       let ct, _, _ = cell_shape env l c in
       let needed = ct.V.arity + if mode = Unique then 1 else 0 in
       if List.length names <> needed then error pl "cell-match needs %d binders" needed;
-      let env, ann_tele = result_tele tele env expect l ann in
+      let env, ann_tele = result_tele ~demand tele env expect l ann in
+      let expect = match demand with Fixed -> expect | CallableHead -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None smult Dyn r.ty ~rule:r.term in
       let env = match r.place with Some p -> at_merge env (Var sid) p | None -> env in
       let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true (name_or_anon (atom_or pl n "a slot binder")) (under pos Many) Dyn Prelude.slot_term in (env,x)) env (List.filteri (fun i _ -> i < ct.arity) names) in
@@ -1084,7 +1074,7 @@ and scrutinee env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match tele env expect l args =
+and elab_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
@@ -1095,7 +1085,8 @@ and elab_match tele env expect l args =
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
-      let env, ann_tele = result_tele tele env expect l ann in
+      let env, ann_tele = result_tele ~demand tele env expect l ann in
+      let expect = match demand with Fixed -> expect | CallableHead -> List.map (fun e -> e.mult) ann_tele in
       let enter bl c names =
         let phantom = marker env bl tid ctors c = Erased in
         let tele, ret = ctor_type env bl c in
@@ -1198,7 +1189,7 @@ and elab_match tele env expect l args =
   | _ -> error l "malformed match"
 
 (* A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one. *)
-and result_tele tele env expect l ann =
+and result_tele ?(demand = Fixed) tele env expect l ann =
   let env, ann_tele =
     match (ann, tele) with
     | Atom (_, "_"), Some tele ->
@@ -1218,6 +1209,11 @@ and result_tele tele env expect l ann =
     | _ -> error l "malformed match annotation"
   in
   if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
+  let ann_tele = List.map (fun e ->
+    let mult = match demand with
+      | Fixed -> e.mult
+      | CallableHead -> demanded env demand e.mult (match e.sg with Ty t -> t | Is t -> infer env l t) in
+    { e with mult }) ann_tele in
   (env, ann_tele)
 
 (* An anonymous let at [mult] of a Matchable: the entry an open records (section 19). *)

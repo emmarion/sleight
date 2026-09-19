@@ -3299,20 +3299,20 @@ to look for a guard, are the owner's.
     check uses, then join their usage states by maximum; branch-local facts and
     location refinements do not escape without the written result annotation.
 
-172. Known implementation defect: a computed application head is checked
-    first in a discarded erased context to discover whether its type requires
-    unique or many demand, then checked again at that demand. This was a
-    workaround for the elaborator requiring a multiplicity before synthesizing
-    the head's type; it is not a language rule. The erased probe can reject
-    otherwise valid heads: a unique match with a non-erased field n and an
-    erased (SlotHolds n) proof in its branch is refused because the probe makes
-    n erased. Binding the identical head expression with let unique before
-    applying it succeeds. The ML bound version returned 1. Self accepted and extracted the direct
-    version, which also returned 1: its probe errors are accumulated in the
-    discarded environment rather than raised as in ML. Restoring ML's global
-    tables does not repair that contextual mismatch. The
-    probe needs replacement with head-type synthesis and multiplicity checking
-    in the actual context; the previous computed-head tests missed this case.
+172. The computed-head erased probe was an implementation defect. It rejected
+    a valid unique match containing an erased (SlotHolds n) proof because its
+    probe context made the ordinary pattern field n erased; binding the same
+    head with let unique first succeeded. Self discarded the probe's errors
+    and accepted that example, so the two implementations also disagreed.
+    The owner's approved narrow repair introduces a callable-head demand:
+    elaborate the expression once in its actual context, taking unique demand
+    for a Cell or UniqueFn and many for an ordinary callable. A match's result
+    annotation determines its head demand before checking branch bodies;
+    singleton values and call markers propagate that demand. Ordinary fixed
+    expectations, including contextual erasure, retain their previous modes.
+    No discarded elaboration, global-state rollback, or warning suppression is
+    needed. This is the narrow repair only; whole-body phase separation remains
+    required follow-up work, as recorded in 180.
 
 173. Ordinary unions use one-constructor native variants, one shape per payload
     arity, rather than a separate raw-array representation. Since union matching
@@ -3381,3 +3381,28 @@ to look for a guard, are the owner's.
     at 16,215,227 bytes. Assumption 170 now distinguishes allocation-history
     guarantees from properties of current contents; no heap representation
     change was made for that clarification. DESIGN and UNIQUE remain unchanged.
+
+180. **Required follow-up: separate whole-body typing from multiplicity
+    calculation and checking.** The owner approved finishing the narrow
+    computed-head repair now, while explicitly requiring this broader approach
+    later. Elaborate a whole function body into a typed representation that
+    retains written labels, match modes, erased expressions, source locations,
+    branch/refutation information and capture scopes. A later pass should
+    calculate demands and validate uses, captures, returns and word availability
+    before erasure and runtime-code construction. This appears compatible with
+    the language: already-known head types can direct a recursive demand walk,
+    without re-elaborating source in a different context. Run-position statements
+    still need checking before execution. The current repair does not implement
+    that separation; its demand mode is an interim elaborator interface.
+
+181. Validation of the narrow demand refactor observed 384 ML tests passing
+    with no failures, including interpreter, extraction, extern-model and
+    template-view modes. Four new regressions cover the original SlotHolds
+    failure, conflicting unique uses inside a head branch, singleton values,
+    and a cell-match head forwarding an at promise. The self bootstrap matched
+    252 successful runs (including 27 template-disabled reruns) and refused
+    159 programs with their expected diagnostics. Two successive self-generated
+    compiler sources were identical at 16,297,665 bytes. Self's indexed
+    ExprDemand and DemandBridge retain the distinction between a head's one
+    physical word and its semantic many/unique demand. The whole-body follow-up
+    in 180 remains outstanding; DESIGN and UNIQUE were not modified.
