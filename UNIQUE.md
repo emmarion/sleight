@@ -202,8 +202,10 @@ a many-labelled field yields `(Shared)` to `(Shared)` or `(Shared)` to
 `(Unique)`, over a unique-labelled field `(Shared)` to `(Shared)` or
 `(Unique)` to `(Unique)`; `coercible-ctor`
 applies the meet per field on each side; `coercible-refl` is uniform;
-`coercible-of` is `(Shared)` to `(Shared)`, a function value never
-being unique.
+`coercible-of` takes its sides from the two functions themselves,
+`(Shared)` for a `def-fns` function and `(Unique)` for a `def-unique`
+one (§U6), so a UniqueFn delegating to a plain function is `(Unique)`
+to `(Shared)`.
 Where nothing in a form fixes its sides, `coercible-ctor` and
 `coercible-refl` mint `(Unique)` on both. `coercible-sym` is unconditional,
 every mintable shape being uniform or the harmless "unique wrapper of
