@@ -797,3 +797,101 @@
     (many MkDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
     (many DeleteFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
     (many DeleteDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))))
+
+(def-adts $ Array : (Type A) ((Nat) n) -> Type
+  enum extern
+  (many ANil : (erased Type A) -> (Array A (Zero)))
+  (many ACons : (erased Type A) (erased (Nat) n)
+                (unique A head) (unique (Array A n) tail) ->
+     (Array A (Succ n))))
+
+(def-adts $ MaybeUninit : (Type A) -> Type
+  union newtype
+  (many Uninit : (erased Type A) -> (MaybeUninit A))
+  (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
+
+(def-adts
+  (AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+    enum
+    (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
+    (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
+                   (erased (AllUninit A n tl) p) ->
+       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
+  (AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+    enum
+    (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
+    (many AICons : (erased Type A) (erased (Nat) n) (erased A x)
+                   (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p) ->
+       (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
+  (ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type
+    enum
+    (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
+       (ANth A (Succ n) (ACons A n x tl) (Zero) x))
+    (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
+                 (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p) ->
+       (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
+  (ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type
+    enum
+    (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
+       (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
+    (many SetS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
+                 (erased (Nat) i) (erased A y) (erased (Array A n) tl2)
+                 (erased (ASet A n tl i y tl2) p) ->
+       (ASet A (Succ n) (ACons A n h tl) (Succ i) y (ACons A n h tl2)))))
+
+(def-fns _ $ many extern array-new : (erased Type A) (subterm many (Nat) n) ->
+    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p)
+  (match many n _
+    ((Zero) (values (ANil _) (AUNil _)))
+    ((Succ n1)
+      (let (unique tl) (erased q) (array-new A n1))
+      (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
+
+(def-fns _ $ many extern array-swap : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) ->
+    (unique m is old) (unique (Array A n) r at a)
+    (erased (ASet A n a i x r) p)
+  (match unique a _
+    (absurd (ANil _ _) (match erased nth (((False) f))))
+    ((ACons _ _ hd tl u)
+      (match many i _
+        ((Zero)
+          (match erased nth _
+            ((NthZ _ _ _ _)
+              (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
+            (absurd NthS)))
+        ((Succ i1)
+          (match erased nth _
+            (absurd NthZ)
+            ((NthS _ _ _ _ _ _ q)
+              (let (unique old) (unique tl3) (erased p1) (tail (array-swap _ _ tl i1 x _ q)))
+              (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))))
+
+(def-fns _ $ many extern array-pluck : (erased Type A) (erased (Nat) n)
+    (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
+    (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
+    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p)
+  (tail (array-swap _ _ a i (Uninit _) _ nth)))
+
+(def-fns _ $ many extern array-place : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) ->
+    (unique (Array A n) r at a) (erased (ASet A n a i x r) p)
+  (let (unique old) (unique r) (erased p) (array-swap _ _ a i x _ nth))
+  (values r p))
+
+(def-fns _ $ erased init-witness : (erased Type A) (erased (Nat) n)
+    (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->
+    (erased (Array A n) b)
+    (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c)
+  (match erased all _
+    ((AINil _)
+      (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A)))
+    ((AICons _ n1 x tl q)
+      (let (erased b1) (erased c1) (init-witness _ _ tl q))
+      (values (ACons _ _ x b1)
+              (coercible-ctor _ ACons (MaybeUninit A) A n1 n1
+                 (coercible-sym (coercible-wrap _ Init _ x))
+                 c1)))))

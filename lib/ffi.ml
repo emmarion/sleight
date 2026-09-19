@@ -20,6 +20,7 @@ type ty_spec = { shape : int list; view : adt -> ext }
 let arity = Eval.Runtime "extern arity"
 let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))
+let array = function VExt (_, Array (a,o,n)) -> a,o,n | v -> raise (Eval.Runtime ("not an extern array: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
 
@@ -31,7 +32,12 @@ let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | v -> bad "cons
 let view shape view = { shape; view }
 let types : (string * ty_spec) list =
   let nat adt n = VExt (adt, Int n) in
-  [ ( "Nat",
+  [ ( "Array",
+      view [0; 2] (fun adt ->
+        let wrap (a,o,n) = VExt (adt, Array (a,o,n)) in
+        { construct = (fun i args -> Ffi_core.array_of ~array ~wrap (match i,args with 0,[] -> ANil | 1,[x;tl] -> ACons (x,tl) | _ -> raise arity));
+          destruct = (fun v -> match Ffi_core.array_view ~array ~wrap v with ANil -> 0,[] | ACons(x,tl) -> 1,[x;tl]) }));
+    ( "Nat",
       view [ 0; 1 ] (fun adt ->
           { construct = (fun i args -> Ffi_core.nat_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> Zero | 1, [ p ] -> Succ p | _ -> raise arity));
             destruct = (fun v -> match Ffi_core.nat_view ~z ~nat:(nat adt) v with Zero -> (0, []) | Succ p -> (1, [ p ])) }) );
@@ -52,7 +58,11 @@ let cmp get f = binary (fun a b -> plain "Cmp" (match f (get a) (get b) with Ffi
 
 let spec ?(needs = []) takes run = { takes; needs; run }
 let fns : (string * fn_spec) list =
-  [ ("add", spec 2 (nats "Nat" Ffi_core.add));
+  [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> let a,o,l = Ffi_core.array_new ~blank:VToken (z n) in VExt (Hashtbl.find registered "Array", Array(a,o,l)))));
+    ("array-swap", spec ~needs:["Array"] 3 (function [a;i;x] -> [Ffi_core.array_swap (array a) (z i) x] | _ -> raise arity));
+    ("array-pluck", spec ~needs:["Array"] 2 (function [a;i] -> [Ffi_core.array_pluck (array a) (z i)] | _ -> raise arity));
+    ("array-place", spec ~needs:["Array"] 3 (function [a;i;x] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity));
+    ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
     ("div", spec 2 (nats "Nat" Ffi_core.div));

@@ -3244,3 +3244,14 @@ to look for a guard, are the owner's.
     FFI boundary: comparison results build the declared Cmp blocks, and flatten
     reads Rope blocks through their constructor view. The cell checkpoint passes
     362 tests with interpreter/extracted, extern/model and template/view checks.
+
+167. The U13 array models are added to the prelude with two elaboration repairs:
+    the recursive unannotated array-new let supplies A explicitly, and the Init
+    coercible-wrap supplies its erased type argument. Native arrays are slices
+    of shared backing storage; constructing ACons allocates and copies its tail.
+    Array pluck leaves the physical word untouched under Uninit, while place and
+    swap update the backing slot. Captured slices retain both wrapper and backing
+    identities, assigning these before filling elements to support Slot cycles.
+    Outside extern model bodies, unique Array patterns have no cell binder even
+    when extern implementations are stripped. Four examples agree in interpreter
+    and extracted code with externs, stripped models, and non-template views.

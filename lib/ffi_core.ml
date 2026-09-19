@@ -80,3 +80,30 @@ let flatten ~rope ~slice ~z ~str root =
   let buf = Bytes.create total in
   ignore (List.fold_left (fun pos (s, o, l) -> Bytes.blit_string s o buf pos l; pos + l) 0 ls);
   str (Bytes.unsafe_to_string buf, 0, total)
+
+type 'a array_model = ANil | ACons of 'a * 'a
+
+let array_view ~array ~wrap v =
+  let a, offset, length = array v in
+  if length = 0 then ANil else ACons (a.(offset), wrap (a, offset + 1, length - 1))
+
+let array_of ~array ~wrap = function
+  | ANil -> wrap ([||], 0, 0)
+  | ACons (x, tail) ->
+      let a, offset, length = array tail in
+      let result = Array.make (length + 1) x in
+      Array.blit a offset result 1 length;
+      wrap (result, 0, length + 1)
+
+let array_new ~blank n =
+  let length = Z.to_int n in
+  (Array.make length blank, 0, length)
+
+let array_swap (a, offset, _) i x =
+  let index = offset + Z.to_int i in
+  let old = a.(index) in
+  a.(index) <- x;
+  old
+
+let array_pluck (a, offset, _) i = a.(offset + Z.to_int i)
+let array_place (a, offset, _) i x = a.(offset + Z.to_int i) <- x

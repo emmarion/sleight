@@ -20,7 +20,8 @@ let quote s = "\"" ^ String.escaped s ^ "\""
 (* An extern type's unwrap into its model's shape and the wrap back (lib/ffi_core.ml's views), over Obj.t. *)
 let externs =
   let view name lower args args' = Printf.sprintf "let des_%s v = Obj.repr (Ffi_core.%s_view %s v)\nlet con_%s v = Ffi_core.%s_of %s (Obj.obj v)" name lower args name lower args' in
-  [ ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
+  [ ("Array", view "Array" "array" "~array:Obj.obj ~wrap:Obj.repr" "~array:Obj.obj ~wrap:Obj.repr");
+    ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
 
@@ -38,6 +39,7 @@ type cx = {
   shapes : int list list ref;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
+  arrays : (V.value array * string) list ref;
   seen : (int, (V.value * string option ref) list ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
@@ -143,6 +145,26 @@ let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 
 let rec value cx v =
   match v with
+  | V.VExt (_, Array (a,o,n)) -> (
+      let b = bucket cx v in
+      match List.find_opt (fun (w,_) -> w == v) !b with
+      | Some (_, {contents = Some name}) -> name
+      | _ ->
+          let backing, fresh = match List.assq_opt a !(cx.arrays) with
+            | Some name -> name,false
+            | None ->
+                let name = "array_" ^ string_of_int (List.length !(cx.arrays)) in
+                cx.arrays := (a,name) :: !(cx.arrays);
+                Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t array = Array.make %d (Obj.repr ())\n" name (Array.length a));
+                name,true in
+          incr cx.shared;
+          let name = "slice_" ^ string_of_int !(cx.shared) in
+          b := (v,ref (Some name)) :: !b;
+          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (%s, %d, %d)\n" name backing o n);
+          if fresh then Array.iteri (fun i v ->
+            let rhs = value cx v in
+            Buffer.add_string cx.out (Printf.sprintf "let () = %s.(%d) <- %s\n" backing i rhs)) a;
+          name)
   | V.VCtor (c, vs) when (match shape c.adt with Block _ -> true | _ -> false) -> (
       let b = bucket cx v in
       match List.find_opt (fun (v', _) -> v' == v) !b with
@@ -172,6 +194,9 @@ and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
+  | V.VExt (_, Array (a,o,n)) ->
+      let items = List.init n (fun i -> value cx a.(o+i)) in
+      Printf.sprintf "(Obj.repr ([|%s|], 0, %d))" (concat "; " items) n
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with
@@ -215,7 +240,7 @@ and fn cx scope name f =
         let extra = if f.fname = "flatten" then
           let a = (Program.ctor cx.env "REmpty").V.adt in
           let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
-          "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else "" in
+          "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else if f.fname = "array-new" then "~blank:(Obj.repr ()) " else "" in
         let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
         if f.fname = "nat-cmp" || f.fname = "str-cmp" then
           "(match " ^ call ^ " with " ^ concat " | " (List.map (fun n -> "Ffi_core." ^ n ^ " -> " ^ build cx (Program.ctor cx.env n) []) ["CLt";"CEq";"CGt"]) ^ ")"
@@ -283,6 +308,7 @@ let collect env items =
     match v with
     | V.VCtor (c, vs) -> adt c.adt; Array.iter value vs
     | V.VTuple vs -> List.iter value vs
+    | V.VExt (adt_, Array (a,_,_)) -> adt adt_; Array.iter value a
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
@@ -302,7 +328,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; shapes = ref []; defined; captured = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref []; narrows = ref []; temps = ref 0 }
+  { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; shows = ref []; narrows = ref []; temps = ref 0 }
 
 let all a = List.init (List.length a.V.ctors) Fun.id
 
