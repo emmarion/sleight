@@ -16,8 +16,9 @@ machine-checked, as §40 is.
 Multiplicity: `unique` (§U1). Match modes: `unique`, `peek` (§U5).
 Statements: `def-unique` (§U6), `cstr-read` (§U10). Type formers:
 `UniqueFn` (§U6), `UniqueCstr` (§U9). Expressions: `share` (§U3),
-`cstr-alloc`, `cstr-write` (§U9), `coercible-share` (§U7),
-`at-coercible` and `slot-eq` (§U15, names open). Head position: a
+`cstr-alloc`, `cstr-write` (§U9), `coercible-share` (§U7), and, as a
+later second change, `at-coercible` and `slot-eq` (§U15, names open).
+Head position: a
 UniqueFn head is a call using the head at unique or erased (§U6); a
 UniqueCstr head is the placement invocation, with `(at)` before an
 argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
@@ -587,9 +588,10 @@ mint, and its `coerce` stays sound since a copy has its original's
 contents; `slot-eq` observes addresses at runtime, and once every
 invocation allocates, two slots that held one cell may hold two.
 
-## U15. Two further forms, proposed
+## U15. Two further forms, proposed as a later second change
 
-The proposal's part 5 adds two special forms, both new, names open;
+The proposal's part 5 adds two special forms, both new, names open,
+and proposed as a second change after the rest of this file lands;
 the restrictions are the owner's.
 
 **A `Coercible` from the at-database.** `(at-coercible x y)`, say,
