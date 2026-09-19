@@ -11,6 +11,22 @@ tentative throughout, as CLAUDE.md rule 10 has them. The worked
 example of §U13 is written against the rules as recorded, not
 machine-checked, as §40 is.
 
+## U0. What is new, in one place
+
+Multiplicity: `unique` (§U1). Match modes: `unique`, `peek` (§U5).
+Statements: `def-unique` (§U6), `cstr-read` (§U10). Type formers:
+`UniqueFn` (§U6), `UniqueCstr` (§U9). Expressions: `share` (§U3),
+`cstr-alloc`, `cstr-write`, the placement invocation and its `(at)`
+and full-at `at` (§U9), `coercible-share` (§U7), `at-coercible` and
+`slot-eq` (§U15, names open). Annotation: `at` on a return entry or
+match annotation entry (§U8); an extra binder in every `unique` or
+`peek` pattern, and in an `else` at `peek` (§U5). Built-in type: `Slot`
+with `SlotVacant` and `(SlotHolds v)` (§U10). Changed: `Coercible`
+takes a multiplicity on each side (§U7); `Matchable` carries the
+`newtype` and `extern` marks (§U9); `_` as a binder name (§U16); §23's
+invariant is two tiers (§U14). Removed: `Newtype`, `newtype-of` (§U7).
+Prelude: `Array`, `MaybeUninit` and their functions (§U13).
+
 ## U1. A third multiplicity, and a fourth match mode
 
 A binder may be declared `unique` beside `erased` and `many` (§6, §20):
