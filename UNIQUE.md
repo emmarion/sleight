@@ -90,8 +90,11 @@ so a binder of it forwards `x`'s type and facts, and it is `at x`
 
 ## U4. Fields
 
-A field is labelled `erased`, `many` or `unique`. What a destructure
-hands out for a field, by the scrutinee's mode:
+A field is labelled `erased`, `many` or `unique`. A destructure, here
+and below, is a `match`, `let-match` or `comptime-match` on a value,
+binding its constructor's fields; a `cell-read` (§U10) is not one,
+reading a cell's slots and binding no field. What a destructure hands
+out for a field, by the scrutinee's mode:
 
 | field label | `erased` | `many` | `unique` | `peek` |
 |---|---|---|---|---|
@@ -318,7 +321,8 @@ fresh cell at unique with every slot `SlotVacant`; `(cell-alloc C i1
 ... in)` lists every non-erased field as a write does, a `(Slot)`
 expression at many or `_` for a slot left `SlotVacant`, no partial
 list.
-A destructure at `unique` (§U5) yields the cell the constructor
+A `unique` match, `let-match` or `comptime-match` on a value (§U5)
+yields, through its extra pattern binder, the cell the constructor
 occupied, at the scrutinee, each slot `(SlotHolds f)` for the field's
 binder `f`.
 
