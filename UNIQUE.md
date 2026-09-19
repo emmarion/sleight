@@ -16,9 +16,11 @@ machine-checked, as §40 is.
 Multiplicity: `unique` (§U1). Match modes: `unique`, `peek` (§U5).
 Statements: `def-unique` (§U6), `cstr-read` (§U10). Type formers:
 `UniqueFn` (§U6), `UniqueCstr` (§U9). Expressions: `share` (§U3),
-`cstr-alloc`, `cstr-write`, the placement invocation and its `(at)`
-and full-at `at` (§U9), `coercible-share` (§U7), `at-coercible` and
-`slot-eq` (§U15, names open). Annotation: `at` on a return entry or
+`cstr-alloc`, `cstr-write` (§U9), `coercible-share` (§U7),
+`at-coercible` and `slot-eq` (§U15, names open). Head position: a
+UniqueFn head is a call using the head at unique or erased (§U6); a
+UniqueCstr head is the placement invocation, with `(at)` before an
+argument and the full-at `at` around it (§U9). Annotation: `at` on a return entry or
 match annotation entry (§U8); an extra binder in every `unique` or
 `peek` pattern, and in an `else` at `peek` (§U5). Built-in type: `Slot`
 with `SlotVacant` and `(SlotHolds v)` (§U10). Changed: `Coercible`
@@ -149,7 +151,9 @@ close over `unique` binders as unique: each such binder the body uses
 at unique is used once by the definition, once modulo match branches
 as §U2 has it. The defined binder is born unique; calling it is a use
 of that binder at unique, or erased, so a shared UniqueFn is callable
-only erased and `share` on one leaves a dead value. Its level is
+only erased and `share` on one leaves a dead value; a UniqueFn-typed
+head is applicable in §4's tier 1 as an `Fn`-typed one is, with that
+one difference. Its level is
 written as on a `def-fns` and may be shared with ordinary functions;
 its parameters may be marked `subterm` and its body may make
 same-level calls under `subterm` proofs; it may be marked `erased` or
@@ -268,8 +272,9 @@ physical store into memory the invocation will re-mint; it does no
 usage accounting, whatever its slot refers to, the invocation being the
 semantic mint.
 
-**Invocation.** A UniqueCstr-typed head is a fourth applicable type in
-§4's tier 1: `(u a1 ... an)` is a constructor application that mints
+**Invocation.** A UniqueCstr-typed head is applicable in §4's tier 1,
+as a UniqueFn-typed one is (§U6): `(u a1 ... an)` is a constructor
+application that mints
 `(C a1 ... an)` at `u`, using each argument at the field's multiplicity
 as `(C a1 ... an)` would, and consuming `u` at `unique` whatever the
 position's multiplicity, so a `many` value may be built this way. An
@@ -628,8 +633,9 @@ binder; it is not special anywhere else, `_` in an argument (SUGAR.md
 Additions to §27's registry. Statements: `def-unique`, `cstr-read`.
 Type formers: `UniqueFn`, `UniqueCstr`. Other expressions: `share`,
 `cstr-alloc`, `cstr-write`, the full-at wrapper `at`, `coercible-share`,
-and §U15's `at-coercible` and `slot-eq`, names open; the placement invocation is not a
-special form, being §4's fourth applicable type. Annotation tokens:
+and §U15's `at-coercible` and `slot-eq`, names open; a UniqueFn or
+UniqueCstr head is an applicable type in §4's tier 1, not a special
+form. Annotation tokens:
 `unique`, `peek`, and `at` before an argument or after a telescope
 entry. Built-in types: `Slot` with `SlotVacant` and `SlotHolds`, beside
 §17's opaque objects though not opaque; `Coercible` changed. Removed:
