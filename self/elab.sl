@@ -2988,13 +2988,14 @@
     (match many piece _
       ((MkPair x y ps rets)
         (let (many env2) (many ids) (many tele) $ elab-tele sugar root st ps env (MMDeclared) (Nil _) (BFalse) $ BFalse)
-        (let (many (Env) env3) (many (Term) ret)
+        (let (many (Env) env3a) (many (Term) ret)
           (match many rets _
             ((Nil a) (values (env-error env2 "a constructor returns one type") $ TErr "no return"))
             ((Cons a s more)
               (match many more (((Env) e0) ((Term) t0))
                 ((Nil b) (match many s (((Env) e0) ((Term) t0)) ((MkSub rt r p) (let (many env3) (many t) (many ty) $ elab-term sugar (subterm p) r env2 (BTrue) no-tele) (values env3 t))))
                 ((Cons b x2 y2) (values (env-error env2 "a constructor returns one type") $ TErr "no return"))))))
+        (let (many env3) $ settle env3a ret)
         (let (many (Bool) ok)
           (match many (canon-env env3 ret) _
             ((TApp h as)

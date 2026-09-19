@@ -370,6 +370,7 @@ and elab_valctor env l items =
   let ps, ret = split_arrow env l items in
   let env', ids, tele = elab_tele env ps in
   let env', ret = match ret with [ r ] -> elab_type env' r | _ -> error l "a constructor returns one type" in
+  settle env' l ret;
   (match canon env' ret with
   | App (Var t, _) when (not (List.mem t ids)) && (match type_of env' t with TyCtor _ -> true | _ -> false) -> ()
   | _ -> error l "a constructor returns an application of a type constructor in scope, not %s" (show env' ret));
