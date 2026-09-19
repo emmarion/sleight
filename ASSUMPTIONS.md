@@ -3232,21 +3232,20 @@ to look for a guard, are the owner's.
     The U11 append helper's emitted recursive branch ends in its recursive call,
     with the cell stores before that call.
 
-165. Unique patterns retain their mandatory extra binder even where their body
-    is erased. Generated Cell types in phantom branches may mention the branch's
-    erased field identities as location terms, but no field word is produced
-    there and user-written SlotHolds still refuses erased binders. Extern-model
-    context is lexical, including nested local function bodies. Cell write
-    constructor checks use canonical constructor identity. Slot argument
-    expressions are evaluated before the corresponding physical stores.
+165. Unique patterns for non-phantom constructors with cells retain their
+    mandatory extra binder even where their body is erased. A phantom
+    constructor has no Cell and its pattern has no extra cell binder. The
+    earlier allowance of generated phantom Cell types was incorrect and has
+    been removed following the owner's correction. Extern-model context is
+    lexical, including nested local function bodies. Cell-write constructor
+    checks use canonical constructor identity.
 
-166. A phantom constructor's cell may hold inert storage, but invoking that
-    constructor at runtime is refused, as ordinary phantom construction is.
-    Cell-write evaluates its input expression before its slot expressions.
-    The ordinary-block representation also requires conversions at the fixed
-    FFI boundary: comparison results build the declared Cmp blocks, and flatten
-    reads Rope blocks through their constructor view. The cell checkpoint passes
-    362 tests with interpreter/extracted, extern/model and template/view checks.
+166. Phantom constructors have no cells, including in erased code. Both Cell
+    type formation and cell allocation reject a constructor marked erased in
+    its opened Matchable, including an abstract constructor parameter. The
+    earlier inert-storage allowance was incorrect; rejection is not deferred
+    until invocation. The fixed FFI boundary converts comparison results to the
+    declared Cmp representation and reads Rope values through their constructor view.
 
 167. The U13 array models are added to the prelude with two elaboration repairs:
     the recursive unannotated array-new let supplies A explicitly, and the Init
@@ -3263,8 +3262,12 @@ to look for a guard, are the owner's.
     and proof-indexed array get/set may use unsafe operations. Distinct logical
     location classes need not imply distinct physical words; no at fact is
     inferred just because nullary values share an immediate representation.
-    Multi-result extracted expressions evaluate their components left to right
-    through explicit lets, to match interpreter ordering for cell effects.
+    The source language is pure and specifies no observable evaluation order.
+    Destructive updates implement that pure semantics; their execution order
+    must not be observable in well-typed programs. The earlier claim about
+    left-to-right evaluation for "cell effects" was incorrect. Both extractors
+    now emit ordinary tuples without the extra sequencing added on that basis.
+    The interpreter's traversal order is an implementation choice.
 
 169. The self port separates semantic multiplicity from physical result shape:
     singleton Once remains unique for checking, while a runtime aggregate is
@@ -3274,13 +3277,20 @@ to look for a guard, are the owner's.
     changed environment without decreasing the ordinary fact count. The existing
     erased history and freshness proofs still govern ordinary fact traversal.
 
-170. The self heap keeps immutable allocation snapshots and overlays current
-    block bodies in the Store. Reads consult the overlay first; an untouched
-    reference falls back to its allocation snapshot. This appears to preserve
-    the existing erased history proofs while permitting cycles and shared array
-    slices. Allocation identity proofs concern snapshots, not mutable contents.
-    The diagnostic printer reads current bodies and bounds recursive traversal
-    at depth 100000, matching the existing bounded-evaluation approach.
+170. The self heap models updates by returning a new Store with an override
+    map; each Ref retains its immutable allocation snapshot. Reads consult the
+    supplied Store first and use the snapshot only when it has no override.
+    The retained history proofs appear useful for allocation identity, stamp
+    bounds, and widening references into a later allocation history. They do
+    not establish unchanged current contents across Stores, acyclicity, or
+    preservation of source typing and uniqueness by updates. In particular,
+    ref-unique proves identity of allocation snapshots at a stamp; it is a
+    standalone theorem with no callers. StoredBody's suffix evidence keeps
+    references inside a replacement body within the current allocation history.
+    Retaining the whole snapshot history is an implementation choice, not a
+    requirement of UNIQUE; a history of allocation identities may suffice for
+    these structural guarantees. The diagnostic printer reads current bodies
+    and bounds recursive traversal at depth 100000.
 
 171. Argument preparation retains the source expression's location through an
     anonymous runtime binder. Physical calls omit at-annotated results; caller
@@ -3306,8 +3316,9 @@ to look for a guard, are the owner's.
 173. Ordinary unions use one-constructor native variants, one shape per payload
     arity, rather than a separate raw-array representation. Since union matching
     already knows its constructor, this shares mutable-field extraction with
-    enums without a discriminant test. Phantom cells use the same inert storage
-    shape, and nullary constructors remain immediate. A standalone emitted
+    enums without a discriminant test. Nullary constructors remain immediate.
+    The earlier phantom-cell fallback has been removed: phantom constructors
+    have no cells, as corrected in 165-166. A standalone emitted
     union mutation/projection check returns 40; cell, array, captured-cycle and
     final-at examples also agree with the reference through the self compiler.
 
@@ -3352,3 +3363,20 @@ to look for a guard, are the owner's.
     byte-for-byte identical. There are 66 new test files relative to the
     pre-uniqueness 309-test checkpoint. U15 remains excluded, and these examples
     do not constitute a general proof of U14's erasure invariants.
+
+178. Following the owner's correction, phantom constructors have no Cell in
+    any context. Five new regression files check type formation, erased
+    allocation, an abstract phantom constructor, and unique patterns with and
+    without an illegal cell binder; the existing allocation refusal now stops
+    at allocation itself. The focused ML runner observed all 36 cell, location,
+    and related matching tests pass across its interpreter/extraction modes,
+    and the rebuilt self compiler passed the same 36 differential checks.
+
+179. Validation after the phantom-Cell and tuple-emission corrections observed
+    380 ML tests passing with no failures. The rebuilt self compiler matched
+    the interpreter on 249 successful runs (including 27 template-disabled
+    reruns) and refused 158 programs with the expected diagnostics. Two
+    successive self-generated compiler sources were byte-for-byte identical
+    at 16,215,227 bytes. Assumption 170 now distinguishes allocation-history
+    guarantees from properties of current contents; no heap representation
+    change was made for that clarification. DESIGN and UNIQUE remain unchanged.

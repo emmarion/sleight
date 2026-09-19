@@ -101,7 +101,8 @@ let build cx c es =
   | Union -> one_block cx es
 
 let cell_block cx c es =
-  if List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors then build cx c es else one_block cx es
+  assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
+  build cx c es
 
 (* A match over [a]'s constructors: [arms] pair each constructor with its field names and body, [live] the
    discriminants that can occur, which narrows a tagged type so OCaml drops the others; an extern value is
@@ -264,12 +265,7 @@ and expr cx scope = function
       | Some v -> define cx x v)
   | V.CConst v -> value cx v
   | V.CErased -> "(Obj.repr ())"
-  | V.CValues cs ->
-      let es = List.map (expr cx scope) cs in
-      if List.length es < 2 then tuple es else
-      let n = stamp cx in
-      let xs = List.mapi (fun i _ -> Printf.sprintf "value%d_%d" n i) es in
-      List.fold_right2 (fun x e body -> "(let " ^ x ^ " = " ^ e ^ " in " ^ body ^ ")") xs es (tuple xs)
+  | V.CValues cs -> tuple (List.map (expr cx scope) cs)
   | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
       let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in

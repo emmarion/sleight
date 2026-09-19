@@ -701,18 +701,7 @@
     ((BTrue) (rcat5 (RStr "(match ") call (RStr " with ") (ffi-cmp-arms (Cons _ "CLt" $ Cons _ "CEq" $ Cons _ "CGt" $ Nil _) env d) $ RStr ")"))
     ((BFalse) (rcat3 (RStr "(Obj.repr (") call $ RStr "))"))))
 
-(def-fns _ $ many values-rope : (many (List $ Rope) values) (many (Nat) depth) -> (many (Rope) r)
-  (match many values _
-    ((Nil a) (tuple-rope values))
-    ((Cons a x xs)
-      (match many xs _
-        ((Nil b) x)
-        ((Cons b y ys)
-          (let (many names) (many binds) $ bind-args (str-cat "value" $ nat-str depth) values 0)
-          (let (many body) $ tuple-rope names)
-          (match many binds _
-            ((Nil c) body)
-            ((Cons c first rest) (rcat5 (RStr "(let ") (rjoin binds " in let ") (RStr " in ") body $ RStr ")"))))))))
+
 
 (def-fns _ $ many cell-index : (many (Bool) tagged) (many (Nat) index) -> (many (Nat) r)
   index)
@@ -748,7 +737,7 @@
       ((CConst c0 x) (const-rope env x))
       ((CValue c0 v) (block-rope _ v env d))
       ((CErased c0 ms2) (RStr "(Obj.repr ())"))
-      ((CValues c0 ms2 cs pk) (values-rope (emit-codes _ cs env ns d) $ names-depth _ ns))
+      ((CValues c0 ms2 cs pk) (tuple-rope $ emit-codes _ cs env ns d))
       ((CApp c0 ms2 f args cc)
         (let (many ars) $ emit-codes _ args env ns d)
         (match many (head-of _ f env ns) _

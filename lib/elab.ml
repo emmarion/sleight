@@ -368,7 +368,7 @@ let cell_shape env l c =
    | Matchable (_, true, _, _, _) -> error l "newtype constructors have no cells"
    | Matchable (_, _, true, _, _) when not env.in_extern -> error l "extern constructors have no cells outside an extern model"
    | _ -> ());
-  ignore (marker env l tid cs c);
+  if marker env l tid cs c = Erased then error l "phantom constructors have no cells";
   let params, ret = ctor_type env l c in
   let shapes = shapes env l cs in
   let a = mint_adt env (name_of env tid) disc shapes in
@@ -389,7 +389,7 @@ let pattern_cell env l mult scrut c fids name =
   match name with
   | None -> (env, None)
   | Some name ->
-      let params, _ = ctor_type env l c in
+      let _, params, _ = cell_shape env l c in
       let slots = List.filter_map (fun (e,x) -> if e.mult = Erased then None else Some (SlotHolds (Var x))) (List.combine params fids) in
       let state = match scrut.term with Var x -> (entry env x).state | _ -> Dyn in
       let x, env = bind env ~word:true name mult state (Cell (Var c, slots)) in
@@ -1025,9 +1025,6 @@ and elab_cell_invoke ?(full = false) env expect l h hcode ctor slots args =
   let pos = pos_of expect in
   let c = match canon env ctor with Var c -> c | _ -> error l "Cell constructor is not a variable" in
   let ct, params, ret = cell_shape env l c in
-  let tid = tid_of env l c in
-  let _, _, cs = find_matchable env l tid in
-  if pos <> Erased && marker env l tid cs c = Erased then error l "phantom constructor cannot be invoked through a Cell at runtime";
   let env = match h.term with Var x -> use env l (under pos Unique) x | _ -> env in
   if pos <> Erased && h.erasure <> Unique then error l "Cell invocation needs a unique cell";
   let rec marks mark args = match args with
@@ -1117,6 +1114,7 @@ and elab_match tele env expect l args =
         let bl = loc pat in
         let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern" in
         let c = ctor_var env bl c in
+        let extra = extra && marker env bl tid ctors c <> Erased in
         let fs, name = if kind = `Auto then (fs, if extra then Some None else None) else split_cell_pattern env bl extra fs in
         let phantom, fids, envb, forced = enter bl c (fun tele -> if kind = `Auto then anon tele else field_names env bl c tele fs) in
         let forced, cell = match forced with
