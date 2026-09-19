@@ -350,9 +350,12 @@ variable being in the slot's `SlotHolds` class, and the store is
 skipped; a hard error otherwise, as for `tail`. `(at (u a1 ... an))`,
 wrapping the invocation as `tail` wraps a call, asserts the same of
 every non-erased argument, performs nothing, and is treated as erased
-by the
-`tail` and `delegate` checks, as a `coerce` is, so it may follow a tail
-call.
+by the `tail` and `delegate` checks, as a `coerce` is, so it may follow
+a tail call. What is stripped is the stores only: an invocation with
+every store skipped, or the full-at form, still uses each argument at
+its field's multiplicity, consuming a unique one, still consumes `u`,
+and still mints its value at `u` in the at-database and its `is` in
+the fact table, exactly as one that stores does.
 
 *Reading.* Under these rules a slot can never end up referencing a cell
 owned elsewhere in a minted value: the invocation supplies each field
