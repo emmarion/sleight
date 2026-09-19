@@ -808,7 +808,7 @@ how entering a match branch updates it:
   the stored value. `let-match` exports them only after independently
   refuting every other constructor (§16). Hypothetical facts introduced
   while testing a constructor do not escape that test.
-- - The only three ways forcing a unification fails, i.e. produces a
+- The only three ways forcing a unification fails, i.e. produces a
   contradiction: (1) `x` equated with an expression containing `x`
   (checked after resolving through any existing atom-to-atom `is`-alias
   chains, not just against a new equation's literal surface form; `x =
