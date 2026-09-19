@@ -140,8 +140,11 @@ match are as in §19.
 
 *Reading.* On a source type `peek` is a `unique` destructure followed by
 a full-at reinvocation of the same constructor at the scrutinee (§U9),
-which costs nothing; on an extern type it is primitive, through the
-FFI's peek unwrap (§U12).
+so it does what a `many` match does, read the tag and the many-labelled
+fields, and nothing more. On an extern type the FFI's peek unwrap runs
+in place of those reads, and how it produces the fields, a view or a
+copy, is the FFI author's choice under §U12's constraint; for the array
+of §U13 it yields the discriminant alone.
 
 ## U6. Closures, `def-unique`, and the top level
 
