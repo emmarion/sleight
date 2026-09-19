@@ -480,11 +480,13 @@ extern type's constructor, and so `cell-alloc`, `cell-write`,
 an extern's in-place operations are its own functions, §U13's
 `array-swap` and kin.
 
-*Reading.* In the prototype an extern type's construction and matching
-live in its ADT record and run through one dispatch for a Const-known
-and a held Matchable alike; extraction of a Const-known one goes
-through its template (ASSUMPTIONS 133), the hint, a held one through
-its runtime unwrap. A peek unwrap adds an operation to the record, a
+*Reading.* In the prototype's interpreter an extern type's ADT record
+carries the FFI's construct and destruct, and a match reads them
+through one dispatch function whether its Matchable was Const-known,
+the shape settled at elaboration, or held, read at runtime. In
+extraction a match on a Const-known extern Matchable is emitted inline
+through the type's template, the hint of ASSUMPTIONS 133, and a match
+on a held one through the runtime unwrap. A peek unwrap adds an operation to the record, a
 `peek` template key, a mode on the match node, and makes a held
 Matchable's runtime value a record of two unwraps, a *match unwrap*
 serving `many` and `unique` alike, which hand out the same fields at
