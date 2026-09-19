@@ -381,8 +381,9 @@ position deciding as for any constructor application, and it mentions
 is still live, which stays live, or one already consumed, and either
 way the result is a many slot holding `v`'s word (the proposal's 4f
 and 4g). What `v` must be is declared non-erased, so that the word
-exists; in a type index, a `SlotHolds` may name an erased variable, as
-a type may name anything. A slot value is inert and may sit in a
+exists; since every `SlotHolds` in a cell's type comes from such an
+expression or from a destructure's field binders, none names an erased
+variable. A slot value is inert and may sit in a
 field or a list like any other value.
 
 `cell-read` reads a cell's words out, a statement binding outward:
