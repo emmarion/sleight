@@ -1,5 +1,5 @@
 type id = int
-type mult = Erased | Many
+type mult = Erased | Many | Unique
 type disc = Enum | Union
 
 type term =
@@ -7,6 +7,7 @@ type term =
   | Bound of int
   | App of term * term list
   | Fn of term * tele * tele
+  | UniqueFn of term * tele * tele
   | TyCtor of tele
   | ValCtor of tele * term
   | Matchable of disc * term * (mult * term) list
@@ -23,9 +24,10 @@ let rec map_vars f depth t =
   match t with
   | Var _ | Bound _ -> f depth t
   | App (h, args) -> App (map_vars f depth h, List.map (map_vars f depth) args)
-  | Fn (l, ps, rs) ->
+  | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
       let d, ps = map_tele f depth ps in
-      Fn (map_vars f depth l, ps, snd (map_tele f d rs))
+      let l = map_vars f depth l and rs = snd (map_tele f d rs) in
+      (match kind with UniqueFn _ -> UniqueFn (l, ps, rs) | _ -> Fn (l, ps, rs))
   | TyCtor ps -> TyCtor (snd (map_tele f depth ps))
   | ValCtor (ps, r) ->
       let d, ps = map_tele f depth ps in
@@ -56,7 +58,7 @@ let tele_parts depth es = List.mapi (fun i e -> (depth + i, sg_term e.sg)) es
 let parts = function
   | Var _ | Bound _ -> []
   | App (h, args) -> List.map (fun t -> (0, t)) (h :: args)
-  | Fn (l, ps, rs) -> ((0, l) :: tele_parts 0 ps) @ tele_parts (List.length ps) rs
+  | Fn (l, ps, rs) | UniqueFn (l, ps, rs) -> ((0, l) :: tele_parts 0 ps) @ tele_parts (List.length ps) rs
   | TyCtor ps -> tele_parts 0 ps
   | ValCtor (ps, r) -> tele_parts 0 ps @ [ (List.length ps, r) ]
   | Matchable (_, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
@@ -69,6 +71,7 @@ let blank t =
   | Var _ | Bound _ -> t
   | App (_, args) -> App (hole, List.map (fun _ -> hole) args)
   | Fn (_, ps, rs) -> Fn (hole, tele ps, tele rs)
+  | UniqueFn (_, ps, rs) -> UniqueFn (hole, tele ps, tele rs)
   | TyCtor ps -> TyCtor (tele ps)
   | ValCtor (ps, _) -> ValCtor (tele ps, hole)
   | Matchable (d, _, cs) -> Matchable (d, hole, List.map (fun (m, _) -> (m, hole)) cs)
@@ -84,7 +87,7 @@ let has_dangling t = fold_vars (fun d b t -> b || (match t with Bound k -> k >= 
 
 let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equal x y) (parts a) (parts b)
 
-let mult_name = function Erased -> "erased" | Many -> "many"
+let mult_name = function Erased -> "erased" | Many -> "many" | Unique -> "unique"
 let disc_name = function Enum -> "enum" | Union -> "union"
 
 (* [name_of] resolves free ids; bound names come from the telescopes being printed. *)
@@ -94,10 +97,10 @@ let to_string name_of t =
     | Var x -> name_of x
     | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
     | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
-    | Fn (l, ps, rs) ->
+    | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
         let bound, ps = tele bound ps in
         let _, rs = tele bound rs in
-        "(Fn " ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
+        (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
     | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele ~marks:false bound ps) @ [ "->"; "Type" ]) ^ ")"
     | ValCtor (ps, r) ->
         let bound', ps = tele bound ps in

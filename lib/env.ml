@@ -23,7 +23,12 @@ type scope = { ids : id list; named : id StringMap.t }
 type opened = { obj : id; kind : [ `Matchable | `Newtype | `Other ]; names : term list }
 type opens = { opened : opened list; touched : id list }
 
+type use = Shared | Consumed
+
 type t = {
+  uses : use IntMap.t;
+  captures : id list;
+  usage_erased : bool;
   scope : scope;
   entries : entry IntMap.t;
   facts : fact IntMap.t;
@@ -37,7 +42,7 @@ type t = {
 }
 
 let empty =
-  { scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
+  { uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -194,3 +199,19 @@ let rec merge_opens (Forcing env) =
           let (Forcing env) = unify_force (Forcing env) (type_of env newer) (type_of env older) in
           let drop = if rank env newer < rank env older then older else newer in
           merge_opens (Forcing (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop)))
+
+(* Usage follows binder identity, never its canonical value. Branches join by maximum. *)
+let join_uses a b = IntMap.union (fun _ x y -> Some (if x = Consumed || y = Consumed then Consumed else Shared)) a b
+
+let use env loc ?(sharing = false) mult x =
+  if mult = Erased || env.usage_erased then env else
+  let e = entry env x in
+  if e.mult = Erased then error loc "erased value %s : %s used in a non-erased position" (show env (Var x)) (show env (type_of env x));
+  if mult = Unique && e.mult <> Unique then error loc "many value %s used at unique" (name_of env x);
+  if e.mult <> Unique then env else (
+    if mult = Many && not sharing then error loc "unique value %s needs an explicit share" (name_of env x);
+    if mult = Unique && List.mem x env.captures then error loc "def-fns cannot capture %s at unique" (name_of env x);
+    let prior = IntMap.find_opt x env.uses in
+    if prior = Some Consumed || (mult = Unique && prior = Some Shared) then
+      error loc "unique value %s has conflicting non-erased uses" (name_of env x);
+    { env with uses = IntMap.add x (if mult = Unique then Consumed else Shared) env.uses })

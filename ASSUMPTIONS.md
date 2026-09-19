@@ -3131,3 +3131,29 @@ to look for a guard, are the owner's.
      `tests/phantom_warn.sl` warns and then compiles and runs, the case
      the existing test does not reach. Both directives were checked by
      corrupting them and watching each harness fail.
+
+156. **Uniqueness implementation scope and working conventions (Codex/Astra).**
+     The owner authorized implementation of UNIQUE.md except U15, with ML
+     first and the self-hosted implementation subsequently bootstrapped through
+     ML; incremental compatibility with an older slc is not required. Commits
+     may be made at useful milestones. DESIGN.md and UNIQUE.md are frozen:
+     assumptions and implementation readings are recorded here instead.
+
+     Decisions supplied in this session: `def-unique` uses the `def-fns`
+     declaration shape with a `unique` or `erased` marker and one function;
+     `comptime-match` must carry a multiplicity; `cell-write` must name the
+     cell's existing constructor after canonicalization. The existing List
+     field labels remain unchanged. U15's `at-coercible` and `slot-eq` are
+     excluded. The owner allows restructuring the self-hosted heap and staged
+     restoration of erased proof invariants, while preferring the compiler to
+     continue exemplifying checked correctness through dependent proofs.
+
+     Implementation proceeds in checkpoints; a checkpoint introducing a
+     multiplicity does not by itself claim the rest of UNIQUE.md is present.
+     Uses are recorded against the binder as written, never its canonical
+     value. A direct `(share x)` degrades x; a computed share argument is
+     elaborated as a unique expression and its fresh result is shared. Uses
+     needed to compute that expression retain their own multiplicities.
+     Erased and unreachable bodies contribute no usage, including statements
+     preceding their results. Ordinary let RHS statements retain DESIGN 16's
+     existing independent multiplicities.
