@@ -78,6 +78,40 @@ that the test does not make is a mistake in this file.
   test fetches with `coercible-of` the proof the mark minted that `char-cmp`
   and `nat-cmp` are one function, coerces `char-cmp` to the `Nat` signature,
   and runs it both on characters and on numerals.
+- `tests/cell_rev_inplace.sl`, `tests/cell_rotate.sl` and
+  `tests/cell_map_retype.sl` — algorithms that reuse the cells their unique
+  destructures hand back (UNIQUE.md U5, U9), beside `tests/cell_append.sl`'s
+  tail call modulo cons. The first is pointer reversal, one store per node
+  under an `(at)` that skips the head slot; the second rotates a tree by
+  reinvoking both the outer node's cell and its left child's; the third maps
+  `(ULst (Nat))` to `(ULst (Tag))`, a cell being tied to its value
+  constructor but not to the type constructor's arguments, with `Tag` a
+  newtype so the elements need no wrapper either.
+  `tests/cell_retype_ctor_bad.sl` is the step a cell does not take, a block
+  rewritten as a different constructor's of the same non-erased arity.
+- `tests/cell_rev_certified.sl` and `tests/cell_rotate_certified.sl` — the
+  same two algorithms carrying a relation about their result: reversal's
+  `RevOnto` and rotation's `FlatOnto`, both in difference-list form, which is
+  what lets rotation's derivation be rebuilt from its argument's with no
+  lemma about appending. Each relation's indices name cells the algorithm
+  overwrites, which an erased mention may do after the binder is consumed
+  (U2), and every entry of both proofs is declared erased (section 20).
+  `tests/cell_at_not_is_bad.sl` is the step that separates them: the result
+  is `at` its argument and not `is` it, so a relation proved of the argument
+  beforehand is refused where one about the result is wanted. It is the
+  converse of `tests/at_is_independent_bad.sl`.
+- `tests/unique_typestate.sl` — a handle whose erased index records its
+  protocol state and whose operations consume it, so the index fixes the
+  order and uniqueness stops a spent handle being reused. Each transition
+  reinvokes the handle's own cell, and `do-open`, which changes nothing but
+  the index, is a full-at invocation returning `at` its argument.
+  `tests/unique_typestate_bad.sl` skips a step; `tests/unique_double_bad.sl`
+  is the other half.
+- `tests/subterm_call_result_bad.sl` — a field is a subterm of what it was
+  destructured from and a call's result is not (DESIGN.md section 15), so a
+  recursive occurrence reached by calling a stored function does not drive
+  recursion the way `tests/recursion_through_pointer.sl`'s stored function
+  does when the decreasing argument is a field.
 - `tests/vec_map.sl` and `tests/binder_clash.sl` — dependent motives checked
   under each branch's forced facts, and a branch refuted because a
   constructor's index mentions its own `Fn` binder (ASSUMPTIONS 73).
