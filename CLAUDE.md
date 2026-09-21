@@ -78,3 +78,15 @@ by the owner and apply to every session.
 13. **`origin/main` is the only main.** A local `main` may be the
     pre-restart history (`simply-typed-archive/main`), which shares no
     ancestor with it — never merge or rebase across the two.
+
+14. **ASSUMPTIONS.md is for decisions made *without* the owner.** That
+    is its entire purpose: a choice a session had to make because the
+    spec was silent and the code had to do something. An entry there
+    saying the owner decided something is a contradiction in terms.
+    When the owner does decide, the decision goes to DESIGN.md or
+    UNIQUE.md under rules 11 and 12, the audit or bug index is marked
+    as those files' own conventions have it, and any ASSUMPTIONS entry
+    that stood in for the question is removed rather than amended. Do
+    not add an entry recording what the owner just said in chat,
+    however faithfully — and do not take the entries already there that
+    do so as the pattern to follow.

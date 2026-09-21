@@ -4,7 +4,11 @@ A prototype OCaml interpreter for the language recorded in DESIGN.md
 and UNIQUE.md (excluding the deferred forms in U15).
 KERNEL.md and SUGAR.md are further design notes; SPEC-REVIEW.md lists
 the spec's open points and ASSUMPTIONS.md the assumptions the
-interpreter makes about them. HANDOFF.md records work in progress
+interpreter makes about them, which is the whole of what it is for: a
+choice a session had to make on its own, because the spec was silent
+and the code had to do something. A decision the owner made is recorded
+in DESIGN.md or UNIQUE.md, never here, and an entry that stood in for
+one is removed when the owner decides it. HANDOFF.md records work in progress
 handed from one session to the next. BUGS.md records defects found in the
 implementation and TOOLING-WISHLIST.md the friction met writing programs in
 the language. EXAMPLES.md indexes the tests that show the
