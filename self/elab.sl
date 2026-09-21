@@ -3526,7 +3526,7 @@
                           (erased-result _ expect env3 r))
                         ((ExDelegateOf)
                           (let (many env2) (many g) $ named env0 (one-arg args) "a function name")
-                          (match many (find-delegate (list-rev _ $ env-objects env2) env2 g) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
+                          (match many (find-delegate (env-objects env2) env2 g) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
                             ((None c) (expr-error _ expect env2 (str-cat (name-of env2 g) " has no delegate proof in scope") "no delegate proof"))
                             ((Some c x) (erased-result _ expect env2 $ res-of env2 x))))))))
                 ((None b)

@@ -1000,7 +1000,7 @@ and elab_special demand tele env expect l sp args =
   | Sp.DelegateOf, [ g ] ->
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
-      fetch "delegate proof in scope" g (List.find_opt about (List.rev env.scope.ids))
+      fetch "delegate proof in scope" g (List.find_opt about env.scope.ids)
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
 
