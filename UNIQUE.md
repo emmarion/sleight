@@ -38,12 +38,16 @@ bound first (§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude:
 
 A binder may be declared `unique` beside `erased` and `many` (§6, §20):
 function parameters and return entries, constructor fields, `let`
-binders, and a match's scrutinee. A `unique` binder is the only
-reference to its value, which is what lets an operation on it run in
-place; the guarantee is the binder's, not the type's, so there is no
-unique type, no unique type or value constructor, and no phantom
-analogue. `match`, `let-match` and `comptime-match` gain a mode,
-`unique` (§U5).
+binders, and a match's scrutinee. What `unique` is for is safe
+mutation. Where a value can be mutated in place, through the cell a
+`unique` destructure gives back (§U9) or by an extern's own in-place
+operation (§U12), a `unique` binder on it is the only reference to it,
+which is what makes the mutation safe. Where nothing can mutate the
+value the sole-reference property is neither promised nor needed, and a
+`unique` binder there may alias a live `many` one (§U7). The guarantee
+is the binder's, not the type's, so there is no unique type, no unique
+type or value constructor, and no phantom analogue. `match`,
+`let-match` and `comptime-match` gain a mode, `unique` (§U5).
 
 ## U2. Uses
 
@@ -100,9 +104,7 @@ a unique position or by `def-unique` (§U6), and reappears unique as a
 `unique`-declared return of a non-erased call, as a `unique`-labelled
 field taken by a `unique` destructure (§U4), or as the result of a
 `coerce` in a non-erased position whose target side is `(Unique)`
-(§U7). Nothing turns a `many` or erased value unique, except as §20
-already has it in an erased position or a phantom branch, where nothing
-runs.
+(§U7).
 
 Degradation from `unique` to `many` is explicit: a `unique` value in a
 `many` position is an error unless written `(share e)`, `e` an
