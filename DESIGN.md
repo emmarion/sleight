@@ -302,7 +302,7 @@ There are also two ways for these to be "minted" (introduced):
   function's body reduces to nothing but the delegated call, so the two
   functions' non-erased behavior is identical, and the outer function's
   function pointer could just *be* the inner one's — which §38's
-  `coercible-of` turns into a proof.
+  `Delegate` proof records, and `coercible-of` turns into a `Coercible`.
 
 ## 10. `Type : Type`, no strict positivity
 
@@ -686,7 +686,7 @@ Everything below can be passed around as ordinary first-class data:
 5. a `Matchable` object — see below
 6. a `Type`, or a `Newtype` object (§38)
 7. an opaque object (a `Level`, a `Subterm`/`Predates` proof, §8, or a
-   `Coercible` proof, §38)
+   `Coercible` or `Delegate` proof, §38)
 
 `Special` and `Macro` (§9) are both ordinary ADT values. Applying a held,
 unapplied constructor (items 3–4) is ordinary constructor application,
@@ -893,7 +893,7 @@ form being undecided.
 and `comptime-match`; §12's and §37's emptiness check; `matchable-of`
 and `newtype-of`, which find only an opened object; and
 `coercible-wrap`, which needs an opened `Newtype` for its constructor.
-`coercible-of` still fetches from ambient scope (§38, TBD). §18's occurs
+`delegate-of` still fetches from ambient scope (§38). §18's occurs
 check and its refutation by signature are not gated. A match that
 dispatches at runtime — a `many` match on a `many` scrutinee, or a
 `let-match` at `many` outside run position — reads its `Matchable`'s
@@ -905,10 +905,10 @@ constructors are told apart only by their opened `Matchable`s, so an
 unopened first-class one unifies with any other.
 
 `def-adts` opens what it mints, as does the FFI (§41) for the built-in
-`Special`. The opaque built-ins, `Level`, `Predates`, `Subterm` and
-`Coercible` (§8, §38), have no `Matchable` and are never opened, so they
-are neither matchable nor empty (§37): no `absurd` function can hand
-back one of their proofs as its contradiction.
+`Special`. The opaque built-ins, `Level`, `Predates`, `Subterm`,
+`Coercible` and `Delegate` (§8, §38), have no `Matchable` and are never
+opened, so they are neither matchable nor empty (§37): no `absurd`
+function can hand back one of their proofs as its contradiction.
 
 `def-adts` is the sole minting site: declaring an ADT mints an anonymous
 `Matchable` describing it, from the `enum`/`union` tag and the
@@ -1069,7 +1069,7 @@ actually specified.
    function is just the one-element case. Possibly nested inside another
    function's body (§9, §16). A body may be marked `absurd` (§37) or
    `extern` (§41). Mints a
-   `Coercible` proof for each `delegate`-bodied function (§38).
+   `Delegate` proof for each `delegate`-bodied function (§38).
 4. 4. `def-adts` — defines one or more (possibly mutually recursive)
    ADTs, same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); mints,
@@ -1148,7 +1148,9 @@ type or an `is` expression, not only at a declaration site.
 23. `coercible-ctor` — mints the proof between two applications of the
     same non-phantom constructor, from per-field values and proofs
     (§38).
-24. `coercible-of` — yields the proof `def-fns` mints for a
+24. `coercible-of` — yields the `Coercible` a `Delegate` proof carries
+    (§38).
+24a. `delegate-of` — yields the `Delegate` proof `def-fns` mints for a
     `delegate`-bodied function, from ambient scope (§38), as
     `matchable-of` does for a `Matchable`.
 
@@ -1633,6 +1635,11 @@ example in §40).
 heterogeneous like `Subterm` (§8), an opaque object (§17), always
 erased.
 
+**The delegate proof.** `Delegate : (Type G) (G g) (Type F) (F f) ->
+Type`, the same shape, likewise opaque and always erased. It records
+that `g`'s body is a `delegate` call to `f` (§9); `def-fns` is its only
+introduction rule, so item 7's fetch has nothing to choose between.
+
 **The expression.** `(coerce a p)`, with `a` the value being
 reinterpreted and `p : (Coercible A a B b)`; `a` must be identical,
 post-canonicalization, to the value in `p`'s type, and `b` is read from
@@ -1693,15 +1700,13 @@ checked entirely at elaboration time:
    `coerce` needs the source to canonicalize to `(C sources)`, which
    is what entering a `C` branch forces (§18), so such a proof is built
    per branch from the branch's binders.
-6. `(coercible-of g)` — for a `many` function `g` whose body is a
-   `delegate` call to `f` (§9). `def-fns` mints the proof
-   `(Coercible (Fn ...) g (Fn ...) f)` anonymously, as `def-adts`
-   mints a `Matchable` (§19), and this form fetches it from ambient
-   scope by naming `g`, as `matchable-of` does. `g` is `Dyn` within its
-   own block (§34), so `g`'s body cannot use its own proof. TBD: whether
-   this fetch should instead find only an opened proof, `def-fns`
-   opening what it mints and a first-class proof being opened as a
-   `Matchable` is (§19).
+6. `(coercible-of d)` — from a `d : (Delegate G g F f)`, the
+   `(Coercible G g F f)`. It forgets only why the two coincide.
+7. `(delegate-of g)` — for a `many` function `g` whose body is a
+   `delegate` call to `f` (§9), the `(Delegate (Fn ...) g (Fn ...) f)`
+   `def-fns` minted anonymously, fetched from ambient scope by naming
+   `g`, as `matchable-of` does. `g` is `Dyn` within its own block (§34),
+   so its body cannot use its own proof.
 
 **Representation requirement.** Coercion is zero-cost only if the
 representations really coincide, so the following is a requirement on
@@ -1728,7 +1733,7 @@ callee's (§9). An extern type (§41) may be marked `newtype` like any
 other, its FFI author then guaranteeing the field representation, and
 a newtype may wrap a field of an extern type.
 
-Only non-phantom constructors and `many` functions matter in items 4–6:
+Only non-phantom constructors and `many` functions matter in items 4–7:
 a `coerce` produces a non-erased value, which by §20's rule 2 none of
 the others can head. So `coercible-ctor` consults no `Matchable` and
 does not refuse a phantom `C`, a proof between two phantom-headed values
@@ -1842,11 +1847,12 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
     (many (Nat) m)
   (delegate (inc (predates piv) n)))
 
-(let (erased ig) (coercible-of inc-noted))
+(let (erased ig) (coercible-of (delegate-of inc-noted)))
 ```
 
 - After erasure `inc-noted`'s body is nothing but the call to `inc`
-  (§9), so `def-fns` mints the proof and `coercible-of` fetches it:
+  (§9), so `def-fns` mints the `Delegate` proof, `delegate-of` fetches
+  it and `coercible-of` reads the `Coercible` off it:
   `ig : (Coercible (Fn V ...) inc-noted (Fn I ...) inc)` (§38).
   `(coerce inc-noted ig)` is then `inc`'s own pointer.
 

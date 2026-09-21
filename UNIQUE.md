@@ -26,13 +26,13 @@ entry or match annotation entry (§U8); an extra binder in every
 have cells (§U5). Built-in types: `Slot` with `(SlotVacant)` and
 `(SlotHolds v)` (§U10), `Sharing` with `Unique` and `Shared` (§U7).
 Elaboration state: an at-database beside §18's fact table,
-partitioning entries by location (§U8). Changed: `Coercible` takes a
-multiplicity on each side, and `coercible-ctor` and `coercible-refl`
-take one as their first argument (§U7); `Matchable` carries the
-`newtype` and `extern` marks (§U9); `_` as a binder name (§U16); §23's
-invariant is two tiers (§U14); an argument is as if bound first
-(§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude: `Array`,
-`MaybeUninit` and their functions (§U13).
+partitioning entries by location (§U8). Changed: `Coercible` and
+`Delegate` take a multiplicity on each side, and `coercible-ctor` and
+`coercible-refl` take one as their first argument (§U7); `Matchable`
+carries the `newtype` and `extern` marks (§U9); `_` as a binder name
+(§U16); §23's invariant is two tiers (§U14); an argument is as if
+bound first (§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude:
+`Array`, `MaybeUninit` and their functions (§U13).
 
 ## U1. A third multiplicity, and a third match mode
 
@@ -206,7 +206,7 @@ same-level calls under `subterm` proofs; it may be marked `erased` or
 `absurd`; its own name is in scope in its body as an erased entry, so
 a self call is refused as any call through an erased head is and
 recursion goes through a `def-fns` function taking the values as
-parameters; its body supports `tail` and `delegate`, and `coercible-of`
+parameters; its body supports `tail` and `delegate`, and `delegate-of`
 fetches a delegate's proof as for a `def-fns` function.
 
 *Reading.* The former is what a `unique` binder of `Fn` type cannot
@@ -239,15 +239,17 @@ proof is always erased, so a side describes a non-erased use. `coercible-ctor`, 
 solving it from the expected type. `coercible-ctor` and
 `coercible-refl` mint `s` on both sides. `coercible-wrap` mints `s` as
 its target side and, as its source side, `s` over a unique-labelled
-field and `(Shared)` over a many-labelled one. `coercible-of` takes its
-sides from the two functions' types, `(Shared)` for an `Fn` and
-`(Unique)` for a `UniqueFn` (§U6), so a UniqueFn delegating to an Fn
-is `(Unique)` to `(Shared)`. `coercible-sym` is unconditional,
-every mintable shape being uniform or the harmless one: the sym of
-`(Shared)` `x` to `(Unique)` `(MkBox x)` consumes a unique wrapper and
-gives its many-labelled field back shared; `coercible-trans` requires
-the middle multiplicities equal; and a new form, `coercible-share`,
-weakens any proof to `(Shared)` on both sides (the proposal's 1j).
+field and `(Shared)` over a many-labelled one. `Delegate` (§38) takes a
+side on each end too, set by `def-fns` where it mints the proof, from
+the two functions' types: `(Shared)` for an `Fn` and `(Unique)` for a
+`UniqueFn` (§U6), so a UniqueFn delegating to an Fn is `(Unique)` to
+`(Shared)`; `coercible-of` carries them across. `coercible-sym` is
+unconditional, every mintable shape being uniform or the harmless one:
+the sym of `(Shared)` `x` to `(Unique)` `(MkBox x)` consumes a unique
+wrapper and gives its many-labelled field back shared;
+`coercible-trans` requires the middle multiplicities equal; and a new
+form, `coercible-share`, weakens any proof to `(Shared)` on both sides
+(the proposal's 1j).
 `(coerce a p)` in a position of multiplicity `m`, `m_a` and `m_b`
 canonicalizing to `(Unique)` or `(Shared)` there, uses `a` at `m_a`,
 consuming it when that is `(Unique)`, and yields its result at `m_b`:
