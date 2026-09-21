@@ -1,4 +1,4 @@
-; error: expected VCons, got (VNil)
+; error: expected VCons, got (VNil _)
 ; A comptime-match mismatch on an indexed type prints the value through its type, the constructors' return
 ; types unified with it and the opened objects merged as entering a branch does.
 

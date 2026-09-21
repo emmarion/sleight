@@ -692,6 +692,8 @@ records only `erased`/`many`, §17, and no constructor is unique). That
 keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
+Both tiers are §23's "identically", and leave `tail` and `delegate`
+unchecked.
 
 `slot-eq` falls under tier 1: it is an optimization hint and a compiler
 may always answer `SlotDiffer` (§U15), so an implementation on which

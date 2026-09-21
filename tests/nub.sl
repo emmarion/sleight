@@ -1,5 +1,5 @@
 ; needs: list vec lt_subterm
-; expect: (Cons 1 (Cons 2 (Cons 3 (Nil))))
+; expect: (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Nil _)
 ; Recursion on a computed vector, not a subterm: filter-ne returns the shorter vector with an erased bound on
 ; its length, and nub recurses on the erased length index, turned into the Subterm proof by lt-sub. The
 ; measure costs nothing at runtime.

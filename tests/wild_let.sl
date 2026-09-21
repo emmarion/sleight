@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 1 (Nil))
+; expect: (Cons _ 1 $ Nil _)
 ; A let whose binders all carry a type is the telescope its right-hand side is expected to produce
 ; (SUGAR.md 6): a `_` argument is solved by it, and a match there may write `_` for its annotation.
 

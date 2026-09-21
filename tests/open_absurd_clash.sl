@@ -1,4 +1,4 @@
-; expect: <function f>
+; expect: _
 ; The contradiction between two opened Matchables that share a constructor but cannot unify is what
 ; open-absurd cashes in (DESIGN.md section 19), here as a whole function body.
 

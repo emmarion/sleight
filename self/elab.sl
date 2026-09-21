@@ -1688,9 +1688,6 @@
   (let (many env2) (error-unless env1 (mult-is-many (entry-mult-of env1 id)) "SlotHolds needs a declared non-erased variable"))
   (values (error-when env2 (list-mem-bin (env-signature env2) id) "SlotHolds cannot name a telescope binder; abstract over a Slot instead") id))
 
-(def-fns _ $ many cell-tagged : (many (Ctor) c) -> (many (Bool) tagged)
-  (match many c _ ((MkCtor n id i ar tagged ex shape nt) tagged)))
-
 (def-fns _ $ many cell-slot-codes : (many (Env) env) (many (List $ List $ Nat) ctx)
     (subterm many (List $ Maybe $ Nat) ids) -> (many (List $ Code ctx many-one) codes)
   (match many ids _
@@ -1760,7 +1757,7 @@
             ((BTrue) writes) ((BFalse) (Cons _ (MkPair _ _ index (var-code env2 ctx (term-var term))) writes)))))))))
 
 (def-fns _ $ many cell-read-bindings : (many (Env) env) (many (List $ List $ Nat) ctx)
-    (many (Nat) sid) (many (Bool) tagged) (subterm many (Nat) n) (many (List $ Raw) names)
+    (many (Nat) sid) (many (Ctor) k2) (subterm many (Nat) n) (many (List $ Raw) names)
     (many (List $ Term) slots) (many (Mult) pos) (many (Nat) index) ->
     (many (Env) env2) (many (List $ Pair (Nat) $ Code ctx many-one) pairs) (many (List $ Raw) restnames)
   (match many n _
@@ -1773,8 +1770,8 @@
             ((Nil u) (values (TErr "missing slot") (Nil _))) ((Cons u s ss) (values s ss))))
           (let (many env1) (many id) (bind env (name-or-anon (raw-name name)) (under pos (Many)) slot-term (Some _ slot) delegate-id))
           (let (many env2) (mark-word env1 id (BFalse)))
-          (let (many env3) (many pairs) (many restnames) (cell-read-bindings env2 ctx sid tagged k rest ss pos (Succ index)))
-          (values env3 (Cons _ (MkPair _ _ id (CCellRead _ tagged index (var-code env3 ctx sid))) pairs) restnames))))))
+          (let (many env3) (many pairs) (many restnames) (cell-read-bindings env2 ctx sid k2 k rest ss pos (Succ index)))
+          (values env3 (Cons _ (MkPair _ _ id (CCellRead _ k2 index (var-code env3 ctx sid))) pairs) restnames))))))
 
 (def-fns _ $ many parse-entries-checked : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) (many (Env) env) -> (many (Env) r) (many (List $ SrcEntry root) es)
   (match many subs _
@@ -2309,12 +2306,12 @@
 
       ((CCellAlloc c0 ctor slots)
         (match many (strengthen-list _ _ slots d) _ ((KNo a b e) (None _)) ((KYes a b e slots2 lk) (Some _ $ CCellAlloc _ ctor slots2))))
-      ((CCellWrite c0 tagged cell slots)
+      ((CCellWrite c0 k2 cell slots)
         (match many (strengthen _ _ _ cell d) _
           ((None a) (None _))
-          ((Some a cell2) (match many (strengthen-slots _ _ slots d) _ ((None b) (None _)) ((Some b slots2) (Some _ $ CCellWrite _ tagged cell2 slots2))))))
-      ((CCellRead c0 tagged index cell)
-        (match many (strengthen _ _ _ cell d) _ ((None a) (None _)) ((Some a cell2) (Some _ $ CCellRead _ tagged index cell2))))
+          ((Some a cell2) (match many (strengthen-slots _ _ slots d) _ ((None b) (None _)) ((Some b slots2) (Some _ $ CCellWrite _ k2 cell2 slots2))))))
+      ((CCellRead c0 k2 index cell)
+        (match many (strengthen _ _ _ cell d) _ ((None a) (None _)) ((Some a cell2) (Some _ $ CCellRead _ k2 index cell2))))
       ((CAbsurd c0 ms2) (Some _ $ CAbsurd _ ms2))
       ((CError c0 ms2 m) (Some _ $ CError _ ms2 m))))
   (many strengthen-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r)
@@ -2453,8 +2450,8 @@
       ((CCellAlloc c0 ctor slots)
         (let (many slots2) (erased lk) $ norm-list _ _ slots ren)
         (CCellAlloc _ ctor slots2))
-      ((CCellWrite c0 tagged cell slots) (CCellWrite _ tagged (norm _ _ many-one cell ren) $ norm-slots _ _ slots ren))
-      ((CCellRead c0 tagged index cell) (CCellRead _ tagged index $ norm _ _ many-one cell ren))
+      ((CCellWrite c0 k2 cell slots) (CCellWrite _ k2 (norm _ _ many-one cell ren) $ norm-slots _ _ slots ren))
+      ((CCellRead c0 k2 index cell) (CCellRead _ k2 index $ norm _ _ many-one cell ren))
       ((CAbsurd c0 ms2) (CAbsurd _ ms2))
       ((CError c0 ms2 m) (CError _ ms2 m))))
   (many norm-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Ren from ctx) ren) -> (many (List $ Code ctx many-one) r) (erased (Lockstep (Code from many-one) (Code ctx many-one) cs r) lock)
@@ -2542,8 +2539,8 @@
       ((CCellAlloc c0 ctor slots)
         (let (many ss) (erased lk) $ distribute-list ctx slots)
         (CCellAlloc _ ctor ss))
-      ((CCellWrite c0 tagged cell slots) (CCellWrite _ tagged (distribute ctx many-one cell) $ distribute-slots ctx slots))
-      ((CCellRead c0 tagged index cell) (CCellRead _ tagged index $ distribute ctx many-one cell))
+      ((CCellWrite c0 k2 cell slots) (CCellWrite _ k2 (distribute ctx many-one cell) $ distribute-slots ctx slots))
+      ((CCellRead c0 k2 index cell) (CCellRead _ k2 index $ distribute ctx many-one cell))
       (else code)))
   (many distribute-list : (many (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) codes) ->
       (many (List $ Code ctx many-one) r) (erased (Lockstep (Code ctx many-one) (Code ctx many-one) codes r) lk)
@@ -2595,8 +2592,8 @@
       ((CApp c0 ms2 f args cc) (or (cc-marked cc only) $ or (has-marked _ _ f only) $ has-marked-list _ args only))
 
       ((CCellAlloc c0 ctor slots) (has-marked-list _ slots only))
-      ((CCellWrite c0 tagged cell slots) (or (has-marked _ _ cell only) $ has-marked-slots _ slots only))
-      ((CCellRead c0 tagged index cell) (has-marked _ _ cell only))
+      ((CCellWrite c0 k2 cell slots) (or (has-marked _ _ cell only) $ has-marked-slots _ slots only))
+      ((CCellRead c0 k2 index cell) (has-marked _ _ cell only))
       ((CValues c0 ms2 cs pk) (has-marked-list _ cs only))
       ((CLet c0 ms2 ns ids pk rhs rest) (or (has-marked _ _ rhs only) $ has-marked _ _ rest only))
       ((CLetRec c0 ns gids g rest) (has-marked _ _ rest only))
@@ -2639,8 +2636,8 @@
                           $ match many dfl (((Bool) b)) ((Some a d) (tails-ok _ _ d direct)) ((None a) (BTrue))))))))
 
       ((CCellAlloc c0 ctor slots) (not $ has-marked-list _ slots $ BFalse))
-      ((CCellWrite c0 tagged cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
-      ((CCellRead c0 tagged index cell) (not $ has-marked _ _ cell $ BFalse))
+      ((CCellWrite c0 k2 cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
+      ((CCellRead c0 k2 index cell) (not $ has-marked _ _ cell $ BFalse))
       ((CValues c0 ms2 cs pk) (not $ has-marked-list _ cs $ BFalse)) (else (BTrue))))
   (many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r)
     (match many bs _
@@ -3074,11 +3071,22 @@
     ((Cons a x rest) (Cons _ (type-of env x) $ types-of env rest))))
 
 ; The many fields' types of a constructor at an instance of its type, as entering its branch reads them.
-(def-fns _ $ many field-types : (many (Env) env) (many (Term) ty) (many (Ctor) c) -> (many (List $ Term) tys)
+; One entry per field in declaration order, None where the field is erased: it has no word, so it takes none
+; from the destructure and prints `_` (ASSUMPTIONS 184).
+(def-fns _ $ many field-slots : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Maybe $ Term) r)
+  (match many xs _
+    ((Nil a) (Nil _))
+    ((Cons a x rest)
+      (Cons _ (match many (entry-mult-of env x) (((Maybe $ Term) m))
+                ((Erased) (None _))
+                (else (Some _ $ type-of env x)))
+        $ field-slots env rest))))
+
+(def-fns _ $ many field-types : (many (Env) env) (many (Term) ty) (many (Ctor) c) -> (many (List $ Maybe $ Term) tys)
   (let (many ctele) (many ret) $ ctor-type env $ ctor-id c)
   (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
   (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
-    ((UOk e2) (types-of e2 $ non-erased fids e2))
+    ((UOk e2) (field-slots e2 fids))
     ((UContra msg) (Nil _))))
 
 (def-fns _ $ many type-adt : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Adt) r)
@@ -3090,53 +3098,80 @@
         ((None b) (None _))
         ((Some b info) (match many info _ ((MkMatchInfo mid disc mctors rank) (adt-of env mid))))))))
 
-(def-fns _ $ many show-constructor : (many (Bool) tagged) (many (Ctor) ct) (many (List $ Rope) fields) -> (many (Rope) r)
-  (match many tagged _
-    ((BTrue) (rwrap "(" (rjoin (Cons _ (RStr $ ctor-name ct) fields) " ") ")"))
-    ((BFalse) (match many fields _ ((Nil a) (RStr "_")) ((Cons a x xs) (match many xs _ ((Nil b) x) ((Cons b y ys) (rwrap "(" (rjoin fields " ") ")"))))))))
+; The constructor's name over its fields, without the outer parens: show-at hands those to its caller as the
+; Bool beside the rope, so a last argument that is an application takes `$` instead of its own pair (DESIGN 2).
+(def-fns _ $ many ctor-body : (many (Ctor) ct) (many (List $ Rope) fields) -> (many (Rope) r)
+  (rjoin (Cons _ (RStr $ ctor-name ct) fields) " "))
+
+; The sole non-phantom constructor, where a type has exactly one and so needs no tag (ASSUMPTIONS 184).
+(def-fns _ $ many lone-ctor : (many (Adt) adt) -> (many (Maybe $ Ctor) c)
+  (match many (adt-ctors adt) _
+    ((Nil a) (None _))
+    ((Cons a c more) (match many more (((Maybe $ Ctor) r)) ((Nil b) (Some _ c)) ((Cons b y ys) (None _))))))
 
 (def-fns _
+  ; The rope is the rendering, and the Bool says it is an application body still missing its parens, which is
+  ; what lets a caller write `$` before a last one instead (ASSUMPTIONS 184).
   (many show-at : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) r) (subterm many (Nat) depth)
-      (many (Env) env) (many (Term) ty0) -> (many (Rope) rope)
-    (match many depth _
-      ((Zero) (RStr "?"))
+      (many (Env) env) (many (Term) ty0) -> (many (Rope) rope) (many (Bool) app)
+    (match many depth (((Rope) r0) ((Bool) b0))
+      ((Zero) (values (RStr "_") (BFalse)))
       ((Succ dd)
         (let (many ty) $ canon-env env ty0)
-        (match many (term-eq ty slot-term) _
-          ((BTrue) (RStr "<slot>"))
+        (match many (term-eq ty slot-term) (((Rope) r1) ((Bool) b1))
+          ((BTrue) (values (RStr "_") (BFalse)))
           ((BFalse)
-            (match many ty _
-              ((TCell ctor slots) (RStr "<cell>"))
+            (match many ty (((Rope) r2) ((Bool) b2))
+              ((TCell ctor slots) (values (RStr "_") (BFalse)))
               (else
                 (let (erased rs) (many blk) (erased sf) $ store-read Block hs hp r)
-                (match many (lit-rope _ env ty blk) _
-                  ((Some a text) text)
+                (match many (lit-rope _ env ty blk) (((Rope) r3) ((Bool) b3))
+                  ((Some a text) (values text (BFalse)))
                   ((None a)
-                    (match many (type-adt env ty) _
-                      ((None b) (show-plain _ blk))
+                    (match many (type-adt env ty) (((Rope) r4) ((Bool) b4))
+                      ((None b) (values (RStr "_") (BFalse)))
                       ((Some b adt)
                         (let (erased hs2) (many hp2) (erased le) (many read) $ dispatch _ hp (adt-ext adt) (adt-tagged adt) r)
-                        (match many read _
+                        (match many read (((Rope) r5) ((Bool) b5))
                           ((Some c pair)
-                            (match many pair _
+                            (match many pair (((Rope) r6) ((Bool) b6))
                               ((MkPair x y index fields)
-                                (match many (ctor-at adt index) _
-                                  ((None d) (show-plain _ blk))
-                                  ((Some d ct) (show-constructor (adt-tagged adt) ct $ show-fields _ hp2 dd fields env $ field-types env ty ct))))))
+                                (match many (ctor-at adt index) (((Rope) r7) ((Bool) b7))
+                                  ((None d) (values (RStr "_") (BFalse)))
+                                  ((Some d ct)
+                                    (values (ctor-body ct $ show-fields _ hp2 dd (field-types env ty ct) fields env) (BTrue)))))))
                           ((None c)
-                            (match many (ctor-at adt 0) _
-                              ((None d) (show-plain _ blk))
+                            (match many (lone-ctor adt) (((Rope) r8) ((Bool) b8))
+                              ((None d) (values (RStr "_") (BFalse)))
                               ((Some d ct)
-                                (show-constructor (adt-tagged adt) ct $ show-fields _ hp dd (ctor-fields _ hp (adt-newtype adt) (ctor-arity ct) r) env $ field-types env ty ct))))))))))))))))
+                                (values (ctor-body ct $ show-fields _ hp dd (field-types env ty ct)
+                                          (ctor-fields _ hp (adt-newtype adt) (ctor-arity ct) r) env) (BTrue)))))))))))))))))
 
-  (many show-fields : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (Nat) depth) (subterm many (List $ Ref Block hs) fs)
-      (many (Env) env) (many (List $ Term) tys) -> (many (List $ Rope) rs)
-    (match many fs _
+  ; Walks the declared fields, an erased one taking no word from the destructure; a field that is an application
+  ; takes its own parens, or `$` where it is the last (DESIGN 2, ASSUMPTIONS 184).
+  (many show-fields : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (Nat) depth)
+      (subterm many (List $ Maybe $ Term) tys) (many (List $ Ref Block hs) fs) (many (Env) env) -> (many (List $ Rope) rs)
+    (match many tys _
       ((Nil a) (Nil _))
-      ((Cons a f rest)
-        (let (many fty) (many trest) $ match many tys (((Term) t) ((List $ Term) ts)) ((Nil b) (values (TErr "?") $ Nil _)) ((Cons b ty more) (values ty more)))
-        (let (many text) $ match many depth (((Rope) r)) ((Zero) (RStr "?")) ((Succ dd) (show-at _ hp f dd env fty)))
-        (Cons _ text $ show-fields _ hp depth rest env trest)))))
+      ((Cons a mt rest)
+        (let (many (Rope) shown) (many (List $ Ref Block hs) more)
+          (match many mt (((Rope) r) ((List $ Ref Block hs) l))
+            ((None b) (values (RStr "_") fs))
+            ((Some b t)
+              (match many fs (((Rope) r2) ((List $ Ref Block hs) l2))
+                ((Nil c) (values (RStr "_") fs))
+                ((Cons c f rst)
+                  (let (many body) (many app)
+                    (match many depth (((Rope) r3) ((Bool) b3))
+                      ((Zero) (values (RStr "_") (BFalse)))
+                      ((Succ dd) (show-at _ hp f dd env t))))
+                  (values (match many app (((Rope) r4))
+                            ((BFalse) body)
+                            ((BTrue) (match many rest (((Rope) r5))
+                                       ((Nil e) (RCat (RStr "$ ") body))
+                                       ((Cons e y ys) (rwrap "(" body ")")))))
+                          rst))))))
+        (Cons _ shown $ show-fields _ hp depth rest more env)))))
 
 
 (def-fns _ $ many show-typed : (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) r)
@@ -3148,7 +3183,9 @@
         ((MkEInfo z n m s mi me)
           (match many s _
             ((SDyn z2) (RStr "?"))
-            ((SConst z2 v) (show-at _ hp v 100000 env ty))))))))
+            ((SConst z2 v)
+              (let (many body) (many app) $ show-at _ hp v 100000 env ty)
+              (match many app (((Rope) r)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body)))))))))
 
 (def-fns _ $ many elab-comptime-match : (erased (List $ List $ Nat) ctx) (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (StmtCode ctx ctx) sc)
     (let (many (Env) env) (many (Mult) mode) (many (List $ Raw) tail)
@@ -3800,7 +3837,7 @@
                         (cell-result _ expect env8 (res-with-place (res-of env8 x) (res-place prepared))
                           (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode)
                             (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
-                              (CCellWrite _ (cell-tagged ct) (var-code env8 bctx sid) (cell-slot-writes env8 bctx ids2 0))))))
+                              (CCellWrite _ ct (var-code env8 bctx sid) (cell-slot-writes env8 bctx ids2 0))))))
                       (else (expr-error _ expect env4 "cell-write needs a Cell" "cell-write"))))))
               (else (expr-error _ expect env2 "malformed cell-write" "cell-write"))))))))
 
@@ -3841,7 +3878,7 @@
                                 (let (many outer-expect) expect)
                                 (let (many env6) (many anntele) (many inner-expect) (many bridge) (result-tele sugar ann env5 expect tele demand))
                                 (let (many expect) inner-expect)
-                                (let (many env7) (many pairs) (many restnames) (cell-read-bindings env6 hctx sid (cell-tagged ct) n names slots pos 0))
+                                (let (many env7) (many pairs) (many restnames) (cell-read-bindings env6 hctx sid ct n names slots pos 0))
                                 (let (many env8) (many pairs2)
                                   (match many (mult-is-once mode) (((Env) e) ((List $ Pair (Nat) $ Code hctx many-one) ps))
                                     ((BFalse) (values env7 pairs))
@@ -3895,7 +3932,7 @@
             (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
               (match many writes (((Code bctx many-one) c))
                 ((Nil t) (var-code env7 bctx sid))
-                ((Cons t w rest) (CCellWrite _ (cell-tagged ct) (var-code env7 bctx sid) writes)))))))
+                ((Cons t w rest) (CCellWrite _ ct (var-code env7 bctx sid) writes)))))))
       (else (expr-error _ expect env1 "Cell constructor is not a variable" "cell invocation"))))
 
   (many elab-slot-terms : (subterm many (Nat) sugar) (subterm many (List $ Raw) items) (many (Env) env) ->

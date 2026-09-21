@@ -1,4 +1,4 @@
-; expect: (Cons 7 (Cons 9 (Cons 11 (Nil))))
+; expect: (Cons _ 7 $ Cons _ 9 $ Cons _ 11 $ Nil _)
 ; Index refinement selects a middle runtime tag, both in a body and in run position.
 ; The same rule applies to unions, without changing their runtime representation.
 (def-adts $ Choice : ((Nat) i) -> Type enum

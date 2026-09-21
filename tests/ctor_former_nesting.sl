@@ -1,4 +1,4 @@
-; expect: 0
+; expect: (MkBoxed 0)
 ; A ValCtor's return may name a type constructor bound by any enclosing former, one or two levels out: what
 ; ASSUMPTIONS 80 refuses is only a return headed by the constructor's own field. Here `one` takes a
 ; constructor into a type constructor from its own Fn telescope, and `two` takes a constructor whose field is

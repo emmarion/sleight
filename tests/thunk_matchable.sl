@@ -1,4 +1,4 @@
-; expect: (1 (PS (PZ)))
+; expect: (MkBoth 1 $ PS $ PZ)
 
 (def-adts $ Peano : -> Type
   enum

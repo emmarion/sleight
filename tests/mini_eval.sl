@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/core ../mini/eval
-; expect: (MkEvaled (Cons (VCon 12 (Cons (VCon 11 (Nil)) (Nil))) (Nil)))
+; expect: (MkEvaled _ _ (Cons _ (VCon 12 $ Cons _ (VCon 11 $ Nil _) $ Nil _) $ Nil _) _)
 ; Evaluation in mini/ of a hand-built program: Nat declared as 10 with Zero 11 and Succ 12, a predecessor
 ; function 13 over its parameter 14 matching on Zero and on Succ with field 15, applied to two.
 

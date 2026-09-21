@@ -35,8 +35,8 @@ and code =
   | CLetRec of (id * fn) list * code
   | CMatch of matching
   | CCellAlloc of ctor * code list
-  | CCellWrite of bool * code * (int * code) list
-  | CCellRead of bool * int * code
+  | CCellWrite of ctor * code * (int * code) list
+  | CCellRead of ctor * int * code
   | CAbsurd
 
 (* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
@@ -55,8 +55,8 @@ let map_code f = function
       let branches = List.map (fun (i, ids, b) -> (i, ids, f b)) m.branches in
       CMatch { scrut; shape; branches; default = Option.map f m.default; live = m.live }
   | CCellAlloc (c, ss) -> CCellAlloc (c, List.map f ss)
-  | CCellWrite (tagged, c, ss) -> CCellWrite (tagged, f c, List.map (fun (i,s) -> i, f s) ss)
-  | CCellRead (tagged, i, c) -> CCellRead (tagged, i, f c)
+  | CCellWrite (k, c, ss) -> CCellWrite (k, f c, List.map (fun (i,s) -> i, f s) ss)
+  | CCellRead (k, i, c) -> CCellRead (k, i, f c)
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes c =

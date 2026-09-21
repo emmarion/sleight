@@ -26,6 +26,18 @@ let str_of ~z ~slice ~str = function
 (* The source spelling a printed literal reads back from (lib/literal.ml), shared with extracted programs: a
    character bare where the reader's word syntax admits it, hexadecimal otherwise, and a string escaped the way
    the reader unescapes. A Nat spells as Z.to_string. *)
+(* An application's rendering (ASSUMPTIONS 184): a last argument that is itself an application keeps its own parens
+   off and is written with `$` (DESIGN 2), so a right spine ends in no pile of them. Nothing else a value prints as
+   opens with `(` -- a numeral, a character, a string, `_` and a constructor name all do not -- so the test names an
+   application. One definition serves the interpreter, an extracted program and slc's output, as lit_char does. *)
+let show_app name args =
+  let rec go = function
+    | [ s ] when String.length s > 1 && s.[0] = '(' -> [ "$ " ^ String.sub s 1 (String.length s - 2) ]
+    | s :: rest -> s :: go rest
+    | [] -> []
+  in
+  "(" ^ String.concat " " (name :: go args) ^ ")"
+
 let lit_char c =
   if c = 32 then "#\\space"
   else if c = 10 then "#\\newline"

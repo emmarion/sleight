@@ -265,10 +265,11 @@ let open_tele env ?(word = true) ?names ?mults ?states ?(ids = []) ?meta tele =
   in
   (env, List.rev fresh)
 
-(* Printing a value against its type (section 16's printed final; ASSUMPTIONS 66's printer follows this one).
-   The three literal types print as the literals they read back from (Literal.spell); every other value prints as
-   its constructor over its many fields, the type supplying each field's own type. Total: anything the walk cannot
-   resolve falls back to Value.show's untyped rendering. *)
+(* Printing a value against its type (section 16's printed final; ASSUMPTIONS 184). The three literal types print
+   as the literals they read back from (Literal.spell); a value whose type names a readable Matchable prints as
+   its constructor -- read from the tag where there is one, and the sole non-phantom constructor where there is
+   no choice -- over its fields, each erased one printing as `_`. Everything else prints `_`, so the walk is total
+   and never reaches Value.show's untyped rendering. *)
 let prelude_id env name = Env.lookup { env with scope = env.prelude } name
 
 let nullary env name ty = match (type_head env ty, prelude_id env name) with Some t, Some p -> t = p | _ -> false
@@ -303,44 +304,50 @@ let str_host env loc v =
   go v;
   Buffer.contents buf
 
-(* The constructors whose return type the instance does not refute, each at its discriminant with the types of its
-   many fields, as entering a branch computes them (ASSUMPTIONS 66). *)
-let candidates env loc ty =
-  let of_ctor c =
-    try
-      let ct = ctor_of env loc c in
-      let tele, ret = ctor_type env loc c in
-      let env', fids = open_tele env tele in
-      let env' = merge_opens (unify_force (forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
-      Some (ct.V.index, (ct, env', List.map (type_of env') (non_erased env' fids)))
-    with Contradiction _ | Error _ | Not_found -> None
-  in
+(* The constructor a value prints as (ASSUMPTIONS 184), chosen off the type's opened Matchable and never by
+   refuting candidates: the tag where the type is tagged, else the one non-phantom constructor where the type has
+   exactly one. `adt.ctors` is already the non-phantom list, indexed by discriminant. *)
+let shown_ctor env loc ty v =
   let _, _, cs = find_matchable env loc (Option.get (type_head env ty)) in
-  List.filter_map (fun (_, c) -> match c with Var c -> of_ctor c | _ -> None) cs
+  let of_ctor (_, c) = match c with Var c -> (try Some (ctor_of env loc c) with Contradiction _ | Error _ | Not_found -> None) | _ -> None in
+  match List.filter_map of_ctor cs with
+  | [] -> None
+  | first :: _ ->
+      let adt = first.V.adt in
+      if adt.V.tagged then match V.dispatch adt.V.ext adt.V.tagged v with Some (i, _) -> List.nth_opt adt.V.ctors i | None -> None
+      else ( match adt.V.ctors with [ c ] -> Some c | _ -> None)
 
-(* Each node degrades on its own, as the generated printer's arms do: a type or constructor the walk cannot
-   resolve prints through Value.show rather than discarding the rendering around it. *)
+(* A constructor's fields against an instance of its type, in declaration order with each one's multiplicity, as
+   entering a branch computes them: the unification types the children, it no longer decides the constructor. *)
+let ctor_fields env loc ct ty =
+  let tele, ret = ctor_type env loc ct.V.cid in
+  let env', fids = open_tele env tele in
+  let env' = merge_opens (unify_force (forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
+  (env', List.map (fun x -> ((entry env' x).mult, type_of env' x)) fids)
+
 let rec show_value env loc ty v =
   try
     let ty = canon env ty in
-    if equal ty Prelude.slot_term then "<slot>" else if (match ty with Cell _ -> true | _ -> false) then "<cell>" else
-    if nullary env "Nat" ty then Literal.spell (Literal.Numeral (nat_z env loc v))
+    if equal ty Prelude.slot_term || (match ty with Cell _ -> true | _ -> false) then "_"
+    else if nullary env "Nat" ty then Literal.spell (Literal.Numeral (nat_z env loc v))
     else if nullary env "Char" ty then Literal.spell (Literal.Char (nat_byte env loc v))
     else if nullary env "String" ty then Literal.spell (Literal.Str (str_host env loc v))
     else
-      match v with
-      | V.VCtor _ | V.VTuple _ | V.VExt _ | V.VToken ->
-          let cands = candidates env loc ty in
-          let first = match cands with (_, (c, _, _)) :: _ -> c | [] -> raise Not_found in
-          let i = match V.dispatch first.V.adt.V.ext first.V.adt.V.tagged v with Some (i, _) -> i | None -> first.V.index in
-          let ct, env', tys = List.assoc i cands in
+      match shown_ctor env loc ty v with
+      | None -> "_"
+      | Some ct ->
+          let env', specs = ctor_fields env loc ct ty in
           let _, fs = V.destruct ct v in
-          (* a field's type is the branch env's, where the constructor's telescope was opened *)
-          let shown = List.map2 (fun t f -> show_value env' loc t f) tys fs in
-          if ct.V.adt.V.tagged then "(" ^ String.concat " " (ct.V.cname :: shown) ^ ")"
-          else ( match shown with [] -> "_" | [ one ] -> one | many -> "(" ^ String.concat " " many ^ ")")
-      | v -> V.show v
-  with Contradiction _ | Error _ | Not_found | Invalid_argument _ -> V.show v
+          (* an erased field has no word, so it takes none from the destructure *)
+          let rec args specs fs = match (specs, fs) with
+            | [], _ -> []
+            | (Erased, _) :: rest, fs -> "_" :: args rest fs
+            | (_, t) :: rest, f :: fs -> show_value env' loc t f :: args rest fs
+            | _ :: rest, [] -> "_" :: args rest []
+          in
+          Ffi_core.show_app ct.V.cname (args specs fs)
+  with Contradiction _ | Error _ | Not_found | Invalid_argument _ -> "_"
+
 
 let spread mults values =
   snd (List.fold_left_map (fun vs m -> match (m, vs) with (Many | Unique), v :: rest -> (rest, v) | _ -> (vs, V.VToken)) values mults)
@@ -833,7 +840,7 @@ and elab_special demand tele env expect l sp args =
       let env, slots, writes, wrap = cell_items env pos l slots items in
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
-      (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct.V.adt.tagged, code, writes))))
+      (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct, code, writes))))
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
   | Sp.At, [ List (_, head :: args) ] ->
       let env, h, hcode, wrap = elab_head env pos l head in
@@ -1034,7 +1041,7 @@ and elab_cell_invoke ?(full = false) env expect l h hcode ctor slots args =
     let same = equal (canon env (List.nth slots i)) (canon env (SlotHolds t)) in
     if (full || skip) && not same then error l "at argument %d is not in its slot's location class" (i+1);
     (i+1, if full || skip then writes else (i, List.nth codes i) :: writes)) (0, []) (List.combine params (List.rev acc)) marked in
-  let code = if pos = Erased then V.CErased else if writes = [] then hcode else V.CCellWrite (ct.V.adt.tagged, hcode, List.rev writes) in
+  let code = if pos = Erased then V.CErased else if writes = [] then hcode else V.CCellWrite (ct, hcode, List.rev writes) in
   (env, [{term = App (Var c, List.rev acc); ty = instantiate acc ret; erasure = pos; place = h.place}], wrap code)
 
 and elab_cell_match ?(demand = Fixed) tele env expect l args =
@@ -1062,7 +1069,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let envb, rs, body = elab_body ~tele:ann_tele envb expect l body in
       check_results envb l ann_tele rs;
       let body = match back with None -> body | Some x -> V.CLet ([x], V.CVar sid, body) in
-      let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct.V.adt.tagged, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
+      let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, if pos = Erased then V.CErased else V.CLet ([sid], code, body))

@@ -490,8 +490,8 @@
     (many CLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (erased (List $ Nat) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Nat)) gids ctx) ns) rest) -> (Code ctx ns))
     (many CMatch : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) dflt) (many (List $ Nat) live) -> (Code ctx ns))
     (many CCellAlloc : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (List $ Code ctx many-one) slots) -> (Code ctx many-one))
-    (many CCellWrite : (erased (List $ List $ Nat) ctx) (many (Bool) tagged) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
-    (many CCellRead : (erased (List $ List $ Nat) ctx) (many (Bool) tagged) (many (Nat) index) (many (Code ctx many-one) cell) -> (Code ctx many-one))
+    (many CCellWrite : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
+    (many CCellRead : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Nat) index) (many (Code ctx many-one) cell) -> (Code ctx many-one))
     (many CAbsurd : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
     (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (String) msg) -> (Code ctx ms)))
   (CC : -> Type

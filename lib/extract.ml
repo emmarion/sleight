@@ -100,6 +100,23 @@ let build cx c es =
   | Untagged _ -> tuple es
   | Union -> one_block cx es
 
+let field_match cx c target =
+  let ty, k = match shape c.V.adt with
+    | Tagged ns -> ((if List.length ns > 1 then "yes " ^ narrow cx ns [ c.V.index ] else type_name cx ns), ctor_at cx ns c.V.index)
+    | Union -> let ns = [ c.V.arity ] in (type_name cx ns, ctor_at cx ns 0)
+    | Untagged _ | Ext _ -> assert false in
+  let r = Printf.sprintf "r%d" (stamp cx) in
+  (r, Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> " target ty k r)
+
+let field_write cx c target stores =
+  if stores = [] then "" else
+  let r, head = field_match cx c target in
+  head ^ concat "; " (List.map (fun (i, s) -> Printf.sprintf "%s.f%d <- %s" r i s) stores) ^ ")"
+
+let field_read cx c i target =
+  let r, head = field_match cx c target in
+  Printf.sprintf "%s%s.f%d)" head r i
+
 let cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
   build cx c es
@@ -170,7 +187,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (%s, %d, %d)\n" name backing o n);
           if fresh then Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = %s.(%d) <- %s\n" backing i rhs)) a;
+            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set %s %d %s\n" backing i rhs)) a;
           name)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
@@ -183,7 +200,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
           Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = Obj.set_field %s %d %s\n" name i rhs)) vs;
+            Buffer.add_string cx.fills (Printf.sprintf "let () = %s\n" (field_write cx c name [ (i, rhs) ]))) vs;
           name)
   | _ -> (
       let b = bucket cx v in
@@ -294,13 +311,12 @@ and expr cx scope = function
       in
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CCellAlloc (c, ss) -> cell_block cx c (List.map (expr cx scope) ss)
-  | V.CCellRead (_, i, c) -> Printf.sprintf "(Obj.field %s %d)" (expr cx scope c) i
-  | V.CCellWrite (_, c, ss) ->
-      let n = stamp cx in
-      let name = Printf.sprintf "cell%d" n in
+  | V.CCellRead (k, i, c) -> field_read cx k i (expr cx scope c)
+  | V.CCellWrite (k, c, ss) ->
+      let name = Printf.sprintf "cell%d" (stamp cx) in
       let ss = List.map (fun (i,s) -> i, expr cx scope s) ss in
-      let stores = List.map (fun (i,s) -> Printf.sprintf "Obj.set_field %s %d %s; " name i s) ss in
-      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) (concat "" stores) name
+      let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
+      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) stores name
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =
@@ -397,14 +413,21 @@ let rec show cx env ty =
       let name = Printf.sprintf "show_%d" (List.length !(cx.shows)) and body = ref "" in
       cx.shows := (key, name, body) :: !(cx.shows);
       let adt_of tid = List.find_opt (fun a -> match a.V.ctors with c :: _ -> (try Elab.tid_of env 0 c.cid = tid with _ -> false) | [] -> false) cx.adts in
+      (* one arm: the constructor's name over its fields, an erased one printing as `_` and taking no binder
+         (ASSUMPTIONS 184). The shared Ffi_core.show_app joins them, so `$` reads the same here as in the
+         interpreter rather than being decided again. *)
       let branch a c =
         try
           let tele, ret = Elab.ctor_type env 0 c.V.cid in
           let env', fids = Elab.open_tele env tele in
           let env' = Env.merge_opens (Env.unify_force (Env.forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
-          let many = Elab.non_erased env' fids in
-          let shown = List.mapi (fun i x -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i) many in
-          let text = if a.V.tagged then spaced (quote c.cname :: shown) else match shown with [] -> "\"_\"" | [ s ] -> s | ss -> spaced ss in
+          let rec args i = function
+            | [] -> []
+            | x :: rest when (Env.entry env' x).mult = Erased -> "\"_\"" :: args i rest
+            | x :: rest -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i :: args (i + 1) rest
+          in
+          let text = Printf.sprintf "(Ffi_core.show_app %s [ %s ])" (quote c.V.cname) (concat "; " (args 0 fids)) in
+          ignore a;
           Some (c, fields c, text)
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
       in
@@ -413,20 +436,19 @@ let rec show cx env ty =
          | Some text -> text
          | None -> (
          match ty with
-         | Cell _ -> "\"<cell>\""
-         | t when equal t Prelude.slot_term -> "\"<slot>\""
+         | Cell _ -> "\"_\""
+         | t when equal t Prelude.slot_term -> "\"_\""
          | App (Var tid, _) -> (
              match adt_of tid with
-             | None -> "\"?\""
+             | None -> "\"_\""
              | Some a ->
-                 let arms = List.filter_map (branch a) a.V.ctors in
-                 let arms = match shape a with
-                   | Ext _ | Tagged _ -> arms
-                   | Untagged _ | Union -> (match arms with arm :: _ -> [ arm ] | [] -> []) in
-                 dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"?\""))
-         | Fn _ -> "\"<function ?>\""
-         | ValCtor _ -> "\"<constructor ?>\""
-         | _ -> "\"?\""));
+                 (* the tag where there is one, else the sole non-phantom constructor; a union with several has
+                    no way to choose and prints `_` (ASSUMPTIONS 184) *)
+                 let arms = if a.V.tagged then List.filter_map (branch a) a.V.ctors
+                            else match a.V.ctors with [ c ] -> Option.to_list (branch a c) | _ -> [] in
+                 if arms = [] then "\"_\""
+                 else dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"_\""))
+         | _ -> "\"_\""));
       name
 
 (* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the
@@ -469,8 +491,8 @@ let item cx = function
       let v = Program.adapt_final cx.env ty v in
       let text =
         match (v, Program.final cx.env ty) with
-        | V.VFn cl, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<function " ^ cl.fn.fname ^ ">"))
-        | V.VCtorFn c, Program.Plain -> Printf.sprintf "print_endline %s" (quote ("<constructor " ^ c.cname ^ ">"))
+        (* a function and a bare constructor print `_`, as the type-directed printer gives them (ASSUMPTIONS 184) *)
+        | V.VFn _, Program.Plain | V.VCtorFn _, Program.Plain -> "print_endline \"_\""
         | _, kind -> (
             let e = value cx v in
             match kind with

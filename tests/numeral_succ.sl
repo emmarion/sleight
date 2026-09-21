@@ -1,5 +1,5 @@
 ; needs: list vec
-; expect: (VCons 0 (VCons 0 (VCons 0 (VNil))))
+; expect: (VCons _ _ 0 $ VCons _ _ 0 $ VCons _ _ 0 $ VNil _)
 ; unary mints one rule relating a literal to a floor under that many successors, folding the prelude's
 ; one-step numeral-succ proofs with eq-cong-succ and eq-trans: (unary 5 3) gives 5 is (Succ (Succ 3))
 ; and leaves 4 opaque, so a literal a million above its floor still costs one rule. (unary a) takes

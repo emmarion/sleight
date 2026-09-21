@@ -1,4 +1,4 @@
-; expect: ((Cons #\A (Cons #\space (Cons #\newline (Cons #\tab (Cons #\x01 (Cons #\x28 (Cons #\x29 (Cons #\x3b (Nil))))))))) (Cons "a\"b" (Cons "back\\slash" (Cons "tab\there" (Cons "nl\nhere" (Cons "" (Nil)))))))
+; expect: (MkPair _ _ (Cons _ #\A $ Cons _ #\space $ Cons _ #\newline $ Cons _ #\tab $ Cons _ #\x01 $ Cons _ #\x28 $ Cons _ #\x29 $ Cons _ #\x3b $ Nil _) $ Cons _ "a\"b" $ Cons _ "back\\slash" $ Cons _ "tab\there" $ Cons _ "nl\nhere" $ Cons _ "" $ Nil _)
 ; The spellings a printed Char and String read back from (ASSUMPTIONS 154): a bare character where the
 ; reader's word syntax admits one, the three named ones, and hexadecimal for a control character and for
 ; the delimiters a word cannot hold, which is why they are cut out of a string literal here rather than
