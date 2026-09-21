@@ -3471,9 +3471,6 @@ to look for a guard, are the owner's.
       is already live in the implemented subset
       (`tests/at_slots_force.sl` and the audit's `slot_class_merge`).
     - U13's text needs the two repairs of 167 to elaborate under SUGAR.md 6.
-    - What `array-new` beyond the host's limits does (BUGS.md). What a
-      value of a type with no runtime discriminant prints as was decided
-      at item 184.
     Two clarifications this session read as within the text: an `at`
     return is verified only where U8 lists, and U8's writers were checked
     against every merge site of the at-database, none extra found.
