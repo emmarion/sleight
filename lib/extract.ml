@@ -100,6 +100,23 @@ let build cx c es =
   | Untagged _ -> tuple es
   | Union -> one_block cx es
 
+let field_match cx c target =
+  let ty, k = match shape c.V.adt with
+    | Tagged ns -> ((if List.length ns > 1 then "yes " ^ narrow cx ns [ c.V.index ] else type_name cx ns), ctor_at cx ns c.V.index)
+    | Union -> let ns = [ c.V.arity ] in (type_name cx ns, ctor_at cx ns 0)
+    | Untagged _ | Ext _ -> assert false in
+  let r = Printf.sprintf "r%d" (stamp cx) in
+  (r, Printf.sprintf "(match (Obj.obj %s : %s) with %s %s -> " target ty k r)
+
+let field_write cx c target stores =
+  if stores = [] then "" else
+  let r, head = field_match cx c target in
+  head ^ concat "; " (List.map (fun (i, s) -> Printf.sprintf "%s.f%d <- %s" r i s) stores) ^ ")"
+
+let field_read cx c i target =
+  let r, head = field_match cx c target in
+  Printf.sprintf "%s%s.f%d)" head r i
+
 let cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
   build cx c es
@@ -183,7 +200,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name (cell_block cx c (List.init (Array.length vs) (fun _ -> "(Obj.repr ())"))));
           Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = Obj.set_field %s %d %s\n" name i rhs)) vs;
+            Buffer.add_string cx.fills (Printf.sprintf "let () = %s\n" (field_write cx c name [ (i, rhs) ]))) vs;
           name)
   | _ -> (
       let b = bucket cx v in
@@ -294,13 +311,12 @@ and expr cx scope = function
       in
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CCellAlloc (c, ss) -> cell_block cx c (List.map (expr cx scope) ss)
-  | V.CCellRead (_, i, c) -> Printf.sprintf "(Obj.field %s %d)" (expr cx scope c) i
-  | V.CCellWrite (_, c, ss) ->
-      let n = stamp cx in
-      let name = Printf.sprintf "cell%d" n in
+  | V.CCellRead (k, i, c) -> field_read cx k i (expr cx scope c)
+  | V.CCellWrite (k, c, ss) ->
+      let name = Printf.sprintf "cell%d" (stamp cx) in
       let ss = List.map (fun (i,s) -> i, expr cx scope s) ss in
-      let stores = List.map (fun (i,s) -> Printf.sprintf "Obj.set_field %s %d %s; " name i s) ss in
-      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) (concat "" stores) name
+      let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
+      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) stores name
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =

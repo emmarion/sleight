@@ -1688,9 +1688,6 @@
   (let (many env2) (error-unless env1 (mult-is-many (entry-mult-of env1 id)) "SlotHolds needs a declared non-erased variable"))
   (values (error-when env2 (list-mem-bin (env-signature env2) id) "SlotHolds cannot name a telescope binder; abstract over a Slot instead") id))
 
-(def-fns _ $ many cell-tagged : (many (Ctor) c) -> (many (Bool) tagged)
-  (match many c _ ((MkCtor n id i ar tagged ex shape nt) tagged)))
-
 (def-fns _ $ many cell-slot-codes : (many (Env) env) (many (List $ List $ Nat) ctx)
     (subterm many (List $ Maybe $ Nat) ids) -> (many (List $ Code ctx many-one) codes)
   (match many ids _
@@ -1760,7 +1757,7 @@
             ((BTrue) writes) ((BFalse) (Cons _ (MkPair _ _ index (var-code env2 ctx (term-var term))) writes)))))))))
 
 (def-fns _ $ many cell-read-bindings : (many (Env) env) (many (List $ List $ Nat) ctx)
-    (many (Nat) sid) (many (Bool) tagged) (subterm many (Nat) n) (many (List $ Raw) names)
+    (many (Nat) sid) (many (Ctor) k2) (subterm many (Nat) n) (many (List $ Raw) names)
     (many (List $ Term) slots) (many (Mult) pos) (many (Nat) index) ->
     (many (Env) env2) (many (List $ Pair (Nat) $ Code ctx many-one) pairs) (many (List $ Raw) restnames)
   (match many n _
@@ -1773,8 +1770,8 @@
             ((Nil u) (values (TErr "missing slot") (Nil _))) ((Cons u s ss) (values s ss))))
           (let (many env1) (many id) (bind env (name-or-anon (raw-name name)) (under pos (Many)) slot-term (Some _ slot) coercible-id))
           (let (many env2) (mark-word env1 id (BFalse)))
-          (let (many env3) (many pairs) (many restnames) (cell-read-bindings env2 ctx sid tagged k rest ss pos (Succ index)))
-          (values env3 (Cons _ (MkPair _ _ id (CCellRead _ tagged index (var-code env3 ctx sid))) pairs) restnames))))))
+          (let (many env3) (many pairs) (many restnames) (cell-read-bindings env2 ctx sid k2 k rest ss pos (Succ index)))
+          (values env3 (Cons _ (MkPair _ _ id (CCellRead _ k2 index (var-code env3 ctx sid))) pairs) restnames))))))
 
 (def-fns _ $ many parse-entries-checked : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) (many (Env) env) -> (many (Env) r) (many (List $ SrcEntry root) es)
   (match many subs _
@@ -2309,12 +2306,12 @@
 
       ((CCellAlloc c0 ctor slots)
         (match many (strengthen-list _ _ slots d) _ ((KNo a b e) (None _)) ((KYes a b e slots2 lk) (Some _ $ CCellAlloc _ ctor slots2))))
-      ((CCellWrite c0 tagged cell slots)
+      ((CCellWrite c0 k2 cell slots)
         (match many (strengthen _ _ _ cell d) _
           ((None a) (None _))
-          ((Some a cell2) (match many (strengthen-slots _ _ slots d) _ ((None b) (None _)) ((Some b slots2) (Some _ $ CCellWrite _ tagged cell2 slots2))))))
-      ((CCellRead c0 tagged index cell)
-        (match many (strengthen _ _ _ cell d) _ ((None a) (None _)) ((Some a cell2) (Some _ $ CCellRead _ tagged index cell2))))
+          ((Some a cell2) (match many (strengthen-slots _ _ slots d) _ ((None b) (None _)) ((Some b slots2) (Some _ $ CCellWrite _ k2 cell2 slots2))))))
+      ((CCellRead c0 k2 index cell)
+        (match many (strengthen _ _ _ cell d) _ ((None a) (None _)) ((Some a cell2) (Some _ $ CCellRead _ k2 index cell2))))
       ((CAbsurd c0 ms2) (Some _ $ CAbsurd _ ms2))
       ((CError c0 ms2 m) (Some _ $ CError _ ms2 m))))
   (many strengthen-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r)
@@ -2453,8 +2450,8 @@
       ((CCellAlloc c0 ctor slots)
         (let (many slots2) (erased lk) $ norm-list _ _ slots ren)
         (CCellAlloc _ ctor slots2))
-      ((CCellWrite c0 tagged cell slots) (CCellWrite _ tagged (norm _ _ many-one cell ren) $ norm-slots _ _ slots ren))
-      ((CCellRead c0 tagged index cell) (CCellRead _ tagged index $ norm _ _ many-one cell ren))
+      ((CCellWrite c0 k2 cell slots) (CCellWrite _ k2 (norm _ _ many-one cell ren) $ norm-slots _ _ slots ren))
+      ((CCellRead c0 k2 index cell) (CCellRead _ k2 index $ norm _ _ many-one cell ren))
       ((CAbsurd c0 ms2) (CAbsurd _ ms2))
       ((CError c0 ms2 m) (CError _ ms2 m))))
   (many norm-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Ren from ctx) ren) -> (many (List $ Code ctx many-one) r) (erased (Lockstep (Code from many-one) (Code ctx many-one) cs r) lock)
@@ -2542,8 +2539,8 @@
       ((CCellAlloc c0 ctor slots)
         (let (many ss) (erased lk) $ distribute-list ctx slots)
         (CCellAlloc _ ctor ss))
-      ((CCellWrite c0 tagged cell slots) (CCellWrite _ tagged (distribute ctx many-one cell) $ distribute-slots ctx slots))
-      ((CCellRead c0 tagged index cell) (CCellRead _ tagged index $ distribute ctx many-one cell))
+      ((CCellWrite c0 k2 cell slots) (CCellWrite _ k2 (distribute ctx many-one cell) $ distribute-slots ctx slots))
+      ((CCellRead c0 k2 index cell) (CCellRead _ k2 index $ distribute ctx many-one cell))
       (else code)))
   (many distribute-list : (many (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) codes) ->
       (many (List $ Code ctx many-one) r) (erased (Lockstep (Code ctx many-one) (Code ctx many-one) codes r) lk)
@@ -2595,8 +2592,8 @@
       ((CApp c0 ms2 f args cc) (or (cc-marked cc only) $ or (has-marked _ _ f only) $ has-marked-list _ args only))
 
       ((CCellAlloc c0 ctor slots) (has-marked-list _ slots only))
-      ((CCellWrite c0 tagged cell slots) (or (has-marked _ _ cell only) $ has-marked-slots _ slots only))
-      ((CCellRead c0 tagged index cell) (has-marked _ _ cell only))
+      ((CCellWrite c0 k2 cell slots) (or (has-marked _ _ cell only) $ has-marked-slots _ slots only))
+      ((CCellRead c0 k2 index cell) (has-marked _ _ cell only))
       ((CValues c0 ms2 cs pk) (has-marked-list _ cs only))
       ((CLet c0 ms2 ns ids pk rhs rest) (or (has-marked _ _ rhs only) $ has-marked _ _ rest only))
       ((CLetRec c0 ns gids g rest) (has-marked _ _ rest only))
@@ -2639,8 +2636,8 @@
                           $ match many dfl (((Bool) b)) ((Some a d) (tails-ok _ _ d direct)) ((None a) (BTrue))))))))
 
       ((CCellAlloc c0 ctor slots) (not $ has-marked-list _ slots $ BFalse))
-      ((CCellWrite c0 tagged cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
-      ((CCellRead c0 tagged index cell) (not $ has-marked _ _ cell $ BFalse))
+      ((CCellWrite c0 k2 cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
+      ((CCellRead c0 k2 index cell) (not $ has-marked _ _ cell $ BFalse))
       ((CValues c0 ms2 cs pk) (not $ has-marked-list _ cs $ BFalse)) (else (BTrue))))
   (many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r)
     (match many bs _
@@ -3795,7 +3792,7 @@
                         (cell-result _ expect env8 (res-with-place (res-of env8 x) (res-place prepared))
                           (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode)
                             (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
-                              (CCellWrite _ (cell-tagged ct) (var-code env8 bctx sid) (cell-slot-writes env8 bctx ids2 0))))))
+                              (CCellWrite _ ct (var-code env8 bctx sid) (cell-slot-writes env8 bctx ids2 0))))))
                       (else (expr-error _ expect env4 "cell-write needs a Cell" "cell-write"))))))
               (else (expr-error _ expect env2 "malformed cell-write" "cell-write"))))))))
 
@@ -3836,7 +3833,7 @@
                                 (let (many outer-expect) expect)
                                 (let (many env6) (many anntele) (many inner-expect) (many bridge) (result-tele sugar ann env5 expect tele demand))
                                 (let (many expect) inner-expect)
-                                (let (many env7) (many pairs) (many restnames) (cell-read-bindings env6 hctx sid (cell-tagged ct) n names slots pos 0))
+                                (let (many env7) (many pairs) (many restnames) (cell-read-bindings env6 hctx sid ct n names slots pos 0))
                                 (let (many env8) (many pairs2)
                                   (match many (mult-is-once mode) (((Env) e) ((List $ Pair (Nat) $ Code hctx many-one) ps))
                                     ((BFalse) (values env7 pairs))
@@ -3890,7 +3887,7 @@
             (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
               (match many writes (((Code bctx many-one) c))
                 ((Nil t) (var-code env7 bctx sid))
-                ((Cons t w rest) (CCellWrite _ (cell-tagged ct) (var-code env7 bctx sid) writes)))))))
+                ((Cons t w rest) (CCellWrite _ ct (var-code env7 bctx sid) writes)))))))
       (else (expr-error _ expect env1 "Cell constructor is not a variable" "cell invocation"))))
 
   (many elab-slot-terms : (subterm many (Nat) sugar) (subterm many (List $ Raw) items) (many (Env) env) ->

@@ -3216,6 +3216,16 @@ to look for a guard, are the owner's.
     dummy-word/fresh-allocation requirement and extra-tag layout were unnecessary
     assumptions, corrected following the owner's clarification. Held extern
     Matchables expose the same ordinary tagged constructor layout.
+    A store into such a block goes through the constructor's own pattern rather
+    than `Obj.set_field`, at the owner's direction: the block is read at its
+    constructor's type, narrowed to that one discriminant where the type is
+    tagged, so the match binding the record has no other arm; whether the host
+    then tests the tag is the session's expectation from the narrowing, not
+    something it measured. Reading a cell's slot is the same match. The session's reading, not the owner's, is that this is what the
+    `mutable` marks were always for, a store through `Obj` into a block the host
+    may treat as constant being the thing they rule out. An array block is a host
+    array, so its back-patch is an ordinary element write. Both emitters do this
+    and neither writes `Obj.set_field` or `Obj.field` any more.
 
 163. Captured mutable blocks are emitted by assigning each an identity before
     following its fields, then filling those fields. This is intended to preserve

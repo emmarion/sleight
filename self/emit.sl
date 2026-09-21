@@ -703,23 +703,44 @@
 
 
 
-(def-fns _ $ many cell-index : (many (Bool) tagged) (many (Nat) index) -> (many (Nat) r)
-  index)
+(def-fns _ $ many cell-view : (many (Decls) d) (many (Ctor) c) -> (many (String) ty) (many (String) k)
+  (match many (ctor-tagged c) _
+    ((BTrue)
+      (let (many shape) $ ctor-shape c)
+      (let (many k) $ ctor-name-at d shape $ ctor-index c)
+      (match many (nat-lt (Succ (Zero)) $ list-length _ shape) (((String) ty) ((String) k2))
+        ((BTrue) (values (str-cat "yes " $ narrow-name d shape $ live-key $ Cons _ (ctor-index c) $ Nil _) k))
+        ((BFalse) (values (shape-name d shape) k))))
+    ((BFalse)
+      (let (many shape) $ Cons _ (ctor-arity c) $ Nil _)
+      (values (shape-name d shape) $ ctor-name-at d shape (Zero)))))
 
-(def-fns _ $ many cell-stores : (subterm many (List $ Nat) indices) (many (List $ Rope) args) (many (Bool) tagged) (many (Rope) cell) -> (many (Rope) r)
+(def-fns _ $ many field-writes : (subterm many (List $ Nat) indices) (many (List $ Rope) args) (many (String) r) -> (many (List $ Rope) ws)
   (match many indices _
-    ((Nil a) cell)
+    ((Nil a) (Nil _))
     ((Cons a i rest)
       (match many args _
-        ((Nil b) (RStr "(absurd ())"))
+        ((Nil b) (Nil _))
         ((Cons b arg more)
-          (rcat5 (RStr "(Obj.set_field ") cell (rcat3 (RStr " ") (nat-rope $ cell-index tagged i) $ RStr " ") arg $ rcat3 (RStr "; ") (cell-stores rest more tagged cell) $ RStr ")"))))))
+          (Cons _ (rcat3 (RStr $ str-cat3 r ".f" $ nat-str i) (RStr " <- ") arg) $ field-writes rest more r))))))
 
-(def-fns _ $ many cell-write-rope : (many (Bool) tagged) (many (Rope) cell) (many (List $ Nat) indices) (many (List $ Rope) args) (many (Nat) depth) -> (many (Rope) r)
+(def-fns _ $ many field-match-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (String) r) -> (many (Rope) w)
+  (let (many ty) (many k) $ cell-view d c)
+  (rcat3 (RStr "(match (Obj.obj ") target $ RStr $ str-cat3 " : " ty $ str-cat3 ") with " k $ str-cat3 " " r " -> "))
+
+(def-fns _ $ many field-store-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (List $ Nat) indices) (many (List $ Rope) args) (many (String) r) -> (many (Rope) w)
+  (rcat3 (field-match-rope d c target r) (rjoin (field-writes indices args r) "; ") $ RStr ")"))
+
+(def-fns _ $ many field-read-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (Nat) index) (many (String) r) -> (many (Rope) w)
+  (rcat3 (field-match-rope d c target r) (RStr $ str-cat3 r ".f" $ nat-str index) $ RStr ")"))
+
+(def-fns _ $ many cell-write-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) cell) (many (List $ Nat) indices) (many (List $ Rope) args) (many (Nat) depth) -> (many (Rope) r)
   (let (many prefix) $ str-cat "cell" $ nat-str depth)
   (let (many cr) $ RStr prefix)
   (let (many names) (many binds) $ bind-args prefix args 0)
-  (let (many stores) $ cell-stores indices names tagged cr)
+  (let (many stores) $ match many indices (((Rope) r))
+    ((Nil a) cr)
+    ((Cons a x y) (rcat3 (field-store-rope d c cr indices names $ str-cat prefix "_r") (RStr "; ") cr)))
   (let (many body) $ match many binds (((Rope) r)) ((Nil a) stores) ((Cons a b rest) (rcat5 (RStr "(let ") (rjoin binds " in let ") (RStr " in ") stores $ RStr ")")))
   (rcat5 (RStr "(let ") cr (rcat3 (RStr " = ") cell $ RStr " in ") body $ RStr ")"))
 
@@ -770,11 +791,11 @@
           ((ShNone c1) (default-rope dr))))
 
       ((CCellAlloc c0 ctor slots) (plain-build d ctor $ emit-codes _ slots env ns d))
-      ((CCellWrite c0 tagged cell slots)
+      ((CCellWrite c0 k2 cell slots)
         (let (many indices) (many args) $ emit-slots _ slots env ns d)
-        (cell-write-rope tagged (emit-code _ _ cell env ns d) indices args $ names-depth _ ns))
-      ((CCellRead c0 tagged index cell)
-        (rcat5 (RStr "(Obj.field ") (emit-code _ _ cell env ns d) (RStr " ") (nat-rope $ cell-index tagged index) $ RStr ")"))
+        (cell-write-rope d k2 (emit-code _ _ cell env ns d) indices args $ names-depth _ ns))
+      ((CCellRead c0 k2 index cell)
+        (field-read-rope d k2 (emit-code _ _ cell env ns d) index $ str-cat3 "cell" (nat-str $ names-depth _ ns) "_r"))
       ((CAbsurd c0 ms2) (RStr "(absurd ())"))
       ((CError c0 ms2 m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
@@ -846,6 +867,15 @@
       ((BTrue) d)
       ((BFalse) (decl-shape d $ Cons _ (ctor-arity c) $ Nil _))))))
 
+(def-fns _ $ many collect-cell : (many (Ctor) c) (many (Decls) d) -> (many (Decls) r)
+  (match many (ctor-tagged c) _
+    ((BTrue)
+      (let (many shape) $ ctor-shape c)
+      (match many (nat-lt (Succ (Zero)) $ list-length _ shape) (((Decls) r))
+        ((BTrue) (decl-narrow d shape $ live-key $ Cons _ (ctor-index c) $ Nil _))
+        ((BFalse) (decl-shape d shape))))
+    ((BFalse) (collect-ctor c d))))
+
 (def-fns _ $ many collect-ctors : (subterm many (List $ Ctor) cs) (many (Decls) d) -> (many (Decls) r)
   (match many cs _
     ((Nil a) d)
@@ -875,8 +905,8 @@
       ((CValues c0 ms2 cs pk) (collect-codes _ cs env d))
       ((CApp c0 ms2 f args cc) (collect-codes _ args env $ collect-code _ _ f env d))
       ((CCellAlloc c0 ctor slots) (collect-codes _ slots env $ collect-ctor ctor d))
-      ((CCellWrite c0 tagged cell slots) (collect-slots _ slots env $ collect-code _ _ cell env d))
-      ((CCellRead c0 tagged index cell) (collect-code _ _ cell env d))
+      ((CCellWrite c0 k2 cell slots) (collect-slots _ slots env $ collect-code _ _ cell env $ collect-cell k2 d))
+      ((CCellRead c0 k2 index cell) (collect-code _ _ cell env $ collect-cell k2 d))
       ((CLet c0 ms2 ns2 ids pk rhs rest) (collect-code _ _ rest env $ collect-code _ _ rhs env d))
       ((CLetRec c0 ns2 gids g rest) (match many g _ ((MkGroup c1 ids fns lk) (collect-code _ _ rest env $ collect-group _ _ fns env d))))
       ((CMatch c0 ns2 scrut shape branches dfl live)
@@ -922,7 +952,7 @@
 
   (many collect-block : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r)
     (match many b _
-      ((BTag z c fields) (collect-ctor c d))
+      ((BTag z c fields) (collect-cell c d))
       ((BCtorFn z c) (collect-ctor c d))
       ((BMat z adt) (collect-adt adt d))
       ((BGroup z gids ctx g env2) (match many g _ ((MkGroup c1 ids fns lk) (collect-group _ _ fns env d))))
@@ -1050,11 +1080,19 @@
 (def-fns _ $ many blank-words : (subterm many (Nat) n) -> (many (List $ Rope) r)
   (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ (RStr "(Obj.repr ())") $ blank-words k))))
 
-(def-fns _ $ many block-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fields) (many (Rope) at) (many (Nat) index) -> (many (Rope) r)
+(def-fns _ $ many block-stores : (erased (Hist Block) hs) (many (Decls) d) (many (Ctor) c) (subterm many (List $ Ref Block hs) fields) (many (Rope) at) (many (Nat) index) -> (many (Rope) r)
   (match many fields _
     ((Nil a) (REmpty))
     ((Cons a f rest)
-      (rcat5 (RStr "let () = Obj.set_field ") at (rcat3 (RStr " ") (nat-rope index) $ RStr " ") (addr-rope _ f) $ rcat (RStr "\n") $ block-stores _ rest at $ Succ index))))
+      (rcat3 (RStr "let () = ")
+        (field-store-rope d c at (Cons _ index $ Nil _) (Cons _ (addr-rope _ f) $ Nil _) "bf")
+        $ rcat (RStr "\n") $ block-stores _ d c rest at $ Succ index))))
+
+(def-fns _ $ many array-stores : (erased (Hist Block) hs) (subterm many (List $ Ref Block hs) fields) (many (Rope) at) (many (Nat) index) -> (many (Rope) r)
+  (match many fields _
+    ((Nil a) (REmpty))
+    ((Cons a f rest)
+      (rcat5 (RStr "let () = (Obj.obj ") at (rcat3 (RStr " : Obj.t array).(") (nat-rope index) $ RStr ") <- ") (addr-rope _ f) $ rcat (RStr "\n") $ array-stores _ rest at $ Succ index))))
 
 (def-fns _ $ many emit-blocks : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) order)
     (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (Rope) fills)
@@ -1066,10 +1104,10 @@
       (match many blk _
         ((BTag z c fields)
           (let (many skeleton) $ rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = ") (plain-build d c $ blank-words $ list-length _ fields) $ RStr "\n")
-          (values (rcat skeleton before) middle $ rcat (block-stores _ fields (addr-rope _ at) 0) after))
+          (values (rcat skeleton before) middle $ rcat (block-stores _ d c fields (addr-rope _ at) 0) after))
         ((BArrayData z fields)
           (let (many skeleton) $ rcat5 (RStr "let ") (addr-rope _ at) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope $ list-length _ fields) $ RStr " (Obj.repr ()))\n")
-          (values (rcat skeleton before) middle $ rcat (block-stores _ fields (addr-rope _ at) 0) after))
+          (values (rcat skeleton before) middle $ rcat (array-stores _ fields (addr-rope _ at) 0) after))
         (else (values before (rcat (block-let _ at _ blk env d) middle) after))))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match

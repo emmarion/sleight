@@ -833,7 +833,7 @@ and elab_special demand tele env expect l sp args =
       let env, slots, writes, wrap = cell_items env pos l slots items in
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
-      (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct.V.adt.tagged, code, writes))))
+      (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct, code, writes))))
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
   | Sp.At, [ List (_, head :: args) ] ->
       let env, h, hcode, wrap = elab_head env pos l head in
@@ -1029,7 +1029,7 @@ and elab_cell_invoke ?(full = false) env expect l h hcode ctor slots args =
     let same = equal (canon env (List.nth slots i)) (canon env (SlotHolds t)) in
     if (full || skip) && not same then error l "at argument %d is not in its slot's location class" (i+1);
     (i+1, if full || skip then writes else (i, List.nth codes i) :: writes)) (0, []) (List.combine params (List.rev acc)) marked in
-  let code = if pos = Erased then V.CErased else if writes = [] then hcode else V.CCellWrite (ct.V.adt.tagged, hcode, List.rev writes) in
+  let code = if pos = Erased then V.CErased else if writes = [] then hcode else V.CCellWrite (ct, hcode, List.rev writes) in
   (env, [{term = App (Var c, List.rev acc); ty = instantiate acc ret; erasure = pos; place = h.place}], wrap code)
 
 and elab_cell_match ?(demand = Fixed) tele env expect l args =
@@ -1057,7 +1057,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let envb, rs, body = elab_body ~tele:ann_tele envb expect l body in
       check_results envb l ann_tele rs;
       let body = match back with None -> body | Some x -> V.CLet ([x], V.CVar sid, body) in
-      let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct.V.adt.tagged, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
+      let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, if pos = Erased then V.CErased else V.CLet ([sid], code, body))
