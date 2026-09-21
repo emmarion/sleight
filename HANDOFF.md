@@ -392,3 +392,42 @@ Open, in the session's estimation, none of it decided:
   argument, in a match scrutinee, so `(nat-cmp 200000 200000)` alone
   overflows `slc`'s stack. Pre-existing and untouched here, and the one
   thing that bit the session while testing.
+
+## IO over UniqueFn, and `slc --interpret` (one session, autonomous)
+
+Done, at the owner's request, both halves: the prelude's `IO`
+continuations are `UniqueFn`s and its requests unique (ASSUMPTIONS 185,
+186), and `slc` takes `--interpret` and performs the program itself
+(ASSUMPTIONS 188, `self/interp.sl`). Every `tests/io_*.sl` was rewritten
+to the new shape, `self/main.sl` with them, and `self/bootstrap.sh`
+gained an interpret pass over every test. Two things a later session
+should know:
+
+- `test/runtest.ml` now extracts before it runs a test's final
+  (ASSUMPTIONS 187): the first run of `tests/io_unique_state.sl` exited
+  6 in the extracted program because the interpreter's run had already
+  counted the lines into the Const it embeds.
+- `self/base.sl`'s `Pair` is gone, the prelude's being used throughout
+  `self/` (ASSUMPTIONS 188); the sources did not otherwise change.
+
+Open, none of it decided:
+
+1. Whether DESIGN.md section 16 should record that the driver consumes
+   an `IO` value at unique (186), and whether U6 should mention that the
+   driver's application of a continuation is the one use a request's
+   `UniqueFn` gets.
+2. A prelude wrapper from an `Fn` at a lower level to a `UniqueFn`
+   (185) would shorten the tests' `(def-unique P $ unique start ...)`
+   lines; left out for now.
+3. `bench/bench.sh`'s pinned sources predate this change too (the
+   earlier note above), so the benchmark still needs re-pinning.
+4. A discrepancy between `slc` and the reference, worked around and
+   not reduced: in `self/interp.sl`'s `interp-io`, `(le-refl h1)`
+   written as an erased argument of `applied` inside a `def-unique` at
+   `io-lvl`, `h1` the erased history from the `destruct` before it, was
+   accepted by the reference and refused by `slc` compiling `slc` with
+   "`_134395` was not in scope when level io-lvl was minted". Binding
+   the proof once outside the closures (`le0`) satisfies both. Two
+   smaller programs of the same shape, an erased call on an erased
+   `let` binder inside a later-level `def-unique`, are accepted by
+   both, so the trigger is finer than that.

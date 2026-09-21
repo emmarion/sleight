@@ -3553,8 +3553,8 @@ to look for a guard, are the owner's.
 
 Asked for by the owner in chat, as two tasks for one autonomous session:
 switch `IO` to use `UniqueFn`, then give `slc` an interpret option in
-place of emitting OCaml (item 188). The shapes below are the session's,
-made without the owner.
+place of emitting OCaml. The shapes below are the session's, made
+without the owner.
 
 185. **`IO` continuations are `UniqueFn`s and requests are unique.**
     Every constructor but `Exit` carries `(unique (UniqueFn L ... ->
@@ -3615,3 +3615,45 @@ made without the owner.
     the deferred final. Not a defect in the language on the session's
     reading: the Const was consumed by the definition that captured it,
     and nothing reads it afterwards.
+
+188. **`slc --interpret`** performs the elaborated program's finals in
+    place of writing them out (`self/interp.sl`), each as
+    `lib/program.ml`'s `consume` has it and in file order. An `IO` final
+    is walked one request at a time: each request of the program becomes
+    the same request of slc's own driver, whose continuation allocates
+    the answer into the compile-time store -- a `String` as the FFI's
+    payload, a `Maybe`, `Result`, `List`, `Pair`, `Unit`, `EntryKind` or
+    `Change` through the prelude's constructors, found as the emitter
+    finds them -- applies the program's continuation with `self/eval.sl`'s
+    `apply` under the usual fuel, and walks the request that comes back;
+    `Exit` exits slc with the code. A plain value and a thunk's result
+    print through the compile-time printer (154), a `String -> String`
+    function is applied to what `ReadRemaining` answers, and an `at`
+    return is read from the argument or the captured Const as
+    `adapt_final` does (159). The interpreted program's arguments follow
+    a `--` among slc's own; its environment, working directory and stdin
+    are slc's. Two shapes the checker imposed: walking a request and
+    applying its continuation cannot be two functions at one level
+    calling each other, so the application sits in the `def-unique` each
+    request's continuation is, which applies and then walks; and a
+    continuation's parameter type must name the prelude's `Pair` for
+    `GetEnvs`, which `self/base.sl`'s shadowing `Pair`, the same shape
+    under another declaration, made unnameable, so that declaration is
+    gone. `self/bootstrap.sh` runs every test a third time this way and
+    compares it with the reference as it does the compiled program.
+
+    Three things that pass turned up. The evaluator's fuel is 1000000000
+    where it was 1000000 (150 left raising it open): the million-step
+    tail loop of `tests/extern_tail.sl` ran out under `--interpret`,
+    where neither the reference nor the compiled program has a bound.
+    A value the interpreter hands back as an error block, running out of
+    fuel among them, is reported as a runtime error on stderr with exit
+    code 1, as the reference's is, wherever a final or a request is read,
+    where the printer had rendered it silently. And the compile-time
+    printer printed a nested field's constructor without its fields
+    where the field's type names the outer value's indices
+    (`tests/numeral.sl`'s `Vec`), reading that type in the environment
+    from before the unification that minted its variables;
+    `field-types` now hands that environment back, as `show_value`
+    passes its own down. The `comptime-match` message was its only
+    reader before, and no test reached it with such a value.

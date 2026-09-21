@@ -5,14 +5,15 @@
 #      with a message mentioning that text; any other is built (to bytecode, the faster compile) and run with
 #      the test's stdin and arguments, and its stdout, stderr and exit code compared with the reference
 #      interpreter's on the same files; the extern, thunk, main, char and nat tests are compiled again with
-#      --no-templates (ASSUMPTIONS 133);
+#      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
+#      the program in place of writing it out, and compared the same way;
 #   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
-SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/main.sl"
+SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 REF=_build/default/bin/main.exe
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 OCB="ocamlfind ocamlc -custom -package zarith,unix -linkpkg"
@@ -51,6 +52,13 @@ check_test() {
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program
   (cd "$B" && env -i $envs "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  if [ "$flags" = --interpret ]; then
+    # slc elaborates and performs the program in one process, as the reference does, so its warnings land in
+    # the same stderr and are filtered from both below
+    (cd "$B" && env -i $envs "$B/slc" -- --interpret $(for f in lib/prelude.sl $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
+    check_warns "$t" "$name" || return
+    grep -v '^warning (line ' "$B/$name.slc.err" > "$B/$name.err" || true
+  else
   if ! "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
@@ -59,6 +67,7 @@ check_test() {
   fi
   check_warns "$t" "$name" || return
   (cd "$B" && env -i $envs "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
+  fi
   # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
   # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
   grep -v '^warning (line ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
@@ -76,9 +85,10 @@ echo "== extracting slc with the reference extractor"
 $REF $SL --extract "$B/slc.ml" || exit 1
 $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
 
-echo "== compiling the tests with slc, and the extern, thunk, main, char and nat tests again with --no-templates"
+echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
 { for t in tests/*.sl; do echo "$t - -"; done
   for t in tests/extern_*.sl tests/thunk_*.sl tests/main_*.sl tests/char*.sl tests/nat_*.sl; do echo "$t --no-templates _view"; done
+  for t in tests/*.sl; do echo "$t --interpret _interp"; done
 } | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")

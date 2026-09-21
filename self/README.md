@@ -53,7 +53,7 @@ host (section 41); a `U8` or a
 
 ## Files
 
-- `base.sl` — booleans, pairs, `Nat`/`Char`/`String` helpers over the
+- `base.sl` — booleans, `Nat`/`Char`/`String` helpers over the
   prelude's externs, a trie map over `Nat` identifiers walked by the
   prelude's `Half`, a trie map keyed by names, list helpers, and helpers
   over the prelude's `Rope` (ASSUMPTIONS 122). Since ASSUMPTIONS 121 its deciders and lookups return evidence: the
@@ -108,6 +108,11 @@ host (section 41); a `U8` or a
   collecting the shapes and narrowings a program needs, the blocks and
   groups as OCaml, the driver's operations, and a generated printer
   per type for a final function's result.
+- `interp.sl` — the `--interpret` mode (ASSUMPTIONS 188): a program's
+  finals performed by slc itself, an `IO` value's requests becoming
+  slc's own with the answers allocated into the store and the program's
+  continuations applied by `eval.sl`, and the other finals printed by
+  the compile-time printer.
 - `main.sl` — the entry point, an `IO` program (ASSUMPTIONS 56).
 - `bootstrap.sh` — builds and checks everything, below.
 
@@ -118,6 +123,7 @@ dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
 _build/self/slc -- lib/prelude.sl tests/list.sl > list.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
+_build/self/slc -- --interpret lib/prelude.sl tests/io_echo.sl -- arg1 arg2
 ```
 
 `slc` takes the files to compile as its program arguments, the prelude
@@ -127,9 +133,11 @@ with exit code 1. The compiled program takes its own arguments after
 `--` and behaves as `lib/program.ml` would: a final `String -> String`
 function runs over stdin, an `IO` value is performed, a function from
 no arguments is applied and its result printed, and any other value is
-printed.
+printed. Under `--interpret` slc does the same itself instead of
+writing the program out (`interp.sl`), the interpreted program's
+arguments following a `--` after the files.
 
-`self/bootstrap.sh` does three things. It extracts `slc` to a native
+`self/bootstrap.sh` does four things. It extracts `slc` to a native
 binary with the reference extractor (`--extract`), since running the
 compiler under the reference *interpreter* takes seconds per file where
 the native binary takes milliseconds. It compiles every `tests/*.sl`
@@ -137,7 +145,9 @@ with that binary, the tests in parallel: a test with an `; error:` directive mus
 with a message mentioning the text, and any other is built (to bytecode,
 whose compiler is the faster one at that size) and run with
 the test's stdin and arguments, its stdout, stderr and exit code
-compared with the reference interpreter run on the same files. And it compiles `slc` with
+compared with the reference interpreter run on the same files. It runs
+every test again under `slc --interpret` and compares it the same way.
+And it compiles `slc` with
 `slc`, then compiles `slc` again with the compiler that produced, and
 requires the two outputs to be byte-for-byte identical, which is the
 self-hosting fixpoint. At the time of writing all 151 runnable tests

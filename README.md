@@ -31,6 +31,7 @@ self/bootstrap.sh
 dune exec bin/shape.exe -- tests/list.sl
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg echo.ml -o echo && ./echo
+_build/self/slc -- --interpret lib/prelude.sl tests/io_echo.sl
 ```
 
 Files given on one command line share a scope, in order; with no file
@@ -72,7 +73,9 @@ typed OCaml.
 
 `self/bootstrap.sh` extracts the self-hosted compiler with the reference
 extractor, compiles every `tests/*.sl` with it and compares what each program
-does with the interpreter on the same files, then compiles the compiler with
+does with the interpreter on the same files, runs every test again under
+`slc --interpret`, which performs the program itself in place of writing
+it out (`self/interp.sl`), then compiles the compiler with
 itself and again with that result and requires the two outputs to be identical
 (`self/README.md`). `bin/shape` reports where a file's forms open and close:
 `shape file` lists every form spanning more than one line with the line it

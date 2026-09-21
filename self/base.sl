@@ -1,4 +1,4 @@
-; self/base.sl -- foundations for the self-hosted compiler (self/README.md): booleans, pairs, orders and
+; self/base.sl -- foundations for the self-hosted compiler (self/README.md): booleans, orders and
 ; their decisions, Nat/Char/String helpers over the prelude's externs, Nat identifiers and a trie map over them, a
 ; trie map keyed by names, list helpers and a rope of output chunks. Everything here is plain SL checked
 ; by the reference interpreter; nothing is settled design.
@@ -7,11 +7,6 @@
   enum
   (many BTrue : -> (Bool))
   (many BFalse : -> (Bool)))
-
-(def-adts
-  (Pair : (Type A) (Type B) -> Type
-    enum
-    (many MkPair : (erased Type A) (erased Type B) (many A fst) (many B snd) -> (Pair A B))))
 
 (def-fns _ $ many not : (many (Bool) b) -> (many (Bool) r)
   (match many b _ ((BTrue) (BFalse)) ((BFalse) (BTrue))))

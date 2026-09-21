@@ -818,7 +818,7 @@
       ((BError z m) (error-vals _ hp ms m))
       (else (error-vals _ hp ms "cannot apply a value that is not a function")))))
 
-(let (many eval-fuel) 1000000)
+(let (many eval-fuel) 1000000000)
 
 (def-fns _ $ many run-code : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (erased (List $ Mult) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk)
   (eval eval-fuel _ hp _ _ code $ MkSt _ _ cs $ FrNil _))

@@ -3106,12 +3106,14 @@
                 (else (Some _ $ type-of env x)))
         $ field-slots env rest))))
 
-(def-fns _ $ many field-types : (many (Env) env) (many (Term) ty) (many (Ctor) c) -> (many (List $ Maybe $ Term) tys)
+; The fields' types in the environment the unification refined, which a nested field's own printing reads
+; them in (lib/elab.ml's show_value passes its env' down).
+(def-fns _ $ many field-types : (many (Env) env) (many (Term) ty) (many (Ctor) c) -> (many (Env) e) (many (List $ Maybe $ Term) tys)
   (let (many ctele) (many ret) $ ctor-type env $ ctor-id c)
   (let (many envb) (many fids) (erased lock) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
   (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
-    ((UOk e2) (field-slots e2 fids))
-    ((UContra msg) (Nil _))))
+    ((UOk e2) (values e2 (field-slots e2 fids)))
+    ((UContra msg) (values env (Nil _)))))
 
 (def-fns _ $ many type-adt : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Adt) r)
   (match many (type-head env ty) _
@@ -3163,13 +3165,15 @@
                                 (match many (ctor-at adt index) (((Rope) r7) ((Bool) b7))
                                   ((None d) (values (RStr "_") (BFalse)))
                                   ((Some d ct)
-                                    (values (ctor-body ct $ show-fields _ hp2 dd (field-types env ty ct) fields env) (BTrue)))))))
+                                    (let (many e2) (many tys) (field-types env ty ct))
+                                    (values (ctor-body ct $ show-fields _ hp2 dd tys fields e2) (BTrue)))))))
                           ((None c)
                             (match many (lone-ctor adt) (((Rope) r8) ((Bool) b8))
                               ((None d) (values (RStr "_") (BFalse)))
                               ((Some d ct)
-                                (values (ctor-body ct $ show-fields _ hp dd (field-types env ty ct)
-                                          (ctor-fields _ hp (adt-newtype adt) (ctor-arity ct) r) env) (BTrue)))))))))))))))))
+                                (let (many e2) (many tys) (field-types env ty ct))
+                                (values (ctor-body ct $ show-fields _ hp dd tys
+                                          (ctor-fields _ hp (adt-newtype adt) (ctor-arity ct) r) e2) (BTrue)))))))))))))))))
 
   ; Walks the declared fields, an erased one taking no word from the destructure; a field that is an application
   ; takes its own parens, or `$` where it is the last (DESIGN 2, ASSUMPTIONS 184).
