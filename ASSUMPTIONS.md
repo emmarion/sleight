@@ -3478,7 +3478,8 @@ to look for a guard, are the owner's.
     against every merge site of the at-database, none extra found.
 
 184. **What a value prints as** (the owner's decision, in chat, settling
-    BUGS.md 1 and `audit/B1`). The printer renders a value from its type
+    the defect `audit/README.md` carries as B1, which was BUGS.md 1 until
+    this fixed it). The printer renders a value from its type
     by the cases below and has no fall-through:
     - a `Nat`, `Char` or `String` prints as the literal it reads back
       from, unchanged from 154;
