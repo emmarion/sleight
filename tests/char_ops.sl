@@ -1,8 +1,9 @@
 ; expect: 3
 ; A Char is its code at runtime, so char-cmp delegates to nat-cmp (section 38): its arguments coerce
 ; down through both newtypes, and the Coercible carrying the result back up is built by an erased match
-; that leaves no code, so the delegate mark still stands. coercible-of then fetches the proof that the
-; two are one function, and the coerced char-cmp runs on Nats. Less, equal and greater score 0, 1 and 2.
+; that leaves no code, so the delegate mark still stands. delegate-of then fetches the proof that the
+; two are one function, coercible-of reads the Coercible off it, and the coerced char-cmp runs on
+; Nats. Less, equal and greater score 0, 1 and 2.
 
 (let (erased cg) (coercible-of (delegate-of char-cmp)))
 (let (many g) (coerce char-cmp cg))

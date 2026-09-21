@@ -7,10 +7,11 @@ that the test does not make is a mistake in this file.
 
 - `tests/io_lift.sl` — two `IO` programs at two levels embedded in a program
   at a third, at no runtime cost. An erased factory mints the program's
-  level; `delegate` mints a `Coercible` between continuations whose types
-  differ in level and result; `coercible-ctor` lifts it through each request
-  with the erased level index differing on the two sides; the user's `coerce`
-  erases to nothing, and the extracted OCaml holds only the original values.
+  level; `delegate` mints a `Delegate`, read as a `Coercible` between
+  continuations whose types differ in level and result; `coercible-ctor` lifts
+  it through each request with the erased level index differing on the two
+  sides; the user's `coerce` erases to nothing, and the extracted OCaml holds
+  only the original values.
   `tests/io_lift_runtime.sl` is the same embedding by rewrapping, one closure
   per request. Together they are the fullest exhibit of levels, erasure,
   `delegate` and `coerce` depending on each other.
@@ -75,9 +76,10 @@ that the test does not make is a mistake in this file.
   the call to `nat-cmp` is marked `delegate`, and the `Coercible` carrying
   the result back up to `Cmp (Char) CharLt a b` is built by an erased match
   on the three outcomes, so nothing but the marked call is left to run. The
-  test fetches with `coercible-of` the proof the mark minted that `char-cmp`
-  and `nat-cmp` are one function, coerces `char-cmp` to the `Nat` signature,
-  and runs it both on characters and on numerals.
+  test fetches with `delegate-of` the proof the mark minted that `char-cmp`
+  and `nat-cmp` are one function, reads the `Coercible` off it with
+  `coercible-of`, coerces `char-cmp` to the `Nat` signature, and runs it
+  both on characters and on numerals.
 - `tests/cell_rev_inplace.sl`, `tests/cell_rotate.sl` and
   `tests/cell_map_retype.sl` — algorithms that reuse the cells their unique
   destructures hand back (UNIQUE.md U5, U9), beside `tests/cell_append.sl`'s

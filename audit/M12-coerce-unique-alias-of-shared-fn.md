@@ -2,7 +2,8 @@
 
 Status: observation; appears sanctioned by U3 and U7.
 
-`(coercible-of d)` on a `def-unique` `d` that delegates to an `Fn` `f`
+`(coercible-of (delegate-of d))` on a `def-unique` `d` that delegates to
+an `Fn` `f`
 gives `Coercible (Unique) ... d (Shared) ... f`. `coercible-sym` is
 unconditional (U7), so its sym relates `f` at `(Shared)` to `d` at
 `(Unique)`, and `(coerce f symp)` in a unique position uses `f` at many

@@ -92,11 +92,12 @@ ground.
     call none; a match in tail position puts its branches in tail
     position. A `delegate` callee must be a named variable, and its
     arguments must resolve to the function's non-erased parameters in
-    order. `coercible-of` returns the newest anonymous `Coercible` proof
-    about the function found in scope, so an anonymous proof minted later
-    (a `(let (erased _) (coercible-refl g))`, say) shadows the delegate
-    proof; harmless, any such proof being true, but not what section 38
-    says it fetches. Open.
+    order. `delegate-of` fetches the proof `def-fns` minted
+    about the function. Settled: the proof is a `Delegate` (section 38),
+    which only `def-fns` and `def-unique` introduce, so no other form can
+    mint one about the function and the fetch has nothing to choose
+    between. This entry previously recorded the shadowing an anonymous
+    `Coercible` could cause as open (audit F4).
 18. **Warnings** (a phantom constructor with a `many` field) go to
     stderr and do not stop elaboration.
 
@@ -414,7 +415,7 @@ literals as open.
     literal's erased `Numeral` proof; a character literal yields its
     code's proof, and a string literal is an error, having none. It
     resolves the literal by its own spelling through `Env.literals`
-    rather than searching the scope, unlike `coercible-of`. Resolving
+    rather than searching the scope, unlike `delegate-of`. Resolving
     by spelling rather than by canonicalized value is what keeps the
     form usable inside a branch that has equated two literals: each
     still fetches its own proof, so the two spellings for one `Nat`
@@ -734,11 +735,11 @@ later session.
     The marks set the calling convention of the call they wrap, so a
     mark on a constructor application, a `values` or a `match` had no
     effect at all and was silently accepted, `(tail (Succ n))` among
-    them; only a later `coercible-of` revealed that `def-fns` had
-    minted no proof. Both forms now reject anything whose compiled code
-    is not the marked call. This looks like plugging an implementation
-    gap rather than a design choice: section 9 describes both marks as
-    claims about a call.
+    them; only a later fetch of the delegate proof (`delegate-of` today)
+    revealed that `def-fns` had minted no proof. Both forms now reject
+    anything whose compiled code is not the marked call. This looks like
+    plugging an implementation gap rather than a design choice: section 9
+    describes both marks as claims about a call.
 
 72. **A `let` that returns exactly what it binds is replaced by its
     right-hand side.** Section 9 counts a call as `tail` when its
@@ -941,7 +942,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     that way (`tests/ctor_alias.sl`). The two forms that fetch an object
     from ambient scope did not. `matchable-of` looked for a `Matchable`
     naming the alias entry itself rather than the type constructor it
-    resolves to, and `coercible-of` for a `Coercible` about the alias
+    resolves to, and `delegate-of` for a `Delegate` about the alias
     rather than about the function `def-fns` minted the proof for, so
     each reported its object missing on a renamed name. Both now resolve
     the name first, through the one helper `ctor_var` uses, which is also
@@ -1695,8 +1696,8 @@ checked by running (rule 2).
     reaches them by name; but the lookups that go by type scan
     `env.scope` regardless — `find_matchable` and `matchable-of` for a
     `Matchable` heading a type constructor (§19), `newtype-of` for a
-    `Newtype` naming a constructor (§38), `coercible-of` for an
-    anonymous `Coercible` about a function (§9). A branch could
+    `Newtype` naming a constructor (§38), `delegate-of` for an
+    anonymous `Delegate` about a function (§9). A branch could
     therefore satisfy the annotation by fetching the entry the
     annotation had just minted, and `check_results` then compared that
     entry with itself. Two consequences the session could run:
@@ -1888,10 +1889,10 @@ judiciously with `_`. The names and the shapes below are the session's.
      relating the three `U8`s' fields through `Add` and `Mod`;
      `append` returns an `Append`. `nat-add`, `u8-add` and `str-append`
      keep their names and one-value signatures as `delegate` wrappers
-     (so `coercible-of` relates each to its primitive), chosen so that
-     no test or `self/` call site changes; `u8-add` is therefore no
-     longer extern and the FFI's `u8_add` is gone, `nat_mod` (`Z.rem`)
-     taking its place. `double` is `(add a a)` with the erased lemma
+     (so `delegate-of` fetches a proof relating each to its primitive),
+     chosen so that no test or `self/` call site changes; `u8-add` is
+     therefore no longer extern and the FFI's `u8_add` is gone, `nat_mod`
+     (`Z.rem`) taking its place. `double` is `(add a a)` with the erased lemma
      `add-diag-double`, so the modulus is eight FFI additions rather
      than unary doubling; `Double` stays as the relation the `Numeral`
      lemmas invert. `Add` is Coq's (`AddZero : Add (Zero) b b`,
@@ -2661,9 +2662,10 @@ session's reading, with the tests as the evidence.
      on one is refused as undecided
      (`tests/open_absurd_newtype_bad.sl`). Still open, as the proposal
      lists it: whether an opened `Newtype` for `C` beside an opened
-     `Matchable` marking `C` phantom is a contradiction. `coercible-of`
-     keeps its fetch from ambient scope for now, the owner's decision,
-     recorded as a TBD in DESIGN.md section 38.
+     `Matchable` marking `C` phantom is a contradiction. The fetch from
+     ambient scope is `delegate-of`'s now, over a `Delegate` proof; the
+     TBD this entry recorded in DESIGN.md section 38, whether it should
+     instead find only an opened proof, is gone with it.
 
 141. **`coercible-ctor` no longer refuses a phantom constructor**, so it
      reads no `Matchable` and needs none opened
@@ -3453,8 +3455,10 @@ to look for a guard, are the owner's.
     no location (`tests/at_erased_newtype.sl`); `coercible-of` fetches the
     oldest anonymous proof about its function, the one `def-fns` minted,
     where a later `coercible-refl` used to shadow it
-    (`tests/coercible_of_shadowed.sl`); the self compiler's `let-match` at
-    `many` handed a unique-labelled field out at unique against U4's table,
+    (`tests/coercible_of_shadowed.sl`), since superseded: the proof is a
+    `Delegate` and the fetch is `delegate-of`, so no order is involved;
+    the self compiler's `let-match` at `many` handed a unique-labelled
+    field out at unique against U4's table,
     which let a shared block be updated through the alias
     (`tests/let_match_many_*_bad.sl`); the extractor asserted false when
     printing a value of a union or newtype with several candidate
