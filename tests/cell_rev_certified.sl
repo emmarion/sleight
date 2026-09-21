@@ -1,5 +1,5 @@
 ; needs: cell_rev_inplace
-; expect: (UCons 2 (UCons 1 (UCons 0 (UNil))))
+; expect: (UCons _ 2 $ UCons _ 1 $ UCons _ 0 $ UNil _)
 ; The same in-place reversal carrying its correctness relation. RevOnto xs acc r reads
 ; reverse(xs) ++ acc = r, and its indices name xs and acc -- the cells the reversal overwrites. An erased
 ; mention may follow a binder's consumption (UNIQUE.md U2), so each branch builds its proof out of binders

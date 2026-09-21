@@ -191,7 +191,9 @@ ground.
 34. **Unions are never tagged**, so a match on one binds its single
     real branch's fields from the tuple without inspecting anything;
     the interpreter prints an untagged value as its fields, with no
-    constructor name. A union newtype's other non-phantom constructors
+    constructor name (superseded by item 184: an untagged type with one
+    non-phantom constructor prints that constructor's name, and one with
+    several prints `_`). A union newtype's other non-phantom constructors
     build the token. Marking changes nothing at runtime here: an
     unmarked type of newtype shape is represented as its field too, it
     just gets no `coercible-wrap`.
@@ -3055,7 +3057,8 @@ to look for a guard, are the owner's.
      program's own `Zero` or `SNil` (`tests/gmap.sl`) is untouched. A
      node whose type the walk cannot resolve falls back to `Value.show`,
      which leaves item 34's untagged rendering and item 66's limits as
-     they were. A `Char`'s code and a `String`'s elements fall back the
+     they were (superseded by item 184: the walk is total and such a node
+     prints `_`, so no path reaches `Value.show`). A `Char`'s code and a `String`'s elements fall back the
      same way when the `Nat` is not a byte, since `Literal.spell` has no
      reading for one: the session could not construct such a value, the
      `Lt` proof `MkU8` carries bounding both (section 41), so the guard

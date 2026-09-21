@@ -1187,7 +1187,7 @@
 ; integer and a String its slice; a Char and a U8 are their Nat (section 38), unwrapped by neither.
 (def-fns _ $ many lit-show : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Rope) r)
   (match many (prelude-nullary env ty "Slot") _
-    ((BTrue) (Some _ $ RStr "\"<slot>\""))
+    ((BTrue) (Some _ $ RStr "\"_\""))
     ((BFalse)
   (match many (prelude-nullary env ty "Nat") (((Maybe $ Rope) r1))
     ((BTrue) (Some _ $ RStr "(Z.to_string (Obj.obj v : Z.t))"))
@@ -1220,13 +1220,24 @@
                   (match many ty _
                     ((TApp h args)
                       (match many (type-adt env ty) (((ShowMemo) m) ((Rope) r))
-                        ((None b) (values memo1 $ RStr "\"?\""))
+                        ((None b) (values memo1 $ RStr "\"_\""))
                         ((Some b adt)
-                          (let (many memo3) (many arms) $ show-arms k env ty (adt-ctors adt) memo1 (adt-tagged adt) d)
-                          (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"?\""))))
-                    ((TFn unique l ps rs) (values memo1 $ RStr "\"<function ?>\""))
-                    ((TCell ctor slots) (values memo1 $ RStr "\"<cell>\""))
-                    ((TValCtor ps r) (values memo1 $ RStr "\"<constructor ?>\"")) (else (values memo1 $ RStr "\"?\""))))))
+                          ; the tag where there is one, else the sole non-phantom constructor; a union with
+                          ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
+                          (let (many usable)
+                            (match many (adt-tagged adt) (((List $ Ctor) cs))
+                              ((BTrue) (adt-ctors adt))
+                              ((BFalse) (match many (lone-ctor adt) (((List $ Ctor) cs2))
+                                          ((None z) (Nil _))
+                                          ((Some z c) (Cons _ c $ Nil _))))))
+                          (let (many memo3) (many arms) $ show-arms k env ty usable memo1 (adt-tagged adt) d)
+                          (match many arms (((ShowMemo) m2) ((Rope) r2))
+                            ((Nil z2) (values memo3 $ RStr "\"_\""))
+                            ((Cons z2 y ys)
+                              (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
+                    ((TFn unique l ps rs) (values memo1 $ RStr "\"_\""))
+                    ((TCell ctor slots) (values memo1 $ RStr "\"_\""))
+                    ((TValCtor ps r) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
                 (match many memo2 _
                   ((MkShowMemo fresh2 count2 known2 defs2)
                     (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))
@@ -1250,12 +1261,12 @@
                     ((UContra msg) (values envb $ BFalse))))
                 (let (many (ShowMemo) memo2) (many (List $ Rope) shown)
                   (match many live _
-                    ((BTrue) (show-fields k envb2 (non-erased fids envb2) memo 0 d))
+                    ((BTrue) (show-fields k envb2 fids memo 0 d))
                     ((BFalse) (values memo $ Nil _))))
+                ; Ffi_core.show_app is the one definition the interpreter, an extracted program and this
+                ; output share, so `$` is not decided again here (ASSUMPTIONS 184)
                 (let (many (Rope) text)
-                  (match many tagged _
-                    ((BFalse) (match many shown (((Rope) r)) ((Nil b) (RStr "\"_\"")) ((Cons b s more) (match many more (((Rope) r)) ((Nil e) s) ((Cons e s2 more2) (rcat3 (RStr "\"(\" ^ ") (spaced shown) $ RStr " ^ \")\""))))))
-                    ((BTrue) (rcat3 (RStr "\"(\" ^ ") (spaced $ Cons _ (quoted cname) shown) $ RStr " ^ \")\""))))
+                  (rcat4 (RStr "(Ffi_core.show_app ") (quoted cname) (rwrap " [ " (rjoin shown "; ") " ])") $ REmpty))
                 (let (many memo3) (many more) $ show-arms k env ty rest memo2 tagged d)
                 (values memo3 $ match many live (((List $ Arm) r)) ((BTrue) (Cons _ (MkArm index (field-names arity 0) text) more)) ((BFalse) more)))))))))
 
@@ -1266,9 +1277,14 @@
         (match many fids _
           ((Nil a) (values memo $ Nil _))
           ((Cons a x rest)
-            (let (many memo2) (many name) $ show-type k env (type-of env x) memo d)
-            (let (many memo3) (many more) $ show-fields k env rest memo2 (Succ i) d)
-            (values memo3 $ Cons _ (rcat3 (RStr name) (RStr " f") $ nat-rope i) more)))))))
+            (match many (entry-mult-of env x) (((ShowMemo) m) ((List $ Rope) rs))
+              ((Erased)
+                (let (many memo3) (many more) $ show-fields k env rest memo i d)
+                (values memo3 $ Cons _ (RStr "\"_\"") more))
+              (else
+                (let (many memo2) (many name) $ show-type k env (type-of env x) memo d)
+                (let (many memo3) (many more) $ show-fields k env rest memo2 (Succ i) d)
+                (values memo3 $ Cons _ (rcat3 (RStr name) (RStr " f") $ nat-rope i) more)))))))))
 
 (def-fns _ $ many show-defs : (many (ShowMemo) memo) -> (many (Rope) r)
   (match many memo _
@@ -1277,12 +1293,12 @@
         ((Nil a) (REmpty))
         ((Cons a d rest) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))))
 
-; A final that is a function or a constructor prints its name, as the reference does.
+; A final that is a function or a constructor prints `_`, as the reference does (ASSUMPTIONS 184).
 (def-fns _ $ many named-final : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Env) env) -> (many (Maybe $ String) r)
   (let (erased ns) (many b) (erased sf) $ store-read Block hs hp v)
   (match many b _
-    ((BFn z g i id) (Some _ $ str-cat3 "<function " (name-of env id) ">"))
-    ((BCtorFn z c) (Some _ $ str-cat3 "<constructor " (ctor-name c) ">"))
+    ((BFn z g i id) (Some _ "_"))
+    ((BCtorFn z c) (Some _ "_"))
     (else (None $ String))))
 
 (def-fns _ $ many final-captured-word : (subterm many (List $ Nat) ids) (many (Env) env)

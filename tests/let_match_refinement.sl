@@ -1,4 +1,4 @@
-; expect: (Cons 5 (Cons 3 (Nil)))
+; expect: (Cons _ 5 $ Cons _ 3 $ Nil _)
 ; Fields and forced facts bind outward, including constructor subterms.
 (def-adts $ LMVec : (Type A) ((Nat) n) -> Type enum
   (many LMNil : (erased Type A) -> (LMVec A (Zero)))

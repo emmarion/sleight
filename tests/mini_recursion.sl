@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
-; expect: (Cons (VCon 6 (Cons (VCon 6 (Cons (VCon 6 (Cons (VCon 6 (Cons (VCon 5 (Nil)) (Nil))) (Nil))) (Nil))) (Nil))) (Nil))
+; expect: (Cons _ (VCon 6 $ Cons _ (VCon 6 $ Cons _ (VCon 6 $ Cons _ (VCon 6 $ Cons _ (VCon 5 $ Nil _) $ Nil _) $ Nil _) $ Nil _) $ Nil _) $ Nil _)
 ; A same-level recursive call in the minimal language, with its Subterm proof (DESIGN.md sections 8, 9):
 ;   (def-fns L (double ((subterm (Nat) n)) (((Nat) r))
 ;     (match n (((Nat) r))

@@ -1,4 +1,4 @@
-; expect: (Node (Leaf) 0 (Node (Leaf) 1 (Leaf)))
+; expect: (Node (Leaf) 0 $ Node (Leaf) 1 $ Leaf)
 ; A right rotation performed in place on branching data: both the outer node's cell and the left child's
 ; are handed back by their unique destructures and reinvoked with the rotated contents, so the rotation
 ; allocates nothing.

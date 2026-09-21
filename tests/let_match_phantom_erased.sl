@@ -1,4 +1,4 @@
-; expect: (Cons 4 (Cons 6 (Nil)))
+; expect: (Cons _ 4 $ Cons _ 6 $ Nil _)
 ; Phantom evidence may be destructured at erased, including its declared-many fields.
 (def-adts $ GhostIndex : ((Nat) i) -> Type enum
   (many RealIndex : -> (GhostIndex (Zero)))

@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 1 (Cons 0 (Cons 0 (Cons 2 (Nil)))))
+; expect: (Cons _ 1 $ Cons _ 0 $ Cons _ 0 $ Cons _ 2 $ Nil _)
 ; An else branch on a tagged enum: it covers every constructor not listed, binds nothing, and dispatches on the tag.
 
 (def-adts $ Color : -> Type

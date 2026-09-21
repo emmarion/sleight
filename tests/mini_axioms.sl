@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
-; expect: (Cons (VToken) (Nil))
+; expect: (Cons _ (VToken) $ Nil _)
 ; The three transitivity axioms of DESIGN.md section 8 in the minimal language:
 ;   (def-lvl L1) (def-lvl L2) (let (m) (Succ (Zero))) (let (n) (Succ m)) (def-lvl L3)
 ;   (let (p) (prove-predates L1 L2)) (let (q) (prove-predates L2 L3)) (let (r) (predates-trans p q))

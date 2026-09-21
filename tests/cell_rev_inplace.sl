@@ -1,4 +1,4 @@
-; expect: (UCons 2 (UCons 1 (UCons 0 (UNil))))
+; expect: (UCons _ 2 $ UCons _ 1 $ UCons _ 0 $ UNil _)
 ; Pointer reversal in place. The spine's fields are unique, so a unique destructure hands back the cons
 ; cell each node occupied (UNIQUE.md U5), and reinvoking that cell with the accumulator reuses the block.
 ; The head slot already holds hd, so (at) skips its store: one store per node, no allocation, and the

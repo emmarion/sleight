@@ -1,4 +1,4 @@
-; expect: (4 (B2 (B1 (BZ))) "bac")
+; expect: (MkOut 4 (B2 $ B1 $ BZ) "bac")
 ; Extern matches and builds nested every way the extraction templates must handle (ASSUMPTIONS 133): a
 ; match in scrutinee position, an else standing for two constructors of a three-constructor type, a build
 ; whose argument is a build, and matches under matches on a String, all inside a thunk so the extracted

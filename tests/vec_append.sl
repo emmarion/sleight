@@ -1,5 +1,5 @@
 ; needs: list vec
-; expect: (VCons 0 (VCons 1 (VCons 2 (VNil))))
+; expect: (VCons _ _ 0 $ VCons _ _ 1 $ VCons _ _ 2 $ VNil _)
 ; Vector append with the sum witnessed by an erased Plus proof: each erased match on the
 ; proof has one real branch, the other refuted through the indices.
 
