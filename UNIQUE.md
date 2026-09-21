@@ -177,7 +177,10 @@ outward as before (§16). `comptime-match` at `unique` is a destructure
 like any other and does not degrade a unique Const, but merely consumes
 it at unique, binding its fields Const at their labels; the
 elaborator's other reads of a Const (a special form or macro at the
-head, a Matchable read, §U6) are many uses. Readability requirements for a dispatching
+head, a Matchable read, §U6) are many uses. Its scrutinee may be
+written `(share x)` as well as `x` (§15, §U3), naming the same entry;
+at `many` that is the written degradation a unique Const needs, and at
+`unique` it is an error. Readability requirements for a dispatching
 match are as in §19.
 
 *Reading, an idiom.* A value is read without giving up its uniqueness

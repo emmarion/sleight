@@ -544,7 +544,12 @@ proves heavy.
 A special form, `comptime-match`, works specifically on a `Const`,
 itself non-erased (§34) scrutinee whose discriminant is also non-erased
 — i.e. an enum, never a union (§12): it asserts the value has a given
-discriminant, and is a compile error if it doesn't. It is the one
+discriminant, and is a compile error if it doesn't. It is written
+`(comptime-match mult x (C field ...))`: a mandatory multiplicity, as a
+`match` carries before its scrutinee (§11); a variable naming the entry
+whose stored value is read, not an expression; and the constructor with
+one binder per field, the erased ones included, as a match pattern has
+(§32). It is the one
 statement confined to run position (§16): every binding inside a
 function body or a match branch is `Dyn`, so any `Const` it could
 inspect there is a run-position one anyway, and asserting it in run

@@ -83,7 +83,9 @@ inconsistent or silent.
     such as `(Fn L ->)` are never shown.
 
 11. **Forms with no syntax.** `comptime-match` has semantics in §15 and
-    §27 but no shown syntax for the pattern or field binders. The three
+    §27 but no shown syntax for the pattern or field binders. Settled
+    for `comptime-match` alone: §15 now gives its syntax, the owner's
+    decision; the rest of this item stands. The three
     §8 transitivity axioms have no names. `Macro` construction, the
     `Raw` type, anonymous `def-lvl`, and anonymous pattern binders are
     missing. §32 says every field gets a binder, so an implementer needs
