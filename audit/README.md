@@ -29,16 +29,17 @@ removed from there when they were fixed, as were their files here:
 - B2. FIXED (§22): `array-new` beyond the host's limits escapes as an OCaml exception
 - B3. `tail` refused in a function whose returns are all erased
 
-Open questions for the owner, also in ASSUMPTIONS 183:
+Open questions for the owner, also in ASSUMPTIONS 183; a settled one
+keeps its line, marked as the fixed items above are:
 
 - Q1. `comptime-match many` on a unique Const cannot write its `share`
 - Q2. An erased-position `unique` match mints `SlotHolds` over erased binders
 - Q3. Structural Matchable marks prevent abstracting over extern and non-extern
-- Q4. `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
+- Q4. FIXED (U1): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
 - Q5. Slot-indexed user types reach U10's class merge, U15's deferred question
 - Q6. U13's text as written needs two repairs to elaborate
 
-Minor observations, not acted on:
+Minor observations, not acted on unless marked:
 
 - M1. `matchable-of` records no use of the Matchable entry
 - M2. `read_special`'s share branch lacks the erased-position guard
@@ -51,7 +52,7 @@ Minor observations, not acted on:
 - M9. `--no-templates` is a vacuous check for arrays
 - M10. Stripped-extern `array-new` is quadratic
 - M11. An extern's signature is elaborated outside the extern body's cell context
-- M12. `coerce` via the sym of a delegate proof mints a unique alias of a shared Fn
+- M12. FIXED (U1): `coerce` via the sym of a delegate proof mints a unique alias of a shared Fn
 
 What was checked and found correct is not itemised here; the coverage
 was every rule of U1 to U14 that could be turned into a program, roughly
