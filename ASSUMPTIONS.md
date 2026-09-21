@@ -3473,3 +3473,59 @@ to look for a guard, are the owner's.
     Two clarifications this session read as within the text: an `at`
     return is verified only where U8 lists, and U8's writers were checked
     against every merge site of the at-database, none extra found.
+
+184. **What a value prints as** (the owner's decision, in chat, settling
+    BUGS.md 1 and `audit/B1`). The printer renders a value from its type
+    by the cases below and has no fall-through:
+    - a `Nat`, `Char` or `String` prints as the literal it reads back
+      from, unchanged from 154;
+    - otherwise, where the type's head has a readable Matchable (section
+      19): a tagged enum reads its tag and names that constructor; a type
+      with exactly one non-phantom constructor names it, no tag being
+      needed; a union with two or more non-phantom constructors prints
+      `_`;
+    - everything else prints `_`: a cell, a slot, a function, an opaque
+      proof (section 19's `Level`, `Subterm`, `Predates` and `Coercible`,
+      which are erased by kind and so are reached only as erased fields),
+      and a type whose head has no readable Matchable;
+    - a field prints `_` where it is erased, and goes through these same
+      cases where it is not;
+    - a last argument that is itself an application is written with `$`
+      (section 2) rather than parenthesised.
+
+    The constructor is chosen structurally, off the Matchable's tag and
+    its non-phantom constructor list. Two things the owner considered and
+    set aside: narrowing the constructor by refuting candidates against
+    the value's type, and printing an erased field whose value the type
+    determines. Both are available -- `Elab.candidates` and
+    `Extract.branch` already refute by forced unification, and the facts
+    a refutation forces determine many erased fields -- and the session's
+    reading of why they were dropped is that the first is what B1 is (the
+    two back ends compute the same candidate set and diverge only in what
+    they do when it is not a singleton) and the second would put term
+    rendering inside the printer, which three back ends would then have
+    to agree on character for character.
+
+    What this gives up, on the same reading: a union whose constructor is
+    pinned by a type index prints `_` where a `let-match` could name it
+    (section 16), so the printer is weaker than a program, and a function
+    prints `_` where both back ends agree on `<function name>` today. No
+    test in the tree prints a multi-constructor union as a structured
+    value; the two that print a union expect `_` already
+    (`tests/show_union_newtype.sl`, `tests/thunk_union_newtype.sl`).
+
+    Two divergences this retires, the session's reading of the mechanism
+    in each: B1, by the rule being total, there being no untyped
+    `Value.show` fall-through left for the interpreter to reach; and a
+    second of the same shape found while settling it, a non-erased field
+    of existentially-quantified type -- `(many MkDyn : (erased Type A)
+    (many A value) -> (Dyn))` with `(MkDyn _ 5)` -- which printed
+    `(Succ (Succ (Succ (Succ (Succ (Zero))))))` in the interpreter,
+    through the same fall-back, and `?` extracted. F9's `<cycle>` guard
+    is expected to become unreachable rather than wrong: the language is
+    immutable apart from cell slots, so a cyclic value is reachable only
+    through a slot, and a slot now prints `_` without being walked.
+
+    Not decided here, and left open by the owner: whether a rendering's
+    reading back as the same value becomes a test of its own, which
+    `tests/literal_print.sl` already does for the three literal types.
