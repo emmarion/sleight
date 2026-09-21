@@ -1,4 +1,4 @@
-; expect: (Cons 1 (Cons 2 (Cons 3 (Nil))))
+; expect: (Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Nil _)
 (def-fns _ $ many append-into : (erased Type A)
     (unique (Cell Cons (SlotVacant) (SlotVacant)) cell)
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->

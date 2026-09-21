@@ -1,5 +1,5 @@
 ; needs: ../pal/palindrome_relations ../pal/palindrome_naive
-; expect: (Cons 0 (Cons 1 (Cons 2 (Cons 1 (Cons 3 (Cons 4 (Cons 1 (Cons 2 (Cons 3 (Cons 2 (Cons 5 (Cons 5 (Cons 5 (Cons 6 (Cons 1 (Cons 3 (Cons 5 (Nil))))))))))))))))))
+; expect: (Cons _ 0 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Cons _ 4 $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Cons _ 5 $ Cons _ 5 $ Cons _ 5 $ Cons _ 6 $ Cons _ 1 $ Cons _ 3 $ Cons _ 5 $ Nil _)
 ; The nullary main makes these runtime checks in extracted programs too.
 ; Covers empty/singleton, odd/even, unequal outer/inner ends, ties, repeated
 ; elements, and longest windows at the beginning, middle, and end.

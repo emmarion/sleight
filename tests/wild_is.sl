@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 0 (Cons 1 (Nil)))
+; expect: (Cons _ 0 $ Cons _ 1 $ Nil _)
 ; `_` at an is-entry takes the entry's value; a `_` inside the pinned field is solved through the is
 ; expectation, and the whole application against a value expectation.
 

@@ -1,4 +1,4 @@
-; expect: <slot>
+; expect: _
 (let (unique a) (erased all) (array-new (Slot) (Succ (Zero))))
 (let (many s) (SlotHolds a))
 (def-fns _ $ many cyclic : -> (many (Slot) r) s)

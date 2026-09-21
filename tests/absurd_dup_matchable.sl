@@ -1,4 +1,4 @@
-; expect: <function boom>
+; expect: _
 ; Two identical Matchables for an empty type, one a parameter opened beside False's own, merge into one record
 ; (DESIGN.md section 19) and still make the type empty (section 19).
 

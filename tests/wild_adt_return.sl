@@ -1,4 +1,4 @@
-; expect: ((PLeft) (PRight))
+; expect: (MkPair _ _ (PLeft) $ PRight)
 ; Constructor return holes may be solved by later arguments or their expected types.
 (def-adts $ P : (Type A) ((List A) xs) -> Type enum
   (many PLeft : -> (P _ (Nil (Nat))))

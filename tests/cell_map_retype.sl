@@ -1,5 +1,5 @@
 ; needs: cell_rev_inplace
-; expect: (UCons 0 (UCons 1 (UNil)))
+; expect: (UCons _ (MkTag 0) $ UCons _ (MkTag 1) $ UNil _)
 ; A map that changes the element type and allocates nothing. The cell a unique destructure hands back is
 ; tied to its constructor but not to the type arguments, so UCons's cell can be reinvoked at (ULst (Tag))
 ; where it was built at (ULst (Nat)); Tag is a newtype, so its wrapper is its field's word (DESIGN.md

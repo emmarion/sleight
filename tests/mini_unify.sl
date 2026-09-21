@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify
-; expect: (Cons (BTrue) (Cons (BFalse) (Cons (BFalse) (Cons (BFalse) (Cons (BTrue) (Cons (BTrue) (Cons (BTrue) (Nil))))))))
+; expect: (Cons _ (BTrue) $ Cons _ (BFalse) $ Cons _ (BFalse) $ Cons _ (BFalse) $ Cons _ (BTrue) $ Cons _ (BTrue) $ Cons _ (BTrue) $ Nil _)
 ; Unification in mini/: over Nat's declaration (2 the type constructor, 3 Zero, 4 Succ) and two variables 5 and
 ; 6, in order: a variable takes an application; Zero against Succ is refused, both rigid; the occurs check;
 ; Check mode refuses two variables; Check mode accepts identical terms; Force aliases two variables; a variable

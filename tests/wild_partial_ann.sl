@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 1 (Nil))
+; expect: (Cons _ 1 $ Nil _)
 ; A match annotation may hold `_`s; they are solved against the expected telescope before any branch, and
 ; so may a let binder's type, solved by the right-hand side.
 

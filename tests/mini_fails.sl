@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
-; expect: (Cons (Some (RMissingBranch)) (Cons (Some (RMismatch)) (Cons (Some (RUnbound)) (Cons (Some (RArity)) (Cons (Some (RTopLevelOnly)) (Cons (None) (Nil)))))))
+; expect: (Cons _ (Some _ $ RMissingBranch) $ Cons _ (Some _ $ RMismatch) $ Cons _ (Some _ $ RUnbound) $ Cons _ (Some _ $ RArity) $ Cons _ (Some _ $ RTopLevelOnly) $ Cons _ (None _) $ Nil _)
 ; Programs the minimal language refuses, each with the reason its Fails derivation carries: a match missing
 ; its Succ branch; Succ applied to a type; an unbound name; Succ applied to two arguments; a def-adts
 ; inside a function body. The last program, Succ applied to Zero, is accepted.

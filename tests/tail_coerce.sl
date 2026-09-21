@@ -1,5 +1,5 @@
 ; needs: list
-; expect: 1
+; expect: (MkMeters 1)
 ; A tail call whose result is coerced through a non-erased let still counts: after erasure the lets only rename (section 9).
 
 (def-adts $ Meters : -> Type

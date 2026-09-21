@@ -1,4 +1,4 @@
-; expect: (ACons <slot> (ANil))
+; expect: (ACons _ _ _ $ ANil _)
 (let (unique a) (erased all) (array-new (Slot) (Succ (Zero))))
 (let-match erased all (AUCons _ _ _ q))
 (let-match erased q (AUNil _))

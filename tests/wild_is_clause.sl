@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 0 (Cons 1 (Nil)))
+; expect: (Cons _ 0 $ Cons _ 1 $ Nil _)
 ; `_` inside an is clause and a type: solved from the neighbouring arguments, the nested Nil through the
 ; expectation the enclosing Cons hands down.
 

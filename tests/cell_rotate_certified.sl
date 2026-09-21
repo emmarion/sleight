@@ -1,5 +1,5 @@
 ; needs: cell_rotate
-; expect: (Node (Leaf) 0 (Node (Leaf) 1 (Leaf)))
+; expect: (Node (Leaf) 0 $ Node (Leaf) 1 $ Leaf)
 ; The same in-place rotation carrying the relation its result must satisfy. FlatOnto t acc out reads
 ; inorder(t) ++ acc = out; stating it in difference-list form is what lets the rotated tree's derivation
 ; be rebuilt from the original's without an associativity lemma. The relation's indices name t and l, the

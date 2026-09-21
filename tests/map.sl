@@ -1,5 +1,5 @@
 ; needs: list
-; expect: (Cons 1 (Cons 2 (Nil)))
+; expect: (Cons _ 1 $ Cons _ 2 $ Nil _)
 ; DESIGN.md section 33: level-polymorphic map via a factory. Needs list.sl first.
 
 (def-lvl F)
