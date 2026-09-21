@@ -22,10 +22,10 @@ Fixed in `fa5747a`, each with a test under `tests/`:
 - F8. The extractor asserts false printing a union or newtype value
 - F9. The untyped printer overflows the stack on a cycle through a slot word
 
-Unfixed defects, also in BUGS.md:
+Defects, also in BUGS.md:
 
 - B1. Discriminant-free values print differently in the interpreter and extracted code
-- B2. `array-new` beyond the host's limits escapes as an OCaml exception
+- B2. FIXED (§22): `array-new` beyond the host's limits escapes as an OCaml exception
 - B3. `tail` refused in a function whose returns are all erased
 
 Open questions for the owner, also in ASSUMPTIONS 183:

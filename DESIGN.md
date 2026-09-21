@@ -1001,6 +1001,10 @@ Haskell-newtype-style wrapper type (`coercible-wrap`).
 
 The language is eagerly evaluated.
 
+Everything here is said of a machine with unlimited stack and heap. A
+real run may crash where the host cannot allocate or represent what is
+asked of it; a crash produces no value, never a different one.
+
 ## 23. Invariant: erasure is conservative
 
 Erasure (§6, §12, §20) is, in a sense, just an optimization — a
@@ -1012,6 +1016,11 @@ from `p`'s type, which the stripped program has as a real value (§38) —
 the result should still compile and run identically to the original.
 Recorded as an intended invariant/target, not something verified yet
 (in the spirit of §10).
+
+"Identically" is the values, not the time or memory taken; the
+transformed program may crash on resource exhaustion where the original
+did not (§22). `tail` and `delegate` marks are kept but unchecked,
+though `def-fns` still mints a `delegate`'s `Coercible` proof (§38).
 
 The non-erased stand-in for `Level` and friends would most likely just be
 `Unit` (an enum with one constructor, no fields) — but other
@@ -1872,8 +1881,10 @@ safe; a newtype may equally wrap a field of an extern type.
 **Invariant: externs are conservative.** In the spirit of §23: every
 extern implementation stands in for a declaration in the language, and
 stripping every extern implementation — running the models instead —
-must leave a program that compiles and runs identically. Recorded as an
-intended invariant; the prototype checks it on its own tests.
+must leave a program that compiles and runs identically: the same
+values, not the same cost, and either side may crash on resource
+exhaustion where the other does not (§22). Recorded as an intended
+invariant; the prototype checks it on its own tests.
 
 **`Nat`.** The prelude declares `Nat` as the Peano enum of §32, marked
 `extern`, and the FFI holds it as an arbitrary-precision integer;
