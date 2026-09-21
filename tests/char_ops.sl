@@ -4,7 +4,7 @@
 ; that leaves no code, so the delegate mark still stands. coercible-of then fetches the proof that the
 ; two are one function, and the coerced char-cmp runs on Nats. Less, equal and greater score 0, 1 and 2.
 
-(let (erased cg) (coercible-of char-cmp))
+(let (erased cg) (coercible-of (delegate-of char-cmp)))
 (let (many g) (coerce char-cmp cg))
 
 (def-lvl X)

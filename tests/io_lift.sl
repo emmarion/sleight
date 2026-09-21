@@ -32,7 +32,7 @@
         (let (many r) (delegate (k (predates ab) x)))
         (let (erased o2) (erased q) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
-      (values o (coercible-of o)))
+      (values o (coercible-of (delegate-of o))))
     (def-fns proof-lvl $ erased lift-fn0 : (subterm many (Fn A -> (many (IO A) next)) k) ->
         (erased (Fn B -> (many (IO B) next)) o)
         (erased (Coercible (Shared) (Fn B -> (many (IO B) next)) o (Shared) (Fn A -> (many (IO A) next)) k) p)
@@ -40,7 +40,7 @@
         (let (many r) (delegate (k (predates ab))))
         (let (erased o2) (erased q) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
-      (values o (coercible-of o)))
+      (values o (coercible-of (delegate-of o))))
     (match many io _
       ((Exit l c) (values (Exit B c) (coercible-ctor (Shared) Exit B A (coercible-refl (Shared) c))))
       ((Step l k)

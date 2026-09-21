@@ -230,7 +230,7 @@
     (many ExProvePredates : -> (ExprK)) (many ExValues : -> (ExprK)) (many ExPredatesTrans : -> (ExprK))
     (many ExSubtermTrans : -> (ExprK)) (many ExPredatesSubterm : -> (ExprK)) (many ExCoerce : -> (ExprK))
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
-    (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK))
+    (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
     (many ExDistinct : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)))
   (MarkK : -> Type
     enum
@@ -250,7 +250,7 @@
     ((ExMatch) 0) ((ExMatchableOf) 1) ((ExSlotHolds) 2) ((ExSlotVacant) 20) ((ExShare) 21) ((ExCellAlloc) 22) ((ExCellWrite) 23) ((ExCellMatch) 24) ((ExCoercibleShare) 25) ((ExNumeralOf) 3) ((ExLevelOf) 4) ((ExProveSubterm) 5)
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
-    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExDistinct) 18) ((ExOpenAbsurd) 19)))
+    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExDistinct) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26)))
 
 (def-fns _ $ many mark-code : (many (MarkK) k) -> (many (Nat) n)
   (match many k _
@@ -287,7 +287,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $
@@ -2446,11 +2446,11 @@
 
 
 ; Whether a type is one the fetching forms look for in ambient scope (sections 19, 38).
-(def-fns _ $ many is-object-type : (many (Term) ty) (many (Nat) coercible) -> (many (Bool) r)
+(def-fns _ $ many is-object-type : (many (Term) ty) (many (Nat) objid) -> (many (Bool) r)
   (match many ty _
     ((TMatchable d nt ex t cs) (BTrue))
     ((TSlotHolds c) (BFalse))
-    ((TApp h args) (match many h _ ((TVar x) (nat-eq x coercible)) (else (BFalse))))
+    ((TApp h args) (match many h _ ((TVar x) (nat-eq x objid)) (else (BFalse))))
     ((TCell h args) (BFalse)) (else (BFalse))))
 
 (def-fns _
@@ -2563,7 +2563,7 @@
 ; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
 ; name or by type, and unification alone solves it. No other entry's type or rule may mention one still
 ; unsolved -- the invariant behind the sugar -- except while a telescope with holes is being built [holes].
-(def-fns _ $ many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x)
   (let (many (Maybe $ String) bad) $ match many name _ ((None a) (None _)) ((Some a n) (match many (is-literal-name n) (((Maybe $ String) m)) ((BTrue) (Some _ $ located env ": error: " $ str-cat n " is a literal, not a name")) ((BFalse) (None _)))))
   (let (many (Maybe $ Term) open)
@@ -2588,29 +2588,29 @@
               ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab op)
                 (let (many t2) (erased ft) $ canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1)
                 (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))))
-      (let (many (List $ Nat) ob2) $ match many (and (not meta) $ is-object-type ty coercible) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
+      (let (many (List $ Nat) ob2) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
       (values (MkEnv _ hp sc2 en2 _ _ x tb2 rp ob2 li fi er lv sts cl wa lt lo pr us) x))))
 
-(def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x)
-  (bind-as env (BFalse) (BFalse) name mult ty rule coercible))
+  (bind-as env (BFalse) (BFalse) name mult ty rule objid))
 
 ; A binder that is Const at once: over a closed block, over the token, or over the token only in run
 ; position (section 34).
-(def-fns _ $ many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x)
-  (let (many env2) (many x) $ bind env name mult ty rule coercible)
+  (let (many env2) (many x) $ bind env name mult ty rule objid)
   (values (set-state-closed env2 x b) x))
 
-(def-fns _ $ many bind-token : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind-token : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x)
-  (bind-closed env name mult (BToken _) ty rule coercible))
+  (bind-closed env name mult (BToken _) ty rule objid))
 
-(def-fns _ $ many bind-erased : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) coercible) ->
+(def-fns _ $ many bind-erased : (many (Env) env) (many (Maybe $ String) name) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x)
   (match many (env-run-pos env) _
-    ((BTrue) (bind-token env name mult ty rule coercible))
-    ((BFalse) (bind env name mult ty rule coercible))))
+    ((BTrue) (bind-token env name mult ty rule objid))
+    ((BFalse) (bind env name mult ty rule objid))))
 
 
 ; ---- Instantiation and abstraction over de Bruijn binders (lib/term.ml)
@@ -2740,7 +2740,8 @@
 (let (many shared-id) (Succ unique-id))
 (let (many sharing-matchable-id) (Succ shared-id))
 (let (many coercible-id) (Succ sharing-matchable-id))
-(let (many special-id) (Succ coercible-id))
+(let (many delegate-id) (Succ coercible-id))
+(let (many special-id) (Succ delegate-id))
 (let (many type-term) $ TApp (TVar univ-id) $ Nil _)
 (let (many level-term) $ TApp (TVar level-id) $ Nil _)
 (let (many special-term) $ TApp (TVar special-id) $ Nil _)
@@ -2750,7 +2751,7 @@
 (let (many shared-term) $ TApp (TVar shared-id) $ Nil _)
 
 (def-fns _ $ many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r)
-  (let (many env2) (many x) $ bind-token env (Some _ name) (Erased) ty rule coercible-id)
+  (let (many env2) (many x) $ bind-token env (Some _ name) (Erased) ty rule delegate-id)
   env2)
 
 (let (many special-adt-stub) (MkAdt "Special" (BTrue) (Nil _) (None _) (BFalse)))
@@ -2764,10 +2765,10 @@
       (match many sp _
         ((MkSpEntry name k)
           (let (many cname) $ str-cat "%" name)
-          (let (many env2) (many c) $ bind env (Some _ cname) (Many) (TValCtor (Nil _) special-term) (None _) coercible-id)
+          (let (many env2) (many c) $ bind env (Some _ cname) (Many) (TValCtor (Nil _) special-term) (None _) delegate-id)
           (let (many ctor) (MkCtor cname c index 0 (BTrue) (None _) shape (BFalse)))
           (let (many env3) $ set-state-closed env2 c $ BCtorFn _ ctor)
-          (let (many env4) (many x) $ bind-closed env3 (Some _ name) (Many) (BTag _ ctor $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) coercible-id)
+          (let (many env4) (many x) $ bind-closed env3 (Some _ name) (Many) (BTag _ ctor $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) delegate-id)
           (let (many env5) (many ctors) (many mctors) $ bind-specials rest env4 (Succ index) shape)
           (values env5 (Cons _ ctor ctors) $ Cons _ (MkMCtor (Many) $ TVar c) mctors))))))
 
@@ -2778,7 +2779,7 @@
   (let (many e2) $ bind-builtin e1 "Type" type-term $ Some _ type-term)
   (let (many e3) $ bind-builtin e2 "Level" (TTyCtor $ Nil _) $ None _)
   (let (many eslot) (bind-builtin e3 "Slot" (TTyCtor $ Nil _) $ None _))
-  (let (many enull) (many null) (bind-token eslot (None _) (Many) type-term (None _) coercible-id))
+  (let (many enull) (many null) (bind-token eslot (None _) (Many) type-term (None _) delegate-id))
   (let (many e4) (bind-builtin (mark-word enull null (BFalse)) "Predates"
                    (TTyCtor (Cons _ (ty-entry "A" type-term) $ Cons _ (ty-entry "a" $ TBound 0) $
                              Cons _ (ty-entry "l" level-term) (Nil _))) $ None _))
@@ -2787,17 +2788,19 @@
   (let (many ushape) (Cons _ 0 $ Cons _ 0 $ Nil _))
   (let (many uc) (MkCtor "Unique" unique-id 0 0 (BTrue) (None _) ushape (BFalse)))
   (let (many sc) (MkCtor "Shared" shared-id 1 0 (BTrue) (None _) ushape (BFalse)))
-  (let (many eu) (many ui) (bind-closed esharing (Some _ "Unique") (Many) (BCtorFn _ uc) (TValCtor (Nil _) sharing-term) (None _) coercible-id))
-  (let (many es) (many si) (bind-closed eu (Some _ "Shared") (Many) (BCtorFn _ sc) (TValCtor (Nil _) sharing-term) (None _) coercible-id))
+  (let (many eu) (many ui) (bind-closed esharing (Some _ "Unique") (Many) (BCtorFn _ uc) (TValCtor (Nil _) sharing-term) (None _) delegate-id))
+  (let (many es) (many si) (bind-closed eu (Some _ "Shared") (Many) (BCtorFn _ sc) (TValCtor (Nil _) sharing-term) (None _) delegate-id))
   (let (many ucs) (Cons _ uc $ Cons _ sc $ Nil _))
   (let (many umcs) (Cons _ (MkMCtor (Many) $ TVar ui) $ Cons _ (MkMCtor (Many) $ TVar si) $ Nil _))
-  (let (many em) (many mid) (bind-closed es (None _) (Many) (BMat _ $ MkAdt "Sharing" (BTrue) ucs (None _) (BFalse)) (TMatchable (DEnum) (BFalse) (BFalse) (TVar sharing-id) umcs) (None _) coercible-id))
+  (let (many em) (many mid) (bind-closed es (None _) (Many) (BMat _ $ MkAdt "Sharing" (BTrue) ucs (None _) (BFalse)) (TMatchable (DEnum) (BFalse) (BFalse) (TVar sharing-id) umcs) (None _) delegate-id))
   (let (many coercible-tele) (Cons _ (ty-entry "sa" sharing-term) $ Cons _ (ty-entry "A" type-term) $ Cons _ (ty-entry "a" $ TBound 0) $ Cons _ (ty-entry "sb" sharing-term) $ Cons _ (ty-entry "B" type-term) $ Cons _ (ty-entry "b" $ TBound 0) $ Nil _))
   (let (many e6) (bind-builtin (env-settled $ env-open em mid) "Coercible" (TTyCtor coercible-tele) $ None _))
-  (let (many e7) $ bind-builtin e6 "Special" (TTyCtor $ Nil _) $ None _)
+  (let (many delegate-tele) (Cons _ (ty-entry "sg" sharing-term) $ Cons _ (ty-entry "G" type-term) $ Cons _ (ty-entry "g" $ TBound 0) $ Cons _ (ty-entry "sf" sharing-term) $ Cons _ (ty-entry "F" type-term) $ Cons _ (ty-entry "f" $ TBound 0) $ Nil _))
+  (let (many edel) (bind-builtin e6 "Delegate" (TTyCtor delegate-tele) $ None _))
+  (let (many e7) $ bind-builtin edel "Special" (TTyCtor $ Nil _) $ None _)
   (let (many e8) (many ctors) (many mctors) $ bind-specials sp-table e7 0 $ list-replicate _ (list-length _ sp-table) 0)
   (let (many adt) (MkAdt "Special" (BTrue) ctors (None _) (BFalse)))
-  (let (many e9) (many m) $ bind-closed e8 (None _) (Many) (BMat _ adt) (TMatchable (DEnum) (BFalse) (BFalse) (TVar special-id) mctors) (None _) coercible-id)
+  (let (many e9) (many m) $ bind-closed e8 (None _) (Many) (BMat _ adt) (TMatchable (DEnum) (BFalse) (BFalse) (TVar special-id) mctors) (None _) delegate-id)
   (env-settled $ env-open e9 m))
 
 

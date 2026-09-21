@@ -18,6 +18,6 @@
       (let (many j) (delegate (inc (predates p) k)))
       (coerce j (coercible-wrap (Shared) MkMeters j)))))
 
-(let (erased ig) (coercible-of inc-meters))
+(let (erased ig) (coercible-of (delegate-of inc-meters)))
 (let (many (Fn L (many (Nat) a) -> (many (Nat) b)) g) (coerce inc-meters ig))
 (g (Zero))

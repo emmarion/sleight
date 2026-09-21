@@ -3,7 +3,7 @@ type t =
   | Fn | UniqueFn | TyCtor | ValCtor | Matchable
   | CellAlloc | CellWrite | CellMatch | Cell | SlotHolds | SlotVacant | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
-  | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf | CoercibleShare
+  | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf | DelegateOf | CoercibleShare
   | Erased | Many | Unique | Colon | Is | Arrow | Subterm | Enum | Union | Tail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
@@ -15,7 +15,7 @@ let all =
     (PredatesTrans, "predates-trans"); (SubtermTrans, "subterm-trans"); (PredatesSubterm, "predates-subterm");
     (Coerce, "coerce"); (CoercibleRefl, "coercible-refl"); (CoercibleSym, "coercible-sym");
     (CoercibleTrans, "coercible-trans"); (CoercibleWrap, "coercible-wrap"); (CoercibleCtor, "coercible-ctor");
-    (CoercibleOf, "coercible-of"); (CoercibleShare, "coercible-share");
+    (CoercibleOf, "coercible-of"); (DelegateOf, "delegate-of"); (CoercibleShare, "coercible-share");
     (Erased, "erased"); (Many, "many"); (Unique, "unique"); (Colon, ":"); (Is, "is"); (Arrow, "->"); (Subterm, "subterm");
     (Enum, "enum"); (Union, "union"); (Tail, "tail"); (Delegate, "delegate"); (Predates, "predates");
     (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]

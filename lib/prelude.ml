@@ -38,6 +38,9 @@ let shared_term = App (Var (List.nth sharing_ctors 1).V.cid, [])
 let coercible, env = Env.bind env (Some "Coercible") Erased token
   (TyCtor [ ty "sa" sharing_term; ty "A" type_term; ty "a" (Bound 0);
             ty "sb" sharing_term; ty "B" type_term; ty "b" (Bound 0) ])
+let delegate, env = Env.bind env (Some "Delegate") Erased token
+  (TyCtor [ ty "sg" sharing_term; ty "G" type_term; ty "g" (Bound 0);
+            ty "sf" sharing_term; ty "F" type_term; ty "f" (Bound 0) ])
 
 let special, env = Env.bind env (Some "Special") Erased token (TyCtor [])
 let special_term = App (Var special, [])

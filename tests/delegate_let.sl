@@ -8,6 +8,6 @@
   (let (many r) (delegate (inc (predates piv) n)))
   (let (erased twice) (Succ r))
   r)
-(let (erased ig) (coercible-of inc-noted))
+(let (erased ig) (coercible-of (delegate-of inc-noted)))
 (let (many (Fn I (many (Nat) a) -> (many (Nat) b)) g) (coerce inc-noted ig))
 (g (inc-noted (Zero) (Zero)))

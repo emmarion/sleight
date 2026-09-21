@@ -17,6 +17,6 @@
   (delegate (inc (predates p) n)))
 
 (let (many noted) inc-noted)
-(let (erased ig) (coercible-of noted))
+(let (erased ig) (coercible-of (delegate-of noted)))
 (let (many (Fn L (many (Nat) a) -> (many (Nat) b)) g) (coerce noted ig))
 (g (Zero))

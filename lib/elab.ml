@@ -992,9 +992,14 @@ and elab_special demand tele env expect l sp args =
         | _ -> error l "coercible-ctor: wrong number of arguments for %s" (name_of env c) in
       let env, src, tgt = go env [] [] params args in
       mint env (proof_type Prelude.coercible [ s; instantiate src ret; App (Var c, List.rev src); s; instantiate tgt ret; App (Var c, List.rev tgt) ])
-  | Sp.CoercibleOf, [ g ] ->
+  | Sp.CoercibleOf, [ d ] -> (
+      let env, d = proof ?sides:(expected_sides env) env Prelude.delegate d in
+      match d with
+      | [ sg; gty; g; sf; fty; f ] -> mint env (proof_type Prelude.coercible [ sg; gty; g; sf; fty; f ])
+      | _ -> assert false)
+  | Sp.DelegateOf, [ g ] ->
       let g = named env l "a function name" g in
-      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.coercible && g' = g | _ -> false) in
+      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
       fetch "delegate proof in scope" g (List.find_opt about (List.rev env.scope.ids))
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (Sp.name sp)
   | sp, _ -> error l "malformed %s form" (Sp.name sp)
@@ -1512,7 +1517,7 @@ and elab_def_fns ?(unique = false) env l args =
       let env =
         List.fold_left
           (fun env -> function
-            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.coercible [ sharing_of_fn env gty; gty; Var g; sharing_of_fn env (infer env l callee); infer env l callee; callee ]))
+            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.delegate [ sharing_of_fn env gty; gty; Var g; sharing_of_fn env (infer env l callee); infer env l callee; callee ]))
             | None -> env)
           env proofs
       in

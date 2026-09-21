@@ -40,7 +40,7 @@
     (many (Nat) m)
   (delegate (inc (predates piv) n)))
 
-(let (erased ig) (coercible-of inc-noted))
+(let (erased ig) (coercible-of (delegate-of inc-noted)))
 
 (let (many ms) (Cons (Meters) (MkMeters (Succ (Zero))) $ Cons (Meters) (MkMeters (Zero)) $ Nil (Meters)))
 
