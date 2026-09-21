@@ -1425,7 +1425,6 @@ and elab_let_match env l args =
       let mults = List.map (fun e -> field_under smult e.mult) tele in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult <> Erased in
-      if smult <> Erased && not run then held_needs_many env l tid mid;
       let value = if run then Some (List.hd (run_code env (swrap scode))) else None in
       let env = match value,sres.term with Some v, Var x -> set_state env x (Const v) | _ -> env in
       let states = Option.map (fun v -> snd (const_fields env pl c mults v)) value in

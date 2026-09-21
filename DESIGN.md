@@ -900,14 +900,13 @@ and `comptime-match`; §12's and §37's emptiness check; `matchable-of`
 and `newtype-of`, which find only an opened object; and
 `coercible-wrap`, which needs an opened `Newtype` for its constructor.
 `delegate-of` still fetches from ambient scope (§38). §18's occurs
-check and its refutation by signature are not gated. A match that
-dispatches at runtime — a `many` match on a `many` scrutinee, or a
-`let-match` at `many` outside run position — reads its `Matchable`'s
-value and so requires the opened entry to be readable: `Const` with the
+check and its refutation by signature are not gated. A `many` match on a
+`many` scrutinee and a `let-match` at `many` use their `Matchable` at
+`many` and require the opened entry to be readable: `Const` with the
 type's declaration, or non-erased and still bound. A `comptime-match`
 consults its `Matchable` at elaboration time and so requires the
 stricter half, the opened entry `Const` with the type's declaration, and
-uses it at `many` as a dispatching match does. Readability is judged
+uses it at `many` as those do. Readability is judged
 at the match, so a `many` parameter opened at `erased` serves no such
 match. An unopened `Matchable` leaves its type constructor opaque: type
 constructors are told apart only by their opened `Matchable`s, so an

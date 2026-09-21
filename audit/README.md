@@ -32,7 +32,7 @@ removed from there when they were fixed, as were their files here:
 Open questions for the owner, also in ASSUMPTIONS 183; a settled one
 keeps its line, marked as the fixed items above are:
 
-- Q1. `comptime-match many` on a unique Const cannot write its `share`
+- Q1. FIXED (§15, U5, §19): `comptime-match many` on a unique Const cannot write its `share`
 - Q2. An erased-position `unique` match mints `SlotHolds` over erased binders
 - Q3. Structural Matchable marks prevent abstracting over extern and non-extern
 - Q4. FIXED (U1): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
