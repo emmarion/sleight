@@ -193,6 +193,17 @@
 (def-fns _ $ many is-statement : (many (Env) env) (many (Raw) raw) -> (many (Bool) r)
   (match many (stmt-of env raw) _ ((None a) (BFalse)) ((Some a k) (BTrue))))
 
+(def-fns _ $ many share-arg : (many (Env) env) (many (Raw) raw) -> (many (Maybe $ Raw) r)
+  (match many (raw-items raw) _
+    ((Nil a) (None _))
+    ((Cons a h rest)
+      (match many rest _
+        ((Nil b) (None _))
+        ((Cons b arg more)
+          (match many (and (list-is-empty _ more) $ is-special env h $ SpExpr $ ExShare) _
+            ((BTrue) (Some _ arg))
+            ((BFalse) (None _))))))))
+
 
 (def-fns _ $ many show-t : (many (Env) env) (many (Term) t) -> (many (String) s)
   (rope-str $ show-term (canon-env env t) env))
@@ -3203,8 +3214,17 @@
             (match many cpat _
               ((MkPair s2 t2 craw fields)
                 (let (many env1) $ error-unless env (env-run-pos env) "comptime-match is a run-position statement (section 15)")
-                (let (many env2) (many x) $ var-of-raw env1 xraw "a variable")
-                (let (many env2) (use-entry env2 mode x (BFalse)))
+                (let (many env2) (many x) (many sharing)
+                  (match many (share-arg env1 xraw) (((Env) e) ((Nat) i) ((Bool) b))
+                    ((None a)
+                      (let (many envb) (many z) $ var-of-raw env1 xraw "a variable")
+                      (values envb z (BFalse)))
+                    ((Some a arg)
+                      (let (many envb) (many y) $ var-of-raw env1 arg "a variable")
+                      (let (many envc) $ error-when envb (not $ mult-is-once $ entry-mult-of envb y) "share needs a unique value")
+                      (let (many envd) $ error-when envc (mult-is-once mode) $ str-cat3 "many value " (name-of envc y) " used at unique")
+                      (values envd y (BTrue)))))
+                (let (many env2) (use-entry env2 mode x sharing))
                 (let (many (Env) env3)
                   (match many (and (is-const env2 x) $ mult-is-many $ entry-mult-of env2 x) _
                     ((BTrue) env2)

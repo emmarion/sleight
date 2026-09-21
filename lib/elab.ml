@@ -1447,8 +1447,16 @@ and elab_comptime_match env l args =
       let smult = mult_or env l m in
       if smult = Erased then error l "comptime-match needs a non-erased multiplicity";
       if not env.run_pos then error l "comptime-match is a run-position statement (section 15)";
-      let x = var env l (atom_or l x "a variable") in
-      let env = use env l smult x in
+      let x, sharing =
+        match x with
+        | List (_, [ h; a ]) when special_of env h = Some Sp.Share ->
+            let y = var env l (atom_or l a "a variable") in
+            if (entry env y).mult <> Unique then error l "share needs a unique value";
+            if smult = Unique then error l "many value %s used at unique" (name_of env y);
+            (y, true)
+        | _ -> (var env l (atom_or l x "a variable"), false)
+      in
+      let env = use env l ~sharing smult x in
       let value = match entry env x with { state = Const v; mult = (Many | Unique); _ } -> v | _ -> error l "comptime-match needs a Const, non-erased scrutinee" in
       let c = ctor_var env pl c in
       let tele, ret = ctor_type env pl c in
