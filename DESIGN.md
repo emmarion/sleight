@@ -187,9 +187,10 @@ There are also two ways for these to be "minted" (introduced):
   canonicalized/rewritten first, and both are restricted to §5's
   "is"/type grammar. The minted claim then requires the first,
   post-canonicalization, to be a strict subtree of the second, where the
-  search walks only through type- and value-constructor applications
-  (§5's productions 2 and 3). A type former (production 4) is opaque —
-  nothing inside its telescope counts as a subterm of it.
+  search walks only through type-constructor applications and
+  applications of an ADT's value constructors (§5's productions 2 and
+  3). A type former (production 4) is opaque — nothing inside its
+  telescope counts as a subterm of it.
 
 - **`Level` minting.** A `def-lvl` form mints a fresh `Level`. Mental
   model (a model only — fully erased in practice, not a real runtime
