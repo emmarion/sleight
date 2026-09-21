@@ -15,10 +15,7 @@ Fixed in `fa5747a`, each with a test under `tests/`:
 - F1. An `at` return reconstructed from an erased binder's word
 - F2. Self `let-match many` hands a unique-labelled field out at unique
 - F3. A newtype application in an erased position refused as a non-variable location
-- F4. FIXED, and its note deleted: `coercible-of` fetched the newest anonymous
-  proof, shadowing the delegate proof. The owner has since moved the mint to a
-  `Delegate` type and split the fetch off as `delegate-of`, so there is no
-  longer a search order for the finding to turn on.
+- F4. FIXED (§38): `coercible-of` fetches the newest anonymous proof, shadowing the delegate proof
 - F5. A size-zero position treated as erased (a reading)
 - F6. A type former's head recorded as a use, inconsistently (a reading)
 - F7. A zero-binder `let` inside a body drops its right-hand side's code
