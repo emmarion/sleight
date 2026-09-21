@@ -220,10 +220,12 @@ running the captured uniques again; a UniqueFn held at many cannot.
 
 A top-level binder, and so a Const (§34), may be `unique` under the same
 rules, run-position statements being sequential. Where the elaborator
-must read a Const as a value, a special form or macro at a head (§4) or
-a Matchable a match reads, that read is a many use, so a unique Const
-there is an error until it is written `(share x)`, as anywhere else;
-`comptime-match` is not such a read (§U5).
+must read a Const as a value, a special form or macro at a head (§4), or
+a Matchable that a `match`, a `let-match` or a `comptime-match` reads,
+that read is a many use, so a unique Const there is an error until it is
+written `(share x)`, as anywhere else. A `comptime-match`'s scrutinee is
+the one exception: it is used at the mode written on the form (§U5), not
+at `many` for having been read.
 
 ## U7. `Coercible` with multiplicities
 
