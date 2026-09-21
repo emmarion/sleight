@@ -3,21 +3,28 @@
 ; expect: > a
 ; expect: > bb
 ; exit: 3
-; An IO program: a ReadLine request whose continuation answers with the next request, holding itself,
-; so the driver's loop reads until end of input; Exit carries a U8 code.
+; An IO program: a ReadLine request whose continuation answers with the next request, so the driver's loop
+; reads until end of input; Exit carries a U8 code. A continuation is a UniqueFn, born by def-unique and
+; consumed by the request it is stored in, so the loop's body sits below the IO level and each request
+; wraps it in a fresh continuation.
 
+(def-lvl P0)
 (def-lvl P)
 (let (many d3) (lt-dec 3 u8-modulus))
 (comptime-match many d3 (Yes za3 zb3 zp3))
 (let (many code3) (MkU8 3 zp3))
-(let (erased str-p) (prove-predates str-lvl P))
-(let (erased thunk-p) (prove-predates thunk-lvl P))
+(let (erased str-p0) (prove-predates str-lvl P0))
+(let (erased thunk-p0) (prove-predates thunk-lvl P0))
+(let (erased p0-p) (prove-predates P0 P))
 
-(def-fns P $ many echo : (many (Maybe (String)) line) -> (many (IO P) next)
+(def-fns P0 $ many echo : (many (Maybe (String)) line) -> (unique (IO P) next)
   (match many line _
     ((None a) (Exit P code3))
     ((Some a s)
-      (WriteOut P (str-append (predates str-p) "> " (str-append (predates str-p) s "\n"))
-        (thunk (predates thunk-p) _ _ (ReadLine P echo))))))
+      (def-unique P $ unique again : (many (Maybe (String)) line) -> (unique (IO P) next) (echo (predates p0-p) line))
+      (WriteOut P (str-append (predates str-p0) "> " (str-append (predates str-p0) s "\n"))
+        (unique-thunk (predates thunk-p0) _ _ (ReadLine P again))))))
 
-(ReadLine P echo)
+(def-unique P $ unique start : (many (Maybe (String)) line) -> (unique (IO P) next) (echo (predates p0-p) line))
+
+(ReadLine P start)

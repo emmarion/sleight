@@ -1172,7 +1172,7 @@
           (match many rs _
             ((Cons b r more)
               (match many more _
-                ((Nil c) (match many r _ ((MkEntry n s m sg place) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FPlain)) ((Erased) (FPlain))))))
+                ((Nil c) (match many r _ ((MkEntry n s m sg place) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FThunk $ sg-term sg)) ((Erased) (FPlain))))))
                 ((Cons c r2 more2) (FPlain))))
             ((Nil b) (FPlain))))
         ((Cons a p more)

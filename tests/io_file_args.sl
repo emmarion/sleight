@@ -4,7 +4,7 @@
 ; stderr: y
 ; Writes a file, reads it back to stdout, then lists the arguments on stderr. A recursive helper over
 ; the argument list sits at a level below the IO level, since a continuation's type fixes its level and
-; a same-level call would need a subterm proof; it references the P-level echo only as a value.
+; a same-level call would need a subterm proof; each request wraps the next step in a fresh continuation.
 
 (def-lvl P0)
 (def-lvl P)
@@ -22,22 +22,22 @@
 (let (erased thunk-p) (prove-predates thunk-lvl P))
 (let (erased thunk-p0) (prove-predates thunk-lvl P0))
 
-(def-fns P0 $ many list-args : (subterm many (List (String)) args) -> (many (IO P) next)
+(def-fns P0 $ many list-args : (subterm many (List (String)) args) -> (unique (IO P) next)
   (match many args _
     ((Nil a) (Exit P code0))
-    ((Cons a x rest) (WriteErr P (str-append (predates str-p0) x "\n") (thunk (predates thunk-p0) _ _ (list-args (subterm _) rest))))))
+    ((Cons a x rest) (WriteErr P (str-append (predates str-p0) x "\n") (unique-thunk (predates thunk-p0) _ _ (list-args (subterm _) rest))))))
 
-(def-fns P $ many all-args : (many (List (String)) args) -> (many (IO P) next)
+(def-unique P $ unique all-args : (many (List (String)) args) -> (unique (IO P) next)
   (list-args (predates p0-p) args))
 
-(def-fns P $ many after-read : (many (Result (String)) r) -> (many (IO P) next)
+(def-unique P $ unique after-read : (many (Result (String)) r) -> (unique (IO P) next)
   (match many r _
-    ((Ok a s) (WriteOut P s (thunk (predates thunk-p) _ _ (GetArgs P all-args))))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
+    ((Ok a s) (WriteOut P s (unique-thunk (predates thunk-p) _ _ (GetArgs P all-args))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
-(def-fns P $ many after-write : (many (Result (Unit)) r) -> (many (IO P) next)
+(def-unique P $ unique after-write : (many (Result (Unit)) r) -> (unique (IO P) next)
   (match many r _
     ((Ok a u) (ReadFile P "io-test.txt" after-read))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code2))))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code2))))))
 
 (WriteFile P "io-test.txt" "file contents\n" after-write)

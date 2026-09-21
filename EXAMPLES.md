@@ -158,9 +158,16 @@ that the test does not make is a mistake in this file.
   `Exit` carries a continuation, so a loop hands its next request to the
   driver instead of calling itself: `Step` performs nothing and loops
   silently, and `WriteOut` loops on output alone. The continuation is a
-  closure at the IO level, which comes after the looping function's own,
-  so no function in the program can call it and the unbounded iteration
-  stays the driver's.
+  `def-unique` closure at the IO level, which comes after the looping
+  function's own, so no function in the program can call it and the
+  unbounded iteration stays the driver's; the request it is stored in
+  consumes it, so each request wraps a fresh one.
+- `tests/io_unique_state.sl` — a continuation owning a unique value across
+  requests: a counter captured at unique by each `ReadLine`'s
+  continuation, updated in place through its cell as lines arrive, and
+  read off at the end. `tests/io_continuation_twice_bad.sl` and
+  `tests/io_shared_final_bad.sl` show a continuation refused twice and a
+  shared request refused as a program.
 - `tests/numeral_distinct.sl`, `tests/numeral_succ.sl`,
   `tests/numeral_lemmas.sl` — reasoning about literals through the prelude's
   `Numeral` relation rather than about their opaque `Nat`s. `distinct`

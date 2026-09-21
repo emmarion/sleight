@@ -17,7 +17,7 @@
 (let (erased thunk-p) (prove-predates thunk-lvl P))
 (let (erased thunk-p0) (prove-predates thunk-lvl P0))
 
-(def-fns P0 $ many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (many (IO P) next)
+(def-fns P0 $ many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next)
   (match many vars _
     ((Nil a) (Exit P code0))
     ((Cons a v rest)
@@ -25,19 +25,19 @@
         ((MkPair b c name value)
           (WriteOut P
             (str-append (predates str-p0) name (str-append (predates str-p0) "=" (str-append (predates str-p0) value "\n")))
-            (thunk (predates thunk-p0) _ _ (show-vars (subterm _) rest))))))))
+            (unique-thunk (predates thunk-p0) _ _ (show-vars (subterm _) rest))))))))
 
-(def-fns P $ many after-envs : (many (List (Pair (String) (String))) vars) -> (many (IO P) next)
+(def-unique P $ unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next)
   (show-vars (predates p0-p) vars))
 
-(def-fns P $ many after-absent : (many (Maybe (String)) value) -> (many (IO P) next)
+(def-unique P $ unique after-absent : (many (Maybe (String)) value) -> (unique (IO P) next)
   (match many value _
-    ((None a) (WriteOut P "absent\n" (thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))
-    ((Some a s) (WriteOut P "present\n" (thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))))
+    ((None a) (WriteOut P "absent\n" (unique-thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))
+    ((Some a s) (WriteOut P "present\n" (unique-thunk (predates thunk-p) _ _ (GetEnvs P after-envs))))))
 
-(def-fns P $ many after-a : (many (Maybe (String)) value) -> (many (IO P) next)
+(def-unique P $ unique after-a : (many (Maybe (String)) value) -> (unique (IO P) next)
   (match many value _
-    ((None a) (WriteOut P "absent\n" (thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))
-    ((Some a s) (WriteOut P (str-append (predates str-p) s "\n") (thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))))
+    ((None a) (WriteOut P "absent\n" (unique-thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))
+    ((Some a s) (WriteOut P (str-append (predates str-p) s "\n") (unique-thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))))
 
 (GetEnv P "SL_A" after-a)

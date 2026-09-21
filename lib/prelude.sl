@@ -774,29 +774,34 @@
   (def-fns L $ many held : -> (many A r) a)
   held)
 
+(def-fns thunk-lvl $ many unique-thunk : (erased Type A) (erased (Level) L) (unique A a) -> (unique (UniqueFn L -> (unique A r)) k)
+  (def-unique L $ unique held : -> (unique A r) a)
+  held)
+
 ; A program's requests to the driver (ASSUMPTIONS.md): every entry but Exit carries a continuation the
-; driver applies to the request's answer, so a step never recurses and the driver loops.
+; driver applies to the request's answer, so a step never recurses and the driver loops. A continuation is a
+; UniqueFn and a request unique, so a continuation may own what it closes over and is applied once.
 (def-adts
   (IO : ((Level) L) -> Type
     enum
     (many Exit : (erased (Level) L) (many (U8) code) -> (IO L))
-    (many Step : (erased (Level) L) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
-    (many WriteOut : (erased (Level) L) (many (String) text) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
-    (many WriteErr : (erased (Level) L) (many (String) text) (many (Fn L -> (many (IO L) next)) k) -> (IO L))
-    (many ReadLine : (erased (Level) L) (many (Fn L (many (Maybe (String)) line) -> (many (IO L) next)) k) -> (IO L))
-    (many ReadFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (String)) contents) -> (many (IO L) next)) k) -> (IO L))
-    (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))
-    (many GetArgs : (erased (Level) L) (many (Fn L (many (List (String)) args) -> (many (IO L) next)) k) -> (IO L))
-    (many GetEnv : (erased (Level) L) (many (String) name) (many (Fn L (many (Maybe (String)) value) -> (many (IO L) next)) k) -> (IO L))
-    (many GetEnvs : (erased (Level) L) (many (Fn L (many (List (Pair (String) (String))) vars) -> (many (IO L) next)) k) -> (IO L))
-    (many AppendFile : (erased (Level) L) (many (String) path) (many (String) text) (many (Fn L (many (Result (Unit)) outcome) -> (many (IO L) next)) k) -> (IO L))
-    (many ReadRemaining : (erased (Level) L) (many (Fn L (many (String) rest) -> (many (IO L) next)) k) -> (IO L))
-    (many ListDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (List (String))) entries) -> (many (IO L) next)) k) -> (IO L))
-    (many GetCwd : (erased (Level) L) (many (Fn L (many (String) path) -> (many (IO L) next)) k) -> (IO L))
-    (many Stat : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (EntryKind)) kind) -> (many (IO L) next)) k) -> (IO L))
-    (many MkDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
-    (many DeleteFile : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))
-    (many DeleteDir : (erased (Level) L) (many (String) path) (many (Fn L (many (Result (Change)) outcome) -> (many (IO L) next)) k) -> (IO L))))
+    (many Step : (erased (Level) L) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
+    (many WriteOut : (erased (Level) L) (many (String) text) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
+    (many WriteErr : (erased (Level) L) (many (String) text) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
+    (many ReadLine : (erased (Level) L) (unique (UniqueFn L (many (Maybe (String)) line) -> (unique (IO L) next)) k) -> (IO L))
+    (many ReadFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (String)) contents) -> (unique (IO L) next)) k) -> (IO L))
+    (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    (many GetArgs : (erased (Level) L) (unique (UniqueFn L (many (List (String)) args) -> (unique (IO L) next)) k) -> (IO L))
+    (many GetEnv : (erased (Level) L) (many (String) name) (unique (UniqueFn L (many (Maybe (String)) value) -> (unique (IO L) next)) k) -> (IO L))
+    (many GetEnvs : (erased (Level) L) (unique (UniqueFn L (many (List (Pair (String) (String))) vars) -> (unique (IO L) next)) k) -> (IO L))
+    (many AppendFile : (erased (Level) L) (many (String) path) (many (String) text) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    (many ReadRemaining : (erased (Level) L) (unique (UniqueFn L (many (String) rest) -> (unique (IO L) next)) k) -> (IO L))
+    (many ListDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (List (String))) entries) -> (unique (IO L) next)) k) -> (IO L))
+    (many GetCwd : (erased (Level) L) (unique (UniqueFn L (many (String) path) -> (unique (IO L) next)) k) -> (IO L))
+    (many Stat : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (EntryKind)) kind) -> (unique (IO L) next)) k) -> (IO L))
+    (many MkDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    (many DeleteFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))))
 
 (def-adts $ Array : (Type A) ((Nat) n) -> Type
   enum extern

@@ -19,7 +19,7 @@
 (let (many d0) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let (many code0) (MkU8 0 zp0))
-(def-fns P $ many k : (many (Maybe (String)) line) -> (many (IO P) next)
+(def-unique P $ unique k : (many (Maybe (String)) line) -> (unique (IO P) next)
   (let (many n) (add2 (predates ap) (add5 (predates bp) 1)))
   (match many (lt-dec (predates np) n u8-modulus) (((IO P) next))
     ((Yes a b p) (Exit P (MkU8 n p)))

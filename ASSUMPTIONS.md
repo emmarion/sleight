@@ -3548,3 +3548,70 @@ to look for a guard, are the owner's.
     Not decided here, and left open by the owner: whether a rendering's
     reading back as the same value becomes a test of its own, which
     `tests/literal_print.sl` already does for the three literal types.
+
+## IO over UniqueFn, and slc's interpret mode (sections 16, U6)
+
+Asked for by the owner in chat, as two tasks for one autonomous session:
+switch `IO` to use `UniqueFn`, then give `slc` an interpret option in
+place of emitting OCaml (item 188). The shapes below are the session's,
+made without the owner.
+
+185. **`IO` continuations are `UniqueFn`s and requests are unique.**
+    Every constructor but `Exit` carries `(unique (UniqueFn L ... ->
+    (unique (IO L) next)) k)` and every continuation returns `(unique
+    (IO L) next)`, so an `IO` value is unique throughout; the session
+    saw no way to keep the requests `many`, since a unique-labelled
+    field of a constructor built at `many` is requested at `many` (U4),
+    which would want a `share` and leave the continuation callable only
+    erased (U6). What the change buys is that a continuation may own a
+    unique value across requests, captured at unique by the `def-unique`
+    each request wraps and updated in place through its cell
+    (`tests/io_unique_state.sl`), where an `Fn` could hold it only
+    shared. A continuation is born by `def-unique` and consumed by the
+    request that holds it, so one cannot serve two requests
+    (`tests/io_continuation_twice_bad.sl`), and a looping program's body
+    is no longer its own continuation: it sits at a level below the IO
+    level and each request wraps the next step in a fresh `def-unique`
+    calling it (`tests/io_echo.sl`), which supersedes item 57's pattern;
+    a recursive helper takes the request that follows it as a `unique`
+    parameter, a `def-fns` being unable to capture one
+    (`tests/io_dirs.sl`, `self/main.sl`'s `write-lines`). `unique-thunk`
+    joins the prelude beside `thunk`, holding a unique value in a
+    nullary `UniqueFn`; `thunk` stays, being general (147), and a
+    wrapper turning an `Fn` into a `UniqueFn` was considered and left
+    out, an inline `def-unique` saying the same in one line.
+    `tests/io_lift.sl`'s proofs carry `(Unique)` sides with `(Shared)`
+    over the many-labelled arguments, its delegates being `def-unique`s,
+    and `tests/io_lift_runtime.sl` takes each request apart at `unique`,
+    with the cell binder every pattern then needs (U5). The comment above
+    the prelude's `IO` says as much in one sentence.
+
+186. **The driver takes an `IO` value at unique.** Section 16 leaves what
+    consumes the top level's result unsettled, and the final expression
+    was elaborated at `many`; a unique request there would want a
+    `share`, which is exactly what must be refused, a shared request's
+    continuations being dead (`tests/io_shared_final_bad.sl`). So the
+    final expression is elaborated under a third demand beside `Fixed`
+    and `CallableHead` (`Elab.Driver`, `self/elab.sl`'s `FinalDemand`)
+    that takes a value of the prelude's `IO` type at `unique` and
+    anything else at `many`, decided by the type as a callable head's
+    multiplicity is: through the atom, constructor application, `values`
+    and `match` cases, so a top-level `match` producing a request builds
+    it at unique. A `many` `IO` value at the top level is refused as a
+    many value used at unique. The reading behind it is that the driver
+    is the one consumer of a program's `IO` value and applies each
+    continuation once, so it stands where a unique use stands. The
+    `Thunk` final accepts a `unique` return beside a `many` one, its
+    result being read once and printed. Whether section 16 should say
+    this is the owner's; nothing in DESIGN.md or UNIQUE.md was changed.
+
+187. **A run may update a Const the extractor then embeds.**
+    `test/runtest.ml` ran the interpreter's final and extracted from the
+    environment afterwards. With a continuation owning a top-level unique
+    Const, the run updates that Const's block in place
+    (`tests/io_unique_state.sl`'s counter), and the extracted program
+    began where the run had ended, exiting 6 for 3. `--extract` runs no
+    final, so the harness now takes the extracted sources before running
+    the deferred final. Not a defect in the language on the session's
+    reading: the Const was consumed by the definition that captured it,
+    and nothing reads it afterwards.

@@ -11,9 +11,9 @@
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let (many code1) (MkU8 1 zp1))
 
-(def-fns P $ many after-read : (many (Result (String)) r) -> (many (IO P) next)
+(def-unique P $ unique after-read : (many (Result (String)) r) -> (unique (IO P) next)
   (match many r _
-    ((Ok a s) (WriteOut P s (thunk (predates thunk-p) _ _ (Exit P code0))))
-    ((Fail a m) (WriteErr P "missing\n" (thunk (predates thunk-p) _ _ (Exit P code1))))))
+    ((Ok a s) (WriteOut P s (unique-thunk (predates thunk-p) _ _ (Exit P code0))))
+    ((Fail a m) (WriteErr P "missing\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (ReadFile P "no-such-file" after-read)

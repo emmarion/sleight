@@ -24,41 +24,41 @@
     ((IsOther) "other")
     ((Missing) "missing")))
 
-(def-fns P $ many cleaned : (many (Result (Change)) o) -> (many (IO P) next)
+(def-unique P $ unique cleaned : (many (Result (Change)) o) -> (unique (IO P) next)
   (Exit P code0))
 
-(def-fns P $ many cwd-kind : (many (Result (EntryKind)) r) -> (many (IO P) next)
+(def-unique P $ unique cwd-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next)
   (match many r _
     ((Ok a k)
       (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates p0-p) k) "\n"))
-        (thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
+        (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
-(def-fns P $ many got-cwd : (many (String) path) -> (many (IO P) next)
+(def-unique P $ unique got-cwd : (many (String) path) -> (unique (IO P) next)
   (Stat P path cwd-kind))
 
-(def-fns P $ many none-kind : (many (Result (EntryKind)) r) -> (many (IO P) next)
+(def-unique P $ unique none-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next)
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
-(def-fns P $ many file-kind : (many (Result (EntryKind)) r) -> (many (IO P) next)
+(def-unique P $ unique file-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next)
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
-(def-fns P $ many read-back : (many (Result (String)) r) -> (many (IO P) next)
+(def-unique P $ unique read-back : (many (Result (String)) r) -> (unique (IO P) next)
   (match many r _
-    ((Ok a s) (WriteOut P (str-append (predates str-p) s "\n") (thunk (predates thunk-p) _ _ (Stat P "io-stat-test.txt" file-kind))))
-    ((Fail a m) (WriteErr P m (thunk (predates thunk-p) _ _ (Exit P code1))))))
+    ((Ok a s) (WriteOut P (str-append (predates str-p) s "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test.txt" file-kind))))
+    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
-(def-fns P $ many appended : (many (Result (Unit)) o) -> (many (IO P) next)
+(def-unique P $ unique appended : (many (Result (Unit)) o) -> (unique (IO P) next)
   (ReadFile P "io-stat-test.txt" read-back))
 
-(def-fns P $ many wrote : (many (Result (Unit)) o) -> (many (IO P) next)
+(def-unique P $ unique wrote : (many (Result (Unit)) o) -> (unique (IO P) next)
   (AppendFile P "io-stat-test.txt" "two" appended))
 
-(def-fns P $ many swept : (many (Result (Change)) o) -> (many (IO P) next)
+(def-unique P $ unique swept : (many (Result (Change)) o) -> (unique (IO P) next)
   (WriteFile P "io-stat-test.txt" "one" wrote))
 
 (DeleteFile P "io-stat-test.txt" swept)

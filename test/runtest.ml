@@ -23,21 +23,15 @@ let report out err code expect stderr exit =
 
 let split_env s = Option.map (fun i -> (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))) (String.index_opt s '=')
 
-let extracted name externs templates env input args envs expect stderr exit =
+let extracted name externs templates source input args envs expect stderr exit =
   if not (Lazy.force ocamlfind) then Some "ocamlfind is not available to compile the extracted program"
   else
     let base = Filename.concat "extract" (name ^ if not externs then "_src" else if templates then "_ffi" else "_ffi_view") in
-    Extract.templates := templates;
     (try Sys.mkdir "extract" 0o755 with Sys_error _ -> ());
-    let outcome =
-      try
-        write (base ^ ".ml") (Extract.emit env (List.rev !Env.trace));
-        Ok ()
-      with e -> Error (Printexc.to_string e)
-    in
-    match outcome with
+    match source with
     | Error m -> Some ("extraction failed: " ^ m)
-    | Ok () ->
+    | Ok text ->
+        write (base ^ ".ml") text;
         if Sys.command (Printf.sprintf "ocamlfind ocamlopt -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
           Some ("extracted program failed to compile, see " ^ base ^ ".log")
         else (
@@ -74,14 +68,20 @@ and run_mode name externs src =
       exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
   in
   let consume = Program.consume world in
+  (* The test's own final is run only after the extracted sources are taken: running it may update a unique
+     Const in place, which the extracted program must start from as elaboration left it, as --extract does. *)
+  let final = ref None in
   let outcome =
     try
       let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
-      let env = Elab.run_toplevel ~consume env (Reader.parse src) in
-      Ok (env, Buffer.contents printed)
+      let env = Elab.run_toplevel ~consume:(fun env ty v -> final := Some (env, ty, v)) env (Reader.parse src) in
+      let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
+      let sources = List.map (fun t -> (t, source t)) (if externs then [ true; false ] else [ true ]) in
+      Option.iter (fun (env, ty, v) -> consume env ty v) !final;
+      Ok (sources, Buffer.contents printed)
     with e -> (match Program.explain name e with Some m -> Error m | None -> raise e)
   in
   let contains hay needle =
@@ -100,10 +100,10 @@ and run_mode name externs src =
   in
   match outcome with
   | _ when mismatched_warnings <> None -> mismatched_warnings
-  | Ok (env, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
+  | Ok (sources, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
-      (match extracted name externs true env input args envs expect stderr exit with
-       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false env input args envs expect stderr exit)
+      (match extracted name externs true (List.assoc true sources) input args envs expect stderr exit with
+       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false (List.assoc false sources) input args envs expect stderr exit)
        | r -> r)
   | Ok (_, out) ->
       Some

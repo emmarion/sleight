@@ -151,7 +151,8 @@
 (def-adts $ ExprDemand : ((List $ Mult) expect) -> Type
   enum
   (many Fixed : (erased (List $ Mult) expect) -> (ExprDemand expect))
-  (many CallableHead : -> (ExprDemand many-one)))
+  (many CallableHead : -> (ExprDemand many-one))
+  (many FinalDemand : -> (ExprDemand many-one)))
 
 (def-adts $ DemandBridge : ((List $ Mult) outer) ((List $ Mult) inner) -> Type
   enum
@@ -305,6 +306,23 @@
 (def-fns _ $ many prelude-type : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Term) t)
   (let (many env2) (many x) $ prelude-id env name)
   (values env2 $ TApp (TVar x) $ Nil _))
+
+; Whether [ty] applies the prelude's [name] type constructor, found in the prelude's scope however the program
+; shadows the name, as lib/elab.ml's nullary finds it.
+(def-fns _ $ many prelude-nullary : (many (Env) env) (many (Term) ty) (many (String) name) -> (many (Bool) b)
+  (match many (type-head env ty) _
+    ((None a) (BFalse))
+    ((Some a tid)
+      (let (many env2) (many x) $ prelude-id (env-set-scope env $ env-prelude env) name)
+      (nat-eq tid x))))
+
+; The multiplicity a position demands of a value by its type (lib/elab.ml's demanded): a callable head takes
+; a Cell or a UniqueFn at unique, and the driver takes an IO value at unique.
+(def-fns _ $ many final-demand : (many (Env) env) (many (Term) ty) -> (many (Mult) m)
+  (match many (prelude-nullary env ty "IO") _ ((BTrue) (Once)) ((BFalse) (Many))))
+
+(def-fns _ $ many mode-demand : (many (Env) env) (many (Term) ty) (many (Bool) final) -> (many (Mult) m)
+  (match many final _ ((BTrue) (final-demand env ty)) ((BFalse) (head-demand env ty))))
 
 (let (many two-dec) (lt-dec (Zero) 2))
 (comptime-match many two-dec (Yes tda tdb two-positive))
@@ -1049,19 +1067,23 @@
     ((Nil a) (Nil _))
     ((Cons a e rest) (Cons _ (None _) $ anon-names rest))))
 
+(def-fns _ $ many finish-mode-tele : (many (Env) env) (many (List $ Entry) tele) (many (Bool) final) ->
+    (many (Env) out) (many (List $ Entry) selected) (many (List $ Mult) inner) (many (DemandBridge many-one inner) bridge)
+  (match many tele _
+    ((Nil a) (values env tele many-one (HeadDemand (Many))))
+    ((Cons a e rest)
+      (match many e _
+        ((MkEntry name sub mult sg place)
+          (let (many ty) (many rule) (fact-of env sg))
+          (let (many mode) (mode-demand env ty final))
+          (values env (Cons _ (MkEntry name sub mode sg place) rest) (Cons _ mode (Nil _)) (HeadDemand mode)))))))
+
 (def-fns _ $ many finish-demand-tele : (many (List $ Mult) expect) (many (ExprDemand expect) demand) (many (Env) env) (many (List $ Entry) tele) ->
     (many (Env) out) (many (List $ Entry) selected) (many (List $ Mult) inner) (many (DemandBridge expect inner) bridge)
   (match many demand _
     ((Fixed ms) (values env tele expect (KeepDemand _)))
-    ((CallableHead)
-      (match many tele _
-        ((Nil a) (values env tele many-one (HeadDemand (Many))))
-        ((Cons a e rest)
-          (match many e _
-            ((MkEntry name sub mult sg place)
-              (let (many ty) (many rule) (fact-of env sg))
-              (let (many mode) (head-demand env ty))
-              (values env (Cons _ (MkEntry name sub mode sg place) rest) (Cons _ mode (Nil _)) (HeadDemand mode)))))))))
+    ((CallableHead) (finish-mode-tele env tele $ BFalse))
+    ((FinalDemand) (finish-mode-tele env tele $ BTrue))))
 
 (def-fns _ $ many raw-names : (subterm many (List $ Raw) rs) -> (many (List $ Maybe $ String) r)
   (match many rs _
@@ -2792,11 +2814,11 @@
           ((Erased) env2))))
       (erased-in-many rest rrest p env3))))
 
-(def-fns _ $ many head-result-check : (many (Env) env) (many (List $ Res) ress) -> (many (Env) out)
+(def-fns _ $ many mode-result-check : (many (Env) env) (many (List $ Res) ress) (many (Bool) final) -> (many (Env) out)
   (match many ress _
     ((Nil a) env)
     ((Cons a r rest)
-      (let (many mode) (head-demand env (res-ty r)))
+      (let (many mode) (mode-demand env (res-ty r) final))
       (erased-in-many (Cons _ mode (Nil _)) (Cons _ r (Nil _)) (LsCons _ _ mode r (Nil _) (Nil _) (LsNil _ _)) env))))
 
 ; A call's or application's argument count against its telescope (lib/elab.ml's check_args).
@@ -2966,15 +2988,6 @@
 ; ---- The source spelling of a literal, which a printed Nat, Char or String reads back from
 ; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
 ; the language; an emitted printer calls Ffi_core (emit.sl).
-
-; Whether [ty] applies the prelude's [name] type constructor, found in the prelude's scope however the program
-; shadows the name, as lib/elab.ml's nullary finds it.
-(def-fns _ $ many prelude-nullary : (many (Env) env) (many (Term) ty) (many (String) name) -> (many (Bool) b)
-  (match many (type-head env ty) _
-    ((None a) (BFalse))
-    ((Some a tid)
-      (let (many env2) (many x) $ prelude-id (env-set-scope env $ env-prelude env) name)
-      (nat-eq tid x))))
 
 (let (many sixteen-dec) (lt-dec (Zero) 16))
 (comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
@@ -3351,7 +3364,7 @@
       (match many raw _
         (else
           (let (many env1) (many x) $ var-of-raw envl raw "a name")
-          (let (many mode) (match many demand (((Mult) m)) ((Fixed ms) (pos-mult expect)) ((CallableHead) (head-demand env1 (type-of env1 x)))))
+          (let (many mode) (match many demand (((Mult) m)) ((Fixed ms) (pos-mult expect)) ((CallableHead) (head-demand env1 (type-of env1 x))) ((FinalDemand) (final-demand env1 (type-of env1 x)))))
           (let (many env2) $ use-entry env1 mode x $ BFalse)
           (values env2 (Cons _ (res-of env2 x) $ Nil _) $ coercible-code _ expect (Many) $ var-code env2 ctx x))
         ((RList lq items)
@@ -3410,13 +3423,8 @@
                               (cell-result _ expect env2 (MkRes (res-term r) (res-ty r) (under pos $ Many) $ res-place r) physical))))
                         ((ExValues)
                           (match many demand (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
-                            ((CallableHead)
-                              (match many args _
-                                ((Nil a) (expr-error _ expect env0 "a callable head needs one value" "values"))
-                                ((Cons a item rest)
-                                  (let (many env1) (count-check env0 " values" 1 (list-length _ args)))
-                                  (let (many env2) (many rs) (many code) (erased lock) (elab-expr-demand sugar item env1 ctx many-one tele (CCPlain) (CallableHead)))
-                                  (values env2 rs code))))
+                            ((CallableHead) (elab-values-one sugar args env0 ctx tele (CallableHead)))
+                            ((FinalDemand) (elab-values-one sugar args env0 ctx tele (FinalDemand)))
                             ((Fixed ms)
                           (let (many n) $ list-length _ expect)
                           (let (many na) $ list-length _ args)
@@ -3612,7 +3620,7 @@
                       (let (many env4) (many acc) (many tys) (many codes) (many prepared) $ check-args sugar args (subs-all args) one-step (check-arity env3 ttele $ list-length _ args) ctx ttele (Erased) tele (ARApp (res-term h) type-term) (BTrue) (BFalse) (BFalse))
                       (erased-result _ expect env4 $ MkRes (TApp (res-term h) $ list-rev _ acc) type-term (Erased) $ None _))
                     ((TValCtor ctele ret)
-                      (let (many mode) $ pos-mult expect)
+                      (let (many mode) (match many demand (((Mult) m)) ((Fixed ms) (pos-mult expect)) ((CallableHead) (head-demand env2 ret)) ((FinalDemand) (final-demand env2 ret))))
                       (let (many env2) $ error-when env2 (and (mult-is-many pos) $ not $ mult-is-many $ res-erasure h) $ str-cat3 "erased constructor " (show-t env2 $ res-term h) " in a non-erased position")
                       (let (many env3) $ match many (res-term h) (((Env) e)) ((TVar x) (use-entry env2 (under pos $ Many) x $ BFalse)) (else env2))
                       (let (many env3a) (many hr) (many hid) $ prepare-argument env3 (under pos $ Many) h)
@@ -3641,7 +3649,17 @@
       (else (values (env-back env $ count-error env2 " values" n m) ress2 code lock))
       ((CEq eq-t eq-r eq-x) (values (env-set-usage-erased (env-back env $ match many demand (((Env) e))
         ((Fixed ms) (erased-in-many expect ress2 lock env2))
-        ((CallableHead) (head-result-check env2 ress2))) $ env-usage-erased env) ress2 code lock))))
+        ((CallableHead) (mode-result-check env2 ress2 $ BFalse))
+        ((FinalDemand) (mode-result-check env2 ress2 $ BTrue))) $ env-usage-erased env) ress2 code lock))))
+  ; A values of one entry under a head or driver demand: the entry is elaborated under the same demand.
+  (many elab-values-one : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) (many (ExprDemand many-one) demand) ->
+      (many (Env) r) (many (List $ Res) ress) (many (Code ctx many-one) code)
+    (match many args _
+      ((Nil a) (expr-error _ many-one env "a callable head needs one value" "values"))
+      ((Cons a item rest)
+        (let (many env1) (count-check env " values" 1 (list-length _ args)))
+        (let (many env2) (many rs) (many code) (erased lock) (elab-expr-demand sugar item env1 ctx many-one tele (CCPlain) demand))
+        (values env2 rs code))))
   (many elab-one-term : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) -> (many (Env) r) (many (Term) t) (many (Term) ty)
     (match many args _
       ((Nil a) (let (many env2) (many x) $ missing-arg env) (values env2 (TVar x) $ type-of env2 x))
@@ -5187,7 +5205,7 @@
           (match many rest _
             ((Cons b x more) (run-toplevel rest $ env-error env2 "only the last top-level form may be an expression"))
             ((Nil b)
-              (let (many env3a) (many ress) (many code) (erased lock) $ elab-expr sugar-budget item env2 (Nil _) many-one no-tele $ CCPlain)
+              (let (many env3a) (many ress) (many code) (erased lock) $ elab-expr-demand sugar-budget item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
               (let (many env3) $ settle-res env3a $ first-res _ _ ress lock)
               (match many (env-errors env3) _
                 ((Cons c e es) env3)

@@ -38,7 +38,8 @@ the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. A file's final expression is printed, unless its
 value is a function from `String` to `String`, when stdin is fed to it
 and its result written to stdout (`tests/main_reverse.sl`), or an `IO`
-value, when the driver performs its requests one by one
+value, when the driver performs its requests one by one, applying each
+request's continuation, a `UniqueFn`, once
 (`tests/io_echo.sl`; arguments after `--` on the command line are the
 program's), or a function from no arguments to one value, when it is
 applied and its result printed (`tests/thunk_list.sl`), which is how a

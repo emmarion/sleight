@@ -13,7 +13,7 @@ let final env ty =
   match Env.canon env ty with
   | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) when equal a string && equal b string -> Main
   | App (Var t, [ _ ]) when t = prelude env "IO" -> Io
-  | Fn (_, [], [ { mult = Many; sg = Ty t; _ } ]) -> Thunk t
+  | Fn (_, [], [ { mult = Many | Unique; sg = Ty t; _ } ]) -> Thunk t
   | _ -> Plain
 
 let driver env =

@@ -6,7 +6,7 @@ module Sp = Special
 
 type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option }
 type res = { term : term; ty : term; erasure : mult; place : term option }
-type demand = Fixed | CallableHead
+type demand = Fixed | CallableHead | Driver
 
 let location_var env l p =
   let readable x = (entry env x).mult <> Erased && ((entry env x).word || IntMap.mem x env.values) in
@@ -625,9 +625,11 @@ let prove_predates env l x lvl =
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
 let demanded env demand mult ty =
+  if mult = Erased then mult else
   match demand with
   | Fixed -> mult
   | CallableHead -> (match canon env ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
+  | Driver -> if nullary env "IO" ty then Unique else Many
 
 let rec elab_expr ?(demand = Fixed) ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
   let l = loc raw in
@@ -673,6 +675,7 @@ and elab_form demand cc expect_tele env expect raw =
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased; place = None } ], V.CErased)
           | ValCtor (tele, ret) ->
               if pos <> Erased && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (show env h.term);
+              let pos = demanded env demand pos ret in
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
               let env, acc, codes, wrap = check_args env l ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args (fun env _ a tele -> arg env (field_under pos (List.hd (Option.get tele)).mult) a tele) in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
@@ -1058,7 +1061,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let needed = ct.V.arity + if mode = Unique then 1 else 0 in
       if List.length names <> needed then error pl "cell-match needs %d binders" needed;
       let env, ann_tele = result_tele ~demand tele env expect l ann in
-      let expect = match demand with Fixed -> expect | CallableHead -> List.map (fun e -> e.mult) ann_tele in
+      let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None smult Dyn r.ty ~rule:r.term in
       let env = match r.place with Some p -> at_merge env (Var sid) p | None -> env in
       let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true (name_or_anon (atom_or pl n "a slot binder")) (under pos Many) Dyn Prelude.slot_term in (env,x)) env (List.filteri (fun i _ -> i < ct.arity) names) in
@@ -1098,7 +1101,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
       let tagged = tagged disc shapes in
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
       let env, ann_tele = result_tele ~demand tele env expect l ann in
-      let expect = match demand with Fixed -> expect | CallableHead -> List.map (fun e -> e.mult) ann_tele in
+      let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let enter bl c names =
         let phantom = marker env bl tid ctors c = Erased in
         let tele, ret = ctor_type env bl c in
@@ -1224,7 +1227,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
   let ann_tele = List.map (fun e ->
     let mult = match demand with
       | Fixed -> e.mult
-      | CallableHead -> demanded env demand e.mult (match e.sg with Ty t -> t | Is t -> infer env l t) in
+      | _ -> demanded env demand e.mult (match e.sg with Ty t -> t | Is t -> infer env l t) in
     { e with mult }) ann_tele in
   (env, ann_tele)
 
@@ -1661,7 +1664,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
         let env = List.fold_left hoist env (literals item) in
         at (loc item) (fun () ->
             if rest = [] && not (is_statement env item) then (
-              let env, ress, code = elab_expr env [ Many ] item in
+              let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
               let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
               trace := Final (v, ty, path) :: !trace;
