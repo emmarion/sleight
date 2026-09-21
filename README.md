@@ -8,7 +8,8 @@ interpreter makes about them. HANDOFF.md records work in progress
 handed from one session to the next. BUGS.md records defects found in the
 implementation and TOOLING-WISHLIST.md the friction met writing programs in
 the language. EXAMPLES.md indexes the tests that show the
-features working together. `self/` is a compiler from the language to
+features working together, and DEMOS.md proposes programs that are not
+written yet. `self/` is a compiler from the language to
 OCaml written in the language itself, bootstrapped through this
 interpreter's extractor (`self/README.md`, `self/bootstrap.sh`).
 MINIMAL.md records a minimal fragment of the language, and `mini/` its
