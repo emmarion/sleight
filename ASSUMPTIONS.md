@@ -3705,9 +3705,11 @@ without the owner.
     repository's sources and a thousand generated files to settle it
     the same way on both sides. A message is
     `path:line:col: warning: text`, the shape of an error with
-    `warning` for `error` (194), and `path: warning: text` where what
-    is reported is the file's rather than one line's, which is the
-    count of forms left open. The depth never falls
+    `warning` for `error` (194), and each of these rules compares two
+    lines, so a `note` under it names the line compared against; the
+    forms a file leaves open are named one by one the same way, the
+    innermost the warning and the rest its notes, which says where
+    each missing `)` goes where a count would not. The depth never falls
     below zero: a `)` with nothing open is reported where it sits and
     leaves the depth alone, so one surplus `)` does not shift the
     nesting every line after it is read against, which also lets
@@ -3734,8 +3736,10 @@ without the owner.
     `path:line:col: error: text`, `warning` or `syntax error` for
     `error` where those are what is meant; 193's warnings and section
     12's phantom-constructor warning, which had a spelling of its own,
-    both read that way now. What has no position names the file alone:
-    a file's unclosed forms, a contradiction reaching the driver
+    both read that way now. A message about two places writes the
+    second as a `note` on its own line under it, `path:line:col: note:
+    text`, rather than describing it in prose (193). What has no
+    position names the file alone: a contradiction reaching the driver
     rather than the form that would have placed it, and a runtime
     error, the post-erasure code carrying no positions and an
     extracted program having none to carry. A string literal is placed

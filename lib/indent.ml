@@ -43,10 +43,12 @@
 open Reader
 
 (* An issue whose location is the file's [nowhere] is the file's as a whole rather than one line's,
-   and [Reader.where] then names the file alone. *)
-type issue = { at : loc; msg : string }
+   and [Reader.where] then names the file alone. A [note] is a second location the message before it
+   talks about: every one of these rules is a comparison between two lines, and the line compared
+   against is worth naming rather than describing. *)
+type issue = { at : loc; note : bool; msg : string }
 
-let show { at; msg } = Printf.sprintf "%s: warning: %s\n" (Reader.where "-" at) msg
+let show { at; note; msg } = Printf.sprintf "%s: %s: %s\n" (Reader.where "-" at) (if note then "note" else "warning") msg
 
 type checkable = { pos : loc; indent : int; nesting : int }
 
@@ -61,7 +63,7 @@ let checkable_lines report src toks =
          cur := l.line;
          let bol = off - (l.col - 1) in
          if String.exists (( = ) '\t') (String.sub src bol (off - bol)) then
-           report { at = l; msg = "indentation uses a tab, not spaces only" };
+           report { at = l; note = false; msg = "indentation uses a tab, not spaces only" };
          out := { pos = l; indent = l.col - 1; nesting = !depth } :: !out
        end;
        match tok with
@@ -71,57 +73,66 @@ let checkable_lines report src toks =
     toks;
   List.rev !out
 
-(* The indentation/nesting stack: (indent, nesting) list, head = innermost. *)
+(* The indentation/nesting stack, head = innermost: each level with the line that opened it, which is the
+   line a later one is compared against and so the one its note names. *)
 let check_lines report lines =
   let stack = ref [] in
   List.iter
     (fun { pos = l; indent = i; nesting = n } ->
-       let say fmt = Printf.ksprintf (fun m -> report { at = l; msg = m }) fmt in
+       let say el note fmt =
+         Printf.ksprintf (fun m -> report { at = l; note = false; msg = m }; report { at = el; note = true; msg = note }) fmt
+       in
        match !stack with
-       | [] -> stack := [ (i, n) ]
-       | (top_i, top_n) :: _ when i = top_i ->
+       | [] -> stack := [ (l, i, n) ]
+       | (el, top_i, top_n) :: _ when i = top_i ->
            if n <> top_n then
-             say "same indentation (%d) as the previous checked line but nesting is %d, expected %d (matching that line)" i n top_n;
-           stack := (i, n) :: List.tl !stack
-       | (top_i, top_n) :: _ when i > top_i ->
+             say el "the previous line at this indentation"
+               "same indentation (%d) as the previous checked line but nesting is %d, expected %d (matching that line)" i n top_n;
+           stack := (l, i, n) :: List.tl !stack
+       | (el, top_i, top_n) :: _ when i > top_i ->
            if n <= top_n then
-             say "indentation increased (%d -> %d) but nesting did not increase (%d -> %d)" top_i i top_n n;
-           stack := (i, n) :: !stack
+             say el "the line before it"
+               "indentation increased (%d -> %d) but nesting did not increase (%d -> %d)" top_i i top_n n;
+           stack := (l, i, n) :: !stack
        | _ ->
            let rec pop s =
              match s with
-             | (ei, en) :: rest when ei > i ->
+             | (el, ei, en) :: rest when ei > i ->
                  if not (en > n) then
-                   say "dedented past indentation %d (nesting %d), but this line's nesting is %d (expected less than %d)" ei en n en;
+                   say el "the line at that indentation"
+                     "dedented past indentation %d (nesting %d), but this line's nesting is %d (expected less than %d)" ei en n en;
                  pop rest
              | _ -> s
            in
            let remaining = pop !stack in
            List.iter
-             (fun (ei, en) ->
+             (fun (el, ei, en) ->
                 if ei < i && not (en < n) then
-                  say "dedented to indentation %d, but an enclosing line at indentation %d has nesting %d, not less than this line's %d" i ei en n)
+                  say el "that enclosing line"
+                    "dedented to indentation %d, but an enclosing line at indentation %d has nesting %d, not less than this line's %d" i ei en n)
              remaining;
            (match remaining with
-            | (ei, en) :: rest when ei = i ->
+            | (el, ei, en) :: rest when ei = i ->
                 if en <> n then
-                  say "dedented back to indentation %d, matching an earlier line, but nesting is %d there vs %d here" i en n;
-                stack := (i, n) :: rest
-            | _ -> stack := (i, n) :: remaining))
+                  say el "the earlier line it matches"
+                    "dedented back to indentation %d, matching an earlier line, but nesting is %d there vs %d here" i en n;
+                stack := (l, i, n) :: rest
+            | _ -> stack := (l, i, n) :: remaining))
     lines
 
-(* The forms left open at the end, and the first line at which a ) closed more than was open. A file the
-   reader cannot close is the case this tool is most wanted for, so neither is left to the nesting rules:
-   they read relative depth and would pass a file whose indentation is consistent and whose forms never
-   close. *)
+(* Where each form still open at the end was opened, innermost first, and the first ) that closed more than
+   was open. A file the reader cannot close is the case this tool is most wanted for, so neither is left to
+   the nesting rules: they read relative depth and would pass a file whose indentation is consistent and
+   whose forms never close. Naming the openings rather than counting them says where each missing ) goes,
+   which is what a reader's "missing )" at the end of the file does not. *)
 let balance toks =
   List.fold_left
-    (fun (d, surplus) (l, _, tok) ->
+    (fun (opens, surplus) (l, _, tok) ->
        match tok with
-       | LParen -> (d + 1, surplus)
-       | RParen -> if d = 0 then (0, (if surplus = None then Some l else surplus)) else (d - 1, surplus)
-       | Dollar | Word _ -> (d, surplus))
-    (0, None) toks
+       | LParen -> (l :: opens, surplus)
+       | RParen -> (match opens with _ :: rest -> (rest, surplus) | [] -> ([], (if surplus = None then Some l else surplus)))
+       | Dollar | Word _ -> (opens, surplus))
+    ([], None) toks
 
 (* The issues, in line order, and where the lexer stopped if it could not finish the file. *)
 let issues path src =
@@ -129,11 +140,11 @@ let issues path src =
   let acc = ref [] in
   let report i = acc := i :: !acc in
   check_lines report (checkable_lines report src toks);
-  let depth, surplus = balance toks in
-  Option.iter (fun l -> report { at = l; msg = "a ) here closes more than is open (surplus ))" }) surplus;
-  if depth <> 0 then
-    report { at = { Reader.nowhere with file = path };
-             msg = Printf.sprintf "final depth %d (unclosed forms: append that many ))" depth };
+  let opens, surplus = balance toks in
+  Option.iter (fun l -> report { at = l; note = false; msg = "a ) here closes more than is open (surplus ))" }) surplus;
+  List.iteri
+    (fun k l -> report { at = l; note = k > 0; msg = (if k = 0 then "this form is never closed" else "and this one") })
+    opens;
   (List.rev !acc, stopped)
 
 let warn path src = List.iter (fun i -> !Elab.warn (show i)) (fst (issues path src))

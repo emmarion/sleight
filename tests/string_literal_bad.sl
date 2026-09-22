@@ -1,4 +1,4 @@
 ; error: unterminated string literal
-; warns: tests/string_literal_bad.sl: warning: final depth 1 (unclosed forms: append that many ))
+; warns: tests/string_literal_bad.sl:3:1: warning: this form is never closed
 (let ((many s)) "abc)
 (Zero)

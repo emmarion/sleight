@@ -24,7 +24,8 @@ directive() { sed -n "s/^; $2: //p" "$1"; }
 # check_warns <file> <name>: every "; warns:" line must appear in slc's own stderr, where it writes a warning,
 # the reference writing one as it elaborates or as it checks a file's indentation. A "; warns:" line names the
 # test by its path from the repository root, which is a suffix of the path slc is handed here, so the match is
-# on a substring; the filters above drop both warning spellings from a stderr being compared.
+# on a substring; the filters above drop a warning, and the note that may follow it, from a stderr being
+# compared.
 check_warns() {
   directive "$1" warns | while IFS= read -r want; do
     grep -qF -- "$want" "$B/$2.slc.err" || { echo "FAIL $2: expected a warning mentioning: $want; got: $(head -c 300 "$B/$2.slc.err" | tr '\n' ' ')"; exit 1; }
@@ -70,7 +71,7 @@ check_test() {
     # the same stderr and are filtered from both below
     (cd "$B" && env -i $envs "$B/slc" -- --interpret $(for f in lib/prelude.sl $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
-    grep -vE '^warning \(line |: warning: ' "$B/$name.slc.err" > "$B/$name.err" || true
+    grep -vE ': warning: |: note: ' "$B/$name.slc.err" > "$B/$name.err" || true
   else
   if ! "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
@@ -83,7 +84,7 @@ check_test() {
   fi
   # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
   # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
-  grep -vE '^warning \(line |: warning: ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
+  grep -vE ': warning: |: note: ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
   if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err.run" && [ "$code" = "$refcode" ]; then
     echo "ok $name"
   else
