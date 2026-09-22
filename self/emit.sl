@@ -605,7 +605,7 @@
     ((Miss _ _ _ _) (RStr "(failwith \"unbound constant\")"))
     ((Hit _ _ _ info _)
       (match many info _
-        ((MkEInfo _ _ _ s _ _) (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v) (addr-rope _ v))))))))
+        ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v) (addr-rope _ v))))))))
 
 ; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
 (def-fns _ $ (many frame-named : (erased (Hist Block) a) (erased (List $ Nat) f) (subterm many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2))
@@ -1029,7 +1029,7 @@
           ((None _) acc)
           ((Some _ info)
             (match many info (((List $ Ref Block hs) _))
-              ((MkEInfo _ _ _ st _ _)
+              ((MkEInfo _ _ _ st _ _ _)
                 (match many st (((List $ Ref Block hs) _))
                   ((SDyn _) acc)
                   ((SConst _ v) (Cons _ v acc))))))))
@@ -1174,7 +1174,7 @@
               (match many rs _
                 ((Cons _ r more)
                   (match many more _
-                    ((Nil _) (match many r _ ((MkEntry _ _ m sg _) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FThunk $ sg-term sg)) ((Erased) (FPlain))))))
+                    ((Nil _) (match many r _ ((MkEntry _ _ m sg _ _) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FThunk $ sg-term sg)) ((Erased) (FPlain))))))
                     ((Cons _ _ _) (FPlain))))
                 ((Nil _) (FPlain))))
             ((Cons _ p more)
@@ -1294,7 +1294,7 @@
             (match many c _
               ((MkCtor cname cid index arity _ _ _ _)
                 (let ((many ctele) (many ret)) $ ctor-type env cid)
-                (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
+                (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
                 (let ((many (Env) envb2) (many (Bool) live))
                   (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
                     ((UOk e2) (values e2 $ BTrue))

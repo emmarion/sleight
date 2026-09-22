@@ -556,7 +556,7 @@
         (match many (idmap-get _ x $ st-consts _ _ st) _
           ((Hit _ _ _ info _)
             (match many info _
-              ((MkEInfo _ _ _ s _ _)
+              ((MkEInfo _ _ _ s _ _ _)
                 (match many s _
                   ((SConst _ v) (values hs hp (le-refl hs) (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _)))
                   ((SDyn _) (error-vals _ hp many-one "a Dyn constant"))))))
@@ -894,7 +894,7 @@
     ((Miss _ _ _ _) (values e $ None _))
     ((Hit _ _ _ info _)
       (match many info _
-        ((MkEInfo _ _ _ s _ _)
+        ((MkEInfo _ _ _ s _ _ _)
           (match many s _
             ((SDyn _) (values e $ None _))
             ((SConst _ v)
@@ -908,7 +908,7 @@
     ((Miss _ _ _ _) e)
     ((Hit _ _ _ info _)
       (match many info _
-        ((MkEInfo _ _ _ s _ _)
+        ((MkEInfo _ _ _ s _ _ _)
           (match many s _
             ((SDyn _) e)
             ((SConst _ v)

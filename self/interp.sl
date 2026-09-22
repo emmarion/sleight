@@ -144,7 +144,7 @@
     ((Miss _ _ _ _) (None _))
     ((Hit _ _ _ info _)
       (match many info _
-        ((MkEInfo _ _ _ s _ _) (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))))))
+        ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))))))
 
 (def-fns _ $ (many captured-word : (many (Env) env) (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (Term) place) -> (many (Maybe $ Ref Block hs) r))
   (match many ids _
