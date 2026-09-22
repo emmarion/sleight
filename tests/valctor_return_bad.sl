@@ -4,5 +4,5 @@
 
 (def-lvl X)
 
-(def-fns X $ many use : (erased Type A) (many (ValCtor (many (Nat) n) -> A) C) (many (Nat) n) -> (many A a)
+(def-fns X $ (many use : (erased Type A) (many (ValCtor (many (Nat) n) -> A) C) (many (Nat) n) -> (many A a))
   (C n))

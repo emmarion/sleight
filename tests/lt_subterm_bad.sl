@@ -3,6 +3,6 @@
 ; le-split separates.
 
 (def-lvl L)
-(def-fns L $ erased claim : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) ->
-    (erased (Subterm (Nat) a (Nat) (Succ b)) q)
+(def-fns L $ (erased claim : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) ->
+    (erased (Subterm (Nat) a (Nat) (Succ b)) q))
   (prove-subterm a (Succ b)))

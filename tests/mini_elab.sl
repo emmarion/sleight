@@ -9,7 +9,7 @@
 ;   (pred (Succ (Succ (Zero))))
 ; and its value is one, Succ applied to Zero, the two constructors being entries 6 and 5.
 
-(let (many body) (l5 (k (KMatch)) (a "n") (l1 (l2 nat (a "r"))) (l2 (l1 (a "Zero")) zero) (l2 (l2 (a "Succ") (a "k")) (a "k"))))
-(let (many fns) (l3 (k (KDefFns)) (a "L") (l4 (a "pred") (l1 (l2 nat (a "n"))) (l1 (l2 nat (a "r"))) body)))
-(let (many call) (l2 (a "pred") (l2 (a "Succ") (l2 (a "Succ") zero))))
+(let ((many body)) (l5 (k (KMatch)) (a "n") (l1 (l2 nat (a "r"))) (l2 (l1 (a "Zero")) zero) (l2 (l2 (a "Succ") (a "k")) (a "k"))))
+(let ((many fns)) (l3 (k (KDefFns)) (a "L") (l4 (a "pred") (l1 (l2 nat (a "n"))) (l1 (l2 nat (a "r"))) body)))
+(let ((many call)) (l2 (a "pred") (l2 (a "Succ") (l2 (a "Succ") zero))))
 (run (Cons _ nat-decl (Cons _ lvl-decl (Cons _ fns (Cons _ call (Nil _))))))

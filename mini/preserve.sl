@@ -2,8 +2,8 @@
 ; is a function of the rules, and an elaborated term of the grammar has the type elaboration gave it. One
 ; session's proposal, loaded after mini/elab.sl.
 
-(def-fns _ $ erased rule-of-unique : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (Term) r2) (subterm erased (RuleOf rules x r) p) (erased (RuleOf rules x r2) q) ->
-    (erased (Eq (Term) r r2) e)
+(def-fns _ $ (erased rule-of-unique : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (Term) r2) (subterm erased (RuleOf rules x r) p) (erased (RuleOf rules x r2) q) ->
+    (erased (Eq (Term) r r2) e))
   (match erased p _
     ((RuleHere a b rest)
       (match erased q _
@@ -15,7 +15,7 @@
         ((RuleThere a2 y2 b2 s2 rest2 n2 q2) (rule-of-unique rest x r r2 p2 q2))))))
 
 (def-fns _
-  (erased canon-unique : (erased (List (Rule)) rules) (erased (Term) t) (erased (Term) u) (erased (Term) u2) (subterm erased (Canon rules t u) p) (erased (Canon rules t u2) q) -> (erased (Eq (Term) u u2) e)
+  ((erased canon-unique : (erased (List (Rule)) rules) (erased (Term) t) (erased (Term) u) (erased (Term) u2) (subterm erased (Canon rules t u) p) (erased (Canon rules t u2) q) -> (erased (Eq (Term) u u2) e))
     (match erased p _
       ((CanRule a x r b rp cp)
         (match erased q _
@@ -51,8 +51,8 @@
           ((CanValCtor a2 ps0 ps3 r0 r3 qps qr)
             (match erased (canon-unique-tele rules ps ps2 ps3 pps qps) _
               ((Refl c d) (match erased (canon-unique rules r r2 r3 pr qr) _ ((Refl c2 d2) (Refl (Term) (ValCtor ps2 r2)))))))))))
-  (erased canon-unique-list : (erased (List (Rule)) rules) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (List (Term)) us2) (subterm erased (CanonList rules ts us) p) (erased (CanonList rules ts us2) q) ->
-      (erased (Eq (List (Term)) us us2) e)
+  ((erased canon-unique-list : (erased (List (Rule)) rules) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (List (Term)) us2) (subterm erased (CanonList rules ts us) p) (erased (CanonList rules ts us2) q) ->
+      (erased (Eq (List (Term)) us us2) e))
     (match erased p _
       ((CanNil a) (match erased q _ ((CanNil a2) (Refl (List (Term)) (Nil (Term))))))
       ((CanCons a t u ts2 us3 pt pts)
@@ -60,8 +60,8 @@
           ((CanCons a2 t0 u0 ts0 us0 qt qts)
             (match erased (canon-unique rules t u u0 pt qt) _
               ((Refl c d) (match erased (canon-unique-list rules ts2 us3 us0 pts qts) _ ((Refl c2 d2) (Refl (List (Term)) (Cons (Term) u us3)))))))))))
-  (erased canon-unique-tele : (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Entry)) fs2) (subterm erased (CanonTele rules es fs) p) (erased (CanonTele rules es fs2) q) ->
-      (erased (Eq (List (Entry)) fs fs2) e)
+  ((erased canon-unique-tele : (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Entry)) fs2) (subterm erased (CanonTele rules es fs) p) (erased (CanonTele rules es fs2) q) ->
+      (erased (Eq (List (Entry)) fs fs2) e))
     (match erased p _
       ((CanTNil a) (match erased q _ ((CanTNil a2) (Refl (List (Entry)) (Nil (Entry))))))
       ((CanTCons a s i t u es2 fs3 pt pes)
@@ -71,7 +71,7 @@
               ((Refl c d) (match erased (canon-unique-tele rules es2 fs3 fs0 pes qes) _ ((Refl c2 d2) (Refl (List (Entry)) (Cons (Entry) (MkEntry s i u) fs3))))))))))))
 
 ; A term elaboration accepts has the type it gave it: [ElabTerm] forms only what [TypeOfTerm] types.
-(def-fns _ $ erased elab-term-typed : (erased (Ctx) ctx) (erased (Raw) raw) (erased (Term) t) (erased (Term) ty) (subterm erased (ElabTerm ctx raw (TOk t ty)) p) -> (erased (Typed ctx t ty) q)
+(def-fns _ $ (erased elab-term-typed : (erased (Ctx) ctx) (erased (Raw) raw) (erased (Term) t) (erased (Term) ty) (subterm erased (ElabTerm ctx raw (TOk t ty)) p) -> (erased (Typed ctx t ty) q))
   (let-match erased ctx (MkCtx n0 s0 e0 r0 a0 l0 sa0))
   (match erased p _
     ((ETName a s x b scope sc n tp)

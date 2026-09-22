@@ -5,5 +5,5 @@
 ; section 33's factory supplies the proof by hand.
 
 (def-lvl L)
-(def-fns L $ many apply-all : (erased (Level) M) (many (Fn M (many (Nat) x) -> (many (Nat) y)) f) (many (Nat) x) -> (many (Nat) y)
+(def-fns L $ (many apply-all : (erased (Level) M) (many (Fn M (many (Nat) x) -> (many (Nat) y)) f) (many (Nat) x) -> (many (Nat) y))
   (f x))

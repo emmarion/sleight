@@ -5,11 +5,11 @@
 ; for a printed final; this is the same printer reached through the compile error, which slc reaches by its
 ; own compile-time path.
 
-(def-adts $ Note : -> Type
+(def-adts $ (Note : -> Type)
   enum
   (many NoteOk : -> (Note))
   (many NoteBad : (many (Char) c) (many (String) s) -> (Note)))
 
-(let (many n) (NoteBad #\x28 "a\"b\\c\nd\te"))
+(let ((many n)) (NoteBad #\x28 "a\"b\\c\nd\te"))
 
 (comptime-match many n (NoteOk))

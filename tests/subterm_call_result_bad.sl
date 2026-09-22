@@ -5,16 +5,16 @@
 ; recursion_through_pointer.sl's stored function does when the decreasing argument is a field.
 
 (def-lvl AL)
-(def-adts $ Wrap : -> Type
+(def-adts $ (Wrap : -> Type)
   enum
   (many MkWrap : (many (Fn AL -> (many (Wrap) w)) f) -> (Wrap)))
 
 (def-lvl WL)
-(let (erased aw) (prove-predates AL WL))
+(let ((erased aw)) (prove-predates AL WL))
 
-(def-fns WL $ many walk : (subterm many (Wrap) w) -> (many (Nat) n)
+(def-fns WL $ (many walk : (subterm many (Wrap) w) -> (many (Nat) n))
   (match many w _
     ((MkWrap f)
-      (let (many sub) (f (predates aw)))
+      (let ((many sub)) (f (predates aw)))
       (Succ (walk (subterm (prove-subterm sub w)) sub)))))
 walk

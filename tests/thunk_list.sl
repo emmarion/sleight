@@ -4,8 +4,8 @@
 ; code (at runtime once extracted) over the embedded constant xs.
 
 (def-lvl T)
-(let (erased lt) (prove-predates L T))
-(def-fns T $ many main : -> (many (Nat) n)
+(let ((erased lt)) (prove-predates L T))
+(def-fns T $ (many main : -> (many (Nat) n))
   (length (predates lt) (Nat) xs))
 
 main

@@ -3,16 +3,16 @@
 ; Matching through a first-class type constructor, constructor and Matchable (section 17), once the Matchable
 ; is opened (DESIGN.md section 19).
 
-(def-adts $ Box : -> Type
+(def-adts $ (Box : -> Type)
   enum
   (many MkBox : (many (Nat) n) -> (Box)))
 
 (def-lvl X)
 
-(def-fns X $ many open : (erased (TyCtor -> Type) T)
+(def-fns X $ (many open : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
     (many (Matchable enum T (many C)) m)
-    (many (T) x) -> (many (Nat) n)
+    (many (T) x) -> (many (Nat) n))
   (open-adt many m)
   (match many x (((Nat) r))
     ((C n) n)))

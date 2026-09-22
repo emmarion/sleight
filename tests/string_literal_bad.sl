@@ -1,3 +1,3 @@
 ; error: unterminated string literal
-(let (many s) "abc)
+(let ((many s)) "abc)
 (Zero)

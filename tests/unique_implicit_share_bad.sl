@@ -1,3 +1,3 @@
 ; error: explicit share
-(let (unique x) (Zero))
+(let ((unique x)) (Zero))
 x

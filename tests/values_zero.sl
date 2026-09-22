@@ -1,5 +1,5 @@
 ; needs: list
 ; expect: 0
 
-(let (values))
+(let () (values))
 (Zero)

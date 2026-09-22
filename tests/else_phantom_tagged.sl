@@ -3,7 +3,7 @@
 ; An else standing only for a phantom constructor beside two listed non-phantom ones: the enum stays tagged on the
 ; two, the else adds no real branch and is checked erased.
 
-(def-adts $ Three : -> Type
+(def-adts $ (Three : -> Type)
   enum
   (many A : -> (Three))
   (many B : -> (Three))
@@ -11,7 +11,7 @@
 
 (def-lvl X)
 
-(def-fns X $ many pick : (many (Three) t) (erased (Nat) hidden) -> (many (Nat) n)
+(def-fns X $ (many pick : (many (Three) t) (erased (Nat) hidden) -> (many (Nat) n))
   (match many t (((Nat) r))
     ((A) (Zero))
     ((B) (Succ (Zero)))

@@ -2,6 +2,6 @@
 ; error: must return an application of
 
 (def-adts
-  (Wrong : -> Type
+  ((Wrong : -> Type)
     enum
     (many Oops : -> (Nat))))

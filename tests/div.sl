@@ -4,26 +4,26 @@
 ; subterm-trans, and div recurses under that proof. (div n d1) divides n by (Succ d1).
 
 (def-lvl S)
-(let (erased ns) (prove-predates nat-lvl S))
-(def-fns S $ many sub-pos : (subterm many (Nat) n) (many (Nat) d) (erased (Lt d n) lt) ->
-    (many (Nat) r) (erased (Subterm (Nat) r (Nat) n) p)
+(let ((erased ns)) (prove-predates nat-lvl S))
+(def-fns S $ (many sub-pos : (subterm many (Nat) n) (many (Nat) d) (erased (Lt d n) lt) ->
+    (many (Nat) r) (erased (Subterm (Nat) r (Nat) n) p))
   (match many n _
     ((Zero) (match erased lt _ (absurd LtZ) (absurd LtS)))
     ((Succ n1)
       (match many d _
         ((Zero) (values n1 (prove-subterm n1 n)))
         ((Succ d1)
-          (let (erased lt1) (match erased lt (((Lt d1 n1) q)) (absurd LtZ) ((LtS a b p1) p1)))
-          (let (many r) (erased p) (sub-pos (subterm _) n1 d1 lt1))
+          (let ((erased lt1)) (match erased lt (((Lt d1 n1) q)) (absurd LtZ) ((LtS a b p1) p1)))
+          (let ((many r) (erased p)) (sub-pos (subterm _) n1 d1 lt1))
           (values r (subterm-trans p (prove-subterm n1 n))))))))
 
 (def-lvl Q)
-(let (erased nq) (prove-predates nat-lvl Q))
-(let (erased sq) (prove-predates S Q))
-(def-fns Q $ many div : (subterm many (Nat) n) (many (Nat) d1) -> (many (Nat) q)
+(let ((erased nq)) (prove-predates nat-lvl Q))
+(let ((erased sq)) (prove-predates S Q))
+(def-fns Q $ (many div : (subterm many (Nat) n) (many (Nat) d1) -> (many (Nat) q))
   (match many (lt-dec (predates nq) d1 n) _
     ((Yes a b lt)
-      (let (many r) (erased p) (sub-pos (predates sq) n d1 lt))
+      (let ((many r) (erased p)) (sub-pos (predates sq) n d1 lt))
       (Succ (div (subterm p) r d1)))
     ((No a b q) (Zero))))
 

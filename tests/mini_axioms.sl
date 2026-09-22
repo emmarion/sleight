@@ -7,9 +7,9 @@
 ;   (let (pn) (prove-predates n L3)) (predates-subterm pn s2)
 ; whose value is the token every proof is; (predates-trans q p) is refused, its levels not chaining.
 
-(def-fns _ $ many bind : (many (String) x) (many (Raw) e) -> (many (Raw) r) (l3 (k (KLet)) (l1 (a x)) e))
+(def-fns _ $ (many bind : (many (String) x) (many (Raw) e) -> (many (Raw) r)) (l3 (k (KLet)) (l1 (a x)) e))
 
-(def-fns _ $ many prog : (many (Raw) final) -> (many (List (Raw)) program)
+(def-fns _ $ (many prog : (many (Raw) final) -> (many (List (Raw)) program))
   (Cons _ nat-decl $ Cons _ (l2 (k (KDefLvl)) (a "L1")) $ Cons _ (l2 (k (KDefLvl)) (a "L2"))
     $ Cons _ (bind "m" (l2 (a "Succ") zero)) $ Cons _ (bind "n" (l2 (a "Succ") (a "m"))) $ Cons _ (l2 (k (KDefLvl)) (a "L3"))
     $ Cons _ (bind "p" (l3 (k (KProvePredates)) (a "L1") (a "L2"))) $ Cons _ (bind "q" (l3 (k (KProvePredates)) (a "L2") (a "L3")))
@@ -19,10 +19,10 @@
     $ Cons _ (bind "pn" (l3 (k (KProvePredates)) (a "n") (a "L3")))
     $ Cons _ final $ Nil _))
 
-(let (many backwards) (outcome (prog (l3 (k (KPredatesTrans)) (a "q") (a "p")))))
+(let ((many backwards)) (outcome (prog (l3 (k (KPredatesTrans)) (a "q") (a "p")))))
 (comptime-match many backwards (Some ty r))
 (comptime-match many r (RBadProof))
-(let (many wrong-link) (outcome (prog (l3 (k (KPredatesSubterm)) (a "pn") (a "s1")))))
+(let ((many wrong-link)) (outcome (prog (l3 (k (KPredatesSubterm)) (a "pn") (a "s1")))))
 (comptime-match many wrong-link (Some ty2 r2))
 (comptime-match many r2 (RBadProof))
 

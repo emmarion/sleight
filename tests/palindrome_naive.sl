@@ -4,8 +4,8 @@
 ; Covers empty/singleton, odd/even, unequal outer/inner ends, ties, repeated
 ; elements, and longest windows at the beginning, middle, and end.
 
-(def-fns _ $ many pal-test-nats : (subterm many (String) s) ->
-    (many (List (Nat)) xs)
+(def-fns _ $ (many pal-test-nats : (subterm many (String) s) ->
+    (many (List (Nat)) xs))
   (match many s _
     ((SNil) (Nil (Nat)))
     ((SCons ch rest)
@@ -13,13 +13,13 @@
       (let-match many byte (MkU8 n bound))
       (Cons (Nat) n (pal-test-nats rest)))))
 
-(def-fns _ $ many pal-test-length : (many (String) s) -> (many (Nat) n)
-  (let (many xs) (pal-test-nats s))
-  (let (many (Nat) n) (erased (LongestPalindrome xs n) correct)
+(def-fns _ $ (many pal-test-length : (many (String) s) -> (many (Nat) n))
+  (let ((many xs)) (pal-test-nats s))
+  (let ((many (Nat) n) (erased (LongestPalindrome xs n) correct))
     (longest-palindrome xs))
   n)
 
-(def-fns _ $ many pal-test-main : -> (many (List (Nat)) answers)
+(def-fns _ $ (many pal-test-main : -> (many (List (Nat)) answers))
   $ Cons _ (pal-test-length "") $
   Cons _ (pal-test-length "a") $
   Cons _ (pal-test-length "aa") $

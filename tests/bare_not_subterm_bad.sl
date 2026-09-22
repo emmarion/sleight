@@ -3,5 +3,5 @@
 ; for lacking an annotation.
 
 (def-lvl X)
-(def-fns X $ many loop : (subterm many (Nat) n) -> (many (Nat) m)
+(def-fns X $ (many loop : (subterm many (Nat) n) -> (many (Nat) m))
   (loop (Succ n)))

@@ -5,14 +5,14 @@
 ; instance.
 
 (def-adts
-  (Vec : (Type A) ((Nat) n) -> Type
+  ((Vec : (Type A) ((Nat) n) -> Type)
     enum
     (many VNil : (erased Type A) -> (Vec A (Zero)))
     (many VCons : (erased Type A) (erased (Nat) n) (many A x) (many (Vec A n) rest) -> (Vec A (Succ n)))))
 
 (def-lvl L)
 
-(def-fns L $ many one : -> (many (Vec (Nat) (Succ (Zero))) v)
+(def-fns L $ (many one : -> (many (Vec (Nat) (Succ (Zero))) v))
   (VCons _ _ (Succ (Zero)) (VNil _)))
 
 one

@@ -5,13 +5,13 @@
 ; all a printer can show of it. Generating the printer must skip the constructors the index refutes.
 
 (def-adts
-  (UNat : ((Nat) n) -> Type
+  ((UNat : ((Nat) n) -> Type)
     union newtype
     (many UZero : -> (UNat (Zero)))
     (many USucc : (erased (Nat) m) (many (UNat m) pred) -> (UNat (Succ m)))))
 
 (def-lvl L)
-(def-fns L $ many two : -> (many (UNat (Succ (Succ (Zero)))) r)
+(def-fns L $ (many two : -> (many (UNat (Succ (Succ (Zero)))) r))
   (USucc (Succ (Zero)) (USucc (Zero) (UZero))))
 
 two

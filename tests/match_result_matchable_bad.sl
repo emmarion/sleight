@@ -6,11 +6,11 @@
 
 (def-lvl L)
 
-(let (erased m)
+(let ((erased m))
   (match erased (Zero) (((Matchable enum Level) m))
     (else (matchable-of Level))))
 
-(def-fns _ $ erased absurd forge : -> (erased (False) f)
+(def-fns _ $ (erased absurd forge : -> (erased (False) f))
   L)
 
-(let (erased f) (forge))
+(let ((erased f)) (forge))

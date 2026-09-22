@@ -4,25 +4,25 @@
 ; whose argument is a build, and matches under matches on a String, all inside a thunk so the extracted
 ; program does the work.
 
-(def-adts $ Out : -> Type
+(def-adts $ (Out : -> Type)
   enum
   (many MkOut : (many (Nat) n) (many (Bin) b) (many (String) s) -> (Out)))
 
 (def-lvl X)
-(def-fns X $ many twice-pred : (many (Nat) n) -> (many (Nat) r)
+(def-fns X $ (many twice-pred : (many (Nat) n) -> (many (Nat) r))
   (match many (match many n (((Nat) m)) ((Zero) (Zero)) ((Succ k) k)) _
     ((Zero) (Zero))
     ((Succ k) k)))
 
-(def-fns X $ many bin-kind : (many (Bin) b) -> (many (Bin) r)
+(def-fns X $ (many bin-kind : (many (Bin) b) -> (many (Bin) r))
   (match many b _
     ((B1 rest) (B2 (B1 rest)))
     (else (B1 (B1 b)))))
 
-(def-fns X $ many bin-all : (many (Bin) b) -> (many (Nat) n)
+(def-fns X $ (many bin-all : (many (Bin) b) -> (many (Nat) n))
   (match many b _ ((BZ) 0) ((B1 r) 1) ((B2 r) 2)))
 
-(def-fns X $ many str-swap : (many (String) s) -> (many (String) t)
+(def-fns X $ (many str-swap : (many (String) s) -> (many (String) t))
   (match many s _
     ((SNil) (SCons #\x (SNil)))
     ((SCons c rest)
@@ -31,8 +31,8 @@
         ((SCons d rest2) (SCons d (SCons c rest2)))))))
 
 (def-lvl Y)
-(let (erased xy) (prove-predates X Y))
-(def-fns Y $ many run : -> (many (Out) o)
+(let ((erased xy)) (prove-predates X Y))
+(def-fns Y $ (many run : -> (many (Out) o))
   (MkOut (nat-add (twice-pred (predates xy) 5) (bin-all (predates xy) (bin-kind (predates xy) (B2 (BZ)))))
          (bin-kind (predates xy) (B1 (BZ)))
          (str-swap (predates xy) "abc")))

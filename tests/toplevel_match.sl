@@ -4,12 +4,12 @@
 ; xs is (Cons ...) is known from its let, so the Nil branch is refuted.
 
 (def-lvl X)
-(def-fns X $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))
+(def-fns X $ (many inc : (many (Nat) n) -> (many (Nat) m)) (Succ n))
 
-(let (many xs) (Cons (Nat) (Zero) (Nil (Nat))))
+(let ((many xs)) (Cons (Nat) (Zero) (Nil (Nat))))
 
 (match many xs (((Nat) r))
   (absurd Nil)
   ((Cons a hd tl)
-    (let (many one) (inc hd))
+    (let ((many one)) (inc hd))
     one))

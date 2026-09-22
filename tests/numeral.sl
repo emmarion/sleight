@@ -4,7 +4,7 @@
 ; that proof by erased matches makes the literal unary-known inside the branch, here to index a Vec by 3.
 
 (def-lvl X)
-(def-fns X $ many three-zeros : (erased (Nat) n) (erased (Numeral (B1 (B1 (BZ))) n) v) -> (many (Vec (Nat) n) xs)
+(def-fns X $ (many three-zeros : (erased (Nat) n) (erased (Numeral (B1 (B1 (BZ))) n) v) -> (many (Vec (Nat) n) xs))
   (match erased v _
     (absurd NZ)
     (absurd N2)

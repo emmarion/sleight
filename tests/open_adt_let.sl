@@ -4,13 +4,13 @@
 ; open inside the right-hand side still serves the matches after the let, the second of which dispatches at
 ; runtime through the entry the open bound there.
 
-(def-adts $ Box : -> Type enum (many MkBox : (many (Nat) n) -> (Box)))
+(def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)
-(def-fns X $ many open : (erased (TyCtor -> Type) T)
+(def-fns X $ (many open : (erased (TyCtor -> Type) T)
     (erased (ValCtor (many (Nat) n) -> (T)) C)
     (many (Matchable enum T (many C)) m)
-    (many (T) x) -> (many (Nat) n)
-  (let (many k) (open-adt many m) (match many x (((Nat) r)) ((C n) n)))
-  (let (many j) (match erased x (((Nat) r)) ((C n) (Succ k))))
+    (many (T) x) -> (many (Nat) n))
+  (let ((many k)) (open-adt many m) (match many x (((Nat) r)) ((C n) n)))
+  (let ((many j)) (match erased x (((Nat) r)) ((C n) (Succ k))))
   (match many x (((Nat) r)) ((C n) (Succ j))))
 (open Box MkBox (matchable-of Box) (MkBox (Zero)))

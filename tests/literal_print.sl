@@ -4,16 +4,16 @@
 ; the delimiters a word cannot hold, which is why they are cut out of a string literal here rather than
 ; written; and the four escapes the reader unescapes.
 
-(let (many s) "();")
+(let ((many s)) "();")
 (comptime-match many s (SCons op rest1))
 (comptime-match many rest1 (SCons cl rest2))
 (comptime-match many rest2 (SCons semi rest3))
 
-(let (many chars)
+(let ((many chars))
   (Cons (Char) #\A $ Cons (Char) #\space $ Cons (Char) #\newline $ Cons (Char) #\tab
     $ Cons (Char) #\x01 $ Cons (Char) op $ Cons (Char) cl $ Cons (Char) semi $ Nil (Char)))
 
-(let (many strs)
+(let ((many strs))
   (Cons (String) "a\"b" $ Cons (String) "back\\slash" $ Cons (String) "tab\there"
     $ Cons (String) "nl\nhere" $ Cons (String) "" $ Nil (String)))
 

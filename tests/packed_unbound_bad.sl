@@ -3,14 +3,14 @@
 ; consumer's, and prove-predates refuses to relate them there.
 
 (def-lvl L1)
-(def-fns L1 $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))
-(def-adts $ Packed : -> Type
+(def-fns L1 $ (many inc : (many (Nat) n) -> (many (Nat) m)) (Succ n))
+(def-adts $ (Packed : -> Type)
   enum
   (many Pack : (erased (Level) l) (many (Fn l (many (Nat) x) -> (many (Nat) y)) f) -> (Packed)))
 (def-lvl K)
-(def-fns K $ many run-one : (many (Packed) p) (many (Nat) x) -> (many (Nat) y)
+(def-fns K $ (many run-one : (many (Packed) p) (many (Nat) x) -> (many (Nat) y))
   (match many p _
     ((Pack l f)
-      (let (erased q) (prove-predates l K))
+      (let ((erased q)) (prove-predates l K))
       (f (predates q) x))))
 (run-one (Pack L1 inc) 3)

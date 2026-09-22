@@ -4,13 +4,13 @@
 
 (def-lvl F)
 
-(def-fns F $ many adder : (many (Nat) n) -> (erased (Level) L) (many (Fn L (many (Nat) m) -> (many (Nat) r)) add-n)
+(def-fns F $ (many adder : (many (Nat) n) -> (erased (Level) L) (many (Fn L (many (Nat) m) -> (many (Nat) r)) add-n))
   (def-lvl L)
-  (def-fns L $ many add-n : (many (Nat) m) -> (many (Nat) r)
+  (def-fns L $ (many add-n : (many (Nat) m) -> (many (Nat) r))
     (match many n (((Nat) r))
       ((Zero) m)
       ((Succ k) (Succ m))))
   (values L add-n))
 
-(let (erased L) (many add-one) (adder (Succ (Zero))))
+(let ((erased L) (many add-one)) (adder (Succ (Zero))))
 (add-one (Succ (Zero)))

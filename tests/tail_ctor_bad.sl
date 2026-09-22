@@ -4,5 +4,5 @@
 
 (def-lvl X)
 
-(def-fns X $ many bump : (many (Nat) n) -> (many (Nat) m)
+(def-fns X $ (many bump : (many (Nat) n) -> (many (Nat) m))
   (tail (Succ n)))

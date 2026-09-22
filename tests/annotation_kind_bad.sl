@@ -3,8 +3,8 @@
 
 (def-lvl P)
 (def-lvl Q)
-(let (erased pq) (prove-predates P Q))
-(def-fns Q $ many f : (subterm many (Nat) n) -> (many (Nat) m)
+(let ((erased pq)) (prove-predates P Q))
+(def-fns Q $ (many f : (subterm many (Nat) n) -> (many (Nat) m))
   (match many n _
     ((Zero) (Zero))
     ((Succ k) (f (predates pq) k))))

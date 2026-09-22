@@ -3,13 +3,13 @@
 ; constructor, minting the facts that takes (DESIGN.md section 19): m1 and m2 share C, so
 ; opening both equates T with U and D with E, and a (T) value is returned where a (U) is declared.
 
-(def-adts $ Two : -> Type enum (many A : -> (Two)) (many B : -> (Two)))
+(def-adts $ (Two : -> Type) enum (many A : -> (Two)) (many B : -> (Two)))
 (def-lvl X)
-(def-fns X $ many cast : (erased (TyCtor -> Type) T) (erased (TyCtor -> Type) U)
+(def-fns X $ (many cast : (erased (TyCtor -> Type) T) (erased (TyCtor -> Type) U)
     (erased (ValCtor -> (T)) C) (erased (ValCtor -> (T)) D) (erased (ValCtor -> (U)) E)
     (erased (Matchable enum T (many C) (many D)) m1)
     (erased (Matchable enum U (many C) (many E)) m2)
-    (many (T) x) -> (many (U) y)
+    (many (T) x) -> (many (U) y))
   (open-adt erased m1)
   (open-adt erased m2)
   x)

@@ -5,20 +5,20 @@
 
 (def-lvl X)
 
-(def-fns X $ many count : (subterm many (Nat) n) (many (Nat) acc) (many (Nat) tag) ->
-    (many (Nat) total) (many (Nat) same)
+(def-fns X $ (many count : (subterm many (Nat) n) (many (Nat) acc) (many (Nat) tag) ->
+    (many (Nat) total) (many (Nat) same))
   (match many n (((Nat) r) ((Nat) s))
     ((Zero) (values acc tag))
     ((Succ k)
-      (let (erased p) (prove-subterm k n))
-      (let (many total) (many same) (tail (count (subterm p) k (Succ acc) tag)))
+      (let ((erased p)) (prove-subterm k n))
+      (let ((many total) (many same)) (tail (count (subterm p) k (Succ acc) tag)))
       (values total same))))
 
 (def-lvl Y)
-(let (erased pxy) (prove-predates X Y))
+(let ((erased pxy)) (prove-predates X Y))
 
-(def-fns Y $ many run : -> (many (Nat) same)
-  (let (many total) (many same) (count (predates pxy) 2000 (Zero) (Succ (Zero))))
+(def-fns Y $ (many run : -> (many (Nat) same))
+  (let ((many total) (many same)) (count (predates pxy) 2000 (Zero) (Succ (Zero))))
   same)
 
 run

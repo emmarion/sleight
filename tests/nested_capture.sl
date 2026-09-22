@@ -4,12 +4,12 @@
 
 (def-lvl L)
 (def-lvl M)
-(let (erased pm) (prove-predates L M))
+(let ((erased pm)) (prove-predates L M))
 
-(def-fns M $ many outer : (many (Nat) n) -> (many (Nat) r)
-  (let (many k) n)
-  (let (many _) (many b) (values k k))
-  (def-fns L $ many inner : (many (Nat) x) -> (many (Nat) y)
+(def-fns M $ (many outer : (many (Nat) n) -> (many (Nat) r))
+  (let ((many k)) n)
+  (let ((many _) (many b)) (values k k))
+  (def-fns L $ (many inner : (many (Nat) x) -> (many (Nat) y))
     (Succ b))
   (inner (predates pm) n))
 

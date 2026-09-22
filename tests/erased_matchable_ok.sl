@@ -2,15 +2,15 @@
 ; An erased Matchable still serves a match that compiles to no dispatch: an erased scrutinee has one real
 ; branch, and an erased position leaves no code at all.
 
-(def-adts $ Box : -> Type
+(def-adts $ (Box : -> Type)
   enum
   (many MkBox : (many (Nat) n) -> (Box)))
 
 (def-lvl X)
-(def-fns X $ many peek : (erased (TyCtor -> Type) T)
+(def-fns X $ (many peek : (erased (TyCtor -> Type) T)
     (erased (ValCtor (many (Nat) n) -> (T)) C)
     (erased (Matchable enum T (many C)) m)
-    (erased (T) x) -> (many (Nat) n)
+    (erased (T) x) -> (many (Nat) n))
   (open-adt erased m)
   (match erased x (((Nat) r))
     ((C n) (Zero))))

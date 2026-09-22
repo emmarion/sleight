@@ -10,14 +10,14 @@
   (Refl t r))
 
 (def-lvl X)
-(def-fns X $ many first : (erased Type A) (many (Vec A 5) v) -> (many A x)
+(def-fns X $ (many first : (erased Type A) (many (Vec A 5) v) -> (many A x))
   (match many v ((A r))
     (absurd VNil)
     ((VCons a m x xs) x)))
 
-(def-adts (Tag : ((Nat) n) -> Type enum (many TA : -> (Tag 0)) (many TB : -> (Tag 1))))
+(def-adts ((Tag : ((Nat) n) -> Type) enum (many TA : -> (Tag 0)) (many TB : -> (Tag 1))))
 
-(def-fns X $ many only-a : (many (Tag 0) t) -> (many (Nat) r)
+(def-fns X $ (many only-a : (many (Tag 0) t) -> (many (Nat) r))
   (match many t (((Nat) r))
     ((TA) (Zero))
     (absurd (TB)

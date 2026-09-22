@@ -5,19 +5,19 @@
 ; two are one function, coercible-of reads the Coercible off it, and the coerced char-cmp runs on
 ; Nats. Less, equal and greater score 0, 1 and 2.
 
-(let (erased cg) (coercible-of (delegate-of char-cmp)))
-(let (many g) (coerce char-cmp cg))
+(let ((erased cg)) (coercible-of (delegate-of char-cmp)))
+(let ((many g)) (coerce char-cmp cg))
 
 (def-lvl X)
-(let (erased cx) (prove-predates char-lvl X))
+(let ((erased cx)) (prove-predates char-lvl X))
 
-(def-fns X $ many which : (many (Char) a) (many (Char) b) -> (many (Nat) r)
+(def-fns X $ (many which : (many (Char) a) (many (Char) b) -> (many (Nat) r))
   (match many (char-cmp (predates cx) a b) (((Nat) r))
     ((CLt t rr x y p) (Zero))
     ((CEq t rr x) (Succ (Zero)))
     ((CGt t rr x y q) (Succ (Succ (Zero))))))
 
-(def-fns X $ many which-nat : (many (Nat) a) (many (Nat) b) -> (many (Nat) r)
+(def-fns X $ (many which-nat : (many (Nat) a) (many (Nat) b) -> (many (Nat) r))
   (match many (g a b) (((Nat) r))
     ((CLt t rr x y p) (Zero))
     ((CEq t rr x) (Succ (Zero)))

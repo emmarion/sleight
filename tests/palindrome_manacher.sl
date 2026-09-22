@@ -5,8 +5,8 @@
 ; elements, longest windows at the beginning, middle, and end, and nested
 ; mirrors that stop before, at, and beyond the rightmost boundary.
 
-(def-fns _ $ many man-test-nats : (subterm many (String) s) ->
-    (many (List (Nat)) xs)
+(def-fns _ $ (many man-test-nats : (subterm many (String) s) ->
+    (many (List (Nat)) xs))
   (match many s _
     ((SNil) (Nil (Nat)))
     ((SCons ch rest)
@@ -14,13 +14,13 @@
       (let-match many byte (MkU8 n bound))
       (Cons (Nat) n (man-test-nats rest)))))
 
-(def-fns _ $ many man-test-length : (many (String) s) -> (many (Nat) n)
-  (let (many xs) (man-test-nats s))
-  (let (many (Nat) n) (erased (LongestPalindrome xs n) correct)
+(def-fns _ $ (many man-test-length : (many (String) s) -> (many (Nat) n))
+  (let ((many xs)) (man-test-nats s))
+  (let ((many (Nat) n) (erased (LongestPalindrome xs n) correct))
     (longest-palindrome-manacher xs))
   n)
 
-(def-fns _ $ many man-test-main : -> (many (List (Nat)) answers)
+(def-fns _ $ (many man-test-main : -> (many (List (Nat)) answers))
   $ Cons _ (man-test-length "") $
   Cons _ (man-test-length "a") $
   Cons _ (man-test-length "aa") $

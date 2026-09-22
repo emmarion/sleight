@@ -3,7 +3,7 @@
 ; (DESIGN.md section 19) and still make the type empty (section 19).
 
 (def-lvl X)
-(def-fns X $ many absurd boom : (erased (Matchable enum False) m) (many (False) f) -> (many (Nat) n)
+(def-fns X $ (many absurd boom : (erased (Matchable enum False) m) (many (False) f) -> (many (Nat) n))
   (open-adt erased m)
   f)
 boom

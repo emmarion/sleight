@@ -25,7 +25,7 @@
 ; NB: named Concat, not Append, to stay clear of the prelude's Append.
 
 (def-adts
-  (Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type
+  ((Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
     enum
     (many CatNil : (erased Type A) (erased (List A) ys) ->
        (Concat A (Nil A) ys ys))
@@ -40,7 +40,7 @@
 ; ends, which is exactly what expand-around-centre style proofs recurse on.
 
 (def-adts
-  (Palindrome : (Type A) ((List A) xs) -> Type
+  ((Palindrome : (Type A) ((List A) xs) -> Type)
     enum
     (many PalNil : (erased Type A) -> (Palindrome A (Nil A)))
     (many PalOne : (erased Type A) (erased A x) ->
@@ -57,7 +57,7 @@
 ; real palindromes and make the whole spec vacuous.
 
 (def-adts
-  (NatApart : ((Nat) a) ((Nat) b) -> Type
+  ((NatApart : ((Nat) a) ((Nat) b) -> Type)
     enum
     (many ApartLt : (erased (Nat) a) (erased (Nat) b) (erased (Lt a b) p) -> (NatApart a b))
     (many ApartGt : (erased (Nat) a) (erased (Nat) b) (erased (Lt b a) p) -> (NatApart a b))))
@@ -68,7 +68,7 @@
 ; Lists of fewer than two elements can never be shown NotPalindrome.
 
 (def-adts
-  (NotPalindrome : ((List (Nat)) xs) -> Type
+  ((NotPalindrome : ((List (Nat)) xs) -> Type)
     enum
     (many NotPalEnds : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) inner)
         (erased (List (Nat)) withx)
@@ -83,7 +83,7 @@
 ; --- xs has length n ---
 
 (def-adts
-  (Length : (Type A) ((List A) xs) ((Nat) n) -> Type
+  ((Length : (Type A) ((List A) xs) ((Nat) n) -> Type)
     enum
     (many LNil : (erased Type A) -> (Length A (Nil A) (Zero)))
     (many LCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n)
@@ -94,7 +94,7 @@
 ; Only inhabited when xs has at least n elements.
 
 (def-adts
-  (Take : (Type A) ((Nat) n) ((List A) xs) ((List A) w) -> Type
+  ((Take : (Type A) ((Nat) n) ((List A) xs) ((List A) w) -> Type)
     enum
     (many TakeZero : (erased Type A) (erased (List A) xs) -> (Take A (Zero) xs (Nil A)))
     (many TakeSucc : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
@@ -112,7 +112,7 @@
 ; so Windows Zero xs has (length xs + 1) empty windows, as it should.
 
 (def-adts
-  (Windows : (Type A) ((Nat) n) ((List A) xs) ((List (List A)) xss) -> Type
+  ((Windows : (Type A) ((Nat) n) ((List A) xs) ((List (List A)) xss) -> Type)
     enum
     (many WinEmpty : (erased Type A) ->
        (Windows A (Zero) (Nil A) (Cons (List A) (Nil A) (Nil (List A)))))
@@ -127,7 +127,7 @@
 ; --- every element of xs satisfies P (P a first-class unary TyCtor) ---
 
 (def-adts
-  (All : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type
+  ((All : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type)
     enum
     (many AllNil : (erased Type A) (erased (TyCtor (A x) -> Type) P) ->
        (All A P (Nil A)))
@@ -139,7 +139,7 @@
 ; No Nil case: an empty list never witnesses an existential.
 
 (def-adts
-  (Exists : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type
+  ((Exists : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type)
     enum
     (many ExHere : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased A x)
         (erased (List A) rest) (erased (P x) p) ->
@@ -151,7 +151,7 @@
 ; --- adapter: Palindrome with A fixed to Nat (constructors can't be curried) ---
 
 (def-adts
-  (NatPalindrome : ((List (Nat)) xs) -> Type
+  ((NatPalindrome : ((List (Nat)) xs) -> Type)
     enum
     (many IsNatPalindrome : (erased (List (Nat)) xs) (erased (Palindrome (Nat) xs) p) ->
        (NatPalindrome xs))))
@@ -161,7 +161,7 @@
 ; since length-0 and length-1 windows are always palindromes. Correct.
 
 (def-adts
-  (NoPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((NoPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoPal : (erased (List (Nat)) xs) (erased (Nat) n) (erased (List (List (Nat))) xss)
         (erased (Windows (Nat) n xs xss) w) (erased (All (List (Nat)) NotPalindrome xss) a) ->
@@ -173,7 +173,7 @@
 ; (Succ n) is checked explicitly and the rest is deferred one step out.
 
 (def-adts
-  (NoLargerPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((NoLargerPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDone : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
         (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short) ->
@@ -190,7 +190,7 @@
 ; no other n does (Windows (Succ k) Nil is only ever the empty list).
 
 (def-adts
-  (LongestPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((LongestPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many IsLongest : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (List (List (Nat))) xss)
@@ -212,7 +212,7 @@
 ; Fuses:  Windows n xs xss  +  Exists NatPalindrome xss.
 
 (def-adts
-  (HasPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((HasPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many HasHere : (erased (List (Nat)) xs) (erased (Nat) n) (erased (List (Nat)) w)
         (erased (Take (Nat) n xs w) tk) (erased (Palindrome (Nat) w) p) ->
@@ -227,7 +227,7 @@
 ; (No mirror of WinEmpty: its one window is Nil, which is a palindrome.)
 
 (def-adts
-  (NoPalindromeOfLengthF : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((NoPalindromeOfLengthF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many SlideShort : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
         (erased (Length (Nat) xs len) l) (erased (Lt len n) short) ->
@@ -242,7 +242,7 @@
 ; --- no window longer than n is a palindrome (fused) ---
 
 (def-adts
-  (NoLargerPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((NoLargerPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDoneF : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
         (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short) ->
@@ -255,7 +255,7 @@
 ; --- fused answer ---
 
 (def-adts
-  (LongestPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type
+  ((LongestPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many IsLongestF : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (HasPalindromeOfLength xs n) h)
@@ -270,7 +270,7 @@
 ; definition means what it should; delete it otherwise.
 
 (def-adts
-  (Reverse : (Type A) ((List A) xs) ((List A) ys) -> Type
+  ((Reverse : (Type A) ((List A) xs) ((List A) ys) -> Type)
     enum
     (many RevNil : (erased Type A) -> (Reverse A (Nil A) (Nil A)))
     (many RevCons : (erased Type A) (erased A x) (erased (List A) xs)

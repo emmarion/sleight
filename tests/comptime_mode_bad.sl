@@ -1,3 +1,3 @@
 ; error: malformed comptime-match
-(let (many z) (Zero))
+(let ((many z)) (Zero))
 (comptime-match z (Zero))

@@ -2,18 +2,18 @@
 ; expect: (Cons _ 1 $ Cons _ 0 $ Nil _)
 ; An else through a first-class Matchable dispatches on the constructor's position, naming no constructor.
 
-(def-adts $ Two : -> Type
+(def-adts $ (Two : -> Type)
   enum
   (many L : (many (Nat) n) -> (Two))
   (many R : (many (Nat) n) -> (Two)))
 
 (def-lvl X)
 
-(def-fns X $ many pick : (erased (TyCtor -> Type) T)
+(def-fns X $ (many pick : (erased (TyCtor -> Type) T)
     (many (ValCtor (many (Nat) n) -> (T)) C)
     (many (ValCtor (many (Nat) n) -> (T)) D)
     (many (Matchable enum T (many C) (many D)) m)
-    (many (T) x) -> (many (Nat) n)
+    (many (T) x) -> (many (Nat) n))
   (open-adt many m)
   (match many x (((Nat) r))
     ((C n) n)

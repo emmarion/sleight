@@ -7,7 +7,7 @@
 
 (unary 5 3)
 (def-lvl X)
-(def-fns X $ many drop2 : (erased Type A) (many (Vec A 5) v) -> (many (Vec A 3) w)
+(def-fns X $ (many drop2 : (erased Type A) (many (Vec A 5) v) -> (many (Vec A 3) w))
   (match many v (((Vec A 3) w))
     (absurd VNil)
     ((VCons a m x xs)
@@ -19,7 +19,7 @@
 (unary 2)
 (unary 1)
 (unary 0)
-(def-fns X $ many three-zeros : -> (many (Vec (Nat) 3) xs)
+(def-fns X $ (many three-zeros : -> (many (Vec (Nat) 3) xs))
   (VCons (Nat) 2 (Zero) (VCons (Nat) 1 (Zero) (VCons (Nat) 0 (Zero) (VNil (Nat))))))
 
 (three-zeros)

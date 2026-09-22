@@ -1,6 +1,6 @@
 ; externs: only
 ; expect: 0
-(let (many r) (nat-cmp 50000 50001))
+(let ((many r)) (nat-cmp 50000 50001))
 (match many r (((Nat) n))
   ((CLt t rr x y p) (Zero))
   ((CEq t rr x) (Succ (Zero)))

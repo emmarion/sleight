@@ -3,11 +3,11 @@
 ; and calls the pointer at its own level under a subterm decrease, which is what bounds the call.
 
 (def-lvl L)
-(def-adts $ Packed : -> Type
+(def-adts $ (Packed : -> Type)
   enum
   (many Pack : (many (Fn L (many (Packed) q) (subterm many (List (Nat)) xs) -> (many (Nat) n)) f) -> (Packed)))
 
-(def-fns L $ many g : (many (Packed) q) (subterm many (List (Nat)) xs) -> (many (Nat) n)
+(def-fns L $ (many g : (many (Packed) q) (subterm many (List (Nat)) xs) -> (many (Nat) n))
   (match many q _
     ((Pack f)
       (match many xs _

@@ -3,7 +3,7 @@
 ; counterpart, so the inferred proof decreases there; the inner call keeps the first and so decreases the second.
 
 (def-lvl K)
-(def-fns K $ many ack : (subterm many (Nat) m) (subterm many (Nat) n) -> (many (Nat) r)
+(def-fns K $ (many ack : (subterm many (Nat) m) (subterm many (Nat) n) -> (many (Nat) r))
   (match many m _
     ((Zero) (Succ n))
     ((Succ m1)

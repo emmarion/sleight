@@ -4,11 +4,11 @@
 ; built and matched at runtime.
 
 (def-lvl X)
-(def-fns X $ many twice : (many (Nat) n) -> (many (Nat) m)
-  (def-adts $ Holds : ((Nat) k) -> Type
+(def-fns X $ (many twice : (many (Nat) n) -> (many (Nat) m))
+  (def-adts $ (Holds : ((Nat) k) -> Type)
     enum
     (many Here : (many (Nat) a) -> (Holds n)))
-  (let (many h) (Here n))
+  (let ((many h)) (Here n))
   (match many h (((Nat) r))
     ((Here a) (Succ a))))
 

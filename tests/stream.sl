@@ -5,16 +5,16 @@
 
 (def-lvl P)
 (def-lvl K)
-(def-adts $ Stream : -> Type
+(def-adts $ (Stream : -> Type)
   enum
   (many MkS : (many (Nat) head) (many (Fn K -> (many (Stream) rest)) tail) -> (Stream)))
-(let (erased pk) (prove-predates P K))
-(def-fns P $ many nats-from : (many (Nat) n) -> (many (Stream) s)
-  (def-fns K $ many next : -> (many (Stream) s) (nats-from (predates pk) (Succ n)))
+(let ((erased pk)) (prove-predates P K))
+(def-fns P $ (many nats-from : (many (Nat) n) -> (many (Stream) s))
+  (def-fns K $ (many next : -> (many (Stream) s)) (nats-from (predates pk) (Succ n)))
   (MkS n next))
 (def-lvl T)
-(let (erased kt) (prove-predates K T))
-(def-fns T $ many take : (subterm many (Nat) n) (many (Stream) s) -> (many (List (Nat)) out)
+(let ((erased kt)) (prove-predates K T))
+(def-fns T $ (many take : (subterm many (Nat) n) (many (Stream) s) -> (many (List (Nat)) out))
   (match many n _
     ((Zero) (Nil (Nat)))
     ((Succ n1)

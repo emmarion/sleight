@@ -10,26 +10,26 @@
 ; parameter unmarked the annotation is refused.
 
 ; the branch's body: the let of the proof, then the doubled call
-(def-fns _ $ many double-prog : (many (Raw) param) (many (List (Raw)) call) -> (many (List (Raw)) program)
-  (let (many branch)
+(def-fns _ $ (many double-prog : (many (Raw) param) (many (List (Raw)) call) -> (many (List (Raw)) program))
+  (let ((many branch))
     (l3 (l2 (a "Succ") (a "k"))
       (l3 (k (KLet)) (l1 (a "p")) (l3 (k (KProveSubterm)) (a "k") (a "n")))
       (l2 (a "Succ") (l2 (a "Succ") (RList (Cons _ (a "double") call))))))
-  (let (many fns)
+  (let ((many fns))
     (l3 (k (KDefFns)) (a "L")
       (l4 (a "double") (l1 param) (l1 (l2 nat (a "r")))
         (l5 (k (KMatch)) (a "n") (l1 (l2 nat (a "r"))) (l2 (l1 (a "Zero")) zero) branch))))
   (Cons _ nat-decl (Cons _ lvl-decl (Cons _ fns (Cons _ (l2 (a "double") (l2 (a "Succ") (l2 (a "Succ") zero))) (Nil _))))))
 
-(let (many marked) (l3 (k (KSubterm)) nat (a "n")))
-(let (many unmarked) (l2 nat (a "n")))
-(let (many with-proof) (Cons _ (l2 (k (KSubterm)) (a "p")) (Cons _ (a "k") (Nil _))))
-(let (many bare) (Cons _ (a "k") (Nil _)))
+(let ((many marked)) (l3 (k (KSubterm)) nat (a "n")))
+(let ((many unmarked)) (l2 nat (a "n")))
+(let ((many with-proof)) (Cons _ (l2 (k (KSubterm)) (a "p")) (Cons _ (a "k") (Nil _))))
+(let ((many bare)) (Cons _ (a "k") (Nil _)))
 
-(let (many no-proof) (outcome (double-prog marked bare)))
+(let ((many no-proof)) (outcome (double-prog marked bare)))
 (comptime-match many no-proof (Some t r))
 (comptime-match many r (RNoProof))
-(let (many not-marked) (outcome (double-prog unmarked with-proof)))
+(let ((many not-marked)) (outcome (double-prog unmarked with-proof)))
 (comptime-match many not-marked (Some t2 r2))
 (comptime-match many r2 (RBadProof))
 

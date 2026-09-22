@@ -3,5 +3,5 @@
 ; The top level calls without proofs (section 24), so a decrease annotation there is an error.
 
 (def-lvl L)
-(def-fns L $ many inc : (many (Nat) n) -> (many (Nat) m) (Succ n))
+(def-fns L $ (many inc : (many (Nat) n) -> (many (Nat) m)) (Succ n))
 (inc (predates _) (Zero))

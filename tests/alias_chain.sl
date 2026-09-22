@@ -3,9 +3,9 @@
 ; Branches refute through a chain of let aliases.
 
 (def-lvl X)
-(def-fns X $ many f : (many (Nat) n) -> (many (Nat) m)
-  (let (many a) n)
-  (let (many b) a)
+(def-fns X $ (many f : (many (Nat) n) -> (many (Nat) m))
+  (let ((many a)) n)
+  (let ((many b)) a)
   (match many n (((Nat) r))
     ((Zero)
       (match many b (((Nat) r))

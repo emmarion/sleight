@@ -1,4 +1,4 @@
 ; needs: list
 ; error: type mismatch
 
-(let (many (List (Nat)) x) (Zero))
+(let ((many (List (Nat)) x)) (Zero))

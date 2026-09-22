@@ -226,13 +226,6 @@ let split_arrow env loc items =
   in
   go [] items
 
-let split_returns env items =
-  let rec go acc = function
-    | List (_, m :: _) as r :: rest when mult_of env m <> None -> go (r :: acc) rest
-    | rest -> (List.rev acc, rest)
-  in
-  go [] items
-
 let no_mults loc = fun _ -> function None -> Some Erased | Some _ -> error loc "these entries carry no multiplicity"
 
 (* Leading annotation tokens drawn from [allowed], in any order. *)
@@ -1301,7 +1294,11 @@ and run_code env code = Eval.eval env.values code
    statements are statements of the enclosing expression: their code wraps the let's own, and their entries
    stay in scope after it, anonymously (section 16). *)
 and elab_let spos env l args =
-  let binder_raws, rhs = split_returns env args in
+  let binder_raws, rhs =
+    match args with
+    | List (_, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bs, rhs)
+    | _ -> error l "malformed let: expected (let (<binder> ...) <value> ...)"
+  in
   let binders = List.concat_map (parse_entry env) binder_raws in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
   let env, tele =
@@ -1495,13 +1492,12 @@ and elab_def_fns ?(unique = false) env l args =
       in
       let header raw =
         match raw with
-        | List (fl, m :: rest) -> (
+        | List (_, List (fl, m :: rest) :: body) -> (
             let mult = mult_or env fl m in
             let marks, rest = marks env [ Sp.Absurd; Sp.Extern ] rest in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
-                let ps, rest = split_arrow env fl sg in
-                let rs, body = split_returns env rest in
+                let ps, rs = split_arrow env fl sg in
                 let name = atom_or fl n "a function name" in
                 let ty = elab_fn_type ~unique env (Var lvl) ps rs in
                 let many_params = match ty with Fn (_, ps, _) | UniqueFn (_, ps, _) -> List.length (List.filter (fun e -> e.mult <> Erased) ps) | _ -> 0 in
@@ -1510,7 +1506,7 @@ and elab_def_fns ?(unique = false) env l args =
                 in
                 (fl, name, mult, List.mem Sp.Absurd marks, impl, ty, body)
             | _ -> error fl "malformed function header")
-        | _ -> error (loc raw) "malformed function definition"
+        | _ -> error (loc raw) "malformed function definition: expected ((<multiplicity> <name> : ... -> ...) <body> ...)"
       in
       let headers = List.map header fns in
       List.iter (fun (fl, _, m, _, _, _, _) -> if unique && m = Many then error fl "def-unique requires unique or erased" else if not unique && m = Unique then error fl "use def-unique to define a unique function") headers;
@@ -1613,12 +1609,12 @@ and check_marks env l pids code =
 and elab_def_adts env adts =
   let header raw =
     match raw with
-    | List (al, n :: colon :: rest) when is_special env colon Sp.Colon -> (
-        let ps, rest = split_arrow env al rest in
-        match rest with
-        | ty :: d :: rest -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
-        | _ -> error al "malformed def-adts entry")
-    | _ -> error (loc raw) "malformed def-adts entry"
+    | List (_, List (al, n :: colon :: sg) :: d :: rest) when is_special env colon Sp.Colon -> (
+        let ps, ret = split_arrow env al sg in
+        match ret with
+        | [ ty ] -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
+        | _ -> error al "a type constructor declares one return")
+    | _ -> error (loc raw) "malformed def-adts entry: expected ((<name> : ... -> Type) enum ...)"
   in
   let headers = List.map header adts in
   let env, tids =

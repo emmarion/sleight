@@ -3,7 +3,7 @@
 
 (def-lvl X)
 
-(def-fns X $ many f : (erased (Nat) n) -> (many (Nat) m)
+(def-fns X $ (many f : (erased (Nat) n) -> (many (Nat) m))
   (match erased n (((Nat) r))
     ((Zero) (Zero))
     (else (Succ (Zero)))))
