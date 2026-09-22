@@ -79,7 +79,9 @@ inconsistent or silent.
     suggests, or recognized by the reader. Signature parsing needs a
     rule for where return entries end and the body begins; the only
     rule inferable from the examples is "items headed by a multiplicity
-    token are return entries". Zero-parameter and zero-return forms
+    token are return entries". Settled: a telescope is written in a
+    bracket of its own, the owner's decision, so the rule is no longer
+    inferred. Zero-parameter and zero-return forms
     such as `(Fn L ->)` are never shown.
 
 11. **Forms with no syntax.** `comptime-match` has semantics in §15 and

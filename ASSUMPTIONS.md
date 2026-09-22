@@ -60,10 +60,10 @@ ground.
 10. Retired: `comptime-match`'s syntax is section 15's, which now gives
     it, and the multiplicity this entry predated is mandatory (158).
     The number is kept so that the entries after it do not move.
-11. **Where return entries end and a body begins**: after `->`, the
-    leading items that are lists headed by a multiplicity token are
-    return entries; the rest is the body. The same rule separates a
-    `let`'s binders from its right-hand side (SR 10).
+11. Retired: a telescope is written in a bracket of its own, so where
+    return entries end and a body begins is written rather than
+    inferred, and the same holds for a `let`'s binders (SR 10).
+    The number is kept so that the entries after it do not move.
 12. **A file may end in a statement** (section 40 does); then nothing
     is printed (SR 27). Otherwise the final expression's one value is
     printed. Several files on the command line share one scope, in

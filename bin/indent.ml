@@ -133,10 +133,31 @@ let check_lines path lines =
             | _ -> stack := (i, n) :: remaining))
     lines
 
+(* The final paren depth, and the first line at which it went below zero. A file
+   the reader cannot close is the case this tool is most wanted for, so neither
+   is left to the nesting rules: they read relative depth and would pass a file
+   whose indentation is consistent and whose forms never close. *)
+let balance toks =
+  List.fold_left
+    (fun (d, neg) (line, _, tok) ->
+       match tok with
+       | LParen -> (d + 1, neg)
+       | RParen -> (d - 1, if d - 1 < 0 && neg = None then Some line else neg)
+       | Dollar | Word _ -> (d, neg))
+    (0, None) toks
+
 let check_file path =
   let src = match Program.read_file path with s -> s | exception Sys_error m -> prerr_endline m; exit 2 in
   let toks, stopped = scan_upto src in
   check_lines path (checkable_lines path src toks);
+  let depth, neg = balance toks in
+  (match neg with
+   | Some line -> report path line "a ) here closes more than is open (surplus ))"
+   | None -> ());
+  if depth <> 0 then (
+    incr issues;
+    Printf.printf "%s: final depth %d %s\n" path depth
+      (if depth > 0 then "(unclosed forms: append that many ))" else "(surplus ))"));
   match stopped with
   | None -> ()
   | Some (l, m) ->
