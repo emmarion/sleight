@@ -697,11 +697,11 @@
     (many MW1 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRuleW ctx (Succ d) t rules) m) -> (MemRuleW (Cons (Digit) (D1) ctx) x t rules))
     (many MW2 : (erased (List $ Digit) ctx) (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Term) t) (erased (List $ Rule) rules) (erased (MemRuleW ctx (Succ (Succ d)) t rules) m) -> (MemRuleW (Cons (Digit) (D2) ctx) x t rules))))
 
-(def-fns _ $ many append-rule : (subterm many (List $ Rule) rules) (many (Rule) r) -> (many (List $ Rule) res) (erased (AppendR rules r res) p)
-  (match many rules _
+(def-fns _ $ erased append-rule : (subterm erased (List $ Rule) rules) (erased (Rule) r) -> (erased (List $ Rule) res) (erased (AppendR rules r res) p)
+  (match erased rules _
     ((Nil a) (values (Cons _ r $ Nil _) $ ApNil _))
     ((Cons a x rest)
-      (let (many res) (erased p) $ append-rule rest r)
+      (let (erased res) (erased p) $ append-rule rest r)
       (values (Cons _ x res) $ ApCons _ _ _ _ p))))
 
 (def-fns _ $ erased mem-append : (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) rules) (erased (Rule) r) (erased (List $ Rule) res) (subterm erased (MemRule x t rules) m) (erased (AppendR rules r res) ap) -> (erased (MemRule x t res) m2)
@@ -1408,10 +1408,10 @@
     enum
     (many PNil : (erased (List $ Rule) whole) -> (Prefix (Nil $ Nat) whole whole))
     (many PCons : (erased (List $ Nat) seen) (erased (List $ Rule) whole) (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) after) (erased (Prefix seen whole $ Cons (Rule) (MkRule x t) after) p) -> (Prefix (Cons (Nat) x seen) whole after)))
-  (RuleFound : ((List $ Nat) seen) ((List $ Rule) whole) ((List $ Rule) after) -> Type
+  (RuleFound : ((List $ Nat) seen) ((List $ Rule) whole) ((List $ Rule) after) ((Term) t) -> Type
     enum
-    (many MkRuleFound : (erased (List $ Nat) seen) (erased (List $ Rule) whole) (erased (List $ Rule) after) (many (Term) t) (many (List $ Rule) after2) (erased (List $ Nat) seen2)
-       (erased (Prefix seen2 whole after2) pre) (erased (Ord seen2 after2) ord) (erased (Guard t seen2) g) (erased (Subterm (List $ Rule) after2 (List $ Rule) after) sub) -> (RuleFound seen whole after))))
+    (many MkRuleFound : (erased (List $ Nat) seen) (erased (List $ Rule) whole) (erased (List $ Rule) after) (erased (Term) t) (erased (List $ Rule) after2) (erased (List $ Nat) seen2)
+       (erased (Prefix seen2 whole after2) pre) (erased (Ord seen2 after2) ord) (erased (Guard t seen2) g) (erased (Subterm (List $ Rule) after2 (List $ Rule) after) sub) -> (RuleFound seen whole after t))))
 
 (def-fns _ $ erased ord-snoc : (erased (List $ Nat) seen) (erased (List $ Rule) rules) (subterm erased (Ord seen rules) o) (erased (List $ Nat) ks) (erased (Keys seen rules ks) k) (erased (Nat) x) (erased (Term) t) (erased (List $ Rule) res) (erased (AppendR rules (MkRule x t) res) ap) (erased (Guard t $ Cons (Nat) x ks) g) -> (erased (Ord seen res) o2)
   (match erased o _
@@ -1444,26 +1444,20 @@
         (absurd (MRHere v1 t1 rest1) (guard-clash _ _ g))
         ((MRThere v1 t1 r1 rest1 m1) m1)))))
 
-(def-fns _ $ many find-rule : (subterm many (List $ Rule) after) (many (Nat) x) (erased (List $ Nat) seen) (erased (List $ Rule) whole) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (Term) t0) (erased (MemRule x t0 after) m) -> (many (RuleFound seen whole after) r)
-  (match many after _
-    (absurd (Nil a) (match erased m (((False) f))))
-    ((Cons a rule rest)
-      (match many rule _
-        ((MkRule y t)
-          (let (erased (Guard t $ Cons _ y seen) g) $ match erased ord _ ((OrdCons s1 y1 t1 r1 g o) g))
-          (let (erased (Ord (Cons _ y seen) rest) o) $ match erased ord _ ((OrdCons s1 y1 t1 r1 g o) o))
-          (let (erased pre2) $ PCons _ _ _ _ _ pre)
-          (match many (nat-eq-dec x y) _
-            ((BYes a1 b1 e) (MkRuleFound _ _ _ t rest _ pre2 o g $ prove-subterm rest after))
-            ((BNo a1 b1 ne)
-              (let (erased (MemRule x t0 rest) m2) $ match erased m _ ((MRThere x1 t1 r1 rest1 m2) m2) (absurd (MRHere x1 t1 rest1) (neq-irrefl _ ne)))
-              (match many (find-rule rest x _ _ pre2 o _ m2) _
-                ((MkRuleFound s2 w2 a2 t2 after3 seen3 pre3 ord3 g3 sub) (MkRuleFound _ _ _ t2 after3 _ pre3 ord3 g3 $ subterm-trans sub $ prove-subterm rest after))))))))))
+(def-fns _ $ erased find-rule : (erased (List $ Rule) after) (erased (Nat) x) (erased (List $ Nat) seen) (erased (List $ Rule) whole) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (Term) t) (subterm erased (MemRule x t after) m) -> (erased (RuleFound seen whole after t) r)
+  (match erased m _
+    ((MRHere x1 t1 rest)
+      (let-match erased ord (OrdCons s1 y1 t2 r1 g o))
+      (MkRuleFound _ _ _ _ rest _ (PCons _ _ _ _ _ pre) o g $ prove-subterm rest after))
+    ((MRThere x1 t1 r rest m2)
+      (let-match erased ord (OrdCons s1 y1 t2 r1 g o))
+      (match erased (find-rule rest x _ _ (PCons _ _ _ _ _ pre) o _ m2) _
+        ((MkRuleFound s2 w2 a2 t3 after3 seen3 pre3 ord3 g3 sub) (MkRuleFound _ _ _ _ after3 _ pre3 ord3 g3 $ subterm-trans sub $ prove-subterm rest after))))))
 ; ---- Canonicalization (sections 5, 18): a chase continues along the rules after the one followed, the
 ; guard and the agreement proofs saying the rule is there; the result comes with its freshness.
 
 (def-fns _
-  (many canon : (subterm many (List $ Rule) after) (subterm many (Term) t) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (Guard t seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
+  (many canon : (subterm erased (List $ Rule) after) (subterm many (Term) t) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (Guard t seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (Term) r) (erased (Fr n f r) fr)
     (match many t _
       ((TVar x)
@@ -1473,8 +1467,8 @@
             (values (TErr msg) $ FrErr _ _ _))
           ((LFree a b d e h ty p) (values t $ FrVar _ _ _ p))
           ((LRuled a b d e h ty r0 m)
-            (match many (find-rule after x _ _ pre ord _ $ mem-after seen whole after pre x r0 m g) _
-              ((MkRuleFound s w a2 r after2 seen2 pre2 ord2 g2 sub) (canon (subterm sub) after2 r n f whole seen2 pre2 ord2 g2 c))))))
+            (match erased (find-rule after x _ _ pre ord _ $ mem-after seen whole after pre x r0 m g) _
+              ((MkRuleFound s w a2 t2 after2 seen2 pre2 ord2 g2 sub) (canon (subterm sub) after2 r0 n f whole seen2 pre2 ord2 g2 c))))))
       ((TBound k) (values t $ FrBound _ _ _))
       ((TApp h args)
         (let (erased gh) (erased ga) $ guard-app _ _ _ g)
@@ -1508,7 +1502,7 @@
         (values (TMatchable d nt ex ty2 cs2) (FrMatchable _ _ _ _ _ _ _ ft fc)))
       ((TSlotHolds cn) (values t $ FrSlotHolds _ _ cn))
       ((TErr m) (values t $ FrErr _ _ _))))
-  (many canon-list : (subterm many (List $ Rule) after) (subterm many (List $ Term) ts) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardL ts seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
+  (many canon-list : (subterm erased (List $ Rule) after) (subterm many (List $ Term) ts) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardL ts seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (List $ Term) r) (erased (FrL n f r) fr)
     (match many ts _
       ((Nil a) (values ts $ FrLNil _ _))
@@ -1517,7 +1511,7 @@
         (let (many t2) (erased ft) $ canon after t _ f _ _ pre ord gt c)
         (let (many rest2) (erased frest) $ canon-list after rest _ f _ _ pre ord gr c)
         (values (Cons _ t2 rest2) $ FrLCons _ _ _ _ ft frest))))
-  (many canon-tele : (subterm many (List $ Rule) after) (subterm many (List $ Entry) es) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardT es seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
+  (many canon-tele : (subterm erased (List $ Rule) after) (subterm many (List $ Entry) es) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardT es seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (List $ Entry) r) (erased (FrT n f r) fr)
     (match many es _
       ((Nil a) (values es $ FrTNil _ _))
@@ -1528,7 +1522,7 @@
             (let (many sg2) (erased fs) $ canon-sg after sg _ f _ _ pre ord gs c)
             (let (many rest2) (erased frest) $ canon-tele after rest _ f _ _ pre ord gr c)
             (values (Cons _ (MkEntry nm s mu sg2 place) rest2) (FrTCons _ _ _ _ _ _ _ _ fs frest)))))))
-  (many canon-sg : (subterm many (List $ Rule) after) (subterm many (Sg) sg) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardS sg seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
+  (many canon-sg : (subterm erased (List $ Rule) after) (subterm many (Sg) sg) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardS sg seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (Sg) r) (erased (FrS n f r) fr)
     (match many sg _
       ((SgTy t)
@@ -1539,7 +1533,7 @@
         (let (erased gt) $ guards-is _ _ _ g)
         (let (many t2) (erased ft) $ canon after t _ f _ _ pre ord gt c)
         (values (SgIs t2 ty) $ FrSIs _ _ _ _ ft))))
-  (many canon-mctors : (subterm many (List $ Rule) after) (subterm many (List $ MCtor) cs) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardM cs seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
+  (many canon-mctors : (subterm erased (List $ Rule) after) (subterm many (List $ MCtor) cs) (erased (Nat) n) (many (Facts n) f) (erased (List $ Rule) whole) (erased (List $ Nat) seen) (erased (Prefix seen whole after) pre) (erased (Ord seen after) ord) (erased (GuardM cs seen) g) (erased (C1 (Nil $ Digit) n f whole) c) ->
       (many (List $ MCtor) r) (erased (FrM n f r) fr)
     (match many cs _
       ((Nil a) (values cs $ FrMNil _ _))
@@ -1816,7 +1810,7 @@
 (def-adts
   (Table : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type
     enum
-    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (many (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) -> (Table n f c)))
+    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) -> (Table n f c)))
   (Added : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type
     enum
     (many MkAdded : (erased (Nat) k) (erased (Facts $ Succ k) f) (erased (Facts k) f2) (erased (Nat) c) (many (Table k f2 c) tb) -> (Added (Succ k) f c))))
@@ -1926,9 +1920,9 @@
 ; The table after a variable is ruled out with a term fresh in the result: the rule is appended, the
 ; keys and the order extended, both agreements carried across, and the opened objects naming the variable
 ; refreshed.
-(def-fns _ $ many rule-into : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Above (Nil $ Digit) c n f) ab) (many (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1)
+(def-fns _ $ many rule-into : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Above (Nil $ Digit) c n f) ab) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1)
     (many (Opens n f) op) (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb)
-  (let (many ru2) (erased ap) $ append-rule ru $ MkRule x t)
+  (let (erased ru2) (erased ap) $ append-rule ru $ MkRule x t)
   (let (erased ar2) $ ARCons _ _ _ _ (ruledin-out-new x t n f k f2 o) $ allruled-out ks x t n f k f2 o ar)
   (table-refresh _ _ c
     (MkTable _ f2 _ ru2 _
@@ -1946,7 +1940,7 @@
     ((MkTable n0 f0 c0 ru ks ord keys ar c1 ab op)
       (match many (facts-rule-out _ f0 x p t) _
         ((MkRemoved a b k d f2 o)
-          (let (many ru2) (erased ap) $ append-rule ru $ MkRule x t)
+          (let (erased ru2) (erased ap) $ append-rule ru $ MkRule x t)
           (let (erased c2) $ c1-out _ _ _ (WNil x) _ _ _ _ _ o _ c1 _ ap)
           (match many (refresh t _ f2 _ c2) _
             ((None e) (None _))

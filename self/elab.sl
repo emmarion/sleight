@@ -1592,6 +1592,33 @@
     ((None t) env2) ((Some t place) (at-merge env2 (TVar id) place))))
   (values env3 (res-of env3 id) id))
 
+(def-fns _ $ many code-var : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) -> (many (Maybe $ Nat) r)
+  (match many code _
+    ((CVar c0 z p) (Some _ z))
+    ((CConst c0 z) (Some _ z))
+    ((CValues c0 ms2 cs pk) (match many cs _ ((Cons a c rest) (match many rest _ ((Nil b) (code-var _ _ c)) (else (None _)))) (else (None _))))
+    (else (None _))))
+
+(def-fns _ $ many prepare-or-keep : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (many (Env) env) (many (Mult) pos) (many (Res) res) (many (Code ctx ms) code) ->
+    (many (Env) env2) (many (Res) prepared) (many (Nat) id)
+  (let (many (Maybe $ Nat) same)
+    (match many (res-term res) _
+      ((TVar y) (match many (code-var _ _ code) _ ((Some a z) (match many (nat-eq y z) _ ((BTrue) (Some _ y)) ((BFalse) (None _)))) ((None a) (None _))))
+      (else (None _))))
+  (match many same _
+    ((Some a y) (values env res y))
+    ((None a) (prepare-argument env pos res))))
+
+(def-fns _ $ many frame-pairs : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Code ctx many-one) pairs) -> (many (List $ Pair (Nat) $ Code ctx many-one) r)
+  (match many pairs _
+    ((Nil a) (Nil _))
+    ((Cons a pair rest)
+      (let (many more) (frame-pairs _ rest))
+      (match many pair _ ((MkPair b c id code)
+        (match many (code-var _ _ code) _
+          ((Some d z) (match many (nat-eq id z) _ ((BTrue) more) ((BFalse) (Cons _ pair more))))
+          ((None d) (Cons _ pair more))))))))
+
 (def-fns _ $ many prepare-pack : (erased (List $ List $ Nat) ctx)
     (subterm many (List $ Pair (Nat) $ Code ctx many-one) pairs) ->
     (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) ipk)
@@ -3630,7 +3657,7 @@
                       (let (many mode) (match many demand (((Mult) m)) ((Fixed ms) (pos-mult expect)) ((CallableHead) (head-demand env2 ret)) ((FinalDemand) (final-demand env2 ret))))
                       (let (many env2) $ error-when env2 (and (mult-is-many pos) $ not $ mult-is-many $ res-erasure h) $ str-cat3 "erased constructor " (show-t env2 $ res-term h) " in a non-erased position")
                       (let (many env3) $ match many (res-term h) (((Env) e)) ((TVar x) (use-entry env2 (under pos $ Many) x $ BFalse)) (else env2))
-                      (let (many env3a) (many hr) (many hid) $ prepare-argument env3 (under pos $ Many) h)
+                      (let (many env3a) (many hr) (many hid) $ prepare-or-keep _ _ env3 (under pos $ Many) h hcode)
                       (let (many env4) (many acc) (many tys) (many codes) (many pairs) $ check-args sugar args (subs-all args) one-step (check-arity env3a ctele $ list-length _ args) ctx ctele mode tele (ARApp (res-term h) ret) (BFalse) (BFalse) $ BTrue)
                       (let (many wrapped) $ match many (canon-env env4 $ res-term h) (((Bool) w)) ((TVar c) (is-some _ $ find-newtype env4 c)) (else (BFalse)))
                       (let (many place) $ match many (and wrapped $ mult-is-many mode) (((Maybe $ Term) p))
@@ -3638,7 +3665,7 @@
                         ((BTrue) (match many (wrap-field ctele (list-rev _ acc) $ list-rev _ tys) (((Maybe $ Term) p)) ((None a) (None _)) ((Some a p) (match many p (((Maybe $ Term) p)) ((MkPair a b t ty) (Some _ t)))))))
                       (let (many result) $ MkRes (TApp (res-term h) $ list-rev _ acc) (instantiate acc ret) mode place)
                       (let (many inputs) $ Cons _ (MkPair _ _ hid $ runtime-one _ pos hcode) pairs)
-                      (let (many ims) (many iids) (erased ipk) (many ics) (erased icpk) $ prepare-pack _ inputs)
+                      (let (many ims) (many iids) (erased ipk) (many ics) (erased icpk) $ prepare-pack _ $ frame-pairs _ inputs)
                       (let (many ictx) $ Cons _ iids ctx)
                       (let (many actuals) $ prepared-codes _ pairs env4 ictx)
                       (let (many code) $ match many wrapped (((Code ictx many-one) c))
@@ -5097,7 +5124,7 @@
                     (let (many env4) $ check env3 "value" (res-term r) $ TVar m)
                     (let (many env5) (many r2) (many id)
                       (match many (and prepare (mult-is-many mult)) (((Env) e0) ((Res) r0) ((Nat) x0))
-                        ((BTrue) (prepare-argument env4 mult r))
+                        ((BTrue) (prepare-or-keep _ _ env4 mult r code))
                         ((BFalse) (values env4 r 0))))
                     (let (many (List $ Code ctx many-one) codes2) (many (List $ Pair (Nat) $ Code ctx many-one) pairs2)
                       (match many mult _
@@ -5117,7 +5144,7 @@
         (let (many env) $ error-when env (and (mult-is-many pos) $ not $ mult-is-many $ res-erasure callee) $ str-cat3 "erased function " (show-t env $ res-term callee) " called in a non-erased position")
         (let (many env0) $ match many (res-term callee) (((Env) e)) ((TVar x) (use-entry env mode x $ BFalse)) (else env))
         (let (many env1) $ error-when env0 (and uq $ and (mult-is-many pos) $ not $ mult-is-once $ res-erasure callee) "a shared UniqueFn is callable only erased")
-        (let (many env1a) (many hres) (many hid) $ prepare-argument env1 mode callee)
+        (let (many env1a) (many hres) (many hid) $ prepare-or-keep _ _ env1 mode callee hcode)
         (let (many env2) (many acc) (many tys) (many codes) (many pairs) $ check-args sugar rawargs args one-step (check-arity env1a params $ list-length _ args) ctx params pos tele (ARCall rets) (BFalse) (BTrue) $ BTrue)
         (let (many arg-terms) $ list-rev _ acc)
         (let (many env3) $ check-call-proof sugar rawargs ann env2 ctx callee lv params arg-terms $ list-rev _ tys)
@@ -5128,7 +5155,7 @@
             ((BFalse) (values env4 $ CErased _ expect))
             ((BTrue)
               (let (many inputs) $ Cons _ (MkPair _ _ hid $ runtime-one _ pos hcode) pairs)
-              (let (many ims) (many iids) (erased ipk) (many ics) (erased icpk) $ prepare-pack _ inputs)
+              (let (many ims) (many iids) (erased ipk) (many ics) (erased icpk) $ prepare-pack _ $ frame-pairs _ inputs)
               (let (many ictx) $ Cons _ iids ctx)
               (let (many actuals) $ prepared-codes _ pairs env4 ictx)
               (let (many call) $ CApp ictx rmults (var-code env4 ictx hid) actuals cc)

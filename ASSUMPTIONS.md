@@ -3713,3 +3713,46 @@ without the owner.
     no longer elaborate under the current prelude (`heap.sl:100:
     expected 6 arguments, got 4`), so its "slc on pinned slc" line
     measures nothing until the pin moves.
+
+190. **A call's argument or head that is already a variable is not
+    bound to a temporary.** U2a has every argument as if bound to an
+    anonymous variable first, and `self/elab.sl`'s `prepare-argument`
+    did so for every non-erased argument, callee and constructor head,
+    minting an entry with an `is` rule and a word each time;
+    `lib/elab.ml` binds one only when the argument is not a plain
+    variable, an entry aliasing a variable adding nothing the variable
+    itself does not say. `prepare-or-keep` now does the same at those
+    three sites, for a term that is a variable whose code is that
+    variable, or a `values` of it, and `frame-pairs` leaves such an
+    input out of the call's input frame, which referenced it by its
+    own id: binding a variable to itself there bound one id twice when
+    a variable was passed twice, which OCaml refuses. Match scrutinees
+    are still bound, as the reference binds them. On the same input
+    the entries minted fall from about 137,000 to 113,000 and slc's
+    compile of itself from 16.6s to 10.9s. Believed to change nothing
+    observable: the temporary's rule made it canonically the variable,
+    the at-database read the variable's class through it, and the
+    normalizer substituted the frame binder away, so the emitted
+    program differs in the numbering of its names and types and in
+    the input frames alone; the bootstrap compares every test with
+    the reference and requires the fixpoint as before.
+
+191. **The rules list is erased.** 189 left the fact table's linear
+    walk: `canon` chased a ruled variable by `find-rule`'s scan of the
+    rules list from the current suffix, the list being oldest first so
+    that a fresh variable's rule sat at the far end, and `rule-into`
+    copied the whole list to append at the end. The list served the
+    chase as its termination measure, the suffix after a followed rule
+    being a subterm of the one before, and its ordering proofs
+    (`Ord`, `Prefix`, `Guard`, `C1`) as their index. Section 12 lets
+    subterm recursion go through an erased argument, as the prelude's
+    `init-witness` does, so the list is now erased everywhere: the
+    table's `ru`, `canon`'s `after`, `append-rule`, and `find-rule`,
+    which walks the erased `MemRule` witness the trie's `C1` agreement
+    hands it instead of deciding keys, and returns a `RuleFound` now
+    indexed by the term it finds, every field erased. The chase's only
+    physical step is `facts-lookup`'s trie walk, and a rule-out copies
+    nothing. The proofs are the same proofs; what changed is which of
+    their inputs the running program computes. On the same input the
+    compile falls from 10.9s to 5.0s, the emitted program
+    byte-identical.
