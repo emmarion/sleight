@@ -5,7 +5,7 @@
 ; AppendFile adds to what WriteFile left; Stat names what a path holds, Missing being an ordinary answer.
 ; GetCwd's value is the machine's, so the test asks Stat what it names rather than printing it.
 
-(def-lvl P0)
+(def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
@@ -14,10 +14,10 @@
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
 (let ((erased str-p)) (prove-predates str-lvl P))
-(let ((erased p0-p)) (prove-predates P0 P))
+(let ((erased pa-p)) (prove-predates PA P))
 (let ((erased thunk-p)) (prove-predates thunk-lvl P))
 
-(def-fns P0 $ (many kind-name : (many (EntryKind) k) -> (many (String) s))
+(def-fns PA $ (many kind-name : (many (EntryKind) k) -> (many (String) s))
   (match many k _
     ((IsFile) "file")
     ((IsDir) "dir")
@@ -30,7 +30,7 @@
 (def-unique P $ (unique cwd-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
   (match many r _
     ((Ok a k)
-      (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates p0-p) k) "\n"))
+      (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates pa-p) k) "\n"))
         (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
     ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
@@ -39,12 +39,12 @@
 
 (def-unique P $ (unique none-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates pa-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
     ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-unique P $ (unique file-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
   (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates p0-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
+    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates pa-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
     ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-unique P $ (unique read-back : (many (Result (String)) r) -> (unique (IO P) next))

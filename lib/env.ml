@@ -14,10 +14,6 @@ let warn_at l notes fmt =
     (fun s -> !warn (Printf.sprintf "%s: warning: %s\n%s" (Reader.where "-" l) s (String.concat "" (List.map note notes))))
     fmt
 
-(* Shadowing is legal (section 9) and off by default; --warn-shadow asks for a warning at every binder that
-   hides a name already in scope. *)
-let warn_shadow = ref false
-
 let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
@@ -29,7 +25,9 @@ let error_with loc notes fmt =
 type state = Const of Value.value | Dyn
 
 (* [at] is where the source wrote the binder, for a message about it to point at; an entry the elaborator
-   mints for itself carries no position (ASSUMPTIONS 195). *)
+   mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
+   a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
+   [~written:false], the declaration having already been read once. *)
 type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
@@ -142,17 +140,19 @@ let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x 
 (* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?rule name mult state ty =
+let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error Reader.nowhere "%s is a literal, not a name" n) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     error Reader.nowhere "cannot infer the _ in %s" (show env (match rule with Some r when has_meta env r -> r | _ -> ty));
-  if !warn_shadow && Reader.placed at then
+  if written && Reader.placed at then
     Option.iter
       (fun n ->
          match StringMap.find_opt n env.scope.named with
          | Some prior when n <> "_" ->
-             (* An entry with no position is one the built-ins minted rather than a file: a special form,
-                an annotation token, or one of the opaque types (section 27). *)
+             (* An entry with no position was minted by the built-ins rather than read from a file: a
+                special form, an annotation token, or one of the opaque types (section 27). A binder the
+                source wrote carries its position even where it is bound again from a stored telescope,
+                the telescope entry holding it (Term.entry). *)
              let prior = (IntMap.find prior env.entries).at in
              if Reader.placed prior then warn_at at [ (prior, "shadowed binder is here") ] "declaration of %s shadows a previous binder" n
              else warn_at at [] "declaration of %s shadows a built-in" n

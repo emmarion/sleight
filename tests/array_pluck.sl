@@ -16,7 +16,7 @@
   (let ((erased raw) (erased witness))
     (init-witness _ _ c (AICons _ _ _ _ (AICons _ _ _ _ (AINil _)))))
   (let ((unique initialized)) (coerce c witness))
-  (let-match unique initialized (ACons _ _ x tail))
-  (let-match unique tail (ACons _ _ y end))
+  (let-match unique initialized (ACons _ _ x rest))
+  (let-match unique rest (ACons _ _ y end))
   (nat-add (share x) (share y)))
 pluck-test

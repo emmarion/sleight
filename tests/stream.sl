@@ -7,7 +7,7 @@
 (def-lvl K)
 (def-adts $ (Stream : -> Type)
   enum
-  (many MkS : (many (Nat) head) (many (Fn K -> (many (Stream) rest)) tail) -> (Stream)))
+  (many MkS : (many (Nat) head) (many (Fn K -> (many (Stream) rest)) next) -> (Stream)))
 (let ((erased pk)) (prove-predates P K))
 (def-fns P $ (many nats-from : (many (Nat) n) -> (many (Stream) s))
   (def-fns K $ (many next : -> (many (Stream) s)) (nats-from (predates pk) (Succ n)))

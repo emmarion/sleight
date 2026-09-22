@@ -4,17 +4,17 @@
 
 (def-adts $ (Opt : -> Type)
   enum
-  (many Some : -> (Opt))
+  (many OSome : -> (Opt))
   (erased Ghost : -> (Opt)))
 
 (def-adts
   ((P : ((Opt) o) -> Type)
     enum
-    (many PSome : -> (P (Some)))
+    (many PSome : -> (P (OSome)))
     (many PAny : (erased (Opt) o) -> (P o))))
 
 (def-lvl X)
 (def-fns X $ (many prove : (erased (Opt) o) -> (many (P o) p))
   (match erased o (((P o) r))
-    ((Some) (PSome))
+    ((OSome) (PSome))
     ((Ghost) (PAny (Ghost)))))

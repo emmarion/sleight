@@ -9,6 +9,6 @@
 (def-fns T $ (many main : -> (many (Special) s))
   (match many (get-left (predates uxt) (L (Succ (Zero)))) (((Special) r))
     ((Zero) let)
-    ((Succ k) (pick (predates xt) (False)))))
+    ((Succ k) (pick (predates xt) (BFalse)))))
 
 main

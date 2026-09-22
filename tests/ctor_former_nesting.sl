@@ -3,9 +3,9 @@
 ; ASSUMPTIONS 80 refuses is only a return headed by the constructor's own field. Here `one` takes a
 ; constructor into a type constructor from its own Fn telescope, and `two` takes a constructor whose field is
 ; itself a constructor into a type constructor bound beside it.
-(def-adts $ (Pair : (Type A) (Type B) -> Type)
+(def-adts $ (Duo : (Type A) (Type B) -> Type)
   enum
-  (many MkPair : (erased Type A) (erased Type B) (many A a) (many B b) -> (Pair A B)))
+  (many MkDuo : (erased Type A) (erased Type B) (many A a) (many B b) -> (Duo A B)))
 
 (def-lvl X)
 ; one level out: T comes from the enclosing Fn telescope

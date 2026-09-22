@@ -8,23 +8,23 @@
 ; consumed by the request it is stored in, so the loop's body sits below the IO level and each request
 ; wraps it in a fresh continuation.
 
-(def-lvl P0)
+(def-lvl PA)
 (def-lvl P)
 (let ((many d3)) (lt-dec 3 u8-modulus))
 (comptime-match many d3 (Yes za3 zb3 zp3))
 (let ((many code3)) (MkU8 3 zp3))
-(let ((erased str-p0)) (prove-predates str-lvl P0))
-(let ((erased thunk-p0)) (prove-predates thunk-lvl P0))
-(let ((erased p0-p)) (prove-predates P0 P))
+(let ((erased str-pa)) (prove-predates str-lvl PA))
+(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
+(let ((erased pa-p)) (prove-predates PA P))
 
-(def-fns P0 $ (many echo : (many (Maybe (String)) line) -> (unique (IO P) next))
+(def-fns PA $ (many echo : (many (Maybe (String)) line) -> (unique (IO P) next))
   (match many line _
     ((None a) (Exit P code3))
     ((Some a s)
-      (def-unique P $ (unique again : (many (Maybe (String)) line) -> (unique (IO P) next)) (echo (predates p0-p) line))
-      (WriteOut P (str-append (predates str-p0) "> " (str-append (predates str-p0) s "\n"))
-        (unique-thunk (predates thunk-p0) _ _ (ReadLine P again))))))
+      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (echo (predates pa-p) line))
+      (WriteOut P (str-append (predates str-pa) "> " (str-append (predates str-pa) s "\n"))
+        (unique-thunk (predates thunk-pa) _ _ (ReadLine P again))))))
 
-(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (echo (predates p0-p) line))
+(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (echo (predates pa-p) line))
 
 (ReadLine P start)

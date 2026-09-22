@@ -158,8 +158,8 @@
           (let ((many fields)) (backing-fields _ hp backing))
           (let ((many at)) (nat-add offset index))
           (match many (list-nth _ fields at) _
-            ((NthMiss t fs i p) (values hp (None _)))
-            ((NthHit t fs i old p)
+            ((NthMiss _ fs i _) (values hp (None _)))
+            ((NthHit _ fs i old _)
               (let ((many (Store Block hs) hp2))
                 (match many replacement _
                   ((None t2) hp)
@@ -270,7 +270,7 @@
         ((Some e t)
           (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ ext-destruct _ hp p)
           (values hs2 hp2 le $ Some _ $ MkPair _ _ i fs))))
-    ((BArray z backing offset length)
+    ((BArray z backing offset _)
       (match many ext _
         ((Some t e)
           (match many e _
@@ -641,7 +641,7 @@
                   (match many br _
                     ((MkBranch c2 n0 d ids body)
                       (let ((erased h2b) (many hp2b) (erased le2b) (many fs) (erased lk)) $ fit-addrs _ hp2 ids $ ctor-fields _ hp2
-                        (match many shape (((Bool) b)) ((ShKnown cx adt) (adt-newtype adt)) ((ShHeld cx mc adt) (adt-newtype adt)) ((ShNone cx) (BTrue)))
+                        (match many shape (((Bool) _)) ((ShKnown cx adt) (adt-newtype adt)) ((ShHeld cx mc adt) (adt-newtype adt)) ((ShNone cx) (BTrue)))
                         (list-length _ ids) v2)
                       (let ((erased ws5) (erased ps5)) (st-widen _ _ le2b _ st2))
                       (let ((erased h2c) (many hp2c) (erased le2c) (many r) (erased rpk)) $ eval fuel _ hp2b _ _ body $ st-push _ _ (coerce st2 ps5) ids fs lk)
@@ -782,7 +782,7 @@
                   ((NthMiss nt nl ni np) (error-vals _ hp ms "no such member"))
                   ((NthHit nt nl ni p np)
                     (match many p _
-                      ((MkPair x y id fn)
+                      ((MkPair x y _ fn)
                         (match many fn _
                           ((MkFunc gg cc rets name fid params body impl top)
                             (match many impl _

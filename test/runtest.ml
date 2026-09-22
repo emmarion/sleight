@@ -1,4 +1,5 @@
-(* Runs every tests/*.sl. Directives in leading comments:
+(* Runs every tests/*.sl. Directives are comment lines, read wherever in the file they sit; one that names
+   a line of the test itself is written at the end, so that adding it does not move the lines it names.
    "; needs: a b" runs tests/a.sl and tests/b.sl first in the same scope;
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;

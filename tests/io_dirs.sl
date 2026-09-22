@@ -10,7 +10,7 @@
 ; The recursive helper over the listing takes the request that follows it as a unique parameter, a
 ; def-fns being unable to capture one.
 
-(def-lvl P0)
+(def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
@@ -18,10 +18,10 @@
 (let ((many d1)) (lt-dec 1 u8-modulus))
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
-(let ((erased str-p0)) (prove-predates str-lvl P0))
-(let ((erased p0-p)) (prove-predates P0 P))
+(let ((erased str-pa)) (prove-predates str-lvl PA))
+(let ((erased pa-p)) (prove-predates PA P))
 (let ((erased thunk-p)) (prove-predates thunk-lvl P))
-(let ((erased thunk-p0)) (prove-predates thunk-lvl P0))
+(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
 (def-unique P $ (unique gone-again : (many (Result (Change)) o) -> (unique (IO P) next))
   (match many o _
@@ -50,15 +50,15 @@
     ((Ok a c) (WriteOut P "removed a full directory\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
     ((Fail a m) (WriteOut P "not empty\n" (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-dir-test/a.txt" drop-a))))))
 
-(def-fns P0 $ (many show-entries : (subterm many (List (String)) es) (unique (IO P) after) -> (unique (IO P) next))
+(def-fns PA $ (many show-entries : (subterm many (List (String)) es) (unique (IO P) after) -> (unique (IO P) next))
   (match many es _
     ((Nil a) after)
     ((Cons a e rest)
-      (WriteOut P (str-append (predates str-p0) e "\n") (unique-thunk (predates thunk-p0) _ _ (show-entries (subterm _) rest after))))))
+      (WriteOut P (str-append (predates str-pa) e "\n") (unique-thunk (predates thunk-pa) _ _ (show-entries (subterm _) rest after))))))
 
 (def-unique P $ (unique listed : (many (Result (List (String))) r) -> (unique (IO P) next))
   (match many r _
-    ((Ok a es) (show-entries (predates p0-p) es (DeleteDir P "io-dir-test" full-dir)))
+    ((Ok a es) (show-entries (predates pa-p) es (DeleteDir P "io-dir-test" full-dir)))
     ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-unique P $ (unique wrote-a : (many (Result (Unit)) o) -> (unique (IO P) next))

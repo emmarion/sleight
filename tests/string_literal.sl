@@ -8,6 +8,6 @@
 
 (let ((many s)) "a\"")
 (comptime-match many s (SCons c rest))
-(comptime-match many rest (SCons d tail))
-(comptime-match many tail (SNil))
+(comptime-match many rest (SCons d tl))
+(comptime-match many tl (SNil))
 (len s)

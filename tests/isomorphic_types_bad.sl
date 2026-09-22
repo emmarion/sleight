@@ -1,8 +1,8 @@
 ; error: not refuted
 ; Two declared types of identical shape are not told apart: nothing but a signature or a Matchable
 ; distinguishes atoms, and Bit's and Bool's unify, so the branch must be written out (ASSUMPTIONS 89).
-(def-adts $ (Bool : -> Type) enum (many True : -> (Bool)) (many False : -> (Bool)))
-(def-adts $ (Bit : -> Type) enum (many B0 : -> (Bit)) (many B1 : -> (Bit)))
+(def-adts $ (Bool : -> Type) enum (many BTrue : -> (Bool)) (many BFalse : -> (Bool)))
+(def-adts $ (Bit : -> Type) enum (many Bit0 : -> (Bit)) (many Bit1 : -> (Bit)))
 (def-adts $ (Shape : (Type T) -> Type)
   enum
   (many IsBit : -> (Shape (Bit)))

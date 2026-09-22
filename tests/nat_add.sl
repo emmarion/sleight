@@ -2,18 +2,18 @@
 ; expect: 5
 ; A second return entry mentioning the parameters, reused by _ (SUGAR.md section 2).
 (def-adts
-  ((Add : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
+  ((Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum
-    (many AddZero : (erased (Nat) b) -> (Add (Zero) b b))
-    (many AddSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a b c) q) -> (Add (Succ a) b (Succ c)))))
+    (many PlusZero : (erased (Nat) b) -> (Plus (Zero) b b))
+    (many PlusSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) q) -> (Plus (Succ a) b (Succ c)))))
 
-(def-fns _ $ (many add : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p))
+(def-fns _ $ (many plus : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Plus a b c) pa))
   (match many a _
-    ((Zero) (values b (AddZero b)))
+    ((Zero) (values b (PlusZero b)))
     ((Succ k)
-      (let ((many c) (erased q)) (add (subterm _) k b))
-      (values (Succ c) (AddSucc k b c q)))))
+      (let ((many c) (erased q)) (plus (subterm _) k b))
+      (values (Succ c) (PlusSucc k b c q)))))
 
 (let ((many two)) (Succ (Succ (Zero))))
-(let ((many s) (erased p)) (add two (Succ two)))
+(let ((many s) (erased pa)) (plus two (Succ two)))
 s

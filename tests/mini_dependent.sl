@@ -22,8 +22,8 @@
 (let ((many both)) (Cons _ (l2 (l1 (a "Zero")) zero) (Cons _ (l2 (l2 (a "Succ") (a "q")) (a "q")) (Nil _))))
 (let ((many none)) (Nil (Raw)))
 
-(let ((many refuted)) (outcome (prog both)))
-(comptime-match many refuted (Some t r))
+(let ((many refuted-prog)) (outcome (prog both)))
+(comptime-match many refuted-prog (Some t r))
 (comptime-match many r (RRefutedBranch))
 (let ((many missing)) (outcome (prog none)))
 (comptime-match many missing (Some t2 r2))

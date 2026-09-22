@@ -15,7 +15,11 @@ type term =
   | Cell of term * term list
 
 and tele = entry list
-and entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option }
+(* [loc] is where the source wrote the entry's binder: a telescope outlives the scope it was read in, so
+   carrying it is what lets a message about a binder bound from a stored telescope -- a function's parameter
+   inside its own body -- still point at the declaration (ASSUMPTIONS 195). It is not part of the type: a
+   telescope compares as if it were absent, which [blank] is where that holds. *)
+and entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
 and sg = Ty of term | Is of term
 
 let sg_term = function Ty t | Is t -> t
@@ -69,7 +73,7 @@ let parts = function
 
 let blank t =
   let hole = Bound 0 in
-  let tele = List.map (fun e -> { e with name = None; sg = map_sg (fun _ -> hole) e.sg; place = Option.map (fun _ -> hole) e.place }) in
+  let tele = List.map (fun e -> { e with name = None; loc = Reader.nowhere; sg = map_sg (fun _ -> hole) e.sg; place = Option.map (fun _ -> hole) e.place }) in
   match t with
   | Var _ | Bound _ -> t
   | App (_, args) -> App (hole, List.map (fun _ -> hole) args)

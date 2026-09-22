@@ -181,7 +181,7 @@
 
 (def-fns _ $ (many pos-mult : (many (List $ Mult) ms) -> (many (Mult) r))
   (match many ms _
-    ((Cons a m rest) (match many m _ ((Once) (match many rest _ ((Nil b) (Once)) ((Cons b n tail) (Many)))) (else (let ((many r) (erased pf)) (pos-of ms)) r)))
+    ((Cons a m rest) (match many m _ ((Once) (match many rest _ ((Nil b) (Once)) ((Cons b n _) (Many)))) (else (let ((many r) (erased pf)) (pos-of ms)) r)))
     ((Nil a) (Many))))
 
 (def-fns _ $ (many mult-is-once : (many (Mult) m) -> (many (Bool) r))
@@ -954,10 +954,10 @@
       (AbNode _ _ _ _ _ _ _ _ _ _ (AHNone ctx c)
         (AbEmpty (Cons (Digit) _ _) c)
         $ above-ins (Cons (Digit) _ _) c (Zero) (FEmpty) (Succ _) two x1 y (AbEmpty (Cons (Digit) _ _) c) q (W2 ctx x1 d1 dd1 y w) le))
-    ((InsHere n1 n2 m ty one two p)
+    ((InsHere n1 _ m ty one two p)
       (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
       (AbNode _ _ _ _ _ _ _ _ _ _ (AHKey ctx c (Succ _) (HFree _) y w le) a1 a2))
-    ((Ins1 x1 d1 dd1 h n1 n2 m here one two p k1 m2 one2 p2 q)
+    ((Ins1 x1 d1 dd1 h n1 _ m here one two p k1 m2 one2 p2 q)
       (let-match erased ab (AbNode c2 c3 h4 n5 n6 m7 here8 one9 two10 p11 ah a1 a2))
       (AbNode _ _ _ _ _ _ _ _ _ _ ah (above-ins (Cons (Digit) _ _) c n1 one k1 one2 x1 y a1 q (W1 ctx x1 d1 dd1 y w) le) a2))
     ((Ins2 x1 d1 dd1 h n1 n2 m here one two p k2 m2 two2 p2 q)
@@ -1080,8 +1080,8 @@
             ((HFree ty)
               (let-match erased p3 (P3S h1 a1 b1 c1 q))
               (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two _) $ OutHere n1 n2 c1 ty t one two q))
-            (absurd HNone (match erased p (((False) f))))
-            (absurd (HRuled ty0 t0) (match erased p (((False) f))))))
+            (absurd HNone (match erased p (((False) _))))
+            (absurd (HRuled ty0 t0) (match erased p (((False) _))))))
         ((H1 x1 d dd)
           (let ((erased (In x1 n1 one) q)) $ match erased p _
             ((In1 x2 d2 dd2 h2 a2 b2 c2 here2 one2 two2 p2 q0) (match erased (double-inj x2 x1 d dd2 dd) _ ((Refl t0 r0) q0)))
@@ -1106,7 +1106,7 @@
     ((InsLeaf ty p) (match erased r _))
     ((InsGrow1 x1 d1 dd1 one q p) (match erased r _))
     ((InsGrow2 x1 d1 dd1 two q p) (match erased r _))
-    ((InsHere n1 n2 m ty one two p)
+    ((InsHere n1 _ m ty one two p)
       (match erased r _
         ((R1 z1 dz ddz h a b c here one1 two1 p1 q1) (R1 _ _ ddz _ _ _ _ _ _ _ _ q1))
         ((R2 z1 dz ddz h a b c here one1 two1 p1 q1) (R2 _ _ ddz _ _ _ _ _ _ _ _ q1))))
@@ -1179,7 +1179,7 @@
       (C1Node _ _ _ _ _ _ _ _ _ _ (C1None ctx rules)
         (C1Empty (Cons (Digit) (D1) _) rules)
         $ c1-ins (Cons (Digit) (D2) _) x1 (Zero) (FEmpty) (Succ _) two q rules $ C1Empty (Cons (Digit) (D2) ctx) rules))
-    ((InsHere n1 n2 m ty one two p)
+    ((InsHere n1 _ m ty one two p)
       (let-match erased c (C1Node c0 h0 a0 b0 m0 here0 one0 two0 p0 r0 ch c1 c2))
       (C1Node _ _ _ _ _ _ _ _ _ _ (C1Free ctx ty rules) c1 c2))
     ((Ins1 x1 d1 dd1 h n1 a2 m here one two p k1 m2 one2 p2 q)
@@ -1676,7 +1676,7 @@
     ((InsLeaf ty pp) (match erased p _))
     ((InsGrow1 x1 d1 dd1 one q1 pp) (match erased p _))
     ((InsGrow2 x1 d1 dd1 two q1 pp) (match erased p _))
-    ((InsHere n1 n2 m ty one two pp)
+    ((InsHere _ n2 m ty one two pp)
       (let-match erased o (OutHere a1 a2 a3 ty0 t0 one0 two0 p0))
       (match erased p _
         ((In1 z1 dz ddz h b1 b2 b3 here1 one1 two1 p1 q1) (In1 _ _ ddz _ _ _ _ _ _ _ _ q1))
@@ -1690,7 +1690,7 @@
               (match erased (double-inj x2 x1 d1 dd2 dd1) _ ((Refl t4 r4) (In1 _ _ ddz _ _ _ _ _ _ _ _ $ in-ins-out z1 x1 t n1 one k1 one2 k3 one3 q1 q2 q3))))
             ((In2 z1 dz ddz h1 c1 c2 c3 here1 one1 two1 p1 q3) (In2 _ _ ddz _ _ _ _ _ _ _ _ q3))))
         (absurd (Out2 x2 d2 dd2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 two3 p3 q2) (double-parity x1 x2 d2 dd1 dd2))))
-    ((Ins2 x1 d1 dd1 h n1 a2 m here one two pp k2 m2 two2 p2 q1)
+    ((Ins2 x1 d1 dd1 h _ a2 m here one two pp k2 m2 two2 p2 q1)
       (match erased o _
         (absurd (Out1 x2 d2 dd2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 one3 p3 q2) (double-parity x2 x1 d1 dd2 dd1))
         ((Out2 x2 d2 dd2 t0 h0 b1 b2 b3 here0 one0 two0 p0 k3 m3 two3 p3 q2)
@@ -2545,7 +2545,7 @@
       ((Nil a) (BFalse))
       ((Cons a e rest)
         (match many e _
-          ((MkEntry n s m sg place) (or (match many sg (((Bool) b)) ((SgTy t) (has-meta t env)) ((SgIs t t-ty) (has-meta t env))) $ or (match many place (((Bool) b)) ((None a) (BFalse)) ((Some a p) (has-meta p env))) $ has-meta-tele rest env)))))))
+          ((MkEntry n s m sg place) (or (match many sg (((Bool) b)) ((SgTy t) (has-meta t env)) ((SgIs t t-ty) (has-meta t env))) $ or (match many place (((Bool) b)) ((None _) (BFalse)) ((Some _ p) (has-meta p env))) $ has-meta-tele rest env)))))))
 
 (def-fns _ $ (many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r))
   (has-meta (canon-env env t) env))
@@ -2590,8 +2590,8 @@
                                ((SgTy t) (rcat3 (show-term t env) (RStr " ") $ RStr nm))
                                ((SgIs t t-ty) (rcat3 (show-term t env) (RStr " is ") $ RStr nm))))
             (let ((many body)) (match many place (((Rope) r))
-              ((None a) body)
-              ((Some a p) (match many p _
+              ((None _) body)
+              ((Some _ p) (match many p _
                 ((TSlotHolds loc) (rcat3 body (RStr " at ") (show-term loc env)))
                 (else (rcat3 body (RStr " at ") (show-term p env)))))))
             (rcat5 (RStr " (") (RStr marks) body (RStr ")") $ show-tele rest env)))))))
@@ -2724,7 +2724,7 @@
       ((Cons a e rest)
         (let ((many (Entry) e2)) (match many e _
                          ((MkEntry n s m sg place)
-                           (MkEntry n s m (match many sg (((Sg) y)) ((SgTy t) (SgTy $ mapv t op d)) ((SgIs t ty) (SgIs (mapv t op d) $ mapv ty op d))) (match many place (((Maybe $ Term) q)) ((None a) (None _)) ((Some a p) (Some _ $ mapv p op d)))))))
+                           (MkEntry n s m (match many sg (((Sg) y)) ((SgTy t) (SgTy $ mapv t op d)) ((SgIs t ty) (SgIs (mapv t op d) $ mapv ty op d))) (match many place (((Maybe $ Term) q)) ((None _) (None _)) ((Some _ p) (Some _ $ mapv p op d)))))))
         (let ((many d3) (many rest2)) $ mapv-tele rest op $ Succ d)
         (values d3 $ Cons _ e2 rest2)))))
 
@@ -3016,7 +3016,7 @@
         (match many e _
           ((MkEntry n s m sg place)
             (or (match many sg (((Bool) b)) ((SgTy t) (dangling t d)) ((SgIs t t-ty) (dangling t d)))
-              $ or (match many place (((Bool) b)) ((None a) (BFalse)) ((Some a p) (dangling p d))) $ dangling-tele rest $ Succ d)))))))
+              $ or (match many place (((Bool) b)) ((None _) (BFalse)) ((Some _ p) (dangling p d))) $ dangling-tele rest $ Succ d)))))))
 
 (def-fns _ $ (many contradiction : (erased (Nat) n) (many (Nat) bnd) (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r))
   (Contra _ _ $ rope-str $ rcat3 (show-term a env) (RStr " vs ") $ show-term b env))
@@ -3081,7 +3081,7 @@
                                           (unify _ _ bnd tb2 s3 ps3 s4 ps4 env2 force))))))
                                 (match many after-sig _
                                   ((Contra c cc m) (Contra _ _ m))
-                                  ((Same c cc env) (Less _ _ _ _ tb2 env2 p))
+                                  ((Same c cc _) (Less _ _ _ _ tb2 env2 p))
                                   ((Less c cc j f3 tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
               ((TBound j) (contradiction _ bnd env a b))
               ((TErr m) (Contra _ _ m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force))))
@@ -3145,7 +3145,7 @@
                             (let ((many ps4) (erased pps4)) $ canon-tele-in _ _ bnd tb2 ps2)
                             (match many (unify-tele (subterm p) k f2 bnd tb2 ps3 pps3 ps4 pps4 env2 a b force) _
                               ((Contra d dc m) (Contra _ _ m))
-                              ((Same d dc env)
+                              ((Same d dc _)
                                 (let ((many rs3) (erased prs3)) $ canon-tele-in _ _ bnd tb2 rs)
                                 (let ((many rs4) (erased prs4)) $ canon-tele-in _ _ bnd tb2 rs2)
                                 (lift _ bnd _ _ tb2 env2 p $ unify-tele (subterm p) k f2 bnd tb2 rs3 prs3 rs4 prs4 env2 a b force))

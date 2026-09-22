@@ -11,7 +11,7 @@
 (def-fns _ $ (many indexed-main : -> (many (Nat) n))
   (middle-value (Middle 7)))
 (let ((many chosen)) (Middle 9))
-(let-match many chosen (Middle n))
+(let-match many chosen (Middle chosen-n))
 (def-adts $ (UChoice : ((Nat) i) -> Type) union
   (many UFirst : (many (Nat) x) -> (UChoice (Zero)))
   (many ULast : (many (Nat) x) -> (UChoice (Succ (Zero)))))
@@ -22,5 +22,5 @@
   (union-value (ULast 11)))
 
 (def-fns _ $ (many indexed-tests : -> (many (List (Nat)) results))
-  (Cons _ (indexed-main) (Cons _ n (Cons _ (union-main) (Nil _)))))
+  (Cons _ (indexed-main) (Cons _ chosen-n (Cons _ (union-main) (Nil _)))))
 indexed-tests

@@ -15,6 +15,6 @@
 (def-fns WL $ (many walk : (subterm many (Wrap) w) -> (many (Nat) n))
   (match many w _
     ((MkWrap f)
-      (let ((many sub)) (f (predates aw)))
-      (Succ (walk (subterm (prove-subterm sub w)) sub)))))
+      (let ((many w2)) (f (predates aw)))
+      (Succ (walk (subterm (prove-subterm w2 w)) w2)))))
 walk

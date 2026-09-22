@@ -4,18 +4,18 @@
 
 (def-adts $ (Bool : -> Type)
   enum
-  (many True : -> (Bool))
-  (many False : -> (Bool)))
+  (many BTrue : -> (Bool))
+  (many BFalse : -> (Bool)))
 
 (def-adts
   ((Either : ((Bool) tag) -> Type)
     union
-    (many L : (many (Nat) n) -> (Either (True)))
-    (many R : (many (Bool) b) -> (Either (False)))))
+    (many L : (many (Nat) n) -> (Either (BTrue)))
+    (many R : (many (Bool) b) -> (Either (BFalse)))))
 
-(def-lvl X)
+(def-lvl union-lvl)
 
-(def-fns X $ (many get-left : (many (Either (True)) e) -> (many (Nat) n))
+(def-fns union-lvl $ (many get-left : (many (Either (BTrue)) e) -> (many (Nat) n))
   (match many e (((Nat) r))
     ((L n) n)
     (absurd R)))

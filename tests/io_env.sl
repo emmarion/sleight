@@ -6,29 +6,29 @@
 ; expect: SL_B=two
 ; GetEnv answers with Maybe; GetEnvs lists the whole environment sorted by name, whatever order it was given in.
 
-(def-lvl P0)
+(def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased str-p0)) (prove-predates str-lvl P0))
+(let ((erased str-pa)) (prove-predates str-lvl PA))
 (let ((erased str-p)) (prove-predates str-lvl P))
-(let ((erased p0-p)) (prove-predates P0 P))
+(let ((erased pa-p)) (prove-predates PA P))
 (let ((erased thunk-p)) (prove-predates thunk-lvl P))
-(let ((erased thunk-p0)) (prove-predates thunk-lvl P0))
+(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
-(def-fns P0 $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
+(def-fns PA $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
   (match many vars _
     ((Nil a) (Exit P code0))
     ((Cons a v rest)
       (match many v _
         ((MkPair b c name value)
           (WriteOut P
-            (str-append (predates str-p0) name (str-append (predates str-p0) "=" (str-append (predates str-p0) value "\n")))
-            (unique-thunk (predates thunk-p0) _ _ (show-vars (subterm _) rest))))))))
+            (str-append (predates str-pa) name (str-append (predates str-pa) "=" (str-append (predates str-pa) value "\n")))
+            (unique-thunk (predates thunk-pa) _ _ (show-vars (subterm _) rest))))))))
 
 (def-unique P $ (unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
-  (show-vars (predates p0-p) vars))
+  (show-vars (predates pa-p) vars))
 
 (def-unique P $ (unique after-absent : (many (Maybe (String)) value) -> (unique (IO P) next))
   (match many value _

@@ -109,7 +109,9 @@ own sources and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
 `bench/gen.py` writes the samples. `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both
-ways, against the same directives. A test's leading comments say what it needs: `; needs: list vec` runs those files first in the same scope,
+ways, against the same directives. A test's comment lines say what it needs, read wherever in the file
+they sit; one that names a line of the test itself is written at the end, so
+that adding it does not move the lines it names. `; needs: list vec` runs those files first in the same scope,
 `; expect: text` is a line the test must print, `; stdin: text` a
 line of its input, `; args: a b` its arguments, `; env: NAME=value` a
 variable of the environment it runs with, which holds those alone,

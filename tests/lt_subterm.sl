@@ -4,9 +4,9 @@
 ; a = b1 or Lt a b1; sub-lt decides a < b and refutes the other case through loop, whose self-call
 ; the reflexive proof itself licenses, so the checker accepts Subterm x x as refuting.
 
-(def-adts $ (Eq : ((Nat) a) ((Nat) b) -> Type)
+(def-adts $ (NatEq : ((Nat) a) ((Nat) b) -> Type)
   enum
-  (many Refl : (erased (Nat) x) -> (Eq x x)))
+  (many NatRefl : (erased (Nat) x) -> (NatEq x x)))
 
 (def-adts $ (Or : (Type A) (Type B) -> Type)
   enum
@@ -23,19 +23,19 @@
   (loop (subterm q) x q))
 
 (def-fns L $ (erased le-split : (subterm erased (Nat) b1) (erased (Nat) a) (erased (Lt a (Succ b1)) p) ->
-    (erased (Or (Eq a b1) (Lt a b1)) r))
+    (erased (Or (NatEq a b1) (Lt a b1)) r))
   (match erased p _
     ((LtZ b2)
       (match erased b1 _
-        ((Zero) (Left (Eq a b1) (Lt a b1) (Refl a)))
-        ((Succ b3) (Right (Eq a b1) (Lt a b1) (LtZ b3)))))
+        ((Zero) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))
+        ((Succ b3) (Right (NatEq a b1) (Lt a b1) (LtZ b3)))))
     ((LtS a1 b2 p1)
       (match erased b1 _
         ((Zero) (match erased p1 _ (absurd LtZ) (absurd LtS)))
         ((Succ b3)
           (match erased (le-split (subterm _) b3 a1 p1) _
-            ((Left A B e) (match erased e _ ((Refl z) (Left (Eq a b1) (Lt a b1) (Refl a)))))
-            ((Right A B l) (Right (Eq a b1) (Lt a b1) (LtS a1 b3 l)))))))))
+            ((Left A B e) (match erased e _ ((NatRefl z) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))))
+            ((Right A B l) (Right (NatEq a b1) (Lt a b1) (LtS a1 b3 l)))))))))
 
 (def-fns L $ (erased lt-sub : (subterm erased (Nat) b) (erased (Nat) a) (erased (Lt a b) p) ->
     (erased (Subterm (Nat) a (Nat) b) q))
@@ -43,7 +43,7 @@
     ((Zero) (match erased p _ (absurd LtZ) (absurd LtS)))
     ((Succ b1)
       (match erased (le-split (subterm (prove-subterm b1 b)) b1 a p) _
-        ((Left A B e) (match erased e _ ((Refl z) (prove-subterm a b))))
+        ((Left A B e) (match erased e _ ((NatRefl z) (prove-subterm a b))))
         ((Right A B l) (subterm-trans (lt-sub (subterm _) b1 a l) (prove-subterm b1 b)))))))
 
 (def-lvl M)
@@ -58,7 +58,7 @@
       (match erased (le-split (predates lm) a b r) _
         ((Left A B e)
           (match erased e _
-            ((Refl z) (explode (predates lm) (Lt a b) (loop (predates lm) a q)))))
+            ((NatRefl z) (explode (predates lm) (Lt a b) (loop (predates lm) a q)))))
         ((Right A B l)
           (explode (predates lm) (Lt a b)
             (loop (predates lm) a (subterm-trans q (lt-sub (predates lm) a b l)))))))))

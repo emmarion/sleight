@@ -3,10 +3,10 @@
 ; Two non-phantom union constructors with a many field each cannot be marked newtype.
 
 (def-adts
-  ((Either : ((Bool) tag) -> Type)
+  ((Both : ((Bool) tag) -> Type)
     union newtype
-    (many L : (many (Nat) n) -> (Either (True)))
-    (many R : (many (Bool) b) -> (Either (False)))))
+    (many BL : (many (Nat) n) -> (Both (BTrue)))
+    (many BR : (many (Bool) b) -> (Both (BFalse)))))
 
 (let ((many one)) (Succ (Zero)))
-(coerce one (coercible-wrap (Shared) L one))
+(coerce one (coercible-wrap (Shared) BL one))

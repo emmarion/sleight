@@ -247,7 +247,7 @@
   (many MkDecls : (many (List $ List $ Nat) shapes) (many (List $ Narrow) narrows) (many (List $ Template) templates) -> (Decls)))
 
 (def-fns _ $ (many decl-templates : (many (Decls) d) -> (many (List $ Template) ts))
-  (match many d _ ((MkDecls shapes narrows ts) ts)))
+  (match many d _ ((MkDecls _ narrows ts) ts)))
 
 (def-fns _ $ (many shape-index : (subterm many (List $ List $ Nat) ss) (many (List $ Nat) s) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (match many ss _
@@ -271,7 +271,7 @@
   (match many d _ ((MkDecls shapes narrows ts) (str-cat3 "K" (index-str $ shape-index shapes s 0) $ str-cat "_" $ nat-str i))))
 
 (def-fns _ $ (many narrow-name : (many (Decls) d) (many (List $ Nat) s) (many (List $ Nat) live) -> (many (String) r))
-  (match many d _ ((MkDecls shapes narrows ts) (str-cat3 (shape-name d s) "_n" $ index-str $ narrow-index narrows s live 0))))
+  (match many d _ ((MkDecls _ narrows ts) (str-cat3 (shape-name d s) "_n" $ index-str $ narrow-index narrows s live 0))))
 
 (def-fns _ $ (many add-shape : (many (List $ List $ Nat) ss) (many (List $ Nat) s) -> (many (List $ List $ Nat) r))
   (match many (shape-index ss s 0) _
@@ -433,7 +433,7 @@
 
 (def-fns _ $ (many build-rope : (many (Decls) d) (many (Nat) depth) (many (Ctor) c) (many (List $ Rope) args) -> (many (Rope) r))
   (match many c _
-    ((MkCtor name id index arity tagged ext shape newtype)
+    ((MkCtor name id index arity tagged ext shape _)
       (match many ext _
         ((Some a e)
           (match many (find-template (decl-templates d) (BTrue) (ext-type-name e) index) _
@@ -1013,7 +1013,7 @@
   (match many b _
     ((BTag z c fields) fields)
     ((BArrayData z fields) fields)
-    ((BArray z backing offset length) (Cons _ backing $ Nil _))
+    ((BArray z backing offset _) (Cons _ backing $ Nil _))
     ((BTup z fields) fields)
     ((BFn z g i id) (Cons _ g $ Nil _))
     ((BGroup z gids ctx g fr) (frames-refs _ _ fr (Nil _)))
@@ -1275,7 +1275,7 @@
                                 ((Nil z2) (values memo3 $ RStr "\"_\""))
                                 ((Cons z2 y ys)
                                   (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
-                        ((TFn unique l ps rs) (values memo1 $ RStr "\"_\""))
+                        ((TFn _ l ps rs) (values memo1 $ RStr "\"_\""))
                         ((TCell ctor slots) (values memo1 $ RStr "\"_\""))
                         ((TValCtor ps r) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
                 (match many memo2 _
@@ -1292,7 +1292,7 @@
           ((Nil a) (values memo $ Nil _))
           ((Cons a c rest)
             (match many c _
-              ((MkCtor cname cid index arity ctagged ext shape newtype)
+              ((MkCtor cname cid index arity ctagged ext shape _)
                 (let ((many ctele) (many ret)) $ ctor-type env cid)
                 (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (Nil _) $ BFalse)
                 (let ((many (Env) envb2) (many (Bool) live))
@@ -1365,7 +1365,7 @@
 (def-fns _ $ (many adapt-final-rope : (many (Env) env) (many (Term) ty) (many (Rope) callable)
     (many (Bool) argument) -> (many (Rope) adapted))
   (match many (canon-env env ty) _
-    ((TFn unique level params rets)
+    ((TFn _ level params rets)
       (match many rets _
         ((Nil t) callable)
         ((Cons t entry rest)

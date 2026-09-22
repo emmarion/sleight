@@ -19,7 +19,7 @@
 (def-fns X $ (many coexist : (erased (TyCtor -> Type) T)
     (erased (ValCtor (many (Nat) n) -> (T)) C)
     (erased (Matchable enum T (erased C)) m)
-    (erased (Matchable enum newtype T (many C)) nt) -> (many (Nat) r))
+    (erased (Matchable enum newtype T (many C)) nt) -> (many (Nat) out))
   (open-adt erased m)
   (open-adt erased nt)
   (Zero))

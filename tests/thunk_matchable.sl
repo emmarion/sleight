@@ -1,9 +1,9 @@
-; expect: (MkBoth 1 $ PS $ PZ)
+; expect: (MkBoth 1 $ PSucc $ PZero)
 
 (def-adts $ (Peano : -> Type)
   enum
-  (many PZ : -> (Peano))
-  (many PS : (many (Peano) pred) -> (Peano)))
+  (many PZero : -> (Peano))
+  (many PSucc : (many (Peano) pred) -> (Peano)))
 
 (def-adts $ (Both : -> Type)
   enum
@@ -35,6 +35,6 @@
 
 (def-fns Y $ (many run : -> (many (Both) b))
   (MkBoth (open-extern (predates xy) Nat Zero Succ (matchable-of Nat) (Succ (Succ (Zero))))
-          (open (predates xy) Peano PZ PS (matchable-of Peano) (PS (PS (PZ))))))
+          (open (predates xy) Peano PZero PSucc (matchable-of Peano) (PSucc (PSucc (PZero))))))
 
 run

@@ -14,7 +14,7 @@
 (let ((many three2) (many two) (erased dm) (erased dmm) (erased da) (erased dp)) (divmod 17 5 pos))
 
 (def-lvl A)
-(def-fns A $ (many arith : -> (many (List (Nat)) r))
+(def-fns A $ (many arith : -> (many (List (Nat)) out))
   (let ((many x) (erased xp)) (mul 3 4))
   (let ((many y) (erased yp)) (sub 9 4 le))
   (let ((many z) (erased zm) (erased zr) (erased zmm) (erased za) (erased zp)) (div 17 5 pos))

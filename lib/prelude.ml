@@ -2,7 +2,7 @@ open Term
 module V = Value
 
 let token = Env.Const V.VToken
-let ty name sg = { name = Some name; subterm = false; mult = Erased; sg = Ty sg; place = None }
+let ty name sg = { name = Some name; subterm = false; mult = Erased; sg = Ty sg; place = None; loc = Reader.nowhere }
 
 let env = Env.empty
 let univ, env = Env.bind env (Some "Univ") Erased token (TyCtor [])

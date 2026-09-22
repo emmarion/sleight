@@ -39,12 +39,11 @@ let () =
   let extract, args = extract [] args in
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
-  Env.warn_shadow := flag "--warn-shadow";
   Extract.templates := not (flag "--no-templates");
   let consume = if extract = None then Program.consume (world program_args) else fun _ _ _ -> () in
   let env = Builtin.load () in
   let env =
-    match List.filter (fun a -> a <> "--repl" && a <> "--no-extern" && a <> "--no-templates" && a <> "--warn-shadow") args with
+    match List.filter (fun a -> a <> "--repl" && a <> "--no-extern" && a <> "--no-templates") args with
     | [] when not (flag "--repl") -> run consume env "-"
     | files ->
         let env = List.fold_left (run consume) env files in

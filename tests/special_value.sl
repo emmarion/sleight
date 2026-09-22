@@ -5,7 +5,7 @@
 (def-lvl X)
 (def-fns X $ (many pick : (many (Bool) b) -> (many (Special) s))
   (match many b (((Special) r))
-    ((True) let)
-    ((False) match)))
+    ((BTrue) let)
+    ((BFalse) match)))
 
-(pick (False))
+(pick (BFalse))

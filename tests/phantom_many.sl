@@ -4,7 +4,7 @@
 (def-adts
   ((Opt : -> Type)
     enum
-    (many Some : (many (Nat) n) -> (Opt))
+    (many OSome : (many (Nat) n) -> (Opt))
     (erased Ghost : (erased (Nat) n) -> (Opt))))
 
 (Ghost (Zero))

@@ -1,6 +1,6 @@
 ; expect: 3
 ; The same quotient by structural recursion on the dividend alone, counting the divisor down beside it,
-; so no proof is returned or composed. (div n m) divides n by (Succ m).
+; so no proof is returned or composed. (struct-div n m) divides n by (Succ m).
 
 (def-lvl D)
 (def-fns D $ (many div-helper : (many (Nat) k) (many (Nat) m) (subterm many (Nat) n) (many (Nat) j) -> (many (Nat) q))
@@ -13,7 +13,7 @@
 
 (def-lvl E)
 (let ((erased de)) (prove-predates D E))
-(def-fns E $ (many div : (many (Nat) n) (many (Nat) m) -> (many (Nat) q))
+(def-fns E $ (many struct-div : (many (Nat) n) (many (Nat) m) -> (many (Nat) q))
   (div-helper (predates de) (Zero) m n m))
 
-(div 7 1)
+(struct-div 7 1)

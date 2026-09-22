@@ -7,7 +7,7 @@
 (def-adts $ (ULst : (Type A) -> Type)
   enum
   (many UNil : (erased Type A) -> (ULst A))
-  (many UCons : (erased Type A) (many A head) (unique (ULst A) tail) -> (ULst A)))
+  (many UCons : (erased Type A) (many A head) (unique (ULst A) rest) -> (ULst A)))
 
 (def-fns _ $ (many rev-onto : (erased Type A) (subterm unique (ULst A) xs) (unique (ULst A) acc) ->
     (unique (ULst A) r))

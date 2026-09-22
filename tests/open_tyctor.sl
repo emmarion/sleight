@@ -3,7 +3,7 @@
 ; apart by their Matchables, so with m unopened T unifies with (Nat) and the IsNat branch must be written,
 ; while with m opened T's constructors meet Nat's, D's signature differs from Succ's, and IsNat is refuted.
 
-(def-adts $ (Bool : -> Type) enum (many True : -> (Bool)) (many False : -> (Bool)))
+(def-adts $ (Bool : -> Type) enum (many BTrue : -> (Bool)) (many BFalse : -> (Bool)))
 (def-adts $ (Shape : (Type T) -> Type)
   enum
   (many IsNat : -> (Shape (Nat)))
@@ -20,4 +20,4 @@
   (match many s (((Nat) r))
     (absurd IsNat)
     ((IsBool) (Succ (Zero)))))
-(nat-add (opaque Bool True False (matchable-of Bool) (IsBool)) (told Bool True False (matchable-of Bool) (IsBool)))
+(nat-add (opaque Bool BTrue BFalse (matchable-of Bool) (IsBool)) (told Bool BTrue BFalse (matchable-of Bool) (IsBool)))

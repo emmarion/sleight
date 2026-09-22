@@ -7,7 +7,7 @@
   (numeral-succ (B2 (B1 (BZ))) (B1 (B2 (BZ))) 4 5
     (BS2 (B1 (BZ)) (B2 (BZ)) (BS1 (BZ)))
     (numeral-of 4) (numeral-of 5))
-  (Refl t r))
+  (Refl nt nr))
 
 (def-lvl X)
 (def-fns X $ (many first : (erased Type A) (many (Vec A 5) v) -> (many A x))

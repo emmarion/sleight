@@ -5,13 +5,13 @@
 (def-adts
   ((Opt : ((Nat) n) -> Type)
     enum
-    (many Some : -> (Opt (Zero)))
+    (many OSome : -> (Opt (Zero)))
     (erased Ghost : -> (Opt (Succ (Zero))))))
 
 (def-lvl X)
 (def-fns X $ (many f : (erased (Opt (Succ (Zero))) o) -> (many (Nat) n))
   (match erased o (((Nat) r))
-    (absurd Some)
+    (absurd OSome)
     ((Ghost) (Zero))))
 
 (f (Ghost))

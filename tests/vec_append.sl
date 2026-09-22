@@ -6,8 +6,8 @@
 (def-adts
   ((Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum
-    (many PZ : (erased (Nat) b) -> (Plus (Zero) b b))
-    (many PS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (many (Plus a b c) p)
+    (many PlusZ : (erased (Nat) b) -> (Plus (Zero) b b))
+    (many PlusS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (many (Plus a b c) p)
        -> (Plus (Succ a) b (Succ c)))))
 
 (def-lvl V)
@@ -17,12 +17,12 @@
   (match many xs (((Vec A k) zs))
     ((VNil a)
       (match erased p (((Vec A k) zs))
-        ((PZ b) ys)
-        (absurd PS)))
+        ((PlusZ b) ys)
+        (absurd PlusS)))
     ((VCons a n2 x xs2)
       (match erased p (((Vec A k) zs))
-        (absurd PZ)
-        ((PS a2 b c q)
+        (absurd PlusZ)
+        ((PlusS a2 b c q)
           (let ((erased sp)) (prove-subterm xs2 xs))
           (VCons A c x (vappend A n2 m c q (subterm sp) xs2 ys)))))))
 
@@ -30,4 +30,4 @@
 (let ((many two)) (Succ one))
 (let ((many xs)) (VCons (Nat) one (Zero) (VCons (Nat) (Zero) one (VNil (Nat)))))
 (let ((many ys)) (VCons (Nat) (Zero) two (VNil (Nat))))
-(vappend (Nat) two one (Succ two) (PS one one two (PS (Zero) one one (PZ one))) xs ys)
+(vappend (Nat) two one (Succ two) (PlusS one one two (PlusS (Zero) one one (PlusZ one))) xs ys)

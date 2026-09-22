@@ -4,10 +4,10 @@
 ; its length, and nub recurses on the erased length index, turned into the Subterm proof by lt-sub. The
 ; measure costs nothing at runtime.
 
-(def-fns L $ (erased lt-weaken : (subterm erased (Nat) b) (erased (Nat) a) (erased (Lt a b) p) -> (erased (Lt a (Succ b)) q))
+(def-fns L $ (erased lt-weak : (subterm erased (Nat) b) (erased (Nat) a) (erased (Lt a b) p) -> (erased (Lt a (Succ b)) q))
   (match erased p _
     ((LtZ b1) (LtZ (Succ b1)))
-    ((LtS a1 b1 p1) (LtS a1 (Succ b1) (lt-weaken (subterm (prove-subterm b1 b)) b1 a1 p1)))))
+    ((LtS a1 b1 p1) (LtS a1 (Succ b1) (lt-weak (subterm (prove-subterm b1 b)) b1 a1 p1)))))
 
 (def-lvl F)
 (let ((erased nf)) (prove-predates nat-lvl F))
@@ -23,7 +23,7 @@
         ((No q r ge)
           (match many (lt-dec (predates nf) y x) (((Nat) m) ((Vec (Nat) m) w) ((Lt m (Succ n)) p))
             ((Yes q2 r2 lt2) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1)))
-            ((No q2 r2 ge2) (values m1 w1 (lt-weaken (predates lf) (Succ n1) m1 p1)))))))))
+            ((No q2 r2 ge2) (values m1 w1 (lt-weak (predates lf) (Succ n1) m1 p1)))))))))
 
 (def-lvl H)
 (let ((erased fh)) (prove-predates F H))

@@ -749,7 +749,7 @@
   ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
-    (many Cons : (erased Type A) (many A head) (many (List A) tail) -> (List A))))
+    (many Cons : (erased Type A) (many A head) (many (List A) rest) -> (List A))))
 
 (def-adts
   ((Pair : (Type A) (Type B) -> Type)
@@ -807,7 +807,7 @@
   enum extern
   (many ANil : (erased Type A) -> (Array A (Zero)))
   (many ACons : (erased Type A) (erased (Nat) n)
-                (unique A head) (unique (Array A n) tail)
+                (unique A head) (unique (Array A n) rest)
                 -> (Array A (Succ n))))
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)

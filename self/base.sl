@@ -611,13 +611,13 @@
   (match erased ab _
     ((AB1 t k2 d2 dd2 h2 o2 t2 sub)
       (match erased (double-inj k1 k2 d dd dd2) _ ((Refl ty x) sub)))
-    (absurd (AB2 t k2 d2 dd2 h2 o2 t2 sub) (double-parity k1 k2 d2 dd dd2))))
+    (absurd (AB2 t k2 d2 dd2 h2 o2 t2 _) (double-parity k1 k2 d2 dd dd2))))
 
 (def-fns _ $ (erased absent-two : (erased Type V) (erased (Nat) k1) (erased (Nat) d) (erased (Double k1 d) dd)
     (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two)
     (erased (Absent V (Succ (Succ d)) (MNode V here one two)) ab) -> (erased (Absent V k1 two) r))
   (match erased ab _
-    (absurd (AB1 t k2 d2 dd2 h2 o2 t2 sub) (double-parity k2 k1 d dd2 dd))
+    (absurd (AB1 t k2 d2 dd2 h2 o2 t2 _) (double-parity k2 k1 d dd2 dd))
     ((AB2 t k2 d2 dd2 h2 o2 t2 sub)
       (match erased (double-inj k1 k2 d dd dd2) _ ((Refl ty x) sub)))))
 

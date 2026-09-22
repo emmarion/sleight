@@ -10,15 +10,15 @@
   enum
   (many MkCounter : (many (Nat) n) -> (Counter)))
 
-(def-lvl P0)
+(def-lvl PA)
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased nat-p0)) (prove-predates nat-lvl P0))
-(let ((erased p0-p)) (prove-predates P0 P))
+(let ((erased nat-p0)) (prove-predates nat-lvl PA))
+(let ((erased pa-p)) (prove-predates PA P))
 
-(def-fns P0 $ (many count : (unique (Counter) c) (many (Maybe (String)) line) -> (unique (IO P) next))
+(def-fns PA $ (many count : (unique (Counter) c) (many (Maybe (String)) line) -> (unique (IO P) next))
   (match many line _
     ((None a)
       (match unique c _
@@ -28,10 +28,10 @@
             ((No x y q) (Exit P code0))))))
     ((Some a s)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
-      (def-unique P $ (unique again : (many (Maybe (String)) line) -> (unique (IO P) next)) (count (predates p0-p) c2 line))
+      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (count (predates pa-p) c2 line))
       (ReadLine P again))))
 
 (let ((unique (Counter) counter)) (MkCounter 0))
-(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (count (predates p0-p) counter line))
+(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (count (predates pa-p) counter line))
 
 (ReadLine P start)

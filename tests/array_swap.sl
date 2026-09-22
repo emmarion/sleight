@@ -12,7 +12,7 @@
       (ACons _ _ (Succ (Succ (Succ (Zero)))) (ANil (Nat))))))
   (let ((unique old) (unique b)) (swap-second a (NthS _ _ _ _ _ _ (NthZ _ _ _ _))))
   (let-match unique b (ACons _ _ x tl))
-  (let-match unique tl (ACons _ _ y tail))
-  (let-match unique tail (ACons _ _ z end))
+  (let-match unique tl (ACons _ _ y rest))
+  (let-match unique rest (ACons _ _ z end))
   (nat-add (share old) (nat-add (share x) (nat-add (share y) (share z)))))
 swap-test

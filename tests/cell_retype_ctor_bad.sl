@@ -5,9 +5,9 @@
 ; constructor's arguments under the same value constructor.
 
 (def-adts $ (A2 : -> Type) enum (many MkA : (many (Nat) x) (many (Nat) y) -> (A2)))
-(def-adts $ (B2 : -> Type) enum (many MkB : (many (Nat) p) (many (Nat) q) -> (B2)))
+(def-adts $ (Two : -> Type) enum (many MkB : (many (Nat) p) (many (Nat) q) -> (Two)))
 
-(def-fns _ $ (many convert : (unique (A2) a) -> (unique (B2) b))
+(def-fns _ $ (many convert : (unique (A2) a) -> (unique (Two) b))
   (match unique a _
     ((MkA x y cell)
       (let ((unique cell2)) (cell-write cell (MkB (SlotHolds y) (SlotHolds x))))

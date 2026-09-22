@@ -17,6 +17,6 @@
     (absurd VNil)
     ((VCons a m x xs) x)))
 
-(let ((many v)) (VCons (Nat) (Zero) (Succ (Zero)) (VNil (Nat))))
+(let ((many vec-v)) (VCons (Nat) (Zero) (Succ (Zero)) (VNil (Nat))))
 
-(head (Nat) (Zero) v)
+(head (Nat) (Zero) vec-v)

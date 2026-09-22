@@ -26,7 +26,7 @@
           (let ((many items) (many err)) $ parse src)
           (let ((many (Env) env2))
             (match many err _
-              ((Some b e) (match many e (((Env) e)) ((MkSynErr pos m) (env-report envw $ located (env-at envw pos) ": syntax error: " m))))
+              ((Some b e) (match many e (((Env) _)) ((MkSynErr pos m) (env-report envw $ located (env-at envw pos) ": syntax error: " m))))
               ((None b) (run-toplevel items envw))))
           (run-files rest (match many first (((Env) e)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 

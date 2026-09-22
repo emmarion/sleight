@@ -4,7 +4,7 @@ open Env
 module V = Value
 module Sp = Special
 
-type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option }
+type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
 type res = { term : term; ty : term; erasure : mult; place : term option }
 type demand = Fixed | CallableHead | Driver
 
@@ -236,21 +236,24 @@ let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Som
 
 let anon tele = List.map (fun _ -> None) tele
 let count_check l expect got = if List.length expect <> List.length got then error l "expected %d values, got %d" (List.length expect) (List.length got)
-let ctor_result head mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (head, List.rev mvars)); place = None } ]
+let ctor_result head mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (head, List.rev mvars)); place = None; loc = Reader.nowhere } ]
 let field_names env l c tele fields =
   if List.length fields <> List.length tele then error l "%s has %d fields" (name_of env c) (List.length tele);
   List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields
 
 let field_ats tele fields = if List.length fields = List.length tele then List.map loc fields else List.map (fun _ -> Reader.nowhere) tele
 
-(* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns their ids in order. *)
+(* [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns
+   their ids in order. [ats] given means this site is where the source writes the binders -- a pattern's
+   fields -- so they are the ones shadowing warns at; without it the telescope is being read back and each
+   entry keeps the position its declaration carried (Env.bind). *)
 let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta tele =
   let nth l i default = match l with Some l -> List.nth l i | None -> default in
   let _, env, _, fresh =
     List.fold_left
       (fun (i, env, ids, fresh) e ->
         let ty, rule = fact_of env Reader.nowhere (map_sg (instantiate ids) e.sg) in
-        let x, env = bind env ?meta ~word:(word && meta <> Some true) ~at:(nth ats i Reader.nowhere) (nth names i e.name) (nth mults i e.mult) (nth states i Dyn) ty ?rule in
+        let x, env = bind env ?meta ~word:(word && meta <> Some true) ~at:(nth ats i e.loc) ~written:(ats <> None) (nth names i e.name) (nth mults i e.mult) (nth states i Dyn) ty ?rule in
         let env = match Option.map (instantiate ids) e.place with
           | Some (SlotHolds p) when meta <> Some true -> at_merge env (Var x) p
           | _ -> env in
@@ -384,17 +387,17 @@ let cells_allowed env mid = match type_of env mid with
 
 let split_cell_pattern _env l extra fields =
   if not extra then (fields, None) else match List.rev fields with
-  | n :: fs -> (List.rev fs, Some (name_or_anon (atom_or l n "a cell binder")))
+  | n :: fs -> (List.rev fs, Some (name_or_anon (atom_or l n "a cell binder"), loc n))
   | [] -> error l "a unique pattern needs its extra cell binder"
 
 let pattern_cell env l mult scrut c fids name =
   match name with
   | None -> (env, None)
-  | Some name ->
+  | Some (name, at) ->
       let _, params, _ = cell_shape env l c in
       let slots = List.filter_map (fun (e,x) -> if e.mult = Erased then None else Some (SlotHolds (Var x))) (List.combine params fids) in
       let state = match scrut.term with Var x -> (entry env x).state | _ -> Dyn in
-      let x, env = bind env ~word:true name mult state (Cell (Var c, slots)) in
+      let x, env = bind env ~word:true ~at name mult state (Cell (Var c, slots)) in
       let env = match scrut.place with Some p -> at_merge env (Var x) p | None -> env in
       (env, Some x)
 
@@ -505,7 +508,7 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
           SlotHolds (Var x)) e.s_place in
         let name = name_or_anon e.s_name in
         let x, env = at e.s_loc (fun () -> bind env ?holes ~at:e.s_loc name mult Dyn ty ?rule) in
-        (i + 1, { env with signature = x :: env.signature }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place } :: tele))
+        (i + 1, { env with signature = x :: env.signature }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
   in
   (env, List.rev ids, List.rev tele)
@@ -785,7 +788,7 @@ and elab_special demand tele env expect l sp args =
           let x, env = bind env ~meta:true None Erased Dyn (Var a) in
           let b, env = bind env ~meta:true None Erased Dyn type_term in
           let y, env = bind env ~meta:true None Erased Dyn (Var b) in
-          (env, Some [ { name = None; subterm = false; mult = Erased; place = None;
+          (env, Some [ { name = None; subterm = false; mult = Erased; place = None; loc = Reader.nowhere;
             sg = Ty (proof_type ctor [sa; Var a; Var x; sb; Var b; Var y]) } ]) in
     let env, p, _ = elab_expr1 ?tele env Erased raw in
     settle_res env l p;
@@ -1115,7 +1118,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
         let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern" in
         let c = ctor_var env bl c in
         let extra = extra && marker env bl tid ctors c <> Erased in
-        let fs, name = if kind = `Auto then (fs, if extra then Some None else None) else split_cell_pattern env bl extra fs in
+        let fs, name = if kind = `Auto then (fs, if extra then Some (None, Reader.nowhere) else None) else split_cell_pattern env bl extra fs in
         let phantom, fids, envb, forced =
           enter bl c (fun tele -> if kind = `Auto then anon tele else field_names env bl c tele fs)
             (fun tele -> if kind = `Auto then List.map (fun _ -> Reader.nowhere) tele else field_ats tele fs) in

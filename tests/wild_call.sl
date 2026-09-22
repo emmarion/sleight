@@ -4,10 +4,10 @@
 ; the telescope its results are returned into.
 
 (def-lvl A)
-(def-fns A $ (many length : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
+(def-fns A $ (many len : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
     ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (length _ tl)))))
+    ((Cons a hd tl) (Succ (len _ tl)))))
 
 (def-fns A $ (many split : (erased Type X) (many (List X) xs) -> (many (List X) l) (many (List X) r))
   (values xs (Nil _)))
@@ -17,7 +17,7 @@
   (split _ xs))
 
 (def-fns B $ (many count : (many (List (Nat)) xs) -> (many (Nat) n))
-  (tail (length _ xs)))
+  (tail (len _ xs)))
 
 (let ((many l) (many r)) (both (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat))))))
 (count l)

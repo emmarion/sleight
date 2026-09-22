@@ -21,16 +21,16 @@
         (l5 (k (KMatch)) (a "n") (l1 (l2 nat (a "r"))) (l2 (l1 (a "Zero")) zero) branch))))
   (Cons _ nat-decl (Cons _ lvl-decl (Cons _ fns (Cons _ (l2 (a "double") (l2 (a "Succ") (l2 (a "Succ") zero))) (Nil _))))))
 
-(let ((many marked)) (l3 (k (KSubterm)) nat (a "n")))
+(let ((many marked-prog)) (l3 (k (KSubterm)) nat (a "n")))
 (let ((many unmarked)) (l2 nat (a "n")))
 (let ((many with-proof)) (Cons _ (l2 (k (KSubterm)) (a "p")) (Cons _ (a "k") (Nil _))))
 (let ((many bare)) (Cons _ (a "k") (Nil _)))
 
-(let ((many no-proof)) (outcome (double-prog marked bare)))
+(let ((many no-proof)) (outcome (double-prog marked-prog bare)))
 (comptime-match many no-proof (Some t r))
 (comptime-match many r (RNoProof))
 (let ((many not-marked)) (outcome (double-prog unmarked with-proof)))
 (comptime-match many not-marked (Some t2 r2))
 (comptime-match many r2 (RBadProof))
 
-(run (double-prog marked with-proof))
+(run (double-prog marked-prog with-proof))

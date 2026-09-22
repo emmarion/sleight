@@ -9,11 +9,11 @@
     (many SSucc : (erased (Nat) m) (many (Sing m) s) -> (Sing (Succ m)))))
 
 (def-lvl X)
-(def-fns X $ (many double : (subterm erased (Nat) n) (many (Sing n) s) -> (many (Nat) r))
+(def-fns X $ (many twice : (subterm erased (Nat) n) (many (Sing n) s) -> (many (Nat) r))
   (match many s (((Nat) r))
     ((SZero) (Zero))
     ((SSucc k t)
       (let ((erased p)) (prove-subterm k n))
-      (Succ (Succ (double (subterm p) k t))))))
+      (Succ (Succ (twice (subterm p) k t))))))
 
-(double (Succ (Zero)) (SSucc (Zero) (SZero)))
+(twice (Succ (Zero)) (SSucc (Zero) (SZero)))
