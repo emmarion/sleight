@@ -27,5 +27,5 @@
 ; bare self-call read as a lower-level call -- which the inferred Predates proof between the two levels
 ; would discharge, with no decreasing argument at all. tests/level_alias_predates_bad.sl writes pq out.
 (def-fns Q $ erased bad : (many (Pair Q P) t) -> (erased (Absurd) f)
-  (match many t (((Absurd) r))
+  (match erased t (((Absurd) r))
     ((Diag l) (bad t))))

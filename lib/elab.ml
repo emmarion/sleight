@@ -95,6 +95,8 @@ let check_type = check "type" and check_equal = check "value"
 let solve_sg env loc sg r = match sg with Ty ty -> solve "type" env loc r.ty ty | Is t -> solve "value" env loc r.term t
 let check_sg env loc sg r = ignore (solve_sg env loc sg r)
 let under pos m = if pos = Erased then Erased else m
+let written pos l what m =
+  if pos = Erased && m <> Erased then error l "%s in an erased position is written erased" what else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 
@@ -852,14 +854,15 @@ and elab_special demand tele env expect l sp args =
        | _ -> error l "at wraps a Cell invocation" in
       (env,rs,wrap code)
   | Sp.Share, [ a ] ->
+      if pos = Erased then error l "share in an erased position";
       let env, r, code = match a with
         | Atom (al, n) ->
             let x = var env al n in
-            if pos <> Erased && (entry env x).mult <> Unique then error al "share needs a unique value";
-            (use env al ~sharing:true (under pos Many) x, res_of env x, if pos = Erased then V.CErased else V.CVar x)
-        | _ -> elab_expr1 env (under pos Unique) a
+            if (entry env x).mult <> Unique then error al "share needs a unique value";
+            (use env al ~sharing:true Many x, res_of env x, V.CVar x)
+        | _ -> elab_expr1 env Unique a
       in
-      (env, [ { r with erasure = under pos Many } ], code)
+      (env, [ { r with erasure = Many } ], code)
   | Sp.Values, _ ->
       count_check l expect args;
       let entry i = Option.map (fun t -> List.nth t i) tele in
@@ -1093,9 +1096,9 @@ and elab_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
-      let smult = under pos (mult_or env l m) in
+      let smult = written pos l "a match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
-      let extra = mult_or env l m = Unique && cells_allowed env mid in
+      let extra = smult = Unique && cells_allowed env mid in
       let branch_uses = ref env.uses in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
@@ -1242,17 +1245,17 @@ and open_binding env l mult raw =
   (env', x, r.term, code)
 
 and elab_body ?tele env expect l items =
-  let env, wrap, final = elab_stmts env l items in
+  let env, wrap, final = elab_stmts (pos_of expect) env l items in
   let env, ress, code = elab_expr ?tele env expect final in
   (env, ress, wrap code)
 
 (* The statements before a body's final expression, and the code they wrap around what follows them. *)
-and elab_stmts env l = function
+and elab_stmts spos env l = function
   | [] -> error l "a body needs a final expression"
   | [ final ] -> (env, Fun.id, final)
   | stmt :: rest ->
-      let env, wrap = elab_stmt env stmt in
-      let env, wrap', final = elab_stmts env l rest in
+      let env, wrap = elab_stmt spos env stmt in
+      let env, wrap', final = elab_stmts spos env l rest in
       (env, (fun code -> wrap (wrap' code)), final)
 
 and elab_absurd env l body =
@@ -1268,12 +1271,12 @@ and refine env scrut c fids ret =
   let fvars = List.rev_map (fun x -> Var x) fids in
   merge_opens (unify_force (unify_force (forcing env) scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
 
-and elab_stmt env raw : Env.t * (V.code -> V.code) =
+and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
   match raw with
   | List (l, head :: args) -> (
       let env = if special_of env head <> None then read_special env head else env in
       match (special_of env head, args) with
-      | Some Sp.Let, _ -> elab_let env l args
+      | Some Sp.Let, _ -> elab_let spos env l args
       | Some Sp.DefLvl, [ n ] ->
           let _, env = mint_level env (name_or_anon (atom_or l n "a name")) in
           (env, Fun.id)
@@ -1281,8 +1284,8 @@ and elab_stmt env raw : Env.t * (V.code -> V.code) =
       | Some Sp.DefUnique, _ -> elab_def_fns ~unique:true env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
-      | Some Sp.LetMatch, _ -> elab_let_match env l args
-      | Some Sp.Unary, _ -> elab_unary env l args
+      | Some Sp.LetMatch, _ -> elab_let_match spos env l args
+      | Some Sp.Unary, _ -> elab_unary spos env l args
       | Some Sp.OpenAdt, [ m; e ] ->
           let mult = mult_or env l m in
           let env', x, t, code = open_binding env l mult e in
@@ -1297,7 +1300,7 @@ and run_code env code = Eval.eval env.values code
    produce (SUGAR.md 6); the check of each binder against its value stays as it was. The right-hand side's
    statements are statements of the enclosing expression: their code wraps the let's own, and their entries
    stay in scope after it, anonymously (section 16). *)
-and elab_let env l args =
+and elab_let spos env l args =
   let binder_raws, rhs = split_returns env args in
   let binders = List.concat_map (parse_entry env) binder_raws in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "let binder needs a multiplicity") binders in
@@ -1307,7 +1310,7 @@ and elab_let env l args =
       ({ env' with scope = env.scope }, Some t)
     else (env, None)
   in
-  let after, wrap, final = elab_stmts env l rhs in
+  let after, wrap, final = elab_stmts spos env l rhs in
   let inner, ress, code = elab_expr ?tele after expect final in
   let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
@@ -1339,7 +1342,7 @@ and hoist env lit =
   else
     let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
     let env = List.fold_left hoist env parts in
-    let frame = List.fold_left (fun env item -> fst (elab_stmt env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
+    let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
     let entry =
       match (lit, frame.scope.ids) with
       | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
@@ -1351,7 +1354,7 @@ and hoist env lit =
 
 (* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
-and elab_unary env l args =
+and elab_unary spos env l args =
   let za, _ = numeral_entry env l (List.hd args) in
   let lo =
     match args with
@@ -1383,7 +1386,7 @@ and elab_unary env l args =
     Printf.sprintf "(eq-trans (Nat) %s (Succ %s) (Succ %s) %s %s)" (Z.to_string n) (Z.to_string z) below stp congd
   in
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
-  in_prelude env (fun env -> elab_stmt env (List.hd (Reader.parse src)))
+  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse src)))
 
 and elab_distinct env l a b =
   let za, xa = numeral_entry env l a and zb, xb = numeral_entry env l b in
@@ -1402,10 +1405,10 @@ and elab_distinct env l a b =
   in
   (env, ress, code)
 
-and elab_let_match env l args =
+and elab_let_match spos env l args =
   match args with
   | [ m; scrut; List (pl, c :: fields) ] ->
-      let smult = mult_or env l m in
+      let smult = written spos l "a let-match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
       let c = ctor_var env pl c in
       if marker env pl tid ctors c = Erased && smult <> Erased then error pl "%s is phantom" (name_of env c);
@@ -1672,6 +1675,6 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
               env)
             else (
               if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
-              go (fst (elab_stmt env item)) rest)))
+              go (fst (elab_stmt Many env item)) rest)))
   in
   go env items
