@@ -1347,7 +1347,8 @@ and hoist env lit =
       | Literal.Str _, str :: _ -> (str, None)
       | _ -> assert false
     in
-    { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
+    let facts = match lit with Literal.Str _ -> IntMap.add (fst entry) { (fact frame (fst entry)) with rule = None } frame.facts | _ -> frame.facts in
+    { frame with scope = env.scope; facts; literals = (key, entry) :: frame.literals }
 
 (* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)

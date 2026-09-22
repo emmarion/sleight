@@ -496,10 +496,11 @@ shape below is the session's.
 60. **String literals** `"..."` were added for the IO tests' paths and
     messages: the reader accepts `\n`, `\t`, `\"` and `\\`, and a literal
     is sugar for its characters consed up with `SCons`, each a
-    character literal hoisted first, so it is `is`-transparent like a
-    character literal (`tests/string_literal.sl`). Interned by content.
-    The hoisted `let` builds the value by consing, quadratic under the
-    FFI, which only matters for very long literals.
+    character literal hoisted first (`tests/string_literal.sl`).
+    Interned by content. The hoisted `let` builds the value by consing,
+    quadratic under the FFI, which only matters for very long literals.
+    Whether the literal is `is`-transparent is decided in SUGAR.md 7:
+    it is not.
 
 ## OCaml extraction (extract.ml)
 
