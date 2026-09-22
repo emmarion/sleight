@@ -1,5 +1,5 @@
 ; needs: ../mini/base ../mini/term
-; expect: (Cons _ (Fn (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ TyApp (Ref 3) (Cons _ (MkEntry (BFalse) (BFalse) $ Univ) $ Nil _) $ Cons _ (Bound 0) $ Nil _) $ Nil _) $ Cons _ (MkEntry (BFalse) (BTrue) $ ValApp (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ Univ) $ Nil _) (Bound 0) $ Cons _ (Bound 1) $ Nil _) $ Nil _) $ Cons _ (Fn (Ref 7) (Cons _ (MkEntry (BFalse) (BFalse) $ TyApp (Ref 3) (Cons _ (MkEntry (BFalse) (BFalse) $ Univ) $ Nil _) $ Cons _ (Ref 7) $ Nil _) $ Nil _) $ Cons _ (MkEntry (BFalse) (BTrue) $ ValApp (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ Univ) $ Nil _) (Bound 0) $ Cons _ (Ref 7) $ Nil _) $ Nil _) $ Nil _)
+; expect: (Cons _ (TFn (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ TyApp (Ref 3) (Cons _ (MkEntry (BFalse) (BFalse) $ TUniv) $ Nil _) $ Cons _ (Bound 0) $ Nil _) $ Nil _) $ Cons _ (MkEntry (BFalse) (BTrue) $ ValApp (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ TUniv) $ Nil _) (Bound 0) $ Cons _ (Bound 1) $ Nil _) $ Nil _) $ Cons _ (TFn (Ref 7) (Cons _ (MkEntry (BFalse) (BFalse) $ TyApp (Ref 3) (Cons _ (MkEntry (BFalse) (BFalse) $ TUniv) $ Nil _) $ Cons _ (Ref 7) $ Nil _) $ Nil _) $ Cons _ (MkEntry (BFalse) (BTrue) $ ValApp (Bound 0) (Cons _ (MkEntry (BFalse) (BFalse) $ TUniv) $ Nil _) (Bound 0) $ Cons _ (Ref 7) $ Nil _) $ Nil _) $ Nil _)
 ; The term layer of mini/: a binder substituted through a function type, where the return entry sits one
 ; binder deeper than the level and the parameter; the abstraction back and the assignability decision are
 ; exercised by the checks below, each expected to come out as noted.
@@ -7,8 +7,8 @@
 (let ((many z)) (Zero))
 (let ((many one)) (Succ z))
 (let ((many subs)) (Cons _ (Some _ (Ref 7)) (Nil _)))
-(let ((many ps)) (Cons _ (MkEntry (BFalse) (BFalse) (Univ)) (Nil _)))
-(let ((many t)) (Fn (Bound z) (Cons _ (MkEntry (BFalse) (BFalse) (TyApp (Ref 3) ps (Cons _ (Bound z) (Nil _)))) (Nil _)) (Cons _ (MkEntry (BFalse) (BTrue) (ValApp (Bound z) ps (Bound z) (Cons _ (Bound one) (Nil _)))) (Nil _))))
+(let ((many ps)) (Cons _ (MkEntry (BFalse) (BFalse) (TUniv)) (Nil _)))
+(let ((many t)) (TFn (Bound z) (Cons _ (MkEntry (BFalse) (BFalse) (TyApp (Ref 3) ps (Cons _ (Bound z) (Nil _)))) (Nil _)) (Cons _ (MkEntry (BFalse) (BTrue) (ValApp (Bound z) ps (Bound z) (Cons _ (Bound one) (Nil _)))) (Nil _))))
 
 (let ((many s) (erased sp))
   (subst subs (Succ (Zero)) (LenCons _ _ _ _ (LenNil _)) t

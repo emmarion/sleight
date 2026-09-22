@@ -1,6 +1,6 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
 ; expect: (Cons _ (Some _ $ Some _ $ RBadReturn) $ Cons _ (Some _ $ Some _ $ RBadReturn) $ Cons _ (Some _ $ Some _ $ RBadReturn) $ Cons _ (Some _ $ None _) $ Cons _ (Some _ $ Some _ $ RBadReturn) $ Cons _ (Some _ $ None _) $ Nil _)
-; A ValCtor former's return is an application of a type constructor other than the former's own binders
+; A TValCtor former's return is an application of a type constructor other than the former's own binders
 ; (ASSUMPTIONS 80, restored here at the owner's word). While the former accepted any type as its return,
 ; this program reached [type-of-term]'s stuck, so that (in one session's reading) no derivation of
 ; [ElabProgram] existed for it:

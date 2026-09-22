@@ -22,17 +22,18 @@
 ; =====================================================================
 
 ; --- xs ++ ys = zs ---
-; NB: named Concat, not Append, to stay clear of the prelude's Append.
+; NB: named PalConcat, not Append or Concat, to stay clear of the prelude's
+; Append and of self/base.sl's Concat, which the Manacher build reads first.
 
 (def-adts
-  ((Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
+  ((PalConcat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
     enum
-    (many CatNil : (erased Type A) (erased (List A) ys)
-       -> (Concat A (Nil A) ys ys))
-    (many CatCons : (erased Type A) (erased A x) (erased (List A) rest)
+    (many PalCatNil : (erased Type A) (erased (List A) ys)
+       -> (PalConcat A (Nil A) ys ys))
+    (many PalCatCons : (erased Type A) (erased A x) (erased (List A) rest)
         (erased (List A) ys) (erased (List A) zs)
-        (erased (Concat A rest ys zs) p)
-        -> (Concat A (Cons A x rest) ys (Cons A x zs)))))
+        (erased (PalConcat A rest ys zs) p)
+        -> (PalConcat A (Cons A x rest) ys (Cons A x zs)))))
 
 ; --- xs reads the same forwards and backwards ("onion peeling") ---
 ; Nil and singletons are palindromes; wrapping a palindrome in the same
@@ -48,7 +49,7 @@
     (many PalWrap : (erased Type A) (erased A x) (erased (List A) inner)
         (erased (List A) withx)
         (erased (Palindrome A inner) p)
-        (erased (Concat A inner (Cons A x (Nil A)) withx) q)
+        (erased (PalConcat A inner (Cons A x (Nil A)) withx) q)
         -> (Palindrome A (Cons A x withx)))))
 
 ; --- positive evidence that two Nats differ ---
@@ -72,23 +73,23 @@
     enum
     (many NotPalEnds : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) inner)
         (erased (List (Nat)) withx)
-        (erased (Concat (Nat) inner (Cons (Nat) y (Nil (Nat))) withx) q)
+        (erased (PalConcat (Nat) inner (Cons (Nat) y (Nil (Nat))) withx) q)
         (erased (NatApart x y) d)
         -> (NotPalindrome (Cons (Nat) x withx)))
     (many NotPalInner : (erased (Nat) x) (erased (List (Nat)) inner) (erased (List (Nat)) withx)
-        (erased (Concat (Nat) inner (Cons (Nat) x (Nil (Nat))) withx) q)
+        (erased (PalConcat (Nat) inner (Cons (Nat) x (Nil (Nat))) withx) q)
         (erased (NotPalindrome inner) np)
         -> (NotPalindrome (Cons (Nat) x withx)))))
 
 ; --- xs has length n ---
 
 (def-adts
-  ((Length : (Type A) ((List A) xs) ((Nat) n) -> Type)
+  ((PalLength : (Type A) ((List A) xs) ((Nat) n) -> Type)
     enum
-    (many LNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n)
-        (erased (Length A rest n) p)
-        -> (Length A (Cons A x rest) (Succ n)))))
+    (many PalLNil : (erased Type A) -> (PalLength A (Nil A) (Zero)))
+    (many PalLCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n)
+        (erased (PalLength A rest n) p)
+        -> (PalLength A (Cons A x rest) (Succ n)))))
 
 ; --- w is the first n elements of xs ---
 ; Only inhabited when xs has at least n elements.
@@ -117,7 +118,7 @@
     (many WinEmpty : (erased Type A)
        -> (Windows A (Zero) (Nil A) (Cons (List A) (Nil A) (Nil (List A)))))
     (many WinStop : (erased Type A) (erased (Nat) n) (erased (List A) xs)
-        (erased (Nat) len) (erased (Length A xs len) l) (erased (Lt len n) short)
+        (erased (Nat) len) (erased (PalLength A xs len) l) (erased (Lt len n) short)
         -> (Windows A n xs (Nil (List A))))
     (many WinStep : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
         (erased (List A) w) (erased (Take A n (Cons A x xs) w) tk)
@@ -176,7 +177,7 @@
   ((NoLargerPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDone : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short)
+        (erased (PalLength (Nat) xs len) l) (erased (Lt len (Succ n)) short)
         -> (NoLargerPalindrome xs n))
     (many NoLargerStep : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (NoPalindromeOfLength xs (Succ n)) here)
@@ -230,7 +231,7 @@
   ((NoPalindromeOfLengthF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many SlideShort : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len n) short)
+        (erased (PalLength (Nat) xs len) l) (erased (Lt len n) short)
         -> (NoPalindromeOfLengthF xs n))
     (many SlideStep : (erased (Nat) n) (erased (Nat) x) (erased (List (Nat)) xs)
         (erased (List (Nat)) w)
@@ -245,7 +246,7 @@
   ((NoLargerPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDoneF : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short)
+        (erased (PalLength (Nat) xs len) l) (erased (Lt len (Succ n)) short)
         -> (NoLargerPalindromeF xs n))
     (many NoLargerStepF : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (NoPalindromeOfLengthF xs (Succ n)) here)
@@ -276,7 +277,7 @@
     (many RevCons : (erased Type A) (erased A x) (erased (List A) xs)
         (erased (List A) ys) (erased (List A) zs)
         (erased (Reverse A xs ys) p)
-        (erased (Concat A ys (Cons A x (Nil A)) zs) q)
+        (erased (PalConcat A ys (Cons A x (Nil A)) zs) q)
         -> (Reverse A (Cons A x xs) zs))))
 
 ; =====================================================================
@@ -294,7 +295,7 @@
 ;   this language offers for a dependent pair; B5's statement does not.
 ; Sanity (shows the spec is not vacuous or contradictory):
 ;   S1. Palindrome (Nat) w -> NotPalindrome w -> absurd
-;       Needs snoc-injectivity of Concat and irreflexivity of Lt.
+;       Needs snoc-injectivity of PalConcat and irreflexivity of Lt.
 ;   S2. LongestPalindrome xs n -> LongestPalindrome xs m -> n = m
 ; Main theorem:
 ;   every xs : LongestPalindromeF xs (algo xs), then B5.

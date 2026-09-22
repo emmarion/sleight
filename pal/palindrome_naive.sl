@@ -14,36 +14,36 @@
 ; reflection assertions, or changes to the specification are needed.
 
 (def-fns _ $ (many pal-length : (subterm many (List (Nat)) xs) ->
-    (many (Nat) n) (erased (Length (Nat) xs n) p))
+    (many (Nat) n) (erased (PalLength (Nat) xs n) p))
   (match many xs _
-    ((Nil a) (values (Zero) (LNil _)))
+    ((Nil a) (values (Zero) (PalLNil _)))
     ((Cons a x rest)
       (let ((many n) (erased p)) (pal-length rest))
-      (values (Succ n) (LCons _ x _ _ p)))))
+      (values (Succ n) (PalLCons _ x _ _ p)))))
 
 ; Remove the last element of a nonempty list. The length certificate
 ; supplies the strict decrease for the later onion-peeling recursion.
 (def-fns _ $ (many pal-unsnoc : (subterm many (List (Nat)) xs)
-    (erased (Nat) n) (erased (Length (Nat) xs (Succ n)) len) ->
+    (erased (Nat) n) (erased (PalLength (Nat) xs (Succ n)) len) ->
     (many (List (Nat)) inner) (many (Nat) last)
-    (erased (Length (Nat) inner n) ilen)
-    (erased (Concat (Nat) inner (Cons (Nat) last (Nil (Nat))) xs) cat))
+    (erased (PalLength (Nat) inner n) ilen)
+    (erased (PalConcat (Nat) inner (Cons (Nat) last (Nil (Nat))) xs) cat))
   (match many xs _
     (absurd (Nil a) (match erased len (((False) f))))
     ((Cons a x rest)
-      (let-match erased len (LCons b y tail k plen))
+      (let-match erased len (PalLCons b y tail3 k plen))
       (match many rest _
-        ((Nil b)
-          (let-match erased plen (LNil c))
-          (values (Nil _) x (LNil _)
-            (CatNil _ _)))
-        ((Cons b y tail)
-          (let-match erased plen (LCons c z tail2 k2 plen2))
+        ((Nil _)
+          (let-match erased plen (PalLNil c))
+          (values (Nil _) x (PalLNil _)
+            (PalCatNil _ _)))
+        ((Cons _ _ _)
+          (let-match erased plen (PalLCons c z tail2 k2 plen2))
           (let ((many inner) (many last) (erased ilen) (erased cat))
             (pal-unsnoc rest k2 plen))
           (values (Cons _ x inner) last
-            (LCons _ x _ _ ilen)
-            (CatCons _ x _ _ _ cat)))))))
+            (PalLCons _ x _ _ ilen)
+            (PalCatCons _ x _ _ _ cat)))))))
 
 (def-adts
   ((PalDecision : ((List (Nat)) xs) -> Type) enum
@@ -53,16 +53,16 @@
       (erased (NotPalindrome xs) p) -> (PalDecision xs))))
 
 (def-fns _ $ (many pal-decide : (subterm erased (Nat) n)
-    (many (List (Nat)) xs) (erased (Length (Nat) xs n) len) ->
+    (many (List (Nat)) xs) (erased (PalLength (Nat) xs n) len) ->
     (many (PalDecision xs) decision))
   (match many xs _
     ((Nil a) (PalYes xs (PalNil _)))
     ((Cons a x rest)
-      (let-match erased len (LCons b y tail k plen))
+      (let-match erased len (PalLCons b y tail3 k plen))
       (match many rest _
-        ((Nil b) (PalYes xs (PalOne _ x)))
-        ((Cons b y tail)
-          (let-match erased plen (LCons c z tail2 k2 plen2))
+        ((Nil _) (PalYes xs (PalOne _ x)))
+        ((Cons _ _ _)
+          (let-match erased plen (PalLCons c z tail2 k2 plen2))
           (let ((many inner) (many last) (erased ilen) (erased cat))
             (pal-unsnoc rest k2 plen))
           (match many (nat-cmp x last) _
@@ -81,25 +81,25 @@
   ((PalTake : ((Nat) n) ((List (Nat)) xs) -> Type) enum
     (many PalTaken : (erased (Nat) n) (erased (List (Nat)) xs)
       (many (List (Nat)) w) (erased (Take (Nat) n xs w) tk)
-      (erased (Length (Nat) w n) len) -> (PalTake n xs))
+      (erased (PalLength (Nat) w n) len) -> (PalTake n xs))
     (many PalShort : (erased (Nat) n) (erased (List (Nat)) xs)
-      (erased (Nat) len) (erased (Length (Nat) xs len) p)
+      (erased (Nat) len) (erased (PalLength (Nat) xs len) p)
       (erased (Lt len n) short) -> (PalTake n xs))))
 
 (def-fns _ $ (many pal-take : (subterm many (Nat) n)
     (many (List (Nat)) xs) -> (many (PalTake n xs) result))
   (match many n _
-    ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (LNil _)))
+    ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (PalLNil _)))
     ((Succ k)
       (match many xs _
-        ((Nil a) (PalShort n xs (Zero) (LNil _) (LtZ k)))
+        ((Nil a) (PalShort n xs (Zero) (PalLNil _) (LtZ k)))
         ((Cons a x rest)
           (match many (pal-take k rest) _
-            ((PalTaken m tail w tk len)
+            ((PalTaken m _ w tk len)
               (PalTaken n xs (Cons _ x w)
-                (TakeSucc _ _ x _ _ tk) (LCons _ x _ _ len)))
-            ((PalShort m tail len p short)
-              (PalShort n xs _ (LCons _ x _ _ p)
+                (TakeSucc _ _ x _ _ tk) (PalLCons _ x _ _ len)))
+            ((PalShort m _ len p short)
+              (PalShort n xs _ (PalLCons _ x _ _ p)
                 (LtS _ _ short)))))))))
 
 (def-adts
@@ -119,14 +119,14 @@
   (match many xs _
     ((Nil a)
       (values (Nil _)
-        (WinStop _ _ xs (Zero) (LNil _) (LtZ k))
+        (WinStop _ _ xs (Zero) (PalLNil _) (LtZ k))
         (PalAbsent (Nil _) (AllNil _ NotPalindrome))))
     ((Cons a x rest)
       (match many (pal-take (Succ k) xs) _
-        ((PalShort m tail len p short)
+        ((PalShort m _ len p short)
           (values (Nil _) (WinStop _ _ xs len p short)
             (PalAbsent (Nil _) (AllNil _ NotPalindrome))))
-        ((PalTaken m tail w tk len)
+        ((PalTaken m _ w tk len)
           (let ((erased ws) (erased wins) (many result)) (pal-windows k rest))
           (let ((erased xss)) (Cons _ w ws))
           (let ((erased windows)) (WinStep _ _ x rest w tk ws wins))

@@ -8,8 +8,8 @@
 (let ((many nat)) (TyApp (Ref 2) (Nil _) (Nil _)))
 (let ((many succ-ps)) (Cons _ (MkEntry (BFalse) (BFalse) nat) (Nil _)))
 (let ((many ents))
-  (Cons _ (MkEnt 6 nat (KPlain)) $ Cons _ (MkEnt 5 nat (KPlain)) $ Cons _ (MkEnt 4 (ValCtor succ-ps nat) (KDecl))
-    $ Cons _ (MkEnt 3 (ValCtor (Nil _) nat) (KDecl)) $ Cons _ (MkEnt 2 (TyCtor (Nil _)) (KDecl)) $ Nil _))
+  (Cons _ (MkEnt 6 nat (KPlain)) $ Cons _ (MkEnt 5 nat (KPlain)) $ Cons _ (MkEnt 4 (TValCtor succ-ps nat) (KDecl))
+    $ Cons _ (MkEnt 3 (TValCtor (Nil _) nat) (KDecl)) $ Cons _ (MkEnt 2 (TTyCtor (Nil _)) (KDecl)) $ Nil _))
 
 ; Every entry is in scope: the evidence the unifier asks for.
 (let ((erased (HasEnt ents 6) h6)) (HEHere _ _ _ _))

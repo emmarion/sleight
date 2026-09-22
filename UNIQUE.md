@@ -464,7 +464,7 @@ prelude's `List` of §31, whose fields are both `many`:
   ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
-    (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
+    (many Cons : (erased Type A) (many A head) (many (List A) rest) ->
        (List A))))
 ```
 
@@ -512,7 +512,7 @@ promises its result at the cell:
   and the result are many, the tail being labelled `many`, which is
   why the helper returns `many` and needs no `share`. Per element, one
   allocation and two stores, in constant stack. Perhaps `List` should
-  instead be defined with `unique` on both `head` and `tail` (the
+  instead be defined with `unique` on both `head` and `rest` (the
   owner's remark, undecided): a many construction would still request
   them at many, and a unique one would own its whole spine.
 
@@ -546,7 +546,7 @@ source over it. `_` is SUGAR.md 6's.
   enum extern
   (many ANil : (erased Type A) -> (Array A (Zero)))
   (many ACons : (erased Type A) (erased (Nat) n)
-                (unique A head) (unique (Array A n) tail) ->
+                (unique A head) (unique (Array A n) rest) ->
      (Array A (Succ n))))
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)

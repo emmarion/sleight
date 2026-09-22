@@ -1358,7 +1358,7 @@ identity:
   ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
-    (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
+    (many Cons : (erased Type A) (many A head) (many (List A) rest) ->
        (List A))))
 ```
 
@@ -1374,7 +1374,9 @@ Pulls together most of the design established so far:
   too, not just to genuinely-indexed types).
 - `(erased Type A)` — expression-before-name (§30); `erased` because `A`
   is `Type`-sorted (§12); multiplicity always explicit.
-- `(many A head)` / `(many (List A) tail)` — ordinary non-erased fields.
+- `(many A head)` / `(many (List A) rest)` — ordinary non-erased fields.
+  The tail field is named `rest` because `tail` is §27's marker, and a
+  binder that hides one warns (§9).
 - `many` on both declaration lines — neither constructor is phantom
   (§12); the marker is the multiplicity the constructor enters scope
   with, and is what the type's `Matchable` records (§17).

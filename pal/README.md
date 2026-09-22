@@ -26,8 +26,8 @@ dune exec bin/main.exe -- \
 ```
 
 The order matters: `self/base.sl` supplies the immutable `IdMap` trie and also
-has names such as `Length` and `Concat` that the palindrome specification
-subsequently shadows. The 27 examples run as a nullary function, including
+`Length` and `Concat`, which the palindrome specification uses rather than
+declaring again. The 27 examples run as a nullary function, including
 when extracted. `dune test` includes them with and without externs and in the
 three extraction modes supported by the test runner.
 

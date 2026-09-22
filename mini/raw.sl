@@ -16,7 +16,7 @@
 (let ((many nat-decl)) (l2 (k (KDefAdts)) (l4 (a "Nat") (l0) (l3 (a "Zero") (l0) nat) (l3 (a "Succ") (l1 (l2 nat (a "pred"))) nat))))
 (let ((many lvl-decl)) (l2 (k (KDefLvl)) (a "L")))
 
-(let ((many init-env)) (ECons 3 (VFormer (Univ) (ENil)) (ECons 2 (VAtom 2) (ECons 1 (VAtom 1) (ECons 0 (VAtom 0) (ENil))))))
+(let ((many init-env)) (ECons 3 (VFormer (TUniv) (ENil)) (ECons 2 (VAtom 2) (ECons 1 (VAtom 1) (ECons 0 (VAtom 0) (ENil))))))
 
 ; Elaborate and run a program, or answer the empty list.
 (def-fns _ $ (many run : (many (List (Raw)) program) -> (many (List (Val)) vs))
