@@ -4,7 +4,7 @@ open Value
    their models. Integers are zarith's. *)
 
 let registered : (string, adt) Hashtbl.t = Hashtbl.create 8
-let claimed : (string, unit) Hashtbl.t = Hashtbl.create 8
+let claimed : (string, Reader.loc) Hashtbl.t = Hashtbl.create 8
 
 (* Every declared type by name, the first declaration winning, for an implementation that builds a plain type's
    values (nat-cmp's Cmp). *)
@@ -99,8 +99,10 @@ let check_shape loc name adt =
    already, in the implementation's shape; both are checked before the binding, so a mismatched redeclaration of a
    name the prelude already bound still reports the mismatch. *)
 let bind loc name =
-  if Hashtbl.mem claimed name then Env.error loc "the extern implementation of %s is already bound" name;
-  Hashtbl.replace claimed name ()
+  Option.iter
+    (fun l -> Env.error_with loc [ (l, "the declaration that bound it") ] "the extern implementation of %s is already bound" name)
+    (Hashtbl.find_opt claimed name);
+  Hashtbl.replace claimed name loc
 
 let claim_fn loc name n =
   match List.assoc_opt name fns with

@@ -1176,7 +1176,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
             check_results envb el ann_tele ress;
             if reachable <> [] then branch_uses := join_uses !branch_uses envb.uses;
             if reachable = [] then None else Some (bind_cell scode cell code)
-        | _ :: dup :: _ -> error (loc dup) "a match has at most one else branch"
+        | first :: dup :: _ -> error_with (loc dup) [ (loc first, "the first else branch") ] "a match has at most one else branch"
         | _ -> error l "a match has at most one else branch"
       in
       let real =

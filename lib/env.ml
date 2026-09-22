@@ -6,6 +6,12 @@ exception Contradiction of string
 
 let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
+(* An error about two places names both: each note is a second location, written on its own line under the
+   message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
+let error_with loc notes fmt =
+  let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
+  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes))) fmt
+
 type state = Const of Value.value | Dyn
 
 type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool }
@@ -23,13 +29,14 @@ type scope = { ids : id list; named : id StringMap.t }
 type opened = { obj : id; kind : [ `Matchable | `Other ]; names : term list }
 type opens = { opened : opened list; touched : id list }
 
+(* A use, with where it was: what the other one of a conflicting pair names. *)
 type use = Shared | Consumed
 
 type t = {
   locations : id IntMap.t;
   signature : id list;
   in_extern : bool;
-  uses : use IntMap.t;
+  uses : (use * Reader.loc) IntMap.t;
   captures : id list;
   usage_erased : bool;
   scope : scope;
@@ -215,7 +222,8 @@ let rec merge_opens (Forcing env) =
           let drop = if rank env newer < rank env older then older else newer in
           merge_opens (Forcing (opens_drop { env with opens = { env.opens with touched = env.opens.touched @ touched } } drop)))
 
-let join_uses a b = IntMap.union (fun _ x y -> Some (if x = Consumed || y = Consumed then Consumed else Shared)) a b
+let join_uses a b =
+  IntMap.union (fun _ (x, lx) (y, ly) -> Some (if x = Consumed then (x, lx) else if y = Consumed then (y, ly) else (x, lx))) a b
 
 let use env loc ?(sharing = false) mult x =
   if mult = Erased || env.usage_erased then env else
@@ -225,7 +233,8 @@ let use env loc ?(sharing = false) mult x =
   if e.mult <> Unique then env else (
     if mult = Many && not sharing then error loc "unique value %s needs an explicit share" (name_of env x);
     if mult = Unique && List.mem x env.captures then error loc "def-fns cannot capture %s at unique" (name_of env x);
-    let prior = IntMap.find_opt x env.uses in
-    if prior = Some Consumed || (mult = Unique && prior = Some Shared) then
-      error loc "unique value %s has conflicting non-erased uses" (name_of env x);
-    { env with uses = IntMap.add x (if mult = Unique then Consumed else Shared) env.uses })
+    (match IntMap.find_opt x env.uses with
+     | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (name_of env x)
+     | Some (Shared, pl) when mult = Unique -> error_with loc [ (pl, "already shared here") ] "unique value %s has conflicting non-erased uses" (name_of env x)
+     | _ -> ());
+    { env with uses = IntMap.add x ((if mult = Unique then Consumed else Shared), loc) env.uses })

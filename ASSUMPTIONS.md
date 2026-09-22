@@ -3738,7 +3738,16 @@ without the owner.
     12's phantom-constructor warning, which had a spelling of its own,
     both read that way now. A message about two places writes the
     second as a `note` on its own line under it, `path:line:col: note:
-    text`, rather than describing it in prose (193). What has no
+    text`, rather than describing it in prose (193). An error does the
+    same, through `Env.error_with` and `env-note-at`, where the second
+    place is what makes it readable: the earlier of two conflicting
+    uses of a `unique` value, which the use map now records beside
+    each use; the first of two `else` branches; and the declaration
+    that already bound an extern implementation, which the FFI's
+    claimed names now record and which is often in another file, so
+    that the note is where carrying the file in a location pays.
+    Which of these deserve one is this session's reading of where one
+    location is not enough; the rest carry one place, as before. What has no
     position names the file alone: a contradiction reaching the driver
     rather than the form that would have placed it, and a runtime
     error, the post-erasure code carrying no positions and an

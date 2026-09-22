@@ -2008,8 +2008,13 @@
 ; ---- The scope environment (section 3) and fact table (section 18); [hl] the ghost history every
 ; Const's value was allocated into, [store] the next stamp, and [entries] and [finals] hold its references.
 
+; Where a message points: the file and the position within it (ASSUMPTIONS 194).
+(def-adts $ (Loc : -> Type)
+  enum
+  (many MkLoc : (many (String) file) (many (Pos) pos) -> (Loc)))
+
 (def-adts
-  ((Use : -> Type) enum (many UseShared : -> (Use)) (many UseConsumed : -> (Use)))
+  ((Use : -> Type) enum (many UseShared : (many (Loc) at) -> (Use)) (many UseConsumed : (many (Loc) at) -> (Use)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
@@ -2022,11 +2027,8 @@
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (NameMap $ Nat) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals) (many (List $ String) errors)
-       (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ String) claimed) (many (List $ String) warnings)
+       (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ String) warnings)
        (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (UniqueState) us) -> (Env)))
-  ((Loc : -> Type)
-    enum
-    (many MkLoc : (many (String) file) (many (Pos) pos) -> (Loc)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) -> (EInfo l)))
@@ -2139,7 +2141,7 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) lv)))
 (def-fns _ $ (many env-subterms : (many (Env) e) -> (many (List $ Nat) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) st)))
-(def-fns _ $ (many env-claimed : (many (Env) e) -> (many (List $ String) r))
+(def-fns _ $ (many env-claimed : (many (Env) e) -> (many (List $ Pair (String) $ Loc) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) cl)))
 (def-fns _ $ (many env-warnings : (many (Env) e) -> (many (List $ String) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) wa)))
@@ -2147,8 +2149,19 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) lt)))
 (def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb (BFalse) ob li fi er (Some _ level) subterms cl wa lt lo pr us))))
+; Where a claimed name was bound, which the second claim's note names.
+(def-fns _ $ (many claimed-at : (subterm many (List $ Pair (String) $ Loc) cl) (many (String) name) ->
+    (many (Maybe $ Loc) r))
+  (match many cl _
+    ((Nil a) (None _))
+    ((Cons a p rest)
+      (match many p _
+        ((MkPair x y n l)
+          (match many (str-eq n name) (((Maybe $ Loc) r))
+            ((BTrue) (Some _ l))
+            ((BFalse) (claimed-at rest name))))))))
 (def-fns _ $ (many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st (Cons _ x cl) wa lt lo pr us))))
+  (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st (Cons _ (MkPair _ _ x lo) cl) wa lt lo pr us))))
 (def-fns _ $ (many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl (Cons _ x wa) lt lo pr us))))
 (def-fns _ $ (many env-warn-all : (many (Env) e) (subterm many (List $ String) xs) -> (many (Env) r))
@@ -2196,6 +2209,10 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi (Cons _ msg er) lv st cl wa lt lo pr us))))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
   (env-report e $ located e ": error: " x))
+; An error about two places names both: the note is a second location, written under the message as a
+; warning's note is, rather than described in the message's prose (ASSUMPTIONS 194).
+(def-fns _ $ (many env-note-at : (many (Env) e) (many (Loc) l) (many (String) x) -> (many (Env) r))
+  (env-report e $ located (env-at-loc e l) ": note: " x))
 
 ; The names of the entries minted after [stop], up to [x], dropped (lib/env.ml's hide).
 (def-fns _ $ (many entries-anonymize : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (Nat) x) (many (Nat) stop) -> (many (IdMap $ EInfo hs) r))
@@ -2409,7 +2426,7 @@
           (else (env-error env "locations must be variables"))))
         (else (env-error env "locations must be variables"))))))
 (def-fns _ $ (many use-max : (many (Use) a) (many (Use) b) -> (many (Use) r))
-  (match many a _ ((UseConsumed) a) ((UseShared) b)))
+  (match many a _ ((UseConsumed la) a) ((UseShared la) b)))
 (def-fns _ $ (many use-insert : (many (IdMap $ Use) uses) (many (Nat) x) (many (Use) state) -> (many (IdMap $ Use) r))
   (match many (idmap-get _ x uses) _
     ((Miss t k m p) (idmap-set _ x state uses))
@@ -2434,11 +2451,24 @@
         ((Once)
           (let ((many env1)) (match many (and (not $ mult-is-once pos) $ not sharing) (((Env) r)) ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "unique value " (name-of env x) " needs an explicit share"))))
           (let ((many env2)) (match many (and (mult-is-once pos) $ list-mem-bin (env-captures env) x) (((Env) r)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 "def-fns cannot capture " (name-of env x) " at unique"))))
-          (let ((many conflict)) (match many (idmap-get _ x $ env-uses env2) (((Bool) r))
-            ((Miss t k map p) (BFalse))
-            ((Hit t k map prior p) (match many prior _ ((UseConsumed) (BTrue)) ((UseShared) (mult-is-once pos))))))
-          (let ((many env3)) (match many conflict (((Env) r)) ((BFalse) env2) ((BTrue) (env-error env2 $ str-cat3 "unique value " (name-of env x) " has conflicting non-erased uses"))))
-          (env-set-uses env3 $ idmap-set _ x (match many (mult-is-once pos) (((Use) r)) ((BTrue) (UseConsumed)) ((BFalse) (UseShared))) $ env-uses env3))))))
+          (let ((many (Maybe $ Pair (Loc) $ String) conflict))
+            (match many (idmap-get _ x $ env-uses env2) (((Maybe $ Pair (Loc) $ String) r))
+              ((Miss t k map p) (None _))
+              ((Hit t k map prior p)
+                (match many prior (((Maybe $ Pair (Loc) $ String) r))
+                  ((UseConsumed la) (Some _ $ MkPair _ _ la "already used at unique here"))
+                  ((UseShared la)
+                    (match many (mult-is-once pos) (((Maybe $ Pair (Loc) $ String) r))
+                      ((BTrue) (Some _ $ MkPair _ _ la "already shared here"))
+                      ((BFalse) (None _))))))))
+          (let ((many env3))
+            (match many conflict (((Env) r))
+              ((None c) env2)
+              ((Some c p)
+                (match many p (((Env) r))
+                  ((MkPair pa pb la why)
+                    (env-note-at (env-error env2 $ str-cat3 "unique value " (name-of env x) " has conflicting non-erased uses") la why))))))
+          (env-set-uses env3 $ idmap-set _ x (match many (mult-is-once pos) (((Use) r)) ((BTrue) (UseConsumed $ env-loc env3)) ((BFalse) (UseShared $ env-loc env3))) $ env-uses env3))))))
 (def-fns _ $ (many set-entry-mult : (many (Env) env) (many (Nat) x) (many (Mult) mult) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
   (match many (idmap-get _ x en) _

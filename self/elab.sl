@@ -1551,9 +1551,11 @@
   (match many known _
     ((BFalse) (env-error env $ str-cat "no extern implementation for " name))
     ((BTrue)
-      (match many (list-mem-str (env-claimed env) name) _
-        ((BTrue) (env-error env $ str-cat3 "the extern implementation of " name " is already bound"))
-        ((BFalse) (env-claim env name))))))
+      (match many (claimed-at (env-claimed env) name) _
+        ((Some a l)
+          (env-note-at (env-error env $ str-cat3 "the extern implementation of " name " is already bound")
+            l "the declaration that bound it"))
+        ((None a) (env-claim env name))))))
 
 
 ; ---- Small helpers the block's checks use
@@ -4925,7 +4927,7 @@
                             (let ((many env5) (many real) (many seen)) $ elab-branches sugar branches env3b ctx tid sres smult mctors ann-tele expect (Nil _) (Nil _) extra saved incoming incoming)
                             (let ((many env6)) $ check-coverage mctors env5 seen)
                             (let ((many env6b) (many first) (many reachable) (many covered)) $ covered-of mctors env6 seen sres smult (None _) (BFalse) $ Nil _)
-                            (let ((many env6c) (many dflt)) $ elab-else sugar branches env6b ctx ann-tele expect first reachable (BFalse) (None _) sres smult extra saved incoming)
+                            (let ((many env6c) (many dflt)) $ elab-else sugar branches env6b ctx ann-tele expect first reachable (None _) (None _) sres smult extra saved incoming)
                             (let ((many nreal)) $ nat-add (list-length _ real) $ match many dflt (((Nat) n0)) ((None f) 0) ((Some f d) 1))
                             (let ((many env7)) $ error-when env6c (and (mult-is-many pos) $ and (or (not tagged) $ not $ mult-is-many smult) $ nat-lt 1 nreal) "a match without a runtime discriminant can have only one real branch")
                             (let ((many live) (erased lp)) $ list-append _ (discs-of (real-ctors _ _ real) ss) $ discs-of covered ss)
@@ -5059,13 +5061,13 @@
 
   ; The else branch (section 12): at most one, standing for at least one constructor, its body under no forced
   ; facts and erased throughout when none of them could run.
-  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Bool) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) ->
+  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) ->
       (many (Env) r) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) code))
     (match many branches _
       ((Nil a)
         (match many seen-else _
-          ((BTrue) (values env found))
-          ((BFalse) (match many first _ ((None b) (values env found)) ((Some b c) (values (env-error env $ str-cat3 "constructor " (name-of env c) " has 0 branches") found))))))
+          ((Some b l) (values env found))
+          ((None b) (match many first _ ((None b) (values env found)) ((Some b c) (values (env-error env $ str-cat3 "constructor " (name-of env c) " has 0 branches") found))))))
       ((Cons a braw brest)
         (match many (is-else-branch env braw) _
           ((BFalse) (elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming))
@@ -5073,8 +5075,9 @@
             (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
             (let ((many (Env) env2) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found2))
               (match many seen-else _
-                ((BTrue) (values (env-error envl "a match has at most one else branch") found))
-                ((BFalse)
+                ((Some b l)
+                  (values (env-note-at (env-error envl "a match has at most one else branch") l "the first else branch") found))
+                ((None b)
                   (match many first _
                     ((None b) (values (env-error envl "else covers no constructor") found))
                     ((Some b c0)
@@ -5094,7 +5097,7 @@
                                 ((BFalse)
                                   (let ((many envb2) (many code)) (elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) (all-erased expect) ann-tele saved alias))
                                   (values (env-discard envl envb2) (None _)))))))))))))
-            (elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (BTrue) found2 sres smult extra saved incoming))))))
+            (elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming))))))
 
   ; Arguments against a telescope, each at the position's multiplicity and checked against its entry
   ; (section 20); returns the terms innermost first and the code of the many ones in order.
