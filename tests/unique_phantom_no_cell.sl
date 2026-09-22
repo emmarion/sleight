@@ -5,8 +5,8 @@
     ((Live cell) (Succ (Zero)))
     ((Ghost) (Zero))))
 (def-fns _ $ erased inspect : (erased (T) t) -> (erased (Nat) r)
-  (match unique t _
-    ((Live cell) (Zero))
+  (match erased t _
+    ((Live) (Zero))
     ((Ghost) (Zero))))
 (def-fns _ $ many run : -> (many (Nat) r) (choose (Live)))
 run

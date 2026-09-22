@@ -27,7 +27,7 @@
   (match erased b _
     ((RPNil a) (NoRuleNil x))
     ((RPCons a y t rest ty2 k2 e2 nd q)
-      (match many (nat-dec x y) _
+      (match erased (nat-dec x y) _
         ((NDSame z) (match erased (ent-of-unique ents x ty (KDecl) ty2 k2 e e2) _ ((SameEntRefl c d) (match erased nd _))))
         ((NDDiff z w nq) (NoRuleCons x y t rest nq (decl-no-rule ents rest x ty e q)))))))
 
@@ -147,7 +147,7 @@
 (def-fns _ $ erased ctors-grew : (erased (Ctx) c1) (erased (Ctx) c2) (erased (List (Nat)) ids) (many (WF c1) wf) (erased (Grew c1 c2) g) (erased (Ctors c1 ids) p) -> (erased (Ctors c2 ids) q)
   (let-match erased g (GrewBy n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 le ext))
   (let-match erased p (MkCtors q1 q2 q3 q4 q5 q6 q7 q8 cs))
-  (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
   (MkCtors _ _ _ _ _ _ _ ids (all-ctor-ext n0 e0 e1 ids be cs ext)))
 (def-fns _ $ erased cov-grew : (erased (Ctx) c0) (erased (List (Maybe (Nat))) acc) (erased (Ctx) c1) (erased (Nat) m) (erased (Cov c0 acc c1 m) c) -> (erased (Grew c0 c1) g)
   (let-match erased c (MkCov n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 acc2 mm le cv ly))
@@ -182,12 +182,12 @@
   (let-match erased ctx (MkCtx n s e r a l sa))
   (MkSc _ _ _ _ _ _ _ _ (Univ) (ScUniv _ _)))
 (def-fns _ $ erased sc-level-ty : (erased (Ctx) ctx) (many (WF ctx) wf) -> (erased (Sc ctx (Zero) level-ty) p)
-  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 h1 h2))
   (MkSc _ _ _ _ _ _ _ _ _ (ScTyApp _ _ _ _ _ _ (ScRef _ _ _ h0) (ScTNil _ _) (ScNil _ _) (LENil _ _))))
 (def-fns _ $ erased sc-predates : (erased (Ctx) ctx) (many (WF ctx) wf) (erased (Term) ty) (erased (Term) av) (erased (Term) lv) (erased (Sc ctx (Zero) ty) pty) (erased (Sc ctx (Zero) av) pav) (erased (Sc ctx (Zero) lv) plv) ->
     (erased (Sc ctx (Zero) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) ty (Cons (Term) av (Cons (Term) lv (Nil (Term))))))) p)
-  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 h1 h2))
   (let-match erased pty (MkSc q1 q2 q3 q4 q5 q6 q7 q8 q9 sty))
   (let-match erased pav (MkSc y1 y2 y3 y4 y5 y6 y7 y8 y9 sav))
@@ -198,7 +198,7 @@
 (def-fns _ $ erased sc-subterm : (erased (Ctx) ctx) (many (WF ctx) wf) (erased (Term) ta) (erased (Term) av) (erased (Term) tb) (erased (Term) bv) (erased (Sc ctx (Zero) ta) pta) (erased (Sc ctx (Zero) av) pav)
     (erased (Sc ctx (Zero) tb) ptb) (erased (Sc ctx (Zero) bv) pbv) ->
     (erased (Sc ctx (Zero) (TyApp (Ref (Succ (Succ (Zero)))) subterm-ps (Cons (Term) ta (Cons (Term) av (Cons (Term) tb (Cons (Term) bv (Nil (Term)))))))) p)
-  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 h1 h2))
   (let-match erased pta (MkSc q1 q2 q3 q4 q5 q6 q7 q8 q9 sta))
   (let-match erased pav (MkSc y1 y2 y3 y4 y5 y6 y7 y8 y9 sav))
@@ -208,7 +208,7 @@
     (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTCons _ _ _ _ _ _ _ (ScUniv _ _) (ScTCons _ _ _ _ _ _ _ (ScBound _ _ _ (LtZ _)) (ScTNil _ _)))))
     (ScCons _ _ _ _ sta (ScCons _ _ _ _ sav (ScCons _ _ _ _ stb (ScCons _ _ _ _ sbv (ScNil _ _))))) (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LECons _ _ _ _ _ _ (LENil _ _))))))))
 (def-fns _ $ erased sc-builtin : (erased (Ctx) ctx) (many (WF ctx) wf) -> (erased (Has ctx (Succ (Zero))) h1) (erased (Has ctx (Succ (Succ (Zero)))) h2)
-  (let-match many wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF n s e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased bi (MkBuiltins z h0 hh1 hh2))
   (values (MkHas _ _ _ _ _ _ _ _ hh1) (MkHas _ _ _ _ _ _ _ _ hh2)))
 (def-fns _ $ erased sc-fn : (erased (Ctx) ctx) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2) (erased (Sc ctx (Zero) l) p) (erased (ScT ctx (Zero) ps d1) q)
@@ -319,7 +319,7 @@
 (def-fns _ $ erased ctor-grew : (erased (Ctx) c1) (erased (Ctx) c2) (erased (Nat) c) (many (WF c1) wf) (erased (Grew c1 c2) g) (erased (Ctor c1 c) p) -> (erased (Ctor c2 c) q)
   (let-match erased g (GrewBy n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 le ext))
   (let-match erased p (MkCtor q1 q2 q3 q4 q5 q6 q7 q8 fs r eo))
-  (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
   (MkCtor _ _ _ _ _ _ _ c fs r (ent-of-ext n0 e0 e1 c (ValCtor fs r) (KDecl) be eo ext)))
 
 (def-fns _ $ many snoc-id : (subterm many (List (Maybe (Nat))) xs) (many (Maybe (Nat)) x) -> (many (List (Maybe (Nat))) out) (erased (SnocId xs x out) p)
@@ -796,7 +796,7 @@
     (many TeleStuck : (erased (Ctx) ctx0) (erased (List (Maybe (Nat))) acc) (erased (Nat) m) (erased (Ctx) ctx) (erased (List (Raw)) raws) -> (TeleDec ctx0 acc m ctx raws))))
 
 (def-fns _ $ erased scope-has-ctx : (erased (Ctx) ctx) (many (WF ctx) wf) (erased (List (Name)) scope) (erased (String) s) (erased (Nat) x) (erased (Scope ctx scope) sc) (erased (NameOf scope s x) n) -> (erased (Has ctx x) h)
-  (let-match many wf (MkWF n0 s0 e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF n0 s0 e r a l sa ranks top v al be se ss sr sa2 sl ssa bi rp))
   (let-match erased sc (ScopeOf z1 z2 z3 z4 z5 z6 z7))
   (MkHas _ _ _ _ _ _ _ x (scope-has e scope s x ss n)))
 (def-fns _ $ erased sct-nil : (erased (Ctx) ctx) (erased (Nat) d) -> (erased (ScT ctx d (Nil (Entry)) d) s)
@@ -1418,7 +1418,7 @@
 (def-fns _ $ erased tycon-grew : (erased (Ctx) c1) (erased (Ctx) c2) (erased (Nat) tid) (many (WF c1) wf) (erased (Grew c1 c2) g) (erased (Tycon c1 tid) p) -> (erased (Tycon c2 tid) q)
   (let-match erased g (GrewBy n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 le ext))
   (let-match erased p (MkTycon q1 q2 q3 q4 q5 q6 q7 q8 pt eo))
-  (let-match many wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
+  (let-match erased wf (MkWF m1 m2 m3 m4 m5 m6 m7 ranks top v al be se ss sr sa2 sl ssa bi rp))
   (MkTycon _ _ _ _ _ _ _ tid pt (ent-of-ext n0 e0 e1 tid (TyCtor pt) (KDecl) be eo ext)))
 (def-fns _ $ erased tycons-grew : (erased (Ctx) c1) (erased (Ctx) c2) (erased (List (Nat)) tids) (many (WF c1) wf) (erased (Grew c1 c2) g) (subterm erased (Tycons c1 tids) p) -> (erased (Tycons c2 tids) q)
   (match erased p _

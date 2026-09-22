@@ -3472,9 +3472,6 @@ to look for a guard, are the owner's.
       `share`, which cannot be written in place since the scrutinee must be
       a bare variable; U5 decides only the `unique` mode. Is the `many`
       mode's read of the value a many use of the binder?
-    - A `match unique` in an erased position still takes its cell binder
-      (U5), whose type names `SlotHolds` of binders that are erased there,
-      which U10 says never happens; no misbehaviour was found.
     - The `newtype` and `extern` marks being structural (U9), an unmarked
       `(Matchable enum T ...)` literal no longer accepts an extern type's
       Matchable, and no signature abstracts over the marks (160).

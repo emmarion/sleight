@@ -27,5 +27,5 @@
 ; differ and the self-call read as a lower-level call -- which pq discharges, with no decreasing argument
 ; at all. tests/level_alias_bad.sl is the same program with the call bare.
 (def-fns Q $ erased bad : (many (Pair Q P) t) -> (erased (Absurd) f)
-  (match many t (((Absurd) r))
+  (match erased t (((Absurd) r))
     ((Diag l) (bad (predates pq) t))))

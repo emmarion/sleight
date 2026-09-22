@@ -358,7 +358,8 @@ part of a closed, first-class type (§29) and does bind positionally; a
 `let` receives that telescope already instantiated.
 
 `match` carries, before its scrutinee, the scrutinee's multiplicity —
-`erased` or `many`, mandatory (§12, §20) — and after it an explicit
+`erased` or `many`, mandatory (§12, §20), and `erased` in an erased
+position — and after it an explicit
 result-type annotation listing the return type(s) (plural, to match a
 function's possibly-multiple return values). The types are mandatory —
 they play the role of a match motive, and in a dependent match the
@@ -969,6 +970,11 @@ position is an error; referencing a `many` name from anywhere is fine —
 a non-erased value can be "copied" into an erased one for free, but
 never the reverse. Going the other way needs a proof: §38's
 `coerce`, or §14's `is` reification.
+
+A multiplicity written on a form rather than a binder must match the
+form's position: a `match` in an erased position writes `erased`, and
+`many` there is an error. A statement's position is that of the
+expression it belongs to (§16), so the rule reaches `let-match`.
 
 The rule for a function call or constructor application:
 1. If the overall result is erased, there's no further constraint —
