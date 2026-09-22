@@ -499,8 +499,8 @@ shape below is the session's.
     character literal hoisted first (`tests/string_literal.sl`).
     Interned by content. The hoisted `let` builds the value by consing,
     quadratic under the FFI, which only matters for very long literals.
-    Whether the literal is `is`-transparent is decided in SUGAR.md 7:
-    it is not.
+    Whether the literal is `is`-transparent: it is not, as slc always
+    had it; LITERALS.md gathers the literal handling.
 
 ## OCaml extraction (extract.ml)
 

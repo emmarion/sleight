@@ -203,22 +203,3 @@ Open, for the owner (the implementation's choices are the session's):
 3. A bare `_` as a whole annotation or binder type is a hole of type
    `Type`; as the expression of an `is` entry it would be a value of
    unknown type and is not given a meaning.
-
-## 7. String literals are opaque
-
-A string literal `"..."` denotes a `String` (ASSUMPTIONS 48) and is
-bound `Const` by content, its value built from its characters; it
-carries no `is` rule, so the checker does not see through it to its
-characters, and a `comptime-match` is the way to take one apart at
-elaboration time. The owner's decision, made when the two compilers
-were found to disagree: `slc` had always interned a literal as an
-opaque constant, while the reference had hoisted it as its `SCons`
-chain with the chain as its rule (a session's choice, formerly
-ASSUMPTIONS 60), which made every canonical form mentioning the
-literal expand to all of its characters and a chain of `n` `RCat`s
-over such literals cost the reference n² times their length to
-elaborate. Character literals are unchanged. We believe the tests
-never distinguished the two readings, `tests/string_literal.sl`
-reading the value; a plain `match` refuted through a literal's
-structure would have.
-
