@@ -334,8 +334,8 @@
     enum
     (many MkU8Add : (erased (Nat) n) (erased (Nat) m) (erased (Nat) r)
                     (erased (Lt n u8-modulus) pn) (erased (Lt m u8-modulus) pm) (erased (Lt r u8-modulus) pr)
-                    (erased (Nat) s) (erased (Add n m s) a) (erased (Mod s u8-modulus r) q) ->
-       (U8Add (MkU8 n pn) (MkU8 m pm) (MkU8 r pr)))))
+                    (erased (Nat) s) (erased (Add n m s) a) (erased (Mod s u8-modulus r) q)
+                    -> (U8Add (MkU8 n pn) (MkU8 m pm) (MkU8 r pr)))))
 
 (def-fns _ $ (many add-u8 : (many (U8) a) (many (U8) b) -> (many (U8) c) (erased (U8Add a b c) w))
   (let-match many a (MkU8 n pn))
@@ -807,8 +807,8 @@
   enum extern
   (many ANil : (erased Type A) -> (Array A (Zero)))
   (many ACons : (erased Type A) (erased (Nat) n)
-                (unique A head) (unique (Array A n) tail) ->
-     (Array A (Succ n))))
+                (unique A head) (unique (Array A n) tail)
+                -> (Array A (Succ n))))
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
@@ -820,29 +820,29 @@
     enum
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
     (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
-                   (erased (AllUninit A n tl) p) ->
-       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
+                   (erased (AllUninit A n tl) p)
+                   -> (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
   ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
     (many AICons : (erased Type A) (erased (Nat) n) (erased A x)
-                   (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p) ->
-       (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
+                   (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p)
+                   -> (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
   ((ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type)
     enum
     (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
        (ANth A (Succ n) (ACons A n x tl) (Zero) x))
     (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
-                 (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p) ->
-       (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
+                 (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p)
+                 -> (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
   ((ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type)
     enum
     (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
        (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
     (many SetS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
                  (erased (Nat) i) (erased A y) (erased (Array A n) tl2)
-                 (erased (ASet A n tl i y tl2) p) ->
-       (ASet A (Succ n) (ACons A n h tl) (Succ i) y (ACons A n h tl2)))))
+                 (erased (ASet A n tl i y tl2) p)
+                 -> (ASet A (Succ n) (ACons A n h tl) (Succ i) y (ACons A n h tl2)))))
 
 (def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
     (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))

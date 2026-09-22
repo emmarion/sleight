@@ -48,7 +48,7 @@ anything downstream of a value it bound) assumes the interpreter
 evaluated correctly. The assumption is not free. Consider
 
 ```scheme
-(def-adts $ Maybe : -> Type
+(def-adts $ (Maybe : -> Type)
   enum
   (many T : -> (Maybe))
   (many F : (erased (False) f) -> (Maybe)))

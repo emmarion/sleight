@@ -417,7 +417,7 @@ Open, none of it decided:
    driver's application of a continuation is the one use a request's
    `UniqueFn` gets.
 2. A prelude wrapper from an `Fn` at a lower level to a `UniqueFn`
-   (185) would shorten the tests' `(def-unique P $ unique start ...)`
+   (185) would shorten the tests' `(def-unique P $ (unique start ...))`
    lines; left out for now.
 3. `bench/bench.sh`'s pinned sources predate this change too (the
    earlier note above), so the benchmark still needs re-pinning.

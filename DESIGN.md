@@ -223,7 +223,7 @@ There are also two ways for these to be "minted" (introduced):
   in the fact table (§18), its type and "is" —
   whenever that entry is an expression in §5's grammar and so has a
   scope entry of its own (§3). This is per-binder:
-  with `(let (many a) (many b) (many c) (values x y z))`, each of `a`,
+  with `(let ((many a) (many b) (many c)) (values x y z))`, each of `a`,
   `b`, `c` takes from
   `x`, `y`, `z` respectively. Where an entry is a call, a match or a
   `coerce` (§38) there is nothing to forward, §15 making those results
@@ -343,7 +343,7 @@ size-one location (§16), so multiple values cannot nest, and there is
 nothing to pass into an argument slot or match on.
 
 Multiple values are introduced by `values` and eliminated by `let`,
-which binds one variable per value: `(let (many q) (many r) (divmod n d))`
+which binds one variable per value: `(let ((many q) (many r)) (divmod n d))`
 binds both
 of `divmod`'s returns. A `let`'s items are its binders, then any
 statements, then the final expression, which is the last item; the
@@ -1300,7 +1300,7 @@ the same way is still open — that's a binding (`let`-like: "give this
 name to this signature"), possibly not the same kind of thing as a
 telescope entry at all.
 
-`let` also runs the other way: `(let (many p) rhs)` puts the names first and the
+`let` also runs the other way: `(let ((many p)) rhs)` puts the names first and the
 right-hand side last, where the rule above would have the names last.
 Left as is for now — worth reconsidering.
 
@@ -1349,7 +1349,7 @@ identity:
 
 ```scheme
 (def-adts
-  (List : (Type A) -> Type
+  ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
     (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
@@ -1382,19 +1382,19 @@ drafted (12 opens, 12 closes).
 ## 32. Worked example: `length`
 
 ```scheme
-(def-adts $ Nat : -> Type
+(def-adts $ (Nat : -> Type)
   enum
   (many Zero : -> (Nat))
   (many Succ : (many (Nat) pred) -> (Nat)))
 
 (def-lvl L)
 
-(def-fns L $ many length : (erased Type A) (subterm many (List A) xs) ->
-    (many (Nat) n)
+(def-fns L $ (many length : (erased Type A) (subterm many (List A) xs) ->
+    (many (Nat) n))
   (match many xs (((Nat) r))
     ((Nil a) (Zero))
     ((Cons a hd tl)
-      (let (erased p) (prove-subterm tl xs))
+      (let ((erased p)) (prove-subterm tl xs))
       (Succ $ length A (subterm p) tl))))
 ```
 
@@ -1409,7 +1409,7 @@ drafted (12 opens, 12 closes).
   first (§11, §20); §11's result annotation is one parenthesized
   telescope of types directly after the scrutinee, so it cannot be
   mistaken for a branch.
-- `(let (erased p) ...)` — every binder declares its multiplicity (§9);
+- `(let ((erased p)) ...)` — every binder declares its multiplicity (§9);
   a proof is erased.
 - `((Cons a hd tl) ...)` — a branch is a pattern list followed by a body.
   Every field gets a binder, the erased ones included.
@@ -1438,23 +1438,23 @@ factory.
 ```scheme
 (def-lvl F)
 
-(def-fns F $ many map-factory : (erased (Level) M) ->
+(def-fns F $ (many map-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A) (erased Type B)
               (many (Fn M (many A x) -> (many B y)) f)
               (subterm many (List A) xs) ->
               (many (List B) ys))
-          mapped)
+          mapped))
   (def-lvl L)
-  (let (erased pml) (prove-predates M L))
-  (def-fns L $ many map : (erased Type A) (erased Type B)
+  (let ((erased pml)) (prove-predates M L))
+  (def-fns L $ (many map : (erased Type A) (erased Type B)
       (many (Fn M (many A x) -> (many B y)) f)
       (subterm many (List A) xs) ->
-      (many (List B) ys)
+      (many (List B) ys))
     (match many xs (((List B) r))
       ((Nil a) (Nil B))
       ((Cons a hd tl)
-        (let (erased p) (prove-subterm tl xs))
+        (let ((erased p)) (prove-subterm tl xs))
         (Cons B (f (predates pml) hd) $ map A B f (subterm p) tl))))
   (values L map))
 ```
@@ -1462,12 +1462,12 @@ factory.
 ```scheme
 (def-lvl I)
 
-(def-fns I $ many inc : (many (Nat) n) -> (many (Nat) m)
+(def-fns I $ (many inc : (many (Nat) n) -> (many (Nat) m))
   (Succ n))
 
-(let (erased ML) (many map-nat) (map-factory I))
+(let ((erased ML) (many map-nat)) (map-factory I))
 
-(let (many xs) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let ((many xs)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
 ```
@@ -1624,7 +1624,7 @@ caching/closing over its value.
 ## 37. Absurd functions
 
 A function marked `absurd` on its `def-fns` line, next to its name and
-multiplicity — `(def-fns L $ many absurd explode : ...)` — has a body
+multiplicity — `(def-fns L $ (many absurd explode : ...))` — has a body
 that, instead of producing its declared return telescope, produces a
 single value of a type with no constructors (§7's zero-variant ADTs,
 e.g. `False`), read off the type's `Matchable` (§19). It is the
@@ -1777,13 +1777,13 @@ pass straight through.
 ## 39. Worked example: absurd `explode`
 
 ```scheme
-(def-adts $ False : -> Type
+(def-adts $ (False : -> Type)
   enum)
 
 (def-lvl X)
 
-(def-fns X $ many absurd explode : (erased Type A) (many (False) f) ->
-    (many A a)
+(def-fns X $ (many absurd explode : (erased Type A) (many (False) f) ->
+    (many A a))
   f)
 ```
 
@@ -1802,21 +1802,21 @@ Written against §38's rules as recorded, not machine-checked — nothing
 implements them yet.
 
 ```scheme
-(def-adts $ Meters : -> Type
+(def-adts $ (Meters : -> Type)
   enum
   (many MkMeters : (many (Nat) n) -> (Meters)))
 
 (def-lvl U)
 
-(def-fns U $ erased unwrap-witness : (subterm many (List (Meters)) ms) ->
+(def-fns U $ (erased unwrap-witness : (subterm many (List (Meters)) ms) ->
     (erased (List (Nat)) ns)
-    (erased (Coercible (List (Meters)) ms (List (Nat)) ns) p)
+    (erased (Coercible (List (Meters)) ms (List (Nat)) ns) p))
   (match erased ms (((List (Nat)) ns)
                     ((Coercible (List (Meters)) ms (List (Nat)) ns) p))
     ((Nil a) (values (Nil (Nat)) (coercible-ctor Nil (Meters) (Nat))))
     ((Cons a m tl)
-      (let (erased sp) (prove-subterm tl ms))
-      (let (erased ws) (erased q) (unwrap-witness (subterm sp) tl))
+      (let ((erased sp)) (prove-subterm tl ms))
+      (let ((erased ws) (erased q)) (unwrap-witness (subterm sp) tl))
       (match erased m (((List (Nat)) ns)
                        ((Coercible (List (Meters)) ms (List (Nat)) ns) p))
         ((MkMeters n)
@@ -1827,11 +1827,11 @@ implements them yet.
 
 (def-lvl V)
 
-(let (erased puv) (prove-predates U V))
+(let ((erased puv)) (prove-predates U V))
 
-(def-fns V $ many unwrap-all : (many (List (Meters)) ms) ->
-    (many (List (Nat)) ns)
-  (let (erased ws) (erased p) (unwrap-witness (predates puv) ms))
+(def-fns V $ (many unwrap-all : (many (List (Meters)) ms) ->
+    (many (List (Nat)) ns))
+  (let ((erased ws) (erased p)) (unwrap-witness (predates puv) ms))
   (coerce ms p))
 ```
 
@@ -1864,13 +1864,13 @@ implements them yet.
 A `delegate` proof, reusing `inc` from §33 at level `I`:
 
 ```scheme
-(let (erased piv) (prove-predates I V))
+(let ((erased piv)) (prove-predates I V))
 
-(def-fns V $ many inc-noted : (many (Nat) n) (erased (Nat) note) ->
-    (many (Nat) m)
+(def-fns V $ (many inc-noted : (many (Nat) n) (erased (Nat) note) ->
+    (many (Nat) m))
   (delegate (inc (predates piv) n)))
 
-(let (erased ig) (coercible-of (delegate-of inc-noted)))
+(let ((erased ig)) (coercible-of (delegate-of inc-noted)))
 ```
 
 - After erasure `inc-noted`'s body is nothing but the call to `inc`
@@ -1917,7 +1917,7 @@ numeric literals for now.
 `(Nat)` and an erased proof that it is below the modulus:
 
 ```scheme
-(def-adts $ U8 : -> Type
+(def-adts $ (U8 : -> Type)
   enum newtype
   (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
 ```

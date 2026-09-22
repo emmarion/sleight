@@ -75,7 +75,7 @@ scrutinee, whose body is elaborated with everything erased (§12). An
 `else` branch has an ordinary body and takes part like any other.
 
 A `unique` value need not be used: GC reclaims it (the proposal's
-"at most one use"), and `(let (values))` needs no new meaning.
+"at most one use"), and `(let () (values))` needs no new meaning.
 
 ## U2a. Four kinds of mention
 
@@ -237,7 +237,7 @@ b`, each a value of a new built-in enum in the manner of `Special`,
 an ordinary ADT with a Matchable and nothing special about it:
 
 ```scheme
-(def-adts $ Sharing : -> Type
+(def-adts $ (Sharing : -> Type)
   enum
   (many Unique : -> (Sharing))
   (many Shared : -> (Sharing)))
@@ -461,7 +461,7 @@ prelude's `List` of §31, whose fields are both `many`:
 
 ```scheme
 (def-adts
-  (List : (Type A) -> Type
+  ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
     (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
@@ -472,24 +472,24 @@ The helper takes a vacant cell and the head that belongs in it, and
 promises its result at the cell:
 
 ```scheme
-(def-fns _ $ many append-into : (erased Type A)
+(def-fns _ $ (many append-into : (erased Type A)
     (unique (Cell Cons (SlotVacant) (SlotVacant)) cell)
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->
-    (many (List A) r at cell)
+    (many (List A) r at cell))
   (match many xs _
     ((Nil _) (cell _ h ys))
     ((Cons _ hd tl)
-      (let (unique next) (cell-alloc Cons))
-      (let (unique cell2) (cell-write cell (Cons (SlotHolds h) (SlotHolds next))))
-      (let (many r2) (tail (append-into _ next hd tl ys)))
+      (let ((unique next)) (cell-alloc Cons))
+      (let ((unique cell2)) (cell-write cell (Cons (SlotHolds h) (SlotHolds next))))
+      (let ((many r2)) (tail (append-into _ next hd tl ys)))
       (at (cell2 _ h r2)))))
 
-(def-fns _ $ many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
-    (many (List A) r)
+(def-fns _ $ (many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
+    (many (List A) r))
   (match many xs _
     ((Nil _) ys)
     ((Cons _ hd tl)
-      (let (unique cell) (cell-alloc Cons))
+      (let ((unique cell)) (cell-alloc Cons))
       (append-into _ cell hd tl ys))))
 ```
 
@@ -542,14 +542,14 @@ and one extern primitive per element operation with the rest plain
 source over it. `_` is SUGAR.md 6's.
 
 ```scheme
-(def-adts $ Array : (Type A) ((Nat) n) -> Type
+(def-adts $ (Array : (Type A) ((Nat) n) -> Type)
   enum extern
   (many ANil : (erased Type A) -> (Array A (Zero)))
   (many ACons : (erased Type A) (erased (Nat) n)
                 (unique A head) (unique (Array A n) tail) ->
      (Array A (Succ n))))
 
-(def-adts $ MaybeUninit : (Type A) -> Type
+(def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
   (many Uninit : (erased Type A) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
@@ -566,26 +566,26 @@ The relations, every field erased:
 
 ```scheme
 (def-adts
-  (AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+  ((AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
     (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
                    (erased (AllUninit A n tl) p) ->
        (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
-  (AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type
+  ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
     (many AICons : (erased Type A) (erased (Nat) n) (erased A x)
                    (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p) ->
        (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
-  (ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type
+  ((ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type)
     enum
     (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
        (ANth A (Succ n) (ACons A n x tl) (Zero) x))
     (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
                  (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p) ->
        (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
-  (ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type
+  ((ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type)
     enum
     (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
        (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
@@ -600,19 +600,19 @@ functions, each `extern` with a source model, the FFI's implementation
 shedding the argument its model does not use:
 
 ```scheme
-(def-fns _ $ many extern array-new : (erased Type A) (subterm many (Nat) n) ->
-    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p)
+(def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
+    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))
   (match many n _
     ((Zero) (values (ANil _) (AUNil _)))
     ((Succ n1)
-      (let (unique tl) (erased q) (array-new A n1))
+      (let ((unique tl) (erased q)) (array-new A n1))
       (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
 
-(def-fns _ $ many extern array-swap : (erased Type A) (erased (Nat) n)
+(def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
     (erased A m) (erased (ANth A n a i m) nth) ->
     (unique m is old) (unique (Array A n) r at a)
-    (erased (ASet A n a i x r) p)
+    (erased (ASet A n a i x r) p))
   (match unique a _
     (absurd (ANil _ _) (match erased nth (((False) f))))
     ((ACons _ _ hd tl u)
@@ -626,21 +626,21 @@ shedding the argument its model does not use:
           (match erased nth _
             (absurd NthZ)
             ((NthS _ _ _ _ _ _ q)
-              (let (unique old) (unique tl3) (erased p1) (tail (array-swap _ _ tl i1 x _ q)))
+              (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
               (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))))
 
-(def-fns _ $ many extern array-pluck : (erased Type A) (erased (Nat) n)
+(def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
     (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
     (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
     (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p))
   (tail (array-swap _ _ a i (Uninit _) _ nth)))
 
-(def-fns _ $ many extern array-place : (erased Type A) (erased (Nat) n)
+(def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (many (Nat) i) (unique A x)
     (erased A m) (erased (ANth A n a i m) nth) ->
-    (unique (Array A n) r at a) (erased (ASet A n a i x r) p)
-  (let (unique old) (unique r) (erased p) (array-swap _ _ a i x _ nth))
+    (unique (Array A n) r at a) (erased (ASet A n a i x r) p))
+  (let ((unique old) (unique r) (erased p)) (array-swap _ _ a i x _ nth))
   (values r p))
 ```
 
@@ -663,22 +663,22 @@ and the `coerce` is written where it is used, a wrapper function
 extracting to a call where the inline `coerce` extracts to nothing:
 
 ```scheme
-(def-fns _ $ erased init-witness : (erased Type A) (erased (Nat) n)
+(def-fns _ $ (erased init-witness : (erased Type A) (erased (Nat) n)
     (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->
     (erased (Array A n) b)
-    (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c)
+    (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c))
   (match erased all _
     ((AINil _)
       (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A)))
     ((AICons _ n1 x tl q)
-      (let (erased b1) (erased c1) (init-witness _ _ tl q))
+      (let ((erased b1) (erased c1)) (init-witness _ _ tl q))
       (values (ACons _ _ x b1)
               (coercible-ctor _ ACons (MaybeUninit A) A n1 n1
                  (coercible-sym (coercible-wrap _ Init _ x))
                  c1)))))
 
-(let (erased b0) (erased c) (init-witness _ _ a all))
-(let (unique arr) (coerce a c))
+(let ((erased b0) (erased c)) (init-witness _ _ a all))
+(let ((unique arr)) (coerce a c))
 ```
 
 `arr` is at `a` by the `coerce` rule, and nothing runs.
@@ -743,7 +743,7 @@ prelude's `Dec`, but a compiler is allowed to always answer
 
 ```scheme
 (def-adts
-  (SlotEq : ((Slot) a) ((Slot) b) -> Type
+  ((SlotEq : ((Slot) a) ((Slot) b) -> Type)
     enum
     (many SlotSame : (erased (Slot) a) (erased (Slot) b) (erased (Eq (Slot) a b) e) -> (SlotEq a b))
     (many SlotDiffer : (erased (Slot) a) (erased (Slot) b) -> (SlotEq a b))))
@@ -776,4 +776,4 @@ Open, as questions: the names of §U15's two forms; whether
 `at-coercible` falls under tier 1 (§U14); a `Cell` for an extern type's
 constructor outside an extern function's body (TBD, for now not
 allowed); the shadowing sugar the proposal defers, same-name rebinding,
-`(let (unique x) (f x))`, being the idiom until then.
+`(let ((unique x)) (f x))`, being the idiom until then.

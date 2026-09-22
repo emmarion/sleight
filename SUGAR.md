@@ -49,17 +49,17 @@ The same program as DESIGN.md §33, which is written without any, the
 calls with no annotation (§3).
 
 ```scheme
-(def-fns _ $ many map-factory : (erased (Level) M) ->
+(def-fns _ $ (many map-factory : (erased (Level) M) ->
     (erased (Level) L)
     (many (Fn L (erased Type A) (erased Type B)
               (many (Fn M (many A x) -> (many B y)) f)
               (subterm many (List A) xs) ->
               (many (List B) ys))
-          mapped)
-  (def-fns _ $ many map : (erased Type A) (erased Type B)
+          mapped))
+  (def-fns _ $ (many map : (erased Type A) (erased Type B)
       (many (Fn M (many A x) -> (many B y)) f)
       (subterm many (List A) xs) ->
-      (many (List B) ys)
+      (many (List B) ys))
     (match many xs _
       ((Nil a) (Nil B))
       ((Cons a hd tl)
@@ -68,12 +68,12 @@ calls with no annotation (§3).
 ```
 
 ```scheme
-(def-fns _ $ many inc : (many (Nat) n) -> (many (Nat) m)
+(def-fns _ $ (many inc : (many (Nat) n) -> (many (Nat) m))
   (Succ n))
 
-(let (erased ML) (many map-nat) (map-factory (level-of inc)))
+(let ((erased ML) (many map-nat)) (map-factory (level-of inc)))
 
-(let (many xs) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
+(let ((many xs)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
 ```
@@ -189,7 +189,7 @@ telescope it is returned into, the parameter it is passed at or the typed
 binder it is bound to, `(list-length _ xs)` by `xs`, `(Cons _ (Nil _) rest)`
 by `rest`, and `(f _ (Nil _) xs)` by `xs`, the inner `Nil` being pure.
 Refused, by the constraints above: `(f _ (Nil _))`, nothing in the call
-fixing the element type by the call's `)`; `(let (many xs) (Nil _))`, the
+fixing the element type by the call's `)`; `(let ((many xs)) (Nil _))`, the
 untyped binder handing nothing down; `(List _)` in a signature, since a
 signature is spelled out in full; and a match annotation with a `_` where
 nothing is expected of the match.

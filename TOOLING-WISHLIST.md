@@ -126,7 +126,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
 
 17. **A result type's new constructor ripples through every caller.**
     Giving unification's walk a stuck answer meant turning each
-    `(let (erased o) (many st) (erased p) (call ...))` in six mutually
+    `(let ((erased o) (many st) (erased p)) (call ...))` in six mutually
     recursive functions into a two-armed `match` whose second arm wraps
     the rest of the body, fifteen times, by script. Either a refactoring
     tool for "this call's result gained a case" or a language form that
@@ -163,8 +163,8 @@ Nothing here is a design decision; it is a log of friction, in the order met.
     unsolved with its expected type, would help.
 
 22. **Unannotated result binders look like grouped binders.** While writing
-    the palindrome proofs, `(let (erased before) (erased after) ...)` was
-    accidentally shortened to `(let (erased before after) ...)`. The latter
+    the palindrome proofs, `(let ((erased before) (erased after)) ...)` was
+    accidentally shortened to `(let ((erased before after)) ...)`. The latter
     means a binder named `after` with type `before`, unlike the explicitly
     typed groups in signatures. A diagnostic suggesting separate result
     binders when the supposed type names a value would identify the typo.

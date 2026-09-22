@@ -527,10 +527,10 @@
     ((Cons a braw after)
       (let ((erased wa)) $ within-step after args args (prove-subterm after args) (WHere args))
       (let ((many env1) (many entries))
-        $ match many braw (((Env) e) ((List $ Sub args) es))
+        (match many braw (((Env) e) ((List $ Sub args) es))
           ((RList lq items)
             (values env $ subs-of items _ $ WIn _ _ $ subterm-trans (prove-subterm items braw) (prove-subterm braw args)))
-          (else (values (env-error env what) (Nil _))))
+          (else (values (env-error env what) (Nil _)))))
       (values env1 entries after wa))))
 
 ; A hop budget: a function that hands its whole raw to another spends one step (see the elaborator block).
@@ -4662,7 +4662,9 @@
                                 (match many rest2 _
                                   ((Nil f) (values bad0 (AStop _) $ TStop _))
                                   ((Cons f draw after3)
-                                    (let ((many env1) (many disc)) $ disc-of-checked env0 draw)
+                                    (let ((many stray)) $ match many after2 (((Bool) b)) ((Nil g) (BFalse)) ((Cons g y more) (BTrue)))
+                                    (let ((many env0c)) $ error-when env0 stray "a type constructor declares one return")
+                                    (let ((many env1) (many disc)) $ disc-of-checked env0c draw)
                                     (let ((many nt) (many ext) (many cs) (erased wc)) $ take-marks after3 _ (within-step after3 rest2 items (prove-subterm after3 rest2) $ WIn rest2 items $ prove-subterm rest2 items) env1 (MkNewtypeMark) $ MkExtern)
                                     (let ((many tyraws)) $ Cons _ (MkSub _ tyraw $ in-within (Raw) tyraw after sg (prove-subterm tyraw after) wa) $ Nil _)
                                     (let ((many env2) (many ty)) $ elab-tyctor sugar sg one-step (MkPair _ _ ps tyraws) env1)

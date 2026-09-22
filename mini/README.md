@@ -127,8 +127,9 @@ claim in this file that the tests do not make is a mistake in this file.
   fresh entry of kind `KLevel`, and `prove-predates x L` checks `x`'s id
   is below `L`'s, section 8's counter taken literally.
 - **Surface syntax of the minimal language.** With no multiplicities to
-  mark them, telescopes and binders are grouped in lists, which the full
-  language does not do: `(Fn L (params) (rets))`, `(TyCtor (params))`,
+  mark them, telescopes and binders are grouped in lists, and more finely
+  than the full language, which brackets a signature or a binder list
+  whole rather than its halves: `(Fn L (params) (rets))`, `(TyCtor (params))`,
   `(ValCtor (params) ret)` (the return an application of a type
   constructor other than the former's own binders, ASSUMPTIONS 80), `(def-fns L (f (params) (rets) items...)...)`,
   `(def-adts (T (params) (C (fields) ret)...)...)`,

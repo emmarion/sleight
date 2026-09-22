@@ -158,7 +158,7 @@ inconsistent or silent.
 20. **`def-fns` level and the level-mint marker.** Must the level on a
     `def-fns` be a `def-lvl`-minted entry, or any `(Level)`-typed
     variable such as a parameter? Does `prove-predates` canonicalize its
-    arguments first, so an alias made by `(let (erased L2) L)` works?
+    arguments first, so an alias made by `(let ((erased L2)) L)` works?
     §3's forwarding list omits the marker, so as written an alias
     apparently cannot be used there.
 

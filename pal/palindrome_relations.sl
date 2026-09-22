@@ -31,8 +31,8 @@
        (Concat A (Nil A) ys ys))
     (many CatCons : (erased Type A) (erased A x) (erased (List A) rest)
         (erased (List A) ys) (erased (List A) zs)
-        (erased (Concat A rest ys zs) p) ->
-       (Concat A (Cons A x rest) ys (Cons A x zs)))))
+        (erased (Concat A rest ys zs) p)
+        -> (Concat A (Cons A x rest) ys (Cons A x zs)))))
 
 ; --- xs reads the same forwards and backwards ("onion peeling") ---
 ; Nil and singletons are palindromes; wrapping a palindrome in the same
@@ -48,8 +48,8 @@
     (many PalWrap : (erased Type A) (erased A x) (erased (List A) inner)
         (erased (List A) withx)
         (erased (Palindrome A inner) p)
-        (erased (Concat A inner (Cons A x (Nil A)) withx) q) ->
-       (Palindrome A (Cons A x withx)))))
+        (erased (Concat A inner (Cons A x (Nil A)) withx) q)
+        -> (Palindrome A (Cons A x withx)))))
 
 ; --- positive evidence that two Nats differ ---
 ; Fixed to Lt rather than taking an arbitrary relation R as a parameter:
@@ -73,12 +73,12 @@
     (many NotPalEnds : (erased (Nat) x) (erased (Nat) y) (erased (List (Nat)) inner)
         (erased (List (Nat)) withx)
         (erased (Concat (Nat) inner (Cons (Nat) y (Nil (Nat))) withx) q)
-        (erased (NatApart x y) d) ->
-       (NotPalindrome (Cons (Nat) x withx)))
+        (erased (NatApart x y) d)
+        -> (NotPalindrome (Cons (Nat) x withx)))
     (many NotPalInner : (erased (Nat) x) (erased (List (Nat)) inner) (erased (List (Nat)) withx)
         (erased (Concat (Nat) inner (Cons (Nat) x (Nil (Nat))) withx) q)
-        (erased (NotPalindrome inner) np) ->
-       (NotPalindrome (Cons (Nat) x withx)))))
+        (erased (NotPalindrome inner) np)
+        -> (NotPalindrome (Cons (Nat) x withx)))))
 
 ; --- xs has length n ---
 
@@ -87,8 +87,8 @@
     enum
     (many LNil : (erased Type A) -> (Length A (Nil A) (Zero)))
     (many LCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n)
-        (erased (Length A rest n) p) ->
-       (Length A (Cons A x rest) (Succ n)))))
+        (erased (Length A rest n) p)
+        -> (Length A (Cons A x rest) (Succ n)))))
 
 ; --- w is the first n elements of xs ---
 ; Only inhabited when xs has at least n elements.
@@ -98,8 +98,8 @@
     enum
     (many TakeZero : (erased Type A) (erased (List A) xs) -> (Take A (Zero) xs (Nil A)))
     (many TakeSucc : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
-        (erased (List A) w) (erased (Take A n xs w) t) ->
-       (Take A (Succ n) (Cons A x xs) (Cons A x w)))))
+        (erased (List A) w) (erased (Take A n xs w) t)
+        -> (Take A (Succ n) (Cons A x xs) (Cons A x w)))))
 
 ; --- xss is exactly the contiguous length-n windows of xs, in order ---
 ; Slide along xs: take a full window (WinStep), or stop because the suffix
@@ -117,12 +117,12 @@
     (many WinEmpty : (erased Type A) ->
        (Windows A (Zero) (Nil A) (Cons (List A) (Nil A) (Nil (List A)))))
     (many WinStop : (erased Type A) (erased (Nat) n) (erased (List A) xs)
-        (erased (Nat) len) (erased (Length A xs len) l) (erased (Lt len n) short) ->
-       (Windows A n xs (Nil (List A))))
+        (erased (Nat) len) (erased (Length A xs len) l) (erased (Lt len n) short)
+        -> (Windows A n xs (Nil (List A))))
     (many WinStep : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
         (erased (List A) w) (erased (Take A n (Cons A x xs) w) tk)
-        (erased (List (List A)) rest) (erased (Windows A n xs rest) r) ->
-       (Windows A n (Cons A x xs) (Cons (List A) w rest)))))
+        (erased (List (List A)) rest) (erased (Windows A n xs rest) r)
+        -> (Windows A n (Cons A x xs) (Cons (List A) w rest)))))
 
 ; --- every element of xs satisfies P (P a first-class unary TyCtor) ---
 
@@ -132,8 +132,8 @@
     (many AllNil : (erased Type A) (erased (TyCtor (A x) -> Type) P) ->
        (All A P (Nil A)))
     (many AllCons : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased A x)
-        (erased (List A) rest) (erased (P x) p) (erased (All A P rest) ps) ->
-       (All A P (Cons A x rest)))))
+        (erased (List A) rest) (erased (P x) p) (erased (All A P rest) ps)
+        -> (All A P (Cons A x rest)))))
 
 ; --- some element of xs satisfies P ---
 ; No Nil case: an empty list never witnesses an existential.
@@ -142,11 +142,11 @@
   ((Exists : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type)
     enum
     (many ExHere : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased A x)
-        (erased (List A) rest) (erased (P x) p) ->
-       (Exists A P (Cons A x rest)))
+        (erased (List A) rest) (erased (P x) p)
+        -> (Exists A P (Cons A x rest)))
     (many ExThere : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased A x)
-        (erased (List A) rest) (erased (Exists A P rest) e) ->
-       (Exists A P (Cons A x rest)))))
+        (erased (List A) rest) (erased (Exists A P rest) e)
+        -> (Exists A P (Cons A x rest)))))
 
 ; --- adapter: Palindrome with A fixed to Nat (constructors can't be curried) ---
 
@@ -164,8 +164,8 @@
   ((NoPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoPal : (erased (List (Nat)) xs) (erased (Nat) n) (erased (List (List (Nat))) xss)
-        (erased (Windows (Nat) n xs xss) w) (erased (All (List (Nat)) NotPalindrome xss) a) ->
-       (NoPalindromeOfLength xs n))))
+        (erased (Windows (Nat) n xs xss) w) (erased (All (List (Nat)) NotPalindrome xss) a)
+        -> (NoPalindromeOfLength xs n))))
 
 ; --- no window longer than n in xs is a palindrome ---
 ; Upward induction from n: either xs has at most n elements, so nothing
@@ -176,12 +176,12 @@
   ((NoLargerPalindrome : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDone : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short) ->
-       (NoLargerPalindrome xs n))
+        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short)
+        -> (NoLargerPalindrome xs n))
     (many NoLargerStep : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (NoPalindromeOfLength xs (Succ n)) here)
-        (erased (NoLargerPalindrome xs (Succ n)) rest) ->
-       (NoLargerPalindrome xs n))))
+        (erased (NoLargerPalindrome xs (Succ n)) rest)
+        -> (NoLargerPalindrome xs n))))
 
 ; --- THE ANSWER: n is the length of xs's longest palindromic substring ---
 ; SOME window of length n is a palindrome, and NO longer window is.
@@ -196,8 +196,8 @@
         (erased (List (List (Nat))) xss)
         (erased (Windows (Nat) n xs xss) w)
         (erased (Exists (List (Nat)) NatPalindrome xss) e)
-        (erased (NoLargerPalindrome xs n) nl) ->
-       (LongestPalindrome xs n))))
+        (erased (NoLargerPalindrome xs n) nl)
+        -> (LongestPalindrome xs n))))
 
 ; =====================================================================
 ; PART 2 -- FUSED HELPERS (not part of the trusted spec)
@@ -215,11 +215,11 @@
   ((HasPalindromeOfLength : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many HasHere : (erased (List (Nat)) xs) (erased (Nat) n) (erased (List (Nat)) w)
-        (erased (Take (Nat) n xs w) tk) (erased (Palindrome (Nat) w) p) ->
-       (HasPalindromeOfLength xs n))
+        (erased (Take (Nat) n xs w) tk) (erased (Palindrome (Nat) w) p)
+        -> (HasPalindromeOfLength xs n))
     (many HasThere : (erased (Nat) x) (erased (List (Nat)) xs) (erased (Nat) n)
-        (erased (HasPalindromeOfLength xs n) h) ->
-       (HasPalindromeOfLength (Cons (Nat) x xs) n))))
+        (erased (HasPalindromeOfLength xs n) h)
+        -> (HasPalindromeOfLength (Cons (Nat) x xs) n))))
 
 ; --- no window of length n in xs is a palindrome ---
 ; Fuses:  Windows n xs xss  +  All NotPalindrome xss.
@@ -230,14 +230,14 @@
   ((NoPalindromeOfLengthF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many SlideShort : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len n) short) ->
-       (NoPalindromeOfLengthF xs n))
+        (erased (Length (Nat) xs len) l) (erased (Lt len n) short)
+        -> (NoPalindromeOfLengthF xs n))
     (many SlideStep : (erased (Nat) n) (erased (Nat) x) (erased (List (Nat)) xs)
         (erased (List (Nat)) w)
         (erased (Take (Nat) n (Cons (Nat) x xs) w) tk)
         (erased (NotPalindrome w) np)
-        (erased (NoPalindromeOfLengthF xs n) rest) ->
-       (NoPalindromeOfLengthF (Cons (Nat) x xs) n))))
+        (erased (NoPalindromeOfLengthF xs n) rest)
+        -> (NoPalindromeOfLengthF (Cons (Nat) x xs) n))))
 
 ; --- no window longer than n is a palindrome (fused) ---
 
@@ -245,12 +245,12 @@
   ((NoLargerPalindromeF : ((List (Nat)) xs) ((Nat) n) -> Type)
     enum
     (many NoLargerDoneF : (erased (List (Nat)) xs) (erased (Nat) n) (erased (Nat) len)
-        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short) ->
-       (NoLargerPalindromeF xs n))
+        (erased (Length (Nat) xs len) l) (erased (Lt len (Succ n)) short)
+        -> (NoLargerPalindromeF xs n))
     (many NoLargerStepF : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (NoPalindromeOfLengthF xs (Succ n)) here)
-        (erased (NoLargerPalindromeF xs (Succ n)) rest) ->
-       (NoLargerPalindromeF xs n))))
+        (erased (NoLargerPalindromeF xs (Succ n)) rest)
+        -> (NoLargerPalindromeF xs n))))
 
 ; --- fused answer ---
 
@@ -259,8 +259,8 @@
     enum
     (many IsLongestF : (erased (List (Nat)) xs) (erased (Nat) n)
         (erased (HasPalindromeOfLength xs n) h)
-        (erased (NoLargerPalindromeF xs n) nl) ->
-       (LongestPalindromeF xs n))))
+        (erased (NoLargerPalindromeF xs n) nl)
+        -> (LongestPalindromeF xs n))))
 
 ; =====================================================================
 ; PART 3 -- OPTIONAL: Reverse, for a sanity lemma only
@@ -276,8 +276,8 @@
     (many RevCons : (erased Type A) (erased A x) (erased (List A) xs)
         (erased (List A) ys) (erased (List A) zs)
         (erased (Reverse A xs ys) p)
-        (erased (Concat A ys (Cons A x (Nil A)) zs) q) ->
-       (Reverse A (Cons A x xs) zs))))
+        (erased (Concat A ys (Cons A x (Nil A)) zs) q)
+        -> (Reverse A (Cons A x xs) zs))))
 
 ; =====================================================================
 ; PROOF PLAN (lemmas to write as def-fns; not included, syntax unknown)

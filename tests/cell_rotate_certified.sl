@@ -16,8 +16,8 @@
     (many FLeaf : (erased (Lst) acc) -> (FlatOnto (Leaf) acc acc))
     (many FNode : (erased (Tree) l) (erased (Nat) v) (erased (Tree) r) (erased (Lst) acc)
                   (erased (Lst) m) (erased (Lst) out)
-                  (erased (FlatOnto r acc m) pr) (erased (FlatOnto l (LCons v m) out) pl) ->
-       (FlatOnto (Node l v r) acc out))))
+                  (erased (FlatOnto r acc m) pr) (erased (FlatOnto l (LCons v m) out) pl)
+                  -> (FlatOnto (Node l v r) acc out))))
 
 (def-fns _ $ (many rot-right-proved : (unique (Tree) t) (erased (Lst) acc) (erased (Lst) out)
     (erased (FlatOnto t acc out) p) -> (unique (Tree) r) (erased (FlatOnto r acc out) q))

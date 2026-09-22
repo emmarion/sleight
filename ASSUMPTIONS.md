@@ -382,7 +382,7 @@ literals as open.
 
 51. **A numeral is a digit-only atom and never a name** (`Env.bind`
     refuses one; leading zeros are rejected outright). It is sugar for
-    `(let (many _) (erased _) (bin-to-nat <spelling>))` hoisted to just
+    `(let ((many _) (erased _)) (bin-to-nat <spelling>))` hoisted to just
     before the top-level form that first mentions it, run in run
     position, and interned per program by value, so every occurrence is
     one entry: the `Nat` is opaque, a call's result with no `is` rule,
@@ -403,9 +403,9 @@ literals as open.
     `#\space`, `#\newline`, `#\tab` and `#\xHH`; Scheme's spelling was
     chosen over `'c'` to leave the quote free for a future `Raw`. One is
     sugar for its code's numeral followed by section 41's reflection
-    route, `(let (many %d) (lt-dec n u8-modulus))`,
+    route, `(let ((many %d)) (lt-dec n u8-modulus))`,
     `(comptime-match %d (Yes %a %b %p))` and
-    `(let (many _) (MkChar (MkU8 n %p)))`, hoisted and interned the
+    `(let ((many _)) (MkChar (MkU8 n %p)))`, hoisted and interned the
     same way, the `%`-names living only in the discarded frame. The
     state-forwarding `let` makes the literal `is (MkChar (MkU8 n p))`,
     transparent down to its opaque `Nat` (`tests/char.sl`), so no
@@ -777,12 +777,12 @@ later session.
     ```scheme
     (def-lvl L)
     (def-adts
-      (Tag : (Type A) -> Type
+      ((Tag : (Type A) -> Type)
         enum
         (many MkTag : -> (Tag (Fn L (many (Nat) x) -> (many x is y))))))
     (def-lvl M)
-    (def-fns M $ many probe : (erased (Nat) k)
-        (many (Tag (Fn L (many (Nat) x) -> (many k is y))) t) -> (many (Nat) r)
+    (def-fns M $ (many probe : (erased (Nat) k)
+        (many (Tag (Fn L (many (Nat) x) -> (many k is y))) t) -> (many (Nat) r))
       (match many t (((Nat) r))
         ((MkTag) (Zero))))
     ```
@@ -865,7 +865,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     an id that nothing bound any more -- the interpreter raised `unbound
     at runtime` and the extracted OCaml named a variable that does not
     exist. Reached by a nested `def-fns` whose body mentions a binder of
-    an enclosing `(let (many k) n)`, or of a `let` whose right-hand side
+    an enclosing `(let ((many k)) n)`, or of a `let` whose right-hand side
     is a `values` of plain variables. The normalizer now rewrites nested
     bodies as well; the mark scoping is untouched. Believed
     semantics-preserving, the binder and its right-hand side denoting the
@@ -939,7 +939,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
 78. **A form that fetches an object by naming something reads the name
     through its alias.** Section 9's state-forwarding `let` makes a
     binder an alias of the entry it names, and section 5's identity is
-    canonicalize-then-compare, so `(let (erased N) Nat)` should leave `N`
+    canonicalize-then-compare, so `(let ((erased N)) Nat)` should leave `N`
     usable wherever `Nat` was; `ctor_var` already resolved a constructor
     that way (`tests/ctor_alias.sl`). The two forms that fetch an object
     from ambient scope did not. `matchable-of` looked for a `Matchable`
@@ -1776,7 +1776,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     was (`tests/wild_let.sl`). Consequences the session chose without
     the owner: `(f _ (Nil _))` is refused, the inner application closing
     before anything settles the outer `_` (`tests/wild_nested_bad.sl`);
-    an untyped binder hands nothing down, so `(let (many xs) (Nil _))`
+    an untyped binder hands nothing down, so `(let ((many xs)) (Nil _))`
     and a `(Nil _)` scrutinee are refused; a type constructor
     application's `_` is
     solved only through an `is` expectation, so `(many (List _) xs)` in
@@ -1859,7 +1859,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     A typed `let`'s binders are likewise elaborated with holes and each
     value is checked against its binder's entry of that telescope rather
     than a second elaboration of the clause (`bind_one`; `bind-let`),
-    so `(let (many (List _) xs) ...)` is solved by the right-hand side.
+    so `(let ((many (List _) xs)) ...)` is solved by the right-hand side.
     In `self/` the two telescopes keep their metas' facts through
     `env-restore` rather than `env-discard`. Consequences: `(f _ (Nil _)
     xs)` is accepted, `(len _ (Nil _))` still refused at the call's paren

@@ -10,8 +10,8 @@
     enum
     (many RONil : (erased Type A) (erased (ULst A) acc) -> (RevOnto A (UNil A) acc acc))
     (many ROCons : (erased Type A) (erased A hd) (erased (ULst A) tl) (erased (ULst A) acc)
-                   (erased (ULst A) r) (erased (RevOnto A tl (UCons A hd acc) r) p) ->
-       (RevOnto A (UCons A hd tl) acc r))))
+                   (erased (ULst A) r) (erased (RevOnto A tl (UCons A hd acc) r) p)
+                   -> (RevOnto A (UCons A hd tl) acc r))))
 
 (def-fns _ $ (many rev-onto-proved : (erased Type A) (subterm unique (ULst A) xs) (unique (ULst A) acc) ->
     (unique (ULst A) r) (erased (RevOnto A xs acc r) p))
