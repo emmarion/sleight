@@ -3654,3 +3654,62 @@ without the owner.
     `field-types` now hands that environment back, as `show_value`
     passes its own down. The `comptime-match` message was its only
     reader before, and no test reached it with such a value.
+
+189. **A let-bound match is floated into its branches only under a
+    continuation of atoms, and the words list is kept in descending
+    order.** Two changes to how long slc takes to compile itself,
+    measured on one machine with every binary compiling the same
+    `self/*.sl`: 36s and 19.2 MB of emitted OCaml at f676cd1, 16.6s
+    and 2.1 MB after, the emitted program byte-identical between the
+    two changes.
+
+    (a) 164's nested let normalization copied a let's continuation
+    into every branch of a right-hand-side match and normalized each
+    copy, in `lib/elab.ml`'s `check_marks` and `self/elab.sl`'s
+    `bind-through` alike, so a run of N let-bound matches multiplied
+    the code after them 2^N times: `self/eval.sl`'s `apply-extern`, 83
+    lines, came out as 9.5 MB. What the float is for is a continuation
+    that only repackages the binders, in particular the projection
+    that drops an `at` return (U8), `let [old, r] = body in values
+    old`, which the self-hosted compiler wraps around a whole body
+    (`project-code`) where the reference projects structurally. Both
+    now float only when the normalized continuation is a variable or
+    a `values` of variables, constants and erased entries
+    (`rhs-atoms` in self); any other continuation stays a `let` of
+    the match, and the general case of the normalizer still drops a
+    let whose body returns exactly what it binds. Believed to accept
+    the same programs: a marked call inside such a match was never in
+    tail position unless the continuation returned the binders, and
+    the tests, the bootstrap and the fixpoint are unchanged. A
+    continuation that becomes atoms only once a branch's own values
+    are substituted into it is no longer specialized per branch; no
+    test has one. The reference's own `slc.ml` is 1.3 MB where it was
+    10.9 MB.
+
+    (b) `hide-words` walked the whole words list at every `let`,
+    testing every word against the whole temporaries list under a
+    strict `and`, and the temporaries list never shrank. Every word is
+    marked right after it is minted, at every `mark-word` site, so
+    both lists were in descending id order in practice; `mark-word`
+    now inserts in that order, an invariant by construction rather
+    than by inspection, `hide-words` stops at the first word at or
+    below the bound and shares the rest, and the temporaries above the
+    bound are dropped with it, which is exact because a temporary is
+    marked once and leaves the words list at the first hide that
+    covers it.
+
+    What remains, measured and not changed: elaboration still costs
+    more the larger the scope, `self/base.sl` taking 0.23s at the
+    start of the program and 1.4s when elaborated again after the
+    rest. A `callgrind` profile puts about half of the instructions in
+    the fact table: `find-rule`'s linear walk of the rules list, kept
+    oldest first so that a freshly minted variable's rule is at the
+    far end, `append-rule`'s copy of the list per rule added, and the
+    trie walk; and since e20f6f6 every non-erased argument is bound to
+    an anonymous entry with a rule of its own (U2a,
+    `prepare-argument`), an argument that is already a variable
+    included, where `lib/elab.ml` binds none, which multiplies the
+    rules a body carries. `bench/bench.sh`'s pinned sources (4fda15f)
+    no longer elaborate under the current prelude (`heap.sl:100:
+    expected 6 arguments, got 4`), so its "slc on pinned slc" line
+    measures nothing until the pin moves.

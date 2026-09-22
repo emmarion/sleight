@@ -2228,13 +2228,17 @@
 
 ; Leaves a let's right-hand side: as env-restore, but the objects stay [inner]'s and the entries it added
 ; keep their ids in scope with their names dropped (section 16, lib/env.ml's hide).
+(def-fns _ $ many drop-above : (subterm many (List $ Nat) xs) (many (Nat) bound) -> (many (List $ Nat) r)
+  (match many xs _ ((Nil a) xs) ((Cons a x rest) (match many (nat-lt bound x) _ ((BTrue) (drop-above rest bound)) ((BFalse) xs)))))
 (def-fns _ $ many hide-words : (subterm many (List $ Nat) words) (many (List $ Nat) temp) (many (Nat) bound) -> (many (List $ Nat) r)
   (match many words _ ((Nil a) words) ((Cons a x rest)
-    (let (many tail) (hide-words rest temp bound))
-    (match many (and (not $ nat-lt x $ Succ bound) $ list-mem-bin temp x) _ ((BTrue) tail) ((BFalse) (Cons _ x tail))))))
+    (match many (nat-lt bound x) _
+      ((BFalse) words)
+      ((BTrue) (match many (list-mem-bin temp x) _ ((BTrue) (hide-words rest temp bound)) ((BFalse) (Cons _ x $ hide-words rest temp bound))))))))
 (def-fns _ $ many unique-hide : (many (Nat) bound) (many (UniqueState) state) -> (many (UniqueState) r)
   (match many state _ ((MkUniqueState loc uses caps ue ie sig words temp)
-    (MkUniqueState loc uses caps ue ie sig (hide-words words temp bound) temp))))
+    (let (many temp2) (drop-above temp bound))
+    (MkUniqueState loc uses caps ue ie sig (hide-words words temp2 bound) temp2))))
 
 (def-fns _ $ many env-hide : (many (Env) outer) (many (Env) inner) -> (many (Env) r)
   (match many outer _
@@ -2364,9 +2368,13 @@
 
 (def-fns _ $ many entry-word : (many (Env) env) (many (Nat) x) -> (many (Bool) r)
   (list-mem-bin (env-words env) x))
+(def-fns _ $ many insert-desc : (many (Nat) x) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r)
+  (match many xs _
+    ((Nil a) (Cons _ x xs))
+    ((Cons a y rest) (match many (nat-lt y x) _ ((BTrue) (Cons _ x xs)) ((BFalse) (Cons _ y $ insert-desc x rest))))))
 (def-fns _ $ many mark-word : (many (Env) env) (many (Nat) x) (many (Bool) temporary) -> (many (Env) r)
-  (let (many env2) (env-set-words env $ Cons _ x $ env-words env))
-  (match many temporary _ ((BFalse) env2) ((BTrue) (env-set-temporary env2 $ Cons _ x $ env-temporary env2))))
+  (let (many env2) (env-set-words env $ insert-desc x $ env-words env))
+  (match many temporary _ ((BFalse) env2) ((BTrue) (env-set-temporary env2 $ insert-desc x $ env-temporary env2))))
 (def-fns _ $ many location-root : (subterm many (Nat) x) (many (IdMap $ Nat) locations) -> (many (Nat) r)
   (match many (idmap-get _ x locations) _
     ((Miss t k m p) x)

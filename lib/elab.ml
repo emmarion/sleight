@@ -1558,6 +1558,7 @@ and check_marks env l pids code =
   let vars_of cs = List.map (function V.CVar x -> x | _ -> -1) cs in
   let returns ids = function V.CValues cs -> vars_of cs = ids | V.CVar x -> ids = [ x ] | _ -> false in
   let constant = function V.CValues cs -> List.for_all (function V.CConst _ -> true | _ -> false) cs | _ -> false in
+  let atoms = function V.CVar _ -> true | V.CValues cs -> List.for_all (function V.CVar _ | V.CConst _ | V.CErased -> true | _ -> false) cs | _ -> false in
   let rec mentions x c =
     (match c with V.CVar y -> y = x | V.CLetRec (fns, _) -> List.exists (fun (_, f) -> mentions x f.V.body) fns | _ -> false)
     || List.exists (mentions x) (V.subcodes c)
@@ -1568,7 +1569,7 @@ and check_marks env l pids code =
         match norm sub rhs with
         | V.CLet (xs, a, b) -> norm sub (V.CLet (xs, a, V.CLet (ids, b, rest)))
         | V.CLetRec (fs, b) -> norm sub (V.CLetRec (fs, V.CLet (ids, b, rest)))
-        | V.CMatch m -> norm sub (V.CMatch { m with branches = List.map (fun (i,xs,b) -> i,xs,V.CLet(ids,b,rest)) m.branches; default = Option.map (fun b -> V.CLet(ids,b,rest)) m.default })
+        | V.CMatch m when atoms (norm sub rest) -> norm sub (V.CMatch { m with branches = List.map (fun (i,xs,b) -> i,xs,V.CLet(ids,b,rest)) m.branches; default = Option.map (fun b -> V.CLet(ids,b,rest)) m.default })
         | V.CVar y when List.length ids = 1 -> norm ((List.hd ids, y) :: sub) rest
         | V.CValues cs when List.length cs = List.length ids && not (List.mem (-1) (vars_of cs)) ->
             norm (List.combine ids (vars_of cs) @ sub) rest
