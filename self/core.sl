@@ -29,7 +29,7 @@
       (let (many r) (erased pk) $ picked-of _ rest xrest p)
       (match many m _
         ((Many) (values (Cons _ x r) (PkMany _ rest x r pk)))
-    ((Once) (values (Cons _ x r) (PkOnce _ rest x r pk)))
+        ((Once) (values (Cons _ x r) (PkOnce _ rest x r pk)))
         ((Erased) (values r (PkErased _ rest r pk)))))))
 
 (def-fns _ $ erased picked-along : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Lockstep A B xs ys) q) -> (erased (Picked B ms ys) r)
@@ -101,8 +101,7 @@
         ((Once) (match many b _ ((Nil y) (None _)) ((Cons y n br) (match many n _
           ((Many) (match many (mults-same ar br) _ ((Some z p) (Some _ $ MsOnceMany _ _ p)) ((None z) (None _))))
           ((Once) (match many (mults-same ar br) _ ((Some z p) (Some _ $ MsOnce _ _ p)) ((None z) (None _))))
-          ((Erased) (match many (mults-same a br) _ ((Some z p) (Some _ $ MsErasedR _ _ p)) ((None z) (None _))))))))
-))))
+          ((Erased) (match many (mults-same a br) _ ((Some z p) (Some _ $ MsErasedR _ _ p)) ((None z) (None _))))))))))))
 
 (def-adts $ Disc : -> Type
   enum
@@ -197,7 +196,7 @@
     ((Cons a e rest)
       (match many (entry-mult e) _
         ((Many) (Succ $ many-count rest))
-    ((Once) (Succ $ many-count rest))
+        ((Once) (Succ $ many-count rest))
         ((Erased) (many-count rest))))))
 
 (def-fns _ $ many tele-mults : (subterm many (List $ Entry) es) -> (many (List $ Mult) ms)
@@ -274,7 +273,7 @@
 ; Every special form by name, in the order of lib/special.ml; a form's constructor index in the Special
 ; ADT is its position here.
 (let (many sp-table)
-  (sp-cons "let" (SpStmt $ StLet) $ sp-cons "def-lvl" (SpStmt $ StDefLvl) $ sp-cons "def-fns" (SpStmt $ StDefFns) $ sp-cons "def-unique" (SpStmt $ StDefUnique) $
+  $ sp-cons "let" (SpStmt $ StLet) $ sp-cons "def-lvl" (SpStmt $ StDefLvl) $ sp-cons "def-fns" (SpStmt $ StDefFns) $ sp-cons "def-unique" (SpStmt $ StDefUnique) $
   sp-cons "def-adts" (SpStmt $ StDefAdts) $ sp-cons "comptime-match" (SpStmt $ StComptimeMatch) $
   sp-cons "let-match" (SpStmt $ StLetMatch) $ sp-cons "unary" (SpStmt $ StUnary) $ sp-cons "distinct" (SpExpr $ ExDistinct) $
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
@@ -292,7 +291,7 @@
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $
   sp-cons "delegate" (SpMark $ MkDelegate) $ sp-cons "predates" (SpMark $ MkPredates) $ sp-cons "absurd" (SpMark $ MkAbsurd) $
-  sp-cons "newtype" (SpMark $ MkNewtypeMark) $ sp-cons "extern" (SpMark $ MkExtern) $ sp-cons "else" (SpMark $ MkElse) (Nil _)))
+  sp-cons "newtype" (SpMark $ MkNewtypeMark) $ sp-cons "extern" (SpMark $ MkExtern) $ sp-cons "else" (SpMark $ MkElse) (Nil _))
 
 (def-fns _ $ many sp-of-index : (many (Nat) i) -> (many (Maybe $ Sp) r)
   (match many (list-nth _ sp-table i) _
@@ -408,9 +407,9 @@
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str")))
 
 (let (many externs)
-  (Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
+  $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
-  Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) (Nil _)))
+  Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) (Nil _))
 
 (def-fns _ $ many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r)
   (match many es _
@@ -2473,9 +2472,10 @@
       ((Nil a) es)
       ((Cons a e rest) (match many e _
         ((MkEntry name sub mu sg place)
-          (Cons _ (MkEntry name sub mu
-            (match many sg (((Sg) r)) ((SgTy t) (SgTy $ canon-locations t env)) ((SgIs t ty) (SgIs (canon-locations t env) ty)))
-            (match many place (((Maybe $ Term) p)) ((None t) (None _)) ((Some t at) (Some _ $ canon-locations at env))))
+          (Cons _
+            (MkEntry name sub mu
+              (match many sg (((Sg) r)) ((SgTy t) (SgTy $ canon-locations t env)) ((SgIs t ty) (SgIs (canon-locations t env) ty)))
+              (match many place (((Maybe $ Term) p)) ((None t) (None _)) ((Some t at) (Some _ $ canon-locations at env))))
             (canon-locations-tele rest env)))))))
   (many canon-locations-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) -> (many (List $ MCtor) r)
     (match many cs _ ((Nil a) cs) ((Cons a c rest) (match many c _ ((MkMCtor m t) (Cons _ (MkMCtor m $ canon-locations t env) $ canon-locations-mctors rest env)))))))
@@ -3007,47 +3007,47 @@
           ((TVar x)
             (match many b _
               ((TVar y)
-              (let (erased px) $ fr-var _ _ _ pa)
-              (let (erased py) $ fr-var _ _ _ pb)
-              (match many (nat-eq-dec x y) _
-                ((BYes c1 c2 e) (Same _ _ env))
-                ((BNo c1 c2 ne)
-                  (let (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) neq)
-                    (match many (nat-lt x y) _
-                      ((BTrue) (values y x py px ne))
-                      ((BFalse) (values x y px py $ neq-sym _ _ ne))))
-                  (match many (or (is-meta env x) $ is-meta env y) _
-                    ((BTrue)
-                      (let (many (Nat) m) (many (Nat) o) (erased (In m n f) pm) (erased (In o n f) po2) (erased (Neq o m) neq2)
-                        (match many (and (is-meta env x) $ or (not $ is-meta env y) $ nat-eq x newer) _
-                          ((BTrue) (values x y px py $ neq-sym _ _ ne))
-                          ((BFalse) (values y x py px ne))))
-                      (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
-                        ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
-                    ((BFalse)
-                  (match many (or (not force) $ listed env x y) _
-                    ((BTrue) (contradiction _ bnd env a b))
-                    ((BFalse)
-                      (let (many sx) $ signature-of env newer)
-                      (let (many sy) $ signature-of env older)
-                      (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
-                        ((MkAdded k f0 f2 tb2c tb2)
-                          (let (many env2) $ env-set-table env _ _ bnd tb2)
-                          (let (erased p) $ prove-subterm k n)
-                          (let (many (Outcome k bnd) after-sig)
-                            (match many sx _
-                              ((None c) (Same _ _ env))
-                              ((Some c s)
-                                (match many sy (((Outcome k bnd) r))
-                                  ((None d) (Same _ _ env))
-                                  ((Some d s2)
-                                    (let (many s3) (erased ps3) $ canon-in _ _ bnd tb2 s)
-                                    (let (many s4) (erased ps4) $ canon-in _ _ bnd tb2 s2)
-                                    (unify _ _ bnd tb2 s3 ps3 s4 ps4 env2 force))))))
-                          (match many after-sig _
-                            ((Contra c cc m) (Contra _ _ m))
-                            ((Same c cc env) (Less _ _ _ _ tb2 env2 p))
-                            ((Less c cc j f3 tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
+                (let (erased px) $ fr-var _ _ _ pa)
+                (let (erased py) $ fr-var _ _ _ pb)
+                (match many (nat-eq-dec x y) _
+                  ((BYes c1 c2 e) (Same _ _ env))
+                  ((BNo c1 c2 ne)
+                    (let (many (Nat) newer) (many (Nat) older) (erased (In newer n f) pn) (erased (In older n f) po) (erased (Neq older newer) neq)
+                      (match many (nat-lt x y) _
+                        ((BTrue) (values y x py px ne))
+                        ((BFalse) (values x y px py $ neq-sym _ _ ne))))
+                    (match many (or (is-meta env x) $ is-meta env y) _
+                      ((BTrue)
+                        (let (many (Nat) m) (many (Nat) o) (erased (In m n f) pm) (erased (In o n f) po2) (erased (Neq o m) neq2)
+                          (match many (and (is-meta env x) $ or (not $ is-meta env y) $ nat-eq x newer) _
+                            ((BTrue) (values x y px py $ neq-sym _ _ ne))
+                            ((BFalse) (values y x py px ne))))
+                        (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
+                          ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
+                      ((BFalse)
+                    (match many (or (not force) $ listed env x y) _
+                      ((BTrue) (contradiction _ bnd env a b))
+                      ((BFalse)
+                        (let (many sx) $ signature-of env newer)
+                        (let (many sy) $ signature-of env older)
+                        (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
+                          ((MkAdded k f0 f2 tb2c tb2)
+                            (let (many env2) $ env-set-table env _ _ bnd tb2)
+                            (let (erased p) $ prove-subterm k n)
+                            (let (many (Outcome k bnd) after-sig)
+                              (match many sx _
+                                ((None c) (Same _ _ env))
+                                ((Some c s)
+                                  (match many sy (((Outcome k bnd) r))
+                                    ((None d) (Same _ _ env))
+                                    ((Some d s2)
+                                      (let (many s3) (erased ps3) $ canon-in _ _ bnd tb2 s)
+                                      (let (many s4) (erased ps4) $ canon-in _ _ bnd tb2 s2)
+                                      (unify _ _ bnd tb2 s3 ps3 s4 ps4 env2 force))))))
+                            (match many after-sig _
+                              ((Contra c cc m) (Contra _ _ m))
+                              ((Same c cc env) (Less _ _ _ _ tb2 env2 p))
+                              ((Less c cc j f3 tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
               ((TBound j) (contradiction _ bnd env a b))
               ((TErr m) (Contra _ _ m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force))))
           ((TBound j) (contradiction _ bnd env a b))

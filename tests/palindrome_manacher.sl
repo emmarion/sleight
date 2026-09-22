@@ -21,7 +21,7 @@
   n)
 
 (def-fns _ $ many man-test-main : -> (many (List (Nat)) answers)
-  (Cons _ (man-test-length "") $
+  $ Cons _ (man-test-length "") $
   Cons _ (man-test-length "a") $
   Cons _ (man-test-length "aa") $
   Cons _ (man-test-length "ab") $
@@ -48,6 +48,6 @@
   Cons _ (man-test-length "abcddcbaefggfe") $
   Cons _ (man-test-length "abaxyzzyxf") $
   Cons _ (man-test-length "babcbabcbaccba") $
-  Nil (Nat)))
+  Nil (Nat))
 
 man-test-main

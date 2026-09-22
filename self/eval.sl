@@ -732,7 +732,7 @@
             (let (erased wo2) (erased po2) (ref-widen _ _ _ le2 vo1))
             (let (many vo) (coerce vo1 po2))
             (values h2 hp2 (le-trans _ _ _ le1 le2) (Cons _ vo vs) (PkMany _ rest vo vs rpk)))
-        ((Once)
+          ((Once)
             (let-match erased pk (PkOnce ta ms2 c0 cs2 p))
             (let-match many cs (Cons b c crest))
             (let (erased h1) (many hp1) (erased le1) (many vs1) (erased pk1) $ eval fuel _ hp _ _ c st)

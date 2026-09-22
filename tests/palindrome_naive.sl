@@ -20,7 +20,7 @@
   n)
 
 (def-fns _ $ many pal-test-main : -> (many (List (Nat)) answers)
-  (Cons _ (pal-test-length "") $
+  $ Cons _ (pal-test-length "") $
   Cons _ (pal-test-length "a") $
   Cons _ (pal-test-length "aa") $
   Cons _ (pal-test-length "ab") $
@@ -37,6 +37,6 @@
   Cons _ (pal-test-length "abcdef") $
   Cons _ (pal-test-length "abacdfgdcaba") $
   Cons _ (pal-test-length "abcxyzyxdef") $
-  Nil (Nat)))
+  Nil (Nat))
 
 pal-test-main

@@ -740,7 +740,7 @@
     ((Cons a s rest)
       (match many s _
         ((MkCShape m c n) (match many m _ ((Many) (Cons _ s $ non-phantom rest))
-        ((Once) (Cons _ s $ non-phantom rest)) ((Erased) (non-phantom rest))))))))
+                                          ((Once) (Cons _ s $ non-phantom rest)) ((Erased) (non-phantom rest))))))))
 
 (def-fns _ $ many shape-index : (subterm many (List $ CShape) ss) (many (Nat) c) (many (Nat) i) -> (many (Maybe $ Nat) r)
   (match many ss _
@@ -943,7 +943,7 @@
           (match many m _
             ((Erased) (values kept (PkErased _ rest kept kpk)))
             ((Many) (values (Cons _ missing kept) (PkMany _ rest missing kept kpk)))
-        ((Once) (values (Cons _ missing kept) (PkOnce _ rest missing kept kpk)))))
+            ((Once) (values (Cons _ missing kept) (PkOnce _ rest missing kept kpk)))))
         ((Many)
           (let-match erased bpk (PkMany tb rr t bb bp))
           (let-match erased lk (LsCons tc td t0 a0 bb0 arest0 lq))
@@ -952,7 +952,7 @@
           (let (many (Code (Cons (List (Nat)) frame ctx) many-one) code) $ match many at _ ((MkAtIn f z p) (CVar _ z $ MHere _ _ _ p)))
           (match many m _
             ((Many) (values (Cons _ code kept) (PkMany _ rest code kept kpk)))
-        ((Once) (values (Cons _ code kept) (PkOnce _ rest code kept kpk)))
+            ((Once) (values (Cons _ code kept) (PkOnce _ rest code kept kpk)))
             ((Erased) (values kept (PkErased _ rest kept kpk)))))
         ((Once)
           (let-match erased bpk (PkOnce tb rr t bb bp))
@@ -962,7 +962,7 @@
           (let (many (Code (Cons (List (Nat)) frame ctx) many-one) code) $ match many at _ ((MkAtIn f z p) (CVar _ z $ MHere _ _ _ p)))
           (match many m _
             ((Many) (values (Cons _ code kept) (PkMany _ rest code kept kpk)))
-        ((Once) (values (Cons _ code kept) (PkOnce _ rest code kept kpk)))
+            ((Once) (values (Cons _ code kept) (PkOnce _ rest code kept kpk)))
             ((Erased) (values kept (PkErased _ rest kept kpk)))))))))
 
 (def-fns _ $ many projection : (erased (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (List $ Mult) rets) (erased (Lockstep (Mult) (Mult) expect rets) lock) (many (Env) env) ->
@@ -1856,7 +1856,7 @@
                   ((Cons c x more) (values env es))))))))
       (let (many env2) (many more) $ parse-entries-checked _ rest env1)
       (let (many all) (erased cat) $ list-append _ here more)
-        (values env2 all))))
+      (values env2 all))))
 
 (def-fns _ $ many check-binder-mults : (erased (List $ Raw) root) (subterm many (List $ SrcEntry root) es) (many (Env) env) -> (many (Env) r)
   (match many es _
@@ -2084,7 +2084,7 @@
       (match many ids _
         ((Nil b) (Nil _))
         ((Cons b x xrest) (match many m _ ((Many) (Cons _ x $ many-of rest xrest))
-        ((Once) (Cons _ x $ many-of rest xrest)) ((Erased) (many-of rest xrest))))))))
+                                          ((Once) (Cons _ x $ many-of rest xrest)) ((Erased) (many-of rest xrest))))))))
 
 ; Whether a def-fns group binds a many function; a group of erased ones leaves nothing behind (ASSUMPTIONS 77).
 ; ---- The elaborator proper: one block recursing on the raws it elaborates (self/README.md)
@@ -2508,11 +2508,11 @@
         (match many dropped _
           ((Some a d) d)
           ((None a)
-        (CMatch _ ns (norm _ _ many-one scrut ren)
-                (match many shape (((Shape ctx) s)) ((ShKnown c1 adt) (ShKnown _ adt)) ((ShNone c1) (ShNone _)) ((ShHeld c1 mc tags) (ShHeld _ (norm _ _ many-one mc ren) tags)))
-                (norm-branches _ _ ns bs ren)
-                (match many dfl (((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) r)) ((Some a d) (Some _ $ norm _ _ ns d $ ren-weaken _ _ (Nil _) ren)) ((None a) (None _)))
-                live))))
+            (CMatch _ ns (norm _ _ many-one scrut ren)
+                    (match many shape (((Shape ctx) s)) ((ShKnown c1 adt) (ShKnown _ adt)) ((ShNone c1) (ShNone _)) ((ShHeld c1 mc tags) (ShHeld _ (norm _ _ many-one mc ren) tags)))
+                    (norm-branches _ _ ns bs ren)
+                    (match many dfl (((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) r)) ((Some a d) (Some _ $ norm _ _ ns d $ ren-weaken _ _ (Nil _) ren)) ((None a) (None _)))
+                    live))))
 
       ((CCellAlloc c0 ctor slots)
         (let (many slots2) (erased lk) $ norm-list _ _ slots ren)

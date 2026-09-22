@@ -202,7 +202,7 @@
     (many (ManSpan xs) span) (erased (HasPalindromeOfLength xs width) has)
   (let (many k) (erased exact)
     (match many (man-reuse xs left fullright right mid i extra parity split llen mlen mcat
-      table radii frame) (((Nat) k) ((PalLcp left right k) exact))
+        table radii frame) (((Nat) k) ((PalLcp left right k) exact))
       ((None t) (man-expand left right))
       ((Some t seed)
         (let-match many seed (MkManSeed l r common lrest rrest start cl cr len))
