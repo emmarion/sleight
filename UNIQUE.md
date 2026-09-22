@@ -31,7 +31,9 @@ partitioning entries by location (§U8). Changed: `Coercible` and
 `coercible-refl` take one as their first argument (§U7); `Matchable`
 carries the `newtype` and `extern` marks (§U9); `_` as a binder name
 (§U16); §23's invariant is two tiers (§U14); an argument is as if
-bound first (§U2a). Removed: `Newtype`, `newtype-of` (§U7). Prelude:
+bound first (§U2a); a form's written multiplicity must be `erased` in an
+erased position, where `share` and `cell-match` are refused (§20, §U3,
+§U10). Removed: `Newtype`, `newtype-of` (§U7). Prelude:
 `Array`, `MaybeUninit` and their functions (§U13).
 
 ## U1. A third multiplicity, and a third match mode
@@ -113,7 +115,8 @@ expression yielding a unique value, as if bound to a variable `x` first
 use of `x` at unique on the same path (§U2), after which `x` is usable
 at many, as `(share x)` every time, and never again at unique. Its
 result `is x`, so a binder of it forwards `x`'s type and facts, and it
-is `at x` (§U8).
+is `at x` (§U8). A `share` in an erased position is an error, nothing
+being used there.
 
 ## U4. Fields
 
@@ -436,7 +439,8 @@ expression or from a destructure's field binders, none names an erased
 variable. A slot value is inert and may sit in a
 field or a list like any other value.
 
-`cell-match` reads a cell's words out, an expression in two modes,
+`cell-match` reads a cell's words out, an expression in two modes and an
+error in an erased position (§20),
 `(cell-match many u ann (C s1 ... sn) body)` with `u` at `many` and
 `(cell-match unique u ann (C s1 ... sn u2) body)` with `u` at
 `unique`, `ann` being a return annotation as a `match`'s (§11). In

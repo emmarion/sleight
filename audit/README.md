@@ -33,7 +33,7 @@ Open questions for the owner, also in ASSUMPTIONS 183; a settled one
 keeps its line, marked as the fixed items above are:
 
 - Q1. FIXED (§15, U5, §19): `comptime-match many` on a unique Const cannot write its `share`
-- Q2. An erased-position `unique` match mints `SlotHolds` over erased binders
+- Q2. FIXED (§20, U0, U3, U10): An erased-position `unique` match mints `SlotHolds` over erased binders
 - Q3. Structural Matchable marks prevent abstracting over extern and non-extern
 - Q4. FIXED (U1): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
 - Q5. Slot-indexed user types reach U10's class merge, U15's deferred question
@@ -42,7 +42,7 @@ keeps its line, marked as the fixed items above are:
 Minor observations, not acted on unless marked:
 
 - M1. `matchable-of` records no use of the Matchable entry
-- M2. `read_special`'s share branch lacks the erased-position guard
+- M2. FIXED (§20, U3): `read_special`'s share branch lacks the erased-position guard
 - M3. ML and self give different messages for some refusals
 - M4. FIXED (U4): The phantom-with-unique-field warning text said "many field"
 - M5. `_` not accepted as a `Cell` slot in a type

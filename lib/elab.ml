@@ -39,10 +39,11 @@ let rec special_of env raw =
   | List (_, [head; Atom (_, n)]) when special_of env head = Some Sp.Share -> Option.bind (lookup env n) value
   | _ -> None
 
-let read_special env raw =
+let read_special pos env raw =
   match raw with
   | Atom (l,n) -> use env l Many (Option.get (lookup env n))
   | List (l,[h;Atom (_,n)]) when special_of env h = Some Sp.Share ->
+      if pos = Erased then error l "share in an erased position";
       let x = Option.get (lookup env n) in
       if (entry env x).mult <> Unique then error l "share needs a unique value";
       use env l ~sharing:true Many x
@@ -667,7 +668,7 @@ and elab_form demand cc expect_tele env expect raw =
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
-      | Some sp -> elab_special demand expect_tele (read_special env head) expect l sp args
+      | Some sp -> elab_special demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
           let env, h, hcode, headwrap = elab_head env pos l head in
           let env, rs, code = match canon env h.ty with
@@ -1273,7 +1274,7 @@ and refine env scrut c fids ret =
 and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
   match raw with
   | List (l, head :: args) -> (
-      let env = if special_of env head <> None then read_special env head else env in
+      let env = if special_of env head <> None then read_special spos env head else env in
       match (special_of env head, args) with
       | Some Sp.Let, _ -> elab_let spos env l args
       | Some Sp.DefLvl, [ n ] ->

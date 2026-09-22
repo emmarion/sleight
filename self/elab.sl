@@ -136,7 +136,7 @@
                     ((BTrue) (special-of env arg))))))))))
     (else (special-of-atom env raw))))
 
-(def-fns _ $ many read-special : (many (Env) env) (subterm many (Raw) raw) (many (Bool) sharing) -> (many (Env) r)
+(def-fns _ $ many read-special : (many (Env) env) (subterm many (Raw) raw) (many (Bool) sharing) (many (Mult) pos) -> (many (Env) r)
   (match many raw _
     ((RAtom l n) (match many (lookup env n) _ ((None a) env) ((Some a x) (use-entry env (Many) x sharing))))
     ((RList l items)
@@ -145,7 +145,11 @@
         ((Cons a h rest)
           (match many rest _
             ((Nil b) env)
-            ((Cons b arg more) (read-special (read-special env h $ BFalse) arg $ BTrue))))))
+            ((Cons b arg more)
+              (let (many env) (match many (mult-is-many pos) (((Env) e))
+                ((BTrue) env)
+                ((BFalse) (env-error env "share in an erased position"))))
+              (read-special (read-special env h (BFalse) pos) arg (BTrue) pos))))))
     (else env)))
 
 (def-adts $ ExprDemand : ((List $ Mult) expect) -> Type
@@ -3380,7 +3384,7 @@
             ((Cons a head args)
               (match many (special-of envl head) (((Env) e) ((List $ Res) rs) ((Code ctx expect) c))
                 ((Some b sp)
-                  (let (many envl) $ read-special envl head $ BFalse)
+                  (let (many envl) $ read-special envl head (BFalse) pos)
                   (let (many multi) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ sp-eq sp $ SpMark $ MkDelegate)
                   (let (many (Env) env0)
                     (match many multi _
@@ -4152,7 +4156,7 @@
               (match many (special-of envl head) (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                 ((None b) (values bad ctx $ SNone _))
                 ((Some b sp)
-                  (let (many envl) $ read-special envl head $ BFalse)
+                  (let (many envl) $ read-special envl head (BFalse) spos)
                   (match many sp (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                     ((SpStmt st)
                       (match many st (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
