@@ -25,26 +25,11 @@
    ignoring it. Blank lines and comment-only lines carry no tokens and are
    silently skipped, matching the reader.
 
-   Running this today flags real files for two different reasons, not one:
-
-   - Genuine indentation typos, harmless to the reader but misleading to a
-     human (e.g. self/core.sl:32, self/elab.sl:946/955/965: an (Once) match
-     branch sitting one level left of its (Many)/(Erased) siblings, parens
-     still balanced). These are the bugs worth fixing file by file.
-
-   - A $ chain whose first element still opens with a literal "(" instead of
-     "$" (self/header.sl:4, self/core.sl:277-281's sp-table): every later
-     element already uses "$" at the same column, so the first one both
-     could and, for consistency, should too -- a small textual fix.
-
-   - A def-fns/def-adts signature that wraps its param/return telescope
-     across several more indented lines with no bracket of its own around
-     it (self/base.sl:212, self/base.sl:773's sort-factory): indentation
-     rises for readability but nothing is left open, so a later dedent
-     reads as leaving less than was entered. Fixing this for real means
-     giving the wrapped signature its own enclosing form, so its close
-     lines up with where indentation actually drops -- a syntax change,
-     not a one-line edit, and out of scope here. *)
+   The one shape it misreads is the other side of that $ rule: a form
+   introduced by $ whose arguments sit on more indented lines below it
+   reads as a level that never opened, since $ emits no token. Writing
+   such a form with parens appears to be the cheaper side to fix, the
+   flat-aligned chain above having no such alternative. *)
 
 open Speciallang
 open Reader
