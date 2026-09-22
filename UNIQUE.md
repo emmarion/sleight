@@ -7,9 +7,9 @@ it says linear or unique types are punted (§6) this file is the
 continuation. Section references with `§` are to DESIGN.md. A passage
 marked *reading* is a session's inference from the decisions, not a
 decision; §U17 lists what is not decided, as questions. Names are
-tentative throughout, as CLAUDE.md rule 10 has them. The worked
-example of §U13 is written against the rules as recorded, not
-machine-checked, as §40 is.
+tentative throughout, as CLAUDE.md rule 10 has them. §U13's
+definitions are the code `lib/prelude.sl` carries, unchanged, its
+closing two lines being illustrative.
 
 ## U0. What is new, in one place
 
