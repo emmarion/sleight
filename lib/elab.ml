@@ -1053,10 +1053,9 @@ and elab_cell_invoke ?(full = false) env expect l h hcode ctor slots args =
 and elab_cell_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: u :: ann :: List (pl, c :: names) :: body ->
-      let pos = pos_of expect in
+      if pos_of expect = Erased then error l "cell-match in an erased position";
       let mode = mult_or env l m in
-      let smult = under pos mode in
-      let env, r, code = elab_expr1 env smult u in
+      let env, r, code = elab_expr1 env mode u in
       let c = ctor_var env pl c in
       let c', slots = match canon env r.ty with Cell (Var c, ss) -> c, ss | _ -> error l "cell-match needs a Cell" in
       check_equal env l (Var c) (Var c');
@@ -1065,12 +1064,12 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       if List.length names <> needed then error pl "cell-match needs %d binders" needed;
       let env, ann_tele = result_tele ~demand tele env expect l ann in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
-      let sid, env = bind env ~word:true ~temporary:true None smult Dyn r.ty ~rule:r.term in
+      let sid, env = bind env ~word:true ~temporary:true None mode Dyn r.ty ~rule:r.term in
       let env = match r.place with Some p -> at_merge env (Var sid) p | None -> env in
-      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true (name_or_anon (atom_or pl n "a slot binder")) (under pos Many) Dyn Prelude.slot_term in (env,x)) env (List.filteri (fun i _ -> i < ct.arity) names) in
+      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) env (List.filteri (fun i _ -> i < ct.arity) names) in
       let envb = merge_opens (unify_force (forcing envb) (Cell (Var c,List.map (fun x -> Var x) ids)) (Cell (Var c,slots))) in
       let envb, back = if mode <> Unique then (envb, None) else
-        let x, envb = bind envb ~word:true (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) (under pos Unique) Dyn r.ty ~rule:r.term in
+        let x, envb = bind envb ~word:true (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
         (at_merge envb (Var x) (Var sid), Some x) in
       let envb, rs, body = elab_body ~tele:ann_tele envb expect l body in
       check_results envb l ann_tele rs;
@@ -1078,7 +1077,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
-      (env, List.map (res_of env) result_ids, if pos = Erased then V.CErased else V.CLet ([sid], code, body))
+      (env, List.map (res_of env) result_ids, V.CLet ([sid], code, body))
   | _ -> error l "malformed cell-match"
 
 and scrutinee env l smult scrut =

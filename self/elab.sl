@@ -218,6 +218,9 @@
 (def-fns _ $ many error-when : (many (Env) env) (many (Bool) bad) (many (String) msg) -> (many (Env) r)
   (error-unless env (not bad) msg))
 
+(def-fns _ $ many written : (many (Env) env) (many (Mult) pos) (many (Mult) m) (many (String) what) -> (many (Env) r)
+  (error-when env (and (not $ mult-is-many pos) $ mult-is-many m) $ str-cat what " in an erased position is written erased"))
+
 ; ---- Literals (ASSUMPTIONS 51-53, 60): numerals, characters and strings, interned per program
 
 (def-adts $ LitKind : -> Type
@@ -3413,6 +3416,7 @@
                             ((Nil a) (malformed _ expect env0 sp))
                             ((Cons a arg rest)
                               (let (many env1) $ error-unless env0 (list-is-empty _ rest) "share takes one value")
+                              (let (many env1) $ error-when env1 (not $ mult-is-many pos) "share in an erased position")
                               (let (many mode) $ under pos $ Once)
                               (let (many env2) (many r) (many physical)
                                 (match many arg (((Env) e) ((Res) r) ((Code ctx many-one) c))
@@ -3901,6 +3905,7 @@
                   ((Nil w) (expr-error _ expect env "malformed cell-match" "cell-match"))
                   ((Cons w pattern body)
                     (let (many pos) (pos-mult expect))
+                    (let (many env) (error-when env (not $ mult-is-many pos) "cell-match in an erased position"))
                     (let (many env0) (many mode) (mult-checked env mraw))
                     (let (many mult) (under pos mode))
                     (let (many env1) (many rs) (many inputcode) (erased lk) (elab-expr-demand sugar input env0 ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
@@ -4110,8 +4115,8 @@
         (match many rest _
           ((Nil b) (elab-expr-demand sugar (subterm pi) item env ctx expect tele (CCPlain) (Fixed _)))
           ((Cons b item2 rest2)
-            (let (many env2) (many ctx2) (many sc) $ elab-stmt sugar (subterm pi) item env ctx)
-            (let (many env3) (many ctx3) (many sc2) (many final) $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2)
+            (let (many env2) (many ctx2) (many sc) $ elab-stmt sugar (subterm pi) item env ctx (pos-mult expect))
+            (let (many env3) (many ctx3) (many sc2) (many final) $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 (pos-mult expect))
             (match many final _
               ((FinalNone c)
                 (let (many ress) (erased lock) $ list-fit _ _ expect (Nil _) no-res)
@@ -4122,7 +4127,7 @@
 
   ; The statements before a body's final expression and the code they wrap around what follows them
   ; (lib/elab.ml's elab_stmts), then the final expression with its place in [root].
-  (many elab-stmts : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) ->
+  (many elab-stmts : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) ->
       (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc) (many (Final root) final)
     (match many items _
       ((Nil a) (values env ctx (SNone _) $ FinalNone _))
@@ -4131,11 +4136,11 @@
         (match many rest _
           ((Nil b) (values env ctx (SNone _) $ FinalIs _ item pi))
           ((Cons b item2 rest2)
-            (let (many env2) (many ctx2) (many sc) $ elab-stmt sugar (subterm pi) item env ctx)
-            (let (many env3) (many ctx3) (many sc2) (many final) $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2)
+            (let (many env2) (many ctx2) (many sc) $ elab-stmt sugar (subterm pi) item env ctx spos)
+            (let (many env3) (many ctx3) (many sc2) (many final) $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 spos)
             (values env3 ctx3 (SSeq _ _ _ sc sc2) final))))))
 
-  (many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many envl) $ env-at env $ raw-line raw)
     (let (many bad) $ env-error envl $ str-cat (show-r raw) " is not a statement")
     (let (many (Env) env2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
@@ -4160,7 +4165,7 @@
                               ((BTrue)
                                 (let (many env1) (many bound) (many t) $ elab-src-entries sugar args (SZ) binders env0 (MMDeclared) (Nil _) (Nil _) (BFalse) (BTrue) $ BFalse)
                                 (values (env-restore env0 env1) $ Some _ t))))
-                          (elab-let sugar args (MkLetParts _ binders rhs wr) env0b ctx tele))
+                          (elab-let sugar args (MkLetParts _ binders rhs wr) env0b ctx tele spos))
                         ((StDefLvl)
                           (match many args (((Env) e0) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
                             ((Nil c) (values (env-error envl "def-lvl needs a name") ctx $ SNone _))
@@ -4178,8 +4183,8 @@
                               (let (many ms) (many ids) (erased ipk) (many codes) (erased cpk) $ consts-codes ctx consts)
                               (values env4 (Cons _ ids ctx) $ SLet _ ms ids ipk $ CValues _ ms codes cpk))))
                         ((StComptimeMatch) (let (many env2) (many sc) $ elab-comptime-match ctx envl args) (values env2 ctx sc))
-                        ((StLetMatch) (elab-let-match sugar args envl ctx))
-                        ((StUnary) (elab-unary sugar args envl ctx))
+                        ((StLetMatch) (elab-let-match sugar args envl ctx spos))
+                        ((StUnary) (elab-unary sugar args envl ctx spos))
                         ((StOpenAdt) (elab-open-adt sugar args envl ctx)))) (else (values bad ctx $ SNone _)))))))) (else (values bad ctx $ SNone _))))
     (values (env-back env env2) ctx2 sc))
 
@@ -4211,7 +4216,7 @@
 
   ; let-match (section 16, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
-  (many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many bad) $ env-error env "malformed let-match: expected (let-match <multiplicity> x (C field ...))")
     (match many args _
       ((Nil a) (values bad ctx $ SNone _))
@@ -4229,6 +4234,7 @@
                       ((Nil e) (values bad ctx $ SNone _))
                       ((Cons e craw fields)
                         (let (many env0) (many smult) $ mult-checked env mraw)
+                        (let (many env0) $ written env0 spos smult "a let-match")
                         (let (many env1a) (many srs) (many scode) (erased lock) $ elab-expr-demand sugar scrut env0 ctx (Cons _ smult $ Nil _) no-tele (CCPlain) (Fixed _))
                         (let (many original) $ first-res _ _ srs lock)
                         (let (many source-code) (runtime-one _ smult scode))
@@ -4298,7 +4304,7 @@
 
   ; unary (SUGAR.md 5): the literals checked in the reference's order, then the let-match the form stands
   ; for, written out as there.
-  (many elab-unary : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-unary : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (let (many arity-error) $ env-error env "unary takes one or two literals")
     (match many args _
       ((Nil a) (values arity-error ctx $ SNone _))
@@ -4337,7 +4343,7 @@
                           ((Zero) (values (env-error env2 "internal: a generated form contains sugar") ctx $ SNone _))
                           ((Succ k)
                             (let (many gen) $ unary-source za l floored)
-                            (let (many env3) (many ctx2) (many sc) $ elab-stmt k gen (generated-form gen env2) ctx)
+                            (let (many env3) (many ctx2) (many sc) $ elab-stmt k gen (generated-form gen env2) ctx spos)
                             (values (leave-prelude env2 env3) ctx2 sc))))))))))))))
 
   ; distinct (SUGAR.md 5): a match on numeral-inj's Eq, once the two literals are checked to be different
@@ -4383,12 +4389,12 @@
   ; annotation is a checked redundancy.
   ; Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
   ; produce (SUGAR.md 6); the check of each binder against its value stays as it was.
-  (many elab-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (LetParts args) parts) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
+  (many elab-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (LetParts args) parts) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc)
     (match many parts _
       ((MkLetParts z binders rhs wr)
         (let (many env1) $ check-binder-mults _ binders env0)
         (let (many expect) (erased lbe) $ src-mults _ binders)
-        (let (many env1b) (many ctx2) (many sc) (many final) $ elab-stmts sugar args rhs wr env1 ctx)
+        (let (many env1b) (many ctx2) (many sc) (many final) $ elab-stmts sugar args rhs wr env1 ctx spos)
         (match many final _
           ((FinalNone z2) (values (env-error env1b "a body needs a final expression") ctx2 sc))
           ((FinalIs z2 fin pf)
@@ -4835,6 +4841,7 @@
               ((Cons c ann branches)
                 (let (many pos) (erased pos-proof) $ pos-of expect)
                 (let (many env0) (many sm) $ mult-checked env mraw)
+                (let (many env0) $ written env0 pos sm "a match")
                 (let (many smult) $ under pos sm)
                 (let (many env2a) (many srs) (many scode) (erased lock) $ elab-expr-demand sugar scrut env0 ctx (Cons _ smult $ Nil _) no-tele (CCPlain) (Fixed _))
                 (let (many original) $ first-res _ _ srs lock)
@@ -4860,7 +4867,7 @@
                             (let (many outer-expect) expect)
                             (let (many env3b) (many ann-tele) (many inner-expect) (many bridge) $ result-tele sugar ann env2c expect tele demand)
                             (let (many expect) inner-expect)
-                            (let (many extra) (and (mult-is-once sm) (cells-allowed env3b mid)))
+                            (let (many extra) (and (mult-is-once smult) (cells-allowed env3b mid)))
                             (let (many incoming) (env-uses env3b))
                             (let (many env5) (many real) (many seen) $ elab-branches sugar branches env3b ctx tid sres smult mctors ann-tele expect (Nil _) (Nil _) extra saved incoming incoming)
                             (let (many env6) $ check-coverage mctors env5 seen)
@@ -5203,7 +5210,7 @@
       (let (many env2) $ intern-literals item $ env-at env $ raw-line item)
       (match many (is-statement env2 item) _
         ((BTrue)
-          (let (many env3) (many ctx2) (many sc) $ elab-stmt sugar-budget item env2 $ Nil _)
+          (let (many env3) (many ctx2) (many sc) $ elab-stmt sugar-budget item env2 (Nil _) (Many))
           (run-toplevel rest env3))
         ((BFalse)
           (match many rest _
