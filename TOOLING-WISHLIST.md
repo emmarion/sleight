@@ -310,3 +310,17 @@ files are not in this tree; they are at commit `4912ada`
     name is defined against where it was wanted would have settled it
     faster than the arity error that followed.
 
+38. **Identity re-matches in the emitters.** A match on a plain type
+    with no `else` whose every arm rebuilds the arm's own constructor
+    from its fields in order could emit its scrutinee; the extracted
+    slc has 39 such arms, in the trie walkers among them, each
+    allocating a copy per level. The `slc-performance-investigation`
+    branch had this in both emitters (its commit "Extraction: a match
+    whose every arm rebuilds its own constructor is its scrutinee")
+    and measured it at about a fifth of a compile that has since
+    changed shape; on today's profile the trie walk is a quarter of
+    the run, so the gain would be a few percent. Under mutable blocks
+    it needs the argument that a block a `many` match read is mutated
+    by neither side afterwards. Source-level, section 38's `coerce`
+    with `coercible-ctor` says the same at zero cost.
+
