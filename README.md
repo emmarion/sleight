@@ -136,11 +136,12 @@ runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).
 
 Shadowing is legal (section 9) and silent by default. `--warn-shadow` asks
-for a warning at every binder that hides a name already in scope, with a note
-at the binding it hides, or, where that one has no position of its own,
-saying it is a built-in — a special form or an annotation token, which is the
-case worth finding, since a field named `tail` or a `let` binder named `at`
-leaves that scope unable to write the marker. It is off by default because
+for a warning at every binder that hides a name already in scope —
+`the binder List shadows an earlier one`, with a note at the binder it
+shadows, or `the binder tail shadows a built-in` where that one has no
+position of its own, being a special form or an annotation token. That last
+is the case worth finding, since a field named `tail` or a `let` binder named
+`at` leaves that scope unable to write the marker. It is off by default because
 the repository does it everywhere: `lib/prelude.sl` earns two (`Cons`'s
 `tail` field, twice over), `self/*.sl` 314 over its 13000 lines, 94 of them
 over a built-in, and every test earns at least one, `tests/list.sl` alone
