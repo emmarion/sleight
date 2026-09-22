@@ -133,7 +133,7 @@ let open_adt env x =
 
 (* The opened Matchable for a type, at most one (Env.merge_opens). *)
 let matchables env tid =
-  let of_type o = match (o.Env.names, type_of env o.obj) with Var t :: _, Matchable (d, _, _, _, cs) when t = tid -> Some (o.obj, d, cs) | _ -> None in
+  let of_type o = match o.Env.names with Var t :: _ when t = tid -> (match type_of env o.obj with Matchable (d, _, _, _, cs) -> Some (o.obj, d, cs) | _ -> None) | _ -> None in
   List.filter_map of_type env.opens.opened
 
 let find_matchable env loc tid =
@@ -175,7 +175,7 @@ let wrapper disc shapes =
   | _ -> None
 
 let newtype_of env c =
-  List.find_map (fun o -> match type_of env o.Env.obj with
+  List.find_map (fun o -> if not (List.mem (Var c) o.Env.names) then None else match type_of env o.Env.obj with
     | Matchable (d, true, _, _, cs) when wrapper d (shapes env 0 cs) = Some c -> Some o.obj
     | _ -> None) env.opens.opened
 
