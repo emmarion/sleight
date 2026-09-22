@@ -3693,3 +3693,14 @@ without the owner.
     it, `append-rule` is erased, and `RuleFound` is indexed by the term
     it finds, every field erased. The chase's only physical step is
     the trie lookup, and the ordering proofs are unchanged.
+
+192. **A newtype is looked up among the opened objects the index lists
+    for its constructor.** `find-newtype-in` walked every opened
+    object, canonicalizing each one's Matchable type, where
+    `find-matchable-in` and `listed-in` first test membership in the
+    candidates the opens index gives for the name; it now does the
+    same, and the reference's `newtype_of` and `matchables` test an
+    object's recorded names before canonicalizing its type. Exact
+    under the index's invariant, an object being listed under each
+    name its type holds canonically and the wrapper constructor being
+    one of them; the emitted program is unchanged.
