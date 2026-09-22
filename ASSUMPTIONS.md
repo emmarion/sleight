@@ -3697,3 +3697,31 @@ without the owner.
     under the index's invariant, an object being listed under each
     name its type holds canonically and the wrapper constructor being
     one of them; the emitted program is unchanged.
+
+193. **What an indentation warning says, and where the check runs.**
+    The check of `lib/indent.ml` runs over each file the driver is
+    handed, before that file is parsed; what the text left open is
+    this session's, and the two implementations were compared over the
+    repository's sources and a thousand generated files to settle it
+    the same way on both sides. A message is
+    `path:line: warning: text`, the shape of an error with `warning`
+    for `error`, and `path: warning: text` where what is reported is
+    the file's rather than one line's, which is the count of forms
+    left open; section 12's phantom-constructor warning keeps its own
+    older spelling, `warning (line n): text`. The depth never falls
+    below zero: a `)` with nothing open is reported where it sits and
+    leaves the depth alone, so one surplus `)` does not shift the
+    nesting every line after it is read against, which also lets
+    `self/reader.sl` hold the depth in a `Nat`. A line is the line a
+    token's first character sits on, read from the token's offset
+    rather than from the line `Reader.scan_upto` records for it, the
+    two differing for a literal spanning lines; the tab a line is
+    warned for is any tab in the source between that line's start and
+    its first token, a literal's own text included, which is what
+    reading the offsets amounts to. Where the lexer cannot finish, the
+    check reports what was read before it stopped and no more, and
+    leaves the stopping point to the syntax error the driver then
+    reports; `bin/indent.ml`, which reports nothing else, prints it.
+    `lib/builtin.ml`'s prelude is not checked, being no file the
+    driver was given, where `slc` checks it as one named on its
+    command line.

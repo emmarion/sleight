@@ -219,3 +219,378 @@
     (match many rs _
       ((Nil a) (Nil _))
       ((Cons a r rest) (Cons _ (show-raw r) $ show-raws rest)))))
+
+; The indentation check of lib/indent.ml, read from the source text rather than from the tokens above, which
+; carry no column: indentation is a claim about paren nesting, and a line's claim is checked against the
+; depth in force where its first token starts. It runs before the parse, so a file the reader goes on to
+; refuse is reported on too. $ is not nesting and is not tracked; lib/indent.ml's header says why.
+
+(def-adts $ (IndentLine : -> Type)
+  enum
+  (many MkIndentLine : (many (Nat) line) (many (Nat) indent) (many (Nat) nesting) -> (IndentLine)))
+
+; The scan's state: the line and the characters seen on it, the paren depth, whether a token has started on
+; this line and whether a tab sits in what precedes it, the first line at which a ) closed more than was
+; open, and the lines checked and the lines carrying a tab, both reversed.
+(def-adts $ (IndentSt : -> Type)
+  enum
+  (many MkIndentSt : (many (Nat) line) (many (Nat) col) (many (Nat) depth) (many (Bool) started)
+      (many (Bool) tabbed) (many (Maybe $ Nat) surplus) (many (List $ IndentLine) lines)
+      (many (List $ Nat) tabs) -> (IndentSt)))
+
+(def-fns _ $ (many ind-nl : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many st _ ((MkIndentSt l c d s t u ls ts) (MkIndentSt (Succ l) 0 d (BFalse) (BFalse) u ls ts))))
+
+(def-fns _ $ (many ind-plain : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many st _ ((MkIndentSt l c d s t u ls ts) (MkIndentSt l (Succ c) d s t u ls ts))))
+
+; A tab is recorded for the line it sits on whatever is being read there, a literal included: what the check
+; reads is the text between the start of a line and the first token attributed to it.
+(def-fns _ $ (many ind-tab : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many st _ ((MkIndentSt l c d s t u ls ts) (MkIndentSt l (Succ c) d s (BTrue) u ls ts))))
+
+(def-fns _ $ (many ind-mark : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many st _
+    ((MkIndentSt l c d s t u ls ts)
+      (match many s _
+        ((BTrue) st)
+        ((BFalse)
+          (let ((many (List $ Nat) ts2))
+            (match many t (((List $ Nat) r))
+              ((BTrue) (Cons _ l ts))
+              ((BFalse) ts)))
+          (MkIndentSt l c d (BTrue) t u (Cons _ (MkIndentLine l c d) ls) ts2))))))
+
+(def-fns _ $ (many ind-open : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many (ind-plain $ ind-mark st) _
+    ((MkIndentSt l c d s t u ls ts) (MkIndentSt l c (Succ d) s t u ls ts))))
+
+; A ) with nothing open is recorded where it sits and leaves the depth at zero, so the lines after it are
+; still checked against the count of forms actually open.
+(def-fns _ $ (many ind-close : (many (IndentSt) st) -> (many (IndentSt) r))
+  (match many (ind-plain $ ind-mark st) _
+    ((MkIndentSt l c d s t u ls ts)
+      (match many d _
+        ((Succ p) (MkIndentSt l c p s t u ls ts))
+        ((Zero)
+          (let ((many (Maybe $ Nat) u2))
+            (match many u (((Maybe $ Nat) r))
+              ((Some b m) u)
+              ((None b) (Some _ l))))
+          (MkIndentSt l c 0 s t u2 ls ts))))))
+
+; A string literal's token sits at its opening quote, so the line it opened on is recorded once the literal
+; closes, and an unterminated one is no token at all, the reference reader emitting none for it.
+(def-fns _ $ (many ind-close-str : (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc) (many (Bool) os)
+    (many (Bool) ot) -> (many (IndentSt) r))
+  (match many st _
+    ((MkIndentSt l c d s t u ls ts)
+      (let ((many (List $ IndentLine) ls2) (many (List $ Nat) ts2))
+        (match many os (((List $ IndentLine) x) ((List $ Nat) y))
+          ((BTrue) (values ls ts))
+          ((BFalse)
+            (let ((many (List $ Nat) ts1))
+              (match many ot (((List $ Nat) y))
+                ((BTrue) (Cons _ ol ts))
+                ((BFalse) ts)))
+            (values (Cons _ (MkIndentLine ol oc d) ls) ts1))))
+      (MkIndentSt l c d (nat-eq l ol) t u ls2 ts2))))
+
+(def-fns _ $ (many ind-delim : (many (Char) c) (many (IndentSt) st) ->
+    (many (Bool) comment) (many (IndentSt) st2))
+  (let ((many n)) (char-code c))
+  (match many (nat-eq n 59) _
+    ((BTrue) (values (BTrue) (ind-plain st)))
+    ((BFalse)
+      (match many (nat-eq n 40) _
+        ((BTrue) (values (BFalse) (ind-open st)))
+        ((BFalse)
+          (match many (nat-eq n 41) _
+            ((BTrue) (values (BFalse) (ind-close st)))
+            ((BFalse)
+              (match many (nat-eq n 10) _
+                ((BTrue) (values (BFalse) (ind-nl st)))
+                ((BFalse)
+                  (match many (nat-eq n 9) _
+                    ((BTrue) (values (BFalse) (ind-tab st)))
+                    ((BFalse) (values (BFalse) (ind-plain st)))))))))))))
+
+; Five modes over the source: between tokens, inside a word, inside a comment, and inside a string literal
+; or its escape. A word runs to a delimiter, which a quote is not, so only a quote met between tokens opens
+; a literal, as in the tokenizer above. The scan stops where the tokenizer's lexing would, at an unterminated
+; literal or an escape it does not know, so that what is reported is what was read, as in lib/indent.ml.
+(def-fns _
+  ((many ind-scan : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
+    (match many s _
+      ((SNil) st)
+      ((SCons c rest)
+        (match many (is-delim c) _
+          ((BTrue)
+            (let ((many comment) (many st2)) (ind-delim c st))
+            (match many comment _
+              ((BTrue) (ind-comment rest st2))
+              ((BFalse) (ind-scan rest st2))))
+          ((BFalse)
+            (match many (char-is c 34) _
+              ((BTrue)
+                (match many st (((IndentSt) r))
+                  ((MkIndentSt l cl d sd t u ls ts) (ind-str rest (ind-plain st) l cl sd t))))
+              ((BFalse) (ind-word rest (ind-plain $ ind-mark st)))))))))
+  ((many ind-word : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
+    (match many s _
+      ((SNil) st)
+      ((SCons c rest)
+        (match many (is-delim c) _
+          ((BTrue)
+            (let ((many comment) (many st2)) (ind-delim c st))
+            (match many comment _
+              ((BTrue) (ind-comment rest st2))
+              ((BFalse) (ind-scan rest st2))))
+          ((BFalse) (ind-word rest (ind-plain st)))))))
+  ((many ind-comment : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
+    (match many s _
+      ((SNil) st)
+      ((SCons c rest)
+        (match many (char-is c 10) _
+          ((BTrue) (ind-scan rest (ind-nl st)))
+          ((BFalse) (ind-comment rest (ind-plain st)))))))
+  ((many ind-str : (subterm many (String) s) (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc)
+       (many (Bool) os) (many (Bool) ot) -> (many (IndentSt) r))
+    (match many s _
+      ((SNil) st)
+      ((SCons c rest)
+        (match many (char-is c 34) _
+          ((BTrue) (ind-scan rest (ind-close-str (ind-plain st) ol oc os ot)))
+          ((BFalse)
+            (match many (char-is c 92) _
+              ((BTrue) (ind-str-esc rest (ind-plain st) ol oc os ot))
+              ((BFalse)
+                (match many (char-is c 10) _
+                  ((BTrue) (ind-str rest (ind-nl st) ol oc os ot))
+                  ((BFalse)
+                    (match many (char-is c 9) (((IndentSt) r))
+                      ((BTrue) (ind-str rest (ind-tab st) ol oc os ot))
+                      ((BFalse) (ind-str rest (ind-plain st) ol oc os ot))))))))))))
+  ((many ind-str-esc : (subterm many (String) s) (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc)
+       (many (Bool) os) (many (Bool) ot) -> (many (IndentSt) r))
+    (match many s _
+      ((SNil) st)
+      ((SCons c rest)
+        (match many (escape-ok c) _
+          ((BFalse) st)
+          ((BTrue) (ind-str rest (ind-plain st) ol oc os ot)))))))
+
+(def-fns _ $ (many ind-cat : (subterm many (List $ String) parts) -> (many (String) r))
+  (match many parts _
+    ((Nil a) (SNil))
+    ((Cons a p rest) (str-cat p $ ind-cat rest))))
+
+(def-fns _ $ (many ind-at : (many (String) path) (many (Nat) line) (many (String) msg) -> (many (String) r))
+  (ind-cat
+    $ Cons _ path
+    $ Cons _ ":"
+    $ Cons _ (nat-str line)
+    $ Cons _ ": warning: "
+    $ Cons _ msg
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-same : (many (Nat) i) (many (Nat) n) (many (Nat) tn) -> (many (String) r))
+  (ind-cat
+    $ Cons _ "same indentation ("
+    $ Cons _ (nat-str i)
+    $ Cons _ ") as the previous checked line but nesting is "
+    $ Cons _ (nat-str n)
+    $ Cons _ ", expected "
+    $ Cons _ (nat-str tn)
+    $ Cons _ " (matching that line)"
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-deeper : (many (Nat) ti) (many (Nat) i) (many (Nat) tn) (many (Nat) n) ->
+    (many (String) r))
+  (ind-cat
+    $ Cons _ "indentation increased ("
+    $ Cons _ (nat-str ti)
+    $ Cons _ " -> "
+    $ Cons _ (nat-str i)
+    $ Cons _ ") but nesting did not increase ("
+    $ Cons _ (nat-str tn)
+    $ Cons _ " -> "
+    $ Cons _ (nat-str n)
+    $ Cons _ ")"
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-pop : (many (Nat) ei) (many (Nat) en) (many (Nat) n) -> (many (String) r))
+  (ind-cat
+    $ Cons _ "dedented past indentation "
+    $ Cons _ (nat-str ei)
+    $ Cons _ " (nesting "
+    $ Cons _ (nat-str en)
+    $ Cons _ "), but this line's nesting is "
+    $ Cons _ (nat-str n)
+    $ Cons _ " (expected less than "
+    $ Cons _ (nat-str en)
+    $ Cons _ ")"
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-enclosing : (many (Nat) i) (many (Nat) ei) (many (Nat) en) (many (Nat) n) ->
+    (many (String) r))
+  (ind-cat
+    $ Cons _ "dedented to indentation "
+    $ Cons _ (nat-str i)
+    $ Cons _ ", but an enclosing line at indentation "
+    $ Cons _ (nat-str ei)
+    $ Cons _ " has nesting "
+    $ Cons _ (nat-str en)
+    $ Cons _ ", not less than this line's "
+    $ Cons _ (nat-str n)
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-back : (many (Nat) i) (many (Nat) en) (many (Nat) n) -> (many (String) r))
+  (ind-cat
+    $ Cons _ "dedented back to indentation "
+    $ Cons _ (nat-str i)
+    $ Cons _ ", matching an earlier line, but nesting is "
+    $ Cons _ (nat-str en)
+    $ Cons _ " there vs "
+    $ Cons _ (nat-str n)
+    $ Cons _ " here"
+    $ Nil _))
+
+(def-fns _ $ (many ind-msg-depth : (many (String) path) (many (Nat) d) -> (many (String) r))
+  (ind-cat
+    $ Cons _ path
+    $ Cons _ ": warning: final depth "
+    $ Cons _ (nat-str d)
+    $ Cons _ " (unclosed forms: append that many ))"
+    $ Nil _))
+
+(def-fns _ $ (many ind-tabs : (many (String) path) (subterm many (List $ Nat) ts)
+    (many (List $ String) acc) -> (many (List $ String) r))
+  (match many ts _
+    ((Nil a) acc)
+    ((Cons a l more)
+      (ind-tabs path more
+        $ Cons _ (ind-at path l "indentation uses a tab, not spaces only") acc))))
+
+(def-fns _ $ (many ind-pop : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (subterm many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) rest) (many (List $ String) acc2))
+  (match many stack _
+    ((Nil a) (values stack acc))
+    ((Cons a e more)
+      (match many e _
+        ((MkPair x y ei en)
+          (match many (nat-lt i ei) _
+            ((BFalse) (values stack acc))
+            ((BTrue)
+              (let ((many (List $ String) acc1))
+                (match many (nat-lt n en) (((List $ String) r))
+                  ((BTrue) acc)
+                  ((BFalse) (Cons _ (ind-at path ln $ ind-msg-pop ei en n) acc))))
+              (ind-pop path ln i n more acc1))))))))
+
+(def-fns _ $ (many ind-enclosing : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (subterm many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ String) acc2))
+  (match many stack _
+    ((Nil a) acc)
+    ((Cons a e more)
+      (match many e _
+        ((MkPair x y ei en)
+          (let ((many (List $ String) acc1))
+            (match many (and (nat-lt ei i) (not $ nat-lt en n)) (((List $ String) r))
+              ((BFalse) acc)
+              ((BTrue) (Cons _ (ind-at path ln $ ind-msg-enclosing i ei en n) acc))))
+          (ind-enclosing path ln i n more acc1))))))
+
+(def-fns _ $ (many ind-same : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (Nat) tn) (many (List $ Pair (Nat) $ Nat) more) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (let ((many (List $ String) acc1))
+    (match many (nat-eq n tn) (((List $ String) r))
+      ((BTrue) acc)
+      ((BFalse) (Cons _ (ind-at path ln $ ind-msg-same i n tn) acc))))
+  (values (Cons _ (MkPair _ _ i n) more) acc1))
+
+(def-fns _ $ (many ind-deeper : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (Nat) ti) (many (Nat) tn) (many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (let ((many (List $ String) acc1))
+    (match many (nat-lt tn n) (((List $ String) r))
+      ((BTrue) acc)
+      ((BFalse) (Cons _ (ind-at path ln $ ind-msg-deeper ti i tn n) acc))))
+  (values (Cons _ (MkPair _ _ i n) stack) acc1))
+
+(def-fns _ $ (many ind-back : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (Pair (Nat) $ Nat) e) (many (List $ Pair (Nat) $ Nat) rest)
+    (many (List $ Pair (Nat) $ Nat) rem) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (match many e _
+    ((MkPair x y ei en)
+      (match many (nat-eq ei i) (((List $ Pair (Nat) $ Nat) s2) ((List $ String) r))
+        ((BFalse) (values (Cons _ (MkPair _ _ i n) rem) acc))
+        ((BTrue)
+          (let ((many (List $ String) acc1))
+            (match many (nat-eq en n) (((List $ String) r))
+              ((BTrue) acc)
+              ((BFalse) (Cons _ (ind-at path ln $ ind-msg-back i en n) acc))))
+          (values (Cons _ (MkPair _ _ i n) rest) acc1))))))
+
+(def-fns _ $ (many ind-dedent : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (let ((many rem) (many acc1)) (ind-pop path ln i n stack acc))
+  (let ((many acc2)) (ind-enclosing path ln i n rem acc1))
+  (match many rem (((List $ Pair (Nat) $ Nat) s2) ((List $ String) r))
+    ((Nil b) (values (Cons _ (MkPair _ _ i n) rem) acc2))
+    ((Cons b e2 rest2) (ind-back path ln i n e2 rest2 rem acc2))))
+
+(def-fns _ $ (many ind-head : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (Pair (Nat) $ Nat) e) (many (List $ Pair (Nat) $ Nat) more)
+    (many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (match many e _
+    ((MkPair x y ti tn)
+      (match many (nat-eq i ti) (((List $ Pair (Nat) $ Nat) s2) ((List $ String) r))
+        ((BTrue) (ind-same path ln i n tn more acc))
+        ((BFalse)
+          (match many (nat-lt ti i) (((List $ Pair (Nat) $ Nat) s2) ((List $ String) r))
+            ((BTrue) (ind-deeper path ln i n ti tn stack acc))
+            ((BFalse) (ind-dedent path ln i n stack acc))))))))
+
+(def-fns _ $ (many ind-step : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
+    (many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) ->
+    (many (List $ Pair (Nat) $ Nat) s2) (many (List $ String) acc2))
+  (match many stack _
+    ((Nil a) (values (Cons _ (MkPair _ _ i n) $ Nil _) acc))
+    ((Cons a e more) (ind-head path ln i n e more stack acc))))
+
+(def-fns _ $ (many ind-check : (many (String) path) (subterm many (List $ IndentLine) lines)
+    (many (List $ Pair (Nat) $ Nat) stack) (many (List $ String) acc) -> (many (List $ String) r))
+  (match many lines _
+    ((Nil a) acc)
+    ((Cons a il more)
+      (match many il _
+        ((MkIndentLine ln i n)
+          (let ((many stack2) (many acc2)) (ind-step path ln i n stack acc))
+          (ind-check path more stack2 acc2))))))
+
+; The warnings one file's text earns, in line order: the tabs, then the nesting claims, then a surplus ) and
+; the count of forms left open, which are what the reader's own error does not name.
+(def-fns _ $ (many indent-warnings : (many (String) path) (many (String) src) -> (many (List $ String) ws))
+  (let ((many st))
+    (ind-scan src (MkIndentSt 1 0 0 (BFalse) (BFalse) (None _) (Nil _) (Nil _))))
+  (match many st (((List $ String) r))
+    ((MkIndentSt l c d s t u ls ts)
+      (let ((many acc0)) (ind-tabs path (list-rev _ ts) (Nil _)))
+      (let ((many acc1)) (ind-check path (list-rev _ ls) (Nil _) acc0))
+      (let ((many (List $ String) acc2))
+        (match many u (((List $ String) r))
+          ((None b) acc1)
+          ((Some b sl)
+            (Cons _ (ind-at path sl "a ) here closes more than is open (surplus ))") acc1))))
+      (let ((many (List $ String) acc3))
+        (match many d (((List $ String) r))
+          ((Zero) acc2)
+          ((Succ p) (Cons _ (ind-msg-depth path d) acc2))))
+      (list-rev _ acc3))))

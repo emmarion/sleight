@@ -1,0 +1,147 @@
+(* indent.ml -- checks that a .sl file's indentation tracks its paren nesting.
+
+   Not part of the language: a claim the source makes about itself, which the
+   driver checks and warns about (bin/indent.ml runs it alone). It reads
+   Reader.scan_upto's tokens rather than re-scanning bytes, so it skips
+   comments and strings exactly the way the real reader does, and it runs
+   before parsing, so a file the reader goes on to refuse is still reported
+   on -- which is the case it is most wanted for.
+
+   Rule, one line: indentation is read as a claim about paren nesting, and
+   this checks the claim. Spelled out --
+
+     - indentation must be spaces only, no tabs;
+     - only relative indentation and relative nesting matter, never their
+       absolute values;
+     - two lines at the same indentation must start at the same nesting;
+     - a more indented line must start more nested than the one before it;
+     - a less indented line is checked against every indentation level still
+       "open" above it: each must have been more nested, and if the new
+       line's indentation exactly matches one still open, its nesting must
+       match too.
+
+   A line is the line a token's first character sits on, read off the token's
+   offset rather than off the line the scanner recorded for it, the two
+   differing for a string literal spanning lines. Nesting never falls below
+   zero: a ) with nothing open is reported where it sits and leaves the depth
+   alone, so the nesting the lines after it are checked against is still the
+   count of forms actually open.
+
+   $ is not paren nesting and is deliberately not tracked: a $ chain closes
+   only at its enclosing form's terminator, so counting it would make the
+   common flat-aligned $ chain (self/header.sl, self/core.sl's sp-table)
+   look like it plunges one level deeper on every line, which is worse than
+   ignoring it. Blank lines and comment-only lines carry no tokens and are
+   silently skipped, matching the reader.
+
+   The one shape it misreads is the other side of that $ rule: a form
+   introduced by $ whose arguments sit on more indented lines below it
+   reads as a level that never opened, since $ emits no token. Writing
+   such a form with parens appears to be the cheaper side to fix, the
+   flat-aligned chain above having no such alternative. *)
+
+open Reader
+
+(* [line] is absent where the issue is the file's as a whole rather than one line's. *)
+type issue = { line : int option; msg : string }
+
+let show path { line; msg } =
+  match line with
+  | Some l -> Printf.sprintf "%s:%d: warning: %s\n" path l msg
+  | None -> Printf.sprintf "%s: warning: %s\n" path msg
+
+let col_of src off =
+  let rec bol i = if i <= 0 then 0 else if src.[i - 1] = '\n' then i else bol (i - 1) in
+  off - bol off + 1
+
+type checkable = { at : int; indent : int; nesting : int }
+
+(* One line is "checkable" when a token starts on it; its indent is that
+   token's column, and its nesting is the paren depth in effect just before
+   that token -- i.e. before the line's own characters are read. *)
+let checkable_lines report src toks =
+  let depth = ref 0 and pos = ref 0 and line = ref 1 and cur = ref 0 and out = ref [] in
+  List.iter
+    (fun (_, off, tok) ->
+       for i = !pos to off - 1 do if src.[i] = '\n' then incr line done;
+       pos := off;
+       if !line <> !cur then begin
+         cur := !line;
+         let col = col_of src off in
+         let bol = off - (col - 1) in
+         if String.exists (( = ) '\t') (String.sub src bol (off - bol)) then
+           report { line = Some !line; msg = "indentation uses a tab, not spaces only" };
+         out := { at = !line; indent = col - 1; nesting = !depth } :: !out
+       end;
+       match tok with
+       | LParen -> incr depth
+       | RParen -> if !depth > 0 then decr depth
+       | Dollar | Word _ -> ())
+    toks;
+  List.rev !out
+
+(* The indentation/nesting stack: (indent, nesting) list, head = innermost. *)
+let check_lines report lines =
+  let stack = ref [] in
+  List.iter
+    (fun { at = l; indent = i; nesting = n } ->
+       let say fmt = Printf.ksprintf (fun m -> report { line = Some l; msg = m }) fmt in
+       match !stack with
+       | [] -> stack := [ (i, n) ]
+       | (top_i, top_n) :: _ when i = top_i ->
+           if n <> top_n then
+             say "same indentation (%d) as the previous checked line but nesting is %d, expected %d (matching that line)" i n top_n;
+           stack := (i, n) :: List.tl !stack
+       | (top_i, top_n) :: _ when i > top_i ->
+           if n <= top_n then
+             say "indentation increased (%d -> %d) but nesting did not increase (%d -> %d)" top_i i top_n n;
+           stack := (i, n) :: !stack
+       | _ ->
+           let rec pop s =
+             match s with
+             | (ei, en) :: rest when ei > i ->
+                 if not (en > n) then
+                   say "dedented past indentation %d (nesting %d), but this line's nesting is %d (expected less than %d)" ei en n en;
+                 pop rest
+             | _ -> s
+           in
+           let remaining = pop !stack in
+           List.iter
+             (fun (ei, en) ->
+                if ei < i && not (en < n) then
+                  say "dedented to indentation %d, but an enclosing line at indentation %d has nesting %d, not less than this line's %d" i ei en n)
+             remaining;
+           (match remaining with
+            | (ei, en) :: rest when ei = i ->
+                if en <> n then
+                  say "dedented back to indentation %d, matching an earlier line, but nesting is %d there vs %d here" i en n;
+                stack := (i, n) :: rest
+            | _ -> stack := (i, n) :: remaining))
+    lines
+
+(* The forms left open at the end, and the first line at which a ) closed more than was open. A file the
+   reader cannot close is the case this tool is most wanted for, so neither is left to the nesting rules:
+   they read relative depth and would pass a file whose indentation is consistent and whose forms never
+   close. *)
+let balance toks =
+  List.fold_left
+    (fun (d, surplus) (line, _, tok) ->
+       match tok with
+       | LParen -> (d + 1, surplus)
+       | RParen -> if d = 0 then (0, (if surplus = None then Some line else surplus)) else (d - 1, surplus)
+       | Dollar | Word _ -> (d, surplus))
+    (0, None) toks
+
+(* The issues, in line order, and where the lexer stopped if it could not finish the file. *)
+let issues src =
+  let toks, stopped = scan_upto src in
+  let acc = ref [] in
+  let report i = acc := i :: !acc in
+  check_lines report (checkable_lines report src toks);
+  let depth, surplus = balance toks in
+  Option.iter (fun line -> report { line = Some line; msg = "a ) here closes more than is open (surplus ))" }) surplus;
+  if depth <> 0 then
+    report { line = None; msg = Printf.sprintf "final depth %d (unclosed forms: append that many ))" depth };
+  (List.rev !acc, stopped)
+
+let warn path src = List.iter (fun i -> !Elab.warn (show path i)) (fst (issues src))

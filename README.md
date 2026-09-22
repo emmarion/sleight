@@ -85,6 +85,24 @@ end of the file. It reads the same `lib/reader.ml` the checker does, so
 comments and string literals are skipped rather than counted, and a file the
 lexer cannot finish is reported as far as it got.
 
+Indentation is read as a claim about paren nesting, and `lib/indent.ml`
+checks the claim: a line indented further than the line before it must start
+strictly more nested, two lines at one indentation must start at one nesting,
+a dedent must land where every level it passed was really more nested, and
+the indentation is spaces. What it finds it writes as a warning,
+`path:line: warning: text`, and it runs over every file the driver or `slc`
+is handed *before* that file is parsed, so a file the reader then refuses is
+reported on all the same — which is where it pays most, since it also warns
+about a `)` closing more than is open and about the forms a file never
+closes, neither of which a `missing )` at the line some form opened on tells
+you. `bin/indent` runs the same check alone over the files named on its
+command line and exits 1 when it finds any, so it can gate a commit over
+the files a commit touches; the repository's own sources are clean of it
+but for the five tests the warnings are tested on, which are inconsistent
+on purpose (`tests/indent_*.sl`, `tests/string_literal_bad.sl`). `$` is
+not paren nesting and is deliberately not counted; `lib/indent.ml`'s header
+says why, and names the one shape that misreads.
+
 `bench/bench.sh` times the self-hosted compiler on a pinned copy of its
 own sources and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
@@ -94,8 +112,9 @@ ways, against the same directives. A test's leading comments say what it needs: 
 `; expect: text` is a line the test must print, `; stdin: text` a
 line of its input, `; args: a b` its arguments, `; env: NAME=value` a
 variable of the environment it runs with, which holds those alone,
-`; stderr: text` a line it must write to stderr, `; warns: text` a line
-elaborating it must warn with, whether or not it is then refused,
+`; stderr: text` a line it must write to stderr, `; warns: text` a line the
+file must warn with, from elaborating it or from checking its indentation,
+whether or not it is then refused,
 `; exit: n` the code an
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, and `; error: text`
@@ -132,7 +151,9 @@ an existing word instead of returning it physically.
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
 - `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
+- `lib/indent.ml` — indentation read as a claim about paren nesting, and the claim checked
 - `bin/main.ml` — command line driver
 - `bin/shape.ml` — where a file's forms open and close, for locating a misplaced paren
+- `bin/indent.ml` — `lib/indent.ml`'s check run on its own over the files named
 - `test/runtest.ml` — the test runner, interpreting and extracting each test
 - `tests/` — DESIGN.md's worked examples and further tests

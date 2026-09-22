@@ -75,7 +75,13 @@ host (section 41); a `U8` or a
   tokenizer, a word being a slice of the source cut by the prelude's
   `str-split` under an `Add` invariant counting the characters taken
   and remaining, a string literal a `Rope` of characters flattened
-  once, and a fold over the tokens with a stack of open forms.
+  once, and a fold over the tokens with a stack of open forms. It also
+  holds the port of `lib/indent.ml`, the indentation check the driver
+  runs over each file before parsing it: a second scan of the source
+  text, since the tokens above carry a line but no column. Both sides
+  were compared over the repository's own sources and over a thousand
+  generated files of parens, tabs, comments and literals, well formed
+  and not, and reported the same lines.
 - `core.sl` — terms with de Bruijn telescopes (section 5), the
   special-form registry (section 27), runtime values and post-erasure
   code, the scope environment with its fact table and its list of opened
@@ -386,9 +392,12 @@ the entry says otherwise, and recorded so it can be revisited.
   elaborator counted against its model. `apply-extern` is total
   (ASSUMPTIONS 151), so a claimed extern always runs.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
-  always runs the FFI's externs, and the output always uses them),
-  the reference's warning for a phantom
-  constructor with a `many` field (recorded but not printed), and
-  macros, which the reference does not implement either. A string
+  always runs the FFI's externs, and the output always uses them), and
+  macros, which the reference does not implement either. A warning is
+  modelled: the phantom-constructor one of section 12 and the
+  indentation ones above are collected in the environment as errors are
+  and written to stderr ahead of either outcome, which the `; warns:`
+  directive of every test carrying one checks
+  (`self/bootstrap.sh`'s `check_warns`). A string
   literal is not `is`-transparent to its characters as the reference's
   is (ASSUMPTIONS 60); `numeral-of` on one is refused as there.

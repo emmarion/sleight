@@ -2151,6 +2151,10 @@
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st (Cons _ x cl) wa lt lo pr us))))
 (def-fns _ $ (many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl (Cons _ x wa) lt lo pr us))))
+(def-fns _ $ (many env-warn-all : (many (Env) e) (subterm many (List $ String) xs) -> (many (Env) r))
+  (match many xs _
+    ((Nil a) e)
+    ((Cons a x rest) (env-warn-all (env-warn e x) rest))))
 (def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa (Cons _ (MkPair _ _ x proof) lt) lo pr us))))
 (def-fns _ $ (many env-set-scope : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))

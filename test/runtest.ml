@@ -4,12 +4,15 @@
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
-   "; warns: text" a line elaborating it must warn with, whether or not it goes on to be refused;
+   "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run. *)
 open Speciallang
 
 let dir = "../tests"
 let read = Program.read_file and write = Program.write_file
+
+(* The path from the repository root, which is what bootstrap.sh hands slc, not the path read from here. *)
+let label name = "tests/" ^ name ^ ".sl"
 
 let directive src key =
   let prefix = "; " ^ key ^ ": " in
@@ -73,10 +76,12 @@ and run_mode name externs src =
   let final = ref None in
   let outcome =
     try
-      let env = List.fold_left (fun env n -> Elab.run_toplevel ~consume env (Reader.parse (read (Filename.concat dir (n ^ ".sl"))))) (Builtin.load ()) needs in
+      let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in Indent.warn (label n) src; Elab.run_toplevel ~consume env (Reader.parse src) in
+      let env = List.fold_left one (Builtin.load ()) needs in
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
+      Indent.warn (label name) src;
       let env = Elab.run_toplevel ~consume:(fun env ty v -> final := Some (env, ty, v)) env (Reader.parse src) in
       let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
       let sources = List.map (fun t -> (t, source t)) (if externs then [ true; false ] else [ true ]) in
