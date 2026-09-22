@@ -601,7 +601,7 @@ shedding the argument its model does not use:
   (match many n _
     ((Zero) (values (ANil _) (AUNil _)))
     ((Succ n1)
-      (let (unique tl) (erased q) (array-new _ n1))
+      (let (unique tl) (erased q) (array-new A n1))
       (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
 
 (def-fns _ $ many extern array-swap : (erased Type A) (erased (Nat) n)
@@ -670,7 +670,7 @@ extracting to a call where the inline `coerce` extracts to nothing:
       (let (erased b1) (erased c1) (init-witness _ _ tl q))
       (values (ACons _ _ x b1)
               (coercible-ctor _ ACons (MaybeUninit A) A n1 n1
-                 (coercible-sym (coercible-wrap _ Init x))
+                 (coercible-sym (coercible-wrap _ Init _ x))
                  c1)))))
 
 (let (erased b0) (erased c) (init-witness _ _ a all))

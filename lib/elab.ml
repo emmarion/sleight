@@ -155,7 +155,7 @@ let marker env loc tid ctors c =
   | Some (m, _) -> m
   | None -> error loc "%s is not a constructor of %s" (name_of env c) (name_of env tid)
 
-(* A Matchable's constructors, each with its phantom marker and its number of many fields (section 38). *)
+(* A Matchable's constructors, each with its phantom marker and its number of non-erased fields (section 38). *)
 let shapes env loc ctors =
   List.map (fun (m, c) -> match c with Var c -> (m, c, List.length (List.filter (fun e -> e.mult <> Erased) (fst (ctor_type env loc c)))) | _ -> assert false) ctors
 
@@ -1632,7 +1632,7 @@ and elab_def_adts env adts =
           let name = atom_or cl n "a constructor name" in
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
-          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then !warn (Printf.sprintf "warning (line %d): phantom constructor %s has a many field\n" cl name);
+          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then !warn (Printf.sprintf "warning (line %d): phantom constructor %s has a non-erased field\n" cl name);
           let c, env = bind env (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"

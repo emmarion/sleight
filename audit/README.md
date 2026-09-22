@@ -37,17 +37,17 @@ keeps its line, marked as the fixed items above are:
 - Q3. Structural Matchable marks prevent abstracting over extern and non-extern
 - Q4. FIXED (U1): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
 - Q5. Slot-indexed user types reach U10's class merge, U15's deferred question
-- Q6. U13's text as written needs two repairs to elaborate
+- Q6. FIXED (U13): U13's text as written needed two repairs to elaborate
 
 Minor observations, not acted on unless marked:
 
 - M1. `matchable-of` records no use of the Matchable entry
 - M2. `read_special`'s share branch lacks the erased-position guard
 - M3. ML and self give different messages for some refusals
-- M4. The phantom-with-unique-field warning text says "many field"
+- M4. FIXED (U4): The phantom-with-unique-field warning text said "many field"
 - M5. `_` not accepted as a `Cell` slot in a type
 - M6. `at_equal` structural in ML, variable-only in self
-- M7. Stale comments say "many fields" where the code counts non-erased
+- M7. FIXED (U12): Stale comments said "many fields" where the code counts non-erased
 - M8. `Ffi.claim_fn` never checks an implementation's result count
 - M9. `--no-templates` is a vacuous check for arrays
 - M10. Stripped-extern `array-new` is quadratic

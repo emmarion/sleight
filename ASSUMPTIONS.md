@@ -99,7 +99,7 @@ ground.
     mint one about the function and the fetch has nothing to choose
     between. This entry previously recorded the shadowing an anonymous
     `Coercible` could cause as open (audit F4).
-18. **Warnings** (a phantom constructor with a `many` field) go to
+18. **Warnings** (a phantom constructor with a non-erased field) go to
     stderr and do not stop elaboration.
 
 ## Type checking
@@ -3265,9 +3265,7 @@ to look for a guard, are the owner's.
     until invocation. The fixed FFI boundary converts comparison results to the
     declared Cmp representation and reads Rope values through their constructor view.
 
-167. The U13 array models are added to the prelude with two elaboration repairs:
-    the recursive unannotated array-new let supplies A explicitly, and the Init
-    coercible-wrap supplies its erased type argument. Native arrays are slices
+167. The U13 array models are added to the prelude. Native arrays are slices
     of shared backing storage; constructing ACons allocates and copies its tail.
     Array pluck leaves the physical word untouched under Uninit, while place and
     swap update the backing slot. Captured slices retain both wrapper and backing
@@ -3487,7 +3485,6 @@ to look for a guard, are the owner's.
       classes in an unrefuted branch, so the soundness question U15 defers
       is already live in the implemented subset
       (`tests/at_slots_force.sl` and the audit's `slot_class_merge`).
-    - U13's text needs the two repairs of 167 to elaborate under SUGAR.md 6.
     Two clarifications this session read as within the text: an `at`
     return is verified only where U8 lists, and U8's writers were checked
     against every merge site of the at-database, none extra found.

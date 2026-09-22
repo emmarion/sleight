@@ -79,7 +79,7 @@ let fns : (string * fn_spec) list =
     ("flatten", spec ~needs:[ "Rope" ] 1 (unary (Ffi_core.flatten ~slice ~z ~str:text ~rope:(fun v -> match des v with 0, [] -> REmpty | 1, [ s ] -> RStr s | 2, [ a; b ] -> RCat (a, b) | 3, [ c ] -> RChar c | _ -> bad "rope node" v)))) ]
 
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
-   the many-field arities of the non-phantom constructors in order, since the extracted program lays the view
+   the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
 let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)

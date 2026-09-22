@@ -20,5 +20,5 @@
 (def-fns _ $ many phantom-tests : -> (many (List (Nat)) results)
   (Cons _ (ghost-main) (Cons _ (sole-main) (Nil _))))
 phantom-tests
-; warns: warning (line 5): phantom constructor GhostIndexOne has a many field
-; warns: warning (line 7): phantom constructor SoleGhost has a many field
+; warns: warning (line 5): phantom constructor GhostIndexOne has a non-erased field
+; warns: warning (line 7): phantom constructor SoleGhost has a non-erased field
