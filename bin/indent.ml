@@ -7,13 +7,13 @@ let issues = ref 0
 
 let check_file path =
   let src = match Speciallang.Program.read_file path with s -> s | exception Sys_error m -> prerr_endline m; exit 2 in
-  let found, stopped = Indent.issues src in
-  List.iter (fun i -> incr issues; print_string (Indent.show path i)) found;
+  let found, stopped = Indent.issues path src in
+  List.iter (fun i -> incr issues; print_string (Indent.show i)) found;
   match stopped with
   | None -> ()
   | Some (l, m) ->
       incr issues;
-      Printf.printf "%s:%d: %s -- everything above is what was read before that\n" path l m
+      Printf.printf "%s: %s -- everything above is what was read before that\n" (Speciallang.Reader.where path l) m
 
 let () =
   let files = List.tl (Array.to_list Sys.argv) in

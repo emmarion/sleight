@@ -24,10 +24,6 @@ open Reader
 
 let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Word w -> w
 
-let col_of src off =
-  let rec bol i = if i <= 0 then 0 else if src.[i - 1] = '\n' then i else bol (i - 1) in
-  off - bol off + 1
-
 type form = { line : int; col : int; depth : int; text : string; mutable closes : int }
 
 let () =
@@ -44,7 +40,7 @@ let () =
     | s -> s
     | exception Sys_error m -> prerr_endline m; exit 2
   in
-  let toks, stopped = scan_upto src in
+  let toks, stopped = scan_upto !path src in
   let toks = Array.of_list toks in
 
   (* the first two tokens after a `(`, which is enough to recognise a form:
@@ -59,17 +55,17 @@ let () =
      records the line that closed it. A form left open keeps closes = 0. *)
   let forms = ref [] and stack = ref [] and depth = ref 0 in
   Array.iteri
-    (fun k (line, off, t) ->
+    (fun k ((l : Reader.loc), _, t) ->
       match t with
       | LParen ->
-          let f = { line; col = col_of src off; depth = !depth; text = label k; closes = 0 } in
+          let f = { line = l.line; col = l.col; depth = !depth; text = label k; closes = 0 } in
           forms := f :: !forms;
           stack := f :: !stack;
           incr depth
       | RParen ->
           decr depth;
           (match !stack with
-           | f :: rest -> f.closes <- line; stack := rest
+           | f :: rest -> f.closes <- l.line; stack := rest
            | [] -> ())
       | _ -> ())
     toks;
@@ -84,15 +80,15 @@ let () =
     let runs = ref [] and pending = ref [] and last = ref (-1) in
     let run_line = ref 1 and stack = ref [] in
     Array.iteri
-      (fun k (line, off, t) ->
+      (fun k ((l : Reader.loc), off, t) ->
         match t with
-        | LParen -> stack := ((line, col_of src off), label k) :: !stack
+        | LParen -> stack := ((l.line, l.col), label k) :: !stack
         | RParen ->
             (match !stack with
              | o :: rest ->
                  if !last <> off - 1 && !pending <> [] then (
                    runs := (!run_line, List.rev !pending) :: !runs; pending := []);
-                 if !pending = [] then run_line := line;
+                 if !pending = [] then run_line := l.line;
                  pending := o :: !pending;
                  last := off;
                  stack := rest
@@ -126,5 +122,5 @@ let () =
   match stopped with
   | None -> ()
   | Some (l, m) ->
-      Printf.eprintf "line %d: %s -- everything above is what was read before that\n" l m;
+      Printf.eprintf "%s: %s -- everything above is what was read before that\n" (Reader.where !path l) m;
       exit 2

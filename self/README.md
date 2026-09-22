@@ -249,10 +249,15 @@ the entry says otherwise, and recorded so it can be revisited.
   elaboration error is recorded in the environment and elaboration goes
   on; every error is reported at the end and no OCaml is written. Where
   the reference stops at the first error, `slc` may report a few more
-  that follow from it. A message names the file and the line of the
-  innermost form being elaborated, in the reference's `path:line:
-  error:` format; on every error test the first message is the
-  reference's, line included. A runtime error in the interpreter is an error
+  that follow from it. A message names the file and the position of the
+  innermost form being elaborated, in the reference's `path:line:col:
+  error:` format. On every error test the first message is the
+  reference's, file and line included; the column agrees on most and
+  not all, since the reference carries a location per form while this
+  one records a position per form it descends into, so a check running
+  after a sub-elaboration has returned names an enclosing form
+  (ASSUMPTIONS 194). `bootstrap.sh` counts both and lists the
+  differences, so the number cannot quietly grow. A runtime error in the interpreter is an error
   block that prints as `<error: ...>`.
 - **The opened objects live in the fact table with their canonical
   names.** The table (`Table n f c`) holds, beside its proofs, the

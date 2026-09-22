@@ -42,36 +42,27 @@
 
 open Reader
 
-(* [line] is absent where the issue is the file's as a whole rather than one line's. *)
-type issue = { line : int option; msg : string }
+(* An issue whose location is the file's [nowhere] is the file's as a whole rather than one line's,
+   and [Reader.where] then names the file alone. *)
+type issue = { at : loc; msg : string }
 
-let show path { line; msg } =
-  match line with
-  | Some l -> Printf.sprintf "%s:%d: warning: %s\n" path l msg
-  | None -> Printf.sprintf "%s: warning: %s\n" path msg
+let show { at; msg } = Printf.sprintf "%s: warning: %s\n" (Reader.where "-" at) msg
 
-let col_of src off =
-  let rec bol i = if i <= 0 then 0 else if src.[i - 1] = '\n' then i else bol (i - 1) in
-  off - bol off + 1
-
-type checkable = { at : int; indent : int; nesting : int }
+type checkable = { pos : loc; indent : int; nesting : int }
 
 (* One line is "checkable" when a token starts on it; its indent is that
    token's column, and its nesting is the paren depth in effect just before
    that token -- i.e. before the line's own characters are read. *)
 let checkable_lines report src toks =
-  let depth = ref 0 and pos = ref 0 and line = ref 1 and cur = ref 0 and out = ref [] in
+  let depth = ref 0 and cur = ref 0 and out = ref [] in
   List.iter
-    (fun (_, off, tok) ->
-       for i = !pos to off - 1 do if src.[i] = '\n' then incr line done;
-       pos := off;
-       if !line <> !cur then begin
-         cur := !line;
-         let col = col_of src off in
-         let bol = off - (col - 1) in
+    (fun (l, off, tok) ->
+       if l.line <> !cur then begin
+         cur := l.line;
+         let bol = off - (l.col - 1) in
          if String.exists (( = ) '\t') (String.sub src bol (off - bol)) then
-           report { line = Some !line; msg = "indentation uses a tab, not spaces only" };
-         out := { at = !line; indent = col - 1; nesting = !depth } :: !out
+           report { at = l; msg = "indentation uses a tab, not spaces only" };
+         out := { pos = l; indent = l.col - 1; nesting = !depth } :: !out
        end;
        match tok with
        | LParen -> incr depth
@@ -84,8 +75,8 @@ let checkable_lines report src toks =
 let check_lines report lines =
   let stack = ref [] in
   List.iter
-    (fun { at = l; indent = i; nesting = n } ->
-       let say fmt = Printf.ksprintf (fun m -> report { line = Some l; msg = m }) fmt in
+    (fun { pos = l; indent = i; nesting = n } ->
+       let say fmt = Printf.ksprintf (fun m -> report { at = l; msg = m }) fmt in
        match !stack with
        | [] -> stack := [ (i, n) ]
        | (top_i, top_n) :: _ when i = top_i ->
@@ -125,23 +116,24 @@ let check_lines report lines =
    close. *)
 let balance toks =
   List.fold_left
-    (fun (d, surplus) (line, _, tok) ->
+    (fun (d, surplus) (l, _, tok) ->
        match tok with
        | LParen -> (d + 1, surplus)
-       | RParen -> if d = 0 then (0, (if surplus = None then Some line else surplus)) else (d - 1, surplus)
+       | RParen -> if d = 0 then (0, (if surplus = None then Some l else surplus)) else (d - 1, surplus)
        | Dollar | Word _ -> (d, surplus))
     (0, None) toks
 
 (* The issues, in line order, and where the lexer stopped if it could not finish the file. *)
-let issues src =
-  let toks, stopped = scan_upto src in
+let issues path src =
+  let toks, stopped = scan_upto path src in
   let acc = ref [] in
   let report i = acc := i :: !acc in
   check_lines report (checkable_lines report src toks);
   let depth, surplus = balance toks in
-  Option.iter (fun line -> report { line = Some line; msg = "a ) here closes more than is open (surplus ))" }) surplus;
+  Option.iter (fun l -> report { at = l; msg = "a ) here closes more than is open (surplus ))" }) surplus;
   if depth <> 0 then
-    report { line = None; msg = Printf.sprintf "final depth %d (unclosed forms: append that many ))" depth };
+    report { at = { Reader.nowhere with file = path };
+             msg = Printf.sprintf "final depth %d (unclosed forms: append that many ))" depth };
   (List.rev !acc, stopped)
 
-let warn path src = List.iter (fun i -> !Elab.warn (show path i)) (fst (issues src))
+let warn path src = List.iter (fun i -> !Elab.warn (show i)) (fst (issues path src))

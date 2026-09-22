@@ -2,29 +2,45 @@
 ; source string and a fold over the tokens with a stack of open forms, so nothing recurses on a computed
 ; suffix of the input.
 
+; Where a token's first character sits, which every message a session writes points at (ASSUMPTIONS 194);
+; both counted from one.
+(def-adts $ (Pos : -> Type)
+  enum
+  (many MkPos : (many (Nat) line) (many (Nat) col) -> (Pos)))
+
 (def-adts
   ((Raw : -> Type)
     enum
-    (many RAtom : (many (Nat) line) (many (String) s) -> (Raw))
-    (many RString : (many (Nat) line) (many (String) s) -> (Raw))
-    (many RList : (many (Nat) line) (many (List $ Raw) items) -> (Raw))))
+    (many RAtom : (many (Pos) pos) (many (String) s) -> (Raw))
+    (many RString : (many (Pos) pos) (many (String) s) -> (Raw))
+    (many RList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))))
 
-(def-fns _ $ (many raw-line : (many (Raw) r) -> (many (Nat) line))
+(def-fns _ $ (many raw-pos : (many (Raw) r) -> (many (Pos) pos))
   (match many r _ ((RAtom l s) l) ((RString l s) l) ((RList l items) l)))
+
+; Where a form's first item sits, which is what a declaration's messages name: the signature rather than
+; the entry that carries it.
+(def-fns _ $ (many raw-head-pos : (many (Raw) r) -> (many (Pos) pos))
+  (match many r _
+    ((RList l items)
+      (match many items (((Pos) p))
+        ((Cons a h rest) (raw-pos h))
+        ((Nil a) l)))
+    (else (raw-pos r))))
 
 (def-adts $ (Tok : -> Type)
   enum
-  (many TOpen : (many (Nat) line) -> (Tok))
-  (many TClose : (many (Nat) line) -> (Tok))
-  (many TDollar : (many (Nat) line) -> (Tok))
-  (many TWord : (many (Nat) line) (many (String) s) -> (Tok))
-  (many TStrLit : (many (Nat) line) (many (String) s) -> (Tok))
-  (many TError : (many (Nat) line) (many (String) msg) -> (Tok)))
+  (many TOpen : (many (Pos) pos) -> (Tok))
+  (many TClose : (many (Pos) pos) -> (Tok))
+  (many TDollar : (many (Pos) pos) -> (Tok))
+  (many TWord : (many (Pos) pos) (many (String) s) -> (Tok))
+  (many TStrLit : (many (Pos) pos) (many (String) s) -> (Tok))
+  (many TError : (many (Pos) pos) (many (String) msg) -> (Tok)))
 
-; A syntax error and the line it is reported for.
+; A syntax error and where it is reported.
 (def-adts $ (SynErr : -> Type)
   enum
-  (many MkSynErr : (many (Nat) line) (many (String) msg) -> (SynErr)))
+  (many MkSynErr : (many (Pos) pos) (many (String) msg) -> (SynErr)))
 
 (def-fns _ $ (many is-delim : (many (Char) c) -> (many (Bool) r))
   (let ((many n)) $ char-code c)
@@ -32,14 +48,11 @@
     (or (nat-eq n 40)
       $ or (nat-eq n 41) $ nat-eq n 59)))
 
-(def-fns _ $ (many word-tok : (many (Nat) line) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
+(def-fns _ $ (many word-tok : (many (Pos) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
   (let ((many w) (many after) (erased p) (erased la)) (str-split start k len l (add-le-left k rl len sum)))
   (match many (str-cmp w "$") _
-    ((CEq eq-t eq-r eq-x) (TDollar line))
-    (else (TWord line w))))
-
-(def-fns _ $ (many next-line : (many (Nat) line) (many (Char) c) -> (many (Nat) r))
-  (match many (char-is c 10) _ ((BTrue) (Succ line)) ((BFalse) line)))
+    ((CEq eq-t eq-r eq-x) (TDollar pos))
+    (else (TWord pos w))))
 
 (def-fns _ $ (many escape-ok : (many (Char) e) -> (many (Bool) r))
   (let ((many n)) $ char-code e)
@@ -57,84 +70,93 @@
 (def-fns _ $ (many end-toks : (many (Tok) t) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
   (list-rev _ $ Cons _ t acc))
 
-(def-fns _ $ (many unterminated : (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-  (end-toks (TError line "unterminated string literal") acc))
+(def-fns _ $ (many unterminated : (many (Pos) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+  (end-toks (TError pos "unterminated string literal") acc))
 
-(def-fns _ $ (many delim-step : (many (Char) c) (many (Nat) line) (many (List $ Tok) acc) -> (many (Bool) comment) (many (Nat) line2) (many (List $ Tok) acc2))
+; [col] counts the characters read on the current line, so the character being read sits at column
+; (Succ col); a newline starts the next line over at zero.
+(def-fns _ $ (many delim-step : (many (Char) c) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) ->
+    (many (Bool) comment) (many (Nat) line2) (many (Nat) col2) (many (List $ Tok) acc2))
   (let ((many n)) $ char-code c)
-  (match many (nat-cmp n 59) _
-    ((CEq eq-t eq-r eq-x) (values (BTrue) line acc))
-    (else
-      (match many (nat-cmp n 40) _
-        ((CEq eq-t eq-r eq-x) (values (BFalse) line $ Cons _ (TOpen line) acc))
-        (else
-          (match many (nat-cmp n 41) _
-            ((CEq eq-t eq-r eq-x) (values (BFalse) line $ Cons _ (TClose line) acc))
-            (else (values (BFalse) (next-line line c) acc))))))))
+  (match many (nat-eq n 59) _
+    ((BTrue) (values (BTrue) line (Succ col) acc))
+    ((BFalse)
+      (match many (nat-eq n 40) _
+        ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkPos line $ Succ col) acc))
+        ((BFalse)
+          (match many (nat-eq n 41) _
+            ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkPos line $ Succ col) acc))
+            ((BFalse)
+              (match many (nat-eq n 10) _
+                ((BTrue) (values (BFalse) (Succ line) 0 acc))
+                ((BFalse) (values (BFalse) line (Succ col) acc))))))))))
 
-; Tokens accumulate reversed in [acc]; an atom's or a literal's characters accumulate as a rope; [line] counts
-; the newlines passed, and a string literal's token carries the line of its closing quote as the
-; reference reader's does.
+; Tokens accumulate reversed in [acc]; an atom's or a literal's characters accumulate as a rope; [line] and
+; [col] count the newlines and the characters passed, and a token is placed where it starts, a string
+; literal's at its opening quote, as the reference reader places one.
 (def-fns _
-  ((many tokenize : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+  ((many tokenize : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (match many s _
       ((SNil) (list-rev _ acc))
       ((SCons c rest)
         (match many (is-delim c) _
           ((BTrue)
-            (let ((many comment) (many line2) (many acc2)) $ delim-step c line acc)
-            (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 acc2))))
+            (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col acc)
+            (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 col2 acc2))))
           ((BFalse)
             (match many (char-is c 34) _
-              ((BTrue) (string-lit rest line (REmpty) acc))
+              ((BTrue) (string-lit rest line (Succ col) (MkPos line $ Succ col) (REmpty) acc))
               ((BFalse)
                 (let ((many len) (erased l)) (str-length s))
                 (let-match erased l (SLenCons c0 s0 rl lr))
-                (word rest line s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) acc))))))))
+                (word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))))))
   ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (match many s _
       ((SNil) (list-rev _ acc))
       ((SCons c rest)
         (match many (char-is c 10) _
-          ((BTrue) (tokenize rest (Succ line) acc))
+          ((BTrue) (tokenize rest (Succ line) 0 acc))
           ((BFalse) (skip-comment rest line acc))))))
-  ((many word : (subterm many (String) s) (many (Nat) line) (many (String) start) (erased (Nat) len) (erased (StrLength start len) l) (many (Nat) k) (erased (Nat) rl) (erased (StrLength s rl) lr) (erased (Add k rl len) sum) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+  ((many word : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (String) start) (erased (Nat) len) (erased (StrLength start len) l) (many (Nat) k) (erased (Nat) rl) (erased (StrLength s rl) lr) (erased (Add k rl len) sum) (many (Pos) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (match many s _
-      ((SNil) (end-toks (word-tok line start k len l rl sum) acc))
+      ((SNil) (end-toks (word-tok pos start k len l rl sum) acc))
       ((SCons c rest)
         (match many (is-delim c) _
           ((BTrue)
-            (let ((many comment) (many line2) (many acc2)) $ delim-step c line $ Cons _ (word-tok line start k len l rl sum) acc)
-            (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 acc2))))
+            (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col $ Cons _ (word-tok pos start k len l rl sum) acc)
+            (match many comment _ ((BTrue) (skip-comment rest line2 acc2)) ((BFalse) (tokenize rest line2 col2 acc2))))
           ((BFalse)
             (let-match erased lr (SLenCons c0 s0 rl1 lr1))
-            (word rest line start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) acc))))))
-  ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+            (word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))))
+  ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (match many s _
-      ((SNil) (unterminated line acc))
+      ((SNil) (unterminated (MkPos line $ Succ col) acc))
       ((SCons c rest)
         (let ((many n)) $ char-code c)
-        (match many (nat-cmp n 34) _
-          ((CEq eq-t eq-r eq-x) (tokenize rest line $ Cons _ (TStrLit line $ rope-str rev) acc))
-          (else
-            (match many (nat-cmp n 92) _
-              ((CEq eq-t eq-r eq-x)
+        (match many (nat-eq n 34) _
+          ((BTrue) (tokenize rest line (Succ col) $ Cons _ (TStrLit pos $ rope-str rev) acc))
+          ((BFalse)
+            (match many (nat-eq n 92) _
+              ((BTrue)
                 (match many rest _
-                  ((SNil) (unterminated line acc))
+                  ((SNil) (unterminated (MkPos line $ Succ col) acc))
                   ((SCons e rest2)
                     (match many (escape-ok e) _
-                      ((BTrue) (string-lit rest2 line (RCat rev $ RChar $ unescape e) acc))
-                      ((BFalse) (end-toks (TError line $ str-cat "unknown escape \\" $ SCons e $ SNil) acc))))))
-              (else (string-lit rest (next-line line c) (RCat rev $ RChar c) acc)))))))))
+                      ((BTrue) (string-lit rest2 line (Succ (Succ col)) pos (RCat rev $ RChar $ unescape e) acc))
+                      ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ str-cat "unknown escape \\" $ SCons e $ SNil) acc))))))
+              ((BFalse)
+                (match many (nat-eq n 10) _
+                  ((BTrue) (string-lit rest (Succ line) 0 pos (RCat rev $ RChar c) acc))
+                  ((BFalse) (string-lit rest line (Succ col) pos (RCat rev $ RChar c) acc)))))))))))
 
-; A frame is an open form: the line it opened on, whether $ opened it, and its items so far, reversed.
+; A frame is an open form: where it opened, whether $ opened it, and its items so far, reversed.
 (def-adts $ (Frame : -> Type)
   enum
-  (many MkFrame : (many (Nat) line) (many (Bool) dollar) (many (List $ Raw) items) -> (Frame)))
+  (many MkFrame : (many (Pos) pos) (many (Bool) dollar) (many (List $ Raw) items) -> (Frame)))
 
 (def-fns _ $ (many push-item : (many (Raw) item) (many (List $ Frame) stack) -> (many (List $ Frame) r))
   (match many stack _
-    ((Nil a) (Cons _ (MkFrame 1 (BFalse) $ Cons _ item $ Nil _) $ Nil _))
+    ((Nil a) (Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Cons _ item $ Nil _) $ Nil _))
     ((Cons a f rest)
       (match many f _
         ((MkFrame l d items) (Cons _ (MkFrame l d $ Cons _ item items) rest))))))
@@ -203,8 +225,8 @@
             ((MkFrame l d items) (values (Nil _) $ Some _ $ MkSynErr l $ match many d (((String) m)) ((BTrue) "missing ) after $") ((BFalse) "missing )")))))))))
 
 (def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err))
-  (let ((many stack) (many err)) (parse-toks (tokenize src 1 $ Nil _)
-                                            $ Cons _ (MkFrame 1 (BFalse) $ Nil _) $ Nil _))
+  (let ((many stack) (many err)) (parse-toks (tokenize src 1 0 $ Nil _)
+                                            $ Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Nil _) $ Nil _))
   (match many err _
     ((Some a m) (values (Nil _) err))
     ((None a) (finish-stack stack))))
@@ -235,8 +257,8 @@
 (def-adts $ (IndentSt : -> Type)
   enum
   (many MkIndentSt : (many (Nat) line) (many (Nat) col) (many (Nat) depth) (many (Bool) started)
-      (many (Bool) tabbed) (many (Maybe $ Nat) surplus) (many (List $ IndentLine) lines)
-      (many (List $ Nat) tabs) -> (IndentSt)))
+      (many (Bool) tabbed) (many (Maybe $ Pos) surplus) (many (List $ IndentLine) lines)
+      (many (List $ Pos) tabs) -> (IndentSt)))
 
 (def-fns _ $ (many ind-nl : (many (IndentSt) st) -> (many (IndentSt) r))
   (match many st _ ((MkIndentSt l c d s t u ls ts) (MkIndentSt (Succ l) 0 d (BFalse) (BFalse) u ls ts))))
@@ -255,9 +277,9 @@
       (match many s _
         ((BTrue) st)
         ((BFalse)
-          (let ((many (List $ Nat) ts2))
-            (match many t (((List $ Nat) r))
-              ((BTrue) (Cons _ l ts))
+          (let ((many (List $ Pos) ts2))
+            (match many t (((List $ Pos) r))
+              ((BTrue) (Cons _ (MkPos l $ Succ c) ts))
               ((BFalse) ts)))
           (MkIndentSt l c d (BTrue) t u (Cons _ (MkIndentLine l c d) ls) ts2))))))
 
@@ -273,10 +295,10 @@
       (match many d _
         ((Succ p) (MkIndentSt l c p s t u ls ts))
         ((Zero)
-          (let ((many (Maybe $ Nat) u2))
-            (match many u (((Maybe $ Nat) r))
+          (let ((many (Maybe $ Pos) u2))
+            (match many u (((Maybe $ Pos) r))
               ((Some b m) u)
-              ((None b) (Some _ l))))
+              ((None b) (Some _ $ MkPos l c))))
           (MkIndentSt l c 0 s t u2 ls ts))))))
 
 ; A string literal's token sits at its opening quote, so the line it opened on is recorded once the literal
@@ -285,13 +307,13 @@
     (many (Bool) ot) -> (many (IndentSt) r))
   (match many st _
     ((MkIndentSt l c d s t u ls ts)
-      (let ((many (List $ IndentLine) ls2) (many (List $ Nat) ts2))
-        (match many os (((List $ IndentLine) x) ((List $ Nat) y))
+      (let ((many (List $ IndentLine) ls2) (many (List $ Pos) ts2))
+        (match many os (((List $ IndentLine) x) ((List $ Pos) y))
           ((BTrue) (values ls ts))
           ((BFalse)
-            (let ((many (List $ Nat) ts1))
-              (match many ot (((List $ Nat) y))
-                ((BTrue) (Cons _ ol ts))
+            (let ((many (List $ Pos) ts1))
+              (match many ot (((List $ Pos) y))
+                ((BTrue) (Cons _ (MkPos ol $ Succ oc) ts))
                 ((BFalse) ts)))
             (values (Cons _ (MkIndentLine ol oc d) ls) ts1))))
       (MkIndentSt l c d (nat-eq l ol) t u ls2 ts2))))
@@ -385,14 +407,18 @@
     ((Nil a) (SNil))
     ((Cons a p rest) (str-cat p $ ind-cat rest))))
 
-(def-fns _ $ (many ind-at : (many (String) path) (many (Nat) line) (many (String) msg) -> (many (String) r))
-  (ind-cat
-    $ Cons _ path
-    $ Cons _ ":"
-    $ Cons _ (nat-str line)
-    $ Cons _ ": warning: "
-    $ Cons _ msg
-    $ Nil _))
+(def-fns _ $ (many ind-at : (many (String) path) (many (Pos) pos) (many (String) msg) -> (many (String) r))
+  (match many pos _
+    ((MkPos line col)
+      (ind-cat
+        $ Cons _ path
+        $ Cons _ ":"
+        $ Cons _ (nat-str line)
+        $ Cons _ ":"
+        $ Cons _ (nat-str col)
+        $ Cons _ ": warning: "
+        $ Cons _ msg
+        $ Nil _))))
 
 (def-fns _ $ (many ind-msg-same : (many (Nat) i) (many (Nat) n) (many (Nat) tn) -> (many (String) r))
   (ind-cat
@@ -464,7 +490,7 @@
     $ Cons _ " (unclosed forms: append that many ))"
     $ Nil _))
 
-(def-fns _ $ (many ind-tabs : (many (String) path) (subterm many (List $ Nat) ts)
+(def-fns _ $ (many ind-tabs : (many (String) path) (subterm many (List $ Pos) ts)
     (many (List $ String) acc) -> (many (List $ String) r))
   (match many ts _
     ((Nil a) acc)
@@ -486,7 +512,7 @@
               (let ((many (List $ String) acc1))
                 (match many (nat-lt n en) (((List $ String) r))
                   ((BTrue) acc)
-                  ((BFalse) (Cons _ (ind-at path ln $ ind-msg-pop ei en n) acc))))
+                  ((BFalse) (Cons _ (ind-at path (MkPos ln $ Succ i) $ ind-msg-pop ei en n) acc))))
               (ind-pop path ln i n more acc1))))))))
 
 (def-fns _ $ (many ind-enclosing : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
@@ -500,7 +526,7 @@
           (let ((many (List $ String) acc1))
             (match many (and (nat-lt ei i) (not $ nat-lt en n)) (((List $ String) r))
               ((BFalse) acc)
-              ((BTrue) (Cons _ (ind-at path ln $ ind-msg-enclosing i ei en n) acc))))
+              ((BTrue) (Cons _ (ind-at path (MkPos ln $ Succ i) $ ind-msg-enclosing i ei en n) acc))))
           (ind-enclosing path ln i n more acc1))))))
 
 (def-fns _ $ (many ind-same : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
@@ -509,7 +535,7 @@
   (let ((many (List $ String) acc1))
     (match many (nat-eq n tn) (((List $ String) r))
       ((BTrue) acc)
-      ((BFalse) (Cons _ (ind-at path ln $ ind-msg-same i n tn) acc))))
+      ((BFalse) (Cons _ (ind-at path (MkPos ln $ Succ i) $ ind-msg-same i n tn) acc))))
   (values (Cons _ (MkPair _ _ i n) more) acc1))
 
 (def-fns _ $ (many ind-deeper : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
@@ -518,7 +544,7 @@
   (let ((many (List $ String) acc1))
     (match many (nat-lt tn n) (((List $ String) r))
       ((BTrue) acc)
-      ((BFalse) (Cons _ (ind-at path ln $ ind-msg-deeper ti i tn n) acc))))
+      ((BFalse) (Cons _ (ind-at path (MkPos ln $ Succ i) $ ind-msg-deeper ti i tn n) acc))))
   (values (Cons _ (MkPair _ _ i n) stack) acc1))
 
 (def-fns _ $ (many ind-back : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)
@@ -533,7 +559,7 @@
           (let ((many (List $ String) acc1))
             (match many (nat-eq en n) (((List $ String) r))
               ((BTrue) acc)
-              ((BFalse) (Cons _ (ind-at path ln $ ind-msg-back i en n) acc))))
+              ((BFalse) (Cons _ (ind-at path (MkPos ln $ Succ i) $ ind-msg-back i en n) acc))))
           (values (Cons _ (MkPair _ _ i n) rest) acc1))))))
 
 (def-fns _ $ (many ind-dedent : (many (String) path) (many (Nat) ln) (many (Nat) i) (many (Nat) n)

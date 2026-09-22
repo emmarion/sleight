@@ -89,8 +89,8 @@ Indentation is read as a claim about paren nesting, and `lib/indent.ml`
 checks the claim: a line indented further than the line before it must start
 strictly more nested, two lines at one indentation must start at one nesting,
 a dedent must land where every level it passed was really more nested, and
-the indentation is spaces. What it finds it writes as a warning,
-`path:line: warning: text`, and it runs over every file the driver or `slc`
+the indentation is spaces. What it finds it writes as a warning, and it runs
+over every file the driver or `slc`
 is handed *before* that file is parsed, so a file the reader then refuses is
 reported on all the same — which is where it pays most, since it also warns
 about a `)` closing more than is open and about the forms a file never
@@ -119,6 +119,14 @@ whether or not it is then refused,
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, and `; error: text`
 means it must fail with a message mentioning that text.
+
+Every message either writes carries where it is about: the file, and the line
+and column of the form it names, `path:line:col: error: text`, with `warning`
+or `syntax error` in place of `error` for those. A position is where a token's
+first character sits, both counted from one, and a message with nothing to
+point at — a file's unclosed forms, a contradiction that reached the driver, a
+runtime error, whose code carries no positions — names the file alone
+(ASSUMPTIONS 194).
 
 ## How it runs a program
 

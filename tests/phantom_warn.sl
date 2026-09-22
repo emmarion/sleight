@@ -1,4 +1,4 @@
-; warns: warning (line 11): phantom constructor Tag has a non-erased field
+; warns: tests/phantom_warn.sl:11:3: warning: phantom constructor Tag has a non-erased field
 ; expect: (Boxed 3)
 ; A phantom constructor with a many field is legal and warned about (section 12): nothing non-erased is ever
 ; headed by Tag, so its field could not be read back. The program goes on to compile and run, which is the

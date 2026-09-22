@@ -22,6 +22,7 @@ let type_term = Prelude.type_term
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
    what lets the runner capture one, stderr being the process's own here rather than the world's. *)
 let warn = ref prerr_string
+let warn_at l fmt = Printf.ksprintf (fun m -> !warn (Printf.sprintf "%s: warning: %s\n" (Reader.where "-" l) m)) fmt
 
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
 let pos_of expect = if expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
@@ -53,7 +54,7 @@ let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | Some Sp.Unique -> Some Unique | _ -> None
 let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error loc "expected a multiplicity, got %s" (Reader.show raw)
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
-let at loc f = try f () with Error (0, msg) -> error loc "%s" msg
+let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
 let var env loc n =
   match Literal.classify n with
   | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s" n)
@@ -176,7 +177,7 @@ let wrapper disc shapes =
 
 let newtype_of env c =
   List.find_map (fun o -> if not (List.mem (Var c) o.Env.names) then None else match type_of env o.Env.obj with
-    | Matchable (d, true, _, _, cs) when wrapper d (shapes env 0 cs) = Some c -> Some o.obj
+    | Matchable (d, true, _, _, cs) when wrapper d (shapes env Reader.nowhere cs) = Some c -> Some o.obj
     | _ -> None) env.opens.opened
 
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (name_of env c)
@@ -251,7 +252,7 @@ let open_tele env ?(word = true) ?names ?mults ?states ?(ids = []) ?meta tele =
   let _, env, _, fresh =
     List.fold_left
       (fun (i, env, ids, fresh) e ->
-        let ty, rule = fact_of env 0 (map_sg (instantiate ids) e.sg) in
+        let ty, rule = fact_of env Reader.nowhere (map_sg (instantiate ids) e.sg) in
         let x, env = bind env ?meta ~word:(word && meta <> Some true) (nth names i e.name) (nth mults i e.mult) (nth states i Dyn) ty ?rule in
         let env = match Option.map (instantiate ids) e.place with
           | Some (SlotHolds p) when meta <> Some true -> at_merge env (Var x) p
@@ -1175,6 +1176,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
             check_results envb el ann_tele ress;
             if reachable <> [] then branch_uses := join_uses !branch_uses envb.uses;
             if reachable = [] then None else Some (bind_cell scode cell code)
+        | _ :: dup :: _ -> error (loc dup) "a match has at most one else branch"
         | _ -> error l "a match has at most one else branch"
       in
       let real =
@@ -1339,7 +1341,7 @@ and hoist env lit =
   else
     let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
     let env = List.fold_left hoist env parts in
-    let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse (Literal.source lit)) in
+    let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse "<literal>" (Literal.source lit)) in
     let entry =
       match (lit, frame.scope.ids) with
       | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
@@ -1384,7 +1386,7 @@ and elab_unary spos env l args =
     Printf.sprintf "(eq-trans (Nat) %s (Succ %s) (Succ %s) %s %s)" (Z.to_string n) (Z.to_string z) below stp congd
   in
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
-  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse src)))
+  in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse "<unary>" src)))
 
 and elab_distinct env l a b =
   let za, xa = numeral_entry env l a and zb, xb = numeral_entry env l b in
@@ -1395,7 +1397,7 @@ and elab_distinct env l a b =
     Printf.sprintf "(match erased (numeral-inj %s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
       (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
   in
-  let raw = match Reader.parse src with [ r ] -> r | _ -> assert false in
+  let raw = match Reader.parse "<distinct>" src with [ r ] -> r | _ -> assert false in
   let env, (ress, code) =
     in_prelude env (fun env ->
         let env, ress, code = elab_expr env [ Erased ] raw in
@@ -1633,7 +1635,7 @@ and elab_def_adts env adts =
           let name = atom_or cl n "a constructor name" in
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" name (name_of env tid));
-          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then !warn (Printf.sprintf "warning (line %d): phantom constructor %s has a non-erased field\n" cl name);
+          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl "phantom constructor %s has a non-erased field" name;
           let c, env = bind env (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor"

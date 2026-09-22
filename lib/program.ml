@@ -56,9 +56,12 @@ let driver env =
       changed = build "Changed" []; unchanged = build "Unchanged" [];
       request; apply = (fun k x -> List.hd (Eval.apply k [ x ])); apply0 = (fun k -> List.hd (Eval.apply k [])) }
 
+(* A message names where it is about, the file the location carries or, where it carries none, the file
+   being read. A contradiction that reaches here escaped every form that would have placed it, and the
+   evaluator's code has no locations at all (ASSUMPTIONS 194). *)
 let explain path = function
-  | Reader.Syntax (l, m) -> Some (Printf.sprintf "%s:%d: syntax error: %s" path l m)
-  | Env.Error (l, m) -> Some (Printf.sprintf "%s:%d: error: %s" path l m)
+  | Reader.Syntax (l, m) -> Some (Reader.where path l ^ ": syntax error: " ^ m)
+  | Env.Error (l, m) -> Some (Reader.where path l ^ ": error: " ^ m)
   | Env.Contradiction m -> Some (path ^ ": error: contradiction: " ^ m)
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None
@@ -68,7 +71,7 @@ let adapt_final env ty v =
   | (Main | Thunk _), Fn (_, ps, [ { place = Some (SlotHolds p); _ } ]) ->
       let ids = List.map (fun _ -> Env.fresh ()) ps in
       let p = instantiate (List.rev_map (fun x -> Var x) ids) p in
-      let source = match p with Var x when List.mem x ids -> V.CVar x | _ -> V.CVar (Elab.location_var env 0 p) in
+      let source = match p with Var x when List.mem x ids -> V.CVar x | _ -> V.CVar (Elab.location_var env Reader.nowhere p) in
       let fn = { V.fname = "at-final"; params = ids;
         body = V.CLet ([], V.CApp (V.CConst v, List.map (fun x -> V.CVar x) ids, V.Plain), source); impl = None } in
       V.VFn { fn; env = lazy env.Env.values }
@@ -79,5 +82,5 @@ let consume w env ty v =
   match final env ty with
   | Main -> (driver env).run_main w v
   | Io -> w.exit ((driver env).run_io w v)
-  | Thunk t -> w.print (Elab.show_value env 0 t (List.hd (Eval.apply v [])))
-  | Plain -> w.print (Elab.show_value env 0 ty v)
+  | Thunk t -> w.print (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
+  | Plain -> w.print (Elab.show_value env Reader.nowhere ty v)

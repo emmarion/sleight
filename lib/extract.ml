@@ -412,13 +412,13 @@ let rec show cx env ty =
   | None ->
       let name = Printf.sprintf "show_%d" (List.length !(cx.shows)) and body = ref "" in
       cx.shows := (key, name, body) :: !(cx.shows);
-      let adt_of tid = List.find_opt (fun a -> match a.V.ctors with c :: _ -> (try Elab.tid_of env 0 c.cid = tid with _ -> false) | [] -> false) cx.adts in
+      let adt_of tid = List.find_opt (fun a -> match a.V.ctors with c :: _ -> (try Elab.tid_of env Reader.nowhere c.cid = tid with _ -> false) | [] -> false) cx.adts in
       (* one arm: the constructor's name over its fields, an erased one printing as `_` and taking no binder
          (ASSUMPTIONS 184). The shared Ffi_core.show_app joins them, so `$` reads the same here as in the
          interpreter rather than being decided again. *)
       let branch a c =
         try
-          let tele, ret = Elab.ctor_type env 0 c.V.cid in
+          let tele, ret = Elab.ctor_type env Reader.nowhere c.V.cid in
           let env', fids = Elab.open_tele env tele in
           let env' = Env.merge_opens (Env.unify_force (Env.forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
           let rec args i = function

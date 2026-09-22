@@ -6,7 +6,8 @@
 #      the test's stdin and arguments, and its stdout, stderr and exit code compared with the reference
 #      interpreter's on the same files; the extern, thunk, main, char and nat tests are compiled again with
 #      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
-#      the program in place of writing it out, and compared the same way;
+#      the program in place of writing it out, and compared the same way; a refused test is also run through
+#      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
 #   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 set -u
@@ -45,7 +46,17 @@ check_test() {
       echo "FAIL $name: slc accepted a program the checker refuses"; return
     fi
     directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
-      check_warns "$t" "$name" && echo "refused $name"
+      check_warns "$t" "$name" || return
+    # Where each side puts its first message. The directives match on the text alone, so nothing else
+    # compares the two positions; slc records one per form it descends into and the reference carries one
+    # per form, so the file and line agree far more often than the column (ASSUMPTIONS 194).
+    "$ROOT/$REF" $(for f in $needs "$t"; do echo "$ROOT/$f"; done) > /dev/null 2> "$B/$name.ref.err"
+    first() { grep -m1 ' error: ' "$1" | sed "s|^$ROOT/||"; }
+    refpos=$(first "$B/$name.ref.err"); slcpos=$(first "$B/$name.slc.err")
+    if [ "$(echo "$refpos" | cut -d: -f1-3)" = "$(echo "$slcpos" | cut -d: -f1-3)" ]; then echo "pos-same $name"
+    elif [ "$(echo "$refpos" | cut -d: -f1-2)" = "$(echo "$slcpos" | cut -d: -f1-2)" ]; then echo "pos-col $name: $refpos vs $slcpos"
+    else echo "pos-line $name: $refpos vs $slcpos"; fi
+    echo "refused $name"
     return
   fi
   args=$(directive "$t" args)
@@ -95,6 +106,8 @@ echo "== compiling the tests with slc, the extern, thunk, main, char and nat tes
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
 echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"
+grep "^pos-line " "$B/results.txt"
+echo "$(grep -c '^pos-same ' "$B/results.txt") refusals agree on file, line and column, $(grep -c '^pos-col ' "$B/results.txt") on file and line alone ($B/results.txt lists them), $(grep -c '^pos-line ' "$B/results.txt") on neither"
 
 echo "== compiling slc with slc"
 "$B/slc" -- lib/prelude.sl $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }

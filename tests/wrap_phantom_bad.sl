@@ -1,5 +1,5 @@
 ; error: has no opened newtype Matchable
-; warns: warning (line 7): phantom constructor Ghost has a non-erased field
+; warns: tests/wrap_phantom_bad.sl:7:3: warning: phantom constructor Ghost has a non-erased field
 
 (def-adts $ (T : -> Type)
   enum newtype

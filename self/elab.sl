@@ -1888,7 +1888,7 @@
     ((TVar x) (match many (equal-env env (type-of env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values bad x)))) (else (values bad $ Zero))))
 
 (def-fns _ $ (many one-arg : (many (List $ Raw) args) -> (many (Raw) r))
-  (match many args _ ((Nil a) (RAtom 0 "_")) ((Cons a r rest) r)))
+  (match many args _ ((Nil a) (RAtom (MkPos 0 0) "_")) ((Cons a r rest) r)))
 
 (def-fns _ $ (many comptime-shape : (many (List $ Raw) args) -> (many (Maybe $ Pair (Raw) $ Pair (Raw) $ List $ Raw) r))
   (match many args _
@@ -2893,7 +2893,7 @@
                 ((Erased) (wrap-field rest trest tyrest))))))))))
 
 (def-fns _ $ (many missing-arg : (many (Env) env) -> (many (Env) r) (many (Nat) x))
-  (let ((many env2) (many x)) $ var (env-at env 0) "_")
+  (let ((many env2) (many x)) $ var (env-at env $ MkPos 0 0) "_")
   (values (env-back env env2) x))
 
 (def-fns _ $ (many erased-res : (many (List $ Res) ress) (erased (Lockstep (Mult) (Res) erased-one ress) lock) -> (many (Res) r))
@@ -3341,13 +3341,13 @@
 (let ((many sugar-budget)) 1)
 
 (def-fns _ $ (many gen-atom : (many (String) s) -> (many (Raw) r))
-  (RAtom 1 s))
+  (RAtom (MkPos 1 1) s))
 
 (def-fns _ $ (many gen-nat : (many (Nat) n) -> (many (Raw) r))
   (gen-atom $ nat-str n))
 
 (def-fns _ $ (many gen-of : (many (String) head) (many (List $ Raw) args) -> (many (Raw) r))
-  (RList 1 $ Cons _ (gen-atom head) args))
+  (RList (MkPos 1 1) $ Cons _ (gen-atom head) args))
 
 (def-fns _ $ (many gen-numeral-of : (many (Nat) n) -> (many (Raw) r))
   (gen-of "numeral-of" $ Cons _ (gen-nat n) $ Nil _))
@@ -3397,14 +3397,14 @@
 (def-fns _ $ (many distinct-source : (many (Nat) za) (many (Nat) zb) -> (many (Raw) r))
   (gen-of "match" $ Cons _ (gen-atom "erased")
     $ Cons _ (gen-of "numeral-inj" $ Cons _ (bin-text za) $ Cons _ (bin-text zb) $ Cons _ (gen-nat za) $ Cons _ (gen-numeral-of za) $ Cons _ (gen-numeral-of zb) $ Nil _)
-    $ Cons _ (RList 1 $ Cons _ (RList 1 $ Cons _ (gen-of "False" $ Nil _) $ Cons _ (gen-atom "f") $ Nil _) $ Nil _)
+    $ Cons _ (RList (MkPos 1 1) $ Cons _ (RList (MkPos 1 1) $ Cons _ (gen-of "False" $ Nil _) $ Cons _ (gen-atom "f") $ Nil _) $ Nil _)
     $ Cons _ (gen-of "absurd" $ Cons _ (gen-atom "Refl") $ Nil _) $ Nil _))
 
 (def-fns _
   ; An expression of the given size and erasures (sections 16, 20); [tele] is the telescope a bare _ reuses.
   ((many elab-expr-demand : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (ExprDemand expect) demand) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock))
-    (let ((many envl0)) $ env-at env $ raw-line raw)
+    (let ((many envl0)) $ env-at env $ raw-pos raw)
     (let ((many envl)) $ env-set-usage-erased envl0 $ or (env-usage-erased env) $ not $ mult-is-many $ pos-mult expect)
     (let ((many pos) (erased pf)) $ pos-of expect)
     (let ((many (Env) env2) (many (List $ Res) ress) (many (Code ctx expect) code))
@@ -3723,7 +3723,7 @@
   ; Grammar expressions (section 5): variables, constructor applications and type formers; [as-type] also
   ; checks the result is a type.
   ((many elab-term : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (Bool) as-type) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (Term) t) (many (Term) ty))
-    (let ((many envl)) $ env-at env $ raw-line raw)
+    (let ((many envl)) $ env-at env $ raw-pos raw)
     (let ((many (Env) env2) (many (Term) t) (many (Term) ty))
       (match many raw _
         (else
@@ -4181,7 +4181,7 @@
             (values env3 ctx3 (SSeq _ _ _ sc sc2) final))))))
 
   ((many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
-    (let ((many envl)) $ env-at env $ raw-line raw)
+    (let ((many envl)) $ env-at env $ raw-pos raw)
     (let ((many bad)) $ env-error envl $ str-cat (show-r raw) " is not a statement")
     (let ((many (Env) env2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
       (match many raw _
@@ -4518,7 +4518,7 @@
     (match many fns _
       ((Nil a) (values env $ HStop _))
       ((Cons a f rest)
-        (let ((many envl)) $ env-at env $ raw-line f)
+        (let ((many envl)) $ env-at env $ raw-pos f)
         (let ((many bad)) $ env-error envl "malformed function definition")
         (match many f _
           ((RList lq items)
@@ -4640,7 +4640,7 @@
     (match many adts _
       ((Nil a) (values env (AStop _) $ TStop _))
       ((Cons a adt rest)
-        (let ((many envl)) $ env-at env $ raw-line adt)
+        (let ((many envl)) $ env-at env $ raw-pos adt)
         (let ((many bad)) $ env-error envl "malformed def-adts entry")
         (match many adt _
           ((RList lq items)
@@ -4686,7 +4686,8 @@
             (let-match many tids (TCons g3 r3 h3 hs3 tid trest))
             (match many h _
               ((MkAdtHeader g2 name disc nt ext ctors pc)
-                (let ((many env2) (many mcpairs)) $ elab-ctors sugar (subterm (subterm-trans pc $ prove-subterm adt adts)) ctors env tid)
+                (let ((many envh)) $ env-at env $ raw-head-pos adt)
+                (let ((many env2) (many mcpairs)) $ elab-ctors sugar (subterm (subterm-trans pc $ prove-subterm adt adts)) ctors envh tid)
                 (let ((many mctors)) $ mctors-of mcpairs)
                 (let ((many ss)) $ shapes mctors env2)
                 (let ((many tagged)) $ tagged-of disc ss)
@@ -4721,7 +4722,7 @@
     (match many ctors _
       ((Nil a) (values env $ Nil _))
       ((Cons a craw rest)
-        (let ((many envl)) $ env-at env $ raw-line craw)
+        (let ((many envl)) $ env-at env $ raw-pos craw)
         (let ((many bad)) $ env-error envl "malformed constructor")
         (let ((many (Env) env0) (many (Maybe $ CtorParts craw) parsed))
           (match many craw _
@@ -4752,7 +4753,7 @@
                     ((Some c t) (match many (nat-cmp t tid) (((Env) e0)) ((CEq eq-t eq-r eq-x) env2) (else (env-error env2 $ str-cat3 name " must return an application of " $ name-of env2 tid))))))
                 (let ((many (Env) env2c))
                   (match many (and (not $ mult-is-many mult) $ not $ nat-is-zero $ many-count tele) _
-                    ((BTrue) (env-warn env2b $ str-cat3 "warning (line " (nat-str $ env-line env2b) $ str-cat3 "): phantom constructor " name " has a non-erased field"))
+                    ((BTrue) (env-warn env2b $ located env2b ": warning: " $ str-cat3 "phantom constructor " name " has a non-erased field"))
                     ((BFalse) env2b)))
                 (let ((many env3)) $ env-discard env0 env2c)
                 (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 (Some _ name) mult ty (None _) delegate-id)) (else (bind env3 (Some _ name) mult ty (None _) delegate-id)))
@@ -5002,7 +5003,7 @@
     (match many branches _
       ((Nil a) (values (env-set-uses env joined) (list-rev _ acc) seen))
       ((Cons a braw brest)
-        (let ((many envl)) (env-at (env-set-uses env incoming) (raw-line braw)))
+        (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
         (match many (is-else-branch envl braw) _
           ((BTrue) (elab-branches sugar brest env ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined))
           ((BFalse)
@@ -5069,7 +5070,7 @@
         (match many (is-else-branch env braw) _
           ((BFalse) (elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming))
           ((BTrue)
-            (let ((many envl)) (env-at (env-set-uses env incoming) (raw-line braw)))
+            (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
             (let ((many (Env) env2) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found2))
               (match many seen-else _
                 ((BTrue) (values (env-error envl "a match has at most one else branch") found))
@@ -5137,7 +5138,7 @@
                   ((BTrue)
                     (let ((many (Env) env2))
                       (match many (mult-is-many mult) _
-                        ((BTrue) (env-back env $ env-error (env-at env $ raw-line arg) $ str-cat3 "_ stands for an erased argument, and argument " (nat-str $ Succ $ list-length _ acc) " here is not erased"))
+                        ((BTrue) (env-back env $ env-error (env-at env $ raw-pos arg) $ str-cat3 "_ stands for an erased argument, and argument " (nat-str $ Succ $ list-length _ acc) " here is not erased"))
                         ((BFalse) env)))
                     (check-args-go sugar root arest st env2 ctx rest mrest lp pos as-term prepare fields (Cons _ (TVar m) acc) (Cons _ (type-of env2 m) tys) codes pairs))
                   ((BFalse)
@@ -5259,7 +5260,7 @@
   (match many items _
     ((Nil a) env)
     ((Cons a item rest)
-      (let ((many env2)) $ intern-literals item $ env-at env $ raw-line item)
+      (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
       (match many (is-statement env2 item) _
         ((BTrue)
           (let ((many env3) (many ctx2) (many sc)) $ elab-stmt sugar-budget item env2 (Nil _) (Many))

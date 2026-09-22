@@ -2,5 +2,5 @@
 let load () =
   Ffi.reset ();
   Env.trace := [];
-  let env = Elab.run_toplevel Prelude.env (Reader.parse Prelude_source.source) in
+  let env = Elab.run_toplevel Prelude.env (Reader.parse "lib/prelude.sl" Prelude_source.source) in
   { env with prelude = env.scope }

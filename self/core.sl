@@ -2026,7 +2026,7 @@
        (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (UniqueState) us) -> (Env)))
   ((Loc : -> Type)
     enum
-    (many MkLoc : (many (String) file) (many (Nat) line) -> (Loc)))
+    (many MkLoc : (many (String) file) (many (Pos) pos) -> (Loc)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) -> (EInfo l)))
@@ -2178,19 +2178,20 @@
       (values (MkEnv _ hp sc en _ _ x (table-weaken _ _ _ _ tb $ lt-weaken fr x ltp) rp ob li fi er lv st cl wa lt lo pr us) x))))
 (def-fns _ $ (many env-loc : (many (Env) e) -> (many (Loc) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) lo)))
-(def-fns _ $ (many env-line : (many (Env) e) -> (many (Nat) r))
-  (match many (env-loc e) _ ((MkLoc f l) l)))
 (def-fns _ $ (many env-at-loc : (many (Env) e) (many (Loc) x) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt x pr us))))
-(def-fns _ $ (many env-at : (many (Env) e) (many (Nat) line) -> (many (Env) r))
-  (match many (env-loc e) _ ((MkLoc f l) (env-at-loc e $ MkLoc f line))))
-; Restores [outer]'s line in [inner], on leaving the form that set it.
+(def-fns _ $ (many env-at : (many (Env) e) (many (Pos) pos) -> (many (Env) r))
+  (match many (env-loc e) _ ((MkLoc f l) (env-at-loc e $ MkLoc f pos))))
+; Restores [outer]'s position in [inner], on leaving the form that set it.
 (def-fns _ $ (many env-back : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (env-at-loc inner $ env-loc outer))
-; A message with the file and line in force, in the reference's format.
+; A message with the file and position in force, in the reference's format.
 (def-fns _ $ (many located : (many (Env) e) (many (String) kind) (many (String) x) -> (many (String) r))
   (match many (env-loc e) _
-    ((MkLoc f l) (str-cat3 f ":" $ str-cat3 (nat-str l) kind x))))
+    ((MkLoc f p)
+      (match many p (((String) r))
+        ((MkPos l c)
+          (str-cat3 f ":" $ str-cat3 (nat-str l) ":" $ str-cat3 (nat-str c) kind x))))))
 (def-fns _ $ (many env-report : (many (Env) e) (many (String) msg) -> (many (Env) r))
   (match many e _ ((MkEnv hs hp sc en nf ff fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi (Cons _ msg er) lv st cl wa lt lo pr us))))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
@@ -2731,7 +2732,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ name) (BFalse) (Erased) (SgTy t) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" 0) (nm-empty _) unique-empty))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) (nm-empty _) (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) (nm-empty _) unique-empty))
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
 (let ((many univ-id)) (Succ (Zero)))
