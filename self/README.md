@@ -397,13 +397,16 @@ the entry says otherwise, and recorded so it can be revisited.
   elaborator counted against its model. `apply-extern` is total
   (ASSUMPTIONS 151), so a claimed extern always runs.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
-  always runs the FFI's externs, and the output always uses them), the
-  reference's `--warn-shadow` (ASSUMPTIONS 195), and
-  macros, which the reference does not implement either. A warning is
-  modelled: the phantom-constructor one of section 12 and the
-  indentation ones above are collected in the environment as errors are
+  always runs the FFI's externs, and the output always uses them), and
+  macros, which the reference does not implement either. The warnings are
+  modelled: the phantom-constructor one of section 12, the shadowing one
+  of section 9 (ASSUMPTIONS 195) and the indentation ones above are
+  collected in the environment as errors are
   and written to stderr ahead of either outcome, which the `; warns:`
   directive of every test carrying one checks
-  (`self/bootstrap.sh`'s `check_warns`). A string
+  (`self/bootstrap.sh`'s `check_warns`). The shadowing warning needs a
+  position per binder, which `Entry` and `EInfo` carry as the reference's
+  telescope and scope entries do, so its messages agree with the
+  reference's on the column as well as the line. A string
   literal is not `is`-transparent to its characters as the reference's
   is (ASSUMPTIONS 60); `numeral-of` on one is refused as there.

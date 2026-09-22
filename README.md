@@ -137,19 +137,20 @@ message with nothing to point at — a contradiction that reached the driver, a
 runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).
 
-Shadowing is legal (section 9) and silent by default. `--warn-shadow` asks
-for a warning at every binder that hides a name already in scope —
-`declaration of List shadows a previous binder`, with a note
-`shadowed binder is here`, or `declaration of tail shadows a built-in`
-where the shadowed one has no position of its own, being a special form or
-an annotation token. That last
+Shadowing is legal (section 9) and warns. Every binder that hides a name
+already in scope earns `declaration of List shadows a previous binder`,
+with a note `shadowed binder is here`, or
+`declaration of tail shadows a built-in` where the binder it hides has no
+position of its own, being a special form or an annotation token. That last
 is the case worth finding, since a field named `tail` or a `let` binder named
-`at` leaves that scope unable to write the marker. It is off by default because
-the repository does it everywhere: `lib/prelude.sl` earns two (`Cons`'s
-`tail` field, twice over), `self/*.sl` 314 over its 13000 lines, 94 of them
-over a built-in, and every test earns at least one, `tests/list.sl` alone
-redefining `List`, `Nil` and `Cons` over the prelude's as DESIGN.md section
-31's worked example (ASSUMPTIONS 195).
+`at` leaves that scope unable to write the marker. `slc` warns the same, at
+the same positions (ASSUMPTIONS 195). The repository is clean of shadowing
+but for the four tests the warning is tested on: `tests/shadow_warn.sl` and
+`tests/shadow_builtin_warn.sl`, which take a binder of each kind through it,
+`tests/list.sl`, which redefines `List`, `Nil` and `Cons` over the prelude's
+as DESIGN.md section 31's worked example and names `Cons`'s field `tail` as
+section 31 does, and `tests/shadow_false_capture.sl`, whose subject is a
+declaration hidden by a later one.
 
 ## How it runs a program
 

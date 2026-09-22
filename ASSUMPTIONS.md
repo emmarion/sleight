@@ -3771,29 +3771,39 @@ without the owner.
     error test; the column agrees on most, and the script prints how
     many of each so the number cannot quietly grow.
 
-195. **Shadowing warns only when asked, and only for a binder the
-    source wrote.** Section 9 makes every name shadowable, so the
-    warning is behind `--warn-shadow` rather than on by default; the
-    owner asked for the flag, and what follows is this session's.
-    `Env.bind` is the one place every entry is minted, but it is
-    reached twice for one binder -- reading a stored telescope binds
-    its entries again -- so the warning is not for `bind` to decide:
-    an entry carries the position the source wrote it at, `bind` takes
-    it as `~at`, and only a binder given one warns. The sites that
-    give one are the declaration telescope entries, `let` binders,
-    the names `def-lvl`, `def-fns` and `def-adts` introduce, a
-    pattern's fields, and the binders a `unique` destructure,
-    `cell-match` and an `else` add; everything else the elaborator
-    mints for itself carries `Reader.nowhere` and is silent, which
-    also makes a message about a binding with no position -- a
-    built-in special form or annotation token -- say so instead of
-    pointing nowhere. `slc` does not model the flag, as it does not
-    model `--no-extern`.
+195. **Which binders the shadowing warning covers, and which of its
+    two messages each earns.** Section 9 makes every name shadowable
+    and the checker warns at every binder that hides a name already in
+    scope; the spec says nothing further, so what follows is this
+    session's. `Env.bind` is the one place every entry is minted, but
+    it is reached twice for one binder -- reading a stored telescope
+    binds its entries again -- so `bind` takes two things and not one:
+    `~at`, the position the source wrote the binder at, which the entry
+    keeps and a later message points at, and `~written`, whether this
+    site is that writing, which is what decides the warning. A
+    telescope carries the position for its own entries
+    (`Term.entry`'s `loc`), so a parameter bound again inside its body
+    keeps its declaration's position and does not warn a second time;
+    it is no part of the type, `Term.blank` clearing it so that
+    telescopes compare as they did. The sites that write a binder are
+    the declaration telescope entries, `let` binders, the names
+    `def-lvl`, `def-fns` and `def-adts` introduce, a pattern's fields,
+    and the binders a `unique` destructure, `cell-match` and an `else`
+    add; everything the elaborator mints for itself carries
+    `Reader.nowhere` and is silent. An entry with no position is then a
+    built-in and nothing else -- a special form, an annotation token or
+    one of the opaque types -- which is what lets the message say so
+    rather than point nowhere; before the telescope carried one this
+    was untrue, and a shadowed parameter was reported as a built-in.
+    `slc` models all of it, its `Entry` and `EInfo` carrying the same
+    position, so its messages agree with the reference's on the column
+    as well as the line (`self/README.md`).
 
-    What the repository earns, which is why the flag is not a
-    default: two in `lib/prelude.sl`, both `Cons`'s `tail` field over
-    section 27's `tail` token; 314 in `self/*.sl`, 94 of them over a
-    built-in, the recurring names being `at`, `tail`, `unique`,
-    `newtype`, `values` and `sub`; and at least one in every test,
-    `tail` alone accounting for most of those through `Cons` and the
-    139 tests that need `tests/list.sl`.
+    The repository is clean of shadowing but for four tests, each
+    recording what it earns in `; warns:` directives:
+    `tests/shadow_warn.sl` and `tests/shadow_builtin_warn.sl`, which
+    take a binder of each kind through the warning; `tests/list.sl`,
+    which redeclares the prelude's `List`, `Nil` and `Cons` and names
+    `Cons`'s field `tail` as DESIGN.md section 31 does; and
+    `tests/shadow_false_capture.sl`, whose subject is a declaration
+    hidden by a later one.
