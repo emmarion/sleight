@@ -477,9 +477,9 @@
           (let ((many shape)) $ adt-shape adt)
           (let ((many ty)) $ match many (narrowed adt live) (((String) r)) ((BTrue) (str-cat "yes " $ narrow-name d shape $ live-key live)) ((BFalse) (shape-name d shape)))
           (let ((many inner))
-            $ match many arms (((Rope) r))
+            (match many arms (((Rope) r))
               ((Nil b) (match many dflt (((Rope) r)) ((None c) (RStr "| _ -> .")) ((Some c dr) (rcat (RStr "| _ -> ") dr))))
-              ((Cons b arm rest) (rcat (tagged-arms d shape arms) $ match many dflt (((Rope) r)) ((None c) (REmpty)) ((Some c dr) (rcat (RStr "| _ -> ") dr)))))
+              ((Cons b arm rest) (rcat (tagged-arms d shape arms) $ match many dflt (((Rope) r)) ((None c) (REmpty)) ((Some c dr) (rcat (RStr "| _ -> ") dr))))))
           (rcat5 (RStr "(match (Obj.obj ") scrut (RStr $ str-cat3 " : " ty ") with ") inner $ RStr ")"))
         ((BFalse)
           (match many (adt-newtype adt) _
