@@ -154,8 +154,8 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
              (* An entry with no position is one the built-ins minted rather than a file: a special form,
                 an annotation token, or one of the opaque types (section 27). *)
              let prior = (IntMap.find prior env.entries).at in
-             if Reader.placed prior then warn_at at [ (prior, "the binder it shadows") ] "the binder %s shadows an earlier one" n
-             else warn_at at [] "the binder %s shadows a built-in" n
+             if Reader.placed prior then warn_at at [ (prior, "shadowed binder is here") ] "declaration of %s shadows a previous binder" n
+             else warn_at at [] "declaration of %s shadows a built-in" n
          | _ -> ())
       name;
   let x = fresh () in
