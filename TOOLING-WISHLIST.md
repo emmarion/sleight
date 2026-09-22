@@ -264,3 +264,49 @@ files are not in this tree; they are at commit `4912ada`
     would likely make these failures easier to diagnose than temporary source
     instrumentation. Showing logical versus physical at returns alongside it
     would help check that stores remain before the exposed tail call.
+
+33. **Item 32, met again.** Finding why a let-bound match multiplied the
+    output took a temporary printer in `lib/elab.ml` and another in
+    `self/elab.sl`, the second re-extracted into the compiler to read one
+    function's code before and after normalization. The same dump, with
+    the environment's counters beside it (entries minted, rules in force,
+    words in scope), would also have shown at once which of those grew
+    with the program, which took prefix timings and a profile to see.
+
+34. **A hermetic bootstrap.** `self/bootstrap.sh` reads `self/*.sl` when
+    it extracts the compiler and again, minutes later, when the compiler
+    compiles itself, so an edit or a `git stash` in between feeds the two
+    steps different sources and the fixpoint compares the wrong things.
+    Copying the sources into the build directory at the start would make
+    a run answer for one tree. `bench/bench.sh` has the complementary
+    problem: its pinned commit is unreachable in a shallow clone, and
+    where it is reachable the pinned sources no longer elaborate under
+    the current prelude, so the "slc on pinned slc" line measures nothing
+    and says so only in passing.
+
+35. **Profiles and growth.** Extraction keeps function names, so
+    `callgrind` on a `-g` build of `slc.ml` reads directly in terms of
+    the source; a script for that, and a sample under `bench/` whose
+    elaboration re-runs one file after a large scope (which is how the
+    cost growing with the scope was first seen, `self/base.sl` costing
+    six times as much at the end of the program as at its start), would
+    have saved the setup. Three of the four costs found this way were
+    linear walks of lists that grew with the program (the words list,
+    the temporaries, the rules list), and one was an exponential copy;
+    a counter per list in the same dump as item 33 would show them
+    without a profiler.
+
+36. **`and` and `or` evaluate both operands.** They are functions, so
+    `(and cheap expensive)` runs the expensive test whether or not the
+    cheap one failed; `hide-words` tested every word's membership in the
+    temporaries list even below its bound. A short-circuiting form
+    (a nested `match` today, a macro once macros land) is the idiom, and
+    the base helpers' names invite the mistake.
+
+37. **Backwards references and helpers.** A helper defined later in the
+    file is unusable earlier (`atoms-of` at line 2241 of `self/elab.sl`
+    could not serve `prepare-argument` at line 1590), so a smaller copy
+    was written above it. Not a tooling gap, but a report of where a
+    name is defined against where it was wanted would have settled it
+    faster than the arity error that followed.
+
