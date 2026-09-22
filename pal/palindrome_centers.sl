@@ -7,16 +7,16 @@
     (many PLLeft : (erased (List (Nat)) right) -> (PalLcp (Nil (Nat)) right (Zero)))
     (many PLRight : (erased (List (Nat)) left) -> (PalLcp left (Nil (Nat)) (Zero)))
     (many PLApart : (erased (Nat) x y) (erased (List (Nat)) left right)
-      (erased (NatApart x y) apart) ->
-      (PalLcp (Cons (Nat) x left) (Cons (Nat) y right) (Zero)))
+      (erased (NatApart x y) apart)
+      -> (PalLcp (Cons (Nat) x left) (Cons (Nat) y right) (Zero)))
     (many PLStep : (erased (Nat) x) (erased (List (Nat)) left right)
-      (erased (Nat) n) (erased (PalLcp left right n) p) ->
-      (PalLcp (Cons (Nat) x left) (Cons (Nat) x right) (Succ n))))
+      (erased (Nat) n) (erased (PalLcp left right n) p)
+      -> (PalLcp (Cons (Nat) x left) (Cons (Nat) x right) (Succ n))))
   ((PalSplit : ((List (Nat)) xs left right) -> Type) enum
     (many PSStart : (erased (List (Nat)) xs) -> (PalSplit xs (Nil (Nat)) xs))
     (many PSStep : (erased (List (Nat)) xs left right) (erased (Nat) x)
-      (erased (PalSplit xs left (Cons (Nat) x right)) p) ->
-      (PalSplit xs (Cons (Nat) x left) right))))
+      (erased (PalSplit xs left (Cons (Nat) x right)) p)
+      -> (PalSplit xs (Cons (Nat) x left) right))))
 
 (def-fns _ $ (erased fp-split-has : (erased (List (Nat)) xs left right)
     (erased (Nat) n) (subterm erased (PalSplit xs left right) split)
@@ -122,15 +122,15 @@
 
 (def-adts $ (PalCenterBounds : ((List (Nat)) left right) ((Nat) n) -> Type)
   enum
-  (many PCBEnd : (erased (List (Nat)) left) (erased (Nat) n) ->
-    (PalCenterBounds left (Nil (Nat)) n))
+  (many PCBEnd : (erased (List (Nat)) left) (erased (Nat) n)
+    -> (PalCenterBounds left (Nil (Nat)) n))
   (many PCBStep : (erased (List (Nat)) left right) (erased (Nat) x n e o de do)
     (erased (PalLcp left (Cons (Nat) x right) e) even)
     (erased (PalLcp left right o) odd)
     (erased (Double e de) twicee) (erased (Double o do) twiceo)
     (erased (Lt de (Succ n)) be) (erased (Lt (Succ do) (Succ n)) bo)
-    (erased (PalCenterBounds (Cons (Nat) x left) right n) rest) ->
-    (PalCenterBounds left (Cons (Nat) x right) n)))
+    (erased (PalCenterBounds (Cons (Nat) x left) right n) rest)
+    -> (PalCenterBounds left (Cons (Nat) x right) n)))
 
 (def-fns _ $ (erased fp-bounds-weaken : (erased (List (Nat)) left right)
     (erased (Nat) n m) (subterm erased (PalCenterBounds left right n) bounds)
@@ -302,11 +302,11 @@
 ; Erased histories let the runtime loops carry only numeric accumulators.
 (def-adts $ (PalLcpPrefix : ((List (Nat)) fullleft fullright left right) ((Nat) n) -> Type)
   enum
-  (many PLPStart : (erased (List (Nat)) left right) ->
-    (PalLcpPrefix left right left right (Zero)))
+  (many PLPStart : (erased (List (Nat)) left right)
+    -> (PalLcpPrefix left right left right (Zero)))
   (many PLPStep : (erased (List (Nat)) fullleft fullright left right) (erased (Nat) x n)
-    (erased (PalLcpPrefix fullleft fullright (Cons (Nat) x left) (Cons (Nat) x right) n) p) ->
-    (PalLcpPrefix fullleft fullright left right (Succ n))))
+    (erased (PalLcpPrefix fullleft fullright (Cons (Nat) x left) (Cons (Nat) x right) n) p)
+    -> (PalLcpPrefix fullleft fullright left right (Succ n))))
 
 (def-fns _ $ (erased fp-lcp-prefix-close : (erased (List (Nat)) fl fr left right)
     (erased (Nat) n k total) (subterm erased (PalLcpPrefix fl fr left right n) prefix)
@@ -323,15 +323,15 @@
         (add-succ-right n1 k c q)))))
 
 (def-adts $ (PalScanned : ((List (Nat)) xs left right) ((Nat) n) -> Type) enum
-  (many PSCStart : (erased (List (Nat)) xs) (erased (Nat) n) ->
-    (PalScanned xs (Nil (Nat)) xs n))
+  (many PSCStart : (erased (List (Nat)) xs) (erased (Nat) n)
+    -> (PalScanned xs (Nil (Nat)) xs n))
   (many PSCStep : (erased (List (Nat)) xs left right) (erased (Nat) x n e o de do)
     (erased (PalLcp left (Cons (Nat) x right) e) even)
     (erased (PalLcp left right o) odd)
     (erased (Double e de) twicee) (erased (Double o do) twiceo)
     (erased (Lt de (Succ n)) be) (erased (Lt (Succ do) (Succ n)) bo)
-    (erased (PalScanned xs left (Cons (Nat) x right) n) previous) ->
-    (PalScanned xs (Cons (Nat) x left) right n)))
+    (erased (PalScanned xs left (Cons (Nat) x right) n) previous)
+    -> (PalScanned xs (Cons (Nat) x left) right n)))
 
 (def-fns _ $ (erased fp-scanned-weaken : (erased (List (Nat)) xs left right)
     (erased (Nat) n m) (subterm erased (PalScanned xs left right n) scanned)

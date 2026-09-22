@@ -36,8 +36,8 @@
   ((NoEnt : ((List (Ent)) ents) ((Nat) x) -> Type)
     enum
     (many NoEntNil : (erased (Nat) x) -> (NoEnt (Nil (Ent)) x))
-    (many NoEntCons : (erased (Nat) x) (erased (Nat) y) (erased (Term) ty2) (erased (Kind) k2) (erased (List (Ent)) rest) (erased (Neq x y) n) (erased (NoEnt rest x) p) ->
-       (NoEnt (Cons (Ent) (MkEnt y ty2 k2) rest) x)))
+    (many NoEntCons : (erased (Nat) x) (erased (Nat) y) (erased (Term) ty2) (erased (Kind) k2) (erased (List (Ent)) rest) (erased (Neq x y) n) (erased (NoEnt rest x) p)
+       -> (NoEnt (Cons (Ent) (MkEnt y ty2 k2) rest) x)))
   ((EntDec : ((List (Ent)) ents) ((Nat) x) -> Type)
     enum
     (many EntHit : (erased (List (Ent)) ents) (erased (Nat) x) (many (Term) ty) (many (Kind) k) (erased (EntOf ents x ty k) p) -> (EntDec ents x))
@@ -64,13 +64,13 @@
   ((NameOf : ((List (Name)) scope) ((String) s) ((Nat) x) -> Type)
     enum
     (many NameHere : (erased (String) s) (erased (Nat) x) (erased (List (Name)) rest) -> (NameOf (Cons (Name) (MkName s x) rest) s x))
-    (many NameThere : (erased (String) s) (erased (String) s2) (erased (Nat) x) (erased (Nat) y) (erased (List (Name)) rest) (erased (StrNeq s s2) n) (erased (NameOf rest s x) p) ->
-       (NameOf (Cons (Name) (MkName s2 y) rest) s x)))
+    (many NameThere : (erased (String) s) (erased (String) s2) (erased (Nat) x) (erased (Nat) y) (erased (List (Name)) rest) (erased (StrNeq s s2) n) (erased (NameOf rest s x) p)
+       -> (NameOf (Cons (Name) (MkName s2 y) rest) s x)))
   ((NoName : ((List (Name)) scope) ((String) s) -> Type)
     enum
     (many NoNameNil : (erased (String) s) -> (NoName (Nil (Name)) s))
-    (many NoNameCons : (erased (String) s) (erased (String) s2) (erased (Nat) y) (erased (List (Name)) rest) (erased (StrNeq s s2) n) (erased (NoName rest s) p) ->
-       (NoName (Cons (Name) (MkName s2 y) rest) s)))
+    (many NoNameCons : (erased (String) s) (erased (String) s2) (erased (Nat) y) (erased (List (Name)) rest) (erased (StrNeq s s2) n) (erased (NoName rest s) p)
+       -> (NoName (Cons (Name) (MkName s2 y) rest) s)))
   ((NameDec : ((List (Name)) scope) ((String) s) -> Type)
     enum
     (many NameHit : (erased (List (Name)) scope) (erased (String) s) (many (Nat) x) (erased (NameOf scope s x) p) -> (NameDec scope s))
@@ -99,13 +99,13 @@
   ((AdtOf : ((List (Adt)) adts) ((Nat) t) ((List (Nat)) ctors) -> Type)
     enum
     (many AdtHere : (erased (Nat) t) (erased (List (Nat)) ctors) (erased (List (Adt)) rest) -> (AdtOf (Cons (Adt) (MkAdt t ctors) rest) t ctors))
-    (many AdtThere : (erased (Nat) t) (erased (Nat) t2) (erased (List (Nat)) ctors) (erased (List (Nat)) ctors2) (erased (List (Adt)) rest) (erased (Neq t t2) n) (erased (AdtOf rest t ctors) p) ->
-       (AdtOf (Cons (Adt) (MkAdt t2 ctors2) rest) t ctors)))
+    (many AdtThere : (erased (Nat) t) (erased (Nat) t2) (erased (List (Nat)) ctors) (erased (List (Nat)) ctors2) (erased (List (Adt)) rest) (erased (Neq t t2) n) (erased (AdtOf rest t ctors) p)
+       -> (AdtOf (Cons (Adt) (MkAdt t2 ctors2) rest) t ctors)))
   ((NoAdt : ((List (Adt)) adts) ((Nat) t) -> Type)
     enum
     (many NoAdtNil : (erased (Nat) t) -> (NoAdt (Nil (Adt)) t))
-    (many NoAdtCons : (erased (Nat) t) (erased (Nat) t2) (erased (List (Nat)) ctors2) (erased (List (Adt)) rest) (erased (Neq t t2) n) (erased (NoAdt rest t) p) ->
-       (NoAdt (Cons (Adt) (MkAdt t2 ctors2) rest) t)))
+    (many NoAdtCons : (erased (Nat) t) (erased (Nat) t2) (erased (List (Nat)) ctors2) (erased (List (Adt)) rest) (erased (Neq t t2) n) (erased (NoAdt rest t) p)
+       -> (NoAdt (Cons (Adt) (MkAdt t2 ctors2) rest) t)))
   ((AdtDec : ((List (Adt)) adts) ((Nat) t) -> Type)
     enum
     (many AdtHit : (erased (List (Adt)) adts) (erased (Nat) t) (many (List (Nat)) ctors) (erased (AdtOf adts t ctors) p) -> (AdtDec adts t))
@@ -146,13 +146,13 @@
     (many ScFn : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Scoped ents d l) p) (erased (ScopedTele ents d ps d1) q) (erased (ScopedTele ents d1 rs d2) r) -> (Scoped ents d (Fn l ps rs)))
     (many ScTyCtor : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) ps) (erased (Nat) d1) (erased (ScopedTele ents d ps d1) q) -> (Scoped ents d (TyCtor ps)))
-    (many ScValCtor : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1) (erased (ScopedTele ents d ps d1) q) (erased (Scoped ents d1 r) p) ->
-       (Scoped ents d (ValCtor ps r))))
+    (many ScValCtor : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1) (erased (ScopedTele ents d ps d1) q) (erased (Scoped ents d1 r) p)
+       -> (Scoped ents d (ValCtor ps r))))
   ((ScopedList : ((List (Ent)) ents) ((Nat) d) ((List (Term)) ts) -> Type)
     enum
     (many ScNil : (erased (List (Ent)) ents) (erased (Nat) d) -> (ScopedList ents d (Nil (Term))))
-    (many ScCons : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) t) (erased (List (Term)) ts) (erased (Scoped ents d t) p) (erased (ScopedList ents d ts) q) ->
-       (ScopedList ents d (Cons (Term) t ts))))
+    (many ScCons : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Term) t) (erased (List (Term)) ts) (erased (Scoped ents d t) p) (erased (ScopedList ents d ts) q)
+       -> (ScopedList ents d (Cons (Term) t ts))))
   ((ScopedTele : ((List (Ent)) ents) ((Nat) d) ((List (Entry)) es) ((Nat) out) -> Type)
     enum
     (many ScTNil : (erased (List (Ent)) ents) (erased (Nat) d) -> (ScopedTele ents d (Nil (Entry)) d))
@@ -163,13 +163,13 @@
     enum
     (many ScSNil : (erased (List (Ent)) ents) -> (ScopedSub ents (Nil (Maybe (Term)))))
     (many ScSNone : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) rest) (erased (ScopedSub ents rest) q) -> (ScopedSub ents (Cons (Maybe (Term)) (None (Term)) rest)))
-    (many ScSSome : (erased (List (Ent)) ents) (erased (Term) t) (erased (List (Maybe (Term))) rest) (erased (Scoped ents (Zero) t) p) (erased (ScopedSub ents rest) q) ->
-       (ScopedSub ents (Cons (Maybe (Term)) (Some (Term) t) rest))))
+    (many ScSSome : (erased (List (Ent)) ents) (erased (Term) t) (erased (List (Maybe (Term))) rest) (erased (Scoped ents (Zero) t) p) (erased (ScopedSub ents rest) q)
+       -> (ScopedSub ents (Cons (Maybe (Term)) (Some (Term) t) rest))))
   ((ScopedRules : ((List (Ent)) ents) ((List (Rule)) rules) -> Type)
     enum
     (many SRNil : (erased (List (Ent)) ents) -> (ScopedRules ents (Nil (Rule))))
-    (many SRCons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) (erased (Scoped ents (Zero) r) p) (erased (ScopedRules ents rest) q) ->
-       (ScopedRules ents (Cons (Rule) (MkRule x r) rest)))))
+    (many SRCons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) (erased (Scoped ents (Zero) r) p) (erased (ScopedRules ents rest) q)
+       -> (ScopedRules ents (Cons (Rule) (MkRule x r) rest)))))
 
 ; Substitution, abstraction and canonicalization keep an application's arity.
 (def-fns _ $ (erased subst-len-eq : (erased (List (Maybe (Term))) sub) (erased (List (Maybe (Term))) sub2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
@@ -428,13 +428,13 @@
   ((BoundedEnts : ((Nat) n) ((List (Ent)) ents) -> Type)
     enum
     (many BENil : (erased (Nat) n) -> (BoundedEnts n (Nil (Ent))))
-    (many BECons : (erased (Nat) n) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (List (Ent)) rest) (erased (Lt x n) lt) (erased (BoundedEnts n rest) q) ->
-       (BoundedEnts n (Cons (Ent) (MkEnt x ty k) rest))))
+    (many BECons : (erased (Nat) n) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (List (Ent)) rest) (erased (Lt x n) lt) (erased (BoundedEnts n rest) q)
+       -> (BoundedEnts n (Cons (Ent) (MkEnt x ty k) rest))))
   ((ScopedEnts : ((List (Ent)) ents) ((List (Ent)) es) -> Type)
     enum
     (many SENil : (erased (List (Ent)) ents) -> (ScopedEnts ents (Nil (Ent))))
-    (many SECons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (List (Ent)) rest) (erased (Scoped ents (Zero) ty) b) (erased (ScopedEnts ents rest) q) ->
-       (ScopedEnts ents (Cons (Ent) (MkEnt x ty k) rest))))
+    (many SECons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (List (Ent)) rest) (erased (Scoped ents (Zero) ty) b) (erased (ScopedEnts ents rest) q)
+       -> (ScopedEnts ents (Cons (Ent) (MkEnt x ty k) rest))))
   ((ScopedScope : ((List (Ent)) ents) ((List (Name)) scope) -> Type)
     enum
     (many SSNil : (erased (List (Ent)) ents) -> (ScopedScope ents (Nil (Name))))
@@ -446,13 +446,13 @@
   ((AllCtor : ((List (Ent)) ents) ((List (Nat)) ids) -> Type)
     enum
     (many ACNil : (erased (List (Ent)) ents) -> (AllCtor ents (Nil (Nat))))
-    (many ACCons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (List (Nat)) ids) (erased (List (Entry)) fs) (erased (Term) r) (erased (EntOf ents x (ValCtor fs r) (KDecl)) e) (erased (AllCtor ents ids) q) ->
-       (AllCtor ents (Cons (Nat) x ids))))
+    (many ACCons : (erased (List (Ent)) ents) (erased (Nat) x) (erased (List (Nat)) ids) (erased (List (Entry)) fs) (erased (Term) r) (erased (EntOf ents x (ValCtor fs r) (KDecl)) e) (erased (AllCtor ents ids) q)
+       -> (AllCtor ents (Cons (Nat) x ids))))
   ((ScopedAdts : ((List (Ent)) ents) ((List (Adt)) adts) -> Type)
     enum
     (many SANil : (erased (List (Ent)) ents) -> (ScopedAdts ents (Nil (Adt))))
-    (many SACons : (erased (List (Ent)) ents) (erased (Nat) t) (erased (List (Nat)) ctors) (erased (List (Adt)) rest) (erased (HasEnt ents t) h) (erased (AllCtor ents ctors) cs) (erased (ScopedAdts ents rest) q) ->
-       (ScopedAdts ents (Cons (Adt) (MkAdt t ctors) rest))))
+    (many SACons : (erased (List (Ent)) ents) (erased (Nat) t) (erased (List (Nat)) ctors) (erased (List (Adt)) rest) (erased (HasEnt ents t) h) (erased (AllCtor ents ctors) cs) (erased (ScopedAdts ents rest) q)
+       -> (ScopedAdts ents (Cons (Adt) (MkAdt t ctors) rest))))
   ((ScopedMaybe : ((List (Ent)) ents) ((Maybe (Term)) m) -> Type)
     enum
     (many SMNone : (erased (List (Ent)) ents) -> (ScopedMaybe ents (None (Term))))
@@ -465,8 +465,8 @@
   ((Ext : ((Nat) n) ((List (Ent)) e0) ((List (Ent)) e1) -> Type)
     enum
     (many ExtRefl : (erased (Nat) n) (erased (List (Ent)) e) -> (Ext n e e))
-    (many ExtCons : (erased (Nat) n) (erased (List (Ent)) e0) (erased (List (Ent)) e1) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (Lt n (Succ x)) le) (erased (Ext n e0 e1) p) ->
-       (Ext n e0 (Cons (Ent) (MkEnt x ty k) e1))))
+    (many ExtCons : (erased (Nat) n) (erased (List (Ent)) e0) (erased (List (Ent)) e1) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (Lt n (Succ x)) le) (erased (Ext n e0 e1) p)
+       -> (Ext n e0 (Cons (Ent) (MkEnt x ty k) e1))))
   ((Grew : ((Ctx) ctx) ((Ctx) out) -> Type)
     enum
     (many GrewBy : (erased (Nat) n0) (erased (List (Name)) s0) (erased (List (Ent)) e0) (erased (List (Rule)) r0) (erased (List (Adt)) a0) (erased (Maybe (Term)) l0) (erased (List (Term)) sa0)
@@ -528,14 +528,14 @@
     (many CovNil : (erased (Nat) n0) (erased (List (Ent)) e) -> (Covers n0 e (Nil (Maybe (Nat))) e))
     (many CovSome : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) acc) (erased (List (Ent)) e1) (erased (Nat) x) (erased (Term) ty) (erased (Kind) k) (erased (Lt n0 (Succ x)) le)
        (erased (Covers n0 e0 acc e1) p) -> (Covers n0 e0 (Cons (Maybe (Nat)) (Some (Nat) x) acc) (Cons (Ent) (MkEnt x ty k) e1)))
-    (many CovNone : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) acc) (erased (List (Ent)) e1) (erased (Covers n0 e0 acc e1) p) ->
-       (Covers n0 e0 (Cons (Maybe (Nat)) (None (Nat)) acc) e1)))
+    (many CovNone : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) acc) (erased (List (Ent)) e1) (erased (Covers n0 e0 acc e1) p)
+       -> (Covers n0 e0 (Cons (Maybe (Nat)) (None (Nat)) acc) e1)))
   ((Cov : ((Ctx) ctx0) ((List (Maybe (Nat))) acc) ((Ctx) ctx) ((Nat) m) -> Type)
     enum
     (many MkCov : (erased (Nat) n0) (erased (List (Name)) s0) (erased (List (Ent)) e0) (erased (List (Rule)) r0) (erased (List (Adt)) a0) (erased (Maybe (Term)) l0) (erased (List (Term)) sa0)
        (erased (Nat) n1) (erased (List (Name)) s1) (erased (List (Ent)) e1) (erased (List (Rule)) r1) (erased (List (Adt)) a1) (erased (Maybe (Term)) l1) (erased (List (Term)) sa1)
-       (erased (List (Maybe (Nat))) acc) (erased (Nat) m) (erased (Lt n0 (Succ n1)) le) (erased (Covers n0 e0 acc e1) c) (erased (Layout (Nat) acc (Zero) m) ly) ->
-       (Cov (MkCtx n0 s0 e0 r0 a0 l0 sa0) acc (MkCtx n1 s1 e1 r1 a1 l1 sa1) m)))
+       (erased (List (Maybe (Nat))) acc) (erased (Nat) m) (erased (Lt n0 (Succ n1)) le) (erased (Covers n0 e0 acc e1) c) (erased (Layout (Nat) acc (Zero) m) ly)
+       -> (Cov (MkCtx n0 s0 e0 r0 a0 l0 sa0) acc (MkCtx n1 s1 e1 r1 a1 l1 sa1) m)))
   ((SameEnt : ((Term) ty) ((Kind) k) ((Term) ty2) ((Kind) k2) -> Type)
     enum
     (many SameEntRefl : (erased (Term) ty) (erased (Kind) k) -> (SameEnt ty k ty k))))
@@ -545,8 +545,8 @@
     enum
     (many LMNilCons : (erased Type A) (erased Type B) (erased B y) (erased (List B) ys) -> (LenMismatch A B (Nil A) (Cons B y ys)))
     (many LMConsNil : (erased Type A) (erased Type B) (erased A x) (erased (List A) xs) -> (LenMismatch A B (Cons A x xs) (Nil B)))
-    (many LMCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) ->
-       (LenMismatch A B (Cons A x xs) (Cons B y ys))))
+    (many LMCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p)
+       -> (LenMismatch A B (Cons A x xs) (Cons B y ys))))
   ((LenDec : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type)
     enum
     (many LenSame : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (LenEq A B xs ys) p) -> (LenDec A B xs ys))

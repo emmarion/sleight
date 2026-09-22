@@ -38,8 +38,8 @@
     (many ClFn : (erased (Nat) d) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Closed d l) p) (erased (ClosedTele d ps d1) q) (erased (ClosedTele d1 rs d2) r) -> (Closed d (Fn l ps rs)))
     (many ClTyCtor : (erased (Nat) d) (erased (List (Entry)) ps) (erased (Nat) d1) (erased (ClosedTele d ps d1) q) -> (Closed d (TyCtor ps)))
-    (many ClValCtor : (erased (Nat) d) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1) (erased (ClosedTele d ps d1) q) (erased (Closed d1 r) p) ->
-       (Closed d (ValCtor ps r))))
+    (many ClValCtor : (erased (Nat) d) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1) (erased (ClosedTele d ps d1) q) (erased (Closed d1 r) p)
+       -> (Closed d (ValCtor ps r))))
   ((ClosedList : ((Nat) d) ((List (Term)) ts) -> Type)
     enum
     (many ClNil : (erased (Nat) d) -> (ClosedList d (Nil (Term))))
@@ -59,10 +59,10 @@
   ((Subst : ((List (Maybe (Term))) sub) ((Term) t) ((Term) u) -> Type)
     enum
     (many SubRef : (erased (List (Maybe (Term))) sub) (erased (Nat) x) -> (Subst sub (Ref x) (Ref x)))
-    (many SubHit : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Term) a) (erased (Nth (Maybe (Term)) sub k (Some (Term) a)) p) ->
-       (Subst sub (Bound k) a))
-    (many SubSkip : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Nth (Maybe (Term)) sub k (None (Term))) p) ->
-       (Subst sub (Bound k) (Bound k)))
+    (many SubHit : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Term) a) (erased (Nth (Maybe (Term)) sub k (Some (Term) a)) p)
+       -> (Subst sub (Bound k) a))
+    (many SubSkip : (erased (List (Maybe (Term))) sub) (erased (Nat) k) (erased (Nth (Maybe (Term)) sub k (None (Term))) p)
+       -> (Subst sub (Bound k) (Bound k)))
     (many SubTyApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Term)) as) (erased (List (Term)) as2)
        (erased (List (Maybe (Term))) sub1) (erased (Subst sub h h2) p) (erased (SubstTele sub ps ps2 sub1) t) (erased (SubstList sub as as2) q) -> (Subst sub (TyApp h ps as) (TyApp h2 ps2 as2)))
     (many SubValApp : (erased (List (Maybe (Term))) sub) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
@@ -71,13 +71,13 @@
     (many SubUniv : (erased (List (Maybe (Term))) sub) -> (Subst sub (Univ) (Univ)))
     (many SubFn : (erased (List (Maybe (Term))) sub) (erased (Term) l) (erased (Term) l2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2) (erased (List (Maybe (Term))) sub1) (erased (List (Maybe (Term))) sub2)
-       (erased (Subst sub l l2) p) (erased (SubstTele sub ps ps2 sub1) q) (erased (SubstTele sub1 rs rs2 sub2) r) ->
-       (Subst sub (Fn l ps rs) (Fn l2 ps2 rs2)))
+       (erased (Subst sub l l2) p) (erased (SubstTele sub ps ps2 sub1) q) (erased (SubstTele sub1 rs rs2 sub2) r)
+       -> (Subst sub (Fn l ps rs) (Fn l2 ps2 rs2)))
     (many SubTyCtor : (erased (List (Maybe (Term))) sub) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Maybe (Term))) sub1)
        (erased (SubstTele sub ps ps2 sub1) q) -> (Subst sub (TyCtor ps) (TyCtor ps2)))
     (many SubValCtor : (erased (List (Maybe (Term))) sub) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
-       (erased (List (Maybe (Term))) sub1) (erased (SubstTele sub ps ps2 sub1) q) (erased (Subst sub1 r r2) p) ->
-       (Subst sub (ValCtor ps r) (ValCtor ps2 r2))))
+       (erased (List (Maybe (Term))) sub1) (erased (SubstTele sub ps ps2 sub1) q) (erased (Subst sub1 r r2) p)
+       -> (Subst sub (ValCtor ps r) (ValCtor ps2 r2))))
   ((SubstList : ((List (Maybe (Term))) sub) ((List (Term)) ts) ((List (Term)) us) -> Type)
     enum
     (many SubNil : (erased (List (Maybe (Term))) sub) -> (SubstList sub (Nil (Term)) (Nil (Term))))
@@ -89,8 +89,8 @@
     (many SubTNil : (erased (List (Maybe (Term))) sub) -> (SubstTele sub (Nil (Entry)) (Nil (Entry)) sub))
     (many SubTCons : (erased (List (Maybe (Term))) sub) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (Term) u)
        (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Maybe (Term))) out)
-       (erased (Subst sub t u) p) (erased (SubstTele (Cons (Maybe (Term)) (None (Term)) sub) es fs out) q) ->
-       (SubstTele sub (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs) out))))
+       (erased (Subst sub t u) p) (erased (SubstTele (Cons (Maybe (Term)) (None (Term)) sub) es fs out) q)
+       -> (SubstTele sub (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs) out))))
 
 (def-fns _
   ((many subst : (many (List (Maybe (Term))) sub) (erased (Nat) n) (erased (Length (Maybe (Term)) sub n) ln) (subterm many (Term) t) (erased (Closed n t) ct) -> (many (Term) u) (erased (Subst sub t u) p))
@@ -170,8 +170,8 @@
   ((Snoc : ((List (Maybe (Term))) xs) ((Maybe (Term)) x) ((List (Maybe (Term))) out) -> Type)
     enum
     (many SnocNil : (erased (Maybe (Term)) x) -> (Snoc (Nil (Maybe (Term))) x (Cons (Maybe (Term)) x (Nil (Maybe (Term))))))
-    (many SnocCons : (erased (Maybe (Term)) y) (erased (List (Maybe (Term))) ys) (erased (Maybe (Term)) x) (erased (List (Maybe (Term))) out) (erased (Snoc ys x out) p) ->
-       (Snoc (Cons (Maybe (Term)) y ys) x (Cons (Maybe (Term)) y out)))))
+    (many SnocCons : (erased (Maybe (Term)) y) (erased (List (Maybe (Term))) ys) (erased (Maybe (Term)) x) (erased (List (Maybe (Term))) out) (erased (Snoc ys x out) p)
+       -> (Snoc (Cons (Maybe (Term)) y ys) x (Cons (Maybe (Term)) y out)))))
 
 (def-fns _ $ (many snoc : (subterm many (List (Maybe (Term))) xs) (many (Maybe (Term)) x) -> (many (List (Maybe (Term))) out) (erased (Snoc xs x out) p))
   (match many xs _
@@ -190,16 +190,16 @@
   ((IndexOf : ((List (Maybe (Nat))) ids) ((Nat) x) ((Nat) k) -> Type)
     enum
     (many IdxHere : (erased (Nat) x) (erased (List (Maybe (Nat))) rest) -> (IndexOf (Cons (Maybe (Nat)) (Some (Nat) x) rest) x (Zero)))
-    (many IdxNone : (erased (Nat) x) (erased (List (Maybe (Nat))) rest) (erased (Nat) k) (erased (IndexOf rest x k) p) ->
-       (IndexOf (Cons (Maybe (Nat)) (None (Nat)) rest) x (Succ k)))
-    (many IdxOther : (erased (Nat) x) (erased (Nat) y) (erased (List (Maybe (Nat))) rest) (erased (Nat) k) (erased (Neq x y) n) (erased (IndexOf rest x k) p) ->
-       (IndexOf (Cons (Maybe (Nat)) (Some (Nat) y) rest) x (Succ k))))
+    (many IdxNone : (erased (Nat) x) (erased (List (Maybe (Nat))) rest) (erased (Nat) k) (erased (IndexOf rest x k) p)
+       -> (IndexOf (Cons (Maybe (Nat)) (None (Nat)) rest) x (Succ k)))
+    (many IdxOther : (erased (Nat) x) (erased (Nat) y) (erased (List (Maybe (Nat))) rest) (erased (Nat) k) (erased (Neq x y) n) (erased (IndexOf rest x k) p)
+       -> (IndexOf (Cons (Maybe (Nat)) (Some (Nat) y) rest) x (Succ k))))
   ((NotIn : ((List (Maybe (Nat))) ids) ((Nat) x) -> Type)
     enum
     (many NotInNil : (erased (Nat) x) -> (NotIn (Nil (Maybe (Nat))) x))
     (many NotInNone : (erased (Nat) x) (erased (List (Maybe (Nat))) rest) (erased (NotIn rest x) p) -> (NotIn (Cons (Maybe (Nat)) (None (Nat)) rest) x))
-    (many NotInSome : (erased (Nat) x) (erased (Nat) y) (erased (List (Maybe (Nat))) rest) (erased (Neq x y) n) (erased (NotIn rest x) p) ->
-       (NotIn (Cons (Maybe (Nat)) (Some (Nat) y) rest) x)))
+    (many NotInSome : (erased (Nat) x) (erased (Nat) y) (erased (List (Maybe (Nat))) rest) (erased (Neq x y) n) (erased (NotIn rest x) p)
+       -> (NotIn (Cons (Maybe (Nat)) (Some (Nat) y) rest) x)))
   ((IndexDec : ((List (Maybe (Nat))) ids) ((Nat) x) -> Type)
     enum
     (many IdxHit : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (many (Nat) k) (erased (IndexOf ids x k) p) -> (IndexDec ids x))
@@ -242,13 +242,13 @@
     (many AbsUniv : (erased (List (Maybe (Nat))) ids) -> (Abstract ids (Univ) (Univ)))
     (many AbsFn : (erased (List (Maybe (Nat))) ids) (erased (Term) l) (erased (Term) l2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2) (erased (List (Maybe (Nat))) ids1) (erased (List (Maybe (Nat))) ids2)
-       (erased (Abstract ids l l2) p) (erased (AbstractTele ids ps ps2 ids1) q) (erased (AbstractTele ids1 rs rs2 ids2) r) ->
-       (Abstract ids (Fn l ps rs) (Fn l2 ps2 rs2)))
+       (erased (Abstract ids l l2) p) (erased (AbstractTele ids ps ps2 ids1) q) (erased (AbstractTele ids1 rs rs2 ids2) r)
+       -> (Abstract ids (Fn l ps rs) (Fn l2 ps2 rs2)))
     (many AbsTyCtor : (erased (List (Maybe (Nat))) ids) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (List (Maybe (Nat))) ids1)
        (erased (AbstractTele ids ps ps2 ids1) q) -> (Abstract ids (TyCtor ps) (TyCtor ps2)))
     (many AbsValCtor : (erased (List (Maybe (Nat))) ids) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
-       (erased (List (Maybe (Nat))) ids1) (erased (AbstractTele ids ps ps2 ids1) q) (erased (Abstract ids1 r r2) p) ->
-       (Abstract ids (ValCtor ps r) (ValCtor ps2 r2))))
+       (erased (List (Maybe (Nat))) ids1) (erased (AbstractTele ids ps ps2 ids1) q) (erased (Abstract ids1 r r2) p)
+       -> (Abstract ids (ValCtor ps r) (ValCtor ps2 r2))))
   ((AbstractList : ((List (Maybe (Nat))) ids) ((List (Term)) ts) ((List (Term)) us) -> Type)
     enum
     (many AbsNil : (erased (List (Maybe (Nat))) ids) -> (AbstractList ids (Nil (Term)) (Nil (Term))))
@@ -259,8 +259,8 @@
     (many AbsTNil : (erased (List (Maybe (Nat))) ids) -> (AbstractTele ids (Nil (Entry)) (Nil (Entry)) ids))
     (many AbsTCons : (erased (List (Maybe (Nat))) ids) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (Term) u)
        (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Maybe (Nat))) out)
-       (erased (Abstract ids t u) p) (erased (AbstractTele (Cons (Maybe (Nat)) (None (Nat)) ids) es fs out) q) ->
-       (AbstractTele ids (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs) out))))
+       (erased (Abstract ids t u) p) (erased (AbstractTele (Cons (Maybe (Nat)) (None (Nat)) ids) es fs out) q)
+       -> (AbstractTele ids (Cons (Entry) (MkEntry s i t) es) (Cons (Entry) (MkEntry s i u) fs) out))))
 
 (def-fns _
   ((many abstract : (many (List (Maybe (Nat))) ids) (subterm many (Term) t) -> (many (Term) u) (erased (Abstract ids t u) p))
@@ -320,8 +320,8 @@
   ((TeleDepth : ((Nat) d) ((List (Entry)) es) ((Nat) out) -> Type)
     enum
     (many TDNil : (erased (Nat) d) -> (TeleDepth d (Nil (Entry)) d))
-    (many TDCons : (erased (Nat) d) (erased (Entry) e) (erased (List (Entry)) es) (erased (Nat) out) (erased (TeleDepth (Succ d) es out) p) ->
-       (TeleDepth d (Cons (Entry) e es) out))))
+    (many TDCons : (erased (Nat) d) (erased (Entry) e) (erased (List (Entry)) es) (erased (Nat) out) (erased (TeleDepth (Succ d) es out) p)
+       -> (TeleDepth d (Cons (Entry) e es) out))))
 
 (def-adts
   ((Assignable : ((Nat) d) ((Nat) x) ((Term) t) -> Type)
@@ -335,15 +335,15 @@
     (many AsgUniv : (erased (Nat) d) (erased (Nat) x) -> (Assignable d x (Univ)))
     (many AsgFn : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1) (erased (Nat) d2)
        (erased (Assignable d x l) p) (erased (AssignableTele d x ps d1) q) (erased (AssignableTele d1 x rs d2) r) -> (Assignable d x (Fn l ps rs)))
-    (many AsgTyCtor : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Nat) d1) (erased (AssignableTele d x ps d1) q) ->
-       (Assignable d x (TyCtor ps)))
+    (many AsgTyCtor : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Nat) d1) (erased (AssignableTele d x ps d1) q)
+       -> (Assignable d x (TyCtor ps)))
     (many AsgValCtor : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1)
        (erased (AssignableTele d x ps d1) q) (erased (Assignable d1 x r) p) -> (Assignable d x (ValCtor ps r))))
   ((AssignableList : ((Nat) d) ((Nat) x) ((List (Term)) ts) -> Type)
     enum
     (many AsgNil : (erased (Nat) d) (erased (Nat) x) -> (AssignableList d x (Nil (Term))))
-    (many AsgCons : (erased (Nat) d) (erased (Nat) x) (erased (Term) t) (erased (List (Term)) ts) (erased (Assignable d x t) p) (erased (AssignableList d x ts) q) ->
-       (AssignableList d x (Cons (Term) t ts))))
+    (many AsgCons : (erased (Nat) d) (erased (Nat) x) (erased (Term) t) (erased (List (Term)) ts) (erased (Assignable d x t) p) (erased (AssignableList d x ts) q)
+       -> (AssignableList d x (Cons (Term) t ts))))
   ((AssignableTele : ((Nat) d) ((Nat) x) ((List (Entry)) es) ((Nat) out) -> Type)
     enum
     (many AsgTNil : (erased (Nat) d) (erased (Nat) x) -> (AssignableTele d x (Nil (Entry)) d))
@@ -356,23 +356,23 @@
     (many UnTyAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Unassignable d x h) p) -> (Unassignable d x (TyApp h ps as)))
     (many UnTyAppParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (UnassignableTele d x ps) p) -> (Unassignable d x (TyApp h ps as)))
     (many UnTyAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (UnassignableList d x as) p) -> (Unassignable d x (TyApp h ps as)))
-    (many UnValAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Unassignable d x h) p) ->
-       (Unassignable d x (ValApp h ps r as)))
-    (many UnValAppParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableTele d x ps) p) ->
-       (Unassignable d x (ValApp h ps r as)))
+    (many UnValAppHead : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Unassignable d x h) p)
+       -> (Unassignable d x (ValApp h ps r as)))
+    (many UnValAppParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableTele d x ps) p)
+       -> (Unassignable d x (ValApp h ps r as)))
     (many UnValAppRet : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Nat) d1)
        (erased (TeleDepth d ps d1) q) (erased (Unassignable d1 x r) p) -> (Unassignable d x (ValApp h ps r as)))
-    (many UnValAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableList d x as) p) ->
-       (Unassignable d x (ValApp h ps r as)))
-    (many UnFnLevel : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Unassignable d x l) p) ->
-       (Unassignable d x (Fn l ps rs)))
-    (many UnFnParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (UnassignableTele d x ps) p) ->
-       (Unassignable d x (Fn l ps rs)))
+    (many UnValAppArgs : (erased (Nat) d) (erased (Nat) x) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (UnassignableList d x as) p)
+       -> (Unassignable d x (ValApp h ps r as)))
+    (many UnFnLevel : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Unassignable d x l) p)
+       -> (Unassignable d x (Fn l ps rs)))
+    (many UnFnParams : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (UnassignableTele d x ps) p)
+       -> (Unassignable d x (Fn l ps rs)))
     (many UnFnRets : (erased (Nat) d) (erased (Nat) x) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) d1)
        (erased (TeleDepth d ps d1) q) (erased (UnassignableTele d1 x rs) p) -> (Unassignable d x (Fn l ps rs)))
     (many UnTyCtor : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (UnassignableTele d x ps) p) -> (Unassignable d x (TyCtor ps)))
-    (many UnValCtorParams : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Term) r) (erased (UnassignableTele d x ps) p) ->
-       (Unassignable d x (ValCtor ps r)))
+    (many UnValCtorParams : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Term) r) (erased (UnassignableTele d x ps) p)
+       -> (Unassignable d x (ValCtor ps r)))
     (many UnValCtorRet : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) d1)
        (erased (TeleDepth d ps d1) q) (erased (Unassignable d1 x r) p) -> (Unassignable d x (ValCtor ps r))))
   ((UnassignableList : ((Nat) d) ((Nat) x) ((List (Term)) ts) -> Type)
@@ -381,10 +381,10 @@
     (many UnThere : (erased (Nat) d) (erased (Nat) x) (erased (Term) t) (erased (List (Term)) ts) (erased (UnassignableList d x ts) p) -> (UnassignableList d x (Cons (Term) t ts))))
   ((UnassignableTele : ((Nat) d) ((Nat) x) ((List (Entry)) es) -> Type)
     enum
-    (many UnTHere : (erased (Nat) d) (erased (Nat) x) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Unassignable d x t) p) ->
-       (UnassignableTele d x (Cons (Entry) (MkEntry s i t) es)))
-    (many UnTThere : (erased (Nat) d) (erased (Nat) x) (erased (Entry) e) (erased (List (Entry)) es) (erased (UnassignableTele (Succ d) x es) p) ->
-       (UnassignableTele d x (Cons (Entry) e es)))))
+    (many UnTHere : (erased (Nat) d) (erased (Nat) x) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Unassignable d x t) p)
+       -> (UnassignableTele d x (Cons (Entry) (MkEntry s i t) es)))
+    (many UnTThere : (erased (Nat) d) (erased (Nat) x) (erased (Entry) e) (erased (List (Entry)) es) (erased (UnassignableTele (Succ d) x es) p)
+       -> (UnassignableTele d x (Cons (Entry) e es)))))
 
 (def-adts
   ((AssignDec : ((Nat) d) ((Nat) x) ((Term) t) -> Type)
@@ -397,8 +397,8 @@
     (many ADLNo : (erased (Nat) d) (erased (Nat) x) (erased (List (Term)) ts) (erased (UnassignableList d x ts) p) -> (AssignDecList d x ts)))
   ((AssignDecTele : ((Nat) d) ((Nat) x) ((List (Entry)) es) -> Type)
     enum
-    (many ADTYes : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) es) (many (Nat) out) (erased (AssignableTele d x es out) p) (erased (TeleDepth d es out) q) ->
-       (AssignDecTele d x es))
+    (many ADTYes : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) es) (many (Nat) out) (erased (AssignableTele d x es out) p) (erased (TeleDepth d es out) q)
+       -> (AssignDecTele d x es))
     (many ADTNo : (erased (Nat) d) (erased (Nat) x) (erased (List (Entry)) es) (erased (UnassignableTele d x es) p) -> (AssignDecTele d x es))))
 
 (def-fns _

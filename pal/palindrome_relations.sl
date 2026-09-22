@@ -27,8 +27,8 @@
 (def-adts
   ((Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
     enum
-    (many CatNil : (erased Type A) (erased (List A) ys) ->
-       (Concat A (Nil A) ys ys))
+    (many CatNil : (erased Type A) (erased (List A) ys)
+       -> (Concat A (Nil A) ys ys))
     (many CatCons : (erased Type A) (erased A x) (erased (List A) rest)
         (erased (List A) ys) (erased (List A) zs)
         (erased (Concat A rest ys zs) p)
@@ -43,8 +43,8 @@
   ((Palindrome : (Type A) ((List A) xs) -> Type)
     enum
     (many PalNil : (erased Type A) -> (Palindrome A (Nil A)))
-    (many PalOne : (erased Type A) (erased A x) ->
-       (Palindrome A (Cons A x (Nil A))))
+    (many PalOne : (erased Type A) (erased A x)
+       -> (Palindrome A (Cons A x (Nil A))))
     (many PalWrap : (erased Type A) (erased A x) (erased (List A) inner)
         (erased (List A) withx)
         (erased (Palindrome A inner) p)
@@ -114,8 +114,8 @@
 (def-adts
   ((Windows : (Type A) ((Nat) n) ((List A) xs) ((List (List A)) xss) -> Type)
     enum
-    (many WinEmpty : (erased Type A) ->
-       (Windows A (Zero) (Nil A) (Cons (List A) (Nil A) (Nil (List A)))))
+    (many WinEmpty : (erased Type A)
+       -> (Windows A (Zero) (Nil A) (Cons (List A) (Nil A) (Nil (List A)))))
     (many WinStop : (erased Type A) (erased (Nat) n) (erased (List A) xs)
         (erased (Nat) len) (erased (Length A xs len) l) (erased (Lt len n) short)
         -> (Windows A n xs (Nil (List A))))
@@ -129,8 +129,8 @@
 (def-adts
   ((All : (Type A) ((TyCtor (A x) -> Type) P) ((List A) xs) -> Type)
     enum
-    (many AllNil : (erased Type A) (erased (TyCtor (A x) -> Type) P) ->
-       (All A P (Nil A)))
+    (many AllNil : (erased Type A) (erased (TyCtor (A x) -> Type) P)
+       -> (All A P (Nil A)))
     (many AllCons : (erased Type A) (erased (TyCtor (A x) -> Type) P) (erased A x)
         (erased (List A) rest) (erased (P x) p) (erased (All A P rest) ps)
         -> (All A P (Cons A x rest)))))
@@ -153,8 +153,8 @@
 (def-adts
   ((NatPalindrome : ((List (Nat)) xs) -> Type)
     enum
-    (many IsNatPalindrome : (erased (List (Nat)) xs) (erased (Palindrome (Nat) xs) p) ->
-       (NatPalindrome xs))))
+    (many IsNatPalindrome : (erased (List (Nat)) xs) (erased (Palindrome (Nat) xs) p)
+       -> (NatPalindrome xs))))
 
 ; --- no window of length n in xs is a palindrome ---
 ; Uninhabited at n = Zero and n = 1 on any list that has such a window,

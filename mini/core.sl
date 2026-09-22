@@ -46,8 +46,8 @@
   ((EnvOf : ((Env) env) ((Nat) x) ((Val) v) -> Type)
     enum
     (many EnvHere : (erased (Nat) x) (erased (Val) v) (erased (Env) rest) -> (EnvOf (ECons x v rest) x v))
-    (many EnvThere : (erased (Nat) x) (erased (Nat) y) (erased (Val) v) (erased (Val) w) (erased (Env) rest) (erased (Neq x y) n) (erased (EnvOf rest x v) p) ->
-       (EnvOf (ECons y w rest) x v)))
+    (many EnvThere : (erased (Nat) x) (erased (Nat) y) (erased (Val) v) (erased (Val) w) (erased (Env) rest) (erased (Neq x y) n) (erased (EnvOf rest x v) p)
+       -> (EnvOf (ECons y w rest) x v)))
   ((EnvDec : ((Env) env) ((Nat) x) -> Type)
     enum
     (many EnvHit : (erased (Env) env) (erased (Nat) x) (many (Val) v) (erased (EnvOf env x v) p) -> (EnvDec env x))
@@ -94,8 +94,8 @@
     enum
     (many BGNil : (erased (Env) cenv) (erased (List (FnDef)) group) (erased (Env) env) -> (BindGroup cenv group (Nil (FnDef)) env env))
     (many BGCons : (erased (Env) cenv) (erased (List (FnDef)) group) (erased (Nat) id) (erased (List (Nat)) ps) (erased (Core) body) (erased (List (FnDef)) defs) (erased (Env) env) (erased (Env) out)
-       (erased (BindGroup cenv group defs (ECons id (VClo cenv group (MkFnDef id ps body)) env) out) p) ->
-       (BindGroup cenv group (Cons (FnDef) (MkFnDef id ps body) defs) env out))))
+       (erased (BindGroup cenv group defs (ECons id (VClo cenv group (MkFnDef id ps body)) env) out) p)
+       -> (BindGroup cenv group (Cons (FnDef) (MkFnDef id ps body) defs) env out))))
 
 (def-fns _ $ (many bind-group : (many (Env) cenv) (many (List (FnDef)) group) (subterm many (List (FnDef)) defs) (many (Env) env) -> (many (Env) out) (erased (BindGroup cenv group defs env out) p))
   (match many defs _
@@ -110,8 +110,8 @@
   ((BindAtoms : ((Env) env) ((List (Nat)) ids) ((Env) out) -> Type)
     enum
     (many BTNil : (erased (Env) env) -> (BindAtoms env (Nil (Nat)) env))
-    (many BTCons : (erased (Env) env) (erased (Nat) x) (erased (List (Nat)) ids) (erased (Env) out) (erased (BindAtoms (ECons x (VAtom x) env) ids out) p) ->
-       (BindAtoms env (Cons (Nat) x ids) out))))
+    (many BTCons : (erased (Env) env) (erased (Nat) x) (erased (List (Nat)) ids) (erased (Env) out) (erased (BindAtoms (ECons x (VAtom x) env) ids out) p)
+       -> (BindAtoms env (Cons (Nat) x ids) out))))
 
 (def-fns _ $ (many bind-atoms : (many (Env) env) (subterm many (List (Nat)) ids) -> (many (Env) out) (erased (BindAtoms env ids out) p))
   (match many ids _

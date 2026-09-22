@@ -5,8 +5,8 @@
   ((List : (Type A) -> Type)
     enum
     (many Nil : (erased Type A) -> (List A))
-    (many Cons : (erased Type A) (many A head) (many (List A) tail) ->
-       (List A))))
+    (many Cons : (erased Type A) (many A head) (many (List A) tail)
+       -> (List A))))
 
 (def-lvl L)
 

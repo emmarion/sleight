@@ -44,15 +44,15 @@
   ((Pow2 : ((Nat) k) ((Nat) v) -> Type)
     enum
     (many P0 : -> (Pow2 (Zero) (Succ (Zero))))
-    (many PS : (erased (Nat) k) (erased (Nat) v) (erased (Nat) w) (erased (Pow2 k v) p) (erased (Double v w) d) ->
-       (Pow2 (Succ k) w))))
+    (many PS : (erased (Nat) k) (erased (Nat) v) (erased (Nat) w) (erased (Pow2 k v) p) (erased (Double v w) d)
+       -> (Pow2 (Succ k) w))))
 
 (def-adts
   ((Mod : ((Nat) s) ((Nat) c) ((Nat) r) -> Type)
     enum
     (many ModLt : (erased (Nat) s) (erased (Nat) c) (erased (Lt s c) p) -> (Mod s c s))
-    (many ModSub : (erased (Nat) s1) (erased (Nat) c) (erased (Nat) s) (erased (Nat) r) (erased (Add c s1 s) a) (erased (Mod s1 c r) m) ->
-       (Mod s c r))))
+    (many ModSub : (erased (Nat) s1) (erased (Nat) c) (erased (Nat) s) (erased (Nat) r) (erased (Add c s1 s) a) (erased (Mod s1 c r) m)
+       -> (Mod s c r))))
 
 (def-adts
   ((Dec : ((Nat) a) ((Nat) b) -> Type)
@@ -182,8 +182,8 @@
   ((Mul : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum
     (many MulZero : (erased (Nat) b) -> (Mul (Zero) b (Zero)))
-    (many MulSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d) (erased (Mul a b c) m) (erased (Add c b d) p) ->
-       (Mul (Succ a) b d))))
+    (many MulSucc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d) (erased (Mul a b c) m) (erased (Add c b d) p)
+       -> (Mul (Succ a) b d))))
 
 (def-fns _ $ (erased add-comm : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) -> (erased (Add b a c) q))
   (match erased p _
@@ -360,10 +360,10 @@
   ((Numeral : ((Bin) b) ((Nat) n) -> Type)
     enum
     (many NZ : -> (Numeral (BZ) (Zero)))
-    (many N1 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd) ->
-       (Numeral (B1 b) (Succ d)))
-    (many N2 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd) ->
-       (Numeral (B2 b) (Succ (Succ d))))))
+    (many N1 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd)
+       -> (Numeral (B1 b) (Succ d)))
+    (many N2 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd)
+       -> (Numeral (B2 b) (Succ (Succ d))))))
 
 (def-fns _ $ (many bin-to-nat : (subterm many (Bin) b) -> (many (Nat) n) (erased (Numeral b n) v))
   (match many b _
@@ -604,8 +604,8 @@
   ((Append : ((String) a) ((String) b) ((String) c) -> Type)
     enum
     (many AppNil : (erased (String) b) -> (Append (SNil) b b))
-    (many AppCons : (erased (Char) ch) (erased (String) a) (erased (String) b) (erased (String) c) (erased (Append a b c) q) ->
-       (Append (SCons ch a) b (SCons ch c)))))
+    (many AppCons : (erased (Char) ch) (erased (String) a) (erased (String) b) (erased (String) c) (erased (Append a b c) q)
+       -> (Append (SCons ch a) b (SCons ch c)))))
 
 (def-fns _ $ (many extern append : (subterm many (String) a) (many (String) b) -> (many (String) c) (erased (Append a b c) p))
   (match many a _
@@ -830,15 +830,15 @@
                    -> (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
   ((ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type)
     enum
-    (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
-       (ANth A (Succ n) (ACons A n x tl) (Zero) x))
+    (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl)
+       -> (ANth A (Succ n) (ACons A n x tl) (Zero) x))
     (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
                  (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p)
                  -> (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
   ((ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type)
     enum
-    (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
-       (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
+    (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl)
+       -> (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
     (many SetS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
                  (erased (Nat) i) (erased A y) (erased (Array A n) tl2)
                  (erased (ASet A n tl i y tl2) p)

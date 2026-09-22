@@ -7,8 +7,8 @@
   ((Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum
     (many PZ : (erased (Nat) b) -> (Plus (Zero) b b))
-    (many PS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (many (Plus a b c) p) ->
-       (Plus (Succ a) b (Succ c)))))
+    (many PS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (many (Plus a b c) p)
+       -> (Plus (Succ a) b (Succ c)))))
 
 (def-lvl V)
 

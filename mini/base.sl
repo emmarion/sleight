@@ -74,10 +74,10 @@
   ((Layout : (Type A) ((List (Maybe A)) xs) ((Nat) r) ((Nat) n) -> Type)
     enum
     (many LayNil : (erased Type A) -> (Layout A (Nil (Maybe A)) (Zero) (Zero)))
-    (many LaySome : (erased Type A) (erased A x) (erased (List (Maybe A)) rest) (erased (Nat) n) (erased (Layout A rest (Zero) n) p) ->
-       (Layout A (Cons (Maybe A) (Some A x) rest) (Zero) (Succ n)))
-    (many LayNone : (erased Type A) (erased (List (Maybe A)) rest) (erased (Nat) r) (erased (Nat) n) (erased (Layout A rest r n) p) ->
-       (Layout A (Cons (Maybe A) (None A) rest) (Succ r) (Succ n))))
+    (many LaySome : (erased Type A) (erased A x) (erased (List (Maybe A)) rest) (erased (Nat) n) (erased (Layout A rest (Zero) n) p)
+       -> (Layout A (Cons (Maybe A) (Some A x) rest) (Zero) (Succ n)))
+    (many LayNone : (erased Type A) (erased (List (Maybe A)) rest) (erased (Nat) r) (erased (Nat) n) (erased (Layout A rest r n) p)
+       -> (Layout A (Cons (Maybe A) (None A) rest) (Succ r) (Succ n))))
   ((Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum
     (many PlusZ : (erased (Nat) b) -> (Plus (Zero) b b))
@@ -113,8 +113,8 @@
   ((Nth : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
     enum
     (many NthHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Nth A (Cons A x rest) (Zero) x))
-    (many NthThere : (erased Type A) (erased A y) (erased (List A) rest) (erased (Nat) i) (erased A x) (erased (Nth A rest i x) p) ->
-       (Nth A (Cons A y rest) (Succ i) x)))
+    (many NthThere : (erased Type A) (erased A y) (erased (List A) rest) (erased (Nat) i) (erased A x) (erased (Nth A rest i x) p)
+       -> (Nth A (Cons A y rest) (Succ i) x)))
   ((NoNth : (Type A) ((List A) xs) ((Nat) i) -> Type)
     enum
     (many NoNthNil : (erased Type A) (erased (Nat) i) -> (NoNth A (Nil A) i))

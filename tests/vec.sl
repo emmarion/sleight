@@ -6,8 +6,8 @@
   ((Vec : (Type A) ((Nat) n) -> Type)
     enum
     (many VNil : (erased Type A) -> (Vec A (Zero)))
-    (many VCons : (erased Type A) (erased (Nat) m) (many A x) (many (Vec A m) xs) ->
-       (Vec A (Succ m)))))
+    (many VCons : (erased Type A) (erased (Nat) m) (many A x) (many (Vec A m) xs)
+       -> (Vec A (Succ m)))))
 
 (def-lvl L)
 

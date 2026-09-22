@@ -176,18 +176,18 @@
   ((MapsTo : (Type V) ((Nat) k) (V v) ((IdMap V) m) -> Type)
     enum
     (many MTHere : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two) -> (MapsTo V (Zero) v $ MNode V (Some V v) one two))
-    (many MT1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v one) p) ->
-       (MapsTo V (Succ d) v $ MNode V here one two))
-    (many MT2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v two) p) ->
-       (MapsTo V (Succ (Succ d)) v $ MNode V here one two)))
+    (many MT1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v one) p)
+       -> (MapsTo V (Succ d) v $ MNode V here one two))
+    (many MT2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased V v) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (MapsTo V k v two) p)
+       -> (MapsTo V (Succ (Succ d)) v $ MNode V here one two)))
   ((Absent : (Type V) ((Nat) k) ((IdMap V) m) -> Type)
     enum
     (many ABEmpty : (erased Type V) (erased (Nat) k) -> (Absent V k $ MEmpty V))
     (many ABHere : (erased Type V) (erased (IdMap V) one) (erased (IdMap V) two) -> (Absent V (Zero) $ MNode V (None V) one two))
-    (many AB1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k one) p) ->
-       (Absent V (Succ d) $ MNode V here one two))
-    (many AB2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k two) p) ->
-       (Absent V (Succ (Succ d)) $ MNode V here one two)))
+    (many AB1 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k one) p)
+       -> (Absent V (Succ d) $ MNode V here one two))
+    (many AB2 : (erased Type V) (erased (Nat) k) (erased (Nat) d) (erased (Double k d) dd) (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two) (erased (Absent V k two) p)
+       -> (Absent V (Succ (Succ d)) $ MNode V here one two)))
   ((Lookup : (Type V) ((Nat) k) ((IdMap V) m) -> Type)
     enum
     (many Hit : (erased Type V) (erased (Nat) k) (erased (IdMap V) m) (many V v) (erased (MapsTo V k v m) p) -> (Lookup V k m))
@@ -244,15 +244,15 @@
   ((KidIs : (Type V) ((Char) c) ((NameMap V) sub) ((List $ NMKid V) kids) -> Type)
     enum
     (many KHere : (erased Type V) (erased (Char) c) (erased (NameMap V) sub) (erased (List $ NMKid V) rest) -> (KidIs V c sub $ Cons (NMKid V) (MkKid V c sub) rest))
-    (many KThere : (erased Type V) (erased (Char) c) (erased (NameMap V) sub) (erased (NMKid V) k) (erased (List $ NMKid V) rest) (erased (KidIs V c sub rest) p) ->
-       (KidIs V c sub $ Cons (NMKid V) k rest)))
+    (many KThere : (erased Type V) (erased (Char) c) (erased (NameMap V) sub) (erased (NMKid V) k) (erased (List $ NMKid V) rest) (erased (KidIs V c sub rest) p)
+       -> (KidIs V c sub $ Cons (NMKid V) k rest)))
   ((NoKid : (Type V) ((Char) c) ((List $ NMKid V) kids) -> Type)
     enum
     (many NKNil : (erased Type V) (erased (Char) c) -> (NoKid V c $ Nil $ NMKid V))
-    (many NKLt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) sub) (erased (List $ NMKid V) rest) (erased (CharLt c d) lt) (erased (NoKid V c rest) p) ->
-       (NoKid V c $ Cons (NMKid V) (MkKid V d sub) rest))
-    (many NKGt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) sub) (erased (List $ NMKid V) rest) (erased (CharLt d c) gt) (erased (NoKid V c rest) p) ->
-       (NoKid V c $ Cons (NMKid V) (MkKid V d sub) rest)))
+    (many NKLt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) sub) (erased (List $ NMKid V) rest) (erased (CharLt c d) lt) (erased (NoKid V c rest) p)
+       -> (NoKid V c $ Cons (NMKid V) (MkKid V d sub) rest))
+    (many NKGt : (erased Type V) (erased (Char) c) (erased (Char) d) (erased (NameMap V) sub) (erased (List $ NMKid V) rest) (erased (CharLt d c) gt) (erased (NoKid V c rest) p)
+       -> (NoKid V c $ Cons (NMKid V) (MkKid V d sub) rest)))
   ((KidLookup : (Type V) ((Char) c) ((List $ NMKid V) kids) -> Type)
     enum
     (many KHit : (erased Type V) (erased (Char) c) (erased (List $ NMKid V) kids) (many (NameMap V) sub) (erased (KidIs V c sub kids) p) -> (KidLookup V c kids))
@@ -265,8 +265,8 @@
   ((NAbsent : (Type V) ((String) name) ((NameMap V) m) -> Type)
     enum
     (many NAHere : (erased Type V) (erased (List $ NMKid V) kids) -> (NAbsent V (SNil) $ NMNode V (None V) kids))
-    (many NANoKid : (erased Type V) (erased (Char) c) (erased (String) rest) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NoKid V c kids) n) ->
-       (NAbsent V (SCons c rest) $ NMNode V here kids))
+    (many NANoKid : (erased Type V) (erased (Char) c) (erased (String) rest) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NoKid V c kids) n)
+       -> (NAbsent V (SCons c rest) $ NMNode V here kids))
     (many NAStep : (erased Type V) (erased (Char) c) (erased (String) rest) (erased (Maybe V) here) (erased (List $ NMKid V) kids) (erased (NameMap V) sub)
                    (erased (KidIs V c sub kids) k) (erased (NAbsent V rest sub) p) -> (NAbsent V (SCons c rest) $ NMNode V here kids)))
   ((NLookup : (Type V) ((String) name) ((NameMap V) m) -> Type)
@@ -338,8 +338,8 @@
   ((Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
     enum
     (many CatNil : (erased Type A) (erased (List A) ys) -> (Concat A (Nil A) ys ys))
-    (many CatCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (List A) ys) (erased (List A) zs) (erased (Concat A rest ys zs) p) ->
-       (Concat A (Cons A x rest) ys (Cons A x zs))))
+    (many CatCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (List A) ys) (erased (List A) zs) (erased (Concat A rest ys zs) p)
+       -> (Concat A (Cons A x rest) ys (Cons A x zs))))
   ((Nth : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
     enum
     (many NthHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Nth A (Cons A x rest) (Zero) x))
@@ -374,8 +374,8 @@
   ((Lockstep : (Type A) (Type B) ((List A) xs) ((List B) ys) -> Type)
     enum
     (many LsNil : (erased Type A) (erased Type B) -> (Lockstep A B (Nil A) (Nil B)))
-    (many LsCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (Lockstep A B xs ys) p) ->
-       (Lockstep A B (Cons A x xs) (Cons B y ys)))))
+    (many LsCons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (Lockstep A B xs ys) p)
+       -> (Lockstep A B (Cons A x xs) (Cons B y ys)))))
 
 (def-fns _ $ (erased lockstep-trans : (erased Type A) (erased Type B) (erased Type C) (erased (List A) xs) (erased (List B) ys) (erased (List C) zs)
     (subterm erased (Lockstep A B xs ys) p) (erased (Lockstep B C ys zs) q) -> (erased (Lockstep A C xs zs) r))

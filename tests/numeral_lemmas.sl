@@ -22,7 +22,7 @@
     ((TA) (Zero))
     (absurd (TB)
       (match erased (numeral-inj (predates _) (BZ) (B1 (BZ)) 0 (numeral-of 0) (numeral-of 1))
-          (((False) f))
+        (((False) f))
         (absurd Refl)))))
 
 (only-a (TA))

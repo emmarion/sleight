@@ -803,46 +803,46 @@
     (many FNode : (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (many (Here h) here) (many (Facts n1) one) (many (Facts n2) two) (erased (Plus3 h n1 n2 m) p) -> (Facts m)))
   ((In : ((Nat) x) ((Nat) n) ((Facts n) f) -> Type)
     enum
-    (many InHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Succ $ Zero) n1 n2 m) p) ->
-       (In (Zero) m $ FNode (Succ $ Zero) n1 n2 m (HFree ty) one two p))
-    (many In1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (In x n1 one) q) ->
-       (In (Succ d) m $ FNode h n1 n2 m here one two p))
-    (many In2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (In x n2 two) q) ->
-       (In (Succ (Succ d)) m $ FNode h n1 n2 m here one two p)))
+    (many InHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Succ $ Zero) n1 n2 m) p)
+       -> (In (Zero) m $ FNode (Succ $ Zero) n1 n2 m (HFree ty) one two p))
+    (many In1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (In x n1 one) q)
+       -> (In (Succ d) m $ FNode h n1 n2 m here one two p))
+    (many In2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (In x n2 two) q)
+       -> (In (Succ (Succ d)) m $ FNode h n1 n2 m here one two p)))
   ((RuledIn : ((Nat) x) ((Nat) n) ((Facts n) f) -> Type)
     enum
-    (many RHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Term) t) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p) ->
-       (RuledIn (Zero) m $ FNode (Zero) n1 n2 m (HRuled ty t) one two p))
-    (many R1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (RuledIn x n1 one) q) ->
-       (RuledIn (Succ d) m $ FNode h n1 n2 m here one two p))
-    (many R2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (RuledIn x n2 two) q) ->
-       (RuledIn (Succ (Succ d)) m $ FNode h n1 n2 m here one two p)))
+    (many RHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Term) t) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p)
+       -> (RuledIn (Zero) m $ FNode (Zero) n1 n2 m (HRuled ty t) one two p))
+    (many R1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (RuledIn x n1 one) q)
+       -> (RuledIn (Succ d) m $ FNode h n1 n2 m here one two p))
+    (many R2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (RuledIn x n2 two) q)
+       -> (RuledIn (Succ (Succ d)) m $ FNode h n1 n2 m here one two p)))
   ((Ins : ((Nat) x) ((Nat) n) ((Facts n) f) ((Nat) n2) ((Facts n2) f2) -> Type)
     enum
-    (many InsLeaf : (erased (Term) ty) (erased (Plus3 (Succ $ Zero) (Zero) (Zero) $ Succ $ Zero) p) ->
-       (Ins (Zero) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Succ $ Zero) (Zero) (Zero) (Succ $ Zero) (HFree ty) (FEmpty) (FEmpty) p))
-    (many InsGrow1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Facts $ Succ $ Zero) one) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) one) q) (erased (Add (Succ $ Zero) (Zero) $ Succ $ Zero) p) ->
-       (Ins (Succ d) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Succ $ Zero) (Zero) (Succ $ Zero) (HNone) one (FEmpty) $ P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p))
-    (many InsGrow2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Facts $ Succ $ Zero) two) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) two) q) (erased (Add (Zero) (Succ $ Zero) $ Succ $ Zero) p) ->
-       (Ins (Succ (Succ d)) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Zero) (Succ $ Zero) (Succ $ Zero) (HNone) (FEmpty) two $ P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p))
-    (many InsHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p) ->
-       (Ins (Zero) m (FNode (Zero) n1 n2 m (HNone) one two p) (Succ m) $ FNode (Succ $ Zero) n1 n2 (Succ m) (HFree ty) one two $ P3S (Zero) n1 n2 m p))
+    (many InsLeaf : (erased (Term) ty) (erased (Plus3 (Succ $ Zero) (Zero) (Zero) $ Succ $ Zero) p)
+       -> (Ins (Zero) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Succ $ Zero) (Zero) (Zero) (Succ $ Zero) (HFree ty) (FEmpty) (FEmpty) p))
+    (many InsGrow1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Facts $ Succ $ Zero) one) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) one) q) (erased (Add (Succ $ Zero) (Zero) $ Succ $ Zero) p)
+       -> (Ins (Succ d) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Succ $ Zero) (Zero) (Succ $ Zero) (HNone) one (FEmpty) $ P3Z (Succ $ Zero) (Zero) (Succ $ Zero) p))
+    (many InsGrow2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Facts $ Succ $ Zero) two) (erased (Ins x (Zero) (FEmpty) (Succ $ Zero) two) q) (erased (Add (Zero) (Succ $ Zero) $ Succ $ Zero) p)
+       -> (Ins (Succ (Succ d)) (Zero) (FEmpty) (Succ $ Zero) $ FNode (Zero) (Zero) (Succ $ Zero) (Succ $ Zero) (HNone) (FEmpty) two $ P3Z (Zero) (Succ $ Zero) (Succ $ Zero) p))
+    (many InsHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p)
+       -> (Ins (Zero) m (FNode (Zero) n1 n2 m (HNone) one two p) (Succ m) $ FNode (Succ $ Zero) n1 n2 (Succ m) (HFree ty) one two $ P3S (Zero) n1 n2 m p))
     (many Ins1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p)
-       (erased (Nat) k1) (erased (Nat) m2) (erased (Facts k1) one2) (erased (Plus3 h k1 n2 m2) p2) (erased (Ins x n1 one k1 one2) q) ->
-       (Ins (Succ d) m (FNode h n1 n2 m here one two p) m2 $ FNode h k1 n2 m2 here one2 two p2))
+       (erased (Nat) k1) (erased (Nat) m2) (erased (Facts k1) one2) (erased (Plus3 h k1 n2 m2) p2) (erased (Ins x n1 one k1 one2) q)
+       -> (Ins (Succ d) m (FNode h n1 n2 m here one two p) m2 $ FNode h k1 n2 m2 here one2 two p2))
     (many Ins2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p)
-       (erased (Nat) k2) (erased (Nat) m2) (erased (Facts k2) two2) (erased (Plus3 h n1 k2 m2) p2) (erased (Ins x n2 two k2 two2) q) ->
-       (Ins (Succ (Succ d)) m (FNode h n1 n2 m here one two p) m2 $ FNode h n1 k2 m2 here one two2 p2)))
+       (erased (Nat) k2) (erased (Nat) m2) (erased (Facts k2) two2) (erased (Plus3 h n1 k2 m2) p2) (erased (Ins x n2 two k2 two2) q)
+       -> (Ins (Succ (Succ d)) m (FNode h n1 n2 m here one two p) m2 $ FNode h n1 k2 m2 here one two2 p2)))
   ((Out : ((Nat) x) ((Term) t) ((Nat) n) ((Facts n) f) ((Nat) k) ((Facts k) f2) -> Type)
     enum
-    (many OutHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Term) t) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p) ->
-       (Out (Zero) t (Succ m) (FNode (Succ $ Zero) n1 n2 (Succ m) (HFree ty) one two $ P3S (Zero) n1 n2 m p) m $ FNode (Zero) n1 n2 m (HRuled ty t) one two p))
+    (many OutHere : (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Term) ty) (erased (Term) t) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 (Zero) n1 n2 m) p)
+       -> (Out (Zero) t (Succ m) (FNode (Succ $ Zero) n1 n2 (Succ m) (HFree ty) one two $ P3S (Zero) n1 n2 m p) m $ FNode (Zero) n1 n2 m (HRuled ty t) one two p))
     (many Out1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Term) t) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p)
-       (erased (Nat) k1) (erased (Nat) m2) (erased (Facts k1) one2) (erased (Plus3 h k1 n2 m2) p2) (erased (Out x t n1 one k1 one2) q) ->
-       (Out (Succ d) t m (FNode h n1 n2 m here one two p) m2 $ FNode h k1 n2 m2 here one2 two p2))
+       (erased (Nat) k1) (erased (Nat) m2) (erased (Facts k1) one2) (erased (Plus3 h k1 n2 m2) p2) (erased (Out x t n1 one k1 one2) q)
+       -> (Out (Succ d) t m (FNode h n1 n2 m here one two p) m2 $ FNode h k1 n2 m2 here one2 two p2))
     (many Out2 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Term) t) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p)
-       (erased (Nat) k2) (erased (Nat) m2) (erased (Facts k2) two2) (erased (Plus3 h n1 k2 m2) p2) (erased (Out x t n2 two k2 two2) q) ->
-       (Out (Succ (Succ d)) t m (FNode h n1 n2 m here one two p) m2 $ FNode h n1 k2 m2 here one two2 p2)))
+       (erased (Nat) k2) (erased (Nat) m2) (erased (Facts k2) two2) (erased (Plus3 h n1 k2 m2) p2) (erased (Out x t n2 two k2 two2) q)
+       -> (Out (Succ (Succ d)) t m (FNode h n1 n2 m here one two p) m2 $ FNode h n1 k2 m2 here one two2 p2)))
   ((Taken : ((Nat) x) ((Nat) n) ((Facts n) f) -> Type)
     enum
     (many TFree : (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (erased (In x n f) p) -> (Taken x n f))
@@ -867,8 +867,8 @@
     enum
     (many C1Empty : (erased (List $ Digit) ctx) (erased (List $ Rule) rules) -> (C1 ctx (Zero) (FEmpty) rules))
     (many C1Node : (erased (List $ Digit) ctx) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (List $ Rule) rules)
-       (erased (C1Here ctx h here rules) ch) (erased (C1 (Cons (Digit) (D1) ctx) n1 one rules) c1) (erased (C1 (Cons (Digit) (D2) ctx) n2 two rules) c2) ->
-       (C1 ctx m (FNode h n1 n2 m here one two p) rules)))
+       (erased (C1Here ctx h here rules) ch) (erased (C1 (Cons (Digit) (D1) ctx) n1 one rules) c1) (erased (C1 (Cons (Digit) (D2) ctx) n2 two rules) c2)
+       -> (C1 ctx m (FNode h n1 n2 m here one two p) rules)))
   ((AllRuled : ((List $ Nat) ks) ((Nat) n) ((Facts n) f) -> Type)
     enum
     (many ARNil : (erased (Nat) n) (erased (Facts n) f) -> (AllRuled (Nil $ Nat) n f))

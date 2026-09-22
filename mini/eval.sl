@@ -15,8 +15,8 @@
        (erased (BindGroup cenv group group cenv env1) g) (erased (BindAll env1 ps vals env2) b) (erased (Eval env2 body outs) r) -> (Eval env (CCall fn args) outs))
     (many EvMatch : (erased (Env) env) (erased (Core) s) (erased (List (Branch)) bs) (erased (Nat) c) (erased (List (Val)) fields) (erased (List (Nat)) ids) (erased (Core) body)
        (erased (Env) env1) (erased (List (Val)) outs)
-       (erased (Eval env s (Cons (Val) (VCon c fields) (Nil (Val)))) p) (erased (BranchOf bs c ids body) br) (erased (BindAll env ids fields env1) b) (erased (Eval env1 body outs) r) ->
-       (Eval env (CMatch s bs) outs))
+       (erased (Eval env s (Cons (Val) (VCon c fields) (Nil (Val)))) p) (erased (BranchOf bs c ids body) br) (erased (BindAll env ids fields env1) b) (erased (Eval env1 body outs) r)
+       -> (Eval env (CMatch s bs) outs))
     (many EvValues : (erased (Env) env) (erased (List (Core)) items) (erased (List (Val)) vals) (erased (EvalList env items vals) q) -> (Eval env (CValues items) vals))
     (many EvFormer : (erased (Env) env) (erased (Term) t) -> (Eval env (CFormer t) (Cons (Val) (VFormer t env) (Nil (Val)))))
     (many EvToken : (erased (Env) env) -> (Eval env (CToken) (Cons (Val) (VToken) (Nil (Val)))))

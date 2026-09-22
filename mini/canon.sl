@@ -14,13 +14,13 @@
   ((RuleOf : ((List (Rule)) rules) ((Nat) x) ((Term) r) -> Type)
     enum
     (many RuleHere : (erased (Nat) x) (erased (Term) r) (erased (List (Rule)) rest) -> (RuleOf (Cons (Rule) (MkRule x r) rest) x r))
-    (many RuleThere : (erased (Nat) x) (erased (Nat) y) (erased (Term) r) (erased (Term) s) (erased (List (Rule)) rest) (erased (Neq x y) n) (erased (RuleOf rest x r) p) ->
-       (RuleOf (Cons (Rule) (MkRule y s) rest) x r)))
+    (many RuleThere : (erased (Nat) x) (erased (Nat) y) (erased (Term) r) (erased (Term) s) (erased (List (Rule)) rest) (erased (Neq x y) n) (erased (RuleOf rest x r) p)
+       -> (RuleOf (Cons (Rule) (MkRule y s) rest) x r)))
   ((NoRule : ((List (Rule)) rules) ((Nat) x) -> Type)
     enum
     (many NoRuleNil : (erased (Nat) x) -> (NoRule (Nil (Rule)) x))
-    (many NoRuleCons : (erased (Nat) x) (erased (Nat) y) (erased (Term) s) (erased (List (Rule)) rest) (erased (Neq x y) n) (erased (NoRule rest x) p) ->
-       (NoRule (Cons (Rule) (MkRule y s) rest) x)))
+    (many NoRuleCons : (erased (Nat) x) (erased (Nat) y) (erased (Term) s) (erased (List (Rule)) rest) (erased (Neq x y) n) (erased (NoRule rest x) p)
+       -> (NoRule (Cons (Rule) (MkRule y s) rest) x)))
   ((RuleDec : ((List (Rule)) rules) ((Nat) x) -> Type)
     enum
     (many RuleHit : (erased (List (Rule)) rules) (erased (Nat) x) (many (Term) r) (erased (RuleOf rules x r) p) -> (RuleDec rules x))
@@ -42,8 +42,8 @@
 (def-adts
   ((Canon : ((List (Rule)) rules) ((Term) t) ((Term) u) -> Type)
     enum
-    (many CanRule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (Term) u) (erased (RuleOf rules x r) p) (erased (Canon rules r u) q) ->
-       (Canon rules (Ref x) u))
+    (many CanRule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (Term) u) (erased (RuleOf rules x r) p) (erased (Canon rules r u) q)
+       -> (Canon rules (Ref x) u))
     (many CanFree : (erased (List (Rule)) rules) (erased (Nat) x) (erased (NoRule rules x) p) -> (Canon rules (Ref x) (Ref x)))
     (many CanBound : (erased (List (Rule)) rules) (erased (Nat) k) -> (Canon rules (Bound k) (Bound k)))
     (many CanTyApp : (erased (List (Rule)) rules) (erased (Term) h) (erased (Term) h2) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (List (Term)) as2)
@@ -54,8 +54,8 @@
     (many CanFn : (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) l2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
        (erased (List (Entry)) rs) (erased (List (Entry)) rs2)
        (erased (Canon rules l l2) p) (erased (CanonTele rules ps ps2) q) (erased (CanonTele rules rs rs2) r) -> (Canon rules (Fn l ps rs) (Fn l2 ps2 rs2)))
-    (many CanTyCtor : (erased (List (Rule)) rules) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (CanonTele rules ps ps2) q) ->
-       (Canon rules (TyCtor ps) (TyCtor ps2)))
+    (many CanTyCtor : (erased (List (Rule)) rules) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (CanonTele rules ps ps2) q)
+       -> (Canon rules (TyCtor ps) (TyCtor ps2)))
     (many CanValCtor : (erased (List (Rule)) rules) (erased (List (Entry)) ps) (erased (List (Entry)) ps2) (erased (Term) r) (erased (Term) r2)
        (erased (CanonTele rules ps ps2) q) (erased (Canon rules r r2) p) -> (Canon rules (ValCtor ps r) (ValCtor ps2 r2))))
   ((CanonList : ((List (Rule)) rules) ((List (Term)) ts) ((List (Term)) us) -> Type)
@@ -81,8 +81,8 @@
   ((Below : ((List (Rule)) rules) ((List (Nat)) ranks) ((Term) t) ((Nat) k) -> Type)
     enum
     (many BlFree : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) x) (erased (Nat) k) (erased (NoRule rules x) p) -> (Below rules ranks (Ref x) k))
-    (many BlRuled : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) x) (erased (Nat) k) (erased (Term) r) (erased (Nat) j) (erased (RuleRank rules ranks x r j) p) (erased (Lt j k) lt) ->
-       (Below rules ranks (Ref x) k))
+    (many BlRuled : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) x) (erased (Nat) k) (erased (Term) r) (erased (Nat) j) (erased (RuleRank rules ranks x r j) p) (erased (Lt j k) lt)
+       -> (Below rules ranks (Ref x) k))
     (many BlBound : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) i) (erased (Nat) k) -> (Below rules ranks (Bound i) k))
     (many BlTyApp : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Nat) k)
        (erased (Below rules ranks h k) p) (erased (BelowList rules ranks as k) q) -> (Below rules ranks (TyApp h ps as) k))
@@ -92,13 +92,13 @@
     (many BlFn : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Nat) k)
        (erased (Below rules ranks l k) p) (erased (BelowTele rules ranks ps k) q) (erased (BelowTele rules ranks rs k) r) -> (Below rules ranks (Fn l ps rs) k))
     (many BlTyCtor : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Entry)) ps) (erased (Nat) k) (erased (BelowTele rules ranks ps k) q) -> (Below rules ranks (TyCtor ps) k))
-    (many BlValCtor : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) k) (erased (BelowTele rules ranks ps k) q) (erased (Below rules ranks r k) p) ->
-       (Below rules ranks (ValCtor ps r) k)))
+    (many BlValCtor : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Entry)) ps) (erased (Term) r) (erased (Nat) k) (erased (BelowTele rules ranks ps k) q) (erased (Below rules ranks r k) p)
+       -> (Below rules ranks (ValCtor ps r) k)))
   ((BelowList : ((List (Rule)) rules) ((List (Nat)) ranks) ((List (Term)) ts) ((Nat) k) -> Type)
     enum
     (many BlNil : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) k) -> (BelowList rules ranks (Nil (Term)) k))
-    (many BlCons : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) t) (erased (List (Term)) ts) (erased (Nat) k) (erased (Below rules ranks t k) p) (erased (BelowList rules ranks ts k) q) ->
-       (BelowList rules ranks (Cons (Term) t ts) k)))
+    (many BlCons : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) t) (erased (List (Term)) ts) (erased (Nat) k) (erased (Below rules ranks t k) p) (erased (BelowList rules ranks ts k) q)
+       -> (BelowList rules ranks (Cons (Term) t ts) k)))
   ((BelowTele : ((List (Rule)) rules) ((List (Nat)) ranks) ((List (Entry)) es) ((Nat) k) -> Type)
     enum
     (many BlTNil : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) k) -> (BelowTele rules ranks (Nil (Entry)) k))
@@ -277,11 +277,11 @@
     (many CnRef : (erased (List (Rule)) rules) (erased (Nat) x) (erased (NoRule rules x) p) -> (Canonical rules (Ref x)))
     (many CnBound : (erased (List (Rule)) rules) (erased (Nat) k) -> (Canonical rules (Bound k)))
     (many CnTyApp : (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Entry)) ps) (erased (List (Term)) as) (erased (Canonical rules h) p) (erased (CanonicalList rules as) q) -> (Canonical rules (TyApp h ps as)))
-    (many CnValApp : (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Canonical rules h) p) (erased (CanonicalList rules as) q) ->
-       (Canonical rules (ValApp h ps r as)))
+    (many CnValApp : (erased (List (Rule)) rules) (erased (Term) h) (erased (List (Entry)) ps) (erased (Term) r) (erased (List (Term)) as) (erased (Canonical rules h) p) (erased (CanonicalList rules as) q)
+       -> (Canonical rules (ValApp h ps r as)))
     (many CnUniv : (erased (List (Rule)) rules) -> (Canonical rules (Univ)))
-    (many CnFn : (erased (List (Rule)) rules) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Canonical rules l) p) (erased (CanonicalTele rules ps) q) (erased (CanonicalTele rules rs) r) ->
-       (Canonical rules (Fn l ps rs)))
+    (many CnFn : (erased (List (Rule)) rules) (erased (Term) l) (erased (List (Entry)) ps) (erased (List (Entry)) rs) (erased (Canonical rules l) p) (erased (CanonicalTele rules ps) q) (erased (CanonicalTele rules rs) r)
+       -> (Canonical rules (Fn l ps rs)))
     (many CnTyCtor : (erased (List (Rule)) rules) (erased (List (Entry)) ps) (erased (CanonicalTele rules ps) q) -> (Canonical rules (TyCtor ps)))
     (many CnValCtor : (erased (List (Rule)) rules) (erased (List (Entry)) ps) (erased (Term) r) (erased (CanonicalTele rules ps) q) (erased (Canonical rules r) p) -> (Canonical rules (ValCtor ps r))))
   ((CanonicalList : ((List (Rule)) rules) ((List (Term)) ts) -> Type)
@@ -291,8 +291,8 @@
   ((CanonicalTele : ((List (Rule)) rules) ((List (Entry)) es) -> Type)
     enum
     (many CnTNil : (erased (List (Rule)) rules) -> (CanonicalTele rules (Nil (Entry))))
-    (many CnTCons : (erased (List (Rule)) rules) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Canonical rules t) p) (erased (CanonicalTele rules es) q) ->
-       (CanonicalTele rules (Cons (Entry) (MkEntry s i t) es)))))
+    (many CnTCons : (erased (List (Rule)) rules) (erased (Bool) s) (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Canonical rules t) p) (erased (CanonicalTele rules es) q)
+       -> (CanonicalTele rules (Cons (Entry) (MkEntry s i t) es)))))
 
 (def-fns _
   ((erased canon-canonical : (erased (List (Rule)) rules) (erased (Term) t) (erased (Term) u) (subterm erased (Canon rules t u) d) -> (erased (Canonical rules u) c))
