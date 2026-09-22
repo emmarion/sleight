@@ -17,6 +17,11 @@ enclosing form, the missing `)` is reported as missing, since none
 exists. Only a bare `$` token is special — `$` inside a run of other
 characters (e.g. `foo$bar`) is just part of an ordinary atom.
 
+A telescope written in a form that also carries something else is
+bracketed: a `let`'s binders, and a `def-fns` or `def-adts` signature up
+to and including its returns. What follows the bracket is the body. A
+value constructor has no body, so its clause is that bracket alone.
+
 ## 3. Scope environment
 
 The scope environment is a list of entries (shadowing allowed), a pure
@@ -345,13 +350,13 @@ nothing to pass into an argument slot or match on.
 Multiple values are introduced by `values` and eliminated by `let`,
 which binds one variable per value: `(let ((many q) (many r)) (divmod n d))`
 binds both
-of `divmod`'s returns. A `let`'s items are its binders, then any
-statements, then the final expression, which is the last item; the
-right-hand side is that expression together with the statements before
-it, an expression in §16's sense. The binders are a flat list, not a
-telescope. `let` is a statement (§16), so its binders enter the
-containing expression as ordinary scope entries, and an earlier binder
-is, to a later one, just another in-scope variable — a scope-table
+of `divmod`'s returns. A `let`'s items are its binders in a bracket of
+their own, then any statements, then the final expression, which is the
+last item; the right-hand side is that expression together with the
+statements before it, an expression in §16's sense. The binders are a
+flat list, not a telescope. `let` is a statement (§16), so its binders
+enter the containing expression as ordinary scope entries, and an earlier
+binder is, to a later one, just another in-scope variable — a scope-table
 reference, not a de Bruijn index (§5). The dependency among a function's
 returns lives instead in the function's own return telescope, which is
 part of a closed, first-class type (§29) and does bind positionally; a
@@ -1078,13 +1083,14 @@ actually specified.
 
 **Statements** (§16):
 1. `let` — introduces zero or more bindings, one per value of the
-   right-hand side: the binders come first, then any statements, then
-   the final expression as the last item (§11); multiplicity mandatory
-   and type/`is` optional per binder (§9, §14); state-forwarding per
-   binder, from the corresponding right-hand-side entry when that entry
-   is in §5's grammar (§3, §9). Zero bindings is useless as the language
-   stands, being pure and total, but is expected to matter once linear or
-   unique types arrive (§6) — invoking a destructor, or similar.
+   right-hand side: the binders come first, bracketed together, then any
+   statements, then the final expression as the last item (§11);
+   multiplicity mandatory and type/`is` optional per binder (§9, §14);
+   state-forwarding per binder, from the corresponding right-hand-side
+   entry when that entry is in §5's grammar (§3, §9). Zero bindings is
+   useless as the language stands, being pure and total, but is expected
+   to matter once linear or unique types arrive (§6) — invoking a
+   destructor, or similar.
 2. `def-lvl` — mints a fresh `Level` (§8).
 3. `def-fns` — defines one or more (possibly mutually recursive)
    functions at a shared level, written on the form itself, each
@@ -1093,7 +1099,7 @@ actually specified.
    function's body (§9, §16). A body may be marked `absurd` (§37) or
    `extern` (§41). Mints a
    `Delegate` proof for each `delegate`-bodied function (§38).
-4. 4. `def-adts` — defines one or more (possibly mutually recursive)
+4. `def-adts` — defines one or more (possibly mutually recursive)
    ADTs, same one-element-case pattern as `def-fns`; possibly nested;
    index variables aren't shared across constructors (§12, §16); mints,
    and opens, each type's `Matchable` (§19), and its `Newtype` when

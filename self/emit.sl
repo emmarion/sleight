@@ -1166,30 +1166,32 @@
 (def-fns _ $ (many classify-final : (many (Env) env) (many (Term) ty) -> (many (Final) f))
   (match many (canon-env env ty) _
     ((TFn unique lv ps rs)
-      (match many unique _ ((BTrue) (FPlain)) ((BFalse)
-      (match many ps _
-        ((Nil a)
-          (match many rs _
-            ((Cons b r more)
-              (match many more _
-                ((Nil c) (match many r _ ((MkEntry n s m sg place) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FThunk $ sg-term sg)) ((Erased) (FPlain))))))
-                ((Cons c r2 more2) (FPlain))))
-            ((Nil b) (FPlain))))
-        ((Cons a p more)
-          (match many more _
-            ((Cons b p2 more2) (FPlain))
-            ((Nil b)
+      (match many unique _
+        ((BTrue) (FPlain))
+        ((BFalse)
+          (match many ps _
+            ((Nil a)
               (match many rs _
-                ((Nil c) (FPlain))
-                ((Cons c r more3)
-                  (match many more3 _
-                    ((Cons d r2 more4) (FPlain))
-                    ((Nil d)
-                      (match many (and (is-string-type env $ sg-term $ entry-sg p)
-                                    (and (is-string-type env $ sg-term $ entry-sg r)
-                                      $ and (and (mult-is-many $ entry-mult p) $ not $ mult-is-once $ entry-mult p) $ and (mult-is-many $ entry-mult r) $ not $ mult-is-once $ entry-mult r)) _
-                        ((BTrue) (FMain))
-                        ((BFalse) (FPlain))))))))))))))
+                ((Cons b r more)
+                  (match many more _
+                    ((Nil c) (match many r _ ((MkEntry n s m sg place) (match many m _ ((Many) (FThunk $ sg-term sg)) ((Once) (FThunk $ sg-term sg)) ((Erased) (FPlain))))))
+                    ((Cons c r2 more2) (FPlain))))
+                ((Nil b) (FPlain))))
+            ((Cons a p more)
+              (match many more _
+                ((Cons b p2 more2) (FPlain))
+                ((Nil b)
+                  (match many rs _
+                    ((Nil c) (FPlain))
+                    ((Cons c r more3)
+                      (match many more3 _
+                        ((Cons d r2 more4) (FPlain))
+                        ((Nil d)
+                          (match many (and (is-string-type env $ sg-term $ entry-sg p)
+                                        (and (is-string-type env $ sg-term $ entry-sg r)
+                                          $ and (and (mult-is-many $ entry-mult p) $ not $ mult-is-once $ entry-mult p) $ and (mult-is-many $ entry-mult r) $ not $ mult-is-once $ entry-mult r)) _
+                            ((BTrue) (FMain))
+                            ((BFalse) (FPlain))))))))))))))
     ((TApp h args)
       (match many (type-head env ty) _
         ((None a) (FPlain))
@@ -1227,15 +1229,15 @@
   (match many (prelude-nullary env ty "Slot") _
     ((BTrue) (Some _ $ RStr "\"_\""))
     ((BFalse)
-  (match many (prelude-nullary env ty "Nat") (((Maybe $ Rope) r1))
-    ((BTrue) (Some _ $ RStr "(Z.to_string (Obj.obj v : Z.t))"))
-    ((BFalse)
-      (match many (prelude-nullary env ty "Char") (((Maybe $ Rope) r2))
-        ((BTrue) (Some _ $ RStr "(Ffi_core.lit_char (Z.to_int (Obj.obj v : Z.t)))"))
+      (match many (prelude-nullary env ty "Nat") (((Maybe $ Rope) r1))
+        ((BTrue) (Some _ $ RStr "(Z.to_string (Obj.obj v : Z.t))"))
         ((BFalse)
-          (match many (prelude-nullary env ty "String") (((Maybe $ Rope) r3))
-            ((BTrue) (Some _ $ RStr "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"))
-            ((BFalse) (None $ Rope))))))))))
+          (match many (prelude-nullary env ty "Char") (((Maybe $ Rope) r2))
+            ((BTrue) (Some _ $ RStr "(Ffi_core.lit_char (Z.to_int (Obj.obj v : Z.t)))"))
+            ((BFalse)
+              (match many (prelude-nullary env ty "String") (((Maybe $ Rope) r3))
+                ((BTrue) (Some _ $ RStr "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"))
+                ((BFalse) (None $ Rope))))))))))
 
 (def-fns _
   ((many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) (many (Decls) d) -> (many (ShowMemo) memo2) (many (String) name))
@@ -1255,27 +1257,27 @@
                   (match many (lit-show env ty) (((ShowMemo) m0) ((Rope) r0))
                     ((Some lz text) (values memo1 text))
                     ((None lz)
-                  (match many ty _
-                    ((TApp h args)
-                      (match many (type-adt env ty) (((ShowMemo) m) ((Rope) r))
-                        ((None b) (values memo1 $ RStr "\"_\""))
-                        ((Some b adt)
-                          ; the tag where there is one, else the sole non-phantom constructor; a union with
-                          ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
-                          (let ((many usable))
-                            (match many (adt-tagged adt) (((List $ Ctor) cs))
-                              ((BTrue) (adt-ctors adt))
-                              ((BFalse) (match many (lone-ctor adt) (((List $ Ctor) cs2))
-                                          ((None z) (Nil _))
-                                          ((Some z c) (Cons _ c $ Nil _))))))
-                          (let ((many memo3) (many arms)) $ show-arms k env ty usable memo1 (adt-tagged adt) d)
-                          (match many arms (((ShowMemo) m2) ((Rope) r2))
-                            ((Nil z2) (values memo3 $ RStr "\"_\""))
-                            ((Cons z2 y ys)
-                              (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
-                    ((TFn unique l ps rs) (values memo1 $ RStr "\"_\""))
-                    ((TCell ctor slots) (values memo1 $ RStr "\"_\""))
-                    ((TValCtor ps r) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
+                      (match many ty _
+                        ((TApp h args)
+                          (match many (type-adt env ty) (((ShowMemo) m) ((Rope) r))
+                            ((None b) (values memo1 $ RStr "\"_\""))
+                            ((Some b adt)
+                              ; the tag where there is one, else the sole non-phantom constructor; a union with
+                              ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
+                              (let ((many usable))
+                                (match many (adt-tagged adt) (((List $ Ctor) cs))
+                                  ((BTrue) (adt-ctors adt))
+                                  ((BFalse) (match many (lone-ctor adt) (((List $ Ctor) cs2))
+                                              ((None z) (Nil _))
+                                              ((Some z c) (Cons _ c $ Nil _))))))
+                              (let ((many memo3) (many arms)) $ show-arms k env ty usable memo1 (adt-tagged adt) d)
+                              (match many arms (((ShowMemo) m2) ((Rope) r2))
+                                ((Nil z2) (values memo3 $ RStr "\"_\""))
+                                ((Cons z2 y ys)
+                                  (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
+                        ((TFn unique l ps rs) (values memo1 $ RStr "\"_\""))
+                        ((TCell ctor slots) (values memo1 $ RStr "\"_\""))
+                        ((TValCtor ps r) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
                 (match many memo2 _
                   ((MkShowMemo fresh2 count2 known2 defs2)
                     (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))

@@ -3025,29 +3025,29 @@
                         (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
                           ((MkAdded k f0 f2 tb2c tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
                       ((BFalse)
-                    (match many (or (not force) $ listed env x y) _
-                      ((BTrue) (contradiction _ bnd env a b))
-                      ((BFalse)
-                        (let ((many sx)) $ signature-of env newer)
-                        (let ((many sy)) $ signature-of env older)
-                        (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
-                          ((MkAdded k f0 f2 tb2c tb2)
-                            (let ((many env2)) $ env-set-table env _ _ bnd tb2)
-                            (let ((erased p)) $ prove-subterm k n)
-                            (let ((many (Outcome k bnd) after-sig))
-                              (match many sx _
-                                ((None c) (Same _ _ env))
-                                ((Some c s)
-                                  (match many sy (((Outcome k bnd) r))
-                                    ((None d) (Same _ _ env))
-                                    ((Some d s2)
-                                      (let ((many s3) (erased ps3)) $ canon-in _ _ bnd tb2 s)
-                                      (let ((many s4) (erased ps4)) $ canon-in _ _ bnd tb2 s2)
-                                      (unify _ _ bnd tb2 s3 ps3 s4 ps4 env2 force))))))
-                            (match many after-sig _
-                              ((Contra c cc m) (Contra _ _ m))
-                              ((Same c cc env) (Less _ _ _ _ tb2 env2 p))
-                              ((Less c cc j f3 tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
+                        (match many (or (not force) $ listed env x y) _
+                          ((BTrue) (contradiction _ bnd env a b))
+                          ((BFalse)
+                            (let ((many sx)) $ signature-of env newer)
+                            (let ((many sy)) $ signature-of env older)
+                            (match many (rule-out-var _ _ bnd tb newer older pn po neq) _
+                              ((MkAdded k f0 f2 tb2c tb2)
+                                (let ((many env2)) $ env-set-table env _ _ bnd tb2)
+                                (let ((erased p)) $ prove-subterm k n)
+                                (let ((many (Outcome k bnd) after-sig))
+                                  (match many sx _
+                                    ((None c) (Same _ _ env))
+                                    ((Some c s)
+                                      (match many sy (((Outcome k bnd) r))
+                                        ((None d) (Same _ _ env))
+                                        ((Some d s2)
+                                          (let ((many s3) (erased ps3)) $ canon-in _ _ bnd tb2 s)
+                                          (let ((many s4) (erased ps4)) $ canon-in _ _ bnd tb2 s2)
+                                          (unify _ _ bnd tb2 s3 ps3 s4 ps4 env2 force))))))
+                                (match many after-sig _
+                                  ((Contra c cc m) (Contra _ _ m))
+                                  ((Same c cc env) (Less _ _ _ _ tb2 env2 p))
+                                  ((Less c cc j f3 tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
               ((TBound j) (contradiction _ bnd env a b))
               ((TErr m) (Contra _ _ m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force))))
           ((TBound j) (contradiction _ bnd env a b))
@@ -3196,15 +3196,15 @@
                         (match many (unify-place env place place2 force) _
                           ((UContra msg) (Contra _ _ msg))
                           ((UOk env)
-                        (let ((erased psg) (erased prest)) (frt-cons _ _ _ _ _ _ _ _ pas))
-                        (let ((erased psg2) (erased prest2)) (frt-cons _ _ _ _ _ _ _ _ pbs))
-                        (match many (unify-sg _ _ bnd tb sg psg sg2 psg2 env force) _
-                          ((Contra c cc msg) (Contra _ _ msg))
-                          ((Same c cc env) (unify-tele _ _ bnd tb rest prest rest2 prest2 env wa wb force))
-                          ((Less c cc k f2 tb2 env2 p)
-                            (let ((many rest3) (erased prest3)) $ canon-tele-in _ _ bnd tb2 rest)
-                            (let ((many rest4) (erased prest4)) $ canon-tele-in _ _ bnd tb2 rest2)
-                            (lift _ bnd _ _ tb2 env2 p $ unify-tele (subterm p) k f2 bnd tb2 rest3 prest3 rest4 prest4 env2 wa wb force))))))))))))))))
+                            (let ((erased psg) (erased prest)) (frt-cons _ _ _ _ _ _ _ _ pas))
+                            (let ((erased psg2) (erased prest2)) (frt-cons _ _ _ _ _ _ _ _ pbs))
+                            (match many (unify-sg _ _ bnd tb sg psg sg2 psg2 env force) _
+                              ((Contra c cc msg) (Contra _ _ msg))
+                              ((Same c cc env) (unify-tele _ _ bnd tb rest prest rest2 prest2 env wa wb force))
+                              ((Less c cc k f2 tb2 env2 p)
+                                (let ((many rest3) (erased prest3)) $ canon-tele-in _ _ bnd tb2 rest)
+                                (let ((many rest4) (erased prest4)) $ canon-tele-in _ _ bnd tb2 rest2)
+                                (lift _ bnd _ _ tb2 env2 p $ unify-tele (subterm p) k f2 bnd tb2 rest3 prest3 rest4 prest4 env2 wa wb force))))))))))))))))
 
   ((many unify-sg : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (Sg) sg) (erased (FrS n f sg) psg) (many (Sg) sg2) (erased (FrS n f sg2) psg2) (many (Env) env) (many (Bool) force) -> (many (Outcome n bnd) r))
     (match many sg _
