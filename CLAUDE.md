@@ -90,3 +90,10 @@ by the owner and apply to every session.
     not add an entry recording what the owner just said in chat,
     however faithfully — and do not take the entries already there that
     do so as the pattern to follow.
+
+15. **Numbered items are never renumbered.** DESIGN.md's sections,
+    UNIQUE.md's, and the items of ASSUMPTIONS.md, SPEC-REVIEW.md,
+    SUGAR.md, TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md and BUGS.md are
+    cited by number from the code and from each other. An item or
+    section that goes away is deleted and its number left as a gap;
+    nothing after it moves.
