@@ -3,6 +3,8 @@
 Observations from one session rewriting `mini/` without fuel: each item is a
 point where the session lost time or guessed, with what would have helped.
 Nothing here is a design decision; it is a log of friction, in the order met.
+Items are never renumbered: one that goes away is deleted and its number left
+as a gap, so a reference to another item keeps naming what it named.
 
 1. **Paren-depth locator.** Every unbalanced file was diagnosed with an ad hoc
    script printing the nesting depth at each `(many f :` line. A checker
