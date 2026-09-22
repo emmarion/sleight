@@ -93,7 +93,7 @@
   (match many line _
     ((None a) (Exit A code3))
     ((Some a s)
-      (def-unique A $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO A) next)) (lib-echo (predates a0-a) line))
+      (def-unique A $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO A) next)) (lib-echo (predates a0-a) next-line))
       (WriteOut A (str-append (predates str-a0) "> " (str-append (predates str-a0) s "\n"))
         (unique-thunk (predates th-a0) _ _ (ReadLine A again))))))
 (def-unique A $ (unique echo-start : (many (Maybe (String)) line) -> (unique (IO A) next)) (lib-echo (predates a0-a) line))

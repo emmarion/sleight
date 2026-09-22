@@ -21,7 +21,7 @@
   (match many line _
     ((None a) (Exit P code3))
     ((Some a s)
-      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (echo (predates pa-p) line))
+      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (echo (predates pa-p) next-line))
       (WriteOut P (str-append (predates str-pa) "> " (str-append (predates str-pa) s "\n"))
         (unique-thunk (predates thunk-pa) _ _ (ReadLine P again))))))
 

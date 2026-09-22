@@ -20,23 +20,23 @@
 
 (def-fns _ $ (erased add-shift : (erased (Nat) n) (erased (Nat) k) (erased (Nat) size) (subterm erased (Add n (Succ k) size) sum) -> (erased (Add (Succ n) k size) r))
   (match erased sum _
-    ((AddZero b) (AddSucc (Zero) k k (AddZero k)))
-    ((AddSucc a b c q) (AddSucc (Succ a) k c (add-shift a k c q)))))
+    ((AddZero _) (AddSucc (Zero) k k (AddZero k)))
+    ((AddSucc a _ c q) (AddSucc (Succ a) k c (add-shift a k c q)))))
 
 (def-fns _ $ (erased lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f))
   (lt-asym a a p (lt-succ a)))
 
 (def-fns _ $ (erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e))
   (match erased p _
-    ((WNil z)
+    ((WNil _)
       (let-match erased q (WNil z2))
       (Refl (Nat) x))
-    ((W1 c1 a1 d1 dd1 x1 p1)
+    ((W1 c1 _ d1 dd1 _ p1)
       (let-match erased q (W1 c2 a2 d2 dd2 y1 q1))
-      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ d1) x y p1 q1))))
-    ((W2 c1 a1 d1 dd1 x1 p1)
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl _ _) (wrap-fn c1 (Succ d1) x y p1 q1))))
+    ((W2 c1 _ d1 dd1 _ p1)
       (let-match erased q (W2 c2 a2 d2 dd2 y1 q1))
-      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl t r) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))
+      (match erased (double-fn a d1 d2 dd1 dd2) _ ((Refl _ _) (wrap-fn c1 (Succ (Succ d1)) x y p1 q1))))))
 
 ; ---- the ghost history: an erased list of every value allocated so far, newest first
 
@@ -79,19 +79,19 @@
 (def-fns _ $ (erased len-fn : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) n) (erased (Nat) m)
     (subterm erased (Len B l n) p) (erased (Len B l m) q) -> (erased (Eq (Nat) n m) e))
   (match erased p _
-    ((LenNil tb)
+    ((LenNil _)
       (let-match erased q (LenNil tb2))
       (Refl (Nat) (Zero)))
-    ((LenAdd tb r1 v1 n1 p1)
+    ((LenAdd _ r1 _ n1 p1)
       (let-match erased q (LenAdd tb2 r2 v2 m1 q1))
-      (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl t x) (Refl (Nat) (Succ n1)))))))
+      (match erased (len-fn _ r1 n1 m1 p1 q1) _ ((Refl _ _) (Refl (Nat) (Succ n1)))))))
 
 (def-fns _ $ (erased suffix-len : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (subterm erased (Suffix B l s) p) (erased (Nat) n) (erased (Len B s n) ls) (erased (Nat) m) (erased (Len B l m) ll) ->
     (erased (Lt n (Succ m)) r))
   (match erased p _
-    ((SfHere tb h) (match erased (len-fn _ l n m ls ll) _ ((Refl t x) (lt-succ n))))
-    ((SfThere tb rest w s1 p1)
+    ((SfHere _ _) (match erased (len-fn _ l n m ls ll) _ ((Refl _ _) (lt-succ n))))
+    ((SfThere _ rest _ s1 p1)
       (let-match erased ll (LenAdd tb2 r2 v2 m1 ll1))
       (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))))
 
@@ -99,18 +99,18 @@
     (erased (Hist B) s2) (erased (Nat) n) (subterm erased (Suffix B l s1) p1) (erased (Suffix B l s2) p2)
     (erased (Len B s1 n) l1) (erased (Len B s2 n) l2) -> (erased (Eq (Hist B) s1 s2) e))
   (match erased p1 _
-    ((SfHere tb h)
+    ((SfHere _ _)
       (match erased p2 _
-        ((SfHere tb2 h2) (Refl (Hist B) s1))
-        (absurd (SfThere tb2 rest w s0 q)
-          (match erased l1 (((False) f))
-            ((LenAdd tb3 r3 v3 n0 l1b) (lt-irrefl n (suffix-len _ rest s2 q n l2 n0 l1b)))))))
-    ((SfThere tb rest w s0 q)
+        ((SfHere _ _) (Refl (Hist B) s1))
+        (absurd (SfThere _ rest _ _ q)
+          (match erased l1 (((False) _))
+            ((LenAdd _ _ _ n0 l1b) (lt-irrefl n (suffix-len _ rest s2 q n l2 n0 l1b)))))))
+    ((SfThere _ rest _ _ q)
       (match erased p2 _
-        (absurd (SfHere tb2 h2)
-          (match erased l2 (((False) f))
-            ((LenAdd tb3 r3 v3 n0 l2b) (lt-irrefl n (suffix-len _ rest s1 q n l1 n0 l2b)))))
-        ((SfThere tb2 rest2 w2 s02 q2) (suffix-unique _ rest s1 s2 n q q2 l1 l2))))))
+        (absurd (SfHere _ _)
+          (match erased l2 (((False) _))
+            ((LenAdd _ _ _ n0 l2b) (lt-irrefl n (suffix-len _ rest s1 q n l1 n0 l2b)))))
+        ((SfThere _ _ _ _ q2) (suffix-unique _ rest s1 s2 n q q2 l1 l2))))))
 
 (def-fns _ $ (erased ref-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
     (erased (Hist B) s1) (erased (Value B s1) v1) (erased (Suffix B l (HAdd B s1 v1)) p1)
@@ -124,8 +124,8 @@
 (def-fns _ $ (erased suffix-trans : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) a) (erased (Hist B) b)
     (erased (Hist B) c) (subterm erased (Suffix B a b) p) (erased (Suffix B b c) q) -> (erased (Suffix B a c) r))
   (match erased p _
-    ((SfHere tb h) q)
-    ((SfThere tb rest w s p1) (SfThere _ rest w c (suffix-trans _ rest b c p1 q)))))
+    ((SfHere _ _) q)
+    ((SfThere _ rest w _ p1) (SfThere _ rest w c (suffix-trans _ rest b c p1 q)))))
 
 (def-fns _ $ (erased suffix-one : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) s) (erased (Value B s) v) ->
     (erased (Suffix B (HAdd B s v) s) r))
@@ -134,15 +134,15 @@
 (def-fns _ $ (erased empty-suffix : (erased (TyCtor (Type R) -> Type) B) (subterm erased (Hist B) l) ->
     (erased (Suffix B l (HEmpty B)) r))
   (match erased l _
-    ((HEmpty tb) (SfHere _ _))
-    ((HAdd tb rest v) (SfThere _ rest v (HEmpty B) (empty-suffix _ rest)))))
+    ((HEmpty _) (SfHere _ _))
+    ((HAdd _ rest v) (SfThere _ rest v (HEmpty B) (empty-suffix _ rest)))))
 
 (def-fns _ $ (erased stored-body-widen : (erased (TyCtor (Type R) -> Type) B)
     (erased (Hist B) b) (erased (Hist B) c) (erased (Suffix B c b) le)
     (erased (StoredBody B b) v) -> (erased (StoredBody B c) w)
     (erased (Coercible (Shared) (StoredBody B b) v (Shared) (StoredBody B c) w) p))
   (match erased v _
-    ((MkStoredBody tb b0 s body sf)
+    ((MkStoredBody _ _ s body sf)
       (let ((erased sf2)) (suffix-trans _ c b s le sf))
       (values (MkStoredBody _ _ s body sf2)
         (coercible-ctor (Shared) MkStoredBody B B b c s s (coercible-refl (Shared) body) sf sf2)))))
@@ -152,8 +152,8 @@
     (erased (Maybe $ StoredBody B b) v) -> (erased (Maybe $ StoredBody B c) w)
     (erased (Coercible (Shared) (Maybe $ StoredBody B b) v (Shared) (Maybe $ StoredBody B c) w) p))
   (match erased v _
-    ((None t) (values (None _) (coercible-ctor (Shared) None (StoredBody B b) (StoredBody B c))))
-    ((Some t x)
+    ((None _) (values (None _) (coercible-ctor (Shared) None (StoredBody B b) (StoredBody B c))))
+    ((Some _ x)
       (let ((erased x2) (erased px)) (stored-body-widen _ b c le x))
       (values (Some _ x2) (coercible-ctor (Shared) Some (StoredBody B b) (StoredBody B c) px)))))
 
@@ -162,8 +162,8 @@
     (subterm erased (IdMap $ StoredBody B b) v) -> (erased (IdMap $ StoredBody B c) w)
     (erased (Coercible (Shared) (IdMap $ StoredBody B b) v (Shared) (IdMap $ StoredBody B c) w) p))
   (match erased v _
-    ((MEmpty t) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (StoredBody B b) (StoredBody B c))))
-    ((MNode t here one two)
+    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (StoredBody B b) (StoredBody B c))))
+    ((MNode _ here one two)
       (let ((erased h2) (erased ph)) (stored-maybe-widen _ b c le here))
       (let ((erased o2) (erased po)) (stored-map-widen _ b c le one))
       (let ((erased t2) (erased pt)) (stored-map-widen _ b c le two))
@@ -175,9 +175,9 @@
 
 (def-fns _ $ (many alloc : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Store B l) st)
     (many (B (Ref B l)) body) ->
-    (erased (Hist B) l2) (many (Store B l2) st2) (erased (Suffix B l2 l) sf) (many (Ref B l2) at))
+    (erased (Hist B) l2) (many (Store B l2) st2) (erased (Suffix B l2 l) sf) (many (Ref B l2) addr))
   (match many st _
-    ((MkStore tb l0 next ln writes)
+    ((MkStore _ _ next ln writes)
       (let ((many (Value B l) v)) (MkValue _ _ next ln body))
       (let ((erased writes2) (erased pw)) (stored-map-widen _ l (HAdd _ l v) (suffix-one _ l v) writes))
       (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln) (coerce writes pw)) (suffix-one _ l v)
@@ -191,24 +191,24 @@
 (def-fns _ $ (many ref-key : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) bound)
     (erased (Len B l bound) lb) (many (Ref B l) r) -> (many (Nat) k) (erased (Lt k bound) lt))
   (match many r _
-    ((MkRef tb l0 s v p)
+    ((MkRef _ _ s v p)
       (match many v _
-        ((MkValue tb2 s0 pos lp body)
+        ((MkValue _ _ pos lp _)
           (values pos (lt-succ-inv pos bound
             (suffix-len _ l (HAdd _ s v) p (Succ pos) (LenAdd _ s v pos lp) bound lb))))))))
 
 (def-fns _ $ (many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p))
-  (match many r _ ((MkRef tb l0 s v p) (match many v _ ((MkValue tb2 s0 pos lp body) pos)))))
+  (match many r _ ((MkRef _ _ _ v _) (match many v _ ((MkValue _ _ pos _ _) pos)))))
 
 (def-fns _ $ (many store-read : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
     (many (Store B l) st) (many (Ref B l) r) ->
     (erased (Hist B) s) (many (B (Ref B s)) body) (erased (Suffix B l s) sf))
   (let-match many st (MkStore _ _ next ln writes))
   (match many (idmap-get _ (ref-pos _ _ r) writes) _
-    ((Hit t k m v p)
+    ((Hit _ _ _ v _)
       (let-match many v (MkStoredBody _ _ s body sf))
       (values s body sf))
-    ((Miss t k m p)
+    ((Miss _ _ _ _)
       (let-match many r (MkRef _ _ s v rp))
       (let-match many v (MkValue _ _ pos lp body))
       (values s body (ref-suffix _ _ s v rp)))))
@@ -223,7 +223,7 @@
 (def-fns _ $ (erased ref-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (erased (Ref B b) r) -> (erased (Ref B c) r2) (erased (Coercible (Shared) (Ref B b) r (Shared) (Ref B c) r2) p))
   (match erased r _
-    ((MkRef tb b0 s v p)
+    ((MkRef _ _ s v p)
       (let ((erased p2)) (suffix-trans _ c b (HAdd _ s v) le p))
       (values (MkRef _ _ s v p2) (coercible-ctor (Shared) MkRef B B b c s s (coercible-refl (Shared) v) p p2)))))
 
@@ -231,8 +231,8 @@
     (erased (Suffix B c b) le) (subterm erased (List $ Ref B b) xs) ->
     (erased (List $ Ref B c) ys) (erased (Coercible (Shared) (List $ Ref B b) xs (Shared) (List $ Ref B c) ys) p))
   (match erased xs _
-    ((Nil t) (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c))))
-    ((Cons t x rest)
+    ((Nil _) (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c))))
+    ((Cons _ x rest)
       (let ((erased x2) (erased px)) (ref-widen _ b c le x))
       (let ((erased rest2) (erased pr)) (refs-widen _ b c le rest))
       (values (Cons _ x2 rest2) (coercible-ctor (Shared) Cons (Ref B b) (Ref B c) px pr)))))
@@ -241,10 +241,10 @@
     (erased (Suffix B c b) le) (erased (List $ Nat) f) (subterm erased (List $ Ref B b) xs) (erased (Lockstep (Nat) (Ref B b) f xs) lk) ->
     (erased (List $ Ref B c) ys) (erased (Coercible (Shared) (List $ Ref B b) xs (Shared) (List $ Ref B c) ys) p) (erased (Lockstep (Nat) (Ref B c) f ys) lk2))
   (match erased xs _
-    ((Nil t)
+    ((Nil _)
       (let-match erased lk (LsNil ta tb))
       (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c)) (LsNil _ _)))
-    ((Cons t x rest)
+    ((Cons _ x rest)
       (let-match erased lk (LsCons ta tb x0 y0 xs0 ys0 lk1))
       (let ((erased x2) (erased px)) (ref-widen _ b c le x))
       (let ((erased rest2) (erased pr) (erased lk2)) (refs-widen-lk _ b c le xs0 rest lk1))
@@ -254,8 +254,8 @@
     (erased (Suffix B c b) le) (erased (Maybe $ Ref B b) m) ->
     (erased (Maybe $ Ref B c) m2) (erased (Coercible (Shared) (Maybe $ Ref B b) m (Shared) (Maybe $ Ref B c) m2) p))
   (match erased m _
-    ((None t) (values (None _) (coercible-ctor (Shared) None (Ref B b) (Ref B c))))
-    ((Some t x)
+    ((None _) (values (None _) (coercible-ctor (Shared) None (Ref B b) (Ref B c))))
+    ((Some _ x)
       (let ((erased x2) (erased px)) (ref-widen _ b c le x))
       (values (Some _ x2) (coercible-ctor (Shared) Some (Ref B b) (Ref B c) px)))))
 
@@ -263,8 +263,8 @@
     (erased (Suffix B c b) le) (subterm erased (IdMap $ Ref B b) m) ->
     (erased (IdMap $ Ref B c) m2) (erased (Coercible (Shared) (IdMap $ Ref B b) m (Shared) (IdMap $ Ref B c) m2) p))
   (match erased m _
-    ((MEmpty t) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (Ref B b) (Ref B c))))
-    ((MNode t here one two)
+    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (Ref B b) (Ref B c))))
+    ((MNode _ here one two)
       (let ((erased here2) (erased ph)) (maybe-widen _ b c le here))
       (let ((erased one2) (erased p1)) (idmap-widen _ b c le one))
       (let ((erased two2) (erased p2)) (idmap-widen _ b c le two))

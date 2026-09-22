@@ -28,7 +28,7 @@
             ((No x y q) (Exit P code0))))))
     ((Some a s)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
-      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (count (predates pa-p) c2 line))
+      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (count (predates pa-p) c2 next-line))
       (ReadLine P again))))
 
 (let ((unique (Counter) counter)) (MkCounter 0))

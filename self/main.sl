@@ -9,36 +9,36 @@
 
 (def-fns util-lvl $ (many write-lines : (subterm many (List $ String) es) (unique (IO io-lvl) next) -> (unique (IO io-lvl) io))
   (match many es _
-    ((Nil a) next)
-    ((Cons a e rest)
+    ((Nil _) next)
+    ((Cons _ e rest)
       (WriteErr _ e $ unique-thunk (predates th-util) _ _ $ WriteErr _ "\n" $ unique-thunk (predates th-util) _ _ $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r))
   (match many srcs _
-    ((Nil a) env)
-    ((Cons a ps rest)
+    ((Nil _) env)
+    ((Cons _ ps rest)
       (match many ps _
-        ((MkPair s t path src)
+        ((MkPair _ _ path src)
           (let ((many env1)) $ env-at-loc env $ MkLoc path $ MkPos 1 1)
           (let ((many envw)) $ env-warn-all env1 $ indent-warnings path src)
           (let ((many items) (many err)) $ parse src)
           (let ((many (Env) env2))
             (match many err _
-              ((Some b e) (match many e (((Env) _)) ((MkSynErr pos m) (env-report envw $ located (env-at envw pos) ": syntax error: " m))))
-              ((None b) (run-toplevel items envw))))
-          (run-files rest (match many first (((Env) e)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
+              ((Some _ e) (match many e (((Env) _)) ((MkSynErr pos m) (env-report envw $ located (env-at envw pos) ": syntax error: " m))))
+              ((None _) (run-toplevel items envw))))
+          (run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 
 (def-fns compile-lvl $ (many compile : (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
   (let ((many env)) $ run-files srcs (make-builtins) $ BTrue)
   ; A warning stands whether or not the program is refused, so it is written ahead of either outcome, in the
   ; order elaboration minted it, as the reference writes one where it meets it.
   (write-lines (list-rev _ $ env-warnings env)
-    (match many (env-errors env) (((IO io-lvl) io))
-      ((Cons a e rest) (write-lines (list-rev _ $ env-errors env) $ Exit _ exit-fail))
-      ((Nil a)
-        (match many interpreting (((IO io-lvl) io))
+    (match many (env-errors env) (((IO io-lvl) _))
+      ((Cons _ _ _) (write-lines (list-rev _ $ env-errors env) $ Exit _ exit-fail))
+      ((Nil _)
+        (match many interpreting (((IO io-lvl) _))
           ((BTrue)
             (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
             (interp-finals env pargs _ (list-rev _ fi) _ hp en (le-refl hs)))
@@ -48,21 +48,21 @@
 
 (def-fns slc-lvl $ (many read-files : (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
   (match many paths _
-    ((Nil a) (compile templates interpreting pargs $ list-rev _ acc))
-    ((Cons a path rest)
+    ((Nil _) (compile templates interpreting pargs $ list-rev _ acc))
+    ((Cons _ path rest)
       (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
         (match many r _
-          ((Fail b m)
+          ((Fail _ m)
             (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
               $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
-          ((Ok b src) (read-files templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
+          ((Ok _ src) (read-files templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
       (ReadFile _ path after-read))))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.
 (def-fns util-lvl $ (many split-args : (subterm many (List $ String) args) -> (many (List $ String) files) (many (List $ String) pargs))
   (match many args _
-    ((Nil a) (values (Nil _) (Nil _)))
-    ((Cons a p rest)
+    ((Nil _) (values (Nil _) (Nil _)))
+    ((Cons _ p rest)
       (match many (str-eq p "--") _
         ((BTrue) (values (Nil _) rest))
         ((BFalse)
@@ -72,10 +72,10 @@
 ; The flags, in any order, then the files: --no-templates and --interpret.
 (def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
   (match many args _
-    ((Nil a)
+    ((Nil _)
       (WriteErr _ "usage: slc -- [--no-templates] [--interpret] prelude.sl file.sl ... [-- arg ...] > out.ml\n"
         $ unique-thunk _ _ $ Exit _ exit-fail))
-    ((Cons a p rest)
+    ((Cons _ p rest)
       (match many (str-eq p "--no-templates") _
         ((BTrue) (start-with rest (BFalse) interpreting))
         ((BFalse)
