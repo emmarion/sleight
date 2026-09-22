@@ -58,7 +58,7 @@ let rec run_test name =
 and run_mode name externs src =
   let needs = List.concat_map (String.split_on_char ' ') (directive src "needs") in
   let printed = Buffer.create 64 and errors = Buffer.create 64 and warnings = Buffer.create 64 and code = ref 0 in
-  Elab.warn := Buffer.add_string warnings;
+  Env.warn := Buffer.add_string warnings;
   let input = String.concat "\n" (directive src "stdin") in
   let lines = ref (if input = "" then [] else String.split_on_char '\n' input) in
   let read_line () = match !lines with [] -> None | l :: rest -> lines := rest; Some l in

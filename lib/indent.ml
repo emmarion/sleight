@@ -147,4 +147,4 @@ let issues path src =
     opens;
   (List.rev !acc, stopped)
 
-let warn path src = List.iter (fun i -> !Elab.warn (show i)) (fst (issues path src))
+let warn path src = List.iter (fun i -> !Env.warn (show i)) (fst (issues path src))

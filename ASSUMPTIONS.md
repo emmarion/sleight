@@ -3770,3 +3770,30 @@ without the owner.
     names an enclosing form. The file and the line agree on every
     error test; the column agrees on most, and the script prints how
     many of each so the number cannot quietly grow.
+
+195. **Shadowing warns only when asked, and only for a binder the
+    source wrote.** Section 9 makes every name shadowable, so the
+    warning is behind `--warn-shadow` rather than on by default; the
+    owner asked for the flag, and what follows is this session's.
+    `Env.bind` is the one place every entry is minted, but it is
+    reached twice for one binder -- reading a stored telescope binds
+    its entries again -- so the warning is not for `bind` to decide:
+    an entry carries the position the source wrote it at, `bind` takes
+    it as `~at`, and only a binder given one warns. The sites that
+    give one are the declaration telescope entries, `let` binders,
+    the names `def-lvl`, `def-fns` and `def-adts` introduce, a
+    pattern's fields, and the binders a `unique` destructure,
+    `cell-match` and an `else` add; everything else the elaborator
+    mints for itself carries `Reader.nowhere` and is silent, which
+    also makes a message about a binding with no position -- a
+    built-in special form or annotation token -- say so instead of
+    pointing nowhere. `slc` does not model the flag, as it does not
+    model `--no-extern`.
+
+    What the repository earns, which is why the flag is not a
+    default: two in `lib/prelude.sl`, both `Cons`'s `tail` field over
+    section 27's `tail` token; 314 in `self/*.sl`, 94 of them over a
+    built-in, the recurring names being `at`, `tail`, `unique`,
+    `newtype`, `values` and `sub`; and at least one in every test,
+    `tail` alone accounting for most of those through `Cons` and the
+    139 tests that need `tests/list.sl`.

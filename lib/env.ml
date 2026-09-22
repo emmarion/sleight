@@ -4,6 +4,20 @@ module IntMap = Value.IntMap
 exception Error of Reader.loc * string
 exception Contradiction of string
 
+(* A session's third output channel, beside a program's own stdout and stderr and the message a refusal
+   carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
+   what lets the runner capture one, stderr being the process's own here rather than the world's. *)
+let warn = ref prerr_string
+let warn_at l notes fmt =
+  let note (nl, m) = Printf.sprintf "%s: note: %s\n" (Reader.where "-" nl) m in
+  Printf.ksprintf
+    (fun s -> !warn (Printf.sprintf "%s: warning: %s\n%s" (Reader.where "-" l) s (String.concat "" (List.map note notes))))
+    fmt
+
+(* Shadowing is legal (section 9) and off by default; --warn-shadow asks for a warning at every binder that
+   hides a name already in scope. *)
+let warn_shadow = ref false
+
 let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
@@ -14,7 +28,9 @@ let error_with loc notes fmt =
 
 type state = Const of Value.value | Dyn
 
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool }
+(* [at] is where the source wrote the binder, for a message about it to point at; an entry the elaborator
+   mints for itself carries no position (ASSUMPTIONS 195). *)
+type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -126,13 +142,25 @@ let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x 
 (* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?rule name mult state ty =
+let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?rule name mult state ty =
   Option.iter (fun n -> if Literal.classify n <> `Name then error Reader.nowhere "%s is a literal, not a name" n) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     error Reader.nowhere "cannot infer the _ in %s" (show env (match rule with Some r when has_meta env r -> r | _ -> ty));
+  if !warn_shadow && Reader.placed at then
+    Option.iter
+      (fun n ->
+         match StringMap.find_opt n env.scope.named with
+         | Some prior when n <> "_" ->
+             (* An entry with no position is one the built-ins minted rather than a file: a special form,
+                an annotation token, or one of the opaque types (section 27). *)
+             let prior = (IntMap.find prior env.entries).at in
+             if Reader.placed prior then warn_at at [ (prior, "the binding it hides") ] "%s shadows a name already in scope" n
+             else warn_at at [] "%s shadows a built-in name" n
+         | _ -> ())
+      name;
   let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary } env.entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary; at } env.entries in
   let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)

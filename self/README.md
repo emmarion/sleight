@@ -397,7 +397,8 @@ the entry says otherwise, and recorded so it can be revisited.
   elaborator counted against its model. `apply-extern` is total
   (ASSUMPTIONS 151), so a claimed extern always runs.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
-  always runs the FFI's externs, and the output always uses them), and
+  always runs the FFI's externs, and the output always uses them), the
+  reference's `--warn-shadow` (ASSUMPTIONS 195), and
   macros, which the reference does not implement either. A warning is
   modelled: the phantom-constructor one of section 12 and the
   indentation ones above are collected in the environment as errors are
