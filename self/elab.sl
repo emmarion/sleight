@@ -3030,6 +3030,16 @@
     ((Nil _) (BFalse))
     ((Cons _ s rest) (match many s _ ((MkSub _ arg _) (or (is-underscore arg) $ any-wild _ rest))))))
 
+; Where each `_` among [args] is written, for the meta that stands for it; nothing for any other argument.
+(def-fns _ $ (many wild-sites : (erased (List $ Raw) root) (many (Env) env) (subterm many (List $ Sub root) args) -> (many (List $ Maybe $ Loc) r))
+  (match many args _
+    ((Nil _) (Nil _))
+    ((Cons _ s rest)
+      (match many s _
+        ((MkSub _ arg _)
+          (Cons _ (match many (is-underscore arg) (((Maybe $ Loc) _)) ((BTrue) (Some _ $ loc-in env $ raw-pos arg)) ((BFalse) (None _)))
+            $ wild-sites _ env rest))))))
+
 ; comptime-match (section 15): a Const, non-erased scrutinee with a non-erased discriminant, verified
 ; against the named constructor; the fields are bound Const and the facts refined as a branch would.
 ; ---- A Const's value printed through its type, for section 15's mismatch message (ASSUMPTIONS 66): a
@@ -3753,7 +3763,7 @@
       (match many raw _
         (else
           (match many (is-underscore raw) (((Env) _) ((Term) t0) ((Term) ty0))
-            ((BTrue) (let ((many env2) (many x)) $ bind-as envl (BTrue) (BFalse) (None _) (None _) (BFalse) (Erased) type-term (None _) delegate-id) (values env2 (TVar x) type-term))
+            ((BTrue) (let ((many env2) (many x)) $ bind-as envl (BTrue) (BFalse) (None _) (Some _ $ loc-in env $ raw-pos raw) (BFalse) (Erased) type-term (None _) delegate-id) (values env2 (TVar x) type-term))
             ((BFalse) (let ((many env2) (many x)) $ var-of-raw envl raw "a name") (values env2 (TVar x) $ type-of env2 x))))
         ((RList _ items)
           (match many items (((Env) _) ((Term) t0) ((Term) ty0))
@@ -4855,7 +4865,7 @@
       ((Cons _ raw _)
         (match many (is-underscore raw) _
           ((BTrue)
-            (let ((many env2) (many x)) $ bind-as env (BTrue) (BFalse) (None _) (None _) (BFalse) (Erased) sharing-term (None _) delegate-id)
+            (let ((many env2) (many x)) $ bind-as env (BTrue) (BFalse) (None _) (Some _ $ loc-in env $ raw-pos raw) (BFalse) (Erased) sharing-term (None _) delegate-id)
             (values env2 $ TVar x))
           ((BFalse)
             (let ((many env2) (many t) (many ty)) $ elab-term sugar raw env (BFalse) no-tele)
@@ -5134,7 +5144,7 @@
   ((many check-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Succ $ Zero) st) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (Mult) pos) (many (Maybe $ List $ Entry) expect) (many (AppResult) result) (many (Bool) as-term) (many (Bool) boundary) (many (Bool) prepare) ->
       (many (Env) r) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Code ctx many-one) codes) (many (List $ Pair (Nat) $ Code ctx many-one) pairs))
     (let-match many st (SS sn k))
-    (let ((many env1) (many metas) (erased lock)) $ open-tele tele env (Some _ $ anon-names tele) (None _) (Some _ $ all-erased $ tele-mults tele) (Nil _) $ BTrue)
+    (let ((many env1) (many metas) (erased lock)) $ open-tele tele env (Some _ $ anon-names tele) (Some _ $ wild-sites _ env args) (Some _ $ all-erased $ tele-mults tele) (Nil _) $ BTrue)
     (let ((many mvars)) $ tvars-rev metas $ Nil _)
     (let ((many wilds)) $ any-wild _ args)
     (let ((many env2)) $ solve-against env1 expect result mvars wilds $ BFalse)

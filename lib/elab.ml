@@ -407,7 +407,7 @@ let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const
 
 let rec elab_term ?expect env raw =
   match raw with
-  | Atom (_, "_") -> let x, env = bind env ~meta:true None Erased Dyn type_term in (env, Var x)
+  | Atom (l, "_") -> let x, env = bind env ~meta:true ~at:l None Erased Dyn type_term in (env, Var x)
   | Atom (l, n) -> (env, Var (var env l n))
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
@@ -521,7 +521,8 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
    when a `_` would otherwise stay unsolved at the closing paren; every `_` is solved by then or refused. *)
 and check_args env loc ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundary = true) ?(bind_args = false) tele args elab =
   if List.length tele <> List.length args then error loc "expected %d arguments, got %d" (List.length tele) (List.length args);
-  let env, metas = open_tele env ~meta:true ~names:(anon tele) ~mults:(List.map (fun _ -> Erased) tele) tele in
+  let ats = List.map (fun a -> if wild a then Reader.loc a else Reader.nowhere) args in
+  let env, metas = open_tele env ~meta:true ~names:(anon tele) ~ats ~mults:(List.map (fun _ -> Erased) tele) tele in
   let mvars = List.rev_map (fun x -> Var x) metas in
   let wilds = List.exists wild args in
   let against ~strict env = match expect with Some tele when wilds -> solve_tele ~strict env loc tele (result mvars) | _ -> env in
@@ -798,7 +799,7 @@ and elab_special demand tele env expect l sp args =
     let env = match expected_type env with Some want -> solve "type" env l ty want | None -> env in
     erased (mint env (metaless env ty)) in
   let side env raw =
-    if wild raw then let x, env = bind env ~meta:true None Erased Dyn Prelude.sharing_term in (env, Var x)
+    if wild raw then let x, env = bind env ~meta:true ~at:(Reader.loc raw) None Erased Dyn Prelude.sharing_term in (env, Var x)
     else let env, t = elab_term env raw in check_type env l (infer env l t) Prelude.sharing_term; (env, t) in
   let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s" (qname env x) what in
   let compose (c1, p) (c2, q) k =

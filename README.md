@@ -141,7 +141,10 @@ Within a compile-time message a name, a term or a keyword of the language is
 set off in backticks, `` `(List A)` `` or `` `share` ``, and a literal is left
 bare, since it already reads as one: `3`, `#\a`, `"ab"`. Both compilers quote
 through one function, `Env.tick` and `tick` in `self/core.sl`. Runtime errors
-are not quoted.
+are not quoted. An unsolved `_` (SUGAR.md 6) in a message is numbered, `?1`,
+`?2` and on in the order the message first mentions each, and a note under the
+message names where each one's `_` is written, `` `?1` is the `_` written here ``
+(`Env.metas_in`, `metas-in` in `self/core.sl`).
 
 Shadowing is legal (section 9) and warns. Every binder that hides a name
 already in scope earns ``declaration of `List` shadows a previous binder``,

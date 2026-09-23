@@ -8,19 +8,52 @@ exception Contradiction of string
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
    what lets the runner capture one, stderr being the process's own here rather than the world's. *)
 let warn = ref prerr_string
+
+(* An unsolved meta is printed as a marker holding its id and where its `_` was written (name_of), so that the
+   message it lands in can number the metas it mentions, in order, and name each one's `_` in a note of its own. *)
+let metas_in loc s =
+  let b = Buffer.create (String.length s) and seen = ref [] in
+  let number id = match List.assoc_opt id !seen with
+    | Some (k, _) -> k
+    | None -> List.length !seen + 1 in
+  let rec go i =
+    match String.index_from_opt s i '\001' with
+    | None -> Buffer.add_string b (String.sub s i (String.length s - i))
+    | Some j ->
+        let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
+        let id = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
+        let n = number id in
+        if not (List.mem_assoc id !seen) then seen := !seen @ [ (id, (n, at)) ];
+        Buffer.add_string b (String.sub s i (j - i) ^ "?" ^ string_of_int n);
+        go (e + 1)
+  in
+  go 0;
+  let note (_, (n, at)) =
+    if at = "" then (Reader.where "-" loc, Printf.sprintf "`?%d` is a `_` the elaborator supplied, not one written in the source" n)
+    else (at, Printf.sprintf "`?%d` is the `_` written here" n)
+  in
+  (Buffer.contents b, List.map note !seen)
+
 let warn_at l notes fmt =
   let note (nl, m) = Printf.sprintf "%s: note: %s\n" (Reader.where "-" nl) m in
   Printf.ksprintf
-    (fun s -> !warn (Printf.sprintf "%s: warning: %s\n%s" (Reader.where "-" l) s (String.concat "" (List.map note notes))))
+    (fun s ->
+      let s, metas = metas_in l s in
+      !warn (Printf.sprintf "%s: warning: %s\n%s%s" (Reader.where "-" l) s (String.concat "" (List.map note notes))
+               (String.concat "" (List.map (fun (w, m) -> Printf.sprintf "%s: note: %s\n" w m) metas))))
     fmt
-
-let error loc fmt = Printf.ksprintf (fun s -> raise (Error (loc, s))) fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
 let error_with loc notes fmt =
   let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
-  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes))) fmt
+  Printf.ksprintf
+    (fun s ->
+      let s, metas = metas_in loc s in
+      raise (Error (loc, List.fold_left (fun s (w, m) -> Printf.sprintf "%s\n%s: note: %s" s w m) (List.fold_left note s notes) metas)))
+    fmt
+
+let error loc fmt = error_with loc [] fmt
 
 type state = Const of Value.value | Dyn
 
@@ -78,7 +111,10 @@ let trace : item list ref = ref []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
-let name_of env x = match entry env x with { name = Some n; _ } -> n | { meta = true; _ } -> "_" | _ -> "_" ^ string_of_int x
+let name_of env x = match entry env x with
+  | { name = Some n; _ } -> n
+  | { meta = true; at; _ } -> Printf.sprintf "\001%d\001%s\002" x (Reader.where "" at)
+  | _ -> "_" ^ string_of_int x
 
 let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
