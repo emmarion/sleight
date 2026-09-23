@@ -110,9 +110,10 @@ let rec to_string_in name_of bound t =
   | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
   | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
+      let l = go bound l in
       let bound, ps = tele_strings name_of bound ps in
       let _, rs = tele_strings name_of bound rs in
-      (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
+      (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((l :: ps) @ ("->" :: rs)) ^ ")"
   | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele_strings ~marks:false name_of bound ps) @ [ "->"; "Type" ]) ^ ")"
   | ValCtor (ps, r) ->
       let bound', ps = tele_strings name_of bound ps in

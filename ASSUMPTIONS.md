@@ -3885,6 +3885,25 @@ session's, made without the owner.
     directives satisfied; whether either misnames something in a message
     no test pins is not checked beyond that.
 
+    `slc` carries the form too (`self/README.md`), built the same way
+    from its own environment, and on the five tests its report appears to
+    agree with the reference's line for line but for the ids of anonymous
+    entries and three binders `slc` mints for a `cell-write`'s head and
+    slots, which the reference does not; the messages `slc` writes after
+    the report are its usual cascade, the reference stopping at the first
+    error. Getting there took four alignments in `slc`, each mirroring
+    what the reference already did as this session read it, none checked
+    beyond `self/bootstrap.sh` passing: a literal's entries stay out of
+    the scope, as the reference's hoisting restores the scope around
+    them; an atom head in an erased position mints no temporary, as
+    `Elab.elab_head` binds none for an atom; a temporary keeps its mark
+    when a `let`'s right-hand side closes; and a `share`'s use is placed
+    at its argument, as `use env al` places it. One printer difference
+    found by comparing every named prelude entry on both sides was the
+    reference's and is fixed alongside: a `Fn`'s level was printed under
+    the telescope's binders, so a level that is a bound variable was
+    misnamed (`AppendFile`'s continuation read `(UniqueFn path ...)`).
+
     Not decided here, and open for the owner: the form's name; whether
     section 27's registry lists it, the entry being the owner's to word
     (rule 12); whether the report should also list the prelude's entries
