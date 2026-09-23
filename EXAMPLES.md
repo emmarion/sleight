@@ -206,3 +206,12 @@ that the test does not make is a mistake in this file.
   (`(len _ (Nil _))`, the inner `)` first), `tests/wild_ambiguous_bad.sl`,
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.
+- `tests/dump_context.sl` — `(dump-context)` in the `Cons` branch of
+  UNIQUE.md U11's `append-into`, after the tail call: the report shows the
+  goal `(many (List A) r at cell)`, the scrutinee's forced rule, the cell
+  consumed by the write and the fresh one consumed by the call, the live
+  written cell, and the at-database's classes. `tests/dump_context_top.sl`
+  is the same form as a top-level statement over `Const` values, a `unary`
+  rule and a shared unique; `tests/dump_context_focus.sl` names what to
+  report and has a `_` still open in the goal; `tests/dump_context_type.sl`
+  and `tests/dump_context_stmt.sl` put it in a type and in an erased body.

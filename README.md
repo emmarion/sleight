@@ -183,6 +183,19 @@ in `self/elab.sl`), and the repository marks every such call, written
 `(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
 the warning is tested on.
 
+`(dump-context)` stops elaboration where it is written and reports what the
+checker knows there, as one error (ASSUMPTIONS 196): the goal, the position,
+the level and the enclosing function's subterm arguments, every entry in scope
+from the program's own files with its canonical type, its `is` rule, its
+multiplicity and state, where it was bound, its value where it is a non-erased
+`Const` and, for a `unique` binder, whether it is live, shared or consumed and
+where; then the at-database's classes, the opened objects beyond the prelude's
+and the numerals a rule has been minted on. It stands as an expression, a
+statement or a type. `(dump-context x (Cons A hd tl))` reports those alone: a
+variable as its entry, any other term by what it canonicalizes to. It is meant
+for a session that is stuck, so nothing of it is stable output; the tests
+`tests/dump_context*.sl` pin the lines the report makes.
+
 ## How it runs a program
 
 The reader turns the file into s-expressions. The elaborator walks
@@ -212,6 +225,7 @@ an existing word instead of returning it physically.
 - `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 41)
 - `lib/literal.ml` — numeral and character literals and what they expand to
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
+- `lib/dump.ml` — the report `dump-context` stops elaboration with
 - `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
 - `lib/indent.ml` — indentation read as a claim about paren nesting, and the claim checked

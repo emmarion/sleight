@@ -70,7 +70,7 @@ let constructors env ty =
           match type_of env o.obj with
           | Matchable (_, _, _, _, cs) ->
               [ Printf.sprintf "constructors of `%s`: %s" (name_of env tid)
-                  (String.concat "; " (List.map (fun (_, c) -> show env c ^ " : " ^ show env (Env.canon env (match c with Var c -> type_of env c | _ -> c))) cs)) ]
+                  (String.concat "; " (List.map (fun (_, c) -> show env c ^ " : " ^ show env (match c with Var c -> type_of env c | _ -> c)) cs)) ]
           | _ -> [])
       | None -> [])
   | _ -> []

@@ -3807,3 +3807,88 @@ without the owner.
     `Cons`'s field `tail` as DESIGN.md section 31 does; and
     `tests/shadow_false_capture.sl`, whose subject is a declaration
     hidden by a later one.
+
+## `dump-context`
+
+Asked for by the owner in chat: a special form that, applied, errors
+out and dumps what would help the programmer -- the variables in scope
+with their canonicalized types and `is` rules, their declared
+multiplicities and, for a unique one, whether it is consumed or shared
+yet, the at table, the goal, and whatever else is useful -- with the
+name and the details left to the session. Every shape below is the
+session's, made without the owner.
+
+196. **What `dump-context` is and what it reports.** `(dump-context)`,
+    or `(dump-context e ...)`, is refused as an error: its first line is
+    the `path:line:col: error:` header every refusal has, and the report
+    follows as lines indented two spaces, an entry's details four, so
+    that a test names any line of it with `; error:` directives as it
+    names any refusal (`tests/dump_context*.sl`). It stands in three
+    positions, each of which the reference hooks separately: as an
+    expression, where the telescope the position expects is the goal; as
+    a statement, in a body or at the top level, where there is no goal
+    and the report says so; and as a type, in a signature or a `let`
+    binder, where the goal is a type. It is listed among the statements
+    (`Special.statements`) so that a top-level `(dump-context)` reads as
+    one, and handled before the "is a statement, not an expression"
+    refusal so that it also reads as an expression.
+
+    The report, top to bottom, all of it through `Env.show` so that a
+    term is canonical and each atom named as any message names it:
+    the goal, as the expected telescope under the position's
+    multiplicities with any `at`, a `_` still open numbered `?1` and
+    placed by the usual note, and, for a goal whose type's head has an
+    opened `Matchable`, that type's constructors with their types;
+    the position's multiplicity; whether the enclosing position is
+    erased (nothing there counts as a use); whether this is run position;
+    the current level and the enclosing function's subterm arguments in
+    order, or that this is the top level; whether this is inside an
+    extern function's model. Then every entry in scope that the
+    program's own files bound, newest first, one line each: its name or
+    `_id`, its canonical type, its multiplicity, `Const` or `Dyn`, a
+    kind read off its type (function, constructor, type constructor,
+    level, proof, cell, `Matchable`, type, value), which subterm
+    parameter it is, whether it is anonymous, the elaborator's own
+    binder for a head or an argument, or shadowed by a newer binder of
+    its name, and where it was bound (`Env.entry`'s position, ASSUMPTIONS
+    195; a built-in or a minted entry says so). Under it: its `is` rule,
+    canonical, except an alias of an anonymous entry, which a let
+    forwarding a call's result has and which names nothing a reader can
+    use; its value where it is a non-erased `Const`, printed as a final
+    is (ASSUMPTIONS 184) and as `Value.show` prints a function or a
+    `Matchable`; and for a `unique` binder whether it is live, shared or
+    consumed on this path and where, and whether the enclosing `def-fns`
+    closes over it. The prelude's several hundred entries are not listed
+    -- their count is -- because naming one as an argument shows it.
+    Then the at-database as its classes of two or more members a reader
+    can name (an entry in scope, a literal by its spelling, or
+    `(SlotVacant)`), the opened objects beyond the prelude's, and the
+    numerals a rule has been minted on, as `unary` mints them, since a
+    literal is otherwise opaque (LITERALS.md).
+
+    An argument is a term in section 5's grammar, elaborated as a type
+    argument is: a variable is shown as its entry, the prelude's
+    included, and any other term by what it canonicalizes to and its
+    type, so `(dump-context (Cons A hd tl))` asks what a term means where
+    the form stands. With any argument the scope listing is left out.
+
+    Two renderings changed for every message alongside, both in
+    `Env.namer`, which `Env.show` and the new `Env.show_tele` share:
+    `(SlotVacant)` prints as itself rather than as the anonymous variable
+    it stands for (U10; `Term.vacant`, set where the prelude mints it),
+    and an entry that is a location's representative is named by its own
+    binder inside `SlotHolds` even where its `is` rule aliases it
+    elsewhere, since a `SlotHolds` argument is read by binder and not
+    through the rule (U10). A message about an entry's own rule names
+    nothing by that entry (`show ~except`), or `(let ((many ys)) (share
+    xs))` would report `ys is ys`. Both changes left every existing test's
+    directives satisfied; whether either misnames something in a message
+    no test pins is not checked beyond that.
+
+    Not decided here, and open for the owner: the form's name; whether
+    section 27's registry lists it, the entry being the owner's to word
+    (rule 12); whether the report should also list the prelude's entries
+    on request as a whole rather than one by one; and whether the
+    branch-forced facts of an enclosing match should be shown apart from
+    the entries' rules, where they now appear only as `xs is (Cons A hd
+    tl)` on the scrutinee's own line.
