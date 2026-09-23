@@ -22,7 +22,6 @@
 ; error: u : (List (Nat))  [unique, Const, value, bound at tests/dump_context_top.sl:9:7]
 ; error: unique: shared at tests/dump_context_top.sl:10:24, so usable at many, written `(share u)`, and never again at unique
 ; error: inc : (Fn L (many (Nat) k) -> (many (Nat) m))  [many, Const, function, bound at tests/dump_context_top.sl:7:14]
-; error: = <function inc>
 ; error: n : (Nat)  [many, Const, value, bound at tests/dump_context_top.sl:5:7]
 ; error: is (Succ (Succ 3))
 ; error: = 5

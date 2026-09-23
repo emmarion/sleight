@@ -47,9 +47,10 @@ let unique_status env x =
      | None -> [ "unique: live, neither consumed nor shared on this path" ])
     @ if List.mem x env.captures then [ "unique: closed over by the enclosing `def-fns`, so usable here only erased or through `share`" ] else []
 
+(* A value the final's printer can spell (ASSUMPTIONS 184); a function or a Matchable adds nothing to its kind. *)
 let value ~show_value env l x =
   match (entry env x).state, (entry env x).mult with
-  | Const v, (Many | Unique) -> let s = show_value env l (type_of env x) v in [ "= " ^ (if s = "_" then V.show v else s) ]
+  | Const v, (Many | Unique) -> (match show_value env l (type_of env x) v with "_" -> [] | s -> [ "= " ^ s ])
   | _ -> []
 
 let entry_lines ~show_value env l x =
@@ -101,15 +102,17 @@ let position_lines env goal =
       (if env.in_extern then [ "inside an extern function's model, so extern types' constructors have cells" ] else []) ]
 
 (* A class is shown by the members a reader can name: the entries in scope, a literal by its spelling, and the
-   vacant slot; one with fewer than two such members says nothing about anything nameable. *)
+   vacant slot; one without two such members, or without an entry in scope, says nothing about anything the
+   program bound, a character sharing its code's word being the newtype's doing. *)
 let at_lines env =
   let ids = List.sort_uniq compare (IntMap.fold (fun k v acc -> k :: v :: acc) env.locations []) in
   let literal x = List.find_map (fun (k, (y, _)) -> match Literal.classify k with `Lit lit when y = x -> Some (Literal.spell lit) | _ -> None) env.literals in
+  let bound x = List.mem x env.scope.ids && not (is_prelude env x) in
   let member x =
     if x = Prelude.null then Some "(SlotVacant)"
-    else match literal x with Some s -> Some s | None -> if List.mem x env.scope.ids && not (is_prelude env x) then Some (name_of env x) else None in
-  let classes = List.map (fun r -> List.filter_map member (List.filter (fun x -> location env x = r) ids)) (List.sort_uniq compare (List.map (location env) ids)) in
-  let classes = List.filter (fun c -> List.length c > 1) classes in
+    else match literal x with Some s -> Some s | None -> if bound x then Some (name_of env x) else None in
+  let classes = List.map (fun r -> List.filter (fun x -> location env x = r) ids) (List.sort_uniq compare (List.map (location env) ids)) in
+  let classes = List.filter_map (fun c -> let shown = List.filter_map member c in if List.length shown > 1 && List.exists bound c then Some shown else None) classes in
   match classes with
   | [] -> [ "at-database: every entry is at a location of its own" ]
   | cs -> [ "at-database, the entries at one location: " ^ String.concat " " (List.map (fun c -> "{" ^ String.concat ", " c ^ "}") cs) ]
