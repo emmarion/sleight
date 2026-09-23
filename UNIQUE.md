@@ -34,7 +34,7 @@ carries the `newtype` and `extern` marks (§U9); `_` as a binder name
 bound first (§U2a); a form's written multiplicity must be `erased` in an
 erased position, where `share` and `cell-match` are refused (§20, §U3,
 §U10). Removed: `Newtype`, `newtype-of` (§U7). Prelude:
-`Array`, `MaybeUninit` and their functions (§U13).
+`Array`, `MaybeUninit`, `Copy` and their functions (§U13).
 
 ## U1. A third multiplicity, and a third match mode
 
@@ -657,6 +657,36 @@ slot typed `Uninit`, which nothing can read. `array-place` drops `old`,
 as at-most-one-use allows, so it is a plain call. The FFI's `array-new`
 is a block of `n` words, the model's `ACons` view its first word and a
 slice of the rest sharing the block.
+
+`Copy`'s field being `many`, an element of an `(Array (Copy A) n)` is
+read in place, its FFI that of `array-pluck`:
+
+```scheme
+(def-adts $ (Copy : (Type A) -> Type)
+  enum newtype
+  (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
+
+(def-fns _ $ (many extern array-get : (erased Type A) (erased (Nat) n)
+    (unique (Array (Copy A) n) a) (subterm many (Nat) i)
+    (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
+    (many x is v) (unique a is r at a))
+  (match unique a _
+    (absurd (ANil _ _) (match erased nth (((False) f))))
+    ((ACons _ _ hd tl u)
+      (match many i _
+        ((Zero)
+          (match erased nth _
+            ((NthZ _ _ _ _)
+              (let-match unique hd (MkCopy _ v))
+              (values v (at (u _ _ (MkCopy _ v) tl))))
+            (absurd NthS)))
+        ((Succ i1)
+          (match erased nth _
+            (absurd NthZ)
+            ((NthS _ _ _ _ _ _ q)
+              (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
+              (values v (at (u _ _ hd tl3))))))))))
+```
 
 The conversion to a plain array is an erased witness in §40's shape,
 and the `coerce` is written where it is used, a wrapper function

@@ -1957,8 +1957,8 @@ its own.
 The modulus, and `sixty-two` beside it, are erased top-level bindings,
 so the prelude never computes 2^62; each keeps the proofs it was built
 from. The arithmetic takes `Nat`s rather than `U62`s: `u62-add`,
-`u62-sub`, `u62-mul`, `u62-div`, `u62-mod`, `u62-divmod` and `u62-cmp`
-are extern, each modelled on the `Nat` primitive it corresponds to, and each takes erased
+`u62-sub`, `u62-mul`, `u62-div`, `u62-mod`, `u62-divmod`, `u62-cmp`
+and `u62-lt-dec` are extern, each modelled on the `Nat` primitive it corresponds to, and each takes erased
 proofs that its operands and its result are below the modulus, which
 the caller discharges, so a call cannot overflow or underflow. What
 this is for is the implementation it permits: the FFI runs each as one
