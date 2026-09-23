@@ -111,7 +111,9 @@ grep "^pos-line " "$B/results.txt"
 echo "$(grep -c '^pos-same ' "$B/results.txt") refusals agree on file, line and column, $(grep -c '^pos-col ' "$B/results.txt") on file and line alone ($B/results.txt lists them), $(grep -c '^pos-line ' "$B/results.txt") on neither"
 
 echo "== compiling slc with slc"
-"$B/slc" -- lib/prelude.sl $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+# timed, and the time reported, so a change that slows slc down is seen: this is a report, not a check
+/usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" -- lib/prelude.sl $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+cat "$B/slc2.time"
 $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
 echo "== compiling slc with the slc that slc compiled"
 "$B/slc2" -- lib/prelude.sl $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }

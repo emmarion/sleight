@@ -431,3 +431,27 @@ Open, none of it decided:
    smaller programs of the same shape, an erased call on an erased
    `let` binder inside a later-level `def-unique`, are accepted by
    both, so the trigger is finer than that.
+
+## TODO: the diagnostic path is a reconstruction, not a proof (one session)
+
+Not done; recorded so it is not lost. The notes a refusal carries about
+numeral and character literals (`literal_notes` and `forced_notes` in
+`lib/elab.ml`, `literal-notes` and `forced-notes` in `self/elab.sl`) are
+worked out after the fact, on the error path, rather than reported by
+the check they explain. For a failed check they walk the two canonical
+sides to where they first differ (`differ`), which the session believes
+can disagree with where the unifier actually failed: an occurs check, a
+meta already solved, or a telescope `differ` does not enter. For a
+branch left standing they compare each literal's canonical form before
+and after the forcing trial, which infers what the trial bound rather
+than observing it. So a note may, in principle, explain something other
+than what happened.
+
+The owner's direction is that the real fix is to prove, with the
+language's own dependent types, that the explanation agrees with the
+check; the session that wrote this did not have the context to attempt
+it. A cheaper step the session considered and set aside is a recording
+mode in the unifier, used only on the error path, which would make the
+explanation observed rather than reconstructed; in `slc`, whose
+unifier is pure, it would mean threading the record through every
+unification function.
