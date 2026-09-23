@@ -32,8 +32,8 @@ ground.
    neither be matched on nor count as empty (SR 6). On top of that a
    source prelude (`lib/prelude.sl`, section 41) defines `Nat`, `False`,
    `Eq`, `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `Dec`, `Cmp`, `U8`,
-   `U8Add`, `Bin`, `Numeral`, `Char`, `String`, `Append`, their
-   functions, and the levels `nat-lvl`, `u8-lvl`, `char-lvl` and
+   `U62`, `Bin`, `Numeral`, `Char`, `String`, `Append`, their
+   functions, and the levels `nat-lvl`, `char-lvl` and
    `str-lvl`, the tests' names for them, every other level being
    anonymous (item 118), all as ordinary, shadowable entries, and since item 58 also `Unit`, `Maybe`,
    `Result`, `List` and `IO`; a user function calling `nat-add` proves
@@ -231,7 +231,7 @@ ground.
     found in scope; the mark having named `C` is what makes `C` the
     wrapper, the only check left after trusting the mark.
 46. **The prelude's proofs are erased fields and erased functions**:
-    `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `U8Add` and `Append` carry
+    `Add`, `Lt`, `Double`, `Pow2`, `Mod` and `Append` carry
     their sub-proofs at `erased`, and the lemmas (`double-pos`,
     `add-succ-right`, `mod-succ-lt`, ...) are `erased` functions, so no
     proof is ever built at runtime; `lt-dec` returns a `Dec` whose

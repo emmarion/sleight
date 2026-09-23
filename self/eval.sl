@@ -367,7 +367,7 @@
   (let ((many (String) sa)) $ match many a _ ((Some _ x) (heap-str _ hp x)) ((None _) (SNil)))
   (let ((many (String) sb)) $ match many b _ ((Some _ x) (heap-str _ hp x)) ((None _) (SNil)))
   (let ((many (ExtResult) res))
-    (match many e _
+    (match many (ext-nat-twin _ e) _
       ((ExArrayNew) (ErArrayNew na))
       ((ExArraySwap) (ErArraySwap))
       ((ExArrayPluck) (ErArrayPluck))
@@ -406,7 +406,8 @@
           ((Yes _ _ pos)
             (let ((many qq) (many rr) (erased m) (erased mm) (erased ad) (erased pr)) $ divmod na nb pos)
             (ErPair (PNat qq) (PNat rr)))
-          ((No _ _ _) (ErPayload $ PStr "divmod: zero divisor"))))))
+          ((No _ _ _) (ErPayload $ PStr "divmod: zero divisor"))))
+      (else (ErPayload $ PStr "an extern with no implementation of its own"))))
   (match many res _
     ((ErArrayNew length2)
       (let ((erased h1) (many hp1) (erased le1) (many blank)) (alloc Block _ hp (BToken _)))

@@ -266,7 +266,7 @@ and fn cx scope name f =
           let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
           "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else if f.fname = "array-new" then "~blank:(Obj.repr ()) " else "" in
         let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
-        if f.fname = "nat-cmp" || f.fname = "str-cmp" then
+        if List.mem f.fname [ "nat-cmp"; "u62-cmp"; "str-cmp" ] then
           "(match " ^ call ^ " with " ^ concat " | " (List.map (fun n -> "Ffi_core." ^ n ^ " -> " ^ build cx (Program.ctor cx.env n) []) ["CLt";"CEq";"CGt"]) ^ ")"
         else "(Obj.repr (" ^ call ^ "))"
     | _ -> expr cx scope f.body

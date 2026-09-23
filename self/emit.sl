@@ -697,7 +697,7 @@
 
 (def-fns _ $ (many ffi-call : (many (String) name) (many (List $ Rope) args) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
   (let ((many call)) $ rcat5 (RStr "Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ flatten-extra name env d) (rjoin args " ") $ REmpty)
-  (match many (or (str-eq name "nat-cmp") $ str-eq name "str-cmp") _
+  (match many (or (str-eq name "nat-cmp") $ or (str-eq name "u62-cmp") $ str-eq name "str-cmp") _
     ((BTrue) (rcat5 (RStr "(match ") call (RStr " with ") (ffi-cmp-arms (Cons _ "CLt" $ Cons _ "CEq" $ Cons _ "CGt" $ Nil _) env d) $ RStr ")"))
     ((BFalse) (rcat3 (RStr "(Obj.repr (") call $ RStr "))"))))
 

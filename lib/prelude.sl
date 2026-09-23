@@ -335,26 +335,93 @@
   enum newtype
   (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
 
-(def-adts
-  ((U8Add : ((U8) a) ((U8) b) ((U8) c) -> Type)
-    enum
-    (many MkU8Add : (erased (Nat) n) (erased (Nat) m) (erased (Nat) r)
-                    (erased (Lt n u8-modulus) pn) (erased (Lt m u8-modulus) pm) (erased (Lt r u8-modulus) pr)
-                    (erased (Nat) s) (erased (Add n m s) a) (erased (Mod s u8-modulus r) q)
-                    -> (U8Add (MkU8 n pn) (MkU8 m pm) (MkU8 r pr)))))
+(let ((erased sixty) (erased sixty-mul)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
+(let ((erased sixty-two) (erased sixty-two-add)) (add sixty (Succ (Succ (Zero)))))
+(let ((erased u62-modulus) (erased u62-modulus-pow2) (erased u62-modulus-pos)) (pow2 sixty-two))
 
-(def-fns _ $ (many add-u8 : (many (U8) a) (many (U8) b) -> (many (U8) c) (erased (U8Add a b c) w))
-  (let-match many a (MkU8 n pn))
-  (let-match many b (MkU8 m pm))
-  (let ((many s) (erased ps)) (add n m))
-  (let ((many r) (erased pr) (erased q)) (nat-mod s u8-modulus u8-modulus-pos))
-  (values (MkU8 r pr) (MkU8Add n m r pn pm pr s ps q)))
+(def-adts $ (U62 : -> Type)
+  enum newtype
+  (many MkU62 : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (U62)))
 
-(def-lvl u8-lvl)
+(def-fns _ $ (erased add-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
+    (subterm erased (Add a b c1) p) (erased (Add a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
+  (match erased p _
+    ((AddZero b0) (match erased q _ ((AddZero b1) (Refl (Nat) c1)) (absurd AddSucc)))
+    ((AddSucc a1 b1 d1 p1)
+      (match erased q _
+        (absurd AddZero)
+        ((AddSucc a2 b2 d2 q1)
+          (let ((erased sp)) (prove-subterm p1 p))
+          (match erased (add-fn a1 b d1 d2 (subterm sp) p1 q1) _ ((Refl t r) (Refl (Nat) c1))))))))
 
-(def-fns u8-lvl $ (many u8-add : (many (U8) a) (many (U8) b) -> (many (U8) c))
-  (let ((many c) (erased w)) (delegate (add-u8 a b)))
-  c)
+(def-fns _ $ (erased mul-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
+    (subterm erased (Mul a b c1) p) (erased (Mul a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
+  (match erased p _
+    ((MulZero b0) (match erased q _ ((MulZero b1) (Refl (Nat) c1)) (absurd MulSucc)))
+    ((MulSucc a1 b1 x1 d1 m1 p1)
+      (match erased q _
+        (absurd MulZero)
+        ((MulSucc a2 b2 x2 d2 m2 q1)
+          (let ((erased sp)) (prove-subterm m1 p))
+          (match erased (mul-fn a1 b x1 x2 (subterm sp) m1 m2) _
+            ((Refl t r) (add-fn x1 b c1 c2 p1 q1))))))))
+
+(def-fns _ $ (erased add-pos-lt : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) (erased (Lt (Zero) b) pos) -> (erased (Lt a c) q))
+  (match erased p _
+    ((AddZero b0) pos)
+    ((AddSucc a1 b1 c1 p1) (LtS a1 c1 (add-pos-lt a1 b c1 p1 pos)))))
+
+(def-fns _ $ (erased mul-le : (erased (Nat) q) (erased (Nat) c) (erased (Nat) k) (subterm erased (Mul q c k) mm) (erased (Lt (Zero) c) pos) -> (erased (Lt q (Succ k)) l))
+  (match erased mm _
+    ((MulZero b0) (LtZ k))
+    ((MulSucc q1 c1 k1 k2 mm1 p1)
+      (LtS q1 k (lt-le-trans q1 (Succ k1) k (mul-le q1 c k1 mm1 pos) (LtS k1 k (add-pos-lt k1 c k p1 pos)))))))
+
+(def-fns _ $ (many extern u62-add : (many (Nat) n) (many (Nat) m)
+    (erased (Nat) s) (erased (Add n m s) sum) (erased (Lt s u62-modulus) ps) ->
+    (many s is r))
+  (let ((many s1) (erased sum1)) (add n m))
+  (match erased (add-fn n m s1 s sum1 sum) _ ((Refl t x) s1)))
+
+(def-fns _ $ (many extern u62-sub : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m (Succ n)) le) ->
+    (many (Nat) d) (erased (Add m d n) diff) (erased (Lt d u62-modulus) pd))
+  (let ((many d) (erased diff)) (sub n m le))
+  (values d diff (lt-le-trans d (Succ n) u62-modulus (add-le-left d m n (add-comm m d n diff)) (LtS n u62-modulus pn))))
+
+(def-fns _ $ (many extern u62-mul : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm)
+    (erased (Nat) r) (erased (Mul n m r) prod) (erased (Lt r u62-modulus) pr) ->
+    (many r is c))
+  (let ((many r1) (erased prod1)) (mul n m))
+  (match erased (mul-fn n m r1 r prod1 prod) _ ((Refl t x) r1)))
+
+(def-fns _ $ (many extern u62-divmod : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) q) (many (Nat) r) (erased (Nat) k) (erased (Mul q m k) mm) (erased (Add k r n) ad) (erased (Lt r m) rlt)
+    (erased (Lt q u62-modulus) pq) (erased (Lt r u62-modulus) pr))
+  (let ((many q) (many r) (erased k) (erased mm) (erased ad) (erased rlt)) (divmod n m pos))
+  (let ((erased qle)) (lt-le-trans q (Succ k) (Succ n) (mul-le q m k mm pos) (LtS k (Succ n) (add-le-left k r n ad))))
+  (values q r k mm ad rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn)) (lt-trans r m u62-modulus rlt pm)))
+
+(def-fns _ $ (many extern u62-div : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) q) (erased (Nat) k) (erased (Nat) r) (erased (Mul q m k) mm) (erased (Add k r n) ad) (erased (Lt r m) rlt)
+    (erased (Lt q u62-modulus) pq))
+  (let ((many q) (erased k) (erased r) (erased mm) (erased ad) (erased rlt)) (div n m pos))
+  (let ((erased qle)) (lt-le-trans q (Succ k) (Succ n) (mul-le q m k mm pos) (LtS k (Succ n) (add-le-left k r n ad))))
+  (values q k r mm ad rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn))))
+
+(def-fns _ $ (many extern u62-mod : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) (erased (Lt (Zero) m) pos) ->
+    (many (Nat) r) (erased (Lt r m) rlt) (erased (Mod n m r) md) (erased (Lt r u62-modulus) pr))
+  (let ((many r) (erased rlt) (erased md)) (nat-mod n m pos))
+  (values r rlt md (lt-trans r m u62-modulus rlt pm)))
+
+(def-fns _ $ (many extern u62-cmp : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
+    (many (Cmp (Nat) Lt n m) c))
+  (delegate (nat-cmp n m)))
 
 (def-adts $ (Bin : -> Type)
   enum

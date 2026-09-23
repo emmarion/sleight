@@ -54,6 +54,7 @@ let types : (string * ty_spec) list =
 let unary f = function [ a ] -> [ f a ] | _ -> raise arity
 let binary f = function [ a; b ] -> [ f a b ] | _ -> raise arity
 let nats name f = binary (fun a b -> int name (f (z a) (z b)))
+let quotient f = function [ a; b ] -> let q, r = f (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity
 let cmp get f = binary (fun a b -> plain "Cmp" (match f (get a) (get b) with Ffi_core.CLt -> 0 | CEq -> 1 | CGt -> 2) [])
 
 let spec ?(needs = []) takes run = { takes; needs; run }
@@ -66,13 +67,20 @@ let fns : (string * fn_spec) list =
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
     ("div", spec 2 (nats "Nat" Ffi_core.div));
-    ("divmod", spec 2 (function [ a; b ] -> let q, r = Ffi_core.divmod (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity));
+    ("divmod", spec 2 (quotient Ffi_core.divmod));
     ("nat-cmp", spec ~needs:[ "Cmp" ] 2 (cmp z Ffi_core.nat_cmp));
     ("str-cmp", spec ~needs:[ "Cmp" ] 2 (cmp slice Ffi_core.str_cmp));
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
     ("nat-mod", spec 2 (nats "Nat" Ffi_core.nat_mod));
+    ("u62-add", spec 2 (nats "Nat" Ffi_core.u62_add));
+    ("u62-sub", spec 2 (nats "Nat" Ffi_core.u62_sub));
+    ("u62-mul", spec 2 (nats "Nat" Ffi_core.u62_mul));
+    ("u62-div", spec 2 (nats "Nat" Ffi_core.u62_div));
+    ("u62-mod", spec 2 (nats "Nat" Ffi_core.u62_mod));
+    ("u62-divmod", spec 2 (quotient Ffi_core.u62_divmod));
+    ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (cmp z Ffi_core.u62_cmp));
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));
     ("trim", spec 1 (unary (fun s -> text (Ffi_core.trim (slice s)))));
     ("append", spec 2 (binary (fun a b -> text (Ffi_core.append (slice a) (slice b)))));
