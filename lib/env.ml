@@ -2,7 +2,7 @@ open Term
 module IntMap = Value.IntMap
 
 exception Error of Reader.loc * string
-exception Contradiction of string
+exception Contradiction of string Lazy.t
 
 (* A session's third output channel, beside a program's own stdout and stderr and the message a refusal
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
@@ -140,7 +140,7 @@ let at_merge env a b =
   match location_term env a, location_term env b with
   | Var x, Var y when x <> y -> { env with locations = IntMap.add (max x y) (min x y) env.locations }
   | a, b when equal a b -> env
-  | _ -> raise (Contradiction "locations must be variables")
+  | _ -> raise (Contradiction (lazy "locations must be variables"))
 let at_equal env a b = equal (location_term env a) (location_term env b)
 
 let rec canon env t =
@@ -164,16 +164,24 @@ let opens_ruled env v =
   { env with opens = { opened; touched = touched @ env.opens.touched } }
 
 let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts } x
-(* A literal reads as written: its canonical form, the anonymous entry a numeral or string is or a
-   character's constructor application, is shown by its spelling. *)
+(* An atom is shown by the best of the entries equal to it that a reader can name where the message is: a
+   numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
+   canonicalization picks to represent a class is an accident of minting order, so it does not decide the name. *)
 let show env t =
-  let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with `Lit lit -> Some (canon env (Var x), x, Literal.spell lit) | _ -> None) env.literals in
-  let rec spelled t = match List.find_opt (fun (c, _, _) -> equal c t) lits with
-    | Some (_, x, _) -> Var x
-    | None -> (match t with App (h, args) -> App (spelled h, List.map spelled args) | _ -> map_vars (fun _ v -> spelled_leaf v) 0 t)
-  and spelled_leaf v = match List.find_opt (fun (c, _, _) -> equal c v) lits with Some (_, x, _) -> Var x | None -> v in
-  let name x = match List.find_opt (fun (_, y, _) -> y = x) lits with Some (_, _, s) -> s | None -> name_of env x in
-  to_string name (spelled (canon env t))
+  let c = canon env t in
+  let atoms = fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0 [] c in
+  if atoms = [] then to_string (name_of env) c
+  else
+    let of_atom x = match canon env (Var x) with Var a when List.mem a atoms -> Some a | _ -> None in
+    let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
+      | `Lit ((Literal.Numeral _ | Literal.Str _) as lit) -> Option.map (fun a -> (a, (x, Literal.spell lit))) (of_atom x)
+      | _ -> None) env.literals in
+    let names = List.filter_map (fun (n, x) -> Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
+    let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands in
+    let name x =
+      if (entry env x).meta then name_of env x
+      else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> "_" ^ string_of_int x in
+    to_string name c
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"
@@ -240,10 +248,10 @@ let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
-    let contradiction () = raise (Contradiction (qshow env a ^ " vs " ^ qshow env b)) in
+    let contradiction () = raise (Contradiction (lazy (qshow env a ^ " vs " ^ qshow env b))) in
     let assign x t =
       if has_dangling t then contradiction ();
-      if occurs x t then raise (Contradiction (qname env x ^ " occurs in " ^ qshow env t));
+      if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
       add_rule env x t
     in
     match (a, b) with

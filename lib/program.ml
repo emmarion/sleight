@@ -62,7 +62,7 @@ let driver env =
 let explain path = function
   | Reader.Syntax (l, m) -> Some (Reader.where path l ^ ": syntax error: " ^ m)
   | Env.Error (l, m) -> Some (Reader.where path l ^ ": error: " ^ m)
-  | Env.Contradiction m -> let m, notes = Env.metas_in Reader.nowhere m in
+  | Env.Contradiction m -> let m, notes = Env.metas_in Reader.nowhere (Lazy.force m) in
       Some (String.concat "\n" ((path ^ ": error: contradiction: " ^ m) :: List.map (fun (w, n) -> w ^ ": note: " ^ n) notes))
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None

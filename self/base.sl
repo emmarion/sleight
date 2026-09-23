@@ -502,6 +502,20 @@
     ((Nil _) (REmpty))
     ((Cons _ r rest) (RCat r $ notail $ rlist rest))))
 
+; Every name a NameMap holds, with its value.
+(def-fns _
+  ((many nm-entries : (erased Type V) (subterm many (NameMap V) m) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
+    (match many m _
+      ((NMNode _ here kids)
+        (let ((many acc2)) $ match many here (((List $ Pair (String) V) _)) ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ (rope-str path) v) acc)))
+        (tail $ nm-kids-entries _ kids path acc2))))
+  ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
+    (match many kids _
+      ((Nil _) acc)
+      ((Cons _ k rest)
+        (match many k _
+          ((MkKid _ c submap) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))))
+
 ; ---- lemmas over the prelude's Lt and Double, shared with heap.sl and core.sl's fact table
 
 (def-fns _ $ (erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f))

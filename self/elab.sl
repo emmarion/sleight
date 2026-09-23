@@ -210,41 +210,74 @@
             ((BFalse) (None _))))))))
 
 
-; The literals, each with its canonical form: the numerals and characters, and the strings too where [all].
-(def-fns _ $ (many lit-terms : (many (Env) env) (many (Bool) all) (subterm many (List $ LitEntry) lits) -> (many (List $ Pair (Term) (LitEntry)) r))
+; The numeral and character literals, each with its canonical form.
+(def-fns _ $ (many lit-terms : (many (Env) env) (subterm many (List $ LitEntry) lits) -> (many (List $ Pair (Term) (LitEntry)) r))
   (match many lits _
     ((Nil _) (Nil _))
     ((Cons _ l rest)
-      (let ((many more)) $ notail $ lit-terms env all rest)
+      (let ((many more)) $ notail $ lit-terms env rest)
       (match many l _
         ((MkLitEntry x _ s)
-          (match many (or all $ is-literal-name s) _
+          (match many (is-literal-name s) _
             ((BTrue) (Cons _ (MkPair _ _ (canon-env env $ TVar x) l) more))
             ((BFalse) more)))))))
 
-(def-fns _ $ (many lit-of-term : (subterm many (List $ Pair (Term) (LitEntry)) ls) (many (Term) t) -> (many (Maybe $ Nat) x))
-  (match many ls _
-    ((Nil _) (None _))
-    ((Cons _ l rest) (match many l _ ((MkPair _ _ c e) (match many (term-eq c t) _ ((BTrue) (match many e _ ((MkLitEntry x _ _) (Some _ x)))) ((BFalse) (tail $ lit-of-term rest t))))))))
+; An atom is shown by the best of the entries equal to it that a reader can name where the message is: a
+; numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
+; canonicalization picks to represent a class is an accident of minting order, so it does not decide the name
+; (lib/env.ml's show). A candidate is the atom it would name, its entry, and the name.
+(def-fns _ $ (many cand-of : (many (Env) env) (many (List $ Nat) atoms) (many (Nat) x) (many (String) n) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+  (match many (canon-env env $ TVar x) _
+    ((TVar a) (match many (list-mem-bin atoms a) _ ((BTrue) (Cons _ (MkPair _ _ a $ MkPair _ _ x n) acc)) ((BFalse) acc)))
+    (else acc)))
 
-(def-fns _ $ (many name-lits : (many (Env) env) (subterm many (List $ Pair (Term) (LitEntry)) ls) -> (many (Env) r))
+(def-fns _ $ (many name-cands : (many (Env) env) (many (List $ Nat) atoms) (subterm many (List $ Pair (String) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+  (match many ns _
+    ((Nil _) acc)
+    ((Cons _ p rest) (match many p _ ((MkPair _ _ n x) (tail $ name-cands env atoms rest $ cand-of env atoms x n acc))))))
+
+(def-fns _ $ (many lit-cands : (many (Env) env) (many (List $ Nat) atoms) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (match many ls _
+    ((Nil _) acc)
+    ((Cons _ l rest)
+      (match many l _
+        ((MkLitEntry x _ s)
+          (let ((many (Bool) string)) $ match many s (((Bool) _)) ((SCons c _) (char-is c 34)) ((SNil) (BFalse)))
+          (tail $ lit-cands env atoms rest $ match many (or (all-digits s) string) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) (cand-of env atoms x s acc)) ((BFalse) acc)))))))
+
+(def-fns _ $ (many best-cand : (many (Nat) a) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) cs) (many (Maybe $ Pair (Nat) (String)) best) -> (many (Maybe $ Pair (Nat) (String)) r))
+  (match many cs _
+    ((Nil _) best)
+    ((Cons _ c rest)
+      (match many c _
+        ((MkPair _ _ a2 xn)
+          (match many xn _
+            ((MkPair _ _ x _)
+              (let ((many (Bool) newer)) $ match many best (((Bool) _)) ((None _) (BTrue)) ((Some _ b) (match many b _ ((MkPair _ _ y _) (nat-lt y x)))))
+              (tail $ best-cand a rest $ match many (and (nat-eq a a2) newer) (((Maybe $ Pair (Nat) (String)) _)) ((BTrue) (Some _ xn)) ((BFalse) best)))))))))
+
+(def-fns _ $ (many name-atoms : (many (Env) env) (subterm many (List $ Nat) atoms) (many (List $ Pair (Nat) $ Pair (Nat) (String)) lits) (many (List $ Pair (Nat) $ Pair (Nat) (String)) names) -> (many (Env) r))
+  (match many atoms _
     ((Nil _) env)
-    ((Cons _ l rest) (match many l _ ((MkPair _ _ _ e) (match many e _ ((MkLitEntry x _ sp) (tail $ name-lits (env-name-entry env x sp) rest))))))))
+    ((Cons _ a rest)
+      (let ((many (String) fallback)) $ match many (best-cand a names $ None _) (((String) _)) ((Some _ p) (match many p _ ((MkPair _ _ _ nm) nm))) ((None _) (str-cat "_" $ nat-str a)))
+      (let ((many (String) n)) $ match many (best-cand a lits $ None _) (((String) _)) ((Some _ p) (match many p _ ((MkPair _ _ _ sp) sp))) ((None _) fallback))
+      (tail $ name-atoms (env-name-entry env a n) rest lits names))))
 
-; A literal's canonical form, as its entry, where it stands.
-(def-fns _
-  ((many spell-lits : (many (List $ Pair (Term) (LitEntry)) ls) (subterm many (Term) t) -> (many (Term) r))
-    (match many (lit-of-term ls t) _
-      ((Some _ x) (TVar x))
-      ((None _) (match many t _ ((TApp h args) (TApp (notail $ spell-lits ls h) $ notail $ spell-lits-list ls args)) (else t)))))
-  ((many spell-lits-list : (many (List $ Pair (Term) (LitEntry)) ls) (subterm many (List $ Term) ts) -> (many (List $ Term) r))
-    (match many ts _ ((Nil _) (Nil _)) ((Cons _ t rest) (Cons _ (notail $ spell-lits ls t) $ notail $ spell-lits-list ls rest)))))
+(def-fns _ $ (many plain-atoms : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
+  (match many xs _
+    ((Nil _) (Nil _))
+    ((Cons _ x rest) (match many (is-meta env x) _ ((BTrue) (tail $ plain-atoms env rest)) ((BFalse) (Cons _ x $ notail $ plain-atoms env rest))))))
 
-; A literal reads as written: its entry is shown by its spelling (lib/env.ml's show).
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
-  (let ((many ls)) $ lit-terms env (BTrue) $ env-lits env)
-  (rope-str $ show-term (spell-lits ls $ canon-env env t) $ name-lits env ls))
+  (let ((many c)) $ canon-env env t)
+  (let ((many atoms)) $ plain-atoms env $ term-vars c $ Nil _)
+  (match many atoms _
+    ((Nil _) (rope-str $ show-term c env))
+    ((Cons _ _ _)
+      (let ((many lits)) $ lit-cands env atoms (env-lits env) $ Nil _)
+      (let ((many names)) $ name-cands env atoms (nm-entries _ (env-scope env) (REmpty) $ Nil _) $ Nil _)
+      (rope-str $ show-term c $ name-atoms env atoms lits names))))
 
 (def-fns _ $ (many show-r : (many (Raw) r) -> (many (String) s))
   (rope-str $ show-raw r))
@@ -1375,7 +1408,7 @@
 
 ; The notes for a branch a forcing trial left standing, [env] the environment before the trial.
 (def-fns _ $ (many forced-notes : (many (Env) env) (many (Env) trial) (many (Res) r) (many (Env) out) -> (many (Env) e))
-  (let ((many ls)) $ lit-terms env (BFalse) $ env-lits env)
+  (let ((many ls)) $ lit-terms env $ env-lits env)
   (let ((many hs)) $ forced-hits trial ls $ trial-bound trial ls)
   (literal-notes env out (Cons _ (res-ty r) $ Cons _ (res-term r) $ Nil _) $ hits-kept hs hs $ Nil _))
 
@@ -1389,7 +1422,7 @@
     ((UContra _)
       (match many report _
         ((BTrue)
-          (let ((many ls)) $ lit-terms env (BFalse) $ env-lits env)
+          (let ((many ls)) $ lit-terms env $ env-lits env)
           (let ((many hs)) $ check-hits env ls $ differ (canon-env env actual) $ canon-env env expected)
           (let ((many out)) $ env-error env $ str-cat3 what " mismatch: expected " $ str-cat3 (qshow env expected) ", got " $ qshow env actual)
           (values (literal-notes env out (Cons _ expected $ Cons _ actual $ Nil _) $ hits-kept hs hs $ Nil _) $ BFalse))
@@ -1454,21 +1487,41 @@
               (error-unless-msg env ok msg-at))
             (else (env-error env "internal: malformed location"))))))))
 
-; Results against a return telescope; [ids] as in open-tele.
-(def-fns _ $ (many check-results : (subterm many (List $ Entry) tele) (many (Env) env) (many (List $ Res) ress) (many (List $ Term) ids) -> (many (Env) r))
+; Results against a return telescope; [ids] as in open-tele. Each result is checked at [sites], where it is
+; written.
+(def-fns _ $ (many check-results : (subterm many (List $ Entry) tele) (many (Env) env) (many (List $ Res) ress) (many (List $ Term) ids) (many (List $ Pos) sites) -> (many (Env) r))
   (match many tele _
     ((Nil _) (match many ress _ ((Nil _) env) ((Cons _ _ _) (env-error env "expected fewer values"))))
     ((Cons _ e rest)
       (match many ress _
         ((Nil _) (env-error env "expected more values"))
         ((Cons _ r rrest)
-          (tail $ check-results rest (check-result-place (settle-res (check-sg env (sg-inst ids $ entry-sg e) r) r) e ids r) rrest $ Cons _ (res-term r) ids))))))
+          (let ((many (Env) at-site) (many (List $ Pos) more)) $ match many sites (((Env) _) ((List $ Pos) _)) ((Nil _) (values env sites)) ((Cons _ pos ps) (values (env-at env pos) ps)))
+          (let ((many env2)) $ env-back env $ check-result-place (settle-res (check-sg at-site (sg-inst ids $ entry-sg e) r) r) e ids r)
+          (tail $ check-results rest env2 rrest (Cons _ (res-term r) ids) more))))))
 
-(def-fns _ $ (many check-results-count : (many (Env) env) (many (List $ Entry) tele) (many (List $ Res) ress) (many (List $ Term) ids) -> (many (Env) r))
+(def-fns _ $ (many raw-positions : (subterm many (List $ Raw) rs) -> (many (List $ Pos) r))
+  (match many rs _ ((Nil _) (Nil _)) ((Cons _ r rest) (Cons _ (raw-pos r) $ notail $ raw-positions rest))))
+
+; Where each of a body's [n] results is written: the entries of a final values form holding one per result,
+; else the final expression (lib/elab.ml's result_locs).
+(def-fns _ $ (many result-sites : (many (Env) env) (many (List $ Raw) body) (many (Nat) n) -> (many (List $ Pos) r))
+  (match many (list-rev _ body) _
+    ((Nil _) (match many (env-loc env) _ ((MkLoc _ here) (list-replicate _ n here))))
+    ((Cons _ final _)
+      (let ((many whole)) $ list-replicate _ n $ raw-pos final)
+      (match many final _
+        ((RList _ items)
+          (match many items _
+            ((Cons _ v entries) (match many (and (is-special env v $ SpExpr $ ExValues) $ nat-eq (list-length _ entries) n) _ ((BTrue) (raw-positions entries)) ((BFalse) whole)))
+            ((Nil _) whole)))
+        (else whole)))))
+
+(def-fns _ $ (many check-results-count : (many (Env) env) (many (List $ Raw) body) (many (List $ Entry) tele) (many (List $ Res) ress) (many (List $ Term) ids) -> (many (Env) r))
   (let ((many n)) $ list-length _ tele)
   (let ((many m)) $ list-length _ ress)
   (match many (nat-cmp n m) _
-    ((CEq _ _ _) (check-results tele env ress ids))
+    ((CEq _ _ _) (check-results tele env ress ids $ result-sites env body n))
     (else (count-error env " values" n m))))
 
 ; prove-subterm (section 8): the first, canonicalized, is a strict subtree of the second through constructor
@@ -4283,7 +4336,7 @@
                                 (let ((many bctx)) (Cons _ ids hctx))
                                 (let ((many env9) (many ress) (many bcode) (erased lock))
                                   (notail $ elab-body sugar body body (WHere _) (env-set-run-pos env8 (BFalse)) bctx expect2 (Some _ anntele)))
-                                (let ((many env10)) (check-results-count env9 anntele ress (Nil _)))
+                                (let ((many env10)) (check-results-count env9 body anntele ress (Nil _)))
                                 (let ((many env11) (many resultids) (erased rl))
                                   (open-tele anntele (env-discard env6 env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
                                 (values env11 (ress-of resultids env11)
@@ -4921,7 +4974,7 @@
               (let ((many pvars)) $ tvars-rev pids $ Nil _)
               (let ((many tele)) $ instantiate-tele pvars rets)
               (let ((many envb1b) (many ress) (many code) (erased lock3)) $ notail $ elab-body sugar (subterm pb) body body (WHere _) envb bctx rms (Some _ tele))
-              (let ((many envb2)) $ check-results-count envb1b rets ress pvars)
+              (let ((many envb2)) $ check-results-count envb1b body rets ress pvars)
               (values envb2 $ match many mult (((Code bctx rms) _)) ((Erased) (CErased _ rms)) (else code)))))
         (let ((many physical)) $ under-list (physical-mults rets) mult)
         (let ((many envb2a) (many projected)) $ project-code bctx envb2 rms physical code)
@@ -5290,16 +5343,16 @@
   ((many elab-branch-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) ->
       (many (Env) r) (many (Code bctx ex) code))
     (let ((many envb) (many ress) (many code) (erased lock)) $ notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex $ Some _ ann-tele)
-    (values (check-results-count envb ann-tele ress $ Nil _) code))
+    (values (check-results-count envb body ann-tele ress $ Nil _) code))
 
   ((many elab-pattern-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) (many (Nat) saved) (many (Maybe $ Nat) alias) -> (many (Env) r) (many (Code bctx ex) code))
     (match many alias _
       ((None _)
         (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex (Some _ ann-tele)))
-        (values (check-results-count env2 ann-tele ress (Nil _)) code))
+        (values (check-results-count env2 body ann-tele ress (Nil _)) code))
       ((Some _ x)
         (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env (Cons _ (Cons _ x (Nil _)) bctx) ex (Some _ ann-tele)))
-        (values (check-results-count env2 ann-tele ress (Nil _)) (CLet _ many-one ex (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env bctx saved) code)))))
+        (values (check-results-count env2 body ann-tele ress (Nil _)) (CLet _ many-one ex (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env bctx saved) code)))))
 
   ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 12).
   ((many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Nat) seen) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (IdMap $ Use) joined) ->

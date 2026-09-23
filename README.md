@@ -146,7 +146,13 @@ through one function, `Env.tick` and `tick` in `self/core.sl`. Runtime errors
 are not quoted. An unsolved `_` (SUGAR.md 6) in a message is numbered, `?1`,
 `?2` and on in the order the message first mentions each, and a note under the
 message names where each one's `_` is written, `` `?1` is the `_` written here ``
-(`Env.metas_in`, `metas-in` in `self/core.sl`).
+(`Env.metas_in`, `metas-in` in `self/core.sl`). A term is shown canonically,
+and each atom in it by a numeral or string literal it equals, else by the
+newest name still in scope for it, else by its id, `_4416`: which atom
+canonicalization keeps for a class is an accident of minting order, and a
+name is shown only where it still denotes that atom (`Env.show`, `show-t` in
+`self/elab.sl`). A result that fails its return type is reported where it is
+written, the entry of the body's final `values` or the final expression.
 
 Shadowing is legal (section 9) and warns. Every binder that hides a name
 already in scope earns ``declaration of `List` shadows a previous binder``,

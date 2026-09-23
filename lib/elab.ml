@@ -163,7 +163,7 @@ let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased; pla
 let open_adt env x =
   let rec dup = function [] -> None | c :: rest -> if List.mem c rest then Some c else dup rest in
   (match type_of env x with
-  | Matchable (_, _, _, _, cs) -> Option.iter (fun c -> raise (Contradiction (qshow env c ^ " is listed twice"))) (dup (List.map snd cs))
+  | Matchable (_, _, _, _, cs) -> Option.iter (fun c -> raise (Contradiction (lazy (qshow env c ^ " is listed twice")))) (dup (List.map snd cs))
   | _ -> ());
   merge_opens (forcing (opens_add env x))
 
@@ -617,16 +617,24 @@ and elab_term_args env loc ?expect tele ret args =
   (env, acc)
 
 (* [ids] as in [open_tele]. *)
-let check_results env loc ?(ids = []) tele ress =
+(* Where each of a body's results is written: the entries of a final values form holding one per result, else
+   the final expression, which is what a mismatch with the returns points at. *)
+let result_locs env loc body n =
+  match List.rev body with
+  | List (_, v :: entries) :: _ when is_special env v Sp.Values && List.length entries = n -> List.map Reader.loc entries
+  | final :: _ -> List.init n (fun _ -> Reader.loc final)
+  | [] -> List.init n (fun _ -> loc)
+
+let check_results env loc ?(ids = []) body tele ress =
   count_check loc tele ress;
-  let env = List.fold_left2 (fun (env, acc) e r ->
-    let env = solve_sg env loc (map_sg (instantiate acc) e.sg) r in
+  let env = List.fold_left2 (fun (env, acc) (e, rl) r ->
+    let env = solve_sg env rl (map_sg (instantiate acc) e.sg) r in
     (match Option.map (instantiate acc) e.place with
      | Some (SlotHolds p) when not env.usage_erased ->
-         if not (Option.fold ~none:false ~some:(at_equal env p) r.place) then error loc "return does not satisfy `at` %s" (tick (to_string (name_of env) p))
+         if not (Option.fold ~none:false ~some:(at_equal env p) r.place) then error rl "return does not satisfy `at` %s" (tick (to_string (name_of env) p))
      | _ -> ());
-    (env, r.term :: acc)) (env, ids) tele ress |> fst in
-  List.iter (settle_res env loc) ress
+    (env, r.term :: acc)) (env, ids) (List.combine tele (result_locs env loc body (List.length tele))) ress |> fst in
+  List.iter2 (settle_res env) (result_locs env loc body (List.length ress)) ress
 
 let rec project_code keep code =
   if List.for_all Fun.id keep then code else
@@ -1106,9 +1114,9 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let envb, back = if mode <> Unique then (envb, None) else
         let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
         (at_merge envb (Var x) (Var sid), Some x) in
-      let envb, rs, body = elab_body ~tele:ann_tele envb expect l body in
-      check_results envb l ann_tele rs;
-      let body = match back with None -> body | Some x -> V.CLet ([x], V.CVar sid, body) in
+      let envb, rs, bcode = elab_body ~tele:ann_tele envb expect l body in
+      check_results envb l body ann_tele rs;
+      let body = match back with None -> bcode | Some x -> V.CLet ([x], V.CVar sid, bcode) in
       let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) body in
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
@@ -1174,7 +1182,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
           | `Present, Some envb ->
               let envb = { envb with usage_erased = envb.usage_erased || unreachable } in
               let envb, ress, code = elab_body ~tele:ann_tele envb (if unreachable then List.map (fun _ -> Erased) expect else expect) bl body in
-              check_results envb bl ann_tele ress;
+              check_results envb bl body ann_tele ress;
               if not unreachable then branch_uses := join_uses !branch_uses envb.uses;
               `Present (bind_cell scode cell code)
           | `Proof, Some envb -> ignore (elab_absurd envb bl body); `Absurd
@@ -1215,7 +1223,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
                   (envb,Some x,body)
               | [] -> error el "a unique `else` needs its binder and body" in
             let envb, ress, code = elab_body ~tele:ann_tele envb (if reachable = [] then List.map (fun _ -> Erased) expect else expect) el body in
-            check_results envb el ann_tele ress;
+            check_results envb el body ann_tele ress;
             if reachable <> [] then branch_uses := join_uses !branch_uses envb.uses;
             if reachable = [] then None else Some (bind_cell scode cell code)
         | first :: dup :: _ -> error_with (loc dup) [ (loc first, "the first `else` branch") ] "a match has at most one `else` branch"
@@ -1327,7 +1335,7 @@ and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
       | Some Sp.OpenAdt, [ m; e ] ->
           let mult = mult_or env l m in
           let env', x, t, code = open_binding env l mult e in
-          let env' = try open_adt env' x with Contradiction msg -> error l "`open-adt`: %s contradicts what is open (%s)" (qshow env' t) msg in
+          let env' = try open_adt env' x with Contradiction msg -> error l "`open-adt`: %s contradicts what is open (%s)" (qshow env' t) (Lazy.force msg) in
           (env', if env.run_pos || mult = Erased then Fun.id else fun rest -> V.CLet ([ x ], code, rest))
       | _ -> error l "%s is not a statement" (tick (Reader.show raw)))
   | _ -> error (loc raw) "%s is not a statement" (tick (Reader.show raw))
@@ -1479,7 +1487,7 @@ and elab_let_match spos env l args =
       let env = match value,sres.term with Some v, Var x -> set_state env x (Const v) | _ -> env in
       let states = Option.map (fun v -> snd (const_fields env pl c mults v)) value in
       let env, fids = open_tele env ~names ~ats:(field_ats tele fields) ~mults ?states tele in
-      let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" msg) in
+      let env = at l (fun () -> try refine env sres c fids ret with Contradiction msg -> error l "the scrutinee contradicts the facts in force (%s)" (Lazy.force msg)) in
       let env, cell = pattern_cell env pl smult sres c fids name in
       ( env,
         if smult = Erased || run then Fun.id
@@ -1521,7 +1529,7 @@ and elab_comptime_match env l args =
       let fields, name = split_cell_pattern env pl (smult = Unique && cells_allowed env mid) fields in
       let names = field_names env pl c tele fields in
       let env, fids = open_tele env ~names ~ats:(field_ats tele fields) ~mults ~states tele in
-      let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" msg) in
+      let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" (Lazy.force msg)) in
       let env, _ = pattern_cell env pl smult (res_of env x) c fids name in
       (env, Fun.id)
   | _ -> error l "malformed `comptime-match`: expected `(comptime-match <multiplicity> x (C field ...))`"
@@ -1570,7 +1578,7 @@ and elab_def_fns ?(unique = false) env l args =
             let pvars = List.rev_map (fun x -> Var x) pids in
             let tele = instantiate_tele pvars rets in
             let envb, ress, code = elab_body ~tele envb (List.map (fun e -> under mult e.mult) rets) fl body in
-            check_results envb fl ~ids:pvars rets ress;
+            check_results envb fl ~ids:pvars body rets ress;
             (envb, if mult = Erased then V.CErased else project_code (List.filter_map (fun e -> if e.mult = Erased then None else Some (e.place = None)) rets) code)
         in
         capture_uses := join_uses !capture_uses (IntMap.filter (fun x _ -> IntMap.mem x env.entries) envb.uses);

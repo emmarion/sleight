@@ -2640,32 +2640,42 @@
   (let ((many r) (erased fr)) $ canon-in _ _ bnd tb t)
   (canon-locations r env))
 
-; Whether a canonical term still mentions an unsolved meta.
+; The variables a term mentions, onto [acc], each place it occurs.
 (def-fns _
-  ((many has-meta : (subterm many (Term) t) (many (Env) env) -> (many (Bool) r))
+  ((many term-vars : (subterm many (Term) t) (many (List $ Nat) acc) -> (many (List $ Nat) r))
     (match many t _
-      ((TVar x) (is-meta env x))
-      ((TApp h args) (or (notail $ has-meta h env) $ notail $ has-meta-list args env))
-      ((TCell h args) (or (notail $ has-meta h env) $ notail $ has-meta-list args env))
-      ((TFn _ l ps rs) (or (notail $ has-meta l env) $ or (notail $ has-meta-tele ps env) $ notail $ has-meta-tele rs env))
-      ((TTyCtor ps) (tail $ has-meta-tele ps env))
-      ((TValCtor ps ret) (or (notail $ has-meta-tele ps env) $ notail $ has-meta ret env))
-      ((TMatchable _ _ _ ty cs) (or (notail $ has-meta ty env) $ notail $ has-meta-mctors cs env))
-      ((TSlotHolds c) (tail $ has-meta c env)) (else (BFalse))))
-  ((many has-meta-list : (subterm many (List $ Term) ts) (many (Env) env) -> (many (Bool) r))
+      ((TVar x) (Cons _ x acc))
+      ((TApp h args) (tail $ term-vars h $ notail $ term-vars-list args acc))
+      ((TCell h args) (tail $ term-vars h $ notail $ term-vars-list args acc))
+      ((TFn _ l ps rs) (tail $ term-vars l $ notail $ term-vars-tele ps $ notail $ term-vars-tele rs acc))
+      ((TTyCtor ps) (tail $ term-vars-tele ps acc))
+      ((TValCtor ps ret) (tail $ term-vars-tele ps $ notail $ term-vars ret acc))
+      ((TMatchable _ _ _ ty cs) (tail $ term-vars ty $ notail $ term-vars-mctors cs acc))
+      ((TSlotHolds c) (tail $ term-vars c acc)) (else acc)))
+  ((many term-vars-list : (subterm many (List $ Term) ts) (many (List $ Nat) acc) -> (many (List $ Nat) r))
     (match many ts _
-      ((Nil _) (BFalse))
-      ((Cons _ t rest) (or (notail $ has-meta t env) $ notail $ has-meta-list rest env))))
-  ((many has-meta-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) -> (many (Bool) r))
+      ((Nil _) acc)
+      ((Cons _ t rest) (tail $ term-vars t $ notail $ term-vars-list rest acc))))
+  ((many term-vars-mctors : (subterm many (List $ MCtor) cs) (many (List $ Nat) acc) -> (many (List $ Nat) r))
     (match many cs _
-      ((Nil _) (BFalse))
-      ((Cons _ c rest) (match many c _ ((MkMCtor _ t) (or (notail $ has-meta t env) $ notail $ has-meta-mctors rest env))))))
-  ((many has-meta-tele : (subterm many (List $ Entry) es) (many (Env) env) -> (many (Bool) r))
+      ((Nil _) acc)
+      ((Cons _ c rest) (match many c _ ((MkMCtor _ t) (tail $ term-vars t $ notail $ term-vars-mctors rest acc))))))
+  ((many term-vars-tele : (subterm many (List $ Entry) es) (many (List $ Nat) acc) -> (many (List $ Nat) r))
     (match many es _
-      ((Nil _) (BFalse))
+      ((Nil _) acc)
       ((Cons _ e rest)
         (match many e _
-          ((MkEntry _ _ _ sg place _) (or (match many sg (((Bool) _)) ((SgTy t) (notail $ has-meta t env)) ((SgIs t _) (notail $ has-meta t env))) $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (notail $ has-meta p env))) $ notail $ has-meta-tele rest env)))))))
+          ((MkEntry _ _ _ sg place _)
+            (let ((many acc2)) $ notail $ term-vars-tele rest acc)
+            (let ((many acc3)) $ match many place (((List $ Nat) _)) ((None _) acc2) ((Some _ p) (notail $ term-vars p acc2)))
+            (match many sg _ ((SgTy t) (tail $ term-vars t acc3)) ((SgIs t _) (tail $ term-vars t acc3)))))))))
+
+(def-fns _ $ (many any-meta : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (Bool) r))
+  (match many xs _ ((Nil _) (BFalse)) ((Cons _ x rest) (or (is-meta env x) $ notail $ any-meta env rest))))
+
+; Whether a canonical term still mentions an unsolved meta.
+(def-fns _ $ (many has-meta : (many (Term) t) (many (Env) env) -> (many (Bool) r))
+  (any-meta env $ term-vars t $ Nil _))
 
 (def-fns _ $ (many has-meta-env : (many (Env) env) (many (Term) t) -> (many (Bool) r))
   (has-meta (canon-env env t) env))

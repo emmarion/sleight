@@ -1,5 +1,6 @@
 ; error: constructor `TB` has 0 branches
-; error: #\a in `(Tag #\a)` is a character literal, whose code is usually opaque to the checker
+; error: #\a in `(Tag (MkChar (MkU8 97 _
+; error: is a character literal, whose code is usually opaque to the checker
 ; error: #\b is a character literal, whose code is usually opaque to the checker
 ; A character literal is transparent down to its code, a numeral (LITERALS.md), so the note names the
 ; character as written rather than its code, both the scrutinee's and the one TB's index forced it to.
