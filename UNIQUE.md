@@ -214,7 +214,7 @@ same-level calls under `subterm` proofs; it may be marked `erased` or
 `absurd`; its own name is in scope in its body as an erased entry, so
 a self call is refused as any call through an erased head is and
 recursion goes through a `def-fns` function taking the values as
-parameters; its body supports `tail` and `delegate`, and `delegate-of`
+parameters; its body supports `tail`, `notail` and `delegate`, and `delegate-of`
 fetches a delegate's proof as for a `def-fns` function.
 
 *Reading.* The former is what a `unique` binder of `Fn` type cannot
@@ -703,7 +703,7 @@ records only `erased`/`many`, §17, and no constructor is unique). That
 keeps every refutation and `open-absurd` the original program had.
 Tier 2 presupposes tier 1: collapsing erasure alone would turn an
 erased mention of a consumed unique into a second use.
-Both tiers are §23's "identically", and leave `tail` and `delegate`
+Both tiers are §23's "identically", and leave `tail`, `notail` and `delegate`
 unchecked.
 
 `slot-eq` falls under tier 1: it is an optimization hint and a compiler
