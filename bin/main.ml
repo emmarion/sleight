@@ -10,8 +10,8 @@ let world args =
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
-  Speciallang.Indent.warn path src;
-  match report path (fun () -> Elab.run_toplevel ~consume ~path env (Reader.parse path src)) with Some env -> env | None -> exit 1
+  let warned = Speciallang.Indent.warn path src in
+  match report path (fun () -> Elab.run_toplevel ~consume ~path env (Reader.parse ~shape:(not warned) path src)) with Some env -> env | None -> exit 1
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =

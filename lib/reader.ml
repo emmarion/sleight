@@ -69,12 +69,18 @@ let scan file src =
 
 let tokenize file src = List.map (fun (l, _, t) -> (l, t)) (scan file src)
 
+(* A parenthesis a file gets wrong is found faster with bin/shape than from the one position a message names. *)
+let shape_note path =
+  Printf.sprintf "%s: note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes" path
+
 (* [read_items] reads until the enclosing form's terminator, which it leaves in place;
-   a [$] form ends at that same terminator (DESIGN.md section 2). *)
-let parse file src =
+   a [$] form ends at that same terminator (DESIGN.md section 2). [shape] false leaves out the note on a
+   parenthesis error, where the indentation check has already written it. *)
+let parse ?(shape = true) file src =
   let toks = ref (tokenize file src) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
+  let paren l m = Syntax (l, if shape then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
   let rec read_items acc =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
@@ -83,11 +89,11 @@ let parse file src =
         let items = read_items [] in
         (match (opener, peek ()) with
          | LParen, Some (_, RParen) -> advance ()
-         | LParen, _ -> raise (Syntax (l, "missing `)`"))
-         | _, None -> raise (Syntax (l, "missing `)` after `$`"))
+         | LParen, _ -> raise (paren l "missing `)`")
+         | _, None -> raise (paren l "missing `)` after `$`")
          | _ -> ());
         read_items (List (l, items) :: acc)
     | Some (l, Word w) -> advance (); read_items (Atom (l, w) :: acc)
   in
   let items = read_items [] in
-  match peek () with Some (l, _) -> raise (Syntax (l, "unexpected `)`")) | None -> items
+  match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> items

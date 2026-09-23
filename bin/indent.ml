@@ -9,11 +9,12 @@ let check_file path =
   let src = match Speciallang.Program.read_file path with s -> s | exception Sys_error m -> prerr_endline m; exit 2 in
   let found, stopped = Indent.issues path src in
   List.iter (fun i -> incr issues; print_string (Indent.show i)) found;
-  match stopped with
-  | None -> ()
-  | Some (l, m) ->
-      incr issues;
-      Printf.printf "%s: %s -- everything above is what was read before that\n" (Speciallang.Reader.where path l) m
+  (match stopped with
+   | None -> ()
+   | Some (l, m) ->
+       incr issues;
+       Printf.printf "%s: %s -- everything above is what was read before that\n" (Speciallang.Reader.where path l) m);
+  if found <> [] || stopped <> None then print_endline (Speciallang.Reader.shape_note path)
 
 let () =
   let files = List.tl (Array.to_list Sys.argv) in

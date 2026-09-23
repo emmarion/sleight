@@ -9,3 +9,4 @@
 (def-lvl A)
 (let ((many x)) (Zero)
 (Zero)
+; warns: tests/indent_unclosed_bad.sl: note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes

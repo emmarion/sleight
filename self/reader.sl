@@ -40,7 +40,12 @@
 ; A syntax error and where it is reported.
 (def-adts $ (SynErr : -> Type)
   enum
-  (many MkSynErr : (many (Pos) pos) (many (String) msg) -> (SynErr)))
+  (many MkSynErr : (many (Pos) pos) (many (String) msg) (many (Bool) paren) -> (SynErr)))
+
+; A parenthesis a file gets wrong is found faster with bin/shape than from the one position a message names
+; (lib/reader.ml's shape_note).
+(def-fns _ $ (many shape-note : (many (String) path) -> (many (String) r))
+  (str-cat path ": note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes"))
 
 (def-fns _ $ (many is-delim : (many (Char) c) -> (many (Bool) r))
   (let ((many n)) $ char-code c)
@@ -202,14 +207,14 @@
         ((TDollar l) (parse-toks rest $ Cons _ (MkFrame l (BTrue) $ Nil _) stack))
         ((TWord l w) (parse-toks rest $ push-item (RAtom l w) stack))
         ((TStrLit l s) (parse-toks rest $ push-item (RString l s) stack))
-        ((TError l m) (values stack $ Some _ $ MkSynErr l m))
+        ((TError l m) (values stack $ Some _ $ MkSynErr l m $ BFalse))
         ((TClose l)
           (let ((many s1)) $ close-dollars stack)
           (match many s1 _
-            ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`"))
+            ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`" $ BTrue))
             ((Cons _ _ s2)
               (match many s2 _
-                ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`"))
+                ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`" $ BTrue))
                 ((Cons _ _ _) (parse-toks rest $ close-top s1))))))))))
 
 ; Reads the root frame's items once nothing is open; an open form at the end is a missing ), reported
@@ -222,7 +227,7 @@
         ((Nil _) (match many f _ ((MkFrame _ _ items) (values (list-rev _ items) $ None _))))
         ((Cons _ _ _)
           (match many f _
-            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l $ match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")))))))))
+            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l (match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")) $ BTrue))))))))
 
 (def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err))
   (let ((many stack) (many err)) (parse-toks (tokenize src 1 0 $ Nil _)
@@ -651,4 +656,5 @@
           ((None _) acc1)
           ((Some _ sl)
             (Cons _ (ind-at path sl "a `)` here closes more than is open (surplus `)`)") acc1))))
-      (list-rev _ $ ind-unclosed path op (BTrue) acc2))))
+      (let ((many acc3)) $ ind-unclosed path op (BTrue) acc2)
+      (match many acc3 _ ((Nil _) acc3) ((Cons _ _ _) (list-rev _ $ Cons _ (shape-note path) acc3))))))

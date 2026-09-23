@@ -147,4 +147,9 @@ let issues path src =
     opens;
   (List.rev !acc, stopped)
 
-let warn path src = List.iter (fun i -> !Env.warn (show i)) (fst (issues path src))
+(* Whether it warned, and so wrote the note on bin/shape, which the reader's error then need not repeat. *)
+let warn path src =
+  let found = fst (issues path src) in
+  List.iter (fun i -> !Env.warn (show i)) found;
+  if found <> [] then !Env.warn (Reader.shape_note path ^ "\n");
+  found <> []

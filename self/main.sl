@@ -22,11 +22,14 @@
       (match many ps _
         ((MkPair _ _ path src)
           (let ((many env1)) $ env-at-loc env $ MkLoc path $ MkPos 1 1)
-          (let ((many envw)) $ env-warn-all env1 $ indent-warnings path src)
+          (let ((many ws)) $ indent-warnings path src)
+          (let ((many envw)) $ env-warn-all env1 ws)
           (let ((many items) (many err)) $ parse src)
           (let ((many (Env) env2))
             (match many err _
-              ((Some _ e) (match many e (((Env) _)) ((MkSynErr pos m) (env-report envw $ located (env-at envw pos) ": syntax error: " m))))
+              ((Some _ e) (match many e (((Env) _)) ((MkSynErr pos m paren)
+                (let ((many enve)) $ env-report envw $ located (env-at envw pos) ": syntax error: " m)
+                (match many (and paren $ list-is-empty _ ws) _ ((BTrue) (env-report enve $ shape-note path)) ((BFalse) enve)))))
               ((None _) (run-toplevel items envw))))
           (run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 

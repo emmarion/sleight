@@ -77,13 +77,13 @@ and run_mode name externs src =
   let final = ref None in
   let outcome =
     try
-      let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in Indent.warn (label n) src; Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse (label n) src) in
+      let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
       let env = List.fold_left one (Builtin.load ()) needs in
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
-      Indent.warn (label name) src;
-      let env = Elab.run_toplevel ~consume:(fun env ty v -> final := Some (env, ty, v)) env (Reader.parse (label name) src) in
+      let warned = Indent.warn (label name) src in
+      let env = Elab.run_toplevel ~consume:(fun env ty v -> final := Some (env, ty, v)) env (Reader.parse ~shape:(not warned) (label name) src) in
       let source templates = Extract.templates := templates; (try Ok (Extract.emit env (List.rev !Env.trace)) with e -> Error (Printexc.to_string e)) in
       let sources = List.map (fun t -> (t, source t)) (if externs then [ true; false ] else [ true ]) in
       Option.iter (fun (env, ty, v) -> consume env ty v) !final;
