@@ -1,5 +1,5 @@
 ; error: constructor `VNil` has 0 branches
-; error: 3 in `(Vec 3)` is a numeral literal, opaque to the checker; consider `unary`, `distinct` or `numeral-of`
+; error: 3 in `(Vec 3)` is a numeral literal, usually opaque to the checker; consider `unary`, `distinct`, or `numeral-of`
 ; A numeral is opaque (LITERALS.md), so a Vec of length 3 does not refute VNil until (unary 3) says
 ; 3 is (Succ (Succ (Succ (Zero)))): forcing the VNil branch binds 3 to (Zero) instead, and the refusal notes
 ; the literal and the forms that reason about it.
