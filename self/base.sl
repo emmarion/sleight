@@ -229,6 +229,14 @@
 (def-fns _ $ (many idmap-mem : (erased Type V) (many (Nat) k) (many (IdMap V) m) -> (many (Bool) r))
   (match many (idmap-get _ k m) _ ((Miss _ _ _ _) (BFalse)) ((Hit _ _ _ _ _) (BTrue))))
 
+(def-fns _ $ (many idmap-pairs : (erased Type V) (subterm many (IdMap V) m) (many (Nat) a) (many (Nat) b) (many (List $ Pair (Nat) V) acc) -> (many (List $ Pair (Nat) V) r))
+  (match many m _
+    ((MEmpty _) acc)
+    ((MNode _ here one two)
+      (let ((many a2)) $ nat-add a a)
+      (let ((many (List $ Pair (Nat) V) acc2)) $ match many here _ ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ b v) acc)))
+      (tail $ idmap-pairs _ two a2 (nat-add a2 b) $ notail $ idmap-pairs _ one a2 (nat-add a b) acc2))))
+
 ; ---- NameMap: a persistent trie keyed by a string's characters
 
 (def-adts

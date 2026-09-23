@@ -259,6 +259,21 @@ the entry says otherwise, and recorded so it can be revisited.
   (ASSUMPTIONS 194). `bootstrap.sh` counts both and lists the
   differences, so the number cannot quietly grow. A runtime error in the interpreter is an error
   block that prints as `<error: ...>`.
+- **`dump-context` is ported** (ASSUMPTIONS 196): the form is refused
+  with the report `lib/dump.ml` writes, built the same way here -- the
+  goal, the position, the entries in scope, the at-database, the opened
+  objects and the numerals with rules. For it the scope keeps its
+  entries' ids newest first beside the name map, the anonymous ones
+  included, as the reference's scope does (`Scope` in `core.sl`); the
+  printer names a de Bruijn index from the telescopes being printed and
+  prints `(SlotVacant)` as itself; and a literal's entries stay out of
+  the scope, as `lib/elab.ml`'s hoisting appears to keep them. On
+  `tests/dump_context*.sl` the report seems to agree with the
+  reference's line for line, apart from the ids of anonymous entries
+  and the binders this compiler mints for a `cell-write`'s head and
+  slots, which the reference does not; the messages after the report
+  are the cascade described above, which the reference's stop at the
+  first error has no counterpart to.
 - **The opened objects live in the fact table with their canonical
   names.** The table (`Table n f c`) holds, beside its proofs, the
   opened list (ASSUMPTIONS 139): each entry with its kind and the names
