@@ -11,7 +11,7 @@
   (match many es _
     ((Nil _) next)
     ((Cons _ e rest)
-      (WriteErr _ e $ unique-thunk (predates th-util) _ _ $ WriteErr _ "\n" $ unique-thunk (predates th-util) _ _ $ write-lines rest next))))
+      (WriteErr _ e $ unique-thunk (predates th-util) _ _ $ WriteErr _ "\n" $ unique-thunk (predates th-util) _ _ $ notail $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
@@ -31,7 +31,7 @@
                 (let ((many enve)) $ env-report envw $ located (env-at envw pos) ": syntax error: " m)
                 (match many (and paren $ list-is-empty _ ws) _ ((BTrue) (env-report enve $ shape-note path)) ((BFalse) enve)))))
               ((None _) (run-toplevel items envw))))
-          (run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
+          (tail $ run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 
 (def-fns compile-lvl $ (many compile : (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
   (let ((many env)) $ run-files srcs (make-builtins) $ BTrue)
@@ -69,7 +69,7 @@
       (match many (str-eq p "--") _
         ((BTrue) (values (Nil _) rest))
         ((BFalse)
-          (let ((many files) (many pargs)) (split-args rest))
+          (let ((many files) (many pargs)) (notail $ split-args rest))
           (values (Cons _ p files) pargs))))))
 
 ; The flags, in any order, then the files: --no-templates and --interpret.
@@ -80,10 +80,10 @@
         $ unique-thunk _ _ $ Exit _ exit-fail))
     ((Cons _ p rest)
       (match many (str-eq p "--no-templates") _
-        ((BTrue) (start-with rest (BFalse) interpreting))
+        ((BTrue) (tail $ start-with rest (BFalse) interpreting))
         ((BFalse)
           (match many (str-eq p "--interpret") _
-            ((BTrue) (start-with rest templates (BTrue)))
+            ((BTrue) (tail $ start-with rest templates (BTrue)))
             ((BFalse)
               (let ((many files) (many pargs)) (split-args args))
               (read-files templates interpreting pargs files $ Nil _))))))))

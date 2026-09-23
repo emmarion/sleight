@@ -21,7 +21,7 @@
       ((Nil a) (Nil B))
       ((Cons a hd tl)
         (let ((erased p)) (prove-subterm tl xs))
-        (Cons B (f (predates pml) hd) $ map A B f (subterm p) tl))))
+        (Cons B (f (predates pml) hd) $ notail $ map A B f (subterm p) tl))))
   (values L map))
 
 (def-lvl I)

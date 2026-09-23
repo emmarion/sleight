@@ -782,6 +782,7 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
     let results = List.filter_map (fun (m, (x, place)) -> if m = Erased then None else
       Some (V.CVar (match place with Some (SlotHolds p) -> location_var env l p | None -> x | Some _ -> assert false)))
       (List.combine expect (List.rev returned)) in
+    let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, qshow env callee.term) | _ -> cc in
     V.CLet (List.rev physical, V.CApp (hcode, codes, cc), V.CValues results)
   in
   (env, List.map (res_of env) ids, wrap code)
@@ -789,7 +790,7 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
 and elab_special demand tele env expect l sp args =
   let pos = pos_of expect in
   let m =
-    if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.Delegate :: Sp.statements) then pos
+    if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (Sp.name sp))
   in
   let expected_type env = match tele with
@@ -890,9 +891,9 @@ and elab_special demand tele env expect l sp args =
       in
       (env, List.rev ress, if pos = Erased then V.CErased else V.CValues (List.rev codes))
   | Sp.Match, _ -> elab_match ~demand tele env expect l args
-  | (Sp.Tail | Sp.Delegate), [ (List _ as call) ] ->
+  | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (Sp.name sp));
-      let cc = if sp = Sp.Tail then V.Tail else V.Delegate in
+      let cc = match sp with Sp.Tail -> V.Tail | Sp.NoTail -> V.NoTail | _ -> V.Delegate in
       let env, ress, code = elab_expr ~demand ~cc ?tele env expect call in
       let rec has_call c = (match c with V.CApp (_, _, cc') -> cc' = cc | _ -> false) || List.exists has_call (V.subcodes c) in
       if not (has_call code) then error l "%s marks a function call, not %s" (tick (Sp.name sp)) (tick (Reader.show call));
@@ -1606,20 +1607,26 @@ and check_marks env l pids code =
     | c -> V.map_code (norm sub) c
   in
   let code = norm [] code in
-  let rec marked acc c = List.fold_left marked (match c with V.CApp (_, _, (V.Tail | V.Delegate)) -> c :: acc | _ -> acc) (V.subcodes c)
-  in
+  let rec calls acc c = List.fold_left calls (match c with V.CApp _ -> c :: acc | _ -> acc) (V.subcodes c) in
   let rec tails ~direct = function
-    | V.CApp (_, _, (V.Tail | V.Delegate)) as c -> [ c ]
+    | V.CApp _ as c -> [ c ]
     | V.CLet (_, _, rest) | V.CLetRec (_, rest) -> if direct then [] else tails ~direct rest
     | V.CMatch m -> if direct then [] else List.concat_map (tails ~direct) (List.map (fun (_, _, c) -> c) m.V.branches @ Option.to_list m.V.default)
     | _ -> []
   in
+  let all = calls [] code and in_tail = tails ~direct:false code in
+  List.iter
+    (function
+      | V.CApp (_, _, V.NoTail) as c when List.memq c in_tail -> error l "a `notail`-marked call is in tail position"
+      | V.CApp (_, _, V.Same (cl, name)) as c -> warn_at cl [] "same-level call to %s is unmarked; mark it %s" name (if List.memq c in_tail then "`tail`" else "`notail`")
+      | _ -> ())
+    all;
   ( code,
-    match marked [] code with
+    match List.filter (function V.CApp (_, _, (V.Tail | V.Delegate)) -> true | _ -> false) all with
     | [] -> None
     | marks ->
         let delegate = List.exists (function V.CApp (_, _, V.Delegate) -> true | _ -> false) marks in
-        let ok = tails ~direct:delegate code in
+        let ok = if delegate then tails ~direct:true code else in_tail in
         List.iter (fun c -> if not (List.memq c ok) then error l "a %s-marked call is not in tail position" (tick (if delegate then "delegate" else "tail"))) marks;
         if not delegate then None
         else

@@ -13,7 +13,7 @@
   (match unique xs _
     ((UNil _ c) (UNil _))
     ((UCons _ hd tl cell)
-      (let ((unique tl2)) (map-retype tl))
+      (let ((unique tl2)) (notail $ map-retype tl))
       (cell _ (MkTag hd) tl2))))
 
 (def-fns _ $ (many run-retype : -> (many (ULst (Tag)) r))

@@ -25,7 +25,7 @@
         ((MkPair b c name value)
           (WriteOut P
             (str-append (predates str-pa) name (str-append (predates str-pa) "=" (str-append (predates str-pa) value "\n")))
-            (unique-thunk (predates thunk-pa) _ _ (show-vars (subterm _) rest))))))))
+            (unique-thunk (predates thunk-pa) _ _ (notail $ show-vars (subterm _) rest))))))))
 
 (def-unique P $ (unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
   (show-vars (predates pa-p) vars))

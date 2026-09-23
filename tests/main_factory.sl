@@ -10,7 +10,7 @@
   (def-fns L $ (many rep : (subterm many (Nat) n) -> (many (String) t))
     (match many n _
       ((Zero) (SNil))
-      ((Succ k) (str-append (predates sp) p (rep (subterm _) k)))))
+      ((Succ k) (str-append (predates sp) p (notail $ rep (subterm _) k)))))
   (values L rep))
 
 (let ((erased L) (many rep-ab)) (rep-factory "ab"))

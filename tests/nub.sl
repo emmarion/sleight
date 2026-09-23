@@ -17,7 +17,7 @@
   (match many v _
     ((VNil a) (values (Zero) (VNil (Nat)) (LtZ (Zero))))
     ((VCons a n1 y ys)
-      (let ((erased m1) (many w1) (erased p1)) (filter-ne x n1 (subterm (prove-subterm ys v)) ys))
+      (let ((erased m1) (many w1) (erased p1)) (notail $ filter-ne x n1 (subterm (prove-subterm ys v)) ys))
       (match many (lt-dec (predates nf) x y) (((Nat) m) ((Vec (Nat) m) w) ((Lt m (Succ n)) p))
         ((Yes q r lt) (values (Succ m1) (VCons (Nat) m1 y w1) (LtS m1 (Succ n1) p1)))
         ((No q r ge)
@@ -33,7 +33,7 @@
     ((VNil a) (Nil (Nat)))
     ((VCons a n1 y ys)
       (let ((erased m) (many w) (erased p)) (filter-ne (predates fh) y n1 ys))
-      (Cons (Nat) y (nub (subterm (lt-sub (predates lh) n m p)) m w)))))
+      (Cons (Nat) y (notail $ nub (subterm (lt-sub (predates lh) n m p)) m w)))))
 
 (let ((many one)) (Succ (Zero)))
 (let ((many two)) (Succ one))

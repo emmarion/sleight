@@ -7,5 +7,5 @@
 (def-fns X $ (many len : (subterm many (List (Nat)) xs) -> (many (Nat) n))
   (match many xs (((Nat) r))
     ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (len (subterm (prove-subterm tl xs)) tl)))))
+    ((Cons a hd tl) (Succ (notail $ len (subterm (prove-subterm tl xs)) tl)))))
 (len (Cons (Nat) 0 (Nil (Nat))))

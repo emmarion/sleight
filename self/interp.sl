@@ -57,7 +57,7 @@
   (match many xs _
     ((Nil _) (construct _ hp (pctor env "Nil") (Nil _)))
     ((Cons _ x rest)
-      (let ((erased h1) (many hp1) (erased le1) (many tl)) (store-strs env _ hp rest))
+      (let ((erased h1) (many hp1) (erased le1) (many tl)) (notail $ store-strs env _ hp rest))
       (let ((erased h2) (many hp2) (erased le2) (many hd)) (alloc-ext _ hp1 (PStr x)))
       (let ((erased h3) (many hp3) (erased le3) (many v)) (construct _ hp2 (pctor env "Cons") (Cons _ hd (Cons _ (widen-ref _ _ le2 tl) (Nil _)))))
       (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) v))))
@@ -68,7 +68,7 @@
     ((Nil _) (construct _ hp (pctor env "Nil") (Nil _)))
     ((Cons _ x rest)
       (let-match many x (MkPair _ _ n s))
-      (let ((erased h1) (many hp1) (erased le1) (many tl)) (store-pairs env _ hp rest))
+      (let ((erased h1) (many hp1) (erased le1) (many tl)) (notail $ store-pairs env _ hp rest))
       (let ((erased h2) (many hp2) (erased le2) (many nr)) (alloc-ext _ hp1 (PStr n)))
       (let ((erased h3) (many hp3) (erased le3) (many sr)) (alloc-ext _ hp2 (PStr s)))
       (let ((erased h4) (many hp4) (erased le4) (many pr)) (construct _ hp3 (pctor env "MkPair") (Cons _ (widen-ref _ _ le3 nr) (Cons _ sr (Nil _)))))
@@ -152,7 +152,7 @@
     ((Cons _ id rest)
       (match many (and (is-const env id) (at-equal env place (TVar id))) _
         ((BTrue) (const-ref _ en id))
-        ((BFalse) (captured-word env _ en rest place))))))
+        ((BFalse) (tail $ captured-word env _ en rest place))))))
 
 ; The physical result of a final function, or, where its return is promised at an argument or a captured
 ; word, that word (lib/program.ml's adapt_final, self/emit.sl's adapt-final-rope).
@@ -219,7 +219,7 @@
       (let-match many e (MkRqEntry n rq))
       (match many (str-eq name n) _
         ((BTrue) rq)
-        ((BFalse) (request-of rest name))))))
+        ((BFalse) (tail $ request-of rest name))))))
 
 ; ---- The levels of the compiler's own IO program (self/main.sl), and the codes it exits with.
 
@@ -374,7 +374,7 @@
       (match many (classify-final env ty) _
         ((FIo) (interp-io env pargs _ hp en v))
         ((FPlain)
-          (WriteOut _ (str-cat (final-text _ hp v env ty) "\n") (unique-thunk _ _ (interp-finals env pargs _ rest _ hp en le))))
+          (WriteOut _ (str-cat (final-text _ hp v env ty) "\n") (unique-thunk _ _ (notail $ interp-finals env pargs _ rest _ hp en le))))
         ((FThunk t)
           (let ((many rets)) (fn-rets env ty))
           (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk)) (apply eval-fuel _ hp en v (Nil _) (physical-mults rets)))
@@ -383,7 +383,7 @@
           (match many (error-of _ hp1 r) _
             ((Some _ m) (runtime-error m))
             ((None _)
-              (WriteOut _ (str-cat (final-text _ hp1 r env t) "\n") (unique-thunk _ _ (interp-finals env pargs _ rest _ hp1 en1 (hist-le-trans _ _ _ le le1)))))))
+              (WriteOut _ (str-cat (final-text _ hp1 r env t) "\n") (unique-thunk _ _ (notail $ interp-finals env pargs _ rest _ hp1 en1 (hist-le-trans _ _ _ le le1)))))))
         ((FMain)
           (def-unique io-lvl $ (unique k : (many (String) input) -> (unique (IO io-lvl) next))
             (let ((many rets)) (fn-rets env ty))

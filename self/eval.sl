@@ -54,7 +54,7 @@
     ((Cons _ x rest)
       (match many index _
         ((Zero) (Cons _ value rest))
-        ((Succ k) (Cons _ x (replace-field _ rest k value)))))))
+        ((Succ k) (Cons _ x (notail $ replace-field _ rest k value)))))))
 
 (def-fns _ $ (many replace-fields : (erased Type A) (many (List A) fields)
     (subterm many (List $ Nat) indices) (many (List A) elems) -> (many (List A) out))
@@ -63,7 +63,7 @@
     ((Cons _ i rest)
       (match many elems _
         ((Nil _) fields)
-        ((Cons _ v tail2) (replace-fields _ (replace-field _ fields i v) rest tail2))))))
+        ((Cons _ v tail2) (tail $ replace-fields _ (replace-field _ fields i v) rest tail2))))))
 
 (def-adts $ (ArrayView : (Type R) -> Type) enum
   (many MkArrayView : (erased Type R) (many R backing) (many (Nat) offset) (many (Nat) count) -> (ArrayView R)))
@@ -91,16 +91,16 @@
   (match many fields _
     ((Nil _) (Nil _))
     ((Cons _ x rest)
-      (match many count _ ((Zero) (Nil _)) ((Succ k) (Cons _ x (take-fields _ rest k)))))))
+      (match many count _ ((Zero) (Nil _)) ((Succ k) (Cons _ x (notail $ take-fields _ rest k)))))))
 
 (def-fns _ $ (many slice-fields : (erased Type A) (subterm many (List A) fields)
     (many (Nat) offset) (many (Nat) count) -> (many (List A) out))
   (match many offset _
     ((Zero) (take-fields _ fields count))
-    ((Succ k) (match many fields _ ((Nil _) (Nil _)) ((Cons _ _ rest) (slice-fields _ rest k count))))))
+    ((Succ k) (match many fields _ ((Nil _) (Nil _)) ((Cons _ _ rest) (tail $ slice-fields _ rest k count))))))
 
 (def-fns _ $ (many repeat-field : (erased Type A) (subterm many (Nat) n) (many A v) -> (many (List A) fields))
-  (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ v (repeat-field _ k v)))))
+  (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ v (notail $ repeat-field _ k v)))))
 
 (def-fns _ $ (many alloc-array : (erased (Hist Block) hs) (many (Store Block hs) hp)
     (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2)
@@ -314,7 +314,7 @@
           ((BExt _ pp) (match many pp _ ((PStr str) (RStr str)) ((PNat m) (RChar $ char-of-code m)) (else (REmpty))))
           ((BTag _ _ fields)
             (let ((erased fs2) (erased pf)) (refs-widen _ _ _ sf fields))
-            (rope-fields k _ hp (coerce fields pf)))
+            (tail $ rope-fields k _ hp (coerce fields pf)))
           (else (REmpty))))))
   ((many rope-fields : (subterm many (Nat) fuel) (erased (Hist Block) hs)
       (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) fs) -> (many (Rope) rope))
@@ -323,7 +323,7 @@
       ((Cons _ f rest)
         (match many fuel _
           ((Zero) (REmpty))
-          ((Succ k) (RCat (rope-walk k _ hp f) (rope-fields fuel _ hp rest))))))))
+          ((Succ k) (RCat (notail $ rope-walk k _ hp f) (notail $ rope-fields fuel _ hp rest))))))))
 
 (def-fns _ $ (many flatten-value : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) r) -> (many (String) s))
   (let ((many str) (erased p)) $ flatten $ rope-walk 1000000 _ hp r)
@@ -446,7 +446,7 @@
   (match many ms _
     ((Nil _) (values (Nil _) (PkNil _)))
     ((Cons _ m rest)
-      (let ((many r) (erased pk)) $ vals-of _ rest v)
+      (let ((many r) (erased pk)) $ notail $ vals-of _ rest v)
       (match many m _
         ((Many) (values (Cons _ v r) (PkMany _ rest v r pk)))
         ((Once) (values (Cons _ v r) (PkOnce _ rest v r pk)))
@@ -464,18 +464,18 @@
     ((Cons _ m rest)
       (match many m _
         ((Erased)
-          (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ vals-fit _ hp rest vs)
+          (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ tail $ vals-fit _ hp rest vs)
           (values hs2 hp2 le r (PkErased _ rest r pk)))
         ((Many)
           (match many vs _
             ((Nil _)
               (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ "arity mismatch")
-              (let ((erased hs3) (many hp3) (erased le3) (many r) (erased pk)) $ vals-fit _ hp2 rest $ Nil _)
+              (let ((erased hs3) (many hp3) (erased le3) (many r) (erased pk)) $ notail $ vals-fit _ hp2 rest $ Nil _)
               (let ((erased we1) (erased pe1)) (ref-widen _ _ _ le3 e))
               (let ((many e2)) (coerce e pe1))
               (values hs3 hp3 (hist-le-trans _ _ _ sf2 le3) (Cons _ e2 r) (PkMany _ rest e2 r pk)))
             ((Cons _ v vrest)
-              (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ vals-fit _ hp rest vrest)
+              (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ notail $ vals-fit _ hp rest vrest)
               (let ((erased wv1) (erased pv1)) (ref-widen _ _ _ le v))
               (let ((many v2)) (coerce v pv1))
               (values hs2 hp2 le (Cons _ v2 r) (PkMany _ rest v2 r pk)))))
@@ -483,12 +483,12 @@
           (match many vs _
             ((Nil _)
               (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ "arity mismatch")
-              (let ((erased hs3) (many hp3) (erased le3) (many r) (erased pk)) $ vals-fit _ hp2 rest $ Nil _)
+              (let ((erased hs3) (many hp3) (erased le3) (many r) (erased pk)) $ notail $ vals-fit _ hp2 rest $ Nil _)
               (let ((erased we1) (erased pe1)) (ref-widen _ _ _ le3 e))
               (let ((many e2)) (coerce e pe1))
               (values hs3 hp3 (hist-le-trans _ _ _ sf2 le3) (Cons _ e2 r) (PkOnce _ rest e2 r pk)))
             ((Cons _ v vrest)
-              (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ vals-fit _ hp rest vrest)
+              (let ((erased hs2) (many hp2) (erased le) (many r) (erased pk)) $ notail $ vals-fit _ hp rest vrest)
               (let ((erased wv1) (erased pv1)) (ref-widen _ _ _ le v))
               (let ((many v2)) (coerce v pv1))
               (values hs2 hp2 le (Cons _ v2 r) (PkOnce _ rest v2 r pk)))))))))
@@ -507,18 +507,18 @@
       (match many vs _
         ((Nil _)
           (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ "arity mismatch")
-          (let ((erased hs3) (many hp3) (erased le3) (many r) (erased lk)) $ fit-addrs _ hp2 rest $ Nil _)
+          (let ((erased hs3) (many hp3) (erased le3) (many r) (erased lk)) $ notail $ fit-addrs _ hp2 rest $ Nil _)
           (let ((erased we2) (erased pe2)) (ref-widen _ _ _ le3 e))
           (let ((many e2)) (coerce e pe2))
           (values hs3 hp3 (hist-le-trans _ _ _ sf2 le3) (Cons _ e2 r) (LsCons _ _ x e2 rest r lk)))
         ((Cons _ v vrest)
-          (let ((erased hs2) (many hp2) (erased le) (many r) (erased lk)) $ fit-addrs _ hp rest vrest)
+          (let ((erased hs2) (many hp2) (erased le) (many r) (erased lk)) $ notail $ fit-addrs _ hp rest vrest)
           (let ((erased wv2) (erased pv2)) (ref-widen _ _ _ le v))
           (let ((many v2)) (coerce v pv2))
           (values hs2 hp2 le (Cons _ v2 r) (LsCons _ _ x v2 rest r lk)))))))
 
 (def-fns _ $ (many at-index : (erased (Nat) x) (erased (List $ Nat) f) (subterm many (At x f) p) -> (many (Nat) i))
-  (match many p _ ((AtHere _ _) 0) ((AtThere _ _ _ q) (Succ $ at-index _ _ q))))
+  (match many p _ ((AtHere _ _) 0) ((AtThere _ _ _ q) (Succ $ notail $ at-index _ _ q))))
 
 ; A variable's value: from a frame of values by its place, or, in a group's frame, the member's closure
 ; made over the group's block.
@@ -535,13 +535,13 @@
           (values hl2 hp2 sf2 v))))
     ((MThere _ _ _ q)
       (match many env _
-        ((FrVals _ _ _ _ _ rest) (frames-get _ _ q _ hp rest))
-        ((FrGroup _ _ _ _ rest) (frames-get _ _ q _ hp rest))))))
+        ((FrVals _ _ _ _ _ rest) (tail $ frames-get _ _ q _ hp rest))
+        ((FrGroup _ _ _ _ rest) (tail $ frames-get _ _ q _ hp rest))))))
 
 (def-fns _ $ (many has-branch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) -> (many (Bool) r))
   (match many bs _
     ((Nil _) (BFalse))
-    ((Cons _ b rest) (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ has-branch _ _ rest i))))))
+    ((Cons _ b rest) (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ notail $ has-branch _ _ rest i))))))
 
 (def-fns _
   ((many eval : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (St hs ctx) st) ->
@@ -569,12 +569,12 @@
         (let ((erased hl2) (many hp2) (erased sf2) (many a)) $ alloc Block _ hp $ BToken _)
         (let ((many vs) (erased pk)) $ vals-of _ ms2 a)
         (values hl2 hp2 sf2 vs pk))
-      ((CValues _ ms2 cs2 pk) (eval-picked fuel _ hp _ cs2 ms2 pk st))
+      ((CValues _ ms2 cs2 pk) (tail $ eval-picked fuel _ hp _ cs2 ms2 pk st))
       ((CApp _ ms2 f args _)
-        (let ((erased h1) (many hp1) (erased le1) (many fvs) (erased fpk)) $ eval fuel _ hp _ _ f st)
+        (let ((erased h1) (many hp1) (erased le1) (many fvs) (erased fpk)) $ notail $ eval fuel _ hp _ _ f st)
         (let ((many fv0)) $ vals-one _ fvs fpk)
         (let ((erased ws1) (erased ps1)) (st-widen _ _ le1 _ st))
-        (let ((erased h2) (many hp2) (erased le2) (many avs)) $ eval-list fuel _ hp1 _ args (coerce st ps1))
+        (let ((erased h2) (many hp2) (erased le2) (many avs)) $ notail $ eval-list fuel _ hp1 _ args (coerce st ps1))
         (let ((erased wf0) (erased pf0)) (ref-widen _ _ _ le2 fv0))
         (let ((many fv)) (coerce fv0 pf0))
         (match many fuel _
@@ -584,13 +584,13 @@
           ((Succ k)
             (let ((many cs0)) $ st-consts _ _ st)
             (let ((erased wc0) (erased pc0)) (entries-widen _ _ (hist-le-trans _ _ _ le1 le2) cs0))
-            (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ apply k _ hp2 (coerce cs0 pc0) fv avs ms2)
+            (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ tail $ apply k _ hp2 (coerce cs0 pc0) fv avs ms2)
             (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) r rpk))))
       ((CLet _ _ _ ids pk rhs rest)
-        (let ((erased h1) (many hp1) (erased le1) (many vs) (erased vpk)) $ eval fuel _ hp _ _ rhs st)
+        (let ((erased h1) (many hp1) (erased le1) (many vs) (erased vpk)) $ notail $ eval fuel _ hp _ _ rhs st)
         (let ((erased lk)) (picked-lockstep _ _ _ _ _ pk vpk))
         (let ((erased ws2) (erased ps2)) (st-widen _ _ le1 _ st))
-        (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ eval fuel _ hp1 _ _ rest $ st-push _ _ (coerce st ps2) ids vs lk)
+        (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ tail $ eval fuel _ hp1 _ _ rest $ st-push _ _ (coerce st ps2) ids vs lk)
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) r rpk))
       ((CLetRec _ _ _ g rest)
         (match many st _
@@ -601,10 +601,10 @@
                 (let ((erased le1)) sf1)
                 (let ((erased wc1) (erased pc1)) (entries-widen _ _ le1 cs))
                 (let ((erased wn1) (erased pn1)) (frames-widen _ _ le1 _ env))
-                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (coerce cs pc1) (FrGroup _ _ ids ga (coerce env pn1)))
+                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ tail $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (coerce cs pc1) (FrGroup _ _ ids ga (coerce env pn1)))
                 (values h2 hp2 (hist-le-trans _ _ _ le1 le2) r rpk))))))
       ((CMatch _ ns scrut shape branches dfl _)
-        (let ((erased h1) (many hp1) (erased le1) (many svs) (erased spk)) $ eval fuel _ hp _ _ scrut st)
+        (let ((erased h1) (many hp1) (erased le1) (many svs) (erased spk)) $ notail $ eval fuel _ hp _ _ scrut st)
         (let ((many v)) $ vals-one _ svs spk)
         (let ((erased ws3) (erased ps3)) (st-widen _ _ le1 _ st))
         (let ((many st1)) (coerce st ps3))
@@ -613,7 +613,7 @@
             ((ShKnown _ adt) (dispatch _ hp1 (adt-ext adt) (adt-tagged adt) v))
             ((ShNone _) (values h1 hp1 (le-refl h1) $ None _))
             ((ShHeld _ mcode held)
-              (let ((erased h1b) (many hp1b) (erased le1b) (many mvs) (erased mpk)) $ eval fuel _ hp1 _ _ mcode st1)
+              (let ((erased h1b) (many hp1b) (erased le1b) (many mvs) (erased mpk)) $ notail $ eval fuel _ hp1 _ _ mcode st1)
               (let ((many mref)) $ vals-one _ mvs mpk)
               (let ((erased ma) (many mb) (erased mlt)) (store-read Block _ hp1b mref))
               (match many mb (((Hist Block) h) ((Store Block h) p) ((Suffix Block h h1) l) ((Maybe $ Pair (Nat) $ List $ Ref Block h) r))
@@ -632,11 +632,11 @@
               (match many p _
                 ((MkPair _ _ i fields)
                   (match many (has-branch _ _ branches i) _
-                    ((BTrue) (eval-branch fuel _ hp2 _ ns branches i fields st2))
-                    ((BFalse) (match many dfl _ ((Some _ d) (eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (eval-branch fuel _ hp2 _ ns branches i fields st2))))))))
+                    ((BTrue) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2))
+                    ((BFalse) (match many dfl _ ((Some _ d) (tail $ eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2))))))))
             ((None _)
               (match many branches _
-                ((Nil _) (match many dfl _ ((Some _ d) (eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (error-vals _ hp2 ns "no branch"))))
+                ((Nil _) (match many dfl _ ((Some _ d) (tail $ eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (error-vals _ hp2 ns "no branch"))))
                 ((Cons _ br _)
                   (match many br _
                     ((MkBranch _ _ _ ids body)
@@ -644,19 +644,19 @@
                         (match many shape (((Bool) _)) ((ShKnown _ adt) (adt-newtype adt)) ((ShHeld _ _ adt) (adt-newtype adt)) ((ShNone _) (BTrue)))
                         (list-length _ ids) v2)
                       (let ((erased ws5) (erased ps5)) (st-widen _ _ le2b _ st2))
-                      (let ((erased h2c) (many hp2c) (erased le2c) (many r) (erased rpk)) $ eval fuel _ hp2b _ _ body $ st-push _ _ (coerce st2 ps5) ids fs lk)
+                      (let ((erased h2c) (many hp2c) (erased le2c) (many r) (erased rpk)) $ tail $ eval fuel _ hp2b _ _ body $ st-push _ _ (coerce st2 ps5) ids fs lk)
                       (values h2c hp2c (hist-le-trans _ _ _ le2b le2c) r rpk))))))))
         (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) r rpk))
       ((CCellAlloc _ ctor slots)
-        (let ((erased h1) (many hp1) (erased le1) (many fs)) (eval-list fuel _ hp _ slots st))
+        (let ((erased h1) (many hp1) (erased le1) (many fs)) (notail $ eval-list fuel _ hp _ slots st))
         (let ((erased h2) (many hp2) (erased le2) (many v)) (alloc Block _ hp1 (BTag _ ctor fs)))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ v (Nil _)) (PkMany _ _ v (Nil _) (PkNil _))))
       ((CCellWrite _ _ cell slots)
-        (let ((erased h1) (many hp1) (erased le1) (many cvs) (erased cpk)) (eval fuel _ hp _ _ cell st))
+        (let ((erased h1) (many hp1) (erased le1) (many cvs) (erased cpk)) (notail $ eval fuel _ hp _ _ cell st))
         (let ((many cv)) (vals-one _ cvs cpk))
         (let ((erased st1) (erased pst)) (st-widen _ _ le1 _ st))
         (let ((erased h2) (many hp2) (erased le2) (many indices) (many vals))
-          (eval-updates fuel _ hp1 _ slots (coerce st pst)))
+          (notail $ eval-updates fuel _ hp1 _ slots (coerce st pst)))
         (let ((erased cv2) (erased pcv)) (ref-widen _ _ _ le2 cv))
         (let ((many target)) (coerce cv pcv))
         (let ((erased s) (many body) (erased sf)) (store-read Block _ hp2 target))
@@ -670,7 +670,7 @@
             (else (error-vals _ hp2 many-one "not a cell"))))
         (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) vs pk))
       ((CCellRead _ _ index cell)
-        (let ((erased h1) (many hp1) (erased le1) (many cvs) (erased cpk)) (eval fuel _ hp _ _ cell st))
+        (let ((erased h1) (many hp1) (erased le1) (many cvs) (erased cpk)) (notail $ eval fuel _ hp _ _ cell st))
         (let ((many cv)) (vals-one _ cvs cpk))
         (let ((erased s) (many body) (erased sf)) (store-read Block _ hp1 cv))
         (let ((erased (Hist Block) h2) (many (Store Block h2) hp2) (erased (Suffix Block h2 h1) le2)
@@ -693,10 +693,10 @@
     (match many cs _
       ((Nil _) (values hs hp (le-refl hs) $ Nil _))
       ((Cons _ c rest)
-        (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ eval fuel _ hp _ _ c st)
+        (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ notail $ eval fuel _ hp _ _ c st)
         (let ((many vo1)) $ vals-one _ vs1 pk1)
         (let ((erased ws6) (erased ps6)) (st-widen _ _ le1 _ st))
-        (let ((erased h2) (many hp2) (erased le2) (many vs)) $ eval-list fuel _ hp1 _ rest (coerce st ps6))
+        (let ((erased h2) (many hp2) (erased le2) (many vs)) $ notail $ eval-list fuel _ hp1 _ rest (coerce st ps6))
         (let ((erased wo1) (erased po1)) (ref-widen _ _ _ le2 vo1))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) $ Cons _ (coerce vo1 po1) vs))))
 
@@ -708,11 +708,11 @@
       ((Nil _) (values hs hp (le-refl hs) (Nil _) (Nil _)))
       ((Cons _ slot rest)
         (let-match many slot (MkPair x y i code))
-        (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk)) (eval fuel _ hp _ _ code st))
+        (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk)) (notail $ eval fuel _ hp _ _ code st))
         (let ((many v)) (vals-one _ vs pk))
         (let ((erased st1) (erased pst)) (st-widen _ _ le1 _ st))
         (let ((erased h2) (many hp2) (erased le2) (many indices) (many vals))
-          (eval-updates fuel _ hp1 _ rest (coerce st pst)))
+          (notail $ eval-updates fuel _ hp1 _ rest (coerce st pst)))
         (let ((erased v2) (erased pv)) (ref-widen _ _ _ le2 v))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ i indices) (Cons _ (coerce v pv) vals)))))
 
@@ -725,26 +725,26 @@
           ((Many)
             (let-match erased pk (PkMany ta ms2 c0 cs2 p))
             (let-match many cs (Cons b c crest))
-            (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ eval fuel _ hp _ _ c st)
+            (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ notail $ eval fuel _ hp _ _ c st)
             (let ((many vo1)) $ vals-one _ vs1 pk1)
             (let ((erased ws7) (erased ps7)) (st-widen _ _ le1 _ st))
-            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
+            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ notail $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
             (let ((erased wo2) (erased po2)) (ref-widen _ _ _ le2 vo1))
             (let ((many vo)) (coerce vo1 po2))
             (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ vo vs) (PkMany _ rest vo vs rpk)))
           ((Once)
             (let-match erased pk (PkOnce ta ms2 c0 cs2 p))
             (let-match many cs (Cons b c crest))
-            (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ eval fuel _ hp _ _ c st)
+            (let ((erased h1) (many hp1) (erased le1) (many vs1) (erased pk1)) $ notail $ eval fuel _ hp _ _ c st)
             (let ((many vo1)) $ vals-one _ vs1 pk1)
             (let ((erased ws7) (erased ps7)) (st-widen _ _ le1 _ st))
-            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
+            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ notail $ eval-picked fuel _ hp1 _ crest rest p (coerce st ps7))
             (let ((erased wo2) (erased po2)) (ref-widen _ _ _ le2 vo1))
             (let ((many vo)) (coerce vo1 po2))
             (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ vo vs) (PkOnce _ rest vo vs rpk)))
           ((Erased)
             (let-match erased pk (PkErased ta ms2 cs2 p))
-            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ eval-picked fuel _ hp _ cs rest p st)
+            (let ((erased h2) (many hp2) (erased le2) (many vs) (erased rpk)) $ tail $ eval-picked fuel _ hp _ cs rest p st)
             (values h2 hp2 le2 vs (PkErased _ rest vs rpk)))))))
 
   ((many eval-branch : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) (many (List $ Ref Block hs) fields) (many (St hs ctx) st) ->
@@ -758,9 +758,9 @@
               ((CEq _ _ _)
                 (let ((erased h1) (many hp1) (erased le1) (many fs) (erased lk)) $ fit-addrs _ hp ids fields)
                 (let ((erased ws8) (erased ps8)) (st-widen _ _ le1 _ st))
-                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ eval fuel _ hp1 _ _ body $ st-push _ _ (coerce st ps8) ids fs lk)
+                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ tail $ eval fuel _ hp1 _ _ body $ st-push _ _ (coerce st ps8) ids fs lk)
                 (values h2 hp2 (hist-le-trans _ _ _ le1 le2) r rpk))
-              (else (eval-branch fuel _ hp _ ns rest i fields st))))))))
+              (else (tail $ eval-branch fuel _ hp _ ns rest i fields st))))))))
 
   ; A closure is a member of the group at its block: the body runs over the parameters, the group's frame
   ; and the frames the group closed over. A missing member is an error block (ASSUMPTIONS 127). The call
@@ -808,7 +808,7 @@
                                         (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ error-vals _ hp2 ms "arity mismatch")
                                         (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r rpk))
                                       ((Some _ same)
-                                        (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ eval k _ hp2 _ _ body $ MkSt _ _ (coerce cs pc2) env)
+                                        (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ tail $ eval k _ hp2 _ _ body $ MkSt _ _ (coerce cs pc2) env)
                                         (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r (picked-same _ rets ms r same rpk)))))))))))))))))
           (else (error-vals _ hp ms "not a group"))))
       ((BCtorFn _ c)
@@ -832,7 +832,7 @@
     ((Cons _ x rest)
       (let-match erased lk (LsCons ta tb x0 v0 xs vrest0 p))
       (let-match many vs (Cons b v vrest))
-      (set-states _ (entries-set-state _ en x $ SConst _ v) rest vrest p))))
+      (tail $ set-states _ (entries-set-state _ en x $ SConst _ v) rest vrest p))))
 
 (def-fns _ $ (many env-run-final : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Term) ty) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
@@ -848,7 +848,7 @@
       (let ((erased le)) sf2)
       (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
       (let ((erased wg3) (erased pg3)) (ref-widen _ _ _ le g))
-      (close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 rest (coerce g pg3) $ Succ i))))
+      (tail $ close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 rest (coerce g pg3) $ Succ i))))
 
 ; A run-position def-fns: the group's block over no frames, then a closure block per member.
 (def-fns _ $ (many env-close-group : (many (Env) e) (erased (List $ Nat) gids) (many (Group gids (Nil (List (Nat)))) g) -> (many (Env) r))
@@ -872,13 +872,13 @@
       (let ((many (List $ Ref Block hs) vrest)) $ match many m _ ((Erased) vs) ((Many) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr)))
         ((Once) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr))))
       (match many have _
-        ((Some _ v) (set-field-states _ hp (entries-set-state _ en x $ SConst _ v) fi rest mrest vrest))
+        ((Some _ v) (tail $ set-field-states _ hp (entries-set-state _ en x $ SConst _ v) fi rest mrest vrest))
         ((None _)
           (let ((erased hl2) (many hp2) (erased sf2) (many t)) $ alloc Block _ hp filler)
           (let ((erased le)) sf2)
           (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
           (let ((erased wr1) (erased pr1)) (refs-widen _ _ _ le vrest))
-          (set-field-states _ hp2 (entries-set-state _ en2 x $ SConst _ t) fi2 rest mrest (coerce vrest pr1)))))))
+          (tail $ set-field-states _ hp2 (entries-set-state _ en2 x $ SConst _ t) fi2 rest mrest (coerce vrest pr1)))))))
 
 (def-fns _ $ (many env-run-let : (many (Env) e) (many (List $ Mult) ms) (many (Code (Nil (List (Nat))) ms) code) (many (List $ Nat) ids) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
@@ -930,4 +930,4 @@
 (def-fns _ $ (many env-set-tokens : (many (Env) e) (subterm many (List $ Nat) ids) -> (many (Env) r))
   (match many ids _
     ((Nil _) e)
-    ((Cons _ x rest) (env-set-tokens (set-state-closed e x $ BToken _) rest))))
+    ((Cons _ x rest) (tail $ env-set-tokens (set-state-closed e x $ BToken _) rest))))

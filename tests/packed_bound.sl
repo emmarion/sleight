@@ -22,7 +22,7 @@
     ((Nil a) x)
     ((Cons a p rest)
       (match many p _
-        ((Pack l q f) (f (predates (predates-trans q k0k)) (run-all (subterm (prove-subterm rest ps)) rest x)))))))
+        ((Pack l q f) (f (predates (predates-trans q k0k)) (notail $ run-all (subterm (prove-subterm rest ps)) rest x)))))))
 
 (def-lvl Z)
 (let ((erased kz)) (prove-predates K Z))

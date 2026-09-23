@@ -24,7 +24,7 @@
         (absurd PlusZ)
         ((PlusS a2 b c q)
           (let ((erased sp)) (prove-subterm xs2 xs))
-          (VCons A c x (vappend A n2 m c q (subterm sp) xs2 ys)))))))
+          (VCons A c x (notail $ vappend A n2 m c q (subterm sp) xs2 ys)))))))
 
 (let ((many one)) (Succ (Zero)))
 (let ((many two)) (Succ one))

@@ -12,7 +12,7 @@
     ((SCons ch rest)
       (let-match many ch (MkChar byte))
       (let-match many byte (MkU8 n bound))
-      (Cons (Nat) n (man-test-nats rest)))))
+      (Cons (Nat) n (notail $ man-test-nats rest)))))
 
 (def-fns _ $ (many man-test-length : (many (String) s) -> (many (Nat) n))
   (let ((many xs)) (man-test-nats s))

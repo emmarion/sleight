@@ -12,7 +12,7 @@
     ((No x y q)
       (let ((erased lt1)) (match erased q (((Lt d1 n) l)) (absurd LtZ) ((LtS a b p1) p1)))
       (let ((many r0) (erased sp)) (sub-pos (predates sg) n d1 lt1))
-      (gcd-mod (subterm sp) r0 d1))))
+      (tail $ gcd-mod (subterm sp) r0 d1))))
 
 (def-lvl H)
 (let ((erased gh)) (prove-predates G H))
@@ -22,6 +22,6 @@
     ((Zero) a)
     ((Succ b1)
       (let ((many r) (erased p)) (gcd-mod (predates gh) a b1))
-      (gcd b (subterm (lt-sub (predates lh) b r p)) r))))
+      (tail $ gcd b (subterm (lt-sub (predates lh) b r p)) r))))
 
 (gcd 12 18)

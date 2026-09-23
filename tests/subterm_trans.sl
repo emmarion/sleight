@@ -12,6 +12,6 @@
         ((Nil b) (Zero))
         ((Cons b hd2 tl2)
           (let ((erased q)) (prove-subterm tl2 tl))
-          (Succ (pairs A (subterm (subterm-trans q p)) tl2)))))))
+          (Succ (notail $ pairs A (subterm (subterm-trans q p)) tl2)))))))
 
 (pairs (Nat) (Cons (Nat) (Zero) $ Cons (Nat) (Zero) $ Cons (Nat) (Zero) $ Nil (Nat)))

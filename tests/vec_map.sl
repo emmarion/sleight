@@ -13,6 +13,6 @@
     ((VNil a) (VNil (Nat)))
     ((VCons a m x xs)
       (let ((erased q)) (prove-subterm xs v))
-      (VCons (Nat) m (inc (predates p) x) (vmap m (subterm q) xs)))))
+      (VCons (Nat) m (inc (predates p) x) (notail $ vmap m (subterm q) xs)))))
 
 (vmap (Succ (Zero)) (VCons (Nat) (Zero) (Zero) (VNil (Nat))))

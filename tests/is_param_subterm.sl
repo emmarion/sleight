@@ -8,5 +8,5 @@
     ((Zero) m)
     ((Succ k)
       (let ((erased p)) (prove-subterm n m))
-      (count k (subterm p) n))))
+      (tail $ count k (subterm p) n))))
 (count (Succ (Zero)) (Succ (Succ (Zero))))

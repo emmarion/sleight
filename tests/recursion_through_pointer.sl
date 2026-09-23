@@ -12,6 +12,6 @@
     ((Pack f)
       (match many xs _
         ((Nil a) (Zero))
-        ((Cons a hd tl) (Succ (f q (subterm (prove-subterm tl xs)) tl)))))))
+        ((Cons a hd tl) (Succ (notail $ f q (subterm (prove-subterm tl xs)) tl)))))))
 
 (g (Pack g) (Cons (Nat) 0 (Cons (Nat) 0 (Cons (Nat) 0 (Nil (Nat))))))

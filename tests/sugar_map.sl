@@ -16,7 +16,7 @@
     (match many xs _
       ((Nil a) (Nil B))
       ((Cons a hd tl)
-        (Cons B (f (predates _) hd) $ map A B f (subterm _) tl))))
+        (Cons B (f (predates _) hd) $ notail $ map A B f (subterm _) tl))))
   (values (level-of map) map))
 
 (def-fns _ $ (many inc : (many (Nat) n) -> (many (Nat) m))

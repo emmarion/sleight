@@ -25,7 +25,7 @@
 (def-fns PA $ (many list-args : (subterm many (List (String)) args) -> (unique (IO P) next))
   (match many args _
     ((Nil a) (Exit P code0))
-    ((Cons a x rest) (WriteErr P (str-append (predates str-pa) x "\n") (unique-thunk (predates thunk-pa) _ _ (list-args (subterm _) rest))))))
+    ((Cons a x rest) (WriteErr P (str-append (predates str-pa) x "\n") (unique-thunk (predates thunk-pa) _ _ (notail $ list-args (subterm _) rest))))))
 
 (def-unique P $ (unique all-args : (many (List (String)) args) -> (unique (IO P) next))
   (list-args (predates pa-p) args))

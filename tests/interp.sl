@@ -5,12 +5,12 @@
 (def-fns _ $ (many plus : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (match many a _
     ((Zero) b)
-    ((Succ k) (Succ (plus (subterm _) k b)))))
+    ((Succ k) (Succ (notail $ plus (subterm _) k b)))))
 
 (def-fns _ $ (many times : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (match many a _
     ((Zero) (Zero))
-    ((Succ k) (plus (predates _) b (times (subterm _) k b)))))
+    ((Succ k) (plus (predates _) b (notail $ times (subterm _) k b)))))
 
 (def-adts $ (Expr : -> Type)
   enum
@@ -23,8 +23,8 @@
   (match many e _
     ((Lit n) n)
     ((Var0) x)
-    ((EAdd a b) (plus (predates _) (eval (subterm _) a x) (eval (subterm _) b x)))
-    ((EMul a b) (times (predates _) (eval (subterm _) a x) (eval (subterm _) b x)))))
+    ((EAdd a b) (plus (predates _) (notail $ eval (subterm _) a x) (notail $ eval (subterm _) b x)))
+    ((EMul a b) (times (predates _) (notail $ eval (subterm _) a x) (notail $ eval (subterm _) b x)))))
 
 (let ((many two)) (Succ (Succ (Zero))))
 (eval (EAdd (EMul (Var0) (Var0)) (Lit (Succ (Zero)))) two)

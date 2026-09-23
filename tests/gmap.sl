@@ -23,7 +23,7 @@
   (open-adt many m)
   (match many xs (((F B) r))
     ((NilC a) (NilC B))
-    ((ConsC a hd tl) (ConsC B (f (predates mg) hd) (gmap F NilC ConsC m A B f (subterm (prove-subterm tl xs)) tl)))))
+    ((ConsC a hd tl) (ConsC B (f (predates mg) hd) (notail $ gmap F NilC ConsC m A B f (subterm (prove-subterm tl xs)) tl)))))
 
 (let ((many ys)) (gmap List Nil Cons (matchable-of List) (Nat) (Nat) inc (Cons (Nat) (Zero) (Nil (Nat)))))
 (gmap Seq QNil QCons (matchable-of Seq) (Nat) (Nat) inc (QCons (Nat) (Zero) (QNil (Nat))))

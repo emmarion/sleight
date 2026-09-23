@@ -7,7 +7,7 @@
 (def-fns R $ (many rev-onto : (subterm many (String) s) (many (String) acc) -> (many (String) t))
   (match many s _
     ((SNil) acc)
-    ((SCons c rest) (rev-onto (subterm _) rest (SCons c acc)))))
+    ((SCons c rest) (tail $ rev-onto (subterm _) rest (SCons c acc)))))
 
 (def-lvl M)
 (let ((erased rev-m)) (prove-predates R M))

@@ -11,12 +11,12 @@
 (def-fns B $ (many count : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
     ((Nil a) (Zero))
-    ((Cons a hd tl) (inc (count X tl)))))
+    ((Cons a hd tl) (inc (notail $ count X tl)))))
 
 (def-fns B $ (many count-again : (erased Type X) (subterm many (List X) xs) -> (many (Nat) n))
   (match many xs _
     ((Nil a) (Zero))
-    ((Cons a hd tl) (inc (predates _) (count-again X (subterm _) tl)))))
+    ((Cons a hd tl) (inc (predates _) (notail $ count-again X (subterm _) tl)))))
 
 (let ((many xs)) (Cons (Nat) 1 (Cons (Nat) 2 (Cons (Nat) 3 (Nil (Nat))))))
 (match many (count (Nat) xs) (((Nat) r))

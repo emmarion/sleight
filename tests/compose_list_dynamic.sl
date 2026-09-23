@@ -16,7 +16,7 @@
       (def-fns N $ (many id : (many (Nat) x) -> (many (Nat) y)) x)
       (values N id))
     ((Cons a f rest)
-      (let ((erased L1) (many g1)) (compose-all (subterm (prove-subterm rest fs)) rest))
+      (let ((erased L1) (many g1)) (notail $ compose-all (subterm (prove-subterm rest fs)) rest))
       (def-lvl N)
       (let ((erased p1)) (prove-predates L1 N))
       (let ((erased pm)) (prove-predates M N))

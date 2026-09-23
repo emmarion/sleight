@@ -14,6 +14,6 @@
     ((SZero) (Zero))
     ((SSucc k t)
       (let ((erased p)) (prove-subterm k n))
-      (Succ (Succ (twice (subterm p) k t))))))
+      (Succ (Succ (notail $ twice (subterm p) k t))))))
 
 (twice (Succ (Zero)) (SSucc (Zero) (SZero)))

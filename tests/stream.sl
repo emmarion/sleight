@@ -19,5 +19,5 @@
     ((Zero) (Nil (Nat)))
     ((Succ n1)
       (match many s _
-        ((MkS h rest) (Cons (Nat) h (take (subterm (prove-subterm n1 n)) n1 (rest (predates kt)))))))))
+        ((MkS h rest) (Cons (Nat) h (notail $ take (subterm (prove-subterm n1 n)) n1 (rest (predates kt)))))))))
 (take 3 (nats-from (Zero)))

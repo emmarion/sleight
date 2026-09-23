@@ -163,6 +163,18 @@ as DESIGN.md section 31's worked example and names `Cons`'s field `tail` as
 section 31 does, and `tests/shadow_false_capture.sl`, whose subject is a
 declaration hidden by a later one.
 
+A same-level call (section 9) in a non-erased position that carries none of
+`tail`, `notail` and `delegate` warns, naming the mark that fits where it
+stands, `` same-level call to `f` is unmarked; mark it `notail` ``: its
+recursion is what can grow the stack with the input. `notail` is the mark
+that says a call is meant not to be a tail call, and is a hard error on one
+that is, as `tail` is on one that is not; all three are hard errors in an
+erased position. Both compilers read the call's position off the same
+post-erasure code the `tail` check reads (`Elab.check_marks`, `check-marks`
+in `self/elab.sl`), and the repository marks every such call, written
+`(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
+the warning is tested on.
+
 ## How it runs a program
 
 The reader turns the file into s-expressions. The elaborator walks

@@ -17,7 +17,7 @@
     ((Nil a) (Zero))
     ((Cons a x rest)
       (let-match many xs (Cons b y ys))
-      (Succ (lm-length ys)))))
+      (Succ (notail $ lm-length ys)))))
 (def-fns _ $ (many refinement-main : -> (many (Nat) n))
   (let ((erased p)) (lm-lt (Zero) (Succ (Zero)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))))
   (lm-head (Nat) (Zero) (LMCons (Nat) (Zero) 5 (LMNil (Nat)))))

@@ -13,7 +13,7 @@
 (def-fns C $ (many leaves : (subterm many (Tree) t) -> (many (Nat) n))
   (match many t _
     ((Leaf) (Succ (Zero)))
-    ((Node l r) (nat-add (predates nc) (leaves (subterm _) l) (leaves (subterm _) r)))))
+    ((Node l r) (nat-add (predates nc) (notail $ leaves (subterm _) l) (notail $ leaves (subterm _) r)))))
 
 (let ((many t1)) (Node (Leaf) (Leaf)))
 (let ((many t2)) (Node t1 t1))

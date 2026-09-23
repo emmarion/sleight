@@ -14,7 +14,7 @@
         ((Zero) (values n1 (prove-subterm n1 n)))
         ((Succ d1)
           (let ((erased lt1)) (match erased lt (((Lt d1 n1) q)) (absurd LtZ) ((LtS a b p1) p1)))
-          (let ((many r) (erased p)) (sub-pos (subterm _) n1 d1 lt1))
+          (let ((many r) (erased p)) (tail $ sub-pos (subterm _) n1 d1 lt1))
           (values r (subterm-trans p (prove-subterm n1 n))))))))
 
 (def-lvl Q)
@@ -24,7 +24,7 @@
   (match many (lt-dec (predates nq) d1 n) _
     ((Yes a b lt)
       (let ((many r) (erased p)) (sub-pos (predates sq) n d1 lt))
-      (Succ (slow-div (subterm p) r d1)))
+      (Succ (notail $ slow-div (subterm p) r d1)))
     ((No a b q) (Zero))))
 
 (slow-div 7 1)

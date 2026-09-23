@@ -27,7 +27,7 @@
     ((BZ) (NoPred))
     ((B2 b) (YesPred _ (B1 b) (BS1 b)))
     ((B1 c0)
-      (match many (bin-pred c0) (((Pred c) r))
+      (match many (notail $ bin-pred c0) (((Pred c) r))
         ((NoPred) (YesPred _ (BZ) (BSZ)))
         ((YesPred cc b0 s0) (YesPred _ (B2 b0) (BS2 b0 c0 s0)))))))
 

@@ -11,7 +11,7 @@
   (match many a _
     ((Zero) (values b (PlusZero b)))
     ((Succ k)
-      (let ((many c) (erased q)) (plus (subterm _) k b))
+      (let ((many c) (erased q)) (notail $ plus (subterm _) k b))
       (values (Succ c) (PlusSucc k b c q)))))
 
 (let ((many two)) (Succ (Succ (Zero))))

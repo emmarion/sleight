@@ -8,7 +8,7 @@
     ((Zero) (Succ n))
     ((Succ m1)
       (match many n _
-        ((Zero) (ack m1 (Succ (Zero))))
-        ((Succ n1) (ack m1 (ack m n1)))))))
+        ((Zero) (tail $ ack m1 (Succ (Zero))))
+        ((Succ n1) (tail $ ack m1 (notail $ ack m n1)))))))
 
 (ack 2 3)

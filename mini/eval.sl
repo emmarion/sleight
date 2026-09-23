@@ -60,7 +60,7 @@
               ((EnvMiss a b) (EvalStuck _ _))
               ((EnvHit a b v p) (MkEvaled _ _ (Cons _ v (Nil _)) $ EvVar env x v p))))
           ((CApp h args)
-            (match many (eval f env h) _
+            (match many (notail $ eval f env h) _
               ((EvalStuck a b) (EvalStuck _ _))
               ((MkEvaled a b hv p)
                 (match many hv _
@@ -69,14 +69,14 @@
                       ((Nil e)
                         (match many v _
                           ((VAtom ctor)
-                            (match many (eval-list f env args) _
+                            (match many (notail $ eval-list f env args) _
                               ((EvalListStuck a2 b2) (EvalStuck _ _))
                               ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ (Cons _ (VCon ctor vals) (Nil _)) $ EvApp env h args ctor vals p q))))
                           (else (EvalStuck _ _))))
                       (else (EvalStuck _ _))))
                   ((Nil d) (EvalStuck _ _))))))
           ((CCall fn args)
-            (match many (eval f env fn) _
+            (match many (notail $ eval f env fn) _
               ((EvalStuck a b) (EvalStuck _ _))
               ((MkEvaled a b fv p)
                 (match many fv _
@@ -87,14 +87,14 @@
                           ((VClo cenv group def)
                             (match many def _
                               ((MkFnDef id ps body)
-                                (match many (eval-list f env args) _
+                                (match many (notail $ eval-list f env args) _
                                   ((EvalListStuck a2 b2) (EvalStuck _ _))
                                   ((MkEvaledList a2 b2 vals q)
                                     (let ((many env1) (erased g)) (bind-group cenv group group cenv))
                                     (match many (bind-all env1 ps vals) _
                                       ((BDStuck a3 b3 c3) (EvalStuck _ _))
                                       ((BDOk a3 b3 c3 env2 bd)
-                                        (match many (eval f env2 body) _
+                                        (match many (notail $ eval f env2 body) _
                                           ((EvalStuck a4 b4) (EvalStuck _ _))
                                           ((MkEvaled a4 b4 outs r)
                                             (MkEvaled _ _ outs $ EvCall env fn args cenv group id ps body vals env1 env2 outs p q g bd r))))))))))
@@ -102,7 +102,7 @@
                       (else (EvalStuck _ _))))
                   ((Nil d) (EvalStuck _ _))))))
           ((CMatch s bs)
-            (match many (eval f env s) _
+            (match many (notail $ eval f env s) _
               ((EvalStuck a b) (EvalStuck _ _))
               ((MkEvaled a b sv p)
                 (match many sv _
@@ -117,23 +117,23 @@
                                 (match many (bind-all env ids fields) _
                                   ((BDStuck a3 b3 c3) (EvalStuck _ _))
                                   ((BDOk a3 b3 c3 env1 bd)
-                                    (match many (eval f env1 body) _
+                                    (match many (notail $ eval f env1 body) _
                                       ((EvalStuck a4 b4) (EvalStuck _ _))
                                       ((MkEvaled a4 b4 outs r) (MkEvaled _ _ outs $ EvMatch env s bs ctor fields ids body env1 outs p br bd r))))))))
                           (else (EvalStuck _ _))))
                       (else (EvalStuck _ _))))
                   ((Nil d) (EvalStuck _ _))))))
           ((CValues items)
-            (match many (eval-list f env items) _
+            (match many (notail $ eval-list f env items) _
               ((EvalListStuck a2 b2) (EvalStuck _ _))
               ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ vals $ EvValues env items vals q))))
           ((CFormer t) (MkEvaled _ _ (Cons _ (VFormer t env) (Nil _)) $ EvFormer env t))
           ((CToken) (MkEvaled _ _ (Cons _ (VToken) (Nil _)) $ EvToken env))
           ((CStmt s rest)
-            (match many (eval-stmt f env s) _
+            (match many (notail $ eval-stmt f env s) _
               ((EvalStmtStuck a b) (EvalStuck _ _))
               ((MkEvaledStmt a b env1 p)
-                (match many (eval f env1 rest) _
+                (match many (notail $ eval f env1 rest) _
                   ((EvalStuck a2 b2) (EvalStuck _ _))
                   ((MkEvaled a2 b2 outs q) (MkEvaled _ _ outs $ EvStmt env s rest env1 outs p q))))))))))
   ((many eval-list : (subterm many (Nat) fuel) (many (Env) env) (many (List (Core)) cs) -> (many (EvaledList env cs) r))
@@ -143,14 +143,14 @@
         (match many cs _
           ((Nil a) (MkEvaledList _ _ (Nil _) $ EvLNil env))
           ((Cons a c rest)
-            (match many (eval f env c) _
+            (match many (notail $ eval f env c) _
               ((EvalStuck a1 b1) (EvalListStuck _ _))
               ((MkEvaled a1 b1 vs p)
                 (match many vs _
                   ((Cons d v vrest)
                     (match many vrest _
                       ((Nil e)
-                        (match many (eval-list f env rest) _
+                        (match many (notail $ eval-list f env rest) _
                           ((EvalListStuck a2 b2) (EvalListStuck _ _))
                           ((MkEvaledList a2 b2 vals q) (MkEvaledList _ _ (Cons _ v vals) $ EvLCons env c v rest vals p q))))
                       (else (EvalListStuck _ _))))
@@ -161,7 +161,7 @@
       ((Succ f)
         (match many s _
           ((SLet ids rhs)
-            (match many (eval f env rhs) _
+            (match many (notail $ eval f env rhs) _
               ((EvalStuck a1 b1) (EvalStmtStuck _ _))
               ((MkEvaled a1 b1 vals p)
                 (match many (bind-all env ids vals) _

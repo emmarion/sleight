@@ -9,5 +9,5 @@
   (open-adt erased m)
   (match many xs (((Nat) r))
     ((Nil a) (Zero))
-    ((Cons a hd tl) (Succ (len m (subterm (prove-subterm tl xs)) tl)))))
+    ((Cons a hd tl) (Succ (notail $ len m (subterm (prove-subterm tl xs)) tl)))))
 (len (matchable-of List) (Cons (Nat) 0 (Nil (Nat))))

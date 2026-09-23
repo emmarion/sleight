@@ -86,7 +86,7 @@
 (def-fns _ $ (many list-len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p))
   (match many xs _
     ((Nil a) (values (Zero) (LenNil _)))
-    ((Cons a x rest) (let ((many n) (erased p)) (list-len _ rest)) (values (Succ n) (LenCons _ x rest n p)))))
+    ((Cons a x rest) (let ((many n) (erased p)) (notail $ list-len _ rest)) (values (Succ n) (LenCons _ x rest n p)))))
 (def-fns _ $ (erased layout-length : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (subterm erased (Layout A xs r n) p) -> (erased (Length (Maybe A) xs n) q))
   (match erased p _
     ((LayNil a) (LenNil _))
@@ -131,7 +131,7 @@
       (match many i _
         ((Zero) (NthHit _ _ _ y $ NthHere _ y rest))
         ((Succ j)
-          (match many (nth-dec _ rest j) _
+          (match many (notail $ nth-dec _ rest j) _
             ((NthHit b l k x p) (NthHit _ _ _ x $ NthThere _ y rest j x p))
             ((NthMiss b l k p) (NthMiss _ _ _ $ NoNthCons _ y rest j p))))))))
 

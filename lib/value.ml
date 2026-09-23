@@ -2,7 +2,8 @@ open Term
 
 module IntMap = Map.Make (Int)
 
-type cc = Plain | Tail | Delegate | Ctor
+(* [Same]: a same-level call in a non-erased position carrying no mark, where the tail-position check warns. *)
+type cc = Plain | Tail | Delegate | NoTail | Ctor | Same of Reader.loc * string
 
 (* [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom ones, each
    at its discriminant; [ext]: the FFI's implementation (section 41), its values then [VExt] payloads. *)

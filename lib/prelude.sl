@@ -147,7 +147,7 @@
   (match many n _
     ((Zero) (HZ))
     ((Succ k)
-      (match many (nat-halve k) _
+      (match many (notail $ nat-halve k) _
         ((HZ) (H1 (Zero) (Zero) (D0)))
         ((H1 m d dd) (H2 m d dd))
         ((H2 m d dd) (H1 (Succ m) (Succ (Succ d)) (DS m d dd)))))))
@@ -156,7 +156,7 @@
   (match many a _
     ((Zero) (values b (AddZero b)))
     ((Succ k)
-      (let ((many c) (erased q)) (add k b))
+      (let ((many c) (erased q)) (notail $ add k b))
       (values (Succ c) (AddSucc k b c q)))))
 
 (def-fns _ $ (erased lt-succ : (subterm erased (Nat) a) -> (erased (Lt a (Succ a)) p))
@@ -179,7 +179,7 @@
       (match many b _
         ((Zero) (CGt (Nat) Lt a b (LtZ a1)))
         ((Succ b1)
-          (match many (nat-cmp a1 b1) _
+          (match many (notail $ nat-cmp a1 b1) _
             ((CLt t r x y p) (CLt (Nat) Lt a b (LtS a1 b1 p)))
             ((CEq t r x) (CEq (Nat) Lt a))
             ((CGt t r x y q) (CGt (Nat) Lt a b (LtS b1 a1 q)))))))))
@@ -200,7 +200,7 @@
   (match many a _
     ((Zero) (values (Zero) (MulZero b)))
     ((Succ a1)
-      (let ((many c1) (erased m)) (mul a1 b))
+      (let ((many c1) (erased m)) (notail $ mul a1 b))
       (let ((many c) (erased q)) (add b c1))
       (values c (MulSucc a1 b c1 c m (add-comm b c1 c q))))))
 
@@ -212,7 +212,7 @@
         ((Zero) (match erased le _ (absurd LtZ) ((LtS x y l1) (match erased l1 _ (absurd LtZ) (absurd LtS)))))
         ((Succ a1)
           (let ((erased le1)) (match erased le (((Lt b1 (Succ a1)) l)) (absurd LtZ) ((LtS x y l1) l1)))
-          (let ((many c) (erased q)) (sub a1 b1 le1))
+          (let ((many c) (erased q)) (tail $ sub a1 b1 le1))
           (values c (AddSucc b1 c a1 q)))))))
 
 (def-fns _ $ (many succ-div : (many (Nat) q) (many (Nat) r) (many (Nat) c) (erased (Nat) m) (erased (Nat) s)
@@ -228,7 +228,7 @@
   (match many s _
     ((Zero) (values (Zero) (Zero) (Zero) (MulZero c) (AddZero (Zero)) pos))
     ((Succ s1)
-      (let ((many q1) (many r1) (erased m1) (erased mm1) (erased a1) (erased p1)) (divmod s1 c pos))
+      (let ((many q1) (many r1) (erased m1) (erased mm1) (erased a1) (erased p1)) (notail $ divmod s1 c pos))
       (succ-div q1 r1 c m1 s1 mm1 a1 p1))))
 
 (def-fns _ $ (many extern div : (many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
@@ -317,14 +317,14 @@
   (match many s _
     ((Zero) (values (Zero) pos (ModLt (Zero) c pos)))
     ((Succ s1)
-      (let ((many r1) (erased p1) (erased q1)) (nat-mod s1 c pos))
+      (let ((many r1) (erased p1) (erased q1)) (notail $ nat-mod s1 c pos))
       (succ-mod r1 c s1 p1 q1))))
 
 (def-fns _ $ (many pow2 : (subterm many (Nat) k) -> (many (Nat) v) (erased (Pow2 k v) p) (erased (Lt (Zero) v) q))
   (match many k _
     ((Zero) (values (Succ (Zero)) (P0) (LtZ (Zero))))
     ((Succ k1)
-      (let ((many v) (erased p) (erased q)) (pow2 k1))
+      (let ((many v) (erased p) (erased q)) (notail $ pow2 k1))
       (let ((many w) (erased d)) (double v))
       (values w (PS k1 v w p d) (double-pos v w q d)))))
 
@@ -375,11 +375,11 @@
   (match many b _
     ((BZ) (values (Zero) (NZ)))
     ((B1 b1)
-      (let ((many m) (erased v1)) (bin-to-nat b1))
+      (let ((many m) (erased v1)) (notail $ bin-to-nat b1))
       (let ((many d) (erased dd)) (double m))
       (values (Succ d) (N1 b1 m d v1 dd)))
     ((B2 b1)
-      (let ((many m) (erased v1)) (bin-to-nat b1))
+      (let ((many m) (erased v1)) (notail $ bin-to-nat b1))
       (let ((many d) (erased dd)) (double m))
       (values (Succ (Succ d)) (N2 b1 m d v1 dd)))))
 
@@ -617,7 +617,7 @@
   (match many a _
     ((SNil) (values b (AppNil b)))
     ((SCons ch rest)
-      (let ((many c) (erased q)) (append rest b))
+      (let ((many c) (erased q)) (notail $ append rest b))
       (values (SCons ch c) (AppCons ch rest b c q)))))
 
 (def-lvl str-lvl)
@@ -646,7 +646,7 @@
           (match many (char-cmp c d) _
             ((CLt ct cr cx cy p) (CLt _ _ a b $ SLtHead c d s t p))
             ((CEq ct cr cx)
-              (match many (str-cmp s t) _
+              (match many (notail $ str-cmp s t) _
                 ((CLt st sr sx sy q) (CLt _ _ a b $ SLtTail c s t q))
                 ((CEq st sr sx) (CEq _ _ a))
                 ((CGt st sr sx sy q) (CGt _ _ a b $ SLtTail c t s q))))
@@ -662,7 +662,7 @@
   (match many s _
     ((SNil) (values (Zero) (SLenNil)))
     ((SCons c rest)
-      (let ((many n) (erased p)) (str-length rest))
+      (let ((many n) (erased p)) (notail $ str-length rest))
       (values (Succ n) (SLenCons c rest n p)))))
 
 (def-fns _ $ (many extern str-split : (many (String) s) (subterm many (Nat) k) (erased (Nat) len) (erased (StrLength s len) l) (erased (Lt k (Succ len)) le) ->
@@ -677,7 +677,7 @@
             ((SLenCons c0 s0 len1 l1)
               (match erased le _
                 ((LtS x y q)
-                  (let ((many a1) (many b) (erased p) (erased la1)) (str-split rest k1 len1 l1 q))
+                  (let ((many a1) (many b) (erased p) (erased la1)) (notail $ str-split rest k1 len1 l1 q))
                   (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))))))))))
 
 (def-adts $ (Rope : -> Type)
@@ -701,8 +701,8 @@
     ((REmpty) (values (SNil) (FlatEmpty)))
     ((RStr s) (values s (FlatStr s)))
     ((RCat a b)
-      (let ((many s1) (erased p)) (flatten a))
-      (let ((many s2) (erased q)) (flatten b))
+      (let ((many s1) (erased p)) (notail $ flatten a))
+      (let ((many s2) (erased q)) (notail $ flatten b))
       (let ((many s) (erased ap)) (append s1 s2))
       (values s (FlatCat a b s1 s2 s p q ap)))
     ((RChar c) (values (SCons c (SNil)) (FlatChar c)))))
@@ -726,7 +726,7 @@
     ((Succ n1)
       (let ((many q) (many d) (erased m) (erased mm) (erased a) (erased p)) (divmod n ten ten-positive))
       (let ((erased lt)) (divmod-lt n1 ten q d m mm a ten-above-one))
-      (nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))))
+      (tail $ nat-digits (subterm (lt-subterm q n lt)) q $ RCat (RChar $ digit-char d) acc))))
 
 (def-fns _ $ (many extern nat-str : (subterm many (Nat) n) -> (many (String) s))
   (match many n _
@@ -855,7 +855,7 @@
   (match many n _
     ((Zero) (values (ANil _) (AUNil _)))
     ((Succ n1)
-      (let ((unique tl) (erased q)) (array-new A n1))
+      (let ((unique tl) (erased q)) (notail $ array-new A n1))
       (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)

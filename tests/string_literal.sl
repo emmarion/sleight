@@ -4,7 +4,7 @@
 (def-fns _ $ (many len : (subterm many (String) s) -> (many (Nat) n))
   (match many s _
     ((SNil) (Zero))
-    ((SCons c rest) (Succ (len (subterm _) rest)))))
+    ((SCons c rest) (Succ (notail $ len (subterm _) rest)))))
 
 (let ((many s)) "a\"")
 (comptime-match many s (SCons c rest))

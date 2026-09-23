@@ -52,7 +52,7 @@
           (match many (nat-dec x y) _
             ((NDSame z) (EntHit _ _ ty2 k2 $ EntHere x ty2 k2 rest))
             ((NDDiff z w n)
-              (match many (ent-dec rest x) _
+              (match many (notail $ ent-dec rest x) _
                 ((EntHit l z2 ty k p) (EntHit _ _ ty k $ EntThere x y ty ty2 k k2 rest n p))
                 ((EntMiss l z2 p) (EntMiss _ _ $ NoEntCons x y ty2 k2 rest n p))))))))))
 
@@ -85,11 +85,11 @@
           (match many (str-cmp s s2) _
             ((CEq t r z) (NameHit _ _ y $ NameHere s y rest))
             ((CLt t r z w p)
-              (match many (name-dec rest s) _
+              (match many (notail $ name-dec rest s) _
                 ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqLt s s2 p) q))
                 ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqLt s s2 p) q))))
             ((CGt t r z w p)
-              (match many (name-dec rest s) _
+              (match many (notail $ name-dec rest s) _
                 ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqGt s s2 p) q))
                 ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqGt s s2 p) q))))))))))
 
@@ -120,7 +120,7 @@
           (match many (nat-dec t t2) _
             ((NDSame z) (AdtHit _ _ ctors2 $ AdtHere t ctors2 rest))
             ((NDDiff z w n)
-              (match many (adt-dec rest t) _
+              (match many (notail $ adt-dec rest t) _
                 ((AdtHit l z2 ctors p) (AdtHit _ _ ctors $ AdtThere t t2 ctors ctors2 rest n p))
                 ((AdtMiss l z2 p) (AdtMiss _ _ $ NoAdtCons t t2 ctors2 rest n p))))))))))
 
@@ -558,7 +558,7 @@
       (match many ys _
         ((Nil b) (LenDiff _ _ _ _ (LMConsNil _ _ x xs2)))
         ((Cons b y ys2)
-          (match many (len-dec _ _ xs2 ys2) _
+          (match many (notail $ len-dec _ _ xs2 ys2) _
             ((LenSame c d e f p) (LenSame _ _ _ _ (LECons _ _ x y xs2 ys2 p)))
             ((LenDiff c d e f p) (LenDiff _ _ _ _ (LMCons _ _ x y xs2 ys2 p)))))))))
 (def-fns _ $ (erased ext-trans : (erased (Nat) n0) (erased (Nat) n1) (erased (List (Ent)) e0) (erased (List (Ent)) e1) (erased (List (Ent)) e2) (erased (Lt n0 (Succ n1)) le) (erased (Ext n0 e0 e1) p)

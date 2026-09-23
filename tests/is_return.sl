@@ -15,6 +15,6 @@
     ((SZero) (Zero))
     ((SSucc k t)
       (let ((erased p)) (prove-subterm t s))
-      (Succ (reify k (subterm p) t)))))
+      (Succ (notail $ reify k (subterm p) t)))))
 
 (reify (Succ (Zero)) (SSucc (Zero) (SZero)))

@@ -24,6 +24,6 @@
       (match many p _
         ((Pack l f)
           (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))
-          (f (predates (predates-subterm pq sl)) (run-all (subterm sr) rest (predates-subterm pq sr) x)))))))
+          (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))))))
 
 (run-all ps pk 3)

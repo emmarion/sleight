@@ -54,7 +54,7 @@
   (match many es _
     ((Nil a) after)
     ((Cons a e rest)
-      (WriteOut P (str-append (predates str-pa) e "\n") (unique-thunk (predates thunk-pa) _ _ (show-entries (subterm _) rest after))))))
+      (WriteOut P (str-append (predates str-pa) e "\n") (unique-thunk (predates thunk-pa) _ _ (notail $ show-entries (subterm _) rest after))))))
 
 (def-unique P $ (unique listed : (many (Result (List (String))) r) -> (unique (IO P) next))
   (match many r _

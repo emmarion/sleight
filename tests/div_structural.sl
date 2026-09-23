@@ -8,8 +8,8 @@
     ((Zero) k)
     ((Succ n1)
       (match many j _
-        ((Zero) (div-helper (Succ k) m (subterm _) n1 m))
-        ((Succ j1) (div-helper k m (subterm _) n1 j1))))))
+        ((Zero) (tail $ div-helper (Succ k) m (subterm _) n1 m))
+        ((Succ j1) (tail $ div-helper k m (subterm _) n1 j1))))))
 
 (def-lvl E)
 (let ((erased de)) (prove-predates D E))

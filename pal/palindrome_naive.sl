@@ -18,7 +18,7 @@
   (match many xs _
     ((Nil a) (values (Zero) (PalLNil _)))
     ((Cons a x rest)
-      (let ((many n) (erased p)) (pal-length rest))
+      (let ((many n) (erased p)) (notail $ pal-length rest))
       (values (Succ n) (PalLCons _ x _ _ p)))))
 
 ; Remove the last element of a nonempty list. The length certificate
@@ -40,7 +40,7 @@
         ((Cons _ _ _)
           (let-match erased plen (PalLCons c z tail2 k2 plen2))
           (let ((many inner) (many last) (erased ilen) (erased cat))
-            (pal-unsnoc rest k2 plen))
+            (notail $ pal-unsnoc rest k2 plen))
           (values (Cons _ x inner) last
             (PalLCons _ x _ _ ilen)
             (PalCatCons _ x _ _ _ cat)))))))
@@ -71,7 +71,7 @@
             ((CGt t r v w gt)
               (PalNo xs (NotPalEnds x last _ _ cat (ApartGt _ _ gt))))
             ((CEq t r v)
-              (match many (pal-decide k2 inner ilen) _
+              (match many (notail $ pal-decide k2 inner ilen) _
                 ((PalYes w p) (PalYes xs (PalWrap _ x _ _ p cat)))
                 ((PalNo w p) (PalNo xs (NotPalInner x _ _ cat p)))))))))))
 
@@ -94,7 +94,7 @@
       (match many xs _
         ((Nil a) (PalShort n xs (Zero) (PalLNil _) (LtZ k)))
         ((Cons a x rest)
-          (match many (pal-take k rest) _
+          (match many (notail $ pal-take k rest) _
             ((PalTaken m _ w tk len)
               (PalTaken n xs (Cons _ x w)
                 (TakeSucc _ _ x _ _ tk) (PalLCons _ x _ _ len)))
@@ -127,7 +127,7 @@
           (values (Nil _) (WinStop _ _ xs len p short)
             (PalAbsent (Nil _) (AllNil _ NotPalindrome))))
         ((PalTaken m _ w tk len)
-          (let ((erased ws) (erased wins) (many result)) (pal-windows k rest))
+          (let ((erased ws) (erased wins) (many result)) (notail $ pal-windows k rest))
           (let ((erased xss)) (Cons _ w ws))
           (let ((erased windows)) (WinStep _ _ x rest w tk ws wins))
           (values xss windows
@@ -172,7 +172,7 @@
       (match many decision _
         ((PalFound vs found) (values n (IsLongest xs n ws wins found above)))
         ((PalAbsent vs absent)
-          (pal-search xs k (NoLargerStep xs k (NoPal xs n ws wins absent) above)))))))
+          (tail $ pal-search xs k (NoLargerStep xs k (NoPal xs n ws wins absent) above)))))))
 
 (def-fns _ $ (many longest-palindrome : (many (List (Nat)) xs) ->
     (many (Nat) n) (erased (LongestPalindrome xs n) correct))

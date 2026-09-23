@@ -23,7 +23,7 @@
     ((Nil a) (Zero))
     ((Cons a hd tl)
       (let ((erased p)) (prove-subterm tl xs))
-      (Succ $ length A (subterm p) tl))))
+      (Succ $ notail $ length A (subterm p) tl))))
 
 (let ((many list-xs)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 

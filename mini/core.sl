@@ -60,7 +60,7 @@
       (match many (nat-dec x y) _
         ((NDSame z) (EnvHit _ _ w $ EnvHere x w rest))
         ((NDDiff z u n)
-          (match many (env-dec rest x) _
+          (match many (notail $ env-dec rest x) _
             ((EnvHit e z2 v p) (EnvHit _ _ v $ EnvThere x y v w rest n p))
             ((EnvMiss e z2) (EnvMiss _ _))))))))
 
@@ -83,7 +83,7 @@
       (match many vs _
         ((Nil b) (BDStuck _ _ _))
         ((Cons b v vrest)
-          (match many (bind-all (ECons x v env) rest vrest) _
+          (match many (notail $ bind-all (ECons x v env) rest vrest) _
             ((BDStuck c d e) (BDStuck _ _ _))
             ((BDOk c d e out p) (BDOk _ _ _ out $ BACons env x v rest vrest out p))))))))
 
@@ -103,7 +103,7 @@
     ((Cons a def rest)
       (match many def _
         ((MkFnDef id ps body)
-          (let ((many out) (erased p)) (bind-group cenv group rest (ECons id (VClo cenv group (MkFnDef id ps body)) env)))
+          (let ((many out) (erased p)) (tail $ bind-group cenv group rest (ECons id (VClo cenv group (MkFnDef id ps body)) env)))
           (values out (BGCons cenv group id ps body rest env out p)))))))
 
 (def-adts
@@ -117,7 +117,7 @@
   (match many ids _
     ((Nil a) (values env (BTNil env)))
     ((Cons a x rest)
-      (let ((many out) (erased p)) (bind-atoms (ECons x (VAtom x) env) rest))
+      (let ((many out) (erased p)) (tail $ bind-atoms (ECons x (VAtom x) env) rest))
       (values out (BTCons env x rest out p)))))
 
 ; The branch a constructor selects.
@@ -141,7 +141,7 @@
           (match many (nat-dec c d) _
             ((NDSame z) (BrHit _ _ fields2 body2 $ BrHere c fields2 body2 rest))
             ((NDDiff z w n)
-              (match many (branch-dec rest c) _
+              (match many (notail $ branch-dec rest c) _
                 ((BrHit l z2 fields body p) (BrHit _ _ fields body $ BrThere c d fields fields2 body body2 rest n p))
                 ((BrMiss l z2) (BrMiss _ _))))))))))
 
