@@ -164,7 +164,16 @@ let opens_ruled env v =
   { env with opens = { opened; touched = touched @ env.opens.touched } }
 
 let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts } x
-let show env t = to_string (name_of env) (canon env t)
+(* A literal reads as written: its canonical form, the anonymous entry a numeral or string is or a
+   character's constructor application, is shown by its spelling. *)
+let show env t =
+  let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with `Lit lit -> Some (canon env (Var x), x, Literal.spell lit) | _ -> None) env.literals in
+  let rec spelled t = match List.find_opt (fun (c, _, _) -> equal c t) lits with
+    | Some (_, x, _) -> Var x
+    | None -> (match t with App (h, args) -> App (spelled h, List.map spelled args) | _ -> map_vars (fun _ v -> spelled_leaf v) 0 t)
+  and spelled_leaf v = match List.find_opt (fun (c, _, _) -> equal c v) lits with Some (_, x, _) -> Var x | None -> v in
+  let name x = match List.find_opt (fun (_, y, _) -> y = x) lits with Some (_, _, s) -> s | None -> name_of env x in
+  to_string name (spelled (canon env t))
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"

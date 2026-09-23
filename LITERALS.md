@@ -53,11 +53,16 @@ the FFI's payload as the value.
 - A character literal is transparent down to its opaque `Nat`: the
   hoisted `let` forwards `is (MkChar (MkU8 n p))`, `n` the code's
   numeral entry.
-- A match or `let-match` refused for a branch left standing, when its
-  scrutinee or the scrutinee's type holds a numeral or character
-  literal, carries a note naming those literals, as written, with
-  `unary`, `distinct` and `numeral-of`; a numeral that is a named
-  character's code is left out, the character standing for it.
+- To the unifier a literal is an atom, so a check fails where one
+  meets a `Succ` shape or another literal, and forcing a branch binds
+  one where a contradiction was wanted. Either refusal carries a note
+  per literal involved, as written and with the term it sits in,
+  suggesting `unary`, `distinct` and `numeral-of`: for a check, the
+  literals where the two canonical sides first differ; for a branch left
+  standing, the literals whose canonical form the forcing trial changed,
+  and those they were bound to. A numeral that is a named character's
+  code is left out, the character standing for it. A literal prints as
+  written in any message.
 - A string literal is opaque: a `Const` `String` with no rule, in
   both compilers. `comptime-match` reads its value; a match inside a
   function walks the runtime slice. A rule exposing its characters
@@ -76,9 +81,9 @@ output.
 
 ## Where the code is
 
-`lib/literal.ml`, `Elab.hoist`, `Elab.elab_unary`, `Elab.elab_distinct`, `Elab.literal_notes`
+`lib/literal.ml`, `Elab.hoist`, `Elab.elab_unary`, `Elab.elab_distinct`, `Elab.literal_notes`, `Env.show`
 and the `NumeralOf` form in `lib/elab.ml`; `classify`, `intern`,
-`intern-string`, `record-literal`, `lit-lookup` and `noted-error` in `self/elab.sl`;
+`intern-string`, `record-literal`, `lit-lookup`, `literal-notes` and `show-t` in `self/elab.sl`;
 `lit_char` and `lit_string` in `lib/ffi_core.ml`; the prelude's `Nat`,
 `Bin`, `Numeral`, `bin-to-nat`, `U8`, `Char`, `String` and the
 `Numeral` lemmas.

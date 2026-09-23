@@ -83,9 +83,49 @@ let named env loc what raw =
 
 let tyname env loc = named env loc "a type constructor"
 
+let rec is_strict_subterm a b =
+  match b with App (_, args) -> List.exists (fun x -> equal a x || is_strict_subterm a x) args | _ -> false
+
+(* A literal is an atom to the unifier (LITERALS.md): checking fails where one meets a Succ shape or another
+   literal, and forcing binds one where a contradiction was wanted. The notes name each literal [hit] picks out
+   among the numeral and character literals, by its canonical form, a character standing for its code, and the
+   first of [within] it sits in. *)
+let literal_notes env l ~within hit =
+  let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
+    | `Lit ((Literal.Numeral _ | Literal.Char _) as lit) -> Some (lit, canon env (Var x))
+    | _ -> None) env.literals in
+  let hits = List.filter (fun (_, t) -> hit t) lits in
+  let code_of_char t = List.exists (function (Literal.Char _, ct) -> is_strict_subterm t ct | _ -> false) hits in
+  let hits = List.sort_uniq compare (List.filter (function (Literal.Numeral _, t) -> not (code_of_char t) | _ -> true) hits) in
+  let note (lit, t) =
+    let place = List.find_opt (fun c -> is_strict_subterm t (canon env c)) within in
+    let kind, opaque = match lit with Literal.Char _ -> ("character", "whose code is opaque") | _ -> ("numeral", "opaque") in
+    (l, Printf.sprintf "%s%s is a %s literal, %s to the checker; consider `unary`, `distinct` or `numeral-of`"
+          (Literal.spell lit) (match place with Some c -> " in " ^ qshow env c | None -> "") kind opaque)
+  in
+  List.map note hits
+
+(* Where two canonical terms part: the pairs of subterms at which they first differ. *)
+let rec differ a b =
+  match (a, b) with
+  | _ when equal a b -> []
+  | App (h, xs), App (h', ys) when equal h h' && List.length xs = List.length ys -> List.concat (List.map2 differ xs ys)
+  | _ -> [ (a, b) ]
+
 (* Identity after canonicalization (section 5), solving any metas either side holds (Env.unify). *)
 let solve what env loc actual expected =
-  try unify env actual expected with Contradiction _ -> error loc "%s mismatch: expected %s, got %s" what (qshow env expected) (qshow env actual)
+  try unify env actual expected
+  with Contradiction _ ->
+    let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
+    let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
+    let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
+    error_with loc notes "%s mismatch: expected %s, got %s" what (qshow env expected) (qshow env actual)
+
+(* The literals a forcing trial bound, which is what leaves a branch standing that a literal index was meant
+   to refute: those whose canonical form the trial changed, and any literal one was bound to. *)
+let forced_notes env l r trial =
+  let bound = List.filter_map (fun (_, (x, _)) -> let t = canon env (Var x) in if equal (canon trial t) t then None else Some (canon trial t)) env.literals in
+  literal_notes env l ~within:[ r.ty; r.term ] (fun t -> List.exists (equal (canon trial t)) bound)
 
 let check what env loc actual expected = ignore (solve what env loc actual expected)
 let check_type = check "type" and check_equal = check "value"
@@ -191,26 +231,6 @@ let expect_proof env loc ctor p =
   | App (Var c, args) when c = ctor -> args
   | ty -> error loc "expected a %s proof, got %s : %s" (qname env ctor) (qshow env p) (qshow env ty)
 
-let rec is_strict_subterm a b =
-  match b with App (_, args) -> List.exists (fun x -> equal a x || is_strict_subterm a x) args | _ -> false
-
-(* A branch left standing may turn on a literal, which the checker sees no further than a numeral (LITERALS.md):
-   the note names the numerals and characters the scrutinee or its type holds, a numeral that is a named
-   character's code left out, and the forms that reason about them (SUGAR.md 5). *)
-let literal_notes env l r =
-  let within lt = List.exists (fun t -> let t = canon env t in equal lt t || is_strict_subterm lt t) [ r.term; r.ty ] in
-  let found = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
-    | `Lit ((Literal.Numeral _ | Literal.Char _) as lit) when within (canon env (Var x)) -> Some (lit, canon env (Var x))
-    | _ -> None) env.literals in
-  let code_of_char t = List.exists (function (Literal.Char _, ct) -> is_strict_subterm t ct | _ -> false) found in
-  let found = List.sort_uniq compare (List.filter_map (function (Literal.Numeral _, t) when code_of_char t -> None | (lit, _) -> Some lit) found) in
-  let rec listed = function [ a; b ] -> a ^ " and " ^ b | x :: rest when rest <> [] -> x ^ ", " ^ listed rest | xs -> String.concat "" xs in
-  let kind = match List.sort_uniq compare (List.map (function Literal.Char _ -> "character " | _ -> "numeral ") found) with [ k ] -> k | _ -> "" in
-  if found = [] then []
-  else
-    [ (l, Printf.sprintf "%s %s %sliteral%s, %s to the checker: `(unary a)` gives a literal its `Succ` shape, `(distinct a b)` refutes a branch that equates two different literals, and `(numeral-of a)` gives a literal's `Numeral` proof"
-            (listed (List.map Literal.spell found)) (if List.length found = 1 then "is a" else "are") kind (if List.length found = 1 then "" else "s")
-            (match kind with "numeral " -> "opaque" | "character " -> "whose code is opaque" | _ -> "opaque, a character's through its code,")) ]
 
 type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string; s_place : raw option }
 
@@ -1149,7 +1169,7 @@ and elab_match ?(demand = Fixed) tele env expect l args =
         let result =
           match (kind, forced) with
           | `Auto, None -> `Absurd
-          | `Auto, Some _ -> error_with bl (literal_notes env bl sres) "branch %s is not refuted" (qname env c)
+          | `Auto, Some trial -> error_with bl (forced_notes env bl sres trial) "branch %s is not refuted" (qname env c)
           | _, None -> error bl "branch %s is refuted; write `(absurd %s)`" (qname env c) (name_of env c)
           | `Present, Some envb ->
               let envb = { envb with usage_erased = envb.usage_erased || unreachable } in
@@ -1159,13 +1179,13 @@ and elab_match ?(demand = Fixed) tele env expect l args =
               `Present (bind_cell scode cell code)
           | `Proof, Some envb -> ignore (elab_absurd envb bl body); `Absurd
         in
-        (c, non_erased envb fids, unreachable, result)
+        (c, non_erased envb fids, unreachable, result, forced)
       in
       let elses, branches = List.partition (function List (_, a :: _) when is_special env a Sp.Else -> true | _ -> false) branches in
       let branches = List.map branch branches in
       List.iter
         (fun (_, c) ->
-          match List.length (List.filter (fun (c', _, _, _) -> Var c' = c) branches) with
+          match List.length (List.filter (fun (c', _, _, _, _) -> Var c' = c) branches) with
           | 0 | 1 -> ()
           | n -> error l "constructor %s has %d branches" (qshow env c) n)
         ctors;
@@ -1173,17 +1193,17 @@ and elab_match ?(demand = Fixed) tele env expect l args =
         List.filter_map
           (fun (_, c) ->
             let c = match c with Var c -> c | _ -> assert false in
-            if List.exists (fun (c', _, _, _) -> c' = c) branches then None
+            if List.exists (fun (c', _, _, _, _) -> c' = c) branches then None
             else
               let phantom, _, _, forced = enter l c anon (List.map (fun _ -> Reader.nowhere)) in
-              if Option.is_none forced then None else Some (c, phantom && smult <> Erased))
+              Option.map (fun trial -> (c, phantom && smult <> Erased, trial)) forced)
           ctors
       in
-      let reachable = List.filter_map (fun (c, unreachable) -> if unreachable then None else Some c) covered in
+      let reachable = List.filter_map (fun (c, unreachable, _) -> if unreachable then None else Some c) covered in
       let else_ =
         match elses with
         | [] ->
-            (match covered with [] -> () | (c, _) :: _ -> error_with l (literal_notes env l sres) "constructor %s has 0 branches" (qname env c));
+            (match covered with [] -> () | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has 0 branches" (qname env c));
             None
         | [ List (el, _ :: body) ] ->
             if covered = [] then error el "`else` covers no constructor";
@@ -1202,10 +1222,11 @@ and elab_match ?(demand = Fixed) tele env expect l args =
         | _ -> error l "a match has at most one `else` branch"
       in
       let real =
-        List.filter_map (fun (c, fids, unreachable, r) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
+        List.filter_map (fun (c, fids, unreachable, r, _) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
       if pos <> Erased && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
-        error_with l (literal_notes env l sres) "a match without a runtime discriminant can have only one real branch";
+        error_with l (List.sort_uniq compare (List.concat_map (function (_, _, false, `Present _, Some trial) -> forced_notes env l sres trial | _ -> []) branches))
+          "a match without a runtime discriminant can have only one real branch";
       let code =
         match (real, else_) with
         | _ when pos = Erased -> V.CErased
@@ -1443,9 +1464,10 @@ and elab_let_match spos env l args =
             let tele, ret = ctor_type env l other in
             let mults = List.map (fun e -> if cmult = Erased then Erased else field_under smult e.mult) tele in
             let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
-            let possible = try ignore (at l (fun () -> refine trial sres other fids ret)); true with Contradiction _ -> false in
-            if possible then
-              error_with l (literal_notes env l sres) "constructor %s is not refuted, so %s needs an ordinary `match`" (qname env other) (qname env tid)))
+            match try Some (at l (fun () -> refine trial sres other fids ret)) with Contradiction _ -> None with
+            | Some trial ->
+              error_with l (forced_notes env l sres trial) "constructor %s is not refuted, so %s needs an ordinary `match`" (qname env other) (qname env tid)
+            | None -> ()))
         ctors;
       let tele, ret = ctor_type env pl c in
       let fields, name = split_cell_pattern env pl (smult = Unique && cells_allowed env mid) fields in

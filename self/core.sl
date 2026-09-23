@@ -2021,6 +2021,11 @@
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
       (many (List $ Nat) words) (many (List $ Nat) temporary) -> (UniqueState))))
+; An interned literal: its entry, its Numeral proof where it has one, and the spelling it reads back as.
+(def-adts $ (LitEntry : -> Type)
+  enum
+  (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) -> (LitEntry)))
+
 (let ((many unique-empty)) (MkUniqueState (MEmpty _) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _)))
 
 (def-adts
@@ -2030,7 +2035,7 @@
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals) (many (List $ String) errors)
        (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ String) warnings)
-       (many (List $ Pair (Nat) $ Maybe $ Nat) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (UniqueState) us) -> (Env)))
+       (many (List $ LitEntry) lits) (many (Loc) loc) (many (NameMap $ Nat) prelude) (many (UniqueState) us) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
@@ -2147,7 +2152,7 @@
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ cl _ _ _ _ _) cl)))
 (def-fns _ $ (many env-warnings : (many (Env) e) -> (many (List $ String) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _) wa)))
-(def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ Pair (Nat) $ Maybe $ Nat) r))
+(def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _) lt)))
 (def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi er _ _ cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb (BFalse) ob li fi er (Some _ level) subterms cl wa lt lo pr us))))
@@ -2170,8 +2175,8 @@
   (match many xs _
     ((Nil _) e)
     ((Cons _ x rest) (tail $ env-warn-all (env-warn e x) rest))))
-(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa (Cons _ (MkPair _ _ x proof) lt) lo pr us))))
+(def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa (Cons _ (MkLitEntry x proof spelling) lt) lo pr us))))
 (def-fns _ $ (many env-set-scope : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp _ en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp x en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us))))
 (def-fns _ $ (many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) x) -> (many (Env) r))
@@ -2399,6 +2404,16 @@
           ((Miss _ _ _ _) (MkEInfo _ (None _) (Erased) (SDyn _) (BTrue) (BFalse) (None _)))
           ((Hit _ _ _ i _) (match many i (((EInfo hs) _)) ((MkEInfo _ n m s _ me site) (MkEInfo _ n m s (BTrue) me site))))))
       (MkEnv _ hp sc (idmap-set _ x info en) _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us))))
+
+; An entry given a name for display only, the scope untouched.
+(def-fns _ $ (many env-name-entry : (many (Env) e) (many (Nat) x) (many (String) n) -> (many (Env) r))
+  (match many e _
+    ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us)
+      (match many (idmap-get _ x en) _
+        ((Miss _ _ _ _) e)
+        ((Hit _ _ _ i _)
+          (match many i _
+            ((MkEInfo _ _ m s mi me site) (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ (Some _ n) m s mi me site) en) _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us))))))))
 
 (def-fns _ $ (many name-of : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
