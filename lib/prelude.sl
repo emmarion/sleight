@@ -1,5 +1,11 @@
 ; The source prelude (DESIGN.md section 41), elaborated ahead of every program. Its extern-marked
 ; definitions are the models the FFI's implementations in ffi.ml stand in for.
+;
+; The reference does not read this file at run time: lib/dune embeds it into the OCaml build as
+; Prelude_source, so an edit here needs a rebuild. slc does not embed it: it is slc's first file on the
+; command line (self/bootstrap.sh). Both compilers also name some of its definitions in their own source --
+; the literal types, the IO driver's types, the lemmas unary and distinct expand to, and the externs
+; lib/ffi.ml and lib/ffi_templates.txt implement -- so renaming one here means renaming it there too.
 
 (def-adts $ (Nat : -> Type)
   enum extern
