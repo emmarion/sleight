@@ -120,6 +120,7 @@ let claim_fn loc name n =
       List.iter
         (fun t -> match Hashtbl.find_opt adts t with Some adt -> check_shape loc t adt | None -> Env.error loc "the extern implementation of %s needs %s declared before it" (Env.tick name) (Env.tick t))
         spec.needs;
+      (try Ffi_templates.check_fn name n with Failure m -> Env.error loc "%s" m);
       bind loc name;
       spec.run
 

@@ -2,7 +2,7 @@
 
 type hole = Scrut | Body of int | Field of int * int | Arg of int | Temp of int
 type piece = Lit of string | Hole of hole
-type key = Match of string | Build of string * int
+type key = Match of string | Build of string * int | Fn of string
 
 let hole h =
   let n = String.length h in
@@ -45,12 +45,23 @@ let table =
              match String.split_on_char ' ' (String.sub line 0 i) with
              | [ "match"; t ] -> Match t
              | [ "build"; t; n ] -> Build (t, int_of_string n)
+             | [ "fn"; f ] -> Fn f
              | _ -> failwith ("malformed template line: " ^ line)
            in
            Some (key, pieces (String.trim (String.sub line (i + 1) (String.length line - i - 1)))))
        (String.split_on_char '\n' Ffi_templates_source.source))
 
 let find key = List.assoc_opt key (Lazy.force table)
+
+let reads what noun n ps =
+  let count h = List.length (List.filter (( = ) (Hole h)) ps) in
+  for j = 0 to n - 1 do if count (Arg j) = 0 then Printf.ksprintf failwith "%s must read {a%d}" what j done;
+  List.iter
+    (function
+      | Hole (Arg j) when j >= n -> Printf.ksprintf failwith "%s reads {a%d}, beyond its %s" what j noun
+      | Hole (Scrut | Body _ | Field _) -> Printf.ksprintf failwith "%s takes only {a} and {t} holes" what
+      | _ -> ())
+    ps
 
 (* Against the shape [ns], the many-field arities of the type's constructors: a match fills each body and
    each field binder exactly once and no hole beyond the shape; a build reads each argument. *)
@@ -73,19 +84,9 @@ let check name ns =
            | Hole (Arg _) -> err "the match template for %s takes no {a} hole" name
            | _ -> ())
          ps);
-  List.iteri
-    (fun i n ->
-      match find (Build (name, i)) with
-      | None -> ()
-      | Some ps ->
-          for j = 0 to n - 1 do if count (Arg j) ps = 0 then err "the build template for %s %d must read {a%d}" name i j done;
-          List.iter
-            (function
-              | Hole (Arg j) -> if j >= n then err "the build template for %s %d reads {a%d}, beyond its fields" name i j
-              | Hole (Scrut | Body _ | Field _) -> err "the build template for %s %d takes only {a} and {t} holes" name i
-              | _ -> ())
-            ps)
-    ns
+  List.iteri (fun i n -> Option.iter (reads (Printf.sprintf "the build template for %s %d" name i) "fields" n) (find (Build (name, i)))) ns
+
+let check_fn name n = Option.iter (reads ("the template for " ^ name) "arguments" n) (find (Fn name))
 
 let fill ps ~scrut ~temp ~field ~body ~arg =
   String.concat ""

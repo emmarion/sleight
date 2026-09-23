@@ -85,6 +85,8 @@ let one_pattern cx n es =
 
 let one_block cx es = Printf.sprintf "(Obj.repr (%s))" (one_pattern cx (List.length es) es)
 
+let fill_args ps n arg = Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg
+
 let build cx c es =
   match shape c.V.adt with
   | Ext name -> (
@@ -94,7 +96,7 @@ let build cx c es =
           let n = stamp cx in
           let args = List.mapi (fun i e -> if Ffi_templates.is_name e then (e, None) else (Printf.sprintf "x%d_a%d" n i, Some e)) es in
           let binds = List.filter_map (fun (x, e) -> Option.map (fun e -> x ^ " = " ^ e) e) args in
-          let text = Ffi_templates.fill ps ~scrut:(fun () -> assert false) ~temp:(Printf.sprintf "x%d_t%d" n) ~field:(fun _ _ -> assert false) ~body:(fun _ -> assert false) ~arg:(fun i -> fst (List.nth args i)) in
+          let text = fill_args ps n (fun i -> fst (List.nth args i)) in
           if binds = [] then "(" ^ text ^ ")" else Printf.sprintf "(let %s in %s)" (concat " and " binds) text)
   | Tagged _ -> Printf.sprintf "(Obj.repr (%s))" (pattern cx c es)
   | Untagged _ -> tuple es
@@ -260,15 +262,16 @@ and define cx x v =
 and fn cx scope name f =
   let body =
     match f.V.impl with
-    | Some _ when !V.use_externs ->
-        let extra = if f.fname = "flatten" then
-          let a = (Program.ctor cx.env "REmpty").V.adt in
-          let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
-          "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else if f.fname = "array-new" then "~blank:(Obj.repr ()) " else "" in
-        let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
-        if List.mem f.fname [ "nat-cmp"; "u62-cmp"; "str-cmp" ] then
-          "(match " ^ call ^ " with " ^ concat " | " (List.map (fun n -> "Ffi_core." ^ n ^ " -> " ^ build cx (Program.ctor cx.env n) []) ["CLt";"CEq";"CGt"]) ^ ")"
-        else "(Obj.repr (" ^ call ^ "))"
+    | Some _ when !V.use_externs -> (
+        match template (Ffi_templates.Fn f.fname) with
+        | Some ps -> "(" ^ fill_args ps (stamp cx) (fun i -> var (List.nth f.params i)) ^ ")"
+        | None ->
+            let extra = if f.fname = "flatten" then
+              let a = (Program.ctor cx.env "REmpty").V.adt in
+              let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
+              "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else if f.fname = "array-new" then "~blank:(Obj.repr ()) " else "" in
+            let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
+            "(Obj.repr (" ^ call ^ "))")
     | _ -> expr cx scope f.body
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body

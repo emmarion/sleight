@@ -59,17 +59,19 @@ let sub = Z.sub
 let mul = Z.mul
 let div = Z.div
 let divmod = Z.div_rem
-let nat_cmp a b = if Z.lt a b then CLt else if Z.equal a b then CEq else CGt
+let order c = if c < 0 then CLt else if c = 0 then CEq else CGt
+let nat_cmp a b = order (Z.compare a b)
 let nat_mod = Z.rem
 let nat_halve n = n
-let u62 f (a : Z.t) (b : Z.t) : Z.t = Obj.magic (f (Obj.magic a : int) (Obj.magic b : int) : int)
+let small (a : Z.t) : int = Obj.magic a
+let u62 f a b : Z.t = Obj.magic (f (small a) (small b) : int)
 let u62_add = u62 ( + )
 let u62_sub = u62 ( - )
 let u62_mul = u62 ( * )
 let u62_div = u62 ( / )
 let u62_mod = u62 ( mod )
 let u62_divmod a b = (u62_div a b, u62_mod a b)
-let u62_cmp (a : Z.t) (b : Z.t) = match compare (Obj.magic a : int) (Obj.magic b : int) with 0 -> CEq | c when c < 0 -> CLt | _ -> CGt
+let u62_cmp a b = order (compare (small a) (small b))
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
   let n = min l1 l2 in
@@ -122,10 +124,10 @@ let array_new ~blank n =
   (Array.make length blank, 0, length)
 
 let array_swap (a, offset, _) i x =
-  let index = offset + Z.to_int i in
+  let index = offset + small i in
   let old = Array.unsafe_get a index in
   Array.unsafe_set a index x;
   old
 
-let array_pluck (a, offset, _) i = Array.unsafe_get a (offset + Z.to_int i)
-let array_place (a, offset, _) i x = Array.unsafe_set a (offset + Z.to_int i) x
+let array_pluck (a, offset, _) i = Array.unsafe_get a (offset + small i)
+let array_place (a, offset, _) i x = Array.unsafe_set a (offset + small i) x
