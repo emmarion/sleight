@@ -488,7 +488,15 @@ and elab_type_form env l sp args =
         | raw -> error (loc raw) "expected a constructor marker" in
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), List.map ctor cs))
   | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "malformed %s" (tick (Sp.name sp))
+  | Sp.DumpContext, _ -> dump_context env l Dump.Type args
   | _ -> error l "%s cannot appear in a type" (tick (Sp.name sp))
+
+(* The form's arguments are terms in section 5's grammar, each shown with its type where it has one. *)
+and dump_context : 'a. Env.t -> Reader.loc -> Dump.goal -> Reader.raw list -> 'a = fun env l goal args ->
+  let env, focus = List.fold_left_map (fun env raw ->
+    let env, t = elab_term env raw in
+    (env, (Reader.show raw, t, try Some (infer env l t) with Error _ -> None))) env args in
+  Dump.report ~show_value env l goal focus
 
 and elab_fn_type ?(unique = false) env lv ps rs =
   let env, ids, params = elab_tele env ~subterm:true ps in
@@ -1057,6 +1065,7 @@ and elab_special demand tele env expect l sp args =
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
       fetch "`Delegate` proof in scope" g (List.find_opt about env.scope.ids)
+  | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (tick (Sp.name sp))
   | sp, _ -> error l "malformed %s form" (tick (Sp.name sp))
 
@@ -1332,6 +1341,7 @@ and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
       | Some Sp.Unary, _ -> elab_unary spos env l args
+      | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
       | Some Sp.OpenAdt, [ m; e ] ->
           let mult = mult_or env l m in
           let env', x, t, code = open_binding env l mult e in

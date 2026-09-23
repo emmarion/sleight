@@ -166,22 +166,30 @@ let opens_ruled env v =
 let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts } x
 (* An atom is shown by the best of the entries equal to it that a reader can name where the message is: a
    numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
-   canonicalization picks to represent a class is an accident of minting order, so it does not decide the name. *)
-let show env t =
-  let c = canon env t in
-  let atoms = fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0 [] c in
-  if atoms = [] then to_string (name_of env) c
-  else
-    let of_atom x = match canon env (Var x) with Var a when List.mem a atoms -> Some a | _ -> None in
-    let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
-      | `Lit ((Literal.Numeral _ | Literal.Str _) as lit) -> Option.map (fun a -> (a, (x, Literal.spell lit))) (of_atom x)
-      | _ -> None) env.literals in
-    let names = List.filter_map (fun (n, x) -> Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
-    let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands in
-    let name x =
-      if (entry env x).meta then name_of env x
-      else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> "_" ^ string_of_int x in
-    to_string name c
+   canonicalization picks to represent a class is an accident of minting order, so it does not decide the name.
+   [namer] chooses once for every atom the canonical [terms] hold, so that several terms print under one naming. *)
+let namer ?except env terms =
+  let atoms = List.fold_left (fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0) [] terms in
+  (* An entry names an atom it canonicalizes to, or itself: a location representative (SlotHolds) is read
+     by binder, not through its rule, so its own name is the one to show. *)
+  let of_atom x = match canon env (Var x) with Var a when List.mem a atoms -> Some a | _ -> if List.mem x atoms then Some x else None in
+  let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
+    | `Lit ((Literal.Numeral _ | Literal.Str _) as lit) -> Option.map (fun a -> (a, (x, Literal.spell lit))) (of_atom x)
+    | _ -> None) env.literals in
+  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
+  let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands in
+  fun x ->
+    if (entry env x).meta then name_of env x
+    else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> "_" ^ string_of_int x
+
+(* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
+let show ?except env t = let c = canon env t in to_string (namer ?except env [ c ]) c
+
+(* A telescope's entries under one naming, each entry's terms canonical; the marks are the entries' own. *)
+let show_tele env tele =
+  let tele = snd (map_tele (fun _ t -> canon env t) 0 tele) in
+  let terms = List.concat_map (fun (e : Term.entry) -> sg_term e.sg :: Option.to_list e.place) tele in
+  snd (tele_strings (namer env terms) [] tele)
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"

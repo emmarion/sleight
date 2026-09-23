@@ -98,34 +98,42 @@ let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equ
 let mult_name = function Erased -> "erased" | Many -> "many" | Unique -> "unique"
 let disc_name = function Enum -> "enum" | Union -> "union"
 
+(* The variable `(SlotVacant)` stands for (UNIQUE.md U10), set once the prelude mints it, so a slot holding it prints
+   as the form that wrote it. *)
+let vacant = ref (-1)
+
 (* [name_of] resolves free ids; bound names come from the telescopes being printed. *)
-let to_string name_of t =
-  let rec go bound t =
-    match t with
-    | Var x -> name_of x
-    | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
-    | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
-    | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
-        let bound, ps = tele bound ps in
-        let _, rs = tele bound rs in
-        (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
-    | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele ~marks:false bound ps) @ [ "->"; "Type" ]) ^ ")"
-    | ValCtor (ps, r) ->
-        let bound', ps = tele bound ps in
-        "(ValCtor " ^ String.concat " " (ps @ [ "->"; go bound' r ]) ^ ")"
-    | Matchable (d, n, e, t, cs) ->
-        "(Matchable " ^ String.concat " "
-          ((disc_name d :: (if n then ["newtype"] else []) @ (if e then ["extern"] else []) @ [go bound t]) @ List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
-        ^ ")"
-    | SlotHolds t -> "(SlotHolds " ^ go bound t ^ ")"
-    | Cell (c, ss) -> "(Cell " ^ String.concat " " (List.map (go bound) (c :: ss)) ^ ")"
-  and tele ?(marks = true) bound es =
-    List.fold_left_map
-      (fun bound e ->
-        let n = Option.value e.name ~default:"_" in
-        let body = match e.sg with Ty t -> go bound t ^ " " ^ n | Is t -> go bound t ^ " is " ^ n in
-        let marks = if marks then (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " else "" in
-        (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " at " ^ go bound p | None -> "" | _ -> assert false) ^ ")"))
-      bound es
-  in
-  go [] t
+let rec to_string_in name_of bound t =
+  let go = to_string_in name_of in
+  match t with
+  | Var x -> name_of x
+  | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
+  | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
+  | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
+      let bound, ps = tele_strings name_of bound ps in
+      let _, rs = tele_strings name_of bound rs in
+      (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((go bound l :: ps) @ ("->" :: rs)) ^ ")"
+  | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele_strings ~marks:false name_of bound ps) @ [ "->"; "Type" ]) ^ ")"
+  | ValCtor (ps, r) ->
+      let bound', ps = tele_strings name_of bound ps in
+      "(ValCtor " ^ String.concat " " (ps @ [ "->"; go bound' r ]) ^ ")"
+  | Matchable (d, n, e, t, cs) ->
+      "(Matchable " ^ String.concat " "
+        ((disc_name d :: (if n then ["newtype"] else []) @ (if e then ["extern"] else []) @ [go bound t]) @ List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
+      ^ ")"
+  | SlotHolds (Var x) when x = !vacant -> "(SlotVacant)"
+  | SlotHolds t -> "(SlotHolds " ^ go bound t ^ ")"
+  | Cell (c, ss) -> "(Cell " ^ String.concat " " (List.map (go bound) (c :: ss)) ^ ")"
+
+(* Each entry as the source writes it, `(subterm many (List A) xs at c)`, binding its name for the entries after it. *)
+and tele_strings ?(marks = true) name_of bound es =
+  List.fold_left_map
+    (fun bound e ->
+      let go = to_string_in name_of bound in
+      let n = Option.value e.name ~default:"_" in
+      let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " is " ^ n in
+      let marks = if marks then (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " else "" in
+      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " at " ^ go p | None -> "" | _ -> assert false) ^ ")"))
+    bound es
+
+let to_string name_of t = to_string_in name_of [] t
