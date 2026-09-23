@@ -1,3 +1,3 @@
-; error: missing ) after $
+; error: missing `)` after `$`
 
 $ foo

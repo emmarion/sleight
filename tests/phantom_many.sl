@@ -1,5 +1,5 @@
 ; needs: list
-; error: erased constructor Ghost in a non-erased position
+; error: erased constructor `Ghost` in a non-erased position
 
 (def-adts
   ((Opt : -> Type)

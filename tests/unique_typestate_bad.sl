@@ -1,5 +1,5 @@
 ; needs: unique_typestate
-; error: expected (Conn (Opened)), got (Conn (Closed))
+; error: expected `(Conn (Opened))`, got `(Conn (Closed))`
 ; The protocol's order is what the index enforces: skipping do-open leaves a (Closed) handle where
 ; do-send declares an (Opened) one. unique_double_bad.sl is the other half, a handle used twice.
 

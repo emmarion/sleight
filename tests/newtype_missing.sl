@@ -1,4 +1,4 @@
-; error: has no opened newtype Matchable
+; error: has no opened newtype `Matchable`
 
 (def-adts $ (Meters : -> Type)
   enum

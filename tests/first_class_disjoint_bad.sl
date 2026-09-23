@@ -1,4 +1,4 @@
-; error: branch D is refuted
+; error: branch `D` is refuted
 ; The same disjointness makes a present D branch an error where the scrutinee is C-headed, as it would be for
 ; the constructors def-adts minted.
 (def-adts $ (Two : -> Type) enum

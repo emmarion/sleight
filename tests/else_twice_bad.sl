@@ -1,5 +1,5 @@
-; error: at most one else
-; error: tests/else_twice_bad.sl:8:5: note: the first else branch
+; error: at most one `else`
+; error: tests/else_twice_bad.sl:8:5: note: the first `else` branch
 
 (def-lvl X)
 

@@ -88,10 +88,10 @@ let check_shape loc name adt =
   let want =
     match List.assoc_opt name types with
     | Some t -> t.shape
-    | None -> ( match List.assoc_opt name plain_shapes with Some s -> s | None -> Env.error loc "the FFI records no shape for %s" name)
+    | None -> ( match List.assoc_opt name plain_shapes with Some s -> s | None -> Env.error loc "the FFI records no shape for %s" (Env.tick name))
   in
   if (not adt.tagged) || ns <> want then
-    Env.error loc "the extern implementation of %s has the tagged shape (%s), its declaration %s(%s)" name (spell want) (if adt.tagged then "" else "the untagged ") (spell ns);
+    Env.error loc "the extern implementation of %s has the tagged shape (%s), its declaration %s(%s)" (Env.tick name) (spell want) (if adt.tagged then "" else "the untagged ") (spell ns);
   try Ffi_templates.check name ns with Failure m -> Env.error loc "%s" m
 
 (* Each implementation may back one declaration per program. A function's model must take as many non-erased
@@ -100,22 +100,22 @@ let check_shape loc name adt =
    name the prelude already bound still reports the mismatch. *)
 let bind loc name =
   Option.iter
-    (fun l -> Env.error_with loc [ (l, "the declaration that bound it") ] "the extern implementation of %s is already bound" name)
+    (fun l -> Env.error_with loc [ (l, "the declaration that bound it") ] "the extern implementation of %s is already bound" (Env.tick name))
     (Hashtbl.find_opt claimed name);
   Hashtbl.replace claimed name loc
 
 let claim_fn loc name n =
   match List.assoc_opt name fns with
-  | None -> Env.error loc "no extern implementation for %s" name
+  | None -> Env.error loc "no extern implementation for %s" (Env.tick name)
   | Some spec ->
-      if spec.takes <> n then Env.error loc "the extern implementation of %s takes %d arguments, its model %d" name spec.takes n;
+      if spec.takes <> n then Env.error loc "the extern implementation of %s takes %d arguments, its model %d" (Env.tick name) spec.takes n;
       List.iter
-        (fun t -> match Hashtbl.find_opt adts t with Some adt -> check_shape loc t adt | None -> Env.error loc "the extern implementation of %s needs %s declared before it" name t)
+        (fun t -> match Hashtbl.find_opt adts t with Some adt -> check_shape loc t adt | None -> Env.error loc "the extern implementation of %s needs %s declared before it" (Env.tick name) (Env.tick t))
         spec.needs;
       bind loc name;
       spec.run
 
 let claim_type loc name adt =
   match List.assoc_opt name types with
-  | None -> Env.error loc "no extern implementation for %s" name
+  | None -> Env.error loc "no extern implementation for %s" (Env.tick name)
   | Some spec -> check_shape loc name adt; bind loc name; Hashtbl.replace registered name adt; spec.view adt

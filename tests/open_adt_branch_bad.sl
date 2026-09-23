@@ -1,4 +1,4 @@
-; error: has no Matchable open
+; error: has no `Matchable` open
 ; An open inside a match branch ends with the branch, as the branch's facts do
 ; (DESIGN.md section 19): the match after it finds nothing.
 

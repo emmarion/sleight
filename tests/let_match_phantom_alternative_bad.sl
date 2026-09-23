@@ -1,4 +1,4 @@
-; error: needs an ordinary match
+; error: needs an ordinary `match`
 ; A phantom alternative is not automatically refuted, even under many.
 (def-adts $ (Both : -> Type) enum
   (many Real : -> (Both))

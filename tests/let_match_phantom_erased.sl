@@ -20,5 +20,5 @@
 (def-fns _ $ (many phantom-tests : -> (many (List (Nat)) results))
   (Cons _ (ghost-main) (Cons _ (sole-main) (Nil _))))
 phantom-tests
-; warns: tests/let_match_phantom_erased.sl:5:3: warning: phantom constructor GhostIndexOne has a non-erased field
-; warns: tests/let_match_phantom_erased.sl:7:3: warning: phantom constructor SoleGhost has a non-erased field
+; warns: tests/let_match_phantom_erased.sl:5:3: warning: phantom constructor `GhostIndexOne` has a non-erased field
+; warns: tests/let_match_phantom_erased.sl:7:3: warning: phantom constructor `SoleGhost` has a non-erased field

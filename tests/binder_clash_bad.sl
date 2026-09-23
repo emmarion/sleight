@@ -1,4 +1,4 @@
-; error: branch MkTag is refuted
+; error: branch `MkTag` is refuted
 
 (def-lvl L)
 (def-adts

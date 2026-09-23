@@ -129,6 +129,11 @@ let opens_ruled env v =
 
 let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x) with rule = Some t } env.facts } x
 let show env t = to_string (name_of env) (canon env t)
+
+(* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
+let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"
+let qshow env t = tick (show env t)
+let qname env x = tick (name_of env x)
 let is_meta env x = (entry env x).meta
 
 (* Whether a canonical term still mentions an unsolved meta. *)
@@ -141,9 +146,9 @@ let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x 
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
 let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
-  Option.iter (fun n -> if Literal.classify n <> `Name then error Reader.nowhere "%s is a literal, not a name" n) name;
+  Option.iter (fun n -> if Literal.classify n <> `Name then error Reader.nowhere "%s is a literal, not a name" (tick n)) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
-    error Reader.nowhere "cannot infer the _ in %s" (show env (match rule with Some r when has_meta env r -> r | _ -> ty));
+    error Reader.nowhere "cannot infer the `_` in %s" (qshow env (match rule with Some r when has_meta env r -> r | _ -> ty));
   if written && Reader.placed at then
     Option.iter
       (fun n ->
@@ -154,8 +159,8 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
                 source wrote carries its position even where it is bound again from a stored telescope,
                 the telescope entry holding it (Term.entry). *)
              let prior = (IntMap.find prior env.entries).at in
-             if Reader.placed prior then warn_at at [ (prior, "shadowed binder is here") ] "declaration of %s shadows a previous binder" n
-             else warn_at at [] "declaration of %s shadows a built-in" n
+             if Reader.placed prior then warn_at at [ (prior, "shadowed binder is here") ] "declaration of %s shadows a previous binder" (tick n)
+             else warn_at at [] "declaration of %s shadows a built-in" (tick n)
          | _ -> ())
       name;
   let x = fresh () in
@@ -190,10 +195,10 @@ let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
   else
-    let contradiction () = raise (Contradiction (show env a ^ " vs " ^ show env b)) in
+    let contradiction () = raise (Contradiction (qshow env a ^ " vs " ^ qshow env b)) in
     let assign x t =
       if has_dangling t then contradiction ();
-      if occurs x t then raise (Contradiction (name_of env x ^ " occurs in " ^ show env t));
+      if occurs x t then raise (Contradiction (qname env x ^ " occurs in " ^ qshow env t));
       add_rule env x t
     in
     match (a, b) with
@@ -256,13 +261,13 @@ let join_uses a b =
 let use env loc ?(sharing = false) mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  if e.mult = Erased then error loc "erased value %s : %s used in a non-erased position" (show env (Var x)) (show env (type_of env x));
-  if mult = Unique && e.mult <> Unique then error loc "many value %s used at unique" (name_of env x);
+  if e.mult = Erased then error loc "erased value %s : %s used in a non-erased position" (qshow env (Var x)) (qshow env (type_of env x));
+  if mult = Unique && e.mult <> Unique then error loc "many value %s used at unique" (qname env x);
   if e.mult <> Unique then env else (
-    if mult = Many && not sharing then error loc "unique value %s needs an explicit share" (name_of env x);
-    if mult = Unique && List.mem x env.captures then error loc "def-fns cannot capture %s at unique" (name_of env x);
+    if mult = Many && not sharing then error loc "unique value %s needs an explicit `share`" (qname env x);
+    if mult = Unique && List.mem x env.captures then error loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
-     | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (name_of env x)
-     | Some (Shared, pl) when mult = Unique -> error_with loc [ (pl, "already shared here") ] "unique value %s has conflicting non-erased uses" (name_of env x)
+     | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (qname env x)
+     | Some (Shared, pl) when mult = Unique -> error_with loc [ (pl, "already shared here") ] "unique value %s has conflicting non-erased uses" (qname env x)
      | _ -> ());
     { env with uses = IntMap.add x ((if mult = Unique then Consumed else Shared), loc) env.uses })

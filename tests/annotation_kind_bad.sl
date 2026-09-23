@@ -1,4 +1,4 @@
-; error: takes a (subterm p) annotation, not (predates p)
+; error: takes a `(subterm p)` annotation, not `(predates p)`
 ; A same-level call carrying a Predates annotation is refused as such: the kind is read from the levels.
 
 (def-lvl P)

@@ -141,7 +141,7 @@ let issues path src =
   let report i = acc := i :: !acc in
   check_lines report (checkable_lines report src toks);
   let opens, surplus = balance toks in
-  Option.iter (fun l -> report { at = l; note = false; msg = "a ) here closes more than is open (surplus ))" }) surplus;
+  Option.iter (fun l -> report { at = l; note = false; msg = "a `)` here closes more than is open (surplus `)`)" }) surplus;
   List.iteri
     (fun k l -> report { at = l; note = k > 0; msg = (if k = 0 then "this form is never closed" else "and this one") })
     opens;

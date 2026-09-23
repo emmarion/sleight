@@ -15,5 +15,5 @@
 (def-fns Y $ (many boom : -> (many (Nat) n))
   (explode (predates p) (Nat) (Sole)))
 (boom)
-; warns: tests/shadow_false_capture.sl:12:13: warning: declaration of Void shadows a previous binder
+; warns: tests/shadow_false_capture.sl:12:13: warning: declaration of `Void` shadows a previous binder
 ; warns: tests/shadow_false_capture.sl:8:13: note: shadowed binder is here

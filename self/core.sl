@@ -2327,6 +2327,18 @@
   (match many e _
     ((MkEInfo _ n _ _ _ me _) (match many n _ ((None _) (match many me _ ((BTrue) "_") ((BFalse) (str-cat "_" $ nat-str x)))) ((Some _ s2) s2)))))
 
+; A name or term in a message is set off in backticks; a literal already reads as one and is left bare.
+(def-fns _ $ (many tick : (many (String) s) -> (many (String) r))
+  (match many s _
+    ((SNil) "``")
+    ((SCons c rest)
+      (match many (or (all-digits s) $ or (char-is c 34) $ and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))) _
+        ((BTrue) s)
+        ((BFalse) (str-cat3 "`" s "`"))))))
+
+(def-fns _ $ (many qname : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (tick $ name-of env x))
+
 ; The block a Const entry's value is, read through its reference.
 (def-fns _ $ (many env-block : (many (Env) e) (many (Nat) x) -> (erased (Hist Block) a) (many (Maybe $ Block (Ref Block a)) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
@@ -2457,11 +2469,11 @@
     ((BTrue)
       (let ((many m)) (entry-mult-of env x))
       (match many m _
-        ((Erased) (env-error env $ str-cat3 "erased value " (name-of env x) " used in a non-erased position"))
-        ((Many) (match many (mult-is-once pos) _ ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "many value " (name-of env x) " used at unique"))))
+        ((Erased) (env-error env $ str-cat3 "erased value " (qname env x) " used in a non-erased position"))
+        ((Many) (match many (mult-is-once pos) _ ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "many value " (qname env x) " used at unique"))))
         ((Once)
-          (let ((many env1)) (match many (and (not $ mult-is-once pos) $ not sharing) (((Env) _)) ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "unique value " (name-of env x) " needs an explicit share"))))
-          (let ((many env2)) (match many (and (mult-is-once pos) $ list-mem-bin (env-captures env) x) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 "def-fns cannot capture " (name-of env x) " at unique"))))
+          (let ((many env1)) (match many (and (not $ mult-is-once pos) $ not sharing) (((Env) _)) ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "unique value " (qname env x) " needs an explicit `share`"))))
+          (let ((many env2)) (match many (and (mult-is-once pos) $ list-mem-bin (env-captures env) x) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 "`def-fns` cannot capture " (qname env x) " at unique"))))
           (let ((many (Maybe $ Pair (Loc) $ String) conflict))
             (match many (idmap-get _ x $ env-uses env2) (((Maybe $ Pair (Loc) $ String) _))
               ((Miss _ _ _ _) (None _))
@@ -2478,7 +2490,7 @@
               ((Some _ p)
                 (match many p (((Env) _))
                   ((MkPair _ _ la why)
-                    (env-note-at (env-error env2 $ str-cat3 "unique value " (name-of env x) " has conflicting non-erased uses") la why))))))
+                    (env-note-at (env-error env2 $ str-cat3 "unique value " (qname env x) " has conflicting non-erased uses") la why))))))
           (env-set-uses env3 $ idmap-set _ x (match many (mult-is-once pos) (((Use) _)) ((BTrue) (UseConsumed $ env-loc env3)) ((BFalse) (UseShared $ env-loc env3))) $ env-uses env3))))))
 (def-fns _ $ (many set-entry-mult : (many (Env) env) (many (Nat) x) (many (Mult) mult) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
@@ -2630,10 +2642,10 @@
                       (match many (env-entry-at env prior) (((Env) _))
                         ((Some _ pl)
                           (env-warn-note-at
-                            (env-warn-at env l $ str-cat3 "declaration of " n " shadows a previous binder")
+                            (env-warn-at env l $ str-cat3 "declaration of " (tick n) " shadows a previous binder")
                             pl "shadowed binder is here"))
                         ((None _)
-                          (env-warn-at env l $ str-cat3 "declaration of " n " shadows a built-in"))))))))))))))
+                          (env-warn-at env l $ str-cat3 "declaration of " (tick n) " shadows a built-in"))))))))))))))
 
 ; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
 ; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
@@ -2651,7 +2663,7 @@
         (match many (has-meta-env envw ty) _
           ((BTrue) (Some _ ty))
           ((BFalse) (match many rule _ ((None _) (None _)) ((Some _ t) (match many (has-meta-env envw t) _ ((BTrue) (Some _ t)) ((BFalse) (None _))))))))))
-  (let ((many (Maybe $ String) bad2)) $ match many open _ ((None _) bad) ((Some _ t) (Some _ $ located envw ": error: " $ str-cat "cannot infer the _ in " $ rope-str $ show-term t envw)))
+  (let ((many (Maybe $ String) bad2)) $ match many open _ ((None _) bad) ((Some _ t) (Some _ $ located envw ": error: " $ str-cat "cannot infer the `_` in " $ tick $ rope-str $ show-term t envw)))
   (match many envw _
     ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er0 lv sts cl wa lt lo pr us)
       (let ((many (List $ String) er)) $ match many bad2 _ ((None _) er0) ((Some _ m) (Cons _ m er0)))
@@ -3060,7 +3072,7 @@
               $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (dangling p d))) $ dangling-tele rest $ Succ d)))))))
 
 (def-fns _ $ (many contradiction : (erased (Nat) n) (many (Nat) bnd) (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r))
-  (Contra _ _ $ rope-str $ rcat3 (show-term a env) (RStr " vs ") $ show-term b env))
+  (Contra _ _ $ str-cat3 (tick $ rope-str $ show-term a env) " vs " $ tick $ rope-str $ show-term b env))
 
 ; A variable against a term: a dangling binder refutes, and so does the variable occurring in the term,
 ; which is the term not being fresh once the variable is ruled out (section 18).
@@ -3069,7 +3081,7 @@
     ((BTrue) (contradiction _ bnd env a b))
     ((BFalse)
       (match many (rule-out-refresh _ _ bnd tb x p t) _
-        ((None _) (Contra _ _ $ rope-str $ rcat3 (RStr $ name-of env x) (RStr " occurs in ") $ show-term t env))
+        ((None _) (Contra _ _ $ str-cat3 (qname env x) " occurs in " $ tick $ rope-str $ show-term t env))
         ((Some _ added)
           (match many added _
             ((MkAdded k _ _ _ tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))))))

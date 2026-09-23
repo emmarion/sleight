@@ -1,4 +1,4 @@
-; error: A is not a constructor of Nat
+; error: `A` is not a constructor of `Nat`
 ; comptime-match may only assert a constructor of the scrutinee's own type, even one whose index and arity happen to match.
 
 (def-adts $ (T : -> Type)

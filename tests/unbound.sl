@@ -1,3 +1,3 @@
-; error: unbound name foo
+; error: unbound name `foo`
 
 (foo)

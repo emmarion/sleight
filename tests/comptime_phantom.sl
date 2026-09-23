@@ -1,5 +1,5 @@
 ; needs: list absurd
-; error: F is phantom
+; error: `F` is phantom
 ; comptime-match may not assert a phantom constructor: the value is never headed by one, and its erased fields would be forged.
 
 (def-adts $ (Opt : -> Type)

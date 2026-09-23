@@ -1,4 +1,4 @@
-; error: delegate in an erased position
+; error: `delegate` in an erased position
 ; A delegate mark in an erased position is refused as a tail mark is there.
 
 (def-lvl L)

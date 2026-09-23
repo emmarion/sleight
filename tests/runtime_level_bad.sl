@@ -1,4 +1,4 @@
-; error: was not in scope when level Z was minted
+; error: was not in scope when level `Z` was minted
 ; compose_list_dynamic.sl's composition called from a function at level Z: the composed function's level N is
 ; minted inside the call, after Z, so prove-predates refuses N against Z and h cannot be called from Z.
 

@@ -1,5 +1,5 @@
 ; needs: list
-; error: constructor Succ has 0 branches
+; error: constructor `Succ` has 0 branches
 
 (def-lvl X)
 (def-fns X $ (many f : (many (Nat) n) -> (many (Nat) m))

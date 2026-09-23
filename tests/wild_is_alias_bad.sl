@@ -1,4 +1,4 @@
-; error: : (Nat) used in a non-erased position
+; error: : `(Nat)` used in a non-erased position
 ; The type printed for an is return instantiated with an alias-typed argument is the canonical one.
 
 (let ((erased Alias)) (Nat))

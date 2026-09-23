@@ -1,4 +1,4 @@
-; error: a is not a strict subterm of (Succ b)
+; error: `a` is not a strict subterm of `(Succ b)`
 ; Lt a (Succ b) alone does not make a a subterm of (Succ b), since a may be b: the case lt_subterm.sl's
 ; le-split separates.
 

@@ -1,4 +1,4 @@
-; error: expected NoteOk, got (NoteBad #\x28 "a\"b\\c\nd\te")
+; error: expected `NoteOk`, got `(NoteBad #\x28 "a\"b\\c\nd\te")`
 ; DESIGN.md section 15's diagnostics channel, where the payload of the variant that was not there is the
 ; message: a Char and a String in it spell as the literals they read back from (ASSUMPTIONS 154), the
 ; character being one of the delimiters a word cannot hold. tests/literal_print.sl pins the two spellings

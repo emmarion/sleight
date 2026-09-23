@@ -1,4 +1,4 @@
-; error: Matchable for T is erased
+; error: `Matchable` for `T` is erased
 ; A non-erased match on a non-erased scrutinee reads its Matchable when the code runs, that being where an
 ; extern type's destructuring lives (section 41), so an erased one cannot serve.
 

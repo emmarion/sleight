@@ -1,4 +1,4 @@
-; error: missing )
+; error: missing `)`
 ; warns: tests/indent_unclosed_bad.sl:11:1: warning: same indentation (0) as the previous checked line but nesting is 1, expected 0 (matching that line)
 ; warns: tests/indent_unclosed_bad.sl:10:1: note: the previous line at this indentation
 ; warns: tests/indent_unclosed_bad.sl:10:1: warning: this form is never closed

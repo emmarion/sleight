@@ -95,7 +95,7 @@ compared against. It runs over every file the driver or `slc` is handed
 *before* that file is parsed, so a file the reader then refuses is reported on
 all the same — which is where it pays most, since it also warns about a `)`
 closing more than is open and names, one by one, every form a file leaves
-open, so that each missing `)` has a place to go; a reader's `missing )` names
+open, so that each missing `)` has a place to go; a reader's ``missing `)` `` names
 the line one form opened on and nothing else. `bin/indent` runs the same check alone over the files named on its
 command line and exits 1 when it finds any, so it can gate a commit over
 the files a commit touches; the repository's own sources are clean of it
@@ -137,10 +137,16 @@ message with nothing to point at — a contradiction that reached the driver, a
 runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).
 
+Within a compile-time message a name, a term or a keyword of the language is
+set off in backticks, `` `(List A)` `` or `` `share` ``, and a literal is left
+bare, since it already reads as one: `3`, `#\a`, `"ab"`. Both compilers quote
+through one function, `Env.tick` and `tick` in `self/core.sl`. Runtime errors
+are not quoted.
+
 Shadowing is legal (section 9) and warns. Every binder that hides a name
-already in scope earns `declaration of List shadows a previous binder`,
+already in scope earns ``declaration of `List` shadows a previous binder``,
 with a note `shadowed binder is here`, or
-`declaration of tail shadows a built-in` where the binder it hides has no
+``declaration of `tail` shadows a built-in`` where the binder it hides has no
 position of its own, being a special form or an annotation token. That last
 is the case worth finding, since a field named `tail` or a `let` binder named
 `at` leaves that scope unable to write the marker. `slc` warns the same, at

@@ -1,4 +1,4 @@
-; error: ps was not in scope when level K was minted
+; error: `ps` was not in scope when level `K` was minted
 ; The consumer of packed_list_predates.sl handed a list built inside a body after K was minted: prove-predates
 ; refuses the list-level proof, ps being bound after K. packed_bound.sl is the shape that works there.
 

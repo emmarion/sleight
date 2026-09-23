@@ -83,11 +83,11 @@ let parse file src =
         let items = read_items [] in
         (match (opener, peek ()) with
          | LParen, Some (_, RParen) -> advance ()
-         | LParen, _ -> raise (Syntax (l, "missing )"))
-         | _, None -> raise (Syntax (l, "missing ) after $"))
+         | LParen, _ -> raise (Syntax (l, "missing `)`"))
+         | _, None -> raise (Syntax (l, "missing `)` after `$`"))
          | _ -> ());
         read_items (List (l, items) :: acc)
     | Some (l, Word w) -> advance (); read_items (Atom (l, w) :: acc)
   in
   let items = read_items [] in
-  match peek () with Some (l, _) -> raise (Syntax (l, "unexpected )")) | None -> items
+  match peek () with Some (l, _) -> raise (Syntax (l, "unexpected `)`")) | None -> items

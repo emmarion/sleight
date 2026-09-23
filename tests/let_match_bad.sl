@@ -1,4 +1,4 @@
-; error: needs an ordinary match
+; error: needs an ordinary `match`
 ; Stored values do not select a constructor: the opaque literal supplies no fact
 ; refuting either Nat constructor, so this still needs an ordinary match.
 

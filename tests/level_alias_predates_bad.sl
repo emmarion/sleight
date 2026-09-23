@@ -1,4 +1,4 @@
-; error: takes a (subterm p) annotation, not (predates p)
+; error: takes a `(subterm p)` annotation, not `(predates p)`
 ; A branch that equates the enclosing function's own level with an older one must not turn its
 ; same-level self-call into a lower-level one: both levels are read canonically (ASSUMPTIONS 75).
 ; Read literally, the call needs no Subterm decrease and bad is lt_subterm.sl's loop -- a total

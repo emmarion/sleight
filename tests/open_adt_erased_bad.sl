@@ -1,4 +1,4 @@
-; error: Matchable for T is erased
+; error: `Matchable` for `T` is erased
 ; The marker is the opened entry's multiplicity: a many parameter opened at erased serves no match that
 ; dispatches at runtime (DESIGN.md section 19, ASSUMPTIONS 139).
 

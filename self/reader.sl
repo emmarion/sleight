@@ -206,10 +206,10 @@
         ((TClose l)
           (let ((many s1)) $ close-dollars stack)
           (match many s1 _
-            ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected )"))
+            ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`"))
             ((Cons _ _ s2)
               (match many s2 _
-                ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected )"))
+                ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`"))
                 ((Cons _ _ _) (parse-toks rest $ close-top s1))))))))))
 
 ; Reads the root frame's items once nothing is open; an open form at the end is a missing ), reported
@@ -222,7 +222,7 @@
         ((Nil _) (match many f _ ((MkFrame _ _ items) (values (list-rev _ items) $ None _))))
         ((Cons _ _ _)
           (match many f _
-            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l $ match many d (((String) _)) ((BTrue) "missing ) after $") ((BFalse) "missing )")))))))))
+            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l $ match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")))))))))
 
 (def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err))
   (let ((many stack) (many err)) (parse-toks (tokenize src 1 0 $ Nil _)
@@ -650,5 +650,5 @@
         (match many u (((List $ String) _))
           ((None _) acc1)
           ((Some _ sl)
-            (Cons _ (ind-at path sl "a ) here closes more than is open (surplus ))") acc1))))
+            (Cons _ (ind-at path sl "a `)` here closes more than is open (surplus `)`)") acc1))))
       (list-rev _ $ ind-unclosed path op (BTrue) acc2))))

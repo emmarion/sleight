@@ -1,4 +1,4 @@
-; error: else covers no constructor
+; error: `else` covers no constructor
 ; Every constructor the else would cover is refuted, so there is nothing for it to cover.
 
 (def-adts

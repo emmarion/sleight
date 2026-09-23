@@ -1,5 +1,5 @@
 ; needs: list
-; error: constructor Zero has 2 branches
+; error: constructor `Zero` has 2 branches
 
 (def-lvl X)
 (def-fns X $ (many f : (many (Nat) n) -> (many (Nat) m))
