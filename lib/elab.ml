@@ -802,7 +802,7 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
     let results = List.filter_map (fun (m, (x, place)) -> if m = Erased then None else
       Some (V.CVar (match place with Some (SlotHolds p) -> location_var env l p | None -> x | Some _ -> assert false)))
       (List.combine expect (List.rev returned)) in
-    let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, qshow env callee.term) | _ -> cc in
+    let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, callee.term) | _ -> cc in
     V.CLet (List.rev physical, V.CApp (hcode, codes, cc), V.CValues results)
   in
   (env, List.map (res_of env) ids, wrap code)
@@ -1640,7 +1640,7 @@ and check_marks env l pids code =
   List.iter
     (function
       | V.CApp (_, _, V.NoTail) as c when List.memq c in_tail -> error l "a `notail`-marked call is in tail position"
-      | V.CApp (_, _, V.Same (cl, name)) as c -> warn_at cl [] "same-level call to %s is unmarked; mark it %s" name (if List.memq c in_tail then "`tail`" else "`notail`")
+      | V.CApp (_, _, V.Same (cl, callee)) as c -> warn_at cl [] "same-level call to %s is unmarked; mark it %s" (qshow env callee) (if List.memq c in_tail then "`tail`" else "`notail`")
       | _ -> ())
     all;
   ( code,
