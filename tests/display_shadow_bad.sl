@@ -1,4 +1,4 @@
-; error: error: type mismatch: expected `(Eq (Nat) <**> <**>)`, got `(Eq (Nat) n n)`
+; error: error: type mismatch: expected `(Eq (Nat) _<**> _<**>)`, got `(Eq (Nat) n n)`
 ; A name is shown only where it still denotes the atom: here the field n shadows the parameter n, so the
 ; parameter is shown by its id and the message cannot read as n differing from itself.
 
