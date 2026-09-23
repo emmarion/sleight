@@ -90,11 +90,21 @@ and run_mode name externs src =
       Ok (sources, Buffer.contents printed)
     with e -> (match Program.explain (label name) e with Some m -> Error m | None -> raise e)
   in
-  let contains hay needle =
-    let n = String.length needle and h = String.length hay in
-    let rec go i = i + n <= h && (String.sub hay i n = needle || go (i + 1)) in
-    go 0
+  let at s i p = i + String.length p <= String.length s && String.sub s i (String.length p) = p in
+  let rec parts pat i j =
+    if j >= String.length pat then [ String.sub pat i (j - i) ]
+    else if at pat j "<**>" then String.sub pat i (j - i) :: parts pat (j + 4) (j + 4)
+    else parts pat i (j + 1)
   in
+  let glob pat line =
+    let n = String.length line in
+    let rec go i = function
+      | [] -> i = n
+      | p :: rest -> List.exists (fun j -> at line j p && go (j + String.length p) rest) (List.init (n - i + 1) (( + ) i))
+    in
+    match parts pat 0 0 with first :: rest -> at line 0 first && go (String.length first) rest | [] -> false
+  in
+  let contains msg needle = List.exists (glob ("<**>" ^ needle ^ "<**>")) (String.split_on_char '\n' msg) in
   let lines key = String.concat "" (List.map (fun s -> s ^ "\n") (directive src key)) in
   let expect = lines "expect" and stderr = lines "stderr" in
   let exit = match directive src "exit" with [ n ] -> int_of_string n | _ -> 0 in
@@ -102,7 +112,8 @@ and run_mode name externs src =
   (* A warning is checked whichever way elaboration went, a refused program warning as readily as one that runs. *)
   let warned = Buffer.contents warnings in
   let mismatched_warnings =
-    if warned = lines "warns" then None else Some (Printf.sprintf "warned:\n%sexpected:\n%s" warned (lines "warns"))
+    let got = String.split_on_char '\n' warned and want = String.split_on_char '\n' (lines "warns") in
+    if List.compare_lengths got want = 0 && List.for_all2 glob want got then None else Some (Printf.sprintf "warned:\n%sexpected:\n%s" warned (lines "warns"))
   in
   match outcome with
   | _ when mismatched_warnings <> None -> mismatched_warnings

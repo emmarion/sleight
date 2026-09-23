@@ -20,6 +20,8 @@ OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 OCB="ocamlfind ocamlc -custom -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
+# has <file> <directive text>: the text is on a line of the file, "<**>" in it matching any run of characters.
+has() { grep -q -- "$(printf '%s' "$2" | sed 's/[][\\.*^$]/\\&/g; s/<\\\*\\\*>/.*/g')" "$1"; }
 
 # check_warns <file> <name>: every "; warns:" line must appear in slc's own stderr, where it writes a warning,
 # the reference writing one as it elaborates or as it checks a file's indentation. A "; warns:" line names the
@@ -28,7 +30,7 @@ directive() { sed -n "s/^; $2: //p" "$1"; }
 # compared.
 check_warns() {
   directive "$1" warns | while IFS= read -r want; do
-    grep -qF -- "$want" "$B/$2.slc.err" || { echo "FAIL $2: expected a warning mentioning: $want; got: $(head -c 300 "$B/$2.slc.err" | tr '\n' ' ')"; exit 1; }
+    has "$B/$2.slc.err" "$want" || { echo "FAIL $2: expected a warning mentioning: $want; got: $(head -c 300 "$B/$2.slc.err" | tr '\n' ' ')"; exit 1; }
   done
 }
 
@@ -46,7 +48,7 @@ check_test() {
     if "$B/slc" -- $flags lib/prelude.sl $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
       echo "FAIL $name: slc accepted a program the checker refuses"; return
     fi
-    directive "$t" error | while IFS= read -r want; do grep -qF -- "$want" "$B/$name.slc.err" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
+    directive "$t" error | while IFS= read -r want; do has "$B/$name.slc.err" "$want" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
       check_warns "$t" "$name" || return
     # Where each side puts its first message. The directives match on the text alone, so nothing else
     # compares the two positions; slc records one per form it descends into and the reference carries one

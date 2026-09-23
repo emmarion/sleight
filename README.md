@@ -123,7 +123,9 @@ whether or not it is then refused,
 `; exit: n` the code an
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, and `; error: text`
-means it must fail with a message mentioning that text.
+means it must fail with a message mentioning that text on one line. In
+a `warns` or `error` line, `<**>` matches any run of characters, such as an
+atom's id.
 
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,
