@@ -279,6 +279,13 @@
       (let ((many names)) $ name-cands env atoms (nm-entries _ (env-scope env) (REmpty) $ Nil _) $ Nil _)
       (rope-str $ show-term c $ name-atoms env atoms lits names))))
 
+(def-fns _ $ (many clash-str : (many (Env) env) (subterm many (Clash) c) -> (many (String) s))
+  (match many c _
+    ((CText s) s)
+    ((CTerm t) (tick $ show-t env t))
+    ((CName x) (qname env x))
+    ((CCat a b) (str-cat (notail $ clash-str env a) $ notail $ clash-str env b))))
+
 (def-fns _ $ (many show-r : (many (Raw) r) -> (many (String) s))
   (rope-str $ show-raw r))
 
@@ -1768,12 +1775,12 @@
 (def-fns _ $ (many env-open-adt : (many (Env) env) (many (Nat) x) -> (many (UnifyRes) r))
   (let ((many dup)) $ match many (type-of env x) (((Maybe $ Nat) _)) ((TMatchable _ _ _ _ cs) (nats-dup $ mctor-ids cs)) (else (None _)))
   (match many dup _
-    ((Some _ c) (UContra $ str-cat (qname env c) " is listed twice"))
+    ((Some _ c) (UContra $ CCat (CTerm $ TVar c) $ CText " is listed twice"))
     ((None _) (merge-all $ Forcing $ env-open env x))))
 
 ; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
 (def-fns _ $ (many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r))
-  (match many (env-open-adt env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " m))))
+  (match many (env-open-adt env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " $ clash-str env m))))
 
 ; An anonymous let at [mult] of a Matchable or Newtype, elaborated by the caller into [inner]: the entry an
 ; open records (section 19). Run at once in run position, as a let's right-hand side is.
@@ -3680,7 +3687,7 @@
                     (let ((many env12)) (match many (ctor-of env11 c) (((Env) _)) ((None _) env11) ((Some _ ct) (env-set-fields env11 x ct fids mults))))
                     (let ((many env13) (many cell)) (pattern-cell-option env12 mode (res-of env12 x) c fids extra cellname))
                     (values env13 $ SNone _))
-                  ((UContra msg) (values (env-error env10 $ str-cat3 "internal: the verified value contradicts the facts in force (" msg ")") $ SNone _))))))))))
+                  ((UContra msg) (values (env-error env10 $ str-cat3 "internal: the verified value contradicts the facts in force (" (clash-str env10 msg) ")") $ SNone _))))))))))
 
 ; Every function recurses on a raw it elaborates: the first subterm parameter is that raw or list, a later
 ; one a structure parsed from it (its entries prove they sit inside it) or a Steps budget spent when a
@@ -4600,7 +4607,7 @@
                 (let ((many env1) (many ress) (many code) (erased lock)) $ notail $ elab-expr-demand sugar eraw env0 ctx (Cons _ mult $ Nil _) no-tele (CCPlain) (Fixed _))
                 (let ((many env2) (many x) (many t)) $ open-bind ctx env0 env1 (first-res _ _ ress lock) mult code)
                 (match many (env-open-adt env2 x) _
-                  ((UContra m) (values (env-error env2 $ str-cat3 "`open-adt`: " (qshow env2 t) $ str-cat3 " contradicts what is open (" m ")") ctx $ SNone _))
+                  ((UContra m) (values (env-error env2 $ str-cat3 "`open-adt`: " (qshow env2 t) $ str-cat3 " contradicts what is open (" (clash-str env2 m) ")") ctx $ SNone _))
                   ((UOk env3)
                     (match many mult _
                       ((Erased) (values env3 ctx $ SNone _))
@@ -4667,7 +4674,7 @@
                                     (let ((many run)) $ and (env-run-pos env7) $ and (mult-is-many smult) $ list-is-empty _ $ env-errors env7)
                                     (let ((many env9) (many fids) (many u)) $ open-fields env7 ctele (raw-names ordinary) (raw-sites ordinary env7) (Some _ mults) sres c3 ret)
                                     (match many u _
-                                      ((UContra msg) (values (env-error env9 $ str-cat3 "the scrutinee contradicts the facts in force (" msg ")") ctx $ SNone _))
+                                      ((UContra msg) (values (env-error env9 $ str-cat3 "the scrutinee contradicts the facts in force (" (clash-str env9 msg) ")") ctx $ SNone _))
                                       ((UOk env10)
                                         (let ((many env10b) (many alias)) (pattern-cell-option env10 smult sres c3 fids extra cellname))
                                         (match many smult _

@@ -3085,27 +3085,33 @@
 ; the rest is re-canonicalized at the smaller count.
 
 (def-adts
+  ((Clash : -> Type)
+    enum
+    (many CText : (many (String) s) -> (Clash))
+    (many CTerm : (many (Term) t) -> (Clash))
+    (many CName : (many (Nat) x) -> (Clash))
+    (many CCat : (many (Clash) a) (many (Clash) b) -> (Clash)))
   ((UnifyRes : -> Type)
     enum
     (many UOk : (many (Env) env) -> (UnifyRes))
-    (many UContra : (many (String) msg) -> (UnifyRes)))
+    (many UContra : (many (Clash) msg) -> (UnifyRes)))
   ((Outcome : ((Nat) n) ((Nat) c) -> Type)
     enum
     (many Same : (erased (Nat) n) (erased (Nat) c) (many (Env) env) -> (Outcome n c))
     (many Less : (erased (Nat) n) (erased (Nat) c) (erased (Nat) k) (erased (Facts k) f2) (many (Table k f2 c) tb) (many (Env) env) (erased (Subterm (Nat) k (Nat) n) p) -> (Outcome n c))
-    (many Contra : (erased (Nat) n) (erased (Nat) c) (many (String) msg) -> (Outcome n c))))
+    (many Contra : (erased (Nat) n) (erased (Nat) c) (many (Clash) msg) -> (Outcome n c))))
 
 (def-fns _ $ (many unify-place : (many (Env) env) (many (Maybe $ Term) a) (many (Maybe $ Term) b) (many (Bool) force) -> (many (UnifyRes) r))
   (match many a _
-    ((None _) (match many b _ ((None _) (UOk env)) ((Some _ _) (UContra "at annotation mismatch"))))
+    ((None _) (match many b _ ((None _) (UOk env)) ((Some _ _) (UContra $ CText "at annotation mismatch"))))
     ((Some _ x) (match many b _
-      ((None _) (UContra "at annotation mismatch"))
+      ((None _) (UContra $ CText "at annotation mismatch"))
       ((Some _ y) (match many x _
         ((TSlotHolds v) (match many y _
           ((TSlotHolds w) (match many (at-equal env v w) _
-            ((BTrue) (UOk env)) ((BFalse) (match many force _ ((BFalse) (UContra "at annotation mismatch")) ((BTrue) (UOk $ at-merge env v w))))))
-          (else (UContra "malformed at annotation"))))
-        (else (UContra "malformed at annotation"))))))))
+            ((BTrue) (UOk env)) ((BFalse) (match many force _ ((BFalse) (UContra $ CText "at annotation mismatch")) ((BTrue) (UOk $ at-merge env v w))))))
+          (else (UContra $ CText "malformed at annotation"))))
+        (else (UContra $ CText "malformed at annotation"))))))))
 
 (def-fns _ $ (many lift : (erased (Nat) n) (many (Nat) bnd) (erased (Nat) k) (erased (Facts k) f2) (many (Table k f2 bnd) tb) (many (Env) env) (erased (Subterm (Nat) k (Nat) n) p) (many (Outcome k bnd) o) -> (many (Outcome n bnd) r))
   (match many o _
@@ -3176,17 +3182,17 @@
             (or (match many sg (((Bool) _)) ((SgTy t) (notail $ dangling t d)) ((SgIs t _) (notail $ dangling t d)))
               $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (notail $ dangling p d))) $ notail $ dangling-tele rest $ Succ d)))))))
 
-(def-fns _ $ (many contradiction : (erased (Nat) n) (many (Nat) bnd) (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r))
-  (Contra _ _ $ str-cat3 (tick $ rope-str $ show-term a env) " vs " $ tick $ rope-str $ show-term b env))
+(def-fns _ $ (many contradiction : (erased (Nat) n) (many (Nat) bnd) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r))
+  (Contra _ _ $ CCat (CTerm a) $ CCat (CText " vs ") $ CTerm b))
 
 ; A variable against a term: a dangling binder refutes, and so does the variable occurring in the term,
 ; which is the term not being fresh once the variable is ruled out (section 18).
 (def-fns _ $ (many bind-var : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Env) env) (many (Nat) x) (erased (In x n f) p) (many (Term) t) (many (Term) a) (many (Term) b) (many (Bool) force) -> (many (Outcome n bnd) r))
   (match many (or (dangling t 0) $ not $ or force $ is-meta env x) _
-    ((BTrue) (contradiction _ bnd env a b))
+    ((BTrue) (contradiction _ bnd a b))
     ((BFalse)
       (match many (rule-out-refresh _ _ bnd tb x p t) _
-        ((None _) (Contra _ _ $ str-cat3 (qname env x) " occurs in " $ tick $ rope-str $ show-term t env))
+        ((None _) (Contra _ _ $ CCat (CName x) $ CCat (CText " occurs in ") $ CTerm t))
         ((Some _ added)
           (match many added _
             ((MkAdded k _ _ _ tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))))))
@@ -3219,7 +3225,7 @@
                           ((MkAdded k _ _ _ tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
                       ((BFalse)
                         (match many (or (not force) $ listed env x y) _
-                          ((BTrue) (contradiction _ bnd env a b))
+                          ((BTrue) (contradiction _ bnd a b))
                           ((BFalse)
                             (let ((many sx)) $ signature-of env newer)
                             (let ((many sy)) $ signature-of env older)
@@ -3241,21 +3247,21 @@
                                   ((Contra _ _ m) (Contra _ _ m))
                                   ((Same _ _ _) (Less _ _ _ _ tb2 env2 p))
                                   ((Less _ _ _ _ tb3 env3 q) (Less _ _ _ _ tb3 env3 $ subterm-trans q p))))))))))))
-              ((TBound _) (contradiction _ bnd env a b))
-              ((TErr m) (Contra _ _ m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force))))
-          ((TBound _) (contradiction _ bnd env a b))
-          ((TErr m) (Contra _ _ m))
+              ((TBound _) (contradiction _ bnd a b))
+              ((TErr m) (Contra _ _ $ CText m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force))))
+          ((TBound _) (contradiction _ bnd a b))
+          ((TErr m) (Contra _ _ $ CText m))
           (else
             (match many b _
               ((TVar y) (bind-var _ _ bnd tb env y (fr-var n f y pb) a a b force))
-              ((TErr m) (Contra _ _ m))
+              ((TErr m) (Contra _ _ $ CText m))
               (else
                 (match many a _
                   ((TApp h as)
                     (match many b _
                       ((TApp h2 as2)
                         (match many (nat-cmp (list-length _ as) $ list-length _ as2) _
-                          (else (contradiction _ bnd env a b))
+                          (else (contradiction _ bnd a b))
                           ((CEq _ _ _)
                             (let ((erased ph) (erased pas)) $ fr-app _ _ _ _ pa)
                             (let ((erased ph2) (erased pas2)) $ fr-app _ _ _ _ pb)
@@ -3266,12 +3272,12 @@
                                 (let ((many bs3) (erased pbs3)) $ canon-list-in _ _ bnd tb2 as2)
                                 (lift _ bnd _ _ tb2 env2 p $ notail $ unify-list (subterm p) k f2 bnd tb2 as3 pas3 bs3 pbs3 env2 force))
                               ((Contra _ _ m) (Contra _ _ m))))))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TCell h as)
                     (match many b _
                       ((TCell h2 as2)
                         (match many (nat-cmp (list-length _ as) $ list-length _ as2) _
-                          (else (contradiction _ bnd env a b))
+                          (else (contradiction _ bnd a b))
                           ((CEq _ _ _)
                             (let ((erased ph) (erased pas)) $ fr-cell _ _ _ _ pa)
                             (let ((erased ph2) (erased pas2)) $ fr-cell _ _ _ _ pb)
@@ -3282,10 +3288,10 @@
                                 (let ((many bs3) (erased pbs3)) $ canon-list-in _ _ bnd tb2 as2)
                                 (lift _ bnd _ _ tb2 env2 p $ notail $ unify-list (subterm p) k f2 bnd tb2 as3 pas3 bs3 pbs3 env2 force))
                               ((Contra _ _ m) (Contra _ _ m))))))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TFn uq l ps rs)
                     (match many b _
-                      ((TFn uq2 l2 ps2 rs2) (match many (bool-eq uq uq2) _ ((BFalse) (contradiction _ bnd env a b)) ((BTrue)
+                      ((TFn uq2 l2 ps2 rs2) (match many (bool-eq uq uq2) _ ((BFalse) (contradiction _ bnd a b)) ((BTrue)
                         (let ((erased pl) (erased pps) (erased prs)) (fr-fn _ _ _ _ _ _ pa))
                         (let ((erased pl2) (erased pps2) (erased prs2)) (fr-fn _ _ _ _ _ _ pb))
                         (match many (notail $ unify _ _ bnd tb l pl l2 pl2 env force) _
@@ -3311,11 +3317,11 @@
                                 (let ((many rs3) (erased prs3)) $ canon-tele-in _ _ bnd tb3 rs)
                                 (let ((many rs4) (erased prs4)) $ canon-tele-in _ _ bnd tb3 rs2)
                                 (lift _ bnd _ _ tb3 env3 (subterm-trans q p) $ notail $ unify-tele (subterm (subterm-trans q p)) j f3 bnd tb3 rs3 prs3 rs4 prs4 env3 a b force))))))))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TTyCtor ps)
                     (match many b _
                       ((TTyCtor ps2) (tail $ unify-tele _ _ bnd tb ps (fr-tyctor n f ps pa) ps2 (fr-tyctor n f ps2 pb) env a b force))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TValCtor ps ret)
                     (match many b _
                       ((TValCtor ps2 ret2)
@@ -3328,12 +3334,12 @@
                             (let ((many ret3) (erased pret3)) $ canon-in _ _ bnd tb2 ret)
                             (let ((many ret4) (erased pret4)) $ canon-in _ _ bnd tb2 ret2)
                             (lift _ bnd _ _ tb2 env2 p $ notail $ unify (subterm p) k f2 bnd tb2 ret3 pret3 ret4 pret4 env2 force))))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TMatchable d nt ex t cs)
                     (match many b _
                       ((TMatchable d2 nt2 ex2 t2 cs2)
                         (match many (and (bool-eq nt nt2) $ and (bool-eq ex ex2) $ and (disc-eq d d2) $ nat-eq (list-length _ cs) $ list-length _ cs2) _
-                          ((BFalse) (contradiction _ bnd env a b))
+                          ((BFalse) (contradiction _ bnd a b))
                           ((BTrue)
                             (let ((erased pt) (erased pcs)) (fr-matchable _ _ _ _ _ _ _ pa))
                             (let ((erased pt2) (erased pcs2)) (fr-matchable _ _ _ _ _ _ _ pb))
@@ -3344,15 +3350,15 @@
                                 (let ((many cs3) (erased pcs3)) $ canon-mctors-in _ _ bnd tb2 cs)
                                 (let ((many cs4) (erased pcs4)) $ canon-mctors-in _ _ bnd tb2 cs2)
                                 (lift _ bnd _ _ tb2 env2 p $ notail $ unify-mctors (subterm p) k f2 bnd tb2 cs3 pcs3 cs4 pcs4 env2 a b force))))))
-                      (else (contradiction n bnd env a b))))
+                      (else (contradiction n bnd a b))))
                   ((TSlotHolds cn)
                     (match many b _
                       ((TSlotHolds cn2)
                         (match many (at-equal env cn cn2) _
                           ((BTrue) (Same _ _ env))
-                          ((BFalse) (match many force _ ((BTrue) (Same _ _ $ at-merge env cn cn2)) ((BFalse) (contradiction _ bnd env a b))))))
-                      (else (contradiction _ bnd env a b))))
-                  (else (contradiction n bnd env a b))))))))))
+                          ((BFalse) (match many force _ ((BTrue) (Same _ _ $ at-merge env cn cn2)) ((BFalse) (contradiction _ bnd a b))))))
+                      (else (contradiction _ bnd a b))))
+                  (else (contradiction n bnd a b))))))))))
 
   ((many unify-list : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (List $ Term) as) (erased (FrL n f as) pas) (many (List $ Term) bs) (erased (FrL n f bs) pbs) (many (Env) env) (many (Bool) force) -> (many (Outcome n bnd) r))
     (match many as _
@@ -3374,17 +3380,17 @@
   ; Telescopes unify entry by entry; a different length, multiplicity or subterm mark is a mismatch of shape.
   ((many unify-tele : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (List $ Entry) as) (erased (FrT n f as) pas) (many (List $ Entry) bs) (erased (FrT n f bs) pbs) (many (Env) env) (many (Term) wa) (many (Term) wb) (many (Bool) force) -> (many (Outcome n bnd) r))
     (match many as _
-      ((Nil _) (match many bs _ ((Nil _) (Same _ _ env)) ((Cons _ _ _) (contradiction _ bnd env wa wb))))
+      ((Nil _) (match many bs _ ((Nil _) (Same _ _ env)) ((Cons _ _ _) (contradiction _ bnd wa wb))))
       ((Cons _ a rest)
         (match many bs _
-          ((Nil _) (contradiction _ bnd env wa wb))
+          ((Nil _) (contradiction _ bnd wa wb))
           ((Cons _ b rest2)
             (match many a _
               ((MkEntry _ s m sg place _)
                 (match many b _
                   ((MkEntry _ s2 m2 sg2 place2 _)
                     (match many (and (mult-eq m m2) $ bool-eq s s2) _
-                      ((BFalse) (contradiction _ bnd env wa wb))
+                      ((BFalse) (contradiction _ bnd wa wb))
                       ((BTrue)
                         (match many (unify-place env place place2 force) _
                           ((UContra msg) (Contra _ _ msg))
@@ -3422,7 +3428,7 @@
                 (match many b _
                   ((MkMCtor m2 t2)
                     (match many (mult-eq m m2) _
-                      ((BFalse) (contradiction _ bnd env wa wb))
+                      ((BFalse) (contradiction _ bnd wa wb))
                       ((BTrue)
                         (let ((erased pt) (erased prest)) $ frm-cons _ _ _ _ _ pas)
                         (let ((erased pt2) (erased prest2)) $ frm-cons _ _ _ _ _ pbs)
@@ -3454,7 +3460,7 @@
 (def-adts $ (Forced : -> Type)
   enum
   (many Forcing : (many (Env) e) -> (Forced))
-  (many Refuted : (many (String) m) -> (Forced)))
+  (many Refuted : (many (Clash) m) -> (Forced)))
 
 (def-fns _ $ (many unify-force : (many (Forced) fe) (many (Term) a) (many (Term) b) -> (many (Forced) r))
   (match many fe _
