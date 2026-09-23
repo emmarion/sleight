@@ -300,7 +300,8 @@ There are also two ways for these to be "minted" (introduced):
   with `let`s that merely rename resolved away — a `coerce` erases to
   exactly such a renaming (§38), so a non-erased `let` of a coerced
   result is fine — and the same reading applies to a `delegate`'s
-  arguments.
+  arguments. `notail` asserts the opposite, with the same hard error. All
+  three marks are a hard error in an erased position.
 - **`delegate` marker.** Same idea as `tail`, plus the same restriction
   applied to the call's arguments: the non-erased arguments must also
   pass straight through, on the same post-erasure AST. The consequence
@@ -1038,7 +1039,7 @@ Recorded as an intended invariant/target, not something verified yet
 
 "Identically" is the values, not the time or memory taken; the
 transformed program may crash on resource exhaustion where the original
-did not (§22). `tail` and `delegate` marks are kept but unchecked,
+did not (§22). `tail`, `notail` and `delegate` marks are kept but unchecked,
 though `def-fns` still mints the `Delegate` proof (§38).
 
 The non-erased stand-in for `Level` and friends would most likely just be
@@ -1205,6 +1206,7 @@ they annotate a form rather than heading a list):
 32. `union` — declares an ADT's discriminant erased (§12).
 33. `tail` — marks a call as compiling to a tail call; a hard compile
     error if the compiler can't honor the claim (§9).
+33a. `notail` — the opposite of `tail` (§9).
 34. `delegate` — `tail` plus the same pass-through requirement on the
     call's non-erased arguments (§9).
 35. `predates` — heads the call-site annotation carrying a lower-level
