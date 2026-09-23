@@ -1892,7 +1892,7 @@ A `delegate` proof, reusing `inc` from §33 at level `I`:
 ## 41. Extern types, the FFI, and the prelude
 
 Partly designed. Settled: the `extern` mark and what it promises, the
-invariant below, and the prelude's `Nat` and `U8`. The prototype's FFI
+invariant below, and the prelude's `Nat`, `U8` and `U62`. The prototype's FFI
 is a fixed table (ASSUMPTIONS.md); a source-level way to add to it is
 not designed.
 
@@ -1942,11 +1942,33 @@ value by reflection (a `comptime-match` on a decided comparison, §15),
 and for a computed one by binding it and matching `lt-dec`, where the
 caller says what out of range means (§5 keeps the call itself out of
 the `Dec` index, so the binding is not optional). There is no
-narrowing function. `u8-add` (wrapping) delegates to `add-u8`, plain source over `add` and
-the extern `nat-mod`, which returns a `U8Add` relating the fields
-through `Add` and `Mod`; `U8` is marked
+narrowing function, and no arithmetic on `U8`. `U8` is marked
 `newtype`, so it is its `Nat` field alone (§38) and needs no extern of
 its own.
+
+**`U62`.** A newtype like `U8`, bounded by `u62-modulus`, 2^62:
+
+```scheme
+(def-adts $ (U62 : -> Type)
+  enum newtype
+  (many MkU62 : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (U62)))
+```
+
+The modulus, and `sixty-two` beside it, are erased top-level bindings,
+so the prelude never computes 2^62; each keeps the proofs it was built
+from. The arithmetic takes `Nat`s rather than `U62`s: `u62-add`,
+`u62-sub`, `u62-mul`, `u62-div`, `u62-mod`, `u62-divmod` and `u62-cmp`
+are extern, each modelled on the `Nat` primitive it corresponds to, and each takes erased
+proofs that its operands and its result are below the modulus, which
+the caller discharges, so a call cannot overflow or underflow. What
+this is for is the implementation it permits: the FFI runs each as one
+machine operation on the word, with no arbitrary-precision arithmetic
+and no overflow check. That rests on the host having 63-bit native
+integers, which the FFI checks at startup, and on its
+arbitrary-precision library holding every value below 2^62 as a native
+integer, which we believe zarith does, the startup check testing it at
+2^62−1. There is no range check from `Nat` to `U62`; a program that
+wants one computes the modulus itself.
 
 Open, not decided: a source-level declaration of extern types and
 functions; what guarantees an extern implementation agrees with its
