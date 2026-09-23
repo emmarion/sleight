@@ -13,6 +13,8 @@
   $ RCat (RStr "type 'v rope = REmpty | RStr of 'v | RCat of 'v * 'v | RChar of 'v\n")
   $ RCat (RStr "type cmp = CLt | CEq | CGt\n")
   $ RCat (RStr "\n")
+  $ RCat (RStr "let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith \"this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed\"\n")
+  $ RCat (RStr "\n")
   $ RCat (RStr "let nat_view ~z ~nat v = let n = z v in if Z.equal n Z.zero then Zero else Succ (nat (Z.pred n))\n")
   $ RCat (RStr "let nat_of ~z ~nat = function Zero -> nat Z.zero | Succ p -> nat (Z.succ (z p))\n")
   $ RCat (RStr "\n")

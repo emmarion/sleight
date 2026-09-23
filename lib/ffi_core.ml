@@ -8,6 +8,8 @@ type 'v str = SNil | SCons of 'v * 'v
 type 'v rope = REmpty | RStr of 'v | RCat of 'v * 'v | RChar of 'v
 type cmp = CLt | CEq | CGt
 
+let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
+
 let nat_view ~z ~nat v = let n = z v in if Z.equal n Z.zero then Zero else Succ (nat (Z.pred n))
 let nat_of ~z ~nat = function Zero -> nat Z.zero | Succ p -> nat (Z.succ (z p))
 
