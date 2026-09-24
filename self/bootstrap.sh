@@ -10,6 +10,8 @@
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
 #   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
+#        self/bootstrap.sh one tests/a.sl ...   step 2 for those tests alone, into _build/self, rebuilding slc only
+#        when self/*.sl or the reference binary changed; test/one.sh also runs them through test/runtest.ml
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
