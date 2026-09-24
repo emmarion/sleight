@@ -473,7 +473,12 @@ let bind_cell code cell body = match cell with None -> body | Some x -> V.CLet (
 
 let warn_use env l what t =
   match canon env t with
-  | Var x when not env.in_extern -> Option.iter (fun (pl, msg) -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg) (IntMap.find_opt x env.warned)
+  | Var x when not env.in_extern -> (
+      let means r = match StringMap.find_opt r.Reader.name env.scope.named with Some y -> canon env (Var y) = Var x | None -> false in
+      match IntMap.find_opt x env.warned, List.filter (fun r -> Reader.covers r l && means r) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions l.file)) with
+      | Some (pl, msg), [] -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg
+      | Some _, rs -> List.iter (fun r -> r.Reader.used <- true) rs
+      | None, _ -> ())
   | _ -> ()
 
 let pragma env l = function
@@ -487,8 +492,7 @@ let pragma env l = function
       | _ -> error nl "`;! warn` names %s, which is neither a type constructor nor a value constructor" (tick n))
   | [ Atom (_, "warn") ] -> error l "`;! warn` needs a name and a message"
   | [ Atom (_, "warn"); _ ] -> error l "`;! warn` needs a message after the name"
-  | Atom (wl, w) :: _ -> error wl "unknown pragma %s" (tick w)
-  | _ -> error l "a pragma needs a word after `;!`"
+  | _ -> error l "`;! warn` needs a name and a message"
 
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const env V.VToken) Prelude.level_term
 
@@ -1809,4 +1813,8 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
               if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
               go (fst (elab_stmt Many env item)) rest)))
   in
-  go env items
+  let env = go env items in
+  (match items with
+   | item :: _ -> List.iter (fun r -> if not r.Reader.used then warn_at r.from [] "`;! suppress warn` for %s silenced nothing" (tick r.name)) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (loc item).file))
+   | [] -> ());
+  env

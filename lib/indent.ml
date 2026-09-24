@@ -137,6 +137,7 @@ let balance toks =
 (* The issues, in line order, and where the lexer stopped if it could not finish the file. *)
 let issues path src =
   let toks, stopped = scan_upto path src in
+  let toks = List.filter (function _, _, Pragma _ -> false | _ -> true) toks in
   let acc = ref [] in
   let report i = acc := i :: !acc in
   check_lines report (checkable_lines report src toks);

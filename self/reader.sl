@@ -41,7 +41,41 @@
 ; A syntax error and where it is reported.
 (def-adts $ (SynErr : -> Type)
   enum
-  (many MkSynErr : (many (Pos) pos) (many (String) msg) (many (Bool) paren) -> (SynErr)))
+  (many MkSynErr : (many (Pos) pos) (many (String) msg) (many (Bool) paren) (many (Maybe $ Pair (Pos) (String)) note) -> (SynErr)))
+
+(def-adts $ (Region : -> Type)
+  enum
+  (many MkRegion : (many (Nat) index) (many (String) name) (many (Pos) from) (many (Maybe $ Pos) until) -> (Region)))
+
+(def-fns _ $ (many pos-lt : (many (Pos) a) (many (Pos) b) -> (many (Bool) r))
+  (match many a _ ((MkPos al ac) (match many b _ ((MkPos bl bc)
+    (or (nat-lt al bl) $ and (nat-eq al bl) $ nat-lt ac bc))))))
+
+(def-fns _ $ (many region-covers : (many (Region) r) (many (Pos) p) -> (many (Bool) b))
+  (match many r _ ((MkRegion _ _ from until)
+    (and (not $ pos-lt p from) $ match many until (((Bool) _)) ((None _) (BTrue)) ((Some _ u) (pos-lt p u))))))
+
+(def-fns _ $ (many region-named : (subterm many (List $ Region) rs) (many (String) name) -> (many (Maybe $ Region) r))
+  (match many rs _
+    ((Nil _) (None _))
+    ((Cons _ r rest) (match many r _ ((MkRegion _ n _ _) (match many (str-eq n name) _ ((BTrue) (Some _ r)) ((BFalse) (tail $ region-named rest name))))))))
+
+(def-fns _ $ (many region-drop : (subterm many (List $ Region) rs) (many (String) name) -> (many (List $ Region) r))
+  (match many rs _
+    ((Nil _) rs)
+    ((Cons _ r rest) (match many r _ ((MkRegion _ n _ _) (match many (str-eq n name) _ ((BTrue) rest) ((BFalse) (Cons _ r $ notail $ region-drop rest name))))))))
+
+(def-fns _ $ (many region-insert : (many (Region) r) (subterm many (List $ Region) rs) -> (many (List $ Region) out))
+  (match many rs _
+    ((Nil _) (Cons _ r rs))
+    ((Cons _ q rest)
+      (match many r _ ((MkRegion i _ _ _) (match many q _ ((MkRegion j _ _ _)
+        (match many (nat-lt i j) _ ((BTrue) (Cons _ r rs)) ((BFalse) (Cons _ q $ notail $ region-insert r rest))))))))))
+
+(def-fns _ $ (many regions-sorted : (subterm many (List $ Region) rs) (many (List $ Region) acc) -> (many (List $ Region) out))
+  (match many rs _
+    ((Nil _) acc)
+    ((Cons _ r rest) (tail $ regions-sorted rest $ region-insert r acc))))
 
 ; A parenthesis a file gets wrong is found faster with bin/shape than from the one position a message names
 ; (lib/reader.ml's shape_note).
@@ -102,6 +136,11 @@
     ((None _) words)
     ((Some _ p) (Cons _ (RAtom p $ rope-str cur) words))))
 
+(def-fns _ $ (many pragma-limit : (many (List $ Raw) words) -> (many (Nat) n))
+  (match many (list-rev _ words) _
+    ((Cons _ w _) (match many w _ ((RAtom _ s) (match many (str-eq s "warn") _ ((BTrue) 2) ((BFalse) 3))) (else 3)))
+    ((Nil _) 3)))
+
 (def-fns _ $ (many pragma-tok : (many (Pos) pos) (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (Tok) t))
   (TPragma pos $ list-rev _ $ pragma-field start cur words))
 
@@ -147,7 +186,7 @@
                 (match many start _
                   ((None _) (tail $ pragma-line rest line (Succ col) pos words start cur blanks acc))
                   ((Some _ _)
-                    (match many (nat-lt (list-length _ words) 2) _
+                    (match many (nat-lt (list-length _ words) $ pragma-limit words) _
                       ((BTrue) (tail $ pragma-line rest line (Succ col) pos (pragma-field start cur words) (None _) (REmpty) (REmpty) acc))
                       ((BFalse) (tail $ pragma-line rest line (Succ col) pos words start cur (RCat blanks $ RChar c) acc))))))
               ((BFalse)
@@ -237,28 +276,69 @@
 ; The stack starts with a root frame; a ) closes the $ frames above the nearest ( frame and then that
 ; frame; a ) with only the root open, a form still open at the end, or a bad token is a syntax error
 ; (DESIGN.md section 2).
-(def-fns _ $ (many parse-toks : (subterm many (List $ Tok) toks) (many (List $ Frame) stack) -> (many (List $ Frame) r) (many (Maybe $ SynErr) err))
+(def-fns _ $ (many is-atom-text : (many (Raw) r) (many (String) x) -> (many (Bool) b))
+  (match many r _ ((RAtom _ y) (str-eq x y)) (else (BFalse))))
+
+(def-fns _ $ (many syn-err : (many (Pos) l) (many (String) m) -> (many (Maybe $ SynErr) e))
+  (Some _ $ MkSynErr l m (BFalse) $ None _))
+
+(def-fns _ $ (many parse-toks : (subterm many (List $ Tok) toks) (many (List $ Frame) stack) (many (List $ Region) opened) (many (List $ Region) closed) ->
+    (many (List $ Frame) r) (many (Maybe $ SynErr) err) (many (List $ Region) regions))
   (match many toks _
-    ((Nil _) (values stack $ None _))
+    ((Nil _) (values stack (None _) $ regions-sorted opened $ regions-sorted closed $ Nil _))
     ((Cons _ t rest)
       (match many t _
-        ((TOpen l) (tail $ parse-toks rest $ Cons _ (MkFrame l (BFalse) $ Nil _) stack))
-        ((TDollar l) (tail $ parse-toks rest $ Cons _ (MkFrame l (BTrue) $ Nil _) stack))
-        ((TWord l w) (tail $ parse-toks rest $ push-item (RAtom l w) stack))
-        ((TStrLit l s) (tail $ parse-toks rest $ push-item (RString l s) stack))
-        ((TError l m) (values stack $ Some _ $ MkSynErr l m $ BFalse))
+        ((TOpen l) (tail $ parse-toks rest (Cons _ (MkFrame l (BFalse) $ Nil _) stack) opened closed))
+        ((TDollar l) (tail $ parse-toks rest (Cons _ (MkFrame l (BTrue) $ Nil _) stack) opened closed))
+        ((TWord l w) (tail $ parse-toks rest (push-item (RAtom l w) stack) opened closed))
+        ((TStrLit l s) (tail $ parse-toks rest (push-item (RString l s) stack) opened closed))
+        ((TError l m) (values stack (syn-err l m) closed))
         ((TPragma l ws)
-          (match many (nat-lt (list-length _ stack) 2) _
-            ((BTrue) (tail $ parse-toks rest $ push-item (RList l $ Cons _ (RAtom l ";!") ws) stack))
-            ((BFalse) (values stack $ Some _ $ MkSynErr l "a pragma must be written between top-level forms" $ BFalse))))
+          (match many ws _
+            ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed))
+            ((Cons _ w args)
+              (match many w _
+                ((RAtom wl kw)
+                  (match many (str-eq kw "warn") _
+                    ((BTrue)
+                      (match many (nat-lt (list-length _ stack) 2) _
+                        ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
+                        ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
+                    ((BFalse)
+                      (match many (or (str-eq kw "suppress") $ str-eq kw "restore") _
+                        ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed))
+                        ((BTrue)
+                          (let ((many (Maybe $ String) name)) $ match many args _
+                            ((Cons _ a more)
+                              (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
+                                ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
+                                ((BFalse) (None _))))
+                            ((Nil _) (None _)))
+                          (match many name _
+                            ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed))
+                            ((Some _ n)
+                              (match many (str-eq kw "suppress") _
+                                ((BTrue)
+                                  (match many (region-named opened n) _
+                                    ((None _) (tail $ parse-toks rest stack (Cons _ (MkRegion (nat-add (list-length _ opened) $ list-length _ closed) n l $ None _) opened) closed))
+                                    ((Some _ first)
+                                      (match many first _ ((MkRegion _ _ fp _)
+                                        (values stack (Some _ $ MkSynErr l (str-cat3 "`;! suppress warn` for `" n "` is already open") (BFalse) $ Some _ $ MkPair _ _ fp "opened here") closed))))))
+                                ((BFalse)
+                                  (match many (region-named opened n) _
+                                    ((None _) (values stack (syn-err l $ str-cat3 "`;! restore warn` for `" n "` has no open `;! suppress warn`") closed))
+                                    ((Some _ r)
+                                      (match many r _ ((MkRegion i _ from _)
+                                        (tail $ parse-toks rest stack (region-drop opened n) $ Cons _ (MkRegion i n from $ Some _ l) closed))))))))))))))
+                (else (values stack (syn-err l "a pragma needs a word after `;!`") closed))))))
         ((TClose l)
           (let ((many s1)) $ close-dollars stack)
           (match many s1 _
-            ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`" $ BTrue))
+            ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed))
             ((Cons _ _ s2)
               (match many s2 _
-                ((Nil _) (values s1 $ Some _ $ MkSynErr l "unexpected `)`" $ BTrue))
-                ((Cons _ _ _) (tail $ parse-toks rest $ close-top s1))))))))))
+                ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed))
+                ((Cons _ _ _) (tail $ parse-toks rest (close-top s1) opened closed))))))))))
 
 ; Reads the root frame's items once nothing is open; an open form at the end is a missing ), reported
 ; for the innermost, which is the $ form's when that is what is open, at the line the form opened on.
@@ -270,14 +350,16 @@
         ((Nil _) (match many f _ ((MkFrame _ _ items) (values (list-rev _ items) $ None _))))
         ((Cons _ _ _)
           (match many f _
-            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l (match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")) $ BTrue))))))))
+            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l (match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")) (BTrue) $ None _))))))))
 
-(def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err))
-  (let ((many stack) (many err)) (parse-toks (tokenize src 1 0 $ Nil _)
-                                            $ Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Nil _) $ Nil _))
+(def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err) (many (List $ Region) regions))
+  (let ((many stack) (many err) (many regions)) (parse-toks (tokenize src 1 0 $ Nil _)
+                                            (Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Nil _) $ Nil _) (Nil _) (Nil _)))
   (match many err _
-    ((Some _ _) (values (Nil _) err))
-    ((None _) (finish-stack stack))))
+    ((Some _ _) (values (Nil _) err $ Nil _))
+    ((None _)
+      (let ((many items) (many err2)) $ finish-stack stack)
+      (values items err2 regions))))
 
 (def-fns _
   ((many show-raw : (subterm many (Raw) r) -> (many (Rope) out))

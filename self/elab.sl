@@ -320,6 +320,20 @@
             ((BTrue) (Some _ w))
             ((BFalse) (tail $ warned-find rest x))))))))
 
+(def-fns _ $ (many means-entry : (many (Env) env) (many (String) n) (many (Nat) x) -> (many (Bool) r))
+  (match many (lookup env n) _
+    ((None _) (BFalse))
+    ((Some _ y) (match many (canon-env env $ TVar y) _ ((TVar z) (nat-eq z x)) (else (BFalse))))))
+
+(def-fns _ $ (many suppressing : (many (Env) env) (many (Nat) x) (many (Pos) p) (subterm many (List $ Region) rs) -> (many (List $ Said) hits))
+  (match many rs _
+    ((Nil _) (Nil _))
+    ((Cons _ r rest)
+      (match many r _ ((MkRegion k n _ _)
+        (match many (and (region-covers r p) $ means-entry env n x) _
+          ((BTrue) (Cons _ (SaidSilenced k) $ notail $ suppressing env x p rest))
+          ((BFalse) (tail $ suppressing env x p rest))))))))
+
 (def-fns _ $ (many warn-use : (many (Env) env) (many (Loc) l) (many (String) what) (many (Term) t) -> (many (Env) r))
   (match many (env-in-extern env) _
     ((BTrue) env)
@@ -329,10 +343,14 @@
           (match many (warned-find (env-warned env) x) _
             ((None _) env)
             ((Some _ w)
-              (match many w _
-                ((MkWarned _ pl msg)
-                  (env-back env $ env-warn-note-at (env-warn-at env l $ str-cat3 what " " $ str-cat3 (qshow env t) ": " msg)
-                    pl $ str-cat3 "`;! warn` for " (qshow env t) " is here"))))))
+              (let ((many hits)) $ suppressing env x (match many l (((Pos) _)) ((MkLoc _ p) p)) $ env-regions env)
+              (match many hits _
+                ((Cons _ _ _) (env-set-said env $ list-rev-onto _ hits $ env-said env))
+                ((Nil _)
+                  (match many w _
+                    ((MkWarned _ pl msg)
+                      (env-back env $ env-warn-note-at (env-warn-at env l $ str-cat3 what " " $ str-cat3 (qshow env t) ": " msg)
+                        pl $ str-cat3 "`;! warn` for " (qshow env t) " is here"))))))))
         (else env)))))
 
 ; A message is built only when it is reported: a check takes it as a function at msg-lvl, which may call
@@ -6041,21 +6059,29 @@
     (else env)))
 
 (def-fns _ $ (many pragma : (many (Env) env) (many (Pos) l) (many (List $ Raw) words) -> (many (Env) r))
-  (match many words _
-    ((Nil _) (env-error env "a pragma needs a word after `;!`"))
-    ((Cons _ w rest)
-      (match many w _
-        ((RAtom wl ws)
-          (match many (str-eq ws "warn") _
-            ((BFalse) (env-error (env-at env wl) $ str-cat "unknown pragma " $ tick ws))
-            ((BTrue)
-              (match many rest _
-                ((Nil _) (env-error env "`;! warn` needs a name and a message"))
-                ((Cons _ nraw more)
-                  (match many more _
-                    ((Nil _) (env-error env "`;! warn` needs a message after the name"))
-                    ((Cons _ mraw _) (pragma-warn env l nraw mraw))))))))
-        (else env)))))
+  (match many (match many words (((List $ Raw) _)) ((Cons _ _ rest) rest) ((Nil _) words)) _
+    ((Nil _) (env-error env "`;! warn` needs a name and a message"))
+    ((Cons _ nraw more)
+      (match many more _
+        ((Nil _) (env-error env "`;! warn` needs a message after the name"))
+        ((Cons _ mraw _) (pragma-warn env l nraw mraw))))))
+
+(def-fns _ $ (many sweep-regions : (many (Env) env) (subterm many (List $ Region) rs) (many (List $ Nat) used) -> (many (Env) r))
+  (match many rs _
+    ((Nil _) env)
+    ((Cons _ r rest)
+      (match many r _ ((MkRegion k n from _)
+        (tail $ sweep-regions
+          (match many (list-mem-bin used k) (((Env) _))
+            ((BTrue) env)
+            ((BFalse) (env-back env $ env-warn-at env (loc-in env from) $ str-cat3 "`;! suppress warn` for " (tick n) " silenced nothing")))
+          rest used))))))
+
+(def-fns _ $ (many end-file : (many (Env) env) -> (many (Env) r))
+  (let ((many swept)) $ match many (env-errors env) (((Env) _))
+    ((Nil _) (sweep-regions env (env-regions env) $ env-silenced env))
+    ((Cons _ _ _) env))
+  (env-set-regions (env-set-said swept $ said-without-silenced $ env-said swept) $ Nil _))
 
 (def-fns _ $ (many run-toplevel : (subterm many (List $ Raw) items) (many (Env) env) -> (many (Env) r))
   (match many items _

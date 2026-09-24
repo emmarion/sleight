@@ -55,7 +55,9 @@ let scan_upto file src =
       match src.[i] with
       | '\n' -> go (line + 1) (i + 1) (i + 1)
       | ' ' | '\t' | '\r' -> go line bol (i + 1)
-      | ';' when i + 1 < n && src.[i + 1] = '!' -> emit (at line bol i, i, Pragma (pragma line bol (i + 2) 2)); go line bol (skip (( <> ) '\n') i)
+      | ';' when i + 1 < n && src.[i + 1] = '!' ->
+          let words = match pragma line bol (i + 2) 2 with Atom (_, "warn") :: _ as ws -> ws | _ -> pragma line bol (i + 2) 3 in
+          emit (at line bol i, i, Pragma words); go line bol (skip (( <> ) '\n') i)
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
@@ -81,6 +83,12 @@ let tokenize file src = List.map (fun (l, _, t) -> (l, t)) (scan file src)
 let shape_note path =
   Printf.sprintf "%s: note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes" path
 
+type region = { name : string; from : loc; until : loc option; mutable used : bool }
+
+let regions : (string, region list) Hashtbl.t = Hashtbl.create 8
+let before a b = (a.line, a.col) < (b.line, b.col)
+let covers r l = not (before l r.from) && match r.until with Some u -> before l u | None -> true
+
 (* [read_items] reads until the enclosing form's terminator, which it leaves in place;
    a [$] form ends at that same terminator (DESIGN.md section 2). [shape] false leaves out the note on a
    parenthesis error, where the indentation check has already written it. *)
@@ -89,11 +97,24 @@ let parse ?(shape = true) file src =
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
   let paren l m = Syntax (l, if shape then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
+  let opened = ref [] and closed = ref [] in
+  let suppression l w = function
+    | Atom (_, "warn") :: Atom (_, name) :: _ -> (
+        match (w, List.assoc_opt name !opened) with
+        | "suppress", None -> opened := (name, l) :: !opened
+        | "suppress", Some first -> raise (Syntax (l, Printf.sprintf "`;! suppress warn` for `%s` is already open\n%s: note: opened here" name (where "-" first)))
+        | _, Some from -> opened := List.remove_assoc name !opened; closed := { name; from; until = Some l; used = false } :: !closed
+        | _, None -> raise (Syntax (l, Printf.sprintf "`;! restore warn` for `%s` has no open `;! suppress warn`" name)))
+    | _ -> raise (Syntax (l, Printf.sprintf "`;! %s` takes `warn NAME`" w))
+  in
   let rec read_items ?(top = false) acc =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
+    | Some (l, Pragma (Atom (_, (("suppress" | "restore") as w)) :: rest)) -> advance (); suppression l w rest; read_items ~top acc
+    | Some (_, Pragma (Atom (wl, w) :: _)) when w <> "warn" -> raise (Syntax (wl, Printf.sprintf "unknown pragma `%s`" w))
+    | Some (l, Pragma []) -> raise (Syntax (l, "a pragma needs a word after `;!`"))
     | Some (l, Pragma words) ->
-        if not top then raise (Syntax (l, "a pragma must be written between top-level forms"));
+        if not top then raise (Syntax (l, "`;! warn` must be written between top-level forms"));
         advance (); read_items ~top (List (l, Atom (l, ";!") :: words) :: acc)
     | Some (l, ((LParen | Dollar) as opener)) ->
         advance ();
@@ -107,4 +128,7 @@ let parse ?(shape = true) file src =
     | Some (l, Word w) -> advance (); read_items ~top (Atom (l, w) :: acc)
   in
   let items = read_items ~top:true [] in
-  match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> items
+  (match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> ());
+  let unclosed = List.map (fun (name, from) -> { name; from; until = None; used = false }) !opened in
+  Hashtbl.replace regions file (List.sort (fun a b -> compare (a.from.line, a.from.col) (b.from.line, b.from.col)) (!closed @ unclosed));
+  items

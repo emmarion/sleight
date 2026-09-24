@@ -192,6 +192,12 @@ non-erased application of the value constructor `NAME`, and every match on the
 type `NAME` that is not `erased`, of any kind, warn with `MESSAGE` (the rest of
 the line). `NAME` means the entry that name refers to where the pragma is
 written. Code inside an extern function's body never earns this warning.
+`;! suppress warn NAME` and `;! restore warn NAME`, written anywhere, bracket
+a region of the file in which that warning is not written wherever `NAME`,
+looked up where the warning arises, means the warned entry; the rest of either
+line is a comment. A region left open runs to the end of the file. Opening a
+region for a name already open, or restoring one that is not, is an error, and
+a region that silenced nothing warns once its file has been elaborated.
 
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope

@@ -7,4 +7,4 @@
   (MkBox 3))
 
 b
-; error: a pragma must be written between top-level forms
+; error: `;! warn` must be written between top-level forms

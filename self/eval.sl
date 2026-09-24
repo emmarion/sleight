@@ -181,7 +181,10 @@
       (let ((many (String) rest)) (match many (list-nth _ fields 1) _
         ((NthHit _ _ _ x _) (heap-str _ hp x)) ((NthMiss _ _ _ _) (SNil))))
       (alloc-ext _ hp (PStr (match many index (((String) _))
-        ((Zero) (SNil)) ((Succ _) (SCons (char-of-code (field-nat _ hp fields 0)) rest))))))))
+        ((Zero) (SNil))
+        ;! suppress warn SCons the program being run asked for this cons
+        ((Succ _) (SCons (char-of-code (field-nat _ hp fields 0)) rest))))))))
+;! restore warn SCons
 
 (def-fns _ $ (many ext-destruct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
   (match many p _

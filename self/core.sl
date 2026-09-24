@@ -2038,16 +2038,18 @@
 (def-adts
   ((Use : -> Type) enum (many UseShared : (many (Loc) loc) -> (Use)) (many UseConsumed : (many (Loc) loc) -> (Use)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
+  ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) -> (Pragmas)))
+  ((Said : -> Type) enum (many SaidText : (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
-      (many (List $ Nat) words) (many (List $ Nat) temporary) (many (List $ Warned) warned) -> (UniqueState))))
+      (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) -> (UniqueState))))
 ; An interned literal: its entry, its Numeral proof where it has one, and the spelling it reads back as.
 (def-adts $ (LitEntry : -> Type)
   enum
   (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) -> (LitEntry)))
 
-(let ((many unique-empty)) (MkUniqueState (MEmpty _) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (Nil _)))
+(let ((many unique-empty)) (MkUniqueState (MEmpty _) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _))))
 
 (def-adts $ (Scope : -> Type)
   enum
@@ -2062,7 +2064,7 @@
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (Scope) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals) (many (List $ String) errors)
-       (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ String) warnings)
+       (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) warnings)
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
@@ -2178,7 +2180,25 @@
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _) st)))
 (def-fns _ $ (many env-claimed : (many (Env) e) -> (many (List $ Pair (String) $ Loc) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ cl _ _ _ _ _) cl)))
+(def-fns _ $ (many said-texts : (subterm many (List $ Said) ss) -> (many (List $ String) r))
+  (match many ss _
+    ((Nil _) (Nil _))
+    ((Cons _ x rest) (match many x _ ((SaidText t) (Cons _ t $ notail $ said-texts rest)) ((SaidSilenced _) (tail $ said-texts rest))))))
+(def-fns _ $ (many said-silenced : (subterm many (List $ Said) ss) -> (many (List $ Nat) r))
+  (match many ss _
+    ((Nil _) (Nil _))
+    ((Cons _ x rest) (match many x _ ((SaidSilenced k) (Cons _ k $ notail $ said-silenced rest)) ((SaidText _) (tail $ said-silenced rest))))))
+(def-fns _ $ (many said-without-silenced : (subterm many (List $ Said) ss) -> (many (List $ Said) r))
+  (match many ss _
+    ((Nil _) ss)
+    ((Cons _ x rest) (match many x _ ((SaidText _) (Cons _ x $ notail $ said-without-silenced rest)) ((SaidSilenced _) (tail $ said-without-silenced rest))))))
 (def-fns _ $ (many env-warnings : (many (Env) e) -> (many (List $ String) r))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _) (said-texts wa))))
+(def-fns _ $ (many env-silenced : (many (Env) e) -> (many (List $ Nat) r))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _) (said-silenced wa))))
+(def-fns _ $ (many env-set-said : (many (Env) e) (many (List $ Said) x) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl _ lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl x lt lo pr us))))
+(def-fns _ $ (many env-said : (many (Env) e) -> (many (List $ Said) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _) wa)))
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _) lt)))
@@ -2198,7 +2218,7 @@
 (def-fns _ $ (many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st (Cons _ (MkPair _ _ x lo) cl) wa lt lo pr us))))
 (def-fns _ $ (many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl (Cons _ x wa) lt lo pr us))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr us) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl (Cons _ (SaidText x) wa) lt lo pr us))))
 (def-fns _ $ (many env-warn-all : (many (Env) e) (subterm many (List $ String) xs) -> (many (Env) r))
   (match many xs _
     ((Nil _) e)
@@ -2525,10 +2545,18 @@
 (def-fns _ $ (many env-set-temporary : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words _ wd) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words x wd)))))
 
-(def-fns _ $ (many env-warned : (many (Env) env) -> (many (List $ Warned) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ _ wd) wd)))
-(def-fns _ $ (many env-set-warned : (many (Env) env) (many (List $ Warned) x) -> (many (Env) r))
+(def-fns _ $ (many env-pragmas : (many (Env) env) -> (many (Pragmas) r))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ _ pg) pg)))
+(def-fns _ $ (many env-set-pragmas : (many (Env) env) (many (Pragmas) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words temp _) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words temp x)))))
+(def-fns _ $ (many env-warned : (many (Env) env) -> (many (List $ Warned) r))
+  (match many (env-pragmas env) _ ((MkPragmas ws _) ws)))
+(def-fns _ $ (many env-set-warned : (many (Env) env) (many (List $ Warned) x) -> (many (Env) r))
+  (match many (env-pragmas env) _ ((MkPragmas _ rs) (env-set-pragmas env $ MkPragmas x rs))))
+(def-fns _ $ (many env-regions : (many (Env) env) -> (many (List $ Region) r))
+  (match many (env-pragmas env) _ ((MkPragmas _ rs) rs)))
+(def-fns _ $ (many env-set-regions : (many (Env) env) (many (List $ Region) x) -> (many (Env) r))
+  (match many (env-pragmas env) _ ((MkPragmas ws _) (env-set-pragmas env $ MkPragmas ws x))))
 
 (def-fns _ $ (many entry-word : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (list-mem-bin (env-words env) x))
