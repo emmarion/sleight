@@ -19,7 +19,7 @@ let rec show = function
   | Atom (_, s) -> s
   | List (_, items) -> "(" ^ String.concat " " (List.map show items) ^ ")"
 
-type token = LParen | RParen | Dollar | Word of string
+type token = LParen | RParen | Dollar | Word of string | Pragma of raw list
 
 (* [bol] is the offset the current line starts at, so a token's column is its own offset from there. A
    string literal's token is placed at its opening quote, the line its own rather than the line it closes
@@ -43,11 +43,19 @@ let scan_upto file src =
       | c -> Buffer.add_char buf c; string buf line bol (i + 1)
   in
   let emit t = out := t :: !out in
+  let blank c = c = ' ' || c = '\t' || c = '\r' in
+  let rec pragma line bol i k =
+    let i = skip blank i in
+    let j = skip (( <> ) '\n') i in
+    let j = if k = 0 then j else skip (fun c -> not (blank c || c = '\n')) i in
+    if i >= j then [] else Atom (at line bol i, String.trim (String.sub src i (j - i))) :: (if k = 0 then [] else pragma line bol j (k - 1))
+  in
   let rec go line bol i =
     if i < n then
       match src.[i] with
       | '\n' -> go (line + 1) (i + 1) (i + 1)
       | ' ' | '\t' | '\r' -> go line bol (i + 1)
+      | ';' when i + 1 < n && src.[i + 1] = '!' -> emit (at line bol i, i, Pragma (pragma line bol (i + 2) 2)); go line bol (skip (( <> ) '\n') i)
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
@@ -81,9 +89,12 @@ let parse ?(shape = true) file src =
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
   let paren l m = Syntax (l, if shape then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
-  let rec read_items acc =
+  let rec read_items ?(top = false) acc =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
+    | Some (l, Pragma words) ->
+        if not top then raise (Syntax (l, "a pragma must be written between top-level forms"));
+        advance (); read_items ~top (List (l, Atom (l, ";!") :: words) :: acc)
     | Some (l, ((LParen | Dollar) as opener)) ->
         advance ();
         let items = read_items [] in
@@ -92,8 +103,8 @@ let parse ?(shape = true) file src =
          | LParen, _ -> raise (paren l "missing `)`")
          | _, None -> raise (paren l "missing `)` after `$`")
          | _ -> ());
-        read_items (List (l, items) :: acc)
-    | Some (l, Word w) -> advance (); read_items (Atom (l, w) :: acc)
+        read_items ~top (List (l, items) :: acc)
+    | Some (l, Word w) -> advance (); read_items ~top (Atom (l, w) :: acc)
   in
-  let items = read_items [] in
+  let items = read_items ~top:true [] in
   match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> items

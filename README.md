@@ -187,6 +187,12 @@ in `self/elab.sl`), and the repository marks every such call, written
 `(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
 the warning is tested on.
 
+`;! warn NAME MESSAGE`, written between top-level forms, makes every
+non-erased application of the value constructor `NAME`, or any kind of match
+on the type `NAME`, warn with `MESSAGE` (the rest of the line), outside an
+extern function's body. `NAME` means the entry that name refers to where the
+pragma is written.
+
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope
 with its type, `is` rule, multiplicity and uniqueness state, and the

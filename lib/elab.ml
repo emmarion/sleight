@@ -471,6 +471,25 @@ let pattern_cell env l mult scrut c fids name =
 
 let bind_cell code cell body = match cell with None -> body | Some x -> V.CLet ([x],code,body)
 
+let warn_use env l what t =
+  match canon env t with
+  | Var x when not env.in_extern -> Option.iter (fun (pl, msg) -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg) (IntMap.find_opt x env.warned)
+  | _ -> ()
+
+let pragma env l = function
+  | [ Atom (_, "warn"); Atom (nl, n); Atom (_, msg) ] -> (
+      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope" (tick n) in
+      match canon env (Var x), canon env (type_of env x) with
+      | Var c, (TyCtor _ | ValCtor _) -> (
+          match IntMap.find_opt c env.warned with
+          | Some (pl, _) -> error_with l [ (pl, "the first is here") ] "second `;! warn` for %s" (tick n)
+          | None -> { env with warned = IntMap.add c (l, msg) env.warned })
+      | _ -> error nl "`;! warn` names %s, which is neither a type constructor nor a value constructor" (tick n))
+  | [ Atom (_, "warn") ] -> error l "`;! warn` needs a name and a message"
+  | [ Atom (_, "warn"); _ ] -> error l "`;! warn` needs a message after the name"
+  | Atom (wl, w) :: _ -> error wl "unknown pragma %s" (tick w)
+  | _ -> error l "a pragma needs a word after `;!`"
+
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term ?expect env raw =
@@ -758,6 +777,7 @@ and elab_form demand cc expect_tele env expect raw =
           | ValCtor (tele, ret) ->
               if pos <> Erased && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (qshow env h.term);
               let pos = demanded env demand pos ret in
+              if pos <> Erased then warn_use env (loc head) "application of" h.term;
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
               let env, acc, codes, wrap = check_args env l ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args (fun env _ a tele -> arg env (field_under pos (List.hd (Option.get tele)).mult) a tele) in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
@@ -1168,6 +1188,7 @@ and scrutinee env l smult scrut =
   let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (qshow env sres.term) (qshow env sres.ty) in
   let mid, disc, ctors = find_matchable env l tid in
   let env = if smult = Erased then env else (held_needs_many env l tid mid; use env l Many mid) in
+  if smult <> Erased then warn_use env l "match on" (Var tid);
   if smult = Erased then (env,sres,scode,Fun.id,tid,mid,disc,ctors) else
   let x, env = bind env ~word:true ~temporary:true None smult Dyn sres.ty ~rule:sres.term in
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
@@ -1570,6 +1591,7 @@ and elab_comptime_match env l args =
       let tele, ret = ctor_type env pl c in
       let tid = match type_head env (type_of env x) with Some t -> t | None -> error l "scrutinee is not a datatype value" in
       let mid, disc, ctors = find_matchable env l tid in
+      warn_use env l "match on" (Var tid);
       if adt_of env mid = None then error l "the `Matchable` for %s is not Const, so `comptime-match` cannot consult it" (qname env tid);
       let env = use env l Many mid in
       if disc = Union then error l "`comptime-match` needs a non-erased discriminant";
@@ -1772,6 +1794,7 @@ let rec literals = function
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env = function
     | [] -> env
+    | List (l, Atom (_, ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
     | item :: rest -> (
         let env = List.fold_left hoist env (literals item) in
         at (loc item) (fun () ->

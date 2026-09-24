@@ -69,7 +69,7 @@ let checkable_lines report src toks =
        match tok with
        | LParen -> incr depth
        | RParen -> if !depth > 0 then decr depth
-       | Dollar | Word _ -> ())
+       | Dollar | Word _ | Pragma _ -> ())
     toks;
   List.rev !out
 
@@ -131,7 +131,7 @@ let balance toks =
        match tok with
        | LParen -> (l :: opens, surplus)
        | RParen -> (match opens with _ :: rest -> (rest, surplus) | [] -> ([], (if surplus = None then Some l else surplus)))
-       | Dollar | Word _ -> (opens, surplus))
+       | Dollar | Word _ | Pragma _ -> (opens, surplus))
     ([], None) toks
 
 (* The issues, in line order, and where the lexer stopped if it could not finish the file. *)

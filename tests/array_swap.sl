@@ -16,3 +16,9 @@
   (let-match unique rest (ACons _ _ z end))
   (nat-add (share old) (nat-add (share x) (nat-add (share y) (share z)))))
 swap-test
+; warns: tests/array_swap.sl:10:22: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: lib/prelude.sl:893:1: note: `;! warn` for `ACons` is here
+; warns: tests/array_swap.sl:11:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: lib/prelude.sl:893:1: note: `;! warn` for `ACons` is here
+; warns: tests/array_swap.sl:12:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: lib/prelude.sl:893:1: note: `;! warn` for `ACons` is here

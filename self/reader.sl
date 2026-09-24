@@ -35,7 +35,8 @@
   (many TDollar : (many (Pos) pos) -> (Tok))
   (many TWord : (many (Pos) pos) (many (String) s) -> (Tok))
   (many TStrLit : (many (Pos) pos) (many (String) s) -> (Tok))
-  (many TError : (many (Pos) pos) (many (String) msg) -> (Tok)))
+  (many TError : (many (Pos) pos) (many (String) msg) -> (Tok))
+  (many TPragma : (many (Pos) pos) (many (List $ Raw) words) -> (Tok)))
 
 ; A syntax error and where it is reported.
 (def-adts $ (SynErr : -> Type)
@@ -96,6 +97,14 @@
                 ((BTrue) (values (BFalse) (Succ line) 0 acc))
                 ((BFalse) (values (BFalse) line (Succ col) acc))))))))))
 
+(def-fns _ $ (many pragma-field : (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (List $ Raw) r))
+  (match many start _
+    ((None _) words)
+    ((Some _ p) (Cons _ (RAtom p $ rope-str cur) words))))
+
+(def-fns _ $ (many pragma-tok : (many (Pos) pos) (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (Tok) t))
+  (TPragma pos $ list-rev _ $ pragma-field start cur words))
+
 ; Tokens accumulate reversed in [acc]; an atom's or a literal's characters accumulate as a rope; [line] and
 ; [col] count the newlines and the characters passed, and a token is placed where it starts, a string
 ; literal's at its opening quote, as the reference reader places one.
@@ -107,7 +116,7 @@
         (match many (is-delim c) _
           ((BTrue)
             (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col acc)
-            (match many comment _ ((BTrue) (tail $ skip-comment rest line2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
+            (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
           ((BFalse)
             (match many (char-is c 34) _
               ((BTrue) (tail $ string-lit rest line (Succ col) (MkPos line $ Succ col) (REmpty) acc))
@@ -115,6 +124,36 @@
                 (let ((many len) (erased l)) (str-length s))
                 (let-match erased l (SLenCons c0 s0 rl lr))
                 (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))))))
+  ((many comment-start : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+    (match many s _
+      ((SNil) (list-rev _ acc))
+      ((SCons c rest)
+        (match many (char-is c 33) _
+          ((BTrue) (tail $ pragma-line rest line (Succ col) (MkPos line col) (Nil _) (None _) (REmpty) (REmpty) acc))
+          ((BFalse)
+            (match many (char-is c 10) _
+              ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
+              ((BFalse) (tail $ skip-comment rest line acc))))))))
+  ((many pragma-line : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (List $ Raw) words)
+      (many (Maybe $ Pos) start) (many (Rope) cur) (many (Rope) blanks) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+    (match many s _
+      ((SNil) (end-toks (pragma-tok pos start cur words) acc))
+      ((SCons c rest)
+        (match many (char-is c 10) _
+          ((BTrue) (tail $ tokenize rest (Succ line) 0 $ Cons _ (pragma-tok pos start cur words) acc))
+          ((BFalse)
+            (match many (or (char-is c 32) $ or (char-is c 9) $ char-is c 13) _
+              ((BTrue)
+                (match many start _
+                  ((None _) (tail $ pragma-line rest line (Succ col) pos words start cur blanks acc))
+                  ((Some _ _)
+                    (match many (nat-lt (list-length _ words) 2) _
+                      ((BTrue) (tail $ pragma-line rest line (Succ col) pos (pragma-field start cur words) (None _) (REmpty) (REmpty) acc))
+                      ((BFalse) (tail $ pragma-line rest line (Succ col) pos words start cur (RCat blanks $ RChar c) acc))))))
+              ((BFalse)
+                (match many start _
+                  ((None _) (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkPos line $ Succ col) (RChar c) (REmpty) acc))
+                  ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc))))))))))
   ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (match many s _
       ((SNil) (list-rev _ acc))
@@ -129,7 +168,7 @@
         (match many (is-delim c) _
           ((BTrue)
             (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col $ Cons _ (word-tok pos start k len l rl sum) acc)
-            (match many comment _ ((BTrue) (tail $ skip-comment rest line2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
+            (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
           ((BFalse)
             (let-match erased lr (SLenCons c0 s0 rl1 lr1))
             (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))))
@@ -208,6 +247,10 @@
         ((TWord l w) (tail $ parse-toks rest $ push-item (RAtom l w) stack))
         ((TStrLit l s) (tail $ parse-toks rest $ push-item (RString l s) stack))
         ((TError l m) (values stack $ Some _ $ MkSynErr l m $ BFalse))
+        ((TPragma l ws)
+          (match many (nat-lt (list-length _ stack) 2) _
+            ((BTrue) (tail $ parse-toks rest $ push-item (RList l $ Cons _ (RAtom l ";!") ws) stack))
+            ((BFalse) (values stack $ Some _ $ MkSynErr l "a pragma must be written between top-level forms" $ BFalse))))
         ((TClose l)
           (let ((many s1)) $ close-dollars stack)
           (match many s1 _

@@ -20,3 +20,7 @@
   (let-match unique rest (ACons _ _ y end))
   (nat-add (share x) (share y)))
 pluck-test
+; warns: tests/array_pluck.sl:4:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: lib/prelude.sl:893:1: note: `;! warn` for `ACons` is here
+; warns: tests/array_pluck.sl:5:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+; warns: lib/prelude.sl:893:1: note: `;! warn` for `ACons` is here

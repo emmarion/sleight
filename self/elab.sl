@@ -310,6 +310,31 @@
 (def-fns _ $ (many qraw : (many (Raw) r) -> (many (String) s))
   (tick $ show-r r))
 
+(def-fns _ $ (many warned-find : (subterm many (List $ Warned) ws) (many (Nat) x) -> (many (Maybe $ Warned) r))
+  (match many ws _
+    ((Nil _) (None _))
+    ((Cons _ w rest)
+      (match many w _
+        ((MkWarned y _ _)
+          (match many (nat-eq x y) _
+            ((BTrue) (Some _ w))
+            ((BFalse) (tail $ warned-find rest x))))))))
+
+(def-fns _ $ (many warn-use : (many (Env) env) (many (Loc) l) (many (String) what) (many (Term) t) -> (many (Env) r))
+  (match many (env-in-extern env) _
+    ((BTrue) env)
+    ((BFalse)
+      (match many (canon-env env t) _
+        ((TVar x)
+          (match many (warned-find (env-warned env) x) _
+            ((None _) env)
+            ((Some _ w)
+              (match many w _
+                ((MkWarned _ pl msg)
+                  (env-back env $ env-warn-note-at (env-warn-at env l $ str-cat3 what " " $ str-cat3 (qshow env t) ": " msg)
+                    pl $ str-cat3 "`;! warn` for " (qshow env t) " is here"))))))
+        (else env)))))
+
 ; A message is built only when it is reported: a check takes it as a function at msg-lvl, which may call
 ; everything above to render terms, and calls it only on failure. A constant message goes through const-msg.
 (def-lvl msg-lvl)
@@ -2346,7 +2371,7 @@
     ((BTrue) (values env $ marker mctors c))
     ((BFalse) (values (env-error env $ str-cat3 (qname env c) " is not a constructor of " $ qname env tid) $ Many))))
 
-(def-fns _ $ (many scrutinee-matchable : (many (Env) env) (many (Res) sres) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ MatchInfo) found))
+(def-fns _ $ (many scrutinee-matchable : (many (Env) env) (many (Mult) smult) (many (Res) sres) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ MatchInfo) found))
   (let ((many env1)) $ settle-res env sres)
   (match many (type-head env1 $ res-ty sres) _
     ((None _) (values (env-error env1 $ str-cat3 "cannot match on " (qshow env1 $ res-term sres) $ str-cat " : " $ qshow env1 $ res-ty sres) $ None _))
@@ -2354,7 +2379,9 @@
       (let ((many env2) (many found)) $ find-matchable env1 tid)
       (match many found _
         ((None _) (values (env-error env2 $ str-cat (qname env2 tid) " has no `Matchable` open") $ None _))
-        ((Some _ info) (values env2 $ Some _ $ MkPair _ _ tid info))))))
+        ((Some _ info)
+          (values (match many (mult-is-many smult) (((Env) _)) ((BTrue) (warn-use env2 (env-loc env2) "match on" $ TVar tid)) ((BFalse) env2))
+            $ Some _ $ MkPair _ _ tid info))))))
 
 (def-fns _ $ (many check-field-count : (many (Env) env) (many (Nat) c) (many (List $ Raw) fields) (many (List $ Entry) tele) -> (many (Env) r))
   (match many (nat-cmp (list-length _ fields) $ list-length _ tele) _
@@ -3678,7 +3705,7 @@
                       (match many info (((Env) _))
                         ((MkMatchInfo mid disc mctors _)
                           (let ((many env5a)) $ error-unless env5 (is-some _ $ adt-of env5 mid) $ str-cat3 "the `Matchable` for " (qname env5 tid) " is not Const, so `comptime-match` cannot consult it")
-                          (let ((many env5b)) $ use-entry env5a (Many) mid (BFalse))
+                          (let ((many env5b)) $ use-entry (warn-use env5a (env-loc env5a) "match on" $ TVar tid) (Many) mid (BFalse))
                           (let ((many env6a)) $ match many disc (((Env) _)) ((DUnion) (env-error env5b "`comptime-match` needs a non-erased discriminant")) ((DEnum) env5b))
                           (let ((many env6b) (many mk)) $ marker-checked env6a tid mctors c)
                           (error-unless env6b (mult-is-many mk) $ str-cat3 "`comptime-match`: " (qname env6b c) " is phantom, so no non-erased value is headed by it"))))))
@@ -4370,7 +4397,8 @@
                       (let ((many mode)) (match many demand (((Mult) _)) ((Fixed _) (pos-mult expect)) ((CallableHead) (head-demand env2 ret)) ((FinalDemand) (final-demand env2 ret))))
                       (def-fns msg-lvl $ (many msg-ctor : -> (many (String) s)) (str-cat3 "erased constructor " (qshow env2 $ res-term h) " in a non-erased position"))
                       (let ((many env2d)) $ error-when-msg env2 (and (mult-is-many pos) $ not $ mult-is-many $ res-erasure h) msg-ctor)
-                      (let ((many env3)) $ match many (res-term h) (((Env) _)) ((TVar x) (use-entry env2d (under pos $ Many) x $ BFalse)) (else env2d))
+                      (let ((many env2e)) $ match many (mult-is-many mode) (((Env) _)) ((BTrue) (warn-use env2d (loc-in env2d $ raw-pos head) "application of" $ res-term h)) ((BFalse) env2d))
+                      (let ((many env3)) $ match many (res-term h) (((Env) _)) ((TVar x) (use-entry env2e (under pos $ Many) x $ BFalse)) (else env2e))
                       (let ((many env3a) (many hr) (many hid)) $ prepare-or-keep _ _ env3 (under pos $ Many) h hcode)
                       (let ((many env4) (many acc) (many tys) (many codes) (many pairs)) $ notail $ check-args sugar args (subs-all args) one-step (check-arity env3a ctele $ list-length _ args) ctx ctele mode tele (ARApp (res-term h) ret) (BFalse) (BFalse) $ BTrue)
                       (let ((many wrapped)) $ match many (canon-env env4 $ res-term h) (((Bool) _)) ((TVar c) (is-some _ $ find-newtype env4 c)) (else (BFalse)))
@@ -4996,7 +5024,7 @@
                         (let ((many original)) $ first-res _ _ srs lock)
                         (let ((many source-code)) (runtime-one _ smult scode))
                         (let ((many env1a2) (many sres) (many saved)) (prepare-argument env1a smult original))
-                        (let ((many env2) (many found)) $ scrutinee-matchable env1a2 sres)
+                        (let ((many env2) (many found)) $ scrutinee-matchable env1a2 smult sres)
                         (match many found _
                           ((None _) (values env2 ctx $ SNone _))
                           ((Some _ pr)
@@ -5620,7 +5648,7 @@
                 (let ((many env2a2) (many sres) (many saved)) (prepare-argument env2a smult original))
                 (let ((many ctx4)) (Cons _ (Cons _ saved (Nil _)) source-ctx))
                 (let ((many scode2)) (var-code env2a2 ctx4 saved))
-                (let ((many env2b) (many found)) $ scrutinee-matchable env2a2 sres)
+                (let ((many env2b) (many found)) $ scrutinee-matchable env2a2 smult sres)
                 (match many found _
                   ((None _) (values env2b (Nil _) $ CError _ expect "no head"))
                   ((Some _ pr)
@@ -5984,21 +6012,69 @@
 ; ---- The top level (section 16): statements run as they are elaborated, the final expression consumed;
 ; only the last form may be an expression (ASSUMPTIONS 12).
 
+(def-fns _ $ (many pragma-of : (many (Raw) raw) -> (many (Maybe $ List $ Raw) r))
+  (match many raw _
+    ((RList _ items)
+      (match many items _
+        ((Cons _ h rest) (match many h _ ((RAtom _ w) (match many (str-eq w ";!") _ ((BTrue) (Some _ rest)) ((BFalse) (None _)))) (else (None _))))
+        ((Nil _) (None _))))
+    (else (None _))))
+
+(def-fns _ $ (many pragma-warn : (many (Env) env) (many (Pos) l) (many (Raw) nraw) (many (Raw) mraw) -> (many (Env) r))
+  (match many nraw _
+    ((RAtom nl n)
+      (match many mraw _
+        ((RAtom _ msg)
+          (match many (lookup env n) _
+            ((None _) (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) ", which is not in scope"))
+            ((Some _ x)
+              (match many (canon-env env $ TVar x) _
+                ((TVar c)
+                  (match many (match many (canon-env env $ type-of env x) (((Bool) _)) ((TTyCtor _) (BTrue)) ((TValCtor _ _) (BTrue)) (else (BFalse))) _
+                    ((BFalse) (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) ", which is neither a type constructor nor a value constructor"))
+                    ((BTrue)
+                      (match many (warned-find (env-warned env) c) _
+                        ((Some _ w) (match many w _ ((MkWarned _ pl _) (env-note-at (env-error env $ str-cat "second `;! warn` for " $ tick n) pl "the first is here"))))
+                        ((None _) (env-set-warned env $ Cons _ (MkWarned c (loc-in env l) msg) $ env-warned env))))))
+                (else (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) ", which is neither a type constructor nor a value constructor"))))))
+        (else env)))
+    (else env)))
+
+(def-fns _ $ (many pragma : (many (Env) env) (many (Pos) l) (many (List $ Raw) words) -> (many (Env) r))
+  (match many words _
+    ((Nil _) (env-error env "a pragma needs a word after `;!`"))
+    ((Cons _ w rest)
+      (match many w _
+        ((RAtom wl ws)
+          (match many (str-eq ws "warn") _
+            ((BFalse) (env-error (env-at env wl) $ str-cat "unknown pragma " $ tick ws))
+            ((BTrue)
+              (match many rest _
+                ((Nil _) (env-error env "`;! warn` needs a name and a message"))
+                ((Cons _ nraw more)
+                  (match many more _
+                    ((Nil _) (env-error env "`;! warn` needs a message after the name"))
+                    ((Cons _ mraw _) (pragma-warn env l nraw mraw))))))))
+        (else env)))))
+
 (def-fns _ $ (many run-toplevel : (subterm many (List $ Raw) items) (many (Env) env) -> (many (Env) r))
   (match many items _
     ((Nil _) env)
     ((Cons _ item rest)
-      (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
-      (match many (is-statement env2 item) _
-        ((BTrue)
-          (let ((many env3) (many ctx2) (many sc)) $ elab-stmt sugar-budget item env2 (Nil _) (Many))
-          (tail $ run-toplevel rest env3))
-        ((BFalse)
-          (match many rest _
-            ((Cons _ _ _) (tail $ run-toplevel rest $ env-error env2 "only the last top-level form may be an expression"))
-            ((Nil _)
-              (let ((many env3a) (many ress) (many code) (erased lock)) $ elab-expr-demand sugar-budget item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
-              (let ((many env3)) $ settle-res env3a $ first-res _ _ ress lock)
-              (match many (env-errors env3) _
-                ((Cons _ _ _) env3)
-                ((Nil _) (env-run-final env3 code $ res-ty $ first-res _ _ ress lock))))))))))
+      (match many (pragma-of item) _
+        ((Some _ words) (tail $ run-toplevel rest $ pragma (env-at env $ raw-pos item) (raw-pos item) words))
+        ((None _)
+          (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
+          (match many (is-statement env2 item) _
+            ((BTrue)
+              (let ((many env3) (many ctx2) (many sc)) $ elab-stmt sugar-budget item env2 (Nil _) (Many))
+              (tail $ run-toplevel rest env3))
+            ((BFalse)
+              (match many rest _
+                ((Cons _ _ _) (tail $ run-toplevel rest $ env-error env2 "only the last top-level form may be an expression"))
+                ((Nil _)
+                  (let ((many env3a) (many ress) (many code) (erased lock)) $ elab-expr-demand sugar-budget item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
+                  (let ((many env3)) $ settle-res env3a $ first-res _ _ ress lock)
+                  (match many (env-errors env3) _
+                    ((Cons _ _ _) env3)
+                    ((Nil _) (env-run-final env3 code $ res-ty $ first-res _ _ ress lock))))))))))))

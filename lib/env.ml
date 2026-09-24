@@ -83,6 +83,7 @@ type t = {
   locations : id IntMap.t;
   signature : id list;
   in_extern : bool;
+  warned : (Reader.loc * string) IntMap.t;
   uses : (use * Reader.loc) IntMap.t;
   captures : id list;
   usage_erased : bool;
@@ -100,7 +101,7 @@ type t = {
 }
 
 let empty =
-  { locations = IntMap.empty; signature = []; in_extern = false; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { locations = IntMap.empty; signature = []; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter

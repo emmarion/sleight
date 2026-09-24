@@ -678,6 +678,8 @@
   (many SNil : -> (String))
   (many SCons : (many (Char) c) (many (String) rest) -> (String)))
 
+;! warn SCons copies the whole string, O(n); build a `Rope` and `flatten` it once
+
 (def-adts
   ((Append : ((String) a) ((String) b) ((String) c) -> Type)
     enum
@@ -887,6 +889,8 @@
   (many ACons : (erased Type A) (erased (Nat) n)
                 (unique A head) (unique (Array A n) rest)
                 -> (Array A (Succ n))))
+
+;! warn ACons copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
