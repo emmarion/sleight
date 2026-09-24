@@ -226,7 +226,7 @@
                   ((SCons e rest2)
                     (match many (escape-ok e) _
                       ((BTrue) (tail $ string-lit rest2 line (Succ (Succ col)) pos (RCat rev $ RChar $ unescape e) acc))
-                      ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ str-cat "unknown escape \\" $ SCons e $ SNil) acc))))))
+                      ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ rope-str $ RCat (RStr "unknown escape \\") $ RChar e) acc))))))
               ((BFalse)
                 (match many (nat-eq n 10) _
                   ((BTrue) (tail $ string-lit rest (Succ line) 0 pos (RCat rev $ RChar c) acc))

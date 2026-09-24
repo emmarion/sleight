@@ -628,6 +628,9 @@
             ((LName) env)))))))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
+(def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
+  (rope-str $ RCat (RChar #\x22) $ RStr s))
+
 (def-fns _ $ (many intern-string : (many (Env) env) (many (String) key) -> (many (Env) r))
   (match many (lit-lookup env key) _
     ((Some _ _) env)
@@ -641,7 +644,7 @@
   ((many intern-literals : (subterm many (Raw) raw) (many (Env) env) -> (many (Env) r))
     (match many raw _
       ((RAtom _ s) (env-set-scope (intern env s $ classify s) $ env-scope env))
-      ((RString _ s) (env-set-scope (intern-string env $ SCons #\x22 s) $ env-scope env))
+      ((RString _ s) (env-set-scope (intern-string env $ string-key s) $ env-scope env))
       ((RList _ items) (tail $ intern-literals-list items env))))
   ((many intern-literals-list : (subterm many (List $ Raw) rs) (many (Env) env) -> (many (Env) r))
     (match many rs _
@@ -664,7 +667,7 @@
   (match many raw _
     ((RAtom _ s) (var env s))
     ((RString _ s)
-      (match many (lit-lookup env $ SCons #\x22 s) _
+      (match many (lit-lookup env $ string-key s) _
         ((Some _ x) (values env x))
         ((None _) (values (env-error env "string literal outside a top-level form") $ Zero))))
     ((RList _ _) (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ tick $ rope-str $ show-raw raw) $ Zero))))
