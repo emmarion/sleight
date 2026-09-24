@@ -524,6 +524,16 @@
           (let ((erased ih)) (double-fn a1 b1 b2 (subterm sp) pp qq))
           (match erased ih _ ((Refl t r) (Refl (Nat) d1))))))))
 
+(def-fns _ $ (erased pow2-fn : (erased (Nat) k) (erased (Nat) v) (erased (Nat) w)
+    (subterm erased (Pow2 k v) p) (erased (Pow2 k w) q) -> (erased (Eq (Nat) v w) e))
+  (match erased p _
+    ((P0) (match erased q _ ((P0) (Refl (Nat) (Succ (Zero)))) (absurd PS)))
+    ((PS k1 v1 v2 p1 d1)
+      (match erased q _
+        (absurd P0)
+        ((PS k2 w1 w2 q1 d2)
+          (match erased (pow2-fn k1 v1 w1 p1 q1) _ ((Refl t x) (double-fn v1 v2 w2 d1 d2))))))))
+
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)
     (subterm erased (Double m1 d) p) (erased (Double m2 d) q) -> (erased (Eq (Nat) m1 m2) e))

@@ -113,8 +113,9 @@ type 'a array_model = ANil | ACons of 'a * 'a
 type 'v list_model = Nil | Cons of 'v * 'v
 
 (* No host float is ever a value of the language, so no array is a flat float array, and an extracted template
-   types an array's elements as [word] rather than [Obj.t], which lets OCaml skip its float check on each access. *)
-type word = Word of word
+   types an array's elements as [word] rather than [Obj.t], which lets OCaml skip its float check on each access.
+   A word may be an immediate or a pointer, as [word]'s own values are, and never a float. *)
+type word = Imm | Ptr of int
 
 let array_view ~array ~wrap v =
   let a = array v in
