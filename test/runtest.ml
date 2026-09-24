@@ -36,7 +36,7 @@ let extracted name externs templates source input args envs expect stderr exit =
     | Error m -> Some ("extraction failed: " ^ m)
     | Ok text ->
         write (base ^ ".ml") text;
-        if Sys.command (Printf.sprintf "ocamlfind ocamlopt -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
+        if Sys.command (Printf.sprintf "ocamlfind ocamlc -custom -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
           Some ("extracted program failed to compile, see " ^ base ^ ".log")
         else (
           write (base ^ ".in") input;
@@ -132,7 +132,26 @@ and run_mode name externs src =
 
 let () =
   let names = Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare in
-  let failures = List.filter_map (fun f -> let name = Filename.chop_suffix f ".sl" in Option.map (fun m -> name ^ ": " ^ m) (run_test name)) names in
+  let jobs = int_of_string (String.trim (In_channel.input_all (Unix.open_process_in "getconf _NPROCESSORS_ONLN"))) in
+  let spawn f =
+    let name = Filename.chop_suffix f ".sl" in
+    let r, w = Unix.pipe () in
+    match Unix.fork () with
+    | 0 -> Unix.close r; let oc = Unix.out_channel_of_descr w in Marshal.to_channel oc (Option.map (fun m -> name ^ ": " ^ m) (try run_test name with e -> Some (Printexc.to_string e))) []; close_out oc; Unix._exit 0
+    | pid -> Unix.close w; (pid, r)
+  in
+  let collect (pid, r) = let ic = Unix.in_channel_of_descr r in let v : string option = Marshal.from_channel ic in close_in ic; ignore (Unix.waitpid [] pid); v in
+  let rec go pending running acc =
+    match pending, running with
+    | [], [] -> List.rev acc
+    | f :: rest, _ when List.length running < jobs -> go rest (running @ [ spawn f ]) acc
+    | _, _ :: _ ->
+        let ready, _, _ = Unix.select (List.map snd running) [] [] (-1.) in
+        let j = List.find (fun (_, r) -> r = List.hd ready) running in
+        go pending (List.filter (( != ) j) running) (collect j :: acc)
+    | _ :: _, [] -> assert false
+  in
+  let failures = List.sort compare (List.filter_map Fun.id (go names [] [])) in
   List.iter (fun m -> print_endline ("FAIL " ^ m)) failures;
   Printf.printf "%d tests, %d failures\n" (List.length names) (List.length failures);
   if failures <> [] then exit 1
