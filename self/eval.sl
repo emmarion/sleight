@@ -845,6 +845,20 @@
   (let ((many en1) (many fi1)) $ store-grow _ _ sf1 en fi)
   (match many g _ ((MkGroup _ ids _ _) (close-members e _ hp1 en1 fi1 ids ga 0))))
 
+; A run-position delegate is its callee's closure (section 9).
+(def-fns _ $ (many alias-consts : (subterm many (List $ Pair (Nat) (Nat)) aliases) (many (Env) e) -> (many (Env) r))
+  (match many aliases _
+    ((Nil _) e)
+    ((Cons _ a rest)
+      (match many a _
+        ((MkPair _ _ g t)
+          (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
+          (let ((many (IdMap $ EInfo hs) en2))
+            (match many (idmap-get _ t en) _
+              ((Hit _ _ _ info _) (match many info _ ((MkEInfo _ _ _ st _ _ _) (entries-set-state _ en g st))))
+              ((Miss _ _ _ _) en)))
+          (tail $ alias-consts rest $ env-with-store e _ hp en2 fi))))))
+
 ; The Const fields of a value bound to their ids at their declared multiplicities (section 15): a many
 ; field its address, an erased one the token, a missing one an error block.
 (def-fns _ $ (many set-field-states : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (subterm many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Ref Block hs) vs) ->
