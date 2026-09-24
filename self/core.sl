@@ -365,6 +365,7 @@
   ((Extern : ((Nat) arity) -> Type)
     enum
     (many ExArrayNew : -> (Extern 1)) (many ExArraySwap : -> (Extern 3)) (many ExArrayPluck : -> (Extern 2)) (many ExArrayPlace : -> (Extern 3))
+    (many ExArraySwapImm : -> (Extern 3)) (many ExArrayPlaceImm : -> (Extern 3)) (many ExArrayLength : -> (Extern 1)) (many ExListToArray : -> (Extern 1))
     (many ExAdd : -> (Extern 2)) (many ExSub : -> (Extern 2)) (many ExMul : -> (Extern 2)) (many ExDiv : -> (Extern 2)) (many ExDivmod : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1))
@@ -392,6 +393,7 @@
   (let ((many (List $ Nat) dec)) (Cons _ 0 $ Cons _ 0 $ Nil _))
   (match many e _
     ((ExArrayNew) (None _)) ((ExArraySwap) (None _)) ((ExArrayPluck) (None _)) ((ExArrayPlace) (None _))
+    ((ExArraySwapImm) (None _)) ((ExArrayPlaceImm) (None _)) ((ExArrayLength) (None _)) ((ExListToArray) (None _))
     ((ExNatCmp) (Some _ cmp)) ((ExStrCmp) (Some _ cmp))
     ((ExAdd) (None _)) ((ExSub) (None _)) ((ExMul) (None _)) ((ExDiv) (None _)) ((ExDivmod) (None _))
     ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
@@ -409,6 +411,7 @@
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
   (match many e _
     ((ExArrayNew) 1) ((ExArraySwap) 3) ((ExArrayPluck) 2) ((ExArrayPlace) 3)
+    ((ExArraySwapImm) 3) ((ExArrayPlaceImm) 3) ((ExArrayLength) 1) ((ExListToArray) 1)
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
@@ -418,11 +421,13 @@
   (match many e _
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
     ((ExU62Mod) (ExNatMod)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExArrayGet) (ExArrayPluck))
+    ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     (else e)))
 
 (def-fns _ $ (many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s))
   (match many e _
     ((ExArrayNew) "array-new") ((ExArraySwap) "array-swap") ((ExArrayPluck) "array-pluck") ((ExArrayPlace) "array-place")
+    ((ExArraySwapImm) "array-swap-imm") ((ExArrayPlaceImm) "array-place-imm") ((ExArrayLength) "array-length") ((ExListToArray) "list-to-array")
     ((ExAdd) "add") ((ExSub) "sub") ((ExMul) "mul") ((ExDiv) "div") ((ExDivmod) "divmod") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
     ((ExNatHalve) "nat-halve") ((ExTrim) "trim") ((ExFlatten) "flatten")
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str")
@@ -430,7 +435,8 @@
     ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExArrayGet) "array-get")))
 
 (let ((many externs))
-  $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
+  $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExArraySwapImm) $ Cons _ (MkSomeExtern _ $ ExArrayPlaceImm) $
+  Cons _ (MkSomeExtern _ $ ExArrayLength) $ Cons _ (MkSomeExtern _ $ ExListToArray) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $
@@ -467,8 +473,7 @@
     (many MkCtor : (many (String) name) (many (Nat) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (Ctor)))
   ((Block : (Type R) -> Type)
     enum
-    (many BArrayData : (erased Type R) (many (List R) fields) -> (Block R))
-    (many BArray : (erased Type R) (many R backing) (many (Nat) offset) (many (Nat) count) -> (Block R))
+    (many BArray : (erased Type R) (many (List R) fields) -> (Block R))
     (many BTag : (erased Type R) (many (Ctor) c) (many (List R) fields) -> (Block R))
     (many BTup : (erased Type R) (many (List R) fields) -> (Block R))
     (many BExt : (erased Type R) (many (Payload) p) -> (Block R))
@@ -548,12 +553,9 @@
 
 (def-fns _ $ (erased block-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Block (Ref Block b)) blk) -> (erased (Block (Ref Block c)) blk2) (erased (Coercible (Shared) (Block (Ref Block b)) blk (Shared) (Block (Ref Block c)) blk2) p))
   (match erased blk _
-    ((BArrayData _ fs)
+    ((BArray _ fs)
       (let ((erased fs2) (erased pf)) (refs-widen Block b c le fs))
-      (values (BArrayData _ fs2) (coercible-ctor (Shared) BArrayData (Ref Block b) (Ref Block c) pf)))
-    ((BArray _ backing offset length2)
-      (let ((erased backing2) (erased pb)) (ref-widen Block b c le backing))
-      (values (BArray _ backing2 offset length2) (coercible-ctor (Shared) BArray (Ref Block b) (Ref Block c) pb (coercible-refl (Shared) offset) (coercible-refl (Shared) length2))))
+      (values (BArray _ fs2) (coercible-ctor (Shared) BArray (Ref Block b) (Ref Block c) pf)))
     ((BTag _ ct fields)
       (let ((erased fs2) (erased pf)) (refs-widen _ b c le fields))
       (values (BTag _ ct fs2) (coercible-ctor (Shared) BTag (Ref Block b) (Ref Block c) (coercible-refl (Shared) ct) pf)))

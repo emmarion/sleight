@@ -20,9 +20,10 @@ type ty_spec = { shape : int list; view : adt -> ext }
 let arity = Eval.Runtime "extern arity"
 let z = function VExt (_, Int n) -> n | v -> raise (Eval.Runtime ("not an extern integer: " ^ show v))
 let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.Runtime ("not an extern string: " ^ show v))
-let array = function VExt (_, Array (a,o,n)) -> a,o,n | v -> raise (Eval.Runtime ("not an extern array: " ^ show v))
+let array = function VExt (_, Array a) -> a | v -> raise (Eval.Runtime ("not an extern array: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
+let arr a = VExt (Hashtbl.find registered "Array", Array a)
 
 let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
@@ -34,7 +35,7 @@ let types : (string * ty_spec) list =
   let nat adt n = VExt (adt, Int n) in
   [ ( "Array",
       view [0; 2] (fun adt ->
-        let wrap (a,o,n) = VExt (adt, Array (a,o,n)) in
+        let wrap a = VExt (adt, Array a) in
         { construct = (fun i args -> Ffi_core.array_of ~array ~wrap (match i,args with 0,[] -> ANil | 1,[x;tl] -> ACons (x,tl) | _ -> raise arity));
           destruct = (fun v -> match Ffi_core.array_view ~array ~wrap v with ANil -> 0,[] | ACons(x,tl) -> 1,[x;tl]) }));
     ( "Nat",
@@ -58,12 +59,18 @@ let quotient f = function [ a; b ] -> let q, r = f (z a) (z b) in [ int "Nat" q;
 let tag name get f = binary (fun a b -> plain name (Obj.magic (f (get a) (get b)) : int) [])
 
 let spec ?(needs = []) takes run = { takes; needs; run }
+let swap = function [ a; i; x ] -> [ Ffi_core.array_swap (array a) (z i) x ] | _ -> raise arity
+let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity
 let fns : (string * fn_spec) list =
-  [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> let a,o,l = Ffi_core.array_new ~blank:VToken (z n) in VExt (Hashtbl.find registered "Array", Array(a,o,l)))));
-    ("array-swap", spec ~needs:["Array"] 3 (function [a;i;x] -> [Ffi_core.array_swap (array a) (z i) x] | _ -> raise arity));
-    ("array-pluck", spec ~needs:["Array"] 2 (function [a;i] -> [Ffi_core.array_pluck (array a) (z i)] | _ -> raise arity));
-    ("array-get", spec ~needs:["Array"] 2 (function [a;i] -> [Ffi_core.array_get (array a) (z i)] | _ -> raise arity));
-    ("array-place", spec ~needs:["Array"] 3 (function [a;i;x] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity));
+  [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VToken (z n)))));
+    ("array-swap", spec ~needs:["Array"] 3 swap);
+    ("array-swap-imm", spec ~needs:["Array"] 3 swap);
+    ("array-pluck", spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_pluck (array a) (z i))));
+    ("array-get", spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i))));
+    ("array-place", spec ~needs:["Array"] 3 place);
+    ("array-place-imm", spec ~needs:["Array"] 3 place);
+    ("array-length", spec ~needs:["Array"] 1 (unary (fun a -> int "Nat" (Ffi_core.array_length (array a)))));
+    ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
     ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
@@ -92,7 +99,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]) ]
+let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]); ("List", [ 0; 2 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
   let ns = List.map (fun (c : ctor) -> c.arity) adt.ctors in

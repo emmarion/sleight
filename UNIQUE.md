@@ -656,7 +656,9 @@ take; its FFI reads and stores nothing, the old word staying under a
 slot typed `Uninit`, which nothing can read. `array-place` drops `old`,
 as at-most-one-use allows, so it is a plain call. The FFI's `array-new`
 is a block of `n` words, the model's `ACons` view its first word and a
-slice of the rest sharing the block.
+copy of the rest, so taking an array apart is O(n). An implementation
+may provide further extern functions over these types, faster than the
+source above allows, each modelled in source as these are.
 
 `Copy`'s field being `many`, an element of an `(Array (Copy A) n)` is
 read in place, its FFI that of `array-pluck`:

@@ -3,11 +3,6 @@
 ; trie map keyed by names, list helpers and a rope of output chunks. Everything here is plain SL checked
 ; by the reference interpreter; nothing is settled design.
 
-(def-adts $ (Bool : -> Type)
-  enum
-  (many BTrue : -> (Bool))
-  (many BFalse : -> (Bool)))
-
 (def-fns _ $ (many not : (many (Bool) b) -> (many (Bool) r))
   (match many b _ ((BTrue) (BFalse)) ((BFalse) (BTrue))))
 

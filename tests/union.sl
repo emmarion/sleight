@@ -2,11 +2,6 @@
 ; expect: 1
 ; A union indexed by a Bool: matching in a non-erased position needs one real branch.
 
-(def-adts $ (Bool : -> Type)
-  enum
-  (many BTrue : -> (Bool))
-  (many BFalse : -> (Bool)))
-
 (def-adts
   ((Either : ((Bool) tag) -> Type)
     union

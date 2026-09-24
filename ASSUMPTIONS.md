@@ -3283,11 +3283,11 @@ to look for a guard, are the owner's.
     until invocation. The fixed FFI boundary converts comparison results to the
     declared Cmp representation and reads Rope values through their constructor view.
 
-167. The U13 array models are added to the prelude. Native arrays are slices
-    of shared backing storage; constructing ACons allocates and copies its tail.
+167. The U13 array models are added to the prelude. Constructing ACons
+    allocates and copies its tail.
     Array pluck leaves the physical word untouched under Uninit, while place and
-    swap update the backing slot. Captured slices retain both wrapper and backing
-    identities, assigning these before filling elements to support Slot cycles.
+    swap update the array's slot. A captured array keeps its identity, assigned
+    before its elements are filled to support Slot cycles.
     Outside extern model bodies, unique Array patterns have no cell binder even
     when extern implementations are stripped. Four examples agree in interpreter
     and extracted code with externs, stripped models, and non-template views.

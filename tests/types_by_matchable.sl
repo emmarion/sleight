@@ -1,7 +1,6 @@
 ; expect: 0
 ; Two declared types are told apart by their Matchables alone: Succ carries a field and neither of Bool's
 ; constructors does, so the two constructor lists cannot unify and the IsBool branch is refuted (ASSUMPTIONS 89).
-(def-adts $ (Bool : -> Type) enum (many BTrue : -> (Bool)) (many BFalse : -> (Bool)))
 (def-adts $ (Shape : (Type T) -> Type)
   enum
   (many IsNat : -> (Shape (Nat)))

@@ -171,25 +171,16 @@ let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 
 let rec value cx v =
   match v with
-  | V.VExt (_, Array (a,o,n)) -> (
-      let b = bucket cx v in
-      match List.find_opt (fun (w,_) -> w == v) !b with
-      | Some (_, {contents = Some name}) -> name
-      | _ ->
-          let backing, fresh = match List.assq_opt a !(cx.arrays) with
-            | Some name -> name,false
-            | None ->
-                let name = "array_" ^ string_of_int (List.length !(cx.arrays)) in
-                cx.arrays := (a,name) :: !(cx.arrays);
-                Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t array = Array.make %d (Obj.repr ())\n" name (Array.length a));
-                name,true in
-          incr cx.shared;
-          let name = "slice_" ^ string_of_int !(cx.shared) in
-          b := (v,ref (Some name)) :: !b;
-          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (%s, %d, %d)\n" name backing o n);
-          if fresh then Array.iteri (fun i v ->
+  | V.VExt (_, Array a) -> (
+      match List.assq_opt a !(cx.arrays) with
+      | Some name -> name
+      | None ->
+          let name = "array_" ^ string_of_int (List.length !(cx.arrays)) in
+          cx.arrays := (a, name) :: !(cx.arrays);
+          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (Array.make %d (Obj.repr ()))\n" name (Array.length a));
+          Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set %s %d %s\n" backing i rhs)) a;
+            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Obj.t array) %d %s\n" name i rhs)) a;
           name)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
@@ -220,9 +211,7 @@ and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
-  | V.VExt (_, Array (a,o,n)) ->
-      let items = List.init n (fun i -> value cx a.(o+i)) in
-      Printf.sprintf "(Obj.repr ([|%s|], 0, %d))" (concat "; " items) n
+  | V.VExt (_, Array _) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with
@@ -266,10 +255,15 @@ and fn cx scope name f =
         match template (Ffi_templates.Fn f.fname) with
         | Some ps -> fill_template cx ps (List.map var f.params)
         | None ->
-            let extra = if f.fname = "flatten" then
-              let a = (Program.ctor cx.env "REmpty").V.adt in
+            let view label ctor =
+              let a = (Program.ctor cx.env ctor).V.adt in
               let arms = List.map (fun c -> let fs = fields c in c,fs,"Ffi_core." ^ pattern_at c.V.cname fs) a.ctors in
-              "~rope:(fun v -> " ^ dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None ^ ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr " else if f.fname = "array-new" then "~blank:(Obj.repr ()) " else "" in
+              Printf.sprintf "~%s:(fun v -> %s) " label (dispatch cx a (List.init (List.length a.ctors) Fun.id) "v" arms None) in
+            let extra = match f.fname with
+              | "flatten" -> view "rope" "REmpty" ^ "~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr "
+              | "list-to-array" -> view "list" "Nil"
+              | "array-new" -> "~blank:(Obj.repr ()) "
+              | _ -> "" in
             let call = Printf.sprintf "Ffi_core.%s %s%s" (sanitize f.fname) extra (concat " " (List.map (fun p -> "(Obj.obj " ^ var p ^ ")") f.params)) in
             "(Obj.repr (" ^ call ^ "))")
     | _ -> expr cx scope f.body
@@ -342,7 +336,7 @@ let collect env items =
     match v with
     | V.VCtor (c, vs) -> adt c.adt; Array.iter value vs
     | V.VTuple vs -> List.iter value vs
-    | V.VExt (adt_, Array (a,_,_)) -> adt adt_; Array.iter value a
+    | V.VExt (adt_, Array a) -> adt adt_; Array.iter value a
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a

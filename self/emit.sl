@@ -679,14 +679,19 @@
       (let ((many body)) $ match many fields (((Rope) _)) ((Nil _) (RStr $ str-cat "Ffi_core." $ ctor-name ctor)) ((Cons _ _ _) (rcat3 (RStr $ str-cat3 "(Ffi_core." (ctor-name ctor) " (") (commas fields) $ RStr "))")))
       (Cons _ (MkArm (ctor-index ctor) fields body) $ notail $ ffi-arms rest))))
 
-(def-fns _ $ (many flatten-extra : (many (String) name) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
-  (match many (str-cmp name "flatten") _
-    ((CEq _ _ _)
-      (match many (prelude-adt env "Rope") _
-        ((None _) (REmpty))
-        ((Some _ adt)
-          (rcat3 (RStr "~rope:(fun v -> ") (dispatch-rope d 0 adt (all-live adt) (RStr "v") (ffi-arms $ adt-ctors adt) $ None _) $ RStr ") ~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr "))))
-    (else (match many (str-eq name "array-new") _ ((BTrue) (RStr "~blank:(Obj.repr ()) ")) ((BFalse) (REmpty))))))
+(def-fns _ $ (many ffi-view : (many (String) label) (many (String) tname) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
+  (match many (prelude-adt env tname) _
+    ((None _) (REmpty))
+    ((Some _ adt)
+      (rcat5 (RStr "~") (RStr label) (RStr ":(fun v -> ") (dispatch-rope d 0 adt (all-live adt) (RStr "v") (ffi-arms $ adt-ctors adt) $ None _) $ RStr ") "))))
+
+(def-fns _ $ (many ffi-extra : (many (String) name) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
+  (match many (str-eq name "flatten") _
+    ((BTrue) (rcat (ffi-view "rope" "Rope" env d) $ RStr "~slice:Obj.obj ~z:Obj.obj ~str:Obj.repr "))
+    ((BFalse)
+      (match many (str-eq name "list-to-array") _
+        ((BTrue) (ffi-view "list" "List" env d))
+        ((BFalse) (match many (str-eq name "array-new") _ ((BTrue) (RStr "~blank:(Obj.repr ()) ")) ((BFalse) (REmpty))))))))
 
 (def-fns _ $ (many objs : (subterm many (List $ Rope) ps) -> (many (List $ Rope) r))
   (match many ps _
@@ -696,7 +701,7 @@
 (def-fns _ $ (many ffi-call : (many (String) name) (many (List $ Rope) params) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
   (match many (find-template (decl-templates d) "fn" name 0) _
     ((Some _ ps) (templated-build ps 0 params))
-    ((None _) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ flatten-extra name env d) (rjoin (objs params) " ") $ RStr "))"))))
+    ((None _) (rcat5 (RStr "(Obj.repr (Ffi_core.") (RStr $ sanitize name) (rcat (RStr " ") $ ffi-extra name env d) (rjoin (objs params) " ") $ RStr "))"))))
 
 
 
@@ -842,9 +847,7 @@
       ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
       ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
       ((BExt _ p) (payload-rope p))
-      ((BArrayData _ fields) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ fields) "; ") $ RStr "|])"))
-      ((BArray _ backing offset length2)
-        (rcat5 (RStr "(Obj.repr ((Obj.obj ") (addr-rope _ backing) (RStr " : Obj.t array), ") (rcat3 (nat-rope offset) (RStr ", ") $ nat-rope length2) $ RStr "))"))
+      ((BArray _ fields) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ fields) "; ") $ RStr "|])"))
       ((BCtorFn _ c) (ctor-fn-rope d c))
       ((BMat _ adt) (matchable-rope adt d))
       ((BGroup _ _ _ _ _) (RStr "(failwith \"a group as a closed value\")"))
@@ -1014,8 +1017,7 @@
 (def-fns _ $ (many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (List $ Ref Block a) r))
   (match many b _
     ((BTag _ _ fields) fields)
-    ((BArrayData _ fields) fields)
-    ((BArray _ backing _ _) (Cons _ backing $ Nil _))
+    ((BArray _ fields) fields)
     ((BTup _ fields) fields)
     ((BFn _ g _ _) (Cons _ g $ Nil _))
     ((BGroup _ _ _ _ fr) (frames-refs _ _ fr (Nil _)))
@@ -1107,7 +1109,7 @@
         ((BTag _ c fields)
           (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = ") (plain-build d c $ blank-words $ list-length _ fields) $ RStr "\n")
           (values (rcat skeleton before) middle $ rcat (block-stores _ d c fields (addr-rope _ at2) 0) after))
-        ((BArrayData _ fields)
+        ((BArray _ fields)
           (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope $ list-length _ fields) $ RStr " (Obj.repr ()))\n")
           (values (rcat skeleton before) middle $ rcat (array-stores _ fields (addr-rope _ at2) 0) after))
         (else (values before (rcat (block-let _ at2 _ blk env d) middle) after))))))

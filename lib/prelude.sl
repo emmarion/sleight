@@ -813,6 +813,11 @@
   enum
   (many MkUnit : -> (Unit)))
 
+(def-adts $ (Bool : -> Type)
+  enum
+  (many BTrue : -> (Bool))
+  (many BFalse : -> (Bool)))
+
 (def-adts
   ((Maybe : (Type A) -> Type)
     enum
@@ -891,6 +896,7 @@
                 -> (Array A (Succ n))))
 
 ;! warn ACons copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
+;! warn Array copies the array's tail, O(n); read with `array-get` and `array-length`
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
@@ -900,6 +906,25 @@
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
+
+; A closed list: every enum whose constructors carry no non-erased field is immediate too in extracted
+; code, which a form reading its Matchable could in principle prove in general.
+(def-adts
+  ((Immediate : (Type A) -> Type)
+    enum
+    (many ImmU62 : -> (Immediate (U62)))
+    (many ImmU8 : -> (Immediate (U8)))
+    (many ImmChar : -> (Immediate (Char)))
+    (many ImmBool : -> (Immediate (Bool)))
+    (many ImmCopy : (erased Type A) (erased (Immediate A) p) -> (Immediate (Copy A)))))
+
+(def-adts
+  ((ArrayIsList : (Type A) ((List A) xs) ((Nat) n) ((Array (Copy A) n) a) -> Type)
+    enum
+    (many AILNil : (erased Type A) -> (ArrayIsList A (Nil A) (Zero) (ANil (Copy A))))
+    (many AILCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n)
+                    (erased (Array (Copy A) n) a) (erased (ArrayIsList A xs n a) p)
+                    -> (ArrayIsList A (Cons A x xs) (Succ n) (ACons (Copy A) n (MkCopy A x) a)))))
 
 (def-adts
   ((AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
@@ -993,6 +1018,37 @@
             ((NthS _ _ _ _ _ _ q)
               (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
               (values v (at (u _ _ hd tl3))))))))))
+
+; TODO: add read-only functions over many arrays.
+
+(def-fns _ $ (many extern array-swap-imm : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) (erased (Immediate A) imm) ->
+    (unique m is old) (unique (Array A n) r at a)
+    (erased (ASet A n a i x r) p))
+  (tail (array-swap _ _ a i x _ nth)))
+
+(def-fns _ $ (many extern array-place-imm : (erased Type A) (erased (Nat) n)
+    (unique (Array A n) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (ANth A n a i m) nth) (erased (Immediate A) imm) ->
+    (unique (Array A n) r at a) (erased (ASet A n a i x r) p))
+  (tail (array-place _ _ a i x _ nth)))
+
+(def-fns _ $ (many extern array-length : (erased Type A) (erased (Nat) n)
+    (subterm unique (Array A n) a) -> (many n is len) (unique a is r at a))
+  (match unique a _
+    ((ANil _ u) (values (Zero) (at (u _))))
+    ((ACons _ n1 hd tl u)
+      (let ((many l1) (unique tl2)) (notail $ array-length _ _ tl))
+      (values (Succ l1) (at (u _ _ hd tl2))))))
+
+(def-fns _ $ (many extern list-to-array : (erased Type A) (subterm many (List A) xs) ->
+    (erased (Nat) n) (unique (Array (Copy A) n) a) (erased (ArrayIsList A xs n a) p))
+  (match many xs _
+    ((Nil _) (values (Zero) (ANil _) (AILNil _)))
+    ((Cons _ hd tl)
+      (let ((erased n1) (unique a1) (erased p1)) (notail $ list-to-array _ tl))
+      (values (Succ n1) (ACons _ _ (MkCopy _ hd) a1) (AILCons _ _ _ _ _ p1)))))
 
 (def-fns _ $ (erased init-witness : (erased Type A) (erased (Nat) n)
     (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->

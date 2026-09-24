@@ -110,29 +110,34 @@ let flatten ~rope ~slice ~z ~str root =
   str (Bytes.unsafe_to_string buf, 0, total)
 
 type 'a array_model = ANil | ACons of 'a * 'a
+type 'v list_model = Nil | Cons of 'v * 'v
+
+(* No host float is ever a value of the language, so no array is a flat float array, and an extracted template
+   types an array's elements as [word] rather than [Obj.t], which lets OCaml skip its float check on each access. *)
+type word = Word of word
 
 let array_view ~array ~wrap v =
-  let a, offset, length = array v in
-  if length = 0 then ANil else ACons (Array.unsafe_get a offset, wrap (a, offset + 1, length - 1))
+  let a = array v in
+  let length = Array.length a in
+  if length = 0 then ANil else ACons (Array.unsafe_get a 0, wrap (Array.sub a 1 (length - 1)))
 
-let array_of ~array ~wrap = function
-  | ANil -> wrap ([||], 0, 0)
-  | ACons (x, tail) ->
-      let a, offset, length = array tail in
-      let result = Array.make (length + 1) x in
-      Array.blit a offset result 1 length;
-      wrap (result, 0, length + 1)
+let array_of ~array ~wrap = function ANil -> wrap [||] | ACons (x, tail) -> wrap (Array.append [| x |] (array tail))
+let array_new ~blank n = Array.make (Z.to_int n) blank
 
-let array_new ~blank n =
-  let length = Z.to_int n in
-  (Array.make length blank, 0, length)
-
-let array_swap (a, offset, _) i x =
-  let index = offset + small i in
-  let old = Array.unsafe_get a index in
-  Array.unsafe_set a index x;
+let array_swap a i x =
+  let old = Array.unsafe_get a (small i) in
+  Array.unsafe_set a (small i) x;
   old
 
-let array_pluck (a, offset, _) i = Array.unsafe_get a (offset + small i)
+let array_pluck a i = Array.unsafe_get a (small i)
 let array_get = array_pluck
-let array_place (a, offset, _) i x = Array.unsafe_set a (offset + small i) x
+let array_place a i x = Array.unsafe_set a (small i) x
+let array_length a = Z.of_int (Array.length a)
+let array_swap_imm a i x =
+  let a = (Obj.magic a : int array) in
+  let old = Array.unsafe_get a (small i) in
+  Array.unsafe_set a (small i) (Obj.magic x : int);
+  Obj.magic old
+
+let array_place_imm a i x = Array.unsafe_set (Obj.magic a : int array) (small i) (Obj.magic x : int)
+let list_to_array ~list v = let rec go acc v = match list v with Nil -> Array.of_list (List.rev acc) | Cons (x, rest) -> go (x :: acc) rest in go [] v

@@ -1,10 +1,5 @@
-; mini/base.sl -- booleans, decided equality on Nat and Bool, and list indexing with evidence, for the
+; mini/base.sl -- decided equality on Nat and Bool, and list indexing with evidence, for the
 ; relations of mini/. Plain SL over the prelude; nothing here is settled design.
-
-(def-adts $ (Bool : -> Type)
-  enum
-  (many BTrue : -> (Bool))
-  (many BFalse : -> (Bool)))
 
 (def-adts
   ((Neq : ((Nat) a) ((Nat) b) -> Type)

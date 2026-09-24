@@ -65,56 +65,23 @@
         ((Nil _) fields)
         ((Cons _ v tail2) (tail $ replace-fields _ (replace-field _ fields i v) rest tail2))))))
 
-(def-adts $ (ArrayView : (Type R) -> Type) enum
-  (many MkArrayView : (erased Type R) (many R backing) (many (Nat) offset) (many (Nat) count) -> (ArrayView R)))
-
-(def-fns _ $ (many array-view : (erased (Hist Block) hs) (many (Store Block hs) hp)
-    (many (Ref Block hs) v) -> (many (Maybe $ ArrayView $ Ref Block hs) view))
+(def-fns _ $ (many array-fields : (erased (Hist Block) hs) (many (Store Block hs) hp)
+    (many (Ref Block hs) v) -> (many (Maybe $ List $ Ref Block hs) fields))
   (let ((erased s) (many body) (erased sf)) (store-read Block _ hp v))
   (match many body _
-    ((BArray _ backing offset length2)
-      (let ((erased b2) (erased pb)) (ref-widen _ _ _ sf backing))
-      (Some _ (MkArrayView _ (coerce backing pb) offset length2)))
-    (else (None _))))
-
-(def-fns _ $ (many backing-fields : (erased (Hist Block) hs) (many (Store Block hs) hp)
-    (many (Ref Block hs) backing) -> (many (List $ Ref Block hs) fields))
-  (let ((erased s) (many body) (erased sf)) (store-read Block _ hp backing))
-  (match many body _
-    ((BArrayData _ fields)
+    ((BArray _ fields)
       (let ((erased fs2) (erased pf)) (refs-widen _ _ _ sf fields))
-      (coerce fields pf))
-    (else (Nil _))))
-
-(def-fns _ $ (many take-fields : (erased Type A) (subterm many (List A) fields)
-    (many (Nat) count) -> (many (List A) out))
-  (match many fields _
-    ((Nil _) (Nil _))
-    ((Cons _ x rest)
-      (match many count _ ((Zero) (Nil _)) ((Succ k) (Cons _ x (notail $ take-fields _ rest k)))))))
-
-(def-fns _ $ (many slice-fields : (erased Type A) (subterm many (List A) fields)
-    (many (Nat) offset) (many (Nat) count) -> (many (List A) out))
-  (match many offset _
-    ((Zero) (take-fields _ fields count))
-    ((Succ k) (match many fields _ ((Nil _) (Nil _)) ((Cons _ _ rest) (tail $ slice-fields _ rest k count))))))
+      (Some _ (coerce fields pf)))
+    (else (None _))))
 
 (def-fns _ $ (many repeat-field : (erased Type A) (subterm many (Nat) n) (many A v) -> (many (List A) fields))
   (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ v (notail $ repeat-field _ k v)))))
-
-(def-fns _ $ (many alloc-array : (erased (Hist Block) hs) (many (Store Block hs) hp)
-    (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2)
-    (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) v))
-  (let ((many count)) (list-length _ fields))
-  (let ((erased h1) (many hp1) (erased le1) (many backing)) (alloc Block _ hp (BArrayData _ fields)))
-  (let ((erased h2) (many hp2) (erased le2) (many v)) (alloc Block _ hp1 (BArray _ backing 0 count)))
-  (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v))
 
 (def-fns _ $ (many array-construct : (erased (Hist Block) hs) (many (Store Block hs) hp)
     (many (Nat) index) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2)
     (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) v))
   (match many index _
-    ((Zero) (alloc-array _ hp (Nil _)))
+    ((Zero) (alloc Block _ hp (BArray _ (Nil _))))
     ((Succ _)
       (match many fields _
         ((Nil _) (alloc Block _ hp (BError _ "array constructor arity")))
@@ -122,50 +89,51 @@
           (match many rest _
             ((Nil _) (alloc Block _ hp (BError _ "array constructor arity")))
             ((Cons _ tail2 _)
-              (match many (array-view _ hp tail2) _
+              (match many (array-fields _ hp tail2) _
                 ((None _) (alloc Block _ hp (BError _ "not an array")))
-                ((Some _ view)
-                  (let-match many view (MkArrayView _ backing offset count))
-                  (alloc-array _ hp (Cons _ head (slice-fields _ (backing-fields _ hp backing) offset count))))))))))))
+                ((Some _ fs) (alloc Block _ hp (BArray _ (Cons _ head fs))))))))))))
 
 (def-fns _ $ (many array-destruct : (erased (Hist Block) hs) (many (Store Block hs) hp)
     (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2)
     (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
-  (match many (array-view _ hp v) _
-    ((None _) (values hs hp (le-refl hs) 0 (Nil _)))
-    ((Some _ view)
-      (let-match many view (MkArrayView _ backing offset count))
-      (match many count _
-        ((Zero) (values hs hp (le-refl hs) 0 (Nil _)))
-        ((Succ k)
-          (match many (list-nth _ (backing-fields _ hp backing) offset) _
-            ((NthMiss _ _ _ _) (values hs hp (le-refl hs) 0 (Nil _)))
-            ((NthHit _ _ _ head _)
-              (let ((erased h1) (many hp1) (erased le1) (many tl))
-                (alloc Block _ hp (BArray _ backing (Succ offset) k)))
-              (let ((erased hd1) (erased ph)) (ref-widen _ _ _ le1 head))
-              (values h1 hp1 le1 1 (Cons _ (coerce head ph) (Cons _ tl (Nil _)))))))))))
+  (match many (array-fields _ hp v) _
+    ((Some _ fields)
+      (match many fields _
+        ((Cons _ head rest)
+          (let ((erased h1) (many hp1) (erased le1) (many tl)) (alloc Block _ hp (BArray _ rest)))
+          (let ((erased hd1) (erased ph)) (ref-widen _ _ _ le1 head))
+          (values h1 hp1 le1 1 (Cons _ (coerce head ph) (Cons _ tl (Nil _)))))
+        ((Nil _) (values hs hp (le-refl hs) 0 (Nil _)))))
+    ((None _) (values hs hp (le-refl hs) 0 (Nil _)))))
 
 (def-fns _ $ (many array-change : (erased (Hist Block) hs) (many (Store Block hs) hp)
     (many (Ref Block hs) array) (many (Nat) index) (many (Maybe $ Ref Block hs) replacement) ->
     (many (Store Block hs) hp2) (many (Maybe $ Ref Block hs) previous))
-  (match many (array-view _ hp array) _
+  (match many (array-fields _ hp array) _
     ((None _) (values hp (None _)))
-    ((Some _ view)
-      (let-match many view (MkArrayView _ backing offset count))
-      (match many (nat-cmp index count) _
-        ((CLt _ _ _ _ _)
-          (let ((many fields)) (backing-fields _ hp backing))
-          (let ((many idx)) (nat-add offset index))
-          (match many (list-nth _ fields idx) _
-            ((NthMiss _ _ _ _) (values hp (None _)))
-            ((NthHit _ _ _ old _)
-              (let ((many (Store Block hs) hp2))
-                (match many replacement _
-                  ((None _) hp)
-                  ((Some _ value) (store-write Block _ hp backing (BArrayData _ (replace-field _ fields idx value))))))
-              (values hp2 (Some _ old)))))
-        (else (values hp (None _)))))))
+    ((Some _ fields)
+      (match many (list-nth _ fields index) _
+        ((NthMiss _ _ _ _) (values hp (None _)))
+        ((NthHit _ _ _ old _)
+          (let ((many (Store Block hs) hp2))
+            (match many replacement _
+              ((None _) hp)
+              ((Some _ value) (store-write Block _ hp array (BArray _ (replace-field _ fields index value))))))
+          (values hp2 (Some _ old)))))))
+
+(def-fns _ $ (many list-refs : (subterm many (Nat) fuel) (erased (Hist Block) hs)
+    (many (Store Block hs) hp) (many (Ref Block hs) v) -> (many (List $ Ref Block hs) r))
+  (match many fuel _
+    ((Zero) (Nil _))
+    ((Succ k)
+      (let ((erased s) (many body) (erased sf)) (store-read Block _ hp v))
+      (match many body _
+        ((BTag _ _ fields)
+          (let ((erased fs2) (erased pf)) (refs-widen _ _ _ sf fields))
+          (match many (coerce fields pf) _
+            ((Cons _ x more) (match many more _ ((Cons _ rest _) (Cons _ x (notail $ list-refs k _ hp rest))) (else (Nil _))))
+            (else (Nil _))))
+        (else (Nil _))))))
 
 (def-fns _ $ (many ext-construct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (ExtType) ext) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
   (match many ext _
@@ -273,7 +241,7 @@
         ((Some _ _)
           (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ ext-destruct _ hp p)
           (values hs2 hp2 le $ Some _ $ MkPair _ _ i fs))))
-    ((BArray _ _ _ _)
+    ((BArray _ _)
       (match many ext _
         ((Some _ e)
           (match many e _
@@ -342,7 +310,8 @@
   (many ErArrayNew : (many (Nat) count) -> (ExtResult))
   (many ErArraySwap : -> (ExtResult))
   (many ErArrayPluck : -> (ExtResult))
-  (many ErArrayPlace : -> (ExtResult)))
+  (many ErArrayPlace : -> (ExtResult))
+  (many ErListToArray : -> (ExtResult)))
 
 ; An extern function over its arguments (section 41). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
@@ -375,6 +344,10 @@
       ((ExArraySwap) (ErArraySwap))
       ((ExArrayPluck) (ErArrayPluck))
       ((ExArrayPlace) (ErArrayPlace))
+      ((ExArrayLength)
+        (ErPayload $ PNat $ match many (match many a (((Maybe $ List $ Ref Block hs) _)) ((Some _ x) (array-fields _ hp x)) ((None _) (None _))) (((Nat) _))
+          ((Some _ fs) (list-length _ fs)) ((None _) 0)))
+      ((ExListToArray) (ErListToArray))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
       ((ExSub)
         (match many (lt-dec nb (Succ na)) (((ExtResult) _))
@@ -415,8 +388,12 @@
   (match many res _
     ((ErArrayNew length2)
       (let ((erased h1) (many hp1) (erased le1) (many blank)) (alloc Block _ hp (BToken _)))
-      (let ((erased h2) (many hp2) (erased le2) (many array)) (alloc-array _ hp1 (repeat-field _ length2 blank)))
+      (let ((erased h2) (many hp2) (erased le2) (many array)) (alloc Block _ hp1 (BArray _ (repeat-field _ length2 blank))))
       (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ array (Nil _))))
+    ((ErListToArray)
+      (let ((erased h2) (many hp2) (erased le2) (many array))
+        (alloc Block _ hp (BArray _ (match many a (((List $ Ref Block hs) _)) ((Some _ x) (list-refs 1000000 _ hp x)) ((None _) (Nil _))))))
+      (values h2 hp2 le2 (Cons _ array (Nil _))))
     ((ErArrayPluck) (apply-array-change _ hp a nb (None _) (BTrue)))
     ((ErArraySwap)
       (let ((many replacement)) (match many (list-nth _ args 2) (((Maybe $ Ref Block hs) _))
