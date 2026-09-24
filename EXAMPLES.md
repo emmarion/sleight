@@ -70,16 +70,16 @@ that the test does not make is a mistake in this file.
   list of newtypes by an erased recursive proof and a `coerce`, and a
   `delegate` whose argument and result pass through coercions.
 - `tests/char_ops.sl` — the prelude's `char-cmp`, a comparison of `Char`s
-  that is `nat-cmp` on their codes. A `Char` is its `U8` and a `U8` its
+  that is `u62-cmp` on their codes. A `Char` is its `U8` and a `U8` its
   `Nat` at runtime, so the arguments coerce down through both newtypes
   (`coercible-wrap` reversed with `coercible-sym`, the two steps chained),
-  the call to `nat-cmp` is marked `delegate`, and the `Coercible` carrying
+  the call to `u62-cmp` is marked `delegate`, and the `Coercible` carrying
   the result back up to `Cmp (Char) CharLt a b` is built by an erased match
   on the three outcomes, so nothing but the marked call is left to run. The
   test fetches with `delegate-of` the proof the mark minted that `char-cmp`
-  and `nat-cmp` are one function, reads the `Coercible` off it with
+  and `u62-cmp` are one function, reads the `Coercible` off it with
   `coercible-of`, coerces `char-cmp` to the `Nat` signature, and runs it
-  both on characters and on numerals.
+  both on characters and on `Nat`s with their bound proofs.
 - `tests/cell_rev_inplace.sl`, `tests/cell_rotate.sl` and
   `tests/cell_map_retype.sl` — algorithms that reuse the cells their unique
   destructures hand back (UNIQUE.md U5, U9), beside `tests/cell_append.sl`'s

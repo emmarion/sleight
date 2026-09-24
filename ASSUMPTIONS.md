@@ -1560,16 +1560,17 @@ what it assumed while doing so.
     literal down to zero, which is the caller's choice rather than the
     form's.
 107. **The prelude's character operations** (`lib/prelude.sl`):
-    `char-cmp`, and it is `nat-cmp`. `Cmp` is parametric in the carrier
+    `char-cmp`, and it is `u62-cmp`. `Cmp` is parametric in the carrier
     and its strict order, `(Cmp T R a b)` with `R` a two-place type
     constructor over `T`, and every field is erased, so a value is only
     its tag and two instances differ by a coercion. `char-cmp`'s
     arguments coerce down through `Char`'s and `U8`'s newtype wrappers
-    to their codes, the call to `nat-cmp` is a `delegate` (§38), and the
+    to their codes, the call to `u62-cmp` is a `delegate` (§38), its bounds
+    from `u8-below-u62`, and the
     `Coercible` carrying the result back up is built by an erased match
     over the three constructors — erased, so §12 puts no one-real-branch
     limit on it and it leaves no code, which is what lets the delegate
-    mark stand. `tests/char_ops.sl` coerces `char-cmp` to `nat-cmp`'s
+    mark stand. `tests/char_ops.sl` coerces `char-cmp` to `u62-cmp`'s
     own type and runs it on `Nat`s. `CEq` repeats its index rather than
     carrying an `Eq`, at the owner's direction, so matching it forces
     the two sides together the way `Refl` does; the branch still wants

@@ -343,6 +343,45 @@
   enum newtype
   (many MkU62 : (many (Nat) n) (erased (Lt n u62-modulus) p) -> (U62)))
 
+(def-fns _ $ (erased pow2-pos : (erased (Nat) k) (erased (Nat) v) (subterm erased (Pow2 k v) p) -> (erased (Lt (Zero) v) q))
+  (match erased p _
+    ((P0) (LtZ (Zero)))
+    ((PS k1 v1 w p1 d) (double-pos v1 w (pow2-pos k1 v1 p1) d))))
+
+(def-fns _ $ (erased double-mono : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Nat) d)
+    (subterm erased (Lt a b) l) (erased (Double a c) p) (erased (Double b d) q) -> (erased (Lt c d) r))
+  (match erased l _
+    ((LtZ b1)
+      (let-match erased p (D0))
+      (let-match erased q (DS _ d1 q1))
+      (LtZ (Succ d1)))
+    ((LtS a1 b1 l1)
+      (let-match erased p (DS _ c1 p1))
+      (let-match erased q (DS _ d1 q1))
+      (LtS (Succ c1) (Succ d1) (LtS c1 d1 (double-mono a1 b1 c1 d1 l1 p1 q1))))))
+
+(def-fns _ $ (erased pow2-lt : (erased (Nat) k) (erased (Nat) k2) (erased (Nat) v) (erased (Nat) w)
+    (subterm erased (Lt k k2) l) (erased (Pow2 k v) p) (erased (Pow2 k2 w) q) -> (erased (Lt v w) r))
+  (match erased l _
+    ((LtZ b1)
+      (let-match erased p (P0))
+      (let-match erased q (PS _ w1 _ q1 d))
+      (let-match erased (pow2-pos _ _ q1) (LtZ x))
+      (let-match erased d (DS _ y _))
+      (LtS (Zero) (Succ y) (LtZ y)))
+    ((LtS k1 k3 l1)
+      (let-match erased p (PS _ v1 _ p1 dp))
+      (let-match erased q (PS _ w1 _ q1 dq))
+      (double-mono v1 w1 v w (pow2-lt k1 k3 v1 w1 l1 p1 q1) dp dq))))
+
+(def-fns _ $ (erased eight-lt-sixty-two : -> (erased (Lt eight sixty-two) l))
+  (let-match erased sixty-mul (MulSucc _ _ m0 _ _ s60))
+  (let ((erased ten-le)) (add-le-left _ _ _ (add-comm _ _ _ s60)))
+  (let ((erased eight-ten)) (lt-trans eight (Succ eight) (Succ (Succ eight)) (lt-succ eight) (lt-succ (Succ eight))))
+  (lt-le-trans eight sixty sixty-two (lt-le-trans _ _ _ eight-ten ten-le) (add-le-left _ _ _ sixty-two-add)))
+
+(let ((erased u8-below-u62)) (pow2-lt _ _ _ _ (eight-lt-sixty-two) u8-modulus-pow2 u62-modulus-pow2))
+
 (def-fns _ $ (erased add-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
     (subterm erased (Add a b c1) p) (erased (Add a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
   (match erased p _
@@ -644,7 +683,7 @@
 
 (def-lvl char-lvl)
 
-; A Char is its code at runtime, so this is nat-cmp: the arguments coerce down through both newtypes and
+; A Char is its code at runtime, so this is u62-cmp: the arguments coerce down through both newtypes and
 ; the result back up, the Coercible for it built by an erased match that leaves no code behind.
 (def-fns char-lvl $ (many char-cmp : (many (Char) a) (many (Char) b) ->
     (many (Cmp (Char) CharLt a b) c))
@@ -656,7 +695,7 @@
                                             (coercible-sym (coercible-wrap (Shared) MkU8 ma pa)))))
   (let ((many kb)) (coerce b (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ub))
                                             (coercible-sym (coercible-wrap (Shared) MkU8 nb pb)))))
-  (let ((many r)) (delegate (nat-cmp ka kb)))
+  (let ((many r)) (delegate (u62-cmp ka kb (lt-trans _ _ _ pa u8-below-u62) (lt-trans _ _ _ pb u8-below-u62))))
   (let ((erased c2) (erased cr))
     (match erased r (((Cmp (Char) CharLt a b) c2)
                      ((Coercible (Shared) (Cmp (Nat) Lt ka kb) r (Shared) (Cmp (Char) CharLt a b) c2) cc))

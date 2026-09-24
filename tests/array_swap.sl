@@ -17,14 +17,14 @@
   (nat-add (share old) (nat-add (share x) (nat-add (share y) (share z)))))
 swap-test
 ; warns: tests/array_swap.sl:10:22: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:898:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:937:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_swap.sl:11:6: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:898:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:937:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_swap.sl:12:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-; warns: lib/prelude.sl:898:1: note: `;! warn` for `ACons` is here
+; warns: lib/prelude.sl:937:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_swap.sl:14:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
-; warns: lib/prelude.sl:899:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:938:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_swap.sl:15:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
-; warns: lib/prelude.sl:899:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:938:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_swap.sl:16:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
-; warns: lib/prelude.sl:899:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:938:1: note: `;! warn` for `Array` is here
