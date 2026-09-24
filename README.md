@@ -188,10 +188,10 @@ in `self/elab.sl`), and the repository marks every such call, written
 the warning is tested on.
 
 `;! warn NAME MESSAGE`, written between top-level forms, makes every
-non-erased application of the value constructor `NAME`, or any kind of match
-on the type `NAME`, warn with `MESSAGE` (the rest of the line), outside an
-extern function's body. `NAME` means the entry that name refers to where the
-pragma is written.
+non-erased application of the value constructor `NAME`, and every match on the
+type `NAME` that is not `erased`, of any kind, warn with `MESSAGE` (the rest of
+the line). `NAME` means the entry that name refers to where the pragma is
+written. Code inside an extern function's body never earns this warning.
 
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope

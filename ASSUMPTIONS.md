@@ -3935,17 +3935,3 @@ session's, made without the owner.
     branch-forced facts of an enclosing match should be shown apart from
     the entries' rules, where they now appear only as `xs is (Cons A hd
     tl)` on the scrutinee's own line.
-
-## `;! warn`
-
-197. **Which matches the pragma warns at.** README records the owner's
-     rule: any kind of match on the named type, in a non-erased
-     position. This session reads a match's position as its scrutinee's,
-     so an `erased` `match` or `let-match`, which dispatches nothing at
-     run time, does not warn even where the form itself stands in a
-     non-erased position; a `comptime-match`, whose scrutinee is always
-     non-erased, always does. Both compilers name a forwarded
-     constructor by the newest name in scope for it, as every message
-     does, so after `(let ((many mk)) MkBox)` the call `(mk 4)` warns
-     about `mk` (`tests/warn_pragma.sl`). Open for the owner: whether an
-     erased match should warn too.
