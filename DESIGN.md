@@ -304,12 +304,16 @@ There are also two ways for these to be "minted" (introduced):
   three marks are a hard error in an erased position.
 - **`delegate` marker.** Same idea as `tail`, plus the same restriction
   applied to the call's arguments: the non-erased arguments must also
-  pass straight through, on the same post-erasure AST. The consequence
-  is stronger than `tail` — after stripping erasure, the marked
-  function's body reduces to nothing but the delegated call, so the two
-  functions' non-erased behavior is identical, and the outer function's
-  function pointer could just *be* the inner one's — which §38's
-  `Delegate` proof records, and `coercible-of` turns into a `Coercible`.
+  pass straight through, on the same post-erasure AST. The called
+  function must be named by a variable introduced before the function
+  whose body it is, in §3's introduction order — so never the function
+  itself, a later function of its `def-fns` block, its parameters, or
+  anything its body binds. The consequence is stronger than `tail` —
+  after stripping erasure, the marked function's body reduces to nothing
+  but the delegated call, so the two functions' non-erased behavior is
+  identical, and the outer function's function pointer *is* the inner
+  one's — which §38's `Delegate` proof records, and `coercible-of` turns
+  into a `Coercible`.
 
 ## 10. `Type : Type`, no strict positivity
 
@@ -1906,7 +1910,8 @@ a type like any other — it has a `Matchable`, its values are non-erased
 and one word (§38), so they sit in a `List` or a `many` field — and it
 may be marked `newtype`, the FFI author then guaranteeing that its
 representation is that of the field and that a `coerce` through it is
-safe; a newtype may equally wrap a field of an extern type.
+safe; a newtype may equally wrap a field of an extern type. A function
+marked `extern` may not have a `delegate` body.
 
 **Invariant: externs are conservative.** In the spirit of §23: every
 extern implementation stands in for a declaration in the language, and
