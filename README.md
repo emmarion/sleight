@@ -183,18 +183,12 @@ in `self/elab.sl`), and the repository marks every such call, written
 `(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
 the warning is tested on.
 
-`(dump-context)` stops elaboration where it is written and reports what the
-checker knows there, as one error (ASSUMPTIONS 196): the goal, the position,
-the level and the enclosing function's subterm arguments, every entry in scope
-from the program's own files with its canonical type, its `is` rule, its
-multiplicity and state, where it was bound, its value where it is a non-erased
-`Const` and, for a `unique` binder, whether it is live, shared or consumed and
-where; then the at-database's classes, the opened objects beyond the prelude's
-and the numerals a rule has been minted on. It stands as an expression, a
-statement or a type. `(dump-context x (Cons A hd tl))` reports those alone: a
-variable as its entry, any other term by what it canonicalizes to. It is meant
-for a session that is stuck, so nothing of it is stable output; the tests
-`tests/dump_context*.sl` pin the lines the report makes.
+`(dump-context)` stops elaboration where it is written and reports, as one
+error, what the checker knows there: the goal, the level, every entry in scope
+with its type, `is` rule, multiplicity and uniqueness state, and the
+at-database. It can be used as an expression, a statement or a type;
+`(dump-context x ...)` reports just the terms named. It's a debugging aid, so
+its output isn't stable (ASSUMPTIONS 196).
 
 ## How it runs a program
 
