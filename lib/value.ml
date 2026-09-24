@@ -65,6 +65,9 @@ let subcodes c =
   ignore (map_code (fun c -> seen := c :: !seen; c) c);
   List.rev !seen
 
+let aliases : (id, id) Hashtbl.t = Hashtbl.create 16
+let resolve x = Option.value (Hashtbl.find_opt aliases x) ~default:x
+
 (* Extern implementations run unless stripped (section 41's invariant). *)
 let use_externs = ref true
 

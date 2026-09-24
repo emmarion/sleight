@@ -13,7 +13,7 @@ let close env fns =
 
 let rec eval env code =
   match code with
-  | CVar x -> (match IntMap.find_opt x env with Some v -> [ v ] | None -> raise (Runtime ("unbound at runtime: " ^ string_of_int x)))
+  | CVar x -> (match IntMap.find_opt (resolve x) env with Some v -> [ v ] | None -> raise (Runtime ("unbound at runtime: " ^ string_of_int x)))
   | CConst v -> [ v ]
   | CErased -> [ VToken ]
   | CValues cs -> List.map (eval1 env) cs

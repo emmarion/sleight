@@ -510,21 +510,56 @@
 
 ; A variable's value: from a frame of values by its place, or, in a group's frame, the member's closure
 ; made over the group's block.
-(def-fns _ $ (many frames-get : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Frames (Ref Block hs) ctx) env) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+(def-fns _ $ (many frames-get-plain : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Frames (Ref Block hs) ctx) env) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (match many p _
     ((MHere _ _ _ q)
       (match many env _
         ((FrVals _ _ _ vs lk _)
           (let ((many v) (erased sq)) $ at-get _ _ _ q vs lk)
           (values hs hp (le-refl hs) v))
-        ((FrGroup _ _ gids g _)
+        ((FrGroup _ _ gids g _ _)
           (let ((many i)) $ at-index _ _ q)
           (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc Block _ hp $ BFn _ g i $ list-nth-or _ gids i (Zero))
           (values hl2 hp2 sf2 v))))
     ((MThere _ _ _ q)
       (match many env _
-        ((FrVals _ _ _ _ _ rest) (tail $ frames-get _ _ q _ hp rest))
-        ((FrGroup _ _ _ _ rest) (tail $ frames-get _ _ q _ hp rest))))))
+        ((FrVals _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))
+        ((FrGroup _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))))))
+
+(def-fns _ $ (many const-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
+  (match many (idmap-get _ x en) _
+    ((Miss _ _ _ _) (None _))
+    ((Hit _ _ _ info _)
+      (match many info _
+        ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))))))
+
+(def-fns _ $ (many const-value : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (match many (const-ref _ cs x) _
+    ((Some _ v) (values hs hp (le-refl hs) v))
+    ((None _) (alloc Block _ hp $ BError _ "unbound constant"))))
+
+(def-fns _ $ (many frames-get : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Frames (Ref Block hs) ctx) env) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (match many p _
+    ((MHere _ _ _ q)
+      (match many env _
+        ((FrVals _ _ _ _ _ _) (tail $ frames-get-plain _ _ p _ hp env))
+        ((FrGroup _ _ _ _ grp _)
+          (match many grp _
+            ((MkGroup _ _ fns lk)
+              (let ((many pr) (erased sq)) $ at-get _ _ _ q fns lk)
+              (match many pr _
+                ((MkPair _ _ _ fn)
+                  (match many fn _
+                    ((MkFunc _ _ _ _ _ _ _ _ _) (tail $ frames-get-plain _ _ p _ hp env))
+                    ((MkAlias _ _ _ _ target)
+                      (match many target _
+                        ((CVar _ _ q2) (tail $ frames-get-plain _ _ q2 _ hp env))
+                        ((CConst _ t) (tail $ const-value _ hp cs t))
+                        (else (alloc Block _ hp $ BError _ "internal: an alias with no target"))))))))))))
+    ((MThere _ _ _ q)
+      (match many env _
+        ((FrVals _ _ _ _ _ rest) (tail $ frames-get _ _ q _ hp cs rest))
+        ((FrGroup _ _ _ _ _ rest) (tail $ frames-get _ _ q _ hp cs rest))))))
 
 (def-fns _ $ (many has-branch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) -> (many (Bool) r))
   (match many bs _
@@ -538,17 +573,11 @@
       ((CVar _ _ p)
         (match many st _
           ((MkSt _ _ _ env)
-            (let ((erased h2) (many hp2) (erased le) (many v)) $ frames-get _ _ p _ hp env)
+            (let ((erased h2) (many hp2) (erased le) (many v)) $ frames-get _ _ p _ hp (st-consts _ _ st) env)
             (values h2 hp2 le (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _)))))
       ((CConst _ x)
-        (match many (idmap-get _ x $ st-consts _ _ st) _
-          ((Hit _ _ _ info _)
-            (match many info _
-              ((MkEInfo _ _ _ s _ _ _)
-                (match many s _
-                  ((SConst _ v) (values hs hp (le-refl hs) (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _)))
-                  ((SDyn _) (error-vals _ hp many-one "a Dyn constant"))))))
-          ((Miss _ _ _ _) (error-vals _ hp many-one "unbound constant"))))
+        (let ((erased h2) (many hp2) (erased le) (many v)) $ const-value _ hp (st-consts _ _ st) x)
+        (values h2 hp2 le (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _)))
       ((CValue _ v)
         (let ((erased wv3) (erased pv3)) (block-widen _ _ (empty-suffix _ hs) v))
         (let ((erased hl2) (many hp2) (erased sf2) (many a)) $ alloc Block _ hp (coerce v pv3))
@@ -589,7 +618,7 @@
                 (let ((erased le1)) sf1)
                 (let ((erased wc1) (erased pc1)) (entries-widen _ _ le1 cs))
                 (let ((erased wn1) (erased pn1)) (frames-widen _ _ le1 _ env))
-                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ tail $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (coerce cs pc1) (FrGroup _ _ ids ga (coerce env pn1)))
+                (let ((erased h2) (many hp2) (erased le2) (many r) (erased rpk)) $ tail $ eval fuel _ hp1 _ _ rest $ MkSt _ _ (coerce cs pc1) (FrGroup _ _ ids ga g (coerce env pn1)))
                 (values h2 hp2 (hist-le-trans _ _ _ le1 le2) r rpk))))))
       ((CMatch _ ns scrut shape branches dfl _)
         (let ((erased h1) (many hp1) (erased le1) (many svs) (erased spk)) $ notail $ eval fuel _ hp _ _ scrut st)
@@ -789,7 +818,7 @@
                                     (let ((erased h2) (many hp2) (erased le2) (many vs) (erased lkp)) $ fit-addrs _ hp params args)
                                     (let ((erased wg2) (erased pg2)) (ref-widen _ _ _ le2 g))
                                     (let ((erased wn2) (erased pn2)) (frames-widen _ _ (hist-le-trans _ _ _ glt le2) _ cenv))
-                                    (let ((many env)) $ FrVals _ _ params vs lkp $ FrGroup _ _ ids (coerce g pg2) (coerce cenv pn2))
+                                    (let ((many env)) $ FrVals _ _ params vs lkp $ FrGroup _ _ ids (coerce g pg2) group (coerce cenv pn2))
                                     (let ((erased wc2) (erased pc2)) (entries-widen _ _ le2 cs))
                                     (match many (mults-same rets ms) _
                                       ((None _)
@@ -797,7 +826,8 @@
                                         (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r rpk))
                                       ((Some _ same)
                                         (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ tail $ eval k _ hp2 _ _ body $ MkSt _ _ (coerce cs pc2) env)
-                                        (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r (picked-same _ rets ms r same rpk)))))))))))))))))
+                                        (values h3 hp3 (hist-le-trans _ _ _ le2 le3) r (picked-same _ rets ms r same rpk)))))))))
+                          ((MkAlias _ _ _ _ _) (error-vals _ hp ms "internal: an alias applied"))))))))))
           (else (error-vals _ hp ms "not a group"))))
       ((BCtorFn _ c)
         (let ((erased h2) (many hp2) (erased le2) (many v)) $ construct _ hp c args)
@@ -828,36 +858,33 @@
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
   (env-with-store e _ hp2 en2 $ Cons _ (MkPair _ _ (vals-one _ vs pk) ty) fi2))
 
-(def-fns _ $ (many close-members : (many (Env) e) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (subterm many (List $ Nat) ids) (many (Ref Block hs) g) (many (Nat) i) -> (many (Env) r))
-  (match many ids _
+(def-fns _ $ (many close-members : (many (Env) e) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (erased (List $ Nat) gids) (subterm many (List $ Pair (Nat) $ Func gids (Nil (List (Nat)))) fns) (many (Ref Block hs) g) (many (Nat) i) -> (many (Env) r))
+  (match many fns _
     ((Nil _) (env-with-store e _ hp en fi))
-    ((Cons _ x rest)
-      (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc Block _ hp $ BFn _ g i x)
-      (let ((erased le)) sf2)
-      (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
-      (let ((erased wg3) (erased pg3)) (ref-widen _ _ _ le g))
-      (tail $ close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 rest (coerce g pg3) $ Succ i))))
+    ((Cons _ pr rest)
+      (match many pr _
+        ((MkPair _ _ x fn)
+          (match many fn _
+            ((MkFunc _ _ _ _ _ _ _ _ _)
+              (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc Block _ hp $ BFn _ g i x)
+              (let ((erased le)) sf2)
+              (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
+              (let ((erased wg3) (erased pg3)) (ref-widen _ _ _ le g))
+              (tail $ close-members e _ hp2 (entries-set-state _ en2 x $ SConst _ v) fi2 _ rest (coerce g pg3) $ Succ i))
+            ((MkAlias _ _ _ _ target)
+              (let ((many (Maybe $ Nat) t)) $ match many target _ ((CVar _ y _) (Some _ y)) ((CConst _ y) (Some _ y)) (else (None _)))
+              (let ((many (IdMap $ EInfo hs) en2))
+                (match many t _
+                  ((None _) en)
+                  ((Some _ y) (match many (const-ref _ en y) _ ((Some _ v) (entries-set-state _ en x $ SConst _ v)) ((None _) en)))))
+              (tail $ close-members e _ hp en2 fi _ rest g $ Succ i))))))))
 
 ; A run-position def-fns: the group's block over no frames, then a closure block per member.
 (def-fns _ $ (many env-close-group : (many (Env) e) (erased (List $ Nat) gids) (many (Group gids (Nil (List (Nat)))) g) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let ((erased hl1) (many hp1) (erased sf1) (many ga)) $ alloc Block _ hp $ BGroup _ _ _ g $ FrNil _)
   (let ((many en1) (many fi1)) $ store-grow _ _ sf1 en fi)
-  (match many g _ ((MkGroup _ ids _ _) (close-members e _ hp1 en1 fi1 ids ga 0))))
-
-; A run-position delegate is its callee's closure (section 9).
-(def-fns _ $ (many alias-consts : (subterm many (List $ Pair (Nat) (Nat)) aliases) (many (Env) e) -> (many (Env) r))
-  (match many aliases _
-    ((Nil _) e)
-    ((Cons _ a rest)
-      (match many a _
-        ((MkPair _ _ g t)
-          (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
-          (let ((many (IdMap $ EInfo hs) en2))
-            (match many (idmap-get _ t en) _
-              ((Hit _ _ _ info _) (match many info _ ((MkEInfo _ _ _ st _ _ _) (entries-set-state _ en g st))))
-              ((Miss _ _ _ _) en)))
-          (tail $ alias-consts rest $ env-with-store e _ hp en2 fi))))))
+  (match many g _ ((MkGroup _ _ fns _) (close-members e _ hp1 en1 fi1 _ fns ga 0))))
 
 ; The Const fields of a value bound to their ids at their declared multiplicities (section 15): a many
 ; field its address, an erased one the token, a missing one an error block.

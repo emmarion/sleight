@@ -53,6 +53,14 @@
   r)
 
 ; What a statement leaves in the code after it (lib/elab.ml's wrap functions), and the frame it binds.
+(def-adts $ (StmtCode : ((List $ List $ Nat) ctx) ((List $ List $ Nat) ctx2) -> Type)
+  enum
+  (many SNone : (erased (List $ List $ Nat) ctx) -> (StmtCode ctx ctx))
+  (many SLet : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (many (Code ctx ms) rhs) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
+  (many SLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) gids) (many (Group gids ctx) g) -> (StmtCode ctx (Cons (List (Nat)) gids ctx)))
+  (many SMatch : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (Nat) disc) (many (List $ Nat) ids) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
+  (many SSeq : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx1) (erased (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx1) first) (many (StmtCode ctx1 ctx2) then) -> (StmtCode ctx ctx2)))
+
 (def-fns _ $ (many consts-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) cs) ->
     (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) ipk) (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) cpk))
   (match many cs _
@@ -61,6 +69,14 @@
       (let ((many ms) (many ids) (erased ipk) (many codes) (erased cpk)) $ notail $ consts-codes ctx rest)
       (match many p _
         ((MkPair _ _ id v) (values (Cons _ (Many) ms) (Cons _ id ids) (PkMany _ ms id ids ipk) (Cons _ (CValue _ v) codes) (PkMany _ ms (CValue _ v) codes cpk)))))))
+
+(def-fns _ $ (many wrap-stmt : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx2) (many (List $ Mult) ns) (subterm many (StmtCode ctx ctx2) sc) (many (Code ctx2 ns) rest) -> (many (Code ctx ns) r))
+  (match many sc _
+    ((SNone _) rest)
+    ((SLet _ ms ids pk rhs) (CLet _ ms _ ids pk rhs rest))
+    ((SLetRec _ _ g) (CLetRec _ _ _ g rest))
+    ((SMatch _ scrut shape disc ids) (CMatch _ ns scrut shape (Cons _ (MkBranch _ _ disc ids rest) $ Nil _) (None _) $ Cons _ disc $ Nil _))
+    ((SSeq _ _ _ first then) (tail $ wrap-stmt _ _ ns first $ notail $ wrap-stmt _ _ ns then rest))))
 
 ; ---- Raw helpers and the special-form head test
 
@@ -1028,6 +1044,9 @@
 (def-fns _ $ (many mint-adt : (many (Env) env) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) (many (Maybe $ ExtType) ext) (many (Bool) nt) -> (many (Adt) r))
   (let ((many tagged)) $ tagged-of disc ss)
   (MkAdt (name-of env tid) tagged (ctor-records (non-phantom ss) env 0 tagged ext (cshape-arities $ non-phantom ss) nt) ext nt))
+
+(def-fns _ $ (many alias-target : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
+  (match many (idmap-get _ x $ env-aliases env) _ ((Hit _ _ _ t _) t) ((Miss _ _ _ _) x)))
 
 ; A variable in a non-erased position: a Const entry's value embedded with its entry (section 34), or a
 ; Dyn entry's place in the frames the code binds.
@@ -2803,16 +2822,20 @@
       ((Cons _ p rest)
         (match many p _
           ((MkPair _ _ id fn)
-            (match many fn _
-              ((MkFunc _ _ rets n i ps body impl top)
-                (match many (notail $ strengthen _ _ _ body $ DUnder _ _ _ $ DUnder _ _ _ d) _
-                  ((None _) (KNo _ _ _))
-                  ((Some _ body2)
-                    (match many (notail $ strengthen-fns _ _ gids rest d) _
-                      ((KNo _ _ _) (KNo _ _ _))
-                      ((KYes _ _ _ r lk)
-                        (let ((many p2)) $ MkPair _ _ id $ MkFunc _ _ rets n i ps body2 impl top)
-                        (KYes _ _ _ (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))))))
+            (let ((many (Maybe $ Func gids ctx) fn2))
+              (match many fn _
+                ((MkFunc _ _ rets n i ps body impl top)
+                  (match many (notail $ strengthen _ _ _ body $ DUnder _ _ _ $ DUnder _ _ _ d) _ ((None _) (None _)) ((Some _ body2) (Some _ $ MkFunc _ _ rets n i ps body2 impl top))))
+                ((MkAlias _ _ n i target)
+                  (match many (notail $ strengthen _ _ _ target $ DUnder _ _ _ d) _ ((None _) (None _)) ((Some _ t2) (Some _ $ MkAlias _ _ n i t2))))))
+            (match many fn2 _
+              ((None _) (KNo _ _ _))
+              ((Some _ f2)
+                (match many (notail $ strengthen-fns _ _ gids rest d) _
+                  ((KNo _ _ _) (KNo _ _ _))
+                  ((KYes _ _ _ r lk)
+                    (let ((many p2)) $ MkPair _ _ id f2)
+                    (KYes _ _ _ (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))))
   ((many strengthen-branches : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Drop from ctx) d) -> (many (Maybe $ List $ Branch ctx ns) r))
     (match many bs _
       ((Nil _) (Some _ $ Nil _))
@@ -2943,10 +2966,12 @@
         (let ((many r) (erased lk)) $ notail $ norm-fns _ _ gids rest ren)
         (match many p _
           ((MkPair _ _ id fn)
-            (match many fn _
-              ((MkFunc _ _ rets n i ps body impl top)
-                (let ((many p2)) $ MkPair _ _ id $ MkFunc _ _ rets n i ps (notail $ norm _ _ rets body $ ren-weaken _ _ ps $ ren-weaken _ _ gids ren) impl top)
-                (values (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))))
+            (let ((many (Func gids ctx) fn2))
+              (match many fn _
+                ((MkFunc _ _ rets n i ps body impl top) (MkFunc _ _ rets n i ps (notail $ norm _ _ rets body $ ren-weaken _ _ ps $ ren-weaken _ _ gids ren) impl top))
+                ((MkAlias _ _ n i target) (MkAlias _ _ n i $ notail $ norm _ _ many-one target $ ren-weaken _ _ gids ren))))
+            (let ((many p2)) $ MkPair _ _ id fn2)
+            (values (Cons _ p2 r) (LsCons _ _ p p2 rest r lk)))))))
   ((many norm-branches : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (subterm many (List $ Branch from ns) bs) (many (Ren from ctx) ren) -> (many (List $ Branch ctx ns) r))
     (match many bs _
       ((Nil _) (Nil _))
@@ -2982,68 +3007,6 @@
         (match many branch _ ((MkBranch _ _ disc frame body)
           (Cons _ (MkBranch _ _ disc frame $ notail $ bind-through (Cons _ frame ctx) ms ns ids pk body $ bind-lift ctx ns ids frame rest)
             $ notail $ bind-through-branches ctx ms ns ids pk more rest)))))))
-
-(def-adts $ (StmtCode : ((List $ List $ Nat) ctx) ((List $ List $ Nat) ctx2) -> Type)
-  enum
-  (many SNone : (erased (List $ List $ Nat) ctx) -> (StmtCode ctx ctx))
-  (many SLet : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (many (Code ctx ms) rhs) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
-  (many SLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) gids) (many (Group gids ctx) g) -> (StmtCode ctx (Cons (List (Nat)) gids ctx)))
-  (many SMatch : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (Nat) disc) (many (List $ Nat) ids) -> (StmtCode ctx (Cons (List (Nat)) ids ctx)))
-  (many SSeq : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx1) (erased (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx1) first) (many (StmtCode ctx1 ctx2) then) -> (StmtCode ctx ctx2))
-  (many SRen : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx1) (erased (List $ Nat) gids) (many (StmtCode ctx ctx1) sc) (many (Ren (Cons (List (Nat)) gids ctx) ctx1) ren) -> (StmtCode ctx (Cons (List (Nat)) gids ctx))))
-
-
-(def-fns _ $ (many wrap-stmt : (erased (List $ List $ Nat) ctx) (erased (List $ List $ Nat) ctx2) (many (List $ Mult) ns) (subterm many (StmtCode ctx ctx2) sc) (many (Code ctx2 ns) rest) -> (many (Code ctx ns) r))
-  (match many sc _
-    ((SNone _) rest)
-    ((SLet _ ms ids pk rhs) (CLet _ ms _ ids pk rhs rest))
-    ((SLetRec _ _ g) (CLetRec _ _ _ g rest))
-    ((SMatch _ scrut shape disc ids) (CMatch _ ns scrut shape (Cons _ (MkBranch _ _ disc ids rest) $ Nil _) (None _) $ Cons _ disc $ Nil _))
-    ((SSeq _ _ _ first then) (tail $ wrap-stmt _ _ ns first $ notail $ wrap-stmt _ _ ns then rest))
-    ((SRen _ _ _ sc2 ren) (tail $ wrap-stmt _ _ ns sc2 $ norm _ _ ns rest ren))))
-
-; A delegate is its callee (section 9): the target a chain of a block's delegates ends at, each recorded
-; already resolved, and the block's frame renamed onto the functions that remain.
-(def-fns _ $ (many alias-target : (subterm many (List $ Pair (Nat) (Nat)) aliases) (many (Nat) x) -> (many (Nat) r))
-  (match many aliases _
-    ((Nil _) x)
-    ((Cons _ a rest) (match many a _ ((MkPair _ _ g t) (match many (nat-eq g x) _ ((BTrue) t) ((BFalse) (tail $ alias-target rest x))))))))
-
-(def-fns _ $ (many unaliased : (subterm many (List $ Nat) ids) (many (List $ Pair (Nat) (Nat)) aliases) -> (many (List $ Nat) r))
-  (match many ids _
-    ((Nil _) (Nil _))
-    ((Cons _ y rest)
-      (let ((many more)) $ notail $ unaliased rest aliases)
-      (match many (nat-eq (alias-target aliases y) y) _ ((BTrue) (Cons _ y more)) ((BFalse) more)))))
-
-(def-fns _ $ (many alias-atoms : (many (Env) env) (many (List $ List $ Nat) tctx) (subterm many (List $ Nat) ids) (many (List $ Pair (Nat) (Nat)) aliases) -> (many (List $ Atom tctx) r) (erased (Lockstep (Nat) (Atom tctx) ids r) lk))
-  (match many ids _
-    ((Nil _) (values (Nil _) (LsNil _ _)))
-    ((Cons _ y rest)
-      (let ((many r) (erased lk)) $ notail $ alias-atoms env tctx rest aliases)
-      (let ((many t)) $ alias-target aliases y)
-      (let ((many (Atom tctx) a)) $ match many (is-const env t) _
-        ((BTrue) (AConst _ t))
-        ((BFalse) (match many (mem-dec t tctx) _ ((Some _ p) (AVar _ t p)) ((None _) (AConst _ t)))))
-      (values (Cons _ a r) (LsCons _ _ y a rest r lk)))))
-
-(def-fns _ $ (many alias-ren : (many (Env) env) (erased (List $ List $ Nat) ctx) (many (List $ List $ Nat) tctx) (many (Ren ctx tctx) base) (many (List $ Nat) gids) (many (List $ Pair (Nat) (Nat)) aliases) -> (many (Ren (Cons (List (Nat)) gids ctx) tctx) r))
-  (let ((many atoms) (erased lk)) $ alias-atoms env tctx gids aliases)
-  (RFrame _ _ _ atoms lk base))
-
-(def-fns _ $ (many alias-fns : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) gids) (erased (List $ Nat) gids2) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (List $ Pair (Nat) (Nat)) aliases) (many (Ren (Cons (List (Nat)) gids ctx) (Cons (List (Nat)) gids2 ctx)) ren) -> (many (List $ Pair (Nat) $ Func gids2 ctx) r))
-  (match many fns _
-    ((Nil _) (Nil _))
-    ((Cons _ p rest)
-      (let ((many more)) $ notail $ alias-fns _ _ _ rest aliases ren)
-      (match many p _
-        ((MkPair _ _ id fn)
-          (match many (nat-eq (alias-target aliases id) id) _
-            ((BFalse) more)
-            ((BTrue)
-              (match many fn _
-                ((MkFunc _ _ rets n i ps body impl top)
-                  (Cons _ (MkPair _ _ id $ MkFunc _ _ rets n i ps (norm _ _ rets body $ ren-weaken _ _ ps ren) impl top) more))))))))))
 
 (def-fns _
   ((many distribute : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (subterm many (Code ctx ms) code) -> (many (Code ctx ms) r))
@@ -3094,10 +3057,13 @@
     (match many fns _
       ((Nil _) (values (Nil _) $ LsNil _ _))
       ((Cons _ pair rest) (match many pair _ ((MkPair _ _ id fn)
-        (match many fn _ ((MkFunc _ _ ms name fid ps body impl top)
-          (let ((many p)) $ MkPair _ _ id $ MkFunc _ _ ms name fid ps (notail $ distribute (Cons _ ps $ Cons _ gids ctx) ms body) impl top)
-          (let ((many more) (erased lk)) $ notail $ distribute-fns ctx gids rest)
-          (values (Cons _ p more) $ LsCons _ _ pair p rest more lk)))))))))
+        (let ((many (Func gids ctx) fn2))
+          (match many fn _
+            ((MkFunc _ _ ms name fid ps body impl top) (MkFunc _ _ ms name fid ps (notail $ distribute (Cons _ ps $ Cons _ gids ctx) ms body) impl top))
+            ((MkAlias _ _ _ _ _) fn)))
+        (let ((many p)) $ MkPair _ _ id fn2)
+        (let ((many more) (erased lk)) $ notail $ distribute-fns ctx gids rest)
+        (values (Cons _ p more) $ LsCons _ _ pair p rest more lk)))))))
 
 (def-fns _ $ (many normalize : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r))
   (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ ren-id ctx) $ ren-id ctx))
@@ -5317,30 +5283,14 @@
         (let ((many env2a)) $ error-when env2 (and uq $ not $ nat-eq (list-length _ fns) 1) "`def-unique` defines exactly one function")
         (let ((many env3) (many headers)) $ notail $ elab-headers sugar fns env2a lvl uq)
         (let ((many env4) (many gids) (many fids)) $ bind-headers _ headers env3 lvl)
-        (let ((many env5) (many fns2) (erased lk) (many aliases)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl (env-run-pos env4) $ Nil _)
-        (match many aliases _
-          ((Nil _)
-            (let ((many group)) $ MkGroup _ gids fns2 lk)
-            (match many gids _
-              ((Nil _) (values env5 ctx $ SNone _))
-              ((Cons _ _ _)
-                (match many ctx _
-                  ((Nil _) (values (env-close-group env5 _ group) ctx $ SNone _))
-                  ((Cons _ _ _) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))))
+        (let ((many env5) (many fns2) (erased lk)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
+        (let ((many group)) $ MkGroup _ gids fns2 lk)
+        (match many gids _
+          ((Nil _) (values env5 ctx $ SNone _))
           ((Cons _ _ _)
-            (let ((many gids2)) $ unaliased gids aliases)
-            (let ((many ren)) $ alias-ren env5 ctx (Cons _ gids2 ctx) (ren-under _ _ gids2 $ ren-id ctx) gids aliases)
-            (let ((many fns3)) $ alias-fns _ _ _ fns2 aliases ren)
-            (match many (lockstep-dec _ _ gids2 fns3) _
-              ((LdNo _ _ _ _) (values (env-error env5 "internal: a block's remaining functions lost their frame") ctx $ SNone _))
-              ((LdYes _ _ _ _ lk2)
-                (let ((many group)) $ MkGroup _ gids2 fns3 lk2)
-                (match many ctx _
-                  ((Nil _) (values (alias-consts aliases $ match many gids2 (((Env) _)) ((Nil _) env5) ((Cons _ _ _) (env-close-group env5 _ group))) ctx $ SNone _))
-                  ((Cons _ _ _)
-                    (match many gids2 _
-                      ((Nil _) (values env5 (Cons _ gids ctx) $ SRen _ _ _ (SNone _) $ alias-ren env5 ctx ctx (ren-id ctx) gids aliases))
-                      ((Cons _ _ _) (values env5 (Cons _ gids ctx) $ SRen _ _ _ (SLetRec _ _ group) ren))))))))))))
+            (match many ctx _
+              ((Nil _) (values (env-close-group env5 _ group) ctx $ SNone _))
+              ((Cons _ _ _) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))))))
 
   ((many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Nat) lvl) (many (Bool) uq) -> (many (Env) r) (many (Headers fns) hs))
     (match many fns _
@@ -5400,33 +5350,32 @@
                                 (let ((many env4) (many hs)) $ notail $ elab-headers sugar rest (env-back env env3b) lvl uq)
                                 (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs)))))))) (else (values bad $ HStop _)))))) (else (values bad $ HStop fns))))))
 
-  ((many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) (many (List $ Pair (Nat) (Nat)) aliases) ->
-      (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk) (many (List $ Pair (Nat) (Nat)) aliases2))
+  ((many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
+      (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk))
     (match many fns _
       ((Nil _)
         (let-match many fids (BStop z))
-        (values env (Nil _) (LsNil _ _) aliases))
+        (values env (Nil _) (LsNil _ _)))
       ((Cons _ f rest)
         (match many headers _
           ((HStop _)
             (let-match many fids (BStop z2))
-            (values env (Nil _) (LsNil _ _) aliases))
+            (values env (Nil _) (LsNil _ _)))
           ((HCons _ _ h hrest)
             (match many fids _
               ((BMany _ _ _ _ _ x xrest)
                 (let-match many gids (Cons zg xg grest))
-                (let ((many env3) (many fn) (many delegated)) $ notail $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
-                (let ((many aliases1)) $ match many delegated (((List $ Pair (Nat) (Nat)) _)) ((None _) aliases) ((Some _ c) (Cons _ (MkPair _ _ x $ alias-target aliases c) aliases)))
-                (let ((many env4) (many more) (erased lk) (many aliases2)) $ notail $ define-fns sugar rest hrest env3 ctx gall grest xrest lvl top aliases1)
-                (values env4 (Cons _ (MkPair _ _ x fn) more) (LsCons _ _ x (MkPair _ _ x fn) grest more lk) aliases2))
+                (let ((many env3) (many fn)) $ notail $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
+                (let ((many env4) (many more) (erased lk)) $ notail $ define-fns sugar rest hrest env3 ctx gall grest xrest lvl top)
+                (values env4 (Cons _ (MkPair _ _ x fn) more) (LsCons _ _ x (MkPair _ _ x fn) grest more lk)))
               ((BErased _ _ _ _ _ x xrest)
-                (let ((many env3) (many fn) (many delegated)) $ notail $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
-                (tail $ define-fns sugar rest hrest env3 ctx gall gids xrest lvl top aliases))))))))
+                (let ((many env3) (many fn)) $ notail $ define-fn sugar (subterm (prove-subterm f fns)) f h env ctx gall x lvl top)
+                (tail $ define-fns sugar rest hrest env3 ctx gall gids xrest lvl top))))))))
 
   ; One function's body checked at its level under its parameters, the group's frame and the defining scope,
   ; its marks validated, and its delegate proof bound where it has one.
   ((many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (Nat) x) (many (Nat) lvl) (many (Bool) top) ->
-      (many (Env) r) (many (Func gall ctx) fn) (many (Maybe $ Nat) callee))
+      (many (Env) r) (many (Func gall ctx) fn))
     (match many h _
       ((MkHeader _ hpos name mult uq isabs impl params rets body pb)
         (let ((many ty)) $ TFn uq (TVar lvl) params rets)
@@ -5462,9 +5411,12 @@
                 (match many (is-some _ impl) (((Env) _))
                   ((BTrue) (env-error (env-at env2 hpos) "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`"))
                   ((BFalse) (match many (nat-lt callee x) _ ((BTrue) env2) ((BFalse) (env-error (env-at env2 hpos) "the function a `delegate` call names must be introduced before the function whose body it is"))))))
-              (let ((many env3) (many px)) $ bind env2b (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
+              (let ((many env2c)) $ env-set-aliases env2b $ idmap-set _ x (alias-target env2b callee) $ env-aliases env2b)
+              (let ((many env3) (many px)) $ bind env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
               env3)))
-        (values env3 (MkFunc _ _ physical name x mps code2 impl top) delegated))))
+        (values env3 $ match many delegated (((Func gall ctx) _))
+          ((None _) (MkFunc _ _ physical name x mps code2 impl top))
+          ((Some _ callee) (MkAlias _ _ name x $ var-code env3 (Cons _ gall ctx) $ alias-target env3 callee))))))
 
   ; def-adts (sections 12, 19, 27): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor

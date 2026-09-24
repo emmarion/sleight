@@ -541,12 +541,8 @@
 (def-adts $ (Named : -> Type)
   enum
   (many NmVal : (many (Rope) r) -> (Named))
-  (many NmFn : (many (String) name) -> (Named)))
-
-(def-fns _ $ (many named-rope : (many (Named) n) -> (many (Rope) r))
-  (match many n _
-    ((NmVal r) r)
-    ((NmFn name) (RStr $ str-cat3 "(Obj.repr " name ")"))))
+  (many NmFn : (many (String) name) (many (Nat) id) -> (Named))
+  (many NmConst : (many (Nat) id) -> (Named)))
 
 (def-adts $ (Names : ((List $ List $ Nat) ctx) -> Type)
   enum
@@ -567,6 +563,35 @@
       (let-match many ns (NmFrame c2 f2 rs lk rest))
       (tail $ names-get _ _ q rest))))
 
+(def-fns _ $ (many target-named : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) c) (many (Names ctx) ns) -> (many (Named) r))
+  (match many c _
+    ((CVar _ _ p) (names-get _ _ p ns))
+    ((CConst _ t) (NmConst t))
+    (else (NmVal $ RStr "(failwith \"internal: an alias with no target\")"))))
+
+(def-fns _ $ (many alias-named : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) all) (many (Names (Cons (List (Nat)) all ctx)) whole) (erased (List $ Nat) f) (subterm many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk) (many (List $ Pair (Nat) $ Func all ctx) fns) -> (many (List $ Named) rs2) (erased (Lockstep (Nat) (Named) f rs2) lk2))
+  (match many rs _
+    ((Nil _)
+      (let-match erased lk (LsNil ta tb))
+      (values (Nil _) (LsNil _ _)))
+    ((Cons _ r rest)
+      (let-match erased lk (LsCons ta tb x y xs ys p))
+      (let ((many (Named) r2) (many (List $ Pair (Nat) $ Func all ctx) more))
+        (match many fns _
+          ((Nil _) (values r fns))
+          ((Cons _ pr fr)
+            (match many pr _
+              ((MkPair _ _ _ fn)
+                (match many fn _
+                  ((MkFunc _ _ _ _ _ _ _ _ _) (values r fr))
+                  ((MkAlias _ _ _ _ target) (values (target-named _ target whole) fr))))))))
+      (let ((many rs3) (erased lk3)) $ notail $ alias-named _ _ whole _ rest p more)
+      (values (Cons _ r2 rs3) (LsCons _ _ x r2 xs rs3 lk3)))))
+
+(def-fns _ $ (many group-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (List $ Pair (Nat) $ Func ids ctx) fns) (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) ids rs) lk) (many (Names ctx) rest) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
+  (let ((many rs2) (erased lk2)) $ alias-named _ _ (NmFrame _ ids rs lk rest) _ rs lk fns)
+  (NmFrame _ ids rs2 lk2 rest))
+
 (def-fns _ $ (many addr-str : (erased (Hist Block) a) (many (Ref Block a) addr) -> (many (String) r))
   (str-cat "a" $ nat-str $ ref-pos Block _ addr))
 
@@ -583,16 +608,16 @@
     ((Nil _) (values (Nil _) (LsNil _ _)))
     ((Cons _ x rest)
       (let ((many rs) (erased lk)) $ notail $ top-names rest env suffix)
-      (let ((many (Named) r)) $ match many suffix _ ((None _) (NmVal $ RStr $ top-name env x)) ((Some _ s) (NmFn $ str-cat (top-name env x) s)))
+      (let ((many (Named) r)) $ match many suffix _ ((None _) (NmVal $ RStr $ top-name env x)) ((Some _ s) (NmFn (str-cat (top-name env x) s) x)))
       (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))))
 
 (def-fns _ $ (many push-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Env) env) (many (Names ctx) ns) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
   (let ((many rs) (erased lk)) $ top-names ids env $ None _)
   (NmFrame _ ids rs lk ns))
 
-(def-fns _ $ (many push-fn-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (Env) env) (many (String) suffix) (many (Names ctx) ns) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
+(def-fns _ $ (many push-fn-names : (erased (List $ List $ Nat) ctx) (many (List $ Nat) ids) (many (List $ Pair (Nat) $ Func ids ctx) fns) (many (Env) env) (many (String) suffix) (many (Names ctx) ns) -> (many (Names (Cons (List (Nat)) ids ctx)) r))
   (let ((many rs) (erased lk)) $ top-names ids env $ Some _ suffix)
-  (NmFrame _ ids rs lk ns))
+  (group-names _ ids fns rs lk ns))
 
 (def-fns _ $ (many addr-ropes : (erased (Hist Block) a) (subterm many (List $ Ref Block a) vs) -> (many (List $ Rope) rs))
   (match many vs _
@@ -606,6 +631,12 @@
     ((Hit _ _ _ info _)
       (match many info _
         ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v) (addr-rope _ v))))))))
+
+(def-fns _ $ (many named-rope : (many (Named) n) (many (Env) env) -> (many (Rope) r))
+  (match many n _
+    ((NmVal r) r)
+    ((NmFn name _) (RStr $ str-cat3 "(Obj.repr " name ")"))
+    ((NmConst x) (const-rope env x))))
 
 ; The names of a group block's captured frames: an address's block by name, a group's members by theirs.
 (def-fns _ $ (many frame-named : (erased (Hist Block) a) (erased (List $ Nat) f) (subterm many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (List $ Named) rs) (erased (Lockstep (Nat) (Named) f rs) lk2))
@@ -624,7 +655,7 @@
     ((Nil _) (values (Nil _) (LsNil _ _)))
     ((Cons _ x rest)
       (let ((many rs) (erased lk)) $ notail $ member-named _ rest env g)
-      (let ((many r)) $ NmFn $ member-name _ env x g)
+      (let ((many r)) $ NmFn (member-name _ env x g) x)
       (values (Cons _ r rs) (LsCons _ _ x r rest rs lk)))))
 
 (def-fns _ $ (many frame-names : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (subterm many (Frames (Ref Block a) ctx) fr) (many (Env) env) -> (many (Names ctx) r))
@@ -633,9 +664,9 @@
     ((FrVals _ _ f vs lk rest)
       (let ((many rs) (erased lk2)) $ frame-named _ _ vs lk)
       (NmFrame _ f rs lk2 $ notail $ frame-names _ _ rest env))
-    ((FrGroup _ _ gids g rest)
+    ((FrGroup _ _ gids g grp rest)
       (let ((many rs) (erased lk2)) $ member-named _ gids env g)
-      (NmFrame _ gids rs lk2 $ notail $ frame-names _ _ rest env))))
+      (match many grp _ ((MkGroup _ _ fns _) (group-names _ gids fns rs lk2 $ notail $ frame-names _ _ rest env))))))
 
 ; ---- The head of a call: a constructor the elaborator saw, a function with an OCaml name, or a value.
 
@@ -651,12 +682,14 @@
     ((BFn _ g _ id) (HFn (member-name _ env id g) id))
     (else (HDyn))))
 
+(def-fns _ $ (many const-head : (many (Env) env) (many (Nat) x) -> (many (Head) h))
+  (let ((erased a) (many blk)) $ env-block env x)
+  (match many blk _ ((None _) (HDyn)) ((Some _ b) (block-head _ b env))))
+
 (def-fns _ $ (many head-of : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) f) (many (Env) env) (many (Names ctx) ns) -> (many (Head) h))
   (match many f _
-    ((CVar _ id p) (match many (names-get _ _ p ns) _ ((NmFn name) (HFn name id)) ((NmVal _) (HDyn))))
-    ((CConst _ x)
-      (let ((erased a) (many blk)) $ env-block env x)
-      (match many blk _ ((None _) (HDyn)) ((Some _ b) (block-head _ b env))))
+    ((CVar _ _ p) (match many (names-get _ _ p ns) _ ((NmFn name id) (HFn name id)) ((NmConst x) (const-head env x)) ((NmVal _) (HDyn))))
+    ((CConst _ x) (const-head env x))
     ((CValue _ v) (block-head _ v env))
     (else (HDyn))))
 
@@ -751,7 +784,7 @@
 (def-fns _
   ((many emit-code : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (Rope) r))
     (match many code _
-      ((CVar _ _ p) (named-rope $ names-get _ _ p ns))
+      ((CVar _ _ p) (named-rope (names-get _ _ p ns) env))
       ((CConst _ x) (const-rope env x))
       ((CValue _ v) (tail $ block-rope _ v env d))
       ((CErased _ _) (RStr "(Obj.repr ())"))
@@ -776,8 +809,10 @@
       ((CLetRec _ ns2 _ g rest)
         (match many g _
           ((MkGroup _ ids fns _)
-            (let ((many ns3)) $ push-fn-names _ ids env "" ns)
-            (rcat5 (RStr "(let rec ") (notail $ emit-group _ _ fns env ns3 d "") (RStr " in ") (notail $ emit-code _ _ rest env ns3 d) $ RStr ")"))))
+            (let ((many ns3)) $ push-fn-names _ ids fns env "" ns)
+            (match many (notail $ emit-group _ _ fns env ns3 d "") _
+              ((Nil _) (tail $ emit-code _ _ rest env ns3 d))
+              ((Cons _ f1 more) (rcat5 (RStr "(let rec ") (rjoin (Cons _ f1 more) "\nand ") (RStr " in ") (notail $ emit-code _ _ rest env ns3 d) $ RStr ")"))))))
       ((CMatch _ _ scrut shape branches dfl live)
         (let ((many sr)) $ notail $ emit-code _ _ scrut env ns d)
         (let ((many (Maybe $ Rope) dr)) (match many dfl _ ((None _) (None _)) ((Some _ dd) (Some _ $ notail $ emit-code _ _ dd env (push-names _ (Nil _) env ns) d))))
@@ -820,15 +855,17 @@
           ((MkBranch _ _ disc ids body)
             (Cons _ (MkArm disc (names-of-ids ids env) $ notail $ emit-code _ _ body env (push-names _ ids env ns) d) $ notail $ emit-arms _ _ rest env ns d))))))
 
-  ; The definitions of a group, joined by and, each named by its entry and the suffix.
-  ((many emit-group : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (Env) env) (many (Names (Cons (List (Nat)) gids ctx)) ns) (many (Decls) d) (many (String) suffix) -> (many (Rope) r))
+  ; The definitions of a group, each named by its entry and the suffix.
+  ((many emit-group : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (List $ Pair (Nat) $ Func gids ctx) fns) (many (Env) env) (many (Names (Cons (List (Nat)) gids ctx)) ns) (many (Decls) d) (many (String) suffix) -> (many (List $ Rope) r))
     (match many fns _
-      ((Nil _) (REmpty))
+      ((Nil _) (Nil _))
       ((Cons _ p rest)
+        (let ((many more)) $ notail $ emit-group _ _ rest env ns d suffix)
         (match many p _
           ((MkPair _ _ id fn)
-            (let ((many (Rope) sep)) $ match many rest _ ((Nil _) (REmpty)) ((Cons _ _ _) (RStr "\nand ")))
-            (rcat5 (RStr $ str-cat (top-name env id) suffix) (RStr " ") (notail $ emit-fn _ _ fn env ns d) sep $ notail $ emit-group _ _ rest env ns d suffix))))))
+            (match many fn _
+              ((MkFunc _ _ _ _ _ _ _ _ _) (Cons _ (rcat3 (RStr $ str-cat (top-name env id) suffix) (RStr " ") $ notail $ emit-fn _ _ fn env ns d) more))
+              ((MkAlias _ _ _ _ _) more)))))))
 
   ; A function's parameters and body; an extern one is the host's, over its parameters unboxed.
   ((many emit-fn : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (subterm many (Func gids ctx) fn) (many (Env) env) (many (Names (Cons (List (Nat)) gids ctx)) ns) (many (Decls) d) -> (many (Rope) r))
@@ -839,7 +876,8 @@
           (match many impl _
             ((Some _ im) (match many im (((Rope) _)) ((MkImpl se _) (match many se (((Rope) _)) ((MkSomeExtern _ e) (ffi-call (ext-name _ e) ps env d))))))
             ((None _) (notail $ emit-code _ _ body env (push-names _ params env ns) d))))
-        (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))))
+        (rcat3 (params-rope ps) (RStr " : Obj.t = ") b))
+      ((MkAlias _ _ _ _ _) (REmpty))))
 
   ; A block as one OCaml value, its addresses by name; a function value is its member's closure.
   ((many block-rope : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
@@ -953,7 +991,8 @@
                               (match many (find-template (decl-templates d) "fn" (ext-name _ e) 0) _
                                 ((Some _ ps) (decl-call-template d fid ps))
                                 ((None _) d)))))))))
-                (tail $ collect-group _ _ rest env d1))))))))
+                (tail $ collect-group _ _ rest env d1))
+              ((MkAlias _ _ _ _ _) (tail $ collect-group _ _ rest env d))))))))
 
   ((many collect-block : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
     (match many b _
@@ -1012,7 +1051,7 @@
   (match many fr _
     ((FrNil _) acc)
     ((FrVals _ _ _ vs _ rest) (tail (frames-refs _ _ rest (rev-onto _ vs acc))))
-    ((FrGroup _ _ _ g rest) (tail (frames-refs _ _ rest (Cons _ g acc))))))
+    ((FrGroup _ _ _ g _ rest) (tail (frames-refs _ _ rest (Cons _ g acc))))))
 
 (def-fns _ $ (many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (List $ Ref Block a) r))
   (match many b _
@@ -1074,7 +1113,9 @@
       (match many g _
         ((MkGroup _ ids fns _)
           (let ((many suffix)) $ str-cat "_" $ addr-str _ addr)
-          (rcat3 (RStr "let rec ") (emit-group _ _ fns env (push-fn-names _ ids env suffix $ frame-names _ _ env2 env) d suffix) $ RStr "\n"))))
+          (match many (emit-group _ _ fns env (push-fn-names _ ids fns env suffix $ frame-names _ _ env2 env) d suffix) _
+            ((Nil _) (REmpty))
+            ((Cons _ f1 more) (rcat3 (RStr "let rec ") (rjoin (Cons _ f1 more) "\nand ") $ RStr "\n"))))))
     (else (rcat5 (RStr "let ") (addr-rope _ addr) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
 
 (def-lvl REF-CMP)

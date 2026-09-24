@@ -489,7 +489,7 @@
     enum
     (many FrNil : (erased Type R) -> (Frames R (Nil (List (Nat)))))
     (many FrVals : (erased Type R) (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (List R) vs) (erased (Lockstep (Nat) R f vs) lk) (many (Frames R ctx) rest) -> (Frames R (Cons (List (Nat)) f ctx)))
-    (many FrGroup : (erased Type R) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many R group) (many (Frames R ctx) rest) -> (Frames R (Cons (List (Nat)) gids ctx))))
+    (many FrGroup : (erased Type R) (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many R group) (many (Group gids ctx) members) (many (Frames R ctx) rest) -> (Frames R (Cons (List (Nat)) gids ctx))))
   ; [gids]: the frame the group binds, its functions' ids in order.
   ((Group : ((List $ Nat) gids) ((List $ List $ Nat) ctx) -> Type)
     enum
@@ -502,7 +502,8 @@
     (many MkImpl : (many (SomeExtern) e) (many (List $ Ctor) cs) -> (Impl)))
   ((Func : ((List $ Nat) gids) ((List $ List $ Nat) ctx) -> Type)
     enum
-    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx)))
+    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx))
+    (many MkAlias : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (String) name) (many (Nat) id) (many (Code (Cons (List (Nat)) gids ctx) many-one) target) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
   ; what runs (section 16); a node that has to make values on its own holds them as data. A Const entry is
   ; named by its id and read from the store when the code runs (section 34); a value elaboration embeds is
@@ -546,10 +547,10 @@
       (let ((erased vs2) (erased pv) (erased lk2)) (refs-widen-lk _ b c le f vs lk))
       (let ((erased rest2) (erased pr)) (frames-widen b c le cx rest))
       (values (FrVals _ _ f vs2 lk2 rest2) (coercible-ctor (Shared) FrVals (Ref Block b) (Ref Block c) cx cx (coercible-refl (Shared) f) pv lk lk2 pr)))
-    ((FrGroup _ cx gids g rest)
+    ((FrGroup _ cx gids g grp rest)
       (let ((erased g2) (erased pg)) (ref-widen _ b c le g))
       (let ((erased rest2) (erased pr)) (frames-widen b c le cx rest))
-      (values (FrGroup _ _ gids g2 rest2) (coercible-ctor (Shared) FrGroup (Ref Block b) (Ref Block c) cx cx (coercible-refl (Shared) gids) pg pr)))))
+      (values (FrGroup _ _ gids g2 grp rest2) (coercible-ctor (Shared) FrGroup (Ref Block b) (Ref Block c) cx cx (coercible-refl (Shared) gids) pg (coercible-refl (Shared) grp) pr)))))
 
 (def-fns _ $ (erased block-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Block (Ref Block b)) blk) -> (erased (Block (Ref Block c)) blk2) (erased (Coercible (Shared) (Block (Ref Block b)) blk (Shared) (Block (Ref Block c)) blk2) p))
   (match erased blk _
@@ -650,19 +651,19 @@
       ((Cons _ b rest) (match many b _ ((MkBranch _ _ d ids body) (Cons _ (MkBranch _ _ d ids $ notail $ recast _ ns ms same body) $ notail $ recast-branches _ ns ms same rest)))))))
 
 (def-fns _ $ (many func-params : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (List $ Nat) ps))
-  (match many f _ ((MkFunc _ _ _ _ _ ps _ _ _) ps)))
+  (match many f _ ((MkFunc _ _ _ _ _ ps _ _ _) ps) ((MkAlias _ _ _ _ _) (Nil _))))
 
 (def-fns _ $ (many func-name : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (String) b))
-  (match many f _ ((MkFunc _ _ _ n _ _ _ _ _) n)))
+  (match many f _ ((MkFunc _ _ _ n _ _ _ _ _) n) ((MkAlias _ _ n _ _) n)))
 
 (def-fns _ $ (many func-id : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Nat) b))
-  (match many f _ ((MkFunc _ _ _ _ id _ _ _ _) id)))
+  (match many f _ ((MkFunc _ _ _ _ id _ _ _ _) id) ((MkAlias _ _ _ id _) id)))
 
 (def-fns _ $ (many func-impl : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Maybe $ Impl) b))
-  (match many f _ ((MkFunc _ _ _ _ _ _ _ impl _) impl)))
+  (match many f _ ((MkFunc _ _ _ _ _ _ _ impl _) impl) ((MkAlias _ _ _ _ _) (None _))))
 
 (def-fns _ $ (many func-top : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Func gids ctx) f) -> (many (Bool) b))
-  (match many f _ ((MkFunc _ _ _ _ _ _ _ _ top) top)))
+  (match many f _ ((MkFunc _ _ _ _ _ _ _ _ top) top) ((MkAlias _ _ _ _ _) (BFalse))))
 
 ; ---- Decidable equality on ids, with inequality as the order either way so a refuted branch stays refutable.
 
@@ -2045,13 +2046,13 @@
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
-      (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) -> (UniqueState))))
+      (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) (many (IdMap $ Nat) aliases) -> (UniqueState))))
 ; An interned literal: its entry, its Numeral proof where it has one, and the spelling it reads back as.
 (def-adts $ (LitEntry : -> Type)
   enum
   (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) -> (LitEntry)))
 
-(let ((many unique-empty)) (MkUniqueState (MEmpty _) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _))))
+(let ((many unique-empty)) (MkUniqueState (MEmpty _) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _)) (MEmpty _)))
 
 (def-adts $ (Scope : -> Type)
   enum
@@ -2371,9 +2372,9 @@
 ; Leaves a telescope: keeps [inner]'s facts, opens, store, literals, fresh ids, finals and errors, restoring
 ; [outer]'s scope and objects; run position is [outer]'s.
 (def-fns _ $ (many unique-restore : (many (UniqueState) outer) (many (UniqueState) inner) -> (many (UniqueState) r))
-  (match many outer _ ((MkUniqueState _ _ caps ue ie sig _ _ _)
-    (match many inner _ ((MkUniqueState loc2 uses2 _ _ _ _ words2 temp2 wd2)
-      (MkUniqueState loc2 uses2 caps ue ie sig words2 temp2 wd2))))))
+  (match many outer _ ((MkUniqueState _ _ caps ue ie sig _ _ _ _)
+    (match many inner _ ((MkUniqueState loc2 uses2 _ _ _ _ words2 temp2 wd2 al2)
+      (MkUniqueState loc2 uses2 caps ue ie sig words2 temp2 wd2 al2))))))
 
 (def-fns _ $ (many env-restore : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (match many outer _
@@ -2389,8 +2390,8 @@
       ((BFalse) words)
       ((BTrue) (match many (list-mem-bin temp x) _ ((BTrue) (tail $ hide-words rest temp bound)) ((BFalse) (Cons _ x $ notail $ hide-words rest temp bound))))))))
 (def-fns _ $ (many unique-hide : (many (Nat) bound) (many (UniqueState) state) -> (many (UniqueState) r))
-  (match many state _ ((MkUniqueState loc uses caps ue ie sig words temp wd)
-    (MkUniqueState loc uses caps ue ie sig (hide-words words temp bound) temp wd))))
+  (match many state _ ((MkUniqueState loc uses caps ue ie sig words temp wd al)
+    (MkUniqueState loc uses caps ue ie sig (hide-words words temp bound) temp wd al))))
 
 (def-fns _ $ (many env-hide : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (match many outer _
@@ -2515,42 +2516,47 @@
 (def-fns _ $ (many env-set-unique : (many (Env) env) (many (UniqueState) state) -> (many (Env) r))
   (match many env _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi er lv st cl wa lt lo pr state))))
 (def-fns _ $ (many env-locations : (many (Env) env) -> (many (IdMap $ Nat) r))
-  (match many (env-unique env) _ ((MkUniqueState locations _ _ _ _ _ _ _ _) locations)))
+  (match many (env-unique env) _ ((MkUniqueState locations _ _ _ _ _ _ _ _ al) locations)))
 (def-fns _ $ (many env-set-locations : (many (Env) env) (many (IdMap $ Nat) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState _ uses captures ue ie sig words temp wd) (env-set-unique env (MkUniqueState x uses captures ue ie sig words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState _ uses captures ue ie sig words temp wd al) (env-set-unique env (MkUniqueState x uses captures ue ie sig words temp wd al)))))
 (def-fns _ $ (many env-uses : (many (Env) env) -> (many (IdMap $ Use) r))
-  (match many (env-unique env) _ ((MkUniqueState _ uses _ _ _ _ _ _ _) uses)))
+  (match many (env-unique env) _ ((MkUniqueState _ uses _ _ _ _ _ _ _ al) uses)))
 (def-fns _ $ (many env-set-uses : (many (Env) env) (many (IdMap $ Use) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations _ captures ue ie sig words temp wd) (env-set-unique env (MkUniqueState locations x captures ue ie sig words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations _ captures ue ie sig words temp wd al) (env-set-unique env (MkUniqueState locations x captures ue ie sig words temp wd al)))))
 (def-fns _ $ (many env-captures : (many (Env) env) -> (many (List $ Nat) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ captures _ _ _ _ _ _) captures)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ captures _ _ _ _ _ _ al) captures)))
 (def-fns _ $ (many env-set-captures : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses _ ue ie sig words temp wd) (env-set-unique env (MkUniqueState locations uses x ue ie sig words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses _ ue ie sig words temp wd al) (env-set-unique env (MkUniqueState locations uses x ue ie sig words temp wd al)))))
 (def-fns _ $ (many env-usage-erased : (many (Env) env) -> (many (Bool) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ ue _ _ _ _ _) ue)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ ue _ _ _ _ _ al) ue)))
 (def-fns _ $ (many env-set-usage-erased : (many (Env) env) (many (Bool) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures _ ie sig words temp wd) (env-set-unique env (MkUniqueState locations uses captures x ie sig words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures _ ie sig words temp wd al) (env-set-unique env (MkUniqueState locations uses captures x ie sig words temp wd al)))))
 (def-fns _ $ (many env-in-extern : (many (Env) env) -> (many (Bool) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ ie _ _ _ _) ie)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ ie _ _ _ _ al) ie)))
 (def-fns _ $ (many env-set-in-extern : (many (Env) env) (many (Bool) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue _ sig words temp wd) (env-set-unique env (MkUniqueState locations uses captures ue x sig words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue _ sig words temp wd al) (env-set-unique env (MkUniqueState locations uses captures ue x sig words temp wd al)))))
 (def-fns _ $ (many env-signature : (many (Env) env) -> (many (List $ Nat) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ sig _ _ _) sig)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ sig _ _ _ al) sig)))
 (def-fns _ $ (many env-set-signature : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie _ words temp wd) (env-set-unique env (MkUniqueState locations uses captures ue ie x words temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie _ words temp wd al) (env-set-unique env (MkUniqueState locations uses captures ue ie x words temp wd al)))))
 (def-fns _ $ (many env-words : (many (Env) env) -> (many (List $ Nat) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ words _ _) words)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ words _ _ al) words)))
 (def-fns _ $ (many env-set-words : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig _ temp wd) (env-set-unique env (MkUniqueState locations uses captures ue ie sig x temp wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig _ temp wd al) (env-set-unique env (MkUniqueState locations uses captures ue ie sig x temp wd al)))))
 (def-fns _ $ (many env-temporary : (many (Env) env) -> (many (List $ Nat) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ temp _) temp)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ temp _ al) temp)))
 (def-fns _ $ (many env-set-temporary : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words _ wd) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words x wd)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words _ wd al) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words x wd al)))))
+
+(def-fns _ $ (many env-aliases : (many (Env) env) -> (many (IdMap $ Nat) r))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ _ _ al) al)))
+(def-fns _ $ (many env-set-aliases : (many (Env) env) (many (IdMap $ Nat) x) -> (many (Env) r))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words temp wd _) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words temp wd x)))))
 
 (def-fns _ $ (many env-pragmas : (many (Env) env) -> (many (Pragmas) r))
-  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ _ pg) pg)))
+  (match many (env-unique env) _ ((MkUniqueState _ _ _ _ _ _ _ _ pg al) pg)))
 (def-fns _ $ (many env-set-pragmas : (many (Env) env) (many (Pragmas) x) -> (many (Env) r))
-  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words temp _) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words temp x)))))
+  (match many (env-unique env) _ ((MkUniqueState locations uses captures ue ie sig words temp _ al) (env-set-unique env (MkUniqueState locations uses captures ue ie sig words temp x al)))))
 (def-fns _ $ (many env-warned : (many (Env) env) -> (many (List $ Warned) r))
   (match many (env-pragmas env) _ ((MkPragmas ws _) ws)))
 (def-fns _ $ (many env-set-warned : (many (Env) env) (many (List $ Warned) x) -> (many (Env) r))

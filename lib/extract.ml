@@ -271,6 +271,7 @@ and fn cx scope name f =
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
 
 and expr cx scope = function
+  | V.CVar x when V.resolve x <> x -> expr cx scope (V.CVar (V.resolve x))
   | V.CVar x when List.mem_assoc x scope.locals -> "(Obj.repr " ^ var x ^ ")"
   | V.CVar x -> (
       match IntMap.find_opt x scope.capture with
@@ -282,6 +283,7 @@ and expr cx scope = function
   | V.CValues cs -> tuple (List.map (expr cx scope) cs)
   | V.CApp (f, es, cc) -> (
       let es = List.map (expr cx scope) es in
+      let f = match f with V.CVar x -> V.CVar (V.resolve x) | f -> f in
       let captured x = if List.mem_assoc x scope.locals then None else IntMap.find_opt x scope.capture in
       let head =
         match f with

@@ -1661,7 +1661,10 @@ and elab_def_fns ?(unique = false) env l args =
         capture_uses := join_uses !capture_uses (IntMap.filter (fun x _ -> IntMap.mem x env.entries) envb.uses);
         let code, delegated = check_marks envb fl pids code in
         if impl <> None && delegated <> None then error fl "%s" "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`";
-        (match delegated with Some (Var f) when f >= x -> error fl "%s" "the function a `delegate` call names must be introduced before the function whose body it is" | _ -> ());
+        (match delegated with
+         | Some (Var f) when f >= x -> error fl "%s" "the function a `delegate` call names must be introduced before the function whose body it is"
+         | Some (Var f) -> Hashtbl.replace V.aliases x (V.resolve f)
+         | _ -> ());
         ((x, { V.fname = name; params = non_erased envb pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
       in
       let fns, proofs = List.split (List.map2 define fids headers) in
@@ -1673,22 +1676,14 @@ and elab_def_fns ?(unique = false) env l args =
             | None -> env)
           env proofs
       in
-      let aliases = List.filter_map (function Some (g, _, Var f) -> Some (g, f) | _ -> None) proofs in
-      let rec target x = match List.assoc_opt x aliases with Some y -> target y | None -> x in
-      let rec rename = function
-        | V.CVar x -> V.CVar (target x)
-        | V.CLetRec (fs, rest) -> V.CLetRec (List.map (fun (x, f) -> (x, { f with V.body = rename f.V.body })) fs, rename rest)
-        | c -> V.map_code rename c
-      in
-      let ids = List.map fst fns in
-      let fns = List.filter_map (fun (x, f) -> if List.mem_assoc x aliases then None else Some (x, { f with V.body = rename f.V.body })) fns in
+      let fns = List.filter (fun (x, _) -> not (Hashtbl.mem V.aliases x)) fns in
       if env.run_pos then
         let values = Eval.close env.values fns in
         if fns <> [] then trace := Fns fns :: !trace;
-        (List.fold_left (fun env x -> set_state env x (Const (IntMap.find (target x) values))) env ids, Fun.id)
+        (List.fold_left (fun env x -> set_state env x (Const (IntMap.find (V.resolve x) values))) env fids, Fun.id)
       else
         let fns = List.filter (fun (x, _) -> (entry env x).mult <> Erased) fns in
-        (env, fun rest -> let rest = rename rest in if fns = [] then rest else V.CLetRec (fns, rest))
+        (env, if fns = [] then Fun.id else fun rest -> V.CLetRec (fns, rest))
 
 (* Validates the tail/delegate marks in a body (section 9), returning the delegated callee if any. Lets that only
    rename (all a coerce leaves), return exactly what they bind, or bind constants nothing mentions (a nested

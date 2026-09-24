@@ -139,13 +139,6 @@
       (let ((many body) (many app)) (show-at _ hp v 100000 env ty))
       (rope-str (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body))))))
 
-(def-fns _ $ (many const-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
-  (match many (idmap-get _ x en) _
-    ((Miss _ _ _ _) (None _))
-    ((Hit _ _ _ info _)
-      (match many info _
-        ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))))))
-
 (def-fns _ $ (many captured-word : (many (Env) env) (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (Term) place) -> (many (Maybe $ Ref Block hs) r))
   (match many ids _
     ((Nil _) (None _))
