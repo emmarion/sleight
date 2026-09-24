@@ -488,12 +488,21 @@ shape below is the session's.
 
 60. **String literals** `"..."` were added for the IO tests' paths and
     messages: the reader accepts `\n`, `\t`, `\"` and `\\`, and a literal
-    is sugar for its characters consed up with `SCons`, each a
-    character literal hoisted first (`tests/string_literal.sl`).
-    Interned by content. The hoisted `let` builds the value by consing,
-    quadratic under the FFI, which only matters for very long literals.
-    Whether the literal is `is`-transparent: it is not, as slc always
-    had it; LITERALS.md gathers the literal handling.
+    denotes its characters consed up with `SCons`
+    (`tests/string_literal.sl`). Interned by content. Whether the
+    literal is `is`-transparent: it is not, as slc always had it, so
+    neither compiler elaborates the characters: the reference binds a
+    `Const` `String` straight to its value (`Elab.str_value`) -- the
+    FFI's slice, or under `--no-extern` the model's list built in
+    OCaml -- as slc's `intern-string` binds the FFI's payload. Until
+    this change the reference hoisted each character as a literal of
+    its own and ran a `let` consing them up, only to drop the rule that
+    left; that cost grew faster than linearly in the literal's length
+    (about 6s and 440MB for one 2000-character literal in one
+    measurement, against 0.05s and 10MB after), and we believe the
+    direct binding changes nothing else observable, except that a
+    string no longer interns its characters' numerals as a side effect.
+    LITERALS.md gathers the literal handling.
 
 ## OCaml extraction (extract.ml)
 

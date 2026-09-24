@@ -23,7 +23,6 @@ let classify s =
 
 let char c = Printf.sprintf "#\\x%02x" c
 let key = function Numeral z -> Z.to_string z | Char c -> char c | Str s -> quote s
-let chars s = List.init (String.length s) (fun i -> Char (Char.code s.[i]))
 
 (* The source spelling a literal reads back from, [classify]'s inverse: a numeral in decimal, a character bare
    where the reader's word syntax admits it, and a string escaped the way [Reader.tokenize] unescapes. *)
@@ -42,10 +41,8 @@ let rec bin_succ z =
   | H2 x -> Printf.sprintf "(BS2 %s %s %s)" (bin x) (bin (Z.succ x)) (bin_succ x)
 
 (* A numeral binds its Nat and Numeral proof; a character its Char, built by reflection on the decided bound
-   (DESIGN.md section 41); a string its characters, each already a literal, consed up. *)
+   (DESIGN.md section 41). A string has no source: it is bound directly to its value (Elab.hoist). *)
 let source = function
   | Numeral z -> Printf.sprintf "(let ((many _) (erased _)) (bin-to-nat %s))" (bin z)
   | Char c -> Printf.sprintf "(let ((many %%d)) (lt-dec %d u8-modulus)) (comptime-match many %%d (Yes %%a %%b %%p)) (let ((many _)) (MkChar (MkU8 %d %%p)))" c c
-  | Str s ->
-      let cons c rest = Printf.sprintf "(SCons %s %s)" (char (Char.code c)) rest in
-      "(let ((many _)) " ^ String.fold_right cons s "(SNil)" ^ ")"
+  | Str _ -> assert false

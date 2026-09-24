@@ -339,6 +339,19 @@ let str_host env loc v =
   go v;
   Buffer.contents buf
 
+(* The value a string literal is bound to, built without elaborating its characters: the FFI's slice where the
+   FFI holds String, else the model's list, each character its code's Peano Nat (section 38) off one ladder, so
+   that the extractor, which shares by identity, sees each Nat once. *)
+let str_value env s =
+  let ctor n = ctor_of env Reader.nowhere (Option.get (prelude_id env n)) in
+  match (ctor "SNil").V.adt.ext with
+  | Some _ when !V.use_externs -> Ffi.text (s, 0, String.length s)
+  | _ ->
+      let build n args = V.construct (ctor n) args in
+      let ladder = Array.make 256 (build "Zero" []) in
+      for k = 1 to 255 do ladder.(k) <- build "Succ" [ ladder.(k - 1) ] done;
+      String.fold_right (fun c rest -> build "SCons" [ build "MkChar" [ build "MkU8" [ ladder.(Char.code c) ] ]; rest ]) s (build "SNil" [])
+
 (* The constructor a value prints as (ASSUMPTIONS 184), chosen off the type's opened Matchable and never by
    refuting candidates: the tag where the type is tagged, else the one non-phantom constructor where the type has
    exactly one. `adt.ctors` is already the non-phantom list, indexed by discriminant. *)
@@ -1395,23 +1408,26 @@ and elab_let spos env l args =
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
-(* Runs a literal's statements (Literal.source) in the prelude's scope, once per program. *)
+(* Interns a literal once per program: a numeral or character runs its statements (Literal.source) in the
+   prelude's scope; a string, opaque, is bound straight to its value (ASSUMPTIONS 60). *)
 and hoist env lit =
   let key = Literal.key lit in
   if List.mem_assoc key env.literals then env
   else
-    let parts = match lit with Literal.Char c -> [ Literal.Numeral (Z.of_int c) ] | Literal.Str s -> Literal.chars s | Literal.Numeral _ -> [] in
-    let env = List.fold_left hoist env parts in
-    let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse "<literal>" (Literal.source lit)) in
-    let entry =
-      match (lit, frame.scope.ids) with
-      | Literal.Numeral _, proof :: value :: _ -> (value, Some proof)
-      | Literal.Char c, char :: _ -> (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals))
-      | Literal.Str _, str :: _ -> (str, None)
-      | _ -> assert false
+    let frame, entry =
+      match lit with
+      | Literal.Str s ->
+          let x, frame = bind env None Many (Const (str_value env s)) (App (Var (Option.get (prelude_id env "String")), [])) in
+          (frame, (x, None))
+      | Literal.Numeral _ | Literal.Char _ -> (
+          let env = match lit with Literal.Char c -> hoist env (Literal.Numeral (Z.of_int c)) | _ -> env in
+          let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse "<literal>" (Literal.source lit)) in
+          match (lit, frame.scope.ids) with
+          | Literal.Numeral _, proof :: value :: _ -> (frame, (value, Some proof))
+          | Literal.Char c, char :: _ -> (frame, (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals)))
+          | _ -> assert false)
     in
-    let facts = match lit with Literal.Str _ -> IntMap.add (fst entry) { (fact frame (fst entry)) with rule = None } frame.facts | _ -> frame.facts in
-    { frame with scope = env.scope; facts; literals = (key, entry) :: frame.literals }
+    { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 
 (* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)

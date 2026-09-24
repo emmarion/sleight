@@ -1,5 +1,5 @@
 ; expect: 2
-; A string literal is its characters consed up, transparent like a character literal.
+; A string literal is an opaque Const String; comptime-match reads its value.
 
 (def-fns _ $ (many len : (subterm many (String) s) -> (many (Nat) n))
   (match many s _
