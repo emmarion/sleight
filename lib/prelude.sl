@@ -460,12 +460,12 @@
 (def-fns _ $ (many extern u62-cmp : (many (Nat) n) (many (Nat) m)
     (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
     (many (Cmp (Nat) Lt n m) c))
-  (delegate (nat-cmp n m)))
+  (tail (nat-cmp n m)))
 
 (def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m)
     (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
     (many (Dec n m) d))
-  (delegate (lt-dec n m)))
+  (tail (lt-dec n m)))
 
 (def-adts $ (Bin : -> Type)
   enum
