@@ -340,17 +340,23 @@ let str_host env loc v =
   Buffer.contents buf
 
 (* The value a string literal is bound to, built without elaborating its characters: the FFI's slice where the
-   FFI holds String, else the model's list, each character its code's Peano Nat (section 38) off one ladder, so
-   that the extractor, which shares by identity, sees each Nat once. *)
+   FFI holds String, else the model's list, each character a pointer into the program's one ladder of Peano Nats
+   (section 38), built at the first such literal, so that the extractor, which shares by identity, emits each Nat
+   once per program. *)
 let str_value env s =
   let ctor n = ctor_of env Reader.nowhere (Option.get (prelude_id env n)) in
   match (ctor "SNil").V.adt.ext with
-  | Some _ when !V.use_externs -> Ffi.text (s, 0, String.length s)
+  | Some _ when !V.use_externs -> (env, Ffi.text (s, 0, String.length s))
   | _ ->
       let build n args = V.construct (ctor n) args in
-      let ladder = Array.make 256 (build "Zero" []) in
-      for k = 1 to 255 do ladder.(k) <- build "Succ" [ ladder.(k - 1) ] done;
-      String.fold_right (fun c rest -> build "SCons" [ build "MkChar" [ build "MkU8" [ ladder.(Char.code c) ] ]; rest ]) s (build "SNil" [])
+      let env =
+        if Array.length env.ladder > 0 then env
+        else
+          let ladder = Array.make 256 (build "Zero" []) in
+          for k = 1 to 255 do ladder.(k) <- build "Succ" [ ladder.(k - 1) ] done;
+          { env with ladder }
+      in
+      (env, String.fold_right (fun c rest -> build "SCons" [ build "MkChar" [ build "MkU8" [ env.ladder.(Char.code c) ] ]; rest ]) s (build "SNil" []))
 
 (* The constructor a value prints as (ASSUMPTIONS 184), chosen off the type's opened Matchable and never by
    refuting candidates: the tag where the type is tagged, else the one non-phantom constructor where the type has
@@ -1417,7 +1423,8 @@ and hoist env lit =
     let frame, entry =
       match lit with
       | Literal.Str s ->
-          let x, frame = bind env None Many (Const (str_value env s)) (App (Var (Option.get (prelude_id env "String")), [])) in
+          let env, v = str_value env s in
+          let x, frame = bind env None Many (Const v) (App (Var (Option.get (prelude_id env "String")), [])) in
           (frame, (x, None))
       | Literal.Numeral _ | Literal.Char _ -> (
           let env = match lit with Literal.Char c -> hoist env (Literal.Numeral (Z.of_int c)) | _ -> env in

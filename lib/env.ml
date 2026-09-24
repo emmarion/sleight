@@ -96,10 +96,11 @@ type t = {
   values : Value.venv;
   prelude : scope;
   literals : (string * (id * id option)) list;
+  ladder : Value.value array;
 }
 
 let empty =
-  { locations = IntMap.empty; signature = []; in_extern = false; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = [] }
+  { locations = IntMap.empty; signature = []; in_extern = false; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
