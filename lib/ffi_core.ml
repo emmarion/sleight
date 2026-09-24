@@ -123,6 +123,7 @@ let array_view ~array ~wrap v =
 
 let array_of ~array ~wrap = function ANil -> wrap [||] | ACons (x, tail) -> wrap (Array.append [| x |] (array tail))
 let array_new ~blank n = Array.make (Z.to_int n) blank
+let array_make n x = array_new ~blank:x n
 
 let array_swap a i x =
   let old = Array.unsafe_get a (small i) in

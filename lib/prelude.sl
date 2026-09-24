@@ -927,6 +927,14 @@
                     -> (ArrayIsList A (Cons A x xs) (Succ n) (ACons (Copy A) n (MkCopy A x) a)))))
 
 (def-adts
+  ((ArrayRepeat : (Type A) ((Nat) n) (A x) ((Array (Copy A) n) a) -> Type)
+    enum
+    (many ARNil : (erased Type A) (erased A x) -> (ArrayRepeat A (Zero) x (ANil (Copy A))))
+    (many ARCons : (erased Type A) (erased (Nat) n) (erased A x)
+                   (erased (Array (Copy A) n) a) (erased (ArrayRepeat A n x a) p)
+                   -> (ArrayRepeat A (Succ n) x (ACons (Copy A) n (MkCopy A x) a)))))
+
+(def-adts
   ((AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
@@ -1049,6 +1057,14 @@
     ((Cons _ hd tl)
       (let ((erased n1) (unique a1) (erased p1)) (notail $ list-to-array _ tl))
       (values (Succ n1) (ACons _ _ (MkCopy _ hd) a1) (AILCons _ _ _ _ _ p1)))))
+
+(def-fns _ $ (many extern array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
+    (unique (Array (Copy A) n) a) (erased (ArrayRepeat A n x a) p))
+  (match many n _
+    ((Zero) (values (ANil _) (ARNil _ _)))
+    ((Succ n1)
+      (let ((unique a1) (erased p1)) (notail $ array-make A n1 x))
+      (values (ACons _ _ (MkCopy _ x) a1) (ARCons _ _ _ _ p1)))))
 
 (def-fns _ $ (erased init-witness : (erased Type A) (erased (Nat) n)
     (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->

@@ -365,7 +365,7 @@
   ((Extern : ((Nat) arity) -> Type)
     enum
     (many ExArrayNew : -> (Extern 1)) (many ExArraySwap : -> (Extern 3)) (many ExArrayPluck : -> (Extern 2)) (many ExArrayPlace : -> (Extern 3))
-    (many ExArraySwapImm : -> (Extern 3)) (many ExArrayPlaceImm : -> (Extern 3)) (many ExArrayLength : -> (Extern 1)) (many ExListToArray : -> (Extern 1))
+    (many ExArraySwapImm : -> (Extern 3)) (many ExArrayPlaceImm : -> (Extern 3)) (many ExArrayLength : -> (Extern 1)) (many ExListToArray : -> (Extern 1)) (many ExArrayMake : -> (Extern 2))
     (many ExAdd : -> (Extern 2)) (many ExSub : -> (Extern 2)) (many ExMul : -> (Extern 2)) (many ExDiv : -> (Extern 2)) (many ExDivmod : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1))
@@ -393,7 +393,7 @@
   (let ((many (List $ Nat) dec)) (Cons _ 0 $ Cons _ 0 $ Nil _))
   (match many e _
     ((ExArrayNew) (None _)) ((ExArraySwap) (None _)) ((ExArrayPluck) (None _)) ((ExArrayPlace) (None _))
-    ((ExArraySwapImm) (None _)) ((ExArrayPlaceImm) (None _)) ((ExArrayLength) (None _)) ((ExListToArray) (None _))
+    ((ExArraySwapImm) (None _)) ((ExArrayPlaceImm) (None _)) ((ExArrayLength) (None _)) ((ExListToArray) (None _)) ((ExArrayMake) (None _))
     ((ExNatCmp) (Some _ cmp)) ((ExStrCmp) (Some _ cmp))
     ((ExAdd) (None _)) ((ExSub) (None _)) ((ExMul) (None _)) ((ExDiv) (None _)) ((ExDivmod) (None _))
     ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
@@ -411,7 +411,7 @@
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
   (match many e _
     ((ExArrayNew) 1) ((ExArraySwap) 3) ((ExArrayPluck) 2) ((ExArrayPlace) 3)
-    ((ExArraySwapImm) 3) ((ExArrayPlaceImm) 3) ((ExArrayLength) 1) ((ExListToArray) 1)
+    ((ExArraySwapImm) 3) ((ExArrayPlaceImm) 3) ((ExArrayLength) 1) ((ExListToArray) 1) ((ExArrayMake) 2)
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
@@ -427,7 +427,7 @@
 (def-fns _ $ (many ext-name : (erased (Nat) n) (many (Extern n) e) -> (many (String) s))
   (match many e _
     ((ExArrayNew) "array-new") ((ExArraySwap) "array-swap") ((ExArrayPluck) "array-pluck") ((ExArrayPlace) "array-place")
-    ((ExArraySwapImm) "array-swap-imm") ((ExArrayPlaceImm) "array-place-imm") ((ExArrayLength) "array-length") ((ExListToArray) "list-to-array")
+    ((ExArraySwapImm) "array-swap-imm") ((ExArrayPlaceImm) "array-place-imm") ((ExArrayLength) "array-length") ((ExListToArray) "list-to-array") ((ExArrayMake) "array-make")
     ((ExAdd) "add") ((ExSub) "sub") ((ExMul) "mul") ((ExDiv) "div") ((ExDivmod) "divmod") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
     ((ExNatHalve) "nat-halve") ((ExTrim) "trim") ((ExFlatten) "flatten")
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str")
@@ -436,7 +436,7 @@
 
 (let ((many externs))
   $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExArraySwapImm) $ Cons _ (MkSomeExtern _ $ ExArrayPlaceImm) $
-  Cons _ (MkSomeExtern _ $ ExArrayLength) $ Cons _ (MkSomeExtern _ $ ExListToArray) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
+  Cons _ (MkSomeExtern _ $ ExArrayLength) $ Cons _ (MkSomeExtern _ $ ExListToArray) $ Cons _ (MkSomeExtern _ $ ExArrayMake) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $

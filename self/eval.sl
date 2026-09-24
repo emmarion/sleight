@@ -311,7 +311,8 @@
   (many ErArraySwap : -> (ExtResult))
   (many ErArrayPluck : -> (ExtResult))
   (many ErArrayPlace : -> (ExtResult))
-  (many ErListToArray : -> (ExtResult)))
+  (many ErListToArray : -> (ExtResult))
+  (many ErArrayMake : (many (Nat) count) -> (ExtResult)))
 
 ; An extern function over its arguments (section 41). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
@@ -348,6 +349,7 @@
         (ErPayload $ PNat $ match many (match many a (((Maybe $ List $ Ref Block hs) _)) ((Some _ x) (array-fields _ hp x)) ((None _) (None _))) (((Nat) _))
           ((Some _ fs) (list-length _ fs)) ((None _) 0)))
       ((ExListToArray) (ErListToArray))
+      ((ExArrayMake) (ErArrayMake na))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
       ((ExSub)
         (match many (lt-dec nb (Succ na)) (((ExtResult) _))
@@ -393,6 +395,10 @@
     ((ErListToArray)
       (let ((erased h2) (many hp2) (erased le2) (many array))
         (alloc Block _ hp (BArray _ (match many a (((List $ Ref Block hs) _)) ((Some _ x) (list-refs 1000000 _ hp x)) ((None _) (Nil _))))))
+      (values h2 hp2 le2 (Cons _ array (Nil _))))
+    ((ErArrayMake length2)
+      (let ((erased h2) (many hp2) (erased le2) (many array))
+        (alloc Block _ hp (BArray _ (match many b (((List $ Ref Block hs) _)) ((Some _ x) (repeat-field _ length2 x)) ((None _) (Nil _))))))
       (values h2 hp2 le2 (Cons _ array (Nil _))))
     ((ErArrayPluck) (apply-array-change _ hp a nb (None _) (BTrue)))
     ((ErArraySwap)

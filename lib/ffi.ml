@@ -63,6 +63,7 @@ let swap = function [ a; i; x ] -> [ Ffi_core.array_swap (array a) (z i) x ] | _
 let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VToken (z n)))));
+    ("array-make", spec ~needs:["Array"] 2 (binary (fun n x -> arr (Ffi_core.array_make (z n) x))));
     ("array-swap", spec ~needs:["Array"] 3 swap);
     ("array-swap-imm", spec ~needs:["Array"] 3 swap);
     ("array-pluck", spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_pluck (array a) (z i))));

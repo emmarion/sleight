@@ -1,0 +1,13 @@
+; expect: (MkPair _ _ #\a #\z)
+(def-fns _ $ (many make-test : -> (many (Pair (Char) (Char)) result))
+  (let ((unique a) (erased p)) (array-make _ (Succ (Succ (Zero))) #\a))
+  (let-match erased p (ARCons _ _ _ _ p1))
+  (let-match erased p1 (ARCons _ _ _ _ p2))
+  (let ((unique b) (erased q))
+    (array-place-imm _ _ a (Succ (Zero)) (MkCopy _ #\z) _ (NthS _ _ _ _ _ _ (NthZ _ _ _ _)) (ImmCopy _ (ImmChar))))
+  (let-match erased q (SetS _ _ _ _ _ _ _ q1))
+  (let-match erased q1 (SetZ _ _ _ _ _))
+  (let ((many x) (unique c)) (array-get _ _ b (Zero) _ (NthZ _ _ _ _)))
+  (let ((many y) (unique d)) (array-get _ _ c (Succ (Zero)) _ (NthS _ _ _ _ _ _ (NthZ _ _ _ _))))
+  (MkPair _ _ x y))
+make-test
