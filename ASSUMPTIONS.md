@@ -374,17 +374,23 @@ literals as open.
     alternative. All names are the session's.
 
 51. **A numeral is a digit-only atom and never a name** (`Env.bind`
-    refuses one; leading zeros are rejected outright). It is sugar for
+    refuses one; leading zeros are rejected outright). It denotes
     `(let ((many _) (erased _)) (bin-to-nat <spelling>))` hoisted to just
-    before the top-level form that first mentions it, run in run
-    position, and interned per program by value, so every occurrence is
-    one entry: the `Nat` is opaque, a call's result with no `is` rule,
-    and the erased `Numeral` proof relates it to the spelling. The
-    hoisted statements are elaborated in the prelude's own scope
-    (`Env.prelude`, `Elab.hoist`), so user shadowing of `let` or
-    `bin-to-nat` cannot reach them, and the minted entries are not in the
-    scope list at all; resolution goes through `Env.literals`. Sound
-    because the statement depends on nothing but the prelude and the top
+    before the top-level form that first mentions it, and is interned
+    per program by value, so every occurrence is one entry: the `Nat` is
+    opaque, a `Const` with no `is` rule, and the erased `Numeral` proof
+    relates it to the spelling. Both compilers mint the two entries
+    directly rather than elaborating that `let` (`Elab.hoist`, slc's
+    `intern-numeral`): the `Nat` holds the FFI's integer, or under
+    `--no-extern` a Peano chain built in OCaml (`Elab.peano`), and the
+    proof is a token whose type spells the numeral in `Bin`
+    (`Elab.bin_term`). The reference elaborated and ran the `let` until
+    its literal handling was unified with slc's; running `bin-to-nat`'s
+    model under `--no-extern` then cost a chain per numeral and, at
+    a million or so, the interpreter's stack. The entries are not in the
+    scope list at all; resolution goes through `Env.literals`. Sound,
+    we believe, because the entries are those the statement would mint,
+    and the statement depends on nothing but the prelude and the top
     level calls freely (section 24). Consequence to note: a literal is
     never unary-known. Using `3` where a `(Vec A n)` index is needed
     means unfolding its `Numeral` proof by erased matches
@@ -394,14 +400,17 @@ literals as open.
 
 52. **Character literals** are `#\c` for a printable ASCII `c`,
     `#\space`, `#\newline`, `#\tab` and `#\xHH`; Scheme's spelling was
-    chosen over `'c'` to leave the quote free for a future `Raw`. One is
-    sugar for its code's numeral followed by section 41's reflection
+    chosen over `'c'` to leave the quote free for a future `Raw`. One
+    denotes its code's numeral followed by section 41's reflection
     route, `(let ((many %d)) (lt-dec n u8-modulus))`,
     `(comptime-match %d (Yes %a %b %p))` and
     `(let ((many _)) (MkChar (MkU8 n %p)))`, hoisted and interned the
-    same way, the `%`-names living only in the discarded frame. The
-    state-forwarding `let` makes the literal `is (MkChar (MkU8 n p))`,
-    transparent down to its opaque `Nat` (`tests/char.sl`), so no
+    same way. As for a numeral, both compilers mint the entries directly
+    (item 51): the bound's proof is an erased token of type
+    `(Lt n u8-modulus)`, asserted rather than decided, every code being
+    below 256 by construction, and the literal's value is its code's
+    `Nat` (section 38), under the rule `is (MkChar (MkU8 n p))`, so it
+    is transparent down to its opaque `Nat` (`tests/char.sl`) and no
     separate relation for characters is needed.
 
 53. **`(numeral-of lit)`** takes a numeral or character literal
@@ -419,12 +428,15 @@ literals as open.
     not a number.
 
 54. **Resource limits under `--no-extern`.** Stripped, `bin-to-nat`'s
-    model runs `add` in unary, so a numeral around a million overflows
-    the interpreter's stack when merely computed. Printing one no
-    longer walks it: a printed `Nat` spells through `Z.to_string` under
-    the FFI and counts the model's chain down without it (item 154).
-    Section 41's invariant holds up to resources; the tests keep their
-    numerals small.
+    model runs `add` in unary, so calling it on a spelling around a
+    million overflows the interpreter's stack. A numeral no longer
+    calls it (item 51): its chain is built in OCaml, iteratively, so a
+    literal of a million elaborates in under a second, though any walk
+    that recurses down the chain, the extractor's for one, still has the
+    chain's depth to cover. Printing one does not walk it: a printed
+    `Nat` spells through `Z.to_string` under the FFI and counts the
+    model's chain down without it (item 154). Section 41's invariant
+    holds up to resources; the tests keep their numerals small.
 
 55. **Location-free errors** (the literal-as-name check lives in
     `Env.bind`, which has no line) are reported at the enclosing
@@ -492,17 +504,20 @@ shape below is the session's.
     (`tests/string_literal.sl`). Interned by content. Whether the
     literal is `is`-transparent: it is not, as slc always had it, so
     neither compiler elaborates the characters: the reference binds a
-    `Const` `String` straight to its value (`Elab.str_value`) -- the
+    `Const` `String` straight to its value (`Elab.str_value`), the
     FFI's slice, or under `--no-extern` the model's list built in
-    OCaml -- as slc's `intern-string` binds the FFI's payload. Until
-    this change the reference hoisted each character as a literal of
-    its own and ran a `let` consing them up, only to drop the rule that
-    left; that cost grew faster than linearly in the literal's length
-    (about 6s and 440MB for one 2000-character literal in one
-    measurement, against 0.05s and 10MB after), and we believe the
-    direct binding changes nothing else observable, except that a
-    string no longer interns its characters' numerals as a side effect.
-    LITERALS.md gathers the literal handling.
+    OCaml, its characters off the Peano chain numerals share (item 51),
+    so the extractor, which shares by identity, emits each `Nat` once
+    per program; slc's `intern-string` binds the FFI's payload. Until
+    the literal handling was unified with slc's (items 51, 52) the
+    reference hoisted each character as a literal of its own and ran a
+    `let` consing them up, only to drop the rule that left; that cost
+    grew faster than linearly in the literal's length (about 6s and
+    440MB for one 2000-character literal in one measurement, against
+    0.05s and 10MB after). We believe the direct binding changes
+    nothing else observable, except that a string no longer interns its
+    characters' numerals as a side effect. LITERALS.md gathers the
+    literal handling.
 
 ## OCaml extraction (extract.ml)
 

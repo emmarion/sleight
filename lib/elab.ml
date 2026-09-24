@@ -339,24 +339,35 @@ let str_host env loc v =
   go v;
   Buffer.contents buf
 
-(* The value a string literal is bound to, built without elaborating its characters: the FFI's slice where the
-   FFI holds String, else the model's list, each character a pointer into the program's one ladder of Peano Nats
-   (section 38), built at the first such literal, so that the extractor, which shares by identity, emits each Nat
-   once per program. *)
+(* What a literal is bound to, minted directly as slc's `intern` mints it (LITERALS.md). A model Nat comes off
+   the program's one Peano chain, extended on demand, so numerals and characters share it wherever they stand
+   and the extractor, which shares by identity, emits each Nat once per program. *)
+let papp env n args = App (Var (Option.get (prelude_id env n)), args)
+let pbuild env n args = V.construct (ctor_of env Reader.nowhere (Option.get (prelude_id env n))) args
+
+(* The FFI's ADT for the prelude type [c] constructs, where the FFI holds it and is in use. *)
+let ext_adt env c = match (ctor_of env Reader.nowhere (Option.get (prelude_id env c))).V.adt with { ext = Some _; _ } as adt when !V.use_externs -> Some adt | _ -> None
+
+let peano env k =
+  let l = Array.length env.ladder in
+  if k < l then (env, env.ladder.(k))
+  else
+    let ladder = Array.append env.ladder (Array.make (k + 1 - l) V.VToken) in
+    for i = l to k do ladder.(i) <- (if i = 0 then pbuild env "Zero" [] else pbuild env "Succ" [ ladder.(i - 1) ]) done;
+    ({ env with ladder }, ladder.(k))
+
+let nat_value env z = match ext_adt env "Zero" with Some adt -> (env, V.VExt (adt, V.Int z)) | None -> peano env (Z.to_int z)
+
 let str_value env s =
-  let ctor n = ctor_of env Reader.nowhere (Option.get (prelude_id env n)) in
-  match (ctor "SNil").V.adt.ext with
-  | Some _ when !V.use_externs -> (env, Ffi.text (s, 0, String.length s))
-  | _ ->
-      let build n args = V.construct (ctor n) args in
-      let env =
-        if Array.length env.ladder > 0 then env
-        else
-          let ladder = Array.make 256 (build "Zero" []) in
-          for k = 1 to 255 do ladder.(k) <- build "Succ" [ ladder.(k - 1) ] done;
-          { env with ladder }
-      in
-      (env, String.fold_right (fun c rest -> build "SCons" [ build "MkChar" [ build "MkU8" [ env.ladder.(Char.code c) ] ]; rest ]) s (build "SNil" []))
+  match ext_adt env "SNil" with
+  | Some adt -> (env, V.VExt (adt, V.Slice (s, 0, String.length s)))
+  | None ->
+      let cons c (env, rest) = let env, n = peano env (Char.code c) in (env, pbuild env "SCons" [ pbuild env "MkChar" [ pbuild env "MkU8" [ n ] ]; rest ]) in
+      String.fold_right cons s (env, pbuild env "SNil" [])
+
+(* The bijective base-2 spelling of [z] as a term (Literal.bin, as source). *)
+let rec bin_term env z =
+  match Ffi_core.half_view ~z:Fun.id ~nat:Fun.id z with HZ -> papp env "BZ" [] | H1 b -> papp env "B1" [ bin_term env b ] | H2 b -> papp env "B2" [ bin_term env b ]
 
 (* The constructor a value prints as (ASSUMPTIONS 184), chosen off the type's opened Matchable and never by
    refuting candidates: the tag where the type is tagged, else the one non-phantom constructor where the type has
@@ -1414,25 +1425,32 @@ and elab_let spos env l args =
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
-(* Interns a literal once per program: a numeral or character runs its statements (Literal.source) in the
-   prelude's scope; a string, opaque, is bound straight to its value (ASSUMPTIONS 60). *)
+(* Interns a literal once per program, its entries minted outside the scope (LITERALS.md): a numeral is a Const
+   Nat beside an erased token typed by its spelling; a character is its code's Nat under the rule
+   `is (MkChar (MkU8 n p))`, `p` a token of its bound, its proof its code's; a string is opaque. *)
 and hoist env lit =
   let key = Literal.key lit in
   if List.mem_assoc key env.literals then env
   else
+    let token env ty = bind env None Erased (Const V.VToken) ty in
     let frame, entry =
       match lit with
+      | Literal.Numeral z ->
+          let env, v = nat_value env z in
+          let x, env = bind env None Many (Const v) (papp env "Nat" []) in
+          let p, env = token env (papp env "Numeral" [ bin_term env z; Var x ]) in
+          (env, (x, Some p))
+      | Literal.Char c ->
+          let env = hoist env (Literal.Numeral (Z.of_int c)) in
+          let n, np = List.assoc (Z.to_string (Z.of_int c)) env.literals in
+          let env, v = nat_value env (Z.of_int c) in
+          let p, env = token env (papp env "Lt" [ Var n; Var (Option.get (prelude_id env "u8-modulus")) ]) in
+          let x, env = bind env None Many (Const (pbuild env "MkChar" [ pbuild env "MkU8" [ v ] ])) (papp env "Char" []) ~rule:(papp env "MkChar" [ papp env "MkU8" [ Var n; Var p ] ]) in
+          (env, (x, np))
       | Literal.Str s ->
           let env, v = str_value env s in
-          let x, frame = bind env None Many (Const v) (App (Var (Option.get (prelude_id env "String")), [])) in
-          (frame, (x, None))
-      | Literal.Numeral _ | Literal.Char _ -> (
-          let env = match lit with Literal.Char c -> hoist env (Literal.Numeral (Z.of_int c)) | _ -> env in
-          let frame = List.fold_left (fun env item -> fst (elab_stmt Many env item)) { env with scope = env.prelude } (Reader.parse "<literal>" (Literal.source lit)) in
-          match (lit, frame.scope.ids) with
-          | Literal.Numeral _, proof :: value :: _ -> (frame, (value, Some proof))
-          | Literal.Char c, char :: _ -> (frame, (char, snd (List.assoc (Z.to_string (Z.of_int c)) env.literals)))
-          | _ -> assert false)
+          let x, env = bind env None Many (Const v) (papp env "String" []) in
+          (env, (x, None))
     in
     { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 

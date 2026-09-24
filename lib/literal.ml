@@ -1,5 +1,5 @@
-(* Literals are sugar for run-position statements over the prelude, hoisted ahead of the top-level statement that
-   first mentions them (ASSUMPTIONS.md). *)
+(* Literals are sugar over the prelude, interned ahead of the top-level statement that first mentions them
+   (LITERALS.md, Elab.hoist). *)
 
 type t = Numeral of Z.t | Char of int | Str of string
 
@@ -39,10 +39,3 @@ let rec bin_succ z =
   | HZ -> "(BSZ)"
   | H1 x -> Printf.sprintf "(BS1 %s)" (bin x)
   | H2 x -> Printf.sprintf "(BS2 %s %s %s)" (bin x) (bin (Z.succ x)) (bin_succ x)
-
-(* A numeral binds its Nat and Numeral proof; a character its Char, built by reflection on the decided bound
-   (DESIGN.md section 41). A string has no source: it is bound directly to its value (Elab.hoist). *)
-let source = function
-  | Numeral z -> Printf.sprintf "(let ((many _) (erased _)) (bin-to-nat %s))" (bin z)
-  | Char c -> Printf.sprintf "(let ((many %%d)) (lt-dec %d u8-modulus)) (comptime-match many %%d (Yes %%a %%b %%p)) (let ((many _)) (MkChar (MkU8 %d %%p)))" c c
-  | Str _ -> assert false

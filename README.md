@@ -217,7 +217,7 @@ an existing word instead of returning it physically.
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
 - `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 41)
-- `lib/literal.ml` — numeral and character literals and what they expand to
+- `lib/literal.ml` — the spellings of numeral, character and string literals
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
 - `lib/dump.ml` — the report `dump-context` stops elaboration with
 - `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
