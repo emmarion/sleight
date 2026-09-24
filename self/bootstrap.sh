@@ -13,7 +13,7 @@
 set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
-if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
+if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; [ "$B" = one ] && B=_build/self; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
 SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 REF=_build/default/bin/main.exe
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
@@ -95,17 +95,33 @@ check_test() {
 }
 if [ "${1:-}" = check ]; then check_test "$2" "$3" "$4"; exit 0; fi
 
-dune build 2>&1 | head -5
-python3 self/gen_header.py
-echo "== extracting slc with the reference extractor"
-$REF $SL --extract "$B/slc.ml" || exit 1
-$OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
+build_slc() {
+  dune build 2>&1 | head -5
+  python3 self/gen_header.py
+  key=$(cat $SL $REF | md5sum)
+  if [ "${1:-}" = cached ] && [ -x "$B/slc" ] && [ "$key" = "$(cat "$B/slc.key" 2>/dev/null)" ]; then return; fi
+  echo "== extracting slc with the reference extractor"
+  $REF $SL --extract "$B/slc.ml" || exit 1
+  $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
+  echo "$key" > "$B/slc.key"
+}
+check_all() {
+  { for t in "$@"; do echo "$t - -"; done
+    for t in "$@"; do case $(basename "$t") in extern_*|thunk_*|main_*|char*|nat_*) echo "$t --no-templates _view" ;; esac; done
+    for t in "$@"; do echo "$t --interpret _interp"; done
+  } | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
+}
+if [ "${1:-}" = one ]; then
+  shift
+  build_slc cached
+  check_all "$@"
+  cat "$B/results.txt"
+  ! grep -q "^FAIL" "$B/results.txt"; exit
+fi
 
+build_slc
 echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
-{ for t in tests/*.sl; do echo "$t - -"; done
-  for t in tests/extern_*.sl tests/thunk_*.sl tests/main_*.sl tests/char*.sl tests/nat_*.sl; do echo "$t --no-templates _view"; done
-  for t in tests/*.sl; do echo "$t --interpret _interp"; done
-} | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
+check_all tests/*.sl
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
 echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"

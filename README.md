@@ -27,6 +27,7 @@ apt-get install -y ocaml ocaml-dune ocaml-findlib libzarith-ocaml-dev python3 ti
 dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
 dune test
+test/one.sh tests/list.sl
 self/bootstrap.sh
 dune exec bin/shape.exe -- tests/list.sl
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
@@ -77,7 +78,10 @@ does with the interpreter on the same files, runs every test again under
 `slc --interpret`, which performs the program itself in place of writing
 it out (`self/interp.sl`), then compiles the compiler with
 itself and again with that result and requires the two outputs to be identical
-(`self/README.md`). `bin/shape` reports where a file's forms open and close:
+(`self/README.md`). `test/one.sh tests/a.sl ...` runs just the named tests
+through both: `test/runtest.ml`, which takes the same names, and
+`self/bootstrap.sh one`, which reuses the last `slc` built when its sources
+and the reference binary are unchanged. `bin/shape` reports where a file's forms open and close:
 `shape file` lists every form spanning more than one line with the line it
 closes on, and `shape --closers file` what each run of `)` closes, which is
 for locating a misplaced paren where the checker's own error names only the
