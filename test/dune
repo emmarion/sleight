@@ -1,8 +1,13 @@
-(test
- (name runtest)
- (libraries speciallang unix)
+(alias
+ (name sources)
  (deps
   (glob_files %{project_root}/tests/*.sl)
   (glob_files %{project_root}/pal/*.sl)
   %{project_root}/self/base.sl
   (glob_files %{project_root}/mini/*.sl)))
+
+(test
+ (name runtest)
+ (libraries speciallang unix)
+ (deps
+  (alias sources)))
