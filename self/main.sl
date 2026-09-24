@@ -36,8 +36,9 @@
               ((None _) (end-file $ run-toplevel items $ env-set-regions envw regions))))
           (tail $ run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
 
-(def-fns compile-lvl $ (many compile : (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
-  (let ((many env)) $ run-files srcs (make-builtins) $ BTrue)
+(def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
+  (let ((many builtins)) (make-builtins))
+  (let ((many env)) $ run-files srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
   ; A warning stands whether or not the program is refused, so it is written ahead of either outcome, in the
   ; order elaboration minted it, as the reference writes one where it meets it.
   (write-lines (list-rev _ $ env-warnings env)
@@ -52,16 +53,16 @@
             (let ((many out) (erased flat)) $ flatten $ emit-program templates env)
             (WriteOut _ out $ unique-thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))))
 
-(def-fns slc-lvl $ (many read-files : (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
+(def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
   (match many paths _
-    ((Nil _) (compile templates interpreting pargs $ list-rev _ acc))
+    ((Nil _) (compile prelude templates interpreting pargs $ list-rev _ acc))
     ((Cons _ path rest)
       (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
         (match many r _
           ((Fail _ m)
             (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
               $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
-          ((Ok _ src) (read-files templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
+          ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
       (ReadFile _ path after-read))))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.
@@ -75,23 +76,27 @@
           (let ((many files) (many pargs)) (notail $ split-args rest))
           (values (Cons _ p files) pargs))))))
 
-; The flags, in any order, then the files: --no-templates and --interpret.
-(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
+; The flags, in any order, then the files: --no-prelude, --no-templates and --interpret. Without --no-prelude
+; the first file is the prelude.
+(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
   (match many args _
     ((Nil _)
-      (WriteErr _ "usage: slc -- [--no-templates] [--interpret] prelude.sl file.sl ... [-- arg ...] > out.ml\n"
+      (WriteErr _ "usage: slc -- [--no-prelude] [--no-templates] [--interpret] prelude.sl file.sl ... [-- arg ...] > out.ml\n"
         $ unique-thunk _ _ $ Exit _ exit-fail))
     ((Cons _ p rest)
-      (match many (str-eq p "--no-templates") _
-        ((BTrue) (tail $ start-with rest (BFalse) interpreting))
+      (match many (str-eq p "--no-prelude") _
+        ((BTrue) (tail $ start-with rest (BFalse) templates interpreting))
         ((BFalse)
-          (match many (str-eq p "--interpret") _
-            ((BTrue) (tail $ start-with rest templates (BTrue)))
+          (match many (str-eq p "--no-templates") _
+            ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting))
             ((BFalse)
-              (let ((many files) (many pargs)) (split-args args))
-              (read-files templates interpreting pargs files $ Nil _))))))))
+              (match many (str-eq p "--interpret") _
+                ((BTrue) (tail $ start-with rest prelude templates (BTrue)))
+                ((BFalse)
+                  (let ((many files) (many pargs)) (split-args args))
+                  (read-files prelude templates interpreting pargs files $ Nil _))))))))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
-  (start-with args (BTrue) (BFalse)))
+  (start-with args (BTrue) (BTrue) (BFalse)))
 
 (GetArgs _ start)

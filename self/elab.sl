@@ -5365,7 +5365,7 @@
   ((many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (Nat) x) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (Func gall ctx) fn))
     (match many h _
-      ((MkHeader _ _ name mult uq isabs impl params rets body pb)
+      ((MkHeader _ hpos name mult uq isabs impl params rets body pb)
         (let ((many ty)) $ TFn uq (TVar lvl) params rets)
         (let ((many env0)) $ match many uq (((Env) _)) ((BTrue) (set-entry-mult env x $ Erased)) ((BFalse) env))
         (let ((many envb0) (many pids) (erased lock)) $ open-tele params (env-set-run-pos env0 $ BFalse) (None _) (None _) (None _) (Nil _) $ BFalse)
@@ -5395,7 +5395,11 @@
           (match many delegated _
             ((None _) env2)
             ((Some _ callee)
-              (let ((many env3) (many px)) $ bind env2 (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
+              (let ((many env2b))
+                (match many (is-some _ impl) (((Env) _))
+                  ((BTrue) (env-error (env-at env2 hpos) "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`"))
+                  ((BFalse) env2)))
+              (let ((many env3) (many px)) $ bind env2b (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
               env3)))
         (values env3 $ MkFunc _ _ physical name x mps code2 impl top))))
 

@@ -3,16 +3,17 @@ open Term
 module V = Value
 include Driver_core
 
-let prelude env name = Option.get (Env.lookup { env with Env.scope = env.Env.prelude } name)
+let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } name
+let prelude env name = Option.get (prelude_opt env name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Const (V.VCtorFn c) -> c | _ -> assert false
 
 type final = Main | Io | Thunk of term | Plain
 
 let final env ty =
-  let string = App (Var (prelude env "String"), []) in
+  let string t = Option.fold ~none:false ~some:(fun s -> equal t (App (Var s, []))) (prelude_opt env "String") in
   match Env.canon env ty with
-  | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) when equal a string && equal b string -> Main
-  | App (Var t, [ _ ]) when t = prelude env "IO" -> Io
+  | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) when string a && string b -> Main
+  | App (Var t, [ _ ]) when Some t = prelude_opt env "IO" -> Io
   | Fn (_, [], [ { mult = Many | Unique; sg = Ty t; _ } ]) -> Thunk t
   | _ -> Plain
 

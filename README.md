@@ -53,7 +53,10 @@ from (ASSUMPTIONS.md 154) rather than as its prelude model. Every program starts
 prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models, and `--no-templates` extracts extern types
-through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133). A file is a sequence of statements,
+through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133).
+`--no-prelude` starts from the built-in special forms alone, without `lib/prelude.sl`, for a program that
+declares what it needs itself; it has no literals and no `String -> String` or `IO` final, those resting on
+the prelude's types, and slc takes the same flag. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
 `--extract out.ml` elaborates the files as usual but, instead of
@@ -126,7 +129,8 @@ file must warn with, from elaborating it or from checking its indentation,
 whether or not it is then refused,
 `; exit: n` the code an
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
-for a test whose source model is too slow to run, and `; error: text`
+for a test whose source model is too slow to run, `; prelude: none` runs it
+under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
 atom's id.

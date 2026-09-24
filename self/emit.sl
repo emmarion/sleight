@@ -1135,7 +1135,7 @@
 (def-fns _ $ (many driver-op : (many (String) field) (many (Rope) r) -> (many (Rope) r2))
   (rcat3 (RStr $ str-cat3 "Driver_core." field " = ") r $ RStr "; "))
 
-(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) -> (many (Rope) r))
+(def-fns _ $ (many driver-rope-of : (many (Decls) d) (many (Env) env) -> (many (Rope) r))
   (rcat5 (RStr "let driver = Driver_core.make ~of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) { ")
     (rcat5 (driver-op "zero" $ driver-make d env "Zero") (driver-op "succ" $ driver-make d env "Succ") (driver-op "pred" $ driver-un d env "Nat" $ AkOption "Succ")
       (driver-op "u8" $ driver-make d env "MkU8") $ driver-op "un_u8" $ driver-un d env "U8" $ AkField)
@@ -1152,6 +1152,11 @@
       (rcat3 (RStr "Driver_core.apply = (fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x); ")
         (RStr "Driver_core.apply0 = (fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())")
         $ RStr " }\n"))))
+
+(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) -> (many (Rope) r))
+  (match many (prelude-ctor env "Exit") _
+    ((None _) (REmpty))
+    ((Some _ _) (driver-rope-of d env))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 

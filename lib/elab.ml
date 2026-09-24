@@ -1660,6 +1660,7 @@ and elab_def_fns ?(unique = false) env l args =
         in
         capture_uses := join_uses !capture_uses (IntMap.filter (fun x _ -> IntMap.mem x env.entries) envb.uses);
         let code, delegated = check_marks envb fl pids code in
+        if impl <> None && delegated <> None then error fl "%s" "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`";
         ((x, { V.fname = name; params = non_erased envb pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
       in
       let fns, proofs = List.split (List.map2 define fids headers) in

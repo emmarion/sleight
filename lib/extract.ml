@@ -511,7 +511,7 @@ let item cx = function
 let emit env items =
   let cx = collect env items in
   List.iter (item cx) items;
-  let driver = driver cx in
+  let driver = if Program.prelude_opt env "Exit" = None then "" else driver cx in
   let shows = List.rev_map (fun (_, name, body) -> Printf.sprintf "%s (v : Obj.t) : string = %s" name !body) !(cx.shows) in
   let types = types cx in
   concat "\n"
