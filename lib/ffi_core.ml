@@ -127,13 +127,14 @@ let array_new ~blank n = Array.make (Z.to_int n) blank
 let array_make n x = array_new ~blank:x n
 
 let array_swap a i x =
+  let a = (Obj.magic a : word array) in
   let old = Array.unsafe_get a (small i) in
-  Array.unsafe_set a (small i) x;
-  old
+  Array.unsafe_set a (small i) (Obj.magic x : word);
+  Obj.magic old
 
-let array_pluck a i = Array.unsafe_get a (small i)
+let array_pluck a i = Obj.magic (Array.unsafe_get (Obj.magic a : word array) (small i))
 let array_get = array_pluck
-let array_place a i x = Array.unsafe_set a (small i) x
+let array_place a i x = Array.unsafe_set (Obj.magic a : word array) (small i) (Obj.magic x : word)
 let array_length a = Z.of_int (Array.length a)
 let array_swap_imm a i x =
   let a = (Obj.magic a : int array) in
