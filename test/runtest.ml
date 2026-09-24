@@ -151,7 +151,7 @@ let () =
         go pending (List.filter (( != ) j) running) (collect j :: acc)
     | _ :: _, [] -> assert false
   in
-  let failures = List.filter_map Fun.id (go names [] []) in
+  let failures = List.sort compare (List.filter_map Fun.id (go names [] [])) in
   List.iter (fun m -> print_endline ("FAIL " ^ m)) failures;
   Printf.printf "%d tests, %d failures\n" (List.length names) (List.length failures);
   if failures <> [] then exit 1
