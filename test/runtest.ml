@@ -131,7 +131,11 @@ and run_mode name externs src =
   | Error msg -> Some ("failed: " ^ msg)
 
 let () =
-  let names = Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare in
+  let names =
+    match List.tl (Array.to_list Sys.argv) with
+    | [] -> Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare
+    | files -> List.map (fun f -> Filename.remove_extension (Filename.basename f) ^ ".sl") files
+  in
   let jobs = int_of_string (String.trim (In_channel.input_all (Unix.open_process_in "getconf _NPROCESSORS_ONLN"))) in
   let spawn f =
     let name = Filename.chop_suffix f ".sl" in
