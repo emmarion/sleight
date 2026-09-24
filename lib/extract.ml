@@ -210,6 +210,7 @@ let rec value cx v =
 and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
+  | V.VExt (_, Int n) when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, Array _) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l

@@ -10,7 +10,9 @@
   (RStr $ nat-str n))
 
 (def-fns _ $ (many nat-literal : (many (Nat) n) -> (many (Rope) r))
-  (rcat3 (RStr "(Obj.repr (Z.of_string \"") (nat-rope n) $ RStr "\"))"))
+  (match many (nat-lt n 4611686018427387904) _
+    ((BTrue) (rcat3 (RStr "(Obj.repr ") (nat-rope n) $ RStr ")"))
+    ((BFalse) (rcat3 (RStr "(Obj.repr (Z.of_string \"") (nat-rope n) $ RStr "\"))"))))
 
 (def-fns _ $ (many bracketed : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (rcat3 (RStr "[") (rjoin rs "; ") $ RStr "]"))
