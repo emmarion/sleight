@@ -367,7 +367,7 @@
   (let ((many (String) sa)) $ match many a _ ((Some _ x) (heap-str _ hp x)) ((None _) (SNil)))
   (let ((many (String) sb)) $ match many b _ ((Some _ x) (heap-str _ hp x)) ((None _) (SNil)))
   (let ((many (ExtResult) res))
-    (match many (ext-nat-twin _ e) _
+    (match many (ext-twin _ e) _
       ((ExArrayNew) (ErArrayNew na))
       ((ExArraySwap) (ErArraySwap))
       ((ExArrayPluck) (ErArrayPluck))
@@ -383,6 +383,7 @@
           ((Yes _ _ pos) (let ((many d) (erased m) (erased r) (erased mm) (erased ad) (erased p)) $ div na nb pos) (ErPayload $ PNat d))
           ((No _ _ _) (ErPayload $ PStr "div: zero divisor"))))
       ((ExNatCmp) (ErCtor $ cmp-index _ _ _ _ $ nat-cmp na nb))
+      ((ExLtDec) (ErCtor $ match many (lt-dec na nb) (((Nat) _)) ((Yes _ _ _) 0) ((No _ _ _) 1)))
       ((ExStrCmp) (ErCtor $ cmp-index _ _ _ _ $ str-cmp sa sb))
       ((ExNatHalve) (ErPayload $ PHalf na))
       ((ExStrLength) (let ((many len) (erased lp)) (str-length sa)) (ErPayload $ PNat len))

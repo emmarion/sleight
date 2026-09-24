@@ -299,7 +299,7 @@
   (let ((many b) (erased p)) (add a a))
   (values b (add-diag-double a b p)))
 
-(def-fns nat-lvl $ (many lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec a b) d))
+(def-fns nat-lvl $ (many extern lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec a b) d))
   (match many (nat-cmp a b) _
     ((CLt t r x y p) (Yes a b p))
     ((CEq t r x) (No a b (lt-succ a)))
@@ -422,6 +422,11 @@
     (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
     (many (Cmp (Nat) Lt n m) c))
   (delegate (nat-cmp n m)))
+
+(def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m)
+    (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
+    (many (Dec n m) d))
+  (delegate (lt-dec n m)))
 
 (def-adts $ (Bin : -> Type)
   enum
@@ -888,6 +893,10 @@
   (many Uninit : (erased Type A) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
 
+(def-adts $ (Copy : (Type A) -> Type)
+  enum newtype
+  (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
+
 (def-adts
   ((AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
@@ -959,6 +968,27 @@
     (unique (Array A n) r at a) (erased (ASet A n a i x r) p))
   (let ((unique old) (unique r) (erased p)) (array-swap _ _ a i x _ nth))
   (values r p))
+
+(def-fns _ $ (many extern array-get : (erased Type A) (erased (Nat) n)
+    (unique (Array (Copy A) n) a) (subterm many (Nat) i)
+    (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
+    (many x is v) (unique a is r at a))
+  (match unique a _
+    (absurd (ANil _ _) (match erased nth (((False) f))))
+    ((ACons _ _ hd tl u)
+      (match many i _
+        ((Zero)
+          (match erased nth _
+            ((NthZ _ _ _ _)
+              (let-match unique hd (MkCopy _ v))
+              (values v (at (u _ _ (MkCopy _ v) tl))))
+            (absurd NthS)))
+        ((Succ i1)
+          (match erased nth _
+            (absurd NthZ)
+            ((NthS _ _ _ _ _ _ q)
+              (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
+              (values v (at (u _ _ hd tl3))))))))))
 
 (def-fns _ $ (erased init-witness : (erased Type A) (erased (Nat) n)
     (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->

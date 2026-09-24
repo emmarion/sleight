@@ -55,21 +55,23 @@ let unary f = function [ a ] -> [ f a ] | _ -> raise arity
 let binary f = function [ a; b ] -> [ f a b ] | _ -> raise arity
 let nats name f = binary (fun a b -> int name (f (z a) (z b)))
 let quotient f = function [ a; b ] -> let q, r = f (z a) (z b) in [ int "Nat" q; int "Nat" r ] | _ -> raise arity
-let cmp get f = binary (fun a b -> plain "Cmp" (match f (get a) (get b) with Ffi_core.CLt -> 0 | CEq -> 1 | CGt -> 2) [])
+let tag name get f = binary (fun a b -> plain name (Obj.magic (f (get a) (get b)) : int) [])
 
 let spec ?(needs = []) takes run = { takes; needs; run }
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> let a,o,l = Ffi_core.array_new ~blank:VToken (z n) in VExt (Hashtbl.find registered "Array", Array(a,o,l)))));
     ("array-swap", spec ~needs:["Array"] 3 (function [a;i;x] -> [Ffi_core.array_swap (array a) (z i) x] | _ -> raise arity));
     ("array-pluck", spec ~needs:["Array"] 2 (function [a;i] -> [Ffi_core.array_pluck (array a) (z i)] | _ -> raise arity));
+    ("array-get", spec ~needs:["Array"] 2 (function [a;i] -> [Ffi_core.array_get (array a) (z i)] | _ -> raise arity));
     ("array-place", spec ~needs:["Array"] 3 (function [a;i;x] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity));
     ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
     ("div", spec 2 (nats "Nat" Ffi_core.div));
     ("divmod", spec 2 (quotient Ffi_core.divmod));
-    ("nat-cmp", spec ~needs:[ "Cmp" ] 2 (cmp z Ffi_core.nat_cmp));
-    ("str-cmp", spec ~needs:[ "Cmp" ] 2 (cmp slice Ffi_core.str_cmp));
+    ("nat-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.nat_cmp));
+    ("lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.lt_dec));
+    ("str-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" slice Ffi_core.str_cmp));
     ("str-length", spec 1 (unary (fun a -> int "Nat" (Ffi_core.str_length (slice a)))));
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
@@ -80,7 +82,8 @@ let fns : (string * fn_spec) list =
     ("u62-div", spec 2 (nats "Nat" Ffi_core.u62_div));
     ("u62-mod", spec 2 (nats "Nat" Ffi_core.u62_mod));
     ("u62-divmod", spec 2 (quotient Ffi_core.u62_divmod));
-    ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (cmp z Ffi_core.u62_cmp));
+    ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.u62_cmp));
+    ("u62-lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.u62_lt_dec));
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));
     ("trim", spec 1 (unary (fun s -> text (Ffi_core.trim (slice s)))));
     ("append", spec 2 (binary (fun a b -> text (Ffi_core.append (slice a) (slice b)))));
@@ -89,7 +92,7 @@ let fns : (string * fn_spec) list =
 (* The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: whether tagged and
    the non-erased-field arities of the non-phantom constructors in order, since the extracted program lays the view
    out as the model's own type. A plain type the implementations touch records its shape here instead. *)
-let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]) ]
+let plain_shapes = [ ("Cmp", [ 0; 0; 0 ]); ("Dec", [ 0; 0 ]); ("Rope", [ 0; 1; 2; 1 ]) ]
 let spell ns = String.concat " " (List.map string_of_int ns)
 let check_shape loc name adt =
   let ns = List.map (fun (c : ctor) -> c.arity) adt.ctors in

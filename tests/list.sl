@@ -29,9 +29,9 @@
 
 (length (Nat) list-xs)
 ; warns: tests/list.sl:12:4: warning: declaration of `List` shadows a previous binder
-; warns: lib/prelude.sl:822:4: note: shadowed binder is here
+; warns: lib/prelude.sl:827:4: note: shadowed binder is here
 ; warns: tests/list.sl:14:5: warning: declaration of `Nil` shadows a previous binder
-; warns: lib/prelude.sl:824:5: note: shadowed binder is here
+; warns: lib/prelude.sl:829:5: note: shadowed binder is here
 ; warns: tests/list.sl:15:48: warning: declaration of `tail` shadows a built-in
 ; warns: tests/list.sl:15:5: warning: declaration of `Cons` shadows a previous binder
-; warns: lib/prelude.sl:825:5: note: shadowed binder is here
+; warns: lib/prelude.sl:830:5: note: shadowed binder is here

@@ -7,6 +7,7 @@ type 'v half = HZ | H1 of 'v | H2 of 'v
 type 'v str = SNil | SCons of 'v * 'v
 type 'v rope = REmpty | RStr of 'v | RCat of 'v * 'v | RChar of 'v
 type cmp = CLt | CEq | CGt
+type dec = Yes | No
 
 let () = if Sys.int_size <> 63 || not (Obj.is_int (Obj.repr (Z.of_int max_int))) then failwith "this runtime needs 63-bit ints, and zarith holding every value below 2^62 unboxed"
 
@@ -61,6 +62,8 @@ let div = Z.div
 let divmod = Z.div_rem
 let order c = if c < 0 then CLt else if c = 0 then CEq else CGt
 let nat_cmp a b = order (Z.compare a b)
+let decide b = if b then Yes else No
+let lt_dec a b = decide (Z.lt a b)
 let nat_mod = Z.rem
 let nat_halve n = n
 let small (a : Z.t) : int = Obj.magic a
@@ -72,6 +75,7 @@ let u62_div = u62 ( / )
 let u62_mod = u62 ( mod )
 let u62_divmod a b = (u62_div a b, u62_mod a b)
 let u62_cmp a b = order (compare (small a) (small b))
+let u62_lt_dec a b = decide (small a < small b)
 let trim (s, o, l) = (String.sub s o l, 0, l)
 let str_cmp (s1, o1, l1) (s2, o2, l2) =
   let n = min l1 l2 in
@@ -130,4 +134,5 @@ let array_swap (a, offset, _) i x =
   old
 
 let array_pluck (a, offset, _) i = Array.unsafe_get a (offset + small i)
+let array_get = array_pluck
 let array_place (a, offset, _) i x = Array.unsafe_set a (offset + small i) x

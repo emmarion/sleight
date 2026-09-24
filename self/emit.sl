@@ -246,6 +246,9 @@
 (def-fns _ $ (many decl-templates : (many (Decls) d) -> (many (List $ Template) ts))
   (match many d _ ((MkDecls _ _ ts) ts)))
 
+(def-fns _ $ (many decl-call-template : (many (Decls) d) (many (Nat) id) (many (List $ Piece) ps) -> (many (Decls) r))
+  (match many d _ ((MkDecls shapes2 narrows ts) (MkDecls shapes2 narrows $ Cons _ (MkTemplate "call" "" id ps) ts))))
+
 (def-fns _ $ (many decl-shape-index : (subterm many (List $ List $ Nat) ss) (many (List $ Nat) s) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (match many ss _
     ((Nil _) (None _))
@@ -639,18 +642,18 @@
 (def-adts $ (Head : -> Type)
   enum
   (many HCtor : (many (Ctor) c) -> (Head))
-  (many HFn : (many (String) name) -> (Head))
+  (many HFn : (many (String) name) (many (Nat) id) -> (Head))
   (many HDyn : -> (Head)))
 
 (def-fns _ $ (many block-head : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (Env) env) -> (many (Head) h))
   (match many b _
     ((BCtorFn _ c) (HCtor c))
-    ((BFn _ g _ id) (HFn $ member-name _ env id g))
+    ((BFn _ g _ id) (HFn (member-name _ env id g) id))
     (else (HDyn))))
 
 (def-fns _ $ (many head-of : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) f) (many (Env) env) (many (Names ctx) ns) -> (many (Head) h))
   (match many f _
-    ((CVar _ _ p) (match many (names-get _ _ p ns) _ ((NmFn name) (HFn name)) ((NmVal _) (HDyn))))
+    ((CVar _ id p) (match many (names-get _ _ p ns) _ ((NmFn name) (HFn name id)) ((NmVal _) (HDyn))))
     ((CConst _ x)
       (let ((erased a) (many blk)) $ env-block env x)
       (match many blk _ ((None _) (HDyn)) ((Some _ b) (block-head _ b env))))
@@ -752,7 +755,10 @@
         (let ((many ars)) $ notail $ emit-codes _ args env ns d)
         (match many (head-of _ f env ns) _
           ((HCtor c) (build-rope d (names-depth _ ns) c ars))
-          ((HFn name) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")"))
+          ((HFn name id)
+            (match many (find-template (decl-templates d) "call" "" id) _
+              ((Some _ ps) (templated-build ps (names-depth _ ns) ars))
+              ((None _) (rcat3 (RStr $ str-cat "(" name) (rcat (RStr " ") $ args-rope ars) $ RStr ")"))))
           ((HDyn)
             (let ((many fr)) $ notail $ emit-code _ _ f env ns d)
             (dyn-call fr ars))))
@@ -932,11 +938,18 @@
         (match many p _
           ((MkPair _ _ _ fn)
             (match many fn _
-              ((MkFunc _ _ _ _ _ _ body impl _)
+              ((MkFunc _ _ _ _ fid _ body impl _)
                 (let ((many (Decls) d1))
                   (match many impl _
                     ((None _) (notail $ collect-code _ _ body env d))
-                    ((Some _ _) d)))
+                    ((Some _ im)
+                      (match many im _
+                        ((MkImpl se _)
+                          (match many se _
+                            ((MkSomeExtern _ e)
+                              (match many (find-template (decl-templates d) "fn" (ext-name _ e) 0) _
+                                ((Some _ ps) (decl-call-template d fid ps))
+                                ((None _) d)))))))))
                 (tail $ collect-group _ _ rest env d1))))))))
 
   ((many collect-block : (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
