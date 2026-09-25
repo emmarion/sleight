@@ -1139,7 +1139,7 @@
   (match many fields _
     ((Nil _) (REmpty))
     ((Cons _ f rest)
-      (rcat5 (RStr "let () = Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Obj.t array) ") (nat-rope index) $ RStr " ") (addr-rope _ f) $ rcat (RStr "\n") $ notail $ array-stores _ rest dest $ Succ index))))
+      (rcat5 (RStr "let () = Array.unsafe_set (Obj.obj ") dest (rcat3 (RStr " : Ffi_core.word array) ") (nat-rope index) $ RStr " (Obj.obj ") (addr-rope _ f) $ rcat (RStr " : Ffi_core.word)\n") $ notail $ array-stores _ rest dest $ Succ index))))
 
 (def-fns _ $ (many emit-blocks : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Ref Block hs) order)
     (many (Env) env) (many (Decls) d) -> (many (Rope) skeletons) (many (Rope) defs) (many (Rope) fills))

@@ -180,7 +180,7 @@ let rec value cx v =
           Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (Array.make %d (Obj.repr ()))\n" name (Array.length a));
           Array.iteri (fun i v ->
             let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Obj.t array) %d %s\n" name i rhs)) a;
+            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a;
           name)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in

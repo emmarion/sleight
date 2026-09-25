@@ -125,7 +125,7 @@
   $ RCat (RStr "let array_view ~array ~wrap v =\n")
   $ RCat (RStr "  let a = array v in\n")
   $ RCat (RStr "  let length = Array.length a in\n")
-  $ RCat (RStr "  if length = 0 then ANil else ACons (Array.unsafe_get a 0, wrap (Array.sub a 1 (length - 1)))\n")
+  $ RCat (RStr "  if length = 0 then ANil else ACons (Obj.magic (Array.unsafe_get (Obj.magic a : word array) 0), wrap (Array.sub a 1 (length - 1)))\n")
   $ RCat (RStr "\n")
   $ RCat (RStr "let array_of ~array ~wrap = function ANil -> wrap [||] | ACons (x, tail) -> wrap (Array.append [| x |] (array tail))\n")
   $ RCat (RStr "let array_new ~blank n = Array.make (Z.to_int n) blank\n")
