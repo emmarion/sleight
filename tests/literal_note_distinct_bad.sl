@@ -8,3 +8,4 @@
 (def-fns L $ (many h : (erased (Eq (Nat) 3 5) e) -> (many (False) f))
   (match erased e _))
 (Zero)
+; warns: tests/literal_note_distinct_bad.sl:9:3: warning: a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead

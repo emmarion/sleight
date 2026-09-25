@@ -485,7 +485,7 @@
 (def-fns _ $ (many vals-one : (erased (Hist Block) hs) (many (List $ Ref Block hs) vs) (erased (Picked (Ref Block hs) many-one vs) pk) -> (many (Ref Block hs) v))
   (match many vs _
     ((Cons _ x _) x)
-    ((Nil _) (match erased pk (((Ref Block hs) _))))))
+    (absurd (Nil _) (match erased pk (((False) f))))))
 
 ; A branch's fields or a closure's arguments bound to their ids, cut or padded to their count.
 (def-fns _ $ (many fit-addrs : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Nat) ids) (many (List $ Ref Block hs) vs) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r) (erased (Lockstep (Nat) (Ref Block hs2) ids r) lk))

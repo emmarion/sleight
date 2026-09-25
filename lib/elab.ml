@@ -1202,6 +1202,8 @@ and elab_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
+      if pos <> Erased && not env.usage_erased && branches = [] then
+        warn_at l [] "a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead";
       let smult = written pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
       let extra = smult = Unique && cells_allowed env mid in

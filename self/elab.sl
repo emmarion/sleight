@@ -5681,7 +5681,14 @@
               ((Nil _) (values bad bad-ress bad-code))
               ((Cons _ ann branches)
                 (let ((many pos) (erased pos-proof)) $ pos-of expect)
-                (let ((many env0) (many sm)) $ mult-checked env mraw)
+                (let ((many (Env) envw))
+                  (match many branches _
+                    ((Nil _)
+                      (match many (and (mult-is-many pos) $ not $ env-usage-erased env) _
+                        ((BTrue) (env-warn env $ located env ": warning: " "a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead"))
+                        ((BFalse) env)))
+                    (else env)))
+                (let ((many env0) (many sm)) $ mult-checked envw mraw)
                 (let ((many env0d)) $ written env0 pos sm "match")
                 (let ((many smult)) $ under pos sm)
                 (let ((many env2a) (many srs) (many scode) (erased lock)) $ notail $ elab-expr-demand sugar scrut env0d ctx (Cons _ smult $ Nil _) no-tele (CCPlain) (Fixed _))
