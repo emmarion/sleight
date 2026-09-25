@@ -339,7 +339,9 @@ the entry says otherwise, and recorded so it can be revisited.
   own making, which is no descent into the form; spending one unit of
   the budget is the decrease the checker sees instead. The forms are
   built as raws rather than text read back (ASSUMPTIONS 124). A
-  generated form contains no sugar, so the budget is one; its zero case
+  `let-match` with branches (SUGAR.md 8) spends one unit on the `match`
+  it is rewritten to, and those can nest, so the budget is the
+  top-level form's size (ASSUMPTIONS 197); its zero case
   is reported as an internal error, not refuted, since the sugar forms
   are found by resolving a head in the prelude's scope, which no proof
   here speaks about (ASSUMPTIONS 111, 124).

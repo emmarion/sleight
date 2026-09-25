@@ -1646,8 +1646,8 @@ none of it is design.
     first `subterm` parameter, passed unchanged on every existing call
     and decreased on the one call that elaborates a generated form,
     which the checker accepts as the lexicographic decrease it already
-    accepted for `canon` (93). The top level starts the budget at one,
-    since a generated form contains no sugar; the zero case is reported
+    accepted for `canon` (93). The top level started the budget at one,
+    since a generated form contains no sugar (now the form's size, 197); the zero case is reported
     as an internal error, as no proof here says a generated form
     contains none. A first version instead expanded the sugar by a pass
     over the top-level form, reading heads by name; the owner asked for
@@ -3935,3 +3935,27 @@ session's, made without the owner.
     branch-forced facts of an enclosing match should be shown apart from
     the entries' rules, where they now appear only as `xs is (Cons A hd
     tl)` on the scrutinee's own line.
+
+197. **Which `let-match` branches count as real (SUGAR.md 8).** Both
+    elaborators decide it from the syntax: any branch not headed by
+    `absurd`, an `else` included, is treated as real. So a `let-match`
+    carrying one is rewritten into the `match` SUGAR.md 8 gives when it
+    is a statement of a function, match branch or cell-match body, and
+    refused anywhere else. That departs, as this session reads it, from
+    §12's count in one corner: a present branch on a phantom constructor
+    under a `many` scrutinee, or an `else` standing only for such
+    constructors, is not real there. Outside those bodies such a branch
+    would have no annotation to be checked against, so the code refuses
+    it rather than guessing one. Whether it should instead be accepted,
+    and against what, is open for the owner.
+
+    `slc` gets there through its budget of sugar expansions (111): the
+    rewritten `match` is a raw of the elaborator's own making, so
+    elaborating it spends one unit, and a body can nest such
+    `let-match`es arbitrarily deep. The top level now starts the budget
+    at the size of the form being elaborated, its count of atoms and
+    lists, in place of one; the session's reading is that no chain of
+    expansions can outrun it, each one being spent on a distinct
+    `let-match`, `unary` or `distinct` in that form, and the generated
+    forms of the latter two containing no sugar. The zero case stays an
+    internal error.

@@ -1191,7 +1191,7 @@ and scrutinee ?res env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match ?(demand = Fixed) ?(refute = false) ?res tele env expect l args =
+and elab_match ?(demand = Fixed) ?(refute = false) ?res ?(skip = []) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
@@ -1251,7 +1251,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res tele env expect l args =
       let branches = List.map branch branches in
       List.iter
         (fun (_, c) ->
-          match List.length (List.filter (fun (c', _, _, _, _) -> Var c' = c) branches) with
+          match List.length (List.filter (fun (c', _, _, _, _) -> Var c' = c) branches) + if List.exists (fun x -> Var x = c) skip then 1 else 0 with
           | 0 | 1 -> ()
           | n -> error l "constructor %s has %d branches" (qshow env c) n)
         ctors;
@@ -1259,7 +1259,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res tele env expect l args =
         List.filter_map
           (fun (_, c) ->
             let c = match c with Var c -> c | _ -> assert false in
-            if List.exists (fun (c', _, _, _, _) -> c' = c) branches then None
+            if List.mem c skip || List.exists (fun (c', _, _, _, _) -> c' = c) branches then None
             else
               let phantom, _, _, forced = enter l c anon (List.map (fun _ -> Reader.nowhere)) in
               Option.map (fun trial -> (c, phantom && smult <> Erased, trial)) forced)
@@ -1352,10 +1352,18 @@ and open_binding env l mult raw =
   let x, env' = bind inner None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
-and elab_body ?tele env expect l items =
-  let env, wrap, final = elab_stmts (pos_of expect) env l items in
-  let env, ress, code = elab_expr ?tele env expect final in
-  (env, ress, wrap code)
+and elab_body ?tele env expect l = function
+  | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
+      elab_match tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
+  | stmt :: (_ :: _ as rest) ->
+      let env, wrap = elab_stmt (pos_of expect) env stmt in
+      let env, ress, code = elab_body ?tele env expect l rest in
+      (env, ress, wrap code)
+  | items ->
+      let env, _, final = elab_stmts (pos_of expect) env l items in
+      elab_expr ?tele env expect final
+
+and real_branch env = function List (_, a :: _) -> not (is_special env a Sp.Absurd) | _ -> true
 
 (* The statements before a body's final expression, and the code they wrap around what follows them. *)
 and elab_stmts spos env l = function
@@ -1548,17 +1556,19 @@ and elab_distinct env l a b =
 
 and elab_let_match spos env l args =
   match args with
-  | [ m; scrut; List (pl, c :: fields) ] ->
+  | m :: scrut :: List (pl, c :: fields) :: branches ->
+      List.iter (fun b -> if real_branch env b then error l "a `let-match` with a real branch besides its pattern must be a statement of a function, match branch or cell-match body") branches;
       let smult = written spos l "let-match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
       let c = ctor_var env pl c in
       if marker env pl tid ctors c = Erased && smult <> Erased then error pl "%s is phantom" (qname env c);
+      let named = List.filter_map (function List (_, _ :: (Atom _ as b) :: _) | List (_, _ :: List (_, b :: _) :: _) -> Some (ctor_var env (loc b) b) | _ -> None) branches in
       (* Test each alternative before introducing the selected constructor's facts.
          Trial fields and refinements stay local, exactly as for omitted match branches. *)
       List.iter
         (fun (cmult, other) ->
           let other = match other with Var x -> x | _ -> assert false in
-          if other <> c then (
+          if other <> c && not (List.mem other named) then (
             let tele, ret = ctor_type env l other in
             let mults = List.map (fun e -> if cmult = Erased then Erased else field_under smult e.mult) tele in
             let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
@@ -1567,6 +1577,7 @@ and elab_let_match spos env l args =
               error_with l (forced_notes env l sres trial) "constructor %s is not refuted, so %s needs an ordinary `match`" (qname env other) (qname env tid)
             | None -> ()))
         ctors;
+      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
       let tele, ret = ctor_type env pl c in
       let fields, name = split_cell_pattern env pl (smult = Unique && cells_allowed env mid) fields in
       let names = field_names env pl c tele fields in
@@ -1586,7 +1597,7 @@ and elab_let_match spos env l args =
             { scrut = scode; shape = match_shape env mid tid disc shapes;
               branches = [ (Option.get (discriminant shapes c), non_erased env fids, bind_cell scode cell rest) ]; default = None;
               live = Option.to_list (discriminant shapes c) }))
-  | _ -> error l "malformed `let-match`: expected `(let-match <multiplicity> x (C field ...))`"
+  | _ -> error l "malformed `let-match`: expected `(let-match <multiplicity> x (C field ...) branch ...)`"
 
 and elab_comptime_match env l args =
   match args with

@@ -2420,6 +2420,31 @@
   (match many braw _
     ((RList _ items) (match many items _ ((Nil _) (BFalse)) ((Cons _ first _) (is-mark env first $ MkElse)))) (else (BFalse))))
 
+(def-fns _ $ (many has-real-branch : (many (Env) env) (subterm many (List $ Raw) bs) -> (many (Bool) r))
+  (match many bs _
+    ((Nil _) (BFalse))
+    ((Cons _ b rest)
+      (match many (raw-items b) _
+        ((Cons _ first _) (match many (is-mark env first $ MkAbsurd) _ ((BTrue) (tail $ has-real-branch env rest)) ((BFalse) (BTrue))))
+        ((Nil _) (BTrue))))))
+
+(def-fns _ $ (many let-else : (many (Env) env) (many (Raw) item) (many (List $ Raw) rest) -> (many (Maybe $ Pair (Raw) $ List $ Raw) r))
+  (match many (raw-items item) _
+    ((Cons _ head args)
+      (match many args _
+        ((Cons _ m a1)
+          (match many a1 _
+            ((Cons _ scrut a2)
+              (match many a2 _
+                ((Cons _ pat branches)
+                  (match many (and (is-special env head $ SpStmt $ StLetMatch) $ has-real-branch env branches) _
+                    ((BTrue) (Some _ $ MkPair _ _ head $ Cons _ m $ Cons _ scrut $ Cons _ (RAtom (raw-pos pat) "_") $ Cons _ (RList (raw-pos pat) $ Cons _ pat rest) branches))
+                    ((BFalse) (None _))))
+                ((Nil _) (None _))))
+            ((Nil _) (None _))))
+        ((Nil _) (None _))))
+    ((Nil _) (None _))))
+
 ; The unlisted constructors an else stands for: those whose forced unification does not contradict; the first of
 ; them, and whether any could run (section 12).
 ; The forcing trial for constructor [c], [m] its multiplicity marker: the environment it opens its fields in, and
@@ -3803,7 +3828,15 @@
 ; budget of such expansions as its first subterm parameter, spent when a generated form is elaborated,
 ; which is what lets that raw be of the elaborator's own making (ASSUMPTIONS 111).
 
-(let ((many sugar-budget)) 1)
+(def-fns _
+  ((many raw-size : (subterm many (Raw) raw) -> (many (Nat) n))
+    (match many raw _
+      ((RList _ items) (Succ $ notail $ raws-size items))
+      (else 1)))
+  ((many raws-size : (subterm many (List $ Raw) rs) -> (many (Nat) n))
+    (match many rs _
+      ((Nil _) 0)
+      ((Cons _ r rest) (nat-add (notail $ raw-size r) $ notail $ raws-size rest)))))
 
 (def-fns _ $ (many gen-atom : (many (String) s) -> (many (Raw) r))
   (RAtom (MkPos 1 1) s))
@@ -4954,15 +4987,23 @@
         (match many rest _
           ((Nil _) (tail $ elab-expr-demand sugar (subterm pi) item env ctx expect tele (CCPlain) (Fixed _)))
           ((Cons _ _ _)
-            (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx (pos-mult expect))
-            (let ((many env3) (many ctx3) (many sc2) (many final)) $ notail $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 (pos-mult expect))
-            (match many final _
-              ((FinalNone _)
-                (let ((many ress) (erased lock)) $ list-fit _ _ expect (Nil _) no-res)
-                (values (env-error env3 "a body needs a final expression") ress (CError _ expect "empty body") lock))
-              ((FinalIs _ fin pf)
-                (let ((many env4) (many ress) (many code) (erased lock)) $ notail $ elab-expr-demand sugar (subterm pf) fin env3 ctx3 expect tele (CCPlain) (Fixed _))
-                (values env4 ress (wrap-stmt _ _ expect (SSeq _ _ _ sc sc2) code) lock))))))))
+            (match many (let-else env item rest) _
+              ((Some _ pr)
+                (match many pr _
+                  ((MkPair _ _ head gen)
+                    (match many sugar _
+                      ((Zero)
+                        (let ((many ress) (erased lock)) $ list-fit _ _ expect (Nil _) no-res)
+                        (values (env-error env "internal: the sugar budget is spent") ress (CError _ expect "sugar") lock))
+                      ((Succ k)
+                        (let ((many envl)) $ env-at env $ raw-pos item)
+                        (let ((many env2) (many ress) (many code)) $ notail $ elab-match k gen (read-special envl head (BFalse) $ pos-mult expect) ctx expect tele (Fixed _) $ BFalse)
+                        (let ((many ress2) (erased lock)) $ list-fit _ _ expect ress no-res)
+                        (values env2 ress2 code lock))))))
+              ((None _)
+                (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx (pos-mult expect))
+                (let ((many env3) (many ress) (many code) (erased lock)) $ notail $ elab-body sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 expect tele)
+                (values env3 ress (wrap-stmt _ _ expect sc code) lock))))))))
 
   ((many elab-refute : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) ->
       (many (Env) r))
@@ -5084,7 +5125,7 @@
   ; let-match (section 16, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
   ((many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
-    (let ((many bad)) $ env-error env "malformed `let-match`: expected `(let-match <multiplicity> x (C field ...))`")
+    (let ((many bad)) $ env-error env "malformed `let-match`: expected `(let-match <multiplicity> x (C field ...) branch ...)`")
     (match many args _
       ((Nil _) (values bad ctx $ SNone _))
       ((Cons _ mraw more)
@@ -5093,10 +5134,10 @@
           ((Cons _ scrut more2)
             (match many more2 _
               ((Nil _) (values bad ctx $ SNone _))
-              ((Cons c pat more3)
-                (match many more3 _
-                  ((Cons _ _ _) (values bad ctx $ SNone _))
-                  ((Nil _)
+              ((Cons c pat branches)
+                (match many (has-real-branch env branches) _
+                  ((BTrue) (values (env-error env "a `let-match` with a real branch besides its pattern must be a statement of a function, match branch or cell-match body") ctx $ SNone _))
+                  ((BFalse)
                     (match many (raw-items pat) _
                       ((Nil _) (values bad ctx $ SNone _))
                       ((Cons _ craw fields)
@@ -5123,8 +5164,9 @@
                                     (let ((many env6)) $ error-unless env5 (or (not $ mult-is-many smult) $ mult-is-many mk) $ str-cat (qname env5 c3) " is phantom")
                                     ; covered-of tests each alternative in an independent branch environment;
                                     ; phantom alternatives count too, even when they cannot run.
+                                    (let ((many env6r) (many real) (many seen)) $ notail $ elab-branches sugar branches env6 ctx tid sres smult mctors (Nil _) erased-one (Nil _) (Cons _ c3 $ Nil _) (BFalse) saved (env-uses env6) (env-uses env6) $ BTrue)
                                     (let ((many env6a) (many other) (many reachable) (many covered))
-                                      $ covered-of mctors env6 (Cons _ c3 $ Nil _) sres smult (None _) (BFalse) $ Nil _)
+                                      $ covered-of mctors (check-coverage mctors env6r seen) seen sres smult (None _) (BFalse) $ Nil _)
                                     (let ((many (Env) env6b))
                                       (match many other _
                                         ((None _) env6a)
@@ -6176,13 +6218,13 @@
           (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
           (match many (is-statement env2 item) _
             ((BTrue)
-              (let ((many env3) (many ctx2) (many sc)) $ elab-stmt sugar-budget item env2 (Nil _) (Many))
+              (let ((many env3) (many ctx2) (many sc)) $ elab-stmt (raw-size item) item env2 (Nil _) (Many))
               (tail $ run-toplevel rest env3))
             ((BFalse)
               (match many rest _
                 ((Cons _ _ _) (tail $ run-toplevel rest $ env-error env2 "only the last top-level form may be an expression"))
                 ((Nil _)
-                  (let ((many env3a) (many ress) (many code) (erased lock)) $ elab-expr-demand sugar-budget item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
+                  (let ((many env3a) (many ress) (many code) (erased lock)) $ elab-expr-demand (raw-size item) item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
                   (let ((many env3)) $ settle-res env3a $ first-res _ _ ress lock)
                   (match many (env-errors env3) _
                     ((Cons _ _ _) env3)
