@@ -3883,8 +3883,7 @@ session's, made without the owner.
     printer can spell (ASSUMPTIONS 184; a function or a `Matchable` adds
     nothing to its kind); and for a `unique` binder whether it is live, shared or
     consumed on this path and where, and whether the enclosing `def-fns`
-    closes over it. The prelude's several hundred entries are not listed
-    -- their count is -- because naming one as an argument shows it.
+    closes over it.
     Then the at-database as its classes of two or more members a reader
     can name (an entry in scope, a literal by its spelling, or
     `(SlotVacant)`), one of them an entry the program bound, the opened objects beyond the prelude's, and the
