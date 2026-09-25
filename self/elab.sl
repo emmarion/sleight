@@ -4131,8 +4131,11 @@
 
 (def-fns _ $ (many scope-lines : (many (Env) env) -> (many (List $ String) r))
   (let ((many mine)) $ not-prelude env $ scope-ids $ env-scope env)
-  (Cons _ (str-cat3 "in scope, newest first (" (nat-str $ list-length _ mine) $ str-cat3 " entries; the prelude's " (nat-str $ list-length _ $ scope-ids $ env-prelude env) " are not listed, and `(dump-context x)` shows any one):")
-    $ entries-lines env mine))
+  (let ((many n)) $ nat-str $ list-length _ $ scope-ids $ env-prelude env)
+  (match many mine _
+    ((Nil _) (Cons _ (str-cat3 "in scope, newest first (the program has bound nothing, so the prelude's " n " are listed):") $ entries-lines env $ scope-ids $ env-scope env))
+    (else (Cons _ (str-cat3 "in scope, newest first (" (nat-str $ list-length _ mine) $ str-cat3 " entries; the prelude's " n " are not listed, and `(dump-context x)` shows any one):")
+      $ entries-lines env mine))))
 
 (def-fns _ $ (many focus-lines : (many (Env) env) (subterm many (List $ Focus) fs) -> (many (List $ String) r))
   (match many fs _

@@ -214,4 +214,6 @@ that the test does not make is a mistake in this file.
   is the same form as a top-level statement over `Const` values, a `unary`
   rule and a shared unique; `tests/dump_context_focus.sl` names what to
   report and has a `_` still open in the goal; `tests/dump_context_type.sl`
-  and `tests/dump_context_stmt.sl` put it in a type and in an erased body.
+  and `tests/dump_context_stmt.sl` put it in a type and in an erased body;
+  `tests/dump_context_empty.sl` is the form alone in a file, where the
+  prelude's entries are listed.

@@ -130,9 +130,11 @@ let literal_lines env =
 
 let scope_lines ~show_value env l =
   let mine = List.filter (fun x -> not (is_prelude env x)) env.scope.ids in
-  Printf.sprintf "in scope, newest first (%d entries; the prelude's %d are not listed, and `(dump-context x)` shows any one):"
-    (List.length mine) (List.length env.prelude.ids)
-  :: List.concat_map (fun x -> List.map (( ^ ) "  ") (entry_lines ~show_value env l x)) mine
+  let n = List.length env.prelude.ids in
+  let header, listed = match mine with
+    | [] -> Printf.sprintf "in scope, newest first (the program has bound nothing, so the prelude's %d are listed):" n, env.scope.ids
+    | _ -> Printf.sprintf "in scope, newest first (%d entries; the prelude's %d are not listed, and `(dump-context x)` shows any one):" (List.length mine) n, mine in
+  header :: List.concat_map (fun x -> List.map (( ^ ) "  ") (entry_lines ~show_value env l x)) listed
 
 (* [focus]: the form's arguments, each a term in section 5's grammar with its type where it has one. A variable
    is shown as its entry, anything else by what it canonicalizes to. *)
