@@ -11,3 +11,11 @@ is a design decision. Remove an entry when it is fixed.
    short-circuits on an empty list of kept results, so the trailing erased
    code never becomes `(values)` for `check_marks` to fold. Such a
    function is only ever called erased, so nothing runs wrongly.
+
+4. **The self-hosted compiler's prelude entries seem to disagree with the
+   reference's.** `(dump-context)` alone in a file lists the prelude on
+   both sides; with anonymous ids normalized, 42 erased prelude functions
+   and proofs (e.g. `numeral-inj`, `init-witness`) read `Const` in the
+   reference and `Dyn` under `slc`, and the 8 `%`-named special forms
+   (`%match`, `%at`, ...) appear at different places in the scope order.
+   Which side is wrong has not been checked.
