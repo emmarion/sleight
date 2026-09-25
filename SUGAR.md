@@ -222,3 +222,18 @@ produces no value and binds nothing. It is one of:
   when `(match erased e _)`, with no branches, would refute. So `(False)`
   works as before, and so does `(Lt a (Zero))`. Naive like §6: one match
   deep, no search.
+
+## 8. `let-match` with branches
+
+`(let-match m s (C f...) branch ...)` takes §12's four branch kinds,
+written as in a `match`, and `(C f...)` binds outward as before. With
+more than one real branch, the pattern included, it elaborates to
+`(match m s A ((C f...) rest...) branch ...)`, with `A` the containing
+expression's annotation and `rest...` what follows. With one, it stays a
+statement and its absurd branches just refute. Coverage replaces
+"exactly one survives."
+
+More than one real branch requires a function body, `match` branch
+body, or `cell-match` body (UNIQUE.md §U10). A `let` right-hand side,
+run position, and absurd bodies (§7) are not allowed. Absurd branches
+are allowed anywhere.
