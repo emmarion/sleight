@@ -191,14 +191,16 @@ in `self/elab.sl`), and the repository marks every such call, written
 `(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
 the warning is tested on.
 
-A `match` with no branches, in a non-erased position outside code that is
-already erased, warns ``a non-erased `match` with no branches; mark the
-enclosing branch or function `absurd` instead``, DESIGN.md section 37
-recording the owner's expectation that absurd functions make such a match
-unneeded. `slc` warns the same, at the same position. The repository is clean
-of it but for the three tests it is tested on: `tests/match_no_branches_warn.sl`,
-and `tests/literal_note_distinct_bad.sl` and `tests/phantom_false_bad.sl`,
-which are refused for other reasons.
+A `match` in a non-erased position, outside code that is already erased,
+whose every branch is absurd (or that has none) compiles to a runtime
+`absurd`, and warns ``a non-erased `match` with no non-absurd branch compiles
+to a runtime `absurd`; mark the enclosing branch or function `absurd`
+instead``: an absurd-by-proof branch or an absurd function (DESIGN.md sections
+12 and 37) compiles to no code at all. `slc` warns the same, at the same
+position. The repository is clean of it but for the tests it is tested on:
+`tests/match_no_branches_warn.sl`, and `tests/binder_clash.sl`,
+`tests/open_absurd.sl` and `tests/else_phantom_only.sl`, whose subject is
+such a match.
 
 `;! warn NAME MESSAGE`, written between top-level forms, makes every
 non-erased application of the value constructor `NAME`, and every match on the

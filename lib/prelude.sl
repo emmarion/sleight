@@ -209,7 +209,7 @@
     ((Zero) (values a (AddZero a)))
     ((Succ b1)
       (match many a _
-        ((Zero) (match erased le _ (absurd LtZ) ((LtS x y l1) (match erased l1 _ (absurd LtZ) (absurd LtS)))))
+        (absurd (Zero) (match erased le (((False) f)) (absurd LtZ) ((LtS x y l1) (match erased l1 _ (absurd LtZ) (absurd LtS)))))
         ((Succ a1)
           (let ((erased le1)) (match erased le (((Lt b1 (Succ a1)) l)) (absurd LtZ) ((LtS x y l1) l1)))
           (let ((many c) (erased q)) (tail $ sub a1 b1 le1))
@@ -794,7 +794,7 @@
     ((Zero) (values (SNil) s (AppNil s) (SLenNil)))
     ((Succ k1)
       (match many s _
-        ((SNil) (match erased l _ ((SLenNil) (match erased le _ (absurd LtZ) ((LtS x y q) (match erased q _ (absurd LtZ) (absurd LtS)))))))
+        (absurd (SNil) (match erased l (((False) f)) ((SLenNil) (match erased le _ (absurd LtZ) ((LtS x y q) (match erased q _ (absurd LtZ) (absurd LtS)))))))
         ((SCons c rest)
           (match erased l _
             ((SLenCons c0 s0 len1 l1)

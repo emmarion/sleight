@@ -8,7 +8,7 @@
 (def-fns S $ (many sub-pos : (subterm many (Nat) n) (many (Nat) d) (erased (Lt d n) lt) ->
     (many (Nat) r) (erased (Subterm (Nat) r (Nat) n) p))
   (match many n _
-    ((Zero) (match erased lt _ (absurd LtZ) (absurd LtS)))
+    (absurd (Zero) (match erased lt (((False) f)) (absurd LtZ) (absurd LtS)))
     ((Succ n1)
       (match many d _
         ((Zero) (values n1 (prove-subterm n1 n)))

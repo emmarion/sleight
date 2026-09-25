@@ -16,3 +16,4 @@
 (let ((erased ghost-nat)) (spook (G)))
 
 (Succ (Zero))
+; warns: tests/else_phantom_only.sl:13:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead

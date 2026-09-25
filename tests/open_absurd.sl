@@ -22,3 +22,4 @@
     (absurd Refl)))
 
 held
+; warns: tests/open_absurd.sl:21:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead

@@ -5681,14 +5681,8 @@
               ((Nil _) (values bad bad-ress bad-code))
               ((Cons _ ann branches)
                 (let ((many pos) (erased pos-proof)) $ pos-of expect)
-                (let ((many (Env) envw))
-                  (match many branches _
-                    ((Nil _)
-                      (match many (and (mult-is-many pos) $ not $ env-usage-erased env) _
-                        ((BTrue) (env-warn env $ located env ": warning: " "a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead"))
-                        ((BFalse) env)))
-                    (else env)))
-                (let ((many env0) (many sm)) $ mult-checked envw mraw)
+                (let ((many mloc)) $ env-loc env)
+                (let ((many env0) (many sm)) $ mult-checked env mraw)
                 (let ((many env0d)) $ written env0 pos sm "match")
                 (let ((many smult)) $ under pos sm)
                 (let ((many env2a) (many srs) (many scode) (erased lock)) $ notail $ elab-expr-demand sugar scrut env0d ctx (Cons _ smult $ Nil _) no-tele (CCPlain) (Fixed _))
@@ -5726,6 +5720,10 @@
                               ((BTrue) (forced-error mctors env6c sres smult (real-ctors _ _ real) $ env-error env6c "a match without a runtime discriminant can have only one real branch"))
                               ((BFalse) env6c))
                             (let ((many live) (erased lp)) $ list-append _ (discs-of (real-ctors _ _ real) ss) $ discs-of covered ss)
+                            (let ((many (Env) env7w))
+                              (match many (and (mult-is-many pos) $ and (not $ env-usage-erased env) $ and (nat-is-zero $ list-length _ real) $ not $ is-some _ dflt) _
+                                ((BTrue) (env-warn-at env7 mloc "a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead"))
+                                ((BFalse) env7)))
                             (let ((many (Code ctx4 expect2) code))
                               (match many pos _
                                 ((Erased) (CErased _ expect2))
@@ -5748,7 +5746,7 @@
                                             ((Nil _) (CMatch _ expect2 (CErased _ many-one) (ShNone _) (real-branches-code _ _ real ss) dflt live))
                                             ((Cons _ _ _) (CError _ expect2 "one real branch"))))
                                         (else (CMatch _ expect2 scode2 (match-shape env7 ctx4 mid tid disc ss) (real-branches-code _ _ real ss) dflt live))))))))
-                            (let ((many env8) (many rids) (erased lock3)) $ open-tele ann-tele env7 (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
+                            (let ((many env8) (many rids) (erased lock3)) $ open-tele ann-tele env7w (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
                             (values env8 (ress-of rids env8) (bridge-code _ outer-expect expect2 bridge (match many pos _ ((Erased) (CErased _ expect2)) (else (CLet source-ctx many-one expect2 (Cons _ saved (Nil _)) (PkMany _ (Nil _) saved (Nil _) (PkNil _)) source-code code))))))))))))))))))
 
   ; A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one.

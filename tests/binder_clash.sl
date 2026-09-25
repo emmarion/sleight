@@ -22,3 +22,5 @@
       (absurd MkTagU))))
 
 probe
+; warns: tests/binder_clash.sl:17:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
+; warns: tests/binder_clash.sl:21:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead

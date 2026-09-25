@@ -22,4 +22,3 @@
     (absurd (Succ k) (boo (predates pxy) (G)))))
 
 (pred (Succ (Zero)))
-; warns: tests/phantom_false_bad.sl:14:3: warning: a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead

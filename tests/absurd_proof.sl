@@ -9,8 +9,8 @@
 
 (def-lvl Y)
 
-(def-fns Y $ (many succ-not-zero : (erased (Nat) k) (many (IsZero (Succ k)) p) -> (many (False) f))
-  (match many p (((False) f))
+(def-fns Y $ (many absurd succ-not-zero : (erased (Nat) k) (many (IsZero (Succ k)) p) -> (many (False) f))
+  (match erased p (((False) f))
     (absurd ItIsZero)))
 
 (def-lvl Z)

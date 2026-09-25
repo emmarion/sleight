@@ -13,4 +13,4 @@
   (match erased f (((Void) w))))
 
 explode
-; warns: tests/match_no_branches_warn.sl:10:3: warning: a non-erased `match` with no branches; mark the enclosing branch or function `absurd` instead
+; warns: tests/match_no_branches_warn.sl:10:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
