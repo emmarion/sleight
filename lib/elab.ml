@@ -181,10 +181,6 @@ let held_needs_many env loc tid mid =
   if not (readable env mid) then
     error loc "the `Matchable` for %s is erased or out of scope, so a non-erased match cannot take a value of it apart" (qname env tid)
 
-let check_empty env loc ty =
-  let empty = match type_head env ty with Some t when matchables env t <> [] -> (let _, _, cs = find_matchable env loc t in cs = []) | _ -> false in
-  if not empty then error loc "%s is not an empty type" (qshow env ty)
-
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (qname env c)
 
@@ -992,10 +988,7 @@ and elab_special demand tele env expect l sp args =
       let x, _, _ = find_matchable env l (tyname env l t) in
       (env, [ res_of env x ], matchable_code env m x)
   | Sp.OpenAbsurd, [ e; ann ] ->
-      let env', x, t, _ = open_binding env l Erased e in
-      (match open_adt env' x with
-      | _ -> error l "`open-absurd`: opening %s contradicts nothing" (qshow env' t)
-      | exception Contradiction _ -> ());
+      open_contradicts env l e;
       let env, ann_tele = result_tele ~demand tele env expect l ann in
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
@@ -1186,8 +1179,8 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       (env, List.map (res_of env) result_ids, V.CLet ([sid], code, body))
   | _ -> error l "malformed `cell-match`"
 
-and scrutinee env l smult scrut =
-  let env, sres, scode = elab_expr1 env smult scrut in
+and scrutinee ?res env l smult scrut =
+  let env, sres, scode = match res with Some (r, c) -> (env, r, c) | None -> elab_expr1 env smult scrut in
   settle_res env l sres;
   let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (qshow env sres.term) (qshow env sres.ty) in
   let mid, disc, ctors = find_matchable env l tid in
@@ -1198,18 +1191,18 @@ and scrutinee env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match ?(demand = Fixed) tele env expect l args =
+and elab_match ?(demand = Fixed) ?(refute = false) ?res tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
-      let smult = written pos l "match" (mult_or env l m) in
-      let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
+      let smult = if res <> None then Erased else written pos l "match" (mult_or env l m) in
+      let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
       let extra = smult = Unique && cells_allowed env mid in
       let branch_uses = ref env.uses in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
-      let env, ann_tele = result_tele ~demand tele env expect l ann in
+      let env, ann_tele = if refute then (env, []) else result_tele ~demand tele env expect l ann in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let enter bl c names ats =
         let phantom = marker env bl tid ctors c = Erased in
@@ -1243,13 +1236,14 @@ and elab_match ?(demand = Fixed) tele env expect l args =
           | `Auto, None -> `Absurd
           | `Auto, Some trial -> error_with bl (forced_notes env bl sres trial) "branch %s is not refuted" (qname env c)
           | _, None -> error bl "branch %s is refuted; write `(absurd %s)`" (qname env c) (name_of env c)
+          | `Present, Some _ when refute -> error bl "a branch of a refuting match is written `absurd`"
           | `Present, Some envb ->
               let envb = { envb with usage_erased = envb.usage_erased || unreachable } in
               let envb, ress, code = elab_body ~tele:ann_tele envb (if unreachable then List.map (fun _ -> Erased) expect else expect) bl body in
               check_results envb bl body ann_tele ress;
               if not unreachable then branch_uses := join_uses !branch_uses envb.uses;
               `Present (bind_cell scode cell code)
-          | `Proof, Some envb -> ignore (elab_absurd envb bl body); `Absurd
+          | `Proof, Some envb -> ignore (elab_refute envb bl body); `Absurd
         in
         (c, non_erased envb fids, unreachable, result, forced)
       in
@@ -1275,8 +1269,12 @@ and elab_match ?(demand = Fixed) tele env expect l args =
       let else_ =
         match elses with
         | [] ->
-            (match covered with [] -> () | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has 0 branches" (qname env c));
+            (match covered with
+             | [] -> ()
+             | (c, _, trial) :: _ when res <> None -> error_with l (forced_notes env l sres trial) "%s : %s is not refuted: it may be headed by %s" (qshow env sres.term) (qshow env sres.ty) (qname env c)
+             | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has 0 branches" (qname env c));
             None
+        | List (el, _) :: _ when refute -> error el "a refuting match has no `else`"
         | [ List (el, _ :: body) ] ->
             if covered = [] then error el "`else` covers no constructor";
             let envb = { env with run_pos = false; usage_erased = env.usage_erased || reachable = [] } in
@@ -1368,11 +1366,27 @@ and elab_stmts spos env l = function
       let env, wrap', final = elab_stmts spos env l rest in
       (env, (fun code -> wrap (wrap' code)), final)
 
-and elab_absurd env l body =
-  let env, ress, _ = elab_body { env with usage_erased = true } [ Erased ] l body in
-  settle_res env l (single l ress);
-  check_empty env l (single l ress).ty;
-  env
+and elab_refute env l body =
+  let env = { env with usage_erased = true } in
+  let env, _, final = elab_stmts Erased env l body in
+  let l = loc final in
+  match final with
+  | List (_, head :: (_ :: _ :: ann :: _ as args)) when is_special env head Sp.Match && wild ann ->
+      let env, _, _ = elab_match ~refute:true None (read_special Erased env head) [ Erased ] l args in
+      env
+  | List (_, [ head; e; ann ]) when is_special env head Sp.OpenAbsurd && wild ann ->
+      open_contradicts (read_special Erased env head) l e;
+      env
+  | _ ->
+      let env, r, code = elab_expr1 env Erased final in
+      let env, _, _ = elab_match ~refute:true ~res:(r, code) None env [ Erased ] l [ final; final; Atom (l, "_") ] in
+      env
+
+and open_contradicts env l e =
+  let env', x, t, _ = open_binding env l Erased e in
+  match open_adt env' x with
+  | _ -> error l "`open-absurd`: opening %s contradicts nothing" (qshow env' t)
+  | exception Contradiction _ -> ()
 
 and refine env scrut c fids ret =
   let env = match scrut.place, newtype_of env c, non_erased env fids with
@@ -1650,7 +1664,7 @@ and elab_def_fns ?(unique = false) env l args =
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
         let envb = { envb with level = At lvl; subterms; run_pos = false; in_extern = env.in_extern || impl <> None; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
         let envb, code =
-          if absurd then (elab_absurd envb fl body, V.CAbsurd)
+          if absurd then (elab_refute envb fl body, V.CAbsurd)
           else
             let pvars = List.rev_map (fun x -> Var x) pids in
             let tele = instantiate_tele pvars rets in

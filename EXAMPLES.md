@@ -120,6 +120,10 @@ that the test does not make is a mistake in this file.
 - `tests/absurd.sl`, `tests/absurd_proof.sl`, `tests/transparent_union.sl` —
   absurd functions and branches, and a union whose other constructor is
   refuted by proof so the type is represented as its one field.
+- `tests/refute.sl`, `tests/refute_noprelude.sl` — absurd bodies ending in a
+  match annotated `_` whose branches are all absurd, in a value whose type no
+  constructor can head, or in `(open-absurd m _)`, with a `let-match` before
+  the final value; `tests/refute_*_bad.sl` are what is refused.
 - `tests/else_enum.sl`, `tests/else_phantom.sl`, `tests/absurd_implicit.sl` — an
   `else` dispatching on a tag, one standing only for a phantom constructor
   and so counting as no real branch, and refuted constructors left unlisted.

@@ -209,7 +209,7 @@
     ((Zero) (values a (AddZero a)))
     ((Succ b1)
       (match many a _
-        (absurd (Zero) (match erased le (((False) f)) (absurd LtZ) ((LtS x y l1) (match erased l1 _ (absurd LtZ) (absurd LtS)))))
+        (absurd (Zero) (let-match erased le (LtS x y l1)) l1)
         ((Succ a1)
           (let ((erased le1)) (match erased le (((Lt b1 (Succ a1)) l)) (absurd LtZ) ((LtS x y l1) l1)))
           (let ((many c) (erased q)) (tail $ sub a1 b1 le1))
@@ -250,7 +250,7 @@
       (match erased q _
         ((LtS x y q1)
           (match erased q1 _
-            (absurd (LtZ z) (match erased p1 (((False) f)) (absurd LtZ) (absurd LtS)))
+            (absurd (LtZ z) p1)
             ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))))
 
 (def-fns _ $ (erased lt-subterm : (erased (Nat) a) (subterm erased (Nat) b) (erased (Lt a b) p) -> (erased (Subterm (Nat) a (Nat) b) s))
@@ -794,7 +794,7 @@
     ((Zero) (values (SNil) s (AppNil s) (SLenNil)))
     ((Succ k1)
       (match many s _
-        (absurd (SNil) (match erased l (((False) f)) ((SLenNil) (match erased le _ (absurd LtZ) ((LtS x y q) (match erased q _ (absurd LtZ) (absurd LtS)))))))
+        (absurd (SNil) (let-match erased l (SLenNil)) (let-match erased le (LtS x y q)) q)
         ((SCons c rest)
           (match erased l _
             ((SLenCons c0 s0 len1 l1)
@@ -1026,7 +1026,7 @@
     (unique m is old) (unique (Array A n) r at a)
     (erased (ASet A n a i x r) p))
   (match unique a _
-    (absurd (ANil _ _) (match erased nth (((False) f))))
+    (absurd (ANil _ _) nth)
     ((ACons _ _ hd tl u)
       (match many i _
         ((Zero)
@@ -1060,7 +1060,7 @@
     (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
     (many x is v) (unique a is r at a))
   (match unique a _
-    (absurd (ANil _ _) (match erased nth (((False) f))))
+    (absurd (ANil _ _) nth)
     ((ACons _ _ hd tl u)
       (match many i _
         ((Zero)
