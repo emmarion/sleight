@@ -203,3 +203,22 @@ Open, for the owner (the implementation's choices are the session's):
 3. A bare `_` as a whole annotation or binder type is a hole of type
    `Type`; as the expression of an `is` entry it would be a value of
    unknown type and is not given a meaning.
+
+## 7. Refuting in an absurd body
+
+In the body of an `absurd` function or of an absurd-by-proof branch
+(DESIGN.md §12, §37), after its statements, the final expression may
+*refute* the facts in force instead of producing a value of an empty
+type. Those statements may include a `let-match`, as in
+`(absurd (Zero) (let-match erased le (LtS x y l1)) l1)`. A refutation
+produces no value and binds nothing. It is one of:
+
+- a `match` annotated `_`. It is erased and refutes when every
+  constructor is refuted. Each of its branches is `(absurd C)` or absurd
+  by proof, whose body refutes in turn, and it has no `else`.
+- `(open-absurd e _)`, which refutes when the open contradicts
+  (DESIGN.md §19).
+- any other expression `e`, elaborated as an erased value and accepted
+  when `(match erased e _)`, with no branches, would refute. So `(False)`
+  works as before, and so does `(Lt a (Zero))`. Naive like §6: one match
+  deep, no search.
