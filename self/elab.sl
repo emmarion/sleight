@@ -1412,8 +1412,8 @@
           (let ((many s)) $ hit-spelling h)
           (let ((many (Bool) numeral)) $ all-digits s)
           (let ((many place)) $ match many (lit-place env t within) (((String) _)) ((None _) "") ((Some _ c) (str-cat " in " $ qshow env c)))
-          (let ((many kind)) $ match many numeral (((String) _)) ((BTrue) " is a numeral literal, usually opaque") ((BFalse) " is a character literal, whose code is usually opaque"))
-          (let ((many msg)) $ str-cat3 s place $ str-cat kind " to the checker; consider `unary`, `distinct`, or `numeral-of`")
+          (let ((many kind)) $ match many numeral (((String) _)) ((BTrue) " is a numeral literal, opaque") ((BFalse) " is a character literal, whose code is opaque"))
+          (let ((many msg)) $ str-cat3 s place $ str-cat kind " to the checker by default; `unary`, `distinct` or `numeral-of` can expose more")
           (tail $ literal-notes env (env-note-at out (env-loc out) msg) within rest))))))
 
 ; Where two canonical terms part: the pairs of subterms at which they first differ.

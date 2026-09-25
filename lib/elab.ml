@@ -99,8 +99,8 @@ let literal_notes env l ~within hit =
   let hits = List.sort_uniq compare (List.filter (function (Literal.Numeral _, t) -> not (code_of_char t) | _ -> true) hits) in
   let note (lit, t) =
     let place = List.find_opt (fun c -> is_strict_subterm t (canon env c)) within in
-    let kind, opaque = match lit with Literal.Char _ -> ("character", "whose code is usually opaque") | _ -> ("numeral", "usually opaque") in
-    (l, Printf.sprintf "%s%s is a %s literal, %s to the checker; consider `unary`, `distinct`, or `numeral-of`"
+    let kind, opaque = match lit with Literal.Char _ -> ("character", "whose code is opaque") | _ -> ("numeral", "opaque") in
+    (l, Printf.sprintf "%s%s is a %s literal, %s to the checker by default; `unary`, `distinct` or `numeral-of` can expose more"
           (Literal.spell lit) (match place with Some c -> " in " ^ qshow env c | None -> "") kind opaque)
   in
   List.map note hits

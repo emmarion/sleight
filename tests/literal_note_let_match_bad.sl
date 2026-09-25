@@ -1,5 +1,5 @@
 ; error: constructor `VNil` is not refuted, so `Vec` needs an ordinary `match`
-; error: 2 in `(Vec 2)` is a numeral literal, usually opaque to the checker; consider `unary`, `distinct`, or `numeral-of`
+; error: 2 in `(Vec 2)` is a numeral literal, opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; let-match needs every other constructor refuted, and a literal length refutes none of them.
 
 (def-adts $ (Vec : ((Nat) n) -> Type)
