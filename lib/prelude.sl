@@ -1078,6 +1078,7 @@
 
 ; TODO: add read-only functions over many arrays.
 
+; The Immediate proof lets extraction skip OCaml's write barrier, measured ~4x faster.
 (def-fns _ $ (many extern array-swap-imm : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (many (Nat) i) (unique A x)
     (erased A m) (erased (ANth A n a i m) nth) (erased (Immediate A) imm) ->
