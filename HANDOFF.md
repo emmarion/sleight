@@ -148,7 +148,9 @@ Open, none of it decided:
    4fda15f, which predates 52d869a and 193f2fd changing the prelude's IO
    shape, so `self/main.sl` at that commit is refused against today's
    prelude, by the old binary as much as the new one. Re-pinning would
-   change what the benchmark measures, so the session left it.
+   change what the benchmark measures, so the session left it. Since resolved
+   at the owner's direction: the commit is now a required argument to
+   `bench/bench.sh`, since the syntax is expected to keep changing.
 
 ## The minimal language and its semantics (`mini/`)
 
@@ -420,7 +422,8 @@ Open, none of it decided:
    (185) would shorten the tests' `(def-unique P $ (unique start ...))`
    lines; left out for now.
 3. `bench/bench.sh`'s pinned sources predate this change too (the
-   earlier note above), so the benchmark still needs re-pinning.
+   earlier note above), so the benchmark still needs re-pinning. Since
+   resolved the same way as that note.
 4. A discrepancy between `slc` and the reference, worked around and
    not reduced: in `self/interp.sl`'s `interp-io`, `(le-refl h1)`
    written as an erased argument of `applied` inside a `def-unique` at

@@ -113,8 +113,8 @@ on purpose (`tests/indent_*.sl`, `tests/string_literal_bad.sl`). `$` is
 not paren nesting and is deliberately not counted; `lib/indent.ml`'s header
 says why, and names the one shape that misreads.
 
-`bench/bench.sh` times the self-hosted compiler on a pinned copy of its
-own sources and on the sample programs under `bench/`, and
+`bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
+own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
 `bench/gen.py` writes the samples. `dune test` runs every `tests/*.sl`, once with the FFI and once
 without, and extracts, compiles and runs every test that runs, both

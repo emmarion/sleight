@@ -278,11 +278,10 @@ files are not in this tree; they are at commit `4912ada`
     compiles itself, so an edit or a `git stash` in between feeds the two
     steps different sources and the fixpoint compares the wrong things.
     Copying the sources into the build directory at the start would make
-    a run answer for one tree. `bench/bench.sh` has the complementary
-    problem: its pinned commit is unreachable in a shallow clone, and
-    where it is reachable the pinned sources no longer elaborate under
-    the current prelude, so the "slc on pinned slc" line measures nothing
-    and says so only in passing.
+    a run answer for one tree. `bench/bench.sh` had the complementary
+    problem with a hard-coded pinned commit; it now takes the commit as a
+    required argument and stops when that commit is unreachable, which
+    leaves choosing sources the measured `slc` still accepts to the caller.
 
 35. **Profiles and growth.** Extraction keeps function names, so
     `callgrind` on a `-g` build of `slc.ml` reads directly in terms of
