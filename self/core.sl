@@ -272,17 +272,17 @@
   sp-cons "def-adts" (SpStmt $ StDefAdts) $ sp-cons "comptime-match" (SpStmt $ StComptimeMatch) $
   sp-cons "let-match" (SpStmt $ StLetMatch) $ sp-cons "unary" (SpStmt $ StUnary) $ sp-cons "distinct" (SpExpr $ ExDistinct) $
   sp-cons "open-adt" (SpStmt $ StOpenAdt) $ sp-cons "open-absurd" (SpExpr $ ExOpenAbsurd) $
-  sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
-  sp-cons "Matchable" (SpFormer $ FoMatchable) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "Cell" (SpFormer $ FoCell) $
-  sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $ sp-cons "SlotHolds" (SpExpr $ ExSlotHolds) $ sp-cons "SlotVacant" (SpExpr $ ExSlotVacant) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $
+  sp-cons "Fn" (SpFormer $ FoFn) $ sp-cons "UniqueFn" (SpFormer $ FoUniqueFn) $ sp-cons "TyCtor" (SpFormer $ FoTyCtor) $ sp-cons "ValCtor" (SpFormer $ FoValCtor) $
+  sp-cons "Matchable" (SpFormer $ FoMatchable) $
+  sp-cons "cell-alloc" (SpExpr $ ExCellAlloc) $ sp-cons "cell-write" (SpExpr $ ExCellWrite) $ sp-cons "cell-match" (SpExpr $ ExCellMatch) $ sp-cons "Cell" (SpFormer $ FoCell) $ sp-cons "SlotHolds" (SpExpr $ ExSlotHolds) $ sp-cons "SlotVacant" (SpExpr $ ExSlotVacant) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons "share" (SpExpr $ ExShare) $ sp-cons "match" (SpExpr $ ExMatch) $ sp-cons "matchable-of" (SpExpr $ ExMatchableOf) $
   sp-cons "numeral-of" (SpExpr $ ExNumeralOf) $ sp-cons "level-of" (SpExpr $ ExLevelOf) $ sp-cons "prove-subterm" (SpExpr $ ExProveSubterm) $
   sp-cons "prove-predates" (SpExpr $ ExProvePredates) $ sp-cons "values" (SpExpr $ ExValues) $
   sp-cons "predates-trans" (SpExpr $ ExPredatesTrans) $ sp-cons "subterm-trans" (SpExpr $ ExSubtermTrans) $
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $
-  sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons "at" (SpMark $ MkAt) $ sp-cons ":" (SpMark $ MkColon) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $
+  sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $ sp-cons "notail" (SpMark $ MkNoTail) $
   sp-cons "delegate" (SpMark $ MkDelegate) $ sp-cons "predates" (SpMark $ MkPredates) $ sp-cons "absurd" (SpMark $ MkAbsurd) $
@@ -2843,9 +2843,16 @@
   (let ((many env2) (many c)) $ bind env (Some _ cname) (None _) (BFalse) (Many) (TValCtor (Nil _) special-term) (None _) delegate-id)
   (let ((many ctor)) (MkCtor cname c index 0 (BTrue) (None _) shape (BFalse)))
   (let ((many env3)) $ set-state-closed env2 c $ BCtorFn _ ctor)
-  (let ((many env4) (many x)) $ bind-closed env3 (Some _ name) (None _) (BFalse) (Many) (BTag _ ctor $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) delegate-id)
-  (let ((many env5) (many ctors) (many mctors)) $ notail $ bind-specials rest env4 (Succ index) shape)
-  (values env5 (Cons _ ctor ctors) $ Cons _ (MkMCtor (Many) $ TVar c) mctors))
+  (let ((many env4) (many ctors) (many mctors)) $ notail $ bind-specials rest env3 (Succ index) shape)
+  (values env4 (Cons _ ctor ctors) $ Cons _ (MkMCtor (Many) $ TVar c) mctors))
+
+(def-fns _ $ (many bind-special-names : (subterm many (List $ SpEntry) sps) (many (List $ Ctor) ctors) (many (Env) env) -> (many (Env) r))
+  (let-match many sps (Cons _ sp rest) ((Nil _) env))
+  (let-match many ctors (Cons _ ctor crest) ((Nil _) env))
+  (let-match many sp (MkSpEntry name _))
+  (let-match many ctor (MkCtor _ c _ _ _ _ _ _))
+  (let ((many env2) (many x)) $ bind-closed env (Some _ name) (None _) (BFalse) (Many) (BTag _ ctor $ Nil _) special-term (Some _ $ TApp (TVar c) $ Nil _) delegate-id)
+  (tail $ bind-special-names rest crest env2))
 
 (def-fns _ $ (many make-builtins : -> (many (Env) env))
   (let ((many hetero)) (Cons _ (ty-entry "A" type-term) $ Cons _ (ty-entry "a" $ TBound 0) $
@@ -2876,7 +2883,7 @@
   (let ((many e8) (many ctors) (many mctors)) $ bind-specials sp-table e7 0 $ list-replicate _ (list-length _ sp-table) 0)
   (let ((many adt)) (MkAdt "Special" (BTrue) ctors (None _) (BFalse)))
   (let ((many e9) (many m)) $ bind-closed e8 (None _) (None _) (BFalse) (Many) (BMat _ adt) (TMatchable (DEnum) (BFalse) (BFalse) (TVar special-id) mctors) (None _) delegate-id)
-  (env-settled $ env-open e9 m))
+  (bind-special-names sp-table ctors $ env-settled $ env-open e9 m))
 
 
 ; ---- Inference over the grammar (lib/elab.ml's infer)

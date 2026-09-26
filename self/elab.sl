@@ -2232,6 +2232,12 @@
     ((Once) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
     ((Erased) (values env3 gids (BErased _ _ _ _ _ x ids)))))
 
+(def-fns _ $ (many bound-erased : (erased (List $ Raw) fns) (erased (Headers fns) hs) (erased (List $ Nat) gids) (subterm many (Bound fns hs gids) ids) -> (many (List $ Nat) r))
+  (match many ids _
+    ((BStop _) (Nil _))
+    ((BMany _ _ _ _ _ _ more) (tail $ bound-erased _ _ _ more))
+    ((BErased _ _ _ _ _ x more) (Cons _ x $ notail $ bound-erased _ _ _ more))))
+
 (def-fns _ $ (many set-const-states : (subterm many (List $ Pair (Nat) $ Block (Ref Block (HEmpty Block))) cs) (many (Env) env) -> (many (Env) r))
   (let-match many cs (Cons _ p rest) ((Nil _) env))
   (match many p _
@@ -4564,7 +4570,8 @@
     (let ((many env2a)) $ error-when env2 (and uq $ not $ nat-eq (list-length _ fns) 1) "`def-unique` defines exactly one function")
     (let ((many env3) (many headers)) $ notail $ elab-headers sugar fns env2a lvl uq)
     (let ((many env4) (many gids) (many fids)) $ bind-headers _ headers env3 lvl)
-    (let ((many env5) (many fns2) (erased lk)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
+    (let ((many env5a) (many fns2) (erased lk)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
+    (let ((many (Env) env5)) $ match many (env-run-pos env4) _ ((BTrue) (env-set-tokens env5a $ bound-erased fns headers gids fids)) ((BFalse) env5a))
     (let ((many group)) $ MkGroup _ gids fns2 lk)
     (let-match many gids (Cons _ _ _) ((Nil _) (values env5 ctx $ SNone _)))
     (match many ctx _
@@ -4674,7 +4681,7 @@
               ((BTrue) (env-error (env-at env2 hpos) "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`"))
               ((BFalse) (match many (nat-lt callee x) _ ((BTrue) env2) ((BFalse) (env-error (env-at env2 hpos) "the function a `delegate` call names must be introduced before the function whose body it is"))))))
           (let ((many env2c)) $ env-set-aliases env2b $ idmap-set _ x (alias-target env2b callee) $ env-aliases env2b)
-          (let ((many env3) (many px)) $ bind env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
+          (let ((many env3) (many px)) $ bind-erased env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
           env3)))
     (values env3 $ match many delegated (((Func gall ctx) _))
       ((None _) (MkFunc _ _ physical name x mps code2 impl top))
