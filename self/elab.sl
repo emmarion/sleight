@@ -2196,7 +2196,7 @@
   (let-match many ms (Cons _ m rest) ((Nil _) (Nil _)))
   (let-match many ids (Cons _ x xrest) ((Nil _) (Nil _)))
   (match many m _ ((Many) (Cons _ x $ notail $ many-of rest xrest))
-                                    ((Once) (Cons _ x $ notail $ many-of rest xrest)) ((Erased) (tail $ many-of rest xrest))))
+                  ((Once) (Cons _ x $ notail $ many-of rest xrest)) ((Erased) (tail $ many-of rest xrest))))
 
 ; Whether a def-fns group binds a many function; a group of erased ones leaves nothing behind (ASSUMPTIONS 77).
 ; ---- The elaborator proper: one block recursing on the raws it elaborates (self/README.md)
@@ -2739,9 +2739,9 @@
       ((CMatch _ _ scrut shape bs dfl _)
         (let-match many direct (BFalse) ((BTrue) (not $ has-marked _ _ c $ BFalse)))
         (and (not $ has-marked _ _ scrut $ BFalse)
-                    (and (match many shape (((Bool) _)) ((ShKnown _ _) (BTrue)) ((ShNone _) (BTrue)) ((ShHeld _ mc _) (not $ has-marked _ _ mc $ BFalse)))
-                      (and (notail $ tails-ok-branches _ _ bs direct)
-                        $ match many dfl (((Bool) _)) ((Some _ d) (notail $ tails-ok _ _ d direct)) ((None _) (BTrue))))))
+          (and (match many shape (((Bool) _)) ((ShKnown _ _) (BTrue)) ((ShNone _) (BTrue)) ((ShHeld _ mc _) (not $ has-marked _ _ mc $ BFalse)))
+            (and (notail $ tails-ok-branches _ _ bs direct)
+              $ match many dfl (((Bool) _)) ((Some _ d) (notail $ tails-ok _ _ d direct)) ((None _) (BTrue))))))
 
       ((CCellAlloc _ _ slots) (not $ has-marked-list _ slots $ BFalse))
       ((CCellWrite _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
@@ -4479,8 +4479,7 @@
                 (match many run _
                   ((BTrue)
                     (let-match many ctx (Nil _) ((Cons _ _ _) (values env10b ctx $ SNone _)))
-                    (let-match many (ctor-of env10b c3) (Some _ ct)
-                      ((None _) (values env10b ctx $ SNone _)))
+                    (let-match many (ctor-of env10b c3) (Some _ ct) ((None _) (values env10b ctx $ SNone _)))
                     (let ((many env11)) (env-run-let env10b many-one source-code (Cons _ saved (Nil _))))
                     (let ((many env12)) (env-set-fields env11 saved ct fids mults))
                     (let ((many env13)) (match many alias (((Env) _)) ((None _) env12) ((Some _ x) (forward-state env12 x saved))))
@@ -4491,8 +4490,7 @@
                     (let ((many fieldctx)) (Cons _ mfids savedctx))
                     (let ((many save)) (SLet ctx many-one (Cons _ saved (Nil _)) (PkMany _ (Nil _) saved (Nil _) (PkNil _)) source-code))
                     (let ((many destruct2)) (SMatch savedctx (var-code env10b savedctx saved) (match-shape env10b savedctx mid tid disc ss) (discriminant ss c3) mfids))
-                    (let-match many alias (Some _ x)
-                      ((None _) (values env10b fieldctx (SSeq _ _ _ save destruct2))))
+                    (let-match many alias (Some _ x) ((None _) (values env10b fieldctx (SSeq _ _ _ save destruct2))))
                     (let ((many bindcell)) (SLet fieldctx many-one (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env10b fieldctx saved)))
                     (values env10b (Cons _ (Cons _ x (Nil _)) fieldctx) (SSeq _ _ _ save (SSeq _ _ _ destruct2 bindcell))))))))))))
 

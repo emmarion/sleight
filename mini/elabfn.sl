@@ -1668,8 +1668,7 @@
     (else
       (let-match many (entry-dec b10) (EntryShape h s i tr x shape _) ((EntryNot h) (BindLetStuck _ _ _)))
       (let-match many s (BFalse) ((BTrue) (BindLetStuck _ _ _)))
-      (let-match many (elab-term ctx wf tr (POuter (PInner))) (MkTermDec k l tout et tsc)
-        ((TermStuck k l) (BindLetStuck _ _ _)))
+      (let-match many (elab-term ctx wf tr (POuter (PInner))) (MkTermDec k l tout et tsc) ((TermStuck k l) (BindLetStuck _ _ _)))
       (let-match many tout (TOk t0 tty)
         ((TErr r) (MkBindLetDec _ _ _ (AErr r) (BLTermErr ctx b10 i tr x brest id irest r shape et) (AOErr _ _) (NCErr _))))
       (match erased tsc _
@@ -1831,8 +1830,7 @@
   (match many psc _
     ((TLOk z1 z2 z3 z4 z5 z6 z7 _ oq wfP cr spt li ln)
       (let ((many tid) (many ctx1) (erased m) (many wf1) (erased g1) (erased eis)) (mint ctx wf (Some _ tn) (TTyCtor pt) (KDecl) (None _) (sc-tyctor ctx pt _ spt) (scm-none ctx) (ROkNone _)))
-      (let-match many (notail $ mint-tycons ctx1 wf1 rest) (MkTyconsDec d2 e2 rout q rsc)
-        ((TyconsStuck d2 e2) (TyconsStuck _ _)))
+      (let-match many (notail $ mint-tycons ctx1 wf1 rest) (MkTyconsDec d2 e2 rout q rsc) ((TyconsStuck d2 e2) (TyconsStuck _ _)))
       (let-match many rout (FOkT out tids)
         ((FErrT r) (MkTyconsDec _ _ (FErrT r) (MTyRestErr ctx tn ps ctors rest ctxP pt pids pn tid ctx1 r ep m q) (TySErr _ _ _))))
       (match many rsc _
@@ -2278,10 +2276,8 @@
       ((MemYes g h ms) (MkBranchesDec _ _ _ _ _ _ _ (BrErr (RDuplicateBranch)) (EBDuplicate ctx s tc ctors seen rt cs fnames items rest scope c sc n mc ms) (BrSErr _ _))))
     (let ((erased cc)) (ctors-mem ctx c ctors cctors mc))
     (let ((many fs) (many ret) (many cty) (erased t) (erased cn) (erased fd) (erased sfs) (erased sret)) (ctor-of ctx wf c cc))
-    (let-match many (atom-names fnames) (MkAtomNames a1 names an lfn)
-      ((AtomNamesStuck a1) (BranchesStuck _ _ _ _ _ _ _)))
-    (let-match many (len-dec _ _ fs fnames) (LenSame x1 x2 x3 x4 lfs)
-      ((LenDiff x1 x2 x3 x4 lm) (BranchesStuck _ _ _ _ _ _ _)))
+    (let-match many (atom-names fnames) (MkAtomNames a1 names an lfn) ((AtomNamesStuck a1) (BranchesStuck _ _ _ _ _ _ _)))
+    (let-match many (len-dec _ _ fs fnames) (LenSame x1 x2 x3 x4 lfs) ((LenDiff x1 x2 x3 x4 lm) (BranchesStuck _ _ _ _ _ _ _)))
     (match many (mint-tele ctx wf (Nil _) _ (scs-nil ctx) fs _ sfs names (len-eq-trans _ _ _ fs fnames names lfs lfn)) _
       ((MTMinted a2 b2 c2 d2 ctxF fids wfF gF hfids le mt)
         (let ((many frefs) (erased rf)) (refs fids))
