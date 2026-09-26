@@ -638,7 +638,7 @@
           (match many (ent-dec ents x) _
             (absurd (EntMiss a2 b2 ne) (has-ent-no-ent ents x hx ne))
             ((EntHit a2 b2 ty k e) (TotIs _ _ _ ty (TotRef ents rules x ty k e) (ent-of-scoped ents ents x ty k se e)))))))
-    ((Bound k) (match erased st _ ((ScBound a d0 k0 lt) (match erased lt _))))
+    (absurd (Bound k) (let-match erased st (ScBound a d0 k0 lt)) lt)
     ((TyApp h ps as) (TotIs _ _ _ (TUniv) (TotTyApp ents rules h ps as) (ScUniv ents (Zero))))
     ((ValApp h ps ret as)
       (match erased st _
@@ -887,7 +887,7 @@
           ((IsNonRef tr0 nr)
             (let ((many b) (erased sb)) (shape-of r))
             (match many l _
-              ((Ref x) (match erased nl _))
+              (absurd (Ref x) nl)
               ((Bound j)
                 (match many (nat-dec (Succ (Zero)) b) _
                   ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Zero)) b nl nr (ShBound j) sb nq)))

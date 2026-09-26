@@ -344,10 +344,10 @@
     ((Cons a x rest) (let ((many out) (erased p)) (notail $ append-nats rest ys)) (values (Cons _ x out) (AppendCons x rest ys out p)))))
 (def-fns _ $ (many marked : (subterm many (List (Entry)) tele) (many (List (Nat)) ids) (erased (LenEq (Entry) (Nat) tele ids) le) -> (many (List (Term)) out) (erased (Marked tele ids out) p))
   (match many tele _
-    ((Nil a) (match many ids _ ((Nil b) (values (Nil _) (MarkedNil))) ((Cons b x rest) (match erased le _))))
+    ((Nil a) (match many ids _ ((Nil b) (values (Nil _) (MarkedNil))) (absurd (Cons b x rest) le)))
     ((Cons a e es)
       (match many ids _
-        ((Nil b) (match erased le _))
+        (absurd (Nil b) le)
         ((Cons b x rest)
           (match many e _
             ((MkEntry s i t)
@@ -652,10 +652,10 @@
     ((Nil a)
       (match many names _
         ((Nil b) (MTMinted _ _ _ _ ctx (Nil _) wf (grew-refl ctx) (has-all-nil ctx) (LENil _ _) (MTNil ctx acc)))
-        ((Cons b nm ns) (match erased len _))))
+        (absurd (Cons b nm ns) len)))
     ((Cons a e es)
       (match many names _
-        ((Nil b) (match erased len _))
+        (absurd (Nil b) len)
         ((Cons b name ns)
           (match many e _
             ((MkEntry s i t)
@@ -1057,10 +1057,10 @@
       ((LenDiff a b c d m8) (MkArgsDec _ _ _ _ (ArgsErr (RArity)) (ETAArity ctx acc tele args m8) (ASErr _ _)))
       ((LenSame a b c d le)
         (match many tele _
-          ((Nil e) (match many args _ ((Nil g) (MkArgsDec _ _ _ _ (ArgsOk (Nil _)) (ETANil ctx acc) (ASOk _ _ (scl-nil ctx)))) ((Cons g x y) (match erased le _))))
+          ((Nil e) (match many args _ ((Nil g) (MkArgsDec _ _ _ _ (ArgsOk (Nil _)) (ETANil ctx acc) (ASOk _ _ (scl-nil ctx)))) (absurd (Cons g x y) le)))
           ((Cons e entry es)
             (match many args _
-              ((Nil g) (match erased le _))
+              (absurd (Nil g) le)
               ((Cons g ar rest)
                 (match many entry _
                   ((MkEntry s i t)
@@ -1662,7 +1662,7 @@
                     ((SDSame e2 g3 h3 sa)
                       (AxOk _ _ _ _ _ (TyApp (Ref (Succ (Zero))) predates-ps (Cons _ tb (Cons _ b1 (Cons _ l (Nil _))))) (AOPredatesSubterm ctx1 cp ctx2 cq ty a1 l tb b1 ty2 a2 s1 s2 st sa)
                         (sc-predates ctx2 wf2 _ _ _ stb sb1 (sc-grew ctx1 ctx2 _ l g sl))))))))))))
-    ((KFn) (match erased ak _)) ((KTyCtor) (match erased ak _)) ((KValCtor) (match erased ak _)) ((KIs) (match erased ak _)) ((KSubterm) (match erased ak _)) ((KPredates) (match erased ak _)) ((KLet) (match erased ak _)) ((KDefLvl) (match erased ak _)) ((KDefFns) (match erased ak _)) ((KDefAdts) (match erased ak _)) ((KMatch) (match erased ak _)) ((KValues) (match erased ak _)) ((KProveSubterm) (match erased ak _)) ((KProvePredates) (match erased ak _))))
+    (absurd (KFn) ak) (absurd (KTyCtor) ak) (absurd (KValCtor) ak) (absurd (KIs) ak) (absurd (KSubterm) ak) (absurd (KPredates) ak) (absurd (KLet) ak) (absurd (KDefLvl) ak) (absurd (KDefFns) ak) (absurd (KDefAdts) ak) (absurd (KMatch) ak) (absurd (KValues) ak) (absurd (KProveSubterm) ak) (absurd (KProvePredates) ak)))
 
 (def-fns _ $ (erased axiom-derivation : (erased (Ctx) ctx) (erased (Key) k) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp)
     (erased (Ctx) ctx2) (erased (Core) qc) (erased (Nat) q) (erased (Term) qty) (erased (Term) cq) (erased (Nat) e) (erased (Ctx) out) (erased (Term) concl)
@@ -1818,10 +1818,10 @@
     ((LenDiff a b c d m8) (values (RErr (RSize)) (CRSize ctx acc rets ids m8)))
     ((LenSame a b c d le)
       (match many rets _
-        ((Nil e) (match many ids _ ((Nil g) (values (ROk) (CRNil ctx acc))) ((Cons g x y) (match erased le _))))
+        ((Nil e) (match many ids _ ((Nil g) (values (ROk) (CRNil ctx acc))) (absurd (Cons g x y) le)))
         ((Cons e entry es)
           (match many ids _
-            ((Nil g) (match erased le _))
+            (absurd (Nil g) le)
             ((Cons g x rest)
               (match many entry _
                 ((MkEntry s i t)
@@ -1851,10 +1851,10 @@
     ((LenDiff a b c d m) (MkBindLetDec _ _ _ (AErr (RSize)) (BLSize ctx binders ids m) (AOErr _ _) (NCErr _)))
     ((LenSame a b c d le)
       (match many binders _
-        ((Nil e) (match many ids _ ((Nil g) (MkBindLetDec _ _ _ (AllOk ctx (Nil _) (Nil _)) (BLNil ctx) (AOOk _ _ _ _ wf (grew-refl ctx) (has-all-nil ctx)) (NCOk _ _))) ((Cons g x y) (match erased le _))))
+        ((Nil e) (match many ids _ ((Nil g) (MkBindLetDec _ _ _ (AllOk ctx (Nil _) (Nil _)) (BLNil ctx) (AOOk _ _ _ _ wf (grew-refl ctx) (has-all-nil ctx)) (NCOk _ _))) (absurd (Cons g x y) le)))
         ((Cons e b10 brest)
           (match many ids _
-            ((Nil g) (match erased le _))
+            (absurd (Nil g) le)
             ((Cons g id irest)
               (let ((erased hid) (erased hirest)) (has-all-parts ctx id irest hids))
               (let ((many ty) (many kt) (erased t) (erased kq) (erased sty) (erased e2) (erased ee) (erased eo)) (type-of ctx wf id hid))
@@ -2118,10 +2118,10 @@
         (else (TyconsStuck _ _))))))
 (def-fns _ $ (many mint-ctors : (many (Ctx) ctx) (many (WF ctx) wf) (subterm many (List (Raw)) decls) (many (List (Nat)) tids) (erased (Tycons ctx tids) tys) (erased (LenEq (Raw) (Nat) decls tids) le) -> (many (CtorsDec ctx decls tids) r))
   (match many decls _
-    ((Nil a) (match many tids _ ((Nil b) (MkCtorsDec _ _ _ (FOkT ctx (Nil _)) (MCNil ctx) (CSOk _ _ _ wf (grew-refl ctx)))) ((Cons b x y) (match erased le _))))
+    ((Nil a) (match many tids _ ((Nil b) (MkCtorsDec _ _ _ (FOkT ctx (Nil _)) (MCNil ctx) (CSOk _ _ _ wf (grew-refl ctx)))) (absurd (Cons b x y) le)))
     ((Cons a decl rest)
       (match many tids _
-        ((Nil b) (match erased le _))
+        (absurd (Nil b) le)
         ((Cons b tid trest)
           (match erased le _
             ((LECons c1 c2 c3 c4 c5 c6 le2)
@@ -2475,10 +2475,10 @@
       ((LenDiff a b c d m8) (MkExprArgsDec _ _ _ _ (AErr (RArity)) (EAArity ctx acc tele args m8) (AOErr _ _) (ArgLenErr _ _)))
       ((LenSame a b c d le)
         (match many tele _
-          ((Nil e) (match many args _ ((Nil g) (MkExprArgsDec _ _ _ _ (AllOk ctx (Nil _) (Nil _)) (EANil ctx acc) (AOOk _ _ _ _ wf (grew-refl ctx) (has-all-nil ctx)) (ArgLenOk _ _ _ _ (LENil _ _)))) ((Cons g x y) (match erased le _))))
+          ((Nil e) (match many args _ ((Nil g) (MkExprArgsDec _ _ _ _ (AllOk ctx (Nil _) (Nil _)) (EANil ctx acc) (AOOk _ _ _ _ wf (grew-refl ctx) (has-all-nil ctx)) (ArgLenOk _ _ _ _ (LENil _ _)))) (absurd (Cons g x y) le)))
           ((Cons e entry es)
             (match many args _
-              ((Nil g) (match erased le _))
+              (absurd (Nil g) le)
               ((Cons g ar rest)
                 (match many entry _
                   ((MkEntry s i t)
@@ -2873,10 +2873,10 @@
   ((many elab-bodies : (many (Ctx) ctx) (many (WF ctx) wf) (many (Term) l) (erased (Sc ctx (Zero) l) sl) (many (List (Sig)) sigs) (erased (SigsSc ctx sigs) ssigs) (subterm many (List (Raw)) defs) (erased (LenEq (Raw) (Sig) defs sigs) le)
       (subterm many (POuter (PInner)) is ph) (subterm many (Nil (Raw)) is tl) -> (many (BodiesDec ctx l sigs defs) r))
     (match many sigs _
-      ((Nil a) (match many defs _ ((Nil b) (MkBodiesDec _ _ _ _ (BsOk ctx (Nil _)) (BdNil ctx l) (BsSOk _ _ _ wf (grew-refl ctx)))) ((Cons b x y) (match erased le _))))
+      ((Nil a) (match many defs _ ((Nil b) (MkBodiesDec _ _ _ _ (BsOk ctx (Nil _)) (BdNil ctx l) (BsSOk _ _ _ wf (grew-refl ctx)))) (absurd (Cons b x y) le)))
       ((Cons a sig srest)
         (match many defs _
-          ((Nil b) (match erased le _))
+          (absurd (Nil b) le)
           ((Cons b def rest)
             (match erased le _
               ((LECons c1 c2 c3 c4 c5 c6 le2)
