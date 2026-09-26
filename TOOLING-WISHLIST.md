@@ -324,3 +324,70 @@ files are not in this tree; they are at commit `4912ada`
     by neither side afterwards. Source-level, section 38's `coerce`
     with `coercible-ctor` says the same at zero cost.
 
+
+39. **A hints mode in the elaborator.** Converting the code base to the
+    SUGAR 7 and 8 forms needed the sites text search cannot tell apart:
+    a match whose every branch is absurd (erased or not), and a refuting
+    match at the end of an absurd body with its annotation and branch
+    kinds. A few lines printing those under an environment variable,
+    compiled into a scratch copy of `lib/elab.ml`, found them all; the
+    run-time `absurd` warning, which already existed, located the
+    non-erased ones exactly. A standing `--hints` flag reporting such
+    candidates, with positions, would make the next migration of this
+    kind a matter of reading its output.
+
+40. **A structural rewriter or formatter.** The same conversion rewrote
+    some 2,400 matches through an ad hoc Python s-expression tool that
+    re-indents the text it moves. It went wrong three times before its
+    output was trusted: re-parsing after each rewrite made it quadratic
+    on `self/elab.sl`; a candidate it declined still blocked the ones
+    nested inside it; and moving a body that began on its pattern's line
+    broke continuation lines aligned under that body (hanging
+    alignment). The indentation check caught the third and not the
+    others. A rewriter over `Reader`'s own tokens, or a formatter that
+    re-derives indentation from nesting, would remove the class of
+    mistake.
+
+41. **Line numbers of the prelude in `; warns:` lines.** Eight tests
+    name `lib/prelude.sl:N:C` in their expected warnings, so every edit
+    that moves prelude lines renumbers them; the session remapped them
+    from the diff with a script at each step. Matching the note by the
+    declaration it names (`<**>` in place of the position works today),
+    or a directive that locates by name, would let the prelude change
+    without touching unrelated tests.
+
+42. **Warnings from `; needs:` files, and `self/`.** The test runner
+    clears the warnings of the files a test needs before elaborating the
+    test itself, so a warning in `mini/`, `pal/` or `self/base.sl`
+    fails nothing; `self/` as a whole is elaborated by the bootstrap,
+    not by `dune test`. The 32 run-time `absurd` warnings in `mini/`
+    were visible only by running the reference on the chain by hand. A
+    test, or a `dune` alias, that elaborates each such chain once and
+    requires no warnings would catch them where they appear.
+
+43. **`dune test` when it thinks nothing changed.** One run after
+    editing `.sl` sources printed no summary at all, and `dune test
+    --force` was needed to see the 505 results; the session did not
+    establish why. A runner that always prints its summary line, or
+    documented use of `--force` in the README, would remove the doubt
+    about whether the tests ran.
+
+44. **The two compilers' messages for one error.** A `unique` pattern on
+    a type with cells written without its cell binder is refused by both,
+    with different text and at different columns: the reference says
+    ``Full` has 1 fields`` at the pattern's constructor, slc says
+    `unique constructor pattern needs fields and a cell binder` at the
+    branch. So no `; error:` line can test it for both, and the
+    reference's text reads as a field count the pattern already has.
+    The bootstrap compares where the two put a first error (ASSUMPTIONS
+    194) and not what they say; a check of a shared substring for each
+    refusing test is what item 42's alias could also run.
+
+45. **Calibration.** Both compilers took the roughly 2,400 added
+    `let-match` expansions without a failure; slc compiled itself in
+    2.61 s against 2.56 s before, at 104 MB peak against 93 MB, and its
+    sugar budget (ASSUMPTIONS 197) never ran out. Mean indentation over
+    the prelude, `self/`, `mini/`, `pal/` and `tests/` went from 7.2 to
+    4.1 columns and code lines from 27,749 to 24,739, with
+    non-whitespace characters unchanged to 0.1%: what the forms bought
+    is shape rather than size.
