@@ -4318,14 +4318,14 @@
 
   ((many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let ((many envl)) $ env-at env $ raw-pos raw)
-    (let ((many bad)) $ env-error envl $ str-cat (qraw raw) " is not a statement")
+    (def-fns msg-lvl $ (many bad : -> (many (Env) r)) (env-error envl $ str-cat (qraw raw) " is not a statement"))
     (let ((many (Env) env2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
       (match many raw _
         ((RList _ items)
-          (let-match many items (Cons _ head args) ((Nil _) (values bad ctx $ SNone _)))
-          (let-match many (special-of envl head) (Some _ sp) ((None _) (values bad ctx $ SNone _)))
+          (let-match many items (Cons _ head args) ((Nil _) (values (bad) ctx $ SNone _)))
+          (let-match many (special-of envl head) (Some _ sp) ((None _) (values (bad) ctx $ SNone _)))
           (let ((many envl2)) $ read-special envl head (BFalse) spos)
-          (let-match many sp (SpStmt st) (else (values bad ctx $ SNone _)))
+          (let-match many sp (SpStmt st) (else (values (bad) ctx $ SNone _)))
           (match many st (((Env) _) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
             ((StLet)
               (let ((many envb) (many braws) (many rhs) (erased wr)) $ bracket-parts args envl2 "malformed `let`: expected `(let (<binder> ...) <value> ...)`")
@@ -4355,7 +4355,7 @@
             ((StOpenAdt) (notail $ elab-open-adt sugar args envl2 ctx))
             ((StDumpContext)
               (let ((many env1) (many focus)) $ notail $ elab-focus sugar args _ two-steps envl2)
-              (values (dump-report env1 (GoalStatement) focus) ctx $ SNone _)))) (else (values bad ctx $ SNone _))))
+              (values (dump-report env1 (GoalStatement) focus) ctx $ SNone _)))) (else (values (bad) ctx $ SNone _))))
     (values (env-back env env2) ctx2 sc))
 
   ; open-adt (section 19, ASSUMPTIONS 139): an anonymous let at the written multiplicity, then the open of that
