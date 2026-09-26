@@ -28,12 +28,11 @@
 
 (def-fns _ $ (many rule-dec : (subterm many (List (Rule)) rules) (many (Nat) x) -> (many (RuleDec rules x) r))
   (let-match many rules (Cons a rule rest) ((Nil a) (RuleMiss _ _ $ NoRuleNil x)))
-  (match many rule _
-    ((MkRule y s)
-      (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (RuleHit _ _ s $ RuleHere x s rest)))
-      (match many (notail $ rule-dec rest x) _
-        ((RuleHit l z2 r p) (RuleHit _ _ r $ RuleThere x y r s rest n p))
-        ((RuleMiss l z2 p) (RuleMiss _ _ $ NoRuleCons x y s rest n p))))))
+  (let-match many rule (MkRule y s))
+  (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (RuleHit _ _ s $ RuleHere x s rest)))
+  (match many (notail $ rule-dec rest x) _
+    ((RuleHit l z2 r p) (RuleHit _ _ r $ RuleThere x y r s rest n p))
+    ((RuleMiss l z2 p) (RuleMiss _ _ $ NoRuleCons x y s rest n p))))
 
 (def-adts
   ((Canon : ((List (Rule)) rules) ((Term) t) ((Term) u) -> Type)
@@ -121,16 +120,13 @@
 (def-fns _ $ (many rank-dec : (erased (List (Rule)) all) (erased (List (Nat)) ar) (subterm many (List (Rule)) rules) (many (List (Nat)) ranks) (erased (ValidFrom all ar rules ranks) v) (many (Nat) x) ->
     (many (RankDec rules ranks x) d))
   (let-match many rules (Cons a rule rest) ((Nil a) (match erased v _ ((VFNil b c) (RankMiss _ _ _ (NoRuleNil x))))))
-  (match many rule _
-    ((MkRule y s)
-      (match erased v _
-        ((VFCons b c y2 s2 k rest2 ks bl v2)
-          (match many ranks _
-            ((Cons d k0 ks0)
-              (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (RankHit _ _ _ s k0 (RRHere x s k0 rest ks0))))
-              (match many (notail $ rank-dec all ar rest ks0 v2 x) _
-                ((RankHit e g h r k5 p) (RankHit _ _ _ r k5 (RRThere x y r s k5 k0 rest ks0 n p)))
-                ((RankMiss e g h p) (RankMiss _ _ _ (NoRuleCons x y s rest n p)))))))))))
+  (let-match many rule (MkRule y s))
+  (let-match erased v (VFCons b c y2 s2 k rest2 ks bl v2))
+  (let-match many ranks (Cons d k0 ks0))
+  (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (RankHit _ _ _ s k0 (RRHere x s k0 rest ks0))))
+  (match many (notail $ rank-dec all ar rest ks0 v2 x) _
+    ((RankHit e g h r k5 p) (RankHit _ _ _ r k5 (RRThere x y r s k5 k0 rest ks0 n p)))
+    ((RankMiss e g h p) (RankMiss _ _ _ (NoRuleCons x y s rest n p)))))
 
 (def-fns _ $ (erased rule-rank-of : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Nat) x) (erased (Term) r) (erased (Nat) k) (subterm erased (RuleRank rules ranks x r k) p) -> (erased (RuleOf rules x r) q))
   (match erased p _
@@ -201,60 +197,51 @@
           ((RankMiss a c d p) (values (Ref x) (CanFree rules x p))))
         (let-match erased b (BlRuled a2 c2 d2 e2 r2 j p2 lt)
           (absurd (BlFree a2 c2 d2 e2 nr) (rule-of-no-rule rules x r (rule-rank-of rules ranks x r k p) nr)))
-        (match erased (rule-rank-unique rules ranks x r k r2 j p p2) _
-          ((SameRankRefl g h)
-            (let ((many u) (erased q)) (tail $ canon rules ranks v (subterm (lt-subterm k n lt)) k r (valid-below rules ranks rules ranks x r k v p)))
-            (values u (CanRule rules x r u (rule-rank-of rules ranks x r k p) q)))))
+        (let-match erased (rule-rank-unique rules ranks x r k r2 j p p2) (SameRankRefl g h))
+        (let ((many u) (erased q)) (tail $ canon rules ranks v (subterm (lt-subterm k n lt)) k r (valid-below rules ranks rules ranks x r k v p)))
+        (values u (CanRule rules x r u (rule-rank-of rules ranks x r k p) q)))
       ((Bound k) (values (Bound k) (CanBound rules k)))
       ((TyApp h ps as)
-        (match erased b _
-          ((BlTyApp a c d e g k bh bas)
-            (let ((many h2) (erased p)) (notail $ canon rules ranks v n h bh))
-            (let ((many as2) (erased q)) (notail $ canon-list rules ranks v n as bas))
-            (values (TyApp h2 ps as2) (CanTyApp rules h h2 ps as as2 p q)))))
+        (let-match erased b (BlTyApp a c d e g k bh bas))
+        (let ((many h2) (erased p)) (notail $ canon rules ranks v n h bh))
+        (let ((many as2) (erased q)) (notail $ canon-list rules ranks v n as bas))
+        (values (TyApp h2 ps as2) (CanTyApp rules h h2 ps as as2 p q)))
       ((ValApp h ps r as)
-        (match erased b _
-          ((BlValApp a c d e g k j bh bas)
-            (let ((many h2) (erased p)) (notail $ canon rules ranks v n h bh))
-            (let ((many as2) (erased q)) (notail $ canon-list rules ranks v n as bas))
-            (values (ValApp h2 ps r as2) (CanValApp rules h h2 ps r as as2 p q)))))
+        (let-match erased b (BlValApp a c d e g k j bh bas))
+        (let ((many h2) (erased p)) (notail $ canon rules ranks v n h bh))
+        (let ((many as2) (erased q)) (notail $ canon-list rules ranks v n as bas))
+        (values (ValApp h2 ps r as2) (CanValApp rules h h2 ps r as as2 p q)))
       ((TUniv) (values (TUniv) (CanUniv rules)))
       ((TFn l ps rs)
-        (match erased b _
-          ((BlFn a c d e g h bl bps brs)
-            (let ((many l2) (erased p)) (notail $ canon rules ranks v n l bl))
-            (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
-            (let ((many rs2) (erased r)) (notail $ canon-tele rules ranks v n rs brs))
-            (values (TFn l2 ps2 rs2) (CanFn rules l l2 ps ps2 rs rs2 p q r)))))
+        (let-match erased b (BlFn a c d e g h bl bps brs))
+        (let ((many l2) (erased p)) (notail $ canon rules ranks v n l bl))
+        (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
+        (let ((many rs2) (erased r)) (notail $ canon-tele rules ranks v n rs brs))
+        (values (TFn l2 ps2 rs2) (CanFn rules l l2 ps ps2 rs rs2 p q r)))
       ((TTyCtor ps)
-        (match erased b _
-          ((BlTyCtor a c d e bps)
-            (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
-            (values (TTyCtor ps2) (CanTyCtor rules ps ps2 q)))))
+        (let-match erased b (BlTyCtor a c d e bps))
+        (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
+        (values (TTyCtor ps2) (CanTyCtor rules ps ps2 q)))
       ((TValCtor ps r)
-        (match erased b _
-          ((BlValCtor a c d e g bps br)
-            (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
-            (let ((many r2) (erased p)) (notail $ canon rules ranks v n r br))
-            (values (TValCtor ps2 r2) (CanValCtor rules ps ps2 r r2 q p)))))))
+        (let-match erased b (BlValCtor a c d e g bps br))
+        (let ((many ps2) (erased q)) (notail $ canon-tele rules ranks v n ps bps))
+        (let ((many r2) (erased p)) (notail $ canon rules ranks v n r br))
+        (values (TValCtor ps2 r2) (CanValCtor rules ps ps2 r r2 q p)))))
   ((many canon-list : (many (List (Rule)) rules) (many (List (Nat)) ranks) (erased (ValidFrom rules ranks rules ranks) v) (subterm erased (Nat) n) (subterm many (List (Term)) ts) (erased (BelowList rules ranks ts n) b) ->
       (many (List (Term)) us) (erased (CanonList rules ts us) p))
     (let-match many ts (Cons a t rest) ((Nil a) (values (Nil _) (CanNil rules))))
-    (match erased b _
-      ((BlCons c d e g h bt brest)
-        (let ((many u) (erased p)) (notail $ canon rules ranks v n t bt))
-        (let ((many us) (erased q)) (notail $ canon-list rules ranks v n rest brest))
-        (values (Cons _ u us) (CanCons rules t u rest us p q)))))
+    (let-match erased b (BlCons c d e g h bt brest))
+    (let ((many u) (erased p)) (notail $ canon rules ranks v n t bt))
+    (let ((many us) (erased q)) (notail $ canon-list rules ranks v n rest brest))
+    (values (Cons _ u us) (CanCons rules t u rest us p q)))
   ((many canon-tele : (many (List (Rule)) rules) (many (List (Nat)) ranks) (erased (ValidFrom rules ranks rules ranks) v) (subterm erased (Nat) n) (subterm many (List (Entry)) es) (erased (BelowTele rules ranks es n) b) ->
       (many (List (Entry)) fs) (erased (CanonTele rules es fs) p))
     (let-match many es (Cons a e rest) ((Nil a) (values (Nil _) (CanTNil rules))))
-    (match many e _
-      ((MkEntry s i t)
-        (match erased b _
-          ((BlTCons c d s2 i2 t2 es2 g bt brest)
-            (let ((many u) (erased p)) (notail $ canon rules ranks v n t bt))
-            (let ((many fs) (erased q)) (notail $ canon-tele rules ranks v n rest brest))
-            (values (Cons _ (MkEntry s i u) fs) (CanTCons rules s i t u rest fs p q))))))))
+    (let-match many e (MkEntry s i t))
+    (let-match erased b (BlTCons c d s2 i2 t2 es2 g bt brest))
+    (let ((many u) (erased p)) (notail $ canon rules ranks v n t bt))
+    (let ((many fs) (erased q)) (notail $ canon-tele rules ranks v n rest brest))
+    (values (Cons _ (MkEntry s i u) fs) (CanTCons rules s i t u rest fs p q))))
 
 ; ---- What canonicalization gives: a term whose entries with rules are all gone ([Canonical]), and a bound
 ; kept when the rules' terms keep it.

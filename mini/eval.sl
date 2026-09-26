@@ -70,15 +70,14 @@
         (let-match many fv (Cons d v rest) ((Nil d) (EvalStuck _ _)))
         (let-match many rest (Nil e) (else (EvalStuck _ _)))
         (let-match many v (VClo cenv group def) (else (EvalStuck _ _)))
-        (match many def _
-          ((MkFnDef id ps body)
-            (let-match many (notail $ eval-list f env args) (MkEvaledList a2 b2 vals q) ((EvalListStuck a2 b2) (EvalStuck _ _)))
-            (let ((many env1) (erased g)) (bind-group cenv group group cenv))
-            (let-match many (bind-all env1 ps vals) (BDOk a3 b3 c3 env2 bd) ((BDStuck a3 b3 c3) (EvalStuck _ _)))
-            (match many (notail $ eval f env2 body) _
-              ((EvalStuck a4 b4) (EvalStuck _ _))
-              ((MkEvaled a4 b4 outs r)
-                (MkEvaled _ _ outs $ EvCall env fn args cenv group id ps body vals env1 env2 outs p q g bd r))))))
+        (let-match many def (MkFnDef id ps body))
+        (let-match many (notail $ eval-list f env args) (MkEvaledList a2 b2 vals q) ((EvalListStuck a2 b2) (EvalStuck _ _)))
+        (let ((many env1) (erased g)) (bind-group cenv group group cenv))
+        (let-match many (bind-all env1 ps vals) (BDOk a3 b3 c3 env2 bd) ((BDStuck a3 b3 c3) (EvalStuck _ _)))
+        (match many (notail $ eval f env2 body) _
+          ((EvalStuck a4 b4) (EvalStuck _ _))
+          ((MkEvaled a4 b4 outs r)
+            (MkEvaled _ _ outs $ EvCall env fn args cenv group id ps body vals env1 env2 outs p q g bd r))))
       ((CMatch s bs)
         (let-match many (notail $ eval f env s) (MkEvaled a b sv p) ((EvalStuck a b) (EvalStuck _ _)))
         (let-match many sv (Cons d v rest) ((Nil d) (EvalStuck _ _)))

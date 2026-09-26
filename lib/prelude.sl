@@ -221,11 +221,10 @@
       (match erased q _
         ((LtS x y q1) (match erased q1 _ ((LtZ z) (LtZ z)) ((LtS x2 y2 q2) (LtZ y2))))))
     ((LtS a1 b1 p1)
-      (match erased q _
-        ((LtS x y q1)
-          (match erased q1 _
-            (absurd (LtZ z) p1)
-            ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))))
+      (let-match erased q (LtS x y q1))
+      (match erased q1 _
+        (absurd (LtZ z) p1)
+        ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))
 
 (def-fns _ $ (erased lt-subterm : (erased (Nat) a) (subterm erased (Nat) b) (erased (Lt a b) p) -> (erased (Subterm (Nat) a (Nat) b) s))
   (let-match erased b (Succ b1) (absurd (Zero) p))
@@ -245,11 +244,10 @@
     ((AddSucc a1 b1 c1 p1) (LtS (Succ a1) c1 (add-lt-left a1 b c1 p1 two)))))
 
 (def-fns _ $ (erased mul-lt : (erased (Nat) q) (erased (Nat) c) (erased (Nat) m) (subterm erased (Mul (Succ q) c m) mm) (erased (Lt (Succ (Zero)) c) two) -> (erased (Lt (Succ q) m) l))
-  (match erased mm _
-    ((MulSucc q0 c0 m0 d0 mm0 p0)
-      (match erased q _
-        ((Zero) (match erased mm0 _ ((MulZero b0) (match erased p0 _ ((AddZero b1) two)))))
-        ((Succ q1) (lt-trans (Succ q) (Succ m0) m (LtS q m0 (mul-lt q1 c m0 mm0 two)) (add-lt-left m0 c m p0 two)))))))
+  (let-match erased mm (MulSucc q0 c0 m0 d0 mm0 p0))
+  (match erased q _
+    ((Zero) (match erased mm0 _ ((MulZero b0) (match erased p0 _ ((AddZero b1) two)))))
+    ((Succ q1) (lt-trans (Succ q) (Succ m0) m (LtS q m0 (mul-lt q1 c m0 mm0 two)) (add-lt-left m0 c m p0 two)))))
 
 (def-fns _ $ (erased divmod-lt : (erased (Nat) s) (erased (Nat) c) (erased (Nat) q) (erased (Nat) r) (erased (Nat) m)
     (erased (Mul q c m) mm) (erased (Add m r (Succ s)) a) (erased (Lt (Succ (Zero)) c) two) -> (erased (Lt q (Succ s)) l))
@@ -518,18 +516,16 @@
       (let-match erased v2 (N1 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N2))
       (let ((erased sp)) (prove-subterm w1 v1))
       (let ((erased ih)) (numeral-fn c1 x1 x2 (subterm sp) w1 w2))
-      (match erased ih _
-        ((Refl t r)
-          (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
-          (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))))
+      (let-match erased ih (Refl t r))
+      (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
+      (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))
     ((N2 c1 x1 d1 w1 dd1)
       (let-match erased v2 (N2 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N1))
       (let ((erased sp)) (prove-subterm w1 v1))
       (let ((erased ih)) (numeral-fn c1 x1 x2 (subterm sp) w1 w2))
-      (match erased ih _
-        ((Refl t r)
-          (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
-          (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))))))
+      (let-match erased ih (Refl t r))
+      (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
+      (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))))
 
 (def-fns _ $ (erased numeral-inj :
     (erased (Bin) b1) (erased (Bin) b2) (erased (Nat) n)
@@ -539,19 +535,17 @@
     ((N1 c1 m1 d1 w1 dd1)
       (let-match erased v2 (N1 c2 m2 d2 w2 dd2) (absurd NZ) (absurd (N2 c2 m2 d2 w2 dd2) (double-parity m1 m2 d2 dd1 dd2)))
       (let ((erased em)) (double-inj m1 m2 d1 dd1 dd2))
-      (match erased em _
-        ((Refl t r)
-          (let ((erased sp)) (prove-subterm w1 v1))
-          (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
-          (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))))
+      (let-match erased em (Refl t r))
+      (let ((erased sp)) (prove-subterm w1 v1))
+      (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
+      (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))
     ((N2 c1 m1 d1 w1 dd1)
       (let-match erased v2 (N2 c2 m2 d2 w2 dd2) (absurd NZ) (absurd (N1 c2 m2 d2 w2 dd2) (double-parity m2 m1 d1 dd2 dd1)))
       (let ((erased em)) (double-inj m1 m2 d1 dd1 dd2))
-      (match erased em _
-        ((Refl t r)
-          (let ((erased sp)) (prove-subterm w1 v1))
-          (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
-          (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))))))
+      (let-match erased em (Refl t r))
+      (let ((erased sp)) (prove-subterm w1 v1))
+      (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
+      (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))))
 
 (def-adts
   ((BinSucc : ((Bin) b) ((Bin) c) -> Type)
@@ -576,20 +570,18 @@
       (let-match erased v (N1 c1 x1 d1 w1 dd1) (absurd NZ) (absurd N2))
       (let-match erased w (N2 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N1))
       (let ((erased ex)) (numeral-fn c1 x1 x2 w1 w2))
-      (match erased ex _
-        ((Refl t r)
-          (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
-          (match erased ed _ ((Refl t2 r2) (Refl (Nat) n))))))
+      (let-match erased ex (Refl t r))
+      (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
+      (match erased ed _ ((Refl t2 r2) (Refl (Nat) n))))
     ((BS2 b0 c0 s0)
       (let-match erased v (N2 c1 x1 d1 w1 dd1) (absurd NZ) (absurd N1))
       (let-match erased w (N1 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N2))
       (let ((erased sp)) (prove-subterm s0 s))
       (let ((erased ih)) (numeral-succ b0 c0 x1 x2 (subterm sp) s0 w1 w2))
-      (match erased ih _
-        ((Refl t r)
-          (let-match erased dd2 (DS a2 bb ddx) (absurd D0))
-          (let ((erased ed)) (double-fn x1 d1 bb dd1 ddx))
-          (match erased ed _ ((Refl t2 r2) (Refl (Nat) n))))))))
+      (let-match erased ih (Refl t r))
+      (let-match erased dd2 (DS a2 bb ddx) (absurd D0))
+      (let ((erased ed)) (double-fn x1 d1 bb dd1 ddx))
+      (match erased ed _ ((Refl t2 r2) (Refl (Nat) n))))))
 
 (def-adts $ (Char : -> Type)
   enum newtype
@@ -624,10 +616,9 @@
         (values (CLt (Char) CharLt a b (MkCharLt ma nb pa pb p))
                 (coercible-ctor (Shared) CLt (Nat) (Char) Lt CharLt ka a kb b p (MkCharLt ma nb pa pb p))))
       ((CEq t rr x)
-        (match erased (lt-unique ma u8-modulus pa pb) _
-          ((Refl u2 v2)
-            (values (CEq (Char) CharLt a)
-                    (coercible-ctor (Shared) CEq (Nat) (Char) Lt CharLt ka a)))))
+        (let-match erased (lt-unique ma u8-modulus pa pb) (Refl u2 v2))
+        (values (CEq (Char) CharLt a)
+                (coercible-ctor (Shared) CEq (Nat) (Char) Lt CharLt ka a)))
       ((CGt t rr x y q)
         (values (CGt (Char) CharLt a b (MkCharLt nb ma pb pa q))
                 (coercible-ctor (Shared) CGt (Nat) (Char) Lt CharLt ka a kb b q (MkCharLt nb ma pb pa q))))))
@@ -694,12 +685,10 @@
     (many (String) a) (many (String) b) (erased (Append a b s) p) (erased (StrLength a k) la))
   (let-match many k (Succ k1) ((Zero) (values (SNil) s (AppNil s) (SLenNil))))
   (let-match many s (SCons c rest) (absurd (SNil) (let-match erased l (SLenNil)) (let-match erased le (LtS x y q)) q))
-  (match erased l _
-    ((SLenCons c0 s0 len1 l1)
-      (match erased le _
-        ((LtS x y q)
-          (let ((many a1) (many b) (erased p) (erased la1)) (notail $ str-split rest k1 len1 l1 q))
-          (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))))))
+  (let-match erased l (SLenCons c0 s0 len1 l1))
+  (let-match erased le (LtS x y q))
+  (let ((many a1) (many b) (erased p) (erased la1)) (notail $ str-split rest k1 len1 l1 q))
+  (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))
 
 (def-adts $ (Rope : -> Type)
   enum

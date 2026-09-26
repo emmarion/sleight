@@ -92,10 +92,9 @@
 
 (def-fns _ $ (many bind-group : (many (Env) cenv) (many (List (FnDef)) group) (subterm many (List (FnDef)) defs) (many (Env) env) -> (many (Env) out) (erased (BindGroup cenv group defs env out) p))
   (let-match many defs (Cons a def rest) ((Nil a) (values env (BGNil cenv group env))))
-  (match many def _
-    ((MkFnDef id ps body)
-      (let ((many out) (erased p)) (tail $ bind-group cenv group rest (ECons id (VClo cenv group (MkFnDef id ps body)) env)))
-      (values out (BGCons cenv group id ps body rest env out p)))))
+  (let-match many def (MkFnDef id ps body))
+  (let ((many out) (erased p)) (tail $ bind-group cenv group rest (ECons id (VClo cenv group (MkFnDef id ps body)) env)))
+  (values out (BGCons cenv group id ps body rest env out p)))
 
 (def-adts
   ((BindAtoms : ((Env) env) ((List (Nat)) ids) ((Env) out) -> Type)
@@ -123,11 +122,10 @@
 
 (def-fns _ $ (many branch-dec : (subterm many (List (Branch)) bs) (many (Nat) c) -> (many (BranchDec bs c) r))
   (let-match many bs (Cons a b rest) ((Nil a) (BrMiss _ _)))
-  (match many b _
-    ((MkBranch d fields2 body2)
-      (let-match many (nat-dec c d) (NDDiff z w n) ((NDSame z) (BrHit _ _ fields2 body2 $ BrHere c fields2 body2 rest)))
-      (match many (notail $ branch-dec rest c) _
-        ((BrHit l z2 fields body p) (BrHit _ _ fields body $ BrThere c d fields fields2 body body2 rest n p))
-        ((BrMiss l z2) (BrMiss _ _))))))
+  (let-match many b (MkBranch d fields2 body2))
+  (let-match many (nat-dec c d) (NDDiff z w n) ((NDSame z) (BrHit _ _ fields2 body2 $ BrHere c fields2 body2 rest)))
+  (match many (notail $ branch-dec rest c) _
+    ((BrHit l z2 fields body p) (BrHit _ _ fields body $ BrThere c d fields fields2 body body2 rest n p))
+    ((BrMiss l z2) (BrMiss _ _))))
 
 (MkUnit)

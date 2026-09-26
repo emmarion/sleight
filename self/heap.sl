@@ -137,11 +137,10 @@
     (erased (Hist B) b) (erased (Hist B) c) (erased (Suffix B c b) le)
     (erased (StoredBody B b) v) -> (erased (StoredBody B c) w)
     (erased (Coercible (Shared) (StoredBody B b) v (Shared) (StoredBody B c) w) p))
-  (match erased v _
-    ((MkStoredBody _ _ s body sf)
-      (let ((erased sf2)) (suffix-trans _ c b s le sf))
-      (values (MkStoredBody _ _ s body sf2)
-        (coercible-ctor (Shared) MkStoredBody B B b c s s (coercible-refl (Shared) body) sf sf2)))))
+  (let-match erased v (MkStoredBody _ _ s body sf))
+  (let ((erased sf2)) (suffix-trans _ c b s le sf))
+  (values (MkStoredBody _ _ s body sf2)
+    (coercible-ctor (Shared) MkStoredBody B B b c s s (coercible-refl (Shared) body) sf sf2)))
 
 (def-fns _ $ (erased stored-maybe-widen : (erased (TyCtor (Type R) -> Type) B)
     (erased (Hist B) b) (erased (Hist B) c) (erased (Suffix B c b) le)
@@ -169,12 +168,11 @@
 (def-fns _ $ (many alloc : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Store B l) st)
     (many (B (Ref B l)) body) ->
     (erased (Hist B) l2) (many (Store B l2) st2) (erased (Suffix B l2 l) sf) (many (Ref B l2) addr))
-  (match many st _
-    ((MkStore _ _ next ln writes)
-      (let ((many (Value B l) v)) (MkValue _ _ next ln body))
-      (let ((erased writes2) (erased pw)) (stored-map-widen _ l (HAdd _ l v) (suffix-one _ l v) writes))
-      (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln) (coerce writes pw)) (suffix-one _ l v)
-              (MkRef _ _ l v (SfHere _ (HAdd _ l v)))))))
+  (let-match many st (MkStore _ _ next ln writes))
+  (let ((many (Value B l) v)) (MkValue _ _ next ln body))
+  (let ((erased writes2) (erased pw)) (stored-map-widen _ l (HAdd _ l v) (suffix-one _ l v) writes))
+  (values (HAdd _ l v) (MkStore _ _ (Succ next) (LenAdd _ l v next ln) (coerce writes pw)) (suffix-one _ l v)
+          (MkRef _ _ l v (SfHere _ (HAdd _ l v)))))
 
 (def-fns _ $ (erased ref-suffix : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (erased (Value B s) v) (erased (Suffix B l (HAdd B s v)) p) -> (erased (Suffix B l s) r))
@@ -183,12 +181,10 @@
 ; a reference's stamp, with the proof that it sits below the store's next stamp
 (def-fns _ $ (many ref-key : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Nat) bound)
     (erased (Len B l bound) lb) (many (Ref B l) r) -> (many (Nat) k) (erased (Lt k bound) lt))
-  (match many r _
-    ((MkRef _ _ s v p)
-      (match many v _
-        ((MkValue _ _ pos lp _)
-          (values pos (lt-succ-inv pos bound
-            (suffix-len _ l (HAdd _ s v) p (Succ pos) (LenAdd _ s v pos lp) bound lb))))))))
+  (let-match many r (MkRef _ _ s v p))
+  (let-match many v (MkValue _ _ pos lp _))
+  (values pos (lt-succ-inv pos bound
+    (suffix-len _ l (HAdd _ s v) p (Succ pos) (LenAdd _ s v pos lp) bound lb))))
 
 (def-fns _ $ (many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p))
   (match many r _ ((MkRef _ _ _ v _) (match many v _ ((MkValue _ _ pos _ _) pos)))))
@@ -215,10 +211,9 @@
 
 (def-fns _ $ (erased ref-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (erased (Ref B b) r) -> (erased (Ref B c) r2) (erased (Coercible (Shared) (Ref B b) r (Shared) (Ref B c) r2) p))
-  (match erased r _
-    ((MkRef _ _ s v p)
-      (let ((erased p2)) (suffix-trans _ c b (HAdd _ s v) le p))
-      (values (MkRef _ _ s v p2) (coercible-ctor (Shared) MkRef B B b c s s (coercible-refl (Shared) v) p p2)))))
+  (let-match erased r (MkRef _ _ s v p))
+  (let ((erased p2)) (suffix-trans _ c b (HAdd _ s v) le p))
+  (values (MkRef _ _ s v p2) (coercible-ctor (Shared) MkRef B B b c s s (coercible-refl (Shared) v) p p2)))
 
 (def-fns _ $ (erased refs-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (subterm erased (List $ Ref B b) xs) ->

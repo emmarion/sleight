@@ -14,9 +14,8 @@
 (let ((erased pp)) (prove-predates p L1))
 
 (def-fns L1 $ (many apply-packed : (many (Nat) x) -> (many (Nat) y))
-  (match many p (((Nat) r))
-    ((Pack l f)
-      (let ((erased q)) (prove-subterm l p))
-      (f (predates (predates-subterm pp q)) (f (predates (predates-subterm pp q)) x)))))
+  (let-match many p (Pack l f))
+  (let ((erased q)) (prove-subterm l p))
+  (f (predates (predates-subterm pp q)) (f (predates (predates-subterm pp q)) x)))
 
 (apply-packed (Zero))

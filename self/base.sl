@@ -268,45 +268,41 @@
 
 (def-fns _ $ (many nm-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) -> (many (KidLookup V c kids) r))
   (let-match many kids (Cons _ k rest) ((Nil _) (KMiss _ _ _ $ NKNil _ c)))
-  (match many k _
-    ((MkKid _ c1 sub3)
-      (match many (char-cmp c c1) _
-        ((CEq _ _ _) (KHit _ _ _ sub3 $ KHere _ c sub3 rest))
-        ((CLt _ _ _ _ lt)
-          (match many (notail $ nm-kid _ rest c) _
-            ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
-            ((KMiss _ _ _ p) (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p))))
-        ((CGt _ _ _ _ gt)
-          (match many (notail $ nm-kid _ rest c) _
-            ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
-            ((KMiss _ _ _ p) (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p))))))))
+  (let-match many k (MkKid _ c1 sub3))
+  (match many (char-cmp c c1) _
+    ((CEq _ _ _) (KHit _ _ _ sub3 $ KHere _ c sub3 rest))
+    ((CLt _ _ _ _ lt)
+      (match many (notail $ nm-kid _ rest c) _
+        ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
+        ((KMiss _ _ _ p) (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p))))
+    ((CGt _ _ _ _ gt)
+      (match many (notail $ nm-kid _ rest c) _
+        ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
+        ((KMiss _ _ _ p) (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p))))))
 
 (def-fns _ $ (many nm-get : (erased Type V) (subterm many (String) name) (many (NameMap V) m) -> (many (NLookup V name m) r))
-  (match many m _
-    ((NMNode _ here kids)
-      (let-match many name (SCons c rest)
-        ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
-      (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
-      (match many (notail $ nm-get _ rest submap) _
-        ((NHit _ _ _ v p) (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p))
-        ((NMiss _ _ _ p) (NMiss _ _ _ $ NAStep _ c rest here kids submap k p))))))
+  (let-match many m (NMNode _ here kids))
+  (let-match many name (SCons c rest)
+    ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
+  (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
+  (match many (notail $ nm-get _ rest submap) _
+    ((NHit _ _ _ v p) (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p))
+    ((NMiss _ _ _ p) (NMiss _ _ _ $ NAStep _ c rest here kids submap k p))))
 
 (def-fns _ $ (many nm-replace-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (NameMap V) submap) -> (many (List $ NMKid V) r))
   (let-match many kids (Cons _ k rest) ((Nil _) (Cons _ (MkKid _ c submap) $ Nil _)))
-  (match many k _
-    ((MkKid _ c1 _)
-      (match many (char-cmp c c1) _
-        ((CEq _ _ _) (Cons _ (MkKid _ c submap) rest))
-        (else (Cons _ k $ notail $ nm-replace-kid _ rest c submap))))))
+  (let-match many k (MkKid _ c1 _))
+  (match many (char-cmp c c1) _
+    ((CEq _ _ _) (Cons _ (MkKid _ c submap) rest))
+    (else (Cons _ k $ notail $ nm-replace-kid _ rest c submap))))
 
 (def-fns _ $ (many nm-set : (erased Type V) (subterm many (String) name) (many V v) (many (NameMap V) m) -> (many (NameMap V) r))
-  (match many m _
-    ((NMNode _ here kids)
-      (let-match many name (SCons c rest) ((SNil) (NMNode _ (Some _ v) kids)))
-      (let ((many (NameMap V) submap)) (match many (nm-kid _ kids c) _
-                        ((KMiss _ _ _ _) (nm-empty _))
-                        ((KHit _ _ _ s _) s)))
-      (NMNode _ here $ nm-replace-kid _ kids c $ notail $ nm-set _ rest v submap))))
+  (let-match many m (NMNode _ here kids))
+  (let-match many name (SCons c rest) ((SNil) (NMNode _ (Some _ v) kids)))
+  (let ((many (NameMap V) submap)) (match many (nm-kid _ kids c) _
+                    ((KMiss _ _ _ _) (nm-empty _))
+                    ((KHit _ _ _ s _) s)))
+  (NMNode _ here $ nm-replace-kid _ kids c $ notail $ nm-set _ rest v submap))
 
 ; ---- Lists
 
@@ -468,10 +464,9 @@
 ; Every name a NameMap holds, with its value.
 (def-fns _
   ((many nm-entries : (erased Type V) (subterm many (NameMap V) m) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
-    (match many m _
-      ((NMNode _ here kids)
-        (let ((many acc2)) $ match many here (((List $ Pair (String) V) _)) ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ (rope-str path) v) acc)))
-        (tail $ nm-kids-entries _ kids path acc2))))
+    (let-match many m (NMNode _ here kids))
+    (let ((many acc2)) $ match many here (((List $ Pair (String) V) _)) ((None _) acc) ((Some _ v) (Cons _ (MkPair _ _ (rope-str path) v) acc)))
+    (tail $ nm-kids-entries _ kids path acc2))
   ((many nm-kids-entries : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Rope) path) (many (List $ Pair (String) V) acc) -> (many (List $ Pair (String) V) r))
     (let-match many kids (Cons _ k rest) ((Nil _) acc))
     (match many k _
@@ -623,70 +618,66 @@
   (match many m _
     ((MEmpty _)
       (let ((erased m1) (erased eqm) (erased l) (erased r) (erased sum) (erased bal)) (bound-split max k lk))
-      (match erased eqm (((IdMap V) r2) ((Bounded V r2 (Succ size) max) b2))
-        ((Refl _ _)
-          (match erased bd (((IdMap V) r2) ((Bounded V r2 (Succ size) max) b2))
-            ((BdEmpty _ _)
-              (match many (nat-halve k) (((IdMap V) r2) ((Bounded V r2 (Succ (Zero)) (Succ m1)) b2))
-                ((HZ)
-                  (values (MNode _ (Some _ v) (MEmpty _) (MEmpty _))
-                    (BdSome _ v _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Zero) (BdEmpty _ r) (Zero) (AddZero (Zero)))))
-                ((H1 k1 d dd)
-                  (let ((many o2) (erased bo2))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) l
-                      (BdEmpty _ l) (ABEmpty _ k1) (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
-                  (values (MNode _ (None _) o2 (MEmpty _))
-                    (BdNone _ _ _ l r m1 sum bal (Succ (Zero)) bo2 (Zero) (BdEmpty _ r) (Succ (Zero))
-                      (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero))))))
-                ((H2 k1 d dd)
-                  (let ((many t2b) (erased bt2))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) r
-                      (BdEmpty _ r) (ABEmpty _ k1) (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
-                  (values (MNode _ (None _) (MEmpty _) t2b)
-                    (BdNone _ _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Succ (Zero)) bt2 (Succ (Zero))
-                      (AddZero (Succ (Zero))))))))))))
+      (let-match erased eqm (Refl _ _))
+      (let-match erased bd (BdEmpty _ _))
+      (match many (nat-halve k) (((IdMap V) r2) ((Bounded V r2 (Succ (Zero)) (Succ m1)) b2))
+        ((HZ)
+          (values (MNode _ (Some _ v) (MEmpty _) (MEmpty _))
+            (BdSome _ v _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Zero) (BdEmpty _ r) (Zero) (AddZero (Zero)))))
+        ((H1 k1 d dd)
+          (let ((many o2) (erased bo2))
+            (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) l
+              (BdEmpty _ l) (ABEmpty _ k1) (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+          (values (MNode _ (None _) o2 (MEmpty _))
+            (BdNone _ _ _ l r m1 sum bal (Succ (Zero)) bo2 (Zero) (BdEmpty _ r) (Succ (Zero))
+              (AddSucc (Zero) (Zero) (Zero) (AddZero (Zero))))))
+        ((H2 k1 d dd)
+          (let ((many t2b) (erased bt2))
+            (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v (MEmpty _) (Zero) r
+              (BdEmpty _ r) (ABEmpty _ k1) (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+          (values (MNode _ (None _) (MEmpty _) t2b)
+            (BdNone _ _ _ l r m1 sum bal (Zero) (BdEmpty _ l) (Succ (Zero)) bt2 (Succ (Zero))
+              (AddZero (Succ (Zero))))))))
     ((MNode _ here one two)
       (match many here (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
         ((None _)
-          (match erased bd (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
-            ((BdNone _ _ _ l r m1 sum bal so bo st bt sot ssum)
-              (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ sot) (Succ m1)) b2))
-                ((HZ)
-                  (values (MNode _ (Some _ v) one two)
-                    (BdSome _ v _ _ l r m1 sum bal so bo st bt sot ssum)))
-                ((H1 k1 d dd)
-                  (let ((many onew) (erased bonew))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
-                      (absent-one _ k1 d dd here one two ab)
-                      (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
-                  (values (MNode _ (None _) onew two)
-                    (BdNone _ _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
-                ((H2 k1 d dd)
-                  (let ((many tnew) (erased btnew))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
-                      (absent-two _ k1 d dd here one two ab)
-                      (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
-                  (values (MNode _ (None _) one tnew)
-                    (BdNone _ _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))))
+          (let-match erased bd (BdNone _ _ _ l r m1 sum bal so bo st bt sot ssum))
+          (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ sot) (Succ m1)) b2))
+            ((HZ)
+              (values (MNode _ (Some _ v) one two)
+                (BdSome _ v _ _ l r m1 sum bal so bo st bt sot ssum)))
+            ((H1 k1 d dd)
+              (let ((many onew) (erased bonew))
+                (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
+                  (absent-one _ k1 d dd here one two ab)
+                  (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+              (values (MNode _ (None _) onew two)
+                (BdNone _ _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
+            ((H2 k1 d dd)
+              (let ((many tnew) (erased btnew))
+                (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
+                  (absent-two _ k1 d dd here one two ab)
+                  (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+              (values (MNode _ (None _) one tnew)
+                (BdNone _ _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))
         ((Some _ v0)
-          (match erased bd (((IdMap V) rr) ((Bounded V rr (Succ size) max) b2))
-            ((BdSome _ _ _ _ l r m1 sum bal so bo st bt sot ssum)
-              (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ (Succ sot)) (Succ m1)) b2))
-                (absurd (HZ) (absent-not-some _ v0 one two ab))
-                ((H1 k1 d dd)
-                  (let ((many onew) (erased bonew))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
-                      (absent-one _ k1 d dd here one two ab)
-                      (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
-                  (values (MNode _ (Some _ v0) onew two)
-                    (BdSome _ v0 _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
-                ((H2 k1 d dd)
-                  (let ((many tnew) (erased btnew))
-                    (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
-                      (absent-two _ k1 d dd here one two ab)
-                      (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
-                  (values (MNode _ (Some _ v0) one tnew)
-                    (BdSome _ v0 _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))))))))
+          (let-match erased bd (BdSome _ _ _ _ l r m1 sum bal so bo st bt sot ssum))
+          (match many (nat-halve k) (((IdMap V) rr) ((Bounded V rr (Succ (Succ sot)) (Succ m1)) b2))
+            (absurd (HZ) (absent-not-some _ v0 one two ab))
+            ((H1 k1 d dd)
+              (let ((many onew) (erased bonew))
+                (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ double-lt k1 d dd)) k1 v one so l bo
+                  (absent-one _ k1 d dd here one two ab)
+                  (half-lt-one k1 d l r m1 dd sum bal (lt-succ-inv d m1 lk))))
+              (values (MNode _ (Some _ v0) onew two)
+                (BdSome _ v0 _ _ l r m1 sum bal (Succ so) bonew st bt (Succ sot) (AddSucc so st sot ssum))))
+            ((H2 k1 d dd)
+              (let ((many tnew) (erased btnew))
+                (notail $ idmap-set-bd _ (subterm (lt-subterm k1 k $ lt-weaken k1 (Succ d) $ double-lt k1 d dd)) k1 v two st r bt
+                  (absent-two _ k1 d dd here one two ab)
+                  (half-lt-two k1 d l r m1 dd sum bal (lt-succ-inv (Succ d) m1 lk))))
+              (values (MNode _ (Some _ v0) one tnew)
+                (BdSome _ v0 _ _ l r m1 sum bal so bo (Succ st) btnew (Succ sot) (add-succ-right so st sot ssum))))))))))
 
 ; size + rest = max with size < max: rest is a successor, so it is what a walk can recurse on
 (def-fns _ $ (erased add-room : (erased (Nat) size) (erased (Nat) rest) (erased (Nat) max)

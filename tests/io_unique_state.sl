@@ -21,11 +21,10 @@
 (def-fns PA $ (many count : (unique (Counter) c) (many (Maybe (String)) line) -> (unique (IO P) next))
   (match many line _
     ((None a)
-      (match unique c _
-        ((MkCounter n cell)
-          (match many (lt-dec (predates nat-p0) n u8-modulus) _
-            ((Yes x y p) (Exit P (MkU8 n p)))
-            ((No x y q) (Exit P code0))))))
+      (let-match unique c (MkCounter n cell))
+      (match many (lt-dec (predates nat-p0) n u8-modulus) _
+        ((Yes x y p) (Exit P (MkU8 n p)))
+        ((No x y q) (Exit P code0))))
     ((Some a s)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
       (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (count (predates pa-p) c2 next-line))

@@ -97,11 +97,10 @@
     ((Zero) (PlusZ (Zero)))
     ((Succ b) (PlusS b (Zero) b (plus-zero b)))))
 (def-fns _ $ (erased plus-shift : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Plus (Succ a) b c) p) -> (erased (Plus a (Succ b) c) q))
-  (match erased p _
-    ((PlusS a2 b2 c2 p2)
-      (match erased p2 _
-        ((PlusZ d) (PlusZ (Succ b)))
-        ((PlusS a3 b3 c3 p3) (PlusS a3 (Succ b) (Succ c3) (plus-shift a3 b (Succ c3) p2)))))))
+  (let-match erased p (PlusS a2 b2 c2 p2))
+  (match erased p2 _
+    ((PlusZ d) (PlusZ (Succ b)))
+    ((PlusS a3 b3 c3 p3) (PlusS a3 (Succ b) (Succ c3) (plus-shift a3 b (Succ c3) p2)))))
 
 ; The i-th element of a list, or evidence that there is none.
 (def-adts

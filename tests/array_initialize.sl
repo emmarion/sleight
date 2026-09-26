@@ -20,6 +20,6 @@
   (nat-add (share x) (share y)))
 initialize-test
 ; warns: tests/array_initialize.sl:18:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
-; warns: lib/prelude.sl:841:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:830:1: note: `;! warn` for `Array` is here
 ; warns: tests/array_initialize.sl:19:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
-; warns: lib/prelude.sl:841:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:830:1: note: `;! warn` for `Array` is here

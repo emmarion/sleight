@@ -45,12 +45,11 @@
 
 (def-fns _ $ (many ent-dec : (subterm many (List (Ent)) ents) (many (Nat) x) -> (many (EntDec ents x) r))
   (let-match many ents (Cons a e rest) ((Nil a) (EntMiss _ _ $ NoEntNil x)))
-  (match many e _
-    ((MkEnt y ty2 k2)
-      (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (EntHit _ _ ty2 k2 $ EntHere x ty2 k2 rest)))
-      (match many (notail $ ent-dec rest x) _
-        ((EntHit l z2 ty k p) (EntHit _ _ ty k $ EntThere x y ty ty2 k k2 rest n p))
-        ((EntMiss l z2 p) (EntMiss _ _ $ NoEntCons x y ty2 k2 rest n p))))))
+  (let-match many e (MkEnt y ty2 k2))
+  (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (EntHit _ _ ty2 k2 $ EntHere x ty2 k2 rest)))
+  (match many (notail $ ent-dec rest x) _
+    ((EntHit l z2 ty k p) (EntHit _ _ ty k $ EntThere x y ty ty2 k k2 rest n p))
+    ((EntMiss l z2 p) (EntMiss _ _ $ NoEntCons x y ty2 k2 rest n p))))
 
 (def-adts
   ((StrNeq : ((String) a) ((String) b) -> Type)
@@ -74,18 +73,17 @@
 
 (def-fns _ $ (many name-dec : (subterm many (List (Name)) scope) (many (String) s) -> (many (NameDec scope s) r))
   (let-match many scope (Cons a e rest) ((Nil a) (NameMiss _ _ $ NoNameNil s)))
-  (match many e _
-    ((MkName s2 y)
-      (match many (str-cmp s s2) _
-        ((CEq t r z) (NameHit _ _ y $ NameHere s y rest))
-        ((CLt t r z w p)
-          (match many (notail $ name-dec rest s) _
-            ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqLt s s2 p) q))
-            ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqLt s s2 p) q))))
-        ((CGt t r z w p)
-          (match many (notail $ name-dec rest s) _
-            ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqGt s s2 p) q))
-            ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqGt s s2 p) q))))))))
+  (let-match many e (MkName s2 y))
+  (match many (str-cmp s s2) _
+    ((CEq t r z) (NameHit _ _ y $ NameHere s y rest))
+    ((CLt t r z w p)
+      (match many (notail $ name-dec rest s) _
+        ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqLt s s2 p) q))
+        ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqLt s s2 p) q))))
+    ((CGt t r z w p)
+      (match many (notail $ name-dec rest s) _
+        ((NameHit l z2 x q) (NameHit _ _ x $ NameThere s s2 x y rest (StrNeqGt s s2 p) q))
+        ((NameMiss l z2 q) (NameMiss _ _ $ NoNameCons s s2 y rest (StrNeqGt s s2 p) q))))))
 
 ; The constructors a declared type constructor has, or evidence that none was declared, which is what
 ; makes a type unmatchable (MINIMAL.md's rule for match).
@@ -107,12 +105,11 @@
 
 (def-fns _ $ (many adt-dec : (subterm many (List (Adt)) adts) (many (Nat) t) -> (many (AdtDec adts t) r))
   (let-match many adts (Cons a e rest) ((Nil a) (AdtMiss _ _ $ NoAdtNil t)))
-  (match many e _
-    ((MkAdt t2 ctors2)
-      (let-match many (nat-dec t t2) (NDDiff z w n) ((NDSame z) (AdtHit _ _ ctors2 $ AdtHere t ctors2 rest)))
-      (match many (notail $ adt-dec rest t) _
-        ((AdtHit l z2 ctors p) (AdtHit _ _ ctors $ AdtThere t t2 ctors ctors2 rest n p))
-        ((AdtMiss l z2 p) (AdtMiss _ _ $ NoAdtCons t t2 ctors2 rest n p))))))
+  (let-match many e (MkAdt t2 ctors2))
+  (let-match many (nat-dec t t2) (NDDiff z w n) ((NDSame z) (AdtHit _ _ ctors2 $ AdtHere t ctors2 rest)))
+  (match many (notail $ adt-dec rest t) _
+    ((AdtHit l z2 ctors p) (AdtHit _ _ ctors $ AdtThere t t2 ctors ctors2 rest n p))
+    ((AdtMiss l z2 p) (AdtMiss _ _ $ NoAdtCons t t2 ctors2 rest n p))))
 
 
 ; ---- Scope of terms: every entry a term mentions is one of the context's entries, and every binder it
@@ -323,32 +320,27 @@
       ((SubHit a k v p) (scoped-mono ents (Zero) r v (LtZ r) (nth-scoped ents subs k v bs p)))
       ((SubSkip a k p) (ScBound ents r k (nth-none-lt _ subs r n k ly p)))
       ((SubTyApp a h h2 ps ps2 as as2 sub1 p t3 q)
-        (match erased bt _
-          ((ScTyApp b n0 h0 ps0 as0 nout bh bps bas ln)
-            (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 nout bs ly bps t3))
-            (ScTyApp ents r h2 ps2 as2 r1 (subst-scoped ents subs r n h h2 bs ly bh p) bps2 (subst-scoped-list ents subs r n as as2 bs ly bas q) (subst-len-eq subs subs as as2 ps ps2 sub1 q t3 ln)))))
+        (let-match erased bt (ScTyApp b n0 h0 ps0 as0 nout bh bps bas ln))
+        (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 nout bs ly bps t3))
+        (ScTyApp ents r h2 ps2 as2 r1 (subst-scoped ents subs r n h h2 bs ly bh p) bps2 (subst-scoped-list ents subs r n as as2 bs ly bas q) (subst-len-eq subs subs as as2 ps ps2 sub1 q t3 ln)))
       ((SubValApp a h h2 ps ps2 rt rt2 as as2 sub1 p t3 pr q)
-        (match erased bt _
-          ((ScValApp b n0 h0 ps0 rt0 as0 nout bh bps brt bas ln)
-            (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 nout bs ly bps t3))
-            (ScValApp ents r h2 ps2 rt2 as2 r1 (subst-scoped ents subs r n h h2 bs ly bh p) bps2 (subst-scoped ents sub1 r1 nout rt rt2 bs1 ly1 brt pr) (subst-scoped-list ents subs r n as as2 bs ly bas q) (subst-len-eq subs subs as as2 ps ps2 sub1 q t3 ln)))))
+        (let-match erased bt (ScValApp b n0 h0 ps0 rt0 as0 nout bh bps brt bas ln))
+        (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 nout bs ly bps t3))
+        (ScValApp ents r h2 ps2 rt2 as2 r1 (subst-scoped ents subs r n h h2 bs ly bh p) bps2 (subst-scoped ents sub1 r1 nout rt rt2 bs1 ly1 brt pr) (subst-scoped-list ents subs r n as as2 bs ly bas q) (subst-len-eq subs subs as as2 ps ps2 sub1 q t3 ln)))
       ((SubUniv a) (ScUniv ents r))
       ((SubFn a l l2 ps ps2 rs rs2 sub1 sub2 p q r2)
-        (match erased bt _
-          ((ScFn b n0 l0 ps0 rs0 n1 n2 bl bps brs)
-            (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
-            (let ((erased rr2) (erased brs2) (erased bs2) (erased ly2)) (subst-scoped-tele ents sub1 r1 n1 rs rs2 sub2 n2 bs1 ly1 brs r2))
-            (ScFn ents r l2 ps2 rs2 r1 rr2 (subst-scoped ents subs r n l l2 bs ly bl p) bps2 brs2))))
+        (let-match erased bt (ScFn b n0 l0 ps0 rs0 n1 n2 bl bps brs))
+        (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
+        (let ((erased rr2) (erased brs2) (erased bs2) (erased ly2)) (subst-scoped-tele ents sub1 r1 n1 rs rs2 sub2 n2 bs1 ly1 brs r2))
+        (ScFn ents r l2 ps2 rs2 r1 rr2 (subst-scoped ents subs r n l l2 bs ly bl p) bps2 brs2))
       ((SubTyCtor a ps ps2 sub1 q)
-        (match erased bt _
-          ((ScTyCtor b n0 ps0 n1 bps)
-            (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
-            (ScTyCtor ents r ps2 r1 bps2))))
+        (let-match erased bt (ScTyCtor b n0 ps0 n1 bps))
+        (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
+        (ScTyCtor ents r ps2 r1 bps2))
       ((SubValCtor a ps ps2 r0 r2 sub1 q p)
-        (match erased bt _
-          ((ScValCtor b n0 ps0 rr0 n1 bps br)
-            (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
-            (ScValCtor ents r ps2 r2 r1 bps2 (subst-scoped ents sub1 r1 n1 r0 r2 bs1 ly1 br p)))))))
+        (let-match erased bt (ScValCtor b n0 ps0 rr0 n1 bps br))
+        (let ((erased r1) (erased bps2) (erased bs1) (erased ly1)) (subst-scoped-tele ents subs r n ps ps2 sub1 n1 bs ly bps q))
+        (ScValCtor ents r ps2 r2 r1 bps2 (subst-scoped ents sub1 r1 n1 r0 r2 bs1 ly1 br p)))))
   ((erased subst-scoped-list : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) subs) (erased (Nat) r) (erased (Nat) n) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (ScopedSub ents subs) bs)
       (erased (Layout (Term) subs r n) ly) (erased (ScopedList ents n ts) bt) (subterm erased (SubstList subs ts us) d) -> (erased (ScopedList ents r us) c))
     (match erased d _
@@ -359,10 +351,9 @@
       (erased (Nat) rout) (erased (ScopedTele ents r fs rout) c) (erased (ScopedSub ents out) c2) (erased (Layout (Term) out rout nout) ly2))
     (let-match erased d (SubTCons a s i t u es2 fs2 out2 p q)
       ((SubTNil a) (match erased bt _ ((ScTNil b n0) (values r (ScTNil ents r) bs ly)))))
-    (match erased bt _
-      ((ScTCons b n0 s0 i0 t0 es0 nout0 b1 b2)
-        (let ((erased rout) (erased bfs) (erased bout) (erased lyout)) (subst-scoped-tele ents (Cons _ (None _) subs) (Succ r) (Succ n) es2 fs2 out2 nout (ScSNone ents subs bs) (LayNone _ subs r n ly) b2 q))
-        (values rout (ScTCons ents r s i u fs2 rout (subst-scoped ents subs r n t u bs ly b1 p) bfs) bout lyout)))))
+    (let-match erased bt (ScTCons b n0 s0 i0 t0 es0 nout0 b1 b2))
+    (let ((erased rout) (erased bfs) (erased bout) (erased lyout)) (subst-scoped-tele ents (Cons _ (None _) subs) (Succ r) (Succ n) es2 fs2 out2 nout (ScSNone ents subs bs) (LayNone _ subs r n ly) b2 q))
+    (values rout (ScTCons ents r s i u fs2 rout (subst-scoped ents subs r n t u bs ly b1 p) bfs) bout lyout)))
 
 
 (def-fns _ $ (erased rule-of-scoped : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (erased (ScopedRules ents rules) b) (subterm erased (RuleOf rules x r) p) -> (erased (Scoped ents (Zero) r) c))
@@ -548,11 +539,10 @@
     ((ExtCons a b c x ty k le2 q2) (ExtCons n0 e0 c x ty k (le-trans n0 n1 x le le2) (ext-trans n0 n1 e0 e1 c le p q2)))))
 
 (def-fns _ $ (erased grew-trans : (erased (Ctx) c1) (erased (Ctx) c2) (erased (Ctx) c3) (erased (Grew c1 c2) g) (erased (Grew c2 c3) h) -> (erased (Grew c1 c3) k))
-  (match erased g _
-    ((GrewBy n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 le ext)
-      (match erased h _
-        ((GrewBy m1 t1 f1 q1 b1 m1l m1sa n2 s2 e2 r2 a2 l2 sa2 le2 ext2)
-          (GrewBy n0 s0 e0 r0 a0 l0 sa0 n2 s2 e2 r2 a2 l2 sa2 (le-trans n0 n1 n2 le le2) (ext-trans n0 n1 e0 e1 e2 le ext ext2)))))))
+  (let-match erased g (GrewBy n0 s0 e0 r0 a0 l0 sa0 n1 s1 e1 r1 a1 l1 sa1 le ext))
+  (match erased h _
+    ((GrewBy m1 t1 f1 q1 b1 m1l m1sa n2 s2 e2 r2 a2 l2 sa2 le2 ext2)
+      (GrewBy n0 s0 e0 r0 a0 l0 sa0 n2 s2 e2 r2 a2 l2 sa2 (le-trans n0 n1 n2 le le2) (ext-trans n0 n1 e0 e1 e2 le ext ext2)))))
 
 (def-fns _ $ (erased grew-refl : (erased (Ctx) ctx) -> (erased (Grew ctx ctx) g))
   (match erased ctx _ ((MkCtx n s e r a l sa) (GrewBy n s e r a l sa n s e r a l sa (lt-succ n) (ExtRefl n e)))))
@@ -712,32 +702,27 @@
       ((AbsHit a x k p) (ScBound e0 m k (index-of-lt ids x k m p (layout-length _ ids d m ly))))
       ((AbsBound a k) (match erased bt _ ((ScBound b d0 k0 lt) (ScBound e0 m k (lt-le k d m lt (layout-le _ ids d m ly))))))
       ((AbsTyApp a h h2 ps ps2 as as2 ids1 p t3 q)
-        (match erased bt _
-          ((ScTyApp b d0 h0 ps0 as0 dout bh bps bas n)
-            (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t3))
-            (ScTyApp e0 m h2 ps2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t3 n)))))
+        (let-match erased bt (ScTyApp b d0 h0 ps0 as0 dout bh bps bas n))
+        (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t3))
+        (ScTyApp e0 m h2 ps2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t3 n)))
       ((AbsValApp a h h2 ps ps2 r r2 as as2 ids1 p t3 pr q)
-        (match erased bt _
-          ((ScValApp b d0 h0 ps0 r0 as0 dout bh bps br bas n)
-            (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t3))
-            (ScValApp e0 m h2 ps2 r2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers n0 e0 ids1 e1 dout m1 r r2 c1 ly1 br pr) (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t3 n)))))
+        (let-match erased bt (ScValApp b d0 h0 ps0 r0 as0 dout bh bps br bas n))
+        (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 dout c ly bps t3))
+        (ScValApp e0 m h2 ps2 r2 as2 m1 (abstract-covers n0 e0 ids e1 d m h h2 c ly bh p) sps (abstract-covers n0 e0 ids1 e1 dout m1 r r2 c1 ly1 br pr) (abstract-covers-list n0 e0 ids e1 d m as as2 c ly bas q) (abstract-len-eq ids ids as as2 ps ps2 ids1 q t3 n)))
       ((AbsUniv a) (ScUniv e0 m))
       ((AbsFn a l l2 ps ps2 rs rs2 ids1 ids2 p q r)
-        (match erased bt _
-          ((ScFn b d0 l0 ps0 rs0 d1 d2 bl bps brs)
-            (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
-            (let ((erased m2) (erased srs) (erased c2) (erased ly2)) (abstract-covers-tele n0 e0 ids1 e1 d1 m1 rs rs2 ids2 d2 c1 ly1 brs r))
-            (ScFn e0 m l2 ps2 rs2 m1 m2 (abstract-covers n0 e0 ids e1 d m l l2 c ly bl p) sps srs))))
+        (let-match erased bt (ScFn b d0 l0 ps0 rs0 d1 d2 bl bps brs))
+        (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
+        (let ((erased m2) (erased srs) (erased c2) (erased ly2)) (abstract-covers-tele n0 e0 ids1 e1 d1 m1 rs rs2 ids2 d2 c1 ly1 brs r))
+        (ScFn e0 m l2 ps2 rs2 m1 m2 (abstract-covers n0 e0 ids e1 d m l l2 c ly bl p) sps srs))
       ((AbsTyCtor a ps ps2 ids1 q)
-        (match erased bt _
-          ((ScTyCtor b d0 ps0 d1 bps)
-            (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
-            (ScTyCtor e0 m ps2 m1 sps))))
+        (let-match erased bt (ScTyCtor b d0 ps0 d1 bps))
+        (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
+        (ScTyCtor e0 m ps2 m1 sps))
       ((AbsValCtor a ps ps2 r r2 ids1 q p)
-        (match erased bt _
-          ((ScValCtor b d0 ps0 r0 d1 bps br)
-            (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
-            (ScValCtor e0 m ps2 r2 m1 sps (abstract-covers n0 e0 ids1 e1 d1 m1 r r2 c1 ly1 br p)))))))
+        (let-match erased bt (ScValCtor b d0 ps0 r0 d1 bps br))
+        (let ((erased m1) (erased sps) (erased c1) (erased ly1)) (abstract-covers-tele n0 e0 ids e1 d m ps ps2 ids1 d1 c ly bps q))
+        (ScValCtor e0 m ps2 r2 m1 sps (abstract-covers n0 e0 ids1 e1 d1 m1 r r2 c1 ly1 br p)))))
   ((erased abstract-covers-list : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) ids) (erased (List (Ent)) e1) (erased (Nat) d) (erased (Nat) m) (erased (List (Term)) ts) (erased (List (Term)) us)
       (erased (Covers n0 e0 ids e1) c) (erased (Layout (Nat) ids d m) ly) (erased (ScopedList e1 d ts) bt) (subterm erased (AbstractList ids ts us) ab) -> (erased (ScopedList e0 m us) su))
     (match erased ab _
@@ -748,10 +733,9 @@
       (erased (Nat) mout) (erased (ScopedTele e0 m fs mout) su) (erased (Covers n0 e0 out e1) c2) (erased (Layout (Nat) out dout mout) ly2))
     (let-match erased ab (AbsTCons a s i t u es2 fs2 out2 p q)
       ((AbsTNil a) (match erased bt _ ((ScTNil b d0) (values m (ScTNil e0 m) c ly)))))
-    (match erased bt _
-      ((ScTCons b d0 s0 i0 t0 es0 dout0 b1 b2)
-        (let ((erased mout) (erased sfs) (erased c2) (erased ly2)) (abstract-covers-tele n0 e0 (Cons _ (None _) ids) e1 (Succ d) (Succ m) es2 fs2 out2 dout (CovNone n0 e0 ids e1 c) (LayNone _ ids d m ly) b2 q))
-        (values mout (ScTCons e0 m s i u fs2 mout (abstract-covers n0 e0 ids e1 d m t u c ly b1 p) sfs) c2 ly2)))))
+    (let-match erased bt (ScTCons b d0 s0 i0 t0 es0 dout0 b1 b2))
+    (let ((erased mout) (erased sfs) (erased c2) (erased ly2)) (abstract-covers-tele n0 e0 (Cons _ (None _) ids) e1 (Succ d) (Succ m) es2 fs2 out2 dout (CovNone n0 e0 ids e1 c) (LayNone _ ids d m ly) b2 q))
+    (values mout (ScTCons e0 m s i u fs2 mout (abstract-covers n0 e0 ids e1 d m t u c ly b1 p) sfs) c2 ly2)))
 
 (def-fns _
   ((erased below-cons : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) t) (erased (Nat) k) (erased (Term) s) (erased (Nat) top)

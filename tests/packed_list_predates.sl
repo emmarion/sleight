@@ -19,9 +19,8 @@
 (def-fns K $ (many run-all : (subterm many (List (Packed)) qs) (erased (Predates (List (Packed)) qs K) pq) (many (Nat) x) -> (many (Nat) y))
   (let-match many qs (Cons a p rest) ((Nil a) x))
   (let ((erased sr)) (prove-subterm rest qs))
-  (match many p _
-    ((Pack l f)
-      (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))
-      (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))))
+  (let-match many p (Pack l f))
+  (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))
+  (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))
 
 (run-all ps pk 3)

@@ -23,10 +23,9 @@
 
 (def-fns X
   ((many size : (subterm many (Tree) t) -> (many (Nat) n))
-    (match many t (((Nat) r))
-      ((Node kids)
-        (let ((erased p)) (prove-subterm kids t))
-        (Succ (notail $ fsize (subterm p) kids)))))
+    (let-match many t (Node kids))
+    (let ((erased p)) (prove-subterm kids t))
+    (Succ (notail $ fsize (subterm p) kids)))
   ((many fsize : (subterm many (Forest) f) -> (many (Nat) n))
     (let-match many f (FCons t rest) ((FNil) (Zero)))
     (let ((erased p)) (prove-subterm t f))
