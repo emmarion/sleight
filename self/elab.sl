@@ -4486,7 +4486,7 @@
                                     (let ((many env6)) $ error-unless env5 (or (not $ mult-is-many smult) $ mult-is-many mk) $ str-cat (qname env5 c3) " is phantom")
                                     ; covered-of tests each alternative in an independent branch environment;
                                     ; phantom alternatives count too, even when they cannot run.
-                                    (let ((many env6r) (many real) (many seen)) $ notail $ elab-branches sugar branches env6 ctx tid sres smult mctors (Nil _) erased-one (Nil _) (Cons _ c3 $ Nil _) (BFalse) saved (env-uses env6) (env-uses env6) $ BTrue)
+                                    (let ((many env6r) (many real) (many seen)) $ notail $ elab-branches sugar branches env6 ctx tid sres smult mctors (Nil _) erased-one (Nil _) (Cons _ c3 $ Nil _) (and (mult-is-once smult) (cells-allowed env6 mid)) saved (env-uses env6) (env-uses env6) $ BTrue)
                                     (let ((many env6a) (many other) (many reachable) (many covered))
                                       $ covered-of mctors (check-coverage mctors env6r seen) seen sres smult (None _) (BFalse) $ Nil _)
                                     (let ((many (Env) env6b))

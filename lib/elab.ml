@@ -1191,13 +1191,13 @@ and scrutinee ?res env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match ?(demand = Fixed) ?(refute = false) ?res ?(skip = []) tele env expect l args =
+and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
       let smult = if res <> None then Erased else written pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
-      let extra = smult = Unique && cells_allowed env mid in
+      let extra = match cells with Some c -> c | None -> smult = Unique && cells_allowed env mid in
       let branch_uses = ref env.uses in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
@@ -1577,7 +1577,7 @@ and elab_let_match spos env l args =
               error_with l (forced_notes env l sres trial) "constructor %s is not refuted, so %s needs an ordinary `match`" (qname env other) (qname env tid)
             | None -> ()))
         ctors;
-      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
+      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(smult = Unique && cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
       let tele, ret = ctor_type env pl c in
       let fields, name = split_cell_pattern env pl (smult = Unique && cells_allowed env mid) fields in
       let names = field_names env pl c tele fields in
