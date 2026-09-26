@@ -31,7 +31,7 @@
         ((Succ b3) (Right (NatEq a b1) (Lt a b1) (LtZ b3)))))
     ((LtS a1 b2 p1)
       (match erased b1 _
-        ((Zero) (match erased p1 _ (absurd LtZ) (absurd LtS)))
+        (absurd (Zero) p1)
         ((Succ b3)
           (match erased (le-split (subterm _) b3 a1 p1) _
             ((Left A B e) (match erased e _ ((NatRefl z) (Left (NatEq a b1) (Lt a b1) (NatRefl a)))))
@@ -40,7 +40,7 @@
 (def-fns L $ (erased lt-sub : (subterm erased (Nat) b) (erased (Nat) a) (erased (Lt a b) p) ->
     (erased (Subterm (Nat) a (Nat) b) q))
   (match erased b _
-    ((Zero) (match erased p _ (absurd LtZ) (absurd LtS)))
+    (absurd (Zero) p)
     ((Succ b1)
       (match erased (le-split (subterm (prove-subterm b1 b)) b1 a p) _
         ((Left A B e) (match erased e _ ((NatRefl z) (prove-subterm a b))))

@@ -23,7 +23,7 @@
     ((AddZero _) (AddSucc (Zero) k k (AddZero k)))
     ((AddSucc a _ c q) (AddSucc (Succ a) k c (add-shift a k c q)))))
 
-(def-fns _ $ (erased lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f))
+(def-fns _ $ (erased absurd lt-irrefl : (erased (Nat) a) (erased (Lt a a) p) -> (erased (False) f))
   (lt-asym a a p (lt-succ a)))
 
 (def-fns _ $ (erased wrap-fn : (erased (List $ Digit) ctx) (erased (Nat) a) (erased (Nat) x) (erased (Nat) y) (subterm erased (Wrap ctx a x) p) (erased (Wrap ctx a y) q) -> (erased (Eq (Nat) x y) e))
@@ -103,13 +103,11 @@
       (match erased p2 _
         ((SfHere _ _) (Refl (Hist B) s1))
         (absurd (SfThere _ rest _ _ q)
-          (match erased l1 (((False) _))
-            ((LenAdd _ _ _ n0 l1b) (lt-irrefl n (suffix-len _ rest s2 q n l2 n0 l1b)))))))
+          (let-match erased l1 (LenAdd _ _ _ n0 l1b)) (lt-irrefl n (suffix-len _ rest s2 q n l2 n0 l1b)))))
     ((SfThere _ rest _ _ q)
       (match erased p2 _
         (absurd (SfHere _ _)
-          (match erased l2 (((False) _))
-            ((LenAdd _ _ _ n0 l2b) (lt-irrefl n (suffix-len _ rest s1 q n l1 n0 l2b)))))
+          (let-match erased l2 (LenAdd _ _ _ n0 l2b)) (lt-irrefl n (suffix-len _ rest s1 q n l1 n0 l2b)))
         ((SfThere _ _ _ _ q2) (suffix-unique _ rest s1 s2 n q q2 l1 l2))))))
 
 (def-fns _ $ (erased ref-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)

@@ -114,16 +114,10 @@
         ((DS a b2 d1) (LtZ (Succ b2)))))
     (absurd LtS)))
 
-(def-fns _ $ (erased lt-asym : (erased (Nat) r) (erased (Nat) c) (subterm erased (Lt r c) p) (erased (Lt c (Succ r)) g) -> (erased (False) f))
+(def-fns _ $ (erased absurd lt-asym : (erased (Nat) r) (erased (Nat) c) (subterm erased (Lt r c) p) (erased (Lt c (Succ r)) g) -> (erased (False) f))
   (match erased p _
-    ((LtZ b)
-      (match erased g _
-        (absurd LtZ)
-        ((LtS x y g1) (match erased g1 _ (absurd LtZ) (absurd LtS)))))
-    ((LtS a b p1)
-      (match erased g _
-        (absurd LtZ)
-        ((LtS x y g1) (lt-asym a b p1 g1))))))
+    (absurd (LtZ b) (let-match erased g (LtS x y g1)) g1)
+    (absurd (LtS a b p1) (let-match erased g (LtS x y g1)) (lt-asym a b p1 g1))))
 
 (def-fns _ $ (erased mod-succ-lt : (erased (Nat) s) (erased (Nat) c) (erased (Nat) r) (subterm erased (Mod s c r) q) (erased (Lt (Succ r) c) lt) ->
     (erased (Mod (Succ s) c (Succ r)) q1))
@@ -255,7 +249,7 @@
 
 (def-fns _ $ (erased lt-subterm : (erased (Nat) a) (subterm erased (Nat) b) (erased (Lt a b) p) -> (erased (Subterm (Nat) a (Nat) b) s))
   (match erased b _
-    ((Zero) (match erased p _ (absurd LtZ) (absurd LtS)))
+    (absurd (Zero) p)
     ((Succ b1)
       (match erased (nat-cmp a b1) _
         ((CLt t r x y q) (subterm-trans (lt-subterm a b1 q) (prove-subterm b1 b)))
@@ -547,17 +541,13 @@
           (let ((erased ih)) (double-inj a1 a2 b1 (subterm sp) pp qq))
           (match erased ih _ ((Refl t r) (Refl (Nat) m1))))))))
 
-(def-fns _ $ (erased double-parity :
+(def-fns _ $ (erased absurd double-parity :
     (erased (Nat) a) (erased (Nat) b) (erased (Nat) e)
     (subterm erased (Double a (Succ e)) p) (erased (Double b e) q) -> (erased (False) f))
-  (match erased p _
-    (absurd D0)
-    ((DS a1 b1 pp)
-      (match erased q _
-        (absurd D0)
-        ((DS a2 b2 qq)
-          (let ((erased sp)) (prove-subterm pp p))
-          (double-parity a1 a2 b2 (subterm sp) pp qq))))))
+  (let-match erased p (DS a1 b1 pp))
+  (let-match erased q (DS a2 b2 qq))
+  (let ((erased sp)) (prove-subterm pp p))
+  (double-parity a1 a2 b2 (subterm sp) pp qq))
 
 (def-fns _ $ (erased numeral-zero :
     (erased (Nat) n) (erased (Numeral (BZ) n) v) -> (erased (Eq (Nat) n (Zero)) e))

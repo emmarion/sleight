@@ -677,11 +677,13 @@
     (many BYes : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) p) -> (NatDec a b))
     (many BNo : (erased (Nat) a) (erased (Nat) b) (erased (Neq a b) p) -> (NatDec a b))))
 
-(def-fns _ $ (erased le-lt-absurd : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) (erased (Lt b a) q) -> (erased (False) f))
+(def-fns _ $ (erased absurd le-lt-absurd : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) (erased (Lt b a) q) -> (erased (False) f))
   (lt-asym b a q p))
 
-(def-fns _ $ (erased neq-irrefl : (erased (Nat) a) (erased (Neq a a) p) -> (erased (False) f))
-  (match erased p _ ((NeqLt _ _ q) (lt-irrefl a q)) ((NeqGt _ _ q) (lt-irrefl a q))))
+(def-fns _ $ (erased absurd neq-irrefl : (erased (Nat) a) (erased (Neq a a) p) -> (erased (False) f))
+  (match erased p _
+    (absurd (NeqLt _ _ q) (lt-irrefl a q))
+    (absurd (NeqGt _ _ q) (lt-irrefl a q))))
 
 (def-fns _ $ (erased neq-sym : (erased (Nat) a) (erased (Nat) b) (erased (Neq a b) p) -> (erased (Neq b a) q))
   (match erased p _ ((NeqLt _ _ q) (NeqGt _ _ q)) ((NeqGt _ _ q) (NeqLt _ _ q))))
@@ -913,21 +915,25 @@
     (many LRuled : (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) xg) (erased (List $ Rule) rules) (many (Term) ty) (many (Term) t) (erased (MemRule xg t rules) m) -> (Looked x n f xg rules))
     (many LFree : (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) xg) (erased (List $ Rule) rules) (many (Term) ty) (erased (In x n f) p) -> (Looked x n f xg rules))))
 
-(def-fns _ $ (erased in-empty : (erased (Nat) x) (erased (In x (Zero) $ FEmpty) p) -> (erased (False) f))
-  (match erased p _))
+(def-fns _ $ (erased absurd in-empty : (erased (Nat) x) (erased (In x (Zero) $ FEmpty) p) -> (erased (False) f))
+  p)
 
 
-(def-fns _ $ (erased in-ruled-clash : (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (subterm erased (In x n f) p) (erased (RuledIn x n f) q) -> (erased (False) r))
+(def-fns _ $ (erased absurd in-ruled-clash : (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (subterm erased (In x n f) p) (erased (RuledIn x n f) q) -> (erased (False) r))
   (match erased p _
-    ((InHere _ _ _ _ _ _ _) (match erased q _))
-    ((In1 x1 d1 dd1 _ _ _ _ _ _ _ _ q1)
+    (absurd (InHere _ _ _ _ _ _ _) q)
+    (absurd (In1 x1 d1 dd1 _ _ _ _ _ _ _ _ q1)
       (match erased q _
-        ((R1 x2 _ dd2 _ _ _ _ _ _ _ _ q2) (match erased (double-inj x1 x2 d1 dd1 dd2) _ ((Refl _ _) (in-ruled-clash _ _ _ q1 q2))))
+        (absurd (R1 x2 _ dd2 _ _ _ _ _ _ _ _ q2)
+          (let-match erased (double-inj x1 x2 d1 dd1 dd2) (Refl _ _))
+          (in-ruled-clash _ _ _ q1 q2))
         (absurd (R2 x2 d2 dd2 _ _ _ _ _ _ _ _ _) (double-parity x1 x2 d2 dd1 dd2))))
-    ((In2 x1 d1 dd1 _ _ _ _ _ _ _ _ q1)
+    (absurd (In2 x1 d1 dd1 _ _ _ _ _ _ _ _ q1)
       (match erased q _
         (absurd (R1 x2 _ dd2 _ _ _ _ _ _ _ _ _) (double-parity x2 x1 d1 dd2 dd1))
-        ((R2 x2 _ dd2 _ _ _ _ _ _ _ _ q2) (match erased (double-inj x1 x2 d1 dd1 dd2) _ ((Refl _ _) (in-ruled-clash _ _ _ q1 q2))))))))
+        (absurd (R2 x2 _ dd2 _ _ _ _ _ _ _ _ q2)
+          (let-match erased (double-inj x1 x2 d1 dd1 dd2) (Refl _ _))
+          (in-ruled-clash _ _ _ q1 q2))))))
 
 ; Every key of a table is at most c: at each node, the key its path spells is, when the node holds an
 ; entry, and so on in both subtrees.
@@ -1016,10 +1022,10 @@
         (above-weaken (Cons (Digit) _ _) c c2 n1 one a1 le)
         $ above-weaken (Cons (Digit) _ _) c c2 n2 two a2 le))))
 
-(def-fns _ $ (erased taken-empty : (erased (Nat) x) (erased (Taken x (Zero) $ FEmpty) t) -> (erased (False) f))
+(def-fns _ $ (erased absurd taken-empty : (erased (Nat) x) (erased (Taken x (Zero) $ FEmpty) t) -> (erased (False) f))
   (match erased t _
-    ((TFree _ _ _ p) (in-empty _ p))
-    ((TRuled _ _ _ p) (match erased p _))))
+    (absurd (TFree _ _ _ p) (in-empty _ p))
+    (absurd (TRuled _ _ _ p) p)))
 
 (def-fns _ $ (erased taken-1 : (erased (Nat) x) (erased (Nat) d) (erased (Double x d) dd) (erased (Nat) h) (erased (Nat) n1) (erased (Nat) n2) (erased (Nat) m) (erased (Here h) here) (erased (Facts n1) one) (erased (Facts n2) two) (erased (Plus3 h n1 n2 m) p) (erased (Taken x n1 one) t) -> (erased (Taken (Succ d) m $ FNode h n1 n2 m here one two p) r))
   (match erased t _
@@ -1110,8 +1116,8 @@
             ((HFree ty)
               (let-match erased p3 (P3S h1 a1 b1 c1 q))
               (MkRemoved _ _ _ _ (FNode _ _ _ _ (HRuled ty t) one two _) $ OutHere n1 n2 c1 ty t one two q))
-            (absurd HNone (match erased p (((False) _))))
-            (absurd (HRuled _ _) (match erased p (((False) _))))))
+            (absurd HNone p)
+            (absurd (HRuled _ _) p)))
         ((H1 x1 d dd)
           (let ((erased (In x1 n1 one) q)) $ match erased p _
             ((In1 x2 _ dd2 _ _ _ _ _ _ _ _ q0) (match erased (double-inj x2 x1 d dd2 dd) _ ((Refl _ _) q0)))
@@ -1133,9 +1139,9 @@
 
 (def-fns _ $ (erased ruledin-ins : (erased (Nat) z) (erased (Nat) x) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) n2) (erased (Facts n2) f2) (subterm erased (Ins x n f n2 f2) i) (erased (RuledIn z n f) r) -> (erased (RuledIn z n2 f2) r2))
   (match erased i _
-    ((InsLeaf _ _) (match erased r _))
-    ((InsGrow1 _ _ _ _ _ _) (match erased r _))
-    ((InsGrow2 _ _ _ _ _ _) (match erased r _))
+    (absurd (InsLeaf _ _) r)
+    (absurd (InsGrow1 _ _ _ _ _ _) r)
+    (absurd (InsGrow2 _ _ _ _ _ _) r)
     ((InsHere _ _ _ _ _ _ _)
       (match erased r _
         ((R1 _ _ ddz _ _ _ _ _ _ _ _ q1) (R1 _ _ ddz _ _ _ _ _ _ _ _ q1))
@@ -1458,7 +1464,7 @@
   (let-match erased a (ARCons z ks n1 f1 r rest))
   (GAv _ _ _ _ p rest))
 
-(def-fns _ $ (erased guard-clash : (erased (Nat) v) (erased (List $ Nat) seen) (erased (Guard (TVar v) $ Cons (Nat) v seen) g) -> (erased (False) r))
+(def-fns _ $ (erased absurd guard-clash : (erased (Nat) v) (erased (List $ Nat) seen) (erased (Guard (TVar v) $ Cons (Nat) v seen) g) -> (erased (False) r))
   (let-match erased g (GAv t0 s n f p a))
   (let-match erased a (ARCons z ks n1 f1 r rest))
   (in-ruled-clash _ _ _ (fr-var n f v p) r))
@@ -1703,9 +1709,9 @@
 (def-fns _ $ (erased in-ins-out : (erased (Nat) z) (erased (Nat) x) (erased (Term) t) (erased (Nat) n0) (erased (Facts n0) f0) (erased (Nat) n1) (erased (Facts n1) f1) (erased (Nat) k) (erased (Facts k) f2)
     (subterm erased (Ins x n0 f0 n1 f1) i) (erased (Out x t n1 f1 k f2) o) (erased (In z n0 f0) p) -> (erased (In z k f2) q))
   (match erased i _
-    ((InsLeaf _ _) (match erased p _))
-    ((InsGrow1 _ _ _ _ _ _) (match erased p _))
-    ((InsGrow2 _ _ _ _ _ _) (match erased p _))
+    (absurd (InsLeaf _ _) p)
+    (absurd (InsGrow1 _ _ _ _ _ _) p)
+    (absurd (InsGrow2 _ _ _ _ _ _) p)
     ((InsHere _ _ _ _ _ _ _)
       (let-match erased o (OutHere a1 a2 a3 ty0 t0 one0 two0 p0))
       (match erased p _

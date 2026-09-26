@@ -298,10 +298,7 @@
     ((Succ k)
       (match erased xs _
         (absurd (Nil a)
-          (match erased size (((False) f))
-            ((PalLNil b)
-              (let-match erased bound (LtS x y q))
-              (match erased q _))))
+          (let-match erased size (PalLNil b)) (let-match erased bound (LtS x y q)) q)
         ((Cons a x tail3)
           (let-match erased size (PalLCons b y tail2 len1 size1))
           (let-match erased bound (LtS u v bound1))
@@ -349,7 +346,7 @@
       (let-match erased lp (PalLCons b y pt2 k lp1))
       (match erased lq _
         (absurd (PalLNil c)
-          (match erased bound (((False) f)) ((LtS u v p2) (match erased p2 _))))
+          (let-match erased bound (LtS u v p2)) p2)
         ((PalLCons c z qt j lq1)
           (let-match erased cq (PalCatCons d v qt2 tail2 out2 cq1))
           (let-match erased bound (LtS u v2 bound1))

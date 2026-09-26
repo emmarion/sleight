@@ -76,11 +76,11 @@
         (add-succ-right d1 _ _
           (add-succ-right d1 m c2 sum2))))))
 
-(def-fns _ $ (erased fp-apart-irrefl : (erased (Nat) x)
+(def-fns _ $ (erased absurd fp-apart-irrefl : (erased (Nat) x)
     (erased (NatApart x x) p) -> (erased (False) f))
   (match erased p _
-    ((ApartLt a b lt) (lt-asym x x lt (lt-succ x)))
-    ((ApartGt a b gt) (lt-asym x x gt (lt-succ x)))))
+    (absurd (ApartLt a b lt) (lt-asym x x lt (lt-succ x)))
+    (absurd (ApartGt a b gt) (lt-asym x x gt (lt-succ x)))))
 
 (def-fns _ $ (erased fp-lcp-lower : (erased (List (Nat)) left right)
     (erased (Nat) radius k) (subterm erased (List (Nat)) w)
@@ -109,7 +109,7 @@
     ((DS a1 aa1 pa1)
       (match erased pb _
         (absurd (D0)
-          (match erased bound (((False) f)) ((LtS x y p) (match erased p _))))
+          (let-match erased bound (LtS x y p)) p)
         ((DS b1 bb1 pb1)
           (let-match erased bound (LtS x y p))
           (LtS _ _
@@ -283,7 +283,7 @@
     (absurd (CGt t r a b gt) (lt-asym candidate answer gt le))
     ((CLt t r a b lt)
       (match erased candidate _
-        (absurd (Zero) (match erased lt (((False) f))))
+        (absurd (Zero) lt)
         ((Succ k)
           (let ((erased ws) (erased wins) (erased absent))
             (fp-bounded-windows (Nil _) xs answer k bounds lt))

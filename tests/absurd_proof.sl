@@ -10,8 +10,7 @@
 (def-lvl Y)
 
 (def-fns Y $ (many absurd succ-not-zero : (erased (Nat) k) (many (IsZero (Succ k)) p) -> (many (False) f))
-  (match erased p (((False) f))
-    (absurd ItIsZero)))
+  p)
 
 (def-lvl Z)
 (let ((erased pz)) (prove-predates Y Z))

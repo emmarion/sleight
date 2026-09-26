@@ -29,7 +29,7 @@
     (erased (PalLength (Nat) inner n) ilen)
     (erased (PalConcat (Nat) inner (Cons (Nat) last (Nil (Nat))) xs) cat))
   (match many xs _
-    (absurd (Nil a) (match erased len (((False) f))))
+    (absurd (Nil a) len)
     ((Cons a x rest)
       (let-match erased len (PalLCons b y tail3 k plen))
       (match many rest _

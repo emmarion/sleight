@@ -15,7 +15,7 @@
       (let ((erased ih)) (pow2-gt k1 v1 p1))
       (let ((erased vw))
         (match erased d (((Lt v1 w) x))
-          ((D0) (match erased ih _ (absurd LtZ) (absurd LtS)))
+          (absurd (D0) ih)
           ((DS a b d1) (LtS a (Succ b) (double-le a b d1)))))
       (lt-le-trans (Succ k1) (Succ v1) w (LtS k1 v1 ih) (LtS v1 w vw)))))
 

@@ -151,16 +151,18 @@
     ((RRHere a b c rest ks)
       (match erased q _
         ((RRHere a2 b2 c2 rest2 ks2) (SameRankRefl r k))
-        ((RRThere a2 y b2 s c2 k3 rest2 ks2 n q2) (match erased (neq-irrefl x n) _))))
+        (absurd (RRThere a2 y b2 s c2 k3 rest2 ks2 n q2) (neq-irrefl x n))))
     ((RRThere a y b s c k3 rest ks n p2)
       (match erased q _
-        ((RRHere a2 b2 c2 rest2 ks2) (match erased (neq-irrefl x n) _))
+        (absurd (RRHere a2 b2 c2 rest2 ks2) (neq-irrefl x n))
         ((RRThere a2 y2 b2 s2 c2 k4 rest2 ks2 n2 q2) (rule-rank-unique rest ks x r k r2 k2 p2 q2))))))
 
-(def-fns _ $ (erased rule-of-no-rule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (subterm erased (RuleOf rules x r) p) (erased (NoRule rules x) q) -> (erased (False) f))
+(def-fns _ $ (erased absurd rule-of-no-rule : (erased (List (Rule)) rules) (erased (Nat) x) (erased (Term) r) (subterm erased (RuleOf rules x r) p) (erased (NoRule rules x) q) -> (erased (False) f))
   (match erased p _
-    ((RuleHere y s rest) (match erased q _ ((NoRuleCons a b c d n e) (neq-irrefl x n))))
-    ((RuleThere a y s t rest n p2) (match erased q _ ((NoRuleCons a2 b2 c2 d2 n2 q2) (rule-of-no-rule rest x r p2 q2))))))
+    (absurd (RuleHere y s rest) (let-match erased q (NoRuleCons a b c d n e)) (neq-irrefl x n))
+    (absurd (RuleThere a y s t rest n p2)
+      (let-match erased q (NoRuleCons a2 b2 c2 d2 n2 q2))
+      (rule-of-no-rule rest x r p2 q2))))
 
 (def-fns _ $ (erased valid-below : (erased (List (Rule)) all) (erased (List (Nat)) ar) (erased (List (Rule)) rs) (erased (List (Nat)) ks) (erased (Nat) x) (erased (Term) r) (erased (Nat) k)
     (erased (ValidFrom all ar rs ks) v) (subterm erased (RuleRank rs ks x r k) p) -> (erased (Below all ar r k) b))

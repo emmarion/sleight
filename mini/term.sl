@@ -102,7 +102,7 @@
             (match many m _
               ((Some b v) (values v (SubHit subs k v p)))
               ((None b) (values (Bound k) (SubSkip subs k p)))))
-          (absurd (NthMiss a l i p) (match erased ct (((False) f)) ((ClBound c k0 lt) (no-nth-lt _ subs n k ln lt p))))))
+          (absurd (NthMiss a l i p) (let-match erased ct (ClBound c k0 lt)) (no-nth-lt _ subs n k ln lt p))))
       ((TyApp h ps as)
         (match erased ct _
           ((ClTyApp c h0 ps0 as0 out ch cps cas)

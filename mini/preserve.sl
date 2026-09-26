@@ -8,10 +8,10 @@
     ((RuleHere _ b rest)
       (match erased q _
         ((RuleHere a2 b2 rest2) (Refl (Term) r))
-        ((RuleThere a2 y b2 s rest2 n q2) (match erased (neq-irrefl x n) _))))
+        (absurd (RuleThere a2 y b2 s rest2 n q2) (neq-irrefl x n))))
     ((RuleThere _ y b s rest n p2)
       (match erased q _
-        ((RuleHere a2 b2 rest2) (match erased (neq-irrefl x n) _))
+        (absurd (RuleHere a2 b2 rest2) (neq-irrefl x n))
         ((RuleThere a2 y2 b2 s2 rest2 n2 q2) (rule-of-unique rest x r r2 p2 q2))))))
 
 (def-fns _
@@ -20,10 +20,10 @@
       ((CanRule _ x r b rp cp)
         (match erased q _
           ((CanRule a2 x2 r2 b2 rq cq) (match erased (rule-of-unique rules x r r2 rp rq) _ ((Refl c d) (canon-unique rules r u u2 cp cq))))
-          ((CanFree a2 x2 nq) (match erased (rule-of-no-rule rules x r rp nq) _))))
+          (absurd (CanFree a2 x2 nq) (rule-of-no-rule rules x r rp nq))))
       ((CanFree _ x np)
         (match erased q _
-          ((CanRule a2 x2 r2 b2 rq cq) (match erased (rule-of-no-rule rules x r2 rq np) _))
+          (absurd (CanRule a2 x2 r2 b2 rq cq) (rule-of-no-rule rules x r2 rq np))
           ((CanFree a2 x2 nq) (Refl (Term) (Ref x)))))
       ((CanBound _ k3) (match erased q _ ((CanBound a2 k2) (Refl (Term) (Bound k3)))))
       ((CanTyApp _ h h2 ps as as2 ph pas)

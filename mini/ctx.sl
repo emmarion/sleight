@@ -610,10 +610,10 @@
     ((EntHere a c d rest)
       (match erased q _
         ((EntHere a2 c2 d2 rest2) (SameEntRefl ty k))
-        ((EntThere a2 y c2 ty3 d2 k3 rest2 nq q2) (match erased (neq-irrefl x nq) _))))
+        (absurd (EntThere a2 y c2 ty3 d2 k3 rest2 nq q2) (neq-irrefl x nq))))
     ((EntThere a y c ty3 d k3 rest nq p2)
       (match erased q _
-        ((EntHere a2 c2 d2 rest2) (match erased (neq-irrefl x nq) _))
+        (absurd (EntHere a2 c2 d2 rest2) (neq-irrefl x nq))
         ((EntThere a2 y2 c2 ty4 d2 k4 rest2 nq2 q2) (ent-of-unique rest x ty k ty2 k2 p2 q2))))))
 
 (def-fns _ $ (erased has-ent-lt : (erased (Nat) n) (erased (List (Ent)) ents) (erased (Nat) x) (erased (BoundedEnts n ents) b) (subterm erased (HasEnt ents x) h) -> (erased (Lt x n) lt))
@@ -621,10 +621,10 @@
     ((HEHere a ty k rest) (match erased b _ ((BECons c d e g i lt q) lt)))
     ((HEThere a e rest p) (match erased b _ ((BECons c d g i j lt q) (has-ent-lt n rest x q p))))))
 
-(def-fns _ $ (erased has-ent-no-ent : (erased (List (Ent)) ents) (erased (Nat) x) (subterm erased (HasEnt ents x) h) (erased (NoEnt ents x) m) -> (erased (False) f))
+(def-fns _ $ (erased absurd has-ent-no-ent : (erased (List (Ent)) ents) (erased (Nat) x) (subterm erased (HasEnt ents x) h) (erased (NoEnt ents x) m) -> (erased (False) f))
   (match erased h _
-    ((HEHere a ty k rest) (match erased m _ ((NoEntCons c y d e g nq p) (neq-irrefl x nq))))
-    ((HEThere a e rest p) (match erased m _ ((NoEntCons c y d g i nq q) (has-ent-no-ent rest x p q))))))
+    (absurd (HEHere a ty k rest) (let-match erased m (NoEntCons c y d e g nq p)) (neq-irrefl x nq))
+    (absurd (HEThere a e rest p) (let-match erased m (NoEntCons c y d g i nq q)) (has-ent-no-ent rest x p q))))
 
 (def-fns _ $ (erased adt-of-scoped : (erased (List (Ent)) ents) (erased (List (Adt)) adts) (erased (Nat) t) (erased (List (Nat)) ctors) (erased (ScopedAdts ents adts) b) (subterm erased (AdtOf adts t ctors) p) ->
     (erased (HasEnt ents t) h) (erased (AllCtor ents ctors) cs))
@@ -721,7 +721,7 @@
     ((CovNil a b) h)
     ((CovSome a b acc2 e2 y ty k le c2)
       (match erased h _
-        ((HEHere a2 ty2 k2 rest) (match erased ni _ ((NotInSome x2 y2 rest2 nq p) (match erased (neq-irrefl x nq) _))))
+        (absurd (HEHere a2 ty2 k2 rest) (let-match erased ni (NotInSome x2 y2 rest2 nq p)) (neq-irrefl x nq))
         ((HEThere a2 ent rest p) (match erased ni _ ((NotInSome x2 y2 rest2 nq p2) (covers-has n0 e0 acc2 e2 x p2 c2 p))))))
     ((CovNone a b acc2 e2 c2) (match erased ni _ ((NotInNone x2 rest p) (covers-has n0 e0 acc2 e2 x p c2 h))))))
 

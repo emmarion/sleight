@@ -28,7 +28,7 @@
     ((RPNil a) (NoRuleNil x))
     ((RPCons a y t rest ty2 k2 e2 nd q)
       (match erased (nat-dec x y) _
-        ((NDSame z) (match erased (ent-of-unique ents x ty (KDecl) ty2 k2 e e2) _ ((SameEntRefl c d) (match erased nd _))))
+        (absurd (NDSame z) (let-match erased (ent-of-unique ents x ty (KDecl) ty2 k2 e e2) (SameEntRefl c d)) nd)
         ((NDDiff z w nq) (NoRuleCons x y t rest nq (decl-no-rule ents rest x ty e q)))))))
 
 ; ---- Helpers over the context and lists, each returning what it built with its derivation.
@@ -425,12 +425,18 @@
     ((LENil a b) (LENil _ _))
     ((LECons a b x y xs2 ys2 p2) (LECons _ _ y x ys2 xs2 (len-eq-sym _ _ xs2 ys2 p2)))))
 ; A marked position of a telescope has an id in a list of the telescope's length.
-(def-fns _ $ (erased nth-marked : (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Nat) j) (subterm erased (MarkedIndex ps i j) mi) (erased (LenEq (Entry) (Nat) ps ids) le) (erased (NoNth (Nat) ids i) nn) ->
+(def-fns _ $ (erased absurd nth-marked : (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (Nat) i) (erased (Nat) j) (subterm erased (MarkedIndex ps i j) mi) (erased (LenEq (Entry) (Nat) ps ids) le) (erased (NoNth (Nat) ids i) nn) ->
     (erased (False) f))
   (match erased mi _
-    ((MIHere _ t es) (match erased le _ ((LECons a b x y xs ys p) (match erased nn _))))
-    ((MIYes _ t es i2 j2 p) (match erased le _ ((LECons a b x y xs ys q) (match erased nn _ ((NoNthCons c d rest i3 nn2) (nth-marked es ys i2 j2 p q nn2))))))
-    ((MINo _ t es i2 j2 p) (match erased le _ ((LECons a b x y xs ys q) (match erased nn _ ((NoNthCons c d rest i3 nn2) (nth-marked es ys i2 j2 p q nn2))))))))
+    (absurd (MIHere _ t es) (let-match erased le (LECons a b x y xs ys p)) nn)
+    (absurd (MIYes _ t es i2 j2 p)
+      (let-match erased le (LECons a b x y xs ys q))
+      (let-match erased nn (NoNthCons c d rest i3 nn2))
+      (nth-marked es ys i2 j2 p q nn2))
+    (absurd (MINo _ t es i2 j2 p)
+      (let-match erased le (LECons a b x y xs ys q))
+      (let-match erased nn (NoNthCons c d rest i3 nn2))
+      (nth-marked es ys i2 j2 p q nn2))))
 
 ; Scope of what the helpers build.
 (def-fns _ $ (erased sc-somes : (erased (Ctx) ctx) (erased (List (Term)) as) (erased (List (Maybe (Term))) subs) (erased (Nat) m) (erased (Length (Term) as m) ln) (erased (ScL ctx (Zero) as) p) (erased (Somes as subs) so) ->

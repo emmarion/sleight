@@ -10,10 +10,8 @@
 (def-lvl Y)
 (def-fns Y $ (many absurd clash : (erased (Nat) n) (erased (Numeral (BZ) n) v0) (erased (Numeral (B1 (BZ)) n) v1) ->
     (many (False) f))
-  (match erased v0 (((False) g))
-    ((NZ) (match erased v1 _ (absurd NZ) (absurd N1) (absurd N2)))
-    (absurd N1)
-    (absurd N2)))
+  (let-match erased v0 (NZ))
+  v1)
 
 (def-lvl Z)
 (let ((erased pz)) (prove-predates Y Z))

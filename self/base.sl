@@ -521,8 +521,8 @@
 
 ; ---- lemmas over the prelude's Lt and Double, shared with heap.sl and core.sl's fact table
 
-(def-fns _ $ (erased lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f))
-  (match erased p _ (absurd LtZ) (absurd LtS)))
+(def-fns _ $ (erased absurd lt-zero : (erased (Nat) a) (erased (Lt a (Zero)) p) -> (erased (False) f))
+  p)
 
 (def-fns _ $ (erased le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a (Succ c)) r))
   (lt-le-trans a (Succ b) (Succ c) p (LtS b (Succ c) q)))
@@ -601,7 +601,7 @@
     ((AddSucc a0 b0 c0 p0)
       (match erased q _
         (absurd (AddZero _)
-          (match erased la (((False) _)) ((LtS _ _ la0) (lt-zero a0 la0))))
+          (let-match erased la (LtS _ _ la0)) (lt-zero a0 la0))
         ((AddSucc x0 y0 z0 q0)
           (let-match erased la (LtS u v la0))
           (LtS c0 (Succ z0) (add-mono a0 b0 c0 p0 x0 y0 z0 q0 la0 lb)))))))
@@ -618,9 +618,9 @@
 
 ; ---- reading an Absent witness at the child the key's halving leads to
 
-(def-fns _ $ (erased absent-not-some : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two)
+(def-fns _ $ (erased absurd absent-not-some : (erased Type V) (erased V v) (erased (IdMap V) one) (erased (IdMap V) two)
     (erased (Absent V (Zero) (MNode V (Some V v) one two)) ab) -> (erased (False) f))
-  (match erased ab (((False) _))))
+  ab)
 
 (def-fns _ $ (erased absent-one : (erased Type V) (erased (Nat) k1) (erased (Nat) d) (erased (Double k1 d) dd)
     (erased (Maybe V) here) (erased (IdMap V) one) (erased (IdMap V) two)
