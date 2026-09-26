@@ -9,15 +9,13 @@
     ((DS a1 b1 d1) (LtS a1 (Succ (Succ b1)) (lt-weaken a1 (Succ b1) (double-le a1 b1 d1))))))
 
 (def-fns _ $ (erased pow2-gt : (erased (Nat) k) (erased (Nat) v) (subterm erased (Pow2 k v) p) -> (erased (Lt k v) l))
-  (match erased p _
-    ((P0) (LtZ (Zero)))
-    ((PS k1 v1 w p1 d)
-      (let ((erased ih)) (pow2-gt k1 v1 p1))
-      (let ((erased vw))
-        (match erased d (((Lt v1 w) x))
-          (absurd (D0) ih)
-          ((DS a b d1) (LtS a (Succ b) (double-le a b d1)))))
-      (lt-le-trans (Succ k1) (Succ v1) w (LtS k1 v1 ih) (LtS v1 w vw)))))
+  (let-match erased p (PS k1 v1 w p1 d) ((P0) (LtZ (Zero))))
+  (let ((erased ih)) (pow2-gt k1 v1 p1))
+  (let ((erased vw))
+    (match erased d (((Lt v1 w) x))
+      (absurd (D0) ih)
+      ((DS a b d1) (LtS a (Succ b) (double-le a b d1)))))
+  (lt-le-trans (Succ k1) (Succ v1) w (LtS k1 v1 ih) (LtS v1 w vw)))
 
 (let ((many two)) (Succ (Succ (Zero))))
 (let ((many three)) (Succ two))

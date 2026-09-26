@@ -20,23 +20,17 @@
 
 ; Elaborate and run a program, or answer the empty list.
 (def-fns _ $ (many run : (many (List (Raw)) program) -> (many (List (Val)) vs))
-  (match many (elab-program program) _
-    ((ProgramStuck x) (Nil _))
-    ((MkProgramDec x out p)
-      (match many out _
-        ((PErr r) (Nil _))
-        ((POk core ty)
-          (match many (eval 500 init-env core) _
-            ((EvalStuck y z) (Nil _))
-            ((MkEvaled y z vs q) vs)))))))
+  (let-match many (elab-program program) (MkProgramDec x out p) ((ProgramStuck x) (Nil _)))
+  (let-match many out (POk core ty) ((PErr r) (Nil _)))
+  (match many (eval 500 init-env core) _
+    ((EvalStuck y z) (Nil _))
+    ((MkEvaled y z vs q) vs)))
 
 ; Elaborate a program and report only the outcome's shape.
 (def-fns _ $ (many outcome : (many (List (Raw)) program) -> (many (Maybe (Reason)) r))
-  (match many (elab-program program) _
-    ((ProgramStuck x) (Some _ (RSize)))
-    ((MkProgramDec x out p)
-      (match many out _
-        ((PErr r) (Some _ r))
-        ((POk core ty) (None _))))))
+  (let-match many (elab-program program) (MkProgramDec x out p) ((ProgramStuck x) (Some _ (RSize))))
+  (match many out _
+    ((PErr r) (Some _ r))
+    ((POk core ty) (None _))))
 
 (MkUnit)

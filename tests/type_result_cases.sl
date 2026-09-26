@@ -17,12 +17,10 @@
 
 (def-lvl U)
 (def-fns U $ (many count : (erased Type B) (many (Shape B) s) (many B v) -> (many (Nat) r))
-  (match many s _
-    ((IsNat) v)
-    ((IsList)
-      (match many v _
-        ((Nil a) (Zero))
-        ((Cons a hd tl) (Succ (Zero)))))))
+  (let-match many s (IsList) ((IsNat) v))
+  (match many v _
+    ((Nil a) (Zero))
+    ((Cons a hd tl) (Succ (Zero)))))
 
 (let ((erased B) (many s) (many v)) (pick (Succ (Zero))))
 (count B s v)

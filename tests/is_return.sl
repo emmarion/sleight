@@ -11,10 +11,8 @@
 (def-lvl X)
 
 (def-fns X $ (many reify : (erased (Nat) n) (subterm many (Sing n) s) -> (many n is m))
-  (match many s ((n is m))
-    ((SZero) (Zero))
-    ((SSucc k t)
-      (let ((erased p)) (prove-subterm t s))
-      (Succ (notail $ reify k (subterm p) t)))))
+  (let-match many s (SSucc k t) ((SZero) (Zero)))
+  (let ((erased p)) (prove-subterm t s))
+  (Succ (notail $ reify k (subterm p) t)))
 
 (reify (Succ (Zero)) (SSucc (Zero) (SZero)))

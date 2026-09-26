@@ -24,20 +24,16 @@
 (let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
 (def-unique P $ (unique gone-again : (many (Result (Change)) o) -> (unique (IO P) next))
-  (match many o _
-    ((Ok a c)
-      (match many c _
-        ((Changed) (WriteOut P "deleted twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
-        ((Unchanged) (WriteOut P "absent\n" (unique-thunk (predates thunk-p) _ _ (Exit P code0))))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
+  (match many c _
+    ((Changed) (WriteOut P "deleted twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
+    ((Unchanged) (WriteOut P "absent\n" (unique-thunk (predates thunk-p) _ _ (Exit P code0))))))
 
 (def-unique P $ (unique dir-gone : (many (Result (Change)) o) -> (unique (IO P) next))
-  (match many o _
-    ((Ok a c)
-      (match many c _
-        ((Changed) (WriteOut P "cleaned\n" (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-dir-test/a.txt" gone-again))))
-        ((Unchanged) (WriteOut P "never made\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
+  (match many c _
+    ((Changed) (WriteOut P "cleaned\n" (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-dir-test/a.txt" gone-again))))
+    ((Unchanged) (WriteOut P "never made\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-unique P $ (unique drop-b : (many (Result (Change)) o) -> (unique (IO P) next))
   (DeleteDir P "io-dir-test" dir-gone))
@@ -68,20 +64,16 @@
   (WriteFile P "io-dir-test/a.txt" "" wrote-a))
 
 (def-unique P $ (unique made-twice : (many (Result (Change)) o) -> (unique (IO P) next))
-  (match many o _
-    ((Ok a c)
-      (match many c _
-        ((Changed) (WriteOut P "made twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
-        ((Unchanged) (WriteOut P "again\n" (unique-thunk (predates thunk-p) _ _ (WriteFile P "io-dir-test/b.txt" "" wrote-b))))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
+  (match many c _
+    ((Changed) (WriteOut P "made twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
+    ((Unchanged) (WriteOut P "again\n" (unique-thunk (predates thunk-p) _ _ (WriteFile P "io-dir-test/b.txt" "" wrote-b))))))
 
 (def-unique P $ (unique made-once : (many (Result (Change)) o) -> (unique (IO P) next))
-  (match many o _
-    ((Ok a c)
-      (match many c _
-        ((Changed) (WriteOut P "made\n" (unique-thunk (predates thunk-p) _ _ (MkDir P "io-dir-test" made-twice))))
-        ((Unchanged) (WriteOut P "already there\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
+  (match many c _
+    ((Changed) (WriteOut P "made\n" (unique-thunk (predates thunk-p) _ _ (MkDir P "io-dir-test" made-twice))))
+    ((Unchanged) (WriteOut P "already there\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (def-unique P $ (unique swept-dir : (many (Result (Change)) o) -> (unique (IO P) next))
   (MkDir P "io-dir-test" made-once))

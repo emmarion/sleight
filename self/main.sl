@@ -16,25 +16,23 @@
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r))
-  (match many srcs _
-    ((Nil _) env)
-    ((Cons _ ps rest)
-      (match many ps _
-        ((MkPair _ _ path src)
-          (let ((many env1)) $ env-at-loc env $ MkLoc path $ MkPos 1 1)
-          (let ((many ws)) $ indent-warnings path src)
-          (let ((many envw)) $ env-warn-all env1 ws)
-          (let ((many items) (many err) (many regions)) $ parse src)
-          (let ((many (Env) env2))
-            (match many err _
-              ((Some _ e) (match many e (((Env) _)) ((MkSynErr pos m paren note)
-                (let ((many enve0)) $ env-report envw $ located (env-at envw pos) ": syntax error: " m)
-                (let ((many enve)) $ match many note (((Env) _))
-                  ((None _) enve0)
-                  ((Some _ pn) (match many pn _ ((MkPair _ _ np nm) (env-report enve0 $ located (env-at envw np) ": note: " nm)))))
-                (match many (and paren $ list-is-empty _ ws) _ ((BTrue) (env-report enve $ shape-note path)) ((BFalse) enve)))))
-              ((None _) (end-file $ run-toplevel items $ env-set-regions envw regions))))
-          (tail $ run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))))
+  (let-match many srcs (Cons _ ps rest) ((Nil _) env))
+  (match many ps _
+    ((MkPair _ _ path src)
+      (let ((many env1)) $ env-at-loc env $ MkLoc path $ MkPos 1 1)
+      (let ((many ws)) $ indent-warnings path src)
+      (let ((many envw)) $ env-warn-all env1 ws)
+      (let ((many items) (many err) (many regions)) $ parse src)
+      (let ((many (Env) env2))
+        (match many err _
+          ((Some _ e) (match many e (((Env) _)) ((MkSynErr pos m paren note)
+            (let ((many enve0)) $ env-report envw $ located (env-at envw pos) ": syntax error: " m)
+            (let ((many enve)) $ match many note (((Env) _))
+              ((None _) enve0)
+              ((Some _ pn) (match many pn _ ((MkPair _ _ np nm) (env-report enve0 $ located (env-at envw np) ": note: " nm)))))
+            (match many (and paren $ list-is-empty _ ws) _ ((BTrue) (env-report enve $ shape-note path)) ((BFalse) enve)))))
+          ((None _) (end-file $ run-toplevel items $ env-set-regions envw regions))))
+      (tail $ run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))))
 
 (def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
   (let ((many builtins)) (make-builtins))
@@ -54,27 +52,21 @@
             (WriteOut _ out $ unique-thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))))
 
 (def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
-  (match many paths _
-    ((Nil _) (compile prelude templates interpreting pargs $ list-rev _ acc))
-    ((Cons _ path rest)
-      (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
-        (match many r _
-          ((Fail _ m)
-            (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
-              $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
-          ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
-      (ReadFile _ path after-read))))
+  (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs $ list-rev _ acc)))
+  (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
+    (match many r _
+      ((Fail _ m)
+        (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
+          $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
+      ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
+  (ReadFile _ path after-read))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.
 (def-fns util-lvl $ (many split-args : (subterm many (List $ String) args) -> (many (List $ String) files) (many (List $ String) pargs))
-  (match many args _
-    ((Nil _) (values (Nil _) (Nil _)))
-    ((Cons _ p rest)
-      (match many (str-eq p "--") _
-        ((BTrue) (values (Nil _) rest))
-        ((BFalse)
-          (let ((many files) (many pargs)) (notail $ split-args rest))
-          (values (Cons _ p files) pargs))))))
+  (let-match many args (Cons _ p rest) ((Nil _) (values (Nil _) (Nil _))))
+  (let-match many (str-eq p "--") (BFalse) ((BTrue) (values (Nil _) rest)))
+  (let ((many files) (many pargs)) (notail $ split-args rest))
+  (values (Cons _ p files) pargs))
 
 ; The flags, in any order, then the files: --no-prelude, --no-templates and --interpret. Without --no-prelude
 ; the first file is the prelude.
@@ -84,17 +76,11 @@
       (WriteErr _ "usage: slc -- [--no-prelude] [--no-templates] [--interpret] prelude.sl file.sl ... [-- arg ...] > out.ml\n"
         $ unique-thunk _ _ $ Exit _ exit-fail))
     ((Cons _ p rest)
-      (match many (str-eq p "--no-prelude") _
-        ((BTrue) (tail $ start-with rest (BFalse) templates interpreting))
-        ((BFalse)
-          (match many (str-eq p "--no-templates") _
-            ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting))
-            ((BFalse)
-              (match many (str-eq p "--interpret") _
-                ((BTrue) (tail $ start-with rest prelude templates (BTrue)))
-                ((BFalse)
-                  (let ((many files) (many pargs)) (split-args args))
-                  (read-files prelude templates interpreting pargs files $ Nil _))))))))))
+      (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting)))
+      (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting)))
+      (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue))))
+      (let ((many files) (many pargs)) (split-args args))
+      (read-files prelude templates interpreting pargs files $ Nil _))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
   (start-with args (BTrue) (BTrue) (BFalse)))

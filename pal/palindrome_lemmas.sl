@@ -31,11 +31,9 @@
 (def-fns _ $ (erased fp-concat : (erased Type A)
     (subterm erased (List A) xs) (erased (List A) ys) ->
     (erased (List A) zs) (erased (PalConcat A xs ys zs) p))
-  (match erased xs _
-    ((Nil a) (values ys (PalCatNil _ ys)))
-    ((Cons a x rest)
-      (let ((erased zs) (erased p)) (fp-concat _ rest ys))
-      (values (Cons _ x zs) (PalCatCons _ x _ _ _ p)))))
+  (let-match erased xs (Cons a x rest) ((Nil a) (values ys (PalCatNil _ ys))))
+  (let ((erased zs) (erased p)) (fp-concat _ rest ys))
+  (values (Cons _ x zs) (PalCatCons _ x _ _ _ p)))
 
 (def-fns _ $ (erased fp-concat-unique : (erased Type A)
     (erased (List A) xs ys zs ws)
@@ -57,13 +55,11 @@
     (erased (PalConcat A xy zs xyz) q) ->
     (erased (List A) yz) (erased (PalConcat A ys zs yz) r)
     (erased (PalConcat A xs yz xyz) s))
-  (match erased p _
-    ((PalCatNil a _) (values xyz q (PalCatNil _ xyz)))
-    ((PalCatCons a x rest _ out p1)
-      (let-match erased q (PalCatCons b y rest2 tail2 out2 q1))
-      (let ((erased yz) (erased r) (erased s))
-        (fp-concat-assoc _ rest ys out zs out2 p1 q1))
-      (values yz r (PalCatCons _ x _ _ _ s)))))
+  (let-match erased p (PalCatCons a x rest _ out p1) ((PalCatNil a _) (values xyz q (PalCatNil _ xyz))))
+  (let-match erased q (PalCatCons b y rest2 tail2 out2 q1))
+  (let ((erased yz) (erased r) (erased s))
+    (fp-concat-assoc _ rest ys out zs out2 p1 q1))
+  (values yz r (PalCatCons _ x _ _ _ s)))
 
 ; Associate xs ++ (ys ++ zs) to (xs ++ ys) ++ zs.
 (def-fns _ $ (erased fp-concat-unassoc : (erased Type A)
@@ -72,13 +68,11 @@
     (erased (PalConcat A ys zs yz) q) ->
     (erased (List A) xy) (erased (PalConcat A xs ys xy) r)
     (erased (PalConcat A xy zs xyz) s))
-  (match erased p _
-    ((PalCatNil a _) (values ys (PalCatNil _ ys) q))
-    ((PalCatCons a x rest _ out p1)
-      (let ((erased xy) (erased r) (erased s))
-        (fp-concat-unassoc _ rest ys zs yz out p1 q))
-      (values (Cons _ x xy) (PalCatCons _ x _ _ _ r)
-        (PalCatCons _ x _ _ _ s)))))
+  (let-match erased p (PalCatCons a x rest _ out p1) ((PalCatNil a _) (values ys (PalCatNil _ ys) q)))
+  (let ((erased xy) (erased r) (erased s))
+    (fp-concat-unassoc _ rest ys zs yz out p1 q))
+  (values (Cons _ x xy) (PalCatCons _ x _ _ _ r)
+    (PalCatCons _ x _ _ _ s)))
 
 (def-fns _ $ (erased fp-concat-length : (erased Type A)
     (erased (List A) xs ys zs) (erased (Nat) n m k)
@@ -125,20 +119,16 @@
     (erased (Nat) n len) (erased (List A) xs w)
     (subterm erased (Take A n xs w) tk) (erased (PalLength A xs len) p) ->
     (erased (Lt n (Succ len)) bound))
-  (match erased tk _
-    ((TakeZero a source) (LtZ len))
-    ((TakeSucc a k x rest out tk1)
-      (let-match erased p (PalLCons b y tail3 len1 p1))
-      (LtS _ _ (fp-take-bound _ k len1 rest out tk1 p1)))))
+  (let-match erased tk (TakeSucc a k x rest out tk1) ((TakeZero a source) (LtZ len)))
+  (let-match erased p (PalLCons b y tail3 len1 p1))
+  (LtS _ _ (fp-take-bound _ k len1 rest out tk1 p1)))
 
 (def-fns _ $ (erased fp-has-bound : (erased (List (Nat)) xs)
     (erased (Nat) n len) (subterm erased (HasPalindromeOfLength xs n) h)
     (erased (PalLength (Nat) xs len) p) -> (erased (Lt n (Succ len)) bound))
-  (match erased h _
-    ((HasHere source k w tk pal) (fp-take-bound _ n len xs w tk p))
-    ((HasThere x rest k h1)
-      (let-match erased p (PalLCons a y tail3 len1 p1))
-      (lt-weaken n _ (fp-has-bound rest n len1 h1 p1)))))
+  (let-match erased h (HasThere x rest k h1) ((HasHere source k w tk pal) (fp-take-bound _ n len xs w tk p)))
+  (let-match erased p (PalLCons a y tail3 len1 p1))
+  (lt-weaken n _ (fp-has-bound rest n len1 h1 p1)))
 
 ; The fused existential really entails the existential in the original spec.
 (def-fns _ $ (erased fp-has-windows : (erased (List (Nat)) xs)
@@ -176,12 +166,10 @@
 (def-fns _ $ (erased fp-reverse : (erased Type A)
     (subterm erased (List A) xs) ->
     (erased (List A) ys) (erased (Reverse A xs ys) rev))
-  (match erased xs _
-    ((Nil a) (values (Nil _) (RevNil _)))
-    ((Cons a x rest)
-      (let ((erased ys) (erased p)) (fp-reverse _ rest))
-      (let ((erased zs) (erased q)) (fp-concat _ ys (Cons _ x (Nil _))))
-      (values zs (RevCons _ x _ _ _ p q)))))
+  (let-match erased xs (Cons a x rest) ((Nil a) (values (Nil _) (RevNil _))))
+  (let ((erased ys) (erased p)) (fp-reverse _ rest))
+  (let ((erased zs) (erased q)) (fp-concat _ ys (Cons _ x (Nil _))))
+  (values zs (RevCons _ x _ _ _ p q)))
 
 (def-fns _ $ (erased fp-reverse-unique : (erased Type A)
     (erased (List A) xs ys zs)
@@ -293,21 +281,19 @@
     (erased (PalConcat A prefix rest xs) cat)
     (erased (PalLength A prefix n) lp) (erased (PalLength A rest m) lr)
     (erased (Add n m len) sum))
-  (match erased n _
-    ((Zero) (values (Nil _) xs len (PalCatNil _ xs) (PalLNil _) size (AddZero len)))
-    ((Succ k)
-      (match erased xs _
-        (absurd (Nil a)
-          (let-match erased size (PalLNil b)) (let-match erased bound (LtS x y q)) q)
-        ((Cons a x tail3)
-          (let-match erased size (PalLCons b y tail2 len1 size1))
-          (let-match erased bound (LtS u v bound1))
-          (let ((erased prefix) (erased rest) (erased m)
-               (erased cat) (erased lp) (erased lr) (erased sum))
-            (fp-split _ k tail3 len1 size1 bound1))
-          (values (Cons _ x prefix) rest m
-            (PalCatCons _ x _ _ _ cat)
-            (PalLCons _ x _ _ lp) lr (AddSucc _ _ _ sum)))))))
+  (let-match erased n (Succ k) ((Zero) (values (Nil _) xs len (PalCatNil _ xs) (PalLNil _) size (AddZero len))))
+  (match erased xs _
+    (absurd (Nil a)
+      (let-match erased size (PalLNil b)) (let-match erased bound (LtS x y q)) q)
+    ((Cons a x tail3)
+      (let-match erased size (PalLCons b y tail2 len1 size1))
+      (let-match erased bound (LtS u v bound1))
+      (let ((erased prefix) (erased rest) (erased m)
+           (erased cat) (erased lp) (erased lr) (erased sum))
+        (fp-split _ k tail3 len1 size1 bound1))
+      (values (Cons _ x prefix) rest m
+        (PalCatCons _ x _ _ _ cat)
+        (PalLCons _ x _ _ lp) lr (AddSucc _ _ _ sum)))))
 
 (def-fns _ $ (erased fp-split-unique : (erased Type A)
     (erased (List A) xs p r q s) (erased (Nat) n)

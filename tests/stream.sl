@@ -15,9 +15,7 @@
 (def-lvl T)
 (let ((erased kt)) (prove-predates K T))
 (def-fns T $ (many take : (subterm many (Nat) n) (many (Stream) s) -> (many (List (Nat)) out))
-  (match many n _
-    ((Zero) (Nil (Nat)))
-    ((Succ n1)
-      (match many s _
-        ((MkS h rest) (Cons (Nat) h (notail $ take (subterm (prove-subterm n1 n)) n1 (rest (predates kt)))))))))
+  (let-match many n (Succ n1) ((Zero) (Nil (Nat))))
+  (match many s _
+    ((MkS h rest) (Cons (Nat) h (notail $ take (subterm (prove-subterm n1 n)) n1 (rest (predates kt)))))))
 (take 3 (nats-from (Zero)))

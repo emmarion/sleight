@@ -18,14 +18,12 @@
 (let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
 (def-fns PA $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
-  (match many vars _
-    ((Nil a) (Exit P code0))
-    ((Cons a v rest)
-      (match many v _
-        ((MkPair b c name value)
-          (WriteOut P
-            (str-append (predates str-pa) name (str-append (predates str-pa) "=" (str-append (predates str-pa) value "\n")))
-            (unique-thunk (predates thunk-pa) _ _ (notail $ show-vars (subterm _) rest))))))))
+  (let-match many vars (Cons a v rest) ((Nil a) (Exit P code0)))
+  (match many v _
+    ((MkPair b c name value)
+      (WriteOut P
+        (str-append (predates str-pa) name (str-append (predates str-pa) "=" (str-append (predates str-pa) value "\n")))
+        (unique-thunk (predates thunk-pa) _ _ (notail $ show-vars (subterm _) rest))))))
 
 (def-unique P $ (unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
   (show-vars (predates pa-p) vars))

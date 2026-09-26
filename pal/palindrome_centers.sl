@@ -95,25 +95,21 @@
       (let-match erased len (PalLCons b y rest2 k1 len1))
       (let-match erased tl (TakeSucc c j z ls ws tl1))
       (let-match erased tr (TakeSucc d j2 z2 rs ws2 tr1))
-      (match erased common _
-        (absurd (PLApart u v l r apart) (fp-apart-irrefl x apart))
-        ((PLStep u l r radius1 p)
-          (LtS _ _
-            (fp-lcp-lower ls rs radius1 k1 rest p tl1 tr1 len1)))))))
+      (let-match erased common (PLStep u l r radius1 p) (absurd (PLApart u v l r apart) (fp-apart-irrefl x apart)))
+      (LtS _ _
+        (fp-lcp-lower ls rs radius1 k1 rest p tl1 tr1 len1)))))
 
 (def-fns _ $ (erased fp-double-mono : (erased (Nat) a aa b bb)
     (subterm erased (Double a aa) pa) (erased (Double b bb) pb)
     (erased (Lt a (Succ b)) bound) -> (erased (Lt aa (Succ bb)) out))
-  (match erased pa _
-    ((D0) (LtZ bb))
-    ((DS a1 aa1 pa1)
-      (match erased pb _
-        (absurd (D0)
-          (let-match erased bound (LtS x y p)) p)
-        ((DS b1 bb1 pb1)
-          (let-match erased bound (LtS x y p))
-          (LtS _ _
-            (LtS _ _ (fp-double-mono a1 aa1 b1 bb1 pa1 pb1 p))))))))
+  (let-match erased pa (DS a1 aa1 pa1) ((D0) (LtZ bb)))
+  (match erased pb _
+    (absurd (D0)
+      (let-match erased bound (LtS x y p)) p)
+    ((DS b1 bb1 pb1)
+      (let-match erased bound (LtS x y p))
+      (LtS _ _
+        (LtS _ _ (fp-double-mono a1 aa1 b1 bb1 pa1 pb1 p))))))
 
 (def-fns _ $ (erased fp-le-trans : (erased (Nat) a b c)
     (erased (Lt a (Succ b)) p) (erased (Lt b (Succ c)) q) ->
@@ -135,12 +131,10 @@
 (def-fns _ $ (erased fp-bounds-weaken : (erased (List (Nat)) left right)
     (erased (Nat) n m) (subterm erased (PalCenterBounds left right n) bounds)
     (erased (Lt n (Succ m)) le) -> (erased (PalCenterBounds left right m) out))
-  (match erased bounds _
-    ((PCBEnd l k) (PCBEnd left m))
-    ((PCBStep l r x k e o de do even odd twicee twiceo be bo rest)
-      (PCBStep left r x m e o de do even odd twicee twiceo
-        (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
-        (fp-bounds-weaken _ r n m rest le)))))
+  (let-match erased bounds (PCBStep l r x k e o de do even odd twicee twiceo be bo rest) ((PCBEnd l k) (PCBEnd left m)))
+  (PCBStep left r x m e o de do even odd twicee twiceo
+    (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
+    (fp-bounds-weaken _ r n m rest le)))
 
 (def-fns _ $ (erased fp-bounds-even : (erased (List (Nat)) left right)
     (erased (Nat) n) (erased (PalCenterBounds left right n) bounds) ->
@@ -229,11 +223,9 @@
     (erased (Nat) n) (erased (List A) xs w)
     (subterm erased (Take A n xs w) tk) ->
     (erased (List A) rest) (erased (PalConcat A w rest xs) cat))
-  (match erased tk _
-    ((TakeZero a source) (values xs (PalCatNil _ xs)))
-    ((TakeSucc a k x tail4 out tk1)
-      (let ((erased rest) (erased cat)) (fp-take-rest _ k tail4 out tk1))
-      (values rest (PalCatCons _ x _ _ _ cat)))))
+  (let-match erased tk (TakeSucc a k x tail4 out tk1) ((TakeZero a source) (values xs (PalCatNil _ xs))))
+  (let ((erased rest) (erased cat)) (fp-take-rest _ k tail4 out tk1))
+  (values rest (PalCatCons _ x _ _ _ cat)))
 
 ; Rule out all windows of a larger length using the center bound.
 (def-fns _ $ (erased fp-bounded-windows : (erased (List (Nat)) left)
@@ -278,17 +270,14 @@
     (erased (Lt answer (Succ candidate)) le)
     (erased (NoLargerPalindrome xs candidate) above) ->
     (erased (NoLargerPalindrome xs answer) out))
-  (match erased (nat-cmp answer candidate) _
+  (let-match erased (nat-cmp answer candidate) (CLt t r a b lt)
     ((CEq t r a) above)
-    (absurd (CGt t r a b gt) (lt-asym candidate answer gt le))
-    ((CLt t r a b lt)
-      (match erased candidate _
-        (absurd (Zero) lt)
-        ((Succ k)
-          (let ((erased ws) (erased wins) (erased absent))
-            (fp-bounded-windows (Nil _) xs answer k bounds lt))
-          (fp-bounded-above xs answer k bounds lt
-            (NoLargerStep xs k (NoPal xs candidate ws wins absent) above)))))))
+    (absurd (CGt t r a b gt) (lt-asym candidate answer gt le)))
+  (let-match erased candidate (Succ k) (absurd (Zero) lt))
+  (let ((erased ws) (erased wins) (erased absent))
+    (fp-bounded-windows (Nil _) xs answer k bounds lt))
+  (fp-bounded-above xs answer k bounds lt
+    (NoLargerStep xs k (NoPal xs candidate ws wins absent) above)))
 
 (def-fns _ $ (erased fp-centers-spec : (erased (List (Nat)) xs)
     (erased (Nat) n) (erased (PalCenterBounds (Nil (Nat)) xs n) bounds)
@@ -336,19 +325,17 @@
 (def-fns _ $ (erased fp-scanned-weaken : (erased (List (Nat)) xs left right)
     (erased (Nat) n m) (subterm erased (PalScanned xs left right n) scanned)
     (erased (Lt n (Succ m)) le) -> (erased (PalScanned xs left right m) out))
-  (match erased scanned _
-    ((PSCStart source old) (PSCStart xs m))
-    ((PSCStep source l r x old e o de do even odd twicee twiceo be bo previous)
-      (PSCStep xs l r x m e o de do even odd twicee twiceo
-        (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
-        (fp-scanned-weaken xs l _ n m previous le)))))
+  (let-match erased scanned (PSCStep source l r x old e o de do even odd twicee twiceo be bo previous)
+    ((PSCStart source old) (PSCStart xs m)))
+  (PSCStep xs l r x m e o de do even odd twicee twiceo
+    (fp-le-trans de n m be le) (fp-le-trans _ n m bo le)
+    (fp-scanned-weaken xs l _ n m previous le)))
 
 (def-fns _ $ (erased fp-scanned-close : (erased (List (Nat)) xs left right)
     (erased (Nat) n) (subterm erased (PalScanned xs left right n) scanned)
     (erased (PalCenterBounds left right n) remaining) ->
     (erased (PalCenterBounds (Nil (Nat)) xs n) all))
-  (match erased scanned _
-    ((PSCStart source bound) remaining)
-    ((PSCStep source l r x bound e o de do even odd twicee twiceo be bo previous)
-      (fp-scanned-close xs l _ n previous
-        (PCBStep l r x n e o de do even odd twicee twiceo be bo remaining)))))
+  (let-match erased scanned (PSCStep source l r x bound e o de do even odd twicee twiceo be bo previous)
+    ((PSCStart source bound) remaining))
+  (fp-scanned-close xs l _ n previous
+    (PCBStep l r x n e o de do even odd twicee twiceo be bo remaining)))

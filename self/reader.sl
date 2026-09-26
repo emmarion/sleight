@@ -21,12 +21,10 @@
 ; Where a form's first item sits, which is what a declaration's messages name: the signature rather than
 ; the entry that carries it.
 (def-fns _ $ (many raw-head-pos : (many (Raw) r) -> (many (Pos) pos))
-  (match many r _
-    ((RList l items)
-      (match many items (((Pos) _))
-        ((Cons _ h _) (raw-pos h))
-        ((Nil _) l)))
-    (else (raw-pos r))))
+  (let-match many r (RList l items) (else (raw-pos r)))
+  (match many items (((Pos) _))
+    ((Cons _ h _) (raw-pos h))
+    ((Nil _) l)))
 
 (def-adts $ (Tok : -> Type)
   enum
@@ -66,11 +64,9 @@
     ((Cons _ r rest) (match many r _ ((MkRegion _ n _ _) (match many (str-eq n name) _ ((BTrue) rest) ((BFalse) (Cons _ r $ notail $ region-drop rest name))))))))
 
 (def-fns _ $ (many region-insert : (many (Region) r) (subterm many (List $ Region) rs) -> (many (List $ Region) out))
-  (match many rs _
-    ((Nil _) (Cons _ r rs))
-    ((Cons _ q rest)
-      (match many r _ ((MkRegion i _ _ _) (match many q _ ((MkRegion j _ _ _)
-        (match many (nat-lt i j) _ ((BTrue) (Cons _ r rs)) ((BFalse) (Cons _ q $ notail $ region-insert r rest))))))))))
+  (let-match many rs (Cons _ q rest) ((Nil _) (Cons _ r rs)))
+  (match many r _ ((MkRegion i _ _ _) (match many q _ ((MkRegion j _ _ _)
+    (match many (nat-lt i j) _ ((BTrue) (Cons _ r rs)) ((BFalse) (Cons _ q $ notail $ region-insert r rest))))))))
 
 (def-fns _ $ (many regions-sorted : (subterm many (List $ Region) rs) (many (List $ Region) acc) -> (many (List $ Region) out))
   (match many rs _
@@ -118,18 +114,13 @@
 (def-fns _ $ (many delim-step : (many (Char) c) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) ->
     (many (Bool) comment) (many (Nat) line2) (many (Nat) col2) (many (List $ Tok) acc2))
   (let ((many n)) $ char-code c)
-  (match many (nat-eq n 59) _
-    ((BTrue) (values (BTrue) line (Succ col) acc))
-    ((BFalse)
-      (match many (nat-eq n 40) _
-        ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkPos line $ Succ col) acc))
-        ((BFalse)
-          (match many (nat-eq n 41) _
-            ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkPos line $ Succ col) acc))
-            ((BFalse)
-              (match many (nat-eq n 10) _
-                ((BTrue) (values (BFalse) (Succ line) 0 acc))
-                ((BFalse) (values (BFalse) line (Succ col) acc))))))))))
+  (let-match many (nat-eq n 59) (BFalse) ((BTrue) (values (BTrue) line (Succ col) acc)))
+  (let-match many (nat-eq n 40) (BFalse) ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TOpen $ MkPos line $ Succ col) acc)))
+  (let-match many (nat-eq n 41) (BFalse)
+    ((BTrue) (values (BFalse) line (Succ col) $ Cons _ (TClose $ MkPos line $ Succ col) acc)))
+  (match many (nat-eq n 10) _
+    ((BTrue) (values (BFalse) (Succ line) 0 acc))
+    ((BFalse) (values (BFalse) line (Succ col) acc))))
 
 (def-fns _ $ (many pragma-field : (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (List $ Raw) r))
   (match many start _
@@ -149,88 +140,69 @@
 ; literal's at its opening quote, as the reference reader places one.
 (def-fns _
   ((many tokenize : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (list-rev _ acc))
-      ((SCons c rest)
-        (match many (is-delim c) _
-          ((BTrue)
-            (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col acc)
-            (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
-          ((BFalse)
-            (match many (char-is c 34) _
-              ((BTrue) (tail $ string-lit rest line (Succ col) (MkPos line $ Succ col) (REmpty) acc))
-              ((BFalse)
-                (let ((many len) (erased l)) (str-length s))
-                (let-match erased l (SLenCons c0 s0 rl lr))
-                (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))))))
+    (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
+    (match many (is-delim c) _
+      ((BTrue)
+        (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col acc)
+        (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
+      ((BFalse)
+        (let-match many (char-is c 34) (BFalse)
+          ((BTrue) (tail $ string-lit rest line (Succ col) (MkPos line $ Succ col) (REmpty) acc)))
+        (let ((many len) (erased l)) (str-length s))
+        (let-match erased l (SLenCons c0 s0 rl lr))
+        (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))
   ((many comment-start : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (list-rev _ acc))
-      ((SCons c rest)
-        (match many (char-is c 33) _
-          ((BTrue) (tail $ pragma-line rest line (Succ col) (MkPos line col) (Nil _) (None _) (REmpty) (REmpty) acc))
-          ((BFalse)
-            (match many (char-is c 10) _
-              ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
-              ((BFalse) (tail $ skip-comment rest line acc))))))))
-  ((many pragma-line : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (List $ Raw) words)
-      (many (Maybe $ Pos) start) (many (Rope) cur) (many (Rope) blanks) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (end-toks (pragma-tok pos start cur words) acc))
-      ((SCons c rest)
-        (match many (char-is c 10) _
-          ((BTrue) (tail $ tokenize rest (Succ line) 0 $ Cons _ (pragma-tok pos start cur words) acc))
-          ((BFalse)
-            (match many (or (char-is c 32) $ or (char-is c 9) $ char-is c 13) _
-              ((BTrue)
-                (match many start _
-                  ((None _) (tail $ pragma-line rest line (Succ col) pos words start cur blanks acc))
-                  ((Some _ _)
-                    (match many (nat-lt (list-length _ words) $ pragma-limit words) _
-                      ((BTrue) (tail $ pragma-line rest line (Succ col) pos (pragma-field start cur words) (None _) (REmpty) (REmpty) acc))
-                      ((BFalse) (tail $ pragma-line rest line (Succ col) pos words start cur (RCat blanks $ RChar c) acc))))))
-              ((BFalse)
-                (match many start _
-                  ((None _) (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkPos line $ Succ col) (RChar c) (REmpty) acc))
-                  ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc))))))))))
-  ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (list-rev _ acc))
-      ((SCons c rest)
+    (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
+    (match many (char-is c 33) _
+      ((BTrue) (tail $ pragma-line rest line (Succ col) (MkPos line col) (Nil _) (None _) (REmpty) (REmpty) acc))
+      ((BFalse)
         (match many (char-is c 10) _
           ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
           ((BFalse) (tail $ skip-comment rest line acc))))))
+  ((many pragma-line : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (List $ Raw) words)
+      (many (Maybe $ Pos) start) (many (Rope) cur) (many (Rope) blanks) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+    (let-match many s (SCons c rest) ((SNil) (end-toks (pragma-tok pos start cur words) acc)))
+    (let-match many (char-is c 10) (BFalse)
+      ((BTrue) (tail $ tokenize rest (Succ line) 0 $ Cons _ (pragma-tok pos start cur words) acc)))
+    (match many (or (char-is c 32) $ or (char-is c 9) $ char-is c 13) _
+      ((BTrue)
+        (let-match many start (Some _ _) ((None _) (tail $ pragma-line rest line (Succ col) pos words start cur blanks acc)))
+        (match many (nat-lt (list-length _ words) $ pragma-limit words) _
+          ((BTrue) (tail $ pragma-line rest line (Succ col) pos (pragma-field start cur words) (None _) (REmpty) (REmpty) acc))
+          ((BFalse) (tail $ pragma-line rest line (Succ col) pos words start cur (RCat blanks $ RChar c) acc))))
+      ((BFalse)
+        (match many start _
+          ((None _) (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkPos line $ Succ col) (RChar c) (REmpty) acc))
+          ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc))))))
+  ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+    (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
+    (match many (char-is c 10) _
+      ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
+      ((BFalse) (tail $ skip-comment rest line acc))))
   ((many word : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (String) start) (erased (Nat) len) (erased (StrLength start len) l) (many (Nat) k) (erased (Nat) rl) (erased (StrLength s rl) lr) (erased (Add k rl len) sum) (many (Pos) pos) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (end-toks (word-tok pos start k len l rl sum) acc))
-      ((SCons c rest)
-        (match many (is-delim c) _
-          ((BTrue)
-            (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col $ Cons _ (word-tok pos start k len l rl sum) acc)
-            (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
-          ((BFalse)
-            (let-match erased lr (SLenCons c0 s0 rl1 lr1))
-            (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))))
+    (let-match many s (SCons c rest) ((SNil) (end-toks (word-tok pos start k len l rl sum) acc)))
+    (match many (is-delim c) _
+      ((BTrue)
+        (let ((many comment) (many line2) (many col2) (many acc2)) $ delim-step c line col $ Cons _ (word-tok pos start k len l rl sum) acc)
+        (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
+      ((BFalse)
+        (let-match erased lr (SLenCons c0 s0 rl1 lr1))
+        (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))
   ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
-    (match many s _
-      ((SNil) (unterminated (MkPos line $ Succ col) acc))
-      ((SCons c rest)
-        (let ((many n)) $ char-code c)
-        (match many (nat-eq n 34) _
-          ((BTrue) (tail $ tokenize rest line (Succ col) $ Cons _ (TStrLit pos $ rope-str rev) acc))
-          ((BFalse)
-            (match many (nat-eq n 92) _
-              ((BTrue)
-                (match many rest _
-                  ((SNil) (unterminated (MkPos line $ Succ col) acc))
-                  ((SCons e rest2)
-                    (match many (escape-ok e) _
-                      ((BTrue) (tail $ string-lit rest2 line (Succ (Succ col)) pos (RCat rev $ RChar $ unescape e) acc))
-                      ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ rope-str $ RCat (RStr "unknown escape \\") $ RChar e) acc))))))
-              ((BFalse)
-                (match many (nat-eq n 10) _
-                  ((BTrue) (tail $ string-lit rest (Succ line) 0 pos (RCat rev $ RChar c) acc))
-                  ((BFalse) (tail $ string-lit rest line (Succ col) pos (RCat rev $ RChar c) acc)))))))))))
+    (let-match many s (SCons c rest) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
+    (let ((many n)) $ char-code c)
+    (let-match many (nat-eq n 34) (BFalse)
+      ((BTrue) (tail $ tokenize rest line (Succ col) $ Cons _ (TStrLit pos $ rope-str rev) acc)))
+    (match many (nat-eq n 92) _
+      ((BTrue)
+        (let-match many rest (SCons e rest2) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
+        (match many (escape-ok e) _
+          ((BTrue) (tail $ string-lit rest2 line (Succ (Succ col)) pos (RCat rev $ RChar $ unescape e) acc))
+          ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ rope-str $ RCat (RStr "unknown escape \\") $ RChar e) acc))))
+      ((BFalse)
+        (match many (nat-eq n 10) _
+          ((BTrue) (tail $ string-lit rest (Succ line) 0 pos (RCat rev $ RChar c) acc))
+          ((BFalse) (tail $ string-lit rest line (Succ col) pos (RCat rev $ RChar c) acc)))))))
 
 ; A frame is an open form: where it opened, whether $ opened it, and its items so far, reversed.
 (def-adts $ (Frame : -> Type)
@@ -238,40 +210,32 @@
   (many MkFrame : (many (Pos) pos) (many (Bool) dollar) (many (List $ Raw) items) -> (Frame)))
 
 (def-fns _ $ (many push-item : (many (Raw) item) (many (List $ Frame) stack) -> (many (List $ Frame) r))
-  (match many stack _
-    ((Nil _) (Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Cons _ item $ Nil _) $ Nil _))
-    ((Cons _ f rest)
-      (match many f _
-        ((MkFrame l d items) (Cons _ (MkFrame l d $ Cons _ item items) rest))))))
+  (let-match many stack (Cons _ f rest) ((Nil _) (Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Cons _ item $ Nil _) $ Nil _)))
+  (match many f _
+    ((MkFrame l d items) (Cons _ (MkFrame l d $ Cons _ item items) rest))))
 
 ; Closes the top frame into its parent as a list.
 (def-fns _ $ (many close-top : (many (List $ Frame) stack) -> (many (List $ Frame) r))
-  (match many stack _
-    ((Nil _) stack)
-    ((Cons _ f rest)
-      (match many f _
-        ((MkFrame l _ items) (push-item (RList l $ list-rev _ items) rest))))))
+  (let-match many stack (Cons _ f rest) ((Nil _) stack))
+  (match many f _
+    ((MkFrame l _ items) (push-item (RList l $ list-rev _ items) rest))))
 
 ; Closes every $-opened frame on top of the stack, each into the frame below it.
 (def-fns _
   ((many close-dollars : (subterm many (List $ Frame) stack) -> (many (List $ Frame) r))
-    (match many stack _
-      ((Nil _) stack)
-      ((Cons _ f rest)
-        (match many f _
-          ((MkFrame l d items)
-            (match many d _
-              ((BFalse) stack)
-              ((BTrue) (tail $ close-into rest $ RList l $ list-rev _ items))))))))
+    (let-match many stack (Cons _ f rest) ((Nil _) stack))
+    (match many f _
+      ((MkFrame l d items)
+        (match many d _
+          ((BFalse) stack)
+          ((BTrue) (tail $ close-into rest $ RList l $ list-rev _ items))))))
   ((many close-into : (subterm many (List $ Frame) stack) (many (Raw) item) -> (many (List $ Frame) r))
-    (match many stack _
-      ((Nil _) (push-item item stack))
-      ((Cons _ f rest)
-        (match many f _
-          ((MkFrame l d items)
-            (match many d _
-              ((BFalse) (Cons _ (MkFrame l d $ Cons _ item items) rest))
-              ((BTrue) (tail $ close-into rest $ RList l $ list-rev _ $ Cons _ item items)))))))))
+    (let-match many stack (Cons _ f rest) ((Nil _) (push-item item stack)))
+    (match many f _
+      ((MkFrame l d items)
+        (match many d _
+          ((BFalse) (Cons _ (MkFrame l d $ Cons _ item items) rest))
+          ((BTrue) (tail $ close-into rest $ RList l $ list-rev _ $ Cons _ item items)))))))
 
 ; The stack starts with a root frame; a ) closes the $ frames above the nearest ( frame and then that
 ; frame; a ) with only the root open, a form still open at the end, or a bad token is a syntax error
@@ -284,82 +248,71 @@
 
 (def-fns _ $ (many parse-toks : (subterm many (List $ Tok) toks) (many (List $ Frame) stack) (many (List $ Region) opened) (many (List $ Region) closed) ->
     (many (List $ Frame) r) (many (Maybe $ SynErr) err) (many (List $ Region) regions))
-  (match many toks _
-    ((Nil _) (values stack (None _) $ regions-sorted opened $ regions-sorted closed $ Nil _))
-    ((Cons _ t rest)
-      (match many t _
-        ((TOpen l) (tail $ parse-toks rest (Cons _ (MkFrame l (BFalse) $ Nil _) stack) opened closed))
-        ((TDollar l) (tail $ parse-toks rest (Cons _ (MkFrame l (BTrue) $ Nil _) stack) opened closed))
-        ((TWord l w) (tail $ parse-toks rest (push-item (RAtom l w) stack) opened closed))
-        ((TStrLit l s) (tail $ parse-toks rest (push-item (RString l s) stack) opened closed))
-        ((TError l m) (values stack (syn-err l m) closed))
-        ((TPragma l ws)
-          (match many ws _
-            ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed))
-            ((Cons _ w args)
-              (match many w _
-                ((RAtom wl kw)
-                  (match many (str-eq kw "warn") _
-                    ((BTrue)
-                      (match many (nat-lt (list-length _ stack) 2) _
-                        ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
-                        ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
-                    ((BFalse)
-                      (match many (or (str-eq kw "suppress") $ str-eq kw "restore") _
-                        ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed))
+  (let-match many toks (Cons _ t rest) ((Nil _) (values stack (None _) $ regions-sorted opened $ regions-sorted closed $ Nil _)))
+  (match many t _
+    ((TOpen l) (tail $ parse-toks rest (Cons _ (MkFrame l (BFalse) $ Nil _) stack) opened closed))
+    ((TDollar l) (tail $ parse-toks rest (Cons _ (MkFrame l (BTrue) $ Nil _) stack) opened closed))
+    ((TWord l w) (tail $ parse-toks rest (push-item (RAtom l w) stack) opened closed))
+    ((TStrLit l s) (tail $ parse-toks rest (push-item (RString l s) stack) opened closed))
+    ((TError l m) (values stack (syn-err l m) closed))
+    ((TPragma l ws)
+      (match many ws _
+        ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed))
+        ((Cons _ w args)
+          (match many w _
+            ((RAtom wl kw)
+              (match many (str-eq kw "warn") _
+                ((BTrue)
+                  (match many (nat-lt (list-length _ stack) 2) _
+                    ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
+                    ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
+                ((BFalse)
+                  (let-match many (or (str-eq kw "suppress") $ str-eq kw "restore") (BTrue)
+                    ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed)))
+                  (let ((many (Maybe $ String) name)) $ match many args _
+                    ((Cons _ a more)
+                      (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
+                        ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
+                        ((BFalse) (None _))))
+                    ((Nil _) (None _)))
+                  (match many name _
+                    ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed))
+                    ((Some _ n)
+                      (match many (str-eq kw "suppress") _
                         ((BTrue)
-                          (let ((many (Maybe $ String) name)) $ match many args _
-                            ((Cons _ a more)
-                              (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
-                                ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
-                                ((BFalse) (None _))))
-                            ((Nil _) (None _)))
-                          (match many name _
-                            ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed))
-                            ((Some _ n)
-                              (match many (str-eq kw "suppress") _
-                                ((BTrue)
-                                  (match many (region-named opened n) _
-                                    ((None _) (tail $ parse-toks rest stack (Cons _ (MkRegion (nat-add (list-length _ opened) $ list-length _ closed) n l $ None _) opened) closed))
-                                    ((Some _ first)
-                                      (match many first _ ((MkRegion _ _ fp _)
-                                        (values stack (Some _ $ MkSynErr l (str-cat3 "`;! suppress warn` for `" n "` is already open") (BFalse) $ Some _ $ MkPair _ _ fp "opened here") closed))))))
-                                ((BFalse)
-                                  (match many (region-named opened n) _
-                                    ((None _) (values stack (syn-err l $ str-cat3 "`;! restore warn` for `" n "` has no open `;! suppress warn`") closed))
-                                    ((Some _ r)
-                                      (match many r _ ((MkRegion i _ from _)
-                                        (tail $ parse-toks rest stack (region-drop opened n) $ Cons _ (MkRegion i n from $ Some _ l) closed))))))))))))))
-                (else (values stack (syn-err l "a pragma needs a word after `;!`") closed))))))
-        ((TClose l)
-          (let ((many s1)) $ close-dollars stack)
-          (match many s1 _
-            ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed))
-            ((Cons _ _ s2)
-              (match many s2 _
-                ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed))
-                ((Cons _ _ _) (tail $ parse-toks rest (close-top s1) opened closed))))))))))
+                          (match many (region-named opened n) _
+                            ((None _) (tail $ parse-toks rest stack (Cons _ (MkRegion (nat-add (list-length _ opened) $ list-length _ closed) n l $ None _) opened) closed))
+                            ((Some _ first)
+                              (match many first _ ((MkRegion _ _ fp _)
+                                (values stack (Some _ $ MkSynErr l (str-cat3 "`;! suppress warn` for `" n "` is already open") (BFalse) $ Some _ $ MkPair _ _ fp "opened here") closed))))))
+                        ((BFalse)
+                          (match many (region-named opened n) _
+                            ((None _) (values stack (syn-err l $ str-cat3 "`;! restore warn` for `" n "` has no open `;! suppress warn`") closed))
+                            ((Some _ r)
+                              (match many r _ ((MkRegion i _ from _)
+                                (tail $ parse-toks rest stack (region-drop opened n) $ Cons _ (MkRegion i n from $ Some _ l) closed))))))))))))
+            (else (values stack (syn-err l "a pragma needs a word after `;!`") closed))))))
+    ((TClose l)
+      (let ((many s1)) $ close-dollars stack)
+      (let-match many s1 (Cons _ _ s2) ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed)))
+      (match many s2 _
+        ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed))
+        ((Cons _ _ _) (tail $ parse-toks rest (close-top s1) opened closed))))))
 
 ; Reads the root frame's items once nothing is open; an open form at the end is a missing ), reported
 ; for the innermost, which is the $ form's when that is what is open, at the line the form opened on.
 (def-fns _ $ (many finish-stack : (many (List $ Frame) stack) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err))
-  (match many stack _
-    ((Nil _) (values (Nil _) $ None _))
-    ((Cons _ f rest)
-      (match many rest _
-        ((Nil _) (match many f _ ((MkFrame _ _ items) (values (list-rev _ items) $ None _))))
-        ((Cons _ _ _)
-          (match many f _
-            ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l (match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")) (BTrue) $ None _))))))))
+  (let-match many stack (Cons _ f rest) ((Nil _) (values (Nil _) $ None _)))
+  (let-match many rest (Cons _ _ _) ((Nil _) (match many f _ ((MkFrame _ _ items) (values (list-rev _ items) $ None _)))))
+  (match many f _
+    ((MkFrame l d _) (values (Nil _) $ Some _ $ MkSynErr l (match many d (((String) _)) ((BTrue) "missing `)` after `$`") ((BFalse) "missing `)`")) (BTrue) $ None _))))
 
 (def-fns _ $ (many parse : (many (String) src) -> (many (List $ Raw) items) (many (Maybe $ SynErr) err) (many (List $ Region) regions))
   (let ((many stack) (many err) (many regions)) (parse-toks (tokenize src 1 0 $ Nil _)
                                             (Cons _ (MkFrame (MkPos 1 1) (BFalse) $ Nil _) $ Nil _) (Nil _) (Nil _)))
-  (match many err _
-    ((Some _ _) (values (Nil _) err $ Nil _))
-    ((None _)
-      (let ((many items) (many err2)) $ finish-stack stack)
-      (values items err2 regions))))
+  (let-match many err (None _) ((Some _ _) (values (Nil _) err $ Nil _)))
+  (let ((many items) (many err2)) $ finish-stack stack)
+  (values items err2 regions))
 
 (def-fns _
   ((many show-raw : (subterm many (Raw) r) -> (many (Rope) out))
@@ -411,14 +364,12 @@
 (def-fns _ $ (many ind-mark : (many (IndentSt) st) -> (many (IndentSt) r))
   (match many st _
     ((MkIndentSt l c d op s t u ls ts)
-      (match many s _
-        ((BTrue) st)
-        ((BFalse)
-          (let ((many (List $ Pos) ts2))
-            (match many t (((List $ Pos) _))
-              ((BTrue) (Cons _ (MkPos l $ Succ c) ts))
-              ((BFalse) ts)))
-          (MkIndentSt l c d op (BTrue) t u (Cons _ (MkIndentLine (MkPos l $ Succ c) c d) ls) ts2))))))
+      (let-match many s (BFalse) ((BTrue) st))
+      (let ((many (List $ Pos) ts2))
+        (match many t (((List $ Pos) _))
+          ((BTrue) (Cons _ (MkPos l $ Succ c) ts))
+          ((BFalse) ts)))
+      (MkIndentSt l c d op (BTrue) t u (Cons _ (MkIndentLine (MkPos l $ Succ c) c d) ls) ts2))))
 
 (def-fns _ $ (many ind-open : (many (IndentSt) st) -> (many (IndentSt) r))
   (match many (ind-plain $ ind-mark st) _
@@ -463,21 +414,13 @@
 (def-fns _ $ (many ind-delim : (many (Char) c) (many (IndentSt) st) ->
     (many (Bool) comment) (many (IndentSt) st2))
   (let ((many n)) (char-code c))
-  (match many (nat-eq n 59) _
-    ((BTrue) (values (BTrue) (ind-plain st)))
-    ((BFalse)
-      (match many (nat-eq n 40) _
-        ((BTrue) (values (BFalse) (ind-open st)))
-        ((BFalse)
-          (match many (nat-eq n 41) _
-            ((BTrue) (values (BFalse) (ind-close st)))
-            ((BFalse)
-              (match many (nat-eq n 10) _
-                ((BTrue) (values (BFalse) (ind-nl st)))
-                ((BFalse)
-                  (match many (nat-eq n 9) _
-                    ((BTrue) (values (BFalse) (ind-tab st)))
-                    ((BFalse) (values (BFalse) (ind-plain st)))))))))))))
+  (let-match many (nat-eq n 59) (BFalse) ((BTrue) (values (BTrue) (ind-plain st))))
+  (let-match many (nat-eq n 40) (BFalse) ((BTrue) (values (BFalse) (ind-open st))))
+  (let-match many (nat-eq n 41) (BFalse) ((BTrue) (values (BFalse) (ind-close st))))
+  (let-match many (nat-eq n 10) (BFalse) ((BTrue) (values (BFalse) (ind-nl st))))
+  (match many (nat-eq n 9) _
+    ((BTrue) (values (BFalse) (ind-tab st)))
+    ((BFalse) (values (BFalse) (ind-plain st)))))
 
 ; Five modes over the source: between tokens, inside a word, inside a comment, and inside a string literal
 ; or its escape. A word runs to a delimiter, which a quote is not, so only a quote met between tokens opens
@@ -485,64 +428,44 @@
 ; literal or an escape it does not know, so that what is reported is what was read, as in lib/indent.ml.
 (def-fns _
   ((many ind-scan : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
-    (match many s _
-      ((SNil) st)
-      ((SCons c rest)
-        (match many (is-delim c) _
-          ((BTrue)
-            (let ((many comment) (many st2)) (ind-delim c st))
-            (match many comment _
-              ((BTrue) (tail $ ind-comment rest st2))
-              ((BFalse) (tail $ ind-scan rest st2))))
-          ((BFalse)
-            (match many (char-is c 34) _
-              ((BTrue)
-                (match many st (((IndentSt) _))
-                  ((MkIndentSt l cl _ _ sd t _ _ _) (tail $ ind-str rest (ind-plain st) l cl sd t))))
-              ((BFalse) (tail $ ind-word rest (ind-plain $ ind-mark st)))))))))
+    (let-match many s (SCons c rest) ((SNil) st))
+    (match many (is-delim c) _
+      ((BTrue)
+        (let ((many comment) (many st2)) (ind-delim c st))
+        (match many comment _
+          ((BTrue) (tail $ ind-comment rest st2))
+          ((BFalse) (tail $ ind-scan rest st2))))
+      ((BFalse)
+        (let-match many (char-is c 34) (BTrue) ((BFalse) (tail $ ind-word rest (ind-plain $ ind-mark st))))
+        (match many st (((IndentSt) _))
+          ((MkIndentSt l cl _ _ sd t _ _ _) (tail $ ind-str rest (ind-plain st) l cl sd t))))))
   ((many ind-word : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
-    (match many s _
-      ((SNil) st)
-      ((SCons c rest)
-        (match many (is-delim c) _
-          ((BTrue)
-            (let ((many comment) (many st2)) (ind-delim c st))
-            (match many comment _
-              ((BTrue) (tail $ ind-comment rest st2))
-              ((BFalse) (tail $ ind-scan rest st2))))
-          ((BFalse) (tail $ ind-word rest (ind-plain st)))))))
+    (let-match many s (SCons c rest) ((SNil) st))
+    (let-match many (is-delim c) (BTrue) ((BFalse) (tail $ ind-word rest (ind-plain st))))
+    (let ((many comment) (many st2)) (ind-delim c st))
+    (match many comment _
+      ((BTrue) (tail $ ind-comment rest st2))
+      ((BFalse) (tail $ ind-scan rest st2))))
   ((many ind-comment : (subterm many (String) s) (many (IndentSt) st) -> (many (IndentSt) r))
-    (match many s _
-      ((SNil) st)
-      ((SCons c rest)
-        (match many (char-is c 10) _
-          ((BTrue) (tail $ ind-scan rest (ind-nl st)))
-          ((BFalse) (tail $ ind-comment rest (ind-plain st)))))))
+    (let-match many s (SCons c rest) ((SNil) st))
+    (match many (char-is c 10) _
+      ((BTrue) (tail $ ind-scan rest (ind-nl st)))
+      ((BFalse) (tail $ ind-comment rest (ind-plain st)))))
   ((many ind-str : (subterm many (String) s) (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc)
        (many (Bool) os) (many (Bool) ot) -> (many (IndentSt) r))
-    (match many s _
-      ((SNil) st)
-      ((SCons c rest)
-        (match many (char-is c 34) _
-          ((BTrue) (tail $ ind-scan rest (ind-close-str (ind-plain st) ol oc os ot)))
-          ((BFalse)
-            (match many (char-is c 92) _
-              ((BTrue) (tail $ ind-str-esc rest (ind-plain st) ol oc os ot))
-              ((BFalse)
-                (match many (char-is c 10) _
-                  ((BTrue) (tail $ ind-str rest (ind-nl st) ol oc os ot))
-                  ((BFalse)
-                    (match many (char-is c 9) (((IndentSt) _))
-                      ((BTrue) (tail $ ind-str rest (ind-tab st) ol oc os ot))
-                      ((BFalse) (tail $ ind-str rest (ind-plain st) ol oc os ot))))))))))))
+    (let-match many s (SCons c rest) ((SNil) st))
+    (let-match many (char-is c 34) (BFalse) ((BTrue) (tail $ ind-scan rest (ind-close-str (ind-plain st) ol oc os ot))))
+    (let-match many (char-is c 92) (BFalse) ((BTrue) (tail $ ind-str-esc rest (ind-plain st) ol oc os ot)))
+    (let-match many (char-is c 10) (BFalse) ((BTrue) (tail $ ind-str rest (ind-nl st) ol oc os ot)))
+    (match many (char-is c 9) (((IndentSt) _))
+      ((BTrue) (tail $ ind-str rest (ind-tab st) ol oc os ot))
+      ((BFalse) (tail $ ind-str rest (ind-plain st) ol oc os ot))))
   ((many ind-str-esc : (subterm many (String) s) (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc)
        (many (Bool) os) (many (Bool) ot) -> (many (IndentSt) r))
-    (match many s _
-      ((SNil) st)
-      ((SCons c rest)
-        (match many (escape-ok c) _
-          ((BFalse) st)
-          ((BTrue) (tail $ ind-str rest (ind-plain st) ol oc os ot)))))))
+    (let-match many s (SCons c rest) ((SNil) st))
+    (match many (escape-ok c) _
+      ((BFalse) st)
+      ((BTrue) (tail $ ind-str rest (ind-plain st) ol oc os ot)))))
 
 (def-fns _ $ (many ind-cat : (subterm many (List $ String) parts) -> (many (String) r))
   (match many parts _
@@ -637,57 +560,47 @@
 ; own "missing )" does not; the first is the warning and the rest its notes, innermost first.
 (def-fns _ $ (many ind-unclosed : (many (String) path) (subterm many (List $ Pos) opens) (many (Bool) first)
     (many (List $ String) acc) -> (many (List $ String) r))
-  (match many opens _
-    ((Nil _) acc)
-    ((Cons _ o more)
-      (let ((many (String) line))
-        (match many first (((String) _))
-          ((BTrue) (ind-at path o "this form is never closed"))
-          ((BFalse) (ind-note path o "and this one"))))
-      (tail $ ind-unclosed path more (BFalse) $ Cons _ line acc))))
+  (let-match many opens (Cons _ o more) ((Nil _) acc))
+  (let ((many (String) line))
+    (match many first (((String) _))
+      ((BTrue) (ind-at path o "this form is never closed"))
+      ((BFalse) (ind-note path o "and this one"))))
+  (tail $ ind-unclosed path more (BFalse) $ Cons _ line acc))
 
 (def-fns _ $ (many ind-tabs : (many (String) path) (subterm many (List $ Pos) ts)
     (many (List $ String) acc) -> (many (List $ String) r))
-  (match many ts _
-    ((Nil _) acc)
-    ((Cons _ l more)
-      (tail $ ind-tabs path more
-        $ Cons _ (ind-at path l "indentation uses a tab, not spaces only") acc))))
+  (let-match many ts (Cons _ l more) ((Nil _) acc))
+  (tail $ ind-tabs path more
+    $ Cons _ (ind-at path l "indentation uses a tab, not spaces only") acc))
 
 (def-fns _ $ (many ind-pop : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
     (subterm many (List $ IndLevel) stack) (many (List $ String) acc) ->
     (many (List $ IndLevel) rest) (many (List $ String) acc2))
-  (match many stack _
-    ((Nil _) (values stack acc))
-    ((Cons _ e more)
-      (match many e _
-        ((MkIndLevel ep ei en)
-          (match many (nat-lt i ei) _
-            ((BFalse) (values stack acc))
-            ((BTrue)
-              (let ((many (List $ String) acc1))
-                (match many (nat-lt n en) (((List $ String) _))
-                  ((BTrue) acc)
-                  ((BFalse)
-                    (Cons _ (ind-note path ep "the line at that indentation")
-                      $ Cons _ (ind-at path ln $ ind-msg-pop ei en n) acc))))
-              (tail $ ind-pop path ln i n more acc1))))))))
+  (let-match many stack (Cons _ e more) ((Nil _) (values stack acc)))
+  (match many e _
+    ((MkIndLevel ep ei en)
+      (let-match many (nat-lt i ei) (BTrue) ((BFalse) (values stack acc)))
+      (let ((many (List $ String) acc1))
+        (match many (nat-lt n en) (((List $ String) _))
+          ((BTrue) acc)
+          ((BFalse)
+            (Cons _ (ind-note path ep "the line at that indentation")
+              $ Cons _ (ind-at path ln $ ind-msg-pop ei en n) acc))))
+      (tail $ ind-pop path ln i n more acc1))))
 
 (def-fns _ $ (many ind-enclosing : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
     (subterm many (List $ IndLevel) stack) (many (List $ String) acc) ->
     (many (List $ String) acc2))
-  (match many stack _
-    ((Nil _) acc)
-    ((Cons _ e more)
-      (match many e _
-        ((MkIndLevel ep ei en)
-          (let ((many (List $ String) acc1))
-            (match many (and (nat-lt ei i) (not $ nat-lt en n)) (((List $ String) _))
-              ((BFalse) acc)
-              ((BTrue)
-                (Cons _ (ind-note path ep "that enclosing line")
-                  $ Cons _ (ind-at path ln $ ind-msg-enclosing i ei en n) acc))))
-          (tail $ ind-enclosing path ln i n more acc1))))))
+  (let-match many stack (Cons _ e more) ((Nil _) acc))
+  (match many e _
+    ((MkIndLevel ep ei en)
+      (let ((many (List $ String) acc1))
+        (match many (and (nat-lt ei i) (not $ nat-lt en n)) (((List $ String) _))
+          ((BFalse) acc)
+          ((BTrue)
+            (Cons _ (ind-note path ep "that enclosing line")
+              $ Cons _ (ind-at path ln $ ind-msg-enclosing i ei en n) acc))))
+      (tail $ ind-enclosing path ln i n more acc1))))
 
 (def-fns _ $ (many ind-same : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
     (many (Pos) tp) (many (Nat) tn) (many (List $ IndLevel) more) (many (List $ String) acc) ->
@@ -717,16 +630,14 @@
     (many (List $ IndLevel) s2) (many (List $ String) acc2))
   (match many e _
     ((MkIndLevel ep ei en)
-      (match many (nat-eq ei i) (((List $ IndLevel) _) ((List $ String) r))
-        ((BFalse) (values (Cons _ (MkIndLevel ln i n) rem) acc))
-        ((BTrue)
-          (let ((many (List $ String) acc1))
-            (match many (nat-eq en n) (((List $ String) _))
-              ((BTrue) acc)
-              ((BFalse)
-                (Cons _ (ind-note path ep "the earlier line it matches")
-                  $ Cons _ (ind-at path ln $ ind-msg-back i en n) acc))))
-          (values (Cons _ (MkIndLevel ln i n) rest) acc1))))))
+      (let-match many (nat-eq ei i) (BTrue) ((BFalse) (values (Cons _ (MkIndLevel ln i n) rem) acc)))
+      (let ((many (List $ String) acc1))
+        (match many (nat-eq en n) (((List $ String) _))
+          ((BTrue) acc)
+          ((BFalse)
+            (Cons _ (ind-note path ep "the earlier line it matches")
+              $ Cons _ (ind-at path ln $ ind-msg-back i en n) acc))))
+      (values (Cons _ (MkIndLevel ln i n) rest) acc1))))
 
 (def-fns _ $ (many ind-dedent : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
     (many (List $ IndLevel) stack) (many (List $ String) acc) ->
@@ -743,12 +654,10 @@
     (many (List $ IndLevel) s2) (many (List $ String) acc2))
   (match many e _
     ((MkIndLevel tp ti tn)
-      (match many (nat-eq i ti) (((List $ IndLevel) _) ((List $ String) r))
-        ((BTrue) (ind-same path ln i n tp tn more acc))
-        ((BFalse)
-          (match many (nat-lt ti i) (((List $ IndLevel) _) ((List $ String) r))
-            ((BTrue) (ind-deeper path ln i n tp ti tn stack acc))
-            ((BFalse) (ind-dedent path ln i n stack acc))))))))
+      (let-match many (nat-eq i ti) (BFalse) ((BTrue) (ind-same path ln i n tp tn more acc)))
+      (match many (nat-lt ti i) (((List $ IndLevel) _) ((List $ String) r))
+        ((BTrue) (ind-deeper path ln i n tp ti tn stack acc))
+        ((BFalse) (ind-dedent path ln i n stack acc))))))
 
 (def-fns _ $ (many ind-step : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
     (many (List $ IndLevel) stack) (many (List $ String) acc) ->
@@ -759,13 +668,11 @@
 
 (def-fns _ $ (many ind-check : (many (String) path) (subterm many (List $ IndentLine) lines)
     (many (List $ IndLevel) stack) (many (List $ String) acc) -> (many (List $ String) r))
-  (match many lines _
-    ((Nil _) acc)
-    ((Cons _ il more)
-      (match many il _
-        ((MkIndentLine ln i n)
-          (let ((many stack2) (many acc2)) (ind-step path ln i n stack acc))
-          (tail $ ind-check path more stack2 acc2))))))
+  (let-match many lines (Cons _ il more) ((Nil _) acc))
+  (match many il _
+    ((MkIndentLine ln i n)
+      (let ((many stack2) (many acc2)) (ind-step path ln i n stack acc))
+      (tail $ ind-check path more stack2 acc2))))
 
 ; The warnings one file's text earns, in line order: the tabs, then the nesting claims, then a surplus ) and
 ; the count of forms left open, which are what the reader's own error does not name.

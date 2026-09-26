@@ -6,12 +6,10 @@
 
 (def-fns _ $ (many pal-test-nats : (subterm many (String) s) ->
     (many (List (Nat)) xs))
-  (match many s _
-    ((SNil) (Nil (Nat)))
-    ((SCons ch rest)
-      (let-match many ch (MkChar byte))
-      (let-match many byte (MkU8 n bound))
-      (Cons (Nat) n (notail $ pal-test-nats rest)))))
+  (let-match many s (SCons ch rest) ((SNil) (Nil (Nat))))
+  (let-match many ch (MkChar byte))
+  (let-match many byte (MkU8 n bound))
+  (Cons (Nat) n (notail $ pal-test-nats rest)))
 
 (def-fns _ $ (many pal-test-length : (many (String) s) -> (many (Nat) n))
   (let ((many xs)) (pal-test-nats s))

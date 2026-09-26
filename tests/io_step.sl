@@ -19,19 +19,15 @@
 (let ((erased th-p1)) (prove-predates thunk-lvl P1))
 
 (def-fns P1 $ (many shout : (subterm many (Nat) n) -> (unique (IO P) next))
-  (match many n _
-    ((Zero) (WriteOut P "done\n" (unique-thunk (predates th-p1) _ _ (Exit P code0))))
-    ((Succ m)
-      (def-unique P $ (unique again : -> (unique (IO P) next))
-        (shout (predates p1-p) m))
-      (WriteOut P "tick\n" again))))
+  (let-match many n (Succ m) ((Zero) (WriteOut P "done\n" (unique-thunk (predates th-p1) _ _ (Exit P code0)))))
+  (def-unique P $ (unique again : -> (unique (IO P) next))
+    (shout (predates p1-p) m))
+  (WriteOut P "tick\n" again))
 
 (def-fns PA $ (many settle : (subterm many (Nat) n) -> (unique (IO P) next))
-  (match many n _
-    ((Zero) (shout (predates p1-p0) 2))
-    ((Succ m)
-      (def-unique P $ (unique again : -> (unique (IO P) next))
-        (settle (predates pa-p) m))
-      (Step P again))))
+  (let-match many n (Succ m) ((Zero) (shout (predates p1-p0) 2)))
+  (def-unique P $ (unique again : -> (unique (IO P) next))
+    (settle (predates pa-p) m))
+  (Step P again))
 
 (settle 3)

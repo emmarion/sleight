@@ -97,12 +97,11 @@
     (match many t _
       ((Ref x) (values (Ref x) (SubRef subs x)))
       ((Bound k)
-        (match many (nth-dec _ subs k) _
-          ((NthHit a l i m p)
-            (match many m _
-              ((Some b v) (values v (SubHit subs k v p)))
-              ((None b) (values (Bound k) (SubSkip subs k p)))))
-          (absurd (NthMiss a l i p) (let-match erased ct (ClBound c k0 lt)) (no-nth-lt _ subs n k ln lt p))))
+        (let-match many (nth-dec _ subs k) (NthHit a l i m p)
+          (absurd (NthMiss a l i p) (let-match erased ct (ClBound c k0 lt)) (no-nth-lt _ subs n k ln lt p)))
+        (match many m _
+          ((Some b v) (values v (SubHit subs k v p)))
+          ((None b) (values (Bound k) (SubSkip subs k p)))))
       ((TyApp h ps as)
         (match erased ct _
           ((ClTyApp c h0 ps0 as0 out ch cps cas)
@@ -139,26 +138,22 @@
             (values (TValCtor ps2 r2) (SubValCtor subs ps ps2 r r2 sub1 q p)))))))
   ((many subst-list : (many (List (Maybe (Term))) subs) (erased (Nat) n) (erased (Length (Maybe (Term)) subs n) ln) (subterm many (List (Term)) ts) (erased (ClosedList n ts) ct) ->
       (many (List (Term)) us) (erased (SubstList subs ts us) p))
-    (match many ts _
-      ((Nil a) (values (Nil _) (SubNil subs)))
-      ((Cons a t rest)
-        (match erased ct _
-          ((ClCons c t0 ts0 c1 c2)
-            (let ((many u) (erased p)) (notail $ subst subs n ln t c1))
-            (let ((many us) (erased q)) (notail $ subst-list subs n ln rest c2))
-            (values (Cons _ u us) (SubCons subs t u rest us p q)))))))
+    (let-match many ts (Cons a t rest) ((Nil a) (values (Nil _) (SubNil subs))))
+    (match erased ct _
+      ((ClCons c t0 ts0 c1 c2)
+        (let ((many u) (erased p)) (notail $ subst subs n ln t c1))
+        (let ((many us) (erased q)) (notail $ subst-list subs n ln rest c2))
+        (values (Cons _ u us) (SubCons subs t u rest us p q)))))
   ((many subst-tele : (many (List (Maybe (Term))) subs) (erased (Nat) n) (erased (Length (Maybe (Term)) subs n) ln) (subterm many (List (Entry)) es) (erased (Nat) out) (erased (ClosedTele n es out) ce) ->
       (many (List (Entry)) fs) (many (List (Maybe (Term))) sub2) (erased (SubstTele subs es fs sub2) p) (erased (Length (Maybe (Term)) sub2 out) ln2))
-    (match many es _
-      ((Nil a) (match erased ce _ ((ClTNil c) (values (Nil _) subs (SubTNil subs) ln))))
-      ((Cons a e rest)
-        (match many e _
-          ((MkEntry s i t)
-            (match erased ce _
-              ((ClTCons c s0 i0 t0 es0 out0 c1 c2)
-                (let ((many u) (erased p)) (notail $ subst subs n ln t c1))
-                (let ((many fs) (many sub2) (erased q) (erased ln2)) (notail $ subst-tele (Cons _ (None _) subs) (Succ n) (LenCons _ (None _) subs n ln) rest out c2))
-                (values (Cons _ (MkEntry s i u) fs) sub2 (SubTCons subs s i t u rest fs sub2 p q) ln2)))))))))
+    (let-match many es (Cons a e rest) ((Nil a) (match erased ce _ ((ClTNil c) (values (Nil _) subs (SubTNil subs) ln)))))
+    (match many e _
+      ((MkEntry s i t)
+        (match erased ce _
+          ((ClTCons c s0 i0 t0 es0 out0 c1 c2)
+            (let ((many u) (erased p)) (notail $ subst subs n ln t c1))
+            (let ((many fs) (many sub2) (erased q) (erased ln2)) (notail $ subst-tele (Cons _ (None _) subs) (Succ n) (LenCons _ (None _) subs n ln) rest out c2))
+            (values (Cons _ (MkEntry s i u) fs) sub2 (SubTCons subs s i t u rest fs sub2 p q) ln2)))))))
 
 ; The substitution that instantiates a telescope with a list of arguments: the last argument innermost.
 (def-adts
@@ -206,21 +201,17 @@
     (many IdxMiss : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (NotIn ids x) p) -> (IndexDec ids x))))
 
 (def-fns _ $ (many index-dec : (subterm many (List (Maybe (Nat))) ids) (many (Nat) x) -> (many (IndexDec ids x) r))
-  (match many ids _
-    ((Nil a) (IdxMiss _ _ $ NotInNil x))
-    ((Cons a m rest)
-      (match many m _
-        ((None b)
-          (match many (notail $ index-dec rest x) _
-            ((IdxHit l y k p) (IdxHit _ _ (Succ k) $ IdxNone x rest k p))
-            ((IdxMiss l y p) (IdxMiss _ _ $ NotInNone x rest p))))
-        ((Some b y)
-          (match many (nat-dec x y) _
-            ((NDSame z) (IdxHit _ _ (Zero) $ IdxHere x rest))
-            ((NDDiff z w n)
-              (match many (notail $ index-dec rest x) _
-                ((IdxHit l z2 k p) (IdxHit _ _ (Succ k) $ IdxOther x y rest k n p))
-                ((IdxMiss l z2 p) (IdxMiss _ _ $ NotInSome x y rest n p))))))))))
+  (let-match many ids (Cons a m rest) ((Nil a) (IdxMiss _ _ $ NotInNil x)))
+  (match many m _
+    ((None b)
+      (match many (notail $ index-dec rest x) _
+        ((IdxHit l y k p) (IdxHit _ _ (Succ k) $ IdxNone x rest k p))
+        ((IdxMiss l y p) (IdxMiss _ _ $ NotInNone x rest p))))
+    ((Some b y)
+      (let-match many (nat-dec x y) (NDDiff z w n) ((NDSame z) (IdxHit _ _ (Zero) $ IdxHere x rest)))
+      (match many (notail $ index-dec rest x) _
+        ((IdxHit l z2 k p) (IdxHit _ _ (Succ k) $ IdxOther x y rest k n p))
+        ((IdxMiss l z2 p) (IdxMiss _ _ $ NotInSome x y rest n p))))))
 
 (def-fns _ $ (erased index-of-lt : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (Nat) k) (erased (Nat) n) (subterm erased (IndexOf ids x k) p) (erased (Length (Maybe (Nat)) ids n) ln) -> (erased (Lt k n) q))
   (match erased p _
@@ -295,21 +286,17 @@
         (let ((many r2) (erased p)) (notail $ abstract ids1 r))
         (values (TValCtor ps2 r2) (AbsValCtor ids ps ps2 r r2 ids1 q p)))))
   ((many abstract-list : (many (List (Maybe (Nat))) ids) (subterm many (List (Term)) ts) -> (many (List (Term)) us) (erased (AbstractList ids ts us) p))
-    (match many ts _
-      ((Nil a) (values (Nil _) (AbsNil ids)))
-      ((Cons a t rest)
-        (let ((many u) (erased p)) (notail $ abstract ids t))
-        (let ((many us) (erased q)) (notail $ abstract-list ids rest))
-        (values (Cons _ u us) (AbsCons ids t u rest us p q)))))
+    (let-match many ts (Cons a t rest) ((Nil a) (values (Nil _) (AbsNil ids))))
+    (let ((many u) (erased p)) (notail $ abstract ids t))
+    (let ((many us) (erased q)) (notail $ abstract-list ids rest))
+    (values (Cons _ u us) (AbsCons ids t u rest us p q)))
   ((many abstract-tele : (many (List (Maybe (Nat))) ids) (subterm many (List (Entry)) es) -> (many (List (Entry)) fs) (many (List (Maybe (Nat))) out) (erased (AbstractTele ids es fs out) p))
-    (match many es _
-      ((Nil a) (values (Nil _) ids (AbsTNil ids)))
-      ((Cons a e rest)
-        (match many e _
-          ((MkEntry s i t)
-            (let ((many u) (erased p)) (notail $ abstract ids t))
-            (let ((many fs) (many out) (erased q)) (notail $ abstract-tele (Cons _ (None _) ids) rest))
-            (values (Cons _ (MkEntry s i u) fs) out (AbsTCons ids s i t u rest fs out p q))))))))
+    (let-match many es (Cons a e rest) ((Nil a) (values (Nil _) ids (AbsTNil ids))))
+    (match many e _
+      ((MkEntry s i t)
+        (let ((many u) (erased p)) (notail $ abstract ids t))
+        (let ((many fs) (many out) (erased q)) (notail $ abstract-tele (Cons _ (None _) ids) rest))
+        (values (Cons _ (MkEntry s i u) fs) out (AbsTCons ids s i t u rest fs out p q))))))
 
 ; ---- Assignability: a variable may be given a term as its rule when the term does not mention it (the
 ; occurs check) and mentions no binder of a telescope it sits under (section 18's third contradiction).
@@ -414,72 +401,54 @@
           ((CEq a b c) (ADNo _ _ _ $ UnBound d x k $ lt-succ d))
           ((CGt a b c e q) (ADNo _ _ _ $ UnBound d x k $ lt-weaken d k q))))
       ((TyApp h ps as)
-        (match many (notail $ assign-dec d x h) _
-          ((ADNo a b c p) (ADNo _ _ _ $ UnTyAppHead d x h ps as p))
-          ((ADYes a b c p)
-            (match many (notail $ assign-dec-tele d x ps) _
-              ((ADTNo a2 b2 c2 t2) (ADNo _ _ _ $ UnTyAppParams d x h ps as t2))
-              ((ADTYes a2 b2 c2 d1 t2 td)
-                (match many (notail $ assign-dec-list d x as) _
-                  ((ADLNo a3 b3 c3 q) (ADNo _ _ _ $ UnTyAppArgs d x h ps as q))
-                  ((ADLYes a3 b3 c3 q) (ADYes _ _ _ $ AsgTyApp d x h ps as d1 p t2 q))))))))
+        (let-match many (notail $ assign-dec d x h) (ADYes a b c p) ((ADNo a b c p) (ADNo _ _ _ $ UnTyAppHead d x h ps as p)))
+        (let-match many (notail $ assign-dec-tele d x ps) (ADTYes a2 b2 c2 d1 t2 td)
+          ((ADTNo a2 b2 c2 t2) (ADNo _ _ _ $ UnTyAppParams d x h ps as t2)))
+        (match many (notail $ assign-dec-list d x as) _
+          ((ADLNo a3 b3 c3 q) (ADNo _ _ _ $ UnTyAppArgs d x h ps as q))
+          ((ADLYes a3 b3 c3 q) (ADYes _ _ _ $ AsgTyApp d x h ps as d1 p t2 q))))
       ((ValApp h ps r as)
-        (match many (notail $ assign-dec d x h) _
-          ((ADNo a b c p) (ADNo _ _ _ $ UnValAppHead d x h ps r as p))
-          ((ADYes a b c p)
-            (match many (notail $ assign-dec-tele d x ps) _
-              ((ADTNo a2 b2 c2 t2) (ADNo _ _ _ $ UnValAppParams d x h ps r as t2))
-              ((ADTYes a2 b2 c2 d1 t2 td)
-                (match many (notail $ assign-dec d1 x r) _
-                  ((ADNo a3 b3 c3 pr) (ADNo _ _ _ $ UnValAppRet d x h ps r as d1 td pr))
-                  ((ADYes a3 b3 c3 pr)
-                    (match many (notail $ assign-dec-list d x as) _
-                      ((ADLNo a4 b4 c4 q) (ADNo _ _ _ $ UnValAppArgs d x h ps r as q))
-                      ((ADLYes a4 b4 c4 q) (ADYes _ _ _ $ AsgValApp d x h ps r as d1 p t2 pr q))))))))))
+        (let-match many (notail $ assign-dec d x h) (ADYes a b c p) ((ADNo a b c p) (ADNo _ _ _ $ UnValAppHead d x h ps r as p)))
+        (let-match many (notail $ assign-dec-tele d x ps) (ADTYes a2 b2 c2 d1 t2 td)
+          ((ADTNo a2 b2 c2 t2) (ADNo _ _ _ $ UnValAppParams d x h ps r as t2)))
+        (let-match many (notail $ assign-dec d1 x r) (ADYes a3 b3 c3 pr)
+          ((ADNo a3 b3 c3 pr) (ADNo _ _ _ $ UnValAppRet d x h ps r as d1 td pr)))
+        (match many (notail $ assign-dec-list d x as) _
+          ((ADLNo a4 b4 c4 q) (ADNo _ _ _ $ UnValAppArgs d x h ps r as q))
+          ((ADLYes a4 b4 c4 q) (ADYes _ _ _ $ AsgValApp d x h ps r as d1 p t2 pr q))))
       ((TUniv) (ADYes _ _ _ $ AsgUniv d x))
       ((TFn l ps rs)
-        (match many (notail $ assign-dec d x l) _
-          ((ADNo a b c p) (ADNo _ _ _ $ UnFnLevel d x l ps rs p))
-          ((ADYes a b c p)
-            (match many (notail $ assign-dec-tele d x ps) _
-              ((ADTNo a2 b2 c2 q) (ADNo _ _ _ $ UnFnParams d x l ps rs q))
-              ((ADTYes a2 b2 c2 d1 q td)
-                (match many (notail $ assign-dec-tele d1 x rs) _
-                  ((ADTNo a3 b3 c3 r) (ADNo _ _ _ $ UnFnRets d x l ps rs d1 td r))
-                  ((ADTYes a3 b3 c3 d2 r td2) (ADYes _ _ _ $ AsgFn d x l ps rs d1 d2 p q r))))))))
+        (let-match many (notail $ assign-dec d x l) (ADYes a b c p) ((ADNo a b c p) (ADNo _ _ _ $ UnFnLevel d x l ps rs p)))
+        (let-match many (notail $ assign-dec-tele d x ps) (ADTYes a2 b2 c2 d1 q td)
+          ((ADTNo a2 b2 c2 q) (ADNo _ _ _ $ UnFnParams d x l ps rs q)))
+        (match many (notail $ assign-dec-tele d1 x rs) _
+          ((ADTNo a3 b3 c3 r) (ADNo _ _ _ $ UnFnRets d x l ps rs d1 td r))
+          ((ADTYes a3 b3 c3 d2 r td2) (ADYes _ _ _ $ AsgFn d x l ps rs d1 d2 p q r))))
       ((TTyCtor ps)
         (match many (notail $ assign-dec-tele d x ps) _
           ((ADTNo a2 b2 c2 q) (ADNo _ _ _ $ UnTyCtor d x ps q))
           ((ADTYes a2 b2 c2 d1 q td) (ADYes _ _ _ $ AsgTyCtor d x ps d1 q))))
       ((TValCtor ps r)
-        (match many (notail $ assign-dec-tele d x ps) _
-          ((ADTNo a2 b2 c2 q) (ADNo _ _ _ $ UnValCtorParams d x ps r q))
-          ((ADTYes a2 b2 c2 d1 q td)
-            (match many (notail $ assign-dec d1 x r) _
-              ((ADNo a b c p) (ADNo _ _ _ $ UnValCtorRet d x ps r d1 td p))
-              ((ADYes a b c p) (ADYes _ _ _ $ AsgValCtor d x ps r d1 q p))))))))
+        (let-match many (notail $ assign-dec-tele d x ps) (ADTYes a2 b2 c2 d1 q td)
+          ((ADTNo a2 b2 c2 q) (ADNo _ _ _ $ UnValCtorParams d x ps r q)))
+        (match many (notail $ assign-dec d1 x r) _
+          ((ADNo a b c p) (ADNo _ _ _ $ UnValCtorRet d x ps r d1 td p))
+          ((ADYes a b c p) (ADYes _ _ _ $ AsgValCtor d x ps r d1 q p))))))
   ((many assign-dec-list : (many (Nat) d) (many (Nat) x) (subterm many (List (Term)) ts) -> (many (AssignDecList d x ts) r))
-    (match many ts _
-      ((Nil a) (ADLYes _ _ _ $ AsgNil d x))
-      ((Cons a t rest)
-        (match many (notail $ assign-dec d x t) _
-          ((ADNo a2 b2 c2 p) (ADLNo _ _ _ $ UnHere d x t rest p))
-          ((ADYes a2 b2 c2 p)
-            (match many (notail $ assign-dec-list d x rest) _
-              ((ADLNo a3 b3 c3 q) (ADLNo _ _ _ $ UnThere d x t rest q))
-              ((ADLYes a3 b3 c3 q) (ADLYes _ _ _ $ AsgCons d x t rest p q))))))))
+    (let-match many ts (Cons a t rest) ((Nil a) (ADLYes _ _ _ $ AsgNil d x)))
+    (let-match many (notail $ assign-dec d x t) (ADYes a2 b2 c2 p) ((ADNo a2 b2 c2 p) (ADLNo _ _ _ $ UnHere d x t rest p)))
+    (match many (notail $ assign-dec-list d x rest) _
+      ((ADLNo a3 b3 c3 q) (ADLNo _ _ _ $ UnThere d x t rest q))
+      ((ADLYes a3 b3 c3 q) (ADLYes _ _ _ $ AsgCons d x t rest p q))))
   ((many assign-dec-tele : (many (Nat) d) (many (Nat) x) (subterm many (List (Entry)) es) -> (many (AssignDecTele d x es) r))
-    (match many es _
-      ((Nil a) (ADTYes _ _ _ d (AsgTNil d x) (TDNil d)))
-      ((Cons a e rest)
-        (match many e _
-          ((MkEntry s i t)
-            (match many (notail $ assign-dec d x t) _
-              ((ADNo a2 b2 c2 p) (ADTNo _ _ _ $ UnTHere d x s i t rest p))
-              ((ADYes a2 b2 c2 p)
-                (match many (notail $ assign-dec-tele (Succ d) x rest) _
-                  ((ADTNo a3 b3 c3 q) (ADTNo _ _ _ $ UnTThere d x (MkEntry s i t) rest q))
-                  ((ADTYes a3 b3 c3 out q td) (ADTYes _ _ _ out (AsgTCons d x s i t rest out p q) (TDCons d (MkEntry s i t) rest out td))))))))))))
+    (let-match many es (Cons a e rest) ((Nil a) (ADTYes _ _ _ d (AsgTNil d x) (TDNil d))))
+    (match many e _
+      ((MkEntry s i t)
+        (let-match many (notail $ assign-dec d x t) (ADYes a2 b2 c2 p)
+          ((ADNo a2 b2 c2 p) (ADTNo _ _ _ $ UnTHere d x s i t rest p)))
+        (match many (notail $ assign-dec-tele (Succ d) x rest) _
+          ((ADTNo a3 b3 c3 q) (ADTNo _ _ _ $ UnTThere d x (MkEntry s i t) rest q))
+          ((ADTYes a3 b3 c3 out q td) (ADTYes _ _ _ out (AsgTCons d x s i t rest out p q) (TDCons d (MkEntry s i t) rest out td))))))))
 (def-fns _
   ((erased assignable-closed : (erased (Nat) d) (erased (Nat) x) (erased (Term) t) (subterm erased (Assignable d x t) a) -> (erased (Closed d t) c))
     (match erased a _

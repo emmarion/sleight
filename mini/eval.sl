@@ -51,128 +51,78 @@
 
 (def-fns _
   ((many eval : (subterm many (Nat) fuel) (many (Env) env) (many (Core) c) -> (many (Evaled env c) r))
-    (match many fuel _
-      ((Zero) (EvalStuck _ _))
-      ((Succ f)
-        (match many c _
-          ((CVar x)
-            (match many (env-dec env x) _
-              ((EnvMiss a b) (EvalStuck _ _))
-              ((EnvHit a b v p) (MkEvaled _ _ (Cons _ v (Nil _)) $ EvVar env x v p))))
-          ((CApp h args)
-            (match many (notail $ eval f env h) _
-              ((EvalStuck a b) (EvalStuck _ _))
-              ((MkEvaled a b hv p)
-                (match many hv _
-                  ((Cons d v rest)
-                    (match many rest _
-                      ((Nil e)
-                        (match many v _
-                          ((VAtom ctor)
-                            (match many (notail $ eval-list f env args) _
-                              ((EvalListStuck a2 b2) (EvalStuck _ _))
-                              ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ (Cons _ (VCon ctor vals) (Nil _)) $ EvApp env h args ctor vals p q))))
-                          (else (EvalStuck _ _))))
-                      (else (EvalStuck _ _))))
-                  ((Nil d) (EvalStuck _ _))))))
-          ((CCall fn args)
-            (match many (notail $ eval f env fn) _
-              ((EvalStuck a b) (EvalStuck _ _))
-              ((MkEvaled a b fv p)
-                (match many fv _
-                  ((Cons d v rest)
-                    (match many rest _
-                      ((Nil e)
-                        (match many v _
-                          ((VClo cenv group def)
-                            (match many def _
-                              ((MkFnDef id ps body)
-                                (match many (notail $ eval-list f env args) _
-                                  ((EvalListStuck a2 b2) (EvalStuck _ _))
-                                  ((MkEvaledList a2 b2 vals q)
-                                    (let ((many env1) (erased g)) (bind-group cenv group group cenv))
-                                    (match many (bind-all env1 ps vals) _
-                                      ((BDStuck a3 b3 c3) (EvalStuck _ _))
-                                      ((BDOk a3 b3 c3 env2 bd)
-                                        (match many (notail $ eval f env2 body) _
-                                          ((EvalStuck a4 b4) (EvalStuck _ _))
-                                          ((MkEvaled a4 b4 outs r)
-                                            (MkEvaled _ _ outs $ EvCall env fn args cenv group id ps body vals env1 env2 outs p q g bd r))))))))))
-                          (else (EvalStuck _ _))))
-                      (else (EvalStuck _ _))))
-                  ((Nil d) (EvalStuck _ _))))))
-          ((CMatch s bs)
-            (match many (notail $ eval f env s) _
-              ((EvalStuck a b) (EvalStuck _ _))
-              ((MkEvaled a b sv p)
-                (match many sv _
-                  ((Cons d v rest)
-                    (match many rest _
-                      ((Nil e)
-                        (match many v _
-                          ((VCon ctor fields)
-                            (match many (branch-dec bs ctor) _
-                              ((BrMiss a2 b2) (EvalStuck _ _))
-                              ((BrHit a2 b2 ids body br)
-                                (match many (bind-all env ids fields) _
-                                  ((BDStuck a3 b3 c3) (EvalStuck _ _))
-                                  ((BDOk a3 b3 c3 env1 bd)
-                                    (match many (notail $ eval f env1 body) _
-                                      ((EvalStuck a4 b4) (EvalStuck _ _))
-                                      ((MkEvaled a4 b4 outs r) (MkEvaled _ _ outs $ EvMatch env s bs ctor fields ids body env1 outs p br bd r))))))))
-                          (else (EvalStuck _ _))))
-                      (else (EvalStuck _ _))))
-                  ((Nil d) (EvalStuck _ _))))))
-          ((CValues items)
-            (match many (notail $ eval-list f env items) _
-              ((EvalListStuck a2 b2) (EvalStuck _ _))
-              ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ vals $ EvValues env items vals q))))
-          ((CFormer t) (MkEvaled _ _ (Cons _ (VFormer t env) (Nil _)) $ EvFormer env t))
-          ((CToken) (MkEvaled _ _ (Cons _ (VToken) (Nil _)) $ EvToken env))
-          ((CStmt s rest)
-            (match many (notail $ eval-stmt f env s) _
-              ((EvalStmtStuck a b) (EvalStuck _ _))
-              ((MkEvaledStmt a b env1 p)
-                (match many (notail $ eval f env1 rest) _
-                  ((EvalStuck a2 b2) (EvalStuck _ _))
-                  ((MkEvaled a2 b2 outs q) (MkEvaled _ _ outs $ EvStmt env s rest env1 outs p q))))))))))
+    (let-match many fuel (Succ f) ((Zero) (EvalStuck _ _)))
+    (match many c _
+      ((CVar x)
+        (match many (env-dec env x) _
+          ((EnvMiss a b) (EvalStuck _ _))
+          ((EnvHit a b v p) (MkEvaled _ _ (Cons _ v (Nil _)) $ EvVar env x v p))))
+      ((CApp h args)
+        (let-match many (notail $ eval f env h) (MkEvaled a b hv p) ((EvalStuck a b) (EvalStuck _ _)))
+        (let-match many hv (Cons d v rest) ((Nil d) (EvalStuck _ _)))
+        (let-match many rest (Nil e) (else (EvalStuck _ _)))
+        (let-match many v (VAtom ctor) (else (EvalStuck _ _)))
+        (match many (notail $ eval-list f env args) _
+          ((EvalListStuck a2 b2) (EvalStuck _ _))
+          ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ (Cons _ (VCon ctor vals) (Nil _)) $ EvApp env h args ctor vals p q))))
+      ((CCall fn args)
+        (let-match many (notail $ eval f env fn) (MkEvaled a b fv p) ((EvalStuck a b) (EvalStuck _ _)))
+        (let-match many fv (Cons d v rest) ((Nil d) (EvalStuck _ _)))
+        (let-match many rest (Nil e) (else (EvalStuck _ _)))
+        (let-match many v (VClo cenv group def) (else (EvalStuck _ _)))
+        (match many def _
+          ((MkFnDef id ps body)
+            (let-match many (notail $ eval-list f env args) (MkEvaledList a2 b2 vals q) ((EvalListStuck a2 b2) (EvalStuck _ _)))
+            (let ((many env1) (erased g)) (bind-group cenv group group cenv))
+            (let-match many (bind-all env1 ps vals) (BDOk a3 b3 c3 env2 bd) ((BDStuck a3 b3 c3) (EvalStuck _ _)))
+            (match many (notail $ eval f env2 body) _
+              ((EvalStuck a4 b4) (EvalStuck _ _))
+              ((MkEvaled a4 b4 outs r)
+                (MkEvaled _ _ outs $ EvCall env fn args cenv group id ps body vals env1 env2 outs p q g bd r))))))
+      ((CMatch s bs)
+        (let-match many (notail $ eval f env s) (MkEvaled a b sv p) ((EvalStuck a b) (EvalStuck _ _)))
+        (let-match many sv (Cons d v rest) ((Nil d) (EvalStuck _ _)))
+        (let-match many rest (Nil e) (else (EvalStuck _ _)))
+        (let-match many v (VCon ctor fields) (else (EvalStuck _ _)))
+        (let-match many (branch-dec bs ctor) (BrHit a2 b2 ids body br) ((BrMiss a2 b2) (EvalStuck _ _)))
+        (let-match many (bind-all env ids fields) (BDOk a3 b3 c3 env1 bd) ((BDStuck a3 b3 c3) (EvalStuck _ _)))
+        (match many (notail $ eval f env1 body) _
+          ((EvalStuck a4 b4) (EvalStuck _ _))
+          ((MkEvaled a4 b4 outs r) (MkEvaled _ _ outs $ EvMatch env s bs ctor fields ids body env1 outs p br bd r))))
+      ((CValues items)
+        (match many (notail $ eval-list f env items) _
+          ((EvalListStuck a2 b2) (EvalStuck _ _))
+          ((MkEvaledList a2 b2 vals q) (MkEvaled _ _ vals $ EvValues env items vals q))))
+      ((CFormer t) (MkEvaled _ _ (Cons _ (VFormer t env) (Nil _)) $ EvFormer env t))
+      ((CToken) (MkEvaled _ _ (Cons _ (VToken) (Nil _)) $ EvToken env))
+      ((CStmt s rest)
+        (let-match many (notail $ eval-stmt f env s) (MkEvaledStmt a b env1 p) ((EvalStmtStuck a b) (EvalStuck _ _)))
+        (match many (notail $ eval f env1 rest) _
+          ((EvalStuck a2 b2) (EvalStuck _ _))
+          ((MkEvaled a2 b2 outs q) (MkEvaled _ _ outs $ EvStmt env s rest env1 outs p q))))))
   ((many eval-list : (subterm many (Nat) fuel) (many (Env) env) (many (List (Core)) cs) -> (many (EvaledList env cs) r))
-    (match many fuel _
-      ((Zero) (EvalListStuck _ _))
-      ((Succ f)
-        (match many cs _
-          ((Nil a) (MkEvaledList _ _ (Nil _) $ EvLNil env))
-          ((Cons a c rest)
-            (match many (notail $ eval f env c) _
-              ((EvalStuck a1 b1) (EvalListStuck _ _))
-              ((MkEvaled a1 b1 vs p)
-                (match many vs _
-                  ((Cons d v vrest)
-                    (match many vrest _
-                      ((Nil e)
-                        (match many (notail $ eval-list f env rest) _
-                          ((EvalListStuck a2 b2) (EvalListStuck _ _))
-                          ((MkEvaledList a2 b2 vals q) (MkEvaledList _ _ (Cons _ v vals) $ EvLCons env c v rest vals p q))))
-                      (else (EvalListStuck _ _))))
-                  ((Nil d) (EvalListStuck _ _))))))))))
+    (let-match many fuel (Succ f) ((Zero) (EvalListStuck _ _)))
+    (let-match many cs (Cons a c rest) ((Nil a) (MkEvaledList _ _ (Nil _) $ EvLNil env)))
+    (let-match many (notail $ eval f env c) (MkEvaled a1 b1 vs p) ((EvalStuck a1 b1) (EvalListStuck _ _)))
+    (let-match many vs (Cons d v vrest) ((Nil d) (EvalListStuck _ _)))
+    (let-match many vrest (Nil e) (else (EvalListStuck _ _)))
+    (match many (notail $ eval-list f env rest) _
+      ((EvalListStuck a2 b2) (EvalListStuck _ _))
+      ((MkEvaledList a2 b2 vals q) (MkEvaledList _ _ (Cons _ v vals) $ EvLCons env c v rest vals p q))))
   ((many eval-stmt : (subterm many (Nat) fuel) (many (Env) env) (many (Stmt) s) -> (many (EvaledStmt env s) r))
-    (match many fuel _
-      ((Zero) (EvalStmtStuck _ _))
-      ((Succ f)
-        (match many s _
-          ((SLet ids rhs)
-            (match many (notail $ eval f env rhs) _
-              ((EvalStuck a1 b1) (EvalStmtStuck _ _))
-              ((MkEvaled a1 b1 vals p)
-                (match many (bind-all env ids vals) _
-                  ((BDStuck a3 b3 c3) (EvalStmtStuck _ _))
-                  ((BDOk a3 b3 c3 out bd) (MkEvaledStmt _ _ out $ EvLet env ids rhs vals out p bd))))))
-          ((SDefLvl x) (MkEvaledStmt _ _ (ECons x (VToken) env) $ EvDefLvl env x))
-          ((SDefFns defs)
-            (let ((many out) (erased g)) (bind-group env defs defs env))
-            (MkEvaledStmt _ _ out $ EvDefFns env defs out g))
-          ((SDefAdts ids)
-            (let ((many out) (erased b)) (bind-atoms env ids))
-            (MkEvaledStmt _ _ out $ EvDefAdts env ids out b)))))))
+    (let-match many fuel (Succ f) ((Zero) (EvalStmtStuck _ _)))
+    (match many s _
+      ((SLet ids rhs)
+        (let-match many (notail $ eval f env rhs) (MkEvaled a1 b1 vals p) ((EvalStuck a1 b1) (EvalStmtStuck _ _)))
+        (match many (bind-all env ids vals) _
+          ((BDStuck a3 b3 c3) (EvalStmtStuck _ _))
+          ((BDOk a3 b3 c3 out bd) (MkEvaledStmt _ _ out $ EvLet env ids rhs vals out p bd))))
+      ((SDefLvl x) (MkEvaledStmt _ _ (ECons x (VToken) env) $ EvDefLvl env x))
+      ((SDefFns defs)
+        (let ((many out) (erased g)) (bind-group env defs defs env))
+        (MkEvaledStmt _ _ out $ EvDefFns env defs out g))
+      ((SDefAdts ids)
+        (let ((many out) (erased b)) (bind-atoms env ids))
+        (MkEvaledStmt _ _ out $ EvDefAdts env ids out b)))))
 
 (MkUnit)

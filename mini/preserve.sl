@@ -53,22 +53,20 @@
               ((Refl c d) (match erased (canon-unique rules r r2 r3 pr qr) _ ((Refl c2 d2) (Refl (Term) (TValCtor ps2 r2)))))))))))
   ((erased canon-unique-list : (erased (List (Rule)) rules) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (List (Term)) us2) (subterm erased (CanonList rules ts us) p) (erased (CanonList rules ts us2) q) ->
       (erased (Eq (List (Term)) us us2) e))
-    (match erased p _
-      ((CanNil _) (match erased q _ ((CanNil a2) (Refl (List (Term)) (Nil (Term))))))
-      ((CanCons _ t u ts2 us3 pt pts)
-        (match erased q _
-          ((CanCons a2 t0 u0 ts0 us0 qt qts)
-            (match erased (canon-unique rules t u u0 pt qt) _
-              ((Refl c d) (match erased (canon-unique-list rules ts2 us3 us0 pts qts) _ ((Refl c2 d2) (Refl (List (Term)) (Cons (Term) u us3)))))))))))
+    (let-match erased p (CanCons _ t u ts2 us3 pt pts)
+      ((CanNil _) (match erased q _ ((CanNil a2) (Refl (List (Term)) (Nil (Term)))))))
+    (match erased q _
+      ((CanCons a2 t0 u0 ts0 us0 qt qts)
+        (match erased (canon-unique rules t u u0 pt qt) _
+          ((Refl c d) (match erased (canon-unique-list rules ts2 us3 us0 pts qts) _ ((Refl c2 d2) (Refl (List (Term)) (Cons (Term) u us3)))))))))
   ((erased canon-unique-tele : (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Entry)) fs2) (subterm erased (CanonTele rules es fs) p) (erased (CanonTele rules es fs2) q) ->
       (erased (Eq (List (Entry)) fs fs2) e))
-    (match erased p _
-      ((CanTNil _) (match erased q _ ((CanTNil a2) (Refl (List (Entry)) (Nil (Entry))))))
-      ((CanTCons _ s i t u es2 fs3 pt pes)
-        (match erased q _
-          ((CanTCons a2 s0 i0 t0 u0 es0 fs0 qt qes)
-            (match erased (canon-unique rules t u u0 pt qt) _
-              ((Refl c d) (match erased (canon-unique-tele rules es2 fs3 fs0 pes qes) _ ((Refl c2 d2) (Refl (List (Entry)) (Cons (Entry) (MkEntry s i u) fs3))))))))))))
+    (let-match erased p (CanTCons _ s i t u es2 fs3 pt pes)
+      ((CanTNil _) (match erased q _ ((CanTNil a2) (Refl (List (Entry)) (Nil (Entry)))))))
+    (match erased q _
+      ((CanTCons a2 s0 i0 t0 u0 es0 fs0 qt qes)
+        (match erased (canon-unique rules t u u0 pt qt) _
+          ((Refl c d) (match erased (canon-unique-tele rules es2 fs3 fs0 pes qes) _ ((Refl c2 d2) (Refl (List (Entry)) (Cons (Entry) (MkEntry s i u) fs3))))))))))
 
 ; A term elaboration accepts has the type it gave it: [ElabTerm] forms only what [TypeOfTerm] types.
 (def-fns _ $ (erased elab-term-typed : (erased (Ctx) ctx) (erased (Raw) raw) (erased (Term) t) (erased (Term) ty) (subterm erased (ElabTerm ctx raw (TOk t ty)) p) -> (erased (Typed ctx t ty) q))

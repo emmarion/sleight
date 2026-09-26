@@ -18,8 +18,8 @@
 
 main
 ; warns: tests/main_reverse.sl:10:56: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:720:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:641:1: note: `;! warn` for `SCons` is here
 ; warns: tests/main_reverse.sl:17:59: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:720:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:641:1: note: `;! warn` for `SCons` is here
 ; warns: tests/main_reverse.sl:17:70: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:720:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:641:1: note: `;! warn` for `SCons` is here

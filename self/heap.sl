@@ -89,11 +89,9 @@
 (def-fns _ $ (erased suffix-len : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s)
     (subterm erased (Suffix B l s) p) (erased (Nat) n) (erased (Len B s n) ls) (erased (Nat) m) (erased (Len B l m) ll) ->
     (erased (Lt n (Succ m)) r))
-  (match erased p _
-    ((SfHere _ _) (match erased (len-fn _ l n m ls ll) _ ((Refl _ _) (lt-succ n))))
-    ((SfThere _ rest _ s1 p1)
-      (let-match erased ll (LenAdd tb2 r2 v2 m1 ll1))
-      (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))))
+  (let-match erased p (SfThere _ rest _ s1 p1) ((SfHere _ _) (match erased (len-fn _ l n m ls ll) _ ((Refl _ _) (lt-succ n)))))
+  (let-match erased ll (LenAdd tb2 r2 v2 m1 ll1))
+  (lt-weaken n (Succ m1) (suffix-len _ rest s1 p1 n ls m1 ll1)))
 
 (def-fns _ $ (erased suffix-unique : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (erased (Hist B) s1)
     (erased (Hist B) s2) (erased (Nat) n) (subterm erased (Suffix B l s1) p1) (erased (Suffix B l s2) p2)
@@ -149,24 +147,21 @@
     (erased (Hist B) b) (erased (Hist B) c) (erased (Suffix B c b) le)
     (erased (Maybe $ StoredBody B b) v) -> (erased (Maybe $ StoredBody B c) w)
     (erased (Coercible (Shared) (Maybe $ StoredBody B b) v (Shared) (Maybe $ StoredBody B c) w) p))
-  (match erased v _
-    ((None _) (values (None _) (coercible-ctor (Shared) None (StoredBody B b) (StoredBody B c))))
-    ((Some _ x)
-      (let ((erased x2) (erased px)) (stored-body-widen _ b c le x))
-      (values (Some _ x2) (coercible-ctor (Shared) Some (StoredBody B b) (StoredBody B c) px)))))
+  (let-match erased v (Some _ x) ((None _) (values (None _) (coercible-ctor (Shared) None (StoredBody B b) (StoredBody B c)))))
+  (let ((erased x2) (erased px)) (stored-body-widen _ b c le x))
+  (values (Some _ x2) (coercible-ctor (Shared) Some (StoredBody B b) (StoredBody B c) px)))
 
 (def-fns _ $ (erased stored-map-widen : (erased (TyCtor (Type R) -> Type) B)
     (erased (Hist B) b) (erased (Hist B) c) (erased (Suffix B c b) le)
     (subterm erased (IdMap $ StoredBody B b) v) -> (erased (IdMap $ StoredBody B c) w)
     (erased (Coercible (Shared) (IdMap $ StoredBody B b) v (Shared) (IdMap $ StoredBody B c) w) p))
-  (match erased v _
-    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (StoredBody B b) (StoredBody B c))))
-    ((MNode _ here one two)
-      (let ((erased h2) (erased ph)) (stored-maybe-widen _ b c le here))
-      (let ((erased o2) (erased po)) (stored-map-widen _ b c le one))
-      (let ((erased t2) (erased pt)) (stored-map-widen _ b c le two))
-      (values (MNode _ h2 o2 t2)
-        (coercible-ctor (Shared) MNode (StoredBody B b) (StoredBody B c) ph po pt)))))
+  (let-match erased v (MNode _ here one two)
+    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (StoredBody B b) (StoredBody B c)))))
+  (let ((erased h2) (erased ph)) (stored-maybe-widen _ b c le here))
+  (let ((erased o2) (erased po)) (stored-map-widen _ b c le one))
+  (let ((erased t2) (erased pt)) (stored-map-widen _ b c le two))
+  (values (MNode _ h2 o2 t2)
+    (coercible-ctor (Shared) MNode (StoredBody B b) (StoredBody B c) ph po pt)))
 
 (def-fns _ $ (many store-empty : (erased (TyCtor (Type R) -> Type) B) -> (many (Store B (HEmpty B)) s))
   (MkStore _ _ (Zero) (LenNil _) (MEmpty _)))
@@ -228,12 +223,10 @@
 (def-fns _ $ (erased refs-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (subterm erased (List $ Ref B b) xs) ->
     (erased (List $ Ref B c) ys) (erased (Coercible (Shared) (List $ Ref B b) xs (Shared) (List $ Ref B c) ys) p))
-  (match erased xs _
-    ((Nil _) (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c))))
-    ((Cons _ x rest)
-      (let ((erased x2) (erased px)) (ref-widen _ b c le x))
-      (let ((erased rest2) (erased pr)) (refs-widen _ b c le rest))
-      (values (Cons _ x2 rest2) (coercible-ctor (Shared) Cons (Ref B b) (Ref B c) px pr)))))
+  (let-match erased xs (Cons _ x rest) ((Nil _) (values (Nil _) (coercible-ctor (Shared) Nil (Ref B b) (Ref B c)))))
+  (let ((erased x2) (erased px)) (ref-widen _ b c le x))
+  (let ((erased rest2) (erased pr)) (refs-widen _ b c le rest))
+  (values (Cons _ x2 rest2) (coercible-ctor (Shared) Cons (Ref B b) (Ref B c) px pr)))
 
 (def-fns _ $ (erased refs-widen-lk : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (erased (List $ Nat) f) (subterm erased (List $ Ref B b) xs) (erased (Lockstep (Nat) (Ref B b) f xs) lk) ->
@@ -251,19 +244,16 @@
 (def-fns _ $ (erased maybe-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (erased (Maybe $ Ref B b) m) ->
     (erased (Maybe $ Ref B c) m2) (erased (Coercible (Shared) (Maybe $ Ref B b) m (Shared) (Maybe $ Ref B c) m2) p))
-  (match erased m _
-    ((None _) (values (None _) (coercible-ctor (Shared) None (Ref B b) (Ref B c))))
-    ((Some _ x)
-      (let ((erased x2) (erased px)) (ref-widen _ b c le x))
-      (values (Some _ x2) (coercible-ctor (Shared) Some (Ref B b) (Ref B c) px)))))
+  (let-match erased m (Some _ x) ((None _) (values (None _) (coercible-ctor (Shared) None (Ref B b) (Ref B c)))))
+  (let ((erased x2) (erased px)) (ref-widen _ b c le x))
+  (values (Some _ x2) (coercible-ctor (Shared) Some (Ref B b) (Ref B c) px)))
 
 (def-fns _ $ (erased idmap-widen : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) b) (erased (Hist B) c)
     (erased (Suffix B c b) le) (subterm erased (IdMap $ Ref B b) m) ->
     (erased (IdMap $ Ref B c) m2) (erased (Coercible (Shared) (IdMap $ Ref B b) m (Shared) (IdMap $ Ref B c) m2) p))
-  (match erased m _
-    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (Ref B b) (Ref B c))))
-    ((MNode _ here one two)
-      (let ((erased here2) (erased ph)) (maybe-widen _ b c le here))
-      (let ((erased one2) (erased p1)) (idmap-widen _ b c le one))
-      (let ((erased two2) (erased p2)) (idmap-widen _ b c le two))
-      (values (MNode _ here2 one2 two2) (coercible-ctor (Shared) MNode (Ref B b) (Ref B c) ph p1 p2)))))
+  (let-match erased m (MNode _ here one two)
+    ((MEmpty _) (values (MEmpty _) (coercible-ctor (Shared) MEmpty (Ref B b) (Ref B c)))))
+  (let ((erased here2) (erased ph)) (maybe-widen _ b c le here))
+  (let ((erased one2) (erased p1)) (idmap-widen _ b c le one))
+  (let ((erased two2) (erased p2)) (idmap-widen _ b c le two))
+  (values (MNode _ here2 one2 two2) (coercible-ctor (Shared) MNode (Ref B b) (Ref B c) ph p1 p2)))

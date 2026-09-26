@@ -28,11 +28,9 @@
   (Exit P code0))
 
 (def-unique P $ (unique cwd-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a k)
-      (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates pa-p) k) "\n"))
-        (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+  (let-match many r (Ok a k) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
+  (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates pa-p) k) "\n"))
+    (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
 
 (def-unique P $ (unique got-cwd : (many (String) path) -> (unique (IO P) next))
   (Stat P path cwd-kind))

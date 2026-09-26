@@ -21,17 +21,13 @@
 
 (def-fns _ $ (many rot-right-proved : (unique (Tree) t) (erased (Lst) acc) (erased (Lst) out)
     (erased (FlatOnto t acc out) p) -> (unique (Tree) r) (erased (FlatOnto r acc out) q))
-  (match unique t _
-    ((Leaf c) (values (Leaf) p))
-    ((Node l y c outer)
-      (match unique l _
-        ((Leaf c2) (values (outer (Leaf) y c) p))
-        ((Node a x b inner)
-          (let-match erased p (FNode _ _ _ _ m1 _ pr pl))
-          (let-match erased pl (FNode _ _ _ _ m2 _ pr2 pl2))
-          (let ((unique nb)) (inner b y c))
-          (values (outer a x nb)
-                  (FNode a x (Node b y c) acc m2 out (FNode b y c acc m1 m2 pr pr2) pl2)))))))
+  (let-match unique t (Node l y c outer) ((Leaf c) (values (Leaf) p)))
+  (let-match unique l (Node a x b inner) ((Leaf c2) (values (outer (Leaf) y c) p)))
+  (let-match erased p (FNode _ _ _ _ m1 _ pr pl))
+  (let-match erased pl (FNode _ _ _ _ m2 _ pr2 pl2))
+  (let ((unique nb)) (inner b y c))
+  (values (outer a x nb)
+          (FNode a x (Node b y c) acc m2 out (FNode b y c acc m1 m2 pr pr2) pl2)))
 
 (def-fns _ $ (many run-rot-proved : -> (many (Tree) r))
   (let ((unique t)) (Node (Node (Leaf) 0 (Leaf)) 1 (Leaf)))

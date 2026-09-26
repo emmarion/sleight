@@ -10,16 +10,14 @@
     (erased (List (Nat)) prefix)
     (erased (PalConcat (Nat) prefix right xs) cat)
     (erased (Reverse (Nat) prefix left) rev))
-  (match erased split _
-    ((PSStart source) (values (Nil _) (PalCatNil _ xs) (RevNil _)))
-    ((PSStep source l r x p)
-      (let ((erased prefix) (erased cat) (erased rev))
-        (fp-split-decomp xs l _ p))
-      (let ((erased out) (erased snoc) (erased final))
-        (fp-concat-unassoc _ prefix _ right
-          _ xs cat
-          (PalCatCons _ x _ _ _ (PalCatNil _ right))))
-      (values out final (fp-reverse-snoc _ prefix l out x rev snoc)))))
+  (let-match erased split (PSStep source l r x p) ((PSStart source) (values (Nil _) (PalCatNil _ xs) (RevNil _))))
+  (let ((erased prefix) (erased cat) (erased rev))
+    (fp-split-decomp xs l _ p))
+  (let ((erased out) (erased snoc) (erased final))
+    (fp-concat-unassoc _ prefix _ right
+      _ xs cat
+      (PalCatCons _ x _ _ _ (PalCatNil _ right))))
+  (values out final (fp-reverse-snoc _ prefix l out x rev snoc)))
 
 (def-fns _ $ (erased fp-reverse-involutive : (erased Type A)
     (erased (List A) xs ys) (subterm erased (Reverse A xs ys) rev) ->
@@ -350,13 +348,9 @@
 (def-fns _ $ (erased fp-lcp-bound : (erased (List (Nat)) left right)
     (erased (Nat) k n) (subterm erased (PalLcp left right k) p)
     (erased (PalLength (Nat) left n) len) -> (erased (Lt k (Succ n)) bound))
-  (match erased p _
-    ((PLLeft r) (LtZ n))
-    ((PLRight l) (LtZ n))
-    ((PLApart x y l r apart) (LtZ n))
-    ((PLStep x l r k1 p1)
-      (let-match erased len (PalLCons a y rest n1 len1))
-      (LtS _ _ (fp-lcp-bound l r k1 n1 p1 len1)))))
+  (let-match erased p (PLStep x l r k1 p1) ((PLLeft r) (LtZ n)) ((PLRight l) (LtZ n)) ((PLApart x y l r apart) (LtZ n)))
+  (let-match erased len (PalLCons a y rest n1 len1))
+  (LtS _ _ (fp-lcp-bound l r k1 n1 p1 len1)))
 
 (def-fns _ $ (erased fp-cut-step : (erased (List (Nat)) xs left right)
     (erased (Nat) i x) (erased (PalCut xs i left (Cons (Nat) x right)) cut) ->

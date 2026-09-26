@@ -4,9 +4,7 @@
 
 (def-lvl X)
 (def-fns X $ (many count : (many (Nat) n) (subterm many (Succ n) is m) -> (many (Nat) r))
-  (match many n (((Nat) r))
-    ((Zero) m)
-    ((Succ k)
-      (let ((erased p)) (prove-subterm n m))
-      (tail $ count k (subterm p) n))))
+  (let-match many n (Succ k) ((Zero) m))
+  (let ((erased p)) (prove-subterm n m))
+  (tail $ count k (subterm p) n))
 (count (Succ (Zero)) (Succ (Succ (Zero))))

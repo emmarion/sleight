@@ -10,10 +10,8 @@
 
 (def-lvl X)
 (def-fns X $ (many twice : (subterm erased (Nat) n) (many (Sing n) s) -> (many (Nat) r))
-  (match many s (((Nat) r))
-    ((SZero) (Zero))
-    ((SSucc k t)
-      (let ((erased p)) (prove-subterm k n))
-      (Succ (Succ (notail $ twice (subterm p) k t))))))
+  (let-match many s (SSucc k t) ((SZero) (Zero)))
+  (let ((erased p)) (prove-subterm k n))
+  (Succ (Succ (notail $ twice (subterm p) k t))))
 
 (twice (Succ (Zero)) (SSucc (Zero) (SZero)))

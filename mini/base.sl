@@ -120,15 +120,11 @@
     (many NthMiss : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased (NoNth A xs i) p) -> (NthDec A xs i))))
 
 (def-fns _ $ (many nth-dec : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (NthDec A xs i) r))
-  (match many xs _
-    ((Nil a) (NthMiss _ _ _ $ NoNthNil _ i))
-    ((Cons a y rest)
-      (match many i _
-        ((Zero) (NthHit _ _ _ y $ NthHere _ y rest))
-        ((Succ j)
-          (match many (notail $ nth-dec _ rest j) _
-            ((NthHit b l k x p) (NthHit _ _ _ x $ NthThere _ y rest j x p))
-            ((NthMiss b l k p) (NthMiss _ _ _ $ NoNthCons _ y rest j p))))))))
+  (let-match many xs (Cons a y rest) ((Nil a) (NthMiss _ _ _ $ NoNthNil _ i)))
+  (let-match many i (Succ j) ((Zero) (NthHit _ _ _ y $ NthHere _ y rest)))
+  (match many (notail $ nth-dec _ rest j) _
+    ((NthHit b l k x p) (NthHit _ _ _ x $ NthThere _ y rest j x p))
+    ((NthMiss b l k p) (NthMiss _ _ _ $ NoNthCons _ y rest j p))))
 
 (def-fns _ $ (erased absurd no-nth-lt : (erased Type A) (erased (List A) xs) (erased (Nat) n) (erased (Nat) k) (erased (Length A xs n) ln) (erased (Lt k n) lt) (subterm erased (NoNth A xs k) p) -> (erased (False) f))
   (match erased p _
@@ -139,12 +135,10 @@
       (no-nth-lt _ rest m i l2 lt2 q))))
 (def-fns _ $ (erased nth-none-lt : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (erased (Nat) k) (erased (Layout A xs r n) ly) (subterm erased (Nth (Maybe A) xs k (None A)) p) ->
     (erased (Lt k r) q))
-  (match erased p _
-    ((NthHere a x rest) (match erased ly _ ((LayNone b rest2 r2 m q) (LtZ r2))))
-    ((NthThere a y rest i x q)
-      (match erased ly _
-        (absurd (LaySome b x2 rest2 m q2) (nth-none-lt _ rest2 (Zero) m i q2 q))
-        ((LayNone b rest2 r2 m q2) (LtS i r2 (nth-none-lt _ rest2 r2 m i q2 q)))))))
+  (let-match erased p (NthThere a y rest i x q) ((NthHere a x rest) (match erased ly _ ((LayNone b rest2 r2 m q) (LtZ r2)))))
+  (match erased ly _
+    (absurd (LaySome b x2 rest2 m q2) (nth-none-lt _ rest2 (Zero) m i q2 q))
+    ((LayNone b rest2 r2 m q2) (LtS i r2 (nth-none-lt _ rest2 r2 m i q2 q)))))
 (def-fns _ $ (erased index-lt : (erased Type A) (erased (List A) xs) (erased (Nat) n) (erased (Nat) k) (erased A x) (erased (Length A xs n) ln) (subterm erased (Nth A xs k x) p) -> (erased (Lt k n) q))
   (match erased p _
     ((NthHere a y rest) (match erased ln _ ((LenCons b z xs2 m l2) (LtZ m))))

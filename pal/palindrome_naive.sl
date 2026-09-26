@@ -15,11 +15,9 @@
 
 (def-fns _ $ (many pal-length : (subterm many (List (Nat)) xs) ->
     (many (Nat) n) (erased (PalLength (Nat) xs n) p))
-  (match many xs _
-    ((Nil a) (values (Zero) (PalLNil _)))
-    ((Cons a x rest)
-      (let ((many n) (erased p)) (notail $ pal-length rest))
-      (values (Succ n) (PalLCons _ x _ _ p)))))
+  (let-match many xs (Cons a x rest) ((Nil a) (values (Zero) (PalLNil _))))
+  (let ((many n) (erased p)) (notail $ pal-length rest))
+  (values (Succ n) (PalLCons _ x _ _ p)))
 
 ; Remove the last element of a nonempty list. The length certificate
 ; supplies the strict decrease for the later onion-peeling recursion.
@@ -28,22 +26,20 @@
     (many (List (Nat)) inner) (many (Nat) last)
     (erased (PalLength (Nat) inner n) ilen)
     (erased (PalConcat (Nat) inner (Cons (Nat) last (Nil (Nat))) xs) cat))
-  (match many xs _
-    (absurd (Nil a) len)
-    ((Cons a x rest)
-      (let-match erased len (PalLCons b y tail3 k plen))
-      (match many rest _
-        ((Nil _)
-          (let-match erased plen (PalLNil c))
-          (values (Nil _) x (PalLNil _)
-            (PalCatNil _ _)))
-        ((Cons _ _ _)
-          (let-match erased plen (PalLCons c z tail2 k2 plen2))
-          (let ((many inner) (many last) (erased ilen) (erased cat))
-            (notail $ pal-unsnoc rest k2 plen))
-          (values (Cons _ x inner) last
-            (PalLCons _ x _ _ ilen)
-            (PalCatCons _ x _ _ _ cat)))))))
+  (let-match many xs (Cons a x rest) (absurd (Nil a) len))
+  (let-match erased len (PalLCons b y tail3 k plen))
+  (match many rest _
+    ((Nil _)
+      (let-match erased plen (PalLNil c))
+      (values (Nil _) x (PalLNil _)
+        (PalCatNil _ _)))
+    ((Cons _ _ _)
+      (let-match erased plen (PalLCons c z tail2 k2 plen2))
+      (let ((many inner) (many last) (erased ilen) (erased cat))
+        (notail $ pal-unsnoc rest k2 plen))
+      (values (Cons _ x inner) last
+        (PalLCons _ x _ _ ilen)
+        (PalCatCons _ x _ _ _ cat)))))
 
 (def-adts
   ((PalDecision : ((List (Nat)) xs) -> Type) enum
@@ -55,25 +51,21 @@
 (def-fns _ $ (many pal-decide : (subterm erased (Nat) n)
     (many (List (Nat)) xs) (erased (PalLength (Nat) xs n) len) ->
     (many (PalDecision xs) decision))
-  (match many xs _
-    ((Nil a) (PalYes xs (PalNil _)))
-    ((Cons a x rest)
-      (let-match erased len (PalLCons b y tail3 k plen))
-      (match many rest _
-        ((Nil _) (PalYes xs (PalOne _ x)))
-        ((Cons _ _ _)
-          (let-match erased plen (PalLCons c z tail2 k2 plen2))
-          (let ((many inner) (many last) (erased ilen) (erased cat))
-            (pal-unsnoc rest k2 plen))
-          (match many (nat-cmp x last) _
-            ((CLt t r v w lt)
-              (PalNo xs (NotPalEnds x last _ _ cat (ApartLt _ _ lt))))
-            ((CGt t r v w gt)
-              (PalNo xs (NotPalEnds x last _ _ cat (ApartGt _ _ gt))))
-            ((CEq t r v)
-              (match many (notail $ pal-decide k2 inner ilen) _
-                ((PalYes w p) (PalYes xs (PalWrap _ x _ _ p cat)))
-                ((PalNo w p) (PalNo xs (NotPalInner x _ _ cat p)))))))))))
+  (let-match many xs (Cons a x rest) ((Nil a) (PalYes xs (PalNil _))))
+  (let-match erased len (PalLCons b y tail3 k plen))
+  (let-match many rest (Cons _ _ _) ((Nil _) (PalYes xs (PalOne _ x))))
+  (let-match erased plen (PalLCons c z tail2 k2 plen2))
+  (let ((many inner) (many last) (erased ilen) (erased cat))
+    (pal-unsnoc rest k2 plen))
+  (match many (nat-cmp x last) _
+    ((CLt t r v w lt)
+      (PalNo xs (NotPalEnds x last _ _ cat (ApartLt _ _ lt))))
+    ((CGt t r v w gt)
+      (PalNo xs (NotPalEnds x last _ _ cat (ApartGt _ _ gt))))
+    ((CEq t r v)
+      (match many (notail $ pal-decide k2 inner ilen) _
+        ((PalYes w p) (PalYes xs (PalWrap _ x _ _ p cat)))
+        ((PalNo w p) (PalNo xs (NotPalInner x _ _ cat p)))))))
 
 ; Either take a complete window with its length, or certify that the
 ; suffix is too short. No partial window is ever tested as a full one.
@@ -88,19 +80,15 @@
 
 (def-fns _ $ (many pal-take : (subterm many (Nat) n)
     (many (List (Nat)) xs) -> (many (PalTake n xs) result))
-  (match many n _
-    ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (PalLNil _)))
-    ((Succ k)
-      (match many xs _
-        ((Nil a) (PalShort n xs (Zero) (PalLNil _) (LtZ k)))
-        ((Cons a x rest)
-          (match many (notail $ pal-take k rest) _
-            ((PalTaken m _ w tk len)
-              (PalTaken n xs (Cons _ x w)
-                (TakeSucc _ _ x _ _ tk) (PalLCons _ x _ _ len)))
-            ((PalShort m _ len p short)
-              (PalShort n xs _ (PalLCons _ x _ _ p)
-                (LtS _ _ short)))))))))
+  (let-match many n (Succ k) ((Zero) (PalTaken n xs (Nil _) (TakeZero _ xs) (PalLNil _))))
+  (let-match many xs (Cons a x rest) ((Nil a) (PalShort n xs (Zero) (PalLNil _) (LtZ k))))
+  (match many (notail $ pal-take k rest) _
+    ((PalTaken m _ w tk len)
+      (PalTaken n xs (Cons _ x w)
+        (TakeSucc _ _ x _ _ tk) (PalLCons _ x _ _ len)))
+    ((PalShort m _ len p short)
+      (PalShort n xs _ (PalLCons _ x _ _ p)
+        (LtS _ _ short)))))
 
 (def-adts
   ((PalWindowsDecision : ((List (List (Nat))) xss) -> Type) enum
