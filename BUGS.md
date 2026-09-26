@@ -18,4 +18,19 @@ is a design decision. Remove an entry when it is fixed.
    and proofs (e.g. `numeral-inj`, `init-witness`) read `Const` in the
    reference and `Dyn` under `slc`, and the 8 `%`-named special forms
    (`%match`, `%at`, ...) appear at different places in the scope order.
-   Which side is wrong has not been checked.
+   Both look to be on the `slc` side, though only `dump-context` has been
+   seen to show either:
+   - The 42 are the 38 erased functions of run-position `def-fns` blocks
+     and the 4 anonymous `Delegate` proofs such blocks bind. DESIGN.md
+     section 34 reads as making every name a run-position statement
+     introduces `Const`, as `lib/elab.ml`'s `elab_def_fns` does. In
+     `self/elab.sl`, `define-fns` leaves a `BErased` function out of the
+     group that `env-close-group` (`self/eval.sl`) marks `Const`, and
+     `define-fn` binds the `Delegate` proof with a plain `bind`. A user
+     file's erased top-level function reproduces it.
+   - `sp-table` (`self/core.sl`) says it follows `lib/special.ml`'s order
+     but places `UniqueFn`, `match`, `matchable-of`, the cell forms,
+     `coercible-share` and `at` differently; and `bind-specials` binds each
+     `%` constructor next to its alias and the `Matchable` last, where
+     `lib/prelude.ml` binds the constructors, then the `Matchable`, then
+     the aliases. No order seems to be fixed by DESIGN.md.
