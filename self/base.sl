@@ -284,13 +284,12 @@
 (def-fns _ $ (many nm-get : (erased Type V) (subterm many (String) name) (many (NameMap V) m) -> (many (NLookup V name m) r))
   (match many m _
     ((NMNode _ here kids)
-      (match many name _
-        ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids))))
-        ((SCons c rest)
-          (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
-          (match many (notail $ nm-get _ rest submap) _
-            ((NHit _ _ _ v p) (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p))
-            ((NMiss _ _ _ p) (NMiss _ _ _ $ NAStep _ c rest here kids submap k p))))))))
+      (let-match many name (SCons c rest)
+        ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
+      (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
+      (match many (notail $ nm-get _ rest submap) _
+        ((NHit _ _ _ v p) (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p))
+        ((NMiss _ _ _ p) (NMiss _ _ _ $ NAStep _ c rest here kids submap k p))))))
 
 (def-fns _ $ (many nm-replace-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (NameMap V) submap) -> (many (List $ NMKid V) r))
   (let-match many kids (Cons _ k rest) ((Nil _) (Cons _ (MkKid _ c submap) $ Nil _)))

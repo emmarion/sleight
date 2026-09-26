@@ -916,19 +916,17 @@
     (erased A m) (erased (ANth A n a i m) nth) ->
     (unique m is old) (unique (Array A n) r at a)
     (erased (ASet A n a i x r) p))
-  (match unique a _
-    (absurd (ANil _ _) nth)
-    ((ACons _ _ hd tl u)
-      (match many i _
-        ((Zero)
-          (match erased nth _
-            ((NthZ _ _ _ _)
-              (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
-            (absurd NthS)))
-        ((Succ i1)
-          (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-          (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
-          (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (match erased nth _
+        ((NthZ _ _ _ _)
+          (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
+        (absurd NthS)))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
+      (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
     (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
@@ -948,18 +946,16 @@
     (unique (Array (Copy A) n) a) (subterm many (Nat) i)
     (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
     (many x is v) (unique a is r at a))
-  (match unique a _
-    (absurd (ANil _ _) nth)
-    ((ACons _ _ hd tl u)
-      (match many i _
-        ((Zero)
-          (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
-          (let-match unique hd (MkCopy _ v))
-          (values v (at (u _ _ (MkCopy _ v) tl))))
-        ((Succ i1)
-          (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-          (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
-          (values v (at (u _ _ hd tl3))))))))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (let-match unique hd (MkCopy _ v))
+      (values v (at (u _ _ (MkCopy _ v) tl))))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3))))))
 
 ; TODO: add read-only functions over many arrays.
 

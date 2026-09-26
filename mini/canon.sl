@@ -171,18 +171,17 @@
 
 (def-fns _
   ((erased below-all : (erased (List (Rule)) all) (erased (List (Nat)) ar) (erased (Nat) m) (erased (ValidFrom all ar all ar) v) (erased (AllLt ar m) a) (subterm erased (Term) t) -> (erased (Below all ar t m) b))
-    (match erased t _
-      ((Ref x)
-        (match erased (rank-dec all ar all ar v x) _
-          ((RankMiss c d e p) (BlFree all ar x m p))
-          ((RankHit c d e r k p) (BlRuled all ar x m r k p (rank-lt all ar x r k m p a)))))
+    (let-match erased t (Ref x)
       ((Bound i) (BlBound all ar i m))
       ((TyApp h ps as) (BlTyApp all ar h ps as m (below-all all ar m v a h) (below-all-list all ar m v a as)))
       ((ValApp h ps r as) (BlValApp all ar h ps r as m (below-all all ar m v a h) (below-all-list all ar m v a as)))
       ((TUniv) (BlUniv all ar m))
       ((TFn l ps rs) (BlFn all ar l ps rs m (below-all all ar m v a l) (below-all-tele all ar m v a ps) (below-all-tele all ar m v a rs)))
       ((TTyCtor ps) (BlTyCtor all ar ps m (below-all-tele all ar m v a ps)))
-      ((TValCtor ps r) (BlValCtor all ar ps r m (below-all-tele all ar m v a ps) (below-all all ar m v a r)))))
+      ((TValCtor ps r) (BlValCtor all ar ps r m (below-all-tele all ar m v a ps) (below-all all ar m v a r))))
+    (match erased (rank-dec all ar all ar v x) _
+      ((RankMiss c d e p) (BlFree all ar x m p))
+      ((RankHit c d e r k p) (BlRuled all ar x m r k p (rank-lt all ar x r k m p a)))))
   ((erased below-all-list : (erased (List (Rule)) all) (erased (List (Nat)) ar) (erased (Nat) m) (erased (ValidFrom all ar all ar) v) (erased (AllLt ar m) a) (subterm erased (List (Term)) ts) -> (erased (BelowList all ar ts m) b))
     (match erased ts _
       ((Nil c) (BlNil all ar m))

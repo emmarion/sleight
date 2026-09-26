@@ -153,12 +153,11 @@
         (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))
   ((many comment-start : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
-    (match many (char-is c 33) _
-      ((BTrue) (tail $ pragma-line rest line (Succ col) (MkPos line col) (Nil _) (None _) (REmpty) (REmpty) acc))
-      ((BFalse)
-        (match many (char-is c 10) _
-          ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
-          ((BFalse) (tail $ skip-comment rest line acc))))))
+    (let-match many (char-is c 33) (BFalse)
+      ((BTrue) (tail $ pragma-line rest line (Succ col) (MkPos line col) (Nil _) (None _) (REmpty) (REmpty) acc)))
+    (match many (char-is c 10) _
+      ((BTrue) (tail $ tokenize rest (Succ line) 0 acc))
+      ((BFalse) (tail $ skip-comment rest line acc))))
   ((many pragma-line : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (List $ Raw) words)
       (many (Maybe $ Pos) start) (many (Rope) cur) (many (Rope) blanks) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (end-toks (pragma-tok pos start cur words) acc)))
@@ -256,42 +255,34 @@
     ((TStrLit l s) (tail $ parse-toks rest (push-item (RString l s) stack) opened closed))
     ((TError l m) (values stack (syn-err l m) closed))
     ((TPragma l ws)
-      (match many ws _
-        ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed))
-        ((Cons _ w args)
-          (match many w _
-            ((RAtom wl kw)
-              (match many (str-eq kw "warn") _
-                ((BTrue)
-                  (match many (nat-lt (list-length _ stack) 2) _
-                    ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
-                    ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
-                ((BFalse)
-                  (let-match many (or (str-eq kw "suppress") $ str-eq kw "restore") (BTrue)
-                    ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed)))
-                  (let ((many (Maybe $ String) name)) $ match many args _
-                    ((Cons _ a more)
-                      (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
-                        ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
-                        ((BFalse) (None _))))
-                    ((Nil _) (None _)))
-                  (match many name _
-                    ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed))
-                    ((Some _ n)
-                      (match many (str-eq kw "suppress") _
-                        ((BTrue)
-                          (match many (region-named opened n) _
-                            ((None _) (tail $ parse-toks rest stack (Cons _ (MkRegion (nat-add (list-length _ opened) $ list-length _ closed) n l $ None _) opened) closed))
-                            ((Some _ first)
-                              (match many first _ ((MkRegion _ _ fp _)
-                                (values stack (Some _ $ MkSynErr l (str-cat3 "`;! suppress warn` for `" n "` is already open") (BFalse) $ Some _ $ MkPair _ _ fp "opened here") closed))))))
-                        ((BFalse)
-                          (match many (region-named opened n) _
-                            ((None _) (values stack (syn-err l $ str-cat3 "`;! restore warn` for `" n "` has no open `;! suppress warn`") closed))
-                            ((Some _ r)
-                              (match many r _ ((MkRegion i _ from _)
-                                (tail $ parse-toks rest stack (region-drop opened n) $ Cons _ (MkRegion i n from $ Some _ l) closed))))))))))))
-            (else (values stack (syn-err l "a pragma needs a word after `;!`") closed))))))
+      (let-match many ws (Cons _ w args) ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
+      (let-match many w (RAtom wl kw) (else (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
+      (match many (str-eq kw "warn") _
+        ((BTrue)
+          (match many (nat-lt (list-length _ stack) 2) _
+            ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
+            ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
+        ((BFalse)
+          (let-match many (or (str-eq kw "suppress") $ str-eq kw "restore") (BTrue)
+            ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed)))
+          (let ((many (Maybe $ String) name)) $ match many args _
+            ((Cons _ a more)
+              (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
+                ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
+                ((BFalse) (None _))))
+            ((Nil _) (None _)))
+          (let-match many name (Some _ n) ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed)))
+          (match many (str-eq kw "suppress") _
+            ((BTrue)
+              (let-match many (region-named opened n) (Some _ first)
+                ((None _) (tail $ parse-toks rest stack (Cons _ (MkRegion (nat-add (list-length _ opened) $ list-length _ closed) n l $ None _) opened) closed)))
+              (match many first _ ((MkRegion _ _ fp _)
+                (values stack (Some _ $ MkSynErr l (str-cat3 "`;! suppress warn` for `" n "` is already open") (BFalse) $ Some _ $ MkPair _ _ fp "opened here") closed))))
+            ((BFalse)
+              (let-match many (region-named opened n) (Some _ r)
+                ((None _) (values stack (syn-err l $ str-cat3 "`;! restore warn` for `" n "` has no open `;! suppress warn`") closed)))
+              (match many r _ ((MkRegion i _ from _)
+                (tail $ parse-toks rest stack (region-drop opened n) $ Cons _ (MkRegion i n from $ Some _ l) closed))))))))
     ((TClose l)
       (let ((many s1)) $ close-dollars stack)
       (let-match many s1 (Cons _ _ s2) ((Nil _) (values s1 (Some _ $ MkSynErr l "unexpected `)`" (BTrue) $ None _) closed)))

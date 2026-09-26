@@ -851,7 +851,7 @@
 
 (def-fns _
   ((many collect-code : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
-    (match many code _
+    (let-match many code (CMatch _ _ scrut shape branches dfl live)
       ((CValue _ v) (tail $ collect-block _ v env d))
       ((CValues _ _ cs _) (tail $ collect-codes _ cs env d))
       ((CApp _ _ f args _) (tail $ collect-codes _ args env $ notail $ collect-code _ _ f env d))
@@ -860,16 +860,15 @@
       ((CCellRead _ k2 _ cell) (tail $ collect-code _ _ cell env $ collect-cell k2 d))
       ((CLet _ _ _ _ _ rhs rest) (tail $ collect-code _ _ rest env $ notail $ collect-code _ _ rhs env d))
       ((CLetRec _ _ _ g rest) (match many g _ ((MkGroup _ _ fns _) (tail $ collect-code _ _ rest env $ notail $ collect-group _ _ fns env d))))
-      ((CMatch _ _ scrut shape branches dfl live)
-        (let ((many d1)) $ notail $ collect-code _ _ scrut env d)
-        (let ((many (Decls) d2))
-          (match many shape _
-            ((ShKnown _ adt) (collect-match adt live d1))
-            ((ShHeld _ mcode adt) (collect-match adt live $ notail $ collect-code _ _ mcode env d1))
-            ((ShNone _) d1)))
-        (let ((many d3)) $ notail $ collect-branches _ _ branches env d2)
-        (match many dfl _ ((None _) d3) ((Some _ dd) (tail $ collect-code _ _ dd env d3))))
-      (else d)))
+      (else d))
+    (let ((many d1)) $ notail $ collect-code _ _ scrut env d)
+    (let ((many (Decls) d2))
+      (match many shape _
+        ((ShKnown _ adt) (collect-match adt live d1))
+        ((ShHeld _ mcode adt) (collect-match adt live $ notail $ collect-code _ _ mcode env d1))
+        ((ShNone _) d1)))
+    (let ((many d3)) $ notail $ collect-branches _ _ branches env d2)
+    (match many dfl _ ((None _) d3) ((Some _ dd) (tail $ collect-code _ _ dd env d3))))
 
   ((many collect-codes : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
     (match many cs _
@@ -1008,15 +1007,14 @@
 
 ; A group's block is its members' top-level let rec over the names of the frames it closed over.
 (def-fns _ $ (many block-let : (erased (Hist Block) hs) (many (Ref Block hs) addr) (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
-  (match many b _
-    ((BGroup _ _ _ g env2)
-      (match many g _
-        ((MkGroup _ ids fns _)
-          (let ((many suffix)) $ str-cat "_" $ addr-str _ addr)
-          (match many (emit-group _ _ fns env (push-fn-names _ ids fns env suffix $ frame-names _ _ env2 env) d suffix) _
-            ((Nil _) (REmpty))
-            ((Cons _ f1 more) (rcat3 (RStr "let rec ") (rjoin (Cons _ f1 more) "\nand ") $ RStr "\n"))))))
-    (else (rcat5 (RStr "let ") (addr-rope _ addr) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n"))))
+  (let-match many b (BGroup _ _ _ g env2)
+    (else (rcat5 (RStr "let ") (addr-rope _ addr) (RStr " : Obj.t = ") (block-rope _ b env d) $ RStr "\n")))
+  (match many g _
+    ((MkGroup _ ids fns _)
+      (let ((many suffix)) $ str-cat "_" $ addr-str _ addr)
+      (match many (emit-group _ _ fns env (push-fn-names _ ids fns env suffix $ frame-names _ _ env2 env) d suffix) _
+        ((Nil _) (REmpty))
+        ((Cons _ f1 more) (rcat3 (RStr "let rec ") (rjoin (Cons _ f1 more) "\nand ") $ RStr "\n"))))))
 
 (def-lvl REF-CMP)
 
@@ -1166,74 +1164,66 @@
 
 (def-fns _
   ((many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) (many (Decls) d) -> (many (ShowMemo) memo2) (many (String) name))
-    (match many fuel _
-      ((Zero) (values memo "show_any"))
-      ((Succ k)
-        (let ((many ty)) $ canon-env env ty0)
-        (match many memo _
-          ((MkShowMemo fresh count known defs)
-            (let ((many key)) $ mapv ty (OpWild fresh) 0)
-            (match many (memo-find known env key) _
-              ((Some _ name) (values memo name))
-              ((None _)
-                (let ((many name)) $ str-cat "show_" $ nat-str count)
-                (let ((many memo1)) $ MkShowMemo fresh (Succ count) (Cons _ (MkPair _ _ key name) known) defs)
-                (let ((many (ShowMemo) memo2) (many (Rope) body))
-                  (match many (lit-show env ty) (((ShowMemo) _) ((Rope) r0))
-                    ((Some _ text) (values memo1 text))
-                    ((None _)
-                      (match many ty _
-                        ((TApp _ _)
-                          (match many (type-adt env ty) (((ShowMemo) _) ((Rope) r))
-                            ((None _) (values memo1 $ RStr "\"_\""))
-                            ((Some _ adt)
-                              ; the tag where there is one, else the sole non-phantom constructor; a union with
-                              ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
-                              (let ((many usable))
-                                (match many (adt-tagged adt) (((List $ Ctor) _))
-                                  ((BTrue) (adt-ctors adt))
-                                  ((BFalse) (match many (lone-ctor adt) (((List $ Ctor) _))
-                                              ((None _) (Nil _))
-                                              ((Some _ c) (Cons _ c $ Nil _))))))
-                              (let ((many memo3) (many arms)) $ notail $ show-arms k env ty usable memo1 (adt-tagged adt) d)
-                              (match many arms (((ShowMemo) _) ((Rope) r2))
-                                ((Nil _) (values memo3 $ RStr "\"_\""))
-                                ((Cons _ _ _)
-                                  (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
-                        ((TFn _ _ _ _) (values memo1 $ RStr "\"_\""))
-                        ((TCell _ _) (values memo1 $ RStr "\"_\""))
-                        ((TValCtor _ _) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
-                (match many memo2 _
-                  ((MkShowMemo fresh2 count2 known2 defs2)
-                    (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))))))
+    (let-match many fuel (Succ k) ((Zero) (values memo "show_any")))
+    (let ((many ty)) $ canon-env env ty0)
+    (match many memo _
+      ((MkShowMemo fresh count known defs)
+        (let ((many key)) $ mapv ty (OpWild fresh) 0)
+        (let-match many (memo-find known env key) (None _) ((Some _ name) (values memo name)))
+        (let ((many name)) $ str-cat "show_" $ nat-str count)
+        (let ((many memo1)) $ MkShowMemo fresh (Succ count) (Cons _ (MkPair _ _ key name) known) defs)
+        (let ((many (ShowMemo) memo2) (many (Rope) body))
+          (match many (lit-show env ty) (((ShowMemo) _) ((Rope) r0))
+            ((Some _ text) (values memo1 text))
+            ((None _)
+              (match many ty _
+                ((TApp _ _)
+                  (match many (type-adt env ty) (((ShowMemo) _) ((Rope) r))
+                    ((None _) (values memo1 $ RStr "\"_\""))
+                    ((Some _ adt)
+                      ; the tag where there is one, else the sole non-phantom constructor; a union with
+                      ; several has no way to choose and prints `_` (ASSUMPTIONS 184)
+                      (let ((many usable))
+                        (match many (adt-tagged adt) (((List $ Ctor) _))
+                          ((BTrue) (adt-ctors adt))
+                          ((BFalse) (match many (lone-ctor adt) (((List $ Ctor) _))
+                                      ((None _) (Nil _))
+                                      ((Some _ c) (Cons _ c $ Nil _))))))
+                      (let ((many memo3) (many arms)) $ notail $ show-arms k env ty usable memo1 (adt-tagged adt) d)
+                      (match many arms (((ShowMemo) _) ((Rope) r2))
+                        ((Nil _) (values memo3 $ RStr "\"_\""))
+                        ((Cons _ _ _)
+                          (values memo3 $ dispatch-rope d 0 adt (all-live adt) (RStr "v") arms $ Some _ $ RStr "\"_\""))))))
+                ((TFn _ _ _ _) (values memo1 $ RStr "\"_\""))
+                ((TCell _ _) (values memo1 $ RStr "\"_\""))
+                ((TValCtor _ _) (values memo1 $ RStr "\"_\"")) (else (values memo1 $ RStr "\"_\""))))))
+        (match many memo2 _
+          ((MkShowMemo fresh2 count2 known2 defs2)
+            (values (MkShowMemo fresh2 count2 known2 $ Cons _ (rcat4 (RStr name) (RStr " (v : Obj.t) : string = ") body $ REmpty) defs2) name))))))
 
   ; One arm per non-phantom constructor whose return type the instance does not refute, the opened objects
   ; merged as entering a branch does, its fields shown only then, as the reference's exception skips them.
   ((many show-arms : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty) (many (List $ Ctor) ctors) (many (ShowMemo) memo) (many (Bool) tagged) (many (Decls) d) -> (many (ShowMemo) memo2) (many (List $ Arm) arms))
-    (match many fuel _
-      ((Zero) (values memo $ Nil _))
-      ((Succ k)
-        (match many ctors _
-          ((Nil _) (values memo $ Nil _))
-          ((Cons _ c rest)
-            (match many c _
-              ((MkCtor cname cid index arity _ _ _ _)
-                (let ((many ctele) (many ret)) $ ctor-type env cid)
-                (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
-                (let ((many (Env) envb2) (many (Bool) live))
-                  (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
-                    ((UOk e2) (values e2 $ BTrue))
-                    ((UContra _) (values envb $ BFalse))))
-                (let ((many (ShowMemo) memo2) (many (List $ Rope) shown))
-                  (match many live _
-                    ((BTrue) (notail $ show-block-fields k envb2 fids memo 0 d))
-                    ((BFalse) (values memo $ Nil _))))
-                ; Ffi_core.show_app is the one definition the interpreter, an extracted program and this
-                ; output share, so `$` is not decided again here (ASSUMPTIONS 184)
-                (let ((many (Rope) text))
-                  (rcat4 (RStr "(Ffi_core.show_app ") (quoted cname) (rwrap " [ " (rjoin shown "; ") " ])") $ REmpty))
-                (let ((many memo3) (many more)) $ notail $ show-arms k env ty rest memo2 tagged d)
-                (values memo3 $ match many live (((List $ Arm) _)) ((BTrue) (Cons _ (MkArm index (field-names arity 0) text) more)) ((BFalse) more)))))))))
+    (let-match many fuel (Succ k) ((Zero) (values memo $ Nil _)))
+    (let-match many ctors (Cons _ c rest) ((Nil _) (values memo $ Nil _)))
+    (match many c _
+      ((MkCtor cname cid index arity _ _ _ _)
+        (let ((many ctele) (many ret)) $ ctor-type env cid)
+        (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
+        (let ((many (Env) envb2) (many (Bool) live))
+          (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
+            ((UOk e2) (values e2 $ BTrue))
+            ((UContra _) (values envb $ BFalse))))
+        (let ((many (ShowMemo) memo2) (many (List $ Rope) shown))
+          (match many live _
+            ((BTrue) (notail $ show-block-fields k envb2 fids memo 0 d))
+            ((BFalse) (values memo $ Nil _))))
+        ; Ffi_core.show_app is the one definition the interpreter, an extracted program and this
+        ; output share, so `$` is not decided again here (ASSUMPTIONS 184)
+        (let ((many (Rope) text))
+          (rcat4 (RStr "(Ffi_core.show_app ") (quoted cname) (rwrap " [ " (rjoin shown "; ") " ])") $ REmpty))
+        (let ((many memo3) (many more)) $ notail $ show-arms k env ty rest memo2 tagged d)
+        (values memo3 $ match many live (((List $ Arm) _)) ((BTrue) (Cons _ (MkArm index (field-names arity 0) text) more)) ((BFalse) more)))))
 
   ((many show-block-fields : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) fids) (many (ShowMemo) memo) (many (Nat) i) (many (Decls) d) -> (many (ShowMemo) memo2) (many (List $ Rope) shown))
     (let-match many fuel (Succ k) ((Zero) (values memo $ Nil _)))

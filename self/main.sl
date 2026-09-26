@@ -54,11 +54,10 @@
 (def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
   (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs $ list-rev _ acc)))
   (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
-    (match many r _
-      ((Fail _ m)
-        (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
-          $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
-      ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc))))
+    (let-match many r (Fail _ m)
+      ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc)))
+    (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
+      $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
   (ReadFile _ path after-read))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.

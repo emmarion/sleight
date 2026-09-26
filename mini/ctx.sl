@@ -535,13 +535,12 @@
     (many LenSame : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (LenEq A B xs ys) p) -> (LenDec A B xs ys))
     (many LenDiff : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (LenMismatch A B xs ys) p) -> (LenDec A B xs ys))))
 (def-fns _ $ (many len-dec : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) -> (many (LenDec A B xs ys) r))
-  (match many xs _
-    ((Nil a) (match many ys _ ((Nil b) (LenSame _ _ _ _ (LENil _ _))) ((Cons b y ys2) (LenDiff _ _ _ _ (LMNilCons _ _ y ys2)))))
-    ((Cons a x xs2)
-      (let-match many ys (Cons b y ys2) ((Nil b) (LenDiff _ _ _ _ (LMConsNil _ _ x xs2))))
-      (match many (notail $ len-dec _ _ xs2 ys2) _
-        ((LenSame c d e f p) (LenSame _ _ _ _ (LECons _ _ x y xs2 ys2 p)))
-        ((LenDiff c d e f p) (LenDiff _ _ _ _ (LMCons _ _ x y xs2 ys2 p)))))))
+  (let-match many xs (Cons a x xs2)
+    ((Nil a) (match many ys _ ((Nil b) (LenSame _ _ _ _ (LENil _ _))) ((Cons b y ys2) (LenDiff _ _ _ _ (LMNilCons _ _ y ys2))))))
+  (let-match many ys (Cons b y ys2) ((Nil b) (LenDiff _ _ _ _ (LMConsNil _ _ x xs2))))
+  (match many (notail $ len-dec _ _ xs2 ys2) _
+    ((LenSame c d e f p) (LenSame _ _ _ _ (LECons _ _ x y xs2 ys2 p)))
+    ((LenDiff c d e f p) (LenDiff _ _ _ _ (LMCons _ _ x y xs2 ys2 p)))))
 (def-fns _ $ (erased ext-trans : (erased (Nat) n0) (erased (Nat) n1) (erased (List (Ent)) e0) (erased (List (Ent)) e1) (erased (List (Ent)) e2) (erased (Lt n0 (Succ n1)) le) (erased (Ext n0 e0 e1) p)
     (subterm erased (Ext n1 e1 e2) q) -> (erased (Ext n0 e0 e2) r))
   (match erased q _
@@ -698,13 +697,12 @@
     ((CovNone a b acc2 e2 c2) (covers-ext n0 e0 acc2 e2 c2))))
 (def-fns _ $ (erased covers-has : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) acc) (erased (List (Ent)) e1) (erased (Nat) x) (erased (NotIn acc x) ni) (subterm erased (Covers n0 e0 acc e1) c)
     (erased (HasEnt e1 x) h) -> (erased (HasEnt e0 x) h2))
-  (match erased c _
+  (let-match erased c (CovSome a b acc2 e2 y ty k le c2)
     ((CovNil a b) h)
-    ((CovSome a b acc2 e2 y ty k le c2)
-      (match erased h _
-        (absurd (HEHere a2 ty2 k2 rest) (let-match erased ni (NotInSome x2 y2 rest2 nq p)) (neq-irrefl x nq))
-        ((HEThere a2 ent rest p) (match erased ni _ ((NotInSome x2 y2 rest2 nq p2) (covers-has n0 e0 acc2 e2 x p2 c2 p))))))
-    ((CovNone a b acc2 e2 c2) (match erased ni _ ((NotInNone x2 rest p) (covers-has n0 e0 acc2 e2 x p c2 h))))))
+    ((CovNone a b acc2 e2 c2) (match erased ni _ ((NotInNone x2 rest p) (covers-has n0 e0 acc2 e2 x p c2 h)))))
+  (match erased h _
+    (absurd (HEHere a2 ty2 k2 rest) (let-match erased ni (NotInSome x2 y2 rest2 nq p)) (neq-irrefl x nq))
+    ((HEThere a2 ent rest p) (match erased ni _ ((NotInSome x2 y2 rest2 nq p2) (covers-has n0 e0 acc2 e2 x p2 c2 p))))))
 
 (def-fns _
   ((erased abstract-covers : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) ids) (erased (List (Ent)) e1) (erased (Nat) d) (erased (Nat) m) (erased (Term) t) (erased (Term) u)
