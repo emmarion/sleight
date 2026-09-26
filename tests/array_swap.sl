@@ -22,9 +22,9 @@ swap-test
 ; warns: lib/prelude.sl:829:1: note: `;! warn` for `ACons` is here
 ; warns: tests/array_swap.sl:12:8: warning: application of `ACons`: copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
 ; warns: lib/prelude.sl:829:1: note: `;! warn` for `ACons` is here
-; warns: tests/array_swap.sl:14:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
+; warns: tests/array_swap.sl:14:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:830:1: note: `;! warn` for `Array` is here
-; warns: tests/array_swap.sl:15:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
+; warns: tests/array_swap.sl:15:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:830:1: note: `;! warn` for `Array` is here
-; warns: tests/array_swap.sl:16:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`
+; warns: tests/array_swap.sl:16:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 ; warns: lib/prelude.sl:830:1: note: `;! warn` for `Array` is here

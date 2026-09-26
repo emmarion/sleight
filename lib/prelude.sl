@@ -827,7 +827,7 @@
                 -> (Array A (Succ n))))
 
 ;! warn ACons copies the whole array, O(n); allocate with `array-new` and fill with `array-place`
-;! warn Array copies the array's tail, O(n); read with `array-get` and `array-length`
+;! warn Array copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype

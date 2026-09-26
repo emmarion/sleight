@@ -690,6 +690,23 @@ read in place, its FFI that of `array-pluck`:
               (values v (at (u _ _ hd tl3))))))))))
 ```
 
+A `many` array is read without handing it back, and its fields being read at `many` already, its elements need no `Copy`; its FFI is that of `array-get`. `array-length` reads a unique array's length and hands the array back, and `array-length-many` reads a `many` array's:
+
+```scheme
+(def-fns _ $ (many extern array-get-many : (erased Type A) (erased (Nat) n)
+    (many (Array A n) a) (subterm many (Nat) i)
+    (erased A x) (erased (ANth A n a i x) nth) -> (many x is v))
+  ...)
+
+(def-fns _ $ (many extern array-length : (erased Type A) (erased (Nat) n)
+    (subterm unique (Array A n) a) -> (many n is len) (unique a is r at a))
+  ...)
+
+(def-fns _ $ (many extern array-length-many : (erased Type A) (erased (Nat) n)
+    (subterm many (Array A n) a) -> (many n is len))
+  ...)
+```
+
 The conversion to a plain array is an erased witness in §40's shape,
 and the `coerce` is written where it is used, a wrapper function
 extracting to a call where the inline `coerce` extracts to nothing:
