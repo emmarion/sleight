@@ -946,7 +946,17 @@
       (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
       (values v (at (u _ _ hd tl3))))))
 
-; TODO: add read-only functions over many arrays.
+(def-fns _ $ (many extern array-get-many : (erased Type A) (erased (Nat) n)
+    (many (Array A n) a) (subterm many (Nat) i)
+    (erased A x) (erased (ANth A n a i x) nth) -> (many x is v))
+  (let-match many a (ACons _ _ hd tl) (absurd (ANil _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      hd)
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (tail (array-get-many _ _ tl i1 _ q)))))
 
 ; The Immediate proof lets extraction skip OCaml's write barrier, measured ~4x faster.
 (def-fns _ $ (many extern array-swap-imm : (erased Type A) (erased (Nat) n)
@@ -967,6 +977,11 @@
   (let-match unique a (ACons _ n1 hd tl u) ((ANil _ u) (values (Zero) (at (u _)))))
   (let ((many l1) (unique tl2)) (notail $ array-length _ _ tl))
   (values (Succ l1) (at (u _ _ hd tl2))))
+
+(def-fns _ $ (many extern array-length-many : (erased Type A) (erased (Nat) n)
+    (subterm many (Array A n) a) -> (many n is len))
+  (let-match many a (ACons _ n1 hd tl) ((ANil _) (Zero)))
+  (Succ (notail $ array-length-many _ _ tl)))
 
 (def-fns _ $ (many extern list-to-array : (erased Type A) (subterm many (List A) xs) ->
     (erased (Nat) n) (unique (Array (Copy A) n) a) (erased (ArrayIsList A xs n a) p))

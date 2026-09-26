@@ -61,16 +61,20 @@ let tag name get f = binary (fun a b -> plain name (Obj.magic (f (get a) (get b)
 let spec ?(needs = []) takes run = { takes; needs; run }
 let swap = function [ a; i; x ] -> [ Ffi_core.array_swap (array a) (z i) x ] | _ -> raise arity
 let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity
+let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i)))
+let length = spec ~needs:["Array"] 1 (unary (fun a -> int "Nat" (Ffi_core.array_length (array a))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VToken (z n)))));
     ("array-make", spec ~needs:["Array"] 2 (binary (fun n x -> arr (Ffi_core.array_make (z n) x))));
     ("array-swap", spec ~needs:["Array"] 3 swap);
     ("array-swap-imm", spec ~needs:["Array"] 3 swap);
     ("array-pluck", spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_pluck (array a) (z i))));
-    ("array-get", spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i))));
+    ("array-get", get);
+    ("array-get-many", get);
     ("array-place", spec ~needs:["Array"] 3 place);
     ("array-place-imm", spec ~needs:["Array"] 3 place);
-    ("array-length", spec ~needs:["Array"] 1 (unary (fun a -> int "Nat" (Ffi_core.array_length (array a)))));
+    ("array-length", length);
+    ("array-length-many", length);
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
     ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));

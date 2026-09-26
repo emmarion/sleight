@@ -134,8 +134,10 @@ let array_swap a i x =
 
 let array_pluck a i = Obj.magic (Array.unsafe_get (Obj.magic a : word array) (small i))
 let array_get = array_pluck
+let array_get_many = array_pluck
 let array_place a i x = Array.unsafe_set (Obj.magic a : word array) (small i) (Obj.magic x : word)
 let array_length a = Z.of_int (Array.length a)
+let array_length_many = array_length
 let array_swap_imm a i x =
   let a = (Obj.magic a : int array) in
   let old = Array.unsafe_get a (small i) in
