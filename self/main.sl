@@ -80,7 +80,7 @@
       (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue))))
       (let ((many files) (many pargs)) (split-args args))
       (read-files prelude templates interpreting pargs files $ match many prelude _
-        ((BTrue) (Cons _ (MkPair _ _ "lib/prelude.sl" $ rope-str prelude-source) $ Nil _))
+        ((BTrue) (Cons _ (MkPair _ _ "lib/prelude.sl" prelude-source) $ Nil _))
         ((BFalse) (Nil _))))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
