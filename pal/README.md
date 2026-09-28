@@ -36,7 +36,7 @@ For a fast standalone program, use an existing `slc` built as described in
 
 ```sh
 mkdir -p _build/pal-fast
-_build/self/slc -- lib/prelude.sl \
+_build/self/slc -- \
   self/base.sl pal/palindrome_relations.sl pal/palindrome_naive.sl \
   pal/palindrome_lemmas.sl pal/palindrome_centers.sl pal/palindrome_seed.sl \
   pal/palindrome_manacher.sl pal/manacher_main.sl > _build/pal-fast/manacher.ml
@@ -52,7 +52,7 @@ cases exercise the tail-recursive input conversion, scan, and expansion.
 
 The driver reads all of stdin, including any
 newlines, as bytes. Send EOF to finish input. Without `slc`, the reference
-compiler accepts the same file list (omit `lib/prelude.sl`) followed by
+compiler accepts the same file list followed by
 `--extract _build/pal-fast/manacher.ml`.
 
 ## Algorithm and cost

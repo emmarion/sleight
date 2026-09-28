@@ -108,8 +108,9 @@ host (section 41); a `U8` or a
   the phantom indices of narrowing, the identity `Matchable`, each
   extern type's unwrap and wrap over `Obj.t`, and the `world` the
   driver runs in. `gen_header.py` turns the three files into `header.sl`, the same
-  text as one `Rope` of SL string literals; regenerate `header.sl`
-  after editing any of them.
+  text as one `Rope` of SL string literals, and `lib/ffi_templates.txt`
+  and `lib/prelude.sl` into two more; regenerate `header.sl` after
+  editing any of them (`bootstrap.sh` does).
 - `emit.sl` — extraction to OCaml in the reference's scheme: a walk
   collecting the shapes and narrowings a program needs, the blocks and
   groups as OCaml, the driver's operations, and a generated printer
@@ -127,13 +128,14 @@ host (section 41); a `U8` or a
 ```sh
 dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
-_build/self/slc -- lib/prelude.sl tests/list.sl > list.ml
+_build/self/slc -- tests/list.sl > list.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
-_build/self/slc -- --interpret lib/prelude.sl tests/io_echo.sl -- arg1 arg2
+_build/self/slc -- --interpret tests/io_echo.sl -- arg1 arg2
 ```
 
-`slc` takes the files to compile as its program arguments, the prelude
-first, elaborates them in one scope in order as the interpreter does,
+`slc` takes the files to compile as its program arguments, elaborates
+them in one scope in order after the prelude it embeds (`header.sl`'s
+`prelude-source`, which `--no-prelude` leaves out) as the interpreter does,
 and writes the OCaml program to stdout; elaboration errors go to stderr
 with exit code 1. The compiled program takes its own arguments after
 `--` and behaves as `lib/program.ml` would: a final `String -> String`

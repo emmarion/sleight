@@ -1,7 +1,8 @@
 ; self/main.sl -- the compiler's entry point: an IO program (ASSUMPTIONS 56) reading the files named on its
-; command line, prelude first, elaborating them in one scope in order, and writing the extracted OCaml to
-; stdout as one string, or under --interpret performing the program itself (self/interp.sl); elaboration
-; errors go to stderr with exit code 1. The levels are minted in self/interp.sl.
+; command line, elaborating them in one scope in order after the prelude (embedded as header.sl's
+; prelude-source), and writing the extracted OCaml to stdout as one string, or under --interpret performing
+; the program itself (self/interp.sl); elaboration errors go to stderr with exit code 1. The levels are
+; minted in self/interp.sl.
 
 (let ((erased th-util)) (prove-predates thunk-lvl util-lvl))
 (let ((erased th-compile)) (prove-predates thunk-lvl compile-lvl))
@@ -14,7 +15,7 @@
       (WriteErr _ e $ unique-thunk (predates th-util) _ _ $ WriteErr _ "\n" $ unique-thunk (predates th-util) _ _ $ notail $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
-; file is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
+; source is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r))
   (let-match many srcs (Cons _ ps rest) ((Nil _) env))
   (let-match many ps (MkPair _ _ path src))
@@ -67,18 +68,20 @@
   (values (Cons _ p files) pargs))
 
 ; The flags, in any order, then the files: --no-prelude, --no-templates and --interpret. Without --no-prelude
-; the first file is the prelude.
+; the embedded prelude goes ahead of the files, under the path the reference names it by (lib/builtin.ml).
 (def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
   (match many args _
     ((Nil _)
-      (WriteErr _ "usage: slc -- [--no-prelude] [--no-templates] [--interpret] prelude.sl file.sl ... [-- arg ...] > out.ml\n"
+      (WriteErr _ "usage: slc -- [--no-prelude] [--no-templates] [--interpret] file.sl ... [-- arg ...] > out.ml\n"
         $ unique-thunk _ _ $ Exit _ exit-fail))
     ((Cons _ p rest)
       (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting)))
       (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting)))
       (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue))))
       (let ((many files) (many pargs)) (split-args args))
-      (read-files prelude templates interpreting pargs files $ Nil _))))
+      (read-files prelude templates interpreting pargs files $ match many prelude _
+        ((BTrue) (Cons _ (MkPair _ _ "lib/prelude.sl" $ rope-str prelude-source) $ Nil _))
+        ((BFalse) (Nil _))))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
   (start-with args (BTrue) (BTrue) (BFalse)))
