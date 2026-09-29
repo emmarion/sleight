@@ -1,8 +1,9 @@
 #!/bin/sh
 # Times the self-hosted compiler (self/README.md) on a copy of its own sources at a given commit and on the
 # sample programs under bench/*.sl. The sources are the self/*.sl files of that commit, materialized under
-# the build directory so that later edits to self/ change the compiler but not its input; the commit has to be
-# reachable (not in a shallow clone) and its sources written in the syntax the measured slc accepts.
+# the build directory with the lib/ files its header is generated from, so that later edits change the
+# compiler but not its input; the commit has to be reachable (not in a shallow clone) and its sources written
+# in the syntax the measured slc accepts.
 # Usage: bench/bench.sh [-n runs] [-b build-dir] <commit> [slc-binary]   (defaults: 5 runs, _build/self, _build/self/slc)
 set -u
 cd "$(dirname "$0")/.."
@@ -14,13 +15,10 @@ shift $((OPTIND - 1))
 PINNED=$(git rev-parse --short --verify "$1^{commit}") || { echo "commit $1 is not reachable here (a shallow clone? git fetch --unshallow)"; exit 2; }
 SLC=${2:-$B/slc}
 P=_build/bench/$PINNED
-mkdir -p "$P"
+[ -d "$P/self" ] || { mkdir -p "$P" && git archive "$PINNED" self lib | tar -x -C "$P"; } || exit 1
+python3 "$P/self/gen_header.py" || exit 1
 PIN=""
-for f in base heap reader core eval elab header emit interp main; do
-  git cat-file -e "$PINNED:self/$f.sl" 2>/dev/null || continue
-  [ -s "$P/$f.sl" ] || git show "$PINNED:self/$f.sl" > "$P/$f.sl" || exit 1
-  PIN="$PIN $P/$f.sl"
-done
+for f in base heap reader core eval elab header emit interp main; do [ -f "$P/self/$f.sl" ] && PIN="$PIN $P/self/$f.sl"; done
 
 # time_one <label> <files...>: RUNS runs, reporting the minimum and median wall time, the minimum user time
 # and the maximum resident size, then the GC's own account of the run (minor words, major collections).

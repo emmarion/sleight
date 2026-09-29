@@ -29,7 +29,7 @@
 
    $ is not paren nesting and is deliberately not tracked: a $ chain closes
    only at its enclosing form's terminator, so counting it would make the
-   common flat-aligned $ chain (self/header.sl, self/core.sl's sp-table)
+   common flat-aligned $ chain (self/core.sl's sp-table)
    look like it plunges one level deeper on every line, which is worse than
    ignoring it. Blank lines and comment-only lines carry no tokens and are
    silently skipped, matching the reader.

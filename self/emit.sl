@@ -1296,7 +1296,7 @@
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on (rope-str extern-templates) 10)) ((BFalse) (Nil _)))
+  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _)))
   (let-match many hp (MkStore _ _ bound lb writes))
   (let ((many roots)) $ roots-of-finals _ fi (roots-of-entries _ en (Nil _)))
   (let ((many acc2) (many d2))
@@ -1305,4 +1305,4 @@
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
-  (rcat5 runtime-header (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env) $ emit-finals _ hp (list-rev _ fi) env d2))
+  (rcat5 (RStr runtime-header) (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env) $ emit-finals _ hp (list-rev _ fi) env d2))

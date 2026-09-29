@@ -108,9 +108,10 @@ host (section 41); a `U8` or a
   the phantom indices of narrowing, the identity `Matchable`, each
   extern type's unwrap and wrap over `Obj.t`, and the `world` the
   driver runs in. `gen_header.py` turns the three files into `header.sl`, the same
-  text as one `Rope` of SL string literals, `lib/ffi_templates.txt`
-  into a second, and `lib/prelude.sl` into one string literal; regenerate `header.sl` after
-  editing any of them (`bootstrap.sh` does).
+  text as one SL string literal, with `lib/ffi_templates.txt` and
+  `lib/prelude.sl` as two more. `header.sl` is generated, not committed:
+  `bootstrap.sh` and `bench/` regenerate it, and a fresh checkout needs
+  `python3 self/gen_header.py` before anything else reads `self/*.sl`.
 - `emit.sl` — extraction to OCaml in the reference's scheme: a walk
   collecting the shapes and narrowings a program needs, the blocks and
   groups as OCaml, the driver's operations, and a generated printer
