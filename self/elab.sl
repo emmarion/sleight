@@ -2281,7 +2281,8 @@
     (many AConst : (erased (List $ List $ Nat) ctx) (many (Nat) x) -> (Atom ctx)))
   ((Ren : ((List $ List $ Nat) from) ((List $ List $ Nat) ctx) -> Type)
     enum
-    (many RNil : (erased (List $ List $ Nat) ctx) -> (Ren (Nil (List (Nat))) ctx))
+    (many RId : (erased (List $ List $ Nat) ctx) -> (Ren ctx ctx))
+    (many RWeak : (erased (List $ Nat) f) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (Ren from ctx) r) -> (Ren from (Cons (List (Nat)) f ctx)))
     (many RFrame : (erased (List $ Nat) f) (erased (List $ List $ Nat) rest) (erased (List $ List $ Nat) ctx) (many (List $ Atom ctx) atoms) (erased (Lockstep (Nat) (Atom ctx) f atoms) lk) (many (Ren rest ctx) r) -> (Ren (Cons (List (Nat)) f rest) ctx))))
 
 (def-fns _ $ (many atom-code : (erased (List $ List $ Nat) ctx) (many (Atom ctx) a) -> (many (Code ctx many-one) r))
@@ -2290,41 +2291,25 @@
 (def-fns _ $ (many atom-there : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (many (Atom ctx) a) -> (many (Atom (Cons (List (Nat)) f ctx)) r))
   (match many a _ ((AVar _ x p) (AVar _ x $ MThere _ _ _ p)) ((AConst _ x) (AConst _ x))))
 
-(def-fns _ $ (many atoms-there : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (List $ Atom ctx) as) -> (many (List $ Atom (Cons (List (Nat)) f ctx)) r) (erased (Lockstep (Atom ctx) (Atom (Cons (List (Nat)) f ctx)) as r) lk))
-  (let-match many as (Cons _ x rest) ((Nil _) (values (Nil _) (LsNil _ _))))
-  (let ((many r) (erased lk)) $ notail $ atoms-there ctx f rest)
-  (let ((many y)) $ atom-there _ f x)
-  (values (Cons _ y r) (LsCons _ _ x y rest r lk)))
-
 (def-fns _ $ (many self-atoms : (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (List $ AtIn f) ats) -> (many (List $ Atom (Cons (List (Nat)) f ctx)) r) (erased (Lockstep (AtIn f) (Atom (Cons (List (Nat)) f ctx)) ats r) lk))
   (let-match many ats (Cons _ at2 rest) ((Nil _) (values (Nil _) (LsNil _ _))))
   (let ((many r) (erased lk)) $ notail $ self-atoms ctx f rest)
   (let ((many (Atom (Cons (List (Nat)) f ctx)) atom)) $ match many at2 _ ((MkAtIn _ x p) (AVar _ x $ MHere _ _ _ p)))
   (values (Cons _ atom r) (LsCons _ _ at2 atom rest r lk)))
 
-(def-fns _ $ (many ren-under : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (erased (List $ Nat) f) (subterm many (Ren from ctx) ren) -> (many (Ren from (Cons (List (Nat)) f ctx)) r))
-  (let-match many ren (RFrame _ _ _ atoms lk r) ((RNil _) (RNil _)))
-  (let ((many atoms2) (erased lk2)) $ atoms-there _ f atoms)
-  (RFrame _ _ _ atoms2 (lockstep-trans _ _ _ _ _ _ lk lk2) $ notail $ ren-under _ _ f r))
-
 (def-fns _ $ (many ren-weaken : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Nat) f) (many (Ren from ctx) ren) -> (many (Ren (Cons (List (Nat)) f from) (Cons (List (Nat)) f ctx)) r))
   (let ((many ats) (erased lk)) $ at-ins f)
   (let ((many atoms) (erased lk2)) $ self-atoms ctx _ ats)
-  (RFrame _ _ _ atoms (lockstep-trans _ _ _ _ _ _ lk lk2) $ ren-under _ _ f ren))
+  (RFrame _ _ _ atoms (lockstep-trans _ _ _ _ _ _ lk lk2) $ RWeak _ _ _ ren))
 
-(def-fns _ $ (many ren-id : (subterm many (List $ List $ Nat) ctx) -> (many (Ren ctx ctx) r))
-  (match many ctx _
-    ((Nil _) (RNil _))
-    ((Cons _ f rest) (ren-weaken _ _ f $ notail $ ren-id rest))))
-
-(def-fns _ $ (many ren-get : (erased (Nat) x) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (Mem x from) p) (many (Ren from ctx) ren) -> (many (Atom ctx) r))
-  (match many p _
-    ((MHere _ _ _ q)
-      (let-match many ren (RFrame g rest c2 atoms lk r))
-      (let ((many a) (erased sq)) $ at-get _ _ _ q atoms lk) a)
-    ((MThere _ _ _ q)
-      (let-match many ren (RFrame g rest c2 atoms lk r))
-      (tail $ ren-get _ _ _ q r))))
+(def-fns _ $ (many ren-get : (many (Nat) x) (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (Mem x from) p) (subterm many (Ren from ctx) ren) -> (many (Atom ctx) r))
+  (match many ren _
+    ((RId _) (AVar _ x p))
+    ((RWeak _ _ _ r) (atom-there _ _ $ notail $ ren-get x _ _ p (subterm (prove-subterm r ren)) r))
+    ((RFrame _ _ _ atoms lk r)
+      (match many p _
+        ((MHere _ _ _ q) (let ((many a) (erased sq)) $ at-get _ _ _ q atoms lk) a)
+        ((MThere _ _ _ q) (tail $ ren-get x _ _ (subterm (prove-subterm q p)) q r))))))
 
 ; The atoms a let binds, if its right-hand side is nothing but variables and constants.
 (def-fns _ $ (many atoms-of : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Maybe $ List $ Atom ctx) r))
@@ -2484,7 +2469,7 @@
 (def-fns _
   ((many norm : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (subterm many (Code from ms) c) (many (Ren from ctx) ren) -> (many (Code ctx ms) r))
     (match many c _
-      ((CVar _ _ p) (atom-code _ $ ren-get _ _ _ p ren))
+      ((CVar _ x p) (atom-code _ $ ren-get x _ _ p ren))
       ((CConst _ x) (CConst _ x))
       ((CValue _ v) (CValue _ v))
       ((CErased _ ms2) (CErased _ ms2))
@@ -2574,7 +2559,7 @@
 
 (def-fns _ $ (many bind-lift : (many (List $ List $ Nat) ctx) (many (List $ Mult) ns) (many (List $ Nat) ids) (many (List $ Nat) frame)
     (many (Code (Cons (List (Nat)) ids ctx) ns) rest) -> (many (Code (Cons (List (Nat)) ids (Cons (List (Nat)) frame ctx)) ns) r))
-  (norm _ _ ns rest $ ren-weaken _ _ ids $ ren-under _ _ frame $ ren-id ctx))
+  (norm _ _ ns rest $ ren-weaken _ _ ids $ RWeak _ _ _ $ RId ctx))
 
 (def-fns _
   ((many bind-through : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Mult) ns) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk)
@@ -2652,7 +2637,7 @@
       (values (Cons _ p more) $ LsCons _ _ pair p rest more lk)))))
 
 (def-fns _ $ (many normalize : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r))
-  (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ ren-id ctx) $ ren-id ctx))
+  (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ RId ctx) $ RId ctx))
 
 
 ; ---- tail and delegate (section 9, ASSUMPTIONS 17): judged on the normalized post-erasure code, per
