@@ -4,6 +4,7 @@
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
+   "; confine: dir" the directory its file requests start confined to, as --confine gives it;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
@@ -67,10 +68,13 @@ and run_mode name externs src =
   let read_rest () = let rest = String.concat "\n" !lines in lines := []; rest in
   let args = List.concat_map (String.split_on_char ' ') (directive src "args") in
   let envs = List.filter_map split_env (directive src "env") in
+  let fence = ref "/" in
+  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d)) (directive src "confine");
+  Extract.fence := !fence;
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
       env = (fun n -> List.assoc_opt n envs); envs = (fun () -> envs); cwd = Sys.getcwd;
-      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")) }
+      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); fence }
   in
   let consume = Program.consume world in
   (* The test's own final is run only after the extracted sources are taken: running it may update a unique

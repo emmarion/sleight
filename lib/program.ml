@@ -42,6 +42,7 @@ let driver env =
     | "MkDir", [ p; k ] -> MkDir (p, k)
     | "DeleteFile", [ p; k ] -> DeleteFile (p, k)
     | "DeleteDir", [ p; k ] -> DeleteDir (p, k)
+    | "Confine", [ p; k ] -> Confine (p, k)
     | _ -> assert false
   in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in

@@ -1072,10 +1072,10 @@
         (RStr "Driver_core.apply0 = (fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())")
         $ RStr " }\n"))))
 
-(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) -> (many (Rope) r))
+(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) -> (many (Rope) r))
   (match many (prelude-ctor env "Exit") _
     ((None _) (REmpty))
-    ((Some _ _) (driver-rope-of d env))))
+    ((Some _ _) (rcat4 (driver-rope-of d env) (RStr "let () = world.Driver_core.fence := ") (quoted fence) $ RStr "\n"))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
@@ -1294,7 +1294,7 @@
     ((Nil _) d)
     ((Cons _ n rest) (tail $ collect-prelude rest env $ match many (prelude-adt env n) (((Decls) _)) ((None _) d) ((Some _ adt) (collect-adt adt d))))))
 
-(def-fns _ $ (many emit-program : (many (Bool) templates) (many (Env) env) -> (many (Rope) r))
+(def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _)))
   (let-match many hp (MkStore _ _ bound lb writes))
@@ -1305,4 +1305,4 @@
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
-  (rcat5 (RStr runtime-header) (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env) $ emit-finals _ hp (list-rev _ fi) env d2))
+  (rcat5 (RStr runtime-header) (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env fence) $ emit-finals _ hp (list-rev _ fi) env d2))

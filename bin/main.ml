@@ -6,7 +6,7 @@ let world args =
   let flush_to oc s = output_string oc s; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
-    exit; print = print_endline }
+    exit; print = print_endline; fence = Extract.fence }
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
@@ -35,8 +35,10 @@ let repl consume env =
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
-  let rec extract acc = function "--extract" :: p :: rest -> (Some p, List.rev_append acc rest) | a :: rest -> extract (a :: acc) rest | [] -> (None, List.rev acc) in
-  let extract, args = extract [] args in
+  let rec option name acc = function f :: v :: rest when f = name -> (Some v, List.rev_append acc rest) | a :: rest -> option name (a :: acc) rest | [] -> (None, List.rev acc) in
+  let extract, args = option "--extract" [] args in
+  let confine, args = option "--confine" [] args in
+  Result.iter_error (fun m -> prerr_endline m; exit 1) (Program.confine Extract.fence (Option.value confine ~default:"/"));
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");

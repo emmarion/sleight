@@ -54,6 +54,7 @@ type cx = {
 (* An extern type's match and builds are its templates (lib/ffi_templates.txt) unless stripped, or where it
    has none, its runtime view; a template's temporaries are numbered per instantiation. *)
 let templates = ref true
+let fence = ref "/"
 let template key = if !templates then Ffi_templates.find key else None
 let stamp cx = incr cx.temps; !(cx.temps)
 
@@ -484,11 +485,12 @@ let driver cx =
   in
   let host = match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "" in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
-  ^ {|let flush_to oc s = output_string oc s; flush oc
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline }
+  ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/" }
+let () = world.fence := %s
 let run_io = driver.run_io world
 let run_main = driver.run_main world
-|}
+|} (quote !fence)
 
 let item cx = function
   | Env.Fns fns ->

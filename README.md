@@ -59,6 +59,18 @@ declares what it needs itself; it has no literals and no `String -> String` or `
 the prelude's types, and slc takes the same flag. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
+`--confine dir` confines a program's file requests to `dir`: a path is
+resolved against the working directory and through any symlinks, and a
+request whose path lands outside `dir` answers `Fail` without being
+performed, while one inside it behaves exactly as it would unconfined.
+Without the flag the fence is `/`, so the same check admits every path.
+A program narrows its own fence with the `Confine` request, which
+answers the new fence's absolute path and refuses a directory outside
+the current one (`tests/io_confine.sl`). Under `--extract` the resolved
+directory is embedded in the OCaml written out, so the compiled program
+starts confined to it wherever it is run from; slc takes the same flag,
+and confines itself once it has read its sources (ASSUMPTIONS.md 198).
+
 `--extract out.ml` elaborates the files as usual but, instead of
 running their final values, writes the program out as standalone OCaml,
 in the sense of Coq's extraction, to be compiled with ocamlfind against

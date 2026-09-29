@@ -817,7 +817,8 @@
     (many Stat : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (EntryKind)) kind) -> (unique (IO L) next)) k) -> (IO L))
     (many MkDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many DeleteFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))))
+    (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    (many Confine : (erased (Level) L) (many (String) dir) (unique (UniqueFn L (many (Result (String)) fence) -> (unique (IO L) next)) k) -> (IO L))))
 
 (def-adts $ (Array : (Type A) ((Nat) n) -> Type)
   enum extern

@@ -69,18 +69,20 @@ check_test() {
   fi
   args=$(directive "$t" args)
   envs=$(directive "$t" env)
+  confine=""
+  for d in $(directive "$t" confine); do confine="--confine $(cd "$B" && cd "$d" && pwd)"; done
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program
-  (cd "$B" && env -i $envs "$ROOT/$REF" $noprelude $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  (cd "$B" && env -i $envs "$ROOT/$REF" $noprelude $confine $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
   if [ "$flags" = --interpret ]; then
     # slc elaborates and performs the program in one process, as the reference does, so its warnings land in
     # the same stderr and are filtered from both below
-    (cd "$B" && env -i $envs "$B/slc" $noprelude --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
+    (cd "$B" && env -i $envs "$B/slc" $noprelude $confine --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
     grep -vE ': warning: |: note: ' "$B/$name.slc.err" > "$B/$name.err" || true
   else
-  if ! "$B/slc" $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+  if ! "$B/slc" $noprelude $confine $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
   if ! $OCB "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then

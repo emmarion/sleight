@@ -6,7 +6,6 @@
 
 (let ((erased th-util)) (prove-predates thunk-lvl util-lvl))
 (let ((erased th-compile)) (prove-predates thunk-lvl compile-lvl))
-(let ((erased th-io)) (prove-predates thunk-lvl io-lvl))
 
 (def-fns util-lvl $ (many write-lines : (subterm many (List $ String) es) (unique (IO io-lvl) next) -> (unique (IO io-lvl) io))
   (match many es _
@@ -34,7 +33,14 @@
       ((None _) (end-file $ run-toplevel items $ env-set-regions envw regions))))
   (tail $ run-files rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))
 
-(def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
+(def-fns util-lvl $ (many failed : (many (String) m) -> (unique (IO io-lvl) io))
+  (WriteErr _ (str-cat3 "slc: " m "\n") (unique-thunk _ _ (Exit _ exit-fail))))
+
+(def-fns util-lvl $ (many usage : -> (unique (IO io-lvl) io))
+  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine dir] file.sl ... [-- arg ...] > out.ml\n"
+    (unique-thunk _ _ (Exit _ exit-fail))))
+
+(def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) fence) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
   (let ((many builtins)) (make-builtins))
   (let ((many env)) $ run-files srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
   ; A warning stands whether or not the program is refused, so it is written ahead of either outcome, in the
@@ -48,17 +54,22 @@
             (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
             (interp-finals env pargs _ (list-rev _ fi) _ hp en (le-refl hs)))
           ((BFalse)
-            (let ((many out) (erased flat)) $ flatten $ emit-program templates env)
+            (let ((many out) (erased flat)) $ flatten $ emit-program templates fence env)
             (WriteOut _ out $ unique-thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))))
 
-(def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
-  (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs $ list-rev _ acc)))
-  (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
-    (let-match many r (Fail _ m)
-      ((Ok _ src) (read-files prelude templates interpreting pargs rest $ Cons _ (MkPair _ _ path src) acc)))
-    (WriteErr _ "slc: " $ unique-thunk (predates th-io) _ _ $ WriteErr _ m $ unique-thunk (predates th-io) _ _
-      $ WriteErr _ "\n" $ unique-thunk (predates th-io) _ _ $ Exit _ exit-fail))
-  (ReadFile _ path after-read))
+(def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) dir) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
+  (match many paths _
+    ((Nil _)
+      (def-unique io-lvl $ (unique confined : (many (Result $ String) r) -> (unique (IO io-lvl) next))
+        (let-match many r (Fail _ m) ((Ok _ fence) (compile prelude templates interpreting pargs fence $ list-rev _ acc)))
+        (failed m))
+      (Confine _ dir confined))
+    ((Cons _ path rest)
+      (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
+        (let-match many r (Fail _ m)
+          ((Ok _ src) (read-files prelude templates interpreting pargs dir rest $ Cons _ (MkPair _ _ path src) acc)))
+        (failed m))
+      (ReadFile _ path after-read))))
 
 ; The files up to a "--", and the interpreted program's own arguments after it.
 (def-fns util-lvl $ (many split-args : (subterm many (List $ String) args) -> (many (List $ String) files) (many (List $ String) pargs))
@@ -67,23 +78,24 @@
   (let ((many files) (many pargs)) (notail $ split-args rest))
   (values (Cons _ p files) pargs))
 
-; The flags, in any order, then the files: --no-prelude, --no-templates and --interpret. Without --no-prelude
-; the embedded prelude goes ahead of the files, under the path the reference names it by (lib/builtin.ml).
-(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
+; The flags, in any order, then the files: --no-prelude, --no-templates, --interpret and --confine dir.
+; Without --no-prelude the embedded prelude goes ahead of the files, under the path the reference names it
+; by (lib/builtin.ml).
+(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (String) dir) -> (unique (IO io-lvl) io))
   (match many args _
-    ((Nil _)
-      (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] file.sl ... [-- arg ...] > out.ml\n"
-        $ unique-thunk _ _ $ Exit _ exit-fail))
+    ((Nil _) (usage))
     ((Cons _ p rest)
-      (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting)))
-      (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting)))
-      (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue))))
+      (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting dir)))
+      (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting dir)))
+      (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue) dir)))
+      (let-match many (str-eq p "--confine") (BFalse)
+        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ d more) (tail $ start-with more prelude templates interpreting d)))))
       (let ((many files) (many pargs)) (split-args args))
-      (read-files prelude templates interpreting pargs files $ match many prelude _
+      (read-files prelude templates interpreting pargs dir files $ match many prelude _
         ((BTrue) (Cons _ (MkPair _ _ "lib/prelude.sl" prelude-source) $ Nil _))
         ((BFalse) (Nil _))))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
-  (start-with args (BTrue) (BTrue) (BFalse)))
+  (start-with args (BTrue) (BTrue) (BFalse) "/"))
 
 (GetArgs _ start)

@@ -3958,3 +3958,37 @@ session's, made without the owner.
     `let-match`, `unary` or `distinct` in that form, and the generated
     forms of the latter two containing no sugar. The zero case stays an
     internal error.
+
+## Confining file requests (section 16)
+
+The `Confine` request, the `--confine` flag and the fence model are as
+README.md describes them; the choices below are the session's.
+
+198. **What the fence admits, and when.** Each of the eight file
+     requests resolves its path the way the session understands the
+     kernel's lookup to go (`Driver_core.resolve`): relative to the
+     working directory, following symlinks with `lstat` and `readlink`,
+     taking `..` physically, and stopping at the first component that
+     cannot be looked up, since the kernel's lookup, as the session
+     reads it, cannot get past that component either. `MkDir`, `DeleteFile` and
+     `DeleteDir` do not follow a symlink in last position, as their
+     syscalls do not, so a symlink inside the fence that points out of
+     it can be deleted; a trailing `/`, `.` or `..` makes the last
+     component followed after all, erring towards refusing. The fence's
+     own directory is inside it, so a program may delete the directory
+     it is confined to. `Confine` answers `(Result (String))` with the
+     new fence rather than `(Result (Unit))`, which is what lets slc
+     learn the absolute directory to embed; slc performs `Confine` once
+     every source is read, in both modes, with `/` when no flag is
+     given. The fence belongs to the process rather than to one final,
+     so a `Confine` in one file's `IO` final holds for the finals after
+     it, as it must under `slc --interpret`, which performs them all
+     inside one run of its own driver. A symlink chain longer than 1000
+     links is not followed further, on the reading that the kernel gives
+     up well before that. The check is made before the request and not
+     atomically with it, so it is not expected to hold against another
+     process changing the directory tree in between, and a hard link
+     already inside the fence reaches whatever it links to. When the working
+     directory cannot be read, a relative path answers `Fail` with that
+     error even unconfined, the one case where the check can change what
+     an unconfined program sees.

@@ -79,7 +79,11 @@
     ((DeleteDir l p k _)
       (def-unique B $ (unique w : (many (Result (Change)) r) -> (unique (IO B) next))
         (lift (predates cb) A B ab cb (k (predates ab) r)))
-      (DeleteDir B p w))))
+      (DeleteDir B p w))
+    ((Confine l d k _)
+      (def-unique B $ (unique w : (many (Result (String)) r) -> (unique (IO B) next))
+        (lift (predates cb) A B ab cb (k (predates ab) r)))
+      (Confine B d w))))
 
 (def-lvl A0)
 (def-lvl A)
