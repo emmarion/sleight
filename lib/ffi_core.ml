@@ -21,7 +21,7 @@ let half_view ~z ~nat v =
 let half_of ~z ~nat = function HZ -> nat Z.zero | H1 m -> nat (Z.succ (Z.shift_left (z m) 1)) | H2 m -> nat (Z.add (Z.shift_left (z m) 1) (Z.of_int 2))
 
 (* A cons list of Char held as a slice of a byte string: the tail is a slice over the same buffer. *)
-let str_view ~slice ~u8 ~str v = let s, o, l = slice v in if l = 0 then SNil else SCons (u8 (Z.of_int (Char.code s.[o])), str (s, o + 1, l - 1))
+let str_view ~slice ~u8 ~str v = let s, o, l = slice v in if l = 0 then SNil else SCons (u8 (Z.of_int (Char.code (String.unsafe_get s o))), str (s, o + 1, l - 1))
 let str_of ~z ~slice ~str = function
   | SNil -> str ("", 0, 0)
   | SCons (c, rest) -> let s, o, l = slice rest in str (String.make 1 (Char.chr (Z.to_int (z c))) ^ String.sub s o l, 0, l + 1)
@@ -81,8 +81,8 @@ let str_cmp (s1, o1, l1) (s2, o2, l2) =
   let n = min l1 l2 in
   let rec go i =
     if i = n then if l1 < l2 then CLt else if l1 = l2 then CEq else CGt
-    else if s1.[o1 + i] < s2.[o2 + i] then CLt
-    else if s1.[o1 + i] > s2.[o2 + i] then CGt
+    else if String.unsafe_get s1 (o1 + i) < String.unsafe_get s2 (o2 + i) then CLt
+    else if String.unsafe_get s1 (o1 + i) > String.unsafe_get s2 (o2 + i) then CGt
     else go (i + 1)
   in
   go 0
