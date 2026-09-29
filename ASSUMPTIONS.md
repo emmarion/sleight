@@ -635,12 +635,11 @@ in both modes.
     at some depth, a limit in the spirit of item 54.
 65. **The driver is `program.ml` transliterated** over descriptors of the
     prelude's constructors, dispatching `IO` requests by constructor
-    name as `run_io` does, flushing after every write, taking the
-    program's arguments after `--`, and exiting with the `U8` counted in
-    unary through destruct as `Program.u8` does. Under the FFI stdin is
-    turned into a slice directly, as `Ffi.str` does; without it, into a
-    cons list. An `absurd` reached at runtime prints `<file>: runtime
-    error: absurd code reached` to stderr and exits 1, the file being
+    name as `run_io` does, flushing after every write, and exiting with
+    the `U8` counted in unary through destruct as `Program.u8` does. Under
+    the FFI stdin is turned into a slice directly, as `Ffi.str` does;
+    without it, into a cons list. An `absurd` reached at runtime prints
+    `<file>: runtime error: absurd code reached` to stderr and exits 1, the file being
     the one whose final expression is running, as `bin/main.ml` prints
     it (`-` for stdin; the test runner passes no file). Every final
     expression of every file on the command line is consumed in order,

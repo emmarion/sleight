@@ -43,7 +43,7 @@ let extracted name externs templates source input args envs expect stderr exit =
           write (base ^ ".in") input;
           let code =
             Sys.command
-              (Printf.sprintf "env -i %s ./%s.exe -- %s < %s.in > %s.out 2> %s.err"
+              (Printf.sprintf "env -i %s ./%s.exe %s < %s.in > %s.out 2> %s.err"
                  (String.concat " " (List.map (fun (n, v) -> Filename.quote (n ^ "=" ^ v)) envs))
                  base (String.concat " " (List.map Filename.quote args)) base base base)
           in

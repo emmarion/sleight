@@ -32,7 +32,7 @@ self/bootstrap.sh
 dune exec bin/shape.exe -- tests/list.sl
 dune exec bin/main.exe -- tests/io_echo.sl --extract echo.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg echo.ml -o echo && ./echo
-_build/self/slc -- --interpret tests/io_echo.sl
+_build/self/slc --interpret tests/io_echo.sl
 ```
 
 Files given on one command line share a scope, in order; with no file

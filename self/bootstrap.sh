@@ -50,7 +50,7 @@ check_test() {
   [ "$(directive "$t" prelude)" = none ] && noprelude=--no-prelude
   if [ -n "$(directive "$t" error)" ]; then
     # a test expecting an error: slc must refuse the program with a message mentioning the text
-    if "$B/slc" -- $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+    if "$B/slc" $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
       echo "FAIL $name: slc accepted a program the checker refuses"; return
     fi
     directive "$t" error | while IFS= read -r want; do has "$B/$name.slc.err" "$want" || { echo "FAIL $name: expected an error mentioning: $want; got: $(head -c 300 "$B/$name.slc.err" | tr '\n' ' ')"; exit 1; }; done &&
@@ -76,18 +76,18 @@ check_test() {
   if [ "$flags" = --interpret ]; then
     # slc elaborates and performs the program in one process, as the reference does, so its warnings land in
     # the same stderr and are filtered from both below
-    (cd "$B" && env -i $envs "$B/slc" -- $noprelude --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
+    (cd "$B" && env -i $envs "$B/slc" $noprelude --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
     grep -vE ': warning: |: note: ' "$B/$name.slc.err" > "$B/$name.err" || true
   else
-  if ! "$B/slc" -- $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+  if ! "$B/slc" $noprelude $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
   if ! $OCB "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
   fi
   check_warns "$t" "$name" || return
-  (cd "$B" && env -i $envs "./$name.exe" -- $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
+  (cd "$B" && env -i $envs "./$name.exe" $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
   fi
   # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
   # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
@@ -137,14 +137,14 @@ echo "== compiling slc with slc"
 # timed, and the time reported, so a change that slows slc down is seen: this is a report, not a check
 # (GNU time takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes)
 if /usr/bin/time -o /dev/null -f x true 2> /dev/null; then
-  /usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" -- $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+  /usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
 else
-  /usr/bin/time -l -o "$B/slc2.time.raw" "$B/slc" -- $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+  /usr/bin/time -l -o "$B/slc2.time.raw" "$B/slc" $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
   awk '/ real /{t=$1} /maximum resident/{m=$1/1024} END{printf "slc compiled itself in %s s (wall), %d KB max rss\n", t, m}' "$B/slc2.time.raw" > "$B/slc2.time"
 fi
 cat "$B/slc2.time"
 $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
 echo "== compiling slc with the slc that slc compiled"
-"$B/slc2" -- $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }
+"$B/slc2" $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }
 if cmp -s "$B/slc2.ml" "$B/slc3.ml"; then echo "fixpoint reached: slc2.ml and slc3.ml are identical"; else echo "FAIL: slc2.ml and slc3.ml differ"; fail=$((fail+1)); fi
 [ "$fail" = 0 ]

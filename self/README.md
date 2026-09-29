@@ -129,9 +129,9 @@ host (section 41); a `U8` or a
 ```sh
 dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
-_build/self/slc -- tests/list.sl > list.ml
+_build/self/slc tests/list.sl > list.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
-_build/self/slc -- --interpret tests/io_echo.sl -- arg1 arg2
+_build/self/slc --interpret tests/io_echo.sl -- arg1 arg2
 ```
 
 `slc` takes the files to compile as its program arguments, elaborates
@@ -185,7 +185,7 @@ the entry says otherwise, and recorded so it can be revisited.
   which the FFI unwraps one level into the shape its model's
   constructors describe and wraps back (`lib/ffi_core.ml`'s views,
   laid out as the model's own type, which the reference checks at the
-  `extern` claim), so it is matched and built like any tagged type; since ASSUMPTIONS 133 an extern type with a template in `lib/ffi_templates.txt` is matched and built through the template instead, the view kept for held values, and `slc -- --no-templates ...` strips the templates. A constructor
+  `extern` claim), so it is matched and built like any tagged type; since ASSUMPTIONS 133 an extern type with a template in `lib/ffi_templates.txt` is matched and built through the template instead, the view kept for held values, and `slc --no-templates ...` strips the templates. A constructor
   application whose head the elaborator sees is the direct build; a
   call whose head is a named function is a direct OCaml call; a match
   on a tagged type is a direct `match` on the shape, and when the

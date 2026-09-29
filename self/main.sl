@@ -72,7 +72,7 @@
 (def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) -> (unique (IO io-lvl) io))
   (match many args _
     ((Nil _)
-      (WriteErr _ "usage: slc -- [--no-prelude] [--no-templates] [--interpret] file.sl ... [-- arg ...] > out.ml\n"
+      (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] file.sl ... [-- arg ...] > out.ml\n"
         $ unique-thunk _ _ $ Exit _ exit-fail))
     ((Cons _ p rest)
       (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting)))
