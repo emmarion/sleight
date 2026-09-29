@@ -3,6 +3,13 @@
 Design decisions here come directly from the repo owner. This file is a
 running record, added to as design sessions happen.
 
+Goals include, among others:
+
+- Match the dynamism of Kernel (John Shutt's Lisp dialect) while still
+  supporting clean compilation with static types (§4).
+- Support LLMs writing code in the language: this is explicitly one
+  purpose of the language and its tooling.
+
 ## 1. Syntax
 
 Scheme syntax (s-expressions).
@@ -77,9 +84,9 @@ Alongside the table, elaboration carries two pieces of ambient context:
 
 ## 4. Orthogonality: Kernel-level dynamism with static types
 
-Goal: match Kernel's level of dynamism while still supporting clean
-compilation with static types. The mechanism for reconciling these is
-analyzing the *constantness* of the head of an s-expression:
+The mechanism for reconciling Kernel-level dynamism with static types
+(the first of the goals above) is analyzing the *constantness* of the
+head of an s-expression:
 
 - Macros and special forms are first-class values — they can be passed
   around at runtime like any other value.
