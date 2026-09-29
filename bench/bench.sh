@@ -37,11 +37,11 @@ time_one() {
   out=$(mktemp)
   i=0
   while [ $i -lt "$RUNS" ]; do
-    timed "$out.t" "$SLC" -- "$@" > /dev/null 2> "$out.err" || { echo "$label: slc failed: $(head -c 200 "$out.err")"; rm -f "$out" "$out.t" "$out.err"; return; }
+    timed "$out.t" "$SLC" "$@" > /dev/null 2> "$out.err" || { echo "$label: slc failed: $(head -c 200 "$out.err")"; rm -f "$out" "$out.t" "$out.err"; return; }
     cat "$out.t" >> "$out"
     i=$((i + 1))
   done
-  gc=$(OCAMLRUNPARAM=v=0x400 "$SLC" -- "$@" 2>&1 >/dev/null | awk '/minor_words|major_collections|top_heap_words|promoted_words/ {printf "%s ", $0}')
+  gc=$(OCAMLRUNPARAM=v=0x400 "$SLC" "$@" 2>&1 >/dev/null | awk '/minor_words|major_collections|top_heap_words|promoted_words/ {printf "%s ", $0}')
   sort -n "$out" | awk -v l="$label" -v gc="$gc" '{ w[NR]=$1; if (NR==1 || $2<u) u=$2; if ($3>m) m=$3 } END { printf "%-28s wall min %6.2fs  median %6.2fs  user min %6.2fs  maxrss %6.0fMB   %s\n", l, w[1], w[int((NR+1)/2)], u, m/1024, gc }'
   rm -f "$out" "$out.t" "$out.err"
 }
