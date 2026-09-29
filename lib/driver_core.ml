@@ -82,8 +82,9 @@ let resolve ~follow p =
     | c :: rest -> (
         let here = path (List.rev (c :: up)) in
         match (Unix.lstat here).st_kind with
-        | Unix.S_LNK when budget > 0 && (follow || rest <> []) -> (
+        | Unix.S_LNK when follow || rest <> [] -> (
             match Unix.readlink here with
+            | _ when budget = 0 -> raise (Sys_error (p ^ ": too many levels of symbolic links"))
             | target -> go (budget - 1) (if Filename.is_relative target then up else []) (parts target @ rest)
             | exception Unix.Unix_error _ -> List.rev (c :: up))
         | _ -> go budget (c :: up) rest
@@ -105,7 +106,9 @@ let confine fence dir =
       | _ -> Error (dir ^ ": not a directory")
       | exception e -> Error (explain e))
 
-let start fence dir = Result.iter_error (fun m -> prerr_endline m; exit 1) (confine fence dir)
+let start dir env w =
+  Result.iter_error (fun m -> prerr_endline m; exit 1) (confine w.fence dir);
+  if env then w else { w with env = (fun _ -> None); envs = (fun () -> []) }
 
 let host_envs () =
   List.filter_map

@@ -64,6 +64,8 @@ resolved against the working directory and through any symlinks, and a
 request whose path lands outside `dir` answers `Fail` without being
 performed, while one inside it behaves exactly as it would unconfined.
 Without the flag the fence is `/`, so the same check admits every path.
+A path whose symlinks cannot be followed to the end, the resolution
+giving up after 1000 links, counts as outside every fence, `/` included.
 A program narrows its own fence with the `Confine` request, which
 refuses a directory outside the current one (`tests/io_confine.sl`).
 Nothing is resolved at compile time: under `--extract` the directory is
@@ -72,6 +74,11 @@ program confines itself to it when it starts, a relative one resolving
 against the directory the program runs in, and exits with the error if
 it cannot. slc takes the same flag, and under `--interpret` confines
 itself once it has read its sources (ASSUMPTIONS.md 198).
+
+`--no-env` hides the environment from the program: `GetEnv` answers
+`None` and `GetEnvs` the empty list. Like `--confine`, under
+`--extract` it is embedded in the program written out, and slc takes
+the same flag.
 
 `--extract out.ml` elaborates the files as usual but, instead of
 running their final values, writes the program out as standalone OCaml,

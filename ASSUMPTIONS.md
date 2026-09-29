@@ -3983,9 +3983,7 @@ README.md describes them; the choices below are the session's.
      and without it by the reference and by a compiled program. The
      fence belongs to the process rather than to one final, so a
      `Confine` in one file's `IO` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
-     inside one run of its own driver. A symlink chain longer than 1000
-     links is not followed further, on the reading that the kernel gives
-     up well before that. The check is made before the request and not
+     inside one run of its own driver. The check is made before the request and not
      atomically with it, so it is not expected to hold against another
      process changing the directory tree in between, and a hard link
      already inside the fence reaches whatever it links to. When the

@@ -42,10 +42,11 @@ let () =
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
-  let consume = if extract = None then (let w = world program_args in Program.start w.fence !Extract.fence; Program.consume w) else fun _ _ _ -> () in
+  Extract.with_env := not (flag "--no-env");
+  let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let env = Builtin.load ~prelude:(not (flag "--no-prelude")) () in
   let env =
-    match List.filter (fun a -> not (List.mem a [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude" ])) args with
+    match List.filter (fun a -> not (List.mem a [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env" ])) args with
     | [] when not (flag "--repl") -> run consume env "-"
     | files ->
         let env = List.fold_left (run consume) env files in
