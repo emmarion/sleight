@@ -101,9 +101,11 @@ let admits fence ~follow p =
 let confine fence dir =
   Result.bind (admits fence ~follow:true dir) (fun cs ->
       match (Unix.stat (path cs)).st_kind with
-      | Unix.S_DIR -> fence := path cs; Ok !fence
+      | Unix.S_DIR -> fence := path cs; Ok ()
       | _ -> Error (dir ^ ": not a directory")
       | exception e -> Error (explain e))
+
+let start fence dir = Result.iter_error (fun m -> prerr_endline m; exit 1) (confine fence dir)
 
 let host_envs () =
   List.filter_map
@@ -169,7 +171,7 @@ let make ?of_host ?to_host o =
       | MkDir (path, k) -> fenced ~follow:false path k (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
       | DeleteFile (path, k) -> fenced ~follow:false path k (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
       | DeleteDir (path, k) -> fenced ~follow:false path k (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
-      | Confine (dir, k) -> loop (o.apply k (match confine w.fence (to_string dir) with Ok f -> o.ok (of_string f) | Error m -> o.fail (of_string m)))
+      | Confine (dir, k) -> loop (o.apply k (match confine w.fence (to_string dir) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m)))
     in
     loop v
   in

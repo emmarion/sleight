@@ -81,7 +81,7 @@
         (lift (predates cb) A B ab cb (k (predates ab) r)))
       (DeleteDir B p w))
     ((Confine l d k _)
-      (def-unique B $ (unique w : (many (Result (String)) r) -> (unique (IO B) next))
+      (def-unique B $ (unique w : (many (Result (Unit)) r) -> (unique (IO B) next))
         (lift (predates cb) A B ab cb (k (predates ab) r)))
       (Confine B d w))))
 

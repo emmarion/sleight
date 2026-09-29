@@ -70,7 +70,7 @@ check_test() {
   args=$(directive "$t" args)
   envs=$(directive "$t" env)
   confine=""
-  for d in $(directive "$t" confine); do confine="--confine $(cd "$B" && cd "$d" && pwd)"; done
+  for d in $(directive "$t" confine); do confine="--confine $d"; done
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program

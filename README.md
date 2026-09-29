@@ -65,11 +65,13 @@ request whose path lands outside `dir` answers `Fail` without being
 performed, while one inside it behaves exactly as it would unconfined.
 Without the flag the fence is `/`, so the same check admits every path.
 A program narrows its own fence with the `Confine` request, which
-answers the new fence's absolute path and refuses a directory outside
-the current one (`tests/io_confine.sl`). Under `--extract` the resolved
-directory is embedded in the OCaml written out, so the compiled program
-starts confined to it wherever it is run from; slc takes the same flag,
-and confines itself once it has read its sources (ASSUMPTIONS.md 198).
+refuses a directory outside the current one (`tests/io_confine.sl`).
+Nothing is resolved at compile time: under `--extract` the directory is
+embedded in the OCaml written out as it was given, and the compiled
+program confines itself to it when it starts, a relative one resolving
+against the directory the program runs in, and exits with the error if
+it cannot. slc takes the same flag, and under `--interpret` confines
+itself once it has read its sources (ASSUMPTIONS.md 198).
 
 `--extract out.ml` elaborates the files as usual but, instead of
 running their final values, writes the program out as standalone OCaml,

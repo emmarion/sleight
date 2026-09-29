@@ -69,8 +69,7 @@ and run_mode name externs src =
   let args = List.concat_map (String.split_on_char ' ') (directive src "args") in
   let envs = List.filter_map split_env (directive src "env") in
   let fence = ref "/" in
-  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d)) (directive src "confine");
-  Extract.fence := !fence;
+  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine");
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
       env = (fun n -> List.assoc_opt n envs); envs = (fun () -> envs); cwd = Sys.getcwd;

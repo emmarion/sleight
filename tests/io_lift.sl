@@ -96,7 +96,7 @@
         (let ((erased o) (erased q)) (lift-fn (Result (Change)) (subterm _) k))
         (values (DeleteDir B path o) (coercible-ctor (Unique) DeleteDir B A (coercible-refl (Shared) path) q)))
       ((Confine l dir k)
-        (let ((erased o) (erased q)) (lift-fn (Result (String)) (subterm _) k))
+        (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
         (values (Confine B dir o) (coercible-ctor (Unique) Confine B A (coercible-refl (Shared) dir) q)))))
   (let ((erased x1) (erased q1)) (lift-proof (predates pl) L1 p1 io1))
   (let ((erased x2) (erased q2)) (lift-proof (predates pl) L2 p2 io2))

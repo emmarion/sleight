@@ -39,7 +39,7 @@
 (def-unique P $ (unique s12 : (many (Result (Change)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "delete file" r (DeleteDir P "io-confine-test/in" s13)))
 
-(def-unique P $ (unique s11 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s11 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "confine file" r (DeleteFile P "io-confine-test/in/a.txt" s12)))
 
 (def-unique P $ (unique s10 : (many (Result (Unit)) r) -> (unique (IO P) next))
@@ -60,16 +60,16 @@
 (def-unique P $ (unique s5 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "write" r (ReadFile P "io-confine-test/in/../in/a.txt" s6)))
 
-(def-unique P $ (unique s4 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s4 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "same fence" r (WriteFile P "io-confine-test/in/a.txt" "hi" s5)))
 
 (def-unique P $ (unique s3 : (many (Result (Change)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "mkdir in" r (Confine P "io-confine-test/in/.." s4)))
 
-(def-unique P $ (unique s2 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "widen" r (MkDir P "io-confine-test/in" s3)))
 
-(def-unique P $ (unique s1 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s1 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "confine" r (Confine P "." s2)))
 
 (def-unique P $ (unique s0 : (many (Result (Change)) r) -> (unique (IO P) next))

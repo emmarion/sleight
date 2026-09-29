@@ -22,10 +22,10 @@
 (def-unique P $ (unique s4 : (many (Result (String)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "read outside" r (Exit P code0)))
 
-(def-unique P $ (unique s3 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s3 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "confine parent" r (ReadFile P "../io-confine-flag.txt" s4)))
 
-(def-unique P $ (unique s2 : (many (Result (String)) r) -> (unique (IO P) next))
+(def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "confine cwd" r (Confine P ".." s3)))
 
 (def-unique P $ (unique s1 : (many (Result (List (String))) r) -> (unique (IO P) next))

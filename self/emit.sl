@@ -1075,7 +1075,7 @@
 (def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) -> (many (Rope) r))
   (match many (prelude-ctor env "Exit") _
     ((None _) (REmpty))
-    ((Some _ _) (rcat4 (driver-rope-of d env) (RStr "let () = world.Driver_core.fence := ") (quoted fence) $ RStr "\n"))))
+    ((Some _ _) (rcat4 (driver-rope-of d env) (RStr "let () = Driver_core.start world.Driver_core.fence ") (quoted fence) $ RStr "\n"))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
