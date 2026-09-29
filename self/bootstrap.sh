@@ -135,7 +135,13 @@ echo "$(grep -c '^pos-same ' "$B/results.txt") refusals agree on file, line and 
 
 echo "== compiling slc with slc"
 # timed, and the time reported, so a change that slows slc down is seen: this is a report, not a check
-/usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" -- $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+# (GNU time takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes)
+if /usr/bin/time -o /dev/null -f x true 2> /dev/null; then
+  /usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" -- $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+else
+  /usr/bin/time -l -o "$B/slc2.time.raw" "$B/slc" -- $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+  awk '/ real /{t=$1} /maximum resident/{m=$1/1024} END{printf "slc compiled itself in %s s (wall), %d KB max rss\n", t, m}' "$B/slc2.time.raw" > "$B/slc2.time"
+fi
 cat "$B/slc2.time"
 $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
 echo "== compiling slc with the slc that slc compiled"

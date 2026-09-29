@@ -20,6 +20,16 @@ python3 "$P/self/gen_header.py" || exit 1
 PIN=""
 for f in base heap reader core eval elab header emit interp main; do [ -f "$P/self/$f.sl" ] && PIN="$PIN $P/self/$f.sl"; done
 
+# timed <file> <command...>: runs the command, writing "wall-seconds user-seconds max-rss-KB" to the file (GNU time
+# takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes).
+timed() {
+  t=$1; shift
+  if /usr/bin/time -o /dev/null -f x true 2> /dev/null; then /usr/bin/time -f "%e %U %M" -o "$t" "$@"; return; fi
+  /usr/bin/time -l -o "$t.raw" "$@"; code=$?
+  awk '/ real /{w=$1; u=$3} /maximum resident/{m=$1/1024} END{print w, u, m}' "$t.raw" > "$t"; rm -f "$t.raw"
+  return $code
+}
+
 # time_one <label> <files...>: RUNS runs, reporting the minimum and median wall time, the minimum user time
 # and the maximum resident size, then the GC's own account of the run (minor words, major collections).
 time_one() {
@@ -27,7 +37,7 @@ time_one() {
   out=$(mktemp)
   i=0
   while [ $i -lt "$RUNS" ]; do
-    /usr/bin/time -f "%e %U %M" -o "$out.t" "$SLC" -- "$@" > /dev/null 2> "$out.err" || { echo "$label: slc failed: $(head -c 200 "$out.err")"; rm -f "$out" "$out.t" "$out.err"; return; }
+    timed "$out.t" "$SLC" -- "$@" > /dev/null 2> "$out.err" || { echo "$label: slc failed: $(head -c 200 "$out.err")"; rm -f "$out" "$out.t" "$out.err"; return; }
     cat "$out.t" >> "$out"
     i=$((i + 1))
   done
@@ -39,7 +49,7 @@ time_one() {
 echo "== $SLC, $RUNS runs each"
 time_one "slc on slc at $PINNED" $PIN
 REF=_build/default/bin/main.exe
-[ -x "$REF" ] && { /usr/bin/time -f "reference on slc at $PINNED wall  %es (one run)" "$REF" $PIN --extract /dev/null > /dev/null; } 2>&1 | grep "^reference"
+[ -x "$REF" ] && { r=$(mktemp); timed "$r" "$REF" $PIN --extract /dev/null > /dev/null 2>&1; awk -v c="$PINNED" '{ printf "reference on slc at %s wall  %ss (one run)\n", c, $1 }' "$r"; rm -f "$r"; }
 for t in bench/*.sl; do
   [ -f "$t" ] || continue
   needs=""
