@@ -117,10 +117,15 @@ let at_lines env =
   | [] -> [ "at-database: every entry is at a location of its own" ]
   | cs -> [ "at-database, the entries at one location: " ^ String.concat " " (List.map (fun c -> "{" ^ String.concat ", " c ^ "}") cs) ]
 
+let mine env = List.filter (fun x -> not (is_prelude env x)) env.scope.ids
+
 let opened_lines env =
-  let mine, prelude = List.partition (fun o -> not (is_prelude env o.obj)) env.opens.opened in
-  let shown = List.map (fun o -> show env (type_of env o.obj)) mine in
-  [ Printf.sprintf "opened, beyond the prelude's %d: %s" (List.length prelude) (if shown = [] then "none" else String.concat " " shown) ]
+  let os, prelude = List.partition (fun o -> not (is_prelude env o.obj)) env.opens.opened in
+  let n = List.length prelude in
+  let header, listed = match mine env with
+    | [] -> Printf.sprintf "opened (the program has bound nothing, so the prelude's %d are listed)" n, env.opens.opened
+    | _ -> Printf.sprintf "opened, beyond the prelude's %d" n, os in
+  [ header ^ ": " ^ (if listed = [] then "none" else String.concat " " (List.map (fun o -> show env (type_of env o.obj)) listed)) ]
 
 let literal_lines env =
   let rules = List.filter_map (fun (k, (x, _)) -> match Literal.classify k, canon env (Var x) with
@@ -129,7 +134,7 @@ let literal_lines env =
   if rules = [] then [] else [ "numerals with rules: " ^ String.concat "; " rules ]
 
 let scope_lines ~show_value env l =
-  let mine = List.filter (fun x -> not (is_prelude env x)) env.scope.ids in
+  let mine = mine env in
   let n = List.length env.prelude.ids in
   let header, listed = match mine with
     | [] -> Printf.sprintf "in scope, newest first (the program has bound nothing, so the prelude's %d are listed):" n, env.scope.ids

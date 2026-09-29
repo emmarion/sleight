@@ -3885,7 +3885,7 @@ session's, made without the owner.
     closes over it.
     Then the at-database as its classes of two or more members a reader
     can name (an entry in scope, a literal by its spelling, or
-    `(SlotVacant)`), one of them an entry the program bound, the opened objects beyond the prelude's, and the
+    `(SlotVacant)`), one of them an entry the program bound, the opened objects, and the
     numerals a rule has been minted on, as `unary` mints them, since a
     literal is otherwise opaque (LITERALS.md).
 

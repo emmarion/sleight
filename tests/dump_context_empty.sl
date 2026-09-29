@@ -8,3 +8,4 @@
 ; error: is (Univ)
 ; error: Cons : (ValCtor (erased (Univ) A) (many A head) (many (List A) rest) -> (List A))  [many, Const, constructor, bound at lib/prelude.sl:<**>]
 ; error: at-database: every entry is at a location of its own
+; error: opened (the program has bound nothing, so the prelude's <**> are listed): <**>(Matchable enum List (many Nil) (many Cons))

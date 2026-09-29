@@ -3537,16 +3537,26 @@
     ((Nil _) (list1 _ "at-database: every entry is at a location of its own"))
     ((Cons _ c cs) (list1 _ $ str-cat "at-database, the entries at one location: " $ join-strs (Cons _ c cs) " "))))
 
-(def-fns _ $ (many opened-split : (many (Env) env) (subterm many (List $ Opened) os) -> (many (List $ String) mine) (many (Nat) prelude))
+(def-fns _ $ (many not-prelude : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
+  (match many xs _
+    ((Nil _) (Nil _))
+    ((Cons _ x rest) (match many (is-prelude env x) _ ((BTrue) (tail $ not-prelude env rest)) ((BFalse) (Cons _ x $ notail $ not-prelude env rest))))))
+
+(def-fns _ $ (many opened-split : (many (Env) env) (many (Bool) all) (subterm many (List $ Opened) os) -> (many (List $ String) shown) (many (Nat) prelude))
   (let-match many os (Cons _ o rest) ((Nil _) (values (Nil _) 0)))
-  (let ((many mine) (many n)) $ notail $ opened-split env rest)
+  (let ((many shown) (many n)) $ notail $ opened-split env all rest)
+  (let ((many s)) $ Cons _ (show-t env $ type-of env $ opened-x o) shown)
   (match many (is-prelude env $ opened-x o) _
-    ((BTrue) (values mine $ Succ n))
-    ((BFalse) (values (Cons _ (show-t env $ type-of env $ opened-x o) mine) n))))
+    ((BTrue) (values (match many all (((List $ String) _)) ((BTrue) s) ((BFalse) shown)) $ Succ n))
+    ((BFalse) (values s n))))
 
 (def-fns _ $ (many opened-lines : (many (Env) env) -> (many (List $ String) r))
-  (let ((many mine) (many n)) $ opened-split env $ env-opens env)
-  (list1 _ $ str-cat3 "opened, beyond the prelude's " (nat-str n) $ str-cat ": " $ match many mine (((String) _)) ((Nil _) "none") ((Cons _ _ _) (join-strs mine " "))))
+  (let ((many none)) $ match many (not-prelude env $ scope-ids $ env-scope env) (((Bool) _)) ((Nil _) (BTrue)) (else (BFalse)))
+  (let ((many shown) (many n)) $ opened-split env none $ env-opens env)
+  (let ((many header)) $ match many none (((String) _))
+    ((BTrue) (str-cat3 "opened (the program has bound nothing, so the prelude's " (nat-str n) " are listed)"))
+    ((BFalse) (str-cat "opened, beyond the prelude's " $ nat-str n)))
+  (list1 _ $ str-cat3 header ": " $ match many shown (((String) _)) ((Nil _) "none") ((Cons _ _ _) (join-strs shown " "))))
 
 (def-fns _ $ (many numeral-rules : (many (Env) env) (subterm many (List $ LitEntry) ls) -> (many (List $ String) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
@@ -3560,11 +3570,6 @@
   (match many (numeral-rules env $ env-lits env) _
     ((Nil _) (Nil _))
     ((Cons _ r rs) (list1 _ $ str-cat "numerals with rules: " $ join-strs (Cons _ r rs) "; "))))
-
-(def-fns _ $ (many not-prelude : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
-  (match many xs _
-    ((Nil _) (Nil _))
-    ((Cons _ x rest) (match many (is-prelude env x) _ ((BTrue) (tail $ not-prelude env rest)) ((BFalse) (Cons _ x $ notail $ not-prelude env rest))))))
 
 (def-fns _ $ (many entries-lines : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) r))
   (match many xs _
