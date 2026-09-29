@@ -59,7 +59,7 @@ declares what it needs itself; it has no literals and no `String -> String` or `
 the prelude's types, and slc takes the same flag. A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
-`--confine dir` confines a program's file requests to `dir`: a path is
+`--confine-dir dir` confines a program's file requests to `dir`: a path is
 resolved against the working directory and through any symlinks, and a
 request whose path lands outside `dir` answers `Fail` without being
 performed, while one inside it behaves exactly as it would unconfined.
@@ -76,7 +76,7 @@ it cannot. slc takes the same flag, and under `--interpret` confines
 itself once it has read its sources (ASSUMPTIONS.md 198).
 
 `--no-env` hides the environment from the program: `GetEnv` answers
-`None` and `GetEnvs` the empty list. Like `--confine`, under
+`None` and `GetEnvs` the empty list. Like `--confine-dir`, under
 `--extract` it is embedded in the program written out, and slc takes
 the same flag.
 

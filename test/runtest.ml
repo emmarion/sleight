@@ -4,7 +4,7 @@
    "; expect: text" requires that printed line; "; error: text" requires a failure mentioning text;
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
-   "; confine: dir" the directory its file requests start confined to, as --confine gives it;
+   "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
@@ -72,7 +72,7 @@ and run_mode name externs src =
   Extract.with_env := directive src "no-env" = [];
   let visible = if !Extract.with_env then envs else [] in
   let fence = ref "/" in
-  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine");
+  List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine-dir");
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
       env = (fun n -> List.assoc_opt n visible); envs = (fun () -> visible); cwd = Sys.getcwd;

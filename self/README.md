@@ -144,7 +144,7 @@ function runs over stdin, an `IO` value is performed, a function from
 no arguments is applied and its result printed, and any other value is
 printed. Under `--interpret` slc does the same itself instead of
 writing the program out (`interp.sl`), the interpreted program's
-arguments following a `--` after the files. `--confine dir` confines the
+arguments following a `--` after the files. `--confine-dir dir` confines the
 program's file requests to `dir` as the reference's flag does
 (ASSUMPTIONS 198), and `--no-env` hides the environment from it as
 the reference's does.

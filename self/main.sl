@@ -37,7 +37,7 @@
   (WriteErr _ (str-cat3 "slc: " m "\n") (unique-thunk _ _ (Exit _ exit-fail))))
 
 (def-fns util-lvl $ (many usage : -> (unique (IO io-lvl) io))
-  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine dir] [--no-env] file.sl ... [-- arg ...] > out.ml\n"
+  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--no-env] file.sl ... [-- arg ...] > out.ml\n"
     (unique-thunk _ _ (Exit _ exit-fail))))
 
 (def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) fence) (many (Bool) with-env) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
@@ -76,7 +76,7 @@
   (let ((many files) (many pargs)) (notail $ split-args rest))
   (values (Cons _ p files) pargs))
 
-; The flags, in any order, then the files: --no-prelude, --no-templates, --interpret, --confine dir and --no-env.
+; The flags, in any order, then the files: --no-prelude, --no-templates, --interpret, --confine-dir dir and --no-env.
 ; Without --no-prelude the embedded prelude goes ahead of the files, under the path the reference names it
 ; by (lib/builtin.ml).
 (def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (String) dir) (many (Bool) with-env) -> (unique (IO io-lvl) io))
@@ -86,7 +86,7 @@
       (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting dir with-env)))
       (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting dir with-env)))
       (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue) dir with-env)))
-      (let-match many (str-eq p "--confine") (BFalse)
+      (let-match many (str-eq p "--confine-dir") (BFalse)
         ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ d more) (tail $ start-with more prelude templates interpreting d with-env)))))
       (let-match many (str-eq p "--no-env") (BFalse) ((BTrue) (tail $ start-with rest prelude templates interpreting dir (BFalse))))
       (let ((many files) (many pargs)) (split-args args))

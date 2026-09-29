@@ -3961,7 +3961,7 @@ session's, made without the owner.
 
 ## Confining file requests (section 16)
 
-The `Confine` request, the `--confine` flag and the fence model are as
+The `Confine` request, the `--confine-dir` flag and the fence model are as
 README.md describes them; the choices below are the session's.
 
 198. **What the fence admits, and when.** Each of the eight file

@@ -37,7 +37,7 @@ let () =
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
   let rec option name acc = function f :: v :: rest when f = name -> (Some v, List.rev_append acc rest) | a :: rest -> option name (a :: acc) rest | [] -> (None, List.rev acc) in
   let extract, args = option "--extract" [] args in
-  let confine, args = option "--confine" [] args in
+  let confine, args = option "--confine-dir" [] args in
   Option.iter (( := ) Extract.fence) confine;
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");

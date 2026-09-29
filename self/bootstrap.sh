@@ -70,7 +70,7 @@ check_test() {
   args=$(directive "$t" args)
   envs=$(directive "$t" env)
   confine=""
-  for d in $(directive "$t" confine); do confine="--confine $d"; done
+  for d in $(directive "$t" confine-dir); do confine="--confine-dir $d"; done
   [ -n "$(directive "$t" no-env)" ] && confine="$confine --no-env"
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,

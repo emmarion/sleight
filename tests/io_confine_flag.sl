@@ -1,4 +1,4 @@
-; confine: .
+; confine-dir: .
 ; expect: stat cwd ok
 ; expect: list parent refused
 ; expect: confine cwd ok
