@@ -1027,16 +1027,20 @@
       (LRuled _ _ _ _ _ ty t $ mw-unwrap ctx (Zero) xg w t rules mw))
     ((H1 x1 d dd)
       (let ((erased (C1 (Cons _ (D1) ctx) n1 one rules) c1)) $ match erased c _ ((C1Node _ _ _ _ _ _ _ _ _ _ _ c1 _) c1))
-      (match many (notail $ facts-lookup x1 _ one _ _ (W1 ctx x1 d dd xg w) _ c1) _
-        ((LNone _ _ _ _ _) (LNone _ _ _ _ _))
-        ((LRuled _ _ _ _ _ ty t mr) (LRuled _ _ _ _ _ ty t mr))
-        ((LFree _ _ _ _ _ ty q) (LFree _ _ _ _ _ ty $ In1 x1 d dd h n1 n2 m here one two p3 q))))
+      (let ((many r)) (tail $ facts-lookup x1 _ one _ _ (W1 ctx x1 d dd xg w) _ c1))
+      (let ((erased r2) (erased cp)) $ match erased r (((Looked x n f xg rules) r2) ((Coercible (Shared) (Looked x1 n1 one xg rules) r (Shared) (Looked x n f xg rules) r2) cp))
+        ((LNone _ _ _ _ _) (values (LNone _ _ _ _ _) (coercible-ctor (Shared) LNone x1 x n1 n one f xg xg rules rules)))
+        ((LRuled _ _ _ _ _ ty t mr) (values (LRuled _ _ _ _ _ ty t mr) (coercible-ctor (Shared) LRuled x1 x n1 n one f xg xg rules rules (coercible-refl (Shared) ty) (coercible-refl (Shared) t) mr mr)))
+        ((LFree _ _ _ _ _ ty q) (values (LFree _ _ _ _ _ ty $ In1 x1 d dd h n1 n2 m here one two p3 q) (coercible-ctor (Shared) LFree x1 x n1 n one f xg xg rules rules (coercible-refl (Shared) ty) q $ In1 x1 d dd h n1 n2 m here one two p3 q))))
+      (coerce r cp))
     ((H2 x1 d dd)
       (let ((erased (C1 (Cons _ (D2) ctx) n2 two rules) c2)) $ match erased c _ ((C1Node _ _ _ _ _ _ _ _ _ _ _ _ c2) c2))
-      (match many (notail $ facts-lookup x1 _ two _ _ (W2 ctx x1 d dd xg w) _ c2) _
-        ((LNone _ _ _ _ _) (LNone _ _ _ _ _))
-        ((LRuled _ _ _ _ _ ty t mr) (LRuled _ _ _ _ _ ty t mr))
-        ((LFree _ _ _ _ _ ty q) (LFree _ _ _ _ _ ty $ In2 x1 d dd h n1 n2 m here one two p3 q))))))
+      (let ((many r)) (tail $ facts-lookup x1 _ two _ _ (W2 ctx x1 d dd xg w) _ c2))
+      (let ((erased r2) (erased cp)) $ match erased r (((Looked x n f xg rules) r2) ((Coercible (Shared) (Looked x1 n2 two xg rules) r (Shared) (Looked x n f xg rules) r2) cp))
+        ((LNone _ _ _ _ _) (values (LNone _ _ _ _ _) (coercible-ctor (Shared) LNone x1 x n2 n two f xg xg rules rules)))
+        ((LRuled _ _ _ _ _ ty t mr) (values (LRuled _ _ _ _ _ ty t mr) (coercible-ctor (Shared) LRuled x1 x n2 n two f xg xg rules rules (coercible-refl (Shared) ty) (coercible-refl (Shared) t) mr mr)))
+        ((LFree _ _ _ _ _ ty q) (values (LFree _ _ _ _ _ ty $ In2 x1 d dd h n1 n2 m here one two p3 q) (coercible-ctor (Shared) LFree x1 x n2 n two f xg xg rules rules (coercible-refl (Shared) ty) q $ In2 x1 d dd h n1 n2 m here one two p3 q))))
+      (coerce r cp))))
 
 ; A new rule-free entry; an occupied position is left as it is.
 (def-fns _ $ (many facts-insert : (subterm many (Nat) x) (erased (Nat) n) (many (Facts n) f) (many (Term) ty) -> (many (Inserted x n f) r))

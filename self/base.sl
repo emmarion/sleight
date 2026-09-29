@@ -183,13 +183,17 @@
   (match many (nat-halve k) _
     ((HZ) (match many here _ ((None _) (Miss _ _ _ $ ABHere _ one two)) ((Some _ v) (Hit _ _ _ v $ MTHere _ v one two))))
     ((H1 k1 d dd)
-      (match many (notail $ idmap-get _ k1 one) _
-        ((Hit _ _ _ v p) (Hit _ _ _ v $ MT1 _ k1 d dd v here one two p))
-        ((Miss _ _ _ p) (Miss _ _ _ $ AB1 _ k1 d dd here one two p))))
+      (let ((many r)) (tail $ idmap-get _ k1 one))
+      (let ((erased r2) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 one) r (Shared) (Lookup V k m) r2) c))
+        ((Hit _ _ _ v p) (values (Hit _ _ _ v $ MT1 _ k1 d dd v here one two p) (coercible-ctor (Shared) Hit V V k1 k one m (coercible-refl (Shared) v) p $ MT1 _ k1 d dd v here one two p)))
+        ((Miss _ _ _ p) (values (Miss _ _ _ $ AB1 _ k1 d dd here one two p) (coercible-ctor (Shared) Miss V V k1 k one m p $ AB1 _ k1 d dd here one two p))))
+      (coerce r c))
     ((H2 k1 d dd)
-      (match many (notail $ idmap-get _ k1 two) _
-        ((Hit _ _ _ v p) (Hit _ _ _ v $ MT2 _ k1 d dd v here one two p))
-        ((Miss _ _ _ p) (Miss _ _ _ $ AB2 _ k1 d dd here one two p))))))
+      (let ((many r)) (tail $ idmap-get _ k1 two))
+      (let ((erased r2) (erased c)) $ match erased r (((Lookup V k m) r2) ((Coercible (Shared) (Lookup V k1 two) r (Shared) (Lookup V k m) r2) c))
+        ((Hit _ _ _ v p) (values (Hit _ _ _ v $ MT2 _ k1 d dd v here one two p) (coercible-ctor (Shared) Hit V V k1 k two m (coercible-refl (Shared) v) p $ MT2 _ k1 d dd v here one two p)))
+        ((Miss _ _ _ p) (values (Miss _ _ _ $ AB2 _ k1 d dd here one two p) (coercible-ctor (Shared) Miss V V k1 k two m p $ AB2 _ k1 d dd here one two p))))
+      (coerce r c))))
 
 ; A value a map holds is a subterm of it, for a recursion that continues into it.
 (def-fns _ $ (erased mapsto-subterm : (erased Type V) (erased (Nat) k) (erased V v) (erased (IdMap V) m) (subterm erased (MapsTo V k v m) p) ->
@@ -280,22 +284,28 @@
   (match many (char-cmp c c1) _
     ((CEq _ _ _) (KHit _ _ _ sub3 $ KHere _ c sub3 rest))
     ((CLt _ _ _ _ lt)
-      (match many (notail $ nm-kid _ rest c) _
-        ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
-        ((KMiss _ _ _ p) (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p))))
+      (let ((many r)) (tail $ nm-kid _ rest c))
+      (let ((erased r2) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
+        ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
+        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKLt _ c c1 sub3 rest lt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKLt _ c c1 sub3 rest lt p))))
+      (coerce r cp))
     ((CGt _ _ _ _ gt)
-      (match many (notail $ nm-kid _ rest c) _
-        ((KHit _ _ _ sub2 p) (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p))
-        ((KMiss _ _ _ p) (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p))))))
+      (let ((many r)) (tail $ nm-kid _ rest c))
+      (let ((erased r2) (erased cp)) $ match erased r (((KidLookup V c kids) r2) ((Coercible (Shared) (KidLookup V c rest) r (Shared) (KidLookup V c kids) r2) cp))
+        ((KHit _ _ _ sub2 p) (values (KHit _ _ _ sub2 $ KThere _ c sub2 k rest p) (coercible-ctor (Shared) KHit V V c c rest kids (coercible-refl (Shared) sub2) p $ KThere _ c sub2 k rest p)))
+        ((KMiss _ _ _ p) (values (KMiss _ _ _ $ NKGt _ c c1 sub3 rest gt p) (coercible-ctor (Shared) KMiss V V c c rest kids p $ NKGt _ c c1 sub3 rest gt p))))
+      (coerce r cp))))
 
 (def-fns _ $ (many nm-get : (erased Type V) (subterm many (String) name) (many (NameMap V) m) -> (many (NLookup V name m) r))
   (let-match many m (NMNode _ here kids))
   (let-match many name (SCons c rest)
     ((SNil) (match many here _ ((None _) (NMiss _ _ _ $ NAHere _ kids)) ((Some _ v) (NHit _ _ _ v $ NMHere _ v kids)))))
   (let-match many (nm-kid _ kids c) (KHit _ _ _ submap k) ((KMiss _ _ _ n) (NMiss _ _ _ $ NANoKid _ c rest here kids n)))
-  (match many (notail $ nm-get _ rest submap) _
-    ((NHit _ _ _ v p) (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p))
-    ((NMiss _ _ _ p) (NMiss _ _ _ $ NAStep _ c rest here kids submap k p))))
+  (let ((many r)) (tail $ nm-get _ rest submap))
+  (let ((erased r2) (erased cp)) $ match erased r (((NLookup V name m) r2) ((Coercible (Shared) (NLookup V rest submap) r (Shared) (NLookup V name m) r2) cp))
+    ((NHit _ _ _ v p) (values (NHit _ _ _ v $ NMStep _ c rest v here kids submap k p) (coercible-ctor (Shared) NHit V V rest name submap m (coercible-refl (Shared) v) p $ NMStep _ c rest v here kids submap k p)))
+    ((NMiss _ _ _ p) (values (NMiss _ _ _ $ NAStep _ c rest here kids submap k p) (coercible-ctor (Shared) NMiss V V rest name submap m p $ NAStep _ c rest here kids submap k p))))
+  (coerce r cp))
 
 (def-fns _ $ (many nm-replace-kid : (erased Type V) (subterm many (List $ NMKid V) kids) (many (Char) c) (many (NameMap V) submap) -> (many (List $ NMKid V) r))
   (let-match many kids (Cons _ k rest) ((Nil _) (Cons _ (MkKid _ c submap) $ Nil _)))
@@ -384,9 +394,11 @@
   (let-match many xs (Cons _ x xrest)
     ((Nil _) (match many ys _ ((Nil _) (LdYes _ _ _ _ $ LsNil _ _)) ((Cons _ _ _) (LdNo _ _ _ _)))))
   (let-match many ys (Cons _ y yrest) ((Nil _) (LdNo _ _ _ _)))
-  (match many (notail $ lockstep-dec _ _ xrest yrest) _
-    ((LdYes _ _ _ _ p) (LdYes _ _ _ _ $ LsCons _ _ x y xrest yrest p))
-    ((LdNo _ _ _ _) (LdNo _ _ _ _))))
+  (let ((many r)) (tail $ lockstep-dec _ _ xrest yrest))
+  (let ((erased r2) (erased cp)) $ match erased r (((LockstepDec A B xs ys) r2) ((Coercible (Shared) (LockstepDec A B xrest yrest) r (Shared) (LockstepDec A B xs ys) r2) cp))
+    ((LdYes _ _ _ _ p) (values (LdYes _ _ _ _ $ LsCons _ _ x y xrest yrest p) (coercible-ctor (Shared) LdYes A A B B xrest xs yrest ys p $ LsCons _ _ x y xrest yrest p)))
+    ((LdNo _ _ _ _) (values (LdNo _ _ _ _) (coercible-ctor (Shared) LdNo A A B B xrest xs yrest ys))))
+  (coerce r cp))
 
 (def-fns _ $ (many list-fit : (erased Type A) (erased Type B) (subterm many (List A) xs) (many (List B) ys) (many B filler) -> (many (List B) r) (erased (Lockstep A B xs r) p))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (LsNil _ _))))
@@ -410,9 +422,11 @@
 (def-fns _ $ (many list-nth : (erased Type A) (subterm many (List A) xs) (many (Nat) i) -> (many (NthLookup A xs i) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (NthMiss _ _ _ $ OONil _ i)))
   (let-match many i (Succ k) ((Zero) (NthHit _ _ _ x $ NthHere _ x rest)))
-  (match many (notail $ list-nth _ rest k) _
-    ((NthHit _ _ _ y p) (NthHit _ _ _ y $ NthThere _ x rest k y p))
-    ((NthMiss _ _ _ p) (NthMiss _ _ _ $ OOCons _ x rest k p))))
+  (let ((many r)) (tail $ list-nth _ rest k))
+  (let ((erased r2) (erased cp)) $ match erased r (((NthLookup A xs i) r2) ((Coercible (Shared) (NthLookup A rest k) r (Shared) (NthLookup A xs i) r2) cp))
+    ((NthHit _ _ _ y p) (values (NthHit _ _ _ y $ NthThere _ x rest k y p) (coercible-ctor (Shared) NthHit A A rest xs k i (coercible-refl (Shared) y) p $ NthThere _ x rest k y p)))
+    ((NthMiss _ _ _ p) (values (NthMiss _ _ _ $ OOCons _ x rest k p) (coercible-ctor (Shared) NthMiss A A rest xs k i p $ OOCons _ x rest k p))))
+  (coerce r cp))
 
 (def-fns _ $ (many list-nth-or : (erased Type A) (many (List A) xs) (many (Nat) i) (many A dflt) -> (many A r))
   (match many (list-nth _ xs i) _ ((NthHit _ _ _ x _) x) ((NthMiss _ _ _ _) dflt)))
