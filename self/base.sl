@@ -212,6 +212,14 @@
 (def-fns _ $ (many idmap-mem : (erased Type V) (many (Nat) k) (many (IdMap V) m) -> (many (Bool) r))
   (match many (idmap-get _ k m) _ ((Miss _ _ _ _) (BFalse)) ((Hit _ _ _ _ _) (BTrue))))
 
+(def-fns _ $ (many idmap-of-list : (erased Type V) (subterm many (List V) xs) (many (Nat) k) (many (IdMap V) acc) -> (many (IdMap V) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) acc))
+  (tail $ idmap-of-list _ rest (Succ k) $ idmap-set _ k x acc))
+
+(def-fns _ $ (many idmap-prefix : (erased Type V) (many (IdMap V) m) (subterm many (Nat) n) (many (List V) acc) -> (many (List V) r))
+  (let-match many n (Succ k) ((Zero) acc))
+  (tail $ idmap-prefix _ m k $ match many (idmap-get _ k m) (((List V) _)) ((Hit _ _ _ v _) (Cons _ v acc)) ((Miss _ _ _ _) acc)))
+
 (def-fns _ $ (many idmap-pairs : (erased Type V) (subterm many (IdMap V) m) (many (Nat) a) (many (Nat) b) (many (List $ Pair (Nat) V) acc) -> (many (List $ Pair (Nat) V) r))
   (let-match many m (MNode _ here one two) ((MEmpty _) acc))
   (let ((many a2)) $ nat-add a a)

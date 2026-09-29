@@ -455,7 +455,7 @@
     (many MkCtor : (many (String) name) (many (Nat) id) (many (Nat) index) (many (Nat) arity) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (Ctor)))
   ((Block : (Type R) -> Type)
     enum
-    (many BArray : (erased Type R) (many (List R) fields) -> (Block R))
+    (many BArray : (erased Type R) (many (Nat) len) (many (IdMap R) elems) -> (Block R))
     (many BTag : (erased Type R) (many (Ctor) c) (many (List R) fields) -> (Block R))
     (many BTup : (erased Type R) (many (List R) fields) -> (Block R))
     (many BExt : (erased Type R) (many (Payload) p) -> (Block R))
@@ -534,11 +534,14 @@
       (let ((erased rest2) (erased pr)) (frames-widen b c le cx rest))
       (values (FrGroup _ _ gids g2 grp rest2) (coercible-ctor (Shared) FrGroup (Ref Block b) (Ref Block c) cx cx (coercible-refl (Shared) gids) pg (coercible-refl (Shared) grp) pr)))))
 
+(def-fns _ $ (many array-block : (erased Type R) (many (List R) xs) -> (many (Block R) b))
+  (BArray _ (list-length _ xs) $ idmap-of-list _ xs 0 $ MEmpty _))
+
 (def-fns _ $ (erased block-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (Block (Ref Block b)) blk) -> (erased (Block (Ref Block c)) blk2) (erased (Coercible (Shared) (Block (Ref Block b)) blk (Shared) (Block (Ref Block c)) blk2) p))
   (match erased blk _
-    ((BArray _ fs)
-      (let ((erased fs2) (erased pf)) (refs-widen Block b c le fs))
-      (values (BArray _ fs2) (coercible-ctor (Shared) BArray (Ref Block b) (Ref Block c) pf)))
+    ((BArray _ n es)
+      (let ((erased es2) (erased pe)) (idmap-widen Block b c le es))
+      (values (BArray _ n es2) (coercible-ctor (Shared) BArray (Ref Block b) (Ref Block c) (coercible-refl (Shared) n) pe)))
     ((BTag _ ct fields)
       (let ((erased fs2) (erased pf)) (refs-widen _ b c le fields))
       (values (BTag _ ct fs2) (coercible-ctor (Shared) BTag (Ref Block b) (Ref Block c) (coercible-refl (Shared) ct) pf)))

@@ -797,7 +797,7 @@
       ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
       ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
       ((BExt _ p) (payload-rope p))
-      ((BArray _ fields) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ fields) "; ") $ RStr "|])"))
+      ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
       ((BCtorFn _ c) (ctor-fn-rope d c))
       ((BMat _ adt) (matchable-rope adt d))
       ((BGroup _ _ _ _ _) (RStr "(failwith \"a group as a closed value\")"))
@@ -948,7 +948,7 @@
 (def-fns _ $ (many block-refs : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (List $ Ref Block a) r))
   (match many b _
     ((BTag _ _ fields) fields)
-    ((BArray _ fields) fields)
+    ((BArray _ n es) (idmap-prefix _ es n $ Nil _))
     ((BTup _ fields) fields)
     ((BFn _ g _ _) (Cons _ g $ Nil _))
     ((BGroup _ _ _ _ fr) (frames-refs _ _ fr (Nil _)))
@@ -1030,9 +1030,9 @@
     ((BTag _ c fields)
       (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = ") (plain-build d c $ blank-words $ list-length _ fields) $ RStr "\n")
       (values (rcat skeleton before) middle $ rcat (block-stores _ d c fields (addr-rope _ at2) 0) after))
-    ((BArray _ fields)
-      (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope $ list-length _ fields) $ RStr " (Obj.repr ()))\n")
-      (values (rcat skeleton before) middle $ rcat (array-stores _ fields (addr-rope _ at2) 0) after))
+    ((BArray _ n es)
+      (let ((many skeleton)) $ rcat5 (RStr "let ") (addr-rope _ at2) (RStr " : Obj.t = Obj.repr (Array.make ") (nat-rope n) $ RStr " (Obj.repr ()))\n")
+      (values (rcat skeleton before) middle $ rcat (array-stores _ (idmap-prefix _ es n $ Nil _) (addr-rope _ at2) 0) after))
     (else (values before (rcat (block-let _ at2 _ blk env d) middle) after))))
 
 ; ---- The driver (lib/driver_core.ml): its operations on the prelude's values, each a direct build or match
