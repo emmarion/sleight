@@ -624,11 +624,11 @@
 ; The prelude's names are found in its scope, as lib/program.ml's driver finds them, however the program
 ; shadows them.
 (def-fns _ $ (many prelude-adt : (many (Env) env) (many (String) name) -> (many (Maybe $ Adt) r))
-  (let ((many env2) (many ty)) $ prelude-type (env-set-scope env $ env-prelude env) name)
+  (let ((many env2) (many ty)) $ prelude-type env name)
   (type-adt env2 ty))
 
 (def-fns _ $ (many prelude-ctor : (many (Env) env) (many (String) name) -> (many (Maybe $ Ctor) r))
-  (let ((many env2) (many x)) $ prelude-id (env-set-scope env $ env-prelude env) name)
+  (let ((many env2) (many x)) $ prelude-id env name)
   (ctor-of env2 x))
 
 (def-fns _ $ (many ffi-arms : (subterm many (List $ Ctor) ctors) -> (many (List $ Arm) r))

@@ -378,7 +378,7 @@
         ((None _) (Some _ $ str-cat "malformed character literal " s))))))
 
 (def-fns _ $ (many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Nat) x))
-  (match many (lookup env name) _
+  (match many (lookup (env-set-scope env $ env-prelude env) name) _
     ((None _) (values (env-error env $ str-cat "unbound name " $ tick name) $ Zero))
     ((Some _ x) (values env x))))
 
@@ -390,7 +390,7 @@
 ; shadows the name, as lib/elab.ml's nullary finds it.
 (def-fns _ $ (many prelude-nullary : (many (Env) env) (many (Term) ty) (many (String) name) -> (many (Bool) b))
   (let-match many (type-head env ty) (Some _ tid) ((None _) (BFalse)))
-  (let ((many env2) (many x)) $ prelude-id (env-set-scope env $ env-prelude env) name)
+  (let ((many env2) (many x)) $ prelude-id env name)
   (nat-eq tid x))
 
 ; The multiplicity a position demands of a value by its type (lib/elab.ml's demanded): a callable head takes
