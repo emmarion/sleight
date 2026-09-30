@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import json, os, re, shutil, stat, subprocess, sys, tempfile, time, urllib.request
+import json, os, re, shutil, stat, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+RESULTS = HERE / "results"
 PROVIDER = os.environ.get("PI_PROVIDER", "neuralwatt")
 DEFAULT_MODELS = {"anthropic": "claude-haiku-4-5", "neuralwatt": "glm-5.3", "local": os.environ.get("PI_LOCAL_MODEL", "")}
 MODEL = os.environ.get("PI_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
@@ -398,17 +399,18 @@ class OpenAICompat:
         return self.limit("max_context_length") or self.model().get("max_model_len")
 
     def send(self, messages):
+        sid = str(RUN_DIR.relative_to(RESULTS))
         body = {
             "model": MODEL, "max_tokens": self.cap(),
             "tools": [{"type": "function", "function": {"name": n, "description": d, "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
-            "user": RUN_DIR.name,
+            "user": sid,
         }
         if EFFORT:
             body["reasoning_effort"] = EFFORT
         if STREAM:
             body.update(stream=True, stream_options={"include_usage": True})
-        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": RUN_DIR.name}, stream=STREAM)
+        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": sid}, stream=STREAM)
 
     def parse(self, reply):
         msg = reply["choices"][0]["message"]
@@ -518,17 +520,53 @@ def run(prompt, keep=()):
     return f"(stopped after {limit} turns)"
 
 
-def main(argv):
+def _copy(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dst) if src.is_dir() else shutil.copy(src, dst)
+
+
+def session(run_dir, prompt, seeds, keep):
     global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT
-    flags = {"-f": [], "-k": []}
+    RUN_DIR = run_dir
+    RUN_DIR.mkdir(parents=True)
+    latest = RESULTS / "latest"
+    latest.unlink(missing_ok=True)
+    latest.symlink_to(RUN_DIR.relative_to(RESULTS))
+    SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
+    ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
+    (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
+    LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
+    (RUN_DIR / "prompt.txt").write_text(prompt)
+    _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                     + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k} ---\n" for k in keep)
+                     + f"--- prompt ---\n{prompt}\n")
+    _say(f"run dir: {RUN_DIR}")
+    t0 = time.time()
+    try:
+        for src, rel in seeds:
+            _copy(src, SANDBOX_ROOT / rel)
+        answer = run(prompt, keep)
+        (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
+        print(answer)
+    finally:
+        (RUN_DIR / "sandbox").unlink()
+        shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
+        shutil.rmtree(SANDBOX_ROOT)
+        os.close(ROOT_FD)
+
+
+def main(argv):
+    flags = {"-f": [], "-k": [], "-n": ["1"]}
     while argv[:1] and argv[0] in flags and len(argv) > 1:
         flags[argv[0]].append(argv[1])
         argv = argv[2:]
-    seeds, keep = [Path(f) for f in flags["-f"]], flags["-k"]
+    seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int(flags["-n"][-1])
     if not argv:
-        sys.exit("usage: pi.py [-f PATH]... [-k PATH]... PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+        sys.exit("usage: pi.py [-f PATH]... [-k PATH]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
-                 f"  -k PATH  in the last {WARN_TURNS} turns, allow only read/write/edit on the -k paths, and done")
+                 f"  -k PATH  in the last {WARN_TURNS} turns, allow only read/write/edit on the -k paths, and done;\n"
+                 "           carry the -k paths from each session's sandbox into the next\n"
+                 "  -n N     run N sessions in a row (default 1)")
     for s in seeds:
         if not s.exists():
             sys.exit(f"no such file: {s}")
@@ -540,32 +578,17 @@ def main(argv):
         sys.exit(f"no slc at {SLC}; build it with the first step of self/bootstrap.sh")
     prompt = "\n\n".join(Path(a).read_text().strip() for a in argv)
     tag = "+".join(Path(a).stem for a in argv)
-    RUN_DIR = HERE / "results" / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"
-    RUN_DIR.mkdir(parents=True)
-    latest = RUN_DIR.parent / "latest"
-    latest.unlink(missing_ok=True)
-    latest.symlink_to(RUN_DIR.name)
-    SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
-    ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
-    (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
-    LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
-    (RUN_DIR / "prompt.txt").write_text(prompt)
-    _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                     + "".join(f"--- seed {s} ---\n" for s in seeds) + "".join(f"--- keep {k} ---\n" for k in keep)
-                     + f"--- prompt ---\n{prompt}\n")
-    _say(f"run dir: {RUN_DIR}")
-    t0 = time.time()
-    try:
-        for s in seeds:
-            dst = SANDBOX_ROOT / s.resolve().name
-            shutil.copytree(s, dst) if s.is_dir() else shutil.copy(s, dst)
-        answer = run(prompt, keep)
-        (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
-        print(answer)
-    finally:
-        (RUN_DIR / "sandbox").unlink()
-        shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
-        shutil.rmtree(SANDBOX_ROOT)
+    loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"
+    prev = None
+    for i in range(1, n + 1):
+        carried = [(prev / "sandbox" / k, k) for k in keep if prev and (prev / "sandbox" / k).exists()]
+        _say(f"session {i}/{n}")
+        try:
+            session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
+        except (Exception, SystemExit):
+            traceback.print_exc()
+            _say(f"session {i}/{n} failed; carrying on")
+        prev = loop / f"{i:02}"
 
 
 if __name__ == "__main__":
