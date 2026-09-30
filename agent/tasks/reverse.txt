@@ -1,0 +1,3 @@
+The `sl` tool compiles and runs programs written in a programming language called SL. You have no documentation for SL, and nothing in the sandbox describes it.
+
+Find out as much as you can about the language by writing programs and running them: its syntax, its types, what the compiler accepts and what it refuses and why, and how a program does input and output. Keep SPEC.md in the sandbox up to date with what you have learned, as you go, and keep the probe programs that support it. When you have learned as much as you can, call `done`.

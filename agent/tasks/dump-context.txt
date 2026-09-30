@@ -1,0 +1,1 @@
+One more thing: the form `(dump-context)`, placed where a statement or an expression could go, stops compilation there and reports what the compiler knows at that point; `(dump-context x)` reports on the name `x`.
