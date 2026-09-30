@@ -16,7 +16,7 @@ MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
-SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/self/slc"))
+SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MAX_WRITE, MAX_OUT = 8 * 1024 * 1024, 20000
@@ -575,7 +575,7 @@ def main(argv):
     if PROVIDER not in ADAPTERS:
         sys.exit(f"unknown provider {PROVIDER!r}; try: {', '.join(ADAPTERS)}")
     if not os.access(SLC, os.X_OK):
-        sys.exit(f"no slc at {SLC}; build it with the first step of self/bootstrap.sh")
+        sys.exit(f"no slc at {SLC}; build it with self/release.sh")
     prompt = "\n\n".join(Path(a).read_text().strip() for a in argv)
     tag = "+".join(Path(a).stem for a in argv)
     loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"

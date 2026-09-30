@@ -123,12 +123,14 @@ host (section 41); a `U8` or a
   the compile-time printer.
 - `main.sl` — the entry point, an `IO` program (ASSUMPTIONS 56).
 - `bootstrap.sh` — builds and checks everything, below.
+- `release.sh` — builds an optimized, stripped `slc` at `_build/release/slc`, without `bootstrap.sh`'s checks.
 
 ## Running it
 
 ```sh
 dune build
 self/bootstrap.sh          # extracts slc natively, checks the tests, self-compiles
+self/release.sh            # or: builds _build/release/slc, unchecked
 _build/self/slc tests/list.sl > list.ml
 ocamlfind ocamlopt -package zarith,unix -linkpkg list.ml -o list && ./list
 _build/self/slc --interpret tests/io_echo.sl -- arg1 arg2
