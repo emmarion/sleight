@@ -407,7 +407,7 @@ class OpenAICompat:
         return self.limit("max_context_length") or self.model().get("max_model_len")
 
     def send(self, messages):
-        sid = str(RUN_DIR.relative_to(RESULTS))
+        sid = re.sub(r"[^A-Za-z0-9._-]", "-", str(RUN_DIR.relative_to(RESULTS)))
         body = {
             "model": MODEL, "max_tokens": self.cap(),
             "tools": [{"type": "function", "function": {"name": n, "description": d, "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
