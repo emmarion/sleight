@@ -656,12 +656,14 @@
     ((BFalse) (None _))
     ((BTrue) (raw-atom target))))
 
-(def-fns _ $ (many entries-of-names : (subterm many (List $ Raw) names) (many (Env) env) (many (Bool) is-sub) (many (Maybe $ Mult) mult) (many (Pos) site) (erased (List $ Raw) root) (many (Raw) ty) (erased (Subterm (Raw) ty (List $ Raw) root) pty) -> (many (List $ SrcEntry root) r))
+(def-fns _ $ (many trailing-at : (many (Env) env) (subterm many (List $ Raw) xs) -> (many (Maybe $ String) r))
+  (let-match many xs (Cons _ _ rest) ((Nil _) (None _)))
+  (match many (at-tail env xs) _ ((Some _ p) (Some _ p)) ((None _) (tail $ trailing-at env rest))))
+
+(def-fns _ $ (many entries-of-names : (subterm many (List $ Raw) names) (many (Env) env) (many (Bool) is-sub) (many (Maybe $ Mult) mult) (many (Pos) site) (erased (List $ Raw) root) (many (Raw) ty) (erased (Subterm (Raw) ty (List $ Raw) root) pty) (many (Maybe $ String) place) -> (many (List $ SrcEntry root) r))
+  (let-match many (at-tail env names) (None _) ((Some _ _) (Nil _)))
   (let-match many names (Cons _ n rest) ((Nil _) (Nil _)))
-  (let ((many place)) $ at-tail env rest)
-  (let ((many more)) $ match many place (((List $ SrcEntry root) _))
-    ((Some _ _) (Nil _))
-    ((None _) (notail $ entries-of-names rest env is-sub mult site _ ty pty)))
+  (let ((many more)) $ notail $ entries-of-names rest env is-sub mult site _ ty pty place)
   (Cons _ (MkSrcEntry _ is-sub mult (Some _ $ SrcTy _ ty pty) (raw-name n) place site) more))
 
 (def-fns _ $ (many parse-entry : (many (Env) env) (many (Raw) raw) (erased (List $ Raw) root) (erased (Subterm (Raw) raw (List $ Raw) root) pr) -> (many (List $ SrcEntry root) r))
@@ -683,13 +685,15 @@
           ((Some _ m) (values (Some _ m) rest $ within-step _ _ _ (prove-subterm rest items1) w1))))))
   (let-match many items (Cons _ first rest) ((Nil _) (Nil _)))
   (let ((erased pf)) $ in-within _ _ _ _ (prove-subterm first items) w2)
-  (let-match many rest (Cons _ second rest2)
-    ((Nil _) (match many (raw-atom first) _ ((None _) (Nil _)) ((Some _ n) (Cons _ (MkSrcEntry _ sub3 mult (None _) n (None _) epos) $ Nil _)))))
   (let-match many (atoms-only rest) (BTrue) ((BFalse) (Nil _)))
-  (let-match many rest2 (Cons _ third rest3) ((Nil _) (entries-of-names rest env sub3 mult epos _ first pf)))
+  (let ((many place)) $ trailing-at env items)
+  (let-match many (or (list-is-empty _ rest) $ is-some _ $ at-tail env rest) (BFalse)
+    ((BTrue) (match many (raw-atom first) _ ((None _) (Nil _)) ((Some _ n) (Cons _ (MkSrcEntry _ sub3 mult (None _) n place epos) $ Nil _)))))
+  (let-match many rest (Cons _ second rest2) ((Nil _) (Nil _)))
+  (let-match many rest2 (Cons _ third rest3) ((Nil _) (entries-of-names rest env sub3 mult epos _ first pf place)))
   (match many (and (is-mark env second $ MkIs) $ or (list-is-empty _ rest3) $ is-some _ $ at-tail env rest3) _
-    ((BTrue) (Cons _ (MkSrcEntry _ sub3 mult (Some _ $ SrcIs _ first pf) (raw-name third) (at-tail env rest3) epos) $ Nil _))
-    ((BFalse) (entries-of-names rest env sub3 mult epos _ first pf))))
+    ((BTrue) (Cons _ (MkSrcEntry _ sub3 mult (Some _ $ SrcIs _ first pf) (raw-name third) place epos) $ Nil _))
+    ((BFalse) (entries-of-names rest env sub3 mult epos _ first pf place))))
 
 ; The items before the arrow, and those after it, which sit within the root.
 (def-fns _ $ (many split-arrow : (subterm many (List $ Raw) items) (erased (List $ Raw) root) (erased (Within items root) w) (many (Env) env) -> (many (Env) r) (many (List $ Sub root) before) (many (List $ Raw) after) (erased (Within after root) wa))
