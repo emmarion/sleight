@@ -127,9 +127,13 @@ def clip(s):
     return s if len(s) <= MAX_OUT else s[:MAX_OUT] + f"\n... ({len(s) - MAX_OUT} more chars cut)"
 
 
-def read(path, limit=2000):
-    lines = read_bytes(path).decode("utf-8", "replace").splitlines()[:limit]
-    return "\n".join(f"{i:6}\t{l}" for i, l in enumerate(lines, 1)) or "(empty)"
+def read(path, offset=1, limit=2000):
+    lines = read_bytes(path).decode("utf-8", "replace").splitlines()
+    start = max(offset, 1) - 1
+    shown = lines[start:start + max(limit, 0)]
+    rest = len(lines) - start - len(shown)
+    return ("\n".join(f"{i:6}\t{l}" for i, l in enumerate(shown, start + 1)) or f"(no lines; the file has {len(lines)})") + (
+        f"\n... ({rest} more lines; read again with offset={start + len(shown) + 1})" if rest > 0 else "")
 
 
 def write(path, content):
@@ -208,9 +212,10 @@ def done(summary=""):
     return summary or "done"
 
 
-STR, STRS = {"type": "string"}, {"type": "array", "items": {"type": "string"}}
+STR, STRS, INT = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}
 TOOLS = {
-    "read": (read, "Read a file", {"path": STR}, ["path"]),
+    "read": (read, "Read a file, with line numbers. `offset` is the first line to show (from 1), `limit` how many (default 2000).",
+             {"path": STR, "offset": INT, "limit": INT}, ["path"]),
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
     "edit": (edit, "Replace exactly one occurrence of old with new", {"path": STR, "old": STR, "new": STR}, ["path", "old", "new"]),
     "ls": (ls, "List a directory", {"path": STR}, []),
