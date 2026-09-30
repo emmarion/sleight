@@ -130,6 +130,8 @@ let spend w cost =
   cost <= !(w.limit) - !(w.used) && (w.used := !(w.used) + cost; true)
   || (w.err (Printf.sprintf "runtime error: output limit exceeded: this request would bring the program's approximate output to %d bytes, over its limit of %d\n" (!(w.used) + cost) !(w.limit)); false)
 
+let print w s = if spend w (String.length s + 1) then w.print s else w.exit 1
+
 let make ?str_of_host ?str_to_host ?nat_to_z o =
   let rec count z v = match o.pred v with Some p -> count (Z.succ z) p | None -> z in
   let to_z = Option.value nat_to_z ~default:(count Z.zero) in

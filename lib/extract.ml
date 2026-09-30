@@ -492,6 +492,7 @@ let driver cx =
   ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
 let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
 let world = Driver_core.start %s %s %b world
+let print_final = Driver_core.print world
 let run_io = driver.run_io world
 let run_main = driver.run_main world
 |} (quote !fence) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
@@ -505,21 +506,21 @@ let item cx = function
       let text =
         match (v, Program.final cx.env ty) with
         (* a function and a bare constructor print `_`, as the type-directed printer gives them (ASSUMPTIONS 184) *)
-        | V.VFn _, Program.Plain | V.VCtorFn _, Program.Plain -> "print_endline \"_\""
+        | V.VFn _, Program.Plain | V.VCtorFn _, Program.Plain -> "print_final \"_\""
         | _, kind -> (
             let e = value cx v in
             match kind with
             | Program.Main -> Printf.sprintf "run_main %s" e
             | Io -> Printf.sprintf "exit (run_io %s)" e
-            | Thunk t -> Printf.sprintf "print_endline (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
-            | Plain -> Printf.sprintf "print_endline (%s %s)" (show cx cx.env ty) e)
+            | Thunk t -> Printf.sprintf "print_final (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
+            | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in
       Buffer.add_string cx.actions (Printf.sprintf "let () = source := %s; %s\n" (quote path) text)
 
 let emit env items =
   let cx = collect env items in
   List.iter (item cx) items;
-  let driver = if Program.prelude_opt env "Exit" = None then "" else driver cx in
+  let driver = if Program.prelude_opt env "Exit" = None then "let print_final = print_endline" else driver cx in
   let shows = List.rev_map (fun (_, name, body) -> Printf.sprintf "%s (v : Obj.t) : string = %s" name !body) !(cx.shows) in
   let types = types cx in
   concat "\n"

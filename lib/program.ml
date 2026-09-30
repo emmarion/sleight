@@ -87,5 +87,5 @@ let consume w env ty v =
   match final env ty with
   | Main -> (driver env).run_main w v
   | Io -> w.exit ((driver env).run_io w v)
-  | Thunk t -> w.print (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
-  | Plain -> w.print (Elab.show_value env Reader.nowhere ty v)
+  | Thunk t -> print w (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
+  | Plain -> print w (Elab.show_value env Reader.nowhere ty v)

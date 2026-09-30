@@ -1077,7 +1077,7 @@
     ((None _) (REmpty))
     ((Some _ _) (rcat5 (driver-rope-of d env) (RStr "let world = Driver_core.start ") (quoted fence)
       (match many bytes _ ((None _) (RStr " None")) ((Some _ b) (rcat3 (RStr " (Some ") (quoted b) $ RStr ")")))
-      $ RStr $ match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")))))
+      $ RStr $ str-cat (match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")) "let print_final = Driver_core.print world\n"))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
@@ -1278,12 +1278,12 @@
     ((FThunk t)
       (let ((many adapted)) (adapt-final-rope env ty vr (BFalse)))
       (let ((many memo) (many name)) $ show-type show-fuel env t (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
-      (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ((Obj.obj ") adapted $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
+      (rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ((Obj.obj ") adapted $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
     ((FPlain)
       (let-match many (named-final _ hp v env) (None _)
-        ((Some _ text) (rcat3 (RStr "let () = print_endline ") (quoted text) $ RStr "\n")))
+        ((Some _ text) (rcat3 (RStr "let () = print_final ") (quoted text) $ RStr "\n")))
       (let ((many memo) (many name)) $ show-type show-fuel env ty (MkShowMemo (env-fresh-bound env) 0 (Nil _) $ Nil _) d)
-      (rcat5 (show-defs memo) (RStr "let () = print_endline (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))
+      (rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ") vr $ RStr ")") $ RStr "\n"))))
 
 (def-fns _ $ (many emit-finals : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Pair (Ref Block hs) $ Term) fs) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
   (match many fs _

@@ -3999,9 +3999,7 @@ README.md describes them; the choices below are the session's.
      check is not atomic with the request. A request that passes the
      check is charged whether or not it then succeeds. The crash exits
      with code 1, the code the driver already exits with when it cannot
-     confine itself at startup. A value printed by a plain final, which
-     goes through the driver's `print` rather than a request, is not
-     counted. Under `--interpret` slc's own warnings pass through its
+     confine itself at startup. Under `--interpret` slc's own warnings pass through its
      driver ahead of `ConfineOutputBytes`, so they count towards the
      limit there, where the reference's do not; a flag value that is not
      a number is reported with slc's `slc: ` prefix there, as a fence is
