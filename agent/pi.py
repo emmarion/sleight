@@ -551,7 +551,8 @@ def run(prompt):
     window = CONTEXT or api.window()
     turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
     phase, turn, start = "experiment", 0, 0
-    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and os.path.normpath(str(c["input"].get("path", ""))) in KEEP
+    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and (
+        "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
     def rewrite():
         nonlocal phase, turn, start
