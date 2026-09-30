@@ -473,6 +473,7 @@ def main(argv):
     latest.symlink_to(RUN_DIR.name)
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
+    (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
     LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -487,6 +488,7 @@ def main(argv):
         (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
         print(answer)
     finally:
+        (RUN_DIR / "sandbox").unlink()
         shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
         shutil.rmtree(SANDBOX_ROOT)
 
