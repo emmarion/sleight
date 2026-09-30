@@ -454,6 +454,49 @@
 (def-fns _ $ (many list-mem-bin : (subterm many (List $ Nat) xs) (many (Nat) x) -> (many (Bool) r))
   (is-some _ $ index-of-bin xs x 0))
 
+(def-fns _ $ (many join-strs : (subterm many (List $ String) xs) (many (String) sep) -> (many (String) r))
+  (match many xs _
+    ((Nil _) "")
+    ((Cons _ x rest) (match many rest _ ((Nil _) x) ((Cons _ _ _) (str-cat3 x sep $ notail $ join-strs rest sep))))))
+
+(def-fns _ $ (many nat-min : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+  (match many (nat-lt a b) _ ((BTrue) a) ((BFalse) b)))
+
+(def-fns _ $ (many char-lower : (many (Char) c) -> (many (Char) r))
+  (match many (char-between c 65 90) _ ((BTrue) (char-of-code $ nat-add (char-code c) 32)) ((BFalse) c)))
+
+(def-fns _ $ (many char-eq-nocase : (many (Char) a) (many (Char) b) -> (many (Bool) r))
+  (char-eq (char-lower a) (char-lower b)))
+
+(def-fns _ $ (many distance-first-row : (subterm many (String) bs) (many (Nat) j) -> (many (List $ Nat) r))
+  (Cons _ j $ match many bs (((List $ Nat) _)) ((SNil) (Nil _)) ((SCons _ rest) (notail $ distance-first-row rest $ Succ j))))
+
+(def-fns _ $ (many distance-swap : (many (Char) c) (many (Maybe $ Char) cp) (many (Char) bc) (many (Maybe $ Char) bp) (many (List $ Nat) up2) -> (many (Maybe $ Nat) r))
+  (let-match many cp (Some _ ap) ((None _) (None _)))
+  (let-match many bp (Some _ bq) ((None _) (None _)))
+  (let-match many up2 (Cons _ q _) ((Nil _) (None _)))
+  (match many (and (char-eq-nocase c bq) $ char-eq-nocase ap bc) _ ((BTrue) (Some _ q)) ((BFalse) (None _))))
+
+(def-fns _ $ (many distance-row : (many (Char) c) (many (Maybe $ Char) cp) (subterm many (String) bs) (many (Maybe $ Char) bp)
+    (many (List $ Nat) up) (many (List $ Nat) up2) (many (Nat) left) -> (many (List $ Nat) r))
+  (let-match many bs (SCons bc rest) ((SNil) (Nil _)))
+  (let-match many up (Cons _ diag up-rest) ((Nil _) (Nil _)))
+  (let-match many up-rest (Cons _ above _) ((Nil _) (Nil _)))
+  (let ((many best)) (nat-min (Succ $ nat-min above left) $ match many (char-eq-nocase c bc) (((Nat) _)) ((BTrue) diag) ((BFalse) (Succ diag))))
+  (let ((many here)) (match many (distance-swap c cp bc bp up2) (((Nat) _)) ((Some _ q) (nat-min best $ Succ q)) ((None _) best)))
+  (let ((many up2-next)) (match many bp (((List $ Nat) _)) ((None _) up2) ((Some _ _) (match many up2 (((List $ Nat) _)) ((Nil _) up2) ((Cons _ _ r2) r2)))))
+  (Cons _ here $ notail $ distance-row c cp rest (Some _ bc) up-rest up2-next here))
+
+(def-fns _ $ (many distance-rows : (subterm many (String) xs) (many (Maybe $ Char) cp) (many (String) b) (many (Nat) i) (many (List $ Nat) up) (many (List $ Nat) up2) -> (many (List $ Nat) r))
+  (let-match many xs (SCons c rest) ((SNil) up))
+  (let ((many row)) (Cons _ (Succ i) $ distance-row c cp b (None _) up up2 (Succ i)))
+  (tail $ distance-rows rest (Some _ c) b (Succ i) row up))
+
+(def-fns _ $ (many distance : (many (String) a) (many (String) b) -> (many (Nat) d))
+  (let ((many first)) (distance-first-row b 0))
+  (let-match many (list-rev _ $ distance-rows a (None _) b 0 first first) (Cons _ d _) ((Nil _) 0))
+  d)
+
 ; ---- Rope: output built as a tree of chunks (the prelude's), flattened once
 
 (def-fns _ $ (many rcat : (many (Rope) a) (many (Rope) b) -> (many (Rope) r))

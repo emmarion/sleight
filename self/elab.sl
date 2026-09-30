@@ -548,7 +548,7 @@
     ((LName)
       (match many (lookup env n) _
         ((Some _ x) (values env x))
-        ((None _) (values (env-error env $ str-cat "unbound name " $ tick n) $ Zero)))) (else (match many (lit-lookup env n) _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat3 "literal " n " outside a top-level form") $ Zero))))))
+        ((None _) (values (env-error env $ str-cat3 "unbound name " (tick n) $ hint env n) $ Zero)))) (else (match many (lit-lookup env n) _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat3 "literal " n " outside a top-level form") $ Zero))))))
 
 (def-fns _ $ (many name-checked : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (String) s))
   (let-match many raw (RAtom _ s) (else (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ tick $ rope-str $ show-raw raw) "_")))
@@ -3326,11 +3326,6 @@
     enum
     (many MkFocus : (many (String) source) (many (Term) t) (many (Term) ty) -> (Focus))))
 
-(def-fns _ $ (many join-strs : (subterm many (List $ String) xs) (many (String) sep) -> (many (String) r))
-  (match many xs _
-    ((Nil _) "")
-    ((Cons _ x rest) (match many rest _ ((Nil _) x) ((Cons _ _ _) (str-cat3 x sep $ notail $ join-strs rest sep))))))
-
 (def-fns _ $ (many cat-strs : (subterm many (List $ String) xs) (many (List $ String) ys) -> (many (List $ String) r))
   (match many xs _ ((Nil _) ys) ((Cons _ x rest) (Cons _ x $ notail $ cat-strs rest ys))))
 
@@ -5261,7 +5256,7 @@
   (let-match many nraw (RAtom nl n) (else env))
   (let-match many mraw (RAtom _ msg) (else env))
   (let-match many (lookup env n) (Some _ x)
-    ((None _) (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) ", which is not in scope")))
+    ((None _) (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) $ str-cat ", which is not in scope" $ hint env n)))
   (let-match many (canon-env env $ TVar x) (TVar c)
     (else (env-error (env-at env nl) $ str-cat3 "`;! warn` names " (tick n) ", which is neither a type constructor nor a value constructor")))
   (let-match many (match many (canon-env env $ type-of env x) (((Bool) _)) ((TTyCtor _) (BTrue)) ((TValCtor _ _) (BTrue)) (else (BFalse))) (BTrue)

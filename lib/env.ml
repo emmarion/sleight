@@ -125,6 +125,24 @@ let set_state env x state =
 
 let lookup env name = StringMap.find_opt name env.scope.named
 
+let distance a b =
+  let a = String.lowercase_ascii a and b = String.lowercase_ascii b in
+  let d = Array.make_matrix (String.length a + 1) (String.length b + 1) 0 in
+  Array.iteri (fun i row -> Array.iteri (fun j _ ->
+    row.(j) <-
+      if i = 0 || j = 0 then i + j
+      else
+        let best = min (min d.(i - 1).(j) row.(j - 1) + 1) (d.(i - 1).(j - 1) + Bool.to_int (a.[i - 1] <> b.[j - 1])) in
+        if i > 1 && j > 1 && a.[i - 1] = b.[j - 2] && a.[i - 2] = b.[j - 1] then min best (d.(i - 2).(j - 2) + 1) else best) row) d;
+  d.(String.length a).(String.length b)
+
+let hint env name =
+  let visible = List.filter_map (fun x -> Option.bind (entry env x).name (fun n -> if lookup env n = Some x then Some n else None)) env.scope.ids in
+  let best = List.fold_left (fun b n -> min b (distance name n)) max_int visible in
+  match List.filter (fun n -> distance name n = best) visible with
+  | [] -> ""
+  | nearest -> "\nhint: nearest in scope: " ^ String.concat " " nearest
+
 (* Leaving a let's right-hand side: the entries it added since [outer] stay in scope, anonymously (section 16),
    so no fact or open record outlives an entry it mentions. *)
 let hide env outer =

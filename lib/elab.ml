@@ -52,7 +52,7 @@ let is_statement env = function List (_, h :: _) -> List.exists (is_special env 
 let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
 let var env loc n =
   match Literal.classify n with
-  | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s" (tick n))
+  | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s%s" (tick n) (hint env n))
   | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
   | `Bad msg -> error loc "%s" msg
 
@@ -479,7 +479,7 @@ let warn_use env l what t =
 
 let pragma env l = function
   | [ Atom (_, "warn"); Atom (nl, n); Atom (_, msg) ] -> (
-      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope" (tick n) in
+      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick n) (hint env n) in
       match canon env (Var x), canon env (type_of env x) with
       | Var c, (TyCtor _ | ValCtor _) -> (
           match IntMap.find_opt c env.warned with

@@ -2502,6 +2502,30 @@
 
 (def-fns _ $ (many lookup : (many (Env) env) (many (String) name) -> (many (Maybe $ Nat) r))
   (match many (nm-get _ name $ scope-names $ env-scope env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
+
+(def-fns _ $ (many visible-names : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
+  (let ((many names)) (notail $ visible-names env rest))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ n _ _ _ _ _))
+  (let-match many n (Some _ s) ((None _) names))
+  (match many (lookup env s) _
+    ((Some _ y) (match many (nat-eq x y) _ ((BTrue) (Cons _ s names)) ((BFalse) names)))
+    ((None _) names)))
+
+(def-fns _ $ (many nearest-names : (many (String) name) (subterm many (List $ String) xs) -> (many (Maybe $ Nat) best) (many (List $ String) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (None _) (Nil _))))
+  (let ((many best) (many ties)) (notail $ nearest-names name rest))
+  (let ((many d)) (distance name x))
+  (let-match many best (Some _ b) ((None _) (values (Some _ d) $ list1 _ x)))
+  (match many (nat-lt d b) _
+    ((BTrue) (values (Some _ d) $ list1 _ x))
+    ((BFalse) (values best $ match many (nat-eq d b) (((List $ String) _)) ((BTrue) (Cons _ x ties)) ((BFalse) ties)))))
+
+(def-fns _ $ (many hint : (many (Env) env) (many (String) name) -> (many (String) r))
+  (let ((many best) (many ties)) $ nearest-names name $ visible-names env $ scope-ids $ env-scope env)
+  (match many ties _ ((Nil _) "") ((Cons _ _ _) (str-cat "\nhint: nearest in scope: " $ join-strs ties " "))))
+
 (def-fns _ $ (many is-prelude : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (list-mem-bin (scope-ids $ env-prelude env) x))
 
