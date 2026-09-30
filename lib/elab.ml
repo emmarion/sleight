@@ -1504,15 +1504,15 @@ and hoist env lit =
 (* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
 and elab_unary spos env l args =
-  let za, _ = numeral_entry env l (List.hd args) in
+  let a, rest = match args with a :: ([] | [ _ ] as rest) -> (a, rest) | _ -> error l "`unary` takes one or two literals" in
+  let za, _ = numeral_entry env l a in
   let lo =
-    match args with
-    | [ _ ] -> Z.zero
-    | [ _; b ] ->
+    match rest with
+    | [ b ] ->
         let zb, _ = numeral_entry env l b in
         if Z.geq zb za then error l "`unary`: %s does not exceed %s" (Z.to_string za) (Z.to_string zb);
         zb
-    | _ -> error l "`unary` takes one or two literals"
+    | _ -> Z.zero
   in
   let k = Z.sub za lo in
   if Z.gt k (Z.of_int 4096) then error l "`unary`: %s successors is beyond the limit" (Z.to_string k);
