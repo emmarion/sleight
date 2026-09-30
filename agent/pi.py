@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, re, shutil, signal, stat, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, functools, json, os, re, shlex, shutil, signal, stat, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -17,9 +17,9 @@ CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
-OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
-MAX_WRITE, MAX_OUT = 8 * 1024 * 1024, 20000
+MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
+MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE = 8 * 1024 * 1024, 20000, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = None
 _LOG_N = 0
 
@@ -168,14 +168,42 @@ def find(glob, path="."):
     return "\n".join(str(p.relative_to(SANDBOX_ROOT)) for p in list(_base(path).rglob(glob))[:200]) or "(none)"
 
 
+@functools.cache
+def _ocamlopt():
+    show = ["ocamlfind", "ocamlopt", "-only-show", "-package", "zarith,unix", "-linkpkg", "p.ml", "-o", "p"]
+    return shlex.split(subprocess.run(show, capture_output=True, text=True, check=True).stdout)
+
+
+def _spawn_exec_limited(cmd, env):
+    libc = ctypes.CDLL(None, use_errno=True)
+    strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[x.encode() for x in xs], None)
+    argv, envp = strs(cmd), strs([f"{k}={v}" for k, v in env.items()])
+    attr, acts = ctypes.c_void_p(), ctypes.c_void_p()
+
+    def exec_():
+        libc.posix_spawnattr_init(ctypes.byref(attr))
+        libc.posix_spawnattr_setflags(ctypes.byref(attr), ctypes.c_short(0x0040 | 0x4000))
+        libc.posix_spawnattr_setjetsam_ext(ctypes.byref(attr), ctypes.c_short(0x800C - 0x10000), 0, MEM_MB, MEM_MB)
+        libc.posix_spawn_file_actions_init(ctypes.byref(acts))
+        for fd in (0, 1, 2):
+            libc.posix_spawn_file_actions_addinherit_np(ctypes.byref(acts), fd)
+        e = libc.posix_spawnp(None, argv[0], ctypes.byref(acts), ctypes.byref(attr), argv, envp)
+        os.write(2, f"posix_spawnp {cmd[0]}: {os.strerror(e)}\n".encode())
+        os._exit(127)
+    return exec_
+
+
 def _proc(cmd, cwd, timeout, stdin="", env=None):
+    env = os.environ if env is None else env
     with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          start_new_session=True) as p:
+                          start_new_session=True, preexec_fn=_spawn_exec_limited(cmd, env)) as p:
         try:
             out, err = p.communicate(stdin.encode(), timeout=timeout)
+            if p.returncode == -signal.SIGKILL:
+                return f"was killed (SIGKILL); the memory limit is {MEM_MB} MB"
             return subprocess.CompletedProcess(cmd, p.returncode, out, err)
         except subprocess.TimeoutExpired:
-            return None
+            return f"timed out after {timeout}s"
         finally:
             try:
                 os.killpg(p.pid, signal.SIGKILL)
@@ -199,22 +227,28 @@ def sl(paths, stdin="", args=()):
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
         c = _proc([SLC, "--confine-dir", ".", "--no-env", *names], src, SLC_TIMEOUT, env={})
-        if c is None:
-            return f"compile: timed out after {SLC_TIMEOUT}s"
+        if isinstance(c, str):
+            return f"compile: {c}"
         warnings = clip(_text(c.stderr))
         if c.returncode:
             return f"compile: failed (exit {c.returncode})\n{warnings}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
-        b = _proc(OCAMLOPT + ["p.ml", "-o", "p"], tmp, BUILD_TIMEOUT)
-        if b is None or b.returncode:
-            shutil.copy(Path(tmp, "p.ml"), RUN_DIR / f"build-failure-{time.time():.0f}.ml")
-            with open(RUN_DIR / "build-failures.log", "ab") as f:
-                f.write(b"timeout\n" if b is None else b.stdout + b.stderr)
-            return "internal error: the compiler's output failed to build; this is not your program's fault"
+        b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={**os.environ, "TMPDIR": tmp})
+        if isinstance(b, str) or b.returncode:
+            why = b if isinstance(b, str) else f"exited {b.returncode}"
+            ml = Path(tmp, "p.ml")
+            kept = RUN_DIR / f"build-failure-{time.time():.0f}.ml"
+            if ml.stat().st_size <= MAX_KEPT_FAILURE:
+                shutil.copy(ml, kept)
+            with open(RUN_DIR / "build-failures.log", "a") as f:
+                f.write(f"ocamlopt {why}; p.ml was {ml.stat().st_size} bytes, "
+                        + (f"kept as {kept.name}\n" if kept.exists() else "not kept\n")
+                        + ("" if isinstance(b, str) else _text(b.stdout + b.stderr)))
+            return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
         r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
         head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
-        if r is None:
-            return f"{head}\nrun: timed out after {RUN_TIMEOUT}s"
+        if isinstance(r, str):
+            return f"{head}\nrun: {r}"
         return f"{head}\nrun: exit {r.returncode}\n--- stdout ---\n{clip(_text(r.stdout))}\n--- stderr ---\n{clip(_text(r.stderr))}"
 
 
