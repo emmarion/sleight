@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, re, shutil, stat, subprocess, sys, tempfile, time, traceback, urllib.request
+import json, os, re, shutil, signal, stat, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -169,10 +169,18 @@ def find(glob, path="."):
 
 
 def _proc(cmd, cwd, timeout, stdin="", env=None):
-    try:
-        return subprocess.run(cmd, cwd=cwd, input=stdin.encode(), capture_output=True, timeout=timeout, env=env)
-    except subprocess.TimeoutExpired:
-        return None
+    with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          start_new_session=True) as p:
+        try:
+            out, err = p.communicate(stdin.encode(), timeout=timeout)
+            return subprocess.CompletedProcess(cmd, p.returncode, out, err)
+        except subprocess.TimeoutExpired:
+            return None
+        finally:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
 
 
 def _text(b):
