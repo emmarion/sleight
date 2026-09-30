@@ -11,7 +11,7 @@ MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 EFFORT = os.environ.get("PI_EFFORT", "").strip()
-MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "200"))
+MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
@@ -466,12 +466,12 @@ def run(prompt, keep=()):
         not keep or os.path.normpath(str(c["input"].get("path", ""))) in keep)
     api = ADAPTERS[PROVIDER]()
     messages, empty = [{"role": "user", "content": prompt}], 0
-    limit = MAX_TURNS
-    for turn in range(MAX_TURNS):
+    window = CONTEXT or api.window()
+    limit = MAX_TURNS or (1000 if window else 200)
+    for turn in range(limit):
         if turn == limit:
             break
         reply = api.send(messages)
-        window = CONTEXT or api.window()
         if window and _context(reply.get("usage"), window) >= window * CONTEXT_STOP / 100 and limit > turn + 1 + WARN_TURNS:
             limit = turn + 1 + WARN_TURNS
             note = f"[context past {CONTEXT_STOP:g}%: stopping after turn {limit}]"
