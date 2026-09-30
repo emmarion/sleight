@@ -1154,6 +1154,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
   | m :: u :: ann :: List (pl, c :: names) :: body ->
       if pos_of expect = Erased then error l "`cell-match` in an erased position";
       let mode = mult_or env l m in
+      if mode = Erased then error l "`cell-match` takes its cell at `many` or `unique`";
       let env, r, code = elab_expr1 env mode u in
       let c = ctor_var env pl c in
       let c', slots = match canon env r.ty with Cell (Var c, ss) -> c, ss | _ -> error l "`cell-match` needs a `Cell`" in
