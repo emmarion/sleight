@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, functools, json, os, re, shlex, shutil, signal, stat, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, functools, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -193,17 +193,35 @@ def _spawn_exec_limited(cmd, env):
     return exec_
 
 
+def _group_mb(pgid):
+    libc, pids = ctypes.CDLL(None), (ctypes.c_int * 4096)()
+    n = libc.proc_listpids(2, pgid, pids, ctypes.sizeof(pids)) // ctypes.sizeof(ctypes.c_int)
+    usage, total = ctypes.create_string_buffer(256), 0
+    for pid in pids[:n]:
+        if pid and libc.proc_pid_rusage(pid, 0, usage) == 0:
+            total += struct.unpack_from("Q", usage, 72)[0]
+    return total >> 20
+
+
 def _proc(cmd, cwd, timeout, stdin="", env=None):
     env = os.environ if env is None else env
     with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           start_new_session=True, preexec_fn=_spawn_exec_limited(cmd, env)) as p:
+        deadline, data = time.monotonic() + timeout, stdin.encode()
         try:
-            out, err = p.communicate(stdin.encode(), timeout=timeout)
+            while True:
+                try:
+                    out, err = p.communicate(data, timeout=min(1, max(0, deadline - time.monotonic())))
+                    break
+                except subprocess.TimeoutExpired:
+                    data = None
+                    if time.monotonic() >= deadline:
+                        return f"timed out after {timeout}s"
+                    if (mb := _group_mb(p.pid)) > MEM_MB:
+                        return f"was killed after its processes used {mb} MB, over the {MEM_MB} MB memory limit"
             if p.returncode == -signal.SIGKILL:
                 return f"was killed (SIGKILL); the memory limit is {MEM_MB} MB"
             return subprocess.CompletedProcess(cmd, p.returncode, out, err)
-        except subprocess.TimeoutExpired:
-            return f"timed out after {timeout}s"
         finally:
             try:
                 os.killpg(p.pid, signal.SIGKILL)
