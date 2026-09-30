@@ -251,6 +251,16 @@
     ((MkErased) 0) ((MkMany) 1) ((MkColon) 2) ((MkIs) 3) ((MkArrow) 4) ((MkSubterm) 5) ((MkEnum) 6) ((MkUnion) 7)
     ((MkTail) 8) ((MkDelegate) 9) ((MkPredates) 10) ((MkAbsurd) 11) ((MkNewtypeMark) 12) ((MkExtern) 13) ((MkElse) 14) ((MkUnique) 15) ((MkAt) 16) ((MkNoTail) 17)))
 
+(def-fns _ $ (many sp-arity : (many (Sp) sp) -> (many (Maybe $ Nat) n))
+  (match many sp _
+    ((SpMark k) (match many k _ ((MkTail) (Some _ 1)) ((MkNoTail) (Some _ 1)) ((MkDelegate) (Some _ 1)) (else (None _))))
+    ((SpExpr k)
+      (match many k _
+        ((ExMatchableOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1))
+        ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
+        (else (None _))))
+    (else (None _))))
+
 (def-fns _ $ (many sp-eq : (many (Sp) a) (many (Sp) b) -> (many (Bool) r))
   (match many a _
     ((SpStmt ka) (match many b _ ((SpStmt kb) (nat-eq (stmt-code ka) $ stmt-code kb)) (else (BFalse))))
