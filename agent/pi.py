@@ -11,6 +11,7 @@ HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 EFFORT = os.environ.get("PI_EFFORT", "").strip()
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "200"))
+WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/self/slc"))
 OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
@@ -384,12 +385,13 @@ class OpenAICompat:
             "model": MODEL, "max_tokens": self.cap(),
             "tools": [{"type": "function", "function": {"name": n, "description": d, "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
+            "user": RUN_DIR.name,
         }
         if EFFORT:
             body["reasoning_effort"] = EFFORT
         if STREAM:
             body.update(stream=True, stream_options={"include_usage": True})
-        return post(self.base + "/chat/completions", body, self.auth(), stream=STREAM)
+        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": RUN_DIR.name}, stream=STREAM)
 
     def parse(self, reply):
         msg = reply["choices"][0]["message"]
@@ -421,7 +423,7 @@ ADAPTERS = {"anthropic": Anthropic, "neuralwatt": OpenAICompat, "local": Local}
 def run(prompt):
     api = ADAPTERS[PROVIDER]()
     messages = [{"role": "user", "content": prompt}]
-    for _ in range(MAX_TURNS):
+    for turn in range(MAX_TURNS):
         assistant, text, calls = api.parse(api.send(messages))
         messages.append(assistant)
         _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
@@ -442,6 +444,11 @@ def run(prompt):
         for c, out in zip(calls, outs):
             if c["name"] == "done":
                 return out
+        left = MAX_TURNS - turn - 1
+        if 0 < left <= WARN_TURNS:
+            note = f"\n\n[{left} turn{'s' * (left != 1)} left: make sure your results are written to files, then call `done`.]"
+            outs[-1] += note
+            _log(TRANSCRIPT, note.lstrip() + "\n")
         messages += api.results(calls, outs)
     return f"(stopped after {MAX_TURNS} turns)"
 
