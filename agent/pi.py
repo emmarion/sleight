@@ -19,7 +19,7 @@ WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
-MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE = 8 * 1024 * 1024, 20000, 1024 * 1024
+MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = None
 _LOG_N = 0
 
@@ -254,7 +254,7 @@ def sl(paths, stdin="", args=()):
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([SLC, "--confine-dir", ".", "--no-env", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([SLC, "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
         warnings = clip(_text(c.stderr))
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
