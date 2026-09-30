@@ -396,8 +396,13 @@ class OpenAICompat:
 
     def parse(self, reply):
         msg = reply["choices"][0]["message"]
-        calls = [{"id": c["id"], "name": c["function"]["name"], "input": json.loads(c["function"]["arguments"] or "{}")}
-                 for c in (msg.get("tool_calls") or [])]
+        calls = []
+        for c in msg.get("tool_calls") or []:
+            try:
+                calls.append({"id": c["id"], "name": c["function"]["name"], "input": json.loads(c["function"]["arguments"] or "{}")})
+            except ValueError:
+                calls.append({"id": c["id"], "name": c["function"]["name"], "input": {}, "bad": c["function"]["arguments"]})
+                c["function"]["arguments"] = "{}"
         return msg, msg.get("content") or "", calls
 
     def results(self, calls, outs):
@@ -444,8 +449,10 @@ def run(prompt):
         for c in calls:
             _log(TRANSCRIPT, f"\n>>> {_ts()} {c['name']}" + "".join(
                 f"\n  {k}:\n{v}" if isinstance(v, str) and "\n" in v else f" {k}={json.dumps(v, ensure_ascii=False)}"
-                for k, v in c["input"].items()) + "\n")
+                for k, v in c["input"].items()) + (f"\n  (invalid arguments) {c['bad']}" if "bad" in c else "") + "\n")
             try:
+                if "bad" in c:
+                    raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
                 out = TOOLS[c["name"]][0](**c["input"])
             except Exception as e:
                 out = f"error: {e}"
@@ -453,7 +460,7 @@ def run(prompt):
             _log(TRANSCRIPT, f"<<< {_ts()}\n{out}\n")
             outs.append(out)
         for c, out in zip(calls, outs):
-            if c["name"] == "done":
+            if c["name"] == "done" and "bad" not in c:
                 return out
         left = MAX_TURNS - turn - 1
         if 0 < left <= WARN_TURNS:
