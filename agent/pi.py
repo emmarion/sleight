@@ -700,7 +700,23 @@ def main(argv):
                  "           read/write/edit on it once experimenting ends; BYTES caps its size (0: no cap)\n"
                  "  -n N     run N sessions in a row (default 1)\n"
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
-                 "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total")
+                 "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
+                 "environment (defaults in brackets):\n"
+                 "  PI_PROVIDER       neuralwatt, anthropic or local [neuralwatt]\n"
+                 "  PI_MODEL          [glm-5.3, claude-haiku-4-5, or PI_LOCAL_MODEL, by provider]\n"
+                 "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
+                 "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
+                 "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
+                 "  PI_CONTEXT_STOP   context per phase, in % of the window [20]\n"
+                 "  PI_CONTEXT        the context window, overriding the provider's [0: ask the provider]\n"
+                 "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
+                 "  PI_EFFORT         reasoning effort [unset]\n"
+                 "  PI_STREAM         stream replies [1]\n"
+                 "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
+                 "  PI_MAX_EMPTY      empty replies in a row before giving up [3]\n"
+                 "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
+                 "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
+                 "  PI_SLC            the compiler [../_build/release/slc]")
     for s in seeds:
         if not s.exists():
             sys.exit(f"no such file: {s}")
