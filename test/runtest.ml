@@ -5,6 +5,7 @@
    "; stdin: text" lines, joined by newlines, are the input a program reads; "; args: a b" its arguments;
    "; env: NAME=value" a variable in its environment, which holds those alone;
    "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
+   "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
@@ -73,10 +74,13 @@ and run_mode name externs src =
   let visible = if !Extract.with_env then envs else [] in
   let fence = ref "/" in
   List.iter (fun d -> Result.iter_error failwith (Program.confine fence d); Extract.fence := d) (directive src "confine-dir");
+  let limit = ref max_int in
+  Extract.output_bytes := None;
+  List.iter (fun b -> limit := Result.fold ~ok:Fun.id ~error:failwith (Program.output_limit b); Extract.output_bytes := Some b) (directive src "confine-output-bytes");
   let world =
     { Program.read_rest; read_line; out = Buffer.add_string printed; err = Buffer.add_string errors; args;
       env = (fun n -> List.assoc_opt n visible); envs = (fun () -> visible); cwd = Sys.getcwd;
-      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); fence }
+      exit = (fun n -> code := n); print = (fun s -> Buffer.add_string printed (s ^ "\n")); fence; limit; used = ref 0 }
   in
   let consume = Program.consume world in
   (* The test's own final is run only after the extracted sources are taken: running it may update a unique

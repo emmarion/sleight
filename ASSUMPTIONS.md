@@ -3961,7 +3961,7 @@ session's, made without the owner.
 
 ## Confining file requests (section 16)
 
-The `Confine` request, the `--confine-dir` flag and the fence model are as
+The `ConfineDir` request, the `--confine-dir` flag and the fence model are as
 README.md describes them; the choices below are the session's.
 
 198. **What the fence admits, and when.** Each of the eight file
@@ -3976,13 +3976,13 @@ README.md describes them; the choices below are the session's.
      it can be deleted; a trailing `/`, `.` or `..` makes the last
      component followed after all, erring towards refusing. The fence's
      own directory is inside it, so a program may delete the directory
-     it is confined to. Under `--interpret` slc performs `Confine` once
+     it is confined to. Under `--interpret` slc performs `ConfineDir` once
      every source is read, with `/` when no flag is given, so its own
      reading of its sources is never fenced; a directory the program
      cannot be confined to is reported with slc's `slc: ` prefix there,
      and without it by the reference and by a compiled program. The
      fence belongs to the process rather than to one final, so a
-     `Confine` in one file's `IO` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
+     `ConfineDir` in one file's `IO` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
      inside one run of its own driver. The check is made before the request and not
      atomically with it, so it is not expected to hold against another
      process changing the directory tree in between, and a hard link
@@ -3990,3 +3990,19 @@ README.md describes them; the choices below are the session's.
      working directory cannot be read, a relative path answers `Fail` with that
      error even unconfined, the one case where the check can change what
      an unconfined program sees.
+
+199. **Counting output against `--confine-output-bytes`.** The choices
+     below are the session's; README.md has the rest. An entry counts as created
+     when `Sys.file_exists` is false for its path just before the
+     request, which follows symlinks, so a write through a dangling
+     symlink is charged for the entry it makes; like the fence (198) the
+     check is not atomic with the request. A request that passes the
+     check is charged whether or not it then succeeds. The crash exits
+     with code 1, the code the driver already exits with when it cannot
+     confine itself at startup. A value printed by a plain final, which
+     goes through the driver's `print` rather than a request, is not
+     counted. Under `--interpret` slc's own warnings pass through its
+     driver ahead of `ConfineOutputBytes`, so they count towards the
+     limit there, where the reference's do not; a flag value that is not
+     a number is reported with slc's `slc: ` prefix there, as a fence is
+     in 198.

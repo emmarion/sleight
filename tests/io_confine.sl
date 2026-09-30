@@ -43,7 +43,7 @@
   (report (predates pa-p) _ "confine file" r (DeleteFile P "io-confine-test/in/a.txt" s12)))
 
 (def-unique P $ (unique s10 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "write outside" r (Confine P "io-confine-test/in/a.txt" s11)))
+  (report (predates pa-p) _ "write outside" r (ConfineDir P "io-confine-test/in/a.txt" s11)))
 
 (def-unique P $ (unique s9 : (many (Result (List (String))) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "list cwd" r (WriteFile P "io-confine-test/../io-confine-escape.txt" "x" s10)))
@@ -64,15 +64,15 @@
   (report (predates pa-p) _ "same fence" r (WriteFile P "io-confine-test/in/a.txt" "hi" s5)))
 
 (def-unique P $ (unique s3 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "mkdir in" r (Confine P "io-confine-test/in/.." s4)))
+  (report (predates pa-p) _ "mkdir in" r (ConfineDir P "io-confine-test/in/.." s4)))
 
 (def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "widen" r (MkDir P "io-confine-test/in" s3)))
 
 (def-unique P $ (unique s1 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine" r (Confine P "." s2)))
+  (report (predates pa-p) _ "confine" r (ConfineDir P "." s2)))
 
 (def-unique P $ (unique s0 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "mkdir" r (Confine P "io-confine-test" s1)))
+  (report (predates pa-p) _ "mkdir" r (ConfineDir P "io-confine-test" s1)))
 
 (MkDir P "io-confine-test" s0)

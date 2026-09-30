@@ -7,4 +7,4 @@
   v)
 first
 ; warns: tests/array_match_warn.sl:5:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
-; warns: lib/prelude.sl:831:1: note: `;! warn` for `Array` is here
+; warns: lib/prelude.sl:832:1: note: `;! warn` for `Array` is here

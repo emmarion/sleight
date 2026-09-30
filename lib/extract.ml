@@ -55,6 +55,7 @@ type cx = {
    has none, its runtime view; a template's temporaries are numbered per instantiation. *)
 let templates = ref true
 let fence = ref "/"
+let output_bytes = ref None
 let with_env = ref true
 let template key = if !templates then Ffi_templates.find key else None
 let stamp cx = incr cx.temps; !(cx.temps)
@@ -464,7 +465,8 @@ let rec show cx env ty =
 (* The driver's operations on the prelude's values, each direct (lib/driver_core.ml); a String held as the
    FFI's slice converts to and from the host's string directly. *)
 let host_conversions =
-  "~of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) "
+  "~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) "
+let nat_conversion = "~nat_to_z:(fun v -> (Obj.obj v : Z.t)) "
 let driver cx =
   let c = Program.ctor cx.env in
   let lam fs body = Printf.sprintf "(fun %s -> %s)" (params fs) body in
@@ -484,14 +486,15 @@ let driver cx =
       ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)");
       ("apply0", "(fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())") ]
   in
-  let host = match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "" in
+  let host = (match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "")
+             ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
   Printf.sprintf "let driver = Driver_core.make %s{ %s }\n" host (concat "; " (List.map (fun (k, v) -> "Driver_core." ^ k ^ " = " ^ v) ops))
   ^ Printf.sprintf {|let flush_to oc s = output_string oc s; flush oc
-let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/" }
-let world = Driver_core.start %s %b world
+let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
+let world = Driver_core.start %s %s %b world
 let run_io = driver.run_io world
 let run_main = driver.run_main world
-|} (quote !fence) !with_env
+|} (quote !fence) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
 
 let item cx = function
   | Env.Fns fns ->

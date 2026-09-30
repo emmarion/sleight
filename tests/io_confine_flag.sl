@@ -26,10 +26,10 @@
   (report (predates pa-p) _ "confine parent" r (ReadFile P "../io-confine-flag.txt" s4)))
 
 (def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine cwd" r (Confine P ".." s3)))
+  (report (predates pa-p) _ "confine cwd" r (ConfineDir P ".." s3)))
 
 (def-unique P $ (unique s1 : (many (Result (List (String))) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "list parent" r (Confine P "." s2)))
+  (report (predates pa-p) _ "list parent" r (ConfineDir P "." s2)))
 
 (def-unique P $ (unique s0 : (many (Result (EntryKind)) r) -> (unique (IO P) next))
   (report (predates pa-p) _ "stat cwd" r (ListDir P ".." s1)))

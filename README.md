@@ -66,7 +66,7 @@ performed, while one inside it behaves exactly as it would unconfined.
 Without the flag the fence is `/`, so the same check admits every path.
 A path whose symlinks cannot be followed to the end, the resolution
 giving up after 1000 links, counts as outside every fence, `/` included.
-A program narrows its own fence with the `Confine` request, which
+A program narrows its own fence with the `ConfineDir` request, which
 refuses a directory outside the current one (`tests/io_confine.sl`).
 Nothing is resolved at compile time: under `--extract` the directory is
 embedded in the OCaml written out as it was given, and the compiled
@@ -74,6 +74,13 @@ program confines itself to it when it starts, a relative one resolving
 against the directory the program runs in, and exits with the error if
 it cannot. slc takes the same flag, and under `--interpret` confines
 itself once it has read its sources (ASSUMPTIONS.md 198).
+
+`--confine-output-bytes n` crashes a program, exit code 1, before the
+request that would take its output past `n` bytes: everything it writes,
+plus 4096 per file or directory it creates. It lowers its own limit with
+`ConfineOutputBytes`; a `Nat` too large for an OCaml `int` means no limit
+(`tests/io_output_limit.sl`, ASSUMPTIONS.md 199). Like `--confine-dir`,
+it is embedded under `--extract`, and slc takes it too.
 
 `--no-env` hides the environment from the program: `GetEnv` answers
 `None` and `GetEnvs` the empty list. Like `--confine-dir`, under

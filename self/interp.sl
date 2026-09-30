@@ -171,7 +171,7 @@
   (many RqGetEnvs : -> (Request)) (many RqAppendFile : -> (Request)) (many RqReadRemaining : -> (Request))
   (many RqListDir : -> (Request)) (many RqGetCwd : -> (Request)) (many RqStat : -> (Request))
   (many RqMkDir : -> (Request)) (many RqDeleteFile : -> (Request)) (many RqDeleteDir : -> (Request))
-  (many RqConfine : -> (Request)))
+  (many RqConfineDir : -> (Request)) (many RqConfineOutputBytes : -> (Request)))
 
 (def-adts $ (RqEntry : -> Type)
   enum
@@ -186,7 +186,8 @@
   rq-cons "WriteFile" (RqWriteFile) $ rq-cons "GetArgs" (RqGetArgs) $ rq-cons "GetEnv" (RqGetEnv) $
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
-  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "Confine" (RqConfine) $ Nil _)
+  rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "ConfineDir" (RqConfineDir) $
+  rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ Nil _)
 
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (Request) r))
   (let-match many es (Cons _ e rest) ((Nil _) (RqUnknown)))
@@ -200,6 +201,7 @@
 (def-lvl util-lvl)
 (def-lvl interp-lvl)
 (def-lvl finals-lvl)
+(def-lvl run-lvl)
 (def-lvl compile-lvl)
 (def-lvl slc-lvl)
 (def-lvl start-lvl)
@@ -333,12 +335,18 @@
         (let ((erased h3) (many hp3) (many en3) (many next)) (applied _ _ le2 hp2 en1 f1 (Cons _ ans (Nil _))))
         (interp-io env pargs with-env _ hp3 en3 next))
       (DeleteDir _ s0 k))
-    ((RqConfine)
+    ((RqConfineDir)
       (def-unique io-lvl $ (unique k : (many (Result (Unit)) r) -> (unique (IO io-lvl) next))
         (let ((erased h2) (many hp2) (erased le2) (many ans)) (store-result-unit env _ hp1 r))
         (let ((erased h3) (many hp3) (many en3) (many next)) (applied _ _ le2 hp2 en1 f1 (Cons _ ans (Nil _))))
         (interp-io env pargs with-env _ hp3 en3 next))
-      (Confine _ s0 k))))
+      (ConfineDir _ s0 k))
+    ((RqConfineOutputBytes)
+      (def-unique io-lvl $ (unique k : (many (Result (Unit)) r) -> (unique (IO io-lvl) next))
+        (let ((erased h2) (many hp2) (erased le2) (many ans)) (store-result-unit env _ hp1 r))
+        (let ((erased h3) (many hp3) (many en3) (many next)) (applied _ _ le2 hp2 en1 f1 (Cons _ ans (Nil _))))
+        (interp-io env pargs with-env _ hp3 en3 next))
+      (ConfineOutputBytes _ (heap-nat _ hp1 f0) k))))
 
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.

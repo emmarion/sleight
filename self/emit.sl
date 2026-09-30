@@ -1055,7 +1055,7 @@
   (rcat3 (RStr $ str-cat3 "Driver_core." field " = ") r $ RStr "; "))
 
 (def-fns _ $ (many driver-rope-of : (many (Decls) d) (many (Env) env) -> (many (Rope) r))
-  (rcat5 (RStr "let driver = Driver_core.make ~of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) { ")
+  (rcat5 (RStr "let driver = Driver_core.make ~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~nat_to_z:(fun v -> (Obj.obj v : Z.t)) { ")
     (rcat5 (driver-op "zero" $ driver-make d env "Zero") (driver-op "succ" $ driver-make d env "Succ") (driver-op "pred" $ driver-un d env "Nat" $ AkOption "Succ")
       (driver-op "u8" $ driver-make d env "MkU8") $ driver-op "un_u8" $ driver-un d env "U8" $ AkField)
     (rcat5 (driver-op "char" $ driver-make d env "MkChar") (driver-op "un_char" $ driver-un d env "Char" $ AkField) (driver-op "snil" $ driver-make d env "SNil")
@@ -1072,10 +1072,12 @@
         (RStr "Driver_core.apply0 = (fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())")
         $ RStr " }\n"))))
 
-(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) (many (Bool) with-env) -> (many (Rope) r))
+(def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) -> (many (Rope) r))
   (match many (prelude-ctor env "Exit") _
     ((None _) (REmpty))
-    ((Some _ _) (rcat4 (driver-rope-of d env) (RStr "let world = Driver_core.start ") (quoted fence) $ RStr $ match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")))))
+    ((Some _ _) (rcat5 (driver-rope-of d env) (RStr "let world = Driver_core.start ") (quoted fence)
+      (match many bytes _ ((None _) (RStr " None")) ((Some _ b) (rcat3 (RStr " (Some ") (quoted b) $ RStr ")")))
+      $ RStr $ match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")))))
 
 ; ---- Finals (lib/program.ml): what the driver does with a file's final value
 
@@ -1294,7 +1296,7 @@
     ((Nil _) d)
     ((Cons _ n rest) (tail $ collect-prelude rest env $ match many (prelude-adt env n) (((Decls) _)) ((None _) d) ((Some _ adt) (collect-adt adt d))))))
 
-(def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
+(def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Nil _) env $ MkDecls (Nil _) (Nil _) $ match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _)))
   (let-match many hp (MkStore _ _ bound lb writes))
@@ -1305,4 +1307,4 @@
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
-  (rcat5 (RStr runtime-header) (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env fence with-env) $ emit-finals _ hp (list-rev _ fi) env d2))
+  (rcat5 (RStr runtime-header) (decls-rope d2) (rcat3 skeletons defs fills) (driver-rope d2 env fence bytes with-env) $ emit-finals _ hp (list-rev _ fi) env d2))

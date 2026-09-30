@@ -6,7 +6,7 @@ let world args =
   let flush_to oc s = output_string oc s; flush oc in
   { Program.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin);
     out = flush_to stdout; err = flush_to stderr; args; env = Sys.getenv_opt; envs = Program.host_envs; cwd = Sys.getcwd;
-    exit; print = print_endline; fence = ref "/" }
+    exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
 
 let run consume env path =
   let src = if path = "-" then In_channel.input_all stdin else Program.read_file path in
@@ -39,11 +39,13 @@ let () =
   let extract, args = option "--extract" [] args in
   let confine, args = option "--confine-dir" [] args in
   Option.iter (( := ) Extract.fence) confine;
+  let output_bytes, args = option "--confine-output-bytes" [] args in
+  Extract.output_bytes := output_bytes;
   let flag f = List.mem f args in
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");
-  let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.with_env (world program_args)) else fun _ _ _ -> () in
+  let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let env = Builtin.load ~prelude:(not (flag "--no-prelude")) () in
   let env =
     match List.filter (fun a -> not (List.mem a [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env" ])) args with

@@ -42,13 +42,15 @@ let driver env =
     | "MkDir", [ p; k ] -> MkDir (p, k)
     | "DeleteFile", [ p; k ] -> DeleteFile (p, k)
     | "DeleteDir", [ p; k ] -> DeleteDir (p, k)
-    | "Confine", [ p; k ] -> Confine (p, k)
+    | "ConfineDir", [ p; k ] -> ConfineDir (p, k)
+    | "ConfineOutputBytes", [ n; k ] -> ConfineOutputBytes (n, k)
     | _ -> assert false
   in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
-  let of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
-  let to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
-  make ?of_host ?to_host
+  let str_of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
+  let str_to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
+  let nat_to_z = if !V.use_externs && Hashtbl.mem Ffi.registered "Nat" then Some Ffi.z else None in
+  make ?str_of_host ?str_to_host ?nat_to_z
     { zero = build "Zero" []; succ = (fun n -> build "Succ" [ n ]); pred = (fun v -> match des "Zero" v with 1, [ p ] -> Some p | _ -> None);
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
       snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);
