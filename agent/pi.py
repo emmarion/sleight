@@ -12,6 +12,7 @@ STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 EFFORT = os.environ.get("PI_EFFORT", "").strip()
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "200"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
+CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/self/slc"))
 OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
@@ -356,6 +357,9 @@ class Anthropic:
         calls = [{"id": b["id"], "name": b["name"], "input": b["input"]} for b in blocks if b["type"] == "tool_use"]
         return {"role": "assistant", "content": blocks}, "".join(b["text"] for b in blocks if b["type"] == "text"), calls
 
+    def window(self):
+        return None
+
     def results(self, calls, outs):
         return [{"role": "user", "content": [{"type": "tool_result", "tool_use_id": c["id"], "content": o} for c, o in zip(calls, outs)]}]
 
@@ -363,23 +367,29 @@ class Anthropic:
 class OpenAICompat:
     base = "https://api.neuralwatt.com/v1"
     key_env = "NEURALWATT_API_KEY"
-    _cap = None
+    _model = None
 
     def auth(self):
         return {"authorization": f"Bearer {os.environ[self.key_env]}"}
 
-    def cap(self):
-        if self._cap is None:
-            self.__class__._cap = MAX_TOKENS
+    def model(self):
+        if self._model is None:
+            self.__class__._model = {}
             try:
                 with urllib.request.urlopen(urllib.request.Request(self.base + "/models", headers=self.auth()), timeout=30) as r:
-                    for m in json.load(r)["data"]:
-                        adv = ((m.get("metadata") or {}).get("limits") or {}).get("max_output_tokens")
-                        if m["id"] == MODEL and adv:
-                            self.__class__._cap = min(MAX_TOKENS, adv)
+                    self.__class__._model = next((m for m in json.load(r)["data"] if m["id"] == MODEL), {})
             except Exception:
                 pass
-        return self._cap
+        return self._model
+
+    def limit(self, key):
+        return ((self.model().get("metadata") or {}).get("limits") or {}).get(key)
+
+    def cap(self):
+        return min(MAX_TOKENS, self.limit("max_output_tokens") or MAX_TOKENS)
+
+    def window(self):
+        return self.limit("max_context_length") or self.model().get("max_model_len")
 
     def send(self, messages):
         body = {
@@ -412,7 +422,7 @@ class OpenAICompat:
 class Local(OpenAICompat):
     base = os.environ.get("PI_LOCAL_URL", "http://localhost:8080/v1").rstrip("/")
     key_env = "PI_LOCAL_API_KEY"
-    _cap = None
+    _model = None
 
     def auth(self):
         key = os.environ.get(self.key_env)
@@ -426,11 +436,23 @@ class Local(OpenAICompat):
 ADAPTERS = {"anthropic": Anthropic, "neuralwatt": OpenAICompat, "local": Local}
 
 
+def _context(usage, window):
+    if not usage:
+        return
+    n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
+                                         ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
+    line = f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)]" if window else "]")
+    _say(line)
+    _log(TRANSCRIPT, f"\n{line}\n")
+
+
 def run(prompt):
     api = ADAPTERS[PROVIDER]()
     messages, empty = [{"role": "user", "content": prompt}], 0
     for turn in range(MAX_TURNS):
-        assistant, text, calls = api.parse(api.send(messages))
+        reply = api.send(messages)
+        _context(reply.get("usage"), CONTEXT or api.window())
+        assistant, text, calls = api.parse(reply)
         if not calls and not text.strip():
             empty += 1
             if empty >= MAX_EMPTY:
