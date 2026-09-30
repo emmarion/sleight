@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, functools, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, functools, hashlib, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -621,18 +621,60 @@ def session(run_dir, prompt, seeds, keep):
         os.close(ROOT_FD)
 
 
+def _commit():
+    r = subprocess.run(["git", "-C", str(HERE), "rev-parse", "HEAD"], capture_output=True, text=True)
+    return r.stdout.strip() or None
+
+
+def _resume(loop, n):
+    rec = json.loads((loop / "run.json").read_text())
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PI_")} | rec["env"]
+    args = [a for f in rec["seeds"] for a in ("-f", f)] + [a for k in rec["keep"] for a in ("-k", k)]
+    os.execve(sys.executable, [sys.executable, __file__, *args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
+
+
+def _claim(loop):
+    pid_file = loop / "pid"
+    pid = pid_file.read_text().strip() if pid_file.exists() else ""
+    if pid.isdigit() and int(pid) != os.getpid() and "pi.py" in subprocess.run(["ps", "-p", pid, "-o", "command="], capture_output=True, text=True).stdout:
+        sys.exit(f"{loop} is still being run by process {pid}")
+    pid_file.write_text(str(os.getpid()))
+
+
+def _set_aside(d):
+    kind = "superseded" if (d / "answer.txt").exists() else "stalled"
+    k = 1
+    while d.with_name(f"{d.name}.{kind}-{k}").exists():
+        k += 1
+    sandbox = d / "sandbox"
+    if sandbox.is_symlink() and sandbox.resolve().is_dir():
+        target = sandbox.resolve()
+        sandbox.unlink()
+        shutil.copytree(target, sandbox, symlinks=True)
+        shutil.rmtree(target)
+    d.rename(d.with_name(f"{d.name}.{kind}-{k}"))
+    _say(f"set {d.name} aside as {d.name}.{kind}-{k}")
+
+
 def main(argv):
-    flags = {"-f": [], "-k": [], "-n": ["1"]}
+    flags = {"-f": [], "-k": [], "-n": [], "-r": []}
     while argv[:1] and argv[0] in flags and len(argv) > 1:
         flags[argv[0]].append(argv[1])
         argv = argv[2:]
-    seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int(flags["-n"][-1])
+    seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int((flags["-n"] or ["0"])[-1])
+    resume = Path(flags["-r"][-1]).resolve() if flags["-r"] else None
+    if resume and not argv:
+        _resume(resume, n)
+    n = n or 1
     if not argv:
         sys.exit("usage: pi.py [-f PATH]... [-k PATH]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+                 "       pi.py -r RUN-DIR [-n N]\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
                  f"  -k PATH  in the last {WARN_TURNS} turns, allow only read/write/edit on the -k paths, and done;\n"
                  "           carry the -k paths from each session's sandbox into the next\n"
-                 "  -n N     run N sessions in a row (default 1)")
+                 "  -n N     run N sessions in a row (default 1)\n"
+                 "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
+                 "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total")
     for s in seeds:
         if not s.exists():
             sys.exit(f"no such file: {s}")
@@ -644,17 +686,34 @@ def main(argv):
         sys.exit(f"no slc at {SLC}; build it with self/release.sh")
     prompt = "\n\n".join(Path(a).read_text().strip() for a in argv)
     tag = "+".join(Path(a).stem for a in argv)
-    loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"
-    prev = None
-    for i in range(1, n + 1):
-        carried = [(prev / "sandbox" / k, k) for k in keep if prev and (prev / "sandbox" / k).exists()]
-        _say(f"session {i}/{n}")
-        try:
-            session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
-        except (Exception, SystemExit):
-            traceback.print_exc()
-            _say(f"session {i}/{n} failed; carrying on")
-        prev = loop / f"{i:02}"
+    loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"
+    loop.mkdir(parents=True, exist_ok=True)
+    _claim(loop)
+    record = {"n": n, "seeds": [str(s.resolve()) for s in seeds], "keep": keep, "prompts": [str(Path(a).resolve()) for a in argv],
+              "env": {k: v for k, v in os.environ.items() if k.startswith("PI_") and "KEY" not in k},
+              "commit": _commit(), "slc_sha256": hashlib.sha256(Path(SLC).read_bytes()).hexdigest()}
+    if resume:
+        old = json.loads((loop / "run.json").read_text())
+        if old.get("commit") != record["commit"]:
+            _say(f"warning: resuming at commit {record['commit']}, but the run started at {old.get('commit')}")
+        record = old | {"n": n}
+    (loop / "run.json").write_text(json.dumps(record, indent=1) + "\n")
+    first = next((i for i in range(1, n + 1) if not (loop / f"{i:02}" / "answer.txt").exists()), n + 1)
+    for d in sorted(d for d in loop.iterdir() if d.name.isdigit() and int(d.name) >= first):
+        _set_aside(d)
+    prev = loop / f"{first - 1:02}" if first > 1 else None
+    try:
+        for i in range(first, n + 1):
+            carried = [(prev / "sandbox" / k, k) for k in keep if prev and (prev / "sandbox" / k).exists()]
+            _say(f"session {i}/{n}")
+            try:
+                session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
+            except (Exception, SystemExit):
+                traceback.print_exc()
+                _say(f"session {i}/{n} failed; carrying on")
+            prev = loop / f"{i:02}"
+    finally:
+        (loop / "pid").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
