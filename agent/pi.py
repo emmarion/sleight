@@ -89,12 +89,15 @@ def write_bytes(user_path, data):
     if len(data) > MAX_WRITE:
         raise PathEscape(f"write of {len(data)} bytes exceeds cap ({MAX_WRITE})")
     name, old = os.path.normpath(user_path), _size(user_path)
-    cap = f" (at most {KEEP[name]})" if KEEP.get(name) else ""
-    if cap and len(data) > KEEP[name] and len(data) > old:
-        raise ValueError(f"{name} would go from {old} to {len(data)} bytes{cap}")
+    if KEEP.get(name) and len(data) > KEEP[name] and len(data) > old:
+        raise ValueError(f"{name} would go from {old} to {len(data)} bytes{_cap(name)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     with os.fdopen(_open_in(user_path, flags, create=True), "wb") as f:
-        return f"{user_path}: {old} -> {f.write(data)} bytes{cap}"
+        return f"{user_path}: {old} -> {f.write(data)} bytes{_cap(name)}"
+
+
+def _cap(path):
+    return f" (at most {KEEP[os.path.normpath(path)]})" if KEEP.get(os.path.normpath(path)) else ""
 
 
 def _size(path):
@@ -102,6 +105,10 @@ def _size(path):
         return len(read_bytes(path))
     except (OSError, PathEscape):
         return 0
+
+
+def _sized(path, label=None):
+    return f"{label or path}  {len(read_bytes(path))} bytes{_cap(path)}"
 
 
 def list_dir(user_path="."):
@@ -113,7 +120,7 @@ def list_dir(user_path="."):
             except OSError:
                 return ""
             return "@" if stat.S_ISLNK(m) else "/" if stat.S_ISDIR(m) else ""
-        return sorted(nm + suffix(nm) for nm in os.listdir(dfd))
+        return sorted((nm, suffix(nm)) for nm in os.listdir(dfd))
     finally:
         os.close(dfd)
 
@@ -156,8 +163,14 @@ def edit(path, old, new):
     return f"edited {write_bytes(path, text.replace(old, new).encode())}"
 
 
-def ls(path="."):
-    return "\n".join(list_dir(path)) or "(empty)"
+def ls(path=".", within=None):
+    try:
+        entries = list_dir(path)
+    except PathEscape:
+        return _sized(path)
+    rel = lambda nm: os.path.normpath(os.path.join(path, nm))
+    return "\n".join(nm + suffix if suffix else _sized(rel(nm), nm)
+                     for nm, suffix in entries if within is None or rel(nm) in within) or "(empty)"
 
 
 def grep(pattern, path=".", within=None):
@@ -304,7 +317,8 @@ TOOLS = {
              {"path": STR, "offset": INT, "limit": INT}, ["path"]),
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
     "edit": (edit, "Replace exactly one occurrence of old with new", {"path": STR, "old": STR, "new": STR}, ["path", "old", "new"]),
-    "ls": (ls, "List a directory", {"path": STR}, []),
+    "ls": (ls, "List a directory, or a single file, with each file's size in bytes (and its cap, for a kept file); "
+               "a trailing `/` marks a directory, `@` a symlink", {"path": STR}, []),
     "grep": (grep, "Regex search file contents", {"pattern": STR, "path": STR}, ["pattern"]),
     "find": (find, "Find files by glob", {"glob": STR, "path": STR}, ["glob"]),
     "sl": (sl, "Compile the SL source files at `paths` (read in order, sharing one scope) and, if they compile, "
@@ -539,8 +553,12 @@ def _context(usage, window):
     return n
 
 
+REWRITE_TOOLS, SCOPED_TOOLS = ("read", "write", "edit", "grep", "ls"), ("grep", "ls")
+REWRITE_NAMES = ", ".join(f"`{t}`" for t in REWRITE_TOOLS[:-1]) + f" and `{REWRITE_TOOLS[-1]}`"
+
+
 def _allowed(caps=False):
-    return f"`read`, `write`, `edit` and `grep` on " + ", ".join(k + (f" (at most {cap} bytes)" if caps and cap else "") for k, cap in sorted(KEEP.items()))
+    return f"{REWRITE_NAMES} on " + ", ".join(k + (_cap(k) if caps else "") for k in sorted(KEEP))
 
 
 def _kept_sizes():
@@ -553,13 +571,13 @@ def run(prompt):
     window = CONTEXT or api.window()
     turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
     phase, turn, start = "experiment", 0, 0
-    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit", "grep") and (
+    ok = lambda c: c["name"] == "done" or c["name"] in REWRITE_TOOLS and (
         "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
     def rewrite():
         nonlocal phase, turn, start
         phase, turn, start = "rewrite", 0, used
-        return f"[Now entering the rewrite phase, where only `read`, `write`, `edit` and `grep` on {_kept_sizes()} and `done` are allowed.]"
+        return f"[Now entering the rewrite phase, where only {REWRITE_NAMES} on {_kept_sizes()} and `done` are allowed.]"
 
     while True:
         reply = api.send(messages)
@@ -588,7 +606,7 @@ def run(prompt):
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
                 if phase == "rewrite" and not ok(c):
                     raise ValueError(f"only {_allowed()}, and `done`, are allowed now")
-                out = TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] == "grep" else {})))
+                out = TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] in SCOPED_TOOLS else {})))
             except Exception as e:
                 out = f"error: {e}"
             _say(f"[{c['name']}] {str(c['input'])[:70]}")
@@ -700,7 +718,7 @@ def main(argv):
                  "       pi.py -r RUN-DIR [-n N]\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
                  "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
-                 "           read/write/edit/grep on it once experimenting ends; BYTES caps its size (0: no cap)\n"
+                 "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
                  "  -n N     run N sessions in a row (default 1)\n"
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
