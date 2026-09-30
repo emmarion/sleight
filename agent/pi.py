@@ -15,26 +15,19 @@ MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
-WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "10"))
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
 MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
+KEEP = {}
 _LOG_N = 0
 
-SYSTEM = """You are an expert programmer working inside a sandbox directory.
-You read, write and edit files, and compile and run programs with the `sl` tool.
+SYSTEM = """You are an expert programmer working inside a sandbox directory. You read, write and edit files, and
+compile and run programs with the `sl` tool. There is no shell; the only way to execute code is the `sl` tool.
 
-- Be concise. Prefer doing over explaining.
-- Use the tools to verify claims rather than guessing; never report success you have not checked.
-- There is no shell. The only way to execute code is the `sl` tool.
-- When the task is complete, call `done` with a short summary. If you get stuck and cannot
-  make progress, call `done` anyway and say what is wrong.
-
-All paths are relative to the sandbox root. This directory is your whole world: paths that
-leave it (absolute paths, .., symlinks) are rejected, and files outside it do not exist for you."""
+All paths are relative to the sandbox root."""
 
 
 class PathEscape(Exception):
@@ -95,9 +88,19 @@ def read_bytes(user_path):
 def write_bytes(user_path, data):
     if len(data) > MAX_WRITE:
         raise PathEscape(f"write of {len(data)} bytes exceeds cap ({MAX_WRITE})")
+    name = os.path.normpath(user_path)
+    if KEEP.get(name) and len(data) > KEEP[name] and len(data) > _size(name):
+        raise ValueError(f"{name} would be {len(data)} bytes; the cap is {KEEP[name]}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     with os.fdopen(_open_in(user_path, flags, create=True), "wb") as f:
         return f.write(data)
+
+
+def _size(path):
+    try:
+        return len(read_bytes(path))
+    except (OSError, PathEscape):
+        return 0
 
 
 def list_dir(user_path="."):
@@ -244,9 +247,21 @@ def _text(b):
     return b.decode("utf-8", "replace")
 
 
-def sl(paths, stdin="", args=()):
+def _shown(capture, ext, data):
+    if not capture:
+        return clip(_text(data))
+    name = f"{capture}.{ext}"
+    write_bytes(name, data)
+    lines = _text(data).splitlines()
+    shown = lines if len(lines) <= 10 else lines[:5] + [f"... ({len(lines) - 10} more lines)"] + lines[-5:]
+    return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
+
+
+def sl(paths, stdin="", args=(), capture=None):
     if isinstance(paths, str):
         paths = [paths]
+    if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
+        raise ValueError("`capture` cannot name a kept file")
     with tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         src = Path(tmp, "src")
         names = []
@@ -256,7 +271,7 @@ def sl(paths, stdin="", args=()):
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
         why, c = _proc([SLC, "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
-        warnings = clip(_text(c.stderr))
+        warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
@@ -274,7 +289,7 @@ def sl(paths, stdin="", args=()):
             return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
         head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
-        return f"{head}\nrun: {why or f'exit {r.returncode}'}\n--- stdout ---\n{clip(_text(r.stdout))}\n--- stderr ---\n{clip(_text(r.stderr))}"
+        return f"{head}\nrun: {why or f'exit {r.returncode}'}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
 
 
 def done(summary=""):
@@ -292,10 +307,11 @@ TOOLS = {
     "find": (find, "Find files by glob", {"glob": STR, "path": STR}, ["glob"]),
     "sl": (sl, "Compile the SL source files at `paths` (read in order, sharing one scope) and, if they compile, "
                "run the program with the sandbox as its working directory, feeding it `stdin` and passing it `args`. "
-               "Returns the compiler's messages, then the program's exit code, stdout and stderr.",
-           {"paths": STRS, "stdin": STR, "args": STRS}, ["paths"]),
-    "done": (done, "Call this when the task is complete, or when you cannot make further progress. "
-                   "Pass a one-line summary. This ends the session, so verify your work before calling it.",
+               "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
+               "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown.",
+           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR}, ["paths"]),
+    "done": (done, "The first call ends experimenting: after it, only {allowed}, and `done`, are allowed. "
+                   "The second call ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
 }
 PARAMS = {n: {"type": "object", "properties": props, "required": req} for n, (_, _, props, req) in TOOLS.items()}
@@ -422,7 +438,7 @@ class Anthropic:
     def send(self, messages):
         return post(self.url, {
             "model": MODEL, "max_tokens": MAX_TOKENS, "system": SYSTEM,
-            "tools": [{"name": n, "description": d, "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
+            "tools": [{"name": n, "description": d.replace("{allowed}", _allowed()), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages,
         }, {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01"})
 
@@ -468,7 +484,7 @@ class OpenAICompat:
     def send(self, messages):
         body = {
             "model": MODEL, "max_tokens": self.cap(),
-            "tools": [{"type": "function", "function": {"name": n, "description": d, "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
+            "tools": [{"type": "function", "function": {"name": n, "description": d.replace("{allowed}", _allowed()), "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
             "user": SESSION_ID,
         }
@@ -521,28 +537,31 @@ def _context(usage, window):
     return n
 
 
-def _turns(n):
-    return f"{n} turn{'s' * (n != 1)} left"
+def _allowed():
+    return f"`read`, `write` and `edit` on {', '.join(sorted(KEEP))}"
 
 
-def run(prompt, keep=()):
-    keep = {os.path.normpath(k) for k in keep}
-    allowed = f"`read`, `write` and `edit` on {', '.join(sorted(keep))}" if keep else "`read`, `write` and `edit`"
-    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and (
-        not keep or os.path.normpath(str(c["input"].get("path", ""))) in keep)
+def _kept_sizes():
+    return ", ".join(f"{k} ({_size(k)} bytes" + (f", at most {cap})" if cap else ")") for k, cap in sorted(KEEP.items()))
+
+
+def run(prompt):
     api = ADAPTERS[PROVIDER]()
     messages, empty = [{"role": "user", "content": prompt}], 0
     window = CONTEXT or api.window()
-    limit = MAX_TURNS or (1000 if window else 200)
-    for turn in range(limit):
-        if turn == limit:
-            break
+    turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
+    phase, turn, start = "experiment", 0, 0
+    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and os.path.normpath(str(c["input"].get("path", ""))) in KEEP
+
+    def rewrite():
+        nonlocal phase, turn, start
+        phase, turn, start = "rewrite", 0, used
+        return f"[Now only `read`, `write` and `edit` on {_kept_sizes()} and `done` are allowed.]"
+
+    while True:
         reply = api.send(messages)
-        if window and _context(reply.get("usage"), window) >= window * CONTEXT_STOP / 100 and limit > turn + 1 + WARN_TURNS:
-            limit = turn + 1 + WARN_TURNS
-            note = f"[context past {CONTEXT_STOP:g}%: stopping after turn {limit}]"
-            _say(note)
-            _log(TRANSCRIPT, f"\n{note}\n")
+        used = _context(reply.get("usage"), window)
+        turn += 1
         assistant, text, calls = api.parse(reply)
         if not calls and not text.strip():
             empty += 1
@@ -556,8 +575,6 @@ def run(prompt, keep=()):
         empty = 0
         messages.append(assistant)
         _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
-        if not calls:
-            return text
         outs = []
         for c in calls:
             _log(TRANSCRIPT, f"\n>>> {_ts()} {c['name']}" + "".join(
@@ -566,24 +583,28 @@ def run(prompt, keep=()):
             try:
                 if "bad" in c:
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
-                if limit - turn <= WARN_TURNS and not ok(c):
-                    raise ValueError(f"{_turns(limit - turn)}, so this call was not run: only {allowed}, and `done`, are allowed now")
+                if phase == "rewrite" and not ok(c):
+                    raise ValueError(f"only {_allowed()}, and `done`, are allowed now")
                 out = TOOLS[c["name"]][0](**c["input"])
             except Exception as e:
                 out = f"error: {e}"
             _say(f"[{c['name']}] {str(c['input'])[:70]}")
             _log(TRANSCRIPT, f"<<< {_ts()}\n{out}\n")
             outs.append(out)
-        for c, out in zip(calls, outs):
-            if c["name"] == "done" and "bad" not in c:
-                return out
-        left = limit - turn - 1
-        if 0 < left <= WARN_TURNS:
-            note = f"\n\n[{_turns(left)}: from now on only {allowed}, and `done`, are allowed. Make sure your results are written, then call `done`.]"
-            outs[-1] += note
-            _log(TRANSCRIPT, note.lstrip() + "\n")
-        messages += api.results(calls, outs)
-    return f"(stopped after {limit} turns)"
+        finished = not calls or any(c["name"] == "done" and "bad" not in c for c in calls)
+        if finished and phase == "rewrite":
+            return next((o for c, o in zip(calls, outs) if c["name"] == "done"), text)
+        exhausted = turn >= turns or tokens is not None and used - start >= tokens
+        if exhausted and phase == "rewrite":
+            return f"(the rewrite phase's budget ran out after {turn} turns)"
+        note = rewrite() if finished or exhausted else ""
+        note += f"\n[{phase} phase: {turns - turn} turn{'s' * (turns - turn != 1)}" + (f" and {tokens - (used - start)} tokens" if tokens else "") + " left]"
+        _log(TRANSCRIPT, f"\n{note.strip()}\n")
+        if calls:
+            outs[-1] += "\n\n" + note.strip()
+            messages += api.results(calls, outs)
+        else:
+            messages.append({"role": "user", "content": note.strip()})
 
 
 def _copy(src, dst):
@@ -591,7 +612,7 @@ def _copy(src, dst):
     shutil.copytree(src, dst) if src.is_dir() else shutil.copy(src, dst)
 
 
-def session(run_dir, prompt, seeds, keep):
+def session(run_dir, prompt, seeds):
     global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT, SESSION_ID
     RUN_DIR = run_dir
     attempt = 1 + len(list(RUN_DIR.parent.glob(f"{RUN_DIR.name}.*")))
@@ -606,14 +627,14 @@ def session(run_dir, prompt, seeds, keep):
     LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                     + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k} ---\n" for k in keep)
+                     + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k}" + (f", at most {cap} bytes" if cap else "") + " ---\n" for k, cap in sorted(KEEP.items()))
                      + f"--- prompt ---\n{prompt}\n")
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
         for src, rel in seeds:
             _copy(src, SANDBOX_ROOT / rel)
-        answer = run(prompt, keep)
+        answer = run(prompt)
         (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
         print(answer)
     finally:
@@ -664,16 +685,19 @@ def main(argv):
         flags[argv[0]].append(argv[1])
         argv = argv[2:]
     seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int((flags["-n"] or ["0"])[-1])
+    for k in keep:
+        path, cap = (k.rsplit(":", 1) if re.fullmatch(r".+:\d+", k) else (k, "0"))
+        KEEP[os.path.normpath(path)] = int(cap)
     resume = Path(flags["-r"][-1]).resolve() if flags["-r"] else None
     if resume and not argv:
         _resume(resume, n)
     n = n or 1
-    if not argv:
-        sys.exit("usage: pi.py [-f PATH]... [-k PATH]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+    if not argv or not keep:
+        sys.exit("usage: pi.py [-f PATH]... -k PATH[:BYTES]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
                  "       pi.py -r RUN-DIR [-n N]\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
-                 f"  -k PATH  in the last {WARN_TURNS} turns, allow only read/write/edit on the -k paths, and done;\n"
-                 "           carry the -k paths from each session's sandbox into the next\n"
+                 "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
+                 "           read/write/edit on it once experimenting ends; BYTES caps its size (0: no cap)\n"
                  "  -n N     run N sessions in a row (default 1)\n"
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total")
@@ -706,11 +730,11 @@ def main(argv):
     prev = loop / f"{first - 1:02}" if first > 1 else None
     try:
         for i in range(first, n + 1):
-            carried = [(prev / "sandbox" / k, k) for k in keep if prev and (prev / "sandbox" / k).exists()]
+            carried = [(prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()]
             for attempt in range(1, SESSION_TRIES + 1):
                 _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
                 try:
-                    session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
+                    session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried)
                     break
                 except (Exception, SystemExit):
                     traceback.print_exc()
