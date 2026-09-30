@@ -207,26 +207,36 @@ def _proc(cmd, cwd, timeout, stdin="", env=None):
     env = os.environ if env is None else env
     with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           start_new_session=True, preexec_fn=_spawn_exec_limited(cmd, env)) as p:
-        deadline, data = time.monotonic() + timeout, stdin.encode()
+        deadline, data, why = time.monotonic() + timeout, stdin.encode(), None
         try:
-            while True:
+            while why is None:
                 try:
                     out, err = p.communicate(data, timeout=min(1, max(0, deadline - time.monotonic())))
                     break
                 except subprocess.TimeoutExpired:
                     data = None
                     if time.monotonic() >= deadline:
-                        return f"timed out after {timeout}s"
-                    if (mb := _group_mb(p.pid)) > MEM_MB:
-                        return f"was killed after its processes used {mb} MB, over the {MEM_MB} MB memory limit"
-            if p.returncode == -signal.SIGKILL:
-                return f"was killed (SIGKILL); the memory limit is {MEM_MB} MB"
-            return subprocess.CompletedProcess(cmd, p.returncode, out, err)
+                        why = f"timed out after {timeout}s"
+                    elif (mb := _group_mb(p.pid)) > MEM_MB:
+                        why = f"was killed after its processes used {mb} MB, over the {MEM_MB} MB memory limit"
+            else:
+                _killpg(p.pid)
+                try:
+                    out, err = p.communicate(timeout=1)
+                except subprocess.TimeoutExpired as e:
+                    out, err = e.output or b"", e.stderr or b""
+            if why is None and p.returncode == -signal.SIGKILL:
+                why = f"was killed (SIGKILL); the memory limit is {MEM_MB} MB"
+            return why, subprocess.CompletedProcess(cmd, p.returncode, out, err)
         finally:
-            try:
-                os.killpg(p.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _killpg(p.pid)
+
+
+def _killpg(pgid):
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
 
 
 def _text(b):
@@ -244,16 +254,14 @@ def sl(paths, stdin="", args=()):
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        c = _proc([SLC, "--confine-dir", ".", "--no-env", *names], src, SLC_TIMEOUT, env={})
-        if isinstance(c, str):
-            return f"compile: {c}"
+        why, c = _proc([SLC, "--confine-dir", ".", "--no-env", *names], src, SLC_TIMEOUT, env={})
         warnings = clip(_text(c.stderr))
-        if c.returncode:
-            return f"compile: failed (exit {c.returncode})\n{warnings}"
+        if why or c.returncode:
+            return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
-        b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={**os.environ, "TMPDIR": tmp})
-        if isinstance(b, str) or b.returncode:
-            why = b if isinstance(b, str) else f"exited {b.returncode}"
+        why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={**os.environ, "TMPDIR": tmp})
+        if why or b.returncode:
+            why = why or f"exited {b.returncode}"
             ml = Path(tmp, "p.ml")
             kept = RUN_DIR / f"build-failure-{time.time():.0f}.ml"
             if ml.stat().st_size <= MAX_KEPT_FAILURE:
@@ -261,13 +269,11 @@ def sl(paths, stdin="", args=()):
             with open(RUN_DIR / "build-failures.log", "a") as f:
                 f.write(f"ocamlopt {why}; p.ml was {ml.stat().st_size} bytes, "
                         + (f"kept as {kept.name}\n" if kept.exists() else "not kept\n")
-                        + ("" if isinstance(b, str) else _text(b.stdout + b.stderr)))
+                        + _text(b.stdout + b.stderr))
             return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
-        r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
+        why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
         head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
-        if isinstance(r, str):
-            return f"{head}\nrun: {r}"
-        return f"{head}\nrun: exit {r.returncode}\n--- stdout ---\n{clip(_text(r.stdout))}\n--- stderr ---\n{clip(_text(r.stderr))}"
+        return f"{head}\nrun: {why or f'exit {r.returncode}'}\n--- stdout ---\n{clip(_text(r.stdout))}\n--- stderr ---\n{clip(_text(r.stderr))}"
 
 
 def done(summary=""):
