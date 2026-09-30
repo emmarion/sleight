@@ -16,6 +16,7 @@ MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
+SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
@@ -705,12 +706,17 @@ def main(argv):
     try:
         for i in range(first, n + 1):
             carried = [(prev / "sandbox" / k, k) for k in keep if prev and (prev / "sandbox" / k).exists()]
-            _say(f"session {i}/{n}")
-            try:
-                session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
-            except (Exception, SystemExit):
-                traceback.print_exc()
-                _say(f"session {i}/{n} failed; carrying on")
+            for attempt in range(1, SESSION_TRIES + 1):
+                _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
+                try:
+                    session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried, keep)
+                    break
+                except (Exception, SystemExit):
+                    traceback.print_exc()
+                    if attempt == SESSION_TRIES:
+                        sys.exit(f"session {i}/{n} failed {SESSION_TRIES} times; stopping (resume with -r {loop})")
+                    if (loop / f"{i:02}").exists():
+                        _set_aside(loop / f"{i:02}")
             prev = loop / f"{i:02}"
     finally:
         (loop / "pid").unlink(missing_ok=True)
