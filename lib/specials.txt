@@ -6,8 +6,9 @@ usage def-lvl: (def-lvl <name>)
 usage def-fns: (def-fns <level> ((<multiplicity> <name> : <parameter> ... -> <result> ...) <statement> ... <value>) ...)
 usage def-unique: (def-unique <level> ((<multiplicity> <name> : <parameter> ... -> <result> ...) <statement> ... <value>))
 usage def-adts: (def-adts ((<name> : <parameter> ... -> Type) enum|union [newtype] [extern] <constructor> ...) ...)
-usage comptime-match: (comptime-match <multiplicity> <name> (<constructor> <field> ...))
-usage let-match: (let-match <multiplicity> <value> (<constructor> <field> ...) <branch> ...)
+usage comptime-match: (comptime-match <multiplicity> <name> (<constructor> <field> ... [<cell binder>]))
+usage comptime-match: (comptime-match many (share <name>) (<constructor> <field> ...))
+usage let-match: (let-match <multiplicity> <value> (<constructor> <field> ... [<cell binder>]) <branch> ...)
 usage unary: (unary <numeral>)
 usage unary: (unary <numeral> <numeral>)
 usage distinct: (distinct <numeral> <numeral>)
@@ -26,6 +27,7 @@ usage Cell: (Cell <constructor> <slot> ...)
 usage SlotHolds: (SlotHolds <name>)
 usage SlotVacant: (SlotVacant)
 usage at: (at (<cell> <argument> ...))
+usage at: (<cell> <argument> ... (at) <argument> ...)
 usage at: (<multiplicity> <type> <name> at <place>)
 usage share: (share <unique value>)
 usage match: (match <multiplicity> <scrutinee> <annotation> <branch> ...)
@@ -49,25 +51,31 @@ usage delegate-of: (delegate-of <function>)
 usage coercible-share: (coercible-share <proof>)
 usage dump-context: (dump-context)
 usage dump-context: (dump-context <value> ...)
-role erased: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a match
+role erased: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
 usage erased: (erased <type> <name>)
-role many: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a match
+role many: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-match or open-adt
 usage many: (many <type> <name>)
-role unique: it is a multiplicity, beginning a telescope entry, a function header or a match
+role unique: it is a multiplicity, beginning a telescope entry or a function header, or the mode of a match, let-match, comptime-match or cell-match
 usage unique: (unique <type> <name>)
 role :: it separates a name from its signature
 usage :: (<multiplicity> <name> : <parameter> ... -> <result> ...)
+usage :: (<name> : <parameter> ... -> Type)
+usage :: (<multiplicity> <name> : <parameter> ... -> <result type>)
 role is: it separates an `is` expression from the name it introduces, in place of a type
 usage is: (<multiplicity> <expression> is <name>)
 role ->: it separates parameters from results
 usage ->: (<multiplicity> <name> : <parameter> ... -> <result> ...)
+usage ->: (<name> : <parameter> ... -> Type)
+usage ->: (<multiplicity> <name> : <parameter> ... -> <result type>)
 role subterm: it marks a parameter that recursion decreases, or annotates a same-level call's decreasing argument
 usage subterm: (subterm <multiplicity> <type> <name>)
 usage subterm: (<function> <argument> ... (subterm <proof or _>) <argument> ...)
-role enum: it follows a type's header in def-adts
+role enum: it follows a type's header in def-adts, or begins a `Matchable` type
 usage enum: (def-adts ((<name> : ... -> Type) enum <constructor> ...))
-role union: it follows a type's header in def-adts
+usage enum: (Matchable enum [newtype] [extern] <type constructor> (<multiplicity> <constructor>) ...)
+role union: it follows a type's header in def-adts, or begins a `Matchable` type
 usage union: (def-adts ((<name> : ... -> Type) union <constructor> ...))
+usage union: (Matchable union [newtype] [extern] <type constructor> (<multiplicity> <constructor>) ...)
 usage tail: (tail (<function> <argument> ...))
 usage notail: (notail (<function> <argument> ...))
 usage delegate: (delegate (<function> <argument> ...))
@@ -75,18 +83,19 @@ role predates: it annotates a lower-level call, right after the callee
 usage predates: (<function> (predates <proof or _>) <argument> ...)
 role absurd: it marks a match branch, or a function on its def-fns line
 usage absurd: (absurd <constructor>)
+usage absurd: (absurd <constructor> <statement> ... <value>)
 usage absurd: (absurd (<constructor> <field> ...) <statement> ... <value>)
 usage absurd: ((<multiplicity> absurd <name> : <parameter> ... -> <result> ...) <statement> ... <value>)
-role newtype: it marks a def-adts entry, after enum or union
-usage newtype: (def-adts ((<name> : ... -> Type) enum newtype <constructor>))
-role extern: it marks a def-adts entry or a function as implemented by the host
-usage extern: (def-adts ((<name> : ... -> Type) enum extern <constructor> ...))
+role newtype: it marks a def-adts entry or a `Matchable` type, after enum or union
+usage newtype: (def-adts ((<name> : ... -> Type) enum|union newtype <constructor> ...))
+role extern: it marks a def-adts entry or a function as implemented by the host, or a `Matchable` type as describing one
+usage extern: (def-adts ((<name> : ... -> Type) enum|union [newtype] extern <constructor> ...))
 usage extern: ((<multiplicity> extern <name> : <parameter> ... -> <result> ...) <statement> ... <value>)
 role else: it heads the match branch for every constructor not listed
 usage else: (else <statement> ... <value>)
 usage else: (else <cell binder> <statement> ... <value>)
-usage telescope-entry: (<multiplicity> <type> <name> ...)
-usage telescope-entry: (<multiplicity> <expression> is <name>)
+usage telescope-entry: ([subterm] [<multiplicity>] <type> <name> ... [at <place>])
+usage telescope-entry: ([subterm] [<multiplicity>] <expression> is <name> [at <place>])
 usage telescope-entry: (<multiplicity> <name>)
 usage function-definition: ((<multiplicity> <name> : <parameter> ... -> <result> ...) <statement> ... <value>)
 usage function-header: (<multiplicity> [absurd] [extern] <name> : <parameter> ... -> <result> ...)
@@ -96,6 +105,7 @@ usage branch: (<constructor> <statement> ... <value>)
 usage branch: ((<constructor> <field> ...) <statement> ... <value>)
 usage branch: ((<constructor> <field> ... <cell binder>) <statement> ... <value>)
 usage branch: (absurd <constructor>)
+usage branch: (absurd <constructor> <statement> ... <value>)
 usage branch: (absurd (<constructor> <field> ...) <statement> ... <value>)
 usage branch: (else <statement> ... <value>)
 usage branch: (else <cell binder> <statement> ... <value>)
