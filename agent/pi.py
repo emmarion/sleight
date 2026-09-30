@@ -122,6 +122,8 @@ def _base(path):
 
 
 def _walk_files(path):
+    if _base(path).is_file() and not _base(path).is_symlink():
+        yield str(_base(path).relative_to(SANDBOX_ROOT)), _base(path)
     for dirpath, dirnames, filenames in os.walk(_base(path), followlinks=False):
         for fn in filenames:
             p = Path(dirpath) / fn
@@ -158,9 +160,9 @@ def ls(path="."):
     return "\n".join(list_dir(path)) or "(empty)"
 
 
-def grep(pattern, path="."):
+def grep(pattern, path=".", within=None):
     rx, hits = re.compile(pattern), []
-    for rel, p in _walk_files(path):
+    for rel, p in (f for f in _walk_files(path) if within is None or f[0] in within):
         try:
             hits += [f"{rel}:{n}: {l[:200]}" for n, l in enumerate(p.read_text(errors="replace").splitlines(), 1) if rx.search(l)]
         except OSError:
@@ -538,7 +540,7 @@ def _context(usage, window):
 
 
 def _allowed(caps=False):
-    return f"`read`, `write` and `edit` on " + ", ".join(k + (f" (at most {cap} bytes)" if caps and cap else "") for k, cap in sorted(KEEP.items()))
+    return f"`read`, `write`, `edit` and `grep` on " + ", ".join(k + (f" (at most {cap} bytes)" if caps and cap else "") for k, cap in sorted(KEEP.items()))
 
 
 def _kept_sizes():
@@ -551,13 +553,13 @@ def run(prompt):
     window = CONTEXT or api.window()
     turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
     phase, turn, start = "experiment", 0, 0
-    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and (
+    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit", "grep") and (
         "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
     def rewrite():
         nonlocal phase, turn, start
         phase, turn, start = "rewrite", 0, used
-        return f"[Now entering the rewrite phase, where only `read`, `write` and `edit` on {_kept_sizes()} and `done` are allowed.]"
+        return f"[Now entering the rewrite phase, where only `read`, `write`, `edit` and `grep` on {_kept_sizes()} and `done` are allowed.]"
 
     while True:
         reply = api.send(messages)
@@ -586,7 +588,7 @@ def run(prompt):
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
                 if phase == "rewrite" and not ok(c):
                     raise ValueError(f"only {_allowed()}, and `done`, are allowed now")
-                out = TOOLS[c["name"]][0](**c["input"])
+                out = TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] == "grep" else {})))
             except Exception as e:
                 out = f"error: {e}"
             _say(f"[{c['name']}] {str(c['input'])[:70]}")
@@ -698,7 +700,7 @@ def main(argv):
                  "       pi.py -r RUN-DIR [-n N]\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
                  "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
-                 "           read/write/edit on it once experimenting ends; BYTES caps its size (0: no cap)\n"
+                 "           read/write/edit/grep on it once experimenting ends; BYTES caps its size (0: no cap)\n"
                  "  -n N     run N sessions in a row (default 1)\n"
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
