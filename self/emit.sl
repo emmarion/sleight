@@ -109,26 +109,6 @@
   enum
   (many MkTemplate : (many (String) kind) (many (String) type) (many (Nat) index) (many (List $ Piece) pieces) -> (Template)))
 
-(def-fns _ $ (many str-until-onto : (many (Rope) acc) (subterm many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after))
-  (let-match many s (SCons c rest) ((SNil) (values (rope-str acc) (None _))))
-  (match many (char-is c code) _
-    ((BTrue) (values (rope-str acc) (Some _ rest)))
-    ((BFalse) (tail (str-until-onto (RCat acc $ RChar c) rest code)))))
-
-(def-fns _ $ (many str-until : (many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after))
-  (str-until-onto (REmpty) s code))
-
-(def-fns _ $ (many str-split-fuel : (subterm many (Nat) fuel) (many (String) s) (many (Nat) code) -> (many (List $ String) r))
-  (let ((many b) (many a)) (str-until s code))
-  (let-match many a (Some _ rest) ((None _) (Cons _ b $ Nil _)))
-  (match many fuel _
-    ((Zero) (Cons _ b $ Nil _))
-    ((Succ f) (Cons _ b $ notail $ str-split-fuel f rest code))))
-
-(def-fns _ $ (many split-on : (many (String) s) (many (Nat) code) -> (many (List $ String) r))
-  (let ((many n) (erased p)) (str-length s))
-  (str-split-fuel n s code))
-
 (def-fns _ $ (many digits-of : (many (String) s) -> (many (Maybe $ Nat) r))
   (match many (and (not $ str-is-empty s) $ all-digits s) _
     ((BTrue) (Some _ $ parse-nat s 0))

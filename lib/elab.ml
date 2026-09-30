@@ -245,7 +245,7 @@ let parse_entry env raw =
       | [ Atom (_, n) ] -> [ mk None n ]
       | ty :: names when names <> [] && List.for_all (fun n -> atom n <> None) names ->
           List.map (fun n -> mk (Some (`Ty ty)) (Option.get (atom n))) names
-      | _ -> error l "malformed telescope entry %s" (tick (Reader.show raw)))
+      | _ -> error l "malformed telescope entry %s%s" (tick (Reader.show raw)) (Sp.hints "telescope-entry"))
   | Atom (l, _) -> error l "expected a telescope entry, got %s" (tick (Reader.show raw))
 
 let split_arrow env loc items =
@@ -529,14 +529,14 @@ and elab_type_form env l sp args =
   | Sp.ValCtor, _ -> let _, _, _, t = elab_valctor env l args in (env, t)
   | Sp.Matchable, d :: rest ->
       let ms, rest = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in
-      let t, cs = match rest with t :: cs -> (t, cs) | _ -> error l "malformed `Matchable`" in
+      let t, cs = match rest with t :: cs -> (t, cs) | _ -> error l "%s" (Sp.misuse sp) in
       let ctor = function
         | List (cl, [ m; c ]) -> let m = mult_or env cl m in
             if m = Unique then error cl "a `Matchable` constructor cannot be `unique`";
             (m, Var (ctor_var env cl c))
         | raw -> error (loc raw) "expected a constructor marker" in
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), List.map ctor cs))
-  | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "malformed %s" (tick (Sp.name sp))
+  | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "%s" (Sp.misuse sp)
   | Sp.DumpContext, _ -> dump_context env l Dump.Type args
   | _ -> error l "%s cannot appear in a type" (tick (Sp.name sp))
 
@@ -927,7 +927,7 @@ and elab_special demand tele env expect l sp args =
       if List.mem x env.signature then error (loc a) "`SlotHolds` cannot name a telescope binder; abstract over a `Slot` instead";
       (env, [ { term = SlotHolds (Var x); ty = Prelude.slot_term; erasure = pos; place = None } ], if pos = Erased then V.CErased else V.CVar x)
   | Sp.CellAlloc, [ raw ] ->
-      let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ -> (raw, None) | _ -> error l "malformed `cell-alloc`" in
+      let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ -> (raw, None) | _ -> error l "%s" (Sp.misuse Sp.CellAlloc) in
       let c = ctor_var env l c in
       let ct, _, _ = cell_shape env l c in
       let env, slots, writes, wrap = cell_items env pos l (List.init ct.V.arity (fun _ -> SlotHolds (Var Prelude.null)))
@@ -1113,8 +1113,8 @@ and elab_special demand tele env expect l sp args =
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
       fetch "`Delegate` proof in scope" g (List.find_opt about env.scope.ids)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
-  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression" (tick (Sp.name sp))
-  | sp, _ -> error l "malformed %s form" (tick (Sp.name sp))
+  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick (Sp.name sp)) (Sp.hints (Sp.name sp))
+  | sp, _ -> error l "%s" (Sp.misuse sp)
 
 and cell_items env pos l slots items =
   if List.length slots <> List.length items then error l "expected %d slot items" (List.length slots);
@@ -1177,7 +1177,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, V.CLet ([sid], code, body))
-  | _ -> error l "malformed `cell-match`"
+  | _ -> error l "%s" (Sp.misuse Sp.CellMatch)
 
 and scrutinee ?res env l smult scrut =
   let env, sres, scode = match res with Some (r, c) -> (env, r, c) | None -> elab_expr1 env smult scrut in
@@ -1217,10 +1217,10 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele
           | List (_, [ a; (Atom _ as c) ]) when is_special env a Sp.Absurd -> (`Auto, c, [])
           | List (_, a :: pat :: body) when is_special env a Sp.Absurd -> (`Proof, pat, body)
           | List (_, pat :: body) -> (`Present, pat, body)
-          | _ -> error (loc raw) "malformed branch"
+          | _ -> error (loc raw) "malformed branch%s" (Sp.hints "branch")
         in
         let bl = loc pat in
-        let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern" in
+        let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern%s" (Sp.hints "branch") in
         let c = ctor_var env bl c in
         let extra = extra && marker env bl tid ctors c <> Erased in
         let fs, name = if kind = `Auto then (fs, if extra then Some (None, Reader.nowhere) else None) else split_cell_pattern env bl extra fs in
@@ -1312,7 +1312,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele
       let env = { env with uses = !branch_uses } in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, swrap code)
-  | _ -> error l "malformed `match`"
+  | _ -> error l "%s" (Sp.misuse Sp.Match)
 
 (* A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one. *)
 and result_tele ?(demand = Fixed) tele env expect l ann =
@@ -1332,7 +1332,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
         let env = match tele with Some tele when List.length tele = List.length ann_tele -> solve_tele ~strict:true env l tele ann_tele | _ -> env in
         List.iter (fun e -> settle env l (sg_term e.sg)) ann_tele;
         (env, List.map (fun e -> { e with sg = map_sg (metaless env) e.sg }) ann_tele)
-    | _ -> error l "malformed match annotation"
+    | _ -> error l "malformed match annotation%s" (Sp.hints "annotation")
   in
   if List.length ann_tele <> List.length expect then error l "match annotation has %d entries, position needs %d" (List.length ann_tele) (List.length expect);
   let ann_tele = List.map (fun e ->
@@ -1424,6 +1424,7 @@ and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
           let env', x, t, code = open_binding env l mult e in
           let env' = try open_adt env' x with Contradiction msg -> error l "`open-adt`: %s contradicts what is open (%s)" (qshow env' t) (Lazy.force msg) in
           (env', if env.run_pos || mult = Erased then Fun.id else fun rest -> V.CLet ([ x ], code, rest))
+      | Some sp, _ when List.mem sp Sp.statements || Sp.lines "role" (Sp.name sp) <> [] -> error l "%s" (Sp.misuse sp)
       | _ -> error l "%s is not a statement" (tick (Reader.show raw)))
   | _ -> error (loc raw) "%s is not a statement" (tick (Reader.show raw))
 
@@ -1437,7 +1438,7 @@ and elab_let spos env l args =
   let binder_raws, rhs =
     match args with
     | List (_, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bs, rhs)
-    | _ -> error l "malformed `let`: expected `(let (<binder> ...) <value> ...)`"
+    | _ -> error l "%s" (Sp.misuse Sp.Let)
   in
   let binders = List.concat_map (parse_entry env) binder_raws in
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "`let` binder needs a multiplicity") binders in
@@ -1597,7 +1598,7 @@ and elab_let_match spos env l args =
             { scrut = scode; shape = match_shape env mid tid disc shapes;
               branches = [ (Option.get (discriminant shapes c), non_erased env fids, bind_cell scode cell rest) ]; default = None;
               live = Option.to_list (discriminant shapes c) }))
-  | _ -> error l "malformed `let-match`: expected `(let-match <multiplicity> x (C field ...) branch ...)`"
+  | _ -> error l "%s" (Sp.misuse Sp.LetMatch)
 
 and elab_comptime_match env l args =
   match args with
@@ -1634,7 +1635,7 @@ and elab_comptime_match env l args =
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" (Lazy.force msg)) in
       let env, _ = pattern_cell env pl smult (res_of env x) c fids name in
       (env, Fun.id)
-  | _ -> error l "malformed `comptime-match`: expected `(comptime-match <multiplicity> x (C field ...))`"
+  | _ -> error l "%s" (Sp.misuse Sp.ComptimeMatch)
 
 and elab_def_fns ?(unique = false) env l args =
   match args with
@@ -1661,8 +1662,8 @@ and elab_def_fns ?(unique = false) env l args =
                   if List.mem Sp.Extern marks then Some (Ffi.claim_fn fl name many_params) else None
                 in
                 (fl, name, mult, List.mem Sp.Absurd marks, impl, ty, body)
-            | _ -> error fl "malformed function header")
-        | _ -> error (loc raw) "malformed function definition: expected `((<multiplicity> <name> : ... -> ...) <body> ...)`"
+            | _ -> error fl "malformed function header%s" (Sp.hints "function-header"))
+        | _ -> error (loc raw) "malformed function definition%s" (Sp.hints "function-definition")
       in
       let headers = List.map header fns in
       List.iter (fun (fl, _, m, _, _, _, _) -> if unique && m = Many then error fl "`def-unique` requires `unique` or `erased`" else if not unique && m = Unique then error fl "use `def-unique` to define a unique function") headers;
@@ -1782,7 +1783,7 @@ and elab_def_adts env adts =
         match ret with
         | [ ty ] -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
         | _ -> error al "a type constructor declares one return")
-    | _ -> error (loc raw) "malformed `def-adts` entry: expected `((<name> : ... -> Type) enum ...)`"
+    | _ -> error (loc raw) "malformed `def-adts` entry%s" (Sp.hints "def-adts-entry")
   in
   let headers = List.map header adts in
   let env, tids =
@@ -1804,7 +1805,7 @@ and elab_def_adts env adts =
           if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl [] "phantom constructor %s has a non-erased field" (tick name);
           let c, env = bind env ~at:cl (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
-      | _ -> error (loc raw) "malformed constructor"
+      | _ -> error (loc raw) "malformed constructor%s" (Sp.hints "constructor")
     in
     let env, ctors = List.fold_left_map ctor env ctors in
     let ctors = List.map (fun (m, c) -> (m, Var c)) ctors in

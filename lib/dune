@@ -45,3 +45,14 @@
     (echo "let source = {|")
     (cat ffi_templates.txt)
     (echo "|}")))))
+
+(rule
+ (targets specials_source.ml)
+ (deps specials.txt)
+ (action
+  (with-stdout-to
+   specials_source.ml
+   (progn
+    (echo "let source = {|")
+    (cat specials.txt)
+    (echo "|}")))))

@@ -1,2 +1,2 @@
-; error: `(def-lvl A B)` is not a statement
+; error: malformed `def-lvl` form
 (def-lvl A B)

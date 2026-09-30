@@ -37,15 +37,15 @@
   (WriteErr _ (str-cat3 "slc: " m "\n") (unique-thunk _ _ (Exit _ exit-fail))))
 
 (def-fns util-lvl $ (many usage : -> (unique (IO io-lvl) io))
-  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] file.sl ... [-- arg ...] > out.ml\n"
+  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--hints file] file.sl ... [-- arg ...] > out.ml\n"
     (unique-thunk _ _ (Exit _ exit-fail))))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) -> (unique (IO io-lvl) io))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
   (interp-finals env pargs with-env _ (list-rev _ fi) _ hp en (le-refl hs)))
 
-(def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
-  (let ((many builtins)) (make-builtins))
+(def-fns compile-lvl $ (many compile : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (String) help) (many (List $ Pair (String) $ String) srcs) -> (unique (IO io-lvl) io))
+  (let ((many builtins)) (env-set-help (make-builtins) help))
   (let ((many env)) $ run-files srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
   ; A warning stands whether or not the program is refused, so it is written ahead of either outcome, in the
   ; order elaboration minted it, as the reference writes one where it meets it.
@@ -69,11 +69,11 @@
             (let ((many out) (erased flat)) $ flatten $ emit-program templates fence bytes with-env env)
             (WriteOut _ out $ unique-thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))))
 
-(def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) dir) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
-  (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs dir bytes with-env $ list-rev _ acc)))
+(def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) dir) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (String) help) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
+  (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs dir bytes with-env help $ list-rev _ acc)))
   (def-unique io-lvl $ (unique after-read : (many (Result $ String) r) -> (unique (IO io-lvl) next))
     (let-match many r (Fail _ m)
-      ((Ok _ src) (read-files prelude templates interpreting pargs dir bytes with-env rest $ Cons _ (MkPair _ _ path src) acc)))
+      ((Ok _ src) (read-files prelude templates interpreting pargs dir bytes with-env help rest $ Cons _ (MkPair _ _ path src) acc)))
     (failed m))
   (ReadFile _ path after-read))
 
@@ -84,27 +84,33 @@
   (let ((many files) (many pargs)) (notail $ split-args rest))
   (values (Cons _ p files) pargs))
 
-; The flags, in any order, then the files: --no-prelude, --no-templates, --interpret, --confine-dir dir, --confine-output-bytes n and --no-env.
+; The flags, in any order, then the files: --no-prelude, --no-templates, --interpret, --confine-dir dir, --confine-output-bytes n, --no-env and --hints file.
 ; Without --no-prelude the embedded prelude goes ahead of the files, under the path the reference names it
 ; by (lib/builtin.ml).
-(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (String) dir) (many (Maybe $ String) bytes) (many (Bool) with-env) -> (unique (IO io-lvl) io))
+(def-fns start-lvl $ (many start-with : (subterm many (List $ String) args) (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (String) dir) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (String) help) -> (unique (IO io-lvl) io))
   (match many args _
     ((Nil _) (usage))
     ((Cons _ p rest)
-      (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting dir bytes with-env)))
-      (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting dir bytes with-env)))
-      (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue) dir bytes with-env)))
+      (let-match many (str-eq p "--no-prelude") (BFalse) ((BTrue) (tail $ start-with rest (BFalse) templates interpreting dir bytes with-env help)))
+      (let-match many (str-eq p "--no-templates") (BFalse) ((BTrue) (tail $ start-with rest prelude (BFalse) interpreting dir bytes with-env help)))
+      (let-match many (str-eq p "--interpret") (BFalse) ((BTrue) (tail $ start-with rest prelude templates (BTrue) dir bytes with-env help)))
       (let-match many (str-eq p "--confine-dir") (BFalse)
-        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ d more) (tail $ start-with more prelude templates interpreting d bytes with-env)))))
+        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ d more) (tail $ start-with more prelude templates interpreting d bytes with-env help)))))
       (let-match many (str-eq p "--confine-output-bytes") (BFalse)
-        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ b more) (tail $ start-with more prelude templates interpreting dir (Some _ b) with-env)))))
-      (let-match many (str-eq p "--no-env") (BFalse) ((BTrue) (tail $ start-with rest prelude templates interpreting dir bytes (BFalse))))
+        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ b more) (tail $ start-with more prelude templates interpreting dir (Some _ b) with-env help)))))
+      (let-match many (str-eq p "--no-env") (BFalse) ((BTrue) (tail $ start-with rest prelude templates interpreting dir bytes (BFalse) help)))
+      (let-match many (str-eq p "--hints") (BFalse)
+        ((BTrue) (match many rest _ ((Nil _) (usage)) ((Cons _ h more)
+          (def-unique io-lvl $ (unique after-hints : (many (Result $ String) r) -> (unique (IO io-lvl) next))
+            (let-match many r (Ok _ text) ((Fail _ m) (failed m)))
+            (start-with more prelude templates interpreting dir bytes with-env text))
+          (ReadFile _ h after-hints)))))
       (let ((many files) (many pargs)) (split-args args))
-      (read-files prelude templates interpreting pargs dir bytes with-env files $ match many prelude _
+      (read-files prelude templates interpreting pargs dir bytes with-env help files $ match many prelude _
         ((BTrue) (Cons _ (MkPair _ _ "lib/prelude.sl" prelude-source) $ Nil _))
         ((BFalse) (Nil _))))))
 
 (def-unique io-lvl $ (unique start : (many (List $ String) args) -> (unique (IO io-lvl) io))
-  (start-with args (BTrue) (BTrue) (BFalse) "/" (None _) (BTrue)))
+  (start-with args (BTrue) (BTrue) (BFalse) "/" (None _) (BTrue) specials-help))
 
 (GetArgs _ start)

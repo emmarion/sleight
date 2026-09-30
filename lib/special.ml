@@ -22,3 +22,17 @@ let all =
 
 let name s = List.assoc s all
 let statements = [ Let; DefLvl; DefFns; DefUnique; DefAdts; ComptimeMatch; LetMatch; Unary; OpenAdt; DumpContext ]
+
+let help = ref Specials_source.source
+
+let lines kind key =
+  let prefix = kind ^ " " ^ key ^ ": " and n = String.length kind + String.length key + 3 in
+  List.filter_map (fun l -> if String.starts_with ~prefix l then Some (String.sub l n (String.length l - n)) else None) (String.split_on_char '\n' !help)
+
+let hints key = String.concat "" (List.map (( ^ ) "\nhint: usage: ") (lines "usage" key))
+
+let misuse sp =
+  let n = name sp in
+  match lines "role" n with
+  | r :: _ -> Printf.sprintf "`%s` is not an expression: %s%s" n r (hints n)
+  | [] -> Printf.sprintf "malformed `%s` form%s" n (hints n)
