@@ -310,8 +310,8 @@ TOOLS = {
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown.",
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR}, ["paths"]),
-    "done": (done, "The first call ends experimenting: after it, only {allowed}, and `done`, are allowed. "
-                   "The second call ends the session. Pass a one-line summary.",
+    "done": (done, "The first call ends the experiment phase and starts the rewrite phase, which has a fresh budget of the same size "
+                   "and allows only {allowed}, and `done`. The second call ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
 }
 PARAMS = {n: {"type": "object", "properties": props, "required": req} for n, (_, _, props, req) in TOOLS.items()}
@@ -438,7 +438,7 @@ class Anthropic:
     def send(self, messages):
         return post(self.url, {
             "model": MODEL, "max_tokens": MAX_TOKENS, "system": SYSTEM,
-            "tools": [{"name": n, "description": d.replace("{allowed}", _allowed()), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
+            "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages,
         }, {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01"})
 
@@ -484,7 +484,7 @@ class OpenAICompat:
     def send(self, messages):
         body = {
             "model": MODEL, "max_tokens": self.cap(),
-            "tools": [{"type": "function", "function": {"name": n, "description": d.replace("{allowed}", _allowed()), "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
+            "tools": [{"type": "function", "function": {"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
             "user": SESSION_ID,
         }
@@ -537,8 +537,8 @@ def _context(usage, window):
     return n
 
 
-def _allowed():
-    return f"`read`, `write` and `edit` on {', '.join(sorted(KEEP))}"
+def _allowed(caps=False):
+    return f"`read`, `write` and `edit` on " + ", ".join(k + (f" (at most {cap} bytes)" if caps and cap else "") for k, cap in sorted(KEEP.items()))
 
 
 def _kept_sizes():
