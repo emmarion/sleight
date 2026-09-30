@@ -21,7 +21,7 @@ SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
 MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
-RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = None
+RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
 _LOG_N = 0
 
 SYSTEM = """You are an expert programmer working inside a sandbox directory.
@@ -466,18 +466,17 @@ class OpenAICompat:
         return self.limit("max_context_length") or self.model().get("max_model_len")
 
     def send(self, messages):
-        sid = re.sub(r"[^A-Za-z0-9._-]", "-", str(RUN_DIR.relative_to(RESULTS)))
         body = {
             "model": MODEL, "max_tokens": self.cap(),
             "tools": [{"type": "function", "function": {"name": n, "description": d, "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
-            "user": sid,
+            "user": SESSION_ID,
         }
         if EFFORT:
             body["reasoning_effort"] = EFFORT
         if STREAM:
             body.update(stream=True, stream_options={"include_usage": True})
-        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": sid}, stream=STREAM)
+        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": SESSION_ID}, stream=STREAM)
 
     def parse(self, reply):
         msg = reply["choices"][0]["message"]
@@ -593,8 +592,10 @@ def _copy(src, dst):
 
 
 def session(run_dir, prompt, seeds, keep):
-    global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT
+    global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT, SESSION_ID
     RUN_DIR = run_dir
+    attempt = 1 + len(list(RUN_DIR.parent.glob(f"{RUN_DIR.name}.*")))
+    SESSION_ID = re.sub(r"[^A-Za-z0-9._-]", "-", f"{RUN_DIR.relative_to(RESULTS)}-attempt{attempt}")
     RUN_DIR.mkdir(parents=True)
     latest = RESULTS / "latest"
     latest.unlink(missing_ok=True)
