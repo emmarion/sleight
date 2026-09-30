@@ -88,12 +88,13 @@ def read_bytes(user_path):
 def write_bytes(user_path, data):
     if len(data) > MAX_WRITE:
         raise PathEscape(f"write of {len(data)} bytes exceeds cap ({MAX_WRITE})")
-    name = os.path.normpath(user_path)
-    if KEEP.get(name) and len(data) > KEEP[name] and len(data) > _size(name):
-        raise ValueError(f"{name} would be {len(data)} bytes; the cap is {KEEP[name]}")
+    name, old = os.path.normpath(user_path), _size(user_path)
+    cap = f" (at most {KEEP[name]})" if KEEP.get(name) else ""
+    if cap and len(data) > KEEP[name] and len(data) > old:
+        raise ValueError(f"{name} would go from {old} to {len(data)} bytes{cap}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     with os.fdopen(_open_in(user_path, flags, create=True), "wb") as f:
-        return f.write(data)
+        return f"{user_path}: {old} -> {f.write(data)} bytes{cap}"
 
 
 def _size(path):
@@ -145,15 +146,14 @@ def read(path, offset=1, limit=2000):
 
 
 def write(path, content):
-    return f"wrote {write_bytes(path, content.encode())} bytes to {path}"
+    return f"wrote {write_bytes(path, content.encode())}"
 
 
 def edit(path, old, new):
     text = read_bytes(path).decode("utf-8", "replace")
     if text.count(old) != 1:
         return f"error: found {text.count(old)} matches, need exactly 1"
-    write_bytes(path, text.replace(old, new).encode())
-    return f"edited {path}"
+    return f"edited {write_bytes(path, text.replace(old, new).encode())}"
 
 
 def ls(path="."):
