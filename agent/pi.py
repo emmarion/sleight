@@ -451,7 +451,15 @@ def _context(usage, window):
     _log(TRANSCRIPT, f"\n{line}\n")
 
 
-def run(prompt):
+def _turns(n):
+    return f"{n} turn{'s' * (n != 1)} left"
+
+
+def run(prompt, keep=()):
+    keep = {os.path.normpath(k) for k in keep}
+    allowed = f"`read`, `write` and `edit` on {', '.join(sorted(keep))}" if keep else "`read`, `write` and `edit`"
+    ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and (
+        not keep or os.path.normpath(str(c["input"].get("path", ""))) in keep)
     api = ADAPTERS[PROVIDER]()
     messages, empty = [{"role": "user", "content": prompt}], 0
     for turn in range(MAX_TURNS):
@@ -480,6 +488,8 @@ def run(prompt):
             try:
                 if "bad" in c:
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
+                if MAX_TURNS - turn <= WARN_TURNS and not ok(c):
+                    raise ValueError(f"{_turns(MAX_TURNS - turn)}, so this call was not run: only {allowed}, and `done`, are allowed now")
                 out = TOOLS[c["name"]][0](**c["input"])
             except Exception as e:
                 out = f"error: {e}"
@@ -491,7 +501,7 @@ def run(prompt):
                 return out
         left = MAX_TURNS - turn - 1
         if 0 < left <= WARN_TURNS:
-            note = f"\n\n[{left} turn{'s' * (left != 1)} left: make sure your results are written to files, then call `done`.]"
+            note = f"\n\n[{_turns(left)}: from now on only {allowed}, and `done`, are allowed. Make sure your results are written, then call `done`.]"
             outs[-1] += note
             _log(TRANSCRIPT, note.lstrip() + "\n")
         messages += api.results(calls, outs)
@@ -500,13 +510,15 @@ def run(prompt):
 
 def main(argv):
     global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT
-    seeds = []
-    while argv[:1] == ["-f"] and len(argv) > 1:
-        seeds.append(Path(argv[1]))
+    flags = {"-f": [], "-k": []}
+    while argv[:1] and argv[0] in flags and len(argv) > 1:
+        flags[argv[0]].append(argv[1])
         argv = argv[2:]
+    seeds, keep = [Path(f) for f in flags["-f"]], flags["-k"]
     if not argv:
-        sys.exit("usage: pi.py [-f PATH]... PROMPT-FILE ...   (the prompt files are joined into one prompt;\n"
-                 "        each -f file or directory is copied into the sandbox root under its own name)")
+        sys.exit("usage: pi.py [-f PATH]... [-k PATH]... PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+                 "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
+                 f"  -k PATH  in the last {WARN_TURNS} turns, allow only read/write/edit on the -k paths, and done")
     for s in seeds:
         if not s.exists():
             sys.exit(f"no such file: {s}")
@@ -529,14 +541,15 @@ def main(argv):
     LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                     + "".join(f"--- seed {s} ---\n" for s in seeds) + f"--- prompt ---\n{prompt}\n")
+                     + "".join(f"--- seed {s} ---\n" for s in seeds) + "".join(f"--- keep {k} ---\n" for k in keep)
+                     + f"--- prompt ---\n{prompt}\n")
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
         for s in seeds:
             dst = SANDBOX_ROOT / s.resolve().name
             shutil.copytree(s, dst) if s.is_dir() else shutil.copy(s, dst)
-        answer = run(prompt)
+        answer = run(prompt, keep)
         (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
         print(answer)
     finally:
