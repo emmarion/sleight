@@ -11,6 +11,7 @@ HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 EFFORT = os.environ.get("PI_EFFORT", "").strip()
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "200"))
+MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/self/slc"))
 OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
@@ -422,9 +423,19 @@ ADAPTERS = {"anthropic": Anthropic, "neuralwatt": OpenAICompat, "local": Local}
 
 def run(prompt):
     api = ADAPTERS[PROVIDER]()
-    messages = [{"role": "user", "content": prompt}]
+    messages, empty = [{"role": "user", "content": prompt}], 0
     for turn in range(MAX_TURNS):
         assistant, text, calls = api.parse(api.send(messages))
+        if not calls and not text.strip():
+            empty += 1
+            if empty >= MAX_EMPTY:
+                return f"(gave up after {empty} empty replies in a row)"
+            nudge = "[Your reply was empty. Continue with a tool call, or call `done` if you are finished.]"
+            _say(f"[empty reply {empty}/{MAX_EMPTY}]")
+            _log(TRANSCRIPT, f"\n{nudge}\n")
+            messages.append({"role": "user", "content": nudge})
+            continue
+        empty = 0
         messages.append(assistant)
         _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
         if not calls:
