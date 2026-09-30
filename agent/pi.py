@@ -448,8 +448,18 @@ def run(prompt):
 
 def main(argv):
     global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT
+    seeds = []
+    while argv[:1] == ["-f"] and len(argv) > 1:
+        seeds.append(Path(argv[1]))
+        argv = argv[2:]
     if not argv:
-        sys.exit("usage: pi.py PROMPT-FILE ...   (the files are joined into one prompt)")
+        sys.exit("usage: pi.py [-f PATH]... PROMPT-FILE ...   (the prompt files are joined into one prompt;\n"
+                 "        each -f file or directory is copied into the sandbox root under its own name)")
+    for s in seeds:
+        if not s.exists():
+            sys.exit(f"no such file: {s}")
+    if len({s.resolve().name for s in seeds}) < len(seeds):
+        sys.exit("two -f paths share a name")
     if PROVIDER not in ADAPTERS:
         sys.exit(f"unknown provider {PROVIDER!r}; try: {', '.join(ADAPTERS)}")
     if not os.access(SLC, os.X_OK):
@@ -465,10 +475,14 @@ def main(argv):
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
-    _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n--- prompt ---\n{prompt}\n")
+    _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                     + "".join(f"--- seed {s} ---\n" for s in seeds) + f"--- prompt ---\n{prompt}\n")
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
+        for s in seeds:
+            dst = SANDBOX_ROOT / s.resolve().name
+            shutil.copytree(s, dst) if s.is_dir() else shutil.copy(s, dst)
         answer = run(prompt)
         (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
         print(answer)
