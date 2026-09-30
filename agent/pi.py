@@ -553,11 +553,10 @@ def run(prompt):
     phase, turn, start = "experiment", 0, 0
     ok = lambda c: c["name"] == "done" or c["name"] in ("read", "write", "edit") and os.path.normpath(str(c["input"].get("path", ""))) in KEEP
 
-    def rewrite(ran_out):
+    def rewrite():
         nonlocal phase, turn, start
         phase, turn, start = "rewrite", 0, used
-        lead = "The experiment phase's budget ran out; now" if ran_out else "Now"
-        return f"[{lead} entering the rewrite phase, where only `read`, `write` and `edit` on {_kept_sizes()} and `done` are allowed.]"
+        return f"[Now entering the rewrite phase, where only `read`, `write` and `edit` on {_kept_sizes()} and `done` are allowed.]"
 
     while True:
         reply = api.send(messages)
@@ -598,7 +597,7 @@ def run(prompt):
         exhausted = turn >= turns or tokens is not None and used - start >= tokens
         if exhausted and phase == "rewrite":
             return f"(the rewrite phase's budget ran out after {turn} turns)"
-        note = rewrite(not finished) if finished or exhausted else ""
+        note = ("" if finished else f"[The {phase} phase's budget ran out.]\n") + rewrite() if finished or exhausted else ""
         note += f"\n[{phase} phase: {turns - turn} turn{'s' * (turns - turn != 1)}" + (f" and {tokens - (used - start)} tokens" if tokens else "") + " left]"
         _log(TRANSCRIPT, f"\n{note.strip()}\n")
         if calls:
