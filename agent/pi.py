@@ -13,6 +13,7 @@ EFFORT = os.environ.get("PI_EFFORT", "").strip()
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "200"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
+CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "50"))
 WARN_TURNS = int(os.environ.get("PI_WARN_TURNS", "5"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/self/slc"))
 OCAMLOPT = ["ocamlfind", "ocamlopt", "-package", "zarith,unix", "-linkpkg"]
@@ -443,12 +444,13 @@ ADAPTERS = {"anthropic": Anthropic, "neuralwatt": OpenAICompat, "local": Local}
 
 def _context(usage, window):
     if not usage:
-        return
+        return 0
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
     line = f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)]" if window else "]")
     _say(line)
     _log(TRANSCRIPT, f"\n{line}\n")
+    return n
 
 
 def _turns(n):
@@ -462,9 +464,17 @@ def run(prompt, keep=()):
         not keep or os.path.normpath(str(c["input"].get("path", ""))) in keep)
     api = ADAPTERS[PROVIDER]()
     messages, empty = [{"role": "user", "content": prompt}], 0
+    limit = MAX_TURNS
     for turn in range(MAX_TURNS):
+        if turn == limit:
+            break
         reply = api.send(messages)
-        _context(reply.get("usage"), CONTEXT or api.window())
+        window = CONTEXT or api.window()
+        if window and _context(reply.get("usage"), window) >= window * CONTEXT_STOP / 100 and limit > turn + 1 + WARN_TURNS:
+            limit = turn + 1 + WARN_TURNS
+            note = f"[context past {CONTEXT_STOP:g}%: stopping after turn {limit}]"
+            _say(note)
+            _log(TRANSCRIPT, f"\n{note}\n")
         assistant, text, calls = api.parse(reply)
         if not calls and not text.strip():
             empty += 1
@@ -488,8 +498,8 @@ def run(prompt, keep=()):
             try:
                 if "bad" in c:
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
-                if MAX_TURNS - turn <= WARN_TURNS and not ok(c):
-                    raise ValueError(f"{_turns(MAX_TURNS - turn)}, so this call was not run: only {allowed}, and `done`, are allowed now")
+                if limit - turn <= WARN_TURNS and not ok(c):
+                    raise ValueError(f"{_turns(limit - turn)}, so this call was not run: only {allowed}, and `done`, are allowed now")
                 out = TOOLS[c["name"]][0](**c["input"])
             except Exception as e:
                 out = f"error: {e}"
@@ -499,13 +509,13 @@ def run(prompt, keep=()):
         for c, out in zip(calls, outs):
             if c["name"] == "done" and "bad" not in c:
                 return out
-        left = MAX_TURNS - turn - 1
+        left = limit - turn - 1
         if 0 < left <= WARN_TURNS:
             note = f"\n\n[{_turns(left)}: from now on only {allowed}, and `done`, are allowed. Make sure your results are written, then call `done`.]"
             outs[-1] += note
             _log(TRANSCRIPT, note.lstrip() + "\n")
         messages += api.results(calls, outs)
-    return f"(stopped after {MAX_TURNS} turns)"
+    return f"(stopped after {limit} turns)"
 
 
 def main(argv):
