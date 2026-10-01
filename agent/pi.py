@@ -5,7 +5,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
 PROVIDER = os.environ.get("PI_PROVIDER", "neuralwatt")
-DEFAULT_MODELS = {"anthropic": "claude-haiku-4-5", "neuralwatt": "glm-5.3", "local": os.environ.get("PI_LOCAL_MODEL", "")}
+DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "glm-5.3", "local": os.environ.get("PI_LOCAL_MODEL", "")}
 MODEL = os.environ.get("PI_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
 MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
@@ -404,21 +404,40 @@ class ThinkLog:
         self.f = None
 
 
+def _sse(r):
+    for raw in r:
+        line = raw.decode("utf-8", "replace").strip()
+        if not line.startswith("data: "):
+            continue
+        if line[6:] == "[DONE]":
+            return
+        try:
+            yield json.loads(line[6:])
+        except ValueError:
+            pass
+
+
+def assemble_responses(r):
+    think, reply = ThinkLog(), None
+    try:
+        for d in _sse(r):
+            if d.get("type") == "response.reasoning_summary_text.delta":
+                think.write(d.get("delta"))
+            elif d.get("type") in ("response.completed", "response.incomplete", "response.failed"):
+                reply = d["response"]
+    finally:
+        think.close()
+    if reply is None:
+        raise ConnectionError("the response stream ended without a final response")
+    return reply
+
+
 def assemble_sse(r):
     content, reasoning, calls = [], [], {}
     finish = usage = None
     think = ThinkLog()
     try:
-        for raw in r:
-            line = raw.decode("utf-8", "replace").strip()
-            if not line.startswith("data: "):
-                continue
-            if line[6:] == "[DONE]":
-                break
-            try:
-                d = json.loads(line[6:])
-            except ValueError:
-                continue
+        for d in _sse(r):
             usage = d.get("usage") or usage
             for ch in d.get("choices") or []:
                 finish = ch.get("finish_reason") or finish
@@ -445,7 +464,7 @@ def assemble_sse(r):
     return {"choices": [{"message": msg, "finish_reason": finish}], **({"usage": usage} if usage else {})}
 
 
-def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), stream=False):
+def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), stream=None):
     global _LOG_N
     for attempt in range(tries):
         req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"content-type": "application/json", **headers})
@@ -454,7 +473,7 @@ def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), st
         t0 = time.time()
         try:
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as r:
-                reply = assemble_sse(r) if stream else json.loads(r.read())
+                reply = stream(r) if stream else json.loads(r.read())
             _log(LOG_PATH, f"---- response {_ts()} ({time.time() - t0:.1f}s) ----\n{json.dumps(reply, indent=2, ensure_ascii=False)}\n")
             return reply
         except urllib.error.HTTPError as e:
@@ -477,7 +496,7 @@ class Anthropic:
         return post(self.url, {
             "model": MODEL, "max_tokens": MAX_TOKENS, "system": SYSTEM,
             "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
-            "messages": messages,
+            "messages": messages, "cache_control": {"type": "ephemeral"},
         }, {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01"})
 
     def parse(self, reply):
@@ -530,21 +549,46 @@ class OpenAICompat:
             body["reasoning_effort"] = EFFORT
         if STREAM:
             body.update(stream=True, stream_options={"include_usage": True})
-        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": SESSION_ID}, stream=STREAM)
+        return post(self.base + "/chat/completions", body, {**self.auth(), "x-nw-conversation-id": SESSION_ID}, stream=assemble_sse if STREAM else None)
 
     def parse(self, reply):
         msg = reply["choices"][0]["message"]
-        calls = []
-        for c in msg.get("tool_calls") or []:
-            try:
-                calls.append({"id": c["id"], "name": c["function"]["name"], "input": json.loads(c["function"]["arguments"] or "{}")})
-            except ValueError:
-                calls.append({"id": c["id"], "name": c["function"]["name"], "input": {}, "bad": c["function"]["arguments"]})
-                c["function"]["arguments"] = "{}"
-        return msg, msg.get("content") or "", calls
+        return msg, msg.get("content") or "", [_call(c["id"], c["function"]) for c in msg.get("tool_calls") or []]
 
     def results(self, calls, outs):
         return [{"role": "tool", "tool_call_id": c["id"], "content": o} for c, o in zip(calls, outs)]
+
+
+def _call(call_id, fn):
+    try:
+        return {"id": call_id, "name": fn["name"], "input": json.loads(fn["arguments"] or "{}")}
+    except ValueError:
+        bad, fn["arguments"] = fn["arguments"], "{}"
+        return {"id": call_id, "name": fn["name"], "input": {}, "bad": bad}
+
+
+class OpenAI(OpenAICompat):
+    base, key_env, _model = "https://api.openai.com/v1", "OPENAI_API_KEY", None
+
+    def window(self):
+        return None
+
+    def send(self, messages):
+        return post(self.base + "/responses", {
+            "model": MODEL, "max_output_tokens": MAX_TOKENS, "instructions": SYSTEM,
+            "tools": [{"type": "function", "name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "parameters": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
+            "input": [item for m in messages for item in (m if isinstance(m, list) else [m])],
+            "reasoning": {"summary": "auto", **({"effort": EFFORT} if EFFORT else {})},
+            "store": False, "include": ["reasoning.encrypted_content"], "stream": STREAM,
+        }, self.auth(), stream=assemble_responses if STREAM else None)
+
+    def parse(self, reply):
+        items = reply["output"]
+        text = "".join(p.get("text", "") for i in items if i["type"] == "message" for p in i["content"])
+        return items, text, [_call(i["call_id"], i) for i in items if i["type"] == "function_call"]
+
+    def results(self, calls, outs):
+        return [{"type": "function_call_output", "call_id": c["id"], "output": o} for c, o in zip(calls, outs)]
 
 
 class Local(OpenAICompat):
@@ -561,18 +605,34 @@ class Local(OpenAICompat):
         return dict({k: v for k, v in msg.items() if v is not None}, role="assistant", content=text or ""), text, calls
 
 
-ADAPTERS = {"anthropic": Anthropic, "neuralwatt": OpenAICompat, "local": Local}
+ADAPTERS = {"anthropic": Anthropic, "openai": OpenAI, "neuralwatt": OpenAICompat, "local": Local}
+CACHE_MIN = 1024
 
 
-def _context(usage, window):
+def _prompt(usage):
+    details = usage.get("prompt_tokens_details") or usage.get("input_tokens_details") or {}
+    cached = details.get("cached_tokens", usage.get("cache_read_input_tokens"))
+    total = usage.get("prompt_tokens") or sum(usage.get(k) or 0 for k in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
+    return total, cached
+
+
+def _context(usage, window, prev_prompt):
     if not usage:
-        return 0
+        return 0, prev_prompt
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
-    line = f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)]" if window else "]")
-    _say(line)
-    _log(TRANSCRIPT, f"\n{line}\n")
-    return n
+    prompt, cached = _prompt(usage)
+    lines = [f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)" if window else "")
+             + (f", {100 * cached / prompt:.0f}% of the prompt cached]" if cached is not None and prompt else "]")]
+    if cached is None and prev_prompt == 0:
+        lines.append("[cache warning: the provider reports no cached-token count, so caching cannot be checked]")
+    elif cached is not None and prev_prompt >= CACHE_MIN and cached < prev_prompt / 2:
+        lines.append(f"[cache warning: only {cached:,} of {prompt:,} prompt tokens were cached, "
+                     f"though the previous request's {prev_prompt:,}-token prompt could have been]")
+    for line in lines:
+        _say(line)
+        _log(TRANSCRIPT, f"\n{line}\n")
+    return n, prompt
 
 
 REWRITE_TOOLS, SCOPED_TOOLS = ("read", "write", "edit", "grep", "ls"), ("grep", "ls")
@@ -589,7 +649,7 @@ def _kept_sizes():
 
 def run(prompt):
     api = ADAPTERS[PROVIDER]()
-    messages, empty = [{"role": "user", "content": prompt}], 0
+    messages, empty, prompt_tokens = [{"role": "user", "content": prompt}], 0, 0
     window = CONTEXT or api.window()
     turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
     phase, turn, start = "experiment", 0, 0
@@ -603,7 +663,7 @@ def run(prompt):
 
     while True:
         reply = api.send(messages)
-        used = _context(reply.get("usage"), window)
+        used, prompt_tokens = _context(reply.get("usage"), window, prompt_tokens)
         turn += 1
         assistant, text, calls = api.parse(reply)
         if not calls and not text.strip():
@@ -745,9 +805,9 @@ def main(argv):
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
                  "environment (defaults in brackets):\n"
-                 "  PI_PROVIDER       neuralwatt, anthropic or local [neuralwatt]\n"
-                 "  PI_MODEL          [glm-5.3, claude-haiku-4-5, or PI_LOCAL_MODEL, by provider]\n"
-                 "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
+                 "  PI_PROVIDER       neuralwatt, anthropic, openai or local [neuralwatt]\n"
+                 "  PI_MODEL          [glm-5.3, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
+                 "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
                  "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
                  "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
                  "  PI_CONTEXT_STOP   context per phase, in % of the window [20]\n"
