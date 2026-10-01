@@ -16,6 +16,7 @@ MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
+REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
@@ -364,6 +365,8 @@ def _say(text):
 
 
 def _log(path, text):
+    if path is None:
+        return
     try:
         with open(path, "a", encoding="utf-8") as f:
             f.write(text)
@@ -763,7 +766,7 @@ def session(run_dir, prompt, seeds):
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
-    LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log", RUN_DIR / "transcript.log"
+    LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log" if REQUESTS_LOG else None, RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                      + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k}" + (f", at most {cap} bytes" if cap else "") + " ---\n" for k, cap in sorted(KEEP.items()))
@@ -854,6 +857,7 @@ def main(argv):
                  "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
                  "  PI_MAX_EMPTY      empty replies in a row before giving up [3]\n"
                  "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
+                 "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
                  "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
                  "  PI_SLC            the compiler [../_build/release/slc]")
     for s in seeds:
