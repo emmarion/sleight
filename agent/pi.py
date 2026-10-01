@@ -691,6 +691,10 @@ def _allowed(caps=False):
     return f"{REWRITE_NAMES} on " + ", ".join(k + (_cap(k) if caps else "") for k in sorted(KEEP))
 
 
+def _over():
+    return [(k, cap, size) for k, cap in sorted(KEEP.items()) if cap and (size := _size(k)) > cap]
+
+
 def _kept_sizes():
     return ", ".join(f"{k} ({_size(k)} bytes" + (f", at most {cap})" if cap else ")") for k, cap in sorted(KEEP.items()))
 
@@ -731,6 +735,7 @@ def run(prompt):
             _log(TRANSCRIPT, f"\n>>> {_ts()} {c['name']}" + "".join(
                 f"\n  {k}:\n{v}" if isinstance(v, str) and "\n" in v else f" {k}={json.dumps(v, ensure_ascii=False)}"
                 for k, v in c["input"].items()) + (f"\n  (invalid arguments) {c['bad']}" if "bad" in c else "") + "\n")
+            before = {k: _size(k) for k in KEEP}
             try:
                 if "bad" in c:
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
@@ -742,6 +747,10 @@ def run(prompt):
                 out = f"error: {e}"
             _say(f"[{c['name']}] {str(c['input'])[:70]}")
             _log(TRANSCRIPT, f"<<< {_ts()}\n{out}\n")
+            for k in KEEP:
+                if c["name"] not in ("write", "edit") and (size := _size(k)) != before[k]:
+                    _say(line := f"{k} changed outside write/edit: {before[k]} -> {size} bytes")
+                    _log(TRANSCRIPT, f"{line}\n")
             outs.append(out)
         finished = not calls or any(c["name"] == "done" and "bad" not in c for c in calls)
         if finished and phase == "rewrite":
@@ -750,6 +759,8 @@ def run(prompt):
         if exhausted and phase == "rewrite":
             return f"(the rewrite phase's budget ran out after {turn} turns)"
         note = ("" if finished else f"[The {phase} phase's budget ran out.]\n") + rewrite() if finished or exhausted else ""
+        note += "".join(f"\n[Warning: {k}: {size} bytes (at most {cap}). It will be truncated at session end; "
+                        "currently only shrinking edits are allowed.]" for k, cap, size in _over())
         note += f"\n[{phase} phase: {turns - turn} turn{'s' * (turns - turn != 1)}" + (f" and {tokens - (used - start)} tokens" if tokens else "") + " left]"
         _log(TRANSCRIPT, f"\n{note.strip()}\n")
         if calls:
@@ -793,6 +804,13 @@ def session(run_dir, prompt, seeds):
         (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
         print(answer)
     finally:
+        for k, cap, size in _over():
+            data, cut = read_bytes(k), cap
+            while cut and data[cut] & 0xC0 == 0x80:
+                cut -= 1
+            write_bytes(k, data[:cut])
+            _say(line := f"{k} truncated at session end: {size} -> {cut} bytes")
+            _log(TRANSCRIPT, f"\n{line}\n")
         (RUN_DIR / "sandbox").unlink()
         shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
         shutil.rmtree(SANDBOX_ROOT)
