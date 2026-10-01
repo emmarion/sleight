@@ -47,7 +47,7 @@ box_dir() { local name; name=$(droplet "$1" | cut -d' ' -f2); echo "agent/result
 
 live() { connect pi@"$1" && $SSH pi@"$1" 'for f in ~/sl/agent/results/*/pid; do [ -f "$f" ] && ps -p "$(cat "$f")" -o command= | grep -q pi.py && basename "${f%/pid}"; done; true'; }
 
-unfetched() { connect pi@"$1" && rsync -an --out-format=%n -e "$SSH" pi@"$1":sl/agent/results/ "$(box_dir "$1")/" | grep -v '/$' || true; }
+unfetched() { connect pi@"$1" && rsync -an --copy-unsafe-links --out-format=%n -e "$SSH" pi@"$1":sl/agent/results/ "$(box_dir "$1")/" | grep -v '/$' || true; }
 
 start() {
     local ip=$1 log run vars dir=
@@ -149,7 +149,7 @@ fetch)
     dir=$(box_dir "$1")
     mkdir -p "$dir"
     connect pi@"$1"
-    rsync -a -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
+    rsync -a --copy-unsafe-links -e "$SSH" pi@"$1":sl/agent/results/ "$dir/"
     echo "fetched into $dir ($(du -sh "$dir" | cut -f1))"
     ;;
 destroy)
