@@ -766,6 +766,8 @@ def session(run_dir, prompt, seeds):
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
+    for k in KEEP:
+        (RUN_DIR / f"sandbox-{k.replace('/', '-')}").symlink_to(Path("sandbox", k))
     LOG_PATH, TRANSCRIPT = RUN_DIR / "requests.log" if REQUESTS_LOG else None, RUN_DIR / "transcript.log"
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
