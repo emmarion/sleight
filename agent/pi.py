@@ -350,8 +350,8 @@ TOOLS = {
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown.",
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR}, ["paths"]),
-    "done": (done, "The first call ends the experiment phase and starts the rewrite phase, which continues this conversation with a fresh budget of the same size "
-                   "and allows only {allowed}, and `done`. The second call ends the session. Pass a one-line summary.",
+    "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
+                   "budget of the same size, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
 }
 PARAMS = {n: {"type": "object", "properties": props, "required": req} for n, (_, _, props, req) in TOOLS.items()}
