@@ -2221,9 +2221,15 @@
   (let ((many out) (many seen)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) (Nil _))
   (values (rope-str out) (meta-notes e seen)))
 
+(def-fns _ $ (many env-notes : (many (Env) e) (subterm many (List $ Pair (Loc) $ String) notes) -> (many (Env) r))
+  (let-match many notes (Cons _ n rest) ((Nil _) e))
+  (let-match many n (MkPair _ _ l m))
+  (tail $ env-notes (env-report e $ located (env-at-loc e l) ": note: " m) rest))
+(def-fns _ $ (many env-error-with : (many (Env) e) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (Env) r))
+  (let ((many msg) (many mnotes)) $ metas-in e x)
+  (env-report-all (env-notes (env-report e $ located e ": error: " msg) notes) mnotes))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (let ((many msg) (many notes)) $ metas-in e x)
-  (env-report-all (env-report e $ located e ": error: " msg) notes))
+  (env-error-with e (Nil _) x))
 ; An error about two places names both: the note is a second location, written under the message as a
 ; warning's note is, rather than described in the message's prose (ASSUMPTIONS 194).
 (def-fns _ $ (many env-note-at : (many (Env) e) (many (Loc) l) (many (String) x) -> (many (Env) r))
@@ -2473,13 +2479,28 @@
   (tail $ uses-join-at two (notail $ uses-join-at one b1 (nat-add offset stride) stride2) (nat-add offset stride2) stride2))
 (def-fns _ $ (many uses-join : (many (IdMap $ Use) a) (many (IdMap $ Use) b) -> (many (IdMap $ Use) r))
   (uses-join-at a b 0 1))
+(def-fns _ $ (many misuse : (many (Mult) demand) (many (Mult) supply) -> (many (Maybe $ String) r))
+  (match many supply _
+    ((Erased) (match many (mult-is-many demand) _ ((BTrue) (Some _ "used in a non-erased position")) ((BFalse) (None _))))
+    ((Many) (match many demand _ ((Once) (Some _ "used at unique")) (else (None _))))
+    ((Once) (match many demand _ ((Many) (Some _ "used at many without `share`")) (else (None _))))))
+
+(def-fns _ $ (many check-mult : (many (Env) env) (many (List $ Pair (Loc) $ String) notes) (many (String) what) (many (Mult) demand) (many (Mult) supply) -> (many (Env) r) (many (Bool) bad))
+  (let-match many (env-usage-erased env) (BFalse) ((BTrue) (values env $ BFalse)))
+  (let-match many (misuse demand supply) (Some _ how) ((None _) (values env $ BFalse)))
+  (values (env-error-with env notes $ str-cat3 what ", " how) $ BTrue))
+
+(def-fns _ $ (many declared : (many (Env) env) (many (String) how) (many (Nat) x) -> (many (List $ Pair (Loc) $ String) r))
+  (match many (env-entry-at env x) _
+    ((None _) (Nil _))
+    ((Some _ l) (Cons _ (MkPair _ _ l $ str-cat3 (qname env x) " is declared" $ str-cat how " here") $ Nil _))))
+
 (def-fns _ $ (many use-entry : (many (Env) env) (many (Mult) pos) (many (Nat) x) (many (Bool) sharing) -> (many (Env) r))
   (let-match many (and (mult-is-many pos) $ not $ env-usage-erased env) (BTrue) ((BFalse) env))
   (let ((many m)) (entry-mult-of env x))
-  (let-match many m (Once)
-    ((Erased) (env-error env $ str-cat3 "erased value " (qname env x) " used in a non-erased position"))
-    ((Many) (match many (mult-is-once pos) _ ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "many value " (qname env x) " used at unique")))))
-  (let ((many env1)) (match many (and (not $ mult-is-once pos) $ not sharing) (((Env) _)) ((BFalse) env) ((BTrue) (env-error env $ str-cat3 "unique value " (qname env x) " needs an explicit `share`"))))
+  (let ((many supply)) $ match many (and sharing $ not $ mult-is-once pos) (((Mult) _)) ((BTrue) (Many)) ((BFalse) m))
+  (let ((many env1) (many _)) $ check-mult env (declared env "" x) (str-cat3 (qname env x) ", declared " $ tick $ mult-name m) pos supply)
+  (let-match many m (Once) (else env1))
   (let ((many env2)) (match many (and (mult-is-once pos) $ list-mem-bin (env-captures env) x) (((Env) _)) ((BFalse) env1) ((BTrue) (env-error env1 $ str-cat3 "`def-fns` cannot capture " (qname env x) " at unique"))))
   (let ((many (Maybe $ Pair (Loc) $ String) conflict))
     (match many (idmap-get _ x $ env-uses env2) (((Maybe $ Pair (Loc) $ String) _))

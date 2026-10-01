@@ -339,13 +339,24 @@ let rec merge_opens (Forcing env) =
 let join_uses a b =
   IntMap.union (fun _ (x, lx) (y, ly) -> Some (if x = Consumed then (x, lx) else if y = Consumed then (y, ly) else (x, lx))) a b
 
+let misuse demand supply =
+  if demand <> Erased && supply = Erased then Some "used in a non-erased position"
+  else if demand = Unique && supply = Many then Some "used at unique"
+  else if demand = Many && supply = Unique then Some "used at many without `share`"
+  else None
+
+let check_mult env loc notes what demand supply =
+  if not env.usage_erased then Option.iter (fun how -> error_with loc notes "%s, %s" what how) (misuse demand supply)
+
+let declared env ?(how = "") x =
+  let e = entry env x in
+  if Reader.placed e.at then [ (e.at, Printf.sprintf "%s is declared%s here" (qname env x) how) ] else []
+
 let use env loc ?(sharing = false) mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  if e.mult = Erased then error loc "erased value %s : %s used in a non-erased position" (qshow env (Var x)) (qshow env (type_of env x));
-  if mult = Unique && e.mult <> Unique then error loc "many value %s used at unique" (qname env x);
+  check_mult env loc (declared env x) (Printf.sprintf "%s, declared `%s`" (qname env x) (mult_name e.mult)) mult (if sharing && mult = Many then Many else e.mult);
   if e.mult <> Unique then env else (
-    if mult = Many && not sharing then error loc "unique value %s needs an explicit `share`" (qname env x);
     if mult = Unique && List.mem x env.captures then error loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
      | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (qname env x)

@@ -1,4 +1,4 @@
-; error: many value
+; error: `(share f)`, shared and so many, used at unique
 (def-lvl answer-level)
 (def-fns _ $ (many choose : (many (Nat) tag) (unique (UniqueFn answer-level -> (many (Nat) r)) f) -> (many (Nat) r))
   ((match many tag (((UniqueFn answer-level -> (many (Nat) r)) g))

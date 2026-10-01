@@ -155,6 +155,9 @@ let rec infer env loc t =
 let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).mult; place = Some (Var x) }
 let settle_res env loc r = settle env loc r.term; settle env loc r.ty
 let non_erased env ids = List.filter (fun x -> (entry env x).mult <> Erased) ids
+let head_name env h = match h.term with Var x -> qname env x | t -> qshow env t
+let head_notes env h = match h.term with Var x -> declared env ~how:(Printf.sprintf " `%s`" (mult_name (entry env x).mult)) x | _ -> []
+
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased; place = None }
 
 (* Opens [x], a Matchable entry (section 19): its constructors must be distinct after canonicalization,
@@ -741,10 +744,7 @@ let rec elab_expr ?(demand = Fixed) ?(cc = V.Plain) ?tele env expect raw : Env.t
   count_check l expect ress;
   List.iter2 (fun m r ->
     let m = demanded env demand m r.ty in
-    if not outer_erased then (
-    if m <> Erased && r.erasure = Erased then error l "erased value %s : %s used in a non-erased position" (qshow env r.term) (qshow env r.ty);
-    if m = Unique && r.erasure = Many then error l "many value %s used at unique" (qshow env r.term);
-    if m = Many && r.erasure = Unique then error l "unique value %s needs an explicit `share`" (qshow env r.term))) expect ress;
+    if not outer_erased then Option.iter (fun how -> error l "internal: an unchecked result %s" how) (misuse m r.erasure)) expect ress;
   ({ env with usage_erased = outer_erased }, ress, code)
 
 and elab_expr1 ?demand ?cc ?tele env mult raw =
@@ -775,7 +775,7 @@ and elab_form demand cc expect_tele env expect raw =
               let env, acc = elab_term_args env l ?expect:expect_tele tele h.term args in
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased; place = None } ], V.CErased)
           | ValCtor (tele, ret) ->
-              if pos <> Erased && h.erasure = Erased then error l "erased constructor %s in a non-erased position" (qshow env h.term);
+              if pos <> Erased && h.erasure = Erased then error_with l (head_notes env h) "erased constructor %s in a non-erased position" (head_name env h);
               let pos = demanded env demand pos ret in
               if pos <> Erased then warn_use env (loc head) "application of" h.term;
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
@@ -785,8 +785,8 @@ and elab_form demand cc expect_tele env expect raw =
               let place = if is_wrapper && pos <> Erased then List.find_map (fun (e, a) -> if e.mult <> Erased then Some a else None) (List.combine tele (List.rev acc)) else None in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], wrap code)
           | Cell (c, slots) -> elab_cell_invoke env expect l h hcode c slots args
-          | UniqueFn (lv, params, rets) -> elab_call ~unique:true cc env ?tele:expect_tele expect l h hcode lv params rets args arg
-          | Fn (lv, params, rets) -> elab_call cc env ?tele:expect_tele expect l h hcode lv params rets args arg
+          | UniqueFn (lv, params, rets) -> elab_call ~unique:true ~demand cc env ?tele:expect_tele expect l h hcode lv params rets args arg
+          | Fn (lv, params, rets) -> elab_call ~demand cc env ?tele:expect_tele expect l h hcode lv params rets args arg
           | ty -> error l "%s : %s is not applicable" (qshow env h.term) (qshow env ty) in
           (env, rs, headwrap code)))
 
@@ -801,10 +801,10 @@ and elab_head env pos l raw =
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
       (env,res_of env x,V.CVar x,fun body -> V.CLet ([x],code,body))
 
-and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params rets args arg =
+and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l callee hcode lv params rets args arg =
   let pos = pos_of expect in
-  if pos <> Erased && callee.erasure = Erased then error l "erased function %s called in a non-erased position" (qshow env callee.term);
-  if unique && pos <> Erased && callee.erasure = Many then error l "a shared `UniqueFn` is callable only erased";
+  if pos <> Erased && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
+  if unique && pos <> Erased && callee.erasure = Many then error_with l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
   let env = match callee.term with Var x -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
   let annotation, args =
     let rec go i acc = function
@@ -859,6 +859,12 @@ and elab_call ?(unique = false) cc env ?tele expect l callee hcode lv params ret
   in
   let env, ids = open_tele env ~word:false ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check l expect ids;
+  let callee_name = match callee.term with Var x -> qname env x | _ -> "this call" in
+  List.iter2 (fun (m, (e : entry)) x ->
+    let name = match e.name with Some n -> tick n ^ " " | None -> "" in
+    let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
+    check_mult env l notes (Printf.sprintf "the return %sof %s, declared `%s`" name callee_name (mult_name e.mult)) (demanded env demand m (type_of env x)) (entry env x).mult)
+    (List.combine expect rets) ids;
   let code =
     if pos = Erased then V.CErased else
     let _, physical, returned = List.fold_left2 (fun (acc, physical, returned) (e : entry) x ->
@@ -899,7 +905,11 @@ and elab_special demand tele env expect l sp args =
     let env, p, _ = elab_expr1 ?tele env Erased raw in
     settle_res env l p;
     (env, expect_proof env l ctor p.term) in
-  let erased (env, r) = (env, [ r ], V.CErased) in
+  let form = tick (Reader.show (List (l, Atom (l, Sp.name sp) :: args))) in
+  let produced env notes what ty supply = check_mult env l notes (form ^ ", " ^ what) (demanded env demand m ty) supply in
+  let erased (env, r) =
+    produced env [] (if sp = Sp.LevelOf then "a `Level` and so erased" else "a proof and so erased") r.ty Erased;
+    (env, [ r ], V.CErased) in
   let mint env ty =
     let env = match expected_type env with Some want -> solve "type" env l ty want | None -> env in
     erased (mint env (metaless env ty)) in
@@ -934,6 +944,7 @@ and elab_special demand tele env expect l sp args =
         (Option.value items ~default:(List.init ct.arity (fun _ -> Atom (l,"_")))) in
       let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.VToken)) in
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
+      produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
       (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ u; List (_, c :: items) ] ->
       let env, r, input = elab_expr1 env (under pos Unique) u in
@@ -945,6 +956,7 @@ and elab_special demand tele env expect l sp args =
       let ct, _, _ = cell_shape env l c in
       let env, slots, writes, wrap = cell_items env pos l slots items in
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
+      produced env [] "a cell and so unique" (type_of env x) (entry env x).mult;
       let env = match r.place with Some p -> at_merge env (Var x) p | None -> env in
       (env, [ { (res_of env x) with place = r.place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap (V.CCellWrite (ct, code, writes))))
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
@@ -963,6 +975,7 @@ and elab_special demand tele env expect l sp args =
             (use env al ~sharing:true Many x, res_of env x, V.CVar x)
         | _ -> elab_expr1 env Unique a
       in
+      produced env [] "shared and so many" r.ty Many;
       (env, [ { r with erasure = Many } ], code)
   | Sp.Values, _ ->
       count_check l expect args;
@@ -986,6 +999,9 @@ and elab_special demand tele env expect l sp args =
       (env, ress, code)
   | Sp.MatchableOf, [ t ] ->
       let x, _, _ = find_matchable env l (tyname env l t) in
+      let e = entry env x in
+      let notes = if Reader.placed e.at then [ (e.at, "the `open-adt` is here") ] else [] in
+      produced env notes (Printf.sprintf "opened `%s` by an `open-adt`" (mult_name e.mult)) (type_of env x) e.mult;
       (env, [ res_of env x ], matchable_code env m x)
   | Sp.OpenAbsurd, [ e; ann ] ->
       open_contradicts env l e;
@@ -1024,8 +1040,8 @@ and elab_special demand tele env expect l sp args =
   | Sp.PredatesSubterm, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.subterm, q)
         (function [ _; x; lv ], [ b; y; _; x' ] -> ((x', x), (Prelude.predates, [ b; y; lv ])) | _ -> assert false)
-  | Sp.Coerce, [ a; p ] -> (
-      let env, p = proof env Prelude.coercible p in
+  | Sp.Coerce, [ a; praw ] -> (
+      let env, p = proof env Prelude.coercible praw in
       match p with
       | [ sa; _; a'; sb; b_ty; b ] ->
           let src = if pos = Erased then Erased else sharing_mult env l sa in
@@ -1034,6 +1050,8 @@ and elab_special demand tele env expect l sp args =
           settle_res env l a;
           check_equal env l a.term a';
           let x, env = bind env None dst Dyn b_ty ~rule:b in
+          let notes = match praw with Atom (_, n) -> (match lookup env n with Some y -> declared env y | None -> []) | _ -> [] in
+          produced env notes (Printf.sprintf "at %s by the target side of %s's type" (qshow env sb) (tick (Reader.show praw))) b_ty dst;
           let env = match a.place with Some p -> at_merge env (Var x) p | None -> env in
           (env, [ { (res_of env x) with place = a.place } ], code)
       | _ -> assert false)
@@ -1350,7 +1368,7 @@ and open_binding env l mult raw =
   (match canon inner r.ty with Matchable _ -> () | ty -> error l "%s : %s is not a `Matchable`" (qshow inner r.term) (qshow inner ty));
   let value = if env.run_pos && mult <> Erased then List.hd (run_code inner code) else V.VToken in
   let state = if env.run_pos then Const value else match r.term with Var y -> (entry inner y).state | _ -> Dyn in
-  let x, env' = bind inner None mult state r.ty ~rule:r.term in
+  let x, env' = bind inner ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
 and elab_body ?tele env expect l = function

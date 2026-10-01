@@ -1,5 +1,5 @@
-; error: : `(Nat)` used in a non-erased position
-; The type printed for an is return instantiated with an alias-typed argument is the canonical one.
+; error: `r`, declared `erased`, used in a non-erased position
+; An erased binder is named as written, not by its canonical form.
 
 (let ((erased Alias)) (Nat))
 
