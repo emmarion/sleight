@@ -1970,7 +1970,7 @@
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
        (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics)
-       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (String) help) -> (Env)))
+       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
@@ -2129,10 +2129,10 @@
 ; The scope the prelude left, which generated forms elaborate in (lib/elab.ml's in_prelude).
 (def-fns _ $ (many env-set-prelude : (many (Env) e) (many (Scope) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo _ us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo x us hn))))
-(def-fns _ $ (many env-help : (many (Env) e) -> (many (String) r))
+(def-fns _ $ (many env-help : (many (Env) e) -> (many (List $ String) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn) hn)))
 (def-fns _ $ (many env-set-help : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us x))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us $ split-on x 10))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
@@ -2882,7 +2882,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty ""))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ name) (None _) (BFalse) (Erased) ty rule delegate-id)
