@@ -212,7 +212,7 @@ def _spawn_exec_limited(cmd, env):
     return exec_
 
 
-def _group_mb(pgid):
+def _group_mb_darwin(pgid):
     libc, pids = ctypes.CDLL(None), (ctypes.c_int * 4096)()
     n = libc.proc_listpids(2, pgid, pids, ctypes.sizeof(pids)) // ctypes.sizeof(ctypes.c_int)
     usage, total = ctypes.create_string_buffer(256), 0
@@ -222,10 +222,32 @@ def _group_mb(pgid):
     return total >> 20
 
 
+def _group_mb_linux(pgid):
+    total = 0
+    for p in Path("/proc").glob("[0-9]*/stat"):
+        try:
+            fields = p.read_text().rsplit(")", 1)[1].split()
+            total += int(fields[21]) * os.sysconf("SC_PAGE_SIZE") if int(fields[2]) == pgid else 0
+        except (OSError, IndexError, ValueError):
+            pass
+    return total >> 20
+
+
+def _limited_linux(cmd, env):
+    scope = ["/usr/bin/systemd-run", "--user", "--scope", "--quiet", "--collect", "-p", f"MemoryMax={MEM_MB}M", "-p", "MemorySwapMax=0", "--"]
+    return [*scope, "/usr/bin/env", "-i", *(f"{k}={v}" for k, v in env.items()), *cmd], \
+        {k: os.environ[k] for k in ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS") if k in os.environ}, None
+
+
+LINUX = sys.platform == "linux"
+_group_mb = _group_mb_linux if LINUX else _group_mb_darwin
+_limited = _limited_linux if LINUX else lambda cmd, env: (cmd, env, _spawn_exec_limited(cmd, env))
+
+
 def _proc(cmd, cwd, timeout, stdin="", env=None):
-    env = os.environ if env is None else env
+    cmd, env, preexec = _limited(cmd, os.environ if env is None else env)
     with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          start_new_session=True, preexec_fn=_spawn_exec_limited(cmd, env)) as p:
+                          start_new_session=True, preexec_fn=preexec) as p:
         deadline, data, why = time.monotonic() + timeout, stdin.encode(), None
         try:
             while why is None:
@@ -290,7 +312,7 @@ def sl(paths, stdin="", args=(), capture=None):
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
-        why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={**os.environ, "TMPDIR": tmp})
+        why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
         if why or b.returncode:
             why = why or f"exited {b.returncode}"
             ml = Path(tmp, "p.ml")
