@@ -404,7 +404,17 @@ class ThinkLog:
         self.f = None
 
 
+RUNAWAY_WINDOW, RUNAWAY_PERIOD = 4000, 64
+
+
+def _streamed_text(d):
+    if (d.get("type") or "").endswith("_text.delta"):
+        return d.get("delta") or ""
+    return "".join((ch.get("delta") or {}).get(k) or "" for ch in d.get("choices") or [] for k in ("content", "reasoning", "reasoning_content"))
+
+
 def _sse(r):
+    tail, chars = "", 0
     for raw in r:
         line = raw.decode("utf-8", "replace").strip()
         if not line.startswith("data: "):
@@ -412,9 +422,18 @@ def _sse(r):
         if line[6:] == "[DONE]":
             return
         try:
-            yield json.loads(line[6:])
+            d = json.loads(line[6:])
         except ValueError:
-            pass
+            continue
+        piece = _streamed_text(d)
+        tail, chars = (tail + piece)[-RUNAWAY_WINDOW:], chars + len(piece)
+        if piece and len(tail) == RUNAWAY_WINDOW and any(tail[p:] == tail[:-p] for p in range(1, RUNAWAY_PERIOD + 1)):
+            note = f"[runaway repetition: the reply was cut off after {chars:,} characters]"
+            _say(note)
+            _log(TRANSCRIPT, f"\n{note}\n")
+            yield {"type": "runaway"}
+            return
+        yield d
 
 
 def assemble_responses(r):
@@ -425,6 +444,8 @@ def assemble_responses(r):
                 think.write(d.get("delta"))
             elif d.get("type") in ("response.completed", "response.incomplete", "response.failed"):
                 reply = d["response"]
+            elif d.get("type") == "runaway":
+                reply = {"output": [], "status": "incomplete", "incomplete_details": {"reason": "runaway repetition"}}
     finally:
         think.close()
     if reply is None:
@@ -439,6 +460,7 @@ def assemble_sse(r):
     try:
         for d in _sse(r):
             usage = d.get("usage") or usage
+            finish = "runaway repetition" if d.get("type") == "runaway" else finish
             for ch in d.get("choices") or []:
                 finish = ch.get("finish_reason") or finish
                 delta = ch.get("delta") or {}
