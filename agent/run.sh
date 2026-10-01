@@ -12,6 +12,9 @@ usage: $0 IP PI-ARGS...
        $0 resume [-n N] RUN-DIR [IP]
            continue a fetched or local run: on IP if it still has the run, else on a new droplet that gets
            HEAD and a copy of RUN-DIR; -n sets a new session total
+       $0 set-n IP [RUN] N
+           change a live run's session total, read before each session: a larger N continues it, a smaller
+           one stops it after the current session; RUN defaults to the box's only live run
        $0 sweep --models M,... [--size S] PI-ARGS...
            one new droplet per model; M is provider:model, or a model whose provider is guessed:
            claude-* anthropic, gpt-* openai, else neuralwatt
@@ -92,7 +95,7 @@ launch() {
 }
 
 cmd=start
-case "${1:-}" in new | resume | sweep | ls | status | fetch | destroy | reap) cmd=$1; shift ;; esac
+case "${1:-}" in new | resume | set-n | sweep | ls | status | fetch | destroy | reap) cmd=$1; shift ;; esac
 if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
     models=
     while :; do
@@ -161,6 +164,32 @@ ls)
         n=$(unfetched "$ip" 2>/dev/null | wc -l | tr -d ' ')
         [ "$n" = 0 ] || echo "    $n files not fetched"
     done 3< <(rows)
+    ;;
+set-n)
+    [ $# -eq 2 ] || [ $# -eq 3 ] || usage
+    ip=$1 n=${!#} runs=$(live "$1")
+    [[ $n =~ ^[0-9]+$ ]] || usage
+    if [ $# -eq 3 ]; then run=$2; else
+        [ "$(grep -c . <<<"$runs")" = 1 ] || { echo "$ip has $(grep -c . <<<"$runs") live runs; name one" >&2; exit 1; }
+        run=$runs
+    fi
+    grep -qx "$run" <<<"$runs" || { echo "$run is not live on $ip; continue it with $0 resume -n $n" >&2; exit 1; }
+    $SSH pi@"$ip" python3 - "$run" "$n" <<'PY'
+import json, os, sys
+from pathlib import Path
+d = Path.home() / "sl/agent/results" / sys.argv[1]
+f, n = d / "run.json", int(sys.argv[2])
+started = max((int(s.name) for s in d.iterdir() if s.name.isdigit()), default=1)
+if n < started:
+    print(f"clamped {n} to {started}: session {started} is already under way or done")
+    n = started
+rec = json.loads(f.read_text())
+old, rec["n"] = rec["n"], n
+tmp = f.with_name("run.json.tmp")
+tmp.write_text(json.dumps(rec, indent=1) + "\n")
+os.replace(tmp, f)
+print(f"{d.name}: n {old} -> {n}, read before its next session")
+PY
     ;;
 status)
     [ $# -eq 1 ] || usage

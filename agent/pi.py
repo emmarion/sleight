@@ -829,6 +829,13 @@ def _resume(loop, n):
     os.execve(sys.executable, [sys.executable, __file__, *args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
 
 
+def _live_n(loop, n, i):
+    m = json.loads((loop / "run.json").read_text())["n"]
+    if m != n:
+        _say(f"n: {n} -> {m} (before session {i})")
+    return m
+
+
 def _claim(loop):
     pid_file = loop / "pid"
     pid = pid_file.read_text().strip() if pid_file.exists() else ""
@@ -917,9 +924,9 @@ def main(argv):
     first = next((i for i in range(1, n + 1) if not (loop / f"{i:02}" / "answer.txt").exists()), n + 1)
     for d in sorted(d for d in loop.iterdir() if d.name.isdigit() and int(d.name) >= first):
         _set_aside(d)
-    prev = loop / f"{first - 1:02}" if first > 1 else None
+    prev, i = (loop / f"{first - 1:02}" if first > 1 else None), first
     try:
-        for i in range(first, n + 1):
+        while i <= (n := _live_n(loop, n, i)):
             carried = [(prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()]
             for attempt in range(1, SESSION_TRIES + 1):
                 _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
@@ -932,7 +939,7 @@ def main(argv):
                         sys.exit(f"session {i}/{n} failed {SESSION_TRIES} times; stopping (resume with -r {loop})")
                     if (loop / f"{i:02}").exists():
                         _set_aside(loop / f"{i:02}")
-            prev = loop / f"{i:02}"
+            prev, i = loop / f"{i:02}", i + 1
     finally:
         (loop / "pid").unlink(missing_ok=True)
 
