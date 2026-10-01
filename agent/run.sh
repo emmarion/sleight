@@ -150,14 +150,14 @@ sweep)
         gpt-*) p=openai ;;
         *) p=neuralwatt ;;
         esac
-        PI_PROVIDER=$p PI_MODEL=$m "$0" new "$@" 2>&1 | sed "s/^/[$m] /" &
+        PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m] /" &
     done
     wait
     ;;
 ls)
     while read -r ip id name size price age <&3; do
         echo "$ip  $name  $size  $price  $age"
-        if ! "$0" status "$ip" 2>/dev/null | sed 's/^/    /'; then echo "    (unreachable)"; fi
+        if out=$(agent/run.sh status "$ip" 2>/dev/null); then sed 's/^/    /' <<<"$out"; else echo "    (unreachable)"; fi
         n=$(unfetched "$ip" 2>/dev/null | wc -l | tr -d ' ')
         [ "$n" = 0 ] || echo "    $n files not fetched"
     done 3< <(rows)
@@ -224,7 +224,7 @@ reap)
         elif [ -n "$l" ]; then
             echo "skipping $name ($ip): $l is live"
         else
-            "$0" fetch "$ip" && "$0" destroy --yes "$ip"
+            agent/run.sh fetch "$ip" && agent/run.sh destroy --yes "$ip"
         fi
     done 3< <(rows)
     ;;
