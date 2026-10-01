@@ -308,7 +308,7 @@ def sl(paths, stdin="", args=(), capture=None):
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([SLC, "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([SLC, "--first-error", "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
