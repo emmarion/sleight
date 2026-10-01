@@ -157,11 +157,11 @@ def write(path, content):
     return f"wrote {write_bytes(path, content.encode())}"
 
 
-def edit(path, old, new):
+def edit(path, old_string, new_string):
     text = read_bytes(path).decode("utf-8", "replace")
-    if text.count(old) != 1:
-        return f"error: found {text.count(old)} matches, need exactly 1"
-    return f"edited {write_bytes(path, text.replace(old, new).encode())}"
+    if text.count(old_string) != 1:
+        return f"error: found {text.count(old_string)} matches, need exactly 1"
+    return f"edited {write_bytes(path, text.replace(old_string, new_string).encode())}"
 
 
 def ls(path=".", within=None):
@@ -339,7 +339,8 @@ TOOLS = {
     "read": (read, "Read a file, with line numbers. `offset` is the first line to show (from 1), `limit` how many (default 2000).",
              {"path": STR, "offset": INT, "limit": INT}, ["path"]),
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
-    "edit": (edit, "Replace exactly one occurrence of old with new", {"path": STR, "old": STR, "new": STR}, ["path", "old", "new"]),
+    "edit": (edit, "Replace exactly one occurrence of old_string with new_string", {"path": STR, "old_string": STR, "new_string": STR},
+             ["path", "old_string", "new_string"]),
     "ls": (ls, "List a directory, or a single file, with each file's size in bytes (and its cap, for a kept file); "
                "a trailing `/` marks a directory, `@` a symlink", {"path": STR}, []),
     "grep": (grep, "Regex search file contents", {"pattern": STR, "path": STR}, ["pattern"]),
@@ -354,6 +355,15 @@ TOOLS = {
              {"summary": STR}, []),
 }
 PARAMS = {n: {"type": "object", "properties": props, "required": req} for n, (_, _, props, req) in TOOLS.items()}
+
+
+def _check(name, args):
+    if name not in TOOLS:
+        raise ValueError(f"there is no tool `{name}`; the tools are {', '.join(TOOLS)}")
+    props, req = TOOLS[name][2], TOOLS[name][3]
+    if set(args) - set(props) or set(req) - set(args):
+        raise ValueError(f"`{name}` takes {', '.join(props)}" + (f" ({', '.join(req)} required)" if req and req != list(props) else "")
+                         + f", but got {', '.join(args) or 'no arguments'}, so the call was not run")
 
 
 def _ts():
@@ -724,6 +734,7 @@ def run(prompt):
             try:
                 if "bad" in c:
                     raise ValueError(f"the arguments were not valid JSON, so the call was not run: {c['bad'][:300]}")
+                _check(c["name"], c["input"])
                 if phase == "rewrite" and not ok(c):
                     raise ValueError(f"only {_allowed()}, and `done`, are allowed now")
                 out = TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] in SCOPED_TOOLS else {})))
