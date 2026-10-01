@@ -21,7 +21,7 @@ done
 cloud-init status --wait >/dev/null 2>&1 || true
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git tmux ocaml-nox ocaml-findlib libzarith-ocaml-dev ocaml-dune >/dev/null
+apt-get install -y -qq git tmux rsync ocaml-nox ocaml-findlib libzarith-ocaml-dev ocaml-dune >/dev/null
 id pi >/dev/null 2>&1 || useradd -m -s /bin/bash pi
 loginctl enable-linger pi
 install -d -o pi -g pi -m 700 /home/pi/.ssh
