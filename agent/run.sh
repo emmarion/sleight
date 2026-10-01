@@ -9,6 +9,9 @@ usage: $0 IP PI-ARGS...
            passing on PI_* variables
        $0 new [--size S] PI-ARGS...
            create a $TAG droplet in nyc3 (size $SIZE), then deploy and start
+       $0 resume [-n N] RUN-DIR [IP]
+           continue a fetched or local run: on IP if it still has the run, else on a new droplet that gets
+           HEAD and a copy of RUN-DIR; -n sets a new session total
        $0 sweep --models M,... [--size S] PI-ARGS...
            one new droplet per model; M is provider:model, or a model whose provider is guessed:
            claude-* anthropic, gpt-* openai, else neuralwatt
@@ -49,10 +52,29 @@ live() { connect pi@"$1" && $SSH pi@"$1" 'for f in ~/sl/agent/results/*/pid; do 
 
 unfetched() { connect pi@"$1" && rsync -an --copy-unsafe-links --out-format=%n -e "$SSH" pi@"$1":sl/agent/results/ "$(box_dir "$1")/" | grep -v '/$' || true; }
 
+create() {
+    local keys
+    keys=$(dctl compute ssh-key list --format ID,FingerPrint --no-header | while read -r id fp; do
+        for f in ~/.ssh/*.pub; do [ "MD5:$fp" = "$(ssh-keygen -E md5 -lf "$f" | awk '{print $2}')" ] && echo "$id"; done
+    done | paste -sd, -)
+    [ -n "$keys" ] || { echo "none of ~/.ssh/*.pub is among the account's SSH keys" >&2; exit 1; }
+    ip=$(dctl compute droplet create "$1" --region nyc3 --size "$SIZE" --image ubuntu-24-04-x64 --ssh-keys "$keys" \
+        --tag-name $TAG --wait --format PublicIPv4 --no-header)
+    echo "created $1 at $ip; waiting for ssh"
+    ssh-keygen -R "$ip" >/dev/null 2>&1 || true
+    connect root@"$ip"
+}
+
+slug() { echo "$1" | tr -c 'a-zA-Z0-9.\n-' -; }
+
 start() {
+    agent/deploy.sh "$1"
+    launch "$@"
+}
+
+launch() {
     local ip=$1 log run vars dir=
     shift
-    agent/deploy.sh "$ip"
     log=results/$($SSH pi@"$ip" date +%Y%m%d-%H%M%S).log
     vars=$(env | grep -E '^PI_' | grep -vE '^PI_(SLC|DEPLOY_ENV|DO_ENV)=' || true)
     run="mkdir -p results && env"
@@ -70,7 +92,7 @@ start() {
 }
 
 cmd=start
-case "${1:-}" in new | sweep | ls | status | fetch | destroy | reap) cmd=$1; shift ;; esac
+case "${1:-}" in new | resume | sweep | ls | status | fetch | destroy | reap) cmd=$1; shift ;; esac
 if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
     models=
     while :; do
@@ -89,17 +111,35 @@ start)
     ;;
 new)
     [ $# -ge 1 ] || usage
-    keys=$(dctl compute ssh-key list --format ID,FingerPrint --no-header | while read -r id fp; do
-        for f in ~/.ssh/*.pub; do [ "MD5:$fp" = "$(ssh-keygen -E md5 -lf "$f" | awk '{print $2}')" ] && echo "$id"; done
-    done | paste -sd, -)
-    [ -n "$keys" ] || { echo "none of ~/.ssh/*.pub is among the account's SSH keys" >&2; exit 1; }
-    name=pi-$(echo "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}" | tr -c 'a-zA-Z0-9.\n-' -)-$(date +%m%d-%H%M%S)
-    ip=$(dctl compute droplet create "$name" --region nyc3 --size "$SIZE" --image ubuntu-24-04-x64 --ssh-keys "$keys" \
-        --tag-name $TAG --wait --format PublicIPv4 --no-header)
-    echo "created $name at $ip; waiting for ssh"
-    ssh-keygen -R "$ip" >/dev/null 2>&1 || true
-    connect root@"$ip"
+    create "pi-$(slug "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}")-$(date +%m%d-%H%M%S)"
     start "$ip" "$@"
+    ;;
+resume)
+    n=
+    [ "${1:-}" = -n ] && { n=$2; shift 2; }
+    [ $# -ge 1 ] && [ $# -le 2 ] || usage
+    dir=${1%/} run=$(basename "${1%/}")
+    [ -f "$dir/run.json" ] || { echo "$dir has no run.json" >&2; exit 1; }
+    if [ $# -eq 2 ]; then ip=$2; else create "pi-$(slug "$run")"; fi
+    agent/deploy.sh "$ip"
+    if $SSH pi@"$ip" test -e "sl/agent/results/$run"; then
+        echo "$ip already has results/$run; resuming that copy"
+    else
+        $SSH pi@"$ip" mkdir -p sl/agent/results
+        rsync -a --copy-unsafe-links --exclude pid -e "$SSH" "$dir/" pi@"$ip":sl/agent/results/"$run"/
+        $SSH pi@"$ip" python3 - "$run" <<'PY'
+import json, sys
+from pathlib import Path
+agent = Path.home() / "sl/agent"
+f = agent / "results" / sys.argv[1] / "run.json"
+rec = json.loads(f.read_text())
+here = lambda p: str(agent / p.split("/agent/", 1)[1]) if "/agent/" in p else p
+rec["prompts"], rec["seeds"] = [here(p) for p in rec["prompts"]], [here(p) for p in rec["seeds"]]
+rec["env"].pop("PI_SLC", None)
+f.write_text(json.dumps(rec, indent=1) + "\n")
+PY
+    fi
+    launch "$ip" -r "results/$run" ${n:+-n "$n"}
     ;;
 sweep)
     [ -n "$models" ] && [ $# -ge 1 ] || usage
