@@ -603,9 +603,10 @@ def _call(call_id, fn):
 
 class OpenAI(OpenAICompat):
     base, key_env, _model = "https://api.openai.com/v1", "OPENAI_API_KEY", None
+    windows = {"gpt-6-astra": 1_050_000, "gpt-6-sol": 1_050_000, "gpt-6-luna": 1_050_000, "gpt-6.1-sol": 1_050_000}
 
     def window(self):
-        return None
+        return self.windows.get(MODEL)
 
     def send(self, messages):
         return post(self.base + "/responses", {
