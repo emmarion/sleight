@@ -489,23 +489,40 @@ def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), st
         time.sleep(2 ** attempt)
 
 
+def _fetch(url, headers):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as r:
+            return json.load(r)
+    except Exception:
+        return {}
+
+
 class Anthropic:
-    url = "https://api.anthropic.com/v1/messages"
+    base = "https://api.anthropic.com/v1"
+    _model = None
+
+    def auth(self):
+        return {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01"}
+
+    def model(self):
+        if self._model is None:
+            self.__class__._model = _fetch(f"{self.base}/models/{MODEL}", self.auth())
+        return self._model
+
+    def window(self):
+        return self.model().get("max_input_tokens")
 
     def send(self, messages):
-        return post(self.url, {
-            "model": MODEL, "max_tokens": MAX_TOKENS, "system": SYSTEM,
+        return post(self.base + "/messages", {
+            "model": MODEL, "max_tokens": min(MAX_TOKENS, self.model().get("max_tokens") or MAX_TOKENS), "system": SYSTEM,
             "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages, "cache_control": {"type": "ephemeral"},
-        }, {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01"})
+        }, self.auth())
 
     def parse(self, reply):
         blocks = reply["content"]
         calls = [{"id": b["id"], "name": b["name"], "input": b["input"]} for b in blocks if b["type"] == "tool_use"]
         return {"role": "assistant", "content": blocks}, "".join(b["text"] for b in blocks if b["type"] == "text"), calls
-
-    def window(self):
-        return None
 
     def results(self, calls, outs):
         return [{"role": "user", "content": [{"type": "tool_result", "tool_use_id": c["id"], "content": o} for c, o in zip(calls, outs)]}]
@@ -521,12 +538,7 @@ class OpenAICompat:
 
     def model(self):
         if self._model is None:
-            self.__class__._model = {}
-            try:
-                with urllib.request.urlopen(urllib.request.Request(self.base + "/models", headers=self.auth()), timeout=30) as r:
-                    self.__class__._model = next((m for m in json.load(r)["data"] if m["id"] == MODEL), {})
-            except Exception:
-                pass
+            self.__class__._model = next((m for m in _fetch(self.base + "/models", self.auth()).get("data") or [] if m.get("id") == MODEL), {})
         return self._model
 
     def limit(self, key):
@@ -606,7 +618,7 @@ class Local(OpenAICompat):
 
 
 ADAPTERS = {"anthropic": Anthropic, "openai": OpenAI, "neuralwatt": OpenAICompat, "local": Local}
-CACHE_MIN = 1024
+CACHE_MIN = 4096
 
 
 def _prompt(usage):
@@ -721,9 +733,10 @@ def session(run_dir, prompt, seeds):
     attempt = 1 + len(list(RUN_DIR.parent.glob(f"{RUN_DIR.name}.*")))
     SESSION_ID = re.sub(r"[^A-Za-z0-9._-]", "-", f"{RUN_DIR.relative_to(RESULTS)}-attempt{attempt}")
     RUN_DIR.mkdir(parents=True)
-    latest = RESULTS / "latest"
-    latest.unlink(missing_ok=True)
-    latest.symlink_to(RUN_DIR.relative_to(RESULTS))
+    tmp = RESULTS / f".latest-{os.getpid()}"
+    tmp.unlink(missing_ok=True)
+    tmp.symlink_to(RUN_DIR.relative_to(RESULTS))
+    os.replace(tmp, RESULTS / "latest")
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
