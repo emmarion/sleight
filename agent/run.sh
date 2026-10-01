@@ -4,17 +4,24 @@ TAG=pi-harness
 SIZE=${SIZE:-s-2vcpu-4gb}
 usage() {
     cat >&2 <<EOF
-usage: $0 IP PI-ARGS...                      deploy HEAD to IP, then start pi.py PI-ARGS (paths relative to agent/)
-                                                in tmux session pi, passing on PI_* variables
-       $0 new [--size S] PI-ARGS...          create a $TAG droplet in nyc3 (size $SIZE), then deploy and start
+usage: $0 IP PI-ARGS...
+           deploy HEAD to IP, then start pi.py PI-ARGS (paths relative to agent/) in tmux session pi,
+           passing on PI_* variables
+       $0 new [--size S] PI-ARGS...
+           create a $TAG droplet in nyc3 (size $SIZE), then deploy and start
        $0 sweep --models M,... [--size S] PI-ARGS...
-                                             one new droplet per model; M is provider:model, or a model whose
-                                                provider is guessed: claude-* anthropic, gpt-* openai, else neuralwatt
-       $0 ls                                 list the $TAG droplets and their runs
-       $0 status IP                          list the runs on the box
-       $0 fetch IP                           copy the box's results into agent/results/box-NAME/
-       $0 destroy [--force] [--yes] IP       destroy a $TAG droplet; --force even with a live or unfetched run
-       $0 reap                               fetch, then destroy, every $TAG droplet with no live run
+           one new droplet per model; M is provider:model, or a model whose provider is guessed:
+           claude-* anthropic, gpt-* openai, else neuralwatt
+       $0 ls
+           list the $TAG droplets and their runs
+       $0 status IP
+           list the runs on the box
+       $0 fetch IP
+           copy the box's results into agent/results/box-NAME/
+       $0 destroy [--force] [--yes] IP
+           destroy a $TAG droplet; --force even with a live or unfetched run
+       $0 reap
+           fetch, then destroy, every $TAG droplet with no live run
 The DigitalOcean token is read from \$PI_DO_ENV [~/.config/pi/do.env] and never leaves this machine.
 EOF
     exit 2
