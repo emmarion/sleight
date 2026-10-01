@@ -9,7 +9,8 @@ cd "$(dirname "$0")/.."
 [ -f "$KEYS" ] || { echo "no key file at $KEYS" >&2; exit 1; }
 [ "$(stat -f %Lp "$KEYS" 2>/dev/null || stat -c %a "$KEYS")" = 600 ] || { echo "$KEYS must have mode 0600" >&2; exit 1; }
 git diff --quiet HEAD || echo "warning: uncommitted changes are not deployed, only HEAD ($(git rev-parse --short HEAD))" >&2
-SSH="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+. agent/ssh.sh
+connect root@"$IP"
 
 $SSH root@"$IP" "FORCE=$FORCE sh -eu" <<'EOF'
 for f in /home/pi/sl/agent/results/*/pid; do
@@ -27,6 +28,7 @@ loginctl enable-linger pi
 install -d -o pi -g pi -m 700 /home/pi/.ssh
 install -o pi -g pi -m 600 /root/.ssh/authorized_keys /home/pi/.ssh/
 EOF
+connect pi@"$IP"
 
 $SSH pi@"$IP" 'umask 077; cat > ~/.pi.env' < "$KEYS"
 git bundle create - HEAD 2>/dev/null | $SSH pi@"$IP" 'cat > ~/sl.bundle'
