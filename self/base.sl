@@ -74,17 +74,6 @@
 (def-fns _ $ (many str-is-empty : (many (String) s) -> (many (Bool) r))
   (match many s _ ((SNil) (BTrue)) ((SCons _ _) (BFalse))))
 
-(def-fns _ $ (many str-starts : (subterm many (String) p) (many (String) s) -> (many (Bool) r))
-  (let-match many p (SCons c prest) ((SNil) (BTrue)))
-  (let-match many s (SCons d srest) ((SNil) (BFalse)))
-  (let-match many (char-eq c d) (BTrue) ((BFalse) (BFalse)))
-  (tail $ str-starts prest srest))
-
-(def-fns _ $ (many str-has : (subterm many (String) s) (many (String) p) -> (many (Bool) r))
-  (let-match many (str-starts p s) (BFalse) ((BTrue) (BTrue)))
-  (let-match many s (SCons _ rest) ((SNil) (BFalse)))
-  (tail $ str-has rest p))
-
 (def-fns _ $ (many str-cat : (many (String) a) (many (String) b) -> (many (String) c))
   (str-append a b))
 

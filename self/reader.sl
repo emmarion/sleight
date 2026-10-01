@@ -568,8 +568,7 @@
     (match many (nat-lt n en) (((List $ String) _))
       ((BTrue) acc)
       ((BFalse)
-        (Cons _ (ind-note path ep "the line at that indentation")
-          $ Cons _ (ind-at path ln $ ind-msg-pop ei en n) acc))))
+        (Cons _ (str-cat3 (ind-at path ln $ ind-msg-pop ei en n) "\n" (ind-note path ep "the line at that indentation")) acc))))
   (tail $ ind-pop path ln i n more acc1))
 
 (def-fns _ $ (many ind-enclosing : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
@@ -581,8 +580,7 @@
     (match many (and (nat-lt ei i) (not $ nat-lt en n)) (((List $ String) _))
       ((BFalse) acc)
       ((BTrue)
-        (Cons _ (ind-note path ep "that enclosing line")
-          $ Cons _ (ind-at path ln $ ind-msg-enclosing i ei en n) acc))))
+        (Cons _ (str-cat3 (ind-at path ln $ ind-msg-enclosing i ei en n) "\n" (ind-note path ep "that enclosing line")) acc))))
   (tail $ ind-enclosing path ln i n more acc1))
 
 (def-fns _ $ (many ind-same : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
@@ -592,8 +590,7 @@
     (match many (nat-eq n tn) (((List $ String) _))
       ((BTrue) acc)
       ((BFalse)
-        (Cons _ (ind-note path tp "the previous line at this indentation")
-          $ Cons _ (ind-at path ln $ ind-msg-same i n tn) acc))))
+        (Cons _ (str-cat3 (ind-at path ln $ ind-msg-same i n tn) "\n" (ind-note path tp "the previous line at this indentation")) acc))))
   (values (Cons _ (MkIndLevel ln i n) more) acc1))
 
 (def-fns _ $ (many ind-deeper : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
@@ -603,8 +600,7 @@
     (match many (nat-lt tn n) (((List $ String) _))
       ((BTrue) acc)
       ((BFalse)
-        (Cons _ (ind-note path tp "the line before it")
-          $ Cons _ (ind-at path ln $ ind-msg-deeper ti i tn n) acc))))
+        (Cons _ (str-cat3 (ind-at path ln $ ind-msg-deeper ti i tn n) "\n" (ind-note path tp "the line before it")) acc))))
   (values (Cons _ (MkIndLevel ln i n) stack) acc1))
 
 (def-fns _ $ (many ind-back : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
@@ -617,8 +613,7 @@
     (match many (nat-eq en n) (((List $ String) _))
       ((BTrue) acc)
       ((BFalse)
-        (Cons _ (ind-note path ep "the earlier line it matches")
-          $ Cons _ (ind-at path ln $ ind-msg-back i en n) acc))))
+        (Cons _ (str-cat3 (ind-at path ln $ ind-msg-back i en n) "\n" (ind-note path ep "the earlier line it matches")) acc))))
   (values (Cons _ (MkIndLevel ln i n) rest) acc1))
 
 (def-fns _ $ (many ind-dedent : (many (String) path) (many (Pos) ln) (many (Nat) i) (many (Nat) n)
@@ -667,5 +662,6 @@
       ((None _) acc1)
       ((Some _ sl)
         (Cons _ (ind-at path sl "a `)` here closes more than is open (surplus `)`)") acc1))))
-  (let ((many acc3)) $ ind-unclosed path op (BTrue) acc2)
-  (match many acc3 _ ((Nil _) acc3) ((Cons _ _ _) (list-rev _ $ Cons _ (shape-note path) acc3))))
+  (let ((many unclosed)) $ ind-unclosed path op (BTrue) (Nil _))
+  (let ((many acc3)) $ match many unclosed (((List $ String) _)) ((Nil _) acc2) ((Cons _ _ _) (Cons _ (join-strs (list-rev _ unclosed) "\n") acc2)))
+  (match many acc3 _ ((Nil _) acc3) ((Cons _ w rest) (list-rev _ $ Cons _ (str-cat3 w "\n" $ shape-note path) rest))))
