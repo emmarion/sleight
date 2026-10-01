@@ -3546,11 +3546,6 @@
     ((Nil _) acc)
     ((Cons _ x rest) (tail $ at-classes env rest $ class-add (location-root x $ env-locations env) x acc))))
 
-(def-fns _ $ (many lit-spelling : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ String) r))
-  (match many ls _
-    ((Nil _) (None _))
-    ((Cons _ l rest) (match many l _ ((MkLitEntry y _ s) (match many (nat-eq x y) _ ((BTrue) (Some _ s)) ((BFalse) (tail $ lit-spelling rest x))))))))
-
 (def-fns _ $ (many at-member : (many (Env) env) (many (Nat) x) -> (many (Maybe $ String) r))
   (let-match many (nat-eq x null-id) (BFalse) ((BTrue) (Some _ "(SlotVacant)")))
   (match many (lit-spelling (env-lits env) x) _
@@ -3653,7 +3648,7 @@
         (else
           (let ((many env1) (many x)) $ var-of-raw envl raw "a name")
           (let ((many mode)) (demand-mode _ env1 demand (pos-mult expect) (type-of env1 x)))
-          (let ((many env2)) $ use-entry env1 mode x $ BFalse)
+          (let ((many env2)) $ use-entry-as env1 mode x (BFalse) $ raw-atom raw)
           (let ((many r)) $ res-of env2 x)
           (values env2 (Cons _ (conformed mode r) $ Nil _) $ coercible-code _ expect (Many) $ var-code env2 ctx x))
         ((RList _ items)

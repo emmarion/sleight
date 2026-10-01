@@ -762,7 +762,7 @@ and elab_form demand cc expect_tele env expect raw =
   match raw with
   | Atom (l, n) ->
       let x = var env l n in
-      (use env l (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
+      (use env l ~written:n (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with

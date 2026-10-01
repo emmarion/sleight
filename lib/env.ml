@@ -352,10 +352,13 @@ let declared env ?(how = "") x =
   let e = entry env x in
   if Reader.placed e.at then [ (e.at, Printf.sprintf "%s is declared%s here" (qname env x) how) ] else []
 
-let use env loc ?(sharing = false) mult x =
+let use env loc ?(sharing = false) ?written mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  check_mult env loc (declared env x) (Printf.sprintf "%s, declared `%s`" (qname env x) (mult_name e.mult)) mult (if sharing && mult = Many then Many else e.mult);
+  let notes, what = match List.find_map (fun (k, (y, _)) -> if y = x then Some k else None) env.literals with
+    | Some k -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:k)) (mult_name e.mult))
+    | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (mult_name e.mult)) in
+  check_mult env loc notes what mult (if sharing && mult = Many then Many else e.mult);
   if e.mult <> Unique then env else (
     if mult = Unique && List.mem x env.captures then error loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
