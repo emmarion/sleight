@@ -93,7 +93,7 @@ new)
         for f in ~/.ssh/*.pub; do [ "MD5:$fp" = "$(ssh-keygen -E md5 -lf "$f" | awk '{print $2}')" ] && echo "$id"; done
     done | paste -sd, -)
     [ -n "$keys" ] || { echo "none of ~/.ssh/*.pub is among the account's SSH keys" >&2; exit 1; }
-    name=pi-$(echo "${PI_MODEL:-default}" | tr -c 'a-zA-Z0-9.\n-' -)-$(date +%m%d-%H%M%S)
+    name=pi-$(echo "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}" | tr -c 'a-zA-Z0-9.\n-' -)-$(date +%m%d-%H%M%S)
     ip=$(dctl compute droplet create "$name" --region nyc3 --size "$SIZE" --image ubuntu-24-04-x64 --ssh-keys "$keys" \
         --tag-name $TAG --wait --format PublicIPv4 --no-header)
     echo "created $name at $ip; waiting for ssh"
@@ -138,7 +138,10 @@ for rec in runs:
     sessions = sorted(s for s in d.iterdir() if s.name.isdigit())
     last = sessions[-1] / "transcript.log" if sessions else None
     context = next((l for l in reversed(last.read_text(errors="replace").splitlines()) if l.startswith("[context")), "") if last and last.exists() else ""
-    print(f"{'live' if live else 'stopped'}  {d.name}  {sum((s / 'answer.txt').exists() for s in sessions)}/{json.loads(rec.read_text())['n']} sessions done  {context}")
+    info = json.loads(rec.read_text())
+    settings = " ".join(f"{k}={v}" for k, v in sorted(info["env"].items()) if k not in ("PI_MODEL", "PI_PROVIDER"))
+    done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} sessions done"
+    print("  ".join(x for x in ("live" if live else "stopped", d.name, done, settings, context) if x))
 PY
     ;;
 fetch)

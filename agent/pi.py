@@ -871,7 +871,7 @@ def main(argv):
         sys.exit(f"no slc at {SLC}; build it with self/release.sh")
     prompt = "\n\n".join(Path(a).read_text().strip() for a in argv)
     tag = "+".join(Path(a).stem for a in argv)
-    loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}-{tag}"
+    loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}{'-' + EFFORT if EFFORT else ''}-{tag}"
     loop.mkdir(parents=True, exist_ok=True)
     _claim(loop)
     record = {"n": n, "seeds": [str(s.resolve()) for s in seeds], "keep": keep, "prompts": [str(Path(a).resolve()) for a in argv],
