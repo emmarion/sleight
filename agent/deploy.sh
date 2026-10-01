@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
-[ $# -eq 1 ] || { echo "usage: $0 IP   (deploys HEAD as user pi; keys: KEY=value lines in \$PI_DEPLOY_ENV [~/.config/pi/deploy.env], mode 0600)" >&2; exit 2; }
+FORCE=0
+[ "${1:-}" = --force ] && { FORCE=1; shift; }
+[ $# -eq 1 ] || { echo "usage: $0 [--force] IP   (deploys HEAD as user pi; --force even during a live pi.py run; keys: KEY=value lines in \$PI_DEPLOY_ENV [~/.config/pi/deploy.env], mode 0600)" >&2; exit 2; }
 IP=$1
 KEYS=${PI_DEPLOY_ENV:-$HOME/.config/pi/deploy.env}
 cd "$(dirname "$0")/.."
@@ -9,7 +11,13 @@ cd "$(dirname "$0")/.."
 git diff --quiet HEAD || echo "warning: uncommitted changes are not deployed, only HEAD ($(git rev-parse --short HEAD))" >&2
 SSH="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
 
-$SSH root@"$IP" sh -eu <<'EOF'
+$SSH root@"$IP" "FORCE=$FORCE sh -eu" <<'EOF'
+for f in /home/pi/sl/agent/results/*/pid; do
+  if [ "$FORCE" = 0 ] && [ -f "$f" ] && ps -p "$(cat "$f")" -o command= 2>/dev/null | grep -q pi.py; then
+    echo "a pi.py run is live in ${f%/pid}; stop it first, or pass --force" >&2
+    exit 1
+  fi
+done
 cloud-init status --wait >/dev/null 2>&1 || true
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
@@ -30,7 +38,12 @@ cd ~/sl
 git fetch -q ~/sl.bundle HEAD
 git checkout -q --detach FETCH_HEAD
 rm ~/sl.bundle
-sh self/release.sh
+if [ -x _build/release/slc ] && [ -f _build/release/slc.commit ] && git diff --quiet "$(cat _build/release/slc.commit)" HEAD -- self bin lib dune-project 2>/dev/null; then
+  echo "slc is up to date (built at $(cut -c1-7 _build/release/slc.commit))"
+else
+  sh self/release.sh
+  git rev-parse HEAD > _build/release/slc.commit
+fi
 python3 - <<'PY'
 import os, sys, tempfile
 from pathlib import Path
