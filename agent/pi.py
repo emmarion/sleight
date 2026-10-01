@@ -18,7 +18,7 @@ CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
-MEM_MB = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20
+MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
 KEEP = {}
