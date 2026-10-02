@@ -342,12 +342,12 @@
         (match many (nat-lt 1 $ count-defaulted ctors 0 arms live) _
           ((BTrue) (values (RStr $ str-cat3 "(" prefix "_d ())") (rcat3 (RStr $ str-cat3 "(let " prefix "_d () = ") d $ RStr " in ") (RStr ")")))
           ((BFalse) (values d (REmpty) (REmpty)))))))
-  (let ((many (String) name) (many (Rope) bind-open) (many (Rope) bind-close))
+  (let ((many (String) name) (many (Rope) let-open) (many (Rope) let-close))
     (match many (rope-is-name scrut0) _
       ((BTrue) (values (rope-str scrut0) (REmpty) (REmpty)))
       ((BFalse) (values prefix (rcat3 (RStr $ str-cat3 "(let " prefix " = ") scrut0 $ RStr " in ") (RStr ")")))))
   (let ((many text)) $ fill-pieces ps $ MkFilling name prefix arms live dr (Nil _))
-  (rcat5 bind-open open (rcat3 (RStr "(") text $ RStr ")") close bind-close))
+  (rcat5 let-open open (rcat3 (RStr "(") text $ RStr ")") close let-close))
 
 (def-fns _ $ (many block-build : (many (Decls) d) (many (List $ Rope) fields) -> (many (Rope) r))
   (rcat3 (RStr "(Obj.repr (") (pattern-rope d (Cons _ (list-length _ fields) $ Nil _) 0 fields) $ RStr "))"))
