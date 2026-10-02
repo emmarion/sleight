@@ -1,4 +1,4 @@
-; error: needs an ordinary `match`
+; error: needs a branch for it
 ; Erased phantom matching still requires every other constructor to be refuted.
 (def-adts $ (Both : -> Type) enum
   (erased GhostA : -> (Both))

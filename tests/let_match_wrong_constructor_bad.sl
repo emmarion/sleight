@@ -1,4 +1,4 @@
-; error: needs an ordinary `match`
+; error: needs a branch for it
 ; A unique surviving constructor is insufficient if the pattern names another.
 (def-adts $ (Indexed : ((Nat) i) -> Type) enum
   (many IZ : -> (Indexed (Zero)))

@@ -1,4 +1,4 @@
-; error: needs an ordinary `match`
+; error: needs a branch for it
 ; Refining the selected constructor first would unsoundly refute the alternative.
 (def-adts $ (Indexed : ((Nat) i) -> Type) enum
   (many IZ : -> (Indexed (Zero)))

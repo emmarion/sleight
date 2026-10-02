@@ -1562,13 +1562,17 @@
 
 ; ---- Checks (section 5's canonicalize-then-compare) and proofs (section 8)
 
-(def-fns _ $ (many ctor-params : (many (Env) env) (many (Term) t) -> (many (Maybe $ List $ Entry) ps))
-  (match many (canon-env env t) _ ((TTyCtor ps) (Some _ ps)) ((TValCtor ps _) (Some _ ps)) (else (None _))))
+(def-fns _ $ (many ctor-result : (many (Env) env) (many (Term) t) -> (many (Maybe $ Pair (List $ Entry) (Term)) r))
+  (match many (canon-env env t) _ ((TTyCtor ps) (Some _ $ MkPair _ _ ps type-term)) ((TValCtor ps ret) (Some _ $ MkPair _ _ ps ret)) (else (None _))))
+
+(def-fns _ $ (many term-head : (many (Term) t) -> (many (Term) h))
+  (match many t _ ((TApp h _) h) (else t)))
 
 (def-fns _ $ (many ctor-hint : (many (Env) env) (many (Maybe $ Raw) raw) (many (Term) actual) (many (Term) expected) -> (many (String) s))
   (let-match many raw (Some _ r) ((None _) ""))
-  (let-match many (ctor-params env actual) (Some _ ps) ((None _) ""))
-  (let-match many (ctor-params env expected) (None _) ((Some _ _) ""))
+  (let-match many (ctor-result env actual) (Some _ pr) ((None _) ""))
+  (let-match many pr (MkPair _ _ ps ret))
+  (let-match many (equal-env env (term-head ret) $ term-head $ canon-env env expected) (BTrue) ((BFalse) ""))
   (let ((many p)) $ raw-pos r)
   (str-cat3 "\nhint: did you mean " (qraw $ RList p $ Cons _ r $ list-replicate _ (list-length _ ps) $ RAtom p "_") "?"))
 
@@ -4828,7 +4832,7 @@
         ((None _) env6a)
         ((Some _ alternative)
           (env-error-with env6a (forced-error mctors env6a sres smult (Cons _ alternative $ Nil _)) $ str-cat3 "constructor " (qshown env6a alternative)
-            $ str-cat3 " is not refuted, so " (qshown env6a tid) (say env6a " needs an ordinary `match`")))))
+            $ say env6a " is not refuted, so this `let-match` needs a branch for it"))))
     (let ((many ctele) (many ret)) $ ctor-type env6b c3)
     (let ((many extra)) (and (mult-is-many mk) $ and (mult-is-once smult) (cells-allowed env6b mid)))
     (let ((many env7) (many ordinary) (many cellname)) (pattern-fields env6b c3 ctele fields extra))

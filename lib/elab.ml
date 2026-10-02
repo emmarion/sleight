@@ -122,7 +122,8 @@ let rec differ a b =
   | App (h, xs), App (h', ys) when equal h h' && List.length xs = List.length ys -> List.concat (List.map2 differ xs ys)
   | _ -> [ (a, b) ]
 
-let ctor_params env t = match canon env t with TyCtor ps | ValCtor (ps, _) -> Some ps | _ -> None
+let ctor_result env t = match canon env t with TyCtor ps -> Some (ps, type_term) | ValCtor (ps, r) -> Some (ps, r) | _ -> None
+let head = function App (h, _) -> h | t -> t
 
 (* Identity after canonicalization (section 5), solving any metas either side holds (Env.unify). *)
 let solve ?raw what env loc actual expected =
@@ -131,8 +132,8 @@ let solve ?raw what env loc actual expected =
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
-    let hint = match raw, ctor_params env actual, ctor_params env expected with
-      | Some raw, Some ps, None -> Printf.sprintf "\nhint: did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Atom (Reader.loc raw, "_")) ps))))
+    let hint = match raw, ctor_result env actual with
+      | Some raw, Some (ps, r) when equal (head r) (head (canon env expected)) -> Printf.sprintf "\nhint: did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Atom (Reader.loc raw, "_")) ps))))
       | _ -> "" in
     error_with loc notes "%s mismatch: expected %s, got %s%s" what (qshow env expected) (qshow env actual) hint
 
@@ -1623,7 +1624,7 @@ and elab_let_match spos env l args =
             let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
             match try Some (at l (fun () -> refine trial sres other fids ret)) with Contradiction _ -> None with
             | Some trial ->
-              error_with_in env l (forced_notes env l sres trial) "constructor %s is not refuted, so %s needs an ordinary `match`" (qname env other) (qname env tid)
+              error_with_in env l (forced_notes env l sres trial) "constructor %s is not refuted, so this `let-match` needs a branch for it" (qname env other)
             | None -> ()))
         ctors;
       if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(smult = Unique && cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
