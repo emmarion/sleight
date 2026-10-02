@@ -628,7 +628,7 @@ and level_var ?(alt = "") env l raw =
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
-and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) ?holes entries =
+and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) ?holes ?written entries =
   let place_scope = env.scope.ids in
   let entries = List.concat_map (parse_entry env) entries in
   let _, env, ids, tele =
@@ -646,7 +646,7 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
           if not (List.mem x place_scope) then error (loc raw) "`at` must name an argument or a closed-over variable";
           SlotHolds (Var x)) e.s_place in
         let name = name_or_anon e.s_name in
-        let x, env = at e.s_loc (fun () -> bind env ?holes ~at:e.s_loc name mult Dyn ty ?rule) in
+        let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Dyn ty ?rule) in
         (i + 1, { env with signature = x :: env.signature }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
   in
@@ -1490,7 +1490,7 @@ and elab_let spos env l args =
   let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error b.s_loc "`let` binder needs a multiplicity") binders in
   let env, tele =
     if binders <> [] && List.for_all (fun b -> b.s_sg <> None) binders then
-      let env', _, t = elab_tele env ~holes:true binder_raws in
+      let env', _, t = elab_tele env ~holes:true ~written:false binder_raws in
       ({ env' with scope = env.scope }, Some t)
     else (env, None)
   in
