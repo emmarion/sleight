@@ -23,6 +23,7 @@ MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4
 MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
 KEEP = {}
+SPENT = {}
 _LOG_N = 0
 
 SYSTEM = """You are an expert programmer working inside a sandbox directory. You read, write and edit files, and
@@ -430,6 +431,13 @@ def _sse(r):
     tail, chars = "", 0
     for raw in r:
         line = raw.decode("utf-8", "replace").strip()
+        if line.startswith((": cost ", ": energy ")):
+            key, _, rest = line[2:].partition(" ")
+            try:
+                yield {key: json.loads(rest)}
+            except ValueError:
+                pass
+            continue
         if not line.startswith("data: "):
             continue
         if line[6:] == "[DONE]":
@@ -468,11 +476,11 @@ def assemble_responses(r):
 
 def assemble_sse(r):
     content, reasoning, calls = [], [], {}
-    finish = usage = None
+    finish, extra = None, {}
     think = ThinkLog()
     try:
         for d in _sse(r):
-            usage = d.get("usage") or usage
+            extra.update({k: d[k] for k in ("usage", "cost", "energy") if d.get(k)})
             finish = "runaway repetition" if d.get("type") == "runaway" else finish
             for ch in d.get("choices") or []:
                 finish = ch.get("finish_reason") or finish
@@ -496,7 +504,7 @@ def assemble_sse(r):
         msg["reasoning"] = "".join(reasoning)
     if calls:
         msg["tool_calls"] = [dict(calls[k], id=calls[k]["id"] or f"call_{i}") for i, k in enumerate(sorted(calls))]
-    return {"choices": [{"message": msg, "finish_reason": finish}], **({"usage": usage} if usage else {})}
+    return {"choices": [{"message": msg, "finish_reason": finish}], **extra}
 
 
 def post(url, body, headers, tries=int(os.environ.get("PI_HTTP_TRIES", "6")), stream=None):
@@ -664,14 +672,23 @@ def _prompt(usage):
     return total, cached
 
 
-def _context(usage, window, prev_prompt):
+def _spend(reply):
+    for key, field in (("cost", "request_cost_usd"), ("energy", "energy_joules")):
+        if (reply.get(key) or {}).get(field) is not None:
+            SPENT[key] = SPENT.get(key, 0) + reply[key][field]
+    return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy'] / 1000:.1f} kJ" if "energy" in SPENT else "")
+
+
+def _context(reply, window, prev_prompt):
+    usage, spent = reply.get("usage"), _spend(reply)
     if not usage:
         return 0, prev_prompt
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
     prompt, cached = _prompt(usage)
     lines = [f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)" if window else "")
-             + (f", {100 * cached / prompt:.0f}% of the prompt cached]" if cached is not None and prompt else "]")]
+             + (f", {100 * cached / prompt:.0f}% of the prompt cached" if cached is not None and prompt else "")
+             + (f"{spent} spent this session]" if spent else "]")]
     if cached is None and prev_prompt == 0:
         lines.append("[cache warning: the provider reports no cached-token count, so caching cannot be checked]")
     elif cached is not None and prev_prompt >= CACHE_MIN and cached < prev_prompt / 2:
@@ -715,7 +732,7 @@ def run(prompt):
 
     while True:
         reply = api.send(messages)
-        used, prompt_tokens = _context(reply.get("usage"), window, prompt_tokens)
+        used, prompt_tokens = _context(reply, window, prompt_tokens)
         turn += 1
         assistant, text, calls = api.parse(reply)
         if not calls and not text.strip():
@@ -778,6 +795,7 @@ def _copy(src, dst):
 def session(run_dir, prompt, seeds):
     global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT, SESSION_ID
     RUN_DIR = run_dir
+    SPENT.clear()
     attempt = 1 + len(list(RUN_DIR.parent.glob(f"{RUN_DIR.name}.*")))
     SESSION_ID = re.sub(r"[^A-Za-z0-9._-]", "-", f"{RUN_DIR.relative_to(RESULTS)}-attempt{attempt}")
     RUN_DIR.mkdir(parents=True)
@@ -801,7 +819,7 @@ def session(run_dir, prompt, seeds):
         for src, rel in seeds:
             _copy(src, SANDBOX_ROOT / rel)
         answer = run(prompt)
-        (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s)\n")
+        (RUN_DIR / "answer.txt").write_text(f"{answer}\n\n({time.time() - t0:.0f}s{_spend({})})\n")
         print(answer)
     finally:
         for k, cap, size in _over():
