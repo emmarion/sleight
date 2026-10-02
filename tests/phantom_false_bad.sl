@@ -1,5 +1,5 @@
 ; needs: absurd
-; error: constructor `G` has 0 branches
+; error: constructor `G` has no branch and is not refuted
 ; A phantom constructor's branch under a many scrutinee can never run, but it still owes its (erased) result: were
 ; the branch allowed to be omitted, boo would be a proof of Ghost -> False, (G) inhabits Ghost in erased positions,
 ; and the by-proof refutation of a reachable Succ branch below would be accepted and reached at runtime.

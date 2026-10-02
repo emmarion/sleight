@@ -1,4 +1,4 @@
-; error: constructor `TB` has 0 branches
+; error: constructor `TB` has no branch and is not refuted
 ; error: note: #\a in `(Tag (MkChar (MkU8 97 <**>)))` is a character literal, whose code is opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; error: #\b is a character literal, whose code is opaque to the checker by default
 ; A character literal is transparent down to its code, a numeral (LITERALS.md), so the note names the

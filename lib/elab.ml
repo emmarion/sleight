@@ -274,7 +274,7 @@ let split_arrow env loc items =
   in
   go [] items
 
-let no_mults loc = fun _ -> function None -> Some Erased | Some _ -> error loc "these entries carry no multiplicity"
+let no_mult env what l m = error l "%s take no multiplicity; drop `%s`" what (speller env (mult_name m))
 
 (* Leading annotation tokens drawn from [allowed], in any order. *)
 let marks env allowed items =
@@ -597,7 +597,7 @@ and elab_fn_type ?(unique = false) env lv ps rs =
   if unique then UniqueFn (lv, params, rets) else Fn (lv, params, rets)
 
 and elab_tyctor env l ps ret =
-  let env', _, tele = elab_tele env ~mults:(no_mults l) ps in
+  let env', _, tele = elab_tele env ~mults:(fun _ l -> function None -> Some Erased | Some m -> no_mult env "a type constructor's parameters" l m) ps in
   (match ret with [ r ] -> let env', r = elab_term env' r in check_equal env' l r type_term | _ -> error_in env l "`TyCtor` returns `Type`");
   TyCtor tele
 
@@ -628,14 +628,14 @@ and level_var ?(alt = "") env l raw =
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
-and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ m -> m) ?holes ?written entries =
+and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ _ m -> m) ?holes ?written entries =
   let place_scope = env.scope.ids in
   let entries = List.concat_map (parse_entry env) entries in
   let _, env, ids, tele =
     List.fold_left
       (fun (i, env, ids, tele) e ->
         if e.s_subterm && not subterm then error_in env e.s_loc "`subterm` is not allowed here";
-        let mult = match mults i e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick e.s_name) in
+        let mult = match mults i e.s_loc e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick e.s_name) in
         let env, sg = match e.s_sg with Some s -> elab_sg env s | None -> error_in env e.s_loc "entry %s needs a type or an `is` clause" (tick e.s_name) in
         let ty, rule = fact_of env e.s_loc sg in
         let place = Option.map (fun raw ->
@@ -1005,7 +1005,7 @@ and elab_special demand tele env expect l sp args =
       let env, h, hcode, wrap = elab_head env pos l head in
       let env,rs,code = match canon env h.ty with
        | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l h hcode c slots args
-       | _ -> error_in env l "`at` wraps a `Cell` invocation" in
+       | _ -> error_in env l "`at` wraps a `Cell` invocation, and %s : %s is not a `Cell`" (qshow env h.term) (qshow env h.ty) in
       (env,rs,wrap code)
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
@@ -1314,7 +1314,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele
             (match covered with
              | [] -> ()
              | (c, _, trial) :: _ when res <> None -> error_with l (forced_notes env l sres trial) "%s : %s is not refuted: it may be headed by %s" (qshow env sres.term) (qshow env sres.ty) (qname env c)
-             | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has 0 branches" (qname env c));
+             | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has no branch and is not refuted" (qname env c));
             None
         | List (el, _) :: _ when refute -> error_in env el "a refuting match has no `else`"
         | [ List (el, _ :: body) ] ->
@@ -1366,8 +1366,8 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
     | Atom (_, "_"), None -> error l "no telescope to reuse for `_`"
     | List (_, ann), _ ->
         List.iter (function Atom (al, _) as a -> error al "expected a telescope or `_`, got %s" (tick (Reader.show a)) | _ -> ()) ann;
-        let mults i = function
-          | Some _ -> error l "a match annotation carries no multiplicities"
+        let mults i el = function
+          | Some m -> no_mult env "a match annotation's entries" el m
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
         in
         let env', _, ann_tele = elab_tele env ~places:true ~contextual:true ~mults ~holes:true ann in

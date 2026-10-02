@@ -1,4 +1,4 @@
-; error: constructor `A3` has 0 branches
+; error: constructor `A3` has no branch and is not refuted
 (def-adts $ (Opt : -> Type) enum
   (many Full : (many (Nat) v) -> (Opt))
   (many Empty : -> (Opt)))

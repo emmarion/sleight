@@ -1,4 +1,4 @@
-; error: constructor `LtS` has 0 branches
+; error: constructor `LtS` has no branch and is not refuted
 
 (def-lvl X)
 

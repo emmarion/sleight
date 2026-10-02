@@ -1,5 +1,5 @@
 ; needs: absurd
-; error: constructor `E` has 0 branches
+; error: constructor `E` has no branch and is not refuted
 ; Under an erased scrutinee a phantom constructor's branch is an ordinary one, so it must be listed or covered.
 
 (def-adts

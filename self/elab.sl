@@ -847,6 +847,9 @@
 (def-fns _ $ (many error-at : (many (Env) env) (many (Pos) pos) (many (String) msg) -> (many (Env) r))
   (env-back env $ env-error (env-at env pos) msg))
 
+(def-fns _ $ (many no-mult : (many (Env) env) (many (Pos) epos) (many (String) what) (many (Mult) m) -> (many (Env) r))
+  (error-at env epos $ say env $ str-cat3 what " take no multiplicity; drop `" $ str-cat (mult-name m) "`"))
+
 (def-fns _ $ (many at-place : (many (Env) env) (many (Bool) places) (many (Bool) live) (many (List $ Nat) outer) (many (Pos) epos) (many (Raw) target) -> (many (Env) r) (many (Maybe $ Term) p))
   (let-match many places (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` is allowed only on return and match annotation entries") $ None _)))
   (let-match many live (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` needs a return declared `many` or `unique`") $ None _)))
@@ -4411,21 +4414,21 @@
   ((many elab-cell-at : (subterm many (Nat) sugar) (subterm many (List $ Raw) args)
       (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) ->
       (many (Env) env2) (many (List $ Res) ress) (many (Code ctx expect) code))
-    (let-match many args (Cons _ raw _) ((Nil _) (expr-error _ expect env (say env "`at` wraps a `Cell` invocation") "at")))
-    (let ((many env0)) (count-check env " arguments" 1 (list-length _ args)))
-    (let-match many raw (RList _ items) (else (expr-error _ expect env0 (say env0 "`at` wraps a `Cell` invocation") "at")))
-    (let-match many items (Cons _ hraw actuals) ((Nil _) (expr-error _ expect env0 (say env0 "`at` wraps a `Cell` invocation") "at")))
+    (let-match many args (Cons _ raw more) ((Nil _) (malformed _ expect env $ SpMark $ MkAt)))
+    (let-match many more (Nil _) (else (malformed _ expect env $ SpMark $ MkAt)))
+    (let-match many raw (RList _ items) (else (malformed _ expect env $ SpMark $ MkAt)))
+    (let-match many items (Cons _ hraw actuals) ((Nil _) (malformed _ expect env $ SpMark $ MkAt)))
     (let ((many env1) (many h) (many hcode))
       (match many hraw (((Env) _) ((Res) r) ((Code ctx many-one) c))
         ((RList _ _)
           (let ((many mult)) (under (pos-mult expect) (Once)))
-          (let ((many env1) (many rs) (many code) (erased lk)) (notail $ elab-expr-demand sugar hraw env0 ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
+          (let ((many env1) (many rs) (many code) (erased lk)) (notail $ elab-expr-demand sugar hraw env ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
           (values env1 (first-res _ _ rs lk) (runtime-one _ mult code)))
         (else
-          (let ((many env1) (many id)) (var-of-raw env0 hraw "a name"))
+          (let ((many env1) (many id)) (var-of-raw env hraw "a name"))
           (values env1 (res-of env1 id) (var-code env1 ctx id)))))
     (let-match many (canon-env env1 (res-ty h)) (TCell c slots)
-      (else (expr-error _ expect env1 (say env1 "`at` wraps a `Cell` invocation") "at")))
+      (else (expr-error _ expect env1 (str-cat (say env1 "`at` wraps a `Cell` invocation, and ") $ str-cat3 (qshow env1 $ res-term h) " : " $ str-cat (qshow env1 $ res-ty h) $ say env1 " is not a `Cell`") "at")))
     (let ((many envm) (many rawargs) (many marks)) (cell-marks _ (subs-all actuals) env1 (BFalse)))
     (tail $ elab-cell-invoke sugar actuals rawargs two-steps envm ctx expect tele h hcode c slots (BTrue) marks))
 
@@ -4640,9 +4643,9 @@
     (let ((many (Env) env1) (many (Mult) mult) (many (MultsMode) mode2))
       (match many mode _
         ((MMDeclared) (match many smult (((Env) _) ((Mult) m0) ((MultsMode) md0)) ((None _) (values (env-error env0 $ str-cat3 "entry " (tick name) " needs a multiplicity") (Many) mode)) ((Some _ m) (values env0 m mode))))
-        ((MMErased) (match many smult (((Env) _) ((Mult) m0) ((MultsMode) md0)) ((None _) (values env0 (Erased) mode)) ((Some _ _) (values (env-error env0 "these entries carry no multiplicity") (Erased) mode))))
+        ((MMErased) (match many smult (((Env) _) ((Mult) m0) ((MultsMode) md0)) ((None _) (values env0 (Erased) mode)) ((Some _ m) (values (no-mult env0 epos "a type constructor's parameters" m) (Erased) mode))))
         ((MMExpect ms)
-          (let ((many env0b)) $ match many smult (((Env) _)) ((None _) env0) ((Some _ _) (env-error env0 "a match annotation carries no multiplicities")))
+          (let ((many env0b)) $ match many smult (((Env) _)) ((None _) env0) ((Some _ m) (no-mult env0 epos "a match annotation's entries" m)))
           (match many ms (((Env) _) ((Mult) m0) ((MultsMode) md0)) ((Nil _) (values env0b (Erased) mode)) ((Cons _ m more) (values env0b m $ MMExpect more))))))
     (let ((many (Env) env2) (many (Sg) sg))
       (match many ssg _
@@ -5478,7 +5481,7 @@
       ((Nil _)
         (match many seen-else _
           ((Some _ _) (values env found))
-          ((None _) (match many first _ ((None _) (values env found)) ((Some _ c) (values (env-error-with env (forced-error mctors env sres smult (Cons _ c $ Nil _)) $ str-cat3 "constructor " (qshown env c) " has 0 branches") found))))))
+          ((None _) (match many first _ ((None _) (values env found)) ((Some _ c) (values (env-error-with env (forced-error mctors env sres smult (Cons _ c $ Nil _)) $ str-cat3 "constructor " (qshown env c) " has no branch and is not refuted") found))))))
       ((Cons _ braw brest)
         (let-match many (is-else-branch env braw) (BTrue)
           ((BFalse) (tail $ elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming mctors refute)))
