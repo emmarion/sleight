@@ -251,7 +251,7 @@
 (def-fns _ $ (many canon-id : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (match many (canon-env env $ TVar x) _ ((TVar a) (Some _ a)) (else (None _))))
 
-(def-fns _ $ (many fetch-form : (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) head) (many (String) arg) -> (many (String) r))
+(def-fns _ $ (many fetch-form : (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) head) (many (String) arg) -> (many (String) r))
   (str-cat3 "(" (kw-spell kws head) $ str-cat3 " " arg ")"))
 
 ; An atom no name reaches may still be what a fetch form yields here, written with a name as its argument
@@ -265,7 +265,7 @@
     ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ x n) acc))
     ((None _) acc)))
 
-(def-fns _ $ (many level-cands : (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many level-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many named (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ _ xn))
   (let-match many xn (MkPair _ _ x n))
@@ -273,7 +273,7 @@
     ((TFn _ lv _ _) (match many lv (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((TVar l) (Cons _ (MkPair _ _ l $ MkPair _ _ x $ fetch-form kws "level-of" n) acc)) (else acc)))
     (else acc)))
 
-(def-fns _ $ (many matchable-cands : (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (subterm many (List $ Opened) os) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many matchable-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (subterm many (List $ Opened) os) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many os (Cons _ o rest) ((Nil _) acc))
   (let ((many m0)) $ opened-x o)
   (let ((many (List $ Pair (Nat) $ Pair (Nat) (String)) acc2))
@@ -293,7 +293,7 @@
   (let-match many (term-eq h $ TVar delegate-id) (BTrue) ((BFalse) (None _)))
   (match many (list-nth _ args 2) _ ((NthHit _ _ _ t _) (match many t _ ((TVar g) (Some _ g)) (else (None _)))) ((NthMiss _ _ _ _) (None _))))
 
-(def-fns _ $ (many delegate-cands : (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (subterm many (List $ Nat) ys) (many (List $ Nat) seen) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many delegate-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (subterm many (List $ Nat) ys) (many (List $ Nat) seen) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ys (Cons _ y rest) ((Nil _) acc))
   (let-match many (delegate-target env y) (Some _ g) ((None _) (tail $ delegate-cands env kws named rest seen acc)))
   (let-match many (list-mem-bin seen g) (BFalse) ((BTrue) (tail $ delegate-cands env kws named rest seen acc)))
@@ -301,7 +301,7 @@
     ((Some _ q) (match many q _ ((MkPair _ _ _ n) (Cons _ (MkPair _ _ y $ MkPair _ _ y $ fetch-form kws "delegate-of" n) acc))))
     ((None _) acc)))
 
-(def-fns _ $ (many numeral-cands : (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many numeral-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
   (let-match many l (MkLitEntry _ proof sp))
   (tail $ numeral-cands env kws rest $ match many proof (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
@@ -309,7 +309,7 @@
     ((None _) acc)))
 
 (def-fns _ $ (many fetch-cands : (many (Env) env) (many (Maybe $ Nat) except) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
-  (let ((many kws)) $ Some _ $ kws-of env)
+  (let ((many kws)) $ kws-of env)
   (let ((many named)) $ named-cands env except (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ Nil _)
   (level-cands env kws named $ matchable-cands env kws named (env-opens env) $ delegate-cands env kws named (env-objects env) (Nil _) $ numeral-cands env kws (env-lits env) $ Nil _))
 
@@ -337,14 +337,14 @@
 
 (def-fns _ $ (many show-t-except : (many (Env) env) (many (Term) t) (many (Maybe $ Nat) except) -> (many (String) s))
   (let ((many c)) $ canon-env env t)
-  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) (Some _ $ kws-of env) $ Nil _))
+  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) (kws-of env) $ Nil _))
 
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
   (show-t-except env t $ None _))
 
 (def-fns _ $ (many show-tele-t : (many (Env) env) (many (List $ Entry) es) -> (many (String) s))
   (let ((many ces)) $ canon-env-tele env es)
-  (let ((many r) (many bound)) $ show-tele ces (naming env (plain-atoms env $ term-vars-tele ces $ Nil _) $ None _) (Some _ $ kws-of env) (Nil _) (BTrue))
+  (let ((many r) (many bound)) $ show-tele ces (naming env (plain-atoms env $ term-vars-tele ces $ Nil _) $ None _) (kws-of env) (Nil _) (BTrue))
   (rope-str r))
 
 (def-fns _ $ (many clash-str : (many (Env) env) (subterm many (Clash) c) -> (many (String) s))
@@ -359,6 +359,27 @@
 
 (def-fns _ $ (many qshow : (many (Env) env) (many (Term) t) -> (many (String) s))
   (tick $ show-t env t))
+
+; A binder whose type or rule still holds an open `_` is refused (lib/env.ml's bind), the term shown as any
+; message shows one, after core.sl's checks on the binder's name.
+(def-fns _ $ (many bind-open : (many (Env) before) (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
+  (match many (open-in before meta holes ty rule) _
+    ((None _) env)
+    ((Some _ t) (env-error env $ str-cat "cannot infer the `_` in " $ qshow before t))))
+
+(def-fns _ $ (many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+    (many (Env) r) (many (Nat) x))
+  (let ((many env2) (many x)) $ bind-as-raw env meta holes name site written mult ty rule objid)
+  (values (bind-open env env2 meta holes ty rule) x))
+
+(def-fns _ $ (many bind : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+    (many (Env) r) (many (Nat) x))
+  (bind-as env (BFalse) (BFalse) name site written mult ty rule objid))
+
+(def-fns _ $ (many bind-erased : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+    (many (Env) r) (many (Nat) x))
+  (let ((many env2) (many x)) $ bind-erased-raw env name site written mult ty rule objid)
+  (values (bind-open env env2 (BFalse) (BFalse) ty rule) x))
 
 (def-fns _ $ (many qraw : (many (Raw) r) -> (many (String) s))
   (tick $ show-r r))

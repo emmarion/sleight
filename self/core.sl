@@ -2701,14 +2701,13 @@
   (let-match many k (MkPair _ _ b2 v))
   (match many (str-eq b b2) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ kw-find rest b))))
 
-(def-fns _ $ (many kw-spell : (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (String) r))
-  (let-match many kws (Some _ ks) ((None _) b))
-  (match many (kw-find ks b) _
+(def-fns _ $ (many kw-spell : (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (String) r))
+  (match many (kw-find kws b) _
     ((Some _ v) (match many v _ ((MkPair _ _ _ n) n)))
     ((None _) (rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat (RChar #\x01) (RChar #\x02)))))
 
 (def-fns _
-  ((many show-term : (subterm many (Term) t) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+  ((many show-term : (subterm many (Term) t) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many t _
       ((TVar x) (RStr $ name-of env x))
       ((TBound k)
@@ -2735,15 +2734,15 @@
           ((TVar x) (match many (nat-eq x null-id) (((Rope) _)) ((BTrue) (RStr $ str-cat3 "(" (kw-spell kws "SlotVacant") ")")) ((BFalse) (rwrap (str-cat3 "(" (kw-spell kws "SlotHolds") " ") (RStr $ name-of env x) ")"))))
           (else (rwrap (str-cat3 "(" (kw-spell kws "SlotHolds") " ") (notail $ show-term c env kws bound) ")"))))
       ((TErr m) (rwrap "<error: " (RStr m) ">"))))
-  ((many show-terms : (subterm many (List $ Term) ts) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+  ((many show-terms : (subterm many (List $ Term) ts) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many ts _
       ((Nil _) (REmpty))
       ((Cons _ t rest) (rcat3 (RStr " ") (notail $ show-term t env kws bound) $ notail $ show-terms rest env kws bound))))
-  ((many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+  ((many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (let-match many cs (Cons _ c rest) ((Nil _) (REmpty)))
     (match many c _
       ((MkMCtor m t) (rcat5 (RStr " (") (RStr $ kw-spell kws $ mult-name m) (rcat (RStr " ") $ notail $ show-term t env kws bound) (RStr ")") $ notail $ show-mctors rest env kws bound))))
-  ((many show-tele : (subterm many (List $ Entry) es) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) (many (Bool) marked) -> (many (Rope) r) (many (List $ Maybe $ String) bound2))
+  ((many show-tele : (subterm many (List $ Entry) es) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) (many (Bool) marked) -> (many (Rope) r) (many (List $ Maybe $ String) bound2))
     (let-match many es (Cons _ e rest) ((Nil _) (values (REmpty) bound)))
     (let-match many e (MkEntry n s m sg place _))
     (let ((many (String) nm)) $ match many n _ ((None _) "_") ((Some _ x) x))
@@ -2781,22 +2780,21 @@
 ; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
 ; name or by type, and unification alone solves it. No other entry's type or rule may mention one still
 ; unsolved -- the invariant behind the sugar -- except while a telescope with holes is being built [holes].
-(def-fns _ $ (many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+; The term a binder's type or rule still holds an open meta in, the rule's first as the reference reports it;
+; elab.sl's bind-as refuses it (lib/env.ml's bind).
+(def-fns _ $ (many open-in : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Maybe $ Term) t))
+  (let-match many (or meta holes) (BFalse) ((BTrue) (None _)))
+  (let ((many (Maybe $ Term) in-rule)) $ match many rule _ ((None _) (None _)) ((Some _ t) (match many (has-meta-env env t) _ ((BTrue) (Some _ t)) ((BFalse) (None _)))))
+  (match many in-rule _ ((Some _ t) (Some _ t)) ((None _) (match many (has-meta-env env ty) _ ((BTrue) (Some _ ty)) ((BFalse) (None _))))))
+
+(def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
   (let ((many (Env) enve)) $ match many site _ ((Some _ l) (env-at-loc envs l)) ((None _) envs))
   (let ((many (Env) envl)) $ match many name _ ((None _) envs) ((Some _ n) (match many (is-literal-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat n " is a literal, not a name"))
     ((BFalse) (match many (is-reserved-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat (tick n) " begins with `_`, which is reserved for the compilers' messages")) ((BFalse) envs))))))
-  (let ((many (Maybe $ Term) open))
-    (match many (or meta holes) _
-      ((BTrue) (None _))
-      ((BFalse)
-        (match many (has-meta-env envl ty) _
-          ((BTrue) (Some _ ty))
-          ((BFalse) (match many rule _ ((None _) (None _)) ((Some _ t) (match many (has-meta-env envl t) _ ((BTrue) (Some _ t)) ((BFalse) (None _))))))))))
-  (let ((many (Env) envw)) $ match many open _ ((None _) envl) ((Some _ t) (env-error envl $ str-cat "cannot infer the `_` in " $ tick $ rope-str $ show-term t envl (None _) $ Nil _)))
-  (let-match many envw (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
+  (let-match many envl (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))
     (match many meta _
@@ -2813,26 +2811,26 @@
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
   (values (MkEnv _ hp sc2 en2 _ _ x tb2 rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
 
-(def-fns _ $ (many bind : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
-  (bind-as env (BFalse) (BFalse) name site written mult ty rule objid))
+  (bind-as-raw env (BFalse) (BFalse) name site written mult ty rule objid))
 
 ; A binder that is Const at once: over a closed block, over the token, or over the token only in run
 ; position (section 34).
 (def-fns _ $ (many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
-  (let ((many env2) (many x)) $ bind env name site written mult ty rule objid)
+  (let ((many env2) (many x)) $ bind-raw env name site written mult ty rule objid)
   (values (set-state-closed env2 x b) x))
 
 (def-fns _ $ (many bind-token : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (bind-closed env name site written mult (BToken _) ty rule objid))
 
-(def-fns _ $ (many bind-erased : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-erased-raw : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (match many (env-run-pos env) _
     ((BTrue) (bind-token env name site written mult ty rule objid))
-    ((BFalse) (bind env name site written mult ty rule objid))))
+    ((BFalse) (bind-raw env name site written mult ty rule objid))))
 
 
 ; ---- Instantiation and abstraction over de Bruijn binders (lib/term.ml)
@@ -2952,7 +2950,7 @@
   (let-match many sps (Cons _ sp rest) ((Nil _) (values env (Nil _) $ Nil _)))
   (let-match many sp (MkSpEntry name _))
   (let ((many cname)) $ str-cat "%" name)
-  (let ((many env2) (many c)) $ bind env (Some _ cname) (None _) (BFalse) (Many) (TValCtor (Nil _) special-term) (None _) delegate-id)
+  (let ((many env2) (many c)) $ bind-raw env (Some _ cname) (None _) (BFalse) (Many) (TValCtor (Nil _) special-term) (None _) delegate-id)
   (let ((many ctor)) (MkCtor cname c index 0 (BTrue) (None _) shape (BFalse)))
   (let ((many env3)) $ set-state-closed env2 c $ BCtorFn _ ctor)
   (let ((many env4) (many ctors) (many mctors)) $ notail $ bind-specials rest env3 (Succ index) shape)
