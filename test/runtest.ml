@@ -24,6 +24,7 @@ let directive src key =
   let value line = if String.starts_with ~prefix line then Some (String.sub line (String.length prefix) (String.length line - String.length prefix)) else None in
   List.filter_map value (String.split_on_char '\n' src)
 
+let preloaded = lazy (Builtin.load ())
 let ocamlfind = lazy (Sys.command "ocamlfind ocamlopt -version > /dev/null 2>&1" = 0)
 
 let report out err code expect stderr exit =
@@ -40,7 +41,7 @@ let extracted name externs templates source input args envs expect stderr exit =
     | Error m -> Some ("extraction failed: " ^ m)
     | Ok text ->
         write (base ^ ".ml") text;
-        if Sys.command (Printf.sprintf "ocamlfind ocamlc -custom -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
+        if Sys.command (Printf.sprintf "ocamlfind ocamlc -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
           Some ("extracted program failed to compile, see " ^ base ^ ".log")
         else (
           write (base ^ ".in") input;
@@ -89,7 +90,8 @@ and run_mode name externs src =
   let outcome =
     try
       let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
-      let env = List.fold_left one (Builtin.load ~prelude:(directive src "prelude" <> [ "none" ]) ()) needs in
+      let prelude = directive src "prelude" <> [ "none" ] in
+      let env = List.fold_left one (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;
@@ -147,6 +149,7 @@ let () =
     | [] -> Sys.readdir dir |> Array.to_list |> List.filter (fun f -> Filename.check_suffix f ".sl") |> List.sort compare
     | files -> List.map (fun f -> Filename.remove_extension (Filename.basename f) ^ ".sl") files
   in
+  ignore (Lazy.force preloaded);
   let jobs = int_of_string (String.trim (In_channel.input_all (Unix.open_process_in "getconf _NPROCESSORS_ONLN"))) in
   let spawn f =
     let name = Filename.chop_suffix f ".sl" in
