@@ -29,7 +29,7 @@ let name_or_anon n = if n = "_" then None else Some n
 let special_value env x = match entry env x with
   | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
   | _ -> None
-let () = Env.special_name := fun env x -> Option.map Sp.name (special_value env x)
+let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate
 
 let rec special_of env raw =
   let value = special_value env in
@@ -888,11 +888,11 @@ and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l callee h
   in
   let env, ids = open_tele env ~word:false ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check l expect ids;
-  let callee_name = match callee.term with Var x -> qname env x | _ -> "this call" in
+  let callee_name () = match callee.term with Var x -> qname env x | _ -> "this call" in
   List.iter2 (fun (m, (e : entry)) x ->
     let name = match e.name with Some n -> tick n ^ " " | None -> "" in
     let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
-    check_mult env l notes (Printf.sprintf "the return %sof %s, declared `%s`" name callee_name (mult_name e.mult)) (demanded env demand m (type_of env x)) (entry env x).mult)
+    check_mult env l (fun () -> (notes, Printf.sprintf "the return %sof %s, declared `%s`" name (callee_name ()) (mult_name e.mult))) (demanded env demand m (type_of env x)) (entry env x).mult)
     (List.combine expect rets) ids;
   let code =
     if pos = Erased then V.CErased else
@@ -935,7 +935,7 @@ and elab_special demand tele env expect l sp args =
     settle_res env l p;
     (env, expect_proof env l ctor p.term) in
   let form = tick (Reader.show (List (l, Atom (l, Sp.name sp) :: args))) in
-  let produced env notes what ty supply = check_mult env l notes (form ^ ", " ^ what) (demanded env demand m ty) supply in
+  let produced env notes what ty supply = check_mult env l (fun () -> (notes, form ^ ", " ^ what)) (demanded env demand m ty) supply in
   let erased (env, r) =
     produced env [] (if sp = Sp.LevelOf then "a `Level` and so erased" else "a proof and so erased") r.ty Erased;
     (env, [ r ], V.CErased) in

@@ -11,5 +11,5 @@
 ; error: is xs
 ; error: xs : (List (Nat))  [unique, Dyn, value, bound at tests/dump_context_stmt.sl:3:30]
 ; error: unique: live, neither consumed nor shared on this path
-; error: ghost : (Fn _<**> (unique (List (Nat)) xs) (erased (Nat) n) -> (erased (Nat) r))  [erased, Dyn, function, bound at tests/dump_context_stmt.sl:3:14]
+; error: ghost : (Fn (level-of ghost) (unique (List (Nat)) xs) (erased (Nat) n) -> (erased (Nat) r))  [erased, Dyn, function, bound at tests/dump_context_stmt.sl:3:14]
 ; error: at-database, the entries at one location: {xs, ys}

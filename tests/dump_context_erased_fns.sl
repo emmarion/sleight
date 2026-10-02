@@ -5,5 +5,5 @@
   (delegate (nat-add a b)))
 (dump-context)
 ; error: tests/dump_context_erased_fns.sl:6:1: error: `dump-context` stops elaboration here and reports what the checker knows
-; error: _<**> : (Delegate (Shared) (Fn _<**> (many (Nat) a) (many (Nat) b) -> (many (Nat) c)) plus (Shared) (Fn nat-lvl (many (Nat) a) (many (Nat) b) -> (many (Nat) c)) nat-add)  [erased, Const, proof, anonymous, minted by the elaborator]
-; error: refl-nat : (Fn _<**> (erased (Nat) n) -> (erased (Eq (Nat) n n) e))  [erased, Const, function, bound at tests/dump_context_erased_fns.sl:2:14]
+; error: (delegate-of plus) : (Delegate (Shared) (Fn (level-of plus) (many (Nat) a) (many (Nat) b) -> (many (Nat) c)) plus (Shared) (Fn nat-lvl (many (Nat) a) (many (Nat) b) -> (many (Nat) c)) nat-add)  [erased, Const, proof, anonymous, minted by the elaborator]
+; error: refl-nat : (Fn (level-of refl-nat) (erased (Nat) n) -> (erased (Eq (Nat) n n) e))  [erased, Const, function, bound at tests/dump_context_erased_fns.sl:2:14]

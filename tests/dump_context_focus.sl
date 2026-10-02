@@ -8,7 +8,7 @@
       ys)))
 ; error: tests/dump_context_focus.sl:7:32: error: `dump-context` stops elaboration here and reports what the checker knows
 ; error: goal: (many _?1 head)
-; error: level: `_<**>`; the enclosing function has no subterm parameter
+; error: level: `(level-of rebuild)`; the enclosing function has no subterm parameter
 ; error: xs : (List A)  [many, Dyn, value, bound at tests/dump_context_focus.sl:3:46]
 ; error: is (Cons A hd tl)
 ; error: `(Cons A hd tl)` canonicalizes to `(Cons A hd tl)` : `(List A)`

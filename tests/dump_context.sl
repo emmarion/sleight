@@ -16,7 +16,7 @@
 ; error: constructors of `List`: Nil : (ValCtor (erased (Univ) A) -> (List A)); Cons : (ValCtor (erased (Univ) A) (many A head) (many (List A) rest) -> (List A))
 ; error: position: many
 ; error: inside a function body or a match branch: binders here are Dyn and calls need their proofs
-; error: level: `_<**>`; its subterm arguments, in order: `xs`
+; error: level: `(level-of append-into)`; its subterm arguments, in order: `xs`
 ; error: r2 : (List A)  [many, Dyn, value, bound at tests/dump_context.sl:12:13]
 ; error: cell2 : (Cell Cons (SlotHolds h) (SlotHolds next))  [unique, Dyn, cell, bound at tests/dump_context.sl:11:13]
 ; error: unique: live, neither consumed nor shared on this path

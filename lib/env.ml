@@ -118,7 +118,6 @@ let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
 let entry_name env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
 let anonymous env x = let e = entry env x in marker (if e.meta then '?' else '_') x e.at
-let name_of env x = match (entry env x).name with Some n -> n | None -> anonymous env x
 
 let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
@@ -190,6 +189,44 @@ let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x
    numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
    canonicalization picks to represent a class is an accident of minting order, so it does not decide the name.
    [namer] chooses once for every atom the canonical [terms] hold, so that several terms print under one naming. *)
+(* The built-in name of the special form an entry holds, if it holds one (section 4); set by the elaborator. *)
+let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
+let delegate_ctor = ref (-1)
+
+(* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name. *)
+let speller env =
+  let held = lazy (List.fold_left (fun acc (n, x) -> match !special_name env x with
+    | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
+    | _ -> acc) [] (StringMap.bindings env.scope.named)) in
+  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None -> Printf.sprintf "\001k%s\001\002" b
+
+(* The newest of the candidates [cands] keyed by [a]. *)
+let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands
+
+(* An atom no name reaches may still be what a fetch form yields here, written with a name as its argument:
+   each candidate keyed by the canonical atom the form yields. *)
+let fetches ?except env =
+  let kw = speller env in
+  let form head arg = "(" ^ kw head ^ " " ^ arg ^ ")" in
+  let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, n)) | _ -> None) (StringMap.bindings env.scope.named) in
+  let name_for a = Option.map snd (newest named a) in
+  List.filter_map (fun (_, (x, n)) -> match canon env (type_of env x) with Fn (Var l, _, _) | UniqueFn (Var l, _, _) -> Some (l, (x, form "level-of" n)) | _ -> None) named
+  @ List.filter_map (fun o -> match o.kind, canon env (Var o.obj), type_of env o.obj with
+      | `Matchable, Var m, Matchable (_, _, _, Var t, _) -> Option.map (fun n -> (m, (o.obj, form "matchable-of" n))) (name_for t)
+      | _ -> None) env.opens.opened
+  @ snd (List.fold_left (fun (seen, acc) y -> match (entry env y).name, type_of env y with
+      | None, App (Var c, [ _; _; Var g; _; _; _ ]) when c = !delegate_ctor && not (List.mem g seen) ->
+          (g :: seen, match name_for g with Some n -> (y, (y, form "delegate-of" n)) :: acc | None -> acc)
+      | _ -> (seen, acc)) ([], []) env.scope.ids)
+  @ List.filter_map (fun (k, (_, p)) -> match p, Literal.classify k with
+      | Some p, `Lit lit -> (match canon env (Var p) with Var a -> Some (a, (p, form "numeral-of" (Literal.spell lit))) | _ -> None)
+      | _ -> None) env.literals
+
+(* An entry by its own name, else by a fetch form yielding it, else as an anonymous marker. *)
+let name_of env x = match (entry env x).name with
+  | Some n -> n
+  | None -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
+
 let namer ?except env terms =
   let atoms = List.fold_left (fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0) [] terms in
   (* An entry names an atom it canonicalizes to, or itself: a location representative (SlotHolds) is read
@@ -199,20 +236,12 @@ let namer ?except env terms =
     | `Lit ((Literal.Numeral _ | Literal.Str _) as lit) -> Option.map (fun a -> (a, (x, Literal.spell lit))) (of_atom x)
     | _ -> None) env.literals in
   let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
-  let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands in
+  let fetched = lazy (fetches ?except env) in
   fun x ->
-    if (entry env x).meta then name_of env x
-    else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> anonymous env x
-
-(* The built-in name of the special form an entry holds, if it holds one (section 4); set by the elaborator. *)
-let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
-
-(* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name. *)
-let speller env =
-  let held = lazy (List.fold_left (fun acc (n, x) -> match !special_name env x with
-    | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
-    | _ -> acc) [] (StringMap.bindings env.scope.named)) in
-  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None -> Printf.sprintf "\001k%s\001\002" b
+    if (entry env x).meta then anonymous env x
+    else match newest lits x, newest names x with
+      | Some (_, n), _ | None, Some (_, n) -> n
+      | None, None -> (match newest (Lazy.force fetched) x with Some (_, n) -> n | None -> anonymous env x)
 
 (* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
 let show ?except env t = let c = canon env t in to_string ~kw:(speller env) (namer ?except env [ c ]) c
@@ -359,8 +388,8 @@ let misuse demand supply =
   else if demand = Many && supply = Unique then Some "used at many without `share`"
   else None
 
-let check_mult env loc notes what demand supply =
-  if not env.usage_erased then Option.iter (fun how -> error_with loc notes "%s, %s" what how) (misuse demand supply)
+let check_mult env loc explain demand supply =
+  if not env.usage_erased then Option.iter (fun how -> let notes, what = explain () in error_with loc notes "%s, %s" what how) (misuse demand supply)
 
 let declared env ?(how = "") x =
   let e = entry env x in
@@ -369,10 +398,10 @@ let declared env ?(how = "") x =
 let use env loc ?(sharing = false) ?written mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  let notes, what = match List.find_map (fun (k, (y, _)) -> if y = x then Some k else None) env.literals with
+  let explain () = match List.find_map (fun (k, (y, _)) -> if y = x then Some k else None) env.literals with
     | Some k -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:k)) (mult_name e.mult))
     | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (mult_name e.mult)) in
-  check_mult env loc notes what mult (if sharing && mult = Many then Many else e.mult);
+  check_mult env loc explain mult (if sharing && mult = Many then Many else e.mult);
   if e.mult <> Unique then env else (
     if mult = Unique && List.mem x env.captures then error loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
