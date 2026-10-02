@@ -20,7 +20,8 @@ REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
-MAX_WRITE, MAX_OUT, MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 8 * 1024 * 1024, 20000, 1024 * 1024, 1024 * 1024
+MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
+MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
 KEEP = {}
 SPENT = {}
@@ -141,16 +142,21 @@ def _walk_files(path):
                 yield str(p.relative_to(SANDBOX_ROOT)), p
 
 
-def clip(s):
-    return s if len(s) <= MAX_OUT else s[:MAX_OUT] + f"\n... ({len(s) - MAX_OUT} more chars cut)"
+def clip(s, cap=MAX_OUT):
+    return s if len(s) <= cap else s[:cap] + f"\n... ({len(s) - cap} more chars cut)"
 
 
 def read(path, offset=1, limit=2000):
     lines = read_bytes(path).decode("utf-8", "replace").splitlines()
-    start = max(offset, 1) - 1
-    shown = lines[start:start + max(limit, 0)]
+    start, shown, room = max(offset, 1) - 1, [], MAX_READ
+    for i, l in enumerate(lines[start:start + max(limit, 0)], start + 1):
+        s = f"{i:6}\t{l}"
+        if shown and len(s) > room:
+            break
+        shown.append(s if len(s) <= room else s[:room] + f" ... ({len(s) - room} more chars of line {i} cut)")
+        room -= len(s) + 1
     rest = len(lines) - start - len(shown)
-    return ("\n".join(f"{i:6}\t{l}" for i, l in enumerate(shown, start + 1)) or f"(no lines; the file has {len(lines)})") + (
+    return ("\n".join(shown) or f"(no lines; the file has {len(lines)})") + (
         f"\n... ({rest} more lines; read again with offset={start + len(shown) + 1})" if rest > 0 else "")
 
 
@@ -759,7 +765,7 @@ def run(prompt):
                 _check(c["name"], c["input"])
                 if phase == "rewrite" and not ok(c):
                     raise ValueError(f"only {_allowed()}, and `done`, are allowed now")
-                out = TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] in SCOPED_TOOLS else {})))
+                out = clip(TOOLS[c["name"]][0](**dict(c["input"], **({"within": KEEP} if phase == "rewrite" and c["name"] in SCOPED_TOOLS else {}))), MAX_RESULT)
             except Exception as e:
                 out = f"error: {e}"
             _say(f"[{c['name']}] {str(c['input'])[:70]}")
