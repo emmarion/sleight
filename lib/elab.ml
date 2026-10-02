@@ -535,7 +535,7 @@ and elab_type_form env l sp args =
   | Sp.SlotVacant, [] -> (env, SlotHolds (Var Prelude.null))
   | Sp.SlotHolds, [ a ] ->
       let x = var env (loc a) (atom_or (loc a) a "a direct variable reference") in
-      if (entry env x).mult = Erased then error (loc a) "`SlotHolds` needs a declared non-erased variable";
+      if (entry env x).mult = Erased then error (loc a) "`SlotHolds` needs a variable declared `many` or `unique`";
       if List.mem x env.signature then error (loc a) "`SlotHolds` cannot name a telescope binder; abstract over a `Slot` instead";
       (env, SlotHolds (Var x))
   | (Sp.Fn | Sp.UniqueFn), lv :: rest ->
@@ -640,9 +640,9 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
         let ty, rule = fact_of env e.s_loc sg in
         let place = Option.map (fun raw ->
           if not places then error e.s_loc "`at` is allowed only on return and match annotation entries";
-          if mult = Erased && not contextual then error e.s_loc "`at` needs a non-erased return";
+          if mult = Erased && not contextual then error e.s_loc "`at` needs a return declared `many` or `unique`";
           let x = var env (loc raw) (atom_or (loc raw) raw "a location variable") in
-          if (entry env x).mult = Erased then error (loc raw) "`at` needs a non-erased variable";
+          if (entry env x).mult = Erased then error (loc raw) "`at` needs a variable declared `many` or `unique`";
           if not (List.mem x place_scope) then error (loc raw) "`at` must name an argument or a closed-over variable";
           SlotHolds (Var x)) e.s_place in
         let name = name_or_anon e.s_name in
@@ -974,7 +974,7 @@ and elab_special demand tele env expect l sp args =
       (env, [ { term = SlotHolds (Var Prelude.null); ty = Prelude.slot_term; erasure = pos; place = None } ], if pos = Erased then V.CErased else V.CConst V.VToken)
   | Sp.SlotHolds, [ a ] ->
       let x = var env (loc a) (atom_or (loc a) a "a direct variable reference") in
-      if (entry env x).mult = Erased then error (loc a) "`SlotHolds` needs a declared non-erased variable";
+      if (entry env x).mult = Erased then error (loc a) "`SlotHolds` needs a variable declared `many` or `unique`";
       if List.mem x env.signature then error (loc a) "`SlotHolds` cannot name a telescope binder; abstract over a `Slot` instead";
       (env, [ { term = SlotHolds (Var x); ty = Prelude.slot_term; erasure = pos; place = None } ], if pos = Erased then V.CErased else V.CVar x)
   | Sp.CellAlloc, [ raw ] ->
@@ -1652,7 +1652,7 @@ and elab_comptime_match env l args =
   match args with
   | [ m; x; List (pl, c :: fields) ] ->
       let smult = mult_or env l m in
-      if smult = Erased then error l "`comptime-match` needs a non-erased multiplicity";
+      if smult = Erased then error l "`comptime-match` takes `many` or `unique`, not `erased`";
       if not env.run_pos then error l "`comptime-match` is a run-position statement (section 15)";
       let x, sharing =
         match x with
@@ -1664,7 +1664,7 @@ and elab_comptime_match env l args =
         | _ -> (var env l (atom_or l x "a variable"), false)
       in
       let env = use env l ~sharing smult x in
-      let value = match entry env x with { state = Const v; mult = (Many | Unique); _ } -> v | _ -> error l "`comptime-match` needs a Const, non-erased scrutinee" in
+      let value = match entry env x with { state = Const v; mult = (Many | Unique); _ } -> v | _ -> error l "`comptime-match` needs a Const scrutinee that is `many` or `unique`" in
       let c = ctor_var env pl c in
       let tele, ret = ctor_type env pl c in
       let tid = match type_head env (type_of env x) with Some t -> t | None -> error l "scrutinee is not a datatype value" in
@@ -1672,7 +1672,7 @@ and elab_comptime_match env l args =
       warn_use env l "match on" (Var tid);
       if adt_of env mid = None then error l "the `Matchable` for %s is not Const, so `comptime-match` cannot consult it" (qname env tid);
       let env = use env l Many mid in
-      if disc = Union then error l "`comptime-match` needs a non-erased discriminant";
+      if disc = Union then error l "`comptime-match` needs an `enum`, not a `union`";
       if marker env pl tid ctors c = Erased then error pl "`comptime-match`: %s is phantom, so no non-erased value is headed by it" (qname env c);
       let mults = List.map (fun e -> field_under smult e.mult) tele in
       let matched, states = const_fields env pl c mults value in

@@ -5,4 +5,4 @@
 (Zero)
 ; warns: tests/keyword_fallback_bad.sl:3:7: warning: declaration of `->` shadows a built-in
 ; error: error: type mismatch: expected `(Nat)`, got `(Fn (level-of inc) (many (Nat) n) _-> (many (Nat) m))`
-; error: note: `_->` is the built-in `->`, which no name in scope denotes here
+; error: tests/keyword_fallback_bad.sl:3:7: note: `_->` is `->`, shadowed here

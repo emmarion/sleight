@@ -37,7 +37,10 @@ let resolve here s =
   in
   go 0;
   let note (key, (shown, at)) =
-    if key.[0] = 'k' then Printf.sprintf "\n%s: note: `%s` is the built-in `%s`, which no name in scope denotes here" here shown (String.sub shown 1 (String.length shown - 1)) else
+    if key.[0] = 'k' then
+      let b = String.sub shown 1 (String.length shown - 1) in
+      if at = "" then Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed" here shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
+    else
     let written, supplied =
       if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
       else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
@@ -193,6 +196,8 @@ let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x
 let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
 let delegate_ctor = ref (-1)
 
+(* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name,
+   placed at the binder that shadows it. *)
 let speller ?except env =
   let holds x = match !special_name env x with
     | Some b -> Some b
@@ -200,7 +205,10 @@ let speller ?except env =
   let held = lazy (List.fold_left (fun acc (n, x) -> match holds x with
     | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
     | _ -> acc) [] (StringMap.bindings env.scope.named)) in
-  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None when b = Term.universe -> b | None -> Printf.sprintf "\001k%s\001\002" b
+  fun b -> match List.assoc_opt b (Lazy.force held) with
+    | Some (_, n) -> n
+    | None when b = Term.universe -> b
+    | None -> Printf.sprintf "\001k%s\001%s\002" b (match lookup env b with Some x -> Reader.where "" (entry env x).at | None -> "")
 
 (* The newest of the candidates [cands] keyed by [a]. *)
 let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands
