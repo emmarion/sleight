@@ -1234,7 +1234,7 @@ and scrutinee ?res env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele env expect l args =
+and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells ?(skip = []) tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
@@ -1315,7 +1315,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?res ?cells ?(skip = []) tele
             (match covered with
              | [] -> ()
              | (c, _, trial) :: _ when res <> None -> error_with l (forced_notes env l sres trial) "%s : %s is not refuted: it may be headed by %s" (qshow env sres.term) (qshow env sres.ty) (qname env c)
-             | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has no branch and is not refuted" (qname env c));
+             | (c, _, trial) :: _ -> error_with l (forced_notes env l sres trial) "constructor %s has no branch and is not refuted, so this %s needs a branch for it" (qname env c) (tick (speller env form)));
             None
         | List (el, _) :: _ when refute -> error_in env el "a refuting match has no `else`"
         | [ List (el, _ :: body) ] ->
@@ -1398,7 +1398,7 @@ and open_binding env l mult raw =
 
 and elab_body ?tele env expect l = function
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
-      elab_match tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
+      elab_match ~form:"let-match" tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
       let env, wrap = elab_stmt (pos_of expect) env stmt in
       let env, ress, code = elab_body ?tele env expect l rest in
@@ -1624,7 +1624,7 @@ and elab_let_match spos env l args =
             let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
             match try Some (at l (fun () -> refine trial sres other fids ret)) with Contradiction _ -> None with
             | Some trial ->
-              error_with_in env l (forced_notes env l sres trial) "constructor %s is not refuted, so this `let-match` needs a branch for it" (qname env other)
+              error_with_in env l (forced_notes env l sres trial) "constructor %s has no branch and is not refuted, so this `let-match` needs a branch for it" (qname env other)
             | None -> ()))
         ctors;
       if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(smult = Unique && cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));

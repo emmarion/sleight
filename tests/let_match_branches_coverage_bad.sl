@@ -1,4 +1,4 @@
-; error: constructor `A3` has no branch and is not refuted
+; error: constructor `A3` has no branch and is not refuted, so this `let-match` needs a branch for it
 (def-adts $ (Opt : -> Type) enum
   (many Full : (many (Nat) v) -> (Opt))
   (many Empty : -> (Opt)))

@@ -4051,7 +4051,7 @@
                       (let ((many env2) (many ress) (many codes) (erased pk)) $ notail $ elab-values sugar args env1 ctx expect tele $ Nil _)
                       (values env2 ress $ CValues _ expect codes pk))
                     ((ExMatch)
-                      (let ((many env2) (many ress) (many code)) $ notail $ elab-match sugar args env0 ctx expect tele demand $ BFalse)
+                      (let ((many env2) (many ress) (many code)) $ notail $ elab-match sugar args env0 ctx expect tele demand (BFalse) "`match`")
                       (values env2 ress code))
                     ((ExMatchableOf)
                       (let ((many env3) (many found)) $ notail $ fetched sugar args one-step env0 ex)
@@ -4690,7 +4690,7 @@
                 (values (env-error env "internal: the sugar budget is spent") ress (CError _ expect "sugar") lock))
               ((Succ k)
                 (let ((many envl)) $ env-at env $ raw-pos item)
-                (let ((many env2) (many ress) (many code)) $ notail $ elab-match k gen (read-special envl head (BFalse) $ pos-mult expect) ctx expect tele (Fixed _) $ BFalse)
+                (let ((many env2) (many ress) (many code)) $ notail $ elab-match k gen (read-special envl head (BFalse) $ pos-mult expect) ctx expect tele (Fixed _) (BFalse) "`let-match`")
                 (let ((many ress2) (erased lock)) $ list-fit _ _ expect ress no-res)
                 (values env2 ress2 code lock))))
           ((None _)
@@ -4711,7 +4711,7 @@
         (let ((many envl)) $ env-at env0 $ raw-pos item)
         (match many (refute-form envl item) _
           ((RefuteMatch _ head args p)
-            (let ((many env2) (many ress) (many code)) $ notail $ elab-match sugar (subterm $ subterm-trans p pi) args (read-special envl head (BFalse) $ Erased) ctx erased-one no-tele (Fixed _) $ BTrue)
+            (let ((many env2) (many ress) (many code)) $ notail $ elab-match sugar (subterm $ subterm-trans p pi) args (read-special envl head (BFalse) $ Erased) ctx erased-one no-tele (Fixed _) (BTrue) "`match`")
             env2)
           ((RefuteOpen _ head e p)
             (let ((many env1)) $ read-special envl head (BFalse) $ Erased)
@@ -4832,7 +4832,7 @@
         ((None _) env6a)
         ((Some _ alternative)
           (env-error-with env6a (forced-error mctors env6a sres smult (Cons _ alternative $ Nil _)) $ str-cat3 "constructor " (qshown env6a alternative)
-            $ say env6a " is not refuted, so this `let-match` needs a branch for it"))))
+            $ say env6a " has no branch and is not refuted, so this `let-match` needs a branch for it"))))
     (let ((many ctele) (many ret)) $ ctor-type env6b c3)
     (let ((many extra)) (and (mult-is-many mk) $ and (mult-is-once smult) (cells-allowed env6b mid)))
     (let ((many env7) (many ordinary) (many cellname)) (pattern-fields env6b c3 ctele fields extra))
@@ -5305,7 +5305,7 @@
 
   ; match (sections 11, 12, 18): the scrutinee, its Matchable, the annotation, then one branch per
   ; constructor, each refined by its forced facts or refuted by them.
-  ((many elab-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) (many (Bool) refute) ->
+  ((many elab-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) (many (Bool) refute) (many (String) form) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code))
     (def-fns refusal-lvl $ (many bad : -> (many (Env) r) (many (List $ Res) rs) (many (Code ctx expect) c))
       (expr-error ctx expect env (sp-misuse env $ SpExpr $ ExMatch) "match"))
@@ -5345,7 +5345,7 @@
     (let ((many env5) (many real) (many seen)) $ notail $ elab-branches sugar branches env3b ctx4 tid sres smult mctors ann-tele expect2 (Nil _) (Nil _) extra saved incoming incoming refute)
     (let ((many env6)) $ check-coverage mctors env5 seen)
     (let ((many env6b) (many first) (many reachable) (many covered)) $ covered-of mctors env6 seen sres smult (None _) (BFalse) $ Nil _)
-    (let ((many env6c) (many dflt)) $ notail $ elab-else sugar branches env6b ctx4 ann-tele expect2 first reachable (None _) (None _) sres smult extra saved incoming mctors refute)
+    (let ((many env6c) (many dflt)) $ notail $ elab-else sugar branches env6b ctx4 ann-tele expect2 first reachable (None _) (None _) sres smult extra saved incoming mctors refute form)
     (let ((many nreal)) $ nat-add (list-length _ real) $ match many dflt (((Nat) _)) ((None _) 0) ((Some _ _) 1))
     (let ((many env7)) $ match many (and (mult-is-many pos) $ and (or (not tagged) $ not $ mult-is-many smult) $ nat-lt 1 nreal) (((Env) _))
       ((BTrue) (env-error-with env6c (forced-error mctors env6c sres smult (real-ctors _ _ real)) "a match without a runtime discriminant can have only one real branch"))
@@ -5479,16 +5479,16 @@
 
   ; The else branch (section 12): at most one, standing for at least one constructor, its body under no forced
   ; facts and erased throughout when none of them could run.
-  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (List $ MCtor) mctors) (many (Bool) refute) ->
+  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (List $ MCtor) mctors) (many (Bool) refute) (many (String) form) ->
       (many (Env) r) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) code))
     (match many branches _
       ((Nil _)
         (match many seen-else _
           ((Some _ _) (values env found))
-          ((None _) (match many first _ ((None _) (values env found)) ((Some _ c) (values (env-error-with env (forced-error mctors env sres smult (Cons _ c $ Nil _)) $ str-cat3 "constructor " (qshown env c) " has no branch and is not refuted") found))))))
+          ((None _) (match many first _ ((None _) (values env found)) ((Some _ c) (values (env-error-with env (forced-error mctors env sres smult (Cons _ c $ Nil _)) $ str-cat3 "constructor " (qshown env c) $ say env $ str-cat3 " has no branch and is not refuted, so this " form " needs a branch for it") found))))))
       ((Cons _ braw brest)
         (let-match many (is-else-branch env braw) (BTrue)
-          ((BFalse) (tail $ elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming mctors refute)))
+          ((BFalse) (tail $ elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming mctors refute form)))
         (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
         (let ((many (Env) env2) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found2))
           (match many refute _
@@ -5513,7 +5513,7 @@
                     ((BFalse)
                       (let ((many envb2) (many code)) (notail $ elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) (all-erased expect) ann-tele saved alias))
                       (values (env-discard envl envb2) (None _)))))))))
-        (tail $ elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming mctors refute))))
+        (tail $ elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming mctors refute form))))
 
   ; Arguments against a telescope, each at the position's multiplicity and checked against its entry
   ; (section 20); returns the terms innermost first and the code of the many ones in order.
