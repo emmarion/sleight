@@ -237,3 +237,15 @@ More than one real branch requires a function body, `match` branch
 body, or `cell-match` body (UNIQUE.md §U10). A `let` right-hand side,
 run position, and absurd bodies (§7) are not allowed. Absurd branches
 are allowed anywhere.
+
+## 9. Fetch forms in a type
+
+`(level-of f)`, `(matchable-of T)`, `(delegate-of g)` and
+`(numeral-of n)` may be written in a type or an `is` expression, where
+each elaborates to the entry it yields as an expression, a variable
+reference, which is DESIGN.md §5's first production. It is read where it
+is written, against the facts in force there. A `def-fns` block's own
+names are in scope in its bodies but not in its signatures, so a
+signature cannot name the block's level through one of them. Whether
+`coercible-of` joins them is deferred: it mints a fresh proof at each
+use rather than fetching one.

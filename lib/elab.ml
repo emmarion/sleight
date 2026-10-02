@@ -541,7 +541,33 @@ and elab_type_form env l sp args =
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), List.map ctor cs))
   | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "%s" (Sp.misuse sp)
   | Sp.DumpContext, _ -> dump_context env l Dump.Type args
+  | (Sp.LevelOf | Sp.MatchableOf | Sp.DelegateOf | Sp.NumeralOf), _ -> fetched env l sp args
   | _ -> error l "%s cannot appear in a type" (tick (Sp.name sp))
+
+and fetched env l sp args =
+  match (sp, args) with
+  | Sp.LevelOf, [ f ] -> (
+      let env, f = elab_term env f in
+      settle env l f;
+      match canon env (infer env l f) with
+      | Fn (lv, _, _) | UniqueFn (lv, _, _) -> (env, lv)
+      | ty -> error l "`level-of`: %s : %s is not a function" (qshow env f) (qshow env ty))
+  | Sp.MatchableOf, [ t ] -> let x, _, _ = find_matchable env l (tyname env l t) in (env, Var x)
+  | Sp.NumeralOf, [ e ] -> (
+      let name = atom_or l e "a literal" in
+      match Literal.classify name with
+      | `Bad msg -> error l "%s" msg
+      | `Name -> error l "`numeral-of` takes a literal, not %s" (tick name)
+      | `Lit lit -> (
+          match List.assoc_opt (Literal.key lit) env.literals with
+          | Some (_, Some p) -> (env, Var p)
+          | Some (_, None) -> error l "%s is a string literal, which carries no `Numeral` proof" name
+          | None -> error l "literal %s is not in scope" name))
+  | Sp.DelegateOf, [ g ] -> (
+      let g = named env l "a function name" g in
+      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
+      match List.find_opt about env.scope.ids with Some y -> (env, Var y) | None -> error l "%s has no `Delegate` proof in scope" (qname env g))
+  | _ -> error l "%s" (Sp.misuse sp)
 
 (* The form's arguments are terms in section 5's grammar, each shown with its type where it has one. *)
 and dump_context : 'a. Env.t -> Reader.loc -> Dump.goal -> Reader.raw list -> 'a = fun env l goal args ->
@@ -916,7 +942,6 @@ and elab_special demand tele env expect l sp args =
   let side env raw =
     if wild raw then let x, env = bind env ~meta:true ~at:(Reader.loc raw) None Erased Dyn Prelude.sharing_term in (env, Var x)
     else let env, t = elab_term env raw in check_type env l (infer env l t) Prelude.sharing_term; (env, t) in
-  let fetch what x found = match found with Some y -> erased (env, res_of env y) | None -> error l "%s has no %s" (qname env x) what in
   let compose (c1, p) (c2, q) k =
     let env, p = proof env c1 p in
     let env, q = proof env c2 q in
@@ -997,8 +1022,8 @@ and elab_special demand tele env expect l sp args =
       let rec has_call c = (match c with V.CApp (_, _, cc') -> cc' = cc | _ -> false) || List.exists has_call (V.subcodes c) in
       if not (has_call code) then error l "%s marks a function call, not %s" (tick (Sp.name sp)) (tick (Reader.show call));
       (env, ress, code)
-  | Sp.MatchableOf, [ t ] ->
-      let x, _, _ = find_matchable env l (tyname env l t) in
+  | Sp.MatchableOf, _ ->
+      let x = match fetched env l sp args with _, Var x -> x | _ -> assert false in
       let e = entry env x in
       let notes = if Reader.placed e.at then [ (e.at, "the `open-adt` is here") ] else [] in
       produced env notes (Printf.sprintf "opened `%s` by an `open-adt`" (mult_name e.mult)) (type_of env x) e.mult;
@@ -1008,23 +1033,9 @@ and elab_special demand tele env expect l sp args =
       let env, ann_tele = result_tele ~demand tele env expect l ann in
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
-  | Sp.NumeralOf, [ e ] -> (
-      let name = atom_or l e "a literal" in
-      match Literal.classify name with
-      | `Bad msg -> error l "%s" msg
-      | `Name -> error l "`numeral-of` takes a literal, not %s" (tick name)
-      | `Lit lit -> (
-          match List.assoc_opt (Literal.key lit) env.literals with
-          | Some (_, Some p) -> erased (env, res_of env p)
-          | Some (_, None) -> error l "%s is a string literal, which carries no `Numeral` proof" name
-          | None -> error l "literal %s is not in scope" name))
+  | (Sp.NumeralOf | Sp.DelegateOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
   | Sp.Distinct, [ a; b ] -> elab_distinct env l a b
-  | Sp.LevelOf, [ f ] -> (
-      let env, f = elab_term env f in
-      settle env l f;
-      match canon env (infer env l f) with
-      | Fn (lv, _, _) | UniqueFn (lv, _, _) -> erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
-      | ty -> error l "`level-of`: %s : %s is not a function" (qshow env f) (qshow env ty))
+  | Sp.LevelOf, _ -> let env, lv = fetched env l sp args in erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
   | Sp.ProveSubterm, [ a; b ] ->
       let env, a = elab_term env a in
       let env, b = elab_term env b in
@@ -1126,10 +1137,6 @@ and elab_special demand tele env expect l sp args =
       match d with
       | [ sg; gty; g; sf; fty; f ] -> mint env (proof_type Prelude.coercible [ sg; gty; g; sf; fty; f ])
       | _ -> assert false)
-  | Sp.DelegateOf, [ g ] ->
-      let g = named env l "a function name" g in
-      let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
-      fetch "`Delegate` proof in scope" g (List.find_opt about env.scope.ids)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick (Sp.name sp)) (Sp.hints (Sp.name sp))
   | sp, _ -> error l "%s" (Sp.misuse sp)
