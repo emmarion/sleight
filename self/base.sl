@@ -123,6 +123,10 @@
   (or (all-digits s)
     $ and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))))
 
+(def-fns _ $ (many is-reserved-name : (many (String) s) -> (many (Bool) r))
+  (let-match many s (SCons c rest) ((SNil) (BFalse)))
+  (and (char-is c 95) $ not $ str-is-empty rest))
+
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
 (def-fns _ $ (many ocaml-escape : (subterm many (String) s) -> (many (Rope) r))

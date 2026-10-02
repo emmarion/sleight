@@ -227,7 +227,9 @@ let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x 
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
 let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
-  Option.iter (fun n -> if Literal.classify n <> `Name then error Reader.nowhere "%s is a literal, not a name" (tick n)) name;
+  Option.iter (fun n ->
+      if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
+      if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     error Reader.nowhere "cannot infer the `_` in %s" (qshow env (match rule with Some r when has_meta env r -> r | _ -> ty));
   if written && Reader.placed at then

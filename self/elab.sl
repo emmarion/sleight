@@ -593,7 +593,7 @@
 (def-fns _ $ (many var-of-raw : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Nat) x))
   (let-match many raw (RString _ s)
     ((RAtom _ s) (var env s))
-    ((RList _ _) (let ((many env2) (many _s)) (name-checked env raw what)) (values env2 $ Zero)))
+    ((RList _ _) (let ((many env2) (many _)) (name-checked env raw what)) (values env2 $ Zero)))
   (match many (lit-lookup env $ string-key s) _
     ((Some _ x) (values env x))
     ((None _) (values (env-error env "string literal outside a top-level form") $ Zero))))
@@ -2301,7 +2301,7 @@
 (def-fns _ $ (many bind-headers : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (List $ Nat) gids) (many (Bound fns hs gids) ids))
   (let-match many hs (HCons _ _ h more) ((HStop _) (values env (Nil _) (BStop _))))
   (let-match many h (MkHeader _ hpos name mult uq _ _ params rets _ _))
-  (let ((many env2) (many x)) $ bind env (Some _ name) (Some _ $ loc-in env hpos) (BTrue) mult (TFn uq (TVar lvl) params rets) (None _) delegate-id)
+  (let ((many env2) (many x)) $ bind env (name-or-anon name) (Some _ $ loc-in env hpos) (BTrue) mult (TFn uq (TVar lvl) params rets) (None _) delegate-id)
   (let ((many env3) (many gids) (many ids)) $ notail $ bind-headers _ more (mark-word env2 x $ BFalse) lvl)
   (match many mult _
     ((Many) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
@@ -4775,7 +4775,7 @@
     (let ((many nt) (many ext) (many cs) (erased wc)) $ take-marks after3 _ (within-step after3 rest2 items (prove-subterm after3 rest2) $ WIn rest2 items $ prove-subterm rest2 items) env1 (MkNewtypeMark) $ MkExtern)
     (let ((many tyraws)) $ Cons _ (MkSub _ tyraw $ in-within (Raw) tyraw after sg (prove-subterm tyraw after) wa) $ Nil _)
     (let ((many env2) (many ty)) $ notail $ elab-tyctor sugar sg one-step (MkPair _ _ ps tyraws) env1)
-    (let ((many env2b) (many x)) $ bind-erased env2 (Some _ name) (Some _ $ loc-in env2 $ raw-head-pos adt) (BTrue) (Erased) ty (None _) delegate-id)
+    (let ((many env2b) (many x)) $ bind-erased env2 (name-or-anon name) (Some _ $ loc-in env2 $ raw-head-pos adt) (BTrue) (Erased) ty (None _) delegate-id)
     (let ((many env3) (many hs) (many tids)) $ notail $ elab-adt-headers sugar rest $ env-back env env2b)
     (let ((many h)) $ MkAdtHeader _ name disc nt ext cs $ within-in cs items (Raw) adt wc $ prove-subterm items adt)
     (values env3 (AHCons _ _ h hs) $ TCons _ _ _ _ x tids))
@@ -4845,7 +4845,7 @@
         ((BTrue) (env-warn env2b $ located env2b ": warning: " $ str-cat3 "phantom constructor " (tick name) " has a non-erased field"))
         ((BFalse) env2b)))
     (let ((many env3)) $ env-discard env0 env2c)
-    (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 (Some _ name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)) (else (bind env3 (Some _ name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)))
+    (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 (name-or-anon name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)) (else (bind env3 (name-or-anon name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)))
     (let ((many env5) (many cs)) $ notail $ elab-ctors sugar rest (env-back env env4) tid)
     (values env5 $ Cons _ (MkPair _ _ mult c) cs))
   ; tail and delegate wrap a call (section 9, ASSUMPTIONS 9); the compiled code must be that call.

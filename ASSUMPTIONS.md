@@ -15,9 +15,6 @@ ground.
    other than whitespace, parens and `;`. Digit-only atoms and `#\c`
    atoms are numeral and character literals (items 51-52); there are no
    string literals (SR 10).
-2. **`_` as a binder name** mints an anonymous entry, wherever a binder
-   is expected (let binders, telescope entries, pattern fields). It is
-   not special anywhere else (SR 10, SR 11).
 3. **Annotation tokens go through the namespace.** `many`, `:`, `->`,
    `is`, `subterm`, `enum`, `absurd` and friends are recognized only by
    resolving the atom to a `Const`, non-erased entry whose value is the

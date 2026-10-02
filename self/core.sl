@@ -2741,7 +2741,9 @@
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
-  (let ((many (Env) envl)) $ match many name _ ((None _) envs) ((Some _ n) (match many (is-literal-name n) (((Env) _)) ((BTrue) (env-error envs $ str-cat n " is a literal, not a name")) ((BFalse) envs))))
+  (let ((many (Env) enve)) $ match many site _ ((Some _ l) (env-at-loc envs l)) ((None _) envs))
+  (let ((many (Env) envl)) $ match many name _ ((None _) envs) ((Some _ n) (match many (is-literal-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat n " is a literal, not a name"))
+    ((BFalse) (match many (is-reserved-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat (tick n) " begins with `_`, which is reserved for the compilers' messages")) ((BFalse) envs))))))
   (let ((many (Maybe $ Term) open))
     (match many (or meta holes) _
       ((BTrue) (None _))

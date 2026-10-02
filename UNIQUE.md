@@ -805,14 +805,18 @@ full-at invocation then holding where it did not before. The unequal
 case carries no evidence, by decision: a refutation would be false
 evidence wherever a compiler answered `SlotDiffer` for equal words.
 
-## U16. `_` as a binder name
+## U16. `_` as a binder name, and the reserved prefix
 
-Promoted here from ASSUMPTIONS 2, the owner's decision: `_` as a binder
-name mints an anonymous entry wherever a binder is expected, a `let`
-binder, a telescope entry, a pattern field, and now §U5's extra pattern
-binder; it is not special anywhere else, `_` in an argument (SUGAR.md
-6), as an annotation (SUGAR.md 2), and as a `cell-write` or
-`cell-alloc` item (§U9) being their own things.
+`_` as a binder name mints an anonymous entry wherever a binder is
+written, such as a `let` binder, a telescope entry, a pattern field,
+§U5's extra pattern binder and the `else`'s, a `cell-match` binder, a
+`def-lvl`, and the name a `def-fns`, `def-unique` or `def-adts`
+defines. Its other uses are separate forms, such as `_` in an argument
+(SUGAR.md 6), as an annotation (SUGAR.md 2), as a `def-fns` level
+(SUGAR.md 1), and as a `cell-write` or `cell-alloc` item (§U9).
+
+No other name may begin with `_`; such spellings are reserved for the
+compilers' messages.
 
 ## U17. Open questions
 

@@ -1687,7 +1687,7 @@ and elab_def_fns ?(unique = false) env l args =
       let headers = List.map header fns in
       List.iter (fun (fl, _, m, _, _, _, _) -> if unique && m = Many then error fl "`def-unique` requires `unique` or `erased`" else if not unique && m = Unique then error fl "use `def-unique` to define a unique function") headers;
       let capture_uses = ref env.uses in
-      let env, fids = List.fold_left_map (fun env (fl, name, mult, _, _, ty, _) -> let x, env = bind env ~word:true ~at:fl (Some name) mult Dyn ty in (env, x)) env headers in
+      let env, fids = List.fold_left_map (fun env (fl, name, mult, _, _, ty, _) -> let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in (env, x)) env headers in
       let define x (fl, name, mult, absurd, impl, ty, body) =
         let params, rets = match ty with Fn (_, ps, rs) | UniqueFn (_, ps, rs) -> (ps, rs) | _ -> assert false in
         let envb = if unique then { env with entries = IntMap.add x { (entry env x) with mult = Erased } env.entries } else env in
@@ -1808,7 +1808,7 @@ and elab_def_adts env adts =
   let env, tids =
     List.fold_left_map
       (fun env (al, name, ps, ty, _, _, _) ->
-        let x, env = bind env ~at:al (Some name) Erased (const env V.VToken) (elab_tyctor env al ps [ ty ]) in
+        let x, env = bind env ~at:al (name_or_anon name) Erased (const env V.VToken) (elab_tyctor env al ps [ ty ]) in
         (env, x))
       env headers
   in
@@ -1822,7 +1822,7 @@ and elab_def_adts env adts =
           let env', tele, ret, ty = elab_valctor env cl rest in
           (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" (tick name) (qname env tid));
           if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl [] "phantom constructor %s has a non-erased field" (tick name);
-          let c, env = bind env ~at:cl (Some name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
+          let c, env = bind env ~at:cl (name_or_anon name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor%s" (Sp.hints "constructor")
     in
