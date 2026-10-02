@@ -4,8 +4,8 @@
 ; error: goal: none; `dump-context` stands as a statement here, so nothing is expected of it
 ; error: in scope, newest first (the program has bound nothing, so the prelude's <**> are listed):
 ; error: Univ : (TyCtor -> Type)  [erased, Const, type constructor, built in]
-; error: Type : (Univ)  [erased, Const, type, built in]
+; error: Type : Type  [erased, Const, type, built in]
 ; error: is (Univ)
-; error: Cons : (ValCtor (erased (Univ) A) (many A head) (many (List A) rest) -> (List A))  [many, Const, constructor, bound at lib/prelude.sl:<**>]
+; error: Cons : (ValCtor (erased Type A) (many A head) (many (List A) rest) -> (List A))  [many, Const, constructor, bound at lib/prelude.sl:<**>]
 ; error: at-database: every entry is at a location of its own
 ; error: opened (the program has bound nothing, so the prelude's <**> are listed): <**>(Matchable enum List (many Nil) (many Cons))

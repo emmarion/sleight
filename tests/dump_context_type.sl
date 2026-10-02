@@ -4,5 +4,5 @@
 ; error: tests/dump_context_type.sl:2:50: error: `dump-context` stops elaboration here and reports what the checker knows
 ; error: goal: a type, in an erased position
 ; error: position: erased
-; error: A : (Univ)  [erased, Dyn, type, bound at tests/dump_context_type.sl:2:28]
+; error: A : Type  [erased, Dyn, type, bound at tests/dump_context_type.sl:2:28]
 ; error: at-database: every entry is at a location of its own

@@ -123,16 +123,23 @@
 (def-fns _ $ (many sp-name : (many (Sp) sp) -> (many (String) name))
   (sp-name-in sp-table sp))
 
-(def-fns _ $ (many kw-held : (many (Env) env) (subterm many (List $ Pair (String) (Nat)) ns) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+(def-fns _ $ (many held-key : (many (Env) env) (many (Maybe $ Nat) except) (many (Nat) x) -> (many (Maybe $ String) r))
+  (let-match many (special-of-entry env x) (None _) ((Some _ sp) (Some _ $ sp-name sp)))
+  (let-match many (match many except (((Bool) _)) ((None _) (BTrue)) ((Some _ e) (not $ nat-eq e x))) (BTrue) ((BFalse) (None _)))
+  (match many (equal-env env (TVar x) type-term) _ ((BTrue) (Some _ universe-key)) ((BFalse) (None _))))
+
+(def-fns _ $ (many kw-held : (many (Env) env) (many (Maybe $ Nat) except) (subterm many (List $ Pair (String) (Nat)) ns) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
   (let-match many ns (Cons _ p rest) ((Nil _) acc))
   (let-match many p (MkPair _ _ n x))
-  (let-match many (special-of-entry env x) (Some _ sp) ((None _) (tail $ kw-held env rest acc)))
-  (let ((many b)) $ sp-name sp)
+  (let-match many (held-key env except x) (Some _ b) ((None _) (tail $ kw-held env except rest acc)))
   (let ((many (Bool) newer)) $ match many (kw-find acc b) _ ((None _) (BTrue)) ((Some _ q) (match many q _ ((MkPair _ _ y _) (nat-lt y x)))))
-  (tail $ kw-held env rest $ match many newer (((List $ Pair (String) $ Pair (Nat) (String)) _)) ((BTrue) (Cons _ (MkPair _ _ b $ MkPair _ _ x n) acc)) ((BFalse) acc)))
+  (tail $ kw-held env except rest $ match many newer (((List $ Pair (String) $ Pair (Nat) (String)) _)) ((BTrue) (Cons _ (MkPair _ _ b $ MkPair _ _ x n) acc)) ((BFalse) acc)))
+
+(def-fns _ $ (many kws-except : (many (Env) env) (many (Maybe $ Nat) except) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+  (kw-held env except (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ Nil _))
 
 (def-fns _ $ (many kws-of : (many (Env) env) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
-  (kw-held env (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ Nil _))
+  (kws-except env $ None _))
 
 (def-fns _ $ (many special-of : (many (Env) env) (subterm many (Raw) raw) -> (many (Maybe $ Sp) r))
   (let-match many raw (RList _ items) (else (special-of-atom env raw)))
@@ -341,7 +348,7 @@
 
 (def-fns _ $ (many show-t-except : (many (Env) env) (many (Term) t) (many (Maybe $ Nat) except) -> (many (String) s))
   (let ((many c)) $ canon-env env t)
-  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) (kws-of env) $ Nil _))
+  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) (kws-except env except) $ Nil _))
 
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
   (show-t-except env t $ None _))

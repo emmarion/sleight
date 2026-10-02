@@ -2684,6 +2684,7 @@
 (let ((many delegate-id)) (Succ coercible-id))
 (let ((many special-id)) (Succ delegate-id))
 (let ((many type-term)) $ TApp (TVar univ-id) $ Nil _)
+(let ((many universe-key)) "(Univ)")
 (let ((many level-term)) $ TApp (TVar level-id) $ Nil _)
 (let ((many special-term)) $ TApp (TVar special-id) $ Nil _)
 (let ((many slot-term)) $ TApp (TVar slot-id) $ Nil _)
@@ -2706,6 +2707,15 @@
     ((Some _ v) (match many v _ ((MkPair _ _ _ n) n)))
     ((None _) (rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat (RChar #\x01) (RChar #\x02)))))
 
+(def-fns _ $ (many is-universe : (many (Term) h) (many (List $ Term) args) -> (many (Bool) r))
+  (let-match many h (TVar u) (else (BFalse)))
+  (and (nat-eq u univ-id) $ list-is-empty _ args))
+
+(def-fns _ $ (many show-universe : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) -> (many (String) r))
+  (match many (kw-find kws universe-key) _
+    ((Some _ v) (match many v _ ((MkPair _ _ _ n) n)))
+    ((None _) (str-cat3 "(" (name-of env univ-id) ")"))))
+
 (def-fns _
   ((many show-term : (subterm many (Term) t) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many t _
@@ -2714,7 +2724,10 @@
         (RStr $ match many (list-nth _ bound k) (((String) _))
           ((NthHit _ _ _ n _) (match many n (((String) _)) ((Some _ s) s) ((None _) (str-cat "#" $ nat-str k))))
           ((NthMiss _ _ _ _) (str-cat "#" $ nat-str k))))
-      ((TApp h args) (rcat4 (RStr "(") (notail $ show-term h env kws bound) (notail $ show-terms args env kws bound) $ RStr ")"))
+      ((TApp h args)
+        (match many (is-universe h args) _
+          ((BTrue) (RStr $ show-universe env kws))
+          ((BFalse) (rcat4 (RStr "(") (notail $ show-term h env kws bound) (notail $ show-terms args env kws bound) $ RStr ")"))))
       ((TCell h args) (rcat4 (RStr $ str-cat3 "(" (kw-spell kws "Cell") " ") (notail $ show-term h env kws bound) (notail $ show-terms args env kws bound) $ RStr ")"))
       ((TFn uq l ps rs)
         (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BTrue))
@@ -2722,7 +2735,7 @@
         (rcat5 (RStr $ str-cat3 "(" (kw-spell kws $ match many uq (((String) _)) ((BTrue) "UniqueFn") ((BFalse) "Fn")) " ") (notail $ show-term l env kws bound) psr (rcat (RStr $ str-cat " " $ kw-spell kws "->") rsr) $ RStr ")"))
       ((TTyCtor ps)
         (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BFalse))
-        (rwrap (str-cat "(" $ kw-spell kws "TyCtor") psr $ str-cat3 " " (kw-spell kws "->") " Type)"))
+        (rwrap (str-cat "(" $ kw-spell kws "TyCtor") psr $ str-cat3 " " (kw-spell kws "->") $ str-cat3 " " (show-universe env kws) ")"))
       ((TValCtor ps ret)
         (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BTrue))
         (rcat4 (RStr $ str-cat "(" $ kw-spell kws "ValCtor") psr (rcat (RStr $ str-cat3 " " (kw-spell kws "->") " ") $ notail $ show-term ret env kws b2) $ RStr ")"))

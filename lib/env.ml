@@ -194,11 +194,14 @@ let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
 let delegate_ctor = ref (-1)
 
 (* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name. *)
-let speller env =
-  let held = lazy (List.fold_left (fun acc (n, x) -> match !special_name env x with
+let speller ?except env =
+  let holds x = match !special_name env x with
+    | Some b -> Some b
+    | None -> if Some x <> except && equal (canon env (Var x)) (App (Var !Term.univ, [])) then Some Term.universe else None in
+  let held = lazy (List.fold_left (fun acc (n, x) -> match holds x with
     | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
     | _ -> acc) [] (StringMap.bindings env.scope.named)) in
-  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None -> Printf.sprintf "\001k%s\001\002" b
+  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None when b = Term.universe -> b | None -> Printf.sprintf "\001k%s\001\002" b
 
 (* The newest of the candidates [cands] keyed by [a]. *)
 let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands
@@ -244,7 +247,7 @@ let namer ?except env terms =
       | None, None -> (match newest (Lazy.force fetched) x with Some (_, n) -> n | None -> anonymous env x)
 
 (* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
-let show ?except env t = let c = canon env t in to_string ~kw:(speller env) (namer ?except env [ c ]) c
+let show ?except env t = let c = canon env t in to_string ~kw:(speller ?except env) (namer ?except env [ c ]) c
 
 (* A telescope's entries under one naming, each entry's terms canonical; the marks are the entries' own. *)
 let show_tele env tele =

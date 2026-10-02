@@ -13,7 +13,7 @@
       (dump-context))))
 ; error: tests/dump_context.sl:13:7: error: `dump-context` stops elaboration here and reports what the checker knows
 ; error: goal: (many (List A) r at cell)
-; error: constructors of `List`: Nil : (ValCtor (erased (Univ) A) -> (List A)); Cons : (ValCtor (erased (Univ) A) (many A head) (many (List A) rest) -> (List A))
+; error: constructors of `List`: Nil : (ValCtor (erased Type A) -> (List A)); Cons : (ValCtor (erased Type A) (many A head) (many (List A) rest) -> (List A))
 ; error: position: many
 ; error: inside a function body or a match branch: binders here are Dyn and calls need their proofs
 ; error: level: `(level-of append-into)`; its subterm arguments, in order: `xs`
@@ -26,5 +26,5 @@
 ; error: is (Cons A hd tl)
 ; error: cell : (Cell Cons (SlotVacant) (SlotVacant))  [unique, Dyn, cell, bound at tests/dump_context.sl:4:5]
 ; error: unique: consumed at tests/dump_context.sl:11:41, so usable only erased from here on
-; error: A : (Univ)  [erased, Dyn, type, bound at tests/dump_context.sl:3:34]
+; error: A : Type  [erased, Dyn, type, bound at tests/dump_context.sl:3:34]
 ; error: at-database, the entries at one location: {cell, _<**>, cell2} {xs, _<**>} {next, _<**>, r2}

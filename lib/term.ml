@@ -102,6 +102,9 @@ let disc_name = function Enum -> "enum" | Union -> "union"
    as the form that wrote it. *)
 let vacant = ref (-1)
 
+let univ = ref (-1)
+let universe = "(Univ)"
+
 (* [name_of] resolves free ids; bound names come from the telescopes being printed. [kw] spells a keyword. *)
 let rec to_string_in ?(kw = Fun.id) name_of bound t =
   let go = to_string_in ~kw name_of in
@@ -109,13 +112,14 @@ let rec to_string_in ?(kw = Fun.id) name_of bound t =
   match t with
   | Var x -> name_of x
   | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
+  | App (Var u, []) when u = !univ && kw universe <> universe -> kw universe
   | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
       let l = go bound l in
       let bound, ps = tele_strings ~kw name_of bound ps in
       let _, rs = tele_strings ~kw name_of bound rs in
       form (match kind with UniqueFn _ -> "UniqueFn" | _ -> "Fn") ((l :: ps) @ (kw "->" :: rs))
-  | TyCtor ps -> form "TyCtor" (snd (tele_strings ~kw ~marks:false name_of bound ps) @ [ kw "->"; "Type" ])
+  | TyCtor ps -> form "TyCtor" (snd (tele_strings ~kw ~marks:false name_of bound ps) @ [ kw "->"; go bound (App (Var !univ, [])) ])
   | ValCtor (ps, r) ->
       let bound', ps = tele_strings ~kw name_of bound ps in
       form "ValCtor" (ps @ [ kw "->"; go bound' r ])
