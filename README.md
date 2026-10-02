@@ -192,16 +192,22 @@ means it where the message points:
   newest name in scope that is `Const`, non-erased and holds it, else as `_`
   followed by its built-in name, `_Fn`, `(_level-of f)`.
 
+Keywords in a message's prose follow the same rule where they stand for syntax,
+alone in backticks, ``mark it `notail` ``, or inside quoted code, ``written
+`(share x)` ``. Plain words naming a multiplicity, as in "used at unique", stay
+as written. A keyword printed as `_` and its built-in name is noted at the
+binder that shadows it, `` `_notail` is `notail`, shadowed here ``.
+
 The two numberings follow order of first mention and hold for the whole run,
 so `_3` names one entry in every message it appears in, and every message
 that mentions one carries a note saying what it is: `` `_?1` is the `_`
-written here ``, `` `_3` is anonymous, minted here ``, `` `_Fn` is the
-built-in `Fn`, which no name in scope denotes here ``. Which atom
-canonicalization keeps for a class is an accident of minting order, so two
-numbers may turn out to denote one thing under later facts, and a name is
-shown only where it still denotes that atom (`Env.show`, `show-t` in
-`self/elab.sl`). A result that fails its return type is reported where it is
-written, the entry of the body's final `values` or the final expression.
+written here ``, `` `_3` is anonymous, minted here ``, `` `_Fn` is `Fn`,
+shadowed here ``. Which atom canonicalization keeps for a class is an
+accident of minting order, so two numbers may turn out to denote one thing
+under later facts, and a name is shown only where it still denotes that atom
+(`Env.show`, `show-t` in `self/elab.sl`). A result that fails its return type
+is reported where it is written, the entry of the body's final `values` or the
+final expression.
 
 Shadowing is legal (section 9) and warns. Every binder that hides a name
 already in scope earns ``declaration of `List` shadows a previous binder``,

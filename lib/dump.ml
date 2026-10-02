@@ -20,7 +20,7 @@ let kind env x =
   | ValCtor _ -> "constructor"
   | Matchable _ -> "Matchable"
   | Cell _ -> "cell"
-  | App (Var h, _) when h = Prelude.level -> if (entry env x).minted_level then "level minted by `def-lvl`" else "level"
+  | App (Var h, _) when h = Prelude.level -> if (entry env x).minted_level then respell env "level minted by `def-lvl`" else "level"
   | App (Var h, _) when h = Prelude.univ -> "type"
   | App (Var h, _) when h = Prelude.special -> "special form"
   | App (Var h, _) when List.mem h proofs -> "proof"
@@ -43,9 +43,9 @@ let unique_status env x =
   else
     (match IntMap.find_opt x env.uses with
      | Some (Consumed, l) -> [ "unique: consumed at " ^ where l ^ ", so usable only erased from here on" ]
-     | Some (Shared, l) -> [ "unique: shared at " ^ where l ^ ", so usable at many, written `(share " ^ name_of env x ^ ")`, and never again at unique" ]
+     | Some (Shared, l) -> [ "unique: shared at " ^ where l ^ ", so usable at many, written `(" ^ speller env "share" ^ " " ^ name_of env x ^ ")`, and never again at unique" ]
      | None -> [ "unique: live, neither consumed nor shared on this path" ])
-    @ if List.mem x env.captures then [ "unique: closed over by the enclosing `def-fns`, so usable here only erased or through `share`" ] else []
+    @ if List.mem x env.captures then [ respell env "unique: closed over by the enclosing `def-fns`, so usable here only erased or through `share`" ] else []
 
 (* A value the final's printer can spell (ASSUMPTIONS 184); a function or a Matchable adds nothing to its kind. *)
 let value ~show_value env l x =
@@ -78,7 +78,7 @@ let constructors env ty =
 
 let goal_lines env goal =
   match goal with
-  | Statement -> [ "goal: none; `dump-context` stands as a statement here, so nothing is expected of it" ]
+  | Statement -> [ respell env "goal: none; `dump-context` stands as a statement here, so nothing is expected of it" ]
   | Type -> [ "goal: a type, in an erased position" ]
   | Values (expect, None) ->
       [ Printf.sprintf "goal: %d value%s at %s; the position fixes no type" (List.length expect) (if List.length expect = 1 then "" else "s") (String.concat ", " (List.map mult_name expect)) ]
@@ -138,7 +138,7 @@ let scope_lines ~show_value env l =
   let n = List.length env.prelude.ids in
   let header, listed = match mine with
     | [] -> Printf.sprintf "in scope, newest first (the program has bound nothing, so the prelude's %d are listed):" n, env.scope.ids
-    | _ -> Printf.sprintf "in scope, newest first (%d entries; the prelude's %d are not listed, and `(dump-context x)` shows any one):" (List.length mine) n, mine in
+    | _ -> sprintf_in env "in scope, newest first (%d entries; the prelude's %d are not listed, and `(dump-context x)` shows any one):" (List.length mine) n, mine in
   header :: List.concat_map (fun x -> List.map (( ^ ) "  ") (entry_lines ~show_value env l x)) listed
 
 (* [focus]: the form's arguments, each a term in section 5's grammar with its type where it has one. A variable
@@ -157,4 +157,4 @@ let report ~show_value env l goal focus =
     @ (if focus = [] then scope_lines ~show_value env l else focus_lines ~show_value env l focus)
     @ at_lines env @ opened_lines env @ literal_lines env
   in
-  error_with l [] "%s" (String.concat "\n" ("`dump-context` stops elaboration here and reports what the checker knows" :: List.map (( ^ ) "  ") body))
+  error_with_in env l [] "%s" (String.concat "\n" (respell env "`dump-context` stops elaboration here and reports what the checker knows" :: List.map (( ^ ) "  ") body))

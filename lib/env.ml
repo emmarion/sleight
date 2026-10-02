@@ -210,6 +210,38 @@ let speller ?except env =
     | None when b = Term.universe -> b
     | None -> Printf.sprintf "\001k%s\001%s\002" b (match lookup env b with Some x -> Reader.where "" (entry env x).at | None -> "")
 
+(* A message's own template with each keyword that stands for syntax spelled as [speller] spells it: inside
+   backticks, or anywhere in [code], a piece of syntax such as a usage hint. Only a template is respelled,
+   never text a name or term was interpolated into, which may hold a binder that merely shares a keyword's name. *)
+let respell ?(code = false) ?(escape = false) env s =
+  let kw = speller env and b = Buffer.create (String.length s) and tok = Buffer.create 16 and quoted = ref code in
+  let flush () =
+    let t = Buffer.contents tok in
+    Buffer.clear tok;
+    Buffer.add_string b
+      (if !quoted && List.exists (fun (_, n) -> n = t) Special.all then
+         let k = kw t in if escape then String.concat "%%" (String.split_on_char '%' k) else k
+       else t) in
+  String.iter (fun c -> match c with
+    | '`' -> flush (); Buffer.add_char b c; if not code then quoted := not !quoted
+    | ' ' | '(' | ')' | '\n' -> flush (); Buffer.add_char b c
+    | c -> Buffer.add_char tok c) s;
+  flush ();
+  Buffer.contents b
+
+(* Help text from lib/specials.txt: its prose as any template, and each usage line, pure syntax, in full. *)
+let help env s =
+  let usage = "hint: usage: " in
+  String.concat "\n" (List.map (fun line ->
+    if String.starts_with ~prefix:usage line then usage ^ respell ~code:true env (String.sub line (String.length usage) (String.length line - String.length usage))
+    else respell env line) (String.split_on_char '\n' s))
+
+let respelled env fmt = Scanf.format_from_string (respell ~escape:true env (string_of_format fmt)) fmt
+let error_in env loc fmt = error_with loc [] (respelled env fmt)
+let error_with_in env loc notes fmt = error_with loc notes (respelled env fmt)
+let warn_in env loc notes fmt = warn_at loc notes (respelled env fmt)
+let sprintf_in env fmt = Printf.sprintf (respelled env fmt)
+
 (* The newest of the candidates [cands] keyed by [a]. *)
 let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands
 
@@ -399,7 +431,7 @@ let misuse demand supply =
   else None
 
 let check_mult env loc explain demand supply =
-  if not env.usage_erased then Option.iter (fun how -> let notes, what = explain () in error_with loc notes "%s, %s" what how) (misuse demand supply)
+  if not env.usage_erased then Option.iter (fun how -> let notes, what = explain () in error_with loc notes "%s, %s" what (respell env how)) (misuse demand supply)
 
 let declared env ?(how = "") x =
   let e = entry env x in
@@ -410,10 +442,10 @@ let use env loc ?(sharing = false) ?written mult x =
   let e = entry env x in
   let explain () = match List.find_map (fun (k, (y, _)) -> if y = x then Some k else None) env.literals with
     | Some k -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:k)) (mult_name e.mult))
-    | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (mult_name e.mult)) in
+    | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
   check_mult env loc explain mult (if sharing && mult = Many then Many else e.mult);
   if e.mult <> Unique then env else (
-    if mult = Unique && List.mem x env.captures then error loc "`def-fns` cannot capture %s at unique" (qname env x);
+    if mult = Unique && List.mem x env.captures then error_in env loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with
      | Some (Consumed, pl) -> error_with loc [ (pl, "already used at unique here") ] "unique value %s has conflicting non-erased uses" (qname env x)
      | Some (Shared, pl) when mult = Unique -> error_with loc [ (pl, "already shared here") ] "unique value %s has conflicting non-erased uses" (qname env x)
