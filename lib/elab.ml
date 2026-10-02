@@ -115,14 +115,19 @@ let rec differ a b =
   | App (h, xs), App (h', ys) when equal h h' && List.length xs = List.length ys -> List.concat (List.map2 differ xs ys)
   | _ -> [ (a, b) ]
 
+let ctor_params env t = match canon env t with TyCtor ps | ValCtor (ps, _) -> Some ps | _ -> None
+
 (* Identity after canonicalization (section 5), solving any metas either side holds (Env.unify). *)
-let solve what env loc actual expected =
+let solve ?raw what env loc actual expected =
   try unify env actual expected
   with Contradiction _ ->
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
-    error_with loc notes "%s mismatch: expected %s, got %s" what (qshow env expected) (qshow env actual)
+    let hint = match raw, ctor_params env actual, ctor_params env expected with
+      | Some raw, Some ps, None -> Printf.sprintf "\nhint: did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Atom (Reader.loc raw, "_")) ps))))
+      | _ -> "" in
+    error_with loc notes "%s mismatch: expected %s, got %s%s" what (qshow env expected) (qshow env actual) hint
 
 (* The literals a forcing trial bound, which is what leaves a branch standing that a literal index was meant
    to refute: those whose canonical form the trial changed, and any literal one was bound to. *)
@@ -132,7 +137,7 @@ let forced_notes env l r trial =
 
 let check what env loc actual expected = ignore (solve what env loc actual expected)
 let check_type = check "type" and check_equal = check "value"
-let solve_sg env loc sg r = match sg with Ty ty -> solve "type" env loc r.ty ty | Is t -> solve "value" env loc r.term t
+let solve_sg ?raw env loc sg r = match sg with Ty ty -> solve ?raw "type" env loc r.ty ty | Is t -> solve "value" env loc r.term t
 let check_sg env loc sg r = ignore (solve_sg env loc sg r)
 let under pos m = if pos = Erased then Erased else m
 let written pos l what m =
@@ -603,7 +608,7 @@ and disc_of env l d = match special_of env d with Some Sp.Enum -> Enum | Some Sp
 
 and elab_type env raw =
   let env, t = elab_term env raw in
-  check_type env (loc raw) (infer env (loc raw) t) type_term;
+  ignore (solve ~raw "type" env (loc raw) (infer env (loc raw) t) type_term);
   (env, t)
 
 and elab_sg env = function
@@ -663,7 +668,7 @@ and check_args env loc ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundar
           (env, Var m :: acc, codes, bindings))
         else
           let env, r, code = elab env e.mult arg (Some [ { e with sg } ]) in
-          let env = solve_sg env (Reader.loc arg) sg r in
+          let env = solve_sg ~raw:arg env (Reader.loc arg) sg r in
           let env, r, code, bindings =
             if bind_args && pos <> Erased && e.mult <> Erased then (
               match r.term, code with
@@ -708,22 +713,22 @@ and elab_term_args env loc ?expect tele ret args =
 (* [ids] as in [open_tele]. *)
 (* Where each of a body's results is written: the entries of a final values form holding one per result, else
    the final expression, which is what a mismatch with the returns points at. *)
-let result_locs env loc body n =
+let result_sites env loc body n =
   match List.rev body with
-  | List (_, v :: entries) :: _ when is_special env v Sp.Values && List.length entries = n -> List.map Reader.loc entries
-  | final :: _ -> List.init n (fun _ -> Reader.loc final)
-  | [] -> List.init n (fun _ -> loc)
+  | List (_, v :: entries) :: _ when is_special env v Sp.Values && List.length entries = n -> List.map (fun e -> (Reader.loc e, Some e)) entries
+  | final :: _ -> List.init n (fun _ -> (Reader.loc final, if n = 1 then Some final else None))
+  | [] -> List.init n (fun _ -> (loc, None))
 
 let check_results env loc ?(ids = []) body tele ress =
   count_check loc tele ress;
-  let env = List.fold_left2 (fun (env, acc) (e, rl) r ->
-    let env = solve_sg env rl (map_sg (instantiate acc) e.sg) r in
+  let env = List.fold_left2 (fun (env, acc) (e, (rl, raw)) r ->
+    let env = solve_sg ?raw env rl (map_sg (instantiate acc) e.sg) r in
     (match Option.map (instantiate acc) e.place with
      | Some (SlotHolds p) when not env.usage_erased ->
          if not (Option.fold ~none:false ~some:(at_equal env p) r.place) then error rl "return does not satisfy `at` %s" (tick (to_string ~kw:(speller env) (name_of env) p))
      | _ -> ());
-    (env, r.term :: acc)) (env, ids) (List.combine tele (result_locs env loc body (List.length tele))) ress |> fst in
-  List.iter2 (settle_res env) (result_locs env loc body (List.length ress)) ress
+    (env, r.term :: acc)) (env, ids) (List.combine tele (result_sites env loc body (List.length tele))) ress |> fst in
+  List.iter2 (fun (l, _) -> settle_res env l) (result_sites env loc body (List.length ress)) ress
 
 let rec project_code keep code =
   if List.for_all Fun.id keep then code else
@@ -1481,11 +1486,12 @@ and elab_let spos env l args =
   let after, wrap, final = elab_stmts spos env l rhs in
   let inner, ress, code = elab_expr ?tele after expect final in
   let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
+  let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
     let env =
       match (tele, b.s_sg) with
-      | Some t, _ -> solve_sg env b.s_loc (map_sg (instantiate acc) (List.nth t i).sg) r
-      | None, Some s -> let env, sg = elab_sg env s in solve_sg env b.s_loc sg r
+      | Some t, _ -> solve_sg ?raw:(raw i) env b.s_loc (map_sg (instantiate acc) (List.nth t i).sg) r
+      | None, Some s -> let env, sg = elab_sg env s in solve_sg ?raw:(raw i) env b.s_loc sg r
       | None, None -> env
     in
     settle_res env b.s_loc r;
