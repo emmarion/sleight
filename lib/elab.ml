@@ -427,12 +427,12 @@ let matchable_code env pos x =
 
 let mint_adt ?(newtype = false) env name disc shapes =
   let adt = { V.tname = name; tagged = tagged disc shapes; newtype; ctors = []; ext = None } in
-  adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = name_of env c; cid = c; index; arity; adt }) (non_phantom shapes);
+  adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = entry_name env c; cid = c; index; arity; adt }) (non_phantom shapes);
   adt
 
 (* A match on an ADT the elaborator can see reads no Matchable at runtime (section 17); one on a held Matchable
    reads it as the shape the Matchable's type gives its values. *)
-let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, mint_adt ~newtype:(match type_of env x with Matchable (_, n, _, _, _) -> n | _ -> false) env (name_of env tid) disc shapes)
+let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, mint_adt ~newtype:(match type_of env x with Matchable (_, n, _, _, _) -> n | _ -> false) env (entry_name env tid) disc shapes)
 let cell_shape env l c =
   let tid = tid_of env l c in
   let mid, disc, cs = find_matchable env l tid in
@@ -443,8 +443,8 @@ let cell_shape env l c =
   if marker env l tid cs c = Erased then error l "phantom constructors have no cells";
   let params, ret = ctor_type env l c in
   let shapes = shapes env l cs in
-  let a = mint_adt env (name_of env tid) disc shapes in
-  let ct = { V.cname = name_of env c; cid = c; index = Option.value (discriminant shapes c) ~default:0;
+  let a = mint_adt env (entry_name env tid) disc shapes in
+  let ct = { V.cname = entry_name env c; cid = c; index = Option.value (discriminant shapes c) ~default:0;
     arity = List.length (List.filter (fun e -> e.mult <> Erased) params); adt = a } in
   (ct, params, ret)
 
@@ -1670,7 +1670,7 @@ and elab_def_fns ?(unique = false) env l args =
       if unique && List.length fns <> 1 then error l "`def-unique` defines exactly one function";
       let env, lvl =
         match lv with
-        | Atom (_, "_") -> let x, env = mint_level env ~at:Reader.nowhere None in (env, x)
+        | Atom (al, "_") -> let x, env = mint_level env ~at:al None in (env, x)
         | _ -> level_var env l lv
       in
       let header raw =

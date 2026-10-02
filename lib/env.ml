@@ -9,49 +9,51 @@ exception Contradiction of string Lazy.t
    what lets the runner capture one, stderr being the process's own here rather than the world's. *)
 let warn = ref prerr_string
 
-(* An unsolved meta is printed as a marker holding its id and where its `_` was written (name_of), so that the
-   message it lands in can number the metas it mentions, in order, and name each one's `_` in a note of its own. *)
-let metas_in loc s =
+(* An unsolved meta or an anonymous entry is printed as a marker holding its kind, its id and where it was
+   written (name_of). Markers are numbered when a message is printed, in order of first mention and once for the
+   whole run, so a number names one thing in every message; each message names where each one stands in a note. *)
+let numbering : (string, int) Hashtbl.t = Hashtbl.create 16
+
+let marker kind x at = Printf.sprintf "\001%c%d\001%s\002" kind x (Reader.where "" at)
+
+let resolve here s =
   let b = Buffer.create (String.length s) and seen = ref [] in
-  let number id = match List.assoc_opt id !seen with
-    | Some (k, _) -> k
-    | None -> List.length !seen + 1 in
+  let number key =
+    match Hashtbl.find_opt numbering key with
+    | Some n -> n
+    | None ->
+        let n = 1 + Hashtbl.fold (fun k _ c -> if k.[0] = key.[0] then c + 1 else c) numbering 0 in
+        Hashtbl.replace numbering key n; n in
   let rec go i =
     match String.index_from_opt s i '\001' with
     | None -> Buffer.add_string b (String.sub s i (String.length s - i))
     | Some j ->
         let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
-        let id = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
-        let n = number id in
-        if not (List.mem_assoc id !seen) then seen := !seen @ [ (id, (n, at)) ];
-        Buffer.add_string b (String.sub s i (j - i) ^ "?" ^ string_of_int n);
+        let key = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
+        let shown = (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
+        if not (List.mem_assoc key !seen) then seen := !seen @ [ (key, (shown, at)) ];
+        Buffer.add_string b (String.sub s i (j - i) ^ shown);
         go (e + 1)
   in
   go 0;
-  let note (_, (n, at)) =
-    if at = "" then (Reader.where "-" loc, Printf.sprintf "`?%d` is a `_` the elaborator supplied, not one written in the source" n)
-    else (at, Printf.sprintf "`?%d` is the `_` written here" n)
-  in
-  (Buffer.contents b, List.map note !seen)
+  let note (key, (shown, at)) =
+    let written, supplied =
+      if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
+      else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
+    if at = "" then Printf.sprintf "\n%s: note: `%s` is %s" here shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
+  Buffer.contents b ^ String.concat "" (List.map note !seen)
 
 let warn_at l notes fmt =
-  let note (nl, m) = Printf.sprintf "%s: note: %s\n" (Reader.where "-" nl) m in
+  let note (nl, m) = Printf.sprintf "\n%s: note: %s" (Reader.where "-" nl) m in
   Printf.ksprintf
-    (fun s ->
-      let s, metas = metas_in l s in
-      !warn (Printf.sprintf "%s: warning: %s\n%s%s" (Reader.where "-" l) s (String.concat "" (List.map note notes))
-               (String.concat "" (List.map (fun (w, m) -> Printf.sprintf "%s: note: %s\n" w m) metas))))
+    (fun s -> let here = Reader.where "-" l in !warn (resolve here (Printf.sprintf "%s: warning: %s%s" here s (String.concat "" (List.map note notes))) ^ "\n"))
     fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
 let error_with loc notes fmt =
   let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
-  Printf.ksprintf
-    (fun s ->
-      let s, metas = metas_in loc s in
-      raise (Error (loc, List.fold_left (fun s (w, m) -> Printf.sprintf "%s\n%s: note: %s" s w m) (List.fold_left note s notes) metas)))
-    fmt
+  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes))) fmt
 
 let error loc fmt = error_with loc [] fmt
 
@@ -113,10 +115,9 @@ let trace : item list ref = ref []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
-let name_of env x = match entry env x with
-  | { name = Some n; _ } -> n
-  | { meta = true; at; _ } -> Printf.sprintf "\001%d\001%s\002" x (Reader.where "" at)
-  | _ -> "_" ^ string_of_int x
+let entry_name env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
+let anonymous env x = let e = entry env x in marker (if e.meta then '?' else '_') x e.at
+let name_of env x = match (entry env x).name with Some n -> n | None -> anonymous env x
 
 let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
@@ -200,7 +201,7 @@ let namer ?except env terms =
   let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (match best with Some (y, _) -> x > y | None -> true) then Some (x, n) else best) None cands in
   fun x ->
     if (entry env x).meta then name_of env x
-    else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> "_" ^ string_of_int x
+    else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> anonymous env x
 
 (* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
 let show ?except env t = let c = canon env t in to_string (namer ?except env [ c ]) c

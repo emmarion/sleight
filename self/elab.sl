@@ -216,7 +216,7 @@
 
 (def-fns _ $ (many name-atoms : (many (Env) env) (subterm many (List $ Nat) atoms) (many (List $ Pair (Nat) $ Pair (Nat) (String)) lits) (many (List $ Pair (Nat) $ Pair (Nat) (String)) names) -> (many (Env) r))
   (let-match many atoms (Cons _ a rest) ((Nil _) env))
-  (let ((many (String) fallback)) $ match many (best-cand a names $ None _) (((String) _)) ((Some _ p) (match many p _ ((MkPair _ _ _ nm) nm))) ((None _) (str-cat "_" $ nat-str a)))
+  (let ((many (String) fallback)) $ match many (best-cand a names $ None _) (((String) _)) ((Some _ p) (match many p _ ((MkPair _ _ _ nm) nm))) ((None _) (anon-mark env a)))
   (let ((many (String) n)) $ match many (best-cand a lits $ None _) (((String) _)) ((Some _ p) (match many p _ ((MkPair _ _ _ sp) sp))) ((None _) fallback))
   (tail $ name-atoms (env-name-entry env a n) rest lits names))
 
@@ -904,12 +904,12 @@
 (def-fns _ $ (many ctor-records : (subterm many (List $ CShape) ss) (many (Env) env) (many (Nat) index) (many (Bool) tagged) (many (Maybe $ ExtType) ext) (many (List $ Nat) shape) (many (Bool) nt) -> (many (List $ Ctor) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
   (match many s _
-    ((MkCShape _ c n) (Cons _ (MkCtor (name-of env c) c index n tagged ext shape nt) $ notail $ ctor-records rest env (Succ index) tagged ext shape nt))))
+    ((MkCShape _ c n) (Cons _ (MkCtor (entry-name-or-id env c) c index n tagged ext shape nt) $ notail $ ctor-records rest env (Succ index) tagged ext shape nt))))
 
 ; The ADT a Matchable's type describes (section 17): the non-phantom constructors at their discriminants.
 (def-fns _ $ (many mint-adt : (many (Env) env) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) (many (Maybe $ ExtType) ext) (many (Bool) nt) -> (many (Adt) r))
   (let ((many tagged)) $ tagged-of disc ss)
-  (MkAdt (name-of env tid) tagged (ctor-records (non-phantom ss) env 0 tagged ext (cshape-arities $ non-phantom ss) nt) ext nt))
+  (MkAdt (entry-name-or-id env tid) tagged (ctor-records (non-phantom ss) env 0 tagged ext (cshape-arities $ non-phantom ss) nt) ext nt))
 
 (def-fns _ $ (many alias-target : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
   (match many (idmap-get _ x $ env-aliases env) _ ((Hit _ _ _ t _) t) ((Miss _ _ _ _) x)))
@@ -1825,7 +1825,7 @@
   (match many found _
     ((None _)
       (values (env-error env1 "cell constructor has no opened `Matchable`")
-        (MkCtor (name-of env c) c 0 (many-count params) (BFalse) (None _) (Nil _) (BFalse)) params ret (Erased)))
+        (MkCtor (entry-name-or-id env c) c 0 (many-count params) (BFalse) (None _) (Nil _) (BFalse)) params ret (Erased)))
     ((Some _ info)
       (let-match many info (MkMatchInfo mid disc cs rank))
       (let ((many env2)) (match many (type-of env1 mid) (((Env) _))
@@ -1837,7 +1837,7 @@
         (str-cat3 (name-of env2 c) " is not a constructor of " (name-of env2 tid))))
       (let ((many env2d)) (error-unless env2b (mult-is-many $ marker cs c) "phantom constructors have no cells"))
       (let ((many ss)) (shapes cs env2d))
-      (values env2d (MkCtor (name-of env2d c) c (discriminant ss c) (many-count params)
+      (values env2d (MkCtor (entry-name-or-id env2d c) c (discriminant ss c) (many-count params)
         (tagged-of disc ss) (None _) (cshape-arities (non-phantom ss)) (BFalse)) params ret (marker cs c)))))
 
 (def-fns _ $ (many pattern-slots : (subterm many (List $ Entry) params) (many (List $ Nat) ids) -> (many (List $ Term) slots))
@@ -4663,7 +4663,7 @@
     (let-match many args (Cons _ lvraw fns) ((Nil _) (values (env-error env "`def-fns` needs a level") ctx $ SNone _)))
     (let ((many (Env) env2) (many (Nat) lvl))
       (match many (is-underscore lvraw) _
-        ((BTrue) (mint-level env (None _) (None _)))
+        ((BTrue) (mint-level env (None _) (Some _ $ loc-in env $ raw-pos lvraw)))
         ((BFalse) (let ((many env2) (many t) (many ty)) $ notail $ elab-term sugar lvraw env (BFalse) no-tele) (level-var-checked env2 t))))
     (let ((many env2a)) $ error-when env2 (and uq $ not $ nat-eq (list-length _ fns) 1) "`def-unique` defines exactly one function")
     (let ((many env3) (many headers)) $ notail $ elab-headers sugar fns env2a lvl uq)

@@ -1071,7 +1071,7 @@
 (def-fns _ $ (many is-string-type : (many (Env) env) (many (Term) ty) -> (many (Bool) r))
   (match many (type-head env ty) _
     ((None _) (BFalse))
-    ((Some _ t) (str-eq (name-of env t) "String"))))
+    ((Some _ t) (str-eq (entry-name-or-id env t) "String"))))
 
 (def-fns _ $ (many classify-final : (many (Env) env) (many (Term) ty) -> (many (FinalKind) f))
   (match many (canon-env env ty) _
@@ -1095,7 +1095,7 @@
     ((TApp _ _)
       (match many (type-head env ty) _
         ((None _) (FPlain))
-        ((Some _ t) (match many (str-cmp (name-of env t) "IO") _ ((CEq _ _ _) (FIo)) (else (FPlain)))))) (else (FPlain))))
+        ((Some _ t) (match many (str-cmp (entry-name-or-id env t) "IO") _ ((CEq _ _ _) (FIo)) (else (FPlain)))))) (else (FPlain))))
 
 ; ---- A printer per type for a final function's result (lib/extract.ml's show): each constructor's return
 ; type is unified with the type to find its many fields' types, as entering a branch does.

@@ -1944,7 +1944,7 @@
   ((Use : -> Type) enum (many UseShared : (many (Loc) loc) -> (Use)) (many UseConsumed : (many (Loc) loc) -> (Use)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
   ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) -> (Pragmas)))
-  ((Said : -> Type) enum (many SaidWarning : (many (String) text) -> (Said)) (many SaidError : (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)))
+  ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
@@ -2091,7 +2091,7 @@
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _ _) wa)))
 (def-fns _ $ (many said-failed : (subterm many (List $ Said) ss) -> (many (Bool) r))
   (let-match many ss (Cons _ x rest) ((Nil _) (BFalse)))
-  (match many x _ ((SaidError _) (BTrue)) (else (tail $ said-failed rest))))
+  (match many x _ ((SaidError _ _) (BTrue)) (else (tail $ said-failed rest))))
 (def-fns _ $ (many env-failed : (many (Env) e) -> (many (Bool) r))
   (said-failed $ env-said e))
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
@@ -2109,7 +2109,7 @@
 (def-fns _ $ (many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st (Cons _ (MkPair _ _ x lo) cl) wa lt lo pr us hn))))
 (def-fns _ $ (many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl (Cons _ (SaidWarning x) wa) lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl (Cons _ (SaidWarning lo x) wa) lt lo pr us hn))))
 (def-fns _ $ (many env-warn-all : (many (Env) e) (subterm many (List $ String) xs) -> (many (Env) r))
   (match many xs _
     ((Nil _) e)
@@ -2151,11 +2151,11 @@
 (def-fns _ $ (many env-back : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (env-at-loc inner $ env-loc outer))
 ; A message with the file and position in force, in the reference's format.
+(def-fns _ $ (many loc-here : (many (Loc) lo) -> (many (String) r))
+  (let-match many lo (MkLoc f p))
+  (match many p _ ((MkPos l c) (str-cat3 f ":" $ str-cat3 (nat-str l) ":" $ nat-str c))))
 (def-fns _ $ (many located : (many (Env) e) (many (String) kind) (many (String) x) -> (many (String) r))
-  (let-match many (env-loc e) (MkLoc f p))
-  (match many p (((String) _))
-    ((MkPos l c)
-      (str-cat3 f ":" $ str-cat3 (nat-str l) ":" $ str-cat3 (nat-str c) kind x))))
+  (str-cat3 (loc-here $ env-loc e) kind x))
 ; Where a position is, in the reference's format, or nothing for none (lib/reader.ml's where).
 (def-fns _ $ (many loc-str : (many (Maybe $ Loc) site) -> (many (String) r))
   (let-match many site (Some _ l) ((None _) ""))
@@ -2165,9 +2165,10 @@
     ((Zero) "")
     (else (str-cat3 f ":" $ str-cat3 (nat-str ln) ":" $ nat-str c))))
 
-; An unsolved meta is printed as a marker holding its id and where its `_` was written (name-of), so that the
-; message it lands in can number the metas it mentions, in order, and name each one's `_` in a note of its own
-; (lib/env.ml's metas_in).
+; An unsolved meta or an anonymous entry is printed as a marker holding its kind, its id and where it was
+; written (name-of). Markers are numbered when a message is printed, in order of first mention and once for the
+; whole run, so a number names one thing in every message; each message names where each one stands in a note
+; (lib/env.ml's resolve).
 (def-adts $ (MsgMeta : -> Type)
   enum
   (many MkMsgMeta : (many (String) id) (many (Nat) n) (many (String) where) -> (MsgMeta)))
@@ -2177,50 +2178,66 @@
     ((Nil _) (None _))
     ((Cons _ m rest) (match many m _ ((MkMsgMeta i n _) (match many (str-eq i id) _ ((BTrue) (Some _ n)) ((BFalse) (tail (meta-find rest id)))))))))
 
-(def-fns _ $ (many meta-number : (many (String) id) (many (String) where) (many (List $ MsgMeta) seen) -> (many (Nat) n) (many (List $ MsgMeta) r))
-  (let-match many (meta-find seen id) (None _) ((Some _ n) (values n seen)))
-  (let ((many n)) $ Succ $ list-length _ seen)
-  (let ((many seen2) (erased _)) $ list-append _ seen $ Cons _ (MkMsgMeta id n where) $ Nil _)
-  (values n seen2))
+(def-fns _ $ (many is-hole-key : (many (String) id) -> (many (Bool) r))
+  (match many id _ ((SCons c _) (char-is c 63)) ((SNil) (BFalse))))
+
+(def-fns _ $ (many key-count : (subterm many (List $ MsgMeta) ms) (many (Bool) hole) -> (many (Nat) n))
+  (let-match many ms (Cons _ m rest) ((Nil _) (Zero)))
+  (let-match many m (MkMsgMeta i _ _))
+  (let ((many more)) $ notail $ key-count rest hole)
+  (match many (match many hole (((Bool) _)) ((BTrue) (is-hole-key i)) ((BFalse) (not $ is-hole-key i))) _ ((BTrue) (Succ more)) ((BFalse) more)))
+
+(def-fns _ $ (many meta-number : (many (String) id) (many (List $ MsgMeta) table) -> (many (Nat) n) (many (List $ MsgMeta) r))
+  (let-match many (meta-find table id) (None _) ((Some _ n) (values n table)))
+  (let ((many n)) $ Succ $ key-count table $ is-hole-key id)
+  (values n $ Cons _ (MkMsgMeta id n "") table))
+
+(def-fns _ $ (many meta-shown : (many (String) id) (many (Nat) n) -> (many (String) r))
+  (str-cat (match many (is-hole-key id) (((String) _)) ((BTrue) "_?") ((BFalse) "_")) $ nat-str n))
 
 ; [mode] is 0 in the text, 1 in a marker's id and 2 in its position.
-(def-fns _ $ (many meta-scan : (subterm many (String) s) (many (Nat) mode) (many (Rope) out) (many (Rope) id) (many (Rope) where) (many (List $ MsgMeta) seen) ->
-    (many (Rope) r) (many (List $ MsgMeta) seen2))
-  (let-match many s (SCons c rest) ((SNil) (values out seen)))
+(def-fns _ $ (many meta-scan : (subterm many (String) s) (many (Nat) mode) (many (Rope) out) (many (Rope) id) (many (Rope) where) (many (List $ MsgMeta) seen) (many (List $ MsgMeta) table) ->
+    (many (Rope) r) (many (List $ MsgMeta) seen2) (many (List $ MsgMeta) table2))
+  (let-match many s (SCons c rest) ((SNil) (values out seen table)))
   (let-match many (char-is c 1) (BFalse)
-    ((BTrue) (match many mode _ ((Zero) (tail (meta-scan rest 1 out (REmpty) (REmpty) seen))) (else (tail (meta-scan rest 2 out id where seen))))))
+    ((BTrue) (match many mode _ ((Zero) (tail (meta-scan rest 1 out (REmpty) (REmpty) seen table))) (else (tail (meta-scan rest 2 out id where seen table))))))
   (match many (char-is c 2) _
     ((BTrue)
-      (let ((many n) (many seen2)) $ meta-number (rope-str id) (rope-str where) seen)
-      (tail (meta-scan rest 0 (rcat3 out (RStr "?") $ RStr $ nat-str n) (REmpty) (REmpty) seen2)))
+      (let ((many key)) $ rope-str id)
+      (let ((many n) (many table2)) $ meta-number key table)
+      (let ((many seen2)) $ match many (meta-find seen key) (((List $ MsgMeta) _))
+        ((Some _ _) seen)
+        ((None _) (let ((many l) (erased _)) (list-append _ seen $ Cons _ (MkMsgMeta key n $ rope-str where) $ Nil _)) l))
+      (tail (meta-scan rest 0 (rcat out $ RStr $ meta-shown key n) (REmpty) (REmpty) seen2 table2)))
     ((BFalse)
-      (let-match many mode (Succ m) ((Zero) (tail (meta-scan rest mode (rcat out $ RChar c) id where seen))))
+      (let-match many mode (Succ m) ((Zero) (tail (meta-scan rest mode (rcat out $ RChar c) id where seen table))))
       (match many m _
-        ((Zero) (tail (meta-scan rest mode out (rcat id $ RChar c) where seen)))
-        (else (tail (meta-scan rest mode out id (rcat where $ RChar c) seen)))))))
+        ((Zero) (tail (meta-scan rest mode out (rcat id $ RChar c) where seen table)))
+        (else (tail (meta-scan rest mode out id (rcat where $ RChar c) seen table)))))))
 
-(def-fns _ $ (many meta-notes : (many (Env) e) (subterm many (List $ MsgMeta) ms) -> (many (List $ String) r))
+(def-fns _ $ (many meta-notes : (many (String) here) (subterm many (List $ MsgMeta) ms) -> (many (List $ String) r))
   (let-match many ms (Cons _ m rest) ((Nil _) (Nil _)))
-  (let-match many m (MkMsgMeta _ n where))
+  (let-match many m (MkMsgMeta id n where))
+  (let ((many shown)) $ str-cat3 "`" (meta-shown id n) "` is ")
+  (let ((many hole)) $ is-hole-key id)
   (Cons _ (match many (str-is-empty where) (((String) _))
-            ((BTrue) (located e ": note: " $ str-cat3 "`?" (nat-str n) "` is a `_` the elaborator supplied, not one written in the source"))
-            ((BFalse) (str-cat3 where ": note: " $ str-cat3 "`?" (nat-str n) "` is the `_` written here")))
-    $ notail $ meta-notes e rest))
+            ((BTrue) (str-cat3 here ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "a `_` the elaborator supplied, not one written in the source") ((BFalse) "anonymous, minted by the elaborator rather than written in the source")))
+            ((BFalse) (str-cat3 where ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "the `_` written here") ((BFalse) "anonymous, minted here"))))
+    $ notail $ meta-notes here rest))
 
-; A message with its metas numbered, and the notes naming where each one's `_` was written.
-(def-fns _ $ (many metas-in : (many (Env) e) (many (String) x) -> (many (String) r) (many (List $ String) notes))
-  (let ((many out) (many seen)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) (Nil _))
-  (values (rope-str out) (meta-notes e seen)))
+; A message with its markers numbered against the run's [table], and the notes placing each one.
+(def-fns _ $ (many resolve-marks : (many (Loc) lo) (many (String) x) (many (List $ MsgMeta) table) -> (many (String) r) (many (List $ MsgMeta) table2))
+  (let ((many out) (many seen) (many table2)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) (Nil _) table)
+  (values (join-strs (Cons _ (rope-str out) $ meta-notes (loc-here lo) seen) "\n") table2))
 
 (def-fns _ $ (many note-lines : (many (Env) e) (subterm many (List $ Pair (Loc) $ String) notes) (many (List $ String) rest) -> (many (List $ String) r))
   (let-match many notes (Cons _ n more) ((Nil _) rest))
   (let-match many n (MkPair _ _ l m))
   (Cons _ (located (env-at-loc e l) ": note: " m) $ notail $ note-lines e more rest))
 (def-fns _ $ (many diagnostic : (many (Env) e) (many (String) kind) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (String) r))
-  (let ((many msg) (many mnotes)) $ metas-in e x)
-  (join-strs (Cons _ (located e kind msg) $ note-lines e notes mnotes) "\n"))
+  (join-strs (Cons _ (located e kind x) $ note-lines e notes $ Nil _) "\n"))
 (def-fns _ $ (many env-fail : (many (Env) e) (many (String) text) -> (many (Env) r))
-  (env-set-said e $ Cons _ (SaidError text) $ env-said e))
+  (env-set-said e $ Cons _ (SaidError (env-loc e) text) $ env-said e))
 (def-fns _ $ (many env-error-with : (many (Env) e) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (Env) r))
   (env-fail e $ diagnostic e ": error: " notes x))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
@@ -2228,7 +2245,7 @@
 ; An error about two places names both: the note is a second location, written under the message as a
 ; warning's note is, rather than described in the message's prose (ASSUMPTIONS 194).
 (def-fns _ $ (many env-warn-with : (many (Env) e) (many (Loc) l) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (Env) r))
-  (env-warn e $ diagnostic (env-at-loc e l) ": warning: " notes x))
+  (env-back e $ env-warn (env-at-loc e l) $ diagnostic (env-at-loc e l) ": warning: " notes x))
 (def-fns _ $ (many env-warn-at : (many (Env) e) (many (Loc) l) (many (String) x) -> (many (Env) r))
   (env-warn-with e l (Nil _) x))
 
@@ -2328,13 +2345,20 @@
   (match many i _
     ((MkEInfo _ _ m s mi me site) (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ (Some _ n) m s mi me site) en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))))
 
+(def-fns _ $ (many anon-mark : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ _ _ _ _ me site))
+  (rope-str $ rcat4 (RChar #\x01) (RStr $ str-cat (match many me (((String) _)) ((BTrue) "?") ((BFalse) "_")) $ nat-str x) (RChar #\x01) $ rcat (RStr $ loc-str site) (RChar #\x02)))
+
+(def-fns _ $ (many entry-name-or-id : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ n _ _ _ _ _))
+  (match many n _ ((None _) (str-cat "_" $ nat-str x)) ((Some _ s2) s2)))
+
 (def-fns _ $ (many name-of : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
-  (let-match many e (MkEInfo _ n _ _ _ me site))
-  (let-match many n (None _) ((Some _ s2) s2))
-  (match many me _
-    ((BTrue) (rope-str $ rcat4 (RChar #\x01) (RStr $ nat-str x) (RChar #\x01) $ rcat (RStr $ loc-str site) (RChar #\x02)))
-    ((BFalse) (str-cat "_" $ nat-str x))))
+  (let-match many e (MkEInfo _ n _ _ _ _ _))
+  (match many n _ ((None _) (anon-mark env x)) ((Some _ s2) s2)))
 
 ; A name or term in a message is set off in backticks; a literal already reads as one and is left bare.
 (def-fns _ $ (many tick : (many (String) s) -> (many (String) r))
