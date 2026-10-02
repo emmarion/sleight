@@ -476,12 +476,21 @@
 (def-fns _ $ (many qshow : (many (Env) env) (many (Term) t) -> (many (String) s))
   (tick $ show-t env t))
 
+(def-fns _ $ (many meta-names : (many (Env) env) (subterm many (List $ Nat) xs) (many (List $ Nat) seen) -> (many (List $ String) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
+  (match many (and (is-meta env x) $ not $ list-mem-bin seen x) _
+    ((BTrue) (Cons _ (qshow env $ TVar x) $ notail $ meta-names env rest $ Cons _ x seen))
+    ((BFalse) (tail $ meta-names env rest seen))))
+
+(def-fns _ $ (many cannot-infer : (many (Env) env) (many (Term) t) -> (many (String) s))
+  (str-cat3 "cannot infer " (join-strs (meta-names env (term-vars (canon-env env t) $ Nil _) $ Nil _) " or ") $ str-cat " in " $ qshow env t))
+
 ; A binder whose type or rule still holds an open `_` is refused (lib/env.ml's bind), the term shown as any
 ; message shows one, after core.sl's checks on the binder's name.
 (def-fns _ $ (many refuse-open : (many (Env) before) (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (match many (open-in before meta holes ty rule) _
     ((None _) env)
-    ((Some _ t) (env-error env $ str-cat "cannot infer the `_` in " $ qshow before t))))
+    ((Some _ t) (env-error env $ cannot-infer before t))))
 
 (def-fns _ $ (many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -1606,7 +1615,7 @@
 
 ; A boundary (SUGAR.md 6): a term reaching one with a `_` still open is refused.
 (def-fns _ $ (many settle : (many (Env) env) (many (Term) t) -> (many (Env) r))
-  (def-fns msg-lvl $ (many msg-settle : -> (many (String) s)) (str-cat "cannot infer the `_` in " $ qshow env t))
+  (def-fns msg-lvl $ (many msg-settle : -> (many (String) s)) (cannot-infer env t))
   (error-when-msg env (has-meta-env env t) msg-settle))
 
 (def-fns _ $ (many settle-res : (many (Env) env) (many (Res) r) -> (many (Env) e))

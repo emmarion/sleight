@@ -301,7 +301,11 @@ let qname env x = tick (name_of env x)
 let is_meta env x = (entry env x).meta
 
 (* Whether a canonical term still mentions an unsolved meta. *)
-let has_meta env t = fold_vars (fun _ b t -> b || (match t with Var x -> is_meta env x | _ -> false)) 0 false (canon env t)
+let metas env t = List.rev (fold_vars (fun _ xs t -> match t with Var x when is_meta env x && not (List.mem x xs) -> x :: xs | _ -> xs) 0 [] (canon env t))
+let has_meta env t = metas env t <> []
+
+let unsolved loc env t =
+  error loc "cannot infer %s in %s" (String.concat " or " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
 let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x -> canon env t | t -> t) 0 t
@@ -314,7 +318,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
       if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
       if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
-    error Reader.nowhere "cannot infer the `_` in %s" (qshow env (match rule with Some r when has_meta env r -> r | _ -> ty));
+    unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   if written && Reader.placed at then
     Option.iter
       (fun n ->

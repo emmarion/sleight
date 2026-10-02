@@ -154,7 +154,7 @@ let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 
 (* A boundary (SUGAR.md 6): a term reaching one with a `_` still open is refused. *)
-let settle env loc t = if has_meta env t then error loc "cannot infer the `_` in %s" (qshow env t)
+let settle env loc t = if has_meta env t then unsolved loc env t
 
 let rec infer env loc t =
   match t with

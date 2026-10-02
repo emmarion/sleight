@@ -1862,7 +1862,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     `coercible-*` terms and proofs, `level-of`, `prove-subterm`), the
     final expression in run position, and `let-match`'s scrutinee.
     `Env.bind` enforces the invariant as a backstop: a type or rule with
-    an open meta is refused with "cannot infer the `_` in ...", so any
+    an open meta is refused with "cannot infer `_?1` in ...", so any
     form that let one leak is caught where it leaks; the one exception,
     `~holes`, is a telescope under construction. A match annotation is
     elaborated with holes allowed, unified with the expected telescope
