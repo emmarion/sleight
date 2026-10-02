@@ -198,8 +198,8 @@ status)
 import json, re, subprocess
 from pathlib import Path
 def spent(log):
-    m = next((m for l in reversed(log.read_text(errors="replace").splitlines()) if (m := re.search(r", \$([\d.]+)(?:, ([\d.]+) kJ)? spent", l))), None)
-    return (float(m[1]), float(m[2] or 0)) if m else (0, 0)
+    m = next((m for l in reversed(log.read_text(errors="replace").splitlines()) if (m := re.search(r", \$([\d.]+)(?:, ([\d,.]+) J)? spent", l))), None)
+    return (float(m[1]), float((m[2] or "0").replace(",", ""))) if m else (0, 0)
 runs = sorted(Path.home().glob("sl/agent/results/*/run.json"))
 if not runs:
     print("no runs")
@@ -214,7 +214,7 @@ for rec in runs:
     settings = " ".join(f"{k}={v}" for k, v in sorted(info["env"].items()) if k not in ("PI_MODEL", "PI_PROVIDER"))
     done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} sessions done"
     cost, energy = map(sum, zip((0, 0), *map(spent, d.glob("*/transcript.log"))))
-    total = f"${cost:.4f}, {energy:,.1f} kJ in all" if cost or energy else ""
+    total = f"${cost:.4f}, {energy:,.0f} J in all" if cost or energy else ""
     print("  ".join(x for x in ("live" if live else "stopped", d.name, done, total, settings, context) if x))
 PY
     ;;

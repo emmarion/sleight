@@ -676,7 +676,7 @@ def _spend(reply):
     for key, field in (("cost", "request_cost_usd"), ("energy", "energy_joules")):
         if (reply.get(key) or {}).get(field) is not None:
             SPENT[key] = SPENT.get(key, 0) + reply[key][field]
-    return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy'] / 1000:.1f} kJ" if "energy" in SPENT else "")
+    return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy']:,.0f} J" if "energy" in SPENT else "")
 
 
 def _context(reply, window, prev_prompt):
