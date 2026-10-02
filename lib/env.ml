@@ -193,7 +193,6 @@ let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x
 let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
 let delegate_ctor = ref (-1)
 
-(* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name. *)
 let speller ?except env =
   let holds x = match !special_name env x with
     | Some b -> Some b

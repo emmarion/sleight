@@ -211,12 +211,7 @@ position of its own, being a special form or an annotation token. That last
 is the case worth finding, since a field named `tail` or a `let` binder named
 `at` leaves that scope unable to write the marker. `slc` warns the same, at
 the same positions (ASSUMPTIONS 195). The repository is clean of shadowing
-but for the four tests the warning is tested on: `tests/shadow_warn.sl` and
-`tests/shadow_builtin_warn.sl`, which take a binder of each kind through it,
-`tests/list.sl`, which redefines `List`, `Nil` and `Cons` over the prelude's
-as DESIGN.md section 31's worked example and names `Cons`'s field `tail` as
-section 31 does, and `tests/shadow_false_capture.sl`, whose subject is a
-declaration hidden by a later one.
+except where a test shadows on purpose.
 
 A same-level call (section 9) in a non-erased position that carries none of
 `tail`, `notail` and `delegate` warns, naming the mark that fits where it
