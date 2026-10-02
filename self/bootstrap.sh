@@ -8,7 +8,8 @@
 #      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
 #      the program in place of writing it out, and compared the same way; a refused test is also run through
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
-#   3. compiles slc with slc, then again with the result, and requires the two outputs to be identical.
+#   3. compiles slc with slc before step 2, then again with the result while step 2 runs, and requires the two
+#      outputs to be identical.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 #        self/bootstrap.sh one tests/a.sl ...   step 2 for those tests alone, into _build/self, rebuilding slc only
 #        when self/*.sl or the reference binary changed; test/one.sh also runs them through test/runtest.ml
@@ -19,7 +20,7 @@ if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; [ "$B" =
 SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 REF=_build/default/bin/main.exe
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
-OCB="ocamlfind ocamlc -custom -package zarith,unix -linkpkg"
+OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
 
 directive() { sed -n "s/^; $2: //p" "$1"; }
 # has <file> <directive text>: the text is on a line of the file, "<**>" in it matching any run of characters.
@@ -129,14 +130,6 @@ if [ "${1:-}" = one ]; then
 fi
 
 build_slc
-echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
-check_all tests/*.sl
-grep "^FAIL" "$B/results.txt"
-fail=$(grep -c "^FAIL" "$B/results.txt")
-echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"
-grep "^pos-line " "$B/results.txt"
-echo "$(grep -c '^pos-same ' "$B/results.txt") refusals agree on file, line and column, $(grep -c '^pos-col ' "$B/results.txt") on file and line alone ($B/results.txt lists them), $(grep -c '^pos-line ' "$B/results.txt") on neither"
-
 echo "== compiling slc with slc"
 # timed, and the time reported, so a change that slows slc down is seen: this is a report, not a check
 # (GNU time takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes)
@@ -147,8 +140,18 @@ else
   awk '/ real /{t=$1} /maximum resident/{m=$1/1024} END{printf "slc compiled itself in %s s (wall), %d KB max rss\n", t, m}' "$B/slc2.time.raw" > "$B/slc2.time"
 fi
 cat "$B/slc2.time"
-$OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
+{ $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
+  "$B/slc2" $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }; } > "$B/slc3.report" 2>&1 &
+slc3=$!
+echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
+check_all tests/*.sl
+grep "^FAIL" "$B/results.txt"
+fail=$(grep -c "^FAIL" "$B/results.txt")
+echo "$(grep -c '^ok ' "$B/results.txt") programs matched the interpreter, $(grep -c '^refused ' "$B/results.txt") programs refused with the expected message, $fail failed"
+grep "^pos-line " "$B/results.txt"
+echo "$(grep -c '^pos-same ' "$B/results.txt") refusals agree on file, line and column, $(grep -c '^pos-col ' "$B/results.txt") on file and line alone ($B/results.txt lists them), $(grep -c '^pos-line ' "$B/results.txt") on neither"
+
 echo "== compiling slc with the slc that slc compiled"
-"$B/slc2" $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }
+wait $slc3 || { cat "$B/slc3.report"; exit 1; }
 if cmp -s "$B/slc2.ml" "$B/slc3.ml"; then echo "fixpoint reached: slc2.ml and slc3.ml are identical"; else echo "FAIL: slc2.ml and slc3.ml differ"; fail=$((fail+1)); fi
 [ "$fail" = 0 ]
