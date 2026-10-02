@@ -2173,6 +2173,12 @@
     ((LNumeral) (Some _ $ parse-nat s 0))
     ((LChar) (char-lit-code s))))
 
+; How a numeral or character literal is spelled in a message (lib/literal.ml's spell).
+(def-fns _ $ (many literal-spelled : (many (Raw) raw) (many (Nat) z) -> (many (String) s))
+  (match many raw (((String) _))
+    ((RAtom _ a) (match many (classify a) (((String) _)) ((LChar) (rope-str $ lit-char-rope z)) (else (nat-str z))))
+    (else (nat-str z))))
+
 ; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
 ; (lib/elab.ml's numeral_entry).
 (def-fns _ $ (many numeral-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
@@ -2184,7 +2190,7 @@
               $ None _))
     ((Some _ z)
       (match many (lit-lookup env $ nat-str z) _
-        ((None _) (values (env-error env $ str-cat3 "literal " (nat-str z) " is not in scope") $ None _))
+        ((None _) (values (env-error env $ str-cat3 "literal " (literal-spelled raw z) " is not in scope") $ None _))
         ((Some _ x) (values env $ Some _ $ MkPair _ _ z x))))))
 
 ; A generated form is read and its literals interned in the prelude's scope, so user shadowing cannot
@@ -4688,7 +4694,7 @@
           (let-match many pb (MkPair _ _ zb _))
           (match many (nat-lt zb za) (((Env) _) ((Maybe $ Nat) l0))
             ((BTrue) (values env2 $ Some _ zb))
-            ((BFalse) (values (env-error env2 $ str-cat3 "`unary`: " (nat-str za) $ str-cat " does not exceed " $ nat-str zb) $ None _))))))
+            ((BFalse) (values (env-error env2 $ str-cat3 "`unary`: " (literal-spelled araw za) $ str-cat " does not exceed " $ literal-spelled braw zb) $ None _))))))
     (let-match many lo (Some _ l) ((None _) (values env2 ctx $ SNone _)))
     (let ((many k)) $ nat-sub za l)
     (let-match many (nat-lt 4096 k) (BFalse)
@@ -4714,11 +4720,12 @@
     (let-match many eb (Some _ pb) ((None _) (values env2 none)))
     (let-match many pa (MkPair _ _ za xa))
     (let-match many pb (MkPair _ _ zb xb))
+    (let ((many refutes-nothing)) "so there is nothing to refute\nhint: `distinct` refutes a context whose facts equate two different literals, typically an `absurd` branch or function body")
     (match many (nat-cmp za zb) _
-      ((CEq _ _ _) (values (env-error env2 $ str-cat3 "`distinct`: " (nat-str za) " is the same literal twice") none))
+      ((CEq _ _ _) (values (env-error env2 $ str-cat3 "`distinct`: " (literal-spelled araw za) $ str-cat " is the same literal twice, " refutes-nothing) none))
       (else
         (let-match many (equal-env env2 (TVar xa) $ TVar xb) (BTrue)
-          ((BFalse) (values (env-error env2 $ str-cat3 "`distinct`: " (nat-str za) $ str-cat3 " and " (nat-str zb) " do not canonicalize equally here") none)))
+          ((BFalse) (values (env-error env2 $ str-cat3 "`distinct`: " (literal-spelled araw za) $ str-cat3 " and " (literal-spelled braw zb) $ str-cat " do not canonicalize equally here, " refutes-nothing) none)))
         (let-match many sugar (Succ k)
           ((Zero) (values (env-error env2 "internal: a generated form contains sugar") none)))
         (let ((many gen)) $ distinct-source za zb)

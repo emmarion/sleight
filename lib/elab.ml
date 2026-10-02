@@ -70,15 +70,15 @@ let in_prelude env f =
 (* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
 let numeral_entry env loc raw =
   let name = atom_or loc raw "a numeral or character literal" in
-  let z =
+  let z, lit =
     match Literal.classify name with
-    | `Lit (Literal.Numeral z) -> z
-    | `Lit (Literal.Char c) -> Z.of_int c
+    | `Lit (Literal.Numeral z as lit) -> (z, lit)
+    | `Lit (Literal.Char c as lit) -> (Z.of_int c, lit)
     | _ -> error loc "%s is not a numeral or character literal" (tick name)
   in
   match List.assoc_opt (Z.to_string z) env.literals with
-  | Some (x, _) -> (z, x)
-  | None -> error loc "literal %s is not in scope" (Z.to_string z)
+  | Some (x, _) -> (z, x, Literal.spell lit)
+  | None -> error loc "literal %s is not in scope" (Literal.spell lit)
 
 (* An atom naming an entry, read through any alias rule the fact table holds for it (section 9). *)
 let named env loc what raw =
@@ -1536,12 +1536,12 @@ and hoist env lit =
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
 and elab_unary spos env l args =
   let a, rest = match args with a :: ([] | [ _ ] as rest) -> (a, rest) | _ -> error l "`unary` takes one or two literals" in
-  let za, _ = numeral_entry env l a in
+  let za, _, sa = numeral_entry env l a in
   let lo =
     match rest with
     | [ b ] ->
-        let zb, _ = numeral_entry env l b in
-        if Z.geq zb za then error l "`unary`: %s does not exceed %s" (Z.to_string za) (Z.to_string zb);
+        let zb, _, sb = numeral_entry env l b in
+        if Z.geq zb za then error l "`unary`: %s does not exceed %s" sa sb;
         zb
     | _ -> Z.zero
   in
@@ -1569,10 +1569,11 @@ and elab_unary spos env l args =
   in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse "<unary>" src)))
 
 and elab_distinct env l a b =
-  let za, xa = numeral_entry env l a and zb, xb = numeral_entry env l b in
-  if Z.equal za zb then error l "`distinct`: %s is the same literal twice" (Z.to_string za);
+  let za, xa, sa = numeral_entry env l a and zb, xb, sb = numeral_entry env l b in
+  let refutes_nothing = "so there is nothing to refute\nhint: `distinct` refutes a context whose facts equate two different literals, typically an `absurd` branch or function body" in
+  if Z.equal za zb then error l "`distinct`: %s is the same literal twice, %s" sa refutes_nothing;
   if not (equal (canon env (Var xa)) (canon env (Var xb))) then
-    error l "`distinct`: %s and %s do not canonicalize equally here" (Z.to_string za) (Z.to_string zb);
+    error l "`distinct`: %s and %s do not canonicalize equally here, %s" sa sb refutes_nothing;
   let src =
     Printf.sprintf "(match erased (numeral-inj %s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
       (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
