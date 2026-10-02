@@ -3857,7 +3857,7 @@ session's, made without the owner.
     The report, top to bottom, all of it through `Env.show` so that a
     term is canonical and each atom named as any message names it:
     the goal, as the expected telescope under the position's
-    multiplicities with any `at`, a `_` still open numbered `?1` and
+    multiplicities with any `at`, a `_` still open numbered `_?1` and
     placed by the usual note, and, for a goal whose type's head has an
     opened `Matchable`, that type's constructors with their types;
     the position's multiplicity; whether the enclosing position is
@@ -3865,8 +3865,8 @@ session's, made without the owner.
     the current level and the enclosing function's subterm arguments in
     order, or that this is the top level; whether this is inside an
     extern function's model. Then every entry in scope that the
-    program's own files bound, newest first, one line each: its name or
-    `_id`, its canonical type, its multiplicity, `Const` or `Dyn`, a
+    program's own files bound, newest first, one line each: its name, a fetch
+    form or `_1`, as README.md says, its canonical type, its multiplicity, `Const` or `Dyn`, a
     kind read off its type (function, constructor, type constructor,
     level, proof, cell, `Matchable`, type, value), which subterm
     parameter it is, whether it is anonymous, the elaborator's own
