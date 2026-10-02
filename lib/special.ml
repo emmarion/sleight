@@ -31,8 +31,6 @@ let lines kind key =
 
 let hints key = String.concat "" (List.map (( ^ ) "\nhint: usage: ") (lines "usage" key))
 
-let misuse sp =
-  let n = name sp in
-  match lines "role" n with
-  | r :: _ -> Printf.sprintf "`%s` is not an expression: %s%s" n r (hints n)
-  | [] -> Printf.sprintf "malformed `%s` form%s" n (hints n)
+let has_role sp = lines "role" (name sp) <> []
+let role_hints sp = let n = name sp in String.concat "" (List.map (Printf.sprintf "\nhint: `%s` %s" n) (lines "role" n)) ^ hints n
+let misuse sp = Printf.sprintf "malformed `%s` form%s" (name sp) (hints (name sp))

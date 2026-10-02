@@ -51,47 +51,47 @@ usage delegate-of: (delegate-of <function>)
 usage coercible-share: (coercible-share <proof>)
 usage dump-context: (dump-context)
 usage dump-context: (dump-context <value> ...)
-role erased: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
+role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
 usage erased: (erased <type> <name>)
-role many: it is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-match or open-adt
+role many: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-match or open-adt
 usage many: (many <type> <name>)
-role unique: it is a multiplicity, beginning a telescope entry or a function header, or the mode of a match, let-match, comptime-match or cell-match
+role unique: is a multiplicity, beginning a telescope entry or a function header, or the mode of a match, let-match, comptime-match or cell-match
 usage unique: (unique <type> <name>)
-role :: it separates a name from its signature
+role :: separates a name from its signature
 usage :: (<multiplicity> <name> : <parameter> ... -> <result> ...)
 usage :: (<name> : <parameter> ... -> Type)
 usage :: (<multiplicity> <name> : <parameter> ... -> <result type>)
-role is: it separates an `is` expression from the name it introduces, in place of a type
+role is: separates an `is` expression from the name it introduces, in place of a type
 usage is: (<multiplicity> <expression> is <name>)
-role ->: it separates parameters from results
+role ->: separates parameters from results
 usage ->: (<multiplicity> <name> : <parameter> ... -> <result> ...)
 usage ->: (<name> : <parameter> ... -> Type)
 usage ->: (<multiplicity> <name> : <parameter> ... -> <result type>)
-role subterm: it marks a parameter that recursion decreases, or annotates a same-level call's decreasing argument
+role subterm: marks a parameter that recursion decreases, or annotates a same-level call's decreasing argument
 usage subterm: (subterm <multiplicity> <type> <name>)
 usage subterm: (<function> <argument> ... (subterm <proof or _>) <argument> ...)
-role enum: it follows a type's header in def-adts, or begins a `Matchable` type
+role enum: follows a type's header in def-adts, or begins a `Matchable` type
 usage enum: (def-adts ((<name> : ... -> Type) enum <constructor> ...))
 usage enum: (Matchable enum [newtype] [extern] <type constructor> (<multiplicity> <constructor>) ...)
-role union: it follows a type's header in def-adts, or begins a `Matchable` type
+role union: follows a type's header in def-adts, or begins a `Matchable` type
 usage union: (def-adts ((<name> : ... -> Type) union <constructor> ...))
 usage union: (Matchable union [newtype] [extern] <type constructor> (<multiplicity> <constructor>) ...)
 usage tail: (tail (<function> <argument> ...))
 usage notail: (notail (<function> <argument> ...))
 usage delegate: (delegate (<function> <argument> ...))
-role predates: it annotates a lower-level call, right after the callee
+role predates: annotates a lower-level call, right after the callee
 usage predates: (<function> (predates <proof or _>) <argument> ...)
-role absurd: it marks a match branch, or a function on its def-fns line
+role absurd: marks a match branch, or a function on its def-fns line
 usage absurd: (absurd <constructor>)
 usage absurd: (absurd <constructor> <statement> ... <value>)
 usage absurd: (absurd (<constructor> <field> ...) <statement> ... <value>)
 usage absurd: ((<multiplicity> absurd <name> : <parameter> ... -> <result> ...) <statement> ... <value>)
-role newtype: it marks a def-adts entry or a `Matchable` type, after enum or union
+role newtype: marks a def-adts entry or a `Matchable` type, after enum or union
 usage newtype: (def-adts ((<name> : ... -> Type) enum|union newtype <constructor> ...))
-role extern: it marks a def-adts entry or a function as implemented by the host, or a `Matchable` type as describing one
+role extern: marks a def-adts entry or a function as implemented by the host, or a `Matchable` type as describing one
 usage extern: (def-adts ((<name> : ... -> Type) enum|union [newtype] extern <constructor> ...))
 usage extern: ((<multiplicity> extern <name> : <parameter> ... -> <result> ...) <statement> ... <value>)
-role else: it heads the match branch for every constructor not listed
+role else: heads the match branch for every constructor not listed
 usage else: (else <statement> ... <value>)
 usage else: (else <cell binder> <statement> ... <value>)
 usage telescope-entry: ([subterm] [<multiplicity>] <type> <name> ... [at <place>])

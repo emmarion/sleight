@@ -52,6 +52,13 @@ let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | Some Sp.Unique -> Some Unique | _ -> None
 let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error loc "expected a multiplicity, got %s" (tick (Reader.show raw))
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
+let misplaced env = function List (_, h :: _) -> Option.to_list (Option.bind (special_of env h) (fun sp -> if Sp.has_role sp then Some sp else None)) | _ -> []
+let brief = function
+  | Atom (_, s) -> tick s
+  | List (_, Atom (_, h) :: args) -> tick ("(" ^ h ^ (if args = [] then ")" else " ...)"))
+  | List (_, []) -> tick "()"
+  | List _ -> "this form"
+let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (String.concat "" (List.map Sp.role_hints (misplaced env raw)))
 let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
 let var env loc n =
   match Literal.classify n with
@@ -800,6 +807,7 @@ and elab_form demand cc expect_tele env expect raw =
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
+      | Some sp when Sp.has_role sp -> not_a env "not an expression" raw
       | Some sp -> elab_special demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
           let env, h, hcode, headwrap = elab_head env pos l head in
@@ -1146,7 +1154,7 @@ and elab_special demand tele env expect l sp args =
       | [ sg; gty; g; sf; fty; f ] -> mint env (proof_type Prelude.coercible [ sg; gty; g; sf; fty; f ])
       | _ -> assert false)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
-  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick (Sp.name sp)) (Sp.hints (Sp.name sp))
+  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (brief (List (l, Atom (l, Sp.name sp) :: args))) (Sp.hints (Sp.name sp))
   | sp, _ -> error l "%s" (Sp.misuse sp)
 
 and cell_items env pos l slots items =
@@ -1401,12 +1409,12 @@ and elab_body ?tele env expect l = function
 and real_branch env = function List (_, a :: _) -> not (is_special env a Sp.Absurd) | _ -> true
 
 (* The statements before a body's final expression, and the code they wrap around what follows them. *)
-and elab_stmts spos env l = function
+and elab_stmts ?within spos env l = function
   | [] -> error l "a body needs a final expression"
   | [ final ] -> (env, Fun.id, final)
   | stmt :: rest ->
-      let env, wrap = elab_stmt spos env stmt in
-      let env, wrap', final = elab_stmts spos env l rest in
+      let env, wrap = elab_stmt ?within spos env stmt in
+      let env, wrap', final = elab_stmts ?within spos env l rest in
       (env, (fun code -> wrap (wrap' code)), final)
 
 and elab_refute env l body =
@@ -1438,7 +1446,7 @@ and refine env scrut c fids ret =
   let fvars = List.rev_map (fun x -> Var x) fids in
   merge_opens (unify_force (unify_force (forcing env) scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
 
-and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
+and elab_stmt ?(within = "item of a body") spos env raw : Env.t * (V.code -> V.code) =
   match raw with
   | List (l, head :: args) -> (
       let env = if special_of env head <> None then read_special spos env head else env in
@@ -1459,9 +1467,12 @@ and elab_stmt spos env raw : Env.t * (V.code -> V.code) =
           let env', x, t, code = open_binding env l mult e in
           let env' = try open_adt env' x with Contradiction msg -> error l "`open-adt`: %s contradicts what is open (%s)" (qshow env' t) (Lazy.force msg) in
           (env', if env.run_pos || mult = Erased then Fun.id else fun rest -> V.CLet ([ x ], code, rest))
-      | Some sp, _ when List.mem sp Sp.statements || Sp.lines "role" (Sp.name sp) <> [] -> error l "%s" (Sp.misuse sp)
-      | _ -> error l "%s is not a statement" (tick (Reader.show raw)))
-  | _ -> error (loc raw) "%s is not a statement" (tick (Reader.show raw))
+      | Some sp, _ when List.mem sp Sp.statements -> error l "%s" (Sp.misuse sp)
+      | _ -> not_a_statement within env raw)
+  | _ -> not_a_statement within env raw
+
+and not_a_statement within env raw =
+  not_a env (if misplaced env raw = [] then Printf.sprintf "not a statement\nhint: every %s but the last must be a statement" within else "not a statement") raw
 
 and run_code env code = Eval.eval env.values code
 
@@ -1483,7 +1494,7 @@ and elab_let spos env l args =
       ({ env' with scope = env.scope }, Some t)
     else (env, None)
   in
-  let after, wrap, final = elab_stmts spos env l rhs in
+  let after, wrap, final = elab_stmts ~within:"item of a `let`'s right-hand side" spos env l rhs in
   let inner, ress, code = elab_expr ?tele after expect final in
   let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
   let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
@@ -1872,15 +1883,14 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
         let env = List.fold_left hoist env (literals item) in
         at (loc item) (fun () ->
             if rest = [] && not (is_statement env item) then (
+              if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
               let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
               let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
               trace := Final (v, ty, path) :: !trace;
               consume env ty v;
               env)
-            else (
-              if not (is_statement env item) then error (loc item) "only the last top-level form may be an expression";
-              go (fst (elab_stmt Many env item)) rest)))
+            else go (fst (elab_stmt ~within:"top-level form" Many env item)) rest))
   in
   let env = go env items in
   (match items with

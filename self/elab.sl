@@ -1675,18 +1675,35 @@
 (def-fns _ $ (many help-lines : (many (Env) env) (many (String) kind) (many (String) key) -> (many (List $ String) r))
   (help-lines-in (env-help env) (str-cat3 kind " " $ str-cat key ": ")))
 
-(def-fns _ $ (many usage-hints : (subterm many (List $ String) ts) -> (many (String) r))
+(def-fns _ $ (many hint-lines : (many (String) prefix) (subterm many (List $ String) ts) -> (many (String) r))
   (let-match many ts (Cons _ t rest) ((Nil _) ""))
-  (str-cat3 "\nhint: usage: " t $ notail $ usage-hints rest))
+  (str-cat3 "\nhint: " prefix $ str-cat t $ notail $ hint-lines prefix rest))
 
 (def-fns _ $ (many sp-hints : (many (Env) env) (many (String) key) -> (many (String) r))
-  (usage-hints $ help-lines env "usage" key))
+  (hint-lines "usage: " $ help-lines env "usage" key))
 
 (def-fns _ $ (many sp-misuse : (many (Env) env) (many (Sp) sp) -> (many (String) r))
   (let ((many n)) (sp-name sp))
-  (match many (help-lines env "role" n) _
-    ((Cons _ r _) (str-cat3 (tick n) " is not an expression: " $ str-cat r $ sp-hints env n))
-    ((Nil _) (str-cat3 "malformed " (tick n) $ str-cat " form" $ sp-hints env n))))
+  (str-cat3 "malformed " (tick n) $ str-cat " form" $ sp-hints env n))
+
+(def-fns _ $ (many misplaced : (many (Env) env) (many (Raw) raw) -> (many (Maybe $ Sp) r))
+  (let-match many (raw-items raw) (Cons _ h _) ((Nil _) (None _)))
+  (let-match many (special-of env h) (Some _ sp) ((None _) (None _)))
+  (match many (help-lines env "role" $ sp-name sp) _ ((Nil _) (None _)) ((Cons _ _ _) (Some _ sp))))
+
+(def-fns _ $ (many brief : (many (Raw) raw) -> (many (String) s))
+  (let-match many raw (RList _ items) (else (qraw raw)))
+  (let-match many items (Cons _ h args) ((Nil _) (tick "()")))
+  (let-match many h (RAtom _ n) (else "this form"))
+  (tick $ str-cat3 "(" n $ match many args (((String) _)) ((Nil _) ")") (else " ...)")))
+
+(def-fns _ $ (many not-a : (many (Env) env) (many (String) what) (many (Raw) raw) -> (many (String) r))
+  (str-cat3 (brief raw) " is " $ str-cat what $ match many (misplaced env raw) (((String) _))
+    ((Some _ sp) (let ((many n)) (sp-name sp)) (str-cat (hint-lines (str-cat (tick n) " ") $ help-lines env "role" n) $ sp-hints env n))
+    ((None _) "")))
+
+(def-fns _ $ (many not-a-statement : (many (Env) env) (many (String) within) (many (Raw) raw) -> (many (String) r))
+  (not-a env (match many (misplaced env raw) (((String) _)) ((Some _ _) "not a statement") ((None _) (str-cat3 "not a statement\nhint: every " within " but the last must be a statement"))) raw))
 
 (def-lvl misuse-lvl)
 
@@ -3812,6 +3829,7 @@
           (let-match many items (Cons a head args) ((Nil _) (expr-error _ expect envl "empty form" "empty form")))
           (match many (special-of envl head) (((Env) _) ((List $ Res) rs) ((Code ctx expect) c))
             ((Some _ sp)
+              (let-match many (misplaced envl raw) (None _) ((Some _ _) (expr-error _ expect envl (not-a envl "not an expression" raw) "misplaced")))
               (let ((many envl2)) $ read-special envl head (BFalse) pos)
               (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ sp-eq sp $ SpStmt $ StDumpContext)
               (let ((many (Env) env0))
@@ -3822,7 +3840,8 @@
                       ((Nil _) (env-error envl2 $ str-cat (tick $ sp-name sp) " produces one value"))
                       ((Cons _ _ rest) (match many rest (((Env) _)) ((Nil _) envl2) ((Cons _ _ _) (env-error envl2 $ str-cat (tick $ sp-name sp) " produces one value"))))))))
               (let-match many (match many (sp-arity sp) (((Bool) _)) ((None _) (BTrue)) ((Some _ n) (nat-eq n $ list-length _ args))) (BTrue) ((BFalse) (malformed _ expect env0 sp)))
-              (let ((many form)) $ qraw $ RList (raw-pos raw) $ Cons _ (RAtom (raw-pos raw) $ sp-name sp) args)
+              (let ((many spelled)) $ RList (raw-pos raw) $ Cons _ (RAtom (raw-pos raw) $ sp-name sp) args)
+              (let ((many form)) $ qraw spelled)
               (let ((many proof-what)) $ Some _ $ str-cat form ", a proof and so erased")
               (match many sp (((Env) _) ((List $ Res) rs) ((Code ctx expect) c))
                 ((SpFormer _)
@@ -3831,7 +3850,7 @@
                   (erased-result _ expect (None _) env2 $ term-res env2 t type-term))
                 ((SpStmt sk)
                   (let-match many sk (StDumpContext)
-                    (else (expr-error _ expect env0 (str-cat3 (tick $ sp-name sp) " is a statement, not an expression" $ sp-hints env0 $ sp-name sp) "statement as expression")))
+                    (else (expr-error _ expect env0 (str-cat3 (brief spelled) " is a statement, not an expression" $ sp-hints env0 $ sp-name sp) "statement as expression")))
                   (let ((many env1) (many focus)) $ notail $ elab-focus sugar args _ two-steps env0)
                   (values (dump-report env1 (GoalValues expect tele) focus) (Nil _) $ CError _ expect "dump-context"))
                 ((SpMark mk)
@@ -3839,7 +3858,8 @@
                     ((MkAt) (notail $ elab-cell-at sugar args env0 ctx expect tele))
                     ((MkTail) (notail $ elab-marked sugar args env0 ctx expect tele (CCTail) sp demand))
                     ((MkNoTail) (notail $ elab-marked sugar args env0 ctx expect tele (CCNoTail) sp demand))
-                    ((MkDelegate) (notail $ elab-marked sugar args env0 ctx expect tele (CCDelegate) sp demand)) (else (malformed _ expect env0 sp))))
+                    ((MkDelegate) (notail $ elab-marked sugar args env0 ctx expect tele (CCDelegate) sp demand))
+                    (else (malformed _ expect env0 sp))))
                 ((SpExpr ex)
                   (match many ex (((Env) _) ((List $ Res) rs) ((Code ctx expect) c))
                     ((ExSlotVacant)
@@ -4531,7 +4551,7 @@
                 (let ((many ress2) (erased lock)) $ list-fit _ _ expect ress no-res)
                 (values env2 ress2 code lock))))
           ((None _)
-            (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx (pos-mult expect))
+            (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx (pos-mult expect) "item of a body")
             (let ((many env3) (many ress) (many code) (erased lock)) $ notail $ elab-body sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 expect tele)
             (values env3 ress (wrap-stmt _ _ expect sc code) lock))))))
 
@@ -4542,7 +4562,7 @@
     (let ((erased pi)) $ in-within _ _ _ _ (prove-subterm item items) w)
     (match many rest _
       ((Cons _ _ _)
-        (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env0 ctx (Erased))
+        (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env0 ctx (Erased) "item of a body")
         (tail $ elab-refute sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2))
       ((Nil _)
         (let ((many envl)) $ env-at env0 $ raw-pos item)
@@ -4560,25 +4580,25 @@
 
   ; The statements before a body's final expression and the code they wrap around what follows them
   ; (lib/elab.ml's elab_stmts), then the final expression with its place in [root].
-  ((many elab-stmts : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) ->
+  ((many elab-stmts : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) (many (String) within) ->
       (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc) (many (Final root) final))
     (let-match many items (Cons _ item rest) ((Nil _) (values env ctx (SNone _) $ FinalNone _)))
     (let ((erased pi)) $ in-within _ _ _ _ (prove-subterm item items) w)
     (let-match many rest (Cons _ _ _) ((Nil _) (values env ctx (SNone _) $ FinalIs _ item pi)))
-    (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx spos)
-    (let ((many env3) (many ctx3) (many sc2) (many final)) $ notail $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 spos)
+    (let ((many env2) (many ctx2) (many sc)) $ notail $ elab-stmt sugar (subterm pi) item env ctx spos within)
+    (let ((many env3) (many ctx3) (many sc2) (many final)) $ notail $ elab-stmts sugar root rest (within-step rest items root (prove-subterm rest items) w) env2 ctx2 spos within)
     (values env3 ctx3 (SSeq _ _ _ sc sc2) final))
 
-  ((many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
+  ((many elab-stmt : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) (many (String) within) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let ((many envl)) $ env-at env $ raw-pos raw)
-    (def-fns msg-lvl $ (many bad : -> (many (Env) r)) (env-error envl $ str-cat (qraw raw) " is not a statement"))
+    (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error envl $ not-a-statement envl within raw))
     (let ((many (Env) env2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
       (match many raw _
         ((RList _ items)
           (let-match many items (Cons _ head args) ((Nil _) (values (bad) ctx $ SNone _)))
           (let-match many (special-of envl head) (Some _ sp) ((None _) (values (bad) ctx $ SNone _)))
           (let ((many envl2)) $ read-special envl head (BFalse) spos)
-          (let-match many sp (SpStmt st) (else (values (match many (help-lines envl "role" $ sp-name sp) (((Env) _)) ((Nil _) (bad)) ((Cons _ _ _) (env-error envl $ sp-misuse envl sp))) ctx $ SNone _)))
+          (let-match many sp (SpStmt st) (else (values (bad) ctx $ SNone _)))
           (match many st (((Env) _) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
             ((StLet)
               (let ((many envb) (many braws) (many rhs) (erased wr)) $ bracket-parts args envl2 $ sp-misuse envl2 sp)
@@ -4728,7 +4748,7 @@
     (let-match many sugar (Succ k2)
       ((Zero) (values (env-error env2 "internal: a generated form contains sugar") ctx $ SNone _)))
     (let ((many gen)) $ unary-source za l floored)
-    (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form gen env2) ctx spos)
+    (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form gen env2) ctx spos "item of a body")
     (values (leave-prelude env2 env3) ctx2 sc))
 
   ; distinct (SUGAR.md 5): a match on numeral-inj's Eq, once the two literals are checked to be different
@@ -4765,7 +4785,7 @@
     (let-match many parts (MkLetParts _ binders rhs wr))
     (let ((many env1)) $ check-binder-mults _ binders env0)
     (let ((many expect) (erased lbe)) $ src-mults _ binders)
-    (let ((many env1b) (many ctx2) (many sc) (many final)) $ notail $ elab-stmts sugar args rhs wr env1 ctx spos)
+    (let ((many env1b) (many ctx2) (many sc) (many final)) $ notail $ elab-stmts sugar args rhs wr env1 ctx spos "item of a `let`'s right-hand side")
     (let-match many final (FinalIs _ fin pf)
       ((FinalNone _) (values (env-error env1b "a body needs a final expression") ctx2 sc)))
     (let ((many inner) (many ress) (many code) (erased lock)) $ notail $ elab-expr-demand sugar (subterm pf) fin env1b ctx2 expect tele (CCPlain) (Fixed _))
@@ -5508,7 +5528,7 @@
   (elab-expr-demand sugar raw env ctx expect tele cc (Fixed _)))
 
 ; ---- The top level (section 16): statements run as they are elaborated, the final expression consumed;
-; only the last form may be an expression (ASSUMPTIONS 12).
+; every form but the last must be a statement (ASSUMPTIONS 12).
 
 (def-fns _ $ (many pragma-of : (many (Raw) raw) -> (many (Maybe $ List $ Raw) r))
   (let-match many raw (RList _ items) (else (None _)))
@@ -5556,13 +5576,12 @@
   (let-match many (pragma-of item) (None _)
     ((Some _ words) (tail $ run-toplevel rest $ pragma (env-at env $ raw-pos item) (raw-pos item) words)))
   (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
-  (match many (is-statement env2 item) _
+  (match many (or (is-statement env2 item) $ not $ list-is-empty _ rest) _
     ((BTrue)
-      (let ((many env3) (many ctx2) (many sc)) $ elab-stmt (raw-size item) item env2 (Nil _) (Many))
+      (let ((many env3) (many ctx2) (many sc)) $ elab-stmt (raw-size item) item env2 (Nil _) (Many) "top-level form")
       (tail $ run-toplevel rest env3))
     ((BFalse)
-      (let-match many rest (Nil _)
-        ((Cons _ _ _) (tail $ run-toplevel rest $ env-error env2 "only the last top-level form may be an expression")))
+      (let-match many (misplaced env2 item) (None _) ((Some _ _) (env-error env2 $ not-a env2 "neither a statement nor an expression" item)))
       (let ((many env3a) (many ress) (many code) (erased lock)) $ elab-expr-demand (raw-size item) item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
       (let ((many env3)) $ settle-res env3a $ first-res _ _ ress lock)
       (match many (env-failed env3) _
