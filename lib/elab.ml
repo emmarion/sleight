@@ -228,10 +228,10 @@ let sharing_mult env l t =
   if equal t Prelude.unique_term then Unique else if equal t Prelude.shared_term then Many
   else error l "`coerce` needs a canonical `Unique` or `Shared` side, got %s" (qshow env t)
 
-let expect_proof env loc ctor p =
+let expect_proof ?(alt = "") env loc ctor p =
   match canon env (infer env loc p) with
   | App (Var c, args) when c = ctor -> args
-  | ty -> error loc "expected a %s proof, got %s : %s" (qname env ctor) (qshow env p) (qshow env ty)
+  | ty -> error loc "expected a %s proof%s, got %s : %s" (qname env ctor) alt (qshow env p) (qshow env ty)
 
 
 type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string; s_place : raw option }
@@ -610,9 +610,9 @@ and elab_sg env = function
   | `Ty t -> let env, t = elab_type env t in (env, Ty t)
   | `Is t -> let env, t = elab_term env t in (env, Is t)
 
-and level_var env l raw =
+and level_var ?(alt = "") env l raw =
   let env, t = elab_term env raw in
-  match canon env t with Var x when equal (type_of env x) Prelude.level_term -> (env, x) | t -> error l "%s is not a level" (qshow env t)
+  match canon env t with Var x when equal (type_of env x) Prelude.level_term -> (env, x) | t -> error l "%s is not a level%s" (qshow env t) alt
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
@@ -869,13 +869,13 @@ and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l callee h
         let k = match find_index (( = ) i) subterm_params with Some k -> k | None -> error l "argument %d is not a subterm parameter" i in
         List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (counterpart j))) subterm_params;
         let env, p = proof env (fun env -> prove_subterm env l (List.nth arg_terms i) (Var (counterpart k))) p in
-        match expect_proof env l Prelude.subterm p with
+        match expect_proof ~alt:" or `_`" env l Prelude.subterm p with
         | [ _; a; _; b ] -> check_equal env l a (List.nth arg_terms i); check_equal env l b (Var (counterpart k)); env
         | _ -> assert false)
     | At cur, Some (`Predates p) when not (same cur) -> (
         let callee_level env = match canon env lv with Var m -> m | t -> error l "%s is not a variable" (qshow env t) in
         let env, p = proof env (fun env -> prove_predates env l (callee_level env) cur) p in
-        match expect_proof env l Prelude.predates p with
+        match expect_proof ~alt:" or `_`" env l Prelude.predates p with
         | [ _; x; l2 ] ->
             check_equal env l l2 (Var cur);
             if not (equal (canon env x) (canon env lv)) then
@@ -1149,7 +1149,7 @@ and cell_items env pos l slots items =
   let env, slots, writes, bindings = List.fold_left2 (fun (env, ss, ws, bs) (i, old) item ->
     if wild item then (env, old :: ss, ws, bs) else
     let env, r, code = elab_expr1 env (under pos Many) item in
-    check_type env l r.ty Prelude.slot_term;
+    (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
     settle_res env l r;
     let x = fresh () in
     (env, r.term :: ss, (i, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) items in
@@ -1352,6 +1352,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
         (env, tele)
     | Atom (_, "_"), None -> error l "no telescope to reuse for `_`"
     | List (_, ann), _ ->
+        List.iter (function Atom (al, _) as a -> error al "expected a telescope or `_`, got %s" (tick (Reader.show a)) | _ -> ()) ann;
         let mults i = function
           | Some _ -> error l "a match annotation carries no multiplicities"
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
@@ -1674,7 +1675,7 @@ and elab_def_fns ?(unique = false) env l args =
       let env, lvl =
         match lv with
         | Atom (al, "_") -> let x, env = mint_level env ~at:al None in (env, x)
-        | _ -> level_var env l lv
+        | _ -> level_var ~alt:" or `_`" env l lv
       in
       let header raw =
         match raw with
