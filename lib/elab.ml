@@ -26,10 +26,13 @@ let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "
 let name_or_anon n = if n = "_" then None else Some n
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4). *)
+let special_value env x = match entry env x with
+  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
+  | _ -> None
+let () = Env.special_name := fun env x -> Option.map Sp.name (special_value env x)
+
 let rec special_of env raw =
-  let value x = match entry env x with
-    | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
-    | _ -> None in
+  let value = special_value env in
   match raw with
   | Atom (_, n) -> Option.bind (lookup env n) value
   | List (_, [head; Atom (_, n)]) when special_of env head = Some Sp.Share -> Option.bind (lookup env n) value
@@ -717,7 +720,7 @@ let check_results env loc ?(ids = []) body tele ress =
     let env = solve_sg env rl (map_sg (instantiate acc) e.sg) r in
     (match Option.map (instantiate acc) e.place with
      | Some (SlotHolds p) when not env.usage_erased ->
-         if not (Option.fold ~none:false ~some:(at_equal env p) r.place) then error rl "return does not satisfy `at` %s" (tick (to_string (name_of env) p))
+         if not (Option.fold ~none:false ~some:(at_equal env p) r.place) then error rl "return does not satisfy `at` %s" (tick (to_string ~kw:(speller env) (name_of env) p))
      | _ -> ());
     (env, r.term :: acc)) (env, ids) (List.combine tele (result_locs env loc body (List.length tele))) ress |> fst in
   List.iter2 (settle_res env) (result_locs env loc body (List.length ress)) ress

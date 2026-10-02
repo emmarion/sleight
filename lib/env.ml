@@ -30,13 +30,14 @@ let resolve here s =
     | Some j ->
         let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
         let key = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
-        let shown = (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
+        let shown = if key.[0] = 'k' then "_" ^ String.sub key 1 (String.length key - 1) else (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
         if not (List.mem_assoc key !seen) then seen := !seen @ [ (key, (shown, at)) ];
         Buffer.add_string b (String.sub s i (j - i) ^ shown);
         go (e + 1)
   in
   go 0;
   let note (key, (shown, at)) =
+    if key.[0] = 'k' then Printf.sprintf "\n%s: note: `%s` is the built-in `%s`, which no name in scope denotes here" here shown (String.sub shown 1 (String.length shown - 1)) else
     let written, supplied =
       if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
       else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
@@ -203,14 +204,24 @@ let namer ?except env terms =
     if (entry env x).meta then name_of env x
     else match newest lits x, newest names x with Some (_, n), _ | None, Some (_, n) -> n | None, None -> anonymous env x
 
+(* The built-in name of the special form an entry holds, if it holds one (section 4); set by the elaborator. *)
+let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
+
+(* A keyword as the newest name in scope holding its special form spells it, or as `_` and its built-in name. *)
+let speller env =
+  let held = lazy (List.fold_left (fun acc (n, x) -> match !special_name env x with
+    | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
+    | _ -> acc) [] (StringMap.bindings env.scope.named)) in
+  fun b -> match List.assoc_opt b (Lazy.force held) with Some (_, n) -> n | None -> Printf.sprintf "\001k%s\001\002" b
+
 (* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
-let show ?except env t = let c = canon env t in to_string (namer ?except env [ c ]) c
+let show ?except env t = let c = canon env t in to_string ~kw:(speller env) (namer ?except env [ c ]) c
 
 (* A telescope's entries under one naming, each entry's terms canonical; the marks are the entries' own. *)
 let show_tele env tele =
   let tele = snd (map_tele (fun _ t -> canon env t) 0 tele) in
   let terms = List.concat_map (fun (e : Term.entry) -> sg_term e.sg :: Option.to_list e.place) tele in
-  snd (tele_strings (namer env terms) [] tele)
+  snd (tele_strings ~kw:(speller env) (namer env terms) [] tele)
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"

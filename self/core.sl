@@ -2192,8 +2192,13 @@
   (let ((many n)) $ Succ $ key-count table $ is-hole-key id)
   (values n $ Cons _ (MkMsgMeta id n "") table))
 
+(def-fns _ $ (many is-kw-key : (many (String) id) -> (many (Bool) r))
+  (match many id _ ((SCons c _) (char-is c 107)) ((SNil) (BFalse))))
+
 (def-fns _ $ (many meta-shown : (many (String) id) (many (Nat) n) -> (many (String) r))
-  (str-cat (match many (is-hole-key id) (((String) _)) ((BTrue) "_?") ((BFalse) "_")) $ nat-str n))
+  (match many id _
+    ((SCons c rest) (match many (char-is c 107) _ ((BTrue) (str-cat "_" rest)) ((BFalse) (str-cat (match many (char-is c 63) (((String) _)) ((BTrue) "_?") ((BFalse) "_")) $ nat-str n))))
+    ((SNil) (str-cat "_" $ nat-str n))))
 
 ; [mode] is 0 in the text, 1 in a marker's id and 2 in its position.
 (def-fns _ $ (many meta-scan : (subterm many (String) s) (many (Nat) mode) (many (Rope) out) (many (Rope) id) (many (Rope) where) (many (List $ MsgMeta) seen) (many (List $ MsgMeta) table) ->
@@ -2204,7 +2209,7 @@
   (match many (char-is c 2) _
     ((BTrue)
       (let ((many key)) $ rope-str id)
-      (let ((many n) (many table2)) $ meta-number key table)
+      (let ((many n) (many table2)) $ match many (is-kw-key key) (((Nat) _) ((List $ MsgMeta) _)) ((BTrue) (values 0 table)) ((BFalse) (meta-number key table)))
       (let ((many seen2)) $ match many (meta-find seen key) (((List $ MsgMeta) _))
         ((Some _ _) seen)
         ((None _) (let ((many l) (erased _)) (list-append _ seen $ Cons _ (MkMsgMeta key n $ rope-str where) $ Nil _)) l))
@@ -2220,6 +2225,8 @@
   (let-match many m (MkMsgMeta id n where))
   (let ((many shown)) $ str-cat3 "`" (meta-shown id n) "` is ")
   (let ((many hole)) $ is-hole-key id)
+  (let-match many (is-kw-key id) (BFalse)
+    ((BTrue) (Cons _ (str-cat3 here ": note: " $ str-cat3 shown "the built-in `" $ str-cat (match many id (((String) _)) ((SCons _ r) r) ((SNil) "")) "`, which no name in scope denotes here") $ notail $ meta-notes here rest)))
   (Cons _ (match many (str-is-empty where) (((String) _))
             ((BTrue) (str-cat3 here ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "a `_` the elaborator supplied, not one written in the source") ((BFalse) "anonymous, minted by the elaborator rather than written in the source")))
             ((BFalse) (str-cat3 where ": note: " $ str-cat shown $ match many hole (((String) _)) ((BTrue) "the `_` written here") ((BFalse) "anonymous, minted here"))))
@@ -2687,59 +2694,72 @@
 
 ; ---- Printing terms and values, for diagnostics and the final value (lib/term.ml's to_string, lib/value.ml's show)
 
+; The newest name in scope holding each special form a message spells (Env.speller), else `_` and its
+; built-in name, as a marker the printed message notes.
+(def-fns _ $ (many kw-find : (subterm many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (Maybe $ Pair (Nat) (String)) r))
+  (let-match many kws (Cons _ k rest) ((Nil _) (None _)))
+  (let-match many k (MkPair _ _ b2 v))
+  (match many (str-eq b b2) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ kw-find rest b))))
+
+(def-fns _ $ (many kw-spell : (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (String) b) -> (many (String) r))
+  (let-match many kws (Some _ ks) ((None _) b))
+  (match many (kw-find ks b) _
+    ((Some _ v) (match many v _ ((MkPair _ _ _ n) n)))
+    ((None _) (rope-str $ rcat4 (RChar #\x01) (RStr "k") (RStr b) $ rcat (RChar #\x01) (RChar #\x02)))))
+
 (def-fns _
-  ((many show-term : (subterm many (Term) t) (many (Env) env) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+  ((many show-term : (subterm many (Term) t) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many t _
       ((TVar x) (RStr $ name-of env x))
       ((TBound k)
         (RStr $ match many (list-nth _ bound k) (((String) _))
           ((NthHit _ _ _ n _) (match many n (((String) _)) ((Some _ s) s) ((None _) (str-cat "#" $ nat-str k))))
           ((NthMiss _ _ _ _) (str-cat "#" $ nat-str k))))
-      ((TApp h args) (rcat4 (RStr "(") (notail $ show-term h env bound) (notail $ show-terms args env bound) $ RStr ")"))
-      ((TCell h args) (rcat4 (RStr "(Cell ") (notail $ show-term h env bound) (notail $ show-terms args env bound) $ RStr ")"))
+      ((TApp h args) (rcat4 (RStr "(") (notail $ show-term h env kws bound) (notail $ show-terms args env kws bound) $ RStr ")"))
+      ((TCell h args) (rcat4 (RStr $ str-cat3 "(" (kw-spell kws "Cell") " ") (notail $ show-term h env kws bound) (notail $ show-terms args env kws bound) $ RStr ")"))
       ((TFn uq l ps rs)
-        (let ((many psr) (many b2)) $ notail $ show-tele ps env bound (BTrue))
-        (let ((many rsr) (many b3)) $ notail $ show-tele rs env b2 (BTrue))
-        (rcat5 (RStr $ match many uq (((String) _)) ((BTrue) "(UniqueFn ") ((BFalse) "(Fn ")) (notail $ show-term l env bound) psr (rcat (RStr " ->") rsr) $ RStr ")"))
+        (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BTrue))
+        (let ((many rsr) (many b3)) $ notail $ show-tele rs env kws b2 (BTrue))
+        (rcat5 (RStr $ str-cat3 "(" (kw-spell kws $ match many uq (((String) _)) ((BTrue) "UniqueFn") ((BFalse) "Fn")) " ") (notail $ show-term l env kws bound) psr (rcat (RStr $ str-cat " " $ kw-spell kws "->") rsr) $ RStr ")"))
       ((TTyCtor ps)
-        (let ((many psr) (many b2)) $ notail $ show-tele ps env bound (BFalse))
-        (rwrap "(TyCtor" psr " -> Type)"))
+        (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BFalse))
+        (rwrap (str-cat "(" $ kw-spell kws "TyCtor") psr $ str-cat3 " " (kw-spell kws "->") " Type)"))
       ((TValCtor ps ret)
-        (let ((many psr) (many b2)) $ notail $ show-tele ps env bound (BTrue))
-        (rcat4 (RStr "(ValCtor") psr (rcat (RStr " -> ") $ notail $ show-term ret env b2) $ RStr ")"))
+        (let ((many psr) (many b2)) $ notail $ show-tele ps env kws bound (BTrue))
+        (rcat4 (RStr $ str-cat "(" $ kw-spell kws "ValCtor") psr (rcat (RStr $ str-cat3 " " (kw-spell kws "->") " ") $ notail $ show-term ret env kws b2) $ RStr ")"))
       ((TMatchable d nt ex ty cs)
-        (let ((many marks)) (str-cat (match many nt (((String) _)) ((BTrue) "newtype ") ((BFalse) "")) (match many ex (((String) _)) ((BTrue) "extern ") ((BFalse) ""))))
-        (rcat5 (RStr $ match many d (((String) _)) ((DEnum) "(Matchable enum ") ((DUnion) "(Matchable union ")) (RStr marks) (notail $ show-term ty env bound) (notail $ show-mctors cs env bound) $ RStr ")"))
+        (let ((many marks)) (str-cat (match many nt (((String) _)) ((BTrue) (str-cat (kw-spell kws "newtype") " ")) ((BFalse) "")) (match many ex (((String) _)) ((BTrue) (str-cat (kw-spell kws "extern") " ")) ((BFalse) ""))))
+        (rcat5 (RStr $ str-cat3 "(" (kw-spell kws "Matchable") $ str-cat3 " " (kw-spell kws $ match many d (((String) _)) ((DEnum) "enum") ((DUnion) "union")) " ") (RStr marks) (notail $ show-term ty env kws bound) (notail $ show-mctors cs env kws bound) $ RStr ")"))
       ((TSlotHolds c)
         (match many c (((Rope) _))
-          ((TVar x) (match many (nat-eq x null-id) (((Rope) _)) ((BTrue) (RStr "(SlotVacant)")) ((BFalse) (rwrap "(SlotHolds " (RStr $ name-of env x) ")"))))
-          (else (rwrap "(SlotHolds " (notail $ show-term c env bound) ")"))))
+          ((TVar x) (match many (nat-eq x null-id) (((Rope) _)) ((BTrue) (RStr $ str-cat3 "(" (kw-spell kws "SlotVacant") ")")) ((BFalse) (rwrap (str-cat3 "(" (kw-spell kws "SlotHolds") " ") (RStr $ name-of env x) ")"))))
+          (else (rwrap (str-cat3 "(" (kw-spell kws "SlotHolds") " ") (notail $ show-term c env kws bound) ")"))))
       ((TErr m) (rwrap "<error: " (RStr m) ">"))))
-  ((many show-terms : (subterm many (List $ Term) ts) (many (Env) env) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+  ((many show-terms : (subterm many (List $ Term) ts) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many ts _
       ((Nil _) (REmpty))
-      ((Cons _ t rest) (rcat3 (RStr " ") (notail $ show-term t env bound) $ notail $ show-terms rest env bound))))
-  ((many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
+      ((Cons _ t rest) (rcat3 (RStr " ") (notail $ show-term t env kws bound) $ notail $ show-terms rest env kws bound))))
+  ((many show-mctors : (subterm many (List $ MCtor) cs) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (let-match many cs (Cons _ c rest) ((Nil _) (REmpty)))
     (match many c _
-      ((MkMCtor m t) (rcat5 (RStr " (") (RStr $ mult-name m) (rcat (RStr " ") $ notail $ show-term t env bound) (RStr ")") $ notail $ show-mctors rest env bound))))
-  ((many show-tele : (subterm many (List $ Entry) es) (many (Env) env) (many (List $ Maybe $ String) bound) (many (Bool) marked) -> (many (Rope) r) (many (List $ Maybe $ String) bound2))
+      ((MkMCtor m t) (rcat5 (RStr " (") (RStr $ kw-spell kws $ mult-name m) (rcat (RStr " ") $ notail $ show-term t env kws bound) (RStr ")") $ notail $ show-mctors rest env kws bound))))
+  ((many show-tele : (subterm many (List $ Entry) es) (many (Env) env) (many (Maybe $ List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) (many (Bool) marked) -> (many (Rope) r) (many (List $ Maybe $ String) bound2))
     (let-match many es (Cons _ e rest) ((Nil _) (values (REmpty) bound)))
     (let-match many e (MkEntry n s m sg place _))
     (let ((many (String) nm)) $ match many n _ ((None _) "_") ((Some _ x) x))
     (let ((many (String) marks))
       (match many marked _
         ((BFalse) "")
-        ((BTrue) (str-cat3 (match many s (((String) _)) ((BTrue) "subterm ") ((BFalse) "")) (mult-name m) " "))))
+        ((BTrue) (str-cat3 (match many s (((String) _)) ((BTrue) (str-cat (kw-spell kws "subterm") " ")) ((BFalse) "")) (kw-spell kws $ mult-name m) " "))))
     (let ((many (Rope) body)) (match many sg _
-                       ((SgTy t) (rcat3 (notail $ show-term t env bound) (RStr " ") $ RStr nm))
-                       ((SgIs t _) (rcat3 (notail $ show-term t env bound) (RStr " is ") $ RStr nm))))
+                       ((SgTy t) (rcat3 (notail $ show-term t env kws bound) (RStr " ") $ RStr nm))
+                       ((SgIs t _) (rcat3 (notail $ show-term t env kws bound) (RStr $ str-cat3 " " (kw-spell kws "is") " ") $ RStr nm))))
     (let ((many body2)) (match many place (((Rope) _))
       ((None _) body)
       ((Some _ p) (match many p _
-        ((TSlotHolds loc) (rcat3 body (RStr " at ") (notail $ show-term loc env bound)))
-        (else (rcat3 body (RStr " at ") (notail $ show-term p env bound)))))))
-    (let ((many restr) (many b2)) $ notail $ show-tele rest env (Cons _ n bound) marked)
+        ((TSlotHolds loc) (rcat3 body (RStr $ str-cat3 " " (kw-spell kws "at") " ") (notail $ show-term loc env kws bound)))
+        (else (rcat3 body (RStr $ str-cat3 " " (kw-spell kws "at") " ") (notail $ show-term p env kws bound)))))))
+    (let ((many restr) (many b2)) $ notail $ show-tele rest env kws (Cons _ n bound) marked)
     (values (rcat5 (RStr " (") (RStr marks) body2 (RStr ")") restr) b2)))
 
 ; Shadowing is legal (section 9) and warns at every binder that hides a name already in scope
@@ -2775,7 +2795,7 @@
         (match many (has-meta-env envl ty) _
           ((BTrue) (Some _ ty))
           ((BFalse) (match many rule _ ((None _) (None _)) ((Some _ t) (match many (has-meta-env envl t) _ ((BTrue) (Some _ t)) ((BFalse) (None _))))))))))
-  (let ((many (Env) envw)) $ match many open _ ((None _) envl) ((Some _ t) (env-error envl $ str-cat "cannot infer the `_` in " $ tick $ rope-str $ show-term t envl $ Nil _)))
+  (let ((many (Env) envw)) $ match many open _ ((None _) envl) ((Some _ t) (env-error envl $ str-cat "cannot infer the `_` in " $ tick $ rope-str $ show-term t envl (None _) $ Nil _)))
   (let-match many envw (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))

@@ -102,39 +102,40 @@ let disc_name = function Enum -> "enum" | Union -> "union"
    as the form that wrote it. *)
 let vacant = ref (-1)
 
-(* [name_of] resolves free ids; bound names come from the telescopes being printed. *)
-let rec to_string_in name_of bound t =
-  let go = to_string_in name_of in
+(* [name_of] resolves free ids; bound names come from the telescopes being printed. [kw] spells a keyword. *)
+let rec to_string_in ?(kw = Fun.id) name_of bound t =
+  let go = to_string_in ~kw name_of in
+  let form head items = "(" ^ String.concat " " (kw head :: items) ^ ")" in
   match t with
   | Var x -> name_of x
   | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
   | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
       let l = go bound l in
-      let bound, ps = tele_strings name_of bound ps in
-      let _, rs = tele_strings name_of bound rs in
-      (match kind with UniqueFn _ -> "(UniqueFn " | _ -> "(Fn ") ^ String.concat " " ((l :: ps) @ ("->" :: rs)) ^ ")"
-  | TyCtor ps -> "(TyCtor " ^ String.concat " " (snd (tele_strings ~marks:false name_of bound ps) @ [ "->"; "Type" ]) ^ ")"
+      let bound, ps = tele_strings ~kw name_of bound ps in
+      let _, rs = tele_strings ~kw name_of bound rs in
+      form (match kind with UniqueFn _ -> "UniqueFn" | _ -> "Fn") ((l :: ps) @ (kw "->" :: rs))
+  | TyCtor ps -> form "TyCtor" (snd (tele_strings ~kw ~marks:false name_of bound ps) @ [ kw "->"; "Type" ])
   | ValCtor (ps, r) ->
-      let bound', ps = tele_strings name_of bound ps in
-      "(ValCtor " ^ String.concat " " (ps @ [ "->"; go bound' r ]) ^ ")"
+      let bound', ps = tele_strings ~kw name_of bound ps in
+      form "ValCtor" (ps @ [ kw "->"; go bound' r ])
   | Matchable (d, n, e, t, cs) ->
-      "(Matchable " ^ String.concat " "
-        ((disc_name d :: (if n then ["newtype"] else []) @ (if e then ["extern"] else []) @ [go bound t]) @ List.map (fun (m, c) -> "(" ^ mult_name m ^ " " ^ go bound c ^ ")") cs)
-      ^ ")"
-  | SlotHolds (Var x) when x = !vacant -> "(SlotVacant)"
-  | SlotHolds t -> "(SlotHolds " ^ go bound t ^ ")"
-  | Cell (c, ss) -> "(Cell " ^ String.concat " " (List.map (go bound) (c :: ss)) ^ ")"
+      form "Matchable"
+        ((kw (disc_name d) :: (if n then [ kw "newtype" ] else []) @ (if e then [ kw "extern" ] else []) @ [ go bound t ])
+         @ List.map (fun (m, c) -> "(" ^ kw (mult_name m) ^ " " ^ go bound c ^ ")") cs)
+  | SlotHolds (Var x) when x = !vacant -> form "SlotVacant" []
+  | SlotHolds t -> form "SlotHolds" [ go bound t ]
+  | Cell (c, ss) -> form "Cell" (List.map (go bound) (c :: ss))
 
 (* Each entry as the source writes it, `(subterm many (List A) xs at c)`, binding its name for the entries after it. *)
-and tele_strings ?(marks = true) name_of bound es =
+and tele_strings ?(kw = Fun.id) ?(marks = true) name_of bound es =
   List.fold_left_map
     (fun bound e ->
-      let go = to_string_in name_of bound in
+      let go = to_string_in ~kw name_of bound in
       let n = Option.value e.name ~default:"_" in
-      let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " is " ^ n in
-      let marks = if marks then (if e.subterm then "subterm " else "") ^ mult_name e.mult ^ " " else "" in
-      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " at " ^ go p | None -> "" | _ -> assert false) ^ ")"))
+      let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " " ^ kw "is" ^ " " ^ n in
+      let marks = if marks then (if e.subterm then kw "subterm" ^ " " else "") ^ kw (mult_name e.mult) ^ " " else "" in
+      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " " ^ kw "at" ^ " " ^ go p | None -> "" | _ -> assert false) ^ ")"))
     bound es
 
-let to_string name_of t = to_string_in name_of [] t
+let to_string ?kw name_of t = to_string_in ?kw name_of [] t

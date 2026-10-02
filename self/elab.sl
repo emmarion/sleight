@@ -98,15 +98,37 @@
   (match many (str-cmp n "_") _ ((CEq _ _ _) (None _)) (else (Some _ n))))
 
 ; A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4).
-(def-fns _ $ (many special-of-atom : (many (Env) env) (many (Raw) raw) -> (many (Maybe $ Sp) r))
-  (let-match many (raw-atom raw) (Some a n) ((None _) (None _)))
-  (let-match many (lookup env n) (Some b x) ((None _) (None _)))
+(def-fns _ $ (many special-of-entry : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Sp) r))
   (let-match many (and (mult-is-many $ entry-mult-of env x) $ equal-env env (type-of env x) special-term) (BTrue)
     ((BFalse) (None _)))
   (let ((erased a2) (many blk)) $ env-block env x)
   (match many blk _
     ((None _) (None _))
     ((Some _ b2) (match many b2 _ ((BTag _ ct _) (sp-of-index $ ctor-index ct)) (else (None $ Sp))))))
+
+(def-fns _ $ (many special-of-atom : (many (Env) env) (many (Raw) raw) -> (many (Maybe $ Sp) r))
+  (let-match many (raw-atom raw) (Some a n) ((None _) (None _)))
+  (let-match many (lookup env n) (Some b x) ((None _) (None _)))
+  (special-of-entry env x))
+
+(def-fns _ $ (many sp-name-in : (subterm many (List $ SpEntry) es) (many (Sp) sp) -> (many (String) name))
+  (match many es _
+    ((Nil _) "?")
+    ((Cons _ e rest) (match many e _ ((MkSpEntry n s) (match many (sp-eq s sp) _ ((BTrue) n) ((BFalse) (tail $ sp-name-in rest sp))))))))
+
+(def-fns _ $ (many sp-name : (many (Sp) sp) -> (many (String) name))
+  (sp-name-in sp-table sp))
+
+(def-fns _ $ (many kw-held : (many (Env) env) (subterm many (List $ Pair (String) (Nat)) ns) (many (List $ Pair (String) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+  (let-match many ns (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ n x))
+  (let-match many (special-of-entry env x) (Some _ sp) ((None _) (tail $ kw-held env rest acc)))
+  (let ((many b)) $ sp-name sp)
+  (let ((many (Bool) newer)) $ match many (kw-find acc b) _ ((None _) (BTrue)) ((Some _ q) (match many q _ ((MkPair _ _ y _) (nat-lt y x)))))
+  (tail $ kw-held env rest $ match many newer (((List $ Pair (String) $ Pair (Nat) (String)) _)) ((BTrue) (Cons _ (MkPair _ _ b $ MkPair _ _ x n) acc)) ((BFalse) acc)))
+
+(def-fns _ $ (many kws-of : (many (Env) env) -> (many (List $ Pair (String) $ Pair (Nat) (String)) r))
+  (kw-held env (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ Nil _))
 
 (def-fns _ $ (many special-of : (many (Env) env) (subterm many (Raw) raw) -> (many (Maybe $ Sp) r))
   (let-match many raw (RList _ items) (else (special-of-atom env raw)))
@@ -233,14 +255,14 @@
 
 (def-fns _ $ (many show-t-except : (many (Env) env) (many (Term) t) (many (Maybe $ Nat) except) -> (many (String) s))
   (let ((many c)) $ canon-env env t)
-  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) $ Nil _))
+  (rope-str $ show-term c (naming env (plain-atoms env $ term-vars c $ Nil _) except) (Some _ $ kws-of env) $ Nil _))
 
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
   (show-t-except env t $ None _))
 
 (def-fns _ $ (many show-tele-t : (many (Env) env) (many (List $ Entry) es) -> (many (String) s))
   (let ((many ces)) $ canon-env-tele env es)
-  (let ((many r) (many bound)) $ show-tele ces (naming env (plain-atoms env $ term-vars-tele ces $ Nil _) $ None _) (Nil _) (BTrue))
+  (let ((many r) (many bound)) $ show-tele ces (naming env (plain-atoms env $ term-vars-tele ces $ Nil _) $ None _) (Some _ $ kws-of env) (Nil _) (BTrue))
   (rope-str r))
 
 (def-fns _ $ (many clash-str : (many (Env) env) (subterm many (Clash) c) -> (many (String) s))
@@ -1503,13 +1525,6 @@
   (let ((many env4)) $ check env3 "value" (nth-term qa 1) $ nth-term pa $ nat-pred n)
   (mint env4 $ proof-type ctor $ Cons _ (nth-term pa 0) $ Cons _ (nth-term pa 1) $ list-drop _ 2 qa))
 
-(def-fns _ $ (many sp-name-in : (subterm many (List $ SpEntry) es) (many (Sp) sp) -> (many (String) name))
-  (match many es _
-    ((Nil _) "?")
-    ((Cons _ e rest) (match many e _ ((MkSpEntry n s) (match many (sp-eq s sp) _ ((BTrue) n) ((BFalse) (tail $ sp-name-in rest sp))))))))
-
-(def-fns _ $ (many sp-name : (many (Sp) sp) -> (many (String) name))
-  (sp-name-in sp-table sp))
 
 (def-fns _ $ (many drop-prefix : (subterm many (String) p) (many (String) s) -> (many (Maybe $ String) r))
   (let-match many p (SCons c prest) ((SNil) (Some _ s)))
