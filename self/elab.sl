@@ -671,11 +671,23 @@
     ((Some _ p) (values env x p))
     ((None _) (values env x $ Zero))))
 
+(def-fns _ $ (many prelude-missing : (many (Env) env) (many (String) what) (many (String) ty) -> (many (Maybe $ String) r))
+  (match many (lookup (env-set-scope env $ env-prelude env) ty) _
+    ((Some _ _) (None _))
+    ((None _) (Some _ $ str-cat3 what " needs the prelude's " $ str-cat (tick ty) ", which `--no-prelude` leaves out"))))
+
+(def-fns _ $ (many lit-prelude-missing : (many (Env) env) (many (LitKind) kind) -> (many (Maybe $ String) r))
+  (match many kind _
+    ((LName) (None _))
+    ((LNumeral) (prelude-missing env "a numeral" "Nat"))
+    ((LChar) (prelude-missing env "a character literal" "Char"))))
+
 ; Interns a numeral or character literal (ASSUMPTIONS 51, 52): a character is (MkChar (MkU8 n p)) over its
 ; code's numeral, transparent down to the opaque n.
 (def-fns _ $ (many intern : (many (Env) env) (many (String) key) (many (LitKind) kind) -> (many (Env) r))
   (let-match many (lit-lookup env key) (None _) ((Some _ _) env))
   (let-match many (literal-error key) (None _) ((Some _ msg) (env-error env msg)))
+  (let-match many (lit-prelude-missing env kind) (None _) ((Some _ msg) (env-error env msg)))
   (let-match many kind (LChar) ((LNumeral) (let ((many env2) (many x) (many p)) $ intern-numeral env key) env2) ((LName) env))
   (let ((many (Nat) code)) $ match many (char-lit-code key) _ ((None _) 0) ((Some _ n) n))
   (let ((many env2) (many num) (many np)) $ intern-numeral-once env $ nat-str code)
@@ -696,6 +708,7 @@
 
 (def-fns _ $ (many intern-string : (many (Env) env) (many (String) key) -> (many (Env) r))
   (let-match many (lit-lookup env key) (None _) ((Some _ _) env))
+  (let-match many (prelude-missing env "a string literal" "String") (None _) ((Some _ msg) (env-error env msg)))
   (let ((many body)) $ match many key (((String) _)) ((SNil) (SNil)) ((SCons _ rest) rest))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (many x)) $ bind-closed env1 (None _) (None _) (BFalse) (Many) (BExt _ $ PStr body) str-ty (None _) delegate-id)
@@ -704,8 +717,8 @@
 (def-fns _
   ((many intern-literals : (subterm many (Raw) raw) (many (Env) env) -> (many (Env) r))
     (match many raw _
-      ((RAtom _ s) (env-set-scope (intern env s $ classify s) $ env-scope env))
-      ((RString _ s) (env-set-scope (intern-string env $ string-key s) $ env-scope env))
+      ((RAtom p s) (env-back env $ env-set-scope (intern (env-at env p) s $ classify s) $ env-scope env))
+      ((RString p s) (env-back env $ env-set-scope (intern-string (env-at env p) $ string-key s) $ env-scope env))
       ((RList _ items) (tail $ intern-literals-list items env))))
   ((many intern-literals-list : (subterm many (List $ Raw) rs) (many (Env) env) -> (many (Env) r))
     (match many rs _

@@ -1872,15 +1872,20 @@ and elab_def_adts env adts =
   (env, if env.run_pos then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
 let rec literals = function
-  | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ x ] | `Bad msg -> error l "%s" msg | `Name -> [])
+  | Atom (l, s) -> (match Literal.classify s with `Lit x -> [ (l, x) ] | `Bad msg -> error l "%s" msg | `Name -> [])
   | List (_, items) -> List.concat_map literals items
+
+let hoist_at env (l, lit) =
+  let what, ty = match lit with Literal.Numeral _ -> ("a numeral", "Nat") | Char _ -> ("a character literal", "Char") | Str _ -> ("a string literal", "String") in
+  if prelude_id env ty = None then error l "%s needs the prelude's %s, which `--no-prelude` leaves out" what (tick ty);
+  hoist env lit
 
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env = function
     | [] -> env
     | List (l, Atom (_, ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
     | item :: rest -> (
-        let env = List.fold_left hoist env (literals item) in
+        let env = List.fold_left hoist_at env (literals item) in
         at (loc item) (fun () ->
             if rest = [] && not (is_statement env item) then (
               if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
