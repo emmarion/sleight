@@ -329,7 +329,9 @@ def _shown(capture, ext, data):
 
 def sl(paths, stdin="", args=(), capture=None):
     if isinstance(paths, str):
-        paths = [paths]
+        paths = [paths] if paths else []
+    if not paths:
+        raise ValueError("`paths` must name at least one file")
     if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
         raise ValueError("`capture` cannot name a kept file")
     with tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
@@ -337,6 +339,8 @@ def sl(paths, stdin="", args=(), capture=None):
         names = []
         for p in paths:
             name = "/".join(_rel_parts(p))
+            if name.startswith("-"):
+                raise PathEscape(f"{p!r}: a path given to `sl` cannot start with '-'")
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
