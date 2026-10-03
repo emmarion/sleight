@@ -1068,11 +1068,6 @@
   (many FThunk : (many (Term) ty) -> (FinalKind))
   (many FPlain : -> (FinalKind)))
 
-(def-fns _ $ (many is-string-type : (many (Env) env) (many (Term) ty) -> (many (Bool) r))
-  (match many (type-head env ty) _
-    ((None _) (BFalse))
-    ((Some _ t) (str-eq (entry-name-or-id env t) "String"))))
-
 (def-fns _ $ (many classify-final : (many (Env) env) (many (Term) ty) -> (many (FinalKind) f))
   (match many (canon-env env ty) _
     ((TFn unique2 _ ps rs)
@@ -1087,15 +1082,12 @@
           (let-match many more (Nil _) ((Cons _ _ _) (FPlain)))
           (let-match many rs (Cons _ r more3) ((Nil _) (FPlain)))
           (let-match many more3 (Nil _) ((Cons _ _ _) (FPlain)))
-          (match many (and (is-string-type env $ sg-term $ entry-sg p)
-                        (and (is-string-type env $ sg-term $ entry-sg r)
+          (match many (and (prelude-nullary env (sg-term $ entry-sg p) "String")
+                        (and (prelude-nullary env (sg-term $ entry-sg r) "String")
                           $ and (and (mult-is-many $ entry-mult p) $ not $ mult-is-once $ entry-mult p) $ and (mult-is-many $ entry-mult r) $ not $ mult-is-once $ entry-mult r)) _
             ((BTrue) (FMain))
             ((BFalse) (FPlain))))))
-    ((TApp _ _)
-      (match many (type-head env ty) _
-        ((None _) (FPlain))
-        ((Some _ t) (match many (str-cmp (entry-name-or-id env t) "IO") _ ((CEq _ _ _) (FIo)) (else (FPlain)))))) (else (FPlain))))
+    ((TApp _ _) (match many (prelude-nullary env ty "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))) (else (FPlain))))
 
 ; ---- A printer per type for a final function's result (lib/extract.ml's show): each constructor's return
 ; type is unified with the type to find its many fields' types, as entering a branch does.
