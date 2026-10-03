@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, functools, hashlib, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -128,18 +128,41 @@ def list_dir(user_path="."):
         os.close(dfd)
 
 
-def _base(path):
-    return SANDBOX_ROOT.joinpath(*(_rel_parts(path) if path not in (".", "") else []))
+def _tree(dfd, rel=""):
+    for e in sorted(os.scandir(dfd), key=lambda e: e.name):
+        r = os.path.join(rel, e.name)
+        yield r, functools.partial(_read_at, dfd, e.name) if e.is_file(follow_symlinks=False) else None
+        if e.is_dir(follow_symlinks=False):
+            sub = os.open(e.name, _DIRFLAGS, dir_fd=dfd)
+            try:
+                yield from _tree(sub, r)
+            finally:
+                os.close(sub)
 
 
-def _walk_files(path):
-    if _base(path).is_file() and not _base(path).is_symlink():
-        yield str(_base(path).relative_to(SANDBOX_ROOT)), _base(path)
-    for dirpath, dirnames, filenames in os.walk(_base(path), followlinks=False):
-        for fn in filenames:
-            p = Path(dirpath) / fn
-            if not p.is_symlink():
-                yield str(p.relative_to(SANDBOX_ROOT)), p
+def _read_at(dfd, name):
+    with os.fdopen(os.open(name, _NOFOLLOW, dir_fd=dfd), "rb") as f:
+        return f.read()
+
+
+def _walk(path):
+    try:
+        dfd = _walk_to_dir(_rel_parts(path or "."), create=False)
+    except PathEscape:
+        yield os.path.normpath(path), functools.partial(read_bytes, path)
+        return
+    try:
+        yield from ((os.path.normpath(os.path.join(path, r)), read) for r, read in _tree(dfd))
+    finally:
+        os.close(dfd)
+
+
+def _glob_match(pat, parts):
+    if not pat:
+        return not parts
+    if pat[0] == "**":
+        return any(_glob_match(pat[1:], parts[i:]) for i in range(len(parts) + 1))
+    return bool(parts) and fnmatch.fnmatchcase(parts[0], pat[0]) and _glob_match(pat[1:], parts[1:])
 
 
 def clip(s, cap=MAX_OUT):
@@ -183,16 +206,18 @@ def ls(path=".", within=None):
 
 def grep(pattern, path=".", within=None):
     rx, hits = re.compile(pattern), []
-    for rel, p in (f for f in _walk_files(path) if within is None or f[0] in within):
-        try:
-            hits += [f"{rel}:{n}: {l[:200]}" for n, l in enumerate(p.read_text(errors="replace").splitlines(), 1) if rx.search(l)]
-        except OSError:
-            pass
+    for rel, read in _walk(path):
+        if read and (within is None or rel in within):
+            try:
+                hits += [f"{rel}:{n}: {l[:200]}" for n, l in enumerate(read().decode("utf-8", "replace").splitlines(), 1) if rx.search(l)]
+            except (OSError, PathEscape):
+                pass
     return "\n".join(hits[:200]) or "(no matches)"
 
 
 def find(glob, path="."):
-    return "\n".join(str(p.relative_to(SANDBOX_ROOT)) for p in list(_base(path).rglob(glob))[:200]) or "(none)"
+    top = len(_rel_parts(path or "."))
+    return "\n".join([rel for rel, _ in _walk(path) if _glob_match(["**", *Path(glob).parts], Path(rel).parts[top:])][:200]) or "(none)"
 
 
 @functools.cache
