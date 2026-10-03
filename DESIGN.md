@@ -399,10 +399,11 @@ type does not carry it, and its return position has no multiplicity of
 its own (§29). Each field (like each function argument) is individually
 annotated erased or not (sane default still TBD). Declaring a phantom
 constructor with any `many` field is a warning. Subterm recursion (§7)
-can go through an erased argument. A type marked `newtype` — which
-must have exactly one non-phantom constructor holding exactly one
-`many` field, or be the union analogue — is required to be represented
-as that field alone (§38).
+can go through an erased argument. A type marked `newtype` must be an enum with exactly one non-phantom
+constructor, holding exactly one `many` field, or a union whose
+non-phantom constructors each hold either only `erased` fields or
+exactly one `many` field, at least one of them the latter. A value of
+it is required to be represented as that `many` field alone (§38).
 
 **A constructor returns its own type.** Every value constructor is
 declared inside exactly one type constructor's entry in `def-adts`, and
@@ -1183,9 +1184,8 @@ type or an `is` expression, not only at a declaration site.
 21. `coercible-refl`, `coercible-sym`, `coercible-trans` — reflexivity,
     symmetry and transitivity of `Coercible` (§38), special forms like
     item 19.
-22. 22. `coercible-wrap` — mints the proof wrapping a value into a
-    transparent type's one non-phantom constructor, whose `Newtype` must
-    be open (§38); unwrapping is its `coercible-sym` (§38).
+22. `coercible-wrap` — mints the proof wrapping a value in one of a
+    newtype's wrapping constructors, whose `Newtype` must be open (§38); unwrapping is its `coercible-sym` (§38).
 23. `coercible-ctor` — mints the proof between two applications of the
     same non-phantom constructor, from per-field values and proofs
     (§38).
@@ -1702,21 +1702,28 @@ checked entirely at elaboration time:
 2. `(coercible-sym p)` — from `a` to `b`, conclude `b` to `a`.
 3. `(coercible-trans p q)` — from `a` to `b` and `b` to `c`, conclude `a` to
    `c`.
-4. 4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **newtype**.
+4. `(coercible-wrap C arg1 ... argn)` — wrapping into a **newtype**.
    A type is a newtype by declaration: its `def-adts` entry carries the
    `newtype` mark after its `enum`/`union` token (§27), and it must then
-   have the newtype shape, a hard error otherwise — an enum with exactly
-   one non-phantom constructor holding exactly one `many` field, or a
-   union in which, among the non-phantom constructors, every one but one
-   has only `erased` fields and the remaining one has exactly one `many`
-   field. Phantom constructors never head a non-erased value (§20) and
-   do not count either way. A type of that shape left unmarked is not a
+   have the newtype shape, a hard error otherwise:
+
+   - an enum: exactly one non-phantom constructor, holding exactly one
+     `many` field;
+   - a union: every non-phantom constructor holds either only `erased`
+     fields or exactly one `many` field, and at least one holds a `many`
+     field.
+
+   A non-phantom constructor holding a `many` field is a **wrapping
+   constructor**: the enum's one constructor, or each such constructor
+   of the union. Phantom constructors never head a non-erased value
+   (§20) and do not count either way. TBD: whether to also allow a
+   union newtype none of whose non-phantom constructors holds a `many`
+   field. A type of that shape left unmarked is not a
    newtype: an implementation may still represent it as its field, but
-   promises nothing and admits no `coerce`. The mark mints an erased
-   `(Newtype C)` alongside the type's `Matchable`, `C` the wrapping
-   constructor the shape above singles out, bare and unapplied as in a
-   `Matchable`; the type is read off `C`'s return type, so the object
-   carries nothing else. `Newtype` is a type former (§5), the object is
+   promises nothing and admits no `coerce`. The mark mints, alongside the
+   type's `Matchable`, one erased `(Newtype C)` for each wrapping
+   constructor `C`, bare and unapplied as in a `Matchable`; the type is
+   read off `C`'s return type, so the object carries nothing else. `Newtype` is a type former (§5), the object is
    first class (§17), and `newtype-of` fetches the opened one by naming
    `C`, as `matchable-of` does by naming the type (§19).
    `coercible-wrap` verifies that a `Newtype` for `C` is open — its
@@ -1764,14 +1771,15 @@ is an enum with more than one non-phantom constructor, the tag being
 the constructor's position among them and all a tag ever
 distinguishes. With no `many` fields a value is therefore the tag alone
 when its type is tagged, and an unspecified word otherwise. A union
-never carries one, its discriminant being erased (§12). So every
-newtype, as item 4 defines it, is represented exactly as its
-one `many` field — no tag, no wrapper — which is the guarantee the
-mark buys; a value built by one of a union newtype's other non-phantom
-constructors is an unspecified word, which
-nothing ever reads as the field: a `many` match on the union has a
-single real branch, and unwrapping needs the value to canonicalize to
-the wrapper's application. Erased fields occupy no space (§34). A
+never carries one, its discriminant being erased (§12). So a newtype
+value built by a wrapping constructor, as item 4 defines it, is
+represented exactly as that constructor's one `many` field — no tag,
+no wrapper — which is the guarantee the mark buys. A union newtype
+value built by a constructor with only `erased` fields is an
+unspecified word. A word is never read as the field of a constructor
+that did not build it: a `many` match on a union has a single real
+branch, and unwrapping needs the value to canonicalize to that wrapping
+constructor's application. Erased fields occupy no space (§34). A
 `delegate`-bodied function's pointer is interchangeable with its
 callee's (§9). An extern type (§41) may be marked `newtype` like any
 other, its FFI author then guaranteeing the field representation, and
