@@ -833,7 +833,7 @@
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
-  (many Uninit : (erased Type A) -> (MaybeUninit A))
+  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
 
 (def-adts $ (Copy : (Type A) -> Type)
@@ -873,7 +873,7 @@
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
     (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
                    (erased (AllUninit A n tl) p)
-                   -> (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
+                   -> (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A (SlotVacant)) tl))))
   ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
@@ -900,7 +900,7 @@
     (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))
   (let-match many n (Succ n1) ((Zero) (values (ANil _) (AUNil _))))
   (let ((unique tl) (erased q)) (notail $ array-new A n1))
-  (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))
+  (values (ACons _ _ (Uninit _ (SlotVacant)) tl) (AUCons _ _ _ q)))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
@@ -919,12 +919,24 @@
       (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
       (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
+; The returned Slot is what the plucked element's Uninit holds: the old word stays in the array, which
+; may keep the plucked value alive, a potential memory leak until the element is overwritten.
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
-    (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
+    (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
-    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p))
-  (tail (array-swap _ _ a i (Uninit _) _ nth)))
+    (unique m is v) (unique (Array (MaybeUninit A) n) r at a) (erased (Slot) s)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A s) r) p))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (match erased nth _
+        ((NthZ _ _ _ _)
+          (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
+        (absurd NthS)))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((unique v) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3)) s (SetS _ _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (many (Nat) i) (unique A x)
