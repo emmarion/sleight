@@ -22,6 +22,8 @@ usage: $0 IP PI-ARGS...
            list the $TAG droplets and their runs
        $0 status IP
            list the runs on the box
+       $0 tail [-t] IP
+           follow the box's newest run log, or with -t the current session's transcript
        $0 fetch IP
            copy the box's results into agent/results/box-NAME/
        $0 destroy [--force] [--yes] IP
@@ -95,7 +97,7 @@ launch() {
 }
 
 cmd=start
-case "${1:-}" in new | resume | set-n | sweep | ls | status | fetch | destroy | reap) cmd=$1; shift ;; esac
+case "${1:-}" in new | resume | set-n | sweep | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
 if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
     models=
     while :; do
@@ -221,6 +223,13 @@ for rec in runs:
         if value:
             print(f"    {label:<9} {value}")
 PY
+    ;;
+tail)
+    f='$(ls -t *.log | head -1)'
+    [ "${1:-}" = -t ] && { f=latest/transcript.log; shift; }
+    [ $# -eq 1 ] || usage
+    connect pi@"$1"
+    exec $SSH -t pi@"$1" "cd sl/agent/results && tail -n 20 -F $f"
     ;;
 fetch)
     [ $# -eq 1 ] || usage
