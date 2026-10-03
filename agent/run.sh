@@ -160,12 +160,19 @@ sweep)
     wait
     ;;
 ls)
+    lock=$(mktemp -u)
     while read -r ip id name size price age <&3; do
-        echo "$ip  $name  $size  $price  $age"
-        if out=$(agent/run.sh status "$ip" 2>/dev/null); then sed 's/^/    /' <<<"$out"; else echo "    (unreachable)"; fi
-        n=$(unfetched "$ip" 2>/dev/null | wc -l | tr -d ' ')
-        [ "$n" = 0 ] || echo "    $n files not fetched"
+        {
+            block="$ip  $name  $size  $price  $age"
+            if out=$(agent/run.sh status "$ip" 2>/dev/null); then block+=$'\n'$(sed 's/^/    /' <<<"$out"); else block+=$'\n    (unreachable)'; fi
+            n=$(unfetched "$ip" 2>/dev/null | wc -l | tr -d ' ')
+            [ "$n" = 0 ] || block+=$'\n'"    $n files not fetched"
+            until mkdir "$lock" 2>/dev/null; do sleep 0.05; done
+            printf '%s\n' "$block"
+            rmdir "$lock"
+        } &
     done 3< <(rows)
+    wait
     ;;
 set-n)
     [ $# -eq 2 ] || [ $# -eq 3 ] || usage
