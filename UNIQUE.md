@@ -551,12 +551,12 @@ source over it. `_` is SUGAR.md 6's.
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
-  (many Uninit : (erased Type A) -> (MaybeUninit A))
+  (many Uninit : (erased Type A) (many (Slot) s) -> (MaybeUninit A))
   (many Init : (erased Type A) (unique A value) -> (MaybeUninit A)))
 ```
 
-A `(MaybeUninit A)` is one word, `A`'s own under `Init` and an
-unspecified one under `Uninit`, so an `(Array (MaybeUninit A) n)` is
+A `(MaybeUninit A)` is one word, `A`'s own under `Init` and its
+slot's under `Uninit`, so an `(Array (MaybeUninit A) n)` is
 the memory of the `(Array A n)` it becomes. Reading an `Init` out is a
 `unique` match whose `Uninit` branch must be refuted, by a fact or by
 proof, §12's one-real-branch rule making that Rust's `assume_init`
@@ -571,7 +571,7 @@ The relations, every field erased:
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
     (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
                    (erased (AllUninit A n tl) p) ->
-       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A) tl))))
+       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A (SlotVacant)) tl))))
   ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
@@ -602,39 +602,41 @@ shedding the argument its model does not use:
 ```scheme
 (def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
     (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))
-  (match many n _
-    ((Zero) (values (ANil _) (AUNil _)))
-    ((Succ n1)
-      (let ((unique tl) (erased q)) (array-new A n1))
-      (values (ACons _ _ (Uninit _) tl) (AUCons _ _ _ q)))))
+  (let-match many n (Succ n1) ((Zero) (values (ANil _) (AUNil _))))
+  (let ((unique tl) (erased q)) (notail $ array-new A n1))
+  (values (ACons _ _ (Uninit _ (SlotVacant)) tl) (AUCons _ _ _ q)))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
     (erased A m) (erased (ANth A n a i m) nth) ->
     (unique m is old) (unique (Array A n) r at a)
     (erased (ASet A n a i x r) p))
-  (match unique a _
-    (absurd (ANil _ _) (match erased nth (((False) f))))
-    ((ACons _ _ hd tl u)
-      (match many i _
-        ((Zero)
-          (match erased nth _
-            ((NthZ _ _ _ _)
-              (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
-            (absurd NthS)))
-        ((Succ i1)
-          (match erased nth _
-            (absurd NthZ)
-            ((NthS _ _ _ _ _ _ q)
-              (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
-              (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))))))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
+      (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
+; The returned Slot is what the plucked element's Uninit holds: the old word stays in the array, which
+; may keep the plucked value alive, a potential memory leak until the element is overwritten.
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
-    (unique (Array (MaybeUninit A) n) a) (many (Nat) i)
+    (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
-    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A) r) p))
-  (tail (array-swap _ _ a i (Uninit _) _ nth)))
+    (unique m is v) (unique (Array (MaybeUninit A) n) r at a) (erased (Slot) s)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A s) r) p))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((unique v) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3)) s (SetS _ _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (many (Nat) i) (unique A x)
@@ -650,10 +652,7 @@ facts make `hd` canonically `m`, so it is returned as `old` with no
 coerce, the head slot takes `x`, one store, and the tail is skipped; in
 its `NthS` branch the recursion returns `tl3 at tl`, the reinvocation
 is full-at and erased, and with `old` the only physical result on
-either side the recursive call is a valid `tail`. `array-pluck` is a
-`tail` and not a `delegate`, `(Uninit _)` being an argument it does not
-take; its FFI reads and stores nothing, the old word staying under a
-slot typed `Uninit`, which nothing can read. `array-place` drops `old`,
+either side the recursive call is a valid `tail`. `array-place` drops `old`,
 as at-most-one-use allows, so it is a plain call. The FFI's `array-new`
 is a block of `n` words, the model's `ACons` view its first word and a
 copy of the rest, so taking an array apart is O(n). An implementation
@@ -672,22 +671,16 @@ read in place, its FFI that of `array-pluck`:
     (unique (Array (Copy A) n) a) (subterm many (Nat) i)
     (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
     (many x is v) (unique a is r at a))
-  (match unique a _
-    (absurd (ANil _ _) (match erased nth (((False) f))))
-    ((ACons _ _ hd tl u)
-      (match many i _
-        ((Zero)
-          (match erased nth _
-            ((NthZ _ _ _ _)
-              (let-match unique hd (MkCopy _ v))
-              (values v (at (u _ _ (MkCopy _ v) tl))))
-            (absurd NthS)))
-        ((Succ i1)
-          (match erased nth _
-            (absurd NthZ)
-            ((NthS _ _ _ _ _ _ q)
-              (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
-              (values v (at (u _ _ hd tl3))))))))))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (let-match unique hd (MkCopy _ v))
+      (values v (at (u _ _ (MkCopy _ v) tl))))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3))))))
 ```
 
 A `many` array is read without handing it back, and its fields being read at `many` already, its elements need no `Copy`; its FFI is that of `array-get`. `array-length` reads a unique array's length and hands the array back, and `array-length-many` reads a `many` array's:
