@@ -910,10 +910,8 @@
   (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
-      (match erased nth _
-        ((NthZ _ _ _ _)
-          (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
-        (absurd NthS)))
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
       (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
@@ -929,10 +927,8 @@
   (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
-      (match erased nth _
-        ((NthZ _ _ _ _)
-          (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
-        (absurd NthS)))
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
       (let ((unique v) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
