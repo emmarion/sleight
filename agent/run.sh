@@ -212,10 +212,14 @@ for rec in runs:
     context = next((l for l in reversed(last.read_text(errors="replace").splitlines()) if l.startswith("[context")), "") if last and last.exists() else ""
     info = json.loads(rec.read_text())
     settings = " ".join(f"{k}={v}" for k, v in sorted(info["env"].items()) if k not in ("PI_MODEL", "PI_PROVIDER"))
-    done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} sessions done"
+    done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} done"
     cost, energy = map(sum, zip((0, 0), *map(spent, d.glob("*/transcript.log"))))
     total = f"${cost:.4f}, {energy:,.0f} J in all" if cost or energy else ""
-    print("  ".join(x for x in ("live" if live else "stopped", d.name, done, total, settings, context) if x))
+    ctx, _, session = context.removeprefix("[context: ").removesuffix("]").partition(", $")
+    print(("live" if live else "stopped") + "  " + d.name)
+    for label, value in (("sessions", done), ("spent", total), ("settings", settings), ("context", ctx), ("session", session and "$" + session)):
+        if value:
+            print(f"    {label:<9} {value}")
 PY
     ;;
 fetch)
