@@ -1131,7 +1131,6 @@
 
 
 
-; The wrapping constructor of a type of newtype shape (section 38), if any.
 (def-fns _ $ (many wrappers : (subterm many (List $ CShape) ss) -> (many (List $ Nat) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
   (let-match many s (MkCShape m c n))
@@ -1139,18 +1138,16 @@
     ((BTrue) (Cons _ c $ notail $ wrappers rest))
     ((BFalse) (tail $ wrappers rest))))
 
-(def-fns _ $ (many others-bare : (subterm many (List $ CShape) ss) (many (Nat) w) -> (many (Bool) r))
-  (let-match many ss (Cons _ s rest) ((Nil _) (BTrue)))
-  (let-match many s (MkCShape m c n))
-  (and (or (not $ mult-is-many m) $ or (nat-eq c w) $ nat-is-zero n)
-    $ notail $ others-bare rest w))
+(def-fns _ $ (many some-wide : (subterm many (List $ CShape) ss) -> (many (Bool) r))
+  (let-match many ss (Cons _ s rest) ((Nil _) (BFalse)))
+  (let-match many s (MkCShape m _ n))
+  (or (and (mult-is-many m) $ nat-lt 1 n) $ notail $ some-wide rest))
 
-(def-fns _ $ (many wrapper : (many (Disc) disc) (many (List $ CShape) ss) -> (many (Maybe $ Nat) r))
-  (let-match many (wrappers ss) (Cons _ w rest) ((Nil _) (None _)))
-  (let-match many rest (Nil _) ((Cons _ _ _) (None _)))
-  (match many (and (not $ tagged-of disc ss) $ others-bare ss w) _
-    ((BTrue) (Some _ w))
-    ((BFalse) (None _))))
+; The wrapping constructors of a type of newtype shape (section 38), none if it is not of that shape.
+(def-fns _ $ (many newtype-wrappers : (many (Disc) disc) (many (List $ CShape) ss) -> (many (List $ Nat) r))
+  (match many (or (tagged-of disc ss) $ some-wide ss) _
+    ((BTrue) (Nil _))
+    ((BFalse) (wrappers ss))))
 
 (def-fns _ $ (many find-newtype-in : (subterm many (List $ Opened) opens) (many (Env) env) (many (Nat) c) (many (List $ Nat) cands) -> (many (Maybe $ Nat) r))
   (let-match many opens (Cons _ o rest) ((Nil _) (None _)))
@@ -1162,7 +1159,7 @@
         (let-match many (type-of env x) (TMatchable d nt _ _ cs) (else (BFalse)))
         (match many nt (((Bool) _))
           ((BFalse) (BFalse))
-          ((BTrue) (match many (wrapper d $ shapes cs env) (((Bool) _)) ((None _) (BFalse)) ((Some _ w) (nat-eq w c))))))))
+          ((BTrue) (list-mem-bin (newtype-wrappers d $ shapes cs env) c))))))
   (match many found _ ((BTrue) (Some _ x)) ((BFalse) (tail $ find-newtype-in rest env c cands))))
 
 (def-fns _ $ (many find-newtype : (many (Env) env) (many (Nat) c) -> (many (Maybe $ Nat) r))
@@ -5176,9 +5173,9 @@
       (match many nt _
         ((BFalse) env3b)
         ((BTrue)
-          (match many (wrapper disc ss) (((Env) _))
-            ((None _) (env-error env3b $ str-cat (tick name) " is not of newtype shape (section 38)"))
-            ((Some _ _) env3b)))))
+          (match many (newtype-wrappers disc ss) (((Env) _))
+            ((Nil _) (env-error env3b $ str-cat (tick name) " is not of newtype shape (section 38)"))
+            ((Cons _ _ _) env3b)))))
     (let ((many env5) (many more)) $ notail $ define-adts sugar rest hrest env4 trest)
     (let ((many all) (erased cat)) $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ BMat _ adt2) more)
     (values env5 all))

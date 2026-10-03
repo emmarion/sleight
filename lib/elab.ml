@@ -220,14 +220,13 @@ let discriminant shapes c = find_index (fun (c', _) -> c' = c) (non_phantom shap
 
 let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
 
-let wrapper disc shapes =
-  match List.filter (fun (m, _, n) -> m = Many && n = 1) shapes with
-  | [ (_, w, _) ] when (not (tagged disc shapes)) && List.for_all (fun (m, c, n) -> m = Erased || c = w || n = 0) shapes -> Some w
-  | _ -> None
+let wrappers disc shapes =
+  let cs = non_phantom shapes in
+  if tagged disc shapes || List.exists (fun (_, n) -> n > 1) cs then [] else List.filter_map (fun (c, n) -> if n = 1 then Some c else None) cs
 
 let newtype_of env c =
   List.find_map (fun o -> if not (List.mem (Var c) o.Env.names) then None else match type_of env o.Env.obj with
-    | Matchable (d, true, _, _, cs) when wrapper d (shapes env Reader.nowhere cs) = Some c -> Some o.obj
+    | Matchable (d, true, _, _, cs) when List.mem c (wrappers d (shapes env Reader.nowhere cs)) -> Some o.obj
     | _ -> None) env.opens.opened
 
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (qname env c)
@@ -1866,7 +1865,7 @@ and elab_def_adts env adts =
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var tid, ctors)) in
     let env = open_adt env mid in
-    if List.mem Sp.NewtypeMark ms && wrapper disc shapes = None then error al "%s is not of newtype shape (section 38)" (tick name);
+    if List.mem Sp.NewtypeMark ms && wrappers disc shapes = [] then error al "%s is not of newtype shape (section 38)" (tick name);
     (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in
