@@ -669,6 +669,12 @@ class Local(OpenAICompat):
 
 ADAPTERS = {"anthropic": Anthropic, "openai": OpenAI, "neuralwatt": OpenAICompat, "local": Local}
 CACHE_MIN = 4096
+PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output
+    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00),
+    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00),
+    "claude-fable-5-1": (10.00, 0.25, 12.50, 50.00), "claude-opus-5-5": (4.00, 0.20, 5.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 0.20, 2.50, 10.00), "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
+}
 
 
 def _prompt(usage):
@@ -678,10 +684,22 @@ def _prompt(usage):
     return total, cached
 
 
+def _priced(usage):
+    p, (total, _) = PRICES[MODEL], _prompt(usage)
+    details = usage.get("input_tokens_details") or {}
+    read = details.get("cached_tokens", usage.get("cache_read_input_tokens")) or 0
+    write = details.get("cache_write_tokens", usage.get("cache_creation_input_tokens")) or 0
+    i, o = (2, 1.5) if PROVIDER == "openai" and total > 272_000 else (1, 1)
+    return (((total - read - write) * p[0] + read * p[1] + write * p[2]) * i + (usage.get("output_tokens") or 0) * p[3] * o) / 1e6
+
+
 def _spend(reply):
-    for key, field in (("cost", "request_cost_usd"), ("energy", "energy_joules")):
-        if (reply.get(key) or {}).get(field) is not None:
-            SPENT[key] = SPENT.get(key, 0) + reply[key][field]
+    cost = (reply.get("cost") or {}).get("request_cost_usd")
+    if cost is None and MODEL in PRICES and reply.get("usage"):
+        cost = _priced(reply["usage"])
+    for key, value in (("cost", cost), ("energy", (reply.get("energy") or {}).get("energy_joules"))):
+        if value is not None:
+            SPENT[key] = SPENT.get(key, 0) + value
     return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy']:,.0f} J" if "energy" in SPENT else "")
 
 
@@ -692,6 +710,7 @@ def _context(reply, window, prev_prompt):
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
     prompt, cached = _prompt(usage)
+    _log(TRANSCRIPT, f"\n[usage: {json.dumps(usage)}]\n")
     lines = [f"[context: {n:,}" + (f" / {window:,} ({100 * n / window:.1f}%)" if window else "")
              + (f", {100 * cached / prompt:.0f}% of the prompt cached" if cached is not None and prompt else "")
              + (f"{spent} spent this session]" if spent else "]")]
