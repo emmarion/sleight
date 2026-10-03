@@ -1,0 +1,10 @@
+Your task is to write to ip.txt the IP address of this VM (either 10.* or global, either is fine).
+Or: to lay the groundwork for a future session to do so.
+
+Between sessions, only a (potentially truncated) SPEC.md file is copied over. It may already exist.
+
+Your session has two phases:
+1. about 200k of tokens spent on exploring,
+2. about 200k additional tokens spent on writing your findings to SPEC.md and/or consolidation.
+
+Good luck. 
