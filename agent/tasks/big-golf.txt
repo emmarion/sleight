@@ -1,0 +1,11 @@
+Your task is to create a 512 KiB file called BIG.
+Or: to lay the groundwork for a future session to do so.
+Bonus: do so via one program, big.sl, written with as few characters as possible.
+
+Between sessions, only a (potentially truncated) SPEC.md file is copied over. It may already exist.
+
+Your session has two parts:
+- about 200k of tokens spent on exploring,
+- about 200k additional tokens spent on writing your findings to SPEC.md and/or consolidation
+
+Good luck. 
