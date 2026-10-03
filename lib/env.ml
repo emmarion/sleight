@@ -305,7 +305,7 @@ let metas env t = List.rev (fold_vars (fun _ xs t -> match t with Var x when is_
 let has_meta env t = metas env t <> []
 
 let unsolved loc env t =
-  error loc "cannot infer %s in %s" (String.concat " or " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
+  error loc "cannot infer %s in %s" (String.concat " and " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
 let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x -> canon env t | t -> t) 0 t

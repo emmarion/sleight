@@ -483,7 +483,7 @@
     ((BFalse) (tail $ meta-names env rest seen))))
 
 (def-fns _ $ (many cannot-infer : (many (Env) env) (many (Term) t) -> (many (String) s))
-  (str-cat3 "cannot infer " (join-strs (meta-names env (term-vars (canon-env env t) $ Nil _) $ Nil _) " or ") $ str-cat " in " $ qshow env t))
+  (str-cat3 "cannot infer " (join-strs (meta-names env (term-vars (canon-env env t) $ Nil _) $ Nil _) " and ") $ str-cat " in " $ qshow env t))
 
 ; A binder whose type or rule still holds an open `_` is refused (lib/env.ml's bind), the term shown as any
 ; message shows one, after core.sl's checks on the binder's name.
