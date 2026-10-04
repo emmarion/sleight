@@ -14,7 +14,7 @@ counts too: a guide, cheat sheet or worked example in tools/ is a tool if it wou
 Each tool lives in its own directory under tools/ and compiles from its own files, plus any of self/ it needs. A tool
 takes its input on stdin, as args, or as paths to files in the sandbox. tools/TOOLS.md lists each tool: what it does,
 why it exists, how to use it (for a program, the exact `sl` call that runs it), and its status. Keep it succinct and
-pruned.
+pruned, and periodically rewrite it to be shorter.
 
 For reference: prelude.sl (the standard library), self/ (the compiler, written in SL), tests/ and pal/ (example
 programs), DESIGN.md, SUGAR.md and UNIQUE.md.
