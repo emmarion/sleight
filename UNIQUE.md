@@ -309,7 +309,7 @@ unification (§18: entering a branch, a `let-match`, a `comptime-match`,
 an open) wherever it meets two `SlotHolds` terms or two `at`
 annotations in the types it unifies, which merges the classes of their
 variables (§U10, the proposal's 3g) as matching `Refl` on an `(Eq
-(Slot) (SlotHolds a) (SlotHolds b))` does (§U15). Such a merge puts `a`
+(Slot) (SlotHolds a) (SlotHolds b))` does. Such a merge puts `a`
 and `b` in one at-class and nothing more: no `is` rule between them
 reaches the fact table. An `at v` in a telescope entry is part of the
 type and is compared through the at-database like a `SlotHolds`, not
@@ -779,24 +779,24 @@ stated as uses, order-free, rather than as liveness.
 
 **Comparing two slots.** `(slot-eq a b)`, say, is an optimization
 hint: it compares the words of two `(Slot)` values at many, at runtime,
-and answers with evidence in the equal case, in the shape of the
-prelude's `Dec`, but a compiler is allowed to always answer
-`SlotDiffer`:
+and answers with evidence in the equal case, similar to the prelude's
+`Dec`, but a compiler is allowed to always answer `SlotDiffer`:
 
 ```scheme
 (def-adts
   ((SlotEq : ((Slot) a) ((Slot) b) -> Type)
     enum
-    (many SlotSame : (erased (Slot) a) (erased (Slot) b) (erased (Eq (Slot) a b) e) -> (SlotEq a b))
+    (many SlotSame : (erased (Slot) a) -> (SlotEq a a))
     (many SlotDiffer : (erased (Slot) a) (erased (Slot) b) -> (SlotEq a b))))
 ```
 
-Matching `Refl` on the `Eq` unifies two `SlotHolds` through the
-at-database (§U10), putting their variables in one class and forcing
-no `is`; that is what makes the equal case usable, an `(at)` or a
-full-at invocation then holding where it did not before. The unequal
-case carries no evidence, by decision: a refutation would be false
-evidence wherever a compiler answered `SlotDiffer` for equal words.
+Matching `SlotSame` forces the two slots in the scrutinee's type
+equal, which unifies two `SlotHolds` through the at-database (§U10),
+putting their variables in one class and forcing no `is`; that is what
+makes the equal case usable, an `(at)` or a full-at invocation then
+holding where it did not before. The unequal case carries no evidence,
+by decision: a refutation would be false evidence wherever a compiler
+answered `SlotDiffer` for equal words.
 
 ## U16. `_` as a binder name, and the reserved prefix
 
