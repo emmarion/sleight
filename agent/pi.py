@@ -909,6 +909,8 @@ def session(run_dir, prompt, seeds):
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
+        for c in CARRY:
+            os.close(_walk_to_dir(_rel_parts(c), create=True))
         for src, rel in seeds:
             _copy(src, SANDBOX_ROOT / rel)
         answer = run(prompt)
