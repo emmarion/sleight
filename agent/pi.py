@@ -15,6 +15,7 @@ MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
+REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
@@ -811,14 +812,15 @@ def run(prompt):
     api = ADAPTERS[PROVIDER]()
     messages, empty, prompt_tokens = [{"role": "user", "content": prompt}], 0, 0
     window = CONTEXT or api.window()
-    turns, tokens = MAX_TURNS or (1000 if window else 200), int(window * CONTEXT_STOP / 100) if window else None
+    turns, budget = MAX_TURNS or (1000 if window else 200), lambda stop: int(window * stop / 100) if window else None
+    tokens = budget(CONTEXT_STOP)
     phase, turn, start = "experiment", 0, 0
     ok = lambda c: c["name"] == "done" or c["name"] in REWRITE_TOOLS and (
         "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
     def rewrite():
-        nonlocal phase, turn, start
-        phase, turn, start = "rewrite", 0, used
+        nonlocal phase, turn, start, tokens
+        phase, turn, start, tokens = "rewrite", 0, used, budget(REWRITE_STOP)
         return f"[Now entering the rewrite phase, where only {REWRITE_NAMES} on {_kept_sizes()} and `done` are allowed.]"
 
     while True:
@@ -1059,7 +1061,8 @@ def main(argv):
                  "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
                  "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
                  "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
-                 "  PI_CONTEXT_STOP   context per phase, in % of the window [20]\n"
+                 "  PI_CONTEXT_STOP   context for the experiment phase, in % of the window [20]\n"
+                 "  PI_REWRITE_STOP   context for the rewrite phase, in % of the window [PI_CONTEXT_STOP]\n"
                  "  PI_CONTEXT        the context window, overriding the provider's [0: ask the provider]\n"
                  "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
                  "  PI_EFFORT         reasoning effort [unset]\n"
