@@ -6,10 +6,11 @@ well-recorded progress matters more than finishing in this one.
 pal/ holds a certified but slow one; see pal/README.md. Write `longest-palindrome-fast`, certified against the unchanged
 `LongestPalindrome` of pal/palindrome_relations.sl, with the interface that manacher-fast/accept-list.sl or
 manacher-fast/accept-array.sl expects. You may reuse anything in pal/. Fast here means making good use of arrays via
-`array-place-imm` and `array-swap-imm`, U62 arithmetic (prelude.sl's `u62-*` functions, in place of `nat-*`), tail calls
-and minimizing allocations; there is no time target. A solution is not finished while any array write could be an `-imm`
-one, or any runtime arithmetic could be a `u62-*` call, even if measurements show no gain. The `sl` tool's `gc_stats`
-reports how much a run allocates.
+`array-place-imm` and `array-swap-imm`, U62 arithmetic (prelude.sl's `u62-*` functions, in place of `nat-*`, and
+`u62-inc` and `u62-dec` in place of a runtime `Succ` and its match), tail calls and minimizing allocations; there is no
+time target. A solution is not finished while any array write could be an `-imm` one, any runtime arithmetic could be a
+`u62-*` call, or any runtime recursion could be a tail call, even if measurements show no gain. The `sl` tool's
+`gc_stats` reports how much a run allocates.
 
 To check your work, compile in order: self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, your files (and
 any pal/ files they use), then one accept file. This must compile with no warning that a declaration shadows another.
