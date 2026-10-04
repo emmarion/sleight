@@ -1,4 +1,4 @@
-#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -f manacher-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60
+#!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -f manacher-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
 Your task is to write a fast, certified implementation of Manacher's algorithm in SL.
 Or: to lay the groundwork for a future session to do so.
 
