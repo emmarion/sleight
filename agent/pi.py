@@ -206,8 +206,9 @@ def delete(path):
     dfd = _walk_to_dir(dirs, create=False)
     try:
         if stat.S_ISDIR(os.stat(name, dir_fd=dfd, follow_symlinks=False).st_mode):
-            raise ValueError(f"`{rel}` is a directory; only files can be deleted")
-        os.unlink(name, dir_fd=dfd)
+            os.rmdir(name, dir_fd=dfd)
+        else:
+            os.unlink(name, dir_fd=dfd)
     except OSError as e:
         raise PathEscape(f"{path!r}: {e.strerror}") from None
     finally:
@@ -437,7 +438,7 @@ TOOLS = {
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
     "edit": (edit, "Replace exactly one occurrence of old_string with new_string", {"path": STR, "old_string": STR, "new_string": STR},
              ["path", "old_string", "new_string"]),
-    "delete": (delete, "Delete a file. Kept files cannot be deleted.",
+    "delete": (delete, "Delete a file or an empty directory. Kept files cannot be deleted.",
                {"path": STR}, ["path"]),
     "ls": (ls, "List a directory, or a single file, with each file's size in bytes (and its cap, for a kept file); "
                "a trailing `/` marks a directory, `@` a symlink", {"path": STR}, []),
