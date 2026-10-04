@@ -198,6 +198,7 @@ def edit(path, old_string, new_string):
 
 
 def ls(path=".", within=None):
+    path = path or "."
     try:
         entries = list_dir(path)
     except PathEscape:
