@@ -1,8 +1,6 @@
 #!/bin/sh
 set -eu
-FORCE=0
-[ "${1:-}" = --force ] && { FORCE=1; shift; }
-[ $# -eq 1 ] || { echo "usage: $0 [--force] IP   (deploys HEAD as user pi; --force even during a live pi.py run; keys: KEY=value lines in \$PI_DEPLOY_ENV [~/.config/pi/deploy.env], mode 0600)" >&2; exit 2; }
+[ $# -eq 1 ] || { echo "usage: $0 IP   (deploys HEAD as user pi, also during a live pi.py run, whose next session uses it; keys: KEY=value lines in \$PI_DEPLOY_ENV [~/.config/pi/deploy.env], mode 0600)" >&2; exit 2; }
 IP=$1
 KEYS=${PI_DEPLOY_ENV:-$HOME/.config/pi/deploy.env}
 cd "$(dirname "$0")/.."
@@ -12,13 +10,7 @@ git diff --quiet HEAD || echo "warning: uncommitted changes are not deployed, on
 . agent/ssh.sh
 connect root@"$IP"
 
-$SSH root@"$IP" "FORCE=$FORCE sh -eu" <<'EOF'
-for f in /home/pi/sl/agent/results/*/pid; do
-  if [ "$FORCE" = 0 ] && [ -f "$f" ] && ps -p "$(cat "$f")" -o command= 2>/dev/null | grep -q pi.py; then
-    echo "a pi.py run is live in ${f%/pid}; stop it first, or pass --force" >&2
-    exit 1
-  fi
-done
+$SSH root@"$IP" sh -eu <<'EOF'
 cloud-init status --wait >/dev/null 2>&1 || true
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
@@ -52,6 +44,7 @@ from pathlib import Path
 sys.path.insert(0, "agent")
 import pi
 pi.SANDBOX_ROOT = pi.RUN_DIR = Path(tempfile.mkdtemp())
+pi.COMPILER = pi.SLC
 pi.ROOT_FD = os.open(pi.SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
 pi.write_bytes("a.sl", Path("tests/ackermann.sl").read_bytes())
 out = pi.sl("a.sl")

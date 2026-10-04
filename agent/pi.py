@@ -4,13 +4,15 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
-PROVIDER = os.environ.get("PI_PROVIDER", "neuralwatt")
-DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "deepseek-v4.1-flash", "local": os.environ.get("PI_LOCAL_MODEL", "")}
-MODEL = os.environ.get("PI_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
+_provider = lambda env: env.get("PI_PROVIDER", "neuralwatt")
+_model_name = lambda env: env.get("PI_MODEL", {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "deepseek-v4.1-flash",
+                                          "local": env.get("PI_LOCAL_MODEL", "")}.get(_provider(env), ""))
+_effort = lambda env: env.get("PI_EFFORT", "").strip()
+_slc = lambda env: env.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
+PROVIDER, MODEL, EFFORT, SLC = _provider(os.environ), _model_name(os.environ), _effort(os.environ), _slc(os.environ)
 MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
-EFFORT = os.environ.get("PI_EFFORT", "").strip()
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
 CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
@@ -19,12 +21,11 @@ REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
-SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
 MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
-RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
+RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = COMPILER = None
 KEEP = {}
 CARRY = []
 SPENT = {}
@@ -391,7 +392,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False):
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([SLC, "--first-error", "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([COMPILER, "--first-error", "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
@@ -915,7 +916,7 @@ def _copy(src, dst):
 
 
 def session(run_dir, prompt, seeds):
-    global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT, SESSION_ID
+    global RUN_DIR, SANDBOX_ROOT, ROOT_FD, LOG_PATH, TRANSCRIPT, SESSION_ID, COMPILER
     RUN_DIR = run_dir
     SPENT.clear()
     attempt = 1 + len(list(RUN_DIR.parent.glob(f"{RUN_DIR.name}.*")))
@@ -925,6 +926,11 @@ def session(run_dir, prompt, seeds):
     tmp.unlink(missing_ok=True)
     tmp.symlink_to(RUN_DIR.relative_to(RESULTS))
     os.replace(tmp, RESULTS / "latest")
+    COMPILER = Path(tempfile.mkdtemp(prefix="slc-")) / "slc"
+    shutil.copy(SLC, COMPILER)
+    (RUN_DIR / "session.json").write_text(json.dumps(
+        {"commit": _commit(), "slc_sha256": hashlib.sha256(COMPILER.read_bytes()).hexdigest(), "seeds": [str(src) for src, _ in seeds],
+         "keep": KEEP, "carry": CARRY, "env": _settings(os.environ)}, indent=1) + "\n")
     SANDBOX_ROOT = Path(tempfile.mkdtemp(prefix="sandbox-")).resolve()
     ROOT_FD = os.open(SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
     (RUN_DIR / "sandbox").symlink_to(SANDBOX_ROOT)
@@ -956,6 +962,7 @@ def session(run_dir, prompt, seeds):
         (RUN_DIR / "sandbox").unlink()
         shutil.copytree(SANDBOX_ROOT, RUN_DIR / "sandbox", symlinks=True)
         shutil.rmtree(SANDBOX_ROOT)
+        shutil.rmtree(COMPILER.parent)
         os.close(ROOT_FD)
 
 
@@ -964,15 +971,12 @@ def _commit():
     return r.stdout.strip() or None
 
 
-def _reexec(args, env):
-    os.execve(sys.executable, [sys.executable, __file__, "--no-header", *args], env)
+def _settings(env):
+    return {k: v for k, v in env.items() if k.startswith("PI_") and "KEY" not in k}
 
 
-def _resume(loop, n):
-    rec = json.loads((loop / "run.json").read_text())
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PI_")} | rec["env"]
-    args = [a for f in rec["seeds"] for a in ("-f", f)] + [a for k in rec["keep"] for a in ("-k", k)] + [a for c in rec.get("carry", []) for a in ("-c", c)]
-    _reexec([*args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
+def _exec(args, env):
+    os.execve(sys.executable, [sys.executable, __file__, *args], {k: v for k, v in os.environ.items() if k not in _settings(os.environ)} | env)
 
 
 HEADER, HEADER_FLAGS = "#!pi", ("-f", "-k", "-c", "-n")
@@ -988,9 +992,9 @@ def _task_lines(path):
     return (first[len(HEADER):], rest) if first.startswith(HEADER) and first[len(HEADER):][:1] in ("", " ", "\t") else ("", text)
 
 
-def _headers(prompts, command_line):
+def _config(rec):
     layers, env = [], {}
-    for a in prompts:
+    for a in [] if rec.get("no_header") else rec["prompts"]:
         words, pairs = shlex.split(_task_lines(a)[0]), []
         while words:
             w = words.pop(0)
@@ -1003,22 +1007,30 @@ def _headers(prompts, command_line):
             else:
                 sys.exit(f"{a}: cannot read {w!r} in its {HEADER} line")
         layers.append((a, pairs))
-    layers.append(("command line", command_line))
+    layers.append(("command line", [tuple(p) for p in (rec["flags"] if "flags" in rec else [("-f", f) for f in rec["seeds"]]
+                                    + [("-k", k) for k in rec["keep"]] + [("-c", c) for c in rec.get("carry", [])])]))
+    for name, value in rec["env"].items():
+        env[name] = (value, f"environment, over {env[name][0]} from {env[name][1]}" if name in env else "environment")
     key = {"-f": lambda v: Path(v).resolve().name, "-k": _keep_path, "-c": os.path.normpath, "-n": lambda v: None}
     merged = [(f, v, src) for i, (src, pairs) in enumerate(layers) for f, v in pairs
               if not any(g == f and key[f](w) == key[f](v) for _, later in layers[i + 1:] for g, w in later)]
-    for f, v, src in merged:
-        _say(f"{f} {v}  ({src})")
-    for name, (value, src) in env.items():
-        _say(f"{name}={os.environ[name]}  (environment, over {value} from {src})" if name in os.environ else f"{name}={value}  ({src})")
-    _reexec([a for f, v, _ in merged for a in (f, v)] + list(prompts), {k: v for k, (v, _) in env.items()} | dict(os.environ))
+    return merged, env
 
 
-def _live_n(loop, n, i):
-    m = json.loads((loop / "run.json").read_text())["n"]
-    if m != n:
-        _say(f"n: {n} -> {m} (before session {i})")
-    return m
+def _problem(pairs, env):
+    seeds, keep = [Path(v) for f, v in pairs if f == "-f"], [v for f, v in pairs if f == "-k"]
+    return next((m for bad, m in (
+        (not keep, "at least one -k is needed"),
+        (any(not s.exists() for s in seeds), f"no such file: {next((s for s in seeds if not s.exists()), '')}"),
+        (any(s.is_dir() and s.resolve().name in map(_keep_path, keep) for s in seeds), "-k cannot name a directory; carry one with -c"),
+        (len({s.resolve().name for s in seeds}) < len(seeds), "two -f paths share a name"),
+        (_provider(env) not in ADAPTERS, f"unknown provider {_provider(env)!r}; try: {', '.join(ADAPTERS)}"),
+        (not os.access(_slc(env), os.X_OK), f"no slc at {_slc(env)}; build it with self/release.sh")) if bad), None)
+
+
+def _stop(loop, message):
+    (loop / "pid").unlink(missing_ok=True)
+    sys.exit(message)
 
 
 def _carried(prev, c):
@@ -1052,102 +1064,120 @@ def _set_aside(d):
     _say(f"set {d.name} aside as {d.name}.{kind}-{k}")
 
 
-def main(argv):
-    pairs, no_header = [], False
-    while argv[:1] == ["--no-header"] or argv[:1] and argv[0] in (*HEADER_FLAGS, "-r") and len(argv) > 1:
-        no_header, pairs, argv = (True, pairs, argv[1:]) if argv[0] == "--no-header" else (no_header, pairs + [tuple(argv[:2])], argv[2:])
-    flags = {f: [v for g, v in pairs if g == f] for f in (*HEADER_FLAGS, "-r")}
-    if not no_header and not flags["-r"] and any(_task_lines(a)[0] for a in argv if Path(a).is_file()):
-        _headers(argv, pairs)
-    seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int((flags["-n"] or ["0"])[-1])
-    for k in keep:
-        KEEP[_keep_path(k)] = int(k.rsplit(":", 1)[1]) if re.fullmatch(r".+:\d+", k) else 0
-    CARRY[:] = [os.path.normpath(c) for c in flags["-c"]]
-    resume = Path(flags["-r"][-1]).resolve() if flags["-r"] else None
-    if resume and not argv:
-        _resume(resume, n)
-    n = n or 1
-    if not argv or not keep:
-        sys.exit("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
-                 "       pi.py -r RUN-DIR [-n N]\n"
-                 f"  a prompt file whose first line starts with `{HEADER}` sets flags and PI_NAME=value settings there, which are not part\n"
-                 "           of the prompt; -f paths are relative to the file. A later file overrides an earlier one, and the environment\n"
-                 "           and command line override both: a later -n, PI_ setting, or -f, -k or -c on the same path replaces an earlier one\n"
-                 "  --no-header  ignore the prompt files' header settings (the header lines still stay out of the prompt)\n"
-                 "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
-                 "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
-                 "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
-                 "  -c DIR   carry the directory DIR from each session's sandbox into the next; no tool may use it\n"
-                 "           once experimenting ends\n"
-                 "  -n N     run N sessions in a row (default 1)\n"
-                 "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
-                 "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
-                 "environment (defaults in brackets):\n"
-                 "  PI_PROVIDER       neuralwatt, anthropic, openai or local [neuralwatt]\n"
-                 "  PI_MODEL          [deepseek-v4.1-flash, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
-                 "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
-                 "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
-                 "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
-                 "  PI_CONTEXT_STOP   context for the experiment phase, in % of the window [20]\n"
-                 "  PI_REWRITE_STOP   context for the rewrite phase, in % of the window [PI_CONTEXT_STOP]\n"
-                 "  PI_CONTEXT        the context window, overriding the provider's [0: ask the provider]\n"
-                 "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
-                 "  PI_EFFORT         reasoning effort [unset]\n"
-                 "  PI_STREAM         stream replies [1]\n"
-                 "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
-                 "  PI_MAX_EMPTY      empty replies in a row before giving up [3]\n"
-                 "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
-                 "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
-                 "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
-                 "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
-                 "  PI_SLC            the compiler [../_build/release/slc]")
-    for s in seeds:
-        if not s.exists():
-            sys.exit(f"no such file: {s}")
-    if any(s.is_dir() and s.resolve().name in KEEP for s in seeds):
-        sys.exit("-k cannot name a directory; carry one with -c")
-    if len({s.resolve().name for s in seeds}) < len(seeds):
-        sys.exit("two -f paths share a name")
-    if PROVIDER not in ADAPTERS:
-        sys.exit(f"unknown provider {PROVIDER!r}; try: {', '.join(ADAPTERS)}")
-    if not os.access(SLC, os.X_OK):
-        sys.exit(f"no slc at {SLC}; build it with self/release.sh")
-    prompt = "\n\n".join(t for a in argv if (t := _task_lines(a)[1].strip()))
-    tag = "+".join(Path(a).stem for a in argv)
-    loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}{'-' + EFFORT if EFFORT else ''}-{tag}"
-    loop.mkdir(parents=True, exist_ok=True)
+def _next(loop):
     _claim(loop)
-    record = {"n": n, "seeds": [str(s.resolve()) for s in seeds], "keep": keep, "carry": CARRY, "prompts": [str(Path(a).resolve()) for a in argv],
-              "env": {k: v for k, v in os.environ.items() if k.startswith("PI_") and "KEY" not in k},
-              "commit": _commit(), "slc_sha256": hashlib.sha256(Path(SLC).read_bytes()).hexdigest()}
-    if resume:
-        old = json.loads((loop / "run.json").read_text())
-        if old.get("commit") != record["commit"]:
-            _say(f"warning: resuming at commit {record['commit']}, but the run started at {old.get('commit')}")
-        record = old | {"n": n}
-    (loop / "run.json").write_text(json.dumps(record, indent=1) + "\n")
+    rec = json.loads((loop / "run.json").read_text())
+    n = rec["n"]
     first = next((i for i in range(1, n + 1) if not (loop / f"{i:02}" / "answer.txt").exists()), n + 1)
     for d in sorted(d for d in loop.iterdir() if d.name.isdigit() and int(d.name) >= first):
         _set_aside(d)
-    prev, i = (loop / f"{first - 1:02}" if first > 1 else None), first
+    if first > n:
+        _say(f"{loop.name}: {n} session{'s' * (n != 1)} done")
+        _stop(loop, None)
     try:
-        while i <= (n := _live_n(loop, n, i)):
-            carried = [(prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()] + [
-                x for c in CARRY if prev for x in _carried(prev, c)]
-            for attempt in range(1, SESSION_TRIES + 1):
-                _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
-                try:
-                    session(loop / f"{i:02}", prompt, [(s, s.resolve().name) for s in seeds] + carried)
-                    break
-                except (Exception, SystemExit):
-                    traceback.print_exc()
-                    if attempt == SESSION_TRIES:
-                        sys.exit(f"session {i}/{n} failed {SESSION_TRIES} times; stopping (resume with -r {loop})")
-                    if (loop / f"{i:02}").exists():
-                        _set_aside(loop / f"{i:02}")
-            prev, i = loop / f"{i:02}", i + 1
-    finally:
-        (loop / "pid").unlink(missing_ok=True)
+        merged, env = _config(rec)
+    except (OSError, SystemExit) as e:
+        _stop(loop, f"{loop.name}: cannot read its settings: {e}")
+    for f, v, src in merged:
+        _say(f"{f} {v}  ({src})")
+    for name, (value, src) in env.items():
+        _say(f"{name}={value}  ({src})")
+    _exec(["--session", str(loop), str(first), *[a for f, v, _ in merged if f != "-n" for a in (f, v)]], {k: v for k, (v, _) in env.items()})
+
+
+def _session(loop, i, pairs):
+    if problem := _problem(pairs, os.environ):
+        _stop(loop, problem)
+    for k in (v for f, v in pairs if f == "-k"):
+        KEEP[_keep_path(k)] = int(k.rsplit(":", 1)[1]) if re.fullmatch(r".+:\d+", k) else 0
+    CARRY[:] = [os.path.normpath(v) for f, v in pairs if f == "-c"]
+    rec = json.loads((loop / "run.json").read_text())
+    prompt = "\n\n".join(t for a in rec["prompts"] if (t := _task_lines(a)[1].strip()))
+    prev = loop / f"{i - 1:02}" if i > 1 else None
+    seeds = [(Path(v), Path(v).resolve().name) for f, v in pairs if f == "-f"] + [
+        (prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()] + [x for c in CARRY if prev for x in _carried(prev, c)]
+    for attempt in range(1, SESSION_TRIES + 1):
+        _say(f"session {i}/{rec['n']}, attempt {attempt}/{SESSION_TRIES}")
+        try:
+            session(loop / f"{i:02}", prompt, seeds)
+            break
+        except (Exception, SystemExit):
+            traceback.print_exc()
+            if attempt == SESSION_TRIES:
+                _stop(loop, f"session {i}/{rec['n']} failed {SESSION_TRIES} times; stopping (resume with -r {loop})")
+            if (loop / f"{i:02}").exists():
+                _set_aside(loop / f"{i:02}")
+    _exec(["-r", str(loop)], {})
+
+
+USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+         "       pi.py -r RUN-DIR [-n N]\n"
+         f"  a prompt file whose first line starts with `{HEADER}` sets flags and PI_NAME=value settings there, which are not part\n"
+         "           of the prompt; -f paths are relative to the file. A later file overrides an earlier one, and the environment\n"
+         "           and command line override both: a later -n, PI_ setting, or -f, -k or -c on the same path replaces an earlier one.\n"
+         "           Each session starts a fresh pi.py and re-reads the prompt files, their headers and the compiler; the command\n"
+         "           line's flags and PI_ settings, recorded in run.json, stay with the run\n"
+         "  --no-header  ignore the prompt files' header settings (the header lines still stay out of the prompt)\n"
+         "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
+         "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
+         "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
+         "  -c DIR   carry the directory DIR from each session's sandbox into the next; no tool may use it\n"
+         "           once experimenting ends\n"
+         "  -n N     run N sessions in a row (default 1); fixed when the run starts, then changed only by -r's -n or run.json\n"
+         "  -r DIR   continue the run in DIR from its first session without an answer.txt, setting that session and the\n"
+         "           ones after it aside; -n sets a new total\n"
+         "environment (defaults in brackets):\n"
+         "  PI_PROVIDER       neuralwatt, anthropic, openai or local [neuralwatt]\n"
+         "  PI_MODEL          [deepseek-v4.1-flash, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
+         "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
+         "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
+         "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
+         "  PI_CONTEXT_STOP   context for the experiment phase, in % of the window [20]\n"
+         "  PI_REWRITE_STOP   context for the rewrite phase, in % of the window [PI_CONTEXT_STOP]\n"
+         "  PI_CONTEXT        the context window, overriding the provider's [0: ask the provider]\n"
+         "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
+         "  PI_EFFORT         reasoning effort [unset]\n"
+         "  PI_STREAM         stream replies [1]\n"
+         "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
+         "  PI_MAX_EMPTY      empty replies in a row before giving up [3]\n"
+         "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
+         "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
+         "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
+         "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
+         "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]")
+
+
+def main(argv):
+    if argv[:1] == ["--session"] and len(argv) >= 3:
+        return _session(Path(argv[1]), int(argv[2]), list(zip(argv[3::2], argv[4::2])))
+    pairs, no_header = [], False
+    while argv[:1] == ["--no-header"] or argv[:1] and argv[0] in (*HEADER_FLAGS, "-r") and len(argv) > 1:
+        no_header, pairs, argv = (True, pairs, argv[1:]) if argv[0] == "--no-header" else (no_header, pairs + [tuple(argv[:2])], argv[2:])
+    n = int(next((v for f, v in reversed(pairs) if f == "-n"), "0"))
+    if resume := next((Path(v).resolve() for f, v in reversed(pairs) if f == "-r"), None):
+        if argv:
+            sys.exit(USAGE)
+        if n:
+            f = resume / "run.json"
+            tmp = f.with_name("run.json.tmp")
+            tmp.write_text(json.dumps(json.loads(f.read_text()) | {"n": n}, indent=1) + "\n")
+            os.replace(tmp, f)
+        return _next(resume)
+    if not argv:
+        sys.exit(USAGE)
+    rec = {"n": 0, "prompts": [str(Path(a).resolve()) for a in argv], "no_header": no_header,
+           "flags": [(f, str(Path(v).resolve()) if f == "-f" else v) for f, v in pairs if f in ("-f", "-k", "-c")],
+           "env": _settings(os.environ), "commit": _commit()}
+    merged, env = _config(rec)
+    env = {k: v for k, (v, _) in env.items()}
+    if problem := _problem([(f, v) for f, v, _ in merged], env):
+        sys.exit(f"{problem}\n\n{USAGE}")
+    rec["n"] = n or int(next((v for f, v, _ in reversed(merged) if f == "-n"), "1"))
+    tag = "+".join(Path(a).stem for a in argv)
+    loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{_model_name(env).replace('/', '_')}{'-' + _effort(env) if _effort(env) else ''}-{tag}"
+    loop.mkdir(parents=True)
+    (loop / "run.json").write_text(json.dumps(rec, indent=1) + "\n")
+    _next(loop)
 
 
 if __name__ == "__main__":

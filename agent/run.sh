@@ -12,6 +12,8 @@ usage: $0 IP PI-ARGS...
        $0 resume [-n N] RUN-DIR [IP]
            continue a fetched or local run: on IP if it still has the run, else on a new droplet that gets
            HEAD and a copy of RUN-DIR; -n sets a new session total
+       $0 deploy IP
+           deploy HEAD to IP; a live run's next session uses its code, prompt files, headers and compiler
        $0 set-n IP [RUN] N
            change a live run's session total, read before each session: a larger N continues it, a smaller
            one stops it after the current session; RUN defaults to the box's only live run
@@ -97,7 +99,7 @@ launch() {
 }
 
 cmd=start
-case "${1:-}" in new | resume | set-n | sweep | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
+case "${1:-}" in new | resume | deploy | set-n | sweep | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
 if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
     models=
     while :; do
@@ -113,6 +115,10 @@ case $cmd in
 start)
     [ $# -ge 2 ] || usage
     start "$@"
+    ;;
+deploy)
+    [ $# -eq 1 ] || usage
+    agent/deploy.sh "$1"
     ;;
 new)
     [ $# -ge 1 ] || usage
@@ -139,7 +145,11 @@ agent = Path.home() / "sl/agent"
 f = agent / "results" / sys.argv[1] / "run.json"
 rec = json.loads(f.read_text())
 here = lambda p: str(agent / p.split("/agent/", 1)[1]) if "/agent/" in p else p
-rec["prompts"], rec["seeds"] = [here(p) for p in rec["prompts"]], [here(p) for p in rec["seeds"]]
+rec["prompts"] = [here(p) for p in rec["prompts"]]
+if "flags" in rec:
+    rec["flags"] = [(f, here(v) if f == "-f" else v) for f, v in rec["flags"]]
+else:
+    rec["seeds"] = [here(p) for p in rec["seeds"]]
 rec["env"].pop("PI_SLC", None)
 f.write_text(json.dumps(rec, indent=1) + "\n")
 PY
@@ -220,7 +230,9 @@ for rec in runs:
     last = sessions[-1] / "transcript.log" if sessions else None
     context = next((l for l in reversed(last.read_text(errors="replace").splitlines()) if l.startswith("[context")), "") if last and last.exists() else ""
     info = json.loads(rec.read_text())
-    settings = " ".join(f"{k}={v}" for k, v in sorted(info["env"].items()) if k not in ("PI_MODEL", "PI_PROVIDER"))
+    used = sessions[-1] / "session.json" if sessions else None
+    env = json.loads(used.read_text())["env"] if used and used.exists() else info["env"]
+    settings = " ".join(f"{k}={v}" for k, v in sorted(env.items()) if k not in ("PI_MODEL", "PI_PROVIDER"))
     done = f"{sum((s / 'answer.txt').exists() for s in sessions)}/{info['n']} done"
     cost, energy = map(sum, zip((0, 0), *map(spent, d.glob("*/transcript.log"))))
     total = f"${cost:.4f}, {energy:,.0f} J in all" if cost or energy else ""

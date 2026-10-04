@@ -20,6 +20,7 @@ python3 self/gen_header.py
 _build/default/bin/main.exe $SL --extract "$B/stage1.ml"
 $OC "$B/stage1.ml" -o "$B/stage1"
 "$B/stage1" $SL > "$B/slc.ml"
-(cd "$B" && $OC $REL slc.ml -o "$OUT")
-strip "$OUT"
+(cd "$B" && $OC $REL slc.ml -o "$OUT.tmp")
+strip "$OUT.tmp"
+mv -f "$OUT.tmp" "$OUT"
 echo "built $OUT"
