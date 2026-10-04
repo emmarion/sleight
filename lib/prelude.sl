@@ -520,6 +520,116 @@
   (let ((erased qle)) (lt-le-trans q (Succ m) (Succ n) (mul-le q v m mm (pow2-pos k v pv)) (LtS m (Succ n) (add-le-left m r n a))))
   (values q v pv m r mm a rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn))))
 
+(def-adts $ (Bit : -> Type)
+  enum
+  (many Bit0 : -> (Bit))
+  (many Bit1 : -> (Bit)))
+
+(def-adts $ (BitOp : -> Type)
+  enum
+  (many MkBitOp : (many (Bit) f01) (many (Bit) f10) (many (Bit) f11) -> (BitOp)))
+
+(def-adts
+  ((BitApply : ((BitOp) t) ((Bit) x) ((Bit) y) ((Bit) z) -> Type)
+    enum
+    (many Ap00 : (erased (BitOp) t) -> (BitApply t (Bit0) (Bit0) (Bit0)))
+    (many Ap01 : (erased (Bit) f01) (erased (Bit) f10) (erased (Bit) f11) -> (BitApply (MkBitOp f01 f10 f11) (Bit0) (Bit1) f01))
+    (many Ap10 : (erased (Bit) f01) (erased (Bit) f10) (erased (Bit) f11) -> (BitApply (MkBitOp f01 f10 f11) (Bit1) (Bit0) f10))
+    (many Ap11 : (erased (Bit) f01) (erased (Bit) f10) (erased (Bit) f11) -> (BitApply (MkBitOp f01 f10 f11) (Bit1) (Bit1) f11)))
+  ((BitCons : ((Nat) m) ((Bit) x) ((Nat) n) -> Type)
+    enum
+    (many BC0 : (erased (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (BitCons m (Bit0) d))
+    (many BC1 : (erased (Nat) m) (erased (Nat) d) (erased (Double m d) dd) -> (BitCons m (Bit1) (Succ d))))
+  ((Bitwise : ((BitOp) t) ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
+    enum
+    (many BwZero : (erased (BitOp) t) -> (Bitwise t (Zero) (Zero) (Zero)))
+    (many BwBit : (erased (BitOp) t) (erased (Nat) a) (erased (Nat) b) (erased (Nat) c)
+       (erased (Bit) x) (erased (Bit) y) (erased (Bit) z) (erased (Nat) a2) (erased (Nat) b2) (erased (Nat) c2)
+       (erased (Bitwise t a b c) p) (erased (BitApply t x y z) e)
+       (erased (BitCons a x a2) pa) (erased (BitCons b y b2) pb) (erased (BitCons c z c2) pc)
+       -> (Bitwise t a2 b2 c2))))
+
+
+(let ((many and-op)) (MkBitOp (Bit0) (Bit0) (Bit1)))
+(let ((many or-op)) (MkBitOp (Bit1) (Bit1) (Bit1)))
+(let ((many xor-op)) (MkBitOp (Bit1) (Bit1) (Bit0)))
+
+(def-fns _ $ (erased double-lt : (erased (Nat) m) (erased (Nat) d) (subterm erased (Double m d) dd) -> (erased (Lt m (Succ d)) l))
+  (match erased dd _
+    ((D0) (LtZ (Zero)))
+    ((DS a b d1) (LtS a (Succ (Succ b)) (lt-weaken a (Succ b) (double-lt a b d1))))))
+
+(def-fns _ $ (erased bitcons-lt : (erased (Nat) m) (erased (Bit) x) (erased (Nat) n) (erased (BitCons m x n) p) (erased (Lt (Zero) n) pos) -> (erased (Lt m n) l))
+  (match erased p _
+    ((BC0 m0 d dd)
+      (match erased dd _
+        (absurd (D0) pos)
+        ((DS a b d1) (LtS a (Succ b) (double-lt a b d1)))))
+    ((BC1 m0 d dd) (double-lt m d dd))))
+
+(def-fns _ $ (many nat-bit : (many (Nat) n) -> (many (Nat) m) (many (Bit) x) (erased (BitCons m x n) p))
+  (match many (nat-halve n) _
+    ((HZ) (values (Zero) (Bit0) (BC0 (Zero) (Zero) (D0))))
+    ((H1 m d dd) (values m (Bit1) (BC1 m d dd)))
+    ((H2 m d dd) (values (Succ m) (Bit0) (BC0 (Succ m) (Succ (Succ d)) (DS m d dd))))))
+
+(def-fns _ $ (many bit-snoc : (many (Nat) c) (many (Bit) z) -> (many (Nat) c2) (erased (BitCons c z c2) p))
+  (let ((many d) (erased dd)) (double c))
+  (match many z _
+    ((Bit0) (values d (BC0 c d dd)))
+    ((Bit1) (values (Succ d) (BC1 c d dd)))))
+
+(def-fns _ $ (many bit-apply : (many (BitOp) t) (many (Bit) x) (many (Bit) y) -> (many (Bit) z) (erased (BitApply t x y z) e))
+  (let-match many t (MkBitOp f01 f10 f11))
+  (match many x _
+    ((Bit0) (match many y _ ((Bit0) (values (Bit0) (Ap00 t))) ((Bit1) (values f01 (Ap01 f01 f10 f11)))))
+    ((Bit1) (match many y _ ((Bit0) (values f10 (Ap10 f01 f10 f11))) ((Bit1) (values f11 (Ap11 f01 f10 f11)))))))
+
+(def-fns _ $ (many bitwise-step : (many (BitOp) t) (erased (Nat) a) (erased (Nat) b) (erased (Nat) a1) (erased (Nat) b1)
+    (many (Bit) x) (many (Bit) y) (erased (BitCons a1 x a) pa) (erased (BitCons b1 y b) pb)
+    (many (Nat) c1) (erased (Bitwise t a1 b1 c1) p1) ->
+    (many (Nat) c) (erased (Bitwise t a b c) p))
+  (let ((many z) (erased e)) (bit-apply t x y))
+  (let ((many c) (erased pc)) (bit-snoc c1 z))
+  (values c (BwBit t a1 b1 c1 x y z a b c p1 e pa pb pc)))
+
+(def-fns _ $ (many bitwise : (many (BitOp) t) (subterm many (Nat) a) (subterm many (Nat) b) -> (many (Nat) c) (erased (Bitwise t a b c) p))
+  (let ((many a1) (many x) (erased pa)) (nat-bit a))
+  (let ((many b1) (many y) (erased pb)) (nat-bit b))
+  (match many a _
+    ((Zero)
+      (let-match many b (Succ b0) ((Zero) (values (Zero) (BwZero t))))
+      (let-match erased pa (BC0 _ _ da) (absurd BC1))
+      (let-match erased da (D0) (absurd DS))
+      (let ((erased sb)) (lt-subterm b1 b (bitcons-lt b1 y b pb (LtZ b0))))
+      (let ((many c1) (erased p1)) (notail $ bitwise t a1 (subterm sb) b1))
+      (bitwise-step t a b a1 b1 x y pa pb c1 p1))
+    ((Succ a0)
+      (let ((erased sa)) (lt-subterm a1 a (bitcons-lt a1 x a pa (LtZ a0))))
+      (let ((many c1) (erased p1)) (notail $ bitwise t (subterm sa) a1 b1))
+      (bitwise-step t a b a1 b1 x y pa pb c1 p1))))
+
+(def-fns _ $ (many extern nat-and : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise and-op a b c) p))
+  (tail (bitwise and-op a b)))
+
+(def-fns _ $ (many extern nat-or : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise or-op a b c) p))
+  (tail (bitwise or-op a b)))
+
+(def-fns _ $ (many extern nat-xor : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise xor-op a b c) p))
+  (tail (bitwise xor-op a b)))
+
+(def-fns _ $ (many extern u62-and : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
+    (many (Nat) r) (erased (Bitwise and-op n m r) p))
+  (tail (nat-and n m)))
+
+(def-fns _ $ (many extern u62-or : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
+    (many (Nat) r) (erased (Bitwise or-op n m r) p))
+  (tail (nat-or n m)))
+
+(def-fns _ $ (many extern u62-xor : (many (Nat) n) (many (Nat) m) (erased (Lt n u62-modulus) pn) (erased (Lt m u62-modulus) pm) ->
+    (many (Nat) r) (erased (Bitwise xor-op n m r) p))
+  (tail (nat-xor n m)))
+
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)
     (subterm erased (Double m1 d) p) (erased (Double m2 d) q) -> (erased (Eq (Nat) m1 m2) e))

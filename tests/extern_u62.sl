@@ -1,4 +1,4 @@
-; expect: (Cons _ 1 $ Cons _ 10 $ Cons _ 4 $ Cons _ 21 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 56 $ Cons _ 2 $ Nil _)
+; expect: (Cons _ 1 $ Cons _ 10 $ Cons _ 4 $ Cons _ 21 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 56 $ Cons _ 2 $ Cons _ 3 $ Cons _ 7 $ Cons _ 4 $ Nil _)
 ; U62 (section 41): its arithmetic takes Nats with erased proofs that neither operands nor results reach
 ; u62-modulus. The modulus is erased, so the bounds here are proved rather than computed: sixty-two is
 ; rebuilt and matched to the prelude's by add-fn and mul-fn, and a Pow2 exceeds its exponent.
@@ -64,8 +64,11 @@
   (let ((many l)) (u62-shl seven three (shift-bounded three p3) v8 pw8 sh msh (bounded sh psh)))
   (let ((many h) (erased v) (erased pv) (erased mh) (erased rh) (erased mmh) (erased ah) (erased rlh) (erased pqh))
     (u62-shr prod three (bounded prod pp) (shift-bounded three p3)))
+  (let ((many ba) (erased pba)) (u62-and seven three (bounded seven p7) (bounded three p3)))
+  (let ((many bo) (erased pbo)) (u62-or seven three (bounded seven p7) (bounded three p3)))
+  (let ((many bx) (erased pbx)) (u62-xor seven three (bounded seven p7) (bounded three p3)))
   (match many (u62-cmp three seven (bounded three p3) (bounded seven p7)) _
-    ((CLt t rr x y p) (Cons _ lt $ Cons _ s $ Cons _ d $ Cons _ m $ Cons _ q $ Cons _ r $ Cons _ q2 $ Cons _ r3 $ Cons _ l $ Cons _ h $ Nil (Nat)))
+    ((CLt t rr x y p) (Cons _ lt $ Cons _ s $ Cons _ d $ Cons _ m $ Cons _ q $ Cons _ r $ Cons _ q2 $ Cons _ r3 $ Cons _ l $ Cons _ h $ Cons _ ba $ Cons _ bo $ Cons _ bx $ Nil (Nat)))
     (absurd CEq)
     ((CGt t rr x y p) (Nil (Nat)))))
 
