@@ -856,18 +856,19 @@ def run(prompt):
         used, prompt_tokens = _context(reply, window, prompt_tokens)
         turn += 1
         assistant, text, calls = api.parse(reply)
-        if not calls and not text.strip():
+        if text.strip() or calls:
+            messages.append(assistant)
+        _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
+        if not calls:
             empty += 1
             if empty >= MAX_EMPTY:
-                return f"(gave up after {empty} empty replies in a row)"
-            nudge = "[Your reply was empty. Continue with a tool call, or call `done` if you are finished.]"
-            _say(f"[empty reply {empty}/{MAX_EMPTY}]")
+                return f"(gave up after {empty} replies in a row without a tool call)"
+            nudge = f"[Your reply {'had no tool call' if text.strip() else 'was empty'}. Continue with a tool call, or call `done` if you are finished.]"
+            _say(f"[no tool call {empty}/{MAX_EMPTY}]")
             _log(TRANSCRIPT, f"\n{nudge}\n")
             messages.append({"role": "user", "content": nudge})
             continue
         empty = 0
-        messages.append(assistant)
-        _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
         outs = []
         for c in calls:
             _log(TRANSCRIPT, f"\n>>> {_ts()} {c['name']}" + "".join(
@@ -890,9 +891,9 @@ def run(prompt):
                     _say(line := f"{k} changed outside write/edit: {before[k]} -> {size} bytes")
                     _log(TRANSCRIPT, f"{line}\n")
             outs.append(out)
-        finished = not calls or any(c["name"] == "done" and "bad" not in c for c in calls)
+        finished = any(c["name"] == "done" and "bad" not in c for c in calls)
         if finished and phase == "rewrite":
-            return next((o for c, o in zip(calls, outs) if c["name"] == "done"), text)
+            return next(o for c, o in zip(calls, outs) if c["name"] == "done")
         exhausted = turn >= turns or tokens is not None and used - start >= tokens
         if exhausted and phase == "rewrite":
             return f"(the rewrite phase's budget ran out after {turn} turns)"
@@ -901,11 +902,8 @@ def run(prompt):
                         "currently only shrinking edits are allowed.]" for k, cap, size in _over())
         note += f"\n[{phase} phase: {turns - turn} turn{'s' * (turns - turn != 1)}" + (f" and {tokens - (used - start)} tokens" if tokens else "") + " left]"
         _log(TRANSCRIPT, f"\n{note.strip()}\n")
-        if calls:
-            outs[-1] += "\n\n" + note.strip()
-            messages += api.results(calls, outs)
-        else:
-            messages.append({"role": "user", "content": note.strip()})
+        outs[-1] += "\n\n" + note.strip()
+        messages += api.results(calls, outs)
 
 
 def _copy(src, dst):
@@ -1139,7 +1137,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_EFFORT         reasoning effort [unset]\n"
          "  PI_STREAM         stream replies [1]\n"
          "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
-         "  PI_MAX_EMPTY      empty replies in a row before giving up [3]\n"
+         "  PI_MAX_EMPTY      replies in a row without a tool call before giving up [3]\n"
          "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
          "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
          "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
