@@ -935,11 +935,54 @@ def _commit():
     return r.stdout.strip() or None
 
 
+def _reexec(args, env):
+    os.execve(sys.executable, [sys.executable, __file__, "--no-header", *args], env)
+
+
 def _resume(loop, n):
     rec = json.loads((loop / "run.json").read_text())
     env = {k: v for k, v in os.environ.items() if not k.startswith("PI_")} | rec["env"]
     args = [a for f in rec["seeds"] for a in ("-f", f)] + [a for k in rec["keep"] for a in ("-k", k)] + [a for c in rec.get("carry", []) for a in ("-c", c)]
-    os.execve(sys.executable, [sys.executable, __file__, *args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
+    _reexec([*args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
+
+
+HEADER, HEADER_FLAGS = "#!pi", ("-f", "-k", "-c", "-n")
+
+
+def _keep_path(k):
+    return os.path.normpath(k.rsplit(":", 1)[0] if re.fullmatch(r".+:\d+", k) else k)
+
+
+def _task_lines(path):
+    text = Path(path).read_text()
+    first, _, rest = text.partition("\n")
+    return (first[len(HEADER):], rest) if first.startswith(HEADER) and first[len(HEADER):][:1] in ("", " ", "\t") else ("", text)
+
+
+def _headers(prompts, command_line):
+    layers, env = [], {}
+    for a in prompts:
+        words, pairs = shlex.split(_task_lines(a)[0]), []
+        while words:
+            w = words.pop(0)
+            if re.fullmatch(r"PI_\w+=.*", w):
+                name, _, value = w.partition("=")
+                env[name] = (value, a)
+            elif w in HEADER_FLAGS and words:
+                v = words.pop(0)
+                pairs.append((w, str(Path(a).parent / v) if w == "-f" else v))
+            else:
+                sys.exit(f"{a}: cannot read {w!r} in its {HEADER} line")
+        layers.append((a, pairs))
+    layers.append(("command line", command_line))
+    key = {"-f": lambda v: Path(v).resolve().name, "-k": _keep_path, "-c": os.path.normpath, "-n": lambda v: None}
+    merged = [(f, v, src) for i, (src, pairs) in enumerate(layers) for f, v in pairs
+              if not any(g == f and key[f](w) == key[f](v) for _, later in layers[i + 1:] for g, w in later)]
+    for f, v, src in merged:
+        _say(f"{f} {v}  ({src})")
+    for name, (value, src) in env.items():
+        _say(f"{name}={os.environ[name]}  (environment, over {value} from {src})" if name in os.environ else f"{name}={value}  ({src})")
+    _reexec([a for f, v, _ in merged for a in (f, v)] + list(prompts), {k: v for k, (v, _) in env.items()} | dict(os.environ))
 
 
 def _live_n(loop, n, i):
@@ -981,22 +1024,27 @@ def _set_aside(d):
 
 
 def main(argv):
-    flags = {"-f": [], "-k": [], "-c": [], "-n": [], "-r": []}
-    while argv[:1] and argv[0] in flags and len(argv) > 1:
-        flags[argv[0]].append(argv[1])
-        argv = argv[2:]
+    pairs, no_header = [], False
+    while argv[:1] == ["--no-header"] or argv[:1] and argv[0] in (*HEADER_FLAGS, "-r") and len(argv) > 1:
+        no_header, pairs, argv = (True, pairs, argv[1:]) if argv[0] == "--no-header" else (no_header, pairs + [tuple(argv[:2])], argv[2:])
+    flags = {f: [v for g, v in pairs if g == f] for f in (*HEADER_FLAGS, "-r")}
+    if not no_header and not flags["-r"] and any(_task_lines(a)[0] for a in argv if Path(a).is_file()):
+        _headers(argv, pairs)
     seeds, keep, n = [Path(f) for f in flags["-f"]], flags["-k"], int((flags["-n"] or ["0"])[-1])
     for k in keep:
-        path, cap = (k.rsplit(":", 1) if re.fullmatch(r".+:\d+", k) else (k, "0"))
-        KEEP[os.path.normpath(path)] = int(cap)
+        KEEP[_keep_path(k)] = int(k.rsplit(":", 1)[1]) if re.fullmatch(r".+:\d+", k) else 0
     CARRY[:] = [os.path.normpath(c) for c in flags["-c"]]
     resume = Path(flags["-r"][-1]).resolve() if flags["-r"] else None
     if resume and not argv:
         _resume(resume, n)
     n = n or 1
     if not argv or not keep:
-        sys.exit("usage: pi.py [-f PATH]... -k PATH[:BYTES]... [-c DIR]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+        sys.exit("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
                  "       pi.py -r RUN-DIR [-n N]\n"
+                 f"  a prompt file whose first line starts with `{HEADER}` sets flags and PI_NAME=value settings there, which are not part\n"
+                 "           of the prompt; -f paths are relative to the file. A later file overrides an earlier one, and the environment\n"
+                 "           and command line override both: a later -n, PI_ setting, or -f, -k or -c on the same path replaces an earlier one\n"
+                 "  --no-header  ignore the prompt files' header settings (the header lines still stay out of the prompt)\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
                  "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
                  "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
@@ -1034,7 +1082,7 @@ def main(argv):
         sys.exit(f"unknown provider {PROVIDER!r}; try: {', '.join(ADAPTERS)}")
     if not os.access(SLC, os.X_OK):
         sys.exit(f"no slc at {SLC}; build it with self/release.sh")
-    prompt = "\n\n".join(Path(a).read_text().strip() for a in argv)
+    prompt = "\n\n".join(t for a in argv if (t := _task_lines(a)[1].strip()))
     tag = "+".join(Path(a).stem for a in argv)
     loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}{'-' + EFFORT if EFFORT else ''}-{tag}"
     loop.mkdir(parents=True, exist_ok=True)
