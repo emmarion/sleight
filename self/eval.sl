@@ -305,6 +305,8 @@
           ((Yes _ _ le) (let ((many c) (erased pf)) $ sub na nb le) (ErPayload $ PNat c))
           ((No _ _ _) (ErPayload $ PStr "sub: negative result"))))
       ((ExMul) (ErPayload $ PNat $ nat-mul na nb))
+      ((ExShl) (ErPayload $ PNat $ nat-shl na nb))
+      ((ExShr) (ErPayload $ PNat $ nat-shr na nb))
       ((ExDiv)
         (match many (lt-dec (Zero) nb) (((ExtResult) _))
           ((Yes _ _ pos) (let ((many d) (erased m) (erased r) (erased mm) (erased ad) (erased p)) $ div na nb pos) (ErPayload $ PNat d))

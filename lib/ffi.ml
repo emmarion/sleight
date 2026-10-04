@@ -88,12 +88,16 @@ let fns : (string * fn_spec) list =
     ("str-split", spec 2 (function [ a; b ] -> let x, y = Ffi_core.str_split (slice a) (z b) in [ text x; text y ] | _ -> raise arity));
     ("nat-str", spec 1 (unary (fun a -> text (Ffi_core.nat_str (z a)))));
     ("nat-mod", spec 2 (nats "Nat" Ffi_core.nat_mod));
+    ("shl", spec 2 (nats "Nat" Ffi_core.shl));
+    ("shr", spec 2 (nats "Nat" Ffi_core.shr));
     ("u62-add", spec 2 (nats "Nat" Ffi_core.u62_add));
     ("u62-sub", spec 2 (nats "Nat" Ffi_core.u62_sub));
     ("u62-mul", spec 2 (nats "Nat" Ffi_core.u62_mul));
     ("u62-div", spec 2 (nats "Nat" Ffi_core.u62_div));
     ("u62-mod", spec 2 (nats "Nat" Ffi_core.u62_mod));
     ("u62-divmod", spec 2 (quotient Ffi_core.u62_divmod));
+    ("u62-shl", spec 2 (nats "Nat" Ffi_core.u62_shl));
+    ("u62-shr", spec 2 (nats "Nat" Ffi_core.u62_shr));
     ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.u62_cmp));
     ("u62-lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.u62_lt_dec));
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));

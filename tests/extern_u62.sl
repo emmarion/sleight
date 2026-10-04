@@ -1,4 +1,4 @@
-; expect: (Cons _ 1 $ Cons _ 10 $ Cons _ 4 $ Cons _ 21 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Nil _)
+; expect: (Cons _ 1 $ Cons _ 10 $ Cons _ 4 $ Cons _ 21 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 56 $ Cons _ 2 $ Nil _)
 ; U62 (section 41): its arithmetic takes Nats with erased proofs that neither operands nor results reach
 ; u62-modulus. The modulus is erased, so the bounds here are proved rather than computed: sixty-two is
 ; rebuilt and matched to the prelude's by add-fn and mul-fn, and a Pow2 exceeds its exponent.
@@ -31,6 +31,9 @@
 (def-fns _ $ (erased bounded : (erased (Nat) n) (erased (Lt n s62) p) -> (erased (Lt n u62-modulus) q))
   (match erased e62 _ ((Refl t r) (lt-trans n sixty-two u62-modulus p big))))
 
+(def-fns _ $ (erased shift-bounded : (erased (Nat) k) (erased (Lt k s62) p) -> (erased (Lt k (Succ sixty-two)) q))
+  (match erased e62 _ ((Refl t r) (lt-weaken k sixty-two p))))
+
 (let ((erased (Add seven three ten) sum)) (AddSucc _ _ _ $ AddSucc _ _ _ $ AddSucc _ _ _ $ AddSucc _ _ _ $ AddSucc _ _ _ $ AddSucc _ _ _ $ AddSucc _ _ _ $ AddZero three))
 (let ((many prod) (erased mp)) (mul seven three))
 (let ((many ds)) (lt-dec seven s62))
@@ -41,6 +44,10 @@
 (comptime-match many dten (Yes a10 b10 p10))
 (let ((many dp)) (lt-dec prod s62))
 (comptime-match many dp (Yes ap bp pp))
+(let ((many v8) (erased pw8) (erased pos8)) (pow2 three))
+(let ((many sh) (erased msh)) (mul seven v8))
+(let ((many dsh)) (lt-dec sh s62))
+(comptime-match many dsh (Yes ash bsh psh))
 
 (def-lvl T)
 
@@ -54,8 +61,11 @@
     (u62-div seven three (bounded seven p7) (bounded three p3) (LtZ _)))
   (let ((many r3) (erased rl3) (erased md3) (erased pr3)) (u62-mod seven three (bounded seven p7) (bounded three p3) (LtZ _)))
   (let ((many lt)) (match many (u62-lt-dec three seven (bounded three p3) (bounded seven p7)) (((Nat) flag)) ((Yes a b p) 1) ((No a b p) 0)))
+  (let ((many l)) (u62-shl seven three (shift-bounded three p3) v8 pw8 sh msh (bounded sh psh)))
+  (let ((many h) (erased v) (erased pv) (erased mh) (erased rh) (erased mmh) (erased ah) (erased rlh) (erased pqh))
+    (u62-shr prod three (bounded prod pp) (shift-bounded three p3)))
   (match many (u62-cmp three seven (bounded three p3) (bounded seven p7)) _
-    ((CLt t rr x y p) (Cons _ lt $ Cons _ s $ Cons _ d $ Cons _ m $ Cons _ q $ Cons _ r $ Cons _ q2 $ Cons _ r3 $ Nil (Nat)))
+    ((CLt t rr x y p) (Cons _ lt $ Cons _ s $ Cons _ d $ Cons _ m $ Cons _ q $ Cons _ r $ Cons _ q2 $ Cons _ r3 $ Cons _ l $ Cons _ h $ Nil (Nat)))
     (absurd CEq)
     ((CGt t rr x y p) (Nil (Nat)))))
 

@@ -356,6 +356,7 @@
     (many ExArrayNew : -> (Extern 1)) (many ExArraySwap : -> (Extern 3)) (many ExArrayPluck : -> (Extern 2)) (many ExArrayPlace : -> (Extern 3))
     (many ExArraySwapImm : -> (Extern 3)) (many ExArrayPlaceImm : -> (Extern 3)) (many ExArrayLength : -> (Extern 1)) (many ExListToArray : -> (Extern 1)) (many ExArrayMake : -> (Extern 2))
     (many ExAdd : -> (Extern 2)) (many ExSub : -> (Extern 2)) (many ExMul : -> (Extern 2)) (many ExDiv : -> (Extern 2)) (many ExDivmod : -> (Extern 2)) (many ExNatCmp : -> (Extern 2)) (many ExNatMod : -> (Extern 2)) (many ExAppend : -> (Extern 2))
+    (many ExShl : -> (Extern 2)) (many ExShr : -> (Extern 2)) (many ExU62Shl : -> (Extern 2)) (many ExU62Shr : -> (Extern 2))
     (many ExNatHalve : -> (Extern 1)) (many ExTrim : -> (Extern 1)) (many ExFlatten : -> (Extern 1))
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1))
     (many ExU62Add : -> (Extern 2)) (many ExU62Sub : -> (Extern 2)) (many ExU62Mul : -> (Extern 2)) (many ExU62Div : -> (Extern 2)) (many ExU62Divmod : -> (Extern 2)) (many ExU62Mod : -> (Extern 2)) (many ExU62Cmp : -> (Extern 2))
@@ -386,7 +387,7 @@
     ((ExArraySwapImm) (None _)) ((ExArrayPlaceImm) (None _)) ((ExArrayLength) (None _)) ((ExListToArray) (None _)) ((ExArrayMake) (None _))
     ((ExNatCmp) (Some _ cmp)) ((ExStrCmp) (Some _ cmp))
     ((ExAdd) (None _)) ((ExSub) (None _)) ((ExMul) (None _)) ((ExDiv) (None _)) ((ExDivmod) (None _))
-    ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
+    ((ExNatMod) (None _)) ((ExAppend) (None _)) ((ExShl) (None _)) ((ExShr) (None _)) ((ExU62Shl) (None _)) ((ExU62Shr) (None _)) ((ExNatHalve) (None _)) ((ExTrim) (None _))
     ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExNatStr) (None _))
     ((ExU62Add) (None _)) ((ExU62Sub) (None _)) ((ExU62Mul) (None _)) ((ExU62Div) (None _)) ((ExU62Divmod) (None _)) ((ExU62Mod) (None _)) ((ExU62Cmp) (Some _ cmp))
     ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExArrayGet) (None _))
@@ -403,7 +404,7 @@
   (match many e _
     ((ExArrayNew) 1) ((ExArraySwap) 3) ((ExArrayPluck) 2) ((ExArrayPlace) 3)
     ((ExArraySwapImm) 3) ((ExArrayPlaceImm) 3) ((ExArrayLength) 1) ((ExListToArray) 1) ((ExArrayMake) 2)
-    ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2)
+    ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2) ((ExShl) 2) ((ExShr) 2) ((ExU62Shl) 2) ((ExU62Shr) 2)
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
     ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)))
@@ -411,7 +412,7 @@
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
   (match many e _
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
-    ((ExU62Mod) (ExNatMod)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExArrayGet) (ExArrayPluck))
+    ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExArrayGet) (ExArrayPluck))
     ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     (else e)))
@@ -421,6 +422,7 @@
     ((ExArrayNew) "array-new") ((ExArraySwap) "array-swap") ((ExArrayPluck) "array-pluck") ((ExArrayPlace) "array-place")
     ((ExArraySwapImm) "array-swap-imm") ((ExArrayPlaceImm) "array-place-imm") ((ExArrayLength) "array-length") ((ExListToArray) "list-to-array") ((ExArrayMake) "array-make")
     ((ExAdd) "add") ((ExSub) "sub") ((ExMul) "mul") ((ExDiv) "div") ((ExDivmod) "divmod") ((ExNatCmp) "nat-cmp") ((ExNatMod) "nat-mod") ((ExAppend) "append")
+    ((ExShl) "shl") ((ExShr) "shr") ((ExU62Shl) "u62-shl") ((ExU62Shr) "u62-shr")
     ((ExNatHalve) "nat-halve") ((ExTrim) "trim") ((ExFlatten) "flatten")
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str")
     ((ExU62Add) "u62-add") ((ExU62Sub) "u62-sub") ((ExU62Mul) "u62-mul") ((ExU62Div) "u62-div") ((ExU62Divmod) "u62-divmod") ((ExU62Mod) "u62-mod") ((ExU62Cmp) "u62-cmp")
@@ -430,6 +432,7 @@
 (let ((many externs))
   $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExArraySwapImm) $ Cons _ (MkSomeExtern _ $ ExArrayPlaceImm) $
   Cons _ (MkSomeExtern _ $ ExArrayLength) $ Cons _ (MkSomeExtern _ $ ExListToArray) $ Cons _ (MkSomeExtern _ $ ExArrayMake) $ Cons _ (MkSomeExtern _ $ ExAdd) $ Cons _ (MkSomeExtern _ $ ExSub) $ Cons _ (MkSomeExtern _ $ ExMul) $ Cons _ (MkSomeExtern _ $ ExDiv) $ Cons _ (MkSomeExtern _ $ ExDivmod) $ Cons _ (MkSomeExtern _ $ ExNatCmp) $ Cons _ (MkSomeExtern _ $ ExNatMod) $ Cons _ (MkSomeExtern _ $ ExAppend) $
+  Cons _ (MkSomeExtern _ $ ExShl) $ Cons _ (MkSomeExtern _ $ ExShr) $ Cons _ (MkSomeExtern _ $ ExU62Shl) $ Cons _ (MkSomeExtern _ $ ExU62Shr) $
   Cons _ (MkSomeExtern _ $ ExNatHalve) $ Cons _ (MkSomeExtern _ $ ExTrim) $ Cons _ (MkSomeExtern _ $ ExFlatten) $
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $

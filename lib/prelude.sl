@@ -483,6 +483,43 @@
     ((PS k2 w1 w2 q1 d2)
       (match erased (pow2-fn k1 v1 w1 p1 q1) _ ((Refl t x) (double-fn v1 v2 w2 d1 d2))))))
 
+(def-fns _ $ (many extern shl : (many (Nat) n) (many (Nat) k) ->
+    (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
+  (let ((many v) (erased pk) (erased pos)) (pow2 k))
+  (let ((many r) (erased p)) (mul n v))
+  (values r v pk p))
+
+(def-fns _ $ (many extern shr : (many (Nat) n) (many (Nat) k) ->
+    (many (Nat) q) (erased (Nat) v) (erased (Pow2 k v) pk)
+    (erased (Nat) m) (erased (Nat) r) (erased (Mul q v m) mm) (erased (Add m r n) a) (erased (Lt r v) p))
+  (let ((many v) (erased pk) (erased pos)) (pow2 k))
+  (let ((many q) (erased m) (erased r) (erased mm) (erased a) (erased p)) (div n v pos))
+  (values q v pk m r mm a p))
+
+(def-fns _ $ (many nat-shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
+  (let ((many r) (erased v) (erased pk) (erased p)) (delegate (shl n k)))
+  r)
+
+(def-fns _ $ (many nat-shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
+  (let ((many q) (erased v) (erased pk) (erased m) (erased r) (erased mm) (erased a) (erased p)) (delegate (shr n k)))
+  q)
+
+(def-fns _ $ (many extern u62-shl : (many (Nat) n) (many (Nat) k) (erased (Lt k (Succ sixty-two)) pk)
+    (erased (Nat) v) (erased (Pow2 k v) pv) (erased (Nat) r) (erased (Mul n v r) prod) (erased (Lt r u62-modulus) pr) ->
+    (many r is c))
+  (let ((many r1) (erased v1) (erased pv1) (erased prod1)) (shl n k))
+  (match erased (pow2-fn k v1 v pv1 pv) _
+    ((Refl t x) (match erased (mul-fn n v r1 r prod1 prod) _ ((Refl t2 x2) r1)))))
+
+(def-fns _ $ (many extern u62-shr : (many (Nat) n) (many (Nat) k)
+    (erased (Lt n u62-modulus) pn) (erased (Lt k (Succ sixty-two)) pk) ->
+    (many (Nat) q) (erased (Nat) v) (erased (Pow2 k v) pv)
+    (erased (Nat) m) (erased (Nat) r) (erased (Mul q v m) mm) (erased (Add m r n) a) (erased (Lt r v) rlt)
+    (erased (Lt q u62-modulus) pq))
+  (let ((many q) (erased v) (erased pv) (erased m) (erased r) (erased mm) (erased a) (erased rlt)) (shr n k))
+  (let ((erased qle)) (lt-le-trans q (Succ m) (Succ n) (mul-le q v m mm (pow2-pos k v pv)) (LtS m (Succ n) (add-le-left m r n a))))
+  (values q v pv m r mm a rlt (lt-le-trans q (Succ n) u62-modulus qle (LtS n u62-modulus pn))))
+
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)
     (subterm erased (Double m1 d) p) (erased (Double m2 d) q) -> (erased (Eq (Nat) m1 m2) e))
