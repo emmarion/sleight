@@ -412,7 +412,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False):
         t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
-        head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
+        head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
 
 
