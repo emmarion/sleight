@@ -5,7 +5,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
 PROVIDER = os.environ.get("PI_PROVIDER", "neuralwatt")
-DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "glm-5.3", "local": os.environ.get("PI_LOCAL_MODEL", "")}
+DEFAULT_MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "deepseek-v4.1-flash", "local": os.environ.get("PI_LOCAL_MODEL", "")}
 MODEL = os.environ.get("PI_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
 MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
@@ -1055,7 +1055,7 @@ def main(argv):
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
                  "environment (defaults in brackets):\n"
                  "  PI_PROVIDER       neuralwatt, anthropic, openai or local [neuralwatt]\n"
-                 "  PI_MODEL          [glm-5.3, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
+                 "  PI_MODEL          [deepseek-v4.1-flash, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
                  "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
                  "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
                  "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
