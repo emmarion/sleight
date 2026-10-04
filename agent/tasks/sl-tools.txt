@@ -13,7 +13,8 @@ counts too: a guide, cheat sheet or worked example in tools/ is a tool if it wou
 
 Each tool lives in its own directory under tools/ and compiles from its own files, plus any of self/ it needs. A tool
 takes its input on stdin, as args, or as paths to files in the sandbox. tools/TOOLS.md lists each tool: what it does,
-why it exists, how to use it (for a program, the exact `sl` call that runs it), and its status.
+why it exists, how to use it (for a program, the exact `sl` call that runs it), and its status. Keep it succinct and
+pruned.
 
 For reference: prelude.sl (the standard library), self/ (the compiler, written in SL), tests/ and pal/ (example
 programs), DESIGN.md, SUGAR.md and UNIQUE.md.
@@ -21,6 +22,7 @@ programs), DESIGN.md, SUGAR.md and UNIQUE.md.
 Only tools/ and HANDOFF.md carry over to the next session.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
-stand and what to try next. Each phase has its own budget of tokens, and every tool result says how much is left. In the
-second phase, HANDOFF.md is the only file you can edit; there's no need to edit it before then, so spend the first phase
-on the task itself.
+stand and what to try next. Keep it succinct and current: rewrite it each session rather than adding to it, so it holds
+only what the next session needs. Each phase has its own budget of tokens, and every tool result says how much is left.
+In the second phase, HANDOFF.md is the only file you can edit; there's no need to edit it before then, so spend the
+first phase on the task itself.
