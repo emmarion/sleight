@@ -7,8 +7,9 @@ well-recorded progress matters more than finishing in this one.
 A good way to find what to build: write a small but real SL program, note what was hard or tedious about it, then build
 a tool that would have made that easier, and check that it does by using it. Many of these programs should be certified,
 proved correct against a specification stated as a type, as pal/ is, since writing proofs is much of what makes SL hard;
-tools that help with proofs count as much as any. Improving or replacing an existing tool counts as much as adding one.
-Documentation counts too: a guide, cheat sheet or worked example in tools/ is a tool if it would have saved you time.
+tools that help with proofs count as much as any. Treat the compiler as the arbiter of whether code is right, and build
+tools for what it can't tell you. Improving or replacing an existing tool counts as much as adding one. Documentation
+counts too: a guide, cheat sheet or worked example in tools/ is a tool if it would have saved you time.
 
 Each tool lives in its own directory under tools/ and compiles from its own files, plus any of self/ it needs. A tool
 takes its input on stdin, as args, or as paths to files in the sandbox. tools/TOOLS.md lists each tool: what it does,
