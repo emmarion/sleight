@@ -1,0 +1,25 @@
+#!pi -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -k NOTES.md:2000 -n 1 PI_CONTEXT_STOP=10 PI_REWRITE_STOP=2 PI_RUN_TIMEOUT=60 PI_HTTP_TIMEOUT=1800
+Your task is to write fib.sl, an SL program whose value is F(90), the 90th Fibonacci number (F(0) = 0, F(1) = 1).
+Check it with the `sl` tool: it must compile with no warnings and print the number. Compute it iteratively, so that it
+runs in well under a second. Call `done` once it prints the right number.
+
+Hints: a program's last top-level expression is its value, and is printed. tests/ackermann.sl shows a recursive
+function over `Nat`:
+
+```
+(def-lvl K)
+(def-fns K $ (many ack : (subterm many (Nat) m) (subterm many (Nat) n) -> (many (Nat) r))
+  (let-match many m (Succ m1) ((Zero) (Succ n)))
+  (match many n _
+    ((Zero) (tail $ ack (subterm (prove-subterm m1 m)) m1 (Succ (Zero))))
+    ((Succ n1) (tail $ ack (subterm (prove-subterm m1 m)) m1 (notail $ ack m (subterm (prove-subterm n1 n)) n1)))))
+
+(ack 2 3)
+```
+
+`nat-add` adds two `Nat`s. For reference: prelude.sl (the standard library), tests/ (example programs), DESIGN.md and
+SUGAR.md.
+
+Your session has two phases: first the task, then writing NOTES.md, a few lines on how it went. Each phase has its own
+budget of tokens, and every tool result says how much is left. In the second phase, NOTES.md is the only file you can
+edit.

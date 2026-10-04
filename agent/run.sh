@@ -18,7 +18,8 @@ usage: $0 IP PI-ARGS...
            change a live run's session total, read before each session: a larger N continues it, a smaller
            one stops it after the current session; RUN defaults to the box's only live run
        $0 sweep --models M,... [--size S] PI-ARGS...
-           one new droplet per model; M is provider:model, or a model whose provider is guessed:
+           one new droplet per model, named with its position in the list so a model may repeat;
+           M is provider:model, or a model whose provider is guessed:
            claude-* anthropic, gpt-* openai, else neuralwatt
        $0 ls
            list the $TAG droplets and their runs
@@ -122,7 +123,7 @@ deploy)
     ;;
 new)
     [ $# -ge 1 ] || usage
-    create "pi-$(slug "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}")-$(date +%m%d-%H%M%S)"
+    create "pi-$(slug "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}")-$(date +%m%d-%H%M%S)${BOX_SUFFIX:+-$BOX_SUFFIX}"
     start "$ip" "$@"
     ;;
 resume)
@@ -158,14 +159,16 @@ PY
     ;;
 sweep)
     [ -n "$models" ] && [ $# -ge 1 ] || usage
+    i=0
     for m in ${models//,/ }; do
+        i=$((i + 1))
         case $m in
         *:*) p=${m%%:*}; m=${m#*:} ;;
         claude-*) p=anthropic ;;
         gpt-*) p=openai ;;
         *) p=neuralwatt ;;
         esac
-        PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m] /" &
+        BOX_SUFFIX=$i PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m #$i] /" &
     done
     wait
     ;;

@@ -472,6 +472,10 @@ def _ts():
     return time.strftime('%H:%M:%S')
 
 
+def _iso(t):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t)) + f".{int(t % 1 * 1000):03}Z"
+
+
 def _say(text):
     print(f"{_ts()} {text}", file=sys.stderr)
 
@@ -852,8 +856,14 @@ def run(prompt):
         return f"[Now entering the rewrite phase, where only {REWRITE_NAMES} on {_kept_sizes()} and `done` are allowed.]"
 
     while True:
+        sent = time.time()
         reply = api.send(messages)
+        received = time.time()
         used, prompt_tokens = _context(reply, window, prompt_tokens)
+        _log(RUN_DIR / "requests.jsonl", json.dumps({
+            "sent": _iso(sent), "received": _iso(received), "seconds": round(received - sent, 3), "phase": phase, "context": used,
+            "usage": reply.get("usage"), "cost": (reply.get("cost") or {}).get("request_cost_usd"),
+            "energy": (reply.get("energy") or {}).get("energy_joules")}) + "\n")
         turn += 1
         assistant, text, calls = api.parse(reply)
         if text.strip() or calls:
