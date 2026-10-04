@@ -169,11 +169,6 @@
 
 ; ---- IdMap: a persistent trie keyed by the halves of a Nat (the prelude's Half)
 
-(def-fns _ $ (erased double-lt : (erased (Nat) m) (erased (Nat) d) (subterm erased (Double m d) dd) -> (erased (Lt m (Succ d)) p))
-  (match erased dd _
-    ((D0) (LtZ (Zero)))
-    ((DS m1 d1 dd1) (LtS m1 (Succ (Succ d1)) (lt-weaken m1 (Succ d1) (double-lt m1 d1 dd1))))))
-
 (def-adts
   ((IdMap : (Type V) -> Type)
     enum
