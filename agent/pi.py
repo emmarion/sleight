@@ -949,6 +949,14 @@ def _live_n(loop, n, i):
     return m
 
 
+def _carried(prev, c):
+    d = prev / "sandbox" / c
+    if d.is_dir() and not d.is_symlink():
+        return [(d, c)]
+    _say(f"-c {c}: session {prev.name} left no directory there, so the next session starts with an empty one")
+    return []
+
+
 def _claim(loop):
     pid_file = loop / "pid"
     pid = pid_file.read_text().strip() if pid_file.exists() else ""
@@ -1046,7 +1054,8 @@ def main(argv):
     prev, i = (loop / f"{first - 1:02}" if first > 1 else None), first
     try:
         while i <= (n := _live_n(loop, n, i)):
-            carried = [(prev / "sandbox" / k, k) for k in [*KEEP, *CARRY] if prev and (prev / "sandbox" / k).exists()]
+            carried = [(prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()] + [
+                x for c in CARRY if prev for x in _carried(prev, c)]
             for attempt in range(1, SESSION_TRIES + 1):
                 _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
                 try:
