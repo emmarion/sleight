@@ -20,7 +20,7 @@ DESIGN.md, SUGAR.md and UNIQUE.md.
 
 Only work/ and HANDOFF.md carry over to the next session. In work/, keep files.txt, listing in order the files that go
 between manacher-fast/below.sl and the accept file, and main.sl, a driver like pal/manacher_main.sl. Small helper
-programs in work/ are fine.
+programs in work/ are fine; keep work/ tidy and periodically prune it, deleting files that have served their purpose.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
 stand and what to try next. Each phase has its own budget of tokens, and every tool result says how much is left. In the
