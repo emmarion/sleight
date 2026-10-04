@@ -1,4 +1,4 @@
-#!pi -f ../../self -k SPEC.md:180000 -n 25
+#!pi -f ../../self -f ../pi.py -k SPEC.md:180000 -n 25
 Your task is to write to ip.txt the IP address of this VM (either 10.* or global, either is fine).
 Or: to lay the groundwork for a future session to do so.
 
