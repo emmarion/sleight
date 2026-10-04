@@ -630,6 +630,15 @@
     (many (Nat) r) (erased (Bitwise xor-op n m r) p))
   (tail (nat-xor n m)))
 
+(def-fns _ $ (many extern u62-inc : (many (Nat) n) (erased (Lt (Succ n) u62-modulus) p) ->
+    (many (Succ n) is r))
+  (Succ n))
+
+(def-fns _ $ (many extern u62-dec : (erased (Nat) m) (many (Succ m) is n) (erased (Lt n u62-modulus) pn) ->
+    (many m is r))
+  (let-match many n (Succ m1))
+  m1)
+
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)
     (subterm erased (Double m1 d) p) (erased (Double m2 d) q) -> (erased (Eq (Nat) m1 m2) e))

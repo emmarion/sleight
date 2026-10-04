@@ -1941,7 +1941,8 @@ invariant; the prototype checks it on its own tests.
 `add` is likewise extern over a structural definition, returning an
 `Add` proof beside the sum; `nat-add` is a `delegate` over it that
 drops the proof. The extern functions on it are `add`, `sub`, `mul`, `div`, `divmod`,
-`nat-mod`, `nat-halve`, `nat-cmp`, `lt-dec`, `shl` and `shr`, and
+`nat-mod`, `nat-halve`, `nat-cmp`, `lt-dec`, `shl`, `shr`, `nat-and`,
+`nat-or` and `nat-xor`, and
 `nat-add`, `nat-mul`, `nat-shl` and `nat-shr` are `delegate`s over
 theirs that drop the proofs. There are no
 numeric literals for now.
@@ -1981,7 +1982,8 @@ The modulus, and `sixty-two` beside it, are erased top-level bindings,
 so the prelude never computes 2^62; each keeps the proofs it was built
 from. The arithmetic takes `Nat`s rather than `U62`s: `u62-add`,
 `u62-sub`, `u62-mul`, `u62-div`, `u62-mod`, `u62-divmod`, `u62-cmp`,
-`u62-lt-dec`, `u62-shl` and `u62-shr` are extern, each modelled on the `Nat` primitive it corresponds to, and each takes erased
+`u62-lt-dec`, `u62-shl`, `u62-shr`, `u62-and`, `u62-or`, `u62-xor`,
+`u62-inc` and `u62-dec` are extern, each modelled on the `Nat` primitive it corresponds to, and each takes erased
 proofs that its operands and its result are below the modulus, which
 the caller discharges, so a call cannot overflow or underflow. What
 this is for is the implementation it permits: the FFI runs each as one

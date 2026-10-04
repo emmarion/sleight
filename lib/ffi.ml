@@ -104,6 +104,8 @@ let fns : (string * fn_spec) list =
     ("u62-and", spec 2 (nats "Nat" Ffi_core.u62_and));
     ("u62-or", spec 2 (nats "Nat" Ffi_core.u62_or));
     ("u62-xor", spec 2 (nats "Nat" Ffi_core.u62_xor));
+    ("u62-inc", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_inc (z a)))));
+    ("u62-dec", spec 1 (unary (fun a -> int "Nat" (Ffi_core.u62_dec (z a)))));
     ("u62-cmp", spec ~needs:[ "Cmp" ] 2 (tag "Cmp" z Ffi_core.u62_cmp));
     ("u62-lt-dec", spec ~needs:[ "Dec" ] 2 (tag "Dec" z Ffi_core.u62_lt_dec));
     ("nat-halve", spec ~needs:[ "Half" ] 1 (unary (fun a -> int "Half" (Ffi_core.nat_halve (z a)))));

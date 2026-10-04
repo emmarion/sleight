@@ -307,6 +307,8 @@
       ((ExMul) (ErPayload $ PNat $ nat-mul na nb))
       ((ExShl) (ErPayload $ PNat $ nat-shl na nb))
       ((ExShr) (ErPayload $ PNat $ nat-shr na nb))
+      ((ExU62Inc) (ErPayload $ PNat $ Succ na))
+      ((ExU62Dec) (ErPayload $ PNat $ match many na (((Nat) _)) ((Zero) (Zero)) ((Succ m) m)))
       ((ExNatAnd) (let ((many c) (erased p)) $ nat-and na nb) (ErPayload $ PNat c))
       ((ExNatOr) (let ((many c) (erased p)) $ nat-or na nb) (ErPayload $ PNat c))
       ((ExNatXor) (let ((many c) (erased p)) $ nat-xor na nb) (ErPayload $ PNat c))
