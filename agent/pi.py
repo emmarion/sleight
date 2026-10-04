@@ -279,6 +279,14 @@ _group_mb = _group_mb_linux if LINUX else _group_mb_darwin
 _limited = _limited_linux if LINUX else lambda cmd, env: (cmd, env, _spawn_exec_limited(cmd, env))
 
 
+# HACK: a Popen whose reaping of the child also records the child's resource usage, which `_stats` reports.
+# Popen exposes no rusage, so this overrides `Popen._try_wait`, a private method of CPython's subprocess module
+# (POSIX only); as far as we can tell, CPython 3.12 calls it from `wait()`, including the `wait()` inside
+# `communicate()`, and it returns the same (pid, status) as `os.waitpid`, which `os.wait4` also returns.
+# If a Python upgrade renames this method, or reaps the child some other way (as `Popen.poll()` already does,
+# bypassing it), the override is silently skipped: `rusage` stays None and `sl` just stops printing the
+# "(... s wall clock, ... s CPU, ... MB peak memory)" stats, with no error. If those stats vanish, look here
+# first, and compare against the `_try_wait` in the installed Python's Lib/subprocess.py.
 class _Popen(subprocess.Popen):
     rusage = None
 
@@ -386,6 +394,11 @@ def sl(paths, stdin="", args=(), capture=None):
 def _stats(wall, ru):
     if not RUN_STATS or ru is None:
         return ""
+    # ru_maxrss is in KiB on Linux but in bytes on macOS (see getrusage(2) on each).
+    # The figures are the program's only if `_proc`'s direct child is the program itself, i.e. if everything
+    # `_limited` puts in front of it (systemd-run --scope, env, or the macOS posix_spawn exec) replaces itself
+    # with the program in place; we believe it does, but this is unchecked on Linux. If a wrapper ever forks
+    # and waits instead, these numbers become the wrapper's (likely still including the reaped program's CPU).
     peak = ru.ru_maxrss << 10 if LINUX else ru.ru_maxrss
     return f" ({wall:.2f} s wall clock, {ru.ru_utime + ru.ru_stime:.2f} s CPU, {peak >> 20} MB peak memory)"
 
