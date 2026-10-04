@@ -201,29 +201,18 @@ def delete(path):
     *dirs, name = _rel_parts(path) or [""]
     if not name:
         raise PathEscape("the sandbox root cannot be deleted")
-    rel = os.path.normpath(path)
-    if kept := [k for k in sorted(KEEP) if k == rel or k.startswith(rel + "/")]:
-        raise ValueError(f"`{kept[0]}` is a kept file and cannot be deleted")
+    if (rel := os.path.normpath(path)) in KEEP:
+        raise ValueError(f"`{rel}` is a kept file and cannot be deleted")
     dfd = _walk_to_dir(dirs, create=False)
     try:
-        _remove_at(dfd, name)
+        if stat.S_ISDIR(os.stat(name, dir_fd=dfd, follow_symlinks=False).st_mode):
+            raise ValueError(f"`{rel}` is a directory; only files can be deleted")
+        os.unlink(name, dir_fd=dfd)
     except OSError as e:
         raise PathEscape(f"{path!r}: {e.strerror}") from None
     finally:
         os.close(dfd)
     return f"deleted {rel}"
-
-
-def _remove_at(dfd, name):
-    if not stat.S_ISDIR(os.stat(name, dir_fd=dfd, follow_symlinks=False).st_mode):
-        return os.unlink(name, dir_fd=dfd)
-    sub = os.open(name, _DIRFLAGS, dir_fd=dfd)
-    try:
-        for e in os.listdir(sub):
-            _remove_at(sub, e)
-    finally:
-        os.close(sub)
-    os.rmdir(name, dir_fd=dfd)
 
 
 def ls(path=".", within=None):
@@ -448,7 +437,7 @@ TOOLS = {
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
     "edit": (edit, "Replace exactly one occurrence of old_string with new_string", {"path": STR, "old_string": STR, "new_string": STR},
              ["path", "old_string", "new_string"]),
-    "delete": (delete, "Delete a file, or a directory and everything in it. Kept files cannot be deleted.",
+    "delete": (delete, "Delete a file. Kept files cannot be deleted.",
                {"path": STR}, ["path"]),
     "ls": (ls, "List a directory, or a single file, with each file's size in bytes (and its cap, for a kept file); "
                "a trailing `/` marks a directory, `@` a symlink", {"path": STR}, []),
