@@ -1,6 +1,7 @@
 #!pi -f ../../pal -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -f manacher-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
 Your task is to write a fast, certified implementation of Manacher's algorithm in SL.
-Or: to lay the groundwork for a future session to do so.
+Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
+well-recorded progress matters more than finishing in this one.
 
 pal/ holds a certified but slow one; see pal/README.md. Write `longest-palindrome-fast`, certified against the unchanged
 `LongestPalindrome` of pal/palindrome_relations.sl, with the interface that manacher-fast/accept-list.sl or
@@ -18,5 +19,5 @@ between manacher-fast/below.sl and the accept file, and main.sl, a driver like p
 programs in work/ are fine.
 
 Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
-stand and what to try next. Each phase has the same budget of tokens, and every tool result says how much is left. In
+stand and what to try next. Each phase has its own budget of tokens, and every tool result says how much is left. In
 the second phase, HANDOFF.md is the only file you can edit.

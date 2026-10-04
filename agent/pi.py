@@ -352,7 +352,9 @@ def _shown(capture, ext, data):
     return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
 
 
-def sl(paths, stdin="", args=(), capture=None):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False):
+    if not isinstance(gc_stats, bool):
+        raise ValueError("`gc_stats` must be true or false")
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
@@ -387,7 +389,8 @@ def sl(paths, stdin="", args=(), capture=None):
                         + _text(b.stdout + b.stderr))
             return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
         t0 = time.monotonic()
-        why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
+        why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
+                       env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
         head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
 
@@ -422,10 +425,12 @@ TOOLS = {
     "sl": (sl, "Compile the SL source files at `paths` (read in order, sharing one scope) and, if they compile, "
                "run the program with the sandbox as its working directory, feeding it `stdin` and passing it `args`. "
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
-               "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown.",
-           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR}, ["paths"]),
+               "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "
+               "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
+               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run.",
+           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": {"type": "boolean"}}, ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
-                   "budget of the same size, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
+                   "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
 }
 PARAMS = {n: {"type": "object", "properties": props, "required": req} for n, (_, _, props, req) in TOOLS.items()}

@@ -56,6 +56,7 @@ pi.ROOT_FD = os.open(pi.SANDBOX_ROOT, os.O_RDONLY | os.O_DIRECTORY)
 pi.write_bytes("a.sl", Path("tests/ackermann.sl").read_bytes())
 out = pi.sl("a.sl")
 assert "run: exit 0 " in out and "--- stdout ---\n9" in out, "sl smoke test failed"
+assert "\nallocated_words: " in pi.sl("a.sl", gc_stats=True), "sl gc_stats smoke test failed"
 why, _ = pi._proc([sys.executable, "-c", f"x = bytearray({pi.MEM_MB + 512} << 20); x[::4096] = b'x' * len(x[::4096])"], ".", 60, env={})
 assert why, "the memory limit did not stop a program"
 print(f"smoke test ok; over the {pi.MEM_MB} MB limit, a program {why}")
