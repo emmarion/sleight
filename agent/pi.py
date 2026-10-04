@@ -17,6 +17,7 @@ CONTEXT = int(os.environ.get("PI_CONTEXT", "0"))
 CONTEXT_STOP = float(os.environ.get("PI_CONTEXT_STOP", "20"))
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
+RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
 SLC = os.environ.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
@@ -24,6 +25,7 @@ MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 *
 MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
 RUN_DIR = SANDBOX_ROOT = ROOT_FD = LOG_PATH = TRANSCRIPT = SESSION_ID = None
 KEEP = {}
+CARRY = []
 SPENT = {}
 _LOG_N = 0
 
@@ -277,10 +279,22 @@ _group_mb = _group_mb_linux if LINUX else _group_mb_darwin
 _limited = _limited_linux if LINUX else lambda cmd, env: (cmd, env, _spawn_exec_limited(cmd, env))
 
 
+class _Popen(subprocess.Popen):
+    rusage = None
+
+    def _try_wait(self, wait_flags):
+        try:
+            pid, sts, rusage = os.wait4(self.pid, wait_flags)
+        except ChildProcessError:
+            return self.pid, 0
+        self.rusage = rusage if pid else None
+        return pid, sts
+
+
 def _proc(cmd, cwd, timeout, stdin="", env=None):
     cmd, env, preexec = _limited(cmd, os.environ if env is None else env)
-    with subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          start_new_session=True, preexec_fn=preexec) as p:
+    with _Popen(cmd, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                start_new_session=True, preexec_fn=preexec) as p:
         deadline, data, why = time.monotonic() + timeout, stdin.encode(), None
         try:
             while why is None:
@@ -301,7 +315,9 @@ def _proc(cmd, cwd, timeout, stdin="", env=None):
                     out, err = e.output or b"", e.stderr or b""
             if why is None and p.returncode == -signal.SIGKILL:
                 why = f"was killed (SIGKILL); the memory limit is {MEM_MB} MB"
-            return why, subprocess.CompletedProcess(cmd, p.returncode, out, err)
+            done = subprocess.CompletedProcess(cmd, p.returncode, out, err)
+            done.rusage = p.rusage
+            return why, done
         finally:
             _killpg(p.pid)
 
@@ -361,9 +377,17 @@ def sl(paths, stdin="", args=(), capture=None):
                         + (f"kept as {kept.name}\n" if kept.exists() else "not kept\n")
                         + _text(b.stdout + b.stderr))
             return f"internal error: building the compiler's output: ocamlopt {why}; this is not your program's fault"
+        t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin, env={})
         head = f"compile: ok\n{warnings}" if warnings else "compile: ok"
-        return f"{head}\nrun: {why or f'exit {r.returncode}'}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+        return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+
+
+def _stats(wall, ru):
+    if not RUN_STATS or ru is None:
+        return ""
+    peak = ru.ru_maxrss << 10 if LINUX else ru.ru_maxrss
+    return f" ({wall:.2f} s wall clock, {ru.ru_utime + ru.ru_stime:.2f} s CPU, {peak >> 20} MB peak memory)"
 
 
 def done(summary=""):
@@ -842,6 +866,8 @@ def run(prompt):
 
 
 def _copy(src, dst):
+    if dst.is_dir() and not dst.is_symlink():
+        shutil.rmtree(dst)
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(src, dst) if src.is_dir() else shutil.copy(src, dst)
 
@@ -866,7 +892,7 @@ def session(run_dir, prompt, seeds):
     (RUN_DIR / "prompt.txt").write_text(prompt)
     _log(TRANSCRIPT, f"=== {PROVIDER}/{MODEL} {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                      + "".join(f"--- seed {src} -> {rel} ---\n" for src, rel in seeds) + "".join(f"--- keep {k}" + (f", at most {cap} bytes" if cap else "") + " ---\n" for k, cap in sorted(KEEP.items()))
-                     + f"--- prompt ---\n{prompt}\n")
+                     + "".join(f"--- carry {c} ---\n" for c in CARRY) + f"--- prompt ---\n{prompt}\n")
     _say(f"run dir: {RUN_DIR}")
     t0 = time.time()
     try:
@@ -897,7 +923,7 @@ def _commit():
 def _resume(loop, n):
     rec = json.loads((loop / "run.json").read_text())
     env = {k: v for k, v in os.environ.items() if not k.startswith("PI_")} | rec["env"]
-    args = [a for f in rec["seeds"] for a in ("-f", f)] + [a for k in rec["keep"] for a in ("-k", k)]
+    args = [a for f in rec["seeds"] for a in ("-f", f)] + [a for k in rec["keep"] for a in ("-k", k)] + [a for c in rec.get("carry", []) for a in ("-c", c)]
     os.execve(sys.executable, [sys.executable, __file__, *args, "-n", str(n or rec["n"]), "-r", str(loop), *rec["prompts"]], env)
 
 
@@ -932,7 +958,7 @@ def _set_aside(d):
 
 
 def main(argv):
-    flags = {"-f": [], "-k": [], "-n": [], "-r": []}
+    flags = {"-f": [], "-k": [], "-c": [], "-n": [], "-r": []}
     while argv[:1] and argv[0] in flags and len(argv) > 1:
         flags[argv[0]].append(argv[1])
         argv = argv[2:]
@@ -940,16 +966,19 @@ def main(argv):
     for k in keep:
         path, cap = (k.rsplit(":", 1) if re.fullmatch(r".+:\d+", k) else (k, "0"))
         KEEP[os.path.normpath(path)] = int(cap)
+    CARRY[:] = [os.path.normpath(c) for c in flags["-c"]]
     resume = Path(flags["-r"][-1]).resolve() if flags["-r"] else None
     if resume and not argv:
         _resume(resume, n)
     n = n or 1
     if not argv or not keep:
-        sys.exit("usage: pi.py [-f PATH]... -k PATH[:BYTES]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
+        sys.exit("usage: pi.py [-f PATH]... -k PATH[:BYTES]... [-c DIR]... [-n N] PROMPT-FILE ...   (the prompt files are joined into one prompt)\n"
                  "       pi.py -r RUN-DIR [-n N]\n"
                  "  -f PATH  copy this file or directory into the sandbox root under its own name\n"
                  "  -k PATH[:BYTES]  carry PATH from each session's sandbox into the next, and allow only\n"
                  "           read/write/edit/grep/ls on it once experimenting ends; BYTES caps its size (0: no cap)\n"
+                 "  -c DIR   carry the directory DIR from each session's sandbox into the next; no tool may use it\n"
+                 "           once experimenting ends\n"
                  "  -n N     run N sessions in a row (default 1)\n"
                  "  -r DIR   resume the run in DIR with the settings its run.json records, from its first session\n"
                  "           without an answer.txt, setting that session and the ones after it aside; -n sets a new total\n"
@@ -969,10 +998,13 @@ def main(argv):
                  "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
                  "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
                  "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
+                 "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
                  "  PI_SLC            the compiler [../_build/release/slc]")
     for s in seeds:
         if not s.exists():
             sys.exit(f"no such file: {s}")
+    if any(s.is_dir() and s.resolve().name in KEEP for s in seeds):
+        sys.exit("-k cannot name a directory; carry one with -c")
     if len({s.resolve().name for s in seeds}) < len(seeds):
         sys.exit("two -f paths share a name")
     if PROVIDER not in ADAPTERS:
@@ -984,7 +1016,7 @@ def main(argv):
     loop = resume or RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{MODEL.replace('/', '_')}{'-' + EFFORT if EFFORT else ''}-{tag}"
     loop.mkdir(parents=True, exist_ok=True)
     _claim(loop)
-    record = {"n": n, "seeds": [str(s.resolve()) for s in seeds], "keep": keep, "prompts": [str(Path(a).resolve()) for a in argv],
+    record = {"n": n, "seeds": [str(s.resolve()) for s in seeds], "keep": keep, "carry": CARRY, "prompts": [str(Path(a).resolve()) for a in argv],
               "env": {k: v for k, v in os.environ.items() if k.startswith("PI_") and "KEY" not in k},
               "commit": _commit(), "slc_sha256": hashlib.sha256(Path(SLC).read_bytes()).hexdigest()}
     if resume:
@@ -999,7 +1031,7 @@ def main(argv):
     prev, i = (loop / f"{first - 1:02}" if first > 1 else None), first
     try:
         while i <= (n := _live_n(loop, n, i)):
-            carried = [(prev / "sandbox" / k, k) for k in KEEP if prev and (prev / "sandbox" / k).exists()]
+            carried = [(prev / "sandbox" / k, k) for k in [*KEEP, *CARRY] if prev and (prev / "sandbox" / k).exists()]
             for attempt in range(1, SESSION_TRIES + 1):
                 _say(f"session {i}/{n}, attempt {attempt}/{SESSION_TRIES}")
                 try:
