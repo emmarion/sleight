@@ -1,3 +1,4 @@
+#!pi -k SPEC.md:180000
 Your task is to create a 512 KiB file called BIG.
 Or: to lay the groundwork for a future session to do so.
 Bonus: do so via one program, big.sl, written with as few characters as possible.
