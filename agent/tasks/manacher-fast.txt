@@ -5,7 +5,7 @@ Or: to lay the groundwork for a future session to do so.
 pal/ holds a certified but slow one; see pal/README.md. Write `longest-palindrome-fast`, certified against the unchanged
 `LongestPalindrome` of pal/palindrome_relations.sl, with the interface that manacher-fast/accept-list.sl or
 manacher-fast/accept-array.sl expects. You may reuse anything in pal/. Fast here means making good use of arrays, U62
-arithmetic, tail calls and few allocations; there is no time target.
+arithmetic, tail calls and minimizing allocations; there is no time target.
 
 To check your work, compile in order: self/base.sl, pal/palindrome_relations.sl, manacher-fast/below.sl, your files (and
 any pal/ files they use), then one accept file. This must compile with no warning that a declaration shadows another.
