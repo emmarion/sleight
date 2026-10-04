@@ -861,10 +861,12 @@ def run(prompt):
         _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
         if not calls:
             empty += 1
-            if empty >= MAX_EMPTY:
-                return f"(gave up after {empty} replies in a row without a tool call)"
             nudge = f"[Your reply {'had no tool call' if text.strip() else 'was empty'}. Continue with a tool call, or call `done` if you are finished.]"
             _say(f"[no tool call {empty}/{MAX_EMPTY}]")
+            if empty >= MAX_EMPTY:
+                if phase == "rewrite":
+                    return f"(gave up after {empty} replies in a row without a tool call)"
+                empty, nudge = 0, f"[{MAX_EMPTY} replies in a row had no tool call, so the experiment phase is over.]\n" + rewrite()
             _log(TRANSCRIPT, f"\n{nudge}\n")
             messages.append({"role": "user", "content": nudge})
             continue
