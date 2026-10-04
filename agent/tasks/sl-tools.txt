@@ -1,0 +1,23 @@
+#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -c tools -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
+Your task is to build a toolkit of self-contained SL programs that make writing SL programs easier, for you and for
+future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing SL.
+Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
+well-recorded progress matters more than finishing in this one.
+
+A good way to find what to build: write a small but real SL program, note what was hard or tedious about it, then build
+a tool that would have made that easier, and check that it does by using it. Improving or replacing an existing tool
+counts as much as adding one.
+
+Each tool lives in its own directory under tools/ and compiles from its own files, plus any of self/ it needs. A tool
+takes its input on stdin, as args, or as paths to files in the sandbox. tools/TOOLS.md lists each tool: what it does,
+why it exists, the exact `sl` call that runs it, and its status.
+
+For reference: prelude.sl (the standard library), self/ (the compiler, written in SL), tests/ and pal/ (example
+programs), DESIGN.md, SUGAR.md and UNIQUE.md.
+
+Only tools/ and HANDOFF.md carry over to the next session.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md, which tells the next session where things
+stand and what to try next. Each phase has its own budget of tokens, and every tool result says how much is left. In the
+second phase, HANDOFF.md is the only file you can edit; there's no need to edit it before then, so spend the first phase
+on the task itself.
