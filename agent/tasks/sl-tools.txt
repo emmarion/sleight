@@ -1,4 +1,4 @@
-#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -f ../../LITERALS.md -c tools -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
+#!pi -f ../../self -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../DESIGN.md -f ../../SUGAR.md -f ../../UNIQUE.md -f ../../LITERALS.md -c tools -k HANDOFF.md:60000 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
 Your task is to build a toolkit of self-contained SL programs that make writing SL programs easier, for you and for
 future sessions like you. What to build is up to you: choose by what you find hard, slow or error-prone when writing SL.
 Or: to lay the groundwork for a future session to do so. This task will likely take many sessions, so leaving solid,
