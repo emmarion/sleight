@@ -2002,10 +2002,8 @@ session's.
      `Cmp` and `Add`, with `plus-zero-right` and `plus-succ-right` now
      the prelude's `add-zero-right` and `add-succ-right`. Not done: a
      `Vec` where a length is statically known — the one candidate,
-     `check-args-go`'s arity mismatch branches, reports a count error
-     that `check-arity` has already recorded rather than being
-     unreachable, so replacing it with a refuted branch would change the
-     messages; `list-mem-*` and `index-of-bin` still return `Bool` and
+     `check-args-go`'s arity mismatch branches, left in place though
+     `check-args` now compares the counts before reaching them; `list-mem-*` and `index-of-bin` still return `Bool` and
      `Maybe`, an absence proof for them wanting a `Bin` inequality the
      `Neq` in `core.sl` provides only after `base.sl`; and the fact
      table's `In`/`RuledIn`/`Taken` family, which resembles `MapsTo`,

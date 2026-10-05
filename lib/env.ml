@@ -289,10 +289,10 @@ let namer ?except env terms =
 let show ?except env t = let c = canon env t in to_string ~kw:(speller ?except env) (namer ?except env [ c ]) c
 
 (* A telescope's entries under one naming, each entry's terms canonical; the marks are the entries' own. *)
-let show_tele env tele =
+let show_tele ?marks env tele =
   let tele = snd (map_tele (fun _ t -> canon env t) 0 tele) in
   let terms = List.concat_map (fun (e : Term.entry) -> sg_term e.sg :: Option.to_list e.place) tele in
-  snd (tele_strings ~kw:(speller env) (namer env terms) [] tele)
+  snd (tele_strings ?marks ~kw:(speller env) (namer env terms) [] tele)
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"

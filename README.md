@@ -167,12 +167,8 @@ Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,
 `syntax error` or `note` in place of `error` for those. A position is where a
 token's first character sits, both counted from one. A message about two
-places writes the second as a `note` on its own line under it: the
-indentation warnings and the report of a file's unclosed forms do that, and
-so does an error whose second place is the point — the earlier of two
-conflicting uses of a `unique` value, the first of two `else` branches, the
-declaration that already bound an extern implementation, which may be in
-another file. A
+places writes the second as a `note` on its own line under it, which may be
+in another file. A
 message with nothing to point at — a contradiction that reached the driver, a
 runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).
