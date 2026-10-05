@@ -9,7 +9,8 @@ _model_name = lambda env: env.get("PI_MODEL", {"anthropic": "claude-sonnet-5-5",
                                           "local": env.get("PI_LOCAL_MODEL", "")}.get(_provider(env), ""))
 _effort = lambda env: env.get("PI_EFFORT", "").strip()
 _slc = lambda env: env.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
-PROVIDER, MODEL, EFFORT, SLC = _provider(os.environ), _model_name(os.environ), _effort(os.environ), _slc(os.environ)
+_first_error = lambda env: env.get("PI_FIRST_ERROR", "yes")
+PROVIDER, MODEL, EFFORT, SLC, FIRST_ERROR = _provider(os.environ), _model_name(os.environ), _effort(os.environ), _slc(os.environ), _first_error(os.environ)
 MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "1800"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
@@ -373,9 +374,10 @@ def _shown(capture, ext, data):
     return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False):
-    if not isinstance(gc_stats, bool):
-        raise ValueError("`gc_stats` must be true or false")
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes"):
+    for name, flag in (("gc_stats", gc_stats), ("first_error", first_error)):
+        if not isinstance(flag, bool):
+            raise ValueError(f"`{name}` must be true or false")
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
@@ -392,7 +394,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False):
             (src / name).parent.mkdir(parents=True, exist_ok=True)
             (src / name).write_bytes(read_bytes(p))
             names.append(name)
-        why, c = _proc([COMPILER, "--first-error", "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
+        why, c = _proc([COMPILER, *(["--first-error"] if first_error else []), "--confine-dir", ".", "--confine-output-bytes", str(MAX_PROGRAM_OUTPUT), "--no-env", *names], src, SLC_TIMEOUT, env={})
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
@@ -432,6 +434,12 @@ def done(summary=""):
     return summary or "done"
 
 
+FIRST_ERROR_NOTES = {
+    "yes": "The compiler reports only its first error.",
+    "no": "The compiler reports every error it finds; errors after the first are best-effort and may be unreliable.",
+    "choose": "By default the compiler reports every error it finds; with `first_error` set to true, only its first. "
+              "Errors after the first are best-effort and may be unreliable.",
+}
 STR, STRS, INT = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}
 TOOLS = {
     "read": (read, "Read a file, with line numbers. `offset` is the first line to show (from 1), `limit` how many (default 2000).",
@@ -450,8 +458,9 @@ TOOLS = {
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "
                "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
-               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run.",
-           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": {"type": "boolean"}}, ["paths"]),
+               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. " + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
+           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": {"type": "boolean"}}
+           | ({"first_error": {"type": "boolean"}} if FIRST_ERROR == "choose" else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -1034,6 +1043,7 @@ def _problem(pairs, env):
         (any(not s.exists() for s in seeds), f"no such file: {next((s for s in seeds if not s.exists()), '')}"),
         (any(s.is_dir() and s.resolve().name in map(_keep_path, keep) for s in seeds), "-k cannot name a directory; carry one with -c"),
         (len({s.resolve().name for s in seeds}) < len(seeds), "two -f paths share a name"),
+        (_first_error(env) not in FIRST_ERROR_NOTES, f"PI_FIRST_ERROR must be one of {', '.join(FIRST_ERROR_NOTES)}"),
         (_provider(env) not in ADAPTERS, f"unknown provider {_provider(env)!r}; try: {', '.join(ADAPTERS)}"),
         (not os.access(_slc(env), os.X_OK), f"no slc at {_slc(env)}; build it with self/release.sh")) if bad), None)
 
@@ -1154,6 +1164,8 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
          "  PI_RUN_TIMEOUT    seconds each program may run [10]\n"
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
+         "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
+         "                    `first_error` decides, defaulting to every error [yes]\n"
          "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]")
 
 
