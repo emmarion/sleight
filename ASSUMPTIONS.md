@@ -3215,10 +3215,7 @@ to look for a guard, are the owner's.
     proofs migrate to Shared on both sides. `_` in the leading sharing argument
     is inferred through an expected Coercible, including expected field-proof
     sides and symmetry/composition; no default is guessed when unconstrained.
-    A many-labelled field requires a Shared field proof even under a Unique
-    constructor proof. A unique-labelled field uses the constructor proof's
-    side. This is the intended application of U4's table to U7's constructor
-    congruence. A delegated UniqueFn-to-Fn proof records Unique-to-Shared.
+    A delegated UniqueFn-to-Fn proof records Unique-to-Shared.
 
 162. Tagged unmarked datatypes use OCaml variants with mutable Obj.t fields;
     the host constructor tag supplies the discriminant. Phantom constructors

@@ -247,7 +247,9 @@ There is no erased side: a `coerce` is never cashed erased and its
 proof is always erased, so a side describes a non-erased use. `coercible-ctor`, `coercible-refl` and `coercible-wrap` take a
 `(Sharing)` value `s` as their first argument, `_` under SUGAR.md 6
 solving it from the expected type. `coercible-ctor` and
-`coercible-refl` mint `s` on both sides. `coercible-wrap` mints `s` as
+`coercible-refl` mint `s` on both sides. A field proof `coercible-ctor`
+takes has, on both sides, `s` over a unique-labelled field and
+`(Shared)` over a many-labelled one. `coercible-wrap` mints `s` as
 its target side and, as its source side, `s` over a unique-labelled
 field and `(Shared)` over a many-labelled one. `Delegate` (§38) takes a
 side on each end too, set by `def-fns` where it mints the proof, from
