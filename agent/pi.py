@@ -11,7 +11,7 @@ _effort = lambda env: env.get("PI_EFFORT", "").strip()
 _slc = lambda env: env.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 PROVIDER, MODEL, EFFORT, SLC = _provider(os.environ), _model_name(os.environ), _effort(os.environ), _slc(os.environ)
 MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
-HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "600"))
+HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "1800"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
 MAX_EMPTY = int(os.environ.get("PI_MAX_EMPTY", "3"))
@@ -1148,7 +1148,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
          "  PI_EFFORT         reasoning effort [unset]\n"
          "  PI_STREAM         stream replies [1]\n"
-         "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [600 s, 6 tries]\n"
+         "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [1800 s, 6 tries]\n"
          "  PI_MAX_EMPTY      replies in a row without a tool call before giving up [3]\n"
          "  PI_SESSION_TRIES  attempts at a session before stopping [3]\n"
          "  PI_REQUESTS_LOG   keep every request and response in requests.log, which grows quadratically [0]\n"
