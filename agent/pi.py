@@ -5,7 +5,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RESULTS = HERE / "results"
 _provider = lambda env: env.get("PI_PROVIDER", "neuralwatt")
-_model_name = lambda env: env.get("PI_MODEL", {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "deepseek-v4.1-flash",
+_model_name = lambda env: env.get("PI_MODEL", {"anthropic": "claude-sonnet-5-5", "openai": "gpt-6-luna", "neuralwatt": "deepseek-v4.1-flash-flex",
                                           "local": env.get("PI_LOCAL_MODEL", "")}.get(_provider(env), ""))
 _effort = lambda env: env.get("PI_EFFORT", "").strip()
 _slc = lambda env: env.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
@@ -1138,7 +1138,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "           ones after it aside; -n sets a new total\n"
          "environment (defaults in brackets):\n"
          "  PI_PROVIDER       neuralwatt, anthropic, openai or local [neuralwatt]\n"
-         "  PI_MODEL          [deepseek-v4.1-flash, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
+         "  PI_MODEL          [deepseek-v4.1-flash-flex, claude-sonnet-5-5, gpt-6-luna, or PI_LOCAL_MODEL, by provider]\n"
          "  NEURALWATT_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, PI_LOCAL_API_KEY   the provider's key\n"
          "  PI_LOCAL_URL      [http://localhost:8080/v1]\n"
          "  PI_MAX_TURNS      turns per phase [1000 if the context window is known, else 200]\n"
