@@ -1,4 +1,4 @@
-#!pi -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -k NOTES.md:2000 -n 1 PI_CONTEXT_STOP=10 PI_REWRITE_STOP=2 PI_RUN_TIMEOUT=60 PI_HTTP_TIMEOUT=1800
+#!pi -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -k NOTES.md:2000 -n 1 PI_CONTEXT_STOP=10 PI_REWRITE_STOP=2 PI_RUN_TIMEOUT=60
 Your task is to write fib.sl, an SL program whose value is F(90), the 90th Fibonacci number (F(0) = 0, F(1) = 1).
 Check it with the `sl` tool: it must compile with no warnings and print the number. Compute it iteratively, so that it
 runs in well under a second. Call `done` once it prints the right number.
