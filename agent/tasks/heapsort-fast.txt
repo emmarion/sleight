@@ -1,0 +1,48 @@
+#!pi -f ../../DESIGN.md -f ../../UNIQUE.md -f ../../SUGAR.md -f ../../LITERALS.md -f ../../lib/prelude.sl -f ../../tests -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20
+Your task is to write a fast, in-place heapsort in SL, certified correct against
+heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
+This task will likely take many sessions, so leaving solid, well-recorded
+progress matters more than finishing in this one.
+
+To check your work, compile in order: heapsort-fast/spec.sl, your files, then
+heapsort-fast/accept.sl. This must compile with no warnings. A solution is not
+finished while any array write could be an `-imm` one, any runtime arithmetic
+could be a `u62-*` call, or any runtime recursion could be a tail call, even if
+measurements show no gain.
+
+For reference: DESIGN.md, UNIQUE.md, SUGAR.md and LITERALS.md (the language),
+prelude.sl (the standard library), tests/ (example programs) and self/ (the
+compiler, itself written in SL).
+
+Only work/ and HANDOFF.md carry over to the next session. In work/, keep
+files.txt, listing in order the files that go between heapsort-fast/spec.sl and
+the accept file, and main.sl, a driver that sorts a pseudo-random array and
+prints a checksum. Small helper programs in work/ are fine; keep work/ tidy and
+periodically prune it, deleting files that have served their purpose.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md, which
+tells the next session where things stand and what to try next. Each phase has
+its own budget of tokens. In the second phase, HANDOFF.md is the only file you
+can edit; there's no need to edit it before then, so spend the first phase on
+the task itself.
+
+Hint: the `sl` tool's `gc_stats` reports how much a run allocates.
+
+Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
+`coerce` in DESIGN.md and `init-witness` in prelude.sl).
+
+Hint: a bound on a concrete number, such as `Lt K u62-modulus`, can be proved
+at compile time like this (here K = 1048576):
+
+```
+(let ((many s60) (erased s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) ten))
+(let-match erased (mul-fn _ _ _ _ s60m sixty-mul) (Refl _ _))
+(let ((many s62) (erased s62a)) (add s60 (Succ (Succ (Zero)))))
+(let-match erased (add-fn _ _ _ _ s62a sixty-two-add) (Refl _ _))
+(let ((many u62m) (erased u62m-pow2) (erased _)) (pow2 s62))
+(let-match erased (pow2-fn _ _ _ u62m-pow2 u62-modulus-pow2) (Refl _ _))
+
+(let ((many c)) (nat-cmp 1048576 u62m))
+(comptime-match many c (CLt _ _ _ _ mib-below-u62))
+(let ((erased (Lt 1048576 u62-modulus) mib-check)) mib-below-u62)
+```
