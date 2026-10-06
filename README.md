@@ -23,6 +23,7 @@ semantics written as relations in the language itself (`mini/README.md`).
 ## Build and run
 
 ```sh
+apt-get update
 apt-get install -y ocaml ocaml-dune ocaml-findlib libzarith-ocaml-dev python3 time
 dune build
 dune exec bin/main.exe tests/list.sl tests/map.sl tests/coerce.sl
