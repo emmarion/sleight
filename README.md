@@ -205,49 +205,6 @@ under later facts, and a name is shown only where it still denotes that atom
 is reported where it is written, the entry of the body's final `values` or the
 final expression.
 
-Shadowing is legal (section 9) and warns. Every binder that hides a name
-already in scope earns ``declaration of `List` shadows a previous binder``,
-with a note `shadowed binder is here`, or
-``declaration of `tail` shadows a built-in`` where the binder it hides has no
-position of its own, being a special form or an annotation token. That last
-is the case worth finding, since a field named `tail` or a `let` binder named
-`at` leaves that scope unable to write the marker. `slc` warns the same, at
-the same positions (ASSUMPTIONS 195). The repository is clean of shadowing
-except where a test shadows on purpose.
-
-A same-level call (section 9) in a non-erased position that carries none of
-`tail`, `notail` and `delegate` warns, naming the mark that fits where it
-stands, `` same-level call to `f` is unmarked; mark it `notail` ``: its
-recursion is what can grow the stack with the input. `notail` is the mark
-that says a call is meant not to be a tail call, and is a hard error on one
-that is, as `tail` is on one that is not; all three are hard errors in an
-erased position. Both compilers read the call's position off the same
-post-erasure code the `tail` check reads (`Elab.check_marks`, `check-marks`
-in `self/elab.sl`), and the repository marks every such call, written
-`(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
-the warning is tested on.
-
-A decrease annotation (section 9) that the call would infer were it left out,
-`(subterm _)` and `(predates _)` included, warns
-``unnecessary `(subterm _)`; drop it``, the proof always shown as `_`: SUGAR.md 3
-supplies the same annotation to a bare call, so it is accepted exactly when the
-bare call would be. `slc` warns the same, at the same position. The repository
-drops such annotations, and the proof bindings only they used, but for the
-tests, which mark each warning with `; warns:`, and `tests/io_output_limit.sl`
-and `tests/io_output_limit_huge.sl`, whose limits slc's own warnings would count
-against (ASSUMPTIONS 199).
-
-A `match` in a non-erased position, outside code that is already erased,
-whose every branch is absurd (or that has none) compiles to a runtime
-`absurd`, and warns ``a non-erased `match` with no non-absurd branch compiles
-to a runtime `absurd`; mark the enclosing branch or function `absurd`
-instead``: an absurd-by-proof branch or an absurd function (DESIGN.md sections
-12 and 37) compiles to no code at all. `slc` warns the same, at the same
-position. The repository is clean of it but for the tests it is tested on:
-`tests/match_no_branches_warn.sl`, and `tests/binder_clash.sl`,
-`tests/open_absurd.sl` and `tests/else_phantom_only.sl`, whose subject is
-such a match.
-
 `;! warn NAME MESSAGE`, written between top-level forms, makes every
 non-erased application of the value constructor `NAME`, and every match on the
 type `NAME` that is not `erased`, of any kind, warn with `MESSAGE` (the rest of
