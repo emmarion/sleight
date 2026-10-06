@@ -123,6 +123,12 @@ lexer cannot finish is reported as far as it got.
 `--no-shape-note` leaves out the note naming the `bin/shape` command that a file
 with a parenthesis mistake otherwise gets; slc takes the same flag.
 
+`--hints file` reads the hints that diagnostics attach to special forms
+and pieces of grammar from `file`, in place of `lib/specials.txt` and in
+its format; slc takes the same flag. `--first-error`, slc's alone, stops
+its report after the first error, where it would otherwise list every
+error it recorded (`self/README.md`, "Errors are values").
+
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
