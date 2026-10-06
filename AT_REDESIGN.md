@@ -102,7 +102,9 @@ runtime, that a slot's word is itself.
 
 A `match` at `many` gives a cell as well, as one at `unique` does
 (§U5), the cell being at `many` rather than at `unique`; otherwise
-everything is as at `unique`. The cell binder is mandatory in both
+everything is as at `unique`, except what the cell mints: a cell at
+`unique` may mint its value at `unique`, while a cell at `many` mints
+its value only at `many`. The cell binder is mandatory in both
 modes, and in both it is `at` the scrutinee (§U5), so it gets no
 automatic slot (A2).
 
