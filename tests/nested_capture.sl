@@ -14,3 +14,4 @@
   (inner (predates pm) n))
 
 (outer (Succ (Zero)))
+; warns: tests/nested_capture.sl:14:10: warning: unnecessary `(predates _)`; drop it

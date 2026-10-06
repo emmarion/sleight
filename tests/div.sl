@@ -22,3 +22,6 @@
   (Succ (notail $ slow-div (subterm p) r d1)))
 
 (slow-div 7 1)
+; warns: tests/div.sl:13:46: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/div.sl:20:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/div.sl:21:39: warning: unnecessary `(predates _)`; drop it

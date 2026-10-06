@@ -26,3 +26,8 @@
 (def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (echo (predates pa-p) line))
 
 (ReadLine P start)
+; warns: tests/io_echo.sl:22:100: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_echo.sl:23:62: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_echo.sl:23:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_echo.sl:24:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_echo.sl:26:93: warning: unnecessary `(predates _)`; drop it

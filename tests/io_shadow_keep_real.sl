@@ -1,5 +1,6 @@
-; warns: tests/io_shadow_keep_real.sl:6:12: warning: declaration of `IO` shadows a previous binder
+; warns: tests/io_shadow_keep_real.sl:7:12: warning: declaration of `IO` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
+; warns: tests/io_shadow_keep_real.sl:14:38: warning: unnecessary `(predates _)`; drop it
 ; stderr: real
 ; exit: 1
 (let ((erased RealIO)) IO)

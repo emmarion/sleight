@@ -4,14 +4,11 @@
 ; the program itself (self/interp.sl); elaboration errors go to stderr with exit code 1. The levels are
 ; minted in self/interp.sl.
 
-(let ((erased th-util)) (prove-predates thunk-lvl util-lvl))
-(let ((erased th-compile)) (prove-predates thunk-lvl compile-lvl))
-
 (def-fns util-lvl $ (many write-lines : (subterm many (List $ String) es) (unique (IO io-lvl) next) -> (unique (IO io-lvl) io))
   (match many es _
     ((Nil _) next)
     ((Cons _ e rest)
-      (WriteErr _ e $ unique-thunk (predates th-util) _ _ $ WriteErr _ "\n" $ unique-thunk (predates th-util) _ _ $ notail $ write-lines rest next))))
+      (WriteErr _ e $ unique-thunk _ _ $ WriteErr _ "\n" $ unique-thunk _ _ $ notail $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
 ; source is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
@@ -76,7 +73,7 @@
             (ConfineDir _ fence confined))
           ((BFalse)
             (let ((many out) (erased flat)) $ flatten $ emit-program templates fence bytes with-env env)
-            (WriteOut _ out $ unique-thunk (predates th-compile) _ _ $ Exit _ exit-ok)))))))
+            (WriteOut _ out $ unique-thunk _ _ $ Exit _ exit-ok)))))))
 
 (def-fns slc-lvl $ (many read-files : (many (Bool) prelude) (many (Bool) templates) (many (Bool) interpreting) (many (List $ String) pargs) (many (String) dir) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Bool) first-only) (many (String) help) (many (List $ String) paths) (many (List $ Pair (String) $ String) acc) -> (unique (IO io-lvl) io))
   (let-match many paths (Cons _ path rest) ((Nil _) (compile prelude templates interpreting pargs dir bytes with-env first-only help $ list-rev _ acc)))

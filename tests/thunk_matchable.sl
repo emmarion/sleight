@@ -38,3 +38,5 @@
           (open (predates xy) Peano PZero PSucc (matchable-of Peano) (PSucc (PSucc (PZero))))))
 
 run
+; warns: tests/thunk_matchable.sl:37:24: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_matchable.sl:38:17: warning: unnecessary `(predates _)`; drop it

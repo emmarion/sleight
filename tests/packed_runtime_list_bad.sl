@@ -24,3 +24,4 @@
   (let ((erased pk)) (prove-predates ps K))
   (run-all (predates kz) ps pk n))
 (main 3)
+; warns: tests/packed_runtime_list_bad.sl:19:68: warning: unnecessary `(subterm _)`; drop it

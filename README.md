@@ -227,6 +227,16 @@ in `self/elab.sl`), and the repository marks every such call, written
 `(tail $ f x)` or `(notail $ f x)`, but for `tests/same_level_warn.sl`, which
 the warning is tested on.
 
+A decrease annotation (section 9) that the call would infer were it left out,
+`(subterm _)` and `(predates _)` included, warns
+``unnecessary `(subterm _)`; drop it``, the proof always shown as `_`: SUGAR.md 3
+supplies the same annotation to a bare call, so it is accepted exactly when the
+bare call would be. `slc` warns the same, at the same position. The repository
+drops such annotations, and the proof bindings only they used, but for the
+tests, which mark each warning with `; warns:`, and `tests/io_output_limit.sl`
+and `tests/io_output_limit_huge.sl`, whose limits slc's own warnings would count
+against (ASSUMPTIONS 199).
+
 A `match` in a non-erased position, outside code that is already erased,
 whose every branch is absurd (or that has none) compiles to a runtime
 `absurd`, and warns ``a non-erased `match` with no non-absurd branch compiles

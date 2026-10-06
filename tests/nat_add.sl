@@ -17,3 +17,4 @@
 (let ((many two)) (Succ (Succ (Zero))))
 (let ((many s) (erased pa)) (plus two (Succ two)))
 s
+; warns: tests/nat_add.sl:14:49: warning: unnecessary `(subterm _)`; drop it

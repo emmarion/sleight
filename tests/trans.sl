@@ -11,3 +11,4 @@
 (def-fns L2 $ (many g : (many (Nat) n) -> (many (Nat) m))
   (f (predates (predates-trans p q)) n))
 (g (Zero))
+; warns: tests/trans.sl:12:6: warning: unnecessary `(predates _)`; drop it

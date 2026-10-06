@@ -31,3 +31,4 @@
 (let ((many xs)) (VCons (Nat) one (Zero) (VCons (Nat) (Zero) one (VNil (Nat)))))
 (let ((many ys)) (VCons (Nat) (Zero) two (VNil (Nat))))
 (vappend (Nat) two one (Succ two) (PlusS one one two (PlusS (Zero) one one (PlusZ one))) xs ys)
+; warns: tests/vec_append.sl:27:53: warning: unnecessary `(subterm _)`; drop it

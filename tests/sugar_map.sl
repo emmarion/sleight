@@ -27,3 +27,5 @@
 (let ((many xs)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
+; warns: tests/sugar_map.sl:19:20: warning: unnecessary `(predates _)`; drop it
+; warns: tests/sugar_map.sl:19:58: warning: unnecessary `(subterm _)`; drop it

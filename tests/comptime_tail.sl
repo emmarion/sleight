@@ -44,3 +44,4 @@
 (let ((erased n0) (erased v0)) (bin-to-nat start))
 
 (countdown n0 start v0 (Even))
+; warns: tests/comptime_tail.sl:41:20: warning: unnecessary `(subterm _)`; drop it

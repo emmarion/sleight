@@ -21,3 +21,8 @@
   (str-append (predates sm) (rep-ab (predates lm) 3) (str-append (predates sm) in "\n")))
 
 main
+; warns: tests/main_factory.sl:13:59: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/main_factory.sl:13:29: warning: unnecessary `(predates _)`; drop it
+; warns: tests/main_factory.sl:21:37: warning: unnecessary `(predates _)`; drop it
+; warns: tests/main_factory.sl:21:66: warning: unnecessary `(predates _)`; drop it
+; warns: tests/main_factory.sl:21:15: warning: unnecessary `(predates _)`; drop it

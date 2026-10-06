@@ -58,3 +58,13 @@
         (loop (predates lm) a (subterm-trans q (lt-sub (predates lm) a b l)))))))
 
 (Zero)
+; warns: tests/lt_subterm.sl:34:31: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/lt_subterm.sl:41:27: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/lt_subterm.sl:43:43: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/lt_subterm.sl:51:29: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:52:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:55:60: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:55:31: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:58:56: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:58:15: warning: unnecessary `(predates _)`; drop it
+; warns: tests/lt_subterm.sl:57:16: warning: unnecessary `(predates _)`; drop it

@@ -21,3 +21,4 @@
 (let ((erased ig)) (coercible-of (delegate-of inc-meters)))
 (let ((many (Fn L (many (Nat) a) -> (many (Nat) b)) g)) (coerce inc-meters ig))
 (g (Zero))
+; warns: tests/delegate_coerce.sl:18:38: warning: unnecessary `(predates _)`; drop it

@@ -10,3 +10,4 @@
   (delegate (inc (predates p) n)))
 (let ((erased ig)) (coercible-of (delegate-of g)))
 (g (Zero))
+; warns: tests/delegate_inner_adts.sl:10:18: warning: unnecessary `(predates _)`; drop it

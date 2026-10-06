@@ -21,3 +21,7 @@
   (tail $ gcd b (subterm (lt-sub (predates lh) b r p)) r))
 
 (gcd 12 18)
+; warns: tests/gcd.sl:10:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/gcd.sl:12:41: warning: unnecessary `(predates _)`; drop it
+; warns: tests/gcd.sl:20:39: warning: unnecessary `(predates _)`; drop it
+; warns: tests/gcd.sl:21:34: warning: unnecessary `(predates _)`; drop it

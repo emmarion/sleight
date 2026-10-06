@@ -10,3 +10,6 @@
     ((Succ n1) (tail $ ack (subterm (prove-subterm m1 m)) m1 (notail $ ack m (subterm (prove-subterm n1 n)) n1)))))
 
 (ack 2 3)
+; warns: tests/ackermann.sl:9:25: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/ackermann.sl:10:78: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/ackermann.sl:10:28: warning: unnecessary `(subterm _)`; drop it

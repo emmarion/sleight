@@ -8,3 +8,4 @@
     ((Succ k)
       (let ((many c) (erased q)) (add2 (subterm _) k b))
       (values (Succ c) (AddSucc k k c q)))))
+; warns: tests/nat_add_bad.sl:9:40: warning: unnecessary `(subterm _)`; drop it

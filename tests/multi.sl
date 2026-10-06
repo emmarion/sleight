@@ -14,3 +14,4 @@
   d)
 
 (second (Succ (Zero)) (Zero))
+; warns: tests/multi.sl:13:34: warning: unnecessary `(predates _)`; drop it

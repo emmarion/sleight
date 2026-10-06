@@ -26,3 +26,6 @@
 
 (let ((erased N) (many h)) (compose-all (Cons (Fn M (many (Nat) x) -> (many (Nat) y)) inc (Cons (Fn M (many (Nat) x) -> (many (Nat) y)) inc (Nil (Fn M (many (Nat) x) -> (many (Nat) y)))))))
 (h 3)
+; warns: tests/compose_list_dynamic.sl:19:58: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/compose_list_dynamic.sl:24:30: warning: unnecessary `(predates _)`; drop it
+; warns: tests/compose_list_dynamic.sl:24:12: warning: unnecessary `(predates _)`; drop it

@@ -41,3 +41,10 @@
     ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code2))))))
 
 (WriteFile P "io-test.txt" "file contents\n" after-write)
+; warns: tests/io_file_args.sl:28:46: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_file_args.sl:28:130: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_file_args.sl:28:86: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_file_args.sl:31:14: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_file_args.sl:35:43: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_file_args.sl:36:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_file_args.sl:41:45: warning: unnecessary `(predates _)`; drop it

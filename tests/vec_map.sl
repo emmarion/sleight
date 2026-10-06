@@ -16,3 +16,5 @@
       (VCons (Nat) m (inc (predates p) x) (notail $ vmap m (subterm q) xs)))))
 
 (vmap (Succ (Zero)) (VCons (Nat) (Zero) (Zero) (VNil (Nat))))
+; warns: tests/vec_map.sl:16:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/vec_map.sl:16:60: warning: unnecessary `(subterm _)`; drop it

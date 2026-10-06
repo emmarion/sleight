@@ -139,3 +139,33 @@
     ((Some a s) (WriteOut B "starting\n" (unique-thunk (predates th-b) _ _ (coerce echo-a1 qe))))))
 
 (ReadLine B user-start)
+; warns: tests/io_lift.sl:34:51: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:42:51: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:48:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:51:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:54:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:57:64: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:60:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:63:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:66:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:69:64: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:72:79: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:75:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:78:56: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:81:72: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:84:56: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:87:68: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:90:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:93:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:96:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:99:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:102:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:104:46: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:105:46: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:118:106: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:119:64: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:119:28: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:120:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:121:104: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:130:53: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:131:51: warning: unnecessary `(predates _)`; drop it

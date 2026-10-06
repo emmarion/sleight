@@ -39,12 +39,17 @@
 
 run
 ; warns: tests/extern_nested.sl:27:14: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:788:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
 ; warns: tests/extern_nested.sl:30:18: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:788:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
 ; warns: tests/extern_nested.sl:30:27: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:788:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
 ; warns: tests/extern_nested.sl:31:27: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:788:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
 ; warns: tests/extern_nested.sl:31:36: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
-; warns: lib/prelude.sl:788:1: note: `;! warn` for `SCons` is here
+; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
+; warns: tests/extern_nested.sl:36:31: warning: unnecessary `(predates _)`; drop it
+; warns: tests/extern_nested.sl:36:81: warning: unnecessary `(predates _)`; drop it
+; warns: tests/extern_nested.sl:36:57: warning: unnecessary `(predates _)`; drop it
+; warns: tests/extern_nested.sl:37:20: warning: unnecessary `(predates _)`; drop it
+; warns: tests/extern_nested.sl:38:20: warning: unnecessary `(predates _)`; drop it

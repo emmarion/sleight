@@ -33,3 +33,8 @@
     (plus (predates pa) (notail $ size (subterm p) t) (notail $ fsize (subterm q) rest))))
 
 (size (Node (FCons (Node (FNil)) (FNil))))
+; warns: tests/mutual.sl:19:24: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/mutual.sl:28:27: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/mutual.sl:33:40: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/mutual.sl:33:71: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/mutual.sl:33:11: warning: unnecessary `(predates _)`; drop it

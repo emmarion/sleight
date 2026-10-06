@@ -24,3 +24,5 @@
   (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))
 
 (run-all ps pk 3)
+; warns: tests/packed_list_predates.sl:9:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/packed_list_predates.sl:24:60: warning: unnecessary `(subterm _)`; drop it

@@ -26,3 +26,4 @@
         (absurd Refl)))))
 
 (only-a (TA))
+; warns: tests/numeral_lemmas.sl:24:34: warning: unnecessary `(predates _)`; drop it

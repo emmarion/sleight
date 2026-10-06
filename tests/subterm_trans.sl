@@ -11,3 +11,4 @@
   (Succ (notail $ pairs A (subterm (subterm-trans q p)) tl2)))
 
 (pairs (Nat) (Cons (Nat) (Zero) $ Cons (Nat) (Zero) $ Cons (Nat) (Zero) $ Nil (Nat)))
+; warns: tests/subterm_trans.sl:11:27: warning: unnecessary `(subterm _)`; drop it

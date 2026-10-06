@@ -12,3 +12,5 @@
     ((Succ k) (pick (predates xt) (BFalse)))))
 
 main
+; warns: tests/thunk_union.sl:10:25: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_union.sl:12:21: warning: unnecessary `(predates _)`; drop it

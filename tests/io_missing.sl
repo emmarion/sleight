@@ -17,3 +17,5 @@
     ((Fail a m) (WriteErr P "missing\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
 
 (ReadFile P "no-such-file" after-read)
+; warns: tests/io_missing.sl:16:43: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_missing.sl:17:55: warning: unnecessary `(predates _)`; drop it

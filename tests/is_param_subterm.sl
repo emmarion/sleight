@@ -8,3 +8,4 @@
   (let ((erased p)) (prove-subterm n m))
   (tail $ count k (subterm p) n))
 (count (Succ (Zero)) (Succ (Succ (Zero))))
+; warns: tests/is_param_subterm.sl:9:19: warning: unnecessary `(subterm _)`; drop it

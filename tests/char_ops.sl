@@ -30,3 +30,4 @@
 
 (nat-add (which #\a #\b)
   (nat-add (which-nat (Zero) (Zero) u62-modulus-pos u62-modulus-pos) (which-nat (Succ (Zero)) (Zero) one-lt u62-modulus-pos)))
+; warns: tests/char_ops.sl:15:25: warning: unnecessary `(predates _)`; drop it

@@ -20,3 +20,4 @@
 (let ((erased ig)) (coercible-of (delegate-of noted)))
 (let ((many (Fn L (many (Nat) a) -> (many (Nat) b)) g)) (coerce noted ig))
 (g (Zero))
+; warns: tests/delegate_erased_inner.sl:17:18: warning: unnecessary `(predates _)`; drop it

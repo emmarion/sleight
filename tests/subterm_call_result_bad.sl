@@ -18,3 +18,4 @@
       (let ((many w2)) (f (predates aw)))
       (Succ (walk (subterm (prove-subterm w2 w)) w2)))))
 walk
+; warns: tests/subterm_call_result_bad.sl:18:27: warning: unnecessary `(predates _)`; drop it

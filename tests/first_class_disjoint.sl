@@ -18,3 +18,4 @@
 (let ((erased xy)) (prove-predates X Y))
 (def-fns Y $ (many go : -> (many (Nat) n)) (g (predates xy) U UA UB (matchable-of U) (Succ (Zero)) (UA (Succ (Zero)))))
 go
+; warns: tests/first_class_disjoint.sl:19:47: warning: unnecessary `(predates _)`; drop it

@@ -857,10 +857,10 @@ and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l hl calle
   if pos <> Erased && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
   if unique && pos <> Erased && callee.erasure = Many then error_with_in env l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
   let env = match callee.term with Var x -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
-  let annotation, args =
+  let written, args =
     let rec go i acc = function
-      | List (_, [ k; p ]) :: rest when is_special env k Sp.Predates && i = 0 -> (Some (`Predates p), List.rev_append acc rest)
-      | List (_, [ k; p ]) :: rest when is_special env k Sp.Subterm -> (Some (`Subterm (i, p)), List.rev_append acc rest)
+      | List (al, [ k; p ]) :: rest when is_special env k Sp.Predates && i = 0 -> (Some (al, `Predates p), List.rev_append acc rest)
+      | List (al, [ k; p ]) :: rest when is_special env k Sp.Subterm -> (Some (al, `Subterm (i, p)), List.rev_append acc rest)
       | a :: rest -> go (i + 1) (a :: acc) rest
       | [] -> (None, List.rev acc)
     in
@@ -872,18 +872,18 @@ and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l hl calle
   let counterpart k = match List.nth_opt env.subterms k with Some x -> x | None -> error l "the enclosing function has no subterm parameter at position %d" k in
   let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
   let same cur = equal (canon env lv) (canon env (Var cur)) in
-  let annotation =
+  let inferred () =
     let wild = Atom (l, "_") in
     let differs j pi = match List.nth_opt env.subterms j with Some x -> not (equal (canon env (List.nth arg_terms pi)) (canon env (Var x))) | None -> false in
-    match (env.level, annotation) with
-    | At cur, None when same cur -> (
+    match env.level with
+    | At cur when same cur -> (
         match List.find_opt (fun (j, pi) -> differs j pi) (List.mapi (fun j pi -> (j, pi)) subterm_params) with
         | Some (_, i) -> Some (`Subterm (i, wild))
         | None -> error l "same-level call to %s decreases no subterm argument" (qshow env callee.term))
-    | At _, None -> Some (`Predates wild)
-    | _ -> annotation
+    | At _ -> Some (`Predates wild)
+    | Top -> None
   in
-  let env =
+  let check annotation =
     match (env.level, annotation) with
     | Top, None -> env
     | Top, Some _ -> error l "the top level calls without proofs; drop the decrease annotation (section 24)"
@@ -907,6 +907,14 @@ and elab_call ?(unique = false) ?(demand = Fixed) cc env ?tele expect l hl calle
     | At cur, _ ->
         let kind, ann, other = if same cur then ("same", "subterm", "predates") else ("lower", "predates", "subterm") in
         error l "%s-level call to %s takes a `(%s p)` annotation, not `(%s p)`" kind (qshow env callee.term) (speller env ann) (speller env other)
+  in
+  let env = match written with
+    | None -> check (inferred ())
+    | Some (al, a) ->
+        let env' = check (Some a) in
+        if (try ignore (check (inferred ())); true with Error _ -> false) then
+          warn_in env al [] "unnecessary %s; drop it" (tick (Printf.sprintf "(%s _)" (speller env (match a with `Predates _ -> "predates" | `Subterm _ -> "subterm"))));
+        env'
   in
   let env, ids = open_tele env ~word:false ~names:(anon rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check l expect ids;

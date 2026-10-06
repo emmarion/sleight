@@ -27,3 +27,6 @@
 (def-fns Z $ (many main : -> (many (Nat) r))
   (run-all (predates kz) (Cons (Packed) (Pack L1 p1 inc) (Cons (Packed) (Pack L2 p2 dbl) (Nil (Packed)))) 3))
 main
+; warns: tests/packed_bound.sl:9:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/packed_bound.sl:23:74: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/packed_bound.sl:28:12: warning: unnecessary `(predates _)`; drop it

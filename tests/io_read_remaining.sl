@@ -22,3 +22,9 @@
     ((Some a s) (WriteOut P (str-append (predates str-p) "line: " (str-append (predates str-p) s "\n")) (unique-thunk (predates thunk-p) _ _ (ReadRemaining P after-rest))))))
 
 (ReadLine P after-line)
+; warns: tests/io_read_remaining.sl:17:65: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_read_remaining.sl:17:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_read_remaining.sl:17:108: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_read_remaining.sl:22:79: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_read_remaining.sl:22:41: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_read_remaining.sl:22:119: warning: unnecessary `(predates _)`; drop it

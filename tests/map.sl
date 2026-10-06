@@ -34,3 +34,5 @@
 (let ((many xs)) (Cons (Nat) (Zero) $ Cons (Nat) (Succ (Zero)) $ Nil (Nat)))
 
 (map-nat (Nat) (Nat) inc xs)
+; warns: tests/map.sl:24:20: warning: unnecessary `(predates _)`; drop it
+; warns: tests/map.sl:24:60: warning: unnecessary `(subterm _)`; drop it

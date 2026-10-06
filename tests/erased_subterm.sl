@@ -15,3 +15,4 @@
   (Succ (Succ (notail $ twice (subterm p) k t))))
 
 (twice (Succ (Zero)) (SSucc (Zero) (SZero)))
+; warns: tests/erased_subterm.sl:15:31: warning: unnecessary `(subterm _)`; drop it

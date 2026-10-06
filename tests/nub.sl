@@ -37,3 +37,10 @@
 (let ((many five)) (Succ four))
 (let ((many v)) (VCons (Nat) four 1 (VCons (Nat) three 2 (VCons (Nat) two 1 (VCons (Nat) one 3 (VCons (Nat) (Zero) 2 (VNil (Nat))))))))
 (nub five v)
+; warns: tests/nub.sl:10:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/nub.sl:18:69: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/nub.sl:19:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nub.sl:21:23: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nub.sl:23:44: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nub.sl:30:52: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nub.sl:31:48: warning: unnecessary `(predates _)`; drop it

@@ -26,3 +26,7 @@
     ((No a b q) (Exit P code0))))
 
 (ReadLine P k)
+; warns: tests/io_factory_twice.sl:10:14: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_factory_twice.sl:23:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_factory_twice.sl:23:25: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_factory_twice.sl:24:23: warning: unnecessary `(predates _)`; drop it

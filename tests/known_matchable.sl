@@ -11,3 +11,4 @@
     ((Nil a) (Zero))
     ((Cons a hd tl) (Succ (notail $ len m (subterm (prove-subterm tl xs)) tl)))))
 (len (matchable-of List) (Cons (Nat) 0 (Nil (Nat))))
+; warns: tests/known_matchable.sl:12:43: warning: unnecessary `(subterm _)`; drop it

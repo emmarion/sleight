@@ -10,3 +10,4 @@
   (let-match erased k (MkInf i))
   (let ((erased p)) (prove-subterm i k))
   (delegate (f n (subterm p) i)))
+; warns: tests/delegate_self_bad.sl:12:18: warning: unnecessary `(subterm _)`; drop it

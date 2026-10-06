@@ -34,3 +34,6 @@
 (def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (count (predates pa-p) counter line))
 
 (ReadLine P start)
+; warns: tests/io_unique_state.sl:25:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_unique_state.sl:30:105: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_unique_state.sl:34:94: warning: unnecessary `(predates _)`; drop it

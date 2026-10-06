@@ -8,3 +8,4 @@
   (twice (predates xt) (Succ (Zero))))
 
 main
+; warns: tests/thunk_nested_adt.sl:8:10: warning: unnecessary `(predates _)`; drop it

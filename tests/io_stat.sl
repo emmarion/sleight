@@ -60,3 +60,19 @@
   (WriteFile P "io-stat-test.txt" "one" wrote))
 
 (DeleteFile P "io-stat-test.txt" swept)
+; warns: tests/io_stat.sl:32:92: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:32:64: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:32:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:33:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:31:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:40:67: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:40:39: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:40:106: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:41:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:45:67: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:45:39: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:45:106: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:46:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:50:39: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:50:78: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_stat.sl:51:45: warning: unnecessary `(predates _)`; drop it

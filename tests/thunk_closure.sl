@@ -11,3 +11,5 @@
   (inc4 (predates kt) (add-one (predates lt) (Zero))))
 
 main
+; warns: tests/thunk_closure.sl:11:32: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_closure.sl:11:9: warning: unnecessary `(predates _)`; drop it

@@ -85,3 +85,22 @@
   (DeleteFile P "io-dir-test/b.txt" swept-b))
 
 (DeleteFile P "io-dir-test/a.txt" swept-a)
+; warns: tests/io_dirs.sl:29:60: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:30:55: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:27:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:35:54: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:36:59: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:33:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:46:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:47:57: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:53:31: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:53:118: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_dirs.sl:53:71: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:57:30: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:58:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:69:57: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:70:54: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:67:70: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:75:51: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:76:62: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_dirs.sl:73:70: warning: unnecessary `(predates _)`; drop it

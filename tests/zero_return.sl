@@ -11,3 +11,4 @@
   (let () (nothing (predates p) n))
   n)
 (use (Zero))
+; warns: tests/zero_return.sl:11:20: warning: unnecessary `(predates _)`; drop it

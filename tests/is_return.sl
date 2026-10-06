@@ -16,3 +16,4 @@
   (Succ (notail $ reify k (subterm p) t)))
 
 (reify (Succ (Zero)) (SSucc (Zero) (SZero)))
+; warns: tests/is_return.sl:16:27: warning: unnecessary `(subterm _)`; drop it

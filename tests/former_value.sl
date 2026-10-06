@@ -10,3 +10,4 @@
 (def-fns K $ (many apply : (many T f) (many (Nat) x) -> (many (Nat) y))
   (f (predates p) x))
 (apply inc (Zero))
+; warns: tests/former_value.sl:11:6: warning: unnecessary `(predates _)`; drop it

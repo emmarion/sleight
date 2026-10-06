@@ -45,3 +45,6 @@
 (let ((many ms)) (Cons (Meters) (MkMeters (Succ (Zero))) $ Cons (Meters) (MkMeters (Zero)) $ Nil (Meters)))
 
 (unwrap-all ms)
+; warns: tests/coerce.sl:19:53: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/coerce.sl:34:49: warning: unnecessary `(predates _)`; drop it
+; warns: tests/coerce.sl:41:18: warning: unnecessary `(predates _)`; drop it

@@ -22,3 +22,4 @@
     (absurd (TB) (clash (predates pz) 0 (numeral-of 0) (numeral-of 1)))))
 
 (only-a (TA))
+; warns: tests/numeral_of_branch.sl:22:25: warning: unnecessary `(predates _)`; drop it

@@ -22,3 +22,5 @@
 (match many (count (Nat) xs) (((Nat) r))
   ((Zero) (Zero))
   ((Succ k) (count-again (Nat) xs)))
+; warns: tests/bare_call.sl:19:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/bare_call.sl:19:26: warning: unnecessary `(predates _)`; drop it

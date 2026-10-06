@@ -29,3 +29,7 @@
   (let ((erased nz)) (prove-predates N Z))
   (h (predates nz) 3))
 main
+; warns: tests/runtime_level_bad.sl:17:58: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/runtime_level_bad.sl:22:30: warning: unnecessary `(predates _)`; drop it
+; warns: tests/runtime_level_bad.sl:22:12: warning: unnecessary `(predates _)`; drop it
+; warns: tests/runtime_level_bad.sl:28:43: warning: unnecessary `(predates _)`; drop it

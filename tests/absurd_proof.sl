@@ -21,3 +21,4 @@
     (absurd (Succ k) (succ-not-zero (predates pz) k p))))
 
 (get (Zero) (ItIsZero))
+; warns: tests/absurd_proof.sl:21:37: warning: unnecessary `(predates _)`; drop it

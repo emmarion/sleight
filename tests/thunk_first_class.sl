@@ -8,3 +8,4 @@
   (open (predates xt) Box MkBox (matchable-of Box) (MkBox (Succ (Zero)))))
 
 main
+; warns: tests/thunk_first_class.sl:8:9: warning: unnecessary `(predates _)`; drop it

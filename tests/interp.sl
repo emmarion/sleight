@@ -28,3 +28,12 @@
 
 (let ((many two)) (Succ (Succ (Zero))))
 (eval (EAdd (EMul (Var0) (Var0)) (Lit (Succ (Zero)))) two)
+; warns: tests/interp.sl:8:36: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:13:52: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:13:21: warning: unnecessary `(predates _)`; drop it
+; warns: tests/interp.sl:26:51: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:26:83: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:26:23: warning: unnecessary `(predates _)`; drop it
+; warns: tests/interp.sl:27:52: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:27:84: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/interp.sl:27:24: warning: unnecessary `(predates _)`; drop it

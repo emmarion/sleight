@@ -9,3 +9,4 @@
   (length (predates lt) (Nat) list-xs))
 
 main
+; warns: tests/thunk_list.sl:9:11: warning: unnecessary `(predates _)`; drop it

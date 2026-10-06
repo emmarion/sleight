@@ -27,3 +27,10 @@
   (tail $ inc1 (predates pln) y2))
 
 (add3 (inc2 0 0))
+; warns: tests/delegate_chain.sl:11:76: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:15:97: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:23:79: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:24:81: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:25:36: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:26:35: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_chain.sl:27:16: warning: unnecessary `(predates _)`; drop it

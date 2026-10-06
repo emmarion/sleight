@@ -19,3 +19,5 @@
   (f (predates (predates-subterm pp q)) (f (predates (predates-subterm pp q)) x)))
 
 (apply-packed (Zero))
+; warns: tests/predates_subterm.sl:19:44: warning: unnecessary `(predates _)`; drop it
+; warns: tests/predates_subterm.sl:19:6: warning: unnecessary `(predates _)`; drop it

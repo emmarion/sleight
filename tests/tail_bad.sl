@@ -9,3 +9,4 @@
     ((Cons a hd tl)
       (let ((erased p)) (prove-subterm tl xs))
       (Succ (tail (len-acc A (subterm p) tl acc))))))
+; warns: tests/tail_bad.sl:11:30: warning: unnecessary `(subterm _)`; drop it

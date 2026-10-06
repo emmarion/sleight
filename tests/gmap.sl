@@ -27,3 +27,5 @@
 
 (let ((many ys)) (gmap List Nil Cons (matchable-of List) (Nat) (Nat) inc (Cons (Nat) (Zero) (Nil (Nat)))))
 (gmap Seq QNil QCons (matchable-of Seq) (Nat) (Nat) inc (QCons (Nat) (Zero) (QNil (Nat))))
+; warns: tests/gmap.sl:26:34: warning: unnecessary `(predates _)`; drop it
+; warns: tests/gmap.sl:26:88: warning: unnecessary `(subterm _)`; drop it

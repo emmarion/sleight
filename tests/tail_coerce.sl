@@ -17,3 +17,4 @@
   m)
 
 (inc-m (Zero))
+; warns: tests/tail_coerce.sl:15:30: warning: unnecessary `(predates _)`; drop it

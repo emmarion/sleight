@@ -38,3 +38,14 @@
     ((Some a s) (WriteOut P (str-append (predates str-p) s "\n") (unique-thunk (predates thunk-p) _ _ (GetEnv P "SL_NONE" after-absent))))))
 
 (GetEnv P "SL_A" after-a)
+; warns: tests/io_env.sl:24:86: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:24:52: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:24:17: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:25:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_env.sl:25:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:28:14: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:32:52: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:33:55: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:37:52: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:38:41: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_env.sl:38:80: warning: unnecessary `(predates _)`; drop it

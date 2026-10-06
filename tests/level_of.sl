@@ -9,3 +9,4 @@
 (def-fns L1 $ (many g : (many (Nat) n) -> (many (Nat) m))
   (f (predates p) n))
 (g (Zero))
+; warns: tests/level_of.sl:10:6: warning: unnecessary `(predates _)`; drop it

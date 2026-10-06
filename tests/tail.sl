@@ -9,3 +9,4 @@
   (tail (len-acc A (subterm p) tl (Succ acc))))
 
 (len-acc (Nat) (Cons (Nat) (Zero) $ Cons (Nat) (Zero) $ Nil (Nat)) (Zero))
+; warns: tests/tail.sl:9:20: warning: unnecessary `(subterm _)`; drop it

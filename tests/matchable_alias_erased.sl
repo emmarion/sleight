@@ -9,3 +9,4 @@
     ((Nil a) (Zero))
     ((Cons a hd tl) (Succ (notail $ len (subterm (prove-subterm tl xs)) tl)))))
 (len (Cons (Nat) 0 (Nil (Nat))))
+; warns: tests/matchable_alias_erased.sl:10:41: warning: unnecessary `(subterm _)`; drop it

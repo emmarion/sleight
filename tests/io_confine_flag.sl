@@ -35,3 +35,10 @@
   (report (predates pa-p) _ "stat cwd" r (ListDir P ".." s1)))
 
 (Stat P "." s0)
+; warns: tests/io_confine_flag.sl:19:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:20:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:23:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:26:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:29:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:32:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine_flag.sl:35:11: warning: unnecessary `(predates _)`; drop it

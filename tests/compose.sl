@@ -23,3 +23,5 @@
 (let ((erased K) (many inc4)) (compose L (level-of inc) inc3 inc))
 
 (inc3 (Zero))
+; warns: tests/compose.sl:16:25: warning: unnecessary `(predates _)`; drop it
+; warns: tests/compose.sl:16:8: warning: unnecessary `(predates _)`; drop it

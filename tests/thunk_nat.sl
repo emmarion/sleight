@@ -8,3 +8,4 @@
   (nat-add (predates nt) 3 4))
 
 main
+; warns: tests/thunk_nat.sl:8:12: warning: unnecessary `(predates _)`; drop it

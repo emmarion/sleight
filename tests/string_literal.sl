@@ -11,3 +11,4 @@
 (comptime-match many rest (SCons d tl))
 (comptime-match many tl (SNil))
 (len s)
+; warns: tests/string_literal.sl:7:41: warning: unnecessary `(subterm _)`; drop it

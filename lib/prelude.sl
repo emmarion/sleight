@@ -352,16 +352,14 @@
     (subterm erased (Add a b c1) p) (erased (Add a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
   (let-match erased p (AddSucc a1 b1 d1 p1) ((AddZero b0) (match erased q _ ((AddZero b1) (Refl (Nat) c1)) (absurd AddSucc))))
   (let-match erased q (AddSucc a2 b2 d2 q1) (absurd AddZero))
-  (let ((erased sp)) (prove-subterm p1 p))
-  (match erased (add-fn a1 b d1 d2 (subterm sp) p1 q1) _ ((Refl t r) (Refl (Nat) c1))))
+  (match erased (add-fn a1 b d1 d2 p1 q1) _ ((Refl t r) (Refl (Nat) c1))))
 
 (def-fns _ $ (erased mul-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
     (subterm erased (Mul a b c1) p) (erased (Mul a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
   (let-match erased p (MulSucc a1 b1 x1 d1 m1 p1)
     ((MulZero b0) (match erased q _ ((MulZero b1) (Refl (Nat) c1)) (absurd MulSucc))))
   (let-match erased q (MulSucc a2 b2 x2 d2 m2 q1) (absurd MulZero))
-  (let ((erased sp)) (prove-subterm m1 p))
-  (match erased (mul-fn a1 b x1 x2 (subterm sp) m1 m2) _
+  (match erased (mul-fn a1 b x1 x2 m1 m2) _
     ((Refl t r) (add-fn x1 b c1 c2 p1 q1))))
 
 (def-fns _ $ (erased add-pos-lt : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) (erased (Lt (Zero) b) pos) -> (erased (Lt a c) q))
@@ -462,8 +460,7 @@
     (erased (Eq (Lt a b) p q) e))
   (let-match erased p (LtS a1 b1 p1) ((LtZ b1) (match erased q _ ((LtZ b2) (Refl (Lt a b) p)) (absurd LtS))))
   (let-match erased q (LtS a2 b2 q1) (absurd LtZ))
-  (let ((erased sp)) (prove-subterm p1 p))
-  (let ((erased ih)) (lt-unique a1 b1 (subterm sp) p1 q1))
+  (let ((erased ih)) (lt-unique a1 b1 p1 q1))
   (match erased ih _ ((Refl t r) (Refl (Lt a b) p))))
 
 (def-fns _ $ (erased double-fn :
@@ -471,8 +468,7 @@
     (subterm erased (Double m d1) p) (erased (Double m d2) q) -> (erased (Eq (Nat) d1 d2) e))
   (let-match erased p (DS a1 b1 pp) ((D0) (match erased q _ ((D0) (Refl (Nat) d1)) (absurd DS))))
   (let-match erased q (DS a2 b2 qq) (absurd D0))
-  (let ((erased sp)) (prove-subterm pp p))
-  (let ((erased ih)) (double-fn a1 b1 b2 (subterm sp) pp qq))
+  (let ((erased ih)) (double-fn a1 b1 b2 pp qq))
   (match erased ih _ ((Refl t r) (Refl (Nat) d1))))
 
 (def-fns _ $ (erased pow2-fn : (erased (Nat) k) (erased (Nat) v) (erased (Nat) w)
@@ -644,8 +640,7 @@
     (subterm erased (Double m1 d) p) (erased (Double m2 d) q) -> (erased (Eq (Nat) m1 m2) e))
   (let-match erased p (DS a1 b1 pp) ((D0) (match erased q _ ((D0) (Refl (Nat) m1)) (absurd DS))))
   (let-match erased q (DS a2 b2 qq) (absurd D0))
-  (let ((erased sp)) (prove-subterm pp p))
-  (let ((erased ih)) (double-inj a1 a2 b1 (subterm sp) pp qq))
+  (let ((erased ih)) (double-inj a1 a2 b1 pp qq))
   (match erased ih _ ((Refl t r) (Refl (Nat) m1))))
 
 (def-fns _ $ (erased absurd double-parity :
@@ -653,8 +648,7 @@
     (subterm erased (Double a (Succ e)) p) (erased (Double b e) q) -> (erased (False) f))
   (let-match erased p (DS a1 b1 pp))
   (let-match erased q (DS a2 b2 qq))
-  (let ((erased sp)) (prove-subterm pp p))
-  (double-parity a1 a2 b2 (subterm sp) pp qq))
+  (double-parity a1 a2 b2 pp qq))
 
 (def-fns _ $ (erased numeral-zero :
     (erased (Nat) n) (erased (Numeral (BZ) n) v) -> (erased (Eq (Nat) n (Zero)) e))
@@ -670,15 +664,13 @@
     ((NZ) (match erased v2 _ ((NZ) (Refl (Nat) m1)) (absurd N1) (absurd N2)))
     ((N1 c1 x1 d1 w1 dd1)
       (let-match erased v2 (N1 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N2))
-      (let ((erased sp)) (prove-subterm w1 v1))
-      (let ((erased ih)) (numeral-fn c1 x1 x2 (subterm sp) w1 w2))
+      (let ((erased ih)) (numeral-fn c1 x1 x2 w1 w2))
       (let-match erased ih (Refl t r))
       (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
       (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))
     ((N2 c1 x1 d1 w1 dd1)
       (let-match erased v2 (N2 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N1))
-      (let ((erased sp)) (prove-subterm w1 v1))
-      (let ((erased ih)) (numeral-fn c1 x1 x2 (subterm sp) w1 w2))
+      (let ((erased ih)) (numeral-fn c1 x1 x2 w1 w2))
       (let-match erased ih (Refl t r))
       (let ((erased ed)) (double-fn x1 d1 d2 dd1 dd2))
       (match erased ed _ ((Refl t2 r2) (Refl (Nat) m1))))))
@@ -692,15 +684,13 @@
       (let-match erased v2 (N1 c2 m2 d2 w2 dd2) (absurd NZ) (absurd (N2 c2 m2 d2 w2 dd2) (double-parity m1 m2 d2 dd1 dd2)))
       (let ((erased em)) (double-inj m1 m2 d1 dd1 dd2))
       (let-match erased em (Refl t r))
-      (let ((erased sp)) (prove-subterm w1 v1))
-      (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
+      (let ((erased ih)) (numeral-inj c1 c2 m1 w1 w2))
       (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))
     ((N2 c1 m1 d1 w1 dd1)
       (let-match erased v2 (N2 c2 m2 d2 w2 dd2) (absurd NZ) (absurd (N1 c2 m2 d2 w2 dd2) (double-parity m2 m1 d1 dd2 dd1)))
       (let ((erased em)) (double-inj m1 m2 d1 dd1 dd2))
       (let-match erased em (Refl t r))
-      (let ((erased sp)) (prove-subterm w1 v1))
-      (let ((erased ih)) (numeral-inj c1 c2 m1 (subterm sp) w1 w2))
+      (let ((erased ih)) (numeral-inj c1 c2 m1 w1 w2))
       (match erased ih _ ((Refl t2 r2) (Refl (Bin) b1))))))
 
 (def-adts
@@ -732,8 +722,7 @@
     ((BS2 b0 c0 s0)
       (let-match erased v (N2 c1 x1 d1 w1 dd1) (absurd NZ) (absurd N1))
       (let-match erased w (N1 c2 x2 d2 w2 dd2) (absurd NZ) (absurd N2))
-      (let ((erased sp)) (prove-subterm s0 s))
-      (let ((erased ih)) (numeral-succ b0 c0 x1 x2 (subterm sp) s0 w1 w2))
+      (let ((erased ih)) (numeral-succ b0 c0 x1 x2 s0 w1 w2))
       (let-match erased ih (Refl t r))
       (let-match erased dd2 (DS a2 bb ddx) (absurd D0))
       (let ((erased ed)) (double-fn x1 d1 bb dd1 ddx))

@@ -76,3 +76,20 @@
   (report (predates pa-p) _ "mkdir" r (ConfineDir P "io-confine-test" s1)))
 
 (MkDir P "io-confine-test" s0)
+; warns: tests/io_confine.sl:30:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:31:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:34:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:37:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:40:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:43:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:46:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:49:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:52:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:55:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:58:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:61:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:64:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:67:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:70:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:73:11: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_confine.sl:76:11: warning: unnecessary `(predates _)`; drop it

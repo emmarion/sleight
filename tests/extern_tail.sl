@@ -19,3 +19,5 @@
   (count-down (predates xy) n (Zero)))
 
 run
+; warns: tests/extern_tail.sl:13:33: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/extern_tail.sl:19:15: warning: unnecessary `(predates _)`; drop it

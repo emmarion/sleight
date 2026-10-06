@@ -19,3 +19,6 @@
   (match many s _
     ((MkS h rest) (Cons (Nat) h (notail $ take (subterm (prove-subterm n1 n)) n1 (rest (predates kt)))))))
 (take 3 (nats-from (Zero)))
+; warns: tests/stream.sl:13:62: warning: unnecessary `(predates _)`; drop it
+; warns: tests/stream.sl:20:88: warning: unnecessary `(predates _)`; drop it
+; warns: tests/stream.sl:20:48: warning: unnecessary `(subterm _)`; drop it

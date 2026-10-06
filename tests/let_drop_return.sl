@@ -13,3 +13,4 @@
 (let ((erased a) (many b)) (two (Zero)))
 (comptime-match many b (Succ z))
 (second z)
+; warns: tests/let_drop_return.sl:10:35: warning: unnecessary `(predates _)`; drop it

@@ -18,3 +18,5 @@
 
 (let ((erased L) (many t) (many d)) (make))
 (t (d (Zero)))
+; warns: tests/nested_marks.sl:15:63: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nested_marks.sl:16:67: warning: unnecessary `(predates _)`; drop it

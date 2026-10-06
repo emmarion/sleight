@@ -14,3 +14,4 @@
     ((Cons a hd tl) (Succ (notail $ f q (subterm (prove-subterm tl xs)) tl)))))
 
 (g (Pack g) (Cons (Nat) 0 (Cons (Nat) 0 (Cons (Nat) 0 (Nil (Nat))))))
+; warns: tests/recursion_through_pointer.sl:14:41: warning: unnecessary `(subterm _)`; drop it

@@ -48,3 +48,6 @@
            (dup-head (predates xy) String (Char) SNil SCons (matchable-of String) "ab")))
 
 run
+; warns: tests/thunk_extern_first_class.sl:46:25: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_extern_first_class.sl:47:18: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_extern_first_class.sl:48:22: warning: unnecessary `(predates _)`; drop it

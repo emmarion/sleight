@@ -9,3 +9,5 @@
   (map-nat (predates mlt) (Nat) (Nat) inc (unwrap-all (predates vt) ms)))
 
 main
+; warns: tests/thunk_coerce.sl:9:55: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_coerce.sl:9:12: warning: unnecessary `(predates _)`; drop it

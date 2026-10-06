@@ -38,3 +38,8 @@
     ((No a b q) (Exit P code0))))
 
 (ReadLine P k)
+; warns: tests/io_closure_in_data.sl:10:14: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_closure_in_data.sl:24:45: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_closure_in_data.sl:24:22: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_closure_in_data.sl:35:23: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_closure_in_data.sl:36:23: warning: unnecessary `(predates _)`; drop it

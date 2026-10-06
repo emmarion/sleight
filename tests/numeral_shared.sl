@@ -12,3 +12,4 @@
 (let ((many y)) 5)
 (let ((erased r)) (five x (numeral-of 5)))
 (add-two 1)
+; warns: tests/numeral_shared.sl:9:12: warning: unnecessary `(predates _)`; drop it

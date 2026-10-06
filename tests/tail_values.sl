@@ -20,3 +20,5 @@
   same)
 
 run
+; warns: tests/tail_values.sl:12:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/tail_values.sl:19:42: warning: unnecessary `(predates _)`; drop it

@@ -16,3 +16,4 @@
 (let ((erased xy)) (prove-predates X Y))
 (def-fns Y $ (many go : -> (many (Nat) n)) (g (predates xy) U UA UB (matchable-of U) (Succ (Zero)) (UB (Succ (Zero)))))
 go
+; warns: tests/held_union.sl:17:47: warning: unnecessary `(predates _)`; drop it

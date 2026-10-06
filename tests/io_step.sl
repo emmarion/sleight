@@ -31,3 +31,7 @@
   (Step P again))
 
 (settle 3)
+; warns: tests/io_step.sl:24:12: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_step.sl:22:73: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_step.sl:30:13: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_step.sl:28:45: warning: unnecessary `(predates _)`; drop it

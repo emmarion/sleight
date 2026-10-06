@@ -43,3 +43,12 @@
   (tail $ inc (predates pkm) y2))
 
 (thrice two)
+; warns: tests/delegate_sibling.sl:16:20: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_sibling.sl:19:24: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/delegate_sibling.sl:22:26: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/delegate_sibling.sl:36:22: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_sibling.sl:39:27: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/delegate_sibling.sl:40:30: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_sibling.sl:41:32: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_sibling.sl:42:37: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_sibling.sl:43:15: warning: unnecessary `(predates _)`; drop it

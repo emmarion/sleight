@@ -25,3 +25,7 @@
   (leaves (predates ct) t3))
 
 main
+; warns: tests/thunk_shared.sl:16:57: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/thunk_shared.sl:16:89: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/thunk_shared.sl:16:26: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_shared.sl:25:11: warning: unnecessary `(predates _)`; drop it

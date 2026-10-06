@@ -15,3 +15,6 @@
   (div-helper (predates de) (Zero) m n m))
 
 (struct-div 7 1)
+; warns: tests/div_structural.sl:9:43: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/div_structural.sl:10:39: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/div_structural.sl:15:15: warning: unnecessary `(predates _)`; drop it
