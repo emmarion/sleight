@@ -126,7 +126,7 @@ let ctor_result env t = match canon env t with TyCtor ps -> Some (ps, type_term)
 let head = function App (h, _) -> h | t -> t
 
 (* Identity after canonicalization (section 5), solving any metas either side holds (Env.unify). *)
-let solve ?raw ?(about = ("", [])) what env loc actual expected =
+let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
   try unify env actual expected
   with Contradiction _ ->
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
@@ -135,7 +135,8 @@ let solve ?raw ?(about = ("", [])) what env loc actual expected =
     let hint = match raw, ctor_result env actual with
       | Some raw, Some (ps, r) when equal (head r) (head (canon env expected)) -> Some (Printf.sprintf "did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Atom (Reader.loc raw, "_")) ps)))))
       | _ -> None in
-    error_with ?hint loc (notes @ snd about) "%s%s mismatch: expected %s, got %s" (fst about) what (qshow env expected) (qshow env actual)
+    let prefix, more = Lazy.force about in
+    error_with ?hint loc (notes @ more) "%s%s mismatch: expected %s, got %s" prefix what (qshow env expected) (qshow env actual)
 
 (* The literals a forcing trial bound, which is what leaves a branch standing that a literal index was meant
    to refute: those whose canonical form the trial changed, and any literal one was bound to. *)
@@ -174,28 +175,29 @@ let non_erased env ids = List.filter (fun x -> (entry env x).mult <> Erased) ids
 let head_name env h = match h.term with Var x -> qname env x | t -> qshow env t
 let head_notes env h = match h.term with Var x -> declared env ~how:(Printf.sprintf " `%s`" (speller env (mult_name (entry env x).mult))) x | _ -> []
 
-type callee = { subject : string; apposed : bool; notes : (Reader.loc * string) list; used : mult -> mult; marks : bool }
+type callee = { subject : string Lazy.t; apposed : bool; notes : (Reader.loc * string) list Lazy.t; used : mult -> mult; marks : bool }
 
 let expected = function [] -> "" | ss -> ": expected " ^ tick (String.concat " " ss)
 let counted n what = Printf.sprintf "%d %s%s" n what (if n = 1 then "" else "s")
 let with_mults used tele = List.map (fun (e : entry) -> { e with mult = used e.mult }) tele
 
 let describe env pos raw term ty =
-  let ty = canon env ty in
-  let kind = kind_name env ty in
   let used, marks = match ty with Fn _ | UniqueFn _ -> (under pos, true) | TyCtor _ -> (Fun.id, false) | _ -> (field_under pos, true) in
-  let subject, apposed, notes = match ty, raw, term with
-    | Cell (Var c, _), Atom _, Var x -> (sprintf_in env "%s, a `Cell` of %s" (qname env x) (qname env c), true, declared_as env c)
-    | Cell (Var c, _), _, _ -> (sprintf_in env "the computed `Cell` of %s" (qname env c), false, (Reader.loc raw, respell env "the `Cell` is computed here") :: declared_as env c)
-    | _, Atom _, Var x -> (qname env x, false, declared_as env x)
-    | _ -> ("the computed " ^ kind, false, [ (Reader.loc raw, Printf.sprintf "the %s is computed here" kind) ]) in
-  { subject; apposed; notes; used; marks }
+  let apposed = match ty, raw with Cell _, Atom _ -> true | _ -> false in
+  let view = lazy (
+    let kind = kind_name env ty in
+    match ty, raw, term with
+    | Cell (Var c, _), Atom _, Var x -> (sprintf_in env "%s, a `Cell` of %s" (qname env x) (qname env c), declared_as env c)
+    | Cell (Var c, _), _, _ -> (sprintf_in env "the computed `Cell` of %s" (qname env c), (Reader.loc raw, respell env "the `Cell` is computed here") :: declared_as env c)
+    | _, Atom _, Var x -> (qname env x, declared_as env x)
+    | _ -> ("the computed " ^ kind, [ (Reader.loc raw, Printf.sprintf "the %s is computed here" kind) ])) in
+  { subject = lazy (fst (Lazy.force view)); apposed; notes = lazy (snd (Lazy.force view)); used; marks }
 
 let count_error env l c what tele got =
-  error_with l c.notes "%s%s expects %s, got %d%s" c.subject (if c.apposed then "," else "") (counted (List.length tele) what) got
+  error_with l (Lazy.force c.notes) "%s%s expects %s, got %d%s" (Lazy.force c.subject) (if c.apposed then "," else "") (counted (List.length tele) what) got
     (expected (show_tele ~marks:c.marks env (with_mults c.used tele)))
 
-let argument c i name = Printf.sprintf "argument %d%s of %s" (i + 1) (match name with Some n -> ", " ^ tick n ^ "," | None -> "") c.subject
+let argument c i name = Printf.sprintf "argument %d%s of %s" (i + 1) (match name with Some n -> ", " ^ tick n ^ "," | None -> "") (Lazy.force c.subject)
 
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased; place = None }
 
@@ -310,13 +312,13 @@ let marks env allowed items =
 let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
 
 let anon tele = List.map (fun _ -> None) tele
-type sink = { owner : string; noun : string; shown : string list Lazy.t; anchors : (Reader.loc * string) list }
+type sink = { owner : string; noun : string; shown : string list; anchors : (Reader.loc * string) list }
 
 let count_check ?sink l expect got =
   let n = List.length expect and m = List.length got in
-  if n <> m then match sink with
+  if n <> m then match Option.map Lazy.force sink with
     | None -> error l "expected %d values, got %d" n m
-    | Some s -> error_with l s.anchors "%s expects %s, got %d%s" s.owner (counted n s.noun) m (expected (Lazy.force s.shown))
+    | Some s -> error_with l s.anchors "%s expects %s, got %d%s" s.owner (counted n s.noun) m (expected s.shown)
 let ctor_result head mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (head, List.rev mvars)); place = None; loc = Reader.nowhere } ]
 let field_names fields = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields
 
@@ -506,10 +508,10 @@ let slot_count env l what noun c params got =
   error_with l (declared_as env c) "%s of %s expects %s, got %d%s" (respell env what) (qname env c) (counted n noun) got
     (match show_tele env params with [] -> "" | ss -> ": expected one for each non-erased field of " ^ tick (String.concat " " ss))
 
-let annotated env form ann tele expect =
+let annotated env form ann tele expect = lazy (
   let enclosing = "the enclosing `" ^ form ^ "`" in
-  { owner = respell env enclosing; noun = "return value"; shown = lazy (show_tele env (List.map2 (fun m (e : entry) -> { e with mult = m }) expect tele));
-    anchors = [ (Reader.loc ann, respell env ("the return annotation of " ^ enclosing ^ " is here")) ] }
+  { owner = respell env enclosing; noun = "return value"; shown = show_tele env (List.map2 (fun m (e : entry) -> { e with mult = m }) expect tele);
+    anchors = [ (Reader.loc ann, respell env ("the return annotation of " ^ enclosing ^ " is here")) ] })
 
 let binder_count env l what c mode got tele =
   error_with l (declared_as env c) "%s on %s under `%s` expects %s, got %d%s" (respell env what) (qname env c) (speller env (mult_name mode))
@@ -729,9 +731,9 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
     List.fold_left2
       (fun (env, acc, codes, bindings) (i, e, m) arg ->
         let sg = map_sg (instantiate acc) e.sg in
-        let about = (argument c i e.name ^ ": ", c.notes) in
+        let about = lazy (argument c i e.name ^ ": ", Lazy.force c.notes) in
         if wild arg then (
-          if under pos e.mult <> Erased then error_with (Reader.loc arg) c.notes "%s`_` stands only for an erased argument, and this one is not erased" (fst about);
+          if under pos e.mult <> Erased then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` stands only for an erased argument, and this one is not erased" (fst (Lazy.force about));
           (env, Var m :: acc, codes, bindings))
         else
           let env, r, code = elab env (c.used e.mult) arg (Some [ { e with sg } ]) in
@@ -750,7 +752,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
       (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
   in
   let env = if boundary && List.exists (has_meta env) acc then against ~strict:true env else env in
-  if boundary then List.iteri (fun i t -> if has_meta env t then error_with loc c.notes "%s is `_` and cannot be inferred" (argument c i (List.nth tele i).name)) (List.rev acc);
+  if boundary then List.iteri (fun i t -> if has_meta env t then error_with loc (Lazy.force c.notes) "%s is `_` and cannot be inferred" (argument c i (List.nth tele i).name)) (List.rev acc);
   (env, List.map (metaless env) acc, List.rev codes, fun body -> List.fold_left (fun body (x, rhs) -> V.CLet ([x], rhs, body)) body bindings)
 
 (* [result] entrywise against [expect]: terms where both are `is` entries, types always. Not [strict]: a
@@ -870,11 +872,12 @@ and elab_form ?sink demand cc expect_tele env expect raw =
       | Some sp -> elab_special ?sink demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
           let env, h, hcode, headwrap = elab_head env pos l head in
-          let callee pos = describe env pos head h.term h.ty in
-          let env, rs, code = match canon env h.ty with
+          let hty = canon env h.ty in
+          let callee pos = describe env pos head h.term hty in
+          let env, rs, code = match hty with
           | TyCtor tele ->
               let c = callee pos in
-              if pos <> Erased then error_with l c.notes "%s applied in a non-erased position" (match head with Atom _ -> "type constructor " ^ c.subject | _ -> c.subject);
+              if pos <> Erased then error_with l (Lazy.force c.notes) "%s applied in a non-erased position" (match head with Atom _ -> "type constructor " ^ Lazy.force c.subject | _ -> Lazy.force c.subject);
               let env, acc = elab_term_args env l ~callee:c ?expect:expect_tele tele h.term args in
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased; place = None } ], V.CErased)
           | ValCtor (tele, ret) ->
@@ -929,7 +932,7 @@ and elab_call ?(unique = false) ?sink ?(demand = Fixed) cc env ?tele expect l c 
     | None, g ->
         let i = List.nth subterm_params k in
         let g, notes = match g with Some g -> (Printf.sprintf " %s %s" (kind_name env (type_of env g)) (qname env g), declared_as env g) | None -> ("", []) in
-        error_with_in env al (c.notes @ notes) "%s is its `subterm` parameter %d, but the enclosing%s has %s" (arg_name i) (k + 1) g (if k = 0 then "none" else Printf.sprintf "only %d" k) in
+        error_with_in env al (Lazy.force c.notes @ notes) "%s is its `subterm` parameter %d, but the enclosing%s has %s" (arg_name i) (k + 1) g (if k = 0 then "none" else Printf.sprintf "only %d" k) in
   let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
   let same cur = equal (canon env lv) (canon env (Var cur)) in
   let inferred () =
@@ -952,7 +955,7 @@ and elab_call ?(unique = false) ?sink ?(demand = Fixed) cc env ?tele expect l c 
           | Some k -> k
           | None ->
               let notes = List.map (fun pi -> (Reader.loc (List.nth args pi), sprintf_in env "%s is a `subterm` parameter" (arg_name pi))) subterm_params in
-              error_with_in env al (notes @ c.notes) "%s is not a `subterm` parameter" (arg_name i) in
+              error_with_in env al (notes @ Lazy.force c.notes) "%s is not a `subterm` parameter" (arg_name i) in
         List.iteri (fun j pi -> if j < k then check_equal env l (List.nth arg_terms pi) (Var (counterpart al j))) subterm_params;
         let env, p = proof env (fun env -> prove_subterm env l (List.nth arg_terms i) (Var (counterpart al k))) p in
         match expect_proof ~alt:" or `_`" env l Prelude.subterm p with
@@ -1084,8 +1087,9 @@ and elab_special ?sink demand tele env expect l sp args =
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
   | Sp.At, [ List (_, head :: args) ] ->
       let env, h, hcode, wrap = elab_head env pos l head in
-      let env,rs,code = match canon env h.ty with
-       | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l (describe env pos head h.term h.ty) h hcode c slots args
+      let hty = canon env h.ty in
+      let env,rs,code = match hty with
+       | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l (describe env pos head h.term hty) h hcode c slots args
        | _ -> error_in env l "`at` wraps a `Cell` invocation, and %s : %s is not a `Cell`" (qshow env h.term) (qshow env h.ty) in
       (env,rs,wrap code)
   | Sp.Share, [ a ] ->
@@ -1196,7 +1200,7 @@ and elab_special ?sink demand tele env expect l sp args =
       let c = ctor_var env l c in
       let params, ret = ctor_type env l c in
       if newtype_of env c = None then error_in env l "%s has no opened newtype `Matchable` for its wrapping constructor" (qname env c);
-      let callee = { subject = sprintf_in env "`coercible-wrap` of %s" (qname env c); apposed = false; notes = declared_as env c; used = (fun _ -> Erased); marks = true } in
+      let callee = { subject = lazy (sprintf_in env "`coercible-wrap` of %s" (qname env c)); apposed = false; notes = lazy (declared_as env c); used = (fun _ -> Erased); marks = true } in
       let env, acc = elab_term_args env l ~callee ~what:"more argument" params (Var c) args in
       List.iter (settle env l) acc;
       let e, f = List.find (fun (e, _) -> e.mult <> Erased) (List.combine params (List.rev acc)) in
@@ -1584,7 +1588,7 @@ and elab_let spos env l args =
     else (env, None)
   in
   let after, wrap, final = elab_stmts ~within:"item of a `let`'s right-hand side" spos env l rhs in
-  let sink = { owner = respell env "the enclosing `let`"; noun = "value"; shown = lazy (List.map Reader.show binder_raws); anchors = [ (bl, respell env "the binders of the enclosing `let` are here") ] } in
+  let sink = lazy { owner = respell env "the enclosing `let`"; noun = "value"; shown = List.map Reader.show binder_raws; anchors = [ (bl, respell env "the binders of the enclosing `let` are here") ] } in
   let inner, ress, code = elab_expr ?tele ~sink after expect final in
   let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
   let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
@@ -1819,7 +1823,7 @@ and elab_def_fns ?(unique = false) env l args =
           else
             let pvars = List.rev_map (fun x -> Var x) pids in
             let tele = instantiate_tele pvars rets in
-            let sink = { owner = qname env x; noun = "return value"; shown = lazy (show_tele envb (with_mults (under mult) tele)); anchors = declared_as env x } in
+            let sink = lazy { owner = qname env x; noun = "return value"; shown = show_tele envb (with_mults (under mult) tele); anchors = declared_as env x } in
             let envb, ress, code = elab_body ~tele ~sink envb (List.map (fun e -> under mult e.mult) rets) fl body in
             check_results envb fl ~ids:pvars body rets ress;
             (envb, if mult = Erased then V.CErased else project_code (List.filter_map (fun e -> if e.mult = Erased then None else Some (e.place = None)) rets) code)

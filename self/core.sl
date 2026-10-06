@@ -1971,7 +1971,7 @@
 
 (def-adts $ (Sink : -> Type)
   enum
-  (many MkSink : (many (String) owner) (many (String) noun) (many (List $ Entry) tele) (many (List $ Raw) written) (many (List $ Pair (Loc) $ String) anchors) (many (Scope) scope) -> (Sink)))
+  (many MkSink : (many (String) owner) (many (String) noun) (many (List $ Entry) tele) (many (List $ Raw) written) (many (List $ Pair (Loc) $ String) anchors) (many (Scope) scope) (many (Maybe $ Nat) function) -> (Sink)))
 
 (def-adts $ (Enclosing : -> Type)
   enum
