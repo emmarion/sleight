@@ -1,4 +1,5 @@
-; error: constructor `LtS` has no branch and is not refuted
+; error: this `match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `LtS`, which is declared here
 
 (def-lvl X)
 

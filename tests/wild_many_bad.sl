@@ -1,3 +1,3 @@
 ; needs: list
-; error: `_` stands for an erased argument
+; error: argument 2, `head`, of `Cons`: `_` stands only for an erased argument, and this one is not erased
 (Cons (Nat) _ (Nil (Nat)))

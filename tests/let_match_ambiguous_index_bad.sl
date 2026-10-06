@@ -1,4 +1,5 @@
-; error: needs a branch for it
+; error: this `let-match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `IS`, which is declared here
 ; Refining the selected constructor first would unsoundly refute the alternative.
 (def-adts $ (Indexed : ((Nat) i) -> Type) enum
   (many IZ : -> (Indexed (Zero)))

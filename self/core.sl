@@ -1969,13 +1969,21 @@
 (def-fns _ $ (many scope-ids : (many (Scope) s) -> (many (List $ Nat) r)) (match many s _ ((MkScope _ ids) ids)))
 (let ((many scope-empty)) (MkScope (nm-empty _) (Nil _)))
 
+(def-adts $ (Sink : -> Type)
+  enum
+  (many MkSink : (many (String) owner) (many (String) noun) (many (List $ Entry) tele) (many (List $ Raw) written) (many (List $ Pair (Loc) $ String) anchors) (many (Scope) scope) -> (Sink)))
+
+(def-adts $ (Enclosing : -> Type)
+  enum
+  (many MkEnclosing : (many (Maybe $ Nat) function) (many (List $ Nat) subterms) (many (Maybe $ Sink) sink) -> (Enclosing)))
+
 (def-adts
   ((Env : -> Type)
     enum
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (Scope) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
        (many (Bool) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
-       (many (Maybe $ Nat) level) (many (List $ Nat) subterms) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics)
+       (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics)
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
@@ -2078,7 +2086,14 @@
 (def-fns _ $ (many env-level : (many (Env) e) -> (many (Maybe $ Nat) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ lv _ _ _ _ _ _ _ _) lv)))
 (def-fns _ $ (many env-subterms : (many (Env) e) -> (many (List $ Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _) st)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _) (match many st _ ((MkEnclosing _ xs _) xs)))))
+(def-fns _ $ (many env-enclosing : (many (Env) e) -> (many (Maybe $ Nat) r))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _) (match many st _ ((MkEnclosing f _ _) f)))))
+(def-fns _ $ (many env-sink : (many (Env) e) -> (many (Maybe $ Sink) r))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _) (match many st _ ((MkEnclosing _ _ k) k)))))
+(def-fns _ $ (many env-set-sink : (many (Env) e) (many (Maybe $ Sink) k) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn)
+    (match many st _ ((MkEnclosing f xs _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs k) cl wa lt lo pr us hn))))))
 (def-fns _ $ (many env-claimed : (many (Env) e) -> (many (List $ Pair (String) $ Loc) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ cl _ _ _ _ _ _) cl)))
 (def-fns _ $ (many said-silenced : (subterm many (List $ Said) ss) -> (many (List $ Nat) r))
@@ -2102,8 +2117,8 @@
   (said-failed $ env-said e))
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _ _) lt)))
-(def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi _ _ cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (BFalse) ob li fi (Some _ level) subterms cl wa lt lo pr us hn))))
+(def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) f) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi _ _ cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (BFalse) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms $ None _) cl wa lt lo pr us hn))))
 ; Where a claimed name was bound, which the second claim's note names.
 (def-fns _ $ (many claimed-at : (subterm many (List $ Pair (String) $ Loc) cl) (many (String) name) ->
     (many (Maybe $ Loc) r))
@@ -2244,9 +2259,16 @@
     $ notail $ meta-notes here rest))
 
 ; A message with its markers numbered against the run's [table], and the notes placing each one.
+(def-fns _ $ (many resolve-lines : (many (Loc) lo) (subterm many (List $ String) lines) (many (List $ MsgMeta) seen) (many (List $ MsgMeta) table) -> (many (List $ String) r) (many (List $ MsgMeta) table2))
+  (let-match many lines (Cons _ x rest) ((Nil _) (values (Nil _) table)))
+  (let ((many out) (many seen2) (many table2)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) seen table)
+  (let ((many more) (many table3)) $ notail $ resolve-lines lo rest seen2 table2)
+  (let ((many notes) (erased _)) $ list-append _ (meta-notes (loc-here lo) $ list-drop _ (list-length _ seen) seen2) more)
+  (values (Cons _ (rope-str out) notes) table3))
+
 (def-fns _ $ (many resolve-marks : (many (Loc) lo) (many (String) x) (many (List $ MsgMeta) table) -> (many (String) r) (many (List $ MsgMeta) table2))
-  (let ((many out) (many seen) (many table2)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) (Nil _) table)
-  (values (join-strs (Cons _ (rope-str out) $ meta-notes (loc-here lo) seen) "\n") table2))
+  (let ((many ls) (many table2)) $ resolve-lines lo (split-on x 10) (Nil _) table)
+  (values (join-strs ls "\n") table2))
 
 (def-fns _ $ (many note-lines : (many (Env) e) (subterm many (List $ Pair (Loc) $ String) notes) (many (List $ String) rest) -> (many (List $ String) r))
   (let-match many notes (Cons _ n more) ((Nil _) rest))
@@ -2254,10 +2276,20 @@
   (Cons _ (located (env-at-loc e l) ": note: " m) $ notail $ note-lines e more rest))
 (def-fns _ $ (many diagnostic : (many (Env) e) (many (String) kind) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (String) r))
   (join-strs (Cons _ (located e kind x) $ note-lines e notes $ Nil _) "\n"))
+(def-fns _ $ (many said-has : (subterm many (List $ Said) ss) (many (String) text) -> (many (Bool) r))
+  (let-match many ss (Cons _ x rest) ((Nil _) (BFalse)))
+  (match many x _
+    ((SaidError _ t) (match many (str-eq t text) _ ((BTrue) (BTrue)) ((BFalse) (tail $ said-has rest text))))
+    (else (tail $ said-has rest text))))
 (def-fns _ $ (many env-fail : (many (Env) e) (many (String) text) -> (many (Env) r))
-  (env-set-said e $ Cons _ (SaidError (env-loc e) text) $ env-said e))
+  (let ((many said)) $ env-said e)
+  (match many (and (said-failed said) $ or (str-contains text "<error: ") $ said-has said text) _
+    ((BTrue) e)
+    ((BFalse) (env-set-said e $ Cons _ (SaidError (env-loc e) text) said))))
 (def-fns _ $ (many env-error-with : (many (Env) e) (many (List $ Pair (Loc) $ String) notes) (many (String) x) -> (many (Env) r))
   (env-fail e $ diagnostic e ": error: " notes x))
+(def-fns _ $ (many env-error-hinted : (many (Env) e) (many (List $ Pair (Loc) $ String) notes) (many (String) x) (many (String) hint) -> (many (Env) r))
+  (env-fail e $ str-cat (diagnostic e ": error: " notes x) hint))
 (def-fns _ $ (many env-error : (many (Env) e) (many (String) x) -> (many (Env) r))
   (env-error-with e (Nil _) x))
 ; An error about two places names both: the note is a second location, written under the message as a
@@ -2495,8 +2527,8 @@
   (let ((many a2)) (location-term env a))
   (let ((many b2)) (location-term env b))
   (let-match many (location-same a2 b2) (BFalse) ((BTrue) env))
-  (let-match many a2 (TVar x) (else (env-error env "locations must be variables")))
-  (let-match many b2 (TVar y) (else (env-error env "locations must be variables")))
+  (let-match many a2 (TVar x) ((TErr _) env) (else (env-error env "locations must be variables")))
+  (let-match many b2 (TVar y) ((TErr _) env) (else (env-error env "locations must be variables")))
   (match many (nat-cmp x y) _
     ((CLt _ _ _ _ _) (env-set-locations env $ idmap-set _ y x $ env-locations env))
     (else (env-set-locations env $ idmap-set _ x y $ env-locations env))))
@@ -2922,7 +2954,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (None _) (Nil _) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _)) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ name) (None _) (BFalse) (Erased) ty rule delegate-id)

@@ -1,5 +1,6 @@
 ; needs: list
-; error: constructor `Succ` has no branch and is not refuted, so this `match` needs a branch for it
+; error: this `match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `Succ`, which is declared here
 
 (def-lvl X)
 (def-fns X $ (many f : (many (Nat) n) -> (many (Nat) m))

@@ -1,5 +1,6 @@
 ; needs: absurd
-; error: constructor `E` has no branch and is not refuted
+; error: this `match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `E`, which is declared here
 ; Under an erased scrutinee a phantom constructor's branch is an ordinary one, so it must be listed or covered.
 
 (def-adts

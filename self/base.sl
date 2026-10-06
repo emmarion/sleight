@@ -80,6 +80,16 @@
 (def-fns _ $ (many str-cat3 : (many (String) a) (many (String) b) (many (String) c) -> (many (String) d))
   (str-append a $ str-append b c))
 
+(def-fns _ $ (many str-starts : (subterm many (String) p) (many (String) s) -> (many (Bool) r))
+  (let-match many p (SCons c prest) ((SNil) (BTrue)))
+  (let-match many s (SCons d srest) ((SNil) (BFalse)))
+  (match many (char-is d $ char-code c) _ ((BTrue) (tail $ str-starts prest srest)) ((BFalse) (BFalse))))
+
+(def-fns _ $ (many str-contains : (subterm many (String) s) (many (String) p) -> (many (Bool) r))
+  (let-match many (str-starts p s) (BFalse) ((BTrue) (BTrue)))
+  (let-match many s (SCons _ rest) ((SNil) (BFalse)))
+  (tail $ str-contains rest p))
+
 (def-fns _ $ (many str-until-onto : (many (Rope) acc) (subterm many (String) s) (many (Nat) code) -> (many (String) before) (many (Maybe $ String) after))
   (let-match many s (SCons c rest) ((SNil) (values (rope-str acc) (None _))))
   (match many (char-is c code) _
@@ -375,6 +385,11 @@
   (match many n _
     ((Zero) (Nil _))
     ((Succ k) (Cons _ x $ notail $ list-replicate _ k x))))
+
+(def-fns _ $ (many list-drop : (erased Type A) (subterm many (Nat) n) (many (List A) xs) -> (many (List A) r))
+  (match many n _
+    ((Zero) xs)
+    ((Succ k) (match many xs _ ((Nil _) (Nil _)) ((Cons _ _ rest) (tail $ list-drop _ k rest))))))
 
 (def-fns _ $ (many list-length : (erased Type A) (many (List A) xs) -> (many (Nat) n))
   (let ((many n) (erased p)) (delegate (length _ xs)))

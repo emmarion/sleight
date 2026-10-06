@@ -1,4 +1,5 @@
-; error: constructor `Refl` has no branch and is not refuted
+; error: this `match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `Refl`, which is declared here
 ; error: 3 in `(Eq (Nat) 3 5)` is a numeral literal, opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; error: 5 in `(Eq (Nat) 3 5)` is a numeral literal, opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; Two literals equated by a branch are not told apart until (distinct 3 5) refutes the branch; the note

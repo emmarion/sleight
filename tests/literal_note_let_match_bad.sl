@@ -1,4 +1,5 @@
-; error: constructor `VNil` has no branch and is not refuted, so this `let-match` needs a branch for it
+; error: this `let-match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `VNil`, which is declared here
 ; error: 2 in `(Vec 2)` is a numeral literal, opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; let-match needs every other constructor refuted, and a literal length refutes none of them.
 

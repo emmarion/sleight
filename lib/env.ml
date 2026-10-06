@@ -17,25 +17,13 @@ let numbering : (string, int) Hashtbl.t = Hashtbl.create 16
 let marker kind x at = Printf.sprintf "\001%c%d\001%s\002" kind x (Reader.where "" at)
 
 let resolve here s =
-  let b = Buffer.create (String.length s) and seen = ref [] in
+  let seen = ref [] in
   let number key =
     match Hashtbl.find_opt numbering key with
     | Some n -> n
     | None ->
         let n = 1 + Hashtbl.fold (fun k _ c -> if k.[0] = key.[0] then c + 1 else c) numbering 0 in
         Hashtbl.replace numbering key n; n in
-  let rec go i =
-    match String.index_from_opt s i '\001' with
-    | None -> Buffer.add_string b (String.sub s i (String.length s - i))
-    | Some j ->
-        let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
-        let key = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
-        let shown = if key.[0] = 'k' then "_" ^ String.sub key 1 (String.length key - 1) else (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
-        if not (List.mem_assoc key !seen) then seen := !seen @ [ (key, (shown, at)) ];
-        Buffer.add_string b (String.sub s i (j - i) ^ shown);
-        go (e + 1)
-  in
-  go 0;
   let note (key, (shown, at)) =
     if key.[0] = 'k' then
       let b = String.sub shown 1 (String.length shown - 1) in
@@ -45,7 +33,23 @@ let resolve here s =
       if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
       else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
     if at = "" then Printf.sprintf "\n%s: note: `%s` is %s" here shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
-  Buffer.contents b ^ String.concat "" (List.map note !seen)
+  let line s =
+    let b = Buffer.create (String.length s) and fresh = ref [] in
+    let rec go i =
+      match String.index_from_opt s i '\001' with
+      | None -> Buffer.add_string b (String.sub s i (String.length s - i))
+      | Some j ->
+          let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
+          let key = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
+          let shown = if key.[0] = 'k' then "_" ^ String.sub key 1 (String.length key - 1) else (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
+          if not (List.mem key !seen) then (seen := key :: !seen; fresh := !fresh @ [ (key, (shown, at)) ]);
+          Buffer.add_string b (String.sub s i (j - i) ^ shown);
+          go (e + 1)
+    in
+    go 0;
+    Buffer.contents b ^ String.concat "" (List.map note !fresh)
+  in
+  String.concat "\n" (List.map line (String.split_on_char '\n' s))
 
 let warn_at l notes fmt =
   let note (nl, m) = Printf.sprintf "\n%s: note: %s" (Reader.where "-" nl) m in
@@ -55,9 +59,9 @@ let warn_at l notes fmt =
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
-let error_with loc notes fmt =
+let error_with ?hint loc notes fmt =
   let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
-  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes))) fmt
+  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint))) fmt
 
 let error loc fmt = error_with loc [] fmt
 
@@ -99,6 +103,7 @@ type t = {
   opens : opens;
   level : level;
   subterms : id list;
+  enclosing : id option;
   run_pos : bool;
   values : Value.venv;
   prelude : scope;
@@ -107,7 +112,7 @@ type t = {
 }
 
 let empty =
-  { locations = IntMap.empty; signature = []; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { locations = IntMap.empty; signature = []; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -440,6 +445,11 @@ let check_mult env loc explain demand supply =
 let declared env ?(how = "") x =
   let e = entry env x in
   if Reader.placed e.at then [ (e.at, Printf.sprintf "%s is declared%s here" (qname env x) how) ] else []
+
+let kind_name env ty =
+  match canon env ty with Fn _ -> "function" | UniqueFn _ -> "unique function" | ValCtor _ -> "value constructor" | TyCtor _ -> "type constructor" | _ -> "value"
+
+let declared_as env x = declared env x |> List.map (fun (l, m) -> (l, kind_name env (type_of env x) ^ " " ^ m))
 
 let use env loc ?(sharing = false) ?written mult x =
   if mult = Erased || env.usage_erased then env else

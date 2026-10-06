@@ -3,5 +3,5 @@
   (many MkP : (many (Nat) a) (erased (Nat) b) (many (Nat) c) -> (P3)))
 (def-fns _ $ (many k : (many (P3) p) -> (many (Nat) y))
   (match many p _ ((MkP a b) a)))
-; error: tests/arity_pattern_bad.sl:5:<**>: error: `MkP` expects 3 fields, got 2
-; error: tests/arity_pattern_bad.sl:3:3: note: `MkP` takes `(many (Nat) a) (erased (Nat) b) (many (Nat) c)`
+; error: tests/arity_pattern_bad.sl:5:20: error: a `match` branch on `MkP` under `many` expects 3 binders, got 2: expected `(many (Nat) a) (erased (Nat) b) (many (Nat) c)`
+; error: tests/arity_pattern_bad.sl:3:3: note: value constructor `MkP` is declared here

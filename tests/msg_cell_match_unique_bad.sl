@@ -1,0 +1,5 @@
+(def-adts $ (P : -> Type) enum (many MkP : (many (Nat) a) (erased (Nat) b) (many (Nat) c) -> (P)))
+(def-fns _ $ (many k : (unique (Cell MkP (SlotVacant) (SlotVacant)) u) -> (many (Nat) r))
+  (cell-match unique u _ (MkP s1 u2) (Zero)))
+; error: tests/msg_cell_match_unique_bad.sl:3:26: error: `cell-match` on `MkP` under `unique` expects 3 binders, got 2: expected `(many (SlotVacant) is _) (many (SlotVacant) is _) (unique u is _ at u)`
+; error: tests/msg_cell_match_unique_bad.sl:1:32: note: value constructor `MkP` is declared here

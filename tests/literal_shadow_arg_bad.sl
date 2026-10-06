@@ -1,4 +1,4 @@
-; error: error: type mismatch: expected `(Nat)`, got `(_<**>)`
+; error: error: argument 1, `x`, of `f`: type mismatch: expected `(Nat)`, got `(_<**>)`
 ; A numeral is the prelude's Nat, not the Nat that shadows it.
 
 (def-adts $ (Nat : -> Type) enum (many A : -> (Nat)))

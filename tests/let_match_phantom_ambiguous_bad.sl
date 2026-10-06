@@ -1,4 +1,5 @@
-; error: needs a branch for it
+; error: this `let-match` is missing a branch for the following unrefuted constructor:
+; error: note: value constructor `GhostB`, which is declared here
 ; Erased phantom matching still requires every other constructor to be refuted.
 (def-adts $ (Both : -> Type) enum
   (erased GhostA : -> (Both))
