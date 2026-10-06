@@ -162,6 +162,12 @@ first-class `f` is skipped only where an at-function proof for `f` is
 opened. Such a call still carries its `predates` or `subterm` proof
 (§9).
 
+An extern type has no cells outside its model's body (§U12). The
+prelude is eventually to gain extern at-functions over arrays, inside
+whose bodies cells reappear, which takes the subsumption of `coerce`
+further: an `Array` conversion such as §U13's `init-witness` then need
+not go through `coerce`.
+
 ## A11. Delegates
 
 A `delegate`-bodied function (§9) may write `at` after its name,
