@@ -1894,9 +1894,8 @@
   (mint env2 $ proof-type subterm-id $ Cons _ aty $ Cons _ a $ Cons _ bty $ Cons _ b $ Nil _))
 
 (def-fns _ $ (many predates-source : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Nat) x))
-  (match many (nat-lt x0 lvl) _
-    ((BTrue) x0)
-    ((BFalse) (match many (canon-env env $ TVar x0) (((Nat) _)) ((TVar y) y) (else x0)))))
+  (let-match many (nat-lt x0 lvl) (BFalse) ((BTrue) x0))
+  (match many (canon-env env $ TVar x0) _ ((TVar y) y) (else x0)))
 
 (def-fns _ $ (many provable-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Bool) r))
   (and (entry-minted env lvl) $ nat-lt (predates-source env x0 lvl) lvl))

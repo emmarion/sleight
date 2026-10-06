@@ -10,6 +10,7 @@
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
 #   3. compiles slc with slc before step 2, then again with the result while step 2 runs, and requires the two
 #      outputs to be identical.
+# Each of the three builds of slc (steps 1 and 3) runs under --warnings-as-errors, so a warning in self/*.sl fails.
 # Usage: self/bootstrap.sh [build-dir]   (default _build/self)
 #        self/bootstrap.sh one tests/a.sl ...   step 2 for those tests alone, into _build/self, rebuilding slc only
 #        when self/*.sl or the reference binary changed; test/one.sh also runs them through test/runtest.ml
@@ -111,7 +112,7 @@ build_slc() {
   key=$(cat $SL $REF | md5sum)
   if [ "${1:-}" = cached ] && [ -x "$B/slc" ] && [ "$key" = "$(cat "$B/slc.key" 2>/dev/null)" ]; then return; fi
   echo "== extracting slc with the reference extractor"
-  $REF $SL --extract "$B/slc.ml" || exit 1
+  $REF --warnings-as-errors $SL --extract "$B/slc.ml" || exit 1
   $OC "$B/slc.ml" -o "$B/slc" > "$B/slc.log" 2>&1 || { cat "$B/slc.log"; exit 1; }
   echo "$key" > "$B/slc.key"
 }
@@ -134,14 +135,14 @@ echo "== compiling slc with slc"
 # timed, and the time reported, so a change that slows slc down is seen: this is a report, not a check
 # (GNU time takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes)
 if /usr/bin/time -o /dev/null -f x true 2> /dev/null; then
-  /usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+  /usr/bin/time -o "$B/slc2.time" -f "slc compiled itself in %e s (wall), %M KB max rss" "$B/slc" --warnings-as-errors $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
 else
-  /usr/bin/time -l -o "$B/slc2.time.raw" "$B/slc" $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
+  /usr/bin/time -l -o "$B/slc2.time.raw" "$B/slc" --warnings-as-errors $SL > "$B/slc2.ml" 2> "$B/slc2.err" || { head -5 "$B/slc2.err"; exit 1; }
   awk '/ real /{t=$1} /maximum resident/{m=$1/1024} END{printf "slc compiled itself in %s s (wall), %d KB max rss\n", t, m}' "$B/slc2.time.raw" > "$B/slc2.time"
 fi
 cat "$B/slc2.time"
 { $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
-  "$B/slc2" $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }; } > "$B/slc3.report" 2>&1 &
+  "$B/slc2" --warnings-as-errors $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }; } > "$B/slc3.report" 2>&1 &
 slc3=$!
 echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
 check_all tests/*.sl

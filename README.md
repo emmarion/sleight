@@ -128,6 +128,11 @@ and pieces of grammar from `file`, in place of `lib/specials.txt` and in
 its format; slc takes the same flag. `--first-error`, slc's alone, stops
 its report after the first error, where it would otherwise list every
 error it recorded (`self/README.md`, "Errors are values").
+`--warnings-as-errors` fails a run that warns, exit code 1, once every
+file has been read and every message written: nothing is run and no
+`--extract` output or OCaml is written. A warning silenced by `;! suppress`
+does not count. slc takes the same flag, and `self/bootstrap.sh` builds slc
+under it.
 
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and

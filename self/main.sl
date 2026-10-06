@@ -47,7 +47,7 @@
 
 
 (def-fns util-lvl $ (many usage : -> (unique (IO io-lvl) io))
-  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml\n"
+  (WriteErr _ "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--warnings-as-errors] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml\n"
     (unique-thunk _ _ (Exit _ exit-fail))))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) -> (unique (IO io-lvl) io))
@@ -61,8 +61,10 @@
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
   (let ((many builtins)) (env-set-help (make-builtins) help))
   (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
-  (write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _)
-    (match many (env-failed env) (((IO io-lvl) _))
+  (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env) $ said-failed (BTrue) $ env-said env)
+  (write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) $ write-lines
+    (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))
+    (match many (or (env-failed env) by-warnings) (((IO io-lvl) _))
       ((BTrue) (Exit _ exit-fail))
       ((BFalse)
         (match many (has-flag flags "--interpret") (((IO io-lvl) _))
