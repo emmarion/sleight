@@ -211,15 +211,23 @@ semantics are settled first:
 
 ## A13. Open questions
 
-6. Soundness: two `Slot` terms that canonicalize equal must denote one
-   word at runtime. Forcing in a branch may equate two `Slot` atoms, as
-   it may two `Level` atoms. ASSUMPTIONS 183 notes that a user type
-   indexed by `(Slot)` already reaches the corresponding merge.
-   *Reading:* `Slot` having no constructors and no `Matchable`, two
-   slots are never told apart, so forcing may equate two slots but never
-   refutes a branch over them; what is left to argue is only that equal
-   slots are one word. `slot-self` agrees with it, a slot's word being
-   itself.
+6. Soundness: wherever two `Slot` terms canonicalize equal, they must
+   denote one word at runtime, since skipped stores, omitted `at`
+   entries and skipped at-functions all rest on it. The owner believes
+   the system is sound. *Reading:* equalities from a written `at`, from
+   `slot-self` and from forcing in a `many` or `unique` match look
+   honest by induction over construction; forcing in erased code rests
+   on §10's consistency claim, as every forced fact does, though a false
+   slot fact would corrupt memory rather than merely prove something
+   false. `Slot` having no constructors and no `Matchable`, forcing may
+   equate two slots but never refutes a branch over them, and nothing
+   relies on two slots being distinct. ASSUMPTIONS 183 notes that a
+   user type indexed by `(Slot)` already reaches the corresponding
+   merge.
+7. §U14's tier 1 drops `at` annotations, which under A3 changes a
+   function's runtime shape: an omitted entry becomes a word, and an
+   at-function then runs, its full-at invocations allocating. §U14
+   needs restating against A3.
 8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
    This needs further work, to be determined; if that work works out,
