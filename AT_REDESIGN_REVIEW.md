@@ -330,9 +330,12 @@ reading of `lib/` at commit ab64de0.
     shared word cannot be filled `(at)` at `unique`, no unique variable
     being at a shared word but the newtype-wrapper aliases §U1 permits,
     which have no cell (audit Q4), so completing such a copy at `unique`
-    supplies fresh unique values there. Open, by the same reasoning:
-    whether a non-full-at invocation of a `many` cell, which also
-    copies, may mint its value at `unique` where its position asks.
+    supplies fresh unique values there. Whether a non-full-at
+    invocation of a `many` cell, which also copies, might mint at
+    `unique` was asked and answered: the owner keeps "a cell at `many`
+    mints its value only at `many`" with no case split on full-at-ness,
+    a program wanting a unique value copying first, which compiles to
+    the same code.
     (c) A non-full-at invocation of a `many` cell copies; the text
     should add that its result is not `at` the cell. A write followed
     by a full-at invocation is one copy, since the written slots and
@@ -394,11 +397,14 @@ reading of `lib/` at commit ab64de0.
 35. **A10, extern at-functions.** In chat after this review's first
     version the owner decided that a function marked both `extern` and
     `at` has no FFI implementation: the marks are a promise, and the
-    compiler emits a function that does nothing, for a call made where
-    no proof is opened. This session reads that as needing no separate
-    dummy: the model body, having passed item 32's check, already
-    compiles to a function returning no word, so compiling the model
-    is the dummy; `Ffi.claim_fn` would skip such a function, and §41's
+    compiler emits a function that does nothing, because such a
+    function may still be treated as an ordinary function for
+    higher-order purposes, passed to a function that expects a function
+    and does not know it is an at-function, and invoking it there
+    cannot crash. This session reads the model body, having passed item
+    32's check, as already compiling to such a function, so compiling
+    the model would serve as the dummy; that is an implementation
+    choice. `Ffi.claim_fn` would skip such a function, and §41's
     conservativity holds vacuously. What `extern` buys such a function
     is §U12's cells over an extern type inside its body, not an
     implementation.
