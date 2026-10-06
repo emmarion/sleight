@@ -11,7 +11,8 @@ as CLAUDE.md rule 10 has them.
 
 The direction is for the `at` system to subsume the existing `coerce`
 system (§38, §U7), in stages; the core semantics come first, and the
-relaxations in A12 wait until those are settled.
+relaxations in A12 wait until those are settled. In version one the
+`coerce` machinery does not change (A12).
 
 ## A1. `Slot` is opaque
 
@@ -210,6 +211,10 @@ semantics are settled first:
 2. Allowing the function in an `at` call to be erased, as a
    `Coercible` proof is erased today.
 3. Further changes around erasure.
+4. Version two: what becomes of `coerce`, `Coercible`, the
+   `coercible-*` forms and `Delegate`. This needs further work; if it
+   works out, perhaps with some tweaks, they are all deleted. In
+   version one they do not change.
 
 ## A13. Open questions
 
@@ -226,10 +231,6 @@ semantics are settled first:
    relies on two slots being distinct. ASSUMPTIONS 183 notes that a
    user type indexed by `(Slot)` already reaches the corresponding
    merge.
-8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
-   `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
-   This needs further work, to be determined; if that work works out,
-   perhaps with some tweaks, they are all deleted.
 10. §U14's tier 1 drops `at` annotations, which under A3 changes a
     function's runtime shape: an omitted entry becomes a word, and an
     at-function then runs, its full-at invocations allocating. §U14
