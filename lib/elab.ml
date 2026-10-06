@@ -826,13 +826,18 @@ let mint env ty =
   let x, env = bind env None Erased Dyn ty in
   (env, res_of env x)
 
+let provable_subterm env a b = is_strict_subterm (canon env a) (canon env b)
+
 let prove_subterm env l a b =
-  if not (is_strict_subterm (canon env a) (canon env b)) then error l "%s is not a strict subterm of %s" (qshow env a) (qshow env b);
+  if not (provable_subterm env a b) then error l "%s is not a strict subterm of %s" (qshow env a) (qshow env b);
   mint env (proof_type Prelude.subterm [ infer env l a; a; infer env l b; b ])
+
+let predates_source env x lvl = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x
+let provable_predates env x lvl = (entry env lvl).minted_level && predates_source env x lvl < lvl
 
 let prove_predates env l x lvl =
   if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (qname env lvl);
-  let x = match canon env (Var x) with Var y when x >= lvl -> y | _ -> x in
+  let x = predates_source env x lvl in
   if x >= lvl then error l "%s was not in scope when level %s was minted" (qname env x) (qname env lvl);
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
@@ -984,7 +989,11 @@ and elab_call ?(unique = false) ?sink ?(demand = Fixed) cc env ?tele expect l c 
     | None -> check l (inferred ())
     | Some (al, a) ->
         let env' = check al (Some a) in
-        if (try ignore (check l (inferred ())); true with Error _ -> false) then
+        let unnecessary = match env.level, a with
+          | At _, `Subterm (i, _) -> provable_subterm env (List.nth arg_terms i) (Var (counterpart al (Option.get (find_index (( = ) i) subterm_params))))
+          | At cur, `Predates _ -> (match canon env lv with Var m -> provable_predates env m cur | _ -> false)
+          | Top, _ -> false in
+        if unnecessary then
           warn_in env al [] "unnecessary %s; drop it" (tick (Printf.sprintf "(%s _)" (speller env (match a with `Predates _ -> "predates" | `Subterm _ -> "subterm"))));
         env'
   in

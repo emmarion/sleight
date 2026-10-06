@@ -1885,20 +1885,26 @@
 
 ; prove-subterm (section 8): the first, canonicalized, is a strict subtree of the second through constructor
 ; applications only.
+(def-fns _ $ (many provable-subterm : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Bool) r))
+  (is-strict-subterm (canon-env env b) $ canon-env env a))
+
 (def-fns _ $ (many mint-subterm : (many (Env) env) (many (Term) a) (many (Term) aty) (many (Term) b) (many (Term) bty) -> (many (Env) r) (many (Res) res))
-  (let ((many ca)) $ canon-env env a)
-  (let ((many cb)) $ canon-env env b)
   (def-fns msg-lvl $ (many msg-subterm : -> (many (String) s)) (str-cat3 (qshow env a) " is not a strict subterm of " $ qshow env b))
-  (let ((many env2)) $ error-unless-msg env (is-strict-subterm cb ca) msg-subterm)
+  (let ((many env2)) $ error-unless-msg env (provable-subterm env a b) msg-subterm)
   (mint env2 $ proof-type subterm-id $ Cons _ aty $ Cons _ a $ Cons _ bty $ Cons _ b $ Nil _))
+
+(def-fns _ $ (many predates-source : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Nat) x))
+  (match many (nat-lt x0 lvl) _
+    ((BTrue) x0)
+    ((BFalse) (match many (canon-env env $ TVar x0) (((Nat) _)) ((TVar y) y) (else x0)))))
+
+(def-fns _ $ (many provable-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Bool) r))
+  (and (entry-minted env lvl) $ nat-lt (predates-source env x0 lvl) lvl))
 
 ; prove-predates (section 8): the variable was in scope when the level was minted (ASSUMPTIONS 13).
 (def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
   (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (qshown env lvl) (say env " is not a level minted by `def-lvl`"))))
-  (let ((many (Nat) x))
-    (match many (nat-lt x0 lvl) _
-      ((BTrue) x0)
-      ((BFalse) (match many (canon-env env2 $ TVar x0) (((Nat) _)) ((TVar y) y) (else x0)))))
+  (let ((many x)) $ predates-source env2 x0 lvl)
   (let ((many env3)) $ match many (nat-lt x lvl) (((Env) _)) ((BTrue) env2) ((BFalse) (env-error env2 $ str-cat3 (qshown env2 x) " was not in scope when level " $ str-cat (qshown env2 lvl) " was minted")))
   (mint env3 $ proof-type predates-id $ Cons _ (type-of env3 x) $ Cons _ (TVar x) $ Cons _ (TVar lvl) $ Nil _))
 
@@ -3506,18 +3512,6 @@
 (def-fns _ $ (many here-pos : (many (Env) env) -> (many (Pos) p))
   (match many (env-loc env) _ ((MkLoc _ p) p)))
 
-(def-fns _ $ (many ann-site : (erased (List $ Raw) root) (many (Ann root) ann) -> (many (Maybe $ Pair (Pos) (String)) r))
-  (match many ann _
-    ((AnnNone _) (None _))
-    ((AnnPredates _ ap _) (Some _ $ MkPair _ _ ap "predates"))
-    ((AnnSubterm _ ap _ _) (Some _ $ MkPair _ _ ap "subterm"))))
-
-(def-fns _ $ (many unneeded : (many (Env) env) (many (Pair (Pos) (String)) site) (many (Env) bare) -> (many (Env) r))
-  (let-match many site (MkPair _ _ ap kw))
-  (match many (or (env-failed env) $ env-failed bare) _
-    ((BTrue) env)
-    ((BFalse) (env-warn-at env (loc-in env ap) $ say env $ str-cat3 "unnecessary `(" kw " _)`; drop it"))))
-
 (def-fns _ $ (many resolve-ann : (many (Env) env) (erased (List $ Raw) root) (many (Ann root) ann) (many (Res) callee) (many (Bool) same) (many (List $ Nat) positions) (many (List $ Term) args) -> (many (Env) r) (many (Ann root) a))
   (let-match many ann (AnnNone _) (else (values env ann)))
   (let-match many same (BTrue) ((BFalse) (values env $ AnnPredates _ (here-pos env) $ Inferred _)))
@@ -3558,6 +3552,23 @@
 (def-fns _ $ (many sub-positions : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) -> (many (List $ Pos) r))
   (let-match many subs (Cons _ s rest) ((Nil _) (Nil _)))
   (match many s _ ((MkSub _ arg _) (Cons _ (raw-pos arg) $ notail $ sub-positions _ rest))))
+
+(def-fns _ $ (many subterm-provable-at : (many (Env) env) (many (List $ Entry) params) (many (List $ Term) args) (many (Nat) i) -> (many (Bool) r))
+  (let-match many (index-of-nat (subterm-indices params 0) i 0) (Some _ k) ((None _) (BFalse)))
+  (let-match many (list-nth _ (env-subterms env) k) (NthHit _ _ _ counterpart _) ((NthMiss _ _ _ _) (BFalse)))
+  (provable-subterm env (nth-term args i) $ TVar counterpart))
+
+(def-fns _ $ (many unneeded : (erased (List $ Raw) root) (many (Ann root) ann) (many (Env) env) (many (Env) checked) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) -> (many (Env) r))
+  (let-match many (env-failed checked) (BFalse) ((BTrue) checked))
+  (let-match many (env-level env) (Some _ cur) ((None _) checked))
+  (let ((many (Pos) ap) (many (String) kw) (many (Bool) drop))
+    (match many ann (((Pos) p) ((String) k) ((Bool) d))
+      ((AnnNone _) (values (here-pos env) "" (BFalse)))
+      ((AnnPredates _ p0 _) (values p0 "predates" $ match many (canon-env env lv) (((Bool) _)) ((TVar m) (provable-predates env m cur)) (else (BFalse))))
+      ((AnnSubterm _ p0 i _) (values p0 "subterm" $ subterm-provable-at env params args i))))
+  (match many drop (((Env) _))
+    ((BFalse) checked)
+    ((BTrue) (env-warn-at checked (loc-in checked ap) $ say checked $ str-cat3 "unnecessary `(" kw " _)`; drop it"))))
 
 (def-fns _ $ (many check-earlier : (subterm many (List $ Nat) positions) (many (Env) env) (many (List $ Term) args) (many (Nat) j) (many (Nat) k) (many (Pos) ap) (many (Callee) desc) (many (List $ Entry) params) -> (many (Env) r))
   (let-match many positions (Cons _ pi rest) ((Nil _) env))
@@ -5982,10 +5993,7 @@
     (let ((many env1a) (many hres) (many hid)) $ prepare-or-keep _ _ env1 mode callee hcode)
     (let ((many env2) (many acc) (many tys) (many codes) (many pairs)) $ notail $ check-args sugar rawargs args one-step env1a desc ctx params pos tele (ARCall rets) (BFalse) (BTrue) $ BTrue)
     (let ((many arg-terms)) $ list-rev _ acc)
-    (let ((many env3p)) $ notail $ check-call-proof sugar rawargs ann env2 ctx callee desc (sub-positions _ args) lv params arg-terms (list-rev _ tys) $ BFalse)
-    (let ((many env3)) $ match many (ann-site _ ann) (((Env) _))
-      ((None _) env3p)
-      ((Some _ site) (unneeded env3p site $ notail $ check-call-proof sugar rawargs ann env2 ctx callee desc (sub-positions _ args) lv params arg-terms (list-rev _ tys) $ BTrue)))
+    (let ((many env3)) $ unneeded _ ann env2 (notail $ check-call-proof sugar rawargs ann env2 ctx callee desc (sub-positions _ args) lv params arg-terms $ list-rev _ tys) lv params arg-terms)
     (let ((many rmults)) $ physical-mults rets)
     (let ((many env4) (many ids) (erased lock)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env) (Some _ $ under-list (tele-mults rets) pos) acc $ BFalse)
     (let ((many (Env) env5) (many (Code ctx expect) code))
@@ -6012,16 +6020,15 @@
 
   ; The call-site proof (section 9), read against the current level and enclosing subterm parameters; a bare
   ; call gets its annotation from resolve-ann first.
-  ((many check-call-proof : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Res) callee) (many (Callee) desc) (many (List $ Pos) sites) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) (many (List $ Term) arg-tys) (many (Bool) bare) -> (many (Env) r))
-    (let ((many ann1)) $ match many bare (((Ann rawargs) _)) ((BTrue) (AnnNone _)) ((BFalse) ann))
+  ((many check-call-proof : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Res) callee) (many (Callee) desc) (many (List $ Pos) sites) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) (many (List $ Term) arg-tys) -> (many (Env) r))
     (match many (env-level env) _
       ((None _)
-        (match many ann1 _
+        (match many ann _
           ((AnnNone _) env) (else (env-error env "the top level calls without proofs; drop the decrease annotation (section 24)"))))
       ((Some _ cur)
         (let ((many same)) $ equal-env env lv $ TVar cur)
         (let ((many positions)) $ subterm-indices params 0)
-        (let ((many env1) (many ann2)) $ resolve-ann env _ ann1 callee same positions args)
+        (let ((many env1) (many ann2)) $ resolve-ann env _ ann callee same positions args)
         (match many ann2 _
           ((AnnNone _) env1)
           ((AnnSubterm _ ap i g)
