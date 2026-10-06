@@ -222,6 +222,8 @@ semantics are settled first:
    itself.
 8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
+   This needs further work, to be determined; if that work works out,
+   perhaps with some tweaks, they are all deleted.
 9. The exceptions to A8's cell binder, presumably those §U5 has today:
    a newtype, an extern type outside its model's body, a phantom
    constructor.
