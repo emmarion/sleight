@@ -40,8 +40,9 @@ them.
    variables" (A9, A10); a recursive or mutually recursive at-function,
    whose own calls have no proof yet (A10); and what a call site checks
    and passes for a parameter written `at` (A3, A5), including how the
-   `delegate` and `tail` checks read such a signature (A11). The rest of
-   part 4 is wording that admits two readings.
+   `delegate` and `tail` checks read such a signature (A11). The owner
+   answered the second in chat after the first version of this review
+   (item 33). The rest of part 4 is wording that admits two readings.
 
 3. **No unsoundness found in the stated core.** Part 5 states the claim
    this session believes A13.6 needs, lists every writer of a slot
@@ -321,13 +322,21 @@ reading of `lib/` at commit ab64de0.
 
 31. **A8.** (a) The mandatory binder is the whole of part 6's cost.
     (b) A `cell-write` at `many` yields a fresh block no one else
-    references, yet "is itself at `many`"; read as deliberate, so that
-    nothing on the `many` path mints a unique, but it forgoes a
-    unique cell that would be sound to hand out if its slots' words are
-    all `many`. (c) A non-full-at invocation of a `many` cell copies;
-    the text should add that its result is not `at` the cell. A write
-    followed by a full-at invocation is one copy, since the written
-    slots and the unchanged field slots are then all in place. (d) At
+    references. The text has it "itself at `many`"; in chat after this
+    review's first version the owner decided it is at `unique`
+    instead, so a write whose items are all `_` is how a shared block
+    is copied into a unique cell. This session reads that as sound: the
+    block is unreferenced, and a unique-labelled slot still holding a
+    shared word cannot be filled `(at)` at `unique`, no unique variable
+    being at a shared word but the newtype-wrapper aliases §U1 permits,
+    which have no cell (audit Q4), so completing such a copy at `unique`
+    supplies fresh unique values there. Open, by the same reasoning:
+    whether a non-full-at invocation of a `many` cell, which also
+    copies, may mint its value at `unique` where its position asks.
+    (c) A non-full-at invocation of a `many` cell copies; the text
+    should add that its result is not `at` the cell. A write followed
+    by a full-at invocation is one copy, since the written slots and
+    the unchanged field slots are then all in place. (d) At
     `many` the `else` binder is `many`, `is` and `at` the scrutinee,
     mandatory and inert. (e) A `comptime-match many` binds a `Const`
     cell. (f) Inside the prelude's extern model bodies the extern mark
@@ -344,6 +353,12 @@ reading of `lib/` at commit ab64de0.
     `check_marks`'s normalizer leaves only `let`s binding variables to
     variables and a final `values` of variables, or nothing. Stores,
     allocations and calls of ordinary functions are what it excludes.
+    Field loads must count as nothing too: P4's body reads `m` and
+    `tl` out of the block before the rename, and once the at-call is
+    dropped those loads are dead, so a match every branch of which
+    erases to nothing erases to nothing itself, dispatch and loads
+    included; item 37's coverage argument is what makes dropping the
+    dispatch sound, and today's `norm` does not yet fold such a match.
     Whether a `match` whose annotation is `_` (SUGAR.md 2) counts as an
     at-match when the reused telescope is all erased or `at`, as P4's
     `let-match` is, is unstated; A9 requires the `(at ...)` spelling.
@@ -356,7 +371,17 @@ reading of `lib/` at commit ab64de0.
     known throughout the block, so the natural rule is that a call to
     a sibling marked `at` counts as skipped by the mark, and that
     `(at (f ...))` on such a sibling is checked against the mark. The
-    earlier draft said as much; the current text does not.
+    earlier draft said as much; the current text does not. In chat
+    after this review's first version the owner proposed minting the
+    `AtFn` proof when a header claiming `at` is elaborated, before the
+    bodies, with a compile error if the body then fails the check.
+    This session agrees: the proof's one use is to drop calls, the
+    check runs regardless, nothing escapes a refused block, and letting
+    the body's own recursive call count as dropped is an induction
+    whose well-foundedness is §7's termination measure, mutual
+    recursion within the block included. A call through the function's
+    name would then be dropped as `delegate-of` fetches by name, and
+    `open-at-fn` would serve first-class uses.
 
 34. **A10, what the proof licenses.** An at-function's returns are
     all erased or `at`, so a first-class call with no proof opened runs
@@ -366,11 +391,17 @@ reading of `lib/` at commit ab64de0.
     than a reinterpretation. Stating this would make the soundness
     story of A10 one sentence: the burden is item 32's check alone.
 
-35. **A10, extern at-functions.** "Extern at-functions over arrays"
-    would have FFI implementations that are skipped where the proof is
-    opened and run where it is not; §U12's "honoured physically"
-    obligation then extends to the implementation doing nothing
-    observable. Worth stating when that work comes.
+35. **A10, extern at-functions.** In chat after this review's first
+    version the owner decided that a function marked both `extern` and
+    `at` has no FFI implementation: the marks are a promise, and the
+    compiler emits a function that does nothing, for a call made where
+    no proof is opened. This session reads that as needing no separate
+    dummy: the model body, having passed item 32's check, already
+    compiles to a function returning no word, so compiling the model
+    is the dummy; `Ffi.claim_fn` would skip such a function, and §41's
+    conservativity holds vacuously. What `extern` buys such a function
+    is §U12's cells over an extern type inside its body, not an
+    implementation.
 
 36. **A10, `open-at-fn` and forcing.** The open is keyed by `f`'s
     canonical atom, as §19's opens are by constructors, and a branch
@@ -551,3 +582,108 @@ the message's operative words.
   accepted, prints `2`; the extracted body is `let y = (match x with
   ... -> (let cell = x in (store; cell))) in ...`, the branch returning
   the word and the `let` receiving it (item 12).
+- **P8** Part 8's pattern over a one-element toy array: a unique cell
+  `(A1 (Un _ (SlotHolds x)))` holding the element `x`'s slot under a
+  union newtype, `x` mutated in place to `x2` through its own cell, the
+  toy array's cell reinvoked `(at (c (In _ x2)))`: refused at the
+  invocation, `` `at` argument 1 is not in its slot's location class ``.
+  Nothing today connects the destructured slot's *value* to the
+  element's *location*, which is what `slot-self` would do.
+- **P8b** The same with a plain store, `(c (In _ x2))`: accepted,
+  prints `1`.
+
+## 8. The owner's motivating example: pluck, mutate, put back
+
+The owner gave this example in chat after the first version of this
+review; the sketches below are this session's, written against the
+proposal's rules as read in part 2, and checked by no compiler, since
+nothing implements them.
+
+47. **The pattern.** An element of an array (a jagged array's row, or
+    any unique value mutated inside an outer array) is taken out with
+    `array-pluck`, mutated in place through its own cells, and put back
+    by an at-function whose call is erased, so that putting a value
+    back costs nothing. Today's `array-pluck` returns the array with
+    the element's word still in place under `Uninit`, an erased `(Slot)
+    s`, and an `ASet` proof naming `(Uninit A s)`; the owner notes the
+    signature must then say that `s` is exactly the slot of the value
+    returned.
+
+48. **Pluck's signature, as this session reads it.** With A6,
+    `slot-of` may name an earlier return entry, so the separate slot
+    return goes away and the proof names the value's slot directly:
+
+    ```scheme
+    (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
+        (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i)
+        (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
+        (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
+        (erased (ASet (MaybeUninit A) n a i (Uninit A (slot-of v)) r) p))
+    ```
+
+    This cannot be written today: `SlotHolds` may not name a telescope
+    binder (probe E5, `tests/slot_binder_bad.sl`), which is why today's
+    `s` is abstract. In the body, `(Uninit _ (slot-of hd))` is a
+    newtype application at `(slot-of hd)`, whose word is `hd`'s, so the
+    one store today's body makes is of the word already there and may
+    be marked `(at)`: pluck then reads a word and stores nothing, which
+    is what the FFI already does (ASSUMPTIONS 167). It is not an
+    at-function, since it returns the element.
+
+49. **The put-back, as an `extern at` function** (item 35):
+
+    ```scheme
+    (def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (Nat) n)
+        (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i) (unique A x)
+        (erased (ANth (MaybeUninit A) n a i (Uninit A (slot-of x))) nth) ->
+        (unique (Array (MaybeUninit A) n) r at a)
+        (erased (ASet (MaybeUninit A) n a i (Init A x) r) p))
+      (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+      (match many i (at (((Array (MaybeUninit A) n) r at a)
+                         ((ASet (MaybeUninit A) n a i (Init A x) r) p)))
+        ((Zero _)
+          (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+          (let-match unique hd (Uninit _ s))
+          (slot-self s)
+          (values (at (u _ _ (Init _ x) tl)) (SetZ _ _ _ _ _)))
+        ((Succ i1 _)
+          (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+          (let ((unique tl3) (erased p1)) (array-unpluck _ _ tl i1 x _ q))
+          (values (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
+    ```
+
+    In the `Zero` branch `nth` forces `hd is (Uninit A (slot-of x))`,
+    which refutes `Init`; the newtype destructure puts `s` at `hd`
+    (§U9); `(slot-self s)` makes `s` its own slot; and `s is (slot-of
+    x)` was forced, so `hd`'s slot is `x`'s. `(Init _ x)` is at `x`,
+    being a newtype application at its non-erased argument, so the
+    invocation is full-at and stores nothing; the `Succ` branch's call
+    is an at-call and `tl3` is at `tl`. The body then erases to nothing
+    under item 32's reading: the outer destructure's loads are dead,
+    the at-match is dropped, and what remains is renames. `x` is
+    consumed once on each path.
+
+50. **What the example needs from the proposal**, item by item: A6's
+    `slot-of` on a telescope binder, an earlier return in pluck and a
+    parameter in the put-back; A7's `slot-self` on the slot a newtype
+    destructure hands out, which is exactly where today's rules stop
+    (P8 against P8b); §U9's newtype rules unchanged; A8's binder on the
+    `Nat` patterns inside the extern body; A9's at-match with dead loads
+    (item 32); A10's header-minted proof for the recursive call (item
+    33) and the `extern at` reading (item 35). The caller also needs an
+    erased lemma from `ASet` to `ANth`, routine and not in the prelude,
+    and relies on `(slot-of v)`, `(slot-of x)` and `(slot-of x2)`
+    canonicalizing equal through the newtype destructure of `v` and the
+    `at` return of the mutation, which they do under part 2's reading.
+
+51. **Two observations.** The array holds the element's pointer under
+    `Uninit` while the element is live and unique: that is already so
+    today (the prelude's comment above `array-pluck` calls it a
+    potential leak until the element is overwritten) and is harmless, a
+    `(Slot)` being inert (§U10); overwriting index `i` meanwhile drops
+    the pointer and with it the `ANth` fact the put-back needs, so a
+    stale put-back is refused by typing. And the example is the
+    strongest case this session has seen for item 30's default: every
+    `slot-self` in it is on a `(Slot)` that a destructure has just
+    bound. A jagged array, `(Array (MaybeUninit (Array B m)) n)`, is the
+    same pattern with `array-place` as the mutation.
