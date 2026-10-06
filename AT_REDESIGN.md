@@ -34,8 +34,8 @@ non-erased fields a match on a non-erased scrutinee binds, with the same
 effect. Erased variables get none.
 
 A `let` needs nothing of its own here: the entries of its right-hand
-side enter the containing expression (§16), bringing their slots with
-them.
+side enter the containing expression anonymously (§16), bringing their
+slots with them.
 
 An automatic slot is `at` itself. Only automatic slots are: a written
 `at` cannot name the entry it is written on.
@@ -179,8 +179,7 @@ semantics are settled first:
    `(Eq (Slot) (slot-of s) s)`, erased.
 3. Whether a written `at v` stands for `at (slot-of v)` for a variable
    `v` of any type, or whether its target must be of type `(Slot)`.
-4. Whether a cell binder (A8) or a closed-over variable receives an
-   automatic slot, beyond the sites A2 lists.
+4. Whether a cell binder (A8) receives an automatic slot.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
