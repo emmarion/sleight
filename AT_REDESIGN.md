@@ -66,10 +66,9 @@ In a function's parameter or return telescope, an entry may be written
 `at` an earlier entry or a variable from an enclosing scope. The target
 must be non-erased.
 
-The target is a `many` or `unique` variable of any type, not
-necessarily a `(Slot)`. `at v` may be read as `at (slot-of v)`, applied
-always, even where `v` is itself a slot: the entry is then at `v`'s
-slot, not at `v`.
+The target is a `many` or `unique` variable `v` of any type, not
+necessarily a `(Slot)`. The entry's at (A4) is `(slot-of v)`, always,
+even where `v` is itself a slot.
 
 Neither `at` nor `slot-of` (A6) may appear in the telescope of a type
 constructor or a value constructor.
