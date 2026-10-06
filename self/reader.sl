@@ -46,27 +46,31 @@
   (many MkRegion : (many (Nat) index) (many (String) name) (many (Pos) from) (many (Maybe $ Pos) until) -> (Region)))
 
 (def-fns _ $ (many pos-lt : (many (Pos) a) (many (Pos) b) -> (many (Bool) r))
-  (match many a _ ((MkPos al ac) (match many b _ ((MkPos bl bc)
-    (or (nat-lt al bl) $ and (nat-eq al bl) $ nat-lt ac bc))))))
+  (let-match many a (MkPos al ac))
+  (match many b _ ((MkPos bl bc)
+    (or (nat-lt al bl) $ and (nat-eq al bl) $ nat-lt ac bc))))
 
 (def-fns _ $ (many region-covers : (many (Region) r) (many (Pos) p) -> (many (Bool) b))
   (match many r _ ((MkRegion _ _ from until)
     (and (not $ pos-lt p from) $ match many until (((Bool) _)) ((None _) (BTrue)) ((Some _ u) (pos-lt p u))))))
 
 (def-fns _ $ (many region-named : (subterm many (List $ Region) rs) (many (String) name) -> (many (Maybe $ Region) r))
-  (match many rs _
-    ((Nil _) (None _))
-    ((Cons _ r rest) (match many r _ ((MkRegion _ n _ _) (match many (str-eq n name) _ ((BTrue) (Some _ r)) ((BFalse) (tail $ region-named rest name))))))))
+  (let-match many rs (Cons _ r rest)
+    ((Nil _) (None _)))
+  (let-match many r (MkRegion _ n _ _))
+  (match many (str-eq n name) _ ((BTrue) (Some _ r)) ((BFalse) (tail $ region-named rest name))))
 
 (def-fns _ $ (many region-drop : (subterm many (List $ Region) rs) (many (String) name) -> (many (List $ Region) r))
-  (match many rs _
-    ((Nil _) rs)
-    ((Cons _ r rest) (match many r _ ((MkRegion _ n _ _) (match many (str-eq n name) _ ((BTrue) rest) ((BFalse) (Cons _ r $ notail $ region-drop rest name))))))))
+  (let-match many rs (Cons _ r rest)
+    ((Nil _) rs))
+  (let-match many r (MkRegion _ n _ _))
+  (match many (str-eq n name) _ ((BTrue) rest) ((BFalse) (Cons _ r $ notail $ region-drop rest name))))
 
 (def-fns _ $ (many region-insert : (many (Region) r) (subterm many (List $ Region) rs) -> (many (List $ Region) out))
   (let-match many rs (Cons _ q rest) ((Nil _) (Cons _ r rs)))
-  (match many r _ ((MkRegion i _ _ _) (match many q _ ((MkRegion j _ _ _)
-    (match many (nat-lt i j) _ ((BTrue) (Cons _ r rs)) ((BFalse) (Cons _ q $ notail $ region-insert r rest))))))))
+  (let-match many r (MkRegion i _ _ _))
+  (let-match many q (MkRegion j _ _ _))
+  (match many (nat-lt i j) _ ((BTrue) (Cons _ r rs)) ((BFalse) (Cons _ q $ notail $ region-insert r rest))))
 
 (def-fns _ $ (many regions-sorted : (subterm many (List $ Region) rs) (many (List $ Region) acc) -> (many (List $ Region) out))
   (match many rs _
@@ -128,9 +132,10 @@
     ((Some _ p) (Cons _ (RAtom p $ rope-str cur) words))))
 
 (def-fns _ $ (many pragma-limit : (many (List $ Raw) words) -> (many (Nat) n))
-  (match many (list-rev _ words) _
-    ((Cons _ w _) (match many w _ ((RAtom _ s) (match many (str-eq s "warn") _ ((BTrue) 2) ((BFalse) 3))) (else 3)))
-    ((Nil _) 3)))
+  (let-match many (list-rev _ words) (Cons _ w _)
+    ((Nil _) 3))
+  (let-match many w (RAtom _ s) (else 3))
+  (match many (str-eq s "warn") _ ((BTrue) 2) ((BFalse) 3)))
 
 (def-fns _ $ (many pragma-tok : (many (Pos) pos) (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (Tok) t))
   (TPragma pos $ list-rev _ $ pragma-field start cur words))
@@ -265,9 +270,10 @@
             ((BFalse) (values stack (syn-err wl $ str-cat3 "unknown pragma `" kw "`") closed)))
           (let ((many (Maybe $ String) name)) $ match many args _
             ((Cons _ a more)
-              (match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) _
-                ((BTrue) (match many more _ ((Cons _ n _) (match many n _ ((RAtom _ x) (Some _ x)) (else (None _)))) ((Nil _) (None _))))
-                ((BFalse) (None _))))
+              (let-match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) (BTrue)
+                ((BFalse) (None _)))
+              (let-match many more (Cons _ n _) ((Nil _) (None _)))
+              (match many n _ ((RAtom _ x) (Some _ x)) (else (None _))))
             ((Nil _) (None _)))
           (let-match many name (Some _ n) ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed)))
           (match many (str-eq kw "suppress") _

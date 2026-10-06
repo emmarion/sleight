@@ -12,13 +12,12 @@
 (let ((erased p)) (prove-predates L M))
 
 (def-fns M $ (many inc-meters : (many (Meters) x) -> (many (Meters) r))
-  (match erased x (((Meters) r))
-    ((MkMeters n)
-      (let ((many k)) (coerce x (coercible-sym (coercible-wrap (Shared) MkMeters n))))
-      (let ((many j)) (delegate (inc (predates p) k)))
-      (coerce j (coercible-wrap (Shared) MkMeters j)))))
+  (let-match erased x (MkMeters n))
+  (let ((many k)) (coerce x (coercible-sym (coercible-wrap (Shared) MkMeters n))))
+  (let ((many j)) (delegate (inc (predates p) k)))
+  (coerce j (coercible-wrap (Shared) MkMeters j)))
 
 (let ((erased ig)) (coercible-of (delegate-of inc-meters)))
 (let ((many (Fn L (many (Nat) a) -> (many (Nat) b)) g)) (coerce inc-meters ig))
 (g (Zero))
-; warns: tests/delegate_coerce.sl:18:38: warning: unnecessary `(predates _)`; drop it
+; warns: tests/delegate_coerce.sl:17:34: warning: unnecessary `(predates _)`; drop it

@@ -9,8 +9,7 @@
   (many Pack : (erased (Level) l) (many (Fn l (many (Nat) x) -> (many (Nat) y)) f) -> (Packed)))
 (def-lvl K)
 (def-fns K $ (many run-one : (many (Packed) p) (many (Nat) x) -> (many (Nat) y))
-  (match many p _
-    ((Pack l f)
-      (let ((erased q)) (prove-predates l K))
-      (f (predates q) x))))
+  (let-match many p (Pack l f))
+  (let ((erased q)) (prove-predates l K))
+  (f (predates q) x))
 (run-one (Pack L1 inc) 3)

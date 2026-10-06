@@ -18,3 +18,4 @@
 (vmap (Succ (Zero)) (VCons (Nat) (Zero) (Zero) (VNil (Nat))))
 ; warns: tests/vec_map.sl:16:27: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/vec_map.sl:16:60: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/vec_map.sl:12:4: warning: lopsided `match`; flatten it with a `let-match` on `VCons`

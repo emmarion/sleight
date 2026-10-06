@@ -55,8 +55,8 @@
     ((UFail) (BFalse))
     ((UOk rs)
       (let-match many rs (Cons e rule rest) ((Nil e) (BFalse)))
-      (match many rule (((Bool) b))
-        ((MkRule x t) (match many (nat-dec x 6) (((Bool) b)) ((NDSame f) (BTrue)) ((NDDiff f g n) (BFalse))))))))
+      (let-match many rule (MkRule x t))
+      (match many (nat-dec x 6) (((Bool) b)) ((NDSame f) (BTrue)) ((NDDiff f g n) (BFalse))))))
 (comptime-match many aliased (BTrue))
 
 ; With 6 ruled to be Succ 5 by the first run, 6 against Succ 5 is read through the rule and accepted in Check mode.

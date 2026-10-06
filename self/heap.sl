@@ -187,7 +187,8 @@
     (suffix-len _ l (HAdd _ s v) p (Succ pos) (LenAdd _ s v pos lp) bound lb))))
 
 (def-fns _ $ (many ref-pos : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Ref B l) r) -> (many (Nat) p))
-  (match many r _ ((MkRef _ _ _ v _) (match many v _ ((MkValue _ _ pos _ _) pos)))))
+  (let-match many r (MkRef _ _ _ v _))
+  (match many v _ ((MkValue _ _ pos _ _) pos)))
 
 (def-fns _ $ (many store-read : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
     (many (Store B l) st) (many (Ref B l) r) ->

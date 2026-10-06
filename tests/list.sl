@@ -36,3 +36,4 @@
 ; warns: tests/list.sl:15:5: warning: declaration of `Cons` shadows a previous binder
 ; warns: lib/prelude.sl:913:5: note: shadowed binder is here
 ; warns: tests/list.sl:26:33: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/list.sl:22:4: warning: lopsided `match`; flatten it with a `let-match` on `Cons`

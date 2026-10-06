@@ -30,11 +30,10 @@
   (match erased p _ (absurd (Refl A x) (open-absurd m _))))
 
 (def-fns X $ (many sub1 : (many (Nat) a) (many (Nat) b) (erased (Lt b (Succ a)) le) -> (many (Nat) c))
-  (match many b _
-    ((Zero) a)
-    ((Succ b1)
-      (match many a _
-        (absurd (Zero) (let-match erased le (LtS x y l1)) l1)
-        ((Succ a1) a1)))))
+  (let-match many b (Succ b1)
+    ((Zero) a))
+  (match many a _
+    (absurd (Zero) (let-match erased le (LtS x y l1)) l1)
+    ((Succ a1) a1)))
 
 (Cons (Nat) (sub1 (Succ (Zero)) (Succ (Zero)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))) $ Nil (Nat))

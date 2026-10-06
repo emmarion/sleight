@@ -34,11 +34,13 @@
 
 (def-fns _ $ (many heap-nat : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (Nat) n))
   (let ((erased x) (many b) (erased lt)) (store-read Block _ hp a))
-  (match many b _ ((BExt _ p) (match many p _ ((PNat n) n) (else 0))) (else 0)))
+  (let-match many b (BExt _ p) (else 0))
+  (match many p _ ((PNat n) n) (else 0)))
 
 (def-fns _ $ (many heap-str : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (String) n))
   (let ((erased x) (many b) (erased lt)) (store-read Block _ hp a))
-  (match many b _ ((BExt _ p) (match many p _ ((PStr s) s) (else (SNil)))) (else (SNil))))
+  (let-match many b (BExt _ p) (else (SNil)))
+  (match many p _ ((PStr s) s) (else (SNil))))
 
 (def-fns _ $ (many alloc-ext : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
   (alloc Block _ hp $ BExt _ p))
@@ -113,9 +115,9 @@
   (let ((erased s) (many body) (erased sf)) (store-read Block _ hp v))
   (let-match many body (BTag _ _ fields) (else (Nil _)))
   (let ((erased fs2) (erased pf)) (refs-widen _ _ _ sf fields))
-  (match many (coerce fields pf) _
-    ((Cons _ x more) (match many more _ ((Cons _ rest _) (Cons _ x (notail $ list-refs k _ hp rest))) (else (Nil _))))
-    (else (Nil _))))
+  (let-match many (coerce fields pf) (Cons _ x more)
+    (else (Nil _)))
+  (match many more _ ((Cons _ rest _) (Cons _ x (notail $ list-refs k _ hp rest))) (else (Nil _))))
 
 (def-fns _ $ (many ext-construct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (ExtType) ext) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
   (match many ext _
@@ -173,8 +175,9 @@
   (let-match many n (Succ k) ((Zero) (Nil _)))
   (let-match many k (Succ _) ((Zero) (Cons _ v $ Nil _)))
   (let ((erased a) (many b) (erased lt)) (store-read Block _ hp v))
-  (match many b _
-    ((BTup _ fs) (let ((erased w2) (erased p2)) (refs-widen _ _ _ lt fs)) (coerce fs p2)) (else (Nil $ Ref Block hs))))
+  (let-match many b (BTup _ fs) (else (Nil $ Ref Block hs)))
+  (let ((erased w2) (erased p2)) (refs-widen _ _ _ lt fs))
+  (coerce fs p2))
 
 (def-fns _ $ (many ctor-fields : (erased (Hist Block) hs) (many (Store Block hs) hp)
     (many (Bool) is-newtype) (many (Nat) arity) (many (Ref Block hs) v) -> (many (List $ Ref Block hs) fields))
@@ -274,12 +277,11 @@
     (match many array _
       ((None _) (values hp (None _)))
       ((Some _ a) (array-change _ hp a index replacement))))
-  (match many old _
-    ((None _)
-      (let ((erased h2) (many hp2) (erased le2) (many err)) (alloc Block _ hp1 (BError _ "invalid array access")))
-      (values h2 hp2 le2 (Cons _ err (Nil _))))
+  (let-match many old (None _)
     ((Some _ v)
-      (values hs hp1 (le-refl hs) (match many return-old (((List $ Ref Block hs) _)) ((BTrue) (Cons _ v (Nil _))) ((BFalse) (Nil _)))))))
+      (values hs hp1 (le-refl hs) (match many return-old (((List $ Ref Block hs) _)) ((BTrue) (Cons _ v (Nil _))) ((BFalse) (Nil _))))))
+  (let ((erased h2) (many hp2) (erased le2) (many err)) (alloc Block _ hp1 (BError _ "invalid array access")))
+  (values h2 hp2 le2 (Cons _ err (Nil _))))
 
 (def-fns _ $ (many apply-extern : (erased (Nat) n) (many (Extern n) e) (many (List $ Ctor) cs) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (List $ Ref Block hs) args) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) r))
   (let ((many (Maybe $ Ref Block hs) a)) $ match many (list-nth _ args 0) _ ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _)))
@@ -301,9 +303,10 @@
       ((ExArrayMake) (ErArrayMake na))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
       ((ExSub)
-        (match many (lt-dec nb (Succ na)) (((ExtResult) _))
-          ((Yes _ _ le) (let ((many c) (erased pf)) $ sub na nb le) (ErPayload $ PNat c))
-          ((No _ _ _) (ErPayload $ PStr "sub: negative result"))))
+        (let-match many (lt-dec nb (Succ na)) (Yes _ _ le)
+          ((No _ _ _) (ErPayload $ PStr "sub: negative result")))
+        (let ((many c) (erased pf)) $ sub na nb le)
+        (ErPayload $ PNat c))
       ((ExMul) (ErPayload $ PNat $ nat-mul na nb))
       ((ExShl) (ErPayload $ PNat $ nat-shl na nb))
       ((ExShr) (ErPayload $ PNat $ nat-shr na nb))
@@ -313,9 +316,10 @@
       ((ExNatOr) (let ((many c) (erased p)) $ nat-or na nb) (ErPayload $ PNat c))
       ((ExNatXor) (let ((many c) (erased p)) $ nat-xor na nb) (ErPayload $ PNat c))
       ((ExDiv)
-        (match many (lt-dec (Zero) nb) (((ExtResult) _))
-          ((Yes _ _ pos) (let ((many d) (erased m) (erased r) (erased mm) (erased ad) (erased p)) $ div na nb pos) (ErPayload $ PNat d))
-          ((No _ _ _) (ErPayload $ PStr "div: zero divisor"))))
+        (let-match many (lt-dec (Zero) nb) (Yes _ _ pos)
+          ((No _ _ _) (ErPayload $ PStr "div: zero divisor")))
+        (let ((many d) (erased m) (erased r) (erased mm) (erased ad) (erased p)) $ div na nb pos)
+        (ErPayload $ PNat d))
       ((ExNatCmp) (ErCtor $ cmp-index _ _ _ _ $ nat-cmp na nb))
       ((ExLtDec) (ErCtor $ match many (lt-dec na nb) (((Nat) _)) ((Yes _ _ _) 0) ((No _ _ _) 1)))
       ((ExStrCmp) (ErCtor $ cmp-index _ _ _ _ $ str-cmp sa sb))
@@ -323,9 +327,10 @@
       ((ExStrLength) (let ((many len) (erased lp)) (str-length sa)) (ErPayload $ PNat len))
       ((ExNatStr) (ErPayload $ PStr $ nat-str na))
       ((ExNatMod)
-        (match many (lt-dec (Zero) nb) (((ExtResult) _))
-          ((Yes _ _ pos) (let ((many m) (erased pf) (erased pq)) $ nat-mod na nb pos) (ErPayload $ PNat m))
-          ((No _ _ _) (ErPayload $ PStr "nat-mod: zero modulus"))))
+        (let-match many (lt-dec (Zero) nb) (Yes _ _ pos)
+          ((No _ _ _) (ErPayload $ PStr "nat-mod: zero modulus")))
+        (let ((many m) (erased pf) (erased pq)) $ nat-mod na nb pos)
+        (ErPayload $ PNat m))
       ((ExTrim) (ErPayload $ PStr $ trim sa))
       ((ExAppend) (ErPayload $ PStr $ str-append sa sb))
       ((ExFlatten) (ErPayload $ PStr $ match many a (((String) _)) ((Some _ x) (flatten-value _ hp x)) ((None _) (SNil))))
@@ -474,8 +479,8 @@
 
 (def-fns _ $ (many const-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
-  (match many info _
-    ((MkEInfo _ _ _ s _ _ _) (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))))
+  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (match many s _ ((SDyn _) (None _)) ((SConst _ v) (Some _ v))))
 
 (def-fns _ $ (many const-value : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (match many (const-ref _ cs x) _
@@ -500,9 +505,9 @@
         ((FrGroup _ _ _ _ _ rest) (tail $ frames-get _ _ q _ hp cs rest))))))
 
 (def-fns _ $ (many has-branch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Nat) i) -> (many (Bool) r))
-  (match many bs _
-    ((Nil _) (BFalse))
-    ((Cons _ b rest) (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ notail $ has-branch _ _ rest i))))))
+  (let-match many bs (Cons _ b rest)
+    ((Nil _) (BFalse)))
+  (match many b _ ((MkBranch _ _ d _ _) (or (nat-eq d i) $ notail $ has-branch _ _ rest i))))
 
 (def-fns _
   ((many eval : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (St hs ctx) st) ->
@@ -580,9 +585,9 @@
           (match many read _
             ((Some _ p)
               (let-match many p (MkPair _ _ i fields))
-              (match many (has-branch _ _ branches i) _
-                ((BTrue) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2))
-                ((BFalse) (match many dfl _ ((Some _ d) (tail $ eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2))))))
+              (let-match many (has-branch _ _ branches i) (BFalse)
+                ((BTrue) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2)))
+              (match many dfl _ ((Some _ d) (tail $ eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (tail $ eval-branch fuel _ hp2 _ ns branches i fields st2))))
             ((None _)
               (let-match many branches (Cons _ br _)
                 ((Nil _) (match many dfl _ ((Some _ d) (tail $ eval fuel _ hp2 _ _ d $ st-push _ _ st2 (Nil _) (Nil _) (LsNil _ _))) ((None _) (error-vals _ hp2 ns "no branch")))))

@@ -8,8 +8,7 @@
 (def-adts $ (Two : -> Type) enum (many MkB : (many (Nat) p) (many (Nat) q) -> (Two)))
 
 (def-fns _ $ (many convert : (unique (A2) a) -> (unique (Two) b))
-  (match unique a _
-    ((MkA x y cell)
-      (let ((unique cell2)) (cell-write cell (MkB (SlotHolds y) (SlotHolds x))))
-      (cell2 y x))))
+  (let-match unique a (MkA x y cell))
+  (let ((unique cell2)) (cell-write cell (MkB (SlotHolds y) (SlotHolds x))))
+  (cell2 y x))
 convert

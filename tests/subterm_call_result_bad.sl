@@ -13,9 +13,8 @@
 (let ((erased aw)) (prove-predates AL WL))
 
 (def-fns WL $ (many walk : (subterm many (Wrap) w) -> (many (Nat) n))
-  (match many w _
-    ((MkWrap f)
-      (let ((many w2)) (f (predates aw)))
-      (Succ (walk (subterm (prove-subterm w2 w)) w2)))))
+  (let-match many w (MkWrap f))
+  (let ((many w2)) (f (predates aw)))
+  (Succ (walk (subterm (prove-subterm w2 w)) w2)))
 walk
-; warns: tests/subterm_call_result_bad.sl:18:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/subterm_call_result_bad.sl:17:23: warning: unnecessary `(predates _)`; drop it

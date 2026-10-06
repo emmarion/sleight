@@ -183,9 +183,9 @@
       ((Nil c) (BlNil all ar m))
       ((Cons c t rest) (BlCons all ar t rest m (below-all all ar m v a t) (below-all-list all ar m v a rest)))))
   ((erased below-all-tele : (erased (List (Rule)) all) (erased (List (Nat)) ar) (erased (Nat) m) (erased (ValidFrom all ar all ar) v) (erased (AllLt ar m) a) (subterm erased (List (Entry)) es) -> (erased (BelowTele all ar es m) b))
-    (match erased es _
-      ((Nil c) (BlTNil all ar m))
-      ((Cons c e rest) (match erased e _ ((MkEntry s i t) (BlTCons all ar s i t rest m (below-all all ar m v a t) (below-all-tele all ar m v a rest))))))))
+    (let-match erased es (Cons c e rest)
+      ((Nil c) (BlTNil all ar m)))
+    (match erased e _ ((MkEntry s i t) (BlTCons all ar s i t rest m (below-all all ar m v a t) (below-all-tele all ar m v a rest))))))
 
 ; ---- The functions: canonicalization recurses on the bound and then the term.
 (def-fns _

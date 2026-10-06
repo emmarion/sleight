@@ -235,32 +235,30 @@
     (erased (List (List (Nat))) ws)
     (erased (Windows (Nat) (Succ k) right ws) wins)
     (erased (All (List (Nat)) NotPalindrome ws) absent))
-  (match erased right _
+  (let-match erased right (Cons a x rest)
     ((Nil a)
       (values (Nil _)
         (WinStop _ _ right (Zero) (PalLNil _) (LtZ k))
-        (AllNil _ NotPalindrome)))
-    ((Cons a x rest)
-      (match erased (pal-take (Succ k) right) _
-        ((PalShort m source len p short)
-          (values (Nil _) (WinStop _ _ right len p short)
-            (AllNil _ NotPalindrome)))
-        ((PalTaken m source w tk len)
-          (match erased (pal-decide _ w len) _
-            (absurd (PalYes v pal)
-              (let ((erased tail4) (erased cat)) (fp-take-rest _ _ right w tk))
-              (lt-asym n _ larger
-                (fp-pal-prefix-bound left right (Nil _) tail4 tail4 w
-                  (Zero) (Zero) _ _ n
-                  (TakeZero _ left) (PalLNil _) (PalCatNil _ tail4)
-                  cat pal len (D0) (AddZero _) bounds)))
-            ((PalNo v np)
-              (let-match erased bounds (PCBStep l r y n2 e o de do even odd twoe twoo be bo rem))
-              (let ((erased tailws) (erased tailwins) (erased tailabsent))
-                (fp-bounded-windows _ rest n k rem larger))
-              (values (Cons _ w tailws)
-                (WinStep _ _ x rest w tk tailws tailwins)
-                (AllCons _ NotPalindrome w tailws np tailabsent)))))))))
+        (AllNil _ NotPalindrome))))
+  (let-match erased (pal-take (Succ k) right) (PalTaken m source w tk len)
+    ((PalShort m source len p short)
+      (values (Nil _) (WinStop _ _ right len p short)
+        (AllNil _ NotPalindrome))))
+  (match erased (pal-decide _ w len) _
+    (absurd (PalYes v pal)
+      (let ((erased tail4) (erased cat)) (fp-take-rest _ _ right w tk))
+      (lt-asym n _ larger
+        (fp-pal-prefix-bound left right (Nil _) tail4 tail4 w
+          (Zero) (Zero) _ _ n
+          (TakeZero _ left) (PalLNil _) (PalCatNil _ tail4)
+          cat pal len (D0) (AddZero _) bounds)))
+    ((PalNo v np)
+      (let-match erased bounds (PCBStep l r y n2 e o de do even odd twoe twoo be bo rem))
+      (let ((erased tailws) (erased tailwins) (erased tailabsent))
+        (fp-bounded-windows _ rest n k rem larger))
+      (values (Cons _ w tailws)
+        (WinStep _ _ x rest w tk tailws tailwins)
+        (AllCons _ NotPalindrome w tailws np tailabsent)))))
 
 ; Descend from the input length to the answer, constructing the specification's
 ; explicit chain of excluded lengths. This potentially expensive work erases.

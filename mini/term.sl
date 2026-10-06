@@ -161,13 +161,16 @@
        -> (Snoc (Cons (Maybe (Term)) y ys) x (Cons (Maybe (Term)) y out)))))
 
 (def-fns _ $ (many snoc : (subterm many (List (Maybe (Term))) xs) (many (Maybe (Term)) x) -> (many (List (Maybe (Term))) out) (erased (Snoc xs x out) p))
-  (match many xs _
-    ((Nil a) (values (Cons _ x (Nil _)) (SnocNil x)))
-    ((Cons a y ys) (let ((many out) (erased p)) (notail $ snoc ys x)) (values (Cons _ y out) (SnocCons y ys x out p)))))
+  (let-match many xs (Cons a y ys)
+    ((Nil a) (values (Cons _ x (Nil _)) (SnocNil x))))
+  (let ((many out) (erased p)) (notail $ snoc ys x))
+  (values (Cons _ y out) (SnocCons y ys x out p)))
 (def-fns _ $ (many somes : (subterm many (List (Term)) as) -> (many (List (Maybe (Term))) subs) (erased (Somes as subs) p))
-  (match many as _
-    ((Nil a) (values (Nil _) (SomesNil)))
-    ((Cons a t ts) (let ((many sub3) (erased p)) (notail $ somes ts)) (let ((many out) (erased q)) (snoc sub3 (Some _ t))) (values out (SomesCons t ts sub3 out p q)))))
+  (let-match many as (Cons a t ts)
+    ((Nil a) (values (Nil _) (SomesNil))))
+  (let ((many sub3) (erased p)) (notail $ somes ts))
+  (let ((many out) (erased q)) (snoc sub3 (Some _ t)))
+  (values out (SomesCons t ts sub3 out p q)))
 
 ; ---- Abstraction, the inverse of substitution: the entries a telescope was elaborated with become its
 ; binders. The list has-is indexed by [Bound] like a substitution: a [Some] has-is the entry the binder stands for, a

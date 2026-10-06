@@ -9,3 +9,4 @@
       (let ((erased p)) (prove-subterm n x))
       n)))
 (probe (B (Zero)))
+; warns: tests/cell_subterm.sl:7:4: warning: lopsided `match`; flatten it with a `let-match` on `B`

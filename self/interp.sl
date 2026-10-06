@@ -27,9 +27,9 @@
     ((None _) (MkCtor name 0 0 0 (BFalse) (None _) (Nil _) (BFalse)))))
 
 (def-fns _ $ (many request-name : (many (Env) env) (many (Nat) i) -> (many (String) s))
-  (match many (prelude-adt env "IO") _
-    ((None _) "")
-    ((Some _ adt) (match many (list-nth _ (adt-ctors adt) i) _ ((NthHit _ _ _ c _) (ctor-name c)) ((NthMiss _ _ _ _) "")))))
+  (let-match many (prelude-adt env "IO") (Some _ adt)
+    ((None _) ""))
+  (match many (list-nth _ (adt-ctors adt) i) _ ((NthHit _ _ _ c _) (ctor-name c)) ((NthMiss _ _ _ _) "")))
 
 (def-fns _ $ (many field-at : (erased (Hist Block) hs) (many (List $ Ref Block hs) fields) (many (Nat) i) (many (Ref Block hs) v) -> (many (Ref Block hs) r))
   (match many (list-nth _ fields i) _ ((NthHit _ _ _ x _) x) ((NthMiss _ _ _ _) v)))
@@ -145,10 +145,10 @@
       ((Cons _ e _)
         (let-match many (entry-place e) (Some _ slot) ((None _) (None _)))
         (let-match many slot (TSlotHolds place) (else (None _)))
-        (match many place _
+        (let-match many place (TVar id)
           ((TBound _) arg)
-          ((TVar id) (match many (const-ref _ en id) _ ((Some _ r) (Some _ r)) ((None _) (captured-word env _ en (env-words env) place))))
-          (else (captured-word env _ en (env-words env) place))))))
+          (else (captured-word env _ en (env-words env) place)))
+        (match many (const-ref _ en id) _ ((Some _ r) (Some _ r)) ((None _) (captured-word env _ en (env-words env) place))))))
   (match many held _ ((Some _ r) r) ((None _) fallback)))
 
 (def-fns _ $ (many fn-rets : (many (Env) env) (many (Term) ty) -> (many (List $ Entry) rets))

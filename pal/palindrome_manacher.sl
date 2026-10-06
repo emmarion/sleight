@@ -43,24 +43,22 @@
     (subterm many (List (Nat)) left) (many (List (Nat)) right) (many (Nat) n)
     (erased (PalLcpPrefix fullleft fullright left right n) prefix) ->
     (many (Nat) k) (erased (PalLcp fullleft fullright k) p))
-  (match many left _
+  (let-match many left (Cons a x l)
     ((Nil a) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
-      prefix (PLLeft right) (add-zero-right n))))
-    ((Cons a x l)
-      (match many right _
-        ((Nil b) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
-          prefix (PLRight left) (add-zero-right n))))
-        ((Cons b y r)
-          (match many (nat-cmp x y) _
-            ((CLt t rel v w lt) (values n
-              (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
-                (PLApart x y l r (ApartLt _ _ lt)) (add-zero-right n))))
-            ((CGt t rel v w gt) (values n
-              (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
-                (PLApart x y l r (ApartGt _ _ gt)) (add-zero-right n))))
-            ((CEq t rel v)
-              (tail (man-expand-acc fullleft fullright l r (Succ n)
-                (PLPStep fullleft fullright l r x n prefix))))))))))
+      prefix (PLLeft right) (add-zero-right n)))))
+  (let-match many right (Cons b y r)
+    ((Nil b) (values n (fp-lcp-prefix-close fullleft fullright left right n (Zero) n
+      prefix (PLRight left) (add-zero-right n)))))
+  (match many (nat-cmp x y) _
+    ((CLt t rel v w lt) (values n
+      (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
+        (PLApart x y l r (ApartLt _ _ lt)) (add-zero-right n))))
+    ((CGt t rel v w gt) (values n
+      (fp-lcp-prefix-close fullleft fullright left right n (Zero) n prefix
+        (PLApart x y l r (ApartGt _ _ gt)) (add-zero-right n))))
+    ((CEq t rel v)
+      (tail (man-expand-acc fullleft fullright l r (Succ n)
+        (PLPStep fullleft fullright l r x n prefix))))))
 
 (def-fns _ $ (many man-expand : (many (List (Nat)) left right) ->
     (many (Nat) k) (erased (PalLcp left right k) p))
@@ -221,35 +219,34 @@
     (erased (PalScanned xs left right best) scanned) ->
     (many (Nat) n) (erased (HasPalindromeOfLength xs n) has)
     (erased (PalCenterBounds (Nil (Nat)) xs n) bounds))
-  (match many right _
+  (let-match many right (Cons a x rest)
     ((Nil a)
       (values best besthas
-        (fp-scanned-close xs left right best scanned (PCBEnd left best))))
-    ((Cons a x rest)
-      (let ((many e) (many de) (many ew) (erased ep) (erased ed) (erased ec)
-           (many es) (erased eh))
-        (man-center xs left right right (Nil _) i (Zero) (PPEven) split llen
-          (PalNil _) (PalLNil _) (PalCatNil _ right) table evens evenframe))
-      (let-match erased (fp-add-unique de (Zero) ew de ec (add-zero-right de)) (Refl t v))
-      (let ((many o) (many do) (many ow) (erased op) (erased od) (erased oc)
-           (many os) (erased oh))
-        (man-center xs left right rest _ i (Succ (Zero))
-          (PPOdd) split llen (PalOne _ x)
-          (PalLCons _ x _ _ (PalLNil _))
-          (PalCatCons _ x _ _ _ (PalCatNil _ rest)) table odds oddframe))
-      (let-match erased (fp-add-unique do (Succ (Zero)) ow _ oc
-        (add-succ-right do (Zero) do (add-zero-right do))) (Refl t2 v2))
-      (let ((many here) (erased herehas) (erased be) (erased bo))
-        (man-best xs de (Succ do) eh oh))
-      (let ((many n) (erased has) (erased bh) (erased bb))
-        (man-best xs here best herehas besthas))
-      (tail (man-scan xs (Cons _ x left) rest (Succ i)
-        (PSStep xs left rest x split) (PalLCons _ x _ _ llen) table
-        (idmap-set _ i es evens) (idmap-set _ i os odds)
-        (man-frame xs evenframe es) (man-frame xs oddframe os) n has
-        (PSCStep xs left rest x n e o de do ep op ed od
-          (fp-le-trans de here n be bh) (fp-le-trans _ here n bo bh)
-          (fp-scanned-weaken xs left right best n scanned bb)))))))
+        (fp-scanned-close xs left right best scanned (PCBEnd left best)))))
+  (let ((many e) (many de) (many ew) (erased ep) (erased ed) (erased ec)
+       (many es) (erased eh))
+    (man-center xs left right right (Nil _) i (Zero) (PPEven) split llen
+      (PalNil _) (PalLNil _) (PalCatNil _ right) table evens evenframe))
+  (let-match erased (fp-add-unique de (Zero) ew de ec (add-zero-right de)) (Refl t v))
+  (let ((many o) (many do) (many ow) (erased op) (erased od) (erased oc)
+       (many os) (erased oh))
+    (man-center xs left right rest _ i (Succ (Zero))
+      (PPOdd) split llen (PalOne _ x)
+      (PalLCons _ x _ _ (PalLNil _))
+      (PalCatCons _ x _ _ _ (PalCatNil _ rest)) table odds oddframe))
+  (let-match erased (fp-add-unique do (Succ (Zero)) ow _ oc
+    (add-succ-right do (Zero) do (add-zero-right do))) (Refl t2 v2))
+  (let ((many here) (erased herehas) (erased be) (erased bo))
+    (man-best xs de (Succ do) eh oh))
+  (let ((many n) (erased has) (erased bh) (erased bb))
+    (man-best xs here best herehas besthas))
+  (tail (man-scan xs (Cons _ x left) rest (Succ i)
+    (PSStep xs left rest x split) (PalLCons _ x _ _ llen) table
+    (idmap-set _ i es evens) (idmap-set _ i os odds)
+    (man-frame xs evenframe es) (man-frame xs oddframe os) n has
+    (PSCStep xs left rest x n e o de do ep op ed od
+      (fp-le-trans de here n be bh) (fp-le-trans _ here n bo bh)
+      (fp-scanned-weaken xs left right best n scanned bb)))))
 
 (def-fns _ $ (many longest-palindrome-manacher : (many (List (Nat)) xs) ->
     (many (Nat) n) (erased (LongestPalindrome xs n) correct))

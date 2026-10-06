@@ -11,3 +11,4 @@
         (absurd Zero)
         ((Succ j) (Succ (Zero)))))))
 (f (Succ (Succ (Zero))))
+; warns: tests/nested_match.sl:7:4: warning: lopsided `match`; flatten it with a `let-match` on `Succ`

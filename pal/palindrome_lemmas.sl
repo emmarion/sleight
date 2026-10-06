@@ -136,20 +136,18 @@
     (subterm erased (Windows (Nat) n xs ws) wins)
     (erased (HasPalindromeOfLength xs n) has) ->
     (erased (Exists (List (Nat)) NatPalindrome ws) found))
-  (match erased wins _
+  (let-match erased wins (WinStep a k x rest w tk tail3 wins1)
     ((WinEmpty a)
       (ExHere _ NatPalindrome (Nil _) (Nil _)
         (IsNatPalindrome (Nil _) (PalNil _))))
     (absurd (WinStop a k source len lp short)
-      (lt-asym len n short (fp-has-bound xs n len has lp)))
-    ((WinStep a k x rest w tk tail3 wins1)
-      (match erased has _
-        ((HasHere source k2 v tk2 pal)
-          (let-match erased (fp-take-unique _ n xs w v tk tk2) (Refl t z))
-          (ExHere _ NatPalindrome w tail3 (IsNatPalindrome w pal)))
-        ((HasThere y rest2 k2 has1)
-          (ExThere _ NatPalindrome w tail3
-            (fp-has-windows rest n tail3 wins1 has1)))))))
+      (lt-asym len n short (fp-has-bound xs n len has lp))))
+  (let-match erased has (HasHere source k2 v tk2 pal)
+    ((HasThere y rest2 k2 has1)
+      (ExThere _ NatPalindrome w tail3
+        (fp-has-windows rest n tail3 wins1 has1))))
+  (let-match erased (fp-take-unique _ n xs w v tk tk2) (Refl t z))
+  (ExHere _ NatPalindrome w tail3 (IsNatPalindrome w pal)))
 
 (def-fns _ $ (erased fp-spec-answer : (erased (List (Nat)) xs)
     (erased (Nat) n) (erased (HasPalindromeOfLength xs n) has)

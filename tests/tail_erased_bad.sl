@@ -4,7 +4,8 @@
 
 (def-lvl L)
 (def-fns L $ (many f : (subterm many (Nat) n) -> (many (Nat) m))
-  (match many n _
-    ((Zero) (Zero))
-    ((Succ p) (let ((erased q)) (tail (f p))) (Zero))))
+  (let-match many n (Succ p)
+    ((Zero) (Zero)))
+  (let ((erased q)) (tail (f p)))
+  (Zero))
 (f 3)

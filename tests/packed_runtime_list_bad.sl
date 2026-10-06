@@ -9,14 +9,12 @@
   (many Pack : (erased (Level) l) (many (Fn l (many (Nat) x) -> (many (Nat) y)) f) -> (Packed)))
 (def-lvl K)
 (def-fns K $ (many run-all : (subterm many (List (Packed)) qs) (erased (Predates (List (Packed)) qs K) pq) (many (Nat) x) -> (many (Nat) y))
-  (match many qs _
-    ((Nil a) x)
-    ((Cons a p rest)
-      (let ((erased sr)) (prove-subterm rest qs))
-      (match many p _
-        ((Pack l f)
-          (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))
-          (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))))))
+  (let-match many qs (Cons a p rest)
+    ((Nil a) x))
+  (let ((erased sr)) (prove-subterm rest qs))
+  (let-match many p (Pack l f))
+  (let ((erased sl)) (subterm-trans (prove-subterm l p) (prove-subterm p qs)))
+  (f (predates (predates-subterm pq sl)) (notail $ run-all (subterm sr) rest (predates-subterm pq sr) x)))
 (def-lvl Z)
 (let ((erased kz)) (prove-predates K Z))
 (def-fns Z $ (many main : (many (Nat) n) -> (many (Nat) r))
@@ -24,4 +22,4 @@
   (let ((erased pk)) (prove-predates ps K))
   (run-all (predates kz) ps pk n))
 (main 3)
-; warns: tests/packed_runtime_list_bad.sl:19:68: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/packed_runtime_list_bad.sl:17:60: warning: unnecessary `(subterm _)`; drop it

@@ -346,14 +346,16 @@
 
 ; ---- From the walk to the derivation over the list of equations.
 (def-fns _ $ (erased zip-of-samelen : (erased (List (Term)) as) (erased (List (Term)) bs) (erased (List (Eqn)) rest) (subterm erased (SameLen as bs) sl) -> (erased (List (Eqn)) eqs) (erased (Zip as bs rest eqs) z))
-  (match erased sl _
-    ((SLNil) (values rest (ZipNil rest)))
-    ((SLCons a b as2 bs2 p) (let ((erased eqs) (erased z)) (zip-of-samelen as2 bs2 rest p)) (values (Cons _ (MkEqn a b) eqs) (ZipCons a b as2 bs2 rest eqs z)))))
+  (let-match erased sl (SLCons a b as2 bs2 p)
+    ((SLNil) (values rest (ZipNil rest))))
+  (let ((erased eqs) (erased z)) (zip-of-samelen as2 bs2 rest p))
+  (values (Cons _ (MkEqn a b) eqs) (ZipCons a b as2 bs2 rest eqs z)))
 
 (def-fns _ $ (erased zip-tele-of-same : (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Eqn)) rest) (subterm erased (SameTele es fs) st) -> (erased (List (Eqn)) eqs) (erased (ZipTele es fs rest eqs) z))
-  (match erased st _
-    ((STNil) (values rest (ZTNil rest)))
-    ((STCons s i t u es2 fs2 p) (let ((erased eqs) (erased z)) (zip-tele-of-same es2 fs2 rest p)) (values (Cons _ (MkEqn t u) eqs) (ZTCons s i t u es2 fs2 rest eqs z)))))
+  (let-match erased st (STCons s i t u es2 fs2 p)
+    ((STNil) (values rest (ZTNil rest))))
+  (let ((erased eqs) (erased z)) (zip-tele-of-same es2 fs2 rest p))
+  (values (Cons _ (MkEqn t u) eqs) (ZTCons s i t u es2 fs2 rest eqs z)))
 
 (def-fns _ $ (erased zip-samelen : (erased (List (Term)) as) (erased (List (Term)) bs) (erased (List (Eqn)) rest) (erased (List (Eqn)) eqs) (subterm erased (Zip as bs rest eqs) z) -> (erased (SameLen as bs) sl))
   (match erased z _
@@ -418,30 +420,34 @@
   ((erased conv-list : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Term)) as) (erased (List (Term)) bs) (erased (UOut) o1) (erased (List (Eqn)) rest) (erased (List (Eqn)) eqs) (erased (UOut) out)
       (subterm erased (UnifyListC m ents rules as bs o1) d) (erased (Zip as bs rest eqs) z) (erased (Cont m ents o1 rest out) k) -> (erased (Unify m ents rules eqs out) u))
     (match erased d _
-      ((ULNil a b c) (match erased z _ ((ZipNil r2) (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) kk)))))
+      ((ULNil a b c)
+        (let-match erased z (ZipNil r2))
+        (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) kk)))
       ((ULCons a b c a1 b1 a2 b2 as2 bs2 o oo ca cb p q)
         (match erased z _ ((ZipCons a3 b3 as3 bs3 r3 eqs2 z2) (conv m ents rules a1 b1 a2 b2 o eqs2 out p ca cb (conv-after-list m ents rules o as2 bs2 oo rest eqs2 out q z2 k)))))))
   ((erased conv-tele : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (UOut) o1) (erased (List (Eqn)) rest) (erased (List (Eqn)) eqs) (erased (UOut) out)
       (subterm erased (UnifyTeleC m ents rules es fs o1) d) (erased (ZipTele es fs rest eqs) z) (erased (Cont m ents o1 rest out) k) -> (erased (Unify m ents rules eqs out) u))
     (match erased d _
-      ((UTNil a b c) (match erased z _ ((ZTNil r2) (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) kk)))))
+      ((UTNil a b c)
+        (let-match erased z (ZTNil r2))
+        (match erased k _ ((ContOk a2 b2 d2 e2 g2 kk) kk)))
       ((UTCons a b c s i t u t2 u2 es2 fs2 o oo ct cu p q)
         (match erased z _ ((ZTCons s3 i3 t3 u3 es3 fs3 r3 eqs2 z2) (conv m ents rules t u t2 u2 o eqs2 out p ct cu (conv-after-tele m ents rules o es2 fs2 oo rest eqs2 out q z2 k)))))))
   ((erased conv-after : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o0) (erased (Term) t) (erased (Term) u) (erased (UOut) o1) (erased (List (Eqn)) rest) (erased (UOut) out)
       (subterm erased (After m ents rules o0 t u o1) d) (erased (Cont m ents o1 rest out) k) -> (erased (Cont m ents o0 (Cons (Eqn) (MkEqn t u) rest) out) c))
-    (match erased d _
-      ((AFail a b c t0 u0) (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents (Cons _ (MkEqn t u) rest)))))
-      ((AOk a b c rules1 t0 u0 t2 u2 oo ct cu p) (ContOk m ents rules1 (Cons _ (MkEqn t u) rest) out (conv m ents rules1 t u t2 u2 o1 rest out p ct cu k)))))
+    (let-match erased d (AFail a b c t0 u0)
+      ((AOk a b c rules1 t0 u0 t2 u2 oo ct cu p) (ContOk m ents rules1 (Cons _ (MkEqn t u) rest) out (conv m ents rules1 t u t2 u2 o1 rest out p ct cu k))))
+    (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents (Cons _ (MkEqn t u) rest)))))
   ((erased conv-after-list : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o0) (erased (List (Term)) as) (erased (List (Term)) bs) (erased (UOut) o1) (erased (List (Eqn)) rest) (erased (List (Eqn)) eqs) (erased (UOut) out)
       (subterm erased (AfterList m ents rules o0 as bs o1) d) (erased (Zip as bs rest eqs) z) (erased (Cont m ents o1 rest out) k) -> (erased (Cont m ents o0 eqs out) c))
-    (match erased d _
-      ((ALFail a b c as0 bs0) (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents eqs))))
-      ((ALOk a b c rules1 as0 bs0 oo p) (ContOk m ents rules1 eqs out (conv-list m ents rules1 as bs o1 rest eqs out p z k)))))
+    (let-match erased d (ALFail a b c as0 bs0)
+      ((ALOk a b c rules1 as0 bs0 oo p) (ContOk m ents rules1 eqs out (conv-list m ents rules1 as bs o1 rest eqs out p z k))))
+    (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents eqs))))
   ((erased conv-after-tele : (erased (Mode) m) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (UOut) o0) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (UOut) o1) (erased (List (Eqn)) rest) (erased (List (Eqn)) eqs) (erased (UOut) out)
       (subterm erased (AfterTele m ents rules o0 es fs o1) d) (erased (ZipTele es fs rest eqs) z) (erased (Cont m ents o1 rest out) k) -> (erased (Cont m ents o0 eqs out) c))
-    (match erased d _
-      ((ATFail a b c es0 fs0) (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents eqs))))
-      ((ATOk a b c rules1 es0 fs0 oo p) (ContOk m ents rules1 eqs out (conv-tele m ents rules1 es fs o1 rest eqs out p z k))))))
+    (let-match erased d (ATFail a b c es0 fs0)
+      ((ATOk a b c rules1 es0 fs0 oo p) (ContOk m ents rules1 eqs out (conv-tele m ents rules1 es fs o1 rest eqs out p z k))))
+    (match erased k _ ((ContFail a2 b2 d2) (ContFail m ents eqs)))))
 
 ; ---- The bound the walk lowers: at most [n] entries have no rule, and a mint for one that has none lowers
 ; it. A rule consed for such an entry leaves every other rule found.
@@ -509,9 +515,10 @@
     (many ShCons : (erased (Nat) k) (erased (List (Nat)) ks) (erased (List (Nat)) ks2) (erased (Shift ks ks2) p) -> (Shift (Cons (Nat) k ks) (Cons (Nat) (Succ k) ks2)))))
 
 (def-fns _ $ (many shift : (subterm many (List (Nat)) ks) -> (many (List (Nat)) ks2) (erased (Shift ks ks2) p))
-  (match many ks _
-    ((Nil a) (values (Nil _) (ShNil)))
-    ((Cons a k rest) (let ((many rest2) (erased p)) (notail $ shift rest)) (values (Cons _ (Succ k) rest2) (ShCons k rest rest2 p)))))
+  (let-match many ks (Cons a k rest)
+    ((Nil a) (values (Nil _) (ShNil))))
+  (let ((many rest2) (erased p)) (notail $ shift rest))
+  (values (Cons _ (Succ k) rest2) (ShCons k rest rest2 p)))
 
 (def-fns _ $ (erased rule-rank-shift : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Nat)) ranks2) (erased (Nat) z) (erased (Term) r) (erased (Nat) j)
     (subterm erased (RuleRank rules ranks z r j) p) (erased (Shift ranks ranks2) sh) -> (erased (RuleRank rules ranks2 z r (Succ j)) q))
@@ -572,14 +579,14 @@
       ((CnValCtor e ps r q p) (match erased a _ ((AsgValCtor d2 x2 ps2 r2 d1 qa pa) (BlValCtor _ _ ps r (Zero) (below-zero-tele rules ranks2 x s ps d d1 qa q) (below-zero rules ranks2 x s r d1 pa p)))))))
   ((erased below-zero-list : (erased (List (Rule)) rules) (erased (List (Nat)) ranks2) (erased (Nat) x) (erased (Term) s) (erased (List (Term)) ts) (erased (Nat) d)
       (erased (AssignableList d x ts) a) (subterm erased (CanonicalList rules ts) c) -> (erased (BelowList (Cons (Rule) (MkRule x s) rules) ranks2 ts (Zero)) b))
-    (match erased c _
-      ((CnNil e) (BlNil _ _ (Zero)))
-      ((CnCons e t ts2 p q) (match erased a _ ((AsgCons d2 x2 t2 ts3 pa qa) (BlCons _ _ t ts2 (Zero) (below-zero rules ranks2 x s t d pa p) (below-zero-list rules ranks2 x s ts2 d qa q)))))))
+    (let-match erased c (CnCons e t ts2 p q)
+      ((CnNil e) (BlNil _ _ (Zero))))
+    (match erased a _ ((AsgCons d2 x2 t2 ts3 pa qa) (BlCons _ _ t ts2 (Zero) (below-zero rules ranks2 x s t d pa p) (below-zero-list rules ranks2 x s ts2 d qa q)))))
   ((erased below-zero-tele : (erased (List (Rule)) rules) (erased (List (Nat)) ranks2) (erased (Nat) x) (erased (Term) s) (erased (List (Entry)) es) (erased (Nat) d) (erased (Nat) out)
       (erased (AssignableTele d x es out) a) (subterm erased (CanonicalTele rules es) c) -> (erased (BelowTele (Cons (Rule) (MkRule x s) rules) ranks2 es (Zero)) b))
-    (match erased c _
-      ((CnTNil e) (BlTNil _ _ (Zero)))
-      ((CnTCons e s0 i t es2 p q) (match erased a _ ((AsgTCons d2 x2 s1 i1 t2 es3 out2 pa qa) (BlTCons _ _ s0 i t es2 (Zero) (below-zero rules ranks2 x s t d pa p) (below-zero-tele rules ranks2 x s es2 (Succ d) out qa q))))))))
+    (let-match erased c (CnTCons e s0 i t es2 p q)
+      ((CnTNil e) (BlTNil _ _ (Zero))))
+    (match erased a _ ((AsgTCons d2 x2 s1 i1 t2 es3 out2 pa qa) (BlTCons _ _ s0 i t es2 (Zero) (below-zero rules ranks2 x s t d pa p) (below-zero-tele rules ranks2 x s es2 (Succ d) out qa q))))))
 
 (def-fns _ $ (many table-mint : (erased (List (Ent)) ents) (many (List (Rule)) rules) (many (Table ents rules) tb) (many (Nat) x) (many (Term) s) (erased (NoRule rules x) nr) (erased (Canonical rules s) cs)
     (erased (Assignable (Zero) x s) asg) (erased (Scoped ents (Zero) s) ss) (erased (Term) ty) (erased (Kind) k) (erased (EntOf ents x ty k) e) (erased (NotDecl k) nd) -> (many (Table ents (Cons (Rule) (MkRule x s) rules)) tb2))
@@ -604,8 +611,12 @@
 (def-fns _ $ (erased stele-same-out : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (Nat) out) (erased (Nat) out2) (subterm erased (SameTele es fs) st)
     (erased (ScopedTele ents d es out) p) (erased (ScopedTele ents d fs out2) q) -> (erased (Eq (Nat) out out2) e))
   (match erased st _
-    ((STNil) (match erased p _ ((ScTNil a d0) (match erased q _ ((ScTNil b d1) (Refl (Nat) d))))))
-    ((STCons s i t u es2 fs2 st2) (match erased p _ ((ScTCons a d0 s0 i0 t0 es0 o0 p1 p2) (match erased q _ ((ScTCons b d1 s1 i1 u1 fs1 o1 q1 q2) (stele-same-out ents (Succ d) es2 fs2 out out2 st2 p2 q2))))))))
+    ((STNil)
+      (let-match erased p (ScTNil a d0))
+      (match erased q _ ((ScTNil b d1) (Refl (Nat) d))))
+    ((STCons s i t u es2 fs2 st2)
+      (let-match erased p (ScTCons a d0 s0 i0 t0 es0 o0 p1 p2))
+      (match erased q _ ((ScTCons b d1 s1 i1 u1 fs1 o1 q1 q2) (stele-same-out ents (Succ d) es2 fs2 out out2 st2 p2 q2))))))
 
 (def-adts $ (TypeOfTermDec : ((List (Ent)) ents) ((List (Rule)) rules) ((Term) t) -> Type)
   enum
@@ -842,7 +853,9 @@
           (UCAlias ents rules x y tx kx ty ky z3 tz w3 tw tz2 tw2 o2 nq ex ey o ctz ctw q)))
       ((IsNonRef tl0 nl)
         (let-match many (nonref-dec r) (IsNonRef tr0 nr)
-          ((IsRef y) (match erased cr _ ((CnRef a2 y0 ny) (match erased sr _ ((ScRef a3 d3 y1 hy) (tail $ ref-step m ents se rules tb n fc l (Ref y) (unify-ref m ents se rules tb n fc (SR) y l l (Ref y) (SidedR (Ref y) l) nl ny hy cl d sl) (PInner))))))))
+          ((IsRef y)
+            (let-match erased cr (CnRef a2 y0 ny))
+            (match erased sr _ ((ScRef a3 d3 y1 hy) (tail $ ref-step m ents se rules tb n fc l (Ref y) (unify-ref m ents se rules tb n fc (SR) y l l (Ref y) (SidedR (Ref y) l) nl ny hy cl d sl) (PInner))))))
         (let ((many b) (erased sb)) (shape-of r))
         (match many l _
           (absurd (Ref x) nl)
@@ -883,9 +896,10 @@
             (let-match many (notail $ after-list m ents se rules tb n fc _ l o1 st1 as as2 as as2 (canonical-fix-list rules as cas) (canonical-fix-list rules as2 cas2) (prove-subterm as l) d sas sas2 (zip-samelen as as2 (Nil _) eqs z3) (PInner)) (MkAfterList y0b y1b y2b y3b y4b y5b y6 o2 st2 q))
             (MkWalk _ _ _ _ _ _ o2 st2 (UCValApp m ents rules h h2 ps ps2 ret ret2 as as2 o1 o2 (zip-samelen as as2 (Nil _) eqs z3) p q)))
           ((TUniv)
-            (match many (nat-dec (Succ (Succ (Succ (Zero)))) b) _
-              ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Succ (Zero)))) b nl nr (ShUniv) sb nq)))
-              ((NDSame z) (match erased sb _ ((ShUniv) (match many r _ ((TUniv) (MkWalk _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (UCUniv m ents rules)))))))))
+            (let-match many (nat-dec (Succ (Succ (Succ (Zero)))) b) (NDSame z)
+              ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Succ (Zero)))) b nl nr (ShUniv) sb nq))))
+            (let-match erased sb (ShUniv))
+            (match many r _ ((TUniv) (MkWalk _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (UCUniv m ents rules)))))
           ((TFn lv ps rs)
             (let-match many (nat-dec (Succ (Succ (Succ (Succ (Zero))))) b) (NDSame z)
               ((NDDiff z w nq) (MkWalk _ _ _ _ _ _ (UFail) (StFail _ _ _) (UCMismatch m ents rules l r (Succ (Succ (Succ (Succ (Zero))))) b nl nr (ShFn lv ps rs) sb nq))))
@@ -949,7 +963,10 @@
       (erased (Nat) d) (erased (ScopedList ents d as) sa) (erased (ScopedList ents d bs) sb) (erased (SameLen as bs) sl) (subterm many (POuter (PInner)) is phase) ->
       (many (ListDec m n ents rules as bs) w))
     (let-match many as2 (Cons c a2 rest2)
-      ((Nil c) (match erased ca _ ((CanNil a) (match erased sl _ ((SLNil) (match erased cb _ ((CanNil a2) (MkList _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (ULNil m ents rules))))))))))
+      ((Nil c)
+        (let-match erased ca (CanNil a))
+        (let-match erased sl (SLNil))
+        (match erased cb _ ((CanNil a2) (MkList _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (ULNil m ents rules))))))
     (let-match erased ca (CanCons a0 a1 a3 as1 rest1 pa qa))
     (let-match erased sl (SLCons a4 b1 as4 bs1 sl2))
     (let-match erased cb (CanCons b0 b3 b4 bs3 brest2 pb qb))
@@ -967,7 +984,10 @@
       (erased (Nat) d) (erased (Nat) out) (erased (Nat) out2) (erased (ScopedTele ents d es out) se2) (erased (ScopedTele ents d fs out2) sf) (erased (SameTele es fs) st) (subterm many (POuter (PInner)) is phase) ->
       (many (TeleDec m n ents rules es fs) w))
     (let-match many es2 (Cons c e2 rest2)
-      ((Nil c) (match erased ce _ ((CanTNil a) (match erased st _ ((STNil) (match erased cf _ ((CanTNil a2) (MkTele _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (UTNil m ents rules))))))))))
+      ((Nil c)
+        (let-match erased ce (CanTNil a))
+        (let-match erased st (STNil))
+        (match erased cf _ ((CanTNil a2) (MkTele _ _ _ _ _ _ (UOk rules) (StSame _ _ _) (UTNil m ents rules))))))
     (let-match many e2 (MkEntry s i t2))
     (let-match erased ce (CanTCons a0 s0 i0 t0 t1 es1 rest1 pt qt))
     (let-match erased st (STCons s3 i3 t3 u3 es3 fs3 st2))

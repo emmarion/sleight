@@ -162,15 +162,19 @@
 (def-fns _ $ (erased subst-len-eq : (erased (List (Maybe (Term))) subs) (erased (List (Maybe (Term))) sub2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
     (erased (List (Maybe (Term))) out) (erased (SubstList subs as as2) q) (erased (SubstTele sub2 ps ps2 out) t) (subterm erased (LenEq (Term) (Entry) as ps) n) -> (erased (LenEq (Term) (Entry) as2 ps2) m))
   (let-match erased n (LECons a b x y xs ys n2)
-    ((LENil a b) (match erased q _ ((SubNil c) (match erased t _ ((SubTNil d) (LENil _ _)))))))
-  (match erased q _
-    ((SubCons c x0 u xs0 us p q2) (match erased t _ ((SubTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (subst-len-eq subs (Cons _ (None _) sub2) xs us ys fs out2 q2 t2 n2)))))))
+    ((LENil a b)
+      (let-match erased q (SubNil c))
+      (match erased t _ ((SubTNil d) (LENil _ _)))))
+  (let-match erased q (SubCons c x0 u xs0 us p q2))
+  (match erased t _ ((SubTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (subst-len-eq subs (Cons _ (None _) sub2) xs us ys fs out2 q2 t2 n2)))))
 (def-fns _ $ (erased abstract-len-eq : (erased (List (Maybe (Nat))) ids) (erased (List (Maybe (Nat))) ids2) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (List (Entry)) ps2)
     (erased (List (Maybe (Nat))) out) (erased (AbstractList ids as as2) q) (erased (AbstractTele ids2 ps ps2 out) t) (subterm erased (LenEq (Term) (Entry) as ps) n) -> (erased (LenEq (Term) (Entry) as2 ps2) m))
   (let-match erased n (LECons a b x y xs ys n2)
-    ((LENil a b) (match erased q _ ((AbsNil c) (match erased t _ ((AbsTNil d) (LENil _ _)))))))
-  (match erased q _
-    ((AbsCons c x0 u xs0 us p q2) (match erased t _ ((AbsTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (abstract-len-eq ids (Cons _ (None _) ids2) xs us ys fs out2 q2 t2 n2)))))))
+    ((LENil a b)
+      (let-match erased q (AbsNil c))
+      (match erased t _ ((AbsTNil d) (LENil _ _)))))
+  (let-match erased q (AbsCons c x0 u xs0 us p q2))
+  (match erased t _ ((AbsTCons d s i y0 u2 ys0 fs out2 p2 t2) (LECons _ _ u (MkEntry s i u2) us fs (abstract-len-eq ids (Cons _ (None _) ids2) xs us ys fs out2 q2 t2 n2)))))
 (def-fns _ $ (erased canon-len-eq : (erased (List (Rule)) rules) (erased (List (Term)) as) (erased (List (Term)) as2) (erased (List (Entry)) ps) (erased (CanonList rules as as2) q) (subterm erased (LenEq (Term) (Entry) as ps) n) ->
     (erased (LenEq (Term) (Entry) as2 ps) m))
   (match erased n _
@@ -283,15 +287,14 @@
       ((ClValCtor a ps r e1 q p)
         (match erased b _ ((ScValCtor a2 d0 ps0 r0 d1 bps br) (ScValCtor ents d2 ps r e1 (scoped-tighten-tele ents d d2 ps d1 e1 bps q) (scoped-tighten ents d1 e1 r br p)))))))
   ((erased scoped-tighten-list : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Nat) d2) (erased (List (Term)) ts) (erased (ScopedList ents d ts) b) (subterm erased (ClosedList d2 ts) c) -> (erased (ScopedList ents d2 ts) s))
-    (match erased c _
-      ((ClNil a) (ScNil ents d2))
-      ((ClCons a t ts2 p q) (match erased b _ ((ScCons a2 d0 t0 ts0 b1 b2) (ScCons ents d2 t ts2 (scoped-tighten ents d d2 t b1 p) (scoped-tighten-list ents d d2 ts2 b2 q)))))))
+    (let-match erased c (ClCons a t ts2 p q)
+      ((ClNil a) (ScNil ents d2)))
+    (match erased b _ ((ScCons a2 d0 t0 ts0 b1 b2) (ScCons ents d2 t ts2 (scoped-tighten ents d d2 t b1 p) (scoped-tighten-list ents d d2 ts2 b2 q)))))
   ((erased scoped-tighten-tele : (erased (List (Ent)) ents) (erased (Nat) d) (erased (Nat) d2) (erased (List (Entry)) es) (erased (Nat) out) (erased (Nat) out2) (erased (ScopedTele ents d es out) b)
       (subterm erased (ClosedTele d2 es out2) c) -> (erased (ScopedTele ents d2 es out2) s))
-    (match erased c _
-      ((ClTNil a) (ScTNil ents d2))
-      ((ClTCons a s i t es2 out0 p q)
-        (match erased b _ ((ScTCons a2 d0 s0 i0 t0 es0 outb b1 b2) (ScTCons ents d2 s i t es2 out2 (scoped-tighten ents d d2 t b1 p) (scoped-tighten-tele ents (Succ d) (Succ d2) es2 out out2 b2 q))))))))
+    (let-match erased c (ClTCons a s i t es2 out0 p q)
+      ((ClTNil a) (ScTNil ents d2)))
+    (match erased b _ ((ScTCons a2 d0 s0 i0 t0 es0 outb b1 b2) (ScTCons ents d2 s i t es2 out2 (scoped-tighten ents d d2 t b1 p) (scoped-tighten-tele ents (Succ d) (Succ d2) es2 out out2 b2 q))))))
 
 (def-fns _ $ (erased nth-scoped : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) subs) (erased (Nat) k) (erased (Term) v) (erased (ScopedSub ents subs) b) (subterm erased (Nth (Maybe (Term)) subs k (Some (Term) v)) p) ->
     (erased (Scoped ents (Zero) v) c))
@@ -306,9 +309,9 @@
     ((ScSNone a rest q2) (ScSNone e out2 (snoc-scoped e ys t out2 q2 st p2)))
     ((ScSSome a t2 rest st2 q2) (ScSSome e t2 out2 st2 (snoc-scoped e ys t out2 q2 st p2)))))
 (def-fns _ $ (erased somes-scoped : (erased (List (Ent)) ents) (erased (List (Term)) as) (erased (List (Maybe (Term))) subs) (erased (ScopedList ents (Zero) as) p) (subterm erased (Somes as subs) so) -> (erased (ScopedSub ents subs) q))
-  (match erased so _
-    ((SomesNil) (ScSNil ents))
-    ((SomesCons a as2 sub2 out p2 sn) (match erased p _ ((ScCons b d0 t0 ts0 st sts) (snoc-scoped ents sub2 a out (somes-scoped ents as2 sub2 sts p2) st sn))))))
+  (let-match erased so (SomesCons a as2 sub2 out p2 sn)
+    ((SomesNil) (ScSNil ents)))
+  (match erased p _ ((ScCons b d0 t0 ts0 st sts) (snoc-scoped ents sub2 a out (somes-scoped ents as2 sub2 sts p2) st sn))))
 
 ; Substituting through a list of [r] kept binders and then closed terms, [n] in all, takes a term scoped
 ; under [n] binders to one scoped under [r].
@@ -343,9 +346,9 @@
         (ScValCtor ents r ps2 r2 r1 bps2 (subst-scoped ents sub1 r1 n1 r0 r2 bs1 ly1 br p)))))
   ((erased subst-scoped-list : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) subs) (erased (Nat) r) (erased (Nat) n) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (ScopedSub ents subs) bs)
       (erased (Layout (Term) subs r n) ly) (erased (ScopedList ents n ts) bt) (subterm erased (SubstList subs ts us) d) -> (erased (ScopedList ents r us) c))
-    (match erased d _
-      ((SubNil a) (ScNil ents r))
-      ((SubCons a t u ts2 us2 p q) (match erased bt _ ((ScCons b n0 t0 ts0 b1 b2) (ScCons ents r u us2 (subst-scoped ents subs r n t u bs ly b1 p) (subst-scoped-list ents subs r n ts2 us2 bs ly b2 q)))))))
+    (let-match erased d (SubCons a t u ts2 us2 p q)
+      ((SubNil a) (ScNil ents r)))
+    (match erased bt _ ((ScCons b n0 t0 ts0 b1 b2) (ScCons ents r u us2 (subst-scoped ents subs r n t u bs ly b1 p) (subst-scoped-list ents subs r n ts2 us2 bs ly b2 q)))))
   ((erased subst-scoped-tele : (erased (List (Ent)) ents) (erased (List (Maybe (Term))) subs) (erased (Nat) r) (erased (Nat) n) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (List (Maybe (Term))) out)
       (erased (Nat) nout) (erased (ScopedSub ents subs) bs) (erased (Layout (Term) subs r n) ly) (erased (ScopedTele ents n es nout) bt) (subterm erased (SubstTele subs es fs out) d) ->
       (erased (Nat) rout) (erased (ScopedTele ents r fs rout) c) (erased (ScopedSub ents out) c2) (erased (Layout (Term) out rout nout) ly2))
@@ -382,9 +385,9 @@
         (match erased bt _ ((ScValCtor b d0 ps0 r0 d1 bps b2) (ScValCtor ents d ps2 r2 d1 (canon-scoped-tele ents rules d ps ps2 d1 br bps q) (canon-scoped ents rules d1 r r2 br b2 p)))))))
   ((erased canon-scoped-list : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) d) (erased (List (Term)) ts) (erased (List (Term)) us) (erased (ScopedRules ents rules) br) (erased (ScopedList ents d ts) bt)
       (subterm erased (CanonList rules ts us) c) -> (erased (ScopedList ents d us) s))
-    (match erased c _
-      ((CanNil a) (ScNil ents d))
-      ((CanCons a t u ts2 us2 p q) (match erased bt _ ((ScCons b d0 t0 ts0 b1 b2) (ScCons ents d u us2 (canon-scoped ents rules d t u br b1 p) (canon-scoped-list ents rules d ts2 us2 br b2 q)))))))
+    (let-match erased c (CanCons a t u ts2 us2 p q)
+      ((CanNil a) (ScNil ents d)))
+    (match erased bt _ ((ScCons b d0 t0 ts0 b1 b2) (ScCons ents d u us2 (canon-scoped ents rules d t u br b1 p) (canon-scoped-list ents rules d ts2 us2 br b2 q)))))
   ((erased canon-scoped-tele : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Nat) d) (erased (List (Entry)) es) (erased (List (Entry)) fs) (erased (Nat) out) (erased (ScopedRules ents rules) br)
       (erased (ScopedTele ents d es out) bt) (subterm erased (CanonTele rules es fs) c) -> (erased (ScopedTele ents d fs out) s))
     (match erased c _
@@ -725,9 +728,9 @@
         (ScValCtor e0 m ps2 r2 m1 sps (abstract-covers n0 e0 ids1 e1 d1 m1 r r2 c1 ly1 br p)))))
   ((erased abstract-covers-list : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) ids) (erased (List (Ent)) e1) (erased (Nat) d) (erased (Nat) m) (erased (List (Term)) ts) (erased (List (Term)) us)
       (erased (Covers n0 e0 ids e1) c) (erased (Layout (Nat) ids d m) ly) (erased (ScopedList e1 d ts) bt) (subterm erased (AbstractList ids ts us) ab) -> (erased (ScopedList e0 m us) su))
-    (match erased ab _
-      ((AbsNil a) (ScNil e0 m))
-      ((AbsCons a t u ts2 us2 p q) (match erased bt _ ((ScCons b d0 t0 ts0 b1 b2) (ScCons e0 m u us2 (abstract-covers n0 e0 ids e1 d m t u c ly b1 p) (abstract-covers-list n0 e0 ids e1 d m ts2 us2 c ly b2 q)))))))
+    (let-match erased ab (AbsCons a t u ts2 us2 p q)
+      ((AbsNil a) (ScNil e0 m)))
+    (match erased bt _ ((ScCons b d0 t0 ts0 b1 b2) (ScCons e0 m u us2 (abstract-covers n0 e0 ids e1 d m t u c ly b1 p) (abstract-covers-list n0 e0 ids e1 d m ts2 us2 c ly b2 q)))))
   ((erased abstract-covers-tele : (erased (Nat) n0) (erased (List (Ent)) e0) (erased (List (Maybe (Nat))) ids) (erased (List (Ent)) e1) (erased (Nat) d) (erased (Nat) m) (erased (List (Entry)) es) (erased (List (Entry)) fs)
       (erased (List (Maybe (Nat))) out) (erased (Nat) dout) (erased (Covers n0 e0 ids e1) c) (erased (Layout (Nat) ids d m) ly) (erased (ScopedTele e1 d es dout) bt) (subterm erased (AbstractTele ids es fs out) ab) ->
       (erased (Nat) mout) (erased (ScopedTele e0 m fs mout) su) (erased (Covers n0 e0 out e1) c2) (erased (Layout (Nat) out dout mout) ly2))
@@ -756,22 +759,21 @@
         (match erased bt _ ((ScValCtor e d0 ps0 r0 d1 bps br) (BlValCtor _ _ ps r k (below-cons-tele n ents rules ranks ps k s top be d d1 bps q) (below-cons n ents rules ranks r k s top be d1 br p)))))))
   ((erased below-cons-list : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Term)) ts) (erased (Nat) k) (erased (Term) s) (erased (Nat) top)
       (erased (BoundedEnts n ents) be) (erased (Nat) d) (erased (ScopedList ents d ts) bt) (subterm erased (BelowList rules ranks ts k) b) -> (erased (BelowList (Cons (Rule) (MkRule n s) rules) (Cons (Nat) top ranks) ts k) c))
-    (match erased b _
-      ((BlNil a c d2) (BlNil _ _ k))
-      ((BlCons a c t ts2 d2 p q) (match erased bt _ ((ScCons e d0 t0 ts0 b1 b2) (BlCons _ _ t ts2 k (below-cons n ents rules ranks t k s top be d b1 p) (below-cons-list n ents rules ranks ts2 k s top be d b2 q)))))))
+    (let-match erased b (BlCons a c t ts2 d2 p q)
+      ((BlNil a c d2) (BlNil _ _ k)))
+    (match erased bt _ ((ScCons e d0 t0 ts0 b1 b2) (BlCons _ _ t ts2 k (below-cons n ents rules ranks t k s top be d b1 p) (below-cons-list n ents rules ranks ts2 k s top be d b2 q)))))
   ((erased below-cons-tele : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (List (Entry)) es) (erased (Nat) k) (erased (Term) s) (erased (Nat) top)
       (erased (BoundedEnts n ents) be) (erased (Nat) d) (erased (Nat) out) (erased (ScopedTele ents d es out) bt) (subterm erased (BelowTele rules ranks es k) b) ->
       (erased (BelowTele (Cons (Rule) (MkRule n s) rules) (Cons (Nat) top ranks) es k) c))
-    (match erased b _
-      ((BlTNil a c d2) (BlTNil _ _ k))
-      ((BlTCons a c s0 i t es2 d2 p q)
-        (match erased bt _ ((ScTCons e d0 s1 i1 t0 es0 out0 b1 b2) (BlTCons _ _ s0 i t es2 k (below-cons n ents rules ranks t k s top be d b1 p) (below-cons-tele n ents rules ranks es2 k s top be (Succ d) out b2 q))))))))
+    (let-match erased b (BlTCons a c s0 i t es2 d2 p q)
+      ((BlTNil a c d2) (BlTNil _ _ k)))
+    (match erased bt _ ((ScTCons e d0 s1 i1 t0 es0 out0 b1 b2) (BlTCons _ _ s0 i t es2 k (below-cons n ents rules ranks t k s top be d b1 p) (below-cons-tele n ents rules ranks es2 k s top be (Succ d) out b2 q))))))
 
 (def-fns _ $ (erased valid-cons : (erased (Nat) n) (erased (List (Ent)) ents) (erased (List (Rule)) all) (erased (List (Nat)) ar) (erased (List (Rule)) rs) (erased (List (Nat)) ks) (erased (Term) s) (erased (Nat) top)
     (erased (BoundedEnts n ents) be) (erased (ScopedRules ents rs) sr) (subterm erased (ValidFrom all ar rs ks) v) -> (erased (ValidFrom (Cons (Rule) (MkRule n s) all) (Cons (Nat) top ar) rs ks) w))
-  (match erased v _
-    ((VFNil a c) (VFNil _ _))
-    ((VFCons a c x r k rs2 ks2 bl p) (match erased sr _ ((SRCons d e g h bt q) (VFCons _ _ x r k rs2 ks2 (below-cons n ents all ar r k s top be (Zero) bt bl) (valid-cons n ents all ar rs2 ks2 s top be q p)))))))
+  (let-match erased v (VFCons a c x r k rs2 ks2 bl p)
+    ((VFNil a c) (VFNil _ _)))
+  (match erased sr _ ((SRCons d e g h bt q) (VFCons _ _ x r k rs2 ks2 (below-cons n ents all ar r k s top be (Zero) bt bl) (valid-cons n ents all ar rs2 ks2 s top be q p)))))
 
 (def-fns _
   ((erased below-lift : (erased (List (Rule)) rules) (erased (List (Nat)) ranks) (erased (Term) t) (erased (Nat) k) (subterm erased (Below rules ranks t k) b) -> (erased (Below rules ranks t (Succ k)) c))

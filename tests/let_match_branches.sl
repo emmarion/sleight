@@ -52,3 +52,4 @@
 (Cons (Nat) (or-zero (Full 1)) $ Cons (Nat) (or-zero (Empty)) $ Cons (Nat) (pred-or 1 0) $
   Cons (Nat) (pred-or 2 1) $ Cons (Nat) (in-branch (Full 3) (Empty)) $ Cons (Nat) (sure (Got seven)) $
   Cons (Nat) (cell-root 1) $ Nil (Nat))
+; warns: tests/let_match_branches.sl:25:4: warning: lopsided `match`; flatten it with a `let-match` on `Full`

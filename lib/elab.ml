@@ -843,11 +843,11 @@ let demanded env demand mult ty =
   | CallableHead -> (match canon env ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
   | Driver -> if nullary env "IO" ty then Unique else Many
 
-let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele env expect raw : Env.t * res list * V.code =
+let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false) env expect raw : Env.t * res list * V.code =
   let l = loc raw in
   let outer_erased = env.usage_erased in
   let env = { env with usage_erased = outer_erased || pos_of expect = Erased } in
-  let env, ress, code = elab_form ?sink demand cc tele env expect raw in
+  let env, ress, code = elab_form ?sink ~final demand cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
   count_check ?sink l expect ress;
   List.iter2 (fun m r ->
@@ -864,7 +864,7 @@ and elab_erased env raw =
   settle_res env (loc raw) r;
   (env, r.term)
 
-and elab_form ?sink demand cc expect_tele env expect raw =
+and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of expect in
   match raw with
   | Atom (l, n) ->
@@ -874,7 +874,7 @@ and elab_form ?sink demand cc expect_tele env expect raw =
   | List (l, head :: args) -> (
       match special_of env head with
       | Some sp when Sp.has_role sp -> not_a env "not an expression" raw
-      | Some sp -> elab_special ?sink demand expect_tele (read_special pos env head) expect l sp args
+      | Some sp -> elab_special ?sink ?final:(if final then Some (loc head) else None) demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
           let env, h, hcode, headwrap = elab_head env pos l head in
           let hty = canon env h.ty in
@@ -1010,7 +1010,7 @@ and elab_call ?(unique = false) ?sink ?(demand = Fixed) cc env ?tele expect l c 
   in
   (env, List.map (res_of env) ids, wrap code)
 
-and elab_special ?sink demand tele env expect l sp args =
+and elab_special ?sink ?final demand tele env expect l sp args =
   let pos = pos_of expect in
   let m =
     if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.statements) then pos
@@ -1120,7 +1120,7 @@ and elab_special ?sink demand tele env expect l sp args =
           (env, [], []) (List.mapi (fun i m -> (i, m)) expect) args
       in
       (env, List.rev ress, if pos = Erased then V.CErased else V.CValues (List.rev codes))
-  | Sp.Match, _ -> elab_match ~demand tele env expect l args
+  | Sp.Match, _ -> elab_match ~demand ?final tele env expect l args
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name sp)));
       let cc = match sp with Sp.Tail -> V.Tail | Sp.NoTail -> V.NoTail | _ -> V.Delegate in
@@ -1328,14 +1328,15 @@ and scrutinee ?res env l smult scrut =
   let env = match sres.place with Some p -> at_merge env (Var x) p | None -> env in
   (env,res_of env x,V.CVar x,(fun body -> V.CLet ([x],scode,body)),tid,mid,disc,ctors)
 
-and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells ?(skip = []) ?sink tele env expect l args =
+and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells ?(skip = []) ?sink ?final tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
       let pos = pos_of expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
       let extra = match cells with Some c -> c | None -> smult = Unique && cells_allowed env mid in
-      let branch_uses = ref env.uses in
+      let branch_uses = ref env.uses and deep = ref [] in
+      let deepen envb body flat = if deep_body envb body then deep := flat :: !deep in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
@@ -1377,13 +1378,14 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
           | _, None -> error_in env bl "branch %s is refuted; write `(absurd %s)`" (qname env c) (name_of env c)
           | `Present, Some _ when refute -> error_in env bl "a branch of a refuting match is written `absurd`"
           | `Present, Some envb ->
+              deepen envb body (if unreachable then None else Some c);
               let envb = { envb with usage_erased = envb.usage_erased || unreachable } in
               let expect = if unreachable then List.map (fun _ -> Erased) expect else expect in
               let envb, ress, code = elab_body ~tele:ann_tele ~sink:(sink expect) envb expect bl body in
               check_results envb bl body ann_tele ress;
               if not unreachable then branch_uses := join_uses !branch_uses envb.uses;
               `Present (bind_cell scode cell code)
-          | `Proof, Some envb -> ignore (elab_refute envb bl body); `Absurd
+          | `Proof, Some envb -> deepen envb body None; ignore (elab_refute envb bl body); `Absurd
         in
         (c, non_erased envb fids, unreachable, result, forced)
       in
@@ -1427,6 +1429,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
               | _ ->
                   error_with el (declared_as env tid) "this %s under `%s` expects %s, got 0%s" (respell env ("`" ^ form ^ "` `else` branch")) (speller env (mult_name smult))
                     (counted 1 "binder") (expected (show_tele env [ is_entry ~mult:smult ?place:sres.place sres.term ])) in
+            deepen envb body None;
             let expect = if reachable = [] then List.map (fun _ -> Erased) expect else expect in
             let envb, ress, code = elab_body ~tele:ann_tele ~sink:(sink expect) envb expect el body in
             check_results envb el body ann_tele ress;
@@ -1435,6 +1438,9 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         | first :: dup :: _ -> error_with_in env (loc dup) [ (loc first, respell env "the first `else` branch") ] "a match has at most one `else` branch"
         | _ -> error_in env l "a match has at most one `else` branch"
       in
+      (match final, !deep with
+       | Some hl, [ Some c ] when not env.run_pos -> warn_in env hl [] "lopsided `match`; flatten it with a `let-match` on %s" (qshow env (Var c))
+       | _ -> ());
       let real =
         List.filter_map (fun (c, fids, unreachable, r, _) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
@@ -1506,7 +1512,12 @@ and elab_body ?tele ?sink env expect l = function
       (env, ress, wrap code)
   | items ->
       let env, _, final = elab_stmts (pos_of expect) env l items in
-      elab_expr ?tele ?sink env expect final
+      elab_expr ?tele ?sink ~final:true env expect final
+
+and deep_body env = function
+  | [ List (_, h :: _) ] -> is_special env h Sp.Match || is_special env h Sp.CellMatch
+  | [] | [ _ ] -> false
+  | _ -> true
 
 and real_branch env = function List (_, a :: _) -> not (is_special env a Sp.Absurd) | _ -> true
 

@@ -18,3 +18,4 @@
 (let ((many s) (erased pa)) (plus two (Succ two)))
 s
 ; warns: tests/nat_add.sl:14:49: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/nat_add.sl:11:4: warning: lopsided `match`; flatten it with a `let-match` on `Succ`

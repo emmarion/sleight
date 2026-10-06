@@ -79,9 +79,10 @@
     (many PlusS : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Plus a b c) p) -> (Plus (Succ a) b (Succ c)))))
 
 (def-fns _ $ (many list-len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p))
-  (match many xs _
-    ((Nil a) (values (Zero) (LenNil _)))
-    ((Cons a x rest) (let ((many n) (erased p)) (notail $ list-len _ rest)) (values (Succ n) (LenCons _ x rest n p)))))
+  (let-match many xs (Cons a x rest)
+    ((Nil a) (values (Zero) (LenNil _))))
+  (let ((many n) (erased p)) (notail $ list-len _ rest))
+  (values (Succ n) (LenCons _ x rest n p)))
 (def-fns _ $ (erased layout-length : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (subterm erased (Layout A xs r n) p) -> (erased (Length (Maybe A) xs n) q))
   (match erased p _
     ((LayNil a) (LenNil _))

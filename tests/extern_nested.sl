@@ -48,6 +48,7 @@ run
 ; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
 ; warns: tests/extern_nested.sl:31:36: warning: application of `SCons`: copies the whole string, O(n); build a `Rope` and `flatten` it once
 ; warns: lib/prelude.sl:777:1: note: `;! warn` for `SCons` is here
+; warns: tests/extern_nested.sl:26:4: warning: lopsided `match`; flatten it with a `let-match` on `SCons`
 ; warns: tests/extern_nested.sl:36:31: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/extern_nested.sl:36:81: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/extern_nested.sl:36:57: warning: unnecessary `(predates _)`; drop it

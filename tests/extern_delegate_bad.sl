@@ -10,9 +10,10 @@
     (many Yes : (erased (Nat) a) (erased (Nat) b) -> (Dec a b))
     (many No : (erased (Nat) a) (erased (Nat) b) -> (Dec a b))))
 (def-fns _ $ (many lt-dec : (subterm many (Nat) a) (many (Nat) b) -> (many (Dec a b) d))
-  (match many b _
-    ((Zero) (No a b))
-    ((Succ b1) (match many a _ ((Zero) (Yes a b)) ((Succ a1) (match many (notail $ lt-dec a1 b1) _ ((Yes _ _) (Yes a b)) ((No _ _) (No a b))))))))
+  (let-match many b (Succ b1)
+    ((Zero) (No a b)))
+  (let-match many a (Succ a1) ((Zero) (Yes a b)))
+  (match many (notail $ lt-dec a1 b1) _ ((Yes _ _) (Yes a b)) ((No _ _) (No a b))))
 (def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m) -> (many (Dec n m) d))
   (delegate (lt-dec n m)))
 (Zero)
