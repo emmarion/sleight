@@ -23,6 +23,9 @@ A global constant of type `(Slot)`, the **null slot**, is what an
 allocation that provides nothing defaults to, in place of
 `(SlotVacant)`.
 
+A `Cell` type (§U9) is indexed by slot terms: `(slot-of f)` in place of
+`(SlotHolds f)`, and the null slot in place of `(SlotVacant)`.
+
 ## A2. Automatic slots
 
 For every non-erased variable without a written `at` (A5), named or
@@ -208,9 +211,6 @@ semantics are settled first:
 
 1. The names of the null slot, the at-function proof's type, its fetch
    form and the form that opens it.
-5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
-   place of `(SlotHolds f)` and the null slot in place of
-   `(SlotVacant)`.
 6. Soundness: two `Slot` terms that canonicalize equal must denote one
    word at runtime. Forcing in a branch may equate two `Slot` atoms, as
    it may two `Level` atoms. ASSUMPTIONS 183 notes that a user type
