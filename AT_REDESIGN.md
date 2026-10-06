@@ -48,8 +48,8 @@ An automatic slot is `at` itself. Only automatic slots are: a written
 What reaches runtime is exactly the automatic slots. An entry with a
 written `at`, as a parameter, a return entry or a match annotation
 entry, is omitted after erasure: its word is the word of what it is
-`at`, so it need not be passed. The number of non-erased words passed
-and returned therefore stays what it is today.
+`at`, so it need not be passed. A signature written today therefore
+passes and returns as many words as it does today.
 
 Which entries reach runtime is read off the signature as written: the
 runtime signature of a function is the non-erased entries without a
@@ -65,8 +65,9 @@ slot is then decided by the fact table's ordinary canonicalization.
 
 ## A5. Written `at`
 
-In a function's parameter or return telescope, an entry may be written
-`at` an earlier entry or a variable from an enclosing scope. The target
+In a function's parameter or return telescope, or a match's return
+annotation (§U8), an entry may be written `at` an earlier entry or a
+variable from an enclosing scope. The target
 must be non-erased.
 
 The target is a `many` or `unique` variable `v` of any type, not
@@ -131,6 +132,12 @@ Every entry of its annotation is erased or `at`. An at-match skips its
 runtime. Its branches erase to nothing, or to a reordering of
 variables.
 
+*Reading*, of "erase to nothing" here and in A10: what is left after
+erasure, once `at` returns, full-at invocations (§U9), calls of
+at-functions and at-matches are dropped as erased, is nothing but
+`let`s that rename. Without those drops a recursive at-function such as
+A16's would not qualify.
+
 ## A10. At-functions
 
 A function is an **at-function** when its `def-fns` line puts `at`
@@ -180,6 +187,10 @@ followed by the function it delegates to:
 For now the annotation is optional. Where it is written it must be
 accurate.
 
+*Reading:* §9's pass-through check is then judged on A3's runtime
+shape, the entries without a written `at`; a parameter written `at` is
+passed as no word of its own.
+
 ## A12. To be decided
 
 Loosenings, deliberately left out of the first version so that the core
@@ -196,7 +207,9 @@ semantics are settled first:
 1. The names of the null slot, the at-function proof's type, its fetch
    form and the form that opens it.
 2. The type of `slot-self`'s proof, for instance the prelude's
-   `(Eq (Slot) (slot-of s) s)`, erased.
+   `(Eq (Slot) (slot-of s) s)`, erased. A built-in form whose result
+   names a prelude type would not work under `--no-prelude`; a built-in
+   opaque proof type is an alternative.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
@@ -204,6 +217,11 @@ semantics are settled first:
    word at runtime. Forcing in a branch may equate two `Slot` atoms, as
    it may two `Level` atoms. ASSUMPTIONS 183 notes that a user type
    indexed by `(Slot)` already reaches the corresponding merge.
+   *Reading:* `Slot` having no constructors and no `Matchable`, two
+   slots are never told apart, so forcing may equate two slots but never
+   refutes a branch over them; what is left to argue is only that equal
+   slots are one word. `slot-self` agrees with it, a slot's word being
+   itself.
 8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
 9. The exceptions to A8's cell binder, presumably those §U5 has today:
@@ -214,3 +232,42 @@ semantics are settled first:
 
 §U15's `at-coercible`, as stated today, is potentially unsound, and is
 deferred further.
+
+## A15. Reading: the null slot and `MaybeUninit`
+
+*Reading*, not a decision. With `(slot-self null)`, the null slot is its
+own at, so a full-at invocation of a cell from `(cell-alloc Uninit)`
+with the null slot as its argument checks with no store. `(Uninit A
+(slot-of v))` and `(Init A v)`, both newtype applications at their
+non-erased argument (§U9), are at one slot: §U13's `MaybeUninit`
+without a special case. Two different values at one slot are fine, no
+form turning sharing a slot into being one value.
+
+## A16. Worked example: unwrapping a list
+
+Written against the rules above, not machine-checked: nothing
+implements them yet. §40's `unwrap-all` as an at-function, with no
+`Coercible`:
+
+```scheme
+(def-adts $ (Meters : -> Type)
+  enum newtype
+  (many MkMeters : (many (Nat) n) -> (Meters)))
+
+(def-fns _ $ (many at unwrap : (subterm many (List (Meters)) ms) ->
+    (many (List (Nat)) ns at ms))
+  (match many ms (at (((List (Nat)) r at ms)))
+    ((Nil _ u) (at (u _)))
+    ((Cons _ m tl u)
+      (let-match many m (MkMeters n))
+      (let ((many r)) (unwrap tl))
+      (at (u _ n r)))))
+```
+
+- The `many` match gives each branch a cell `u` at `ms` (A8).
+- `n` is at `m`, a newtype destructure putting its field at the
+  scrutinee (§U9), and `r` is at `tl` by `unwrap`'s own return.
+- So `(u _ n r)` is full-at, the cell's slots being `m`'s and `tl`'s,
+  and mints `(Cons (Nat) n r)` at `ms`, at `many` as a cell at `many`
+  must (A8). After the drops of A9's reading the body is nothing, and a
+  call of `unwrap` skips its runtime.
