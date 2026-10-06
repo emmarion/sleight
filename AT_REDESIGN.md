@@ -203,8 +203,9 @@ passed as no word of its own.
 
 ## A12. To be decided
 
-Loosenings, deliberately left out of the first version so that the core
-semantics are settled first:
+Left for later: loosenings deliberately left out of the first version
+so that the core semantics are settled first (1-3), and follow-up work
+(4-5).
 
 1. Relaxing §12's one-real-branch rule for an at-match, which does not
    dispatch at runtime.
