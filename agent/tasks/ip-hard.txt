@@ -1,0 +1,13 @@
+#!pi -k HANDOFF.md:180000 -n 25 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+Your task is to write to ip.txt the global IP address of this VM.
+Or: to lay the groundwork for a future session to do so.
+
+Between sessions, only a (potentially truncated) HANDOFF.md file is copied over. It may already exist.
+
+Your session has two phases:
+- about 500k tokens spent on exploring,
+- about 200k additional tokens spent on writing your findings to HANDOFF.md and/or consolidation
+
+There's no need to edit HANDOFF.md before the second phase, so spend the first phase on the task itself.
+
+Good luck.
