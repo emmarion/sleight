@@ -1503,7 +1503,9 @@ and open_binding env l mult raw =
   let x, env' = bind inner ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
-and elab_body ?tele ?sink env expect l = function
+and elab_body ?tele ?sink env expect l items =
+  report_shadows ~env ();
+  match items with
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
       elab_match ?sink ~form:"let-match" tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
@@ -1559,7 +1561,12 @@ and refine env scrut c fids ret =
   let fvars = List.rev_map (fun x -> Var x) fids in
   merge_opens (unify_force (unify_force (forcing env) scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
 
-and elab_stmt ?(within = "item of a body") spos env raw : Env.t * (V.code -> V.code) =
+and elab_stmt ?within spos env raw : Env.t * (V.code -> V.code) =
+  let env, wrap = elab_stmt_unsettled ?within spos env raw in
+  report_shadows ~env ();
+  (env, wrap)
+
+and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
   match raw with
   | List (l, head :: args) -> (
       let env = if special_of env head <> None then read_special spos env head else env in
@@ -2013,7 +2020,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
               env)
             else go (fst (elab_stmt ~within:"top-level form" Many env item)) rest))
   in
-  let env = go env items in
+  let env = Fun.protect ~finally:report_shadows (fun () -> go env items) in
   (match items with
    | item :: _ -> List.iter (fun r -> if not r.Reader.used then warn_at r.from [] "`;! suppress warn` for %s silenced nothing" (tick r.name)) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (loc item).file))
    | [] -> ());

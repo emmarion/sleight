@@ -51,10 +51,16 @@ let resolve here s =
   in
   String.concat "\n" (List.map line (String.split_on_char '\n' s))
 
+type held = Said of string | Shadow of int * int * Reader.loc * string * Reader.loc
+let held : held list ref = ref []
+
 let warn_at l notes fmt =
   let note (nl, m) = Printf.sprintf "\n%s: note: %s" (Reader.where "-" nl) m in
   Printf.ksprintf
-    (fun s -> let here = Reader.where "-" l in !warn (resolve here (Printf.sprintf "%s: warning: %s%s" here s (String.concat "" (List.map note notes))) ^ "\n"))
+    (fun s ->
+      let here = Reader.where "-" l in
+      let s = resolve here (Printf.sprintf "%s: warning: %s%s" here s (String.concat "" (List.map note notes))) ^ "\n" in
+      if !held = [] then !warn s else held := Said s :: !held)
     fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
@@ -324,6 +330,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
       if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
+  let x = fresh () in
   if written && Reader.placed at then
     Option.iter
       (fun n ->
@@ -333,17 +340,32 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
                 special form, an annotation token, or one of the opaque types (section 27). A binder the
                 source wrote carries its position even where it is bound again from a stored telescope,
                 the telescope entry holding it (Term.entry). *)
-             let prior = (IntMap.find prior env.entries).at in
-             if Reader.placed prior then warn_at at [ (prior, "shadowed binder is here") ] "declaration of %s shadows a previous binder" (tick n)
+             let prior_at = (IntMap.find prior env.entries).at in
+             if Reader.placed prior_at then held := Shadow (x, prior, prior_at, n, at) :: !held
              else warn_at at [] "declaration of %s shadows a built-in" (tick n)
          | _ -> ())
       name;
-  let x = fresh () in
   Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary; at } env.entries in
   let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } env.facts } in
   (x, set_state env x state)
+
+let covers env prior x =
+  IntMap.mem x env.entries && IntMap.mem prior env.entries
+  && (try canon env (Var x) = canon env (Var prior) with Contradiction _ | Not_found -> false)
+  && match ((entry env x).mult, (entry env prior).mult) with Erased, _ -> true | Many, Many -> at_equal env (Var x) (Var prior) | _ -> false
+
+let report_shadows ?env () =
+  let pending = List.rev !held in
+  held := [];
+  List.iter
+    (function
+      | Said s -> !warn s
+      | Shadow (x, prior, prior_at, n, at) ->
+          let hint = match env with Some env when covers env prior x -> [ (at, "`_` here is safe and equivalent") ] | _ -> [] in
+          warn_at at ((prior_at, "shadowed binder is here") :: hint) "declaration of %s shadows a previous binder" (tick n))
+    pending
 
 
 (* [opens] holds the Matchables opened so far (section 19), one entry per merged group; nothing

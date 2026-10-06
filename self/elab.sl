@@ -4979,8 +4979,9 @@
     (let ((many env4) (many bound2) (many tele)) $ notail $ elab-src-entries sugar root st rest env3e mode2 (Cons _ (TVar x) ids) (Cons _ x bound) outer subterm-ok holes places warns)
     (values env4 bound2 $ Cons _ entry3 tele))
   ; A body: statements then the final expression (section 16); [items] sits within [root].
-  ((many elab-body : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Maybe $ Sink) sink) ->
+  ((many elab-body : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Maybe $ Sink) sink) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock))
+    (let ((many env)) $ report-shadows env0 $ BTrue)
     (match many items _
       ((Nil _)
         (let ((many ress) (erased lock)) $ list-fit _ _ expect (Nil _) no-res)
@@ -5082,7 +5083,7 @@
             ((StDumpContext)
               (let ((many env1) (many focus)) $ notail $ elab-focus sugar args _ two-steps envl2)
               (values (dump-report env1 (GoalStatement) focus) ctx $ SNone _)))) (else (values (bad) ctx $ SNone _))))
-    (values (env-back env env2) ctx2 sc))
+    (values (report-shadows (env-back env env2) $ BTrue) ctx2 sc))
 
   ; open-adt (section 19, ASSUMPTIONS 139): an anonymous let at the written multiplicity, then the open of that
   ; binder; the entry is bound by the code where the let would be.
@@ -6043,7 +6044,8 @@
         ((BFalse) (env-back env $ env-warn-at env (loc-in env from) $ str-cat3 "`;! suppress warn` for " (tick n) " silenced nothing")))
       rest used))))
 
-(def-fns _ $ (many end-file : (many (Env) env) -> (many (Env) r))
+(def-fns _ $ (many end-file : (many (Env) env0) -> (many (Env) r))
+  (let ((many env)) $ report-shadows env0 $ BFalse)
   (let ((many swept)) $ match many (env-failed env) (((Env) _))
     ((BFalse) (sweep-regions env (env-regions env) $ env-silenced env))
     ((BTrue) env))

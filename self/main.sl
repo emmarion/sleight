@@ -36,7 +36,7 @@
   (let ((many lo) (many text) (many err)) $ match many x (((Loc) _) ((Maybe $ String) _) ((Bool) _))
     ((SaidWarning sl t) (values sl (Some _ t) $ BFalse))
     ((SaidError sl t) (values sl (Some _ t) $ BTrue))
-    ((SaidSilenced _) (values (MkLoc "" $ MkPos 0 0) (None _) $ BFalse)))
+    (else (values (MkLoc "" $ MkPos 0 0) (None _) $ BFalse)))
   (let-match many text (Some _ t) ((None _) (tail $ shown first-only rest seen table)))
   (let-match many (and first-only seen) (BFalse) ((BTrue) (Cons _ "slc: stopped at the first error (--first-error)" $ Nil _)))
   (let ((many t2) (many table2)) $ resolve-marks lo t table)

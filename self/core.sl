@@ -1954,7 +1954,7 @@
   ((Use : -> Type) enum (many UseShared : (many (Loc) loc) -> (Use)) (many UseConsumed : (many (Loc) loc) -> (Use)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
   ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) -> (Pragmas)))
-  ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)))
+  ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (String) name) (many (Loc) here) -> (Said)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (IdMap $ Nat) locations) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
@@ -2809,9 +2809,9 @@
   (let-match many name (Some _ n) ((None _) env))
   (let-match many (lookup env n) (Some _ prior) ((None _) env))
   (let-match many (str-eq n "_") (BFalse) ((BTrue) env))
+  (let-match many env (MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (match many (env-entry-at env prior) (((Env) _))
-    ((Some _ pl)
-      (env-warn-with env l (Cons _ (MkPair _ _ pl "shadowed binder is here") $ Nil _) $ str-cat3 "declaration of " (tick n) " shadows a previous binder"))
+    ((Some _ pl) (env-set-said env $ Cons _ (SaidShadow (Succ fr) prior pl n l) $ env-said env))
     ((None _)
       (env-warn-at env l $ str-cat3 "declaration of " (tick n) " shadows a built-in"))))
 
@@ -3429,3 +3429,26 @@
 
 (let ((many nat-adt)) (MkAdt "Nat" (BTrue) (Nil _) (Some _ (ExtNat)) (BFalse)))
 (let ((many str-adt)) (MkAdt "String" (BTrue) (Nil _) (Some _ (ExtString)) (BFalse)))
+
+(def-fns _ $ (many shadow-covered : (many (Env) env) (many (Nat) prior) (many (Nat) x) -> (many (Bool) r))
+  (let ((many ids)) $ scope-ids $ env-scope env)
+  (let-match many (and (list-mem-bin ids x) $ list-mem-bin ids prior) (BTrue) ((BFalse) (BFalse)))
+  (let-match many (term-eq (canon-env env $ TVar x) $ canon-env env $ TVar prior) (BTrue) ((BFalse) (BFalse)))
+  (match many (entry-mult-of env x) _
+    ((Erased) (BTrue))
+    ((Many) (match many (entry-mult-of env prior) _ ((Many) (at-equal env (TVar x) $ TVar prior)) (else (BFalse))))
+    (else (BFalse))))
+
+(def-fns _ $ (many shadow-said : (many (Env) env) (many (Bool) hinted) (subterm many (List $ Said) ss) -> (many (List $ Said) r))
+  (let-match many ss (Cons _ s rest) ((Nil _) (Nil _)))
+  (match many s _
+    ((SaidShadow x prior pl n l)
+      (let ((many covered)) $ match many (and hinted $ shadow-covered env prior x) (((List $ Pair (Loc) $ String) _))
+        ((BTrue) (Cons _ (MkPair _ _ l "`_` here is safe and equivalent") $ Nil _))
+        ((BFalse) (Nil _)))
+      (let ((many text)) $ diagnostic (env-at-loc env l) ": warning: " (Cons _ (MkPair _ _ pl "shadowed binder is here") covered) $ str-cat3 "declaration of " (tick n) " shadows a previous binder")
+      (Cons _ (SaidWarning l text) $ notail $ shadow-said env hinted rest))
+    (else (Cons _ s $ notail $ shadow-said env hinted rest))))
+
+(def-fns _ $ (many report-shadows : (many (Env) env) (many (Bool) hinted) -> (many (Env) r))
+  (env-set-said env $ shadow-said env hinted $ env-said env))
