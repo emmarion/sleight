@@ -95,7 +95,9 @@ allowed after `x` is consumed.
 
 `(slot-self s)`, a statement (§16), takes a non-erased variable `s` in
 scope whose type canonicalizes to `(Slot)` and mints, outward, the fact
-that `(slot-of s)` and `s` are `is`-equal. It yields no proof object.
+that `(slot-of s)` and `s` are `is`-equal. It yields no proof object. It is a
+compile error if minting the fact leaves the fact table contradictory;
+we currently believe that cannot happen.
 
 *Reading:* a `Slot` the user binds is an ordinary non-erased variable,
 so it has an automatic slot of its own and is omitted after erasure
