@@ -41,10 +41,10 @@
 (len _ (Cons _ (get _ (MkSing q)) $ Nil _))
 ; warns: tests/shadow_covered_warn.sl:19:11: warning: declaration of `A` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:17:26: note: shadowed binder is here
-; warns: tests/shadow_covered_warn.sl:19:11: note: `_` here is safe and equivalent
+; warns: tests/shadow_covered_warn.sl:19:11: note: using `_` here instead would be equivalent
 ; warns: tests/shadow_covered_warn.sl:20:12: warning: declaration of `A` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:17:26: note: shadowed binder is here
-; warns: tests/shadow_covered_warn.sl:20:12: note: `_` here is safe and equivalent
+; warns: tests/shadow_covered_warn.sl:20:12: note: using `_` here instead would be equivalent
 ; warns: tests/shadow_covered_warn.sl:24:14: warning: declaration of `n` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:22:26: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:29:11: warning: declaration of `x` shadows a previous binder
@@ -55,7 +55,7 @@
 ; warns: tests/shadow_covered_warn.sl:35:7: note: shadowed binder is here
 ; warns: tests/shadow_covered_warn.sl:37:7: warning: declaration of `q` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:36:7: note: shadowed binder is here
-; warns: tests/shadow_covered_warn.sl:37:7: note: `_` here is safe and equivalent
+; warns: tests/shadow_covered_warn.sl:37:7: note: using `_` here instead would be equivalent
 ; warns: tests/shadow_covered_warn.sl:39:7: warning: declaration of `w` shadows a previous binder
 ; warns: tests/shadow_covered_warn.sl:38:7: note: shadowed binder is here
-; warns: tests/shadow_covered_warn.sl:39:7: note: `_` here is safe and equivalent
+; warns: tests/shadow_covered_warn.sl:39:7: note: using `_` here instead would be equivalent

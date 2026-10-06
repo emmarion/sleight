@@ -3444,7 +3444,7 @@
   (match many s _
     ((SaidShadow x prior pl n l)
       (let ((many covered)) $ match many (and hinted $ shadow-covered env prior x) (((List $ Pair (Loc) $ String) _))
-        ((BTrue) (Cons _ (MkPair _ _ l "`_` here is safe and equivalent") $ Nil _))
+        ((BTrue) (Cons _ (MkPair _ _ l "using `_` here instead would be equivalent") $ Nil _))
         ((BFalse) (Nil _)))
       (let ((many text)) $ diagnostic (env-at-loc env l) ": warning: " (Cons _ (MkPair _ _ pl "shadowed binder is here") covered) $ str-cat3 "declaration of " (tick n) " shadows a previous binder")
       (Cons _ (SaidWarning l text) $ notail $ shadow-said env hinted rest))

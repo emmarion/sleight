@@ -363,7 +363,7 @@ let report_shadows ?env () =
     (function
       | Said s -> !warn s
       | Shadow (x, prior, prior_at, n, at) ->
-          let hint = match env with Some env when covers env prior x -> [ (at, "`_` here is safe and equivalent") ] | _ -> [] in
+          let hint = match env with Some env when covers env prior x -> [ (at, "using `_` here instead would be equivalent") ] | _ -> [] in
           warn_at at ((prior_at, "shadowed binder is here") :: hint) "declaration of %s shadows a previous binder" (tick n))
     pending
 
