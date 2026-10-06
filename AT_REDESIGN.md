@@ -121,8 +121,9 @@ before its name:
 (def-fns L $ (many at unwrap : ...) ...)
 ```
 
-Its returns are all erased or `at`, and its body erases to nothing, or
-to a reordering of variables. Calling an at-function skips its runtime.
+Its return entries are all erased or `at`; its parameters are not
+restricted. Its body erases to nothing, or to a reordering of
+variables. Calling an at-function skips its runtime.
 
 Being an at-function is not part of the function's type. As for
 `Delegate` (§38), `def-fns` mints an erased proof object for it, a
