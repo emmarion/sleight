@@ -93,9 +93,9 @@ allowed after `x` is consumed.
 
 ## A7. `slot-self`
 
-`(slot-self s)`, an expression, takes a non-erased variable `s` in
-scope whose type canonicalizes to `(Slot)` and yields a proof that
-`(slot-of s)` and `s` are `is`-equal.
+`(slot-self s)`, a statement (§16), takes a non-erased variable `s` in
+scope whose type canonicalizes to `(Slot)` and mints, outward, the fact
+that `(slot-of s)` and `s` are `is`-equal. It yields no proof object.
 
 *Reading:* a `Slot` the user binds is an ordinary non-erased variable,
 so it has an automatic slot of its own and is omitted after erasure
@@ -206,10 +206,6 @@ semantics are settled first:
 
 1. The names of the null slot, the at-function proof's type, its fetch
    form and the form that opens it.
-2. The type of `slot-self`'s proof, for instance the prelude's
-   `(Eq (Slot) (slot-of s) s)`, erased. A built-in form whose result
-   names a prelude type would not work under `--no-prelude`; a built-in
-   opaque proof type is an alternative.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
