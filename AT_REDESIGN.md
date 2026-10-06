@@ -116,7 +116,9 @@ everything is as at `unique`, except what the cell mints: a cell at
 `unique` may mint its value at `unique`, while a cell at `many` mints
 its value only at `many`. The cell binder is mandatory in both
 modes, and in both it is `at` the scrutinee (§U5), so it gets no
-automatic slot (A2).
+automatic slot (A2). Which constructors have no cell binder is the same in both
+modes as at `unique` today (§U5, §U9): a newtype's, an extern type's
+outside its model's body, and a phantom constructor's.
 
 A `cell-write` at `many` copies: the new cell is not `at` the old one,
 and is itself at `many`.
@@ -228,9 +230,6 @@ semantics are settled first:
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
    This needs further work, to be determined; if that work works out,
    perhaps with some tweaks, they are all deleted.
-9. The exceptions to A8's cell binder, presumably those §U5 has today:
-   a newtype, an extern type outside its model's body, a phantom
-   constructor.
 10. §U14's tier 1 drops `at` annotations, which under A3 changes a
     function's runtime shape: an omitted entry becomes a word, and an
     at-function then runs, its full-at invocations allocating. §U14
