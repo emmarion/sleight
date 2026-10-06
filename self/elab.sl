@@ -565,21 +565,75 @@
 (def-fns _ $ (many argument-label : (many (Callee) c) (many (Nat) i) (many (Maybe $ String) name) -> (many (String) s))
   (str-cat3 (str-cat "argument " $ nat-str i) (match many name (((String) _)) ((Some _ n) (str-cat3 ", " (tick n) ",")) ((None _) "")) $ str-cat " of " $ callee-subject c))
 
-(def-fns _ $ (many meta-names : (many (Env) env) (subterm many (List $ Nat) xs) (many (List $ Nat) seen) -> (many (List $ String) r))
+(def-fns _ $ (many meta-ids : (many (Env) env) (subterm many (List $ Nat) xs) (many (List $ Nat) seen) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (match many (and (is-meta env x) $ not $ list-mem-bin seen x) _
-    ((BTrue) (Cons _ (qshow env $ TVar x) $ notail $ meta-names env rest $ Cons _ x seen))
-    ((BFalse) (tail $ meta-names env rest seen))))
+    ((BTrue) (Cons _ x $ notail $ meta-ids env rest $ Cons _ x seen))
+    ((BFalse) (tail $ meta-ids env rest seen))))
+
+(def-fns _ $ (many term-metas : (many (Env) env) (many (Term) t) -> (many (List $ Nat) r))
+  (meta-ids env (term-vars (canon-env env t) $ Nil _) $ Nil _))
+
+(def-fns _ $ (many meta-names : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
+  (Cons _ (qshow env $ TVar x) $ notail $ meta-names env rest))
 
 (def-fns _ $ (many cannot-infer : (many (Env) env) (many (Term) t) -> (many (String) s))
-  (str-cat3 "cannot infer " (join-strs (meta-names env (term-vars (canon-env env t) $ Nil _) $ Nil _) " and ") $ str-cat " in " $ qshow env t))
+  (str-cat3 "cannot infer " (join-strs (meta-names env $ term-metas env t) " and ") $ str-cat " in " $ qshow env t))
+
+(def-fns _ $ (many hint-at : (many (Env) env) (many (Maybe $ Loc) site) (many (String) x) -> (many (String) r))
+  (match many site _
+    ((Some _ l) (str-cat "\n" $ located (env-at-loc env l) ": hint: " x))
+    ((None _) (str-cat "\nhint: " x))))
+
+(def-fns _ $ (many entry-site : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Loc) r))
+  (let ((erased hs) (many e)) $ entry env x)
+  (match many e _ ((MkEInfo _ _ _ _ _ _ site) site)))
+
+(def-fns _ $ (many same-value : (many (Env) env) (many (Nat) x) (subterm many (List $ Pair (Nat) (String)) found) -> (many (Bool) r))
+  (let-match many found (Cons _ f rest) ((Nil _) (BFalse)))
+  (let-match many f (MkPair _ _ y _))
+  (or (equal-env env (TVar x) (TVar y)) $ notail $ same-value env x rest))
+
+(def-fns _ $ (many typed-entries : (many (Env) env) (many (Term) ty) (subterm many (List $ Nat) xs) (many (List $ Pair (Nat) (String)) found) -> (many (List $ Pair (Nat) (String)) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) found))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ n _ _ _ _ _))
+  (let-match many n (Some _ name) ((None _) (tail $ typed-entries env ty rest found)))
+  (let ((many visible)) $ match many (lookup env name) (((Bool) _)) ((Some _ y) (nat-eq x y)) ((None _) (BFalse)))
+  (let-match many (and visible $ and (equal-env env (type-of env x) ty) $ not $ same-value env x found) (BTrue)
+    ((BFalse) (tail $ typed-entries env ty rest found)))
+  (let ((many more) (erased _)) (list-append _ found $ list1 _ $ MkPair _ _ x name))
+  (tail $ typed-entries env ty rest more))
+
+(def-fns _ $ (many candidate-hints : (many (Env) env) (subterm many (List $ Pair (Nat) (String)) found) -> (many (String) r))
+  (let-match many found (Cons _ f rest) ((Nil _) ""))
+  (let-match many f (MkPair _ _ y name))
+  (let ((many site)) $ entry-site env y)
+  (str-cat (hint-at env site $ str-cat (tick name) $ match many site (((String) _)) ((Some _ _) ", bound here") ((None _) "")) $ notail $ candidate-hints env rest))
+
+(def-fns _ $ (many hole-hint : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (let ((many ty)) $ canon-env env $ type-of env x)
+  (let-match many (or (has-meta-env env ty) $ equal-env env ty type-term) (BFalse) ((BTrue) ""))
+  (let ((many found)) $ typed-entries env ty (scope-ids $ env-scope env) $ Nil _)
+  (let ((many k)) $ list-length _ found)
+  (let-match many (and (nat-lt 0 k) $ nat-lt k 6) (BTrue) ((BFalse) ""))
+  (str-cat (hint-at env (entry-site env x) $ str-cat3 (qshow env $ TVar x) " has type " $ str-cat3 (qshow env ty) ", as " $ match many (nat-eq k 1) (((String) _)) ((BTrue) "does:") ((BFalse) "do:"))
+    $ candidate-hints env found))
+
+(def-fns _ $ (many hole-hints-of : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (String) r))
+  (let-match many xs (Cons _ x rest) ((Nil _) ""))
+  (str-cat (hole-hint env x) $ notail $ hole-hints-of env rest))
+
+(def-fns _ $ (many hole-hints : (many (Env) env) (many (Term) t) -> (many (String) r))
+  (hole-hints-of env $ term-metas env t))
 
 ; A binder whose type or rule still holds an open `_` is refused (lib/env.ml's bind), the term shown as any
 ; message shows one, after core.sl's checks on the binder's name.
 (def-fns _ $ (many refuse-open : (many (Env) before) (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (match many (open-in before meta holes ty rule) _
     ((None _) env)
-    ((Some _ t) (env-error env $ cannot-infer before t))))
+    ((Some _ t) (env-error-hinted env (Nil _) (cannot-infer before t) $ hole-hints before t))))
 
 (def-fns _ $ (many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -1681,6 +1735,9 @@
 (def-fns _ $ (many error-at-with : (many (Env) env) (many (Pos) pos) (many (List $ Pair (Loc) $ String) notes) (many (String) msg) -> (many (Env) r))
   (env-back env $ env-error-with (env-at env pos) notes msg))
 
+(def-fns _ $ (many error-at-hinted : (many (Env) env) (many (Pos) pos) (many (List $ Pair (Loc) $ String) notes) (many (String) msg) (many (String) hints) -> (many (Env) r))
+  (env-back env $ env-error-hinted (env-at env pos) notes msg hints))
+
 (def-fns msg-lvl $ (many no-about : -> (many (String) p) (many (List $ Pair (Loc) $ String) n))
   (values "" $ Nil _))
 
@@ -1750,8 +1807,9 @@
 
 ; A boundary (SUGAR.md 6): a term reaching one with a `_` still open is refused.
 (def-fns _ $ (many settle : (many (Env) env) (many (Term) t) -> (many (Env) r))
-  (def-fns msg-lvl $ (many msg-settle : -> (many (String) s)) (cannot-infer env t))
-  (error-when-msg env (has-meta-env env t) msg-settle))
+  (match many (has-meta-env env t) _
+    ((BTrue) (env-error-hinted env (Nil _) (cannot-infer env t) $ hole-hints env t))
+    ((BFalse) env)))
 
 (def-fns _ $ (many settle-res : (many (Env) env) (many (Res) r) -> (many (Env) e))
   (match many (has-meta-env env $ res-term r) _
@@ -3634,8 +3692,8 @@
   (let ((many what)) $ argument-label c i name)
   (let ((many apos)) $ match many raw (((Pos) _)) ((Some _ r) (raw-pos r)) ((None _) (here-pos env)))
   (match many (match many raw (((Bool) _)) ((Some _ r) (is-underscore r)) ((None _) (BTrue))) _
-    ((BTrue) (error-at-with env apos (callee-notes c) $ str-cat what " is `_` and cannot be inferred"))
-    ((BFalse) (error-at-with env apos (callee-notes c) $ str-cat3 what ": " $ cannot-infer env t))))
+    ((BTrue) (error-at-hinted env apos (callee-notes c) (str-cat what " is `_` and cannot be inferred") $ hole-hints env t))
+    ((BFalse) (error-at-hinted env apos (callee-notes c) (str-cat3 what ": " $ cannot-infer env t) $ hole-hints env t))))
 
 (def-fns _ $ (many any-wild : (erased (List $ Raw) root) (subterm many (List $ Sub root) args) -> (many (Bool) r))
   (let-match many args (Cons _ s rest)

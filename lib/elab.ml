@@ -756,7 +756,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
   let env = if boundary && List.exists (has_meta env) acc then against ~strict:true env else env in
   if boundary then List.iteri (fun i t -> if has_meta env t then
     let what = argument c i (List.nth tele i).name and arg = List.nth args i in
-    if wild arg then error_with (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
+    if wild arg then error_with ~hints:(hole_hints env t) (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
     else unsolved ~about:(what ^ ": ", Lazy.force c.notes) (Reader.loc arg) env t) (List.rev acc);
   (env, List.map (metaless env) acc, List.rev codes, fun body -> List.fold_left (fun body (x, rhs) -> V.CLet ([x], rhs, body)) body bindings)
 

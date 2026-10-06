@@ -16,6 +16,11 @@ let numbering : (string, int) Hashtbl.t = Hashtbl.create 16
 
 let marker kind x at = Printf.sprintf "\001%c%d\001%s\002" kind x (Reader.where "" at)
 
+let hint_line s =
+  let sub = ": hint: " in
+  let rec go i = i + String.length sub <= String.length s && (String.sub s i (String.length sub) = sub || go (i + 1)) in
+  String.starts_with ~prefix:"hint: " s || go 0
+
 let resolve here s =
   let seen = ref [] in
   let number key =
@@ -47,7 +52,8 @@ let resolve here s =
           go (e + 1)
     in
     go 0;
-    Buffer.contents b ^ String.concat "" (List.map note !fresh)
+    let notes = String.concat "" (List.map note !fresh) and body = Buffer.contents b in
+    if notes <> "" && hint_line body then String.sub notes 1 (String.length notes - 1) ^ "\n" ^ body else body ^ notes
   in
   String.concat "\n" (List.map line (String.split_on_char '\n' s))
 
@@ -65,9 +71,9 @@ let warn_at l notes fmt =
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
-let error_with ?hint loc notes fmt =
+let error_with ?hint ?(hints = "") loc notes fmt =
   let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
-  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint))) fmt
+  Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
 
 let error loc fmt = error_with loc [] fmt
 
@@ -315,8 +321,24 @@ let is_meta env x = (entry env x).meta
 let metas env t = List.rev (fold_vars (fun _ xs t -> match t with Var x when is_meta env x && not (List.mem x xs) -> x :: xs | _ -> xs) 0 [] (canon env t))
 let has_meta env t = metas env t <> []
 
+let hole_hints env t =
+  let line l s = "\n" ^ (if Reader.placed l then Reader.where "-" l ^ ": " else "") ^ "hint: " ^ s in
+  let hints x =
+    let ty = type_of env x in
+    if has_meta env ty || equal ty (App (Var !Term.univ, [])) then ""
+    else
+      let typed = List.filter_map (fun y -> Option.bind (entry env y).name (fun n -> if lookup env n = Some y && equal (type_of env y) ty then Some (y, n) else None)) env.scope.ids in
+      let same (y, _) (z, _) = equal (canon env (Var y)) (canon env (Var z)) in
+      let found = List.rev (List.fold_left (fun acc c -> if List.exists (same c) acc then acc else c :: acc) [] typed) in
+      let k = List.length found in
+      if k = 0 || k > 5 then ""
+      else
+        line (entry env x).at (Printf.sprintf "%s has type %s, as %s:" (qshow env (Var x)) (qshow env ty) (if k = 1 then "does" else "do"))
+        ^ String.concat "" (List.map (fun (y, n) -> let l = (entry env y).at in line l (tick n ^ if Reader.placed l then ", bound here" else "")) found) in
+  String.concat "" (List.map hints (metas env t))
+
 let unsolved ?(about = ("", [])) loc env t =
-  error_with loc (snd about) "%scannot infer %s in %s" (fst about) (String.concat " and " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
+  error_with ~hints:(hole_hints env t) loc (snd about) "%scannot infer %s in %s" (fst about) (String.concat " and " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
 let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x -> canon env t | t -> t) 0 t

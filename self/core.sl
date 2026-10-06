@@ -2280,8 +2280,11 @@
   (let-match many lines (Cons _ x rest) ((Nil _) (values (Nil _) table)))
   (let ((many out) (many seen2) (many table2)) $ meta-scan x 0 (REmpty) (REmpty) (REmpty) seen table)
   (let ((many more) (many table3)) $ notail $ resolve-lines lo rest seen2 table2)
-  (let ((many notes) (erased _)) $ list-append _ (meta-notes (loc-here lo) $ list-drop _ (list-length _ seen) seen2) more)
-  (values (Cons _ (rope-str out) notes) table3))
+  (let ((many line)) $ rope-str out)
+  (let ((many mine)) $ meta-notes (loc-here lo) $ list-drop _ (list-length _ seen) seen2)
+  (match many (and (not $ list-is-empty _ mine) $ or (str-starts "hint: " line) $ str-contains line ": hint: ") _
+    ((BTrue) (let ((many notes) (erased _)) (list-append _ mine $ Cons _ line more)) (values notes table3))
+    ((BFalse) (let ((many notes) (erased _)) (list-append _ mine more)) (values (Cons _ line notes) table3))))
 
 (def-fns _ $ (many resolve-marks : (many (Loc) lo) (many (String) x) (many (List $ MsgMeta) table) -> (many (String) r) (many (List $ MsgMeta) table2))
   (let ((many ls) (many table2)) $ resolve-lines lo (split-on x 10) (Nil _) table)
