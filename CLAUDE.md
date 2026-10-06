@@ -106,3 +106,8 @@ by the owner and apply to every session.
     user-defined warnings (the `;! warn` pragma and its `suppress` and
     `restore` regions) is a language feature, not a warning, and stays
     documented.
+
+17. **Lazy diagnostics; time slc on slc.** Build message text only when
+    the message is reported. Before pushing an elaborator change, time
+    slc compiling itself against `origin/main`'s slc on the same input;
+    a slowdown beyond noise is a regression.
