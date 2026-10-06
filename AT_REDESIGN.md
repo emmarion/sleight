@@ -4,9 +4,8 @@ A working document for the owner's proposal to redesign `at`, made in a
 design session in chat. It records what the owner proposed and decided
 there. It changes nothing in DESIGN.md or UNIQUE.md until its parts are
 carried into them under CLAUDE.md rules 11 and 12. Section references
-with `§` are to DESIGN.md, and with `§U` to UNIQUE.md. A passage marked
-*reading* is a session's inference from the decisions, not a decision;
-the TBDs and open questions are listed at the end. Names are tentative,
+with `§` are to DESIGN.md, and with `§U` to UNIQUE.md. The TBDs and
+open questions are listed at the end. Names are tentative,
 as CLAUDE.md rule 10 has them.
 
 The direction is for the `at` system to subsume the existing `coerce`
@@ -17,8 +16,7 @@ relaxations in A12 wait until those are settled. In version one the
 ## A1. `Slot` is opaque
 
 `Slot` stays a type but is treated like `Level` (§8): opaque, with no
-constructors, so `SlotVacant` and `SlotHolds` (§U10) are gone, and no
-`Matchable`. It is not erased by kind: a `Slot` binder may be `many`.
+constructors, so `SlotVacant` and `SlotHolds` (§U10) are gone. It is not erased by kind: a `Slot` binder may be `many`.
 
 A global constant of type `(Slot)`, the **null slot**, written
 `vacant-slot`, is what an
@@ -93,9 +91,6 @@ table equates with `(slot-of v)`.
 
 `(slot-of x)` is not a use of `x` (§U2).
 
-*Reading:* after replacement `x` does not occur, so `(slot-of x)` stays
-allowed after `x` is consumed.
-
 ## A7. `slot-self`
 
 `(slot-self s)`, a statement (§16), takes a non-erased variable `s` in
@@ -103,11 +98,6 @@ scope whose type canonicalizes to `(Slot)` and mints, outward, the fact
 that `(slot-of s)` and `s` are `is`-equal. It yields no proof object. It is a
 compile error if minting the fact leaves the fact table contradictory;
 we currently believe that cannot happen.
-
-*Reading:* a `Slot` the user binds is an ordinary non-erased variable,
-so it has an automatic slot of its own and is omitted after erasure
-(A3); `slot-self` is how a program learns what is always true at
-runtime, that a slot's word is itself.
 
 ## A8. Cells at `many`
 
@@ -141,12 +131,6 @@ Every entry of its annotation is erased or `at`. An at-match skips its
 runtime. Its branches erase to nothing, or to a reordering of
 variables.
 
-*Reading*, of "erase to nothing" here and in A10: what is left after
-erasure, once `at` returns, full-at invocations (§U9), calls of
-at-functions and at-matches are dropped as erased, is nothing but
-`let`s that rename. Without those drops a recursive at-function such as
-A16's would not qualify.
-
 ## A10. At-functions
 
 A function is an **at-function** when its `def-fns` line puts `at`
@@ -166,12 +150,6 @@ type `(AtFn F f)` for a function `f` of type `F`, the first half of
 `Delegate`'s shape; `(at-fn-of f)` fetches it, in the manner of
 `delegate-of`, and a new form, `open-at-fn`, opens it.
 
-*Reading:* the type alone could not decide it. `array-place` (§U13)
-returns only an `at` entry and an erased proof, so a call returns no
-word, yet the call writes into the array and cannot be skipped. What
-makes a call skippable is the body, a fact about the definition, as a
-`delegate` body is.
-
 A call may be asserted to be a call of an at-function by wrapping it,
 `(at (f ...))`, as the full-at form wraps a cell invocation (§U9). The
 assertion is optional and a hard error when it fails. A call through a
@@ -179,11 +157,9 @@ first-class `f` is skipped only where an at-function proof for `f` is
 opened. Such a call still carries its `predates` or `subterm` proof
 (§9).
 
-An extern type has no cells outside its model's body (§U12). The
-prelude is eventually to gain extern at-functions over arrays, inside
-whose bodies cells reappear, which takes the subsumption of `coerce`
-further: an `Array` conversion such as §U13's `init-witness` then need
-not go through `coerce`.
+The prelude is eventually to gain extern at-functions over arrays,
+inside whose bodies cells reappear, which takes the subsumption of
+`coerce` further.
 
 ## A11. Delegates
 
@@ -196,10 +172,6 @@ followed by the function it delegates to:
 
 For now the annotation is optional. Where it is written it must be
 accurate.
-
-*Reading:* §9's pass-through check is then judged on A3's runtime
-shape, the entries without a written `at`; a parameter written `at` is
-passed as no word of its own.
 
 ## A12. To be decided
 
@@ -222,60 +194,10 @@ so that the core semantics are settled first (1-3), and follow-up work
 
 ## A13. Open questions
 
-6. Soundness: wherever two `Slot` terms canonicalize equal, they must
-   denote one word at runtime, since skipped stores, omitted `at`
-   entries and skipped at-functions all rest on it. The owner believes
-   the system is sound. *Reading:* equalities from a written `at`, from
-   `slot-self` and from forcing in a `many` or `unique` match look
-   honest by induction over construction; forcing in erased code rests
-   on §10's consistency claim, as every forced fact does, though a false
-   slot fact would corrupt memory rather than merely prove something
-   false. `Slot` having no constructors and no `Matchable`, forcing may
-   equate two slots but never refutes a branch over them, and nothing
-   relies on two slots being distinct. ASSUMPTIONS 183 notes that a
-   user type indexed by `(Slot)` already reaches the corresponding
-   merge.
+6. Soundness of slot equality: what the claim must be, and whether it
+   holds. The owner believes the system is sound.
 
 ## A14. `at-coercible` deferred further
 
 §U15's `at-coercible`, as stated today, is potentially unsound, and is
 deferred further.
-
-## A15. Reading: the null slot and `MaybeUninit`
-
-*Reading*, not a decision. With `(slot-self null)`, the null slot is its
-own at, so a full-at invocation of a cell from `(cell-alloc Uninit)`
-with the null slot as its argument checks with no store. `(Uninit A
-(slot-of v))` and `(Init A v)`, both newtype applications at their
-non-erased argument (§U9), are at one slot: §U13's `MaybeUninit`
-without a special case. Two different values at one slot are fine, no
-form turning sharing a slot into being one value.
-
-## A16. Worked example: unwrapping a list
-
-Written against the rules above, not machine-checked: nothing
-implements them yet. §40's `unwrap-all` as an at-function, with no
-`Coercible`:
-
-```scheme
-(def-adts $ (Meters : -> Type)
-  enum newtype
-  (many MkMeters : (many (Nat) n) -> (Meters)))
-
-(def-fns _ $ (many at unwrap : (subterm many (List (Meters)) ms) ->
-    (many (List (Nat)) ns at ms))
-  (match many ms (at (((List (Nat)) r at ms)))
-    ((Nil _ u) (at (u _)))
-    ((Cons _ m tl u)
-      (let-match many m (MkMeters n))
-      (let ((many r)) (unwrap tl))
-      (at (u _ n r)))))
-```
-
-- The `many` match gives each branch a cell `u` at `ms` (A8).
-- `n` is at `m`, a newtype destructure putting its field at the
-  scrutinee (§U9), and `r` is at `tl` by `unwrap`'s own return.
-- So `(u _ n r)` is full-at, the cell's slots being `m`'s and `tl`'s,
-  and mints `(Cons (Nat) n r)` at `ms`, at `many` as a cell at `many`
-  must (A8). After the drops of A9's reading the body is nothing, and a
-  call of `unwrap` skips its runtime.
