@@ -28,9 +28,14 @@ allocation that provides nothing defaults to, in place of
 For every named non-erased variable without a written `at` (A5), the
 elaborator inserts an anonymous `many` binder of type `(Slot)`, its
 **automatic slot**, and the variable is `at` that slot. This applies to
-function parameters and return entries among others, so a signature
-carries, in its mental model, roughly twice as many non-erased entries.
-Erased variables get none.
+function parameters and return entries, so a signature carries, in its
+mental model, roughly twice as many non-erased entries, and to the
+non-erased fields a match on a non-erased scrutinee binds, with the same
+effect. Erased variables get none.
+
+A `let` needs nothing of its own here: the entries of its right-hand
+side enter the containing expression (§16), bringing their slots with
+them.
 
 An automatic slot is `at` itself. Only automatic slots are: a written
 `at` cannot name the entry it is written on.
@@ -174,9 +179,8 @@ semantics are settled first:
    `(Eq (Slot) (slot-of s) s)`, erased.
 3. Whether a written `at v` stands for `at (slot-of v)` for a variable
    `v` of any type, or whether its target must be of type `(Slot)`.
-4. Which binder sites receive automatic slots beyond function
-   parameters and returns: `let` binders, pattern fields, cell binders,
-   closed-over variables.
+4. Whether a cell binder (A8) or a closed-over variable receives an
+   automatic slot, beyond the sites A2 lists.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
@@ -184,14 +188,13 @@ semantics are settled first:
    word at runtime. Forcing in a branch may equate two `Slot` atoms, as
    it may two `Level` atoms. ASSUMPTIONS 183 notes that a user type
    indexed by `(Slot)` already reaches the corresponding merge.
-7. Soundness: two variables at one slot need not have the same
-   contents, since a unique value consumed and rewritten through its
-   cell is re-minted at the same slot (§U15's concern about
-   `at-coercible`). Which forms license reading one value as another;
-   *reading*, a full-at invocation and an at-function only, never
-   sharing a slot alone.
 8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
 9. The exceptions to A8's cell binder, presumably those §U5 has today:
    a newtype, an extern type outside its model's body, a phantom
    constructor.
+
+## A14. `at-coercible` deferred further
+
+§U15's `at-coercible`, as stated today, is potentially unsound, and is
+deferred further.
