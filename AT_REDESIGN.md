@@ -66,6 +66,11 @@ In a function's parameter or return telescope, an entry may be written
 `at` an earlier entry or a variable from an enclosing scope. The target
 must be non-erased.
 
+The target is a `many` or `unique` variable of any type, not
+necessarily a `(Slot)`. `at v` may be read as `at (slot-of v)`, applied
+always, even where `v` is itself a slot: the entry is then at `v`'s
+slot, not at `v`.
+
 Neither `at` nor `slot-of` (A6) may appear in the telescope of a type
 constructor or a value constructor.
 
@@ -178,8 +183,6 @@ semantics are settled first:
    form and the form that opens it.
 2. The type of `slot-self`'s proof, for instance the prelude's
    `(Eq (Slot) (slot-of s) s)`, erased.
-3. Whether a written `at v` stands for `at (slot-of v)` for a variable
-   `v` of any type, or whether its target must be of type `(Slot)`.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
