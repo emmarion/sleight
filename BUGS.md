@@ -11,17 +11,3 @@ is a design decision. Remove an entry when it is fixed.
    short-circuits on an empty list of kept results, so the trailing erased
    code never becomes `(values)` for `check_marks` to fold. Such a
    function is only ever called erased, so nothing runs wrongly.
-
-
-2. **The two compilers disagree on whether a `cell-match` body is in run
-   position.** `lib/elab.ml`'s `elab_cell_match` elaborates the body under
-   the enclosing run position, while `self/elab.sl`'s `elab-cell-match`
-   clears it, as both do for a match branch. So with a `cell-match` at a
-   file's top level, `(comptime-match many o (Full w))` as a statement of
-   its body is accepted by the reference and refused by slc (`` `comptime-match`
-   is a run-position statement``), reproduced on 354d1aa; and slc writes one
-   warning on `tests/lopsided_match_warn.sl` (line 94) that the reference
-   does not. DESIGN.md §16 defines run position as under no function body
-   and no match branch, which, as read here, would make the reference's
-   behaviour the specified one; whether a `cell-match` body was meant to
-   count as a match branch there is not settled.

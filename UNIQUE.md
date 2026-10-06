@@ -451,7 +451,9 @@ one forced unification of `(Cell C s1 ... sn)` against `u`'s type
 mints their `is` rules, as entering a branch unifies a scrutinee's
 type (§18). At `unique`, `u2` is the cell given back, a fresh `unique`
 binder `is u` and `at u` (§U8), which `body` gets out by returning it
-into an entry of `ann` marked `is u` and `at u`. It decides nothing
+into an entry of `ann` marked `is u` and `at u`. `body` is not in run
+position (§16), as a match branch is not, wherever the `cell-match`
+sits. It decides nothing
 about a slot: an `si` is whatever `u`'s type said, a `(SlotHolds v)`,
 a `(SlotVacant)`, or an abstract slot. What the words are for is a
 write into another cell and §U15's comparison.

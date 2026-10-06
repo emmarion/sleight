@@ -107,3 +107,4 @@
 ; warns: tests/lopsided_match_warn.sl:43:10: warning: lopsided `match`; flatten it with a `let-match` on `Succ`
 ; warns: tests/lopsided_match_warn.sl:51:6: warning: lopsided `match`; flatten it with a `let-match` on `Zero`
 ; warns: tests/lopsided_match_warn.sl:82:15: warning: declaration of `match` shadows a built-in
+; warns: tests/lopsided_match_warn.sl:94:6: warning: lopsided `match`; flatten it with a `let-match` on `Zero`
