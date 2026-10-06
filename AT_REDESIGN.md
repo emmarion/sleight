@@ -19,7 +19,8 @@ relaxations in A12 wait until those are settled.
 constructors, so `SlotVacant` and `SlotHolds` (§U10) are gone, and no
 `Matchable`. It is not erased by kind: a `Slot` binder may be `many`.
 
-A global constant of type `(Slot)`, the **null slot**, is what an
+A global constant of type `(Slot)`, the **null slot**, written
+`vacant-slot`, is what an
 allocation that provides nothing defaults to, in place of
 `(SlotVacant)`.
 
@@ -157,9 +158,10 @@ restricted. Its body erases to nothing, or to a reordering of
 variables. Calling an at-function skips its runtime.
 
 Being an at-function is not part of the function's type. As for
-`Delegate` (§38), `def-fns` mints an erased proof object for it, a
-fetch form in the manner of `delegate-of` yields it, and a new form
-opens it.
+`Delegate` (§38), `def-fns` mints an erased proof object for it, of
+type `(AtFn F f)` for a function `f` of type `F`, the first half of
+`Delegate`'s shape; `(at-fn-of f)` fetches it, in the manner of
+`delegate-of`, and a new form, `open-at-fn`, opens it.
 
 *Reading:* the type alone could not decide it. `array-place` (§U13)
 returns only an `at` entry and an erased proof, so a call returns no
@@ -209,8 +211,6 @@ semantics are settled first:
 
 ## A13. Open questions
 
-1. The names of the null slot, the at-function proof's type, its fetch
-   form and the form that opens it.
 6. Soundness: two `Slot` terms that canonicalize equal must denote one
    word at runtime. Forcing in a branch may equate two `Slot` atoms, as
    it may two `Level` atoms. ASSUMPTIONS 183 notes that a user type
