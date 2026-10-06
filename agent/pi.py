@@ -192,11 +192,17 @@ def write(path, content):
     return f"wrote {write_bytes(path, content.encode())}"
 
 
-def edit(path, old_string, new_string):
+def edit(path, old_string, new_string, replace_all=False):
+    if old_string == new_string:
+        return "error: old_string and new_string are the same"
     text = read_bytes(path).decode("utf-8", "replace")
-    if text.count(old_string) != 1:
-        return f"error: found {text.count(old_string)} matches, need exactly 1"
-    return f"edited {write_bytes(path, text.replace(old_string, new_string).encode())}"
+    if not old_string and text:
+        return "error: an empty old_string only matches an empty file"
+    n = text.count(old_string)
+    if n == 0 or n > 1 and not replace_all:
+        return f"error: found {n} matches, need {'at least' if replace_all else 'exactly'} 1" + (
+            "; add more context to pick one, or pass replace_all to replace them all" if n else "")
+    return f"edited {write_bytes(path, text.replace(old_string, new_string).encode())}" + (f" ({n} replacements)" if n > 1 else "")
 
 
 def delete(path):
@@ -375,9 +381,6 @@ def _shown(capture, ext, data):
 
 
 def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes"):
-    for name, flag in (("gc_stats", gc_stats), ("first_error", first_error)):
-        if not isinstance(flag, bool):
-            raise ValueError(f"`{name}` must be true or false")
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
@@ -440,13 +443,13 @@ FIRST_ERROR_NOTES = {
     "choose": "By default the compiler reports every error it finds; with `first_error` set to true, only its first. "
               "Errors after the first are best-effort and may be unreliable.",
 }
-STR, STRS, INT = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}
+STR, STRS, INT, BOOL = {"type": "string"}, {"type": "array", "items": {"type": "string"}}, {"type": "integer"}, {"type": "boolean"}
 TOOLS = {
     "read": (read, "Read a file, with line numbers. `offset` is the first line to show (from 1), `limit` how many (default 2000).",
              {"path": STR, "offset": INT, "limit": INT}, ["path"]),
     "write": (write, "Write a file", {"path": STR, "content": STR}, ["path", "content"]),
-    "edit": (edit, "Replace exactly one occurrence of old_string with new_string", {"path": STR, "old_string": STR, "new_string": STR},
-             ["path", "old_string", "new_string"]),
+    "edit": (edit, "Replace exactly one occurrence of old_string with new_string, or every occurrence with `replace_all`",
+             {"path": STR, "old_string": STR, "new_string": STR, "replace_all": BOOL}, ["path", "old_string", "new_string"]),
     "delete": (delete, "Delete a file or an empty directory. Kept files cannot be deleted.",
                {"path": STR}, ["path"]),
     "ls": (ls, "List a directory, or a single file, with each file's size in bytes (and its cap, for a kept file); "
@@ -459,8 +462,8 @@ TOOLS = {
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "
                "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
                "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. " + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
-           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": {"type": "boolean"}}
-           | ({"first_error": {"type": "boolean"}} if FIRST_ERROR == "choose" else {}), ["paths"]),
+           {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -475,6 +478,9 @@ def _check(name, args):
     if set(args) - set(props) or set(req) - set(args):
         raise ValueError(f"`{name}` takes {', '.join(props)}" + (f" ({', '.join(req)} required)" if req and req != list(props) else "")
                          + f", but got {', '.join(args) or 'no arguments'}, so the call was not run")
+    for k, v in args.items():
+        if props[k] is BOOL and not isinstance(v, bool):
+            raise ValueError(f"`{k}` must be true or false")
 
 
 def _ts():
