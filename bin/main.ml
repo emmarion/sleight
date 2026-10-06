@@ -31,19 +31,28 @@ let repl consume env =
   in
   loop env
 
-(* Arguments after "--" belong to the program (its GetArgs request); the rest are files and flags. *)
+(* Arguments after "--" belong to the program (its GetArgs request); the rest are files and flags, in any order, the
+   flags in [valued] each taking the argument after it; a flag given twice takes its last value. *)
 let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
-  let rec option name acc = function f :: v :: rest when f = name -> (Some v, List.rev_append acc rest) | a :: rest -> option name (a :: acc) rest | [] -> (None, List.rev acc) in
-  let extract, args = option "--extract" [] args in
-  let confine, args = option "--confine-dir" [] args in
-  Option.iter (( := ) Extract.fence) confine;
-  let output_bytes, args = option "--confine-output-bytes" [] args in
-  Extract.output_bytes := output_bytes;
-  let hints, args = option "--hints" [] args in
-  Option.iter (fun p -> Special.help := Program.read_file p) hints;
-  let flag f = List.mem f args in
+  let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints" ]
+  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note" ] in
+  let rec read flags files = function
+    | [] -> (flags, List.rev files)
+    | f :: v :: rest when List.mem f valued -> read ((f, v) :: flags) files rest
+    | f :: rest when List.mem f switches -> read ((f, "") :: flags) files rest
+    | f :: _ when String.starts_with ~prefix:"--" f ->
+        prerr_endline (if List.mem f valued then f ^ " needs a value" else "unknown flag " ^ f);
+        exit 1
+    | file :: rest -> read flags (file :: files) rest
+  in
+  let flags, files = read [] [] args in
+  let option f = List.assoc_opt f flags and flag f = List.mem_assoc f flags in
+  let extract = option "--extract" in
+  Option.iter (( := ) Extract.fence) (option "--confine-dir");
+  Extract.output_bytes := option "--confine-output-bytes";
+  Option.iter (fun p -> Special.help := Program.read_file p) (option "--hints");
   Value.use_externs := not (flag "--no-extern");
   Extract.templates := not (flag "--no-templates");
   Extract.with_env := not (flag "--no-env");
@@ -51,7 +60,7 @@ let () =
   let consume = if extract = None then Program.consume (Program.start !Extract.fence !Extract.output_bytes !Extract.with_env (world program_args)) else fun _ _ _ -> () in
   let env = Builtin.load ~prelude:(not (flag "--no-prelude")) () in
   let env =
-    match List.filter (fun a -> not (List.mem a [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note" ])) args with
+    match files with
     | [] when not (flag "--repl") -> run consume env "-"
     | files ->
         let env = List.fold_left (run consume) env files in

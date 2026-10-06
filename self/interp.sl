@@ -196,6 +196,34 @@
     ((BTrue) rq)
     ((BFalse) (tail $ request-of rest name))))
 
+; ---- The compiler's command-line flags (self/main.sl).
+; The flags slc takes alone, and those taking the argument after them.
+(def-fns _ $ (many switches : -> (many (List $ String) r))
+  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Nil _))
+
+(def-fns _ $ (many valued : -> (many (List $ String) r))
+  (Cons _ "--confine-dir" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Nil _))
+
+; The flags among the arguments, in any order, the last given first and a switch's value "", and the files in order.
+(def-fns _ $ (many read-flags : (subterm many (List $ String) args) (many (List $ Pair (String) $ String) flags) (many (List $ String) files)
+    -> (many (Result $ Pair (List $ Pair (String) $ String) $ List $ String) r))
+  (let-match many args (Cons _ a rest) ((Nil _) (Ok _ $ MkPair _ _ flags $ list-rev _ files)))
+  (let-match many (list-mem-str (switches) a) (BFalse) ((BTrue) (tail $ read-flags rest (Cons _ (MkPair _ _ a "") flags) files)))
+  (let-match many (list-mem-str (valued) a) (BFalse)
+    ((BTrue) (match many rest _
+      ((Nil _) (Fail _ $ str-cat a " needs a value"))
+      ((Cons _ v more) (tail $ read-flags more (Cons _ (MkPair _ _ a v) flags) files)))))
+  (let-match many (str-starts "--" a) (BFalse) ((BTrue) (Fail _ $ str-cat "unknown flag " a)))
+  (tail $ read-flags rest flags $ Cons _ a files))
+
+(def-fns _ $ (many flag-value : (subterm many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (Maybe $ String) r))
+  (let-match many flags (Cons _ p rest) ((Nil _) (None _)))
+  (let-match many p (MkPair _ _ g v))
+  (match many (str-eq f g) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ flag-value rest f))))
+
+(def-fns _ $ (many has-flag : (many (List $ Pair (String) $ String) flags) (many (String) f) -> (many (Bool) r))
+  (is-some _ $ flag-value flags f))
+
 ; ---- The levels of the compiler's own IO program (self/main.sl), and the codes it exits with.
 
 (def-lvl util-lvl)
