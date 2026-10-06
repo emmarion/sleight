@@ -1747,7 +1747,9 @@
   (error-when-msg env (has-meta-env env t) msg-settle))
 
 (def-fns _ $ (many settle-res : (many (Env) env) (many (Res) r) -> (many (Env) e))
-  (settle (settle env $ res-term r) $ res-ty r))
+  (match many (has-meta-env env $ res-term r) _
+    ((BTrue) (settle env $ res-term r))
+    ((BFalse) (settle env $ res-ty r))))
 
 (def-fns _ $ (many settle-list : (subterm many (List $ Term) ts) (many (Env) env) -> (many (Env) r))
   (match many ts _
@@ -3484,6 +3486,9 @@
   (let ((many notes) (erased _)) $ list-append _ (subterm-notes env desc params sites positions) $ callee-notes desc)
   (error-at-with env ap notes $ str-cat (param-label desc params i) $ say env " is not a `subterm` parameter"))
 
+(def-fns _ $ (many sub-raws : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) -> (many (List $ Raw) r))
+  (match many subs _ ((Nil _) (Nil _)) ((Cons _ s rest) (match many s _ ((MkSub _ arg _) (Cons _ arg $ notail $ sub-raws _ rest))))))
+
 (def-fns _ $ (many sub-positions : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) -> (many (List $ Pos) r))
   (match many subs _ ((Nil _) (Nil _)) ((Cons _ s rest) (match many s _ ((MkSub _ arg _) (Cons _ (raw-pos arg) $ notail $ sub-positions _ rest))))))
 
@@ -3612,12 +3617,16 @@
     ((Cons _ t rest) (Cons _ (metaless env t) $ notail $ metaless-list rest env))))
 
 ; The first argument, in order, still holding a `_` no unification solved.
-(def-fns _ $ (many report-unsolved : (subterm many (List $ Term) args) (many (List $ Entry) tele) (many (Callee) c) (many (Env) env) (many (Nat) i) -> (many (Env) r))
+(def-fns _ $ (many report-unsolved : (subterm many (List $ Term) args) (many (List $ Raw) raws) (many (List $ Entry) tele) (many (Callee) c) (many (Env) env) (many (Nat) i) -> (many (Env) r))
   (let-match many args (Cons _ t rest) ((Nil _) env))
   (let ((many name) (many more)) $ match many tele (((Maybe $ String) _) ((List $ Entry) _)) ((Cons _ e es) (values (entry-name e) es)) ((Nil _) (values (None _) (Nil _))))
-  (match many (has-meta-env env t) _
-    ((BTrue) (env-error-with env (callee-notes c) $ str-cat (argument-label c i name) " is `_` and cannot be inferred"))
-    ((BFalse) (tail $ report-unsolved rest more c env $ Succ i))))
+  (let ((many raw) (many rraws)) $ match many raws (((Maybe $ Raw) _) ((List $ Raw) _)) ((Cons _ r rs) (values (Some _ r) rs)) ((Nil _) (values (None _) (Nil _))))
+  (let-match many (has-meta-env env t) (BTrue) ((BFalse) (tail $ report-unsolved rest rraws more c env $ Succ i)))
+  (let ((many what)) $ argument-label c i name)
+  (let ((many apos)) $ match many raw (((Pos) _)) ((Some _ r) (raw-pos r)) ((None _) (here-pos env)))
+  (match many (match many raw (((Bool) _)) ((Some _ r) (is-underscore r)) ((None _) (BTrue))) _
+    ((BTrue) (error-at-with env apos (callee-notes c) $ str-cat what " is `_` and cannot be inferred"))
+    ((BFalse) (error-at-with env apos (callee-notes c) $ str-cat3 what ": " $ cannot-infer env t))))
 
 (def-fns _ $ (many any-wild : (erased (List $ Raw) root) (subterm many (List $ Sub root) args) -> (many (Bool) r))
   (match many args _
@@ -5813,7 +5822,7 @@
       ((BFalse) (let ((many errs)) $ count-errs tele) (values (count-mismatch env2 callee tele pos $ list-length _ args) errs errs (Nil _) (Nil _))))
     (let ((many env3) (many acc) (many tys) (many codes) (many pairs)) $ notail $ check-args-go sugar root args k env2 callee ctx tele metas lock pos as-term prepare fields (Nil _) (Nil _) (Nil _) (Nil _))
     (let ((many (Env) env4)) $ match many (and boundary $ terms-have-meta acc env3) _ ((BTrue) (solve-against env3 expect result mvars wilds $ BTrue)) ((BFalse) env3))
-    (let ((many (Env) env5)) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) tele callee env4 1)) ((BFalse) env4))
+    (let ((many (Env) env5)) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) (sub-raws _ args) tele callee env4 1)) ((BFalse) env4))
     (values env5 (metaless-list acc env5) (metaless-list tys env5) codes pairs))
 
   ((many check-args-go : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (Callee) callee) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Mult) pos) (many (Bool) as-term) (many (Bool) prepare) (many (Bool) fields) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Code ctx many-one) codes) (many (List $ Pair (Nat) $ Code ctx many-one) pairs) ->
