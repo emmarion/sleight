@@ -97,7 +97,8 @@ runtime, that a slot's word is itself.
 A `match` at `many` gives a cell as well, as one at `unique` does
 (§U5), the cell being at `many` rather than at `unique`; otherwise
 everything is as at `unique`. The cell binder is mandatory in both
-modes.
+modes, and in both it is `at` the scrutinee (§U5), so it gets no
+automatic slot (A2).
 
 A `cell-write` at `many` copies: the new cell is not `at` the old one.
 So does an invocation of a cell at `many` that is not full-at. A full-at
@@ -179,7 +180,6 @@ semantics are settled first:
    `(Eq (Slot) (slot-of s) s)`, erased.
 3. Whether a written `at v` stands for `at (slot-of v)` for a variable
    `v` of any type, or whether its target must be of type `(Slot)`.
-4. Whether a cell binder (A8) receives an automatic slot.
 5. Whether a `Cell` type's indices become slot terms, `(slot-of f)` in
    place of `(SlotHolds f)` and the null slot in place of
    `(SlotVacant)`.
