@@ -152,5 +152,5 @@ let issues path src =
 let warn path src =
   let found = fst (issues path src) in
   List.iter (fun i -> !Env.warn (show i)) found;
-  if found <> [] then !Env.warn (Reader.shape_note path ^ "\n");
+  if found <> [] && !Reader.shape_notes then !Env.warn (Reader.shape_note path ^ "\n");
   found <> []

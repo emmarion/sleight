@@ -80,6 +80,8 @@ let scan file src =
 let tokenize file src = List.map (fun (l, _, t) -> (l, t)) (scan file src)
 
 (* A parenthesis a file gets wrong is found faster with bin/shape than from the one position a message names. *)
+let shape_notes = ref true
+
 let shape_note path =
   Printf.sprintf "%s: note: `bin/shape` lists where each form of this file opens and closes, `dune exec bin/shape.exe -- <file>`, and with `--closers` what each run of `)` closes" path
 
@@ -96,7 +98,7 @@ let parse ?(shape = true) file src =
   let toks = ref (tokenize file src) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
-  let paren l m = Syntax (l, if shape then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
+  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
   let opened = ref [] and closed = ref [] in
   let suppression l w = function
     | Atom (_, "warn") :: Atom (_, name) :: _ -> (

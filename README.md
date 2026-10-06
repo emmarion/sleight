@@ -134,7 +134,7 @@ closing more than is open and names, one by one, every form a file leaves
 open, so that each missing `)` has a place to go; a reader's ``missing `)` `` names
 the line one form opened on and nothing else. A file that earns any of these warnings, or a
 reader's parenthesis error, gets a note naming the `bin/shape` command for
-it, once. `bin/indent` runs the same check alone over the files named on its
+it, once. `--no-shape-note` leaves that note out, as slc's flag of the same name does. `bin/indent` runs the same check alone over the files named on its
 command line and exits 1 when it finds any, so it can gate a commit over
 the files a commit touches; the repository's own sources are clean of it
 but for the five tests the warnings are tested on, which are inconsistent

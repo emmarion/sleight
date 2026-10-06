@@ -657,7 +657,7 @@
 
 ; The warnings one file's text earns, in line order: the tabs, then the nesting claims, then a surplus ) and
 ; the count of forms left open, which are what the reader's own error does not name.
-(def-fns _ $ (many indent-warnings : (many (String) path) (many (String) src) -> (many (List $ String) ws))
+(def-fns _ $ (many indent-warnings : (many (Bool) notes) (many (String) path) (many (String) src) -> (many (List $ String) ws))
   (let ((many st))
     (ind-scan src (MkIndentSt 1 0 0 (Nil _) (BFalse) (BFalse) (None _) (Nil _) (Nil _))))
   (let-match many st (MkIndentSt _ _ _ op _ _ u ls ts))
@@ -670,4 +670,4 @@
         (Cons _ (ind-at path sl "a `)` here closes more than is open (surplus `)`)") acc1))))
   (let ((many unclosed)) $ ind-unclosed path op (BTrue) (Nil _))
   (let ((many acc3)) $ match many unclosed (((List $ String) _)) ((Nil _) acc2) ((Cons _ _ _) (Cons _ (join-strs (list-rev _ unclosed) "\n") acc2)))
-  (match many acc3 _ ((Nil _) acc3) ((Cons _ w rest) (list-rev _ $ Cons _ (str-cat3 w "\n" $ shape-note path) rest))))
+  (match many acc3 _ ((Nil _) acc3) ((Cons _ w rest) (list-rev _ $ Cons _ (match many notes (((String) _)) ((BTrue) (str-cat3 w "\n" $ shape-note path)) ((BFalse) w)) rest))))
