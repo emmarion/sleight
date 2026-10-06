@@ -120,6 +120,8 @@ for locating a misplaced paren where the checker's own error names only the
 end of the file. It reads the same `lib/reader.ml` the checker does, so
 comments and string literals are skipped rather than counted, and a file the
 lexer cannot finish is reported as far as it got.
+`--no-shape-note` leaves out the note naming the `bin/shape` command that a file
+with a parenthesis mistake otherwise gets; slc takes the same flag.
 
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
