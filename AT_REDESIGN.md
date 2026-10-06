@@ -75,10 +75,12 @@ constructor or a value constructor.
 
 ## A6. `slot-of`
 
-`(slot-of x)`, for a non-erased variable `x`, denotes `x`'s slot. The
-elaborator replaces it with a reference to the anonymous slot variable
-itself, a real entry in the fact table, which is why it may appear in
-type-like positions, function telescopes included.
+`(slot-of x)`, for a non-erased variable `x`, denotes `x`'s at. The
+elaborator replaces it with a reference to a real entry in the fact
+table, which is why it may appear in type-like positions, function
+telescopes included: for an `x` without a written `at`, its automatic
+slot; for an `x` written `at v`, which has none (A2), a slot the fact
+table equates with `(slot-of v)`.
 
 `(slot-of x)` is not a use of `x` (§U2).
 
