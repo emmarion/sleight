@@ -113,7 +113,8 @@ modes as at `unique` today (§U5, §U9): a newtype's, an extern type's
 outside its model's body, and a phantom constructor's.
 
 A `cell-write` at `many` copies: the new cell is not `at` the old one,
-and is itself at `many`.
+and is itself at `unique`, so a write whose items are all `_` copies a
+shared block into a unique cell.
 So does an invocation of a cell at `many` that is not full-at. A full-at
 invocation of a cell at `many` costs nothing at runtime. Invoking a
 cell at `unique` to mint a `unique` value consumes the cell (§U9).
@@ -149,7 +150,10 @@ Being an at-function is not part of the function's type. As for
 `Delegate` (§38), `def-fns` mints an erased proof object for it, of
 type `(AtFn F f)` for a function `f` of type `F`, the first half of
 `Delegate`'s shape; `(at-fn-of f)` fetches it, in the manner of
-`delegate-of`, and a new form, `open-at-fn`, opens it.
+`delegate-of`, and a new form, `open-at-fn`, opens it. The proof is
+minted when a header claiming `at` is elaborated, before the block's
+bodies, so a call within the block to a function so marked is skipped;
+a body that then fails to erase to nothing is a compile error.
 
 A call may be asserted to be a call of an at-function by wrapping it,
 `(at (f ...))`, as the full-at form wraps a cell invocation (§U9). The
@@ -160,7 +164,12 @@ opened. Such a call still carries its `predates` or `subterm` proof
 
 The prelude is eventually to gain extern at-functions over arrays,
 inside whose bodies cells reappear, which takes the subsumption of
-`coerce` further.
+`coerce` further. A function marked both `extern` and `at` has no FFI
+implementation: the marks are a promise. It is still legal to treat it
+as an ordinary function for higher-order purposes, including passing it
+to a function that expects a function and does not know it is an
+at-function, so the compiler emits a dummy function for it, and
+invoking that cannot crash.
 
 ## A11. Delegates
 
@@ -178,7 +187,7 @@ accurate.
 
 Left for later: loosenings deliberately left out of the first version
 so that the core semantics are settled first (1-3), and follow-up work
-(4-5).
+(4-5, 11).
 
 1. Relaxing §12's one-real-branch rule for an at-match, which does not
    dispatch at runtime.
@@ -192,6 +201,14 @@ so that the core semantics are settled first (1-3), and follow-up work
 5. §U14's tier 1 list, to be extended with the new forms: the `at`
    mark on at-functions and at-matches, cells from `many` matches,
    `slot-of`, `slot-self` and `vacant-slot`.
+11. The prelude's `array-pluck`, its signature changed so that the slot
+   it returns is exactly the slot of the value it returns, `(Uninit A
+   (slot-of v))` in its `ASet` proof for the `v` it returns, and an
+   `extern at` function that puts a plucked value back. The motivating
+   example: a jagged array's row, or any unique value mutated inside an
+   outer array, is taken out with `array-pluck`, mutated in place, and
+   put back by an at-function whose call is erased, so that putting it
+   back costs nothing.
 
 ## A13. Open questions
 
