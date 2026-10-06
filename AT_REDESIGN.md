@@ -215,6 +215,9 @@ semantics are settled first:
    `coercible-*` forms and `Delegate`. This needs further work; if it
    works out, perhaps with some tweaks, they are all deleted. In
    version one they do not change.
+5. §U14's tier 1 list, to be extended with the new forms: the `at`
+   mark on at-functions and at-matches, cells from `many` matches,
+   `slot-of`, `slot-self` and `vacant-slot`.
 
 ## A13. Open questions
 
@@ -231,10 +234,6 @@ semantics are settled first:
    relies on two slots being distinct. ASSUMPTIONS 183 notes that a
    user type indexed by `(Slot)` already reaches the corresponding
    merge.
-10. §U14's tier 1 drops `at` annotations, which under A3 changes a
-    function's runtime shape: an omitted entry becomes a word, and an
-    at-function then runs, its full-at invocations allocating. §U14
-    needs restating against A3.
 
 ## A14. `at-coercible` deferred further
 
