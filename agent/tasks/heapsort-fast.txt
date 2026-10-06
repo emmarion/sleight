@@ -27,8 +27,8 @@ try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
 SL's maintainers what slowed you down because of SL, its library, or its tools,
 rather than because of the problem itself; add to it each session instead of
 rewriting it. Each phase has its own budget of tokens. In the second phase,
-those two are the only files you can edit; there's no need to edit them before
-then, so spend the first phase on the task itself.
+those two are the only files you can edit; there's no need to edit them, or to
+read FEEDBACK.md, before then, so spend the first phase on the task itself.
 
 Hint: the `sl` tool's `gc_stats` reports how much a run allocates.
 
