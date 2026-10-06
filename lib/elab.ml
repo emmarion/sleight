@@ -503,10 +503,12 @@ let missing env l form sres cs =
     :: forced_notes env l sres trial in
   error_with l (List.concat_map note cs) "this %s is missing a branch for the following unrefuted constructor%s:" (tick (speller env form)) (if List.length cs = 1 then "" else "s")
 
+let field_count env l what noun c params needed got rule =
+  error_with l (declared_as env c) "%s of %s expects %s, got %d%s" (respell env what) (qname env c) (counted needed noun) got
+    (match show_tele env params with [] -> "" | ss -> ": expected " ^ rule ^ " " ^ tick (String.concat " " ss))
+
 let slot_count env l what noun c params got =
-  let n = List.length (List.filter (fun (e : entry) -> e.mult <> Erased) params) in
-  error_with l (declared_as env c) "%s of %s expects %s, got %d%s" (respell env what) (qname env c) (counted n noun) got
-    (match show_tele env params with [] -> "" | ss -> ": expected one for each non-erased field of " ^ tick (String.concat " " ss))
+  field_count env l what noun c params (List.length (List.filter (fun (e : entry) -> e.mult <> Erased) params)) got "one for each non-erased field of"
 
 let annotated env form ann tele expect = lazy (
   let enclosing = "the enclosing `" ^ form ^ "`" in
@@ -1211,6 +1213,10 @@ and elab_special ?sink demand tele env expect l sp args =
       let env = match expected_sides env with Some (sa,_) -> solve "sharing" env l s sa | None -> env in
       let c = ctor_var env l c in
       let params, ret = ctor_type env l c in
+      let needed = List.fold_left (fun n (e : entry) -> n + if e.mult = Erased then 2 else 1) 0 params in
+      if List.length args <> needed then
+        field_count env l "`coercible-ctor`" "more argument" c params needed (List.length args)
+          "a source and a target for each erased field and a `Coercible` proof for each other field, in the order of";
       let check env side e ty t = check_sg env l (map_sg (instantiate side) e.sg) { term = t; ty; erasure = Erased; place = None } in
       let rec go env src tgt tele args =
         match (tele, args) with
@@ -1231,7 +1237,7 @@ and elab_special ?sink demand tele env expect l sp args =
                 check env tgt e tty b;
                 go env (a :: src) (b :: tgt) tele args
             | _ -> assert false)
-        | _ -> error_in env l "`coercible-ctor`: wrong number of arguments for %s" (qname env c) in
+        | _ -> assert false in
       let env, src, tgt = go env [] [] params args in
       mint env (proof_type Prelude.coercible [ s; instantiate src ret; App (Var c, List.rev src); s; instantiate tgt ret; App (Var c, List.rev tgt) ])
   | Sp.CoercibleOf, [ d ] -> (

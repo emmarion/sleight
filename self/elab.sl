@@ -2334,10 +2334,18 @@
   (error-at-with env ppos (declared-as env c) $ str-cat3 (say env what) " on " $ str-cat3 (qshown env c) (str-cat3 " under `" (spell env $ mult-name mode) "` expects ")
     $ str-cat3 (counted (list-length _ tele) "binder") ", got " $ str-cat (nat-str got) $ expected-str $ show-tele-t env tele (BTrue)))
 
-(def-fns _ $ (many slot-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (String) noun) (many (Nat) c) (many (List $ Entry) params) (many (Nat) got) -> (many (Env) r))
+(def-fns _ $ (many field-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (String) noun) (many (Nat) c) (many (List $ Entry) params) (many (Nat) needed) (many (Nat) got) (many (String) rule) -> (many (Env) r))
   (let ((many shown)) $ show-tele-t env params (BTrue))
-  (error-at-with env ppos (declared-as env c) $ str-cat3 (say env what) " of " $ str-cat3 (qshown env c) " expects " $ str-cat3 (counted (many-count params) noun) ", got "
-    $ str-cat (nat-str got) $ match many (str-is-empty shown) (((String) _)) ((BTrue) "") ((BFalse) (str-cat ": expected one for each non-erased field of " $ tick shown))))
+  (error-at-with env ppos (declared-as env c) $ str-cat3 (say env what) " of " $ str-cat3 (qshown env c) " expects " $ str-cat3 (counted needed noun) ", got "
+    $ str-cat (nat-str got) $ match many (str-is-empty shown) (((String) _)) ((BTrue) "") ((BFalse) (str-cat3 ": expected " rule $ str-cat " " $ tick shown))))
+
+(def-fns _ $ (many slot-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (String) noun) (many (Nat) c) (many (List $ Entry) params) (many (Nat) got) -> (many (Env) r))
+  (field-count env ppos what noun c params (many-count params) got "one for each non-erased field of"))
+
+(def-fns _ $ (many ctor-arg-count : (subterm many (List $ Entry) tele) -> (many (Nat) n))
+  (let-match many tele (Cons _ e rest) ((Nil _) (Zero)))
+  (let ((many more)) $ notail $ ctor-arg-count rest)
+  (match many (entry-mult e) _ ((Erased) (Succ $ Succ more)) (else (Succ more))))
 
 (def-fns _ $ (many slot-entries : (subterm many (List $ Term) slots) -> (many (List $ Entry) r))
   (match many slots _ ((Nil _) (Nil _)) ((Cons _ t rest) (Cons _ (is-entry (Many) t $ None _) $ notail $ slot-entries rest))))
@@ -4426,6 +4434,9 @@
                       (let-match many rest (Cons _ craw cargs) ((Nil _) (malformed _ expect env2 sp)))
                       (let ((many env3) (many cid)) $ ctor-var env2 craw)
                       (let ((many ctele) (many ret)) $ ctor-type env3 cid)
+                      (let ((many needed)) $ ctor-arg-count ctele)
+                      (let-match many (nat-eq needed $ list-length _ cargs) (BTrue)
+                        ((BFalse) (values (field-count env3 (here-pos env3) "`coercible-ctor`" "more argument" cid ctele needed (list-length _ cargs) "a source and a target for each erased field and a `Coercible` proof for each other field, in the order of") (list-replicate _ (list-length _ expect) no-res) $ CError _ expect "coercible-ctor")))
                       (let ((many env4) (many src) (many tgt)) $ notail $ coercible-ctor-args sugar cargs env3 ctx ctele (Nil _) (Nil _) cid s)
                       (let ((many env5) (many r)) $ coercible-mint env4 tele $ proof-type coercible-id $ Cons _ s $ Cons _ (instantiate src ret) $ Cons _ (TApp (TVar cid) $ list-rev _ src) $ Cons _ s $ Cons _ (instantiate tgt ret) $ Cons _ (TApp (TVar cid) $ list-rev _ tgt) $ Nil _)
                       (erased-result _ expect proof-what env5 r))
@@ -5535,7 +5546,7 @@
     (values (settle-res env2 r) r))
 
   ((many coercible-ctor-args : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) tele) (many (List $ Term) src) (many (List $ Term) tgt) (many (Nat) c) (many (Term) side) -> (many (Env) r) (many (List $ Term) src2) (many (List $ Term) tgt2))
-    (def-fns refusal-lvl $ (many wrong : -> (many (Env) r)) (env-error env $ str-cat (say env "`coercible-ctor`: wrong number of arguments for ") $ qshown env c))
+    (def-fns refusal-lvl $ (many wrong : -> (many (Env) r)) (env-error env "internal: `coercible-ctor` argument count"))
     (let-match many tele (Cons _ e rest)
       ((Nil _) (match many args _ ((Nil _) (values env src tgt)) ((Cons _ _ _) (values (wrong) src tgt)))))
     (match many (entry-mult e) _
