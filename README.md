@@ -121,27 +121,6 @@ end of the file. It reads the same `lib/reader.ml` the checker does, so
 comments and string literals are skipped rather than counted, and a file the
 lexer cannot finish is reported as far as it got.
 
-Indentation is read as a claim about paren nesting, and `lib/indent.ml`
-checks the claim: a line indented further than the line before it must start
-strictly more nested, two lines at one indentation must start at one nesting,
-a dedent must land where every level it passed was really more nested, and
-the indentation is spaces. Each of those rules compares two lines, so a
-warning names the line it is about and a `note` under it the line that was
-compared against. It runs over every file the driver or `slc` is handed
-*before* that file is parsed, so a file the reader then refuses is reported on
-all the same — which is where it pays most, since it also warns about a `)`
-closing more than is open and names, one by one, every form a file leaves
-open, so that each missing `)` has a place to go; a reader's ``missing `)` `` names
-the line one form opened on and nothing else. A file that earns any of these warnings, or a
-reader's parenthesis error, gets a note naming the `bin/shape` command for
-it, once. `--no-shape-note` leaves that note out, as slc's flag of the same name does. `bin/indent` runs the same check alone over the files named on its
-command line and exits 1 when it finds any, so it can gate a commit over
-the files a commit touches; the repository's own sources are clean of it
-but for the five tests the warnings are tested on, which are inconsistent
-on purpose (`tests/indent_*.sl`, `tests/string_literal_bad.sl`). `$` is
-not paren nesting and is deliberately not counted; `lib/indent.ml`'s header
-says why, and names the one shape that misreads.
-
 `bench/bench.sh <commit>` times the self-hosted compiler on a copy of its
 own sources at that commit and on the sample programs under `bench/`, and
 `bench/selfbuild.sh` rebuilds it from `self/` with an existing binary;
@@ -205,18 +184,6 @@ under later facts, and a name is shown only where it still denotes that atom
 (`Env.show`, `show-t` in `self/elab.sl`). A result that fails its return type
 is reported where it is written, the entry of the body's final `values` or the
 final expression.
-
-`;! warn NAME MESSAGE`, written between top-level forms, makes every
-non-erased application of the value constructor `NAME`, and every match on the
-type `NAME` that is not `erased`, of any kind, warn with `MESSAGE` (the rest of
-the line). `NAME` means the entry that name refers to where the pragma is
-written. Code inside an extern function's body never earns this warning.
-`;! suppress warn NAME` and `;! restore warn NAME`, written anywhere, bracket
-a region of the file in which that warning is not written wherever `NAME`,
-looked up where the warning arises, means the warned entry; the rest of either
-line is a comment. A region left open runs to the end of the file. Opening a
-region for a name already open, or restoring one that is not, is an error, and
-a region that silenced nothing warns once its file has been elaborated.
 
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope
