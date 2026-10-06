@@ -3494,7 +3494,8 @@
   (error-at-with env ap notes $ str-cat (param-label desc params i) $ say env " is not a `subterm` parameter"))
 
 (def-fns _ $ (many sub-raws : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) -> (many (List $ Raw) r))
-  (match many subs _ ((Nil _) (Nil _)) ((Cons _ s rest) (match many s _ ((MkSub _ arg _) (Cons _ arg $ notail $ sub-raws _ rest))))))
+  (let-match many subs (Cons _ s rest) ((Nil _) (Nil _)))
+  (match many s _ ((MkSub _ arg _) (Cons _ arg $ notail $ sub-raws _ rest))))
 
 (def-fns _ $ (many sub-positions : (erased (List $ Raw) root) (subterm many (List $ Sub root) subs) -> (many (List $ Pos) r))
   (let-match many subs (Cons _ s rest) ((Nil _) (Nil _)))
