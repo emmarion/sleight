@@ -25,13 +25,16 @@ allocation that provides nothing defaults to, in place of
 
 ## A2. Automatic slots
 
-For every named non-erased variable without a written `at` (A5), the
-elaborator inserts an anonymous `many` binder of type `(Slot)`, its
+For every non-erased variable without a written `at` (A5), named or
+anonymous, the elaborator inserts an anonymous `many` binder of type `(Slot)`, its
 **automatic slot**, and the variable is `at` that slot. This applies to
 function parameters and return entries, so a signature carries, in its
 mental model, roughly twice as many non-erased entries, and to the
 non-erased fields a match on a non-erased scrutinee binds, with the same
-effect. Erased variables get none.
+effect. Erased variables get none. As an invariant, every `many` or
+`unique` entry of the fact table has a corresponding slot: an argument
+bound first (§U2a), the anonymous entries a `let`'s right-hand side
+brings in, and a constructor application's own entry (§3) included.
 
 A `let` needs nothing of its own here: the entries of its right-hand
 side enter the containing expression anonymously (§16), bringing their
@@ -55,7 +58,7 @@ may differ from one match branch to another.
 
 ## A4. `at` in the fact table
 
-The at-database of §U8 is replaced. Every entry has, beside its type and
+The at-database of §U8 is replaced. Every non-erased entry has, beside its type and
 its `is` (§3, §18), an **at**: as its type must canonicalize to a type,
 its at must canonicalize to a `(Slot)`. Whether two variables are at one
 slot is then decided by the fact table's ordinary canonicalization.
@@ -108,9 +111,11 @@ its value only at `many`. The cell binder is mandatory in both
 modes, and in both it is `at` the scrutinee (§U5), so it gets no
 automatic slot (A2).
 
-A `cell-write` at `many` copies: the new cell is not `at` the old one.
+A `cell-write` at `many` copies: the new cell is not `at` the old one,
+and is itself at `many`.
 So does an invocation of a cell at `many` that is not full-at. A full-at
-invocation of a cell at `many` costs nothing at runtime.
+invocation of a cell at `many` costs nothing at runtime. Invoking a
+cell at `unique` to mint a `unique` value consumes the cell (§U9).
 
 ## A9. At-matches
 
