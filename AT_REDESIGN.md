@@ -68,10 +68,11 @@ slot is then decided by the fact table's ordinary canonicalization.
 
 ## A5. Written `at`
 
-In a function's parameter or return telescope, or a match's return
-annotation (§U8), an entry may be written `at` an earlier entry or a
-variable from an enclosing scope. The target
-must be non-erased.
+As in §U8, a function's return entries and a match's annotation entries
+may be written `at`; in addition, a function's parameters may be, and
+the target may be any earlier entry of the telescope, a return entry
+included, or a variable from an enclosing scope. The target must be
+non-erased.
 
 The target is a `many` or `unique` variable `v` of any type, not
 necessarily a `(Slot)`. The entry's at (A4) is `(slot-of v)`, always,
