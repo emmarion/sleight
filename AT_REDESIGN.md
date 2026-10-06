@@ -224,10 +224,6 @@ semantics are settled first:
    relies on two slots being distinct. ASSUMPTIONS 183 notes that a
    user type indexed by `(Slot)` already reaches the corresponding
    merge.
-7. §U14's tier 1 drops `at` annotations, which under A3 changes a
-   function's runtime shape: an omitted entry becomes a word, and an
-   at-function then runs, its full-at invocations allocating. §U14
-   needs restating against A3.
 8. What becomes of `coerce`, `Coercible`, the `coercible-*` forms,
    `Delegate` and §U15's `at-coercible` as the subsumption proceeds.
    This needs further work, to be determined; if that work works out,
@@ -235,6 +231,10 @@ semantics are settled first:
 9. The exceptions to A8's cell binder, presumably those §U5 has today:
    a newtype, an extern type outside its model's body, a phantom
    constructor.
+10. §U14's tier 1 drops `at` annotations, which under A3 changes a
+    function's runtime shape: an omitted entry becomes a word, and an
+    at-function then runs, its full-at invocations allocating. §U14
+    needs restating against A3.
 
 ## A14. `at-coercible` deferred further
 
