@@ -109,90 +109,36 @@ such a context it is an error, having nothing to discharge.
 
 ## 6. `_` for an erased argument
 
-Note (owner, via a later session): the `_` implementation is more powerful
-than this section says, and the section needs updating from the
-implementation itself; until then read it as a lower bound.
+**Where `_` may stand, today.** As an erased argument of any application
+(§4's tier 1, including a Cell invocation, §U9). Also as an argument of
+`coercible-wrap`, as the `Sharing` argument of the `coercible-*` forms
+(§U7), and in place of any type. Each `_` is a fresh unification
+variable, a *meta*. Nowhere else.
 
-The owner's proposal, recorded by the session that implemented it: the
-decisions are the owner's, the wording and the reading of the gaps the
-session's, and `tests/wild_*.sl` are the evidence for what the
-implementation does.
+**Expectation.** Some positions expect a telescope, each entry a type or
+an `is` term, which helps solve the metas inside them. These positions
+are a function body (its returns), a match branch (its annotation), a
+`let` whose binders all carry a type or `is` clause, and an argument
+(its parameter, given the arguments before it). The expectation passes
+down through `values`, `tail`, `notail` and `delegate`, and never passes
+up.
 
-An argument to a type constructor, a value constructor or a function may
-be written `_` (type formers perhaps later). Elaboration stays naive and
-left to right, and an expression's type is fully settled once the
-elaborator leaves it.
+**Boundaries.** A meta may never reach the fact table. So every form
+that records a fact is a *boundary*, and any meta still unsolved at a
+boundary is an error. The boundaries are a call's `)`, a `let` binding,
+a scrutinee, a match annotation, a body's results, a special form's
+operands, run position, and each telescope entry as it is bound. A
+constructor application is not a boundary, and *as implemented* neither
+is a Cell invocation: its metas may stay open for the surrounding form
+to solve. So a `_` in a signature is fine when its own entry solves it.
 
-- **Expectation.** An expression may be elaborated with an expected type
-  and/or an expected `is` (terminology open: holes, wildcards, metas),
-  built from the usual type and `is` grammar (DESIGN.md §5) except that,
-  in place of a variable, a meta — a unification variable — may stand,
-  with no user-facing syntax for it. §2's `_` annotation reuses the
-  expectation, and is an error if the expectation still holds a meta.
-  Function and match returns set the expectation initially, and so does a
-  `let` whose binders all carry a type or an `is` clause (added by the
-  owner after the first implementation); a function still spells out its
-  whole type.
-- **Solving.** Each `_` mints a fresh meta, unified at once with what is
-  known and eagerly from then on. A `_` is solved by the time the nearest
-  *boundary* around it closes; one still open there is an error, and so
-  is a `_` at an argument that is not erased where it stands (in
-  actuality, not by the parameter's mark: in an erased context a `_` may
-  stand at a parameter the function declared `many`).
-- **Boundaries** (the owner's second round): the invariant is that no
-  entry's type or `is` rule in the fact table mentions an unsolved meta;
-  metas live only in terms in flight. A form whose whole content is §5's
-  grammar — a type or value constructor application, a type former — is
-  pure and no boundary: its `_`s may stay open past its own `)`. Every
-  form that records a fact is one: a function call's `)` for its
-  arguments, a `let`'s right-hand side, a `match`'s scrutinee and its
-  annotation, a function body's results, the arguments of the special
-  forms, and run position. A match's annotation may itself hold `_`s
-  (`(((List _) r))`, `((_ r))`, or `_` for all of it) and must fully
-  unify with the expected telescope right there, before any branch; a
-  `let` binder's type may too, solved by the right-hand side at the
-  let's `)`. Whether a meta may be solved inside a match branch and
-  escape it is deliberately left out.
-- **Then the decrease annotation.** Only after this is §3's `predates` or
-  `subterm` proof inferred where none is written.
+**Solving.** By unification only, with no search and no computation.
+Boundaries settle inside out. Everything within one boundary is solved
+together. A boundary nested inside it closes first, using only what is
+known at that point. A match's annotation is settled before its
+branches, so no meta crosses into a branch.
 
-**Naive by design.** The constraints, spelled out, since they decide what
-is refused:
-
-- Arguments are read once, left to right: what a later argument would
-  settle is not known while an earlier one is elaborated, and an
-  expression's own arguments are never revisited.
-- A `_` is solved at the nearest boundary's `)` and not later: no
-  constraint is carried past a boundary to be solved by what follows,
-  and there is no search or backtracking. Within the boundary, what can
-  solve a `_` is the expectation the position hands down and the
-  arguments before and after it, in the same application or an
-  enclosing pure one.
-- The expectation flows downward only, from the enclosing position into
-  an expression, never up from an expression into its context, and
-  never out of a boundary.
-- A `_` is never solved by computation: the unifier compares canonical
-  terms and binds metas, nothing more (DESIGN.md §5's grammar has no
-  function calls to run anyway).
-
-As implemented (ASSUMPTIONS 115): the expectation is the telescope a body
-returns into, a match's annotation, or — the owner's addition — the
-binders of a `let` when every one of them carries a type or an `is`
-clause; it is handed down through `values`, `tail`, `delegate` and every
-argument position, where it is the parameter's signature instantiated with
-the arguments before it. An application with a `_` first unifies its
-result, over metas for all its parameters, with the expectation; each
-written argument is then checked against its parameter and bound to its
-meta; at the `)` a mismatch with the expectation is reported before an
-unsolved `_` is. So `(Cons _ hd tl)` is solved by `hd`, `(Nil _)` by the
-telescope it is returned into, the parameter it is passed at or the typed
-binder it is bound to, `(list-length _ xs)` by `xs`, `(Cons _ (Nil _) rest)`
-by `rest`, and `(f _ (Nil _) xs)` by `xs`, the inner `Nil` being pure.
-Refused, by the constraints above: `(f _ (Nil _))`, nothing in the call
-fixing the element type by the call's `)`; `(let ((many xs)) (Nil _))`, the
-untyped binder handing nothing down; `(List _)` in a signature, since a
-signature is spelled out in full; and a match annotation with a `_` where
-nothing is expected of the match.
+After that, §3's decrease annotation is inferred.
 
 Open, for the owner (the implementation's choices are the session's):
 
