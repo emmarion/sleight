@@ -11,7 +11,8 @@ _effort = lambda env: env.get("PI_EFFORT", "").strip()
 _slc = lambda env: env.get("PI_SLC", str(HERE.parent / "_build/release/slc"))
 _first_error = lambda env: env.get("PI_FIRST_ERROR", "yes")
 PROVIDER, MODEL, EFFORT, SLC, FIRST_ERROR = _provider(os.environ), _model_name(os.environ), _effort(os.environ), _slc(os.environ), _first_error(os.environ)
-MAX_TOKENS = int(os.environ.get("PI_MAX_TOKENS", "65536"))
+MAX_TOKENS = int(os.environ["PI_MAX_TOKENS"]) if os.environ.get("PI_MAX_TOKENS") else None
+_out_cap = lambda limit: min(c for c in (MAX_TOKENS, limit) if c) if MAX_TOKENS or limit else None
 HTTP_TIMEOUT = int(os.environ.get("PI_HTTP_TIMEOUT", "1800"))
 STREAM = os.environ.get("PI_STREAM", "1") not in ("0", "false", "")
 MAX_TURNS = int(os.environ.get("PI_MAX_TURNS", "0"))
@@ -675,9 +676,15 @@ class Anthropic:
     def window(self):
         return self.model().get("max_input_tokens")
 
+    def cap(self):
+        return _out_cap(self.model().get("max_tokens")) or 65536
+
+    def truncated(self, reply):
+        return reply.get("stop_reason") == "max_tokens"
+
     def send(self, messages):
         return post(self.base + "/messages", {
-            "model": MODEL, "max_tokens": min(MAX_TOKENS, self.model().get("max_tokens") or MAX_TOKENS), "system": SYSTEM,
+            "model": MODEL, "max_tokens": self.cap(), "system": SYSTEM,
             "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages, "cache_control": {"type": "ephemeral"},
         }, self.auth())
@@ -708,14 +715,17 @@ class OpenAICompat:
         return ((self.model().get("metadata") or {}).get("limits") or {}).get(key)
 
     def cap(self):
-        return min(MAX_TOKENS, self.limit("max_output_tokens") or MAX_TOKENS)
+        return _out_cap(self.limit("max_output_tokens"))
+
+    def truncated(self, reply):
+        return reply["choices"][0].get("finish_reason") == "length"
 
     def window(self):
         return self.limit("max_context_length") or self.model().get("max_model_len")
 
     def send(self, messages):
         body = {
-            "model": MODEL, "max_tokens": self.cap(),
+            "model": MODEL, **({"max_tokens": self.cap()} if self.cap() else {}),
             "tools": [{"type": "function", "function": {"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "parameters": PARAMS[n]}} for n, (_, d, _, _) in TOOLS.items()],
             "messages": [{"role": "system", "content": SYSTEM}] + messages,
             "user": SESSION_ID,
@@ -749,9 +759,15 @@ class OpenAI(OpenAICompat):
     def window(self):
         return self.windows.get(MODEL)
 
+    def cap(self):
+        return MAX_TOKENS
+
+    def truncated(self, reply):
+        return reply.get("status") == "incomplete" and (reply.get("incomplete_details") or {}).get("reason") == "max_output_tokens"
+
     def send(self, messages):
         return post(self.base + "/responses", {
-            "model": MODEL, "max_output_tokens": MAX_TOKENS, "instructions": SYSTEM,
+            "model": MODEL, **({"max_output_tokens": MAX_TOKENS} if MAX_TOKENS else {}), "instructions": SYSTEM,
             "tools": [{"type": "function", "name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "parameters": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "input": [item for m in messages for item in (m if isinstance(m, list) else [m])],
             "reasoning": {"summary": "auto", **({"effort": EFFORT} if EFFORT else {})},
@@ -886,7 +902,11 @@ def run(prompt):
         _log(TRANSCRIPT, f"\n--- says {_ts()} ---\n{text}\n" if text.strip() else "")
         if not calls:
             empty += 1
-            nudge = f"[Your reply {'had no tool call' if text.strip() else 'was empty'}. Continue with a tool call, or call `done` if you are finished.]"
+            nudge = (f"[Your last reply reached the {f'{api.cap():,}-token ' if api.cap() else ''}output limit before it made a tool call, "
+                     "so it was cut off and discarded. You cannot see any of that reasoning now. To avoid losing work again, think in "
+                     "shorter steps: work out one part of the problem, then save your conclusion with a tool call, for example by "
+                     "writing it to a file, before going further.]" if api.truncated(reply) and not text.strip() else
+                     f"[Your reply {'had no tool call' if text.strip() else 'was empty'}. Continue with a tool call, or call `done` if you are finished.]")
             _say(f"[no tool call {empty}/{MAX_EMPTY}]")
             if empty >= MAX_EMPTY:
                 if phase == "rewrite":
@@ -1161,7 +1181,7 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_CONTEXT_STOP   context for the experiment phase, in % of the window [20]\n"
          "  PI_REWRITE_STOP   context for the rewrite phase, in % of the window [PI_CONTEXT_STOP]\n"
          "  PI_CONTEXT        the context window, overriding the provider's [0: ask the provider]\n"
-         "  PI_MAX_TOKENS     output tokens per reply [65536]\n"
+         "  PI_MAX_TOKENS     output tokens per reply [the model's maximum]\n"
          "  PI_EFFORT         reasoning effort [unset]\n"
          "  PI_STREAM         stream replies [1]\n"
          "  PI_HTTP_TIMEOUT, PI_HTTP_TRIES   per request [1800 s, 6 tries]\n"
