@@ -1558,12 +1558,6 @@
   (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ equal-env env p $ slot-atom x) _
     ((BTrue) (Some _ x)) ((BFalse) (tail $ at-constant rest env p))))
 
-(def-fns _ $ (many at-hint : (many (Env) env) (many (Term) p) -> (many (String) r))
-  (let-match many p (TVar x) (else ""))
-  (match many (str-eq (shown-name env x) $ anon-mark env x) _
-    ((BTrue) (str-cat "\nhint: " $ say env "give the argument it is at a name, with a `let`, before the call that takes it"))
-    ((BFalse) "")))
-
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
 (def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
   (let-match many p0 (TSlotOf c) (else (None _)))
@@ -1575,7 +1569,7 @@
   (let ((many p)) $ canon-env env p0)
   (let ((many inframe)) $ match many direct (((Maybe $ Nat) _)) ((Some _ _) direct) ((None _) (at-in-frames ctx env p)))
   (let ((many found)) $ match many inframe (((Maybe $ Nat) _)) ((Some _ _) inframe) ((None _) (at-constant (env-words env) env p)))
-  (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat3 (say env "no caller word for `at` ") (qshow env p) $ at-hint env p) 0))))
+  (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat (say env "no caller word for `at` ") $ qshow env p) 0))))
 
 ; A parameter written `at` is not passed: inside the body it is a rename of the word its target holds
 ; (section 36), bound over the frame of the runtime parameters [base], the first such parameter outermost;

@@ -45,3 +45,19 @@ is a design decision. Remove an entry when it is fixed.
     since is an absurd-by-proof branch written with no body,
     `(absurd (C ...))`, which the reference refuses with "a body needs a
     final expression" and `slc` with "malformed branch".
+
+14. **An `at` naming an argument that was not a variable has no caller
+    word once the call is over.** With `mk : (many (Nat) x) -> (many
+    (Fn K (many (Nat) y) -> (many (Nat) r at x)) g)`, `(let ((many g))
+    (mk (Succ n)))` then `(g 3)` is refused with "no caller word for
+    `at` `_1`", at the top level and inside a body alike, in the
+    reference and in `slc`. The argument is bound to an anonymous
+    temporary before the call (§15), and `g`'s type names that
+    temporary's slot, but the temporary is bound only around the call
+    to `mk`, so `location_var` finds no readable word in its slot by
+    the time of `(g 3)`. Binding the same argument by a `let` first
+    runs, but the owner has said a `let` should never be needed. One
+    reading, this session's and not the owner's, is that the temporary
+    should stay bound, and readable, for the rest of the enclosing
+    expression, as the entries of a `let`'s right-hand-side statements
+    do (§27). Entry 6 is the converse case.

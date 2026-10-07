@@ -17,9 +17,7 @@ let location_var env l p =
       let p = canon env p in
       (match List.find_opt (fun x -> readable x && same_slot env p (slot_of x)) env.scope.ids with
       | Some x -> x
-      | None ->
-          let hint = match p with Var x when name_of env x = anonymous env x -> Some (sprintf_in env "give the argument it is at a name, with a `let`, before the call that takes it") | _ -> None in
-          error_with ?hint l [] (respelled env "no caller word for `at` %s") (qshow env p))
+      | None -> error_in env l "no caller word for `at` %s" (qshow env p))
 
 let type_term = Prelude.type_term
 
