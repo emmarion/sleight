@@ -556,12 +556,13 @@ in a `many` position is an error unless it is written `(share e)`. If
 `e` is a variable `x`, the form is a many use of `x`. It is an error if
 `x` is also used at unique on the same path (§15). Afterwards `x` can
 be used at many, written `(share x)` each time, and never again at
-unique. The result of `(share x)` `is x`, so a binder of it forwards
-the type and facts of `x`, and the result is at `x` (§36). If `e` is
-any other expression, `e` is elaborated at `unique` and the fresh
-result is shared. A `share` in an erased position is an error, because
-nothing is used there. A head written `(share n)` dispatches as `n`
-does (§6).
+unique. If `e` is any other expression, `e` is elaborated at `unique`
+and its result is shared. Either way, the result of `(share e)` is the
+result of `e`, at `many`: it has the type of `e`, it `is` whatever `e`
+is, so a binder of it forwards the type and facts of `e`, and it is at
+the location of `e` (§36). A `share` in an erased position is an error,
+because nothing is used there. A head written `(share n)` dispatches as
+`n` does (§6).
 
 ## 17. Function levels
 
