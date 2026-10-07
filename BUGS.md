@@ -18,3 +18,129 @@ is a design decision. Remove an entry when it is fixed.
    the head through `special_of` without the position check that
    `read_special` makes. Reported by a review session; not reproduced
    independently.
+
+5. **A `_` for an `is`-typed parameter or field is solved without a
+   type check, so a value of the wrong type reaches a non-erased
+   position.** With `g : (erased (False) j) (many j is x) ->
+   (many (False) r)` and body `x`, the call `(g _ 3)` is accepted: the
+   meta for `j` is solved to `3` by the value equation `x is j`
+   (`solve_sg`'s `Is` case checks the value alone, and `Env.unify_in`
+   assigns a meta without comparing its type with the term's), so a
+   `many` `(False)` comes back and an `absurd` function given it runs
+   ("runtime error: absurd code reached", in the interpreter and in the
+   extracted OCaml). The same through a constructor field
+   `(erased (False) a) (many a is b)` built as `(C _ (MkUnit))`. With
+   `(erased (Nat) j)` and `(BTrue)` a `Bool` is read as a `Nat` (prints
+   1 in every backend); with a list the interpreter stops with "not an
+   extern integer" and the extracted program prints garbage. Without
+   the `_` the value check refuses it. `slc` accepts the same programs.
+   A fix this session did not apply or test: also unify the argument's
+   type with the type of the `is` expression (`mini/`'s `UAssign` does
+   the equivalent at every meta assignment).
+
+6. **An `at` entry's word can be read from a temporary whose runtime
+   binding has closed.** `location_var` scans the scope for any entry
+   marked `word` in the slot when the entry the `at` names is not
+   itself readable (an `at` return whose target is another `at` return
+   of the same call, `r1 at x` then `r2 at r1`). Temporaries bound by
+   `check_args`, `elab_head`, `scrutinee` and `elab_cell_match` keep
+   `word` after the `CLet` that binds them has closed; only `Env.hide`
+   clears it. With `twice : (many (Box) x) -> (many (Box) r1 at x)
+   (many (Box) r2 at r1)`, a body `(open-adt many (get-m (id-box z)))
+   (let ((many a) (many b)) (twice z)) b`, where `id-box` returns its
+   argument `at` it, fails with "runtime error: unbound at runtime";
+   the same with the call inside a `match` scrutinee and `(twice z)`
+   in a branch; the same through a `cell-match`'s temporary. Extracted,
+   the OCaml does not compile ("Unbound value v13955"). `slc` runs all
+   of these correctly, so the defect is the reference's alone.
+
+7. **Printing a function type whose `at` names a closed-over variable
+   asserts.** `Env.show` and `Env.show_tele` canonicalize the term, and
+   `Env.canon` turns a place `SlotOf (Var z)` into the slot atom
+   `Var s`; `Term.tele_strings` accepts only `SlotOf _` as a place and
+   has `| _ -> assert false` (lib/term.ml:151). A target that is an
+   earlier binder of the telescope stays `SlotOf (Bound k)` and prints.
+   So every diagnostic that shows such a type dies with "Fatal error:
+   exception ... Assertion failed", exit 2: a type mismatch against
+   `inner : (many (Nat) x) -> (many (Nat) q at z)` defined inside
+   `outer`'s body with `z` its parameter, `(dump-context)` in that body,
+   or an arity error on a function with a parameter `at z`. `slc`
+   prints the message.
+
+8. **A `many` cell of a nullary constructor, copied, extracts to OCaml
+   that does not compile.** `(match many x _ ((A u) (u)) ((B n u)
+   (u n)))` over `enum (many A : -> (D)) (many B : (many (Nat) n) ->
+   (D))` runs in the interpreter (prints `(A)`), but `--extract`
+   emits `K6_0 r55 -> ...` for the copy of the nullary cell:
+   `field_match` in lib/extract.ml always writes the pattern `K r`.
+   ocamlopt: "The constructor K6_0 expects 0 argument(s), but is
+   applied here to 1". The same for `(cell-write u (A))` on a `many`
+   cell and for a union's nullary constructor; a `unique` nullary cell
+   and the full-at form are unaffected.
+
+9. **A `many` cell invoked with every argument `(at)`-marked is
+   treated as a copy at nothing.** `elab_cell_invoke` sets `copies`
+   whenever the cell is `many` and the invocation is not the wrapping
+   form `(at (u ...))` (ASSUMPTIONS 206), so `(u (at) n)` in a body
+   promising its result `at b`, `u` the cell binder of a `many`
+   destructure of `b`, is refused "return does not satisfy `at`",
+   while `(at (u n))` is accepted and is at the cell. As this session
+   reads §37, "at the cell when every store is skipped (below)" covers
+   the per-argument marks too; whether it does is the owner's to say
+   (SPEC-REVIEW 36).
+
+10. **The unmarked same-level-call warning crashes when the callee was
+    bound by a match branch.** `check_marks` builds the warning "same-
+    level call to `f` is unmarked" with the body's final environment,
+    in which a callee bound by a `match` branch has no fact-table
+    entry, so `Env.fact` raises `Not_found` ("Fatal error: exception
+    Not_found", exit 2). With `Pack : (many (Fn L (subterm many (Nat)
+    n) -> (many (Nat) r)) f) -> (Packed)` and `g` at `L` matching its
+    `Packed` parameter in a `Succ` branch and calling `(f (subterm p)
+    k)` unmarked, `(g (Pack g) 2)` crashes; marking the call `notail`
+    runs it. A callee from a `let-match`, which binds outward, warns as
+    intended (tests/recursion_through_pointer.sl).
+
+11. **Inputs beyond the host's limits escape as OCaml exceptions
+    rather than a `runtime error:` line.** `Program.explain` maps only
+    the language's own exceptions, so each of these ends with "Fatal
+    error: exception ...", exit 2, in the interpreter and, where it
+    runs, in the extracted program: `(nat-shl 1 4611686018427387904)`
+    (`Z.Overflow`; `shl` has no `fits_int` guard, `shr` has one);
+    `(array-new (Nat) 100000000000000000000000)` (`Z.Overflow`) and
+    `(array-new (Nat) 1000000000000000000)`
+    (`Invalid_argument("Array.make")`), which audit B2 once covered;
+    a numeral of 2^62 or more under `--no-extern` (`Z.Overflow` from
+    `Z.to_int` in `nat_value`'s Peano ladder); and stack overflows in
+    the source models under `--no-extern` (`array-new` of 200000, a
+    `Rope` of 100000 `RCat`s flattened), where the FFI is fine. §31
+    allows a crash where the host cannot represent what is asked, so
+    only the form of the report may be at issue. `slc --interpret`
+    overflows its stack on the deep `Rope` too (it runs the model at
+    compile time); `ulimit -s unlimited` makes it print 100000.
+
+12. **A computed head yielding a `many` cell cannot be invoked.**
+    `Elab.demanded` demands `Unique` of every `Cell`-typed computed
+    head, so `((share u) 1)` and `((id-cell _ u) 9)`, `id-cell`
+    returning its `many` cell, are refused "used at unique", while §37
+    lets a cell at `many` be invoked (as a copy). Whether a computed
+    head may be a `many` cell is for the owner (SPEC-REVIEW 37).
+
+13. **Diagnostics found wanting by the sweep**, each a refusal that is
+    right with a message that is not: `(match many xs (at _) ...)` says
+    "expected a telescope or `_`, got `at`" though `_` is what §40
+    forbids (`result_tele` sees the `at` wrapper only around a list);
+    `_` as an entry of a `values` or inside `slot-of` says "unbound
+    name `_`" with "hint: nearest in scope: :"; a binder forwarded from
+    a literal is named by the literal's anonymous entry
+    (`(let ((many five)) 5) (coercible-wrap (Shared) five five)` says
+    "`_1` is not a value constructor"); `(open-adt unique m)` on an
+    abstract type followed by a `many` match blames readability where
+    the cause is a `unique` binder read at many without `share`; an
+    `open-absurd` annotation written `(at (...))` is accepted silently
+    (`result_tele`'s flag is dropped); a returned closure whose `at`
+    names an argument that was not a variable fails "no caller word
+    for `at` `_1`" with no hint that naming the argument first works.
+    `slc` and the reference also differ in wording on several
+    refusals (`(absurd C)` against `absurd`, a literal written as a
+    binder), as audit M3 already records.

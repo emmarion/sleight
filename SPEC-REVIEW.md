@@ -215,3 +215,61 @@ inconsistent or silent.
 The three items most likely to make a handoff fail outright appear to
 be 1, 13 and 14, since an implementer would have to invent core
 semantics to get past them.
+
+## 4. From the bug sweep after the `at` redesign
+
+Found by a Claude session probing the implementation against DESIGN.md
+after the merge of the spec files; each is a reading that may be
+mistaken and a question for the owner, not a decision. BUGS.md 5 to 13
+hold the implementation side.
+
+32. **The cell `at` forms in an erased position.** §39 makes
+    `(at (f ...))` an error in an erased position, as §19 does `tail`.
+    §37 says nothing for `(at (u ...))` or the per-argument `(at)`
+    marks there, and the implementation does three things: the
+    wrapping form is accepted and used for nothing, the per-argument
+    mark is checked and, since nothing is bound in an erased position,
+    fails on any argument that is not a variable, and the call form is
+    refused. Open: which of refusing, ignoring and checking is meant.
+33. **The at-match's scrutinee.** §40 says an at-match "skips its
+    runtime: its code is empty", yet its scrutinee is evaluated: with
+    `(match unique (fill c) (at (((Box) r at c))) ((MkBox n u) (at (u
+    n))))`, `fill` stores into `c` and `r` reads it back. Evaluating it
+    seems necessary for the `at` entries to be honest; the sentence
+    reads as if it were not. Open: say the scrutinee runs, or require
+    it to be a variable.
+34. **`let-match` on a union with a phantom constructor.** §27's
+    survivor rule counts a phantom constructor under a `many`
+    scrutinee as surviving, since it is not refuted, so
+    `(let-match many w (WA n))` is refused where the equivalent `match`
+    treats the phantom branch as unreachable (§21). Open: should a
+    phantom under a non-erased scrutinee count as not surviving.
+35. **Hand-written `Matchable` types.** `(Matchable enum T (many k))`
+    with `k` a `Nat` or a literal, and `newtype` written twice, are
+    accepted by the former and by `open-adt`; the error comes at a
+    match. §24 says the entries are value constructors and allows each
+    mark once. Open: whether the former should check them.
+36. **"At the cell when every store is skipped" (§37).** Whether that
+    sentence covers an invocation whose every argument carries the
+    per-argument `(at)` mark, or only the wrapping form `(at (u ...))`,
+    which ASSUMPTIONS 206 reads it as (BUGS.md 9).
+37. **A computed head that is a `many` cell.** §37 lets a cell at
+    `many` be invoked, as a copy; the implementation demands `unique`
+    of any computed `Cell`-typed head, so `((share u) 1)` is refused
+    (BUGS.md 12). Open: whether a computed head may be a `many` cell.
+38. **The type of an argument for an `is` entry.** §12 says the
+    argument "must canonicalize to the same term as the `is`
+    expression" and says nothing of its type; §50 lets `_` stand for an
+    erased argument. Read literally, `(g _ 3)` with `g : (erased
+    (False) j) (many j is x)` satisfies §12 (BUGS.md 5). Open: state
+    that the argument must also have the entry's type, the type of the
+    `is` expression; and whether solving a meta should unify its type
+    with the term's, as `mini/`'s `UAssign` does, which HANDOFF.md
+    records `lib/` and `self/` not doing.
+39. **An `at` naming an argument that was bound to a temporary.** §36
+    reads an `at` return back from "the caller's own binder for the
+    argument the promise names". When a returned closure's `at` names
+    an argument that was an expression, bound first by §15's rule and
+    hidden after its `let`, nothing readable sits at the slot and the
+    call is refused. Open: whether the refusal is intended, or the
+    temporary should stay readable.
