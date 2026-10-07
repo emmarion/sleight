@@ -617,10 +617,10 @@ shedding the argument its model does not use:
 ```scheme
 (def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
     (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
-    (erased (Repeat (MaybeUninit A) n (Uninit A (SlotVacant)) xs) p))
+    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p))
   (let-match many n (Succ n1) ((Zero) (values (Nil _) (ANil _) (RepeatNil _ _))))
   (let ((erased xs1) (unique tl) (erased q)) (notail $ array-new A n1))
-  (values (Cons (MaybeUninit A) (Uninit A (SlotVacant)) xs1) (ACons _ _ (Uninit _ (SlotVacant)) tl)
+  (values (Cons (MaybeUninit A) (Uninit A vacant-slot) xs1) (ACons _ _ (Uninit _ vacant-slot) tl)
           (RepeatCons _ _ _ _ q)))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (List A) xs)
@@ -638,23 +638,43 @@ shedding the argument its model does not use:
       (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
       (values old (Cons A hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
-; The returned Slot is what the plucked element's Uninit holds: the old word stays in the array, which
-; may keep the plucked value alive, a potential memory leak until the element is overwritten.
+; The plucked element's Uninit holds the element's own slot: the old word stays in the array, which may
+; keep the plucked value alive, a potential memory leak until the element is overwritten or put back.
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
     (unique m is v) (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
-    (erased (Slot) s) (erased (SetNth (MaybeUninit A) xs i (Uninit A s) ys) p))
+    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p))
   (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
       (let-match erased nth (NthHere _ _ _) (absurd NthThere))
-      (values hd (Cons (MaybeUninit A) (Uninit A (SlotHolds hd)) xs1)
-              (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetHere _ _ _ _)))
+      (values hd (Cons (MaybeUninit A) (Uninit A (slot-of hd)) xs1) (at (u _ _ (Uninit _ (slot-of hd)) tl))
+              (SetHere _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
-      (let ((unique v) (erased ys1) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
-      (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) s (SetThere _ _ _ _ _ _ p1)))))
+      (let ((unique v) (erased ys1) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
+; Puts a plucked element back into the slot it came from, which already holds its word, so the call is
+; skipped (AT_REDESIGN A10): the marks are a promise and the function has no implementation.
+(def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
+    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
+  (match many i (at (((List (MaybeUninit A)) ys) ((Array (MaybeUninit A) ys) r at a)
+                     ((SetNth (MaybeUninit A) xs i (Init A x) ys) p)))
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (let-match unique hd (Uninit _ s))
+      (slot-self s)
+      (values (Cons (MaybeUninit A) (Init A x) xs1) (at (u _ _ (Init _ x) tl)) (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((erased ys1) (unique tl3) (erased p1)) (at (array-unpluck _ _ tl i1 x q)))
+      (values (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
     (unique (Array A xs) a) (many (Nat) i) (unique A x)
@@ -676,6 +696,10 @@ is a block of `n` words, the model's `ACons` view its first word and a
 copy of the rest, so taking an array apart is O(n). An implementation
 may provide further extern functions over these types, faster than the
 source above allows, each modelled in source as these are.
+`array-pluck`, `array-unpluck` and `array-new` are written in forms
+AT_REDESIGN.md proposes and UNIQUE.md does not yet record: `slot-of`
+(A6), `slot-self` (A7), `vacant-slot` (A1), an at-match (A9) and an
+`extern` at-function (A10).
 
 `Copy`'s field being `many`, an element of an `(Array (Copy A) xs)` is
 read in place, its FFI that of `array-pluck`:
