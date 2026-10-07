@@ -1,24 +1,23 @@
 # special-lang
 
-A prototype OCaml interpreter for the language recorded in DESIGN.md
-and UNIQUE.md (excluding the deferred forms in U15).
-KERNEL.md and SUGAR.md are further design notes; SPEC-REVIEW.md lists
-the spec's open points and ASSUMPTIONS.md the assumptions the
-interpreter makes about them, which is the whole of what it is for: a
+A prototype OCaml interpreter and compiler for the language DESIGN.md
+specifies. OPEN.md lists the open questions. SPEC-REVIEW.md lists the
+spec's open points and ASSUMPTIONS.md the assumptions the
+implementations make about them, which is the whole of what it is for: a
 choice a session had to make on its own, because the spec was silent
 and the code had to do something. A decision the owner made is recorded
-in DESIGN.md or UNIQUE.md, never here, and an entry that stood in for
-one is removed when the owner decides it. HANDOFF.md records work in progress
-handed from one session to the next. BUGS.md records defects found in the
-implementation and TOOLING-WISHLIST.md the friction met writing programs in
-the language. EXAMPLES.md indexes the tests that show the
-features working together, and DEMOS.md proposes programs that are not
-written yet. `self/` is a compiler from the language to
-OCaml written in the language itself, bootstrapped through this
-interpreter's extractor (`self/README.md`, `self/bootstrap.sh`).
-MINIMAL.md records a minimal fragment of the language, and `mini/` its
-semantics written as relations in the language itself (`mini/README.md`).
-`pal/` holds certified longest-palindrome programs (`pal/README.md`).
+in DESIGN.md, never here, and an entry that stood in for one is removed
+when the owner decides it. HANDOFF.md records work in progress handed
+from one session to the next. BUGS.md records defects found in the
+implementation and TOOLING-WISHLIST.md the friction met writing programs
+in the language. EXAMPLES.md indexes the tests that show the features
+working together, and DEMOS.md proposes programs that are not written
+yet. `self/` is a compiler from the language to OCaml written in the
+language itself, bootstrapped through this interpreter's extractor
+(`self/README.md`, `self/bootstrap.sh`). MINIMAL.md records a minimal
+fragment of the language, and `mini/` its semantics written as
+relations in the language itself (`mini/README.md`). `pal/` holds
+certified longest-palindrome programs (`pal/README.md`).
 
 ## Build and run
 
@@ -48,10 +47,10 @@ program's), or a function from no arguments to one value, when it is
 applied and its result printed (`tests/thunk_list.sl`), which is how a
 program asks for its final value to be computed by code rather than at
 elaboration. Numerals, `#\c` character literals and `"..."` string
-literals are prelude-backed sugar (LITERALS.md, ASSUMPTIONS.md 47-60), and a printed
+literals are prelude-backed sugar (DESIGN.md section 45, ASSUMPTIONS.md 47-60), and a printed
 value of one of those three types is spelled as the literal it reads back
 from (ASSUMPTIONS.md 154) rather than as its prelude model. Every program starts in the scope of the source
-prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 41), whose
+prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 42), whose
 `extern`-marked definitions run through `lib/ffi.ml` unless
 `--no-extern` strips those implementations and runs the source models, and `--no-templates` extracts extern types
 through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133).
@@ -129,8 +128,8 @@ its format; slc takes the same flag. `--first-error`, slc's alone, stops
 its report after the first error, where it would otherwise list every
 error it recorded (`self/README.md`, "Errors are values").
 `--warnings-as-errors` fails a run that warns, exit code 1, once every
-file has been read and every message written: nothing is run and no
-`--extract` output or OCaml is written. A warning silenced by `;! suppress`
+file has been read and every message written: no final value is run and
+no `--extract` output or OCaml is written. A warning silenced by `;! suppress`
 does not count. slc takes the same flag, and `self/bootstrap.sh` builds slc
 under it.
 
@@ -154,7 +153,8 @@ for a test whose source model is too slow to run, `; prelude: none` runs it
 under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
-atom's id.
+atom's id. `; confine-dir: dir`, `; confine-output-bytes: n` and
+`; no-env: yes` run the test under the corresponding flags.
 
 Every message either writes carries where it is about: the file, and the line
 and column of the form it names, `path:line:col: error: text`, with `warning`,
@@ -176,7 +176,7 @@ means it where the message points:
 - an atom by a numeral or string literal it equals, else by the newest name
   still in scope for it, else by a fetch form that yields it there with its
   argument a name, `(level-of f)`, `(slot-of x)`, else as `_1`, `_2` and on;
-- an unsolved `_` (SUGAR.md 6) as `_?1`, `_?2` and on;
+- an unsolved `_` (DESIGN.md section 50) as `_?1`, `_?2` and on;
 - a special form or annotation token, a fetch form's head included, by the
   newest name in scope that is `Const`, non-erased and holds it, else as `_`
   followed by its built-in name, `_Fn`, `(_level-of f)`.
@@ -210,32 +210,32 @@ its output isn't stable (ASSUMPTIONS 196).
 The reader turns the file into s-expressions. The elaborator walks
 them with a scope of entries and a fact table (types and `is` rules,
 read canonically), dispatching each form on its head as DESIGN.md
-section 4 describes: constructor and function application by the
+section 6 describes: constructor and function application by the
 head's type, special forms by the head's Const value. Elaboration
 produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
 statement in run position is elaborated, run at once by the evaluator,
-and its binders are minted Const with the resulting values (sections 16
-and 34), which form the environment later code runs in; inside function
+and its binders are minted Const with the resulting values (sections 27
+and 29), which form the environment later code runs in; inside function
 bodies and match branches statements compile to code instead. The
 evaluator is a plain recursive interpreter over that code; a value contains
-its constructor's non-erased fields, tagged only where section 38 says an
+its constructor's non-erased fields, tagged only where section 33 says an
 enum carries a tag, or a closure, or a token standing for anything
 erased. Unique cells permit in-place updates, while an entry written `at`
 another, a parameter, a return or a match annotation entry, is neither
-passed nor returned physically but read from the word it is at (AT_REDESIGN.md
-A3); an at-function's call and an at-match are skipped (A9, A10). Every
+passed nor returned physically but read from the word it is at (section
+36); an at-function's call and an at-match are skipped (sections 39, 40). Every
 entry has an automatic slot in the fact table, erased where the entry
 is, which `(slot-of x)` names, and a slot prints by that form.
 
 ## Layout
 
 - `lib/reader.ml` — s-expressions with `$` (DESIGN.md section 2)
-- `lib/term.ml` — the restricted type grammar (section 5), de Bruijn telescopes
-- `lib/env.ml` — scope entries, the fact table, canonicalization, forced unification (sections 3, 18)
+- `lib/term.ml` — the restricted type grammar (section 9), de Bruijn telescopes
+- `lib/env.ml` — scope entries, the fact table, canonicalization, forced unification (sections 5, 7)
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
-- `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 27) and built-ins
-- `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 41)
+- `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 54) and built-ins
+- `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 42)
 - `lib/literal.ml` — the spellings of numeral, character and string literals
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
 - `lib/dump.ml` — the report `dump-context` stops elaboration with

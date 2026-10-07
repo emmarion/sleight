@@ -64,8 +64,8 @@ by the owner and apply to every session.
     hedging governs claims; this rule governs decisions. Mechanical
     wording choices while applying approved edits are fine.)
 
-12. **Every change to DESIGN.md, UNIQUE.md, SUGAR.md, or LITERALS.md
-    needs the owner's confirmation of its exact wording first.** Before
+12. **Every change to DESIGN.md needs the owner's confirmation of its
+    exact wording first.** Before
     editing one of them, show the owner the proposed text — the file,
     the section, the passage being replaced, and the replacement,
     verbatim — and change the file only after the owner confirms that
@@ -84,17 +84,17 @@ by the owner and apply to every session.
     is its entire purpose: a choice a session had to make because the
     spec was silent and the code had to do something. An entry there
     saying the owner decided something is a contradiction in terms.
-    When the owner does decide, the decision goes to DESIGN.md or
-    UNIQUE.md under rules 11 and 12, the audit or bug index is marked
+    When the owner does decide, the decision goes to DESIGN.md under
+    rules 11 and 12, the audit or bug index is marked
     as those files' own conventions have it, and any ASSUMPTIONS entry
     that stood in for the question is removed rather than amended. Do
     not add an entry recording what the owner just said in chat,
     however faithfully — and do not take the entries already there that
     do so as the pattern to follow.
 
-15. **Numbered items are never renumbered.** DESIGN.md's sections,
-    UNIQUE.md's, and the items of ASSUMPTIONS.md, SPEC-REVIEW.md,
-    SUGAR.md, TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md and BUGS.md are
+15. **Numbered items are never renumbered.** DESIGN.md's sections and
+    the items of ASSUMPTIONS.md, SPEC-REVIEW.md, OPEN.md,
+    TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md and BUGS.md are
     cited by number from the code and from each other. An item or
     section that goes away is deleted and its number left as a gap;
     nothing after it moves.
