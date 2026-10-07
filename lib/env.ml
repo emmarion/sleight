@@ -454,8 +454,13 @@ let rec unify_in ?(force = false) env a b =
 (* Solving, for a check. *)
 let unify env a b = unify_in env a b
 
-(* [x] is at the slot [p]: a rule on its automatic slot, which has none yet (A4). *)
-let place env x p = match (entry env x).slot with Some s -> unify_in ~force:true env (Var s) p | None -> env
+(* [x] is at the slot [p]: a rule on its automatic slot (A4). While the slot is still the fresh atom it was
+   minted as, with no rule, named by no opened object and absent from [p], the rule is added outright, which
+   is what forcing it would do; a slot a forcing has already ruled is forced as any atom is. *)
+let place env x p = match (entry env x).slot with
+  | Some s when (fact env s).rule = None -> (match canon env p with Var t when t = s -> env | t -> { env with facts = IntMap.add s { (fact env s) with rule = Some t } env.facts })
+  | Some s -> unify_in ~force:true env (Var s) p
+  | None -> env
 let placed env x = function Some p -> place env x p | None -> env
 
 (* A forcing leaves the opened objects it touched to be merged, so its environment comes back as [forced], which

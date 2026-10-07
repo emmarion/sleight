@@ -4018,8 +4018,12 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      slot term, `None` for an erased result.
 
 201. **`(slot-of x)` as an expression** is a reference to the slot entry:
-     a `many` value whose word is `x`'s word, at that slot (A2's "an
-     automatic slot is at itself"), and no use of `x`. So a `let` binder of
+     a value whose word is `x`'s word, at that slot (A2's "an automatic
+     slot is at itself"), and no use of `x`; it takes the multiplicity of
+     its position, as U10 has `(SlotHolds v)` doing, a slot being inert
+     (U10) so that a unique copy of its word aliases nothing that matters
+     (U1), which is what lets `(Init _ (slot-of a))` fill a unique field
+     (`tests/array_cycle.sl`). So a `let` binder of
      it sits where `x` does without `slot-self`, and a `(Slot)` read out of
      data does not until `slot-self` says so (review items 27 and 30). The
      default of item 30, a `(Slot)`-typed binder being its own `at`, is not

@@ -458,3 +458,40 @@ mode in the unifier, used only on the error path, which would make the
 explanation observed rather than reconstructed; in `slc`, whose
 unifier is pure, it would mean threading the record through every
 unification function.
+
+## The `at` redesign (one session, autonomous, with a subagent for `self/`)
+
+Done, at the owner's direction: AT_REDESIGN.md's A1 to A11 and A12's
+follow-up 11, in `lib/` and in `self/`, on the branch `at-redesign`.
+Nothing in DESIGN.md, UNIQUE.md, SUGAR.md or LITERALS.md was changed;
+ASSUMPTIONS 200-210 hold the readings this session made where the
+proposal and AT_REDESIGN_REVIEW.md are silent, and the tests named there
+and under `tests/at_*`, `slot_*`, `cell_many_*`, `cell_binder_*`,
+`at_fn_*`, `at_match*`, `delegate_at*`, `vacant_slot` and
+`array_unpluck` pin the behaviour. `self/README.md` says what the port
+chose where the reference left it room.
+
+What the owner still has to decide, none of it settled here:
+
+- AT_REDESIGN A8 says the cell binder is mandatory; the owner decided in
+  chat that it is optional at `unique` and at `many`, and the code
+  follows the chat. A8's wording is the owner's to update (rule 12).
+- Whether `vacant-slot` is its own `at` (review item 17; ASSUMPTIONS 204
+  does nothing special).
+- Whether a `(Slot)`-typed binder is its own `at` by default (review
+  item 30; not implemented, `slot-self` is written where wanted).
+- The slot of an erased argument, reached through an erased call of a
+  signature naming `(slot-of p)` (ASSUMPTIONS 210, the owner's probe in
+  chat): accept as the formal term it now is, or refuse the call.
+- Whether `tail`, `notail` or `delegate` on a skipped at-call should be
+  the error it is now (ASSUMPTIONS 207) or be ignored.
+- A12.5's tier-1 list, and the A12 items 1-4 left for version two.
+
+Timing (CLAUDE.md rule 17), `bench/bench.sh` on each compiler's own
+sources, five runs, minimum and median wall time: origin/main's `slc`
+2.73s and 2.88s; the ported `slc` at 0bfdbaa 3.64s and 3.96s, the
+reference showing the same ratio on the same job, so the cost looks to
+be the redesign's (a slot entry per non-erased binder, a placement per
+binder) rather than the port's. The placement of a fresh slot was then
+made a direct rule rather than a forcing (`Env.place`); the figures
+after that change are in the session's final report.
