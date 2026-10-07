@@ -381,7 +381,7 @@
 (def-adts
   ((ExtType : -> Type)
     enum
-    (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)))
+    (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType)))
   ((Extern : ((Nat) arity) -> Type)
     enum
     (many ExArrayNew : -> (Extern 1)) (many ExArraySwap : -> (Extern 3)) (many ExArrayPluck : -> (Extern 2)) (many ExArrayPlace : -> (Extern 3))
@@ -393,13 +393,15 @@
     (many ExStrCmp : -> (Extern 2)) (many ExStrLength : -> (Extern 1)) (many ExStrSplit : -> (Extern 2)) (many ExNatStr : -> (Extern 1))
     (many ExU62Add : -> (Extern 2)) (many ExU62Sub : -> (Extern 2)) (many ExU62Mul : -> (Extern 2)) (many ExU62Div : -> (Extern 2)) (many ExU62Divmod : -> (Extern 2)) (many ExU62Mod : -> (Extern 2)) (many ExU62Cmp : -> (Extern 2))
     (many ExLtDec : -> (Extern 2)) (many ExU62LtDec : -> (Extern 2)) (many ExArrayGet : -> (Extern 2))
-    (many ExArrayGetMany : -> (Extern 2)) (many ExArrayLengthMany : -> (Extern 1)))
+    (many ExArrayGetMany : -> (Extern 2)) (many ExArrayLengthMany : -> (Extern 1))
+    (many ExBytesMake : -> (Extern 2)) (many ExBytesGet : -> (Extern 2)) (many ExBytesGetMany : -> (Extern 2)) (many ExBytesSet : -> (Extern 3))
+    (many ExBytesLength : -> (Extern 1)) (many ExBytesLengthMany : -> (Extern 1)) (many ExStrBytesCopy : -> (Extern 1)) (many ExBytesStr : -> (Extern 1)))
   ((SomeExtern : -> Type)
     enum
     (many MkSomeExtern : (erased (Nat) n) (many (Extern n) e) -> (SomeExtern))))
 
 (def-fns _ $ (many ext-type-name : (many (ExtType) t) -> (many (String) s))
-  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String")))
+  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes")))
 
 ; The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: the many-field
 ; arities of the non-phantom constructors in order, every one of them tagged. An extern function that builds
@@ -409,7 +411,8 @@
     ((ExtArray) (Cons _ 0 $ Cons _ 2 $ Nil _))
     ((ExtNat) (Cons _ 0 $ Cons _ 1 $ Nil _))
     ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
-    ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))))
+    ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))
+    ((ExtBytes) (Cons _ 0 $ Cons _ 2 $ Nil _))))
 
 (def-fns _ $ (many ext-result-shape : (erased (Nat) n) (many (Extern n) e) -> (many (Maybe $ List $ Nat) s))
   (let ((many (List $ Nat) cmp)) (Cons _ 0 $ Cons _ 0 $ Cons _ 0 $ Nil _))
@@ -423,14 +426,16 @@
     ((ExFlatten) (None _)) ((ExStrLength) (None _)) ((ExStrSplit) (None _)) ((ExNatStr) (None _))
     ((ExU62Add) (None _)) ((ExU62Sub) (None _)) ((ExU62Mul) (None _)) ((ExU62Div) (None _)) ((ExU62Divmod) (None _)) ((ExU62Mod) (None _)) ((ExU62Cmp) (Some _ cmp))
     ((ExLtDec) (Some _ dec)) ((ExU62LtDec) (Some _ dec)) ((ExArrayGet) (None _))
-    ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _))))
+    ((ExArrayGetMany) (None _)) ((ExArrayLengthMany) (None _))
+    ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
+    ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _))))
 
 (def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
-  (match many (str-cmp name "Nat") _
-    ((CEq _ _ _) (Some _ $ ExtNat))
-    (else (match many (str-cmp name "Half") _
-      ((CEq _ _ _) (Some _ $ ExtHalf))
-      (else (match many (str-cmp name "String") _ ((CEq _ _ _) (Some _ $ ExtString)) (else (match many (str-eq name "Array") _ ((BTrue) (Some _ $ ExtArray)) ((BFalse) (None _))))))))))
+  (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
+  (let-match many (str-eq name "Half") (BFalse) ((BTrue) (Some _ $ ExtHalf)))
+  (let-match many (str-eq name "String") (BFalse) ((BTrue) (Some _ $ ExtString)))
+  (let-match many (str-eq name "Array") (BFalse) ((BTrue) (Some _ $ ExtArray)))
+  (match many (str-eq name "Bytes") _ ((BTrue) (Some _ $ ExtBytes)) ((BFalse) (None _))))
 
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
   (match many e _
@@ -439,13 +444,14 @@
     ((ExAdd) 2) ((ExSub) 2) ((ExMul) 2) ((ExDiv) 2) ((ExDivmod) 2) ((ExNatCmp) 2) ((ExNatMod) 2) ((ExAppend) 2) ((ExShl) 2) ((ExShr) 2) ((ExU62Shl) 2) ((ExU62Shr) 2) ((ExNatAnd) 2) ((ExNatOr) 2) ((ExNatXor) 2) ((ExU62And) 2) ((ExU62Or) 2) ((ExU62Xor) 2) ((ExU62Inc) 1) ((ExU62Dec) 1)
     ((ExNatHalve) 1) ((ExTrim) 1) ((ExFlatten) 1) ((ExStrCmp) 2) ((ExStrLength) 1) ((ExStrSplit) 2) ((ExNatStr) 1)
     ((ExU62Add) 2) ((ExU62Sub) 2) ((ExU62Mul) 2) ((ExU62Div) 2) ((ExU62Divmod) 2) ((ExU62Mod) 2) ((ExU62Cmp) 2)
-    ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)))
+    ((ExLtDec) 2) ((ExU62LtDec) 2) ((ExArrayGet) 2) ((ExArrayGetMany) 2) ((ExArrayLengthMany) 1)
+    ((ExBytesMake) 2) ((ExBytesGet) 2) ((ExBytesGetMany) 2) ((ExBytesSet) 3) ((ExBytesLength) 1) ((ExBytesLengthMany) 1) ((ExStrBytesCopy) 1) ((ExBytesStr) 1)))
 
 (def-fns _ $ (many ext-twin : (erased (Nat) n) (many (Extern n) e) -> (many (Extern n) r))
   (match many e _
     ((ExU62Add) (ExAdd)) ((ExU62Sub) (ExSub)) ((ExU62Mul) (ExMul)) ((ExU62Div) (ExDiv)) ((ExU62Divmod) (ExDivmod))
     ((ExU62Mod) (ExNatMod)) ((ExU62Shl) (ExShl)) ((ExU62Shr) (ExShr)) ((ExU62And) (ExNatAnd)) ((ExU62Or) (ExNatOr)) ((ExU62Xor) (ExNatXor)) ((ExU62Cmp) (ExNatCmp)) ((ExU62LtDec) (ExLtDec)) ((ExArrayGet) (ExArrayPluck))
-    ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength))
+    ((ExArrayGetMany) (ExArrayPluck)) ((ExArrayLengthMany) (ExArrayLength)) ((ExBytesGetMany) (ExBytesGet)) ((ExBytesLengthMany) (ExBytesLength))
     ((ExArraySwapImm) (ExArraySwap)) ((ExArrayPlaceImm) (ExArrayPlace))
     (else e)))
 
@@ -460,7 +466,9 @@
     ((ExStrCmp) "str-cmp") ((ExStrLength) "str-length") ((ExStrSplit) "str-split") ((ExNatStr) "nat-str")
     ((ExU62Add) "u62-add") ((ExU62Sub) "u62-sub") ((ExU62Mul) "u62-mul") ((ExU62Div) "u62-div") ((ExU62Divmod) "u62-divmod") ((ExU62Mod) "u62-mod") ((ExU62Cmp) "u62-cmp")
     ((ExLtDec) "lt-dec") ((ExU62LtDec) "u62-lt-dec") ((ExArrayGet) "array-get")
-    ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many")))
+    ((ExArrayGetMany) "array-get-many") ((ExArrayLengthMany) "array-length-many")
+    ((ExBytesMake) "bytes-make") ((ExBytesGet) "bytes-get") ((ExBytesGetMany) "bytes-get-many") ((ExBytesSet) "bytes-set")
+    ((ExBytesLength) "bytes-length") ((ExBytesLengthMany) "bytes-length-many") ((ExStrBytesCopy) "str-bytes-copy") ((ExBytesStr) "bytes-str")))
 
 (let ((many externs))
   $ Cons _ (MkSomeExtern _ $ ExArrayNew) $ Cons _ (MkSomeExtern _ $ ExArraySwap) $ Cons _ (MkSomeExtern _ $ ExArrayPluck) $ Cons _ (MkSomeExtern _ $ ExArrayPlace) $ Cons _ (MkSomeExtern _ $ ExArraySwapImm) $ Cons _ (MkSomeExtern _ $ ExArrayPlaceImm) $
@@ -471,7 +479,9 @@
   Cons _ (MkSomeExtern _ $ ExStrCmp) $ Cons _ (MkSomeExtern _ $ ExStrLength) $ Cons _ (MkSomeExtern _ $ ExStrSplit) $ Cons _ (MkSomeExtern _ $ ExNatStr) $
   Cons _ (MkSomeExtern _ $ ExU62Add) $ Cons _ (MkSomeExtern _ $ ExU62Sub) $ Cons _ (MkSomeExtern _ $ ExU62Mul) $ Cons _ (MkSomeExtern _ $ ExU62Div) $ Cons _ (MkSomeExtern _ $ ExU62Divmod) $ Cons _ (MkSomeExtern _ $ ExU62Mod) $ Cons _ (MkSomeExtern _ $ ExU62Cmp) $
   Cons _ (MkSomeExtern _ $ ExLtDec) $ Cons _ (MkSomeExtern _ $ ExU62LtDec) $ Cons _ (MkSomeExtern _ $ ExArrayGet) $
-  Cons _ (MkSomeExtern _ $ ExArrayGetMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthMany) (Nil _))
+  Cons _ (MkSomeExtern _ $ ExArrayGetMany) $ Cons _ (MkSomeExtern _ $ ExArrayLengthMany) $
+  Cons _ (MkSomeExtern _ $ ExBytesMake) $ Cons _ (MkSomeExtern _ $ ExBytesGet) $ Cons _ (MkSomeExtern _ $ ExBytesGetMany) $ Cons _ (MkSomeExtern _ $ ExBytesSet) $
+  Cons _ (MkSomeExtern _ $ ExBytesLength) $ Cons _ (MkSomeExtern _ $ ExBytesLengthMany) $ Cons _ (MkSomeExtern _ $ ExStrBytesCopy) $ Cons _ (MkSomeExtern _ $ ExBytesStr) (Nil _))
 
 (def-fns _ $ (many extern-named : (subterm many (List $ SomeExtern) es) (many (String) name) -> (many (Maybe $ SomeExtern) r))
   (let-match many es (Cons _ e rest) ((Nil _) (None _)))
@@ -490,7 +500,8 @@
     enum
     (many PNat : (many (Nat) n) -> (Payload))
     (many PHalf : (many (Nat) n) -> (Payload))
-    (many PStr : (many (String) s) -> (Payload)))
+    (many PStr : (many (String) s) -> (Payload))
+    (many PBytes : (many (String) s) -> (Payload)))
   ; [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom
   ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 42); a
   ; constructor's [shape] is its type's many-field arities in order, which fixes the representation.

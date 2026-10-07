@@ -40,10 +40,24 @@
 (def-fns _ $ (many heap-str : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (String) n))
   (let ((erased x) (many b) (erased lt)) (store-read Block _ hp a))
   (let-match many b (BExt _ p) (else (SNil)))
-  (match many p _ ((PStr s) s) (else (SNil))))
+  (match many p _ ((PStr s) s) ((PBytes s) s) (else (SNil))))
 
 (def-fns _ $ (many alloc-ext : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
   (alloc Block _ hp $ BExt _ p))
+
+(def-fns _ $ (many byte-run : (subterm many (Nat) n) (many (Char) c) -> (many (Rope) r))
+  (let-match many n (Succ k) ((Zero) (REmpty)))
+  (RCat (RChar c) (notail $ byte-run k c)))
+
+(def-fns _ $ (many byte-at : (subterm many (String) s) (many (Nat) i) -> (many (Nat) b))
+  (let-match many s (SCons c rest) ((SNil) 0))
+  (match many i _ ((Zero) (char-code c)) ((Succ k) (tail $ byte-at rest k))))
+
+(def-fns _ $ (many byte-put : (subterm many (String) s) (many (Nat) i) (many (Char) b) (many (Rope) acc) -> (many (Rope) r))
+  (let-match many s (SCons c rest) ((SNil) acc))
+  (match many i _
+    ((Zero) (RCat acc $ RCat (RChar b) $ RStr rest))
+    ((Succ k) (tail $ byte-put rest k b $ RCat acc $ RChar c))))
 
 (def-fns _ $ (many field-nat : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (List $ Ref Block hs) fields) (many (Nat) i) -> (many (Nat) n))
   (match many (list-nth _ fields i) _ ((NthHit _ _ _ x _) (heap-nat _ hp x)) ((NthMiss _ _ _ _) 0)))
@@ -119,24 +133,32 @@
     (else (Nil _)))
   (match many more _ ((Cons _ rest _) (Cons _ x (notail $ list-refs k _ hp rest))) (else (Nil _))))
 
+(def-fns _ $ (many cons-string : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (many (String) s))
+  (let-match many index (Succ _) ((Zero) (SNil)))
+  (let ((many (String) rest)) (match many (list-nth _ fields 1) _
+    ((NthHit _ _ _ x _) (heap-str _ hp x)) ((NthMiss _ _ _ _) (SNil))))
+  ;! suppress warn SCons the program being run asked for this cons
+  (SCons (char-of-code (field-nat _ hp fields 0)) rest))
+;! restore warn SCons
+
 (def-fns _ $ (many ext-construct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (ExtType) ext) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) sf) (many (Ref Block hs2) a))
-  (match many ext _
+  (let-match many ext (ExtHalf)
     ((ExtArray) (array-construct _ hp index fields))
     ((ExtNat)
       (alloc-ext _ hp (PNat (match many index (((Nat) _))
         ((Zero) (Zero)) ((Succ _) (Succ (field-nat _ hp fields 0)))))))
-    ((ExtHalf)
-      (let ((many d) (erased dd)) (double (field-nat _ hp fields 0)))
-      (alloc-ext _ hp (PHalf (match many index (((Nat) _))
-        ((Zero) 0) ((Succ k) (match many k (((Nat) _)) ((Zero) (Succ d)) ((Succ _) (Succ (Succ d)))))))))
-    ((ExtString)
-      (let ((many (String) rest)) (match many (list-nth _ fields 1) _
-        ((NthHit _ _ _ x _) (heap-str _ hp x)) ((NthMiss _ _ _ _) (SNil))))
-      (alloc-ext _ hp (PStr (match many index (((String) _))
-        ((Zero) (SNil))
-        ;! suppress warn SCons the program being run asked for this cons
-        ((Succ _) (SCons (char-of-code (field-nat _ hp fields 0)) rest))))))))
-;! restore warn SCons
+    ((ExtString) (alloc-ext _ hp $ PStr $ cons-string _ hp index fields))
+    ((ExtBytes) (alloc-ext _ hp $ PBytes $ cons-string _ hp index fields)))
+  (let ((many d) (erased dd)) (double (field-nat _ hp fields 0)))
+  (alloc-ext _ hp (PHalf (match many index (((Nat) _))
+    ((Zero) 0) ((Succ k) (match many k (((Nat) _)) ((Zero) (Succ d)) ((Succ _) (Succ (Succ d)))))))))
+
+(def-fns _ $ (many cons-destruct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (String) s) (many (Bool) bytes) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
+  (let-match many s (SCons c rest) ((SNil) (values hs hp (le-refl hs) 0 $ Nil _)))
+  (let ((erased hl2) (many hp2) (erased sf2) (many a1)) $ alloc-ext _ hp $ PNat $ char-code c)
+  (let ((erased hl3) (many hp3) (erased sf3) (many a2)) $ alloc-ext _ hp2 $ match many bytes (((Payload) _)) ((BTrue) (PBytes rest)) ((BFalse) (PStr rest)))
+  (let ((erased w1) (erased p1)) (ref-widen _ _ _ sf3 a1))
+  (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) 1 $ Cons _ (coerce a1 p1) $ Cons _ a2 $ Nil _))
 
 (def-fns _ $ (many ext-destruct : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
   (match many p _
@@ -153,12 +175,8 @@
         ((H2 m _ _)
           (let ((erased hl2) (many hp2) (erased sf2) (many a)) $ alloc-ext _ hp $ PNat m)
           (values hl2 hp2 sf2 2 $ Cons _ a $ Nil _))))
-    ((PStr s)
-      (let-match many s (SCons c rest) ((SNil) (values hs hp (le-refl hs) 0 $ Nil _)))
-      (let ((erased hl2) (many hp2) (erased sf2) (many a1)) $ alloc-ext _ hp $ PNat $ char-code c)
-      (let ((erased hl3) (many hp3) (erased sf3) (many a2)) $ alloc-ext _ hp2 $ PStr rest)
-      (let ((erased w1) (erased p1)) (ref-widen _ _ _ sf3 a1))
-      (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) 1 $ Cons _ (coerce a1 p1) $ Cons _ a2 $ Nil _))))
+    ((PStr s) (tail $ cons-destruct _ hp s (BFalse)))
+    ((PBytes s) (tail $ cons-destruct _ hp s (BTrue)))))
 
 
 (def-fns _ $ (many tuple : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (List $ Ref Block hs) vs) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
@@ -264,7 +282,8 @@
   (many ErArrayPluck : -> (ExtResult))
   (many ErArrayPlace : -> (ExtResult))
   (many ErListToArray : -> (ExtResult))
-  (many ErArrayMake : (many (Nat) count) -> (ExtResult)))
+  (many ErArrayMake : (many (Nat) count) -> (ExtResult))
+  (many ErWrite : (many (Payload) p) -> (ExtResult)))
 
 ; An extern function over its arguments (section 42). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
@@ -300,6 +319,12 @@
         (ErPayload $ PNat $ match many (match many a (((Maybe $ Pair (Nat) $ IdMap $ Ref Block hs) _)) ((Some _ x) (array-elems _ hp x)) ((None _) (None _))) (((Nat) _))
           ((Some _ ne) (match many ne _ ((MkPair _ _ len _) len))) ((None _) 0)))
       ((ExListToArray) (ErListToArray))
+      ((ExBytesMake) (let ((many s) (erased fp)) (flatten $ byte-run na $ char-of-code nb)) (ErPayload $ PBytes s))
+      ((ExBytesGet) (ErPayload $ PNat $ byte-at sa nb))
+      ((ExBytesSet) (let ((many s) (erased fp)) (flatten $ byte-put sa nb (char-of-code $ field-nat _ hp args 2) $ REmpty)) (ErWrite $ PBytes s))
+      ((ExBytesLength) (let ((many len) (erased lp)) (str-length sa)) (ErPayload $ PNat len))
+      ((ExStrBytesCopy) (ErPayload $ PBytes sa))
+      ((ExBytesStr) (ErPayload $ PStr sa))
       ((ExArrayMake) (ErArrayMake na))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
       ((ExSub)
@@ -366,6 +391,8 @@
       (let ((many replacement)) (match many (list-nth _ args 2) (((Maybe $ Ref Block hs) _))
         ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _))))
       (apply-array-change _ hp a nb replacement (BFalse)))
+    ((ErWrite p)
+      (values hs (match many a _ ((Some _ x) (store-write Block _ hp x $ BExt _ p)) ((None _) hp)) (le-refl hs) (Nil _)))
     ((ErPayload p)
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc-ext _ hp p)
       (values hl2 hp2 sf2 $ Cons _ v $ Nil _))

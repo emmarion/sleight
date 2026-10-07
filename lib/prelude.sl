@@ -1175,3 +1175,83 @@
           (coercible-ctor _ ACons (MaybeUninit A) A tl ys1
              (coercible-sym (coercible-wrap _ Init _ x))
              c1)))
+
+(def-adts $ (Bytes : ((List (U8)) xs) -> Type)
+  enum extern
+  (many BNil : -> (Bytes (Nil (U8))))
+  (many BCons : (erased (List (U8)) xs) (many (U8) head) (unique (Bytes xs) rest) -> (Bytes (Cons (U8) head xs))))
+
+;! warn BCons copies the whole buffer, O(n); allocate with `bytes-make` and fill with `bytes-set`
+;! warn Bytes copies the buffer's tail, O(n); read with `bytes-get` and `bytes-length`, or their `-many` forms at many
+
+(def-adts
+  ((StrBytes : ((String) s) ((List (U8)) xs) -> Type)
+    enum
+    (many SBNil : -> (StrBytes (SNil) (Nil (U8))))
+    (many SBCons : (erased (U8) u) (erased (String) s) (erased (List (U8)) xs) (erased (StrBytes s xs) p)
+       -> (StrBytes (SCons (MkChar u) s) (Cons (U8) u xs)))))
+
+(def-fns _ $ (many extern bytes-make : (subterm many (Nat) n) (many (U8) x) ->
+    (erased (List (U8)) xs) (unique (Bytes xs) b) (erased (Repeat (U8) n x xs) p))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) (BNil) (RepeatNil _ _))))
+  (let ((erased xs1) (unique b1) (erased p1)) (notail $ bytes-make n1 x))
+  (values (Cons (U8) x xs1) (BCons _ x b1) (RepeatCons _ _ _ _ p1)))
+
+(def-fns _ $ (many extern bytes-get : (erased (List (U8)) xs) (unique (Bytes xs) b) (subterm many (Nat) i)
+    (erased (U8) x) (erased (Nth (U8) xs i x) nth) -> (many x is v) (unique b is r at b))
+  (let-match unique b (BCons _ hd tl u) (absurd (BNil u) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (at (u _ hd tl))))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((many v) (unique tl3)) (tail (bytes-get _ tl i1 _ q)))
+      (values v (at (u _ hd tl3))))))
+
+(def-fns _ $ (many extern bytes-get-many : (erased (List (U8)) xs) (many (Bytes xs) b) (subterm many (Nat) i)
+    (erased (U8) x) (erased (Nth (U8) xs i x) nth) -> (many x is v))
+  (let-match many b (BCons _ hd tl) (absurd BNil nth))
+  (match many i _
+    ((Zero) (let-match erased nth (NthHere _ _ _) (absurd NthThere)) hd)
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (tail (bytes-get-many _ tl i1 _ q)))))
+
+(def-fns _ $ (many extern bytes-set : (erased (List (U8)) xs) (unique (Bytes xs) b) (subterm many (Nat) i) (many (U8) x)
+    (erased (U8) m) (erased (Nth (U8) xs i m) nth) ->
+    (erased (List (U8)) ys) (unique (Bytes ys) r at b) (erased (SetNth (U8) xs i x ys) p))
+  (let-match unique b (BCons xs1 hd tl u) (absurd (BNil u) nth))
+  (match many i _
+    ((Zero)
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values (Cons (U8) x xs1) (u _ x (at) tl) (SetHere _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((erased ys1) (unique tl3) (erased p1)) (tail (bytes-set _ tl i1 x _ q)))
+      (values (Cons (U8) hd ys1) (at (u _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
+
+(def-fns _ $ (many extern bytes-length : (erased (List (U8)) xs) (subterm unique (Bytes xs) b) ->
+    (many (Nat) len) (erased (Length (U8) xs len) p) (unique b is r at b))
+  (let-match unique b (BCons _ hd tl u) ((BNil u) (values (Zero) (LengthNil _) (at (u)))))
+  (let ((many l1) (erased p1) (unique tl2)) (notail $ bytes-length _ tl))
+  (values (Succ l1) (LengthCons _ _ _ _ p1) (at (u _ hd tl2))))
+
+(def-fns _ $ (many extern bytes-length-many : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
+    (many (Nat) len) (erased (Length (U8) xs len) p))
+  (let-match many b (BCons _ hd tl) ((BNil) (values (Zero) (LengthNil _))))
+  (let ((many l1) (erased p1)) (notail $ bytes-length-many _ tl))
+  (values (Succ l1) (LengthCons _ _ _ _ p1)))
+
+(def-fns _ $ (many extern str-bytes-copy : (subterm many (String) s) ->
+    (erased (List (U8)) xs) (unique (Bytes xs) b) (erased (StrBytes s xs) p))
+  (let-match many s (SCons c rest) ((SNil) (values (Nil _) (BNil) (SBNil))))
+  (let-match many c (MkChar u))
+  (let ((erased xs1) (unique b1) (erased p1)) (notail $ str-bytes-copy rest))
+  (values (Cons (U8) u xs1) (BCons _ u b1) (SBCons u rest xs1 p1)))
+
+(def-fns _ $ (many extern bytes-str : (erased (List (U8)) xs) (subterm many (Bytes xs) b) ->
+    (many (String) s) (erased (StrBytes s xs) p))
+  (let-match many b (BCons xs1 hd tl) ((BNil) (values (SNil) (SBNil))))
+  (let ((many s1) (erased p1)) (notail $ bytes-str _ tl))
+  (values (SCons (MkChar hd) s1) (SBCons hd s1 xs1 p1)))

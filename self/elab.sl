@@ -3982,7 +3982,8 @@
       (match many (prelude-nullary env ty "String") (((Maybe $ Rope) _))
         ((BTrue) (Some _ $ lit-string-rope st))
         ((BFalse) (None $ Rope))))
-    ((PHalf _) (None $ Rope))))
+    ((PHalf _) (None $ Rope))
+    ((PBytes _) (None $ Rope))))
 
 (def-fns _ $ (many show-plain : (erased (Hist Block) a) (many (Block (Ref Block a)) b) -> (many (Rope) r))
   (let-match many b (BExt _ p)
@@ -3991,7 +3992,7 @@
     ((BToken _) (RStr "_"))
     ((BError _ m) (rwrap "<error: " (RStr m) ">"))
     (else (RStr "?")))
-  (match many p _ ((PNat n) (show-nat n)) ((PHalf x) (show-half x)) ((PStr x) (show-str x))))
+  (match many p _ ((PNat n) (show-nat n)) ((PHalf x) (show-half x)) ((PStr x) (show-str x)) ((PBytes x) (show-str x))))
 
 ; A Half at its own type. Its field is a Nat, so it spells in decimal, as the reference's typed printer reaches
 ; it; show-plain above keeps the unary spelling, which is what the untyped fallback prints.
@@ -4007,7 +4008,7 @@
 ; a second extern declaration of an already bound name is refused (ASSUMPTIONS 42), so ExtNat and ExtString
 ; tag the prelude's own types alone, which lit-rope spells before this is reached.
 (def-fns _ $ (many show-ext-typed : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (ExtType) e) -> (many (Rope) r))
-  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)))
+  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)) ((ExtBytes) (show-plain _ b)))
   (let-match many b (BExt _ p)
     (else (show-plain _ b)))
   (match many p (((Rope) _)) ((PHalf n) (show-half-typed n)) (else (show-plain _ b))))

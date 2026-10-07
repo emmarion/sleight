@@ -23,6 +23,7 @@ let externs =
   [ ("Array", view "Array" "array" "~array:Obj.obj ~wrap:Obj.repr" "~array:Obj.obj ~wrap:Obj.repr");
     ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
+    ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
@@ -39,7 +40,7 @@ type cx = {
   shapes : int list list ref;
   defined : (id, string) Hashtbl.t;
   captured : (V.value * string) list ref;
-  arrays : (V.value array * string) list ref;
+  arrays : (Obj.t * string) list ref;
   seen : (int, (V.value * string option ref) list ref) Hashtbl.t;
   shared : int ref;
   closures : (V.closure * string) list ref;
@@ -180,17 +181,13 @@ let remember cx v named = let b = bucket cx v in b := (v, named) :: !b
 
 let rec value cx v =
   match v with
-  | V.VExt (_, Array a) -> (
-      match List.assq_opt a !(cx.arrays) with
-      | Some name -> name
-      | None ->
-          let name = "array_" ^ string_of_int (List.length !(cx.arrays)) in
-          cx.arrays := (a, name) :: !(cx.arrays);
-          Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = Obj.repr (Array.make %d (Obj.repr ()))\n" name (Array.length a));
-          Array.iteri (fun i v ->
-            let rhs = value cx v in
-            Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a;
-          name)
+  | V.VExt (_, Bytes b) ->
+      named_buffer cx (Obj.repr b) (Printf.sprintf "Obj.repr (Bytes.of_string %s)" (quote (Bytes.to_string b))) ignore
+  | V.VExt (_, Array a) ->
+      named_buffer cx (Obj.repr a) (Printf.sprintf "Obj.repr (Array.make %d (Obj.repr ()))" (Array.length a)) (fun name ->
+        Array.iteri (fun i v ->
+          let rhs = value cx v in
+          Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
       match List.find_opt (fun (v', _) -> v' == v) !b with
@@ -216,12 +213,22 @@ let rec value cx v =
           name
       | None -> b := (v, ref None) :: !b; plain cx v)
 
+and named_buffer cx key init fill =
+  match List.assq_opt key !(cx.arrays) with
+  | Some name -> name
+  | None ->
+      let name = "array_" ^ string_of_int (List.length !(cx.arrays)) in
+      cx.arrays := (key, name) :: !(cx.arrays);
+      Buffer.add_string cx.out (Printf.sprintf "let %s : Obj.t = %s\n" name init);
+      fill name;
+      name
+
 and plain cx = function
   | V.VCtor (c, vs) -> build cx c (List.map (value cx) (Array.to_list vs))
   | V.VTuple vs -> tuple (List.map (value cx) vs)
   | V.VExt (_, Int n) when Z.fits_int n -> Printf.sprintf "(Obj.repr (%s))" (Z.to_string n)
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
-  | V.VExt (_, Array _) as v -> value cx v
+  | V.VExt (_, (Array _ | Bytes _)) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with

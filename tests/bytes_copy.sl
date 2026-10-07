@@ -1,0 +1,10 @@
+; expect: (MkPair _ _ "hi" "Ji")
+(comptime-match many "hi" (SCons h rest))
+(let-match many #\J (MkChar j))
+(def-fns _ $ (many copy-test : -> (many (Pair (String) (String)) r))
+  (let ((erased xs) (unique b) (erased p)) (str-bytes-copy "hi"))
+  (let-match erased p (SBCons _ _ _ _) (absurd SBNil))
+  (let ((erased ys) (unique b2) (erased q)) (bytes-set _ b (Zero) j _ (NthHere _ _ _)))
+  (let ((many s) (erased sp)) (bytes-str _ (share b2)))
+  (MkPair _ _ "hi" s))
+copy-test

@@ -447,7 +447,8 @@
     ((Some _ _) (rcat3 (RStr "(Obj.repr (fun held -> ") (dispatch-rope d 0 adt (all-live adt) (RStr "held") (held-arms (adt-ctors adt) d) $ None _) $ RStr "))"))))
 
 (def-fns _ $ (many payload-rope : (many (Payload) p) -> (many (Rope) r))
-  (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n)))
+  (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
+    ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))")))
   (let ((many n) (erased _)) (str-length s))
   (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
 

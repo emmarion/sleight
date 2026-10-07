@@ -1658,7 +1658,9 @@ levels are anonymous except `nat-lvl`, `char-lvl`, `str-lvl` and
 `thunk-lvl`, which a program proves `Predates` against; for example, a
 function at level `L` that calls `nat-add` proves
 `(prove-predates nat-lvl L)`. Its proofs are erased fields and erased
-functions, so none is built at runtime. It contains:
+functions, so none is built at runtime. It contains the following,
+along with further types, functions and lemmas not described here, for
+which `lib/prelude.sl` is the reference:
 
 - **Equality and arithmetic.** `False`; `Eq : (Type A) (A x) (A y)`
   with `Refl`; the relations `Add`, `Lt`, `Double`, `Pow2`, `Mod` and

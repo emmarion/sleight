@@ -158,3 +158,19 @@ let array_swap_imm a i x =
 
 let array_place_imm a i x = Array.unsafe_set (Obj.magic a : int array) (small i) (Obj.magic x : int)
 let list_to_array ~list v = let rec go acc v = match list v with Nil -> Array.of_list (List.rev acc) | Cons (x, rest) -> go (x :: acc) rest in go [] v
+
+let byte (b : bytes) i = Z.of_int (Char.code (Bytes.unsafe_get b i))
+let bytes_view ~bytes ~u8 ~wrap v =
+  let b = bytes v in
+  let length = Bytes.length b in
+  if length = 0 then ANil else ACons (u8 (byte b 0), wrap (Bytes.sub b 1 (length - 1)))
+
+let bytes_of ~z ~bytes ~wrap = function ANil -> wrap Bytes.empty | ACons (x, tail) -> wrap (Bytes.cat (Bytes.make 1 (Char.unsafe_chr (small (z x)))) (bytes tail))
+let bytes_make n x = Bytes.make (Z.to_int n) (Char.unsafe_chr (small x))
+let bytes_get b i = byte b (small i)
+let bytes_get_many = bytes_get
+let bytes_set b i x = Bytes.unsafe_set b (small i) (Char.unsafe_chr (small x))
+let bytes_length b = Z.of_int (Bytes.length b)
+let bytes_length_many = bytes_length
+let str_bytes_copy (s, o, l) = Bytes.of_string (String.sub s o l)
+let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)

@@ -23,7 +23,9 @@ let slice = function VExt (_, Slice (s, o, l)) -> (s, o, l) | v -> raise (Eval.R
 let array = function VExt (_, Array a) -> a | v -> raise (Eval.Runtime ("not an extern array: " ^ show v))
 let int name n = VExt (Hashtbl.find registered name, Int n)
 let text sl = VExt (Hashtbl.find registered "String", Slice sl)
+let bytes = function VExt (_, Bytes b) -> b | v -> raise (Eval.Runtime ("not an extern byte buffer: " ^ show v))
 let arr a = VExt (Hashtbl.find registered "Array", Array a)
+let buf b = VExt (Hashtbl.find registered "Bytes", Bytes b)
 
 let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 
@@ -33,11 +35,12 @@ let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | v -> bad "cons
 let view shape view = { shape; view }
 let types : (string * ty_spec) list =
   let nat adt n = VExt (adt, Int n) in
-  [ ( "Array",
-      view [0; 2] (fun adt ->
-        let wrap a = VExt (adt, Array a) in
-        { construct = (fun i args -> Ffi_core.array_of ~array ~wrap (match i,args with 0,[] -> ANil | 1,[x;tl] -> ACons (x,tl) | _ -> raise arity));
-          destruct = (fun v -> match Ffi_core.array_view ~array ~wrap v with ANil -> 0,[] | ACons(x,tl) -> 1,[x;tl]) }));
+  let cons_view build view_ = view [0; 2] (fun adt ->
+    { construct = (fun i args -> build adt (match i,args with 0,[] -> Ffi_core.ANil | 1,[x;tl] -> ACons (x,tl) | _ -> raise arity));
+      destruct = (fun v -> match view_ adt v with Ffi_core.ANil -> 0,[] | ACons(x,tl) -> 1,[x;tl]) }) in
+  let in_array adt a = VExt (adt, Array a) and in_bytes adt b = VExt (adt, Bytes b) in
+  [ ("Array", cons_view (fun adt -> Ffi_core.array_of ~array ~wrap:(in_array adt)) (fun adt -> Ffi_core.array_view ~array ~wrap:(in_array adt)));
+    ("Bytes", cons_view (fun adt -> Ffi_core.bytes_of ~z ~bytes ~wrap:(in_bytes adt)) (fun adt -> Ffi_core.bytes_view ~bytes ~u8:(int "Nat") ~wrap:(in_bytes adt)));
     ( "Nat",
       view [ 0; 1 ] (fun adt ->
           { construct = (fun i args -> Ffi_core.nat_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> Zero | 1, [ p ] -> Succ p | _ -> raise arity));
@@ -63,6 +66,8 @@ let swap = function [ a; i; x ] -> [ Ffi_core.array_swap (array a) (z i) x ] | _
 let place = function [ a; i; x ] -> Ffi_core.array_place (array a) (z i) x; [] | _ -> raise arity
 let get = spec ~needs:["Array"] 2 (binary (fun a i -> Ffi_core.array_get (array a) (z i)))
 let length = spec ~needs:["Array"] 1 (unary (fun a -> int "Nat" (Ffi_core.array_length (array a))))
+let bytes_get = spec ~needs:["Bytes"] 2 (binary (fun b i -> int "Nat" (Ffi_core.bytes_get (bytes b) (z i))))
+let bytes_length = spec ~needs:["Bytes"] 1 (unary (fun b -> int "Nat" (Ffi_core.bytes_length (bytes b))))
 let fns : (string * fn_spec) list =
   [ ("array-new", spec ~needs:["Array"] 1 (unary (fun n -> arr (Ffi_core.array_new ~blank:VToken (z n)))));
     ("array-make", spec ~needs:["Array"] 2 (binary (fun n x -> arr (Ffi_core.array_make (z n) x))));
@@ -76,6 +81,14 @@ let fns : (string * fn_spec) list =
     ("array-length", length);
     ("array-length-many", length);
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
+    ("bytes-make", spec ~needs:["Bytes"] 2 (binary (fun n x -> buf (Ffi_core.bytes_make (z n) (z x)))));
+    ("bytes-get", bytes_get);
+    ("bytes-get-many", bytes_get);
+    ("bytes-set", spec ~needs:["Bytes"] 3 (function [ b; i; x ] -> Ffi_core.bytes_set (bytes b) (z i) (z x); [] | _ -> raise arity));
+    ("bytes-length", bytes_length);
+    ("bytes-length-many", bytes_length);
+    ("str-bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun s -> buf (Ffi_core.str_bytes_copy (slice s)))));
+    ("bytes-str", spec 1 (unary (fun b -> text (Ffi_core.bytes_str (bytes b)))));
     ("add", spec 2 (nats "Nat" Ffi_core.add));
     ("sub", spec 2 (nats "Nat" Ffi_core.sub));
     ("mul", spec 2 (nats "Nat" Ffi_core.mul));
