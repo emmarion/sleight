@@ -1,5 +1,5 @@
 ; expect: 5
-; `vacant-slot` is its own slot (section 35, the owner's reading): a `let` of `(slot-of
+; `vacant-slot` is its own slot (section 35): a `let` of `(slot-of
 ; vacant-slot)` sits where `vacant-slot` does, so a cell type naming its slot is the type of a fresh cell.
 (def-adts $ (Pair2 : -> Type) enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))
 (let ((many s)) (slot-of vacant-slot))

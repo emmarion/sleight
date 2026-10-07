@@ -4028,14 +4028,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      (section 38) so that a unique copy of its word aliases nothing that matters
      (section 13), which is what lets `(Init _ (slot-of a))` fill a unique field
      (`tests/array_cycle.sl`). So a `let` binder of
-     it sits where `x` does without `slot-self` (review item 27). A binder
-     whose type is `(Slot)` is its own slot, the owner's reading of review
-     item 30 (HANDOFF.md), an erased binder included and a meta excepted,
-     since a rule to an unsolved meta would put one in the fact table
-     (DESIGN.md section 50); the check is on the type the binder is given, a
-     variable or a nullary application canonicalized as the binder is
-     minted, so a binder whose type is only later found to be `(Slot)` is
-     left to `slot-self` (`tests/slot_default.sl`).
+     it sits where `x` does without `slot-self` (review item 27).
 
 202. **What is passed and what is read (section 36).** The runtime signature of a
      function is its non-erased entries without a written `at` (review
@@ -4057,11 +4050,6 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      allowed there; `slot-of` and `at` are refused in a type or value
      constructor's telescope and in a `let`'s binders, and `at` names a
      variable, never a literal.
-
-204. **`vacant-slot`** is a named `many` constant of type `(Slot)`, Const
-     over the token, so its runtime word is what `cell-alloc` fills a
-     vacant slot with (section 35), and its slot is itself, as any
-     `(Slot)`-typed binder's is (201; `tests/vacant_slot_self.sl`).
 
 205. **`slot-self`** mints its fact by forcing, so either the variable or
      its slot may end up carrying the rule, and a `Contradiction` is

@@ -365,9 +365,8 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let x = fresh () in
   let slot = fresh () in
-  let self = (not meta) && (match ty with Var _ | App (Var _, []) -> equal (canon env ty) !slot_type | _ -> false) in
   let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
-  let facts = IntMap.add slot { ty = !slot_type; rule = (if self then Some (Var x) else None) } env.facts in
+  let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
       (fun n ->

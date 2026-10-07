@@ -1,6 +1,6 @@
-; expect: 2
-; A binder whose type is `(Slot)` is its own slot without `slot-self` (section 35, the
-; owner's tentative reading): a word `at` an opaque `(Slot)` parameter is in the slot the parameter names.
+; error: not in its slot's location class
+; A `(Slot)` parameter is not its own slot without `slot-self` (section 35), so a word `at` it is not in
+; the slot it names.
 (def-adts $ (Pair2 : -> Type) enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))
 (def-fns _ $ (many fill : (many (Slot) s) (many (Nat) n at s) (unique (Cell P s vacant-slot) u) -> (many (Nat) r))
   (let ((many p)) (u (at) n (Succ n)))

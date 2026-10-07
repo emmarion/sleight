@@ -25,21 +25,6 @@ is a design decision. Remove an entry when it is fixed.
    `cell-match` is refused in an erased position. Nothing runs wrongly,
    because the whole body is erased.
 
-3. **A binder whose declared type is `(Slot)` is made its own slot
-   without `slot-self`.** `Env.bind` (`lib/env.ml`, the `self` flag)
-   equates a new entry's automatic slot with the entry itself whenever
-   the declared type is a variable or a nullary application that
-   canonicalizes to `(Slot)`. `self/core.sl`'s `bind-as-raw` does the
-   same. DESIGN.md §35 says `slot-self` is the only way a `(Slot)`
-   variable becomes its own slot. Reproduced: `tests/slot_self.sl`
-   prints its expected `2` with its `(slot-self s)` line deleted, and
-   `tests/slot_default.sl` expects a word `at` a `(Slot)` parameter to be
-   in that parameter's slot with no `slot-self` written, so that test
-   pins the defect. ASSUMPTIONS 201 and 204 record the default. The fix
-   is the one line in each compiler that creates the slot's rule. After
-   the fix, `tests/slot_default.sl` should be refused or rewritten with a
-   `slot-self`, and `tests/slot_self.sl` will then exercise the form.
-
 4. **`(share u)` is accepted as the head of a type form.**
    `tests/type_head_unique_const_degrade.sl` expects it, although a type
    is an erased position, where `share` is an error. `elab_term` reads

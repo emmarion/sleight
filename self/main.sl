@@ -59,7 +59,7 @@
   (let ((many with-env)) $ not $ has-flag flags "--no-env")
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
-  (let ((many builtins)) (env-set-help (make-builtins) help))
+  (let ((many builtins)) (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help))
   (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
   (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env) $ said-failed (BTrue) $ env-said env)
   (write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) $ write-lines
