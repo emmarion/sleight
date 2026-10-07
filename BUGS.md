@@ -64,3 +64,28 @@ is a design decision. Remove an entry when it is fixed.
     went from 142M instructions at 3091d12 to 244M at dbb1525, about 1.4
     percent of that run. A join that visits only what a branch changed
     might cost less; not tried.
+
+19. **`slc` keeps a `ValCtor` type's binders in scope for the rest of
+    the signature.** The reference refuses this program, the `A` of
+    `(erased A y)` with "unbound name `A`"; `slc` at 1168548 accepts it,
+    compiled and under `--interpret`.
+
+    ```scheme
+    (def-fns _ $ (erased leak : (erased (TyCtor -> Type) T)
+        (erased (ValCtor (erased Type A) (erased A x) -> (T)) C)
+        (erased A y) -> (erased (Nat) r))
+      (Zero))
+    ```
+
+    With `y` as the body, or `(erased A r)` as the return, `slc` instead
+    reports a type mismatch against `<error: no fact for 18743>`, where
+    the reference again refuses the `A`; `slc` does refuse an `A` in the
+    body as unbound. After an `Fn` or a `TyCtor` parameter type, both
+    refuse its binders, and only `slc` warns that a second `ValCtor`
+    type's `A` shadows a previous binder. This session's reading of the
+    code, not tested by a fix: the `FoValCtor` branch of `self/elab.sl`'s
+    former dispatch returns the environment `elab-valctor` hands back,
+    which its comment says has the fields in scope, without the
+    `env-discard` that `elab-fn-type` and `elab-tyctor` apply. Whether
+    the dangling name can be made to unify with anything was not
+    explored. Found while fixing audit A1.
