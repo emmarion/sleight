@@ -13,11 +13,16 @@ tests do not make is a mistake in this file.
 ## What it is
 
 The uniqueness extension adds `def-unique`, explicit `share`, per-branch use
-checking, a separate location partition, mutable cells, and proof-indexed
-arrays. `at` results are checked logically and omitted physically. The port
-retains erased proofs for code contexts, fact-table traversals, and heap
-histories; current mutable contents are stored separately from allocation
-snapshots.
+checking, slots in the fact table (AT_REDESIGN.md: every non-erased entry is
+minted with an anonymous `many` entry of type `(Slot)`, its automatic slot,
+and `(slot-of x)` canonicalizes to it by `x`'s binder, never through `x`'s
+rule), mutable cells at `unique` and at `many`, and proof-indexed arrays.
+Entries written `at`, as parameters, returns or match annotation entries,
+are checked logically and omitted physically, and a call of an at-function
+or an at-match compiles to nothing but the reconstruction of its `at`
+entries. The port retains erased proofs for code contexts, fact-table
+traversals, and heap histories; current mutable contents are stored
+separately from allocation snapshots.
 
 A compiler that checks what it compiles. The reference interpreter in
 `lib/` is the arbiter of the language; `slc` does the same elaboration
@@ -269,12 +274,12 @@ the entry says otherwise, and recorded so it can be revisited.
   block that prints as `<error: ...>`.
 - **`dump-context` is ported** (ASSUMPTIONS 196): the form is refused
   with the report `lib/dump.ml` writes, built the same way here -- the
-  goal, the position, the entries in scope, the at-database, the opened
+  goal, the position, the entries in scope, the entries sharing a slot, the opened
   objects and the numerals with rules. For it the scope keeps its
   entries' ids newest first beside the name map, the anonymous ones
   included, as the reference's scope does (`Scope` in `core.sl`); the
   printer names a de Bruijn index from the telescopes being printed and
-  prints `(SlotVacant)` as itself; and a literal's entries stay out of
+  prints `vacant-slot` by its name; and a literal's entries stay out of
   the scope, as `lib/elab.ml`'s hoisting appears to keep them. On
   `tests/dump_context*.sl` the report seems to agree with the
   reference's line for line, apart from the ids of anonymous entries

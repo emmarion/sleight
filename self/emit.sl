@@ -673,6 +673,14 @@
 (def-fns _ $ (many field-read-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (Nat) index) (many (String) r) -> (many (Rope) w))
   (rcat3 (field-match-rope d c target r) (RStr $ str-cat3 r ".f" $ nat-str index) $ RStr ")"))
 
+(def-fns _ $ (many field-reads : (many (String) r) (subterm many (Nat) n) (many (Nat) i) -> (many (List $ Rope) fs))
+  (let-match many n (Succ k) ((Zero) (Nil _)))
+  (Cons _ (RStr $ str-cat3 r ".f" $ nat-str i) $ notail $ field-reads r k $ Succ i))
+
+; A fresh block holding [target]'s fields (lib/extract.ml's field_copy): a `cell-write` on a cell at `many`.
+(def-fns _ $ (many field-copy-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (String) r) -> (many (Rope) w))
+  (rcat3 (field-match-rope d c target r) (plain-build d c $ field-reads r (ctor-arity c) 0) $ RStr ")"))
+
 (def-fns _ $ (many cell-write-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) cell) (many (List $ Nat) indices) (many (List $ Rope) args) (many (Nat) depth) -> (many (Rope) r))
   (let ((many prefix)) $ str-cat "cell" $ nat-str depth)
   (let ((many cr)) $ RStr prefix)
@@ -731,6 +739,9 @@
       ((CCellWrite _ k2 cell slots)
         (let ((many indices) (many args)) $ notail $ emit-slots _ slots env ns d)
         (cell-write-rope d k2 (notail $ emit-code _ _ cell env ns d) indices args $ names-depth _ ns))
+      ((CCellCopy _ k2 cell slots)
+        (let ((many indices) (many args)) $ notail $ emit-slots _ slots env ns d)
+        (cell-write-rope d k2 (field-copy-rope d k2 (notail $ emit-code _ _ cell env ns d) $ str-cat3 "r" (nat-str $ names-depth _ ns) "_c") indices args $ names-depth _ ns))
       ((CCellRead _ k2 index cell)
         (field-read-rope d k2 (notail $ emit-code _ _ cell env ns d) index $ str-cat3 "cell" (nat-str $ names-depth _ ns) "_r"))
       ((CAbsurd _ _) (RStr "(absurd ())"))
@@ -833,6 +844,7 @@
       ((CApp _ _ f args _) (tail $ collect-codes _ args env $ notail $ collect-code _ _ f env d))
       ((CCellAlloc _ ctor slots) (tail $ collect-codes _ slots env $ collect-ctor ctor d))
       ((CCellWrite _ k2 cell slots) (tail $ collect-slots _ slots env $ notail $ collect-code _ _ cell env $ collect-cell k2 d))
+      ((CCellCopy _ k2 cell slots) (tail $ collect-slots _ slots env $ notail $ collect-code _ _ cell env $ collect-cell k2 $ collect-ctor k2 d))
       ((CCellRead _ k2 _ cell) (tail $ collect-code _ _ cell env $ collect-cell k2 d))
       ((CLet _ _ _ _ _ rhs rest) (tail $ collect-code _ _ rest env $ notail $ collect-code _ _ rhs env d))
       ((CLetRec _ _ _ g rest) (match many g _ ((MkGroup _ _ fns _) (tail $ collect-code _ _ rest env $ notail $ collect-group _ _ fns env d))))
@@ -1212,31 +1224,27 @@
     (else (None $ String))))
 
 (def-fns _ $ (many final-captured-word : (subterm many (List $ Nat) ids) (many (Env) env)
-    (many (Term) place) -> (many (Rope) r))
+    (many (Term) slot) -> (many (Rope) r))
   (let-match many ids (Cons _ id rest) ((Nil _) (RStr "(failwith \"no captured word for final at-return\")")))
-  (match many (and (is-const env id) (at-equal env place (TVar id))) _
+  (match many (and (is-const env id) (equal-env env slot (slot-atom id))) _
     ((BTrue) (const-rope env id))
-    ((BFalse) (tail $ final-captured-word rest env place))))
+    ((BFalse) (tail $ final-captured-word rest env slot))))
 
-(def-fns _ $ (many final-at-source : (many (Env) env) (many (Term) place) (many (Bool) argument) -> (many (Rope) r))
-  (match many place _
-    ((TBound n)
-      (match many (and argument (nat-is-zero n)) _
-        ((BTrue) (RStr "_at_final_arg"))
-        ((BFalse) (RStr "(failwith \"invalid final at-return parameter\")"))))
-    ((TVar id)
-      (match many (is-const env id) _
-        ((BTrue) (const-rope env id))
-        ((BFalse) (final-captured-word (env-words env) env place))))
-    (else (final-captured-word (env-words env) env place))))
+; The return's slot after canonicalization: `(slot-of <parameter>)` for the argument, else the atom some
+; captured Const word is at.
+(def-fns _ $ (many final-at-source : (many (Env) env) (many (Term) slot) (many (Bool) argument) -> (many (Rope) r))
+  (let-match many slot (TSlotOf place) (else (final-captured-word (env-words env) env slot)))
+  (let-match many place (TBound n) (else (final-captured-word (env-words env) env slot)))
+  (match many (and argument (nat-is-zero n)) _
+    ((BTrue) (RStr "_at_final_arg"))
+    ((BFalse) (RStr "(failwith \"invalid final at-return parameter\")"))))
 
 (def-fns _ $ (many adapt-final-rope : (many (Env) env) (many (Term) ty) (many (Rope) callable)
     (many (Bool) argument) -> (many (Rope) adapted))
   (let-match many (canon-env env ty) (TFn _ _ _ rets) (else callable))
   (let-match many rets (Cons _ entry2 _) ((Nil _) callable))
   (let-match many (entry-place entry2) (Some _ slot) ((None _) callable))
-  (let-match many slot (TSlotHolds place) (else callable))
-  (let ((many source)) (final-at-source env place argument))
+  (let ((many source)) (final-at-source env slot argument))
   (match many argument _
     ((BTrue)
       (rcat5 (RStr "(Obj.repr (fun (_at_final_arg : Obj.t) -> let () = (Obj.obj ") callable

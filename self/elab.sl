@@ -19,7 +19,8 @@
   (match many r _ ((MkRes t ty m _) (MkRes t ty m p))))
 
 (def-fns _ $ (many res-of : (many (Env) env) (many (Nat) x) -> (many (Res) r))
-  (MkRes (TVar x) (type-of env x) (entry-mult-of env x) $ Some _ $ TVar x))
+  (let ((many m)) $ entry-mult-of env x)
+  (MkRes (TVar x) (type-of env x) m $ match many m (((Maybe $ Term) _)) ((Erased) (None _)) (else (Some _ $ slot-atom x))))
 
 (def-fns _ $ (many term-res : (many (Env) env) (many (Term) t) (many (Term) ty) -> (many (Res) r))
   (MkRes t ty (Erased) $ None _))
@@ -326,20 +327,35 @@
       (else acc)))
   (tail $ matchable-cands env kws named rest acc2))
 
-(def-fns _ $ (many delegate-target : (many (Env) env) (many (Nat) y) -> (many (Maybe $ Nat) g))
+; The function an anonymous proof of the constructor [ctor] (`Delegate` or `AtFn`) is about: its argument
+; [index] of [arity], when a variable.
+(def-fns _ $ (many proof-target : (many (Env) env) (many (Nat) y) (many (Nat) ctor) (many (Nat) arity) (many (Nat) index) -> (many (Maybe $ Nat) g))
   (let-match many (env-entry-name env y) (None _) ((Some _ _) (None _)))
-  (let-match many (canon-env env $ type-of env y) (TApp h args) (else (None _)))
-  (let-match many (term-eq h $ TVar delegate-id) (BTrue) ((BFalse) (None _)))
-  (let-match many (list-nth _ args 2) (NthHit _ _ _ t _) ((NthMiss _ _ _ _) (None _)))
+  (let-match many (type-of env y) (TApp h args) (else (None _)))
+  (let-match many (and (term-eq h $ TVar ctor) $ nat-eq (list-length _ args) arity) (BTrue) ((BFalse) (None _)))
+  (let-match many (list-nth _ args index) (NthHit _ _ _ t _) ((NthMiss _ _ _ _) (None _)))
   (match many t _ ((TVar g) (Some _ g)) (else (None _))))
 
-(def-fns _ $ (many delegate-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (subterm many (List $ Nat) ys) (many (List $ Nat) seen) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+; `(delegate-of n)` and `(at-fn-of n)` for each anonymous proof about a named function, the proof's kind
+; told by its constructor [ctor] and the function read at [index] of its [arity] arguments.
+(def-fns _ $ (many proof-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Pair (Nat) $ Pair (Nat) (String)) named) (many (Nat) ctor) (many (Nat) arity) (many (Nat) index) (many (String) form) (subterm many (List $ Nat) ys) (many (List $ Nat) seen) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ys (Cons _ y rest) ((Nil _) acc))
-  (let-match many (delegate-target env y) (Some _ g) ((None _) (tail $ delegate-cands env kws named rest seen acc)))
-  (let-match many (list-mem-bin seen g) (BFalse) ((BTrue) (tail $ delegate-cands env kws named rest seen acc)))
-  (tail $ delegate-cands env kws named rest (Cons _ g seen) $ match many (best-cand g named $ None _) (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
-    ((Some _ q) (match many q _ ((MkPair _ _ _ n) (Cons _ (MkPair _ _ y $ MkPair _ _ y $ fetch-form kws "delegate-of" n) acc))))
+  (let-match many (proof-target env y ctor arity index) (Some _ g) ((None _) (tail $ proof-cands env kws named ctor arity index form rest seen acc)))
+  (let-match many (list-mem-bin seen g) (BFalse) ((BTrue) (tail $ proof-cands env kws named ctor arity index form rest seen acc)))
+  (tail $ proof-cands env kws named ctor arity index form rest (Cons _ g seen) $ match many (best-cand g named $ None _) (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
+    ((Some _ q) (match many q _ ((MkPair _ _ _ n) (Cons _ (MkPair _ _ y $ MkPair _ _ y $ fetch-form kws form n) acc))))
     ((None _) acc)))
+
+; `(slot-of n)` for a named non-erased entry whose slot canonicalizes to an atom; the newest entry of that
+; slot wins, as the reference's `fetches` has it.
+(def-fns _ $ (many slot-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (Maybe $ Nat) except) (subterm many (List $ Pair (String) (Nat)) ns) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
+  (let-match many ns (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ n x))
+  (let ((many (Bool) skip)) $ or (match many except (((Bool) _)) ((None _) (BFalse)) ((Some _ e) (nat-eq e x))) $ not $ is-some _ $ env-slot-of env x)
+  (let-match many skip (BFalse) ((BTrue) (tail $ slot-cands env kws except rest acc)))
+  (tail $ slot-cands env kws except rest $ match many (canon-env env $ slot-atom x) (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
+    ((TVar a) (Cons _ (MkPair _ _ a $ MkPair _ _ x $ fetch-form kws "slot-of" n) acc))
+    (else acc)))
 
 (def-fns _ $ (many numeral-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
@@ -351,7 +367,7 @@
 (def-fns _ $ (many fetch-cands : (many (Env) env) (many (Maybe $ Nat) except) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let ((many kws)) $ kws-of env)
   (let ((many named)) $ named-cands env except (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ Nil _)
-  (level-cands env kws named $ matchable-cands env kws named (env-opens env) $ delegate-cands env kws named (env-objects env) (Nil _) $ numeral-cands env kws (env-lits env) $ Nil _))
+  (level-cands env kws named $ slot-cands env kws except (nm-entries _ (scope-names $ env-scope env) (REmpty) $ Nil _) $ matchable-cands env kws named (env-opens env) $ proof-cands env kws named delegate-id 6 2 "delegate-of" (env-objects env) (Nil _) $ proof-cands env kws named atfn-id 2 1 "at-fn-of" (env-objects env) (Nil _) $ numeral-cands env kws (env-lits env) $ Nil _))
 
 (def-fns _ $ (many plain-atoms : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ x rest)
@@ -460,8 +476,23 @@
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
   (show-t-except env t $ None _))
 
+; A place is shown as written, `at x`, its variable read through its rule where that is a variable, as the
+; reference's namer names an atom; canonicalizing it would show the slot atom instead.
+(def-fns _ $ (many shown-places : (many (Env) env) (subterm many (List $ Entry) es) (many (List $ Entry) ces) -> (many (List $ Entry) r))
+  (let-match many es (Cons _ e rest) ((Nil _) ces))
+  (let-match many ces (Cons _ ce crest) ((Nil _) ces))
+  (let-match many ce (MkEntry nm s mu sg cplace site))
+  (let ((many (Maybe $ Term) place))
+    (match many (entry-place e) _
+      ((Some _ p)
+        (let-match many p (TSlotOf c) (else cplace))
+        (let-match many c (TVar x) (else cplace))
+        (Some _ $ TSlotOf $ match many (canon-env env $ TVar x) (((Term) _)) ((TVar a) (TVar a)) (else c)))
+      ((None _) cplace)))
+  (Cons _ (MkEntry nm s mu sg place site) $ notail $ shown-places env rest crest))
+
 (def-fns _ $ (many show-tele-t : (many (Env) env) (many (List $ Entry) es) (many (Bool) marked) -> (many (String) s))
-  (let ((many ces)) $ canon-env-tele env es)
+  (let ((many ces)) $ shown-places env es $ canon-env-tele env es)
   (let ((many r) (many bound)) $ show-tele ces (naming env (plain-atoms env $ term-vars-tele ces $ Nil _) $ None _) (kws-of env) (Nil _) marked)
   (let ((many spaced)) $ rope-str r)
   (let-match many spaced (SCons _ shown) ((SNil) ""))
@@ -1003,15 +1034,15 @@
 (def-fns _ $ (many no-mult : (many (Env) env) (many (Pos) epos) (many (String) what) (many (Mult) m) -> (many (Env) r))
   (error-at env epos $ say env $ str-cat3 what " take no multiplicity; drop `" $ str-cat (mult-name m) "`"))
 
-(def-fns _ $ (many at-place : (many (Env) env) (many (Bool) places) (many (Bool) live) (many (List $ Nat) outer) (many (Pos) epos) (many (Raw) target) -> (many (Env) r) (many (Maybe $ Term) p))
-  (let-match many places (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` is allowed only on return and match annotation entries") $ None _)))
-  (let-match many live (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` needs a return declared `many` or `unique`") $ None _)))
+(def-fns _ $ (many at-place : (many (Env) env) (many (Bool) places) (many (Bool) live) (many (Pos) epos) (many (Raw) target) -> (many (Env) r) (many (Maybe $ Term) p))
+  (let-match many places (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` is allowed only on function telescope and match annotation entries") $ None _)))
+  (let-match many live (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` needs an entry declared `many` or `unique`") $ None _)))
   (let ((many tpos)) $ raw-pos target)
+  (let-match many (classify $ raw-name target) (LName) (else (values (error-at env tpos $ say env "`at` names a variable, not a literal") $ None _)))
   (let ((many envv) (many found)) $ var-found (env-at env tpos) $ raw-name target)
   (let-match many found (Some _ x) ((None _) (values (env-back env envv) $ None _)))
   (let-match many (mult-is-many $ entry-mult-of env x) (BTrue) ((BFalse) (values (error-at env tpos $ say env "`at` needs a variable declared `many` or `unique`") $ None _)))
-  (let-match many (list-mem-bin outer x) (BTrue) ((BFalse) (values (error-at env tpos $ say env "`at` must name an argument or a closed-over variable") $ None _)))
-  (values env $ Some _ $ TSlotHolds $ TVar x))
+  (values env $ Some _ $ slot-atom x))
 
 (def-fns _ $ (many name-checked : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (String) s))
   (let-match many raw (RAtom _ s) (else (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ tick $ rope-str $ show-raw raw) "_")))
@@ -1168,6 +1199,16 @@
       (let ((many f) (many s) (many rest) (erased wr)) $ notail $ take-marks more _ wm env first second)
       (values f (BTrue) rest wr))))
 
+; A function header's marks, `absurd`, `extern` and `at`, in any order (AT_REDESIGN A10).
+(def-fns _ $ (many take-marks3 : (subterm many (List $ Raw) items) (erased (List $ Raw) root) (erased (Within items root) w) (many (Env) env) -> (many (Bool) isabs) (many (Bool) isext) (many (Bool) isat) (many (List $ Raw) rest) (erased (Within rest root) wr))
+  (let-match many items (Cons _ t more) ((Nil _) (values (BFalse) (BFalse) (BFalse) items w)))
+  (let ((erased wm)) $ within-step _ _ _ (prove-subterm more items) w)
+  (let ((many (Bool) a) (many (Bool) e) (many (Bool) f))
+    (values (is-mark env t $ MkAbsurd) (is-mark env t $ MkExtern) (is-mark env t $ MkAt)))
+  (let-match many (or a $ or e f) (BTrue) ((BFalse) (values (BFalse) (BFalse) (BFalse) items w)))
+  (let ((many a2) (many e2) (many f2) (many rest) (erased wr)) $ notail $ take-marks3 more _ wm env)
+  (values (or a a2) (or e e2) (or f f2) rest wr))
+
 ; ---- Constructors, Matchables and shapes (sections 17, 19, 38)
 
 (def-fns _ $ (many adt-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Adt) r))
@@ -1223,17 +1264,18 @@
 
 
 ; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
-(def-fns _ $ (many find-delegate : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) g) -> (many (Maybe $ Nat) r))
+(def-fns _ $ (many find-proof : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) ctor) (many (Nat) arity) (many (Nat) index) (many (Nat) g) -> (many (Maybe $ Nat) r))
   (let-match many objects (Cons _ x rest) ((Nil _) (None _)))
-  (let ((many (Bool) hit))
-    (match many (type-of env x) _
-      ((TApp h args)
-        (let-match many (list-nth _ args 2) (NthHit _ _ _ t _) ((NthMiss _ _ _ _) (BFalse)))
-        (match many t (((Bool) _))
-          ((TVar g2) (and (and (term-eq h $ TVar delegate-id) $ nat-eq (list-length _ args) 6) $ and (nat-eq g2 g) $ match many (env-entry-name env x) (((Bool) _)) ((None _) (BTrue)) ((Some _ _) (BFalse)))) (else (BFalse)))) (else (BFalse))))
+  (let ((many hit)) $ match many (proof-target env x ctor arity index) (((Bool) _)) ((Some _ g2) (nat-eq g2 g)) ((None _) (BFalse)))
   (match many hit _
     ((BTrue) (Some _ x))
-    ((BFalse) (tail $ find-delegate rest env g))))
+    ((BFalse) (tail $ find-proof rest env ctor arity index g))))
+
+(def-fns _ $ (many fetched-proof : (many (Env) env) (many (Raw) arg) (many (Nat) ctor) (many (Nat) arity) (many (Nat) index) (many (String) kind) -> (many (Env) r) (many (Maybe $ Term) t))
+  (let ((many env2) (many g)) $ named env arg "a function name")
+  (match many (find-proof (env-objects env2) env2 ctor arity index g) _
+    ((None _) (values (env-error env2 $ str-cat (qshown env2 g) $ str-cat3 " has no `" kind "` proof in scope") $ None _))
+    ((Some _ x) (values env2 $ Some _ $ TVar x))))
 
 ; A Matchable's constructors, each with its phantom marker, id and number of many fields (section 38).
 (def-adts $ (CShape : -> Type)
@@ -1398,6 +1440,15 @@
 (def-fns _ $ (many no-code : (erased (List $ List $ Nat) ctx) -> (many (Code ctx many-one) c))
   (CError _ many-one "no value"))
 
+(def-fns _ $ (many codes-missing : (erased (List $ List $ Nat) ctx) (subterm many (List $ Mult) ms) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk))
+  (let-match many ms (Cons _ m rest) ((Nil _) (values (Nil _) (PkNil _))))
+  (let ((many codes) (erased pk)) $ notail $ codes-missing ctx rest)
+  (let ((many (Code ctx many-one) missing)) $ no-code _)
+  (match many m _
+    ((Many) (values (Cons _ missing codes) (PkMany _ rest missing codes pk)))
+    ((Once) (values (Cons _ missing codes) (PkOnce _ rest missing codes pk)))
+    ((Erased) (values codes (PkErased _ rest codes pk)))))
+
 ; Binds fresh ids for the many returns and keeps those the position takes many (ASSUMPTIONS 39): the ids
 ; first, then each one's place in the frame they form, then the code referring to them there.
 (def-fns _ $ (many fresh-bound : (subterm many (List $ Mult) rets) (many (Env) env) -> (many (Env) r) (many (List $ Nat) bound) (erased (Picked (Nat) rets bound) bpk))
@@ -1463,7 +1514,7 @@
 (def-fns _ $ (many at-in-frame : (subterm many (List $ Nat) ids) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
   (let-match many ids (Cons _ x rest)
     ((Nil _) (None _)))
-  (match many (at-equal env p $ TVar x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-in-frame rest env p))))
+  (match many (and (mult-is-many $ entry-mult-of env x) $ equal-env env p $ slot-atom x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-in-frame rest env p))))
 
 (def-fns _ $ (many at-in-frames : (subterm many (List $ List $ Nat) ctx) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
   (let-match many ctx (Cons _ frame rest)
@@ -1472,16 +1523,32 @@
 
 (def-fns _ $ (many at-constant : (subterm many (List $ Nat) ids) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
   (let-match many ids (Cons _ x rest) ((Nil _) (None _)))
-  (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ at-equal env p $ TVar x) _
+  (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ equal-env env p $ slot-atom x) _
     ((BTrue) (Some _ x)) ((BFalse) (tail $ at-constant rest env p))))
 
-(def-fns _ $ (many location-var : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p) -> (many (Env) r) (many (Nat) x))
-  (let ((many direct)) $ match many p (((Maybe $ Nat) _))
-    ((TVar x) (match many (and (mult-is-many $ entry-mult-of env x) $ or (is-const env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
-    (else (None _)))
+; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (AT_REDESIGN A3).
+(def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
+  (let-match many p0 (TSlotOf c) (else (None _)))
+  (let-match many c (TVar x) (else (None _)))
+  (match many (and (mult-is-many $ entry-mult-of env x) $ or (is-const env x) $ is-some _ $ mem-dec x ctx) _ ((BTrue) (Some _ x)) ((BFalse) (None _))))
+
+(def-fns _ $ (many location-var : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Env) r) (many (Nat) x))
+  (let ((many direct)) $ direct-word env ctx p0)
+  (let ((many p)) $ canon-env env p0)
   (let ((many inframe)) $ match many direct (((Maybe $ Nat) _)) ((Some _ _) direct) ((None _) (at-in-frames ctx env p)))
   (let ((many found)) $ match many inframe (((Maybe $ Nat) _)) ((Some _ _) inframe) ((None _) (at-constant (env-words env) env p)))
   (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat (say env "no caller word for `at` ") $ qshow env p) 0))))
+
+; A parameter written `at` is not passed: inside the body it is a rename of the word its target holds
+; (AT_REDESIGN A3), bound over the frame of the runtime parameters [base], the first such parameter outermost.
+(def-fns _ $ (many at-renames : (subterm many (List $ Entry) params) (many (List $ Nat) pids) (many (List $ Term) pvars) (many (Env) env) (many (List $ List $ Nat) base) -> (many (Env) r) (many (List $ List $ Nat) ctx) (many (StmtCode base ctx) sc))
+  (let-match many params (Cons _ e rest) ((Nil _) (values env base $ SNone _)))
+  (let-match many pids (Cons _ y yrest) ((Nil _) (values env base $ SNone _)))
+  (let-match many (entry-place e) (Some _ p) ((None _) (tail $ at-renames rest yrest pvars env base)))
+  (let-match many (mult-is-many $ entry-mult e) (BTrue) ((BFalse) (tail $ at-renames rest yrest pvars env base)))
+  (let ((many env2) (many src)) $ location-var env base $ instantiate pvars p)
+  (let ((many env3) (many ctx) (many more)) $ notail $ at-renames rest yrest pvars env2 $ Cons _ (Cons _ y $ Nil _) base)
+  (values env3 ctx $ SSeq _ _ _ (SLet _ many-one (Cons _ y $ Nil _) (PkMany _ (Nil _) y (Nil _) $ PkNil _) (var-code env2 base src)) more))
 
 (def-fns _ $ (many physical-mults : (subterm many (List $ Entry) tele) -> (many (List $ Mult) ms))
   (match many tele _
@@ -1505,9 +1572,7 @@
       ((Erased) (values env $ CError _ many-one "erased return"))
       (else
         (let-match many place (Some _ p) ((None _) (values env $ var-code env ctx x)))
-        (let-match many (instantiate args p) (TSlotHolds p2)
-          (else (values (env-error env "internal: malformed return location") $ CError _ many-one "location")))
-        (let ((many env2) (many y)) $ location-var env ctx p2)
+        (let ((many env2) (many y)) $ location-var env ctx $ instantiate args p)
         (values env2 $ var-code env2 ctx y))))
   (let ((many env3) (many codes) (erased pk)) $ notail $ result-codes rest tail3 more (Cons _ (TVar x) args) env2 ctx)
   (match many m _
@@ -1515,8 +1580,112 @@
     ((Many) (values env3 (Cons _ code codes) $ PkMany _ rest code codes pk))
     ((Once) (values env3 (Cons _ code codes) $ PkOnce _ rest code codes pk))))
 
+; What a signature passes or returns at runtime: its non-erased entries without a written `at` (AT_REDESIGN A3).
+(def-fns _ $ (many runtime-ids : (subterm many (List $ Entry) tele) (many (List $ Nat) ids) -> (many (List $ Nat) r))
+  (let-match many tele (Cons _ e rest) ((Nil _) (Nil _)))
+  (let-match many ids (Cons _ x xrest) ((Nil _) (Nil _)))
+  (let ((many more)) $ notail $ runtime-ids rest xrest)
+  (match many (and (mult-is-many $ entry-mult e) $ not $ is-some _ $ entry-place e) _ ((BTrue) (Cons _ x more)) ((BFalse) more)))
+
+(def-fns _ $ (many has-place : (subterm many (List $ Entry) tele) -> (many (Bool) r))
+  (match many tele _ ((Nil _) (BFalse)) ((Cons _ e rest) (or (is-some _ $ entry-place e) $ notail $ has-place rest))))
+
+(def-fns _ $ (many runtime-count : (subterm many (List $ Entry) tele) -> (many (Nat) n))
+  (let-match many tele (Cons _ e rest) ((Nil _) 0))
+  (let ((many more)) $ notail $ runtime-count rest)
+  (match many (and (mult-is-many $ entry-mult e) $ not $ is-some _ $ entry-place e) _ ((BTrue) (Succ more)) ((BFalse) more)))
+
+(def-fns _ $ (many has-runtime : (many (List $ Entry) tele) -> (many (Bool) r))
+  (not $ nat-is-zero $ runtime-count tele))
+
+; [code] produces the runtime entries of [tele], bound to [rids]; the entries written `at` are read from the
+; words the code holds (AT_REDESIGN A3), as a call's returns are. An at-match [skipped] has no runtime at all.
+(def-fns _ $ (many reconstruct : (many (List $ List $ Nat) ctx) (many (Env) env) (many (List $ Mult) expect) (many (List $ Entry) tele) (many (List $ Nat) rids) (many (Bool) skipped) (many (Code ctx expect) code) -> (many (Env) r) (many (Code ctx expect) out))
+  (let-match many (and (mult-is-many $ pos-mult expect) $ or skipped $ has-place tele) (BTrue) ((BFalse) (values env code)))
+  (let ((many physical)) $ physical-mults tele)
+  (let-match many (lockstep-dec _ _ physical rids) (LdYes _ _ _ _ lk)
+    ((LdNo _ _ _ _) (values (env-error env "internal: reconstruction size") code)))
+  (let ((many bound) (erased bpk)) $ picked-of _ physical rids lk)
+  (let ((many env2) (many projected)) $ match many skipped (((Env) _) ((Code ctx physical) _))
+    ((BFalse) (project-code ctx env expect physical code))
+    ((BTrue) (let ((many missing) (erased pk)) $ codes-missing ctx physical) (values env $ CValues _ physical missing pk)))
+  (let ((many env3) (many kept) (erased kpk)) $ result-codes expect tele rids (Nil _) env2 $ Cons _ bound ctx)
+  (values env3 $ CLet _ physical _ bound bpk projected $ CValues _ expect kept kpk))
+
 ; [ids]: terms of the binders already in force, innermost first. Binds one fresh entry per item and returns
 ; their ids in order; names, multiplicities and states override the telescope's own when given.
+(def-fns _ $ (many opened-among : (subterm many (List $ Opened) os) (many (List $ Nat) ids) -> (many (List $ Opened) r))
+  (let-match many os (Cons _ o rest)
+    ((Nil _) (Nil _)))
+  (match many (list-mem-bin ids $ opened-x o) _ ((BTrue) (Cons _ o $ notail $ opened-among rest ids)) ((BFalse) (tail $ opened-among rest ids))))
+
+; Two opened objects of one kind naming one thing.
+(def-fns _ $ (many opened-share : (many (Opened) x) (many (Opened) y) -> (many (Bool) r))
+  (let-match many x (MkOpened _ kx nx))
+  (match many y _
+    ((MkOpened _ ky ny)
+      (and (nat-eq (open-kind-code kx) $ open-kind-code ky) $ and (nat-lt (open-kind-code kx) 2) $ nats-share nx ny))))
+
+; The first of [ys] sharing a name with x; only one older than x, of a smaller id (an object is opened after
+; the entries it may share with were bound), when [older-only].
+(def-fns _ $ (many first-sharing : (subterm many (List $ Opened) ys) (many (Opened) x) (many (Bool) older-only) -> (many (Maybe $ Nat) r))
+  (let-match many ys (Cons _ y rest) ((Nil _) (None _)))
+  (match many (and (or (not older-only) $ nat-lt (opened-x y) $ opened-x x) $ opened-share x y) _
+    ((BTrue) (Some _ $ opened-x y))
+    ((BFalse) (tail $ first-sharing rest x older-only))))
+
+; A newer opened object and an older one naming one thing, if any: the newest such object, and the newest
+; older one it shares with; the list holds the newer first. Only a pair with a [touched] object, one whose
+; names changed since the invariant last held, can share, the others having been disjoint then, so an
+; untouched object is compared with the touched ones [tos] alone.
+(def-fns _ $ (many open-pair : (subterm many (List $ Opened) opens) (many (List $ Nat) touched) (many (List $ Opened) tos) -> (many (Maybe $ Pair (Nat) (Nat)) r))
+  (let-match many opens (Cons _ x rest) ((Nil _) (None _)))
+  (let ((many (Maybe $ Nat) y))
+    (match many (list-mem-bin touched $ opened-x x) _
+      ((BTrue) (first-sharing rest x $ BFalse))
+      ((BFalse) (first-sharing tos x $ BTrue))))
+  (match many y _
+    ((Some _ yy) (Some _ $ MkPair _ _ (opened-x x) yy))
+    ((None _) (tail $ open-pair rest touched tos))))
+
+; At most one opened Matchable names a given type constructor or value constructor, and at most one opened
+; Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
+; kept, the older on a tie, until no two name one thing; [fuel] bounds the merges by the list's length, and
+; [touched] holds the objects whose names changed since the invariant last held, the unification adding to
+; the environment's own those it changes.
+(def-fns _ $ (many merge-opens : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) touched) -> (many (UnifyRes) r))
+  (let-match many fuel (Succ f) ((Zero) (UOk env)))
+  (let ((many opens)) $ env-opens env)
+  (let-match many (open-pair opens touched $ opened-among opens touched) (Some _ pr) ((None _) (UOk env)))
+  (let-match many pr (MkPair _ _ newer older))
+  (let-match many (unify-force (Forcing env) (type-of env newer) (type-of env older)) (Forcing env2)
+    ((Refuted m) (UContra m)))
+  (let ((many drop)) $ match many (nat-lt (matchable-rank env2 newer) $ matchable-rank env2 older) (((Nat) _)) ((BTrue) older) ((BFalse) newer))
+  (let ((many env3)) $ env-unopen env2 drop)
+  (let ((many all) (erased cat)) $ list-append _ (env-touched env3) $ nats-remove touched drop)
+  (tail $ merge-opens f (env-settled env3) all))
+
+; The invariant restored after a forcing (refine, open-adt, the printers), for the objects it touched.
+(def-fns _ $ (many merge-all : (many (Forced) fe) -> (many (UnifyRes) r))
+  (let-match many fe (Forcing env) ((Refuted m) (UContra m)))
+  (match many (env-touched env) _
+    ((Nil _) (UOk env))
+    ((Cons _ _ _) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
+
+; [x] is at the slot term [p] (AT_REDESIGN A4): a rule on its automatic slot, minted by forcing, the opened
+; objects merged after; an erased entry has no slot and nothing is said.
+(def-fns _ $ (many place-forced : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (UnifyRes) r))
+  (let-match many (env-slot-of env x) (Some _ s) ((None _) (UOk env)))
+  (merge-all $ unify-force (Forcing env) (TVar s) p))
+
+(def-fns _ $ (many place-at : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (Env) r))
+  (match many (place-forced env x p) _
+    ((UOk env2) env2)
+    ((UContra m) (env-error env $ str-cat3 "internal: " (qshow env $ TVar x) $ str-cat3 " cannot sit at " (qshow env p) $ str-cat3 " (" (clash-str env m) ")"))))
+
+(def-fns _ $ (many placed-at : (many (Env) env) (many (Nat) x) (many (Maybe $ Term) p) -> (many (Env) r))
+  (match many p _ ((None _) env) ((Some _ q) (place-at env x q))))
+
 ; ---- Opening telescopes into scope
 
 (def-adts $ (MultsMode : -> Type)
@@ -1548,7 +1717,7 @@
   (let ((many env2a) (many x)) $ bind-as env meta (BFalse) name site warns mult ty rule delegate-id)
   (let ((many env2)) $ match many place (((Env) _))
     ((None _) env2a)
-    ((Some _ p) (match many (instantiate ids p) (((Env) _)) ((TSlotHolds p2) (at-merge env2a (TVar x) p2)) (else (env-error env2a "internal: malformed location")))))
+    ((Some _ p) (match many meta (((Env) _)) ((BTrue) env2a) ((BFalse) (place-at env2a x $ instantiate ids p)))))
   (let ((many env3) (many more) (erased p)) $ notail $ open-tele rest env2 names2 sites2 mults2 (Cons _ (TVar x) ids) meta)
   (values env3 (Cons _ x more) (LsCons _ _ e x rest more p)))
 
@@ -1842,10 +2011,18 @@
   (let-match many (env-usage-erased env) (BFalse) ((BTrue) env))
   (let-match many (match many (res-term r) (((Bool) _)) ((TErr _) (BTrue)) (else (BFalse))) (BFalse) ((BTrue) env))
   (let-match many (entry-place e) (Some _ p) ((None _) env))
-  (let-match many (instantiate ids p) (TSlotHolds p2) (else (env-error env "internal: malformed location")))
-  (let ((many ok)) $ match many (res-place r) (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (at-equal env p2 q)))
+  (let ((many p2)) $ instantiate ids p)
+  (let ((many ok)) $ match many (res-place r) (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (equal-env env p2 q)))
   (def-fns msg-lvl $ (many msg-at : -> (many (String) s)) (str-cat (say env "return does not satisfy `at` ") $ qshow env p2))
   (error-unless-msg env ok msg-at))
+
+; A result that is not a variable is bound to an anonymous one for the entries after it, so that a later
+; entry's `at` can name the slot it sits in (UNIQUE.md U2a).
+(def-fns _ $ (many result-term : (many (Env) env) (many (Res) r) -> (many (Env) r2) (many (Term) t))
+  (let-match many (res-term r) (TVar _) (else (values env $ res-term r)))
+  (let-match many (res-place r) (Some _ p) ((None _) (values env $ res-term r)))
+  (let ((many env2) (many y)) $ bind-as env (BFalse) (BTrue) (None _) (None _) (BFalse) (res-erasure r) (res-ty r) (Some _ $ res-term r) delegate-id)
+  (values (place-at env2 y p) $ TVar y))
 
 (def-fns _ $ (many next-site : (many (Env) env) (many (List $ Pair (Pos) $ Maybe $ Raw) sites) -> (many (Env) r) (many (Maybe $ Raw) raw) (many (List $ Pair (Pos) $ Maybe $ Raw) more))
   (let-match many sites (Cons _ site ps) ((Nil _) (values env (None _) sites)))
@@ -1860,7 +2037,8 @@
   (let-match many ress (Cons _ r rrest) ((Nil _) (env-error env "expected more values")))
   (let ((many (Env) at-site) (many (Maybe $ Raw) raw) (many (List $ Pair (Pos) $ Maybe $ Raw) more)) $ next-site env sites)
   (let ((many env2)) $ env-back env $ check-result-place (settle-res (check-sg at-site (sg-inst ids $ entry-sg e) r raw) r) e ids r)
-  (tail $ check-results rest env2 rrest (Cons _ (res-term r) ids) more))
+  (let ((many env3) (many t)) $ result-term env2 r)
+  (tail $ check-results rest env3 rrest (Cons _ t ids) more))
 
 (def-fns _ $ (many written-sites : (subterm many (List $ Raw) rs) -> (many (List $ Pair (Pos) $ Maybe $ Raw) r))
   (match many rs _ ((Nil _) (Nil _)) ((Cons _ r rest) (Cons _ (MkPair _ _ (raw-pos r) $ Some _ r) $ notail $ written-sites rest))))
@@ -2087,64 +2265,6 @@
 ; ---- Opening a Matchable or Newtype (section 19, ASSUMPTIONS 139)
 
 ; The entries of [os] whose ids are in [ids], in order.
-(def-fns _ $ (many opened-among : (subterm many (List $ Opened) os) (many (List $ Nat) ids) -> (many (List $ Opened) r))
-  (let-match many os (Cons _ o rest)
-    ((Nil _) (Nil _)))
-  (match many (list-mem-bin ids $ opened-x o) _ ((BTrue) (Cons _ o $ notail $ opened-among rest ids)) ((BFalse) (tail $ opened-among rest ids))))
-
-; Two opened objects of one kind naming one thing.
-(def-fns _ $ (many opened-share : (many (Opened) x) (many (Opened) y) -> (many (Bool) r))
-  (let-match many x (MkOpened _ kx nx))
-  (match many y _
-    ((MkOpened _ ky ny)
-      (and (nat-eq (open-kind-code kx) $ open-kind-code ky) $ and (nat-lt (open-kind-code kx) 2) $ nats-share nx ny))))
-
-; The first of [ys] sharing a name with x; only one older than x, of a smaller id (an object is opened after
-; the entries it may share with were bound), when [older-only].
-(def-fns _ $ (many first-sharing : (subterm many (List $ Opened) ys) (many (Opened) x) (many (Bool) older-only) -> (many (Maybe $ Nat) r))
-  (let-match many ys (Cons _ y rest) ((Nil _) (None _)))
-  (match many (and (or (not older-only) $ nat-lt (opened-x y) $ opened-x x) $ opened-share x y) _
-    ((BTrue) (Some _ $ opened-x y))
-    ((BFalse) (tail $ first-sharing rest x older-only))))
-
-; A newer opened object and an older one naming one thing, if any: the newest such object, and the newest
-; older one it shares with; the list holds the newer first. Only a pair with a [touched] object, one whose
-; names changed since the invariant last held, can share, the others having been disjoint then, so an
-; untouched object is compared with the touched ones [tos] alone.
-(def-fns _ $ (many open-pair : (subterm many (List $ Opened) opens) (many (List $ Nat) touched) (many (List $ Opened) tos) -> (many (Maybe $ Pair (Nat) (Nat)) r))
-  (let-match many opens (Cons _ x rest) ((Nil _) (None _)))
-  (let ((many (Maybe $ Nat) y))
-    (match many (list-mem-bin touched $ opened-x x) _
-      ((BTrue) (first-sharing rest x $ BFalse))
-      ((BFalse) (first-sharing tos x $ BTrue))))
-  (match many y _
-    ((Some _ yy) (Some _ $ MkPair _ _ (opened-x x) yy))
-    ((None _) (tail $ open-pair rest touched tos))))
-
-; At most one opened Matchable names a given type constructor or value constructor, and at most one opened
-; Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
-; kept, the older on a tie, until no two name one thing; [fuel] bounds the merges by the list's length, and
-; [touched] holds the objects whose names changed since the invariant last held, the unification adding to
-; the environment's own those it changes.
-(def-fns _ $ (many merge-opens : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) touched) -> (many (UnifyRes) r))
-  (let-match many fuel (Succ f) ((Zero) (UOk env)))
-  (let ((many opens)) $ env-opens env)
-  (let-match many (open-pair opens touched $ opened-among opens touched) (Some _ pr) ((None _) (UOk env)))
-  (let-match many pr (MkPair _ _ newer older))
-  (let-match many (unify-force (Forcing env) (type-of env newer) (type-of env older)) (Forcing env2)
-    ((Refuted m) (UContra m)))
-  (let ((many drop)) $ match many (nat-lt (matchable-rank env2 newer) $ matchable-rank env2 older) (((Nat) _)) ((BTrue) older) ((BFalse) newer))
-  (let ((many env3)) $ env-unopen env2 drop)
-  (let ((many all) (erased cat)) $ list-append _ (env-touched env3) $ nats-remove touched drop)
-  (tail $ merge-opens f (env-settled env3) all))
-
-; The invariant restored after a forcing (refine, open-adt, the printers), for the objects it touched.
-(def-fns _ $ (many merge-all : (many (Forced) fe) -> (many (UnifyRes) r))
-  (let-match many fe (Forcing env) ((Refuted m) (UContra m)))
-  (match many (env-touched env) _
-    ((Nil _) (UOk env))
-    ((Cons _ _ _) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
-
 ; Opens x (section 19): its constructors must be distinct after canonicalization, and it then merges with
 ; whatever open names one of them or its type constructor.
 (def-fns _ $ (many env-open-adt : (many (Env) env) (many (Nat) x) -> (many (UnifyRes) r))
@@ -2156,6 +2276,11 @@
 ; def-adts opens what it mints; a fresh object relates to nothing open, so the assertion holds.
 (def-fns _ $ (many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r))
   (match many (env-open-adt env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " $ clash-str env m))))
+
+; Opens an `AtFn` proof (AT_REDESIGN A10), as a Matchable is opened; naming one function, it seems unable to
+; contradict another open, so a contradiction is reported as internal.
+(def-fns _ $ (many open-proof : (many (Env) env) (many (Nat) x) -> (many (Env) r))
+  (match many (merge-all $ Forcing $ env-open env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " $ clash-str env m))))
 
 ; An anonymous let at [mult] of a Matchable or Newtype, elaborated by the caller into [inner]: the entry an
 ; open records (section 19). Run at once in run position, as a let's right-hand side is.
@@ -2186,7 +2311,7 @@
   (let ((many env2) (many x) (many t)) $ open-bind ctx env inner r (Erased) code)
   (let ((erased on) (erased of) (many obnd) (many otb)) $ env-table env2)
   (let ((many kind) (many names)) $ open-names _ _ obnd otb x)
-  (let-match many kind (OKMatchable) ((OKNone) env2))
+  (let-match many kind (OKMatchable) ((OKNone) env2) ((OKAtFn) env2))
   (match many (env-open-adt env2 x) _
     ((UOk _) (env-error env2 $ str-cat3 (say env2 "`open-absurd`: opening ") (qshow env2 t) " contradicts nothing"))
     ((UContra _) env2)))
@@ -2201,7 +2326,7 @@
   (let-match many tele (Cons _ _ rest) ((Nil _) env))
   (let-match many fids (Cons _ x tail2) ((Nil _) env))
   (let ((many env1)) (match many (mult-is-many $ entry-mult-of env x) (((Env) _))
-    ((BFalse) env) ((BTrue) (match many (res-place scrut) _ ((None _) env) ((Some _ loc) (at-merge env (TVar x) loc))))))
+    ((BFalse) env) ((BTrue) (placed-at env x $ res-place scrut))))
   (tail $ newtype-fields-at rest tail2 env1 scrut))
 
 (def-fns _ $ (many refine : (many (Env) env) (many (Res) scrut) (many (Nat) c) (many (List $ Nat) fids) (many (Term) ret) -> (many (UnifyRes) r))
@@ -2277,8 +2402,7 @@
     (many (Env) env2) (many (Res) prepared) (many (Nat) id))
   (let ((many env1) (many id)) (bind-as env (BFalse) (BTrue) (None _) (None _) (BFalse) pos (res-ty res) (Some _ (res-term res)) delegate-id))
   (let ((many env2)) (mark-word env1 id (BTrue)))
-  (let ((many env3)) (match many (res-place res) (((Env) _))
-    ((None _) env2) ((Some _ place) (at-merge env2 (TVar id) place))))
+  (let ((many env3)) (placed-at env2 id $ res-place res))
   (values env3 (res-of env3 id) id))
 
 (def-fns _ $ (many code-var : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) -> (many (Maybe $ Nat) r))
@@ -2362,7 +2486,7 @@
   (let-match many params (Cons _ entry2 rest) ((Nil _) (Nil _)))
   (let-match many ids (Cons _ id tail2) ((Nil _) (Nil _)))
   (let ((many slots)) (notail $ pattern-slots rest tail2))
-  (match many (entry-mult entry2) _ ((Erased) slots) (else (Cons _ (TSlotHolds (TVar id)) slots))))
+  (match many (entry-mult entry2) _ ((Erased) slots) (else (Cons _ (slot-atom id) slots))))
 
 (def-fns _ $ (many binder-name : (many (Maybe $ Raw) b) -> (many (Maybe $ String) r))
   (match many b _ ((None _) (None _)) ((Some _ r) (name-or-anon $ raw-name r))))
@@ -2375,9 +2499,7 @@
   (let ((many params) (many ret)) (ctor-type env ctor))
   (let ((many env1) (many id)) (bind env (binder-name braw) (binder-site env braw) (BTrue) mult (TCell (TVar ctor) (pattern-slots params fids)) (None _) delegate-id))
   (let ((many env2)) (mark-word env1 id (BFalse)))
-  (let ((many env3)) (match many (res-place scrut) (((Env) _))
-    ((None _) env2) ((Some _ place) (at-merge env2 (TVar id) place))))
-  (values env3 id))
+  (values (placed-at env2 id $ res-place scrut) id))
 
 (def-fns _ $ (many field-mults : (subterm many (List $ Mult) ms) (many (Mult) mode) -> (many (List $ Mult) r))
   (match many ms _ ((Nil _) ms) ((Cons _ m rest) (Cons _ (field-under mode m) $ notail $ field-mults rest mode))))
@@ -2389,24 +2511,24 @@
   (let ((many prefix) (many suffix)) (notail $ split-pattern-fields rest tail2))
   (values (Cons _ f prefix) suffix))
 
-(def-fns _ $ (many place-slot : (many (Maybe $ Term) place) -> (many (Maybe $ Term) r))
-  (match many place _ ((None _) (None _)) ((Some _ p) (Some _ $ TSlotHolds p))))
-
 (def-fns _ $ (many is-entry : (many (Mult) mult) (many (Term) t) (many (Maybe $ Term) place) -> (many (Entry) e))
-  (MkEntry (None _) (BFalse) mult (SgIs t type-term) (place-slot place) (None _)))
+  (MkEntry (None _) (BFalse) mult (SgIs t type-term) place (None _)))
 
 (def-fns _ $ (many bound-slots : (subterm many (List $ Entry) tele) -> (many (List $ Term) slots))
   (let-match many tele (Cons _ e rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ bound-slots rest)
-  (match many (entry-mult e) _ ((Erased) more) (else (Cons _ (TSlotHolds $ TBound $ list-length _ rest) more))))
+  (match many (entry-mult e) _ ((Erased) more) (else (Cons _ (TSlotOf $ TBound $ list-length _ rest) more))))
 
 (def-fns _ $ (many with-cell-entry : (many (Nat) c) (many (List $ Entry) tele) (many (List $ Entry) shown) (many (Mult) mode) (many (Maybe $ Term) place) -> (many (List $ Entry) r))
-  (let ((many es) (erased _)) $ list-append _ shown $ Cons _ (MkEntry (None _) (BFalse) mode (SgTy $ TCell (TVar c) $ bound-slots tele) (place-slot place) (None _)) $ Nil _)
+  (let ((many es) (erased _)) $ list-append _ shown $ Cons _ (MkEntry (None _) (BFalse) mode (SgTy $ TCell (TVar c) $ bound-slots tele) place (None _)) $ Nil _)
   es)
 
-(def-fns _ $ (many binder-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (Nat) c) (many (Mult) mode) (many (Nat) got) (many (List $ Entry) tele) -> (many (Env) r))
+; [extra]: the telescope ends with the cell binder, which is optional (the owner's decision in chat, which
+; AT_REDESIGN A8's "mandatory" is to follow).
+(def-fns _ $ (many binder-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (Nat) c) (many (Mult) mode) (many (Bool) extra) (many (Nat) got) (many (List $ Entry) tele) -> (many (Env) r))
+  (let ((many n)) $ list-length _ tele)
   (error-at-with env ppos (declared-as env c) $ str-cat3 (say env what) " on " $ str-cat3 (qshown env c) (str-cat3 " under `" (spell env $ mult-name mode) "` expects ")
-    $ str-cat3 (counted (list-length _ tele) "binder") ", got " $ str-cat (nat-str got) $ expected-str $ show-tele-t env tele (BTrue)))
+    $ str-cat3 (match many extra (((String) _)) ((BTrue) (str-cat3 (nat-str $ nat-sub n 1) " or " $ str-cat (nat-str n) " binders")) ((BFalse) (counted n "binder"))) ", got " $ str-cat (nat-str got) $ expected-str $ show-tele-t env tele (BTrue)))
 
 (def-fns _ $ (many field-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (String) noun) (many (Nat) c) (many (List $ Entry) params) (many (Nat) needed) (many (Nat) got) (many (String) rule) -> (many (Env) r))
   (let ((many shown)) $ show-tele-t env params (BTrue))
@@ -2428,10 +2550,12 @@
     (many (Env) out) (many (List $ Raw) ordinary) (many (Maybe $ Raw) braw))
   (let ((many env14)) (error-unless env (atoms-only fields) "pattern binders must be names or `_`"))
   (let ((many n)) $ list-length _ tele)
+  (let ((many got)) $ list-length _ fields)
   (let ((many shown)) $ tele-with-mults tele mults)
-  (let-match many (nat-eq (list-length _ fields) $ match many extra (((Nat) _)) ((BTrue) (Succ n)) ((BFalse) n)) (BTrue)
-    ((BFalse) (values (binder-count env14 ppos what c mode (list-length _ fields) $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
-  (let-match many extra (BTrue) ((BFalse) (values env14 fields (None _))))
+  (let ((many has-cell)) $ and extra $ nat-eq got $ Succ n)
+  (let-match many (or (nat-eq got n) has-cell) (BTrue)
+    ((BFalse) (values (binder-count env14 ppos what c mode extra got $ match many extra (((List $ Entry) _)) ((BTrue) (with-cell-entry c tele shown mode $ res-place scrut)) ((BFalse) shown)) fields (None _))))
+  (let-match many has-cell (BTrue) ((BFalse) (values env14 fields (None _))))
   (let ((many ordinary) (many rest)) (split-pattern-fields tele fields))
   (values env14 ordinary (match many rest (((Maybe $ Raw) _)) ((Nil _) (None _)) ((Cons _ r _) (Some _ r)))))
 
@@ -2445,35 +2569,29 @@
 (def-adts $ (ElseBody : ((Raw) raw) -> Type)
   enum
   (many MkElseBody : (erased (Raw) raw) (many (Maybe $ Raw) name) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) raw) p) -> (ElseBody raw)))
+; An `else` binds the scrutinee back when its first item is an atom followed by a body; otherwise the body
+; starts at once (ASSUMPTIONS 206).
 (def-fns _ $ (many else-parts : (many (Raw) raw) (many (Bool) extra) -> (many (Maybe $ ElseBody raw) r))
   (let-match many raw (RList _ items) (else (None _)))
   (let-match many items (Cons _ _ body) ((Nil _) (None _)))
-  (let-match many extra (BTrue) ((BFalse) (Some _ $ MkElseBody raw (None _) body $ prove-subterm body raw)))
+  (let ((many whole)) $ MkElseBody raw (None _) body $ prove-subterm body raw)
+  (let-match many extra (BTrue) ((BFalse) (Some _ whole)))
   (let-match many body (Cons _ name rest)
-    ((Nil _) (None _)))
-  (let-match many rest (Cons _ _ _) ((Nil _) (None _)))
-  (match many (raw-atom name) _ ((None _) (None _)) ((Some _ n) (Some _ $ MkElseBody raw (Some _ name) rest $ prove-subterm rest raw))))
-
-(def-fns _ $ (many else-malformed : (many (Env) env) (many (Raw) braw) (many (Bool) extra) (many (Res) sres) (many (Mult) smult) (many (String) form) -> (many (Env) r))
-  (let ((many body)) $ match many (raw-items braw) (((List $ Raw) _)) ((Cons _ _ b) b) ((Nil _) (Nil _)))
-  (let ((many lone)) $ match many body (((Bool) _)) ((Cons _ n rest) (and (is-some _ $ raw-atom n) $ list-is-empty _ rest)) ((Nil _) (BFalse)))
-  (let-match many (and extra $ not lone) (BTrue)
-    ((BFalse) (env-error env $ say env $ match many (and extra lone) (((String) _)) ((BTrue) "a unique `else` needs its binder and body") ((BFalse) "malformed `else` branch"))))
-  (let ((many notes)) $ match many (type-head env $ res-ty sres) (((List $ Pair (Loc) $ String) _)) ((Some _ t) (declared-as env t)) ((None _) (Nil _)))
-  (env-error-with env notes $ str-cat3 (say env $ str-cat3 "this " form " `else` branch under `") (spell env $ mult-name smult) $ str-cat3 "` expects " (counted 1 "binder")
-    $ str-cat ", got 0" $ expected-str $ show-tele-t env (Cons _ (is-entry smult (res-term sres) $ res-place sres) $ Nil _) (BTrue)))
+    ((Nil _) (Some _ whole)))
+  (let-match many rest (Cons _ _ _) ((Nil _) (Some _ whole)))
+  (match many (raw-atom name) _ ((None _) (Some _ whole)) ((Some _ n) (Some _ $ MkElseBody raw (Some _ name) rest $ prove-subterm rest raw))))
 
 (def-fns _ $ (many else-binder : (many (Env) env) (many (Res) scrut) (many (Mult) mult) (many (Bool) extra) (many (Maybe $ Raw) name) -> (many (Env) out) (many (Maybe $ Nat) binder))
   (let-match many extra (BTrue) ((BFalse) (values env (None _))))
   (let ((many env1) (many x)) (bind env (binder-name name) (binder-site env name) (BTrue) mult (res-ty scrut) (Some _ $ res-term scrut) delegate-id))
   (let ((many env2)) (mark-word env1 x (BFalse)))
-  (let ((many env3)) (match many (res-place scrut) (((Env) _)) ((None _) env2) ((Some _ loc) (at-merge env2 (TVar x) loc))))
-  (values env3 (Some _ x)))
+  (values (placed-at env2 x $ res-place scrut) (Some _ x)))
 
-(def-fns _ $ (many slot-direct : (many (Env) env) (many (Raw) raw) -> (many (Env) env2) (many (Nat) id))
+; `(slot-of x)`: the automatic slot of x's binder (AT_REDESIGN A6), a direct variable reference and no use.
+(def-fns _ $ (many slot-var : (many (Env) env) (many (Raw) raw) -> (many (Env) env2) (many (Nat) id))
   (let ((many env1) (many id)) (var-of-raw env raw "a direct variable reference"))
-  (let ((many env2)) (refuse-unless env1 (mult-is-many (entry-mult-of env1 id)) "`SlotHolds` needs a variable declared `many` or `unique`"))
-  (values (refuse-when env2 (list-mem-bin (env-signature env2) id) "`SlotHolds` cannot name a telescope binder; abstract over a `Slot` instead") id))
+  (let ((many env2)) (refuse-unless env1 (mult-is-many (entry-mult-of env1 id)) "`slot-of` needs a variable declared `many` or `unique`"))
+  (values (refuse-when env2 (env-ctor-tele env2) "`slot-of` cannot appear in a constructor's telescope") id))
 
 (def-fns _ $ (many cell-slot-codes : (many (Env) env) (many (List $ List $ Nat) ctx)
     (subterm many (List $ Maybe $ Nat) ids) -> (many (List $ Code ctx many-one) codes))
@@ -2524,8 +2642,7 @@
     (else
       (let ((many slot) (many ss)) (match many slots (((Term) _) ((List $ Term) xs))
         ((Nil _) (values (TErr "missing slot") (Nil _))) ((Cons _ x xs) (values x xs))))
-      (let ((many same)) (match many (canon-env env slot) (((Bool) _))
-        ((TSlotHolds target) (at-equal env target term)) (else (BFalse))))
+      (let ((many same)) (equal-env env slot $ TSlotOf term))
       (let ((many omit)) (or full skip))
       (let ((many env1)) (refuse-when env (and omit (not same))
         (str-cat3 "`at` argument " (nat-str (Succ index)) " is not in its slot's location class")))
@@ -2605,7 +2722,7 @@
   (values (env-error env $ str-cat (say env "`numeral-of` takes a literal, not ") $ tick s) $ None _))
 
 (def-fns _ $ (many is-fetch : (many (ExprK) e) -> (many (Bool) r))
-  (match many e _ ((ExLevelOf) (BTrue)) ((ExMatchableOf) (BTrue)) ((ExDelegateOf) (BTrue)) ((ExNumeralOf) (BTrue)) (else (BFalse))))
+  (match many e _ ((ExLevelOf) (BTrue)) ((ExMatchableOf) (BTrue)) ((ExDelegateOf) (BTrue)) ((ExNumeralOf) (BTrue)) ((ExSlotOf) (BTrue)) ((ExAtFnOf) (BTrue)) (else (BFalse))))
 
 ; The number a numeral or character literal spells, if the raw is one (lib/literal.ml's classify).
 (def-fns _ $ (many lit-number : (many (Raw) raw) -> (many (Maybe $ Nat) n))
@@ -2856,7 +2973,7 @@
 (def-adts
   ((Header : ((Raw) f) -> Type)
     enum
-    (many MkHeader : (erased (Raw) f) (many (Pos) site) (many (String) name) (many (Mult) mult) (many (Bool) is-unique) (many (Bool) is-absurd) (many (Maybe $ Impl) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
+    (many MkHeader : (erased (Raw) f) (many (Pos) site) (many (String) name) (many (Mult) mult) (many (Bool) is-unique) (many (Bool) is-absurd) (many (Bool) is-extern) (many (Bool) is-at) (many (Maybe $ Raw) delegates) (many (Maybe $ Impl) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
   ((Headers : ((List $ Raw) fns) -> Type)
     enum
     (many HStop : (erased (List $ Raw) fns) -> (Headers fns))
@@ -2900,9 +3017,23 @@
   (match many b _
     ((MkRealBranch _ _ c fids code) (Cons _ (MkBranch _ _ (discriminant ss c) fids code) $ notail $ real-branches-code _ _ rest ss))))
 
+; The `AtFn` proof of a header marked `at`, minted and opened before the block's bodies, so a call within the
+; block to the function is skipped (AT_REDESIGN A10).
+(def-fns _ $ (many open-atfn-proof : (erased (Raw) f) (many (Header f) h) (many (Nat) x) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
+  (let-match many h (MkHeader _ _ _ _ uq _ _ isat _ _ params rets _ _))
+  (let-match many isat (BTrue) ((BFalse) env))
+  (let ((many env1) (many p)) $ bind-erased env (None _) (None _) (BFalse) (Erased) (proof-type atfn-id $ Cons _ (TFn uq (TVar lvl) params rets) $ Cons _ (TVar x) $ Nil _) (None _) delegate-id)
+  (open-proof env1 p))
+
+(def-fns _ $ (many open-atfn-proofs : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (erased (List $ Nat) gids) (many (Bound fns hs gids) ids) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
+  (let-match many hs (HCons _ _ h more) ((HStop _) env))
+  (match many ids _
+    ((BMany _ _ _ _ _ x xrest) (tail $ open-atfn-proofs _ more _ xrest (open-atfn-proof _ h x env lvl) lvl))
+    ((BErased _ _ _ _ _ x xrest) (tail $ open-atfn-proofs _ more _ xrest (open-atfn-proof _ h x env lvl) lvl))))
+
 (def-fns _ $ (many bind-headers : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (List $ Nat) gids) (many (Bound fns hs gids) ids))
   (let-match many hs (HCons _ _ h more) ((HStop _) (values env (Nil _) (BStop _))))
-  (let-match many h (MkHeader _ hpos name mult uq _ _ params rets _ _))
+  (let-match many h (MkHeader _ hpos name mult uq _ _ _ _ _ params rets _ _))
   (let ((many env2) (many x)) $ bind env (name-or-anon name) (Some _ $ loc-in env hpos) (BTrue) mult (TFn uq (TVar lvl) params rets) (None _) delegate-id)
   (let ((many env3) (many gids) (many ids)) $ notail $ bind-headers _ more (mark-word env2 x $ BFalse) lvl)
   (match many mult _
@@ -2931,15 +3062,6 @@
     ((Nil _) (Nil _)))
   (match many p _ ((MkPair _ _ m c) (Cons _ (MkMCtor m $ TVar c) $ notail $ mctors-of rest))))
 
-
-(def-fns _ $ (many codes-missing : (erased (List $ List $ Nat) ctx) (subterm many (List $ Mult) ms) -> (many (List $ Code ctx many-one) codes) (erased (Picked (Code ctx many-one) ms codes) pk))
-  (let-match many ms (Cons _ m rest) ((Nil _) (values (Nil _) (PkNil _))))
-  (let ((many codes) (erased pk)) $ notail $ codes-missing ctx rest)
-  (let ((many (Code ctx many-one) missing)) $ no-code _)
-  (match many m _
-    ((Many) (values (Cons _ missing codes) (PkMany _ rest missing codes pk)))
-    ((Once) (values (Cons _ missing codes) (PkOnce _ rest missing codes pk)))
-    ((Erased) (values codes (PkErased _ rest codes pk)))))
 
 (def-fns _ $ (many bin-ids-of : (subterm many (List $ Term) ts) -> (many (List $ Nat) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (Nil _)))
@@ -3088,6 +3210,10 @@
         (let-match many (notail $ strengthen _ _ _ cell d) (Some _ cell2)
           ((None _) (None _)))
         (match many (notail $ strengthen-slots _ _ slots d) _ ((None _) (None _)) ((Some _ slots2) (Some _ $ CCellWrite _ k2 cell2 slots2))))
+      ((CCellCopy _ k2 cell slots)
+        (let-match many (notail $ strengthen _ _ _ cell d) (Some _ cell2)
+          ((None _) (None _)))
+        (match many (notail $ strengthen-slots _ _ slots d) _ ((None _) (None _)) ((Some _ slots2) (Some _ $ CCellCopy _ k2 cell2 slots2))))
       ((CCellRead _ k2 index cell)
         (match many (notail $ strengthen _ _ _ cell d) _ ((None _) (None _)) ((Some _ cell2) (Some _ $ CCellRead _ k2 index cell2))))
       ((CAbsurd _ ms2) (Some _ $ CAbsurd _ ms2))
@@ -3202,6 +3328,7 @@
         (let ((many slots2) (erased lk)) $ notail $ norm-list _ _ slots ren)
         (CCellAlloc _ ctor slots2))
       ((CCellWrite _ k2 cell slots) (CCellWrite _ k2 (notail $ norm _ _ many-one cell ren) $ notail $ norm-slots _ _ slots ren))
+      ((CCellCopy _ k2 cell slots) (CCellCopy _ k2 (notail $ norm _ _ many-one cell ren) $ notail $ norm-slots _ _ slots ren))
       ((CCellRead _ k2 index cell) (CCellRead _ k2 index $ notail $ norm _ _ many-one cell ren))
       ((CAbsurd _ ms2) (CAbsurd _ ms2))
       ((CError _ ms2 m) (CError _ ms2 m))))
@@ -3286,6 +3413,7 @@
         (let ((many ss) (erased lk)) $ notail $ distribute-list ctx slots)
         (CCellAlloc _ ctor ss))
       ((CCellWrite _ k2 cell slots) (CCellWrite _ k2 (notail $ distribute ctx many-one cell) $ notail $ distribute-slots ctx slots))
+      ((CCellCopy _ k2 cell slots) (CCellCopy _ k2 (notail $ distribute ctx many-one cell) $ notail $ distribute-slots ctx slots))
       ((CCellRead _ k2 index cell) (CCellRead _ k2 index $ notail $ distribute ctx many-one cell))
       (else code)))
   ((many distribute-list : (many (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) codes) ->
@@ -3317,6 +3445,34 @@
 (def-fns _ $ (many normalize : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r))
   (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ RId ctx) $ RId ctx))
 
+; Normalized code that erases to nothing, or to a reordering of variables (AT_REDESIGN A9, A10; ASSUMPTIONS
+; 207): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store,
+; an allocation, a copy or a call that was not skipped.
+(def-fns _
+  ((many erases-to-nothing : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) c) -> (many (Bool) r))
+    (match many c _
+      ((CApp _ _ _ _ _) (BFalse))
+      ((CCellAlloc _ _ _) (BFalse))
+      ((CCellWrite _ _ _ _) (BFalse))
+      ((CCellCopy _ _ _ _) (BFalse))
+      ((CCellRead _ _ _ cell) (tail $ erases-to-nothing _ _ cell))
+      ((CValues _ _ cs _) (tail $ erases-list _ cs))
+      ((CLet _ _ _ _ _ rhs rest) (and (notail $ erases-to-nothing _ _ rhs) $ notail $ erases-to-nothing _ _ rest))
+      ((CLetRec _ _ _ _ rest) (tail $ erases-to-nothing _ _ rest))
+      ((CMatch _ _ scrut shape bs dfl _)
+        (and (notail $ erases-to-nothing _ _ scrut)
+          $ and (match many shape (((Bool) _)) ((ShHeld _ mc _) (notail $ erases-to-nothing _ _ mc)) (else (BTrue)))
+          $ and (notail $ erases-branches _ _ bs) $ match many dfl (((Bool) _)) ((Some _ d) (notail $ erases-to-nothing _ _ d)) ((None _) (BTrue))))
+      (else (BTrue))))
+  ((many erases-list : (erased (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) cs) -> (many (Bool) r))
+    (match many cs _
+      ((Nil _) (BTrue))
+      ((Cons _ c rest) (and (notail $ erases-to-nothing _ _ c) $ notail $ erases-list _ rest))))
+  ((many erases-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) -> (many (Bool) r))
+    (let-match many bs (Cons _ b rest)
+      ((Nil _) (BTrue)))
+    (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ erases-to-nothing _ _ body) $ notail $ erases-branches _ _ rest)))))
+
 
 ; ---- tail and delegate (section 9, ASSUMPTIONS 17): judged on the normalized post-erasure code, per
 ; function, so a nested def-fns's marks are its own.
@@ -3337,6 +3493,7 @@
 
       ((CCellAlloc _ _ slots) (tail $ has-marked-list _ slots only))
       ((CCellWrite _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
+      ((CCellCopy _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
       ((CCellRead _ _ _ cell) (tail $ has-marked _ _ cell only))
       ((CValues _ _ cs _) (tail $ has-marked-list _ cs only))
       ((CLet _ _ _ _ _ rhs rest) (or (notail $ has-marked _ _ rhs only) $ notail $ has-marked _ _ rest only))
@@ -3380,6 +3537,7 @@
 
       ((CCellAlloc _ _ slots) (not $ has-marked-list _ slots $ BFalse))
       ((CCellWrite _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
+      ((CCellCopy _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
       ((CCellRead _ _ _ cell) (not $ has-marked _ _ cell $ BFalse))
       ((CValues _ _ cs _) (not $ has-marked-list _ cs $ BFalse)) (else (BTrue))))
   ((many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r))
@@ -3405,6 +3563,9 @@
         (tail $ call-report-list _ args env2))
       ((CCellAlloc _ _ slots) (tail $ call-report-list _ slots env))
       ((CCellWrite _ _ cell slots)
+        (let ((many env1)) $ notail $ call-report _ _ cell (BFalse) env)
+        (tail $ call-report-slots _ slots env1))
+      ((CCellCopy _ _ cell slots)
         (let ((many env1)) $ notail $ call-report _ _ cell (BFalse) env)
         (tail $ call-report-slots _ slots env1))
       ((CCellRead _ _ _ cell) (tail $ call-report _ _ cell (BFalse) env))
@@ -3936,7 +4097,7 @@
           (match many (nat-cmp i $ ctor-index ct) (((Env) _))
             ((CEq _ _ _) env6b)
             (else (env-error env6b $ str-cat3 (say env6b "`comptime-match`: expected ") (qshown env6b c) $ str-cat ", got " $ tick $ rope-str $ show-typed env6b (type-of env6b x) x))))))
-    (let ((many extra)) (match many found (((Bool) _)) ((None _) (BFalse)) ((Some _ info) (match many info _ ((MkMatchInfo mid _ cs _) (and (mult-is-many $ marker cs c) $ and (mult-is-once mode) (cells-allowed env7 mid)))))))
+    (let ((many extra)) (match many found (((Bool) _)) ((None _) (BFalse)) ((Some _ info) (match many info _ ((MkMatchInfo mid _ cs _) (and (mult-is-many $ marker cs c) $ cells-allowed env7 mid))))))
     (let ((many mults)) (field-mults (tele-mults tele) mode))
     (let ((many ppos)) $ match many (list-nth _ rest 1) (((Pos) _)) ((NthHit _ _ _ pr _) (raw-pos pr)) ((NthMiss _ _ _ _) (here-pos env7)))
     (let ((many env8) (many ordinary) (many cellname)) (pattern-fields env7 ppos "a `comptime-match` pattern" mode (res-of env7 x) c tele mults fields extra))
@@ -4054,7 +4215,7 @@
 (def-fns _ $ (many bound-here : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (and (list-mem-bin (scope-ids $ env-scope env) x) $ not $ is-prelude env x))
 
-(let ((many proof-ids)) (Cons _ predates-id $ Cons _ subterm-id $ Cons _ coercible-id $ Cons _ delegate-id $ Nil _))
+(let ((many proof-ids)) (Cons _ predates-id $ Cons _ subterm-id $ Cons _ coercible-id $ Cons _ delegate-id $ Cons _ atfn-id $ Nil _))
 
 (def-fns _ $ (many entry-kind : (many (Env) env) (many (Nat) x) -> (many (String) s))
   (let-match many (canon-env env $ type-of env x) (TApp h _)
@@ -4185,29 +4346,29 @@
     ((CEq _ _ _) xs)
     (else (Cons _ y $ notail $ insert-asc x rest))))
 
-(def-fns _ $ (many pairs-ids : (subterm many (List $ Pair (Nat) (Nat)) ps) (many (List $ Nat) acc) -> (many (List $ Nat) r))
-  (let-match many ps (Cons _ p rest)
-    ((Nil _) acc))
-  (match many p _ ((MkPair _ _ k v) (tail $ pairs-ids rest $ insert-asc k $ insert-asc v acc))))
+(def-fns _ $ (many sort-asc : (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
+  (match many xs _
+    ((Nil _) (Nil _))
+    ((Cons _ x rest) (insert-asc x $ notail $ sort-asc rest))))
 
 (def-fns _ $ (many class-add : (many (Nat) root) (many (Nat) x) (subterm many (List $ Pair (Nat) $ List $ Nat) cs) -> (many (List $ Pair (Nat) $ List $ Nat) r))
   (let-match many cs (Cons _ c rest) ((Nil _) (list1 _ $ MkPair _ _ root $ list1 _ x)))
   (let-match many c (MkPair _ _ r members))
   (match many (nat-cmp root r) _
-    ((CLt _ _ _ _ _) (Cons _ (MkPair _ _ root $ list1 _ x) cs))
     ((CEq _ _ _) (Cons _ (MkPair _ _ r $ list-rev _ $ Cons _ x $ list-rev _ members) rest))
     (else (Cons _ c $ notail $ class-add root x rest))))
 
+; The slotted entries grouped by the canonical atom of their slot, each class in order of first mention.
 (def-fns _ $ (many at-classes : (many (Env) env) (subterm many (List $ Nat) ids) (many (List $ Pair (Nat) $ List $ Nat) acc) -> (many (List $ Pair (Nat) $ List $ Nat) r))
-  (match many ids _
-    ((Nil _) acc)
-    ((Cons _ x rest) (tail $ at-classes env rest $ class-add (location-root x $ env-locations env) x acc))))
+  (let-match many ids (Cons _ x rest) ((Nil _) acc))
+  (let-match many (env-slot-of env x) (Some _ _) ((None _) (tail $ at-classes env rest acc)))
+  (let-match many (canon-env env $ slot-atom x) (TVar a) (else (tail $ at-classes env rest acc)))
+  (tail $ at-classes env rest $ class-add a x acc))
 
 (def-fns _ $ (many at-member : (many (Env) env) (many (Nat) x) -> (many (Maybe $ String) r))
-  (let-match many (nat-eq x null-id) (BFalse) ((BTrue) (Some _ "(SlotVacant)")))
   (let-match many (lit-spelling (env-lits env) x) (None _)
     ((Some _ s) (Some _ s)))
-  (match many (bound-here env x) _ ((BTrue) (Some _ $ shown-name env x)) ((BFalse) (None _))))
+  (match many (or (bound-here env x) $ nat-eq x null-id) _ ((BTrue) (Some _ $ shown-name env x)) ((BFalse) (None _))))
 
 (def-fns _ $ (many at-members : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) shown) (many (Bool) bound))
   (let-match many xs (Cons _ x rest) ((Nil _) (values (Nil _) (BFalse))))
@@ -4221,16 +4382,20 @@
   (let-match many cs (Cons _ c rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ at-shown env rest)
   (let-match many c (MkPair _ _ _ members))
-  (let ((many shown) (many bound)) $ at-members env members)
+  (let ((many shown) (many bound)) $ at-members env $ sort-asc members)
   (match many (and bound $ nat-lt 1 $ list-length _ shown) _
     ((BTrue) (Cons _ (str-cat3 "{" (join-strs shown ", ") "}") more))
     ((BFalse) more)))
 
+(def-fns _ $ (many lit-ids : (subterm many (List $ LitEntry) ls) -> (many (List $ Nat) r))
+  (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
+  (match many l _ ((MkLitEntry x _ _) (Cons _ x $ notail $ lit-ids rest))))
+
 (def-fns _ $ (many at-lines : (many (Env) env) -> (many (List $ String) r))
-  (let ((many ids)) $ pairs-ids (idmap-pairs _ (env-locations env) 1 0 $ Nil _) $ Nil _)
+  (let ((many ids) (erased _)) $ list-append _ (Cons _ null-id $ lit-ids $ env-lits env) $ scope-ids $ env-scope env)
   (match many (at-shown env $ at-classes env ids $ Nil _) _
-    ((Nil _) (list1 _ "at-database: every entry is at a location of its own"))
-    ((Cons _ c cs) (list1 _ $ str-cat "at-database, the entries at one location: " $ join-strs (Cons _ c cs) " "))))
+    ((Nil _) (list1 _ "slots: every entry is at a slot of its own"))
+    ((Cons _ c cs) (list1 _ $ str-cat "slots, the entries at one slot: " $ join-strs (Cons _ c cs) " "))))
 
 (def-fns _ $ (many not-prelude : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ x rest)
@@ -4333,7 +4498,7 @@
             ((Some _ sp)
               (let-match many (misplaced envl raw) (None _) ((Some _ _) (expr-error _ expect envl (not-a envl "not an expression" raw) "misplaced")))
               (let ((many envl2)) $ read-special envl head (BFalse) pos)
-              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ sp-eq sp $ SpStmt $ StDumpContext)
+              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ or (sp-eq sp $ SpMark $ MkAt) $ sp-eq sp $ SpStmt $ StDumpContext)
               (let ((many (Env) env0))
                 (match many multi _
                   ((BTrue) envl2)
@@ -4364,12 +4529,14 @@
                     (else (malformed _ expect env0 sp))))
                 ((SpExpr ex)
                   (match many ex (((Env) _) ((List $ Res) rs) ((Code ctx expect) c))
-                    ((ExSlotVacant)
-                      (cell-result _ expect (count-check env0 " arguments" 0 (list-length _ args))
-                        (MkRes (TSlotHolds (TVar null-id)) slot-term (pos-mult expect) (None _)) (CValue _ (BToken _))))
-                    ((ExSlotHolds)
-                      (let ((many env1) (many id)) (slot-direct (count-check env0 " arguments" 1 (list-length _ args)) (one-arg args)))
-                      (cell-result _ expect env1 (MkRes (TSlotHolds (TVar id)) slot-term (pos-mult expect) (None _)) (var-code env1 ctx id)))
+                    ((ExSlotOf)
+                      (let ((many env1) (many id)) (slot-var env0 (one-arg args)))
+                      (cell-result _ expect env1 (MkRes (slot-atom id) slot-term (pos-mult expect) $ match many pos (((Maybe $ Term) _)) ((Erased) (None _)) (else (Some _ $ slot-atom id))) (var-code env1 ctx id)))
+                    ((ExAtFnOf)
+                      (let ((many env2) (many found)) $ notail $ fetched sugar args one-step env0 ex)
+                      (match many found (((Env) _) ((List $ Res) rs) ((Code ctx expect) c))
+                        ((None _) (values env2 (Nil _) $ CError _ expect "no AtFn proof"))
+                        ((Some _ x) (erased-result _ expect proof-what env2 $ res-of env2 $ term-var x))))
                     ((ExCellAlloc)
                       (let ((many env1) (many rs) (many c)) $ notail $ elab-cell-alloc sugar args env0 ctx expect)
                       (let ((many env2) (many rs2)) $ produced-first expect env1 demand (str-cat form ", a fresh cell and so unique") rs)
@@ -4430,7 +4597,7 @@
                       (let-match many more2 (Nil _) ((Cons _ _ _) (malformed _ expect env0 sp)))
                       (let ((many env1) (many ress) (many code0) (erased lock)) $ notail $ elab-expr-demand sugar eraw env0 ctx erased-one no-tele (CCPlain) (Fixed _))
                       (let ((many env3)) $ open-contradicts ctx env0 env1 (first-res _ _ ress lock) code0)
-                      (let ((many env4) (many ann-tele) (many result-mults) (many result-bridge)) $ notail $ result-tele sugar ann env3 expect tele demand)
+                      (let ((many env4) (many ann-tele) (many result-mults) (many result-bridge) (many _)) $ notail $ result-tele sugar ann env3 expect tele demand)
                       (let ((many env5) (many rids) (erased lock2)) $ open-tele ann-tele env4 (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
                       (values env5 (ress-of rids env5) $ match many pos (((Code ctx expect) _)) ((Erased) (CErased _ expect)) (else (CAbsurd _ expect))))
                     ((ExLevelOf)
@@ -4492,7 +4659,7 @@
                       (let ((many ar)) $ first-res _ _ ars lock)
                       (let ((many env5)) $ check (settle-res env4 ar) "value" (res-term ar) va)
                       (let ((many env6) (many x)) $ bind env5 (None _) (None _) (BFalse) dst tb (Some _ vb) delegate-id)
-                      (let ((many env7)) $ match many (res-place ar) (((Env) _)) ((None _) env6) ((Some _ place) (at-merge env6 (TVar x) place)))
+                      (let ((many env7)) $ placed-at env6 x $ res-place ar)
                       (let-match many rest (Cons _ praw _) ((Nil _) (malformed _ expect env7 sp)))
                       (let ((many notes)) $ match many praw (((List $ Pair (Loc) $ String) _)) ((RAtom _ n) (match many (lookup env7 n) (((List $ Pair (Loc) $ String) _)) ((Some _ y) (declared env7 "" y)) ((None _) (Nil _)))) (else (Nil _)))
                       (let ((many env8) (many r)) $ produced env7 notes (str-cat3 form ", at " $ str-cat3 (qshow env7 sb) " by the target side of " $ str-cat (qraw praw) "'s type") (demand-mode _ env7 demand (pos-mult expect) tb) $ res-with-place (res-of env7 x) $ res-place ar)
@@ -4591,7 +4758,7 @@
                     ((BFalse) (None _))
                     ((BTrue)
                       (let-match many (wrap-field ctele (list-rev _ acc) $ list-rev _ tys) (Some _ p) ((None _) (None _)))
-                      (match many p (((Maybe $ Term) _)) ((MkPair _ _ t _) (Some _ t)))))
+                      (match many p (((Maybe $ Term) _)) ((MkPair _ _ t _) (Some _ $ TSlotOf t)))))
                   (let ((many result)) $ MkRes (TApp (res-term h) $ list-rev _ acc) (instantiate acc ret) mode place)
                   (let ((many inputs)) $ Cons _ (MkPair _ _ hid $ runtime-one _ pos hcode) pairs)
                   (let ((many ims) (many iids) (erased ipk) (many ics) (erased icpk)) $ prepare-pack _ $ frame-pairs _ inputs)
@@ -4603,7 +4770,7 @@
                   (cell-result _ expect env4 result $ CLet _ ims _ iids ipk (CValues _ ims ics icpk) code))
                 ((TFn uq lv params rets)
                   (let ((many ann) (many args2)) $ split-annotation args _ (WHere args) env2 0)
-                  (notail $ elab-call sugar args (MkPair _ _ args2 ann) env2 ctx expect tele h (describe env2 head (res-term h) (res-ty h)) pos hcode uq lv params rets cc demand))
+                  (notail $ elab-call sugar args (MkPair _ _ args2 ann) env2 ctx expect tele h (describe env2 head (res-term h) (res-ty h)) pos hcode uq lv params rets cc demand $ BFalse))
                 ((TErr m) (expr-error _ expect env2 (not-applicable env2 h) m)) (else (expr-error _ expect env2 (not-applicable env2 h) "not applicable"))))))))
     (let ((many n)) $ list-length _ expect)
     (let ((many m)) $ list-length _ ress)
@@ -4652,7 +4819,7 @@
           (match many (special-of envl head) (((Env) _) ((Term) t0) ((Term) ty0))
             ((Some _ sp)
               (let ((many env2) (many t)) $ notail $ elab-type-form sugar args two-steps envl sp)
-              (values env2 t (match many t (((Term) _)) ((TSlotHolds _) slot-term) ((TVar x) (type-of env2 x)) (else type-term))))
+              (values env2 t (match many t (((Term) _)) ((TSlotOf _) slot-term) ((TVar x) (type-of env2 x)) (else type-term))))
             ((None _)
               (let ((many env2) (many x)) $ var-of-raw envl head "a constructor")
               (let ((many h)) $ TVar x)
@@ -4686,11 +4853,9 @@
           ((None _) (values (env-error env3 $ str-cat (qshown env3 tid) (say env3 " has no `Matchable` open")) $ None _)))
         (match many i _ ((MkMatchInfo mid _ _ _) (values env3 $ Some _ $ TVar mid))))
       ((ExNumeralOf) (numeral-of-term env arg))
-      ((ExDelegateOf)
-        (let ((many env2) (many g)) $ named env arg "a function name")
-        (match many (find-delegate (env-objects env2) env2 g) (((Env) _) ((Maybe $ Term) _))
-          ((None _) (values (env-error env2 $ str-cat (qshown env2 g) " has no `Delegate` proof in scope") $ None _))
-          ((Some _ x) (values env2 $ Some _ $ TVar x))))
+      ((ExSlotOf) (let ((many env2) (many id)) (slot-var env arg)) (values env2 $ Some _ $ slot-atom id))
+      ((ExDelegateOf) (fetched-proof env arg delegate-id 6 2 "Delegate"))
+      ((ExAtFnOf) (fetched-proof env arg atfn-id 2 1 "AtFn"))
       (else (values (env-error env $ sp-misuse env $ SpExpr e) $ None _))))
 
   ((many elab-type-form : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (Steps $ Succ $ Succ $ Zero) st) (many (Env) env) (many (Sp) sp) -> (many (Env) r) (many (Term) t))
@@ -4743,17 +4908,12 @@
         (let ((many env1) (many focus)) $ notail $ elab-focus sugar args _ k env)
         (values (dump-report env1 (GoalType) focus) $ TErr "dump-context"))
       ((SpExpr e)
-        (let-match many e (ExSlotHolds)
-          ((ExSlotVacant) (values (count-check env " arguments" 0 (list-length _ args)) (TSlotHolds (TVar null-id))))
-          (else
-            (let-match many (is-fetch e) (BTrue)
-              ((BFalse) (values (env-error env (str-cat (tick $ spell env $ sp-name sp) " cannot appear in a type")) (TErr "expression in type"))))
-            (let-match many (sp-arity sp) (Some _ n) ((None _) (values (env-error env $ sp-misuse env sp) $ TErr "malformed fetch")))
-            (let-match many (nat-eq n $ list-length _ args) (BTrue) ((BFalse) (values (env-error env $ sp-misuse env sp) $ TErr "malformed fetch")))
-            (let ((many env1) (many found)) $ notail $ fetched sugar args k env e)
-            (values env1 $ match many found (((Term) _)) ((None _) (TErr "fetch")) ((Some _ t) t))))
-        (let ((many env1) (many id)) (slot-direct (count-check env " arguments" 1 (list-length _ args)) (one-arg args)))
-        (values env1 (TSlotHolds (TVar id))))
+        (let-match many (is-fetch e) (BTrue)
+          ((BFalse) (values (env-error env (str-cat (tick $ spell env $ sp-name sp) " cannot appear in a type")) (TErr "expression in type"))))
+        (let-match many (sp-arity sp) (Some _ n) ((None _) (values (env-error env $ sp-misuse env sp) $ TErr "malformed fetch")))
+        (let-match many (nat-eq n $ list-length _ args) (BTrue) ((BFalse) (values (env-error env $ sp-misuse env sp) $ TErr "malformed fetch")))
+        (let ((many env1) (many found)) $ notail $ fetched sugar args k env e)
+        (values env1 $ match many found (((Term) _)) ((None _) (TErr "fetch")) ((Some _ t) t)))
       ((SpMark _) (values (env-error env $ str-cat (tick $ spell env $ sp-name sp) " cannot appear in a type") $ TErr "mark in type"))))
 
   ((many elab-cell-items : (subterm many (Nat) sugar) (subterm many (List $ Raw) items)
@@ -4762,7 +4922,7 @@
       (many (List $ Pair (Nat) $ Code ctx many-one) pairs))
     (let-match many items (Cons _ item rest) ((Nil _) (values env slots (repeat-field _ (list-length _ slots) (None _)) (Nil _))))
     (let ((many old) (many tail3)) (match many slots (((Term) _) ((List $ Term) xs))
-      ((Nil _) (values (TSlotHolds (TVar null-id)) (Nil _))) ((Cons _ x xs) (values x xs))))
+      ((Nil _) (values (TVar null-id) (Nil _))) ((Cons _ x xs) (values x xs))))
     (match many (is-underscore item) _
       ((BTrue)
         (let ((many env2) (many slots2) (many ids) (many pairs)) (notail $ elab-cell-items sugar rest tail3 env ctx pos))
@@ -4772,7 +4932,7 @@
         (let ((many env1) (many rs) (many code) (erased lk)) (notail $ elab-expr-demand sugar item env ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
         (let ((many res)) (first-res _ _ rs lk))
         (let ((many env2)) (settle-res (check-slot env1 (res-ty res)) res))
-        (let ((many env3) (many prepared) (many id)) (prepare-argument env2 mult res))
+        (let ((many env3) (many id)) (env-fresh-id env2))
         (let ((many env4) (many slots2) (many ids) (many pairs)) (notail $ elab-cell-items sugar rest tail3 env3 ctx pos))
         (values env4 (Cons _ (res-term res) slots2) (Cons _ (Some _ id) ids)
           (Cons _ (MkPair _ _ id (runtime-one _ mult code)) pairs)))))
@@ -4784,19 +4944,32 @@
     (let-match many more (Nil _) (else (malformed _ expect env $ SpMark $ MkAt)))
     (let-match many raw (RList _ items) (else (malformed _ expect env $ SpMark $ MkAt)))
     (let-match many items (Cons _ hraw actuals) ((Nil _) (malformed _ expect env $ SpMark $ MkAt)))
+    (let ((many pos)) $ pos-mult expect)
     (let ((many env1) (many h) (many hcode))
-      (match many hraw (((Env) _) ((Res) r) ((Code ctx many-one) c))
+      (match many hraw (((Env) _) ((Res) r) ((Code ctx (Cons (Mult) pos (Nil (Mult)))) c))
         ((RList _ _)
-          (let ((many mult)) (under (pos-mult expect) (Once)))
-          (let ((many env1) (many rs) (many code) (erased lk)) (notail $ elab-expr-demand sugar hraw env ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
-          (values env1 (first-res _ _ rs lk) (runtime-one _ mult code)))
+          (let ((many (Env) env1) (many (Res) hr) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hc))
+            (match many pos _
+              ((Erased)
+                (let ((many env1) (many rs) (many hc) (erased lk)) (notail $ elab-expr-demand sugar hraw env ctx erased-one no-tele (CCPlain) (Fixed _)))
+                (values env1 (first-res _ _ rs lk) hc))
+              (else
+                (let ((many env1) (many rs) (many hc) (erased lk)) (notail $ elab-expr-demand sugar hraw env ctx many-one no-tele (CCPlain) (CallableHead)))
+                (values env1 (first-res _ _ rs lk) (coercible-code _ (Cons _ pos (Nil _)) (Many) hc)))))
+          (let ((many env2) (many hr2) (many hid)) (prepare-argument env1 (res-erasure hr) hr))
+          (values env2 hr2 hc))
         (else
           (let ((many env1) (many id)) (var-of-raw env hraw "a name"))
-          (values env1 (res-of env1 id) (var-code env1 ctx id)))))
-    (let-match many (canon-env env1 (res-ty h)) (TCell c slots)
-      (else (expr-error _ expect env1 (str-cat (say env1 "`at` wraps a `Cell` invocation, and ") $ str-cat3 (qshow env1 $ res-term h) " : " $ str-cat (qshow env1 $ res-ty h) $ say env1 " is not a `Cell`") "at")))
-    (let ((many envm) (many rawargs) (many marks)) (cell-marks _ (subs-all actuals) env1 (BFalse)))
-    (tail $ elab-cell-invoke sugar actuals rawargs two-steps envm ctx expect tele h (describe env1 hraw (res-term h) (res-ty h)) hcode c slots (BTrue) marks))
+          (values env1 (res-of env1 id) (coercible-code _ (Cons _ pos $ Nil _) (Many) $ var-code env1 ctx id)))))
+    (let ((many desc)) $ describe env1 hraw (res-term h) (res-ty h))
+    (match many (canon-env env1 (res-ty h)) _
+      ((TCell c slots)
+        (let ((many envm) (many rawargs) (many marks)) (cell-marks _ (subs-all actuals) env1 (BFalse)))
+        (tail $ elab-cell-invoke sugar actuals rawargs two-steps envm ctx expect tele h desc (runtime-one _ pos hcode) c slots (BTrue) marks))
+      ((TFn uq lv params rets)
+        (let ((many ann) (many args2)) $ split-annotation actuals _ (WHere actuals) env1 0)
+        (tail $ elab-call sugar actuals (MkPair _ _ args2 ann) env1 ctx expect tele h desc pos hcode uq lv params rets (CCPlain) (Fixed _) $ BTrue))
+      (else (expr-error _ expect env1 (str-cat (say env1 "`at` wraps a `Cell` invocation or a call, and ") $ str-cat3 (qshow env1 $ res-term h) " : " $ str-cat (qshow env1 $ res-ty h) $ say env1 " is neither") "at"))))
 
   ((many elab-cell-alloc : (subterm many (Nat) sugar) (subterm many (List $ Raw) args)
       (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) ->
@@ -4813,13 +4986,13 @@
           ((BFalse) (values (slot-count env2 (raw-pos raw) "`cell-alloc`" "slot item" c params $ list-length _ rest) (list-replicate _ (list-length _ expect) no-res) $ CError _ expect "cell-alloc")))
         (let ((many env3)) env2)
         (let ((many env4) (many slots) (many ids) (many pairs))
-          (notail $ elab-cell-items sugar rest (repeat-field _ n (TSlotHolds (TVar null-id))) env3 ctx (pos-mult expect)))
+          (notail $ elab-cell-items sugar rest (repeat-field _ n (TVar null-id)) env3 ctx (pos-mult expect)))
         (cell-alloc-result env4 ctx expect c ct slots ids pairs))
       (else
         (let ((many env1) (many c)) (ctor-var env0 raw))
         (let ((many env2) (many ct) (many params) (many ret) (many cm)) (cell-shape env1 c))
         (let ((many n)) (ctor-arity ct))
-        (cell-alloc-result env2 ctx expect c ct (repeat-field _ n (TSlotHolds (TVar null-id)))
+        (cell-alloc-result env2 ctx expect c ct (repeat-field _ n (TVar null-id))
           (repeat-field _ n (None _)) (Nil _)))))
 
   ((many elab-cell-write : (subterm many (Nat) sugar) (subterm many (List $ Raw) args)
@@ -4828,10 +5001,11 @@
     (let-match many args (Cons _ input rest) ((Nil _) (expr-error _ expect env (sp-misuse env $ SpExpr $ ExCellWrite) "cell-write")))
     (let-match many rest (Cons _ spec _) ((Nil _) (expr-error _ expect env (sp-misuse env $ SpExpr $ ExCellWrite) "cell-write")))
     (let ((many env0)) (count-check env " arguments" 2 (list-length _ args)))
-    (let ((many mult)) (under (pos-mult expect) (Once)))
+    (let ((many shared)) $ match many input (((Bool) _)) ((RAtom _ n) (match many (lookup env0 n) (((Bool) _)) ((Some _ x) (mult-eq (entry-mult-of env0 x) $ Many)) ((None _) (BFalse)))) (else (BFalse)))
+    (let ((many mult)) (under (pos-mult expect) $ match many shared (((Mult) _)) ((BTrue) (Many)) ((BFalse) (Once))))
     (let ((many env1) (many rs) (many inputcode) (erased lk)) (notail $ elab-expr-demand sugar input env0 ctx (Cons _ mult (Nil _)) no-tele (CCPlain) (Fixed _)))
     (let ((many res)) (first-res _ _ rs lk))
-    (let ((many env2) (many prepared) (many sid)) (prepare-argument env1 mult res))
+    (let ((many env2) (many sid)) (env-fresh-id env1))
     (let ((many hctx)) (Cons _ (Cons _ sid (Nil _)) ctx))
     (let-match many spec (RList _ items) (else (expr-error _ expect env2 (sp-misuse env2 $ SpExpr $ ExCellWrite) "cell-write")))
     (let-match many items (Cons _ craw items4) ((Nil _) (expr-error _ expect env2 (sp-misuse env2 $ SpExpr $ ExCellWrite) "cell-write")))
@@ -4846,12 +5020,16 @@
     (let ((many env6) (many slots2) (many ids2) (many pairs)) (notail $ elab-cell-items sugar items4 slots env5 hctx (pos-mult expect)))
     (let ((many ms) (many ids) (erased ipk) (many codes) (erased cpk)) (prepare-pack _ pairs))
     (let ((many bctx)) (Cons _ ids hctx))
-    (let ((many env7) (many x)) (bind env6 (None _) (None _) (BFalse) mult (TCell (TVar c) slots2) (None _) delegate-id))
-    (let ((many env8)) (at-merge env7 (TVar x) (TVar sid)))
-    (cell-result _ expect env8 (res-with-place (res-of env8 x) (res-place prepared))
+    (let ((many env7) (many x)) (bind env6 (None _) (None _) (BFalse) (under (pos-mult expect) (Once)) (TCell (TVar c) slots2) (None _) delegate-id))
+    (let ((many place)) $ match many shared (((Maybe $ Term) _)) ((BTrue) (None _)) ((BFalse) (res-place res)))
+    (let ((many env8)) (placed-at env7 x place))
+    (let ((many writes)) (cell-slot-writes env8 bctx ids2 0))
+    (cell-result _ expect env8 (res-with-place (res-of env8 x) place)
       (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode)
         (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
-          (CCellWrite _ ct (var-code env8 bctx sid) (cell-slot-writes env8 bctx ids2 0))))))
+          (match many shared (((Code bctx many-one) _))
+            ((BTrue) (CCellCopy _ ct (var-code env8 bctx sid) writes))
+            ((BFalse) (CCellWrite _ ct (var-code env8 bctx sid) writes)))))))
 
   ((many elab-cell-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args)
       (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) ->
@@ -4881,10 +5059,10 @@
     (let ((many given-back)) $ match many (mult-is-once mode) (((List $ Entry) _)) ((BTrue) (Cons _ (is-entry mode (res-term res) $ res-place res) $ Nil _)) ((BFalse) (Nil _)))
     (let ((many shown) (erased _)) $ list-append _ (slot-entries slots) given-back)
     (let-match many (nat-eq needed $ list-length _ names) (BTrue)
-      ((BFalse) (values (binder-count env4c (raw-pos pattern) "`cell-match`" c mode (list-length _ names) shown) (list-replicate _ (list-length _ expect) no-res) $ CError _ expect "cell-match")))
+      ((BFalse) (values (binder-count env4c (raw-pos pattern) "`cell-match`" c mode (BFalse) (list-length _ names) shown) (list-replicate _ (list-length _ expect) no-res) $ CError _ expect "cell-match")))
     (let ((many env5)) env4c)
     (let ((many outer-expect)) expect)
-    (let ((many env6) (many anntele) (many inner-expect) (many bridge)) (notail $ result-tele sugar ann env5 expect tele demand))
+    (let ((many env6) (many anntele) (many inner-expect) (many bridge) (many atmatch)) (notail $ result-tele sugar ann env5 expect tele demand))
     (let ((many expect2)) inner-expect)
     (let ((many env7) (many pairs) (many restnames)) (cell-read-bindings env6 hctx sid ct n names slots pos 0))
     (let ((many env8) (many pairs2))
@@ -4894,7 +5072,7 @@
           (let ((many env7n) (many name) (many site)) (match many restnames (((Env) _) ((Maybe $ String) _) ((Maybe $ Loc) _))
             ((Nil _) (values env7 (None _) $ None _)) ((Cons _ raw _) (let ((many e) (many nm)) (name-checked env7 raw "a cell binder")) (values e (name-or-anon nm) $ Some _ $ loc-in e $ raw-pos raw))))
           (let ((many envb) (many back)) (bind env7n name site (BTrue) (under pos (Once)) (res-ty res) (Some _ (res-term res)) delegate-id))
-          (let ((many envb2)) (at-merge (mark-word envb back (BFalse)) (TVar back) (TVar sid)))
+          (let ((many envb2)) (place-at (mark-word envb back (BFalse)) back (slot-atom sid)))
           (let ((many pairs2) (erased appended)) (list-append _ pairs (Cons _ (MkPair _ _ back (var-code envb2 hctx sid)) (Nil _))))
           (values envb2 pairs2))))
     (let ((many ms) (many ids) (erased ipk) (many codes) (erased cpk)) (prepare-pack _ pairs2))
@@ -4904,12 +5082,14 @@
     (let ((many env10)) (check-results-count env9 body anntele ress (Nil _)))
     (let ((many env11) (many resultids) (erased rl))
       (open-tele anntele (env-discard env6 env10) (Some _ (anon-names anntele)) (None _) (None _) (Nil _) (BFalse)))
-    (values env11 (ress-of resultids env11)
+    (let ((many env12) (many code))
+      (reconstruct ctx env11 expect2 anntele resultids (BFalse)
+        (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode)
+          (CLet _ ms _ ids ipk (CValues _ ms codes cpk) bcode))))
+    (values env12 (ress-of resultids env12)
       (bridge-code _ outer-expect expect2 bridge (match many (mult-is-many pos) (((Code ctx expect2) _))
         ((BFalse) (CErased _ expect2))
-        ((BTrue)
-          (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) (runtime-one _ mult inputcode)
-            (CLet _ ms _ ids ipk (CValues _ ms codes cpk) bcode)))))))
+        ((BTrue) code)))))
 
   ((many elab-cell-invoke : (subterm many (Nat) sugar) (subterm many (List $ Raw) args)
       (subterm many (List $ Sub args) rawargs) (subterm many (Steps $ Succ $ Succ $ Zero) st) (many (Env) env) (many (List $ List $ Nat) ctx)
@@ -4918,10 +5098,12 @@
       (many (Env) env2) (many (List $ Res) ress) (many (Code ctx expect) code))
     (let-match many st (SS sn step))
     (let ((many pos)) (pos-mult expect))
-    (let ((many mult)) (under pos (Once)))
+    (let ((many shared)) $ mult-eq (res-erasure head) $ Many)
+    (let ((many mult)) (under pos $ match many shared (((Mult) _)) ((BTrue) (Many)) ((BFalse) (Once))))
     (let ((many env0)) (match many (res-term head) (((Env) _))
       ((TVar x) (use-entry env mult x (BFalse))) (else env)))
-    (let ((many env1)) (refuse-when env0 (and (mult-is-many pos) (not (mult-is-once (res-erasure head)))) "`Cell` invocation needs a unique cell"))
+    (let ((many env0b)) (refuse-when env0 (and (mult-is-many pos) (not (mult-is-many (res-erasure head)))) "`Cell` invocation needs a cell declared `many` or `unique`"))
+    (let ((many env1)) (refuse-when env0b (and (mult-is-once pos) shared) "a cell at `many` mints its value only at `many`"))
     (let-match many (canon-env env1 ctor) (TVar c)
       (else (expr-error _ expect env1 (say env1 "`Cell` constructor is not a variable") "cell invocation")))
     (let ((many env2) (many ct) (many params) (many ret) (many cm)) (cell-shape env1 c))
@@ -4933,12 +5115,16 @@
     (let ((many ms) (many ids) (erased ipk) (many codes) (erased cpk)) (prepare-pack _ pairs))
     (let ((many bctx)) (Cons _ ids hctx))
     (let ((many env7) (many writes)) (cell-invoke-writes env6 bctx full params (list-rev _ acc) marks slots 0))
-    (cell-result _ expect env7 (MkRes (TApp (TVar c) (list-rev _ acc)) (instantiate acc ret) pos (res-place hres))
+    (let ((many copies)) $ and shared $ not full)
+    (cell-result _ expect env7 (MkRes (TApp (TVar c) (list-rev _ acc)) (instantiate acc ret) pos $ match many copies (((Maybe $ Term) _)) ((BTrue) (None _)) ((BFalse) (res-place hres)))
       (CLet _ many-one _ (Cons _ sid (Nil _)) (PkMany _ _ _ _ (PkNil _)) hcode
         (CLet _ ms _ ids ipk (CValues _ ms codes cpk)
-          (match many writes (((Code bctx many-one) _))
-            ((Nil _) (var-code env7 bctx sid))
-            ((Cons _ _ _) (CCellWrite _ ct (var-code env7 bctx sid) writes)))))))
+          (match many copies (((Code bctx many-one) _))
+            ((BTrue) (CCellCopy _ ct (var-code env7 bctx sid) writes))
+            ((BFalse)
+              (match many writes (((Code bctx many-one) _))
+                ((Nil _) (var-code env7 bctx sid))
+                ((Cons _ _ _) (CCellWrite _ ct (var-code env7 bctx sid) writes)))))))))
 
   ((many elab-slot-terms : (subterm many (Nat) sugar) (subterm many (List $ Raw) items) (many (Env) env) ->
       (many (Env) env2) (many (List $ Term) slots))
@@ -4966,13 +5152,13 @@
   ; The signature pieces [piece] were read from [root]; [st] pays for the parse of each telescope.
   ((many elab-fn-type : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (many (Env) r) (many (List $ Entry) params) (many (List $ Entry) rets))
     (let-match many piece (MkPair _ _ ps rs))
-    (let ((many env2) (many ids) (many params)) $ notail $ elab-tele sugar root st ps env (MMDeclared) (Nil _) (BTrue) (BFalse) $ BFalse)
+    (let ((many env2) (many ids) (many params)) $ notail $ elab-tele sugar root st ps env (MMDeclared) (Nil _) (BTrue) (BFalse) $ BTrue)
     (let ((many env3) (many ids2) (many rets)) $ notail $ elab-tele sugar root st rs env2 (MMDeclared) (tvars-rev ids $ Nil _) (BFalse) (BFalse) $ BTrue)
     (values (env-discard env env3) params rets))
 
   ((many elab-tyctor : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (many (Env) r) (many (Term) t))
     (let-match many piece (MkPair _ _ ps ret))
-    (let ((many env2) (many ids) (many tele)) $ notail $ elab-tele sugar root st ps env (MMErased) (Nil _) (BFalse) (BFalse) $ BFalse)
+    (let ((many env2) (many ids) (many tele)) $ notail $ elab-tele sugar root st ps (env-set-ctor-tele env $ BTrue) (MMErased) (Nil _) (BFalse) (BFalse) $ BFalse)
     (let ((many (Env) env3))
       (match many ret _
         ((Cons _ s more)
@@ -4988,7 +5174,7 @@
   ; closed ValCtor type; the return is an application of a type constructor in scope (ASSUMPTIONS 70, 80).
   ((many elab-valctor : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (Pair (List $ Sub root) $ List $ Sub root) piece) (many (Env) env) -> (many (Env) r) (many (List $ Entry) tele) (many (Term) ret) (many (Term) t))
     (let-match many piece (MkPair _ _ ps rets))
-    (let ((many env2) (many ids) (many tele)) $ notail $ elab-tele sugar root st ps env (MMDeclared) (Nil _) (BFalse) (BFalse) $ BFalse)
+    (let ((many env2) (many ids) (many tele)) $ notail $ elab-tele sugar root st ps (env-set-ctor-tele env $ BTrue) (MMDeclared) (Nil _) (BFalse) (BFalse) $ BFalse)
     (let ((many (Env) env3a) (many (Term) ret))
       (match many rets _
         ((Nil _) (values (env-error env2 "a constructor returns one type") $ TErr "no return"))
@@ -5007,7 +5193,7 @@
                          $ match many (type-of env3 t) (((Bool) _)) ((TTyCtor _) (BTrue)) (else (BFalse)))) (else (BFalse)))) (else (BFalse))))
     (def-fns msg-lvl $ (many msg-return : -> (many (String) s)) (str-cat "a constructor returns an application of a type constructor in scope, not " $ qshow env3 ret))
     (let ((many env4)) $ error-unless-msg env3 ok msg-return)
-    (values (env-set-signature env4 $ env-signature env) tele ret $ TValCtor tele $ abstract (list-rev _ ids) ret))
+    (values (env-set-ctor-tele (env-set-signature env4 $ env-signature env) $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract (list-rev _ ids) ret))
 
   ; Source entries into a closed telescope, each name bound for the entries after it (section 30).
   ; [ids]: binders already in force, innermost first.
@@ -5039,7 +5225,7 @@
     (let ((many env2a) (many atplace))
       (match many place (((Env) _) ((Maybe $ Term) p0))
         ((None _) (values env2 $ None _))
-        ((Some _ target) (at-place env2 places (or (mult-is-many mult) $ match many mode (((Bool) _)) ((MMExpect _) (BTrue)) (else (BFalse))) outer epos target))))
+        ((Some _ target) (at-place env2 places (or (mult-is-many mult) $ match many mode (((Bool) _)) ((MMExpect _) (BTrue)) (else (BFalse))) epos target))))
     (let ((many env3) (many x)) $ bind-as env2a (BFalse) holes nm (Some _ $ loc-in env2a epos) warns mult ty rule delegate-id)
     (let ((many env3e)) (env-set-signature env3 (Cons _ x (env-signature env3))))
     (let ((many ap)) $ match many atplace (((Maybe $ Term) _)) ((None _) (None _)) ((Some _ p) (Some _ $ abstract (bin-ids-of ids) p)))
@@ -5148,6 +5334,24 @@
             ((StLetMatch) (notail $ elab-let-match sugar args envl2 ctx spos))
             ((StUnary) (notail $ elab-unary sugar args envl2 ctx spos))
             ((StOpenAdt) (notail $ elab-open-adt sugar args envl2 ctx))
+            ((StSlotSelf)
+              (let-match many args (Cons _ a more) ((Nil _) (values (env-error envl2 $ sp-misuse envl2 sp) ctx $ SNone _)))
+              (let-match many more (Nil _) ((Cons _ _ _) (values (env-error envl2 $ sp-misuse envl2 sp) ctx $ SNone _)))
+              (let ((many env1) (many x)) $ var-of-raw envl2 a "a variable")
+              (let ((many env2)) $ match many (mult-is-many $ entry-mult-of env1 x) (((Env) _)) ((BTrue) env1) ((BFalse) (error-at env1 (raw-pos a) $ say env1 "`slot-self` needs a variable declared `many` or `unique`")))
+              (let ((many env3)) $ env-back env2 $ check (env-at env2 $ raw-pos a) "type" (type-of env2 x) slot-term)
+              (match many (place-forced env3 x $ TVar x) (((Env) _) ((List $ List $ Nat) c0) ((StmtCode ctx c0) sc0))
+                ((UOk env4) (values env4 ctx $ SNone _))
+                ((UContra m) (values (env-error env3 $ str-cat3 (say env3 "`slot-self`: ") (qshown env3 x) $ str-cat3 (say env3 " contradicts the facts in force (") (clash-str env3 m) ")") ctx $ SNone _))))
+            ((StOpenAtFn)
+              (let-match many args (Cons _ e more) ((Nil _) (values (env-error envl2 $ sp-misuse envl2 sp) ctx $ SNone _)))
+              (let-match many more (Nil _) ((Cons _ _ _) (values (env-error envl2 $ sp-misuse envl2 sp) ctx $ SNone _)))
+              (let ((many env1) (many p)) $ notail $ elab-one-erased sugar args envl2 ctx)
+              (let ((many env2)) $ match many (canon-env env1 $ res-ty p) (((Env) _))
+                ((TApp h as) (match many (and (term-eq h $ TVar atfn-id) $ nat-eq (list-length _ as) 2) (((Env) _)) ((BTrue) env1) ((BFalse) (env-error env1 $ str-cat3 (qshow env1 $ res-term p) " : " $ str-cat (qshow env1 $ res-ty p) $ say env1 " is not an `AtFn` proof"))))
+                (else (env-error env1 $ str-cat3 (qshow env1 $ res-term p) " : " $ str-cat (qshow env1 $ res-ty p) $ say env1 " is not an `AtFn` proof")))
+              (let ((many env3) (many x)) $ bind-erased env2 (None _) (Some _ $ env-loc env2) (BFalse) (Erased) (res-ty p) (Some _ $ res-term p) delegate-id)
+              (values (open-proof env3 x) ctx $ SNone _))
             ((StDumpContext)
               (let ((many env1) (many focus)) $ notail $ elab-focus sugar args _ two-steps envl2)
               (values (dump-report env1 (GoalStatement) focus) ctx $ SNone _)))) (else (values (bad) ctx $ SNone _))))
@@ -5201,7 +5405,7 @@
     (let ((many env6)) $ match many (or (not $ mult-is-many smult) $ mult-is-many mk) (((Env) _)) ((BTrue) env5) ((BFalse) (env-error env5 $ str-cat (qshown env5 c3) " is phantom")))
     ; covered-of tests each alternative in an independent branch environment;
     ; phantom alternatives count too, even when they cannot run.
-    (let ((many env6r) (many real) (many seen) (many deep)) $ notail $ elab-branches sugar branches env6 ctx tid sres smult mctors (Nil _) erased-one (Nil _) (Cons _ c3 $ Nil _) (and (mult-is-once smult) (cells-allowed env6 mid)) saved (env-uses env6) (env-uses env6) (BTrue) "`let-match`" (MkSink "" "" (Nil _) (Nil _) (Nil _) (env-scope env6) $ None _) (BFalse) $ Nil _)
+    (let ((many env6r) (many real) (many seen) (many deep)) $ notail $ elab-branches sugar branches env6 ctx tid sres smult mctors (Nil _) erased-one (Nil _) (Cons _ c3 $ Nil _) (and (mult-is-many smult) (cells-allowed env6 mid)) saved (env-uses env6) (env-uses env6) (BTrue) "`let-match`" (MkSink "" "" (Nil _) (Nil _) (Nil _) (env-scope env6) $ None _) (BFalse) (BFalse) $ Nil _)
     (let ((many env6a) (many other) (many reachable) (many covered))
       $ covered-of mctors (check-coverage mctors env6r seen) seen sres smult (None _) (BFalse) $ Nil _)
     (let ((many (Env) env6b))
@@ -5209,7 +5413,7 @@
         ((None _) env6a)
         ((Some _ _) (missing-branches mctors env6a sres smult seen "`let-match`"))))
     (let ((many ctele) (many ret)) $ ctor-type env6b c3)
-    (let ((many extra)) (and (mult-is-many mk) $ and (mult-is-once smult) (cells-allowed env6b mid)))
+    (let ((many extra)) (and (mult-is-many mk) $ and (mult-is-many smult) (cells-allowed env6b mid)))
     (let ((many mults)) $ field-mults (tele-mults ctele) smult)
     (let ((many env7) (many ordinary) (many cellname)) (pattern-fields env6b (raw-pos pat) "a `let-match` pattern" smult sres c3 ctele mults fields extra))
     (let ((many ss)) $ shapes mctors env7)
@@ -5346,10 +5550,10 @@
             ((SrcTy _ t p) (let ((many env1) (many ty) (many tyty)) $ notail $ elab-term sugar (subterm p) t env (BTrue) no-tele) (values (check-sg env1 (SgTy ty) r raw) no-tele))
             ((SrcIs _ t p) (let ((many env1) (many ty) (many tyty)) $ notail $ elab-term sugar (subterm p) t env (BFalse) no-tele) (values (check-sg env1 (SgIs ty tyty) r raw) no-tele))))))
     (let ((many env1s)) $ settle-res env1a r)
-    (let ((many env1)) $ match many (and (is-some _ place) $ not $ is-some _ tele) (((Env) _)) ((BFalse) env1s) ((BTrue) (error-at env1s epos $ say env1s "`at` is allowed only on return and match annotation entries")))
+    (let ((many env1)) $ match many (and (is-some _ place) $ not $ is-some _ tele) (((Env) _)) ((BFalse) env1s) ((BTrue) (error-at env1s epos $ say env1s "`at` is allowed only on function telescope and match annotation entries")))
     (let ((many env2a) (many x)) $ bind env1 (name-or-anon name) (Some _ $ loc-in env1 epos) (BTrue) mult (res-ty r) (Some _ $ res-term r) delegate-id)
     (let ((many env2b)) $ mark-word env2a x $ BFalse)
-    (let ((many env2)) $ match many (res-place r) (((Env) _)) ((None _) env2b) ((Some _ p) (at-merge env2b (TVar x) p)))
+    (let ((many env2)) $ placed-at env2b x $ res-place r)
     (let ((many (Env) env3))
       (match many run _
         ((BTrue) env2)
@@ -5367,7 +5571,8 @@
         ((BFalse) (let ((many env2) (many t) (many ty)) $ notail $ elab-term sugar lvraw env (BFalse) no-tele) (level-var-checked env2 t " or `_`"))))
     (let ((many env2a)) $ refuse-when env2 (and uq $ not $ nat-eq (list-length _ fns) 1) "`def-unique` defines exactly one function")
     (let ((many env3) (many headers)) $ notail $ elab-headers sugar fns env2a lvl uq)
-    (let ((many env4) (many gids) (many fids)) $ bind-headers _ headers env3 lvl)
+    (let ((many env4a) (many gids) (many fids)) $ bind-headers _ headers env3 lvl)
+    (let ((many env4)) $ open-atfn-proofs _ headers _ fids env4a lvl)
     (let ((many env5a) (many fns2) (erased lk)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
     (let ((many (Env) env5)) $ match many (env-run-pos env4) _ ((BTrue) (env-set-tokens env5a $ bound-erased fns headers gids fids)) ((BFalse) env5a))
     (let ((many group)) $ MkGroup _ gids fns2 lk)
@@ -5388,16 +5593,28 @@
     (let ((many env0)) $ match many uq (((Env) _))
       ((BTrue) (refuse-when env0a (and (mult-is-many mult) $ not $ mult-is-once mult) "`def-unique` requires `unique` or `erased`"))
       ((BFalse) (refuse-when env0a (mult-is-once mult) "use `def-unique` to define a unique function")))
-    (let ((many isabs) (many isext) (many items2) (erased w2)) $ take-marks items1 _ (WIn items1 sitems $ prove-subterm items1 sitems) env0 (MkAbsurd) $ MkExtern)
+    (let ((many isabs) (many isext) (many isat) (many items2) (erased w2)) $ take-marks3 items1 _ (WIn items1 sitems $ prove-subterm items1 sitems) env0)
     (def-fns misuse-lvl $ (many bad0 : -> (many (Env) r)) (env-error env0 $ str-cat "malformed function header" $ sp-hints env0 "function-header"))
-    (let-match many items2 (Cons _ nraw items3) ((Nil _) (values (bad0) $ HStop _)))
+    (let-match many items2 (Cons _ nraw items3a) ((Nil _) (values (bad0) $ HStop _)))
     (let ((many env0n) (many name)) $ name-checked env0 nraw "a function name")
+    ; `at f` after the name annotates a delegate to f (AT_REDESIGN A11)
+    (let ((many (Maybe $ Raw) delegates) (many (List $ Raw) items3) (erased (Subterm (List $ Raw) items3 (List $ Raw) items2) p3))
+      (match many items3a (((Maybe $ Raw) d) ((List $ Raw) items3) ((Subterm (List $ Raw) items3 (List $ Raw) items2) p3))
+        ((Cons _ a more)
+          (let-match many more (Cons _ fraw after-at) ((Nil _) (values (None _) items3a $ prove-subterm items3a items2)))
+          (match many (is-mark env0n a $ MkAt) _
+            ((BTrue) (values (Some _ fraw) after-at $ prove-subterm after-at items2))
+            ((BFalse) (values (None _) items3a $ prove-subterm items3a items2))))
+        ((Nil _) (values (None _) items3a $ prove-subterm items3a items2))))
     (let-match many items3 (Cons _ colon sg) ((Nil _) (values (bad0) $ HStop _)))
     (let ((many env1)) $ match many (is-mark env0n colon $ MkColon) (((Env) _)) ((BTrue) env0n) ((BFalse) (bad0)))
-    (let ((erased psg)) $ subterm-trans (prove-subterm sg items2) $ within-in _ _ _ _ w2 $ subterm-trans (prove-subterm sitems sigraw) $ subterm-trans (prove-subterm sigraw items) $ prove-subterm items f)
+    (let ((erased psg)) $ subterm-trans (prove-subterm sg items3) $ subterm-trans p3 $ within-in _ _ _ _ w2 $ subterm-trans (prove-subterm sitems sigraw) $ subterm-trans (prove-subterm sigraw items) $ prove-subterm items f)
     (let ((many env1a) (many ps) (many after) (erased wa)) $ split-arrow sg _ (WHere sg) env1)
     (let ((many rs)) $ subs-of after _ wa)
-    (let ((many env2) (many params) (many rets)) $ notail $ elab-fn-type sugar (subterm (subterm-trans psg $ prove-subterm f fns)) sg one-step (MkPair _ _ ps rs) env1a)
+    (let ((many env2a) (many params) (many rets)) $ notail $ elab-fn-type sugar (subterm (subterm-trans psg $ prove-subterm f fns)) sg one-step (MkPair _ _ ps rs) env1a)
+    (let ((many env2)) $ match many (and isat $ has-runtime rets) (((Env) _)) ((BTrue) (error-at env2a (raw-pos sigraw) $ say env2a "an at-function's returns are erased or `at`")) ((BFalse) env2a))
+    ; a function marked `extern` and `at` has no implementation, its marks being a promise (A10)
+    (let ((many claims)) $ and isext $ not isat)
     (let ((many found)) $ extern-of name)
     (let ((many (Env) env2b))
       (match many found _
@@ -5405,9 +5622,9 @@
         ((Some _ se)
           (match many se _
             ((MkSomeExtern _ e)
-              (error-when env2 (and isext $ not $ nat-eq (many-count params) $ ext-arity _ e) $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " takes " (nat-str $ ext-arity _ e) $ str-cat3 " arguments, its model " (nat-str $ many-count params) ""))))))
-    (let ((many (Env) env3)) $ match many isext _ ((BTrue) (claim-extern env2b name $ is-some _ found)) ((BFalse) env2b))
-    (let ((many (Maybe $ SomeExtern) se)) $ match many isext _ ((BTrue) found) ((BFalse) (None _)))
+              (error-when env2 (and claims $ not $ nat-eq (runtime-count params) $ ext-arity _ e) $ str-cat3 "the extern implementation of " (tick name) $ str-cat3 " takes " (nat-str $ ext-arity _ e) $ str-cat3 " arguments, its model " (nat-str $ runtime-count params) ""))))))
+    (let ((many (Env) env3)) $ match many claims _ ((BTrue) (claim-extern env2b name $ is-some _ found)) ((BFalse) env2b))
+    (let ((many (Maybe $ SomeExtern) se)) $ match many claims _ ((BTrue) found) ((BFalse) (None _)))
     (let ((many (Env) env3b) (many (Maybe $ Impl) impl))
       (match many se _
         ((None _) (values env3 (None _)))
@@ -5417,7 +5634,7 @@
           (let ((many env3a) (many cs)) $ extern-ctors env3 name rets want)
           (values env3a (Some _ $ MkImpl e2 cs)))))
     (let ((many env4) (many hs)) $ notail $ elab-headers sugar rest (env-back env env3b) lvl uq)
-    (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs))
+    (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs isext isat delegates impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs))
 
   ((many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk))
@@ -5445,30 +5662,33 @@
   ; its marks validated, and its delegate proof bound where it has one.
   ((many define-fn : (subterm many (Nat) sugar) (subterm many (Raw) f) (many (Header f) h) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (Nat) x) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (Func gall ctx) fn))
-    (let-match many h (MkHeader _ hpos name mult uq isabs impl params rets body pb))
+    (let-match many h (MkHeader _ hpos name mult uq isabs isext isat delegates impl params rets body pb))
     (let ((many ty)) $ TFn uq (TVar lvl) params rets)
     (let ((many env0)) $ match many uq (((Env) _)) ((BTrue) (set-entry-mult env x $ Erased)) ((BFalse) env))
     (let ((many envb0) (many pids) (erased lock)) $ open-tele params (env-set-run-pos env0 $ BFalse) (None _) (None _) (None _) (Nil _) $ BFalse)
     (let ((many envb1)) $ env-enter-body (mark-words pids envb0 $ BFalse) x lvl $ subterm-params params pids)
     (let ((many captures)) $ match many uq (((List $ Nat) _)) ((BTrue) (env-captures env)) ((BFalse) (env-words env)))
-    (let ((many envb)) $ env-set-captures (env-set-usage-erased (env-set-in-extern envb1 (or (env-in-extern env) $ is-some _ impl)) (or (env-usage-erased env) $ not $ mult-is-many mult)) captures)
+    (let ((many envb)) $ env-set-captures (env-set-usage-erased (env-set-in-extern envb1 (or (env-in-extern env) isext)) (or (env-usage-erased env) $ not $ mult-is-many mult)) captures)
     (let ((many rms)) $ under-list (tele-mults rets) mult)
-    (let ((many mps)) $ many-of (tele-mults params) pids)
-    (let ((many bctx)) $ Cons _ mps $ Cons _ gall ctx)
+    (let ((many pvars)) $ tvars-rev pids $ Nil _)
+    ; the frame holds the runtime parameters; a parameter written `at` is a rename of its target's word,
+    ; bound by a let around the body (AT_REDESIGN A3)
+    (let ((many rt)) $ runtime-ids params pids)
+    (let ((many base)) $ Cons _ rt $ Cons _ gall ctx)
+    (let ((many envr) (many bctx) (many renames)) $ at-renames params pids pvars envb base)
     (let ((many (Env) envb2) (many (Code bctx rms) code))
       (match many isabs _
         ((BTrue)
-          (let ((many envb2)) $ notail $ elab-refute sugar (subterm pb) body body (WHere _) envb bctx)
+          (let ((many envb2)) $ notail $ elab-refute sugar (subterm pb) body body (WHere _) envr bctx)
           (values envb2 $ CAbsurd _ rms))
         ((BFalse)
-          (let ((many pvars)) $ tvars-rev pids $ Nil _)
           (let ((many tele)) $ instantiate-tele pvars rets)
-          (let ((many envb1b) (many ress) (many code) (erased lock3)) $ notail $ elab-body sugar (subterm pb) body body (WHere _) envb bctx rms (Some _ tele) $ Some _ $ MkSink "" "return value" (tele-with-mults tele rms) (Nil _) (Nil _) (env-scope envb) $ Some _ x)
+          (let ((many envb1b) (many ress) (many code) (erased lock3)) $ notail $ elab-body sugar (subterm pb) body body (WHere _) envr bctx rms (Some _ tele) $ Some _ $ MkSink "" "return value" (tele-with-mults tele rms) (Nil _) (Nil _) (env-scope envr) $ Some _ x)
           (let ((many envb2)) $ check-results-count envb1b body rets ress pvars)
           (values envb2 $ match many mult (((Code bctx rms) _)) ((Erased) (CErased _ rms)) (else code)))))
     (let ((many physical)) $ under-list (physical-mults rets) mult)
     (let ((many envb2a) (many projected)) $ project-code bctx envb2 rms physical code)
-    (let ((many envb3m) (many code2) (many delegated)) $ check-marks (env-at envb2a hpos) bctx mps physical projected)
+    (let ((many envb3m) (many code2) (many delegated)) $ check-marks (env-at envb2a hpos) base rt physical $ wrap-stmt _ _ physical renames projected)
     (let ((many envb3)) $ env-back envb2a envb3m)
     (let ((many env2)) $ set-entry-mult (env-set-uses (env-discard env envb3) $ uses-join (env-uses env) $ env-uses envb3) x mult)
     (let ((many (Env) env3))
@@ -5476,15 +5696,35 @@
         ((None _) env2)
         ((Some _ callee)
           (let ((many env2b))
-            (match many (is-some _ impl) (((Env) _))
+            (match many isext (((Env) _))
               ((BTrue) (env-error (env-at env2 hpos) (say env2 "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`")))
               ((BFalse) (match many (nat-lt callee x) _ ((BTrue) env2) ((BFalse) (env-error (env-at env2 hpos) (say env2 "the function a `delegate` call names must be introduced before the function whose body it is")))))))
           (let ((many env2c)) $ env-set-aliases env2b $ idmap-set _ x (alias-target env2b callee) $ env-aliases env2b)
           (let ((many env3) (many px)) $ bind-erased env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
           env3)))
-    (values env3 $ match many delegated (((Func gall ctx) _))
-      ((None _) (MkFunc _ _ physical name x mps code2 impl top))
-      ((Some _ callee) (MkAlias _ _ name x $ var-code env3 (Cons _ gall ctx) $ alias-target env3 callee))))
+    ; the delegate annotation names the function the one `delegate` call names (A11)
+    (let ((many (Env) env3d))
+      (match many delegates _
+        ((None _) env3)
+        ((Some _ fraw)
+          (let ((many env3a) (many df)) $ named (env-at env3 hpos) fraw "a function name")
+          (env-back env3 $ match many delegated (((Env) _))
+            ((None _) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but its body is not a `delegate` call") ""))
+            ((Some _ callee)
+              (match many (equal-env env3a (TVar callee) $ TVar df) (((Env) _))
+                ((BTrue) env3a)
+                ((BFalse) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but delegates to ") $ qshow env3a $ TVar callee))))))))
+    ; an at-function's body erases to nothing and is never run through the proof; what remains is the dummy a
+    ; first-class call without the proof reaches (A10)
+    (let ((many env3e)) $ match many (and isat $ and (mult-is-many mult) $ and (not isabs) $ not $ erases-to-nothing _ _ code2) (((Env) _))
+      ((BTrue) (error-at env3d hpos $ str-cat3 (say env3d "the body of at-function ") (tick name) $ say env3d " does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"))
+      ((BFalse) env3d))
+    (let ((many (Code base physical) code3)) $ match many isat _
+      ((BTrue) (let ((many missing) (erased pk)) $ codes-missing base physical) (CValues _ physical missing pk))
+      ((BFalse) code2))
+    (values env3e $ match many delegated (((Func gall ctx) _))
+      ((None _) (MkFunc _ _ physical name x rt code3 impl top))
+      ((Some _ callee) (MkAlias _ _ name x $ var-code env3e (Cons _ gall ctx) $ alias-target env3e callee))))
 
   ; def-adts (sections 12, 19, 27): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor
@@ -5715,21 +5955,21 @@
         ((BTrue) (use-entry (held-needs-many env2b tid mid) (Many) mid (BFalse)))
         ((BFalse) env2b)))
     (let ((many outer-expect)) expect)
-    (let ((many env3b) (many ann-tele) (many inner-expect) (many bridge))
-      (match many refute (((Env) _) ((List $ Entry) _) ((List $ Mult) i) ((DemandBridge expect i) _))
-        ((BTrue) (values env2c (Nil _) expect $ KeepDemand _))
+    (let ((many env3b) (many ann-tele) (many inner-expect) (many bridge) (many atmatch))
+      (match many refute (((Env) _) ((List $ Entry) _) ((List $ Mult) i) ((DemandBridge expect i) _) ((Bool) _))
+        ((BTrue) (values env2c (Nil _) expect (KeepDemand _) $ BFalse))
         ((BFalse) (notail $ result-tele sugar ann env2c expect tele demand))))
     (let ((many expect2)) inner-expect)
-    (let ((many extra)) (and (mult-is-once smult) (cells-allowed env3b mid)))
+    (let ((many extra)) (and (mult-is-many smult) (cells-allowed env3b mid)))
     (let ((many incoming)) (env-uses env3b))
     (let ((many bsink)) $ match many override (((Sink) _))
       ((Some _ k) k)
       ((None _) (MkSink (str-cat "the enclosing " form) "return value" ann-tele (Nil _) (Cons _ (MkPair _ _ (loc-in env $ raw-pos ann) $ str-cat3 "the return annotation of the enclosing " form " is here") $ Nil _) (env-scope env3b) $ None _)))
     (let ((many remap)) $ not $ is-some _ override)
-    (let ((many env5) (many real) (many seen) (many deep)) $ notail $ elab-branches sugar branches env3b ctx4 tid sres smult mctors ann-tele expect2 (Nil _) (Nil _) extra saved incoming incoming refute form bsink remap (Nil _))
+    (let ((many env5) (many real) (many seen) (many deep)) $ notail $ elab-branches sugar branches env3b ctx4 tid sres smult mctors ann-tele expect2 (Nil _) (Nil _) extra saved incoming incoming refute form bsink remap atmatch (Nil _))
     (let ((many env6)) $ check-coverage mctors env5 seen)
     (let ((many env6b) (many first) (many reachable) (many covered)) $ covered-of mctors env6 seen sres smult (None _) (BFalse) $ Nil _)
-    (let ((many env6l) (many dflt) (many deep2)) $ notail $ elab-else sugar branches env6b ctx4 ann-tele expect2 first reachable (None _) (None _) sres smult extra saved incoming mctors refute form bsink remap seen deep)
+    (let ((many env6l) (many dflt) (many deep2)) $ notail $ elab-else sugar branches env6b ctx4 ann-tele expect2 first reachable (None _) (None _) sres smult extra saved incoming mctors refute form bsink remap atmatch seen deep)
     (let ((many env6c)) $ warn-lopsided env6l final deep2)
     (let ((many nreal)) $ nat-add (list-length _ real) $ match many dflt (((Nat) _)) ((None _) 0) ((Some _ _) 1))
     (let ((many env7)) $ match many (and (mult-is-many pos) $ and (or (not tagged) $ not $ mult-is-many smult) $ nat-lt 1 nreal) (((Env) _))
@@ -5760,22 +6000,34 @@
                 ((Nil _) (CMatch _ expect2 (CErased _ many-one) (ShNone _) (real-branches-code _ _ real ss) dflt live))
                 ((Cons _ _ _) (CError _ expect2 "one real branch"))))))))
     (let ((many env8) (many rids) (erased lock3)) $ open-tele ann-tele env7w (Some _ $ anon-names ann-tele) (None _) (None _) (Nil _) $ BFalse)
-    (values env8 (ress-of rids env8) (bridge-code _ outer-expect expect2 bridge (match many pos _ ((Erased) (CErased _ expect2)) (else (CLet source-ctx many-one expect2 (Cons _ saved (Nil _)) (PkMany _ (Nil _) saved (Nil _) (PkNil _)) source-code code))))))
+    (let ((many env9) (many code2)) $ reconstruct ctx4 env8 expect2 ann-tele rids atmatch code)
+    (values env9 (ress-of rids env9) (bridge-code _ outer-expect expect2 bridge (match many pos _ ((Erased) (CErased _ expect2)) (else (CLet source-ctx many-one expect2 (Cons _ saved (Nil _)) (PkMany _ (Nil _) saved (Nil _) (PkNil _)) source-code code2))))))
 
   ; A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one.
-  ((many result-tele : (subterm many (Nat) sugar) (subterm many (Raw) ann) (many (Env) env) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) -> (many (Env) r) (many (List $ Entry) t) (many (List $ Mult) inner) (many (DemandBridge expect inner) bridge))
-    (let ((many (Env) env3) (many (List $ Entry) ann-tele))
+  ((many result-tele : (subterm many (Nat) sugar) (subterm many (Raw) ann) (many (Env) env) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) -> (many (Env) r) (many (List $ Entry) t) (many (List $ Mult) inner) (many (DemandBridge expect inner) bridge) (many (Bool) atmatch))
+    (let ((many (Env) env3) (many (List $ Entry) ann-tele) (many (Bool) atmatch))
       (match many (is-underscore ann) _
         ((BTrue)
-          (let-match many tele (Some _ t) ((None _) (values (env-error env "no telescope to reuse for `_`") $ Nil _)))
-          (match many (tele-has-meta t env) (((Env) _) ((List $ Entry) t0))
-            ((BTrue) (values (env-error env "the telescope `_` would reuse still has a `_` to infer") t))
-            ((BFalse) (values env t))))
+          (let-match many tele (Some _ t) ((None _) (values (env-error env "no telescope to reuse for `_`") (Nil _) $ BFalse)))
+          (match many (tele-has-meta t env) (((Env) _) ((List $ Entry) t0) ((Bool) _))
+            ((BTrue) (values (env-error env "the telescope `_` would reuse still has a `_` to infer") t $ BFalse))
+            ((BFalse) (values env t $ BFalse))))
         ((BFalse)
-          (let-match many ann (RList _ aitems) (else (values (env-error env $ str-cat "malformed match annotation" $ sp-hints env "annotation") $ Nil $ Entry)))
+          (let-match many ann (RList _ items0) (else (values (env-error env $ str-cat "malformed match annotation" $ sp-hints env "annotation") (Nil $ Entry) $ BFalse)))
+          ; an at-match's annotation is wrapped `(at <telescope>)` (AT_REDESIGN A9)
+          (let ((many (List $ Raw) aitems) (erased (Subterm (List $ Raw) aitems (Raw) ann) pa) (many (Bool) atmatch))
+            (match many items0 (((List $ Raw) aitems) ((Subterm (List $ Raw) aitems (Raw) ann) pa) ((Bool) atmatch))
+              ((Cons _ a more)
+                (let-match many more (Cons _ inner last) ((Nil _) (values items0 (prove-subterm items0 ann) $ BFalse)))
+                (let-match many last (Nil _) ((Cons _ _ _) (values items0 (prove-subterm items0 ann) $ BFalse)))
+                (let-match many inner (RList _ iitems) (else (values items0 (prove-subterm items0 ann) $ BFalse)))
+                (match many (is-special env a $ SpMark $ MkAt) _
+                  ((BTrue) (values iitems (prove-subterm iitems ann) $ BTrue))
+                  ((BFalse) (values items0 (prove-subterm items0 ann) $ BFalse))))
+              ((Nil _) (values items0 (prove-subterm items0 ann) $ BFalse))))
           (let-match many (first-atom aitems) (None _)
-            ((Some _ a) (values (error-at env (raw-pos a) $ str-cat "expected a telescope or `_`, got " $ qraw a) $ Nil $ Entry)))
-          (let ((many env3) (many ids) (many t)) $ notail $ elab-tele sugar aitems one-step (subs-all aitems) env (MMExpect expect) (Nil _) (BFalse) (BTrue) $ BTrue)
+            ((Some _ a) (values (error-at env (raw-pos a) $ str-cat "expected a telescope or `_`, got " $ qraw a) (Nil $ Entry) $ BFalse)))
+          (let ((many env3) (many ids) (many t)) $ notail $ elab-tele sugar (subterm pa) aitems one-step (subs-all aitems) env (MMExpect expect) (Nil _) (BFalse) (BTrue) $ BTrue)
           (let ((many env3b)) $ env-restore env env3)
           (let ((many (Env) env3c))
             (match many tele _
@@ -5786,34 +6038,41 @@
                 (let ((many env3c) (many ok)) $ solve-tele et t env3b $ BTrue)
                 env3c)))
           (let ((many env3d)) $ settle-tele t env3c)
-          (values env3d $ metaless-tele t env3d))))
-    (match many (nat-cmp (list-length _ ann-tele) $ list-length _ expect) _
-      ((CEq _ _ _) (finish-demand-tele expect demand env3 ann-tele))
-      (else (finish-demand-tele expect demand (env-error env3 $ str-cat3 "match annotation has " (nat-str $ list-length _ ann-tele) $ str-cat " entries, position needs " $ nat-str $ list-length _ expect) ann-tele))))
+          (values env3d (metaless-tele t env3d) atmatch))))
+    (let ((many (Env) env4) (many (List $ Entry) t) (many (List $ Mult) inner) (many (DemandBridge expect inner) bridge))
+      (match many (nat-cmp (list-length _ ann-tele) $ list-length _ expect) _
+        ((CEq _ _ _) (finish-demand-tele expect demand env3 ann-tele))
+        (else (finish-demand-tele expect demand (env-error env3 $ str-cat3 "match annotation has " (nat-str $ list-length _ ann-tele) $ str-cat " entries, position needs " $ nat-str $ list-length _ expect) ann-tele))))
+    (let ((many env5)) $ refuse-when env4 (and atmatch $ has-runtime t) "an at-match's annotation entries are erased or `at`")
+    (values env5 t inner bridge atmatch))
 
   ((many elab-branch-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) ->
       (many (Env) r) (many (Code bctx ex) code))
     (let ((many envb) (many ress) (many code) (erased lock)) $ notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex (Some _ ann-tele) $ None _)
     (values (check-results-count envb body ann-tele ress $ Nil _) code))
 
-  ((many elab-pattern-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) (many (Nat) saved) (many (Maybe $ Nat) alias) (many (Maybe $ Sink) sink) -> (many (Env) r) (many (Code bctx ex) code))
-    (match many alias _
-      ((None _)
-        (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex (Some _ ann-tele) sink))
-        (values (check-results-count env2 body ann-tele ress (Nil _)) code))
-      ((Some _ x)
-        (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env (Cons _ (Cons _ x (Nil _)) bctx) ex (Some _ ann-tele) sink))
-        (values (check-results-count env2 body ann-tele ress (Nil _)) (CLet _ many-one ex (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env bctx saved) code)))))
+  ; [atmatch]: the branch of an at-match must erase to nothing, dispatch and loads included (AT_REDESIGN A9).
+  ((many elab-pattern-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) (many (Nat) saved) (many (Maybe $ Nat) alias) (many (Maybe $ Sink) sink) (many (Bool) atmatch) (many (Pos) bpos) -> (many (Env) r) (many (Code bctx ex) code))
+    (let ((many env3) (many code))
+      (match many alias (((Env) _) ((Code bctx ex) _))
+        ((None _)
+          (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex (Some _ ann-tele) sink))
+          (values (check-results-count env2 body ann-tele ress (Nil _)) code))
+        ((Some _ x)
+          (let ((many env2) (many ress) (many code) (erased lock)) (notail $ elab-body sugar (subterm p) body body (WHere _) env (Cons _ (Cons _ x (Nil _)) bctx) ex (Some _ ann-tele) sink))
+          (values (check-results-count env2 body ann-tele ress (Nil _)) (CLet _ many-one ex (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env bctx saved) code)))))
+    (let ((many bad)) $ and atmatch $ and (mult-is-many $ pos-mult ex) $ not $ erases-to-nothing _ _ $ normalize bctx ex code)
+    (values (match many bad (((Env) _)) ((BFalse) env3) ((BTrue) (error-at env3 bpos $ say env3 "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))) code))
 
   ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 12).
-  ((many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Nat) seen) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (IdMap $ Use) joined) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (List $ Maybe $ Nat) deep) ->
+  ((many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Nat) seen) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (IdMap $ Use) joined) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (Bool) atmatch) (many (List $ Maybe $ Nat) deep) ->
       (many (Env) r) (many (List $ RealBranch ctx expect) real) (many (List $ Nat) seen2) (many (List $ Maybe $ Nat) deep2))
     (let-match many branches (Cons _ braw brest) ((Nil _) (values (env-set-uses env joined) (list-rev _ acc) seen deep)))
     (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
     (let-match many (is-else-branch envl braw) (BFalse)
-      ((BTrue) (tail $ elab-branches sugar brest env ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap deep)))
+      ((BTrue) (tail $ elab-branches sugar brest env ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap atmatch deep)))
     (let-match many (branch-parts envl braw) (Some _ bp)
-      ((None _) (tail $ elab-branches sugar brest (env-back env $ env-error envl $ str-cat "malformed branch" $ sp-hints envl "branch") ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap deep)))
+      ((None _) (tail $ elab-branches sugar brest (env-back env $ env-error envl $ str-cat "malformed branch" $ sp-hints envl "branch") ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap atmatch deep)))
     (let ((many (Raw) craw) (many (List $ Raw) fields) (many (Bool) refuted))
       (match many bp _
         ((BPresent _ c fs _ _) (values c fs (BFalse)))
@@ -5822,7 +6081,7 @@
     (let ((many ppos)) $ pattern-pos envl braw)
     (let ((many env1) (many c)) (named (env-at envl ppos) craw "a constructor"))
     (let-match many (mctors-list mctors c) (BTrue)
-      ((BFalse) (tail $ elab-branches sugar brest (env-back env $ env-error-with env1 (declared-as env1 tid) $ str-cat3 (qshown env1 c) " is not a constructor of " $ qshown env1 tid) ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap deep)))
+      ((BFalse) (tail $ elab-branches sugar brest (env-back env $ env-error-with env1 (declared-as env1 tid) $ str-cat3 (qshown env1 c) " is not a constructor of " $ qshown env1 tid) ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap atmatch deep)))
     (let ((many env2)) $ env-back envl env1)
     (let ((many mk)) $ marker mctors c)
     (let ((many phantom)) (not $ mult-is-many mk))
@@ -5845,7 +6104,7 @@
             ((BTrue) (values (env-discard env3 envb) acc deep))
             ((BFalse) (values (env-error (env-discard env3 envb) $ str-cat3 "branch " (qshown env3 c) (say envb " is refuted; write `absurd`")) acc deep))))
         ((UOk envb2)
-          (let ((many envb2a) (many alias)) (pattern-cell-option envb2 (match many ghost _ ((BTrue) (Erased)) ((BFalse) (Once))) sres c fids (and cell-extra $ not refuted) cellname))
+          (let ((many envb2a) (many alias)) (pattern-cell-option envb2 (match many ghost _ ((BTrue) (Erased)) ((BFalse) smult)) sres c fids (and cell-extra $ not refuted) cellname))
           (let ((many envb2b)) (env-set-usage-erased envb2a (or ghost $ env-usage-erased envb2a)))
           (match many bp _
             ((BPresent _ _ _ body p)
@@ -5854,10 +6113,10 @@
               (let ((many deep3)) $ deepen envb2b body (match many unreachable _ ((BTrue) (None _)) ((BFalse) (Some _ c))) deep)
               (match many unreachable _
                 ((BTrue)
-                  (let ((many envb3) (many code)) (notail $ elab-pattern-body sugar braw body p envb2b bctx (all-erased expect) ann-tele saved alias $ branch-sink bsink remap $ all-erased expect))
+                  (let ((many envb3) (many code)) (notail $ elab-pattern-body sugar braw body p envb2b bctx (all-erased expect) ann-tele saved alias (branch-sink bsink remap $ all-erased expect) atmatch ppos))
                   (values (env-discard env3 envb3) acc deep3))
                 ((BFalse)
-                  (let ((many envb3) (many code)) (notail $ elab-pattern-body sugar braw body p envb2b bctx expect ann-tele saved alias $ branch-sink bsink remap expect))
+                  (let ((many envb3) (many code)) (notail $ elab-pattern-body sugar braw body p envb2b bctx expect ann-tele saved alias (branch-sink bsink remap expect) atmatch ppos))
                   (let ((many outer)) (env-discard env3 envb3))
                   (values (match many ghost _ ((BTrue) outer) ((BFalse) (env-set-uses outer $ env-uses envb3))) (Cons _ (MkRealBranch _ _ c mfids code) acc) deep3))))
             ((BRefuted _ _) (values (env-error-with (env-discard env3 envb2b) (forced-notes env3 envb2 sres) $ str-cat3 "branch " (qshown env3 c) " is not refuted") acc deep))
@@ -5866,11 +6125,11 @@
               (let ((many actx)) (match many alias (((List $ List $ Nat) _)) ((None _) bctx) ((Some _ x) (Cons _ (Cons _ x (Nil _)) bctx))))
               (let ((many envb3)) (notail $ elab-refute sugar (subterm q) body body (WHere _) envb2b actx))
               (values (env-discard env3 envb3) acc $ deepen envb2b body (None _) deep))))))
-    (tail $ elab-branches sugar brest (env-back env env4) ctx tid sres smult mctors ann-tele expect acc2 (Cons _ c seen) extra saved incoming (uses-join joined $ env-uses env4) refute form bsink remap deep2))
+    (tail $ elab-branches sugar brest (env-back env env4) ctx tid sres smult mctors ann-tele expect acc2 (Cons _ c seen) extra saved incoming (uses-join joined $ env-uses env4) refute form bsink remap atmatch deep2))
 
   ; The else branch (section 12): at most one, standing for at least one constructor, its body under no forced
   ; facts and erased throughout when none of them could run.
-  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (List $ MCtor) mctors) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (List $ Nat) seen) (many (List $ Maybe $ Nat) deep) ->
+  ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (List $ MCtor) mctors) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (Bool) atmatch) (many (List $ Nat) seen) (many (List $ Maybe $ Nat) deep) ->
       (many (Env) r) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) code) (many (List $ Maybe $ Nat) deep2))
     (match many branches _
       ((Nil _)
@@ -5879,7 +6138,7 @@
         (match many first _ ((None _) (values env found deep)) ((Some _ _) (values (missing-branches mctors env sres smult seen form) found deep))))
       ((Cons _ braw brest)
         (let-match many (is-else-branch env braw) (BTrue)
-          ((BFalse) (tail $ elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming mctors refute form bsink remap seen deep)))
+          ((BFalse) (tail $ elab-else sugar brest env ctx ann-tele expect first reachable seen-else found sres smult extra saved incoming mctors refute form bsink remap atmatch seen deep)))
         (let ((many envl)) (env-at (env-set-uses env incoming) (raw-pos braw)))
         (let ((many (Env) env2) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found2) (many (List $ Maybe $ Nat) deep2))
           (match many refute _
@@ -5890,7 +6149,7 @@
                   (values (env-error-with envl (Cons _ (MkPair _ _ l (say envl "the first `else` branch")) $ Nil _) (say envl "a match has at most one `else` branch")) found deep)))
               (let-match many first (Some _ _) ((None _) (values (env-error envl (say envl "`else` covers no constructor")) found deep)))
               (let-match many (else-parts braw extra) (Some _ parts)
-                ((None _) (values (else-malformed envl braw extra sres smult form) found deep)))
+                ((None _) (values (env-error envl $ say envl "malformed `else` branch") found deep)))
               (let-match many parts (MkElseBody _ name body p))
               (let ((many live)) (and reachable $ mult-is-many $ pos-mult expect))
               (let ((many envb) (many alias)) (else-binder (env-set-run-pos envl (BFalse)) sres (match many live _ ((BTrue) smult) ((BFalse) (Erased))) extra name))
@@ -5898,13 +6157,13 @@
               (let ((many deep3)) $ deepen envb1 body (None _) deep)
               (match many reachable _
                 ((BTrue)
-                  (let ((many envb2) (many code)) (notail $ elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) expect ann-tele saved alias $ branch-sink bsink remap expect))
+                  (let ((many envb2) (many code)) (notail $ elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) expect ann-tele saved alias (branch-sink bsink remap expect) atmatch $ raw-pos braw))
                   (let ((many outer)) (env-discard envl envb2))
                   (values (match many live _ ((BTrue) (env-set-uses outer $ env-uses envb2)) ((BFalse) outer)) (Some _ code) deep3))
                 ((BFalse)
-                  (let ((many envb2) (many code)) (notail $ elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) (all-erased expect) ann-tele saved alias $ branch-sink bsink remap $ all-erased expect))
+                  (let ((many envb2) (many code)) (notail $ elab-pattern-body sugar braw body p envb1 (Cons _ (Nil _) ctx) (all-erased expect) ann-tele saved alias (branch-sink bsink remap $ all-erased expect) atmatch $ raw-pos braw))
                   (values (env-discard envl envb2) (None _) deep3))))))
-        (tail $ elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming mctors refute form bsink remap seen deep2))))
+        (tail $ elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming mctors refute form bsink remap atmatch seen deep2))))
 
   ; Arguments against a telescope, each at the position's multiplicity and checked against its entry
   ; (section 20); returns the terms innermost first and the code of the many ones in order.
@@ -5966,27 +6225,41 @@
             (let ((many env3)) $ env-back env2 $ check-sg-about (env-at env2 apos) sg r (Some _ arg) arg-about)
             (let ((many env4a) (many _)) $ solve-about (env-at env3 apos) "value" (res-term r) (TVar m) (BTrue) (None _) arg-about)
             (let ((many env4)) $ env-back env3 env4a)
-            (let ((many env5) (many r2) (many id))
+            (let ((many env5a) (many r2) (many id))
               (match many (and prepare (mult-is-many mult)) (((Env) _) ((Res) r0) ((Nat) x0))
                 ((BTrue) (prepare-or-keep _ _ env4 mult r code))
                 ((BFalse) (values env4 r 0))))
+            ; an argument for a parameter written `at` must sit where its target does, and is not passed
+            ; (AT_REDESIGN A3, A5)
+            (let ((many (Env) env5) (many (Bool) omitted))
+              (match many (entry-place e) _
+                ((None _) (values env5a $ BFalse))
+                ((Some _ pl)
+                  (let-match many (mult-is-many pos) (BTrue) ((BFalse) (values env5a $ BFalse)))
+                  (let ((many p2)) $ instantiate acc pl)
+                  (let ((many ok)) $ match many (res-place r2) (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (equal-env env5a p2 q)))
+                  (values (match many ok (((Env) _)) ((BTrue) env5a) ((BFalse) (env-back env5a $ env-error-with (env-at env5a apos) (callee-notes callee) $ str-cat3 (argument-label callee (Succ $ list-length _ acc) $ entry-name e) " does not satisfy `at` " $ qshow env5a p2))) $ BTrue))))
             (let ((many (List $ Code ctx many-one) codes2) (many (List $ Pair (Nat) $ Code ctx many-one) pairs2))
-              (match many mult _
-                ((Erased) (values codes pairs))
-                (else (let ((many physical)) (runtime-one _ mult code))
+              (match many (or omitted $ not $ mult-is-many mult) _
+                ((BTrue) (values codes pairs))
+                ((BFalse) (let ((many physical)) (runtime-one _ mult code))
                   (values (Cons _ physical codes) (Cons _ (MkPair _ _ id physical) pairs)))))
             (tail $ check-args-go sugar root arest st env5 callee ctx rest mrest lp pos as-term prepare fields
               (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) codes2 pairs2))))))
 
   ; A function call (section 9): a lower-level call carries a Predates proof about the callee's level, a
   ; same-level call a Subterm proof for its decreasing argument; the top level carries neither (section 24).
-  ((many elab-call : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Pair (List $ Sub rawargs) $ Ann rawargs) parts) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Res) callee) (many (Callee) desc) (many (Mult) pos) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hcode) (many (Bool) uq) (many (Term) lv) (many (List $ Entry) params) (many (List $ Entry) rets) (many (CC) cc) (many (ExprDemand expect) demand) ->
+  ((many elab-call : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Pair (List $ Sub rawargs) $ Ann rawargs) parts) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Res) callee) (many (Callee) desc) (many (Mult) pos) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hcode) (many (Bool) uq) (many (Term) lv) (many (List $ Entry) params) (many (List $ Entry) rets) (many (CC) cc) (many (ExprDemand expect) demand) (many (Bool) assert-at) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code))
     (let-match many parts (MkPair x _ args ann))
     (let ((many mode)) $ under pos $ match many uq (((Mult) _)) ((BTrue) (Once)) ((BFalse) (Many)))
+    ; a call of an at-function is skipped (AT_REDESIGN A10): the proof opened for the callee is what licenses it
+    (let ((many skipped)) $ and (mult-is-many pos) $ atfn-open env $ res-term callee)
+    (let ((many env12)) $ match many (and assert-at $ not skipped) (((Env) _)) ((BTrue) (env-error-with env (head-notes env callee) $ str-cat (head-name env callee) $ say env " is not an at-function here: no `AtFn` proof for it is open")) ((BFalse) env))
+    (let ((many env13)) $ match many (and skipped $ not $ cc-eq cc $ CCPlain) (((Env) _)) ((BTrue) (env-error env12 $ str-cat3 (tick $ spell env12 $ match many cc (((String) _)) ((CCTail) "tail") ((CCNoTail) "notail") (else "delegate")) (say env12 " marks a call that compiles to one, and a call of at-function ") $ str-cat (head-name env12 callee) " is skipped")) ((BFalse) env12))
     (let ((many bad-fn)) $ and (mult-is-many pos) $ not $ mult-is-many $ res-erasure callee)
     (let ((many bad-share)) $ and (not bad-fn) $ and uq $ and (mult-is-many pos) $ not $ mult-is-once $ res-erasure callee)
-    (let ((many env14)) $ match many bad-fn (((Env) _)) ((BTrue) (env-error-with env (head-notes env callee) $ str-cat3 "erased function " (head-name env callee) " called in a non-erased position")) ((BFalse) env))
+    (let ((many env14)) $ match many bad-fn (((Env) _)) ((BTrue) (env-error-with env13 (head-notes env13 callee) $ str-cat3 "erased function " (head-name env13 callee) " called in a non-erased position")) ((BFalse) env13))
     (let ((many env0)) $ match many bad-share (((Env) _)) ((BTrue) (env-error-with env14 (head-notes env14 callee) $ str-cat3 (say env14 "a shared `UniqueFn` ") (head-name env14 callee) " is callable only erased")) ((BFalse) env14))
     (let ((many env1)) $ match many (res-term callee) (((Env) _)) ((TVar x2) (match many (or bad-fn bad-share) (((Env) _)) ((BTrue) env0) ((BFalse) (use-entry env0 mode x2 $ BFalse)))) (else env0))
     (let ((many env1a) (many hres) (many hid)) $ prepare-or-keep _ _ env1 mode callee hcode)
@@ -6007,7 +6280,10 @@
             (match many (and (cc-eq cc $ CCPlain) $ match many (env-level env4) (((Bool) _)) ((None _) (BFalse)) ((Some _ cur) (equal-env env4 lv $ TVar cur))) _
               ((BTrue) (CCSame (env-loc env) $ res-term callee))
               ((BFalse) cc)))
-          (let ((many call)) $ CApp ictx rmults (var-code env4 ictx hid) actuals cc2)
+          (let ((many (Code ictx rmults) call))
+            (match many skipped _
+              ((BTrue) (let ((many missing) (erased pk)) $ codes-missing ictx rmults) (CValues _ rmults missing pk))
+              ((BFalse) (CApp ictx rmults (var-code env4 ictx hid) actuals cc2))))
           (let-match many (lockstep-dec _ _ rmults ids) (LdYes _ _ _ _ lk)
             ((LdNo _ _ _ _) (values (env-error env4 "internal: call return count") $ CError _ expect "size")))
           (let ((many bound) (erased bpk)) $ picked-of _ rmults ids lk)

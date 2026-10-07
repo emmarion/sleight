@@ -129,11 +129,11 @@
   (let ((many body) (many app)) (show-at _ hp v 100000 env ty))
   (rope-str (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body))))
 
-(def-fns _ $ (many captured-word : (many (Env) env) (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (Term) place) -> (many (Maybe $ Ref Block hs) r))
+(def-fns _ $ (many captured-word : (many (Env) env) (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (Term) slot) -> (many (Maybe $ Ref Block hs) r))
   (let-match many ids (Cons _ id rest) ((Nil _) (None _)))
-  (match many (and (is-const env id) (at-equal env place (TVar id))) _
+  (match many (and (is-const env id) (equal-env env slot (slot-atom id))) _
     ((BTrue) (const-ref _ en id))
-    ((BFalse) (tail $ captured-word env _ en rest place))))
+    ((BFalse) (tail $ captured-word env _ en rest slot))))
 
 ; The physical result of a final function, or, where its return is promised at an argument or a captured
 ; word, that word (lib/program.ml's adapt_final, self/emit.sl's adapt-final-rope).
@@ -144,11 +144,10 @@
       ((Nil _) (None _))
       ((Cons _ e _)
         (let-match many (entry-place e) (Some _ slot) ((None _) (None _)))
-        (let-match many slot (TSlotHolds place) (else (None _)))
-        (let-match many place (TVar id)
+        (let-match many slot (TSlotOf place) (else (captured-word env _ en (env-words env) slot)))
+        (match many place _
           ((TBound _) arg)
-          (else (captured-word env _ en (env-words env) place)))
-        (match many (const-ref _ en id) _ ((Some _ r) (Some _ r)) ((None _) (captured-word env _ en (env-words env) place))))))
+          (else (captured-word env _ en (env-words env) slot))))))
   (match many held _ ((Some _ r) r) ((None _) fallback)))
 
 (def-fns _ $ (many fn-rets : (many (Env) env) (many (Term) ty) -> (many (List $ Entry) rets))
