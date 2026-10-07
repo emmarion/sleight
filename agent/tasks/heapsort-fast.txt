@@ -6,13 +6,13 @@ progress matters more than finishing in this one.
 
 To check your work, compile in order: heapsort-fast/spec.sl, your files, then
 heapsort-fast/accept.sl. This must compile with no warnings. A solution is not
-finished while any array write could be an `-imm` one, any runtime arithmetic
-could be a `u62-*` call, or any runtime recursion could be a tail call, even if
-measurements show no gain.
+finished while the sort allocates, any array write could be an `-imm` one, any
+runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a
+tail call, even if measurements show no gain.
 
-For reference: DESIGN.md (the language),
-prelude.sl (the standard library), tests/ (example programs), pal/ (a certified
-program), and self/ (the compiler, itself written in SL).
+For reference: DESIGN.md (the language), prelude.sl (the standard library),
+tests/ (example programs), pal/ (a certified program), and self/ (the compiler,
+itself written in SL).
 
 Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
 work/, keep files.txt, listing in order the files that go between
