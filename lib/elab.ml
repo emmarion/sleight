@@ -26,7 +26,7 @@ let is_atfn_proof env x g = match type_of env x with App (Var c, [ _; Var g' ]) 
 
 
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
-let pos_of expect = if expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
+let pos_of env expect = if expect = [] && env.usage_erased || expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
 let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (tick (Reader.show raw))
 let name_or_anon n = if n = "_" then None else Some n
@@ -155,8 +155,8 @@ let check_type = check "type" and check_equal = check "value"
 let solve_sg ?raw ?about env loc sg r = match sg with Ty ty -> solve ?raw ?about "type" env loc r.ty ty | Is t -> solve ?about "value" env loc r.term t
 let check_sg env loc sg r = ignore (solve_sg env loc sg r)
 let under pos m = if pos = Erased then Erased else m
-let written env pos l what m =
-  if pos = Erased && m <> Erased then error_in env l "a %s in an erased position is written `erased`" (tick (speller env what)) else m
+let written ?(noun = "") env pos l what m =
+  if pos = Erased && m <> Erased then error_in env l "%s %s%s in an erased position is written `erased`" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 
@@ -951,7 +951,7 @@ let demanded env demand mult ty =
 let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false) env expect raw : Env.t * res list * V.code =
   let l = loc raw in
   let outer_erased = env.usage_erased in
-  let env = { env with usage_erased = outer_erased || pos_of expect = Erased } in
+  let env = { env with usage_erased = outer_erased || pos_of env expect = Erased } in
   let env, ress, code = elab_form ?sink ~final demand cc tele env expect raw in
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
   count_check ?sink l expect ress;
@@ -970,7 +970,7 @@ and elab_erased env raw =
   (env, r.term)
 
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
-  let pos = pos_of expect in
+  let pos = pos_of env expect in
   match raw with
   | Atom (l, n) ->
       let x = var env l n in
@@ -1019,7 +1019,7 @@ and elab_head env pos l raw =
       (placed env x r.place,res_of env x,V.CVar x,fun body -> V.CLet ([x],code,body))
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l c callee hcode lv params rets args =
-  let pos = pos_of expect in
+  let pos = pos_of env expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
   let skipped = pos <> Erased && atfn_open env callee.term in
@@ -1117,7 +1117,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   (env, List.map (res_of env) ids, wrap code)
 
 and elab_special ?sink ?final demand tele env expect l sp args =
-  let pos = pos_of expect in
+  let pos = pos_of env expect in
   let m =
     if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
@@ -1370,7 +1370,7 @@ and cell_items env pos l (what, il, c, params) slots items =
   (env, List.rev slots, List.rev writes, fun body -> List.fold_left (fun b (x,c) -> V.CLet ([x], c, b)) body bindings)
 
 and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args =
-  let pos = pos_of expect in
+  let pos = pos_of env expect in
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
   let ct, params, ret = cell_shape env l c in
   (* a cell at `many` is read, not consumed; it mints its value only at `many`, and an invocation that is not
@@ -1398,7 +1398,7 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
 and elab_cell_match ?(demand = Fixed) tele env expect l args =
   match args with
   | m :: u :: ann :: List (pl, c :: names) :: body ->
-      if pos_of expect = Erased then error_in env l "`cell-match` in an erased position";
+      if pos_of env expect = Erased then error_in env l "`cell-match` in an erased position";
       let mode = mult_or env l m in
       if mode = Erased then error_in env l "`cell-match` takes its cell at `many` or `unique`";
       let env, r, code = elab_expr1 env mode u in
@@ -1443,7 +1443,7 @@ and scrutinee ?res env l smult scrut =
 and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells ?(skip = []) ?sink ?final tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
-      let pos = pos_of expect in
+      let pos = pos_of env expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
       let extra = match cells with Some c -> c | None -> smult <> Erased && cells_allowed env mid in
@@ -1622,13 +1622,13 @@ and elab_body ?tele ?sink env expect l items =
   report_shadows ~env ();
   match items with
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
-      elab_match ?sink ~form:"let-match" tele (read_special (pos_of expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
+      elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
-      let env, wrap = elab_stmt (pos_of expect) env stmt in
+      let env, wrap = elab_stmt (pos_of env expect) env stmt in
       let env, ress, code = elab_body ?tele ?sink env expect l rest in
       (env, ress, wrap code)
   | items ->
-      let env, _, final = elab_stmts (pos_of expect) env l items in
+      let env, _, final = elab_stmts (pos_of env expect) env l items in
       elab_expr ?tele ?sink ~final:true env expect final
 
 and deep_body env = function
@@ -1711,7 +1711,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
           let x, env' = bind env' ~at:l None Erased Dyn p.ty ~rule:p.term in
           (merge_opens (forcing (opens_add env' x)), Fun.id)
       | Some Sp.OpenAdt, [ m; e ] ->
-          let mult = mult_or env l m in
+          let mult = written env spos l "open-adt" (mult_or env l m) in
           let env', x, t, code = open_binding env l mult e in
           let env' = try open_adt env' x with Contradiction msg -> error_in env l "`open-adt`: %s contradicts what is open (%s)" (qshow env' t) (Lazy.force msg) in
           (env', if env.run_pos || mult = Erased then Fun.id else fun rest -> V.CLet ([ x ], code, rest))
@@ -1735,7 +1735,7 @@ and elab_let spos env l args =
     | _ -> error l "%s" (help env (Sp.misuse Sp.Let))
   in
   let binders = List.concat_map (parse_entry env) binder_raws in
-  let expect = List.map (fun b -> match b.s_mult with Some m -> m | None -> error_in env b.s_loc "`let` binder needs a multiplicity") binders in
+  let expect = List.map (fun b -> match b.s_mult with Some m -> written ~noun:" binder" env spos b.s_loc "let" m | None -> error_in env b.s_loc "`let` binder needs a multiplicity") binders in
   let env, tele =
     if binders <> [] && List.for_all (fun b -> b.s_sg <> None) binders then
       let env', _, t = elab_tele env ~holes:true ~written:false binder_raws in
@@ -1745,7 +1745,7 @@ and elab_let spos env l args =
   let after, wrap, final = elab_stmts ~within:"item of a `let`'s right-hand side" spos env l rhs in
   let sink = lazy { owner = respell env "the enclosing `let`"; noun = "value"; shown = List.map Reader.show binder_raws; anchors = [ (bl, respell env "the binders of the enclosing `let` are here") ] } in
   let inner, ress, code = elab_expr ?tele ~sink after expect final in
-  let values = if env.run_pos && pos_of expect <> Erased then run_code inner code else [] in
+  let values = if env.run_pos && pos_of env expect <> Erased then run_code inner code else [] in
   let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
     let env =
@@ -1764,7 +1764,7 @@ and elab_let spos env l args =
     List.fold_left bind_one (hide inner env, [], []) (List.mapi (fun i x -> (i, x)) (List.combine (List.combine binders ress) (spread expect values)))
   in
   let ids = non_erased env' (List.rev ids) in
-  (env', if env.run_pos then Fun.id else fun rest -> wrap (if pos_of expect = Erased then rest else V.CLet (ids, code, rest)))
+  (env', if env.run_pos then Fun.id else fun rest -> wrap (if pos_of env expect = Erased then rest else V.CLet (ids, code, rest)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)

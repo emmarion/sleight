@@ -2,6 +2,6 @@
 ; An atom a literal stands for is shown by the literal, ahead of any name bound to it.
 
 (def-fns _ $ (erased g : (many (Nat) k) -> (erased (Eq (Nat) k k) r))
-  (let ((many n)) 3)
+  (let ((erased n)) 3)
   (Refl (Nat) n))
 (Zero)

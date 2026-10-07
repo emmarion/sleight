@@ -463,7 +463,8 @@ The branch of a phantom constructor under a non-erased scrutinee is
 erased throughout (§21). So is the body of an `erased` function: it is
 checked with every return entry `erased`, whatever its signature says,
 so such a function can only be held or called at `erased`. Every other
-position is non-erased, including a position of size zero.
+position is non-erased, including a position of size zero that is not
+inside an erased position.
 
 Checking is local. Referring to an `erased` name from a non-erased
 position is an error. Referring to a `many` name from anywhere is
@@ -473,7 +474,8 @@ the reverse needs a proof: `coerce` (§33) or `is` (§12).
 A multiplicity written on a form must match the form's position. A
 `match` in an erased position must be written `erased`; `many` or
 `unique` there is an error. A statement's position is that of the
-expression it belongs to (§27), so this rule also covers `let-match`.
+expression it belongs to (§27), so this rule also covers `let-match`,
+every binder of a `let`, and `open-adt`.
 
 For a call or a constructor application:
 
@@ -515,7 +517,8 @@ branch, and the branch of a phantom constructor under a `many` or
 `unique` scrutinee (§21). An `else` branch takes part like any other.
 
 A `unique` value need not be used. A `let` with no binders runs its
-right-hand side, because a position of size zero is non-erased (§14).
+right-hand side, because a position of size zero is non-erased outside
+an erased position (§14).
 This is how a value is consumed for its effect alone.
 
 **Four kinds of mention.** A variable occurs in code in one of four

@@ -68,10 +68,6 @@ ground.
 14. **`def-adts` ordering**: a type constructor's own telescope may
     mention types defined earlier in the same `def-adts`, not later
     ones; every constructor may mention every type of the group.
-15. **A position of size zero is erased** (all zero of its entries
-    are), so the right-hand side of a `let` with no binders, or a match
-    with an empty annotation, is checked but never run. Section 54
-    calls such a `let` useless as the language stands.
 16. **A match in an erased position** elaborates its scrutinee erased
     whatever the keyword says, per section 21's "unconstrained".
 17. **Tail position** for `tail`/`delegate` (section 19) is judged on
@@ -3432,18 +3428,8 @@ to look for a guard, are the owner's.
     request).** The final tree of 156-181 was checked against UNIQUE.md
     section by section with adversarial programs, in the interpreter, the
     extracted code and the self-hosted compiler. Seven defects were fixed;
-    the tests named record each. Two of the fixes rest on a reading this
+    the tests named record each. One of the fixes rests on a reading this
     session made, recorded here as the candidate question it is:
-    - A size-zero position is now non-erased (`tests/zero_size_tail.sl`,
-      `zero_size_use_bad.sl`): a `tail` mark in a body returning no value
-      was refused as erased, and a call there consumed nothing. The reading
-      is section 14's closing "every other position is non-erased", section
-      54's purpose for a zero-binder `let` (invoking a destructor), and section 36's
-      "a tail call from a function returning none". The other reading, that
-      section 14's "a `let` whose binders are all `erased`" is vacuously met
-      by no binders, would keep the call unrun and the value unconsumed;
-      the owner may prefer it. A zero-binder `let` inside a body now emits
-      its right-hand side's code where it was dropped before.
     - A type former at the head of a type expression no longer records a
       use of the head's entry (`tests/type_head_unique_const*.sl`): the
       reading is that a type is an erased position (section 14) and an
