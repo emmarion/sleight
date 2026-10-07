@@ -25,19 +25,6 @@ is a design decision. Remove an entry when it is fixed.
     body, `(absurd (C ...))`, which the reference refuses with "a body
     needs a final expression" and `slc` with "malformed branch".
 
-16. **`slc` embeds a compile-time value that nothing reaches.** On
-    `bench/comptime_garbage.sl`, whose list of 12000 elements is built at
-    compile time and folded away, `slc` at 30db0c9 writes 3469217 bytes of
-    OCaml, about 24000 constant blocks holding the list, where the
-    reference writes 60788. Both programs print 71994000. Since 7f3a568
-    (BUGS 14) `slc` takes about 0.38 s on the sample, 0.14 s at f944496
-    before it, and its output there was 162177 bytes. This session's guess,
-    not checked against the code, is that `slc` emits a run-position
-    argument's hoisted temporary as a Const whether or not anything
-    reaches it. `ocamlopt` overflows its stack on that output at the
-    default 8 MB limit and builds it with `ulimit -s unlimited`; `ocamlc`
-    builds it. No test compares output size, and nothing runs `bench/`.
-
 17. **Investigate a cheaper `uses-join`.** `uses-join-at`
     (`self/core.sl`) walks the whole of its first uses map into the
     second at every join of branches, so its cost seems to grow with
