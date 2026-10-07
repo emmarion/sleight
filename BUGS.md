@@ -24,13 +24,20 @@ is a design decision. Remove an entry when it is fixed.
    be written `erased`, and the `cell-match` refusal, look reachable by
    the same route. Nothing runs wrongly, the body being erased throughout.
 
-3. **`tests/slot_self.sl` passes without its `(slot-self s)`.** Deleting
-   that line leaves the test printing its expected `2`, so the test does
-   not exercise the form it is named for: the pattern field `s : (Slot)`
-   is its own slot by default (DESIGN.md §35), and the `MkBox` match
-   already forces the cell's slot to `(slot-of n)`. The `(slot-self s)` in
-   the prelude's `array-unpluck` may be redundant for the same reason;
-   not checked.
+3. **A binder of declared type `(Slot)` is made its own slot without
+   `slot-self`.** `Env.bind` (`lib/env.ml`, the `self` flag) equates a
+   new entry's automatic slot with the entry whenever its declared type
+   is a variable or a nullary application canonicalizing to `(Slot)`, and
+   `self/core.sl`'s `bind-as-raw` does the same; DESIGN.md §35 has
+   `slot-self` as the only way a `(Slot)` variable becomes its own slot.
+   Reproduced: `tests/slot_self.sl` prints its expected `2` with its
+   `(slot-self s)` line deleted, and `tests/slot_default.sl` expects a
+   word `at` a `(Slot)` parameter to sit in that parameter's slot with no
+   `slot-self` written, so that test pins the defect. ASSUMPTIONS 201 and
+   204 record the default. The fix is the one line minting the slot's
+   rule in each compiler, after which `tests/slot_default.sl` is to be
+   refused, or rewritten with a `slot-self`, and `tests/slot_self.sl`
+   then exercises the form.
 
 4. **`(share u)` as the head of a type form is accepted.**
    `tests/type_head_unique_const_degrade.sl` pins it, although a type is

@@ -1315,16 +1315,15 @@ takes the multiplicity of its position, `unique` included, its word is
 `x`'s word, and the result is at `x`, so a `let` of it sits where `x`
 does.
 
-A binder whose declared type is `(Slot)`, a variable or a nullary
-application canonicalizing to it when the binder is minted, metas
-excepted, is its own slot: its automatic slot is equated with it. So a
-`(Slot)` parameter `s` is the slot `(many A a at s)` names, and
-`vacant-slot`, the built-in `many` constant of type `(Slot)` (§42), is
-its own slot, which makes a cell type naming it the type of a fresh
-cell. `(slot-self s)`, a statement (§27), serves a non-erased variable
-`s` whose type is `(Slot)` but was not so when it was bound: it mints,
-outward and by forcing, the fact that `(slot-of s)` and `s` are equal;
-a contradiction is an error. The runtime word of `vacant-slot` is what
+A variable of type `(Slot)` is not its own slot by being declared:
+like any entry it has an automatic slot distinct from itself.
+`(slot-self s)`, a statement (§27), takes a non-erased variable `s`
+whose type canonicalizes to `(Slot)` and mints, outward and by forcing,
+the fact that `(slot-of s)` and `s` are equal; a contradiction is an
+error. After it, `s` is the slot that `(many A a at s)` names and that
+a cell type `(Cell C s)` indexes. `vacant-slot`, the built-in `many`
+constant of type `(Slot)` (§42), is its own slot, which makes a cell
+type naming it the type of a fresh cell; its runtime word is what
 `cell-alloc` fills a vacant slot with.
 
 ## 36. `at`

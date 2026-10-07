@@ -472,11 +472,9 @@ and under `tests/at_*`, `slot_*`, `cell_many_*`, `cell_binder_*`,
 chose where the reference left it room.
 
 What the owner still has to decide, none of it settled here (the cell
-binder's optionality and the `(Slot)`-typed binder's own slot, decided
-in chat, are DESIGN.md sections 23 and 35 now; ASSUMPTIONS 201 and 204
-say how far the slot default reaches, and reverting it is the one line
-minting the slot's rule in `Env.bind` and its counterpart in
-`self/core.sl`'s `bind-as-raw`):
+binder's optionality, decided in chat, is DESIGN.md section 23 now; the
+`(Slot)`-typed binder's default slot, which the code has and the spec
+does not, is BUGS.md 3, with the reverting line named there):
 
 - Whether `tail`, `notail` or `delegate` on a skipped at-call should be
   the error it is now (ASSUMPTIONS 207) or be ignored (OPEN.md 21).
