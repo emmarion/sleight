@@ -171,17 +171,17 @@
   (ocaml-escape-onto (REmpty) s))
 
 ; An SL name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
-(def-fns _ $ (many sanitize-rope : (subterm many (String) s) -> (many (Rope) r))
-  (let-match many s (SCons c rest) ((SNil) (REmpty)))
-  (let ((many more)) $ notail $ sanitize-rope rest)
+(def-fns _ $ (many sanitize-char : (many (Char) c) -> (many (Char) r))
   (let ((many ok)) (or (char-between c 48 57)
                     $ or (char-between c 65 90) $ char-between c 97 122))
-  (match many ok (((Rope) _))
-    ((BTrue) (RCat (RChar c) more))
-    ((BFalse) (RCat (RChar #\_) more))))
+  (match many ok _ ((BTrue) c) ((BFalse) #\_)))
+
+(def-fns _ $ (many sanitize-onto : (many (Rope) acc) (subterm many (String) s) -> (many (Rope) r))
+  (let-match many s (SCons c rest) ((SNil) acc))
+  (tail $ sanitize-onto (RCat acc $ RChar $ sanitize-char c) rest))
 
 (def-fns _ $ (many sanitize : (many (String) s) -> (many (String) r))
-  (rope-str $ sanitize-rope s))
+  (rope-str $ sanitize-onto (REmpty) s))
 
 ; ---- IdMap: a persistent trie keyed by the halves of a Nat (the prelude's Half)
 
