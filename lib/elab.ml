@@ -938,6 +938,9 @@ let rec erases_to_nothing = function
   | V.CLetRec (_, rest) -> erases_to_nothing rest
   | c -> List.for_all erases_to_nothing (V.subcodes c)
 
+let must_erase env l what code =
+  if not (erases_to_nothing (normalize code)) then error_in env l "%s must erase to nothing, or to a reordering of variables; this one stores, allocates or calls" what
+
 let demanded env demand mult ty =
   if mult = Erased then mult else
   match demand with
@@ -1406,7 +1409,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let needed = ct.V.arity + if mode = Unique then 1 else 0 in
       if List.length names <> needed then
         binder_count env pl "`cell-match`" c mode names (List.map is_entry slots @ if mode = Unique then [ is_entry ~mult:Unique ?place:r.place r.term ] else []);
-      let env, ann_tele, _ = result_tele ~demand tele env expect l ann in
+      let env, ann_tele, atmatch = result_tele ~demand tele env expect l ann in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None mode Dyn r.ty ~rule:r.term in
       let env = placed env sid r.place in
@@ -1417,8 +1420,10 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
         (place envb x (slot_of sid), Some x) in
       let envb, rs, bcode = elab_body ~tele:ann_tele ~sink:(annotated env "cell-match" ann ann_tele expect) envb expect l body in
       check_results envb l body ann_tele rs;
+      if atmatch then must_erase env l "the body of an at-`cell-match`" (project_code (keeps ann_tele) bcode);
+      let body = if atmatch then V.CValues [] else
       let body = match back with None -> bcode | Some x -> V.CLet ([x], V.CVar sid, bcode) in
-      let body = List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) (project_code (keeps ann_tele) body) in
+      List.fold_right (fun (i,x) b -> V.CLet ([x], V.CCellRead (ct, i, V.CVar sid), b)) (List.mapi (fun i x -> i,x) ids) (project_code (keeps ann_tele) body) in
       let env = {env with uses = envb.uses} in
       let env, result_ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) result_ids, V.CLet ([sid], code, reconstruct env l ann_tele result_ids body))
@@ -1451,7 +1456,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       (* an at-match skips its runtime (section 40): each branch must erase to nothing, dispatch and loads included *)
       let erasable bl code = let code = project_code (keeps ann_tele) code in
-        if atmatch && pos <> Erased && not (erases_to_nothing (normalize code)) then error_in env bl "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls";
+        if atmatch && pos <> Erased then must_erase env bl "a branch of an at-match" code;
         code in
       let sink expect = match sink with Some s -> s | None -> annotated env form ann ann_tele expect in
       let mults_of bl c = let phantom = marker env bl tid ctors c = Erased in List.map (fun e -> if phantom then Erased else field_under smult e.mult) (fst (ctor_type env bl c)) in

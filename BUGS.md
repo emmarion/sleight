@@ -31,16 +31,3 @@ is a design decision. Remove an entry when it is fixed.
    the head through `special_of` without the position check that
    `read_special` makes. Reported by a review session; not reproduced
    independently.
-
-5. **A `cell-match` written with an `(at ...)` annotation is accepted
-   and keeps its code.** The entries are checked to be erased or `at`,
-   as for an at-match, but the code is neither skipped nor checked to
-   erase: the `result_tele` call for `cell-match` in `lib/elab.ml`
-   discards the at-match flag. Reported by a review session from the
-   code; no test reaches it. OPEN.md 22 asks what the form should mean.
-
-6. **The usage hints in `lib/specials.txt` disagree with the elaborator
-   about cell binders.** The hint for `cell-match` shows the cell binder
-   as optional, but it is mandatory at `unique`. The hints for a branch
-   and for `else` show it as required, but it is optional. Reported by a
-   review session from the file; not reproduced independently.

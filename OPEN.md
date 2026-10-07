@@ -86,8 +86,6 @@ references are to DESIGN.md.
     the body of an extern function (§43)?
 21. Should `tail`, `notail` or `delegate` on a skipped at-function call
     (§39) be an error, as it is now, or be ignored?
-22. Should a `cell-match` whose annotation is written in the `at` form
-    skip its runtime, as an at-match does?
 23. Should a shadowing sugar replace rebinding under the same name,
     `(let ((unique x)) (f x))`, which is the current idiom?
 24. The names of the forms above, and of `vacant-slot`, `slot-self`,
