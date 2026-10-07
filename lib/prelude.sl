@@ -1096,7 +1096,7 @@
       (values (at (u _ _ (Init _ x) tl)) (SetZ _ _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-      (let ((unique tl3) (erased p1)) (array-unpluck _ _ tl i1 x q))
+      (let ((unique tl3) (erased p1)) (at (array-unpluck _ _ tl i1 x q)))
       (values (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
