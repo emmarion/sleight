@@ -45,14 +45,39 @@ is a design decision. Remove an entry when it is fixed.
    of the same call, `r1 at x` then `r2 at r1`). Temporaries bound by
    `check_args`, `elab_head`, `scrutinee` and `elab_cell_match` keep
    `word` after the `CLet` that binds them has closed; only `Env.hide`
-   clears it. With `twice : (many (Box) x) -> (many (Box) r1 at x)
-   (many (Box) r2 at r1)`, a body `(open-adt many (get-m (id-box z)))
-   (let ((many a) (many b)) (twice z)) b`, where `id-box` returns its
-   argument `at` it, fails with "runtime error: unbound at runtime";
-   the same with the call inside a `match` scrutinee and `(twice z)`
-   in a branch; the same through a `cell-match`'s temporary. Extracted,
-   the OCaml does not compile ("Unbound value v13955"). `slc` runs all
-   of these correctly, so the defect is the reference's alone.
+   clears it. Both programs below are accepted and fail with
+   "runtime error: unbound at runtime: N", exit 1, where `(MkBox 3)` is
+   expected; the temporary read is the one bound for the argument
+   `(id-box z)`, whose binding closed with the `open-adt`'s expression
+   in the first and with the match's scrutinee in the second. Extracted
+   OCaml of the same shape does not compile ("Unbound value vN").
+   `slc` prints `(MkBox 3)` for both, so the defect is the reference's
+   alone.
+
+   ```scheme
+   (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
+   (def-fns _ $ (many id-box : (many (Box) x) -> (many (Box) r at x)) x)
+   (def-fns _ $ (many get-m : (many (Box) x) -> (many (Matchable enum Box (many MkBox)) m)) (matchable-of Box))
+   (def-fns _ $ (many twice : (many (Box) x) -> (many (Box) r1 at x) (many (Box) r2 at r1)) (values x x))
+   (def-fns _ $ (many go : (many (Box) z) -> (many (Box) b))
+     (open-adt many (get-m (id-box z)))
+     (let ((many a) (many b)) (twice z))
+     b)
+   (go (MkBox 3))
+   ```
+
+   ```scheme
+   (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
+   (def-fns _ $ (many id-box : (many (Box) x) -> (many (Box) r at x)) x)
+   (def-fns _ $ (many copy-box : (many (Box) x) -> (many (Box) r)) (let-match many x (MkBox n)) (MkBox n))
+   (def-fns _ $ (many twice : (many (Box) x) -> (many (Box) r1 at x) (many (Box) r2 at r1)) (values x x))
+   (def-fns _ $ (many go : (many (Box) z) -> (many (Box) b))
+     (match many (copy-box (id-box z)) (((Box) b))
+       ((MkBox n)
+         (let ((many a) (many b)) (twice z))
+         b)))
+   (go (MkBox 3))
+   ```
 
 7. **Printing a function type whose `at` names a closed-over variable
    asserts.** `Env.show` and `Env.show_tele` canonicalize the term, and
