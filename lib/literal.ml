@@ -17,7 +17,7 @@ let classify s =
     | "newline" -> `Lit (Char 10)
     | "tab" -> `Lit (Char 9)
     | c when String.length c = 1 -> `Lit (Char (Char.code c.[0]))
-    | c when String.length c = 3 && c.[0] = 'x' && int_of_string_opt ("0" ^ c) <> None -> `Lit (Char (int_of_string ("0" ^ c)))
+    | c when String.length c = 3 && c.[0] = 'x' && String.for_all (function '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true | _ -> false) (String.sub c 1 2) -> `Lit (Char (int_of_string ("0" ^ c)))
     | _ -> `Bad ("malformed character literal " ^ s)
   else `Name
 
