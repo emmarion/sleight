@@ -33,3 +33,10 @@
     (many MkSortedPerm : (erased (List (Nat)) xs) (erased (List (Nat)) ys)
         (erased (Ascending ys) sorted) (erased (Permutation xs ys) perm)
         -> (SortedPerm xs ys))))
+
+(def-adts
+  ((Copies : ((List (Nat)) xs) ((List (Copy (Nat))) cs) -> Type)
+    enum
+    (many CopiesNil : -> (Copies (Nil (Nat)) (Nil (Copy (Nat)))))
+    (many CopiesCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Copy (Nat))) cs)
+        (erased (Copies xs cs) rest) -> (Copies (Cons (Nat) x xs) (Cons (Copy (Nat)) (MkCopy (Nat) x) cs)))))
