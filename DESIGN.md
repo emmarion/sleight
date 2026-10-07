@@ -1585,8 +1585,8 @@ an erased position, like the marks of §19.
 
 ## 40. At-matches
 
-A match is an **at-match** when its return annotation is wrapped in an
-`at` form, with the telescope inside:
+A `match` or `cell-match` (§38) is an **at-match** when its return
+annotation is wrapped in an `at` form, with the telescope inside:
 
 ```scheme
 (match many xs (at (((List (Nat)) ns at xs)))
@@ -2210,9 +2210,9 @@ list:
 - `else` heads the branch that stands for every unlisted constructor
   (§21).
 - `at` appears on a telescope entry, before an argument of a cell
-  invocation, around an invocation or a call, around a match
-  annotation, before a `def-fns` name, and after one (§36, §37, §39,
-  §40, §41).
+  invocation, around an invocation or a call, around the annotation
+  of a `match` or `cell-match`, before a `def-fns` name, and after one
+  (§36, §37, §39, §40, §41).
 
 ## 55. Worked example: `List`
 
