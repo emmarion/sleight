@@ -90,6 +90,13 @@ references are to DESIGN.md.
     `(let ((unique x)) (f x))`, which is the current idiom?
 24. The names of the forms above, and of `vacant-slot`, `slot-self`,
     `at-fn-of` and `open-at-fn`.
+26. Is a `delegate`-bodied function written without the annotation of
+    §41 at its callee's slot? §41 puts `g` at `f` only when the
+    annotation is written, and DESIGN.md leaves the unannotated case
+    unspecified. As a session read the code, both implementations give
+    such a function its own automatic slot, so it cannot stand for a
+    parameter written `at` an argument that is its callee, although
+    both compile it to its callee's word (§33).
 
 ## Argument temporaries
 
