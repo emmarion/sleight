@@ -238,12 +238,6 @@ hold the implementation side.
     seems necessary for the `at` entries to be honest; the sentence
     reads as if it were not. Open: say the scrutinee runs, or require
     it to be a variable.
-34. **`let-match` on a union with a phantom constructor.** §27's
-    survivor rule counts a phantom constructor under a `many`
-    scrutinee as surviving, since it is not refuted, so
-    `(let-match many w (WA n))` is refused where the equivalent `match`
-    treats the phantom branch as unreachable (§21). Open: should a
-    phantom under a non-erased scrutinee count as not surviving.
 38. **The type of an argument for an `is` entry.** §12 says the
     argument "must canonicalize to the same term as the `is`
     expression" and says nothing of its type; §50 lets `_` stand for an
