@@ -1718,7 +1718,8 @@ functions, so none is built at runtime. It contains:
   `RStr`, `RCat` and `RChar`, with the extern `flatten`, which returns
   a `Flat` proof.
 - **Containers.** `Unit`, `Bool`, `Maybe`, `Result` (whose `Fail`
-  carries a `String`), `List` (§55), `Pair`, `EntryKind` (`IsFile`,
+  carries a `String`), `List` (§55) with the list relations `Length`,
+  `Nth`, `SetNth` and `Repeat` (§44), `Pair`, `EntryKind` (`IsFile`,
   `IsDir`, `IsOther`, `Missing`) and `Change` (`Changed`, `Unchanged`).
 - **`thunk` and `unique-thunk`**, at `thunk-lvl`. `thunk` takes a
   value and returns a nullary `Fn` that holds it, at any type and any
@@ -1779,19 +1780,19 @@ functions, such as `array-swap` in §44.
 
 ## 44. Arrays
 
-The prelude's array API is length-indexed, with owned elements and
-uninitialised slots through a union newtype in the manner of Rust's
-`MaybeUninit`. There is one extern primitive per element operation,
-each modelled in source over the type's own cells (§43). `_` is as in
-§50.
+The prelude's array API is indexed by the list of the array's elements.
+Elements are owned, and uninitialised slots go through a union newtype
+in the manner of Rust's `MaybeUninit`. There is one extern primitive
+per element operation, each modelled in source over the type's own
+cells (§43). `_` is as in §50.
 
 ```scheme
-(def-adts $ (Array : (Type A) ((Nat) n) -> Type)
+(def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern
-  (many ANil : (erased Type A) -> (Array A (Zero)))
-  (many ACons : (erased Type A) (erased (Nat) n)
-                (unique A head) (unique (Array A n) rest) ->
-     (Array A (Succ n))))
+  (many ANil : (erased Type A) -> (Array A (Nil A)))
+  (many ACons : (erased Type A) (erased (List A) xs)
+                (unique A head) (unique (Array A xs) rest) ->
+     (Array A (Cons A head xs))))
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
@@ -1804,26 +1805,33 @@ each modelled in source over the type's own cells (§43). `_` is as in
 ```
 
 A `(MaybeUninit A)` is one word: the word of `A` under `Init`, and the
-word of its slot under `Uninit`. So an `(Array (MaybeUninit A) n)` is
-the same memory as the `(Array A n)` it becomes. Reading an `Init` out
+word of its slot under `Uninit`. So an `(Array (MaybeUninit A) xs)` is
+the same memory as the `(Array A ys)` it becomes. Reading an `Init` out
 is a `unique` match whose `Uninit` branch must be refuted, by a fact or
 by proof; the one-real-branch rule of §21 makes this `assume_init`
 with evidence in place of `unsafe`. Since the field of `Copy` is
-`many`, an element of an `(Array (Copy A) n)` is read in place.
+`many`, an element of an `(Array (Copy A) xs)` is read in place.
 `Immediate A` is an enum with `ImmU62`, `ImmU8`, `ImmChar`, `ImmBool`
 and `ImmCopy`, naming the types whose values are immediates; the
 `-imm` operations take it as evidence.
 
-The relations, with every field erased, and their index shapes:
+The index proofs are generic relations on lists, which the prelude
+declares next to `List` (§42), with every field erased:
 
-- `(AllUninit A n a)` and `(AllInit A n a)` over an
-  `(Array (MaybeUninit A) n) a`: every element is
-  `(Uninit A vacant-slot)`, or every element is `(Init A x)`;
-- `(ANth A n a i x)`: element `i` of `a` is `x`. It carries the bound,
-  so no `Lt` accompanies an index;
-- `(ASet A n a i y r)`: `r` is `a` with element `i` set to `y`;
-- `(ArrayIsList A xs n a)` and `(ArrayRepeat A n x a)` over an
-  `(Array (Copy A) n)`.
+- `(Length A xs n)`: `xs` has `n` elements. Its constructors are
+  `LengthNil` and `LengthCons`.
+- `(Nth A xs i x)`: element `i` of `xs` is `x`. Its constructors are
+  `NthHere` and `NthThere`. It carries the bound, so no `Lt` accompanies
+  an index.
+- `(SetNth A xs i y ys)`: `ys` is `xs` with element `i` set to `y`. Its
+  constructors are `SetHere` and `SetThere`.
+- `(Repeat A n x xs)`: `xs` is `n` copies of `x`. Its constructors are
+  `RepeatNil` and `RepeatCons`.
+
+One relation belongs to the arrays themselves. `(AllInit A xs ys)`
+pairs a list `xs` of `(MaybeUninit A)` whose every element is
+`(Init A x)` with the list `ys` of those `x`; its constructors are
+`AINil` and `AICons`.
 
 The functions. Each is `extern` with a source model in
 `lib/prelude.sl`; the FFI's implementation drops the arguments the
@@ -1831,38 +1839,44 @@ model does not use:
 
 ```scheme
 array-new : (erased Type A) (subterm many (Nat) n) ->
-    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p)
-array-swap : (erased Type A) (erased (Nat) n) (unique (Array A n) a)
-    (subterm many (Nat) i) (unique A x) (erased A m) (erased (ANth A n a i m) nth) ->
-    (unique m is old) (unique (Array A n) r at a) (erased (ASet A n a i x r) p)
-array-place : (erased Type A) (erased (Nat) n) (unique (Array A n) a)
-    (many (Nat) i) (unique A x) (erased A m) (erased (ANth A n a i m) nth) ->
-    (unique (Array A n) r at a) (erased (ASet A n a i x r) p)
-array-pluck : (erased Type A) (erased (Nat) n) (unique (Array (MaybeUninit A) n) a)
-    (subterm many (Nat) i) (erased (MaybeUninit A) m)
-    (erased (ANth (MaybeUninit A) n a i m) nth) ->
-    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A (slot-of v)) r) p)
-array-unpluck : (erased Type A) (erased (Nat) n) (unique (Array (MaybeUninit A) n) a)
-    (subterm many (Nat) i) (unique A x)
-    (erased (ANth (MaybeUninit A) n a i (Uninit A (slot-of x))) nth) ->
-    (unique (Array (MaybeUninit A) n) r at a)
-    (erased (ASet (MaybeUninit A) n a i (Init A x) r) p)
-array-get : (erased Type A) (erased (Nat) n) (unique (Array (Copy A) n) a)
-    (subterm many (Nat) i) (erased A x)
-    (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
+    (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
+    (erased (Repeat (MaybeUninit A) n (Uninit A vacant-slot) xs) p)
+array-swap : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
+    (subterm many (Nat) i) (unique A x) (erased A m) (erased (Nth A xs i m) nth) ->
+    (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
+    (erased (SetNth A xs i x ys) p)
+array-place : (erased Type A) (erased (List A) xs) (unique (Array A xs) a)
+    (many (Nat) i) (unique A x) (erased A m) (erased (Nth A xs i m) nth) ->
+    (erased (List A) ys) (unique (Array A ys) r at a) (erased (SetNth A xs i x ys) p)
+array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
+    (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
+    (unique m is v) (erased (List (MaybeUninit A)) ys)
+    (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i (Uninit A (slot-of v)) ys) p)
+array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
+    (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->
+    (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (SetNth (MaybeUninit A) xs i (Init A x) ys) p)
+array-get : (erased Type A) (erased (List (Copy A)) xs)
+    (unique (Array (Copy A) xs) a) (subterm many (Nat) i)
+    (erased A x) (erased (Nth (Copy A) xs i (MkCopy A x)) nth) ->
     (many x is v) (unique a is r at a)
-array-get-many : (erased Type A) (erased (Nat) n) (many (Array A n) a)
-    (subterm many (Nat) i) (erased A x) (erased (ANth A n a i x) nth) ->
+array-get-many : (erased Type A) (erased (List A) xs) (many (Array A xs) a)
+    (subterm many (Nat) i) (erased A x) (erased (Nth A xs i x) nth) ->
     (many x is v)
-array-length : (erased Type A) (erased (Nat) n) (subterm unique (Array A n) a) ->
-    (many n is len) (unique a is r at a)
-array-length-many : (erased Type A) (erased (Nat) n) (subterm many (Array A n) a) ->
-    (many n is len)
-list-to-array : (erased Type A) (subterm many (List A) xs) ->
-    (erased (Nat) n) (unique (Array (Copy A) n) a) (erased (ArrayIsList A xs n a) p)
+array-length : (erased Type A) (erased (List A) xs)
+    (subterm unique (Array A xs) a) ->
+    (many (Nat) len) (erased (Length A xs len) p) (unique a is r at a)
+array-length-many : (erased Type A) (erased (List A) xs)
+    (subterm many (Array A xs) a) ->
+    (many (Nat) len) (erased (Length A xs len) p)
+list-to-array : (erased Type A) (subterm many (List (Copy A)) xs) ->
+    (unique (Array (Copy A) xs) a)
 array-make : (erased Type A) (subterm many (Nat) n) (many A x) ->
-    (unique (Array (Copy A) n) a) (erased (ArrayRepeat A n x a) p)
+    (erased (List (Copy A)) xs) (unique (Array (Copy A) xs) a)
+    (erased (Repeat (Copy A) n (MkCopy A x) xs) p)
 ```
 
 `array-swap-imm` and `array-place-imm` are `array-swap` and
@@ -1875,8 +1889,8 @@ costs nothing. Until it is put back, the array may keep the plucked
 value alive. Constructing an `ACons` copies its tail, and taking an
 array apart through the model's `ACons` view is O(n). `init-witness`
 is an erased witness, in the shape of §60, that an
-`(Array (MaybeUninit A) n)` whose elements are all `Init` coerces to an
-`(Array A n)`, at `(Unique)` on both sides. The `coerce` is written
+`(Array (MaybeUninit A) xs)` with `(AllInit A xs ys)` coerces to an
+`(Array A ys)`, at `(Unique)` on both sides. The `coerce` is written
 where it is used: a wrapper function would extract to a call, while
 the inline `coerce` extracts to nothing.
 
