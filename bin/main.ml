@@ -15,14 +15,18 @@ let run consume env path =
 
 (* Reads forms until each is complete, running statements and printing expressions; an error keeps the scope as it was. *)
 let repl consume env =
-  let balance s = String.fold_left (fun n c -> match c with '(' -> n + 1 | ')' -> n - 1 | _ -> n) 0 s in
+  let unfinished src =
+    match Reader.scan_upto "repl" src with
+    | _, Some (_, m) -> m = Reader.unterminated
+    | toks, None -> (match Speciallang.Indent.balance toks with _ :: _, None -> true | _ -> false)
+  in
   let rec form buf =
     print_string (if Buffer.length buf = 0 then "> " else "  ");
     match In_channel.input_line stdin with
-    | None -> None
+    | None -> if Buffer.length buf = 0 then None else Some (Buffer.contents buf)
     | Some line ->
         Buffer.add_string buf (line ^ "\n");
-        if balance (Buffer.contents buf) > 0 then form buf else Some (Buffer.contents buf)
+        if unfinished (Buffer.contents buf) then form buf else Some (Buffer.contents buf)
   in
   let rec loop env =
     match form (Buffer.create 64) with

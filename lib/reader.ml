@@ -21,6 +21,8 @@ let rec show = function
 
 type token = LParen | RParen | Dollar | Word of string | Pragma of raw list
 
+let unterminated = "unterminated string literal"
+
 (* [bol] is the offset the current line starts at, so a token's column is its own offset from there. A
    string literal's token is placed at its opening quote, the line its own rather than the line it closes
    on, which is what makes a position the start of the token it names. *)
@@ -31,12 +33,12 @@ let scan_upto file src =
   let err l msg = raise (Syntax (l, msg)) in
   let rec skip p i = if i < n && p src.[i] then skip p (i + 1) else i in
   let rec string buf line bol i =
-    if i >= n then err (at line bol i) "unterminated string literal"
+    if i >= n then err (at line bol i) unterminated
     else
       match src.[i] with
       | '"' -> (line, bol, i + 1)
       | '\\' ->
-          let e = if i + 1 < n then src.[i + 1] else err (at line bol i) "unterminated string literal" in
+          let e = if i + 1 < n then src.[i + 1] else err (at line bol i) unterminated in
           Buffer.add_char buf (match e with 'n' -> '\n' | 't' -> '\t' | '"' | '\\' -> e | _ -> err (at line bol i) ("unknown escape \\" ^ String.make 1 e));
           string buf line bol (i + 2)
       | '\n' -> Buffer.add_char buf '\n'; string buf (line + 1) (i + 1) (i + 1)
