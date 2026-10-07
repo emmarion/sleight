@@ -1136,6 +1136,8 @@ inferred. Multiplicity, by contrast, is declared at every binder (§14).
 Evaluation is eager. The semantics is that of a machine with unlimited
 stack and heap. A real run may crash where the host cannot represent
 what is asked of it. A crash produces no value, never a different one.
+How a crash is reported is not specified; it need not be a runtime
+error.
 
 ## 32. Closures, `def-unique`, and the top level
 
@@ -1645,12 +1647,13 @@ extern function may not have a `delegate` body. A function marked both
 `extern` and `at` has no FFI implementation (§39). An `extern`
 implementation must agree with its model: running the models instead
 of the implementations must give a program the same values, though not
-the same cost. The prototype's FFI is a fixed table keyed by the
-declared name. An `extern` declaration of a name the table lacks, or of
-a name already claimed, is an error. `--no-extern` runs the models
-instead, and `dune test` runs every test both ways. Inside the body of
-an extern function, no type counts as marked `extern` for the purposes
-of §37 and §43.
+the same cost, and either may crash where the other does not (§31).
+The prototype's FFI is a fixed table keyed by the declared name. An
+`extern` declaration of a name the table lacks, or of a name already
+claimed, is an error. `--no-extern` runs the models instead, and
+`dune test` runs every test both ways. Inside the body of an extern
+function, no type counts as marked `extern` for the purposes of §37
+and §43.
 
 **The source prelude** `lib/prelude.sl` is elaborated before a
 program's files. Its names are ordinary and may be shadowed. Its

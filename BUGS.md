@@ -19,24 +19,6 @@ is a design decision. Remove an entry when it is fixed.
    `read_special` makes. Reported by a review session; not reproduced
    independently.
 
-11. **Inputs beyond the host's limits escape as OCaml exceptions
-    rather than a `runtime error:` line.** `Program.explain` maps only
-    the language's own exceptions, so each of these ends with "Fatal
-    error: exception ...", exit 2, in the interpreter and, where it
-    runs, in the extracted program: `(nat-shl 1 4611686018427387904)`
-    (`Z.Overflow`; `shl` has no `fits_int` guard, `shr` has one);
-    `(array-new (Nat) 100000000000000000000000)` (`Z.Overflow`) and
-    `(array-new (Nat) 1000000000000000000)`
-    (`Invalid_argument("Array.make")`), which audit B2 once covered;
-    a numeral of 2^62 or more under `--no-extern` (`Z.Overflow` from
-    `Z.to_int` in `nat_value`'s Peano ladder); and stack overflows in
-    the source models under `--no-extern` (`array-new` of 200000, a
-    `Rope` of 100000 `RCat`s flattened), where the FFI is fine. §31
-    allows a crash where the host cannot represent what is asked, so
-    only the form of the report may be at issue. `slc --interpret`
-    overflows its stack on the deep `Rope` too (it runs the model at
-    compile time); `ulimit -s unlimited` makes it print 100000.
-
 13. **Diagnostics found wanting by the sweep.** `slc` and the
     reference differ in wording on some refusals, as audit M3 already
     records; one seen since is an absurd-by-proof branch written with no
