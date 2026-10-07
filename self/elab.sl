@@ -5296,7 +5296,7 @@
           (match many (mult-of env mraw) (((Env) _) ((Mult) m0) ((Raw) r0))
             ((None _) (values (env-error env $ str-cat "expected a multiplicity, got " $ qraw mraw) (Many) cr))
             ((Some _ mm) (values env mm cr))))))
-    (let ((many env2) (many cid)) $ ctor-var env1 craw)
+    (let ((many env2) (many cid)) $ named env1 craw "a constructor")
     (let ((many env3) (many mcs)) $ notail $ elab-mctors sugar rest env2)
     (values env3 $ Cons _ (MkMCtor m $ TVar cid) mcs))
 
@@ -6249,7 +6249,7 @@
         ((BRefuted _ c) (values c (Nil _) (BTrue)))
         ((BAbsurd _ c fs _ _) (values c fs (BFalse)))))
     (let ((many ppos)) $ pattern-pos envl braw)
-    (let ((many env1) (many c)) (named (env-at envl ppos) craw "a constructor"))
+    (let ((many env1) (many c)) (ctor-var (env-at envl ppos) craw))
     (let-match many (mctors-list mctors c) (BTrue)
       ((BFalse) (tail $ elab-branches sugar brest (env-back env $ env-error-with env1 (declared-as env1 tid) $ str-cat3 (qshown env1 c) " is not a constructor of " $ qshown env1 tid) ctx tid sres smult mctors ann-tele expect acc seen extra saved incoming joined refute form bsink remap atmatch deep)))
     (let ((many env2)) $ env-back envl env1)

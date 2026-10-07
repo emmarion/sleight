@@ -244,11 +244,6 @@ hold the implementation side.
     `(let-match many w (WA n))` is refused where the equivalent `match`
     treats the phantom branch as unreachable (§21). Open: should a
     phantom under a non-erased scrutinee count as not surviving.
-35. **Hand-written `Matchable` types.** `(Matchable enum T (many k))`
-    with `k` a `Nat` or a literal, and `newtype` written twice, are
-    accepted by the former and by `open-adt`; the error comes at a
-    match. §24 says the entries are value constructors and allows each
-    mark once. Open: whether the former should check them.
 38. **The type of an argument for an `is` entry.** §12 says the
     argument "must canonicalize to the same term as the `is`
     expression" and says nothing of its type; §50 lets `_` stand for an
