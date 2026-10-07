@@ -13,10 +13,11 @@ tests do not make is a mistake in this file.
 ## What it is
 
 The uniqueness extension adds `def-unique`, explicit `share`, per-branch use
-checking, slots in the fact table (AT_REDESIGN.md: every non-erased entry is
-minted with an anonymous `many` entry of type `(Slot)`, its automatic slot,
-and `(slot-of x)` canonicalizes to it by `x`'s binder, never through `x`'s
-rule), mutable cells at `unique` and at `many`, and proof-indexed arrays.
+checking, slots in the fact table (AT_REDESIGN.md: every entry is minted
+with an anonymous entry of type `(Slot)`, erased where the entry is, its
+automatic slot, and `(slot-of x)` canonicalizes to it by `x`'s binder, never
+through `x`'s rule), mutable cells at `unique` and at `many`, and
+proof-indexed arrays.
 Entries written `at`, as parameters, returns or match annotation entries,
 are checked logically and omitted physically, and a call of an at-function
 or an at-match compiles to nothing but the reconstruction of its `at`

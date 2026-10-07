@@ -476,30 +476,49 @@ What the owner still has to decide, none of it settled here:
 - AT_REDESIGN A8 says the cell binder is mandatory; the owner decided in
   chat that it is optional at `unique` and at `many`, and the code
   follows the chat. A8's wording is the owner's to update (rule 12).
-- Whether `vacant-slot` is its own `at` (review item 17; ASSUMPTIONS 204
-  does nothing special).
-- Whether a `(Slot)`-typed binder is its own `at` by default (review
-  item 30; not implemented, `slot-self` is written where wanted).
+- The owner decided in chat that `vacant-slot` is its own `at` (review
+  item 17) and, tentatively ("yeah probably"), that a `(Slot)`-typed
+  binder is its own `at` by default (review item 30); the code follows
+  the chat (ASSUMPTIONS 201 and 204 say how far the check reaches), and
+  AT_REDESIGN.md's wording is the owner's to update (rule 12). Reverting
+  the default is the one line minting the slot's rule in `Env.bind` and
+  its counterpart in `self/core.sl`'s `bind-as-raw`.
 - Whether `tail`, `notail` or `delegate` on a skipped at-call should be
   the error it is now (ASSUMPTIONS 207) or be ignored.
 - A12.5's tier-1 list, and the A12 items 1-4 left for version two.
 
-Decided by the owner in this session's chat, in AT_REDESIGN A2, A5, A6
-and A10, and not yet implemented in `lib/` or `self/`: an erased
-binder has an erased automatic slot; an erased entry may be `at` any
-variable, and the `at` claim of a parameter is checked in erased
-positions too; `erased` with `at` is refused on `def-fns` and
-`def-unique`, as is the `(at (f ...))` assertion in an erased
-position. A seven-line prototype of the first point in `lib/` passed
-the suite with one expected message change
-(`tests/slot_of_erased_arg_bad.sl`) and timed within noise on slc's
-sources; ASSUMPTIONS 200's "`None` for an erased result" is for the
-implementing session to revisit.
+Done after that, in the same session: AT_REDESIGN A2, A5, A6 and A10
+as the owner approved them, in `lib/` and in `self/` (the port by a
+subagent), with `origin/at-redesign`'s `0af18f3` (a `(Slot)`-typed
+binder is its own slot; the at-parameter rename fix) merged in at the
+owner's request, the slot-self rule reaching erased binders too and
+metas not (ASSUMPTIONS 201). Every entry now carries a slot at its own
+erasure; an erased entry may be `at` any variable and the claim is
+checked in every position; `erased` with `at`, and the `(at (f ...))`
+assertion in an erased position, are refused; the argument for a
+slot-named parameter is bound first (ASSUMPTIONS 211). `dune test`: 750
+tests, 0 failures; `self/bootstrap.sh`: 709 matched, 829 refused, 0
+failed, fixpoint reached. Worth knowing: the port's first version built
+two of its new messages before testing their conditions, spelling a
+keyword and naming a term through a scope walk on every call, and slc
+took fifteen times as long on its own sources; both are built on the
+failing branch now (rule 17), found with callgrind on
+`bench/wide_scope.sl`.
+
+Timing (rule 17) after the merge, slc on its own sources, five
+alternating runs, minimum and median wall time, noise about 0.4s: the
+branch's tip before this change (`fd851d4`) on the new sources 4.08s and
+4.29s, 100 MB; the merged slc 4.17s and 4.56s, 113 MB; origin/main's on
+its own sources 3.11s and 3.35s, 103 MB. This session reads the
+difference from the tip as one entry per erased binder, inside the run
+spread by minimum and about six percent by median; the note below on
+representing slots as entries at all stands.
 
 Timing (CLAUDE.md rule 17), each compiler on its own sources, five
 alternating runs, minimum and median wall time, on a machine whose
 noise was about 0.3s: origin/main's `slc` 2.70s and 2.96s; the ported
-`slc` 3.29s and 3.80s, about 25 percent slower. The reference compiling
+`slc` 3.29s and 3.80s, about 25 percent slower (3.34s and 3.48s again
+after the `(Slot)` default landed, three runs). The reference compiling
 the same sources: origin/main's 4.7s, this branch's 3.8s, faster
 because a polymorphic comparison of terms over every opened object on
 every rule added, more than half of the reference's run before, is an

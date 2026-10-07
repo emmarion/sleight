@@ -4001,11 +4001,11 @@ document decides, each a reading that may be mistaken; the owner's decisions
 of that document, and the owner's decision in chat that the cell binder of a
 pattern is optional at `unique` as at `many`, are not repeated here.
 
-200. **How a slot sits in the fact table.** Every non-erased, non-meta
-     entry is minted together with an anonymous `many` entry of type
-     `(Slot)`, its automatic slot (A2), held on the entry (`Env.entry`'s
-     `slot`) and not in the scope's list of ids; the slot entry's own slot
-     is itself. The closed spelling of `(slot-of x)` is a term node,
+200. **How a slot sits in the fact table.** Every entry, erased ones
+     and metas included, is minted together with an anonymous entry of
+     type `(Slot)` at the entry's own erasure, its automatic slot (A2),
+     held on the entry (`Env.entry`'s `slot`) and not in the scope's list
+     of ids; the slot entry's own slot is itself. The closed spelling of `(slot-of x)` is a term node,
      `Term.SlotOf`, over a variable or a `Bound`, which is what a telescope
      can hold for one of its own binders (A6); `Env.canon` resolves
      `(slot-of x)` to `x`'s binder's slot and never through `x`'s rule
@@ -4022,15 +4022,20 @@ pattern is optional at `unique` as at `many`, are not repeated here.
 
 201. **`(slot-of x)` as an expression** is a reference to the slot entry:
      a value whose word is `x`'s word, at that slot (A2's "an automatic
-     slot is at itself"), and no use of `x`; it takes the multiplicity of
-     its position, as U10 has `(SlotHolds v)` doing, a slot being inert
+     slot is at itself"), and no use of `x`; for a non-erased `x` it takes
+     the multiplicity of its position, as U10 has `(SlotHolds v)` doing,
+     and for an erased `x` it is erased (A6); a slot being inert
      (U10) so that a unique copy of its word aliases nothing that matters
      (U1), which is what lets `(Init _ (slot-of a))` fill a unique field
      (`tests/array_cycle.sl`). So a `let` binder of
-     it sits where `x` does without `slot-self`, and a `(Slot)` read out of
-     data does not until `slot-self` says so (review items 27 and 30). The
-     default of item 30, a `(Slot)`-typed binder being its own `at`, is not
-     implemented: open, for the owner.
+     it sits where `x` does without `slot-self` (review item 27). A binder
+     whose type is `(Slot)` is its own slot, the owner's reading of review
+     item 30 (HANDOFF.md), an erased binder included and a meta excepted,
+     since a rule to an unsolved meta would put one in the fact table
+     (SUGAR.md 6); the check is on the type the binder is given, a
+     variable or a nullary application canonicalized as the binder is
+     minted, so a binder whose type is only later found to be `(Slot)` is
+     left to `slot-self` (`tests/slot_default.sl`).
 
 202. **What is passed and what is read (A3).** The runtime signature of a
      function is its non-erased entries without a written `at` (review
@@ -4055,9 +4060,8 @@ pattern is optional at `unique` as at `many`, are not repeated here.
 
 204. **`vacant-slot`** is a named `many` constant of type `(Slot)`, Const
      over the token, so its runtime word is what `cell-alloc` fills a
-     vacant slot with (review item 17). Whether it is its own `at` is
-     open: nothing special is done, so it has an automatic slot like any
-     entry and no `slot-self` is minted on it.
+     vacant slot with (review item 17), and its slot is itself, as any
+     `(Slot)`-typed binder's is (201; `tests/vacant_slot_self.sl`).
 
 205. **`slot-self`** mints its fact by forcing, so either the variable or
      its slot may end up carrying the rule, and a `Contradiction` is

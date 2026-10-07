@@ -1538,14 +1538,16 @@
   (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat (say env "no caller word for `at` ") $ qshow env p) 0))))
 
 ; A parameter written `at` is not passed: inside the body it is a rename of the word its target holds
-; (AT_REDESIGN A3), bound over the frame of the runtime parameters [base], the first such parameter outermost.
-(def-fns _ $ (many at-renames : (subterm many (List $ Entry) params) (many (List $ Nat) pids) (many (List $ Term) pvars) (many (Env) env) (many (List $ List $ Nat) base) -> (many (Env) r) (many (List $ List $ Nat) ctx) (many (StmtCode base ctx) sc))
+; (AT_REDESIGN A3), bound over the frame of the runtime parameters [base], the first such parameter outermost;
+; [before] holds the parameters bound so far, the place of each entry being written over those alone.
+(def-fns _ $ (many at-renames : (subterm many (List $ Entry) params) (many (List $ Nat) pids) (many (List $ Term) before) (many (Env) env) (many (List $ List $ Nat) base) -> (many (Env) r) (many (List $ List $ Nat) ctx) (many (StmtCode base ctx) sc))
   (let-match many params (Cons _ e rest) ((Nil _) (values env base $ SNone _)))
   (let-match many pids (Cons _ y yrest) ((Nil _) (values env base $ SNone _)))
-  (let-match many (entry-place e) (Some _ p) ((None _) (tail $ at-renames rest yrest pvars env base)))
-  (let-match many (mult-is-many $ entry-mult e) (BTrue) ((BFalse) (tail $ at-renames rest yrest pvars env base)))
-  (let ((many env2) (many src)) $ location-var env base $ instantiate pvars p)
-  (let ((many env3) (many ctx) (many more)) $ notail $ at-renames rest yrest pvars env2 $ Cons _ (Cons _ y $ Nil _) base)
+  (let ((many after)) $ Cons _ (TVar y) before)
+  (let-match many (entry-place e) (Some _ p) ((None _) (tail $ at-renames rest yrest after env base)))
+  (let-match many (mult-is-many $ entry-mult e) (BTrue) ((BFalse) (tail $ at-renames rest yrest after env base)))
+  (let ((many env2) (many src)) $ location-var env base $ instantiate before p)
+  (let ((many env3) (many ctx) (many more)) $ notail $ at-renames rest yrest after env2 $ Cons _ (Cons _ y $ Nil _) base)
   (values env3 ctx $ SSeq _ _ _ (SLet _ many-one (Cons _ y $ Nil _) (PkMany _ (Nil _) y (Nil _) $ PkNil _) (var-code env2 base src)) more))
 
 (def-fns _ $ (many physical-mults : (subterm many (List $ Entry) tele) -> (many (List $ Mult) ms))
@@ -5723,7 +5725,7 @@
     ; bound by a let around the body (AT_REDESIGN A3)
     (let ((many rt)) $ runtime-ids params pids)
     (let ((many base)) $ Cons _ rt $ Cons _ gall ctx)
-    (let ((many envr) (many bctx) (many renames)) $ at-renames params pids pvars envb base)
+    (let ((many envr) (many bctx) (many renames)) $ at-renames params pids (Nil _) envb base)
     (let ((many (Env) envb2) (many (Code bctx rms) code))
       (match many isabs _
         ((BTrue)
