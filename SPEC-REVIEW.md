@@ -259,8 +259,7 @@ hold the implementation side.
     of any computed `Cell`-typed head, so `((share u) 1)` is refused
     Settled: whether a head is computed is never relevant, the owner's
     decision; a cell is taken at the multiplicity its expression has,
-    and §37's "A cell given by any other expression is taken at
-    unique" is to be reworded.
+    and §37 now says so.
 38. **The type of an argument for an `is` entry.** §12 says the
     argument "must canonicalize to the same term as the `is`
     expression" and says nothing of its type; §50 lets `_` stand for an

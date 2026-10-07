@@ -1471,31 +1471,33 @@ is not allowed. A destructure at `many` or `unique` yields, through its
 cell binder (§23), the cell the constructor occupied, at the scrutinee,
 with each slot `(slot-of g)` for the field binder `g`.
 
-**Writing.** `(cell-write u (C i1 ... in))` is an expression with one
-item per non-erased field. Each item is a `(Slot)` expression at many,
-or `_` to leave that slot alone. `C` must be the cell's own
-constructor, canonically. The index of the new type for each written
-slot is the value of that item. When `u` is a `unique` cell, the form
-takes it at `unique` and yields the same cell under the new type, at
-`u`. This is a physical store into memory that the cell's eventual
-invocation re-creates; it does no usage accounting of its own. When `u`
-is a variable declared `many`, the form uses it at many and copies: the
-result is a fresh block holding the old words with the written slots
-replaced, at unique and at nothing. So a write whose items are all `_`
-copies a shared block into a unique cell. A cell given by any other
-expression is taken at unique.
+**Writing.** `(cell-write m u (C i1 ... in))` is an expression. `m`,
+`many` or `unique`, is the multiplicity the cell is taken at, as a
+`cell-match` writes it (§38); the items are one per non-erased field.
+An erased position is refused (§14), as for `cell-match`. Each item is
+a `(Slot)` expression at many, or `_` to leave that slot alone. `C`
+must be the cell's own constructor, canonically. The index of the new
+type for each written slot is the value of that item. At `unique` the
+form takes `u` at unique and yields the same cell under the new type,
+at `u`. This is a physical store into memory that the cell's eventual
+invocation re-creates; it does no usage accounting of its own. At
+`many` the form uses `u` at many and copies: the result is a fresh
+block holding the old words with the written slots replaced, at unique
+and at nothing. So a write whose items are all `_` copies a shared
+block into a unique cell.
 
 **Invocation.** A head of `Cell` type can be applied in tier 1 of §6.
 `(u a1 ... an)` is a constructor application that creates
 `(C a1 ... an)` at `u`. It uses each argument at the multiplicity of
 its field, as `(C a1 ... an)` would, including erased arguments, which
 have no slot and are written as in any constructor application. The
-type of the value is the return type of `C`, instantiated. When `u` is
-at `unique`, the invocation consumes `u`, in a `many` position as in a
-`unique` one, so a `many` value may be built this way. When `u` is at
-`many`, the invocation uses `u` at many and produces its value only at
-`many`: at the cell when every store is skipped (below), and otherwise
-as a fresh copy at nothing. In an erased position nothing is used
+type of the value is the return type of `C`, instantiated. The cell is
+taken at the multiplicity of the invocation's own position (§14),
+whatever expression `u` is. At `unique` the invocation consumes `u` and
+creates its value at `u`; `(share (u a1 ... an))` is how a `many` value
+is built in place. At `many` it uses `u` at many and produces its value
+at `many`: at the cell when every store is skipped (below), and
+otherwise as a fresh copy at nothing. In an erased position nothing is used
 (§14).
 
 An `(at)` written immediately before an argument, in the way
@@ -1508,8 +1510,8 @@ be non-erased. `(at (u a1 ... an))`, which wraps the invocation as
 performs nothing. The `tail` and `delegate` checks treat it as erased,
 as they treat a `coerce`, so it may follow a tail call. Only the stores
 are skipped. An invocation with every store skipped still uses each
-argument at its field's multiplicity, consuming a unique one, still
-consumes a unique `u`, and still creates its value at `u` and its `is`
+argument at its field's multiplicity and `u` at its position's,
+consuming unique ones, and still creates its value at `u` and its `is`
 fact in the fact table.
 
 ## 38. `Slot` and `cell-match`
@@ -2228,18 +2230,6 @@ list:
        (List A))))
 ```
 
-- `List : (Type A) -> Type` is the signature of the type constructor.
-  It has no level (§17).
-- `enum`: `List` is walked over at runtime, so it carries a tag (§21).
-- `Nil` and `Cons` each declare `A` again. No telescope is shared at
-  the head (§21).
-- `(erased Type A)`: type before name (§3). It is erased because `A` is
-  a type (§21).
-- `many` on both constructor lines: neither constructor is phantom
-  (§21). The marker is what the type's `Matchable` records (§24).
-- `(List A)` on both returns: the saturated application of the type
-  constructor each is declared under (§21).
-
 The prelude declares `List` exactly like this (§42). `tests/list.sl`
 redeclares it.
 
@@ -2261,19 +2251,6 @@ redeclares it.
       (let ((erased p)) (prove-subterm tl xs))
       (Succ $ length A (subterm p) tl))))
 ```
-
-- `Nat : -> Type` is a nullary type constructor, so the type is
-  `(Nat)`, the same shape as `Univ` and `Type` in §10.
-- `(def-lvl L)` creates the level that `length` is defined at (§18).
-- `many length` is the function's own multiplicity (§14).
-- `(match many xs (((Nat) r)) ...)`: the scrutinee's multiplicity comes
-  first, then the annotation as one bracketed telescope of types (§26).
-- Every field gets a binder, including the erased `a` (§21).
-- `(prove-subterm tl xs)` creates the proof (§18). Entering the `Cons`
-  branch forces `xs is (Cons A hd tl)` (§7), so `tl` canonicalizes to a
-  strict subtree of `xs`.
-- `(subterm p)` comes before the decreasing argument (§19). The
-  position names the argument, so nothing can shadow it.
 
 ## 57. Worked example: level-polymorphic `map`
 
@@ -2320,19 +2297,6 @@ is produced by a factory.
 
 (map-nat (Nat) (Nat) inc xs)
 ```
-
-- The factory creates the level and returns it. Naming `L` in the
-  return telescope lets the type of the second return mention it (§26).
-- `prove-predates` is discharged inside the factory, because `M` is in
-  scope when `def-lvl L` runs (§18).
-- `A` and `B` stay parameters of `map`. Types carry no level.
-- `(f (predates pml) hd)` is the lower-level call and
-  `(map A B f (subterm p) tl)` is the same-level recursion (§19).
-- The usage is a sequence of statements in run position, each
-  elaborated and run in turn (§27, §20). Calls there need no proofs,
-  and every binder becomes `Const` (§29). `ML` and `map-nat` match the
-  `erased` and `many` of the factory's return telescope. `xs` is a
-  constructor application bound `many`.
 
 §58 is the same program with sugar.
 
@@ -2384,17 +2348,10 @@ and bare calls:
   f)
 ```
 
-- `False` has no constructors (§17). Its `Matchable` is
-  `(Matchable enum False)`, which is how §25 sees that the type is
-  empty.
-- `many absurd explode`: the multiplicity (§14) and the `absurd` token
-  (§25) share the line with the name.
-- The body is `f`, a single value of `(False)`, where the signature
-  promises `(many A a)`. Because the function is marked `absurd`, that
-  is accepted. It compiles to no code, and holding it at `many` is
-  fine: the pointer is never followed.
-
-`tests/absurd.sl` is this program.
+The body is `f`, a `(False)`, where the signature promises `(many A a)`;
+`absurd` accepts that. The function compiles to no code, and holding it
+at `many` is fine: the pointer is never followed. `tests/absurd.sl` is
+this program.
 
 ## 60. Worked example: unwrapping a list with `coerce`
 
@@ -2432,32 +2389,11 @@ and bare calls:
   (coerce ms p))
 ```
 
-- `Meters` is marked `newtype`: one non-phantom constructor with one
-  non-erased field. So by §33 a `(Meters)` is exactly a `(Nat)` at
-  runtime, and a `(List (Meters))` is exactly a `(List (Nat))`.
-  `unwrap-all` is the zero-cost witness of that.
-- `unwrap-witness` is `erased` (§14). It never runs, but it is a
-  function like any other, with a level, a `subterm` parameter, and the
-  termination check of §17 on its recursive call.
-- Its two returns form a telescope (§26): the witness list `ns`, then
-  the proof whose type names it. Both matches carry that telescope as
-  their annotation, with types only.
-- `(coercible-ctor (Shared) Nil (Meters) (Nat))`: the one erased field
-  of `Nil` takes a source value and a target value (§33).
-- In the `Cons` branch, `ms is (Cons a m tl)` is forced (§7), and in
-  the inner `MkMeters` branch, `m is (MkMeters n)`. So
-  `(coercible-wrap (Shared) MkMeters n)` relates `n` to `m`, its
-  `coercible-sym` is the proof for the head, and the `coercible-ctor`
-  for `Cons` takes the source and target `A`, that head proof and the
-  recursive tail proof `q`. The result is a proof whose source
-  canonicalizes to `ms`.
-- Both matches are `erased`. The whole body is an erased position, so
-  the one-real-branch rule of §21 never applies.
-- `unwrap-all` calls `unwrap-witness` from a higher level, with the
-  `Predates` proof created in run position after `def-lvl V` (§18,
-  §19). The binders of the `let` are all `erased`, so the call is in
-  an erased position (§14) and never runs. `(coerce ms p)` is the only
-  runtime content, and it erases to nothing.
+The whole body of `unwrap-witness` is an erased position, so the
+one-real-branch rule of §21 never applies, and the proof's source
+canonicalizes to `ms` because each branch forces the matching `is` fact.
+In `unwrap-all` the call is in an erased position and never runs;
+`(coerce ms p)` is the only runtime content, and it erases to nothing.
 
 A `delegate` proof, reusing `inc` from §57 at level `I`:
 
@@ -2471,12 +2407,7 @@ A `delegate` proof, reusing `inc` from §57 at level `I`:
 (let ((erased ig)) (coercible-of (delegate-of inc-noted)))
 ```
 
-- After erasure, the body of `inc-noted` is nothing but the call to
-  `inc` (§19). So `def-fns` creates the `Delegate` proof, `delegate-of`
-  fetches it, and `coercible-of` reads the `Coercible` from it:
-  `ig : (Coercible (Shared) (Fn V ...) inc-noted (Shared) (Fn I ...) inc)`.
-  `(coerce inc-noted ig)` is then the pointer of `inc` itself.
-
+`(coerce inc-noted ig)` is then the pointer of `inc` itself.
 `tests/coerce.sl` is this program.
 
 ## 61. Worked example: tail call modulo cons
