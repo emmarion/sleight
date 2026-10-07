@@ -78,17 +78,6 @@ is a design decision. Remove an entry when it is fixed.
    cell and for a union's nullary constructor; a `unique` nullary cell
    and the full-at form are unaffected.
 
-9. **A `many` cell invoked with every argument `(at)`-marked is
-   treated as a copy at nothing.** `elab_cell_invoke` sets `copies`
-   whenever the cell is `many` and the invocation is not the wrapping
-   form `(at (u ...))` (ASSUMPTIONS 206), so `(u (at) n)` in a body
-   promising its result `at b`, `u` the cell binder of a `many`
-   destructure of `b`, is refused "return does not satisfy `at`",
-   while `(at (u n))` is accepted and is at the cell. As this session
-   reads §37, "at the cell when every store is skipped (below)" covers
-   the per-argument marks too; whether it does is the owner's to say
-   (SPEC-REVIEW 36).
-
 10. **The unmarked same-level-call warning crashes when the callee was
     bound by a match branch.** `check_marks` builds the warning "same-
     level call to `f` is unmarked" with the body's final environment,
@@ -121,13 +110,6 @@ is a design decision. Remove an entry when it is fixed.
     only the form of the report may be at issue. `slc --interpret`
     overflows its stack on the deep `Rope` too (it runs the model at
     compile time); `ulimit -s unlimited` makes it print 100000.
-
-12. **A computed head yielding a `many` cell cannot be invoked.**
-    `Elab.demanded` demands `Unique` of every `Cell`-typed computed
-    head, so `((share u) 1)` and `((id-cell _ u) 9)`, `id-cell`
-    returning its `many` cell, are refused "used at unique", while §37
-    lets a cell at `many` be invoked (as a copy). Whether a computed
-    head may be a `many` cell is for the owner (SPEC-REVIEW 37).
 
 13. **Diagnostics found wanting by the sweep**, each a refusal that is
     right with a message that is not: `(match many xs (at _) ...)` says

@@ -4041,12 +4041,11 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      its slot may end up carrying the rule, and a `Contradiction` is
      reported as an error, as section 35 says and review item 29 discusses.
 
-206. **Cells at `many` (section 37).** A `cell-write` whose cell is a `many`
-     variable, and an invocation of a `many` cell that is not full-at,
-     compile to a copying node (`Value.CCellCopy`): a fresh block holding
-     the old one's words with the written slots replaced, at unique and at
-     nothing (review item 31c); a `cell-write` whose cell is a computed
-     expression takes it at unique. A full-at invocation of a `many` cell
+206. **Cells at `many` (section 37).** A `cell-write` on a cell at `many`,
+     and an invocation of a `many` cell that stores, compile to a copying
+     node (`Value.CCellCopy`): a fresh block holding the old one's words
+     with the written slots replaced, at unique and at nothing (review
+     item 31c). An invocation of a `many` cell with every store skipped
      is its word, at the cell. An `else` branch binds the scrutinee back
      when its first item is an atom followed by a body; a lone atom is the
      body, the binder being optional.

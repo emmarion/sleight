@@ -1,0 +1,7 @@
+; expect: (Cons _ (MkPair2 1 5) $ Cons _ (MkPair2 1 2) $ Nil _)
+(def-adts $ (Pair2 : -> Type) enum (many MkPair2 : (many (Nat) a) (many (Nat) b) -> (Pair2)))
+(def-fns _ $ (many bump : (many (Pair2) p) -> (many (Pair2) copy) (many (Pair2) same at p))
+  (let-match many p (MkPair2 a b u))
+  (values (u (at) a 5) (u (at) a (at) b)))
+(let ((many c) (many s)) (bump (MkPair2 1 2)))
+(Cons _ c $ Cons _ s $ Nil _)

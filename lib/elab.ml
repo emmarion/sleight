@@ -941,11 +941,11 @@ let rec erases_to_nothing = function
 let must_erase env l what code =
   if not (erases_to_nothing (normalize code)) then error_in env l "%s must erase to nothing, or to a reordering of variables; this one stores, allocates or calls" what
 
-let demanded env demand mult ty =
+let demanded ?supply env demand mult ty =
   if mult = Erased then mult else
   match demand with
   | Fixed -> mult
-  | CallableHead -> (match canon env ty with Cell _ | UniqueFn _ -> Unique | _ -> Many)
+  | CallableHead -> (match canon env ty, supply with Cell _, Some ((Many | Unique) as s) -> s | (Cell _ | UniqueFn _), _ -> Unique | _ -> Many)
   | Driver -> if nullary env "IO" ty then Unique else Many
 
 let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false) env expect raw : Env.t * res list * V.code =
@@ -956,7 +956,7 @@ let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false)
   let ress = List.map (fun r -> { r with term = metaless env r.term; ty = metaless env r.ty }) ress in
   count_check ?sink l expect ress;
   List.iter2 (fun m r ->
-    let m = demanded env demand m r.ty in
+    let m = demanded ~supply:r.erasure env demand m r.ty in
     if not outer_erased then Option.iter (fun how -> error l "internal: an unchecked result %s" how) (misuse m r.erasure)) expect ress;
   ({ env with usage_erased = outer_erased }, ress, code)
 
@@ -974,7 +974,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
   match raw with
   | Atom (l, n) ->
       let x = var env l n in
-      (use env l ~written:n (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
+      (use env l ~written:n (demanded ~supply:(entry env x).mult env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
@@ -1107,7 +1107,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   List.iter2 (fun (m, (e : entry)) x ->
     let name = match e.name with Some n -> tick n ^ " " | None -> "" in
     let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
-    check_mult env l (fun () -> (notes, Printf.sprintf "the return %sof %s, declared `%s`" name (callee_name ()) (speller env (mult_name e.mult)))) (demanded env demand m (type_of env x)) (entry env x).mult)
+    check_mult env l (fun () -> (notes, Printf.sprintf "the return %sof %s, declared `%s`" name (callee_name ()) (speller env (mult_name e.mult)))) (demanded ~supply:(entry env x).mult env demand m (type_of env x)) (entry env x).mult)
     (List.combine expect rets) ids;
   let code =
     if pos = Erased then V.CErased else
@@ -1143,7 +1143,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
     settle_res env l p;
     (env, expect_proof env l ctor p.term) in
   let form () = tick (Reader.show (List (l, Atom (l, speller env (Sp.name sp)) :: args))) in
-  let produced env notes what ty supply = check_mult env l (fun () -> (notes, form () ^ ", " ^ what)) (demanded env demand m ty) supply in
+  let produced env notes what ty supply = check_mult env l (fun () -> (notes, form () ^ ", " ^ what)) (demanded ~supply env demand m ty) supply in
   let erased (env, r) =
     produced env [] (if sp = Sp.LevelOf then "a `Level` and so erased" else "a proof and so erased") r.ty Erased;
     (env, [ r ], V.CErased) in
@@ -1181,8 +1181,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ u; List (il, c :: items) ] ->
       (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
-      let shared = match u with Atom (al, n) -> (entry env (var env al n)).mult = Many | _ -> false in
-      let env, r, input = elab_expr1 env (under pos (if shared then Many else Unique)) u in
+      let env, r, input = elab_expr1 ~demand:(if pos = Erased then Fixed else CallableHead) env (under pos Many) u in
+      let shared = r.erasure = Many in
       let input_id = fresh () in
       let code = V.CVar input_id in
       let c = ctor_var env l c in
@@ -1373,8 +1373,8 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
   let pos = pos_of env expect in
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
   let ct, params, ret = cell_shape env l c in
-  (* a cell at `many` is read, not consumed; it mints its value only at `many`, and an invocation that is not
-     full-at copies it (section 37) *)
+  (* a cell at `many` is read, not consumed; it mints its value only at `many`, and an invocation that stores
+     copies it (section 37) *)
   let shared = h.erasure = Many in
   let env = match h.term with Var x -> use env l (under pos (if shared then Many else Unique)) x | _ -> env in
   if pos <> Erased && h.erasure = Erased then error_in env l "`Cell` invocation needs a cell declared `many` or `unique`";
@@ -1391,7 +1391,7 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
     let same = same_slot env (List.nth slots i) (SlotOf t) in
     if (full || skip) && not same then error_in env l "`at` argument %d is not in its slot's location class" (i+1);
     (i+1, if full || skip then writes else (i, List.nth codes i) :: writes)) (0, []) (List.combine params (List.rev acc)) marked in
-  let copies = shared && not full in
+  let copies = shared && writes <> [] in
   let code = if pos = Erased then V.CErased else if copies then V.CCellCopy (ct, hcode, List.rev writes) else if writes = [] then hcode else V.CCellWrite (ct, hcode, List.rev writes) in
   (env, [{term = App (Var c, List.rev acc); ty = instantiate acc ret; erasure = pos; place = if copies then None else h.place}], wrap code)
 

@@ -252,11 +252,15 @@ hold the implementation side.
 36. **"At the cell when every store is skipped" (§37).** Whether that
     sentence covers an invocation whose every argument carries the
     per-argument `(at)` mark, or only the wrapping form `(at (u ...))`,
-    which ASSUMPTIONS 206 reads it as (BUGS.md 9).
+    which ASSUMPTIONS 206 read it as. Settled: it covers both, the
+    owner's decision; the implementation now follows the text.
 37. **A computed head that is a `many` cell.** §37 lets a cell at
     `many` be invoked, as a copy; the implementation demands `unique`
     of any computed `Cell`-typed head, so `((share u) 1)` is refused
-    (BUGS.md 12). Open: whether a computed head may be a `many` cell.
+    Settled: whether a head is computed is never relevant, the owner's
+    decision; a cell is taken at the multiplicity its expression has,
+    and §37's "A cell given by any other expression is taken at
+    unique" is to be reworded.
 38. **The type of an argument for an `is` entry.** §12 says the
     argument "must canonicalize to the same term as the `is`
     expression" and says nothing of its type; §50 lets `_` stand for an
