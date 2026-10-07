@@ -258,10 +258,3 @@ hold the implementation side.
     `is` expression; and whether solving a meta should unify its type
     with the term's, as `mini/`'s `UAssign` does, which HANDOFF.md
     records `lib/` and `self/` not doing.
-39. **An `at` naming an argument that was bound to a temporary.** §36
-    reads an `at` return back from "the caller's own binder for the
-    argument the promise names". When a returned closure's `at` names
-    an argument that was an expression, bound first by §15's rule and
-    hidden after its `let`, nothing readable sits at the slot and the
-    call is refused. Open: whether the refusal is intended, or the
-    temporary should stay readable.

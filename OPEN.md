@@ -90,3 +90,18 @@ references are to DESIGN.md.
     `(let ((unique x)) (f x))`, which is the current idiom?
 24. The names of the forms above, and of `vacant-slot`, `slot-self`,
     `at-fn-of` and `open-at-fn`.
+
+## Argument temporaries
+
+25. Is the anonymous binding of an argument (§15) `Const` in run
+    position, as the binders of a run-position statement are (§29)? As
+    a session read the code, both implementations make it so for an
+    argument and for a computed head, so its value is computed at
+    elaboration and embedded, which is how an `at` word is read from it
+    after the call. They leave `Dyn` the temporary of a match
+    scrutinee, of a `cell-match`, and of an argument bound only because
+    a later entry names its slot. A computed head is still not
+    dispatched as a special form, since dispatch looks at the head as
+    written (§6). Is that what §6 and §28 mean, and should the
+    scrutinee, `cell-match` and slot-named temporaries be statements
+    too, and so `Const` in run position?
