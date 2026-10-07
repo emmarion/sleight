@@ -1973,14 +1973,14 @@ and elab_def_fns ?(unique = false) env l args =
         | _ -> level_var ~alt:" or `_`" env l lv
       in
       (* the header's marks: `at` before the name makes an at-function (section 39), `at f` after it annotates a
-         delegate to f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
+         delegate to f and puts it at f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
          promise *)
       let header raw =
         match raw with
         | List (_, List (fl, m :: rest) :: body) -> (
             let mult = mult_or env fl m in
             let marks, rest = marks env [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
-            let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some f, n :: rest) | _ -> (None, rest) in
+            let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some (named env (loc f) "a function name" f), n :: rest) | _ -> (None, rest) in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
                 let ps, rs = split_arrow env fl sg in
@@ -2005,6 +2005,7 @@ and elab_def_fns ?(unique = false) env l args =
         if not atfn then env else
         let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in
         merge_opens (forcing (opens_add env p))) env fids headers in
+      let env = List.fold_left2 (fun env x (_, _, _, _, (_, _, _, delegates), _, _) -> placed env x (Option.map slot_of delegates)) env fids headers in
       let define x (fl, name, mult, absurd, (impl, extern, atfn, delegates), ty, body) =
         let params, rets = match ty with Fn (_, ps, rs) | UniqueFn (_, ps, rs) -> (ps, rs) | _ -> assert false in
         let envb = if unique then { env with entries = IntMap.add x { (entry env x) with mult = Erased } env.entries } else env in
@@ -2037,9 +2038,8 @@ and elab_def_fns ?(unique = false) env l args =
         (match delegates, delegated with
          | None, _ -> ()
          | Some f, Some callee ->
-             let f = named env (loc f) "a function name" f in
              if not (equal (canon env callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow env callee)
-         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (tick (Reader.show f)));
+         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (qname env f));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
            dummy a first-class call without the proof reaches (section 39) *)
         if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);

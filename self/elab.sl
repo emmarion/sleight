@@ -3095,7 +3095,7 @@
 (def-adts
   ((Header : ((Raw) f) -> Type)
     enum
-    (many MkHeader : (erased (Raw) f) (many (Pos) site) (many (String) name) (many (Mult) mult) (many (Bool) is-unique) (many (Bool) is-absurd) (many (Bool) is-extern) (many (Bool) is-at) (many (Maybe $ Raw) delegates) (many (Maybe $ Impl) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
+    (many MkHeader : (erased (Raw) f) (many (Pos) site) (many (String) name) (many (Mult) mult) (many (Bool) is-unique) (many (Bool) is-absurd) (many (Bool) is-extern) (many (Bool) is-at) (many (Maybe $ Nat) delegates) (many (Maybe $ Impl) impl) (many (List $ Entry) params) (many (List $ Entry) rets) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) f) p) -> (Header f)))
   ((Headers : ((List $ Raw) fns) -> Type)
     enum
     (many HStop : (erased (List $ Raw) fns) -> (Headers fns))
@@ -3140,11 +3140,13 @@
     ((MkRealBranch _ _ c fids code) (Cons _ (MkBranch _ _ (discriminant ss c) fids code) $ notail $ real-branches-code _ _ rest ss))))
 
 ; The `AtFn` proof of a header marked `at`, minted and opened before the block's bodies, so a call within the
-; block to the function is skipped (section 39).
+; block to the function is skipped (section 39); and a header's delegate annotation puts it at the function
+; named, also before the bodies (section 41).
 (def-fns _ $ (many open-atfn-proof : (erased (Raw) f) (many (Header f) h) (many (Nat) x) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
-  (let-match many h (MkHeader _ _ _ _ uq _ _ isat _ _ params rets _ _))
-  (let-match many isat (BTrue) ((BFalse) env))
-  (let ((many env1) (many p)) $ bind-erased env (None _) (None _) (BFalse) (Erased) (proof-type atfn-id $ Cons _ (TFn uq (TVar lvl) params rets) $ Cons _ (TVar x) $ Nil _) (None _) delegate-id)
+  (let-match many h (MkHeader _ _ _ _ uq _ _ isat delegates _ params rets _ _))
+  (let ((many env0)) $ match many delegates (((Env) _)) ((None _) env) ((Some _ df) (place-at env x $ slot-atom df)))
+  (let-match many isat (BTrue) ((BFalse) env0))
+  (let ((many env1) (many p)) $ bind-erased env0 (None _) (None _) (BFalse) (Erased) (proof-type atfn-id $ Cons _ (TFn uq (TVar lvl) params rets) $ Cons _ (TVar x) $ Nil _) (None _) delegate-id)
   (open-proof env1 p))
 
 (def-fns _ $ (many open-atfn-proofs : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (erased (List $ Nat) gids) (many (Bound fns hs gids) ids) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
@@ -5763,8 +5765,14 @@
             ((BTrue) (values (Some _ fraw) after-at $ prove-subterm after-at items2))
             ((BFalse) (values (None _) items3a $ prove-subterm items3a items2))))
         ((Nil _) (values (None _) items3a $ prove-subterm items3a items2))))
+    (let ((many env0d) (many (Maybe $ Nat) dfn))
+      (match many delegates (((Env) _) ((Maybe $ Nat) _))
+        ((None _) (values env0n (None _)))
+        ((Some _ fraw)
+          (let ((many env0f) (many df)) $ named (env-at env0n $ raw-pos fraw) fraw "a function name")
+          (values (env-back env0n env0f) (Some _ df)))))
     (let-match many items3 (Cons _ colon sg) ((Nil _) (values (bad0) $ HStop _)))
-    (let ((many env1)) $ match many (is-mark env0n colon $ MkColon) (((Env) _)) ((BTrue) env0n) ((BFalse) (bad0)))
+    (let ((many env1)) $ match many (is-mark env0d colon $ MkColon) (((Env) _)) ((BTrue) env0d) ((BFalse) (bad0)))
     (let ((erased psg)) $ subterm-trans (prove-subterm sg items3) $ subterm-trans p3 $ within-in _ _ _ _ w2 $ subterm-trans (prove-subterm sitems sigraw) $ subterm-trans (prove-subterm sigraw items) $ prove-subterm items f)
     (let ((many env1a) (many ps) (many after) (erased wa)) $ split-arrow sg _ (WHere sg) env1)
     (let ((many rs)) $ subs-of after _ wa)
@@ -5791,7 +5799,7 @@
           (let ((many env3a) (many cs)) $ extern-ctors env3 name rets want)
           (values env3a (Some _ $ MkImpl e2 cs)))))
     (let ((many env4) (many hs)) $ notail $ elab-headers sugar rest (env-back env env3b) lvl uq)
-    (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs isext isat delegates impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs))
+    (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs isext isat dfn impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs))
 
   ((many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk))
@@ -5863,8 +5871,8 @@
     (let ((many (Env) env3d))
       (match many delegates _
         ((None _) env3)
-        ((Some _ fraw)
-          (let ((many env3a) (many df)) $ named (env-at env3 hpos) fraw "a function name")
+        ((Some _ df)
+          (let ((many env3a)) $ env-at env3 hpos)
           (env-back env3 $ match many delegated (((Env) _))
             ((None _) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but its body is not a `delegate` call") ""))
             ((Some _ callee)

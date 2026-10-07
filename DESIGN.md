@@ -1282,7 +1282,7 @@ field of a constructor that did not build it: a non-erased match on a
 union has a single real branch, and unwrapping requires the value to
 canonicalize to the application of the wrapping constructor. Erased
 fields occupy no space. The pointer of a `delegate`-bodied function
-is interchangeable with its callee's (§19). An extern type (§42) may be
+is its callee's pointer (§19). An extern type (§42) may be
 marked `newtype`; its FFI author then guarantees the field
 representation. A newtype may wrap a field of an extern type.
 
@@ -1426,7 +1426,8 @@ a cell invocation (the value with its cell) and a `cell-write` on a
 `unique` cell (the result with its input); `coerce` and `share` (the
 result with the source); a forwarding `let` (§19); a `let` of
 `(slot-of x)` (with `x`); the `at` return and `at` parameter of a call,
-and the `at` entry of a match (with their targets); `slot-self` (§35);
+and the `at` entry of a match (with their targets); the delegate
+annotation (`g` with `f`, §41); `slot-self` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
 slot is an atom of the fact table. A forced rule between two ordinary
@@ -1619,7 +1620,9 @@ followed by the function it delegates to:
 
 The annotation is optional. If it is written, it must be accurate: the
 function it names must be the one named by the body's `delegate` call,
-canonically. A body with no such call is an error.
+canonically. A body with no such call is an error. The annotation
+also puts `g` at `f` (§36): from the header on, including in the
+bodies of `g`'s own block, `(slot-of g)` is `(slot-of f)`.
 ## 42. Built-ins, the prelude and the FFI
 
 **Built-ins.** Before any file is read, the scope holds the following,
