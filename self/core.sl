@@ -3205,8 +3205,9 @@
     (let-match many bs (Cons _ b rest2) ((Nil _) (BFalse)))
     (let-match many a (MkEntry _ s m sg place _))
     (let-match many b (MkEntry _ s2 m2 sg2 place2 _))
-    (let ((many t2)) $ sg-term sg2)
-    (let ((many (Bool) same)) $ match many sg _ ((SgTy t) (notail $ term-eq t t2)) ((SgIs t _) (notail $ term-eq t t2)))
+    (let ((many (Bool) same)) $ match many sg _
+      ((SgTy t) (match many sg2 _ ((SgTy t2) (notail $ term-eq t t2)) ((SgIs _ _) (BFalse))))
+      ((SgIs t _) (match many sg2 _ ((SgTy _) (BFalse)) ((SgIs t2 _) (notail $ term-eq t t2)))))
     (and (mult-eq m m2) $ and (bool-eq s s2)
       $ and (notail $ places-eq place place2) $ and same $ notail $ tele-eq rest rest2))
   ((many mctors-eq : (subterm many (List $ MCtor) as) (many (List $ MCtor) bs) -> (many (Bool) r))
@@ -3484,7 +3485,7 @@
     (let-match many (notail $ unify-place _ _ bnd tb place ppl place2 ppl2 env wa wb force) (Less _ _ k0 f0 tb0 env0 p0)
       ((Contra _ _ msg) (Contra _ _ msg))
       ((Same _ _ env5)
-        (let-match many (notail $ unify-sg _ _ bnd tb sg psg sg2 psg2 env5 force) (Less _ _ k f2 tb2 env2 p)
+        (let-match many (notail $ unify-sg _ _ bnd tb sg psg sg2 psg2 env5 wa wb force) (Less _ _ k f2 tb2 env2 p)
           ((Contra _ _ msg) (Contra _ _ msg))
           ((Same _ _ env4) (tail $ unify-tele _ _ bnd tb rest prest rest2 prest2 env4 wa wb force)))
         (let ((many rest3) (erased prest3)) $ canon-tele-in _ _ bnd tb2 rest)
@@ -3492,7 +3493,7 @@
         (lift _ bnd _ _ tb2 env2 p $ notail $ unify-tele (subterm p) k f2 bnd tb2 rest3 prest3 rest4 prest4 env2 wa wb force)))
     (let ((many sg3) (erased psg3)) $ canon-sg-in _ _ bnd tb0 sg)
     (let ((many sg4) (erased psg4)) $ canon-sg-in _ _ bnd tb0 sg2)
-    (let-match many (notail $ unify-sg (subterm p0) k0 f0 bnd tb0 sg3 psg3 sg4 psg4 env0 force) (Less _ _ k f2 tb2 env2 p)
+    (let-match many (notail $ unify-sg (subterm p0) k0 f0 bnd tb0 sg3 psg3 sg4 psg4 env0 wa wb force) (Less _ _ k f2 tb2 env2 p)
       ((Contra _ _ msg) (Contra _ _ msg))
       ((Same _ _ env4)
         (let ((many rest3) (erased prest3)) $ canon-tele-in _ _ bnd tb0 rest)
@@ -3510,16 +3511,14 @@
         (let-match many place2 (Some _ q2) ((None _) (contradiction _ bnd wa wb)))
         (tail $ unify _ _ bnd tb q (frp-some n f q pp) q2 (frp-some n f q2 pp2) env force))))
 
-  ((many unify-sg : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (Sg) sg) (erased (FrS n f sg) psg) (many (Sg) sg2) (erased (FrS n f sg2) psg2) (many (Env) env) (many (Bool) force) -> (many (Outcome n bnd) r))
+  ((many unify-sg : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (Sg) sg) (erased (FrS n f sg) psg) (many (Sg) sg2) (erased (FrS n f sg2) psg2) (many (Env) env) (many (Term) wa) (many (Term) wb) (many (Bool) force) -> (many (Outcome n bnd) r))
     (match many sg _
       ((SgTy t)
-        (match many sg2 _
-          ((SgTy t2) (tail $ unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-ty n f t2 psg2) env force))
-          ((SgIs t2 ty2) (tail $ unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-is n f t2 ty2 psg2) env force))))
+        (let-match many sg2 (SgTy t2) ((SgIs _ _) (contradiction _ bnd wa wb)))
+        (tail $ unify _ _ bnd tb t (frs-ty n f t psg) t2 (frs-ty n f t2 psg2) env force))
       ((SgIs t ty)
-        (match many sg2 _
-          ((SgTy t2) (tail $ unify _ _ bnd tb t (frs-is n f t ty psg) t2 (frs-ty n f t2 psg2) env force))
-          ((SgIs t2 ty2) (tail $ unify _ _ bnd tb t (frs-is n f t ty psg) t2 (frs-is n f t2 ty2 psg2) env force))))))
+        (let-match many sg2 (SgIs t2 ty2) ((SgTy _) (contradiction _ bnd wa wb)))
+        (tail $ unify _ _ bnd tb t (frs-is n f t ty psg) t2 (frs-is n f t2 ty2 psg2) env force))))
 
   ((many unify-mctors : (subterm erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (subterm many (List $ MCtor) as) (erased (FrM n f as) pas) (many (List $ MCtor) bs) (erased (FrM n f bs) pbs) (many (Env) env) (many (Term) wa) (many (Term) wb) (many (Bool) force) -> (many (Outcome n bnd) r))
     (let-match many as (Cons _ a rest) ((Nil _) (Same _ _ env)))
