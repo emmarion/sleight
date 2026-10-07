@@ -480,12 +480,21 @@ What the owner still has to decide, none of it settled here:
   does nothing special).
 - Whether a `(Slot)`-typed binder is its own `at` by default (review
   item 30; not implemented, `slot-self` is written where wanted).
-- The slot of an erased argument, reached through an erased call of a
-  signature naming `(slot-of p)` (ASSUMPTIONS 210, the owner's probe in
-  chat): accept as the formal term it now is, or refuse the call.
 - Whether `tail`, `notail` or `delegate` on a skipped at-call should be
   the error it is now (ASSUMPTIONS 207) or be ignored.
 - A12.5's tier-1 list, and the A12 items 1-4 left for version two.
+
+Decided by the owner in this session's chat, in AT_REDESIGN A2, A5, A6
+and A10, and not yet implemented in `lib/` or `self/`: an erased
+binder has an erased automatic slot; an erased entry may be `at` any
+variable, and the `at` claim of a parameter is checked in erased
+positions too; `erased` with `at` is refused on `def-fns` and
+`def-unique`, as is the `(at (f ...))` assertion in an erased
+position. A seven-line prototype of the first point in `lib/` passed
+the suite with one expected message change
+(`tests/slot_of_erased_arg_bad.sl`) and timed within noise on slc's
+sources; ASSUMPTIONS 200's "`None` for an erased result" is for the
+implementing session to revisit.
 
 Timing (CLAUDE.md rule 17), each compiler on its own sources, five
 alternating runs, minimum and median wall time, on a machine whose

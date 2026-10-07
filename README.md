@@ -225,8 +225,8 @@ erased. Unique cells permit in-place updates, while an entry written `at`
 another, a parameter, a return or a match annotation entry, is neither
 passed nor returned physically but read from the word it is at (AT_REDESIGN.md
 A3); an at-function's call and an at-match are skipped (A9, A10). Every
-non-erased entry has an automatic slot in the fact table, which
-`(slot-of x)` names, and a slot prints by that form.
+entry has an automatic slot in the fact table, erased where the entry
+is, which `(slot-of x)` names, and a slot prints by that form.
 
 ## Layout
 

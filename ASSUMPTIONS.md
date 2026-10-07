@@ -4078,15 +4078,15 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      branch erases, dispatch included, count as nothing. An at-function's
      body is checked so and then replaced by a body returning nothing, the
      dummy a first-class call without the proof reaches (items 34, 35),
-     `extern` or not; an `erased` or `absurd` at-function skips the check,
-     its body being no code. A match annotated `_` inside an at-function
+     `extern` or not; an `absurd` at-function skips the check, its body
+     being no code. A match annotated `_` inside an at-function
      is not an at-match and keeps its code, which the body check then
      covers. The `AtFn` proof is opened by `def-fns` as a `Matchable` is,
      so a call is skipped exactly when an opened proof names the callee's
      canonical atom (item 36), which is also what `open-at-fn` adds; a
      `tail`, `notail` or `delegate` mark on a skipped call is refused,
      section 9's claim being one the compiler cannot honour for a call
-     that compiles to nothing. `def-unique` takes the `at` mark too.
+     that compiles to nothing.
 
 208. **The delegate annotation (A11)** is checked after section 9's
      `delegate` check: the function named must be the one the one
@@ -4099,20 +4099,3 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      48); `array-unpluck` is the review's item 49 as written, and the
      lemma from `ASet` to `ANth` its caller needs lives in
      `tests/array_unpluck.sl`, not the prelude.
-
-210. **Open: the slot of an erased argument.** A6 speaks of `slot-of` on
-     a non-erased variable, and the source refuses it on an erased one;
-     but a signature naming `(slot-of p)` for a `many` parameter `p` may
-     be instantiated by a call in an erased position, where section 20
-     lets the argument for `p` be erased, as `tests/slot_of_erased_arg.sl`
-     does. Neither AT_REDESIGN.md nor the review says what that
-     instantiation means, and the code does what falls out of 200 with
-     nothing added: the term `(slot-of x)` for an erased `x` has no slot
-     entry to resolve to and stays a formal term, which never reaches a
-     word, is never an `at` target, and is equal to another such term
-     exactly when the arguments are, so that a forcing that equates two of
-     them equates their arguments (`tests/slot_of_erased_arg_bad.sl`
-     shows the `Refl` such a forcing would need being refused where they
-     are not already equal). Whether the call should instead be refused,
-     or the term given some other meaning, is the owner's question; this
-     entry records the gap, not an answer.

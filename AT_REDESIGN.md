@@ -28,20 +28,29 @@ A `Cell` type (§U9) is indexed by slot terms: `(slot-of f)` in place of
 
 ## A2. Automatic slots
 
-For every non-erased variable without a written `at` (A5), named or
-anonymous, the elaborator inserts an anonymous `many` binder of type `(Slot)`, its
-**automatic slot**, and the variable is `at` that slot. This applies to
-function parameters and return entries, so a signature carries, in its
-mental model, roughly twice as many non-erased entries, and to the
-non-erased fields a match on a non-erased scrutinee binds, with the same
-effect. Erased variables get none. As an invariant, every `many` or
-`unique` entry of the fact table has a corresponding slot: an argument
-bound first (§U2a), the anonymous entries a `let`'s right-hand side
-brings in, and a constructor application's own entry (§3) included.
+For every variable without a written `at` (A5), named or anonymous,
+the elaborator inserts an anonymous binder of type `(Slot)`, its
+**automatic slot**, and the variable is `at` that slot. The slot is
+`many` for a `many` or `unique` variable and `erased` for an erased
+one: an erased variable has no word, so its slot has none behind it,
+and §20 keeps the slot out of non-erased positions as it keeps the
+variable. This applies to function parameters and return entries, so a
+signature carries, in its mental model, roughly twice as many entries,
+and to the fields a match binds, with the same effect. As an
+invariant, every entry of the fact table has a corresponding slot at
+its own erasure: an argument bound first (§U2a), the anonymous entries
+a `let`'s right-hand side brings in, and a constructor application's
+own entry (§3) included. A call in an erased position may pass an
+erased argument for a `many` parameter (§20's rule 1); the parameter's
+slot is then that argument's erased slot, which is what `(slot-of p)`
+in the signature denotes at such a call. Two erased slots are atoms
+like any two slots: equating them says nothing about the variables.
 
 A `let` needs nothing of its own here: the entries of its right-hand
 side enter the containing expression anonymously (§16), bringing their
-slots with them.
+slots with them. A forwarding binder (§9) sits at its source's slot
+whatever its erasure, so an erased binder of a variable has that
+variable's slot.
 
 An automatic slot is `at` itself. Only automatic slots are: a written
 `at` cannot name the entry it is written on.
@@ -71,19 +80,27 @@ slot is then decided by the fact table's ordinary canonicalization.
 As in §U8, a function's return entries and a match's annotation entries
 may be written `at`; in addition, a function's parameters may be, and
 the target may be any earlier entry of the telescope, a return entry
-included, or a variable from an enclosing scope. The target must be
-non-erased.
+included, or a variable from an enclosing scope. The target is at
+least as non-erased as the entry: an erased entry may be `at` any
+variable, and a `many` or `unique` entry only `at` a `many` or
+`unique` one, since its word is its target's (A3) and an erased
+target has none. For an erased entry the claim is a rule between its
+erased slot and the target's and nothing more (A2); `(slot-of y)` for
+an erased `y` stays erased whatever its target is (§20).
 
-The target is a `many` or `unique` variable `v` of any type, not
-necessarily a `(Slot)`. The entry's at (A4) is `(slot-of v)`, always,
-even where `v` is itself a slot.
+The target is a variable `v` of any type, not necessarily a `(Slot)`.
+The entry's at (A4) is `(slot-of v)`, always, even where `v` is
+itself a slot. The claim is checked at every call, in erased
+positions too, by the canonical identity of the two slots.
 
 Neither `at` nor `slot-of` (A6) may appear in the telescope of a type
 constructor or a value constructor.
 
 ## A6. `slot-of`
 
-`(slot-of x)`, for a non-erased variable `x`, denotes `x`'s at. The
+`(slot-of x)`, for a variable `x` of any multiplicity, denotes `x`'s
+at, and is erased exactly when `x` is, so it stands only in erased
+positions for an erased `x`. The
 elaborator replaces it with a reference to a real entry in the fact
 table, which is why it may appear in type-like positions, function
 telescopes included: for an `x` without a written `at`, its automatic
@@ -144,7 +161,11 @@ before its name:
 
 Its return entries are all erased or `at`; its parameters are not
 restricted. Its body erases to nothing, or to a reordering of
-variables. Calling an at-function skips its runtime.
+variables. Calling an at-function skips its runtime. A function marked
+`erased` may not be marked `at`: it is called only where nothing runs,
+so the mark would claim nothing and its proof would rest on a body the
+check cannot see, as `tail` in an erased position is refused (§9).
+`def-unique` takes the mark under the same rule.
 
 Being an at-function is not part of the function's type. As for
 `Delegate` (§38), `def-fns` mints an erased proof object for it, of
@@ -157,7 +178,8 @@ a body that then fails to erase to nothing is a compile error.
 
 A call may be asserted to be a call of an at-function by wrapping it,
 `(at (f ...))`, as the full-at form wraps a cell invocation (§U9). The
-assertion is optional and a hard error when it fails. A call through a
+assertion is optional and a hard error when it fails, and an error in
+an erased position, as the marks of §9 are there. A call through a
 first-class `f` is skipped only where an at-function proof for `f` is
 opened. Such a call still carries its `predates` or `subterm` proof
 (§9).
