@@ -558,7 +558,7 @@
     enum
     (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCNoTail : -> (CC))
     ; a same-level call in a non-erased position carrying no mark, where the tail-position check warns
-    (many CCSame : (many (Loc) site) (many (Term) callee) -> (CC)))
+    (many CCSame : (many (Loc) site) (many (String) callee) -> (CC)))
   ((Shape : ((List $ List $ Nat) ctx) -> Type)
     enum
     (many ShKnown : (erased (List $ List $ Nat) ctx) (many (Adt) adt) -> (Shape ctx))

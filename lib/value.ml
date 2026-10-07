@@ -3,7 +3,7 @@ open Term
 module IntMap = Map.Make (Int)
 
 (* [Same]: a same-level call in a non-erased position carrying no mark, where the tail-position check warns. *)
-type cc = Plain | Tail | Delegate | NoTail | Ctor | Same of Reader.loc * Term.term
+type cc = Plain | Tail | Delegate | NoTail | Ctor | Same of Reader.loc * string Lazy.t
 
 (* [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom ones, each
    at its discriminant; [ext]: the FFI's implementation (section 42), its values then [VExt] payloads. *)

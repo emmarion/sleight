@@ -313,12 +313,24 @@ let namer ?except env terms =
       | Some (_, n), _ | None, Some (_, n) -> n
       | None, None -> (match newest (Lazy.force fetched) x with Some (_, n) -> n | None -> anonymous env x)
 
+let rec shown ?except env t =
+  match canon env t with
+  | Fn (l, ps, rs) -> Fn (shown ?except env l, shown_tele ?except env ps, shown_tele ?except env rs)
+  | UniqueFn (l, ps, rs) -> UniqueFn (shown ?except env l, shown_tele ?except env ps, shown_tele ?except env rs)
+  | t -> map_shallow (shown ?except env) t
+
+and shown_tele ?except env tele =
+  let place p = match canon env p with
+    | Var _ as p -> (match List.find_opt (fun x -> Some x <> except && equal (canon env (slot_of x)) p) (List.rev env.scope.ids) with Some x -> slot_of x | None -> p)
+    | p -> p in
+  List.map (fun e -> { e with sg = map_sg (shown ?except env) e.sg; place = Option.map place e.place }) tele
+
 (* [except]: an entry not to name anything by, for a message about that entry's own rule. *)
-let show ?except env t = let c = canon env t in to_string ~kw:(speller ?except env) (namer ?except env [ c ]) c
+let show ?except env t = let c = shown ?except env t in to_string ~kw:(speller ?except env) (namer ?except env [ c ]) c
 
 (* A telescope's entries under one naming, each entry's terms canonical; the marks are the entries' own. *)
 let show_tele ?marks env tele =
-  let tele = snd (map_tele (fun _ t -> canon env t) 0 tele) in
+  let tele = shown_tele env tele in
   let terms = List.concat_map (fun (e : Term.entry) -> sg_term e.sg :: Option.to_list e.place) tele in
   snd (tele_strings ?marks ~kw:(speller env) (namer env terms) [] tele)
 

@@ -679,6 +679,7 @@
 
 ; A fresh block holding [target]'s fields (lib/extract.ml's field_copy): a `cell-write` on a cell at `many`.
 (def-fns _ $ (many field-copy-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) target) (many (String) r) -> (many (Rope) w))
+  (let-match many (ctor-arity c) (Succ _) ((Zero) (plain-build d c $ Nil _)))
   (rcat3 (field-match-rope d c target r) (plain-build d c $ field-reads r (ctor-arity c) 0) $ RStr ")"))
 
 (def-fns _ $ (many cell-write-rope : (many (Decls) d) (many (Ctor) c) (many (Rope) cell) (many (List $ Nat) indices) (many (List $ Rope) args) (many (Nat) depth) -> (many (Rope) r))

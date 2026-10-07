@@ -1,0 +1,11 @@
+; expect: (MkBox 3)
+; The temporary bound for `(id-box z)` sits at `z` and closes with the `open-adt`; `b`, at `a` at `z`, is read from `z`.
+(def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
+(def-fns _ $ (many id-box : (many (Box) x) -> (many (Box) r at x)) x)
+(def-fns _ $ (many get-m : (many (Box) x) -> (many (Matchable enum Box (many MkBox)) m)) (matchable-of Box))
+(def-fns _ $ (many twice : (many (Box) x) -> (many (Box) r1 at x) (many (Box) r2 at r1)) (values x x))
+(def-fns _ $ (many go : (many (Box) z) -> (many (Box) b))
+  (open-adt many (get-m (id-box z)))
+  (let ((many a) (many b)) (twice z))
+  b)
+(go (MkBox 3))

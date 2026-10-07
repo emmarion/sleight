@@ -475,6 +475,19 @@
 (def-fns _ $ (many show-t : (many (Env) env) (many (Term) t) -> (many (String) s))
   (show-t-except env t $ None _))
 
+(def-fns _ $ (many slot-holder : (many (Env) env) (many (Term) s) (subterm many (List $ Nat) ids) -> (many (Maybe $ Term) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) (None _)))
+  (match many (equal-env env (slot-atom x) s) _
+    ((BTrue) (Some _ $ TSlotOf $ TVar x))
+    ((BFalse) (tail $ slot-holder env s rest))))
+
+(def-fns _ $ (many shown-place : (many (Env) env) (many (Maybe $ Term) cplace) -> (many (Maybe $ Term) r))
+  (let-match many cplace (Some _ p) ((None _) cplace))
+  (let-match many p (TVar _) (else cplace))
+  (match many (slot-holder env p $ list-rev _ $ scope-ids $ env-scope env) _
+    ((Some _ h) (Some _ h))
+    ((None _) cplace)))
+
 ; A place is shown as written, `at x`, its variable read through its rule where that is a variable, as the
 ; reference's namer names an atom; canonicalizing it would show the slot atom instead.
 (def-fns _ $ (many shown-places : (many (Env) env) (subterm many (List $ Entry) es) (many (List $ Entry) ces) -> (many (List $ Entry) r))
@@ -484,8 +497,8 @@
   (let ((many (Maybe $ Term) place))
     (match many (entry-place e) _
       ((Some _ p)
-        (let-match many p (TSlotOf c) (else cplace))
-        (let-match many c (TVar x) (else cplace))
+        (let-match many p (TSlotOf c) (else (shown-place env cplace)))
+        (let-match many c (TVar x) (else (shown-place env cplace)))
         (Some _ $ TSlotOf $ match many (canon-env env $ TVar x) (((Term) _)) ((TVar a) (TVar a)) (else c)))
       ((None _) cplace)))
   (Cons _ (MkEntry nm s mu sg place site) $ notail $ shown-places env rest crest))
@@ -1992,7 +2005,9 @@
 (def-fns _ $ (many check-sg-about : (many (Env) env) (many (Sg) sg) (many (Res) r) (many (Maybe $ Raw) raw) (many (Fn msg-lvl -> (many (String) p) (many (List $ Pair (Loc) $ String) n)) about) -> (many (Env) e))
   (let ((many env2) (many _)) $ match many sg (((Env) _) ((Bool) _))
     ((SgTy ty) (solve-about env "type" (res-ty r) ty (BTrue) raw about))
-    ((SgIs t _) (solve-about env "value" (res-term r) t (BTrue) (None _) about)))
+    ((SgIs t ty)
+      (let ((many env3) (many _)) $ solve-about env "value" (res-term r) t (BTrue) (None _) about)
+      (solve-about env3 "type" (res-ty r) ty (BTrue) (None _) about)))
   env2)
 
 (def-fns _ $ (many check-sg : (many (Env) env) (many (Sg) sg) (many (Res) r) (many (Maybe $ Raw) raw) -> (many (Env) e))
@@ -3602,7 +3617,7 @@
   (let-match many cc (CCSame l callee)
     ((CCNoTail) (refuse-when env in-tail "a `notail`-marked call is in tail position"))
     (else env))
-  (env-warn-at env l $ str-cat3 "same-level call to " (qshow env callee) $ str-cat " is unmarked; mark it "
+  (env-warn-at env l $ str-cat3 "same-level call to " callee $ str-cat " is unmarked; mark it "
     $ tick $ spell env $ match many in-tail (((String) _)) ((BTrue) "tail") ((BFalse) "notail")))
 
 (def-fns _
@@ -6349,7 +6364,7 @@
           (let ((many actuals)) $ prepared-codes _ pairs env4 ictx)
           (let ((many (CC) cc2))
             (match many (and (cc-eq cc $ CCPlain) $ match many (env-level env4) (((Bool) _)) ((None _) (BFalse)) ((Some _ cur) (equal-env env4 lv $ TVar cur))) _
-              ((BTrue) (CCSame (env-loc env) $ res-term callee))
+              ((BTrue) (CCSame (env-loc env) $ qshow env $ res-term callee))
               ((BFalse) cc)))
           (let ((many (Code ictx rmults) call))
             (match many skipped _

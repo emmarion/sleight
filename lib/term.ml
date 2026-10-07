@@ -148,7 +148,7 @@ and tele_strings ?(kw = Fun.id) ?(marks = true) name_of bound es =
       let n = Option.value e.name ~default:"_" in
       let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " " ^ kw "is" ^ " " ^ n in
       let marks = if marks then (if e.subterm then kw "subterm" ^ " " else "") ^ kw (mult_name e.mult) ^ " " else "" in
-      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotOf p) -> " " ^ kw "at" ^ " " ^ go p | None -> "" | _ -> assert false) ^ ")"))
+      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some p -> " " ^ kw "at" ^ " " ^ go (match p with SlotOf v -> v | s -> s) | None -> "") ^ ")"))
     bound es
 
 let to_string ?kw name_of t = to_string_in ?kw name_of [] t

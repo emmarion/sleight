@@ -124,6 +124,7 @@ let field_read cx c i target =
 
 (* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, section 37). *)
 let field_copy cx c target =
+  if c.V.arity = 0 then build cx c [] else
   let r, head = field_match cx c target in
   head ^ build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)) ^ ")"
 
