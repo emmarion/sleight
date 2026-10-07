@@ -137,22 +137,23 @@
     enum
     (many MkMCtor : (many (Mult) m) (many (Term) c) -> (MCtor))))
 
-; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order.
+; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order, each
+; entry followed by its automatic slot (AT_REDESIGN A2), so the ids step by two.
 (let ((many univ-id)) (Succ (Zero)))
-(let ((many type-id)) (Succ univ-id))
-(let ((many level-id)) (Succ type-id))
-(let ((many slot-id)) (Succ level-id))
-(let ((many null-id)) (Succ slot-id))
+(let ((many type-id)) (Succ $ Succ univ-id))
+(let ((many level-id)) (Succ $ Succ type-id))
+(let ((many slot-id)) (Succ $ Succ level-id))
+(let ((many null-id)) (Succ $ Succ slot-id))
 (let ((many predates-id)) (Succ $ Succ null-id))
-(let ((many subterm-id)) (Succ predates-id))
-(let ((many sharing-id)) (Succ subterm-id))
-(let ((many unique-id)) (Succ sharing-id))
+(let ((many subterm-id)) (Succ $ Succ predates-id))
+(let ((many sharing-id)) (Succ $ Succ subterm-id))
+(let ((many unique-id)) (Succ $ Succ sharing-id))
 (let ((many shared-id)) (Succ $ Succ unique-id))
 (let ((many sharing-matchable-id)) (Succ $ Succ shared-id))
 (let ((many coercible-id)) (Succ $ Succ sharing-matchable-id))
-(let ((many delegate-id)) (Succ coercible-id))
-(let ((many atfn-id)) (Succ delegate-id))
-(let ((many special-id)) (Succ atfn-id))
+(let ((many delegate-id)) (Succ $ Succ coercible-id))
+(let ((many atfn-id)) (Succ $ Succ delegate-id))
+(let ((many special-id)) (Succ $ Succ atfn-id))
 (let ((many type-term)) $ TApp (TVar univ-id) $ Nil _)
 (let ((many universe-key)) "(Univ)")
 (let ((many level-term)) $ TApp (TVar level-id) $ Nil _)
@@ -2766,7 +2767,7 @@
   (let ((many r) (erased fr)) $ canon-tele-in _ _ bnd tb es)
   r)
 
-; The automatic slot of a non-erased entry (AT_REDESIGN A2), none for an erased one or a meta.
+; The automatic slot an entry was minted with (AT_REDESIGN A2); `None` only for an id the table never bound.
 (def-fns _ $ (many env-slot-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (table-slot-of _ _ bnd tb x))
@@ -2947,15 +2948,10 @@
       ((Some _ t)
         (let ((many t2) (erased ft)) $ canon-in _ _ _ tb t)
         (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))
-  ; every non-erased, non-meta entry is minted with its automatic slot, the next id (AT_REDESIGN A2)
-  (let ((many (Nat) fr2) (erased (Nat) nf3) (erased (Facts nf3) ff3) (many (Table nf3 ff3 fr2) tb3))
-    (match many (and (not meta) $ mult-is-many mult) _
-      ((BFalse) (values x nf2 ff2 tb2))
-      ((BTrue)
-        (let ((erased nf3) (erased ff3) (many tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
-        (values (Succ x) nf3 ff3 $ table-add-slot _ _ _ tb3 x $ Succ x))))
+  ; every entry, erased or a meta included, is minted with its automatic slot, the next id (AT_REDESIGN A2)
+  (let ((erased nf3) (erased ff3) (many tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-  (values (MkEnv _ hp sc2 en2 _ _ fr2 tb3 rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
+  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x $ Succ x) rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
 
 (def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -3013,6 +3009,11 @@
       (let-match many t (TVar x) (else t))
       (match many (nat-lt x f) _ ((BTrue) t) ((BFalse) (TVar (Zero)))))))
 
+(def-fns _ $ (many meta-slot : (many (VOp) op) (many (Term) c) -> (many (Maybe $ Env) r))
+  (let-match many op (OpMeta env) (else (None _)))
+  (let-match many c (TVar x) (else (None _)))
+  (match many (is-meta env x) _ ((BTrue) (Some _ env)) ((BFalse) (None _))))
+
 (def-fns _
   ((many mapv : (subterm many (Term) t) (many (VOp) op) (many (Nat) d) -> (many (Term) r))
     (match many t _
@@ -3029,7 +3030,7 @@
         (let ((many d2) (many ps2)) $ notail $ mapv-tele ps op d)
         (TValCtor ps2 $ notail $ mapv ret op d2))
       ((TMatchable disc nt ex ty cs) (TMatchable disc nt ex (notail $ mapv ty op d) (notail $ mapv-mctors cs op d)))
-      ((TSlotOf c) (TSlotOf $ notail $ mapv c op d))
+      ((TSlotOf c) (match many (meta-slot op c) _ ((Some _ env) (canon-env env t)) ((None _) (TSlotOf $ notail $ mapv c op d))))
       (else (op-leaf op d t))))
   ((many mapv-list : (subterm many (List $ Term) ts) (many (VOp) op) (many (Nat) d) -> (many (List $ Term) r))
     (match many ts _
