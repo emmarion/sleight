@@ -1561,7 +1561,8 @@ no call that is not skipped, no constructor application, no allocation,
 no store and no copy. Renames, constants, loads from a block, a
 `values`, a match whose every branch erases to nothing (including its
 dispatch), a nested definition whose remainder erases, and absurd code
-all count as nothing. Calling an at-function skips its runtime. A
+all count as nothing. Calling an at-function skips its runtime; its
+arguments are still evaluated, as §15 binds them. A
 function marked `erased` may not be marked `at`: it is only ever called
 where nothing runs, so the mark would claim nothing. The body of an
 `absurd` at-function is a refutation (§25) and is not checked for
@@ -1603,8 +1604,10 @@ annotation is wrapped in an `at` form, with the telescope inside:
 
 Every entry of the annotation must be erased or `at`. The code of each
 branch must erase to nothing, as the body of an at-function must (§39).
-The match skips its runtime: its code is empty, and the consumer reads
-its `at` entries back from their targets (§36). Coverage and the
+The match skips its runtime: its scrutinee is evaluated as for any
+match, but the match itself, its dispatch and its branches, compiles to
+no code, and the consumer reads its `at` entries back from their
+targets (§36). Coverage and the
 one-real-branch rule (§21) are checked as for any match. The annotation
 inside the `at` must be written out; `_` cannot stand for it.
 

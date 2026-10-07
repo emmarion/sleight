@@ -231,13 +231,6 @@ hold the implementation side.
     mark is checked and, since nothing is bound in an erased position,
     fails on any argument that is not a variable, and the call form is
     refused. Open: which of refusing, ignoring and checking is meant.
-33. **The at-match's scrutinee.** §40 says an at-match "skips its
-    runtime: its code is empty", yet its scrutinee is evaluated: with
-    `(match unique (fill c) (at (((Box) r at c))) ((MkBox n u) (at (u
-    n))))`, `fill` stores into `c` and `r` reads it back. Evaluating it
-    seems necessary for the `at` entries to be honest; the sentence
-    reads as if it were not. Open: say the scrutinee runs, or require
-    it to be a variable.
 34. **`let-match` on a union with a phantom constructor.** §27's
     survivor rule counts a phantom constructor under a `many`
     scrutinee as surviving, since it is not refuted, so
