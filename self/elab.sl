@@ -5035,7 +5035,7 @@
           ((FoValCtor)
             (let ((many env1) (many ps) (many after) (erased wa)) $ split-arrow args _ (WHere args) env)
             (let ((many env2) (many tele) (many ret) (many t)) $ notail $ elab-valctor sugar args k (MkPair _ _ ps $ subs-of after _ wa) env1)
-            (values env2 t))
+            (values (env-discard env1 env2) t))
           ((FoMatchable)
             (let-match many args (Cons _ d rest)
               ((Nil _) (values (env-error env $ sp-misuse env $ SpFormer $ FoMatchable) $ TErr "malformed Matchable")))
