@@ -71,19 +71,20 @@ is a design decision. Remove an entry when it is fixed.
     beyond A2/A3, none of the cases below was reproduced) found the
     same shape in several places, in three groups:
 
-    - *Fuel.* `rope-walk`/`rope-fields` return `REmpty`, and `list-refs`
-      `Nil`, once their fixed fuel of 1000000 is spent (A2, A3). Seeding
-      the fuel from the store's own allocation count (`next` in
-      `MkStore`; twice it for the rope pair, which spends two units per
-      level) appears to be enough on an acyclic heap. Tried in a scratch
-      tree, not committed: both reproducers then match the reference
-      under `--interpret` and compiled, under `ulimit -s unlimited` (at
-      the default 8 MB stack, the old and new `slc` both overflow, as in
-      11), and slc's self-compile time looked unchanged. That bound is an
-      informal pigeonhole argument, not a proof. Also, nothing at the meta
-      level excludes a cycle: `store-write` stores a body over the whole
-      current history, and `CCellWrite` writes `BTag` blocks. On a cycle,
-      running out would still return a shortened value silently.
+    - *Fuel.* No longer a fixed 1000000: `flatten-value` seeds
+      `rope-walk` with twice the store's allocation count (`store-size`;
+      the rope pair spends two units per level), `ErListToArray` seeds
+      `list-refs` with the count itself, and running out becomes a
+      `BError` ("out of fuel") rather than `REmpty` or `Nil`. With that,
+      A2's and A3's reproducers match the reference under `--interpret`
+      and compiled, under `ulimit -s unlimited` (at the default 8 MB
+      stack, `slc` overflows on them before and after, as in 11); no test
+      was added yet. That the count suffices on an acyclic heap is an
+      informal pigeonhole argument, not a proof. Nothing at the meta
+      level excludes a cycle (`store-write` stores a body over the whole
+      current history, and `CCellWrite` writes `BTag` blocks). On one,
+      the report is an error block, with the limits of the third group
+      below.
     - *A block of the wrong shape, or a missing argument.* `rope-walk`
       returns `REmpty` on a block that is neither `BTag` nor a
       string/char `BExt`. `list-refs` and `ctor-fields` return `Nil`

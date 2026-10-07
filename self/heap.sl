@@ -190,6 +190,9 @@
   (let-match many r (MkRef _ _ _ v _))
   (match many v _ ((MkValue _ _ pos _ _) pos)))
 
+(def-fns _ $ (many store-size : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l) (many (Store B l) st) -> (many (Nat) n))
+  (match many st _ ((MkStore _ _ next _ _) next)))
+
 (def-fns _ $ (many store-read : (erased (TyCtor (Type R) -> Type) B) (erased (Hist B) l)
     (many (Store B l) st) (many (Ref B l) r) ->
     (erased (Hist B) s) (many (B (Ref B s)) body) (erased (Suffix B l s) sf))
