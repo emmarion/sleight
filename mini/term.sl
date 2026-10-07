@@ -144,7 +144,7 @@
     (let-match many e (MkEntry s i t))
     (let-match erased ce (ClTCons c s0 i0 t0 es0 out0 c1 c2))
     (let ((many u) (erased p)) (notail $ subst subs n ln t c1))
-    (let ((many fs) (many sub2) (erased q) (erased ln2)) (notail $ subst-tele (Cons _ (None _) subs) (Succ n) (LenCons _ (None _) subs n ln) rest out c2))
+    (let ((many fs) (many sub2) (erased q) (erased ln2)) (notail $ subst-tele (Cons _ (None _) subs) (Succ n) (LengthCons _ (None _) subs n ln) rest out c2))
     (values (Cons _ (MkEntry s i u) fs) sub2 (SubTCons subs s i t u rest fs sub2 p q) ln2)))
 
 ; The substitution that instantiates a telescope with a list of arguments: the last argument innermost.
@@ -210,9 +210,9 @@
 
 (def-fns _ $ (erased index-of-lt : (erased (List (Maybe (Nat))) ids) (erased (Nat) x) (erased (Nat) k) (erased (Nat) n) (subterm erased (IndexOf ids x k) p) (erased (Length (Maybe (Nat)) ids n) ln) -> (erased (Lt k n) q))
   (match erased p _
-    ((IdxHere a rest) (match erased ln _ ((LenCons b y rest2 m l2) (LtZ m))))
-    ((IdxNone a rest k2 p2) (match erased ln _ ((LenCons b y rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))
-    ((IdxOther a y rest k2 nq p2) (match erased ln _ ((LenCons b y2 rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))))
+    ((IdxHere a rest) (match erased ln _ ((LengthCons b y rest2 m l2) (LtZ m))))
+    ((IdxNone a rest k2 p2) (match erased ln _ ((LengthCons b y rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))
+    ((IdxOther a y rest k2 nq p2) (match erased ln _ ((LengthCons b y2 rest2 m l2) (LtS k2 m (index-of-lt rest x k2 m p2 l2)))))))
 
 (def-adts
   ((Abstract : ((List (Maybe (Nat))) ids) ((Term) t) ((Term) u) -> Type)

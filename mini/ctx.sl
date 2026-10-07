@@ -806,21 +806,21 @@
 (def-fns _ $ (erased stele-plus : (erased (List (Ent)) ents) (erased (Nat) d) (erased (List (Entry)) es) (erased (Nat) out) (erased (Nat) m) (subterm erased (ScopedTele ents d es out) b) (erased (Length (Entry) es m) ln) ->
     (erased (Plus d m out) p))
   (match erased b _
-    ((ScTNil a d0) (match erased ln _ ((LenNil c) (plus-zero d))))
-    ((ScTCons a d0 s i t es2 out0 p q) (match erased ln _ ((LenCons c x xs m2 l2) (plus-shift d m2 out (stele-plus ents (Succ d) es2 out m2 q l2)))))))
+    ((ScTNil a d0) (match erased ln _ ((LengthNil c) (plus-zero d))))
+    ((ScTCons a d0 s i t es2 out0 p q) (match erased ln _ ((LengthCons c x xs m2 l2) (plus-shift d m2 out (stele-plus ents (Succ d) es2 out m2 q l2)))))))
 (def-fns _ $ (erased snoc-length : (erased (List (Maybe (Term))) xs) (erased (Maybe (Term)) x) (erased (List (Maybe (Term))) out) (erased (Nat) m) (subterm erased (Snoc xs x out) sn) (erased (Length (Maybe (Term)) xs m) ln) ->
     (erased (Length (Maybe (Term)) out (Succ m)) q))
   (match erased sn _
-    ((SnocNil y) (match erased ln _ ((LenNil a) (LenCons _ x (Nil _) (Zero) (LenNil _)))))
-    ((SnocCons y ys z out2 p) (match erased ln _ ((LenCons a y0 ys0 m2 l2) (LenCons _ y out2 (Succ m2) (snoc-length ys x out2 m2 p l2)))))))
+    ((SnocNil y) (match erased ln _ ((LengthNil a) (LengthCons _ x (Nil _) (Zero) (LengthNil _)))))
+    ((SnocCons y ys z out2 p) (match erased ln _ ((LengthCons a y0 ys0 m2 l2) (LengthCons _ y out2 (Succ m2) (snoc-length ys x out2 m2 p l2)))))))
 (def-fns _ $ (erased somes-length : (erased (List (Term)) as) (erased (List (Maybe (Term))) subs) (erased (Nat) m) (subterm erased (Somes as subs) so) (erased (Length (Term) as m) ln) -> (erased (Length (Maybe (Term)) subs m) q))
   (match erased so _
-    ((SomesNil) (match erased ln _ ((LenNil a) (LenNil _))))
-    ((SomesCons a as2 sub2 out p sn) (match erased ln _ ((LenCons b a0 as0 m2 l2) (snoc-length sub2 (Some _ a) out m2 sn (somes-length as2 sub2 m2 p l2)))))))
+    ((SomesNil) (match erased ln _ ((LengthNil a) (LengthNil _))))
+    ((SomesCons a as2 sub2 out p sn) (match erased ln _ ((LengthCons b a0 as0 m2 l2) (snoc-length sub2 (Some _ a) out m2 sn (somes-length as2 sub2 m2 p l2)))))))
 (def-fns _ $ (erased len-eq-length : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (Nat) m) (subterm erased (LenEq A B xs ys) le) (erased (Length B ys m) ln) -> (erased (Length A xs m) q))
   (match erased le _
-    ((LENil a b) (match erased ln _ ((LenNil c) (LenNil _))))
-    ((LECons a b x y xs2 ys2 p) (match erased ln _ ((LenCons c y0 ys0 m2 l2) (LenCons _ x xs2 m2 (len-eq-length _ _ xs2 ys2 m2 p l2)))))))
+    ((LENil a b) (match erased ln _ ((LengthNil c) (LengthNil _))))
+    ((LECons a b x y xs2 ys2 p) (match erased ln _ ((LengthCons c y0 ys0 m2 l2) (LengthCons _ x xs2 m2 (len-eq-length _ _ xs2 ys2 m2 p l2)))))))
 (def-fns _ $ (erased snoc-layout : (erased (List (Maybe (Term))) xs) (erased (Term) a) (erased (List (Maybe (Term))) out) (erased (Nat) m) (subterm erased (Snoc xs (Some (Term) a) out) sn) (erased (Layout (Term) xs (Zero) m) ly) ->
     (erased (Layout (Term) out (Zero) (Succ m)) q))
   (match erased sn _
@@ -828,8 +828,8 @@
     ((SnocCons y ys z out2 p) (match erased ly _ ((LaySome b y0 ys0 m2 l2) (LaySome _ y0 out2 (Succ m2) (snoc-layout ys a out2 m2 p l2)))))))
 (def-fns _ $ (erased somes-layout : (erased (List (Term)) as) (erased (List (Maybe (Term))) subs) (erased (Nat) m) (subterm erased (Somes as subs) so) (erased (Length (Term) as m) ln) -> (erased (Layout (Term) subs (Zero) m) q))
   (match erased so _
-    ((SomesNil) (match erased ln _ ((LenNil a) (LayNil _))))
-    ((SomesCons a as2 sub2 out p sn) (match erased ln _ ((LenCons b a0 as0 m2 l2) (snoc-layout sub2 a out m2 sn (somes-layout as2 sub2 m2 p l2)))))))
+    ((SomesNil) (match erased ln _ ((LengthNil a) (LayNil _))))
+    ((SomesCons a as2 sub2 out p sn) (match erased ln _ ((LengthCons b a0 as0 m2 l2) (snoc-layout sub2 a out m2 sn (somes-layout as2 sub2 m2 p l2)))))))
 (def-fns _ $ (many inst-ret : (erased (List (Ent)) ents) (erased (Nat) out) (many (List (Entry)) ps) (many (Term) ret) (many (List (Term)) as) (erased (ScopedTele ents (Zero) ps out) sps) (erased (Scoped ents out ret) sret)
     (erased (ScopedList ents (Zero) as) sas) (erased (LenEq (Term) (Entry) as ps) le) ->
     (many (List (Maybe (Term))) subs) (erased (Somes as subs) so) (many (Term) ty) (erased (Subst subs ret ty) q) (erased (Scoped ents (Zero) ty) sty))

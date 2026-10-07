@@ -394,10 +394,10 @@
     ((Cons b y more) (OneNo _ (NotOneMore x y more)))))
 (def-fns _ $ (many not-len-dec : (many (Nat) n) (subterm many (List (Term)) as) -> (many (NotLenDec n as) r))
   (let-match many as (Cons a t rest)
-    ((Nil a) (match many n _ ((Zero) (LenIs _ _ (LenNil _))) ((Succ m) (LenIsNot _ _ (NLNilSucc m))))))
+    ((Nil a) (match many n _ ((Zero) (LenIs _ _ (LengthNil _))) ((Succ m) (LenIsNot _ _ (NLNilSucc m))))))
   (let-match many n (Succ m) ((Zero) (LenIsNot _ _ (NLConsZero t rest))))
   (match many (notail $ not-len-dec m rest) _
-    ((LenIs b c p) (LenIs _ _ (LenCons _ t rest m p)))
+    ((LenIs b c p) (LenIs _ _ (LengthCons _ t rest m p)))
     ((LenIsNot b c p) (LenIsNot _ _ (NLCons m t rest p)))))
 (def-fns _ $ (erased len-eq-trans : (erased Type A) (erased Type B) (erased Type C) (erased (List A) xs) (erased (List B) ys) (erased (List C) zs) (subterm erased (LenEq A B xs ys) p) (erased (LenEq B C ys zs) q) ->
     (erased (LenEq A C xs zs) r))
@@ -495,8 +495,8 @@
     ((BindersCons x2 ids3 b2 out2 bd2 sn) (covers-rev-binders n0 e0 (Cons _ (Some _ x) acc) ids2 e1 b2 out cr2 bd2 (snoc-cat b2 (Some _ x) b acc out sn ct)))))
 (def-fns _ $ (erased len-eq-length-r : (erased Type A) (erased Type B) (erased (List A) xs) (erased (List B) ys) (erased (Nat) m) (subterm erased (LenEq A B xs ys) le) (erased (Length A xs m) ln) -> (erased (Length B ys m) q))
   (match erased le _
-    ((LENil a b) (match erased ln _ ((LenNil c) (LenNil _))))
-    ((LECons a b x y xs2 ys2 p) (match erased ln _ ((LenCons c x0 xs0 m2 l2) (LenCons _ y ys2 m2 (len-eq-length-r _ _ xs2 ys2 m2 p l2)))))))
+    ((LENil a b) (match erased ln _ ((LengthNil c) (LengthNil _))))
+    ((LECons a b x y xs2 ys2 p) (match erased ln _ ((LengthCons c x0 xs0 m2 l2) (LengthCons _ y ys2 m2 (len-eq-length-r _ _ xs2 ys2 m2 p l2)))))))
 (def-fns _ $ (erased snocid-layout : (erased (List (Maybe (Nat))) xs) (erased (Nat) x) (erased (List (Maybe (Nat))) out) (erased (Nat) m) (subterm erased (SnocId xs (Some (Nat) x) out) sn) (erased (Layout (Nat) xs (Zero) m) ly) ->
     (erased (Layout (Nat) out (Zero) (Succ m)) q))
   (match erased sn _
@@ -504,16 +504,16 @@
     ((SnocIdCons y ys z out2 p) (match erased ly _ ((LaySome b y0 ys0 m2 l2) (LaySome _ y0 out2 (Succ m2) (snocid-layout ys x out2 m2 p l2)))))))
 (def-fns _ $ (erased binders-layout : (erased (List (Nat)) ids) (erased (List (Maybe (Nat))) b) (erased (Nat) m) (subterm erased (Binders ids b) bd) (erased (Length (Nat) ids m) ln) -> (erased (Layout (Nat) b (Zero) m) q))
   (match erased bd _
-    ((BindersNil) (match erased ln _ ((LenNil a) (LayNil _))))
-    ((BindersCons x ids2 acc out p sn) (match erased ln _ ((LenCons a x0 ids0 m2 l2) (snocid-layout acc x out m2 sn (binders-layout ids2 acc m2 p l2)))))))
+    ((BindersNil) (match erased ln _ ((LengthNil a) (LayNil _))))
+    ((BindersCons x ids2 acc out p sn) (match erased ln _ ((LengthCons a x0 ids0 m2 l2) (snocid-layout acc x out m2 sn (binders-layout ids2 acc m2 p l2)))))))
 (def-fns _ $ (erased tele-ids-length : (erased (Ctx) ctx) (erased (List (Entry)) pt) (erased (List (Nat)) ids) (erased (Nat) m) (erased (ScT ctx (Zero) pt m) spt) (erased (LenEq (Entry) (Nat) pt ids) li) -> (erased (Length (Nat) ids m) ln))
   (let-match erased spt (MkScT q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 sps))
   (let ((erased m2) (erased lp)) (list-len _ pt))
   (match erased (stele-plus _ (Zero) pt m m2 sps lp) _ ((PlusZ b) (len-eq-length-r _ _ pt ids m2 li lp))))
 (def-fns _ $ (erased refs-length : (erased (List (Nat)) ids) (erased (List (Term)) ts) (erased (Nat) m) (subterm erased (Refs ids ts) rf) (erased (Length (Nat) ids m) ln) -> (erased (Length (Term) ts m) q))
   (match erased rf _
-    ((RefsNil) (match erased ln _ ((LenNil a) (LenNil _))))
-    ((RefsCons x ids2 ts2 p) (match erased ln _ ((LenCons a x0 ids0 m2 l2) (LenCons _ (Ref x) ts2 m2 (refs-length ids2 ts2 m2 p l2)))))))
+    ((RefsNil) (match erased ln _ ((LengthNil a) (LengthNil _))))
+    ((RefsCons x ids2 ts2 p) (match erased ln _ ((LengthCons a x0 ids0 m2 l2) (LengthCons _ (Ref x) ts2 m2 (refs-length ids2 ts2 m2 p l2)))))))
 (def-fns _ $ (erased refs-len-eq : (erased (List (Entry)) ps) (erased (List (Nat)) ids) (erased (List (Term)) ts) (erased (LenEq (Entry) (Nat) ps ids) le) (subterm erased (Refs ids ts) rf) -> (erased (LenEq (Term) (Entry) ts ps) q))
   (match erased rf _
     ((RefsNil) (match erased le _ ((LENil a b) (LENil _ _))))
@@ -1163,16 +1163,16 @@
         ((PrefixNo c2 d2 e2 g2 p) (PrefixNo _ _ _ _ (DPThere ctx j2 x xs y ys sm p)))
         ((PrefixYes c2 d2 e2 g2 bb p sb) (PrefixYes _ _ _ _ bb (SPSucc ctx j2 x xs y ys bb sm p) sb))))))
 (def-fns _ $ (erased len3 : (erased (List (Term)) as) (erased (Length (Term) as (Succ (Succ (Succ (Zero))))) ln) -> (erased (As3 as) p))
-  (let-match erased ln (LenCons a x rest n l1))
-  (let-match erased l1 (LenCons b y rest2 n2 l2))
-  (let-match erased l2 (LenCons c z rest3 n3 l3))
-  (match erased l3 _ ((LenNil d) (MkAs3 x y z))))
+  (let-match erased ln (LengthCons a x rest n l1))
+  (let-match erased l1 (LengthCons b y rest2 n2 l2))
+  (let-match erased l2 (LengthCons c z rest3 n3 l3))
+  (match erased l3 _ ((LengthNil d) (MkAs3 x y z))))
 (def-fns _ $ (erased len4 : (erased (List (Term)) as) (erased (Length (Term) as (Succ (Succ (Succ (Succ (Zero)))))) ln) -> (erased (As4 as) p))
-  (let-match erased ln (LenCons a x rest n l1))
-  (let-match erased l1 (LenCons b y rest2 n2 l2))
-  (let-match erased l2 (LenCons c z rest3 n3 l3))
-  (let-match erased l3 (LenCons d w rest4 n4 l4))
-  (match erased l4 _ ((LenNil e) (MkAs4 x y z w))))
+  (let-match erased ln (LengthCons a x rest n l1))
+  (let-match erased l1 (LengthCons b y rest2 n2 l2))
+  (let-match erased l2 (LengthCons c z rest3 n3 l3))
+  (let-match erased l3 (LengthCons d w rest4 n4 l4))
+  (match erased l4 _ ((LengthNil e) (MkAs4 x y z w))))
 
 ; A proof's canonical type as (Predates ty a lv), with each part the same as required, or why not.
 (def-adts

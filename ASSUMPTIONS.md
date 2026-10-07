@@ -4104,7 +4104,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      hd))` into the slot already holding `hd`, is written full-at, so the
      model stores nothing, as the FFI's implementation does (review item
      48); `array-unpluck` is the review's item 49 as written, and the
-     lemma from `ASet` to `ANth` its caller needs lives in
+     lemma from `SetNth` to `Nth` its caller needs lives in
      `tests/array_unpluck.sl`, not the prelude.
 
 211. **Which arguments are bound first (A2, U2a).** U2a's "as if bound

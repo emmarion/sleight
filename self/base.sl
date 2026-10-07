@@ -360,19 +360,11 @@
 ; ---- Lists
 
 (def-adts
-  ((Length : (Type A) ((List A) xs) ((Nat) n) -> Type)
-    enum
-    (many LNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n) (erased (Length A rest n) p) -> (Length A (Cons A x rest) (Succ n))))
   ((Concat : (Type A) ((List A) xs) ((List A) ys) ((List A) zs) -> Type)
     enum
     (many CatNil : (erased Type A) (erased (List A) ys) -> (Concat A (Nil A) ys ys))
     (many CatCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (List A) ys) (erased (List A) zs) (erased (Concat A rest ys zs) p)
        -> (Concat A (Cons A x rest) ys (Cons A x zs))))
-  ((Nth : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
-    enum
-    (many NthHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Nth A (Cons A x rest) (Zero) x))
-    (many NthThere : (erased Type A) (erased A y) (erased (List A) rest) (erased (Nat) i) (erased A x) (erased (Nth A rest i x) p) -> (Nth A (Cons A y rest) (Succ i) x)))
   ((OutOfRange : (Type A) ((List A) xs) ((Nat) i) -> Type)
     enum
     (many OONil : (erased Type A) (erased (Nat) i) -> (OutOfRange A (Nil A) i))
@@ -383,9 +375,9 @@
     (many NthMiss : (erased Type A) (erased (List A) xs) (erased (Nat) i) (erased (OutOfRange A xs i) p) -> (NthLookup A xs i))))
 
 (def-fns _ $ (many length : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p))
-  (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (LNil _))))
+  (let-match many xs (Cons _ x rest) ((Nil _) (values (Zero) (LengthNil _))))
   (let ((many n) (erased p)) (notail $ length _ rest))
-  (values (Succ n) (LCons _ x rest n p)))
+  (values (Succ n) (LengthCons _ x rest n p)))
 
 (def-fns _ $ (many list-replicate : (erased Type A) (subterm many (Nat) n) (many A x) -> (many (List A) r))
   (match many n _

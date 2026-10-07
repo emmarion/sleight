@@ -62,10 +62,6 @@
     (many LECons : (erased Type A) (erased Type B) (erased A x) (erased B y) (erased (List A) xs) (erased (List B) ys) (erased (LenEq A B xs ys) p) -> (LenEq A B (Cons A x xs) (Cons B y ys)))))
 
 (def-adts
-  ((Length : (Type A) ((List A) xs) ((Nat) n) -> Type)
-    enum
-    (many LenNil : (erased Type A) -> (Length A (Nil A) (Zero)))
-    (many LenCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) n) (erased (Length A xs n) p) -> (Length A (Cons A x xs) (Succ n))))
   ((Layout : (Type A) ((List (Maybe A)) xs) ((Nat) r) ((Nat) n) -> Type)
     enum
     (many LayNil : (erased Type A) -> (Layout A (Nil (Maybe A)) (Zero) (Zero)))
@@ -80,14 +76,14 @@
 
 (def-fns _ $ (many list-len : (erased Type A) (subterm many (List A) xs) -> (many (Nat) n) (erased (Length A xs n) p))
   (let-match many xs (Cons a x rest)
-    ((Nil a) (values (Zero) (LenNil _))))
+    ((Nil a) (values (Zero) (LengthNil _))))
   (let ((many n) (erased p)) (notail $ list-len _ rest))
-  (values (Succ n) (LenCons _ x rest n p)))
+  (values (Succ n) (LengthCons _ x rest n p)))
 (def-fns _ $ (erased layout-length : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (subterm erased (Layout A xs r n) p) -> (erased (Length (Maybe A) xs n) q))
   (match erased p _
-    ((LayNil a) (LenNil _))
-    ((LaySome a x rest m q) (LenCons _ (Some _ x) rest m (layout-length _ rest (Zero) m q)))
-    ((LayNone a rest r2 m q) (LenCons _ (None _) rest m (layout-length _ rest r2 m q)))))
+    ((LayNil a) (LengthNil _))
+    ((LaySome a x rest m q) (LengthCons _ (Some _ x) rest m (layout-length _ rest (Zero) m q)))
+    ((LayNone a rest r2 m q) (LengthCons _ (None _) rest m (layout-length _ rest r2 m q)))))
 (def-fns _ $ (erased layout-le : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (subterm erased (Layout A xs r n) p) -> (erased (Lt r (Succ n)) q))
   (match erased p _
     ((LayNil a) (LtZ (Zero)))
@@ -105,11 +101,6 @@
 
 ; The i-th element of a list, or evidence that there is none.
 (def-adts
-  ((Nth : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
-    enum
-    (many NthHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Nth A (Cons A x rest) (Zero) x))
-    (many NthThere : (erased Type A) (erased A y) (erased (List A) rest) (erased (Nat) i) (erased A x) (erased (Nth A rest i x) p)
-       -> (Nth A (Cons A y rest) (Succ i) x)))
   ((NoNth : (Type A) ((List A) xs) ((Nat) i) -> Type)
     enum
     (many NoNthNil : (erased Type A) (erased (Nat) i) -> (NoNth A (Nil A) i))
@@ -128,9 +119,9 @@
 
 (def-fns _ $ (erased absurd no-nth-lt : (erased Type A) (erased (List A) xs) (erased (Nat) n) (erased (Nat) k) (erased (Length A xs n) ln) (erased (Lt k n) lt) (subterm erased (NoNth A xs k) p) -> (erased (False) f))
   (match erased p _
-    (absurd (NoNthNil a i) (let-match erased ln (LenNil b)) lt)
+    (absurd (NoNthNil a i) (let-match erased ln (LengthNil b)) lt)
     (absurd (NoNthCons a y rest i q)
-      (let-match erased ln (LenCons b x xs2 m l2))
+      (let-match erased ln (LengthCons b x xs2 m l2))
       (let-match erased lt (LtS c d lt2))
       (no-nth-lt _ rest m i l2 lt2 q))))
 (def-fns _ $ (erased nth-none-lt : (erased Type A) (erased (List (Maybe A)) xs) (erased (Nat) r) (erased (Nat) n) (erased (Nat) k) (erased (Layout A xs r n) ly) (subterm erased (Nth (Maybe A) xs k (None A)) p) ->
@@ -141,7 +132,7 @@
     ((LayNone b rest2 r2 m q2) (LtS i r2 (nth-none-lt _ rest2 r2 m i q2 q)))))
 (def-fns _ $ (erased index-lt : (erased Type A) (erased (List A) xs) (erased (Nat) n) (erased (Nat) k) (erased A x) (erased (Length A xs n) ln) (subterm erased (Nth A xs k x) p) -> (erased (Lt k n) q))
   (match erased p _
-    ((NthHere a y rest) (match erased ln _ ((LenCons b z xs2 m l2) (LtZ m))))
-    ((NthThere a y rest i z q) (match erased ln _ ((LenCons b w xs2 m l2) (LtS i m (index-lt _ rest m i x l2 q)))))))
+    ((NthHere a y rest) (match erased ln _ ((LengthCons b z xs2 m l2) (LtZ m))))
+    ((NthThere a y rest i z q) (match erased ln _ ((LengthCons b w xs2 m l2) (LtS i m (index-lt _ rest m i x l2 q)))))))
 
 (MkUnit)

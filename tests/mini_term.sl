@@ -11,7 +11,7 @@
 (let ((many t)) (TFn (Bound z) (Cons _ (MkEntry (BFalse) (BFalse) (TyApp (Ref 3) ps (Cons _ (Bound z) (Nil _)))) (Nil _)) (Cons _ (MkEntry (BFalse) (BTrue) (ValApp (Bound z) ps (Bound z) (Cons _ (Bound one) (Nil _)))) (Nil _))))
 
 (let ((many s) (erased sp))
-  (subst subs (Succ (Zero)) (LenCons _ _ _ _ (LenNil _)) t
+  (subst subs (Succ (Zero)) (LengthCons _ _ _ _ (LengthNil _)) t
     (ClFn (Succ (Zero)) _ _ _ (Succ (Succ (Zero))) (Succ (Succ (Succ (Zero)))) (ClBound (Succ (Zero)) (Zero) (LtZ (Zero)))
       (ClTCons (Succ (Zero)) _ _ _ _ (Succ (Succ (Zero))) (ClTyApp (Succ (Zero)) _ _ _ _ (ClRef (Succ (Zero)) 3) (ClTCons (Succ (Zero)) _ _ _ _ (Succ (Succ (Zero))) (ClUniv (Succ (Zero))) (ClTNil (Succ (Succ (Zero))))) (ClCons (Succ (Zero)) _ _ (ClBound (Succ (Zero)) (Zero) (LtZ (Zero))) (ClNil (Succ (Zero))))) (ClTNil (Succ (Succ (Zero)))))
       (ClTCons (Succ (Succ (Zero))) _ _ _ _ (Succ (Succ (Succ (Zero))))

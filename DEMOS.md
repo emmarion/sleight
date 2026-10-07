@@ -55,12 +55,12 @@ entries here are ranked highest. Each is a step up in size from
 A quicksort or heapsort over the prelude's `Array`, returning the sorted
 array `at` its argument beside evidence that it is a permutation of the
 input and is ordered. The reason this session would rank the permutation
-half above the sortedness half: `array-swap` already returns an `ASet`
+half above the sortedness half: `array-swap` already returns a `SetNth`
 relating the array before and after, so a run of swaps might compose into a
 permutation witness out of the calls' own return values, rather than needing
 a multiset argument beside them. Whether they compose that way is the thing
 to find out; if they do, that is a better story than proving a permutation
-lemma. Expected cost: high, and the friction is expected to be the `ANth`
+lemma. Expected cost: high, and the friction is expected to be the `Nth`
 evidence a runtime index needs, of the kind TOOLING-WISHLIST 8, 20 and 28
 record, rather than the proof.
 
