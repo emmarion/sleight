@@ -17,7 +17,9 @@ let location_var env l p =
       let p = canon env p in
       (match List.find_opt (fun x -> readable x && same_slot env p (slot_of x)) env.scope.ids with
       | Some x -> x
-      | None -> error_in env l "no caller word for `at` %s" (qshow env p))
+      | None ->
+          let hint = match p with Var x when name_of env x = anonymous env x -> Some (sprintf_in env "give the argument it is at a name, with a `let`, before the call that takes it") | _ -> None in
+          error_with ?hint l [] (respelled env "no caller word for `at` %s") (qshow env p))
 
 let type_term = Prelude.type_term
 
@@ -68,6 +70,7 @@ let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (help env
 let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
 let var env loc n =
   match Literal.classify n with
+  | `Name when n = "_" -> error loc "`_` is not a name, and nothing is inferred here"
   | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s%s" (tick n) (hint env n))
   | `Lit lit -> (match List.assoc_opt (Literal.key lit) env.literals with Some (x, _) -> x | None -> error loc "literal %s outside a top-level form" n)
   | `Bad msg -> error loc "%s" msg
@@ -243,8 +246,9 @@ let find_matchable env loc tid =
 let type_head env ty = match canon env ty with App (Var t, _) -> Some t | _ -> None
 
 let held_needs_many env loc tid mid =
-  if not (readable env mid) then
-    error_in env loc "the `Matchable` for %s is erased or out of scope, so a non-erased match cannot take a value of it apart" (qname env tid)
+  if not (readable env mid) then (
+    if (entry env mid).mult = Unique && List.mem mid env.scope.ids then ignore (use env loc Many mid);
+    error_in env loc "the `Matchable` for %s is erased or out of scope, so a non-erased match cannot take a value of it apart" (qname env tid))
 
 let ctor_type env loc c =
   match canon env (type_of env c) with ValCtor (tele, ret) -> (tele, ret) | _ -> error loc "%s is not a value constructor" (qname env c)
@@ -895,9 +899,9 @@ let predates_source env x lvl = match canon env (Var x) with Var y when x >= lvl
 let provable_predates env x lvl = (entry env lvl).minted_level && predates_source env x lvl < lvl
 
 let prove_predates env l x lvl =
-  if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (qname env lvl);
+  if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (qshow env (Var lvl));
   let x = predates_source env x lvl in
-  if x >= lvl then error l "%s was not in scope when level %s was minted" (qname env x) (qname env lvl);
+  if x >= lvl then error l "%s was not in scope when level %s was minted" (qname env x) (qshow env (Var lvl));
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
 (* The post-erasure normalizer behind the `tail` and `delegate` checks (section 19, ASSUMPTIONS 164, 189): lets
@@ -1035,13 +1039,16 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   if unique && pos <> Erased && callee.erasure = Many then error_with_in env l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
   let env = match callee.term with Var x -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
   let written, args =
-    let rec go i acc = function
-      | List (al, [ k; p ]) :: rest when is_special env k Sp.Predates && i = 0 -> (Some (al, `Predates p), List.rev_append acc rest)
-      | List (al, [ k; p ]) :: rest when is_special env k Sp.Subterm -> (Some (al, `Subterm (i, p)), List.rev_append acc rest)
-      | a :: rest -> go (i + 1) (a :: acc) rest
-      | [] -> (None, List.rev acc)
+    let rec go i found acc = function
+      | List (al, [ k; p ]) :: rest when is_special env k Sp.Predates || is_special env k Sp.Subterm ->
+          let predates = is_special env k Sp.Predates in
+          if found <> None then error al "a call carries at most one decrease annotation";
+          if predates && i > 0 then error_in env al "`predates` is written immediately after the callee";
+          go i (Some (al, if predates then `Predates p else `Subterm (i, p))) acc rest
+      | a :: rest -> go (i + 1) found (a :: acc) rest
+      | [] -> (found, List.rev acc)
     in
-    go 0 [] args
+    go 0 None [] args
   in
   let env, acc, codes, wrap = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
   let arg_terms = List.rev acc in
@@ -1591,7 +1598,10 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
 
 (* A match's or open-absurd's return annotation: a telescope of the position's size, or _ for the enclosing one. *)
 and result_tele ?(demand = Fixed) tele env expect l ann =
-  let atmatch, ann = match ann with List (_, [ a; (List _ as inner) ]) when is_special env a Sp.At -> (true, inner) | _ -> (false, ann) in
+  let atmatch, ann = match ann with
+    | List (_, [ a; (List _ as inner) ]) when is_special env a Sp.At -> (true, inner)
+    | List (_, [ a; Atom (al, "_") ]) when is_special env a Sp.At -> error al "an at-match's annotation is written out; `_` cannot stand for it"
+    | _ -> (false, ann) in
   let env, ann_tele =
     match (ann, tele) with
     | Atom (_, "_"), Some tele ->

@@ -294,10 +294,14 @@ let fetches ?except env =
       | Some p, `Lit lit -> (match canon env (Var p) with Var a -> Some (a, (p, form "numeral-of" (Literal.spell lit))) | _ -> None)
       | _ -> None) env.literals
 
-(* An entry by its own name, else by a fetch form yielding it, else as an anonymous marker. *)
+(* An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
+   an anonymous marker. *)
 let name_of env x = match (entry env x).name with
   | Some n -> n
-  | None -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
+  | None ->
+    match List.find_map (fun (k, (y, _)) -> match Literal.classify k with `Lit ((Literal.Numeral _ | Literal.Str _) as lit) when y = x -> Some (Literal.spell lit) | _ -> None) env.literals with
+    | Some n -> n
+    | None -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
 
 let namer ?except env terms =
   let atoms = List.fold_left (fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0) [] terms in

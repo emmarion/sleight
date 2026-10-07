@@ -37,24 +37,11 @@ is a design decision. Remove an entry when it is fixed.
     overflows its stack on the deep `Rope` too (it runs the model at
     compile time); `ulimit -s unlimited` makes it print 100000.
 
-13. **Diagnostics found wanting by the sweep**, each a refusal that is
-    right with a message that is not: `(match many xs (at _) ...)` says
-    "expected a telescope or `_`, got `at`" though `_` is what §40
-    forbids (`result_tele` sees the `at` wrapper only around a list);
-    `_` as an entry of a `values` or inside `slot-of` says "unbound
-    name `_`" with "hint: nearest in scope: :"; a binder forwarded from
-    a literal is named by the literal's anonymous entry
-    (`(let ((many five)) 5) (coercible-wrap (Shared) five five)` says
-    "`_1` is not a value constructor"); `(open-adt unique m)` on an
-    abstract type followed by a `many` match blames readability where
-    the cause is a `unique` binder read at many without `share`; an
-    `open-absurd` annotation written `(at (...))` is accepted silently
-    (`result_tele`'s flag is dropped); a returned closure whose `at`
-    names an argument that was not a variable fails "no caller word
-    for `at` `_1`" with no hint that naming the argument first works.
-    a second decrease annotation on a call, or `(predates p)` after the
-    first argument, is reported as an arity error; a lower-level call
-    from a function at a factory-returned level names that level as
-    `(level-of h)` in its refusal. `slc` and the reference also differ
-    in wording on several refusals (`(absurd C)` against `absurd`, a literal written as a
-    binder), as audit M3 already records.
+13. **Diagnostics found wanting by the sweep.** An `open-absurd`
+    annotation written `(at (...))` is accepted: `result_tele` checks
+    its entries as an at-match's but then drops the flag, and nothing
+    says the `at` meant nothing. `slc` and the reference also differ in
+    wording on some refusals, as audit M3 already records; one seen
+    since is an absurd-by-proof branch written with no body,
+    `(absurd (C ...))`, which the reference refuses with "a body needs a
+    final expression" and `slc` with "malformed branch".
