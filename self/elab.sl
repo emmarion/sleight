@@ -1580,6 +1580,11 @@
   (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ equal-env env p $ slot-atom x) _
     ((BTrue) (Some _ x)) ((BFalse) (tail $ at-constant rest env p))))
 
+(def-fns _ $ (many at-literal : (subterm many (List $ LitEntry) ls) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
+  (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
+  (let-match many l (MkLitEntry x _ _))
+  (match many (equal-env env p $ slot-atom x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-literal rest env p))))
+
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
 (def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
   (let-match many p0 (TSlotOf c) (else (None _)))
@@ -1590,7 +1595,8 @@
   (let ((many direct)) $ direct-word env ctx p0)
   (let ((many p)) $ canon-env env p0)
   (let ((many inframe)) $ match many direct (((Maybe $ Nat) _)) ((Some _ _) direct) ((None _) (at-in-frames ctx env p)))
-  (let ((many found)) $ match many inframe (((Maybe $ Nat) _)) ((Some _ _) inframe) ((None _) (at-constant (env-words env) env p)))
+  (let ((many constant)) $ match many inframe (((Maybe $ Nat) _)) ((Some _ _) inframe) ((None _) (at-constant (env-words env) env p)))
+  (let ((many found)) $ match many constant (((Maybe $ Nat) _)) ((Some _ _) constant) ((None _) (at-literal (env-lits env) env p)))
   (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat (say env "no caller word for `at` ") $ qshow env p) 0))))
 
 ; A parameter written `at` is not passed: inside the body it is a rename of the word its target holds

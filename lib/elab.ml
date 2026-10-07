@@ -15,7 +15,7 @@ let location_var env l p =
   | SlotOf (Var x) when readable x -> x
   | _ ->
       let p = canon env p in
-      (match List.find_opt (fun x -> readable x && same_slot env p (slot_of x)) env.scope.ids with
+      (match List.find_opt (fun x -> readable x && same_slot env p (slot_of x)) (env.scope.ids @ List.map (fun (_, (x, _)) -> x) env.literals) with
       | Some x -> x
       | None -> error_in env l "no caller word for `at` %s" (qshow env p))
 
