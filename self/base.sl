@@ -140,30 +140,35 @@
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
-(def-fns _ $ (many ocaml-escape : (subterm many (String) s) -> (many (Rope) r))
-  (let-match many s (SCons c rest) ((SNil) (REmpty)))
-  (let ((many more)) $ notail $ ocaml-escape rest)
+(def-fns _ $ (many ocaml-escape-char : (many (Char) c) -> (many (Rope) r))
   (let ((many n)) $ char-code c)
   (match many (nat-cmp n 34) (((Rope) _))
-    ((CEq _ _ _) (RCat (RChar #\x5c) $ RCat (RChar #\x22) more))
+    ((CEq _ _ _) (RCat (RChar #\x5c) $ RChar #\x22))
     (else
       (match many (nat-cmp n 92) (((Rope) _))
-        ((CEq _ _ _) (RCat (RChar #\x5c) $ RCat (RChar #\x5c) more))
+        ((CEq _ _ _) (RCat (RChar #\x5c) $ RChar #\x5c))
         (else
           (match many (nat-cmp n 10) (((Rope) _))
-            ((CEq _ _ _) (RCat (RChar #\x5c) $ RCat (RChar #\n) more))
+            ((CEq _ _ _) (RCat (RChar #\x5c) $ RChar #\n))
             (else
               (match many (nat-cmp n 9) (((Rope) _))
-                ((CEq _ _ _) (RCat (RChar #\x5c) $ RCat (RChar #\t) more))
+                ((CEq _ _ _) (RCat (RChar #\x5c) $ RChar #\t))
                 (else
-                  (let-match many (or (nat-lt n 32) $ nat-lt 126 n) (BTrue) ((BFalse) (RCat (RChar c) more)))
+                  (let-match many (or (nat-lt n 32) $ nat-lt 126 n) (BTrue) ((BFalse) (RChar c)))
                   (let ((many d)) $ RStr $ nat-str n)
                   (let ((many (Rope) d3)) (match many (nat-lt n 10) _
                                    ((BTrue) (RCat (RChar #\0) $ RCat (RChar #\0) d))
                                    ((BFalse) (match many (nat-lt n 100) (((Rope) _))
                                                ((BTrue) (RCat (RChar #\0) d))
                                                ((BFalse) d)))))
-                  (RCat (RChar #\x5c) $ RCat d3 more))))))))))
+                  (RCat (RChar #\x5c) d3))))))))))
+
+(def-fns _ $ (many ocaml-escape-onto : (many (Rope) acc) (subterm many (String) s) -> (many (Rope) r))
+  (let-match many s (SCons c rest) ((SNil) acc))
+  (tail $ ocaml-escape-onto (RCat acc $ ocaml-escape-char c) rest))
+
+(def-fns _ $ (many ocaml-escape : (many (String) s) -> (many (Rope) r))
+  (ocaml-escape-onto (REmpty) s))
 
 ; An SL name as an OCaml identifier fragment: letters and digits kept, anything else an underscore.
 (def-fns _ $ (many sanitize-rope : (subterm many (String) s) -> (many (Rope) r))
