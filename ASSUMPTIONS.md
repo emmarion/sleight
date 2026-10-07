@@ -4095,3 +4095,20 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      48); `array-unpluck` is the review's item 49 as written, and the
      lemma from `ASet` to `ANth` its caller needs lives in
      `tests/array_unpluck.sl`, not the prelude.
+
+210. **Open: the slot of an erased argument.** A6 speaks of `slot-of` on
+     a non-erased variable, and the source refuses it on an erased one;
+     but a signature naming `(slot-of p)` for a `many` parameter `p` may
+     be instantiated by a call in an erased position, where section 20
+     lets the argument for `p` be erased, as `tests/slot_of_erased_arg.sl`
+     does. Neither AT_REDESIGN.md nor the review says what that
+     instantiation means, and the code does what falls out of 200 with
+     nothing added: the term `(slot-of x)` for an erased `x` has no slot
+     entry to resolve to and stays a formal term, which never reaches a
+     word, is never an `at` target, and is equal to another such term
+     exactly when the arguments are, so that a forcing that equates two of
+     them equates their arguments (`tests/slot_of_erased_arg_bad.sl`
+     shows the `Refl` such a forcing would need being refused where they
+     are not already equal). Whether the call should instead be refused,
+     or the term given some other meaning, is the owner's question; this
+     entry records the gap, not an answer.
