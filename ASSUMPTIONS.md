@@ -4015,7 +4015,10 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      get a rule on their own slot equating it with the target's (review
      item 18's second reading, which agrees with the first on every word);
      the rule is minted by forcing, as any fact is. A `res`'s `place` is a
-     slot term, `None` for an erased result.
+     slot term, `None` only where no binder stands behind the result
+     yet, as far as this session traced: a call's return without `at`,
+     a constructor application that is not a newtype's, a fresh or
+     copied cell.
 
 201. **`(slot-of x)` as an expression** is a reference to the slot entry:
      a value whose word is `x`'s word, at that slot (A2's "an automatic
@@ -4099,3 +4102,19 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      48); `array-unpluck` is the review's item 49 as written, and the
      lemma from `ASet` to `ANth` its caller needs lives in
      `tests/array_unpluck.sl`, not the prelude.
+
+211. **Which arguments are bound first (A2, U2a).** U2a's "as if bound
+     first" is done literally only where a slot is asked for: an argument
+     that is not a variable is bound to an anonymous entry when its
+     parameter is non-erased in a non-erased position, as before, or when
+     a later entry of the signature names the parameter's slot, by
+     `(slot-of p)` or `at p` (`Elab.slot_named_params`); the entry is
+     erased when the argument is, and its slot is the slot the signature
+     then speaks of. Binding every argument would give the same facts at a
+     cost in fact-table entries that rule 17 argued against. A `_`
+     argument's meta has a slot of its own, never related to the slot of
+     what the meta is solved to, which is why `_` is refused for a
+     parameter written `at`; a solved meta inside `slot-of` resolves to
+     that slot (`Env.metaless`), so no `slot-of` over a term survives
+     canonicalization. `dump-context`'s slot listing includes erased
+     entries.

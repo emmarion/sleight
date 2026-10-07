@@ -175,13 +175,19 @@ let rec infer env loc t =
   | SlotOf _ -> Prelude.slot_term
   | Bound _ -> error loc "internal: dangling binder"
 
-let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).mult; place = if (entry env x).mult = Erased then None else Some (slot_of x) }
+let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).mult; place = Some (slot_of x) }
 let settle_res env loc r = settle env loc r.term; settle env loc r.ty
 let non_erased env ids = List.filter (fun x -> (entry env x).mult <> Erased) ids
 
 (* What a signature passes or returns at runtime: its non-erased entries without a written `at` (A3). *)
 let runtime tele = List.filter (fun (e : entry) -> e.mult <> Erased && e.place = None) tele
 let runtime_ids tele ids = List.filter_map (fun (e, x) -> if e.mult <> Erased && e.place = None then Some x else None) (List.combine tele ids)
+
+let slot_named_params params rets =
+  let rec go i d acc t = match t with
+    | SlotOf (Bound k) when k >= d -> (i - 1 - (k - d)) :: acc
+    | t -> List.fold_left (fun acc (dd, t) -> go i (d + dd) acc t) acc (parts t) in
+  List.concat (List.mapi (fun i (e : entry) -> List.fold_left (go i 0) [] (sg_term e.sg :: Option.to_list e.place)) (params @ rets))
 let with_words env ids = List.fold_left (fun env x -> { env with entries = IntMap.add x { (entry env x) with word = true } env.entries }) env ids
 let head_name env h = match h.term with Var x -> qname env x | t -> qshow env t
 let head_notes env h = match h.term with Var x -> declared env ~how:(Printf.sprintf " `%s`" (speller env (mult_name (entry env x).mult))) x | _ -> []
@@ -634,7 +640,6 @@ and elab_type_form env l sp args =
 and slot_var env l = function
   | [ a ] ->
       let x = var env (loc a) (atom_or (loc a) a "a direct variable reference") in
-      if (entry env x).mult = Erased then error_in env (loc a) "`slot-of` needs a variable declared `many` or `unique`";
       if env.ctor_tele then error_in env (loc a) "`slot-of` cannot appear in a constructor's telescope";
       x
   | _ -> error l "%s" (help env (Sp.misuse Sp.SlotOf))
@@ -714,7 +719,7 @@ and level_var ?(alt = "") env l raw =
 
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
-and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ _ m -> m) ?holes ?written entries =
+and elab_tele env ?(places = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ _ m -> m) ?holes ?written entries =
   let entries = List.concat_map (parse_entry env) entries in
   let _, env, ids, tele =
     List.fold_left
@@ -725,11 +730,10 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
         let ty, rule = fact_of env e.s_loc sg in
         let place = Option.map (fun raw ->
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope and match annotation entries";
-          if mult = Erased && not contextual then error_in env e.s_loc "`at` needs an entry declared `many` or `unique`";
           let n = atom_or (loc raw) raw "a location variable" in
           if Literal.classify n <> `Name then error_in env (loc raw) "`at` names a variable, not a literal";
           let x = var env (loc raw) n in
-          if (entry env x).mult = Erased then error_in env (loc raw) "`at` needs a variable declared `many` or `unique`";
+          if (entry env x).mult = Erased && mult <> Erased then error_in env (loc raw) "`at` needs a variable declared `many` or `unique`";
           slot_of x) e.s_place in
         let name = name_or_anon e.s_name in
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Dyn ty ?rule) in
@@ -744,7 +748,7 @@ and elab_tele env ?(places = false) ?(contextual = false) ?(subterm = false) ?(i
    to its meta. [result] is the application's result telescope over the parameters' metas, unified with
    [expect] eagerly, where a `_` is present, before any argument is read, and again, reporting the mismatch,
    when a `_` would otherwise stay unsolved at the closing paren; every `_` is solved by then or refused. *)
-and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundary = true) ?(bind_args = false) tele args elab =
+and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundary = true) ?(bind_args = false) ?(named = []) tele args elab =
   if List.length tele <> List.length args then count_error env loc c what tele (List.length args);
   let ats = List.map (fun a -> if wild a then Reader.loc a else Reader.nowhere) args in
   let env, metas = open_tele env ~meta:true ~names:(anon tele) ~ats ~mults:(List.map (fun _ -> Erased) tele) tele in
@@ -759,6 +763,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
         let about = lazy (argument c i e.name ^ ": ", Lazy.force c.notes) in
         if wild arg then (
           if under pos e.mult <> Erased then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` stands only for an erased argument, and this one is not erased" (fst (Lazy.force about));
+          if e.place <> None then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` cannot stand for an argument written `at`" (fst (Lazy.force about));
           (env, Var m :: acc, codes, bindings))
         else
           let env, r, code = elab env (c.used e.mult) arg (Some [ { e with sg } ]) in
@@ -770,15 +775,18 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
               | _ ->
                   let x, env = bind env ~holes:true ~word:true ~temporary:true None r.erasure Dyn r.ty ~rule:r.term in
                   (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, V.CVar x, (x, code) :: bindings))
+            else if bind_args && List.mem i named && (match r.term with Var _ -> false | _ -> true) then
+              let x, env = bind env ~holes:true ~temporary:true None r.erasure Dyn r.ty ~rule:r.term in
+              (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, code, bindings)
             else (env, r, code, bindings)
           in
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (A3, A5) *)
           let omitted = match e.place with
-            | Some p when pos <> Erased ->
+            | Some p ->
                 if not (Option.fold ~none:false ~some:(same_slot env (instantiate acc p)) r.place) then
                   error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i e.name) (qshow env (instantiate acc p));
                 true
-            | _ -> false in
+            | None -> false in
           (solve ~about "value" env (Reader.loc arg) r.term (Var m), r.term :: acc, (if e.mult <> Erased && not omitted then code :: codes else codes), bindings))
       (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
   in
@@ -1009,6 +1017,7 @@ and elab_head env pos l raw =
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l c callee hcode lv params rets args =
   let pos = pos_of expect in
+  if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (A10): the proof opened for the callee is what licenses it *)
   let skipped = pos <> Erased && atfn_open env callee.term in
   if assert_at && not skipped then error_with_in env l (head_notes env callee) "%s is not an at-function here: no `AtFn` proof for it is open" (head_name env callee);
@@ -1025,7 +1034,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
     in
     go 0 [] args
   in
-  let env, acc, codes, wrap = check_args env l ~callee:c ~bind_args:true ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
+  let env, acc, codes, wrap = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
   let arg_terms = List.rev acc in
   let subterm_params = List.filter_map (fun (i, e) -> if e.subterm then Some i else None) (List.mapi (fun i e -> (i, e)) params) in
   let arg_name i = argument c i (Option.bind (List.nth_opt params i) (fun e -> e.name)) in
@@ -1155,7 +1164,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       erased (env, term_res env l t)
   | Sp.SlotOf, _ ->
       let x = slot_var env l args in
-      (env, [ { term = slot_of x; ty = Prelude.slot_term; erasure = pos; place = if pos = Erased then None else Some (slot_of x) } ], if pos = Erased then V.CErased else V.CVar x)
+      if pos <> Erased && (entry env x).mult = Erased then error_in env l "%s is erased, as %s is, and stands in a non-erased position" (qshow env (slot_of x)) (qname env x);
+      (env, [ { term = slot_of x; ty = Prelude.slot_term; erasure = pos; place = Some (slot_of x) } ], if pos = Erased then V.CErased else V.CVar x)
   | Sp.CellAlloc, [ raw ] ->
       let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
       let c = ctor_var env l c in
@@ -1577,7 +1587,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
           | Some m -> no_mult env "a match annotation's entries" el m
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
         in
-        let env', _, ann_tele = elab_tele env ~places:true ~contextual:true ~mults ~holes:true ann in
+        let env', _, ann_tele = elab_tele env ~places:true ~mults ~holes:true ann in
         let env = { env' with scope = env.scope } in
         let env = match tele with Some tele when List.length tele = List.length ann_tele -> solve_tele ~strict:true env l tele ann_tele | _ -> env in
         List.iter (fun e -> settle env l (sg_term e.sg)) ann_tele;
@@ -1945,6 +1955,7 @@ and elab_def_fns ?(unique = false) env l args =
                 let ty = elab_fn_type ~unique env (Var lvl) ps rs in
                 let many_params = match ty with Fn (_, ps, _) | UniqueFn (_, ps, _) -> List.length (runtime ps) | _ -> 0 in
                 let atfn = List.mem Sp.At marks and extern = List.mem Sp.Extern marks in
+                if atfn && mult = Erased then error_in env fl "an `erased` function cannot be an at-function: it is called only where nothing runs";
                 if atfn && runtime (match ty with Fn (_, _, rs) | UniqueFn (_, _, rs) -> rs | _ -> []) <> [] then error_in env fl "an at-function's returns are erased or `at`";
                 let impl = if extern && not atfn then Some (Ffi.claim_fn fl name many_params) else None in
                 (fl, name, mult, List.mem Sp.Absurd marks, (impl, extern, atfn, delegates), ty, body)
@@ -1996,7 +2007,7 @@ and elab_def_fns ?(unique = false) env l args =
          | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (tick (Reader.show f)));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
            dummy a first-class call without the proof reaches (A10) *)
-        if atfn && mult <> Erased && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
+        if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
         let code = if atfn then V.CValues [] else code in
         ((x, { V.fname = name; params = runtime_ids params pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
       in

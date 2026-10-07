@@ -83,7 +83,7 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id option }
+type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -172,8 +172,8 @@ let hide env outer =
   let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None; word = (let e = IntMap.find x es in e.word && not e.temporary) } es) env.entries added in
   { env with entries; scope = { env.scope with named = outer.scope.named } }
 
-(* The type `(Slot)`, set once the prelude binds its constructor, for the automatic slot every non-erased entry
-   is minted with (AT_REDESIGN A2). *)
+(* The type `(Slot)`, set once the prelude binds its constructor, for the automatic slot every entry is minted
+   with, erased where the entry is (AT_REDESIGN A2). *)
 let slot_type = ref (Var (-1))
 let atfn_ctor = ref (-1)
 
@@ -181,7 +181,7 @@ let atfn_ctor = ref (-1)
    nothing about where the two words sit. *)
 let rec canon env t =
   match t with
-  | SlotOf (Var x) -> (match (entry env x).slot with Some s -> canon env (Var s) | None -> t)
+  | SlotOf (Var x) -> canon env (Var (entry env x).slot)
   | Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t)
   | t -> map_shallow (canon env) t
 
@@ -280,7 +280,7 @@ let fetches ?except env =
   let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, n)) | _ -> None) (StringMap.bindings env.scope.named) in
   let name_for a = Option.map snd (newest named a) in
   List.filter_map (fun (_, (x, n)) -> match canon env (type_of env x) with Fn (Var l, _, _) | UniqueFn (Var l, _, _) -> Some (l, (x, form "level-of" n)) | _ -> None) named
-  @ List.filter_map (fun (n, x) -> if Some x = except || (entry env x).slot = None then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" n)) | _ -> None) (StringMap.bindings env.scope.named)
+  @ List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" n)) | _ -> None) (StringMap.bindings env.scope.named)
   @ List.filter_map (fun o -> match o.kind, canon env (Var o.obj), type_of env o.obj with
       | `Matchable, Var m, Matchable (_, _, _, Var t, _) -> Option.map (fun n -> (m, (o.obj, form "matchable-of" n))) (name_for t)
       | _ -> None) env.opens.opened
@@ -352,7 +352,7 @@ let unsolved ?(about = ("", [])) loc env t =
   error_with ~hints:(hole_hints env t) loc (snd about) "%scannot infer %s in %s" (fst about) (String.concat " and " (List.map (fun x -> qshow env (Var x)) (metas env t))) (qshow env t)
 
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
-let metaless env t = map_vars (fun _ t -> match t with Var x when is_meta env x -> canon env t | t -> t) 0 t
+let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env x -> canon env t | t -> map_shallow (metaless env) t
 
 (* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
@@ -364,12 +364,9 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let x = fresh () in
-  let slot, entries, facts =
-    if mult = Erased || meta then (None, env.entries, env.facts)
-    else
-      let s = fresh () in
-      (Some s, IntMap.add s { name = None; mult = Many; state = Dyn; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot = Some s } env.entries,
-       IntMap.add s { ty = !slot_type; rule = None } env.facts) in
+  let slot = fresh () in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
       (fun n ->
@@ -459,10 +456,10 @@ let unify env a b = unify_in env a b
 (* [x] is at the slot [p]: a rule on its automatic slot (A4). While the slot is still the fresh atom it was
    minted as, with no rule, named by no opened object and absent from [p], the rule is added outright, which
    is what forcing it would do; a slot a forcing has already ruled is forced as any atom is. *)
-let place env x p = match (entry env x).slot with
-  | Some s when (fact env s).rule = None -> (match canon env p with Var t when t = s -> env | t -> { env with facts = IntMap.add s { (fact env s) with rule = Some t } env.facts })
-  | Some s -> unify_in ~force:true env (Var s) p
-  | None -> env
+let place env x p =
+  let s = (entry env x).slot in
+  if (fact env s).rule <> None then unify_in ~force:true env (Var s) p
+  else match canon env p with Var t when t = s -> env | t -> { env with facts = IntMap.add s { (fact env s) with rule = Some t } env.facts }
 let placed env x = function Some p -> place env x p | None -> env
 
 (* A forcing leaves the opened objects it touched to be merged, so its environment comes back as [forced], which
