@@ -197,7 +197,9 @@ The two numberings follow order of first mention and hold for the whole run,
 so `_3` names one entry in every message it appears in, and every message
 that mentions one carries a note saying what it is: `` `_?1` is the `_`
 written here ``, `` `_3` is anonymous, minted here ``, `` `_Fn` is `Fn`,
-shadowed here ``. Which atom canonicalization keeps for a class is an
+shadowed here ``. An automatic slot that no name reaches is noted at its
+entry, where the source wrote one: `` `_2` is the slot of the `_` written
+here `` or `` `_2` is the slot of the entry bound here ``. Which atom canonicalization keeps for a class is an
 accident of minting order, so two numbers may turn out to denote one thing
 under later facts, and a name is shown only where it still denotes that atom
 (`Env.show`, `show-t` in `self/elab.sl`). A result that fails its return type

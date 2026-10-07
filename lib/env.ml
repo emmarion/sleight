@@ -27,7 +27,8 @@ let resolve here s =
     match Hashtbl.find_opt numbering key with
     | Some n -> n
     | None ->
-        let n = 1 + Hashtbl.fold (fun k _ c -> if k.[0] = key.[0] then c + 1 else c) numbering 0 in
+        let kind k = if k.[0] = '?' || k.[0] = 'k' then k.[0] else '_' in
+        let n = 1 + Hashtbl.fold (fun k _ c -> if kind k = kind key then c + 1 else c) numbering 0 in
         Hashtbl.replace numbering key n; n in
   let note (key, (shown, at)) =
     if key.[0] = 'k' then
@@ -35,8 +36,11 @@ let resolve here s =
       if at = "" then Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed" here shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
     else
     let written, supplied =
-      if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
-      else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
+      match key.[0] with
+      | '?' -> ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
+      | 'm' -> ("the slot of the `_` written here", "")
+      | 's' -> ("the slot of the entry bound here", "")
+      | _ -> ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
     if at = "" then Printf.sprintf "\n%s: note: `%s` is %s" here shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
   let line s =
     let b = Buffer.create (String.length s) and fresh = ref [] in
@@ -138,7 +142,12 @@ let trace : item list ref = ref []
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
 let entry_name env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
-let anonymous env x = let e = entry env x in marker (if e.meta then '?' else '_') x e.at
+let anonymous env x =
+  let e = entry env x in
+  let owner = if e.slot = x then Some (entry env (x - 1)) else None in
+  match owner with
+  | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
+  | _ -> marker (if e.meta then '?' else '_') x e.at
 
 let set_state env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
