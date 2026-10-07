@@ -4088,10 +4088,14 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      `(slot-of p)` or `at p` (`Elab.slot_named_params`); the entry is
      erased when the argument is, and its slot is the slot the signature
      then speaks of. Binding every argument would give the same facts at a
-     cost in fact-table entries that rule 17 argued against. A `_`
-     argument's meta has a slot of its own, never related to the slot of
-     what the meta is solved to, which is why `_` is refused for a
-     parameter written `at`; a solved meta inside `slot-of` resolves to
+     cost in fact-table entries that rule 17 argued against. Section 35
+     gives a meta no slot of its own and says no more. Here a `_`
+     argument's meta solved to a variable takes that variable's slot
+     (`Env.unify_in`, `table-reslot` in `self/core.sl`); one solved to any
+     other term keeps a fresh slot, as that term written out would get by
+     being bound first. So the `at` check of section 36 waits for the
+     call's metas to settle at its closing paren, rather than running as
+     each argument is read. A solved meta inside `slot-of` resolves to
      that slot (`Env.metaless`), so no `slot-of` over a term survives
      canonicalization. `dump-context`'s slot listing includes erased
      entries.

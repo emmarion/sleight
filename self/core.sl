@@ -1862,6 +1862,12 @@
   (match many tb _
     ((MkTable _ f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x s $ idmap-set _ s s sl))))
 
+(def-fns _ $ (many table-reslot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Nat) y) -> (many (Table n f c) r))
+  (let-match many tb (MkTable _ f0 _ ru _ ord keys ar c1 ab op sl))
+  (match many (idmap-get _ y sl) _
+    ((Hit _ _ _ s _) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x s sl))
+    ((Miss _ _ _ _) tb)))
+
 (def-fns _ $ (many table-slot-of : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
   (match many (idmap-get _ x sl) _ ((Hit _ _ _ s _) (Some _ s)) ((Miss _ _ _ _) (None _))))
@@ -3351,8 +3357,9 @@
               (match many (and (is-meta env x) $ or (not $ is-meta env y) $ nat-eq x newer) _
                 ((BTrue) (values x y px py $ neq-sym _ _ ne))
                 ((BFalse) (values y x py px ne))))
-            (match many (rule-out-var _ _ bnd tb m o pm po2 neq2) _
-              ((MkAdded k _ _ _ tb2) (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))))
+            (let-match many (rule-out-var _ _ bnd tb m o pm po2 neq2) (MkAdded k _ _ _ tb2))
+            (let ((many tb3)) $ table-reslot _ _ _ tb2 m o)
+            (Less _ _ _ _ tb3 (env-set-table env _ _ bnd tb3) $ prove-subterm k n))
           ((BFalse)
             (let-match many (or (not force) $ listed env x y) (BFalse) ((BTrue) (contradiction _ bnd a b)))
             (let ((many sx)) $ signature-of env newer)

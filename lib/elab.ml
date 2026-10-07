@@ -762,15 +762,15 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
   let wilds = List.exists wild args in
   let against ~strict env = match expect with Some tele when wilds -> solve_tele ~strict env loc tele (result mvars) | _ -> env in
   let env = against ~strict:false env in
-  let env, acc, codes =
+  let env, acc, codes, ats =
     List.fold_left2
-      (fun (env, acc, codes) (i, e, m) arg ->
+      (fun (env, acc, codes, ats) (i, e, m) arg ->
         let sg = map_sg (instantiate acc) e.sg in
         let about = lazy (argument c i e.name ^ ": ", Lazy.force c.notes) in
         if wild arg then (
           if under pos e.mult <> Erased then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` stands only for an erased argument, and this one is not erased" (fst (Lazy.force about));
           if e.place <> None then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` cannot stand for an argument written `at`" (fst (Lazy.force about));
-          (env, Var m :: acc, codes))
+          (env, Var m :: acc, codes, ats))
         else
           let env, r, code = elab env (c.used e.mult) arg (Some [ { e with sg } ]) in
           let env = solve_sg ~raw:arg ~about env (Reader.loc arg) sg r in
@@ -789,20 +789,17 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
             else (env, r, code)
           in
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
-          let omitted = match e.place with
-            | Some p ->
-                if not (Option.fold ~none:false ~some:(same_slot env (instantiate acc p)) r.place) then
-                  error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i e.name) (qshow env (instantiate acc p));
-                true
-            | None -> false in
-          (solve ~about "value" env (Reader.loc arg) r.term (Var m), r.term :: acc, (if e.mult <> Erased && not omitted then code :: codes else codes)))
-      (env, [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
+          let ats = match e.place with Some p -> (arg, i, e.name, instantiate acc p, r.place) :: ats | None -> ats in
+          (solve ~about "value" env (Reader.loc arg) r.term (Var m), r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
+      (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
   in
   let env = if boundary && List.exists (has_meta env) acc then against ~strict:true env else env in
   if boundary then List.iteri (fun i t -> if has_meta env t then
     let what = argument c i (List.nth tele i).name and arg = List.nth args i in
     if wild arg then error_with ~hints:(hole_hints env t) (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
     else unsolved ~about:(what ^ ": ", Lazy.force c.notes) (Reader.loc arg) env t) (List.rev acc);
+  List.iter (fun (arg, i, name, p, place) -> if not (Option.fold ~none:false ~some:(same_slot env p) place) then
+    error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i name) (qshow env p)) (List.rev ats);
   (env, List.map (metaless env) acc, List.rev codes)
 
 (* [result] entrywise against [expect]: terms where both are `is` entries, types always. Not [strict]: a

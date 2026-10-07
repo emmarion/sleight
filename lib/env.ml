@@ -454,7 +454,8 @@ let rec unify_in ?(force = false) env a b =
     match (a, b) with
     | Var x, Var y when is_meta env x || is_meta env y ->
         let x, y = if is_meta env x && ((not (is_meta env y)) || x > y) then (x, y) else (y, x) in
-        assign x (Var y)
+        let env = assign x (Var y) in
+        { env with entries = IntMap.add x { (entry env x) with slot = (entry env y).slot } env.entries }
     | Var x, Var y when force && listed env x y -> contradiction ()
     | Var x, Var y when force ->
         let x, y = if x > y then (x, y) else (y, x) in

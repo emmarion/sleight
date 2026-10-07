@@ -646,6 +646,17 @@
 (def-fns _ $ (many argument-label : (many (Callee) c) (many (Nat) i) (many (Maybe $ String) name) -> (many (String) s))
   (str-cat3 (str-cat "argument " $ nat-str i) (match many name (((String) _)) ((Some _ n) (str-cat3 ", " (tick n) ",")) ((None _) "")) $ str-cat " of " $ callee-subject c))
 
+(def-adts $ (AtCheck : -> Type)
+  enum
+  (many MkAtCheck : (many (Pos) pos) (many (Nat) i) (many (Maybe $ String) name) (many (Term) target) (many (Maybe $ Term) place) -> (AtCheck)))
+
+(def-fns _ $ (many report-ats : (subterm many (List $ AtCheck) ats) (many (Callee) c) (many (Env) env) -> (many (Env) r))
+  (let-match many ats (Cons _ a rest) ((Nil _) env))
+  (let-match many a (MkAtCheck pos i name p place))
+  (let ((many ok)) $ match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (equal-env env p q)))
+  (let ((many env2)) $ match many ok (((Env) _)) ((BTrue) env) ((BFalse) (env-back env $ env-error-with (env-at env pos) (callee-notes c) $ str-cat3 (argument-label c i name) " does not satisfy `at` " $ qshow env p)))
+  (tail $ report-ats rest c env2))
+
 (def-fns _ $ (many meta-ids : (many (Env) env) (subterm many (List $ Nat) xs) (many (List $ Nat) seen) -> (many (List $ Nat) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
   (match many (and (is-meta env x) $ not $ list-mem-bin seen x) _
@@ -6354,21 +6365,22 @@
     (let-match many (nat-eq (list-length _ tele) $ list-length _ args) (BTrue)
       ((BFalse) (let ((many errs)) $ count-errs tele) (values (count-mismatch env2 callee tele pos $ list-length _ args) errs errs ctx (SNone _) (Nil _))))
     (let ((many slotted)) $ match many result (((List $ Nat) _)) ((ARCall rets) (slot-named-params tele rets)) ((ARApp _ _) (Nil _)))
-    (let ((many env3) (many acc) (many tys) (many ctx2) (many pre) (many codes)) $ notail $ check-args-go sugar root args k env2 callee ctx ctx (SNone _) tele metas lock pos as-term prepare fields slotted (Nil _) (Nil _) (Nil _))
+    (let ((many env3) (many acc) (many tys) (many ctx2) (many pre) (many codes) (many ats)) $ notail $ check-args-go sugar root args k env2 callee ctx ctx (SNone _) tele metas lock pos as-term prepare fields slotted (Nil _) (Nil _) (Nil _) (Nil _))
     (let ((many (Env) env4)) $ match many (and boundary $ terms-have-meta acc env3) _ ((BTrue) (solve-against env3 expect result mvars wilds $ BTrue)) ((BFalse) env3))
     (let ((many (Env) env5)) $ match many boundary _ ((BTrue) (report-unsolved (list-rev _ acc) (sub-raws _ args) tele callee env4 1)) ((BFalse) env4))
-    (values env5 (metaless-list acc env5) (metaless-list tys env5) ctx2 pre codes))
+    (let ((many (Env) env6)) $ report-ats (list-rev _ ats) callee env5)
+    (values env6 (metaless-list acc env6) (metaless-list tys env6) ctx2 pre codes))
 
-  ((many check-args-go : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (Callee) callee) (many (List $ List $ Nat) ctx0) (many (List $ List $ Nat) ctx) (many (StmtCode ctx0 ctx) chain) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Mult) pos) (many (Bool) as-term) (many (Bool) prepare) (many (Bool) fields) (many (List $ Nat) slotted) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Nat) ids) ->
-      (many (Env) r) (many (List $ Term) acc2) (many (List $ Term) tys2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx0 ctx2) pre2) (many (List $ Code ctx2 many-one) codes2))
+  ((many check-args-go : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Sub root) args) (subterm many (Steps $ Zero) st) (many (Env) env) (many (Callee) callee) (many (List $ List $ Nat) ctx0) (many (List $ List $ Nat) ctx) (many (StmtCode ctx0 ctx) chain) (many (List $ Entry) tele) (many (List $ Nat) metas) (erased (Lockstep (Entry) (Nat) tele metas) lock) (many (Mult) pos) (many (Bool) as-term) (many (Bool) prepare) (many (Bool) fields) (many (List $ Nat) slotted) (many (List $ Term) acc) (many (List $ Term) tys) (many (List $ Nat) ids) (many (List $ AtCheck) ats) ->
+      (many (Env) r) (many (List $ Term) acc2) (many (List $ Term) tys2) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx0 ctx2) pre2) (many (List $ Code ctx2 many-one) codes2) (many (List $ AtCheck) ats2))
     (match many tele _
       ((Nil _)
         (match many args _
-          ((Nil _) (values env acc tys ctx chain (id-codes env ctx $ list-rev _ ids)))
-          ((Cons _ _ _) (values (env-error env $ str-cat "expected fewer arguments, got " $ nat-str $ list-length _ args) acc tys ctx chain (id-codes env ctx $ list-rev _ ids)))))
+          ((Nil _) (values env acc tys ctx chain (id-codes env ctx $ list-rev _ ids) ats))
+          ((Cons _ _ _) (values (env-error env $ str-cat "expected fewer arguments, got " $ nat-str $ list-length _ args) acc tys ctx chain (id-codes env ctx $ list-rev _ ids) ats))))
       ((Cons _ e rest)
         (let-match many args (Cons _ s arest)
-          ((Nil _) (values (env-error env $ str-cat "expected " $ str-cat (nat-str $ list-length _ tele) " more arguments, got 0") acc tys ctx chain (id-codes env ctx $ list-rev _ ids))))
+          ((Nil _) (values (env-error env $ str-cat "expected " $ str-cat (nat-str $ list-length _ tele) " more arguments, got 0") acc tys ctx chain (id-codes env ctx $ list-rev _ ids) ats)))
         (let-match erased lock (LsCons ta tb e0 m0 rest0 mrest0 lp))
         (let-match many metas (Cons c m mrest))
         (let-match many s (MkSub _ arg p))
@@ -6385,7 +6397,7 @@
                 ((BFalse) (match many (entry-place e) (((Env) _) ((Term) _))
                   ((None _) (values env $ TVar m))
                   ((Some _ _) (values (wild-error env apos arg-about "`_` cannot stand for an argument written `at`") $ TErr "wild"))))))
-            (tail $ check-args-go sugar root arest st env2 callee ctx0 ctx chain rest mrest lp pos as-term prepare fields slotted (Cons _ t acc) (Cons _ (type-of env2 m) tys) ids))
+            (tail $ check-args-go sugar root arest st env2 callee ctx0 ctx chain rest mrest lp pos as-term prepare fields slotted (Cons _ t acc) (Cons _ (type-of env2 m) tys) ids ats))
           ((BFalse)
             (let ((many (Env) env2) (many (Res) r) (many (List $ List $ Nat) ctxa) (many (StmtCode ctx ctxa) prea) (many (Code ctxa (Cons (Mult) mult (Nil (Mult)))) code))
               (match many as-term _
@@ -6410,16 +6422,13 @@
                   (values env5 r3 x3 ctxa $ SNone _))))
             ; an argument for a parameter written `at` must sit where its target does, in an erased position
             ; too, and is not passed (section 36)
-            (let ((many (Env) env5) (many (Bool) omitted))
+            (let ((many (List $ AtCheck) ats2) (many (Bool) omitted))
               (match many (entry-place e) _
-                ((None _) (values env5a $ BFalse))
-                ((Some _ pl)
-                  (let ((many p2)) $ instantiate acc pl)
-                  (let ((many ok)) $ match many (res-place r2) (((Bool) _)) ((None _) (BFalse)) ((Some _ q) (equal-env env5a p2 q)))
-                  (values (match many ok (((Env) _)) ((BTrue) env5a) ((BFalse) (env-back env5a $ env-error-with (env-at env5a apos) (callee-notes callee) $ str-cat3 (argument-label callee (Succ $ list-length _ acc) $ entry-name e) " does not satisfy `at` " $ qshow env5a p2))) $ BTrue))))
+                ((None _) (values ats $ BFalse))
+                ((Some _ pl) (values (Cons _ (MkAtCheck apos (Succ $ list-length _ acc) (entry-name e) (instantiate acc pl) $ res-place r2) ats) $ BTrue))))
             (let ((many ids2)) $ match many (or omitted $ not $ mult-is-many mult) (((List $ Nat) _)) ((BTrue) ids) ((BFalse) (Cons _ id ids)))
-            (tail $ check-args-go sugar root arest st env5 callee ctx0 ctxb (SSeq _ _ _ chain $ SSeq _ _ _ prea scb) rest mrest lp pos as-term prepare fields slotted
-              (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) ids2))))))
+            (tail $ check-args-go sugar root arest st env5a callee ctx0 ctxb (SSeq _ _ _ chain $ SSeq _ _ _ prea scb) rest mrest lp pos as-term prepare fields slotted
+              (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) ids2 ats2))))))
 
   ; A function call (section 19): a lower-level call carries a Predates proof about the callee's level, a
   ; same-level call a Subterm proof for its decreasing argument; the top level carries neither (section 20).
