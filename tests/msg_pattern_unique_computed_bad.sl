@@ -2,8 +2,8 @@
 (def-fns _ $ (many mk : -> (unique (P) r)) (MkQ))
 (def-fns _ $ (many f : -> (many (Nat) q))
   (match unique (mk) (((Nat) q))
-    ((MkP a b c) a)
+    ((MkP a b) a)
     (else p2 (Zero))))
-; error: tests/msg_pattern_unique_computed_bad.sl:5:6: error: a `match` branch on `MkP` under `unique` expects 4 binders, got 3: expected `(many (Nat) a) (erased (Nat) b) (many (Nat) c) (unique (Cell MkP (SlotHolds a) (SlotHolds c)) _ at _1)`
+; error: tests/msg_pattern_unique_computed_bad.sl:5:6: error: a `match` branch on `MkP` under `unique` expects 3 or 4 binders, got 2: expected `(many (Nat) a) (erased (Nat) b) (many (Nat) c) (unique (Cell MkP (slot-of a) (slot-of c)) _ at _1)`
 ; error: tests/msg_pattern_unique_computed_bad.sl:4:17: note: `_1` is anonymous, minted here
 ; error: tests/msg_pattern_unique_computed_bad.sl:1:32: note: value constructor `MkP` is declared here

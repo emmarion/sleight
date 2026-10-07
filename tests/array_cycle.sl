@@ -3,7 +3,7 @@
 (let-match erased all (AUCons _ _ _ q))
 (let-match erased q (AUNil _))
 (let ((unique b) (erased placed))
-  (array-place _ _ a (Zero) (Init _ (SlotHolds a)) _ (NthZ _ _ _ _)))
+  (array-place _ _ a (Zero) (Init _ (slot-of a)) _ (NthZ _ _ _ _)))
 (let-match erased placed (SetZ _ _ _ _ _))
 (let ((erased raw) (erased witness))
   (init-witness _ _ b (AICons _ _ _ _ (AINil _))))

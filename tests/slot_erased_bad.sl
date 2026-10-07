@@ -1,3 +1,3 @@
-; error: `SlotHolds` needs a variable declared `many` or `unique`
+; error: `slot-of` needs a variable declared `many` or `unique`
 (let ((erased x)) (Zero))
-(SlotHolds x)
+(slot-of x)

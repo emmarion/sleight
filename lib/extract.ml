@@ -122,6 +122,11 @@ let field_read cx c i target =
   let r, head = field_match cx c target in
   Printf.sprintf "%s%s.f%d)" head r i
 
+(* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, A8). *)
+let field_copy cx c target =
+  let r, head = field_match cx c target in
+  head ^ build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)) ^ ")"
+
 let cell_block cx c es =
   assert (List.exists (fun k -> k.V.cid = c.V.cid) c.V.adt.ctors);
   build cx c es
@@ -274,7 +279,7 @@ and fn cx scope name f =
   in
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
 
-and expr cx scope = function
+and expr cx scope code = match code with
   | V.CVar x when V.resolve x <> x -> expr cx scope (V.CVar (V.resolve x))
   | V.CVar x when List.mem_assoc x scope.locals -> "(Obj.repr " ^ var x ^ ")"
   | V.CVar x -> (
@@ -323,11 +328,12 @@ and expr cx scope = function
       dispatch cx a m.live scrut (List.map (fun (i, ids, body) -> (V.ctor_at a i, List.map var ids, expr cx scope body)) m.branches) (Option.map (expr cx scope) m.default)
   | V.CCellAlloc (c, ss) -> cell_block cx c (List.map (expr cx scope) ss)
   | V.CCellRead (k, i, c) -> field_read cx k i (expr cx scope c)
-  | V.CCellWrite (k, c, ss) ->
+  | V.CCellWrite (k, c, ss) | V.CCellCopy (k, c, ss) ->
       let name = Printf.sprintf "cell%d" (stamp cx) in
       let ss = List.map (fun (i,s) -> i, expr cx scope s) ss in
       let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
-      Printf.sprintf "(let %s = %s in %s%s)" name (expr cx scope c) stores name
+      let source = expr cx scope c in
+      Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =

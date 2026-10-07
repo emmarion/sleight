@@ -13,8 +13,8 @@ let level_term = App (Var level, [])
 
 let slot, env = Env.bind env (Some "Slot") Erased token (TyCtor [])
 let slot_term = App (Var slot, [])
-let null, env = Env.bind env None Many token type_term
-let () = Term.vacant := null
+let () = Env.slot_type := slot_term
+let null, env = Env.bind env (Some "vacant-slot") Many token slot_term
 let () = Term.univ := univ
 
 let heterogeneous = [ ty "A" type_term; ty "a" (Bound 0); ty "B" type_term; ty "b" (Bound 0) ]
@@ -43,6 +43,7 @@ let coercible, env = Env.bind env (Some "Coercible") Erased token
 let delegate, env = Env.bind env (Some "Delegate") Erased token
   (TyCtor [ ty "sg" sharing_term; ty "G" type_term; ty "g" (Bound 0);
             ty "sf" sharing_term; ty "F" type_term; ty "f" (Bound 0) ])
+let atfn, env = Env.bind env (Some "AtFn") Erased token (TyCtor [ ty "F" type_term; ty "f" (Bound 0) ])
 
 let special, env = Env.bind env (Some "Special") Erased token (TyCtor [])
 let special_term = App (Var special, [])

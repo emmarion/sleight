@@ -7,5 +7,5 @@
 ; error: Type : Type  [erased, Const, type, built in]
 ; error: is (Univ)
 ; error: Cons : (ValCtor (erased Type A) (many A head) (many (List A) rest) -> (List A))  [many, Const, constructor, bound at lib/prelude.sl:<**>]
-; error: at-database: every entry is at a location of its own
+; error: slots: every entry is at a slot of its own
 ; error: opened (the program has bound nothing, so the prelude's <**> are listed): <**>(Matchable enum List (many Nil) (many Cons))

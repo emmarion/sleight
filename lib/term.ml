@@ -11,7 +11,7 @@ type term =
   | TyCtor of tele
   | ValCtor of tele * term
   | Matchable of disc * bool * bool * term * (mult * term) list
-  | SlotHolds of term
+  | SlotOf of term
   | Cell of term * term list
 
 and tele = entry list
@@ -25,25 +25,39 @@ and sg = Ty of term | Is of term
 let sg_term = function Ty t | Is t -> t
 let map_sg f = function Ty t -> Ty (f t) | Is t -> Is (f t)
 
-let rec map_vars ?location f depth t =
+let rec map_vars f depth t =
   match t with
   | Var _ | Bound _ -> f depth t
-  | App (h, args) -> App (map_vars ?location f depth h, List.map (map_vars ?location f depth) args)
+  | App (h, args) -> App (map_vars f depth h, List.map (map_vars f depth) args)
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
-      let d, ps = map_tele ?location f depth ps in
-      let l = map_vars ?location f depth l and rs = snd (map_tele ?location f d rs) in
+      let d, ps = map_tele f depth ps in
+      let l = map_vars f depth l and rs = snd (map_tele f d rs) in
       (match kind with UniqueFn _ -> UniqueFn (l, ps, rs) | _ -> Fn (l, ps, rs))
-  | TyCtor ps -> TyCtor (snd (map_tele ?location f depth ps))
+  | TyCtor ps -> TyCtor (snd (map_tele f depth ps))
   | ValCtor (ps, r) ->
-      let d, ps = map_tele ?location f depth ps in
-      ValCtor (ps, map_vars ?location f d r)
+      let d, ps = map_tele f depth ps in
+      ValCtor (ps, map_vars f d r)
   | Matchable (d, n, e, t, cs) ->
-      Matchable (d, n, e, map_vars ?location f depth t, List.map (fun (m, c) -> (m, map_vars ?location f depth c)) cs)
-  | SlotHolds t -> SlotHolds (match location with Some g -> g depth t | None -> map_vars f depth t)
-  | Cell (c, ss) -> Cell (map_vars ?location f depth c, List.map (map_vars ?location f depth) ss)
+      Matchable (d, n, e, map_vars f depth t, List.map (fun (m, c) -> (m, map_vars f depth c)) cs)
+  | SlotOf t -> SlotOf (map_vars f depth t)
+  | Cell (c, ss) -> Cell (map_vars f depth c, List.map (map_vars f depth) ss)
 
-and map_tele ?location f depth es =
-  List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars ?location f d) e.sg; place = Option.map (map_vars ?location f d) e.place })) depth es
+and map_tele f depth es =
+  List.fold_left_map (fun d e -> (d + 1, { e with sg = map_sg (map_vars f d) e.sg; place = Option.map (map_vars f d) e.place })) depth es
+
+(* [f] on each immediate subterm, binders left alone: what a substitution of closed terms needs. *)
+let map_shallow f t =
+  let tele = List.map (fun e -> { e with sg = map_sg f e.sg; place = Option.map f e.place }) in
+  match t with
+  | Var _ | Bound _ -> t
+  | App (h, args) -> App (f h, List.map f args)
+  | Fn (l, ps, rs) -> Fn (f l, tele ps, tele rs)
+  | UniqueFn (l, ps, rs) -> UniqueFn (f l, tele ps, tele rs)
+  | TyCtor ps -> TyCtor (tele ps)
+  | ValCtor (ps, r) -> ValCtor (tele ps, f r)
+  | Matchable (d, n, e, t, cs) -> Matchable (d, n, e, f t, List.map (fun (m, c) -> (m, f c)) cs)
+  | SlotOf t -> SlotOf (f t)
+  | Cell (c, ss) -> Cell (f c, List.map f ss)
 
 (* [args] are closed terms, innermost binder first. *)
 let subst args d t =
@@ -68,7 +82,7 @@ let parts = function
   | TyCtor ps -> tele_parts 0 ps
   | ValCtor (ps, r) -> tele_parts 0 ps @ [ (List.length ps, r) ]
   | Matchable (_, _, _, t, cs) -> (0, t) :: List.map (fun (_, c) -> (0, c)) cs
-  | SlotHolds t -> [ (0, t) ]
+  | SlotOf t -> [ (0, t) ]
   | Cell (c, ss) -> List.map (fun t -> (0, t)) (c :: ss)
 
 let blank t =
@@ -82,7 +96,7 @@ let blank t =
   | TyCtor ps -> TyCtor (tele ps)
   | ValCtor (ps, _) -> ValCtor (tele ps, hole)
   | Matchable (d, n, e, _, cs) -> Matchable (d, n, e, hole, List.map (fun (m, _) -> (m, hole)) cs)
-  | SlotHolds _ -> SlotHolds hole
+  | SlotOf _ -> SlotOf hole
   | Cell (_, ss) -> Cell (hole, List.map (fun _ -> hole) ss)
 
 let rec fold_vars f depth acc t =
@@ -97,10 +111,6 @@ let rec equal a b = blank a = blank b && List.for_all2 (fun (_, x) (_, y) -> equ
 
 let mult_name = function Erased -> "erased" | Many -> "many" | Unique -> "unique"
 let disc_name = function Enum -> "enum" | Union -> "union"
-
-(* The variable `(SlotVacant)` stands for (UNIQUE.md U10), set once the prelude mints it, so a slot holding it prints
-   as the form that wrote it. *)
-let vacant = ref (-1)
 
 let univ = ref (-1)
 let universe = "(Univ)"
@@ -127,8 +137,7 @@ let rec to_string_in ?(kw = Fun.id) name_of bound t =
       form "Matchable"
         ((kw (disc_name d) :: (if n then [ kw "newtype" ] else []) @ (if e then [ kw "extern" ] else []) @ [ go bound t ])
          @ List.map (fun (m, c) -> "(" ^ kw (mult_name m) ^ " " ^ go bound c ^ ")") cs)
-  | SlotHolds (Var x) when x = !vacant -> form "SlotVacant" []
-  | SlotHolds t -> form "SlotHolds" [ go bound t ]
+  | SlotOf t -> form "slot-of" [ go bound t ]
   | Cell (c, ss) -> form "Cell" (List.map (go bound) (c :: ss))
 
 (* Each entry as the source writes it, `(subterm many (List A) xs at c)`, binding its name for the entries after it. *)
@@ -139,7 +148,7 @@ and tele_strings ?(kw = Fun.id) ?(marks = true) name_of bound es =
       let n = Option.value e.name ~default:"_" in
       let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " " ^ kw "is" ^ " " ^ n in
       let marks = if marks then (if e.subterm then kw "subterm" ^ " " else "") ^ kw (mult_name e.mult) ^ " " else "" in
-      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotHolds p) -> " " ^ kw "at" ^ " " ^ go p | None -> "" | _ -> assert false) ^ ")"))
+      (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some (SlotOf p) -> " " ^ kw "at" ^ " " ^ go p | None -> "" | _ -> assert false) ^ ")"))
     bound es
 
 let to_string ?kw name_of t = to_string_in ?kw name_of [] t

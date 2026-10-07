@@ -10,7 +10,7 @@ type goal = Statement | Type | Values of mult list * tele option
 
 let where l = Reader.where "-" l
 let is_prelude env x = List.mem x env.prelude.ids
-let proofs = [ Prelude.predates; Prelude.subterm; Prelude.coercible; Prelude.delegate ]
+let proofs = [ Prelude.predates; Prelude.subterm; Prelude.coercible; Prelude.delegate; Prelude.atfn ]
 
 let kind env x =
   match type_of env x with
@@ -101,21 +101,21 @@ let position_lines env goal =
                (match env.subterms with [] -> "; the enclosing function has no subterm parameter" | xs -> "; its subterm arguments, in order: " ^ String.concat ", " (List.map (qname env) xs))) ];
       (if env.in_extern then [ "inside an extern function's model, so extern types' constructors have cells" ] else []) ]
 
-(* A class is shown by the members a reader can name: the entries in scope, a literal by its spelling, and the
-   vacant slot; one without two such members, or without an entry in scope, says nothing about anything the
-   program bound, a character sharing its code's word being the newtype's doing. *)
+(* The entries sharing a slot, shown by the members a reader can name: the entries in scope, a literal by its
+   spelling, and `vacant-slot`; a class without two such members, or without an entry the program bound, says
+   nothing about anything the program bound, a character sharing its code's word being the newtype's doing. *)
 let at_lines env =
-  let ids = List.sort_uniq compare (IntMap.fold (fun k v acc -> k :: v :: acc) env.locations []) in
   let literal x = List.find_map (fun (k, (y, _)) -> match Literal.classify k with `Lit lit when y = x -> Some (Literal.spell lit) | _ -> None) env.literals in
   let bound x = List.mem x env.scope.ids && not (is_prelude env x) in
-  let member x =
-    if x = Prelude.null then Some "(SlotVacant)"
-    else match literal x with Some s -> Some s | None -> if bound x then Some (name_of env x) else None in
-  let classes = List.map (fun r -> List.filter (fun x -> location env x = r) ids) (List.sort_uniq compare (List.map (location env) ids)) in
-  let classes = List.filter_map (fun c -> let shown = List.filter_map member c in if List.length shown > 1 && List.exists bound c then Some shown else None) classes in
+  let member x = match literal x with Some s -> Some s | None -> if bound x || x = Prelude.null then Some (name_of env x) else None in
+  let slotted = List.filter (fun x -> (entry env x).slot <> None) (Prelude.null :: List.filter_map (fun (_, (x, _)) -> Some x) env.literals @ env.scope.ids) in
+  let classes = List.fold_left (fun acc x ->
+    let k = canon env (slot_of x) in
+    match List.assoc_opt k acc with Some c -> c := x :: !c; acc | None -> acc @ [ (k, ref [ x ]) ]) [] slotted in
+  let classes = List.filter_map (fun (_, c) -> let c = List.sort_uniq compare !c in let shown = List.filter_map member c in if List.length shown > 1 && List.exists bound c then Some shown else None) classes in
   match classes with
-  | [] -> [ "at-database: every entry is at a location of its own" ]
-  | cs -> [ "at-database, the entries at one location: " ^ String.concat " " (List.map (fun c -> "{" ^ String.concat ", " c ^ "}") cs) ]
+  | [] -> [ "slots: every entry is at a slot of its own" ]
+  | cs -> [ "slots, the entries at one slot: " ^ String.concat " " (List.map (fun c -> "{" ^ String.concat ", " c ^ "}") cs) ]
 
 let mine env = List.filter (fun x -> not (is_prelude env x)) env.scope.ids
 

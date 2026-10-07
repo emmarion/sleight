@@ -5,4 +5,4 @@
 ; error: goal: a type, in an erased position
 ; error: position: erased
 ; error: A : Type  [erased, Dyn, type, bound at tests/dump_context_type.sl:2:28]
-; error: at-database: every entry is at a location of its own
+; error: slots: every entry is at a slot of its own

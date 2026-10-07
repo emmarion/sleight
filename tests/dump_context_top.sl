@@ -27,5 +27,5 @@
 ; error: = 5
 ; error: xs : (List (Nat))  [many, Const, value, shadowed by a newer binder of the same name, bound at tests/dump_context_top.sl:4:7]
 ; error: L : (Level)  [erased, Const, level minted by `def-lvl`, bound at tests/dump_context_top.sl:3:10]
-; error: at-database, the entries at one location: {5, n} {u, s}
+; error: slots, the entries at one slot: {5, n} {u, s}
 ; error: numerals with rules: 5 is (Succ (Succ 3))

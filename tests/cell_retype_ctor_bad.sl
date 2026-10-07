@@ -9,6 +9,6 @@
 
 (def-fns _ $ (many convert : (unique (A2) a) -> (unique (Two) b))
   (let-match unique a (MkA x y cell))
-  (let ((unique cell2)) (cell-write cell (MkB (SlotHolds y) (SlotHolds x))))
+  (let ((unique cell2)) (cell-write cell (MkB (slot-of y) (slot-of x))))
   (cell2 y x))
 convert

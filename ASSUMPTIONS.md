@@ -3991,3 +3991,107 @@ README.md describes them; the choices below are the session's.
      limit there, where the reference's do not; a flag value that is not
      a number is reported with slc's `slc: ` prefix there, as a fence is
      in 198.
+
+## The `at` redesign (AT_REDESIGN.md)
+
+Asked for by the owner: implement AT_REDESIGN.md's A1 to A11 and A12's
+follow-up 11, with AT_REDESIGN_REVIEW.md's readings where the proposal is
+silent. The entries below are the choices this session made where neither
+document decides, each a reading that may be mistaken; the owner's decisions
+of that document, and the owner's decision in chat that the cell binder of a
+pattern is optional at `unique` as at `many`, are not repeated here.
+
+200. **How a slot sits in the fact table.** Every non-erased, non-meta
+     entry is minted together with an anonymous `many` entry of type
+     `(Slot)`, its automatic slot (A2), held on the entry (`Env.entry`'s
+     `slot`) and not in the scope's list of ids; the slot entry's own slot
+     is itself. The closed spelling of `(slot-of x)` is a term node,
+     `Term.SlotOf`, over a variable or a `Bound`, which is what a telescope
+     can hold for one of its own binders (A6); `Env.canon` resolves
+     `(slot-of x)` to `x`'s binder's slot and never through `x`'s rule
+     (review item 28), so after canonicalization a slot is an atom and two
+     slots are equal exactly when the atoms are. A binder written `at`, a
+     `let` binder, a temporary, a cell binder and the rest of U8's writers
+     get a rule on their own slot equating it with the target's (review
+     item 18's second reading, which agrees with the first on every word);
+     the rule is minted by forcing, as any fact is. A `res`'s `place` is a
+     slot term, `None` for an erased result.
+
+201. **`(slot-of x)` as an expression** is a reference to the slot entry:
+     a `many` value whose word is `x`'s word, at that slot (A2's "an
+     automatic slot is at itself"), and no use of `x`. So a `let` binder of
+     it sits where `x` does without `slot-self`, and a `(Slot)` read out of
+     data does not until `slot-self` says so (review items 27 and 30). The
+     default of item 30, a `(Slot)`-typed binder being its own `at`, is not
+     implemented: open, for the owner.
+
+202. **What is passed and what is read (A3).** The runtime signature of a
+     function is its non-erased entries without a written `at` (review
+     item 20). An argument for a parameter written `at` must sit in the
+     slot its target's argument sits in, checked after both are bound as
+     U2a has it, and is not passed; its uses are counted as any
+     argument's (item 21); inside the body the parameter is a rename of
+     the word its target holds. The `tail` and `delegate` checks read that
+     runtime shape (item 22). A match's `at` annotation entries, and a
+     `cell-match`'s, are projected away from every branch and read back
+     by the consumer from the word they are at, as a call's are (item 12);
+     the match's code gains that projection only when an entry is `at`.
+     A result that is not a variable is bound to an anonymous entry before
+     the entries after it are checked, so that a later entry's `at` can
+     name the slot it sits in (U2a, A5's return at an earlier return).
+
+203. **The constructor-telescope ban (A5)** is read as review item 26 has
+     it: `vacant-slot`, a plain variable, and a `(Slot)`-typed field are
+     allowed there; `slot-of` and `at` are refused in a type or value
+     constructor's telescope and in a `let`'s binders, and `at` names a
+     variable, never a literal.
+
+204. **`vacant-slot`** is a named `many` constant of type `(Slot)`, Const
+     over the token, so its runtime word is what `cell-alloc` fills a
+     vacant slot with (review item 17). Whether it is its own `at` is
+     open: nothing special is done, so it has an automatic slot like any
+     entry and no `slot-self` is minted on it.
+
+205. **`slot-self`** mints its fact by forcing, so either the variable or
+     its slot may end up carrying the rule, and a `Contradiction` is
+     reported as an error, as A7 says and review item 29 discusses.
+
+206. **Cells at `many` (A8).** A `cell-write` whose cell is a `many`
+     variable, and an invocation of a `many` cell that is not full-at,
+     compile to a copying node (`Value.CCellCopy`): a fresh block holding
+     the old one's words with the written slots replaced, at unique and at
+     nothing (review item 31c); a `cell-write` whose cell is a computed
+     expression takes it at unique. A full-at invocation of a `many` cell
+     is its word, at the cell. An `else` branch binds the scrutinee back
+     when its first item is an atom followed by a body; a lone atom is the
+     body, the binder being optional.
+
+207. **At-functions and at-matches (A9, A10).** "Erases to nothing, or to
+     a reordering of variables" is read as review item 32 has it: after
+     `Elab.normalize`, with `at` entries projected away, the code holds no
+     call that was not skipped, no allocation, no store and no copy;
+     renames, loads, a `let rec` whose rest erases and a match whose every
+     branch erases, dispatch included, count as nothing. An at-function's
+     body is checked so and then replaced by a body returning nothing, the
+     dummy a first-class call without the proof reaches (items 34, 35),
+     `extern` or not; an `erased` or `absurd` at-function skips the check,
+     its body being no code. A match annotated `_` inside an at-function
+     is not an at-match and keeps its code, which the body check then
+     covers. The `AtFn` proof is opened by `def-fns` as a `Matchable` is,
+     so a call is skipped exactly when an opened proof names the callee's
+     canonical atom (item 36), which is also what `open-at-fn` adds; a
+     `tail`, `notail` or `delegate` mark on a skipped call is refused,
+     section 9's claim being one the compiler cannot honour for a call
+     that compiles to nothing. `def-unique` takes the `at` mark too.
+
+208. **The delegate annotation (A11)** is checked after section 9's
+     `delegate` check: the function named must be the one the one
+     `delegate` call names, canonically, and a body with no such call is
+     refused.
+
+209. **Follow-up 11.** `array-pluck`'s one store, of `(Uninit A (slot-of
+     hd))` into the slot already holding `hd`, is written full-at, so the
+     model stores nothing, as the FFI's implementation does (review item
+     48); `array-unpluck` is the review's item 49 as written, and the
+     lemma from `ASet` to `ANth` its caller needs lives in
+     `tests/array_unpluck.sl`, not the prelude.

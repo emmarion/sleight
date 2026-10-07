@@ -30,9 +30,9 @@
 
 (def-fns X $ (many cell-root : (many (Nat) n) -> (many (Nat) r))
   (let ((many a)) (Zero))
-  (let ((unique u)) (cell-alloc (Full (SlotHolds a))))
+  (let ((unique u)) (cell-alloc (Full (slot-of a))))
   (let ((unique v))
-    (cell-match unique u (((Cell Full (SlotHolds a)) v at u))
+    (cell-match unique u (((Cell Full (slot-of a)) v at u))
       (Full s back)
       (let-match many n (Succ k) ((Zero) back))
       back))

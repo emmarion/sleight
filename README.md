@@ -175,7 +175,7 @@ means it where the message points:
 
 - an atom by a numeral or string literal it equals, else by the newest name
   still in scope for it, else by a fetch form that yields it there with its
-  argument a name, `(level-of f)`, else as `_1`, `_2` and on;
+  argument a name, `(level-of f)`, `(slot-of x)`, else as `_1`, `_2` and on;
 - an unsolved `_` (SUGAR.md 6) as `_?1`, `_?2` and on;
 - a special form or annotation token, a fetch form's head included, by the
   newest name in scope that is `Const`, non-erased and holds it, else as `_`
@@ -200,8 +200,8 @@ final expression.
 
 `(dump-context)` stops elaboration where it is written and reports, as one
 error, what the checker knows there: the goal, the level, every entry in scope
-with its type, `is` rule, multiplicity and uniqueness state, and the
-at-database. It can be used as an expression, a statement or a type;
+with its type, `is` rule, multiplicity and uniqueness state, and the slots
+that two or more entries share. It can be used as an expression, a statement or a type;
 `(dump-context x ...)` reports just the terms named. It's a debugging aid, so
 its output isn't stable (ASSUMPTIONS 196).
 
@@ -221,8 +221,12 @@ bodies and match branches statements compile to code instead. The
 evaluator is a plain recursive interpreter over that code; a value contains
 its constructor's non-erased fields, tagged only where section 38 says an
 enum carries a tag, or a closure, or a token standing for anything
-erased. Unique cells permit in-place updates, while `at` returns reuse
-an existing word instead of returning it physically.
+erased. Unique cells permit in-place updates, while an entry written `at`
+another, a parameter, a return or a match annotation entry, is neither
+passed nor returned physically but read from the word it is at (AT_REDESIGN.md
+A3); an at-function's call and an at-match are skipped (A9, A10). Every
+non-erased entry has an automatic slot in the fact table, which
+`(slot-of x)` names, and a slot prints by that form.
 
 ## Layout
 

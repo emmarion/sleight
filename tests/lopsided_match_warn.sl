@@ -36,9 +36,9 @@
           ((Succ i) (let ((many h)) i) h)))))
   ((many in-cell-match : (many (Nat) n) -> (many (Nat) r))
     (let ((many a)) (Zero))
-    (let ((unique u)) (cell-alloc (Full (SlotHolds a))))
+    (let ((unique u)) (cell-alloc (Full (slot-of a))))
     (let ((unique v))
-      (cell-match unique u (((Cell Full (SlotHolds a)) v at u))
+      (cell-match unique u (((Cell Full (slot-of a)) v at u))
         (Full s back)
         (match many n _
           ((Zero) back)
@@ -87,9 +87,9 @@
     (absurd Succ)))
 
 (let ((many a)) (Zero))
-(let ((unique u)) (cell-alloc (Full (SlotHolds a))))
+(let ((unique u)) (cell-alloc (Full (slot-of a))))
 (let ((unique v))
-  (cell-match unique u (((Cell Full (SlotHolds a)) v at u))
+  (cell-match unique u (((Cell Full (slot-of a)) v at u))
     (Full s back)
     (match many top _
       ((Zero) (let ((many j)) top) back)

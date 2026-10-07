@@ -39,12 +39,11 @@ let rec eval env code =
       | None, [], Some d -> eval env d
       | None, _, _ -> raise (Runtime ("no discriminant to tell the branches of " ^ show v ^ " apart")))
   | CCellAlloc (c, ss) -> [ VCtor (c, Array.of_list (List.map (eval1 env) ss)) ]
-  | CCellWrite (_, c, ss) ->
-      let v = eval1 env c in
-      let fs = match v with VCtor (_, fs) -> fs | _ -> raise (Runtime "not a cell") in
-      let ss = List.map (fun (i,s) -> i, eval1 env s) ss in
-      List.iter (fun (i,s) -> fs.(i) <- s) ss;
-      [v]
+  | CCellWrite (_, c, ss) | CCellCopy (_, c, ss) ->
+      let k, fs = match eval1 env c with VCtor (k, fs) -> (k, fs) | _ -> raise (Runtime "not a cell") in
+      let fs = match code with CCellCopy _ -> Array.copy fs | _ -> fs in
+      List.iter (fun (i,s) -> fs.(i) <- eval1 env s) ss;
+      [ VCtor (k, fs) ]
   | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))
   | CAbsurd -> raise (Runtime "absurd code reached")
 

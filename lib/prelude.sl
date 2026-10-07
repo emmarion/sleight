@@ -1018,7 +1018,7 @@
     (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
     (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
                    (erased (AllUninit A n tl) p)
-                   -> (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A (SlotVacant)) tl))))
+                   -> (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A vacant-slot) tl))))
   ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
     enum
     (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
@@ -1045,7 +1045,7 @@
     (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))
   (let-match many n (Succ n1) ((Zero) (values (ANil _) (AUNil _))))
   (let ((unique tl) (erased q)) (notail $ array-new A n1))
-  (values (ACons _ _ (Uninit _ (SlotVacant)) tl) (AUCons _ _ _ q)))
+  (values (ACons _ _ (Uninit _ vacant-slot) tl) (AUCons _ _ _ q)))
 
 (def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
@@ -1062,22 +1062,42 @@
       (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
       (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
-; The returned Slot is what the plucked element's Uninit holds: the old word stays in the array, which
-; may keep the plucked value alive, a potential memory leak until the element is overwritten.
+; The plucked element's Uninit holds the element's own slot: the old word stays in the array, which may
+; keep the plucked value alive, a potential memory leak until the element is overwritten or put back.
 (def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
     (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i)
     (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
-    (unique m is v) (unique (Array (MaybeUninit A) n) r at a) (erased (Slot) s)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A s) r) p))
+    (unique m is v) (unique (Array (MaybeUninit A) n) r at a)
+    (erased (ASet (MaybeUninit A) n a i (Uninit A (slot-of v)) r) p))
   (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
       (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
-      (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
+      (values hd (at (u _ _ (Uninit _ (slot-of hd)) tl)) (SetZ _ _ _ _ _)))
     ((Succ i1)
       (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-      (let ((unique v) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
-      (values v (at (u _ _ hd tl3)) s (SetS _ _ _ _ _ _ _ p1)))))
+      (let ((unique v) (unique tl3) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
+
+; Puts a plucked element back into the slot it came from, which already holds its word, so the call is
+; skipped (AT_REDESIGN A10): the marks are a promise and the function has no implementation.
+(def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (Nat) n)
+    (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i) (unique A x)
+    (erased (ANth (MaybeUninit A) n a i (Uninit A (slot-of x))) nth) ->
+    (unique (Array (MaybeUninit A) n) r at a)
+    (erased (ASet (MaybeUninit A) n a i (Init A x) r) p))
+  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+  (match many i (at (((Array (MaybeUninit A) n) r at a)
+                     ((ASet (MaybeUninit A) n a i (Init A x) r) p)))
+    ((Zero)
+      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (let-match unique hd (Uninit _ s))
+      (slot-self s)
+      (values (at (u _ _ (Init _ x) tl)) (SetZ _ _ _ _ _)))
+    ((Succ i1)
+      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let ((unique tl3) (erased p1)) (array-unpluck _ _ tl i1 x q))
+      (values (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
 
 (def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
     (unique (Array A n) a) (many (Nat) i) (unique A x)

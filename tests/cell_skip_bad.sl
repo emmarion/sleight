@@ -2,5 +2,5 @@
 (def-adts $ (Box : -> Type) enum (many B : (many (Nat) n) -> (Box)))
 (let ((many a)) (Zero))
 (let ((many b)) (Zero))
-(let ((unique u)) (cell-alloc (B (SlotHolds a))))
+(let ((unique u)) (cell-alloc (B (slot-of a))))
 (let ((many v)) (u (at) b))

@@ -1,0 +1,12 @@
+; expect: (MkPair _ _ 1 7)
+; A `cell-write` on a cell at `many` copies (AT_REDESIGN A8): the shared block is untouched, the new cell is
+; unique and at nothing, and an all-`_` write is how a shared block becomes a unique one.
+(def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
+(def-fns _ $ (many bump : (many (Box) b) -> (many (Pair (Nat) (Nat)) r))
+  (let-match many b (MkBox n u))
+  (let ((unique u2)) (cell-write u (MkBox _)))
+  (let ((many fresh)) (u2 7))
+  (let-match many fresh (MkBox m))
+  (let-match many b (MkBox k))
+  (MkPair _ _ k m))
+(bump (MkBox 1))

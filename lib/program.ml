@@ -72,12 +72,13 @@ let explain path = function
 
 let adapt_final env ty v =
   match final env ty, Env.canon env ty with
-  | (Main | Thunk _), Fn (_, ps, [ { place = Some (SlotHolds p); _ } ]) ->
+  | (Main | Thunk _), Fn (_, ps, [ { place = Some p; _ } ]) ->
       let ids = List.map (fun _ -> Env.fresh ()) ps in
       let p = instantiate (List.rev_map (fun x -> Var x) ids) p in
-      let source = match p with Var x when List.mem x ids -> V.CVar x | _ -> V.CVar (Elab.location_var env Reader.nowhere p) in
-      let fn = { V.fname = "at-final"; params = ids;
-        body = V.CLet ([], V.CApp (V.CConst v, List.map (fun x -> V.CVar x) ids, V.Plain), source); impl = None } in
+      let source = match p with SlotOf (Var x) when List.mem x ids -> V.CVar x | _ -> V.CVar (Elab.location_var env Reader.nowhere p) in
+      let passed = Elab.runtime_ids ps ids in
+      let fn = { V.fname = "at-final"; params = passed;
+        body = V.CLet ([], V.CApp (V.CConst v, List.map (fun x -> V.CVar x) passed, V.Plain), source); impl = None } in
       V.VFn { fn; env = lazy env.Env.values }
   | _ -> v
 

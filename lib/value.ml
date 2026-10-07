@@ -37,6 +37,7 @@ and code =
   | CMatch of matching
   | CCellAlloc of ctor * code list
   | CCellWrite of ctor * code * (int * code) list
+  | CCellCopy of ctor * code * (int * code) list
   | CCellRead of ctor * int * code
   | CAbsurd
 
@@ -57,6 +58,7 @@ let map_code f = function
       CMatch { scrut; shape; branches; default = Option.map f m.default; live = m.live }
   | CCellAlloc (c, ss) -> CCellAlloc (c, List.map f ss)
   | CCellWrite (k, c, ss) -> CCellWrite (k, f c, List.map (fun (i,s) -> i, f s) ss)
+  | CCellCopy (k, c, ss) -> CCellCopy (k, f c, List.map (fun (i,s) -> i, f s) ss)
   | CCellRead (k, i, c) -> CCellRead (k, i, f c)
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 

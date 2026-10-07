@@ -6,6 +6,6 @@
     (unique (UniqueFn answer-level -> (many (Nat) r)) f) -> (many (Nat) r))
   ((match unique x (((UniqueFn answer-level -> (many (Nat) r)) g))
     ((B n c)
-      (let ((erased s)) (SlotHolds n))
+      (let ((erased s)) (slot-of n))
       f))))
 (choose (B (Zero)) answer)
