@@ -1674,9 +1674,23 @@
 
 ; [x] is at the slot term [p] (AT_REDESIGN A4): a rule on its automatic slot, minted by forcing, the opened
 ; objects merged after; an erased entry has no slot and nothing is said.
+; While the slot is still the fresh atom it was minted as, with no rule, named by no opened object and absent
+; from [p], the rule is added outright, which seems to be what forcing it would do; a slot a forcing has
+; already ruled is forced as any atom is.
+(def-lvl place-lvl)
 (def-fns _ $ (many place-forced : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (UnifyRes) r))
   (let-match many (env-slot-of env x) (Some _ s) ((None _) (UOk env)))
-  (merge-all $ unify-force (Forcing env) (TVar s) p))
+  (def-fns place-lvl $ (many forced : -> (many (UnifyRes) r)) (merge-all $ unify-force (Forcing env) (TVar s) p))
+  (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
+  (let ((many ty) (many rule)) $ fact-in _ _ bnd tb s)
+  (let-match many rule (None _) ((Some _ _) (forced)))
+  (let ((many a) (erased pa)) $ canon-in _ _ bnd tb $ TVar s)
+  (let-match many a (TVar s2) (else (forced)))
+  (let-match many (nat-eq-dec s2 s) (BYes _ _ _) ((BNo _ _ _) (forced)))
+  (let ((many t) (erased pt)) $ canon-in _ _ bnd tb p)
+  (let-match many (term-eq t a) (BFalse) ((BTrue) (UOk env)))
+  (let-match many (rule-out-refresh _ _ bnd tb s2 (fr-var _ _ _ pa) t) (Some _ added) ((None _) (forced)))
+  (match many added _ ((MkAdded _ _ _ _ tb2) (UOk $ env-set-table env _ _ bnd tb2))))
 
 (def-fns _ $ (many place-at : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (Env) r))
   (match many (place-forced env x p) _
