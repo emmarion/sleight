@@ -190,6 +190,8 @@ let same_slot env a b = equal (canon env a) (canon env b)
 
 let type_of env x = canon env (fact env x).ty
 
+let names_var v = List.exists (function Var c -> c = v | _ -> false)
+
 let opened_of env x =
   match type_of env x with
   | Matchable (_, _, _, t, cs) -> { obj = x; kind = `Matchable; names = t :: List.map snd cs }
@@ -199,7 +201,7 @@ let opened_of env x =
 (* Whether an `AtFn` proof about [f] is open (AT_REDESIGN A10), keyed by [f]'s canonical atom as section 19's
    opens are. *)
 let atfn_open env f = match canon env f with
-  | Var f -> List.exists (fun o -> o.kind = `AtFn && List.mem (Var f) o.names) env.opens.opened
+  | Var f -> List.exists (fun o -> o.kind = `AtFn && names_var f o.names) env.opens.opened
   | _ -> false
 
 let opens_add env x = { env with opens = { opened = opened_of env x :: env.opens.opened; touched = x :: env.opens.touched } }
@@ -207,7 +209,7 @@ let opens_drop env x = { env with opens = { opened = List.filter (fun o -> o.obj
 
 (* A variable ruled out is canonical no longer, so every opened object naming it reads its names again. *)
 let opens_ruled env v =
-  let names_v o = List.mem (Var v) o.names in
+  let names_v o = names_var v o.names in
   let opened = List.map (fun o -> if names_v o then opened_of env o.obj else o) env.opens.opened in
   let touched = List.filter_map (fun o -> if names_v o then Some o.obj else None) env.opens.opened in
   { env with opens = { opened; touched = touched @ env.opens.touched } }
@@ -409,7 +411,7 @@ let report_shadows ?env () =
    consults one that is not in it. Constructors one opened Matchable lists are distinct, first-class ones
    included. *)
 let listed env x y =
-  List.exists (fun o -> match (o.kind, o.names) with `Matchable, _ :: cs -> List.mem (Var x) cs && List.mem (Var y) cs | _ -> false) env.opens.opened
+  List.exists (fun o -> match (o.kind, o.names) with `Matchable, _ :: cs -> names_var x cs && names_var y cs | _ -> false) env.opens.opened
 
 (* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
 let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -> Some adt | _ -> None
