@@ -10,6 +10,7 @@
    "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
+   "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;
    "; prelude: none" runs it without lib/prelude.sl, for one that declares what it needs itself. *)
 open Speciallang
 
@@ -32,13 +33,15 @@ let report out err code expect stderr exit =
 
 let split_env s = Option.map (fun i -> (String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1))) (String.index_opt s '=')
 
-let extracted name externs templates source input args envs expect stderr exit =
+let extracted name externs templates source limit input args envs expect stderr exit =
   if not (Lazy.force ocamlfind) then Some "ocamlfind is not available to compile the extracted program"
   else
     let base = Filename.concat "extract" (name ^ if not externs then "_src" else if templates then "_ffi" else "_ffi_view") in
     (try Sys.mkdir "extract" 0o755 with Sys_error _ -> ());
     match source with
     | Error m -> Some ("extraction failed: " ^ m)
+    | Ok text when List.exists (fun n -> String.length text > int_of_string n) limit ->
+        Some (Printf.sprintf "extraction wrote %d bytes, more than %s" (String.length text) (String.concat ", " limit))
     | Ok text ->
         write (base ^ ".ml") text;
         if Sys.command (Printf.sprintf "ocamlfind ocamlc -package zarith,unix -linkpkg %s.ml -o %s.exe > %s.log 2>&1" base base base) <> 0 then
@@ -132,8 +135,9 @@ and run_mode name externs src =
   | _ when mismatched_warnings <> None -> mismatched_warnings
   | Ok (sources, out) when failures = [] && out = expect && Buffer.contents errors = stderr && !code = exit ->
       (* With the FFI the program is extracted twice, through the extern templates and through the views alone. *)
-      (match extracted name externs true (List.assoc true sources) input args envs expect stderr exit with
-       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false (List.assoc false sources) input args envs expect stderr exit)
+      let limit = directive src "extract-bytes-at-most" in
+      (match extracted name externs true (List.assoc true sources) limit input args envs expect stderr exit with
+       | None when externs -> Option.map (fun m -> "without templates: " ^ m) (extracted name externs false (List.assoc false sources) limit input args envs expect stderr exit)
        | r -> r)
   | Ok (_, out) ->
       Some

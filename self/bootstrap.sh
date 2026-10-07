@@ -89,6 +89,9 @@ check_test() {
   if ! "$B/slc" $noprelude $confine $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
+  for n in $(directive "$t" extract-bytes-at-most); do
+    [ "$(wc -c < "$B/$name.ml")" -le "$n" ] || { echo "FAIL $name: slc wrote $(wc -c < "$B/$name.ml") bytes of OCaml, more than $n"; return; }
+  done
   if ! $OCB "$B/$name.ml" -o "$B/$name.exe" > "$B/$name.log" 2>&1; then
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
   fi

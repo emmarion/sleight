@@ -154,7 +154,8 @@ file must warn with, from elaborating it or from checking its indentation,
 whether or not it is then refused,
 `; exit: n` the code an
 `IO` program must exit with, `; externs: only` runs it with the FFI alone,
-for a test whose source model is too slow to run, `; prelude: none` runs it
+for a test whose source model is too slow to run, `; extract-bytes-at-most: n`
+bounds the size of the OCaml that extracting it writes, `; prelude: none` runs it
 under `--no-prelude`, and `; error: text`
 means it must fail with a message mentioning that text on one line. In
 a `warns` or `error` line, `<**>` matches any run of characters, such as an
