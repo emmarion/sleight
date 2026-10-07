@@ -42,3 +42,15 @@ is a design decision. Remove an entry when it is fixed.
     records; one seen since is an absurd-by-proof branch written with no
     body, `(absurd (C ...))`, which the reference refuses with "a body
     needs a final expression" and `slc` with "malformed branch".
+
+15. **A literal written as the argument an `at` names has no caller
+    word.** With `mk` as in the fixed entry 14, `(let ((many g)) (mk 1))`
+    then `(g 0)` is refused with "no caller word for `at` `_1`", at the
+    top level and inside a body alike, in the reference and in `slc`;
+    `(let ((many t)) 1) (let ((many g)) (mk t))` then `(g 0)` prints 1.
+    The literal is a variable, so no temporary is bound for it (§15),
+    and `g`'s type names the literal's own entry. A session's guess, not
+    checked: that entry is minted outside the scope (§45), so the
+    fallback that scans the scope for a readable entry in the slot never
+    meets it, and `slc`'s scan of its words list likewise. Found while
+    fixing entry 14; it fails the same way before that fix.
