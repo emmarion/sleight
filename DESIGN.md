@@ -1343,9 +1343,9 @@ described in §33.
 
 ## 35. Slots in the fact table
 
-Every entry of the scope environment (§5), including erased entries
-and metas, is created together with an anonymous entry of type
-`(Slot)` at the entry's own erasure. This is the entry's **automatic
+Every entry of the scope environment (§5), including erased entries,
+is created together with an anonymous entry of type `(Slot)` at the
+entry's own erasure. This is the entry's **automatic
 slot**. It is not in the scope's list of names, and its own slot is
 itself. An erased variable has no word, so its slot has no word behind
 it, and §14 keeps the slot out of non-erased positions as it keeps the
