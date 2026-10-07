@@ -176,3 +176,9 @@ let str_bytes_copy (s, o, l) = Bytes.of_string (String.sub s o l)
 let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)
 let bytes_copy = Bytes.copy
 let array_copy = Array.copy
+external array_unsafe_sub : 'a array -> int -> int -> 'a array = "caml_array_sub"
+external array_unsafe_blit : 'a array -> int -> 'a array -> int -> int -> unit = "caml_array_blit"
+let bytes_sub b i n = let r = Bytes.create (small n) in Bytes.unsafe_blit b (small i) r 0 (small n); r
+let bytes_blit src i dst j n = Bytes.unsafe_blit src (small i) dst (small j) (small n)
+let array_sub a i n = array_unsafe_sub a (small i) (small n)
+let array_blit src i dst j n = array_unsafe_blit src (small i) dst (small j) (small n)

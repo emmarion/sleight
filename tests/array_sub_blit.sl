@@ -1,0 +1,22 @@
+; expect: (MkPair _ _ (Cons _ 2 $ Cons _ 3 $ Nil _) $ Cons _ 0 $ Cons _ 2 $ Cons _ 3 $ Cons _ 0 $ Nil _)
+(def-fns _ $ (many to-list : (erased (List (Copy (Nat))) xs) (subterm many (Array (Copy (Nat)) xs) a) -> (many (List (Nat)) r))
+  (let-match many a (ACons _ _ h t) ((ANil _) (Nil _)))
+  (let-match many h (MkCopy _ v))
+  (Cons _ v (notail $ to-list _ t)))
+(def-fns _ $ (many sub-blit-test : -> (many (Pair (List (Nat)) (List (Nat))) r))
+  (let ((unique a)) (list-to-array _ (Cons _ (MkCopy _ 1) $ Cons _ (MkCopy _ 2) $ Cons _ (MkCopy _ 3) $ Cons _ (MkCopy _ 4) $ Nil _)))
+  (let ((many len) (erased lp) (unique a2)) (array-length _ _ a))
+  (let ((many e) (erased ad)) (add 1 2))
+  (let-match many (lt-dec e (Succ len)) (Yes _ _ lt) ((No _ _ _) (MkPair _ _ (Nil _) (Nil _))))
+  (let ((erased ys) (erased range)) (splice-range _ _ _ lp 1 2 e ad lt))
+  (let ((many frozen)) (share a2))
+  (let ((unique part)) (array-sub _ _ frozen 1 2 _ range))
+  (let ((unique zero)) (list-to-array _ (Cons _ (MkCopy _ 0) $ Cons _ (MkCopy _ 0) $ Cons _ (MkCopy _ 0) $ Cons _ (MkCopy _ 0) $ Nil _)))
+  (let ((many zlen) (erased zlp) (unique zero2)) (array-length _ _ zero))
+  (let-match many (lt-dec e (Succ zlen)) (Yes _ _ zlt) ((No _ _ _) (MkPair _ _ (Nil _) (Nil _))))
+  (let ((erased old) (erased to)) (splice-range _ _ _ zlp 1 2 e ad zlt))
+  (let ((erased zs) (unique r) (erased q)) (array-blit _ _ frozen 1 _ zero2 1 2 _ range _ to))
+  (MkPair _ _ (to-list _ (share part)) (to-list _ (share r))))
+sub-blit-test
+; warns: tests/array_sub_blit.sl:3:3: warning: match on `Array`: copies the array's tail, O(n); read with `array-get` and `array-length`, or their `-many` forms at many
+; warns: lib/prelude.sl:1001:1: note: `;! warn` for `Array` is here
