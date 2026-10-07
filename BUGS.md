@@ -98,8 +98,11 @@ is a design decision. Remove an entry when it is fixed.
     n) -> (many (Nat) r)) f) -> (Packed)` and `g` at `L` matching its
     `Packed` parameter in a `Succ` branch and calling `(f (subterm p)
     k)` unmarked, `(g (Pack g) 2)` crashes; marking the call `notail`
-    runs it. A callee from a `let-match`, which binds outward, warns as
-    intended (tests/recursion_through_pointer.sl).
+    runs it. The same for a callee bound by a `let-match` inside a
+    branch, and for a `let` alias of the function made inside a branch,
+    `(let ((many g2)) g)`. A callee from a `let-match` at the body's
+    own level, which binds outward, warns as intended
+    (tests/recursion_through_pointer.sl).
 
 11. **Inputs beyond the host's limits escape as OCaml exceptions
     rather than a `runtime error:` line.** `Program.explain` maps only
@@ -141,6 +144,9 @@ is a design decision. Remove an entry when it is fixed.
     (`result_tele`'s flag is dropped); a returned closure whose `at`
     names an argument that was not a variable fails "no caller word
     for `at` `_1`" with no hint that naming the argument first works.
-    `slc` and the reference also differ in wording on several
-    refusals (`(absurd C)` against `absurd`, a literal written as a
+    a second decrease annotation on a call, or `(predates p)` after the
+    first argument, is reported as an arity error; a lower-level call
+    from a function at a factory-returned level names that level as
+    `(level-of h)` in its refusal. `slc` and the reference also differ
+    in wording on several refusals (`(absurd C)` against `absurd`, a literal written as a
     binder), as audit M3 already records.
