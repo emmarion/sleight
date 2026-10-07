@@ -5,6 +5,6 @@
 (let ((many n)) 4)
 (let ((many s)) (slot-of n))
 (let ((unique u)) (cell-alloc (P s _)))
-(let ((many p)) (u (at) n n))
+(let ((many p)) (share (u (at) n n)))
 (let-match many p (P x y _))
 x

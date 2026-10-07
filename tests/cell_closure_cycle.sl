@@ -2,5 +2,5 @@
 ; expect: _
 (def-fns _ $ (many cyclic : -> (many (Slot) r)) s)
 (let ((many fs)) (slot-of cyclic))
-(let ((many n)) (u fs))
+(let ((many n)) (share (u fs)))
 cyclic

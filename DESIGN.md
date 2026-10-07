@@ -2491,11 +2491,11 @@ at the cell:
     (unique (Cell Cons vacant-slot vacant-slot) cell)
     (many A h) (subterm many (List A) xs) (many (List A) ys) ->
     (many (List A) r at cell))
-  (let-match many xs (Cons _ hd tl) ((Nil _) (cell _ h ys)))
+  (let-match many xs (Cons _ hd tl) ((Nil _) (share (cell _ h ys))))
   (let ((unique next)) (cell-alloc Cons))
-  (let ((unique cell2)) (cell-write cell (Cons (slot-of h) (slot-of next))))
+  (let ((unique cell2)) (cell-write unique cell (Cons (slot-of h) (slot-of next))))
   (let ((many r2)) (tail (append-into _ next hd tl ys)))
-  (at (cell2 _ h r2)))
+  (share (at (cell2 _ h r2))))
 
 (def-fns _ $ (many append : (erased Type A) (many (List A) xs) (many (List A) ys) ->
     (many (List A) r))
@@ -2504,26 +2504,8 @@ at the cell:
   (append-into _ cell hd tl ys))
 ```
 
-- In the `Nil` branch, the invocation creates `(Cons A h ys)` at
-  `cell`. `h` and `ys` go at many into the many-labelled fields (§22).
-  The cell is consumed and the value is many, as an invocation in a
-  many position builds (§37). The result is at `cell`, which is the
-  promise.
-- In the `Cons` case, the write stores the word of `h` and the pointer
-  to the fresh `next` into `cell`: two stores. Both are mentioned
-  through `slot-of`, which is not a use (§15), so `next` is still live
-  for the call. The call consumes `next` and returns `r2` at `next`,
-  which is physically nothing.
-- The call is a tail call. With `at` returns dropped, the callee
-  returns nothing and so does this function, and what follows the call
-  is erased: the invocation has every store skipped, because `h` is in
-  the first slot and `r2` is at `next`, which the second slot holds.
-  Its result is at `cell2`, which is at `cell`. If `h` were left to the
-  invocation instead of the write, there would be a store after the
-  call and the claim would fail.
-- Each of `cell`, `cell2` and `next` is used once at unique. `h`, `r2`
-  and the result are many, because the tail field is labelled `many`,
-  which is why the helper returns `many` and needs no `share`. Per
-  element: one allocation and two stores, in constant stack.
+The write stores `h` before the call: left to the invocation, that
+store would follow the call and the `tail` claim would fail. Per
+element: one allocation, two stores, constant stack.
 
 `tests/cell_append.sl` is this program.

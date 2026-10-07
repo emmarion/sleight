@@ -3,4 +3,4 @@
 (let ((many a)) (Zero))
 (let ((many b)) (Zero))
 (let ((unique u)) (cell-alloc (B (slot-of a))))
-(let ((many v)) (u (at) b))
+(let ((many v)) (share (u (at) b)))
