@@ -2532,20 +2532,11 @@
 
 ; Leaves a let's right-hand side: as env-restore, but the objects stay [inner]'s and the entries it added
 ; keep their ids in scope with their names dropped (section 27, lib/env.ml's hide).
-(def-fns _ $ (many hide-words : (subterm many (List $ Nat) words) (many (List $ Nat) temp) (many (Nat) bound) -> (many (List $ Nat) r))
-  (let-match many words (Cons _ x rest) ((Nil _) words))
-  (let-match many (nat-lt bound x) (BTrue)
-    ((BFalse) words))
-  (match many (list-mem-bin temp x) _ ((BTrue) (tail $ hide-words rest temp bound)) ((BFalse) (Cons _ x $ notail $ hide-words rest temp bound))))
-(def-fns _ $ (many unique-hide : (many (Nat) bound) (many (UniqueState) state) -> (many (UniqueState) r))
-  (match many state _ ((MkUniqueState ct uses caps ue ie sig words temp wd al)
-    (MkUniqueState ct uses caps ue ie sig (hide-words words temp bound) temp wd al))))
-
 (def-fns _ $ (many env-hide : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (let-match many outer (MkEnv _ _ sc _ _ _ fr _ rp _ _ _ lv st _ _ _ lo pr us hn))
   (match many inner _
     ((MkEnv _ hp2 sc2 en2 _ _ fr2 tb2 _ ob2 li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _)
-      (MkEnv _ hp2 (MkScope (scope-names sc) $ scope-ids sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-hide fr (unique-restore us us2)) hn))))
+      (MkEnv _ hp2 (MkScope (scope-names sc) $ scope-ids sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn))))
 
 ; Leaves a match branch or a body: the entries (whose names the extractor prints), the store, the id
 ; supply, finals and errors survive; scope, facts, opens and objects are the outer ones again.

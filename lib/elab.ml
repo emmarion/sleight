@@ -989,7 +989,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
       | Some sp when Sp.has_role sp -> not_a env "not an expression" raw
       | Some sp -> elab_special ?sink ?final:(if final then Some (loc head) else None) demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
-          let env, h, hcode, headwrap = elab_head env pos l head in
+          let env, h, hcode = elab_head env pos l head in
           let hty = canon env h.ty in
           let callee pos = describe env pos head h.term hty in
           let env, rs, code = match hty with
@@ -1012,20 +1012,20 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
           | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (callee pos) h hcode lv params rets args
           | Fn (lv, params, rets) -> elab_call ?sink ~demand cc env ?tele:expect_tele expect l (callee pos) h hcode lv params rets args
           | ty -> error l "%s : %s is not applicable" (qshow env h.term) (qshow env ty) in
-          let env, code = headwrap env code in
           (env, rs, code)))
 
 and elab_arg env m a tele = elab_expr1 ?tele env m a
 
 and elab_head env pos l raw =
   match raw with
-  | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x,fun env code -> (env, code))
+  | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
-      let state = match r.term with Var x -> (entry env x).state | _ -> Dyn in
+      let state = if env.run_pos && pos <> Erased then Const (List.hd (Eval.eval env.values code)) else match r.term with Var x -> (entry env x).state | _ -> Dyn in
       let x,env = bind env ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
-      (placed env x r.place,res_of env x,V.CVar x,fun env body -> closing env [x] (V.CLet ([x],code,body)))
+      let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
+      (placed env x r.place,res_of env x,V.CVar x)
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l c callee hcode lv params rets args =
   let pos = pos_of env expect in
@@ -1211,14 +1211,13 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (placed env x place, [ { (res_of env x) with place } ], if pos = Erased then V.CErased else V.CLet ([input_id], input, wrap ((if shared then V.CCellCopy (ct, code, writes) else V.CCellWrite (ct, code, writes)))))
   | Sp.CellMatch, _ -> elab_cell_match ~demand tele env expect l args
   | Sp.At, [ List (_, head :: args) ] ->
-      let env, h, hcode, wrap = elab_head env pos l head in
+      let env, h, hcode = elab_head env pos l head in
       let hty = canon env h.ty in
       let env,rs,code = match hty with
        | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l (describe env pos head h.term hty) h hcode c slots args
        | UniqueFn (lv, params, rets) -> elab_call ~unique:true ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (describe env pos head h.term hty) h hcode lv params rets args
        | Fn (lv, params, rets) -> elab_call ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (describe env pos head h.term hty) h hcode lv params rets args
        | _ -> error_in env l "`at` wraps a `Cell` invocation or a call, and %s : %s is neither" (qshow env h.term) (qshow env h.ty) in
-      let env, code = wrap env code in
       (env,rs,code)
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
