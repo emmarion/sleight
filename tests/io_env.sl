@@ -16,12 +16,12 @@
 (let ((erased pa-p)) (prove-predates PA P))
 (let ((erased thunk-p)) (prove-predates thunk-lvl P))
 (let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
-; Why PWD is dropped: under OCaml 5.5.1 (and perhaps other 5.x releases), ocamlc builds a bytecode executable
-; whose first line is `#!/usr/bin/sh`, a shell-script launcher that finds ocamlrun and execs it. Both test
-; harnesses compile extracted programs that way and run them under `env -i` with only the variables the
-; directives above give, but the launching shell sets PWD itself, so GetEnvs saw PWD as well and the listing
-; gained a line. Removing it keeps the expected output the same under every compiler.
-(def-fns PA $ (many drop-pwd : (subterm many (List (Pair (String) (String))) vars) -> (many (List (Pair (String) (String))) r)) (let-match many vars (Cons a v rest) ((Nil a) vars)) (let-match many v (MkPair b c name value)) (match many (str-cmp name "PWD") _ ((CEq x y z) (tail $ drop-pwd rest)) (else (Cons _ v (notail $ drop-pwd rest)))))
+; Why PWD and SHLVL are dropped: under OCaml 5.5 (seen with 5.5.0 and 5.5.1, perhaps other 5.x releases), ocamlc
+; builds a bytecode executable whose first line is a `#!/bin/sh`-style shell-script launcher that finds ocamlrun
+; and execs it. Both test harnesses compile extracted programs that way and run them under `env -i` with only the
+; variables the directives above give, but the launching shell seems to set variables of its own (PWD on one
+; machine, SHLVL=0 under macOS's /bin/sh), so GetEnvs saw them too. Removing them keeps the expected output the same.
+(def-fns PA $ (many drop-shell-vars : (subterm many (List (Pair (String) (String))) vars) -> (many (List (Pair (String) (String))) r)) (let-match many vars (Cons a v rest) ((Nil a) vars)) (let-match many v (MkPair b c name value)) (match many (str-cmp name "PWD") _ ((CEq x y z) (tail $ drop-shell-vars rest)) (else (match many (str-cmp name "SHLVL") _ ((CEq x y z) (tail $ drop-shell-vars rest)) (else (Cons _ v (notail $ drop-shell-vars rest)))))))
 (def-fns PA $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
   (let-match many vars (Cons a v rest) ((Nil a) (Exit P code0)))
   (let-match many v (MkPair b c name value))
@@ -30,7 +30,7 @@
     (unique-thunk (predates thunk-pa) _ _ (notail $ show-vars (subterm _) rest))))
 
 (def-unique P $ (unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
-  (show-vars (predates pa-p) (drop-pwd vars)))
+  (show-vars (predates pa-p) (drop-shell-vars vars)))
 
 (def-unique P $ (unique after-absent : (many (Maybe (String)) value) -> (unique (IO P) next))
   (match many value _
