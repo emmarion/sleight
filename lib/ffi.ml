@@ -81,6 +81,8 @@ let fns : (string * fn_spec) list =
     ("array-length", length);
     ("array-length-many", length);
     ("list-to-array", spec ~needs:["Array"; "List"] 1 (unary (fun l -> arr (Ffi_core.list_to_array ~list:(fun v -> match des v with 0, [] -> Nil | 1, [ x; rest ] -> Cons (x, rest) | _ -> bad "list node" v) l))));
+    ("array-copy", spec ~needs:["Array"] 1 (unary (fun a -> arr (Ffi_core.array_copy (array a)))));
+    ("bytes-copy", spec ~needs:["Bytes"] 1 (unary (fun b -> buf (Ffi_core.bytes_copy (bytes b)))));
     ("bytes-make", spec ~needs:["Bytes"] 2 (binary (fun n x -> buf (Ffi_core.bytes_make (z n) (z x)))));
     ("bytes-get", bytes_get);
     ("bytes-get-many", bytes_get);

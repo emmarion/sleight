@@ -283,7 +283,8 @@
   (many ErArrayPlace : -> (ExtResult))
   (many ErListToArray : -> (ExtResult))
   (many ErArrayMake : (many (Nat) count) -> (ExtResult))
-  (many ErWrite : (many (Payload) p) -> (ExtResult)))
+  (many ErWrite : (many (Payload) p) -> (ExtResult))
+  (many ErArrayCopy : -> (ExtResult)))
 
 ; An extern function over its arguments (section 42). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
@@ -324,6 +325,8 @@
       ((ExBytesSet) (let ((many s) (erased fp)) (flatten $ byte-put sa nb (char-of-code $ field-nat _ hp args 2) $ REmpty)) (ErWrite $ PBytes s))
       ((ExBytesLength) (let ((many len) (erased lp)) (str-length sa)) (ErPayload $ PNat len))
       ((ExStrBytesCopy) (ErPayload $ PBytes sa))
+      ((ExBytesCopy) (ErPayload $ PBytes sa))
+      ((ExArrayCopy) (ErArrayCopy))
       ((ExBytesStr) (ErPayload $ PStr sa))
       ((ExArrayMake) (ErArrayMake na))
       ((ExAdd) (ErPayload $ PNat $ nat-add na nb))
@@ -391,6 +394,10 @@
       (let ((many replacement)) (match many (list-nth _ args 2) (((Maybe $ Ref Block hs) _))
         ((NthHit _ _ _ x _) (Some _ x)) ((NthMiss _ _ _ _) (None _))))
       (apply-array-change _ hp a nb replacement (BFalse)))
+    ((ErArrayCopy)
+      (let ((erased h2) (many hp2) (erased le2) (many array))
+        (alloc Block _ hp (array-block _ (match many a (((List $ Ref Block hs) _)) ((Some _ x) (match many (array-fields _ hp x) _ ((Some _ fs) fs) ((None _) (Nil _)))) ((None _) (Nil _))))))
+      (values h2 hp2 le2 (Cons _ array (Nil _))))
     ((ErWrite p)
       (values hs (match many a _ ((Some _ x) (store-write Block _ hp x $ BExt _ p)) ((None _) hp)) (le-refl hs) (Nil _)))
     ((ErPayload p)

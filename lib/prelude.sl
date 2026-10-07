@@ -1255,3 +1255,13 @@
   (let-match many b (BCons xs1 hd tl) ((BNil) (values (SNil) (SBNil))))
   (let ((many s1) (erased p1)) (notail $ bytes-str _ tl))
   (values (SCons (MkChar hd) s1) (SBCons hd s1 xs1 p1)))
+
+(def-fns _ $ (many extern bytes-copy : (erased (List (U8)) xs) (subterm many (Bytes xs) b) -> (unique b is c))
+  (let-match many b (BCons _ hd tl) ((BNil) (BNil)))
+  (BCons _ hd (notail $ bytes-copy _ tl)))
+
+(def-fns _ $ (many extern array-copy : (erased Type A) (erased (List (Copy A)) xs) (subterm many (Array (Copy A) xs) a) ->
+    (unique a is c))
+  (let-match many a (ACons _ _ hd tl) ((ANil _) (ANil _)))
+  (let-match many hd (MkCopy _ v))
+  (ACons _ _ (MkCopy _ v) (notail $ array-copy _ _ tl)))

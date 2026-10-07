@@ -174,3 +174,5 @@ let bytes_length b = Z.of_int (Bytes.length b)
 let bytes_length_many = bytes_length
 let str_bytes_copy (s, o, l) = Bytes.of_string (String.sub s o l)
 let bytes_str b = (Bytes.unsafe_to_string b, 0, Bytes.length b)
+let bytes_copy = Bytes.copy
+let array_copy = Array.copy
