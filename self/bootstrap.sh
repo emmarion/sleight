@@ -4,7 +4,7 @@
 #   2. compiles every tests/*.sl with slc, in parallel: a test with an "; error:" directive must be refused
 #      with a message mentioning that text; any other is built (to bytecode, the faster compile) and run with
 #      the test's stdin and arguments, and its stdout, stderr and exit code compared with the reference
-#      interpreter's on the same files; the extern, thunk, main, char and nat tests are compiled again with
+#      interpreter's on the same files; the extern, thunk, main, char, nat and bytes tests are compiled again with
 #      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
 #      the program in place of writing it out, and compared the same way; a refused test is also run through
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
@@ -118,7 +118,7 @@ build_slc() {
 }
 check_all() {
   { for t in "$@"; do echo "$t - -"; done
-    for t in "$@"; do case $(basename "$t") in extern_*|thunk_*|main_*|char*|nat_*) echo "$t --no-templates _view" ;; esac; done
+    for t in "$@"; do case $(basename "$t") in extern_*|thunk_*|main_*|char*|nat_*|bytes_*) echo "$t --no-templates _view" ;; esac; done
     for t in "$@"; do echo "$t --interpret _interp"; done
   } | BOOTSTRAP_B=$B xargs -P "$(getconf _NPROCESSORS_ONLN)" -L 1 sh self/bootstrap.sh check > "$B/results.txt"
 }
@@ -144,7 +144,7 @@ cat "$B/slc2.time"
 { $OC "$B/slc2.ml" -o "$B/slc2" > "$B/slc2.log" 2>&1 || { cat "$B/slc2.log"; exit 1; }
   "$B/slc2" --warnings-as-errors $SL > "$B/slc3.ml" 2> "$B/slc3.err" || { head -5 "$B/slc3.err"; exit 1; }; } > "$B/slc3.report" 2>&1 &
 slc3=$!
-echo "== compiling the tests with slc, the extern, thunk, main, char and nat tests again with --no-templates, and every test again under --interpret"
+echo "== compiling the tests with slc, the extern, thunk, main, char, nat and bytes tests again with --no-templates, and every test again under --interpret"
 check_all tests/*.sl
 grep "^FAIL" "$B/results.txt"
 fail=$(grep -c "^FAIL" "$B/results.txt")
