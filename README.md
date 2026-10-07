@@ -1,23 +1,28 @@
 # special-lang
 
-A prototype OCaml interpreter and compiler for the language DESIGN.md
-specifies. OPEN.md lists the open questions. SPEC-REVIEW.md lists the
-spec's open points and ASSUMPTIONS.md the assumptions the
-implementations make about them, which is the whole of what it is for: a
-choice a session had to make on its own, because the spec was silent
-and the code had to do something. A decision the owner made is recorded
-in DESIGN.md, never here, and an entry that stood in for one is removed
-when the owner decides it. HANDOFF.md records work in progress handed
-from one session to the next. BUGS.md records defects found in the
-implementation and TOOLING-WISHLIST.md the friction met writing programs
-in the language. EXAMPLES.md indexes the tests that show the features
-working together, and DEMOS.md proposes programs that are not written
-yet. `self/` is a compiler from the language to OCaml written in the
-language itself, bootstrapped through this interpreter's extractor
-(`self/README.md`, `self/bootstrap.sh`). MINIMAL.md records a minimal
-fragment of the language, and `mini/` its semantics written as
-relations in the language itself (`mini/README.md`). `pal/` holds
-certified longest-palindrome programs (`pal/README.md`).
+A prototype OCaml interpreter and compiler for the language that
+DESIGN.md specifies. The other files:
+
+- OPEN.md: the open questions about the language.
+- SPEC-REVIEW.md: open points found in the spec by a review.
+- ASSUMPTIONS.md: the assumptions the implementations make where the
+  spec is silent. Every entry is a choice a session had to make on its
+  own, because the code had to do something. A decision the owner made
+  goes in DESIGN.md, never here, and an entry that stood in for one is
+  removed when the owner decides it.
+- HANDOFF.md: work in progress handed from one session to the next.
+- BUGS.md: defects found in the implementation.
+- TOOLING-WISHLIST.md: friction met while writing programs in the
+  language.
+- EXAMPLES.md: an index of the tests that show the features working
+  together. DEMOS.md: programs proposed but not yet written.
+- `self/`: a compiler from the language to OCaml, written in the
+  language itself and bootstrapped through this interpreter's extractor
+  (`self/README.md`, `self/bootstrap.sh`).
+- MINIMAL.md: a minimal fragment of the language. `mini/`: its
+  semantics, written as relations in the language itself
+  (`mini/README.md`).
+- `pal/`: certified longest-palindrome programs (`pal/README.md`).
 
 ## Build and run
 

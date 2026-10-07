@@ -471,10 +471,11 @@ and under `tests/at_*`, `slot_*`, `cell_many_*`, `cell_binder_*`,
 `array_unpluck` pin the behaviour. `self/README.md` says what the port
 chose where the reference left it room.
 
-What the owner still has to decide, none of it settled here (the cell
-binder's optionality, decided in chat, is DESIGN.md section 23 now; the
-`(Slot)`-typed binder's default slot, which the code has and the spec
-does not, is BUGS.md 3, with the reverting line named there):
+What the owner still has to decide, none of it settled here. (Two
+items that were here are resolved: the cell binder being optional,
+decided in chat, is now DESIGN.md section 23; and the default slot of a
+`(Slot)`-typed binder, which the code has and the spec does not, is now
+BUGS.md 3, which names the line to revert.)
 
 - Whether `tail`, `notail` or `delegate` on a skipped at-call should be
   the error it is now (ASSUMPTIONS 207) or be ignored (OPEN.md 21).
