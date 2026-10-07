@@ -6152,7 +6152,7 @@
         ((UContra _)
           (match many refuted _
             ((BTrue) (values (env-discard env3 envb) acc deep))
-            ((BFalse) (values (env-error (env-discard env3 envb) $ str-cat3 "branch " (qshown env3 c) (say envb " is refuted; write `absurd`")) acc deep))))
+            ((BFalse) (values (env-error (env-discard env3 envb) $ str-cat3 "branch " (qshown env3 c) (say envb " is refuted; omit it or write `absurd`")) acc deep))))
         ((UOk envb2)
           (let ((many envb2a) (many alias)) (pattern-cell-option envb2 (match many ghost _ ((BTrue) (Erased)) ((BFalse) smult)) sres c fids (and cell-extra $ not refuted) cellname))
           (let ((many envb2b)) (env-set-usage-erased envb2a (or ghost $ env-usage-erased envb2a)))

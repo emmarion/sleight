@@ -1486,7 +1486,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
           match (kind, forced) with
           | `Auto, None -> `Absurd
           | `Auto, Some trial -> error_with bl (forced_notes env bl sres trial) "branch %s is not refuted" (qname env c)
-          | _, None -> error_in env bl "branch %s is refuted; write `(absurd %s)`" (qname env c) (name_of env c)
+          | _, None -> error_in env bl "branch %s is refuted; omit it or write `(absurd %s)`" (qname env c) (name_of env c)
           | `Present, Some _ when refute -> error_in env bl "a branch of a refuting match is written `absurd`"
           | `Present, Some envb ->
               deepen envb body (if unreachable then None else Some c);
