@@ -531,7 +531,7 @@ and §U9's cells, so such a model is written with §U9's placement over
 its type's own cells. (*Reading*: §41's shape check then compares the
 non-erased arities of the model's constructors, not the many ones.)
 Part 1 of the proposal is useful before parts 2 to 4 exist: an update
-`(unique (Array A n) a) ... -> (unique (Array A n) r)` is O(1) and
+`(unique (Array A xs) a) ... -> (unique (Array A ys) r)` is O(1) and
 returns one word the caller already holds. Outside an extern function's
 body a `Cell` for an extern type's constructor, and so `cell-alloc`,
 `cell-write`, `cell-match` and the invocation on one, is TBD and for
@@ -540,18 +540,18 @@ now not allowed: an extern's in-place operations are its own functions,
 
 ## U13. Worked example: arrays
 
-The owner's array API, length-indexed, elements owned, uninitialised
+The owner's array API, indexed by the list of its elements, elements owned, uninitialised
 slots through a union newtype in the manner of Rust's `MaybeUninit`,
 and one extern primitive per element operation with the rest plain
 source over it. `_` is SUGAR.md 6's.
 
 ```scheme
-(def-adts $ (Array : (Type A) ((Nat) n) -> Type)
+(def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern
-  (many ANil : (erased Type A) -> (Array A (Zero)))
-  (many ACons : (erased Type A) (erased (Nat) n)
-                (unique A head) (unique (Array A n) rest) ->
-     (Array A (Succ n))))
+  (many ANil : (erased Type A) -> (Array A (Nil A)))
+  (many ACons : (erased Type A) (erased (List A) xs)
+                (unique A head) (unique (Array A xs) rest) ->
+     (Array A (Cons A head xs))))
 
 (def-adts $ (MaybeUninit : (Type A) -> Type)
   union newtype
@@ -560,101 +560,115 @@ source over it. `_` is SUGAR.md 6's.
 ```
 
 A `(MaybeUninit A)` is one word, `A`'s own under `Init` and its
-slot's under `Uninit`, so an `(Array (MaybeUninit A) n)` is
-the memory of the `(Array A n)` it becomes. Reading an `Init` out is a
+slot's under `Uninit`, so an `(Array (MaybeUninit A) xs)` is
+the memory of the `(Array A ys)` it becomes. Reading an `Init` out is a
 `unique` match whose `Uninit` branch must be refuted, by a fact or by
 proof, §12's one-real-branch rule making that Rust's `assume_init`
 with evidence in place of `unsafe`.
 
-The relations, every field erased:
+The index proofs are generic relations on lists, which the prelude
+declares beside `List`, every field erased:
 
 ```scheme
 (def-adts
-  ((AllUninit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
+  ((Length : (Type A) ((List A) xs) ((Nat) n) -> Type)
     enum
-    (many AUNil : (erased Type A) -> (AllUninit A (Zero) (ANil (MaybeUninit A))))
-    (many AUCons : (erased Type A) (erased (Nat) n) (erased (Array (MaybeUninit A) n) tl)
-                   (erased (AllUninit A n tl) p) ->
-       (AllUninit A (Succ n) (ACons (MaybeUninit A) n (Uninit A (SlotVacant)) tl))))
-  ((AllInit : (Type A) ((Nat) n) ((Array (MaybeUninit A) n) a) -> Type)
+    (many LengthNil : (erased Type A) -> (Length A (Nil A) (Zero)))
+    (many LengthCons : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) n)
+                       (erased (Length A rest n) p) ->
+       (Length A (Cons A x rest) (Succ n))))
+  ((Nth : (Type A) ((List A) xs) ((Nat) i) (A x) -> Type)
     enum
-    (many AINil : (erased Type A) -> (AllInit A (Zero) (ANil (MaybeUninit A))))
-    (many AICons : (erased Type A) (erased (Nat) n) (erased A x)
-                   (erased (Array (MaybeUninit A) n) tl) (erased (AllInit A n tl) p) ->
-       (AllInit A (Succ n) (ACons (MaybeUninit A) n (Init A x) tl))))
-  ((ANth : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A x) -> Type)
+    (many NthHere : (erased Type A) (erased A x) (erased (List A) rest) -> (Nth A (Cons A x rest) (Zero) x))
+    (many NthThere : (erased Type A) (erased A y) (erased (List A) rest) (erased (Nat) i) (erased A x)
+                     (erased (Nth A rest i x) p) ->
+       (Nth A (Cons A y rest) (Succ i) x)))
+  ((SetNth : (Type A) ((List A) xs) ((Nat) i) (A y) ((List A) ys) -> Type)
     enum
-    (many NthZ : (erased Type A) (erased (Nat) n) (erased A x) (erased (Array A n) tl) ->
-       (ANth A (Succ n) (ACons A n x tl) (Zero) x))
-    (many NthS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
-                 (erased (Nat) i) (erased A x) (erased (ANth A n tl i x) p) ->
-       (ANth A (Succ n) (ACons A n h tl) (Succ i) x)))
-  ((ASet : (Type A) ((Nat) n) ((Array A n) a) ((Nat) i) (A y) ((Array A n) r) -> Type)
+    (many SetHere : (erased Type A) (erased A x) (erased A y) (erased (List A) rest) ->
+       (SetNth A (Cons A x rest) (Zero) y (Cons A y rest)))
+    (many SetThere : (erased Type A) (erased A x) (erased (List A) rest) (erased (Nat) i) (erased A y)
+                     (erased (List A) rest2) (erased (SetNth A rest i y rest2) p) ->
+       (SetNth A (Cons A x rest) (Succ i) y (Cons A x rest2))))
+  ((Repeat : (Type A) ((Nat) n) (A x) ((List A) xs) -> Type)
     enum
-    (many SetZ : (erased Type A) (erased (Nat) n) (erased A h) (erased A y) (erased (Array A n) tl) ->
-       (ASet A (Succ n) (ACons A n h tl) (Zero) y (ACons A n y tl)))
-    (many SetS : (erased Type A) (erased (Nat) n) (erased A h) (erased (Array A n) tl)
-                 (erased (Nat) i) (erased A y) (erased (Array A n) tl2)
-                 (erased (ASet A n tl i y tl2) p) ->
-       (ASet A (Succ n) (ACons A n h tl) (Succ i) y (ACons A n h tl2)))))
+    (many RepeatNil : (erased Type A) (erased A x) -> (Repeat A (Zero) x (Nil A)))
+    (many RepeatCons : (erased Type A) (erased (Nat) n) (erased A x) (erased (List A) xs)
+                       (erased (Repeat A n x xs) p) ->
+       (Repeat A (Succ n) x (Cons A x xs)))))
 ```
 
-`ANth` carries the bound, so no `Lt` accompanies an index. The
+and one relation of the arrays' own, pairing each `(Init A x)` with `x`:
+
+```scheme
+(def-adts
+  ((AllInit : (Type A) ((List (MaybeUninit A)) xs) ((List A) ys) -> Type)
+    enum
+    (many AINil : (erased Type A) -> (AllInit A (Nil (MaybeUninit A)) (Nil A)))
+    (many AICons : (erased Type A) (erased A x) (erased (List (MaybeUninit A)) rest) (erased (List A) rest2)
+                   (erased (AllInit A rest rest2) p) ->
+       (AllInit A (Cons (MaybeUninit A) (Init A x) rest) (Cons A x rest2)))))
+```
+
+`Nth` carries the bound, so no `Lt` accompanies an index. The
 functions, each `extern` with a source model, the FFI's implementation
 shedding the argument its model does not use:
 
 ```scheme
 (def-fns _ $ (many extern array-new : (erased Type A) (subterm many (Nat) n) ->
-    (unique (Array (MaybeUninit A) n) a) (erased (AllUninit A n a) p))
-  (let-match many n (Succ n1) ((Zero) (values (ANil _) (AUNil _))))
-  (let ((unique tl) (erased q)) (notail $ array-new A n1))
-  (values (ACons _ _ (Uninit _ (SlotVacant)) tl) (AUCons _ _ _ q)))
+    (erased (List (MaybeUninit A)) xs) (unique (Array (MaybeUninit A) xs) a)
+    (erased (Repeat (MaybeUninit A) n (Uninit A (SlotVacant)) xs) p))
+  (let-match many n (Succ n1) ((Zero) (values (Nil _) (ANil _) (RepeatNil _ _))))
+  (let ((erased xs1) (unique tl) (erased q)) (notail $ array-new A n1))
+  (values (Cons (MaybeUninit A) (Uninit A (SlotVacant)) xs1) (ACons _ _ (Uninit _ (SlotVacant)) tl)
+          (RepeatCons _ _ _ _ q)))
 
-(def-fns _ $ (many extern array-swap : (erased Type A) (erased (Nat) n)
-    (unique (Array A n) a) (subterm many (Nat) i) (unique A x)
-    (erased A m) (erased (ANth A n a i m) nth) ->
-    (unique m is old) (unique (Array A n) r at a)
-    (erased (ASet A n a i x r) p))
-  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+(def-fns _ $ (many extern array-swap : (erased Type A) (erased (List A) xs)
+    (unique (Array A xs) a) (subterm many (Nat) i) (unique A x)
+    (erased A m) (erased (Nth A xs i m) nth) ->
+    (unique m is old) (erased (List A) ys) (unique (Array A ys) r at a)
+    (erased (SetNth A xs i x ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
-      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
-      (values hd (u _ _ x (at) tl) (SetZ _ _ _ _ _)))
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (Cons A x xs1) (u _ _ x (at) tl) (SetHere _ _ _ _)))
     ((Succ i1)
-      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-      (let ((unique old) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
-      (values old (at (u _ _ hd tl3)) (SetS _ _ _ _ _ _ _ p1)))))
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((unique old) (erased ys1) (unique tl3) (erased p1)) (tail (array-swap _ _ tl i1 x _ q)))
+      (values old (Cons A hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 ; The returned Slot is what the plucked element's Uninit holds: the old word stays in the array, which
 ; may keep the plucked value alive, a potential memory leak until the element is overwritten.
-(def-fns _ $ (many extern array-pluck : (erased Type A) (erased (Nat) n)
-    (unique (Array (MaybeUninit A) n) a) (subterm many (Nat) i)
-    (erased (MaybeUninit A) m) (erased (ANth (MaybeUninit A) n a i m) nth) ->
-    (unique m is v) (unique (Array (MaybeUninit A) n) r at a) (erased (Slot) s)
-    (erased (ASet (MaybeUninit A) n a i (Uninit A s) r) p))
-  (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
+(def-fns _ $ (many extern array-pluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
+    (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i)
+    (erased (MaybeUninit A) m) (erased (Nth (MaybeUninit A) xs i m) nth) ->
+    (unique m is v) (erased (List (MaybeUninit A)) ys) (unique (Array (MaybeUninit A) ys) r at a)
+    (erased (Slot) s) (erased (SetNth (MaybeUninit A) xs i (Uninit A s) ys) p))
+  (let-match unique a (ACons _ xs1 hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
-      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
-      (values hd (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetZ _ _ _ _ _)))
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
+      (values hd (Cons (MaybeUninit A) (Uninit A (SlotHolds hd)) xs1)
+              (u _ _ (Uninit _ (SlotHolds hd)) (at) tl) (SlotHolds hd) (SetHere _ _ _ _)))
     ((Succ i1)
-      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
-      (let ((unique v) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
-      (values v (at (u _ _ hd tl3)) s (SetS _ _ _ _ _ _ _ p1)))))
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
+      (let ((unique v) (erased ys1) (unique tl3) (erased s) (erased p1)) (tail (array-pluck _ _ tl i1 _ q)))
+      (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) s (SetThere _ _ _ _ _ _ p1)))))
 
-(def-fns _ $ (many extern array-place : (erased Type A) (erased (Nat) n)
-    (unique (Array A n) a) (many (Nat) i) (unique A x)
-    (erased A m) (erased (ANth A n a i m) nth) ->
-    (unique (Array A n) r at a) (erased (ASet A n a i x r) p))
-  (let ((unique old) (unique r) (erased p)) (array-swap _ _ a i x _ nth))
-  (values r p))
+(def-fns _ $ (many extern array-place : (erased Type A) (erased (List A) xs)
+    (unique (Array A xs) a) (many (Nat) i) (unique A x)
+    (erased A m) (erased (Nth A xs i m) nth) ->
+    (erased (List A) ys) (unique (Array A ys) r at a) (erased (SetNth A xs i x ys) p))
+  (let ((unique old) (erased ys) (unique r) (erased p)) (array-swap _ _ a i x _ nth))
+  (values ys r p))
 ```
 
 In `array-swap`'s `ANil` branch the bound refutes itself, `nth` having
-no constructor at length `(Zero)`; in its `NthZ` branch the forced
+no constructor at the empty list; in its `NthHere` branch the forced
 facts make `hd` canonically `m`, so it is returned as `old` with no
 coerce, the head slot takes `x`, one store, and the tail is skipped; in
-its `NthS` branch the recursion returns `tl3 at tl`, the reinvocation
+its `NthThere` branch the recursion returns `tl3 at tl`, the reinvocation
 is full-at and erased, and with `old` the only physical result on
 either side the recursive call is a valid `tail`. `array-place` drops `old`,
 as at-most-one-use allows, so it is a plain call. The FFI's `array-new`
@@ -663,7 +677,7 @@ copy of the rest, so taking an array apart is O(n). An implementation
 may provide further extern functions over these types, faster than the
 source above allows, each modelled in source as these are.
 
-`Copy`'s field being `many`, an element of an `(Array (Copy A) n)` is
+`Copy`'s field being `many`, an element of an `(Array (Copy A) xs)` is
 read in place, its FFI that of `array-pluck`:
 
 ```scheme
@@ -671,18 +685,18 @@ read in place, its FFI that of `array-pluck`:
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
 
-(def-fns _ $ (many extern array-get : (erased Type A) (erased (Nat) n)
-    (unique (Array (Copy A) n) a) (subterm many (Nat) i)
-    (erased A x) (erased (ANth (Copy A) n a i (MkCopy A x)) nth) ->
+(def-fns _ $ (many extern array-get : (erased Type A) (erased (List (Copy A)) xs)
+    (unique (Array (Copy A) xs) a) (subterm many (Nat) i)
+    (erased A x) (erased (Nth (Copy A) xs i (MkCopy A x)) nth) ->
     (many x is v) (unique a is r at a))
   (let-match unique a (ACons _ _ hd tl u) (absurd (ANil _ _) nth))
   (match many i _
     ((Zero)
-      (let-match erased nth (NthZ _ _ _ _) (absurd NthS))
+      (let-match erased nth (NthHere _ _ _) (absurd NthThere))
       (let-match unique hd (MkCopy _ v))
       (values v (at (u _ _ (MkCopy _ v) tl))))
     ((Succ i1)
-      (let-match erased nth (NthS _ _ _ _ _ _ q) (absurd NthZ))
+      (let-match erased nth (NthThere _ _ _ _ _ q) (absurd NthHere))
       (let ((many v) (unique tl3)) (tail (array-get _ _ tl i1 _ q)))
       (values v (at (u _ _ hd tl3))))))
 ```
@@ -690,17 +704,17 @@ read in place, its FFI that of `array-pluck`:
 A `many` array is read without handing it back, and its fields being read at `many` already, its elements need no `Copy`; its FFI is that of `array-get`. `array-length` reads a unique array's length and hands the array back, and `array-length-many` reads a `many` array's:
 
 ```scheme
-(def-fns _ $ (many extern array-get-many : (erased Type A) (erased (Nat) n)
-    (many (Array A n) a) (subterm many (Nat) i)
-    (erased A x) (erased (ANth A n a i x) nth) -> (many x is v))
+(def-fns _ $ (many extern array-get-many : (erased Type A) (erased (List A) xs)
+    (many (Array A xs) a) (subterm many (Nat) i)
+    (erased A x) (erased (Nth A xs i x) nth) -> (many x is v))
   ...)
 
-(def-fns _ $ (many extern array-length : (erased Type A) (erased (Nat) n)
-    (subterm unique (Array A n) a) -> (many n is len) (unique a is r at a))
+(def-fns _ $ (many extern array-length : (erased Type A) (erased (List A) xs)
+    (subterm unique (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p) (unique a is r at a))
   ...)
 
-(def-fns _ $ (many extern array-length-many : (erased Type A) (erased (Nat) n)
-    (subterm many (Array A n) a) -> (many n is len))
+(def-fns _ $ (many extern array-length-many : (erased Type A) (erased (List A) xs)
+    (subterm many (Array A xs) a) -> (many (Nat) len) (erased (Length A xs len) p))
   ...)
 ```
 
@@ -709,21 +723,22 @@ and the `coerce` is written where it is used, a wrapper function
 extracting to a call where the inline `coerce` extracts to nothing:
 
 ```scheme
-(def-fns _ $ (erased init-witness : (erased Type A) (erased (Nat) n)
-    (erased (Array (MaybeUninit A) n) a) (subterm erased (AllInit A n a) all) ->
-    (erased (Array A n) b)
-    (erased (Coercible (Unique) (Array (MaybeUninit A) n) a (Unique) (Array A n) b) c))
-  (match erased all _
+(def-fns _ $ (erased init-witness : (erased Type A) (erased (List (MaybeUninit A)) xs) (erased (List A) ys)
+    (erased (Array (MaybeUninit A) xs) a) (subterm erased (AllInit A xs ys) all) ->
+    (erased (Array A ys) b)
+    (erased (Coercible (Unique) (Array (MaybeUninit A) xs) a (Unique) (Array A ys) b) c))
+  (let-match erased all (AICons _ x tl ys1 q)
     ((AINil _)
-      (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A)))
-    ((AICons _ n1 x tl q)
-      (let ((erased b1) (erased c1)) (init-witness _ _ tl q))
-      (values (ACons _ _ x b1)
-              (coercible-ctor _ ACons (MaybeUninit A) A n1 n1
-                 (coercible-sym (coercible-wrap _ Init _ x))
-                 c1)))))
+      (let-match erased a (ANil _))
+      (values (ANil _) (coercible-ctor _ ANil (MaybeUninit A) A))))
+  (let-match erased a (ACons _ _ hd rest))
+  (let ((erased b1) (erased c1)) (init-witness _ _ _ rest q))
+  (values (ACons _ _ x b1)
+          (coercible-ctor _ ACons (MaybeUninit A) A tl ys1
+             (coercible-sym (coercible-wrap _ Init _ x))
+             c1)))
 
-(let ((erased b0) (erased c)) (init-witness _ _ a all))
+(let ((erased b0) (erased c)) (init-witness _ _ _ a all))
 (let ((unique arr)) (coerce a c))
 ```
 
