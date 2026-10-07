@@ -2140,11 +2140,12 @@
 
 (def-adts
   ((Use : -> Type) enum (many UseShared : (many (Loc) loc) -> (Use)) (many UseConsumed : (many (Loc) loc) -> (Use)))
+  ((Uses : -> Type) enum (many MkUses : (many (IdMap $ Use) map) (many (List $ Nat) dirty) -> (Uses)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
   ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) -> (Pragmas)))
   ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (String) name) (many (Loc) here) -> (Said)))
   ((UniqueState : -> Type) enum
-    (many MkUniqueState : (many (Bool) ctor-tele) (many (IdMap $ Use) uses) (many (List $ Nat) captures)
+    (many MkUniqueState : (many (Bool) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
       (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) (many (IdMap $ Nat) aliases) -> (UniqueState))))
 ; An interned literal: its entry, its Numeral proof where it has one, and the spelling it reads back as.
@@ -2152,7 +2153,7 @@
   enum
   (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) -> (LitEntry)))
 
-(let ((many unique-empty)) (MkUniqueState (BFalse) (MEmpty _) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _)) (MEmpty _)))
+(let ((many unique-empty)) (MkUniqueState (BFalse) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _)) (MEmpty _)))
 
 (def-adts $ (Scope : -> Type)
   enum
@@ -2647,9 +2648,9 @@
   (match many (env-unique env) _ ((MkUniqueState ct _ _ _ _ _ _ _ _ al) ct)))
 (def-fns _ $ (many env-set-ctor-tele : (many (Env) env) (many (Bool) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState _ uses captures ue ie sig words temp wd al) (env-set-unique env (MkUniqueState x uses captures ue ie sig words temp wd al)))))
-(def-fns _ $ (many env-uses : (many (Env) env) -> (many (IdMap $ Use) r))
+(def-fns _ $ (many env-uses : (many (Env) env) -> (many (Uses) r))
   (match many (env-unique env) _ ((MkUniqueState _ uses _ _ _ _ _ _ _ al) uses)))
-(def-fns _ $ (many env-set-uses : (many (Env) env) (many (IdMap $ Use) x) -> (many (Env) r))
+(def-fns _ $ (many env-set-uses : (many (Env) env) (many (Uses) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState ct _ captures ue ie sig words temp wd al) (env-set-unique env (MkUniqueState ct x captures ue ie sig words temp wd al)))))
 (def-fns _ $ (many env-captures : (many (Env) env) -> (many (List $ Nat) r))
   (match many (env-unique env) _ ((MkUniqueState _ _ captures _ _ _ _ _ _ al) captures)))
@@ -2705,17 +2706,18 @@
   (match many temporary _ ((BFalse) env2) ((BTrue) (env-set-temporary env2 $ insert-desc x $ env-temporary env2))))
 (def-fns _ $ (many use-max : (many (Use) a) (many (Use) b) -> (many (Use) r))
   (match many a _ ((UseConsumed _) a) ((UseShared _) b)))
-(def-fns _ $ (many use-insert : (many (IdMap $ Use) uses) (many (Nat) x) (many (Use) state) -> (many (IdMap $ Use) r))
-  (match many (idmap-get _ x uses) _
-    ((Miss _ _ _ _) (idmap-set _ x state uses))
-    ((Hit _ _ _ old _) (idmap-set _ x (use-max old state) uses))))
-(def-fns _ $ (many uses-join-at : (subterm many (IdMap $ Use) a) (many (IdMap $ Use) b) (many (Nat) offset) (many (Nat) stride) -> (many (IdMap $ Use) r))
-  (let-match many a (MNode _ here one two) ((MEmpty _) b))
-  (let ((many b1)) (match many here (((IdMap $ Use) _)) ((None _) b) ((Some _ state) (use-insert b offset state))))
-  (let ((many stride2)) (nat-add stride stride))
-  (tail $ uses-join-at two (notail $ uses-join-at one b1 (nat-add offset stride) stride2) (nat-add offset stride2) stride2))
-(def-fns _ $ (many uses-join : (many (IdMap $ Use) a) (many (IdMap $ Use) b) -> (many (IdMap $ Use) r))
-  (uses-join-at a b 0 1))
+(def-fns _ $ (many uses-map : (many (Uses) u) -> (many (IdMap $ Use) r))
+  (match many u _ ((MkUses m _) m)))
+(def-fns _ $ (many uses-fork : (many (Uses) u) -> (many (Uses) r))
+  (MkUses (uses-map u) (Nil _)))
+(def-fns _ $ (many uses-set : (many (Uses) u) (many (Nat) x) (many (Use) state) -> (many (Uses) r))
+  (match many u _ ((MkUses m d) (MkUses (idmap-set _ x state m) (Cons _ x d)))))
+(def-fns _ $ (many uses-join-keys : (subterm many (List $ Nat) ks) (many (IdMap $ Use) from) (many (Uses) into) -> (many (Uses) r))
+  (let-match many ks (Cons _ k rest) ((Nil _) into))
+  (let-match many (idmap-get _ k from) (Hit _ _ _ state _) ((Miss _ _ _ _) (tail $ uses-join-keys rest from into)))
+  (tail $ uses-join-keys rest from $ uses-set into k $ match many (idmap-get _ k $ uses-map into) (((Use) _)) ((Miss _ _ _ _) state) ((Hit _ _ _ old _) (use-max state old))))
+(def-fns _ $ (many uses-join : (many (Uses) a) (many (Uses) b) -> (many (Uses) r))
+  (match many b _ ((MkUses m d) (uses-join-keys d m a))))
 (def-fns _ $ (many misuse : (many (Mult) demand) (many (Mult) supply) -> (many (Maybe $ String) r))
   (match many supply _
     ((Erased) (match many (mult-is-many demand) _ ((BTrue) (Some _ "used in a non-erased position")) ((BFalse) (None _))))
