@@ -16,7 +16,7 @@
 (let ((erased pa-p)) (prove-predates PA P))
 (let ((erased thunk-p)) (prove-predates thunk-lvl P))
 (let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
-
+(def-fns PA $ (many drop-pwd : (subterm many (List (Pair (String) (String))) vars) -> (many (List (Pair (String) (String))) r)) (let-match many vars (Cons a v rest) ((Nil a) vars)) (let-match many v (MkPair b c name value)) (match many (str-cmp name "PWD") _ ((CEq x y z) (tail $ drop-pwd rest)) (else (Cons _ v (notail $ drop-pwd rest)))))
 (def-fns PA $ (many show-vars : (subterm many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
   (let-match many vars (Cons a v rest) ((Nil a) (Exit P code0)))
   (let-match many v (MkPair b c name value))
@@ -25,7 +25,7 @@
     (unique-thunk (predates thunk-pa) _ _ (notail $ show-vars (subterm _) rest))))
 
 (def-unique P $ (unique after-envs : (many (List (Pair (String) (String))) vars) -> (unique (IO P) next))
-  (show-vars (predates pa-p) vars))
+  (show-vars (predates pa-p) (drop-pwd vars)))
 
 (def-unique P $ (unique after-absent : (many (Maybe (String)) value) -> (unique (IO P) next))
   (match many value _
