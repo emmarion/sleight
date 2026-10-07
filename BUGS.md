@@ -25,14 +25,6 @@ is a design decision. Remove an entry when it is fixed.
     body, `(absurd (C ...))`, which the reference refuses with "a body
     needs a final expression" and `slc` with "malformed branch".
 
-17. **Investigate a cheaper `uses-join`.** `uses-join-at`
-    (`self/core.sl`) walks the whole of its first uses map into the
-    second at every join of branches, so its cost seems to grow with
-    branches times live entries; the at redesign's slot entries made the
-    maps larger. Its own cost under callgrind, `slc` on its own sources,
-    went from 142M instructions at 3091d12 to 244M at dbb1525, about 1.4
-    percent of that run. A join that visits only what a branch changed
-    might cost less; not tried.
 
 18. **`self/eval.sl` answers a failed step with an ordinary value.**
     Audit 2026-10-07 A2 and A3 are two instances. A survey of
