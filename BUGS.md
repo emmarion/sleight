@@ -37,14 +37,11 @@ is a design decision. Remove an entry when it is fixed.
     overflows its stack on the deep `Rope` too (it runs the model at
     compile time); `ulimit -s unlimited` makes it print 100000.
 
-13. **Diagnostics found wanting by the sweep.** An `open-absurd`
-    annotation written `(at (...))` is accepted: `result_tele` checks
-    its entries as an at-match's but then drops the flag, and nothing
-    says the `at` meant nothing. `slc` and the reference also differ in
-    wording on some refusals, as audit M3 already records; one seen
-    since is an absurd-by-proof branch written with no body,
-    `(absurd (C ...))`, which the reference refuses with "a body needs a
-    final expression" and `slc` with "malformed branch".
+13. **Diagnostics found wanting by the sweep.** `slc` and the
+    reference differ in wording on some refusals, as audit M3 already
+    records; one seen since is an absurd-by-proof branch written with no
+    body, `(absurd (C ...))`, which the reference refuses with "a body
+    needs a final expression" and `slc` with "malformed branch".
 
 14. **An `at` naming an argument that was not a variable has no caller
     word once the call is over.** With `mk : (many (Nat) x) -> (many
