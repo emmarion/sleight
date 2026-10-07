@@ -1,5 +1,5 @@
 ; expect: 4
-; A `let` binder of `(slot-of x)` sits where `x` does, a slot's word being the slot (AT_REDESIGN A2, A6), so
+; A `let` binder of `(slot-of x)` sits where `x` does, a slot's word being the slot (section 35), so
 ; no `slot-self` is needed to fill a cell at it.
 (def-adts $ (Pair2 : -> Type) enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))
 (let ((many n)) 4)

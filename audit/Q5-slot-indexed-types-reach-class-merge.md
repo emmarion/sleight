@@ -1,20 +1,20 @@
-# Q5. Slot-indexed user types reach U10's class merge, U15's deferred question
+# Q5. Slot-indexed user types reach DESIGN.md section 38's class merge, OPEN.md 3's deferred question
 
 Status: open question, ASSUMPTIONS 183. Spec-faithful; nothing found that
 exploits it.
 
 ## The rule
 
-UNIQUE.md U10: a forcing unification of two `SlotHolds` "merges the
+DESIGN.md section 38: a forcing unification of two `SlotHolds` "merges the
 classes, `(SlotVacant)` against `(SlotHolds v)` merging `v`'s with
-`null`'s, so nothing is ever refuted between two slots". U15 defers
+`null`'s, so nothing is ever refuted between two slots". OPEN.md 16 and 17 defer
 `at-coercible` and `slot-eq`, which mint at-class merges from evidence,
 "after a more thorough investigation of their soundness".
 
 ## The observation
 
 An ordinary user type indexed by `(Slot)` reaches the same merge without
-U15:
+OPEN.md 16 and 17:
 
 ```scheme
 (def-adts $ Holder : ((Slot) s) -> Type
@@ -43,9 +43,9 @@ that nothing can supply.
 
 ## The question
 
-The soundness question U15 defers, whether an at-class merge licensed by
+The soundness question OPEN.md 3 states, whether an at-class merge licensed by
 a branch is sound in the branch's reachability, is already live for
 slot-indexed types in the implemented subset. Does the argument that
-justifies section 18's forced `is` facts, that a branch's facts hold in
+justifies section 7's forced `is` facts, that a branch's facts hold in
 exactly the branch that runs, carry over to at-class merges, whose
 consequence is a skipped store rather than a rewrite?

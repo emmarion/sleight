@@ -9,11 +9,11 @@ the caveat. ASSUMPTIONS 182.
 
 ## The rule
 
-DESIGN.md section 20 lists "a type or `is` expression" among the erased
-positions. UNIQUE.md U2: "An erased mention is never a use and is allowed
+DESIGN.md section 14 lists "a type or `is` expression" among the erased
+positions. DESIGN.md section 15: "An erased mention is never a use and is allowed
 anywhere, before or after the binder is consumed: a proof or a type may
-name a consumed value." U6: where the elaborator must read a Const as a
-value, "a special form or macro at a head (section 4)", that read is a
+name a consumed value." Section 32: where the elaborator must read a Const as a
+value, "a special form or macro at a head (section 6)", that read is a
 many use.
 
 ## The defect
@@ -50,8 +50,8 @@ statement-head reads are unchanged.
 
 ## Caveats
 
-This reads section 20 and U2 as controlling: a type former's head is a
-section 5 position, not a section 4 dispatch, and sits in an erased
-position. If the owner means U6's rule to cover every Const read, type
+This reads sections 14 and 15 as controlling: a type former's head is a
+section 9 position, not a section 6 dispatch, and sits in an erased
+position. If the owner means section 32's rule to cover every Const read, type
 formers included, the signature path is the one that was wrong and the
 fix goes the other way. Either way the two paths must agree.

@@ -1128,7 +1128,7 @@
 
 ; A literal type's printer, which prints the literal its value reads back from: the emitted OCaml spells it
 ; through Ffi_core (lib/extract.ml's literal_show). slc always compiles against the FFI, so a Nat is its
-; integer and a String its slice; a Char and a U8 are their Nat (section 38), unwrapped by neither.
+; integer and a String its slice; a Char and a U8 are their Nat (section 33), unwrapped by neither.
 (def-fns _ $ (many lit-show : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Rope) r))
   (let-match many (prelude-nullary env ty "Slot") (BFalse) ((BTrue) (Some _ $ RStr "\"_\"")))
   (let-match many (prelude-nullary env ty "Nat") (BFalse) ((BTrue) (Some _ $ RStr "(Z.to_string (Obj.obj v : Z.t))")))

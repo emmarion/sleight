@@ -1,5 +1,5 @@
 ; prelude: none
-; A numeral denotes the prelude's own Nat (LITERALS.md), so without the prelude it is refused at the literal,
+; A numeral denotes the prelude's own Nat (DESIGN.md section 45), so without the prelude it is refused at the literal,
 ; even where the program declares a Nat of its own.
 (def-adts $ (Nat : -> Type) enum (many Zero : -> (Nat)) (many Succ : (many (Nat) pred) -> (Nat)))
 (let ((many x)) 0)

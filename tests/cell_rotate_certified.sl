@@ -3,7 +3,7 @@
 ; The same in-place rotation carrying the relation its result must satisfy. FlatOnto t acc out reads
 ; inorder(t) ++ acc = out; stating it in difference-list form is what lets the rotated tree's derivation
 ; be rebuilt from the original's without an associativity lemma. The relation's indices name t and l, the
-; two cells the rotation overwrites, and every entry of the proof is declared erased (section 20).
+; two cells the rotation overwrites, and every entry of the proof is declared erased (section 14).
 
 (def-adts $ (Lst : -> Type)
   enum

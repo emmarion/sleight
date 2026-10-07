@@ -1,6 +1,6 @@
 ; Two declared types of one shape, and an index that names them: the TF branch equates Feet with Meters
 ; and their Matchables, which nothing refutes, so a match on a Feet inside it finds its Matchable through
-; the alias (section 19).
+; the alias (section 8).
 ; expect: 3
 (def-adts $ (Meters : -> Type)
   enum

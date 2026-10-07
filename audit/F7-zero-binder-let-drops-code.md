@@ -6,9 +6,9 @@ omission, companion to F5.
 
 ## The rule
 
-DESIGN.md section 27: a zero-binder `let` is expected to matter for
-"invoking a destructor, or similar". UNIQUE.md U9: a placement invocation
-performs stores; U8: a call whose only results are `at` returns has no
+DESIGN.md section 54: a zero-binder `let` is expected to matter for
+"invoking a destructor, or similar". DESIGN.md section 37: a placement invocation
+performs stores; section 36: a call whose only results are `at` returns has no
 physical results.
 
 ## The defect
@@ -36,7 +36,7 @@ the mirror is one condition.
 ## Caveats
 
 Whether a computation producing no value can be dropped at all is
-arguable from section 20's justification of erasure, the language being
-"immutable, effect-free, and total"; with U9's stores and extern in-place
+arguable from section 14's justification of erasure, the language being
+"immutable, effect-free, and total"; with section 37's stores and extern in-place
 updates that argument no longer covers a zero-result call, which is why
 the code is now kept. Tied to F5's reading.

@@ -2,7 +2,7 @@
 ; error: note: value constructor `TB`, which is declared here
 ; error: note: #\a in `(Tag (MkChar (MkU8 97 <**>)))` is a character literal, whose code is opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
 ; error: #\b is a character literal, whose code is opaque to the checker by default
-; A character literal is transparent down to its code, a numeral (LITERALS.md), so the note names the
+; A character literal is transparent down to its code, a numeral (DESIGN.md section 45), so the note names the
 ; character as written rather than its code, both the scrutinee's and the one TB's index forced it to.
 
 (def-adts ((Tag : ((Char) c) -> Type)

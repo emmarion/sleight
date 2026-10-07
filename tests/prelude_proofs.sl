@@ -1,5 +1,5 @@
 ; expect: 2
-; The prelude's primitives carry their specifications (section 41): add returns an Add, nat-mod a Mod with the
+; The prelude's primitives carry their specifications (section 42): add returns an Add, nat-mod a Mod with the
 ; bound, append an Append, and trim's return is its argument to the checker.
 
 (let ((many three)) (Succ (Succ (Succ (Zero)))))

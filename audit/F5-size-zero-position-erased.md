@@ -8,11 +8,11 @@ reading; see the caveat. ASSUMPTIONS 182.
 
 ## The rule
 
-DESIGN.md section 16: `(values)` is the size-zero expression. Section 20
+DESIGN.md section 27: `(values)` is the size-zero expression. Section 14
 lists the erased positions and closes "Every other position is
-non-erased". Section 27 says a zero-binder `let` "is expected to matter
+non-erased". Section 54 says a zero-binder `let` "is expected to matter
 once linear or unique types arrive, invoking a destructor, or similar".
-UNIQUE.md U8 speaks of "a tail call from a function returning none"; U2
+DESIGN.md section 36 speaks of "a tail call from a function returning none"; section 15
 requires exactly one non-erased use of a unique binder per path.
 
 ## The defect
@@ -60,12 +60,12 @@ companion change that makes the emitted code agree.
 
 ## Caveats
 
-Section 20's clause "the final expression of the right-hand side of a
+Section 14's clause "the final expression of the right-hand side of a
 `let` whose binders are all `erased`" is vacuously met by no binders, and
-U2's remark that `(let (values))` "needs no new meaning" shows the owner
+section 15's remark that `(let (values))` "needs no new meaning" shows the owner
 considered zero-binder lets. Under that reading the second reproducer is
 not a bug and only the `tail` guard needed relaxing. The fix takes the
-non-erased reading because of section 20's closing sentence, section 27's
-destructor motivation, and U8's phrase; the owner may prefer the other,
+non-erased reading because of section 14's closing sentence, section 54's
+destructor motivation, and section 36's phrase; the owner may prefer the other,
 in which case `pos_of` reverts and the `tail`/`delegate` guard alone
 changes.

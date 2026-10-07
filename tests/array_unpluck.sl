@@ -1,5 +1,5 @@
 ; expect: 7
-; AT_REDESIGN A12's follow-up 11: an element is taken out of an array with `array-pluck`, whose `SetNth` proof
+; Section 44: an element is taken out of an array with `array-pluck`, whose `SetNth` proof
 ; names the element's own slot, mutated in place through its cell, and put back by `array-unpluck`, an
 ; at-function whose call is skipped: the array already holds the word.
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))

@@ -1,5 +1,5 @@
 ; error: has no opened newtype
-; A union newtype's fieldless constructor is not a wrapping constructor (section 38).
+; A union newtype's fieldless constructor is not a wrapping constructor (section 33).
 
 (def-adts
   ((Opt : ((Bool) k) -> Type)

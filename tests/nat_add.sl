@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 5
-; A second return entry mentioning the parameters, reused by _ (SUGAR.md section 2).
+; A second return entry mentioning the parameters, reused by _ (DESIGN.md section 47).
 (def-adts
   ((Plus : ((Nat) a) ((Nat) b) ((Nat) c) -> Type)
     enum

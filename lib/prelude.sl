@@ -1,4 +1,4 @@
-; The source prelude (DESIGN.md section 41), elaborated ahead of every program. Its extern-marked
+; The source prelude (DESIGN.md section 42), elaborated ahead of every program. Its extern-marked
 ; definitions are the models the FFI's implementations in ffi.ml stand in for.
 ;
 ; Neither compiler reads this file at run time: lib/dune embeds it into the reference as Prelude_source,
@@ -68,7 +68,7 @@
     (many No : (erased (Nat) a) (erased (Nat) b) (erased (Lt b (Succ a)) q) -> (Dec a b))))
 
 ; Parametric in the carrier and its strict order, every field erased, so a value is only its tag and two
-; instances differ by a coercion (section 38).
+; instances differ by a coercion (section 33).
 (def-adts
   ((Cmp : (Type T) ((TyCtor (T x) (T y) -> Type) R) (T a) (T b) -> Type)
     enum
@@ -454,7 +454,7 @@
       (values (Succ (Succ d)) (N2 b1 m d v1 dd)))))
 
 ; Reasoning about a numeral through its spelling rather than its opaque Nat: the relations below are
-; functional and injective, and the spelling's successor is structural (DESIGN.md section 16's let-match
+; functional and injective, and the spelling's successor is structural (DESIGN.md section 27's let-match
 ; carries their conclusions outward).
 
 (def-fns _ $ (erased lt-unique :
@@ -1069,7 +1069,7 @@
       (values v (Cons (MaybeUninit A) hd ys1) (at (u _ _ hd tl3)) (SetThere _ _ _ _ _ _ p1)))))
 
 ; Puts a plucked element back into the slot it came from, which already holds its word, so the call is
-; skipped (AT_REDESIGN A10): the marks are a promise and the function has no implementation.
+; skipped (section 39): the marks are a promise and the function has no implementation.
 (def-fns _ $ (many extern at array-unpluck : (erased Type A) (erased (List (MaybeUninit A)) xs)
     (unique (Array (MaybeUninit A) xs) a) (subterm many (Nat) i) (unique A x)
     (erased (Nth (MaybeUninit A) xs i (Uninit A (slot-of x))) nth) ->

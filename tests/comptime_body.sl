@@ -1,6 +1,6 @@
 ; needs: list
 ; error: run-position statement
-; comptime-match is confined to run position (section 15): inside a function body it is an error.
+; comptime-match is confined to run position (section 28): inside a function body it is an error.
 
 (let ((many two)) (Succ (Succ (Zero))))
 

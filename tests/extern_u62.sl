@@ -1,5 +1,5 @@
 ; expect: (Cons _ 1 $ Cons _ 10 $ Cons _ 4 $ Cons _ 21 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 1 $ Cons _ 56 $ Cons _ 2 $ Cons _ 3 $ Cons _ 7 $ Cons _ 4 $ Cons _ 8 $ Cons _ 7 $ Nil _)
-; U62 (section 41): its arithmetic takes Nats with erased proofs that neither operands nor results reach
+; U62 (section 42): its arithmetic takes Nats with erased proofs that neither operands nor results reach
 ; u62-modulus. The modulus is erased, so the bounds here are proved rather than computed: sixty-two is
 ; rebuilt and matched to the prelude's by add-fn and mul-fn, and a Pow2 exceeds its exponent.
 

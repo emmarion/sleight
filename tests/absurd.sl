@@ -1,5 +1,5 @@
 ; expect: _
-; DESIGN.md section 39: an absurd function.
+; DESIGN.md section 59: an absurd function.
 
 (def-adts $ (Void : -> Type)
   enum)

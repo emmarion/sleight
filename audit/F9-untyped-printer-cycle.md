@@ -4,7 +4,7 @@ Status: fixed in `fa5747a` (`lib/value.ml` `show`). Severity: crash.
 
 ## The rule
 
-UNIQUE.md U10: a slot's value "is inert and may sit in a field or a list
+DESIGN.md section 38: a slot's value "is inert and may sit in a field or a list
 like any other value". ASSUMPTIONS 163 says a printed Slot or Cell is
 opaque and "its arbitrary held word is not recursively interpreted".
 

@@ -2,7 +2,7 @@
 ; error: type mismatch
 ; A first-class match's Matchable carries the type's full constructor list in its
 ; type, so a one-constructor Matchable parameter cannot receive a two-constructor
-; type's real Matchable: exhaustiveness cannot be dodged this way (sections 17, 19).
+; type's real Matchable: exhaustiveness cannot be dodged this way (sections 8, 24).
 
 (def-adts $ (Two : -> Type) enum
   (many A : (many (Nat) n) -> (Two))

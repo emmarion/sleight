@@ -10,7 +10,7 @@ opened entry directly (`lib/elab.ml`, `Sp.MatchableOf`) without recording
 a use. A `unique` Matchable would therefore be handed out twice as two
 live unique binders.
 
-No route mints one: a Matchable enters scope `many` (DESIGN.md section 17,
+No route mints one: a Matchable enters scope `many` (DESIGN.md section 24,
 `witness ~mult:Many`), `(let (unique m) (matchable-of T))` is refused as a
 many value used at unique, and a unique-labelled field, a unique
 parameter or a `(Unique)` coerce were each blocked earlier. So this is a

@@ -1,5 +1,5 @@
 ; mini/core.sl -- what the minimal language's programs elaborate to and evaluate to: core code with every
-; binder an entry id, runtime values, and environments. Types are data (DESIGN.md section 17), so a type
+; binder an entry id, runtime values, and environments. Types are data (DESIGN.md section 24), so a type
 ; former in value position is a [CFormer] and evaluates to itself closed by the environment; a level or a
 ; proof is a [CToken], unit at runtime (MINIMAL.md). One session's proposal.
 

@@ -1,7 +1,7 @@
 ; needs: list
 ; expect: (Cons _ 0 $ Cons _ 0 $ Nil _)
 ; A constructor application is a pure term, so its `_`s may stay open past its own paren: the argument after
-; it in the same call, or in the enclosing constructor, solves them (SUGAR.md 6); a call is the boundary.
+; it in the same call, or in the enclosing constructor, solves them (DESIGN.md section 50); a call is the boundary.
 
 (def-lvl A)
 (def-fns A $ (many prepend : (erased Type X) (many (List X) front) (many (List X) xs) -> (many (List X) r))

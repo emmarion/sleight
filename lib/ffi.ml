@@ -1,6 +1,6 @@
 open Value
 
-(* The prototype's fixed FFI (section 41): implementations by name for extern-marked prelude definitions, which are
+(* The prototype's fixed FFI (section 42): implementations by name for extern-marked prelude definitions, which are
    their models. Integers are zarith's. *)
 
 let registered : (string, adt) Hashtbl.t = Hashtbl.create 8

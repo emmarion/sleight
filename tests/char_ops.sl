@@ -1,5 +1,5 @@
 ; expect: 3
-; A Char is its code at runtime, so char-cmp delegates to u62-cmp (section 38): its arguments coerce
+; A Char is its code at runtime, so char-cmp delegates to u62-cmp (section 33): its arguments coerce
 ; down through both newtypes, and the Coercible carrying the result back up is built by an erased match
 ; that leaves no code, so the delegate mark still stands. delegate-of then fetches the proof that the
 ; two are one function, coercible-of reads the Coercible off it, and the coerced char-cmp runs on

@@ -1,9 +1,9 @@
 (* Literals are sugar over the prelude, interned ahead of the top-level statement that first mentions them
-   (LITERALS.md, Elab.hoist). *)
+   (DESIGN.md section 45, Elab.hoist). *)
 
 type t = Numeral of Z.t | Char of int | Str of string
 
-(* The reader hands a string literal over as an atom in this shape, which no name can take (section 28). *)
+(* The reader hands a string literal over as an atom in this shape, which no name can take (section 1). *)
 let quote s = "\"" ^ s ^ "\""
 
 let classify s =

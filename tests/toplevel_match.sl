@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 1
-; Statements inside a top-level match branch are not in run position but need no proofs (sections 16, 24).
+; Statements inside a top-level match branch are not in run position but need no proofs (sections 20, 27).
 ; xs is (Cons ...) is known from its let, so the Nil branch is refuted.
 
 (def-lvl X)

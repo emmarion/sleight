@@ -1,6 +1,6 @@
 ; error: type mismatch
 ; Shadowing Void after explode is defined cannot feed the new, inhabited Void to
-; it: explode captured the original, empty Void by entry identity (section 9), so
+; it: explode captured the original, empty Void by entry identity (section 19), so
 ; (Sole) is a value of the second Void and not of explode's parameter type. The
 ; second declaration is the shadowing, deliberate here and recorded by the
 ; ; warns: lines at the end of the file.

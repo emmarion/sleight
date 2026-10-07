@@ -89,10 +89,10 @@ type level = Top | At of id
 
 module StringMap = Map.Make (String)
 
-(* The scope (section 3): its entries newest first, and the newest named entry of each name, for lookup. *)
+(* The scope (section 5): its entries newest first, and the newest named entry of each name, for lookup. *)
 type scope = { ids : id list; named : id StringMap.t }
 
-(* An opened Matchable (section 19) with the names its type holds canonically, the type constructor
+(* An opened Matchable (section 8) with the names its type holds canonically, the type constructor
    first. The names are read again whenever a variable is ruled out ([add_rule]), so they are current under the
    facts in force; [touched] holds the objects whose names changed since [merge_opens] last ran. *)
 type opened = { obj : id; kind : [ `Matchable | `AtFn | `Other ]; names : term list }
@@ -164,7 +164,7 @@ let hint env name =
   | [] -> ""
   | nearest -> "\nhint: nearest in scope: " ^ String.concat " " nearest
 
-(* Leaving a let's right-hand side: the entries it added since [outer] stay in scope, anonymously (section 16),
+(* Leaving a let's right-hand side: the entries it added since [outer] stay in scope, anonymously (section 27),
    so no fact or open record outlives an entry it mentions. *)
 let hide env outer =
   let n = List.length env.scope.ids - List.length outer.scope.ids in
@@ -173,11 +173,11 @@ let hide env outer =
   { env with entries; scope = { env.scope with named = outer.scope.named } }
 
 (* The type `(Slot)`, set once the prelude binds its constructor, for the automatic slot every entry is minted
-   with, erased where the entry is (AT_REDESIGN A2). *)
+   with, erased where the entry is (section 35). *)
 let slot_type = ref (Var (-1))
 let atfn_ctor = ref (-1)
 
-(* `(slot-of x)` is read by `x`'s binder and never through `x`'s rule (AT_REDESIGN A6): a forced `x is y` says
+(* `(slot-of x)` is read by `x`'s binder and never through `x`'s rule (section 35): a forced `x is y` says
    nothing about where the two words sit. *)
 let rec canon env t =
   match t with
@@ -198,7 +198,7 @@ let opened_of env x =
   | App (Var c, [ _; f ]) when c = !atfn_ctor -> { obj = x; kind = `AtFn; names = [ f ] }
   | _ -> { obj = x; kind = `Other; names = [] }
 
-(* Whether an `AtFn` proof about [f] is open (AT_REDESIGN A10), keyed by [f]'s canonical atom as section 19's
+(* Whether an `AtFn` proof about [f] is open (section 39), keyed by [f]'s canonical atom as section 8's
    opens are. *)
 let atfn_open env f = match canon env f with
   | Var f -> List.exists (fun o -> o.kind = `AtFn && names_var f o.names) env.opens.opened
@@ -219,7 +219,7 @@ let add_rule env x t = opens_ruled { env with facts = IntMap.add x { (fact env x
    numeral or string literal, by its spelling, else the newest binding the scope still names, else its id. What
    canonicalization picks to represent a class is an accident of minting order, so it does not decide the name.
    [namer] chooses once for every atom the canonical [terms] hold, so that several terms print under one naming. *)
-(* The built-in name of the special form an entry holds, if it holds one (section 4); set by the elaborator. *)
+(* The built-in name of the special form an entry holds, if it holds one (section 6); set by the elaborator. *)
 let special_name : (t -> id -> string option) ref = ref (fun _ _ -> None)
 let delegate_ctor = ref (-1)
 
@@ -354,7 +354,7 @@ let unsolved ?(about = ("", [])) loc env t =
 (* Every solved meta replaced by its solution, the rest of the term as written. *)
 let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env x -> canon env t | t -> map_shallow (metaless env) t
 
-(* A meta (a `_` argument's unification variable, SUGAR.md 6) enters no scope: nothing reaches it by name or by
+(* A meta (a `_` argument's unification variable, DESIGN.md section 50) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
 let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
@@ -374,7 +374,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
          match StringMap.find_opt n env.scope.named with
          | Some prior when n <> "_" ->
              (* An entry with no position was minted by the built-ins rather than read from a file: a
-                special form, an annotation token, or one of the opaque types (section 27). A binder the
+                special form, an annotation token, or one of the opaque types (section 54). A binder the
                 source wrote carries its position even where it is bound again from a stored telescope,
                 the telescope entry holding it (Term.entry). *)
              let prior_at = (IntMap.find prior env.entries).at in
@@ -405,13 +405,13 @@ let report_shadows ?env () =
     pending
 
 
-(* [opens] holds the Matchables opened so far (section 19), one entry per merged group; nothing
+(* [opens] holds the Matchables opened so far (section 8), one entry per merged group; nothing
    consults one that is not in it. Constructors one opened Matchable lists are distinct, first-class ones
    included. *)
 let listed env x y =
   List.exists (fun o -> match (o.kind, o.names) with `Matchable, _ :: cs -> names_var x cs && names_var y cs | _ -> false) env.opens.opened
 
-(* A Matchable's value, where its entry is Const (section 34); a Dyn one is read when the code runs. *)
+(* A Matchable's value, where its entry is Const (section 29); a Dyn one is read when the code runs. *)
 let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -> Some adt | _ -> None
 
 (* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Const, else read
@@ -420,10 +420,10 @@ let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -
 let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope.ids)
 let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 else 2
 
-(* Two atoms equated, forcing (section 18): a contradiction where one opened Matchable lists both; otherwise the
+(* Two atoms equated, forcing (section 7): a contradiction where one opened Matchable lists both; otherwise the
    newer becomes an alias of the older, and the two must have one signature. Whoever forces then restores
    [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
-   by a name's identity (section 19). Solving (not forcing): only a meta may be bound, and the two sides must
+   by a name's identity (section 8). Solving (not forcing): only a meta may be bound, and the two sides must
    otherwise be identical; a meta against a meta binds the newer. *)
 let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
@@ -454,7 +454,7 @@ let rec unify_in ?(force = false) env a b =
 (* Solving, for a check. *)
 let unify env a b = unify_in env a b
 
-(* [x] is at the slot [p]: a rule on its automatic slot (A4). While the slot is still the fresh atom it was
+(* [x] is at the slot [p]: a rule on its automatic slot (section 35). While the slot is still the fresh atom it was
    minted as, with no rule, named by no opened object and absent from [p], the rule is added outright, which
    is what forcing it would do; a slot a forcing has already ruled is forced as any atom is. *)
 let place env x p =
@@ -471,7 +471,7 @@ let forcing env = Forcing env
 let unify_force (Forcing env) a b = Forcing (unify_in ~force:true env a b)
 
 (* At most one opened Matchable names a given type constructor or value constructor
-   (section 19): two that would are unified, forcing, and the better-ranked entry
+   (section 8): two that would are unified, forcing, and the better-ranked entry
    kept, the older on a tie, until no two name one thing. Restored after every forcing (Elab.refine, Elab.open_adt).
    Failure is a Contradiction. Only a pair with a touched object can share, the rest having been disjoint when
    the invariant last held, so the pair sought is the newest object sharing a name with an older one (of a

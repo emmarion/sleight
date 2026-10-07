@@ -1,8 +1,8 @@
-; self/eval.sl -- the compile-time interpreter (KERNEL.md's round trip; lib/eval.ml): a plain recursive
+; self/eval.sl -- the compile-time interpreter (DESIGN.md section 29's round trip; lib/eval.ml): a plain recursive
 ; evaluator over post-erasure code and the store of self/heap.sl, bounded by a fuel that decreases along the
 ; call stack so the checker accepts it. Every value is an address; every step returns the grown store with
 ; a proof of the growth, by which what was held before is widened. Extern functions run as the host's own
-; (section 41).
+; (section 42).
 
 (def-fns _ $ (erased le-refl : (erased (Hist Block) a) -> (erased (Suffix Block a a) p))
   (SfHere Block a))
@@ -30,7 +30,7 @@
 (def-fns _ $ (many st-push : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (many (St a ctx) st) (many (List $ Nat) f) (many (List $ Ref Block a) vs) (erased (Lockstep (Nat) (Ref Block a) f vs) lk) -> (many (St a (Cons (List (Nat)) f ctx)) r))
   (match many st _ ((MkSt _ _ cs env) (MkSt _ _ cs $ FrVals _ _ f vs lk env))))
 
-; ---- Extern values (section 41; lib/ffi_core.ml): payload blocks, read and made through the store
+; ---- Extern values (section 42; lib/ffi_core.ml): payload blocks, read and made through the store
 
 (def-fns _ $ (many heap-nat : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) a) -> (many (Nat) n))
   (let ((erased x) (many b) (erased lt)) (store-read Block _ hp a))
@@ -198,7 +198,7 @@
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc Block _ hp $ BTag _ c args)
       (values hl2 hp2 sf2 v))))
 
-; A value's discriminant and many fields where the FFI holds the type or a tag says (section 38); None
+; A value's discriminant and many fields where the FFI holds the type or a tag says (section 33); None
 ; otherwise, the value then being its fields as they stand.
 (def-fns _ $ (many dispatch : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Maybe $ ExtType) ext) (many (Bool) tagged) (many (Ref Block hs) v) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Maybe $ Pair (Nat) $ List $ Ref Block hs2) r))
   (let ((erased a) (many b) (erased lt)) (store-read Block _ hp v))
@@ -266,7 +266,7 @@
   (many ErListToArray : -> (ExtResult))
   (many ErArrayMake : (many (Nat) count) -> (ExtResult)))
 
-; An extern function over its arguments (section 41). The arguments are counted against the arity here, the
+; An extern function over its arguments (section 42). The arguments are counted against the arity here, the
 ; call having been checked against the model's telescope; [cs] are the constructors of the plain type it
 ; builds, read off that model's return type at the extern mark.
 (def-fns _ $ (many apply-array-change : (erased (Hist Block) hs) (many (Store Block hs) hp)
@@ -385,7 +385,7 @@
 
 ; ---- Values at every position of a code's index (ASSUMPTIONS 125): a code's values are the list of its
 ; many results, with a Picked reading them back against the index. Nothing converts between the two
-; representations along a call, which is what lets a call in tail position compile to one (section 9).
+; representations along a call, which is what lets a call in tail position compile to one (section 19).
 
 (def-fns _ $ (many vals-of : (erased (Hist Block) hs) (subterm many (List $ Mult) ms) (many (Ref Block hs) v) -> (many (List $ Ref Block hs) r) (erased (Picked (Ref Block hs) ms r) pk))
   (let-match many ms (Cons _ m rest) ((Nil _) (values (Nil _) (PkNil _))))
@@ -621,7 +621,7 @@
               (values h2 hp3 (le-refl h2) (Cons _ target (Nil _)) (PkMany _ _ target (Nil _) (PkNil _))))
             (else (error-vals _ hp2 many-one "not a cell"))))
         (values h3 hp3 (hist-le-trans _ _ _ (hist-le-trans _ _ _ le1 le2) le3) vs pk))
-      ; a copy of the block with the writes applied (AT_REDESIGN A8), the old block untouched
+      ; a copy of the block with the writes applied (section 37), the old block untouched
       ((CCellCopy _ _ cell slots)
         (let ((erased h1) (many hp1) (erased le1) (many cvs) (erased cpk)) (notail $ eval fuel _ hp _ _ cell st))
         (let ((many cv)) (vals-one _ cvs cpk))
@@ -723,7 +723,7 @@
   ; A closure is a member of the group at its block: the body runs over the parameters, the group's frame
   ; and the frames the group closed over. A missing member is an error block (ASSUMPTIONS 127). The call
   ; site's index and the member's returns are reconciled before the body runs, not after, so the body's
-  ; values are the call's own and the call to eval is a tail call (section 9).
+  ; values are the call's own and the call to eval is a tail call (section 19).
   ((many apply : (subterm many (Nat) fuel) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Ref Block hs) f) (many (List $ Ref Block hs) args) (many (List $ Mult) ms) ->
       (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
     (let ((erased fa) (many fb) (erased flt)) (store-read Block _ hp f))
@@ -771,7 +771,7 @@
 (def-fns _ $ (many run-code : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (erased (List $ Mult) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
   (eval eval-fuel _ hp _ _ code $ MkSt _ _ cs $ FrNil _))
 
-; ---- Run-position statements against the environment (section 34): each reads the store out, runs or
+; ---- Run-position statements against the environment (section 29): each reads the store out, runs or
 ; allocates, and puts it back with what holds its addresses widened.
 
 (def-fns _ $ (many set-states : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids) (many (List $ Ref Block hs) vs) (erased (Lockstep (Nat) (Ref Block hs) ids vs) lk) -> (many (IdMap $ EInfo hs) r))
@@ -811,7 +811,7 @@
   (let ((many en1) (many fi1)) $ store-grow _ _ sf1 en fi)
   (match many g _ ((MkGroup _ _ fns _) (close-members e _ hp1 en1 fi1 _ fns ga 0))))
 
-; The Const fields of a value bound to their ids at their declared multiplicities (section 15): a many
+; The Const fields of a value bound to their ids at their declared multiplicities (section 28): a many
 ; field its address, an erased one the token, a missing one an error block.
 (def-fns _ $ (many set-field-states : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (subterm many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Ref Block hs) vs) ->
     (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (many (IdMap $ EInfo hs2) en2) (many (List $ Pair (Ref Block hs2) $ Term) fi2))
@@ -858,7 +858,7 @@
   (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 fids mults fs)
   (env-with-store e _ hp3 en3 fi3))
 
-; A run-position let-match: the scrutinee's code run and its fields bound (section 16).
+; A run-position let-match: the scrutinee's code run and its fields bound (section 27).
 (def-fns _ $ (many env-run-fields : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let ((erased hs1) (many hp1) (erased le1) (many vs) (erased pk)) $ run-code _ hp en _ code)

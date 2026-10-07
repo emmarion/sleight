@@ -1,6 +1,6 @@
 ; stdin: x
 ; expect: hello, world
-; A Rope, with a character leaf, flattened by the FFI in one pass (section 41), with the Flat proof relating the tree to the string
+; A Rope, with a character leaf, flattened by the FFI in one pass (section 42), with the Flat proof relating the tree to the string
 ; through Append; the model runs under --no-extern, and the top-level flatten runs at compile time.
 
 (let ((many greeting) (erased pg)) (flatten (RCat (RChar #\h) (RStr "ello"))))

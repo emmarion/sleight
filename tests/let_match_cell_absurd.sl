@@ -1,6 +1,6 @@
 ; expect: 7
 ; A unique let-match on a type with cells: its absurd branch carries the cell binder, as a unique match's does
-; (UNIQUE.md U5).
+; (DESIGN.md section 23).
 
 (def-adts $ (Opt : -> Type) enum
   (many Full : (many (Nat) v) -> (Opt))

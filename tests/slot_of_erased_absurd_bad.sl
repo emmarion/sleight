@@ -1,5 +1,5 @@
 ; error: is not refuted: it may be headed by `Refl`
-; Equating the erased slots of two erased arguments says nothing about the arguments (AT_REDESIGN A2), so no
+; Equating the erased slots of two erased arguments says nothing about the arguments (section 35), so no
 ; contradiction follows from their values differing; the same program with the arguments `many` is
 ; tests/slot_of_many_absurd_bad.sl.
 (def-fns _ $ (erased f : (many (Nat) p) -> (erased (slot-of p) is s)) (slot-of p))

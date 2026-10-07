@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 1
-; A delegate whose argument and result pass through coerces: both erase to renamings (section 9).
+; A delegate whose argument and result pass through coerces: both erase to renamings (section 19).
 
 (def-adts $ (Meters : -> Type)
   enum newtype

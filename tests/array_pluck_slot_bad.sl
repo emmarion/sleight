@@ -1,5 +1,5 @@
 ; error: value mismatch
-; A plucked element is left Uninit over the element's own slot (AT_REDESIGN A12, follow-up 11), which is not known vacant:
+; A plucked element is left Uninit over the element's own slot (section 44), which is not known vacant:
 ; the old word may still be in the array.
 
 (def-fns _ $ (many leak-test : -> (many (Nat) result))

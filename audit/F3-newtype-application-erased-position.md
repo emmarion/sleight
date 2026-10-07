@@ -7,9 +7,9 @@ error carrying no source location.
 
 ## The rule
 
-UNIQUE.md U8: the at-database is a partition of scope entries, and one of
+DESIGN.md section 36: the at-database is a partition of scope entries, and one of
 its writers is "a newtype constructor application (the value with its
-non-erased argument, U9)". DESIGN.md section 20: an erased position's value
+non-erased argument, section 37)". DESIGN.md section 14: an erased position's value
 is never computed, so nothing there has a word. Nothing forbids writing a
 newtype application in an erased position.
 

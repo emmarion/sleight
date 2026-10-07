@@ -1,8 +1,8 @@
 ; expect: 2
-; DESIGN.md sections 31 and 32: List and length; Nat comes from the prelude.
+; DESIGN.md sections 55 and 56: List and length; Nat comes from the prelude.
 ; The declarations here deliberately shadow: List, Nil and Cons are the prelude's
-; own names, redeclared so that section 31's worked example stands on its own, and
-; Cons's tail field is section 27's tail marker, which is the case the warning is
+; own names, redeclared so that section 55's worked example stands on its own, and
+; Cons's tail field is section 54's tail marker, which is the case the warning is
 ; most worth finding. The ; warns: lines at the end of the file are what that
 ; earns; the rest of the tests are clean of it. They sit at the end because each
 ; names a line of this file, and a directive written above the code it names moves

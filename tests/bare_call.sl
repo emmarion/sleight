@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 3
-; Calls with no decrease annotation (SUGAR.md 3): where the levels differ the elaborator supplies
+; Calls with no decrease annotation (DESIGN.md section 48): where the levels differ the elaborator supplies
 ; (predates _), where they agree it supplies (subterm _) at the first subterm argument that differs from
 ; its counterpart; a written (subterm _) still reads the same.
 

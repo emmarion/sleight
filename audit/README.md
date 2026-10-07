@@ -15,7 +15,7 @@ Fixed in `fa5747a`, each with a test under `tests/`:
 - F1. An `at` return reconstructed from an erased binder's word
 - F2. Self `let-match many` hands a unique-labelled field out at unique
 - F3. A newtype application in an erased position refused as a non-variable location
-- F4. FIXED (§38): `coercible-of` fetches the newest anonymous proof, shadowing the delegate proof
+- F4. FIXED (§33): `coercible-of` fetches the newest anonymous proof, shadowing the delegate proof
 - F5. A size-zero position treated as erased (a reading)
 - F6. A type former's head recorded as a use, inconsistently (a reading)
 - F7. A zero-binder `let` inside a body drops its right-hand side's code
@@ -26,33 +26,33 @@ Defects. B3 is the one still in BUGS.md; B1's and B2's entries were
 removed from there when they were fixed, as were their files here:
 
 - B1. FIXED (ASSUMPTIONS 184): Discriminant-free values print differently in the interpreter and extracted code
-- B2. FIXED (§22): `array-new` beyond the host's limits escapes as an OCaml exception
+- B2. FIXED (§31): `array-new` beyond the host's limits escapes as an OCaml exception
 - B3. `tail` refused in a function whose returns are all erased
 
 Open questions for the owner, also in ASSUMPTIONS 183; a settled one
 keeps its line, marked as the fixed items above are:
 
-- Q1. FIXED (§15, U5, §19): `comptime-match many` on a unique Const cannot write its `share`
-- Q2. FIXED (§20, U0, U3, U10): An erased-position `unique` match mints `SlotHolds` over erased binders
+- Q1. FIXED (§8, §23, §28): `comptime-match many` on a unique Const cannot write its `share`
+- Q2. FIXED (§14, §16, §38): An erased-position `unique` match mints `SlotHolds` over erased binders
 - Q3. Structural Matchable marks prevent abstracting over extern and non-extern
-- Q4. FIXED (U1): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
-- Q5. Slot-indexed user types reach U10's class merge, U15's deferred question
-- Q6. FIXED (U13): U13's text as written needed two repairs to elaborate
+- Q4. FIXED (§13): `coercible-wrap (Unique)` over a many-labelled field mints unique aliases
+- Q5. Slot-indexed user types reach §38's class merge, OPEN.md 3's deferred question
+- Q6. FIXED (§44): §44's text as written needed two repairs to elaborate
 
 Minor observations, not acted on unless marked:
 
 - M1. `matchable-of` records no use of the Matchable entry
-- M2. FIXED (§20, U3): `read_special`'s share branch lacks the erased-position guard
+- M2. FIXED (§14, §16): `read_special`'s share branch lacks the erased-position guard
 - M3. ML and self give different messages for some refusals
-- M4. FIXED (U4): The phantom-with-unique-field warning text said "many field"
+- M4. FIXED (§22): The phantom-with-unique-field warning text said "many field"
 - M5. `_` not accepted as a `Cell` slot in a type
 - M6. `at_equal` structural in ML, variable-only in self
-- M7. FIXED (U12): Stale comments said "many fields" where the code counts non-erased
+- M7. FIXED (§43): Stale comments said "many fields" where the code counts non-erased
 - M8. `Ffi.claim_fn` never checks an implementation's result count
 - M9. `--no-templates` is a vacuous check for arrays
 - M10. Stripped-extern `array-new` is quadratic
 - M11. An extern's signature is elaborated outside the extern body's cell context
-- M12. FIXED (U1): `coerce` via the sym of a delegate proof mints a unique alias of a shared Fn
+- M12. FIXED (§13): `coerce` via the sym of a delegate proof mints a unique alias of a shared Fn
 
 What was checked and found correct is not itemised here; the coverage
 was every rule of U1 to U14 that could be turned into a program, roughly

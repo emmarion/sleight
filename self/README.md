@@ -1,7 +1,7 @@
 # slc: a compiler from SL to OCaml, written in SL
 
-`self/` holds a compiler for the language of DESIGN.md and UNIQUE.md
-(excluding U15; tentatively
+`self/` holds a compiler for the language of DESIGN.md
+(excluding OPEN.md 16 and 17; tentatively
 "SL"), written in that language and compiling it to OCaml. It was
 written by a Claude session working autonomously at the owner's request
 ("let's self host"); everything here is that session's reading of the
@@ -13,7 +13,7 @@ tests do not make is a mistake in this file.
 ## What it is
 
 The uniqueness extension adds `def-unique`, explicit `share`, per-branch use
-checking, slots in the fact table (AT_REDESIGN.md: every entry is minted
+checking, slots in the fact table (DESIGN.md section 35: every entry is minted
 with an anonymous entry of type `(Slot)`, erased where the entry is, its
 automatic slot, and `(slot-of x)` canonicalizes to it by `x`'s binder, never
 through `x`'s rule), mutable cells at `unique` and at `many`, and
@@ -27,7 +27,7 @@ separately from allocation snapshots.
 
 A compiler that checks what it compiles. The reference interpreter in
 `lib/` is the arbiter of the language; `slc` does the same elaboration
-(DESIGN.md sections 3-5, 9, 12, 16-20, 34, 38), with every check of
+(DESIGN.md sections 5-9, 14, 19, 21, 24, 27, 29 and 33), with every check of
 `lib/elab.ml` and `lib/env.ml` ported: canonicalize-then-compare
 identity of types and values, erasure by position, the call-site level
 and subterm proofs, forced unification that refutes a branch by
@@ -37,14 +37,14 @@ tail and delegate marks on the normalized code, newtype shape, extern
 claims, the opening of a marked `Matchable` that every read of one
 requires and the contradiction `open-absurd` cashes in (ASSUMPTIONS
 139-142), and the reader's and literals' syntax errors; `unary` and
-`distinct` (SUGAR.md 5) expand to the prelude calls the reference
-writes down, in the prelude's scope as there; a `_` argument (SUGAR.md 6)
+`distinct` (DESIGN.md section 49) expand to the prelude calls the reference
+writes down, in the prelude's scope as there; a `_` argument (DESIGN.md section 50)
 is solved as the reference solves it, by a meta the scope and the
 type-directed lookups never see, and the unifier's forcing mode is a
 flag. Its error messages are the reference's, and
 `self/bootstrap.sh` requires every test that expects an error to be
 refused with a message mentioning the expected text. What it does not
-do: verify that the interpreter's evaluation is honest (KERNEL.md's
+do: verify that the interpreter's evaluation is honest (DESIGN.md section 29's
 interpreter-trust obligation applies to it as much as to `lib/`).
 
 The compile-time part is the "comp time / Const stuff" the owner asked
@@ -54,8 +54,8 @@ statement, and the values it computes are embedded in the OCaml output
 as data, closures included, rather than recomputed (ASSUMPTIONS 61's
 reading of the owner's intent). Extern types and functions run as the
 host's own `Nat`, `Half`, `String`, and mutable `Array` blocks, and a `Rope` is flattened by the
-host (section 41); a `U8` or a
-`Char`, both newtypes, is its `Nat` (section 38).
+host (section 42); a `U8` or a
+`Char`, both newtypes, is its `Nat` (section 33).
 
 ## Files
 
@@ -88,12 +88,12 @@ host (section 41); a `U8` or a
   were compared over the repository's own sources and over a thousand
   generated files of parens, tabs, comments and literals, well formed
   and not, and reported the same 10690 lines, notes included.
-- `core.sl` — terms with de Bruijn telescopes (section 5), the
-  special-form registry (section 27), runtime values and post-erasure
+- `core.sl` — terms with de Bruijn telescopes (section 9), the
+  special-form registry (section 54), runtime values and post-erasure
   code, the scope environment with its fact table and its list of opened
-  objects (sections 3, 18; ASSUMPTIONS 139),
+  objects (sections 5, 7; ASSUMPTIONS 139),
   canonicalization, instantiation, forced unification with its three
-  contradictions (section 18), term identity, and the built-in entries.
+  contradictions (section 7), term identity, and the built-in entries.
 - `eval.sl` — the compile-time interpreter over the store: every value
   is an address, every step returns the grown store with a proof of the
   growth by which what was held before is widened, and a run-position
@@ -293,7 +293,7 @@ the entry says otherwise, and recorded so it can be revisited.
   opened list (ASSUMPTIONS 139): each entry with its kind and the names
   its type holds canonically, the type constructor first, an index from
   name to the objects naming it, and the objects *touched* since section
-  19's invariant was last restored. The list is indexed by the table's
+  8's invariant was last restored. The list is indexed by the table's
   facts, `Opens n f`, and only the functions that change the facts mint
   one at a new index, each from the proof of the change (`Ins` for a
   fresh entry, `Out` for a ruling out), so the checker refuses a table
@@ -353,7 +353,7 @@ the entry says otherwise, and recorded so it can be revisited.
   own making, which is no descent into the form; spending one unit of
   the budget is the decrease the checker sees instead. The forms are
   built as raws rather than text read back (ASSUMPTIONS 124). A
-  `let-match` with branches (SUGAR.md 8) spends one unit on the `match`
+  `let-match` with branches (DESIGN.md section 52) spends one unit on the `match`
   it is rewritten to, and those can nest, so the budget is the
   top-level form's size (ASSUMPTIONS 197); its zero case
   is reported as an internal error, not refuted, since the sugar forms
@@ -379,7 +379,7 @@ the entry says otherwise, and recorded so it can be revisited.
   of values per frame and a lookup is total; a `let` extends the
   environment with the values picked from the same positions as its
   ids. A Const entry's value is embedded in the code with the entry
-  that named it (section 34), so the top level binds no frames and run
+  that named it (section 29), so the top level binds no frames and run
   position is the empty context: a statement runs at compile time
   exactly when its context is empty, and a branch body, an `else` body
   included, always sits under a frame. The elaborator decides each
@@ -406,8 +406,8 @@ the entry says otherwise, and recorded so it can be revisited.
   count was decided: `elab-expr` fits its results to the expectation
   after reporting a count error, so a consumer refutes the short list
   rather than filling in a placeholder.
-- **The sources write `_` and `$` wherever the checker allows** (SUGAR.md
-  6, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
+- **The sources write `_` and `$` wherever the checker allows** (DESIGN.md section
+  50, DESIGN.md section 2; ASSUMPTIONS 116): an erased index is left to
   unification where a later argument or the expected telescope fixes it,
   and a last argument on one line opens with `$`.
 - **`nat-cmp` is extern** (ASSUMPTIONS 90, 120, 123), so that the
@@ -430,8 +430,8 @@ the entry says otherwise, and recorded so it can be revisited.
 - **Not modelled**: the `--no-extern` mode (the compiler's interpreter
   always runs the FFI's externs, and the output always uses them), and
   macros, which the reference does not implement either. The warnings are
-  modelled: the phantom-constructor one of section 12, the shadowing one
-  of section 9 (ASSUMPTIONS 195) and the indentation ones above are
+  modelled: the phantom-constructor one of section 21, the shadowing one
+  of section 19 (ASSUMPTIONS 195) and the indentation ones above are
   collected in the environment as errors are
   and written to stderr ahead of either outcome, which the `; warns:`
   directive of every test carrying one checks

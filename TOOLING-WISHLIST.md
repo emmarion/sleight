@@ -29,7 +29,7 @@ Nothing here is a design decision; it is a log of friction, in the order met.
    what makes these functions 20 levels deep. Accepting a `let-match` when
    the index leaves one constructor possible would flatten most of
    `elabfn.sl`.
-   Implemented in DESIGN.md §16: `let-match` now accepts the unique
+   Implemented in DESIGN.md §27: `let-match` now accepts the unique
    structurally unrefuted constructor, including a phantom at `erased`.
 
 5. **`else` does not refine.** After `(else ...)` the scrutinee is not known
@@ -320,12 +320,12 @@ files are not in this tree; they are at commit `4912ada`
     changed shape; on today's profile the trie walk is a quarter of
     the run, so the gain would be a few percent. Under mutable blocks
     it needs the argument that a block a `many` match read is mutated
-    by neither side afterwards. Source-level, section 38's `coerce`
+    by neither side afterwards. Source-level, section 33's `coerce`
     with `coercible-ctor` says the same at zero cost.
 
 
 39. **A hints mode in the elaborator.** Converting the code base to the
-    SUGAR 7 and 8 forms needed the sites text search cannot tell apart:
+    sections 51 and 52 forms needed the sites text search cannot tell apart:
     a match whose every branch is absurd (erased or not), and a refuting
     match at the end of an absurd body with its annotation and branch
     kinds. A few lines printing those under an environment variable,

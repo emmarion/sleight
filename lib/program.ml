@@ -1,4 +1,4 @@
-(* Runs a program's final value against a [world] (DESIGN.md section 16), which the test runner stands in for. *)
+(* Runs a program's final value against a [world] (DESIGN.md section 27), which the test runner stands in for. *)
 open Term
 module V = Value
 include Driver_core

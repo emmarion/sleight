@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 2
-; Subterm recursion through an erased argument (section 12).
+; Subterm recursion through an erased argument (section 21).
 
 (def-adts
   ((Sing : ((Nat) n) -> Type)

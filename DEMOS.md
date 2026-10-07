@@ -69,7 +69,7 @@ while leaving the partition it denotes unchanged, which is the same
 separation `tests/cell_at_not_is_bad.sl` pins down, so this session expects
 the language's own distinction to be doing the work rather than being
 illustrated. `find`'s termination would want an erased rank or depth measure
-about the structure *before* compression, which UNIQUE.md U2 permits as an
+about the structure *before* compression, which DESIGN.md section 15 permits as an
 erased mention of a consumed binder. Expected cost: high. Unknown: whether
 the measure can be stated over a structure the same call is mutating, which
 is 1d's question in a harder setting.

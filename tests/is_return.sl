@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 1
-; Reifying an erased index through an is return (section 14).
+; Reifying an erased index through an is return (section 12).
 
 (def-adts
   ((Sing : ((Nat) n) -> Type)

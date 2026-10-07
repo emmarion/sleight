@@ -1,9 +1,9 @@
-; mini/ctx.sl -- the scope environment and fact table of DESIGN.md sections 3 and 18 for the minimal
+; mini/ctx.sl -- the scope environment and fact table of DESIGN.md sections 5 and 7 for the minimal
 ; language: entries with a type and a kind, names, the declared ADTs, and the rules of mini/canon.sl, in one
 ; record with the ambient level and subterm arguments. Lookups come with evidence. One session's proposal.
 
 ; An entry's kind: [KDecl] is a type or value constructor declared by def-adts or built in, rigid for
-; unification (ASSUMPTIONS 40); [KLevel] an entry def-lvl minted (section 8's marker).
+; unification (ASSUMPTIONS 40); [KLevel] an entry def-lvl minted (section 18's marker).
 (def-adts
   ((Kind : -> Type)
     enum
@@ -20,8 +20,8 @@
     enum
     (many MkAdt : (many (Nat) tycon) (many (List (Nat)) ctors) -> (Adt)))
   ; [next] is the first unused id: ids are never reused, so leaving a scope restores the lists and keeps it.
-  ; [level] is the current function's level, or [None] at the top level (section 24); [subargs] the
-  ; enclosing function's subterm-marked parameters (section 3).
+  ; [level] is the current function's level, or [None] at the top level (section 20); [subargs] the
+  ; enclosing function's subterm-marked parameters (section 5).
   ((Ctx : -> Type)
     enum
     (many MkCtx : (many (Nat) next) (many (List (Name)) scope) (many (List (Ent)) ents) (many (List (Rule)) rules) (many (List (Adt)) adts)

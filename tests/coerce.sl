@@ -1,6 +1,6 @@
 ; needs: list map
 ; expect: (Cons _ 1 $ Cons _ 0 $ Nil _)
-; DESIGN.md section 40: unwrapping a list with coerce, and a delegate proof. Needs list.sl and map.sl first.
+; DESIGN.md section 60: unwrapping a list with coerce, and a delegate proof. Needs list.sl and map.sl first.
 
 (def-adts $ (Meters : -> Type)
   enum newtype

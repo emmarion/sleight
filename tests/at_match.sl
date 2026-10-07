@@ -1,5 +1,5 @@
 ; expect: (Cons _ 1 $ Cons _ 2 $ Nil _)
-; An at-match (AT_REDESIGN A9): its annotation is written in an `at` form, every entry erased or `at`, its
+; An at-match (section 40): its annotation is written in an `at` form, every entry erased or `at`, its
 ; branches erase to nothing, and it skips its runtime; coverage is still checked.
 (def-adts $ (Meters : -> Type) enum newtype (many MkMeters : (many (Nat) n) -> (Meters)))
 (def-fns _ $ (many at unwrap : (subterm many (List (Meters)) ms) -> (many (List (Nat)) ns at ms))

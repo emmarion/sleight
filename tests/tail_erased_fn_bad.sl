@@ -1,5 +1,5 @@
 ; error: `tail` in an erased position
-; The body of an erased function is an erased position throughout (section 20), so a tail mark there
+; The body of an erased function is an erased position throughout (section 14), so a tail mark there
 ; is refused as in any other erased position.
 
 (def-lvl L)

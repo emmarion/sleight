@@ -1,6 +1,6 @@
 ; error: `Matchable` for `T` is erased
 ; The marker is the opened entry's multiplicity: a many parameter opened at erased serves no match that
-; dispatches at runtime (DESIGN.md section 19, ASSUMPTIONS 139).
+; dispatches at runtime (DESIGN.md section 8, ASSUMPTIONS 139).
 
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)

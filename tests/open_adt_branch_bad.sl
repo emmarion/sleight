@@ -1,6 +1,6 @@
 ; error: has no `Matchable` open
 ; An open inside a match branch ends with the branch, as the branch's facts do
-; (DESIGN.md section 19): the match after it finds nothing.
+; (DESIGN.md section 8): the match after it finds nothing.
 
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)

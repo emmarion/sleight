@@ -1,5 +1,5 @@
 ; expect: 7
-; A union newtype with several wrapping constructors (section 38): each wraps its own field type at no
+; A union newtype with several wrapping constructors (section 33): each wraps its own field type at no
 ; cost, the index telling them apart, and NoEither is fieldless. Rewrapping 7 from Left to Right goes
 ; through the field.
 

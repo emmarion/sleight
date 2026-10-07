@@ -1,4 +1,4 @@
-#!pi -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -f ../../SUGAR.md -k NOTES.md:2000 -n 1 PI_CONTEXT_STOP=10 PI_REWRITE_STOP=2 PI_RUN_TIMEOUT=60
+#!pi -f ../../lib/prelude.sl -f ../../tests -f ../../DESIGN.md -k NOTES.md:2000 -n 1 PI_CONTEXT_STOP=10 PI_REWRITE_STOP=2 PI_RUN_TIMEOUT=60
 Your task is to write fib.sl, an SL program whose value is F(90), the 90th Fibonacci number (F(0) = 0, F(1) = 1).
 Check it with the `sl` tool: it must compile with no warnings and print the number. Compute it iteratively, so that it
 runs in well under a second. Call `done` once it prints the right number.
@@ -17,8 +17,8 @@ function over `Nat`:
 (ack 2 3)
 ```
 
-`nat-add` adds two `Nat`s. For reference: prelude.sl (the standard library), tests/ (example programs), DESIGN.md and
-SUGAR.md.
+`nat-add` adds two `Nat`s. For reference: prelude.sl (the standard library), tests/ (example programs) and
+DESIGN.md.
 
 Your session has two phases: first the task, then writing NOTES.md, a few lines on how it went. Each phase has its own
 budget of tokens, and every tool result says how much is left. In the second phase, NOTES.md is the only file you can

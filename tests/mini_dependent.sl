@@ -1,6 +1,6 @@
 ; needs: ../mini/base ../mini/term ../mini/canon ../mini/ctx ../mini/unify ../mini/core ../mini/eval ../mini/elab ../mini/elabfn ../mini/raw
 ; expect: (Cons _ (VCon 5 $ Nil _) $ Nil _)
-; Branch refinement and refutation in the minimal language (DESIGN.md sections 12, 18; MINIMAL.md):
+; Branch refinement and refutation in the minimal language (DESIGN.md sections 7, 21; MINIMAL.md):
 ;   (def-adts (Box (((Nat) n)) (MkBox (((Nat) m)) (Box m))))
 ;   (def-fns L (f (((Box (Zero)) b)) (((Nat) r))
 ;     (match b (((Nat) r)) ((MkBox m) (match m (((Nat) r2)) ((Zero) (Zero)))))))

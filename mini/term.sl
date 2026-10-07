@@ -1,13 +1,13 @@
-; mini/term.sl -- the restricted type grammar of DESIGN.md section 5 as terms with de Bruijn telescopes
+; mini/term.sl -- the restricted type grammar of DESIGN.md section 9 as terms with de Bruijn telescopes
 ; (MINIMAL.md), and three relations over it with the functions that derive them: substitution of a
 ; telescope's binders, abstraction of scope entries into binders, and whether a term may be assigned to a
-; variable (section 18's occurs check and its third contradiction). Every function recurses on the term,
+; variable (section 7's occurs check and its third contradiction). Every function recurses on the term,
 ; so none needs fuel. One session's proposal, not settled design.
 
 ; A term has-is closed except for [Bound] references into the telescopes enclosing it, innermost first. [Univ] has-is
 ; the universe itself: DESIGN.md section 10 makes it a nullary type constructor, and this file keeps it a term
 ; so that Type : Type has-is one rule rather than one entry. An entry's [is] flag says whether its term has-is the
-; entry's type or the value it has-is definitionally equal to (section 14).
+; entry's type or the value it has-is definitionally equal to (section 12).
 (def-adts
   ((Term : -> Type)
     enum
@@ -293,7 +293,7 @@
     (values (Cons _ (MkEntry s i u) fs) out (AbsTCons ids s i t u rest fs out p q))))
 
 ; ---- Assignability: a variable may be given a term as its rule when the term does not mention it (the
-; occurs check) and mentions no binder of a telescope it sits under (section 18's third contradiction).
+; occurs check) and mentions no binder of a telescope it sits under (section 7's third contradiction).
 ; [Assignable d x t] says so of a term under [d] binders of its own; [Unassignable d x t] has-is the evidence
 ; that it has-is not, one rule per place the offence can sit.
 

@@ -5,8 +5,8 @@ module IntMap = Map.Make (Int)
 (* [Same]: a same-level call in a non-erased position carrying no mark, where the tail-position check warns. *)
 type cc = Plain | Tail | Delegate | NoTail | Ctor | Same of Reader.loc * Term.term
 
-(* [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom ones, each
-   at its discriminant; [ext]: the FFI's implementation (section 41), its values then [VExt] payloads. *)
+(* [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom ones, each
+   at its discriminant; [ext]: the FFI's implementation (section 42), its values then [VExt] payloads. *)
 type adt = { tname : string; tagged : bool; newtype : bool; mutable ctors : ctor list; mutable ext : ext option }
 and ctor = { cname : string; cid : id; index : int; arity : int; adt : adt }
 and ext = { construct : int -> value list -> value; destruct : value -> int * value list }
@@ -41,7 +41,7 @@ and code =
   | CCellRead of ctor * int * code
   | CAbsurd
 
-(* Branches are keyed by discriminant (section 38). [shape] is how the scrutinee comes apart (section 17): an
+(* Branches are keyed by discriminant (section 33). [shape] is how the scrutinee comes apart (section 24): an
    ADT the elaborator saw, or a Matchable read at runtime, its type having settled the shape its values take. *)
 and matching = { scrut : code; shape : shape; branches : (int * id list * code) list; default : code option; live : int list }
 and shape = Known of adt | Held of code * adt
@@ -70,7 +70,7 @@ let subcodes c =
 let aliases : (id, id) Hashtbl.t = Hashtbl.create 16
 let resolve x = Option.value (Hashtbl.find_opt aliases x) ~default:x
 
-(* Extern implementations run unless stripped (section 41's invariant). *)
+(* Extern implementations run unless stripped (section 42's invariant). *)
 let use_externs = ref true
 
 (* An untagged value is its many fields: one of them bare, none the token. *)

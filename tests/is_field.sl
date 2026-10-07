@@ -1,7 +1,7 @@
 ; needs: list
 ; expect: (Two _ _ $ Cons _ 0 $ Cons _ 1 $ Nil _)
-; Duo is transparent (section 38), so a Two is represented as its list.
-; Section 30's constructor with an is field.
+; Duo is transparent (section 33), so a Two is represented as its list.
+; Section 3's constructor with an is field.
 
 (def-adts
   ((Duo : ((Nat) a) ((Nat) b) -> Type)

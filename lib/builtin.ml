@@ -1,4 +1,4 @@
-(* The source prelude, lib/prelude.sl, elaborated over Prelude.env ahead of every program (section 41), unless
+(* The source prelude, lib/prelude.sl, elaborated over Prelude.env ahead of every program (section 42), unless
    [prelude] is false. *)
 let load ?(prelude = true) () =
   Ffi.reset ();

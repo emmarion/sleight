@@ -206,7 +206,7 @@ structurally, with the relations kept as they were:
   ASSUMPTIONS 89); `Refine` and `Contradict` take one equation, the
   scrutinee against the pattern, the type equation following from it.
   So `mini/` is now stricter than the reference: whether `lib/` and
-  `self/` should follow, and the sentence section 18 of DESIGN.md would
+  `self/` should follow, and the sentence section 7 of DESIGN.md would
   need, are for the owner. For the function side this moved the stuck
   into unification (`RefStuck`, propagated as the `Stuck` constructors
   of the walk's result types, which only `Force` mode can be). This
@@ -292,13 +292,13 @@ carried:
 Next, in the session's estimation: the head-type stuck, by one of the
 routes discussed with the owner (a well-typedness invariant carried
 through unification, or recording an application's former or type on the
-term as DESIGN.md section 3's entries do).
+term as DESIGN.md section 5's entries do).
 
 ## The head-type stuck closed by `TyApp` and `ValApp` (one session)
 
 Done, at the owner's word after a chat comparison of the two routes
 above: `Term`'s one `App` became `TyApp head params args` and
-`ValApp head params ret args`, DESIGN.md section 5's productions 2 and 3
+`ValApp head params ret args`, DESIGN.md section 9's productions 2 and 3
 each with the former it applies recorded on the node, so that
 `TypeOfTerm` needs no head type and `type-of-term` is total;
 `mini/README.md` has the shape and what it leaves to the metatheory (the
@@ -317,7 +317,7 @@ recorded former's agreement with the head's type is checked nowhere).
   `subterm-ps`, shared with `init-ctx`. The rules that read a type's
   shape match `TyApp` and count a `ValApp` as not having the shape
   (`NotTyApp`); `StrictSub` walks through either kind by `AppParts`,
-  as section 8 says. New erased fields on these rules (the params
+  as section 18 says. New erased fields on these rules (the params
   read, `hps`/`tps`/`aps`) are the only other change to the relations.
 - `tests/mini_term.sl` and `tests/mini_unify.sl` build the split terms
   by hand; every test and the bootstrap pass.
@@ -414,8 +414,8 @@ should know:
 
 Open, none of it decided:
 
-1. Whether DESIGN.md section 16 should record that the driver consumes
-   an `IO` value at unique (186), and whether U6 should mention that the
+1. Whether DESIGN.md section 27 should record that the driver consumes
+   an `IO` value at unique (186), and whether section 32 should mention that the
    driver's application of a continuation is the one use a request's
    `UniqueFn` gets.
 2. A prelude wrapper from an `Fn` at a lower level to a `UniqueFn`
@@ -461,9 +461,9 @@ unification function.
 
 ## The `at` redesign (one session, autonomous, with a subagent for `self/`)
 
-Done, at the owner's direction: AT_REDESIGN.md's A1 to A11 and A12's
-follow-up 11, in `lib/` and in `self/`, on the branch `at-redesign`.
-Nothing in DESIGN.md, UNIQUE.md, SUGAR.md or LITERALS.md was changed;
+Done, at the owner's direction: DESIGN.md sections 35 to 41 and section 44's
+`array-unpluck`, in `lib/` and in `self/`, on the branch `at-redesign`.
+The specification files were not changed;
 ASSUMPTIONS 200-210 hold the readings this session made where the
 proposal and AT_REDESIGN_REVIEW.md are silent, and the tests named there
 and under `tests/at_*`, `slot_*`, `cell_many_*`, `cell_binder_*`,
@@ -471,23 +471,18 @@ and under `tests/at_*`, `slot_*`, `cell_many_*`, `cell_binder_*`,
 `array_unpluck` pin the behaviour. `self/README.md` says what the port
 chose where the reference left it room.
 
-What the owner still has to decide, none of it settled here:
+What the owner still has to decide, none of it settled here (the cell
+binder's optionality and the `(Slot)`-typed binder's own slot, decided
+in chat, are DESIGN.md sections 23 and 35 now; ASSUMPTIONS 201 and 204
+say how far the slot default reaches, and reverting it is the one line
+minting the slot's rule in `Env.bind` and its counterpart in
+`self/core.sl`'s `bind-as-raw`):
 
-- AT_REDESIGN A8 says the cell binder is mandatory; the owner decided in
-  chat that it is optional at `unique` and at `many`, and the code
-  follows the chat. A8's wording is the owner's to update (rule 12).
-- The owner decided in chat that `vacant-slot` is its own `at` (review
-  item 17) and, tentatively ("yeah probably"), that a `(Slot)`-typed
-  binder is its own `at` by default (review item 30); the code follows
-  the chat (ASSUMPTIONS 201 and 204 say how far the check reaches), and
-  AT_REDESIGN.md's wording is the owner's to update (rule 12). Reverting
-  the default is the one line minting the slot's rule in `Env.bind` and
-  its counterpart in `self/core.sl`'s `bind-as-raw`.
 - Whether `tail`, `notail` or `delegate` on a skipped at-call should be
-  the error it is now (ASSUMPTIONS 207) or be ignored.
-- A12.5's tier-1 list, and the A12 items 1-4 left for version two.
+  the error it is now (ASSUMPTIONS 207) or be ignored (OPEN.md 21).
+- OPEN.md 2's tier-1 list, and OPEN.md 18 to 20.
 
-Done after that, in the same session: AT_REDESIGN A2, A5, A6 and A10
+Done after that, in the same session: sections 35, 36 and 39
 as the owner approved them, in `lib/` and in `self/` (the port by a
 subagent), with `origin/at-redesign`'s `0af18f3` (a `(Slot)`-typed
 binder is its own slot; the at-parameter rename fix) merged in at the
@@ -525,8 +520,8 @@ every rule added, more than half of the reference's run before, is an
 integer comparison now (5ed34ef); `slc` indexes its opens and had no
 such cost to recover. A differential profile of `slc` (callgrind, old
 against new) puts the whole increase in proportional work: 72 percent
-more fact-table inserts (one slot entry per non-erased binder, A2), a
-rule-out per placement (nearly every binder is placed, U8's writers), a
+more fact-table inserts (one slot entry per non-erased binder, section 35), a
+rule-out per placement (nearly every binder is placed, section 36's writers), a
 larger live table for every lookup and for the GC, with no single hot
 function and the `slots-in` pass at about one percent of the run. The
 placement of a fresh slot is a direct rule rather than a forcing in

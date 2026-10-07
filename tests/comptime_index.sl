@@ -1,7 +1,7 @@
 ; needs: list
 ; expect: (SSucc _ $ SZero)
 ; A field projected by comptime-match serves as a type index afterwards. The stored value is
-; never consulted by canonicalization (section 18), so zero needs its own comptime-match.
+; never consulted by canonicalization (section 7), so zero needs its own comptime-match.
 
 (def-adts
   ((Sing : ((Nat) n) -> Type)

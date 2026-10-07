@@ -1,13 +1,13 @@
 # M11. An extern's signature is elaborated outside the extern body's cell context
 
-Status: observation; consistent with U12 as written.
+Status: observation; consistent with section 43 as written.
 
-UNIQUE.md U12: inside an extern function's body no type counts as marked
-`extern` for U8's `at` rules and U9's cells. `elab_def_fns` elaborates a
+DESIGN.md section 43: inside an extern function's body no type counts as marked
+`extern` for section 36's `at` rules and section 37's cells. `elab_def_fns` elaborates a
 function's header, its signature, from the outer environment, and only
 `define` sets the in-extern flag for the body. So a `Cell` of the extern's
 own type cannot appear in its telescope even though its body may build
-one. U12 speaks only of the body, and no current model needs a cell in
+one. Section 43 speaks only of the body, and no current model needs a cell in
 its signature, so this looks consistent; recorded in case a future model
 wants to pass a cell between externs.
 

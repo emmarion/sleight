@@ -128,7 +128,7 @@
     ((SNil) (BTrue))
     ((SCons c rest) (and (char-between c 48 57) $ notail $ all-digits rest))))
 
-; A numeral or a #\c character literal, which no name may spell (section 28, ASSUMPTIONS 51).
+; A numeral or a #\c character literal, which no name may spell (section 1, ASSUMPTIONS 51).
 (def-fns _ $ (many is-literal-name : (many (String) s) -> (many (Bool) r))
   (let-match many s (SCons c rest) ((SNil) (BFalse)))
   (or (all-digits s)

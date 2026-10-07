@@ -1,6 +1,6 @@
-; self/elab.sl -- the elaborator and checker (self/README.md): head dispatch (DESIGN.md section 4), erasure
-; by position (section 20), calls with their proofs, matches with refutation and else (sections 12, 17, 38),
-; the seven statements with run-position statements run at once (sections 16, 34), literals, and the sugar
+; self/elab.sl -- the elaborator and checker (self/README.md): head dispatch (DESIGN.md section 6), erasure
+; by position (section 14), calls with their proofs, matches with refutation and else (sections 21, 24, 33),
+; the seven statements with run-position statements run at once (sections 27, 29), literals, and the sugar
 ; expansions. It mirrors lib/elab.ml with every check ported (ASSUMPTIONS 91); an error is recorded as a
 ; value and elaboration goes on, so a program may be refused with more than one message.
 
@@ -101,7 +101,7 @@
 (def-fns _ $ (many name-or-anon : (many (String) n) -> (many (Maybe $ String) r))
   (match many (str-cmp n "_") _ ((CEq _ _ _) (None _)) (else (Some _ n))))
 
-; A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4).
+; A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6).
 (def-fns _ $ (many special-of-entry : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Sp) r))
   (let ((erased a2) (many blk)) $ env-block env x)
   (let-match many blk (Some _ b2) ((None _) (None _)))
@@ -421,7 +421,7 @@
     ((None _) (Nil _))
     ((Some _ l) (Cons _ (MkPair _ _ l $ str-cat3 (qshown env x) " is declared" $ str-cat how " here") $ Nil _))))
 
-; A use of an entry at a position's multiplicity (section 20, UNIQUE.md U2), its message built only when the
+; A use of an entry at a position's multiplicity (section 14, DESIGN.md section 15), its message built only when the
 ; use is refused.
 (def-fns _ $ (many use-entry-as : (many (Env) env) (many (Mult) pos) (many (Nat) x) (many (Bool) sharing) (many (Maybe $ String) written) -> (many (Env) r))
   (let-match many (and (mult-is-many pos) $ not $ env-usage-erased env) (BTrue) ((BFalse) env))
@@ -1062,7 +1062,7 @@
     ((TBound _) (values env2 x)) ((TErr _) (values env2 x)) (else (values (env-error env2 $ str-cat3 (qshow env2 $ TVar x) " is not " what) x))))
 
 
-; ---- Source telescopes (section 30), with erased proofs placing every raw they hold inside the raw list it
+; ---- Source telescopes (section 3), with erased proofs placing every raw they hold inside the raw list it
 ; was read from; the elaborator recurses on those raws.
 
 ; b is a, or a strict subterm of a.
@@ -1122,7 +1122,7 @@
     (many SrcTy : (erased (List $ Raw) root) (many (Raw) r) (erased (Subterm (Raw) r (List $ Raw) root) p) -> (SrcSg root))
     (many SrcIs : (erased (List $ Raw) root) (many (Raw) r) (erased (Subterm (Raw) r (List $ Raw) root) p) -> (SrcSg root))))
 
-; Whether every binder carries a type or an is clause, so a let's binders are a telescope (SUGAR.md 6).
+; Whether every binder carries a type or an is clause, so a let's binders are a telescope (DESIGN.md section 50).
 (def-fns _ $ (many all-have-sg : (erased (List $ Raw) root) (subterm many (List $ SrcEntry root) es) -> (many (Bool) r))
   (let-match many es (Cons _ e rest) ((Nil _) (BFalse)))
   (let-match many e (MkSrcEntry _ _ _ ssg _ _ _))
@@ -1197,7 +1197,7 @@
       (let ((many f) (many s) (many rest) (erased wr)) $ notail $ take-marks more _ wm env first second)
       (values f (BTrue) rest wr))))
 
-; A function header's marks, `absurd`, `extern` and `at`, in any order (AT_REDESIGN A10).
+; A function header's marks, `absurd`, `extern` and `at`, in any order (section 39).
 (def-fns _ $ (many take-marks3 : (subterm many (List $ Raw) items) (erased (List $ Raw) root) (erased (Within items root) w) (many (Env) env) -> (many (Bool) isabs) (many (Bool) isext) (many (Bool) isat) (many (List $ Raw) rest) (erased (Within rest root) wr))
   (let-match many items (Cons _ t more) ((Nil _) (values (BFalse) (BFalse) (BFalse) items w)))
   (let ((erased wm)) $ within-step _ _ _ (prove-subterm more items) w)
@@ -1207,7 +1207,7 @@
   (let ((many a2) (many e2) (many f2) (many rest) (erased wr)) $ notail $ take-marks3 more _ wm env)
   (values (or a a2) (or e e2) (or f f2) rest wr))
 
-; ---- Constructors, Matchables and shapes (sections 17, 19, 38)
+; ---- Constructors, Matchables and shapes (sections 8, 24, 33)
 
 (def-fns _ $ (many adt-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Adt) r))
   (let ((erased a) (many blk)) $ env-block env x)
@@ -1261,7 +1261,7 @@
     (else (tail $ find-matchable-in rest env tid cands))))
 
 
-; The anonymous Coercible proof def-fns minted for a delegating function g (section 38).
+; The anonymous Coercible proof def-fns minted for a delegating function g (section 33).
 (def-fns _ $ (many find-proof : (subterm many (List $ Nat) objects) (many (Env) env) (many (Nat) ctor) (many (Nat) arity) (many (Nat) index) (many (Nat) g) -> (many (Maybe $ Nat) r))
   (let-match many objects (Cons _ x rest) ((Nil _) (None _)))
   (let ((many hit)) $ match many (proof-target env x ctor arity index) (((Bool) _)) ((Some _ g2) (nat-eq g2 g)) ((None _) (BFalse)))
@@ -1275,7 +1275,7 @@
     ((None _) (values (env-error env2 $ str-cat (qshown env2 g) $ str-cat3 " has no `" kind "` proof in scope") $ None _))
     ((Some _ x) (values env2 $ Some _ $ TVar x))))
 
-; A Matchable's constructors, each with its phantom marker, id and number of many fields (section 38).
+; A Matchable's constructors, each with its phantom marker, id and number of many fields (section 33).
 (def-adts $ (CShape : -> Type)
   enum
   (many MkCShape : (many (Mult) m) (many (Nat) c) (many (Nat) arity) -> (CShape)))
@@ -1298,7 +1298,7 @@
   (let-match many s (MkCShape _ c2 _))
   (match many (nat-cmp c c2) _ ((CEq _ _ _) (Some _ i)) (else (tail $ shape-index rest c $ Succ i))))
 
-; A phantom constructor heads no runtime value (section 20 rule 2), so discriminants number the others only.
+; A phantom constructor heads no runtime value (section 14 rule 2), so discriminants number the others only.
 (def-fns _ $ (many discriminant : (many (List $ CShape) ss) (many (Nat) c) -> (many (Nat) r))
   (match many (shape-index (non-phantom ss) c 0) _ ((None _) 0) ((Some _ i) i)))
 
@@ -1327,7 +1327,7 @@
   (let-match many s (MkCShape m _ n))
   (or (and (mult-is-many m) $ nat-lt 1 n) $ notail $ some-wide rest))
 
-; The wrapping constructors of a type of newtype shape (section 38), none if it is not of that shape.
+; The wrapping constructors of a type of newtype shape (section 33), none if it is not of that shape.
 (def-fns _ $ (many newtype-wrappers : (many (Disc) disc) (many (List $ CShape) ss) -> (many (List $ Nat) r))
   (match many (or (tagged-of disc ss) $ some-wide ss) _
     ((BTrue) (Nil _))
@@ -1359,7 +1359,7 @@
   (match many s _
     ((MkCShape _ c n) (Cons _ (MkCtor (entry-name-or-id env c) c index n tagged ext shape nt) $ notail $ ctor-records rest env (Succ index) tagged ext shape nt))))
 
-; The ADT a Matchable's type describes (section 17): the non-phantom constructors at their discriminants.
+; The ADT a Matchable's type describes (section 24): the non-phantom constructors at their discriminants.
 (def-fns _ $ (many mint-adt : (many (Env) env) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) (many (Maybe $ ExtType) ext) (many (Bool) nt) -> (many (Adt) r))
   (let ((many tagged)) $ tagged-of disc ss)
   (MkAdt (entry-name-or-id env tid) tagged (ctor-records (non-phantom ss) env 0 tagged ext (cshape-arities $ non-phantom ss) nt) ext nt))
@@ -1367,7 +1367,7 @@
 (def-fns _ $ (many alias-target : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
   (match many (idmap-get _ x $ env-aliases env) _ ((Hit _ _ _ t _) t) ((Miss _ _ _ _) x)))
 
-; A variable in a non-erased position: a Const entry's value embedded with its entry (section 34), or a
+; A variable in a non-erased position: a Const entry's value embedded with its entry (section 29), or a
 ; Dyn entry's place in the frames the code binds.
 (def-fns _ $ (many var-code : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) x) -> (many (Code ctx many-one) r))
   (let-match many (is-const env x) (BFalse) ((BTrue) (CConst _ x)))
@@ -1381,7 +1381,7 @@
     ((Many) (var-code env ctx x))
     ((Once) (recast _ (Cons _ (Once) $ Nil _) many-one (MsManyOnce _ _ $ MsNil) $ var-code env ctx x))))
 
-; A match on an ADT the elaborator can see reads no Matchable at runtime (section 17); one on a held
+; A match on an ADT the elaborator can see reads no Matchable at runtime (section 24); one on a held
 ; Matchable reads it as the ADT its type describes.
 (def-fns _ $ (many match-shape : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) x) (many (Nat) tid) (many (Disc) disc) (many (List $ CShape) ss) -> (many (Shape ctx) r))
   (match many (adt-of env x) _ ((Some _ adt) (ShKnown _ adt)) ((None _) (ShHeld _ (var-code env ctx x) $ mint-adt env tid disc ss (None _) $ match many (type-of env x) (((Bool) _)) ((TMatchable _ nt _ _ _) nt) (else (BFalse))))))
@@ -1524,7 +1524,7 @@
   (match many (and (is-const env x) $ and (mult-is-many $ entry-mult-of env x) $ equal-env env p $ slot-atom x) _
     ((BTrue) (Some _ x)) ((BFalse) (tail $ at-constant rest env p))))
 
-; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (AT_REDESIGN A3).
+; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
 (def-fns _ $ (many direct-word : (many (Env) env) (many (List $ List $ Nat) ctx) (many (Term) p0) -> (many (Maybe $ Nat) r))
   (let-match many p0 (TSlotOf c) (else (None _)))
   (let-match many c (TVar x) (else (None _)))
@@ -1538,7 +1538,7 @@
   (match many found _ ((Some _ x) (values env x)) ((None _) (values (env-error env $ str-cat (say env "no caller word for `at` ") $ qshow env p) 0))))
 
 ; A parameter written `at` is not passed: inside the body it is a rename of the word its target holds
-; (AT_REDESIGN A3), bound over the frame of the runtime parameters [base], the first such parameter outermost;
+; (section 36), bound over the frame of the runtime parameters [base], the first such parameter outermost;
 ; [before] holds the parameters bound so far, the place of each entry being written over those alone.
 (def-fns _ $ (many at-renames : (subterm many (List $ Entry) params) (many (List $ Nat) pids) (many (List $ Term) before) (many (Env) env) (many (List $ List $ Nat) base) -> (many (Env) r) (many (List $ List $ Nat) ctx) (many (StmtCode base ctx) sc))
   (let-match many params (Cons _ e rest) ((Nil _) (values env base $ SNone _)))
@@ -1580,7 +1580,7 @@
     ((Many) (values env3 (Cons _ code codes) $ PkMany _ rest code codes pk))
     ((Once) (values env3 (Cons _ code codes) $ PkOnce _ rest code codes pk))))
 
-; What a signature passes or returns at runtime: its non-erased entries without a written `at` (AT_REDESIGN A3).
+; What a signature passes or returns at runtime: its non-erased entries without a written `at` (section 36).
 (def-fns _ $ (many runtime-ids : (subterm many (List $ Entry) tele) (many (List $ Nat) ids) -> (many (List $ Nat) r))
   (let-match many tele (Cons _ e rest) ((Nil _) (Nil _)))
   (let-match many ids (Cons _ x xrest) ((Nil _) (Nil _)))
@@ -1636,7 +1636,7 @@
   (not $ nat-is-zero $ runtime-count tele))
 
 ; [code] produces the runtime entries of [tele], bound to [rids]; the entries written `at` are read from the
-; words the code holds (AT_REDESIGN A3), as a call's returns are. An at-match [skipped] has no runtime at all.
+; words the code holds (section 36), as a call's returns are. An at-match [skipped] has no runtime at all.
 (def-fns _ $ (many reconstruct : (many (List $ List $ Nat) ctx) (many (Env) env) (many (List $ Mult) expect) (many (List $ Entry) tele) (many (List $ Nat) rids) (many (Bool) skipped) (many (Code ctx expect) code) -> (many (Env) r) (many (Code ctx expect) out))
   (let-match many (and (mult-is-many $ pos-mult expect) $ or skipped $ has-place tele) (BTrue) ((BFalse) (values env code)))
   (let ((many physical)) $ physical-mults tele)
@@ -1686,7 +1686,7 @@
     ((None _) (tail $ open-pair rest touched tos))))
 
 ; At most one opened Matchable names a given type constructor or value constructor, and at most one opened
-; Newtype a given constructor (section 19): two that would are unified, forcing, and the better-ranked entry
+; Newtype a given constructor (section 8): two that would are unified, forcing, and the better-ranked entry
 ; kept, the older on a tie, until no two name one thing; [fuel] bounds the merges by the list's length, and
 ; [touched] holds the objects whose names changed since the invariant last held, the unification adding to
 ; the environment's own those it changes.
@@ -1709,7 +1709,7 @@
     ((Nil _) (UOk env))
     ((Cons _ _ _) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
 
-; [x] is at the slot term [p] (AT_REDESIGN A4): a rule on its automatic slot, minted by forcing, the opened
+; [x] is at the slot term [p] (section 35): a rule on its automatic slot, minted by forcing, the opened
 ; objects merged after.
 ; While the slot is still the fresh atom it was minted as, with no rule, named by no opened object and absent
 ; from [p], the rule is added outright, which seems to be what forcing it would do; a slot a forcing has
@@ -1804,7 +1804,7 @@
     ((Nil _) (Nil _))
     ((Cons _ r rest) (Cons _ (name-or-anon $ raw-name r) $ notail $ raw-names rest))))
 
-; Entering a branch forces the scrutinee equal to the constructor over its fields (section 18).
+; Entering a branch forces the scrutinee equal to the constructor over its fields (section 7).
 
 (def-fns _ $ (many subterm-params : (subterm many (List $ Entry) tele) (many (List $ Nat) ids) -> (many (List $ Nat) r))
   (let-match many tele (Cons _ e rest) ((Nil _) (Nil _)))
@@ -1830,7 +1830,7 @@
       ((Nil _) (BFalse))
       ((Cons _ t rest) (or (term-eq a t) $ or (notail $ is-strict-subterm t a) $ notail $ subterm-in rest a)))))
 
-; A literal is an atom to the unifier (LITERALS.md): checking fails where one meets a Succ shape or another
+; A literal is an atom to the unifier (DESIGN.md section 45): checking fails where one meets a Succ shape or another
 ; literal, and forcing binds one where a contradiction was wanted. The notes name each literal a check or a
 ; trial turned on, a character standing for its code, with the first of [within] it sits in; numerals come
 ; first, then characters, each in order of value (lib/elab.ml's literal_notes).
@@ -1931,7 +1931,7 @@
   (let ((many hs)) $ forced-hits trial ls $ trial-bound trial ls)
   (literal-notes env (Cons _ (res-ty r) $ Cons _ (res-term r) $ Nil _) $ hits-kept hs hs $ Nil _))
 
-; ---- Checks (section 5's canonicalize-then-compare) and proofs (section 8)
+; ---- Checks (section 9's canonicalize-then-compare) and proofs (section 18)
 
 (def-fns _ $ (many ctor-result : (many (Env) env) (many (Term) t) -> (many (Maybe $ Pair (List $ Entry) (Term)) r))
   (match many (canon-env env t) _ ((TTyCtor ps) (Some _ $ MkPair _ _ ps type-term)) ((TValCtor ps ret) (Some _ $ MkPair _ _ ps ret)) (else (None _))))
@@ -1947,7 +1947,7 @@
   (let ((many p)) $ raw-pos r)
   (str-cat3 "\nhint: did you mean " (qraw $ RList p $ Cons _ r $ list-replicate _ (list-length _ ps) $ RAtom p "_") "?"))
 
-; Identity after canonicalization (section 5), solving any metas either side holds (unify-env); a mismatch
+; Identity after canonicalization (section 9), solving any metas either side holds (unify-env); a mismatch
 ; is reported only when asked to.
 (def-fns _ $ (many error-at-with : (many (Env) env) (many (Pos) pos) (many (List $ Pair (Loc) $ String) notes) (many (String) msg) -> (many (Env) r))
   (env-back env $ env-error-with (env-at env pos) notes msg))
@@ -2022,7 +2022,7 @@
   (Some _ $ match many remap (((Sink) _)) ((BTrue) (sink-mults k ms)) ((BFalse) k)))
 
 
-; A boundary (SUGAR.md 6): a term reaching one with a `_` still open is refused.
+; A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused.
 (def-fns _ $ (many settle : (many (Env) env) (many (Term) t) -> (many (Env) r))
   (match many (has-meta-env env t) _
     ((BTrue) (env-error-hinted env (Nil _) (cannot-infer env t) $ hole-hints env t))
@@ -2065,7 +2065,7 @@
   (error-unless-msg env ok msg-at))
 
 ; A result that is not a variable is bound to an anonymous one for the entries after it, so that a later
-; entry's `at` can name the slot it sits in (UNIQUE.md U2a).
+; entry's `at` can name the slot it sits in (DESIGN.md section 15).
 (def-fns _ $ (many result-term : (many (Env) env) (many (Res) r) -> (many (Env) r2) (many (Term) t))
   (let-match many (res-term r) (TVar _) (else (values env $ res-term r)))
   (let-match many (res-place r) (Some _ p) ((None _) (values env $ res-term r)))
@@ -2109,7 +2109,7 @@
     ((CEq _ _ _) (check-results tele env ress ids $ result-sites env body n))
     (else (count-error env " values" n m))))
 
-; prove-subterm (section 8): the first, canonicalized, is a strict subtree of the second through constructor
+; prove-subterm (section 18): the first, canonicalized, is a strict subtree of the second through constructor
 ; applications only.
 (def-fns _ $ (many provable-subterm : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Bool) r))
   (is-strict-subterm (canon-env env b) $ canon-env env a))
@@ -2126,7 +2126,7 @@
 (def-fns _ $ (many provable-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Bool) r))
   (and (entry-minted env lvl) $ nat-lt (predates-source env x0 lvl) lvl))
 
-; prove-predates (section 8): the variable was in scope when the level was minted (ASSUMPTIONS 13).
+; prove-predates (section 18): the variable was in scope when the level was minted (ASSUMPTIONS 13).
 (def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
   (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (qshown env lvl) (say env " is not a level minted by `def-lvl`"))))
   (let ((many x)) $ predates-source env2 x0 lvl)
@@ -2145,7 +2145,7 @@
 (def-fns _ $ (many proof-errs : (subterm many (Nat) n) -> (many (List $ Term) ts))
   (match many n _ ((Zero) (Nil _)) ((Succ k) (Cons _ (TErr "proof") $ notail $ proof-errs k))))
 
-; The three arguments of a Predates proof, or the four of a Subterm or Coercible proof (section 8).
+; The three arguments of a Predates proof, or the four of a Subterm or Coercible proof (section 18).
 (def-fns _ $ (many proof-terms : (many (Env) env) (many (Nat) ctor) (many (String) alt) (many (Res) p) (many (Nat) n) -> (many (Env) r) (many (List $ Term) args))
   (let ((many (Maybe $ List $ Term) args))
     (match many (proof-args env ctor p) _
@@ -2285,7 +2285,7 @@
 (def-fns _ $ (many find-matchable : (many (Env) env) (many (Nat) tid) -> (many (Env) r) (many (Maybe $ MatchInfo) info))
   (values env $ find-matchable-in (env-opens env) env tid $ index-of tid $ env-index env))
 
-; The constructors an extern function builds its result with, read off its model's return type (section 41):
+; The constructors an extern function builds its result with, read off its model's return type (section 42):
 ; the implementation's view and the declaration must agree on the shape, as they must for an extern type.
 (def-fns _ $ (many extern-ctors : (many (Env) env) (many (String) name) (many (List $ Entry) rets) (many (List $ Nat) want) -> (many (Env) r) (many (List $ Ctor) cs))
   (let ((many (Maybe $ Nat) head))
@@ -2310,10 +2310,10 @@
     (str-cat3 "the extern implementation of " (tick name) $ str-cat3 " has the tagged shape (" (spell-nats want) $ str-cat3 "), its declaration " how $ str-cat (spell-nats ns) ")"))
   (values (error-unless env2 (and (adt-tagged adt) $ nat-list-eq ns want) msg) records))
 
-; ---- Opening a Matchable or Newtype (section 19, ASSUMPTIONS 139)
+; ---- Opening a Matchable or Newtype (section 8, ASSUMPTIONS 139)
 
 ; The entries of [os] whose ids are in [ids], in order.
-; Opens x (section 19): its constructors must be distinct after canonicalization, and it then merges with
+; Opens x (section 8): its constructors must be distinct after canonicalization, and it then merges with
 ; whatever open names one of them or its type constructor.
 (def-fns _ $ (many env-open-adt : (many (Env) env) (many (Nat) x) -> (many (UnifyRes) r))
   (let ((many dup)) $ match many (type-of env x) (((Maybe $ Nat) _)) ((TMatchable _ _ _ _ cs) (nats-dup $ mctor-ids cs)) (else (None _)))
@@ -2325,13 +2325,13 @@
 (def-fns _ $ (many open-minted : (many (Env) env) (many (Nat) x) -> (many (Env) r))
   (match many (env-open-adt env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " $ clash-str env m))))
 
-; Opens an `AtFn` proof (AT_REDESIGN A10), as a Matchable is opened; naming one function, it seems unable to
+; Opens an `AtFn` proof (section 39), as a Matchable is opened; naming one function, it seems unable to
 ; contradict another open, so a contradiction is reported as internal.
 (def-fns _ $ (many open-proof : (many (Env) env) (many (Nat) x) -> (many (Env) r))
   (match many (merge-all $ Forcing $ env-open env x) _ ((UOk env2) env2) ((UContra m) (env-error env $ str-cat "internal: " $ clash-str env m))))
 
 ; An anonymous let at [mult] of a Matchable or Newtype, elaborated by the caller into [inner]: the entry an
-; open records (section 19). Run at once in run position, as a let's right-hand side is.
+; open records (section 8). Run at once in run position, as a let's right-hand side is.
 (def-fns _ $ (many open-bind : (many (List $ List $ Nat) ctx) (many (Env) env) (many (Env) inner) (many (Res) r) (many (Mult) mult) (many (Code ctx (Cons (Mult) mult (Nil (Mult)))) code) ->
     (many (Env) r2) (many (Nat) x) (many (Term) t))
   (let ((many t)) $ res-term r)
@@ -2369,7 +2369,7 @@
   (values (mark-minted env2 x) x))
 
 ; Entering a branch forces the scrutinee equal to the constructor over its fields, and its type to the
-; constructor's return (section 18).
+; constructor's return (section 7).
 (def-fns _ $ (many newtype-fields-at : (subterm many (List $ Entry) tele) (many (List $ Nat) fids) (many (Env) env) (many (Res) scrut) -> (many (Env) out))
   (let-match many tele (Cons _ _ rest) ((Nil _) env))
   (let-match many fids (Cons _ x tail2) ((Nil _) env))
@@ -2571,8 +2571,8 @@
   (let ((many es) (erased _)) $ list-append _ shown $ Cons _ (MkEntry (None _) (BFalse) mode (SgTy $ TCell (TVar c) $ bound-slots tele) place (None _)) $ Nil _)
   es)
 
-; [extra]: the telescope ends with the cell binder, which is optional (the owner's decision in chat, which
-; AT_REDESIGN A8's "mandatory" is to follow).
+; [extra]: the telescope ends with the cell binder, which is optional (the owner's decision in chat;
+; DESIGN.md section 23).
 (def-fns _ $ (many binder-count : (many (Env) env) (many (Pos) ppos) (many (String) what) (many (Nat) c) (many (Mult) mode) (many (Bool) extra) (many (Nat) got) (many (List $ Entry) tele) -> (many (Env) r))
   (let ((many n)) $ list-length _ tele)
   (error-at-with env ppos (declared-as env c) $ str-cat3 (say env what) " on " $ str-cat3 (qshown env c) (str-cat3 " under `" (spell env $ mult-name mode) "` expects ")
@@ -2635,7 +2635,7 @@
   (let ((many env2)) (mark-word env1 x (BFalse)))
   (values (placed-at env2 x $ res-place scrut) (Some _ x)))
 
-; `(slot-of x)`: the automatic slot of x's binder (AT_REDESIGN A6), a direct variable reference and no use.
+; `(slot-of x)`: the automatic slot of x's binder (section 35), a direct variable reference and no use.
 (def-fns _ $ (many slot-var : (many (Env) env) (many (Raw) raw) -> (many (Env) env2) (many (Nat) id))
   (let ((many env1) (many id)) (var-of-raw env raw "a direct variable reference"))
   (values (refuse-when env1 (env-ctor-tele env1) "`slot-of` cannot appear in a constructor's telescope") id))
@@ -2817,7 +2817,7 @@
     ((CCNoTail) (match many b _ ((CCNoTail) (BTrue)) (else (BFalse))))
     ((CCSame _ _) (BFalse))))
 
-; A branch of the raw b: present, refuted automatically with (absurd C), or absurd by proof (section 12).
+; A branch of the raw b: present, refuted automatically with (absurd C), or absurd by proof (section 21).
 (def-adts $ (BranchParts : ((Raw) b) -> Type)
   enum
   (many BPresent : (erased (Raw) b) (many (Raw) craw) (many (List $ Raw) fields) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) b) p) -> (BranchParts b))
@@ -2900,7 +2900,7 @@
     ((BFalse) (None _))))
 
 ; The unlisted constructors an else stands for: those whose forced unification does not contradict; the first of
-; them, and whether any could run (section 12).
+; them, and whether any could run (section 21).
 ; The forcing trial for constructor [c], [m] its multiplicity marker: the environment it opens its fields in, and
 ; whether forcing contradicts. covered-of and the error path's ctor-trial both run it.
 (def-fns _ $ (many run-trial : (many (Mult) m) (many (Nat) c) (many (Env) env) (many (Res) sres) (many (Mult) smult) -> (many (Env) envb) (many (UnifyRes) u))
@@ -3065,7 +3065,7 @@
     ((MkRealBranch _ _ c fids code) (Cons _ (MkBranch _ _ (discriminant ss c) fids code) $ notail $ real-branches-code _ _ rest ss))))
 
 ; The `AtFn` proof of a header marked `at`, minted and opened before the block's bodies, so a call within the
-; block to the function is skipped (AT_REDESIGN A10).
+; block to the function is skipped (section 39).
 (def-fns _ $ (many open-atfn-proof : (erased (Raw) f) (many (Header f) h) (many (Nat) x) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
   (let-match many h (MkHeader _ _ _ _ uq _ _ isat _ _ params rets _ _))
   (let-match many isat (BTrue) ((BFalse) env))
@@ -3492,7 +3492,7 @@
 (def-fns _ $ (many normalize : (many (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Code ctx ms) r))
   (norm _ _ ms (distribute ctx ms $ norm _ _ ms code $ RId ctx) $ RId ctx))
 
-; Normalized code that erases to nothing, or to a reordering of variables (AT_REDESIGN A9, A10; ASSUMPTIONS
+; Normalized code that erases to nothing, or to a reordering of variables (sections 39, 40; ASSUMPTIONS
 ; 207): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store,
 ; an allocation, a copy or a call that was not skipped.
 (def-fns _
@@ -3521,7 +3521,7 @@
     (match many b _ ((MkBranch _ _ _ _ body) (and (notail $ erases-to-nothing _ _ body) $ notail $ erases-branches _ _ rest)))))
 
 
-; ---- tail and delegate (section 9, ASSUMPTIONS 17): judged on the normalized post-erasure code, per
+; ---- tail and delegate (section 19, ASSUMPTIONS 17): judged on the normalized post-erasure code, per
 ; function, so a nested def-fns's marks are its own.
 
 (def-fns _ $ (many cc-marked : (many (CC) cc) (many (Bool) only-delegate) -> (many (Bool) r))
@@ -3643,7 +3643,7 @@
     (let ((many env1)) $ notail $ call-report _ _ body in-tail env)
     (tail $ call-report-branches _ _ rest in-tail env1)))
 
-; Validates the marks in a body and returns the normalized code and, for a delegate, the callee (section 9).
+; Validates the marks in a body and returns the normalized code and, for a delegate, the callee (section 19).
 (def-fns _ $ (many check-marks : (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) pids) (many (List $ Mult) ms) (many (Code ctx ms) code) -> (many (Env) r) (many (Code ctx ms) code2) (many (Maybe $ Nat) delegated))
   (let ((many code2)) $ normalize ctx ms code)
   (let ((many delegate2)) $ has-marked _ _ code2 $ BTrue)
@@ -3663,9 +3663,9 @@
     ((BFalse) (values (env-error env1 (say env1 "a `delegate` call must pass the function's non-erased parameters straight through")) code2 $ None _))))
 
 
-; A call's decrease annotation (section 9): (predates p) right after the callee, or (subterm p) right before
+; A call's decrease annotation (section 19): (predates p) right after the callee, or (subterm p) right before
 ; the decreasing argument, whose position it carries; a written proof p sits inside the call's arguments
-; root, and _ or no annotation at all leaves the proof to the elaborator (SUGAR.md 3).
+; root, and _ or no annotation at all leaves the proof to the elaborator (DESIGN.md section 48).
 (def-adts $ (Given : ((List $ Raw) root) -> Type)
   enum
   (many Inferred : (erased (List $ Raw) root) -> (Given root))
@@ -3707,7 +3707,7 @@
     ((BTrue) (Cons _ i $ notail $ subterm-indices rest $ Succ i))
     ((BFalse) (tail $ subterm-indices rest $ Succ i))))
 
-; A bare call's annotation (SUGAR.md 3): where the levels differ, otherwise at the
+; A bare call's annotation (DESIGN.md section 48): where the levels differ, otherwise at the
 ; first subterm argument that differs from its counterpart; a written annotation stays as it is.
 (def-fns _ $ (many first-differing : (subterm many (List $ Nat) positions) (many (Env) env) (many (List $ Term) args) (many (Nat) j) -> (many (Maybe $ Nat) r))
   (let-match many positions (Cons _ pi rest) ((Nil _) (None _)))
@@ -3731,7 +3731,7 @@
     ((Nil _) (None _)))
   (match many (nat-cmp x y) _ ((CEq _ _ _) (Some _ i)) (else (tail $ index-of-nat rest x $ Succ i))))
 
-; Earlier subterm arguments must equal their counterparts (section 9's lexicographic discipline).
+; Earlier subterm arguments must equal their counterparts (section 19's lexicographic discipline).
 (def-fns _ $ (many param-label : (many (Callee) c) (many (List $ Entry) params) (many (Nat) i) -> (many (String) s))
   (argument-label c (Succ i) $ match many (list-nth _ params i) (((Maybe $ String) _)) ((NthHit _ _ _ e _) (entry-name e)) ((NthMiss _ _ _ _) (None _))))
 
@@ -3832,7 +3832,7 @@
 
 (let ((many no-tele)) $ None $ List $ Entry)
 
-; ---- `_` arguments (SUGAR.md 6): what an application's result looks like over its parameters' metas, and
+; ---- `_` arguments (DESIGN.md section 50): what an application's result looks like over its parameters' metas, and
 ; the solving of that against the telescope the application is expected to produce.
 
 (def-adts $ (AppResult : -> Type)
@@ -3925,9 +3925,9 @@
   (Cons _ (match many (is-underscore arg) (((Maybe $ Loc) _)) ((BTrue) (Some _ $ loc-in env $ raw-pos arg)) ((BFalse) (None _)))
     $ notail $ wild-sites _ env rest))
 
-; comptime-match (section 15): a Const, non-erased scrutinee with a non-erased discriminant, verified
+; comptime-match (section 28): a Const, non-erased scrutinee with a non-erased discriminant, verified
 ; against the named constructor; the fields are bound Const and the facts refined as a branch would.
-; ---- A Const's value printed through its type, for section 15's mismatch message (ASSUMPTIONS 66): a
+; ---- A Const's value printed through its type, for section 28's mismatch message (ASSUMPTIONS 66): a
 ; block carries no names, so the type's Matchable supplies them and an untagged type is read through its one
 ; constructor's field; an extern value prints through its model. The descent into a block's fields is
 ; bounded by the address, which each field's smaller number refines.
@@ -3949,7 +3949,7 @@
     ((SCons c rest) (rwrap "(SCons " (rcat3 (show-nat $ char-code c) (RStr " ") $ notail $ show-str rest) ")"))))
 
 ; The literal a value of one of the three literal types spells as, read off the block: a Char and a U8 are their
-; Nat (section 38), so neither is unwrapped first. None where the type is not one of the three, or the block does
+; Nat (section 33), so neither is unwrapped first. None where the type is not one of the three, or the block does
 ; not carry the payload it would need.
 (def-fns _ $ (many lit-rope : (erased (Hist Block) hs) (many (Env) env) (many (Term) ty) (many (Block (Ref Block hs)) blk) -> (many (Maybe $ Rope) r))
   (let-match many blk (BExt _ p) (else (None $ Rope)))
@@ -4101,7 +4101,7 @@
     (let ((many env14)) $ refuse-unless envm (mult-is-many mode) "`comptime-match` takes `many` or `unique`, not `erased`")
     (let-match many triple (MkPair _ t xraw cpat))
     (let-match many cpat (MkPair _ _ craw fields))
-    (let ((many env1)) $ refuse-unless env14 (env-run-pos env14) "`comptime-match` is a run-position statement (section 15)")
+    (let ((many env1)) $ refuse-unless env14 (env-run-pos env14) "`comptime-match` is a run-position statement (section 28)")
     (let ((many env2) (many x) (many sharing))
       (match many (share-arg env1 xraw) (((Env) _) ((Nat) i) ((Bool) b))
         ((None _)
@@ -4158,7 +4158,7 @@
 ; Every function recurses on a raw it elaborates: the first subterm parameter is that raw or list, a later
 ; one a structure parsed from it (its entries prove they sit inside it) or a Steps budget spent when a
 ; function hands its whole raw to another.
-; ---- Sugar (SUGAR.md 5): unary and distinct stand for calls on the prelude's Numeral lemmas, written
+; ---- Sugar (DESIGN.md section 49): unary and distinct stand for calls on the prelude's Numeral lemmas, written
 ; down as the reference writes them and elaborated where the form is met. The elaborator's group takes a
 ; budget of such expansions as its first subterm parameter, spent when a generated form is elaborated,
 ; which is what lets that raw be of the elaborator's own making (ASSUMPTIONS 111).
@@ -4523,7 +4523,7 @@
   (env-warn-at env l $ str-cat (say env "lopsided `match`; flatten it with a `let-match` on ") $ qshown env c))
 
 (def-fns _
-  ; An expression of the given size and erasures (sections 16, 20); [tele] is the telescope a bare _ reuses.
+  ; An expression of the given size and erasures (sections 14, 27); [tele] is the telescope a bare _ reuses.
   ((many elab-expr-demand : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env-in) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (ExprDemand expect) demand) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock))
     (let ((many env) (many sink) (many final)) $ env-take-sink env-in)
@@ -4852,7 +4852,7 @@
     (let ((many env2) (many more)) $ notail $ elab-focus sugar rest _ st env1)
     (values env2 $ Cons _ (MkFocus (show-r raw) t ty) more))
 
-  ; Grammar expressions (section 5): variables, constructor applications and type formers; [as-type] also
+  ; Grammar expressions (section 9): variables, constructor applications and type formers; [as-type] also
   ; checks the result is a type.
   ((many elab-term : (subterm many (Nat) sugar) (subterm many (Raw) raw) (many (Env) env) (many (Bool) as-type) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (Term) t) (many (Term) ty))
     (let ((many envl)) $ env-at env $ raw-pos raw)
@@ -5244,7 +5244,7 @@
     (let ((many env4)) $ error-unless-msg env3 ok msg-return)
     (values (env-set-ctor-tele (env-set-signature env4 $ env-signature env) $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract (list-rev _ ids) ret))
 
-  ; Source entries into a closed telescope, each name bound for the entries after it (section 30).
+  ; Source entries into a closed telescope, each name bound for the entries after it (section 3).
   ; [ids]: binders already in force, innermost first.
   ((many elab-tele : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (List $ Sub root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (Bool) subterm-ok) (many (Bool) holes) (many (Bool) places) -> (many (Env) r) (many (List $ Nat) bound) (many (List $ Entry) tele))
     (let-match many st (SS sn k))
@@ -5281,7 +5281,7 @@
     (let ((many entry3)) $ MkEntry nm sub2 mult (abstract-sg (bin-ids-of ids) sg) ap (Some _ $ loc-in env2a epos))
     (let ((many env4) (many bound2) (many tele)) $ notail $ elab-src-entries sugar root st rest env3e mode2 (Cons _ (TVar x) ids) (Cons _ x bound) outer subterm-ok holes places warns)
     (values env4 bound2 $ Cons _ entry3 tele))
-  ; A body: statements then the final expression (section 16); [items] sits within [root].
+  ; A body: statements then the final expression (section 27); [items] sits within [root].
   ((many elab-body : (subterm many (Nat) sugar) (subterm many (List $ Raw) root) (subterm many (List $ Raw) items) (erased (Within items root) w) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Maybe $ Sink) sink) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock))
     (let ((many env)) $ report-shadows env0 $ BTrue)
@@ -5406,7 +5406,7 @@
               (values (dump-report env1 (GoalStatement) focus) ctx $ SNone _)))) (else (values (bad) ctx $ SNone _))))
     (values (report-shadows (env-back env env2) $ BTrue) ctx2 sc))
 
-  ; open-adt (section 19, ASSUMPTIONS 139): an anonymous let at the written multiplicity, then the open of that
+  ; open-adt (section 8, ASSUMPTIONS 139): an anonymous let at the written multiplicity, then the open of that
   ; binder; the entry is bound by the code where the let would be.
   ((many elab-open-adt : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error env $ sp-misuse env $ SpStmt $ StOpenAdt))
@@ -5425,7 +5425,7 @@
           ((BTrue) (values env3 ctx $ SNone _))
           ((BFalse) (values env3 (Cons _ (Cons _ x $ Nil _) ctx) $ SLet _ (Cons _ (Many) $ Nil _) (Cons _ x $ Nil _) (PkMany _ (Nil _) x (Nil _) $ PkNil _) $ runtime-one _ mult code))))))
 
-  ; let-match (section 16, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
+  ; let-match (section 27, ASSUMPTIONS 99-100): the sole unrefuted constructor binds outward, its fields at the
   ; scrutinee's own erasure; erased or run at once it leaves no code, else one branch wraps the rest.
   ((many elab-let-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error env $ sp-misuse env $ SpStmt $ StLetMatch))
@@ -5492,7 +5492,7 @@
             (let ((many bindcell)) (SLet fieldctx many-one (Cons _ x (Nil _)) (PkMany _ (Nil _) x (Nil _) (PkNil _)) (var-code env10b fieldctx saved)))
             (values env10b (Cons _ (Cons _ x (Nil _)) fieldctx) (SSeq _ _ _ save (SSeq _ _ _ destruct2 bindcell))))))))
 
-  ; unary (SUGAR.md 5): the literals checked in the reference's order, then the let-match the form stands
+  ; unary (DESIGN.md section 49): the literals checked in the reference's order, then the let-match the form stands
   ; for, written out as there.
   ((many elab-unary : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let ((many arity-error)) $ env-error env (say env "`unary` takes one or two literals"))
@@ -5522,7 +5522,7 @@
     (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form gen env2) ctx spos "item of a body")
     (values (leave-prelude env2 env3) ctx2 sc))
 
-  ; distinct (SUGAR.md 5): a match on numeral-inj's Eq, once the two literals are checked to be different
+  ; distinct (DESIGN.md section 49): a match on numeral-inj's Eq, once the two literals are checked to be different
   ; spellings of one canonical value.
   ((many elab-distinct : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ Res) ress))
     (let ((many none)) $ Nil $ Res)
@@ -5548,10 +5548,10 @@
         (let ((many env3) (many ress) (many code) (erased lock)) $ notail $ elab-expr-demand k gen (generated-form gen env2) ctx erased-one no-tele (CCPlain) (Fixed _))
         (values (leave-prelude env2 env3) ress))))
 
-  ; let (section 9): binders, then the right-hand side; run at once in run position (section 34); an
+  ; let (section 19): binders, then the right-hand side; run at once in run position (section 29); an
   ; annotation is a checked redundancy.
   ; Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
-  ; produce (SUGAR.md 6); the check of each binder against its value stays as it was.
+  ; produce (DESIGN.md section 50); the check of each binder against its value stays as it was.
   ((many elab-let : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (subterm many (LetParts args) parts) (many (Env) env0) (many (List $ List $ Nat) ctx) (many (Maybe $ List $ Entry) tele) (many (Mult) spos) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let-match many parts (MkLetParts _ binders rhs wr))
     (let ((many env1)) $ check-binder-mults _ binders env0)
@@ -5610,7 +5610,7 @@
     (let ((many env4) (many ids) (erased lk)) $ notail $ bind-let sugar root brest env3 rrest lr2 run trest (Cons _ (res-term r) done) srest)
     (values env4 (Cons _ x ids) (LsCons _ _ b x brest ids lk)))
 
-  ; def-fns (sections 7, 27): headers bound Dyn, each body elaborated at the block's level under its own
+  ; def-fns (sections 17, 54): headers bound Dyn, each body elaborated at the block's level under its own
   ; subterm parameters and checked against its return telescope; closures minted Const in run position.
   ((many elab-def-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Bool) uq) -> (many (Env) r) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) sc))
     (let-match many args (Cons _ lvraw fns) ((Nil _) (values (env-error env (say env "`def-fns` needs a level")) ctx $ SNone _)))
@@ -5647,7 +5647,7 @@
     (let-match many items2 (Cons _ nraw items3a) ((Nil _) (values (bad0) $ HStop _)))
     (let ((many env0e)) $ env-back env0 $ refuse-when (env-at env0 $ raw-pos sigraw) (and isat $ not $ mult-is-many mult) "an `erased` function cannot be an at-function: it is called only where nothing runs")
     (let ((many env0n) (many name)) $ name-checked env0e nraw "a function name")
-    ; `at f` after the name annotates a delegate to f (AT_REDESIGN A11)
+    ; `at f` after the name annotates a delegate to f (section 41)
     (let ((many (Maybe $ Raw) delegates) (many (List $ Raw) items3) (erased (Subterm (List $ Raw) items3 (List $ Raw) items2) p3))
       (match many items3a (((Maybe $ Raw) d) ((List $ Raw) items3) ((Subterm (List $ Raw) items3 (List $ Raw) items2) p3))
         ((Cons _ a more)
@@ -5663,7 +5663,7 @@
     (let ((many rs)) $ subs-of after _ wa)
     (let ((many env2a) (many params) (many rets)) $ notail $ elab-fn-type sugar (subterm (subterm-trans psg $ prove-subterm f fns)) sg one-step (MkPair _ _ ps rs) env1a)
     (let ((many env2)) $ match many (and isat $ has-runtime rets) (((Env) _)) ((BTrue) (error-at env2a (raw-pos sigraw) $ say env2a "an at-function's returns are erased or `at`")) ((BFalse) env2a))
-    ; a function marked `extern` and `at` has no implementation, its marks being a promise (A10)
+    ; a function marked `extern` and `at` has no implementation, its marks being a promise (section 39)
     (let ((many claims)) $ and isext $ not isat)
     (let ((many found)) $ extern-of name)
     (let ((many (Env) env2b))
@@ -5722,7 +5722,7 @@
     (let ((many rms)) $ under-list (tele-mults rets) mult)
     (let ((many pvars)) $ tvars-rev pids $ Nil _)
     ; the frame holds the runtime parameters; a parameter written `at` is a rename of its target's word,
-    ; bound by a let around the body (AT_REDESIGN A3)
+    ; bound by a let around the body (section 36)
     (let ((many rt)) $ runtime-ids params pids)
     (let ((many base)) $ Cons _ rt $ Cons _ gall ctx)
     (let ((many envr) (many bctx) (many renames)) $ at-renames params pids (Nil _) envb base)
@@ -5752,7 +5752,7 @@
           (let ((many env2c)) $ env-set-aliases env2b $ idmap-set _ x (alias-target env2b callee) $ env-aliases env2b)
           (let ((many env3) (many px)) $ bind-erased env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
           env3)))
-    ; the delegate annotation names the function the one `delegate` call names (A11)
+    ; the delegate annotation names the function the one `delegate` call names (section 41)
     (let ((many (Env) env3d))
       (match many delegates _
         ((None _) env3)
@@ -5765,7 +5765,7 @@
                 ((BTrue) env3a)
                 ((BFalse) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but delegates to ") $ qshow env3a $ TVar callee))))))))
     ; an at-function's body erases to nothing and is never run through the proof; what remains is the dummy a
-    ; first-class call without the proof reaches (A10)
+    ; first-class call without the proof reaches (section 39)
     (let ((many env3e)) $ match many (and isat $ and (not isabs) $ not $ erases-to-nothing _ _ code2) (((Env) _))
       ((BTrue) (error-at env3d hpos $ str-cat3 (say env3d "the body of at-function ") (tick name) $ say env3d " does not erase to nothing, or to a reordering of variables: it stores, allocates or calls"))
       ((BFalse) env3d))
@@ -5776,7 +5776,7 @@
       ((None _) (MkFunc _ _ physical name x rt code3 impl top))
       ((Some _ callee) (MkAlias _ _ name x $ var-code env3e (Cons _ gall ctx) $ alias-target env3e callee))))
 
-  ; def-adts (sections 12, 19, 27): type constructors bound first, each as soon as its header is read so a
+  ; def-adts (sections 8, 21, 54): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor
   ; returns its own type.
   ((many elab-adt-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) adts) (many (Env) env) -> (many (Env) r) (many (AdtHeaders adts) hs) (many (Tids adts hs) tids))
@@ -5836,7 +5836,7 @@
         ((BFalse) env3b)
         ((BTrue)
           (match many (newtype-wrappers disc ss) (((Env) _))
-            ((Nil _) (env-error env3b $ str-cat (tick name) " is not of newtype shape (section 38)"))
+            ((Nil _) (env-error env3b $ str-cat (tick name) " is not of newtype shape (section 33)"))
             ((Cons _ _ _) env3b)))))
     (let ((many env5) (many more)) $ notail $ define-adts sugar rest hrest env4 trest)
     (let ((many all) (erased cat)) $ list-append _ cvals $ Cons _ (MkPair _ _ mid $ BMat _ adt2) more)
@@ -5873,7 +5873,7 @@
     (let ((many (Env) env4) (many (Nat) c)) $ match many mult _ ((Erased) (bind-erased env3 (name-or-anon name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)) (else (bind env3 (name-or-anon name) (Some _ $ loc-in env3 $ raw-pos craw) (BTrue) mult ty (None _) delegate-id)))
     (let ((many env5) (many cs)) $ notail $ elab-ctors sugar rest (env-back env env4) tid)
     (values env5 $ Cons _ (MkPair _ _ mult c) cs))
-  ; tail and delegate wrap a call (section 9, ASSUMPTIONS 9); the compiled code must be that call.
+  ; tail and delegate wrap a call (section 19, ASSUMPTIONS 9); the compiled code must be that call.
   ((many elab-marked : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (Sp) sp) (many (ExprDemand expect) demand) -> (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code))
     (let ((many env1)) $ refuse-unless env (mult-is-many $ pos-mult expect) $ str-cat (tick $ sp-name sp) " in an erased position")
     (let-match many args (Cons _ call _)
@@ -5926,7 +5926,7 @@
     (values (settle (settle env3 $ erased-term prs lockp) $ erased-term qrs lockq) (erased-res prs lockp) $ erased-res qrs lockq))
 
   ; coercible-ctor's arguments: two terms per erased field, one proof per many field, each checked against
-  ; the field's type on its side (section 38).
+  ; the field's type on its side (section 33).
   ((many elab-sharing-side : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) -> (many (Env) e) (many (Term) side))
     (let-match many args (Cons _ raw _) ((Nil _) (values (env-error env "a `Sharing` argument is required") $ TErr "Sharing")))
     (match many (is-underscore raw) _
@@ -5971,7 +5971,7 @@
         (let ((many env5)) $ check-sg env4 (sg-inst tgt $ entry-sg e) (term-res env4 t tty) $ None _)
         (tail $ coercible-ctor-args sugar more env5 ctx rest (Cons _ s src) (Cons _ t tgt) c side))))
 
-  ; match (sections 11, 12, 18): the scrutinee, its Matchable, the annotation, then one branch per
+  ; match (sections 7, 21, 26): the scrutinee, its Matchable, the annotation, then one branch per
   ; constructor, each refined by its forced facts or refuted by them.
   ((many elab-match : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env-in) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (ExprDemand expect) demand) (many (Bool) refute) (many (String) form) (many (Maybe $ Loc) final) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code))
@@ -6064,7 +6064,7 @@
             ((BFalse) (values env t $ BFalse))))
         ((BFalse)
           (let-match many ann (RList _ items0) (else (values (env-error env $ str-cat "malformed match annotation" $ sp-hints env "annotation") (Nil $ Entry) $ BFalse)))
-          ; an at-match's annotation is wrapped `(at <telescope>)` (AT_REDESIGN A9)
+          ; an at-match's annotation is wrapped `(at <telescope>)` (section 40)
           (let ((many (List $ Raw) aitems) (erased (Subterm (List $ Raw) aitems (Raw) ann) pa) (many (Bool) atmatch))
             (match many items0 (((List $ Raw) aitems) ((Subterm (List $ Raw) aitems (Raw) ann) pa) ((Bool) atmatch))
               ((Cons _ a more)
@@ -6101,7 +6101,7 @@
     (let ((many envb) (many ress) (many code) (erased lock)) $ notail $ elab-body sugar (subterm p) body body (WHere _) env bctx ex (Some _ ann-tele) $ None _)
     (values (check-results-count envb body ann-tele ress $ Nil _) code))
 
-  ; [atmatch]: the branch of an at-match must erase to nothing, dispatch and loads included (AT_REDESIGN A9).
+  ; [atmatch]: the branch of an at-match must erase to nothing, dispatch and loads included (section 40).
   ((many elab-pattern-body : (subterm many (Nat) sugar) (subterm many (Raw) braw) (many (List $ Raw) body) (erased (Subterm (List $ Raw) body (Raw) braw) p) (many (Env) env) (many (List $ List $ Nat) bctx) (many (List $ Mult) ex) (many (List $ Entry) ann-tele) (many (Nat) saved) (many (Maybe $ Nat) alias) (many (Maybe $ Sink) sink) (many (Bool) atmatch) (many (Pos) bpos) -> (many (Env) r) (many (Code bctx ex) code))
     (let ((many env3) (many code))
       (match many alias (((Env) _) ((Code bctx ex) _))
@@ -6114,7 +6114,7 @@
     (let ((many bad)) $ and atmatch $ and (mult-is-many $ pos-mult ex) $ not $ erases-to-nothing _ _ $ normalize bctx ex code)
     (values (match many bad (((Env) _)) ((BFalse) env3) ((BTrue) (error-at env3 bpos $ say env3 "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls"))) code))
 
-  ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 12).
+  ; Each branch: present, refuted automatically with (absurd C), or absurd by proof (section 21).
   ((many elab-branches : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Nat) tid) (many (Res) sres) (many (Mult) smult) (many (List $ MCtor) mctors) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (List $ RealBranch ctx expect) acc) (many (List $ Nat) seen) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (IdMap $ Use) joined) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (Bool) atmatch) (many (List $ Maybe $ Nat) deep) ->
       (many (Env) r) (many (List $ RealBranch ctx expect) real) (many (List $ Nat) seen2) (many (List $ Maybe $ Nat) deep2))
     (let-match many branches (Cons _ braw brest) ((Nil _) (values (env-set-uses env joined) (list-rev _ acc) seen deep)))
@@ -6177,7 +6177,7 @@
               (values (env-discard env3 envb3) acc $ deepen envb2b body (None _) deep))))))
     (tail $ elab-branches sugar brest (env-back env env4) ctx tid sres smult mctors ann-tele expect acc2 (Cons _ c seen) extra saved incoming (uses-join joined $ env-uses env4) refute form bsink remap atmatch deep2))
 
-  ; The else branch (section 12): at most one, standing for at least one constructor, its body under no forced
+  ; The else branch (section 21): at most one, standing for at least one constructor, its body under no forced
   ; facts and erased throughout when none of them could run.
   ((many elab-else : (subterm many (Nat) sugar) (subterm many (List $ Raw) branches) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Entry) ann-tele) (many (List $ Mult) expect) (many (Maybe $ Nat) first) (many (Bool) reachable) (many (Maybe $ Loc) seen-else) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) found) (many (Res) sres) (many (Mult) smult) (many (Bool) extra) (many (Nat) saved) (many (IdMap $ Use) incoming) (many (List $ MCtor) mctors) (many (Bool) refute) (many (String) form) (many (Sink) bsink) (many (Bool) remap) (many (Bool) atmatch) (many (List $ Nat) seen) (many (List $ Maybe $ Nat) deep) ->
       (many (Env) r) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) expect) code) (many (List $ Maybe $ Nat) deep2))
@@ -6216,10 +6216,10 @@
         (tail $ elab-else sugar brest (env-set-uses (env-back env env2) (uses-join (env-uses env) (env-uses env2))) ctx ann-tele expect first reachable (Some _ $ env-loc envl) found2 sres smult extra saved incoming mctors refute form bsink remap atmatch seen deep2))))
 
   ; Arguments against a telescope, each at the position's multiplicity and checked against its entry
-  ; (section 20); returns the terms innermost first and the code of the many ones in order.
-  ; The arguments of an application against [tele] (SUGAR.md 6): a meta stands for each parameter; an
+  ; (section 14); returns the terms innermost first and the code of the many ones in order.
+  ; The arguments of an application against [tele] (DESIGN.md section 50): a meta stands for each parameter; an
   ; argument written `_` is left to it, and is an error unless erased where it stands; any other is checked
-  ; against its parameter and bound to its meta, as a term where [as-term] (section 5's grammar) and as an
+  ; against its parameter and bound to its meta, as a term where [as-term] (section 9's grammar) and as an
   ; expression otherwise. [result], over the metas, is solved against [expect] eagerly, where a `_` is present,
   ; before any argument is read, and again, reporting the mismatch, when a `_` would otherwise stay unsolved
   ; at the closing paren; every `_` is solved by then or refused. Returns the argument terms innermost first.
@@ -6287,7 +6287,7 @@
                     ((BTrue) (prepare-argument env4 (res-erasure r) r $ BFalse))
                     ((BFalse) (values env4 r 0))))))
             ; an argument for a parameter written `at` must sit where its target does, in an erased position
-            ; too, and is not passed (AT_REDESIGN A3, A5)
+            ; too, and is not passed (section 36)
             (let ((many (Env) env5) (many (Bool) omitted))
               (match many (entry-place e) _
                 ((None _) (values env5a $ BFalse))
@@ -6303,8 +6303,8 @@
             (tail $ check-args-go sugar root arest st env5 callee ctx rest mrest lp pos as-term prepare fields slotted
               (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) codes2 pairs2))))))
 
-  ; A function call (section 9): a lower-level call carries a Predates proof about the callee's level, a
-  ; same-level call a Subterm proof for its decreasing argument; the top level carries neither (section 24).
+  ; A function call (section 19): a lower-level call carries a Predates proof about the callee's level, a
+  ; same-level call a Subterm proof for its decreasing argument; the top level carries neither (section 20).
   ((many elab-call : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Pair (List $ Sub rawargs) $ Ann rawargs) parts) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (Res) callee) (many (Callee) desc) (many (Mult) pos) (many (Code ctx (Cons (Mult) pos (Nil (Mult)))) hcode) (many (Bool) uq) (many (Term) lv) (many (List $ Entry) params) (many (List $ Entry) rets) (many (CC) cc) (many (ExprDemand expect) demand) (many (Bool) assert-at) ->
       (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code))
     (let-match many parts (MkPair x _ args ann))
@@ -6312,7 +6312,7 @@
     (let ((many env11)) $ match many (and assert-at $ not $ mult-is-many pos) (((Env) _))
       ((BTrue) (env-error env $ say env $ str-cat (tick $ spell env $ sp-name $ SpMark $ MkAt) " in an erased position"))
       ((BFalse) env))
-    ; a call of an at-function is skipped (AT_REDESIGN A10): the proof opened for the callee is what licenses it
+    ; a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it
     (let ((many skipped)) $ and (mult-is-many pos) $ atfn-open env11 $ res-term callee)
     (let ((many env12)) $ match many (and assert-at $ not skipped) (((Env) _)) ((BTrue) (env-error-with env11 (head-notes env11 callee) $ str-cat (head-name env11 callee) $ say env11 " is not an at-function here: no `AtFn` proof for it is open")) ((BFalse) env11))
     (let ((many env13)) $ match many (and skipped $ not $ cc-eq cc $ CCPlain) (((Env) _)) ((BTrue) (env-error env12 $ str-cat3 (tick $ spell env12 $ match many cc (((String) _)) ((CCTail) "tail") ((CCNoTail) "notail") (else "delegate")) (say env12 " marks a call that compiles to one, and a call of at-function ") $ str-cat (head-name env12 callee) " is skipped")) ((BFalse) env12))
@@ -6352,13 +6352,13 @@
     (let ((many env6) (many ress)) $ returns-produced _ env5 demand callee-name expect rets $ ress-of ids env5)
     (values env6 ress code))
 
-  ; The call-site proof (section 9), read against the current level and enclosing subterm parameters; a bare
+  ; The call-site proof (section 19), read against the current level and enclosing subterm parameters; a bare
   ; call gets its annotation from resolve-ann first.
   ((many check-call-proof : (subterm many (Nat) sugar) (subterm many (List $ Raw) rawargs) (subterm many (Ann rawargs) ann) (many (Env) env) (many (List $ List $ Nat) ctx) (many (Res) callee) (many (Callee) desc) (many (List $ Pos) sites) (many (Term) lv) (many (List $ Entry) params) (many (List $ Term) args) (many (List $ Term) arg-tys) -> (many (Env) r))
     (match many (env-level env) _
       ((None _)
         (match many ann _
-          ((AnnNone _) env) (else (env-error env "the top level calls without proofs; drop the decrease annotation (section 24)"))))
+          ((AnnNone _) env) (else (env-error env "the top level calls without proofs; drop the decrease annotation (section 20)"))))
       ((Some _ cur)
         (let ((many same)) $ equal-env env lv $ TVar cur)
         (let ((many positions)) $ subterm-indices params 0)
@@ -6404,7 +6404,7 @@
     (many (Env) r) (many (List $ Res) ress) (many (Code ctx expect) code) (erased (Lockstep (Mult) (Res) expect ress) lock))
   (elab-expr-demand sugar raw env ctx expect tele cc (Fixed _)))
 
-; ---- The top level (section 16): statements run as they are elaborated, the final expression consumed;
+; ---- The top level (section 27): statements run as they are elaborated, the final expression consumed;
 ; every form but the last must be a statement (ASSUMPTIONS 12).
 
 (def-fns _ $ (many pragma-of : (many (Raw) raw) -> (many (Maybe $ List $ Raw) r))

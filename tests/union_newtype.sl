@@ -1,6 +1,6 @@
 ; needs: list union
 ; expect: 1
-; An indexed union marked newtype: its other non-phantom constructors have only erased fields (section 38).
+; An indexed union marked newtype: its other non-phantom constructors have only erased fields (section 33).
 ; MkA wraps a Nat at no cost, and a NoB value is the null.
 
 (def-adts

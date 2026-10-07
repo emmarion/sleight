@@ -1,5 +1,5 @@
 ; expect: 2
-; `slot-self` (AT_REDESIGN A7): a `(Slot)` value read back out of data is made its own slot, so a cell whose
+; `slot-self` (section 35): a `(Slot)` value read back out of data is made its own slot, so a cell whose
 ; type holds that slot can be filled `(at)` with the word it names.
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Slot) s) -> (Box)))
 (def-adts $ (Pair2 : -> Type) enum (many P : (many (Nat) a) (many (Nat) b) -> (Pair2)))

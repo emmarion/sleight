@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: (MkMeters 1)
-; A tail call whose result is coerced through a non-erased let still counts: after erasure the lets only rename (section 9).
+; A tail call whose result is coerced through a non-erased let still counts: after erasure the lets only rename (section 19).
 
 (def-adts $ (Meters : -> Type)
   enum newtype

@@ -1,5 +1,5 @@
 ; mini/elab.sl -- elaboration of the minimal language (MINIMAL.md) as relations: raw syntax to core code
-; (mini/core.sl) with the types and facts of DESIGN.md sections 3 to 5, 8, 9, 11, 12, 16, 18 and 24. Each
+; (mini/core.sl) with the types and facts of DESIGN.md sections 5 to 7, 9, 18 to 21, 26 and 27. Each
 ; judgment is total, its outcome an [Ok] with what was derived or an [Err] with the first reason found, so
 ; that the relation that types a program and the [Fails] relation are one. Every rule follows the simplest
 ; algorithm the session could write down, however slow. One session's proposal; the surface syntax of the
@@ -10,7 +10,7 @@
 ; being (T x), (subterm T x) or (e is x); a let is (let (binders) items...), a binder x, (T x) or (e is x);
 ; a def-fns is (def-fns L (f (params) (rets) items...)...); a def-adts is (def-adts (T (params) (C (fields)
 ; ret)...)...); a match is (match s (rets) ((C fields...) items...)...); a call carries (predates p) after
-; its head or (subterm p) before the decreasing argument (section 9).
+; its head or (subterm p) before the decreasing argument (section 19).
 (def-adts
   ((Key : -> Type)
     enum
@@ -85,7 +85,7 @@
     (many SubArgsOf : (erased (Nat) n) (erased (List (Name)) s) (erased (List (Ent)) e) (erased (List (Rule)) r) (erased (List (Adt)) a) (erased (Maybe (Term)) l) (erased (List (Term)) sa)
        -> (SubArgs (MkCtx n s e r a l sa) sa)))
   ; Leaving a scope restores everything but the id supply; leaving a let's right-hand side hides its names
-  ; and keeps its entries and facts (section 16); entering a body sets the level and subterm arguments.
+  ; and keeps its entries and facts (section 27); entering a body sets the level and subterm arguments.
   ((Leave : ((Ctx) inner) ((Ctx) outer) ((Ctx) out) -> Type)
     enum
     (many LeaveTo : (erased (Nat) n) (erased (List (Name)) s) (erased (List (Ent)) e) (erased (List (Rule)) r) (erased (List (Adt)) a) (erased (Maybe (Term)) l) (erased (List (Term)) sa)
@@ -127,7 +127,7 @@
     (many AddRuleSome : (erased (List (Rule)) r) (erased (Term) t) (erased (Nat) id) -> (AddRule r (Some (Term) t) id (Cons (Rule) (MkRule id t) r)))))
 
 ; ---- Identity and refinement, through mini/unify.sl: two terms are the same when their canonical forms
-; are identical (section 5); a branch refines the facts by forcing one equation (section 18), or contradicts
+; are identical (section 9); a branch refines the facts by forcing one equation (section 7), or contradicts
 ; them.
 (def-adts
   ((Same : ((Ctx) ctx) ((Term) t) ((Term) u) -> Type)
@@ -164,7 +164,7 @@
        (erased (TypeOfTerm ents rules t ty) p) -> (Typed ctx t ty))))
 
 ; ---- Minting a telescope's entries: each entry's term instantiated with the entries before it, a type
-; entry giving its entry that type, an is entry giving its entry the rule and the rule's type (section 14).
+; entry giving its entry that type, an is entry giving its entry the rule and the rule's type (section 12).
 (def-adts
   ((MintTele : ((Ctx) ctx) ((List (Maybe (Term))) acc) ((List (Entry)) tele) ((List (Maybe (String))) names) ((Ctx) out) ((List (Nat)) ids) -> Type)
     enum
@@ -183,7 +183,7 @@
     (many NonesNil : -> (Nones (Nil (Entry)) (Nil (Maybe (String)))))
     (many NonesCons : (erased (Entry) e) (erased (List (Entry)) es) (erased (List (Maybe (String))) names) (erased (Nones es names) p)
        -> (Nones (Cons (Entry) e es) (Cons (Maybe (String)) (None (String)) names))))
-  ; The references to the entries a telescope's subterm-marked positions got, section 3's enclosing subterm
+  ; The references to the entries a telescope's subterm-marked positions got, section 5's enclosing subterm
   ; arguments, and, at a call, the decreasing candidates.
   ((Marked : ((List (Entry)) tele) ((List (Nat)) ids) ((List (Term)) out) -> Type)
     enum
@@ -193,7 +193,7 @@
     (many MarkedNo : (erased (Bool) i) (erased (Term) t) (erased (List (Entry)) es) (erased (Nat) x) (erased (List (Nat)) ids) (erased (List (Term)) out) (erased (Marked es ids out) p)
        -> (Marked (Cons (Entry) (MkEntry (BFalse) i t) es) (Cons (Nat) x ids) out))))
 
-; ---- Elaborating a term of the grammar (section 5): a name is its entry; an application checks its
+; ---- Elaborating a term of the grammar (section 9): a name is its entry; an application checks its
 ; arguments, themselves terms, against the head's telescope; a former binds its telescopes.
 (def-adts
   ((TOut : -> Type)
@@ -405,9 +405,9 @@
     (many EMTy : (erased (Term) t) (erased (Term) tty) -> (EntryMint (BFalse) t tty t (None (Term))))
     (many EMIs : (erased (Term) t) (erased (Term) tty) -> (EntryMint (BTrue) t tty tty (Some (Term) t)))))
 
-; ---- Expressions (section 16): an expression elaborates to core code and the entries of its values, in a
+; ---- Expressions (section 27): an expression elaborates to core code and the entries of its values, in a
 ; context extended with those entries and whatever facts the expression minted. A name is its entry; a
-; constructor application, a former and a proof each get an entry of their own (section 3), a call one per
+; constructor application, a former and a proof each get an entry of their own (section 5), a call one per
 ; return, a match one per result.
 (def-adts
   ((EOut : -> Type)
@@ -449,7 +449,7 @@
     enum
     (many FOkT : (many (Ctx) ctx) (many (List (Nat)) ids) -> (FOutT))
     (many FErrT : (many (Reason) r) -> (FOutT)))
-  ; A call's decrease annotation (section 9): none, (predates p) after the head, or (subterm p) before the
+  ; A call's decrease annotation (section 19): none, (predates p) after the head, or (subterm p) before the
   ; i-th argument.
   ((Ann : -> Type)
     enum
@@ -519,7 +519,7 @@
     (many SPSucc : (erased (Ctx) ctx) (erased (Nat) j) (erased (Term) a) (erased (List (Term)) as) (erased (Term) b0) (erased (List (Term)) bs) (erased (Term) b)
        (erased (Same ctx a b0) sm) (erased (SamePrefix ctx j as bs b) p) -> (SamePrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b0 bs) b))))
 
-; A strict subterm through constructor applications (section 8), on canonical terms, and its absence.
+; A strict subterm through constructor applications (section 18), on canonical terms, and its absence.
 (def-adts
   ((StrictSub : ((Ctx) ctx) ((Term) a) ((Term) b) -> Type)
     enum
@@ -578,7 +578,7 @@
     (many NLKDecl : -> (NotLevelKind (KDecl)))))
 
 ; A canonical type as a Predates or Subterm application, or evidence that it is neither, for the three
-; transitivity axioms of section 8, special forms by the owner's decision.
+; transitivity axioms of section 18, special forms by the owner's decision.
 (def-adts
   ((PredatesShape : ((Ctx) ctx) ((Term) c) ((Term) ty) ((Term) a) ((Term) lv) -> Type)
     enum
@@ -667,7 +667,7 @@
     (many EXNotApplicable : (erased (Ctx) ctx) (erased (Raw) h) (erased (List (Raw)) items) (erased (Ctx) ctx1) (erased (Core) hc) (erased (Nat) x) (erased (Term) hty) (erased (Term) c)
        (erased (HeadRaw h) hr) (erased (ElabExpr ctx h (EOk ctx1 hc (Cons (Nat) x (Nil (Nat))))) p) (erased (TypeOf ctx1 x hty) t) (erased (CanonAt ctx1 hty c) cn) (erased (NoTeleNoFn c) nt)
        -> (ElabExpr ctx (RList (Cons (Raw) h items)) (EErr (RNotApplicable))))
-    ; match (sections 11, 12, 18): the scrutinee's type must be a declared type constructor's application
+    ; match (sections 7, 21, 26): the scrutinee's type must be a declared type constructor's application
     (many EXMatch : (erased (Ctx) ctx) (erased (Raw) sr) (erased (List (Raw)) ann) (erased (List (Raw)) brs) (erased (Ctx) ctx1) (erased (Core) sc) (erased (Nat) s) (erased (Term) sty) (erased (Nat) tc)
        (erased (List (Entry)) tps) (erased (List (Term)) targs) (erased (List (Adt)) adts) (erased (List (Nat)) ctors) (erased (Ctx) ctxA) (erased (List (Entry)) rt) (erased (List (Nat)) rids) (erased (List (Maybe (String))) rn)
        (erased (Ctx) ctx2) (erased (Ctx) ctx3) (erased (List (Branch)) cbs) (erased (List (Nat)) seen) (erased (List (Maybe (String))) names) (erased (Ctx) out) (erased (List (Nat)) ids)
@@ -712,7 +712,7 @@
     (many EXProveSubtermNot : (erased (Ctx) ctx) (erased (Raw) ar) (erased (Raw) br) (erased (Term) a) (erased (Term) aty) (erased (Term) b) (erased (Term) bty) (erased (Term) ca) (erased (Term) cb)
        (erased (ElabTerm ctx ar (TOk a aty)) p) (erased (ElabTerm ctx br (TOk b bty)) q) (erased (CanonAt ctx a ca) c1) (erased (CanonAt ctx b cb) c2) (erased (NotSub ctx ca cb) ns)
        -> (ElabExpr ctx (RList (Cons (Raw) (RKey (KProveSubterm)) (Cons (Raw) ar (Cons (Raw) br (Nil (Raw)))))) (EErr (RBadProof))))
-    ; (prove-predates x L): x in scope before the def-lvl that minted L (section 8)
+    ; (prove-predates x L): x in scope before the def-lvl that minted L (section 18)
     (many EXProvePredates : (erased (Ctx) ctx) (erased (String) xs) (erased (String) ls) (erased (List (Name)) scope) (erased (Nat) x) (erased (Nat) l) (erased (Term) tx) (erased (Nat) e) (erased (Ctx) out)
        (erased (Scope ctx scope) sc) (erased (NameOf scope xs x) nx) (erased (NameOf scope ls l) nl) (erased (TypeOf ctx x tx) t) (erased (KindOf ctx l (KLevel)) k) (erased (Lt x l) lt)
        (erased (Mint ctx (None (String)) (TyApp (Ref (Succ (Zero))) predates-ps (Cons (Term) tx (Cons (Term) (Ref x) (Cons (Term) (Ref l) (Nil (Term)))))) (KPlain) (None (Term)) e out) m)
@@ -727,7 +727,7 @@
     (many EXProvePredatesAfter : (erased (Ctx) ctx) (erased (String) xs) (erased (String) ls) (erased (List (Name)) scope) (erased (Nat) x) (erased (Nat) l)
        (erased (Scope ctx scope) sc) (erased (NameOf scope xs x) nx) (erased (NameOf scope ls l) nl) (erased (KindOf ctx l (KLevel)) k) (erased (Lt l (Succ x)) le)
        -> (ElabExpr ctx (RList (Cons (Raw) (RKey (KProvePredates)) (Cons (Raw) (RAtom xs) (Cons (Raw) (RAtom ls) (Nil (Raw)))))) (EErr (RBadProof))))
-    ; the three axioms (section 8): each takes two proofs, of size one, whose canonical types have the
+    ; the three axioms (section 18): each takes two proofs, of size one, whose canonical types have the
     ; shapes below with the shared parts the same, and mints the conclusion; a proof of the wrong shape, or
     ; shared parts that differ, is RBadProof
     (many EXPredatesTrans : (erased (Ctx) ctx) (erased (Raw) pr) (erased (Raw) qr) (erased (Ctx) ctx1) (erased (Core) pc) (erased (Nat) p) (erased (Term) pty) (erased (Term) cp) (erased (Term) ty) (erased (Term) a) (erased (Term) l1)
@@ -829,7 +829,7 @@
     (many EIRestErr : (erased (Ctx) ctx) (erased (Raw) r) (erased (List (Raw)) rest) (erased (Ctx) ctx1) (erased (Core) core) (erased (Nat) x) (erased (Reason) e)
        (erased (ElabExpr ctx r (EOk ctx1 core (Cons (Nat) x (Nil (Nat))))) p) (erased (ElabItems ctx1 rest (AErr e)) q) -> (ElabItems ctx (Cons (Raw) r rest) (AErr e))))
   ; Arguments, expressions of size one, against a telescope, as mini/elab.sl's ElabTermArgs but threading
-  ; the context (section 20's rule with every position non-erased).
+  ; the context (section 14's rule with every position non-erased).
   ((ElabExprArgs : ((Ctx) ctx) ((List (Maybe (Term))) acc) ((List (Entry)) tele) ((List (Raw)) args) ((AOut) out) -> Type)
     enum
     (many EANil : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) -> (ElabExprArgs ctx acc (Nil (Entry)) (Nil (Raw)) (AllOk ctx (Nil (Core)) (Nil (Nat)))))
@@ -861,7 +861,7 @@
        (erased (Ctx) ctx1) (erased (Core) core) (erased (Nat) x) (erased (Reason) r)
        (erased (ElabExpr ctx a (EOk ctx1 core (Cons (Nat) x (Nil (Nat))))) p) (erased (ElabExprArgs ctx1 (Cons (Maybe (Term)) (Some (Term) (Ref x)) acc) es args (AErr r)) q)
        -> (ElabExprArgs ctx acc (Cons (Entry) (MkEntry s i t) es) (Cons (Raw) a args) (AErr r))))
-  ; The call-site proof (section 9): none at the top level (section 24); a Predates proof from the callee's
+  ; The call-site proof (section 19): none at the top level (section 20); a Predates proof from the callee's
   ; level to the current one; or a Subterm proof for the j-th subterm-marked argument, every earlier marked
   ; argument the same as the enclosing function's, and the levels the same.
   ((Decrease : ((Ctx) ctx) ((Term) l) ((List (Entry)) ps) ((List (Nat)) ids) ((Ann) ann) ((DOut) out) -> Type)
@@ -923,7 +923,7 @@
        -> (DifferPrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b bs)))
     (many DPThere : (erased (Ctx) ctx) (erased (Nat) j) (erased (Term) a) (erased (List (Term)) as) (erased (Term) b) (erased (List (Term)) bs) (erased (Same ctx a b) s) (erased (DifferPrefix ctx j as bs) p)
        -> (DifferPrefix ctx (Succ j) (Cons (Term) a as) (Cons (Term) b bs))))
-  ; The results of a body against a return telescope (section 11): each the same as its entry, instantiated
+  ; The results of a body against a return telescope (section 26): each the same as its entry, instantiated
   ; with the entries before it.
   ((CheckRets : ((Ctx) ctx) ((List (Maybe (Term))) acc) ((List (Entry)) rets) ((List (Nat)) ids) ((ROut) out) -> Type)
     enum
@@ -939,8 +939,8 @@
        (erased (TypeOf ctx x xty) ty) (erased (Subst acc t t2) sb) (erased (Differ ctx xty t2) d) -> (CheckRets ctx acc (Cons (Entry) (MkEntry s (BFalse) t) es) (Cons (Nat) x ids) (RErr (RMismatch))))
     (many CRIsMismatch : (erased (Ctx) ctx) (erased (List (Maybe (Term))) acc) (erased (Bool) s) (erased (Term) t) (erased (List (Entry)) es) (erased (Nat) x) (erased (List (Nat)) ids) (erased (Term) t2)
        (erased (Subst acc t t2) sb) (erased (Differ ctx (Ref x) t2) d) -> (CheckRets ctx acc (Cons (Entry) (MkEntry s (BTrue) t) es) (Cons (Nat) x ids) (RErr (RMismatch)))))
-  ; Branches (section 12): each names a constructor of the type, once; its fields are minted, the scrutinee
-  ; and its type are forced against the pattern and its type (section 18), the body is checked against the
+  ; Branches (section 21): each names a constructor of the type, once; its fields are minted, the scrutinee
+  ; and its type are forced against the pattern and its type (section 7), the body is checked against the
   ; annotation, and the branch's scope is left. A branch the facts refute is an error (MINIMAL.md).
   ((ElabBranches : ((Ctx) ctx) ((Nat) s) ((Nat) tc) ((List (Nat)) ctors) ((List (Nat)) seen) ((List (Entry)) rt) ((List (Raw)) brs) ((BrOut) out) -> Type)
     enum
@@ -994,7 +994,7 @@
        (erased (ElabBody ctxR items (EOk ctxB core ids)) eb) (erased (CheckRets ctxB (Nil (Maybe (Term))) rt ids (ROk)) cr) (erased (Leave ctxB ctx ctx1) lv)
        (erased (ElabBranches ctx1 s tc ctors (Cons (Nat) c seen) rt rest (BrErr r)) q)
        -> (ElabBranches ctx s tc ctors seen rt (Cons (Raw) (RList (Cons (Raw) (RList (Cons (Raw) (RAtom cs) fnames)) items)) rest) (BrErr r))))
-  ; Every constructor has a branch or is refuted by the facts (section 12), with anonymous fields.
+  ; Every constructor has a branch or is refuted by the facts (section 21), with anonymous fields.
   ((Covered : ((Ctx) ctx) ((Nat) s) ((List (Nat)) ctors) ((List (Nat)) seen) -> Type)
     enum
     (many CvNil : (erased (Ctx) ctx) (erased (Nat) s) (erased (List (Nat)) seen) -> (Covered ctx s (Nil (Nat)) seen))
@@ -1017,7 +1017,7 @@
        (erased (List (Term)) frefs) (erased (Ctx) ctxR)
        (erased (TypeOf ctx c cty) t) (erased (CanonAt ctx cty (TValCtor fs ret)) cn) (erased (Nones fs names) nn) (erased (MintTele ctx (Nil (Maybe (Term))) fs names ctxF fids) m) (erased (Refs fids frefs) rf)
        (erased (Refine ctxF (Ref s) (ValApp (Ref c) fs ret frefs) ctxR) rf2) -> (Reachable ctx s c)))
-  ; A body: statements, then the final expression (section 16).
+  ; A body: statements, then the final expression (section 27).
   ((ElabBody : ((Ctx) ctx) ((List (Raw)) items) ((EOut) out) -> Type)
     enum
     (many BodyFinal : (erased (Ctx) ctx) (erased (Raw) r) (erased (EOut) out) (erased (ElabExpr ctx r out) p) -> (ElabBody ctx (Cons (Raw) r (Nil (Raw))) out))
@@ -1026,11 +1026,11 @@
     (many BodyStmtErr : (erased (Ctx) ctx) (erased (Raw) s) (erased (Raw) r) (erased (List (Raw)) rest) (erased (Reason) e) (erased (ElabStmt ctx s (SErr e)) p) -> (ElabBody ctx (Cons (Raw) s (Cons (Raw) r rest)) (EErr e)))
     (many BodyRestErr : (erased (Ctx) ctx) (erased (Raw) s) (erased (Raw) r) (erased (List (Raw)) rest) (erased (Ctx) ctx1) (erased (Stmt) st) (erased (Reason) e)
        (erased (ElabStmt ctx s (SOk ctx1 st)) p) (erased (ElabBody ctx1 (Cons (Raw) r rest) (EErr e)) q) -> (ElabBody ctx (Cons (Raw) s (Cons (Raw) r rest)) (EErr e))))
-  ; Statements (section 16, 27): let, def-lvl, def-fns, def-adts.
+  ; Statements (sections 27, 54): let, def-lvl, def-fns, def-adts.
   ((ElabStmt : ((Ctx) ctx) ((Raw) raw) ((SOut) out) -> Type)
     enum
     ; (let (binders) items...): the right-hand side's names are hidden, its entries and facts kept; each
-    ; binder is an alias of its value's entry, its type or is clause a checked redundancy (section 9)
+    ; binder is an alias of its value's entry, its type or is clause a checked redundancy (section 19)
     (many STLet : (erased (Ctx) ctx) (erased (List (Raw)) binders) (erased (List (Raw)) items) (erased (Ctx) ctx1) (erased (Core) core) (erased (List (Nat)) ids) (erased (List (Name)) scope) (erased (Ctx) ctxH) (erased (Ctx) out) (erased (List (Nat)) aids)
        (erased (ElabBody ctx items (EOk ctx1 core ids)) p) (erased (Scope ctx scope) sc) (erased (Hide ctx1 scope ctxH) h) (erased (BindLet ctxH binders ids (AllOk out (Nil (Core)) aids)) b)
        -> (ElabStmt ctx (RList (Cons (Raw) (RKey (KLet)) (Cons (Raw) (RList binders) items))) (SOk out (SLet aids core))))
@@ -1122,7 +1122,7 @@
        (erased (ElabTele ctx (Nil (Maybe (Nat))) ps (TeleOk ctxP pt pids pn)) ep) (erased (Binders pids acc) b) (erased (ElabTele ctxP acc rs (TeleOk ctxR rt rids rn)) er)
        (erased (Mint ctx (Some (String) f) (TFn l pt rt) (KPlain) (None (Term)) fid ctx1) m) (erased (MintFns ctx1 l rest (FErr r)) q)
        -> (MintFns ctx l (Cons (Raw) (RList (Cons (Raw) (RAtom f) (Cons (Raw) (RList ps) (Cons (Raw) (RList rs) items)))) rest) (FErr r))))
-  ; Each body: the parameters minted with their names, the level and subterm arguments set (section 3), the
+  ; Each body: the parameters minted with their names, the level and subterm arguments set (section 5), the
   ; body checked against the returns, the scope left.
   ((ElabBodies : ((Ctx) ctx) ((Term) l) ((List (Sig)) sigs) ((List (Raw)) defs) ((BsOut) out) -> Type)
     enum
@@ -1184,7 +1184,7 @@
        (erased (MintCtors ctx2 rest tids (FErrT r)) q)
        -> (MintCtors ctx (Cons (Raw) (RList (Cons (Raw) (RAtom tn) (Cons (Raw) (RList ps) ctors))) rest) (Cons (Nat) tid tids) (FErrT r))))
   ; A declaration's constructors: (C (fields) ret), the return the declaration's own type constructor applied
-  ; to as many arguments as it has parameters (section 12).
+  ; to as many arguments as it has parameters (section 21).
   ((MintDeclCtors : ((Ctx) ctx) ((Nat) tid) ((Nat) n) ((List (Raw)) ctors) ((FOutT) out) -> Type)
     enum
     (many MDNil : (erased (Ctx) ctx) (erased (Nat) tid) (erased (Nat) n) -> (MintDeclCtors ctx tid n (Nil (Raw)) (FOkT ctx (Nil (Nat)))))
@@ -1220,7 +1220,7 @@
     (many AppendNil : (erased (List (Nat)) ys) -> (AppendNats (Nil (Nat)) ys ys))
     (many AppendCons : (erased (Nat) x) (erased (List (Nat)) xs) (erased (List (Nat)) ys) (erased (List (Nat)) out) (erased (AppendNats xs ys out) p) -> (AppendNats (Cons (Nat) x xs) ys (Cons (Nat) x out)))))
 
-; ---- A program: its items as a body in the initial context, of size one (section 16).
+; ---- A program: its items as a body in the initial context, of size one (section 27).
 (def-adts
   ((POut : -> Type)
     enum

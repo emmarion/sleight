@@ -7,9 +7,9 @@ self-hosted compiler only.
 
 ## The rule
 
-UNIQUE.md U4's destructuring table: a unique-labelled field under a
+DESIGN.md section 22's destructuring table: a unique-labelled field under a
 `many` scrutinee comes out `many`, "a shared cell shares everything it
-owns, with no per-field bookkeeping". U4 says this governs `match`,
+owns, with no per-field bookkeeping". Section 22 says this governs `match`,
 `let-match` and `comptime-match` alike.
 
 ## The defect
@@ -42,7 +42,7 @@ w
 The reference refuses at line 8. Before the fix `slc` accepted this and
 printed `3`: the block reached through the `many` alias `z` had been
 overwritten in place through a `unique` alias the spec says cannot exist.
-Under U14's tier 1, where every invocation allocates, the same program
+Under OPEN.md 2's tier 1, where every invocation allocates, the same program
 would print `0`, so it also broke the erasure invariant.
 
 ## The fix

@@ -1,5 +1,5 @@
 ; expect: 1
-; Each wrapping constructor of a union newtype is at its field (UNIQUE.md U9), the second as the first.
+; Each wrapping constructor of a union newtype is at its field (DESIGN.md section 37), the second as the first.
 
 (def-adts
   ((Either : ((Bool) k) -> Type)

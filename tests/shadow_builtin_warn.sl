@@ -1,6 +1,6 @@
 ; expect: 0
 ; A binder may hide a special form or an annotation token as readily as anything else
-; (section 9), and that is the case the warning is most worth finding: the scope it
+; (section 19), and that is the case the warning is most worth finding: the scope it
 ; opens cannot write the marker any more. A built-in has no position of its own, so
 ; the message says so in place of pointing at one.
 

@@ -1,5 +1,5 @@
 ; expect: 1
-; Two constructors one Matchable lists are distinct even as first-class parameters of equal arity (sections 18, 19):
+; Two constructors one Matchable lists are distinct even as first-class parameters of equal arity (sections 7, 8):
 ; with x known to be C-headed, the D branch of a union match is refuted, which is what lets the match be written.
 (def-adts $ (U : -> Type) union
   (many UA : (many (Nat) n) -> (U))

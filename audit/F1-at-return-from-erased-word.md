@@ -6,10 +6,10 @@ Severity: soundness (wrong runtime value) and crash.
 
 ## The rule
 
-UNIQUE.md U8: an `at` return is absent from a call's physical values, and
+DESIGN.md section 36: an `at` return is absent from a call's physical values, and
 "the elaborator supplies its word from the caller's own binder for the
 argument the promise names ... which the caller still holds physically".
-DESIGN.md sections 20 and 34: an erased binding is stripped before the
+DESIGN.md sections 14 and 29: an erased binding is stripped before the
 interpreter runs, and an erased Const stores only an existence token.
 
 ## The defect
@@ -48,9 +48,9 @@ self reads hold only emitted ids and needed no change.
 
 ## Caveats
 
-This reads U8's "still holds physically" as requiring a non-erased word,
+This reads section 36's "still holds physically" as requiring a non-erased word,
 and restricts only which member supplies it. The other reading is that an
-erased binder should not join an at-class at all, since U8 lists "a
+erased binder should not join an at-class at all, since section 36 lists "a
 forwarding `let`" among the writers without qualification; under that
 reading the fix moves to `elab_let`. Both give the same results on the
 tests; the owner may prefer the second.

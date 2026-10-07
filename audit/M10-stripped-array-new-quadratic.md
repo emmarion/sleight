@@ -1,6 +1,6 @@
 # M10. Stripped-extern `array-new` is quadratic
 
-Status: observation; U14 does not ask for complexity to be preserved.
+Status: observation; OPEN.md 2 does not ask for complexity to be preserved.
 
 With externs stripped, `array-new` runs its model: `n` `ACons`
 constructions, each of which the FFI's `array_of` implements as an

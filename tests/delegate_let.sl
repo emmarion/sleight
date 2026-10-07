@@ -1,6 +1,6 @@
 ; needs: list map
 ; expect: 2
-; A delegate whose result is bound by a let and returned still counts (section 9).
+; A delegate whose result is bound by a let and returned still counts (section 19).
 
 (def-lvl V)
 (let ((erased piv)) (prove-predates I V))

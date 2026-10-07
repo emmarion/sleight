@@ -19,7 +19,7 @@ ground.
    `is`, `subterm`, `enum`, `absurd` and friends are recognized only by
    resolving the atom to a `Const`, non-erased entry whose value is the
    corresponding `Special` variant, exactly as `let` or `match` are
-   (section 4's tier 2). So all of them can be shadowed (section 9).
+   (section 6's tier 2). So all of them can be shadowed (section 19).
 
 ## Prelude
 
@@ -27,7 +27,7 @@ ground.
    `Coercible`, the `Special` ADT and one entry per special form. The
    opaque types are type constructors with no `Matchable`, so they can
    neither be matched on nor count as empty (SR 6). On top of that a
-   source prelude (`lib/prelude.sl`, section 41) defines `Nat`, `False`,
+   source prelude (`lib/prelude.sl`, section 42) defines `Nat`, `False`,
    `Eq`, `Add`, `Lt`, `Double`, `Pow2`, `Mod`, `Dec`, `Cmp`, `U8`,
    `U62`, `Bin`, `Numeral`, `Char`, `String`, `Append`, their
    functions, and the levels `nat-lvl`, `char-lvl` and
@@ -41,10 +41,10 @@ ground.
    `(%let)` — is distinct from the constructor. Only the prefix is an
    invention; it is not settled by DESIGN.md.
 6. **`Macro` and `Raw` are not implemented.** DESIGN.md gives no way to
-   construct a `Raw`, and macros are interim in section 9 anyway (SR 11).
+   construct a `Raw`, and macros are interim in section 19 anyway (SR 11).
    Head dispatch on a `Macro` value is therefore an error for now.
 7. **Names of the transitivity axioms** (SR 11): `predates-trans`,
-   `subterm-trans`, `predates-subterm`, in the order section 8 lists
+   `subterm-trans`, `predates-subterm`, in the order section 18 lists
    them. Each takes its two premises as arguments.
 
 ## Grammar shapes DESIGN.md leaves open
@@ -53,8 +53,8 @@ ground.
    match or a `coerce` producing several values), as well as a `values`
    (SR 1). A non-final item must be a statement.
 9. **`tail` and `delegate` wrap the call**: `(tail (f ...))`,
-   `(delegate (f ...))`, following section 40's only example (SR 2).
-12. **A file may end in a statement** (section 40 does); then nothing
+   `(delegate (f ...))`, following section 60's only example (SR 2).
+12. **A file may end in a statement** (section 60 does); then nothing
     is printed (SR 27). Otherwise the final expression's one value is
     printed. Several files on the command line share one scope, in
     order.
@@ -70,11 +70,11 @@ ground.
     ones; every constructor may mention every type of the group.
 15. **A position of size zero is erased** (all zero of its entries
     are), so the right-hand side of a `let` with no binders, or a match
-    with an empty annotation, is checked but never run. Section 27
+    with an empty annotation, is checked but never run. Section 54
     calls such a `let` useless as the language stands.
 16. **A match in an erased position** elaborates its scrutinee erased
-    whatever the keyword says, per section 12's "unconstrained".
-17. **Tail position** for `tail`/`delegate` (section 9) is judged on
+    whatever the keyword says, per section 21's "unconstrained".
+17. **Tail position** for `tail`/`delegate` (section 19) is judged on
     the post-erasure code after every `let` that only renames (which is
     what a `coerce`, or a `let` of a variable, erases to) is resolved
     away: the marked call is then the body's final expression, or its
@@ -84,7 +84,7 @@ ground.
     position. A `delegate` callee must be a named variable, and its
     arguments must resolve to the function's non-erased parameters in
     order. `delegate-of` fetches the proof `def-fns` minted
-    about the function. Settled: the proof is a `Delegate` (section 38),
+    about the function. Settled: the proof is a `Delegate` (section 33),
     which only `def-fns` and `def-unique` introduce, so no other form can
     mint one about the function and the fetch has nothing to choose
     between. This entry previously recorded the shadowing an anonymous
@@ -100,15 +100,15 @@ ground.
     entries carrying their types and any `is` rule, and dependent
     telescopes are instantiated with those. Grammar expressions are
     kept as trees rather than as anonymous entries with an `is` rule
-    (section 3's picture); canonicalization should agree either way,
-    but this is a representation choice, not the one section 3 draws.
+    (section 5's picture); canonicalization should agree either way,
+    but this is a representation choice, not the one section 5 draws.
 20. **`is` entries at use sites** (SR 13): an argument landing on an
     `is` parameter or field, or a result landing on an `is` return, is
     written like any other and must canonicalize identically to the
     `is` expression; its erasure is that of the position.
 21. **Match branches**: each constructor of the `Matchable` has at most
     one branch, in any order, and one left unlisted must be refuted or
-    stood for by an `else` (SR 17, settled by the owner; §12 now says
+    stood for by an `else` (SR 17, settled by the owner; §21 now says
     so). A present branch whose forced unification contradicts is an
     error telling the programmer to write `(absurd C)`; an `(absurd C)`
     whose unification succeeds is an error.
@@ -119,7 +119,7 @@ ground.
     forms and the `coercible-*` forms are elaborated as erased
     expressions, so they may be calls to erased functions (SR 18).
 24. **`(predates p)` accepts the level shape only** (SR 15; settled by
-    the owner, section 9): the proof's subject must canonicalize to the
+    the owner, section 19): the proof's subject must canonicalize to the
     callee's level and its level to the current one. A `Predates` about
     the function value, which `predates-subterm` can produce, is
     rejected at a call.
@@ -130,7 +130,7 @@ ground.
     than the index is an error.
 26. **Top-level calls**: a decrease annotation written at the top level,
     the `_` sugar forms included, is an error (settled by the owner,
-    section 24).
+    section 20).
 27. **Atom-vs-atom unification** makes the newer entry an alias of the
     older one (SR 21). Unifying a variable with a term that mentions a
     telescope binder (something inside an `Fn` type, say) is a hard
@@ -148,12 +148,12 @@ ground.
     run-position right-hand side, which are unconditionally true, so
     this looked harmless. Superseded by item 138: the right-hand side's
     entries now stay in scope, so no fact outlives an entry it mentions.
-30. **Nested definitions mint `Dyn`**, as section 34 says: a
+30. **Nested definitions mint `Dyn`**, as section 29 says: a
     `def-adts`, `def-lvl` or delegate proof inside a body mints `Dyn`
     entries, and the body's code binds each nested constructor's value.
     In run position the same mints are `Const`, and the values of
     `Const` entries form the runtime environment every closure and
-    run-position statement runs in (section 34's "embedded into the
+    run-position statement runs in (section 29's "embedded into the
     code").
 31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
     print it that way. A `many` parameter or field of type `Type` (SR
@@ -162,7 +162,7 @@ ground.
 
 ## Runtime representation
 
-32. **Erased positions occupy no slot at runtime** (sections 34, 38).
+32. **Erased positions occupy no slot at runtime** (sections 29, 33).
     A closure takes only its `many` parameters, a call passes only its
     `many` arguments, a constructor value holds only its `many` fields,
     a `values` and a function's results carry only the `many` entries,
@@ -171,7 +171,7 @@ ground.
     `many` binders. The token value stands in only where elaboration
     needs a Const for an erased entry (an erased `let` binder in run
     position, an erased `comptime-match` field, a `Level`).
-33. **Representation is decided at elaboration**, per section 38: a
+33. **Representation is decided at elaboration**, per section 33: a
     value is the tuple of its `many` fields, one field bare and none the
     token (SR 23's "unspecified bits"), and it carries a tag only when
     its type is an enum with more than one non-phantom constructor. A
@@ -192,15 +192,15 @@ ground.
 
 36. Macros (`Macro`, `Raw`, the expansion limit). The `--repl` flag reads one form
     at a time and prints every expression's value, which goes beyond
-    section 16's one-expression file; it is a convenience only.
+    section 27's one-expression file; it is a convenience only.
 
-## Extern types and the FFI (section 41)
+## Extern types and the FFI (section 42)
 
 42. **The FFI is a fixed OCaml table** (`lib/ffi.ml`) keyed by name:
     an `extern`-marked type or function looks its implementation up by
     its declared name at elaboration and fails if there is none, so a
     second `extern` declaration of a name already bound in the program
-    is a hard error (settled by the owner). Section 41 leaves the
+    is a hard error (settled by the owner). Section 42 leaves the
     source-level declaration open; this is the prototype's stand-in.
     The prelude itself is `lib/prelude.sl`, embedded into the binary by
     a dune rule so the interpreter needs no path to it at runtime.
@@ -216,7 +216,7 @@ ground.
     the FFI.
 44. **`--no-extern` strips every implementation** and runs the models
     instead; `dune test` runs every test both ways and requires the
-    same outcome, which is how section 41's invariant is checked. The
+    same outcome, which is how section 42's invariant is checked. The
     prelude is re-elaborated per mode.
 45. **`Newtype` has no ambiguity case**: `(Newtype C)` carries nothing
     but `C`, so `newtype-of` and `coercible-wrap` take the first one
@@ -229,16 +229,16 @@ ground.
     proof is ever built at runtime; `lt-dec` returns a `Dec` whose
     proof field is erased. A choice of the session, not the owner's.
 
-## Sugar (SUGAR.md)
+## Sugar (DESIGN.md sections 46 to 53)
 
-37. All four forms are implemented as SUGAR.md describes them: `_` as
+37. All four forms are implemented as DESIGN.md sections 46 to 53 describe them: `_` as
     a `def-fns` level mints an anonymous level; `_` as a match
     annotation reuses the telescope of the enclosing function body or
     match branch, and is an error elsewhere; `(predates _)` proves
     `Predates` between the callee's level, which must canonicalize to a
     variable, and the current level; `(subterm _)` proves `Subterm`
     between the annotated argument and the enclosing subterm parameter
-    at the same subterm index. All naive, as SUGAR.md says.
+    at the same subterm index. All naive, as DESIGN.md sections 46 to 53 say.
     The telescope `_` reuses from a function body is the return
     telescope with the parameters substituted in; an earlier version
     substituted without regard to each entry's depth, so a second
@@ -258,20 +258,20 @@ owner has since settled. The reasoning is a Claude session's and may be
 wrong (CLAUDE.md rule 1); where possible it was checked by compiling
 (rule 2).
 
-38. **`comptime-match` rejects a phantom constructor pattern.** §15 has
+38. **`comptime-match` rejects a phantom constructor pattern.** §28 has
     `comptime-match` read a non-erased scrutinee with a non-erased
-    discriminant, and §20 rule 2 says no non-erased value is ever headed
+    discriminant, and §14 rule 2 says no non-erased value is ever headed
     by a phantom constructor, so asserting a phantom constructor of a
     real value can never be a legitimate use. The prior code, on a
     transparent enum, treated the phantom (unspecified-repr) constructor
     as having no `many` fields and skipped the discriminant check
     entirely, so `(comptime-match x (F f))` for a phantom `F` succeeded
     against any value and minted `F`'s erased fields as `Const` tokens
-    — and since erased fields carry no runtime bytes (KERNEL.md), a
+    — and since erased fields carry no runtime bytes (DESIGN.md section 29), a
     field of type `(False)` among them was forged into scope, collapsing
     consistency. The pattern's constructor is now rejected when it is
     phantom. This looks like plugging an implementation gap rather than
-    a design choice, but it is recorded here in case the owner reads §15
+    a design choice, but it is recorded here in case the owner reads §28
     as permitting a phantom pattern with some other intended meaning.
 
 39. **A `let` binding a call's leading `many` returns at `erased`
@@ -285,30 +285,30 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     could tell; the values a `let` binds should be its own.
 
 40. **An atom/atom unification never writes a rule onto a rigid entry.**
-    §18's forced unification aliases the newer of two atoms to the
+    §7's forced unification aliases the newer of two atoms to the
     older. Constructors and type constructors are `rigid` (minted so in
     the prelude and by `def-adts`), and two distinct rigid atoms
-    unifying is §18's second contradiction. The prior orientation went
+    unifying is §7's second contradiction. The prior orientation went
     purely by entry id, so a `def-adts`-minted constructor whose id
     happened to exceed a `Dyn` variable's could receive a rewrite rule,
     aliasing one rigid constructor to another and defeating the
-    disjointness check (§19). Orientation now always lands the rule on a
+    disjointness check (§8). Orientation now always lands the rule on a
     non-rigid entry; two rigids still contradict. A correctness fix, not
     a design choice.
 
 41. **A phantom-constructor branch under an *erased* scrutinee is an
-    ordinary branch** (settled by the owner; §12 now says so). §12's
+    ordinary branch** (settled by the owner; §21 now says so). §21's
     exemption of a phantom branch from the match's result erasures, and
     its exclusion from the one-real-branch count, rested on the
     invariant that no non-erased value is headed by a phantom
-    constructor (§20 rule 2, SPEC-REVIEW 9). That holds for a `many`
+    constructor (§14 rule 2, SPEC-REVIEW 9). That holds for a `many`
     scrutinee only: an erased value may well be phantom-headed. So a
     phantom branch counts as unreachable only under a `many` scrutinee; under
     an `erased` one it is a real branch, subject to the one-real-branch
     rule and producing the match's declared result, its fields erased
     like every other branch's.
 
-## Strings, literals, and the driver (sections 16 and 41)
+## Strings, literals, and the driver (sections 27 and 42)
 
 Written by a session working autonomously overnight at the owner's
 request ("make reasonable guesses when necessary and append them to the
@@ -318,8 +318,8 @@ ASCII byte array with a `trim` that copies, no extra erased arguments on
 that function for now, numerals as an opaque `Nat` related by a prelude
 relation to a non-opaque binary spelling computed by a prelude function,
 `Char` as a newtype over `U8`, and a form retrieving the relation.
-Everything below that goes further is a guess, and DESIGN.md sections 16
-and 41 still record the consumer of the top-level value and numeric
+Everything below that goes further is a guess, and DESIGN.md sections 27
+and 42 still record the consumer of the top-level value and numeric
 literals as open.
 
 47. **The driver runs a final value as a program when its type is an
@@ -344,13 +344,13 @@ literals as open.
     models. `str-append` is plain source at
     `str-lvl`. The alternative reading of "slice", an ADT holding a
     buffer, a start and a length with erased bounds proofs, was not
-    taken: section 5 forbids a length function in a type, so every bound
+    taken: section 9 forbids a length function in a type, so every bound
     would be a relation, and iteration would need a `Nat` fuel rather
     than structural recursion.
 
 49. **`Char` is a source `newtype` over `U8`**, not extern, so a `Char`
     at runtime is the `U8`'s integer and the slice's destruct hands the
-    byte back directly. Any byte is a `Char`; section 28's ASCII rule is
+    byte back directly. Any byte is a `Char`; section 1's ASCII rule is
     about the language's syntax, not its data.
 
 50. **`Bin` is bijective base 2**: `(BZ)`, `(B1 b)` meaning 2b+1 and
@@ -358,7 +358,7 @@ literals as open.
     number has exactly one spelling. Uniqueness is what lets the FFI's
     destruct of a zarith integer agree with the model on the head
     constructor; a plain bit list has trailing zeros and would break
-    section 41's invariant. `Numeral : ((Bin) b) ((Nat) n) -> Type`
+    section 42's invariant. `Numeral : ((Bin) b) ((Nat) n) -> Type`
     has one constructor per digit, each carrying an erased sub-proof and
     an erased `Double` from the prelude; `bin-to-nat` is extern (the
     identity on zarith) over a structural model returning the number
@@ -383,7 +383,7 @@ literals as open.
     scope list at all; resolution goes through `Env.literals`. Sound,
     we believe, because the entries are those the statement would mint,
     and the statement depends on nothing but the prelude and the top
-    level calls freely (section 24). Consequence to note: a literal is
+    level calls freely (section 20). Consequence to note: a literal is
     never unary-known. Using `3` where a `(Vec A n)` index is needed
     means unfolding its `Numeral` proof by erased matches
     (`tests/numeral.sl`, six nested matches), reasoning relationally, or
@@ -393,7 +393,7 @@ literals as open.
 52. **Character literals** are `#\c` for a printable ASCII `c`,
     `#\space`, `#\newline`, `#\tab` and `#\xHH`; Scheme's spelling was
     chosen over `'c'` to leave the quote free for a future `Raw`. One
-    denotes its code's numeral followed by section 41's reflection
+    denotes its code's numeral followed by section 42's reflection
     route, `(let ((many %d)) (lt-dec n u8-modulus))`,
     `(comptime-match %d (Yes %a %b %p))` and
     `(let ((many _)) (MkChar (MkU8 n %p)))`, hoisted and interned the
@@ -401,7 +401,7 @@ literals as open.
     (item 51): the bound's proof is an erased token of type
     `(Lt n u8-modulus)`, asserted rather than decided, every code being
     below 256 by construction, and the literal's value is its code's
-    `Nat` (section 38), under the rule `is (MkChar (MkU8 n p))`, so it
+    `Nat` (section 33), under the rule `is (MkChar (MkU8 n p))`, so it
     is transparent down to its opaque `Nat` (`tests/char.sl`) and no
     separate relation for characters is needed.
 
@@ -427,14 +427,14 @@ literals as open.
     that recurses down the chain, the extractor's for one, still has the
     chain's depth to cover. Printing one does not walk it: a printed
     `Nat` spells through `Z.to_string` under the FFI and counts the
-    model's chain down without it (item 154). Section 41's invariant
+    model's chain down without it (item 154). Section 42's invariant
     holds up to resources; the tests keep their numerals small.
 
 55. **Location-free errors** (the literal-as-name check lives in
     `Env.bind`, which has no line) are reported at the enclosing
     top-level form's line.
 
-## IO programs (section 16)
+## IO programs (section 27)
 
 Asked for by the owner in chat: an ADT read by the driver, "quasi
 monad", efficient, able to read a whole file by name, write a whole
@@ -477,7 +477,7 @@ shape below is the session's.
     prelude, their usefulness being an open question.
 
 58. **`Unit`, `Maybe`, `Result` and `List` join the prelude**, `List`
-    exactly as section 31 defines it, so a program that defines its own
+    exactly as section 55 defines it, so a program that defines its own
     (every `; needs: list` test) shadows the prelude's; that changes
     item 4's remark that `List` is not built in. `Result`'s failure
     carries a `String` message, the operating system's for a file that
@@ -508,7 +508,7 @@ shape below is the session's.
     440MB for one 2000-character literal in one measurement, against
     0.05s and 10MB after). We believe the direct binding changes
     nothing else observable, except that a string no longer interns its
-    characters' numerals as a side effect. LITERALS.md gathers the
+    characters' numerals as a side effect. DESIGN.md section 45 gathers the
     literal handling.
 
 ## OCaml extraction (extract.ml)
@@ -565,8 +565,8 @@ in both modes.
     extraction reaches for `Obj.magic`. A typed extraction was not
     attempted: dependent indices, existential erased fields, first-class
     `Matchable`s and level polymorphism have no direct OCaml types, and
-    section 38's zero-cost `coerce` between distinct types would need
-    the same escape anyway. The runtime shape is section 38's: an ADT is
+    section 33's zero-cost `coerce` between distinct types would need
+    the same escape anyway. The runtime shape is section 33's: an ADT is
     an OCaml type, a variant when the interpreter tags it (every
     constructor listed, phantom ones included, with one `Obj.t` per
     `many` field) and otherwise an abbreviation for its one non-phantom
@@ -618,7 +618,7 @@ in both modes.
     with `Obj.repr`/`Obj.obj`. An extern function extracts to a wrapper
     around `Ffi_core.<name with - as _>` of the same arity; under
     `--no-extern` the extern types are ordinary variants and the extern
-    functions' compiled models are extracted instead, so section 41's
+    functions' compiled models are extracted instead, so section 42's
     invariant is checked on the extracted programs too. `Value.payload`'s
     `Slice` now carries `Ffi_core.slice`. An embedded extern integer is
     `Z.of_string` of its decimal spelling; an embedded string is a
@@ -695,13 +695,13 @@ in both modes.
     entries rigid so that the branch was refuted, then reverted that:
     it was a semantic change the owner had not approved, and it closed
     nothing reachable. (A rationale the session offered in between, that
-    refuting on two levels differing would break section 23 because the
+    refuting on two levels differing would break OPEN.md 2 because the
     stripped program may represent `Level` as `Unit`, was wrong: the
     stripped program keeps `P` and `Q` as distinct entries, and
     canonicalization compares entries, not runtime bytes.) Whether
     `def-lvl` levels should be rigid is open: for it, two mints are
     distinct constants, so the refutation is true and it forces the
-    honest `(absurd C)`; against it, section 18 states the atom rule
+    honest `(absurd C)`; against it, section 7 states the atom rule
     for every non-constructor atom and item 40 extended rigidity to
     constructors only. The load bearing part is elsewhere:
     `prove-predates` demands strict mint order and the three axioms
@@ -732,7 +732,7 @@ later session.
     owner's decision, in chat: the former may not be invoked with a bare
     return type. `def-adts` already required each constructor's return
     to be an application of the type constructor it is declared under
-    (section 12), but the first-class former (section 29) accepted a
+    (section 21), but the first-class former (section 11) accepted a
     return of any type-sorted expression, a bare type variable included,
     as in `(ValCtor (many (Nat) n) -> A)` for a parameter `A`. Such a
     type has no `Matchable` to be found, and `coercible-ctor` over a
@@ -748,11 +748,11 @@ later session.
     them; only a later fetch of the delegate proof (`delegate-of` today)
     revealed that `def-fns` had minted no proof. Both forms now reject
     anything whose compiled code is not the marked call. This looks like
-    plugging an implementation gap rather than a design choice: section 9
+    plugging an implementation gap rather than a design choice: section 19
     describes both marks as claims about a call.
 
 72. **A `let` that returns exactly what it binds is replaced by its
-    right-hand side.** Section 9 counts a call as `tail` when its
+    right-hand side.** Section 19 counts a call as `tail` when its
     returns are bound by a `let` and repackaged in a `values` in the
     same order, and requires a hard compile error where the compiler
     cannot honor a mark. The check honored that reading, but the code
@@ -770,7 +770,7 @@ later session.
     marked ones, which keeps one path instead of two. The depth check
     above was run by hand: `tests/tail_values.sl` covers the form at a
     depth the test suite can also extract and compile, since embedding a
-    Peano numeral that large in the extracted OCaml (section 41's
+    Peano numeral that large in the extracted OCaml (section 42's
     stripped mode) is not something extraction handles quickly.
 
 73. **Unifying a free variable with a telescope binder refutes the
@@ -807,19 +807,19 @@ later session.
     of anything false.
 
     The owner's decision, in a later session: the clash refutes the
-    branch, section 18's third way for a forced unification to fail. The
+    branch, section 7's third way for a forced unification to fail. The
     guard now asks whether the term is closed, the same fold from depth
     zero, and a hit raises the contradiction that a `Bound` against a
     constructor already raised through the structural mismatch, which
     left `unify` with no use for a depth at all. The reasoning put to
     the owner, who agreed: a rule maps a variable to a closed term and
     canonicalizing a closed term keeps it closed, so no rule could make
-    the two types identical under section 5, and refuting the
+    the two types identical under section 9, and refuting the
     free-variable case is the universal closure of what the closed case
     already did for each particular `k`; coercion does not reach the
     branch either, `coercible-ctor` retyping a value only to the
     constructor's return at other closed field values. Believed sound
-    under section 5's identity, and by the same reading it holds for a
+    under section 9's identity, and by the same reading it holds for a
     unit-like index type, which is where the owner's Lean demo marks the
     boundary, since whether a binder occurrence and a closed term may be
     identified is a property of the indexed type rather than a
@@ -840,13 +840,13 @@ later session.
     ```
 
     Under eta the two families agree, so refuting on the clash alone
-    would refute something true there; section 5 states no eta rule, so
+    would refute something true there; section 9 states no eta rule, so
     here they are distinct types that no value shares. This session did
     not run the Lean; it is recorded as the owner wrote it. Should an eta
     rule ever be wanted, one place it could live is `canon`,
     eta-normalizing binder occurrences at such a type before comparison,
     which would turn the equation into a solvable `k` against `(MkU)` and
-    leave the refutation as is; not designed. Section 42 records the
+    leave the refutation as is; not designed. OPEN.md 10 records the
     owner's wider open question, a rewriting engine without the atom
     requirement, which could revisit the decision.
     `tests/binder_clash.sl` and `tests/binder_clash_bad.sl` cover the
@@ -881,7 +881,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
 
 75. **A call's same-level test reads both levels canonically.** Section
     9 splits a call by whether the callee's level is the current one,
-    and section 5's identity is canonicalize-then-compare. The test
+    and section 9's identity is canonicalize-then-compare. The test
     canonicalized the callee's level but compared it against the current
     level's bare variable, while the `Predates` check on the next line
     canonicalizes both sides. So a fact equating the enclosing function's
@@ -923,10 +923,10 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     `def-fns` under a function body or match branch compiled to a
     `CLetRec` binding every function of the block, an `erased` one
     included, whose own body is already nothing -- item 32's rule applied
-    to the block's functions but not to the block itself. Section 20 has
+    to the block's functions but not to the block itself. Section 14 has
     an erased function only ever held or called at multiplicity `erased`,
     so nothing at runtime can reach the closure and the leftover binding was
-    unreachable code; it also stood in the way of section 9's `delegate`, whose check
+    unreachable code; it also stood in the way of section 19's `delegate`, whose check
     reads the post-erasure AST and wants the body to reduce to the marked
     call alone, so an erased proof helper defined inside a delegating
     function made the mark a hard error (a `tail` mark was unaffected,
@@ -936,17 +936,17 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     case. Believed conservative, the dropped closures having no
     reachable use. The owner asked for the same reading to be applied to
     a nested `def-adts`'s *phantom* constructors, erased entries by
-    section 12 and equally unreachable, so the `CLet` that statement
+    section 21 and equally unreachable, so the `CLet` that statement
     emits now carries only the non-phantom ones and is dropped when none
     remain. A nested `def-adts` declaring a non-phantom constructor still
     binds a real value and so still blocks a `delegate`, which reads as
-    right: section 9 wants the body to reduce to the marked call alone,
+    right: section 19 wants the body to reduce to the marked call alone,
     and that binding does not reduce away. `tests/delegate_erased_inner.sl`
     covers both statements inside a delegating body.
 
 78. **A form that fetches an object by naming something reads the name
-    through its alias.** Section 9's state-forwarding `let` makes a
-    binder an alias of the entry it names, and section 5's identity is
+    through its alias.** Section 19's state-forwarding `let` makes a
+    binder an alias of the entry it names, and section 9's identity is
     canonicalize-then-compare, so `(let ((erased N)) Nat)` should leave `N`
     usable wherever `Nat` was; `ctor_var` already resolved a constructor
     that way (`tests/ctor_alias.sl`). The two forms that fetch an object
@@ -959,7 +959,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     what makes `matchables` and `newtype_of` compare two canonical ids
     rather than one of each. `tests/matchable_of.sl`,
     `tests/delegate_erased_inner.sl`. Believed a correctness fix: by
-    section 9 an alias and its target are one entry's contents, and
+    section 19 an alias and its target are one entry's contents, and
     nothing else in the checker tells them apart.
 
     The sweep behind this item, offered as a record rather than a claim
@@ -979,13 +979,13 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     -- are not term comparisons and canonicalization does not apply.
     Two places read a named entry deliberately *without* resolving it,
     and were left alone: `comptime-match` wants the named entry's own
-    state, multiplicity and stored value, which section 3 puts on the
+    state, multiplicity and stored value, which section 5 puts on the
     entry while the fact table holds only its type and `is` -- and
     resolving would as a rule leave nothing to read, since a run-position
     `let`'s binder canonicalizes to the expression it bound rather than
     to any variable (checked by patching the form to resolve, which fails
     on the ordinary `(comptime-match two (Succ one))`); an alias reaches
-    the value through section 9's state forwarding instead, and an
+    the value through section 19's state forwarding instead, and an
     erased alias of a non-erased `Const` is refused, which is section
     34's requirement read on the name actually written,
     and `prove-predates` resolves only when the named variable is younger
@@ -1011,7 +1011,7 @@ failed on.
     its constructors erased beside a `Matchable` naming them `many`
     (`tests/erased_ctor_dispatch_bad.sl`). The pattern's constructor is
     now required to be non-erased in a real branch of a `many` match,
-    which reads as section 20's rule -- an erased name in a non-erased
+    which reads as section 14's rule -- an erased name in a non-erased
     position -- applied to the pattern; under an `erased` scrutinee, or
     in a refuted or phantom branch, nothing is dispatched on and the
     constructor may be erased as before. Whether the design would rather
@@ -1028,7 +1028,7 @@ failed on.
     `coercible-ctor` over a variable of it crashed the elaborator on the
     assertion that reads a constructor's type constructor
     (`tests/valctor_field_return_bad.sl`). No `def-adts` can declare
-    such a constructor, section 12 fixing every constructor's return to
+    such a constructor, section 21 fixing every constructor's return to
     the type it is declared under, so the type has no inhabitant and no
     `Matchable` could describe it; the former now rejects it, extending
     item 70's check to the head being a free type constructor. Read as
@@ -1041,16 +1041,16 @@ failed on.
     (`tests/ctor_former_nesting.sl`, `tests/gmap.sl`).
 
 81. **An empty type may have several identical `Matchable`s in scope.**
-    Section 19 makes several `Matchable`s for one type an error only
+    Section 8 makes several `Matchable`s for one type an error only
     when they disagree, and `find_matchable` reads it that way, but the
     emptiness test behind `absurd` demanded exactly one, so an absurd
     function taking `(erased (Matchable enum False) m)` as a parameter
     was told `(False)` is not an empty type. The test now goes through
     the same lookup as a match does (`tests/absurd_dup_matchable.sl`).
-    A correctness fix by the session's reading of section 19.
+    A correctness fix by the session's reading of section 8.
 
 82. **Head dispatch reads the head's type as well as its value**
-    (settled by the owner; section 4 now says so). Section 38's
+    (settled by the owner; section 6 now says so). Section 33's
     `coerce` through a newtype wrapping `(Special)` produced a `Const`
     whose stored value was a `Special` variant, `(%let)`, while its
     type was the newtype's, and the dispatch, which read only the
@@ -1067,16 +1067,16 @@ constructors need no multiplicity of their own; the elaborator should
 stamp what the `Matchable` says into the match; phantom constructors
 take no discriminant; and a non-erased match needs a non-erased
 `Matchable`, which is what carries an extern type's construction and
-matching (§41). DESIGN.md §§17, 20 and 38 now say all four; items 83-85
+matching (§42). DESIGN.md §§14, 24 and 33 now say all four; items 83-85
 record how the prototype reads them, and item 79's restriction is gone.
 
 83. **What a match compiles to.** The post-erasure form of a match is
     its scrutinee, one branch per real constructor keyed by that
     constructor's discriminant, and a *shape* saying how the scrutinee
     comes apart: through the FFI's destructor where it holds the type
-    (§41), off the tag where the type carries one, or as the value's
+    (§42), off the tag where the type carries one, or as the value's
     own fields where it carries neither -- the case the elaborator has
-    already checked leaves a single real branch (§12). All of it is
+    already checked leaves a single real branch (§21). All of it is
     settled at elaboration from the `Matchable`'s *type*, which fixes
     the enum/union tag, the constructor order and each constructor's
     phantom marker, together with the shape `def-adts` recorded for a
@@ -1090,7 +1090,7 @@ record how the prototype reads them, and item 79's restriction is gone.
 84. **A match carries no `Matchable` it would not read** (the owner's
     decision, in chat). A `Matchable` entry is minted `many` and its
     value carries the type's runtime shape, but a match whose
-    `Matchable` entry is `Const` (§34) -- minted by a `def-adts` in run
+    `Matchable` entry is `Const` (§29) -- minted by a `def-adts` in run
     position, or forwarded from one -- takes that shape and mentions no
     `Matchable` at all, so a non-extern type's match is a tag read or a
     field read with nothing dynamic in front of it, in the interpreter
@@ -1111,7 +1111,7 @@ record how the prototype reads them, and item 79's restriction is gone.
     asks for anything (`tests/erased_matchable_ok.sl`).
 
     Which `Matchable` a match reads therefore matters, and consistent
-    ones for a type are interchangeable (§19), so the lookup prefers one
+    ones for a type are interchangeable (§8), so the lookup prefers one
     whose shape the elaborator can see -- the one `def-adts` minted,
     read through an alias as ASSUMPTIONS 78 has the other fetching forms
     do -- over one it cannot, rather than taking the newest in scope.
@@ -1133,7 +1133,7 @@ record how the prototype reads them, and item 79's restriction is gone.
     zero -- but the two numberings had no reason to agree, and the
     stamped discriminants make the choice load-bearing. The extracted
     OCaml follows: a phantom constructor is no longer a variant of its
-    type, and a value is never headed by one (§20's rule 2).
+    type, and a value is never headed by one (§14's rule 2).
 
 ## A cleanup session's reading of the Matchable pick, and one open gap
 
@@ -1154,13 +1154,13 @@ suite (CLAUDE.md rule 2), not settled decisions.
     each candidate through its alias rule, as ASSUMPTIONS 78's fetching
     forms do, and ranks the ADT the elaborator can see first, a
     non-erased `Matchable` second, an erased one last, still refusing
-    inconsistent candidates as before. Read as §19's interchangeability
+    inconsistent candidates as before. Read as §8's interchangeability
     of consistent `Matchable`s, not a new rule: the change can only turn
     a refusal into an acceptance, and only where a `Matchable` that
     would have served was already in scope.
 
 87. **Forced unification consults the Matchables in scope** (settled by
-    the owner; §§18, 19 now say so). The engine knew constructor
+    the owner; §§7, 8 now say so). The engine knew constructor
     disjointness only through rigidity (item 40), which `def-adts`
     confers on the names it mints and nothing confers on a
     `ValCtor`-typed parameter, so with `C` and `D` both parameters
@@ -1169,7 +1169,7 @@ suite (CLAUDE.md rule 2), not settled decisions.
     aliasing `C` to `D` inside the branch, and `(absurd D)` was refused
     as "not refuted": an `erased` or union match over first-class
     constructors could not be written unless the arities differed. Two
-    atoms one `Matchable` in scope lists are now §18's second
+    atoms one `Matchable` in scope lists are now §7's second
     contradiction (`tests/first_class_disjoint.sl`,
     `tests/first_class_disjoint_bad.sl`). No unsoundness was found
     before, the extra branch being unreachable and its facts ending
@@ -1177,16 +1177,16 @@ suite (CLAUDE.md rule 2), not settled decisions.
     excludes and accepts the absurd one.
 
 88. **The elaborator keeps no record of a type beyond the scope**
-    (settled by the owner; §17 now says so). Items 83-84 had stamped
+    (settled by the owner; §24 now says so). Items 83-84 had stamped
     the `def-adts`-minted shape into a match through a global table
     from `Matchable` entry to ADT record, filled by `def-adts` and read
     back by the match. The owner's reading, which the session checked
     against every use: the tag, the discriminants, the phantom markers
     and the field arities are all in the `Matchable`'s type and the
     constructors' `ValCtor` types, so the only thing a `Matchable`'s
-    *value* can carry is an `extern` type's FFI wrapper (§41), and that
+    *value* can carry is an `extern` type's FFI wrapper (§42), and that
     value has the home every value has -- the entry's `Const` state in
-    run position, a runtime binding in a body (§34). The table is gone;
+    run position, a runtime binding in a body (§29). The table is gone;
     the `Matchable` minted inside a body is `Dyn` like the
     constructors beside it, bound by the same code, and a match on it
     reads it when the code runs, as a match on a parameter does. In the
@@ -1195,7 +1195,7 @@ suite (CLAUDE.md rule 2), not settled decisions.
     wrapper. Two smaller tables went the same way: `Special`'s
     variant-to-form map is a value the prelude builds, and the
     `def-adts` code binds no phantom constructor at all, a phantom
-    entry holding only §3's token. What remains global is the id
+    entry holding only §5's token. What remains global is the id
     supply, the extractor's inputs (`Env.trace` and the id-to-name map
     it prints with), the FFI's claim tables and the `--no-extern` flag.
 
@@ -1204,7 +1204,7 @@ suite (CLAUDE.md rule 2), not settled decisions.
     the tail-check's normalizer, which already folds a renaming `let`
     away, also drops a `let` whose right-hand side is values embedded
     by elaboration -- literals in the post-erasure code, the entries
-    they bind staying `Dyn` as §34 has every binding in a body -- when
+    they bind staying `Dyn` as §29 has every binding in a body -- when
     the rest of the body mentions none of its binders. That keeps item 77's guarantee for a phantom-only
     `def-adts` (`tests/delegate_erased_inner.sl`) but reads more widely
     than item 77 did: a nested `def-adts` whose constructors the body
@@ -1233,8 +1233,8 @@ suite (CLAUDE.md rule 2), not settled decisions.
     its signature. The session's reading is that every such branch is
     unreachable and its facts hypothetical, so nothing false follows,
     and that what is lost is only an `(absurd C)` the checker can no
-    longer grant. The suite is unchanged. §18's second failure mode and
-    §19 now say this, in wording the owner confirmed (CLAUDE.md rule
+    longer grant. The suite is unchanged. §7's second failure mode and
+    §8 now say this, in wording the owner confirmed (CLAUDE.md rule
     12).
 
 ## A compiler written in the language (self/)
@@ -1266,7 +1266,7 @@ by the owner.
 91. **The compiler checks its input.** A first version trusted it; at
     the owner's request ("make it not trusting") the session ported
     every check of `lib/elab.ml` and `lib/env.ml`: the three
-    contradictions of forced unification (section 18), identity of
+    contradictions of forced unification (section 7), identity of
     types and values, erasure by position, the call-site proofs against
     the current level and enclosing subterm parameters, branch
     refutation and the one-real-branch rule, `comptime-match`
@@ -1283,7 +1283,7 @@ by the owner.
     a second arbiter
     for section 10's consistency question, since it runs on the same
     reading of the design and trusts its own interpreter as `lib/`
-    trusts its (KERNEL.md).
+    trusts its (DESIGN.md section 29).
 
 92. **What the fixpoint shows, precisely.** `self/bootstrap.sh`
     extracts the compiler natively with the reference extractor, checks
@@ -1474,19 +1474,19 @@ by the owner.
 ## `let-match`, and reasoning about literals through their spelling
 
 The owner asked for a single-branch statement form of `match`, named it,
-and confirmed §16's wording. What follows is how the session built it and
+and confirmed §27's wording. What follows is how the session built it and
 what it assumed while doing so.
 
 99. **`let-match` reads no value, so it is not confined to run
     position** (`Elab.elab_let_match`). It requires the scrutinee's
     `Matchable` originally had to list exactly one non-phantom constructor.
-    Following the approved §16 extension, it now requires every alternative
+    Following the approved §27 extension, it now requires every alternative
     to be automatically refuted in an independent branch environment, and
     permits the selected constructor to be phantom at `erased`. Both
     compilers use ordinary match refinement for these checks; phantom
     alternatives are not skipped. The fields bind at `under smult` their
     declared multiplicities,
-    which is §20's existing rule for a match's branch fields, so an
+    which is §14's existing rule for a match's branch fields, so an
     erased scrutinee yields only erased fields. The refinement goes
     through the same `refine` an ordinary `match` branch uses, so nothing
     is asserted that a branch would not already have established — the
@@ -1501,9 +1501,9 @@ what it assumed while doing so.
     So a `let-match` at top level never costs the code after it its run
     position, which was the session's worry about the form and appears
     not to arise.
-101. **§27 numbers it `5a`** rather than renumbering the entries after
+101. **§54 numbers it `5a`** rather than renumbering the entries after
     it, at the owner's direction, in wording the owner confirmed
-    (CLAUDE.md rule 12), and §20's erasure list names the form in its
+    (CLAUDE.md rule 12), and §14's erasure list names the form in its
     own bullet, in wording the owner confirmed.
 102. **The `Numeral` lemmas are tests, not prelude additions**
     (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
@@ -1529,14 +1529,14 @@ what it assumed while doing so.
     `Elab.in_prelude`), so user shadowing cannot reach the generated
     forms, as with a literal's own expansion (51). The level context
     stays the caller's, so the generated call carries `(predates _)`
-    inside a function body and nothing at top level (§24). `unary`
+    inside a function body and nothing at top level (§20). `unary`
     hoists every literal on the walk, which is why `Elab.hoist` moved
     into the elaborator's recursive group. Its ceiling is 4096 steps,
     a number the session chose and the owner has not confirmed.
-105. **Whether §27 should list a sugar form is open.** `unary` and
+105. **Whether §54 should list a sugar form is open.** `unary` and
     `distinct` are registered as `Special` variants like any other form,
-    but they carry no meaning of their own and are recorded in SUGAR.md,
-    which is what that file is for. §27 says it lists every special
+    but they carry no meaning of their own and are recorded in DESIGN.md sections 46 to 53,
+    which is what that file is for. §54 says it lists every special
     form; the two readings are not reconciled here.
 
 106. **`unary` mints one rule, not one per step.** At the owner's
@@ -1556,10 +1556,10 @@ what it assumed while doing so.
     constructor over `T`, and every field is erased, so a value is only
     its tag and two instances differ by a coercion. `char-cmp`'s
     arguments coerce down through `Char`'s and `U8`'s newtype wrappers
-    to their codes, the call to `u62-cmp` is a `delegate` (§38), its bounds
+    to their codes, the call to `u62-cmp` is a `delegate` (§33), its bounds
     from `u8-below-u62`, and the
     `Coercible` carrying the result back up is built by an erased match
-    over the three constructors — erased, so §12 puts no one-real-branch
+    over the three constructors — erased, so §21 puts no one-real-branch
     limit on it and it leaves no code, which is what lets the delegate
     mark stand. `tests/char_ops.sl` coerces `char-cmp` to `u62-cmp`'s
     own type and runs it on `Nat`s. `CEq` repeats its index rather than
@@ -1578,33 +1578,33 @@ what it assumed while doing so.
     not a claim about who checked it.** For `unary` and `distinct`
     nothing is asserted: the elaborator writes down terms — a `Bin`
     spelling, a `BinSucc` witness, a call — and the refinement reaches
-    §18's table through the same `refine` an ordinary match branch uses.
+    §7's table through the same `refine` an ordinary match branch uses.
     A wrong term does not typecheck, which the session checked by
     handing `numeral-succ` a witness and then a spelling that lie; both
     are rejected. What is not checked, here as everywhere a numeral is
     involved, is that a literal's runtime `Nat` is the number its source
-    spelled, which rests on `bin-to-nat`'s extern (§41's invariant, and
-    KERNEL.md's note on facts).
+    spelled, which rests on `bin-to-nat`'s extern (§42's invariant, and
+    DESIGN.md section 29's note on facts).
 
 109. **`nat-to-u8` is gone** (`lib/prelude.sl`, `lib/ffi.ml`,
     `lib/ffi_core.ml`), removed at the owner's direction: a wrapping
     narrowing hands back a `U8` whose value bears no stated relation to
     its input, so what it returns is opaque exactly where a caller
     wanted to know. Nothing replaced it, and nothing needed to. A
-    literal takes §41's reflection route at top level and is referenced
+    literal takes §42's reflection route at top level and is referenced
     from a body as an ordinary value, which is what the eight tests
     using it for an exit code now do. A computed `Nat` is narrowed where
-    it is used, by binding it and matching `lt-dec` — §5 keeps a call
+    it is used, by binding it and matching `lt-dec` — §9 keeps a call
     out of the `Dec` index, so the binding is not optional — with the
     caller saying what out of range means instead of the prelude
     wrapping silently (`tests/io_closure_in_data.sl`,
     `tests/io_factory_twice.sl`). `u8-add` still wraps, which is
     modular arithmetic rather than a narrowing and was not touched.
-    §41 says this, in wording the owner confirmed (CLAUDE.md rule 12).
+    §42 says this, in wording the owner confirmed (CLAUDE.md rule 12).
 
 110. **`U8` is marked `newtype`, and needs no extern.** `MkU8` carries
-    an erased bound proof beside its one `many` field, which §12's
-    newtype rule permits, so §38 requires the value to be that field
+    an erased bound proof beside its one `many` field, which §21's
+    newtype rule permits, so §33 requires the value to be that field
     alone — which is what the FFI's `bounded` was doing by hand:
     construct was the identity on the integer and destruct handed it
     back. With the mark, the ordinary untagged one-field path does the
@@ -1614,7 +1614,7 @@ what it assumed while doing so.
     being a `Nat` at runtime. `u8-to-nat` went too, having been the
     extern form of `coercible-wrap MkU8`.
 
-    §41 says this in its prose, its code block and its list of externs,
+    §42 says this in its prose, its code block and its list of externs,
     in wording the owner confirmed (CLAUDE.md rule 12).
 
 ## The compiler in `self/` after `let-match`, `unary` and `distinct`
@@ -1664,8 +1664,8 @@ none of it is design.
     own exit codes are built as the tests' are, by reflection at top
     level (109).
 
-113. **A call with no decrease annotation gets one inferred** (SUGAR.md
-    3; `Elab.elab_call`, `elab-call` in `self/elab.sl`). Inside a
+113. **A call with no decrease annotation gets one inferred** (DESIGN.md section
+    48; `Elab.elab_call`, `elab-call` in `self/elab.sl`). Inside a
     function body a call carrying neither `(predates p)` nor
     `(subterm p)` is elaborated as if it carried `(predates _)` when the
     callee's level and the current level differ canonically (75), and
@@ -1706,16 +1706,16 @@ checked by running (rule 2).
     Their names are dropped (`~names:(anon ann_tele)`), so nothing
     reaches them by name; but the lookups that go by type scan
     `env.scope` regardless — `find_matchable` and `matchable-of` for a
-    `Matchable` heading a type constructor (§19), `newtype-of` for a
-    `Newtype` naming a constructor (§38), `delegate-of` for an
-    anonymous `Delegate` about a function (§9). A branch could
+    `Matchable` heading a type constructor (§8), `newtype-of` for a
+    `Newtype` naming a constructor (§33), `delegate-of` for an
+    anonymous `Delegate` about a function (§19). A branch could
     therefore satisfy the annotation by fetching the entry the
     annotation had just minted, and `check_results` then compared that
     entry with itself. Two consequences the session could run:
     `(match erased (Zero) (((Matchable enum Level) m)) (else
     (matchable-of Level)))` bound an erased `Matchable` for `Level`
     listing no constructors, which is what `check_empty` reads as
-    `(Level)` being an empty type, so an `absurd` body (§37) was
+    `(Level)` being an empty type, so an `absurd` body (§25) was
     accepted for a `def-lvl` level and `(False)` followed
     (`tests/match_result_matchable_bad.sl`, the owner's program); and
     the same shape through `newtype-of` minted a `Newtype` for a
@@ -1730,7 +1730,7 @@ checked by running (rule 2).
     to say either way. That a branch may not read what the match it
     belongs to produces looks to the session like plugging a
     circularity rather than a design choice, but it is recorded here in
-    case the owner reads §12's annotation as binding for the branches;
+    case the owner reads §21's annotation as binding for the branches;
     the entries are still anonymous, so the question is only about the
     type-directed lookups.
 
@@ -1739,7 +1739,7 @@ checked by running (rule 2).
 The owner proposed `_` for an erased argument of a type constructor, a
 value constructor or a function call, solved by unification against an
 expectation and the other arguments, naive and left to right, with every
-expression's type settled when the elaborator leaves it (SUGAR.md 6
+expression's type settled when the elaborator leaves it (DESIGN.md section 50
 records the proposal). Items 115 and 116 are the implementing session's
 reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
 
@@ -1751,7 +1751,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     name and none of the type-directed lookups of item 114 can fetch it;
     it prints as `_`. `unify` without `~force` binds only metas — a meta
     against a meta binds the newer, a meta against a term binds the meta
-    after the occurs and dangling-binder checks of §18 — and requires the
+    after the occurs and dangling-binder checks of §7 — and requires the
     two sides identical otherwise; `refine` and the extractor's printer
     pass `~force:true` and are as they were, and `check`/`check_sg` now
     go through the solving unifier, which on meta-free terms is the
@@ -1789,7 +1789,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     and a `(Nil _)` scrutinee are refused; a type constructor
     application's `_` is
     solved only through an `is` expectation, so `(many (List _) xs)` in
-    a signature is refused (`tests/wild_type_bad.sl`); §3's decrease
+    a signature is refused (`tests/wild_type_bad.sl`); §5's decrease
     annotation is inferred after the arguments are solved, as the
     proposal asks, which is the order `elab_call` already had. All prior
     tests pass unchanged, and no error message of a prior test changed.
@@ -1843,10 +1843,10 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
 
 117. **Pure terms stay open; boundaries settle** (`Elab.check_args
     ~boundary`, `Elab.settle`, `Env.bind`; `check-args`, `settle`,
-    `bind-as` in `self/`). The owner's second round on SUGAR.md 6: the
+    `bind-as` in `self/`). The owner's second round on DESIGN.md section 50: the
     invariant is that no fact in the table mentions an unsolved meta,
     and the forms are sorted by it. A constructor or type constructor
-    application, in an expression or in §5's grammar, is no boundary:
+    application, in an expression or in §9's grammar, is no boundary:
     `check_args` runs without its closing checks there, the term and
     type it returns may hold open metas, and `elab_expr` substitutes the
     solved ones into every result it returns (`Env.metaless`). A call is
@@ -1884,7 +1884,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
 
 Asked for by the owner in chat: the prelude's primitives should return
 proofs of their specifications, CPDT-style, since a function that returns
-a bare value is opaque to every later type (section 5 keeps calls out of
+a bare value is opaque to every later type (section 9 keeps calls out of
 types, so a returned relation is the only channel). The owner decided
 that the FFI adder returns an `Add` proof with a plain adder as a
 `delegate` over it, that `double` is derived from it, that `trim` is
@@ -1918,8 +1918,8 @@ judiciously with `_`. The names and the shapes below are the session's.
      the third. `mod-add`, `succ-mod`'s old form and `lt-pos` are gone.
      `trim`'s return is `(many s is t)`. `tests/prelude_proofs.sl` is the
      evidence.
-119. **Levels in the prelude are anonymous** (`_`, SUGAR.md 1) and its
-     calls bare (SUGAR.md 3), except `nat-lvl`, `u8-lvl`, `char-lvl`
+119. **Levels in the prelude are anonymous** (`_`, DESIGN.md section 46) and its
+     calls bare (DESIGN.md section 48), except `nat-lvl`, `u8-lvl`, `char-lvl`
      and `str-lvl`, which tests prove `Predates` against; the functions
      the tests reach through them (`nat-add`, `double`, `lt-dec`,
      `nat-cmp`; `u8-add`; `char-cmp`; `trim`, `str-append`) sit at
@@ -1927,7 +1927,7 @@ judiciously with `_`. The names and the shapes below are the session's.
      as its reading: a lemma cannot recurse on a proof another lemma's
      call produced, since that is not a subterm of anything, so
      `add-diag-double` recurses on the `Nat` instead; and two lemmas at
-     one level can only call each other under section 9's positional
+     one level can only call each other under section 19's positional
      subterm discipline, so each lemma is its own `def-fns _` and calls
      the ones above it with an inferred `Predates`.
 120. **`nat-cmp` is the extern comparison; `lt-dec` is derived from it
@@ -2170,7 +2170,7 @@ had noted that an `SCons` copies its tail, so building a string by
      index; nothing else in the proof family moved. The "dangling
      binder" case is not refuted but absent: no function reads a type
      off a term any more. `dangling` itself stays, deciding section
-     18's third contradiction and whether a `_` may be solved against
+     7's third contradiction and whether a `_` may be solved against
      an `is` entry. `self/bootstrap.sh` is the evidence.
 
 ## Code indexed by its scope
@@ -2201,7 +2201,7 @@ had noted that an `SCons` copies its tail, so building a string by
      defined in, and a `Closure` packs those; `Bound` in `elab.sl`
      carries the group's ids as an index so `define-fns` returns the
      group's `Lockstep` by construction. A Const entry's value is
-     embedded with its entry (`CConst id v`, section 34's wording), so
+     embedded with its entry (`CConst id v`, section 29's wording), so
      the top level binds no frame, a top-level closure captures
      nothing, and run position is the empty context: `elab-let`,
      `elab-let-match` and `elab-def-fns` run code or mint a top-level
@@ -2332,7 +2332,7 @@ of what the code does; `self/bootstrap.sh` is the evidence, and the
 bootstrap runs in the same time as before (about four minutes here).
 
 131. **A value is an address into a size-indexed store; a block holds
-     section 38's representation with every address in it below its
+     section 33's representation with every address in it below its
      own.** `self/heap.sl` declares `Addr bound`, a Nat below the bound
      carried at runtime as its bijective spelling (the prelude's `Bin`,
      related by `Numeral`), and `Heap B size`, a Braun tree of blocks
@@ -2348,14 +2348,14 @@ bootstrap runs in the same time as before (about four minutes here).
      `Maybe`, an `IdMap`, the interpreter's frames, the environment's
      entries and finals), is a `coerce` whose proof an erased function
      builds by recursion, so it extracts to the identity; `Addr` needs
-     no `newtype` mark for that (section 38's `coercible-ctor` with the
+     no `newtype` mark for that (section 33's `coercible-ctor` with the
      erased bound differing). `core.sl`'s `Block a` is a tag with
      fields, a tuple of fields, a host payload, a held constructor, a
      Matchable, a group over the frames it closed, a closure as a group
      block's address and member index, the token, or an error; its
      addresses are `Addr a`, `a` its own address, which is what makes
      the emitter's walk a single pass in address order and lets every
-     walker over values (the printer for section 15's message, the
+     walker over values (the printer for section 28's message, the
      Rope read back for `flatten`) recurse on an erased bound that a
      field's smaller number refines, with no fuel that can run out.
      `eval` keeps its fuel; every step returns the grown store with an
@@ -2575,9 +2575,9 @@ bootstrap runs in the same time as before (about four minutes here).
      passed; bootstrap 175 matched, 103 refused, fixpoint reached.
 
 
-## Opening a `Matchable` or `Newtype` (DESIGN.md section 19)
+## Opening a `Matchable` or `Newtype` (DESIGN.md section 8)
 
-Implemented from proposals/matchable-newtype-opening.md, since folded into DESIGN.md section 19, as the owner settled it in chat, on this
+Implemented from proposals/matchable-newtype-opening.md, since folded into DESIGN.md section 8, as the owner settled it in chat, on this
 branch afresh rather than by merging `claude/matchables-proposal-ekulyk`,
 whose implementation predates the `_` metas and the evidence-carrying
 `self/`. The owner decided the points marked so; everything else is the
@@ -2597,8 +2597,8 @@ session's reading, with the tests as the evidence.
      (`Elab.elab_stmts`; in `self/`, `elab-stmts` and the `SSeq` code a
      `let` returns), so their code is emitted whether or not the `let`'s
      binders are erased, and only the final expression is the position
-     section 20 calls the right-hand side. Run position is unchanged,
-     nested statements having run first (section 16).
+     section 14 calls the right-hand side. Run position is unchanged,
+     nested statements having run first (section 27).
      `tests/let_nested_scope.sl` still refuses the name; the entry's
      survival is what `tests/open_adt_let.sl` reads.
 
@@ -2651,12 +2651,12 @@ session's reading, with the tests as the evidence.
      `tests/open_absurd_bad.sl`). Every read of a `Matchable` goes
      through the opened list: `match`, `let-match`, `comptime-match`,
      the emptiness check, `matchable-of`, `newtype-of`, `coercible-wrap`
-     and section 18's disjointness rule, so an unopened first-class
+     and section 7's disjointness rule, so an unopened first-class
      `TyCtor` unifies with any other (`tests/open_tyctor.sl`,
      `tests/unopened_matchable_bad.sl`,
      `tests/unopened_newtype_bad.sl`, `tests/open_adt_branch_bad.sl`).
      `def-adts` and the built-in `Special` open what they mint. Section
-     19's ambiguity error is gone, two opened Matchables for one type
+     8's ambiguity error is gone, two opened Matchables for one type
      being one. The keywords are the owner's: `open-adt` names the
      minting site, one form opening both objects, and `open-absurd`
      carries the token that marks a contradiction elsewhere. The
@@ -2673,7 +2673,7 @@ session's reading, with the tests as the evidence.
      lists it: whether an opened `Newtype` for `C` beside an opened
      `Matchable` marking `C` phantom is a contradiction. The fetch from
      ambient scope is `delegate-of`'s now, over a `Delegate` proof; the
-     TBD this entry recorded in DESIGN.md section 38, whether it should
+     TBD this entry recorded in DESIGN.md section 33, whether it should
      instead find only an opened proof, is gone with it.
 
 141. **`coercible-ctor` no longer refuses a phantom constructor**, so it
@@ -2687,7 +2687,7 @@ session's reading, with the tests as the evidence.
      everything erased, where a `coerce` yields an erased value, which
      a phantom constructor may head. `coercible-wrap` is the contrast:
      its source is the field, from which it manufactures a `C`-headed
-     value, so its `Newtype` stays load-bearing. Section 38's "the same
+     value, so its `Newtype` stays load-bearing. Section 33's "the same
      non-phantom constructor on both sides" then describes what a usable
      proof relates rather than what the form checks.
 
@@ -2703,7 +2703,7 @@ session's reading, with the tests as the evidence.
      it is not checked there. That `let-match` is a match for this
      purpose is the owner's.
 
-## More IO requests (section 16)
+## More IO requests (section 27)
 
 Asked for by the owner in chat, as a batch to prepare and then add:
 environment variables in Java's two shapes, appending to a file,
@@ -2778,7 +2778,7 @@ path, and the `unix` dependency; the shapes below are the session's.
      the syscall's own success. Extracted programs, the bootstrap and
      the benchmark compile with `-package zarith,unix`.
 
-## Every request but Exit carries a function (section 16)
+## Every request but Exit carries a function (section 27)
 
 Asked for by the owner in chat: every `IO` entry except `Exit` should be
 a function, possibly nullary, and an entry that does nothing should join
@@ -2834,7 +2834,7 @@ rest below is the session's.
      Reaching `thunk` at a level `L` needs `Predates thunk-lvl L`, which
      a caller holding `L` only as an existential cannot mint for itself,
      `prove-predates` wanting a level minted by `def-lvl` with the other
-     in scope (section 8). That is section 31's factory rule rather than
+     in scope (section 18). That is section 55's factory rule rather than
      a limit on `thunk`: the relation is established where the level is
      minted, so a function that mints a level and hands it back returns
      the relation with it, as `lift2` in `tests/io_lift.sl` now returns
@@ -2843,7 +2843,7 @@ rest below is the session's.
      with a named nullary function in its place; the owner doubted it,
      and the doubt was right.
 
-## The emitters' walks over the store (sections 16, 34)
+## The emitters' walks over the store (sections 27, 29)
 
 148. **The emitters walk the compile-time store in tail position.**
      `slc` refused three of the `mini/` end-to-end tests
@@ -2897,7 +2897,7 @@ rest below is the session's.
      of the term it now rewrites to, as the next equation; an atom
      aliased to another is the case of this that item 89's signature
      check already covered, and the type equation a branch entry forces
-     (section 18) follows from the scrutinee's, so `mini/`'s `Refine`
+     (section 7) follows from the scrutinee's, so `mini/`'s `Refine`
      forces the one. `lib/` and `self/` still assign with no type check,
      and unify signatures only where both atoms' types are formers
      (item 89); whether they should follow, and whether under item 80 the
@@ -2988,7 +2988,7 @@ rest below is the session's.
      `apply-extern` should build a `Cmp`, as `lib/ffi.ml` does through
      the type's constructor, is open.
 
-## An extern is run wherever it is claimed (section 41)
+## An extern is run wherever it is claimed (section 42)
 
 The owner asked why `nat-cmp` ran its source model rather than the FFI
 when `slc` interpreted it, and then for a guard so that an extern
@@ -3040,7 +3040,7 @@ to look for a guard, are the owner's.
      whose source model is too slow to run;
      `tests/extern_comptime.sl` is the first, comparing two `Nat`s far
      beyond what the model reaches. The session's reading is that this
-     is a hole in section 41's conservativity check and should stay
+     is a hole in section 42's conservativity check and should stay
      rare: nothing is lost for `nat-cmp` in particular, whose model every
      other test comparing numbers still exercises under `--no-extern`.
      `self/bootstrap.sh` needs no directive of its own, running the
@@ -3061,7 +3061,7 @@ to look for a guard, are the owner's.
      Printing in the interpreter is therefore type-directed
      (`Elab.show_value`), as item 66's generated printer already was.
      What forces that: a `Char` and a `U8` are their `Nat` at runtime
-     (section 38), so nothing but the type tells those three apart, and
+     (section 33), so nothing but the type tells those three apart, and
      a `(Half)` is a zarith integer too and must not be spelled as a
      numeral. The three are recognised as the prelude's own entries, as
      item 65's driver finds its constructors, rather than by name, so a
@@ -3072,7 +3072,7 @@ to look for a guard, are the owner's.
      prints `_`, so no path reaches `Value.show`). A `Char`'s code and a `String`'s elements fall back the
      same way when the `Nat` is not a byte, since `Literal.spell` has no
      reading for one: the session could not construct such a value, the
-     `Lt` proof `MkU8` carries bounding both (section 41), so the guard
+     `Lt` proof `MkU8` carries bounding both (section 42), so the guard
      is read as covering a case the checker already rules out rather
      than one the printer meets.
 
@@ -3085,7 +3085,7 @@ to look for a guard, are the owner's.
      and printing 1000000 overflowed the stack where
      `(nat-mul 1000000000 1000000000)` now prints at once.
 
-     `comptime-match`'s diagnostic (section 15) goes through the same
+     `comptime-match`'s diagnostic (section 28) goes through the same
      printer, so the wrapper-payload channel that section describes
      reports a `String` payload as its text. `slc`'s counterpart is
      `show-at`, which spells a literal type off the block's payload and
@@ -3157,7 +3157,7 @@ to look for a guard, are the owner's.
      declaration shape with a `unique` or `erased` marker and one function;
      `comptime-match` must carry a multiplicity; `cell-write` must name the
      cell's existing constructor after canonicalization. The existing List
-     field labels remain unchanged. U15's `at-coercible` and `slot-eq` are
+     field labels remain unchanged. OPEN.md 16 and 17's `at-coercible` and `slot-eq` are
      excluded. The owner allows restructuring the self-hosted heap and staged
      restoration of erased proof invariants, while preferring the compiler to
      continue exemplifying checked correctness through dependent proofs.
@@ -3172,7 +3172,7 @@ to look for a guard, are the owner's.
      preceding their results. Ordinary let RHS statements retain DESIGN 16's
      existing independent multiplicities.
 
-157. UNIQUE.md locations are represented separately from ordinary value rules.
+157. DESIGN.md section 36's locations are represented separately from ordinary value rules.
     Location terms retain the original binder when `is` canonicalization runs;
     only location equality and the listed location-producing operations merge
     that partition. Argument temporaries preserve the caller's physical word
@@ -3191,7 +3191,7 @@ to look for a guard, are the owner's.
     including a consumed one, never a signature's telescope binder. An `at`
     target must name a non-erased argument or closed-over variable, not another
     return entry; an erased return cannot carry an `at` annotation. These last
-    restrictions interpret U8's description of the promise's source and word.
+    restrictions interpret section 36's description of the promise's source and word.
     Phantom/absurd bodies bypass both usage and multiplicity-promotion checks,
     as their runtime expressions are erased.
 
@@ -3252,7 +3252,7 @@ to look for a guard, are the owner's.
     an available member, including the forwarding let's binder. Nested let
     normalization moves binding continuations into the producing expression;
     this exposes actual tail calls after location returns have been dropped.
-    The U11 append helper's emitted recursive branch ends in its recursive call,
+    The section 61 append helper's emitted recursive branch ends in its recursive call,
     with the cell stores before that call.
 
 165. Unique patterns for non-phantom constructors with cells retain their
@@ -3270,7 +3270,7 @@ to look for a guard, are the owner's.
     until invocation. The fixed FFI boundary converts comparison results to the
     declared Cmp representation and reads Rope values through their constructor view.
 
-167. The U13 array models are added to the prelude. Constructing ACons
+167. The section 44 array models are added to the prelude. Constructing ACons
     allocates and copies its tail.
     Array pluck leaves the physical word untouched under Uninit, while place and
     swap update the array's slot. A captured array keeps its identity, assigned
@@ -3309,7 +3309,7 @@ to look for a guard, are the owner's.
     standalone theorem with no callers. StoredBody's suffix evidence keeps
     references inside a replacement body within the current allocation history.
     Retaining the whole snapshot history is an implementation choice, not a
-    requirement of UNIQUE; a history of allocation identities may suffice for
+    requirement of DESIGN.md; a history of allocation identities may suffice for
     these structural guarantees. The diagnostic printer reads current bodies
     and bounds recursive traversal at depth 100000.
 
@@ -3362,7 +3362,7 @@ to look for a guard, are the owner's.
     skeletons, definitions and fills. Cell and Array closure-cycle regressions
     fail OCaml compilation before this change and match the reference afterwards.
 
-176. UNIQUE U2 excludes a phantom constructor's branch from usage checking
+176. Section 15 excludes a phantom constructor's branch from usage checking
     under a many or unique scrutinee. An erased scrutinee does not by itself
     erase its branch body: when that body is non-erased and not refuted, its
     uses participate in the branch join. Fully erased bodies and absurd branches
@@ -3371,7 +3371,7 @@ to look for a guard, are the owner's.
     use of an outer unique variable through an erased phantom match and refuses
     another use afterwards.
 
-    UNIQUE U9 also reads cell eligibility from the opened Matchable listing the
+    Section 37 also reads cell eligibility from the opened Matchable listing the
     constructor. The self port now checks that membership, as ML already did,
     and refuses Cell for an unlisted abstract constructor. These are conformance
     fixes, not additional language assumptions.
@@ -3383,8 +3383,8 @@ to look for a guard, are the owner's.
     case was rechecked after splitting its initial final expression into a
     dependency file. Two successive self-generated compiler sources were
     byte-for-byte identical. There are 66 new test files relative to the
-    pre-uniqueness 309-test checkpoint. U15 remains excluded, and these examples
-    do not constitute a general proof of U14's erasure invariants.
+    pre-uniqueness 309-test checkpoint. OPEN.md 16 and 17 remain excluded, and these examples
+    do not constitute a general proof of OPEN.md 2's erasure invariants.
 
 178. Following the owner's correction, phantom constructors have no Cell in
     any context. Five new regression files check type formation, erased
@@ -3437,23 +3437,23 @@ to look for a guard, are the owner's.
     - A size-zero position is now non-erased (`tests/zero_size_tail.sl`,
       `zero_size_use_bad.sl`): a `tail` mark in a body returning no value
       was refused as erased, and a call there consumed nothing. The reading
-      is section 20's closing "every other position is non-erased", section
-      27's purpose for a zero-binder `let` (invoking a destructor), and U8's
+      is section 14's closing "every other position is non-erased", section
+      54's purpose for a zero-binder `let` (invoking a destructor), and section 36's
       "a tail call from a function returning none". The other reading, that
-      section 20's "a `let` whose binders are all `erased`" is vacuously met
+      section 14's "a `let` whose binders are all `erased`" is vacuously met
       by no binders, would keep the call unrun and the value unconsumed;
       the owner may prefer it. A zero-binder `let` inside a body now emits
       its right-hand side's code where it was dropped before.
     - A type former at the head of a type expression no longer records a
       use of the head's entry (`tests/type_head_unique_const*.sl`): the
-      reading is that a type is an erased position (section 20) and an
-      erased mention is never a use (U2). Before, the same mention counted
+      reading is that a type is an erased position (section 14) and an
+      erased mention is never a use (section 15). Before, the same mention counted
       in a `let` binder's annotation and not in a `def-fns` signature. If
-      U6's rule that a Const read at a head is a many use is meant to cover
+      section 32's rule that a Const read at a head is a many use is meant to cover
       type formers too, the signature path is the one to change instead.
     The other fixes follow the text without a choice this session could
     see: an `at` return's word is supplied only from a non-erased entry, an
-    erased `let` binder in the class having no word (U8;
+    erased `let` binder in the class having no word (section 36;
     `tests/at_erased_word.sl`, which crashed the interpreter and printed a
     wrong value extracted); a newtype application in an erased position has
     no location (`tests/at_erased_newtype.sl`); `coercible-of` fetches the
@@ -3462,7 +3462,7 @@ to look for a guard, are the owner's.
     (`tests/coercible_of_shadowed.sl`), since superseded: the proof is a
     `Delegate` and the fetch is `delegate-of`, so no order is involved;
     the self compiler's `let-match` at `many` handed a unique-labelled
-    field out at unique against U4's table,
+    field out at unique against section 22's table,
     which let a shared block be updated through the alias
     (`tests/let_match_many_*_bad.sl`); the extractor asserted false when
     printing a value of a union or newtype with several candidate
@@ -3474,21 +3474,21 @@ to look for a guard, are the owner's.
 183. **Questions the audit left for the owner**, none decided here:
     - `comptime-match many` on a unique Const is refused for want of a
       `share`, which cannot be written in place since the scrutinee must be
-      a bare variable; U5 decides only the `unique` mode. Is the `many`
+      a bare variable; section 23 decides only the `unique` mode. Is the `many`
       mode's read of the value a many use of the binder?
-    - The `newtype` and `extern` marks being structural (U9), an unmarked
+    - The `newtype` and `extern` marks being structural (section 37), an unmarked
       `(Matchable enum T ...)` literal no longer accepts an extern type's
       Matchable, and no signature abstracts over the marks (160).
     - `coercible-wrap (Unique)` over a many-labelled field is Shared to
-      Unique (U7 as written), so a live many value yields any number of
+      Unique (section 34 as written), so a live many value yields any number of
       unique aliases of its newtype wrapper; nothing found can exploit it,
       the wrapper having no cell.
-    - A user type indexed by `(Slot)` reaches U10's merge of two slots'
-      classes in an unrefuted branch, so the soundness question U15 defers
+    - A user type indexed by `(Slot)` reaches section 38's merge of two slots'
+      classes in an unrefuted branch, so the soundness question OPEN.md 3 states
       is already live in the implemented subset
       (`tests/at_slots_force.sl` and the audit's `slot_class_merge`).
     Two clarifications this session read as within the text: an `at`
-    return is verified only where U8 lists, and U8's writers were checked
+    return is verified only where section 36 lists, and section 36's writers were checked
     against every merge site of the at-database, none extra found.
 
 184. **What a value prints as** (the owner's decision, in chat, settling
@@ -3498,12 +3498,12 @@ to look for a guard, are the owner's.
     - a `Nat`, `Char` or `String` prints as the literal it reads back
       from, unchanged from 154;
     - otherwise, where the type's head has a readable Matchable (section
-      19): a tagged enum reads its tag and names that constructor; a type
+      8): a tagged enum reads its tag and names that constructor; a type
       with exactly one non-phantom constructor names it, no tag being
       needed; a union with two or more non-phantom constructors prints
       `_`;
     - everything else prints `_`: a cell, a slot, a function, an opaque
-      proof (section 19's `Level`, `Subterm`, `Predates` and `Coercible`,
+      proof (section 8's `Level`, `Subterm`, `Predates` and `Coercible`,
       which are erased by kind and so are reached only as erased fields),
       and a type whose head has no readable Matchable;
     - a field prints `_` where it is erased, and goes through these same
@@ -3526,7 +3526,7 @@ to look for a guard, are the owner's.
 
     What this gives up, on the same reading: a union whose constructor is
     pinned by a type index prints `_` where a `let-match` could name it
-    (section 16), so the printer is weaker than a program, and a function
+    (section 27), so the printer is weaker than a program, and a function
     prints `_` where both back ends agree on `<function name>` today. No
     test in the tree prints a multi-constructor union as a structured
     value; the two that print a union expect `_` already
@@ -3548,7 +3548,7 @@ to look for a guard, are the owner's.
     reading back as the same value becomes a test of its own, which
     `tests/literal_print.sl` already does for the three literal types.
 
-## IO over UniqueFn, and slc's interpret mode (sections 16, U6)
+## IO over UniqueFn, and slc's interpret mode (sections 27, 32)
 
 Asked for by the owner in chat, as two tasks for one autonomous session:
 switch `IO` to use `UniqueFn`, then give `slc` an interpret option in
@@ -3560,9 +3560,9 @@ without the owner.
     (unique (IO L) next)) k)` and every continuation returns `(unique
     (IO L) next)`, so an `IO` value is unique throughout; the session
     saw no way to keep the requests `many`, since a unique-labelled
-    field of a constructor built at `many` is requested at `many` (U4),
+    field of a constructor built at `many` is requested at `many` (section 22),
     which would want a `share` and leave the continuation callable only
-    erased (U6). What the change buys is that a continuation may own a
+    erased (section 32). What the change buys is that a continuation may own a
     unique value across requests, captured at unique by the `def-unique`
     each request wraps and updated in place through its cell
     (`tests/io_unique_state.sl`), where an `Fn` could hold it only
@@ -3582,10 +3582,10 @@ without the owner.
     `tests/io_lift.sl`'s proofs carry `(Unique)` sides with `(Shared)`
     over the many-labelled arguments, its delegates being `def-unique`s,
     and `tests/io_lift_runtime.sl` takes each request apart at `unique`,
-    with the cell binder every pattern then needs (U5). The comment above
+    with the cell binder every pattern then needs (section 23). The comment above
     the prelude's `IO` says as much in one sentence.
 
-186. **The driver takes an `IO` value at unique.** Section 16 leaves what
+186. **The driver takes an `IO` value at unique.** Section 27 leaves what
     consumes the top level's result unsettled, and the final expression
     was elaborated at `many`; a unique request there would want a
     `share`, which is exactly what must be refused, a shared request's
@@ -3601,7 +3601,7 @@ without the owner.
     is the one consumer of a program's `IO` value and applies each
     continuation once, so it stands where a unique use stands. The
     `Thunk` final accepts a `unique` return beside a `many` one, its
-    result being read once and printed. Whether section 16 should say
+    result being read once and printed. Whether section 27 should say
     this is the owner's; nothing in DESIGN.md or UNIQUE.md was changed.
 
 187. **A run may update a Const the extractor then embeds.**
@@ -3677,7 +3677,7 @@ without the owner.
     temporary is marked once.
 
 190. **A call's argument or head that is already a variable is not
-    bound to a temporary.** U2a has every argument as if bound to an
+    bound to a temporary.** Section 15 has every argument as if bound to an
     anonymous variable first; `lib/elab.ml` binds one only when the
     argument is not a plain variable, and `self/elab.sl`'s
     `prepare-or-keep` now does the same for an argument, a callee or a
@@ -3691,7 +3691,7 @@ without the owner.
 191. **The rules list is erased.** The chase in `canon` walked the
     rules list to find a ruled variable's rule and to take the suffix
     after it as its termination measure, and `rule-into` copied the
-    list to append. Section 12 lets subterm recursion go through an
+    list to append. Section 21 lets subterm recursion go through an
     erased argument, so the list is erased everywhere: `find-rule`
     walks the erased `MemRule` witness the trie's `C1` agreement hands
     it, `append-rule` is erased, and `RuleFound` is indexed by the term
@@ -3783,7 +3783,7 @@ without the owner.
     many of each so the number cannot quietly grow.
 
 195. **Which binders the shadowing warning covers, and which of its
-    two messages each earns.** Section 9 makes every name shadowable
+    two messages each earns.** Section 19 makes every name shadowable
     and the checker warns at every binder that hides a name already in
     scope; the spec says nothing further, so what follows is this
     session's. `Env.bind` is the one place every entry is minted, but
@@ -3815,7 +3815,7 @@ without the owner.
     `tests/shadow_warn.sl` and `tests/shadow_builtin_warn.sl`, which
     take a binder of each kind through the warning; `tests/list.sl`,
     which redeclares the prelude's `List`, `Nil` and `Cons` and names
-    `Cons`'s field `tail` as DESIGN.md section 31 does; and
+    `Cons`'s field `tail` as DESIGN.md section 55 does; and
     `tests/shadow_false_capture.sl`, whose subject is a declaration
     hidden by a later one.
 
@@ -3874,9 +3874,9 @@ session's, made without the owner.
     can name (an entry in scope, a literal by its spelling, or
     `(SlotVacant)`), one of them an entry the program bound, the opened objects, and the
     numerals a rule has been minted on, as `unary` mints them, since a
-    literal is otherwise opaque (LITERALS.md).
+    literal is otherwise opaque (DESIGN.md section 45).
 
-    An argument is a term in section 5's grammar, elaborated as a type
+    An argument is a term in section 9's grammar, elaborated as a type
     argument is: a variable is shown as its entry, the prelude's
     included, and any other term by what it canonicalizes to and its
     type, so `(dump-context (Cons A hd tl))` asks what a term means where
@@ -3885,11 +3885,11 @@ session's, made without the owner.
     Two renderings changed for every message alongside, both in
     `Env.namer`, which `Env.show` and the new `Env.show_tele` share:
     `(SlotVacant)` prints as itself rather than as the anonymous variable
-    it stands for (U10; `Term.vacant`, set where the prelude mints it),
+    it stands for (section 38; `Term.vacant`, set where the prelude mints it),
     and an entry that is a location's representative is named by its own
     binder inside `SlotHolds` even where its `is` rule aliases it
     elsewhere, since a `SlotHolds` argument is read by binder and not
-    through the rule (U10). A message about an entry's own rule names
+    through the rule (section 38). A message about an entry's own rule names
     nothing by that entry (`show ~except`), or `(let ((many ys)) (share
     xs))` would report `ys is ys`. Both changes left every existing test's
     directives satisfied; whether either misnames something in a message
@@ -3915,20 +3915,20 @@ session's, made without the owner.
     misnamed (`AppendFile`'s continuation read `(UniqueFn path ...)`).
 
     Not decided here, and open for the owner: the form's name; whether
-    section 27's registry lists it, the entry being the owner's to word
+    section 54's registry lists it, the entry being the owner's to word
     (rule 12); whether the report should also list the prelude's entries
     on request as a whole rather than one by one; and whether the
     branch-forced facts of an enclosing match should be shown apart from
     the entries' rules, where they now appear only as `xs is (Cons A hd
     tl)` on the scrutinee's own line.
 
-197. **Which `let-match` branches count as real (SUGAR.md 8).** Both
+197. **Which `let-match` branches count as real (DESIGN.md section 52).** Both
     elaborators decide it from the syntax: any branch not headed by
     `absurd`, an `else` included, is treated as real. So a `let-match`
-    carrying one is rewritten into the `match` SUGAR.md 8 gives when it
+    carrying one is rewritten into the `match` DESIGN.md section 52 gives when it
     is a statement of a function, match branch or cell-match body, and
     refused anywhere else. That departs, as this session reads it, from
-    §12's count in one corner: a present branch on a phantom constructor
+    §21's count in one corner: a present branch on a phantom constructor
     under a `many` scrutinee, or an `else` standing only for such
     constructors, is not real there. Outside those bodies such a branch
     would have no annotation to be checked against, so the code refuses
@@ -3946,7 +3946,7 @@ session's, made without the owner.
     forms of the latter two containing no sugar. The zero case stays an
     internal error.
 
-## Confining file requests (section 16)
+## Confining file requests (section 27)
 
 The `ConfineDir` request, the `--confine-dir` flag and the fence model are as
 README.md describes them; the choices below are the session's.
@@ -3992,10 +3992,10 @@ README.md describes them; the choices below are the session's.
      a number is reported with slc's `slc: ` prefix there, as a fence is
      in 198.
 
-## The `at` redesign (AT_REDESIGN.md)
+## The `at` redesign (DESIGN.md sections 35 to 41)
 
-Asked for by the owner: implement AT_REDESIGN.md's A1 to A11 and A12's
-follow-up 11, with AT_REDESIGN_REVIEW.md's readings where the proposal is
+Asked for by the owner: implement DESIGN.md sections 35 to 41 and section 44's
+`array-unpluck`, with AT_REDESIGN_REVIEW.md's readings where the proposal is
 silent. The entries below are the choices this session made where neither
 document decides, each a reading that may be mistaken; the owner's decisions
 of that document, and the owner's decision in chat that the cell binder of a
@@ -4003,15 +4003,15 @@ pattern is optional at `unique` as at `many`, are not repeated here.
 
 200. **How a slot sits in the fact table.** Every entry, erased ones
      and metas included, is minted together with an anonymous entry of
-     type `(Slot)` at the entry's own erasure, its automatic slot (A2),
+     type `(Slot)` at the entry's own erasure, its automatic slot (section 35),
      held on the entry (`Env.entry`'s `slot`) and not in the scope's list
      of ids; the slot entry's own slot is itself. The closed spelling of `(slot-of x)` is a term node,
      `Term.SlotOf`, over a variable or a `Bound`, which is what a telescope
-     can hold for one of its own binders (A6); `Env.canon` resolves
+     can hold for one of its own binders (section 35); `Env.canon` resolves
      `(slot-of x)` to `x`'s binder's slot and never through `x`'s rule
      (review item 28), so after canonicalization a slot is an atom and two
      slots are equal exactly when the atoms are. A binder written `at`, a
-     `let` binder, a temporary, a cell binder and the rest of U8's writers
+     `let` binder, a temporary, a cell binder and the rest of section 36's writers
      get a rule on their own slot equating it with the target's (review
      item 18's second reading, which agrees with the first on every word);
      the rule is minted by forcing, as any fact is. A `res`'s `place` is a
@@ -4021,27 +4021,27 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      copied cell.
 
 201. **`(slot-of x)` as an expression** is a reference to the slot entry:
-     a value whose word is `x`'s word, at that slot (A2's "an automatic
+     a value whose word is `x`'s word, at that slot (section 35's "an automatic
      slot is at itself"), and no use of `x`; for a non-erased `x` it takes
-     the multiplicity of its position, as U10 has `(SlotHolds v)` doing,
-     and for an erased `x` it is erased (A6); a slot being inert
-     (U10) so that a unique copy of its word aliases nothing that matters
-     (U1), which is what lets `(Init _ (slot-of a))` fill a unique field
+     the multiplicity of its position, as section 38 has `(SlotHolds v)` doing,
+     and for an erased `x` it is erased (section 35); a slot being inert
+     (section 38) so that a unique copy of its word aliases nothing that matters
+     (section 13), which is what lets `(Init _ (slot-of a))` fill a unique field
      (`tests/array_cycle.sl`). So a `let` binder of
      it sits where `x` does without `slot-self` (review item 27). A binder
      whose type is `(Slot)` is its own slot, the owner's reading of review
      item 30 (HANDOFF.md), an erased binder included and a meta excepted,
      since a rule to an unsolved meta would put one in the fact table
-     (SUGAR.md 6); the check is on the type the binder is given, a
+     (DESIGN.md section 50); the check is on the type the binder is given, a
      variable or a nullary application canonicalized as the binder is
      minted, so a binder whose type is only later found to be `(Slot)` is
      left to `slot-self` (`tests/slot_default.sl`).
 
-202. **What is passed and what is read (A3).** The runtime signature of a
+202. **What is passed and what is read (section 36).** The runtime signature of a
      function is its non-erased entries without a written `at` (review
      item 20). An argument for a parameter written `at` must sit in the
      slot its target's argument sits in, checked after both are bound as
-     U2a has it, and is not passed; its uses are counted as any
+     section 15 has it, and is not passed; its uses are counted as any
      argument's (item 21); inside the body the parameter is a rename of
      the word its target holds. The `tail` and `delegate` checks read that
      runtime shape (item 22). A match's `at` annotation entries, and a
@@ -4050,9 +4050,9 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      the match's code gains that projection only when an entry is `at`.
      A result that is not a variable is bound to an anonymous entry before
      the entries after it are checked, so that a later entry's `at` can
-     name the slot it sits in (U2a, A5's return at an earlier return).
+     name the slot it sits in (section 15, section 36's return at an earlier return).
 
-203. **The constructor-telescope ban (A5)** is read as review item 26 has
+203. **The constructor-telescope ban (section 36)** is read as review item 26 has
      it: `vacant-slot`, a plain variable, and a `(Slot)`-typed field are
      allowed there; `slot-of` and `at` are refused in a type or value
      constructor's telescope and in a `let`'s binders, and `at` names a
@@ -4060,14 +4060,14 @@ pattern is optional at `unique` as at `many`, are not repeated here.
 
 204. **`vacant-slot`** is a named `many` constant of type `(Slot)`, Const
      over the token, so its runtime word is what `cell-alloc` fills a
-     vacant slot with (review item 17), and its slot is itself, as any
+     vacant slot with (section 35), and its slot is itself, as any
      `(Slot)`-typed binder's is (201; `tests/vacant_slot_self.sl`).
 
 205. **`slot-self`** mints its fact by forcing, so either the variable or
      its slot may end up carrying the rule, and a `Contradiction` is
-     reported as an error, as A7 says and review item 29 discusses.
+     reported as an error, as section 35 says and review item 29 discusses.
 
-206. **Cells at `many` (A8).** A `cell-write` whose cell is a `many`
+206. **Cells at `many` (section 37).** A `cell-write` whose cell is a `many`
      variable, and an invocation of a `many` cell that is not full-at,
      compile to a copying node (`Value.CCellCopy`): a fresh block holding
      the old one's words with the written slots replaced, at unique and at
@@ -4077,7 +4077,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      when its first item is an atom followed by a body; a lone atom is the
      body, the binder being optional.
 
-207. **At-functions and at-matches (A9, A10).** "Erases to nothing, or to
+207. **At-functions and at-matches (sections 39, 40).** "Erases to nothing, or to
      a reordering of variables" is read as review item 32 has it: after
      `Elab.normalize`, with `at` entries projected away, the code holds no
      call that was not skipped, no allocation, no store and no copy;
@@ -4092,10 +4092,10 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      so a call is skipped exactly when an opened proof names the callee's
      canonical atom (item 36), which is also what `open-at-fn` adds; a
      `tail`, `notail` or `delegate` mark on a skipped call is refused,
-     section 9's claim being one the compiler cannot honour for a call
+     section 19's claim being one the compiler cannot honour for a call
      that compiles to nothing.
 
-208. **The delegate annotation (A11)** is checked after section 9's
+208. **The delegate annotation (section 41)** is checked after section 19's
      `delegate` check: the function named must be the one the one
      `delegate` call names, canonically, and a body with no such call is
      refused.
@@ -4107,7 +4107,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      lemma from `SetNth` to `Nth` its caller needs lives in
      `tests/array_unpluck.sl`, not the prelude.
 
-211. **Which arguments are bound first (A2, U2a).** U2a's "as if bound
+211. **Which arguments are bound first (sections 15, 35).** Section 15's "as if bound
      first" is done literally only where a slot is asked for: an argument
      that is not a variable is bound to an anonymous entry when its
      parameter is non-erased in a non-erased position, as before, or when

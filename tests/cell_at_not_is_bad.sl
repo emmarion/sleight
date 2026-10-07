@@ -2,8 +2,8 @@
 ; error: type mismatch
 ; The converse of at_is_independent_bad.sl, and what lets a proof outlive the memory it describes: the
 ; rotation's result is at t, the same word, but it is not is t, so the relation proved of t before the
-; rotation is refused where one about r is wanted. Location and value are compared separately (UNIQUE.md
-; U8), which is why an erased mention of an overwritten binder states the old contents and nothing else.
+; rotation is refused where one about r is wanted. Location and value are compared separately (DESIGN.md
+; section 36), which is why an erased mention of an overwritten binder states the old contents and nothing else.
 
 (def-fns _ $ (many stale : -> (many (Tree) out))
   (let ((unique t)) (Node (Node (Leaf) 0 (Leaf)) 1 (Leaf)))

@@ -1,7 +1,7 @@
-; mini/unify.sl -- forced unification (DESIGN.md section 18) for the minimal language, as a walk over a list
+; mini/unify.sl -- forced unification (DESIGN.md section 7) for the minimal language, as a walk over a list
 ; of equations: each is canonicalized, then identical atoms and binders are dropped, applications and
 ; formers are split into the equations of their parts, and a variable meets a term either by taking it as
-; its rule ([Force], entering a branch) or by failing ([Check], comparing two types for identity, section 5).
+; its rule ([Force], entering a branch) or by failing ([Check], comparing two types for identity, section 9).
 ; The three contradictions are the [UFail] rules: an unassignable term (the occurs check and a telescope
 ; binder), two rigid atoms, and two shapes that differ. The function that derives it walks the two terms of
 ; an equation nested rather than over the list, on a bound on the entries without a rule and then the term,
@@ -222,7 +222,7 @@
     (many UCheckRefRef : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest) (erased (Nat) x) (erased (Nat) y)
        (erased (Canon rules l (Ref x)) cl) (erased (Canon rules r (Ref y)) cr) (erased (Neq x y) n) -> (Unify (Check) ents rules (Cons (Eqn) (MkEqn l r) rest) (UFail)))
     ; two distinct variables: the one that is not rigid, else the newer, becomes an alias of the other, and
-    ; their types are equated next (section 18's signature check); two rigid ones contradict
+    ; their types are equated next (section 7's signature check); two rigid ones contradict
     (many UAlias : (erased (List (Ent)) ents) (erased (List (Rule)) rules) (erased (Term) l) (erased (Term) r) (erased (List (Eqn)) rest) (erased (Nat) x) (erased (Nat) y)
        (erased (Term) tx) (erased (Term) ty) (erased (Kind) kx) (erased (Kind) ky) (erased (Nat) z) (erased (Nat) w) (erased (Term) tz) (erased (Term) tw) (erased (UOut) out)
        (erased (Canon rules l (Ref x)) cl) (erased (Canon rules r (Ref y)) cr) (erased (Neq x y) n) (erased (EntOf ents x tx kx) ex) (erased (EntOf ents y ty ky) ey)

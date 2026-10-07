@@ -1,6 +1,6 @@
 ; error: has no `Matchable` open
 ; A Matchable does nothing by being in scope: until it is opened, nothing consults it, and a match on its type
-; has nothing to read (DESIGN.md section 19). tests/first_class.sl is this with the open.
+; has nothing to read (DESIGN.md section 8). tests/first_class.sl is this with the open.
 
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-lvl X)

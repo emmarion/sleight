@@ -8,7 +8,7 @@ type entry = Term.entry = { name : string option; subterm : bool; mult : mult; s
 type res = { term : term; ty : term; erasure : mult; place : term option }
 type demand = Fixed | CallableHead | Driver
 
-(* A variable the caller holds physically whose slot is [p], the word an `at` entry is read from (A3). *)
+(* A variable the caller holds physically whose slot is [p], the word an `at` entry is read from (section 36). *)
 let location_var env l p =
   let readable x = (entry env x).mult <> Erased && ((entry env x).word || IntMap.mem x env.values) in
   match p with
@@ -21,7 +21,7 @@ let location_var env l p =
 
 let type_term = Prelude.type_term
 
-(* An anonymous entry whose type is the `AtFn` proof about [g] (A10), as a `Delegate` proof is found. *)
+(* An anonymous entry whose type is the `AtFn` proof about [g] (section 39), as a `Delegate` proof is found. *)
 let is_atfn_proof env x g = match type_of env x with App (Var c, [ _; Var g' ]) -> c = Prelude.atfn && g' = g | _ -> false
 
 
@@ -31,7 +31,7 @@ let atom = function Atom (_, n) -> Some n | List _ -> None
 let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (tick (Reader.show raw))
 let name_or_anon n = if n = "_" then None else Some n
 
-(* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 4). *)
+(* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
 let special_value env x = match entry env x with
   | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
   | _ -> None
@@ -93,7 +93,7 @@ let numeral_entry env loc raw =
   | Some (x, _) -> (z, x, Literal.spell lit)
   | None -> error loc "literal %s is not in scope" (Literal.spell lit)
 
-(* An atom naming an entry, read through any alias rule the fact table holds for it (section 9). *)
+(* An atom naming an entry, read through any alias rule the fact table holds for it (section 19). *)
 let named env loc what raw =
   match canon env (Var (var env loc (atom_or loc raw what))) with Var x -> x | t -> error loc "%s is not %s" (qshow env t) what
 
@@ -102,7 +102,7 @@ let tyname env loc = named env loc "a type constructor"
 let rec is_strict_subterm a b =
   match b with App (_, args) -> List.exists (fun x -> equal a x || is_strict_subterm a x) args | _ -> false
 
-(* A literal is an atom to the unifier (LITERALS.md): checking fails where one meets a Succ shape or another
+(* A literal is an atom to the unifier (DESIGN.md section 45): checking fails where one meets a Succ shape or another
    literal, and forcing binds one where a contradiction was wanted. The notes name each literal [hit] picks out
    among the numeral and character literals, by its canonical form, a character standing for its code, and the
    first of [within] it sits in. *)
@@ -131,7 +131,7 @@ let rec differ a b =
 let ctor_result env t = match canon env t with TyCtor ps -> Some (ps, type_term) | ValCtor (ps, r) -> Some (ps, r) | _ -> None
 let head = function App (h, _) -> h | t -> t
 
-(* Identity after canonicalization (section 5), solving any metas either side holds (Env.unify). *)
+(* Identity after canonicalization (section 9), solving any metas either side holds (Env.unify). *)
 let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
   try unify env actual expected
   with Contradiction _ ->
@@ -160,7 +160,7 @@ let written env pos l what m =
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 
-(* A boundary (SUGAR.md 6): a term reaching one with a `_` still open is refused. *)
+(* A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused. *)
 let settle env loc t = if has_meta env t then unsolved loc env t
 
 let rec infer env loc t =
@@ -179,7 +179,7 @@ let res_of env x = { term = Var x; ty = type_of env x; erasure = (entry env x).m
 let settle_res env loc r = settle env loc r.term; settle env loc r.ty
 let non_erased env ids = List.filter (fun x -> (entry env x).mult <> Erased) ids
 
-(* What a signature passes or returns at runtime: its non-erased entries without a written `at` (A3). *)
+(* What a signature passes or returns at runtime: its non-erased entries without a written `at` (section 36). *)
 let runtime tele = List.filter (fun (e : entry) -> e.mult <> Erased && e.place = None) tele
 let runtime_ids tele ids = List.filter_map (fun (e, x) -> if e.mult <> Erased && e.place = None then Some x else None) (List.combine tele ids)
 
@@ -218,7 +218,7 @@ let argument c i name = Printf.sprintf "argument %d%s of %s" (i + 1) (match name
 
 let term_res env loc t = { term = t; ty = infer env loc t; erasure = Erased; place = None }
 
-(* Opens [x], a Matchable entry (section 19): its constructors must be distinct after canonicalization,
+(* Opens [x], a Matchable entry (section 8): its constructors must be distinct after canonicalization,
    and it then merges with whatever open names one of them or its type constructor (Env.merge_opens). Failure is
    a Contradiction. *)
 let open_adt env x =
@@ -251,13 +251,13 @@ let marker env loc tid ctors c =
   | Some (m, _) -> m
   | None -> error_with loc (declared_as env tid) "%s is not a constructor of %s" (qname env c) (qname env tid)
 
-(* A Matchable's constructors, each with its phantom marker and its number of non-erased fields (section 38). *)
+(* A Matchable's constructors, each with its phantom marker and its number of non-erased fields (section 33). *)
 let shapes env loc ctors =
   List.map (fun (m, c) -> match c with Var c -> (m, c, List.length (List.filter (fun e -> e.mult <> Erased) (fst (ctor_type env loc c)))) | _ -> assert false) ctors
 
 let non_phantom shapes = List.filter_map (fun (m, c, n) -> if m = Many then Some (c, n) else None) shapes
 
-(* A phantom constructor heads no runtime value (section 20 rule 2), so discriminants number the others only. *)
+(* A phantom constructor heads no runtime value (section 14 rule 2), so discriminants number the others only. *)
 let discriminant shapes c = find_index (fun (c', _) -> c' = c) (non_phantom shapes)
 
 let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
@@ -360,7 +360,7 @@ let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta te
   in
   (env, List.rev fresh)
 
-(* Printing a value against its type (section 16's printed final; ASSUMPTIONS 184). The three literal types print
+(* Printing a value against its type (section 27's printed final; ASSUMPTIONS 184). The three literal types print
    as the literals they read back from (Literal.spell); a value whose type names a readable Matchable prints as
    its constructor -- read from the tag where there is one, and the sole non-phantom constructor where there is
    no choice -- over its fields, each erased one printing as `_`. Everything else prints `_`, so the walk is total
@@ -370,7 +370,7 @@ let prelude_id env name = Env.lookup { env with scope = env.prelude } name
 let nullary env name ty = match (type_head env ty, prelude_id env name) with Some t, Some p -> t = p | _ -> false
 
 (* An extern Nat is its integer; the model's is the Peano chain, walked one constructor at a time. A Char and a
-   U8 are their Nat (section 38), so neither needs unwrapping. *)
+   U8 are their Nat (section 33), so neither needs unwrapping. *)
 let nat_z env loc v =
   let c = ctor_of env loc (Option.get (prelude_id env "Zero")) in
   let rec go acc v =
@@ -380,7 +380,7 @@ let nat_z env loc v =
   in
   go Z.zero v
 
-(* The byte a Char's code and a String's elements are, by the Lt proof MkU8 carries (section 41). A Nat outside
+(* The byte a Char's code and a String's elements are, by the Lt proof MkU8 carries (section 42). A Nat outside
    that range has no literal spelling, so the walk falls back rather than spelling it back unreadably; it also
    keeps Z.to_int, whose Z.Overflow the fallback below does not catch, off an unbounded value. *)
 let nat_byte env loc v =
@@ -399,7 +399,7 @@ let str_host env loc v =
   go v;
   Buffer.contents buf
 
-(* What a literal is bound to, minted directly as slc's `intern` mints it (LITERALS.md). A model Nat comes off
+(* What a literal is bound to, minted directly as slc's `intern` mints it (DESIGN.md section 45). A model Nat comes off
    the program's one Peano chain, extended on demand, so numerals and characters share it wherever they stand
    and the extractor, which shares by identity, emits each Nat once per program. *)
 let papp env n args = App (Var (Option.get (prelude_id env n)), args)
@@ -491,7 +491,7 @@ let mint_adt ?(newtype = false) env name disc shapes =
   adt.ctors <- List.mapi (fun index (c, arity) -> { V.cname = entry_name env c; cid = c; index; arity; adt }) (non_phantom shapes);
   adt
 
-(* A match on an ADT the elaborator can see reads no Matchable at runtime (section 17); one on a held Matchable
+(* A match on an ADT the elaborator can see reads no Matchable at runtime (section 24); one on a held Matchable
    reads it as the shape the Matchable's type gives its values. *)
 let match_shape env x tid disc shapes = match adt_of env x with Some adt -> V.Known adt | None -> V.Held (V.CVar x, mint_adt ~newtype:(match type_of env x with Matchable (_, n, _, _, _) -> n | _ -> false) env (entry_name env tid) disc shapes)
 let cell_shape env l c =
@@ -544,8 +544,8 @@ let cell_entry c tele mode place =
   let slots = List.concat (List.mapi (fun j (e : entry) -> if e.mult = Erased then [] else [ SlotOf (Bound (n - 1 - j)) ]) tele) in
   { name = None; subterm = false; mult = mode; sg = Ty (Cell (Var c, slots)); place; loc = Reader.nowhere }
 
-(* The cell binder after the fields is optional, at `many` as at `unique` (the owner's decision in chat, which
-   AT_REDESIGN A8's "mandatory" is to follow). *)
+(* The cell binder after the fields is optional, at `many` as at `unique` (the owner's decision in chat;
+   DESIGN.md section 23). *)
 let pattern env what mode (scrut : res) l c mults extra fields =
   let tele, _ = ctor_type env l c in
   let n = List.length tele in
@@ -636,7 +636,7 @@ and elab_type_form env l sp args =
   | (Sp.LevelOf | Sp.MatchableOf | Sp.DelegateOf | Sp.NumeralOf | Sp.SlotOf | Sp.AtFnOf), _ -> fetched env l sp args
   | _ -> error l "%s cannot appear in a type" (tick (speller env (Sp.name sp)))
 
-(* `(slot-of x)`: the automatic slot of `x`'s binder (AT_REDESIGN A6), a direct variable reference and no use. *)
+(* `(slot-of x)`: the automatic slot of `x`'s binder (section 35), a direct variable reference and no use. *)
 and slot_var env l = function
   | [ a ] ->
       let x = var env (loc a) (atom_or (loc a) a "a direct variable reference") in
@@ -675,7 +675,7 @@ and fetched env l sp args =
       match List.find_opt about env.scope.ids with Some y -> (env, Var y) | None -> error l "%s has no `Delegate` proof in scope" (qname env g))
   | _ -> error l "%s" (help env (Sp.misuse sp))
 
-(* The form's arguments are terms in section 5's grammar, each shown with its type where it has one. *)
+(* The form's arguments are terms in section 9's grammar, each shown with its type where it has one. *)
 and dump_context : 'a. Env.t -> Reader.loc -> Dump.goal -> Reader.raw list -> 'a = fun env l goal args ->
   let env, focus = List.fold_left_map (fun env raw ->
     let env, t = elab_term env raw in
@@ -743,7 +743,7 @@ and elab_tele env ?(places = false) ?(subterm = false) ?(ids = []) ?(mults = fun
   (env, List.rev ids, List.rev tele)
 
 (* Checks [args] against [tele] with [elab env mult arg expect]; returns the argument terms innermost first,
-   and their code. A meta stands for each parameter (SUGAR.md 6): an argument written `_` is left to it, and
+   and their code. A meta stands for each parameter (DESIGN.md section 50): an argument written `_` is left to it, and
    is an error unless erased where it stands; any other argument is checked against its parameter and bound
    to its meta. [result] is the application's result telescope over the parameters' metas, unified with
    [expect] eagerly, where a `_` is present, before any argument is read, and again, reporting the mismatch,
@@ -780,7 +780,7 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
               (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, code, bindings)
             else (env, r, code, bindings)
           in
-          (* an argument for a parameter written `at` must sit where its target does, and is not passed (A3, A5) *)
+          (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
           let omitted = match e.place with
             | Some p ->
                 if not (Option.fold ~none:false ~some:(same_slot env (instantiate acc p)) r.place) then
@@ -811,7 +811,7 @@ and solve_tele ~strict env loc expect result =
   in
   if strict then attempt () else try attempt () with Error _ -> env
 
-(* A constructor application is a pure term (DESIGN.md section 5), so it is no boundary: its holes may stay
+(* A constructor application is a pure term (DESIGN.md section 9), so it is no boundary: its holes may stay
    open past its paren for the arguments after it, or the position, to solve. *)
 and elab_term_args env loc ~callee ?what ?expect tele ret args =
   let env, acc, _, _ =
@@ -831,7 +831,7 @@ let result_sites env loc body n =
   | [] -> List.init n (fun _ -> (loc, None))
 
 (* A result that is not a variable is bound to an anonymous one for the entries after it, so that a later
-   entry's `at` can name the slot it sits in (U2a). *)
+   entry's `at` can name the slot it sits in (section 15). *)
 let check_results env loc ?(ids = []) body tele ress =
   count_check loc tele ress;
   let env = List.fold_left2 (fun (env, acc) (e, (rl, raw)) r ->
@@ -869,7 +869,7 @@ let mint env ty =
   (env, res_of env x)
 
 (* [code] produces the runtime entries of [tele], bound to [ids]; the entries written `at` are read from the
-   words the caller holds (A3). [init]: the terms the telescope's earlier binders stand for, innermost first. *)
+   words the caller holds (section 36). [init]: the terms the telescope's earlier binders stand for, innermost first. *)
 let reconstruct ?(always = false) ?(init = []) ?expect env l tele ids code =
   if not always && List.for_all (fun (e : entry) -> e.place = None) tele then code else
   let physical = runtime_ids tele ids in
@@ -896,7 +896,7 @@ let prove_predates env l x lvl =
   if x >= lvl then error l "%s was not in scope when level %s was minted" (qname env x) (qname env lvl);
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
-(* The post-erasure normalizer behind the `tail` and `delegate` checks (section 9, ASSUMPTIONS 164, 189): lets
+(* The post-erasure normalizer behind the `tail` and `delegate` checks (section 19, ASSUMPTIONS 164, 189): lets
    that only rename, return exactly what they bind, or bind constants nothing mentions are folded away, so a
    marked call stands in tail position in the code that runs. *)
 let normalize code =
@@ -930,8 +930,8 @@ let normalize code =
   in
   norm [] code
 
-(* Normalized code that erases to nothing, or to a reordering of variables (AT_REDESIGN A9, A10; review item
-   32): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store, an
+(* Normalized code that erases to nothing, or to a reordering of variables (section 40; section
+   39): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store, an
    allocation or a call that was not skipped. *)
 let rec erases_to_nothing = function
   | V.CApp _ | V.CCellAlloc _ | V.CCellWrite _ | V.CCellCopy _ -> false
@@ -1018,7 +1018,7 @@ and elab_head env pos l raw =
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l c callee hcode lv params rets args =
   let pos = pos_of expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
-  (* a call of an at-function is skipped (A10): the proof opened for the callee is what licenses it *)
+  (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
   let skipped = pos <> Erased && atfn_open env callee.term in
   if assert_at && not skipped then error_with_in env l (head_notes env callee) "%s is not an at-function here: no `AtFn` proof for it is open" (head_name env callee);
   if skipped && cc <> V.Plain then error_in env l "%s marks a call that compiles to one, and a call of at-function %s is skipped" (tick (speller env (match cc with V.Tail -> "tail" | V.NoTail -> "notail" | _ -> "delegate"))) (head_name env callee);
@@ -1060,7 +1060,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   let check al annotation =
     match (env.level, annotation) with
     | Top, None -> env
-    | Top, Some _ -> error l "the top level calls without proofs; drop the decrease annotation (section 24)"
+    | Top, Some _ -> error l "the top level calls without proofs; drop the decrease annotation (section 20)"
     | At cur, Some (`Subterm (i, p)) when same cur -> (
         let k = match find_index (( = ) i) subterm_params with
           | Some k -> k
@@ -1177,7 +1177,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
       (env, [ { (res_of env x) with place = None } ], if pos = Erased then V.CErased else wrap (V.CCellAlloc (ct, values)))
   | Sp.CellWrite, [ u; List (il, c :: items) ] ->
-      (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (A8) *)
+      (* a write into a cell at `many` copies: the result is a fresh cell, at unique and at nothing (section 37) *)
       let shared = match u with Atom (al, n) -> (entry env (var env al n)).mult = Many | _ -> false in
       let env, r, input = elab_expr1 env (under pos (if shared then Many else Unique)) u in
       let input_id = fresh () in
@@ -1371,7 +1371,7 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
   let c = match canon env ctor with Var c -> c | _ -> error_in env l "`Cell` constructor is not a variable" in
   let ct, params, ret = cell_shape env l c in
   (* a cell at `many` is read, not consumed; it mints its value only at `many`, and an invocation that is not
-     full-at copies it (A8) *)
+     full-at copies it (section 37) *)
   let shared = h.erasure = Many in
   let env = match h.term with Var x -> use env l (under pos (if shared then Many else Unique)) x | _ -> env in
   if pos <> Erased && h.erasure = Erased then error_in env l "`Cell` invocation needs a cell declared `many` or `unique`";
@@ -1449,7 +1449,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
       let env, ann_tele, atmatch = if refute then (env, [], false) else result_tele ~demand tele env expect l ann in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
-      (* an at-match skips its runtime (A9): each branch must erase to nothing, dispatch and loads included *)
+      (* an at-match skips its runtime (section 40): each branch must erase to nothing, dispatch and loads included *)
       let erasable bl code = let code = project_code (keeps ann_tele) code in
         if atmatch && pos <> Erased && not (erases_to_nothing (normalize code)) then error_in env bl "a branch of an at-match must erase to nothing, or to a reordering of variables; this one stores, allocates or calls";
         code in
@@ -1603,7 +1603,7 @@ and result_tele ?(demand = Fixed) tele env expect l ann =
   if atmatch && runtime ann_tele <> [] then error_in env l "an at-match's annotation entries are erased or `at`";
   (env, ann_tele, atmatch)
 
-(* An anonymous let at [mult] of a Matchable: the entry an open records (section 19). *)
+(* An anonymous let at [mult] of a Matchable: the entry an open records (section 8). *)
 and open_binding env l mult raw =
   let inner, r, code = elab_expr1 env mult raw in
   settle_res inner l r;
@@ -1720,9 +1720,9 @@ and not_a_statement within env raw =
 and run_code env code = Eval.eval env.values code
 
 (* Binders that all carry a type or an is clause are the telescope the right-hand side is expected to
-   produce (SUGAR.md 6); the check of each binder against its value stays as it was. The right-hand side's
+   produce (DESIGN.md section 50); the check of each binder against its value stays as it was. The right-hand side's
    statements are statements of the enclosing expression: their code wraps the let's own, and their entries
-   stay in scope after it, anonymously (section 16). *)
+   stay in scope after it, anonymously (section 27). *)
 and elab_let spos env l args =
   let bl, binder_raws, rhs =
     match args with
@@ -1762,8 +1762,8 @@ and elab_let spos env l args =
   (env', if env.run_pos then Fun.id else fun rest -> wrap (if pos_of expect = Erased then rest else V.CLet (ids, code, rest)))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
-   and its fields bind outward (section 16's reason for comptime-match, without a discriminant to verify). *)
-(* Interns a literal once per program, its entries minted outside the scope (LITERALS.md): a numeral is a Const
+   and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)
+(* Interns a literal once per program, its entries minted outside the scope (DESIGN.md section 45): a numeral is a Const
    Nat beside an erased token typed by its spelling; a character is its code's Nat under the rule
    `is (MkChar (MkU8 n p))`, `p` a token of its bound, its proof its code's; a string is opaque. *)
 and hoist env lit =
@@ -1897,7 +1897,7 @@ and elab_comptime_match env l args =
   | [ m; x; List (pl, c :: fields) ] ->
       let smult = mult_or env l m in
       if smult = Erased then error_in env l "`comptime-match` takes `many` or `unique`, not `erased`";
-      if not env.run_pos then error_in env l "`comptime-match` is a run-position statement (section 15)";
+      if not env.run_pos then error_in env l "`comptime-match` is a run-position statement (section 28)";
       let x, sharing =
         match x with
         | List (_, [ h; a ]) when special_of env h = Some Sp.Share ->
@@ -1939,8 +1939,8 @@ and elab_def_fns ?(unique = false) env l args =
         | Atom (al, "_") -> let x, env = mint_level env ~at:al None in (env, x)
         | _ -> level_var ~alt:" or `_`" env l lv
       in
-      (* the header's marks: `at` before the name makes an at-function (A10), `at f` after it annotates a
-         delegate to f (A11); a function marked `extern` and `at` has no implementation, its marks being a
+      (* the header's marks: `at` before the name makes an at-function (section 39), `at f` after it annotates a
+         delegate to f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
          promise *)
       let header raw =
         match raw with
@@ -1967,7 +1967,7 @@ and elab_def_fns ?(unique = false) env l args =
       let capture_uses = ref env.uses in
       let env, fids = List.fold_left_map (fun env (fl, name, mult, _, _, ty, _) -> let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in (env, x)) env headers in
       (* the `AtFn` proof is minted and opened before the bodies, so a call within the block to a function
-         marked `at` is skipped (A10) *)
+         marked `at` is skipped (section 39) *)
       let env = List.fold_left2 (fun env x (_, _, _, _, (_, _, atfn, _), ty, _) ->
         if not atfn then env else
         let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in
@@ -1977,7 +1977,7 @@ and elab_def_fns ?(unique = false) env l args =
         let envb = if unique then { env with entries = IntMap.add x { (entry env x) with mult = Erased } env.entries } else env in
         let envb, pids = open_tele envb params in
         let pvars = List.rev_map (fun x -> Var x) pids in
-        (* a parameter written `at` is not passed: its word is its target's (A3) *)
+        (* a parameter written `at` is not passed: its word is its target's (section 36) *)
         let renames body =
           let _, lets = List.fold_left2 (fun (ids, lets) (e : entry) x -> (Var x :: ids, match e.place with
             | Some p when e.mult <> Erased -> (x, location_var envb fl (instantiate ids p)) :: lets
@@ -2008,7 +2008,7 @@ and elab_def_fns ?(unique = false) env l args =
              if not (equal (canon env callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow env callee)
          | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (tick (Reader.show f)));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
-           dummy a first-class call without the proof reaches (A10) *)
+           dummy a first-class call without the proof reaches (section 39) *)
         if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
         let code = if atfn then V.CValues [] else code in
         ((x, { V.fname = name; params = runtime_ids params pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
@@ -2031,7 +2031,7 @@ and elab_def_fns ?(unique = false) env l args =
         let fns = List.filter (fun (x, _) -> (entry env x).mult <> Erased) fns in
         (env, if fns = [] then Fun.id else fun rest -> V.CLetRec (fns, rest))
 
-(* Validates the tail/delegate marks in a body (section 9), returning the delegated callee if any. Lets that only
+(* Validates the tail/delegate marks in a body (section 19), returning the delegated callee if any. Lets that only
    rename (all a coerce leaves), return exactly what they bind, or bind constants nothing mentions (a nested
    def-adts the body never reads) are first folded away, so a marked call stands in tail position in the code
    that runs. *)
@@ -2109,7 +2109,7 @@ and elab_def_adts env adts =
     let env = if env.run_pos then List.fold_left (fun env (c, v) -> set_state env c (Const v)) env values else env in
     let mid, env = witness env ~mult:Many ~value:(V.VMatchable adt) (Matchable (disc, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var tid, ctors)) in
     let env = open_adt env mid in
-    if List.mem Sp.NewtypeMark ms && wrappers disc shapes = [] then error al "%s is not of newtype shape (section 38)" (tick name);
+    if List.mem Sp.NewtypeMark ms && wrappers disc shapes = [] then error al "%s is not of newtype shape (section 33)" (tick name);
     (env, cids @ values @ [ (mid, V.VMatchable adt) ])
   in
   let env, cids = List.fold_left2 define (env, []) tids headers in

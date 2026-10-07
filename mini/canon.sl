@@ -1,4 +1,4 @@
-; mini/canon.sl -- the fact table's rewrite rules and canonicalization (DESIGN.md sections 3, 5 and 18) for
+; mini/canon.sl -- the fact table's rewrite rules and canonicalization (DESIGN.md sections 5, 7 and 9) for
 ; the minimal language: a rule maps an entry to a term, and a term's canonical form replaces every entry
 ; that has a rule by the canonical form of that rule's term, structurally. The function that derives it recurses
 ; on a rank: beside the rules the functions carry a rank per rule under which every rule's term sits below

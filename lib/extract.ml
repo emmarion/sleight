@@ -122,7 +122,7 @@ let field_read cx c i target =
   let r, head = field_match cx c target in
   Printf.sprintf "%s%s.f%d)" head r i
 
-(* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, A8). *)
+(* A fresh block holding [target]'s fields (a `cell-write` on a cell at `many`, section 37). *)
 let field_copy cx c target =
   let r, head = field_match cx c target in
   head ^ build cx c (List.map (fun f -> r ^ "." ^ f) (fields c)) ^ ")"
@@ -404,7 +404,7 @@ let nat_z cx =
       Printf.sprintf "(let rec go n (v : Obj.t) = %s in go Z.zero)" (dispatch cx a (all a) "v" arms None)
 
 (* The printer for a literal type, which prints the literal its value reads back from (Literal.spell): a Char and
-   a U8 are their Nat (section 38), so neither is unwrapped first. *)
+   a U8 are their Nat (section 33), so neither is unwrapped first. *)
 let literal_show cx ty =
   let named name = match (ty, Env.lookup { cx.env with Env.scope = cx.env.Env.prelude } name) with App (Var t, []), Some p -> t = p | _ -> false in
   let string_body () =

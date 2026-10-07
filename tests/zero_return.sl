@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 0
-; A function returning no values, and a let binding none (sections 11, 16).
+; A function returning no values, and a let binding none (sections 26, 27).
 
 (def-lvl X)
 (def-fns X $ (many nothing : (many (Nat) n) ->) (values))

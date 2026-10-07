@@ -1,6 +1,6 @@
 ; expect: 4
-; A match annotation entry written `at` an earlier entry of the annotation (AT_REDESIGN A5): the branch
-; returns the one word twice, and the `let` binding the match reconstructs the second from the first (A3).
+; A match annotation entry written `at` an earlier entry of the annotation (section 36): the branch
+; returns the one word twice, and the `let` binding the match reconstructs the second from the first (section 36).
 (def-fns _ $ (many twice : (many (Nat) x) -> (many (Nat) r) (many (Nat) s at r))
   (match many x (((Nat) a) ((Nat) b at a))
     ((Zero) (values x x))

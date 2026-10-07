@@ -141,7 +141,7 @@ let scope_lines ~show_value env l =
     | _ -> sprintf_in env "in scope, newest first (%d entries; the prelude's %d are not listed, and `(dump-context x)` shows any one):" (List.length mine) n, mine in
   header :: List.concat_map (fun x -> List.map (( ^ ) "  ") (entry_lines ~show_value env l x)) listed
 
-(* [focus]: the form's arguments, each a term in section 5's grammar with its type where it has one. A variable
+(* [focus]: the form's arguments, each a term in section 9's grammar with its type where it has one. A variable
    is shown as its entry, anything else by what it canonicalizes to. *)
 let focus_lines ~show_value env l focus =
   List.concat_map

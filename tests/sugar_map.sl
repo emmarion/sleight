@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: (Cons _ 1 $ Cons _ 2 $ Nil _)
-; SUGAR.md section 4: map with _ levels, _ annotations and naive proofs.
+; DESIGN.md section 58: map with _ levels, _ annotations and naive proofs.
 
 (def-fns _ $ (many map-factory : (erased (Level) M) ->
     (erased (Level) L)

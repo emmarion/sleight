@@ -1,5 +1,5 @@
 ; expect: 1
-; Shadowing is legal (section 9) and warns at every binder that hides a name already
+; Shadowing is legal (section 19) and warns at every binder that hides a name already
 ; in scope. Each kind of binder is exercised once here: a level's name, a function's
 ; name, a match branch's field over the function's own parameter, and a let binder
 ; over an earlier one. The ; warns: lines at the end of the file are what that earns,

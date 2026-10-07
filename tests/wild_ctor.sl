@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: (Cons _ 1 $ Cons _ 0 $ Nil _)
-; A `_` argument (SUGAR.md 6) is solved from the arguments after it, from the telescope a body returns into,
+; A `_` argument (DESIGN.md section 50) is solved from the arguments after it, from the telescope a body returns into,
 ; through values, and from a match's annotation.
 
 (def-lvl L)

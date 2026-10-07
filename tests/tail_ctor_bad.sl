@@ -1,6 +1,6 @@
 ; needs: list
 ; error: marks a function call
-; tail and delegate mark a call (section 9); a constructor application is not one.
+; tail and delegate mark a call (section 19); a constructor application is not one.
 
 (def-lvl X)
 

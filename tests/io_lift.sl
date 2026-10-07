@@ -8,7 +8,7 @@
 ; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
 ; minted inside, after B, so the caller supplies levels and values only. The caller cannot mint a level
 ; relation about B itself, B reaching it opened from an existential rather than from def-lvl, so lift2
-; discharges Predates thunk-lvl B where B is minted and returns it (DESIGN section 31), which is what lets
+; discharges Predates thunk-lvl B where B is minted and returns it (DESIGN.md section 55), which is what lets
 ; the prelude's unique-thunk hold the nullary continuation at B. A request and its continuations are unique,
 ; so the proofs' sides are (Unique) and a delegate is a def-unique; the many-labelled arguments keep (Shared).
 (def-lvl proof-lvl)

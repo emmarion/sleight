@@ -6,8 +6,8 @@ divergence between the reference and the self-hosted compiler.
 
 ## The rule
 
-DESIGN.md section 41's invariant and UNIQUE.md U14's tiers require a
-program to compile in every mode. U13 declares `MaybeUninit` as `union
+DESIGN.md section 42's invariant and OPEN.md 2's tiers require a
+program to compile in every mode. Section 44 declares `MaybeUninit` as `union
 newtype` with two constructors.
 
 ## The defect

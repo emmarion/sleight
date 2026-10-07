@@ -1,6 +1,6 @@
-; self/core.sl -- the compiler's data: the restricted type grammar (DESIGN.md section 5) as terms with de
-; Bruijn telescopes, the special-form registry (section 27), runtime values and post-erasure code, the
-; scope environment with its fact table (sections 3, 18), canonicalization, instantiation and the part of
+; self/core.sl -- the compiler's data: the restricted type grammar (DESIGN.md section 9) as terms with de
+; Bruijn telescopes, the special-form registry (section 54), runtime values and post-erasure code, the
+; scope environment with its fact table (sections 5, 7), canonicalization, instantiation and the part of
 ; forced unification a trusting compiler needs. Mirrors lib/term.ml, lib/value.ml and lib/env.ml.
 
 (def-adts $ (Mult : -> Type)
@@ -138,7 +138,7 @@
     (many MkMCtor : (many (Mult) m) (many (Term) c) -> (MCtor))))
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order, each
-; entry followed by its automatic slot (AT_REDESIGN A2), so the ids step by two.
+; entry followed by its automatic slot (section 35), so the ids step by two.
 (let ((many univ-id)) (Succ (Zero)))
 (let ((many type-id)) (Succ $ Succ univ-id))
 (let ((many level-id)) (Succ $ Succ type-id))
@@ -230,7 +230,7 @@
     ((Nil _) (Nil _))
     ((Cons _ e rest) (Cons _ (entry-mult e) $ notail $ tele-mults rest))))
 
-; ---- The special-form registry (section 27), grouped by where each is dispatched.
+; ---- The special-form registry (section 54), grouped by where each is dispatched.
 
 (def-adts
   ((Sp : -> Type)
@@ -376,7 +376,7 @@
   (let ((many shifted) (erased ls)) $ at-ins-there-lock x rest more)
   (values (Cons _ (MkAtIn _ x $ AtHere _ _) shifted) (LsCons _ _ x (MkAtIn _ x $ AtHere _ _) rest shifted $ lockstep-trans _ _ _ _ _ _ lk ls)))
 
-; ---- The FFI's types and functions (section 41; lib/ffi.ml), each decided from its name once, at its extern mark.
+; ---- The FFI's types and functions (section 42; lib/ffi.ml), each decided from its name once, at its extern mark.
 
 (def-adts
   ((ExtType : -> Type)
@@ -483,7 +483,7 @@
   (extern-named externs name))
 
 ; ---- Blocks, frames and post-erasure code (lib/value.ml): a value is an address into self/heap.sl's
-; store, and a block holds section 38's representation with every address in it below its own.
+; store, and a block holds section 33's representation with every address in it below its own.
 
 (def-adts
   ((Payload : -> Type)
@@ -491,8 +491,8 @@
     (many PNat : (many (Nat) n) -> (Payload))
     (many PHalf : (many (Nat) n) -> (Payload))
     (many PStr : (many (String) s) -> (Payload)))
-  ; [tagged]: an enum with more than one non-phantom constructor (section 38); [ctors]: the non-phantom
-  ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 41); a
+  ; [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom
+  ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 42); a
   ; constructor's [shape] is its type's many-field arities in order, which fixes the representation.
   ((Adt : -> Type)
     enum
@@ -525,7 +525,7 @@
     (many MkGroup : (erased (List $ List $ Nat) ctx) (many (List $ Nat) gids) (many (List $ Pair (Nat) $ Func gids ctx) fns) (erased (Lockstep (Nat) (Pair (Nat) $ Func gids ctx) gids fns) lk) -> (Group gids ctx)))
   ; [top]: defined by a run-position def-fns; the body binds the parameters over the group over the
   ; defining scope. [impl]: the FFI's implementation with the constructors of the plain type it builds,
-  ; read off the model's return type at the extern mark (section 41).
+  ; read off the model's return type at the extern mark (section 42).
   ((Impl : -> Type)
     enum
     (many MkImpl : (many (SomeExtern) e) (many (List $ Ctor) cs) -> (Impl)))
@@ -534,8 +534,8 @@
     (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx))
     (many MkAlias : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (String) name) (many (Nat) id) (many (Code (Cons (List (Nat)) gids ctx) many-one) target) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
-  ; what runs (section 16); a node that has to make values on its own holds them as data. A Const entry is
-  ; named by its id and read from the store when the code runs (section 34); a value elaboration embeds is
+  ; what runs (section 27); a node that has to make values on its own holds them as data. A Const entry is
+  ; named by its id and read from the store when the code runs (section 29); a value elaboration embeds is
   ; a closed block, allocated when reached.
   ((Code : ((List $ List $ Nat) ctx) ((List $ Mult) ms) -> Type)
     enum
@@ -568,7 +568,7 @@
     enum
     (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
 
-; Widening the bound of every holder of addresses is a coerce (section 38).
+; Widening the bound of every holder of addresses is a coerce (section 33).
 
 (def-fns _ $ (erased frames-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (List $ List $ Nat) ctx) (subterm erased (Frames (Ref Block b) ctx) env) -> (erased (Frames (Ref Block c) ctx) env2) (erased (Coercible (Shared) (Frames (Ref Block b) ctx) env (Shared) (Frames (Ref Block c) ctx) env2) p))
   (match erased env _
@@ -1502,7 +1502,7 @@
       (let-match erased ord (OrdCons s1 y1 t2 r1 g o))
       (match erased (find-rule rest x _ _ (PCons _ _ _ _ _ pre) o _ m2) _
         ((MkRuleFound _ _ _ _ after3 _ pre3 ord3 g3 sub2) (MkRuleFound _ _ _ _ after3 _ pre3 ord3 g3 $ subterm-trans sub2 $ prove-subterm rest after))))))
-; ---- Canonicalization (sections 5, 18): a chase continues along the rules after the one followed, the
+; ---- Canonicalization (sections 7, 9): a chase continues along the rules after the one followed, the
 ; guard and the agreement proofs saying the rule is there; the result comes with its freshness.
 
 (def-fns _
@@ -1769,7 +1769,7 @@
 (def-fns _ $ (many open-kind-code : (many (OpenKind) k) -> (many (Nat) n))
   (match many k _ ((OKMatchable) 0) ((OKAtFn) 1) ((OKNone) 2)))
 
-; An opened Matchable or Newtype (section 19): its entry, its kind, and the names its type holds canonically,
+; An opened Matchable or Newtype (section 8): its entry, its kind, and the names its type holds canonically,
 ; the type constructor first.
 (def-adts $ (Opened : -> Type)
   enum
@@ -1782,7 +1782,7 @@
   (match many o _ ((MkOpened _ _ ns) ns)))
 
 ; The opened objects of a table, newest first, indexed by the names they hold, and those [touched] since the
-; elaborator last restored section 19's invariant. Indexed by the table's facts: only opens-inserted,
+; elaborator last restored section 8's invariant. Indexed by the table's facts: only opens-inserted,
 ; opens-out, table-open, table-unopen, table-settled and empty-table below mint one, so an Opens sits in
 ; the table its names are canonical under, refreshed where a variable is ruled out (rule-into).
 (def-adts $ (Opens : ((Nat) n) ((Facts n) f) -> Type)
@@ -1840,7 +1840,7 @@
 
 (let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MEmpty _)
 
-; The automatic slot [s] of [x] (AT_REDESIGN A2), both entries already in the table; a slot is its own slot.
+; The automatic slot [s] of [x] (section 35), both entries already in the table; a slot is its own slot.
 (def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Nat) s) -> (many (Table n f c) r))
   (match many tb _
     ((MkTable _ f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x s $ idmap-set _ s s sl))))
@@ -1854,7 +1854,7 @@
   (match many tb _
     ((MkTable _ f0 _ ru _ ord _ _ c1 _ _ _) (canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1))))
 
-; `(slot-of x)` resolved to x's automatic slot, by x's binder and never through x's rule (AT_REDESIGN A6,
+; `(slot-of x)` resolved to x's automatic slot, by x's binder and never through x's rule (section 35,
 ; review item 28), and the slot then chased. This session reads the chase above as leaving the form as
 ; written, so that a rule's term, canonical when it was appended, holds no `(slot-of x)` of a slotted x and
 ; a chase's result needs this pass only where the term it was given did. A place is a slot term and is read
@@ -2118,7 +2118,7 @@
 
 
 
-; ---- The scope environment (section 3) and fact table (section 18); [hl] the ghost history every
+; ---- The scope environment (section 5) and fact table (section 7); [hl] the ghost history every
 ; Const's value was allocated into, [store] the next stamp, and [entries] and [finals] hold its references.
 
 (def-adts
@@ -2514,7 +2514,7 @@
     ((MkEnv _ hp2 _ en2 _ _ fr2 tb2 _ _ li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _) (MkEnv _ hp2 sc en2 _ _ fr2 tb2 rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn))))
 
 ; Leaves a let's right-hand side: as env-restore, but the objects stay [inner]'s and the entries it added
-; keep their ids in scope with their names dropped (section 16, lib/env.ml's hide).
+; keep their ids in scope with their names dropped (section 27, lib/env.ml's hide).
 (def-fns _ $ (many hide-words : (subterm many (List $ Nat) words) (many (List $ Nat) temp) (many (Nat) bound) -> (many (List $ Nat) r))
   (let-match many words (Cons _ x rest) ((Nil _) words))
   (let-match many (nat-lt bound x) (BTrue)
@@ -2620,7 +2620,7 @@
   (let ((erased a) (many b) (erased sf)) (store-read Block _ hp v))
   (values a $ Some _ b))
 
-; Forwards [y]'s state to [x] (section 9's state-forwarding let).
+; Forwards [y]'s state to [x] (section 19's state-forwarding let).
 (def-fns _ $ (many forward-state : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
   (let-match many (idmap-get _ y en) (Hit _ _ _ info _) ((Miss _ _ _ _) e))
@@ -2767,7 +2767,7 @@
   (let ((many r) (erased fr)) $ canon-tele-in _ _ bnd tb es)
   r)
 
-; The automatic slot an entry was minted with (AT_REDESIGN A2); `None` only for an id the table never bound.
+; The automatic slot an entry was minted with (section 35); `None` only for an id the table never bound.
 (def-fns _ $ (many env-slot-of : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (table-slot-of _ _ bnd tb x))
@@ -2814,7 +2814,7 @@
 
 
 
-; Whether a type is one the fetching forms look for in ambient scope (sections 19, 38).
+; Whether a type is one the fetching forms look for in ambient scope (sections 8, 33).
 (def-fns _ $ (many is-object-type : (many (Term) ty) (many (Nat) objid) -> (many (Bool) r))
   (let-match many ty (TApp h _)
     ((TMatchable _ _ _ _ _) (BTrue))
@@ -2900,7 +2900,7 @@
     (let ((many restr) (many b2)) $ notail $ show-tele rest env kws (Cons _ n bound) marked)
     (values (rcat5 (RStr " (") (RStr marks) body2 (RStr ")") restr) b2)))
 
-; Shadowing is legal (section 9) and warns at every binder that hides a name already in scope
+; Shadowing is legal (section 19) and warns at every binder that hides a name already in scope
 ; (ASSUMPTIONS 195). Only a binder the source wrote carries a position, and only such a binder warns;
 ; the entry it hides carries one too unless the built-ins minted it, which is what the other message says.
 (def-fns _ $ (many warn-shadow : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) -> (many (Env) r))
@@ -2915,8 +2915,8 @@
     ((None _)
       (env-warn-at env l $ str-cat3 "declaration of " (tick n) " shadows a built-in"))))
 
-; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 3). A meta,
-; standing for a `_` argument (SUGAR.md 6), enters neither the scope nor the objects: nothing reaches it by
+; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 5). A meta,
+; standing for a `_` argument (DESIGN.md section 50), enters neither the scope nor the objects: nothing reaches it by
 ; name or by type, and unification alone solves it. No other entry's type or rule may mention one still
 ; unsolved -- the invariant behind the sugar -- except while a telescope with holes is being built [holes].
 ; The term a binder's type or rule still holds an open meta in, the rule's first as the reference reports it;
@@ -2954,8 +2954,8 @@
       ((Some _ t)
         (let ((many t2) (erased ft)) $ canon-in _ _ _ tb t)
         (table-insert-ruled _ _ _ tb x ltp ty t2 ft))))
-  ; every entry, erased or a meta included, is minted with its automatic slot, the next id (AT_REDESIGN A2);
-  ; a binder whose type is `(Slot)` is its own slot (AT_REDESIGN_REVIEW item 30, the owner's reading)
+  ; every entry, erased or a meta included, is minted with its automatic slot, the next id (section 35);
+  ; a binder whose type is `(Slot)` is its own slot (section 35, the owner's reading)
   (let ((many (Bool) self)) $ match many meta _
     ((BTrue) (BFalse))
     ((BFalse)
@@ -2984,7 +2984,7 @@
   (bind-as-raw env (BFalse) (BFalse) name site written mult ty rule objid))
 
 ; A binder that is Const at once: over a closed block, over the token, or over the token only in run
-; position (section 34).
+; position (section 29).
 (def-fns _ $ (many bind-closed : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (let ((many env2) (many x)) $ bind-raw env name site written mult ty rule objid)
@@ -3099,7 +3099,7 @@
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (type-in _ _ bnd tb x))
 
-; An entry read through its alias rule (section 9).
+; An entry read through its alias rule (section 19).
 (def-fns _ $ (many resolve : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
   (match many (canon-env env $ TVar x) _
     ((TVar y) y) (else x)))
@@ -3181,7 +3181,7 @@
 (def-fns _ $ (many bool-eq : (many (Bool) a) (many (Bool) b) -> (many (Bool) r))
   (match many a _ ((BTrue) b) ((BFalse) (not b))))
 
-; ---- Structural identity of canonical terms (section 5's canonicalize-then-compare)
+; ---- Structural identity of canonical terms (section 9's canonicalize-then-compare)
 
 (def-fns _ $ (many mult-eq : (many (Mult) a) (many (Mult) b) -> (many (Bool) r))
   (and (bool-eq (mult-is-many a) $ mult-is-many b) $ bool-eq (mult-is-once a) $ mult-is-once b))
@@ -3237,7 +3237,7 @@
 (def-fns _ $ (many equal-env : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (Bool) r))
   (term-eq (canon-env env a) $ canon-env env b))
 
-; ---- Forced unification (section 18): records the facts a branch forces, or reports the contradiction
+; ---- Forced unification (section 7): records the facts a branch forces, or reports the contradiction
 ; that refutes it (lib/env.ml's unify). The measure is the table's count of rule-free entries: a step is
 ; structural on canonical terms while no binding happens, and after a binding, which rules an entry out,
 ; the rest is re-canonicalized at the smaller count.
@@ -3271,7 +3271,7 @@
   (match many t _
     ((TVar y) (or (nat-eq x y) $ notail $ mctors-list rest x)) (else (tail $ mctors-list rest x))))
 
-; Constructors one opened Matchable lists are distinct (section 19), first-class ones included: the objects
+; Constructors one opened Matchable lists are distinct (section 8), first-class ones included: the objects
 ; naming x, found through the index, are those whose canonical constructors, the names after the type
 ; constructor, may hold both (ASSUMPTIONS 139).
 (def-fns _ $ (many listed-in : (subterm many (List $ Opened) os) (many (List $ Nat) cands) (many (Nat) x) (many (Nat) y) -> (many (Bool) r))
@@ -3288,7 +3288,7 @@
 (def-fns _ $ (many listed : (many (Env) env) (many (Nat) x) (many (Nat) y) -> (many (Bool) r))
   (listed-in (env-opens env) (index-of x $ env-index env) x y))
 
-; Whether an `AtFn` proof about [f] is open (AT_REDESIGN A10), keyed by f's canonical atom as section 19's
+; Whether an `AtFn` proof about [f] is open (section 39), keyed by f's canonical atom as section 8's
 ; opens are.
 (def-fns _ $ (many atfn-open-in : (subterm many (List $ Opened) os) (many (Nat) f) -> (many (Bool) r))
   (let-match many os (Cons _ o rest) ((Nil _) (BFalse)))
@@ -3337,7 +3337,7 @@
   (Contra _ _ $ CCat (CTerm a) $ CCat (CText " vs ") $ CTerm b))
 
 ; A variable against a term: a dangling binder refutes, and so does the variable occurring in the term,
-; which is the term not being fresh once the variable is ruled out (section 18).
+; which is the term not being fresh once the variable is ruled out (section 7).
 (def-fns _ $ (many bind-var : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Env) env) (many (Nat) x) (erased (In x n f) p) (many (Term) t) (many (Term) a) (many (Term) b) (many (Bool) force) -> (many (Outcome n bnd) r))
   (let-match many (or (dangling t 0) $ not $ or force $ is-meta env x) (BFalse) ((BTrue) (contradiction _ bnd a b)))
   (let-match many (rule-out-refresh _ _ bnd tb x p t) (Some _ added)
@@ -3568,7 +3568,7 @@
 (def-fns _ $ (many unify-solve : (many (Env) env) (many (Term) a) (many (Term) b) -> (many (UnifyRes) r))
   (unify-in env a b $ BFalse))
 
-; A forcing (section 18) leaves the opened objects it touched to be merged (section 19), so its environment
+; A forcing (section 7) leaves the opened objects it touched to be merged (section 8), so its environment
 ; is handed back as Forced, which only the restorers, merge-all and merge-opens, read an environment out of;
 ; a contradiction is carried along, and the next forcing is on the Forced.
 (def-adts $ (Forced : -> Type)

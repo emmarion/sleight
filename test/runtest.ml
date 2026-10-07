@@ -54,7 +54,7 @@ let extracted name externs templates source input args envs expect stderr exit =
           let out = read (base ^ ".out") and err = read (base ^ ".err") in
           if out = expect && err = stderr && code = exit then None else Some ("extracted program " ^ report out err code expect stderr exit))
 
-(* Every test runs with the FFI's implementations and again with them stripped (section 41's invariant). *)
+(* Every test runs with the FFI's implementations and again with them stripped (section 42's invariant). *)
 let rec run_test name =
   let src = read (Filename.concat dir (name ^ ".sl")) in
   let modes = [ (true, "with externs"); (false, "without externs") ] in

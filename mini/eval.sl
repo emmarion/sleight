@@ -1,6 +1,6 @@
 ; mini/eval.sl -- big-step evaluation of core code (mini/core.sl) for the minimal language, as a relation
 ; with the function that derives it. An expression evaluates to as many values as its size (DESIGN.md
-; section 16); a call rebinds the callee's group over the environment it closed over, then its parameters; a
+; section 27); a call rebinds the callee's group over the environment it closed over, then its parameters; a
 ; match selects the branch of the scrutinee's constructor and binds its fields. One session's proposal.
 
 (def-adts

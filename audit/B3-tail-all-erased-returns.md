@@ -5,8 +5,8 @@ program.
 
 ## The rule
 
-UNIQUE.md U8: "a call whose only non-erased results are `at` returns is a
-tail call from a function returning none". DESIGN.md section 9 judges
+DESIGN.md section 36: "a call whose only non-erased results are `at` returns is a
+tail call from a function returning none". DESIGN.md section 19 judges
 tail-ness on the post-erasure code.
 
 ## The observation

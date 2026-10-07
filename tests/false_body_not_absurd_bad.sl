@@ -1,6 +1,6 @@
 ; error: type mismatch
 ; A body that is a value of an empty type is still checked against the declared
-; return telescope unless the function is marked absurd (DESIGN.md section 37):
+; return telescope unless the function is marked absurd (DESIGN.md section 25):
 ; without the marker (Void) is not A. shadow_false_capture.sl is this program
 ; with the marker, where the point is what happens after it.
 

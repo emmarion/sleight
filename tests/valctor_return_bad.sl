@@ -1,6 +1,6 @@
 ; needs: list
 ; error: returns an application of a type constructor
-; A ValCtor's return is a type-constructor application (section 12), so a bare type variable is refused.
+; A ValCtor's return is a type-constructor application (section 21), so a bare type variable is refused.
 
 (def-lvl X)
 

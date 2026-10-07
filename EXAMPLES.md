@@ -64,9 +64,9 @@ that the test does not make is a mistake in this file.
   existential whose erased type is fixed by matching a runtime witness beside
   a value of it. `tests/eq_transport.sl` transports along a user-defined
   equality by matching `Refl`, with no substitution principle.
-- `tests/map.sl` — DESIGN.md section 33, level-polymorphic `map` through a
+- `tests/map.sl` — DESIGN.md section 57, level-polymorphic `map` through a
   factory that mints the level and proves the relation inside.
-- `tests/coerce.sl` and `tests/delegate_coerce.sl` — section 40, unwrapping a
+- `tests/coerce.sl` and `tests/delegate_coerce.sl` — section 60, unwrapping a
   list of newtypes by an erased recursive proof and a `coerce`, and a
   `delegate` whose argument and result pass through coercions.
 - `tests/char_ops.sl` — the prelude's `char-cmp`, a comparison of `Char`s
@@ -82,7 +82,7 @@ that the test does not make is a mistake in this file.
   both on characters and on `Nat`s with their bound proofs.
 - `tests/cell_rev_inplace.sl`, `tests/cell_rotate.sl` and
   `tests/cell_map_retype.sl` — algorithms that reuse the cells their unique
-  destructures hand back (UNIQUE.md U5, U9), beside `tests/cell_append.sl`'s
+  destructures hand back (DESIGN.md sections 23, 37), beside `tests/cell_append.sl`'s
   tail call modulo cons. The first is pointer reversal, one store per node
   under an `(at)` that skips the head slot; the second rotates a tree by
   reinvoking both the outer node's cell and its left child's; the third maps
@@ -97,7 +97,7 @@ that the test does not make is a mistake in this file.
   what lets rotation's derivation be rebuilt from its argument's with no
   lemma about appending. Each relation's indices name cells the algorithm
   overwrites, which an erased mention may do after the binder is consumed
-  (U2), and every entry of both proofs is declared erased (section 20).
+  (section 15), and every entry of both proofs is declared erased (section 14).
   `tests/cell_at_not_is_bad.sl` is the step that separates them: the result
   is `at` its argument and not `is` it, so a relation proved of the argument
   beforehand is refused where one about the result is wanted. It is the
@@ -110,7 +110,7 @@ that the test does not make is a mistake in this file.
   `tests/unique_typestate_bad.sl` skips a step; `tests/unique_double_bad.sl`
   is the other half.
 - `tests/subterm_call_result_bad.sl` — a field is a subterm of what it was
-  destructured from and a call's result is not (DESIGN.md section 15), so a
+  destructured from and a call's result is not (DESIGN.md section 28), so a
   recursive occurrence reached by calling a stored function does not drive
   recursion the way `tests/recursion_through_pointer.sl`'s stored function
   does when the decreasing argument is a field.
@@ -135,7 +135,7 @@ that the test does not make is a mistake in this file.
   erased. A non-erased binary counter drives the dispatch, while the
   `subterm` decrease is taken on an erased `Nat` tied to that counter by the
   prelude's `Numeral`, stepped by `numeral-succ` and cashed in through the
-  `Eq` it returns — DESIGN.md section 12's subterm recursion through an
+  `Eq` it returns — DESIGN.md section 21's subterm recursion through an
   erased argument — so the iterations build no unary `Nat` and cost the same
   with the extern `Nat` as without it. `tests/extern_tail.sl` is a loop of
   the same shape run by the extracted program rather than at elaboration.
@@ -144,7 +144,7 @@ that the test does not make is a mistake in this file.
   first, and a function keeping the empty `False` it was defined against
   after the name is shadowed by an inhabited one.
 - `tests/open_absurd.sl`, `tests/open_adt_unify.sl`, `tests/open_tyctor.sl` —
-  opening a `Matchable` (DESIGN.md section 19): a
+  opening a `Matchable` (DESIGN.md section 8): a
   contradiction between two constructors held as a fact until the
   `Matchable` listing both is opened, cashed in by `open-absurd` or refuting
   the branch when the open comes first; two `Matchable`s sharing a
@@ -181,14 +181,14 @@ that the test does not make is a mistake in this file.
   what lets one index a `Vec`. The third writes out what both expand to, so
   the sugar can be read against the calls it stands for.
 - `tests/bare_call.sl`, `tests/bare_lex.sl` — calls with no decrease
-  annotation (SUGAR.md 3): the first has a `Predates` proof and a `Subterm`
+  annotation (DESIGN.md section 48): the first has a `Predates` proof and a `Subterm`
   proof inferred beside a written `_`; the second is `tests/ackermann.sl`
   with nothing written, the inferred position being the first `subterm`
   argument that differs from its counterpart. `tests/bare_lex_bad.sl` shows
   there is no search: a first argument that grows is refused although the
   second decreases.
 - `tests/wild_ctor.sl`, `tests/wild_call.sl` and `tests/wild_is.sl` — `_`
-  for an erased argument (SUGAR.md 6): a constructor's type argument solved
+  for an erased argument (DESIGN.md section 50): a constructor's type argument solved
   from the field after it, from the telescope a body returns into through
   `values`, and from a match's annotation; a call's type argument solved
   from a later argument or from the results' expected telescope; an
@@ -211,7 +211,7 @@ that the test does not make is a mistake in this file.
   `tests/wild_many_bad.sl`, `tests/wild_mismatch_bad.sl`,
   `tests/wild_match_ann_bad.sl` and `tests/wild_type_bad.sl`.
 - `tests/dump_context.sl` — `(dump-context)` in the `Cons` branch of
-  UNIQUE.md U11's `append-into`, after the tail call: the report shows the
+  DESIGN.md section 61's `append-into`, after the tail call: the report shows the
   goal `(many (List A) r at cell)`, the scrutinee's forced rule, the cell
   consumed by the write and the fresh one consumed by the call, the live
   written cell, and the at-database's classes. `tests/dump_context_top.sl`

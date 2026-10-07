@@ -1,5 +1,5 @@
 ; expect: (MkPair _ _ 1 9)
-; An invocation of a cell at `many` that is not full-at copies (AT_REDESIGN A8), so the original is unchanged.
+; An invocation of a cell at `many` that is not full-at copies (section 37), so the original is unchanged.
 (def-adts $ (Box : -> Type) enum (many MkBox : (many (Nat) n) -> (Box)))
 (def-fns _ $ (many bump : (many (Box) b) -> (many (Pair (Nat) (Nat)) r))
   (let-match many b (MkBox n u))
