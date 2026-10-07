@@ -118,13 +118,14 @@ type t = {
   enclosing : id option;
   run_pos : bool;
   values : Value.venv;
+  pending : (id * Value.code) list;
   prelude : scope;
   literals : (string * (id * id option)) list;
   ladder : Value.value array;
 }
 
 let empty =
-  { signature = []; ctor_tele = false; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { signature = []; ctor_tele = false; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -169,7 +170,7 @@ let hint env name =
 let hide env outer =
   let n = List.length env.scope.ids - List.length outer.scope.ids in
   let added = List.filteri (fun i _ -> i < n) env.scope.ids in
-  let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None; word = (let e = IntMap.find x es in e.word && not e.temporary) } es) env.entries added in
+  let entries = List.fold_left (fun es x -> IntMap.add x { (IntMap.find x es) with name = None } es) env.entries added in
   { env with entries; scope = { env.scope with named = outer.scope.named } }
 
 (* The type `(Slot)`, set once the prelude binds its constructor, for the automatic slot every entry is minted

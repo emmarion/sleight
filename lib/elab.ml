@@ -779,8 +779,10 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
               match r.term, code with
               | Var _, V.CVar _ -> (env, r, code, bindings)
               | _ ->
-                  let x, env = bind env ~holes:true ~word:true ~temporary:true None r.erasure Dyn r.ty ~rule:r.term in
-                  (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, V.CVar x, (x, code) :: bindings))
+                  let state, pending = if env.run_pos then (Const (List.hd (Eval.eval env.values code)), env.pending) else (Dyn, env.pending) in
+                  let x, env = bind env ~holes:true ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
+                  let env = if env.run_pos then env else { env with pending = (x, code) :: pending } in
+                  (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, V.CVar x, bindings))
             else if bind_args && List.mem i named && (match r.term with Var _ -> false | _ -> true) then
               let x, env = bind env ~holes:true ~temporary:true None r.erasure Dyn r.ty ~rule:r.term in
               (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, code, bindings)
@@ -801,7 +803,8 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
     let what = argument c i (List.nth tele i).name and arg = List.nth args i in
     if wild arg then error_with ~hints:(hole_hints env t) (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
     else unsolved ~about:(what ^ ": ", Lazy.force c.notes) (Reader.loc arg) env t) (List.rev acc);
-  (env, List.map (metaless env) acc, List.rev codes, fun env body -> closing env (List.map fst bindings) (List.fold_left (fun body (x, rhs) -> V.CLet ([x], rhs, body)) body bindings))
+  ignore bindings;
+  (env, List.map (metaless env) acc, List.rev codes, fun env body -> (env, body))
 
 (* [result] entrywise against [expect]: terms where both are `is` entries, types always. Not [strict]: a
    failure leaves the environment as it was. *)
@@ -1638,7 +1641,15 @@ and open_binding env l mult raw =
   let x, env' = bind inner ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
-and elab_body ?tele ?sink env expect l items =
+and lets pending code = List.fold_left (fun body (x, rhs) -> V.CLet ([ x ], rhs, body)) code pending
+
+and hoisted env elab =
+  let env', ress, code = elab { env with pending = [] } in
+  ({ env' with pending = env.pending }, ress, lets env'.pending code)
+
+and elab_body ?tele ?sink env expect l items = hoisted env (fun env -> elab_body_items ?tele ?sink env expect l items)
+
+and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
   match items with
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
@@ -1697,9 +1708,9 @@ and refine env scrut c fids ret =
   merge_opens (unify_force (unify_force (forcing env) scrut.term (App (Var c, List.rev fvars))) scrut.ty (instantiate fvars ret))
 
 and elab_stmt ?within spos env raw : Env.t * (V.code -> V.code) =
-  let env, wrap = elab_stmt_unsettled ?within spos env raw in
-  report_shadows ~env ();
-  (env, wrap)
+  let env', wrap = elab_stmt_unsettled ?within spos { env with pending = [] } raw in
+  report_shadows ~env:env' ();
+  ({ env' with pending = env.pending }, fun rest -> lets env'.pending (wrap rest))
 
 and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
   match raw with
@@ -1764,7 +1775,9 @@ and elab_let spos env l args =
   in
   let after, wrap, final = elab_stmts ~within:"item of a `let`'s right-hand side" spos env l rhs in
   let sink = lazy { owner = respell env "the enclosing `let`"; noun = "value"; shown = List.map Reader.show binder_raws; anchors = [ (bl, respell env "the binders of the enclosing `let` are here") ] } in
-  let inner, ress, code = elab_expr ?tele ~sink after expect final in
+  let inner, ress, code = elab_expr ?tele ~sink { after with pending = [] } expect final in
+  let temps = inner.pending in
+  let inner = { inner with pending = after.pending } in
   let values = if env.run_pos && pos_of env expect <> Erased then run_code inner code else [] in
   let raw i = snd (List.nth (result_sites env l [ final ] (List.length binders)) i) in
   let bind_one (env, ids, acc) (i, ((b, r), v)) =
@@ -1784,7 +1797,7 @@ and elab_let spos env l args =
     List.fold_left bind_one (hide inner env, [], []) (List.mapi (fun i x -> (i, x)) (List.combine (List.combine binders ress) (spread expect values)))
   in
   let ids = non_erased env' (List.rev ids) in
-  (env', if env.run_pos then Fun.id else fun rest -> wrap (if pos_of env expect = Erased then rest else V.CLet (ids, code, rest)))
+  (env', if env.run_pos then Fun.id else fun rest -> wrap (lets temps (if pos_of env expect = Erased then rest else V.CLet (ids, code, rest))))
 
 (* A match on a one-constructor type chooses nothing, so what it learns holds wherever the scrutinee does
    and its fields bind outward (section 27's reason for comptime-match, without a discriminant to verify). *)
