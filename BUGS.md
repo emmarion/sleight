@@ -65,6 +65,65 @@ is a design decision. Remove an entry when it is fixed.
     percent of that run. A join that visits only what a branch changed
     might cost less; not tried.
 
+18. **`self/eval.sl` answers a failed step with an ordinary value.**
+    Audit 2026-10-07 A2 and A3 are two instances. A survey of
+    `self/eval.sl` and `self/heap.sl` at `04a736f` (read from the code;
+    beyond A2/A3, none of the cases below was reproduced) found the
+    same shape in several places, in three groups:
+
+    - *Fuel.* `rope-walk`/`rope-fields` return `REmpty`, and `list-refs`
+      `Nil`, once their fixed fuel of 1000000 is spent (A2, A3). Seeding
+      the fuel from the store's own allocation count (`next` in
+      `MkStore`; twice it for the rope pair, which spends two units per
+      level) appears to be enough on an acyclic heap. Tried in a scratch
+      tree, not committed: both reproducers then match the reference
+      under `--interpret` and compiled, under `ulimit -s unlimited` (at
+      the default 8 MB stack, the old and new `slc` both overflow, as in
+      11), and slc's self-compile time looked unchanged. That bound is an
+      informal pigeonhole argument, not a proof. Also, nothing at the meta
+      level excludes a cycle: `store-write` stores a body over the whole
+      current history, and `CCellWrite` writes `BTag` blocks. On a cycle,
+      running out would still return a shortened value silently.
+    - *A block of the wrong shape, or a missing argument.* `rope-walk`
+      returns `REmpty` on a block that is neither `BTag` nor a
+      string/char `BExt`. `list-refs` and `ctor-fields` return `Nil`
+      on a non-`BTag`. `heap-str` returns `SNil`, `field-nat` returns 0,
+      and `apply-extern`'s `na`/`nb`/`sa`/`sb` default to 0 or `SNil` on
+      a missing argument. `ExFlatten` gives `SNil` on a missing
+      argument, and `ErListToArray`, `ErArrayMake`, `ErArrayCopy`,
+      `ErArraySub` and `ErArrayBlit` build from `Nil` when `array-fields`
+      or the argument is missing. `ErWrite` and
+      `ErArrayBlit` keep the store unchanged on a `list-nth` miss.
+      Well-typed input may never reach these; nothing in the evaluator
+      shows that.
+    - *Error blocks that don't stop evaluation.* Where the evaluator
+      does report (`error-vals`, out of fuel included, and
+      `array-construct` and `apply-array-change`), the report is a
+      `BError` value. It becomes a `runtime error:` only when read as
+      a final or a request, applied (`apply`'s `BError` case), or
+      emitted (`failwith`). As read, `dispatch` returns `None` for a
+      `BError` scrutinee, and `CMatch`'s `None` path then runs the
+      first branch over `ctor-fields` of the error block, so a matched
+      error might turn into an ordinary result. A dropped one
+      disappears. Separately, `sub`, `div`, `divmod`, `nat-mod` and
+      `str-split` report through `ErPayload $ PStr "..."`. That seems to
+      allocate a string `BExt` rather than a `BError`, though the
+      ASSUMPTIONS entry on the arithmetic externs says an error block.
+      Their proof arguments may make those branches unreachable.
+
+    A likely structural fix, not decided: give the evaluator's results
+    a `Result`-shaped type, i.e. a failure with its message or the
+    values. Each helper above would return that type, and `eval` and
+    its mutual group would short-circuit on a failure at every step,
+    making exhaustion and shape mismatches impossible to answer with an
+    ordinary value. The `BError` block would then remain only as the
+    emitted representation, if anywhere. Cheaper partial alternatives
+    are a `BError` that `dispatch` and every block-inspecting helper
+    propagate (each site an obligation, and a missed one keeps the
+    bug), or a host-level abort primitive, which would be a design
+    addition. Separately, the acyclicity a measure-based traversal
+    would need is a question about `heap.sl`'s store invariant.
+
 19. **`slc` keeps a `ValCtor` type's binders in scope for the rest of
     the signature.** The reference refuses this program, the `A` of
     `(erased A y)` with "unbound name `A`"; `slc` at 1168548 accepts it,
