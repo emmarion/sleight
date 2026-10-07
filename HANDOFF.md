@@ -487,11 +487,25 @@ What the owner still has to decide, none of it settled here:
   the error it is now (ASSUMPTIONS 207) or be ignored.
 - A12.5's tier-1 list, and the A12 items 1-4 left for version two.
 
-Timing (CLAUDE.md rule 17), `bench/bench.sh` on each compiler's own
-sources, five runs, minimum and median wall time: origin/main's `slc`
-2.73s and 2.88s; the ported `slc` at 0bfdbaa 3.64s and 3.96s, the
-reference showing the same ratio on the same job, so the cost looks to
-be the redesign's (a slot entry per non-erased binder, a placement per
-binder) rather than the port's. The placement of a fresh slot was then
-made a direct rule rather than a forcing (`Env.place`); the figures
-after that change are in the session's final report.
+Timing (CLAUDE.md rule 17), each compiler on its own sources, five
+alternating runs, minimum and median wall time, on a machine whose
+noise was about 0.3s: origin/main's `slc` 2.70s and 2.96s; the ported
+`slc` 3.29s and 3.80s, about 25 percent slower. The reference compiling
+the same sources: origin/main's 4.7s, this branch's 3.8s, faster
+because a polymorphic comparison of terms over every opened object on
+every rule added, more than half of the reference's run before, is an
+integer comparison now (5ed34ef); `slc` indexes its opens and had no
+such cost to recover. A differential profile of `slc` (callgrind, old
+against new) puts the whole increase in proportional work: 72 percent
+more fact-table inserts (one slot entry per non-erased binder, A2), a
+rule-out per placement (nearly every binder is placed, U8's writers), a
+larger live table for every lookup and for the GC, with no single hot
+function and the `slots-in` pass at about one percent of the run. The
+placement of a fresh slot is a direct rule rather than a forcing in
+both compilers (25629a9, 81c8d64), which recovered a few tenths; what
+remains is this session's reading of the cost of representing automatic
+slots as fact-table entries at all. Closing it would mean another
+representation, a slot class keyed by its entry and materialized only
+when a `(slot-of x)` is canonicalized, which changes `self/core.sl`'s
+table invariants and is the owner's to weigh against rule 17; recorded
+as an unresolved regression, not as noise.

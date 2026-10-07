@@ -3272,6 +3272,7 @@
 
 (def-fns _ $ (many atfn-open : (many (Env) env) (many (Term) t) -> (many (Bool) r))
   (let-match many (canon-env env t) (TVar f) (else (BFalse)))
+  (let-match many (index-of f $ env-index env) (Cons _ _ _) ((Nil _) (BFalse)))
   (atfn-open-in (env-opens env) f))
 
 (def-fns _ $ (many signature-of : (many (Env) env) (many (Nat) z) -> (many (Maybe $ Term) r))
