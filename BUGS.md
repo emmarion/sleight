@@ -57,4 +57,4 @@ is a design decision. Remove an entry when it is fixed.
     reading, this session's and not the owner's, is that the temporary
     should stay bound, and readable, for the rest of the enclosing
     expression, as the entries of a `let`'s right-hand-side statements
-    do (§27). Entry 6 is the converse case.
+    do (§27). The fixed entry 6 was the converse case.
