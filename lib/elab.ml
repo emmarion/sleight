@@ -1967,9 +1967,11 @@ and elab_def_fns ?(unique = false) env l args =
         let envb, pids = open_tele envb params in
         let pvars = List.rev_map (fun x -> Var x) pids in
         (* a parameter written `at` is not passed: its word is its target's (A3) *)
-        let renames body = List.fold_right2 (fun (e : entry) x body -> match e.place with
-          | Some p when e.mult <> Erased -> V.CLet ([ x ], V.CVar (location_var envb fl (instantiate pvars p)), body)
-          | _ -> body) params pids body in
+        let renames body =
+          let _, lets = List.fold_left2 (fun (ids, lets) (e : entry) x -> (Var x :: ids, match e.place with
+            | Some p when e.mult <> Erased -> (x, location_var envb fl (instantiate ids p)) :: lets
+            | _ -> lets)) ([], []) params pids in
+          List.fold_left (fun body (x, y) -> V.CLet ([ x ], V.CVar y, body)) body lets in
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
         let envb = { envb with level = At lvl; subterms; enclosing = Some x; run_pos = false; in_extern = env.in_extern || extern; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
         let envb, code =

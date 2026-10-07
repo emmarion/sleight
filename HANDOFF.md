@@ -476,10 +476,13 @@ What the owner still has to decide, none of it settled here:
 - AT_REDESIGN A8 says the cell binder is mandatory; the owner decided in
   chat that it is optional at `unique` and at `many`, and the code
   follows the chat. A8's wording is the owner's to update (rule 12).
-- Whether `vacant-slot` is its own `at` (review item 17; ASSUMPTIONS 204
-  does nothing special).
-- Whether a `(Slot)`-typed binder is its own `at` by default (review
-  item 30; not implemented, `slot-self` is written where wanted).
+- The owner decided in chat that `vacant-slot` is its own `at` (review
+  item 17) and, tentatively ("yeah probably"), that a `(Slot)`-typed
+  binder is its own `at` by default (review item 30); the code follows
+  the chat (ASSUMPTIONS 201 and 204 say how far the check reaches), and
+  AT_REDESIGN.md's wording is the owner's to update (rule 12). Reverting
+  the default is the one line minting the slot's rule in `Env.bind` and
+  its counterpart in `self/core.sl`'s `bind-as-raw`.
 - The slot of an erased argument, reached through an erased call of a
   signature naming `(slot-of p)` (ASSUMPTIONS 210, the owner's probe in
   chat): accept as the formal term it now is, or refuse the call.
@@ -490,7 +493,8 @@ What the owner still has to decide, none of it settled here:
 Timing (CLAUDE.md rule 17), each compiler on its own sources, five
 alternating runs, minimum and median wall time, on a machine whose
 noise was about 0.3s: origin/main's `slc` 2.70s and 2.96s; the ported
-`slc` 3.29s and 3.80s, about 25 percent slower. The reference compiling
+`slc` 3.29s and 3.80s, about 25 percent slower (3.34s and 3.48s again
+after the `(Slot)` default landed, three runs). The reference compiling
 the same sources: origin/main's 4.7s, this branch's 3.8s, faster
 because a polymorphic comparison of terms over every opened object on
 every rule added, more than half of the reference's run before, is an

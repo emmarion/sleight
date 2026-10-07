@@ -2926,6 +2926,12 @@
   (let-match many in-rule (None _) ((Some _ t) (Some _ t)))
   (match many (has-meta-env env ty) _ ((BTrue) (Some _ ty)) ((BFalse) (None _))))
 
+(def-fns _ $ (many is-slot-term : (many (Term) t) -> (many (Bool) r))
+  (let-match many t (TApp h args) (else (BFalse)))
+  (let-match many h (TVar i) (else (BFalse)))
+  (let-match many args (Nil _) (else (BFalse)))
+  (nat-eq i slot-id))
+
 (def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
@@ -2952,8 +2958,23 @@
     (match many (and (not meta) $ mult-is-many mult) _
       ((BFalse) (values x nf2 ff2 tb2))
       ((BTrue)
-        (let ((erased nf3) (erased ff3) (many tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
-        (values (Succ x) nf3 ff3 $ table-add-slot _ _ _ tb3 x $ Succ x))))
+        ; a binder whose type is `(Slot)` is its own slot (AT_REDESIGN_REVIEW item 30, the owner's reading)
+        (let ((many (Bool) self)) $ match many ty _
+          ((TVar _) (let ((many ty2) (erased _)) $ canon-in _ _ _ tb ty) (is-slot-term ty2))
+          ((TApp h args)
+            (let-match many h (TVar _) (else (BFalse)))
+            (let-match many args (Nil _) (else (BFalse)))
+            (let ((many ty2) (erased _)) $ canon-in _ _ _ tb ty)
+            (is-slot-term ty2))
+          (else (BFalse)))
+        (match many self _
+          ((BFalse)
+            (let ((erased nf3) (erased ff3) (many tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
+            (values (Succ x) nf3 ff3 $ table-add-slot _ _ _ tb3 x $ Succ x))
+          ((BTrue)
+            (let ((many t2) (erased ft)) $ canon-in _ _ _ tb2 (TVar x))
+            (let ((erased nf3) (erased ff3) (many tb3)) $ table-insert-ruled _ _ _ tb2 (Succ x) (lt-succ x) slot-term t2 ft)
+            (values (Succ x) nf3 ff3 $ table-add-slot _ _ _ tb3 x $ Succ x))))))
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
   (values (MkEnv _ hp sc2 en2 _ _ fr2 tb3 rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
 
