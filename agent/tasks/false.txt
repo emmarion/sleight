@@ -6,7 +6,9 @@ in this one.
 
 To check your work, compile in order: your files, then false/accept.sl. It
 calls `bottom`, a function you define that takes no arguments and returns
-`(erased (False) f)`. Warnings are allowed.
+`(erased (False) f)`. Warnings are allowed. A program that reaches absurd code
+at runtime also counts: compiled after your files as work/absurd.sl, its run
+must end with `runtime error: absurd code reached`, without printing it itself.
 
 For reference: DESIGN.md (the language); BUGS.md, OPEN.md, and SPEC-REVIEW.md
 (known defects and open questions); lib/prelude.sl (the standard library);
