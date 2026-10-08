@@ -57,8 +57,6 @@ references are to DESIGN.md.
 11. Should the outer declaration syntax `name : signature` put the name
     last, as telescope entries do (§3)? Should `let` put its binders
     last?
-12. Should a union newtype be allowed when none of its non-phantom
-    constructors holds a non-erased field (§21)?
 13. Should `_` be accepted as an entry of a `values`, or as the
     scrutinee of a `let-match` (§50)?
 14. A source-level way to declare extern types and functions, in place

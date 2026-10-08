@@ -262,7 +262,7 @@ let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
 
 let wrappers disc shapes =
   let cs = non_phantom shapes in
-  if tagged disc shapes || List.exists (fun (_, n) -> n > 1) cs then [] else List.filter_map (fun (c, n) -> if n = 1 then Some c else None) cs
+  if tagged disc shapes || List.exists (fun (_, n) -> n <> 1) cs then [] else List.map fst cs
 
 let newtype_of env c =
   List.find_map (fun o -> if not (names_var c o.Env.names) then None else match type_of env o.Env.obj with

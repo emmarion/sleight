@@ -178,8 +178,7 @@ ground.
     same way as a named one. `coerce` is the identity at runtime.
 34. **Unions are never tagged**, so a match on one binds its single
     real branch's fields without inspecting anything; how an untagged
-    value prints is item 184. A union newtype's constructors with no
-    non-erased field build the token.
+    value prints is item 184.
 35. **An absurd function's code raises** if ever reached; a match whose
     real branches are all absurd or phantom likewise compiles to code
     that raises.

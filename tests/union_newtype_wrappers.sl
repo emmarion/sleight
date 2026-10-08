@@ -1,6 +1,6 @@
 ; expect: 7
 ; A union newtype with several wrapping constructors (section 33): each wraps its own field type at no
-; cost, the index telling them apart, and NoEither is fieldless. Rewrapping 7 from Left to Right goes
+; cost, the index telling them apart, and NoEither is phantom. Rewrapping 7 from Left to Right goes
 ; through the field.
 
 (def-adts
@@ -8,7 +8,7 @@
     union newtype
     (many Left : (erased Type A) (erased Type B) (many A x) -> (Either A B (BTrue)))
     (many Right : (erased Type A) (erased Type B) (many B y) -> (Either A B (BFalse)))
-    (many NoEither : (erased Type A) (erased Type B) (erased (False) f) -> (Either A B (BFalse)))))
+    (erased NoEither : (erased Type A) (erased Type B) (erased (False) f) -> (Either A B (BFalse)))))
 
 (def-fns _ $ (many get-left : (erased Type A) (erased Type B) (many (Either A B (BTrue)) e) -> (many A a))
   (match many e _

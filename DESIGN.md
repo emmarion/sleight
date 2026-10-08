@@ -728,12 +728,10 @@ the constructor **phantom**. The marker is recorded in the type's
 field is declared `erased`, `many` or `unique` (§22). Subterm
 recursion (§17) may go through an erased field.
 
-A type marked `newtype` must have **newtype shape**: either an enum
-with exactly one non-phantom constructor, holding exactly one
-non-erased field; or a union whose non-phantom constructors each hold
-either only erased fields or exactly one non-erased field, with at
-least one of them holding a non-erased field. A value of such a type is
-represented as that field (§33).
+A type marked `newtype` must have **newtype shape**: every non-phantom
+constructor holds exactly one non-erased field, and there is at least
+one non-phantom constructor, and exactly one if the type is an enum. A
+value of such a type is represented as that field (§33).
 
 **A constructor returns its own type.** Every value constructor is
 declared under exactly one type constructor in `def-adts`. Its return
@@ -1238,10 +1236,9 @@ the expected type (§50).
 4. `(coercible-share p)`: `p` with both sides `(Shared)`.
 5. `(coercible-wrap s C arg1 ... argn)`: wrapping into a **newtype**. A
    type is a newtype because of its `def-adts` mark, which requires
-   newtype shape (§21). A non-phantom constructor that holds a
-   non-erased field is a **wrapping constructor**: the single
-   constructor of an enum, or each such constructor of a union. Phantom
-   constructors do not count either way. The form reads the `newtype`
+   newtype shape (§21). Every non-phantom constructor of a newtype is a
+   **wrapping constructor**: the single one of an enum, or each one of
+   a union. Phantom constructors are not wrapping constructors. The form reads the `newtype`
    mark from the opened `Matchable` that lists `C` (§8). That mark is
    what makes the form trustworthy: it guarantees that `C` heads
    inhabited values, whereas wrapping through a constructor without
@@ -1294,8 +1291,7 @@ value built by a wrapping constructor is represented exactly as that
 constructor's one non-erased field, with no tag and no wrapper. That
 representation is mandatory for a type marked `newtype` and forbidden
 for a type that is not marked: an unmarked type of newtype shape is a
-block (§37). A union newtype value built by a constructor with only
-erased fields is an unspecified word. A word is never read as the
+block (§37). A word is never read as the
 field of a constructor that did not build it: a non-erased match on a
 union has a single real branch unless it is an at-match, whose `at`
 entries every real branch must justify (§40), and unwrapping requires

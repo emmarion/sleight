@@ -1394,14 +1394,14 @@
     ((BTrue) (Cons _ c $ notail $ wrappers rest))
     ((BFalse) (tail $ wrappers rest))))
 
-(def-fns _ $ (many some-wide : (subterm many (List $ CShape) ss) -> (many (Bool) r))
+(def-fns _ $ (many some-not-single : (subterm many (List $ CShape) ss) -> (many (Bool) r))
   (let-match many ss (Cons _ s rest) ((Nil _) (BFalse)))
   (let-match many s (MkCShape m _ n))
-  (or (and (mult-is-many m) $ nat-lt 1 n) $ notail $ some-wide rest))
+  (or (and (mult-is-many m) $ not $ nat-eq n 1) $ notail $ some-not-single rest))
 
 ; The wrapping constructors of a type of newtype shape (section 33), none if it is not of that shape.
 (def-fns _ $ (many newtype-wrappers : (many (Disc) disc) (many (List $ CShape) ss) -> (many (List $ Nat) r))
-  (match many (or (tagged-of disc ss) $ some-wide ss) _
+  (match many (or (tagged-of disc ss) $ some-not-single ss) _
     ((BTrue) (Nil _))
     ((BFalse) (wrappers ss))))
 
