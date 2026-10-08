@@ -1,4 +1,4 @@
-#!pi -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no
+#!pi -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1
 Your task is to write a fast, in-place heapsort in SL, certified correct against
 heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
 This task will likely take many sessions, so leaving solid, well-recorded
