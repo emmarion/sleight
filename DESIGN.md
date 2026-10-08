@@ -690,22 +690,24 @@ are gone and every `let` that only renames has been resolved away
 the body, or if its results are bound by a `let` and returned in order
 by a final `values`, with or without coercions. A match in tail
 position puts its branches in tail position. An `at` return is dropped
-from a call's results for this purpose (§36). The marks wrap a call and
-nothing else. They are an error in an erased position.
+for this purpose, from the call's results and from the function's own
+returns alike (§36). The marks wrap a call and nothing else. They are
+an error in an erased position.
 
 **`delegate`.** `(delegate (f ...))` is `tail` plus the same
 pass-through requirement on the arguments: in the post-erasure code the
 marked function's body is nothing but the call, and the non-erased
-parameters are passed straight through, in order. The callee must be
-named by a variable introduced before the function whose body it is,
-in the introduction order of §5. It can never be the function itself,
-a later function of its block, a parameter, or anything the body
-binds. The non-erased behaviour of the two functions is then identical.
-`def-fns` creates a `Delegate` proof recording this; `delegate-of`
-fetches the proof and `coercible-of` turns it into a `Coercible` (§33).
-A function marked `extern` may not have a `delegate` body (§42). The
-function may name its callee on its header line, as in
-`(many g at f : ...)` (§41).
+parameters without a written `at` (§36) are passed straight through, in
+order. The function names its callee on its header line, as in
+`(many g at f : ...)` (§41), and the call must be to a callee that
+canonicalizes to it. The header sees only what was introduced before
+the function (§53), so the function it names can never be the function
+itself, a later function of its block, a parameter, or anything the
+body binds. The non-erased behaviour of the two functions is then
+identical. `def-fns` creates a `Delegate` proof recording this;
+`delegate-of` fetches the proof and `coercible-of` turns it into a
+`Coercible` (§33). A function marked `extern` may not have a `delegate`
+body (§42).
 
 ## 20. The top level calls freely
 
