@@ -2158,9 +2158,10 @@ right-hand side of a `let`, in run position, and in absurd bodies
 type or an `is` expression. Each elaborates to the entry it would yield
 as an expression, which is a variable reference, the first production
 of §9. It is read where it is written, against the facts in force
-there. The names of a `def-fns` block are in scope in its bodies but
-not in its signatures, so a signature cannot name the block's level
-through one of them. `coercible-of` is not a fetch form: it creates a
+there. The names of a `def-fns` block are in scope in every body of
+the block. In a signature, only the functions before it in the block
+are in scope, as `Dyn` entries (§6). A signature never sees its own
+function or a later one. `coercible-of` is not a fetch form: it creates a
 fresh proof at each use, and it may not appear in a type.
 
 ## 54. Special form registry
