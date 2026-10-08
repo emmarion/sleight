@@ -500,10 +500,11 @@ before that unit is compiled or run.
 Erased code obeys the `at` rules of §36 and gets the slot facts of §35
 and §36 that the same code would get at `many` or `unique`. Where the
 two differ, it gets only what holds at both; the forms where that
-matters say so (§37). A form whose only claim is about the run is
-refused in an erased position: `tail`, `notail` and `delegate` (§19),
-the `at` wrapper around a call (§39), and `share` (§16); and an
-`erased` function may not be marked `at` (§39).
+matters say so (§37). A form whose only claim or effect is about the
+run is refused in an erased position: `tail`, `notail` and `delegate`
+(§19), the `at` wrapper around a call (§39), `share` (§16),
+`cell-write` (§37) and `cell-match` (§38); and an `erased` function may
+not be marked `at` (§39).
 
 ## 15. Uses of unique binders
 
