@@ -1274,8 +1274,14 @@ def main(argv):
         sys.exit(f"{problem}\n\n{USAGE}")
     rec["n"] = n or int(next((v for f, v, _ in reversed(merged) if f == "-n"), "1"))
     tag = "+".join(Path(a).stem for a in argv)
-    loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{_model_name(env).replace('/', '_')}{'-' + _effort(env) if _effort(env) else ''}-{tag}"
-    loop.mkdir(parents=True)
+    base, k = f"{time.strftime('%Y%m%d-%H%M')}-{_model_name(env).replace('/', '_')}{'-' + _effort(env) if _effort(env) else ''}-{tag}", 1
+    while True:
+        loop = RESULTS / (base if k == 1 else f"{base}-{k}")
+        try:
+            loop.mkdir(parents=True)
+            break
+        except FileExistsError:
+            k += 1
     (loop / "run.json").write_text(json.dumps(rec, indent=1) + "\n")
     _next(loop)
 
