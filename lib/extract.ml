@@ -190,7 +190,7 @@ let rec value cx v =
           Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
-      match List.find_opt (fun (v', _) -> v' == v) !b with
+      match List.find_opt (function V.VCtor (_, vs'), _ -> vs' == vs | _ -> false) !b with
       | Some (_, { contents = Some name }) -> name
       | _ ->
           incr cx.shared;
