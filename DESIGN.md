@@ -1486,10 +1486,9 @@ type (§24). An abstract constructor must be listed by an opened
 marked `newtype` and forbidden for a type that is not.
 
 **Newtypes.** A newtype has no cell. Its representation is the word of
-its non-erased field (§33). A `unique` or `many` destructure of a
-newtype puts the field it binds at the scrutinee. An application of
-its constructor is at its non-erased argument. In an erased position
-the application is at nothing.
+its non-erased field (§33). A destructure of a newtype puts the field
+it binds at the scrutinee, and an application of its constructor is at
+its non-erased argument.
 
 **Obtaining a cell.** `(cell-alloc C)` is an expression that yields a
 fresh cell at unique, at no slot, with every slot `vacant-slot` (§35).
