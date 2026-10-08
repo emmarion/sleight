@@ -891,10 +891,10 @@ either order, or neither. `T` is the type constructor. The `Ci` are its
 value constructors in declared order, each with its multiplicity `ei`,
 which is `erased` or `many`. `T` and the `Ci` are bare and unapplied.
 The former checks nothing further, so a `Matchable` type may list
-entries that are not constructors, or a mark twice. Only `def-adts`
-creates a `Matchable` (§8), so such a type is uninhabited: opening a
-binder of it is allowed, and a match that names a non-constructor is
-an error.
+entries that are not constructors. Only `def-adts` creates a
+`Matchable` (§8), so such a type is uninhabited: opening a binder of
+it is allowed, and a match that names a non-constructor is an error.
+A mark written twice counts once.
 For example, the `Matchable` of `List` is
 `(Matchable enum List (many Nil) (many Cons))`. The tag, the marks and
 the `ei` are exactly the facts that no type records: a `TyCtor` type
