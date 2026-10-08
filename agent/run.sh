@@ -21,8 +21,9 @@ usage: $0 [IP] [--models M,...] [--copies N] [--per-box K] [--size S] PI-ARGS...
            list the $TAG droplets and their runs
        $0 status IP
            list the runs on the box
-       $0 tail [-t] IP
-           follow the box's newest run log, or with -t the current session's transcript
+       $0 tail [-t] IP [RUN]
+           follow a live run's log, or with -t its current session's transcript; RUN defaults to the
+           box's only live run
        $0 fetch IP
            copy the box's results into agent/results/box-NAME/
        $0 destroy [--force] [--yes] IP
@@ -53,6 +54,16 @@ droplet() { rows 2>/dev/null | awk -v ip="$1" '$1 == ip {print $2, $3}'; }
 box_dir() { local name; name=$(droplet "$1" | cut -d' ' -f2); echo "agent/results/box-${name:-$1}"; }
 
 live() { connect pi@"$1" && $SSH pi@"$1" 'for f in ~/sl/agent/results/*/pid; do [ -f "$f" ] && ps -p "$(cat "$f")" -o command= | grep -q pi.py && basename "${f%/pid}"; done; true'; }
+
+pick() {
+    local runs
+    runs=$(live "$1")
+    if [ -n "${2:-}" ]; then run=$2; else
+        [ "$(grep -c . <<<"$runs")" = 1 ] || { echo "$1 has $(grep -c . <<<"$runs") live runs; name one:" $runs >&2; exit 1; }
+        run=$runs
+    fi
+    grep -qx "$run" <<<"$runs"
+}
 
 unfetched() { connect pi@"$1" && rsync -an --copy-unsafe-links --out-format=%n -e "$SSH" pi@"$1":sl/agent/results/ "$(box_dir "$1")/" | grep -v '/$' || true; }
 
@@ -208,13 +219,9 @@ ls)
     ;;
 set-n)
     [ $# -eq 2 ] || [ $# -eq 3 ] || usage
-    ip=$1 n=${!#} runs=$(live "$1")
+    ip=$1 n=${!#}
     [[ $n =~ ^[0-9]+$ ]] || usage
-    if [ $# -eq 3 ]; then run=$2; else
-        [ "$(grep -c . <<<"$runs")" = 1 ] || { echo "$ip has $(grep -c . <<<"$runs") live runs; name one" >&2; exit 1; }
-        run=$runs
-    fi
-    grep -qx "$run" <<<"$runs" || { echo "$run is not live on $ip; continue it with $0 resume -n $n" >&2; exit 1; }
+    pick "$ip" "$([ $# -eq 3 ] && echo "$2")" || { echo "$run is not live on $ip; continue it with $0 resume -n $n" >&2; exit 1; }
     $SSH pi@"$ip" python3 - "$run" "$n" <<'PY'
 import json, os, sys
 from pathlib import Path
@@ -266,10 +273,11 @@ for rec in runs:
 PY
     ;;
 tail)
-    f='$(ls -t *.log | head -1)'
-    [ "${1:-}" = -t ] && { f=latest/transcript.log; shift; }
-    [ $# -eq 1 ] || usage
-    connect pi@"$1"
+    t=
+    [ "${1:-}" = -t ] && { t=1; shift; }
+    [ $# -eq 1 ] || [ $# -eq 2 ] || usage
+    pick "$1" "${2:-}" || { echo "$run is not live on $1" >&2; exit 1; }
+    if [ -n "$t" ]; then f="\$(ls -d $run/[0-9][0-9] | tail -1)/transcript.log"; else f="\$(grep -l results/$run/ *.log | tail -1)"; fi
     exec $SSH -t pi@"$1" "cd sl/agent/results && tail -n 20 -F $f"
     ;;
 fetch)

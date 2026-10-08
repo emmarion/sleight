@@ -54,5 +54,5 @@ why, _ = pi._proc([sys.executable, "-c", f"x = bytearray({pi.MEM_MB + 512} << 20
 assert why, "the memory limit did not stop a program"
 print(f"smoke test ok; over the {pi.MEM_MB} MB limit, a program {why}")
 PY
-echo "deployed $(git rev-parse --short HEAD); run with: ssh pi@<ip>, tmux, cd ~/sl/agent, ./pi.py ..."
+echo "deployed $(git rev-parse --short HEAD); start runs with: agent/run.sh <ip> PI-ARGS..."
 EOF
