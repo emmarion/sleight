@@ -833,10 +833,10 @@ def _spend(reply):
     return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy']:,.0f} J" if "energy" in SPENT else "")
 
 
-def _context(reply, window, prev_prompt):
+def _context(reply, window, prev_prompt, prev_used):
     usage, spent = reply.get("usage"), _spend(reply)
     if not usage:
-        return 0, prev_prompt
+        return prev_used, prev_prompt
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
     prompt, cached = _prompt(usage)
@@ -877,7 +877,7 @@ def run(prompt):
     window = CONTEXT or api.window()
     turns, budget = MAX_TURNS or (1000 if window else 200), lambda stop: int(window * stop / 100) if window else None
     tokens = budget(CONTEXT_STOP)
-    phase, turn, start = "experiment", 0, 0
+    phase, turn, start, used = "experiment", 0, 0, 0
     ok = lambda c: c["name"] == "done" or c["name"] in REWRITE_TOOLS and (
         "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
@@ -890,7 +890,7 @@ def run(prompt):
         sent = time.time()
         reply = api.send(messages)
         received = time.time()
-        used, prompt_tokens = _context(reply, window, prompt_tokens)
+        used, prompt_tokens = _context(reply, window, prompt_tokens, used)
         _log(RUN_DIR / "requests.jsonl", json.dumps({
             "sent": _iso(sent), "received": _iso(received), "seconds": round(received - sent, 3), "phase": phase, "context": used,
             "usage": reply.get("usage"), "cost": (reply.get("cost") or {}).get("request_cost_usd"),
