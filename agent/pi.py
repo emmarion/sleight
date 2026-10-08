@@ -427,15 +427,14 @@ def _turn():
     for _ in range(50):
         try:
             s = socket.create_connection(("127.0.0.1", GATE_PORT))
-        except ConnectionRefusedError:
+            s.sendall(f"{RUN_DIR.parent.name}\n".encode())
+            if s.recv(1) == b"g":
+                return s
+            s.close()
+        except ConnectionError:
             subprocess.Popen([sys.executable, __file__, "--gate"], start_new_session=True,
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(0.2)
-            continue
-        s.sendall(f"{RUN_DIR.parent.name}\n".encode())
-        if s.recv(1) == b"g":
-            return s
-        s.close()
     sys.exit(f"cannot reach or start the `sl` organizer on port {GATE_PORT}")
 
 
