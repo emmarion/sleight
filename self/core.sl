@@ -1847,35 +1847,47 @@
 
 ; ---- The table: the facts, the rules, the opened objects, and the erased invariants that make canonicalization complete.
 
+(def-adts $ (SlotEntry : -> Type)
+  enum
+  (many EntrySlot : -> (SlotEntry))
+  (many MetaSlot : -> (SlotEntry))
+  (many SlotAtom : -> (SlotEntry)))
+
 (def-adts
   ((Table : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type)
     enum
-    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) (many (IdMap $ Nat) slots) -> (Table n f c)))
+    (many MkTable : (erased (Nat) n) (many (Facts n) f) (erased (Nat) c) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1) (erased (Above (Nil $ Digit) c n f) ab) (many (Opens n f) opens) (many (IdMap $ SlotEntry) slots) -> (Table n f c)))
   ((Added : ((Nat) n) ((Facts n) f) ((Nat) c) -> Type)
     enum
     (many MkAdded : (erased (Nat) k) (erased (Facts $ Succ k) f) (erased (Facts k) f2) (erased (Nat) c) (many (Table k f2 c) tb) -> (Added (Succ k) f c))))
 
 (let ((many empty-table)) $ MkTable _ (FEmpty) _ (Nil _) _ (OrdNil $ Nil $ Nat) (KNil $ Nil $ Nat) (ARNil (Zero) $ FEmpty) (C1Empty (Nil $ Digit) $ Nil $ Rule) (AbEmpty (Nil $ Digit) $ Zero) (MkOpens _ _ (Nil _) (MEmpty _) $ Nil _) $ MEmpty _)
 
-; The automatic slot [s] of [x] (section 35), both entries already in the table; a slot is its own slot.
-(def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Nat) s) -> (many (Table n f c) r))
+; The automatic slot of [x], the next id (section 35), both entries already in the table; a slot is its own slot.
+(def-fns _ $ (many table-add-slot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Bool) meta) -> (many (Table n f c) r))
+  (let ((many e)) $ match many meta (((SlotEntry) e)) ((BTrue) (MetaSlot)) ((BFalse) (EntrySlot)))
   (match many tb _
-    ((MkTable _ f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x s $ idmap-set _ s s sl))))
+    ((MkTable _ f0 _ ru _ ord keys ar c1 ab op sl) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x e $ idmap-set _ (Succ x) (SlotAtom) sl))))
 
-(def-fns _ $ (many table-reslot : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) (many (Nat) y) -> (many (Table n f c) r))
-  (let-match many tb (MkTable _ f0 _ ru _ ord keys ar c1 ab op sl))
-  (match many (idmap-get _ y sl) _
-    ((Hit _ _ _ s _) (MkTable _ f0 _ ru _ ord keys ar c1 ab op $ idmap-set _ x s sl))
-    ((Miss _ _ _ _) tb)))
+(def-fns _ $ (many table-slot-entry : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ SlotEntry) r))
+  (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
+  (match many (idmap-get _ x sl) _ ((Hit _ _ _ e _) (Some _ e)) ((Miss _ _ _ _) (None _))))
 
 (def-fns _ $ (many table-slot-of : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many tb (MkTable _ _ _ _ _ _ _ _ _ _ _ sl))
-  (match many (idmap-get _ x sl) _ ((Hit _ _ _ s _) (Some _ s)) ((Miss _ _ _ _) (None _))))
+  (let-match many (idmap-get _ x sl) (Hit _ _ _ e _) ((Miss _ _ _ _) (None _)))
+  (match many e _ ((EntrySlot) (Some _ $ Succ x)) ((SlotAtom) (Some _ x)) ((MetaSlot) (None _))))
 
 ; The chase alone, from the top: what the rules say, with `(slot-of x)` left as written.
 (def-fns _ $ (many chase-in : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Term) t) -> (many (Term) r) (erased (Fr n f r) fr))
   (match many tb _
     ((MkTable _ f0 _ ru _ ord _ _ c1 _ _ _) (canon ru t _ f0 _ _ (PNil ru) ord (GTop t) c1))))
+
+(def-fns _ $ (many meta-slot-in : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (many (Term) m) (many (Nat) s) -> (many (Term) r) (erased (Fr n f r) fr))
+  (let ((many c) (erased _)) $ chase-in _ _ bnd tb m)
+  (let-match many c (TVar y) (else (chase-in _ _ bnd tb $ TVar s)))
+  (let-match many (table-slot-of _ _ bnd tb y) (Some _ sy) ((None _) (values (TSlotOf c) $ FrSlotOf _ _ c)))
+  (chase-in _ _ bnd tb $ TVar sy))
 
 ; `(slot-of x)` resolved to x's automatic slot, by x's binder and never through x's rule (section 35,
 ; review item 28), and the slot then chased. This session reads the chase above as leaving the form as
@@ -1886,8 +1898,12 @@
   ((many slots-in : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) bnd) (many (Table n f bnd) tb) (subterm many (Term) t) (erased (Fr n f t) p) -> (many (Term) r) (erased (Fr n f r) fr))
     (match many t _
       ((TSlotOf c)
-        (let ((many (Maybe $ Nat) slot)) $ match many c (((Maybe $ Nat) _)) ((TVar x) (table-slot-of _ _ bnd tb x)) (else (None _)))
-        (let-match many slot (None _) ((Some _ s) (chase-in _ _ bnd tb $ TVar s)))
+        (let ((many (Maybe $ SlotEntry) slot)) $ match many c (((Maybe $ SlotEntry) _)) ((TVar x) (table-slot-entry _ _ bnd tb x)) (else (None _)))
+        (let-match many slot (None _) ((Some _ e) (let-match many c (TVar x) (else (values t $ FrSlotOf _ _ c)))
+          (match many e _
+            ((EntrySlot) (chase-in _ _ bnd tb $ TVar $ Succ x))
+            ((SlotAtom) (chase-in _ _ bnd tb c))
+            ((MetaSlot) (meta-slot-in _ _ bnd tb c $ Succ x)))))
         (let-match many c (TApp _ _) ((TCell _ _) (values t $ FrSlotOf _ _ c)) (else (values t $ FrSlotOf _ _ c)))
         (let-match many tb (MkTable _ f0 _ _ _ _ _ _ c1 _ _ _))
         (let-match many (refresh c _ f0 _ c1) (Some _ box) ((None _) (values t $ FrSlotOf _ _ c)))
@@ -2066,7 +2082,7 @@
 ; keys and the order extended, both agreements carried across, and the opened objects naming the variable
 ; refreshed.
 (def-fns _ $ (many rule-into : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (erased (Above (Nil $ Digit) c n f) ab) (erased (List $ Rule) ru) (erased (List $ Nat) ks) (erased (Ord (Nil $ Nat) ru) ord) (erased (Keys (Nil $ Nat) ru ks) keys) (erased (AllRuled ks n f) ar) (erased (C1 (Nil $ Digit) n f ru) c1)
-    (many (Opens n f) op) (many (IdMap $ Nat) sl) (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb))
+    (many (Opens n f) op) (many (IdMap $ SlotEntry) sl) (many (Nat) x) (many (Term) t) (erased (Nat) k) (many (Facts k) f2) (erased (Out x t n f k f2) o) (erased (Fr k f2 t) ft) -> (many (Table k f2 c) tb))
   (let ((erased ru2) (erased ap)) $ append-rule ru $ MkRule x t)
   (let ((erased ar2)) $ ARCons _ _ _ _ (ruledin-out-new x t n f k f2 o) $ allruled-out ks x t n f k f2 o ar)
   (table-refresh _ _ c
@@ -2981,7 +2997,7 @@
   ; every entry, erased or a meta included, is minted with its automatic slot, the next id (section 35)
   (let ((erased (Nat) nf3) (erased (Facts nf3) ff3) (many (Table nf3 ff3 (Succ x)) tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x $ Succ x) rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
+  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
 
 (def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -3372,8 +3388,7 @@
                 ((BTrue) (values x y px py $ neq-sym _ _ ne))
                 ((BFalse) (values y x py px ne))))
             (let-match many (rule-out-var _ _ bnd tb m o pm po2 neq2) (MkAdded k _ _ _ tb2))
-            (let ((many tb3)) $ table-reslot _ _ _ tb2 m o)
-            (Less _ _ _ _ tb3 (env-set-table env _ _ bnd tb3) $ prove-subterm k n))
+            (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))
           ((BFalse)
             (let-match many (or (not force) $ listed env x y) (BFalse) ((BTrue) (contradiction _ bnd a b)))
             (let ((many sx)) $ signature-of env newer)
