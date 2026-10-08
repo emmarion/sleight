@@ -1428,8 +1428,8 @@ what an `at` canonicalizes to. At a call, the argument for a parameter
 written `at` is elaborated at the parameter's multiplicity and its uses
 count like any argument's. If it is not a variable, it is bound first.
 Its slot must equal the target's slot, instantiated with the earlier
-arguments, and it is not passed. `_` cannot stand for it. This check is
-made in erased positions as well. Inside the body, the parameter is a
+arguments, and it is not passed. `_` cannot stand for it. Inside the
+body, the parameter is a
 rename of its target's word. An `at` return is absent from the physical
 values of a call. A `let` binds it like any return, and the elaborator
 supplies its word from a non-erased entry in the same slot, namely the
@@ -1437,13 +1437,13 @@ caller's own binder for the argument the promise names, which the
 caller still holds whether or not the call consumed it. The `at`
 entries of a match are likewise produced by no branch and read back by
 the consumer. The promise of an `at` return is verified where the
-function or branch returns, by the canonical identity of the slots. A
-phantom branch under a non-erased scrutinee, an absurd branch, a
-refuted branch, and an `erased` or `absurd` function are exempt.
+function or branch returns, by the canonical identity of the slots. An
+absurd body (§21, §25) produces no declared returns, so the promise of
+its function or branch has nothing to apply to.
 
 **Writers.** Besides the declaration sites, facts equating slots (§35)
 are created by: the cell binder and `else` binder of a destructure
-(equated with the scrutinee, §23); a `unique` or `many` destructure of
+(equated with the scrutinee, §23); a destructure of
 a newtype (its non-erased field with the scrutinee) and an application
 of a newtype constructor (the value with its non-erased argument, §37);
 a cell invocation (the value with its cell) and a `cell-write` on a
