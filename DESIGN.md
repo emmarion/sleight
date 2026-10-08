@@ -168,8 +168,9 @@ function's `subterm`-marked parameters, in declaration order (§19).
 Macros and special forms are first-class values. To invoke one, rather
 than merely hold it, the head of the form must be constant-known at
 that point. A name bound inside a function body or a match branch is
-`Dyn`. A function is `Dyn` inside the bodies of its own `def-fns`
-block. The binders of a statement in run position (§27) are `Const` in
+`Dyn`. A function is `Dyn` in every body of its own `def-fns` block
+and in the signatures that follow its own in that block (§53). The
+binders of a statement in run position (§27) are `Const` in
 the code after it (§29).
 
 A list is elaborated according to its head:
