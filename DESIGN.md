@@ -786,17 +786,18 @@ Each constructor has at most one branch. A present branch whose forced
 unification contradicts is an error. A constructor with no branch must
 either be refuted or be covered by the `else`.
 
-**One real branch.** A match in an erased position is unconstrained.
-Otherwise, if at least one of its results is non-erased: when the
-discriminant is non-erased, that is, a `many` or `unique` match on an
-enum, there is a runtime tag to dispatch on. When the discriminant is
-erased, that is, an `erased` match or a match on a union in any mode,
-at most one branch may be **real**. The others must each be
-automatically absurd, absurd by proof, or the branch of a phantom
-constructor under a non-erased scrutinee. An `else` counts as one real
-branch, unless every constructor it stands for is phantom under a
-non-erased scrutinee, in which case it counts as none and its body is
-erased throughout.
+**One real branch.** A match in an erased position is unconstrained,
+and so is an at-match (§40) on a union under a `many` or `unique`
+scrutinee, which does not dispatch. Otherwise, if at least one of its
+results is non-erased: when the discriminant is non-erased, that is, a
+`many` or `unique` match on an enum, there is a runtime tag to
+dispatch on. When the discriminant is erased, that is, an `erased`
+match or a match on a union in any mode, at most one branch may be
+**real**. The others must each be automatically absurd, absurd by
+proof, or the branch of a phantom constructor under a non-erased
+scrutinee. An `else` counts as one real branch, unless every
+constructor it stands for is phantom under a non-erased scrutinee, in
+which case it counts as none and its body is erased throughout.
 
 **First-classness.** Types, type constructors and value constructors
 are first class (§24). Every argument of a type constructor is erased.
@@ -1274,8 +1275,8 @@ Values have a uniform representation: every value is one word, either
 an immediate or a pointer to a block, whatever its type. So a `Cons`
 block holds a `(Meters)` and a `(Nat)` in the same way, and the field
 of a wrapper may be existentially typed. A value is the tuple of its
-constructor's non-erased fields; a single field is stored bare. A value
-carries a tag only when its type is an enum with more than one
+constructor's non-erased fields; a single field is stored bare. A
+value carries a tag only when its type is an enum with more than one
 non-phantom constructor. The tag is the constructor's position among
 the non-phantom constructors, and that is all a tag ever
 distinguishes. A phantom constructor takes no discriminant. A value
@@ -1288,12 +1289,13 @@ for a type that is not marked: an unmarked type of newtype shape is a
 block (§37). A union newtype value built by a constructor with only
 erased fields is an unspecified word. A word is never read as the
 field of a constructor that did not build it: a non-erased match on a
-union has a single real branch, and unwrapping requires the value to
-canonicalize to the application of the wrapping constructor. Erased
-fields occupy no space. The pointer of a `delegate`-bodied function
-is its callee's pointer (§19). An extern type (§42) may be
-marked `newtype`; its FFI author then guarantees the field
-representation. A newtype may wrap a field of an extern type.
+union has a single real branch unless it is an at-match, whose `at`
+entries every real branch must justify (§40), and unwrapping requires
+the value to canonicalize to the application of the wrapping
+constructor. Erased fields occupy no space. The pointer of a
+`delegate`-bodied function is its callee's pointer (§19). An extern
+type (§42) may be marked `newtype`; its FFI author then guarantees the
+field representation. A newtype may wrap a field of an extern type.
 
 Only non-phantom constructors and non-erased functions matter in items
 5 to 8, because a `coerce` produces a non-erased value, which none of
@@ -1612,11 +1614,15 @@ annotation is wrapped in an `at` form, with the telescope inside:
 ```
 
 Every entry of the annotation must be erased or `at`. The code of each
-branch must erase to nothing, as the body of an at-function must (§39).
-The match skips its runtime: its code is empty, and the consumer reads
-its `at` entries back from their targets (§36). Coverage and the
-one-real-branch rule (§21) are checked as for any match. The annotation
-inside the `at` must be written out; `_` cannot stand for it.
+branch must erase to nothing, as the body of an at-function must
+(§39). The match skips its runtime: its code is empty, and the
+consumer reads its `at` entries back from their targets (§36).
+Coverage is checked as for any match. On a union under a `many` or
+`unique` scrutinee, the one-real-branch rule of §21 does not apply,
+because nothing dispatches: such an at-match may have several real
+branches. Under an `erased` scrutinee the rule applies as for any
+match. The annotation inside the `at` must be written out; `_` cannot
+stand for it.
 
 ## 41. The delegate annotation
 

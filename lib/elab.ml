@@ -1559,7 +1559,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let real =
         List.filter_map (fun (c, fids, unreachable, r, _) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
-      if pos <> Erased && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
+      if pos <> Erased && not (atmatch && smult <> Erased) && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
         error_with l (List.sort_uniq compare (List.concat_map (function (_, _, false, `Present _, Some trial) -> forced_notes env l sres trial | _ -> []) branches))
           "a match without a runtime discriminant can have only one real branch";
       let code =

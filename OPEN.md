@@ -76,8 +76,6 @@ references are to DESIGN.md.
 17. Should there be a runtime comparison of two slots that answers with
     evidence when they are equal (`slot-eq`), with a compiler free to
     always answer that they differ?
-18. Should the one-real-branch rule of §21 be relaxed for an at-match
-    (§40), which does not dispatch at runtime?
 19. Should the function in an `(at (f ...))` call be allowed to be
     erased, as a `Coercible` proof is?
 20. What becomes of `coerce`, `Coercible`, the `coercible-*` forms and
