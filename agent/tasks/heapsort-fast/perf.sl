@@ -11,15 +11,15 @@
 (comptime-match many perf-zero-cmp (Yes _ _ perf-zero-u8))
 
 (def-fns _ $ (many perf-gen : (subterm many (Nat) k) (many (Nat) seed) (erased (Nat) j) (erased (Add k j perf-size) count)
-    (erased (List (Nat)) xs) (erased (AllBelow (Nat) Lt xs u62-modulus) small) (erased (Length (Nat) xs j) len)
+    (erased (List (Nat)) xs) (erased (AllTo (Nat) Lt xs u62-modulus) small) (erased (Length (Nat) xs j) len)
     (many (List (Copy (Nat))) cs) (erased (Copies (Nat) xs cs) rel) ->
-    (erased (List (Nat)) xs2) (erased (AllBelow (Nat) Lt xs2 u62-modulus) small2) (erased (Length (Nat) xs2 perf-size) len2)
+    (erased (List (Nat)) xs2) (erased (AllTo (Nat) Lt xs2 u62-modulus) small2) (erased (Length (Nat) xs2 perf-size) len2)
     (many (List (Copy (Nat))) cs2) (erased (Copies (Nat) xs2 cs2) rel2))
   (let-match many k (Succ k1) ((Zero) (let-match erased count (AddZero _)) (values xs small len cs rel)))
   (let-match erased count (AddSucc _ _ total1 count1))
   (let ((many x) (erased x-below) (erased _)) (nat-mod (nat-add (nat-mul seed 1103515245) 12345) 1073741824 perf-range-pos))
   (tail $ perf-gen k1 x _ (add-succ-right _ _ _ count1)
-    _ (BelowCons _ _ x xs _ (lt-trans _ _ _ x-below perf-range-fits) small) (LengthCons _ _ _ _ len)
+    _ (AllToCons _ _ x xs _ (lt-trans _ _ _ x-below perf-range-fits) small) (LengthCons _ _ _ _ len)
     (Cons _ (MkCopy _ x) cs) (CopiesCons _ _ _ _ rel)))
 
 (def-fns _ $ (erased perf-nth-exists : (erased Type A) (erased (List A) xs) (erased (Nat) n) (subterm erased (Length A xs n) l)
@@ -63,7 +63,7 @@
 
 (def-unique Perf $ (unique perf-start : -> (unique (IO Perf) next))
   (let ((erased xs) (erased small) (erased len) (many cs) (erased rel))
-    (perf-gen perf-size 42 _ (add-zero-right _) _ (BelowNil _ _ _) (LengthNil _) (Nil _) (CopiesNil _)))
+    (perf-gen perf-size 42 _ (add-zero-right _) _ (AllToNil _ _ _) (LengthNil _) (Nil _) (CopiesNil _)))
   (let ((unique a)) (list-to-array _ cs))
   (def-unique _ $ (unique run : -> (many (PerfSorted) s))
     (let ((erased ys) (erased ds) (unique r) (erased rel2) (erased correct)) (accept xs small _ len perf-size-fits cs a rel))

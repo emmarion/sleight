@@ -36,8 +36,12 @@ allocates. To try another size, copy it to scratch/ and change `perf-size`.
 Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
 `coerce` in DESIGN.md and `init-witness` in prelude.sl).
 
-Hint: heapsort-fast/hint.sl coerces a `List (Nat)` with an `AllBelow` proof
-to `List (U62)` at no cost.
+Hint: heapsort-fast/hint.sl coerces a `List (Nat)` with an `AllTo` proof
+to `List (U62)` at no cost, and holds `bsearch`, a certified binary search.
+Its `Absent` proof walks the whole list, yet the search runs in O(log n),
+since erased code never runs; to see what is left, compile heapsort-fast/spec.sl,
+heapsort-fast/hint.sl and heapsort-fast/bsearch-demo.sl with the `sl` tool's
+`ocaml` option.
 
 Hint: spec.sl defines `u62m`, a `many` copy of `u62-modulus`. With it, a bound
 on a concrete number, such as `Lt K u62-modulus`, is proved at compile time in

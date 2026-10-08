@@ -11,13 +11,13 @@
     (many MkLe : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) -> (Le a b))))
 
 (def-adts
-  ((AllBelow : (Type A) ((TyCtor (A x) (A y) -> Type) R) ((List A) xs) (A m) -> Type)
+  ((AllTo : (Type A) ((TyCtor (A x) (A y) -> Type) R) ((List A) xs) (A m) -> Type)
     enum
-    (many BelowNil : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A m)
-        -> (AllBelow A R (Nil A) m))
-    (many BelowCons : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A x)
-        (erased (List A) xs) (erased A m) (erased (R x m) p) (erased (AllBelow A R xs m) rest)
-        -> (AllBelow A R (Cons A x xs) m))))
+    (many AllToNil : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A m)
+        -> (AllTo A R (Nil A) m))
+    (many AllToCons : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A x)
+        (erased (List A) xs) (erased A m) (erased (R x m) p) (erased (AllTo A R xs m) rest)
+        -> (AllTo A R (Cons A x xs) m))))
 
 (def-adts
   ((Ascending : (Type A) ((TyCtor (A x) (A y) -> Type) R) ((List A) xs) -> Type)
