@@ -2187,8 +2187,9 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `def-lvl`: creates a fresh `Level` (§18).
 - `def-fns`: one or more mutually recursive functions at one level,
   written on the form, each with its own `erased`/`many` marker (§14),
-  and optionally `absurd` (§25), `extern` (§42), `at` (§39) or `at g`
-  (§41). It may be nested in a body. It creates a `Delegate` proof for
+  optionally `absurd` (§25), `extern` (§42) or `at` (§39), and `at g`
+  on a `delegate`-bodied function, where it is required (§41). It may
+  be nested in a body. It creates a `Delegate` proof for
   each `delegate`-bodied function (§33) and an `AtFn` proof for each
   at-function.
 - `def-unique`: one function of `UniqueFn` type (§32).
