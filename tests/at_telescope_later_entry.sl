@@ -1,6 +1,6 @@
 ; expect: 3
 ; A later entry of a parameter telescope, a return telescope or a match annotation sees the slot an earlier
-; entry's `at` gives (sections 3, 36; audit/2026-10-07-review.md R2).
+; entry's `at` gives (sections 3, 36; audit/2026-10-07-review.md R2 at `ace7fc9`).
 (def-adts $ (SameSlot : ((Slot) a) (a is b) -> Type)
   enum
   (many MkSame : (erased (Slot) a) -> (SameSlot a a)))
