@@ -11,10 +11,11 @@ type final = Main | Io | Thunk of term | Plain
 
 let final env ty =
   let string t = Option.fold ~none:false ~some:(fun s -> equal t (App (Var s, []))) (prelude_opt env "String") in
+  let ret ps r = let env, ids = Elab.open_tele env ps in Env.canon env (fst (Elab.fact_of env Reader.nowhere (map_sg (instantiate (List.rev_map (fun x -> Var x) ids)) r.sg))) in
   match Env.canon env ty with
-  | Fn (_, [ { mult = Many; sg = Ty a; _ } ], [ { mult = Many; sg = Ty b; _ } ]) when string a && string b -> Main
+  | Fn (_, ([ { mult = Many; sg = Ty a; _ } ] as ps), [ ({ mult = Many; _ } as r) ]) when string a && string (ret ps r) -> Main
   | App (Var t, [ _ ]) when Some t = prelude_opt env "IO" -> Io
-  | Fn (_, [], [ { mult = Many | Unique; sg = Ty t; _ } ]) -> Thunk t
+  | Fn (_, [], [ ({ mult = Many | Unique; _ } as r) ]) -> Thunk (ret [] r)
   | _ -> Plain
 
 let driver env =

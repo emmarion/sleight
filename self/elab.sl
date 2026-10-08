@@ -2259,7 +2259,7 @@
   (match many rest _
     ((Cons _ _ _) (None _))
     ((Nil _)
-      (Some _ $ canon-env env $ match many (entry-sg e) (((Term) _)) ((SgTy t) t) ((SgIs _ ty) ty)))))
+      (Some _ $ canon-env env $ sg-ty $ entry-sg e))))
 
 (def-fns _ $ (many expected-coercible-sides : (many (Env) env) (many (Maybe $ List $ Entry) tele) -> (many (Maybe $ Pair (Term) $ Term) r))
   (let-match many (expected-proof-type env tele) (Some _ ty) ((None _) (None _)))

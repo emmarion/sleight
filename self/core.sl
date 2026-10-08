@@ -169,6 +169,9 @@
 (def-fns _ $ (many sg-term : (many (Sg) sg) -> (many (Term) t))
   (match many sg _ ((SgTy t) t) ((SgIs t _) t)))
 
+(def-fns _ $ (many sg-ty : (many (Sg) sg) -> (many (Term) t))
+  (match many sg _ ((SgTy t) t) ((SgIs _ ty) ty)))
+
 (def-fns _ $ (many entry-mult : (many (Entry) e) -> (many (Mult) m))
   (match many e _ ((MkEntry _ _ m _ _ _) m)))
 
