@@ -260,7 +260,7 @@ def _ocamlopt():
 
 def _spawn_exec_limited(cmd, env):
     libc = ctypes.CDLL(None, use_errno=True)
-    strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[x.encode() for x in xs], None)
+    strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[str(x).encode() for x in xs], None)
     argv, envp = strs(cmd), strs([f"{k}={v}" for k, v in env.items()])
     attr, acts = ctypes.c_void_p(), ctypes.c_void_p()
 
