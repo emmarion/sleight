@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fnmatch, functools, hashlib, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -24,6 +24,7 @@ SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
+GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
 MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
@@ -388,7 +389,7 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         raise ValueError("`paths` must name at least one file")
     if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
         raise ValueError("`capture` cannot name a kept file")
-    with tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
+    with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         src = Path(tmp, "src")
         names = []
         for p in paths:
@@ -420,6 +421,45 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
         head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+
+
+def _turn():
+    for _ in range(50):
+        try:
+            s = socket.create_connection(("127.0.0.1", GATE_PORT))
+        except ConnectionRefusedError:
+            subprocess.Popen([sys.executable, __file__, "--gate"], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.2)
+            continue
+        s.sendall(f"{RUN_DIR.parent.name}\n".encode())
+        if s.recv(1) == b"g":
+            return s
+        s.close()
+    sys.exit(f"cannot reach or start the `sl` organizer on port {GATE_PORT}")
+
+
+def gate():
+    srv, sel, ids, last, holder = socket.create_server(("127.0.0.1", GATE_PORT)), selectors.DefaultSelector(), {}, {}, None
+    sel.register(srv, selectors.EVENT_READ)
+    while True:
+        for key, _ in sel.select():
+            if (s := key.fileobj) is srv:
+                sel.register(srv.accept()[0], selectors.EVENT_READ)
+            elif data := s.recv(4096):
+                ids[s] = ids.get(s, b"") + data
+            else:
+                sel.unregister(s)
+                s.close()
+                ids.pop(s, None)
+                holder = None if s is holder else holder
+        if holder is None and (waiting := [s for s, i in ids.items() if i.endswith(b"\n")]):
+            holder = min(waiting, key=lambda s: last.get(ids[s], 0))
+            last[ids[holder]] = time.monotonic()
+            try:
+                holder.send(b"g")
+            except OSError:
+                pass
 
 
 def _stats(wall, ru):
@@ -1201,10 +1241,14 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
          "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
          "                    `first_error` decides, defaulting to every error [yes]\n"
-         "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]")
+         "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]\n"
+         "  PI_GATE_PORT      the localhost port of the organizer that lets one `sl` call run at a time, fairest to the run\n"
+         "                    served least recently; the first pi.py to need it starts it [47219]")
 
 
 def main(argv):
+    if argv[:1] == ["--gate"]:
+        return gate()
     if argv[:1] == ["--session"] and len(argv) >= 3:
         return _session(Path(argv[1]), int(argv[2]), list(zip(argv[3::2], argv[4::2])))
     pairs, no_header = [], False
