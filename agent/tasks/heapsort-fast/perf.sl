@@ -1,3 +1,6 @@
+; The size of the array sorted.
+(let ((many perf-size)) 1048576)
+
 (let ((many perf-s60) (erased perf-s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) ten))
 (let-match erased (mul-fn _ _ _ _ perf-s60m sixty-mul) (Refl _ _))
 (let ((many perf-s62) (erased perf-s62a)) (add perf-s60 (Succ (Succ (Zero)))))
@@ -5,7 +8,7 @@
 (let ((many perf-u62m) (erased perf-u62m-pow2) (erased _)) (pow2 perf-s62))
 (let-match erased (pow2-fn _ _ _ perf-u62m-pow2 u62-modulus-pow2) (Refl _ _))
 
-(let ((many perf-size-cmp)) (nat-cmp 1048576 perf-u62m))
+(let ((many perf-size-cmp)) (nat-cmp perf-size perf-u62m))
 (comptime-match many perf-size-cmp (CLt _ _ _ _ perf-size-fits))
 (let ((many perf-range-cmp)) (nat-cmp 1073741824 perf-u62m))
 (comptime-match many perf-range-cmp (CLt _ _ _ _ perf-range-fits))
@@ -14,10 +17,10 @@
 (let ((many perf-zero-cmp)) (lt-dec 0 u8-modulus))
 (comptime-match many perf-zero-cmp (Yes _ _ perf-zero-u8))
 
-(def-fns _ $ (many perf-gen : (subterm many (Nat) k) (many (Nat) seed) (erased (Nat) j) (erased (Add k j 1048576) count)
+(def-fns _ $ (many perf-gen : (subterm many (Nat) k) (many (Nat) seed) (erased (Nat) j) (erased (Add k j perf-size) count)
     (erased (List (Nat)) xs) (erased (AllBelow xs u62-modulus) small) (erased (Length (Nat) xs j) len)
     (many (List (Copy (Nat))) cs) (erased (Copies xs cs) rel) ->
-    (erased (List (Nat)) xs2) (erased (AllBelow xs2 u62-modulus) small2) (erased (Length (Nat) xs2 1048576) len2)
+    (erased (List (Nat)) xs2) (erased (AllBelow xs2 u62-modulus) small2) (erased (Length (Nat) xs2 perf-size) len2)
     (many (List (Copy (Nat))) cs2) (erased (Copies xs2 cs2) rel2))
   (let-match many k (Succ k1) ((Zero) (let-match erased count (AddZero _)) (values xs small len cs rel)))
   (let-match erased count (AddSucc _ _ total1 count1))
@@ -67,7 +70,7 @@
 
 (def-unique Perf $ (unique perf-start : -> (unique (IO Perf) next))
   (let ((erased xs) (erased small) (erased len) (many cs) (erased rel))
-    (perf-gen 1048576 42 _ (add-zero-right _) _ (BelowNil _) (LengthNil _) (Nil _) (CopiesNil)))
+    (perf-gen perf-size 42 _ (add-zero-right _) _ (BelowNil _) (LengthNil _) (Nil _) (CopiesNil)))
   (let ((unique a)) (list-to-array _ cs))
   (def-unique _ $ (unique run : -> (many (PerfSorted) s))
     (let ((erased ys) (erased ds) (unique r) (erased rel2) (erased correct)) (accept xs small _ len perf-size-fits cs a rel))
