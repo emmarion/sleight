@@ -1,4 +1,4 @@
-; The size of the array sorted.
+; Length of the array to sort.
 (let ((many perf-size)) 1048576)
 
 (let ((many perf-s60) (erased perf-s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) ten))
