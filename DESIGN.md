@@ -2093,14 +2093,17 @@ refused at the `)` of the call. A `_` in a signature is accepted when
 its own entry solves it.
 
 **Solving.** Metas are solved by unification only, with no search and
-no computation. Boundaries settle from the inside out: everything
-within one boundary is solved together, and a boundary nested inside
-it closes first, using only what is known at that point. A match's
-annotation is settled before its branches, so no meta crosses into a
-branch. A bare `_` as a whole annotation entry or binder type is a meta
-of type `Type`. `_` is not accepted as an entry of a `values` or as the
-scrutinee of a `let-match`. After the arguments are solved, the
-decrease annotation of §48 is inferred.
+no computation. A meta's solution must have the meta's type, the type
+of the position it stands for, as a written argument must: solving a
+meta to a term also unifies the meta's type with the term's type.
+Boundaries settle from the inside out: everything within one boundary
+is solved together, and a boundary nested inside it closes first, using
+only what is known at that point. A match's annotation is settled
+before its branches, so no meta crosses into a branch. A bare `_` as a
+whole annotation entry or binder type is a meta of type `Type`. `_` is
+not accepted as an entry of a `values` or as the scrutinee of a
+`let-match`. After the arguments are solved, the decrease annotation of
+§48 is inferred.
 
 ## 51. Refuting in an absurd body
 

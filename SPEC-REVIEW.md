@@ -238,12 +238,3 @@ hold the implementation side.
     seems necessary for the `at` entries to be honest; the sentence
     reads as if it were not. Open: say the scrutinee runs, or require
     it to be a variable.
-38. **The type of an argument for an `is` entry.** §12 says the
-    argument "must canonicalize to the same term as the `is`
-    expression" and says nothing of its type; §50 lets `_` stand for an
-    erased argument. Read literally, `(g _ 3)` with `g : (erased
-    (False) j) (many j is x)` satisfies §12 (BUGS.md 5). Open: state
-    that the argument must also have the entry's type, the type of the
-    `is` expression; and whether solving a meta should unify its type
-    with the term's, as `mini/`'s `UAssign` does, which HANDOFF.md
-    records `lib/` and `self/` not doing.
