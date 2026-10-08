@@ -4,11 +4,11 @@ TAG=pi-harness
 SIZE=${SIZE:-s-2vcpu-4gb}
 usage() {
     cat >&2 <<EOF
-usage: $0 IP PI-ARGS...
-           deploy HEAD to IP, then start pi.py PI-ARGS (paths relative to agent/) in tmux session pi,
-           passing on PI_* variables
-       $0 new [--size S] PI-ARGS...
-           create a $TAG droplet in nyc3 (size $SIZE), then deploy and start
+usage: $0 [IP] [--models M,...] [--copies N] [--per-box K] [--size S] PI-ARGS...
+           start N copies [1] of pi.py PI-ARGS (paths relative to agent/) per model, each in its own tmux
+           session, passing on PI_* variables: on IP, after deploying HEAD there, or else on new $TAG
+           droplets in nyc3 (size $SIZE) of K runs each [all of them]; M is provider:model, or a model
+           whose provider is guessed: claude-* anthropic, gpt-* openai, else neuralwatt [\$PI_MODEL]
        $0 resume [-n N] RUN-DIR [IP]
            continue a fetched or local run: on IP if it still has the run, else on a new droplet that gets
            HEAD and a copy of RUN-DIR; -n sets a new session total
@@ -17,10 +17,6 @@ usage: $0 IP PI-ARGS...
        $0 set-n IP [RUN] N
            change a live run's session total, read before each session: a larger N continues it, a smaller
            one stops it after the current session; RUN defaults to the box's only live run
-       $0 sweep --models M,... [--copies N] [--size S] PI-ARGS...
-           N new droplets per model [1], each named with its position in the sweep so a model may repeat;
-           M is provider:model, or a model whose provider is guessed:
-           claude-* anthropic, gpt-* openai, else neuralwatt
        $0 ls
            list the $TAG droplets and their runs
        $0 status IP
@@ -75,39 +71,67 @@ create() {
 
 slug() { echo "$1" | tr -c 'a-zA-Z0-9.\n-' -; }
 
-start() {
-    agent/deploy.sh "$1"
-    launch "$@"
+guess() {
+    case $1 in
+    - | *:*) echo "$1" ;;
+    claude-*) echo "anthropic:$1" ;;
+    gpt-*) echo "openai:$1" ;;
+    *) echo "neuralwatt:$1" ;;
+    esac
+}
+
+task() {
+    local t=
+    while [ $# -gt 0 ]; do
+        case $1 in
+        -f | -k | -c | -n) shift 2 ;;
+        --no-header) shift ;;
+        *) t+=${t:++}$(basename "${1%.*}"); shift ;;
+        esac
+    done
+    echo "$t"
+}
+
+fill() {
+    local ip=$1 m
+    shift
+    agent/deploy.sh "$ip"
+    for m; do
+        if [ "$m" = - ]; then launch "$ip" "${args[@]}"; else PI_PROVIDER=${m%%:*} PI_MODEL=${m#*:} launch "$ip" "${args[@]}"; fi
+    done
 }
 
 launch() {
-    local ip=$1 log run vars dir=
+    local ip=$1 stamp log run vars before dir=
     shift
-    log=results/$($SSH pi@"$ip" date +%Y%m%d-%H%M%S).log
+    stamp=$($SSH pi@"$ip" date +%Y%m%d-%H%M%S-%3N) log=results/$stamp.log
     vars=$(env | grep -E '^PI_' | grep -vE '^PI_(SLC|DEPLOY_ENV|DO_ENV)=' || true)
     run="mkdir -p results && env"
     while IFS= read -r v; do [ -n "$v" ] && run+=" $(printf %q "$v")"; done <<<"$vars"
     run+=" ./pi.py$(printf ' %q' "$@") 2>&1 | tee -a $log; exec bash"
-    $SSH pi@"$ip" "tmux kill-session -t pi 2>/dev/null; tmux new-session -d -s pi -c ~/sl/agent bash -lc $(printf %q "$run")"
+    before=$(live "$ip")
+    $SSH pi@"$ip" "tmux new-session -d -s pi-$stamp -c ~/sl/agent bash -lc $(printf %q "$run")"
     for _ in $(seq 30); do
-        dir=$(live "$ip" || true)
+        dir=$(comm -13 <(sort <<<"$before") <(live "$ip" | sort) || true)
         [ -n "$dir" ] && break
         sleep 1
     done
     [ -n "$dir" ] || { echo "pi.py did not start; see ~/sl/agent/$log on the box" >&2; exit 1; }
     echo "started $dir on $ip, logging to ~/sl/agent/$log"
-    echo "attach: ssh -t pi@$ip tmux attach -t pi    status: $0 status $ip    fetch: $0 fetch $ip"
+    echo "attach: ssh -t pi@$ip tmux attach -t pi-$stamp    status: $0 status $ip    fetch: $0 fetch $ip"
 }
 
 cmd=start
-case "${1:-}" in new | resume | deploy | set-n | sweep | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
-if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
-    models= copies=1
+case "${1:-}" in resume | deploy | set-n | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
+if [ $cmd = start ]; then
+    ip= models=- copies=1 per_box= sized=
+    [[ ${1:-} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && { ip=$1; shift; }
     while :; do
         case "${1:-}" in
-        --size) export SIZE=$2; shift 2 ;;
-        --models) [ $cmd = sweep ] || usage; models=$2; shift 2 ;;
-        --copies) [ $cmd = sweep ] && [[ $2 =~ ^[1-9][0-9]*$ ]] || usage; copies=$2; shift 2 ;;
+        --size) export SIZE=$2 sized=1; shift 2 ;;
+        --models) models=$2; shift 2 ;;
+        --copies) [[ $2 =~ ^[1-9][0-9]*$ ]] || usage; copies=$2; shift 2 ;;
+        --per-box) [[ $2 =~ ^[1-9][0-9]*$ ]] || usage; per_box=$2; shift 2 ;;
         *) break ;;
         esac
     done
@@ -115,17 +139,26 @@ fi
 
 case $cmd in
 start)
-    [ $# -ge 2 ] || usage
-    start "$@"
+    [ $# -ge 1 ] || usage
+    args=("$@") runs=()
+    for m in ${models//,/ }; do
+        for _ in $(seq "$copies"); do runs+=("$(guess "$m")"); done
+    done
+    if [ -n "$ip" ]; then
+        [ -z "$per_box$sized" ] || usage
+        fill "$ip" "${runs[@]}"
+    else
+        k=${per_box:-${#runs[@]}} name=pi-$(slug "$(task "$@")")-$(date +%m%d-%H%M%S)
+        n=$(((${#runs[@]} + k - 1) / k))
+        for ((b = 0; b < n; b++)); do
+            (create "$name$([ $n = 1 ] || echo -$((b + 1)))"; fill "$ip" "${runs[@]:b*k:k}") 2>&1 | sed "s/^/[box $((b + 1))] /" &
+        done
+        wait
+    fi
     ;;
 deploy)
     [ $# -eq 1 ] || usage
     agent/deploy.sh "$1"
-    ;;
-new)
-    [ $# -ge 1 ] || usage
-    create "pi-$(slug "${PI_MODEL:-default}${PI_EFFORT:+-$PI_EFFORT}")-$(date +%m%d-%H%M%S)${BOX_SUFFIX:+-$BOX_SUFFIX}"
-    start "$ip" "$@"
     ;;
 resume)
     n=
@@ -157,23 +190,6 @@ f.write_text(json.dumps(rec, indent=1) + "\n")
 PY
     fi
     launch "$ip" -r "results/$run" ${n:+-n "$n"}
-    ;;
-sweep)
-    [ -n "$models" ] && [ $# -ge 1 ] || usage
-    i=0
-    for m in ${models//,/ }; do
-        case $m in
-        *:*) p=${m%%:*}; m=${m#*:} ;;
-        claude-*) p=anthropic ;;
-        gpt-*) p=openai ;;
-        *) p=neuralwatt ;;
-        esac
-        for _ in $(seq "$copies"); do
-            i=$((i + 1))
-            BOX_SUFFIX=$i PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m #$i] /" &
-        done
-    done
-    wait
     ;;
 ls)
     lock=$(mktemp -u)
