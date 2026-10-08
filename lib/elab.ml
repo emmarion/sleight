@@ -840,7 +840,7 @@ let check_results env loc ?(ids = []) body tele ress =
   let env = List.fold_left2 (fun (env, acc) (e, (rl, raw)) r ->
     let env = solve_sg ?raw env rl (map_sg (instantiate acc) e.sg) r in
     (match Option.map (instantiate acc) e.place with
-     | Some p when not env.usage_erased ->
+     | Some p ->
          if not (Option.fold ~none:false ~some:(same_slot env p) r.place) then error_in env rl "return does not satisfy `at` %s" (qshow env p)
      | _ -> ());
     let env, t = match r.term, r.place with
@@ -1001,7 +1001,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
               let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
-              let place = if is_wrapper && pos <> Erased then List.find_map (fun (e, a) -> if e.mult <> Erased then Some (SlotOf a) else None) (List.combine tele (List.rev acc)) else None in
+              let place = if not is_wrapper then None else List.find_map (fun (e, a) -> match e.mult, a with Erased, _ -> None | _, Var _ -> Some (SlotOf a) | _ -> None) (List.combine tele (List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
           | Cell (c, slots) -> elab_cell_invoke env expect l (callee pos) h hcode c slots args
           | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (callee pos) h hcode lv params rets args
@@ -1455,7 +1455,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let pos = pos_of env expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
-      let extra = match cells with Some c -> c | None -> smult <> Erased && cells_allowed env mid in
+      let extra = match cells with Some c -> c | None -> cells_allowed env mid in
       let branch_uses = ref env.uses and deep = ref [] in
       let deepen envb body flat = if deep_body envb body then deep := flat :: !deep in
       let shapes = shapes env l ctors in
@@ -1691,7 +1691,8 @@ and open_contradicts env l e =
   | exception Contradiction _ -> ()
 
 and refine env scrut c fids ret =
-  let env = match scrut.place, newtype_of env c, non_erased env fids with
+  let labelled = List.filter_map (fun ((e : entry), x) -> if e.mult = Erased then None else Some x) (List.combine (fst (ctor_type env Reader.nowhere c)) fids) in
+  let env = match scrut.place, newtype_of env c, labelled with
     | Some p, Some _, [ x ] -> place env x p
     | _ -> env in
   let fvars = List.rev_map (fun x -> Var x) fids in
@@ -1720,7 +1721,6 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
       | Some Sp.SlotSelf, [ a ] ->
           let x = var env (loc a) (atom_or (loc a) a "a variable") in
-          if (entry env x).mult = Erased then error_in env (loc a) "`slot-self` needs a variable declared `many` or `unique`";
           check_type env (loc a) (type_of env x) Prelude.slot_term;
           ((try place env x (Var x) with Contradiction msg -> error_in env l "`slot-self`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
       | Some Sp.OpenAtFn, [ e ] ->
@@ -1898,10 +1898,10 @@ and elab_let_match spos env l args =
           ctors
       in
       if unrefuted <> [] then missing env l "let-match" sres unrefuted;
-      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(smult <> Erased && cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
+      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
       let tele, ret = ctor_type env pl c in
       let mults = List.map (fun e -> field_under smult e.mult) tele in
-      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (smult <> Erased && cells_allowed env mid) fields in
+      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (cells_allowed env mid) fields in
       let names = field_names fields in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult <> Erased in
@@ -1949,7 +1949,7 @@ and elab_comptime_match env l args =
       let mults = List.map (fun e -> field_under smult e.mult) tele in
       let matched, states = const_fields env pl c mults value in
       if not matched then error_in env l "`comptime-match`: expected %s, got %s" (qname env c) (tick (show_value env l (type_of env x) value));
-      let fields, name = pattern env "a `comptime-match` pattern" smult (res_of env x) pl c mults (smult <> Erased && cells_allowed env mid) fields in
+      let fields, name = pattern env "a `comptime-match` pattern" smult (res_of env x) pl c mults (cells_allowed env mid) fields in
       let names = field_names fields in
       let env, fids = open_tele env ~names ~ats:(field_ats tele fields) ~mults ~states tele in
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" (Lazy.force msg)) in
