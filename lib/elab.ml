@@ -324,6 +324,11 @@ let marks env allowed items =
   in
   go [] items
 
+let def_marks env l allowed items =
+  let ms, rest = marks env allowed items in
+  if List.mem Sp.Extern ms && not env.externs then error_in env l "only the prelude may mark a definition `extern`; a program that declares its own runs with `--no-prelude`";
+  (ms, rest)
+
 let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
 
 let anon tele = List.map (fun _ -> None) tele
@@ -1968,7 +1973,7 @@ and elab_def_fns ?(unique = false) env l args =
         match raw with
         | List (_, List (fl, m :: rest) :: body) -> (
             let mult = mult_or env fl m in
-            let marks, rest = marks env [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
+            let marks, rest = def_marks env fl [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
             let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some (named env (loc f) "a function name" f), n :: rest) | _ -> (None, rest) in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
@@ -2095,7 +2100,7 @@ and elab_def_adts env adts =
     | List (_, List (al, n :: colon :: sg) :: d :: rest) when is_special env colon Sp.Colon -> (
         let ps, ret = split_arrow env al sg in
         match ret with
-        | [ ty ] -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
+        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
         | _ -> error al "a type constructor declares one return")
     | _ -> error_in env (loc raw) "malformed `def-adts` entry%s" (help env (Sp.hints "def-adts-entry"))
   in

@@ -3029,8 +3029,8 @@ to look for a guard, are the owner's.
      undefined"). `claim_fn` and `claim_type` are the single entry
      points, ordered so that an arity or shape mismatch is still
      reported ahead of the already-bound check, which is what
-     `tests/extern_arity_bad.sl` depends on, `trim` being bound by the
-     prelude already.
+     `tests/extern_arity_bad.sl` depends on, `add` being bound by the
+     test's first declaration already.
 153. **A test may ask for the FFI alone.** `; externs: only` runs a test
      with the implementations and not again with them stripped, for one
      whose source model is too slow to run;

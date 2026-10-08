@@ -110,6 +110,7 @@ type t = {
   signature : id list;
   ctor_tele : bool;
   in_extern : bool;
+  externs : bool;
   warned : (Reader.loc * string) IntMap.t;
   uses : (use * Reader.loc) IntMap.t;
   captures : id list;
@@ -130,7 +131,7 @@ type t = {
 }
 
 let empty =
-  { signature = []; ctor_tele = false; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { signature = []; ctor_tele = false; in_extern = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter

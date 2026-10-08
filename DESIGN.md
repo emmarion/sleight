@@ -1651,8 +1651,10 @@ nullary constructor per special form, with its `Matchable` opened and
 each form's name bound `many` to its constructor (§19, §54).
 `--no-prelude` starts from these alone.
 
-**The `extern` mark.** A `def-adts` entry or a `def-fns` function may
-be marked `extern` (§54). The declaration is then a *model*. For a
+**The `extern` mark.** A `def-adts` entry or a `def-fns` or
+`def-unique` function may be marked `extern` (§54) only in the source
+prelude, or anywhere in a program run with `--no-prelude`. Marking one
+`extern` anywhere else is an error. The declaration is then a *model*. For a
 type, its constructors and `Matchable` say what its values are and how
 they are taken apart, and the FFI supplies the representation together
 with construction and matching over it. For a function, the body says

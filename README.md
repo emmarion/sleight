@@ -61,7 +61,8 @@ prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 42), whose
 through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133).
 `--no-prelude` starts from the built-in special forms alone, without `lib/prelude.sl`, for a program that
 declares what it needs itself; it has no literals and no `String -> String` or `IO` final, those resting on
-the prelude's types, and slc takes the same flag. A file is a sequence of statements,
+the prelude's types, and slc takes the same flag. Only the prelude, or a program run with `--no-prelude`, may mark
+a definition `extern` (DESIGN.md section 42). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
 `--confine-dir dir` confines a program's file requests to `dir`: a path is
