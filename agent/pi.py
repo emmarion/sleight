@@ -810,7 +810,7 @@ PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output[, (prompt
     "gpt-6-luna": (0.10, 0.01, 0.125, 0.50, GPT_LONG), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00, GPT_LONG),
     "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00, GPT_LONG), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00, GPT_LONG),
     "claude-fable-5-1": (10.00, 0.25, 12.50, 50.00), "claude-opus-5-5": (4.00, 0.20, 5.00, 20.00),
-    "claude-sonnet-5-5": (2.00, 0.20, 2.50, 10.00), "claude-haiku-5-5": (0.10, 0.01, 0.125, 0.50, HAIKU_LONG),
+    "claude-sonnet-5-5": (2.00, 0.10, 2.50, 10.00), "claude-haiku-5-5": (0.10, 0.01, 0.125, 0.50, HAIKU_LONG),
     "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
 }
 
