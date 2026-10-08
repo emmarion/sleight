@@ -23,6 +23,7 @@ REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
+OCAML = os.environ.get("PI_OCAML", "0") not in ("0", "false", "")
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
 GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
@@ -382,13 +383,17 @@ def _shown(capture, ext, data):
     return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes"):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None):
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
         raise ValueError("`paths` must name at least one file")
     if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
         raise ValueError("`capture` cannot name a kept file")
+    if ocaml and os.path.normpath(ocaml) in KEEP:
+        raise ValueError("`ocaml` cannot name a kept file")
+    if ocaml and (stdin or args or gc_stats):
+        raise ValueError("`stdin`, `args` and `gc_stats` need a run, which `ocaml` skips")
     with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         src = Path(tmp, "src")
         names = []
@@ -403,6 +408,9 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
+        head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
+        if ocaml:
+            return f"{head}\nocaml: wrote {write_bytes(ocaml, c.stdout)}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
         why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
         if why or b.returncode:
@@ -419,7 +427,6 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
-        head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
 
 
@@ -501,9 +508,11 @@ TOOLS = {
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "
                "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
-               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. " + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
+               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. "
+               + ("With `ocaml`, the program is not built or run: if it compiles, the OCaml code the compiler translates it into "
+                  "is written to the file `ocaml` names, and only the compiler's messages are returned. " if OCAML else "") + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
-           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}), ["paths"]),
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -1240,6 +1249,8 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
          "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
          "                    `first_error` decides, defaulting to every error [yes]\n"
+         "  PI_OCAML          let the `sl` tool's `ocaml` parameter write the program's OCaml translation to a file instead of\n"
+         "                    running it [0]\n"
          "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]\n"
          "  PI_GATE_PORT      the localhost port of the organizer that lets one `sl` call run at a time, fairest to the run\n"
          "                    served least recently; the first pi.py to need it starts it [47219]")
