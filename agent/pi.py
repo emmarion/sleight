@@ -687,10 +687,16 @@ class Anthropic:
             "model": MODEL, "max_tokens": self.cap(), "system": SYSTEM,
             "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages, "cache_control": {"type": "ephemeral"},
+            **({"thinking": {"type": "adaptive", "display": "summarized"}}
+               if ((self.model().get("capabilities") or {}).get("thinking") or {}).get("types", {}).get("adaptive", {}).get("supported") else {}),
+            **({"output_config": {"effort": EFFORT}} if EFFORT else {}),
         }, self.auth())
 
     def parse(self, reply):
-        blocks = reply["content"]
+        blocks, think = reply["content"], ThinkLog()
+        for b in blocks:
+            think.write(b.get("thinking"))
+        think.close()
         calls = [{"id": b["id"], "name": b["name"], "input": b["input"]} for b in blocks if b["type"] == "tool_use"]
         return {"role": "assistant", "content": blocks}, "".join(b["text"] for b in blocks if b["type"] == "text"), calls
 
@@ -799,11 +805,13 @@ class Local(OpenAICompat):
 
 ADAPTERS = {"anthropic": Anthropic, "openai": OpenAI, "neuralwatt": OpenAICompat, "local": Local}
 CACHE_MIN = 4096
-PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output
-    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00),
-    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00),
+GPT_LONG, HAIKU_LONG = (272_000, 2, 1.5), (100_000, 5, 5)
+PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output[, (prompt tokens above which, input and output multipliers)]
+    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50, GPT_LONG), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00, GPT_LONG),
+    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00, GPT_LONG), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00, GPT_LONG),
     "claude-fable-5-1": (10.00, 0.25, 12.50, 50.00), "claude-opus-5-5": (4.00, 0.20, 5.00, 20.00),
-    "claude-sonnet-5-5": (2.00, 0.20, 2.50, 10.00), "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
+    "claude-sonnet-5-5": (2.00, 0.20, 2.50, 10.00), "claude-haiku-5-5": (0.10, 0.01, 0.125, 0.50, HAIKU_LONG),
+    "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
 }
 
 
@@ -819,7 +827,8 @@ def _priced(usage):
     details = usage.get("input_tokens_details") or {}
     read = details.get("cached_tokens", usage.get("cache_read_input_tokens")) or 0
     write = details.get("cache_write_tokens", usage.get("cache_creation_input_tokens")) or 0
-    i, o = (2, 1.5) if PROVIDER == "openai" and total > 272_000 else (1, 1)
+    above, i, o = p[4] if len(p) > 4 else (0, 1, 1)
+    i, o = (i, o) if total > above else (1, 1)
     return (((total - read - write) * p[0] + read * p[1] + write * p[2]) * i + (usage.get("output_tokens") or 0) * p[3] * o) / 1e6
 
 
