@@ -1089,8 +1089,9 @@ At each, the multiplicity is declared.
    `def-adts` involves no evaluation: a function's value is its
    compiled code, a `Level` is an erased token, and a `Matchable` is
    the FFI's wrapper for an `extern` type and nothing otherwise (§24).
-   Inside the bodies of a `def-fns` block, the block's own functions
-   are `Dyn`. After the block they are `Const`, at the multiplicity
+   In the bodies of a `def-fns` block, and in the signatures of the
+   block that follow their own (§53), the block's own functions are
+   `Dyn`. After the block they are `Const`, at the multiplicity
    written on their lines.
 2. **Field binding by `comptime-match`** (§28), at the fields'
    declared multiplicities.
