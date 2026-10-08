@@ -1390,8 +1390,9 @@ result is at `x`, so a `let` of it is at the same slot as `x`.
 
 A variable of type `(Slot)` is not its own slot merely by being
 declared. Like any entry, it has an automatic slot distinct from
-itself. `(slot-self s)` is a statement (§27). It takes a non-erased
-variable `s` whose type canonicalizes to `(Slot)` and creates, outward
+itself. `(slot-self s)` is a statement (§27). It takes a variable
+`s`, of any multiplicity, whose type canonicalizes to `(Slot)` and
+creates, outward
 and by forcing, the fact that `(slot-of s)` and `s` are equal. A
 contradiction is an error. After it, `s` is the slot that an entry
 `(many A a at s)` names and that a cell type `(Cell C s)` indexes.
