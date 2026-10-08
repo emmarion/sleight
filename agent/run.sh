@@ -17,8 +17,8 @@ usage: $0 IP PI-ARGS...
        $0 set-n IP [RUN] N
            change a live run's session total, read before each session: a larger N continues it, a smaller
            one stops it after the current session; RUN defaults to the box's only live run
-       $0 sweep --models M,... [--size S] PI-ARGS...
-           one new droplet per model, named with its position in the list so a model may repeat;
+       $0 sweep --models M,... [--copies N] [--size S] PI-ARGS...
+           N new droplets per model [1], each named with its position in the sweep so a model may repeat;
            M is provider:model, or a model whose provider is guessed:
            claude-* anthropic, gpt-* openai, else neuralwatt
        $0 ls
@@ -102,11 +102,12 @@ launch() {
 cmd=start
 case "${1:-}" in new | resume | deploy | set-n | sweep | ls | status | tail | fetch | destroy | reap) cmd=$1; shift ;; esac
 if [ "$cmd" = new ] || [ "$cmd" = sweep ]; then
-    models=
+    models= copies=1
     while :; do
         case "${1:-}" in
         --size) export SIZE=$2; shift 2 ;;
         --models) [ $cmd = sweep ] || usage; models=$2; shift 2 ;;
+        --copies) [ $cmd = sweep ] && [[ $2 =~ ^[1-9][0-9]*$ ]] || usage; copies=$2; shift 2 ;;
         *) break ;;
         esac
     done
@@ -161,14 +162,16 @@ sweep)
     [ -n "$models" ] && [ $# -ge 1 ] || usage
     i=0
     for m in ${models//,/ }; do
-        i=$((i + 1))
         case $m in
         *:*) p=${m%%:*}; m=${m#*:} ;;
         claude-*) p=anthropic ;;
         gpt-*) p=openai ;;
         *) p=neuralwatt ;;
         esac
-        BOX_SUFFIX=$i PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m #$i] /" &
+        for _ in $(seq "$copies"); do
+            i=$((i + 1))
+            BOX_SUFFIX=$i PI_PROVIDER=$p PI_MODEL=$m agent/run.sh new "$@" 2>&1 | sed "s/^/[$m #$i] /" &
+        done
     done
     wait
     ;;
