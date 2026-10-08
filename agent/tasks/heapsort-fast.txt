@@ -4,11 +4,11 @@ heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
 This task will likely take many sessions, so leaving solid, well-recorded
 progress matters more than finishing in this one.
 
-To check your work, compile in order: heapsort-fast/spec.sl, your files, heapsort-fast/accept.sl,
-then heapsort-fast/perf.sl. This must compile with no warnings. A solution is not
-finished while the sort allocates, any array write could be an `-imm` one, any
-runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a
-tail call, even if measurements show no gain.
+To check your work, compile in order: heapsort-fast/spec.sl, your files,
+heapsort-fast/accept.sl, then heapsort-fast/perf.sl. This must compile with no
+warnings. A solution is not finished while the sort allocates, any array write
+could be an `-imm` one, any runtime arithmetic could be a `u62-*` call, or any
+runtime recursion could be a tail call, even if measurements show no gain.
 
 For reference: DESIGN.md (the language), prelude.sl (the standard library),
 tests/ (example programs), pal/ (a certified program), and self/ (the compiler,
@@ -29,7 +29,8 @@ rewriting it. Each phase has its own budget of tokens. In the second phase,
 those two are the only files you can edit; there's no need to edit them, or to
 read FEEDBACK.md, before then, so spend the first phase on the task itself.
 
-Hint: the `sl` tool's `gc_stats` reports how much a run allocates.
+Hint: heapsort-fast/perf.sl times the sort alone and reports what it
+allocates. To try another size, copy it to scratch/ and change `perf-size`.
 
 Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
 `coerce` in DESIGN.md and `init-witness` in prelude.sl).
