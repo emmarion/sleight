@@ -3,6 +3,7 @@ module IntMap = Value.IntMap
 
 exception Error of Reader.loc * string
 exception Contradiction of string Lazy.t
+exception Ill_typed of id * term
 
 (* A session's third output channel, beside a program's own stdout and stderr and the message a refusal
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
@@ -455,6 +456,18 @@ let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 el
    [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
    by a name's identity (section 8). Solving (not forcing): only a meta may be bound, and the two sides must
    otherwise be identical; a meta against a meta binds the newer. *)
+let rec infer env loc t =
+  match t with
+  | Var x -> type_of env x
+  | App (h, args) -> (
+      match canon env (infer env loc h) with
+      | TyCtor _ -> App (Var !univ, [])
+      | ValCtor (_, r) -> instantiate (List.rev args) r
+      | ty -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty))
+  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> App (Var !univ, [])
+  | SlotOf _ -> !slot_type
+  | Bound _ -> error loc "internal: dangling binder"
+
 let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
@@ -463,7 +476,8 @@ let rec unify_in ?(force = false) env a b =
     let assign x t =
       if has_dangling t then contradiction ();
       if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
-      add_rule env x t
+      let env = add_rule env x t in
+      if force then env else try unify_in env (type_of env x) (infer env Reader.nowhere t) with Contradiction _ -> raise (Ill_typed (x, t))
     in
     match (a, b) with
     | Var x, Var y when is_meta env x || is_meta env y ->

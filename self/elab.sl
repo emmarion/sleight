@@ -558,6 +558,7 @@
     ((CText s) s)
     ((CTerm t) (tick $ show-t env t))
     ((CName x) (qshown env x))
+    ((CIllTyped x t) (str-cat3 (qshown env x) " would be " $ tick $ show-t env t))
     ((CCat a b) (str-cat (notail $ clash-str env a) $ notail $ clash-str env b))))
 
 (def-fns _ $ (many show-r : (many (Raw) r) -> (many (String) s))
@@ -2031,10 +2032,16 @@
 (def-fns msg-lvl $ (many no-about : -> (many (String) p) (many (List $ Pair (Loc) $ String) n))
   (values "" $ Nil _))
 
+(def-fns _ $ (many ill-typed-msg : (many (Env) env) (many (Clash) m) -> (many (Maybe $ String) r))
+  (let-match many m (CIllTyped x t) (else (None _)))
+  (let-match many (term-type env t) (Some _ tt) ((None _) (None _)))
+  (Some _ $ str-cat3 "type mismatch: expected " (qshow env $ type-of env x) $ str-cat3 ", got " (qshow env tt) $ str-cat3 ": " (qshow env $ TVar x) $ str-cat " would be " $ qshow env t))
+
 (def-fns _ $ (many solve-about : (many (Env) env) (many (String) what) (many (Term) actual) (many (Term) expected) (many (Bool) report) (many (Maybe $ Raw) raw) (many (Fn msg-lvl -> (many (String) p) (many (List $ Pair (Loc) $ String) n)) about) -> (many (Env) r) (many (Bool) ok))
-  (let-match many (unify-solve env actual expected) (UContra _) ((UOk env2) (values env2 $ BTrue)))
+  (let-match many (unify-solve env actual expected) (UContra m) ((UOk env2) (values env2 $ BTrue)))
   (let-match many report (BTrue) ((BFalse) (values env $ BFalse)))
   (let ((many prefix) (many more)) (about))
+  (let-match many (ill-typed-msg env m) (None _) ((Some _ s) (values (env-error-with env more $ str-cat prefix s) $ BFalse)))
   (let ((many ls)) $ lit-terms env $ env-lits env)
   (let ((many hs)) $ check-hits env ls $ differ (canon-env env actual) $ canon-env env expected)
   (let ((many notes) (erased _)) $ list-append _ (literal-notes env (Cons _ expected $ Cons _ actual $ Nil _) $ hits-kept hs hs $ Nil _) more)

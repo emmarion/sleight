@@ -135,7 +135,11 @@ let head = function App (h, _) -> h | t -> t
 (* Identity after canonicalization (section 9), solving any metas either side holds (Env.unify). *)
 let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
   try unify env actual expected
-  with Contradiction _ ->
+  with
+  | Ill_typed (x, t) ->
+      let prefix, more = Lazy.force about in
+      error_with loc more "%stype mismatch: expected %s, got %s: %s would be %s" prefix (qshow env (type_of env x)) (qshow env (infer env loc t)) (qshow env (Var x)) (qshow env t)
+  | Contradiction _ ->
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
@@ -161,18 +165,6 @@ let wild = function Atom (_, "_") -> true | _ -> false
 
 (* A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused. *)
 let settle env loc t = if has_meta env t then unsolved loc env t
-
-let rec infer env loc t =
-  match t with
-  | Var x -> type_of env x
-  | App (h, args) -> (
-      match canon env (infer env loc h) with
-      | TyCtor _ -> type_term
-      | ValCtor (_, r) -> instantiate (List.rev args) r
-      | ty -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty))
-  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> type_term
-  | SlotOf _ -> Prelude.slot_term
-  | Bound _ -> error loc "internal: dangling binder"
 
 let solve_sg ?raw ?about env loc sg r = match sg with
   | Ty ty -> solve ?raw ?about "type" env loc r.ty ty
@@ -1375,7 +1367,7 @@ and cell_items env pos l (what, il, c, params) slots items =
   let env, slots, writes, bindings = List.fold_left2 (fun (env, ss, ws, bs) (i, old) item ->
     if wild item then (env, old :: ss, ws, bs) else
     let env, r, code = elab_expr1 env (under pos Many) item in
-    (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
+    (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ | Ill_typed _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
     settle_res env l r;
     let x = fresh () in
     (env, r.term :: ss, (i, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) items in

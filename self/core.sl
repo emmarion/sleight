@@ -3269,6 +3269,7 @@
     (many CText : (many (String) s) -> (Clash))
     (many CTerm : (many (Term) t) -> (Clash))
     (many CName : (many (Nat) x) -> (Clash))
+    (many CIllTyped : (many (Nat) x) (many (Term) t) -> (Clash))
     (many CCat : (many (Clash) a) (many (Clash) b) -> (Clash)))
   ((UnifyRes : -> Type)
     enum
@@ -3285,6 +3286,11 @@
     ((Same _ _ env3) (Less _ _ _ _ tb env3 p))
     ((Less _ _ _ _ tb2 env2 q) (Less _ _ _ _ tb2 env2 $ subterm-trans q p))
     ((Contra _ _ m) (Contra _ _ m))))
+
+(def-fns _ $ (many typed-solution : (erased (Nat) n) (many (Nat) bnd) (erased (Nat) k) (erased (Facts k) f2) (many (Table k f2 bnd) tb) (many (Env) env) (erased (Subterm (Nat) k (Nat) n) p) (many (Nat) x) (many (Term) t) (many (Outcome k bnd) o) -> (many (Outcome n bnd) r))
+  (match many o _
+    ((Contra _ _ m) (Contra _ _ $ match many m (((Clash) _)) ((CIllTyped _ _) m) (else (CIllTyped x t))))
+    (else (lift _ bnd _ _ tb env p o))))
 
 (def-fns _ $ (many mctors-list : (subterm many (List $ MCtor) cs) (many (Nat) x) -> (many (Bool) r))
   (let-match many cs (Cons _ c rest) ((Nil _) (BFalse)))
@@ -3354,6 +3360,31 @@
     (or (match many sg (((Bool) _)) ((SgTy t) (notail $ dangling t d)) ((SgIs t _) (notail $ dangling t d)))
       $ or (match many place (((Bool) _)) ((None _) (BFalse)) ((Some _ p) (notail $ dangling p d))) $ notail $ dangling-tele rest $ Succ d)))
 
+(def-fns _ $ (many term-type : (many (Env) env) (many (Term) t) -> (many (Maybe $ Term) r))
+  (let-match many t (TApp h args)
+    ((TVar x) (Some _ $ type-of env x))
+    ((TSlotOf _) (Some _ slot-term))
+    ((TBound _) (None _))
+    ((TErr _) (None _))
+    (else (Some _ type-term)))
+  (let-match many h (TVar x) (else (None _)))
+  (match many (canon-env env $ type-of env x) _
+    ((TTyCtor _) (Some _ type-term))
+    ((TValCtor _ ret) (Some _ $ instantiate (list-rev _ args) ret))
+    (else (None _))))
+
+(def-adts $ (SolTypes : ((Nat) n) ((Facts n) f) -> Type)
+  enum
+  (many MkSolTypes : (erased (Nat) n) (erased (Facts n) f) (many (Term) a) (erased (Fr n f a) pa) (many (Term) b) (erased (Fr n f b) pb) -> (SolTypes n f))
+  (many NoSolTypes : (erased (Nat) n) (erased (Facts n) f) -> (SolTypes n f)))
+
+(def-fns _ $ (many solution-types : (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) (many (Env) env) (many (Nat) x) (many (Term) t) (many (Bool) force) -> (many (SolTypes n f) r))
+  (let-match many force (BFalse) ((BTrue) (NoSolTypes _ _)))
+  (let-match many (term-type env t) (Some _ tt) ((None _) (NoSolTypes _ _)))
+  (let ((many a) (erased pa)) $ canon-in _ _ bnd tb $ type-of env x)
+  (let ((many b) (erased pb)) $ canon-in _ _ bnd tb tt)
+  (MkSolTypes _ _ a pa b pb))
+
 (def-fns _ $ (many contradiction : (erased (Nat) n) (many (Nat) bnd) (many (Term) a) (many (Term) b) -> (many (Outcome n bnd) r))
   (Contra _ _ $ CCat (CTerm a) $ CCat (CText " vs ") $ CTerm b))
 
@@ -3373,7 +3404,12 @@
       ((TVar x)
         (let-match many b (TVar y)
           ((TBound _) (contradiction _ bnd a b))
-          ((TErr m) (Contra _ _ $ CText m)) (else (bind-var n f bnd tb env x (fr-var n f x pa) b a b force)))
+          ((TErr m) (Contra _ _ $ CText m))
+          (else
+            (let ((many o)) $ bind-var n f bnd tb env x (fr-var n f x pa) b a b force)
+            (let-match many o (Less _ _ k f2 tb2 env2 p) (else o))
+            (let-match many (solution-types _ _ bnd tb2 env2 x b force) (MkSolTypes _ _ s1 ps1 s2 ps2) ((NoSolTypes _ _) o))
+            (typed-solution _ bnd _ _ tb2 env2 p x b $ notail $ unify (subterm p) k f2 bnd tb2 s1 ps1 s2 ps2 env2 force)))
         (let ((erased px)) $ fr-var _ _ _ pa)
         (let ((erased py)) $ fr-var _ _ _ pb)
         (let-match many (nat-eq-dec x y) (BNo _ _ ne) ((BYes _ _ _) (Same _ _ env)))
@@ -3387,8 +3423,11 @@
               (match many (and (is-meta env x) $ or (not $ is-meta env y) $ nat-eq x newer) _
                 ((BTrue) (values x y px py $ neq-sym _ _ ne))
                 ((BFalse) (values y x py px ne))))
-            (let-match many (rule-out-var _ _ bnd tb m o pm po2 neq2) (MkAdded k _ _ _ tb2))
-            (Less _ _ _ _ tb2 (env-set-table env _ _ bnd tb2) $ prove-subterm k n))
+            (let-match many (rule-out-var _ _ bnd tb m o pm po2 neq2) (MkAdded k _ f2 _ tb2))
+            (let ((many env2)) $ env-set-table env _ _ bnd tb2)
+            (let ((erased p)) $ prove-subterm k n)
+            (let-match many (solution-types _ _ bnd tb2 env2 m (TVar o) force) (MkSolTypes _ _ s1 ps1 s2 ps2) ((NoSolTypes _ _) (Less _ _ _ _ tb2 env2 p)))
+            (typed-solution _ bnd _ _ tb2 env2 p m (TVar o) $ notail $ unify _ _ bnd tb2 s1 ps1 s2 ps2 env2 force))
           ((BFalse)
             (let-match many (or (not force) $ listed env x y) (BFalse) ((BTrue) (contradiction _ bnd a b)))
             (let ((many sx)) $ signature-of env newer)
@@ -3412,7 +3451,11 @@
       ((TErr m) (Contra _ _ $ CText m))
       (else
         (match many b _
-          ((TVar y) (bind-var _ _ bnd tb env y (fr-var n f y pb) a a b force))
+          ((TVar y)
+            (let ((many o)) $ bind-var _ _ bnd tb env y (fr-var n f y pb) a a b force)
+            (let-match many o (Less _ _ k f2 tb2 env2 p) (else o))
+            (let-match many (solution-types _ _ bnd tb2 env2 y a force) (MkSolTypes _ _ s1 ps1 s2 ps2) ((NoSolTypes _ _) o))
+            (typed-solution _ bnd _ _ tb2 env2 p y a $ notail $ unify (subterm p) k f2 bnd tb2 s1 ps1 s2 ps2 env2 force))
           ((TErr m) (Contra _ _ $ CText m))
           (else
             (match many a _
