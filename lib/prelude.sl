@@ -963,6 +963,12 @@
   (def-unique L $ (unique held : -> (unique A r)) a)
   held)
 
+(def-adts $ (Usage : -> Type)
+  enum
+  (many MkUsage : (many (Nat) wall-ns) (many (Nat) user-ns) (many (Nat) sys-ns)
+     (many (Nat) minor-words) (many (Nat) promoted-words) (many (Nat) major-words)
+     (many (Nat) minor-gcs) (many (Nat) major-gcs) -> (Usage)))
+
 ; A program's requests to the driver (ASSUMPTIONS.md): every entry but Exit carries a continuation the
 ; driver applies to the request's answer, so a step never recurses and the driver loops. A continuation is a
 ; UniqueFn and a request unique, so a continuation may own what it closes over and is applied once.
@@ -988,7 +994,10 @@
     (many DeleteFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many ConfineDir : (erased (Level) L) (many (String) dir) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))))
+    (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    ; Performs compaction first.
+    (many Measure : (erased (Level) L) (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
+       (unique (UniqueFn L (many A r) (many (Usage) u) -> (unique (IO L) next)) k) -> (IO L))))
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern

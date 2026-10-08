@@ -1810,7 +1810,8 @@ which `lib/prelude.sl` is the reference:
   and `Fail` for a path it cannot read. The delete requests answer
   `Unchanged` for an absent path. README.md describes `ConfineDir`,
   `ConfineOutputBytes` and the command-line flags that stand in for
-  them.
+  them. `lib/prelude.sl` declares further requests besides these, and is
+  the reference for them.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions

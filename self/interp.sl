@@ -117,6 +117,20 @@
   (let ((erased h2) (many hp2) (erased le2) (many v)) (store-ok env _ hp1 l))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v))
 
+(def-fns _ $ (many store-nats : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (List $ Nat) ns) ->
+    (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) rs))
+  (let-match many ns (Cons _ n rest) ((Nil _) (values hs hp (le-refl hs) (Nil _))))
+  (let ((erased h1) (many hp1) (erased le1) (many r)) (alloc-ext _ hp (PNat n)))
+  (let ((erased h2) (many hp2) (erased le2) (many rs)) (notail $ store-nats _ hp1 rest))
+  (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ (widen-ref _ _ le2 r) rs)))
+
+(def-fns _ $ (many store-usage : (many (Env) env) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Usage) u) ->
+    (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (let-match many u (MkUsage a b c d e f g h))
+  (let ((erased h1) (many hp1) (erased le1) (many rs)) (store-nats _ hp $ Cons _ a $ Cons _ b $ Cons _ c $ Cons _ d $ Cons _ e $ Cons _ f $ Cons _ g $ Cons _ h $ Nil _))
+  (let ((erased h2) (many hp2) (erased le2) (many v)) (construct _ hp1 (pctor env "MkUsage") rs))
+  (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v))
+
 ; ---- Reading a value out: a String or a U8's Nat held under the FFI, the printed form of any value, and the
 ; message of an error block, which the interpreter returns where the reference raises (self/README.md).
 
@@ -132,10 +146,18 @@
 ; The program's continuation applied to its answer, which was allocated after the request was read: the
 ; continuation and the Consts are widened to the answer's history first. A request's continuation is a
 ; UniqueFn the request owned, so it is applied once, here.
+(def-adts $ (Ran : -> Type)
+  enum
+  (many MkRan : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (Ref Block hs) v) (many (Ref Block hs) kept) -> (Ran)))
+
+(def-fns _ $ (many ran : (erased (Hist Block) hs) (erased (Hist Block) hs2) (erased (Suffix Block hs2 hs) le) (many (Store Block hs2) hp) (many (IdMap $ EInfo hs) en) (many (Ref Block hs) k) (many (List $ Ref Block hs2) args) (many (Ref Block hs) kept) -> (many (Ran) r))
+  (let ((erased h3) (many hp3) (erased le3) (many vs) (erased pk)) (apply eval-fuel _ hp (widen-en _ _ le en) (widen-ref _ _ le k) args many-one))
+  (MkRan _ hp3 (widen-en _ _ le3 (widen-en _ _ le en)) (vals-one _ vs pk) (widen-ref _ _ le3 $ widen-ref _ _ le kept)))
+
 (def-fns _ $ (many applied : (erased (Hist Block) hs) (erased (Hist Block) hs2) (erased (Suffix Block hs2 hs) le) (many (Store Block hs2) hp) (many (IdMap $ EInfo hs) en) (many (Ref Block hs) k) (many (List $ Ref Block hs2) args) ->
     (erased (Hist Block) hs3) (many (Store Block hs3) hp3) (many (IdMap $ EInfo hs3) en3) (many (Ref Block hs3) v))
-  (let ((erased h3) (many hp3) (erased le3) (many vs) (erased pk)) (apply eval-fuel _ hp (widen-en _ _ le en) (widen-ref _ _ le k) args many-one))
-  (values h3 hp3 (widen-en _ _ le3 (widen-en _ _ le en)) (vals-one _ vs pk)))
+  (let-match many (ran _ _ le hp en k args k) (MkRan h3 hp3 en3 v _))
+  (values h3 hp3 en3 v))
 
 (def-adts $ (Request : -> Type)
   enum
@@ -146,7 +168,7 @@
   (many RqGetEnvs : -> (Request)) (many RqAppendFile : -> (Request)) (many RqReadRemaining : -> (Request))
   (many RqListDir : -> (Request)) (many RqGetCwd : -> (Request)) (many RqStat : -> (Request))
   (many RqMkDir : -> (Request)) (many RqDeleteFile : -> (Request)) (many RqDeleteDir : -> (Request))
-  (many RqConfineDir : -> (Request)) (many RqConfineOutputBytes : -> (Request)))
+  (many RqConfineDir : -> (Request)) (many RqConfineOutputBytes : -> (Request)) (many RqMeasure : -> (Request)))
 
 (def-adts $ (RqEntry : -> Type)
   enum
@@ -162,7 +184,7 @@
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
   rq-cons "MkDir" (RqMkDir) $ rq-cons "DeleteFile" (RqDeleteFile) $ rq-cons "DeleteDir" (RqDeleteDir) $ rq-cons "ConfineDir" (RqConfineDir) $
-  rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ Nil _)
+  rq-cons "ConfineOutputBytes" (RqConfineOutputBytes) $ rq-cons "Measure" (RqMeasure) $ Nil _)
 
 (def-fns _ $ (many request-of : (subterm many (List $ RqEntry) es) (many (String) name) -> (many (Request) r))
   (let-match many es (Cons _ e rest) ((Nil _) (RqUnknown)))
@@ -349,7 +371,16 @@
         (let ((erased h2) (many hp2) (erased le2) (many ans)) (store-result-unit env _ hp1 r))
         (let ((erased h3) (many hp3) (many en3) (many next)) (applied _ _ le2 hp2 en1 f1 (Cons _ ans (Nil _))))
         (interp-io env pargs with-env _ hp3 en3 next))
-      (ConfineOutputBytes _ (heap-nat _ hp1 f0) k))))
+      (ConfineOutputBytes _ (heap-nat _ hp1 f0) k))
+    ((RqMeasure)
+      (def-unique io-lvl $ (unique run : -> (many (Ran) r))
+        (ran _ _ le0 hp1 en1 f0 (Nil _) f1))
+      (def-unique io-lvl $ (unique k : (many (Ran) r) (many (Usage) u) -> (unique (IO io-lvl) next))
+        (let-match many r (MkRan h2 hp2 en2 res kept))
+        (let ((erased h3) (many hp3) (erased le3) (many ans)) (store-usage env _ hp2 u))
+        (let ((erased h4) (many hp4) (many en4) (many next)) (applied _ _ le3 hp3 en2 kept (Cons _ (widen-ref _ _ le3 res) $ Cons _ ans $ Nil _)))
+        (interp-io env pargs with-env _ hp4 en4 next))
+      (Measure _ _ _ run k))))
 
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.

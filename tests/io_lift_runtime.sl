@@ -87,7 +87,11 @@
     ((ConfineOutputBytes l n k _)
       (def-unique B $ (unique w : (many (Result (Unit)) r) -> (unique (IO B) next))
         (lift (predates cb) A B ab cb (k (predates ab) r)))
-      (ConfineOutputBytes B n w))))
+      (ConfineOutputBytes B n w))
+    ((Measure l m x run k _)
+      (def-unique B $ (unique w : (many x r) (many (Usage) u) -> (unique (IO B) next))
+        (lift (predates cb) A B ab cb (k (predates ab) r u)))
+      (Measure B m x run w))))
 
 (def-lvl A0)
 (def-lvl A)

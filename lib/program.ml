@@ -38,21 +38,23 @@ let driver env =
     | "DeleteDir", [ p; k ] -> DeleteDir (p, k)
     | "ConfineDir", [ p; k ] -> ConfineDir (p, k)
     | "ConfineOutputBytes", [ n; k ] -> ConfineOutputBytes (n, k)
+    | "Measure", [ r; k ] -> Measure (r, k)
     | _ -> assert false
   in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
   let str_of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
   let str_to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
-  let nat_to_z = if !V.use_externs && Hashtbl.mem Ffi.registered "Nat" then Some Ffi.z else None in
-  make ?str_of_host ?str_to_host ?nat_to_z
+  let ffi_nat = !V.use_externs && Hashtbl.mem Ffi.registered "Nat" in
+  let nat_to_z = if ffi_nat then Some Ffi.z else None and nat_of_z = if ffi_nat then Some (Ffi.int "Nat") else None in
+  make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z
     { zero = build "Zero" []; succ = (fun n -> build "Succ" [ n ]); pred = (fun v -> match des "Zero" v with 1, [ p ] -> Some p | _ -> None);
       u8 = (fun n -> build "MkU8" [ n ]); un_u8 = one "MkU8"; char = (fun n -> build "MkChar" [ n ]); un_char = one "MkChar";
       snil = build "SNil" []; scons = (fun ch r -> build "SCons" [ ch; r ]); un_str = (fun v -> match des "SNil" v with 1, [ ch; r ] -> Some (ch, r) | _ -> None);
       some = (fun x -> build "Some" [ x ]); none = build "None" []; ok = (fun x -> build "Ok" [ x ]); fail = (fun x -> build "Fail" [ x ]); unit = build "MkUnit" [];
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
-      changed = build "Changed" []; unchanged = build "Unchanged" [];
-      request; apply = (fun k x -> List.hd (Eval.apply k [ x ])); apply0 = (fun k -> List.hd (Eval.apply k [])) }
+      changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage");
+      request; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file
    being read. A contradiction that reaches here escaped every form that would have placed it, and the
