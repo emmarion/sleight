@@ -2443,7 +2443,7 @@ A `delegate` proof, reusing `inc` from §57 at level `I`:
 ```scheme
 (let ((erased piv)) (prove-predates I V))
 
-(def-fns V $ (many inc-noted : (many (Nat) n) (erased (Nat) note) ->
+(def-fns V $ (many inc-noted at inc : (many (Nat) n) (erased (Nat) note) ->
     (many (Nat) m))
   (delegate (inc (predates piv) n)))
 
