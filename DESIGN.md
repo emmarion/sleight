@@ -1634,18 +1634,22 @@ stand for it.
 
 ## 41. The delegate annotation
 
-A `delegate`-bodied function (§19) may write `at` after its name,
+A `delegate`-bodied function (§19) writes `at` after its name,
 followed by the function it delegates to:
 
 ```scheme
 (def-fns L $ (many g at f : ...) (delegate (f ...)))
 ```
 
-The annotation is optional. If it is written, it must be accurate: the
-function it names must be the one named by the body's `delegate` call,
-canonically. A body with no such call is an error. The annotation
-also puts `g` at `f` (§36): from the header on, including in the
-bodies of `g`'s own block, `(slot-of g)` is `(slot-of f)`.
+The annotation is required on a `delegate`-bodied function and is
+resolved in the scope of the header (§53). The function it names must
+be the one named by the body's `delegate` call, canonically. A body
+with no such call is an error. `def-fns` or `def-unique` creates the
+`Delegate` proof (§33) when the header is elaborated, before the bodies
+of the block, as it creates an `AtFn` proof (§39). The annotation also
+puts `g` at `f` (§36). `(slot-of g)` is `(slot-of f)` in the signatures
+of the block that follow that of `g`, in every body of the block, and
+after the block.
 ## 42. Built-ins, the prelude and the FFI
 
 **Built-ins.** Before any file is read, the scope holds the following,
