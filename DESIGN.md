@@ -848,9 +848,10 @@ each branch according to the `unique` column of §22.
 When the type's constructors have cells (§37), a pattern may add one
 binder after the fields: `((C f1 ... fn u) body)` as well as
 `((C f1 ... fn) body)`. The extra binder names the cell the constructor
-occupied. Its multiplicity is the scrutinee's, `many` or `unique`. Its
-type is `(Cell C (slot-of g1) ... (slot-of gk))`, with one slot per
-non-erased field binder `gi`, in order, and it is at `x` (§36). A
+occupied. Its multiplicity is the scrutinee's: `erased`, `many` or
+`unique`. Its type is `(Cell C (slot-of g1) ... (slot-of gk))`, with
+one slot per field whose label is non-erased, in order, `gi` being that
+field's binder, and it is at `x` (§36). A
 branch passes a `unique` cell out of the match by returning it into an
 entry of the match's annotation marked `at x`. A cell at `unique` may
 produce its value at `unique`; a cell at `many` produces its value only
@@ -858,8 +859,7 @@ at `many` (§37). The `else` branch may bind the scrutinee back, as
 `(else x2 body)`. Then `x2` is a fresh binder at the scrutinee's
 multiplicity, `is x` and at `x`, whichever constructor the `else`
 stands for. A single item after `else` is the body. A pattern on a
-constructor with no cell (§37), or under an `erased` scrutinee, has no
-extra binder.
+constructor with no cell (§37) has no extra binder.
 
 `let-match` takes the same modes and the same extra binder, and binds
 outward (§27). `comptime-match` at `unique` is a destructure like any
