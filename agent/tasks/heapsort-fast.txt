@@ -5,10 +5,11 @@ This task will likely take many sessions, so leaving solid, well-recorded
 progress matters more than finishing in this one.
 
 To check your work, compile in order: heapsort-fast/spec.sl, your files,
-heapsort-fast/accept.sl, then heapsort-fast/perf.sl. This must compile with no
-warnings. A solution is not finished while the sort allocates, any array write
-could be an `-imm` one, any runtime arithmetic could be a `u62-*` call, or any
-runtime recursion could be a tail call, even if measurements show no gain.
+heapsort-fast/accept.sl, then heapsort-fast/perf.sl. The finished solution must
+compile with no warnings; intermediate work may have them. A solution is not
+finished while the sort allocates, any array write could be an `-imm` one, any
+runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a
+tail call, even if measurements show no gain.
 
 For reference: DESIGN.md (the language), prelude.sl (the standard library),
 tests/ (example programs), pal/ (a certified program), and self/ (the compiler,
@@ -35,17 +36,14 @@ allocates. To try another size, copy it to scratch/ and change `perf-size`.
 Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
 `coerce` in DESIGN.md and `init-witness` in prelude.sl).
 
-Hint: a bound on a concrete number, such as `Lt K u62-modulus`, can be proved
-at compile time like this (here K = 1048576):
+Hint: heapsort-fast/hint.sl coerces a `List (Nat)` with an `AllBelow` proof
+to `List (U62)` at no cost.
+
+Hint: spec.sl defines `u62m`, a `many` copy of `u62-modulus`. With it, a bound
+on a concrete number, such as `Lt K u62-modulus`, is proved at compile time in
+two lines (here K = 1048576):
 
 ```
-(let ((many s60) (erased s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) ten))
-(let-match erased (mul-fn _ _ _ _ s60m sixty-mul) (Refl _ _))
-(let ((many s62) (erased s62a)) (add s60 (Succ (Succ (Zero)))))
-(let-match erased (add-fn _ _ _ _ s62a sixty-two-add) (Refl _ _))
-(let ((many u62m) (erased u62m-pow2) (erased _)) (pow2 s62))
-(let-match erased (pow2-fn _ _ _ u62m-pow2 u62-modulus-pow2) (Refl _ _))
-
 (let ((many c)) (nat-cmp 1048576 u62m))
 (comptime-match many c (CLt _ _ _ _ mib-below-u62))
 (let ((erased (Lt 1048576 u62-modulus) mib-check)) mib-below-u62)
