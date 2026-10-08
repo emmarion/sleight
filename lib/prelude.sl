@@ -995,7 +995,7 @@
     (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many ConfineDir : (erased (Level) L) (many (String) dir) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    ; Performs compaction first.
+    ; Performs compaction first; every Usage figure is zero under --no-extern.
     (many Measure : (erased (Level) L) (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
        (unique (UniqueFn L (many A r) (many (Usage) u) -> (unique (IO L) next)) k) -> (IO L))))
 
