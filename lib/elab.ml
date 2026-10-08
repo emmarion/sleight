@@ -1970,7 +1970,7 @@ and elab_def_fns ?(unique = false) env l args =
       (* the header's marks: `at` before the name makes an at-function (section 39), `at f` after it annotates a
          delegate to f and puts it at f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
          promise *)
-      let header raw =
+      let header env raw =
         match raw with
         | List (_, List (fl, m :: rest) :: body) -> (
             let mult = mult_or env fl m in
@@ -1990,17 +1990,19 @@ and elab_def_fns ?(unique = false) env l args =
             | _ -> error fl "malformed function header%s" (help env (Sp.hints "function-header")))
         | _ -> error (loc raw) "malformed function definition%s" (help env (Sp.hints "function-definition"))
       in
-      let headers = List.map header fns in
-      List.iter (fun (fl, _, m, _, _, _, _) -> if unique && m = Many then error_in env fl "`def-unique` requires `unique` or `erased`" else if not unique && m = Unique then error_in env fl "use `def-unique` to define a unique function") headers;
       let capture_uses = ref env.uses in
-      let env, fids = List.fold_left_map (fun env (fl, name, mult, _, _, ty, _) -> let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in (env, x)) env headers in
-      (* the `AtFn` proof is minted and opened before the bodies, so a call within the block to a function
-         marked `at` is skipped (section 39) *)
-      let env = List.fold_left2 (fun env x (_, _, _, _, (_, _, atfn, _), ty, _) ->
-        if not atfn then env else
-        let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in
-        merge_opens (forcing (opens_add env p))) env fids headers in
-      let env = List.fold_left2 (fun env x (_, _, _, _, (_, _, _, delegates), _, _) -> placed env x (Option.map slot_of delegates)) env fids headers in
+      (* each header sees the functions before it in the block (section 53); the `AtFn` and `Delegate` proofs are
+         minted with the header, so a call within the block to a function marked `at` is skipped (section 39) *)
+      let env, fids_headers = List.fold_left_map (fun env raw ->
+        let (fl, name, mult, _, (_, _, atfn, delegates), ty, _) as h = header env raw in
+        if unique && mult = Many then error_in env fl "`def-unique` requires `unique` or `erased`" else if not unique && mult = Unique then error_in env fl "use `def-unique` to define a unique function";
+        let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in
+        let env = if not atfn then env else let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in merge_opens (forcing (opens_add env p)) in
+        let env = match delegates with
+          | None -> env
+          | Some f -> let fty = infer env fl (Var f) in snd (witness (placed env x (Some (slot_of f))) (proof_type Prelude.delegate [ sharing_of_fn env ty; ty; Var x; sharing_of_fn env fty; fty; Var f ])) in
+        (env, (x, h))) env fns in
+      let fids, headers = List.split fids_headers in
       let define x (fl, name, mult, absurd, (impl, extern, atfn, delegates), ty, body) =
         let params, rets = match ty with Fn (_, ps, rs) | UniqueFn (_, ps, rs) -> (ps, rs) | _ -> assert false in
         let envb = if unique then { env with entries = IntMap.add x { (entry env x) with mult = Erased } env.entries } else env in
@@ -2026,30 +2028,21 @@ and elab_def_fns ?(unique = false) env l args =
         capture_uses := join_uses !capture_uses (IntMap.filter (fun x _ -> IntMap.mem x env.entries) envb.uses);
         let code, delegated = check_marks envb fl (runtime_ids params pids) code in
         if extern && delegated <> None then error_in env fl "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`";
-        (match delegated with
-         | Some (Var f) when f >= x -> error_in env fl "the function a `delegate` call names must be introduced before the function whose body it is"
-         | Some (Var f) -> Hashtbl.replace V.aliases x (V.resolve f)
-         | _ -> ());
         (match delegates, delegated with
-         | None, _ -> ()
+         | None, None -> ()
+         | None, Some callee -> error_in env fl "%s delegates to %s, so its header must name the callee: write `at` and the callee after the name" (tick name) (qshow envb callee)
          | Some f, Some callee ->
-             if not (equal (canon env callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow env callee)
+             if not (equal (canon envb callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow envb callee);
+             Hashtbl.replace V.aliases x (V.resolve f)
          | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (qname env f));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
            dummy a first-class call without the proof reaches (section 39) *)
         if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
         let code = if atfn then V.CValues [] else code in
-        ((x, { V.fname = name; params = runtime_ids params pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
+        (x, { V.fname = name; params = runtime_ids params pids; body = code; impl })
       in
-      let fns, proofs = List.split (List.map2 define fids headers) in
+      let fns = List.map2 define fids headers in
       let env = { env with uses = !capture_uses } in
-      let env =
-        List.fold_left
-          (fun env -> function
-            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.delegate [ sharing_of_fn env gty; gty; Var g; sharing_of_fn env (infer env l callee); infer env l callee; callee ]))
-            | None -> env)
-          env proofs
-      in
       let fns = List.filter (fun (x, _) -> not (Hashtbl.mem V.aliases x)) fns in
       if env.run_pos then
         let values = Eval.close env.values fns in

@@ -259,11 +259,11 @@
 
 (def-lvl nat-lvl)
 
-(def-fns nat-lvl $ (many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+(def-fns nat-lvl $ (many nat-add at add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let ((many c) (erased p)) (delegate (add a b)))
   c)
 
-(def-fns nat-lvl $ (many nat-mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+(def-fns nat-lvl $ (many nat-mul at mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let ((many c) (erased p)) (delegate (mul a b)))
   c)
 
@@ -493,11 +493,11 @@
   (let ((many q) (erased m) (erased r) (erased mm) (erased a) (erased p)) (div n v pos))
   (values q v pk m r mm a p))
 
-(def-fns _ $ (many nat-shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
+(def-fns _ $ (many nat-shl at shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
   (let ((many r) (erased v) (erased pk) (erased p)) (delegate (shl n k)))
   r)
 
-(def-fns _ $ (many nat-shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
+(def-fns _ $ (many nat-shr at shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
   (let ((many q) (erased v) (erased pk) (erased m) (erased r) (erased mm) (erased a) (erased p)) (delegate (shr n k)))
   q)
 
@@ -743,7 +743,7 @@
 
 ; A Char is its code at runtime, so this is u62-cmp: the arguments coerce down through both newtypes and
 ; the result back up, the Coercible for it built by an erased match that leaves no code behind.
-(def-fns char-lvl $ (many char-cmp : (many (Char) a) (many (Char) b) ->
+(def-fns char-lvl $ (many char-cmp at u62-cmp : (many (Char) a) (many (Char) b) ->
     (many (Cmp (Char) CharLt a b) c))
   (let-match erased a (MkChar ua))
   (let-match erased ua (MkU8 ma pa))
@@ -793,7 +793,7 @@
 (def-fns str-lvl $ (many extern trim : (many (String) s) -> (many s is t))
   s)
 
-(def-fns str-lvl $ (many str-append : (many (String) a) (many (String) b) -> (many (String) c))
+(def-fns str-lvl $ (many str-append at append : (many (String) a) (many (String) b) -> (many (String) c))
   (let ((many c) (erased p)) (delegate (append a b)))
   c)
 

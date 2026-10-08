@@ -3161,31 +3161,25 @@
   (match many b _
     ((MkRealBranch _ _ c fids code) (Cons _ (MkBranch _ _ (discriminant ss c) fids code) $ notail $ real-branches-code _ _ rest ss))))
 
-; The `AtFn` proof of a header marked `at`, minted and opened before the block's bodies, so a call within the
-; block to the function is skipped (section 39); and a header's delegate annotation puts it at the function
-; named, also before the bodies (section 41).
-(def-fns _ $ (many open-atfn-proof : (erased (Raw) f) (many (Header f) h) (many (Nat) x) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
-  (let-match many h (MkHeader _ _ _ _ uq _ _ isat delegates _ params rets _ _))
-  (let ((many env0)) $ match many delegates (((Env) _)) ((None _) env) ((Some _ df) (place-at env x $ slot-atom df)))
-  (let-match many isat (BTrue) ((BFalse) env0))
-  (let ((many env1) (many p)) $ bind-erased env0 (None _) (None _) (BFalse) (Erased) (proof-type atfn-id $ Cons _ (TFn uq (TVar lvl) params rets) $ Cons _ (TVar x) $ Nil _) (None _) delegate-id)
-  (open-proof env1 p))
-
-(def-fns _ $ (many open-atfn-proofs : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (erased (List $ Nat) gids) (many (Bound fns hs gids) ids) (many (Env) env) (many (Nat) lvl) -> (many (Env) r))
-  (let-match many hs (HCons _ _ h more) ((HStop _) env))
-  (match many ids _
-    ((BMany _ _ _ _ _ x xrest) (tail $ open-atfn-proofs _ more _ xrest (open-atfn-proof _ h x env lvl) lvl))
-    ((BErased _ _ _ _ _ x xrest) (tail $ open-atfn-proofs _ more _ xrest (open-atfn-proof _ h x env lvl) lvl))))
-
-(def-fns _ $ (many bind-headers : (erased (List $ Raw) fns) (subterm many (Headers fns) hs) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (List $ Nat) gids) (many (Bound fns hs gids) ids))
-  (let-match many hs (HCons _ _ h more) ((HStop _) (values env (Nil _) (BStop _))))
-  (let-match many h (MkHeader _ hpos name mult uq _ _ _ _ _ params rets _ _))
-  (let ((many env2) (many x)) $ bind env (name-or-anon name) (Some _ $ loc-in env hpos) (BTrue) mult (TFn uq (TVar lvl) params rets) (None _) delegate-id)
-  (let ((many env3) (many gids) (many ids)) $ notail $ bind-headers _ more (mark-word env2 x $ BFalse) lvl)
-  (match many mult _
-    ((Many) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
-    ((Once) (values env3 (Cons _ x gids) (BMany _ _ _ _ _ x ids)))
-    ((Erased) (values env3 gids (BErased _ _ _ _ _ x ids)))))
+; A header's function bound as soon as the header is read, so a later header of the block sees it (section 53),
+; with the `AtFn` proof of a header marked `at`, so a call within the block to the function is skipped (section
+; 39), and the `Delegate` proof and placement of its delegate annotation (section 41).
+(def-fns _ $ (many bind-header : (erased (Raw) f) (many (Header f) h) (many (Env) env) (many (Nat) lvl) -> (many (Env) r) (many (Nat) x))
+  (let-match many h (MkHeader _ hpos name mult uq _ _ isat delegates _ params rets _ _))
+  (let ((many ty)) $ TFn uq (TVar lvl) params rets)
+  (let ((many env1) (many x)) $ bind env (name-or-anon name) (Some _ $ loc-in env hpos) (BTrue) mult ty (None _) delegate-id)
+  (let ((many env2)) $ mark-word env1 x $ BFalse)
+  (let ((many env3))
+    (match many delegates (((Env) _))
+      ((None _) env2)
+      ((Some _ df)
+        (let ((many env2p)) $ place-at env2 x $ slot-atom df)
+        (let ((many fty)) $ type-of env2p df)
+        (let ((many env2d) (many pd)) $ bind-erased env2p (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2p ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2p fty) $ Cons _ fty $ Cons _ (TVar df) $ Nil _) (None _) delegate-id)
+        env2d)))
+  (let-match many isat (BTrue) ((BFalse) (values env3 x)))
+  (let ((many env4) (many p)) $ bind-erased env3 (None _) (None _) (BFalse) (Erased) (proof-type atfn-id $ Cons _ ty $ Cons _ (TVar x) $ Nil _) (None _) delegate-id)
+  (values (open-proof env4 p) x))
 
 (def-fns _ $ (many bound-erased : (erased (List $ Raw) fns) (erased (Headers fns) hs) (erased (List $ Nat) gids) (subterm many (Bound fns hs gids) ids) -> (many (List $ Nat) r))
   (match many ids _
@@ -5751,9 +5745,7 @@
         ((BTrue) (mint-level env (None _) (Some _ $ loc-in env $ raw-pos lvraw)))
         ((BFalse) (let ((many env2) (many t) (many ty)) $ notail $ elab-term sugar lvraw env (BFalse) no-tele) (level-var-checked env2 t " or `_`"))))
     (let ((many env2a)) $ refuse-when env2 (and uq $ not $ nat-eq (list-length _ fns) 1) "`def-unique` defines exactly one function")
-    (let ((many env3) (many headers)) $ notail $ elab-headers sugar fns env2a lvl uq)
-    (let ((many env4a) (many gids) (many fids)) $ bind-headers _ headers env3 lvl)
-    (let ((many env4)) $ open-atfn-proofs _ headers _ fids env4a lvl)
+    (let ((many env4) (many headers) (many gids) (many fids)) $ notail $ elab-headers sugar fns env2a lvl uq)
     (let ((many env5a) (many fns2) (erased lk)) $ notail $ define-fns sugar fns headers env4 ctx gids gids fids lvl $ env-run-pos env4)
     (let ((many (Env) env5)) $ match many (env-run-pos env4) _ ((BTrue) (env-set-tokens env5a $ bound-erased fns headers gids fids)) ((BFalse) env5a))
     (let ((many group)) $ MkGroup _ gids fns2 lk)
@@ -5762,14 +5754,14 @@
       ((Nil _) (values (env-close-group env5 _ group) ctx $ SNone _))
       ((Cons _ _ _) (values env5 (Cons _ gids ctx) $ SLetRec _ _ group))))
 
-  ((many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Nat) lvl) (many (Bool) uq) -> (many (Env) r) (many (Headers fns) hs))
-    (let-match many fns (Cons _ f rest) ((Nil _) (values env $ HStop _)))
+  ((many elab-headers : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (many (Env) env) (many (Nat) lvl) (many (Bool) uq) -> (many (Env) r) (many (Headers fns) hs) (many (List $ Nat) gids) (many (Bound fns hs gids) ids))
+    (let-match many fns (Cons _ f rest) ((Nil _) (values env (HStop _) (Nil _) (BStop _))))
     (let ((many envl)) $ env-at env $ raw-pos f)
     (def-fns misuse-lvl $ (many bad : -> (many (Env) r)) (env-error envl $ str-cat "malformed function definition" $ sp-hints envl "function-definition"))
-    (let-match many f (RList _ items) (else (values (bad) $ HStop fns)))
-    (let-match many items (Cons _ sigraw body) ((Nil _) (values (bad) $ HStop _)))
-    (let-match many sigraw (RList _ sitems) (else (values (bad) $ HStop _)))
-    (let-match many sitems (Cons _ mraw items1) ((Nil _) (values (bad) $ HStop _)))
+    (let-match many f (RList _ items) (else (values (bad) (HStop fns) (Nil _) (BStop _))))
+    (let-match many items (Cons _ sigraw body) ((Nil _) (values (bad) (HStop _) (Nil _) (BStop _))))
+    (let-match many sigraw (RList _ sitems) (else (values (bad) (HStop _) (Nil _) (BStop _))))
+    (let-match many sitems (Cons _ mraw items1) ((Nil _) (values (bad) (HStop _) (Nil _) (BStop _))))
     (let ((many env0a) (many mult)) $ mult-checked envl mraw)
     (let ((many env0b)) $ match many uq (((Env) _))
       ((BTrue) (refuse-when env0a (and (mult-is-many mult) $ not $ mult-is-once mult) "`def-unique` requires `unique` or `erased`"))
@@ -5778,7 +5770,7 @@
     (let ((many env0x) (many isext)) $ extern-checked (env-at env0b $ raw-pos sigraw) isext0)
     (let ((many env0)) $ env-back env0b env0x)
     (def-fns misuse-lvl $ (many bad0 : -> (many (Env) r)) (env-error env0 $ str-cat "malformed function header" $ sp-hints env0 "function-header"))
-    (let-match many items2 (Cons _ nraw items3a) ((Nil _) (values (bad0) $ HStop _)))
+    (let-match many items2 (Cons _ nraw items3a) ((Nil _) (values (bad0) (HStop _) (Nil _) (BStop _))))
     (let ((many env0e)) $ env-back env0 $ refuse-when (env-at env0 $ raw-pos sigraw) (and isat $ not $ mult-is-many mult) "an `erased` function cannot be an at-function: it is called only where nothing runs")
     (let ((many env0n) (many name)) $ name-checked env0e nraw "a function name")
     ; `at f` after the name annotates a delegate to f (section 41)
@@ -5796,7 +5788,7 @@
         ((Some _ fraw)
           (let ((many env0f) (many df)) $ named (env-at env0n $ raw-pos fraw) fraw "a function name")
           (values (env-back env0n env0f) (Some _ df)))))
-    (let-match many items3 (Cons _ colon sg) ((Nil _) (values (bad0) $ HStop _)))
+    (let-match many items3 (Cons _ colon sg) ((Nil _) (values (bad0) (HStop _) (Nil _) (BStop _))))
     (let ((many env1)) $ match many (is-mark env0d colon $ MkColon) (((Env) _)) ((BTrue) env0d) ((BFalse) (bad0)))
     (let ((erased psg)) $ subterm-trans (prove-subterm sg items3) $ subterm-trans p3 $ within-in _ _ _ _ w2 $ subterm-trans (prove-subterm sitems sigraw) $ subterm-trans (prove-subterm sigraw items) $ prove-subterm items f)
     (let ((many env1a) (many ps) (many after) (erased wa)) $ split-arrow sg _ (WHere sg) env1)
@@ -5823,8 +5815,12 @@
           (let-match many (ext-result-shape _ e) (Some _ want) ((None _) (values env3 (Some _ $ MkImpl e2 $ Nil _))))
           (let ((many env3a) (many cs)) $ extern-ctors env3 name rets want)
           (values env3a (Some _ $ MkImpl e2 cs)))))
-    (let ((many env4) (many hs)) $ notail $ elab-headers sugar rest (env-back env env3b) lvl uq)
-    (values env4 $ HCons _ _ (MkHeader _ (raw-pos sigraw) name mult uq isabs isext isat dfn impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f) hs))
+    (let ((many h)) $ MkHeader _ (raw-pos sigraw) name mult uq isabs isext isat dfn impl params rets body $ subterm-trans (prove-subterm body items) $ prove-subterm items f)
+    (let ((many env5) (many x)) $ bind-header _ h (env-back env env3b) lvl)
+    (let ((many env6) (many hs) (many gids) (many ids)) $ notail $ elab-headers sugar rest env5 lvl uq)
+    (match many mult _
+      ((Erased) (values env6 (HCons _ _ h hs) gids (BErased _ _ _ _ _ x ids)))
+      (else (values env6 (HCons _ _ h hs) (Cons _ x gids) (BMany _ _ _ _ _ x ids)))))
 
   ((many define-fns : (subterm many (Nat) sugar) (subterm many (List $ Raw) fns) (subterm many (Headers fns) headers) (many (Env) env) (many (List $ List $ Nat) ctx) (many (List $ Nat) gall) (many (List $ Nat) gids) (many (Bound fns headers gids) fids) (many (Nat) lvl) (many (Bool) top) ->
       (many (Env) r) (many (List $ Pair (Nat) $ Func gall ctx) fns2) (erased (Lockstep (Nat) (Pair (Nat) $ Func gall ctx) gids fns2) lk))
@@ -5888,22 +5884,23 @@
           (let ((many env2b))
             (match many isext (((Env) _))
               ((BTrue) (env-error (env-at env2 hpos) (say env2 "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`")))
-              ((BFalse) (match many (nat-lt callee x) _ ((BTrue) env2) ((BFalse) (env-error (env-at env2 hpos) (say env2 "the function a `delegate` call names must be introduced before the function whose body it is")))))))
-          (let ((many env2c)) $ env-set-aliases env2b $ idmap-set _ x (alias-target env2b callee) $ env-aliases env2b)
-          (let ((many env3) (many px)) $ bind-erased env2c (None _) (None _) (BFalse) (Erased) (proof-type delegate-id $ Cons _ (sharing-of-fn env2 ty) $ Cons _ ty $ Cons _ (TVar x) $ Cons _ (sharing-of-fn env2 $ type-of env2 callee) $ Cons _ (type-of env2 callee) $ Cons _ (TVar callee) $ Nil _) (None _) delegate-id)
-          env3)))
+              ((BFalse) env2)))
+          (env-set-aliases env2b $ idmap-set _ x (alias-target env2b $ maybe-or _ delegates callee) $ env-aliases env2b))))
     ; the delegate annotation names the function the one `delegate` call names (section 41)
     (let ((many (Env) env3d))
       (match many delegates _
-        ((None _) env3)
+        ((None _)
+          (match many delegated (((Env) _))
+            ((None _) env3)
+            ((Some _ callee) (error-at env3 hpos $ str-cat3 (tick name) (say env3 " delegates to ") $ str-cat3 (qshow envb3 $ TVar callee) (say env3 ", so its header must name the callee: write `at` and the callee after the name") ""))))
         ((Some _ df)
           (let ((many env3a)) $ env-at env3 hpos)
           (env-back env3 $ match many delegated (((Env) _))
             ((None _) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but its body is not a `delegate` call") ""))
             ((Some _ callee)
-              (match many (equal-env env3a (TVar callee) $ TVar df) (((Env) _))
+              (match many (equal-env envb3 (TVar callee) $ TVar df) (((Env) _))
                 ((BTrue) env3a)
-                ((BFalse) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but delegates to ") $ qshow env3a $ TVar callee))))))))
+                ((BFalse) (env-error env3a $ str-cat3 (tick name) (say env3a " is declared `at` ") $ str-cat3 (qshown env3a df) (say env3a " but delegates to ") $ qshow envb3 $ TVar callee))))))))
     ; an at-function's body erases to nothing and is never run through the proof; what remains is the dummy a
     ; first-class call without the proof reaches (section 39)
     (let ((many env3e)) $ match many (and isat $ and (not isabs) $ not $ erases-to-nothing _ _ code2) (((Env) _))
@@ -5914,7 +5911,7 @@
       ((BFalse) code2))
     (values env3e $ match many delegated (((Func gall ctx) _))
       ((None _) (MkFunc _ _ physical name x rt code3 impl top))
-      ((Some _ callee) (MkAlias _ _ name x $ var-code env3e (Cons _ gall ctx) $ alias-target env3e callee))))
+      ((Some _ callee) (MkAlias _ _ name x $ var-code env3e (Cons _ gall ctx) $ alias-target env3e $ maybe-or _ delegates callee))))
 
   ; def-adts (sections 8, 21, 54): type constructors bound first, each as soon as its header is read so a
   ; later header may mention it, then each type's constructors, Matchable and Newtype; every constructor

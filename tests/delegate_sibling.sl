@@ -12,12 +12,12 @@
 (def-fns L
   ((many via : -> (many (Fn L (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b)) r))
     step1)
-  ((many step0 : (many (Nat) a) (subterm erased (Nat) k) -> (many (Nat) b))
+  ((many step0 at inc : (many (Nat) a) (subterm erased (Nat) k) -> (many (Nat) b))
     (delegate (inc (predates pkl) a)))
-  ((many step1 : (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b))
+  ((many step1 at step0 : (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b))
     (let ((erased p)) (prove-subterm j k))
     (delegate (step0 a (subterm p) j)))
-  ((many step2 : (many (Nat) a) (erased (Nat) i) (subterm erased (Succ (Succ i)) is k) -> (many (Nat) b))
+  ((many step2 at step1 : (many (Nat) a) (erased (Nat) i) (subterm erased (Succ (Succ i)) is k) -> (many (Nat) b))
     (let ((erased p)) (prove-subterm (Succ i) k))
     (delegate (step1 a i (subterm p) (Succ i)))))
 
@@ -32,9 +32,9 @@
   (def-fns L
     ((many inner-via : -> (many (Fn L (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b)) r))
       inner1)
-    ((many inner0 : (many (Nat) a) (subterm erased (Nat) k) -> (many (Nat) b))
+    ((many inner0 at inc : (many (Nat) a) (subterm erased (Nat) k) -> (many (Nat) b))
       (delegate (inc (predates pkl) a)))
-    ((many inner1 : (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b))
+    ((many inner1 at inner0 : (many (Nat) a) (erased (Nat) j) (subterm erased (Succ j) is k) -> (many (Nat) b))
       (let ((erased p)) (prove-subterm j k))
       (delegate (inner0 a (subterm p) j))))
   (let ((many g)) (inner-via (predates plm)))

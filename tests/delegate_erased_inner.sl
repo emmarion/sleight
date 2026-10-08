@@ -9,7 +9,7 @@
 (def-lvl M)
 (let ((erased p)) (prove-predates L M))
 
-(def-fns M $ (many inc-noted : (many (Nat) n) -> (many (Nat) m))
+(def-fns M $ (many inc-noted at inc : (many (Nat) n) -> (many (Nat) m))
   (def-fns L $ (erased same : (erased (Nat) a) -> (erased (Nat) b)) a)
   (def-adts $ (Tally : -> Type)
     enum

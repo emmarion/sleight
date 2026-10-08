@@ -3,6 +3,6 @@
 
 (def-lvl V)
 (let ((erased piv)) (prove-predates I V))
-(def-fns V $ (many inc-twice : (many (Nat) n) -> (many (Nat) m))
+(def-fns V $ (many inc-twice at inc : (many (Nat) n) -> (many (Nat) m))
   (delegate (inc (predates piv) (Succ n))))
 ; warns: tests/delegate_bad.sl:7:18: warning: unnecessary `(predates _)`; drop it

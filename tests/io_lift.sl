@@ -29,7 +29,7 @@
     (def-fns proof-lvl $ (erased lift-fn : (erased Type X) (subterm unique (UniqueFn A (many X x) -> (unique (IO A) next)) k) ->
         (erased (UniqueFn B (many X x) -> (unique (IO B) next)) o)
         (erased (Coercible (Unique) (UniqueFn B (many X x) -> (unique (IO B) next)) o (Unique) (UniqueFn A (many X x) -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o : (many X x) -> (unique (IO B) next))
+      (def-unique B $ (unique o at k : (many X x) -> (unique (IO B) next))
         (let ((unique r)) (delegate (k (predates ab) x)))
         (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
@@ -37,7 +37,7 @@
     (def-fns proof-lvl $ (erased lift-fn0 : (subterm unique (UniqueFn A -> (unique (IO A) next)) k) ->
         (erased (UniqueFn B -> (unique (IO B) next)) o)
         (erased (Coercible (Unique) (UniqueFn B -> (unique (IO B) next)) o (Unique) (UniqueFn A -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o : -> (unique (IO B) next))
+      (def-unique B $ (unique o at k : -> (unique (IO B) next))
         (let ((unique r)) (delegate (k (predates ab))))
         (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))

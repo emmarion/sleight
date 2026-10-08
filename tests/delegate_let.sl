@@ -4,7 +4,7 @@
 
 (def-lvl V)
 (let ((erased piv)) (prove-predates I V))
-(def-fns V $ (many inc-noted : (many (Nat) n) (erased (Nat) note) -> (many (Nat) m))
+(def-fns V $ (many inc-noted at inc : (many (Nat) n) (erased (Nat) note) -> (many (Nat) m))
   (let ((many r)) (delegate (inc (predates piv) n)))
   (let ((erased twice)) (Succ r))
   r)

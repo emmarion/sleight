@@ -65,7 +65,7 @@
   (let ((many n)) $ char-code c)
   (and (not $ nat-lt n lo) $ not $ nat-lt hi n))
 
-(def-fns _ $ (many rope-str : (many (Rope) r) -> (many (String) s))
+(def-fns _ $ (many rope-str at flatten : (many (Rope) r) -> (many (String) s))
   (let ((many s) (erased p)) (delegate (flatten r)))
   s)
 
@@ -389,7 +389,7 @@
     ((Zero) xs))
   (match many xs _ ((Nil _) (Nil _)) ((Cons _ _ rest) (tail $ list-drop _ k rest))))
 
-(def-fns _ $ (many list-length : (erased Type A) (many (List A) xs) -> (many (Nat) n))
+(def-fns _ $ (many list-length at length : (erased Type A) (many (List A) xs) -> (many (Nat) n))
   (let ((many n) (erased p)) (delegate (length _ xs)))
   n)
 
@@ -471,6 +471,9 @@
 
 (def-fns _ $ (many is-some : (erased Type A) (many (Maybe A) m) -> (many (Bool) r))
   (match many m _ ((Some _ _) (BTrue)) ((None _) (BFalse))))
+
+(def-fns _ $ (many maybe-or : (erased Type A) (many (Maybe A) m) (many A d) -> (many A r))
+  (match many m _ ((Some _ x) x) ((None _) d)))
 
 (def-fns _ $ (many list-mem-str : (subterm many (List $ String) xs) (many (String) x) -> (many (Bool) r))
   (let-match many xs (Cons _ y rest)
