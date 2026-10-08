@@ -43,15 +43,15 @@ _build/self/slc --interpret tests/io_echo.sl
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. A file's final expression is printed, unless its
-value is a function from `String` to `String`, when stdin is fed to it
-and its result written to stdout (`tests/main_reverse.sl`), or an `IO`
-value, when the driver performs its requests one by one, applying each
-request's continuation, a `UniqueFn`, once
+value is an `IO` value, when the driver performs its requests one by one,
+applying each request's continuation, a `UniqueFn`, once
 (`tests/io_echo.sl`; arguments after `--` on the command line are the
-program's), or a function from no arguments to one value, when it is
-applied and its result printed (`tests/thunk_list.sl`), which is how a
-program asks for its final value to be computed by code rather than at
-elaboration. Numerals, `#\c` character literals and `"..."` string
+program's), or a function, which must be one of the two forms of
+DESIGN.md section 27: from `String` to `String`, when stdin is fed to it
+and its result written to stdout (`tests/main_reverse.sl`), or from no
+arguments to one value, when it is applied and its result printed
+(`tests/thunk_list.sl`), which is how a program asks for its final value
+to be computed by code rather than at elaboration. Numerals, `#\c` character literals and `"..."` string
 literals are prelude-backed sugar (DESIGN.md section 45, ASSUMPTIONS.md 47-60), and a printed
 value of one of those three types is spelled as the literal it reads back
 from (ASSUMPTIONS.md 154) rather than as its prelude model. Every program starts in the scope of the source

@@ -516,11 +516,10 @@ let item cx = function
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
   | Env.Final (v, ty, path) ->
-      let v = Program.adapt_final cx.env ty v in
       let text =
         match (v, Program.final cx.env ty) with
-        (* a function and a bare constructor print `_`, as the type-directed printer gives them (ASSUMPTIONS 184) *)
-        | V.VFn _, Program.Plain | V.VCtorFn _, Program.Plain -> "print_final \"_\""
+        (* a bare constructor prints `_`, as the type-directed printer gives it (ASSUMPTIONS 184) *)
+        | V.VCtorFn _, Program.Plain -> "print_final \"_\""
         | _, kind -> (
             let e = value cx v in
             match kind with

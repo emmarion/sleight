@@ -1,4 +1,3 @@
-; expect: _
 ; A non-erased match with no branches warns; the same match as an absurd function's body does not.
 
 (def-adts $ (Void : -> Type)
@@ -12,5 +11,4 @@
 (def-fns L $ (many absurd explode2 : (erased Type A) (many (Void) f) -> (many (Void) v))
   (match erased f (((Void) w))))
 
-explode
-; warns: tests/match_no_branches_warn.sl:10:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
+; warns: tests/match_no_branches_warn.sl:9:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead

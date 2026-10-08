@@ -1020,16 +1020,18 @@ right-hand side of a `let`, by its binders.
 **The top level.** A file's top level is an expression and so has size
 one. Several files on one command line share one scope, in order. A
 file that ends in a statement produces nothing. Otherwise the type of
-the final value decides what the driver does with it. A function from
-one `many (String)` to one `many (String)` is applied to all of
-standard input, and its result is written to standard output. An `IO`
-value (§42) is performed: the driver consumes it at `unique` and
-applies each request's continuation once. A function from no arguments
-to one `many` or `unique` return is applied and its result is printed;
-this is how a program asks for its final value to be computed by
-compiled code. Any other value is printed (§45). A function with
-erased parameters or with extra erased returns is not treated as either
-function form.
+the final value decides what the driver does with it. An `IO` value
+(§42) is performed: the driver consumes it at `unique` and applies each
+request's continuation once. Any other final value is used at `many`,
+so a `unique` one is written `(share x)` (§16). A final value of `Fn`
+type must have one of two forms, at any level `L`.
+`(Fn L (many (String) x) -> (many (String) y))`, with the prelude's
+`String`, is applied to all of standard input, and its result is
+written to standard output. `(Fn L -> (many T y))`, for any type `T`,
+is applied and its result is printed (§45); this is how a program asks
+for its final value to be computed by compiled code. A final value of
+`Fn` type in neither form, or of `UniqueFn` type, is an error. Any
+other value is printed (§45).
 
 **Run position.** A statement is in run position when it is under no
 function body and no match branch. Such a statement runs as soon as it

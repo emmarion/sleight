@@ -1079,37 +1079,6 @@
       (match many bytes _ ((None _) (RStr " None")) ((Some _ b) (rcat3 (RStr " (Some ") (quoted b) $ RStr ")")))
       $ RStr $ str-cat (match many with-env _ ((BTrue) " true world\n") ((BFalse) " false world\n")) "let print_final = Driver_core.print world\n"))))
 
-; ---- Finals (lib/program.ml): what the driver does with a file's final value
-
-(def-adts $ (FinalKind : -> Type)
-  enum
-  (many FMain : -> (FinalKind))
-  (many FIo : -> (FinalKind))
-  (many FThunk : (many (Term) ty) -> (FinalKind))
-  (many FPlain : -> (FinalKind)))
-
-(def-fns _ $ (many classify-final : (many (Env) env) (many (Term) ty) -> (many (FinalKind) f))
-  (match many (canon-env env ty) _
-    ((TFn unique2 _ ps rs)
-      (let-match many unique2 (BFalse) ((BTrue) (FPlain)))
-      (match many ps _
-        ((Nil _)
-          (let-match many rs (Cons _ r more) ((Nil _) (FPlain)))
-          (let-match many more (Nil _)
-            ((Cons _ _ _) (FPlain)))
-          (let-match many r (MkEntry _ _ m sg _ _))
-          (match many m _ ((Many) (FThunk $ sg-ty sg)) ((Once) (FThunk $ sg-ty sg)) ((Erased) (FPlain))))
-        ((Cons _ p more)
-          (let-match many more (Nil _) ((Cons _ _ _) (FPlain)))
-          (let-match many rs (Cons _ r more3) ((Nil _) (FPlain)))
-          (let-match many more3 (Nil _) ((Cons _ _ _) (FPlain)))
-          (match many (and (prelude-nullary env (sg-term $ entry-sg p) "String")
-                        (and (prelude-nullary env (sg-ty $ entry-sg r) "String")
-                          $ and (and (mult-is-many $ entry-mult p) $ not $ mult-is-once $ entry-mult p) $ and (mult-is-many $ entry-mult r) $ not $ mult-is-once $ entry-mult r)) _
-            ((BTrue) (FMain))
-            ((BFalse) (FPlain))))))
-    ((TApp _ _) (match many (prelude-nullary env ty "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))) (else (FPlain))))
-
 ; ---- A printer per type for a final function's result (lib/extract.ml's show): each constructor's return
 ; type is unified with the type to find its many fields' types, as entering a branch does.
 
@@ -1225,71 +1194,20 @@
     ((Nil _) (REmpty))
     ((Cons _ _ _) (rcat3 (RStr "let rec ") (rjoin (list-rev _ defs) "\nand ") $ RStr "\n"))))
 
-; A final that is a function or a constructor prints `_`, as the reference does (ASSUMPTIONS 184).
+; A final that is a constructor prints `_`, as the reference does (ASSUMPTIONS 184).
 (def-fns _ $ (many named-final : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Env) env) -> (many (Maybe $ String) r))
   (let ((erased ns) (many b) (erased sf)) $ store-read Block hs hp v)
-  (match many b _
-    ((BFn _ _ _ _) (Some _ "_"))
-    ((BCtorFn _ _) (Some _ "_"))
-    (else (None $ String))))
-
-(def-fns _ $ (many final-captured-word : (subterm many (List $ Nat) ids) (many (Env) env)
-    (many (Term) slot) -> (many (Maybe $ Nat) r))
-  (let-match many ids (Cons _ id rest) ((Nil _) (None _)))
-  (match many (and (is-const env id) (equal-env env slot (slot-atom id))) _
-    ((BTrue) (Some _ id))
-    ((BFalse) (tail $ final-captured-word rest env slot))))
-
-; The return's slot after canonicalization: `(slot-of <parameter>)` for the argument, else the atom some
-; captured Const word is at.
-(def-fns _ $ (many final-param : (many (Term) slot) -> (many (Maybe $ Nat) n))
-  (let-match many slot (TSlotOf place) (else (None _)))
-  (let-match many place (TBound n) (else (None _)))
-  (Some _ n))
-
-(def-fns _ $ (many final-at-source : (many (Env) env) (many (Term) slot) (many (Bool) argument) -> (many (Rope) r))
-  (let-match many (final-param slot) (Some _ n)
-    ((None _)
-      (match many (final-captured-word (env-words env) env slot) _
-        ((Some _ id) (const-rope env id))
-        ((None _) (RStr "(failwith \"no captured word for final at-return\")")))))
-  (match many (and argument (nat-is-zero n)) _
-    ((BTrue) (RStr "_at_final_arg"))
-    ((BFalse) (RStr "(failwith \"invalid final at-return parameter\")"))))
-
-(def-fns _ $ (many final-place : (many (Env) env) (many (Term) ty) -> (many (Maybe $ Term) slot))
-  (let-match many (canon-env env ty) (TFn _ _ _ rets) (else (None _)))
-  (let-match many rets (Cons _ entry2 _) ((Nil _) (None _)))
-  (entry-place entry2))
-
-(def-fns _ $ (many final-const : (many (Env) env) (many (Term) ty) -> (many (List $ Nat) ids))
-  (let ((many adapted)) $ match many (classify-final env ty) (((Bool) _)) ((FMain) (BTrue)) ((FThunk _) (BTrue)) (else (BFalse)))
-  (let-match many adapted (BTrue) ((BFalse) (Nil _)))
-  (let-match many (final-place env ty) (Some _ slot) ((None _) (Nil _)))
-  (let-match many (final-param slot) (None _) ((Some _ _) (Nil _)))
-  (match many (final-captured-word (env-words env) env slot) _ ((Some _ id) (Cons _ id $ Nil _)) ((None _) (Nil _))))
-
-(def-fns _ $ (many adapt-final-rope : (many (Env) env) (many (Term) ty) (many (Rope) callable)
-    (many (Bool) argument) -> (many (Rope) adapted))
-  (let-match many (final-place env ty) (Some _ slot) ((None _) callable))
-  (let ((many source)) (final-at-source env slot argument))
-  (match many argument _
-    ((BTrue)
-      (rcat5 (RStr "(Obj.repr (fun (_at_final_arg : Obj.t) -> let () = (Obj.obj ") callable
-        (RStr " : Obj.t -> unit) _at_final_arg in ") source (RStr "))")))
-    ((BFalse)
-      (rcat5 (RStr "(Obj.repr (fun () -> let () = (Obj.obj ") callable
-        (RStr " : unit -> unit) () in ") source (RStr "))")))))
+  (let-match many b (BCtorFn _ _) (else (None $ String)))
+  (Some _ "_"))
 
 (def-fns _ $ (many final-rope : (many (Env) env) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Term) ty) (many (Decls) d) -> (many (Decls) d2) (many (Rope) r))
   (let ((many vr)) $ addr-rope _ v)
   (match many (classify-final env ty) _
-    ((FMain) (values d $ rcat3 (RStr "let () = driver.run_main world ") (adapt-final-rope env ty vr (BTrue)) $ RStr "\n"))
+    ((FMain) (values d $ rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
     ((FIo) (values d $ rcat3 (RStr "let () = exit (driver.run_io world ") vr $ RStr ")\n"))
     ((FThunk t)
-      (let ((many adapted)) (adapt-final-rope env ty vr (BFalse)))
       (let ((many memo) (many name)) $ show-type show-fuel env t $ MkShowMemo (env-fresh-bound env) 0 (Nil _) (Nil _) d)
-      (values (memo-decls memo) $ rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ((Obj.obj ") adapted $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
+      (values (memo-decls memo) $ rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ((Obj.obj ") vr $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
     ((FPlain)
       (let-match many (named-final _ hp v env) (None _)
         ((Some _ text) (values d $ rcat3 (RStr "let () = print_final ") (quoted text) $ RStr "\n")))
@@ -1314,7 +1232,7 @@
     (many (Env) env) (many (IdMap $ EInfo hs) en) (many (List $ Ref Block hs) acc) -> (many (List $ Ref Block hs) r))
   (let-match many fs (Cons _ p rest)
     ((Nil _) acc))
-  (match many p _ ((MkPair _ _ v ty) (tail (roots-of-finals _ rest env en $ Cons _ v $ const-refs _ en (final-const env ty) acc)))))
+  (match many p _ ((MkPair _ _ v ty) (tail (roots-of-finals _ rest env en $ Cons _ v acc)))))
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)

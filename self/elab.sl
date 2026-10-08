@@ -6590,6 +6590,39 @@
     ((BTrue) env))
   (env-set-regions (env-set-said swept $ said-without-silenced $ env-said swept) $ Nil _))
 
+; ---- Finals (lib/elab.ml's final_form): what the driver does with a file's final value
+
+(def-adts $ (FinalKind : -> Type)
+  enum
+  (many FMain : -> (FinalKind))
+  (many FIo : -> (FinalKind))
+  (many FThunk : (many (Term) ty) -> (FinalKind))
+  (many FPlain : -> (FinalKind)))
+
+(def-fns _ $ (many bare-final-entry : (many (Env) env) (many (Bool) string) (many (Entry) e) -> (many (Bool) b))
+  (let-match many e (MkEntry _ st m sg place _))
+  (let-match many st (BFalse) ((BTrue) (BFalse)))
+  (let-match many place (None _) ((Some _ _) (BFalse)))
+  (let-match many sg (SgTy t) ((SgIs _ _) (BFalse)))
+  (let-match many m (Many) (else (BFalse)))
+  (match many string _ ((BTrue) (prelude-nullary env t "String")) ((BFalse) (BTrue))))
+
+(def-fns _ $ (many final-form : (many (Env) env) (many (Term) ty) -> (many (Maybe $ FinalKind) f))
+  (let-match many (canon-env env ty) (TFn uq _ ps rs)
+    (else (Some _ $ match many (prelude-nullary env ty "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))))
+  (let-match many uq (BFalse) ((BTrue) (None _)))
+  (let-match many rs (Cons _ r more) ((Nil _) (None _)))
+  (let-match many more (Nil _) ((Cons _ _ _) (None _)))
+  (match many ps _
+    ((Nil _) (match many (bare-final-entry env (BFalse) r) _ ((BTrue) (Some _ $ FThunk $ sg-term $ entry-sg r)) ((BFalse) (None _))))
+    ((Cons _ p more2)
+      (match many (and (list-is-empty _ more2) $ and (bare-final-entry env (BTrue) p) $ bare-final-entry env (BTrue) r) _
+        ((BTrue) (Some _ $ FMain))
+        ((BFalse) (None _))))))
+
+(def-fns _ $ (many classify-final : (many (Env) env) (many (Term) ty) -> (many (FinalKind) f))
+  (match many (final-form env ty) _ ((Some _ k) k) ((None _) (FPlain))))
+
 (def-fns _ $ (many run-toplevel : (subterm many (List $ Raw) items) (many (Env) env) -> (many (Env) r))
   (let-match many items (Cons _ item rest) ((Nil _) env))
   (let-match many (pragma-of item) (None _)
@@ -6603,6 +6636,8 @@
       (let-match many (misplaced env2 item) (None _) ((Some _ _) (env-error env2 $ not-a env2 "neither a statement nor an expression" item)))
       (let ((many env3a) (many ress) (many h) (erased lock)) $ elab-expr-demand (raw-size item) item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))
       (let ((many env3)) $ settle-res env3a $ first-res _ _ ress lock)
-      (match many (env-failed env3) _
-        ((BTrue) env3)
-        ((BFalse) (env-run-final env3 (hoisted-code _ many-one h) $ res-ty $ first-res _ _ ress lock))))))
+      (let-match many (env-failed env3) (BFalse) ((BTrue) env3))
+      (let ((many ty)) $ res-ty $ first-res _ _ ress lock)
+      (match many (final-form env3 ty) _
+        ((None _) (env-error env3 $ str-cat "a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`; this one is " $ qshow env3 ty))
+        ((Some _ _) (env-run-final env3 (hoisted-code _ many-one h) ty))))))

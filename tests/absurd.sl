@@ -1,4 +1,3 @@
-; expect: _
 ; DESIGN.md section 59: an absurd function.
 
 (def-adts $ (Void : -> Type)
@@ -10,4 +9,3 @@
     (many A a))
   f)
 
-explode

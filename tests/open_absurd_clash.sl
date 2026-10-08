@@ -1,4 +1,3 @@
-; expect: _
 ; The contradiction between two opened Matchables that share a constructor but cannot unify is what
 ; open-absurd cashes in (DESIGN.md section 8), here as a whole function body.
 
@@ -9,4 +8,3 @@
     (erased (Matchable enum U (many C)) m2) -> (many (Nat) n))
   (open-adt erased m1)
   (open-absurd m2 _))
-f

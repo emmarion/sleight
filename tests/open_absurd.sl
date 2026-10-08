@@ -1,4 +1,3 @@
-; expect: _
 ; Facts can be held before they explode (DESIGN.md section 8): with m unopened, matching
 ; Refl equates C with D by minting a fact, and open-absurd then cashes the contradiction in, producing the
 ; branch's declared result from no value. With m opened first, the same branch is refuted structurally.
@@ -21,5 +20,4 @@
   (match erased p (((Nat) r))
     (absurd Refl)))
 
-held
-; warns: tests/open_absurd.sl:21:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
+; warns: tests/open_absurd.sl:20:3: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead

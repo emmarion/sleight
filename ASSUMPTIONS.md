@@ -318,15 +318,6 @@ Everything below that goes further is a guess, and DESIGN.md sections 27
 and 42 still record the consumer of the top-level value and numeric
 literals as open.
 
-47. **The driver runs a final value as a program when its type is an
-    `Fn`, at any level, from one `many (String)` parameter, `subterm` or
-    not, to one `many (String)` return** (`lib/program.ml`): stdin is read whole into a
-    `String`, the function applied, and the result written to stdout
-    verbatim, with no newline added. Any other final value is printed
-    as before, so the existing tests are unchanged. A `; stdin: text`
-    directive in a test supplies the input, its lines joined by
-    newlines with no trailing one.
-
 48. **`String` is an extern enum modelled as a cons list of `Char`**
     (`SNil`, `SCons`), not marked `newtype`. The FFI holds a value as a
     slice of an OCaml string (offset and length); destructing an
@@ -644,8 +635,7 @@ in both modes.
     it reads back from (item 154). Printing the interpreter's own rendering as a string
     literal would have been simpler and exact, but the printer applied to
     the embedded data is what checks the embedding. Limits, honestly: a
-    closure prints as `<function ?>` unless the final value is itself a
-    closure (`tests/absurd.sl`), since OCaml closures carry no name; a
+    closure prints as `<function ?>`, since OCaml closures carry no name; a
     field whose type stays unknown (an existential) prints `?`; an
     untagged union whose index is not forced prints through its first
     candidate constructor. No test hits these.
@@ -661,22 +651,10 @@ in both modes.
     test passes in both modes. What that shows, precisely: since final
     values are embedded, a test printing a plain value checks the
     embedding of data and closures and the printer, while the `String
-    -> String`, `IO` and final-function tests (item 68; the
+    -> String`, `IO` and final-function tests (DESIGN.md section 27; the
     `tests/thunk_*.sl` files cover tagged, untagged, union, extern,
     first-class and nested types, coerce, factory closures and shared
     data) run extracted function bodies over embedded constants.
-68. **A final function from no arguments is applied and its result
-    printed** (the owner's decision, in chat, so that a program can ask
-    for its final value to be computed by code): the driver treats a
-    final value of type `(Fn L -> (many T v))`, no parameters and
-    exactly one `many` return, as such a request, both in the
-    interpreter and extracted, where it is the form whose code runs at
-    startup. A function with erased returns besides the one `many`
-    return, or with erased parameters, is not accepted as this form;
-    whether it should be is open. The result prints as any value of its
-    type does (item 154), so a function from no arguments can no longer
-    be printed as `<function name>`.
-
 ## A second soundness review
 
 69. **Two `def-lvl` levels may unify, and that is left as it was.** A
@@ -3191,11 +3169,6 @@ to look for a guard, are the owner's.
     Phantom/absurd bodies bypass both usage and multiplicity-promotion checks,
     as their runtime expressions are erased.
 
-159. The top-level driver's implicit calls of a final thunk or String-to-String
-    function use an adapter when its result has an `at` promise. This is intended
-    to give those calls the same physical-return reconstruction as an explicit
-    source call, including calls from the extracted driver's code.
-
 160. The Matchable former accepts its marks between its discriminant and type
     name: `(Matchable enum newtype extern T ...)`, with either mark optional
     and their order immaterial, following def-adts' mark order. Both flags are
@@ -3571,25 +3544,6 @@ without the owner.
     with the cell binder every pattern then needs (section 23). The comment above
     the prelude's `IO` says as much in one sentence.
 
-186. **The driver takes an `IO` value at unique.** Section 27 leaves what
-    consumes the top level's result unsettled, and the final expression
-    was elaborated at `many`; a unique request there would want a
-    `share`, which is exactly what must be refused, a shared request's
-    continuations being dead (`tests/io_shared_final_bad.sl`). So the
-    final expression is elaborated under a third demand beside `Fixed`
-    and `CallableHead` (`Elab.Driver`, `self/elab.sl`'s `FinalDemand`)
-    that takes a value of the prelude's `IO` type at `unique` and
-    anything else at `many`, decided by the type as a callable head's
-    multiplicity is: through the atom, constructor application, `values`
-    and `match` cases, so a top-level `match` producing a request builds
-    it at unique. A `many` `IO` value at the top level is refused as a
-    many value used at unique. The reading behind it is that the driver
-    is the one consumer of a program's `IO` value and applies each
-    continuation once, so it stands where a unique use stands. The
-    `Thunk` final accepts a `unique` return beside a `many` one, its
-    result being read once and printed. Whether section 27 should say
-    this is the owner's; nothing in DESIGN.md or UNIQUE.md was changed.
-
 187. **A run may update a Const the extractor then embeds.**
     `test/runtest.ml` ran the interpreter's final and extracted from the
     environment afterwards. With a continuation owning a top-level unique
@@ -3613,9 +3567,8 @@ without the owner.
     `apply` under the usual fuel, and walks the request that comes back;
     `Exit` exits slc with the code. A plain value and a thunk's result
     print through the compile-time printer (154), a `String -> String`
-    function is applied to what `ReadRemaining` answers, and an `at`
-    return is read from the argument or the captured Const as
-    `adapt_final` does (159). The interpreted program's arguments follow
+    function is applied to what `ReadRemaining` answers. The interpreted
+    program's arguments follow
     a `--` among slc's own; its environment, working directory and stdin
     are slc's. Two shapes the checker imposed: walking a request and
     applying its continuation cannot be two functions at one level

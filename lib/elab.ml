@@ -2152,6 +2152,18 @@ let hoist_at env (l, lit) =
   if prelude_id env ty = None then error l "%s needs the prelude's %s, which `--no-prelude` leaves out" what (tick ty);
   hoist env lit
 
+type final = Main | Io | Thunk of term | Plain
+
+let final_form env ty =
+  let bare string e = match e with { mult = Many; sg = Ty t; place = None; subterm = false; _ } -> (not string) || nullary env "String" t | _ -> false in
+  match canon env ty with
+  | Fn (_, [ p ], [ r ]) when bare true p && bare true r -> Some Main
+  | Fn (_, [], [ ({ sg = Ty t; _ } as r) ]) when bare false r -> Some (Thunk t)
+  | Fn _ | UniqueFn _ -> None
+  | _ -> Some (if nullary env "IO" ty then Io else Plain)
+
+let final env ty = Option.value (final_form env ty) ~default:Plain
+
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env = function
     | [] -> env
@@ -2163,7 +2175,10 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
               if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
               let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
-              let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
+              let ty = (single (loc item) ress).ty in
+              if final_form env ty = None then
+                error_in env (loc item) "a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`; this one is %s" (qshow env ty);
+              let v = List.hd (run_code env code) in
               trace := Final (v, ty, path) :: !trace;
               consume env ty v;
               env)

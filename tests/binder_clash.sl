@@ -1,4 +1,3 @@
-; expect: _
 ; ASSUMPTIONS 73: a constructor's index mentions its own Fn binder where the scrutinee's has a closed variable, so the branch is refuted.
 
 (def-lvl L)
@@ -21,6 +20,5 @@
     (match many t (((Nat) r))
       (absurd MkTagU))))
 
-probe
-; warns: tests/binder_clash.sl:17:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
-; warns: tests/binder_clash.sl:21:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
+; warns: tests/binder_clash.sl:16:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
+; warns: tests/binder_clash.sl:20:5: warning: a non-erased `match` with no non-absurd branch compiles to a runtime `absurd`; mark the enclosing branch or function `absurd` instead
