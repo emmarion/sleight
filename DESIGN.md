@@ -1272,8 +1272,10 @@ the expected type (§50).
 8. `(delegate-of g)`: for a function `g` whose body is a `delegate`
    call to `f` (§19), the `Delegate` proof that `def-fns` created
    anonymously. It is fetched from the ambient scope by naming `g`,
-   resolved through its aliases (§19). `g` is `Dyn` within its own
-   block (§29), so its body cannot use its own proof.
+   resolved through its aliases (§19). It is in scope in the signatures
+   of the block that follow that of `g`, in every body of the block,
+   that of `g` included, and after the block, as the names the block
+   defines are.
 
 **Representation.** Coercion is free only if the representations
 coincide, so the following is a requirement on the implementation.
