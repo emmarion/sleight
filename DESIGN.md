@@ -1494,9 +1494,10 @@ its non-erased argument.
 fresh cell at unique, at no slot, with every slot `vacant-slot` (§35).
 `(cell-alloc (C i1 ... in))` lists every non-erased field; each item is
 a `(Slot)` expression at many, or `_` for `vacant-slot`. A partial list
-is not allowed. A destructure at `many` or `unique` yields, through its
-cell binder (§23), the cell the constructor occupied, at the scrutinee,
-with each slot `(slot-of g)` for the field binder `g`.
+is not allowed. A destructure in any mode yields, through its cell
+binder (§23), the cell the constructor occupied, at the scrutinee, with
+each slot `(slot-of g)` for the binder `g` of a field whose label is
+non-erased.
 
 **Writing.** `(cell-write m u (C i1 ... in))` is an expression. `m`,
 `many` or `unique`, is the multiplicity the cell is taken at, as a
