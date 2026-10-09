@@ -3830,12 +3830,18 @@
 (def-fns _ $ (many here-pos : (many (Env) env) -> (many (Pos) p))
   (match many (env-loc env) _ ((MkLoc _ p) p)))
 
+(def-fns _ $ (many lower-level-hint : (many (Env) env) (many (Res) callee) -> (many (String) s))
+  (let-match many (env-enclosing env) (Some _ g) ((None _) ""))
+  (match many (equal-env env (res-term callee) $ TVar g) _
+    ((BTrue) "")
+    ((BFalse) (str-cat3 "\nhint: a call to a strictly lower level needs no decreasing argument; consider defining " (qshow env $ res-term callee) " at a lower level"))))
+
 (def-fns _ $ (many resolve-ann : (many (Env) env) (erased (List $ Raw) root) (many (Ann root) ann) (many (Res) callee) (many (Bool) same) (many (List $ Nat) positions) (many (List $ Term) args) -> (many (Env) r) (many (Ann root) a))
   (let-match many ann (AnnNone _) (else (values env ann)))
   (let-match many same (BTrue) ((BFalse) (values env $ AnnPredates _ (here-pos env) $ Inferred _)))
   (match many (first-differing positions env args 0) _
     ((Some _ i) (values env $ AnnSubterm _ (here-pos env) i $ Inferred _))
-    ((None _) (values (env-error env $ str-cat3 "same-level call to " (qshow env $ res-term callee) " decreases no subterm argument") $ AnnNone _))))
+    ((None _) (values (env-error env $ str-cat3 "same-level call to " (qshow env $ res-term callee) $ str-cat " decreases no subterm argument" $ lower-level-hint env callee) $ AnnNone _))))
 
 (def-fns _ $ (many index-of-nat : (subterm many (List $ Nat) xs) (many (Nat) x) (many (Nat) i) -> (many (Maybe $ Nat) r))
   (let-match many xs (Cons _ y rest)

@@ -1063,7 +1063,10 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
     | At cur when same cur -> (
         match List.find_opt (fun (j, pi) -> differs j pi) (List.mapi (fun j pi -> (j, pi)) subterm_params) with
         | Some (_, i) -> Some (`Subterm (i, wild))
-        | None -> error l "same-level call to %s decreases no subterm argument" (qshow env callee.term))
+        | None ->
+            let self = match env.enclosing with Some g -> equal (canon env callee.term) (canon env (Var g)) | None -> false in
+            let hint = if self then None else Some (Printf.sprintf "a call to a strictly lower level needs no decreasing argument; consider defining %s at a lower level" (qshow env callee.term)) in
+            error_with ?hint l [] "same-level call to %s decreases no subterm argument" (qshow env callee.term))
     | At _ -> Some (`Predates wild)
     | Top -> None
   in
