@@ -159,7 +159,7 @@ let check what env loc actual expected = ignore (solve what env loc actual expec
 let check_type = check "type" and check_equal = check "value"
 let under pos m = if pos = Erased then Erased else m
 let written ?(noun = "") env pos l what m =
-  if pos = Erased && m <> Erased then error_in env l "%s %s%s in an erased position is written `erased`" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun else m
+  if pos = Erased && m <> Erased then error_in env l "%s %s%s written `%s` in an erased position; write `erased` here" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun (mult_name m) else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 

@@ -814,7 +814,9 @@
   (match many (env-usage-erased env) _ ((BTrue) (Erased)) ((BFalse) (Many))))
 
 (def-fns _ $ (many written : (many (Env) env) (many (Mult) pos) (many (Mult) m) (many (String) what) -> (many (Env) r))
-  (refuse-when env (and (not $ mult-is-many pos) $ mult-is-many m) $ str-cat what " in an erased position is written `erased`"))
+  (match many (and (not $ mult-is-many pos) $ mult-is-many m) _
+    ((BTrue) (env-error env $ say env $ str-cat3 what " written `" $ str-cat (mult-name m) "` in an erased position; write `erased` here"))
+    ((BFalse) env)))
 
 ; ---- Literals (ASSUMPTIONS 51-53, 60): numerals, characters and strings, interned per program
 
