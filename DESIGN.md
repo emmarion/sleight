@@ -453,9 +453,9 @@ These are the **erased positions**:
   multiplicity of its own binder;
 - the scrutinee of an `erased` match;
 - the proof argument of a `coerce`; every argument of a `coercible-*`
-  form, of `prove-subterm`, of `prove-predates` and of the three
-  axioms; and the proof inside `(subterm p)` and `(predates p)` (§18,
-  §19, §33);
+  form, of `prove-subterm`, of `prove-predates`, of `prove-literal-lt`
+  and of the three axioms; and the proof inside `(subterm p)` and
+  `(predates p)` (§18, §19, §33, §45);
 - the body of an absurd-by-proof branch and the body of an `absurd`
   function (§21, §25);
 - every sub-expression of an erased expression.
@@ -2059,14 +2059,13 @@ and checked as if it had been written. A same-level call whose
 counterparts is an error. At the top level a bare call is what §20
 describes, and a written annotation is an error.
 
-## 49. `unary` and `distinct`
+## 49. `unary`
 
-Both forms reason about a numeral through the prelude's `Numeral`
-relation (§45) rather than about its opaque `Nat`. Both elaborate into
+`unary` reasons about a numeral through the prelude's `Numeral`
+relation (§45) rather than about its opaque `Nat`. It elaborates into
 ordinary calls on prelude lemmas, in the prelude's scope, so that no
-shadowing reaches them. Neither carries meaning of its own. Either
-takes a numeral or a character literal; a character stands for its
-code.
+shadowing reaches them, and carries no meaning of its own. It takes a
+numeral or a character literal; a character stands for its code.
 
 `(unary a b)` is a statement. `b` must be below `a`. It creates one
 rule, `a is (Succ ... b)` with as many successors as separate the two.
@@ -2080,14 +2079,6 @@ mentioned by the rule and stay opaque: `(unary 5 3)` says
 4096. What the rule buys is a literal that can be used where a `Succ`
 shape is wanted: to peel a `Vec`, or, with a `unary` for each literal
 down to zero, to stand as the length of a `Vec`.
-
-`(distinct a b)` is an expression. In a context that has equated the
-two literals, it yields an erased `(False)`, by a vacuous match on the
-`Eq` from `numeral-inj` between their spellings: a `Nat` has one
-bijective base-2 spelling, so two spellings for one `Nat` conflict
-through the `Matchable` of `Bin`. Its cost depends on the depth of the
-spellings, not on the difference between the numbers. Outside such a
-context, or on two equal literals, it is an error.
 
 ## 50. `_` for an inferred argument
 
@@ -2229,7 +2220,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   before the decreasing argument, so it has more items than the
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
-  `cell-match` (§37, §38), `open-absurd` (§8), `distinct` (§49).
+  `cell-match` (§37, §38), `open-absurd` (§8).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2240,6 +2231,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).
+- `prove-literal-lt` (§45).
 
 **Fetch forms**, which may also be written inside a type or `is`
 expression (§53):
