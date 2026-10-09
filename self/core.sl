@@ -2167,7 +2167,7 @@
   ((Use : -> Type) enum (many UseShared : (many (Loc) loc) -> (Use)) (many UseConsumed : (many (Loc) loc) -> (Use)))
   ((Uses : -> Type) enum (many MkUses : (many (IdMap $ Use) map) (many (List $ Nat) dirty) -> (Uses)))
   ((Warned : -> Type) enum (many MkWarned : (many (Nat) id) (many (Loc) site) (many (String) msg) -> (Warned)))
-  ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) -> (Pragmas)))
+  ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) (many (Bool) unwarned) -> (Pragmas)))
   ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (String) name) (many (Loc) here) -> (Said)))
   ((UniqueState : -> Type) enum
     (many MkUniqueState : (many (Bool) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
@@ -2178,7 +2178,7 @@
   enum
   (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) -> (LitEntry)))
 
-(let ((many unique-empty)) (MkUniqueState (BFalse) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _)) (MEmpty _) (BFalse)))
+(let ((many unique-empty)) (MkUniqueState (BFalse) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _) (BFalse)) (MEmpty _) (BFalse)))
 
 (def-adts $ (Scope : -> Type)
   enum
@@ -2746,13 +2746,17 @@
 (def-fns _ $ (many env-set-pragmas : (many (Env) env) (many (Pragmas) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState ct uses captures ue ie sig words temp _ al ex) (env-set-unique env (MkUniqueState ct uses captures ue ie sig words temp x al ex)))))
 (def-fns _ $ (many env-warned : (many (Env) env) -> (many (List $ Warned) r))
-  (match many (env-pragmas env) _ ((MkPragmas ws _) ws)))
+  (match many (env-pragmas env) _ ((MkPragmas ws _ _) ws)))
 (def-fns _ $ (many env-set-warned : (many (Env) env) (many (List $ Warned) x) -> (many (Env) r))
-  (match many (env-pragmas env) _ ((MkPragmas _ rs) (env-set-pragmas env $ MkPragmas x rs))))
+  (match many (env-pragmas env) _ ((MkPragmas _ rs si) (env-set-pragmas env $ MkPragmas x rs si))))
 (def-fns _ $ (many env-regions : (many (Env) env) -> (many (List $ Region) r))
-  (match many (env-pragmas env) _ ((MkPragmas _ rs) rs)))
+  (match many (env-pragmas env) _ ((MkPragmas _ rs _) rs)))
 (def-fns _ $ (many env-set-regions : (many (Env) env) (many (List $ Region) x) -> (many (Env) r))
-  (match many (env-pragmas env) _ ((MkPragmas ws _) (env-set-pragmas env $ MkPragmas ws x))))
+  (match many (env-pragmas env) _ ((MkPragmas ws _ si) (env-set-pragmas env $ MkPragmas ws x si))))
+(def-fns _ $ (many env-unwarned : (many (Env) env) -> (many (Bool) r))
+  (match many (env-pragmas env) _ ((MkPragmas _ _ si) si)))
+(def-fns _ $ (many env-set-unwarned : (many (Env) env) (many (Bool) x) -> (many (Env) r))
+  (match many (env-pragmas env) _ ((MkPragmas ws rs _) (env-set-pragmas env $ MkPragmas ws rs x))))
 
 (def-fns _ $ (many entry-word : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (list-mem-bin (env-words env) x))

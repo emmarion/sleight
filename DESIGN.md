@@ -111,16 +111,19 @@ type position:
 
 ## 4. User-defined warnings
 
-A pragma line `;! warn NAME message` names a type constructor or value
-constructor that is in scope, resolved through its aliases, and gives a
+A pragma line `;! warn NAME message` names a type constructor, a value
+constructor or a function, meaning an entry of `Fn` or `UniqueFn`
+type, that is in scope, resolved through its aliases, and gives a
 message. After it, every non-erased application of that constructor
 warns with the message, and so does every non-erased `match`,
-`let-match` or `comptime-match` on that type. Each warning carries a
-note pointing at the pragma. No warning is given inside the body of an
-`extern` function. A `;! warn` must be written between top-level
-forms. It is an error to write a second `;! warn` for the same name, to
-name something not in scope or not a constructor, or to omit the
-message.
+`let-match` or `comptime-match` on that type, and every non-erased call
+of that function. Each warning carries a note pointing at the pragma.
+No warning is given inside the body of an `extern` function or an
+at-function (§39), or inside a branch of an at-match (§40), and none is
+given for an at-match itself or for a skipped call (§39). A `;! warn`
+must be written between top-level forms. It is an error to write a
+second `;! warn` for the same name, to name something not in scope or
+neither a constructor nor a function, or to omit the message.
 
 `;! suppress warn NAME` silences these warnings for `NAME` until the
 matching `;! restore warn NAME`, or to the end of the file if there is
