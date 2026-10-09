@@ -85,11 +85,16 @@ references are to DESIGN.md.
     implemented.
 17. Should there be a runtime comparison of two slots that answers with
     evidence when they are equal (`slot-eq`), with a compiler free to
-    always answer that they differ?
+    always answer that they differ? The owner's tentative view is that
+    the unequal answer should carry no evidence: a refutation would be
+    false wherever a compiler answered that two equal slots differ.
 19. Should the function in an `(at (f ...))` call be allowed to be
     erased, as a `Coercible` proof is?
 20. What becomes of `coerce`, `Coercible`, the `coercible-*` forms and
     `Delegate` once the `at` system can express what they express?
+    The owner's tentative direction is for the `at` system to subsume
+    them in stages, deleting them if that works out, with the prelude
+    gaining further `extern at` functions over arrays.
     Should a `Cell` for the constructor of an extern type exist outside
     the body of an extern function (§43)?
 21. Should `tail`, `notail` or `delegate` on a skipped at-function call
