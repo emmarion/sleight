@@ -6,7 +6,8 @@ progress matters more than finishing in this one.
 
 To check your work, compile in order: heapsort-fast/spec.sl, your files,
 heapsort-fast/accept.sl, then heapsort-fast/perf.sl. The finished solution must
-compile with no warnings; intermediate work may have them. A solution is not
+compile with no warnings, and none of the files in work/files.txt may contain
+a `;! suppress`; intermediate work may have both. A solution is not
 finished while the sort allocates, any array write could be an `-imm` one, any
 runtime arithmetic could be a `u62-*` call, or any runtime recursion could be a
 tail call, even if measurements show no gain.
