@@ -375,6 +375,7 @@
     ((MulSucc q1 c1 k1 k2 mm1 p1)
       (LtS q1 k (lt-le-trans q1 (Succ k1) k (mul-le q1 c k1 mm1 pos) (LtS k1 k (add-pos-lt k1 c k p1 pos)))))))
 
+; Fast arithmetic: Nat is a bignum, but the u62 primitives take proofs that every value is below 2^62, so each runs as one machine operation instead of bignum code.
 (def-fns _ $ (many extern u62-add : (many (Nat) n) (many (Nat) m)
     (erased (Nat) s) (erased (Add n m s) sum) (erased (Lt s u62-modulus) ps) ->
     (many s is r))

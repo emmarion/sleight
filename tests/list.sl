@@ -29,11 +29,11 @@
 
 (length (Nat) list-xs)
 ; warns: tests/list.sl:12:4: warning: declaration of `List` shadows a previous binder
-; warns: lib/prelude.sl:910:4: note: shadowed binder is here
+; warns: lib/prelude.sl:911:4: note: shadowed binder is here
 ; warns: tests/list.sl:14:5: warning: declaration of `Nil` shadows a previous binder
-; warns: lib/prelude.sl:912:5: note: shadowed binder is here
+; warns: lib/prelude.sl:913:5: note: shadowed binder is here
 ; warns: tests/list.sl:15:48: warning: declaration of `tail` shadows a built-in
 ; warns: tests/list.sl:15:5: warning: declaration of `Cons` shadows a previous binder
-; warns: lib/prelude.sl:913:5: note: shadowed binder is here
+; warns: lib/prelude.sl:914:5: note: shadowed binder is here
 ; warns: tests/list.sl:26:33: warning: unnecessary `(subterm _)`; drop it
 ; warns: tests/list.sl:22:4: warning: lopsided `match`; flatten it with a `let-match` on `Cons`
