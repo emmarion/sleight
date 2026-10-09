@@ -2903,7 +2903,6 @@
     ((BFalse) (values (env-error env $ str-cat (say env "`prove-literal-lt` takes two numerals, got ") $ qraw raw) $ None _))
     ((BTrue) (numeral-entry env raw))))
 
-; prove-literal-lt (DESIGN.md section 49): an erased Lt between two numerals, minted as their own Numeral proofs are.
 (def-fns _ $ (many mint-literal-lt : (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (Maybe $ Res) res))
   (let-match many args (Cons _ araw rest) ((Nil _) (values env $ None _)))
   (let-match many rest (Cons _ braw _) ((Nil _) (values env $ None _)))

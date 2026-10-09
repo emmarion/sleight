@@ -1,6 +1,4 @@
 ; expect: 0
-; prove-literal-lt takes numerals only; a character literal's code is its numeral's entry, so the codes'
-; numerals state the order of two characters, and refute a branch that equates them.
 
 (def-adts ((Tag : ((Char) c) -> Type)
   enum

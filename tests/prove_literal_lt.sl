@@ -1,7 +1,4 @@
 ; expect: 0
-; prove-literal-lt gives an erased Lt between two numerals, whatever the facts in force: here a branch has
-; equated the two, so the proof is an Lt from 3 to itself, which lt-asym refutes. Its proof is asserted,
-; as a numeral's Numeral proof is (ASSUMPTIONS 54 keeps a test's numerals small).
 
 (def-adts ((Tag : ((Nat) n) -> Type)
   enum
