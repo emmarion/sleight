@@ -4,6 +4,8 @@
 (let-match erased (add-fn _ _ _ _ spec-s62a sixty-two-add) (Refl _ _))
 (let ((many u62m) (erased spec-u62m-pow2) (erased _)) (pow2 spec-s62))
 (let-match erased (pow2-fn _ _ _ spec-u62m-pow2 u62-modulus-pow2) (Refl _ _))
+(let ((many spec-u62m-cmp)) (nat-cmp 4611686018427387904 u62m))
+(comptime-match many spec-u62m-cmp (CEq _ _ _))
 
 (def-adts
   ((Le : ((Nat) a) ((Nat) b) -> Type)
@@ -56,3 +58,30 @@
     (many CopiesNil : (erased Type A) -> (Copies A (Nil A) (Nil (Copy A))))
     (many CopiesCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (List (Copy A)) cs)
         (erased (Copies A xs cs) rest) -> (Copies A (Cons A x xs) (Cons (Copy A) (MkCopy A x) cs)))))
+
+;! warn Nat at runtime test a number with `u62-lt-dec` or `u62-cmp`, and step it with `u62-dec`
+;! warn Succ at runtime use `u62-inc` or `u62-add`
+;! warn add use `u62-add`
+;! warn nat-add use `u62-add`
+;! warn double use `u62-add`
+;! warn sub use `u62-sub`
+;! warn mul use `u62-mul`
+;! warn nat-mul use `u62-mul`
+;! warn div use `u62-div`
+;! warn divmod use `u62-divmod`
+;! warn nat-mod use `u62-mod`
+;! warn nat-cmp use `u62-cmp`, or `prove-literal-lt` for a bound between numerals
+;! warn lt-dec use `u62-lt-dec`, or `prove-literal-lt` for a bound between numerals
+;! warn nat-halve use `u62-shr`
+;! warn Half use `u62-shr`
+;! warn HZ use `u62-shr`
+;! warn H1 use `u62-shr`
+;! warn H2 use `u62-shr`
+;! warn shl use `u62-shl`
+;! warn shr use `u62-shr`
+;! warn pow2 use `u62-shl`
+;! warn nat-and use `u62-and`
+;! warn nat-or use `u62-or`
+;! warn nat-xor use `u62-xor`
+;! warn array-place use `array-place-imm`
+;! warn array-swap use `array-swap-imm`

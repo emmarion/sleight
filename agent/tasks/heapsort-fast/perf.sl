@@ -1,14 +1,16 @@
 ; Length of the array to sort.
 (let ((many perf-size)) 1048576)
 
-(let ((many perf-size-cmp)) (nat-cmp perf-size u62m))
-(comptime-match many perf-size-cmp (CLt _ _ _ _ perf-size-fits))
-(let ((many perf-range-cmp)) (nat-cmp 1073741824 u62m))
-(comptime-match many perf-range-cmp (CLt _ _ _ _ perf-range-fits))
-(let ((many perf-range-pos-cmp)) (nat-cmp (Zero) 1073741824))
-(comptime-match many perf-range-pos-cmp (CLt _ _ _ _ perf-range-pos))
-(let ((many perf-zero-cmp)) (lt-dec 0 u8-modulus))
-(comptime-match many perf-zero-cmp (Yes _ _ perf-zero-u8))
+(let ((erased (Lt perf-size u62-modulus) perf-size-fits)) (prove-literal-lt 1048576 4611686018427387904))
+(let ((erased perf-range-fits)) (prove-literal-lt 1073741824 4611686018427387904))
+(unary 0)
+(let ((erased perf-range-pos)) (prove-literal-lt 0 1073741824))
+(let ((erased (Lt 0 u8-modulus) perf-zero-u8)) u8-modulus-pos)
+
+;! suppress warn Nat
+;! suppress warn nat-add
+;! suppress warn nat-mul
+;! suppress warn nat-mod
 
 (def-fns _ $ (many perf-gen : (subterm many (Nat) k) (many (Nat) seed) (erased (Nat) j) (erased (Add k j perf-size) count)
     (erased (List (Nat)) xs) (erased (AllTo (Nat) Lt xs u62-modulus) small) (erased (Length (Nat) xs j) len)

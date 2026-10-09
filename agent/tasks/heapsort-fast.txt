@@ -32,24 +32,26 @@ those two are the only files you can edit; there's no need to edit them, or to
 read FEEDBACK.md, before then, so spend the first phase on the task itself.
 
 Hint: heapsort-fast/perf.sl times the sort alone and reports what it
-allocates. To try another size, copy it to scratch/ and change `perf-size`.
+allocates. To try another size, copy it to scratch/ and change both
+`perf-size` and the numeral that `perf-size-fits` bounds.
 
 Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
 `coerce` in DESIGN.md and `init-witness` in prelude.sl).
 
-Hint: heapsort-fast/hint.sl coerces a `List (Nat)` with an `AllTo` proof
-to `List (U62)` at no cost, and holds `bsearch`, a certified binary search.
-Its `Absent` proof walks the whole list, yet the search runs in O(log n),
-since erased code never runs; to see what is left, compile heapsort-fast/spec.sl,
-heapsort-fast/hint.sl and heapsort-fast/bsearch-demo.sl with the `sl` tool's
-`ocaml` option.
+Hint: heapsort-fast/bsearch-demo.sl coerces a `List (Nat)` with an `AllTo`
+proof to `List (U62)` at no cost, and holds `bsearch`, a certified binary
+search, with a program that times it. It compiles with no warnings. Its
+`Absent` proof walks the whole list, yet the search runs in O(log n), since
+erased code never runs; to see what is left, compile heapsort-fast/spec.sl and
+heapsort-fast/bsearch-demo.sl with the `sl` tool's `ocaml` option.
 
-Hint: spec.sl defines `u62m`, a `many` copy of `u62-modulus`. With it, a bound
-on a concrete number, such as `Lt K u62-modulus`, is proved at compile time in
-two lines (here K = 1048576):
+Hint: spec.sl ties `u62-modulus` to the numeral 4611686018427387904, so a
+bound on a concrete number, such as `Lt K u62-modulus`, is one line (here
+K = 1048576):
 
 ```
-(let ((many c)) (nat-cmp 1048576 u62m))
-(comptime-match many c (CLt _ _ _ _ mib-below-u62))
-(let ((erased (Lt 1048576 u62-modulus) mib-check)) mib-below-u62)
+(let ((erased (Lt 1048576 u62-modulus) mib-below-u62)) (prove-literal-lt 1048576 4611686018427387904))
 ```
+
+Hint: spec.sl's `;! warn` pragmas flag runtime arithmetic that is not a
+`u62-*` call, and array writes that are not `-imm`.
