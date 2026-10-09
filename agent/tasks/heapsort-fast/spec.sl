@@ -59,6 +59,11 @@
     (many CopiesCons : (erased Type A) (erased A x) (erased (List A) xs) (erased (List (Copy A)) cs)
         (erased (Copies A xs cs) rest) -> (Copies A (Cons A x xs) (Cons (Copy A) (MkCopy A x) cs)))))
 
+; These warnings fire only on code that runs. Erased code (proofs, erased
+; arguments and results, the bodies of erased functions) never runs, and thus
+; doesn't trigger these warnings: it may match on Nat, apply Succ and call these
+; functions freely. A top-level `let` runs when the file is compiled, so it does
+; warn.
 ;! warn Nat at runtime test a number with `u62-lt-dec` or `u62-cmp`, and step it with `u62-dec`
 ;! warn Succ at runtime use `u62-inc` or `u62-add`
 ;! warn add use `u62-add`
