@@ -143,6 +143,9 @@ entry has:
 - a **stored value**, present only in state `Const`. For an erased
   entry the stored value is a token that records that the value exists;
   it is not data;
+- a **minted type**, present only in state `Const`: the type the entry
+  had when it became `Const`, which special-form dispatch reads (§6,
+  §29);
 - a **multiplicity** (§13), declared at the binder or fixed by the kind
   of entry (§14);
 - a **level-mint marker**, set on an entry introduced by `def-lvl`
@@ -151,8 +154,8 @@ entry has:
   what a `delegate` may name (§19);
 - an **automatic slot** (§35).
 
-An entry's **type** and its **`is` rule** (§12) are not stored on the
-entry. They are stored in the fact table (§7). Each is a tree whose
+An entry's **type** and its **`is` rule** (§12) are stored in the fact
+table (§7), not on the entry, unlike its minted type. Each is a tree whose
 leaves refer to entries (§9); an `is` tree may refer to its own entry.
 Both depend on the scope: an entry's type may be refined inside a match
 branch and revert when the branch ends.
@@ -181,15 +184,16 @@ the code after it (§29).
 
 A list is elaborated according to its head:
 
-1. If the head's type is a type constructor, a value constructor, an
-   `Fn`, a `UniqueFn` or a `Cell` (§32, §37), the list is an
-   application. This needs no constant-knownness: each of these can be
-   applied through a first-class value.
-2. Otherwise, if the head is `Const`, non-erased and of type
-   `(Special)` (§19), the list is the special form named by the head's
-   stored value. A head written `(share n)`, where `n` is such an
-   entry, is dispatched the same way (§16). An erased `Const` holds only
-   the token of §5 and has no value to dispatch on.
+1. If the head is `Const` and non-erased, and its minted type
+   canonicalizes to `(Special)` against the facts of the innermost
+   enclosing run position (§27), the list is the special form named by
+   the head's stored value. A head written `(share n)`, where `n` is
+   such an entry, is dispatched the same way (§16). An erased `Const`
+   holds only the token of §5 and has no value to dispatch on.
+2. Otherwise, if the head's type is a type constructor, a value
+   constructor, an `Fn`, a `UniqueFn` or a `Cell` (§32, §37), the list
+   is an application. This needs no constant-knownness: each of these
+   can be applied through a first-class value.
 3. Otherwise the list is an error.
 
 ## 7. The fact table and forced unification
@@ -216,7 +220,9 @@ branch-local entry and is still gone after the match. A fact can only
 mention entries that are in scope where it is created, so a fact never
 outlives an entry it mentions. Only run-position statements run at
 compile time (§27, §20), and their match branches are gated like any
-other, so one table is enough. Compile-time effects in unreachable code
+other. Special-form dispatch is decided at compile time anywhere, so
+it reads the table as it stood at the innermost enclosing run position
+(§6). One table is therefore enough. Compile-time effects in unreachable code
 still happen. A fact verified by a `comptime-match` in run position
 holds afterwards, so a later match on the same `Const` finds the
 contradicting branches refuted.
@@ -648,8 +654,8 @@ and types.
 
 **State-forwarding `let`.** A `let` binder takes over the state of the
 right-hand-side entry it corresponds to: `Const` or `Dyn` (§5), the
-stored value if `Const`, and, through an alias rule in the fact table
-(§7), its type and `is` rule. This happens whenever that entry is an
+stored value and minted type if `Const`, and, through an alias rule in
+the fact table (§7), its type and `is` rule. This happens whenever that entry is an
 expression in §9's grammar and so has an entry of its own. It is
 decided per binder: in `(let ((many a) (many b)) (values x y))`, `a`
 takes from `x` and `b` from `y`. A call, a match or a `coerce` forwards
@@ -678,7 +684,9 @@ registry of §54, including the annotation tokens.
 **Macros.** `Macro` is a type with one constructor that holds a
 function from a list of unelaborated terms (`Raw`) to one such term.
 Expansion counts against a global limit. The prototype implements
-neither `Macro` nor `Raw`, so a `Macro` head is an error there.
+neither `Macro` nor `Raw`, so a `Macro` head is an error there. A
+`Macro` head would be dispatched as a special form is (§6), with
+`Macro` in place of `(Special)`.
 
 **Call-site proofs.** How the decrease of §17 is discharged depends on
 the kind of call:
@@ -1065,8 +1073,10 @@ evaluator runs the code, and its binders become `Const` with the
 resulting values (§29). This nests: the right-hand side of a `let` may
 contain statements, and those in run position complete before the
 enclosing `let` does. A file's top level is run position, so calls
-there need no proofs (§20). Nothing under a function body or a match
-branch runs at compile time. The binders of a run-position statement
+there need no proofs (§20). Elaborating code under a function body or
+a match branch never runs it; such code runs at compile time only when
+called from run position, or, once macros exist, inside a macro
+dispatched under §6. The binders of a run-position statement
 declare their multiplicities (§19), which is what allows the statement
 to be stripped and run before the code after it is elaborated.
 
@@ -1127,6 +1137,12 @@ Nothing else creates a `Const`. Inside a function body or a match
 branch, every binding is `Dyn`, including nested definitions. So any
 `Special` or `Macro` that is ever invoked (§6) comes from run position.
 A constructor application over `Const` arguments is `Dyn` (§28).
+
+**The minted type.** At sites 1 and 2, an entry records its type,
+as it is there, as its minted type (§5); at site 3 it takes its
+source's (§19). Special-form dispatch canonicalizes the minted type
+against the facts of the innermost enclosing run position (§6), so a
+later run-position fact refines it and a branch-forced one does not.
 
 **Inspection requires `Const` and non-erased.** A stored value is read
 in three places: head dispatch (§6), the discriminant read of
@@ -1196,7 +1212,7 @@ of that binder at unique, or an erased use. A shared `UniqueFn` can
 therefore be called only erased, and `share` on one leaves a dead
 value. This is what a `unique` binder of `Fn` type cannot express:
 once shared, it could be called repeatedly, running its captured unique
-values again. A head of `UniqueFn` type can be applied in tier 1 of §6, like a
+values again. A head of `UniqueFn` type can be applied in item 2 of §6, like a
 head of `Fn` type; the call uses the head at unique. The level is
 written as on a `def-fns`, and `_` is allowed (§46); the level may be
 shared with ordinary functions. The parameters may be marked `subterm`,
@@ -1543,7 +1559,7 @@ block holding the old words with the written slots replaced, at unique
 and at nothing. So a write whose items are all `_` copies a shared
 block into a unique cell.
 
-**Invocation.** A head of `Cell` type can be applied in tier 1 of §6.
+**Invocation.** A head of `Cell` type can be applied in item 2 of §6.
 `(u a1 ... an)` is a constructor application that creates
 `(C a1 ... an)` at `u`. It uses each argument at the multiplicity of
 its field, as `(C a1 ... an)` would, including erased arguments, which
@@ -2114,7 +2130,7 @@ down to zero, to stand as the length of a `Vec`.
 ## 50. `_` for an inferred argument
 
 **Where `_` may stand.** As an argument that is erased where it stands:
-an erased argument of any application in tier 1 of §6, including a
+an erased argument of any application in item 2 of §6, including a
 cell invocation, or any argument of a call that is in an erased
 position. Also as an argument of `coercible-wrap`, as the `Sharing`
 argument of `coercible-refl`, `coercible-wrap` and `coercible-ctor`
