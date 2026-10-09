@@ -3834,7 +3834,7 @@
   (let-match many (env-enclosing env) (Some _ g) ((None _) ""))
   (match many (equal-env env (res-term callee) $ TVar g) _
     ((BTrue) "")
-    ((BFalse) (str-cat3 "\nhint: a call to a strictly lower level needs no decreasing argument; consider defining " (qshow env $ res-term callee) " at a lower level"))))
+    ((BFalse) (str-cat3 "\nhint: a call to a strictly lower level needs no decreasing argument; consider defining " (qshow env $ res-term callee) $ str-cat3 " at a lower level, or " (qshow env $ TVar g) " at a higher one"))))
 
 (def-fns _ $ (many resolve-ann : (many (Env) env) (erased (List $ Raw) root) (many (Ann root) ann) (many (Res) callee) (many (Bool) same) (many (List $ Nat) positions) (many (List $ Term) args) -> (many (Env) r) (many (Ann root) a))
   (let-match many ann (AnnNone _) (else (values env ann)))
