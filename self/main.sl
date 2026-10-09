@@ -11,7 +11,7 @@
       (WriteErr _ e $ unique-thunk _ _ $ WriteErr _ "\n" $ unique-thunk _ _ $ notail $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
-; source is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
+; source is the prelude, whose scope the generated forms of unary elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (many (Bool) notes) (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r))
   (let-match many srcs (Cons _ ps rest) ((Nil _) env))
   (let-match many ps (MkPair _ _ path src))

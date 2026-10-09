@@ -1957,7 +1957,7 @@
   (let ((many (Bool) numeral)) $ all-digits s)
   (let ((many place)) $ match many (lit-place env t within) (((String) _)) ((None _) "") ((Some _ c) (str-cat " in " $ qshow env c)))
   (let ((many kind)) $ match many numeral (((String) _)) ((BTrue) " is a numeral literal, opaque") ((BFalse) " is a character literal, whose code is opaque"))
-  (let ((many msg)) $ str-cat3 s place $ str-cat kind $ say env " to the checker by default; `unary`, `distinct` or `numeral-of` can expose more")
+  (let ((many msg)) $ str-cat3 s place $ str-cat kind $ say env " to the checker by default; `unary`, `prove-literal-lt` or `numeral-of` can expose more")
   (Cons _ (MkPair _ _ (env-loc env) msg) $ notail $ literal-notes env within rest))
 
 ; Where two canonical terms part: the pairs of subterms at which they first differ.
@@ -2896,6 +2896,28 @@
   (match many (lit-lookup env $ nat-str z) _
     ((None _) (values (env-error env $ str-cat3 "literal " (literal-spelled raw z) " is not in scope") $ None _))
     ((Some _ x) (values env $ Some _ $ MkPair _ _ z x))))
+
+(def-fns _ $ (many literal-lt-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
+  (let ((many (Bool) numeral)) $ match many raw (((Bool) b)) ((RAtom _ s) (match many (classify s) (((Bool) b)) ((LNumeral) (BTrue)) (else (BFalse)))) (else (BFalse)))
+  (match many numeral _
+    ((BFalse) (values (env-error env $ str-cat (say env "`prove-literal-lt` takes two numerals, got ") $ qraw raw) $ None _))
+    ((BTrue) (numeral-entry env raw))))
+
+; prove-literal-lt (DESIGN.md section 49): an erased Lt between two numerals, minted as their own Numeral proofs are.
+(def-fns _ $ (many mint-literal-lt : (many (Env) env) (many (List $ Raw) args) -> (many (Env) r) (many (Maybe $ Res) res))
+  (let-match many args (Cons _ araw rest) ((Nil _) (values env $ None _)))
+  (let-match many rest (Cons _ braw _) ((Nil _) (values env $ None _)))
+  (let ((many env1) (many ea)) $ literal-lt-entry env araw)
+  (let ((many env2) (many eb)) $ literal-lt-entry env1 braw)
+  (let-match many ea (Some _ pa) ((None _) (values env2 $ None _)))
+  (let-match many eb (Some _ pb) ((None _) (values env2 $ None _)))
+  (let-match many pa (MkPair _ _ za xa))
+  (let-match many pb (MkPair _ _ zb xb))
+  (let-match many (nat-lt za zb) (BTrue)
+    ((BFalse) (values (env-error env2 $ str-cat3 (say env2 "`prove-literal-lt`: ") (nat-str za) $ str-cat " is not below " $ nat-str zb) $ None _)))
+  (let ((many env3) (many lt)) $ prelude-id env2 "Lt")
+  (let ((many env4) (many r)) $ mint env3 $ proof-type lt $ Cons _ (TVar xa) $ Cons _ (TVar xb) $ Nil _)
+  (values env4 $ Some _ r))
 
 ; A generated form is read and its literals interned in the prelude's scope, so user shadowing cannot
 ; reach it, and the caller's scope restored after; the level context stays the caller's throughout
@@ -4276,7 +4298,7 @@
 ; Every function recurses on a raw it elaborates: the first subterm parameter is that raw or list, a later
 ; one a structure parsed from it (its entries prove they sit inside it) or a Steps budget spent when a
 ; function hands its whole raw to another.
-; ---- Sugar (DESIGN.md section 49): unary and distinct stand for calls on the prelude's Numeral lemmas, written
+; ---- Sugar (DESIGN.md section 49): unary stands for calls on the prelude's Numeral lemmas, written
 ; down as the reference writes them and elaborated where the form is met. The elaborator's group takes a
 ; budget of such expansions as its first subterm parameter, spent when a generated form is elaborated,
 ; which is what lets that raw be of the elaborator's own making (ASSUMPTIONS 111).
@@ -4342,12 +4364,6 @@
       ((BTrue) (values (gen-nat lo) $ gen-of "Refl" $ Cons _ (gen-of "Nat" $ Nil _) $ Cons _ (gen-nat lo) $ Nil _))))
   (gen-of "let-match" $ Cons _ (gen-atom "erased") $ Cons _ (unary-fold (nat-sub za lo) lo lo floor acc)
     $ Cons _ (gen-of "Refl" $ Cons _ (gen-atom "_") $ Cons _ (gen-atom "_") $ Nil _) $ Nil _))
-
-(def-fns _ $ (many distinct-source : (many (Nat) za) (many (Nat) zb) -> (many (Raw) r))
-  (gen-of "match" $ Cons _ (gen-atom "erased")
-    $ Cons _ (gen-of "numeral-inj" $ Cons _ (bin-text za) $ Cons _ (bin-text zb) $ Cons _ (gen-nat za) $ Cons _ (gen-numeral-of za) $ Cons _ (gen-numeral-of zb) $ Nil _)
-    $ Cons _ (RList (MkPos 1 1) $ Cons _ (RList (MkPos 1 1) $ Cons _ (gen-of "False" $ Nil _) $ Cons _ (gen-atom "f") $ Nil _) $ Nil _)
-    $ Cons _ (gen-of "absurd" $ Cons _ (gen-atom "Refl") $ Nil _) $ Nil _))
 
 
 ; ---- dump-context (ASSUMPTIONS 196, lib/dump.ml)
@@ -4759,7 +4775,11 @@
                       (match many found (((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
                         ((None _) (values env2 (Nil _) $ hoist-none ctx expect $ CError _ expect "numeral-of"))
                         ((Some _ p) (erased-result ctx expect proof-what env2 $ res-of env2 $ term-var p))))
-                    ((ExDistinct) (let ((many env2) (many rs)) $ notail $ elab-distinct sugar args env0 ctx) (values env2 rs $ hoist-none ctx expect $ CErased _ expect))
+                    ((ExProveLiteralLt)
+                      (let ((many env2) (many found)) $ mint-literal-lt env0 args)
+                      (match many found (((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
+                        ((None _) (values env2 (Nil _) $ hoist-none ctx expect $ CError _ expect "prove-literal-lt"))
+                        ((Some _ r) (erased-result ctx expect proof-what env2 r))))
                     ((ExOpenAbsurd)
                       (let-match many args (Cons c eraw more) ((Nil _) (malformed ctx expect env0 sp)))
                       (let-match many more (Cons _ ann more2) ((Nil _) (malformed ctx expect env0 sp)))
@@ -5653,32 +5673,6 @@
     (let ((many gen)) $ unary-source za l floored)
     (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form gen env2) ctx spos "item of a body")
     (values (leave-prelude env2 env3) ctx2 sc))
-
-  ; distinct (DESIGN.md section 49): a match on numeral-inj's Eq, once the two literals are checked to be different
-  ; spellings of one canonical value.
-  ((many elab-distinct : (subterm many (Nat) sugar) (subterm many (List $ Raw) args) (many (Env) env) (many (List $ List $ Nat) ctx) -> (many (Env) r) (many (List $ Res) ress))
-    (let ((many none)) $ Nil $ Res)
-    (let ((many arity-error)) $ env-error env (say env "`distinct` takes two literals"))
-    (let-match many args (Cons _ araw rest) ((Nil _) (values arity-error none)))
-    (let-match many rest (Cons _ braw rest2) ((Nil _) (values arity-error none)))
-    (let-match many rest2 (Nil _) ((Cons _ _ _) (values arity-error none)))
-    (let ((many env1) (many ea)) $ numeral-entry env araw)
-    (let ((many env2) (many eb)) $ numeral-entry env1 braw)
-    (let-match many ea (Some _ pa) ((None _) (values env2 none)))
-    (let-match many eb (Some _ pb) ((None _) (values env2 none)))
-    (let-match many pa (MkPair _ _ za xa))
-    (let-match many pb (MkPair _ _ zb xb))
-    (let ((many refutes-nothing)) $ say env2 "so there is nothing to refute\nhint: `distinct` refutes a context whose facts equate two different literals, typically an `absurd` branch or function body")
-    (match many (nat-cmp za zb) _
-      ((CEq _ _ _) (values (env-error env2 $ str-cat3 (say env2 "`distinct`: ") (literal-spelled araw za) $ str-cat " is the same literal twice, " refutes-nothing) none))
-      (else
-        (let-match many (equal-env env2 (TVar xa) $ TVar xb) (BTrue)
-          ((BFalse) (values (env-error env2 $ str-cat3 (say env2 "`distinct`: ") (literal-spelled araw za) $ str-cat3 " and " (literal-spelled braw zb) $ str-cat " do not canonicalize equally here, " refutes-nothing) none)))
-        (let-match many sugar (Succ k)
-          ((Zero) (values (env-error env2 "internal: a generated form contains sugar") none)))
-        (let ((many gen)) $ distinct-source za zb)
-        (let ((many env3) (many ress) (many code) (erased lock)) $ notail $ elab-expr-demand k gen (generated-form gen env2) ctx erased-one no-tele (CCPlain) (Fixed _))
-        (values (leave-prelude env2 env3) ress))))
 
   ; let (section 19): binders, then the right-hand side; run at once in run position (section 29); an
   ; annotation is a checked redundancy.

@@ -1479,7 +1479,8 @@ what it assumed while doing so.
     (CLAUDE.md rule 12), and §14's erasure list names the form in its
     own bullet, in wording the owner confirmed.
 102. **The `Numeral` lemmas are tests, not prelude additions**
-    (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
+    (`tests/numeral_succ.sl`, and a `distinct` test since replaced by
+    `tests/prove_literal_lt.sl`). Each defines
     its own `Eq`, since the prelude has none and what belongs in the
     prelude is the owner's call. The session's reading is that these
     lemmas make disjointness and the successor step derivable rather
@@ -1497,20 +1498,21 @@ what it assumed while doing so.
     that define their own shadow it without trouble. Elaborating the
     prelude went from about 45ms to about 95ms, which the session judged
     acceptable but did not put to the owner.
-104. **`unary` and `distinct` elaborate to prelude calls, in the
-    prelude's scope** (`Elab.elab_unary`, `Elab.elab_distinct`,
-    `Elab.in_prelude`), so user shadowing cannot reach the generated
+104. **`unary` elaborates to prelude calls, in the
+    prelude's scope** (`Elab.elab_unary`, `Elab.in_prelude`), so user shadowing cannot reach the generated
     forms, as with a literal's own expansion (51). The level context
     stays the caller's, so the generated call carries `(predates _)`
     inside a function body and nothing at top level (§20). `unary`
     hoists every literal on the walk, which is why `Elab.hoist` moved
     into the elaborator's recursive group. Its ceiling is 4096 steps,
     a number the session chose and the owner has not confirmed.
-105. **Whether §54 should list a sugar form is open.** `unary` and
-    `distinct` are registered as `Special` variants like any other form,
-    but they carry no meaning of their own and are recorded in DESIGN.md sections 46 to 53,
+105. **Whether §54 should list a sugar form is open.** `unary` is
+    registered as a `Special` variant like any other form,
+    but it carries no meaning of their own and are recorded in DESIGN.md sections 46 to 53,
     which is what that file is for. §54 says it lists every special
-    form; the two readings are not reconciled here.
+    form; the two readings are not reconciled here. (`distinct`, once the
+    other such form, was replaced by `prove-literal-lt`, which is not
+    sugar.)
 
 106. **`unary` mints one rule, not one per step.** At the owner's
     direction `(unary a b)` relates `a` to `b` under `a - b` successors
@@ -1548,7 +1550,7 @@ what it assumed while doing so.
     directions out).
 
 108. **"Mint" in these notes means a fact or entry reaching the tables,
-    not a claim about who checked it.** For `unary` and `distinct`
+    not a claim about who checked it.** For `unary`
     nothing is asserted: the elaborator writes down terms — a `Bin`
     spelling, a `BinSucc` witness, a call — and the refinement reaches
     §7's table through the same `refine` an ordinary match branch uses.
@@ -1597,8 +1599,8 @@ request ("update the self hosted SL on SL to match"). What follows is
 how it read them into the compiler; `self/bootstrap.sh` is the check, and
 none of it is design.
 
-111. **`unary` and `distinct` are expanded where the form is reached, on
-    a budget.** `elab-unary` and `elab-distinct` make the reference's
+111. **`unary` is expanded where the form is reached, on
+    a budget.** `elab-unary` makes the reference's
     checks in its order, with its messages, then write the same source
     text by the same fold and elaborate it in the prelude's scope (a
     `prelude` field the `Env` gained, set by `self/main.sl` after the
@@ -1616,7 +1618,7 @@ none of it is design.
     contains none. A first version instead expanded the sugar by a pass
     over the top-level form, reading heads by name; the owner asked for
     the reference's behaviour, under which a function shadowing
-    `distinct` or a `let` aliasing `unary` resolves as any other head
+    `unary` or a `let` aliasing it resolves as any other head
     does, and the session checked both against the reference. The
     session's reading is that the derivation reaching `refine` (108) is
     the reference's own. `let-match` is ported as the reference has it,
@@ -2047,7 +2049,7 @@ had noted that an `SCons` copies its tail, so building a string by
      `elab-body`'s `absurd` flag went with it: its two absurd sites apply
      `check-empty` to the returned results themselves, which the
      session reads as the same environment the flag acted on. `unary`
-     and `distinct` build their generated forms as `Raw` values
+     builds its generated forms as `Raw` values
      (`gen-of`, `bin-raw`) instead of text read back by the reader, so
      the "internal: a generated form does not read" error is gone by
      construction; the forms are the same s-expressions as before, at
@@ -2272,8 +2274,7 @@ had noted that an `SCons` copies its tail, so building a string by
      expectation is always projected onto it, `needs-projection` being
      gone: the normalizer already turns a projection that repackages
      the call's returns in order back into the call, so a body's code
-     is as before, and only run-position code carries the let. A
-     `distinct` returns no code, its value being erased. The session's
+     is as before, and only run-position code carries the let. The session's
      reading is that no message changes; `self/bootstrap.sh` is the
      evidence.
 
@@ -3703,9 +3704,8 @@ without the owner.
     extracted program having none to carry. A string literal is placed
     at its opening quote, its line its own rather than the line it
     closes on, so that a position is always the start of the token it
-    names. The reference reads a form generated by a literal, `unary`
-    or `distinct` under the pseudo-file `<literal>`, `<unary>` or
-    `<distinct>`, the lines being the generated text's; `slc` builds
+    names. The reference reads a form generated by a literal or `unary`
+    under the pseudo-file `<literal>` or `<unary>`, the lines being the generated text's; `slc` builds
     those forms rather than reading them back and leaves the file as
     it stands, so the two differ on an error inside one, which is an
     internal error either way.
@@ -3880,8 +3880,8 @@ session's, made without the owner.
     at the size of the form being elaborated, its count of atoms and
     lists, in place of one; the session's reading is that no chain of
     expansions can outrun it, each one being spent on a distinct
-    `let-match`, `unary` or `distinct` in that form, and the generated
-    forms of the latter two containing no sugar. The zero case stays an
+    `let-match` or `unary` in that form, and the generated
+    forms of the latter containing no sugar. The zero case stays an
     internal error.
 
 ## Confining file requests (section 27)

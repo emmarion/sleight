@@ -100,3 +100,22 @@ references are to DESIGN.md.
     written (§6). Is that what §6 and §28 mean, and should the
     scrutinee, `cell-match` and slot-named temporaries be statements
     too, and so `Const` in run position?
+
+## Literal proofs
+
+28. Should `prove-literal-lt` derive its `Lt` rather than assert
+    it, through the bijective base-2 spellings of its two numerals? The
+    idea is an order relation on `Bin` and a lemma, appended to the end
+    of `lib/prelude.sl`, from that relation and the two literals'
+    `Numeral` proofs to the `Lt`, at a cost that would seem to grow
+    with the spellings' depth rather than with the numbers. Should a
+    character literal's bound (§45), asserted today, then be derived the
+    same way, from `(prove-literal-lt c 256)`, `c` its code, carried along an
+    erased `(Eq (Nat) u8-modulus 256)` proved once at the end of the
+    prelude? A session sketched that `Eq` from `u8-modulus-pow2` and
+    the `Numeral` proof of `256` (eight `PS` steps over `DS`, then
+    `pow2-fn`) and the checker accepted it; that proof's unfolding
+    would need a place whose facts cannot escape, so that `256` stays
+    opaque, and it is not known whether the prelude can hold a literal.
+    Open as well: one proof for `256` or a general lemma for spellings
+    of a power of two.

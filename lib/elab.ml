@@ -117,7 +117,7 @@ let literal_notes env l ~within hit =
   let note (lit, t) =
     let place = List.find_opt (fun c -> is_strict_subterm t (canon env c)) within in
     let kind, opaque = match lit with Literal.Char _ -> ("character", "whose code is opaque") | _ -> ("numeral", "opaque") in
-    (l, sprintf_in env "%s%s is a %s literal, %s to the checker by default; `unary`, `distinct` or `numeral-of` can expose more"
+    (l, sprintf_in env "%s%s is a %s literal, %s to the checker by default; `unary`, `prove-literal-lt` or `numeral-of` can expose more"
           (Literal.spell lit) (match place with Some c -> " in " ^ qshow env c | None -> "") kind opaque)
   in
   List.map note hits
@@ -1262,7 +1262,13 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
-  | Sp.Distinct, [ a; b ] -> elab_distinct env l a b
+  | Sp.ProveLiteralLt, [ a; b ] ->
+      let numeral raw = match raw with
+        | Reader.Atom (_, s) when (match Literal.classify s with `Lit (Literal.Numeral _) -> true | _ -> false) -> numeral_entry env l raw
+        | _ -> error_in env l "`prove-literal-lt` takes two numerals, got %s" (tick (Reader.show raw)) in
+      let za, xa, sa = numeral a and zb, xb, sb = numeral b in
+      if Z.geq za zb then error_in env l "`prove-literal-lt`: %s is not below %s" sa sb;
+      mint env (papp env "Lt" [ Var xa; Var xb ])
   | Sp.LevelOf, _ -> let env, lv = fetched env l sp args in erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
   | Sp.ProveSubterm, [ a; b ] ->
       let env, a = elab_term env a in
@@ -1825,7 +1831,7 @@ and hoist env lit =
     in
     { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 
-(* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
+(* [unary] elaborates to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
 and elab_unary spos env l args =
   let a, rest = match args with a :: ([] | [ _ ] as rest) -> (a, rest) | _ -> error_in env l "`unary` takes one or two literals" in
@@ -1860,24 +1866,6 @@ and elab_unary spos env l args =
   in
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
   in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse "<unary>" src)))
-
-and elab_distinct env l a b =
-  let za, xa, sa = numeral_entry env l a and zb, xb, sb = numeral_entry env l b in
-  let refutes_nothing = respell env "so there is nothing to refute\nhint: `distinct` refutes a context whose facts equate two different literals, typically an `absurd` branch or function body" in
-  if Z.equal za zb then error_in env l "`distinct`: %s is the same literal twice, %s" sa refutes_nothing;
-  if not (equal (canon env (Var xa)) (canon env (Var xb))) then
-    error_in env l "`distinct`: %s and %s do not canonicalize equally here, %s" sa sb refutes_nothing;
-  let src =
-    Printf.sprintf "(match erased (numeral-inj %s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
-      (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
-  in
-  let raw = match Reader.parse "<distinct>" src with [ r ] -> r | _ -> assert false in
-  let env, (ress, code) =
-    in_prelude env (fun env ->
-        let env, ress, code = elab_expr env [ Erased ] raw in
-        (env, (ress, code)))
-  in
-  (env, ress, code)
 
 and elab_let_match spos env l args =
   match args with
