@@ -128,7 +128,9 @@
   (let ((erased a2) (many blk)) $ env-block env x)
   (let-match many blk (Some _ b2) ((None _) (None _)))
   (let-match many b2 (BTag _ ct _) (else (None $ Sp)))
-  (let-match many (and (mult-is-many $ entry-mult-of env x) $ equal-env env (type-of env x) special-term) (BTrue)
+  (let ((erased hs) (many s)) $ entry-state env x)
+  (let-match many s (SConst _ _ m) ((SDyn _) (None _)))
+  (let-match many (and (mult-is-many $ entry-mult-of env x) $ term-eq (trusted-type env m) special-term) (BTrue)
     ((BFalse) (None _)))
   (sp-of-index $ ctor-index ct))
 
@@ -4228,7 +4230,7 @@
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "?")))
   (let-match many info (MkEInfo _ _ _ s _ _ _))
-  (let-match many s (SConst _ v) ((SDyn _) (RStr "?")))
+  (let-match many s (SConst _ v _) ((SDyn _) (RStr "?")))
   (let ((many body) (many app)) $ show-at _ hp v 100000 env ty)
   (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body)))
 
@@ -4430,7 +4432,7 @@
     (match many (index-of-bin (env-subterms env) x 0) _
       ((Some _ i) (Cons _ (str-cat3 "subterm parameter " (nat-str $ Succ i) " of the enclosing function") rest))
       ((None _) rest)))
-  (join-strs (Cons _ (mult-name mult) $ Cons _ (match many state (((String) _)) ((SConst _ _) "Const") ((SDyn _) "Dyn")) $ Cons _ (entry-kind env x) rest2) ", "))
+  (join-strs (Cons _ (mult-name mult) $ Cons _ (match many state (((String) _)) ((SConst _ _ _) "Const") ((SDyn _) "Dyn")) $ Cons _ (entry-kind env x) rest2) ", "))
 
 (def-fns _ $ (many unique-status : (many (Env) env) (many (Nat) x) -> (many (List $ String) r))
   (let-match many (mult-is-once $ entry-mult-of env x) (BTrue) ((BFalse) (Nil _)))

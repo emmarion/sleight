@@ -2195,11 +2195,20 @@
   enum
   (many MkEnclosing : (many (Maybe $ Nat) function) (many (List $ Nat) subterms) (many (Maybe $ Sink) sink) (many (Bool) final) -> (Enclosing)))
 
+(def-adts $ (Trusted : -> Type)
+  enum
+  (many TrustHere : -> (Trusted))
+  (many TrustThen : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) -> (Trusted)))
+
+(def-fns _ $ (many trusted-at : (many (Bool) run) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Trusted) rp) -> (many (Trusted) r))
+  (let-match many run (BFalse) ((BTrue) (TrustHere)))
+  (match many rp _ ((TrustHere) (TrustThen _ _ _ tb)) (else rp)))
+
 (def-adts
   ((Env : -> Type)
     enum
     (many MkEnv : (erased (Hist Block) hl) (many (Store Block hl) store) (many (Scope) scope) (many (IdMap $ EInfo hl) entries) (erased (Nat) nfree) (erased (Facts nfree) ffacts) (many (Nat) fresh) (many (Table nfree ffacts fresh) table)
-       (many (Bool) run-pos) (many (List $ Nat) objects)
+       (many (Trusted) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
        (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics)
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) -> (Env)))
@@ -2208,13 +2217,13 @@
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
   ((State : ((Hist Block) l) -> Type)
     enum
-    (many SConst : (erased (Hist Block) l) (many (Ref Block l) v) -> (State l))
+    (many SConst : (erased (Hist Block) l) (many (Ref Block l) v) (many (Nat) minter) -> (State l))
     (many SDyn : (erased (Hist Block) l) -> (State l))))
 
 (def-fns _ $ (erased state-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (State b) s) -> (erased (State c) s2) (erased (Coercible (Shared) (State b) s (Shared) (State c) s2) p))
-  (let-match erased s (SConst _ v) ((SDyn _) (values (SDyn _) (coercible-ctor (Shared) SDyn b c))))
+  (let-match erased s (SConst _ v m) ((SDyn _) (values (SDyn _) (coercible-ctor (Shared) SDyn b c))))
   (let ((erased v2) (erased pv)) (ref-widen _ b c le v))
-  (values (SConst _ v2) (coercible-ctor (Shared) SConst b c pv)))
+  (values (SConst _ v2 m) (coercible-ctor (Shared) SConst b c pv (coercible-refl (Shared) m))))
 
 (def-fns _ $ (erased einfo-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (EInfo b) e) -> (erased (EInfo c) e2) (erased (Coercible (Shared) (EInfo b) e (Shared) (EInfo c) e2) p))
   (let-match erased e (MkEInfo _ n m s mi me site))
@@ -2263,7 +2272,7 @@
   (let ((erased wb0) (erased pb0)) (block-widen _ _ (empty-suffix _ hl) b))
   (let ((erased hl2) (many hp2) (erased sf) (many a)) $ alloc Block _ hp (coerce b pb0))
   (let ((many en2) (many fi2)) $ store-grow _ _ sf en fi)
-  (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a) fi2))
+  (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a x) fi2))
 
 (def-fns _ $ (many env-scope : (many (Env) e) -> (many (Scope) r))
   (match many e _ ((MkEnv _ _ sc _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) sc)))
@@ -2277,7 +2286,13 @@
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table e)
   (match many tb _ ((MkTable n0 f0 _ _ _ _ _ _ _ _ _ _) (values n0 f0))))
 (def-fns _ $ (many env-run-pos : (many (Env) e) -> (many (Bool) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _) rp)))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _))
+  (match many rp _ ((TrustHere) (BTrue)) (else (BFalse))))
+(def-fns _ $ (many trusted-type : (many (Env) e) (many (Nat) x) -> (many (Term) r))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ tb rp _ _ _ _ _ _ _ _ _ _ _ _))
+  (match many rp _
+    ((TrustHere) (type-in _ _ _ tb x))
+    ((TrustThen _ _ _ tb0) (type-in _ _ _ tb0 x))))
 (def-fns _ $ (many env-objects : (many (Env) e) -> (many (List $ Nat) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ ob _ _ _ _ _ _ _ _ _ _ _) ob)))
 (def-fns _ $ (many env-opens : (many (Env) e) -> (many (List $ Opened) r))
@@ -2349,7 +2364,7 @@
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _ _) lt)))
 (def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) f) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi _ _ cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (BFalse) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi _ _ cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (trusted-at (BFalse) _ _ _ tb rp) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa lt lo pr us hn))))
 ; Where a claimed name was bound, which the second claim's note names.
 (def-fns _ $ (many claimed-at : (subterm many (List $ Pair (String) $ Loc) cl) (many (String) name) ->
     (many (Maybe $ Loc) r))
@@ -2373,7 +2388,7 @@
 (def-fns _ $ (many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ _ _ rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ c x rp ob li fi lv st cl wa lt lo pr us hn))))
 (def-fns _ $ (many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb _ ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb x ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ _ tb rp) ob li fi lv st cl wa lt lo pr us hn))))
 (def-fns _ $ (many env-set-literals : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob _ fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob x fi lv st cl wa lt lo pr us hn))))
 (def-fns _ $ (many env-prelude : (many (Env) e) -> (many (Scope) r))
@@ -2603,7 +2618,7 @@
 
 (def-fns _ $ (many is-const : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (let ((erased hs) (many s)) $ entry-state env x)
-  (match many s _ ((SConst _ _) (BTrue)) ((SDyn _) (BFalse))))
+  (match many s _ ((SConst _ _ _) (BTrue)) ((SDyn _) (BFalse))))
 
 (def-fns _ $ (many entry-minted : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (let ((erased hs) (many e)) $ entry env x)
@@ -2664,7 +2679,7 @@
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (values (HEmpty Block) $ None _)))
   (let-match many info (MkEInfo _ _ _ s _ _ _))
-  (let-match many s (SConst _ v) ((SDyn _) (values (HEmpty Block) $ None _)))
+  (let-match many s (SConst _ v _) ((SDyn _) (values (HEmpty Block) $ None _)))
   (let ((erased a) (many b) (erased sf)) (store-read Block _ hp v))
   (values a $ Some _ b))
 
@@ -3137,7 +3152,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (BTrue) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ name) (None _) (BFalse) (Erased) ty rule delegate-id)

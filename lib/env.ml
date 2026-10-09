@@ -88,7 +88,7 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
+type entry = { name : string option; mult : mult; state : state; minted : term; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -123,6 +123,7 @@ type t = {
   subterms : id list;
   enclosing : id option;
   run_pos : bool;
+  trusted : fact IntMap.t;
   values : Value.venv;
   pending : (id * Value.code) list;
   prelude : scope;
@@ -131,7 +132,7 @@ type t = {
 }
 
 let empty =
-  { signature = []; ctor_tele = false; in_extern = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { signature = []; ctor_tele = false; in_extern = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -151,9 +152,13 @@ let anonymous env x =
   | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
   | _ -> marker (if e.meta then '?' else '_') x e.at
 
-let set_state env x state =
+let set_state ?minted env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
-  { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
+  let minted = Option.value minted ~default:(fact env x).ty in
+  { env with entries = IntMap.add x { (entry env x) with state; minted } env.entries; values }
+
+let trusted env = if env.run_pos then env.facts else env.trusted
+let leave_run env = { env with run_pos = false; trusted = trusted env }
 
 
 let lookup env name = StringMap.find_opt name env.scope.named
@@ -390,7 +395,7 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
 (* A meta (a `_` argument's unification variable, DESIGN.md section 50) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
+let bind env ?minted ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
   Option.iter (fun n ->
       if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
       if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
@@ -398,7 +403,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let x = fresh () in
   let slot = fresh () in
-  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = !slot_type; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
   let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
@@ -415,10 +420,10 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary; at; slot } entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; meta; word; temporary; at; slot } entries in
   let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
-  (x, set_state env x state)
+  (x, set_state ?minted env x state)
 
 let covers env prior x =
   IntMap.mem x env.entries && IntMap.mem prior env.entries

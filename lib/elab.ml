@@ -33,7 +33,7 @@ let name_or_anon n = if n = "_" then None else Some n
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
 let special_value env x = match entry env x with
-  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
+  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); minted; _ } when equal (canon { env with facts = trusted env } minted) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
   | _ -> None
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
 
@@ -271,6 +271,7 @@ let newtype_of env c =
 
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (qname env c)
 let const env v = if env.run_pos then Const v else Dyn
+let forwarded env r = match r.term with Var y -> let e = entry env y in (e.state, Some e.minted) | _ -> (Dyn, None)
 let ctor_var env loc = named env loc "a constructor"
 let proof_type ctor args = App (Var ctor, args)
 
@@ -1017,8 +1018,8 @@ and elab_head env pos l raw =
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
-      let state = if env.run_pos && pos <> Erased then Const (List.hd (Eval.eval env.values code)) else match r.term with Var x -> (entry env x).state | _ -> Dyn in
-      let x,env = bind env ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
+      let state, minted = if env.run_pos && pos <> Erased then (Const (List.hd (Eval.eval env.values code)), None) else forwarded env r in
+      let x,env = bind env ?minted ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
       (placed env x r.place,res_of env x,V.CVar x)
 
@@ -1432,7 +1433,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None mode Dyn r.ty ~rule:r.term in
       let env = placed env sid r.place in
-      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) { env with run_pos = false } (List.filteri (fun i _ -> i < ct.arity) names) in
+      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) (leave_run env) (List.filteri (fun i _ -> i < ct.arity) names) in
       let envb = merge_opens (unify_force (forcing envb) (Cell (Var c,List.map (fun x -> Var x) ids)) (Cell (Var c,slots))) in
       let envb, back = if mode <> Unique then (envb, None) else
         let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
@@ -1484,7 +1485,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         let phantom = marker env bl tid ctors c = Erased in
         let tele, ret = ctor_type env bl c in
         let mults = mults_of bl c in
-        let envb, fids = open_tele { env with run_pos = false } ~names:(names tele) ~ats:(ats tele) ~mults tele in
+        let envb, fids = open_tele (leave_run env) ~names:(names tele) ~ats:(ats tele) ~mults tele in
         (phantom, fids, envb, try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None)
       in
       let branch raw =
@@ -1555,7 +1556,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         | List (el, _) :: _ when refute -> error_in env el "a refuting match has no `else`"
         | [ List (el, _ :: body) ] ->
             if covered = [] then error_in env el "`else` covers no constructor";
-            let envb = { env with run_pos = false; usage_erased = env.usage_erased || reachable = [] } in
+            let envb = { (leave_run env) with usage_erased = env.usage_erased || reachable = [] } in
             let envb, cell, body = match body with
               | Atom (nl, n) :: (_ :: _ as body) when extra ->
                   let x, envb = bind envb ~word:true ~at:nl (name_or_anon n) smult Dyn sres.ty ~rule:sres.term in
@@ -1638,8 +1639,8 @@ and open_binding env l mult raw =
   settle_res inner l r;
   (match canon inner r.ty with Matchable _ -> () | ty -> error_in env l "%s : %s is not a `Matchable`" (qshow inner r.term) (qshow inner ty));
   let value = if env.run_pos && mult <> Erased then List.hd (run_code inner code) else V.VToken in
-  let state = if env.run_pos then Const value else match r.term with Var y -> (entry inner y).state | _ -> Dyn in
-  let x, env' = bind inner ~at:l None mult state r.ty ~rule:r.term in
+  let state, minted = if env.run_pos then (Const value, None) else forwarded inner r in
+  let x, env' = bind inner ?minted ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
 and lets pending code = List.fold_left (fun body (x, rhs) -> V.CLet ([ x ], rhs, body)) code pending
@@ -1789,9 +1790,9 @@ and elab_let spos env l args =
       | None, None -> env
     in
     settle_res env b.s_loc r;
-    let state = if env.run_pos then Const v else match r.term with Var y -> (entry env y).state | _ -> Dyn in
+    let state, minted = if env.run_pos then (Const v, None) else forwarded env r in
     if b.s_place <> None then error_in env b.s_loc "`at` is allowed only on function telescope and match annotation entries";
-    let x, env = bind env ~word:true ~at:b.s_loc (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
+    let x, env = bind env ?minted ~word:true ~at:b.s_loc (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
     (placed env x r.place, x :: ids, r.term :: acc)
   in
   let env', ids, _ =
@@ -1886,7 +1887,7 @@ and elab_let_match spos env l args =
             else
               let tele, ret = ctor_type env l other in
               let mults = List.map (fun e -> if cmult = Erased then Erased else field_under smult e.mult) tele in
-              let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
+              let trial, fids = open_tele (leave_run env) ~names:(anon tele) ~mults tele in
               Option.map (fun trial -> (other, trial)) (try Some (at l (fun () -> refine trial sres other fids ret)) with Contradiction _ -> None))
           ctors
       in
@@ -2008,7 +2009,7 @@ and elab_def_fns ?(unique = false) env l args =
             | _ -> lets)) ([], []) params pids in
           List.fold_left (fun body (x, y) -> V.CLet ([ x ], V.CVar y, body)) body lets in
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
-        let envb = { envb with level = At lvl; subterms; enclosing = Some x; run_pos = false; in_extern = env.in_extern || extern; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
+        let envb = { envb with level = At lvl; subterms; enclosing = Some x; run_pos = false; trusted = trusted env; in_extern = env.in_extern || extern; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
         let envb, code =
           if absurd then (elab_refute envb fl body, V.CAbsurd)
           else
