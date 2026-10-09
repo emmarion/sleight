@@ -2019,8 +2019,9 @@ also interns the numeral of its code.
 proof by its spelling; for a character literal it yields the proof of
 the character's code, and for a string literal or a name it is an
 error. So two spellings equated in a branch refute the branch, and
-`unary` and `distinct` (§49) produce the one rule or refutation that a
-`Succ` shape or a disjointness needs. A character literal is
+`unary` (§49) produces the one rule that a `Succ` shape needs.
+`(prove-literal-lt a b)`, for numerals `a` below `b`, creates
+`(Lt a b)`, asserted as a character's bound is. A character literal is
 transparent down to its opaque `Nat`: its entry carries
 `is (MkChar (MkU8 n p))`, where `n` is the entry of its code's numeral
 and `p` is the erased proof of its bound, asserted rather than decided.
