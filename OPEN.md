@@ -8,8 +8,8 @@ references are to DESIGN.md.
 
 1. Consistency. Is the language sound with `Type : Type` and no
    positivity restriction (§10)? Termination is carried by the level
-   and subterm order (§17), and types never compute (§9). No soundness
-   argument has been written.
+   and subterm order (§17), and types never compute (§9). The owner
+   holds that it is sound. No soundness argument has been written.
 2. Erasure conservativity. Take any program that compiles and collapse
    `unique` to `many`: a `UniqueFn` becomes an `Fn`, every cell
    operation becomes an allocation, `share` and `slot-of` become the
@@ -21,9 +21,14 @@ references are to DESIGN.md.
    names. Does the result still compile and run to the same values? In
    both steps the collapsed multiplicities would stay as inert markers
    that the unification of §7 still compares. Neither step is verified.
+   The second step presupposes the first: collapsing erasure alone
+   would turn an erased mention of a consumed unique value into a
+   second use. The collapsed markers are kept so that every refutation
+   and `open-absurd` of the original program survives.
 3. Slot equality. What must the soundness claim for slots (§35) be,
    and does it hold? In particular, a user type indexed by `(Slot)` can
    make a forcing merge two slots in a branch that is not refuted.
+   The owner believes it is sound.
 4. Facts from stored values. A `comptime-match` trusts the evaluator
    (§29). Should a reference evaluator inside the checker arbitrate
    runs that produce facts, so that a wrong evaluation cannot produce a
@@ -65,12 +70,19 @@ references are to DESIGN.md.
     there?
 15. Should an `else` refine the scrutinee so that it excludes the
     listed constructors?
+27. Should `List` declare `head` and `rest` `unique` (the owner's
+    remark)? A construction at `many` would still take them at `many`,
+    and one at `unique` would own its whole spine.
 
 ## `at`, slots and cells
 
 16. May a `Coercible` be created from two variables that are in one
     slot (`at-coercible`), and under what restriction? As last
-    proposed, it is potentially unsound, and it is not implemented.
+    proposed, the form is a use of both variables, a unique one being
+    given back as a fresh binder `is` and `at` it, so that neither is
+    consumed: a consumed variable's contents may have changed while its
+    slot has not. As proposed it is potentially unsound, and it is not
+    implemented.
 17. Should there be a runtime comparison of two slots that answers with
     evidence when they are equal (`slot-eq`), with a compiler free to
     always answer that they differ?

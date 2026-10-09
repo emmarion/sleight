@@ -5,6 +5,12 @@ questions. README.md describes the implementations and their command
 lines. EXAMPLES.md indexes the tests. The code and the other files cite
 sections of this file by number.
 
+The language has two aims besides its design. It matches the dynamism
+of Kernel, John Shutt's Lisp dialect, while still compiling cleanly
+with static types; the constant-knownness of a head (§6) is what
+reconciles the two. And it supports LLMs writing code in it, which is
+explicitly one purpose of the language and its tooling.
+
 - Syntax: §1 to §4.
 - The scope environment and the fact table: §5 to §8.
 - Types: §9 to §12.
@@ -15,7 +21,7 @@ sections of this file by number.
 - Coercion: §33, §34.
 - Slots, `at` and cells: §35 to §41.
 - The prelude, the FFI and literals: §42 to §45.
-- Sugar: §46 to §53.
+- Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
 - Worked examples: §55 to §61.
 
@@ -255,7 +261,9 @@ Forcing fails, and so refutes the branch, in exactly three cases:
 
 Constructors are first class (§24), so two constructor-valued
 variables are not known to be distinct just because they are
-syntactically distinct. When two constructor-headed terms meet, there
+syntactically distinct. A list of known-disjoint constructors kept in
+the scope environment would not be first class; a `Matchable` is that
+list as first-class data. When two constructor-headed terms meet, there
 is no third, indeterminate outcome: forcing either succeeds and adds
 facts, or contradicts by the rules of §7. Two atoms conflict only when
 one opened `Matchable` lists both, or their signatures cannot unify, or
@@ -293,7 +301,9 @@ be unified become one; the entry kept is the one the elaborator can
 best read, which is a `Const` with the type's own declaration if there
 is one, and otherwise one that is non-erased and still bound. So two
 opened `Matchable`s for one type are never ambiguous: either they are
-one, or they contradict.
+one, or they contradict. The facts this adds are justified by
+`def-adts` being the only place a `Matchable` is created: two that name
+one constructor describe one declaration.
 
 **What requires an open.** The disjointness rule of §7; `match`,
 `let-match` and `comptime-match`; the emptiness check of §25 and §51;
@@ -409,7 +419,8 @@ multiplicity is that of the position.
 Every binder declares a multiplicity: `erased`, `many` or `unique`.
 `erased` is Idris 2's multiplicity 0 and `many` is its ω, written as
 words (§1). There is no default: wherever the multiplicity is a
-choice, it is written.
+choice, it is written, which cuts down on mistakes while the design is
+in flux.
 
 `unique` may be declared on function parameters and return entries,
 constructor fields, `let` binders, and a match's scrutinee (§14). Where
@@ -654,7 +665,8 @@ multiplicity is mandatory and is the binder's declaration (§14). A
 `many` binder needs a non-erased value, a `unique` binder needs a
 unique value (§16), and an `erased` binder accepts anything. If a type
 or `is` clause is written, it is checked for identity against the
-inferred one (§9); a mismatch is an error. A `let` binder may not be
+inferred one (§9); a mismatch is an error. This is deliberately strict
+for now. A `let` binder may not be
 written `at` (§36).
 
 **Special forms as data.** A special form is a nullary constructor of
@@ -1067,7 +1079,7 @@ function body or a match branch, every binding is `Dyn`. Everywhere
 else, in run position (§27), a statement runs as soon as it is
 elaborated and its binders become `Const` (§29). A definition that is
 wanted as `Const` is therefore bound by its own `let` in run position
-(see `xs` in §57).
+(see `xs` in §57). This may be relaxed if it proves heavy.
 
 `(comptime-match m x (C f1 ... fn))` asserts, at elaboration time, that
 the `Const`, non-erased entry `x` holds a value headed by `C`. It is an
@@ -1080,7 +1092,10 @@ one statement confined to run position (§27). The form consults the
 type's `Matchable` (§24) for the discriminant and binds the fields as
 `Const` at their declared multiplicities under `m` (§22): `many` fields
 take the values projected from the stored value, and erased fields take
-the tokens of §5, since the stored value does not contain them.
+the tokens of §5, since the stored value does not contain them. Its
+purpose is proof by reflection: a decidable proposition is discharged
+by computing it in run position and asserting the outcome, as
+`tests/u8.sl` does for the bound of a `U8`.
 
 On a mismatch, the error prints the expected constructor and the actual
 value, including its discriminant and arguments. This can be used as a
@@ -1179,7 +1194,9 @@ elaborated, not at each call, and once modulo match branches as in
 §15. The defined binder is born unique. Calling the function is a use
 of that binder at unique, or an erased use. A shared `UniqueFn` can
 therefore be called only erased, and `share` on one leaves a dead
-value. A head of `UniqueFn` type can be applied in tier 1 of §6, like a
+value. This is what a `unique` binder of `Fn` type cannot express:
+once shared, it could be called repeatedly, running its captured unique
+values again. A head of `UniqueFn` type can be applied in tier 1 of §6, like a
 head of `Fn` type; the call uses the head at unique. The level is
 written as on a `def-fns`, and `_` is allowed (§46); the level may be
 shared with ordinary functions. The parameters may be marked `subterm`,
@@ -1354,6 +1371,9 @@ two functions: `(Shared)` for an `Fn` and `(Unique)` for a `UniqueFn`.
 So a `UniqueFn` that delegates to an `Fn` is `(Unique)` to `(Shared)`.
 `coercible-of` carries the sides across. `coercible-sym` is always
 allowed. `coercible-trans` requires the two middle sides to be equal.
+Without the sides, a proof chained through two newtypes of one field
+type, one labelled `many` and one `unique`, would carry a `many` value
+into a unique wrapper; `coercible-trans` refuses it.
 `coercible-share` weakens any proof to `(Shared)` on both sides. How a
 `coerce` uses its source and yields its result under the sides is
 described in §33.
@@ -1443,6 +1463,12 @@ the consumer. The promise of an `at` return is verified where the
 function or branch returns, by the canonical identity of the slots. An
 absurd body (§21, §25) produces no declared returns, so the promise of
 its function or branch has nothing to apply to.
+
+A function that may fail can still promise its result at its argument.
+It returns an erased `(Type T)`, a `(unique T v at a)` and a
+non-erased outcome whose type is indexed by `T`. Matching the outcome
+forces `T` to the intended type on success and to the argument's own
+type on failure, and the one word is at `a` either way.
 
 **Writers.** Besides the declaration sites, facts equating slots (§35)
 are created by: the cell binder and `else` binder of a destructure
@@ -1937,7 +1963,9 @@ a `many` index. `array-pluck` leaves the plucked element's word in the
 array under `Uninit`, and the slot of that `Uninit` is exactly the slot
 of the value returned. So the value may be mutated in place and put
 back with `array-unpluck`, an `extern at` function (§39) whose call
-costs nothing. Until it is put back, the array may keep the plucked
+costs nothing. This is for a unique value kept inside an outer array,
+such as a row of a jagged array: it is plucked, mutated in place, and
+put back at no cost. Until it is put back, the array may keep the plucked
 value alive. Constructing an `ACons` copies its tail, and taking an
 array apart through the model's `ACons` view is O(n). `init-witness`
 is an erased witness, in the shape of §60, that an
@@ -1997,7 +2025,9 @@ transparent down to its opaque `Nat`: its entry carries
 `is (MkChar (MkU8 n p))`, where `n` is the entry of its code's numeral
 and `p` is the erased proof of its bound, asserted rather than decided.
 So to the checker a character is its code. A string literal is opaque:
-a `Const` `String` with no rule. `comptime-match` reads its value, and
+a `Const` `String` with no rule. A rule exposing its characters would
+make every canonical form that mentions the literal expand to all of
+them. `comptime-match` reads its value, and
 a match inside a function takes it apart at runtime.
 
 **Printing.** A value of type `Nat`, `Char` or `String` prints as the
