@@ -24,7 +24,7 @@ open Reader
 
 let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Word w -> w | Pragma _ -> ";!"
 
-type form = { line : int; col : int; depth : int; text : string; mutable closes : int }
+type form = { line : Z.t; col : Z.t; depth : int; text : string; mutable closes : Z.t }
 
 let () =
   let closers = ref false and path = ref "" in
@@ -58,7 +58,7 @@ let () =
     (fun k ((l : Reader.loc), _, t) ->
       match t with
       | LParen ->
-          let f = { line = l.line; col = l.col; depth = !depth; text = label k; closes = 0 } in
+          let f = { line = l.line; col = l.col; depth = !depth; text = label k; closes = Z.zero } in
           forms := f :: !forms;
           stack := f :: !stack;
           incr depth
@@ -78,7 +78,7 @@ let () =
        that discards exactly what a run is: which )s were ADJACENT. That
        adjacency lives only in the byte offsets, so it is read back from them. *)
     let runs = ref [] and pending = ref [] and last = ref (-1) in
-    let run_line = ref 1 and stack = ref [] in
+    let run_line = ref Z.one and stack = ref [] in
     Array.iteri
       (fun k ((l : Reader.loc), off, t) ->
         match t with
@@ -100,18 +100,18 @@ let () =
     List.iter
       (fun (ln, os) ->
         if List.length os > 1 then
-          Printf.printf "  L%-4d %2d closers -> %s\n" ln (List.length os)
+          Printf.printf "  L%-4s %2d closers -> %s\n" (Z.to_string ln) (List.length os)
             (String.concat "  "
-               (List.map (fun ((l, c), t) -> Printf.sprintf "%s@%d:%d" t l c) os)))
+               (List.map (fun ((l, c), t) -> Printf.sprintf "%s@%s:%s" t (Z.to_string l) (Z.to_string c)) os)))
       (List.rev !runs))
   else (
     print_endline "depth  opens     form                      closes";
     List.iter
       (fun f ->
-        if f.closes <> f.line || f.closes = 0 then
+        if not (Z.equal f.closes f.line) || Z.equal f.closes Z.zero then
           Printf.printf "%5d  %-9s %-25s %s\n" f.depth
-            (Printf.sprintf "%d:%d" f.line f.col) f.text
-            (if f.closes = 0 then "NEVER" else Printf.sprintf "L%d" f.closes))
+            (Printf.sprintf "%s:%s" (Z.to_string f.line) (Z.to_string f.col)) f.text
+            (if Z.equal f.closes Z.zero then "NEVER" else "L" ^ Z.to_string f.closes))
       forms);
 
   Printf.printf "final depth %d%s\n" !depth

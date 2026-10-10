@@ -1,17 +1,17 @@
 (* A position is where a token's first character sits, named by the file it was read from: what every
    message a session writes points at (ASSUMPTIONS 194). [nowhere] is the location an error carries when
    it is raised where none is at hand, for an enclosing form to fill in. *)
-type loc = { file : string; line : int; col : int }
+type loc = { file : string; line : Z.t; col : Z.t }
 
 type raw = Atom of loc * string | List of loc * raw list
 
 exception Syntax of loc * string
 
-let nowhere = { file = ""; line = 0; col = 0 }
-let placed l = l.line <> 0
+let nowhere = { file = ""; line = Z.zero; col = Z.zero }
+let placed l = not (Z.equal l.line Z.zero)
 let where fallback l =
   let f = if l.file = "" then fallback else l.file in
-  if placed l then Printf.sprintf "%s:%d:%d" f l.line l.col else f
+  if placed l then Printf.sprintf "%s:%s:%s" f (Z.to_string l.line) (Z.to_string l.col) else f
 
 let loc = function Atom (l, _) | List (l, _) -> l
 
@@ -30,7 +30,7 @@ let unterminated = "unterminated string literal"
 let scan_upto file src =
   let n = String.length src in
   let out = ref [] in
-  let at line bol i = { file; line; col = i - bol + 1 } in
+  let at line bol i = { file; line = Z.of_int line; col = Z.of_int (i - bol + 1) } in
   let err l msg = raise (Syntax (l, msg)) in
   let rec skip p i = if i < n && p src.[i] then skip p (i + 1) else i in
   let rec string buf line bol i =
@@ -101,7 +101,8 @@ let shape_note path =
 type region = { name : string; from : loc; until : loc option; mutable used : bool }
 
 let regions : (string, region list) Hashtbl.t = Hashtbl.create 8
-let before a b = (a.line, a.col) < (b.line, b.col)
+let compare_loc a b = match Z.compare a.line b.line with 0 -> Z.compare a.col b.col | c -> c
+let before a b = compare_loc a b < 0
 let covers r l = not (before l r.from) && match r.until with Some u -> before l u | None -> true
 
 (* [read_items] reads until the enclosing form's terminator, which it leaves in place;
@@ -111,7 +112,7 @@ let parse ?(shape = true) file src =
   let toks = ref (tokenize file src) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
-  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (where "-" { l with line = 0 }) else m) in
+  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (where "-" { l with line = Z.zero }) else m) in
   let opened = ref [] and closed = ref [] in
   let suppression l w = function
     | Atom (_, "warn") :: Atom (_, name) :: _ -> (
@@ -145,5 +146,5 @@ let parse ?(shape = true) file src =
   let items = read_items ~top:true [] in
   (match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> ());
   let unclosed = List.map (fun (name, from) -> { name; from; until = None; used = false }) !opened in
-  Hashtbl.replace regions file (List.sort (fun a b -> compare (a.from.line, a.from.col) (b.from.line, b.from.col)) (!closed @ unclosed));
+  Hashtbl.replace regions file (List.sort (fun a b -> compare_loc a.from b.from) (!closed @ unclosed));
   items

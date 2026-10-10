@@ -56,15 +56,16 @@ type checkable = { pos : loc; indent : int; nesting : int }
    token's column, and its nesting is the paren depth in effect just before
    that token -- i.e. before the line's own characters are read. *)
 let checkable_lines report src toks =
-  let depth = ref 0 and cur = ref 0 and out = ref [] in
+  let depth = ref 0 and cur = ref Z.zero and out = ref [] in
   List.iter
     (fun (l, off, tok) ->
-       if l.line <> !cur then begin
+       if not (Z.equal l.line !cur) then begin
          cur := l.line;
-         let bol = off - (l.col - 1) in
+         let indent = Z.to_int l.col - 1 in
+         let bol = off - indent in
          if String.exists (( = ) '\t') (String.sub src bol (off - bol)) then
            report { at = l; note = false; msg = "indentation uses a tab, not spaces only" };
-         out := { pos = l; indent = l.col - 1; nesting = !depth } :: !out
+         out := { pos = l; indent; nesting = !depth } :: !out
        end;
        match tok with
        | LParen -> incr depth
