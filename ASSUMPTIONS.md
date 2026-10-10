@@ -60,10 +60,7 @@ ground.
     order.
 13. **A `def-fns` level** may be any variable whose type is `(Level)`,
     not only a `def-lvl`-minted one; only `prove-predates` insists on the
-    mint marker, after canonicalizing the level. Its subject stays the
-    variable named when that variable is old enough; a newer alias of an
-    older variable (a `let ... is`) is resolved to what it canonicalizes
-    to, so that the proof is about the older variable (SR 20).
+    mint marker (section 18).
 
 14. **`def-adts` ordering**: a type constructor's own telescope may
     mention types defined earlier in the same `def-adts`, not later
@@ -353,12 +350,11 @@ literals as open.
 
 51. **A numeral is a digit-only atom and never a name** (`Env.bind`
     refuses one; leading zeros are rejected outright). It denotes
-    `(let ((many _) (erased _)) (bin-to-nat <spelling>))` hoisted to just
-    before the top-level form that first mentions it, and is interned
-    per program by value, so every occurrence is one entry: the `Nat` is
+    `(let ((many _) (erased _)) (bin-to-nat <spelling>))`, interned where
+    it is first met (212) and per program by value, so every occurrence is one entry: the `Nat` is
     opaque, a `Const` with no `is` rule, and the erased `Numeral` proof
     relates it to the spelling. Both compilers mint the two entries
-    directly rather than elaborating that `let` (`Elab.hoist`, slc's
+    directly rather than elaborating that `let` (`Elab.intern`, slc's
     `intern-numeral`): the `Nat` holds the FFI's integer, or under
     `--no-extern` a Peano chain built in OCaml (`Elab.peano`), and the
     proof is a token whose type spells the numeral in `Bin`
@@ -366,7 +362,7 @@ literals as open.
     its literal handling was unified with slc's; running `bin-to-nat`'s
     model under `--no-extern` then cost a chain per numeral and, at
     a million or so, the interpreter's stack. The entries are not in the
-    scope list at all; resolution goes through `Env.literals`. Sound,
+    scope list at all; resolution goes through the literal table (212). Sound,
     we believe, because the entries are those the statement would mint,
     and the statement depends on nothing but the prelude and the top
     level calls freely (section 20). Consequence to note: a literal is
@@ -382,7 +378,7 @@ literals as open.
     denotes its code's numeral followed by section 42's reflection
     route, `(let ((many %d)) (lt-dec n u8-modulus))`,
     `(comptime-match %d (Yes %a %b %p))` and
-    `(let ((many _)) (MkChar (MkU8 n %p)))`, hoisted and interned the
+    `(let ((many _)) (MkChar (MkU8 n %p)))`, interned the
     same way. As for a numeral, both compilers mint the entries directly
     (item 51): the bound's proof is an erased token of type
     `(Lt n u8-modulus)`, asserted rather than decided, every code being
@@ -395,7 +391,7 @@ literals as open.
     itself, not an expression canonicalizing to one, and yields that
     literal's erased `Numeral` proof; a character literal yields its
     code's proof, and a string literal is an error, having none. It
-    resolves the literal by its own spelling through `Env.literals`
+    resolves the literal by its own spelling through the literal table (212)
     rather than searching the scope, unlike `delegate-of`. Resolving
     by spelling rather than by canonicalized value is what keeps the
     form usable inside a branch that has equated two literals: each
@@ -1494,8 +1490,7 @@ what it assumed while doing so.
     forms, as with a literal's own expansion (51). The level context
     stays the caller's, so the generated call carries `(predates _)`
     inside a function body and nothing at top level (§20). `unary`
-    hoists every literal on the walk, which is why `Elab.hoist` moved
-    into the elaborator's recursive group. Its ceiling is 4096 steps,
+    interns every literal on the walk (`Elab.intern`). Its ceiling is 4096 steps,
     a number the session chose and the owner has not confirmed.
 105. **Whether §54 should list a sugar form is open.** `unary` is
     registered as a `Special` variant like any other form,
@@ -3833,8 +3828,7 @@ session's, made without the owner.
     error. Getting there took four alignments in `slc`, each mirroring
     what the reference already did as this session read it, none checked
     beyond `self/bootstrap.sh` passing: a literal's entries stay out of
-    the scope, as the reference's hoisting restores the scope around
-    them; an atom head in an erased position mints no temporary, as
+    the scope, as the reference's `Env.bind ~literal` keeps them; an atom head in an erased position mints no temporary, as
     `Elab.elab_head` binds none for an atom; a temporary keeps its mark
     when a `let`'s right-hand side closes; and a `share`'s use is placed
     at its argument, as `use env al` places it. One printer difference
@@ -4053,3 +4047,37 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      that slot (`Env.metaless`), so no `slot-of` over a term survives
      canonicalization. `dump-context`'s slot listing includes erased
      entries.
+
+212. **Literals outside every scope (sections 5, 18, 45).** Both compilers
+    intern a literal where it is first met, from `var`'s literal case,
+    `numeral-of`, `prove-literal-lt` and `unary`, with no pass over a
+    form ahead of elaborating it. The reference keeps one program-wide
+    table (`Env.literal_rows`) from a literal's spelling to the entries it
+    minted, with their values and the Peano ladder, reset with the FFI
+    tables; the ids come from a separate half of the id space, the
+    negatives, so that the evaluator and the extractor find a literal's
+    value by its id alone (`Value.literal_values`, emitted once as
+    `l<N>`) and a reference to a literal stays a `CVar`, which section
+    15's "not rebound" relies on. The reference drops an inner env
+    wholesale on leaving a body or branch, so a scope that meets a
+    literal without its entries has them entered again under the same
+    ids (`Env.enter`), the closed-telescope builders carry the literals
+    their scratch env met into the env that continues (`Env.carry`), and
+    diagnostics that walk the literals walk those present in the env
+    (`Env.present_literals`), the only ones its terms can mention.
+    `slc` has an explicit exit, `env-discard`, which keeps entries,
+    store and the key map and enters the declaration facts of the
+    literals interned inside into the restored table (`table-reenter`,
+    at an id below the table's bound where the position is free), oldest
+    first since a character's rule names its code's numeral, so nothing
+    is entered again at resolution there. In
+    both, a branch may still force a rule onto a literal's id, which the
+    scoped table holds and drops with the branch. The introduction order
+    of section 5 is a field of the entry: in the reference the entry's
+    own id, negative for a literal's; in `slc` a `Maybe Nat`, `None` for
+    a literal's. `prove-predates` names the level by its own name when
+    it has one and canonically otherwise, since the inferred form's
+    level is often the anonymous atom a named `let` canonicalizes to;
+    a literal in a name position is refused as "is a literal, not a
+    name". `self/bootstrap.sh` checks that the two compilers agree on
+    every test.

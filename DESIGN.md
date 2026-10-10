@@ -154,7 +154,9 @@ entry has:
 - a **level-mint marker**, set on an entry introduced by `def-lvl`
   (§18);
 - an **introduction order**, which orders `Predates` (§18) and decides
-  what a `delegate` may name (§19);
+  what a `delegate` may name (§19); a forwarding `let` takes it over
+  from a source that has one (§19), and a literal's entries have none
+  (§45);
 - an **automatic slot** (§35).
 
 An entry's **type** and its **`is` rule** (§12) are stored in the fact
@@ -244,7 +246,9 @@ conflicting fact, always unifies. When two atoms are unified, the newer
 becomes an alias of the older, and whatever the two must share is then
 unified as well: their signatures, if both are type or value
 constructors, and the opened `Matchable`s they head, if both are type
-constructors (§8). The forced facts hold while the branch is checked.
+constructors (§8). A literal's entry (§45) is older than every other
+entry, and of two literals the one interned first is the older. The
+forced facts hold while the branch is checked.
 `match` keeps them inside the branch. `comptime-match` exports them
 after verifying the constructor against the stored value. `let-match`
 exports them after refuting every other constructor (§27). Facts added
@@ -646,8 +650,12 @@ type former (production 4) as opaque.
 marker of §5. A level created later is strictly higher than one created
 earlier, so a function at a later level cannot be called from code at
 an earlier level. `(prove-predates x L)` creates `(Predates A x L)`.
-`x` must be a variable that was already in scope when the `def-lvl` of
-`L` ran, and `L` must canonicalize to an entry created by `def-lvl`.
+`x` is a variable and `L` a variable or a fetch form (§53), namely
+`level-of`; both are read by their binders and never canonicalized. `L`
+must be an entry created by `def-lvl`, or a `let` binder forwarding
+from one (§19). `x` must have an introduction order (§5) earlier than
+`L`'s. A literal has none (§45) and is refused; a `let` binder
+forwarding from a literal has an order of its own.
 
 ## 19. Namespaces, special forms, macros, call-site proofs
 
@@ -657,8 +665,11 @@ and types.
 
 **State-forwarding `let`.** A `let` binder takes over the state of the
 right-hand-side entry it corresponds to: `Const` or `Dyn` (§5), the
-stored value and minted type if `Const`, and, through an alias rule in
-the fact table (§7), its type and `is` rule. This happens whenever that entry is an
+stored value and minted type if `Const`, its level-mint marker and its
+introduction order (§5), except that a binder forwarding from a
+literal's entry (§45), which has none, keeps an introduction order of
+its own, and, through an alias rule in the fact table (§7), its type
+and `is` rule. This happens whenever that entry is an
 expression in §9's grammar and so has an entry of its own. It is
 decided per binder: in `(let ((many a) (many b)) (values x y))`, `a`
 takes from `x` and `b` from `y`. A call, a match or a `coerce` forwards
@@ -2027,10 +2038,11 @@ and `SCons` over `Char`: its characters consed up, in order.
 denotes: a numeral by its number, a character by its code, a string by
 its characters. So `#\a` and `#\x61` are one entry, and every
 occurrence of `"ab"` is one entry. The entries a literal stands for
-enter the scope just before the top-level form that first mentions it,
-as if by run-position statements there. They refer to the prelude's
+are the same wherever the literal is met, in whatever scope; they
+depend on the prelude alone, as if minted by run-position statements,
+and have no introduction order (§18). They refer to the prelude's
 own `Nat`, `Char` and `String` and their constructors, whatever names
-the program has shadowed since. They are anonymous and outside the
+the program has shadowed since. They are anonymous and outside every
 scope: nothing can name, shadow or rebind them, and an occurrence of
 the literal resolves to them by the literal itself. A character literal
 also interns the numeral of its code.

@@ -3,6 +3,51 @@
 Work in progress handed from one session to the next. Written by a
 Claude session; nothing here is a design decision.
 
+## Literals outside every scope, `prove-predates` by binder (one session, with the owner)
+
+Done in both compilers, on a design worked out with the owner in chat
+and written into DESIGN.md 5, 7, 18, 19 and 45 in the owner's words:
+every entry a literal stands for has one identity for the whole
+program, met inside a body or branch or not, and `prove-predates` reads
+its two arguments by their binders through an introduction order every
+entry carries. ASSUMPTIONS 212 has the mechanisms, which differ between
+the compilers because the reference drops an inner env wholesale where
+`slc` has an explicit exit. `self/bootstrap.sh` is clean, and `slc` on
+its own sources took 2.72 to 3.05s against 2.61 to 2.96s for the
+previous `slc` over several runs, which this session read as noise; its
+max RSS swings between about 108 and 132MB for one and the same binary,
+so no memory comparison was drawn.
+
+Two things left for a later session, both raised with the owner:
+
+- `prove-predates` takes an atom for `x` and a fetch form only for `L`.
+  The owner would have `x` take a fetch form too, as in
+  `(prove-predates (level-of f) L)`, which is natural since a fetch form
+  elaborates to a variable reference before anything else reads it, and
+  which would spare `tests/thunk_closure.sl` its `let` of
+  `(level-of add-one)`. In the reference this is the `x` line of the
+  `Sp.ProvePredates` arm in `lib/elab.ml`, now `atom` on `atom_or`; in
+  `slc` it is `var-of-raw` in the `ExProvePredates` arm of
+  `self/elab.sl`, where `L` already goes through `elab-one-term` and
+  `level-binder`. A meta from `_` would need refusing as the atom path
+  refuses it today.
+- MACROS.md 4.5's program store holds the literal table and the facts
+  of run-position entries. Here a literal's declaration facts live in
+  the scoped fact table and are entered again where needed, so a
+  `const-eq` answering from run-position facts would first have to
+  enter a handle's literal row into its snapshot (`Env.enter`,
+  `table-reenter`). The owner paused on whether that placement is the
+  store design or a detour from it; undecided when this was written.
+
+The owner's stated next step, in chat and not yet designed in any file:
+a minimal macro support, with `Raw` as an extern ADT in the prelude over
+a position of file, line and column, a `Raw` being a string with its
+position or a position with a list of `Raw`, and `Macro` as a newtype
+over a level and a function at that level from a position and a list of
+`Raw` to a list of `Raw`, with no macro world. A literal a macro makes
+up is then the atom text of its spelling, interned where the output is
+elaborated, which this change makes possible.
+
 ## The compile-time store: stamped values, a ghost history (`self/`)
 
 Done, at the owner's direction and to the owner's design. `slc`'s

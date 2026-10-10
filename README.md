@@ -246,7 +246,7 @@ is, which `(slot-of x)` names, and a slot prints by that form.
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 54) and built-ins
 - `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 42)
 - `lib/literal.ml` — the spellings of numeral, character and string literals
-- `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal hoisting
+- `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal interning
 - `lib/dump.ml` — the report `dump-context` stops elaboration with
 - `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions

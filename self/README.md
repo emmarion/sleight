@@ -281,7 +281,7 @@ the entry says otherwise, and recorded so it can be revisited.
   included, as the reference's scope does (`Scope` in `core.sl`); the
   printer names a de Bruijn index from the telescopes being printed and
   prints `vacant-slot` by its name; and a literal's entries stay out of
-  the scope, as `lib/elab.ml`'s hoisting appears to keep them. On
+  the scope, as `lib/env.ml`'s `bind ~literal` keeps them. On
   `tests/dump_context*.sl` the report seems to agree with the
   reference's line for line, apart from the ids of anonymous entries
   and the binders this compiler mints for a `cell-write`'s head and
