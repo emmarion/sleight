@@ -87,7 +87,11 @@
     ((ConfineOutputBytes l n k _)
       (def-unique B $ (unique w : (many (Result (Unit)) r) -> (unique (IO B) next))
         (lift (predates cb) A B ab cb (k (predates ab) r)))
-      (ConfineOutputBytes B n w))))
+      (ConfineOutputBytes B n w))
+    ((Measure l m x run k _)
+      (def-unique B $ (unique w : (many x r) (many (Usage) u) -> (unique (IO B) next))
+        (lift (predates cb) A B ab cb (k (predates ab) r u)))
+      (Measure B m x run w))))
 
 (def-lvl A0)
 (def-lvl A)
@@ -112,10 +116,10 @@
   (WriteOut B "starting\n" (unique-thunk (predates th-b) _ _ (lift (predates c-b) A B a-b c-b (ReadLine A echo-start)))))
 
 (ReadLine B user-start)
-; warns: tests/io_lift_runtime.sl:102:104: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:103:62: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:103:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:104:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:105:102: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:112:68: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift_runtime.sl:112:42: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:106:104: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:107:62: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:107:27: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:108:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:109:102: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:116:68: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift_runtime.sl:116:42: warning: unnecessary `(predates _)`; drop it

@@ -11,7 +11,7 @@
 (def-lvl M)
 (let ((erased p)) (prove-predates L M))
 
-(def-fns M $ (many inc-meters : (many (Meters) x) -> (many (Meters) r))
+(def-fns M $ (many inc-meters at inc : (many (Meters) x) -> (many (Meters) r))
   (let-match erased x (MkMeters n))
   (let ((many k)) (coerce x (coercible-sym (coercible-wrap (Shared) MkMeters n))))
   (let ((many j)) (delegate (inc (predates p) k)))

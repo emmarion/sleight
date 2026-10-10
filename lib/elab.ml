@@ -33,7 +33,7 @@ let name_or_anon n = if n = "_" then None else Some n
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
 let special_value env x = match entry env x with
-  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); _ } when equal (type_of env x) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
+  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); minted; _ } when equal (canon { env with facts = trusted env } minted) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
   | _ -> None
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
 
@@ -117,7 +117,7 @@ let literal_notes env l ~within hit =
   let note (lit, t) =
     let place = List.find_opt (fun c -> is_strict_subterm t (canon env c)) within in
     let kind, opaque = match lit with Literal.Char _ -> ("character", "whose code is opaque") | _ -> ("numeral", "opaque") in
-    (l, sprintf_in env "%s%s is a %s literal, %s to the checker by default; `unary`, `distinct` or `numeral-of` can expose more"
+    (l, sprintf_in env "%s%s is a %s literal, %s to the checker by default; `unary`, `prove-literal-lt` or `numeral-of` can expose more"
           (Literal.spell lit) (match place with Some c -> " in " ^ qshow env c | None -> "") kind opaque)
   in
   List.map note hits
@@ -135,7 +135,11 @@ let head = function App (h, _) -> h | t -> t
 (* Identity after canonicalization (section 9), solving any metas either side holds (Env.unify). *)
 let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
   try unify env actual expected
-  with Contradiction _ ->
+  with
+  | Ill_typed (x, t) ->
+      let prefix, more = Lazy.force about in
+      error_with loc more "%stype mismatch: expected %s, got %s: %s would be %s" prefix (qshow env (type_of env x)) (qshow env (infer env loc t)) (qshow env (Var x)) (qshow env t)
+  | Contradiction _ ->
     let pairs = List.filter (fun (a, b) -> not (has_meta env a || has_meta env b)) (differ (canon env actual) (canon env expected)) in
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
@@ -155,24 +159,12 @@ let check what env loc actual expected = ignore (solve what env loc actual expec
 let check_type = check "type" and check_equal = check "value"
 let under pos m = if pos = Erased then Erased else m
 let written ?(noun = "") env pos l what m =
-  if pos = Erased && m <> Erased then error_in env l "%s %s%s in an erased position is written `erased`" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun else m
+  if pos = Erased && m <> Erased then error_in env l "%s %s%s written `%s` in an erased position; write `erased` here" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun (mult_name m) else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
 let wild = function Atom (_, "_") -> true | _ -> false
 
 (* A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused. *)
 let settle env loc t = if has_meta env t then unsolved loc env t
-
-let rec infer env loc t =
-  match t with
-  | Var x -> type_of env x
-  | App (h, args) -> (
-      match canon env (infer env loc h) with
-      | TyCtor _ -> type_term
-      | ValCtor (_, r) -> instantiate (List.rev args) r
-      | ty -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty))
-  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> type_term
-  | SlotOf _ -> Prelude.slot_term
-  | Bound _ -> error loc "internal: dangling binder"
 
 let solve_sg ?raw ?about env loc sg r = match sg with
   | Ty ty -> solve ?raw ?about "type" env loc r.ty ty
@@ -270,7 +262,7 @@ let tagged disc shapes = disc = Enum && List.length (non_phantom shapes) > 1
 
 let wrappers disc shapes =
   let cs = non_phantom shapes in
-  if tagged disc shapes || List.exists (fun (_, n) -> n > 1) cs then [] else List.filter_map (fun (c, n) -> if n = 1 then Some c else None) cs
+  if tagged disc shapes || List.exists (fun (_, n) -> n <> 1) cs then [] else List.map fst cs
 
 let newtype_of env c =
   List.find_map (fun o -> if not (names_var c o.Env.names) then None else match type_of env o.Env.obj with
@@ -279,6 +271,7 @@ let newtype_of env c =
 
 let ctor_of env loc c = match (entry env c).state with Const (V.VCtorFn ct) -> ct | _ -> error loc "%s is not a run-position constructor" (qname env c)
 let const env v = if env.run_pos then Const v else Dyn
+let forwarded env r = match r.term with Var y -> let e = entry env y in (e.state, Some e.minted) | _ -> (Dyn, None)
 let ctor_var env loc = named env loc "a constructor"
 let proof_type ctor args = App (Var ctor, args)
 
@@ -331,6 +324,11 @@ let marks env allowed items =
     | rest -> (acc, rest)
   in
   go [] items
+
+let def_marks env l allowed items =
+  let ms, rest = marks env allowed items in
+  if List.mem Sp.Extern ms && not env.externs then error_in env l "only the prelude may mark a definition `extern`; a program that declares its own runs with `--no-prelude`";
+  (ms, rest)
 
 let fact_of env loc = function Ty t -> (t, None) | Is t -> (infer env loc t, Some t)
 
@@ -576,7 +574,7 @@ let bind_cell code cell body = match cell with None -> body | Some x -> V.CLet (
 
 let warn_use env l what t =
   match canon env t with
-  | Var x when not env.in_extern -> (
+  | Var x when not env.unwarned -> (
       let means r = match StringMap.find_opt r.Reader.name env.scope.named with Some y -> canon env (Var y) = Var x | None -> false in
       match IntMap.find_opt x env.warned, List.filter (fun r -> Reader.covers r l && means r) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions l.file)) with
       | Some (pl, msg), [] -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg
@@ -588,11 +586,11 @@ let pragma env l = function
   | [ Atom (_, "warn"); Atom (nl, n); Atom (_, msg) ] -> (
       let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick n) (hint env n) in
       match canon env (Var x), canon env (type_of env x) with
-      | Var c, (TyCtor _ | ValCtor _) -> (
+      | Var c, (TyCtor _ | ValCtor _ | Fn _ | UniqueFn _) -> (
           match IntMap.find_opt c env.warned with
           | Some (pl, _) -> error_with l [ (pl, "the first is here") ] "second `;! warn` for %s" (tick n)
           | None -> { env with warned = IntMap.add c (l, msg) env.warned })
-      | _ -> error nl "`;! warn` names %s, which is neither a type constructor nor a value constructor" (tick n))
+      | _ -> error nl "`;! warn` names %s, which is neither a constructor nor a function" (tick n))
   | [ Atom (_, "warn") ] -> error l "`;! warn` needs a name and a message"
   | [ Atom (_, "warn"); _ ] -> error l "`;! warn` needs a message after the name"
   | _ -> error l "`;! warn` needs a name and a message"
@@ -743,6 +741,7 @@ and elab_tele env ?(places = false) ?(subterm = false) ?(ids = []) ?(mults = fun
           slot_of x) e.s_place in
         let name = name_or_anon e.s_name in
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Dyn ty ?rule) in
+        let env = placed env x place in
         (i + 1, { env with signature = x :: env.signature }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
   in
@@ -762,15 +761,15 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
   let wilds = List.exists wild args in
   let against ~strict env = match expect with Some tele when wilds -> solve_tele ~strict env loc tele (result mvars) | _ -> env in
   let env = against ~strict:false env in
-  let env, acc, codes =
+  let env, acc, codes, ats =
     List.fold_left2
-      (fun (env, acc, codes) (i, e, m) arg ->
+      (fun (env, acc, codes, ats) (i, e, m) arg ->
         let sg = map_sg (instantiate acc) e.sg in
         let about = lazy (argument c i e.name ^ ": ", Lazy.force c.notes) in
         if wild arg then (
           if under pos e.mult <> Erased then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` stands only for an erased argument, and this one is not erased" (fst (Lazy.force about));
           if e.place <> None then error_with (Reader.loc arg) (Lazy.force c.notes) "%s`_` cannot stand for an argument written `at`" (fst (Lazy.force about));
-          (env, Var m :: acc, codes))
+          (env, Var m :: acc, codes, ats))
         else
           let env, r, code = elab env (c.used e.mult) arg (Some [ { e with sg } ]) in
           let env = solve_sg ~raw:arg ~about env (Reader.loc arg) sg r in
@@ -789,20 +788,19 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
             else (env, r, code)
           in
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
-          let omitted = match e.place with
-            | Some p ->
-                if not (Option.fold ~none:false ~some:(same_slot env (instantiate acc p)) r.place) then
-                  error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i e.name) (qshow env (instantiate acc p));
-                true
-            | None -> false in
-          (solve ~about "value" env (Reader.loc arg) r.term (Var m), r.term :: acc, (if e.mult <> Erased && not omitted then code :: codes else codes)))
-      (env, [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
+          let ats = match e.place with Some p -> (arg, i, e.name, instantiate acc p, r.place) :: ats | None -> ats in
+          let env = solve ~about "value" env (Reader.loc arg) r.term (Var m) in
+          let env = match r.term with Var y when not (is_meta env y) -> placed env m (Some (slot_of y)) | _ -> env in
+          (env, r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
+      (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
   in
   let env = if boundary && List.exists (has_meta env) acc then against ~strict:true env else env in
   if boundary then List.iteri (fun i t -> if has_meta env t then
     let what = argument c i (List.nth tele i).name and arg = List.nth args i in
     if wild arg then error_with ~hints:(hole_hints env t) (Reader.loc arg) (Lazy.force c.notes) "%s is `_` and cannot be inferred" what
     else unsolved ~about:(what ^ ": ", Lazy.force c.notes) (Reader.loc arg) env t) (List.rev acc);
+  List.iter (fun (arg, i, name, p, place) -> if not (Option.fold ~none:false ~some:(same_slot env p) place) then
+    error_with (Reader.loc arg) (Lazy.force c.notes) "%s does not satisfy `at` %s" (argument c i name) (qshow env p)) (List.rev ats);
   (env, List.map (metaless env) acc, List.rev codes)
 
 (* [result] entrywise against [expect]: terms where both are `is` entries, types always. Not [strict]: a
@@ -845,7 +843,7 @@ let check_results env loc ?(ids = []) body tele ress =
   let env = List.fold_left2 (fun (env, acc) (e, (rl, raw)) r ->
     let env = solve_sg ?raw env rl (map_sg (instantiate acc) e.sg) r in
     (match Option.map (instantiate acc) e.place with
-     | Some p when not env.usage_erased ->
+     | Some p ->
          if not (Option.fold ~none:false ~some:(same_slot env p) r.place) then error_in env rl "return does not satisfy `at` %s" (qshow env p)
      | _ -> ());
     let env, t = match r.term, r.place with
@@ -1006,11 +1004,11 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
               let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
-              let place = if is_wrapper && pos <> Erased then List.find_map (fun (e, a) -> if e.mult <> Erased then Some (SlotOf a) else None) (List.combine tele (List.rev acc)) else None in
+              let place = if not is_wrapper then None else List.find_map (fun (e, a) -> match e.mult, a with Erased, _ -> None | _, Var _ -> Some (SlotOf a) | _ -> None) (List.combine tele (List.rev acc)) in
               (env, [ { term = App (h.term, List.rev acc); ty = instantiate acc ret; erasure = pos; place } ], code)
           | Cell (c, slots) -> elab_cell_invoke env expect l (callee pos) h hcode c slots args
-          | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (callee pos) h hcode lv params rets args
-          | Fn (lv, params, rets) -> elab_call ?sink ~demand cc env ?tele:expect_tele expect l (callee pos) h hcode lv params rets args
+          | UniqueFn (lv, params, rets) -> elab_call ~unique:true ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
+          | Fn (lv, params, rets) -> elab_call ?sink ~demand cc env ?tele:expect_tele expect l (loc head) (callee pos) h hcode lv params rets args
           | ty -> error l "%s : %s is not applicable" (qshow env h.term) (qshow env ty) in
           (env, rs, code)))
 
@@ -1022,18 +1020,19 @@ and elab_head env pos l raw =
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
-      let state = if env.run_pos && pos <> Erased then Const (List.hd (Eval.eval env.values code)) else match r.term with Var x -> (entry env x).state | _ -> Dyn in
-      let x,env = bind env ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
+      let state, minted = if env.run_pos && pos <> Erased then (Const (List.hd (Eval.eval env.values code)), None) else forwarded env r in
+      let x,env = bind env ?minted ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
       (placed env x r.place,res_of env x,V.CVar x)
 
-and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l c callee hcode lv params rets args =
+and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
   let pos = pos_of env expect in
   if assert_at && pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name Sp.At)));
   (* a call of an at-function is skipped (section 39): the proof opened for the callee is what licenses it *)
   let skipped = pos <> Erased && atfn_open env callee.term in
   if assert_at && not skipped then error_with_in env l (head_notes env callee) "%s is not an at-function here: no `AtFn` proof for it is open" (head_name env callee);
   if skipped && cc <> V.Plain then error_in env l "%s marks a call that compiles to one, and a call of at-function %s is skipped" (tick (speller env (match cc with V.Tail -> "tail" | V.NoTail -> "notail" | _ -> "delegate"))) (head_name env callee);
+  if pos <> Erased && not skipped then warn_use env hl "call of" callee.term;
   if pos <> Erased && callee.erasure = Erased then error_with l (head_notes env callee) "erased function %s called in a non-erased position" (head_name env callee);
   if unique && pos <> Erased && callee.erasure = Many then error_with_in env l (head_notes env callee) "a shared `UniqueFn` %s is callable only erased" (head_name env callee);
   let env = match callee.term with Var x -> use env l (under pos (if unique then Unique else Many)) x | _ -> env in
@@ -1068,7 +1067,12 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
     | At cur when same cur -> (
         match List.find_opt (fun (j, pi) -> differs j pi) (List.mapi (fun j pi -> (j, pi)) subterm_params) with
         | Some (_, i) -> Some (`Subterm (i, wild))
-        | None -> error l "same-level call to %s decreases no subterm argument" (qshow env callee.term))
+        | None ->
+            let hint = match env.enclosing with
+              | Some g when not (equal (canon env callee.term) (canon env (Var g))) ->
+                  Some (Printf.sprintf "a call to a strictly lower level needs no decreasing argument; consider defining %s at a lower level, or %s at a higher one" (qshow env callee.term) (qshow env (Var g)))
+              | _ -> None in
+            error_with ?hint l [] "same-level call to %s decreases no subterm argument" (qshow env callee.term))
     | At _ -> Some (`Predates wild)
     | Top -> None
   in
@@ -1215,8 +1219,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let hty = canon env h.ty in
       let env,rs,code = match hty with
        | Cell (c, slots) -> elab_cell_invoke ~full:true env expect l (describe env pos head h.term hty) h hcode c slots args
-       | UniqueFn (lv, params, rets) -> elab_call ~unique:true ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (describe env pos head h.term hty) h hcode lv params rets args
-       | Fn (lv, params, rets) -> elab_call ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (describe env pos head h.term hty) h hcode lv params rets args
+       | UniqueFn (lv, params, rets) -> elab_call ~unique:true ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) (describe env pos head h.term hty) h hcode lv params rets args
+       | Fn (lv, params, rets) -> elab_call ~assert_at:true ?sink ~demand V.Plain env ?tele expect l (loc head) (describe env pos head h.term hty) h hcode lv params rets args
        | _ -> error_in env l "`at` wraps a `Cell` invocation or a call, and %s : %s is neither" (qshow env h.term) (qshow env h.ty) in
       (env,rs,code)
   | Sp.Share, [ a ] ->
@@ -1262,7 +1266,13 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let env, ids = open_tele env ~word:false ~names:(anon ann_tele) ann_tele in
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
-  | Sp.Distinct, [ a; b ] -> elab_distinct env l a b
+  | Sp.ProveLiteralLt, [ a; b ] ->
+      let numeral raw = match raw with
+        | Reader.Atom (_, s) when (match Literal.classify s with `Lit (Literal.Numeral _) -> true | _ -> false) -> numeral_entry env l raw
+        | _ -> error_in env l "`prove-literal-lt` takes two numerals, got %s" (tick (Reader.show raw)) in
+      let za, xa, sa = numeral a and zb, xb, sb = numeral b in
+      if Z.geq za zb then error_in env l "`prove-literal-lt`: %s is not below %s" sa sb;
+      mint env (papp env "Lt" [ Var xa; Var xb ])
   | Sp.LevelOf, _ -> let env, lv = fetched env l sp args in erased (env, { term = lv; ty = Prelude.level_term; erasure = Erased; place = None })
   | Sp.ProveSubterm, [ a; b ] ->
       let env, a = elab_term env a in
@@ -1378,7 +1388,7 @@ and cell_items env pos l (what, il, c, params) slots items =
   let env, slots, writes, bindings = List.fold_left2 (fun (env, ss, ws, bs) (i, old) item ->
     if wild item then (env, old :: ss, ws, bs) else
     let env, r, code = elab_expr1 env (under pos Many) item in
-    (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
+    (try ignore (unify env r.ty Prelude.slot_term) with Contradiction _ | Ill_typed _ -> error l "expected a `(Slot)` or `_`, got %s" (qshow env r.ty));
     settle_res env l r;
     let x = fresh () in
     (env, r.term :: ss, (i, V.CVar x) :: ws, (x, code) :: bs)) (env, [], [], []) (List.mapi (fun i s -> i,s) slots) items in
@@ -1426,7 +1436,7 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None mode Dyn r.ty ~rule:r.term in
       let env = placed env sid r.place in
-      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) { env with run_pos = false } (List.filteri (fun i _ -> i < ct.arity) names) in
+      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) { (leave_run env) with unwarned = env.unwarned || atmatch } (List.filteri (fun i _ -> i < ct.arity) names) in
       let envb = merge_opens (unify_force (forcing envb) (Cell (Var c,List.map (fun x -> Var x) ids)) (Cell (Var c,slots))) in
       let envb, back = if mode <> Unique then (envb, None) else
         let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
@@ -1449,7 +1459,6 @@ and scrutinee ?res env l smult scrut =
   let tid = match type_head env sres.ty with Some t -> t | None -> error l "cannot match on %s : %s" (qshow env sres.term) (qshow env sres.ty) in
   let mid, disc, ctors = find_matchable env l tid in
   let env = if smult = Erased then env else (held_needs_many env l tid mid; use env l Many mid) in
-  if smult <> Erased then warn_use env l "match on" (Var tid);
   if smult = Erased then (env,sres,scode,(fun env code -> (env, code)),tid,mid,disc,ctors) else
   let x, env = bind env ~word:true ~temporary:true None smult Dyn sres.ty ~rule:sres.term in
   (placed env x sres.place,res_of env x,V.CVar x,(fun env body -> closing env [x] (V.CLet ([x],scode,body))),tid,mid,disc,ctors)
@@ -1460,13 +1469,15 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let pos = pos_of env expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
-      let extra = match cells with Some c -> c | None -> smult <> Erased && cells_allowed env mid in
+      let extra = match cells with Some c -> c | None -> cells_allowed env mid in
       let branch_uses = ref env.uses and deep = ref [] in
       let deepen envb body flat = if deep_body envb body then deep := flat :: !deep in
       let shapes = shapes env l ctors in
       let tagged = tagged disc shapes in
       if pos <> Erased && smult <> Erased then held_needs_many env l tid mid;
       let env, ann_tele, atmatch = if refute then (env, [], false) else result_tele ~demand tele env expect l ann in
+      if smult <> Erased && not atmatch then warn_use env l "match on" (Var tid);
+      let inner env = { (leave_run env) with unwarned = env.unwarned || atmatch } in
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       (* an at-match skips its runtime (section 40): each branch must erase to nothing, dispatch and loads included *)
       let erasable bl code = let code = project_code (keeps ann_tele) code in
@@ -1478,7 +1489,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         let phantom = marker env bl tid ctors c = Erased in
         let tele, ret = ctor_type env bl c in
         let mults = mults_of bl c in
-        let envb, fids = open_tele { env with run_pos = false } ~names:(names tele) ~ats:(ats tele) ~mults tele in
+        let envb, fids = open_tele (inner env) ~names:(names tele) ~ats:(ats tele) ~mults tele in
         (phantom, fids, envb, try Some (at bl (fun () -> refine envb sres c fids ret)) with Contradiction _ -> None)
       in
       let branch raw =
@@ -1549,7 +1560,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
         | List (el, _) :: _ when refute -> error_in env el "a refuting match has no `else`"
         | [ List (el, _ :: body) ] ->
             if covered = [] then error_in env el "`else` covers no constructor";
-            let envb = { env with run_pos = false; usage_erased = env.usage_erased || reachable = [] } in
+            let envb = { (inner env) with usage_erased = env.usage_erased || reachable = [] } in
             let envb, cell, body = match body with
               | Atom (nl, n) :: (_ :: _ as body) when extra ->
                   let x, envb = bind envb ~word:true ~at:nl (name_or_anon n) smult Dyn sres.ty ~rule:sres.term in
@@ -1570,7 +1581,7 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let real =
         List.filter_map (fun (c, fids, unreachable, r, _) -> match r with `Present code when not unreachable -> Some (c, fids, code) | _ -> None) branches
       in
-      if pos <> Erased && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
+      if pos <> Erased && not (atmatch && smult <> Erased) && ((not tagged) || smult = Erased) && List.length real + List.length (Option.to_list else_) > 1 then
         error_with l (List.sort_uniq compare (List.concat_map (function (_, _, false, `Present _, Some trial) -> forced_notes env l sres trial | _ -> []) branches))
           "a match without a runtime discriminant can have only one real branch";
       let code =
@@ -1632,8 +1643,8 @@ and open_binding env l mult raw =
   settle_res inner l r;
   (match canon inner r.ty with Matchable _ -> () | ty -> error_in env l "%s : %s is not a `Matchable`" (qshow inner r.term) (qshow inner ty));
   let value = if env.run_pos && mult <> Erased then List.hd (run_code inner code) else V.VToken in
-  let state = if env.run_pos then Const value else match r.term with Var y -> (entry inner y).state | _ -> Dyn in
-  let x, env' = bind inner ~at:l None mult state r.ty ~rule:r.term in
+  let state, minted = if env.run_pos then (Const value, None) else forwarded inner r in
+  let x, env' = bind inner ?minted ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
 and lets pending code = List.fold_left (fun body (x, rhs) -> V.CLet ([ x ], rhs, body)) code pending
@@ -1696,7 +1707,8 @@ and open_contradicts env l e =
   | exception Contradiction _ -> ()
 
 and refine env scrut c fids ret =
-  let env = match scrut.place, newtype_of env c, non_erased env fids with
+  let labelled = List.filter_map (fun ((e : entry), x) -> if e.mult = Erased then None else Some x) (List.combine (fst (ctor_type env Reader.nowhere c)) fids) in
+  let env = match scrut.place, newtype_of env c, labelled with
     | Some p, Some _, [ x ] -> place env x p
     | _ -> env in
   let fvars = List.rev_map (fun x -> Var x) fids in
@@ -1725,7 +1737,6 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
       | Some Sp.SlotSelf, [ a ] ->
           let x = var env (loc a) (atom_or (loc a) a "a variable") in
-          if (entry env x).mult = Erased then error_in env (loc a) "`slot-self` needs a variable declared `many` or `unique`";
           check_type env (loc a) (type_of env x) Prelude.slot_term;
           ((try place env x (Var x) with Contradiction msg -> error_in env l "`slot-self`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
       | Some Sp.OpenAtFn, [ e ] ->
@@ -1783,9 +1794,9 @@ and elab_let spos env l args =
       | None, None -> env
     in
     settle_res env b.s_loc r;
-    let state = if env.run_pos then Const v else match r.term with Var y -> (entry env y).state | _ -> Dyn in
+    let state, minted = if env.run_pos then (Const v, None) else forwarded env r in
     if b.s_place <> None then error_in env b.s_loc "`at` is allowed only on function telescope and match annotation entries";
-    let x, env = bind env ~word:true ~at:b.s_loc (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
+    let x, env = bind env ?minted ~word:true ~at:b.s_loc (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
     (placed env x r.place, x :: ids, r.term :: acc)
   in
   let env', ids, _ =
@@ -1825,7 +1836,7 @@ and hoist env lit =
     in
     { frame with scope = env.scope; literals = (key, entry) :: frame.literals }
 
-(* [unary] and [distinct] elaborate to calls on the prelude's Numeral lemmas, in the prelude's scope so
+(* [unary] elaborates to calls on the prelude's Numeral lemmas, in the prelude's scope so
    user shadowing cannot reach them; the level context, and so [predates _], stays the caller's. *)
 and elab_unary spos env l args =
   let a, rest = match args with a :: ([] | [ _ ] as rest) -> (a, rest) | _ -> error_in env l "`unary` takes one or two literals" in
@@ -1861,30 +1872,13 @@ and elab_unary spos env l args =
   let src = Printf.sprintf "(let-match erased %s (Refl _ _))" (List.fold_left step acc (upto lo [])) in
   in_prelude env (fun env -> elab_stmt spos env (List.hd (Reader.parse "<unary>" src)))
 
-and elab_distinct env l a b =
-  let za, xa, sa = numeral_entry env l a and zb, xb, sb = numeral_entry env l b in
-  let refutes_nothing = respell env "so there is nothing to refute\nhint: `distinct` refutes a context whose facts equate two different literals, typically an `absurd` branch or function body" in
-  if Z.equal za zb then error_in env l "`distinct`: %s is the same literal twice, %s" sa refutes_nothing;
-  if not (equal (canon env (Var xa)) (canon env (Var xb))) then
-    error_in env l "`distinct`: %s and %s do not canonicalize equally here, %s" sa sb refutes_nothing;
-  let src =
-    Printf.sprintf "(match erased (numeral-inj %s %s %s (numeral-of %s) (numeral-of %s)) (((False) f)) (absurd Refl))"
-      (Literal.bin za) (Literal.bin zb) (Z.to_string za) (Z.to_string za) (Z.to_string zb)
-  in
-  let raw = match Reader.parse "<distinct>" src with [ r ] -> r | _ -> assert false in
-  let env, (ress, code) =
-    in_prelude env (fun env ->
-        let env, ress, code = elab_expr env [ Erased ] raw in
-        (env, (ress, code)))
-  in
-  (env, ress, code)
-
 and elab_let_match spos env l args =
   match args with
   | m :: scrut :: List (pl, c :: fields) :: branches ->
       List.iter (fun b -> if real_branch env b then error_in env l "a `let-match` with a real branch besides its pattern must be a statement of a function, match branch or cell-match body") branches;
       let smult = written env spos l "let-match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
+      if smult <> Erased then warn_use env l "match on" (Var tid);
       let c = ctor_var env pl c in
       if marker env pl tid ctors c = Erased && smult <> Erased then error pl "%s is phantom" (qname env c);
       let named = List.filter_map (function List (_, _ :: (Atom _ as b) :: _) | List (_, _ :: List (_, b :: _) :: _) -> Some (ctor_var env (loc b) b) | _ -> None) branches in
@@ -1898,15 +1892,15 @@ and elab_let_match spos env l args =
             else
               let tele, ret = ctor_type env l other in
               let mults = List.map (fun e -> if cmult = Erased then Erased else field_under smult e.mult) tele in
-              let trial, fids = open_tele { env with run_pos = false } ~names:(anon tele) ~mults tele in
+              let trial, fids = open_tele (leave_run env) ~names:(anon tele) ~mults tele in
               Option.map (fun trial -> (other, trial)) (try Some (at l (fun () -> refine trial sres other fids ret)) with Contradiction _ -> None))
           ctors
       in
       if unrefuted <> [] then missing env l "let-match" sres unrefuted;
-      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(smult <> Erased && cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
+      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
       let tele, ret = ctor_type env pl c in
       let mults = List.map (fun e -> field_under smult e.mult) tele in
-      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (smult <> Erased && cells_allowed env mid) fields in
+      let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (cells_allowed env mid) fields in
       let names = field_names fields in
       let shapes = shapes env l ctors in
       let run = env.run_pos && smult <> Erased in
@@ -1954,7 +1948,7 @@ and elab_comptime_match env l args =
       let mults = List.map (fun e -> field_under smult e.mult) tele in
       let matched, states = const_fields env pl c mults value in
       if not matched then error_in env l "`comptime-match`: expected %s, got %s" (qname env c) (tick (show_value env l (type_of env x) value));
-      let fields, name = pattern env "a `comptime-match` pattern" smult (res_of env x) pl c mults (smult <> Erased && cells_allowed env mid) fields in
+      let fields, name = pattern env "a `comptime-match` pattern" smult (res_of env x) pl c mults (cells_allowed env mid) fields in
       let names = field_names fields in
       let env, fids = open_tele env ~names ~ats:(field_ats tele fields) ~mults ~states tele in
       let env = at l (fun () -> try refine env (res_of env x) c fids ret with Contradiction msg -> error l "internal: the verified value contradicts the facts in force (%s)" (Lazy.force msg)) in
@@ -1973,14 +1967,14 @@ and elab_def_fns ?(unique = false) env l args =
         | _ -> level_var ~alt:" or `_`" env l lv
       in
       (* the header's marks: `at` before the name makes an at-function (section 39), `at f` after it annotates a
-         delegate to f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
+         delegate to f and puts it at f (section 41); a function marked `extern` and `at` has no implementation, its marks being a
          promise *)
-      let header raw =
+      let header env raw =
         match raw with
         | List (_, List (fl, m :: rest) :: body) -> (
             let mult = mult_or env fl m in
-            let marks, rest = marks env [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
-            let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some f, n :: rest) | _ -> (None, rest) in
+            let marks, rest = def_marks env fl [ Sp.Absurd; Sp.Extern; Sp.At ] rest in
+            let delegates, rest = match rest with n :: a :: f :: rest when is_special env a Sp.At -> (Some (named env (loc f) "a function name" f), n :: rest) | _ -> (None, rest) in
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
                 let ps, rs = split_arrow env fl sg in
@@ -1995,16 +1989,19 @@ and elab_def_fns ?(unique = false) env l args =
             | _ -> error fl "malformed function header%s" (help env (Sp.hints "function-header")))
         | _ -> error (loc raw) "malformed function definition%s" (help env (Sp.hints "function-definition"))
       in
-      let headers = List.map header fns in
-      List.iter (fun (fl, _, m, _, _, _, _) -> if unique && m = Many then error_in env fl "`def-unique` requires `unique` or `erased`" else if not unique && m = Unique then error_in env fl "use `def-unique` to define a unique function") headers;
       let capture_uses = ref env.uses in
-      let env, fids = List.fold_left_map (fun env (fl, name, mult, _, _, ty, _) -> let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in (env, x)) env headers in
-      (* the `AtFn` proof is minted and opened before the bodies, so a call within the block to a function
-         marked `at` is skipped (section 39) *)
-      let env = List.fold_left2 (fun env x (_, _, _, _, (_, _, atfn, _), ty, _) ->
-        if not atfn then env else
-        let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in
-        merge_opens (forcing (opens_add env p))) env fids headers in
+      (* each header sees the functions before it in the block (section 53); the `AtFn` and `Delegate` proofs are
+         minted with the header, so a call within the block to a function marked `at` is skipped (section 39) *)
+      let env, fids_headers = List.fold_left_map (fun env raw ->
+        let (fl, name, mult, _, (_, _, atfn, delegates), ty, _) as h = header env raw in
+        if unique && mult = Many then error_in env fl "`def-unique` requires `unique` or `erased`" else if not unique && mult = Unique then error_in env fl "use `def-unique` to define a unique function";
+        let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in
+        let env = if not atfn then env else let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in merge_opens (forcing (opens_add env p)) in
+        let env = match delegates with
+          | None -> env
+          | Some f -> let fty = infer env fl (Var f) in snd (witness (placed env x (Some (slot_of f))) (proof_type Prelude.delegate [ sharing_of_fn env ty; ty; Var x; sharing_of_fn env fty; fty; Var f ])) in
+        (env, (x, h))) env fns in
+      let fids, headers = List.split fids_headers in
       let define x (fl, name, mult, absurd, (impl, extern, atfn, delegates), ty, body) =
         let params, rets = match ty with Fn (_, ps, rs) | UniqueFn (_, ps, rs) -> (ps, rs) | _ -> assert false in
         let envb = if unique then { env with entries = IntMap.add x { (entry env x) with mult = Erased } env.entries } else env in
@@ -2017,7 +2014,7 @@ and elab_def_fns ?(unique = false) env l args =
             | _ -> lets)) ([], []) params pids in
           List.fold_left (fun body (x, y) -> V.CLet ([ x ], V.CVar y, body)) body lets in
         let subterms = List.filter_map (fun (e, x) -> if e.subterm then Some x else None) (List.combine params pids) in
-        let envb = { envb with level = At lvl; subterms; enclosing = Some x; run_pos = false; in_extern = env.in_extern || extern; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
+        let envb = { envb with level = At lvl; subterms; enclosing = Some x; run_pos = false; trusted = trusted env; in_extern = env.in_extern || extern; unwarned = env.unwarned || extern || atfn; usage_erased = env.usage_erased || mult = Erased; captures = (if unique then env.captures else env.scope.ids @ env.captures) } in
         let envb, code =
           if absurd then (elab_refute envb fl body, V.CAbsurd)
           else
@@ -2030,31 +2027,21 @@ and elab_def_fns ?(unique = false) env l args =
         capture_uses := join_uses !capture_uses (IntMap.filter (fun x _ -> IntMap.mem x env.entries) envb.uses);
         let code, delegated = check_marks envb fl (runtime_ids params pids) code in
         if extern && delegated <> None then error_in env fl "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`";
-        (match delegated with
-         | Some (Var f) when f >= x -> error_in env fl "the function a `delegate` call names must be introduced before the function whose body it is"
-         | Some (Var f) -> Hashtbl.replace V.aliases x (V.resolve f)
-         | _ -> ());
         (match delegates, delegated with
-         | None, _ -> ()
+         | None, None -> ()
+         | None, Some callee -> error_in env fl "%s delegates to %s, so its header must name the callee: write `at` and the callee after the name" (tick name) (qshow envb callee)
          | Some f, Some callee ->
-             let f = named env (loc f) "a function name" f in
-             if not (equal (canon env callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow env callee)
-         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (tick (Reader.show f)));
+             if not (equal (canon envb callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow envb callee);
+             Hashtbl.replace V.aliases x (V.resolve f)
+         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (qname env f));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
            dummy a first-class call without the proof reaches (section 39) *)
         if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
         let code = if atfn then V.CValues [] else code in
-        ((x, { V.fname = name; params = runtime_ids params pids; body = code; impl }), Option.map (fun callee -> (x, ty, callee)) delegated)
+        (x, { V.fname = name; params = runtime_ids params pids; body = code; impl })
       in
-      let fns, proofs = List.split (List.map2 define fids headers) in
+      let fns = List.map2 define fids headers in
       let env = { env with uses = !capture_uses } in
-      let env =
-        List.fold_left
-          (fun env -> function
-            | Some (g, gty, callee) -> snd (witness env (proof_type Prelude.delegate [ sharing_of_fn env gty; gty; Var g; sharing_of_fn env (infer env l callee); infer env l callee; callee ]))
-            | None -> env)
-          env proofs
-      in
       let fns = List.filter (fun (x, _) -> not (Hashtbl.mem V.aliases x)) fns in
       if env.run_pos then
         let values = Eval.close env.values fns in
@@ -2106,7 +2093,7 @@ and elab_def_adts env adts =
     | List (_, List (al, n :: colon :: sg) :: d :: rest) when is_special env colon Sp.Colon -> (
         let ps, ret = split_arrow env al sg in
         match ret with
-        | [ ty ] -> let ms, ctors = marks env [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
+        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
         | _ -> error al "a type constructor declares one return")
     | _ -> error_in env (loc raw) "malformed `def-adts` entry%s" (help env (Sp.hints "def-adts-entry"))
   in
@@ -2157,6 +2144,18 @@ let hoist_at env (l, lit) =
   if prelude_id env ty = None then error l "%s needs the prelude's %s, which `--no-prelude` leaves out" what (tick ty);
   hoist env lit
 
+type final = Main | Io | Thunk of term | Plain
+
+let final_form env ty =
+  let bare string e = match e with { mult = Many; sg = Ty t; place = None; subterm = false; _ } -> (not string) || nullary env "String" t | _ -> false in
+  match canon env ty with
+  | Fn (_, [ p ], [ r ]) when bare true p && bare true r -> Some Main
+  | Fn (_, [], [ ({ sg = Ty t; _ } as r) ]) when bare false r -> Some (Thunk t)
+  | Fn _ | UniqueFn _ -> None
+  | _ -> Some (if nullary env "IO" ty then Io else Plain)
+
+let final env ty = Option.value (final_form env ty) ~default:Plain
+
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env = function
     | [] -> env
@@ -2168,7 +2167,10 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
               if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
               let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
-              let ty = (single (loc item) ress).ty and v = List.hd (run_code env code) in
+              let ty = (single (loc item) ress).ty in
+              if final_form env ty = None then
+                error_in env (loc item) "a final function must be `(Fn L (many (String) x) -> (many (String) y))` or `(Fn L -> (many T y))`; this one is %s" (qshow env ty);
+              let v = List.hd (run_code env code) in
               trace := Final (v, ty, path) :: !trace;
               consume env ty v;
               env)

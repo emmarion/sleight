@@ -77,8 +77,8 @@ by the owner and apply to every session.
     ASSUMPTIONS.md and the other notes stay under rules 1 and 11.)
 
 13. **`origin/main` is the only main.** A local `main` may be the
-    pre-restart history (`simply-typed-archive/main`), which shares no
-    ancestor with it — never merge or rebase across the two.
+    pre-restart history, which shares no ancestor with it — never
+    merge or rebase across the two.
 
 14. **ASSUMPTIONS.md is for decisions made *without* the owner.** That
     is its entire purpose: a choice a session had to make because the

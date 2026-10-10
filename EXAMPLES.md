@@ -172,11 +172,11 @@ that the test does not make is a mistake in this file.
   read off at the end. `tests/io_continuation_twice_bad.sl` and
   `tests/io_shared_final_bad.sl` show a continuation refused twice and a
   shared request refused as a program.
-- `tests/numeral_distinct.sl`, `tests/numeral_succ.sl`,
+- `tests/prove_literal_lt.sl`, `tests/numeral_succ.sl`,
   `tests/numeral_lemmas.sl` — reasoning about literals through the prelude's
-  `Numeral` relation rather than about their opaque `Nat`s. `distinct`
-  refutes a branch that has equated two literals, at a cost set by their
-  spellings' depth rather than their difference; `unary` rewrites a literal
+  `Numeral` relation rather than about their opaque `Nat`s.
+  `prove-literal-lt` gives an `Lt` between two numerals, which with
+  `lt-asym` refutes a branch that has equated them; `unary` rewrites a literal
   to successor form, walking only as far as the floor it is given, which is
   what lets one index a `Vec`. The third writes out what both expand to, so
   the sugar can be read against the calls it stands for.

@@ -5,6 +5,12 @@ questions. README.md describes the implementations and their command
 lines. EXAMPLES.md indexes the tests. The code and the other files cite
 sections of this file by number.
 
+The language has two aims besides its design. It matches the dynamism
+of Kernel, John Shutt's Lisp dialect, while still compiling cleanly
+with static types; the constant-knownness of a head (§6) is what
+reconciles the two. And it supports LLMs writing code in it, which is
+explicitly one purpose of the language and its tooling.
+
 - Syntax: §1 to §4.
 - The scope environment and the fact table: §5 to §8.
 - Types: §9 to §12.
@@ -15,7 +21,7 @@ sections of this file by number.
 - Coercion: §33, §34.
 - Slots, `at` and cells: §35 to §41.
 - The prelude, the FFI and literals: §42 to §45.
-- Sugar: §46 to §53.
+- Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
 - Worked examples: §55 to §61.
 
@@ -105,16 +111,19 @@ type position:
 
 ## 4. User-defined warnings
 
-A pragma line `;! warn NAME message` names a type constructor or value
-constructor that is in scope, resolved through its aliases, and gives a
+A pragma line `;! warn NAME message` names a type constructor, a value
+constructor or a function, meaning an entry of `Fn` or `UniqueFn`
+type, that is in scope, resolved through its aliases, and gives a
 message. After it, every non-erased application of that constructor
 warns with the message, and so does every non-erased `match`,
-`let-match` or `comptime-match` on that type. Each warning carries a
-note pointing at the pragma. No warning is given inside the body of an
-`extern` function. A `;! warn` must be written between top-level
-forms. It is an error to write a second `;! warn` for the same name, to
-name something not in scope or not a constructor, or to omit the
-message.
+`let-match` or `comptime-match` on that type, and every non-erased call
+of that function. Each warning carries a note pointing at the pragma.
+No warning is given inside the body of an `extern` function or an
+at-function (§39), or inside a branch of an at-match (§40), and none is
+given for an at-match itself or for a skipped call (§39). A `;! warn`
+must be written between top-level forms. It is an error to write a
+second `;! warn` for the same name, to name something not in scope or
+neither a constructor nor a function, or to omit the message.
 
 `;! suppress warn NAME` silences these warnings for `NAME` until the
 matching `;! restore warn NAME`, or to the end of the file if there is
@@ -137,6 +146,9 @@ entry has:
 - a **stored value**, present only in state `Const`. For an erased
   entry the stored value is a token that records that the value exists;
   it is not data;
+- a **minted type**, present only in state `Const`: the type the entry
+  had when it became `Const`, which special-form dispatch reads (§6,
+  §29);
 - a **multiplicity** (§13), declared at the binder or fixed by the kind
   of entry (§14);
 - a **level-mint marker**, set on an entry introduced by `def-lvl`
@@ -145,8 +157,8 @@ entry has:
   what a `delegate` may name (§19);
 - an **automatic slot** (§35).
 
-An entry's **type** and its **`is` rule** (§12) are not stored on the
-entry. They are stored in the fact table (§7). Each is a tree whose
+An entry's **type** and its **`is` rule** (§12) are stored in the fact
+table (§7), not on the entry, unlike its minted type. Each is a tree whose
 leaves refer to entries (§9); an `is` tree may refer to its own entry.
 Both depend on the scope: an entry's type may be refined inside a match
 branch and revert when the branch ends.
@@ -168,21 +180,23 @@ function's `subterm`-marked parameters, in declaration order (§19).
 Macros and special forms are first-class values. To invoke one, rather
 than merely hold it, the head of the form must be constant-known at
 that point. A name bound inside a function body or a match branch is
-`Dyn`. A function is `Dyn` inside the bodies of its own `def-fns`
-block. The binders of a statement in run position (§27) are `Const` in
+`Dyn`. A function is `Dyn` in every body of its own `def-fns` block
+and in the signatures that follow its own in that block (§53). The
+binders of a statement in run position (§27) are `Const` in
 the code after it (§29).
 
 A list is elaborated according to its head:
 
-1. If the head's type is a type constructor, a value constructor, an
-   `Fn`, a `UniqueFn` or a `Cell` (§32, §37), the list is an
-   application. This needs no constant-knownness: each of these can be
-   applied through a first-class value.
-2. Otherwise, if the head is `Const`, non-erased and of type
-   `(Special)` (§19), the list is the special form named by the head's
-   stored value. A head written `(share n)`, where `n` is such an
-   entry, is dispatched the same way (§16). An erased `Const` holds only
-   the token of §5 and has no value to dispatch on.
+1. If the head is `Const` and non-erased, and its minted type
+   canonicalizes to `(Special)` against the facts of the innermost
+   enclosing run position (§27), the list is the special form named by
+   the head's stored value. A head written `(share n)`, where `n` is
+   such an entry, is dispatched the same way (§16). An erased `Const`
+   holds only the token of §5 and has no value to dispatch on.
+2. Otherwise, if the head's type is a type constructor, a value
+   constructor, an `Fn`, a `UniqueFn` or a `Cell` (§32, §37), the list
+   is an application. This needs no constant-knownness: each of these
+   can be applied through a first-class value.
 3. Otherwise the list is an error.
 
 ## 7. The fact table and forced unification
@@ -209,7 +223,9 @@ branch-local entry and is still gone after the match. A fact can only
 mention entries that are in scope where it is created, so a fact never
 outlives an entry it mentions. Only run-position statements run at
 compile time (§27, §20), and their match branches are gated like any
-other, so one table is enough. Compile-time effects in unreachable code
+other. Special-form dispatch is decided at compile time anywhere, so
+it reads the table as it stood at the innermost enclosing run position
+(§6). One table is therefore enough. Compile-time effects in unreachable code
 still happen. A fact verified by a `comptime-match` in run position
 holds afterwards, so a later match on the same `Const` finds the
 contradicting branches refuted.
@@ -254,7 +270,9 @@ Forcing fails, and so refutes the branch, in exactly three cases:
 
 Constructors are first class (§24), so two constructor-valued
 variables are not known to be distinct just because they are
-syntactically distinct. When two constructor-headed terms meet, there
+syntactically distinct. A list of known-disjoint constructors kept in
+the scope environment would not be first class; a `Matchable` is that
+list as first-class data. When two constructor-headed terms meet, there
 is no third, indeterminate outcome: forcing either succeeds and adds
 facts, or contradicts by the rules of §7. Two atoms conflict only when
 one opened `Matchable` lists both, or their signatures cannot unify, or
@@ -292,7 +310,9 @@ be unified become one; the entry kept is the one the elaborator can
 best read, which is a `Const` with the type's own declaration if there
 is one, and otherwise one that is non-erased and still bound. So two
 opened `Matchable`s for one type are never ambiguous: either they are
-one, or they contradict.
+one, or they contradict. The facts this adds are justified by
+`def-adts` being the only place a `Matchable` is created: two that name
+one constructor describe one declaration.
 
 **What requires an open.** The disjointness rule of §7; `match`,
 `let-match` and `comptime-match`; the emptiness check of §25 and §51;
@@ -408,7 +428,8 @@ multiplicity is that of the position.
 Every binder declares a multiplicity: `erased`, `many` or `unique`.
 `erased` is Idris 2's multiplicity 0 and `many` is its ω, written as
 words (§1). There is no default: wherever the multiplicity is a
-choice, it is written.
+choice, it is written, which cuts down on mistakes while the design is
+in flux.
 
 `unique` may be declared on function parameters and return entries,
 constructor fields, `let` binders, and a match's scrutinee (§14). Where
@@ -452,9 +473,9 @@ These are the **erased positions**:
   multiplicity of its own binder;
 - the scrutinee of an `erased` match;
 - the proof argument of a `coerce`; every argument of a `coercible-*`
-  form, of `prove-subterm`, of `prove-predates` and of the three
-  axioms; and the proof inside `(subterm p)` and `(predates p)` (§18,
-  §19, §33);
+  form, of `prove-subterm`, of `prove-predates`, of `prove-literal-lt`
+  and of the three axioms; and the proof inside `(subterm p)` and
+  `(predates p)` (§18, §19, §33, §45);
 - the body of an absurd-by-proof branch and the body of an `absurd`
   function (§21, §25);
 - every sub-expression of an erased expression.
@@ -495,6 +516,17 @@ constructor.
 Erasure is decided from the text of one unit alone, a function body
 against its signature or a run-position statement against its binders,
 before that unit is compiled or run.
+
+Erased code obeys the `at` rules of §36 and gets the slot facts of §35
+and §36 that the same code would get at `many` or `unique`. Where the
+two differ, it gets what the `unique` form gets, as a call already
+does through its callee's signature (§36); this matters for a cell
+invocation (§37), whose value is then at its cell. A form whose only
+claim or effect is about the
+run is refused in an erased position: `tail`, `notail` and `delegate`
+(§19), the `at` wrapper around a call (§39), `share` (§16),
+`cell-write` (§37) and `cell-match` (§38); and an `erased` function may
+not be marked `at` (§39).
 
 ## 15. Uses of unique binders
 
@@ -540,7 +572,11 @@ were first bound to an anonymous variable. An argument that is already
 a variable is not rebound. An argument that is not a variable is bound
 before the call in two cases: when its parameter is non-erased and the
 call is in a non-erased position, and when a later entry of the
-signature names its slot (§36, §35).
+signature names its slot (§36, §35). The binding is a statement (§27)
+placed just before the statement or final form that contains the call,
+so its entry stays in scope, anonymously, for the rest of the
+expression around it, as the entries of a `let`'s right-hand-side
+statements do.
 
 ## 16. `share`
 
@@ -621,8 +657,8 @@ and types.
 
 **State-forwarding `let`.** A `let` binder takes over the state of the
 right-hand-side entry it corresponds to: `Const` or `Dyn` (§5), the
-stored value if `Const`, and, through an alias rule in the fact table
-(§7), its type and `is` rule. This happens whenever that entry is an
+stored value and minted type if `Const`, and, through an alias rule in
+the fact table (§7), its type and `is` rule. This happens whenever that entry is an
 expression in §9's grammar and so has an entry of its own. It is
 decided per binder: in `(let ((many a) (many b)) (values x y))`, `a`
 takes from `x` and `b` from `y`. A call, a match or a `coerce` forwards
@@ -638,7 +674,8 @@ multiplicity is mandatory and is the binder's declaration (§14). A
 `many` binder needs a non-erased value, a `unique` binder needs a
 unique value (§16), and an `erased` binder accepts anything. If a type
 or `is` clause is written, it is checked for identity against the
-inferred one (§9); a mismatch is an error. A `let` binder may not be
+inferred one (§9); a mismatch is an error. This is deliberately strict
+for now. A `let` binder may not be
 written `at` (§36).
 
 **Special forms as data.** A special form is a nullary constructor of
@@ -650,7 +687,9 @@ registry of §54, including the annotation tokens.
 **Macros.** `Macro` is a type with one constructor that holds a
 function from a list of unelaborated terms (`Raw`) to one such term.
 Expansion counts against a global limit. The prototype implements
-neither `Macro` nor `Raw`, so a `Macro` head is an error there.
+neither `Macro` nor `Raw`, so a `Macro` head is an error there. A
+`Macro` head would be dispatched as a special form is (§6), with
+`Macro` in place of `(Special)`.
 
 **Call-site proofs.** How the decrease of §17 is discharged depends on
 the kind of call:
@@ -685,22 +724,24 @@ are gone and every `let` that only renames has been resolved away
 the body, or if its results are bound by a `let` and returned in order
 by a final `values`, with or without coercions. A match in tail
 position puts its branches in tail position. An `at` return is dropped
-from a call's results for this purpose (§36). The marks wrap a call and
-nothing else. They are an error in an erased position.
+for this purpose, from the call's results and from the function's own
+returns alike (§36). The marks wrap a call and nothing else. They are
+an error in an erased position.
 
 **`delegate`.** `(delegate (f ...))` is `tail` plus the same
 pass-through requirement on the arguments: in the post-erasure code the
 marked function's body is nothing but the call, and the non-erased
-parameters are passed straight through, in order. The callee must be
-named by a variable introduced before the function whose body it is,
-in the introduction order of §5. It can never be the function itself,
-a later function of its block, a parameter, or anything the body
-binds. The non-erased behaviour of the two functions is then identical.
-`def-fns` creates a `Delegate` proof recording this; `delegate-of`
-fetches the proof and `coercible-of` turns it into a `Coercible` (§33).
-A function marked `extern` may not have a `delegate` body (§42). The
-function may name its callee on its header line, as in
-`(many g at f : ...)` (§41).
+parameters without a written `at` (§36) are passed straight through, in
+order. The function names its callee on its header line, as in
+`(many g at f : ...)` (§41), and the call must be to a callee that
+canonicalizes to it. The header sees only what was introduced before
+the function (§53), so the function it names can never be the function
+itself, a later function of its block, a parameter, or anything the
+body binds. The non-erased behaviour of the two functions is then
+identical. `def-fns` creates a `Delegate` proof recording this;
+`delegate-of` fetches the proof and `coercible-of` turns it into a
+`Coercible` (§33). A function marked `extern` may not have a `delegate`
+body (§42).
 
 ## 20. The top level calls freely
 
@@ -721,12 +762,10 @@ the constructor **phantom**. The marker is recorded in the type's
 field is declared `erased`, `many` or `unique` (§22). Subterm
 recursion (§17) may go through an erased field.
 
-A type marked `newtype` must have **newtype shape**: either an enum
-with exactly one non-phantom constructor, holding exactly one
-non-erased field; or a union whose non-phantom constructors each hold
-either only erased fields or exactly one non-erased field, with at
-least one of them holding a non-erased field. A value of such a type is
-represented as that field (§33).
+A type marked `newtype` must have **newtype shape**: every non-phantom
+constructor holds exactly one non-erased field, and there is at least
+one non-phantom constructor, and exactly one if the type is an enum. A
+value of such a type is represented as that field (§33).
 
 **A constructor returns its own type.** Every value constructor is
 declared under exactly one type constructor in `def-adts`. Its return
@@ -782,17 +821,18 @@ Each constructor has at most one branch. A present branch whose forced
 unification contradicts is an error. A constructor with no branch must
 either be refuted or be covered by the `else`.
 
-**One real branch.** A match in an erased position is unconstrained.
-Otherwise, if at least one of its results is non-erased: when the
-discriminant is non-erased, that is, a `many` or `unique` match on an
-enum, there is a runtime tag to dispatch on. When the discriminant is
-erased, that is, an `erased` match or a match on a union in any mode,
-at most one branch may be **real**. The others must each be
-automatically absurd, absurd by proof, or the branch of a phantom
-constructor under a non-erased scrutinee. An `else` counts as one real
-branch, unless every constructor it stands for is phantom under a
-non-erased scrutinee, in which case it counts as none and its body is
-erased throughout.
+**One real branch.** A match in an erased position is unconstrained,
+and so is an at-match (§40) on a union under a `many` or `unique`
+scrutinee, which does not dispatch. Otherwise, if at least one of its
+results is non-erased: when the discriminant is non-erased, that is, a
+`many` or `unique` match on an enum, there is a runtime tag to
+dispatch on. When the discriminant is erased, that is, an `erased`
+match or a match on a union in any mode, at most one branch may be
+**real**. The others must each be automatically absurd, absurd by
+proof, or the branch of a phantom constructor under a non-erased
+scrutinee. An `else` counts as one real branch, unless every
+constructor it stands for is phantom under a non-erased scrutinee, in
+which case it counts as none and its body is erased throughout.
 
 **First-classness.** Types, type constructors and value constructors
 are first class (§24). Every argument of a type constructor is erased.
@@ -834,9 +874,10 @@ each branch according to the `unique` column of §22.
 When the type's constructors have cells (§37), a pattern may add one
 binder after the fields: `((C f1 ... fn u) body)` as well as
 `((C f1 ... fn) body)`. The extra binder names the cell the constructor
-occupied. Its multiplicity is the scrutinee's, `many` or `unique`. Its
-type is `(Cell C (slot-of g1) ... (slot-of gk))`, with one slot per
-non-erased field binder `gi`, in order, and it is at `x` (§36). A
+occupied. Its multiplicity is the scrutinee's: `erased`, `many` or
+`unique`. Its type is `(Cell C (slot-of g1) ... (slot-of gk))`, with
+one slot per field whose label is non-erased, in order, `gi` being that
+field's binder, and it is at `x` (§36). A
 branch passes a `unique` cell out of the match by returning it into an
 entry of the match's annotation marked `at x`. A cell at `unique` may
 produce its value at `unique`; a cell at `many` produces its value only
@@ -844,8 +885,7 @@ at `many` (§37). The `else` branch may bind the scrutinee back, as
 `(else x2 body)`. Then `x2` is a fresh binder at the scrutinee's
 multiplicity, `is x` and at `x`, whichever constructor the `else`
 stands for. A single item after `else` is the body. A pattern on a
-constructor with no cell (§37), or under an `erased` scrutinee, has no
-extra binder.
+constructor with no cell (§37) has no extra binder.
 
 `let-match` takes the same modes and the same extra binder, and binds
 outward (§27). `comptime-match` at `unique` is a destructure like any
@@ -885,6 +925,11 @@ A `Matchable` has the type `(Matchable d marks T (e1 C1) ... (en Cn))`.
 either order, or neither. `T` is the type constructor. The `Ci` are its
 value constructors in declared order, each with its multiplicity `ei`,
 which is `erased` or `many`. `T` and the `Ci` are bare and unapplied.
+The former checks nothing further, so a `Matchable` type may list
+entries that are not constructors. Only `def-adts` creates a
+`Matchable` (§8), so such a type is uninhabited: opening a binder of
+it is allowed, and a match that names a non-constructor is an error.
+A mark written twice counts once.
 For example, the `Matchable` of `List` is
 `(Matchable enum List (many Nil) (many Cons))`. The tag, the marks and
 the `ei` are exactly the facts that no type records: a `TyCtor` type
@@ -1010,16 +1055,18 @@ right-hand side of a `let`, by its binders.
 **The top level.** A file's top level is an expression and so has size
 one. Several files on one command line share one scope, in order. A
 file that ends in a statement produces nothing. Otherwise the type of
-the final value decides what the driver does with it. A function from
-one `many (String)` to one `many (String)` is applied to all of
-standard input, and its result is written to standard output. An `IO`
-value (§42) is performed: the driver consumes it at `unique` and
-applies each request's continuation once. A function from no arguments
-to one `many` or `unique` return is applied and its result is printed;
-this is how a program asks for its final value to be computed by
-compiled code. Any other value is printed (§45). A function with
-erased parameters or with extra erased returns is not treated as either
-function form.
+the final value decides what the driver does with it. An `IO` value
+(§42) is performed: the driver consumes it at `unique` and applies each
+request's continuation once. Any other final value is used at `many`,
+so a `unique` one is written `(share x)` (§16). A final value of `Fn`
+type must have one of two forms, at any level `L`.
+`(Fn L (many (String) x) -> (many (String) y))`, with the prelude's
+`String`, is applied to all of standard input, and its result is
+written to standard output. `(Fn L -> (many T y))`, for any type `T`,
+is applied and its result is printed (§45); this is how a program asks
+for its final value to be computed by compiled code. A final value of
+`Fn` type in neither form, or of `UniqueFn` type, is an error. Any
+other value is printed (§45).
 
 **Run position.** A statement is in run position when it is under no
 function body and no match branch. Such a statement runs as soon as it
@@ -1029,8 +1076,10 @@ evaluator runs the code, and its binders become `Const` with the
 resulting values (§29). This nests: the right-hand side of a `let` may
 contain statements, and those in run position complete before the
 enclosing `let` does. A file's top level is run position, so calls
-there need no proofs (§20). Nothing under a function body or a match
-branch runs at compile time. The binders of a run-position statement
+there need no proofs (§20). Elaborating code under a function body or
+a match branch never runs it; such code runs at compile time only when
+called from run position, or, once macros exist, inside a macro
+dispatched under §6. The binders of a run-position statement
 declare their multiplicities (§19), which is what allows the statement
 to be stripped and run before the code after it is elaborated.
 
@@ -1043,7 +1092,7 @@ function body or a match branch, every binding is `Dyn`. Everywhere
 else, in run position (§27), a statement runs as soon as it is
 elaborated and its binders become `Const` (§29). A definition that is
 wanted as `Const` is therefore bound by its own `let` in run position
-(see `xs` in §57).
+(see `xs` in §57). This may be relaxed if it proves heavy.
 
 `(comptime-match m x (C f1 ... fn))` asserts, at elaboration time, that
 the `Const`, non-erased entry `x` holds a value headed by `C`. It is an
@@ -1056,7 +1105,10 @@ one statement confined to run position (§27). The form consults the
 type's `Matchable` (§24) for the discriminant and binds the fields as
 `Const` at their declared multiplicities under `m` (§22): `many` fields
 take the values projected from the stored value, and erased fields take
-the tokens of §5, since the stored value does not contain them.
+the tokens of §5, since the stored value does not contain them. Its
+purpose is proof by reflection: a decidable proposition is discharged
+by computing it in run position and asserting the outcome, as
+`tests/u8.sl` does for the bound of a `U8`.
 
 On a mismatch, the error prints the expected constructor and the actual
 value, including its discriminant and arguments. This can be used as a
@@ -1076,8 +1128,9 @@ At each, the multiplicity is declared.
    `def-adts` involves no evaluation: a function's value is its
    compiled code, a `Level` is an erased token, and a `Matchable` is
    the FFI's wrapper for an `extern` type and nothing otherwise (§24).
-   Inside the bodies of a `def-fns` block, the block's own functions
-   are `Dyn`. After the block they are `Const`, at the multiplicity
+   In the bodies of a `def-fns` block, and in the signatures of the
+   block that follow their own (§53), the block's own functions are
+   `Dyn`. After the block they are `Const`, at the multiplicity
    written on their lines.
 2. **Field binding by `comptime-match`** (§28), at the fields'
    declared multiplicities.
@@ -1087,6 +1140,12 @@ Nothing else creates a `Const`. Inside a function body or a match
 branch, every binding is `Dyn`, including nested definitions. So any
 `Special` or `Macro` that is ever invoked (§6) comes from run position.
 A constructor application over `Const` arguments is `Dyn` (§28).
+
+**The minted type.** At sites 1 and 2, an entry records its type,
+as it is there, as its minted type (§5); at site 3 it takes its
+source's (§19). Special-form dispatch canonicalizes the minted type
+against the facts of the innermost enclosing run position (§6), so a
+later run-position fact refines it and a branch-forced one does not.
 
 **Inspection requires `Const` and non-erased.** A stored value is read
 in three places: head dispatch (§6), the discriminant read of
@@ -1154,7 +1213,9 @@ elaborated, not at each call, and once modulo match branches as in
 §15. The defined binder is born unique. Calling the function is a use
 of that binder at unique, or an erased use. A shared `UniqueFn` can
 therefore be called only erased, and `share` on one leaves a dead
-value. A head of `UniqueFn` type can be applied in tier 1 of §6, like a
+value. This is what a `unique` binder of `Fn` type cannot express:
+once shared, it could be called repeatedly, running its captured unique
+values again. A head of `UniqueFn` type can be applied in item 2 of §6, like a
 head of `Fn` type; the call uses the head at unique. The level is
 written as on a `def-fns`, and `_` is allowed (§46); the level may be
 shared with ordinary functions. The parameters may be marked `subterm`,
@@ -1222,10 +1283,9 @@ the expected type (§50).
 4. `(coercible-share p)`: `p` with both sides `(Shared)`.
 5. `(coercible-wrap s C arg1 ... argn)`: wrapping into a **newtype**. A
    type is a newtype because of its `def-adts` mark, which requires
-   newtype shape (§21). A non-phantom constructor that holds a
-   non-erased field is a **wrapping constructor**: the single
-   constructor of an enum, or each such constructor of a union. Phantom
-   constructors do not count either way. The form reads the `newtype`
+   newtype shape (§21). Every non-phantom constructor of a newtype is a
+   **wrapping constructor**: the single one of an enum, or each one of
+   a union. Phantom constructors are not wrapping constructors. The form reads the `newtype`
    mark from the opened `Matchable` that lists `C` (§8). That mark is
    what makes the form trustworthy: it guarantees that `C` heads
    inhabited values, whereas wrapping through a constructor without
@@ -1256,8 +1316,10 @@ the expected type (§50).
 8. `(delegate-of g)`: for a function `g` whose body is a `delegate`
    call to `f` (§19), the `Delegate` proof that `def-fns` created
    anonymously. It is fetched from the ambient scope by naming `g`,
-   resolved through its aliases (§19). `g` is `Dyn` within its own
-   block (§29), so its body cannot use its own proof.
+   resolved through its aliases (§19). It is in scope in the signatures
+   of the block that follow that of `g`, in every body of the block,
+   that of `g` included, and after the block, as the names the block
+   defines are.
 
 **Representation.** Coercion is free only if the representations
 coincide, so the following is a requirement on the implementation.
@@ -1265,8 +1327,8 @@ Values have a uniform representation: every value is one word, either
 an immediate or a pointer to a block, whatever its type. So a `Cons`
 block holds a `(Meters)` and a `(Nat)` in the same way, and the field
 of a wrapper may be existentially typed. A value is the tuple of its
-constructor's non-erased fields; a single field is stored bare. A value
-carries a tag only when its type is an enum with more than one
+constructor's non-erased fields; a single field is stored bare. A
+value carries a tag only when its type is an enum with more than one
 non-phantom constructor. The tag is the constructor's position among
 the non-phantom constructors, and that is all a tag ever
 distinguishes. A phantom constructor takes no discriminant. A value
@@ -1276,15 +1338,15 @@ value built by a wrapping constructor is represented exactly as that
 constructor's one non-erased field, with no tag and no wrapper. That
 representation is mandatory for a type marked `newtype` and forbidden
 for a type that is not marked: an unmarked type of newtype shape is a
-block (§37). A union newtype value built by a constructor with only
-erased fields is an unspecified word. A word is never read as the
+block (§37). A word is never read as the
 field of a constructor that did not build it: a non-erased match on a
-union has a single real branch, and unwrapping requires the value to
-canonicalize to the application of the wrapping constructor. Erased
-fields occupy no space. The pointer of a `delegate`-bodied function
-is interchangeable with its callee's (§19). An extern type (§42) may be
-marked `newtype`; its FFI author then guarantees the field
-representation. A newtype may wrap a field of an extern type.
+union has a single real branch unless it is an at-match, whose `at`
+entries every real branch must justify (§40), and unwrapping requires
+the value to canonicalize to the application of the wrapping
+constructor. Erased fields occupy no space. The pointer of a
+`delegate`-bodied function is its callee's pointer (§19). An extern
+type (§42) may be marked `newtype`; its FFI author then guarantees the
+field representation. A newtype may wrap a field of an extern type.
 
 Only non-phantom constructors and non-erased functions matter in items
 5 to 8, because a `coerce` produces a non-erased value, which none of
@@ -1328,15 +1390,18 @@ two functions: `(Shared)` for an `Fn` and `(Unique)` for a `UniqueFn`.
 So a `UniqueFn` that delegates to an `Fn` is `(Unique)` to `(Shared)`.
 `coercible-of` carries the sides across. `coercible-sym` is always
 allowed. `coercible-trans` requires the two middle sides to be equal.
+Without the sides, a proof chained through two newtypes of one field
+type, one labelled `many` and one `unique`, would carry a `many` value
+into a unique wrapper; `coercible-trans` refuses it.
 `coercible-share` weakens any proof to `(Shared)` on both sides. How a
 `coerce` uses its source and yields its result under the sides is
 described in §33.
 
 ## 35. Slots in the fact table
 
-Every entry of the scope environment (§5), including erased entries
-and metas, is created together with an anonymous entry of type
-`(Slot)` at the entry's own erasure. This is the entry's **automatic
+Every entry of the scope environment (§5), including erased entries,
+is created together with an anonymous entry of type `(Slot)` at the
+entry's own erasure. This is the entry's **automatic
 slot**. It is not in the scope's list of names, and its own slot is
 itself. An erased variable has no word, so its slot has no word behind
 it, and §14 keeps the slot out of non-erased positions as it keeps the
@@ -1367,8 +1432,9 @@ result is at `x`, so a `let` of it is at the same slot as `x`.
 
 A variable of type `(Slot)` is not its own slot merely by being
 declared. Like any entry, it has an automatic slot distinct from
-itself. `(slot-self s)` is a statement (§27). It takes a non-erased
-variable `s` whose type canonicalizes to `(Slot)` and creates, outward
+itself. `(slot-self s)` is a statement (§27). It takes a variable
+`s`, of any multiplicity, whose type canonicalizes to `(Slot)` and
+creates, outward
 and by forcing, the fact that `(slot-of s)` and `s` are equal. A
 contradiction is an error. After it, `s` is the slot that an entry
 `(many A a at s)` names and that a cell type `(Cell C s)` indexes.
@@ -1404,8 +1470,8 @@ what an `at` canonicalizes to. At a call, the argument for a parameter
 written `at` is elaborated at the parameter's multiplicity and its uses
 count like any argument's. If it is not a variable, it is bound first.
 Its slot must equal the target's slot, instantiated with the earlier
-arguments, and it is not passed. `_` cannot stand for it. This check is
-made in erased positions as well. Inside the body, the parameter is a
+arguments, and it is not passed. `_` cannot stand for it. Inside the
+body, the parameter is a
 rename of its target's word. An `at` return is absent from the physical
 values of a call. A `let` binds it like any return, and the elaborator
 supplies its word from a non-erased entry in the same slot, namely the
@@ -1413,20 +1479,27 @@ caller's own binder for the argument the promise names, which the
 caller still holds whether or not the call consumed it. The `at`
 entries of a match are likewise produced by no branch and read back by
 the consumer. The promise of an `at` return is verified where the
-function or branch returns, by the canonical identity of the slots. A
-phantom branch under a non-erased scrutinee, an absurd branch, a
-refuted branch, and an `erased` or `absurd` function are exempt.
+function or branch returns, by the canonical identity of the slots. An
+absurd body (§21, §25) produces no declared returns, so the promise of
+its function or branch has nothing to apply to.
+
+A function that may fail can still promise its result at its argument.
+It returns an erased `(Type T)`, a `(unique T v at a)` and a
+non-erased outcome whose type is indexed by `T`. Matching the outcome
+forces `T` to the intended type on success and to the argument's own
+type on failure, and the one word is at `a` either way.
 
 **Writers.** Besides the declaration sites, facts equating slots (§35)
 are created by: the cell binder and `else` binder of a destructure
-(equated with the scrutinee, §23); a `unique` or `many` destructure of
+(equated with the scrutinee, §23); a destructure of
 a newtype (its non-erased field with the scrutinee) and an application
 of a newtype constructor (the value with its non-erased argument, §37);
 a cell invocation (the value with its cell) and a `cell-write` on a
 `unique` cell (the result with its input); `coerce` and `share` (the
 result with the source); a forwarding `let` (§19); a `let` of
 `(slot-of x)` (with `x`); the `at` return and `at` parameter of a call,
-and the `at` entry of a match (with their targets); `slot-self` (§35);
+and the `at` entry of a match (with their targets); the delegate
+annotation (`g` with `f`, §41); `slot-self` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
 slot is an atom of the fact table. A forced rule between two ordinary
@@ -1461,18 +1534,18 @@ type (§24). An abstract constructor must be listed by an opened
 marked `newtype` and forbidden for a type that is not.
 
 **Newtypes.** A newtype has no cell. Its representation is the word of
-its non-erased field (§33). A `unique` or `many` destructure of a
-newtype puts the field it binds at the scrutinee. An application of
-its constructor is at its non-erased argument. In an erased position
-the application is at nothing.
+its non-erased field (§33). A destructure of a newtype puts the field
+it binds at the scrutinee, and an application of its constructor is at
+its non-erased argument.
 
 **Obtaining a cell.** `(cell-alloc C)` is an expression that yields a
 fresh cell at unique, at no slot, with every slot `vacant-slot` (§35).
 `(cell-alloc (C i1 ... in))` lists every non-erased field; each item is
 a `(Slot)` expression at many, or `_` for `vacant-slot`. A partial list
-is not allowed. A destructure at `many` or `unique` yields, through its
-cell binder (§23), the cell the constructor occupied, at the scrutinee,
-with each slot `(slot-of g)` for the field binder `g`.
+is not allowed. A destructure in any mode yields, through its cell
+binder (§23), the cell the constructor occupied, at the scrutinee, with
+each slot `(slot-of g)` for the binder `g` of a field whose label is
+non-erased.
 
 **Writing.** `(cell-write m u (C i1 ... in))` is an expression. `m`,
 `many` or `unique`, is the multiplicity the cell is taken at, as a
@@ -1489,7 +1562,7 @@ block holding the old words with the written slots replaced, at unique
 and at nothing. So a write whose items are all `_` copies a shared
 block into a unique cell.
 
-**Invocation.** A head of `Cell` type can be applied in tier 1 of §6.
+**Invocation.** A head of `Cell` type can be applied in item 2 of §6.
 `(u a1 ... an)` is a constructor application that creates
 `(C a1 ... an)` at `u`. It uses each argument at the multiplicity of
 its field, as `(C a1 ... an)` would, including erased arguments, which
@@ -1603,26 +1676,36 @@ annotation is wrapped in an `at` form, with the telescope inside:
 ```
 
 Every entry of the annotation must be erased or `at`. The code of each
-branch must erase to nothing, as the body of an at-function must (§39).
-The match skips its runtime: its scrutinee is evaluated as for any
-match, but the match itself, its dispatch and its branches, compiles to
-no code, and the consumer reads its `at` entries back from their
-targets (§36). Coverage and the
-one-real-branch rule (§21) are checked as for any match. The annotation
-inside the `at` must be written out; `_` cannot stand for it.
+branch must erase to nothing, as the body of an at-function must
+(§39). The match skips its runtime: its scrutinee is evaluated as for
+any match, but the match itself, its dispatch and its branches,
+compiles to no code, and the consumer reads its `at` entries back from
+their targets (§36).
+Coverage is checked as for any match. On a union under a `many` or
+`unique` scrutinee, the one-real-branch rule of §21 does not apply,
+because nothing dispatches: such an at-match may have several real
+branches. Under an `erased` scrutinee the rule applies as for any
+match. The annotation inside the `at` must be written out; `_` cannot
+stand for it.
 
 ## 41. The delegate annotation
 
-A `delegate`-bodied function (§19) may write `at` after its name,
+A `delegate`-bodied function (§19) writes `at` after its name,
 followed by the function it delegates to:
 
 ```scheme
 (def-fns L $ (many g at f : ...) (delegate (f ...)))
 ```
 
-The annotation is optional. If it is written, it must be accurate: the
-function it names must be the one named by the body's `delegate` call,
-canonically. A body with no such call is an error.
+The annotation is required on a `delegate`-bodied function and is
+resolved in the scope of the header (§53). The function it names must
+be the one named by the body's `delegate` call, canonically. A body
+with no such call is an error. `def-fns` or `def-unique` creates the
+`Delegate` proof (§33) when the header is elaborated, before the bodies
+of the block, as it creates an `AtFn` proof (§39). The annotation also
+puts `g` at `f` (§36). `(slot-of g)` is `(slot-of f)` in the signatures
+of the block that follow that of `g`, in every body of the block, and
+after the block.
 ## 42. Built-ins, the prelude and the FFI
 
 **Built-ins.** Before any file is read, the scope holds the following,
@@ -1636,8 +1719,10 @@ nullary constructor per special form, with its `Matchable` opened and
 each form's name bound `many` to its constructor (§19, §54).
 `--no-prelude` starts from these alone.
 
-**The `extern` mark.** A `def-adts` entry or a `def-fns` function may
-be marked `extern` (§54). The declaration is then a *model*. For a
+**The `extern` mark.** A `def-adts` entry or a `def-fns` or
+`def-unique` function may be marked `extern` (§54) only in the source
+prelude, or anywhere in a program run with `--no-prelude`. Marking one
+`extern` anywhere else is an error. The declaration is then a *model*. For a
 type, its constructors and `Matchable` say what its values are and how
 they are taken apart, and the FFI supplies the representation together
 with construction and matching over it. For a function, the body says
@@ -1773,7 +1858,8 @@ which `lib/prelude.sl` is the reference:
   and `Fail` for a path it cannot read. The delete requests answer
   `Unchanged` for an absent path. README.md describes `ConfineDir`,
   `ConfineOutputBytes` and the command-line flags that stand in for
-  them.
+  them. `lib/prelude.sl` declares further requests besides these, and is
+  the reference for them.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -1899,7 +1985,9 @@ a `many` index. `array-pluck` leaves the plucked element's word in the
 array under `Uninit`, and the slot of that `Uninit` is exactly the slot
 of the value returned. So the value may be mutated in place and put
 back with `array-unpluck`, an `extern at` function (§39) whose call
-costs nothing. Until it is put back, the array may keep the plucked
+costs nothing. This is for a unique value kept inside an outer array,
+such as a row of a jagged array: it is plucked, mutated in place, and
+put back at no cost. Until it is put back, the array may keep the plucked
 value alive. Constructing an `ACons` copies its tail, and taking an
 array apart through the model's `ACons` view is O(n). `init-witness`
 is an erased witness, in the shape of §60, that an
@@ -1953,13 +2041,16 @@ also interns the numeral of its code.
 proof by its spelling; for a character literal it yields the proof of
 the character's code, and for a string literal or a name it is an
 error. So two spellings equated in a branch refute the branch, and
-`unary` and `distinct` (§49) produce the one rule or refutation that a
-`Succ` shape or a disjointness needs. A character literal is
+`unary` (§49) produces the one rule that a `Succ` shape needs.
+`(prove-literal-lt a b)`, for numerals `a` below `b`, creates
+`(Lt a b)`, asserted as a character's bound is. A character literal is
 transparent down to its opaque `Nat`: its entry carries
 `is (MkChar (MkU8 n p))`, where `n` is the entry of its code's numeral
 and `p` is the erased proof of its bound, asserted rather than decided.
 So to the checker a character is its code. A string literal is opaque:
-a `Const` `String` with no rule. `comptime-match` reads its value, and
+a `Const` `String` with no rule. A rule exposing its characters would
+make every canonical form that mentions the literal expand to all of
+them. `comptime-match` reads its value, and
 a match inside a function takes it apart at runtime.
 
 **Printing.** A value of type `Nat`, `Char` or `String` prints as the
@@ -2021,14 +2112,13 @@ and checked as if it had been written. A same-level call whose
 counterparts is an error. At the top level a bare call is what §20
 describes, and a written annotation is an error.
 
-## 49. `unary` and `distinct`
+## 49. `unary`
 
-Both forms reason about a numeral through the prelude's `Numeral`
-relation (§45) rather than about its opaque `Nat`. Both elaborate into
+`unary` reasons about a numeral through the prelude's `Numeral`
+relation (§45) rather than about its opaque `Nat`. It elaborates into
 ordinary calls on prelude lemmas, in the prelude's scope, so that no
-shadowing reaches them. Neither carries meaning of its own. Either
-takes a numeral or a character literal; a character stands for its
-code.
+shadowing reaches them, and carries no meaning of its own. It takes a
+numeral or a character literal; a character stands for its code.
 
 `(unary a b)` is a statement. `b` must be below `a`. It creates one
 rule, `a is (Succ ... b)` with as many successors as separate the two.
@@ -2043,18 +2133,10 @@ mentioned by the rule and stay opaque: `(unary 5 3)` says
 shape is wanted: to peel a `Vec`, or, with a `unary` for each literal
 down to zero, to stand as the length of a `Vec`.
 
-`(distinct a b)` is an expression. In a context that has equated the
-two literals, it yields an erased `(False)`, by a vacuous match on the
-`Eq` from `numeral-inj` between their spellings: a `Nat` has one
-bijective base-2 spelling, so two spellings for one `Nat` conflict
-through the `Matchable` of `Bin`. Its cost depends on the depth of the
-spellings, not on the difference between the numbers. Outside such a
-context, or on two equal literals, it is an error.
-
 ## 50. `_` for an inferred argument
 
 **Where `_` may stand.** As an argument that is erased where it stands:
-an erased argument of any application in tier 1 of §6, including a
+an erased argument of any application in item 2 of §6, including a
 cell invocation, or any argument of a call that is in an erased
 position. Also as an argument of `coercible-wrap`, as the `Sharing`
 argument of `coercible-refl`, `coercible-wrap` and `coercible-ctor`
@@ -2084,14 +2166,17 @@ refused at the `)` of the call. A `_` in a signature is accepted when
 its own entry solves it.
 
 **Solving.** Metas are solved by unification only, with no search and
-no computation. Boundaries settle from the inside out: everything
-within one boundary is solved together, and a boundary nested inside
-it closes first, using only what is known at that point. A match's
-annotation is settled before its branches, so no meta crosses into a
-branch. A bare `_` as a whole annotation entry or binder type is a meta
-of type `Type`. `_` is not accepted as an entry of a `values` or as the
-scrutinee of a `let-match`. After the arguments are solved, the
-decrease annotation of §48 is inferred.
+no computation. A meta's solution must have the meta's type, the type
+of the position it stands for, as a written argument must: solving a
+meta to a term also unifies the meta's type with the term's type.
+Boundaries settle from the inside out: everything within one boundary
+is solved together, and a boundary nested inside it closes first, using
+only what is known at that point. A match's annotation is settled
+before its branches, so no meta crosses into a branch. A bare `_` as a
+whole annotation entry or binder type is a meta of type `Type`. `_` is
+not accepted as an entry of a `values` or as the scrutinee of a
+`let-match`. After the arguments are solved, the decrease annotation of
+§48 is inferred.
 
 ## 51. Refuting in an absurd body
 
@@ -2136,9 +2221,10 @@ right-hand side of a `let`, in run position, and in absurd bodies
 type or an `is` expression. Each elaborates to the entry it would yield
 as an expression, which is a variable reference, the first production
 of §9. It is read where it is written, against the facts in force
-there. The names of a `def-fns` block are in scope in its bodies but
-not in its signatures, so a signature cannot name the block's level
-through one of them. `coercible-of` is not a fetch form: it creates a
+there. The names of a `def-fns` block are in scope in every body of
+the block. In a signature, only the functions before it in the block
+are in scope, as `Dyn` entries (§6). A signature never sees its own
+function or a later one. `coercible-of` is not a fetch form: it creates a
 fresh proof at each use, and it may not appear in a type.
 
 ## 54. Special form registry
@@ -2154,8 +2240,9 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `def-lvl`: creates a fresh `Level` (§18).
 - `def-fns`: one or more mutually recursive functions at one level,
   written on the form, each with its own `erased`/`many` marker (§14),
-  and optionally `absurd` (§25), `extern` (§42), `at` (§39) or `at g`
-  (§41). It may be nested in a body. It creates a `Delegate` proof for
+  optionally `absurd` (§25), `extern` (§42) or `at` (§39), and `at g`
+  on a `delegate`-bodied function, where it is required (§41). It may
+  be nested in a body. It creates a `Delegate` proof for
   each `delegate`-bodied function (§33) and an `AtFn` proof for each
   at-function.
 - `def-unique`: one function of `UniqueFn` type (§32).
@@ -2186,7 +2273,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   before the decreasing argument, so it has more items than the
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
-  `cell-match` (§37, §38), `open-absurd` (§8), `distinct` (§49).
+  `cell-match` (§37, §38), `open-absurd` (§8).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2197,6 +2284,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).
+- `prove-literal-lt` (§45).
 
 **Fetch forms**, which may also be written inside a type or `is`
 expression (§53):
@@ -2409,7 +2497,7 @@ A `delegate` proof, reusing `inc` from §57 at level `I`:
 ```scheme
 (let ((erased piv)) (prove-predates I V))
 
-(def-fns V $ (many inc-noted : (many (Nat) n) (erased (Nat) note) ->
+(def-fns V $ (many inc-noted at inc : (many (Nat) n) (erased (Nat) note) ->
     (many (Nat) m))
   (delegate (inc (predates piv) n)))
 

@@ -200,14 +200,21 @@ structurally, with the relations kept as they were:
   header). Two owner decisions followed. `ETValCtor` now requires
   ASSUMPTIONS 80 of a `ValCtor` former's return, which `lib/` and `self/`
   already did. And `UAssign` equates the assigned variable's type with
-  the term's, pushed as the next equation, which neither `lib/` nor
-  `self/` does (their forcing assigns without a type check, and their
-  atom-against-atom case unifies signatures only where both are formers,
-  ASSUMPTIONS 89); `Refine` and `Contradict` take one equation, the
-  scrutinee against the pattern, the type equation following from it.
-  So `mini/` is now stricter than the reference: whether `lib/` and
-  `self/` should follow, and the sentence section 7 of DESIGN.md would
-  need, are for the owner. For the function side this moved the stuck
+  the term's, pushed as the next equation. `lib/` and `self/` now do the
+  same when solving a meta (DESIGN.md section 50, the owner's decision),
+  but not when forcing: their forcing assigns without a type check, and
+  their atom-against-atom case unifies signatures only where both are
+  formers (ASSUMPTIONS 89); `Refine` and `Contradict` take one equation,
+  the scrutinee against the pattern, the type equation following from
+  it. So `mini/`'s forcing is stricter than the reference's: whether
+  `lib/` and `self/` should follow there, and the sentence section 7 of
+  DESIGN.md would need, are for the owner. One session's reading against
+  following, not proved: types here can mention slots, and section 36
+  says `is`-equality says nothing about slots, so equating the types of
+  two atoms a forcing binds could turn an `is`-equality into a slot
+  equality; and in the programs tried (every test, and slc's sources)
+  the equation never changed an outcome, each forced atom's type
+  seemingly being fixed by indices the forcing had already unified. For the function side this moved the stuck
   into unification (`RefStuck`, propagated as the `Stuck` constructors
   of the walk's result types, which only `Force` mode can be). This
   paragraph used to add that closing it would need the invariant that

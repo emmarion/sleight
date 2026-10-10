@@ -11,7 +11,7 @@
       (WriteErr _ e $ unique-thunk _ _ $ WriteErr _ "\n" $ unique-thunk _ _ $ notail $ write-lines rest next))))
 
 ; Each source with its path, which the messages name; a syntax error ends that file's reading. The first
-; source is the prelude, whose scope the generated forms of unary and distinct elaborate in (lib/builtin.ml).
+; source is the prelude, whose scope the generated forms of unary elaborate in (lib/builtin.ml).
 (def-fns util-lvl $ (many run-files : (many (Bool) notes) (subterm many (List $ Pair (String) $ String) srcs) (many (Env) env) (many (Bool) first) -> (many (Env) r))
   (let-match many srcs (Cons _ ps rest) ((Nil _) env))
   (let-match many ps (MkPair _ _ path src))
@@ -29,7 +29,7 @@
           ((Some _ pn) (match many pn _ ((MkPair _ _ np nm) (Cons _ (located (env-at envw np) ": note: " nm) shape)))))
         (env-fail envw $ join-strs (Cons _ (located (env-at envw pos) ": syntax error: " m) lines) "\n"))
       ((None _) (end-file $ run-toplevel items $ env-set-regions envw regions))))
-  (tail $ run-files notes rest (match many first (((Env) _)) ((BTrue) (env-set-prelude env2 $ env-scope env2)) ((BFalse) env2)) $ BFalse))
+  (tail $ run-files notes rest (match many first (((Env) _)) ((BTrue) (env-set-externs (env-set-prelude env2 $ env-scope env2) $ BFalse)) ((BFalse) env2)) $ BFalse))
 
 (def-fns util-lvl $ (many shown : (many (Bool) first-only) (subterm many (List $ Said) ss) (many (Bool) seen) (many (List $ MsgMeta) table) -> (many (List $ String) r))
   (let-match many ss (Cons _ x rest) ((Nil _) (Nil _)))
@@ -60,7 +60,7 @@
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
   (let ((many builtins)) (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help))
-  (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) prelude)
+  (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) prelude)
   (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env) $ said-failed (BTrue) $ env-said env)
   (write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) $ write-lines
     (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))

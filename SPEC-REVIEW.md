@@ -231,30 +231,3 @@ hold the implementation side.
     mark is checked and, since nothing is bound in an erased position,
     fails on any argument that is not a variable, and the call form is
     refused. Open: which of refusing, ignoring and checking is meant.
-34. **`let-match` on a union with a phantom constructor.** §27's
-    survivor rule counts a phantom constructor under a `many`
-    scrutinee as surviving, since it is not refuted, so
-    `(let-match many w (WA n))` is refused where the equivalent `match`
-    treats the phantom branch as unreachable (§21). Open: should a
-    phantom under a non-erased scrutinee count as not surviving.
-35. **Hand-written `Matchable` types.** `(Matchable enum T (many k))`
-    with `k` a `Nat` or a literal, and `newtype` written twice, are
-    accepted by the former and by `open-adt`; the error comes at a
-    match. §24 says the entries are value constructors and allows each
-    mark once. Open: whether the former should check them.
-38. **The type of an argument for an `is` entry.** §12 says the
-    argument "must canonicalize to the same term as the `is`
-    expression" and says nothing of its type; §50 lets `_` stand for an
-    erased argument. Read literally, `(g _ 3)` with `g : (erased
-    (False) j) (many j is x)` satisfies §12 (BUGS.md 5). Open: state
-    that the argument must also have the entry's type, the type of the
-    `is` expression; and whether solving a meta should unify its type
-    with the term's, as `mini/`'s `UAssign` does, which HANDOFF.md
-    records `lib/` and `self/` not doing.
-39. **An `at` naming an argument that was bound to a temporary.** §36
-    reads an `at` return back from "the caller's own binder for the
-    argument the promise names". When a returned closure's `at` names
-    an argument that was an expression, bound first by §15's rule and
-    hidden after its `let`, nothing readable sits at the slot and the
-    call is refused. Open: whether the refusal is intended, or the
-    temporary should stay readable.

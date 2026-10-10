@@ -5,7 +5,7 @@
 (def-fns L $ (many inc : (many (Nat) n) -> (many (Nat) m)) (Succ n))
 (def-lvl M)
 (let ((erased p)) (prove-predates L M))
-(def-fns M $ (many g : (many (Nat) n) -> (many (Nat) m))
+(def-fns M $ (many g at inc : (many (Nat) n) -> (many (Nat) m))
   (def-adts $ (Tally : -> Type) enum (many Mark : (many (Nat) k) -> (Tally)) (many Blank : -> (Tally)))
   (delegate (inc (predates p) n)))
 (let ((erased ig)) (coercible-of (delegate-of g)))

@@ -1,0 +1,33 @@
+#!pi -f ../../DESIGN.md -f ../../BUGS.md -f ../../OPEN.md -f ../../SPEC-REVIEW.md -f ../../lib -f ../../bin -f ../../tests -f ../../pal -f ../../self -f false -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1
+Your task is to find a soundness hole in SL by proving False. Or: to lay the
+groundwork for a future session to do so. This task will likely take many
+sessions, so leaving solid, well-recorded progress matters more than finishing
+in this one.
+
+To check your work, compile in order: your files, then false/accept.sl. It
+calls `bottom`, a function you define that takes no arguments and returns
+`(erased (False) f)`. Warnings are allowed. A program that reaches absurd code
+at runtime also counts: compiled after your files as work/absurd.sl, its run
+must end with `runtime error: absurd code reached`, without printing it itself.
+
+For reference: DESIGN.md (the language); BUGS.md, OPEN.md, and SPEC-REVIEW.md
+(known defects and open questions); lib/prelude.sl (the standard library);
+tests/ (example programs); pal/ (a certified program); self/ (the compiler
+that the `sl` tool runs, itself written in SL); and lib/ and bin/ (the
+reference compiler, in OCaml).
+
+Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
+work/, keep files.txt, listing in order the files that go before
+false/accept.sl. Generally put experiments and `sl` captures in scratch/,
+which does not carry over. Keep work/ tidy, pruning files that have served
+their purpose.
+
+Your session has two phases: first experimenting, then writing HANDOFF.md and
+FEEDBACK.md. HANDOFF.md tells the next session where things stand and what to
+try next; rewrite it each session instead of adding to it. FEEDBACK.md tells
+SL's maintainers each suspected hole you found, with the smallest program that
+shows it, and anything about SL, its library, or its tools that slowed you
+down; add to it each session instead of rewriting it. Each phase has its own
+budget of tokens. In the second phase, those two are the only files you can
+edit; there's no need to edit them, or to read FEEDBACK.md, before then, so
+spend the first phase on the task itself.

@@ -3,6 +3,7 @@ module IntMap = Value.IntMap
 
 exception Error of Reader.loc * string
 exception Contradiction of string Lazy.t
+exception Ill_typed of id * term
 
 (* A session's third output channel, beside a program's own stdout and stderr and the message a refusal
    carries: a warning names something legal that the session reads as a mistake. Writing it through a hook is
@@ -27,7 +28,8 @@ let resolve here s =
     match Hashtbl.find_opt numbering key with
     | Some n -> n
     | None ->
-        let n = 1 + Hashtbl.fold (fun k _ c -> if k.[0] = key.[0] then c + 1 else c) numbering 0 in
+        let kind k = if k.[0] = '?' || k.[0] = 'k' then k.[0] else '_' in
+        let n = 1 + Hashtbl.fold (fun k _ c -> if kind k = kind key then c + 1 else c) numbering 0 in
         Hashtbl.replace numbering key n; n in
   let note (key, (shown, at)) =
     if key.[0] = 'k' then
@@ -35,8 +37,11 @@ let resolve here s =
       if at = "" then Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed" here shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
     else
     let written, supplied =
-      if key.[0] = '?' then ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
-      else ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
+      match key.[0] with
+      | '?' -> ("the `_` written here", "a `_` the elaborator supplied, not one written in the source")
+      | 'm' -> ("the slot of the `_` written here", "")
+      | 's' -> ("the slot of the entry bound here", "")
+      | _ -> ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
     if at = "" then Printf.sprintf "\n%s: note: `%s` is %s" here shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
   let line s =
     let b = Buffer.create (String.length s) and fresh = ref [] in
@@ -83,7 +88,7 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : string option; mult : mult; state : state; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
+type entry = { name : string option; mult : mult; state : state; minted : term; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -105,6 +110,8 @@ type t = {
   signature : id list;
   ctor_tele : bool;
   in_extern : bool;
+  unwarned : bool;
+  externs : bool;
   warned : (Reader.loc * string) IntMap.t;
   uses : (use * Reader.loc) IntMap.t;
   captures : id list;
@@ -117,6 +124,7 @@ type t = {
   subterms : id list;
   enclosing : id option;
   run_pos : bool;
+  trusted : fact IntMap.t;
   values : Value.venv;
   pending : (id * Value.code) list;
   prelude : scope;
@@ -125,7 +133,7 @@ type t = {
 }
 
 let empty =
-  { signature = []; ctor_tele = false; in_extern = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { signature = []; ctor_tele = false; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
@@ -138,11 +146,20 @@ let trace : item list ref = ref []
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
 let entry_name env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
-let anonymous env x = let e = entry env x in marker (if e.meta then '?' else '_') x e.at
+let anonymous env x =
+  let e = entry env x in
+  let owner = if e.slot = x then Some (entry env (x - 1)) else None in
+  match owner with
+  | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
+  | _ -> marker (if e.meta then '?' else '_') x e.at
 
-let set_state env x state =
+let set_state ?minted env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
-  { env with entries = IntMap.add x { (entry env x) with state } env.entries; values }
+  let minted = Option.value minted ~default:(fact env x).ty in
+  { env with entries = IntMap.add x { (entry env x) with state; minted } env.entries; values }
+
+let trusted env = if env.run_pos then env.facts else env.trusted
+let leave_run env = { env with run_pos = false; trusted = trusted env }
 
 
 let lookup env name = StringMap.find_opt name env.scope.named
@@ -182,6 +199,11 @@ let atfn_ctor = ref (-1)
    nothing about where the two words sit. *)
 let rec canon env t =
   match t with
+  | SlotOf (Var x) when (entry env x).meta ->
+      (match canon env (Var x) with
+       | Var y when y <> x -> canon env (SlotOf (Var y))
+       | Var _ -> t
+       | _ -> canon env (Var (entry env x).slot))
   | SlotOf (Var x) -> canon env (Var (entry env x).slot)
   | Var x -> (match (fact env x).rule with Some r -> canon env r | None -> t)
   | t -> map_shallow (canon env) t
@@ -374,7 +396,7 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
 (* A meta (a `_` argument's unification variable, DESIGN.md section 50) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
+let bind env ?minted ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
   Option.iter (fun n ->
       if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
       if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
@@ -382,7 +404,7 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let x = fresh () in
   let slot = fresh () in
-  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = !slot_type; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
   let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
@@ -399,10 +421,10 @@ let bind env ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted_level; meta; word; temporary; at; slot } entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; meta; word; temporary; at; slot } entries in
   let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
-  (x, set_state env x state)
+  (x, set_state ?minted env x state)
 
 let covers env prior x =
   IntMap.mem x env.entries && IntMap.mem prior env.entries
@@ -441,6 +463,18 @@ let rank env x = if adt_of env x <> None then 0 else if readable env x then 1 el
    [merge_opens]'s invariant, which is how two declared types are told apart exactly by their Matchables, never
    by a name's identity (section 8). Solving (not forcing): only a meta may be bound, and the two sides must
    otherwise be identical; a meta against a meta binds the newer. *)
+let rec infer env loc t =
+  match t with
+  | Var x -> type_of env x
+  | App (h, args) -> (
+      match canon env (infer env loc h) with
+      | TyCtor _ -> App (Var !univ, [])
+      | ValCtor (_, r) -> instantiate (List.rev args) r
+      | ty -> error loc "%s has type %s and cannot be applied" (qshow env h) (qshow env ty))
+  | Fn _ | UniqueFn _ | TyCtor _ | ValCtor _ | Matchable _ | Cell _ -> App (Var !univ, [])
+  | SlotOf _ -> !slot_type
+  | Bound _ -> error loc "internal: dangling binder"
+
 let rec unify_in ?(force = false) env a b =
   let a = canon env a and b = canon env b in
   if equal a b then env
@@ -449,7 +483,8 @@ let rec unify_in ?(force = false) env a b =
     let assign x t =
       if has_dangling t then contradiction ();
       if occurs x t then raise (Contradiction (lazy (qname env x ^ " occurs in " ^ qshow env t)));
-      add_rule env x t
+      let env = add_rule env x t in
+      if force then env else try unify_in env (type_of env x) (infer env Reader.nowhere t) with Contradiction _ -> raise (Ill_typed (x, t))
     in
     match (a, b) with
     | Var x, Var y when is_meta env x || is_meta env y ->

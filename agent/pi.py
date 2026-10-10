@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fnmatch, functools, hashlib, json, os, re, shlex, shutil, signal, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
+import ctypes, fnmatch, functools, hashlib, json, os, re, selectors, shlex, shutil, signal, socket, stat, struct, subprocess, sys, tempfile, time, traceback, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -23,7 +23,9 @@ REWRITE_STOP = float(os.environ.get("PI_REWRITE_STOP") or CONTEXT_STOP)
 SESSION_TRIES = int(os.environ.get("PI_SESSION_TRIES", "3"))
 REQUESTS_LOG = os.environ.get("PI_REQUESTS_LOG", "0") not in ("0", "false", "")
 RUN_STATS = os.environ.get("PI_RUN_STATS", "1") not in ("0", "false", "")
+OCAML = os.environ.get("PI_OCAML", "0") not in ("0", "false", "")
 SLC_TIMEOUT, BUILD_TIMEOUT, RUN_TIMEOUT = 60, 120, int(os.environ.get("PI_RUN_TIMEOUT", "10"))
+GATE_PORT = int(os.environ.get("PI_GATE_PORT", "47219"))
 MEM_MB = max(2048, os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") // 4 // 2**20)
 MAX_WRITE, MAX_OUT, MAX_READ, MAX_RESULT = 8 * 1024 * 1024, 20000, 200000, 256 * 1024
 MAX_KEPT_FAILURE, MAX_PROGRAM_OUTPUT = 1024 * 1024, 1024 * 1024
@@ -260,7 +262,7 @@ def _ocamlopt():
 
 def _spawn_exec_limited(cmd, env):
     libc = ctypes.CDLL(None, use_errno=True)
-    strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[x.encode() for x in xs], None)
+    strs = lambda xs: (ctypes.c_char_p * (len(xs) + 1))(*[str(x).encode() for x in xs], None)
     argv, envp = strs(cmd), strs([f"{k}={v}" for k, v in env.items()])
     attr, acts = ctypes.c_void_p(), ctypes.c_void_p()
 
@@ -381,14 +383,18 @@ def _shown(capture, ext, data):
     return clip("\n".join([f"({name}, {len(data)} bytes)", *shown]))
 
 
-def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes"):
+def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST_ERROR == "yes", ocaml=None):
     if isinstance(paths, str):
         paths = [paths] if paths else []
     if not paths:
         raise ValueError("`paths` must name at least one file")
     if capture and any(os.path.normpath(f"{capture}.{ext}") in KEEP for ext in ("slc.err", "out", "err")):
         raise ValueError("`capture` cannot name a kept file")
-    with tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
+    if ocaml and os.path.normpath(ocaml) in KEEP:
+        raise ValueError("`ocaml` cannot name a kept file")
+    if ocaml and (stdin or args or gc_stats):
+        raise ValueError("`stdin`, `args` and `gc_stats` need a run, which `ocaml` skips")
+    with _turn(), tempfile.TemporaryDirectory(prefix="pi-sl-") as tmp:
         src = Path(tmp, "src")
         names = []
         for p in paths:
@@ -402,6 +408,9 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         warnings = _shown(capture, "slc.err", c.stderr)
         if why or c.returncode:
             return f"compile: {why or f'failed (exit {c.returncode})'}\n{warnings}"
+        head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
+        if ocaml:
+            return f"{head}\nocaml: wrote {write_bytes(ocaml, c.stdout)}"
         Path(tmp, "p.ml").write_bytes(c.stdout)
         why, b = _proc(_ocamlopt(), tmp, BUILD_TIMEOUT, env={"PATH": os.environ["PATH"], "TMPDIR": tmp})
         if why or b.returncode:
@@ -418,8 +427,45 @@ def sl(paths, stdin="", args=(), capture=None, gc_stats=False, first_error=FIRST
         t0 = time.monotonic()
         why, r = _proc([str(Path(tmp, "p")), *map(str, args)], SANDBOX_ROOT, RUN_TIMEOUT, stdin,
                        env={"OCAMLRUNPARAM": "v=0x400"} if gc_stats else {})
-        head = f"compile: ok, with warnings\n{warnings}" if c.stderr.strip() else "compile: ok, no warnings"
         return f"{head}\nrun: {why or f'exit {r.returncode}'}{_stats(time.monotonic() - t0, r.rusage)}\n--- stdout ---\n{_shown(capture, "out", r.stdout)}\n--- stderr ---\n{_shown(capture, "err", r.stderr)}"
+
+
+def _turn():
+    for _ in range(50):
+        try:
+            s = socket.create_connection(("127.0.0.1", GATE_PORT))
+            s.sendall(f"{RUN_DIR.parent.name}\n".encode())
+            if s.recv(1) == b"g":
+                return s
+            s.close()
+        except ConnectionError:
+            subprocess.Popen([sys.executable, __file__, "--gate"], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.2)
+    sys.exit(f"cannot reach or start the `sl` organizer on port {GATE_PORT}")
+
+
+def gate():
+    srv, sel, ids, last, holder = socket.create_server(("127.0.0.1", GATE_PORT)), selectors.DefaultSelector(), {}, {}, None
+    sel.register(srv, selectors.EVENT_READ)
+    while True:
+        for key, _ in sel.select():
+            if (s := key.fileobj) is srv:
+                sel.register(srv.accept()[0], selectors.EVENT_READ)
+            elif data := s.recv(4096):
+                ids[s] = ids.get(s, b"") + data
+            else:
+                sel.unregister(s)
+                s.close()
+                ids.pop(s, None)
+                holder = None if s is holder else holder
+        if holder is None and (waiting := [s for s, i in ids.items() if i.endswith(b"\n")]):
+            holder = min(waiting, key=lambda s: last.get(ids[s], 0))
+            last[ids[holder]] = time.monotonic()
+            try:
+                holder.send(b"g")
+            except OSError:
+                pass
 
 
 def _stats(wall, ru):
@@ -462,9 +508,11 @@ TOOLS = {
                "Returns the compiler's messages, then the program's exit code, stdout and stderr. With `capture`, these go to "
                "`{capture}.slc.err`, `{capture}.out` and `{capture}.err`, and only their sizes and first and last lines are shown. "
                "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
-               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. " + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
+               "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. "
+               + ("With `ocaml`, the program is not built or run: if it compiles, the OCaml code the compiler translates it into "
+                  "is written to the file `ocaml` names, and only the compiler's messages are returned. " if OCAML else "") + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
-           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}), ["paths"]),
+           | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
                    "budget of its own, allowing only {allowed}, and `done`; calling `done` there ends the session. Pass a one-line summary.",
              {"summary": STR}, []),
@@ -687,10 +735,16 @@ class Anthropic:
             "model": MODEL, "max_tokens": self.cap(), "system": SYSTEM,
             "tools": [{"name": n, "description": d.replace("{allowed}", _allowed(caps=True)), "input_schema": PARAMS[n]} for n, (_, d, _, _) in TOOLS.items()],
             "messages": messages, "cache_control": {"type": "ephemeral"},
+            **({"thinking": {"type": "adaptive", "display": "summarized"}}
+               if ((self.model().get("capabilities") or {}).get("thinking") or {}).get("types", {}).get("adaptive", {}).get("supported") else {}),
+            **({"output_config": {"effort": EFFORT}} if EFFORT else {}),
         }, self.auth())
 
     def parse(self, reply):
-        blocks = reply["content"]
+        blocks, think = reply["content"], ThinkLog()
+        for b in blocks:
+            think.write(b.get("thinking"))
+        think.close()
         calls = [{"id": b["id"], "name": b["name"], "input": b["input"]} for b in blocks if b["type"] == "tool_use"]
         return {"role": "assistant", "content": blocks}, "".join(b["text"] for b in blocks if b["type"] == "text"), calls
 
@@ -799,11 +853,13 @@ class Local(OpenAICompat):
 
 ADAPTERS = {"anthropic": Anthropic, "openai": OpenAI, "neuralwatt": OpenAICompat, "local": Local}
 CACHE_MIN = 4096
-PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output
-    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00),
-    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00),
+GPT_LONG, HAIKU_LONG = (272_000, 2, 1.5), (100_000, 5, 5)
+PRICES = {  # $/MTok: input, cached read, 5-minute cache write, output[, (prompt tokens above which, input and output multipliers)]
+    "gpt-6-luna": (0.10, 0.01, 0.125, 0.50, GPT_LONG), "gpt-6-sol": (2.00, 0.20, 2.50, 10.00, GPT_LONG),
+    "gpt-6.1-sol": (2.00, 0.10, 2.50, 10.00, GPT_LONG), "gpt-6-astra": (10.00, 1.00, 12.50, 50.00, GPT_LONG),
     "claude-fable-5-1": (10.00, 0.25, 12.50, 50.00), "claude-opus-5-5": (4.00, 0.20, 5.00, 20.00),
-    "claude-sonnet-5-5": (2.00, 0.20, 2.50, 10.00), "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
+    "claude-sonnet-5-5": (2.00, 0.10, 2.50, 10.00), "claude-haiku-5-5": (0.10, 0.01, 0.125, 0.50, HAIKU_LONG),
+    "claude-haiku-4-5": (1.00, 0.10, 1.25, 5.00),
 }
 
 
@@ -819,7 +875,8 @@ def _priced(usage):
     details = usage.get("input_tokens_details") or {}
     read = details.get("cached_tokens", usage.get("cache_read_input_tokens")) or 0
     write = details.get("cache_write_tokens", usage.get("cache_creation_input_tokens")) or 0
-    i, o = (2, 1.5) if PROVIDER == "openai" and total > 272_000 else (1, 1)
+    above, i, o = p[4] if len(p) > 4 else (0, 1, 1)
+    i, o = (i, o) if total > above else (1, 1)
     return (((total - read - write) * p[0] + read * p[1] + write * p[2]) * i + (usage.get("output_tokens") or 0) * p[3] * o) / 1e6
 
 
@@ -833,10 +890,10 @@ def _spend(reply):
     return (f", ${SPENT['cost']:.6f}" if "cost" in SPENT else "") + (f", {SPENT['energy']:,.0f} J" if "energy" in SPENT else "")
 
 
-def _context(reply, window, prev_prompt):
+def _context(reply, window, prev_prompt, prev_used):
     usage, spent = reply.get("usage"), _spend(reply)
     if not usage:
-        return 0, prev_prompt
+        return prev_used, prev_prompt
     n = usage.get("total_tokens") or sum(usage.get(k) or 0 for k in
                                          ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
     prompt, cached = _prompt(usage)
@@ -877,7 +934,7 @@ def run(prompt):
     window = CONTEXT or api.window()
     turns, budget = MAX_TURNS or (1000 if window else 200), lambda stop: int(window * stop / 100) if window else None
     tokens = budget(CONTEXT_STOP)
-    phase, turn, start = "experiment", 0, 0
+    phase, turn, start, used = "experiment", 0, 0, 0
     ok = lambda c: c["name"] == "done" or c["name"] in REWRITE_TOOLS and (
         "path" not in c["input"] or os.path.normpath(str(c["input"]["path"])) in KEEP)
 
@@ -890,7 +947,7 @@ def run(prompt):
         sent = time.time()
         reply = api.send(messages)
         received = time.time()
-        used, prompt_tokens = _context(reply, window, prompt_tokens)
+        used, prompt_tokens = _context(reply, window, prompt_tokens, used)
         _log(RUN_DIR / "requests.jsonl", json.dumps({
             "sent": _iso(sent), "received": _iso(received), "seconds": round(received - sent, 3), "phase": phase, "context": used,
             "usage": reply.get("usage"), "cost": (reply.get("cost") or {}).get("request_cost_usd"),
@@ -1192,10 +1249,16 @@ USAGE = ("usage: pi.py [--no-header] [-f PATH]... -k PATH[:BYTES]... [-c DIR]...
          "  PI_RUN_STATS      report each program's wall-clock time, CPU time and peak memory [1]\n"
          "  PI_FIRST_ERROR    yes: the compiler stops at the first error; no: it reports every error; choose: the `sl` tool's\n"
          "                    `first_error` decides, defaulting to every error [yes]\n"
-         "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]")
+         "  PI_OCAML          let the `sl` tool's `ocaml` parameter write the program's OCaml translation to a file instead of\n"
+         "                    running it [0]\n"
+         "  PI_SLC            the compiler, copied at the start of each session [../_build/release/slc]\n"
+         "  PI_GATE_PORT      the localhost port of the organizer that lets one `sl` call run at a time, fairest to the run\n"
+         "                    served least recently; the first pi.py to need it starts it [47219]")
 
 
 def main(argv):
+    if argv[:1] == ["--gate"]:
+        return gate()
     if argv[:1] == ["--session"] and len(argv) >= 3:
         return _session(Path(argv[1]), int(argv[2]), list(zip(argv[3::2], argv[4::2])))
     pairs, no_header = [], False
@@ -1222,8 +1285,14 @@ def main(argv):
         sys.exit(f"{problem}\n\n{USAGE}")
     rec["n"] = n or int(next((v for f, v, _ in reversed(merged) if f == "-n"), "1"))
     tag = "+".join(Path(a).stem for a in argv)
-    loop = RESULTS / f"{time.strftime('%Y%m%d-%H%M%S')}-{_model_name(env).replace('/', '_')}{'-' + _effort(env) if _effort(env) else ''}-{tag}"
-    loop.mkdir(parents=True)
+    base, k = f"{time.strftime('%Y%m%d-%H%M')}-{_model_name(env).replace('/', '_')}{'-' + _effort(env) if _effort(env) else ''}-{tag}", 1
+    while True:
+        loop = RESULTS / (base if k == 1 else f"{base}-{k}")
+        try:
+            loop.mkdir(parents=True)
+            break
+        except FileExistsError:
+            k += 1
     (loop / "run.json").write_text(json.dumps(rec, indent=1) + "\n")
     _next(loop)
 

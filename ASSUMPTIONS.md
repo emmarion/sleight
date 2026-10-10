@@ -178,8 +178,7 @@ ground.
     same way as a named one. `coerce` is the identity at runtime.
 34. **Unions are never tagged**, so a match on one binds its single
     real branch's fields without inspecting anything; how an untagged
-    value prints is item 184. A union newtype's constructors with no
-    non-erased field build the token.
+    value prints is item 184.
 35. **An absurd function's code raises** if ever reached; a match whose
     real branches are all absurd or phantom likewise compiles to code
     that raises.
@@ -317,15 +316,6 @@ relation to a non-opaque binary spelling computed by a prelude function,
 Everything below that goes further is a guess, and DESIGN.md sections 27
 and 42 still record the consumer of the top-level value and numeric
 literals as open.
-
-47. **The driver runs a final value as a program when its type is an
-    `Fn`, at any level, from one `many (String)` parameter, `subterm` or
-    not, to one `many (String)` return** (`lib/program.ml`): stdin is read whole into a
-    `String`, the function applied, and the result written to stdout
-    verbatim, with no newline added. Any other final value is printed
-    as before, so the existing tests are unchanged. A `; stdin: text`
-    directive in a test supplies the input, its lines joined by
-    newlines with no trailing one.
 
 48. **`String` is an extern enum modelled as a cons list of `Char`**
     (`SNil`, `SCons`), not marked `newtype`. The FFI holds a value as a
@@ -644,8 +634,7 @@ in both modes.
     it reads back from (item 154). Printing the interpreter's own rendering as a string
     literal would have been simpler and exact, but the printer applied to
     the embedded data is what checks the embedding. Limits, honestly: a
-    closure prints as `<function ?>` unless the final value is itself a
-    closure (`tests/absurd.sl`), since OCaml closures carry no name; a
+    closure prints as `<function ?>`, since OCaml closures carry no name; a
     field whose type stays unknown (an existential) prints `?`; an
     untagged union whose index is not forced prints through its first
     candidate constructor. No test hits these.
@@ -661,22 +650,10 @@ in both modes.
     test passes in both modes. What that shows, precisely: since final
     values are embedded, a test printing a plain value checks the
     embedding of data and closures and the printer, while the `String
-    -> String`, `IO` and final-function tests (item 68; the
+    -> String`, `IO` and final-function tests (DESIGN.md section 27; the
     `tests/thunk_*.sl` files cover tagged, untagged, union, extern,
     first-class and nested types, coerce, factory closures and shared
     data) run extracted function bodies over embedded constants.
-68. **A final function from no arguments is applied and its result
-    printed** (the owner's decision, in chat, so that a program can ask
-    for its final value to be computed by code): the driver treats a
-    final value of type `(Fn L -> (many T v))`, no parameters and
-    exactly one `many` return, as such a request, both in the
-    interpreter and extracted, where it is the form whose code runs at
-    startup. A function with erased returns besides the one `many`
-    return, or with erased parameters, is not accepted as this form;
-    whether it should be is open. The result prints as any value of its
-    type does (item 154), so a function from no arguments can no longer
-    be printed as `<function name>`.
-
 ## A second soundness review
 
 69. **Two `def-lvl` levels may unify, and that is left as it was.** A
@@ -1044,15 +1021,6 @@ failed on.
     was told `(False)` is not an empty type. The test now goes through
     the same lookup as a match does (`tests/absurd_dup_matchable.sl`).
     A correctness fix by the session's reading of section 8.
-
-82. **Head dispatch reads the head's type as well as its value**
-    (settled by the owner; section 6 now says so). Section 33's
-    `coerce` through a newtype wrapping `(Special)` produced a `Const`
-    whose stored value was a `Special` variant, `(%let)`, while its
-    type was the newtype's, and the dispatch, which read only the
-    stored value, ran it as `let`. A special-form head must now also
-    have type `(Special)`; such a value heads no form and elaborating
-    it as an application fails on its type (`tests/special_newtype_bad.sl`).
 
 ## A match reads its Matchable, not its constructors
 
@@ -1502,7 +1470,8 @@ what it assumed while doing so.
     (CLAUDE.md rule 12), and §14's erasure list names the form in its
     own bullet, in wording the owner confirmed.
 102. **The `Numeral` lemmas are tests, not prelude additions**
-    (`tests/numeral_distinct.sl`, `tests/numeral_succ.sl`). Each defines
+    (`tests/numeral_succ.sl`, and a `distinct` test since replaced by
+    `tests/prove_literal_lt.sl`). Each defines
     its own `Eq`, since the prelude has none and what belongs in the
     prelude is the owner's call. The session's reading is that these
     lemmas make disjointness and the successor step derivable rather
@@ -1520,20 +1489,21 @@ what it assumed while doing so.
     that define their own shadow it without trouble. Elaborating the
     prelude went from about 45ms to about 95ms, which the session judged
     acceptable but did not put to the owner.
-104. **`unary` and `distinct` elaborate to prelude calls, in the
-    prelude's scope** (`Elab.elab_unary`, `Elab.elab_distinct`,
-    `Elab.in_prelude`), so user shadowing cannot reach the generated
+104. **`unary` elaborates to prelude calls, in the
+    prelude's scope** (`Elab.elab_unary`, `Elab.in_prelude`), so user shadowing cannot reach the generated
     forms, as with a literal's own expansion (51). The level context
     stays the caller's, so the generated call carries `(predates _)`
     inside a function body and nothing at top level (§20). `unary`
     hoists every literal on the walk, which is why `Elab.hoist` moved
     into the elaborator's recursive group. Its ceiling is 4096 steps,
     a number the session chose and the owner has not confirmed.
-105. **Whether §54 should list a sugar form is open.** `unary` and
-    `distinct` are registered as `Special` variants like any other form,
-    but they carry no meaning of their own and are recorded in DESIGN.md sections 46 to 53,
+105. **Whether §54 should list a sugar form is open.** `unary` is
+    registered as a `Special` variant like any other form,
+    but it carries no meaning of their own and are recorded in DESIGN.md sections 46 to 53,
     which is what that file is for. §54 says it lists every special
-    form; the two readings are not reconciled here.
+    form; the two readings are not reconciled here. (`distinct`, once the
+    other such form, was replaced by `prove-literal-lt`, which is not
+    sugar.)
 
 106. **`unary` mints one rule, not one per step.** At the owner's
     direction `(unary a b)` relates `a` to `b` under `a - b` successors
@@ -1571,7 +1541,7 @@ what it assumed while doing so.
     directions out).
 
 108. **"Mint" in these notes means a fact or entry reaching the tables,
-    not a claim about who checked it.** For `unary` and `distinct`
+    not a claim about who checked it.** For `unary`
     nothing is asserted: the elaborator writes down terms — a `Bin`
     spelling, a `BinSucc` witness, a call — and the refinement reaches
     §7's table through the same `refine` an ordinary match branch uses.
@@ -1620,8 +1590,8 @@ request ("update the self hosted SL on SL to match"). What follows is
 how it read them into the compiler; `self/bootstrap.sh` is the check, and
 none of it is design.
 
-111. **`unary` and `distinct` are expanded where the form is reached, on
-    a budget.** `elab-unary` and `elab-distinct` make the reference's
+111. **`unary` is expanded where the form is reached, on
+    a budget.** `elab-unary` makes the reference's
     checks in its order, with its messages, then write the same source
     text by the same fold and elaborate it in the prelude's scope (a
     `prelude` field the `Env` gained, set by `self/main.sl` after the
@@ -1639,7 +1609,7 @@ none of it is design.
     contains none. A first version instead expanded the sugar by a pass
     over the top-level form, reading heads by name; the owner asked for
     the reference's behaviour, under which a function shadowing
-    `distinct` or a `let` aliasing `unary` resolves as any other head
+    `unary` or a `let` aliasing it resolves as any other head
     does, and the session checked both against the reference. The
     session's reading is that the derivation reaching `refine` (108) is
     the reference's own. `let-match` is ported as the reference has it,
@@ -2070,7 +2040,7 @@ had noted that an `SCons` copies its tail, so building a string by
      `elab-body`'s `absurd` flag went with it: its two absurd sites apply
      `check-empty` to the returned results themselves, which the
      session reads as the same environment the flag acted on. `unary`
-     and `distinct` build their generated forms as `Raw` values
+     builds its generated forms as `Raw` values
      (`gen-of`, `bin-raw`) instead of text read back by the reader, so
      the "internal: a generated form does not read" error is gone by
      construction; the forms are the same s-expressions as before, at
@@ -2295,8 +2265,7 @@ had noted that an `SCons` copies its tail, so building a string by
      expectation is always projected onto it, `needs-projection` being
      gone: the normalizer already turns a projection that repackages
      the call's returns in order back into the call, so a body's code
-     is as before, and only run-position code carries the let. A
-     `distinct` returns no code, its value being erased. The session's
+     is as before, and only run-position code carries the let. The session's
      reading is that no message changes; `self/bootstrap.sh` is the
      evidence.
 
@@ -3029,8 +2998,8 @@ to look for a guard, are the owner's.
      undefined"). `claim_fn` and `claim_type` are the single entry
      points, ordered so that an arity or shape mismatch is still
      reported ahead of the already-bound check, which is what
-     `tests/extern_arity_bad.sl` depends on, `trim` being bound by the
-     prelude already.
+     `tests/extern_arity_bad.sl` depends on, `add` being bound by the
+     test's first declaration already.
 153. **A test may ask for the FFI alone.** `; externs: only` runs a test
      with the implementations and not again with them stripped, for one
      whose source model is too slow to run;
@@ -3190,11 +3159,6 @@ to look for a guard, are the owner's.
     restrictions interpret section 36's description of the promise's source and word.
     Phantom/absurd bodies bypass both usage and multiplicity-promotion checks,
     as their runtime expressions are erased.
-
-159. The top-level driver's implicit calls of a final thunk or String-to-String
-    function use an adapter when its result has an `at` promise. This is intended
-    to give those calls the same physical-return reconstruction as an explicit
-    source call, including calls from the extracted driver's code.
 
 160. The Matchable former accepts its marks between its discriminant and type
     name: `(Matchable enum newtype extern T ...)`, with either mark optional
@@ -3571,25 +3535,6 @@ without the owner.
     with the cell binder every pattern then needs (section 23). The comment above
     the prelude's `IO` says as much in one sentence.
 
-186. **The driver takes an `IO` value at unique.** Section 27 leaves what
-    consumes the top level's result unsettled, and the final expression
-    was elaborated at `many`; a unique request there would want a
-    `share`, which is exactly what must be refused, a shared request's
-    continuations being dead (`tests/io_shared_final_bad.sl`). So the
-    final expression is elaborated under a third demand beside `Fixed`
-    and `CallableHead` (`Elab.Driver`, `self/elab.sl`'s `FinalDemand`)
-    that takes a value of the prelude's `IO` type at `unique` and
-    anything else at `many`, decided by the type as a callable head's
-    multiplicity is: through the atom, constructor application, `values`
-    and `match` cases, so a top-level `match` producing a request builds
-    it at unique. A `many` `IO` value at the top level is refused as a
-    many value used at unique. The reading behind it is that the driver
-    is the one consumer of a program's `IO` value and applies each
-    continuation once, so it stands where a unique use stands. The
-    `Thunk` final accepts a `unique` return beside a `many` one, its
-    result being read once and printed. Whether section 27 should say
-    this is the owner's; nothing in DESIGN.md or UNIQUE.md was changed.
-
 187. **A run may update a Const the extractor then embeds.**
     `test/runtest.ml` ran the interpreter's final and extracted from the
     environment afterwards. With a continuation owning a top-level unique
@@ -3613,9 +3558,8 @@ without the owner.
     `apply` under the usual fuel, and walks the request that comes back;
     `Exit` exits slc with the code. A plain value and a thunk's result
     print through the compile-time printer (154), a `String -> String`
-    function is applied to what `ReadRemaining` answers, and an `at`
-    return is read from the argument or the captured Const as
-    `adapt_final` does (159). The interpreted program's arguments follow
+    function is applied to what `ReadRemaining` answers. The interpreted
+    program's arguments follow
     a `--` among slc's own; its environment, working directory and stdin
     are slc's. Two shapes the checker imposed: walking a request and
     applying its continuation cannot be two functions at one level
@@ -3751,9 +3695,8 @@ without the owner.
     extracted program having none to carry. A string literal is placed
     at its opening quote, its line its own rather than the line it
     closes on, so that a position is always the start of the token it
-    names. The reference reads a form generated by a literal, `unary`
-    or `distinct` under the pseudo-file `<literal>`, `<unary>` or
-    `<distinct>`, the lines being the generated text's; `slc` builds
+    names. The reference reads a form generated by a literal or `unary`
+    under the pseudo-file `<literal>` or `<unary>`, the lines being the generated text's; `slc` builds
     those forms rather than reading them back and leaves the file as
     it stands, so the two differ on an error inside one, which is an
     internal error either way.
@@ -3928,8 +3871,8 @@ session's, made without the owner.
     at the size of the form being elaborated, its count of atoms and
     lists, in place of one; the session's reading is that no chain of
     expansions can outrun it, each one being spent on a distinct
-    `let-match`, `unary` or `distinct` in that form, and the generated
-    forms of the latter two containing no sugar. The zero case stays an
+    `let-match` or `unary` in that form, and the generated
+    forms of the latter containing no sugar. The zero case stays an
     internal error.
 
 ## Confining file requests (section 27)
@@ -4088,10 +4031,25 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      `(slot-of p)` or `at p` (`Elab.slot_named_params`); the entry is
      erased when the argument is, and its slot is the slot the signature
      then speaks of. Binding every argument would give the same facts at a
-     cost in fact-table entries that rule 17 argued against. A `_`
-     argument's meta has a slot of its own, never related to the slot of
-     what the meta is solved to, which is why `_` is refused for a
-     parameter written `at`; a solved meta inside `slot-of` resolves to
+     cost in fact-table entries that rule 17 argued against. Section 35
+     gives a meta no slot of its own and says no more. Here the slot of a
+     `_` argument's meta is read through its solution each time it is
+     read (`Env.canon`; `meta-slot-in` in `self/core.sl`, whose slot map
+     marks a meta's entry `MetaSlot`): solved to a variable, it is that
+     variable's slot, through any chain of metas; solved to any other
+     term, it is a fresh slot, as that term written out would get by being
+     bound first; unsolved, it stays `(slot-of m)`, open like the meta and
+     settled with it. A parameter's meta solved from a written variable
+     is also placed at that variable's slot when the argument is read
+     (`Elab.check_args`, `check-args-go`), since the solution a reader
+     sees is canonical and no longer says which variable was written:
+     `(let ((many p)) (Succ (Zero)))` passed for `x` left `(slot-of x)`
+     in a later entry's type at the meta's own fresh slot, refusing the
+     call (`tests/slot_of_param_type_ruled.sl`). So, as far as this
+     session has found, the order in which a call's metas are solved does
+     not change the slot one names. The `at` check of section
+     36 waits for the call's metas to settle at its closing paren, rather
+     than running as each argument is read. A solved meta inside `slot-of` resolves to
      that slot (`Env.metaless`), so no `slot-of` over a term survives
      canonicalization. `dump-context`'s slot listing includes erased
      entries.

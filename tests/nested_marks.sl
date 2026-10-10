@@ -13,10 +13,10 @@
   (let ((erased fl)) (prove-predates F L))
   (def-fns L
     ((many t : (many (Nat) k) -> (many (Nat) r)) (tail (twice (predates fl) k)))
-    ((many d : (many (Nat) k) -> (many (Nat) r)) (delegate (twice (predates fl) k))))
+    ((many d at twice : (many (Nat) k) -> (many (Nat) r)) (delegate (twice (predates fl) k))))
   (values L t d))
 
 (let ((erased L) (many t) (many d)) (make))
 (t (d (Zero)))
 ; warns: tests/nested_marks.sl:15:63: warning: unnecessary `(predates _)`; drop it
-; warns: tests/nested_marks.sl:16:67: warning: unnecessary `(predates _)`; drop it
+; warns: tests/nested_marks.sl:16:76: warning: unnecessary `(predates _)`; drop it

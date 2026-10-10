@@ -5,6 +5,6 @@
 (def-fns L $ (many inc : (many (Nat) n) -> (many (Nat) m))
   (Succ n))
 (def-lvl M)
-(def-fns M $ (erased g : (many (Nat) n) -> (many (Nat) m))
+(def-fns M $ (erased g at inc : (many (Nat) n) -> (many (Nat) m))
   (delegate (inc n)))
 (Zero)

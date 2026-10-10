@@ -43,15 +43,15 @@ _build/self/slc --interpret tests/io_echo.sl
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. A file's final expression is printed, unless its
-value is a function from `String` to `String`, when stdin is fed to it
-and its result written to stdout (`tests/main_reverse.sl`), or an `IO`
-value, when the driver performs its requests one by one, applying each
-request's continuation, a `UniqueFn`, once
+value is an `IO` value, when the driver performs its requests one by one,
+applying each request's continuation, a `UniqueFn`, once
 (`tests/io_echo.sl`; arguments after `--` on the command line are the
-program's), or a function from no arguments to one value, when it is
-applied and its result printed (`tests/thunk_list.sl`), which is how a
-program asks for its final value to be computed by code rather than at
-elaboration. Numerals, `#\c` character literals and `"..."` string
+program's), or a function, which must be one of the two forms of
+DESIGN.md section 27: from `String` to `String`, when stdin is fed to it
+and its result written to stdout (`tests/main_reverse.sl`), or from no
+arguments to one value, when it is applied and its result printed
+(`tests/thunk_list.sl`), which is how a program asks for its final value
+to be computed by code rather than at elaboration. Numerals, `#\c` character literals and `"..."` string
 literals are prelude-backed sugar (DESIGN.md section 45, ASSUMPTIONS.md 47-60), and a printed
 value of one of those three types is spelled as the literal it reads back
 from (ASSUMPTIONS.md 154) rather than as its prelude model. Every program starts in the scope of the source
@@ -61,7 +61,8 @@ prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 42), whose
 through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133).
 `--no-prelude` starts from the built-in special forms alone, without `lib/prelude.sl`, for a program that
 declares what it needs itself; it has no literals and no `String -> String` or `IO` final, those resting on
-the prelude's types, and slc takes the same flag. A file is a sequence of statements,
+the prelude's types, and slc takes the same flag. Only the prelude, or a program run with `--no-prelude`, may mark
+a definition `extern` (DESIGN.md section 42). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
 
 `--confine-dir dir` confines a program's file requests to `dir`: a path is
@@ -197,7 +198,9 @@ The two numberings follow order of first mention and hold for the whole run,
 so `_3` names one entry in every message it appears in, and every message
 that mentions one carries a note saying what it is: `` `_?1` is the `_`
 written here ``, `` `_3` is anonymous, minted here ``, `` `_Fn` is `Fn`,
-shadowed here ``. Which atom canonicalization keeps for a class is an
+shadowed here ``. An automatic slot that no name reaches is noted at its
+entry, where the source wrote one: `` `_2` is the slot of the `_` written
+here `` or `` `_2` is the slot of the entry bound here ``. Which atom canonicalization keeps for a class is an
 accident of minting order, so two numbers may turn out to denote one thing
 under later facts, and a name is shown only where it still denotes that atom
 (`Env.show`, `show-t` in `self/elab.sl`). A result that fails its return type

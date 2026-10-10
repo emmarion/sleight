@@ -14,6 +14,6 @@
     ((Zero) (No a b)))
   (let-match many a (Succ a1) ((Zero) (Yes a b)))
   (match many (notail $ lt-dec a1 b1) _ ((Yes _ _) (Yes a b)) ((No _ _) (No a b))))
-(def-fns _ $ (many extern u62-lt-dec : (many (Nat) n) (many (Nat) m) -> (many (Dec n m) d))
+(def-fns _ $ (many extern u62-lt-dec at lt-dec : (many (Nat) n) (many (Nat) m) -> (many (Dec n m) d))
   (delegate (lt-dec n m)))
 (Zero)

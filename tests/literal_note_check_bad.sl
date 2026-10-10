@@ -1,5 +1,5 @@
 ; error: type mismatch: expected `(Vec 3)`, got `(Vec (Succ 2))`
-; error: 3 in `(Vec 3)` is a numeral literal, opaque to the checker by default; `unary`, `distinct` or `numeral-of` can expose more
+; error: 3 in `(Vec 3)` is a numeral literal, opaque to the checker by default; `unary`, `prove-literal-lt` or `numeral-of` can expose more
 ; A literal index meets a Succ shape when a value constructor's return is checked against the telescope it is
 ; returned into: the unifier sees 3 as an atom, so the check fails, and the note names the literal. (unary 3 2)
 ; would make 3 (Succ 2).

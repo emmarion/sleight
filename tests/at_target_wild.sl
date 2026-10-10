@@ -1,0 +1,16 @@
+; expect: 0
+(def-fns _ $ (many f : (erased (Nat) n) (erased n is m at n) -> ) (values))
+(def-fns _ $ (many g : (erased (Nat) n) (erased (Nat) m at n) (erased (Eq (Nat) n m) p) -> ) (values))
+(def-fns _ $ (many k : (erased (Nat) a) (erased (Nat) b) (erased (Eq (Nat) a b) p) (erased (Nat) d at b) (erased (Eq (Nat) a d) q) -> ) (values))
+(def-fns _ $ (many h : (erased (Nat) n) (erased (Slot) t) (erased (Eq (Slot) t (slot-of n)) q) (erased (Eq (Nat) n n) p) -> (erased t is u)) t)
+(def-fns _ $ (many same : (erased (Slot) a) (erased (Slot) b) (erased (Eq (Slot) a b) p) -> ) (values))
+(let ((erased x)) 3)
+(let () (f x x))
+(let () (f _ x))
+(let () (f _ 3))
+(let () (g _ x (Refl _ x)))
+(let () (k x x (Refl _ x) x (Refl _ x)))
+(let () (k _ _ (Refl _ _) x (Refl _ _)))
+(let ((erased u)) (h _ _ (Refl _ _) (Refl _ x)))
+(let () (same u (slot-of x) (Refl _ u)))
+0

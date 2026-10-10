@@ -3,7 +3,7 @@
   (Succ n))
 (def-fns _ $ (many app : (many (Fn (level-of inc) (many (Nat) n) -> (many (Nat) m)) f) (many (Nat) x) -> (many (Nat) m))
   (f x))
-(def-fns _ $ (many inc2 : (many (Nat) n) -> (many (Nat) m))
+(def-fns _ $ (many inc2 at inc : (many (Nat) n) -> (many (Nat) m))
   (delegate $ inc n))
 (let ((erased d)) (delegate-of inc2))
 (def-fns _ $ (many k : (erased (level-of inc) is L) (erased (Eq (Level) L (level-of inc)) e)

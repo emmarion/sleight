@@ -259,11 +259,11 @@
 
 (def-lvl nat-lvl)
 
-(def-fns nat-lvl $ (many nat-add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+(def-fns nat-lvl $ (many nat-add at add : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let ((many c) (erased p)) (delegate (add a b)))
   c)
 
-(def-fns nat-lvl $ (many nat-mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+(def-fns nat-lvl $ (many nat-mul at mul : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
   (let ((many c) (erased p)) (delegate (mul a b)))
   c)
 
@@ -375,6 +375,7 @@
     ((MulSucc q1 c1 k1 k2 mm1 p1)
       (LtS q1 k (lt-le-trans q1 (Succ k1) k (mul-le q1 c k1 mm1 pos) (LtS k1 k (add-pos-lt k1 c k p1 pos)))))))
 
+; Fast arithmetic: Nat is a bignum, but the u62 primitives take proofs that every value is below 2^62, so each runs as one machine operation instead of bignum code.
 (def-fns _ $ (many extern u62-add : (many (Nat) n) (many (Nat) m)
     (erased (Nat) s) (erased (Add n m s) sum) (erased (Lt s u62-modulus) ps) ->
     (many s is r))
@@ -493,11 +494,11 @@
   (let ((many q) (erased m) (erased r) (erased mm) (erased a) (erased p)) (div n v pos))
   (values q v pk m r mm a p))
 
-(def-fns _ $ (many nat-shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
+(def-fns _ $ (many nat-shl at shl : (many (Nat) n) (many (Nat) k) -> (many (Nat) r))
   (let ((many r) (erased v) (erased pk) (erased p)) (delegate (shl n k)))
   r)
 
-(def-fns _ $ (many nat-shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
+(def-fns _ $ (many nat-shr at shr : (many (Nat) n) (many (Nat) k) -> (many (Nat) q))
   (let ((many q) (erased v) (erased pk) (erased m) (erased r) (erased mm) (erased a) (erased p)) (delegate (shr n k)))
   q)
 
@@ -743,7 +744,7 @@
 
 ; A Char is its code at runtime, so this is u62-cmp: the arguments coerce down through both newtypes and
 ; the result back up, the Coercible for it built by an erased match that leaves no code behind.
-(def-fns char-lvl $ (many char-cmp : (many (Char) a) (many (Char) b) ->
+(def-fns char-lvl $ (many char-cmp at u62-cmp : (many (Char) a) (many (Char) b) ->
     (many (Cmp (Char) CharLt a b) c))
   (let-match erased a (MkChar ua))
   (let-match erased ua (MkU8 ma pa))
@@ -793,7 +794,7 @@
 (def-fns str-lvl $ (many extern trim : (many (String) s) -> (many s is t))
   s)
 
-(def-fns str-lvl $ (many str-append : (many (String) a) (many (String) b) -> (many (String) c))
+(def-fns str-lvl $ (many str-append at append : (many (String) a) (many (String) b) -> (many (String) c))
   (let ((many c) (erased p)) (delegate (append a b)))
   c)
 
@@ -963,6 +964,12 @@
   (def-unique L $ (unique held : -> (unique A r)) a)
   held)
 
+(def-adts $ (Usage : -> Type)
+  enum
+  (many MkUsage : (many (Nat) wall-ns) (many (Nat) user-ns) (many (Nat) sys-ns)
+     (many (Nat) minor-words) (many (Nat) promoted-words) (many (Nat) major-words)
+     (many (Nat) minor-gcs) (many (Nat) major-gcs) -> (Usage)))
+
 ; A program's requests to the driver (ASSUMPTIONS.md): every entry but Exit carries a continuation the
 ; driver applies to the request's answer, so a step never recurses and the driver loops. A continuation is a
 ; UniqueFn and a request unique, so a continuation may own what it closes over and is applied once.
@@ -988,7 +995,10 @@
     (many DeleteFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
     (many ConfineDir : (erased (Level) L) (many (String) dir) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))))
+    (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
+    ; Performs compaction first; every Usage figure is zero under --no-extern.
+    (many Measure : (erased (Level) L) (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
+       (unique (UniqueFn L (many A r) (many (Usage) u) -> (unique (IO L) next)) k) -> (IO L))))
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern

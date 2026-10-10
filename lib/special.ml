@@ -1,5 +1,5 @@
 type t =
-  | Let | DefLvl | DefFns | DefUnique | DefAdts | ComptimeMatch | LetMatch | Unary | Distinct | OpenAdt | OpenAbsurd
+  | Let | DefLvl | DefFns | DefUnique | DefAdts | ComptimeMatch | LetMatch | Unary | ProveLiteralLt | OpenAdt | OpenAbsurd
   | Fn | UniqueFn | TyCtor | ValCtor | Matchable
   | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
@@ -7,7 +7,7 @@ type t =
   | Erased | Many | Unique | Colon | Is | Arrow | Subterm | Enum | Union | Tail | NoTail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
-  [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefUnique, "def-unique"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match"); (Unary, "unary"); (Distinct, "distinct");
+  [ (Let, "let"); (DefLvl, "def-lvl"); (DefFns, "def-fns"); (DefUnique, "def-unique"); (DefAdts, "def-adts"); (ComptimeMatch, "comptime-match"); (LetMatch, "let-match"); (Unary, "unary"); (ProveLiteralLt, "prove-literal-lt");
     (OpenAdt, "open-adt"); (OpenAbsurd, "open-absurd");
     (Fn, "Fn"); (UniqueFn, "UniqueFn"); (TyCtor, "TyCtor"); (ValCtor, "ValCtor"); (Matchable, "Matchable");
     (CellAlloc, "cell-alloc"); (CellWrite, "cell-write"); (CellMatch, "cell-match"); (Cell, "Cell"); (SlotOf, "slot-of"); (SlotSelf, "slot-self"); (AtFnOf, "at-fn-of"); (OpenAtFn, "open-at-fn"); (At, "at"); (Share, "share"); (Match, "match"); (MatchableOf, "matchable-of"); (NumeralOf, "numeral-of"); (LevelOf, "level-of"); (ProveSubterm, "prove-subterm");

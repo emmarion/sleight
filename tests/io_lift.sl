@@ -29,7 +29,7 @@
     (def-fns proof-lvl $ (erased lift-fn : (erased Type X) (subterm unique (UniqueFn A (many X x) -> (unique (IO A) next)) k) ->
         (erased (UniqueFn B (many X x) -> (unique (IO B) next)) o)
         (erased (Coercible (Unique) (UniqueFn B (many X x) -> (unique (IO B) next)) o (Unique) (UniqueFn A (many X x) -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o : (many X x) -> (unique (IO B) next))
+      (def-unique B $ (unique o at k : (many X x) -> (unique (IO B) next))
         (let ((unique r)) (delegate (k (predates ab) x)))
         (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
@@ -37,8 +37,16 @@
     (def-fns proof-lvl $ (erased lift-fn0 : (subterm unique (UniqueFn A -> (unique (IO A) next)) k) ->
         (erased (UniqueFn B -> (unique (IO B) next)) o)
         (erased (Coercible (Unique) (UniqueFn B -> (unique (IO B) next)) o (Unique) (UniqueFn A -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o : -> (unique (IO B) next))
+      (def-unique B $ (unique o at k : -> (unique (IO B) next))
         (let ((unique r)) (delegate (k (predates ab))))
+        (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
+        (coerce r (coercible-sym q)))
+      (values o (coercible-of (delegate-of o))))
+    (def-fns proof-lvl $ (erased lift-fn2 : (erased Type X) (subterm unique (UniqueFn A (many X x) (many (Usage) u) -> (unique (IO A) next)) k) ->
+        (erased (UniqueFn B (many X x) (many (Usage) u) -> (unique (IO B) next)) o)
+        (erased (Coercible (Unique) (UniqueFn B (many X x) (many (Usage) u) -> (unique (IO B) next)) o (Unique) (UniqueFn A (many X x) (many (Usage) u) -> (unique (IO A) next)) k) p))
+      (def-unique B $ (unique o at k : (many X x) (many (Usage) u) -> (unique (IO B) next))
+        (let ((unique r)) (delegate (k (predates ab) x u)))
         (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
         (coerce r (coercible-sym q)))
       (values o (coercible-of (delegate-of o))))
@@ -100,7 +108,10 @@
         (values (ConfineDir B dir o) (coercible-ctor (Unique) ConfineDir B A (coercible-refl (Shared) dir) q)))
       ((ConfineOutputBytes l bytes k)
         (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
-        (values (ConfineOutputBytes B bytes o) (coercible-ctor (Unique) ConfineOutputBytes B A (coercible-refl (Shared) bytes) q)))))
+        (values (ConfineOutputBytes B bytes o) (coercible-ctor (Unique) ConfineOutputBytes B A (coercible-refl (Shared) bytes) q)))
+      ((Measure l m x run k)
+        (let ((erased o) (erased q)) (lift-fn2 x (subterm _) k))
+        (values (Measure B m x run o) (coercible-ctor (Unique) Measure B A m m x x (coercible-refl (Unique) run) q)))))
   (let ((erased x1) (erased q1)) (lift-proof (predates pl) L1 p1 io1))
   (let ((erased x2) (erased q2)) (lift-proof (predates pl) L2 p2 io2))
   (values B x1 x2 (coercible-sym q1) (coercible-sym q2) tb))
@@ -141,31 +152,33 @@
 (ReadLine B user-start)
 ; warns: tests/io_lift.sl:34:51: warning: unnecessary `(predates _)`; drop it
 ; warns: tests/io_lift.sl:42:51: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:48:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:51:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:54:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:57:64: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:60:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:63:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:66:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:69:64: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:72:79: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:75:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:78:56: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:81:72: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:84:56: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:87:68: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:90:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:93:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:96:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:99:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:102:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:104:46: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:105:46: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:118:106: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:119:64: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:119:28: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:120:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:121:104: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:130:53: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:131:51: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:50:51: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:56:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:59:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:62:48: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:65:64: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:68:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:71:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:74:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:77:64: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:80:79: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:83:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:86:56: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:89:72: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:92:56: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:95:68: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:98:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:101:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:104:65: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:107:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:110:63: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:113:50: warning: unnecessary `(subterm _)`; drop it
+; warns: tests/io_lift.sl:115:46: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:116:46: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:129:106: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:130:64: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:130:28: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:131:19: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:132:104: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:141:53: warning: unnecessary `(predates _)`; drop it
+; warns: tests/io_lift.sl:142:51: warning: unnecessary `(predates _)`; drop it

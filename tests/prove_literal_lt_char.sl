@@ -1,6 +1,4 @@
 ; expect: 0
-; distinct takes character literals as it takes numerals, through their codes, and refutes a branch that
-; equates two different ones.
 
 (def-adts ((Tag : ((Char) c) -> Type)
   enum
@@ -10,5 +8,5 @@
 (def-fns X $ (many only-a : (many (Tag #\a) t) -> (many (Nat) r))
   (match many t (((Nat) r))
     ((TA) (Zero))
-    (absurd (TB) (distinct #\a #\b))))
+    (absurd (TB) (lt-asym 97 97 (prove-literal-lt 97 98) (lt-succ 97)))))
 (only-a (TA))

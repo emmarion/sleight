@@ -190,7 +190,7 @@ let rec value cx v =
           Buffer.add_string cx.fills (Printf.sprintf "let () = Array.unsafe_set (Obj.obj %s : Ffi_core.word array) %d (Obj.obj %s : Ffi_core.word)\n" name i rhs)) a)
   | V.VCtor (c, vs) when (match shape c.adt with Union | Tagged _ -> true | _ -> false) -> (
       let b = bucket cx v in
-      match List.find_opt (fun (v', _) -> v' == v) !b with
+      match List.find_opt (function V.VCtor (_, vs'), _ -> vs' == vs | _ -> false) !b with
       | Some (_, { contents = Some name }) -> name
       | _ ->
           incr cx.shared;
@@ -480,7 +480,9 @@ let rec show cx env ty =
    FFI's slice converts to and from the host's string directly. *)
 let host_conversions =
   "~str_of_host:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~str_to_host:(fun v -> let s, o, l = (Obj.obj v : Ffi_core.slice) in String.sub s o l) "
-let nat_conversion = "~nat_to_z:(fun v -> (Obj.obj v : Z.t)) "
+let nat_conversion = "~nat_to_z:(fun v -> (Obj.obj v : Z.t)) ~nat_of_z:Obj.repr "
+let apply_ocaml =
+  "(fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs)"
 let driver cx =
   let c = Program.ctor cx.env in
   let lam fs body = Printf.sprintf "(fun %s -> %s)" (params fs) body in
@@ -495,10 +497,9 @@ let driver cx =
       ("some", make "Some"); ("none", make "None"); ("ok", make "Ok"); ("fail", make "Fail"); ("unit", make "MkUnit");
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
-      ("changed", make "Changed"); ("unchanged", make "Unchanged");
+      ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")");
       ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
-      ("apply", "(fun (k : Obj.t) (x : Obj.t) -> (Obj.obj k : Obj.t -> Obj.t) x)");
-      ("apply0", "(fun (k : Obj.t) -> (Obj.obj k : unit -> Obj.t) ())") ]
+      ("apply", apply_ocaml) ]
   in
   let host = (match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "")
              ^ (match shape (c "Zero").V.adt with Ext "Nat" -> nat_conversion | _ -> "") in
@@ -516,11 +517,10 @@ let item cx = function
       let text = concat "\nand " (List.map (fun (x, f) -> fn cx { capture = cx.env.values; locals = [] } (var x) f) fns) in
       Buffer.add_string cx.out ("let rec " ^ text ^ "\n")
   | Env.Final (v, ty, path) ->
-      let v = Program.adapt_final cx.env ty v in
       let text =
         match (v, Program.final cx.env ty) with
-        (* a function and a bare constructor print `_`, as the type-directed printer gives them (ASSUMPTIONS 184) *)
-        | V.VFn _, Program.Plain | V.VCtorFn _, Program.Plain -> "print_final \"_\""
+        (* a bare constructor prints `_`, as the type-directed printer gives it (ASSUMPTIONS 184) *)
+        | V.VCtorFn _, Program.Plain -> "print_final \"_\""
         | _, kind -> (
             let e = value cx v in
             match kind with
