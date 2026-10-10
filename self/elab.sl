@@ -2367,7 +2367,7 @@
   (many Spliced : (many (List $ Syn) out) -> (Expansion))
   (many Refused : (many (String) msg) -> (Expansion)))
 
-(def-fns _ $ (many macro-entry : (many (Env) env) (many (Syn) head) -> (many (Maybe $ Nat) r))
+(def-fns _ $ (many head-entry : (many (Env) env) (many (Syn) head) -> (many (Maybe $ Nat) r))
   (let ((many (Maybe $ String) name))
     (match many head _
       ((RAtom _ n) (Some _ n))
@@ -2380,7 +2380,10 @@
         (raw-atom a))
       (else (None _))))
   (let-match many name (Some _ n) ((None _) (None _)))
-  (let-match many (lookup env n) (Some _ x) ((None _) (None _)))
+  (lookup env n))
+
+(def-fns _ $ (many macro-entry : (many (Env) env) (many (Syn) head) -> (many (Maybe $ Nat) r))
+  (let-match many (head-entry env head) (Some _ x) ((None _) (None _)))
   (let-match many (mult-is-many $ entry-mult-of env x) (BTrue) ((BFalse) (None _)))
   (let ((erased hs) (many s)) $ entry-state env x)
   (let-match many s (SConst _ _ m) ((SDyn _) (None _)))
@@ -2407,7 +2410,8 @@
   (let-match many (nat-lt n expansion-limit) (BTrue) ((BFalse) (values env $ Some _ $ Refused "more than 10000 macro expansions")))
   (let-match many (raw-ext-of env) (Some _ ext) ((None _) (values env $ Some _ $ Refused "the prelude's `Raw` is not the FFI's")))
   (let-match many (env-loc env) (MkLoc file _))
-  (let ((many env2) (many out)) $ env-expand (env-set-expansions env $ Succ n) m ext file p args)
+  (let ((many envr)) $ env-back env $ read-special (env-at env $ raw-pos head) head (BFalse) (Many))
+  (let ((many env2) (many out)) $ env-expand (env-set-expansions envr $ Succ n) m ext file p args)
   (match many out _
     ((Ok _ xs) (values env2 $ Some _ $ Spliced xs))
     ((Fail _ msg) (values env2 $ Some _ $ Refused $ str-cat3 "macro " (qraw head) $ str-cat " failed: " msg))))
@@ -2473,7 +2477,8 @@
 (def-fns _ $ (many splice-binders : (many (Env) env) (many (Syn) head) (many (List $ Syn) args) -> (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
   (let-match many args (Cons _ bk rhs) ((Nil _) (values env $ None _)))
   (let-match many bk (RList bp bs) (else (values env $ None _)))
-  (let ((many e2) (many changed) (many out) (many err)) $ splice-entries env bs)
+  (let ((many e0) (many changed) (many out) (many err)) $ splice-entries (env-set-usage-erased env $ BTrue) bs)
+  (let ((many e2)) $ env-set-usage-erased e0 $ env-usage-erased env)
   (let-match many changed (BTrue) ((BFalse) (values e2 $ None _)))
   (let-match many err (None _) ((Some _ e) (match many e _ ((MkPair _ _ item m) (values (env-at e2 $ raw-pos item) $ Some _ $ Fail _ m)))))
   (values e2 $ Some _ $ Ok _ $ Cons _ head $ Cons _ (RList bp out) rhs))
@@ -2637,10 +2642,22 @@
 
 ; ---- Small helpers the block's checks use
 
-(def-fns _ $ (many not-applicable : (many (Env) env) (many (Syn) head) (many (Res) h) -> (many (String) s))
-  (match many (prelude-nullary env (res-ty h) "Macro") _
-    ((BTrue) (str-cat (qraw head) " is a macro, expanded only where its head is constant-known (DESIGN.md section 6)"))
-    ((BFalse) (str-cat3 (qshow env $ res-term h) " : " $ str-cat (qshow env $ res-ty h) " is not applicable"))))
+(def-fns _ $ (many macro-refused : (many (Env) env) (many (Syn) head) -> (many (Env) r))
+  (let ((many plain)) $ str-cat (qraw head) " is a macro, expanded only where its head is constant-known")
+  (let-match many (head-entry env head) (Some _ x) ((None _) (env-error env plain)))
+  (let ((erased hs) (many s)) $ entry-state env x)
+  (let ((many dyn)) $ match many s (((Bool) _)) ((SDyn _) (BTrue)) (else (BFalse)))
+  (let ((many gone)) $ match many (entry-mult-of env x) (((Bool) _)) ((Erased) (BTrue)) (else (BFalse)))
+  (let-match many (or dyn gone) (BTrue) ((BFalse) (env-error env plain)))
+  (let ((many how)) $ match many gone (((String) _)) ((BTrue) " `erased`") ((BFalse) ""))
+  (let ((many where)) $ match many dyn (((String) _)) ((BTrue) ", where every binding is `Dyn`") ((BFalse) ""))
+  (let ((many notes)) $ match many (env-entry-at env x) (((List $ Pair (Loc) $ String) _))
+    ((None _) (Nil _))
+    ((Some _ l) (Cons _ (MkPair _ _ l $ say env $ str-cat3 (qshown env x) " is bound" $ str-cat3 how " here" where) $ Nil _)))
+  (let-match many gone (BTrue) ((BFalse) (env-error-hinted env notes plain $ say env "\nhint: a macro reaches a body through a run-position binding, named directly or forwarded by a `let`")))
+  (match many dyn _
+    ((BTrue) (env-error-with env notes $ str-cat (qraw head) " is an erased macro, expanded only where its head is constant-known and non-erased"))
+    ((BFalse) (env-error-hinted env notes (str-cat (qraw head) " is an erased macro, and only a non-erased one is expanded") $ say env "\nhint: bind it `many` to expand it"))))
 
 (def-fns _ $ (many cannot-apply-in-type : (many (Env) env) (many (Term) h) (many (Term) hty) -> (many (String) s))
   (str-cat3 (qshow env h) " has type " $ str-cat (qshow env hty) " and cannot be applied in a type"))
@@ -2655,6 +2672,11 @@
 
 (def-fns _ $ (many expr-error : (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (String) msg) (many (String) tag) -> (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
   (values (env-error env msg) (list-replicate _ (list-length _ expect) no-res) $ hoist-none ctx expect $ CError _ expect tag))
+
+(def-fns _ $ (many not-applicable : (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Env) env) (many (Syn) head) (many (Res) h) (many (String) tag) -> (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
+  (match many (prelude-nullary env (res-ty h) "Macro") _
+    ((BTrue) (values (macro-refused env head) (list-replicate _ (list-length _ expect) no-res) $ hoist-none ctx expect $ CError _ expect tag))
+    ((BFalse) (expr-error ctx expect env (str-cat3 (qshow env $ res-term h) " : " $ str-cat (qshow env $ res-ty h) " is not applicable") tag))))
 
 (def-lvl refusal-lvl)
 
@@ -5232,7 +5254,7 @@
                 ((TFn uq lv params rets)
                   (let ((many env2a) (many ann) (many args2)) $ split-annotation args _ (WHere args) env2 0)
                   (notail $ elab-call fuel sugar args (MkPair _ _ args2 ann) env2a ctxh expect tele h (describe env2 head (res-term h) (res-ty h)) (raw-pos head) pos hcode uq lv params rets cc demand $ BFalse))
-                ((TErr m) (expr-error ctxh expect env2 (not-applicable env2 head h) m)) (else (expr-error ctxh expect env2 (not-applicable env2 head h) "not applicable"))))
+                ((TErr m) (not-applicable ctxh expect env2 head h m)) (else (not-applicable ctxh expect env2 head h "not applicable"))))
               (values env5 ress5 $ hoist-after _ _ _ hpre hc5))))))
     (let ((many n)) $ list-length _ expect)
     (let ((many m)) $ list-length _ ress)
@@ -5268,14 +5290,16 @@
   ; Grammar expressions (section 9): variables, constructor applications and type formers; [as-type] also
   ; checks the result is a type.
   ((many elab-term : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (Syn) raw) (many (Env) env) (many (Bool) as-type) (many (Maybe $ List $ Entry) tele) -> (many (Env) r) (many (Term) t) (many (Term) ty))
-    (let ((many env-x) (many mx)) $ expand-one env raw)
+    (let ((many env-x0) (many mx)) $ expand-one (env-set-usage-erased env $ BTrue) raw)
+    (let ((many env-x)) $ env-set-usage-erased env-x0 $ env-usage-erased env)
     (let-match many mx (None _)
       ((Some _ er)
         (let ((many envx)) $ env-at env-x $ raw-pos raw)
         (let-match many er (Ok _ out) ((Fail _ m) (values (env-error envx m) (TErr "macro") $ TErr "macro")))
         (let-match many fuel (Succ f2) ((Zero) (values (env-error envx "more than 10000 macro expansions") (TErr "macro") $ TErr "macro")))
         (tail $ elab-term f2 (raw-size out) out env-x as-type tele)))
-    (let ((many env-y) (many sy)) $ splice-call env-x raw)
+    (let ((many env-y0) (many sy)) $ splice-call (env-set-usage-erased env-x $ BTrue) raw)
+    (let ((many env-y)) $ env-set-usage-erased env-y0 $ env-usage-erased env)
     (let-match many sy (None _)
       ((Some _ ry)
         (let-match many ry (Ok _ raw2) ((Fail _ m) (values (env-error env-y m) (TErr "macro") $ TErr "macro")))
@@ -5679,7 +5703,8 @@
   ; [ids]: binders already in force, innermost first.
   ((many elab-tele : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (List $ Sub root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (Bool) subterm-ok) (many (Bool) holes) (many (Bool) places) (many (Bool) ctor) -> (many (Env) r) (many (List $ Nat) bound) (many (List $ Entry) tele))
     (let-match many st (SS sn k))
-    (let ((many envm) (many changed) (many out) (many err)) $ splice-entries env $ sub-syns _ entries)
+    (let ((many envm0) (many changed) (many out) (many err)) $ splice-entries (env-set-usage-erased env $ BTrue) $ sub-syns _ entries)
+    (let ((many envm)) $ env-set-usage-erased envm0 $ env-usage-erased env)
     (let-match many changed (BFalse)
       ((BTrue)
         (let-match many err (None _) ((Some _ e) (match many e _ ((MkPair _ _ item m) (values (env-error (env-at envm $ raw-pos item) m) (Nil _) $ Nil _)))))
@@ -6337,7 +6362,8 @@
     (values env5 all))
 
   ((many elab-ctors : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) ctors) (many (Env) env) (many (Nat) tid) (many (Bool) nt) -> (many (Env) r) (many (List $ Pair (Mult) $ Nat) cs))
-    (let ((many envs) (many sx)) $ splice-tail env 0 ctors)
+    (let ((many envs0) (many sx)) $ splice-tail (env-set-usage-erased env $ BTrue) 0 ctors)
+    (let ((many envs)) $ env-set-usage-erased envs0 $ env-usage-erased env)
     (let-match many sx (None _)
       ((Some _ rr)
         (let-match many rr (Ok _ c2) ((Fail _ m) (values (env-error envs m) $ Nil _)))
