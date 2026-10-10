@@ -59,9 +59,10 @@ let checkable_lines report src toks =
   let depth = ref 0 and cur = ref Z.zero and out = ref [] in
   List.iter
     (fun (l, off, tok) ->
-       if not (Z.equal l.line !cur) then begin
-         cur := l.line;
-         let indent = Z.to_int l.col - 1 in
+       let line, col = Reader.coords l in
+       if not (Z.equal line !cur) then begin
+         cur := line;
+         let indent = Z.to_int col - 1 in
          let bol = off - indent in
          if String.exists (( = ) '\t') (String.sub src bol (off - bol)) then
            report { at = l; note = false; msg = "indentation uses a tab, not spaces only" };

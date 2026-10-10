@@ -16,6 +16,18 @@ let untuple vs e body =
   | [ v ] -> Printf.sprintf "(let %s = %s in %s)" v e body
   | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
+let z n = Printf.sprintf "(Z.of_string %s)" ("\"" ^ Z.to_string n ^ "\"")
+let rec raw r =
+  let l = function
+    | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
+    | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" in
+  match r with
+  | Ffi_core.Atom (p, s) -> Printf.sprintf "(Ffi_core.Atom (%s, %s))" (l p) (quote s)
+  | Nat (p, n) -> Printf.sprintf "(Ffi_core.Nat (%s, %s))" (l p) (z n)
+  | Char (p, c) -> Printf.sprintf "(Ffi_core.Char (%s, %d))" (l p) c
+  | Str (p, s) -> Printf.sprintf "(Ffi_core.Str (%s, %s))" (l p) (quote s)
+  | Wild p -> Printf.sprintf "(Ffi_core.Wild %s)" (l p)
+  | List (p, xs) -> Printf.sprintf "(Ffi_core.List (%s, [ %s ]))" (l p) (concat "; " (List.map raw xs))
 
 (* An extern type's unwrap into its model's shape and the wrap back (lib/ffi_core.ml's views), over Obj.t. *)
 let externs =
@@ -24,7 +36,10 @@ let externs =
     ("Nat", view "Nat" "nat" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Half", view "Half" "half" "~z:Obj.obj ~nat:Obj.repr" "~z:Obj.obj ~nat:Obj.repr");
     ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
-    ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr") ]
+    ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr");
+    ( "Raw",
+      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
+       let con_Raw v = Obj.repr (Ffi_core.raw_of ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
 
@@ -231,6 +246,7 @@ and plain cx = function
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, (Array _ | Bytes _)) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
+  | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw r ^ ")"
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with
       | Ext _ ->

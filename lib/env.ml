@@ -34,7 +34,7 @@ let resolve here s =
   let note (key, (shown, at)) =
     if key.[0] = 'k' then
       let b = String.sub shown 2 (String.length shown - 2) in
-      if at = "" then Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed" here shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
+      if at = "" then Printf.sprintf "\n%s `%s` is `%s`, shadowed" (Reader.label here "note:") shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
     else
     let written, supplied =
       match key.[0] with
@@ -42,7 +42,7 @@ let resolve here s =
       | 'm' -> ("the slot of the `_` written here", "")
       | 's' -> ("the slot of the entry bound here", "")
       | _ -> ("anonymous, minted here", "anonymous, minted by the elaborator rather than written in the source") in
-    if at = "" then Printf.sprintf "\n%s: note: `%s` is %s" here shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
+    if at = "" then Printf.sprintf "\n%s `%s` is %s" (Reader.label here "note:") shown supplied else Printf.sprintf "\n%s: note: `%s` is %s" at shown written in
   let line s =
     let b = Buffer.create (String.length s) and fresh = ref [] in
     let rec go i =
@@ -66,18 +66,18 @@ type held = Said of string | Shadow of int * int * Reader.loc * string * Reader.
 let held : held list ref = ref []
 
 let warn_at l notes fmt =
-  let note (nl, m) = Printf.sprintf "\n%s: note: %s" (Reader.where "-" nl) m in
+  let note (nl, m) = Printf.sprintf "\n%s %s" (Reader.labelled "-" nl "note:") m in
   Printf.ksprintf
     (fun s ->
       let here = Reader.where "-" l in
-      let s = resolve here (Printf.sprintf "%s: warning: %s%s" here s (String.concat "" (List.map note notes))) ^ "\n" in
+      let s = resolve here (Printf.sprintf "%s %s%s" (Reader.label here "warning:") s (String.concat "" (List.map note notes))) ^ "\n" in
       if !held = [] then !warn s else held := Said s :: !held)
     fmt
 
 (* An error about two places names both: each note is a second location, written on its own line under the
    message as a warning's note is, rather than described in the message's prose (ASSUMPTIONS 194). *)
 let error_with ?hint ?(hints = "") loc notes fmt =
-  let note s (l, m) = Printf.sprintf "%s\n%s: note: %s" s (Reader.where "-" l) m in
+  let note s (l, m) = Printf.sprintf "%s\n%s %s" s (Reader.labelled "-" l "note:") m in
   Printf.ksprintf (fun s -> raise (Error (loc, List.fold_left note s notes ^ Option.fold ~none:"" ~some:(( ^ ) "\nhint: ") hint ^ hints))) fmt
 
 let error loc fmt = error_with loc [] fmt

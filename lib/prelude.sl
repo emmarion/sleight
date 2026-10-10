@@ -1384,3 +1384,23 @@
   (let-match many h (MkCopy _ v))
   (let ((erased zs1) (unique tl3) (erased p1)) (notail $ array-blit _ _ stl (Zero) _ dtl (Zero) n1 _ q _ q2))
   (values (Cons (Copy A) (MkCopy A v) zs1) (u _ _ (MkCopy _ v) (at) tl3) (SpliceHere _ _ _ _ _ _ _ p1)))
+
+(def-adts $ (Pos : -> Type)
+  enum
+  (many NoPos : -> (Pos))
+  (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
+
+(def-adts $ (Raw : -> Type)
+  enum extern
+  (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
+  (many RawNat : (many (Pos) pos) (many (Nat) n) -> (Raw))
+  (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
+  (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
+  (many RawWild : (many (Pos) pos) -> (Raw))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
+
+(def-adts $ (Macro : -> Type)
+  enum newtype
+  (many MkMacro : (erased (Level) L)
+     (many (Fn L (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out)) f)
+     -> (Macro)))

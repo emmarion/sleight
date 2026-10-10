@@ -60,8 +60,8 @@ let driver env =
    being read. A contradiction that reaches here escaped every form that would have placed it, and the
    evaluator's code has no locations at all (ASSUMPTIONS 194). *)
 let explain path = function
-  | Reader.Syntax (l, m) -> Some (Reader.where path l ^ ": syntax error: " ^ m)
-  | Env.Error (l, m) -> let here = Reader.where path l in Some (Env.resolve here (here ^ ": error: " ^ m))
+  | Reader.Syntax (l, m) -> Some (Reader.labelled path l "syntax error: " ^ m)
+  | Env.Error (l, m) -> let here = Reader.where path l in Some (Env.resolve here (Reader.label here "error: " ^ m))
   | Env.Contradiction m -> Some (Env.resolve path (path ^ ": error: contradiction: " ^ Lazy.force m))
   | Eval.Runtime m -> Some (path ^ ": runtime error: " ^ m)
   | _ -> None

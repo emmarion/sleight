@@ -56,16 +56,17 @@ let () =
   let forms = ref [] and stack = ref [] and depth = ref 0 in
   Array.iteri
     (fun k ((l : Reader.loc), _, t) ->
+      let line, col = Reader.coords l in
       match t with
       | LParen ->
-          let f = { line = l.line; col = l.col; depth = !depth; text = label k; closes = Z.zero } in
+          let f = { line; col; depth = !depth; text = label k; closes = Z.zero } in
           forms := f :: !forms;
           stack := f :: !stack;
           incr depth
       | RParen ->
           decr depth;
           (match !stack with
-           | f :: rest -> f.closes <- l.line; stack := rest
+           | f :: rest -> f.closes <- line; stack := rest
            | [] -> ())
       | _ -> ())
     toks;
@@ -81,14 +82,15 @@ let () =
     let run_line = ref Z.one and stack = ref [] in
     Array.iteri
       (fun k ((l : Reader.loc), off, t) ->
+        let line, col = Reader.coords l in
         match t with
-        | LParen -> stack := ((l.line, l.col), label k) :: !stack
+        | LParen -> stack := ((line, col), label k) :: !stack
         | RParen ->
             (match !stack with
              | o :: rest ->
                  if !last <> off - 1 && !pending <> [] then (
                    runs := (!run_line, List.rev !pending) :: !runs; pending := []);
-                 if !pending = [] then run_line := l.line;
+                 if !pending = [] then run_line := line;
                  pending := o :: !pending;
                  last := off;
                  stack := rest

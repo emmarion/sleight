@@ -1,17 +1,18 @@
 (* A position is where a token's first character sits, named by the file it was read from: what every
    message a session writes points at (ASSUMPTIONS 194). [nowhere] is the location an error carries when
    it is raised where none is at hand, for an enclosing form to fill in. *)
-type loc = { file : string; line : Z.t; col : Z.t }
+type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 
-type raw = Atom of loc * string | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+type raw = Ffi_core.raw = Atom of loc * string | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 exception Syntax of loc * string
 
-let nowhere = { file = ""; line = Z.zero; col = Z.zero }
-let placed l = not (Z.equal l.line Z.zero)
-let where fallback l =
-  let f = if l.file = "" then fallback else l.file in
-  if placed l then Printf.sprintf "%s:%s:%s" f (Z.to_string l.line) (Z.to_string l.col) else f
+let nowhere = Unknown
+let placed = function At _ -> true | NoLoc | Unknown -> false
+let where fallback = function At { file; line; col } -> Printf.sprintf "%s:%s:%s" file (Z.to_string line) (Z.to_string col) | Unknown -> fallback | NoLoc -> ""
+let file_of = function At { file; _ } -> file | NoLoc | Unknown -> ""
+let label w label = if w = "" then label else w ^ ": " ^ label
+let labelled fallback l = label (where fallback l)
 
 let loc = function Atom (l, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
 
@@ -33,7 +34,7 @@ let unterminated = "unterminated string literal"
 let scan_upto file src =
   let n = String.length src in
   let out = ref [] in
-  let at line bol i = { file; line = Z.of_int line; col = Z.of_int (i - bol + 1) } in
+  let at line bol i = At { file; line = Z.of_int line; col = Z.of_int (i - bol + 1) } in
   let err l msg = raise (Syntax (l, msg)) in
   let rec skip p i = if i < n && p src.[i] then skip p (i + 1) else i in
   let rec string buf line bol i =
@@ -112,7 +113,8 @@ let shape_note path =
 type region = { name : string; from : loc; until : loc option; mutable used : bool }
 
 let regions : (string, region list) Hashtbl.t = Hashtbl.create 8
-let compare_loc a b = match Z.compare a.line b.line with 0 -> Z.compare a.col b.col | c -> c
+let coords = function At { line; col; _ } -> (line, col) | NoLoc | Unknown -> (Z.zero, Z.zero)
+let compare_loc a b = let (al, ac), (bl, bc) = (coords a, coords b) in match Z.compare al bl with 0 -> Z.compare ac bc | c -> c
 let before a b = compare_loc a b < 0
 let covers r l = not (before l r.from) && match r.until with Some u -> before l u | None -> true
 
@@ -123,7 +125,7 @@ let parse ?(shape = true) file src =
   let toks = ref (tokenize file src) in
   let peek () = match !toks with [] -> None | t :: _ -> Some t in
   let advance () = toks := List.tl !toks in
-  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (where "-" { l with line = Z.zero }) else m) in
+  let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (file_of l) else m) in
   let opened = ref [] and closed = ref [] in
   let suppression l w = function
     | Atom (_, "warn") :: Atom (_, name) :: _ -> (

@@ -60,7 +60,7 @@ let brief = function
   | List _ -> "this form"
   | r -> tick (Reader.show r)
 let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (help env (String.concat "" (List.map Sp.role_hints (misplaced env raw))))
-let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
+let at loc f = try f () with Error (Reader.Unknown, msg) -> error loc "%s" msg
 let var env loc n = match lookup env n with Some x -> x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
@@ -458,6 +458,57 @@ let rec intern env loc lit =
 
 let lit_of = function Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s) | _ -> None
 
+let expansions = ref 0
+
+let macro_of env raw =
+  let held n = Option.bind (prelude_id env "Macro") (fun m -> Option.bind (lookup env n) (fun x -> const_value env x (App (Var m, [])))) in
+  match raw with
+  | Atom (_, n) -> held n
+  | List (_, [ h; Atom (_, n) ]) when special_of env h = Some Sp.Share -> held n
+  | _ -> None
+
+let raw_ctor env l = ctor_of env l (Option.get (prelude_id env "RawName"))
+
+let rec raw_value env r =
+  match ext_adt env "RawName" with
+  | Some adt -> V.VExt (adt, V.Raw r)
+  | None ->
+      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
+      V.construct (List.nth (raw_ctor env Reader.nowhere).V.adt.ctors i) fs
+
+let rec value_raw env l = function
+  | V.VExt (_, V.Raw r) -> r
+  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
+
+let expand env raw =
+  match raw with
+  | List (l, head :: args) ->
+      Option.map
+        (fun f ->
+          incr expansions;
+          if !expansions > 10000 then error l "more than 10000 macro expansions";
+          let here = Ffi.pos (Ffi_core.pos_view ~str:(str_value env) ~nat:(nat_value env) l) in
+          let args = List.fold_right (fun a rest -> Ffi.list (Cons (raw_value env a, rest))) args (Ffi.list Nil) in
+          let out = try Eval.apply f [ here; args ] with Eval.Runtime m -> error l "macro %s failed: %s" (tick (Reader.show head)) m in
+          let rec items v = match Ffi.unlist v with Nil -> [] | Cons (x, rest) -> value_raw env l x :: items rest in
+          items (List.hd out))
+        (macro_of env head)
+  | _ -> None
+
+let rec expand_one env raw =
+  match expand env raw with
+  | None -> raw
+  | Some [ r ] -> expand_one env r
+  | Some rs -> error (loc raw) "%s must expand to one form here, and expanded to %d" (brief raw) (List.length rs)
+
+let rec expand_seq env = function
+  | item :: rest as items -> (match expand env item with Some out -> expand_seq env (out @ rest) | None -> items)
+  | [] -> []
+
+let rec spliced env = function
+  | item :: rest -> (match expand env item with Some out -> spliced env (out @ rest) | None -> item :: spliced env rest)
+  | [] -> []
+
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
@@ -647,7 +698,7 @@ let warn_use env l what t =
   match canon env t with
   | Var x when not env.unwarned -> (
       let means r = match StringMap.find_opt r.Reader.name env.scope.named with Some y -> canon env (Var y) = Var x | None -> false in
-      match IntMap.find_opt x env.warned, List.filter (fun r -> Reader.covers r l && means r) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions l.file)) with
+      match IntMap.find_opt x env.warned, List.filter (fun r -> Reader.covers r l && means r) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (Reader.file_of l))) with
       | Some (pl, msg), [] -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg
       | Some _, rs -> List.iter (fun r -> r.Reader.used <- true) rs
       | None, _ -> ())
@@ -669,6 +720,7 @@ let pragma env l = function
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const env V.VToken) Prelude.level_term
 
 let rec elab_term ?expect env raw =
+  let raw = expand_one env raw in
   match raw with
   | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Dyn type_term in (env, Var x)
   | Atom _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
@@ -677,6 +729,7 @@ let rec elab_term ?expect env raw =
       match special_of env head with
       | Some sp -> elab_type_form env l sp args
       | None -> (
+          let args = spliced env args in
           let h = Var (var env l (atom_or l head "a constructor")) in
           match canon env (infer env l h) with
           | (TyCtor tele | ValCtor (tele, _)) as ty -> let env, acc = elab_term_args env l ~callee:(describe env Erased head h ty) ?expect tele h args in (env, App (h, List.rev acc))
@@ -814,7 +867,7 @@ and level_binder env l raw =
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
 and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ _ m -> m) ?holes ?written entries =
-  let entries = List.concat_map (parse_entry env) entries in
+  let entries = List.concat_map (parse_entry env) (spliced env entries) in
   let _, env, ids, tele =
     List.fold_left
       (fun (i, env, ids, tele) e ->
@@ -1069,6 +1122,7 @@ and elab_erased env raw =
 
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
+  let raw = expand_one env raw in
   match raw with
   | Atom (l, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
       let env, x = atom_entry env raw in
@@ -1079,8 +1133,10 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
       | Some sp when Sp.has_role sp -> not_a env "not an expression" raw
       | Some sp -> elab_special ?sink ?final:(if final then Some (loc head) else None) demand expect_tele (read_special pos env head) expect l sp args
       | None -> (
+          let args = spliced env args in
           let env, h, hcode = elab_head env pos l head in
           let hty = canon env h.ty in
+          if nullary env "Macro" hty then error l "%s is a macro, expanded only where its head is constant-known (DESIGN.md section 6)" (tick (Reader.show head));
           let callee pos = describe env pos head h.term hty in
           let env, rs, code = match hty with
           | TyCtor tele ->
@@ -1568,6 +1624,7 @@ and scrutinee ?res env l smult scrut =
 and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells ?(skip = []) ?sink ?final tele env expect l args =
   match args with
   | m :: scrut :: ann :: branches ->
+      let branches = spliced env branches in
       let pos = pos_of env expect in
       let smult = if res <> None then Erased else written env pos l "match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee ?res env l smult scrut in
@@ -1760,8 +1817,8 @@ and elab_body ?tele ?sink env expect l items = hoisted env (fun env -> elab_body
 
 and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
-  match items with
-  | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
+  match expand_seq env items with
+  | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) (spliced env branches) ->
       elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Wild ll :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
       let env, wrap = elab_stmt (pos_of env expect) env stmt in
@@ -1779,7 +1836,7 @@ and deep_body env = function
 and real_branch env = function List (_, a :: _) -> not (is_special env a Sp.Absurd) | _ -> true
 
 (* The statements before a body's final expression, and the code they wrap around what follows them. *)
-and elab_stmts ?within spos env l = function
+and elab_stmts ?within spos env l items = match expand_seq env items with
   | [] -> error l "a body needs a final expression"
   | [ final ] -> (env, Fun.id, final)
   | stmt :: rest ->
@@ -1873,7 +1930,7 @@ and run_code env code = Eval.eval env.values code
 and elab_let spos env l args =
   let bl, binder_raws, rhs =
     match args with
-    | List (bl, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bl, bs, rhs)
+    | List (bl, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bl, spliced env bs, rhs)
     | _ -> error l "%s" (help env (Sp.misuse Sp.Let))
   in
   let binders = List.concat_map (parse_entry env) binder_raws in
@@ -1951,6 +2008,7 @@ and elab_unary spos env l args =
 and elab_let_match spos env l args =
   match args with
   | m :: scrut :: List (pl, c :: fields) :: branches ->
+      let branches = spliced env branches in
       List.iter (fun b -> if real_branch env b then error_in env l "a `let-match` with a real branch besides its pattern must be a statement of a function, match branch or cell-match body") branches;
       let smult = written env spos l "let-match" (mult_or env l m) in
       let env, sres, scode, swrap, tid, mid, disc, ctors = scrutinee env l smult scrut in
@@ -2165,7 +2223,7 @@ and elab_def_adts env adts =
     | List (_, List (al, n :: colon :: sg) :: d :: rest) when is_special env colon Sp.Colon -> (
         let ps, ret = split_arrow env al sg in
         match ret with
-        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, binder_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
+        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, binder_or al n "a type constructor name", ps, ty, disc_of env al d, ms, spliced env ctors)
         | _ -> error al "a type constructor declares one return")
     | _ -> error_in env (loc raw) "malformed `def-adts` entry%s" (help env (Sp.hints "def-adts-entry"))
   in
@@ -2223,7 +2281,7 @@ let final_form env ty =
 let final env ty = Option.value (final_form env ty) ~default:Plain
 
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
-  let rec go env = function
+  let rec go env items = match expand_seq env items with
     | [] -> env
     | List (l, Atom (_, ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
     | item :: rest -> (
@@ -2243,6 +2301,6 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
   in
   let env = Fun.protect ~finally:report_shadows (fun () -> go env items) in
   (match items with
-   | item :: _ -> List.iter (fun r -> if not r.Reader.used then warn_at r.from [] "`;! suppress warn` for %s silenced nothing" (tick r.name)) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (loc item).file))
+   | item :: _ -> List.iter (fun r -> if not r.Reader.used then warn_at r.from [] "`;! suppress warn` for %s silenced nothing" (tick r.name)) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (Reader.file_of (loc item))))
    | [] -> ());
   env

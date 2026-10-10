@@ -1,5 +1,8 @@
 type slice = string * int * int
 
+type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
+type raw = Atom of loc * string | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+
 (* Each extern type one level deep, in the order and arities of its model's constructors: [_view] takes a host
    value apart into the constructor at the top and host values below, [_of] puts one together. *)
 type 'v nat = Zero | Succ of 'v
@@ -123,6 +126,38 @@ let flatten ~rope ~slice ~z ~str root =
 
 type 'a array_model = ANil | ACons of 'a * 'a
 type 'v list_model = Nil | Cons of 'v * 'v
+type 'v pos_model = NoPos | MkPos of 'v * 'v * 'v
+type 'v raw_model = RawName of 'v * 'v | RawNat of 'v * 'v | RawChar of 'v * 'v | RawStr of 'v * 'v | RawWild of 'v | RawList of 'v * 'v
+
+let pos_view ~str ~nat = function At { file; line; col } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos
+
+let raw_view ~get ~str ~nat ~pos ~list ~raw v =
+  let p l = pos (pos_view ~str ~nat l) in
+  match get v with
+  | Atom (l, s) -> RawName (p l, str s)
+  | Nat (l, n) -> RawNat (p l, nat n)
+  | Char (l, c) -> RawChar (p l, nat (Z.of_int c))
+  | Str (l, s) -> RawStr (p l, str s)
+  | Wild l -> RawWild (p l)
+  | List (l, xs) -> RawList (p l, List.fold_right (fun x rest -> list (Cons (raw x, rest))) xs (list Nil))
+
+let raw_fields = function
+  | RawName (p, s) -> (0, [ p; s ]) | RawNat (p, n) -> (1, [ p; n ]) | RawChar (p, c) -> (2, [ p; c ])
+  | RawStr (p, s) -> (3, [ p; s ]) | RawWild p -> (4, [ p ]) | RawList (p, xs) -> (5, [ p; xs ])
+let raw_model i fs = match (i, fs) with
+  | 0, [ p; s ] -> RawName (p, s) | 1, [ p; n ] -> RawNat (p, n) | 2, [ p; c ] -> RawChar (p, c)
+  | 3, [ p; s ] -> RawStr (p, s) | 4, [ p ] -> RawWild p | 5, [ p; xs ] -> RawList (p, xs) | _ -> invalid_arg "raw_model"
+
+let raw_of ~text ~z ~pos ~list ~raw m =
+  let l p = match pos p with NoPos -> NoLoc | MkPos (f, line, col) -> At { file = text f; line = z line; col = z col } in
+  let rec items v = match list v with Nil -> [] | Cons (x, rest) -> raw x :: items rest in
+  match m with
+  | RawName (p, s) -> Atom (l p, text s)
+  | RawNat (p, n) -> Nat (l p, z n)
+  | RawChar (p, c) -> Char (l p, Z.to_int (z c))
+  | RawStr (p, s) -> Str (l p, text s)
+  | RawWild p -> Wild (l p)
+  | RawList (p, xs) -> List (l p, items xs)
 
 (* No host float is ever a value of the language, so no array is a flat float array, and an extracted template
    types an array's elements as [word] rather than [Obj.t], which lets OCaml skip its float check on each access.

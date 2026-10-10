@@ -1,0 +1,14 @@
+; needs: macro_lib
+; expect: 9
+(warn-nowhere)
+(warn-zero)
+(warn-elsewhere)
+(def-fns _ $ (many f : -> (many (Nat) n))
+  (warn-here)
+  (line))
+(let ((many x)) (line))
+x
+; warns: warning: nowhere
+; warns: :0:0: warning: zero
+; warns: elsewhere.sl:7:9: warning: elsewhere
+; warns: tests/macro_pos.sl:7:3: warning: here
