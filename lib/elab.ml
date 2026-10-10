@@ -43,7 +43,7 @@ let special_value env x = match const_value env x Prelude.special_term with Some
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
 
 let rec special_of env raw =
-  let value x = let v = special_value env x in if v <> None then refer ~live:true x; v in
+  let value = special_value env in
   match raw with
   | Atom (_, n) -> Option.bind (lookup env n) value
   | List (_, [head; Atom (_, n)]) when special_of env head = Some Sp.Share -> Option.bind (lookup env n) value

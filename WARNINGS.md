@@ -110,3 +110,17 @@ Specified in DESIGN.md section 4.
 - ``;! suppress warn` for NAME silenced nothing``. `lib/elab.ml` (`run_toplevel`),
   `self/elab.sl`. Test: `tests/suppress_warn.sl`.
 - The text of a `compile-warn` (§4). Test: `tests/compile_warn.sl`.
+
+## 10. Unused binder
+
+`unused NAME; delete it`, ``…; delete its `let` ``,
+``…; write `_` in its place`` or ``…; rename it `_NAME` ``, and
+``NAME is referenced only in erased positions; declare it `erased` ``,
+for a parameter with ``, or rename it `_NAME` `` added. Off unless
+`--warn-unused` is given; the prelude is checked too, and a test opts
+in with `; warn-unused: yes`. Not checked: top-level binders, names
+starting with `_`, the type and value constructors a `def-adts`
+defines, and names in types, returns and match annotations. See
+OPEN.md 30 and 31.
+`lib/elab.ml` (`report_unused`), `self/elab.sl`. Test:
+`tests/unused_warn.sl`.

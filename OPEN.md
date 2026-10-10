@@ -142,3 +142,25 @@ references are to DESIGN.md.
     opaque, and it is not known whether the prelude can hold a literal.
     Open as well: one proof for `256` or a general lemma for spellings
     of a power of two.
+
+## Warnings
+
+30. The unused-binder warning (WARNINGS.md 10) counts a function's
+    recursive calls to itself as references, so a nested function that
+    only calls itself is not reported. The owner's preference is that
+    such calls not count; doing so is deferred. Open with it: whether
+    calls among the functions of one `def-fns` block, none of which is
+    referenced from outside the block, should count either.
+31. The unused-binder warning does not count a use of a name as an
+    annotation token, such as a local binder holding the special form
+    `many` and written where a multiplicity goes, so such a binder is
+    reported as unused, and the recommendation, if followed, breaks the
+    program. A use as the head of a form does count. slc reads
+    annotation tokens without returning an environment, so it has
+    nowhere to record the reference; the reference leaves the case out
+    to agree with it. Open: whether to restructure that lookup in slc
+    so that these uses count.
+32. Should the unused-binder warning check a binder that a macro
+    expansion (DESIGN.md section 19) produced? Today one that the
+    expansion gives a position is checked, and its warning points at
+    that position, often the macro's call.

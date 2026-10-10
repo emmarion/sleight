@@ -43,8 +43,6 @@
   (let ((many (Nat) w) (erased (Eq (Nat) w w) wp)) (values a0 (Refl (Nat) a0)))
   0)
 
-(let ((many my-eight)) (let ((many mm)) many) (let ((mm x)) 8) x)
-
 (let ((many top-unused)) (B 1))
 (let ((many kept)) (same top-unused))
 (f "abc" (cells) 2 (prove-literal-lt 2 5))
