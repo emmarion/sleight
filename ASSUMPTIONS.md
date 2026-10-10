@@ -3007,20 +3007,14 @@ to look for a guard, are the owner's.
      `self/bootstrap.sh` needs no directive of its own, running the
      reference with the FFI as `slc` always does.
 
-154. **A `Nat`, `Char` or `String` prints as the literal it reads back
-     from** (the owner's decision, in chat: all three of items 51-52's
-     literal forms, a `Nat` in decimal being the case that prompted it).
-     `Literal.spell` is `Literal.classify`'s inverse -- decimal; `#\c`
-     bare where the reader's word syntax admits it, `#\space`,
-     `#\newline`, `#\tab` and `#\xHH` otherwise; and a string quoted
-     with `\"` and `\\`, and every byte outside `0x20` to `0x7e` as
-     `\n`, `\t` or `\xHH`. Its character and
-     string cases live in `lib/ffi_core.ml`, which the interpreter, an
-     extracted program and `slc`'s output all paste in, so one
-     definition serves the three back ends. Run over all 256 codes, it
-     round-trips through the reader and `classify`.
+154. **A `Nat`, `Char` or `String` printed as its literal** (DESIGN.md
+     section 45). `Literal.spell` is `Literal.classify`'s inverse. Its
+     character and string cases live in `lib/ffi_core.ml`, which the
+     interpreter, an extracted program and `slc`'s output all paste in,
+     so one definition serves the three back ends. Run over all 256
+     codes, it round-trips through the reader and `classify`.
 
-     Printing in the interpreter is therefore type-directed
+     Printing in the interpreter is type-directed
      (`Elab.show_value`), as item 66's generated printer already was.
      What forces that: a `Char` and a `U8` are their `Nat` at runtime
      (section 33), so nothing but the type tells those three apart, and

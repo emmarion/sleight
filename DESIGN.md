@@ -28,12 +28,14 @@ explicitly one purpose of the language and its tooling.
 ## 1. Syntax
 
 The syntax is s-expressions. A file is a sequence of statements,
-optionally followed by one expression (§27). A `;` starts a comment
-that runs to the end of the line. A `;!` starts a pragma (§4). An atom
-is any run of characters other than whitespace, parentheses and `;`. A
-token that begins with `"` is a string literal. Atoms made only of
-digits, and atoms of the form `#\c`, are numeral and character
-literals (§45).
+optionally followed by one expression (§27). A `;` starts a comment that
+runs to the end of the line. A `;!` starts a pragma (§4). An atom is any
+run of characters other than whitespace, parentheses and `;`. A token
+that begins with `"` is a string literal. Atoms made only of digits, and
+atoms of the form `#\c`, are numeral and character literals (§45). A
+token `#"..."` is a raw name: the string's bytes, read as a string
+literal (§45), whatever they are. It is always a name, so `#"_"`,
+`#"45"` and `#""` are names, and `#"let"` is `let`.
 
 `_` as a binder name creates an anonymous entry. This applies wherever
 a binder is written: a `let` binder, a telescope entry, a pattern
@@ -45,8 +47,9 @@ name written without `#"` may not begin with `__`; such a name is
 written raw. Those spellings are reserved for the compilers' messages,
 which write a name that does not read back plain as a raw name.
 
-The syntax is ASCII only. The multiplicities are written as the words
-`erased`, `many` and `unique`, not as Idris's `0` and `ω`.
+Every built-in name and built-in syntax is ASCII. The multiplicities are
+written as the words `erased`, `many` and `unique`, not as Idris's `0`
+and `ω`.
 
 ## 2. `$`
 
