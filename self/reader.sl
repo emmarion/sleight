@@ -506,9 +506,15 @@
   ((many ind-str-esc : (subterm many (String) s) (many (IndentSt) st) (many (Nat) ol) (many (Nat) oc)
        (many (Bool) os) (many (Bool) ot) -> (many (IndentSt) r))
     (let-match many s (SCons c rest) ((SNil) st))
-    (match many (escape-ok c) _
-      ((BFalse) st)
-      ((BTrue) (tail $ ind-str rest (ind-plain st) ol oc os ot)))))
+    (let-match many (char-is c 120) (BTrue)
+      ((BFalse)
+        (match many (escape-ok c) _
+          ((BFalse) st)
+          ((BTrue) (tail $ ind-str rest (ind-plain st) ol oc os ot)))))
+    (let-match many rest (SCons h1 r3) ((SNil) st))
+    (let-match many r3 (SCons h2 r4) ((SNil) st))
+    (let-match many (hex-pair h1 h2) (Some _ _) ((None _) st))
+    (tail $ ind-str r4 (ind-plain $ ind-plain $ ind-plain st) ol oc os ot)))
 
 (def-fns _ $ (many ind-cat : (subterm many (List $ String) parts) -> (many (String) r))
   (match many parts _

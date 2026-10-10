@@ -3,8 +3,8 @@
 #   1. builds the reference and extracts slc (self/*.sl) to a native binary with the reference extractor;
 #   2. compiles every tests/*.sl with slc, in parallel: a test with an "; error:" directive must be refused
 #      with a message mentioning that text; any other is built (to bytecode, the faster compile) and run with
-#      the test's stdin and arguments, and its stdout, stderr and exit code compared with the reference
-#      interpreter's on the same files; the extern, thunk, main, char, nat and bytes tests are compiled again with
+#      the test's stdin and arguments, and its stdout, exit code, and stderr after slc's own messages compared
+#      with the reference interpreter's on the same files, given to both as absolute paths; the extern, thunk, main, char, nat and bytes tests are compiled again with
 #      --no-templates (ASSUMPTIONS 133); and every test is run again under slc --interpret, which performs
 #      the program in place of writing it out, and compared the same way; a refused test is also run through
 #      the reference, and where each side puts its first message is compared and counted (ASSUMPTIONS 194);
@@ -30,8 +30,7 @@ has() { grep -q -- "$(printf '%s' "$2" | sed 's/[][\\.*^$]/\\&/g; s/<\\\*\\\*>/.
 # check_warns <file> <name>: every "; warns:" line must appear in slc's own stderr, where it writes a warning,
 # the reference writing one as it elaborates or as it checks a file's indentation. A "; warns:" line names the
 # test by its path from the repository root, which is a suffix of the path slc is handed here, so the match is
-# on a substring; the filters above drop a warning, and the note that may follow it, from a stderr being
-# compared.
+# on a substring.
 check_warns() {
   directive "$1" warns | while IFS= read -r want; do
     has "$B/$2.slc.err" "$want" || { echo "FAIL $2: expected a warning mentioning: $want; got: $(head -c 300 "$B/$2.slc.err" | tr '\n' ' ')"; exit 1; }
@@ -47,6 +46,7 @@ check_test() {
   name=$(basename "$t" .sl)$tag
   needs=""
   for n in $(directive "$t" needs); do needs="$needs tests/$n.sl"; done
+  files=$(for f in $needs "$t"; do echo "$ROOT/$f"; done)
   # a "; prelude: none" test runs, on both sides, without the prelude
   noprelude=""
   [ "$(directive "$t" prelude)" = none ] && noprelude=--no-prelude
@@ -60,7 +60,7 @@ check_test() {
     # Where each side puts its first message. The directives match on the text alone, so nothing else
     # compares the two positions; slc records one per form it descends into and the reference carries one
     # per form, so the file and line agree far more often than the column (ASSUMPTIONS 194).
-    "$ROOT/$REF" $noprelude $(for f in $needs "$t"; do echo "$ROOT/$f"; done) > /dev/null 2> "$B/$name.ref.err"
+    "$ROOT/$REF" $noprelude $files > /dev/null 2> "$B/$name.ref.err"
     first() { grep -m1 ' error: ' "$1" | sed "s|^$ROOT/||"; }
     refpos=$(first "$B/$name.ref.err"); slcpos=$(first "$B/$name.slc.err")
     if [ "$(echo "$refpos" | cut -d: -f1-3)" = "$(echo "$slcpos" | cut -d: -f1-3)" ]; then echo "pos-same $name"
@@ -78,15 +78,15 @@ check_test() {
   directive "$t" stdin > "$B/$name.in"
   # the reference run, files sharing one scope in order; both runs happen inside $B, where a test may write files,
   # and in an environment holding the "; env:" variables alone, as test/runtest.ml runs a program
-  (cd "$B" && env -i $envs "$ROOT/$REF" $noprelude $confine $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  (cd "$B" && env -i $envs "$ROOT/$REF" $noprelude $confine $files -- $args < "$name.in" > "$name.ref.out" 2> "$name.ref.err"); refcode=$?
+  # The reference elaborates and runs in one process, so its stderr is its warnings and the program's own;
+  # each slc run is compared with that whole stream, a compiled program's being slc's then the program's.
   if [ "$flags" = --interpret ]; then
-    # slc elaborates and performs the program in one process, as the reference does, so its warnings land in
-    # the same stderr and are filtered from both below
-    (cd "$B" && env -i $envs "$B/slc" $noprelude $confine --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
+    (cd "$B" && env -i $envs "$B/slc" $noprelude $confine --interpret $files -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
-    grep -vE '(^|: )(warning|note): ' "$B/$name.slc.err" > "$B/$name.err" || true
+    cp "$B/$name.slc.err" "$B/$name.err"
   else
-  if ! "$B/slc" $noprelude $confine $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
+  if ! "$B/slc" $noprelude $confine $flags $files > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
   fi
   for n in $(directive "$t" extract-bytes-at-most); do
@@ -96,12 +96,10 @@ check_test() {
     echo "FAIL $name: the emitted OCaml does not compile, see $B/$name.log"; return
   fi
   check_warns "$t" "$name" || return
-  (cd "$B" && env -i $envs "./$name.exe" $args < "$name.in" > "$name.out" 2> "$name.err"); code=$?
+  (cd "$B" && env -i $envs "./$name.exe" $args < "$name.in" > "$name.out" 2> "$name.prog.err"); code=$?
+  cat "$B/$name.slc.err" "$B/$name.prog.err" > "$B/$name.err"
   fi
-  # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
-  # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
-  grep -vE '(^|: )(warning|note): ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
-  if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err.run" && [ "$code" = "$refcode" ]; then
+  if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err" && [ "$code" = "$refcode" ]; then
     echo "ok $name"
   else
     echo "FAIL $name: output differs (exit $code vs $refcode), see $B/$name.out and $B/$name.ref.out"
