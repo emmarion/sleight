@@ -979,14 +979,14 @@
 
 (def-adts $ (Compaction : -> Type)
   enum
-  (many Compact : -> (Compaction))
+  (many Compact : -> (Compaction))  ; compacts the heap first
   (many NoCompact : -> (Compaction)))
 
 (def-adts $ (Request : (Type A) -> Type)
   enum
   (many WriteOut : (many (String) text) -> (Request (Unit)))
   (many WriteErr : (many (String) text) -> (Request (Unit)))
-  (many ReadLine : -> (Request (Maybe (String))))
+  (many ReadLine : -> (Request (Maybe (String))))  ; newline stripped; None at EOF
   (many ReadFile : (many (String) path) -> (Request (Result (String))))
   (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
   (many GetArgs : -> (Request (List (String))))
@@ -994,15 +994,15 @@
   (many GetEnvs : -> (Request (List (Pair (String) (String)))))
   (many AppendFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
   (many ReadRemaining : -> (Request (String)))
-  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))
+  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))  ; sorted, without . and ..
   (many GetCwd : -> (Request (String)))
-  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))
-  (many MkDir : (many (String) path) -> (Request (Result (Change))))
-  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))
-  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))
+  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))  ; Missing if absent; Fail if unreadable
+  (many MkDir : (many (String) path) -> (Request (Result (Change))))  ; one level
+  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
+  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
   (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (many (Compaction) c) -> (Request (Usage))))
+  (many Measure : (many (Compaction) c) -> (Request (Usage))))  ; totals since the Program began
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern

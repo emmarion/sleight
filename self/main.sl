@@ -1,4 +1,4 @@
-; self/main.sl -- the compiler's entry point: a Program (ASSUMPTIONS 56) reading the files named on its
+; self/main.sl -- the compiler's entry point: a Program (DESIGN.md section 42) reading the files named on its
 ; command line, elaborating them in one scope in order after the prelude (embedded as header.sl's
 ; prelude-source), and writing the extracted OCaml to stdout as one string, or under --interpret performing
 ; the program itself (self/interp.sl); elaboration errors go to stderr with exit code 1. The levels are

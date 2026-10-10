@@ -44,8 +44,9 @@ _build/self/slc --interpret tests/io_echo.sl
 Files given on one command line share a scope, in order; with no file
 the program is read from stdin, and `--repl` (after any files) reads
 forms interactively. A file's final expression is printed, unless its
-value is an `IO` value, when the driver performs its requests one by one,
-applying each request's continuation, a `UniqueFn`, once
+value is a `Program`, when the driver runs it step by step, applying each
+step's continuation, a `UniqueFn`, once to the world, whose requests
+`world-do` performs as the code reaches them
 (`tests/io_echo.sl`; arguments after `--` on the command line are the
 program's), or a function, which must be one of the two forms of
 DESIGN.md section 27: from `String` to `String`, when stdin is fed to it
@@ -61,7 +62,7 @@ prelude `lib/prelude.sl` (`Nat`, `U8`, DESIGN.md section 42), whose
 `--no-extern` strips those implementations and runs the source models, and `--no-templates` extracts extern types
 through their runtime views rather than the templates of `lib/ffi_templates.txt` (ASSUMPTIONS.md 133).
 `--no-prelude` starts from the built-in special forms alone, without `lib/prelude.sl`, for a program that
-declares what it needs itself; it has no literals and no `String -> String` or `IO` final, those resting on
+declares what it needs itself; it has no literals, no `world-do` and no `String -> String` or `Program` final, those resting on
 the prelude's types, and slc takes the same flag. Only the prelude, or a program run with `--no-prelude`, may mark
 a definition `extern` (DESIGN.md section 42). A file is a sequence of statements,
 optionally ending in an expression whose value is printed.
@@ -154,8 +155,8 @@ variable of the environment it runs with, which holds those alone,
 `; stderr: text` a line it must write to stderr, `; warns: text` a line the
 file must warn with, from elaborating it or from checking its indentation,
 whether or not it is then refused,
-`; exit: n` the code an
-`IO` program must exit with, `; externs: only` runs it with the FFI alone,
+`; exit: n` the code a
+`Program` must exit with, `; externs: only` runs it with the FFI alone,
 for a test whose source model is too slow to run, `; extract-bytes-at-most: n`
 bounds the size of the OCaml that extracting it writes, `; prelude: none` runs it
 under `--no-prelude`, and `; error: text`
@@ -254,7 +255,7 @@ is, which `(slot-of x)` names, and a slot prints by that form.
 - `lib/literal.ml` — the spellings of numeral, character and string literals
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal interning
 - `lib/dump.ml` — the report `dump-context` stops elaboration with
-- `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `IO` final value against the world, the first shared with extracted programs
+- `lib/driver_core.ml`, `lib/program.ml` — running a `String -> String` or `Program` final value against the world, the first shared with extracted programs
 - `lib/extract.ml` — OCaml extraction of the traced run-position statements and final expressions
 - `lib/indent.ml` — indentation read as a claim about paren nesting, and the claim checked
 - `bin/main.ml` — command line driver

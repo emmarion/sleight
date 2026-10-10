@@ -353,9 +353,9 @@ other type constructor of the same signature.
 ADT creates an anonymous `Matchable` from its tag, its marks and its
 constructor markers, and opens it. The built-in `Special` and
 `Sharing` are opened at the start (§42). The opaque built-ins `Level`,
-`Predates`, `Subterm`, `Coercible`, `Delegate`, `AtFn` and `Slot` have
-no `Matchable` and are never opened, so they are neither matchable nor
-empty (§25).
+`Predates`, `Subterm`, `Coercible`, `Delegate`, `AtFn`, `Slot` and
+`World` have no `Matchable` and are never opened, so they are neither
+matchable nor empty (§25).
 
 `(matchable-of T)` takes a bare, unapplied type constructor and yields
 the opened `Matchable` for it. It is an error when none is open. The
@@ -1090,9 +1090,9 @@ right-hand side of a `let`, by its binders.
 **The top level.** A file's top level is an expression and so has size
 one. Several files on one command line share one scope, in order. A
 file that ends in a statement produces nothing. Otherwise the type of
-the final value decides what the driver does with it. An `IO` value
-(§42) is performed: the driver consumes it at `unique` and applies each
-request's continuation once. Any other final value is used at `many`,
+the final value decides what the driver does with it. A `Program`
+value (§42) is run: the driver consumes it at `unique` and applies each
+step's continuation once. Any other final value is used at `many`,
 so a `unique` one is written `(share x)` (§16). A final value of `Fn`
 type must have one of two forms, at any level `L`.
 `(Fn L (many (String) x) -> (many (String) y))`, with the prelude's
@@ -1271,7 +1271,7 @@ elaborator must read a `Const` as a value, for a special form at a head
 `comptime-match` reads, that read is a many use. A unique `Const` there
 is an error until it is written `(share x)`. The scrutinee of a
 `comptime-match` is used at the mode written on the form (§23). The
-driver consumes a program's final `IO` value at unique (§27) and
+driver consumes a program's final `Program` value at unique (§27) and
 applies each continuation once.
 
 ## 33. `coerce`
@@ -1781,7 +1781,8 @@ after the block.
 all erased unless stated otherwise: `Univ` and `Type` (§10); `Level`,
 `Predates` and `Subterm` (§18); `Slot`, an opaque nullary type
 constructor, and `vacant-slot`, a `many` constant of type `(Slot)`
-(§38, §35); `Sharing`, an enum with the `many` nullary constructors
+(§38, §35); `World`, an opaque nullary type constructor (§42);
+`Sharing`, an enum with the `many` nullary constructors
 `Unique` and `Shared`, with its `Matchable` opened; `Coercible` and
 `Delegate` (§33); `AtFn` (§39); and `Special`, an enum with one `many`
 nullary constructor per special form, with its `Matchable` opened and
@@ -1893,42 +1894,31 @@ which `lib/prelude.sl` is the reference:
   value and returns a nullary `Fn` that holds it, at any type and any
   level. `unique-thunk` does the same for a unique value and a
   `UniqueFn`.
-- **`IO`.** `(IO L)` is an enum indexed by a level, read by the driver
-  (§27). Every constructor except `Exit`, which carries a `U8`
-  exit code, carries its arguments, all `many`, and a continuation
-  `(unique (UniqueFn L answer -> (unique (IO L) next)) k)` from the
-  request's answer to the next request. So an `IO` value is unique
-  throughout, and each continuation is applied once:
+- **`Program` and `Request`.** `(Program L)` is an enum indexed by a
+  level, read by the driver (§27). `Exit` carries a `U8` exit code.
+  `Continue` carries a continuation
+  `(unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) next)) k)`,
+  which the driver applies to the world, the one value of `World`,
+  which only the driver supplies; the `Program` it returns is the next
+  step. So a `Program` is unique throughout, and each continuation is
+  applied once. `(Request A)` is an enum indexed by the type of its
+  answer, and the special form `world-do` performs one:
 
-  | request | arguments | answer |
-  |---|---|---|
-  | `Step` | | none |
-  | `WriteOut`, `WriteErr` | `(String)` | none |
-  | `ReadLine` | | `(Maybe (String))` |
-  | `ReadRemaining` | | `(String)` |
-  | `ReadFile` | path | `(Result (String))` |
-  | `WriteFile`, `AppendFile` | path, text | `(Result (Unit))` |
-  | `ListDir` | path | `(Result (List (String)))` |
-  | `Stat` | path | `(Result (EntryKind))` |
-  | `MkDir`, `DeleteFile`, `DeleteDir` | path | `(Result (Change))` |
-  | `GetArgs` | | `(List (String))` |
-  | `GetEnv` | name | `(Maybe (String))` |
-  | `GetEnvs` | | `(List (Pair (String) (String)))` |
-  | `GetCwd` | | `(String)` |
-  | `ConfineDir` | directory | `(Result (Unit))` |
-  | `ConfineOutputBytes` | `(Nat)` | `(Result (Unit))` |
+  ```scheme
+  (world-do A w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
+                       (unique (World) w2 at w) (many A r)
+  ```
 
-  The driver performs each request, flushes after every write, and
-  applies the continuation to the answer. It never recurses, so an
+  Its arguments are checked as a call's are, and `A` may be `_`
+  (§50). It names the prelude's `Request`, so, like literals, it is
+  unavailable under `--no-prelude`. `lib/prelude.sl` is the reference
+  for the requests and their answers.
+
+  The driver flushes after every write. It never recurses, so an
   unbounded interaction is the driver's loop over total functions, and
-  there is no `bind`. `ReadLine` strips the newline and answers `None`
-  at end of input. `ListDir` sorts its entries and omits `.` and `..`.
-  `MkDir` creates one level. `Stat` answers `Missing` for an absent path
-  and `Fail` for a path it cannot read. The delete requests answer
-  `Unchanged` for an absent path. README.md describes `ConfineDir`,
+  there is no `bind`. README.md describes `ConfineDir`,
   `ConfineOutputBytes` and the command-line flags that stand in for
-  them. `lib/prelude.sl` declares further requests besides these, and is
-  the reference for them.
+  them.
 - **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a
   line and a column (`Nat`). A message about a form at `NoPos` carries
   no location, not even a file; one at `MkPos` names exactly that
@@ -2353,7 +2343,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   before the decreasing argument, so it has more items than the
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
-  `cell-match` (§37, §38), `open-absurd` (§8).
+  `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 

@@ -33,7 +33,7 @@ ground.
    functions, and the levels `nat-lvl`, `char-lvl` and
    `str-lvl`, the tests' names for them, every other level being
    anonymous (item 118), all as ordinary, shadowable entries, and since item 58 also `Unit`, `Maybe`,
-   `Result`, `List` and `IO`; a user function calling `nat-add` proves
+   `Result`, `List` and `Program`; a user function calling `nat-add` proves
    `(prove-predates nat-lvl L)`. The examples still define their own
    `List`, shadowing the prelude's (SR 12).
 5. **Names of the `Special` variants** are the form name prefixed with
@@ -414,7 +414,7 @@ literals as open.
     `Env.bind`, which has no line) are reported at the enclosing
     top-level form's line.
 
-## IO programs (section 27)
+## Programs (section 27)
 
 Asked for by the owner in chat: an ADT read by the driver, "quasi
 monad", efficient, able to read a whole file by name, write a whole
@@ -423,33 +423,15 @@ from stdin, read the command-line arguments and exit with a code, kept
 alongside the `String -> String` form as an optional alternative. The
 shape below is the session's.
 
-56. **`IO` is a source enum in the prelude, indexed by a level**:
-    `(IO L)`. Each constructor carries what happens next, either the
-    next `(IO L)` value outright (`WriteOut`, `WriteErr`, whose effects
-    have no answer -- superseded by item 146, which makes these carry a
-    nullary function too) or a continuation `(Fn L (many answer) -> (many
-    (IO L) next))` the driver applies to the request's answer
-    (`ReadLine` with `(Maybe (String))`, `ReadFile` with `(Result
-    (String))`, `WriteFile` with `(Result (Unit))`, `GetArgs` with
-    `(List (String))`); `Exit` carries a `U8`. The driver
-    (`Program.run_io`) loops: destruct, perform, apply, repeat, flushing
-    after every write. No step recurses, so an unbounded interaction is
-    the driver's loop over a total function that returns a node holding
-    itself as the continuation, which is why nothing coinductive is
-    needed and why there is no `bind`: composing two `IO` values would
-    need a lambda and a recursion the termination discipline cannot
-    admit. Not extern, since the FFI never sees it; the driver reads it
-    through the prelude's constructors.
-
-57. **The level index is load-bearing.** A continuation's `Fn` type
-    names the level its function was defined at, and `subterm` marks
-    are part of an `Fn` type, so a recursive helper cannot itself be a
+57. **The level index is load-bearing.** A continuation's `UniqueFn`
+    type names the level its function was defined at, and `subterm` marks
+    are part of its type, so a recursive helper cannot itself be a
     continuation and a same-level wrapper cannot call it. The pattern
-    the tests use (`tests/io_file_args.sl`): the helper sits at a level
-    below the IO level, is defined after that level and its functions
-    exist, and references those functions only as values, while a
-    continuation at the IO level calls the helper with a `Predates`
-    proof. A cost of the design, recorded rather than smoothed over.
+    the tests use (`tests/io_echo.sl`): the helper takes the world and
+    gives it back `at` itself, sits at a level below the program's, and
+    each step wraps it in a fresh `def-unique` at the program's level
+    that calls it. A cost of the design, recorded rather than smoothed
+    over.
     The index does not confine a program to one level, though:
     `tests/io_lift.sl` embeds values from two levels in a program at a
     third by coercion, at no runtime cost, and `tests/io_lift_runtime.sl`
@@ -470,7 +452,7 @@ shape below is the session's.
     newline and answers `None` at end of input; the whole-stdin
     `String -> String` form is unchanged.
 
-60. **String literals** `"..."` were added for the IO tests' paths and
+60. **String literals** `"..."` were added for the program tests' paths and
     messages: the reader accepts `\n`, `\t`, `\"` and `\\`, and a literal
     denotes its characters consed up with `SCons`
     (`tests/string_literal.sl`). Interned by content. Whether the
@@ -538,8 +520,8 @@ in both modes.
     its `let rec` name. The final expression's value is embedded too,
     being computed at elaboration like any run-position expression; so
     a printed final value is printed from data, a `String -> String`
-    program is its `main` closure applied to stdin, and an `IO` program
-    is its first request, whose continuations are closures.
+    program is its `main` closure applied to stdin, and a `Program` is
+    its first step, whose continuation is a closure.
 62. **Every extracted value is an `Obj.t`**, with `Obj.repr`/`Obj.obj`
     at every construction, application and pattern, the way Coq's
     extraction reaches for `Obj.magic`. A typed extraction was not
@@ -606,8 +588,9 @@ in both modes.
     nested constructor applications, which the OCaml compiler may refuse
     at some depth, a limit in the spirit of item 54.
 65. **The driver is `program.ml` transliterated** over descriptors of the
-    prelude's constructors, dispatching `IO` requests by constructor
-    name as `run_io` does, flushing after every write, and exiting with
+    prelude's constructors, dispatching a `Program`'s steps and its
+    requests by constructor as `run_program` and `perform` do, a
+    `world-do` extracting to a call of `perform`, flushing after every write, and exiting with
     the `U8` counted in unary through destruct as `Program.u8` does. Under
     the FFI stdin is turned into a slice directly, as `Ffi.str` does;
     without it, into a cons list. An `absurd` reached at runtime prints
@@ -644,7 +627,7 @@ in both modes.
     test passes in both modes. What that shows, precisely: since final
     values are embedded, a test printing a plain value checks the
     embedding of data and closures and the printer, while the `String
-    -> String`, `IO` and final-function tests (DESIGN.md section 27; the
+    -> String`, `Program` and final-function tests (DESIGN.md section 27; the
     `tests/thunk_*.sl` files cover tagged, untagged, union, extern,
     first-class and nested types, coerce, factory closures and shared
     data) run extracted function bodies over embedded constants.
@@ -2006,7 +1989,7 @@ had noted that an `SCons` copies its tail, so building a string by
      caught. `tests/rope.sl` is
      the evidence, in both modes and extracted. Not done: length
      caching, which would want a `Length`-style proof beside the cached
-     field; and `IO` still takes `String`s, the driver never seeing a
+     field; and a `Request` still takes `String`s, the driver never seeing a
      `Rope`.
 
 ## Lockstep evidence
@@ -2661,7 +2644,7 @@ session's reading, with the tests as the evidence.
      it is not checked there. That `let-match` is a match for this
      purpose is the owner's.
 
-## More IO requests (section 27)
+## More requests (section 27)
 
 Asked for by the owner in chat, as a batch to prepare and then add:
 environment variables in Java's two shapes, appending to a file,
@@ -2674,8 +2657,8 @@ for the environment and the working directory, single-level `MkDir`,
 deletion that reports `Unchanged` rather than failing on an absent
 path, and the `unix` dependency; the shapes below are the session's.
 
-143. **Ten more requests join `IO`**, each in item 56's shape: `GetEnv`
-     answering `(Maybe (String))` and `GetEnvs` `(List (Pair (String)
+143. **Ten of `Request`'s constructors**: `GetEnv` answering
+     `(Maybe (String))` and `GetEnvs` `(List (Pair (String)
      (String)))`, `AppendFile` and `ReadRemaining`, `ListDir` answering
      `(Result (List (String)))`, `GetCwd`, `Stat` answering `(Result
      (EntryKind))`, and `MkDir`, `DeleteFile` and `DeleteDir` answering
@@ -2736,55 +2719,19 @@ path, and the `unix` dependency; the shapes below are the session's.
      the syscall's own success. Extracted programs, the bootstrap and
      the benchmark compile with `-package zarith,unix`.
 
-## Every request but Exit carries a function (section 27)
+## `thunk` (section 27)
 
-Asked for by the owner in chat: every `IO` entry except `Exit` should be
-a function, possibly nullary, and an entry that does nothing should join
-them, named `Step` unless a better name turned up. The owner proposed
-the in-language helper that thunks a value rather than an anonymous
-function form, and accepted the extra verbosity at the call sites; the
-rest below is the session's.
-
-146. **`WriteOut` and `WriteErr` carry `(Fn L -> (many (IO L) next))`**
-     rather than the next `(IO L)` outright, superseding that part of
-     item 56, and `Step` joins them with the same field and no effect of
-     its own. Every constructor but `Exit` then reads as one signature —
-     arguments, an answer type, and a continuation from the answer to
-     the next request — with `WriteOut`'s answer type empty rather than
-     absent. The driver gains `apply0` beside `apply`; a nullary SL
-     function extracts to an OCaml `unit -> _` (`lib/extract.ml`'s
-     `params`), so both back-ends apply one directly.
-
-     What the change buys beyond uniformity is that a loop no longer
-     needs a request that answers. Before, `(WriteOut L t next)` wanted
-     `next` already built, so a self-referential one would have had to
-     call itself: a same-level call with no decrease, which the checker
-     refuses. Passing a function instead defers the next request to the
-     driver, so an output-only loop is writable, as is a silent one
-     through `Step` (`tests/io_step.sl`). The termination discipline
-     does not move: the continuation is a closure at the IO level, which
-     comes after the looping function's own level, so no SL function may
-     call it, and the unbounded iteration is still the driver's (item
-     56). One consequence is worth naming: a program may now diverge
-     with nothing observable, where before it had to read or write to
-     keep going. That is not new unsoundness, the driver's loop having
-     been unbounded from the start, but it is a new observable
-     behaviour.
-
-     The uniformity is less than it looks for a walk over `IO` written
-     in SL. Nothing here abstracts over a telescope, so a nullary
-     continuation and a unary one are different types, and
-     `tests/io_lift.sl` needs `lift-fn0` beside `lift-fn`: the walk goes
-     from three shapes to two, not to one. What does collapse is the
-     driver's side and the reading of the type.
+The owner proposed the in-language helper that thunks a value rather
+than an anonymous function form, and accepted the extra verbosity at the
+call sites; the rest below is the session's.
 
 147. **`thunk` is a prelude function rather than a form**: it takes a
      value and returns a nullary function holding it, at any type and
      any level, so a call site writes `(thunk (predates p) _ _ e)` where
      a bare `e` used to sit. The owner preferred this to an anonymous
      function expression, which would have been the larger language
-     change. It is general rather than IO-specific, nothing about it
-     being particular to `IO`; its body is the captured value alone, so
+     change. It is general, nothing about it being particular to a
+     program's continuations; its body is the captured value alone, so
      the closure it returns needs no `Predates` proof of its own, and
      `def-fns` accepts the erased level parameter as the level to define
      at, which the session checked before relying on it.
@@ -2795,8 +2742,7 @@ rest below is the session's.
      in scope (section 18). That is section 55's factory rule rather than
      a limit on `thunk`: the relation is established where the level is
      minted, so a function that mints a level and hands it back returns
-     the relation with it, as `lift2` in `tests/io_lift.sl` now returns
-     `Predates thunk-lvl B` beside `B` and its coercions. A session
+     the relation with it. A session
      first recorded this as `thunk` being unreachable at such a level,
      with a named nullary function in its place; the owner doubted it,
      and the doubt was right.
@@ -3486,42 +3432,11 @@ to look for a guard, are the owner's.
     reading back as the same value becomes a test of its own, which
     `tests/literal_print.sl` already does for the three literal types.
 
-## IO over UniqueFn, and slc's interpret mode (sections 27, 32)
+## slc's interpret mode (sections 27, 32)
 
-Asked for by the owner in chat, as two tasks for one autonomous session:
-switch `IO` to use `UniqueFn`, then give `slc` an interpret option in
-place of emitting OCaml. The shapes below are the session's, made
-without the owner.
-
-185. **`IO` continuations are `UniqueFn`s and requests are unique.**
-    Every constructor but `Exit` carries `(unique (UniqueFn L ... ->
-    (unique (IO L) next)) k)` and every continuation returns `(unique
-    (IO L) next)`, so an `IO` value is unique throughout; the session
-    saw no way to keep the requests `many`, since a unique-labelled
-    field of a constructor built at `many` is requested at `many` (section 22),
-    which would want a `share` and leave the continuation callable only
-    erased (section 32). What the change buys is that a continuation may own a
-    unique value across requests, captured at unique by the `def-unique`
-    each request wraps and updated in place through its cell
-    (`tests/io_unique_state.sl`), where an `Fn` could hold it only
-    shared. A continuation is born by `def-unique` and consumed by the
-    request that holds it, so one cannot serve two requests
-    (`tests/io_continuation_twice_bad.sl`), and a looping program's body
-    is no longer its own continuation: it sits at a level below the IO
-    level and each request wraps the next step in a fresh `def-unique`
-    calling it (`tests/io_echo.sl`), which supersedes item 57's pattern;
-    a recursive helper takes the request that follows it as a `unique`
-    parameter, a `def-fns` being unable to capture one
-    (`tests/io_dirs.sl`, `self/main.sl`'s `write-lines`). `unique-thunk`
-    joins the prelude beside `thunk`, holding a unique value in a
-    nullary `UniqueFn`; `thunk` stays, being general (147), and a
-    wrapper turning an `Fn` into a `UniqueFn` was considered and left
-    out, an inline `def-unique` saying the same in one line.
-    `tests/io_lift.sl`'s proofs carry `(Unique)` sides with `(Shared)`
-    over the many-labelled arguments, its delegates being `def-unique`s,
-    and `tests/io_lift_runtime.sl` takes each request apart at `unique`,
-    with the cell binder every pattern then needs (section 23). The comment above
-    the prelude's `IO` says as much in one sentence.
+Asked for by the owner in chat: give `slc` an interpret option in place
+of emitting OCaml. The shapes below are the session's, made without the
+owner.
 
 187. **A run may update a Const the extractor then embeds.**
     `test/runtest.ml` ran the interpreter's final and extracted from the
@@ -3536,27 +3451,36 @@ without the owner.
 
 188. **`slc --interpret`** performs the elaborated program's finals in
     place of writing them out (`self/interp.sl`), each as
-    `lib/program.ml`'s `consume` has it and in file order. An `IO` final
-    is walked one request at a time: each request of the program becomes
-    the same request of slc's own driver, whose continuation allocates
-    the answer into the compile-time store -- a `String` as the FFI's
-    payload, a `Maybe`, `Result`, `List`, `Pair`, `Unit`, `EntryKind` or
-    `Change` through the prelude's constructors, found as the emitter
-    finds them -- applies the program's continuation with `self/eval.sl`'s
-    `apply` under the usual fuel, and walks the request that comes back;
-    `Exit` exits slc with the code. A plain value and a thunk's result
+    `lib/program.ml`'s `consume` has it and in file order. A `Program`
+    final is walked one step at a time: each `Continue` becomes a step of
+    slc's own `Program`, which applies the program's continuation with
+    `self/eval.sl`'s `apply` under the usual fuel, to a token standing for
+    slc's own world, and walks the `Program` that comes back; `Exit` exits
+    slc with the code. The evaluator threads a world of its own through
+    every evaluation function, generic in its type and paired with a
+    `Performer` for it: at compile time a `Unit`, whose performer answers
+    a `world-do` with an error block, there being no world to perform
+    with; under `--interpret` slc's own `World`, whose performer
+    (`perform-request` in `self/eval.sl`) performs the request with
+    `world-do` and allocates the answer into the compile-time store -- a
+    `String` as the FFI's payload, a `Maybe`, `Result`, `List`, `Pair`,
+    `Unit`, `EntryKind`, `Change` or `Usage` through the prelude's
+    constructors, looked up by name in a list the interpreter hands it.
+    The performer and the helpers it calls sit ahead of the evaluator's
+    own level, so the closure the interpreter builds over them at
+    `perform-lvl` can be called from inside evaluation. `Measure` answers
+    the figures less a reading slc takes as it begins interpreting the
+    `Program`, each floored at zero. A plain value and a thunk's result
     print through the compile-time printer (154), a `String -> String`
-    function is applied to what `ReadRemaining` answers. The interpreted
-    program's arguments follow
-    a `--` among slc's own; its environment, working directory and stdin
-    are slc's. Two shapes the checker imposed: walking a request and
-    applying its continuation cannot be two functions at one level
-    calling each other, so the application sits in the `def-unique` each
-    request's continuation is, which applies and then walks; and a
-    continuation's parameter type must name the prelude's `Pair` for
-    `GetEnvs`, which `self/base.sl`'s shadowing `Pair`, the same shape
-    under another declaration, made unnameable, so that declaration is
-    gone. `self/bootstrap.sh` runs every test a third time this way and
+    function is applied to what `ReadRemaining` answers; those finals
+    evaluate with the compile-time performer, having no world to reach.
+    The interpreted program's arguments follow a `--` among slc's own,
+    and `GetArgs` answers them without a request; its environment,
+    working directory and stdin are slc's. A continuation's parameter
+    type must name the prelude's `Pair` for `GetEnvs`, which
+    `self/base.sl`'s shadowing `Pair`, the same shape under another
+    declaration, made unnameable, so that declaration is gone.
+    `self/bootstrap.sh` runs every test a third time this way and
     compares it with the reference as it does the compiled program.
 
     Three things that pass turned up. The evaluator's fuel is 1000000000
@@ -3885,7 +3809,7 @@ README.md describes them; the choices below are the session's.
      cannot be confined to is reported with slc's `slc: ` prefix there,
      and without it by the reference and by a compiled program. The
      fence belongs to the process rather than to one final, so a
-     `ConfineDir` in one file's `IO` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
+     `ConfineDir` in one file's `Program` final holds for the finals after it, as it must under `slc --interpret`, which performs them all
      inside one run of its own driver. The check is made before the request and not
      atomically with it, so it is not expected to hold against another
      process changing the directory tree in between, and a hard link
@@ -4081,3 +4005,23 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     environment, is read as firing before any path's fuel runs out. A
     `let-match` in a body has its branches spliced once, before it is
     told apart as a statement or a match, in both compilers.
+
+## The world (section 42)
+
+Choices both implementations make about the world where DESIGN.md is
+silent.
+
+214. **A world is a token word at runtime.** A continuation's world
+     parameter is passed as an argument like any non-erased one, the
+     driver supplying a token, and is never returned, the world a step
+     or a `world-do` gives back being `at` the one it took (section 36).
+     `world-do` is a node of the post-erasure code of its own (`CWorldDo`
+     in both compilers), evaluated by the driver's `perform` whether or
+     not extern implementations run, and extracted to a call of it. A
+     request that would take the program's output past its limit stops
+     the program with exit code 1 from inside `world-do`. Under
+     `--no-prelude` the name `world-do` stays bound, as every special
+     form's is, and a use of it is refused for want of the prelude's
+     `Request`. The reference's driver takes its `Measure` reading when it
+     begins running the final `Program`, before the first step, with no
+     compaction.

@@ -1,11 +1,11 @@
 # Macros: design notes
 
-Notes from a design session with the owner on a simple macro system, its
-reflection forms, and a threaded `World` replacing `IO`. Nothing here is in
-DESIGN.md yet; the owner chose to write DESIGN.md's wording last. Each item
-says whether the owner decided it ("Decided") or a session proposed it and
-the owner has not reviewed it ("Proposed"). Claims about soundness are the
-session's reasoning, not the owner's, and are hedged accordingly.
+Notes from a design session with the owner on a simple macro system and its
+reflection forms. Nothing here is in DESIGN.md yet; the owner chose to write
+DESIGN.md's wording last. Each item says whether the owner decided it
+("Decided") or a session proposed it and the owner has not reviewed it
+("Proposed"). Claims about soundness are the session's reasoning, not the
+owner's, and are hedged accordingly.
 
 ## 1. Built-ins
 
@@ -25,7 +25,6 @@ Bound before any file is read, beside `Slot` and `Sharing` (DESIGN.md §42).
 Const      : (TyCtor ((Mult) m) (Type T) (T t) -> Type)
 MacroWorld : (TyCtor -> Type)
 Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
-World      : (TyCtor -> Type)
 ```
 
 - `Mult`: Decided that it is a new ADT rather than `Sharing`. Its name and
@@ -43,8 +42,6 @@ World      : (TyCtor -> Type)
   (section 4), passed `unique` to a macro and returned `at` itself.
 - `Gensym`: Decided. Opaque and erased by kind: a witness that `n` was
   minted, with text `s`. Nothing produces one but `gensym`.
-- `World`: Decided, replacing `IO`. Opaque, not erased by kind. Only the
-  driver supplies one.
 
 ## 2. Prelude types
 
@@ -74,43 +71,9 @@ World      : (TyCtor -> Type)
        (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
                  (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
        -> (Macro))))
-
-(def-adts $ (Program : ((Level) L) -> Type)
-  enum
-  (many Exit : (erased (Level) L) (many (U8) code) -> (Program L))
-  (many Continue : (erased (Level) L)
-     (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
-     -> (Program L)))
-
-(def-adts $ (Request : (Type A) -> Type)
-  enum
-  (many WriteOut : (many (String) text) -> (Request (Unit)))
-  (many WriteErr : (many (String) text) -> (Request (Unit)))
-  (many ReadLine : -> (Request (Maybe (String))))
-  (many ReadFile : (many (String) path) -> (Request (Result (String))))
-  (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
-  (many GetArgs : -> (Request (List (String))))
-  (many GetEnv : (many (String) name) -> (Request (Maybe (String))))
-  (many GetEnvs : -> (Request (List (Pair (String) (String)))))
-  (many AppendFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
-  (many ReadRemaining : -> (Request (String)))
-  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))
-  (many GetCwd : -> (Request (String)))
-  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))
-  (many MkDir : (many (String) path) -> (Request (Result (Change))))
-  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))
-  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))
-  (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
-  (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (many (Compaction) c) -> (Request (Usage))))
-
-(def-adts $ (Compaction : -> Type)
-  enum
-  (many Compact : -> (Compaction))
-  (many NoCompact : -> (Compaction)))
 ```
 
-- `Pos`, `Symbol`, `Atom`, `Raw`, `Macro`, `Program`: Decided, as written.
+- `Pos`, `Symbol`, `Atom`, `Raw`, `Macro`: Decided, as written.
 - `Atom` and `Raw` are `extern`: Decided. The intent is that their
   representation is the reader's own syntax tree, so a macro's arguments and
   output are passed without copying; copying would let nested expansions
@@ -121,20 +84,6 @@ World      : (TyCtor -> Type)
   `RWild` (DESIGN.md §1).
 - `Atom` has no literal constructors for now (Decided: deferred). A macro
   gets a literal by interning it (section 3).
-- `Program`: the name and the constructor names `Exit` and `Continue` are
-  Decided.
-- `Request`: Decided that the requests are one prelude type indexed by its
-  answer, with a constructor for each row of DESIGN.md §42's `IO` table and
-  for each of the prelude's further requests. Proposed: a request that
-  answered nothing answers `(Unit)`; `Step` is dropped, `Continue` serving
-  its purpose.
-- `Measure` and `Compaction`: Decided. `Measure` takes no thunk. It answers
-  `Usage`'s eight figures, each the total since the program started running:
-  the driver reads all eight when it begins running the final `Program`,
-  before applying its first step, and `Measure` answers each figure less that
-  reading. `Compact` compacts the heap before reading; `NoCompact` does not.
-  The names `Compaction`, `Compact` and `NoCompact` are open.
-
 `symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)`
 is ordinary prelude code (Decided that equality returns a proof): `str-cmp`
 for names; for gensyms, `nat-cmp` on the ids and then `gensym-unique` in the
@@ -197,19 +146,6 @@ was considered and dropped.
   Proposed.
 - `read-file` and its jail: Decided.
 
-### The world
-
-```scheme
-(world-do A w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
-                     (unique (World) w2 at w) (many A r)
-```
-
-Decided: one special form, not a function, performs every request, in place
-of one operation per row. It names the prelude's own `Request`, so like
-literals it does not exist under `--no-prelude`. Decided: its answer type `A`
-is written as its first argument, as an erased argument of a call is, and
-may be `_` to be inferred.
-
 ## 4. Rules
 
 1. Expansion (Decided). A `Macro` head dispatches as a special form does
@@ -234,18 +170,9 @@ may be `_` to be inferred.
    through all of elaboration, carried out of every scope where uses are
    carried now, and passed along rather than joined. Proposed: it never
    escapes an expansion, having no constructor and being no entry.
-6. Threading (Decided). A helper that takes a macro world or a world
-   returns it `at` its parameter. Proposed: for a world this needs no check
-   of its own, since `Continue`'s continuation must return the world `at`
-   itself, which a helper that kept or dropped it would prevent.
-7. Supply. Only the expander supplies a macro world, and only the driver
-   supplies a world, so that no run-position statement performs world
-   effects while compiling.
-8. The driver (Decided). A file's final value is a `(unique (Program L) p)`.
-   On `Exit code` the driver exits with `code`; on `Continue k` it applies
-   `k` to the world and continues with the `Program` it returns. Unbounded
-   interaction stays a driver loop over total functions. A final value may
-   also be either of DESIGN.md §27's `Fn` forms, unchanged (Decided).
+6. Threading (Decided). A helper that takes a macro world returns it `at`
+   its parameter.
+7. Supply. Only the expander supplies a macro world.
 
 ## 5. Soundness, as a session argues it
 
@@ -255,14 +182,8 @@ may be `_` to be inferred.
 - A handle denotes its index because only built-in forms create handles.
 - A gensym cannot be forged: building an `SGen` at `many` needs an erased
   `Gensym` witness, and only `gensym` makes one.
-- Checked by compiling:
-  - an at-function whose body performs a `world-do` is refused;
-  - a `world-do` in an erased position performs and consumes nothing;
-  - a world cannot serve two requests, be shared and then used, or be kept
-    by a continuation for a later step.
 
-  The owner suspects the rest of this section holds of the language as it
-  stands.
+The owner suspects this section holds of the language as it stands.
 
 ## 6. Open questions
 
@@ -276,29 +197,22 @@ may be `_` to be inferred.
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
 7. Literal constructors in `Atom`: deferred.
+8. The names `Compaction`, `Compact` and `NoCompact`.
 
 ## 7. What implementing it would involve
 
 - `lib/`: `Atom` and `Raw` extern over the reader's tree; names as
   structured symbols in `Term` and `Env`, keying the scope; `Env.t` split
-  into a scoped part and a threaded program store; a world-based driver and
-  extraction in place of the `IO` request loop; every `IO` test moved to
-  `Program`.
+  into a scoped part and a threaded program store.
 - `self/`: its own `Pos` and `Raw` renamed (Decided), so the prelude's do
   not clash with them; a decreasing budget around expansion, since its
   elaborator's structural recursion on raws (ASSUMPTIONS.md 96) does not
-  cover a macro's output; a `main` that takes a world, so its interpreter
-  can serve a macro's `read-file`; its interpreter calling back into its
-  elaborator for macro-world operations.
-- Decided: slc's evaluator threads the world through evaluation so that
-  `slc --interpret` performs a program's requests as it evaluates them,
-  rather than replaying steps; the world may be held inside a larger
-  structure the evaluator already passes along, such as its store.
-- Decided: refactor call elaboration so that `world-do`, and later the
-  macro-world forms of section 3, are elaborated through the same code as a
-  call: the argument checking that calls and constructor applications
-  already share, then a call's return handling, moved out of call
-  elaboration so a form can use it without a callee.
+  cover a macro's output; its interpreter serving a macro's `read-file`
+  with its world, and calling back into its elaborator for macro-world
+  operations.
+- Decided: the macro-world forms of section 3 are elaborated through the
+  same code as a call, as `world-do` is: the argument checking that calls
+  and constructor applications share, then a call's return handling.
 
 
 ## 8. What the compilers implement now

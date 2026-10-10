@@ -440,45 +440,41 @@ Open, in the session's estimation, none of it decided:
   overflows `slc`'s stack. Pre-existing and untouched here, and the one
   thing that bit the session while testing.
 
-## IO over UniqueFn, and `slc --interpret` (one session, autonomous)
+## `Program`, `Request` and `world-do` (one session, with the owner)
 
-Done, at the owner's request, both halves: the prelude's `IO`
-continuations are `UniqueFn`s and its requests unique (ASSUMPTIONS 185,
-186), and `slc` takes `--interpret` and performs the program itself
-(ASSUMPTIONS 188, `self/interp.sl`). Every `tests/io_*.sl` was rewritten
-to the new shape, `self/main.sl` with them, and `self/bootstrap.sh`
-gained an interpret pass over every test. Two things a later session
-should know:
+Done in both compilers, with DESIGN.md sections 8, 27, 32, 42 and 54 in
+the owner's words: the prelude's `Program`, `Request` and `Compaction`,
+the built-in `World`, and the special form `world-do`. MACROS.md keeps
+only the macro system's items. What a later session should know:
 
-- `test/runtest.ml` now extracts before it runs a test's final
-  (ASSUMPTIONS 187): the first run of `tests/io_unique_state.sl` exited
-  6 in the extracted program because the interpreter's run had already
-  counted the lines into the Const it embeds.
-- `self/base.sl`'s `Pair` is gone, the prelude's being used throughout
-  `self/` (ASSUMPTIONS 188); the sources did not otherwise change.
+- `slc --interpret` performs requests as evaluation reaches them: every
+  function of `self/eval.sl`'s evaluator threads a world of a type it is
+  generic in, with a `Performer` for it (ASSUMPTIONS 188). The request
+  handling (`perform-request`) and the answer helpers sit in
+  `self/eval.sl` ahead of `perform-lvl`, since the closure the
+  interpreter builds at that level is called from inside evaluation.
+- Both compilers' call elaboration ends in a return handler a form uses
+  without a callee (`call_returns`, `call-returns`), as `world-do` does
+  and as MACROS.md section 7 has the macro-world forms do. In `slc`, a
+  call's `CCSame` mark is computed only in a non-erased position: built
+  for every call, its `qshow` cost about 24% more allocation in `slc`
+  compiling the part of its own sources both versions accept, and with
+  the condition the two measured within noise of each other.
+- `test/runtest.ml` extracts before it runs a test's final
+  (ASSUMPTIONS 187): a run may update a unique Const in place that the
+  extractor would otherwise embed after the update.
 
 Open, none of it decided:
 
-1. Whether DESIGN.md section 27 should record that the driver consumes
-   an `IO` value at unique (186), and whether section 32 should mention that the
-   driver's application of a continuation is the one use a request's
-   `UniqueFn` gets.
-2. A prelude wrapper from an `Fn` at a lower level to a `UniqueFn`
-   (185) would shorten the tests' `(def-unique P $ (unique start ...))`
-   lines; left out for now.
-3. `bench/bench.sh`'s pinned sources predate this change too (the
-   earlier note above), so the benchmark still needs re-pinning. Since
-   resolved the same way as that note.
-4. A discrepancy between `slc` and the reference, worked around and
-   not reduced: in `self/interp.sl`'s `interp-io`, `(le-refl h1)`
-   written as an erased argument of `applied` inside a `def-unique` at
-   `io-lvl`, `h1` the erased history from the `destruct` before it, was
-   accepted by the reference and refused by `slc` compiling `slc` with
-   "`_134395` was not in scope when level io-lvl was minted". Binding
-   the proof once outside the closures (`le0`) satisfies both. Two
-   smaller programs of the same shape, an erased call on an erased
-   `let` binder inside a later-level `def-unique`, are accepted by
-   both, so the trigger is finer than that.
+1. A discrepancy between `slc` and the reference, not reduced: an
+   erased call `(le-refl h1)` written as an erased argument inside a
+   `def-unique` at a later level, `h1` the erased history from a
+   `destruct` before it, was accepted by the reference and refused by
+   `slc` compiling `slc` with "`_134395` was not in scope when level
+   io-lvl was minted"; binding the proof once outside the closure
+   satisfied both. Two smaller programs of the same shape, an erased
+   call on an erased `let` binder inside a later-level `def-unique`,
+   are accepted by both, so the trigger is finer than that.
 
 ## TODO: the diagnostic path is a reconstruction, not a proof (one session)
 

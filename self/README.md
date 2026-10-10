@@ -103,7 +103,9 @@ host (section 42); a `U8` or a
   -- is reached by a tail call, so interpreting a tail call costs no
   host stack and the fuel, not the stack, is what bounds such a loop
   (ASSUMPTIONS 150). A non-tail call in interpreted code still holds a
-  host frame, as the standing exception below says.
+  host frame, as the standing exception below says. Every evaluation
+  function threads a world of a type it is generic in, with the
+  `Performer` that answers a `world-do` (ASSUMPTIONS 188).
 - `elab.sl` — the elaborator and checker: head dispatch, calls with
   their proofs, matches with refutation and `else`, the seven statements, literals
   with their `Numeral` proofs, the post-erasure normalization behind
@@ -123,11 +125,11 @@ host (section 42); a `U8` or a
   groups as OCaml, the driver's operations, and a generated printer
   per type for a final function's result.
 - `interp.sl` — the `--interpret` mode (ASSUMPTIONS 188): a program's
-  finals performed by slc itself, an `IO` value's requests becoming
-  slc's own with the answers allocated into the store and the program's
-  continuations applied by `eval.sl`, and the other finals printed by
-  the compile-time printer.
-- `main.sl` — the entry point, an `IO` program (ASSUMPTIONS 56).
+  finals performed by slc itself, a `Program`'s steps becoming slc's
+  own, its continuations applied by `eval.sl` to slc's world and the
+  answers to its requests allocated into the store, and the other finals
+  printed by the compile-time printer.
+- `main.sl` — the entry point, a `Program` (DESIGN.md section 42).
 - `bootstrap.sh` — builds and checks everything, below.
 - `release.sh` — builds an optimized, stripped `slc` at `_build/release/slc`, without `bootstrap.sh`'s checks.
 
@@ -148,7 +150,7 @@ them in one scope in order after the prelude it embeds (`header.sl`'s
 and writes the OCaml program to stdout; elaboration errors go to stderr
 with exit code 1. The compiled program takes its own arguments after
 `--` and behaves as `lib/program.ml` would: a final `String -> String`
-function runs over stdin, an `IO` value is performed, a function from
+function runs over stdin, a `Program` is run, a function from
 no arguments is applied and its result printed, and any other value is
 printed. Under `--interpret` slc does the same itself instead of
 writing the program out (`interp.sl`), the interpreted program's
@@ -342,8 +344,8 @@ the entry says otherwise, and recorded so it can be revisited.
 - **The driver's operations are emitted per program**, as
   `lib/extract.ml` does: `lib/driver_core.ml` takes a record of direct
   builds and matches over the prelude's `Nat`, `U8`, `Char`, `String`,
-  `Maybe`, `Result`, `Unit`, `List`, `Pair`, `EntryKind`, `Change` and
-  `IO`, found by name in the
+  `Maybe`, `Result`, `Unit`, `List`, `Pair`, `EntryKind`, `Change`,
+  `Program`, `Request` and `Compaction`, found by name in the
   prelude's scope, so no name is looked up while a program runs. A
   prelude renaming those needs a changed emitter.
 - **The elaborator's group carries a budget of sugar expansions** as its

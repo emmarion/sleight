@@ -93,7 +93,7 @@ is a design decision. Remove an entry when it is fixed.
     it reaches it, before reading the files after it on the command line;
     `slc`, compiled or under `--interpret`, elaborates every file first
     and runs the finals afterwards. Reproduced with two files: `a.sl`
-    ending in an `IO` value that writes to stderr and exits with 0, and
+    ending in a `Program` that writes to stderr and exits with 0, and
     `b.sl` holding only a `compile-warn`. The reference writes the
     program's line and never reads `b.sl`, so it gives no warning; `slc`
     writes the warning, then the program's line. With a final that does

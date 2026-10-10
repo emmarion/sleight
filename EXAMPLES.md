@@ -5,15 +5,15 @@ reader arriving cold. Written by a Claude session, not by the owner: each
 entry says what its test does, and the test is the evidence, so a claim here
 that the test does not make is a mistake in this file.
 
-- `tests/io_lift.sl` — two `IO` programs at two levels embedded in a program
+- `tests/io_lift.sl` — two `Program`s at two levels embedded in a program
   at a third, at no runtime cost. An erased factory mints the program's
   level; `delegate` mints a `Delegate`, read as a `Coercible` between
   continuations whose types differ in level and result; `coercible-ctor` lifts
-  it through each request with the erased level index differing on the two
+  it through each step with the erased level index differing on the two
   sides; the user's `coerce` erases to nothing, and the extracted OCaml holds
   only the original values.
   `tests/io_lift_runtime.sl` is the same embedding by rewrapping, one closure
-  per request. Together they are the fullest exhibit of levels, erasure,
+  per step. Together they are the fullest exhibit of levels, erasure,
   `delegate` and `coerce` depending on each other.
 - `tests/lt_subterm.sl` — `Lt a b` and `Subterm (Nat) a (Nat) b` each derive
   the other, as erased functions, so on `Nat` the subterm order is the strict
@@ -164,20 +164,25 @@ that the test does not make is a mistake in this file.
 - `tests/main_reverse.sl`, `tests/io_echo.sl`, `tests/thunk_list.sl` — the
   three ways a final value is run by the driver, and `tests/tail_values.sl`
   for a checked tail call over multiple returns.
-- `tests/io_step.sl` — iterating without recursing. Every `IO` request but
-  `Exit` carries a continuation, so a loop hands its next request to the
-  driver instead of calling itself: `Step` performs nothing and loops
-  silently, and `WriteOut` loops on output alone. The continuation is a
-  `def-unique` closure at the IO level, which comes after the looping
-  function's own, so no function in the program can call it and the
-  unbounded iteration stays the driver's; the request it is stored in
-  consumes it, so each request wraps a fresh one.
+- `tests/io_step.sl` — iterating without recursing. A loop hands its next
+  step to the driver as a `Continue` instead of calling itself: one loop's
+  continuation performs nothing, and another's writes and nothing else. The
+  continuation is a `def-unique` closure at the program's level, which comes
+  after the looping function's own, so no function in the program can call
+  it and the unbounded iteration stays the driver's; the step it is stored
+  in consumes it, so each step wraps a fresh one.
 - `tests/io_unique_state.sl` — a continuation owning a unique value across
-  requests: a counter captured at unique by each `ReadLine`'s
-  continuation, updated in place through its cell as lines arrive, and
-  read off at the end. `tests/io_continuation_twice_bad.sl` and
-  `tests/io_shared_final_bad.sl` show a continuation refused twice and a
-  shared request refused as a program.
+  steps: a counter captured at unique by each step's continuation, updated
+  in place through its cell as lines arrive, and read off at the end.
+  `tests/io_continuation_twice_bad.sl` and `tests/io_shared_final_bad.sl`
+  show a continuation refused twice and a shared `Program` refused as a
+  program.
+- `tests/world_twice_bad.sl`, `tests/world_shared_bad.sl`,
+  `tests/world_kept_bad.sl`, `tests/world_unboxed_bad.sl` — the world
+  refused for a second request, once shared, kept by a continuation for a
+  later step, and taken out of a box that is not a newtype and so is no
+  longer `at` the world it came from. `tests/world_erased.sl` shows a
+  `world-do` in an erased position performing nothing.
 - `tests/prove_literal_lt.sl`, `tests/numeral_succ.sl`,
   `tests/numeral_lemmas.sl` — reasoning about literals through the prelude's
   `Numeral` relation rather than about their opaque `Nat`s.
