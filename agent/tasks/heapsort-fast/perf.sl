@@ -44,32 +44,37 @@
 (def-fns _ $ (many perf-line : (many (String) name) (many (Nat) v) (many (String) rest) -> (many (String) s))
   (str-append name (str-append " " (str-append (nat-str v) (str-append "\n" rest)))))
 
-(def-adts $ (PerfSorted : -> Type)
-  enum newtype
-  (many PerfMkSorted : (erased (List (Nat)) xs) (erased (List (Nat)) ys) (erased (List (Copy (Nat))) ds)
-     (many (Array (Copy (Nat)) ds) r) (erased (Copies (Nat) ys ds) rel) (erased (SortedPerm (Nat) Le xs ys) correct) -> (PerfSorted)))
+;! suppress warn Succ
+;! suppress warn lt-dec
+;! suppress warn sub
+(def-fns _ $ (many perf-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
+  (let ((many c) (erased p)) (sub a b le))
+  c)
+;! restore warn sub
+;! restore warn lt-dec
+;! restore warn Succ
 
 (def-lvl Perf)
 
-(def-unique Perf $ (unique perf-report : (many (PerfSorted) s) (many (Usage) u) -> (unique (IO Perf) next))
-  (let-match many s (PerfMkSorted _ _ _ r _ _))
-  (let ((many n) (erased len)) (array-length-many _ _ r))
-  (let-match many u (MkUsage wall-ns user-ns sys-ns minor-words promoted-words major-words minor-gcs major-gcs))
-  (let ((many text))
-    (perf-line "checksum" (perf-checksum _ r _ len n (lt-succ n) 0)
-      $ perf-line "wall-ns" wall-ns $ perf-line "user-ns" user-ns $ perf-line "sys-ns" sys-ns
-      $ perf-line "minor-words" minor-words $ perf-line "promoted-words" promoted-words $ perf-line "major-words" major-words
-      $ perf-line "minor-gcs" minor-gcs $ perf-line "major-gcs" major-gcs ""))
-  (WriteOut Perf text
-    (unique-thunk _ _ (Exit Perf (MkU8 0 perf-zero-u8)))))
-
-(def-unique Perf $ (unique perf-start : -> (unique (IO Perf) next))
+(def-unique Perf $ (unique perf-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Perf) next))
   (let ((erased xs) (erased small) (erased len) (many cs) (erased rel))
     (perf-gen perf-size 42 _ (add-zero-right _) _ (AllToNil _ _ _) (LengthNil _) (Nil _) (CopiesNil _)))
   (let ((unique a)) (list-to-array _ cs))
-  (def-unique _ $ (unique run : -> (many (PerfSorted) s))
-    (let ((erased ys) (erased ds) (unique r) (erased rel2) (erased correct)) (accept xs small _ len perf-size-fits cs a rel))
-    (PerfMkSorted xs ys ds (share r) rel2 correct))
-  (Measure Perf _ _ run perf-report))
+  (let ((unique w1) (many u0)) (world-do _ w (Measure (Compact))))
+  (let ((erased ys) (erased ds) (unique r) (erased rel2) (erased correct)) (accept xs small _ len perf-size-fits cs a rel))
+  (let ((unique w2) (many u1)) (world-do _ w1 (Measure (NoCompact))))
+  (let ((many rs)) (share r))
+  (let ((many n) (erased len2)) (array-length-many _ _ rs))
+  (let-match many u0 (MkUsage wall0 user0 sys0 minor0 promoted0 major0 minor-gcs0 major-gcs0))
+  (let-match many u1 (MkUsage wall1 user1 sys1 minor1 promoted1 major1 minor-gcs1 major-gcs1))
+  (let ((many text))
+    (perf-line "checksum" (perf-checksum _ rs _ len2 n (lt-succ n) 0)
+      $ perf-line "wall-ns" (perf-minus wall1 wall0) $ perf-line "user-ns" (perf-minus user1 user0) $ perf-line "sys-ns" (perf-minus sys1 sys0)
+      $ perf-line "minor-words" (perf-minus minor1 minor0) $ perf-line "promoted-words" (perf-minus promoted1 promoted0)
+      $ perf-line "major-words" (perf-minus major1 major0)
+      $ perf-line "minor-gcs" (perf-minus minor-gcs1 minor-gcs0) $ perf-line "major-gcs" (perf-minus major-gcs1 major-gcs0) ""))
+  (let ((unique w3) (many _)) (world-do _ w2 (WriteOut text)))
+  (values w3 (Exit Perf (MkU8 0 perf-zero-u8))))
 
-(Step Perf perf-start)
+(Continue Perf perf-start)

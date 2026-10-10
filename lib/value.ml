@@ -39,6 +39,7 @@ and code =
   | CCellWrite of ctor * code * (int * code) list
   | CCellCopy of ctor * code * (int * code) list
   | CCellRead of ctor * int * code
+  | CWorldDo of code
   | CAbsurd
 
 (* Branches are keyed by discriminant (section 33). [shape] is how the scrutinee comes apart (section 24): an
@@ -60,6 +61,7 @@ let map_code f = function
   | CCellWrite (k, c, ss) -> CCellWrite (k, f c, List.map (fun (i,s) -> i, f s) ss)
   | CCellCopy (k, c, ss) -> CCellCopy (k, f c, List.map (fun (i,s) -> i, f s) ss)
   | CCellRead (k, i, c) -> CCellRead (k, i, f c)
+  | CWorldDo c -> CWorldDo (f c)
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes c =

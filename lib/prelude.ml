@@ -17,6 +17,8 @@ let () = Env.slot_type := slot_term
 let null, env = Env.bind env (Some "vacant-slot") Many token slot_term
 let env = Env.place env null (Var null)
 let () = Term.univ := univ
+let world, env = Env.bind env (Some "World") Erased token (TyCtor [])
+let world_term = App (Var world, [])
 
 let heterogeneous = [ ty "A" type_term; ty "a" (Bound 0); ty "B" type_term; ty "b" (Bound 0) ]
 

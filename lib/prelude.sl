@@ -970,35 +970,39 @@
      (many (Nat) minor-words) (many (Nat) promoted-words) (many (Nat) major-words)
      (many (Nat) minor-gcs) (many (Nat) major-gcs) -> (Usage)))
 
-; A program's requests to the driver (ASSUMPTIONS.md): every entry but Exit carries a continuation the
-; driver applies to the request's answer, so a step never recurses and the driver loops. A continuation is a
-; UniqueFn and a request unique, so a continuation may own what it closes over and is applied once.
-(def-adts
-  ((IO : ((Level) L) -> Type)
-    enum
-    (many Exit : (erased (Level) L) (many (U8) code) -> (IO L))
-    (many Step : (erased (Level) L) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
-    (many WriteOut : (erased (Level) L) (many (String) text) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
-    (many WriteErr : (erased (Level) L) (many (String) text) (unique (UniqueFn L -> (unique (IO L) next)) k) -> (IO L))
-    (many ReadLine : (erased (Level) L) (unique (UniqueFn L (many (Maybe (String)) line) -> (unique (IO L) next)) k) -> (IO L))
-    (many ReadFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (String)) contents) -> (unique (IO L) next)) k) -> (IO L))
-    (many WriteFile : (erased (Level) L) (many (String) path) (many (String) text) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many GetArgs : (erased (Level) L) (unique (UniqueFn L (many (List (String)) args) -> (unique (IO L) next)) k) -> (IO L))
-    (many GetEnv : (erased (Level) L) (many (String) name) (unique (UniqueFn L (many (Maybe (String)) value) -> (unique (IO L) next)) k) -> (IO L))
-    (many GetEnvs : (erased (Level) L) (unique (UniqueFn L (many (List (Pair (String) (String))) vars) -> (unique (IO L) next)) k) -> (IO L))
-    (many AppendFile : (erased (Level) L) (many (String) path) (many (String) text) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many ReadRemaining : (erased (Level) L) (unique (UniqueFn L (many (String) rest) -> (unique (IO L) next)) k) -> (IO L))
-    (many ListDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (List (String))) entries) -> (unique (IO L) next)) k) -> (IO L))
-    (many GetCwd : (erased (Level) L) (unique (UniqueFn L (many (String) path) -> (unique (IO L) next)) k) -> (IO L))
-    (many Stat : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (EntryKind)) kind) -> (unique (IO L) next)) k) -> (IO L))
-    (many MkDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many DeleteFile : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many DeleteDir : (erased (Level) L) (many (String) path) (unique (UniqueFn L (many (Result (Change)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many ConfineDir : (erased (Level) L) (many (String) dir) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    (many ConfineOutputBytes : (erased (Level) L) (many (Nat) bytes) (unique (UniqueFn L (many (Result (Unit)) outcome) -> (unique (IO L) next)) k) -> (IO L))
-    ; Performs compaction first; every Usage figure is zero under --no-extern.
-    (many Measure : (erased (Level) L) (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
-       (unique (UniqueFn L (many A r) (many (Usage) u) -> (unique (IO L) next)) k) -> (IO L))))
+(def-adts $ (Program : ((Level) L) -> Type)
+  enum
+  (many Exit : (erased (Level) L) (many (U8) code) -> (Program L))
+  (many Continue : (erased (Level) L)
+     (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
+     -> (Program L)))
+
+(def-adts $ (Compaction : -> Type)
+  enum
+  (many Compact : -> (Compaction))
+  (many NoCompact : -> (Compaction)))
+
+(def-adts $ (Request : (Type A) -> Type)
+  enum
+  (many WriteOut : (many (String) text) -> (Request (Unit)))
+  (many WriteErr : (many (String) text) -> (Request (Unit)))
+  (many ReadLine : -> (Request (Maybe (String))))
+  (many ReadFile : (many (String) path) -> (Request (Result (String))))
+  (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many GetArgs : -> (Request (List (String))))
+  (many GetEnv : (many (String) name) -> (Request (Maybe (String))))
+  (many GetEnvs : -> (Request (List (Pair (String) (String)))))
+  (many AppendFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many ReadRemaining : -> (Request (String)))
+  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))
+  (many GetCwd : -> (Request (String)))
+  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))
+  (many MkDir : (many (String) path) -> (Request (Result (Change))))
+  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))
+  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))
+  (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
+  (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
+  (many Measure : (many (Compaction) c) -> (Request (Usage))))
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern

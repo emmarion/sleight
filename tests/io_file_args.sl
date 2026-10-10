@@ -2,12 +2,9 @@
 ; expect: file contents
 ; stderr: x
 ; stderr: y
-; Writes a file, reads it back to stdout, then lists the arguments on stderr. A recursive helper over
-; the argument list sits at a level below the IO level, since a continuation's type fixes its level and
-; a same-level call would need a subterm proof; each request wraps the next step in a fresh continuation.
+; Writes a file, reads it back to stdout, then lists the arguments on stderr. The recursive helper over the
+; argument list threads the world, giving it back at itself.
 
-(def-lvl PA)
-(def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
@@ -17,34 +14,21 @@
 (let ((many d2)) (lt-dec 2 u8-modulus))
 (comptime-match many d2 (Yes za2 zb2 zp2))
 (let ((many code2)) (MkU8 2 zp2))
-(let ((erased str-pa)) (prove-predates str-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
-(let ((erased thunk-p)) (prove-predates thunk-lvl P))
-(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
-(def-fns PA $ (many list-args : (subterm many (List (String)) args) -> (unique (IO P) next))
-  (match many args _
-    ((Nil a) (Exit P code0))
-    ((Cons a x rest) (WriteErr P (str-append (predates str-pa) x "\n") (unique-thunk (predates thunk-pa) _ _ (notail $ list-args (subterm _) rest))))))
+(def-fns _ $ (many list-args : (subterm many (List (String)) args) (unique (World) w) -> (unique (World) w2 at w))
+  (let-match many args (Cons a x rest) ((Nil a) w))
+  (let ((unique w1) (many _)) (world-do _ w (WriteErr (str-append x "\n"))))
+  (tail $ list-args rest w1))
 
-(def-unique P $ (unique all-args : (many (List (String)) args) -> (unique (IO P) next))
-  (list-args (predates pa-p) args))
+(def-lvl P)
 
-(def-unique P $ (unique after-read : (many (Result (String)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a s) (WriteOut P s (unique-thunk (predates thunk-p) _ _ (GetArgs P all-args))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many wrote)) (world-do _ w (WriteFile "io-test.txt" "file contents\n")))
+  (let-match many wrote (Ok a u) ((Fail a m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (Exit P code2))))
+  (let ((unique w2) (many read)) (world-do _ w1 (ReadFile "io-test.txt")))
+  (let-match many read (Ok b s) ((Fail b m) (let ((unique w3) (many _)) (world-do _ w2 (WriteErr m))) (values w3 (Exit P code1))))
+  (let ((unique w3) (many _)) (world-do _ w2 (WriteOut s)))
+  (let ((unique w4) (many args)) (world-do _ w3 (GetArgs)))
+  (values (list-args args w4) (Exit P code0)))
 
-(def-unique P $ (unique after-write : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a u) (ReadFile P "io-test.txt" after-read))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code2))))))
-
-(WriteFile P "io-test.txt" "file contents\n" after-write)
-; warns: tests/io_file_args.sl:28:46: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_file_args.sl:28:130: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_file_args.sl:28:86: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_file_args.sl:31:14: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_file_args.sl:35:43: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_file_args.sl:36:45: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_file_args.sl:41:45: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

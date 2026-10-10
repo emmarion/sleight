@@ -3,31 +3,24 @@
 ; expect: > a
 ; expect: > bb
 ; exit: 3
-; An IO program: a ReadLine request whose continuation answers with the next request, so the driver's loop
-; reads until end of input; Exit carries a U8 code. A continuation is a UniqueFn, born by def-unique and
-; consumed by the request it is stored in, so the loop's body sits below the IO level and each request
-; wraps it in a fresh continuation.
+; A Program reading until end of input: each step's continuation is a UniqueFn that takes the world at unique
+; and gives it back at itself, performing its requests with world-do in between, and returns the next step;
+; Exit carries a U8 code. The loop's body sits below the program's level, and each step wraps it in a fresh
+; continuation, so the driver's loop is what iterates.
 
 (def-lvl PA)
 (def-lvl P)
 (let ((many d3)) (lt-dec 3 u8-modulus))
 (comptime-match many d3 (Yes za3 zb3 zp3))
 (let ((many code3)) (MkU8 3 zp3))
-(let ((erased str-pa)) (prove-predates str-lvl PA))
-(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
 
-(def-fns PA $ (many echo : (many (Maybe (String)) line) -> (unique (IO P) next))
-  (let-match many line (Some a s) ((None a) (Exit P code3)))
-  (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (echo (predates pa-p) next-line))
-  (WriteOut P (str-append (predates str-pa) "> " (str-append (predates str-pa) s "\n"))
-    (unique-thunk (predates thunk-pa) _ _ (ReadLine P again))))
+(def-fns PA $ (many echo : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
+  (let-match many line (Some a s) ((None a) (values w1 (Exit P code3))))
+  (let ((unique w3) (many _)) (world-do _ w1 (WriteOut (str-append "> " (str-append s "\n")))))
+  (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) p)) (echo v))
+  (values w3 (Continue P again)))
 
-(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (echo (predates pa-p) line))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p)) (echo w))
 
-(ReadLine P start)
-; warns: tests/io_echo.sl:22:100: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_echo.sl:23:62: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_echo.sl:23:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_echo.sl:24:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_echo.sl:26:93: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

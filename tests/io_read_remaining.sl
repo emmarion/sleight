@@ -10,21 +10,13 @@
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased str-p)) (prove-predates str-lvl P))
-(let ((erased thunk-p)) (prove-predates thunk-lvl P))
 
-(def-unique P $ (unique after-rest : (many (String) rest) -> (unique (IO P) next))
-  (WriteOut P (str-append (predates str-p) "rest: " (str-append (predates str-p) rest "\n")) (unique-thunk (predates thunk-p) _ _ (Exit P code0))))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
+  (let-match many line (Some a s) ((None a) (values w1 (Exit P code0))))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append "line: " (str-append s "\n")))))
+  (let ((unique w3) (many rest)) (world-do _ w2 (ReadRemaining)))
+  (let ((unique w4) (many _)) (world-do _ w3 (WriteOut (str-append "rest: " (str-append rest "\n")))))
+  (values w4 (Exit P code0)))
 
-(def-unique P $ (unique after-line : (many (Maybe (String)) line) -> (unique (IO P) next))
-  (match many line _
-    ((None a) (Exit P code0))
-    ((Some a s) (WriteOut P (str-append (predates str-p) "line: " (str-append (predates str-p) s "\n")) (unique-thunk (predates thunk-p) _ _ (ReadRemaining P after-rest))))))
-
-(ReadLine P after-line)
-; warns: tests/io_read_remaining.sl:17:65: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_read_remaining.sl:17:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_read_remaining.sl:17:108: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_read_remaining.sl:22:79: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_read_remaining.sl:22:41: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_read_remaining.sl:22:119: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

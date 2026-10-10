@@ -4,181 +4,68 @@
 ; expect: > bb
 ; exit: 3
 ; Two libraries at two levels embedded in a program at a third, at no runtime cost: lift2 mints the program's
-; level B and returns, erased, each value at (IO B) and the proof that coerces to it. The erased walk gives each
-; continuation a level-B delegate, whose coercibility coercible-ctor lifts through the request; every proof is
-; minted inside, after B, so the caller supplies levels and values only. The caller cannot mint a level
-; relation about B itself, B reaching it opened from an existential rather than from def-lvl, so lift2
-; discharges Predates thunk-lvl B where B is minted and returns it (DESIGN.md section 55), which is what lets
-; the prelude's unique-thunk hold the nullary continuation at B. A request and its continuations are unique,
-; so the proofs' sides are (Unique) and a delegate is a def-unique; the many-labelled arguments keep (Shared).
+; level B and returns, erased, each program at (Program B) and the proof that coerces to it. The erased walk
+; gives each continuation a level-B delegate, whose coercibility coercible-ctor lifts through the step; every
+; proof is minted inside, after B, so the caller supplies levels and values only. A program and its
+; continuations are unique, so the proofs' sides are (Unique) and a delegate is a def-unique; the many-labelled
+; exit code keeps (Shared).
 (def-lvl proof-lvl)
 (def-lvl lift-lvl)
 (let ((erased pl)) (prove-predates proof-lvl lift-lvl))
 
-(def-fns lift-lvl $ (erased lift2 : (erased (Level) L1) (erased (Level) L2) (unique (IO L1) io1) (unique (IO L2) io2) ->
-    (erased (Level) B) (erased (IO B) o1) (erased (IO B) o2)
-    (erased (Coercible (Unique) (IO L1) io1 (Unique) (IO B) o1) q1) (erased (Coercible (Unique) (IO L2) io2 (Unique) (IO B) o2) q2)
-    (erased (Predates (Level) thunk-lvl B) tb))
+(def-fns lift-lvl $ (erased lift2 : (erased (Level) L1) (erased (Level) L2) (unique (Program L1) io1) (unique (Program L2) io2) ->
+    (erased (Level) B) (erased (Program B) o1) (erased (Program B) o2)
+    (erased (Coercible (Unique) (Program L1) io1 (Unique) (Program B) o1) q1) (erased (Coercible (Unique) (Program L2) io2 (Unique) (Program B) o2) q2))
   (def-lvl B)
-  (let ((erased pb)) (prove-predates proof-lvl B))
-  (let ((erased tb)) (prove-predates thunk-lvl B))
   (let ((erased p1)) (prove-predates L1 B))
   (let ((erased p2)) (prove-predates L2 B))
-  (def-fns proof-lvl $ (erased lift-proof : (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm unique (IO A) io) ->
-      (erased (IO B) out) (erased (Coercible (Unique) (IO B) out (Unique) (IO A) io) p))
-    (def-fns proof-lvl $ (erased lift-fn : (erased Type X) (subterm unique (UniqueFn A (many X x) -> (unique (IO A) next)) k) ->
-        (erased (UniqueFn B (many X x) -> (unique (IO B) next)) o)
-        (erased (Coercible (Unique) (UniqueFn B (many X x) -> (unique (IO B) next)) o (Unique) (UniqueFn A (many X x) -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o at k : (many X x) -> (unique (IO B) next))
-        (let ((unique r)) (delegate (k (predates ab) x)))
-        (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
-        (coerce r (coercible-sym q)))
+  (def-fns proof-lvl $ (erased lift-proof : (erased (Level) A) (erased (Predates (Level) A B) ab) (subterm unique (Program A) io) ->
+      (erased (Program B) out) (erased (Coercible (Unique) (Program B) out (Unique) (Program A) io) p))
+    (def-fns proof-lvl $ (erased lift-fn : (subterm unique (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) ->
+        (erased (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o)
+        (erased (Coercible (Unique) (UniqueFn B (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next)) o
+                           (Unique) (UniqueFn A (unique (World) w) -> (unique (World) w2 at w) (unique (Program A) next)) k) p))
+      (def-unique B $ (unique o at k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) next))
+        (let ((unique w2) (unique r)) (delegate (k (predates ab) w)))
+        (let ((erased o2) (erased q)) (lift-proof A ab r))
+        (values w2 (coerce r (coercible-sym q))))
       (values o (coercible-of (delegate-of o))))
-    (def-fns proof-lvl $ (erased lift-fn0 : (subterm unique (UniqueFn A -> (unique (IO A) next)) k) ->
-        (erased (UniqueFn B -> (unique (IO B) next)) o)
-        (erased (Coercible (Unique) (UniqueFn B -> (unique (IO B) next)) o (Unique) (UniqueFn A -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o at k : -> (unique (IO B) next))
-        (let ((unique r)) (delegate (k (predates ab))))
-        (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
-        (coerce r (coercible-sym q)))
-      (values o (coercible-of (delegate-of o))))
-    (def-fns proof-lvl $ (erased lift-fn2 : (erased Type X) (subterm unique (UniqueFn A (many X x) (many (Usage) u) -> (unique (IO A) next)) k) ->
-        (erased (UniqueFn B (many X x) (many (Usage) u) -> (unique (IO B) next)) o)
-        (erased (Coercible (Unique) (UniqueFn B (many X x) (many (Usage) u) -> (unique (IO B) next)) o (Unique) (UniqueFn A (many X x) (many (Usage) u) -> (unique (IO A) next)) k) p))
-      (def-unique B $ (unique o at k : (many X x) (many (Usage) u) -> (unique (IO B) next))
-        (let ((unique r)) (delegate (k (predates ab) x u)))
-        (let ((erased o2) (erased q)) (lift-proof (predates pb) A ab r))
-        (coerce r (coercible-sym q)))
-      (values o (coercible-of (delegate-of o))))
-    (match erased io _
-      ((Exit l c) (values (Exit B c) (coercible-ctor (Unique) Exit B A (coercible-refl (Shared) c))))
-      ((Step l k)
-        (let ((erased o) (erased q)) (lift-fn0 (subterm _) k))
-        (values (Step B o) (coercible-ctor (Unique) Step B A q)))
-      ((WriteOut l t k)
-        (let ((erased o) (erased q)) (lift-fn0 (subterm _) k))
-        (values (WriteOut B t o) (coercible-ctor (Unique) WriteOut B A (coercible-refl (Shared) t) q)))
-      ((WriteErr l t k)
-        (let ((erased o) (erased q)) (lift-fn0 (subterm _) k))
-        (values (WriteErr B t o) (coercible-ctor (Unique) WriteErr B A (coercible-refl (Shared) t) q)))
-      ((ReadLine l k)
-        (let ((erased o) (erased q)) (lift-fn (Maybe (String)) (subterm _) k))
-        (values (ReadLine B o) (coercible-ctor (Unique) ReadLine B A q)))
-      ((ReadFile l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (String)) (subterm _) k))
-        (values (ReadFile B path o) (coercible-ctor (Unique) ReadFile B A (coercible-refl (Shared) path) q)))
-      ((WriteFile l path t k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
-        (values (WriteFile B path t o) (coercible-ctor (Unique) WriteFile B A (coercible-refl (Shared) path) (coercible-refl (Shared) t) q)))
-      ((GetArgs l k)
-        (let ((erased o) (erased q)) (lift-fn (List (String)) (subterm _) k))
-        (values (GetArgs B o) (coercible-ctor (Unique) GetArgs B A q)))
-      ((GetEnv l n k)
-        (let ((erased o) (erased q)) (lift-fn (Maybe (String)) (subterm _) k))
-        (values (GetEnv B n o) (coercible-ctor (Unique) GetEnv B A (coercible-refl (Shared) n) q)))
-      ((GetEnvs l k)
-        (let ((erased o) (erased q)) (lift-fn (List (Pair (String) (String))) (subterm _) k))
-        (values (GetEnvs B o) (coercible-ctor (Unique) GetEnvs B A q)))
-      ((AppendFile l path t k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
-        (values (AppendFile B path t o) (coercible-ctor (Unique) AppendFile B A (coercible-refl (Shared) path) (coercible-refl (Shared) t) q)))
-      ((ReadRemaining l k)
-        (let ((erased o) (erased q)) (lift-fn (String) (subterm _) k))
-        (values (ReadRemaining B o) (coercible-ctor (Unique) ReadRemaining B A q)))
-      ((ListDir l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (List (String))) (subterm _) k))
-        (values (ListDir B path o) (coercible-ctor (Unique) ListDir B A (coercible-refl (Shared) path) q)))
-      ((GetCwd l k)
-        (let ((erased o) (erased q)) (lift-fn (String) (subterm _) k))
-        (values (GetCwd B o) (coercible-ctor (Unique) GetCwd B A q)))
-      ((Stat l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (EntryKind)) (subterm _) k))
-        (values (Stat B path o) (coercible-ctor (Unique) Stat B A (coercible-refl (Shared) path) q)))
-      ((MkDir l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Change)) (subterm _) k))
-        (values (MkDir B path o) (coercible-ctor (Unique) MkDir B A (coercible-refl (Shared) path) q)))
-      ((DeleteFile l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Change)) (subterm _) k))
-        (values (DeleteFile B path o) (coercible-ctor (Unique) DeleteFile B A (coercible-refl (Shared) path) q)))
-      ((DeleteDir l path k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Change)) (subterm _) k))
-        (values (DeleteDir B path o) (coercible-ctor (Unique) DeleteDir B A (coercible-refl (Shared) path) q)))
-      ((ConfineDir l dir k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
-        (values (ConfineDir B dir o) (coercible-ctor (Unique) ConfineDir B A (coercible-refl (Shared) dir) q)))
-      ((ConfineOutputBytes l bytes k)
-        (let ((erased o) (erased q)) (lift-fn (Result (Unit)) (subterm _) k))
-        (values (ConfineOutputBytes B bytes o) (coercible-ctor (Unique) ConfineOutputBytes B A (coercible-refl (Shared) bytes) q)))
-      ((Measure l m x run k)
-        (let ((erased o) (erased q)) (lift-fn2 x (subterm _) k))
-        (values (Measure B m x run o) (coercible-ctor (Unique) Measure B A m m x x (coercible-refl (Unique) run) q)))))
-  (let ((erased x1) (erased q1)) (lift-proof (predates pl) L1 p1 io1))
-  (let ((erased x2) (erased q2)) (lift-proof (predates pl) L2 p2 io2))
-  (values B x1 x2 (coercible-sym q1) (coercible-sym q2) tb))
+    (let-match erased io (Continue l k) ((Exit l c) (values (Exit B c) (coercible-ctor (Unique) Exit B A (coercible-refl (Shared) c)))))
+    (let ((erased o) (erased q)) (lift-fn k))
+    (values (Continue B o) (coercible-ctor (Unique) Continue B A q)))
+  (let ((erased x1) (erased q1)) (lift-proof L1 p1 io1))
+  (let ((erased x2) (erased q2)) (lift-proof L2 p2 io2))
+  (values B x1 x2 (coercible-sym q1) (coercible-sym q2)))
 
 (def-lvl A10)
 (def-lvl A1)
 (let ((many d3)) (lt-dec 3 u8-modulus))
 (comptime-match many d3 (Yes za3 zb3 zp3))
 (let ((many code3)) (MkU8 3 zp3))
-(let ((erased str-a10)) (prove-predates str-lvl A10))
-(let ((erased th-a10)) (prove-predates thunk-lvl A10))
-(let ((erased a10-a1)) (prove-predates A10 A1))
-(def-fns A10 $ (many lib-echo : (many (Maybe (String)) line) -> (unique (IO A1) next))
-  (let-match many line (Some a s) ((None a) (Exit A1 code3)))
-  (def-unique A1 $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO A1) next)) (lib-echo (predates a10-a1) next-line))
-  (WriteOut A1 (str-append (predates str-a10) "> " (str-append (predates str-a10) s "\n"))
-    (unique-thunk (predates th-a10) _ _ (ReadLine A1 again))))
-(def-unique A1 $ (unique echo-start : (many (Maybe (String)) line) -> (unique (IO A1) next)) (lib-echo (predates a10-a1) line))
+(def-fns A10 $ (many lib-echo : (unique (World) w) -> (unique (World) w2 at w) (unique (Program A1) p))
+  (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
+  (let-match many line (Some a s) ((None a) (values w1 (Exit A1 code3))))
+  (let ((unique w3) (many _)) (world-do _ w1 (WriteOut (str-append "> " (str-append s "\n")))))
+  (def-unique A1 $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program A1) p)) (lib-echo v))
+  (values w3 (Continue A1 again)))
+(def-unique A1 $ (unique echo-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program A1) p)) (lib-echo w))
 
 (def-lvl A2)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased th-a2)) (prove-predates thunk-lvl A2))
-(def-unique A2 $ (unique banner : (many (List (String)) args) -> (unique (IO A2) next))
-  (match many args _
-    ((Nil a) (WriteErr A2 "no args\n" (unique-thunk (predates th-a2) _ _ (Exit A2 code0))))
-    ((Cons a x rest) (WriteErr A2 x (unique-thunk (predates th-a2) _ _ (Exit A2 code0))))))
+(def-unique A2 $ (unique banner : (unique (World) w) -> (unique (World) w2 at w) (unique (Program A2) p))
+  (let ((unique w1) (many args)) (world-do _ w (GetArgs)))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteErr $ match many args (((String) _)) ((Nil a) "no args\n") ((Cons a x rest) x))))
+  (values w2 (Exit A2 code0)))
 
-(let ((unique echo-a1)) (ReadLine A1 echo-start))
-(let ((unique banner-a2)) (GetArgs A2 banner))
-(let ((erased B) (erased e) (erased b) (erased qe) (erased qb) (erased th-b)) (lift2 A1 A2 echo-a1 banner-a2))
-(def-unique B $ (unique user-start : (many (Maybe (String)) line) -> (unique (IO B) next))
-  (match many line _
-    ((None a) (coerce banner-a2 qb))
-    ((Some a s) (WriteOut B "starting\n" (unique-thunk (predates th-b) _ _ (coerce echo-a1 qe))))))
+(let ((unique echo-a1)) (Continue A1 echo-start))
+(let ((unique banner-a2)) (Continue A2 banner))
+(let ((erased B) (erased e) (erased b) (erased qe) (erased qb)) (lift2 A1 A2 echo-a1 banner-a2))
+(def-unique B $ (unique user-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program B) p))
+  (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
+  (let-match many line (Some a s) ((None a) (values w1 (coerce banner-a2 qb))))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut "starting\n")))
+  (values w2 (coerce echo-a1 qe)))
 
-(ReadLine B user-start)
-; warns: tests/io_lift.sl:34:51: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:42:51: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:50:51: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:56:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:59:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:62:48: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:65:64: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:68:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:71:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:74:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:77:64: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:80:79: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:83:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:86:56: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:89:72: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:92:56: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:95:68: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:98:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:101:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:104:65: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:107:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:110:63: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:113:50: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_lift.sl:115:46: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:116:46: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:129:106: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:130:64: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:130:28: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:131:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:132:104: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:141:53: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_lift.sl:142:51: warning: unnecessary `(predates _)`; drop it
+(Continue B user-start)

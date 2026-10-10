@@ -15,27 +15,27 @@ type world = {
 }
 
 type 'v request =
-  | Exit of 'v
-  | Step of 'v
-  | WriteOut of 'v * 'v
-  | WriteErr of 'v * 'v
-  | ReadLine of 'v
-  | ReadFile of 'v * 'v
-  | WriteFile of 'v * 'v * 'v
-  | GetArgs of 'v
-  | GetEnv of 'v * 'v
-  | GetEnvs of 'v
-  | AppendFile of 'v * 'v * 'v
-  | ReadRemaining of 'v
-  | ListDir of 'v * 'v
-  | GetCwd of 'v
-  | Stat of 'v * 'v
-  | MkDir of 'v * 'v
-  | DeleteFile of 'v * 'v
-  | DeleteDir of 'v * 'v
-  | ConfineDir of 'v * 'v
-  | ConfineOutputBytes of 'v * 'v
-  | Measure of 'v * 'v
+  | WriteOut of 'v
+  | WriteErr of 'v
+  | ReadLine
+  | ReadFile of 'v
+  | WriteFile of 'v * 'v
+  | GetArgs
+  | GetEnv of 'v
+  | GetEnvs
+  | AppendFile of 'v * 'v
+  | ReadRemaining
+  | ListDir of 'v
+  | GetCwd
+  | Stat of 'v
+  | MkDir of 'v
+  | DeleteFile of 'v
+  | DeleteDir of 'v
+  | ConfineDir of 'v
+  | ConfineOutputBytes of 'v
+  | Measure of 'v
+
+type 'v step = Exit of 'v | Continue of 'v
 
 (* What the driver builds and reads of the prelude, each a direct operation on the program's own values. *)
 type 'v ops = {
@@ -65,10 +65,14 @@ type 'v ops = {
   unchanged : 'v;
   mk_usage : 'v;
   request : 'v -> 'v request;
+  step : 'v -> 'v step;
+  compact : 'v -> bool;
   apply : 'v -> 'v list -> 'v;
 }
 
-type 'v t = { of_string : string -> 'v; to_string : 'v -> string; run_io : world -> 'v -> int; run_main : world -> 'v -> unit }
+type 'v t = { of_string : string -> 'v; to_string : 'v -> string; perform : world -> 'v -> 'v; run_program : world -> 'v -> int; run_main : world -> 'v -> unit }
+
+exception Halt of int
 
 let read_file path = In_channel.with_open_bin path In_channel.input_all
 let write_file path s = Out_channel.with_open_bin path (fun oc -> Out_channel.output_string oc s)
@@ -153,7 +157,8 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
         go v;
         Buffer.contents buf
   in
-  let run_io w v =
+  let started = lazy (Unix.gettimeofday (), Unix.times (), Gc.quick_stat (), Gc.minor_words ()) in
+  let perform w req =
     let result f = match f () with x -> o.ok x | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e)) in
     let list of_item xs = List.fold_right (fun x acc -> o.cons (of_item x) acc) xs o.nil in
     let change already f =
@@ -163,67 +168,59 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
       | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e))
     in
     let created p = if Sys.file_exists p then 0 else entry_bytes in
-    let rec loop v =
-      let fenced ?(follow = true) ?(cost = fun _ -> 0) path k answer =
-        let p = to_string path in
-        match admits w.fence ~follow p with
-        | Ok _ -> if spend w (cost p) then loop (o.apply k [ answer p ]) else 1
-        | Error m -> loop (o.apply k [ o.fail (of_string m) ])
-      in
-      let write out s k = let s = to_string s in if spend w (String.length s) then (out s; loop (o.apply k [])) else 1 in
-      let write_to f path s k = let s = to_string s in fenced ~cost:(fun p -> String.length s + created p) path k (fun p -> result (fun () -> f p s; o.unit)) in
-      match o.request v with
-      | Exit code -> u8 code
-      | Step k -> loop (o.apply k [])
-      | WriteOut (s, k) -> write w.out s k
-      | WriteErr (s, k) -> write w.err s k
-      | ReadLine k -> loop (o.apply k [ match w.read_line () with Some l -> o.some (of_string l) | None -> o.none ])
-      | ReadFile (path, k) -> fenced path k (fun p -> result (fun () -> of_string (read_file p)))
-      | WriteFile (path, s, k) -> write_to write_file path s k
-      | GetArgs k -> loop (o.apply k [ list of_string w.args ])
-      | GetEnv (name, k) -> loop (o.apply k [ match w.env (to_string name) with Some v -> o.some (of_string v) | None -> o.none ])
-      | GetEnvs k -> loop (o.apply k [ list (fun (n, v) -> o.pair (of_string n) (of_string v)) (List.sort compare (w.envs ())) ])
-      | AppendFile (path, s, k) -> write_to append_file path s k
-      | ReadRemaining k -> loop (o.apply k [ of_string (w.read_rest ()) ])
-      | ListDir (path, k) -> fenced path k (fun p -> result (fun () -> list of_string (List.sort compare (Array.to_list (Sys.readdir p)))))
-      | GetCwd k -> loop (o.apply k [ of_string (w.cwd ()) ])
-      | Stat (path, k) ->
-          fenced path k (fun p ->
-              match (Unix.stat p).st_kind with
-              | Unix.S_REG -> o.ok o.is_file
-              | Unix.S_DIR -> o.ok o.is_dir
-              | _ -> o.ok o.is_other
-              | exception Unix.Unix_error (Unix.ENOENT, _, _) -> o.ok o.missing
-              | exception (Unix.Unix_error _ as e) -> o.fail (of_string (explain e)))
-      | MkDir (path, k) -> fenced ~follow:false ~cost:created path k (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
-      | DeleteFile (path, k) -> fenced ~follow:false path k (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
-      | DeleteDir (path, k) -> fenced ~follow:false path k (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
-      | ConfineDir (dir, k) -> loop (o.apply k [ match confine w.fence (to_string dir) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m) ])
-      | ConfineOutputBytes (bytes, k) ->
-          let z = to_z bytes in
-          loop (o.apply k [ if clamp z <= !(w.limit) then (w.limit := clamp z; o.ok o.unit)
-                           else o.fail (of_string (Printf.sprintf "%s bytes: above the current output limit of %d bytes" (Z.to_string z) !(w.limit))) ])
-      | Measure (run, k) ->
-          Gc.compact ();
-          let t0 = Unix.gettimeofday () in
-          let c0 = Unix.times () in
-          let g0 = Gc.quick_stat () in
-          let m0 = Gc.minor_words () in
-          let r = o.apply run [] in
-          let m1 = Gc.minor_words () in
-          let g1 = Gc.quick_stat () in
-          let c1 = Unix.times () in
-          let t1 = Unix.gettimeofday () in
-          let words f = f g1 -. f g0 and count f = float_of_int (f g1 - f g0) and ns f = 1e9 *. (f c1 -. f c0) in
-          let nat x = match nat_of_z with Some f -> f (Z.of_float (Float.round (Float.max 0. x))) | None -> o.zero in
-          let usage =
-            [ 1e9 *. (t1 -. t0); ns (fun c -> c.Unix.tms_utime); ns (fun c -> c.Unix.tms_stime);
-              m1 -. m0; words (fun g -> g.Gc.promoted_words); words (fun g -> g.Gc.major_words -. g.Gc.promoted_words);
-              count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ]
-          in
-          loop (o.apply k [ r; o.apply o.mk_usage (List.map nat usage) ])
+    let fenced ?(follow = true) ?(cost = fun _ -> 0) path answer =
+      let p = to_string path in
+      match admits w.fence ~follow p with
+      | Ok _ -> if spend w (cost p) then answer p else raise (Halt 1)
+      | Error m -> o.fail (of_string m)
     in
-    loop v
+    let write out s = let s = to_string s in if spend w (String.length s) then (out s; o.unit) else raise (Halt 1) in
+    let write_to f path s = let s = to_string s in fenced ~cost:(fun p -> String.length s + created p) path (fun p -> result (fun () -> f p s; o.unit)) in
+    match o.request req with
+    | WriteOut s -> write w.out s
+    | WriteErr s -> write w.err s
+    | ReadLine -> (match w.read_line () with Some l -> o.some (of_string l) | None -> o.none)
+    | ReadFile path -> fenced path (fun p -> result (fun () -> of_string (read_file p)))
+    | WriteFile (path, s) -> write_to write_file path s
+    | GetArgs -> list of_string w.args
+    | GetEnv name -> (match w.env (to_string name) with Some v -> o.some (of_string v) | None -> o.none)
+    | GetEnvs -> list (fun (n, v) -> o.pair (of_string n) (of_string v)) (List.sort compare (w.envs ()))
+    | AppendFile (path, s) -> write_to append_file path s
+    | ReadRemaining -> of_string (w.read_rest ())
+    | ListDir path -> fenced path (fun p -> result (fun () -> list of_string (List.sort compare (Array.to_list (Sys.readdir p)))))
+    | GetCwd -> of_string (w.cwd ())
+    | Stat path ->
+        fenced path (fun p ->
+            match (Unix.stat p).st_kind with
+            | Unix.S_REG -> o.ok o.is_file
+            | Unix.S_DIR -> o.ok o.is_dir
+            | _ -> o.ok o.is_other
+            | exception Unix.Unix_error (Unix.ENOENT, _, _) -> o.ok o.missing
+            | exception (Unix.Unix_error _ as e) -> o.fail (of_string (explain e)))
+    | MkDir path -> fenced ~follow:false ~cost:created path (fun p -> change (fun e -> e = Unix.EEXIST && is_dir p) (fun () -> Unix.mkdir p 0o777))
+    | DeleteFile path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.unlink p))
+    | DeleteDir path -> fenced ~follow:false path (fun p -> change (fun e -> e = Unix.ENOENT) (fun () -> Unix.rmdir p))
+    | ConfineDir dir -> (match confine w.fence (to_string dir) with Ok () -> o.ok o.unit | Error m -> o.fail (of_string m))
+    | ConfineOutputBytes bytes ->
+        let z = to_z bytes in
+        if clamp z <= !(w.limit) then (w.limit := clamp z; o.ok o.unit)
+        else o.fail (of_string (Printf.sprintf "%s bytes: above the current output limit of %d bytes" (Z.to_string z) !(w.limit)))
+    | Measure c ->
+        if o.compact c then Gc.compact ();
+        let t0, c0, g0, m0 = Lazy.force started in
+        let m1 = Gc.minor_words () and g1 = Gc.quick_stat () and c1 = Unix.times () and t1 = Unix.gettimeofday () in
+        let words f = f g1 -. f g0 and count f = float_of_int (f g1 - f g0) and ns f = 1e9 *. (f c1 -. f c0) in
+        let nat x = match nat_of_z with Some f -> f (Z.of_float (Float.round (Float.max 0. x))) | None -> o.zero in
+        o.apply o.mk_usage
+          (List.map nat
+             [ 1e9 *. (t1 -. t0); ns (fun c -> c.Unix.tms_utime); ns (fun c -> c.Unix.tms_stime);
+               m1 -. m0; words (fun g -> g.Gc.promoted_words); words (fun g -> g.Gc.major_words -. g.Gc.promoted_words);
+               count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ])
+  in
+  let run_program _w v =
+    ignore (Lazy.force started);
+    let rec loop v = match o.step v with Exit code -> u8 code | Continue k -> loop (o.apply k [ o.unit ]) in
+    try loop v with Halt code -> code
   in
   let run_main w f = let s = to_string (o.apply f [ of_string (w.read_rest ()) ]) in if spend w (String.length s) then w.out s else w.exit 1 in
-  { of_string; to_string; run_io; run_main }
+  { of_string; to_string; perform; run_program; run_main }

@@ -1,4 +1,4 @@
 ; prelude: none
 ; expect: (B)
-(def-adts $ (IO : -> Type) enum (many A : -> (IO)) (many B : -> (IO)))
+(def-adts $ (Program : -> Type) enum (many A : -> (Program)) (many B : -> (Program)))
 (B)

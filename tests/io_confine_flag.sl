@@ -6,39 +6,23 @@
 ; expect: read outside refused
 ; The driver starts confined to the directory the command line names, here the one the program runs in.
 
-(def-lvl PA)
-(def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased str-pa)) (prove-predates str-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
-(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
-(def-fns PA $ (many report : (erased Type A) (many (String) label) (many (Result A) r) (unique (IO P) next) -> (unique (IO P) io))
-  (WriteOut P (str-append (predates str-pa) label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n"))
-    (unique-thunk (predates thunk-pa) _ _ next)))
+(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
+  (let ((unique w1) (many r)) (world-do _ w req))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n")))))
+  w2)
 
-(def-unique P $ (unique s4 : (many (Result (String)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "read outside" r (Exit P code0)))
+(def-lvl P)
 
-(def-unique P $ (unique s3 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine parent" r (ReadFile P "../io-confine-flag.txt" s4)))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1)) (report _ "stat cwd" w (Stat ".")))
+  (let ((unique w2)) (report _ "list parent" w1 (ListDir "..")))
+  (let ((unique w3)) (report _ "confine cwd" w2 (ConfineDir ".")))
+  (let ((unique w4)) (report _ "confine parent" w3 (ConfineDir "..")))
+  (let ((unique w5)) (report _ "read outside" w4 (ReadFile "../io-confine-flag.txt")))
+  (values w5 (Exit P code0)))
 
-(def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine cwd" r (ConfineDir P ".." s3)))
-
-(def-unique P $ (unique s1 : (many (Result (List (String))) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "list parent" r (ConfineDir P "." s2)))
-
-(def-unique P $ (unique s0 : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "stat cwd" r (ListDir P ".." s1)))
-
-(Stat P "." s0)
-; warns: tests/io_confine_flag.sl:19:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:20:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:23:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:26:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:29:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:32:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine_flag.sl:35:11: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

@@ -7,100 +7,55 @@
 ; expect: absent
 ; MkDir reports Changed the first time and Unchanged the second; DeleteDir refuses a directory that still
 ; holds entries and reports Unchanged for one that was never there; ListDir sorts and drops "." and "..".
-; The recursive helper over the listing takes the request that follows it as a unique parameter, a
-; def-fns being unable to capture one.
+; A failure ends the program through a Result-returning step, its helpers threading the world.
 
-(def-lvl PA)
-(def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (let ((many d1)) (lt-dec 1 u8-modulus))
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
-(let ((erased str-pa)) (prove-predates str-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
-(let ((erased thunk-p)) (prove-predates thunk-lvl P))
-(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
-(def-unique P $ (unique gone-again : (many (Result (Change)) o) -> (unique (IO P) next))
-  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
-  (match many c _
-    ((Changed) (WriteOut P "deleted twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
-    ((Unchanged) (WriteOut P "absent\n" (unique-thunk (predates thunk-p) _ _ (Exit P code0))))))
+(def-fns _ $ (many say : (many (String) text) (unique (World) w) -> (unique (World) w2 at w))
+  (let ((unique w1) (many _)) (world-do _ w (WriteOut text)))
+  w1)
 
-(def-unique P $ (unique dir-gone : (many (Result (Change)) o) -> (unique (IO P) next))
-  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
-  (match many c _
-    ((Changed) (WriteOut P "cleaned\n" (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-dir-test/a.txt" gone-again))))
-    ((Unchanged) (WriteOut P "never made\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
+(def-fns _ $ (many changed : (many (String) yes) (many (String) no) (unique (World) w) (unique (Request (Result (Change))) req) ->
+    (unique (World) w2 at w) (many (Bool) ok))
+  (let ((unique w1) (many o)) (world-do _ w req))
+  (let-match many o (Ok a c) ((Fail a m) (let ((unique w2) (many _)) (world-do _ w1 (WriteErr m))) (values w2 (BFalse))))
+  (match many c (((World) w2 at w) ((Bool) ok))
+    ((Changed) (values (say yes w1) (BTrue)))
+    ((Unchanged) (values (say no w1) (BFalse)))))
 
-(def-unique P $ (unique drop-b : (many (Result (Change)) o) -> (unique (IO P) next))
-  (DeleteDir P "io-dir-test" dir-gone))
+(def-fns _ $ (many show-entries : (subterm many (List (String)) es) (unique (World) w) -> (unique (World) w2 at w))
+  (let-match many es (Cons a e rest) ((Nil a) w))
+  (tail $ show-entries rest (say (str-append e "\n") w)))
 
-(def-unique P $ (unique drop-a : (many (Result (Change)) o) -> (unique (IO P) next))
-  (DeleteFile P "io-dir-test/b.txt" drop-b))
+(def-lvl P)
 
-(def-unique P $ (unique full-dir : (many (Result (Change)) o) -> (unique (IO P) next))
-  (match many o _
-    ((Ok a c) (WriteOut P "removed a full directory\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
-    ((Fail a m) (WriteOut P "not empty\n" (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-dir-test/a.txt" drop-a))))))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many _)) (world-do _ w (DeleteFile "io-dir-test/a.txt")))
+  (let ((unique w2) (many _)) (world-do _ w1 (DeleteFile "io-dir-test/b.txt")))
+  (let ((unique w3) (many _)) (world-do _ w2 (DeleteDir "io-dir-test")))
+  (let ((unique w4) (many ok4)) (changed "made\n" "already there\n" w3 (MkDir "io-dir-test")))
+  (let-match many ok4 (BTrue) ((BFalse) (values w4 (Exit P code1))))
+  (let ((unique w5) (many ok5)) (changed "made twice\n" "again\n" w4 (MkDir "io-dir-test")))
+  (let-match many ok5 (BFalse) ((BTrue) (values w5 (Exit P code1))))
+  (let ((unique w6) (many _)) (world-do _ w5 (WriteFile "io-dir-test/b.txt" "")))
+  (let ((unique w7) (many _)) (world-do _ w6 (WriteFile "io-dir-test/a.txt" "")))
+  (let ((unique w8) (many listed)) (world-do _ w7 (ListDir "io-dir-test")))
+  (let-match many listed (Ok a es) ((Fail a m) (values (say m w8) (Exit P code1))))
+  (let ((unique w9)) (show-entries es w8))
+  (let ((unique w10) (many full)) (world-do _ w9 (DeleteDir "io-dir-test")))
+  (let-match many full (Fail _ _) ((Ok _ _) (values (say "removed a full directory\n" w10) (Exit P code1))))
+  (let ((unique w11)) (say "not empty\n" w10))
+  (let ((unique w12) (many _)) (world-do _ w11 (DeleteFile "io-dir-test/a.txt")))
+  (let ((unique w13) (many _)) (world-do _ w12 (DeleteFile "io-dir-test/b.txt")))
+  (let ((unique w14) (many ok14)) (changed "cleaned\n" "never made\n" w13 (DeleteDir "io-dir-test")))
+  (let-match many ok14 (BTrue) ((BFalse) (values w14 (Exit P code1))))
+  (let ((unique w15) (many ok15)) (changed "deleted twice\n" "absent\n" w14 (DeleteFile "io-dir-test/a.txt")))
+  (let-match many ok15 (BFalse) ((BTrue) (values w15 (Exit P code1))))
+  (values w15 (Exit P code0)))
 
-(def-fns PA $ (many show-entries : (subterm many (List (String)) es) (unique (IO P) after) -> (unique (IO P) next))
-  (match many es _
-    ((Nil a) after)
-    ((Cons a e rest)
-      (WriteOut P (str-append (predates str-pa) e "\n") (unique-thunk (predates thunk-pa) _ _ (notail $ show-entries (subterm _) rest after))))))
-
-(def-unique P $ (unique listed : (many (Result (List (String))) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a es) (show-entries (predates pa-p) es (DeleteDir P "io-dir-test" full-dir)))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-
-(def-unique P $ (unique wrote-a : (many (Result (Unit)) o) -> (unique (IO P) next))
-  (ListDir P "io-dir-test" listed))
-
-(def-unique P $ (unique wrote-b : (many (Result (Unit)) o) -> (unique (IO P) next))
-  (WriteFile P "io-dir-test/a.txt" "" wrote-a))
-
-(def-unique P $ (unique made-twice : (many (Result (Change)) o) -> (unique (IO P) next))
-  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
-  (match many c _
-    ((Changed) (WriteOut P "made twice\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))
-    ((Unchanged) (WriteOut P "again\n" (unique-thunk (predates thunk-p) _ _ (WriteFile P "io-dir-test/b.txt" "" wrote-b))))))
-
-(def-unique P $ (unique made-once : (many (Result (Change)) o) -> (unique (IO P) next))
-  (let-match many o (Ok a c) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
-  (match many c _
-    ((Changed) (WriteOut P "made\n" (unique-thunk (predates thunk-p) _ _ (MkDir P "io-dir-test" made-twice))))
-    ((Unchanged) (WriteOut P "already there\n" (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-
-(def-unique P $ (unique swept-dir : (many (Result (Change)) o) -> (unique (IO P) next))
-  (MkDir P "io-dir-test" made-once))
-
-(def-unique P $ (unique swept-b : (many (Result (Change)) o) -> (unique (IO P) next))
-  (DeleteDir P "io-dir-test" swept-dir))
-
-(def-unique P $ (unique swept-a : (many (Result (Change)) o) -> (unique (IO P) next))
-  (DeleteFile P "io-dir-test/b.txt" swept-b))
-
-(DeleteFile P "io-dir-test/a.txt" swept-a)
-; warns: tests/io_dirs.sl:29:60: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:30:55: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:27:70: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:35:54: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:36:59: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:33:70: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:46:70: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:47:57: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:53:31: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:53:118: warning: unnecessary `(subterm _)`; drop it
-; warns: tests/io_dirs.sl:53:71: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:57:30: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:58:45: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:69:57: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:70:54: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:67:70: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:75:51: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:76:62: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_dirs.sl:73:70: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

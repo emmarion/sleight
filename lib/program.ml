@@ -7,7 +7,7 @@ let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } n
 let prelude env name = Option.get (prelude_opt env name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Const (V.VCtorFn c) -> c | _ -> assert false
 
-type final = Elab.final = Main | Io | Thunk of term | Plain
+type final = Elab.final = Main | Program | Thunk of term | Plain
 
 let final = Elab.final
 
@@ -16,31 +16,31 @@ let driver env =
   let build n args = V.construct (c n) args and des n v = V.destruct (c n) v in
   let one n v = match des n v with _, [ x ] -> x | _ -> assert false in
   let request v =
-    let i, fs = des "Exit" v in
-    match ((V.ctor_at (c "Exit").adt i).cname, fs) with
-    | "Exit", [ x ] -> Exit x
-    | "Step", [ k ] -> Step k
-    | "WriteOut", [ s; k ] -> WriteOut (s, k)
-    | "WriteErr", [ s; k ] -> WriteErr (s, k)
-    | "ReadLine", [ k ] -> ReadLine k
-    | "ReadFile", [ p; k ] -> ReadFile (p, k)
-    | "WriteFile", [ p; s; k ] -> WriteFile (p, s, k)
-    | "GetArgs", [ k ] -> GetArgs k
-    | "GetEnv", [ n; k ] -> GetEnv (n, k)
-    | "GetEnvs", [ k ] -> GetEnvs k
-    | "AppendFile", [ p; s; k ] -> AppendFile (p, s, k)
-    | "ReadRemaining", [ k ] -> ReadRemaining k
-    | "ListDir", [ p; k ] -> ListDir (p, k)
-    | "GetCwd", [ k ] -> GetCwd k
-    | "Stat", [ p; k ] -> Stat (p, k)
-    | "MkDir", [ p; k ] -> MkDir (p, k)
-    | "DeleteFile", [ p; k ] -> DeleteFile (p, k)
-    | "DeleteDir", [ p; k ] -> DeleteDir (p, k)
-    | "ConfineDir", [ p; k ] -> ConfineDir (p, k)
-    | "ConfineOutputBytes", [ n; k ] -> ConfineOutputBytes (n, k)
-    | "Measure", [ r; k ] -> Measure (r, k)
+    let i, fs = des "WriteOut" v in
+    match ((V.ctor_at (c "WriteOut").adt i).cname, fs) with
+    | "WriteOut", [ s ] -> WriteOut s
+    | "WriteErr", [ s ] -> WriteErr s
+    | "ReadLine", [] -> ReadLine
+    | "ReadFile", [ p ] -> ReadFile p
+    | "WriteFile", [ p; s ] -> WriteFile (p, s)
+    | "GetArgs", [] -> GetArgs
+    | "GetEnv", [ n ] -> GetEnv n
+    | "GetEnvs", [] -> GetEnvs
+    | "AppendFile", [ p; s ] -> AppendFile (p, s)
+    | "ReadRemaining", [] -> ReadRemaining
+    | "ListDir", [ p ] -> ListDir p
+    | "GetCwd", [] -> GetCwd
+    | "Stat", [ p ] -> Stat p
+    | "MkDir", [ p ] -> MkDir p
+    | "DeleteFile", [ p ] -> DeleteFile p
+    | "DeleteDir", [ p ] -> DeleteDir p
+    | "ConfineDir", [ p ] -> ConfineDir p
+    | "ConfineOutputBytes", [ n ] -> ConfineOutputBytes n
+    | "Measure", [ m ] -> Measure m
     | _ -> assert false
   in
+  let step v = match des "Exit" v with 0, [ x ] -> Exit x | 1, [ k ] -> Continue k | _ -> assert false in
+  let compact v = fst (des "Compact" v) = 0 in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
   let str_of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
   let str_to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
@@ -54,7 +54,7 @@ let driver env =
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
       changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage");
-      request; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
+      request; step; compact; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file
    being read. A contradiction that reaches here escaped every form that would have placed it, and the
@@ -69,6 +69,6 @@ let explain path = function
 let consume w env ty v =
   match final env ty with
   | Main -> (driver env).run_main w v
-  | Io -> w.exit ((driver env).run_io w v)
+  | Program -> let d = driver env in Eval.perform := d.perform w; w.exit (d.run_program w v)
   | Thunk t -> print w (Elab.show_value env Reader.nowhere t (List.hd (Eval.apply v [])))
   | Plain -> print w (Elab.show_value env Reader.nowhere ty v)

@@ -241,15 +241,20 @@
 (let ((many demo-q)) 1000000)
 (let ((erased (Lt demo-q u62-modulus) demo-q-fits)) (prove-literal-lt 1000000 4611686018427387904))
 
+;! suppress warn Succ
+;! suppress warn lt-dec
+;! suppress warn sub
+(def-fns _ $ (many demo-minus : (many (Nat) a) (many (Nat) b) -> (many (Nat) c))
+  (let-match many (lt-dec b (Succ a)) (Yes _ _ le) ((No _ _ _) 0))
+  (let ((many c) (erased p)) (sub a b le))
+  c)
+;! restore warn sub
+;! restore warn lt-dec
+;! restore warn Succ
+
 (def-lvl Demo)
 
-(def-unique Demo $ (unique demo-report : (many (Nat) found) (many (Usage) u) -> (unique (IO Demo) next))
-  (let-match many u (MkUsage wall-ns user-ns sys-ns minor-words promoted-words major-words minor-gcs major-gcs))
-  (WriteOut Demo (str-append "found " (str-append (nat-str found) (str-append "\nwall-ns " (str-append (nat-str wall-ns)
-      (str-append "\nminor-words " (str-append (nat-str minor-words) "\n"))))))
-    (unique-thunk _ _ (Exit Demo (MkU8 (Zero) u8-modulus-pos)))))
-
-(def-unique Demo $ (unique demo-start : -> (unique (IO Demo) next))
+(def-unique Demo $ (unique demo-start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Demo) next))
   (let ((erased xs) (erased asc) (erased small) (erased len) (many cs) (erased rel))
     (gen demo-top demo-top-fits demo-h0r demo-dh0 demo-h0-fits (Nil (Nat)) (AscOne (Nat) Le demo-h0)
       (AllToCons (Nat) Lt demo-h0 (Nil (Nat)) u62-modulus demo-h0-fits (AllToNil (Nat) Lt u62-modulus))
@@ -259,8 +264,15 @@
       (CopiesCons (Nat) demo-h0 (Nil (Nat)) (Nil (Copy (Nat))) (CopiesNil (Nat)))))
   (let ((unique ua)) (list-to-array (Nat) cs))
   (let ((many a)) (share ua))
-  (def-unique _ $ (unique run : -> (many (Nat) found))
+  (let ((unique w1) (many u0)) (world-do _ w (Measure (Compact))))
+  (let ((many found))
     (queries xs small asc (Succ demo-top) len demo-n-fits cs a rel demo-q demo-q-fits (Zero) demo-q (AddZero demo-q) demo-q-fits))
-  (Measure Demo _ _ run demo-report))
+  (let ((unique w2) (many u1)) (world-do _ w1 (Measure (NoCompact))))
+  (let-match many u0 (MkUsage wall0 user0 sys0 minor0 promoted0 major0 minor-gcs0 major-gcs0))
+  (let-match many u1 (MkUsage wall1 user1 sys1 minor1 promoted1 major1 minor-gcs1 major-gcs1))
+  (let ((unique w3) (many _))
+    (world-do _ w2 (WriteOut (str-append "found " (str-append (nat-str found) (str-append "\nwall-ns " (str-append (nat-str (demo-minus wall1 wall0))
+      (str-append "\nminor-words " (str-append (nat-str (demo-minus minor1 minor0)) "\n")))))))))
+  (values w3 (Exit Demo (MkU8 (Zero) u8-modulus-pos))))
 
-(Step Demo demo-start)
+(Continue Demo demo-start)

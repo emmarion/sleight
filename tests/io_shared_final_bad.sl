@@ -1,6 +1,6 @@
 ; error: used at unique
-; The driver consumes an IO value at unique, so a shared one cannot be a program: its continuations are
-; UniqueFns a share has left callable only erased.
+; The driver consumes a Program at unique, so a shared one cannot be a program: its continuation is a
+; UniqueFn a share has left callable only erased.
 
 (def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))

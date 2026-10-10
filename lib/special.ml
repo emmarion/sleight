@@ -3,7 +3,7 @@ type t =
   | Fn | UniqueFn | TyCtor | ValCtor | Matchable
   | CellAlloc | CellWrite | CellMatch | Cell | SlotOf | SlotSelf | AtFnOf | OpenAtFn | At | Share | Match | MatchableOf | NumeralOf | LevelOf | ProveSubterm | ProvePredates | Values
   | PredatesTrans | SubtermTrans | PredatesSubterm
-  | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf | DelegateOf | CoercibleShare | DumpContext | CompileError | CompileWarn
+  | Coerce | CoercibleRefl | CoercibleSym | CoercibleTrans | CoercibleWrap | CoercibleCtor | CoercibleOf | DelegateOf | CoercibleShare | DumpContext | CompileError | CompileWarn | WorldDo
   | Erased | Many | Unique | Colon | Is | Arrow | Subterm | Enum | Union | Tail | NoTail | Delegate | Predates | Absurd | NewtypeMark | Extern | Else
 
 let all =
@@ -15,7 +15,7 @@ let all =
     (PredatesTrans, "predates-trans"); (SubtermTrans, "subterm-trans"); (PredatesSubterm, "predates-subterm");
     (Coerce, "coerce"); (CoercibleRefl, "coercible-refl"); (CoercibleSym, "coercible-sym");
     (CoercibleTrans, "coercible-trans"); (CoercibleWrap, "coercible-wrap"); (CoercibleCtor, "coercible-ctor");
-    (CoercibleOf, "coercible-of"); (DelegateOf, "delegate-of"); (CoercibleShare, "coercible-share"); (DumpContext, "dump-context"); (CompileError, "compile-error"); (CompileWarn, "compile-warn");
+    (CoercibleOf, "coercible-of"); (DelegateOf, "delegate-of"); (CoercibleShare, "coercible-share"); (DumpContext, "dump-context"); (CompileError, "compile-error"); (CompileWarn, "compile-warn"); (WorldDo, "world-do");
     (Erased, "erased"); (Many, "many"); (Unique, "unique"); (Colon, ":"); (Is, "is"); (Arrow, "->"); (Subterm, "subterm");
     (Enum, "enum"); (Union, "union"); (Tail, "tail"); (NoTail, "notail"); (Delegate, "delegate"); (Predates, "predates");
     (Absurd, "absurd"); (NewtypeMark, "newtype"); (Extern, "extern"); (Else, "else") ]

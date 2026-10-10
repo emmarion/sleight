@@ -1085,7 +1085,7 @@ let normalize code =
    39): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store, an
    allocation or a call that was not skipped. *)
 let rec erases_to_nothing = function
-  | V.CApp _ | V.CCellAlloc _ | V.CCellWrite _ | V.CCellCopy _ -> false
+  | V.CApp _ | V.CCellAlloc _ | V.CCellWrite _ | V.CCellCopy _ | V.CWorldDo _ -> false
   | V.CLetRec (_, rest) -> erases_to_nothing rest
   | c -> List.for_all erases_to_nothing (V.subcodes c)
 
@@ -1097,7 +1097,7 @@ let demanded env demand mult ty =
   match demand with
   | Fixed -> mult
   | CallableHead pos -> (match canon env ty with Cell _ -> pos | UniqueFn _ -> Unique | _ -> Many)
-  | Driver -> if nullary env "IO" ty then Unique else Many
+  | Driver -> if nullary env "Program" ty then Unique else Many
 
 let rec elab_expr ?sink ?(demand = Fixed) ?(cc = V.Plain) ?tele ?(final = false) env expect raw : Env.t * res list * V.code =
   let l = loc raw in
@@ -1267,9 +1267,15 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
           warn_in env al [] "unnecessary %s; drop it" (tick (Printf.sprintf "(%s _)" (speller env (match a with `Predates _ -> "predates" | `Subterm _ -> "subterm"))));
         env'
   in
+  let callee_name () = match callee.term with Var x -> qname env x | _ -> "this call" in
+  call_returns ?sink ~demand env expect l callee_name acc rets (fun env ->
+    let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, lazy (qshow env callee.term)) | _ -> cc in
+    if skipped then V.CValues [] else V.CApp (hcode, codes, cc))
+
+and call_returns ?sink ~demand env expect l callee_name acc rets inner =
+  let pos = pos_of env expect in
   let env, ids = open_tele env ~word:false ~names:(anon rets) ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
   count_check ?sink l expect ids;
-  let callee_name () = match callee.term with Var x -> qname env x | _ -> "this call" in
   List.iter2 (fun (m, (e : entry)) x ->
     let name = match e.name with Some n -> tick_name n ^ " " | None -> "" in
     let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
@@ -1277,15 +1283,14 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
     (List.combine expect rets) ids;
   let code =
     if pos = Erased then V.CErased else
-    let cc = match env.level with At cur when cc = V.Plain && same cur -> V.Same (l, lazy (qshow env callee.term)) | _ -> cc in
-    reconstruct ~always:true ~init:acc ~expect:(List.map2 (fun m (e : entry) -> under m e.mult) expect rets) env l rets ids (if skipped then V.CValues [] else V.CApp (hcode, codes, cc))
+    reconstruct ~always:true ~init:acc ~expect:(List.map2 (fun m (e : entry) -> under m e.mult) expect rets) env l rets ids (inner env)
   in
   (env, List.map (res_of env) ids, code)
 
 and elab_special ?sink ?final demand tele env expect l sp args =
   let pos = pos_of env expect in
   let m =
-    if List.mem sp (Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
+    if List.mem sp (Sp.WorldDo :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
   in
   let expected_type env = match tele with
@@ -1397,6 +1402,14 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       in
       (env, List.rev ress, if pos = Erased then V.CErased else V.CValues (List.rev codes))
   | Sp.Match, _ -> elab_match ~demand ?final tele env expect l args
+  | Sp.WorldDo, _ ->
+      let request = match prelude_id env "Request" with Some r -> r | None -> error l "`world-do` needs the prelude's `Request`" in
+      let e ?place name mult t = { name = Some name; subterm = false; mult; sg = Ty t; place; loc = Reader.nowhere } in
+      let params = [ e "A" Erased type_term; e "w" Unique Prelude.world_term; e "req" Unique (App (Var request, [ Bound 1 ])) ] in
+      let rets = [ e ~place:(SlotOf (Bound 1)) "w2" Unique Prelude.world_term; e "r" Many (Bound 3) ] in
+      let c = { subject = lazy "`world-do`"; apposed = false; notes = lazy []; used = under pos; marks = true } in
+      let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
+      call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.nth codes 1))
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name sp)));
       let cc = match sp with Sp.Tail -> V.Tail | Sp.NoTail -> V.NoTail | _ -> V.Delegate in
@@ -2271,7 +2284,7 @@ and elab_def_adts env adts =
   let env, cids = List.fold_left2 define (env, []) tids headers in
   (env, if env.run_pos then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
-type final = Main | Io | Thunk of term | Plain
+type final = Main | Program | Thunk of term | Plain
 
 let final_form env ty =
   let bare string e = match e with { mult = Many; sg = Ty t; place = None; subterm = false; _ } -> (not string) || nullary env "String" t | _ -> false in
@@ -2279,7 +2292,7 @@ let final_form env ty =
   | Fn (_, [ p ], [ r ]) when bare true p && bare true r -> Some Main
   | Fn (_, [], [ ({ sg = Ty t; _ } as r) ]) when bare false r -> Some (Thunk t)
   | Fn _ | UniqueFn _ -> None
-  | _ -> Some (if nullary env "IO" ty then Io else Plain)
+  | _ -> Some (if nullary env "Program" ty then Program else Plain)
 
 let final env ty = Option.value (final_form env ty) ~default:Plain
 

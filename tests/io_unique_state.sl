@@ -2,9 +2,9 @@
 ; stdin: two
 ; stdin: three
 ; exit: 3
-; A continuation owns a unique value across requests: the counter is captured at unique by the def-unique
-; each ReadLine wraps, updated in place through its cell when the next line arrives, and read off at the
-; end. Under Fn continuations the closure could hold it only shared, and no request could mutate it.
+; A continuation owns a unique value across steps: the counter is captured at unique by the def-unique each
+; step returns, updated in place through its cell when the next line arrives, and read off at the end.
+; Under Fn continuations the closure could hold it only shared, and no step could mutate it.
 
 (def-adts $ (Counter : -> Type)
   enum
@@ -15,25 +15,21 @@
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased nat-p0)) (prove-predates nat-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
 
-(def-fns PA $ (many count : (unique (Counter) c) (many (Maybe (String)) line) -> (unique (IO P) next))
+(def-fns PA $ (many count : (unique (Counter) c) (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next))
+  (let ((unique w1) (many line)) (world-do _ w (ReadLine)))
   (match many line _
     ((None a)
       (let-match unique c (MkCounter n cell))
-      (match many (lt-dec (predates nat-p0) n u8-modulus) _
-        ((Yes x y p) (Exit P (MkU8 n p)))
-        ((No x y q) (Exit P code0))))
+      (match many (lt-dec n u8-modulus) _
+        ((Yes x y p) (values w1 (Exit P (MkU8 n p))))
+        ((No x y q) (values w1 (Exit P code0)))))
     ((Some a s)
       (let ((unique (Counter) c2)) (match unique c _ ((MkCounter n cell) (cell (Succ n)))))
-      (def-unique P $ (unique again : (many (Maybe (String)) next-line) -> (unique (IO P) next)) (count (predates pa-p) c2 next-line))
-      (ReadLine P again))))
+      (def-unique P $ (unique again : (unique (World) v) -> (unique (World) v2 at v) (unique (Program P) next)) (count c2 v))
+      (values w1 (Continue P again)))))
 
 (let ((unique (Counter) counter)) (MkCounter 0))
-(def-unique P $ (unique start : (many (Maybe (String)) line) -> (unique (IO P) next)) (count (predates pa-p) counter line))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) next)) (count counter w))
 
-(ReadLine P start)
-; warns: tests/io_unique_state.sl:25:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_unique_state.sl:30:105: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_unique_state.sl:34:94: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

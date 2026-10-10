@@ -360,6 +360,7 @@ and expr cx scope code = match code with
       let stores = match field_write cx k name ss with "" -> "" | w -> w ^ "; " in
       let source = expr cx scope c in
       Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
+  | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =
@@ -521,6 +522,7 @@ let driver cx =
   let un n arm = let a = (c n).adt in lam [ "v" ] (dispatch cx a (all a) "v" (List.map (fun ct -> let fs = fields ct in (ct, fs, arm ct fs)) a.V.ctors) None) in
   let option n = un n (fun ct fs -> if ct.V.cname = n then Printf.sprintf "(Some (%s))" (concat ", " fs) else "None") in
   let field n = un n (fun _ fs -> List.hd fs) in
+  let variant ct fs = Printf.sprintf "(Driver_core.%s%s)" ct.V.cname (if fs = [] then "" else " (" ^ concat ", " fs ^ ")") in
   let ops =
     [ ("zero", make "Zero"); ("succ", make "Succ"); ("pred", option "Succ");
       ("u8", make "MkU8"); ("un_u8", field "MkU8"); ("char", make "MkChar"); ("un_char", field "MkChar");
@@ -529,7 +531,8 @@ let driver cx =
       ("cons", make "Cons"); ("nil", make "Nil"); ("pair", make "MkPair");
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
       ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")");
-      ("request", un "Exit" (fun ct fs -> Printf.sprintf "(Driver_core.%s (%s))" ct.V.cname (concat ", " fs)));
+      ("request", un "WriteOut" variant); ("step", un "Exit" variant);
+      ("compact", un "Compact" (fun ct _ -> string_of_bool (ct.V.cname = "Compact")));
       ("apply", apply_ocaml) ]
   in
   let host = (match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "")
@@ -539,7 +542,7 @@ let driver cx =
 let world = { Driver_core.read_rest = (fun () -> In_channel.input_all stdin); read_line = (fun () -> In_channel.input_line stdin); out = flush_to stdout; err = flush_to stderr; args = List.tl (Array.to_list Sys.argv); env = Sys.getenv_opt; envs = Driver_core.host_envs; cwd = Sys.getcwd; exit; print = print_endline; fence = ref "/"; limit = ref max_int; used = ref 0 }
 let world = Driver_core.start %s %s %b world
 let print_final = Driver_core.print world
-let run_io = driver.run_io world
+let run_program = driver.run_program world
 let run_main = driver.run_main world
 |} (quote !fence) (match !output_bytes with Some b -> "(Some " ^ quote b ^ ")" | None -> "None") !with_env
 
@@ -556,7 +559,7 @@ let item cx = function
             let e = value cx v in
             match kind with
             | Program.Main -> Printf.sprintf "run_main %s" e
-            | Io -> Printf.sprintf "exit (run_io %s)" e
+            | Program -> Printf.sprintf "exit (run_program %s)" e
             | Thunk t -> Printf.sprintf "print_final (%s ((Obj.obj %s : unit -> Obj.t) ()))" (show cx cx.env t) e
             | Plain -> Printf.sprintf "print_final (%s %s)" (show cx cx.env ty) e)
       in

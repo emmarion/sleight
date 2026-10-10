@@ -17,79 +17,33 @@
 ; one it does not is refused whether it names something or not, the fence only narrows, and the fence's own
 ; directory is inside it, so the test removes all it made.
 
-(def-lvl PA)
-(def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
-(let ((erased str-pa)) (prove-predates str-lvl PA))
-(let ((erased pa-p)) (prove-predates PA P))
-(let ((erased thunk-pa)) (prove-predates thunk-lvl PA))
 
-(def-fns PA $ (many report : (erased Type A) (many (String) label) (many (Result A) r) (unique (IO P) next) -> (unique (IO P) io))
-  (WriteOut P (str-append (predates str-pa) label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n"))
-    (unique-thunk (predates thunk-pa) _ _ next)))
+(def-fns _ $ (many report : (erased Type A) (many (String) label) (unique (World) w) (unique (Request (Result A)) req) -> (unique (World) w2 at w))
+  (let ((unique w1) (many r)) (world-do _ w req))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteOut (str-append label $ match many r (((String) _)) ((Ok a x) " ok\n") ((Fail a m) " refused\n")))))
+  w2)
 
-(def-unique P $ (unique s14 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "delete fence" r (Exit P code0)))
+(def-lvl P)
 
-(def-unique P $ (unique s13 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "delete in" r (DeleteDir P "io-confine-test" s14)))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1)) (report _ "mkdir" w (MkDir "io-confine-test")))
+  (let ((unique w2)) (report _ "confine" w1 (ConfineDir "io-confine-test")))
+  (let ((unique w3)) (report _ "widen" w2 (ConfineDir ".")))
+  (let ((unique w4)) (report _ "mkdir in" w3 (MkDir "io-confine-test/in")))
+  (let ((unique w5)) (report _ "same fence" w4 (ConfineDir "io-confine-test/in/..")))
+  (let ((unique w6)) (report _ "write" w5 (WriteFile "io-confine-test/in/a.txt" "hi")))
+  (let ((unique w7)) (report _ "read" w6 (ReadFile "io-confine-test/in/../in/a.txt")))
+  (let ((unique w8)) (report _ "stat absent" w7 (Stat "io-confine-test/nope")))
+  (let ((unique w9)) (report _ "stat parent" w8 (Stat "io-confine-test/..")))
+  (let ((unique w10)) (report _ "list cwd" w9 (ListDir ".")))
+  (let ((unique w11)) (report _ "write outside" w10 (WriteFile "io-confine-test/../io-confine-escape.txt" "x")))
+  (let ((unique w12)) (report _ "confine file" w11 (ConfineDir "io-confine-test/in/a.txt")))
+  (let ((unique w13)) (report _ "delete file" w12 (DeleteFile "io-confine-test/in/a.txt")))
+  (let ((unique w14)) (report _ "delete in" w13 (DeleteDir "io-confine-test/in")))
+  (let ((unique w15)) (report _ "delete fence" w14 (DeleteDir "io-confine-test")))
+  (values w15 (Exit P code0)))
 
-(def-unique P $ (unique s12 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "delete file" r (DeleteDir P "io-confine-test/in" s13)))
-
-(def-unique P $ (unique s11 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine file" r (DeleteFile P "io-confine-test/in/a.txt" s12)))
-
-(def-unique P $ (unique s10 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "write outside" r (ConfineDir P "io-confine-test/in/a.txt" s11)))
-
-(def-unique P $ (unique s9 : (many (Result (List (String))) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "list cwd" r (WriteFile P "io-confine-test/../io-confine-escape.txt" "x" s10)))
-
-(def-unique P $ (unique s8 : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "stat parent" r (ListDir P "." s9)))
-
-(def-unique P $ (unique s7 : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "stat absent" r (Stat P "io-confine-test/.." s8)))
-
-(def-unique P $ (unique s6 : (many (Result (String)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "read" r (Stat P "io-confine-test/nope" s7)))
-
-(def-unique P $ (unique s5 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "write" r (ReadFile P "io-confine-test/in/../in/a.txt" s6)))
-
-(def-unique P $ (unique s4 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "same fence" r (WriteFile P "io-confine-test/in/a.txt" "hi" s5)))
-
-(def-unique P $ (unique s3 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "mkdir in" r (ConfineDir P "io-confine-test/in/.." s4)))
-
-(def-unique P $ (unique s2 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "widen" r (MkDir P "io-confine-test/in" s3)))
-
-(def-unique P $ (unique s1 : (many (Result (Unit)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "confine" r (ConfineDir P "." s2)))
-
-(def-unique P $ (unique s0 : (many (Result (Change)) r) -> (unique (IO P) next))
-  (report (predates pa-p) _ "mkdir" r (ConfineDir P "io-confine-test" s1)))
-
-(MkDir P "io-confine-test" s0)
-; warns: tests/io_confine.sl:30:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:31:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:34:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:37:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:40:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:43:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:46:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:49:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:52:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:55:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:58:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:61:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:64:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:67:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:70:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:73:11: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_confine.sl:76:11: warning: unnecessary `(predates _)`; drop it
+(Continue P start)

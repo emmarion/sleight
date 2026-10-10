@@ -5,74 +5,40 @@
 ; AppendFile adds to what WriteFile left; Stat names what a path holds, Missing being an ordinary answer.
 ; GetCwd's value is the machine's, so the test asks Stat what it names rather than printing it.
 
-(def-lvl PA)
-(def-lvl P)
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za0 zb0 zp0))
 (let ((many code0)) (MkU8 0 zp0))
 (let ((many d1)) (lt-dec 1 u8-modulus))
 (comptime-match many d1 (Yes za1 zb1 zp1))
 (let ((many code1)) (MkU8 1 zp1))
-(let ((erased str-p)) (prove-predates str-lvl P))
-(let ((erased pa-p)) (prove-predates PA P))
-(let ((erased thunk-p)) (prove-predates thunk-lvl P))
 
-(def-fns PA $ (many kind-name : (many (EntryKind) k) -> (many (String) s))
+(def-fns _ $ (many kind-name : (many (EntryKind) k) -> (many (String) s))
   (match many k _
     ((IsFile) "file")
     ((IsDir) "dir")
     ((IsOther) "other")
     ((Missing) "missing")))
 
-(def-unique P $ (unique cleaned : (many (Result (Change)) o) -> (unique (IO P) next))
-  (Exit P code0))
+(def-fns _ $ (many show-kind : (many (String) label) (many (Result (EntryKind)) r) (unique (World) w) -> (unique (World) w2 at w))
+  (let ((unique w1) (many _)) (world-do _ w $ match many r (((Request (Unit)) _))
+    ((Ok a k) (WriteOut (str-append label (str-append (kind-name k) "\n"))))
+    ((Fail a m) (WriteErr m))))
+  w1)
 
-(def-unique P $ (unique cwd-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (let-match many r (Ok a k) ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1)))))
-  (WriteOut P (str-append (predates str-p) "cwd: " (str-append (predates str-p) (kind-name (predates pa-p) k) "\n"))
-    (unique-thunk (predates thunk-p) _ _ (DeleteFile P "io-stat-test.txt" cleaned))))
+(def-lvl P)
 
-(def-unique P $ (unique got-cwd : (many (String) path) -> (unique (IO P) next))
-  (Stat P path cwd-kind))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((unique w1) (many _)) (world-do _ w (DeleteFile "io-stat-test.txt")))
+  (let ((unique w2) (many _)) (world-do _ w1 (WriteFile "io-stat-test.txt" "one")))
+  (let ((unique w3) (many _)) (world-do _ w2 (AppendFile "io-stat-test.txt" "two")))
+  (let ((unique w4) (many read)) (world-do _ w3 (ReadFile "io-stat-test.txt")))
+  (let-match many read (Ok a s) ((Fail a m) (let ((unique w5) (many _)) (world-do _ w4 (WriteErr m))) (values w5 (Exit P code1))))
+  (let ((unique w5) (many _)) (world-do _ w4 (WriteOut (str-append s "\n"))))
+  (let ((unique w6) (many file)) (world-do _ w5 (Stat "io-stat-test.txt")))
+  (let ((unique w7) (many none)) (world-do _ (show-kind "" file w6) (Stat "io-stat-test-none")))
+  (let ((unique w8) (many cwd)) (world-do _ (show-kind "" none w7) (GetCwd)))
+  (let ((unique w9) (many here)) (world-do _ w8 (Stat cwd)))
+  (let ((unique w10) (many _)) (world-do _ (show-kind "cwd: " here w9) (DeleteFile "io-stat-test.txt")))
+  (values w10 (Exit P code0)))
 
-(def-unique P $ (unique none-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates pa-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (GetCwd P got-cwd))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-
-(def-unique P $ (unique file-kind : (many (Result (EntryKind)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a k) (WriteOut P (str-append (predates str-p) (kind-name (predates pa-p) k) "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test-none" none-kind))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-
-(def-unique P $ (unique read-back : (many (Result (String)) r) -> (unique (IO P) next))
-  (match many r _
-    ((Ok a s) (WriteOut P (str-append (predates str-p) s "\n") (unique-thunk (predates thunk-p) _ _ (Stat P "io-stat-test.txt" file-kind))))
-    ((Fail a m) (WriteErr P m (unique-thunk (predates thunk-p) _ _ (Exit P code1))))))
-
-(def-unique P $ (unique appended : (many (Result (Unit)) o) -> (unique (IO P) next))
-  (ReadFile P "io-stat-test.txt" read-back))
-
-(def-unique P $ (unique wrote : (many (Result (Unit)) o) -> (unique (IO P) next))
-  (AppendFile P "io-stat-test.txt" "two" appended))
-
-(def-unique P $ (unique swept : (many (Result (Change)) o) -> (unique (IO P) next))
-  (WriteFile P "io-stat-test.txt" "one" wrote))
-
-(DeleteFile P "io-stat-test.txt" swept)
-; warns: tests/io_stat.sl:32:92: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:32:64: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:32:27: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:33:19: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:31:70: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:40:67: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:40:39: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:40:106: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:41:45: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:45:67: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:45:39: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:45:106: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:46:45: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:50:39: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:50:78: warning: unnecessary `(predates _)`; drop it
-; warns: tests/io_stat.sl:51:45: warning: unnecessary `(predates _)`; drop it
+(Continue P start)
