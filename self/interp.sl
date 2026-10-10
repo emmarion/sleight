@@ -18,7 +18,7 @@
 ; ---- The compiler's command-line flags (self/main.sl).
 ; The flags slc takes alone, and those taking the argument after them.
 (def-fns _ $ (many switches : -> (many (List $ String) r))
-  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Nil _))
+  (Cons _ "--no-prelude" $ Cons _ "--no-templates" $ Cons _ "--interpret" $ Cons _ "--no-env" $ Cons _ "--first-error" $ Cons _ "--no-shape-note" $ Cons _ "--warnings-as-errors" $ Cons _ "--warn-unused" $ Nil _))
 
 (def-fns _ $ (many valued : -> (many (List $ String) r))
   (Cons _ "--confine-dir" $ Cons _ "--confine-output-bytes" $ Cons _ "--hints" $ Nil _))

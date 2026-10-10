@@ -7,6 +7,7 @@
    "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
+   "; warn-unused: yes" checks the test's own binders as --warn-unused does;
    "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
@@ -94,7 +95,9 @@ and run_mode name externs src =
     try
       let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
       let prelude = directive src "prelude" <> [ "none" ] in
+      Env.warn_unused := false;
       let env = List.fold_left one (if externs && prelude then Lazy.force preloaded else Builtin.load ~prelude ()) needs in
+      Env.warn_unused := directive src "warn-unused" <> [];
       Buffer.clear printed;
       Buffer.clear warnings;
       Env.trace := List.filter (function Env.Final _ -> false | _ -> true) !Env.trace;

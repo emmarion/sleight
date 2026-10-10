@@ -44,7 +44,7 @@
   (values (say-to (BTrue) (str-cat3 "slc: " m "\n") w) (Exit _ exit-fail)))
 
 (def-fns run-lvl $ (many usage : (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--warnings-as-errors] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml" w))
+  (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml" w))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
@@ -56,7 +56,7 @@
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
   (let ((many builtins)) (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help))
-  (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) prelude)
+  (let ((many env)) $ run-files (not $ has-flag flags "--no-shape-note") srcs (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
   (let ((many by-warnings)) $ and (has-flag flags "--warnings-as-errors") $ and (not $ env-failed env) $ said-failed (BTrue) $ env-said env)
   (let ((unique w1)) $ write-lines (match many by-warnings (((List $ String) _)) ((BTrue) (Cons _ "slc: warnings are treated as errors (--warnings-as-errors)" $ Nil _)) ((BFalse) (Nil _)))
     $ write-lines (shown (has-flag flags "--first-error") (list-rev _ $ env-said env) (BFalse) $ Nil _) w)

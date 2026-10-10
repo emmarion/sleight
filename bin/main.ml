@@ -41,7 +41,7 @@ let () =
   let rec split acc = function [] -> (List.rev acc, []) | "--" :: rest -> (List.rev acc, rest) | a :: rest -> split (a :: acc) rest in
   let args, program_args = split [] (List.tl (Array.to_list Sys.argv)) in
   let valued = [ "--extract"; "--confine-dir"; "--confine-output-bytes"; "--hints" ]
-  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors" ] in
+  and switches = [ "--repl"; "--no-extern"; "--no-templates"; "--no-prelude"; "--no-env"; "--no-shape-note"; "--warnings-as-errors"; "--warn-unused" ] in
   let rec read flags files = function
     | [] -> (flags, List.rev files)
     | f :: v :: rest when List.mem f valued -> read ((f, v) :: flags) files rest
@@ -72,6 +72,7 @@ let () =
     pending := [];
     env
   in
+  Env.warn_unused := flag "--warn-unused";
   let env = Builtin.load ~prelude:(not (flag "--no-prelude")) () in
   let env =
     match files with

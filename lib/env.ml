@@ -586,7 +586,29 @@ let kind_name env ty =
 
 let declared_as env x = declared env x |> List.map (fun (l, m) -> (l, kind_name env (type_of env x) ^ " " ^ m))
 
+type binder_kind = Let of int * bool | Param | Field | Optional | Definition
+type tracked = { binder : string; at : Reader.loc; kind : binder_kind; mult : mult; erased_scope : bool }
+
+let warn_unused = ref false
+let tracked : (id, tracked) Hashtbl.t = Hashtbl.create 64
+let stands_for : (id, id) Hashtbl.t = Hashtbl.create 64
+let referenced : (id, bool) Hashtbl.t = Hashtbl.create 64
+
+let track env kind x =
+  if !warn_unused then
+    let e = entry env x in
+    match e.name with
+    | Some binder when Reader.placed e.at -> Hashtbl.replace tracked x { binder; at = e.at; kind; mult = e.mult; erased_scope = env.usage_erased }
+    | _ -> ()
+
+let stand_for x y = if !warn_unused then Hashtbl.replace stands_for x y
+
+let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset stands_for; Hashtbl.reset referenced
+
+let refer ?(live = false) x = if !warn_unused then Hashtbl.replace referenced x (live || Hashtbl.find_opt referenced x = Some true)
+
 let use env loc ?(sharing = false) ?written mult x =
+  refer ~live:(mult <> Erased && not env.usage_erased) x;
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
   let explain () = match Hashtbl.find_opt literal_of x with
