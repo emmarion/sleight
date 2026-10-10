@@ -187,13 +187,15 @@ was considered and dropped.
 ### The world
 
 ```scheme
-(world-do w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
-                   (unique (World) w2 at w) (many A r)
+(world-do A w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
+                     (unique (World) w2 at w) (many A r)
 ```
 
 Decided: one special form, not a function, performs every request, in place
 of one operation per row. It names the prelude's own `Request`, so like
-literals it does not exist under `--no-prelude`.
+literals it does not exist under `--no-prelude`. Decided: its answer type `A`
+is written as its first argument, as an erased argument of a call is, and
+may be `_` to be inferred.
 
 ## 4. Rules
 
