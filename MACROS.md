@@ -1,0 +1,261 @@
+# Macros: design notes
+
+Notes from a design session with the owner on a simple macro system, its
+reflection forms, and a threaded `World` replacing `IO`. Nothing here is in
+DESIGN.md yet; the owner chose to write DESIGN.md's wording last. Each item
+says whether the owner decided it ("Decided") or a session proposed it and
+the owner has not reviewed it ("Proposed"). Claims about soundness are the
+session's reasoning, not the owner's, and are hedged accordingly.
+
+## 1. Built-ins
+
+Bound before any file is read, beside `Slot` and `Sharing` (DESIGN.md §42).
+
+```scheme
+(def-adts $ (Mult : -> Type)
+  enum
+  (many MErased : -> (Mult))
+  (many MMany : -> (Mult))
+  (many MUnique : -> (Mult)))
+
+(def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
+  enum
+  (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
+
+Const      : (TyCtor ((Mult) m) (Type T) (T t) -> Type)
+MacroWorld : (TyCtor -> Type)
+Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
+World      : (TyCtor -> Type)
+```
+
+- `Mult`: Decided that it is a new ADT rather than `Sharing`. Its name and
+  its constructors' names are open (they must not clash with `Sharing`'s
+  `Unique` or with the annotation tokens).
+- `JMEq`: Decided. Whether it is built in or in the source prelude is open.
+- `Const`: Decided that it is opaque and not an ADT, like `Slot`: no
+  constructors, no `Matchable`, not erased by kind. A handle
+  `(Const m T t)` denotes `t`, held at multiplicity `m`. Decided that its
+  run-time value may be a term rather than an entry id; proposed that it is
+  a closed term over run-position entries, plus the value for an `MMany`
+  handle.
+- `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque,
+  not erased by kind. It is a handle on the elaborator's program store
+  (section 4), passed `unique` to a macro and returned `at` itself.
+- `Gensym`: Decided. Opaque and erased by kind: a witness that `n` was
+  minted, with text `s`. Nothing produces one but `gensym`.
+- `World`: Decided, replacing `IO`. Opaque, not erased by kind. Only the
+  driver supplies one.
+
+## 2. Prelude types
+
+```scheme
+(def-adts $ (Pos : -> Type)
+  enum
+  (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
+
+(def-adts $ (Symbol : -> Type)
+  enum
+  (many SName : (many (String) s) -> (Symbol))
+  (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
+(def-adts
+  ((Atom : -> Type)
+    enum extern
+    (many AName : (many (Symbol) y) -> (Atom))
+    (many AConst : (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Atom)))
+  ((Raw : -> Type)
+    enum extern
+    (many RAtom : (many (Pos) pos) (many (Atom) a) -> (Raw))
+    (many RList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
+  ((Macro : -> Type)
+    enum newtype
+    (many MkMacro : (erased (Level) L)
+       (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+                 (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
+       -> (Macro))))
+
+(def-adts $ (Program : ((Level) L) -> Type)
+  enum
+  (many Halt : (erased (Level) L) (many (U8) code) -> (Program L))
+  (many Continue : (erased (Level) L)
+     (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
+     -> (Program L)))
+```
+
+- `Pos`, `Symbol`, `Atom`, `Raw`, `Macro`, `Program`: Decided, as written.
+- `Atom` and `Raw` are `extern`: Decided. The intent is that their
+  representation is the reader's own syntax tree, so a macro's arguments and
+  output are passed without copying; copying would let nested expansions
+  cost exponentially more than the macros' own work.
+- `AConst` is itself the existential over `m`, `A` and `a` (Decided; an
+  earlier separate `SomeConst` wrapper was dropped).
+- `Atom` has no literal constructors for now (Decided: deferred). A macro
+  gets a literal by interning it (section 3).
+- `Program`: the name is Decided. `Halt` and `Continue` are the session's
+  constructor names; the owner may prefer `Exit` and `Step`.
+
+`symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)`
+is ordinary prelude code (Decided that equality returns a proof): `str-cmp`
+for names; for gensyms, `nat-cmp` on the ids and then `gensym-unique` in the
+`CEq` branch. A session checked this with the current checker against
+stand-ins for `Gensym` and `gensym-unique`; without the `gensym-unique` step
+the `Refl` does not check, which suggests the axiom is exactly what the
+gensym case needs.
+
+## 3. Special forms
+
+### Handles
+
+```scheme
+(constant-of m x)  : (many (Const m' T x) h)
+    ; x a Const entry; T its type; m erased: any entry; many: x declared many;
+    ; unique: x declared unique; m' the matching Mult
+(constant-type c)  : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+                     (many (Const (MErased) Type T) h)
+(const-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+                     (many m is r)
+(unwrap c)         : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)
+```
+
+All Decided. Proposed: `constant-of` resolves `x` through its aliases to the
+run-position entry it forwards from, so that a handle never names an entry
+that a scope can drop. There is no `unwrap` for erased handles (it would
+only rename the handle's own erased index) and none for unique handles (a
+macro's read would happen outside the elaborator's use accounting, possibly
+after the value was consumed and mutated in place). A `constant-slot` form
+was considered and dropped.
+
+### The macro world
+
+```scheme
+(const-eq mw p q)     : (unique (MacroWorld) mw) (many (Const ma A a) p) (many (Const mb B b) q) ->
+                        (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
+(gensym mw s)         : (unique (MacroWorld) mw) (many (String) s) ->
+                        (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
+(gensym-unique a b)   : (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+                        (erased (JMEq (Gensym n s) a (Gensym n t) b) e)
+(intern-nat mw n)     : (unique (MacroWorld) mw) (many (Nat) n) ->
+                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)
+(intern-char mw c)    : (unique (MacroWorld) mw) (many (Char) c) ->
+                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)
+(intern-string mw s)  : (unique (MacroWorld) mw) (many (String) s) ->
+                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)
+(read-file mw path)   : (unique (MacroWorld) mw) (many (String) path) ->
+                        (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)
+    ; read-file is jailed: after resolving symlinks, the path must lie in the directory, or a
+    ; subdirectory, of at least one of the program's source files; any other path answers Fail
+```
+
+- `const-eq`: Decided. Proposed: it answers from run-position facts only,
+  never branch-forced ones, so that a `Just` stays true wherever the
+  macro's output goes and a call expands the same way in every branch.
+- `gensym`, `gensym-unique`: Decided. `gensym-unique` is the one axiom; it
+  is meant to rest on the counter minting each `n` once, with one text.
+- `intern-nat`, `intern-char`, `intern-string`: Decided that a macro
+  interns literals through the macro world; the exact signatures are
+  Proposed.
+- `read-file` and its jail: Decided.
+
+### Errors
+
+```scheme
+(compile-error "text")  ; any position: an error at the form's position
+(compile-warn "text")   ; a statement: a warning at the form's position
+```
+
+Decided. The argument is a string literal, and either form fires wherever
+it is elaborated, erased code included.
+
+### The world
+
+One operation per row of DESIGN.md §42's `IO` table, each threading the
+world `at` itself: `world-write-out`, `world-write-err`, `world-read-line`,
+`world-read-remaining`, `world-read-file`, `world-write-file`,
+`world-append-file`, `world-list-dir`, `world-stat`, `world-mkdir`,
+`world-delete-file`, `world-delete-dir`, `world-get-args`, `world-get-env`,
+`world-get-envs`, `world-get-cwd`, `world-confine-dir`,
+`world-confine-output-bytes`, and the prelude's further requests. For
+example:
+
+```scheme
+(world-read-line w) : (unique (World) w) -> (unique (World) w2 at w) (many (Maybe (String)) r)
+```
+
+Decided that `World` replaces `IO`; the operations' names are Proposed.
+
+## 4. Rules
+
+1. Expansion (Decided). A `Macro` head dispatches as a special form does
+   (DESIGN.md §6) and expands in statement, final, expression and type
+   positions. In statement position each item of the result is a
+   statement; in final position the last item is the final form and the
+   rest are statements before it; anywhere else the result must be exactly
+   one item. Arguments arrive unexpanded and unresolved; the head is not
+   passed. Expansion is limited to 10000 expansions.
+2. Arguments (Proposed). A source name arrives as `(AName (SName s))`; a
+   source literal as an `MMany` handle to its interned entry.
+3. Names (Decided). A name resolves exactly. `SName s` is the source's own
+   name `s`; `SGen n s g` is identified by `n` alone, and a message shows it
+   as `_n_s`. A macro may build a name the reader never yields; the owner
+   intends to forbid that eventually.
+4. Handles (Proposed). An `AConst` resolves to its term directly, bypassing
+   scope. In a non-erased position it must be an entry. Splicing a unique
+   handle is a use at the splice site, checked as usual.
+5. The macro world (Decided). It is the elaborator's program store: the
+   run-position entries with their values and facts, the literal table, the
+   gensym counter and the expansion count. It is threaded sequentially
+   through all of elaboration, carried out of every scope where uses are
+   carried now, and passed along rather than joined. Proposed: it never
+   escapes an expansion, having no constructor and being no entry.
+6. Threading (Decided). A helper that takes a macro world or a world
+   returns it `at` its parameter.
+7. Supply. Only the expander supplies a macro world, and only the driver
+   supplies a world, so that no run-position statement performs world
+   effects while compiling.
+8. The driver (Decided). A file's final value is a `(unique (Program L) p)`.
+   On `Halt code` the driver exits with `code`; on `Continue k` it applies
+   `k` to the world and continues with the `Program` it returns. Unbounded
+   interaction stays a driver loop over total functions.
+
+## 5. Soundness, as a session argues it
+
+- A macro is untrusted: its output is elaborated and checked like source,
+  so reflection should only be able to steer what it generates.
+- `const-eq` answers `Just` only from facts that hold unconditionally.
+- A handle denotes its index because only built-in forms create handles.
+- A gensym cannot be forged: building an `SGen` at `many` needs an erased
+  `Gensym` witness, and only `gensym` makes one.
+- Not yet checked: that neither erasure nor at-function skipping
+  (DESIGN.md §39) can drop a world effect. The session believes neither can,
+  since a function that performs one does not erase to nothing, but this
+  should be settled by compiling cases.
+
+## 6. Open questions
+
+1. The names of `Mult` and its constructors, `Const`, the world operations,
+   and `Program`'s constructors.
+2. Where `JMEq` lives, which decides whether `const-eq` and `gensym-unique`
+   exist under `--no-prelude`.
+3. Whether the macro world resolves names at the call site; if so it must
+   also carry the call site's scope.
+4. Whether `gensym` returns a `Symbol` directly or its parts, as above.
+5. `read-file`: what a relative path is relative to, which files count as
+   the program's source files, whether reads also obey `--confine-dir`, and
+   how symlinks are resolved.
+6. Whether DESIGN.md §27's other final forms, `String -> String` and the
+   thunk, stay.
+7. Literal constructors in `Atom`: deferred.
+
+## 7. What implementing it would involve
+
+- `lib/`: `Atom` and `Raw` extern over the reader's tree; names as
+  structured symbols in `Term` and `Env`, keying the scope; `Env.t` split
+  into a scoped part and a threaded program store; a world-based driver and
+  extraction in place of the `IO` request loop; every `IO` test moved to
+  `Program`.
+- `self/`: its own `Pos` and `Raw` renamed (Decided), so the prelude's do
+  not clash with them; a decreasing budget around expansion, since its
+  elaborator's structural recursion on raws (ASSUMPTIONS.md 96) does not
+  cover a macro's output; a `main` that takes a world, so its interpreter
+  can serve a macro's `read-file`; its interpreter calling back into its
+  elaborator for macro-world operations.
