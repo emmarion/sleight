@@ -76,10 +76,33 @@ World      : (TyCtor -> Type)
 
 (def-adts $ (Program : ((Level) L) -> Type)
   enum
-  (many Halt : (erased (Level) L) (many (U8) code) -> (Program L))
+  (many Exit : (erased (Level) L) (many (U8) code) -> (Program L))
   (many Continue : (erased (Level) L)
      (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
      -> (Program L)))
+
+(def-adts $ (Request : (Type A) -> Type)
+  enum
+  (many WriteOut : (many (String) text) -> (Request (Unit)))
+  (many WriteErr : (many (String) text) -> (Request (Unit)))
+  (many ReadLine : -> (Request (Maybe (String))))
+  (many ReadFile : (many (String) path) -> (Request (Result (String))))
+  (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many GetArgs : -> (Request (List (String))))
+  (many GetEnv : (many (String) name) -> (Request (Maybe (String))))
+  (many GetEnvs : -> (Request (List (Pair (String) (String)))))
+  (many AppendFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many ReadRemaining : -> (Request (String)))
+  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))
+  (many GetCwd : -> (Request (String)))
+  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))
+  (many MkDir : (many (String) path) -> (Request (Result (Change))))
+  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))
+  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))
+  (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
+  (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
+  (many Measure : (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
+     -> (Request (Pair A (Usage)))))
 ```
 
 - `Pos`, `Symbol`, `Atom`, `Raw`, `Macro`, `Program`: Decided, as written.
@@ -91,8 +114,13 @@ World      : (TyCtor -> Type)
   earlier separate `SomeConst` wrapper was dropped).
 - `Atom` has no literal constructors for now (Decided: deferred). A macro
   gets a literal by interning it (section 3).
-- `Program`: the name is Decided. `Halt` and `Continue` are the session's
-  constructor names; the owner may prefer `Exit` and `Step`.
+- `Program`: the name and the constructor names `Exit` and `Continue` are
+  Decided.
+- `Request`: Decided that the requests are one prelude type indexed by its
+  answer, with a constructor for each row of DESIGN.md §42's `IO` table and
+  for each of the prelude's further requests. Proposed: a request that
+  answered nothing answers `(Unit)`; `Step` is dropped, `Continue` serving
+  its purpose; `Measure` answers `(Pair A (Usage))`.
 
 `symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)`
 is ordinary prelude code (Decided that equality returns a proof): `str-cmp`
@@ -168,20 +196,14 @@ it is elaborated, erased code included.
 
 ### The world
 
-One operation per row of DESIGN.md §42's `IO` table, each threading the
-world `at` itself: `world-write-out`, `world-write-err`, `world-read-line`,
-`world-read-remaining`, `world-read-file`, `world-write-file`,
-`world-append-file`, `world-list-dir`, `world-stat`, `world-mkdir`,
-`world-delete-file`, `world-delete-dir`, `world-get-args`, `world-get-env`,
-`world-get-envs`, `world-get-cwd`, `world-confine-dir`,
-`world-confine-output-bytes`, and the prelude's further requests. For
-example:
-
 ```scheme
-(world-read-line w) : (unique (World) w) -> (unique (World) w2 at w) (many (Maybe (String)) r)
+(world-do w req) : (erased Type A) (unique (World) w) (unique (Request A) req) ->
+                   (unique (World) w2 at w) (many A r)
 ```
 
-Decided that `World` replaces `IO`; the operations' names are Proposed.
+Decided: one special form, not a function, performs every request, in place
+of one operation per row. It names the prelude's own `Request`, so like
+literals it does not exist under `--no-prelude`.
 
 ## 4. Rules
 
@@ -208,14 +230,17 @@ Decided that `World` replaces `IO`; the operations' names are Proposed.
    carried now, and passed along rather than joined. Proposed: it never
    escapes an expansion, having no constructor and being no entry.
 6. Threading (Decided). A helper that takes a macro world or a world
-   returns it `at` its parameter.
+   returns it `at` its parameter. Proposed: for a world this needs no check
+   of its own, since `Continue`'s continuation must return the world `at`
+   itself, which a helper that kept or dropped it would prevent.
 7. Supply. Only the expander supplies a macro world, and only the driver
    supplies a world, so that no run-position statement performs world
    effects while compiling.
 8. The driver (Decided). A file's final value is a `(unique (Program L) p)`.
-   On `Halt code` the driver exits with `code`; on `Continue k` it applies
+   On `Exit code` the driver exits with `code`; on `Continue k` it applies
    `k` to the world and continues with the `Program` it returns. Unbounded
-   interaction stays a driver loop over total functions.
+   interaction stays a driver loop over total functions. A final value may
+   also be either of DESIGN.md §27's `Fn` forms, unchanged (Decided).
 
 ## 5. Soundness, as a session argues it
 
@@ -225,15 +250,18 @@ Decided that `World` replaces `IO`; the operations' names are Proposed.
 - A handle denotes its index because only built-in forms create handles.
 - A gensym cannot be forged: building an `SGen` at `many` needs an erased
   `Gensym` witness, and only `gensym` makes one.
-- Not yet checked: that neither erasure nor at-function skipping
-  (DESIGN.md §39) can drop a world effect. The session believes neither can,
-  since a function that performs one does not erase to nothing, but this
-  should be settled by compiling cases.
+- Checked by compiling:
+  - an at-function whose body performs a `world-do` is refused;
+  - a `world-do` in an erased position performs and consumes nothing;
+  - a world cannot serve two requests, be shared and then used, or be kept
+    by a continuation for a later step.
+
+  The owner suspects the rest of this section holds of the language as it
+  stands.
 
 ## 6. Open questions
 
-1. The names of `Mult` and its constructors, `Const`, the world operations,
-   and `Program`'s constructors.
+1. The names of `Mult` and its constructors, and `Const`.
 2. Where `JMEq` lives, which decides whether `const-eq` and `gensym-unique`
    exist under `--no-prelude`.
 3. Whether the macro world resolves names at the call site; if so it must
@@ -242,9 +270,13 @@ Decided that `World` replaces `IO`; the operations' names are Proposed.
 5. `read-file`: what a relative path is relative to, which files count as
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
-6. Whether DESIGN.md §27's other final forms, `String -> String` and the
-   thunk, stay.
 7. Literal constructors in `Atom`: deferred.
+8. A world held in a field of a constructor that is not a newtype cannot be
+   returned `at` the world it came from, since the field has a slot of its
+   own (DESIGN.md §36). So code that holds a world only some of the time,
+   such as an evaluator run both at compile time and under
+   `slc --interpret`, cannot thread one. The owner is considering a
+   language change for this.
 
 ## 7. What implementing it would involve
 
@@ -259,3 +291,6 @@ Decided that `World` replaces `IO`; the operations' names are Proposed.
   cover a macro's output; a `main` that takes a world, so its interpreter
   can serve a macro's `read-file`; its interpreter calling back into its
   elaborator for macro-world operations.
+
+Status: on branch `claude/world-io`, `lib/` has `World`, `Request`,
+`world-do` and `Program` in place of `IO`; `self/` waits on question 8.
