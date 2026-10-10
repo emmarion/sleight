@@ -3968,12 +3968,6 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      the entries after it are checked, so that a later entry's `at` can
      name the slot it sits in (section 15, section 36's return at an earlier return).
 
-203. **The constructor-telescope ban (section 36)** is read as review item 26 has
-     it: `vacant-slot`, a plain variable, and a `(Slot)`-typed field are
-     allowed there; `slot-of` and `at` are refused in a type or value
-     constructor's telescope and in a `let`'s binders, and `at` names a
-     variable, never a literal.
-
 205. **`slot-self`** mints its fact by forcing, so either the variable or
      its slot may end up carrying the rule, and a `Contradiction` is
      reported as an error, as section 35 says and review item 29 discusses.

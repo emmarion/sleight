@@ -395,9 +395,12 @@ former of its own:
    whether a constructor is phantom is declared on its `def-adts` line
    and recorded in the `Matchable` (§21, §24).
 
-Only `Fn` and `UniqueFn` have a return telescope (§26). All three
-formers use the telescope notion of §3. Neither `at` nor `slot-of` may
-appear in a `TyCtor` or `ValCtor` telescope (§36). The declaration
+Of the three formers, only `Fn` and `UniqueFn` have a return
+telescope; a match's annotation is one too (§26). All three formers
+use the telescope notion of §3. In a `TyCtor` or `ValCtor` telescope,
+`slot-of` may name only a variable that no telescope still being
+written binds (§35); `at` may be written in a `ValCtor` telescope
+under §36's rule for it, and not in a `TyCtor` telescope. The declaration
 syntax `name : (telescope) -> (telescope)` used in §55 and §56 is sugar
 for these formers plus a name and, for a function, a body. A
 function's level is written on its `def-fns`. `is` (§12) may be used
@@ -775,8 +778,9 @@ recursion (§17) may go through an erased field.
 
 A type marked `newtype` must have **newtype shape**: every non-phantom
 constructor holds exactly one non-erased field, and there is at least
-one non-phantom constructor, and exactly one if the type is an enum. A
-value of such a type is represented as that field (§33).
+one non-phantom constructor, and exactly one if the type is an enum.
+No field of its constructors may be written `at` (§36). A value of
+such a type is represented as that field (§33).
 
 **A constructor returns its own type.** Every value constructor is
 declared under exactly one type constructor in `def-adts`. Its return
@@ -981,8 +985,9 @@ whose branches are all refuted produces its declared result (§21).
 A function returns zero or more values. A later return may depend on an
 earlier one: the return telescope is a telescope like the parameter
 telescope, where each entry depends only on the entries before it.
-This is for functions only. A type or value constructor returns exactly
-one value (§11). There is no sigma type: an expression of several
+This is for functions and for the annotation of a `match`,
+`cell-match` or `open-absurd` (below, §38, §8). A type or value
+constructor returns exactly one value (§11). There is no sigma type: an expression of several
 values has no type of its own, each entry of a `values` is a size-one
 location (§27), and several values cannot be nested or passed as one.
 
@@ -1435,9 +1440,12 @@ the `is` rule of `x`; this is what keeps `at` and `is` separate. It is
 erased exactly when `x` is, so for an erased `x` it may stand only in
 erased positions. Its argument is a direct variable reference (§15),
 not a use of `x`. It may be written in a type or `is` expression,
-including a function telescope, where it may name an earlier binder of
-the same telescope. It may not appear in the telescope of a type or
-value constructor. As an expression it takes the multiplicity of its
+including a function telescope or a match annotation, where it may
+name an earlier entry of the same telescope. In the telescope of a
+type or value constructor it may name only a variable that no
+telescope still being written binds: not a field of that telescope,
+in a later field's type or in the return, and not an entry of an
+enclosing telescope. As an expression it takes the multiplicity of its
 position, including `unique`. Its word is the word of `x`, and the
 result is at `x`, so a `let` of it is at the same slot as `x`.
 
@@ -1461,7 +1469,7 @@ names may share one `at`: `(many (Nat) r at x)`,
 `(unique a is r at a)`. The value is at the same location as `v`. `v`
 may be any variable in scope: an earlier entry of the same telescope,
 including a return entry, or a variable from an enclosing scope, for
-`def-fns` and `def-unique` alike. The only restriction is the rule of
+`def-fns`, `def-unique` and a match annotation alike. The only restriction is the rule of
 §7 that no fact outlives an entry it mentions, which keeps a function
 whose type names a closed-over variable inside that variable's scope.
 The slot of the entry (§35) is `(slot-of v)`, always, even when `v` is
@@ -1469,8 +1477,37 @@ itself a `(Slot)`. An erased entry may be `at` any variable. A `many`
 or `unique` entry may only be `at` a `many` or `unique` variable,
 because its word is its target's word and an erased target has none.
 `at` may not be written on a `let` binder, in the telescope of a type
-or value constructor, or with a literal as its target. An `at` return
+constructor, or with a literal as its target. An `at` return
 may be `many`, and may be combined with `is`.
+
+**In a value constructor.** A field of a `ValCtor` telescope may be
+written `at v` under the rules above: `v` is an earlier field of the
+same telescope or a variable in scope that no telescope still being
+written binds, and the field's slot is `(slot-of v)`, so the slot that
+a `(Slot)` field names is reached as §35 has it, by `slot-self` on the
+binder a destructure gives that field. The `at` of a field belongs to
+the constructor's telescope, not to the terms built with it: two
+applications `(C a1 ... an)` and `(C b1 ... bn)` are equal exactly
+when their arguments are, and forcing them equal says nothing about
+slots. Where a field's word sits is learnt in two places only: where
+a block is built, by the check on the argument, and where it is taken
+apart, by the binder the pattern gives the field. Such a field holds
+no word of its own, its word being the word of `v`. Wherever §21,
+§23, §33, §37, §38, §42 and §43 count, list or lay out a
+constructor's non-erased fields, a field written `at` is left out, as
+an entry written `at` is left out of a runtime signature: it has no
+slot in a `Cell`, no item in `cell-alloc`, `cell-write` or a
+`cell-match` pattern, and an extern type's FFI arity counts the fields
+that remain; a type with such a constructor may not be marked
+`newtype` (§21). It prints by its type, from the word of its target
+(§45). A constructor application or a cell invocation checks its
+argument as a call checks the argument for a parameter written `at`,
+and stores nothing for it; `_` cannot stand for it, and an `(at)`
+before it is an error, there being no store to skip. In a type or
+`is` expression the application is checked the same way (§14). A
+destructure binds it, under the column of §22 for its label, at the
+binder the pattern gives `v`, or at `v` itself when `v` is not a
+field; a `comptime-match` gives it the word of its target.
 
 **What reaches runtime.** The runtime signature of a function consists
 of its non-erased entries that have no written `at`. An entry written
@@ -1509,8 +1546,9 @@ a cell invocation (the value with its cell) and a `cell-write` on a
 `unique` cell (the result with its input); `coerce` and `share` (the
 result with the source); a forwarding `let` (§19); a `let` of
 `(slot-of x)` (with `x`); the `at` return and `at` parameter of a call,
-and the `at` entry of a match (with their targets); the delegate
-annotation (`g` with `f`, §41); `slot-self` (§35);
+the `at` entry of a match, and the `at` field of a destructure (with
+their targets); the delegate annotation (`g` with `f`, §41);
+`slot-self` (§35);
 and a forcing unification (§7) whenever the types it unifies mention
 slots, including `Cell` types and types indexed by `(Slot)`, since a
 slot is an atom of the fact table. A forced rule between two ordinary

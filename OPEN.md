@@ -103,6 +103,13 @@ references are to DESIGN.md.
     `(let ((unique x)) (f x))`, which is the current idiom?
 24. The names of the forms above, and of `vacant-slot`, `slot-self`,
     `at-fn-of` and `open-at-fn`.
+29. Should `at` be allowed on a `let` binder as a check (§19, §36)? A
+    `let` binder takes its place from its value, so an `at v` there
+    could declare nothing new; it could only assert that the value is
+    already at `v`, checked after the binding as a return's promise
+    is, in the way `(at (f ...))` asserts a skipped call (§39). Today
+    it is refused.
+
 ## Argument temporaries
 
 25. Is the anonymous binding of an argument (§15) `Const` in run

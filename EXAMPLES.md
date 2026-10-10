@@ -109,6 +109,12 @@ that the test does not make is a mistake in this file.
   the index, is a full-at invocation returning `at` its argument.
   `tests/unique_typestate_bad.sl` skips a step; `tests/unique_double_bad.sl`
   is the other half.
+- `tests/at_field_thread.sl` — a constructor field written `at` a `(Slot)`
+  sibling (DESIGN.md section 36). `bump` stores its unique world `n` in a
+  state block as the word of the slot field, `step` mutates the world
+  through its cell and returns a fresh block with no `at` in its signature,
+  and `bump` gets the world back `at n` by one `slot-self` on the slot the
+  destructure binds.
 - `tests/subterm_call_result_bad.sl` — a field is a subterm of what it was
   destructured from and a call's result is not (DESIGN.md section 28), so a
   recursive occurrence reached by calling a stored function does not drive

@@ -271,12 +271,6 @@ literals it does not exist under `--no-prelude`.
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
 7. Literal constructors in `Atom`: deferred.
-8. A world held in a field of a constructor that is not a newtype cannot be
-   returned `at` the world it came from, since the field has a slot of its
-   own (DESIGN.md §36). So code that holds a world only some of the time,
-   such as an evaluator run both at compile time and under
-   `slc --interpret`, cannot thread one. The owner is considering a
-   language change for this.
 
 ## 7. What implementing it would involve
 
@@ -292,5 +286,3 @@ literals it does not exist under `--no-prelude`.
   can serve a macro's `read-file`; its interpreter calling back into its
   elaborator for macro-world operations.
 
-Status: on branch `claude/world-io`, `lib/` has `World`, `Request`,
-`world-do` and `Program` in place of `IO`; `self/` waits on question 8.
