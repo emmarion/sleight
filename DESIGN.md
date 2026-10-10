@@ -711,12 +711,18 @@ head position only when that head is `Const` and non-erased (§6). Held
 as a value, it is ordinary data. The constructors of `Special` are the
 registry of §54, including the annotation tokens.
 
-**Macros.** `Macro` is a type with one constructor that holds a
-function from a list of unelaborated terms (`Raw`) to one such term.
-Expansion counts against a global limit. The prototype implements
-neither `Macro` nor `Raw`, so a `Macro` head is an error there. A
-`Macro` head would be dispatched as a special form is (§6), with
-`Macro` in place of `(Special)`.
+**Macros.** A head whose entry is `Const` and non-erased, and whose
+minted type canonicalizes to the prelude's `(Macro)` against the facts
+of the innermost enclosing run position, is dispatched as a special
+form is (§6), with `(Macro)` in place of `(Special)`: the list is a
+macro call. The macro's function receives the call's position and its
+arguments, unexpanded and unresolved; the head is not passed. The call
+is replaced by the forms the function returns, which are elaborated
+and checked as if they had been written there, so a macro can only
+steer what it generates. Expansion counts against a global limit.
+Macros rest on the prelude's types, so under `--no-prelude` there are
+none. MACROS.md describes the macro system as it is implemented now and
+as it is meant to become.
 
 **Call-site proofs.** How the decrease of §17 is discharged depends on
 the kind of call:
@@ -1107,8 +1113,9 @@ contain statements, and those in run position complete before the
 enclosing `let` does. A file's top level is run position, so calls
 there need no proofs (§20). Elaborating code under a function body or
 a match branch never runs it; such code runs at compile time only when
-called from run position, or, once macros exist, inside a macro
-dispatched under §6. The binders of a run-position statement
+called from run position, or when it is part of a macro's
+implementation, the function the macro holds, which runs each time a
+call of that macro is expanded (§19). The binders of a run-position statement
 declare their multiplicities (§19), which is what allows the statement
 to be stripped and run before the code after it is elaborated.
 
@@ -1922,6 +1929,10 @@ which `lib/prelude.sl` is the reference:
   `ConfineOutputBytes` and the command-line flags that stand in for
   them. `lib/prelude.sl` declares further requests besides these, and is
   the reference for them.
+- **Positions.** `Pos`: `NoPos`, or `MkPos` of a file (`String`), a
+  line and a column (`Nat`). A message about a form at `NoPos` carries
+  no location, not even a file; one at `MkPos` names exactly that
+  position.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions

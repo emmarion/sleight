@@ -87,3 +87,18 @@ is a design decision. Remove an entry when it is fixed.
     bug), or a host-level abort primitive, which would be a design
     addition. Separately, the acyclicity a measure-based traversal
     would need is a question about `heap.sl`'s store invariant.
+
+19. **The compilers run a final value that is not in the last file at
+    different times.** The reference runs a file's final value as soon as
+    it reaches it, before reading the files after it on the command line;
+    `slc`, compiled or under `--interpret`, elaborates every file first
+    and runs the finals afterwards. Reproduced with two files: `a.sl`
+    ending in an `IO` value that writes to stderr and exits with 0, and
+    `b.sl` holding only a `compile-warn`. The reference writes the
+    program's line and never reads `b.sl`, so it gives no warning; `slc`
+    writes the warning, then the program's line. With a final that does
+    not exit, the reference's warnings from later files would follow the
+    program's output instead of preceding it. No test has this shape;
+    `self/bootstrap.sh` compares each side's whole stderr, warnings
+    included, so one that did would fail there. Which order is wanted
+    is not decided here.

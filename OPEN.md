@@ -45,11 +45,10 @@ references are to DESIGN.md.
    represents the whole order of §17 as a nested disjunction, so that a
    call need not name the decreasing argument when which argument
    decreases is known only through an erased computation.
-8. Macros. `Macro` and `Raw` (§19) are not implemented. Open: macro
-   termination beyond a global expansion limit, and hygiene, perhaps by
-   letting `Raw` carry entry references as well as names, with a
-   reference to an entry that is out of scope being an error rather
-   than merged into the current scope.
+8. Macros. Open: macro termination beyond a global expansion limit,
+   and hygiene, perhaps by letting `Raw` carry entry references as well
+   as names, with a reference to an entry that is out of scope being an
+   error rather than merged into the current scope.
 9. Compile-time evaluation inside a body: a `comptime` form, and a
    `hoist` form `(hoist L body)` whose definitions count as made just
    before `L`, so that the factory pattern of §57 could be written

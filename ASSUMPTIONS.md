@@ -40,9 +40,6 @@ ground.
    `%` (`%let`, `%match`, ...), so that the entry `let` — whose value is
    `(%let)` — is distinct from the constructor. Only the prefix is an
    invention; it is not settled by DESIGN.md.
-6. **`Macro` and `Raw` are not implemented.** DESIGN.md gives no way to
-   construct a `Raw`, and macros are interim in section 19 anyway (SR 11).
-   Head dispatch on a `Macro` value is therefore an error for now.
 7. **Names of the transitivity axioms** (SR 11): `predates-trans`,
    `subterm-trans`, `predates-subterm`, in the order section 18 lists
    them. Each takes its two premises as arguments.
@@ -182,7 +179,7 @@ ground.
 
 ## Not implemented
 
-36. Macros (`Macro`, `Raw`, the expansion limit). The `--repl` flag reads one form
+36. The `--repl` flag reads one form
     at a time and prints every expression's value, which goes beyond
     section 27's one-expression file; it is a convenience only.
 
@@ -4071,3 +4068,16 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     a literal in a name position is refused as "is a literal, not a
     name". `self/bootstrap.sh` checks that the two compilers agree on
     every test.
+213. **Macro expansion, where MACROS.md section 8 is silent.** A call's
+    `here` is the position of its opening `(` or `$`. The 10000
+    expansions are counted over the whole run, every file on the command
+    line included. A position a macro gives that names a file other than
+    the one being read is covered by no `;! suppress` region in `slc`,
+    which keeps the regions of the current file alone; the reference
+    reads the regions of the file the position names. `slc`'s elaborator
+    takes a `fuel` parameter ahead of its `sugar` budget: an expansion
+    spends one unit and elaborates its output with `sugar` reset to the
+    output's size, and the run's count of 10000, kept in the
+    environment, is read as firing before any path's fuel runs out. A
+    `let-match` in a body has its branches spliced once, before it is
+    told apart as a statement or a match, in both compilers.

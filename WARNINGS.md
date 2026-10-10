@@ -5,7 +5,8 @@ interpreter in `lib/` and slc in `self/` emit the same set, with the
 same text. The descriptions here are a session's reading of the code.
 The code that emits each warning and its `; warns:` tests are the
 authority. A warning is written as `path:line:col: warning: text`,
-followed by any notes (README.md). It goes to standard error and does
+followed by any notes (README.md); one about a form a macro placed at
+`NoPos` carries no location, not even a file: `warning: text`. It goes to standard error and does
 not stop elaboration. `--warnings-as-errors` makes a run that warns
 fail.
 

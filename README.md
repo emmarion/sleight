@@ -170,6 +170,9 @@ and column of the form it names, `path:line:col: error: text`, with `warning`,
 token's first character sits, both counted from one. A message about two
 places writes the second as a `note` on its own line under it, which may be
 in another file. A
+form a macro places at `NoPos` (MACROS.md section 8) is about nowhere, and a
+message about it carries no location at all, not even a file; a position a macro
+gives with `MkPos` is written exactly as given. A
 message with nothing to point at — a contradiction that reached the driver, a
 runtime error, whose code carries no positions — names the file alone
 (ASSUMPTIONS 194).
@@ -222,7 +225,8 @@ The reader turns the file into s-expressions. The elaborator walks
 them with a scope of entries and a fact table (types and `is` rules,
 read canonically), dispatching each form on its head as DESIGN.md
 section 6 describes: constructor and function application by the
-head's type, special forms by the head's Const value. Elaboration
+head's type, special forms and macros by the head's Const value, a macro
+call being replaced by the forms its function returns (MACROS.md section 8). Elaboration
 produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
 statement in run position is elaborated, run at once by the evaluator,
@@ -246,7 +250,7 @@ is, which `(slot-of x)` names, and a slot prints by that form.
 - `lib/env.ml` — scope entries, the fact table, canonicalization, forced unification (sections 5, 7)
 - `lib/value.ml`, `lib/eval.ml` — runtime values, post-erasure code, the evaluator
 - `lib/special.ml`, `lib/prelude.ml` — the special-form registry (section 54) and built-ins
-- `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 42)
+- `lib/prelude.sl`, `lib/ffi.ml`, `lib/ffi_core.ml` — the source prelude, the FFI registry, and the extern implementations it and extracted programs share (section 42), the reader's tree that the prelude's `Raw` holds among them
 - `lib/literal.ml` — the spellings of numeral, character and string literals
 - `lib/elab.ml` — the elaborator: head dispatch, erasure, levels, match, statements, literal interning
 - `lib/dump.ml` — the report `dump-context` stops elaboration with

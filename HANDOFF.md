@@ -3,6 +3,19 @@
 Work in progress handed from one session to the next. Written by a
 Claude session; nothing here is a design decision.
 
+## Bare-bones macros (one session, with the owner)
+
+Done in both compilers, to the owner's design given in chat; MACROS.md
+section 8 says what is implemented and ASSUMPTIONS 213 what the session
+chose. `self/bootstrap.sh` is clean and now compares each side's whole
+stderr. Measured with callgrind on `origin/main`'s `base.sl`, `heap.sl`
+and `reader.sl` (`Pos` and `Raw` renamed, so nothing warns): `slc` built
+from `origin/main` 1.393G instructions, from `raw-names` 1.482G, from this
+work 1.519G, about 2.5% over its base; the owner accepted that.
+
+Left for a later session: DESIGN.md's wording for what of this is meant to
+last (sections 19 and 42), which the owner confirms passage by passage.
+
 ## Literals outside every scope, `prove-predates` by binder (one session, with the owner)
 
 Done in both compilers, on a design worked out with the owner in chat
@@ -27,15 +40,6 @@ One thing left for a later session, raised with the owner:
   enter a handle's literal row into its snapshot (`Env.enter`,
   `table-reenter`). The owner paused on whether that placement is the
   store design or a detour from it; undecided when this was written.
-
-The owner's stated next step, in chat and not yet designed in any file:
-a minimal macro support, with `Raw` as an extern ADT in the prelude over
-a position of file, line and column, a `Raw` being a string with its
-position or a position with a list of `Raw`, and `Macro` as a newtype
-over a level and a function at that level from a position and a list of
-`Raw` to a list of `Raw`, with no macro world. A literal a macro makes
-up is then the atom text of its spelling, interned where the output is
-elaborated, which this change makes possible.
 
 ## The compile-time store: stamped values, a ghost history (`self/`)
 

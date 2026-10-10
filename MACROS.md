@@ -300,3 +300,54 @@ may be `_` to be inferred.
   already share, then a call's return handling, moved out of call
   elaboration so a form can use it without a callee.
 
+
+## 8. What the compilers implement now
+
+Both compilers implement a smaller system than the one above, which stays
+the long-term design. The owner decided this subset in chat, except where
+an item says a session chose it.
+
+```scheme
+(def-adts $ (Pos : -> Type)
+  enum
+  (many NoPos : -> (Pos))
+  (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
+
+(def-adts $ (Raw : -> Type)
+  enum extern
+  (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
+  (many RawNat : (many (Pos) pos) (many (Nat) n) -> (Raw))
+  (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
+  (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
+  (many RawWild : (many (Pos) pos) -> (Raw))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
+
+(def-adts $ (Macro : -> Type)
+  enum newtype
+  (many MkMacro : (erased (Level) L)
+     (many (Fn L (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out)) f)
+     -> (Macro)))
+```
+
+- The three types are in the source prelude. There is no macro world, no
+  gensym and no handle: a macro is a total function from its call's
+  position and arguments to a list of forms. The constructor names of
+  `Raw` were chosen by a session at the owner's request, `Rope` already
+  having `RStr` and `RChar`.
+- `Raw` is extern over the reader's own tree, so arguments go in and
+  output comes out without being walked. A `RawName` is a name whatever
+  its text, as a raw name is (DESIGN.md section 1); a `RawWild` is `_`. A
+  literal a macro makes, a `RawNat`, `RawChar` or `RawStr`, is interned
+  where its form is elaborated, as a written one is.
+- A call expands in statement, final, expression and type positions as
+  section 4.1 has it. Its result also splices, each item taking the
+  call's place in the list it stands in, into telescopes, `let` binders,
+  the branches of a `match` or `let-match`, the constructors of a
+  `def-adts` entry and the arguments of an application. The limit is 10000
+  expansions in one run, every file included.
+- `here` is the position of the call's opening `(`, or of its `$`; a session
+  chose that.
+- A form at `NoPos` has no position: a message about it carries no
+  location, not even a file. A position given by `MkPos` is written exactly
+  as given, whatever its file, line and column.
+- Under `--no-prelude` there are no macros, as there are no literals.
