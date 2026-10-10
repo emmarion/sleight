@@ -255,10 +255,12 @@ an item says a session chose it.
   where its form is elaborated, as a written one is.
 - A call expands in statement, final, expression and type positions as
   section 4.1 has it. Its result also splices, each item taking the
-  call's place in the list it stands in, into telescopes, `let` binders,
-  the branches of a `match` or `let-match`, the constructors of a
-  `def-adts` entry and the arguments of an application. The limit is 10000
-  expansions in one run, every file included.
+  call's place in the list it stands in, into telescopes and `let`
+  binders, into the items of each of their entries, so that a call may
+  stand for part of an entry such as its multiplicity, into the branches
+  of a `match` or `let-match`, the constructors of a `def-adts` entry,
+  the arguments of an application and the entries of a `values`. The
+  limit is 10000 expansions in one run, every file included.
 - `here` is the position of the call's opening `(`, or of its `$`; a session
   chose that.
 - A form at `NoPos` has no position: a message about it carries no

@@ -2435,6 +2435,21 @@
 (def-fns _ $ (many splice : (many (Env) env) (many (List $ Syn) items) -> (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
   (splice-go expansion-limit env items $ BFalse))
 
+(def-fns _ $ (many splice-items-of : (many (Env) env) (subterm many (List $ Syn) entries) (many (Bool) changed) -> (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  (let-match many entries (Cons _ e rest) ((Nil _) (values env changed (Nil _) $ None _)))
+  (let ((many env2) (many ch2) (many e2) (many err2))
+    (match many e (((Env) a) ((Bool) b) ((Syn) c) ((Maybe $ Pair (Syn) (String)) d))
+      ((RList p items) (let ((many env3) (many c) (many out) (many er)) $ splice env items) (values env3 c (RList p out) er))
+      (else (values env (BFalse) e $ None _))))
+  (let-match many err2 (None _) ((Some _ x) (values env2 (BTrue) (Nil _) $ Some _ x)))
+  (let ((many env4) (many ch3) (many out) (many err)) $ notail $ splice-items-of env2 rest $ or changed ch2)
+  (values env4 ch3 (Cons _ e2 out) err))
+
+(def-fns _ $ (many splice-entries : (many (Env) env) (many (List $ Syn) entries) -> (many (Env) r) (many (Bool) ch) (many (List $ Syn) out) (many (Maybe $ Pair (Syn) (String)) err))
+  (let ((many env2) (many ch) (many out) (many err)) $ splice env entries)
+  (let-match many err (None _) ((Some _ _) (values env2 ch out err)))
+  (splice-items-of env2 out ch))
+
 (def-fns _ $ (many splice-tail : (many (Env) env) (subterm many (Nat) k) (many (List $ Syn) items) -> (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
   (let-match many k (Succ k2)
     ((Zero)
@@ -2450,7 +2465,7 @@
 (def-fns _ $ (many splice-call : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Result $ Syn) x))
   (let-match many raw (RList p items) (else (values env $ None _)))
   (let-match many items (Cons _ head _) ((Nil _) (values env $ None _)))
-  (let-match many (special-of env head) (None _) ((Some _ _) (values env $ None _)))
+  (let-match many (match many (special-of env head) (((Bool) _)) ((None _) (BTrue)) ((Some _ sp) (sp-eq sp $ SpExpr $ ExValues))) (BTrue) ((BFalse) (values env $ None _)))
   (let ((many env2) (many r)) $ splice-tail env 1 items)
   (let-match many r (Some _ rr) ((None _) (values env2 $ None _)))
   (match many rr _ ((Fail _ m) (values env2 $ Some _ $ Fail _ m)) ((Ok _ out) (values env2 $ Some _ $ Ok _ $ RList p out))))
@@ -2458,9 +2473,10 @@
 (def-fns _ $ (many splice-binders : (many (Env) env) (many (Syn) head) (many (List $ Syn) args) -> (many (Env) r) (many (Maybe $ Result $ List $ Syn) x))
   (let-match many args (Cons _ bk rhs) ((Nil _) (values env $ None _)))
   (let-match many bk (RList bp bs) (else (values env $ None _)))
-  (let ((many e2) (many r)) $ splice-tail env 0 bs)
-  (let-match many r (Some _ rr) ((None _) (values e2 $ None _)))
-  (match many rr _ ((Fail _ m) (values e2 $ Some _ $ Fail _ m)) ((Ok _ out) (values e2 $ Some _ $ Ok _ $ Cons _ head $ Cons _ (RList bp out) rhs))))
+  (let ((many e2) (many changed) (many out) (many err)) $ splice-entries env bs)
+  (let-match many changed (BTrue) ((BFalse) (values e2 $ None _)))
+  (let-match many err (None _) ((Some _ e) (match many e _ ((MkPair _ _ item m) (values (env-at e2 $ raw-pos item) $ Some _ $ Fail _ m)))))
+  (values e2 $ Some _ $ Ok _ $ Cons _ head $ Cons _ (RList bp out) rhs))
 
 (def-fns _ $ (many body-head : (many (Env) env) (many (Syn) item) -> (many (Env) r) (many (Maybe $ Expansion) x))
   (let ((many env2) (many x)) $ expand env item)
@@ -2621,9 +2637,9 @@
 
 ; ---- Small helpers the block's checks use
 
-(def-fns _ $ (many not-applicable : (many (Env) env) (many (Res) h) -> (many (String) s))
+(def-fns _ $ (many not-applicable : (many (Env) env) (many (Syn) head) (many (Res) h) -> (many (String) s))
   (match many (prelude-nullary env (res-ty h) "Macro") _
-    ((BTrue) (str-cat (qshow env $ res-term h) " is a macro, expanded only where its head is constant-known (DESIGN.md section 6)"))
+    ((BTrue) (str-cat (qraw head) " is a macro, expanded only where its head is constant-known (DESIGN.md section 6)"))
     ((BFalse) (str-cat3 (qshow env $ res-term h) " : " $ str-cat (qshow env $ res-ty h) " is not applicable"))))
 
 (def-fns _ $ (many cannot-apply-in-type : (many (Env) env) (many (Term) h) (many (Term) hty) -> (many (String) s))
@@ -5216,7 +5232,7 @@
                 ((TFn uq lv params rets)
                   (let ((many env2a) (many ann) (many args2)) $ split-annotation args _ (WHere args) env2 0)
                   (notail $ elab-call fuel sugar args (MkPair _ _ args2 ann) env2a ctxh expect tele h (describe env2 head (res-term h) (res-ty h)) (raw-pos head) pos hcode uq lv params rets cc demand $ BFalse))
-                ((TErr m) (expr-error ctxh expect env2 (not-applicable env2 h) m)) (else (expr-error ctxh expect env2 (not-applicable env2 h) "not applicable"))))
+                ((TErr m) (expr-error ctxh expect env2 (not-applicable env2 head h) m)) (else (expr-error ctxh expect env2 (not-applicable env2 head h) "not applicable"))))
               (values env5 ress5 $ hoist-after _ _ _ hpre hc5))))))
     (let ((many n)) $ list-length _ expect)
     (let ((many m)) $ list-length _ ress)
@@ -5663,7 +5679,7 @@
   ; [ids]: binders already in force, innermost first.
   ((many elab-tele : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) root) (subterm many (Steps $ Succ $ Zero) st) (subterm many (List $ Sub root) entries) (many (Env) env) (many (MultsMode) mode) (many (List $ Term) ids) (many (Bool) subterm-ok) (many (Bool) holes) (many (Bool) places) (many (Bool) ctor) -> (many (Env) r) (many (List $ Nat) bound) (many (List $ Entry) tele))
     (let-match many st (SS sn k))
-    (let ((many envm) (many changed) (many out) (many err)) $ splice env $ sub-syns _ entries)
+    (let ((many envm) (many changed) (many out) (many err)) $ splice-entries env $ sub-syns _ entries)
     (let-match many changed (BFalse)
       ((BTrue)
         (let-match many err (None _) ((Some _ e) (match many e _ ((MkPair _ _ item m) (values (env-error (env-at envm $ raw-pos item) m) (Nil _) $ Nil _)))))

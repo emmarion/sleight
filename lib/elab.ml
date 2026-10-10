@@ -509,6 +509,8 @@ let rec spliced env = function
   | item :: rest -> (match expand env item with Some out -> spliced env (out @ rest) | None -> item :: spliced env rest)
   | [] -> []
 
+let spliced_entries env entries = List.map (function List (l, items) -> List (l, spliced env items) | e -> e) (spliced env entries)
+
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
@@ -869,7 +871,7 @@ and level_binder env l raw =
 (* Elaborates source entries into a closed telescope, binding each name for the entries after it.
    [ids]: binders already in force, innermost first; [mults] maps an entry's index and declared multiplicity to its actual one. *)
 and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = []) ?(mults = fun _ _ m -> m) ?holes ?written entries =
-  let entries = List.concat_map (parse_entry env) (spliced env entries) in
+  let entries = List.concat_map (parse_entry env) (spliced_entries env entries) in
   let _, env, ids, tele =
     List.fold_left
       (fun (i, env, ids, tele) e ->
@@ -1395,6 +1397,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       produced env [] "shared and so many" r.ty Many;
       (env, [ { r with erasure = Many } ], code)
   | Sp.Values, _ ->
+      let args = spliced env args in
       count_check ?sink l expect args;
       let entry i = Option.map (fun t -> List.nth t i) tele in
       let env, ress, codes =
@@ -1955,7 +1958,7 @@ and run_code env code = Eval.eval env.values code
 and elab_let spos env l args =
   let bl, binder_raws, rhs =
     match args with
-    | List (bl, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bl, spliced env bs, rhs)
+    | List (bl, bs) :: rhs when List.for_all (function List _ -> true | _ -> false) bs -> (bl, spliced_entries env bs, rhs)
     | _ -> error l "%s" (help env (Sp.misuse Sp.Let))
   in
   let binders = List.concat_map (parse_entry env) binder_raws in

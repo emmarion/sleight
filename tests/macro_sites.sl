@@ -1,5 +1,5 @@
 ; needs: macro_lib
-; expect: 46
+; expect: 60
 (def-adts $ (Shape : -> Type)
   enum
   (splice (many Dot : -> (Shape)) (many Box : (many (Nat) w) -> (Shape))))
@@ -25,6 +25,10 @@
   k)
 (let ((many s5)) (g (Some _ 0)))
 
+(def-fns _ $ (many twice : ((splice many) (Nat) x) -> ((splice many (Nat)) y) (many (Nat) z))
+  (values (splice x x)))
+(let (((splice many) (Nat) s6) ((splice many) s7)) (twice 7))
+
 (let ((many xs)) (Cons (splice _) 6 (Nil (splice _))))
 (let-match many xs (Cons _ h t))
-(splice (let ((many s4)) (area (Dot))) (nat-add h $ nat-add s1 $ nat-add s2 $ nat-add s3 $ nat-add s4 s5))
+(splice (let ((many s4)) (area (Dot))) (nat-add h $ nat-add s1 $ nat-add s2 $ nat-add s3 $ nat-add s4 $ nat-add s5 $ nat-add s6 s7))
