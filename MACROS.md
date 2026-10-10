@@ -184,16 +184,6 @@ was considered and dropped.
   Proposed.
 - `read-file` and its jail: Decided.
 
-### Errors
-
-```scheme
-(compile-error "text")  ; any position: an error at the form's position
-(compile-warn "text")   ; a statement: a warning at the form's position
-```
-
-Decided. The argument is a string literal, and either form fires wherever
-it is elaborated, erased code included.
-
 ### The world
 
 ```scheme

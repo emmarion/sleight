@@ -109,7 +109,7 @@ type position:
    (many (Cons (Nat) a $ Cons (Nat) b $ Nil (Nat)) is lst) -> (Two a b))
 ```
 
-## 4. User-defined warnings
+## 4. User-defined warnings and errors
 
 A pragma line `;! warn NAME message` names a type constructor, a value
 constructor or a function, meaning an entry of `Fn` or `UniqueFn`
@@ -135,6 +135,15 @@ ignored. A region that silences nothing produces a warning. A second
 Warnings go to standard error and do not stop elaboration.
 `--warnings-as-errors` makes a run that warns fail; a silenced warning
 does not count (README.md).
+
+`(compile-error m)` and `(compile-warn m)` report an error or a warning
+with the text of `m` at the form's position. `m` is read as a head is
+(§6): a name, a literal or `(share n)` whose entry is `Const` and
+non-erased and whose minted type canonicalizes to the prelude's
+`String` against the facts of the innermost enclosing run position.
+`compile-error` may stand anywhere a form may; `compile-warn` is a
+statement. Either fires wherever it is elaborated, erased code
+included. Neither form is subject to `;! suppress`.
 
 ## 5. Scope environment
 
@@ -1026,9 +1035,9 @@ expression that contains it, are visible to the rest of that
 expression, and are gone when it ends. A statement produces no values.
 The statements are `let`, `def-lvl`, `def-fns`, `def-unique` (§32),
 `def-adts`, `comptime-match`, `let-match`, `open-adt` (§8), `slot-self`
-and `open-at-fn` (§35, §39), `unary` (§49) and `dump-context`
-(README.md). All of them except `comptime-match` may appear at the top
-level or inside a body. `def-fns` and `def-adts` bind the names they
+and `open-at-fn` (§35, §39), `unary` (§49), `dump-context`
+(README.md), `compile-error` and `compile-warn` (§4). All of them
+except `comptime-match` may appear at the top level or inside a body. `def-fns` and `def-adts` bind the names they
 define outward and each definition's parameters inward.
 
 The right-hand side of a `let` is itself an expression, so the
@@ -2309,6 +2318,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `unary`: rewrites a numeral to successor form (§49).
 - `dump-context`: stops elaboration with a report of the context
   (README.md). Also usable as an expression and as a type.
+- `compile-error`, `compile-warn`: report an error or a warning (§4).
+  `compile-error` is also usable as an expression and as a type.
 
 **Type formers** (§9, production 4):
 
