@@ -2372,6 +2372,7 @@
       (else (None _))))
   (let-match many name (Some _ n) ((None _) (None _)))
   (let-match many (lookup env n) (Some _ x) ((None _) (None _)))
+  (let-match many (mult-is-many $ entry-mult-of env x) (BTrue) ((BFalse) (None _)))
   (let ((erased hs) (many s)) $ entry-state env x)
   (let-match many s (SConst _ _ m) ((SDyn _) (None _)))
   (let ((erased hb) (many blk)) $ env-block env x)
@@ -2379,7 +2380,7 @@
   (let-match many b (BFn _ _ _ _) (else (None _)))
   (let-match many (trusted-former env m) (BFalse) ((BTrue) (None _)))
   (let-match many (lookup (env-set-scope env $ env-prelude env) "Macro") (Some _ mt) ((None _) (None _)))
-  (match many (and (mult-is-many $ entry-mult-of env x) $ term-eq (trusted-type env m) $ TApp (TVar mt) $ Nil _) _
+  (match many (term-eq (trusted-type env m) $ TApp (TVar mt) $ Nil _) _
     ((BTrue) (Some _ x))
     ((BFalse) (None _))))
 
