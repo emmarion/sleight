@@ -164,3 +164,13 @@ references are to DESIGN.md.
     expansion (DESIGN.md section 19) produced? Today one that the
     expansion gives a position is checked, and its warning points at
     that position, often the macro's call.
+33. Should a type be allowed to be marked `newtype` when a constructor
+    has a field written `at` beside its one non-erased field? Today
+    §21 and §36 forbid it, and both compilers refuse it
+    (`tests/at_field_newtype_bad.sl`). Such a field stores nothing
+    (§36), so the constructor seems to hold a single real word, which
+    is what a newtype is represented as (§33); whether that reading
+    holds, and what the destructure and the facts of §37 would be for
+    such a constructor, has not been worked out. Open: whether to
+    allow it and under what restriction, or to keep the rule. It may
+    bear on item 20.
