@@ -399,3 +399,11 @@ files are not in this tree; they are at commit `4912ada`
     and found it only by reading the `ocaml` output. A warning on a
     `many` binder that no running code reads, suggesting `erased`, would
     have caught it at the binder.
+
+47. **Locations of two errors that point away from their cause.** ``no
+    telescope to reuse for `_` `` points at the `match` whose annotation is
+    `_`; when the reason is that the enclosing `let`'s binders carry no
+    types, a note pointing at that `let` would say where to add them.
+    ``a `notail`-marked call is in tail position`` points at the header of
+    the enclosing function, in one case the head of a large mutual block;
+    pointing at the marked call itself would find it at once.
