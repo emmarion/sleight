@@ -40,9 +40,10 @@ a binder is written: a `let` binder, a telescope entry, a pattern
 field, a cell binder, a `def-lvl`, or the name defined by `def-fns`,
 `def-unique` or `def-adts`. `_` has other meanings in other places,
 each a separate form: an inferred argument or type (§50), an
-annotation (§47), a `def-fns` level (§46), and a cell item (§37). No
-other name may begin with `_`. Those spellings are reserved for the
-compilers' messages.
+annotation (§47), a `def-fns` level (§46), and a cell item (§37). A
+name written without `#"` may not begin with `__`; such a name is
+written raw. Those spellings are reserved for the compilers' messages,
+which write a name that does not read back plain as a raw name.
 
 The syntax is ASCII only. The multiplicities are written as the words
 `erased`, `many` and `unique`, not as Idris's `0` and `ω`.
@@ -2062,13 +2063,15 @@ express, and a program with literals means what it would mean with
 those values written out.
 
 **Syntax.** A numeral is an atom made only of digits, with no leading
-zero: `0` or `42`. It is never a name, and a binder spelled as a
-numeral is an error. A character literal is `#\c` for a single byte
-`c` that the word syntax admits, or `#\space`, `#\newline`, `#\tab` or
-`#\xHH`, where `HH` is two hexadecimal digits. `#\(`, `#\)` and `#\;`
-must be written in the hex form. A string literal is `"..."`, starting
-at the start of a token, with the escapes `\n`, `\t`, `\"` and `\\`.
-Any other byte, including a newline, stands for itself.
+zero: `0` or `42`. A numeral written plain is never a name, and a binder
+written as a plain numeral is an error; `#"42"` is a name (§1). A
+character literal is `#\c` for a single byte `c` that the word syntax
+admits, or `#\space`, `#\newline`, `#\tab` or `#\xHH`, where `HH` is two
+hexadecimal digits. `#\(`, `#\)` and `#\;` must be written in the hex
+form. A string literal is `"..."`, starting at the start of a token,
+with the escapes `\n`, `\t`, `\"`, `\\` and `\xHH`, where `HH` is two
+hexadecimal digits giving one byte. Any other byte, including a newline,
+stands for itself.
 
 **Meaning.** A numeral denotes a `Nat` together with an erased proof
 `(Numeral b n)` that relates it to its spelling `b`, a `Bin` in
@@ -2113,16 +2116,18 @@ them. `comptime-match` reads its value, and
 a match inside a function takes it apart at runtime.
 
 **Printing.** A value of type `Nat`, `Char` or `String` prints as the
-literal it reads back from: a numeral in decimal; a character bare
-where the word syntax admits it, and otherwise as `#\space`,
-`#\newline`, `#\tab` or `#\xHH`; a string with the four escapes above.
-Any other value prints by its type. A tagged enum names its
-constructor. A type with exactly one non-phantom constructor names it.
-A union with more than one prints `_`. So does an erased field, a cell,
-a slot, a function, an opaque proof, and a value whose type has no
-readable `Matchable` (§8). A last argument that is itself an
-application is written with `$` (§2). Reading a printed literal back
-gives a literal that denotes the same value.
+literal it reads back from: a numeral in decimal; a character bare where
+the word syntax admits it, and otherwise as `#\space`, `#\newline`,
+`#\tab` or `#\xHH`; a string with `"` and `\` escaped and every byte
+outside `0x20` to `0x7e` escaped, a newline as `\n`, a tab as `\t` and
+any other as `\xHH`. A constructor's name prints plain where that reads
+back as the same name, and otherwise raw (§1). Any other value prints by
+its type. A tagged enum names its constructor. A type with exactly one
+non-phantom constructor names it. A union with more than one prints `_`.
+So does an erased field, a cell, a slot, a function, an opaque proof,
+and a value whose type has no readable `Matchable` (§8). A last argument
+that is itself an application is written with `$` (§2). Reading a
+printed literal back gives a literal that denotes the same value.
 
 **Left to the implementation.** How a `Nat`, `Char` or `String` is
 held at runtime, and whether a literal's entries are produced by

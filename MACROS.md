@@ -66,6 +66,7 @@ World      : (TyCtor -> Type)
   ((Raw : -> Type)
     enum extern
     (many RAtom : (many (Pos) pos) (many (Atom) a) -> (Raw))
+    (many RWild : (many (Pos) pos) -> (Raw))
     (many RList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
   ((Macro : -> Type)
     enum newtype
@@ -116,6 +117,8 @@ World      : (TyCtor -> Type)
   cost exponentially more than the macros' own work.
 - `AConst` is itself the existential over `m`, `A` and `a` (Decided; an
   earlier separate `SomeConst` wrapper was dropped).
+- `RWild` is a `_` (Decided). A raw name `#"_"` is an `AName`, never an
+  `RWild` (DESIGN.md §1).
 - `Atom` has no literal constructors for now (Decided: deferred). A macro
   gets a literal by interning it (section 3).
 - `Program`: the name and the constructor names `Exit` and `Continue` are
