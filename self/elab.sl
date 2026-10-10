@@ -573,7 +573,13 @@
 (def-adts $ (Callee : -> Type)
   enum
   (many CalleeHead : (many (Env) env) (many (Syn) head) (many (Term) h) (many (Term) ty) -> (Callee))
-  (many CalleeWrap : (many (Env) env) (many (Nat) c) -> (Callee)))
+  (many CalleeWrap : (many (Env) env) (many (Nat) c) -> (Callee))
+  (many CalleeForm : (many (Env) env) (many (String) name) -> (Callee)))
+
+(def-adts $ (Invoke : ((List $ List $ Nat) ctx) -> Type)
+  enum
+  (many InvApp : (erased (List $ List $ Nat) ctx) (many (Nat) hid) (many (List $ Code ctx many-one) actuals) (many (CC) cc) (many (Bool) skipped) -> (Invoke ctx))
+  (many InvWorld : (erased (List $ List $ Nat) ctx) (many (List $ Code ctx many-one) actuals) -> (Invoke ctx)))
 
 (def-fns _ $ (many kind-name : (many (Env) env) (many (Term) ty) -> (many (String) s))
   (let-match many (canon-env env ty) (TFn uq _ _ _)
@@ -599,7 +605,8 @@
 (def-fns _ $ (many callee-view : (many (Callee) c) ->
     (many (String) subject) (many (Bool) apposed) (many (List $ Pair (Loc) $ String) notes) (many (Bool) marked) (many (Bool) fields) (many (String) noun))
   (let-match many c (CalleeHead env head h hty)
-    ((CalleeWrap env cid) (values (str-cat (say env "`coercible-wrap` of ") $ qshown env cid) (BFalse) (declared-as env cid) (BTrue) (BTrue) "more argument")))
+    ((CalleeWrap env cid) (values (str-cat (say env "`coercible-wrap` of ") $ qshown env cid) (BFalse) (declared-as env cid) (BTrue) (BTrue) "more argument"))
+    ((CalleeForm env name) (values (tick $ spell env name) (BFalse) (Nil _) (BTrue) (BFalse) "argument")))
   (let ((many ty)) $ canon-env env hty)
   (let ((many kind)) $ kind-name env ty)
   (let ((many fields)) $ match many ty (((Bool) _)) ((TFn _ _ _ _) (BFalse)) (else (BTrue)))
@@ -842,9 +849,9 @@
   (nat-eq tid x))
 
 ; The multiplicity a position demands of a value by its type (lib/elab.ml's demanded): a callable head takes
-; a Cell or a UniqueFn at unique, and the driver takes an IO value at unique.
+; a Cell or a UniqueFn at unique, and the driver takes a Program at unique.
 (def-fns _ $ (many final-demand : (many (Env) env) (many (Term) ty) -> (many (Mult) m))
-  (match many (prelude-nullary env ty "IO") _ ((BTrue) (Once)) ((BFalse) (Many))))
+  (match many (prelude-nullary env ty "Program") _ ((BTrue) (Once)) ((BFalse) (Many))))
 
 (def-fns _ $ (many mode-demand : (many (Env) env) (many (Term) ty) (many (Mult) pos) (many (Bool) final) -> (many (Mult) m))
   (match many final _ ((BTrue) (final-demand env ty)) ((BFalse) (head-demand env ty pos))))
@@ -3525,6 +3532,8 @@
         (match many (notail $ strengthen-slots _ _ slots d) _ ((None _) (None _)) ((Some _ slots2) (Some _ $ CCellCopy _ k2 cell2 slots2))))
       ((CCellRead _ k2 index cell)
         (match many (notail $ strengthen _ _ _ cell d) _ ((None _) (None _)) ((Some _ cell2) (Some _ $ CCellRead _ k2 index cell2))))
+      ((CWorldDo _ req)
+        (match many (notail $ strengthen _ _ _ req d) _ ((None _) (None _)) ((Some _ req2) (Some _ $ CWorldDo _ req2))))
       ((CAbsurd _ ms2) (Some _ $ CAbsurd _ ms2))
       ((CError _ ms2 m) (Some _ $ CError _ ms2 m))))
   ((many strengthen-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Drop from ctx) d) -> (many (Kept (Code from many-one) (Code ctx many-one) cs) r))
@@ -3639,6 +3648,7 @@
       ((CCellWrite _ k2 cell slots) (CCellWrite _ k2 (notail $ norm _ _ many-one cell ren) $ notail $ norm-slots _ _ slots ren))
       ((CCellCopy _ k2 cell slots) (CCellCopy _ k2 (notail $ norm _ _ many-one cell ren) $ notail $ norm-slots _ _ slots ren))
       ((CCellRead _ k2 index cell) (CCellRead _ k2 index $ notail $ norm _ _ many-one cell ren))
+      ((CWorldDo _ req) (CWorldDo _ $ notail $ norm _ _ many-one req ren))
       ((CAbsurd _ ms2) (CAbsurd _ ms2))
       ((CError _ ms2 m) (CError _ ms2 m))))
   ((many norm-list : (erased (List $ List $ Nat) from) (erased (List $ List $ Nat) ctx) (subterm many (List $ Code from many-one) cs) (many (Ren from ctx) ren) -> (many (List $ Code ctx many-one) r) (erased (Lockstep (Code from many-one) (Code ctx many-one) cs r) lock))
@@ -3735,6 +3745,7 @@
       ((CCellWrite _ k2 cell slots) (CCellWrite _ k2 (notail $ distribute ctx many-one cell) $ notail $ distribute-slots ctx slots))
       ((CCellCopy _ k2 cell slots) (CCellCopy _ k2 (notail $ distribute ctx many-one cell) $ notail $ distribute-slots ctx slots))
       ((CCellRead _ k2 index cell) (CCellRead _ k2 index $ notail $ distribute ctx many-one cell))
+      ((CWorldDo _ req) (CWorldDo _ $ notail $ distribute ctx many-one req))
       (else code)))
   ((many distribute-list : (many (List $ List $ Nat) ctx) (subterm many (List $ Code ctx many-one) codes) ->
       (many (List $ Code ctx many-one) r) (erased (Lockstep (Code ctx many-one) (Code ctx many-one) codes r) lk))
@@ -3776,6 +3787,7 @@
       ((CCellWrite _ _ _ _) (BFalse))
       ((CCellCopy _ _ _ _) (BFalse))
       ((CCellRead _ _ _ cell) (tail $ erases-to-nothing _ _ cell))
+      ((CWorldDo _ _) (BFalse))
       ((CValues _ _ cs _) (tail $ erases-list _ cs))
       ((CLet _ _ _ _ _ rhs rest) (and (notail $ erases-to-nothing _ _ rhs) $ notail $ erases-to-nothing _ _ rest))
       ((CLetRec _ _ _ _ rest) (tail $ erases-to-nothing _ _ rest))
@@ -3815,6 +3827,7 @@
       ((CCellWrite _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
       ((CCellCopy _ _ cell slots) (or (notail $ has-marked _ _ cell only) $ notail $ has-marked-slots _ slots only))
       ((CCellRead _ _ _ cell) (tail $ has-marked _ _ cell only))
+      ((CWorldDo _ req) (tail $ has-marked _ _ req only))
       ((CValues _ _ cs _) (tail $ has-marked-list _ cs only))
       ((CLet _ _ _ _ _ rhs rest) (or (notail $ has-marked _ _ rhs only) $ notail $ has-marked _ _ rest only))
       ((CLetRec _ _ _ _ rest) (tail $ has-marked _ _ rest only))
@@ -3859,6 +3872,7 @@
       ((CCellWrite _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
       ((CCellCopy _ _ cell slots) (and (not $ has-marked _ _ cell $ BFalse) $ not $ has-marked-slots _ slots $ BFalse))
       ((CCellRead _ _ _ cell) (not $ has-marked _ _ cell $ BFalse))
+      ((CWorldDo _ req) (not $ has-marked _ _ req $ BFalse))
       ((CValues _ _ cs _) (not $ has-marked-list _ cs $ BFalse)) (else (BTrue))))
   ((many tails-ok-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (subterm many (List $ Branch ctx ns) bs) (many (Bool) direct) -> (many (Bool) r))
     (let-match many bs (Cons _ b rest)
@@ -3889,6 +3903,7 @@
         (let ((many env1)) $ notail $ call-report _ _ cell (BFalse) env)
         (tail $ call-report-slots _ slots env1))
       ((CCellRead _ _ _ cell) (tail $ call-report _ _ cell (BFalse) env))
+      ((CWorldDo _ req) (tail $ call-report _ _ req (BFalse) env))
       ((CValues _ _ cs _) (tail $ call-report-list _ cs env))
       ((CLet _ _ _ _ _ rhs rest)
         (let ((many env1)) $ notail $ call-report _ _ rhs (BFalse) env)
@@ -4826,6 +4841,34 @@
   (let-match many (env-run-pos env) (BFalse) ((BTrue) env))
   (env-warn-at env l $ str-cat (say env "lopsided `match`; flatten it with a `let-match` on ") $ qshown env c))
 
+(def-fns _ $ (many call-returns : (many (Env) env3) (many (List $ List $ Nat) ctx) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) pre) (many (List $ Mult) expect) (many (List $ Entry) rets) (many (List $ Term) acc) (many (Mult) pos) (many (ExprDemand expect) demand) (many (Maybe $ Nat) cid) (many (String) fallback) (many (Invoke ctx2) inv) ->
+    (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
+  (let ((many rmults)) $ physical-mults rets)
+  (let ((many env4) (many ids) (erased lock)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env3) (Some _ $ under-list (tele-mults rets) pos) acc $ BFalse)
+  (let ((many (Env) env5) (many (Hoisted ctx expect) code))
+    (match many (mult-is-many pos) _
+      ((BFalse) (values env4 $ hoist-none ctx expect $ CErased _ expect))
+      ((BTrue)
+        (let ((many (Code ctx2 rmults) call))
+          (match many inv _
+            ((InvApp _ hid actuals cc2 skipped)
+              (let-match many skipped (BFalse) ((BTrue) (let ((many missing) (erased pk)) $ codes-missing ctx2 rmults) (CValues _ rmults missing pk)))
+              (CApp ctx2 rmults (var-code env4 ctx2 hid) actuals cc2))
+            ((InvWorld _ actuals)
+              (let-match many actuals (Cons _ _ more) ((Nil _) (CError _ rmults "world-do arity")))
+              (let-match many more (Cons _ req _) ((Nil _) (CError _ rmults "world-do arity")))
+              (match many (mults-same many-one rmults) _
+                ((Some _ same) (recast _ rmults many-one same $ CWorldDo _ req))
+                ((None _) (CError _ rmults "world-do returns"))))))
+        (let-match many (lockstep-dec _ _ rmults ids) (LdYes _ _ _ _ lk)
+          ((LdNo _ _ _ _) (values (env-error env4 "internal: call return count") $ hoist-none ctx expect $ CError _ expect "size")))
+        (let ((many bound) (erased bpk)) $ picked-of _ rmults ids lk)
+        (let ((many env5) (many kept) (erased kpk)) $ result-codes expect rets ids acc env4 $ Cons _ bound ctx2)
+        (values env5 $ MkHoisted _ _ ctx2 pre $ CLet _ rmults _ bound bpk call $ CValues _ expect kept kpk))))
+  (let ((many callee-name)) $ match many cid (((String) _)) ((Some _ cx) (qshown env5 cx)) ((None _) fallback))
+  (let ((many env6) (many ress)) $ returns-produced _ env5 demand callee-name expect rets $ ress-of ids env5)
+  (values env6 ress code))
+
 (def-fns _
   ; An expression of the given size and erasures (sections 14, 27); [tele] is the telescope a bare _ reuses.
   ((many elab-expr-demand : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (Syn) raw) (many (Env) env-in) (many (List $ List $ Nat) ctx) (many (List $ Mult) expect) (many (Maybe $ List $ Entry) tele) (many (CC) cc) (many (ExprDemand expect) demand) ->
@@ -4879,7 +4922,7 @@
             ((Some _ sp)
               (let-match many (misplaced envl raw) (None _) ((Some _ _) (expr-error ctx expect envl (not-a envl "not an expression" raw) "misplaced")))
               (let ((many envl2)) $ read-special envl head (BFalse) pos)
-              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ or (sp-eq sp $ SpMark $ MkAt) $ or (sp-eq sp $ SpStmt $ StCompileError) $ sp-eq sp $ SpStmt $ StDumpContext)
+              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExWorldDo) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ or (sp-eq sp $ SpMark $ MkAt) $ or (sp-eq sp $ SpStmt $ StCompileError) $ sp-eq sp $ SpStmt $ StDumpContext)
               (let ((many (Env) env0))
                 (match many multi _
                   ((BTrue) envl2)
@@ -5110,6 +5153,15 @@
                       (let ((many env2) (many sg) (many tg) (many vg) (many sf) (many tf) (many vf)) $ expect-proof6 env1 delegate-id "" p)
                       (let ((many env3) (many r)) $ coercible-mint env2 tele $ proof-type coercible-id $ Cons _ sg $ Cons _ tg $ Cons _ vg $ Cons _ sf $ Cons _ tf $ Cons _ vf $ Nil _)
                       (erased-result ctx expect proof-what env3 r))
+                    ((ExWorldDo)
+                      (let ((many request)) $ lookup (env-set-scope env0 $ env-prelude env0) "Request")
+                      (let-match many request (Some _ rq) ((None _) (values (env-error env0 "`world-do` needs the prelude's `Request`") (list-replicate _ (list-length _ expect) no-res) $ hoist-none ctx expect $ CError _ expect "world-do")))
+                      (let ((many params)) $ Cons _ (ty-entry "A" type-term) $ Cons _ (MkEntry (Some _ "w") (BFalse) (Once) (SgTy world-term) (None _) (None _))
+                        $ Cons _ (MkEntry (Some _ "req") (BFalse) (Once) (SgTy $ TApp (TVar rq) $ Cons _ (TBound 1) $ Nil _) (None _) (None _)) $ Nil _)
+                      (let ((many rets)) $ Cons _ (MkEntry (Some _ "w2") (BFalse) (Once) (SgTy world-term) (Some _ $ TSlotOf $ TBound 1) (None _))
+                        $ Cons _ (MkEntry (Some _ "r") (BFalse) (Many) (SgTy $ TBound 3) (None _) (None _)) $ Nil _)
+                      (let ((many env2) (many acc) (many tys) (many ctx2) (many apre) (many actuals)) $ notail $ check-args fuel sugar args (subs-all args) one-step env0 (CalleeForm env0 "world-do") ctx params pos tele (ARCall rets) (BFalse) (BTrue) $ BTrue)
+                      (call-returns env2 ctx ctx2 apre expect rets acc pos demand (None _) (tick $ spell env2 "world-do") $ InvWorld _ actuals))
                     ((ExDelegateOf)
                       (let ((many env2) (many found)) $ notail $ fetched fuel sugar args one-step env0 ex)
                       (match many found (((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
@@ -6772,28 +6824,12 @@
     (let ((many pre)) $ SSeq _ _ _ hsc apre)
     (let ((many arg-terms)) $ list-rev _ acc)
     (let ((many env3)) $ unneeded _ ann env2 (notail $ check-call-proof fuel sugar rawargs ann env2 ctx callee desc (sub-positions _ args) lv params arg-terms $ list-rev _ tys) lv params arg-terms)
-    (let ((many rmults)) $ physical-mults rets)
-    (let ((many env4) (many ids) (erased lock)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env) (Some _ $ under-list (tele-mults rets) pos) acc $ BFalse)
-    (let ((many (Env) env5) (many (Hoisted ctx expect) code))
-      (match many (mult-is-many pos) _
-        ((BFalse) (values env4 $ hoist-none ctx expect $ CErased _ expect))
-        ((BTrue)
-          (let ((many (CC) cc2))
-            (match many (and (cc-eq cc $ CCPlain) $ match many (env-level env4) (((Bool) _)) ((None _) (BFalse)) ((Some _ cur) (equal-env env4 lv $ TVar cur))) _
-              ((BTrue) (CCSame (env-loc env) $ qshow env $ res-term callee))
-              ((BFalse) cc)))
-          (let ((many (Code ctx2 rmults) call))
-            (match many skipped _
-              ((BTrue) (let ((many missing) (erased pk)) $ codes-missing ctx2 rmults) (CValues _ rmults missing pk))
-              ((BFalse) (CApp ctx2 rmults (var-code env4 ctx2 hid) actuals cc2))))
-          (let-match many (lockstep-dec _ _ rmults ids) (LdYes _ _ _ _ lk)
-            ((LdNo _ _ _ _) (values (env-error env4 "internal: call return count") $ hoist-none ctx expect $ CError _ expect "size")))
-          (let ((many bound) (erased bpk)) $ picked-of _ rmults ids lk)
-          (let ((many env5) (many kept) (erased kpk)) $ result-codes expect rets ids acc env4 $ Cons _ bound ctx2)
-          (values env5 $ MkHoisted _ _ ctx2 pre $ CLet _ rmults _ bound bpk call $ CValues _ expect kept kpk))))
-    (let ((many callee-name)) $ match many (res-term callee) (((String) _)) ((TVar cx) (qshown env5 cx)) (else "this call"))
-    (let ((many env6) (many ress)) $ returns-produced _ env5 demand callee-name expect rets $ ress-of ids env5)
-    (values env6 ress code))
+    (let ((many (CC) cc2))
+      (match many (and (mult-is-many pos) $ and (cc-eq cc $ CCPlain) $ match many (env-level env3) (((Bool) _)) ((None _) (BFalse)) ((Some _ cur) (equal-env env3 lv $ TVar cur))) _
+        ((BTrue) (CCSame (env-loc env) $ qshow env $ res-term callee))
+        ((BFalse) cc)))
+    (let ((many cid)) $ match many (res-term callee) (((Maybe $ Nat) _)) ((TVar cx) (Some _ cx)) (else (None _)))
+    (call-returns env3 ctx ctx2 pre expect rets acc pos demand cid "this call" $ InvApp _ hid actuals cc2 skipped))
 
   ; The call-site proof (section 19), read against the current level and enclosing subterm parameters; a bare
   ; call gets its annotation from resolve-ann first.
@@ -6898,7 +6934,7 @@
 (def-adts $ (FinalKind : -> Type)
   enum
   (many FMain : -> (FinalKind))
-  (many FIo : -> (FinalKind))
+  (many FProgram : -> (FinalKind))
   (many FThunk : (many (Term) ty) -> (FinalKind))
   (many FPlain : -> (FinalKind)))
 
@@ -6912,7 +6948,7 @@
 
 (def-fns _ $ (many final-form : (many (Env) env) (many (Term) ty) -> (many (Maybe $ FinalKind) f))
   (let-match many (canon-env env ty) (TFn uq _ ps rs)
-    (else (Some _ $ match many (prelude-nullary env ty "IO") _ ((BTrue) (FIo)) ((BFalse) (FPlain)))))
+    (else (Some _ $ match many (prelude-nullary env ty "Program") _ ((BTrue) (FProgram)) ((BFalse) (FPlain)))))
   (let-match many uq (BFalse) ((BTrue) (None _)))
   (let-match many rs (Cons _ r more) ((Nil _) (None _)))
   (let-match many more (Nil _) ((Cons _ _ _) (None _)))

@@ -1,6 +1,4 @@
 ; expect: 5050
-; Measure answers the program's usage since its first step; under --no-extern every figure is zero, so the
-; test prints the work's result, not the figures.
 
 (let ((many d0)) (lt-dec 0 u8-modulus))
 (comptime-match many d0 (Yes za zb zp))

@@ -7,7 +7,7 @@
    "; confine-dir: dir" the directory its file requests start confined to, as --confine-dir gives it;
    "; confine-output-bytes: n" the output it may write, as --confine-output-bytes gives it;
    "; no-env: yes" hides the environment from the program, as --no-env does;
-   "; stderr: text" a line it must write to stderr; "; exit: n" the code an IO program must exit with;
+   "; stderr: text" a line it must write to stderr; "; exit: n" the code a Program must exit with;
    "; warns: text" a line the file must warn with, elaborating it or checking its indentation, whether or not it goes on to be refused;
    "; externs: only" runs the test with the FFI alone, for one whose model is too slow to run;
    "; extract-bytes-at-most: n" bounds the size of the OCaml its extraction writes;

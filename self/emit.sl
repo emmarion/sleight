@@ -422,12 +422,16 @@
   enum
   (many AkOption : (many (String) cname) -> (ArmKind))
   (many AkField : -> (ArmKind))
-  (many AkRequest : -> (ArmKind)))
+  (many AkVariant : -> (ArmKind))
+  (many AkIs : (many (String) cname) -> (ArmKind)))
 
 (def-fns _ $ (many arm-body : (many (Decls) d) (many (ArmKind) k) (many (Ctor) c) (many (List $ Rope) fs) -> (many (Rope) r))
   (let-match many k (AkOption cname)
     ((AkField) (match many fs _ ((Nil _) (RStr "(absurd ())")) ((Cons _ f _) f)))
-    ((AkRequest) (rcat3 (RStr $ str-cat3 "(Driver_core." (ctor-name c) " (") (commas fs) $ RStr "))")))
+    ((AkVariant) (match many fs _
+      ((Nil _) (RStr $ str-cat3 "(Driver_core." (ctor-name c) ")"))
+      (else (rcat3 (RStr $ str-cat3 "(Driver_core." (ctor-name c) " (") (commas fs) $ RStr "))"))))
+    ((AkIs n) (RStr $ match many (str-eq n $ ctor-name c) _ ((BTrue) "true") ((BFalse) "false"))))
   (match many (str-cmp (ctor-name c) cname) _
     ((CEq _ _ _) (rcat3 (RStr "(Some (") (commas fs) $ RStr "))"))
     (else (RStr "None"))))
@@ -775,6 +779,7 @@
         (cell-write-rope d k2 (field-copy-rope d k2 (notail $ emit-code _ _ cell env ns d) $ str-cat3 "r" (nat-str $ names-depth _ ns) "_c") indices args $ names-depth _ ns))
       ((CCellRead _ k2 index cell)
         (field-read-rope d k2 (notail $ emit-code _ _ cell env ns d) index $ str-cat3 "cell" (nat-str $ names-depth _ ns) "_r"))
+      ((CWorldDo _ req) (rcat3 (RStr "(driver.Driver_core.perform world ") (notail $ emit-code _ _ req env ns d) $ RStr ")"))
       ((CAbsurd _ _) (RStr "(absurd ())"))
       ((CError _ _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
@@ -877,6 +882,7 @@
       ((CCellWrite _ k2 cell slots) (tail $ collect-slots _ slots env $ notail $ collect-code _ _ cell env $ collect-cell k2 d))
       ((CCellCopy _ k2 cell slots) (tail $ collect-slots _ slots env $ notail $ collect-code _ _ cell env $ collect-cell k2 $ collect-ctor k2 d))
       ((CCellRead _ k2 _ cell) (tail $ collect-code _ _ cell env $ collect-cell k2 d))
+      ((CWorldDo _ req) (tail $ collect-code _ _ req env d))
       ((CLet _ _ _ _ _ rhs rest) (tail $ collect-code _ _ rest env $ notail $ collect-code _ _ rhs env d))
       ((CLetRec _ _ _ g rest) (match many g _ ((MkGroup _ _ fns _) (tail $ collect-code _ _ rest env $ notail $ collect-group _ _ fns env d))))
       ((CConst _ x) (decl-const d x))
@@ -1091,7 +1097,8 @@
         $ driver-op "missing" $ driver-make d env "Missing")
       (rcat4 (driver-op "changed" $ driver-make d env "Changed") (driver-op "unchanged" $ driver-make d env "Unchanged")
         (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")")
-        $ driver-op "request" $ driver-un d env "IO" $ AkRequest)
+        $ rcat3 (driver-op "request" $ driver-un d env "Request" $ AkVariant) (driver-op "step" $ driver-un d env "Program" $ AkVariant)
+        $ driver-op "compact" $ driver-un d env "Compaction" $ AkIs "Compact")
       $ RStr "Driver_core.apply = (fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs) }\n")))
 
 (def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) -> (many (Rope) r))
@@ -1238,7 +1245,7 @@
   (let ((many vr)) $ addr-rope _ v)
   (match many (classify-final env ty) _
     ((FMain) (values d $ rcat3 (RStr "let () = driver.run_main world ") vr $ RStr "\n"))
-    ((FIo) (values d $ rcat3 (RStr "let () = exit (driver.run_io world ") vr $ RStr ")\n"))
+    ((FProgram) (values d $ rcat3 (RStr "let () = exit (driver.run_program world ") vr $ RStr ")\n"))
     ((FThunk t)
       (let ((many memo) (many name)) $ show-type show-fuel env t $ MkShowMemo (env-fresh-bound env) 0 (Nil _) (Nil _) d)
       (values (memo-decls memo) $ rcat5 (show-defs memo) (RStr "let () = print_final (") (RStr name) (rcat3 (RStr " ((Obj.obj ") vr $ RStr " : unit -> Obj.t) ()))") $ RStr "\n"))
@@ -1270,7 +1277,7 @@
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
+  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Compaction" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb writes))
   (let ((many d0b) (many unused)) $ emit-finals _ hp (list-rev _ fi) env d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)
@@ -1282,4 +1289,4 @@
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)
   (let ((many skeletons) (many defs) (many fills)) $ emit-blocks _ hp order env d2)
   (let ((many d3) (many finals)) $ emit-finals _ hp (list-rev _ fi) env d2)
-  (rcat5 (RStr runtime-header) (decls-rope d3) (rcat3 skeletons defs fills) (driver-rope d3 env fence bytes with-env) finals))
+  (rcat5 (RStr runtime-header) (decls-rope d3) (driver-rope d3 env fence bytes with-env) (rcat3 skeletons defs fills) finals))

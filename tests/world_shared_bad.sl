@@ -1,0 +1,10 @@
+; error: used at unique
+(def-lvl P)
+(let ((many d3)) (lt-dec 3 u8-modulus))
+(comptime-match many d3 (Yes za3 zb3 zp3))
+(let ((many code3)) (MkU8 3 zp3))
+(def-unique P $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((many ws)) (share w))
+  (let ((unique w1) (many _)) (world-do _ ws (WriteOut "a\n")))
+  (values w1 (Exit P code3)))
+(Continue P start)
