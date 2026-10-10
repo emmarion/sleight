@@ -287,4 +287,8 @@ may be `_` to be inferred.
   cover a macro's output; a `main` that takes a world, so its interpreter
   can serve a macro's `read-file`; its interpreter calling back into its
   elaborator for macro-world operations.
+- Decided: slc's evaluator threads the world through evaluation so that
+  `slc --interpret` performs a program's requests as it evaluates them,
+  rather than replaying steps; the world may be held inside a larger
+  structure the evaluator already passes along, such as its store.
 
