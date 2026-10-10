@@ -94,18 +94,12 @@ by the owner and apply to every session.
 
 15. **Numbered items are never renumbered.** DESIGN.md's sections and
     the items of ASSUMPTIONS.md, SPEC-REVIEW.md, OPEN.md,
-    TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md and BUGS.md are
+    TOOLING-WISHLIST.md, MINIMAL.md, DEMOS.md, BUGS.md and WARNINGS.md are
     cited by number from the code and from each other. An item or
     section that goes away is deleted and its number left as a gap;
     nothing after it moves.
 
-16. **Compiler warnings are documented solely by their tests and their
-    implementation.** A warning the compilers emit on their own gets no
-    prose in README.md or any other doc; its `; warns:` tests and the
-    code that emits it are its whole documentation. The support for
-    user-defined warnings (the `;! warn` pragma and its `suppress` and
-    `restore` regions) is a language feature, not a warning, and stays
-    documented.
+16. **Compiler warnings are documented in WARNINGS.md.**
 
 17. **Lazy diagnostics; time slc on slc.** Build message text only when
     the message is reported. Before pushing an elaborator change, time

@@ -12,6 +12,7 @@ DESIGN.md specifies. The other files:
   removed when the owner decides it.
 - HANDOFF.md: work in progress handed from one session to the next.
 - BUGS.md: defects found in the implementation.
+- WARNINGS.md: the warnings the compilers emit, one item each.
 - TOOLING-WISHLIST.md: friction met while writing programs in the
   language.
 - EXAMPLES.md: an index of the tests that show the features working
