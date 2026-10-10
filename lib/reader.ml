@@ -3,7 +3,7 @@
    it is raised where none is at hand, for an enclosing form to fill in. *)
 type loc = { file : string; line : Z.t; col : Z.t }
 
-type raw = Atom of loc * string | List of loc * raw list
+type raw = Atom of loc * string | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 exception Syntax of loc * string
 
@@ -13,14 +13,17 @@ let where fallback l =
   let f = if l.file = "" then fallback else l.file in
   if placed l then Printf.sprintf "%s:%s:%s" f (Z.to_string l.line) (Z.to_string l.col) else f
 
-let loc = function Atom (l, _) | List (l, _) -> l
+let loc = function Atom (l, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
 
 let rec show = function
-  | Atom (_, s) when s <> "" && s.[0] = '"' -> Ffi_core.lit_string (String.sub s 1 (String.length s - 2))
-  | Atom (_, s) -> s
+  | Atom (_, s) -> Literal.name s
+  | Wild _ -> "_"
+  | Nat (_, z) -> Z.to_string z
+  | Char (_, c) -> Ffi_core.lit_char c
+  | Str (_, s) -> Ffi_core.lit_string s
   | List (_, items) -> "(" ^ String.concat " " (List.map show items) ^ ")"
 
-type token = LParen | RParen | Dollar | Word of string | Pragma of raw list
+type token = LParen | RParen | Dollar | Item of raw | Invalid of string | Pragma of raw list
 
 let unterminated = "unterminated string literal"
 
@@ -47,7 +50,15 @@ let scan_upto file src =
       | c -> Buffer.add_char buf c; string buf line bol (i + 1)
   in
   let emit t = out := t :: !out in
-  let word w = if w = "_" || String.starts_with ~prefix:"__" w || Literal.classify w <> `Name then w else Literal.name w in
+  let item l w =
+    if w = "_" then Item (Wild l)
+    else if String.starts_with ~prefix:"__" w then Invalid (Printf.sprintf "`%s` begins with `__`, which is reserved for the compilers' messages; write it `%s`" w (Literal.name w))
+    else match Literal.classify w with
+      | `Name -> Item (Atom (l, w))
+      | `Lit (Literal.Numeral z) -> Item (Nat (l, z))
+      | `Lit (Literal.Char c) -> Item (Char (l, c))
+      | `Lit (Literal.Str s) -> Item (Str (l, s))
+      | `Bad m -> Invalid m in
   let blank c = c = ' ' || c = '\t' || c = '\r' in
   let rec pragma line bol i k =
     let i = skip blank i in
@@ -56,10 +67,10 @@ let scan_upto file src =
       let buf = Buffer.create 16 in
       let line', _, j = string buf line bol (i + 2) in
       if line' <> line then err (at line bol i) "a pragma ends with its line";
-      Atom (at line bol i, Literal.name (Buffer.contents buf)) :: pragma line bol j (k - 1))
+      Atom (at line bol i, Buffer.contents buf) :: pragma line bol j (k - 1))
     else
     let j = if k = 0 then j else skip (fun c -> not (blank c || c = '\n')) i in
-    if i >= j then [] else if k = 0 then [ Atom (at line bol i, String.trim (String.sub src i (j - i))) ] else Atom (at line bol i, word (String.sub src i (j - i))) :: pragma line bol j (k - 1)
+    if i >= j then [] else if k = 0 then [ Atom (at line bol i, String.trim (String.sub src i (j - i))) ] else Atom (at line bol i, String.sub src i (j - i)) :: pragma line bol j (k - 1)
   in
   let rec go line bol i =
     if i < n then
@@ -72,17 +83,17 @@ let scan_upto file src =
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
-      | '"' -> literal Literal.quote line bol i (i + 1)
-      | '#' when i + 1 < n && src.[i + 1] = '"' -> literal Literal.name line bol i (i + 2)
+      | '"' -> literal (fun l b -> Str (l, b)) line bol i (i + 1)
+      | '#' when i + 1 < n && src.[i + 1] = '"' -> literal (fun l b -> Atom (l, b)) line bol i (i + 2)
       | _ ->
           let j = skip (fun c -> not (String.contains " \t\r\n();" c)) i in
           let w = String.sub src i (j - i) in
-          emit (at line bol i, i, if w = "$" then Dollar else Word (word w)); go line bol j
-  and literal spell line bol i start =
+          emit (at line bol i, i, if w = "$" then Dollar else item (at line bol i) w); go line bol j
+  and literal make line bol i start =
     let buf = Buffer.create 16 in
     let opened = at line bol i in
     let line, bol, j = string buf line bol start in
-    emit (opened, i, Word (spell (Buffer.contents buf))); go line bol j
+    emit (opened, i, Item (make opened (Buffer.contents buf))); go line bol j
   in
   let stopped = match go 1 0 0 with () -> None | exception Syntax (l, m) -> Some (l, m) in
   (List.rev !out, stopped)
@@ -141,7 +152,8 @@ let parse ?(shape = true) file src =
          | _, None -> raise (paren l "missing `)` after `$`")
          | _ -> ());
         read_items ~top (List (l, items) :: acc)
-    | Some (l, Word w) -> advance (); read_items ~top (Atom (l, w) :: acc)
+    | Some (_, Item r) -> advance (); read_items ~top (r :: acc)
+    | Some (l, Invalid m) -> raise (Syntax (l, m))
   in
   let items = read_items ~top:true [] in
   (match peek () with Some (l, _) -> raise (paren l "unexpected `)`") | None -> ());

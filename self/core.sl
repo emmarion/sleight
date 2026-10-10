@@ -2723,18 +2723,29 @@
 (def-fns _ $ (many entry-name-or-id : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
   (let-match many e (MkEInfo _ n _ _ _ _ _ _))
-  (match many n _ ((None _) (str-cat "__" $ nat-str x)) ((Some _ s2) s2)))
+  (match many n _ ((None _) (str-cat "__" $ nat-str x)) ((Some _ s2) (spell-name s2))))
+
+(def-fns _ $ (many named-as : (many (Env) env) (many (Nat) x) -> (many (String) r))
+  (let ((erased hs) (many e)) $ entry env x)
+  (let-match many e (MkEInfo _ n _ _ _ _ _ _))
+  (match many n _ ((None _) (anon-mark env x)) ((Some _ s2) s2)))
 
 (def-fns _ $ (many name-of : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
   (let-match many e (MkEInfo _ n _ _ _ _ _ _))
-  (match many n _ ((None _) (anon-mark env x)) ((Some _ s2) s2)))
+  (match many n _ ((None _) (anon-mark env x)) ((Some _ s2) (spell-name s2))))
 
 ; A name or term in a message is set off in backticks; a literal already reads as one and is left bare.
 (def-fns _ $ (many tick : (many (String) s) -> (many (String) r))
   (match many (or (is-literal-name s) $ match many s (((Bool) _)) ((SNil) (BFalse)) ((SCons c _) (char-is c 34))) _
     ((BTrue) s)
     ((BFalse) (str-cat3 "`" s "`"))))
+
+(def-fns _ $ (many spell-binder : (many (Maybe $ String) n) -> (many (String) s))
+  (match many n _ ((None _) "_") ((Some _ x) (spell-name x))))
+
+(def-fns _ $ (many tick-name : (many (String) n) -> (many (String) r))
+  (tick $ spell-name n))
 
 (def-fns _ $ (many qname : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (tick $ name-of env x))
@@ -2994,10 +3005,10 @@
 (def-fns _
   ((many show-term : (subterm many (Term) t) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) -> (many (Rope) r))
     (match many t _
-      ((TVar x) (RStr $ name-of env x))
+      ((TVar x) (RStr $ named-as env x))
       ((TBound k)
         (RStr $ match many (list-nth _ bound k) (((String) _))
-          ((NthHit _ _ _ n _) (match many n (((String) _)) ((Some _ s) s) ((None _) (str-cat "#" $ nat-str k))))
+          ((NthHit _ _ _ n _) (match many n (((String) _)) ((Some _ s) (spell-name s)) ((None _) (str-cat "#" $ nat-str k))))
           ((NthMiss _ _ _ _) (str-cat "#" $ nat-str k))))
       ((TApp h args)
         (match many (is-universe h args) _
@@ -3030,7 +3041,7 @@
   ((many show-tele : (subterm many (List $ Entry) es) (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (many (List $ Maybe $ String) bound) (many (Bool) marked) -> (many (Rope) r) (many (List $ Maybe $ String) bound2))
     (let-match many es (Cons _ e rest) ((Nil _) (values (REmpty) bound)))
     (let-match many e (MkEntry n s m sg place _))
-    (let ((many (String) nm)) $ match many n _ ((None _) "_") ((Some _ x) x))
+    (let ((many (String) nm)) $ spell-binder n)
     (let ((many (String) marks))
       (match many marked _
         ((BFalse) "")
@@ -3054,12 +3065,11 @@
   (let-match many site (Some _ l) ((None _) env))
   (let-match many name (Some _ n) ((None _) env))
   (let-match many (lookup env n) (Some _ prior) ((None _) env))
-  (let-match many (str-eq n "_") (BFalse) ((BTrue) env))
   (let-match many env (MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (match many (env-entry-at env prior) (((Env) _))
     ((Some _ pl) (env-set-said env $ Cons _ (SaidShadow (Succ fr) prior pl n l) $ env-said env))
     ((None _)
-      (env-warn-at env l $ str-cat3 "declaration of " (tick n) " shadows a built-in"))))
+      (env-warn-at env l $ str-cat3 "declaration of " (tick-name n) " shadows a built-in"))))
 
 ; Mints an entry: a fresh id, its name in scope, its state, its type and optional rule (section 5). A meta,
 ; standing for a `_` argument (DESIGN.md section 50), enters neither the scope nor the objects: nothing reaches it by
@@ -3077,11 +3087,7 @@
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
-  (let ((many (Env) enve)) $ match many site _ ((Some _ l) (env-at-loc envs l)) ((None _) envs))
-  (let ((many (Env) envl)) $ match many name _ ((None _) envs) ((Some _ n)
-    (let-match many (is-literal-name n) (BFalse) ((BTrue) (env-back envs $ env-error enve $ str-cat n " is a literal, not a name")))
-    (match many (is-reserved-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat3 (tick n) " begins with `__`, which is reserved for the compilers' messages; write it " $ tick $ spell-name n)) ((BFalse) envs))))
-  (let-match many envl (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
+  (let-match many envs (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))
     (match many (or meta literal) _
@@ -3767,7 +3773,7 @@
   (let ((many covered)) $ match many (and hinted $ shadow-covered env prior x) (((List $ Pair (Loc) $ String) _))
     ((BTrue) (Cons _ (MkPair _ _ l "using `_` here instead would be equivalent") $ Nil _))
     ((BFalse) (Nil _)))
-  (let ((many text)) $ diagnostic (env-at-loc env l) ": warning: " (Cons _ (MkPair _ _ pl "shadowed binder is here") covered) $ str-cat3 "declaration of " (tick n) " shadows a previous binder")
+  (let ((many text)) $ diagnostic (env-at-loc env l) ": warning: " (Cons _ (MkPair _ _ pl "shadowed binder is here") covered) $ str-cat3 "declaration of " (tick-name n) " shadows a previous binder")
   (Cons _ (SaidWarning l text) $ notail $ shadow-said env hinted rest))
 
 (def-fns _ $ (many report-shadows : (many (Env) env) (many (Bool) hinted) -> (many (Env) r))

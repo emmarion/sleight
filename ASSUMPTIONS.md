@@ -348,8 +348,9 @@ literals as open.
     and the proof, in `pow2`'s shape. Coq's `positive`/`N` pair was the
     alternative. All names are the session's.
 
-51. **A numeral is a digit-only atom and never a name** (`Env.bind`
-    refuses one; leading zeros are rejected outright). It denotes
+51. **A numeral is a digit-only atom and never a name** (the reader
+    reads one as a numeral, holding its value; leading zeros are rejected
+    outright). It denotes
     `(let ((many _) (erased _)) (bin-to-nat <spelling>))`, interned where
     it is first met (212) and per program by value, so every occurrence is one entry: the `Nat` is
     opaque, a `Const` with no `is` rule, and the erased `Numeral` proof
@@ -4044,10 +4045,10 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      entries.
 
 212. **Literals outside every scope (sections 5, 18, 45).** Both compilers
-    intern a literal where it is first met, from `var`'s literal case,
+    intern a literal where it is first met, from an expression's literal case,
     `numeral-of`, `prove-literal-lt` and `unary`, with no pass over a
     form ahead of elaborating it. The reference keeps one program-wide
-    table (`Env.literal_rows`) from a literal's spelling to the entries it
+    table (`Env.literal_rows`) from a literal's value to the entries it
     minted, with their values and the Peano ladder, reset with the FFI
     tables; the ids come from a separate half of the id space, the
     negatives, so that the evaluator and the extractor find a literal's

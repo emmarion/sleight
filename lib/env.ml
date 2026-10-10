@@ -151,7 +151,7 @@ let trace : item list ref = ref []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
-let entry_name env x = match (entry env x).name with Some n -> n | None -> "__" ^ string_of_int x
+let entry_name env x = match (entry env x).name with Some n -> Literal.name n | None -> "__" ^ string_of_int x
 let anonymous env x =
   let e = entry env x in
   let owner = if e.slot = x then Some (entry env (x - 1)) else None in
@@ -274,7 +274,7 @@ let speller ?except env =
     | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
     | _ -> acc) [] (StringMap.bindings env.scope.named)) in
   fun b -> match List.assoc_opt b (Lazy.force held) with
-    | Some (_, n) -> n
+    | Some (_, n) -> Literal.name n
     | None when b = Term.universe -> b
     | None -> Printf.sprintf "\001k%s\001%s\002" b (match lookup env b with Some x -> Reader.where "" (entry env x).at | None -> "")
 
@@ -318,10 +318,10 @@ let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (matc
 let fetches ?except env =
   let kw = speller env in
   let form head arg = "(" ^ kw head ^ " " ^ arg ^ ")" in
-  let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, n)) | _ -> None) (StringMap.bindings env.scope.named) in
+  let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, Literal.name n)) | _ -> None) (StringMap.bindings env.scope.named) in
   let name_for a = Option.map snd (newest named a) in
   List.filter_map (fun (_, (x, n)) -> match canon env (type_of env x) with Fn (Var l, _, _) | UniqueFn (Var l, _, _) -> Some (l, (x, form "level-of" n)) | _ -> None) named
-  @ List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" n)) | _ -> None) (StringMap.bindings env.scope.named)
+  @ List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" (Literal.name n))) | _ -> None) (StringMap.bindings env.scope.named)
   @ List.filter_map (fun o -> match o.kind, canon env (Var o.obj), type_of env o.obj with
       | `Matchable, Var m, Matchable (_, _, _, Var t, _) -> Option.map (fun n -> (m, (o.obj, form "matchable-of" n))) (name_for t)
       | _ -> None) env.opens.opened
@@ -336,7 +336,7 @@ let fetches ?except env =
 (* An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
    an anonymous marker. *)
 let name_of env x = match (entry env x).name with
-  | Some n -> n
+  | Some n -> Literal.name n
   | None ->
     match Hashtbl.find_opt literal_of x with
     | Some { lit = (Literal.Numeral _ | Literal.Str _) as lit; _ } -> Literal.spell lit
@@ -348,7 +348,7 @@ let namer ?except env terms =
   let lits = List.filter_map (fun r -> match r.lit with
     | (Literal.Numeral _ | Literal.Str _) as lit -> Option.map (fun a -> (a, (r.lit_id, Literal.spell lit))) (of_atom r.lit_id)
     | _ -> None) (present_literals env) in
-  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
+  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, Literal.name n))) (of_atom x)) (StringMap.bindings env.scope.named) in
   let fetched = lazy (fetches ?except env) in
   fun x ->
     if (entry env x).meta then anonymous env x
@@ -379,6 +379,8 @@ let show_tele ?marks env tele =
 
 (* A name or term in a message is set off in backticks; a literal already reads as one and is left bare. *)
 let tick s = match Literal.classify s with `Lit _ -> s | _ -> "`" ^ s ^ "`"
+let tick_name n = tick (Literal.name n)
+let spell_binder = function Some n -> Literal.name n | None -> "_"
 let qshow env t = tick (show env t)
 let qname env x = tick (name_of env x)
 let is_meta env x = (entry env x).meta
@@ -400,7 +402,7 @@ let hole_hints env t =
       if k = 0 || k > 5 then ""
       else
         line (entry env x).at (Printf.sprintf "%s has type %s, as %s:" (qshow env (Var x)) (qshow env ty) (if k = 1 then "does" else "do"))
-        ^ String.concat "" (List.map (fun (y, n) -> let l = (entry env y).at in line l (tick n ^ if Reader.placed l then ", bound here" else "")) found) in
+        ^ String.concat "" (List.map (fun (y, n) -> let l = (entry env y).at in line l (tick_name n ^ if Reader.placed l then ", bound here" else "")) found) in
   String.concat "" (List.map hints (metas env t))
 
 let unsolved ?(about = ("", [])) loc env t =
@@ -413,9 +415,6 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
 let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
-  Option.iter (fun n ->
-      if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
-      if String.starts_with ~prefix:"__" n then error at "%s begins with `__`, which is reserved for the compilers' messages; write it %s" (tick n) (tick (Literal.name n))) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let mint = if literal then fresh_literal else fresh in
@@ -427,14 +426,14 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
     Option.iter
       (fun n ->
          match StringMap.find_opt n env.scope.named with
-         | Some prior when n <> "_" ->
+         | Some prior ->
              (* An entry with no position was minted by the built-ins rather than read from a file: a
                 special form, an annotation token, or one of the opaque types (section 54). A binder the
                 source wrote carries its position even where it is bound again from a stored telescope,
                 the telescope entry holding it (Term.entry). *)
              let prior_at = (IntMap.find prior env.entries).at in
              if Reader.placed prior_at then held := Shadow (x, prior, prior_at, n, at) :: !held
-             else warn_at at [] "declaration of %s shadows a built-in" (tick n)
+             else warn_at at [] "declaration of %s shadows a built-in" (tick_name n)
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
@@ -456,7 +455,7 @@ let report_shadows ?env () =
       | Said s -> !warn s
       | Shadow (x, prior, prior_at, n, at) ->
           let hint = match env with Some env when covers env prior x -> [ (at, "using `_` here instead would be equivalent") ] | _ -> [] in
-          warn_at at ((prior_at, "shadowed binder is here") :: hint) "declaration of %s shadows a previous binder" (tick n))
+          warn_at at ((prior_at, "shadowed binder is here") :: hint) "declaration of %s shadows a previous binder" (tick_name n))
     pending
 
 

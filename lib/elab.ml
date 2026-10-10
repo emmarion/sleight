@@ -27,9 +27,13 @@ let is_atfn_proof env x g = match type_of env x with App (Var c, [ _; Var g' ]) 
 
 let single loc = function [ r ] -> r | rs -> error loc "expected one value, got %d" (List.length rs)
 let pos_of env expect = if expect = [] && env.usage_erased || expect <> [] && List.for_all (( = ) Erased) expect then Erased else if expect = [ Unique ] then Unique else Many
-let atom = function Atom (_, n) -> Some n | List _ -> None
-let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "expected %s, got %s" what (tick (Reader.show raw))
-let name_or_anon n = if n = "_" then None else Some n
+let atom = function Atom (_, n) -> Some n | _ -> None
+let not_name loc what raw = match raw with
+  | Nat _ | Char _ | Str _ -> error loc "%s is a literal, not a name" (Reader.show raw)
+  | _ -> error loc "expected %s, got %s" what (tick (Reader.show raw))
+let atom_or loc raw what = match atom raw with Some n -> n | None -> not_name loc what raw
+let binder = function Atom (_, n) -> Some (Some n) | Wild _ -> Some None | _ -> None
+let binder_or loc raw what = match binder raw with Some b -> b | None -> not_name loc what raw
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
 let const_value env x ty = match entry env x with
@@ -51,18 +55,13 @@ let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
 let misplaced env = function List (_, h :: _) -> Option.to_list (Option.bind (special_of env h) (fun sp -> if Sp.has_role sp then Some sp else None)) | _ -> []
 let brief = function
-  | Atom (_, s) -> tick s
-  | List (_, Atom (_, h) :: args) -> tick ("(" ^ h ^ (if args = [] then ")" else " ...)"))
+  | List (_, (Atom _ as h) :: args) -> tick ("(" ^ Reader.show h ^ (if args = [] then ")" else " ...)"))
   | List (_, []) -> tick "()"
   | List _ -> "this form"
+  | r -> tick (Reader.show r)
 let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (help env (String.concat "" (List.map Sp.role_hints (misplaced env raw))))
 let at loc f = try f () with Error (l, msg) when not (Reader.placed l) -> error loc "%s" msg
-let var env loc n =
-  match Literal.classify n with
-  | `Name when n = "_" -> error loc "`_` is not a name, and nothing is inferred here"
-  | `Name -> (match lookup env n with Some x -> x | None -> error loc "unbound name %s%s" (tick n) (hint env n))
-  | `Lit _ -> error loc "%s is a literal, not a name" n
-  | `Bad msg -> error loc "%s" msg
+let var env loc n = match lookup env n with Some x -> x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
@@ -120,7 +119,7 @@ let solve ?raw ?(about = lazy ("", [])) what env loc actual expected =
     let side t (a, b) = equal t a || equal t b || is_strict_subterm a t || is_strict_subterm b t in
     let notes = literal_notes env loc ~within:[ expected; actual ] (fun t -> List.exists (side t) pairs) in
     let hint = match raw, ctor_result env actual with
-      | Some raw, Some (ps, r) when equal (head r) (head (canon env expected)) -> Some (Printf.sprintf "did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Atom (Reader.loc raw, "_")) ps)))))
+      | Some raw, Some (ps, r) when equal (head r) (head (canon env expected)) -> Some (Printf.sprintf "did you mean %s?" (tick (Reader.show (List (Reader.loc raw, raw :: List.map (fun _ -> Wild (Reader.loc raw)) ps)))))
       | _ -> None in
     let prefix, more = Lazy.force about in
     error_with ?hint loc (notes @ more) "%s%s mismatch: expected %s, got %s" prefix what (qshow env expected) (qshow env actual)
@@ -137,7 +136,7 @@ let under pos m = if pos = Erased then Erased else m
 let written ?(noun = "") env pos l what m =
   if pos = Erased && m <> Erased then error_in env l "%s %s%s written `%s` in an erased position; write `erased` here" (if String.contains "aeiou" what.[0] then "an" else "a") (tick (speller env what)) noun (mult_name m) else m
 let field_under pos m = if pos = Many && m = Unique then Many else under pos m
-let wild = function Atom (_, "_") -> true | _ -> false
+let wild = function Wild _ -> true | _ -> false
 
 (* A boundary (DESIGN.md section 50): a term reaching one with a `_` still open is refused. *)
 let settle env loc t = if has_meta env t then unsolved loc env t
@@ -194,7 +193,7 @@ let count_error env l c what tele got =
   error_with l (Lazy.force c.notes) "%s%s expects %s, got %d%s" (Lazy.force c.subject) (if c.apposed then "," else "") (counted (List.length tele) what) got
     (expected (show_tele ~marks:c.marks env (with_mults c.used tele)))
 
-let argument c i name = Printf.sprintf "argument %d%s of %s" (i + 1) (match name with Some n -> ", " ^ tick n ^ "," | None -> "") (Lazy.force c.subject)
+let argument c i name = Printf.sprintf "argument %d%s of %s" (i + 1) (match name with Some n -> ", " ^ tick_name n ^ "," | None -> "") (Lazy.force c.subject)
 
 (* Opens [x], a Matchable entry (section 8): its constructors must be distinct after canonicalization,
    and it then merges with whatever open names one of them or its type constructor (Env.merge_opens). Failure is
@@ -281,7 +280,7 @@ let expect_proof ?(alt = "") env loc ctor p =
   | ty -> error loc "expected a %s proof%s, got %s : %s" (qname env ctor) alt (qshow env p) (qshow env ty)
 
 
-type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string; s_place : raw option }
+type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string option; s_place : raw option }
 
 let parse_entry env raw =
   match raw with
@@ -294,12 +293,13 @@ let parse_entry env raw =
       in
       let mk s_sg s_name = { s_loc = l; s_subterm; s_mult; s_sg; s_name; s_place } in
       match items with
-      | [ e; i; Atom (_, n) ] when is_special env i Sp.Is -> [ mk (Some (`Is e)) n ]
-      | [ Atom (_, n) ] -> [ mk None n ]
-      | ty :: names when names <> [] && List.for_all (fun n -> atom n <> None) names ->
-          List.map (fun n -> mk (Some (`Ty ty)) (Option.get (atom n))) names
-      | _ -> error l "malformed telescope entry %s%s" (tick (Reader.show raw)) (help env (Sp.hints "telescope-entry")))
-  | Atom (l, _) -> error l "expected a telescope entry, got %s" (tick (Reader.show raw))
+      | [ e; i; n ] when is_special env i Sp.Is && binder n <> None -> [ mk (Some (`Is e)) (Option.get (binder n)) ]
+      | [ n ] when binder n <> None -> [ mk None (Option.get (binder n)) ]
+      | ty :: names when names <> [] && List.for_all (fun n -> binder n <> None) names ->
+          List.map (fun n -> mk (Some (`Ty ty)) (Option.get (binder n))) names
+      | _ -> (match List.rev items with (Nat _ | Char _ | Str _) as r :: _ -> error (loc r) "%s is a literal, not a name" (Reader.show r) | _ -> ());
+          error l "malformed telescope entry %s%s" (tick (Reader.show raw)) (help env (Sp.hints "telescope-entry")))
+  | r -> error (loc r) "expected a telescope entry, got %s" (tick (Reader.show raw))
 
 let split_arrow env loc items =
   let rec go acc = function
@@ -335,7 +335,7 @@ let count_check ?sink l expect got =
     | None -> error l "expected %d values, got %d" n m
     | Some s -> error_with l s.anchors "%s expects %s, got %d%s" s.owner (counted n s.noun) m (expected s.shown)
 let ctor_result head mvars = [ { name = None; subterm = false; mult = Erased; sg = Is (App (head, List.rev mvars)); place = None; loc = Reader.nowhere } ]
-let field_names fields = List.map (fun f -> name_or_anon (atom_or (loc f) f "a field name")) fields
+let field_names fields = List.map (fun f -> binder_or (loc f) f "a field name") fields
 
 let field_ats tele fields = if List.length fields = List.length tele then List.map loc fields else List.map (fun _ -> Reader.nowhere) tele
 
@@ -456,14 +456,20 @@ let rec intern env loc lit =
       record_literal { lit; lit_id = x; lit_proof; minted = List.concat_map (fun x -> List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]) own };
       env
 
-let atom env loc n =
-  match Literal.classify n with
-  | `Lit lit -> let env = intern env loc lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
-  | _ -> (env, var env loc n)
+let lit_of = function Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s) | _ -> None
+
+let atom_entry ?at env raw =
+  let l = Option.value at ~default:(loc raw) in
+  match raw, lit_of raw with
+  | Atom (_, n), _ -> (env, var env l n)
+  | _, Some lit -> let env = intern env l lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
+  | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
+  | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))
+let atom_entry_or env l raw what = match raw with List _ -> error l "expected %s, got %s" what (tick (Reader.show raw)) | _ -> atom_entry ~at:l env raw
 
 let read_special pos env raw =
   match raw with
-  | Atom (l,n) -> let env, x = atom env l n in use env l Many x
+  | Atom (l, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l Many x
   | List (l,[h;Atom (al,n)]) when special_of env h = Some Sp.Share ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let x = var env al n in
@@ -473,12 +479,11 @@ let read_special pos env raw =
 
 (* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
 let numeral_entry env loc raw =
-  let name = atom_or loc raw "a numeral or character literal" in
   let z, lit =
-    match Literal.classify name with
-    | `Lit (Literal.Numeral z as lit) -> (z, lit)
-    | `Lit (Literal.Char c as lit) -> (Z.of_int c, lit)
-    | _ -> error loc "%s is not a numeral or character literal" (tick name)
+    match raw with
+    | Nat (_, z) -> (z, Literal.Numeral z)
+    | Char (_, c) -> (Z.of_int c, Literal.Char c)
+    | _ -> error loc "%s is not a numeral or character literal" (tick (Reader.show raw))
   in
   let env = intern env loc lit in
   (env, z, (Hashtbl.find literal_rows (Z.to_string z)).lit_id, Literal.spell lit)
@@ -624,7 +629,7 @@ let pattern env what mode (scrut : res) l c mults extra fields =
     binder_count env l what c mode ~extra fields (List.map2 (fun m (e : entry) -> { e with mult = m }) mults tele @ if extra then [ cell_entry c tele mode scrut.place ] else []);
   if not has_cell then (fields, None) else
   let cell = List.nth fields n in
-  (List.filteri (fun i _ -> i < n) fields, Some (name_or_anon (atom_or l cell "a cell binder"), loc cell))
+  (List.filteri (fun i _ -> i < n) fields, Some ((binder_or l cell "a cell binder"), loc cell))
 
 let pattern_cell env l mult scrut c fids name =
   match name with
@@ -650,13 +655,13 @@ let warn_use env l what t =
 
 let pragma env l = function
   | [ Atom (_, "warn"); Atom (nl, n); Atom (_, msg) ] -> (
-      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick n) (hint env n) in
+      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick_name n) (hint env n) in
       match canon env (Var x), canon env (type_of env x) with
       | Var c, (TyCtor _ | ValCtor _ | Fn _ | UniqueFn _) -> (
           match IntMap.find_opt c env.warned with
-          | Some (pl, _) -> error_with l [ (pl, "the first is here") ] "second `;! warn` for %s" (tick n)
+          | Some (pl, _) -> error_with l [ (pl, "the first is here") ] "second `;! warn` for %s" (tick_name n)
           | None -> { env with warned = IntMap.add c (l, msg) env.warned })
-      | _ -> error nl "`;! warn` names %s, which is neither a constructor nor a function" (tick n))
+      | _ -> error nl "`;! warn` names %s, which is neither a constructor nor a function" (tick_name n))
   | [ Atom (_, "warn") ] -> error l "`;! warn` needs a name and a message"
   | [ Atom (_, "warn"); _ ] -> error l "`;! warn` needs a message after the name"
   | _ -> error l "`;! warn` needs a name and a message"
@@ -665,8 +670,8 @@ let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const
 
 let rec elab_term ?expect env raw =
   match raw with
-  | Atom (l, "_") -> let x, env = bind env ~meta:true ~at:l None Erased Dyn type_term in (env, Var x)
-  | Atom (l, n) -> let env, x = atom env l n in (env, Var x)
+  | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Dyn type_term in (env, Var x)
+  | Atom _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
@@ -698,7 +703,7 @@ and elab_type_form env l sp args =
       let ctor env = function
         | List (cl, [ m; c ]) -> let m = mult_or env cl m in
             if m = Unique then error_in env cl "a `Matchable` constructor cannot be `unique`";
-            let env, x = atom env cl (atom_or cl c "a constructor") in
+            let env, x = atom_entry_or env cl c "a constructor" in
             (env, (m, Var (named_of env cl "a constructor" x)))
         | raw -> error (loc raw) "expected a constructor marker" in
       let env, cs = List.fold_left_map ctor env cs in
@@ -712,7 +717,7 @@ and elab_type_form env l sp args =
 (* `(slot-of x)`: the automatic slot of `x`'s binder (section 35), a direct variable reference and no use. *)
 and slot_var env l = function
   | [ a ] ->
-      let env, x = atom env (loc a) (atom_or (loc a) a "a direct variable reference") in
+      let env, x = atom_entry_or env (loc a) a "a direct variable reference" in
       if List.mem x env.ctor_tele then error_in env (loc a) "`slot-of` in a constructor's telescope cannot name %s, bound by a telescope still being written" (qname env x);
       (env, x)
   | _ -> error l "%s" (help env (Sp.misuse Sp.SlotOf))
@@ -733,15 +738,13 @@ and fetched env l sp args =
       | ty -> error_in env l "`level-of`: %s : %s is not a function" (qshow env f) (qshow env ty))
   | Sp.MatchableOf, [ t ] -> let x, _, _ = find_matchable env l (tyname env l t) in (env, Var x)
   | Sp.NumeralOf, [ e ] -> (
-      let name = atom_or l e "a literal" in
-      match Literal.classify name with
-      | `Bad msg -> error l "%s" msg
-      | `Name -> error_in env l "`numeral-of` takes a literal, not %s" (tick name)
-      | `Lit lit -> (
+      match lit_of e with
+      | None -> error_in env l "`numeral-of` takes a literal, not %s" (tick (Reader.show e))
+      | Some lit -> (
           let env = intern env l lit in
           match (Hashtbl.find literal_rows (Literal.key lit)).lit_proof with
           | Some p -> (env, Var p)
-          | None -> error l "%s is a string literal, which carries no `Numeral` proof" name))
+          | None -> error l "%s is a string literal, which carries no `Numeral` proof" (Reader.show e)))
   | Sp.DelegateOf, [ g ] -> (
       let g = named env l "a function name" g in
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
@@ -750,7 +753,7 @@ and fetched env l sp args =
 
 and compile_text pos env l sp = function
   | [ raw ] ->
-      let env, x = match raw with Atom (al, n) -> atom env al n | List (_, [ h; Atom (al, n) ]) when special_of env h = Some Sp.Share -> (env, var env al n) | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
+      let env, x = match raw with Atom _ | Nat _ | Char _ | Str _ -> atom_entry env raw | List (_, [ h; Atom (al, n) ]) when special_of env h = Some Sp.Share -> (env, var env al n) | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
       (match const_value env x str with
        | Some v -> (read_special pos env raw, str_host env l v)
@@ -816,18 +819,17 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
     List.fold_left
       (fun (i, env, ids, tele) e ->
         if e.s_subterm && not subterm then error_in env e.s_loc "`subterm` is not allowed here";
-        let mult = match mults i e.s_loc e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick e.s_name) in
-        let env, sg = match e.s_sg with Some s -> elab_sg env s | None -> error_in env e.s_loc "entry %s needs a type or an `is` clause" (tick e.s_name) in
+        let mult = match mults i e.s_loc e.s_mult with Some m -> m | None -> error e.s_loc "entry %s needs a multiplicity" (tick (spell_binder e.s_name)) in
+        let env, sg = match e.s_sg with Some s -> elab_sg env s | None -> error_in env e.s_loc "entry %s needs a type or an `is` clause" (tick (spell_binder e.s_name)) in
         let ty, rule = fact_of env e.s_loc sg in
         let place = Option.map (fun raw ->
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope, match annotation and value constructor entries";
-          let n = atom_or (loc raw) raw "a location variable" in
-          if Literal.classify n <> `Name then error_in env (loc raw) "`at` names a variable, not a literal";
-          let x = var env (loc raw) n in
+          if lit_of raw <> None then error_in env (loc raw) "`at` names a variable, not a literal";
+          let x = var env (loc raw) (atom_or (loc raw) raw "a location variable") in
           if ctor && List.mem x env.signature && not (List.mem x ids) then error_in env (loc raw) "`at` in a constructor's telescope cannot name %s, bound by an enclosing telescope still being written" (qname env x);
           if (entry env x).mult = Erased && mult <> Erased then error_in env (loc raw) "`at` needs a variable declared `many` or `unique`";
           slot_of x) e.s_place in
-        let name = name_or_anon e.s_name in
+        let name = e.s_name in
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Dyn ty ?rule) in
         let env = placed env x place in
         (i + 1, { env with signature = x :: env.signature; ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
@@ -1068,9 +1070,9 @@ and elab_erased env raw =
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
   match raw with
-  | Atom (l, n) ->
-      let env, x = atom env l n in
-      (use env l ~written:n (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
+  | Atom (l, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
+      let env, x = atom_entry env raw in
+      (use env l ~written:(Reader.show raw) (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
@@ -1107,6 +1109,8 @@ and elab_arg env m a tele = elab_expr1 ?tele env m a
 and elab_head env pos l raw =
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
+  | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
+  | Nat _ | Char _ | Str _ -> error l "%s is a literal, not a name" (Reader.show raw)
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
@@ -1148,10 +1152,10 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
         let i = List.nth subterm_params k in
         let g, notes = match g with Some g -> (Printf.sprintf " %s %s" (kind_name env (type_of env g)) (qname env g), declared_as env g) | None -> ("", []) in
         error_with_in env al (Lazy.force c.notes @ notes) "%s is its `subterm` parameter %d, but the enclosing%s has %s" (arg_name i) (k + 1) g (if k = 0 then "none" else Printf.sprintf "only %d" k) in
-  let proof env prove = function Atom (_, "_") -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
+  let proof env prove = function Wild _ -> let env, p = prove env in (env, p.term) | p -> elab_erased env p in
   let same cur = equal (canon env lv) (canon env (Var cur)) in
   let inferred () =
-    let wild = Atom (l, "_") in
+    let wild = Wild l in
     let differs j pi = match List.nth_opt env.subterms j with Some x -> not (equal (canon env (List.nth arg_terms pi)) (canon env (Var x))) | None -> false in
     match env.level with
     | At cur when same cur -> (
@@ -1211,7 +1215,7 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
   count_check ?sink l expect ids;
   let callee_name () = match callee.term with Var x -> qname env x | _ -> "this call" in
   List.iter2 (fun (m, (e : entry)) x ->
-    let name = match e.name with Some n -> tick n ^ " " | None -> "" in
+    let name = match e.name with Some n -> tick_name n ^ " " | None -> "" in
     let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
     check_mult env l (fun () -> (notes, Printf.sprintf "the return %sof %s, declared `%s`" name (callee_name ()) (speller env (mult_name e.mult)))) (demanded env demand m (type_of env x)) (entry env x).mult)
     (List.combine expect rets) ids;
@@ -1248,7 +1252,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
     let env, p, _ = elab_expr1 ?tele env Erased raw in
     settle_res env l p;
     (env, expect_proof env l ctor p.term) in
-  let form () = tick (Reader.show (List (l, Atom (l, speller env (Sp.name sp)) :: args))) in
+  let form () = tick ("(" ^ String.concat " " (speller env (Sp.name sp) :: List.map Reader.show args) ^ ")") in
   let produced env notes what ty supply = check_mult env l (fun () -> (notes, form () ^ ", " ^ what)) (demanded env demand m ty) supply in
   let erased (env, r) =
     produced env [] (if sp = Sp.LevelOf then "a `Level` and so erased" else "a proof and so erased") r.ty Erased;
@@ -1280,7 +1284,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let c = ctor_var env l c in
       let ct, params, _ = cell_shape env l c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
-        (Option.value items ~default:(List.init ct.arity (fun _ -> Atom (l,"_")))) in
+        (Option.value items ~default:(List.init ct.arity (fun _ -> Wild l))) in
       let values = List.init ct.arity (fun i -> Option.value (List.assoc_opt i writes) ~default:(V.CConst V.VToken)) in
       let x, env = bind env None (under pos Unique) Dyn (Cell (Var c, slots)) in
       produced env [] "a fresh cell and so unique" (type_of env x) (entry env x).mult;
@@ -1316,8 +1320,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let env, r, code = match a with
-        | Atom (al, n) ->
-            let env, x = atom env al n in
+        | Atom (al, _) | Nat (al, _) | Char (al, _) | Str (al, _) ->
+            let env, x = atom_entry env a in
             if (entry env x).mult <> Unique then error_in env al "`share` needs a unique value";
             (use env al ~sharing:true Many x, res_of env x, V.CVar x)
         | _ -> elab_expr1 env Unique a
@@ -1358,7 +1362,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
   | Sp.ProveLiteralLt, [ a; b ] ->
       let numeral env raw = match raw with
-        | Reader.Atom (_, s) when (match Literal.classify s with `Lit (Literal.Numeral _) -> true | _ -> false) -> numeral_entry env l raw
+        | Nat _ -> numeral_entry env l raw
         | _ -> error_in env l "`prove-literal-lt` takes two numerals, got %s" (tick (Reader.show raw)) in
       let env, za, xa, sa = numeral env a in
       let env, zb, xb, sb = numeral env b in
@@ -1373,7 +1377,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.ProvePredates, [ x; lv ] ->
       let env, lv = level_binder env l lv in
       let env, x = match x with
-        | Atom (_, n) -> atom env l n
+        | Atom _ | Nat _ | Char _ | Str _ | Wild _ -> atom_entry ~at:l env x
         | _ -> (match elab_term env x with env, Var x -> (env, x) | _ -> error l "expected a variable or a fetch form, got %s" (tick (Reader.show x))) in
       erased (prove_predates env l x lv)
   | Sp.PredatesTrans, [ p; q ] ->
@@ -1477,7 +1481,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       | _ -> assert false)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
   | Sp.CompileError, _ -> compile_error pos env l args
-  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (brief (List (l, Atom (l, speller env (Sp.name sp)) :: args))) (help env (Sp.hints (Sp.name sp)))
+  | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (tick ("(" ^ speller env (Sp.name sp) ^ if args = [] then ")" else " ...)")) (help env (Sp.hints (Sp.name sp)))
   | sp, _ -> error l "%s" (help env (Sp.misuse sp))
 
 and cell_items env pos l (what, il, c, params) slots items =
@@ -1534,10 +1538,10 @@ and elab_cell_match ?(demand = Fixed) tele env expect l args =
       let expect = match demand with Fixed -> expect | _ -> List.map (fun e -> e.mult) ann_tele in
       let sid, env = bind env ~word:true ~temporary:true None mode Dyn r.ty ~rule:r.term in
       let env = placed env sid r.place in
-      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) (name_or_anon (atom_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) { (leave_run env) with unwarned = env.unwarned || atmatch } (List.filteri (fun i _ -> i < ct.arity) names) in
+      let envb, ids = List.fold_left_map (fun env n -> let x, env = bind env ~word:true ~at:(loc n) ((binder_or pl n "a slot binder")) Many Dyn Prelude.slot_term in (env,x)) { (leave_run env) with unwarned = env.unwarned || atmatch } (List.filteri (fun i _ -> i < ct.arity) names) in
       let envb = merge_opens (unify_force (forcing envb) (Cell (Var c,List.map (fun x -> Var x) ids)) (Cell (Var c,slots))) in
       let envb, back = if mode <> Unique then (envb, None) else
-        let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) (name_or_anon (atom_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
+        let x, envb = bind envb ~word:true ~at:(loc (List.nth names ct.arity)) ((binder_or pl (List.nth names ct.arity) "a cell binder")) Unique Dyn r.ty ~rule:r.term in
         (place envb x (slot_of sid), Some x) in
       let envb, rs, bcode = elab_body ~tele:ann_tele ~sink:(annotated env "cell-match" ann ann_tele expect) envb expect l body in
       check_results envb l body ann_tele rs;
@@ -1661,8 +1665,8 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
             if covered = [] then error_in env el "`else` covers no constructor";
             let envb = { (inner env) with usage_erased = env.usage_erased || reachable = [] } in
             let envb, cell, body = match body with
-              | Atom (nl, n) :: (_ :: _ as body) when extra ->
-                  let x, envb = bind envb ~word:true ~at:nl (name_or_anon n) smult Dyn sres.ty ~rule:sres.term in
+              | b :: (_ :: _ as body) when extra && binder b <> None ->
+                  let x, envb = bind envb ~word:true ~at:(loc b) (Option.get (binder b)) smult Dyn sres.ty ~rule:sres.term in
                   (placed envb x sres.place,Some x,body)
               | _ -> (envb,None,body) in
             deepen envb body None;
@@ -1706,16 +1710,16 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
 and result_tele ?(demand = Fixed) tele env expect l ann =
   let atmatch, ann = match ann with
     | List (_, [ a; (List _ as inner) ]) when is_special env a Sp.At -> (true, inner)
-    | List (_, [ a; Atom (al, "_") ]) when is_special env a Sp.At -> error al "an at-match's annotation is written out; `_` cannot stand for it"
+    | List (_, [ a; Wild al ]) when is_special env a Sp.At -> error al "an at-match's annotation is written out; `_` cannot stand for it"
     | _ -> (false, ann) in
   let env, ann_tele =
     match (ann, tele) with
-    | Atom (_, "_"), Some tele ->
+    | Wild _, Some tele ->
         if List.exists (fun e -> has_meta env (sg_term e.sg)) tele then error l "the telescope `_` would reuse still has a `_` to infer";
         (env, tele)
-    | Atom (_, "_"), None -> error l "no telescope to reuse for `_`"
+    | Wild _, None -> error l "no telescope to reuse for `_`"
     | List (_, ann), _ ->
-        List.iter (function Atom (al, _) as a -> error al "expected a telescope or `_`, got %s" (tick (Reader.show a)) | _ -> ()) ann;
+        List.iter (function List _ -> () | a -> error (loc a) "expected a telescope or `_`, got %s" (tick (Reader.show a))) ann;
         let mults i el = function
           | Some m -> no_mult env "a match annotation's entries" el m
           | None -> (match List.nth_opt expect i with Some m -> Some m | None -> error l "match annotation has more than the %d entries the position needs" (List.length expect))
@@ -1758,7 +1762,7 @@ and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
   match items with
   | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
-      elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Atom (ll, "_") :: List (loc pat, pat :: rest) :: branches)
+      elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Wild ll :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
       let env, wrap = elab_stmt (pos_of env expect) env stmt in
       let env, ress, code = elab_body ?tele ?sink env expect l rest in
@@ -1796,7 +1800,7 @@ and elab_refute env l body =
       env
   | _ ->
       let env, r, code = elab_expr1 env Erased final in
-      let env, _, _ = elab_match ~refute:true ~res:(r, code) None env [ Erased ] l [ final; final; Atom (l, "_") ] in
+      let env, _, _ = elab_match ~refute:true ~res:(r, code) None env [ Erased ] l [ final; final; Wild l ] in
       env
 
 and open_contradicts env l e =
@@ -1825,7 +1829,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       match (special_of env head, args) with
       | Some Sp.Let, _ -> elab_let spos env l args
       | Some Sp.DefLvl, [ n ] ->
-          let _, env = mint_level env ~at:(loc n) (name_or_anon (atom_or l n "a name")) in
+          let _, env = mint_level env ~at:(loc n) ((binder_or l n "a name")) in
           (env, Fun.id)
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefUnique, _ -> elab_def_fns ~unique:true env l args
@@ -1897,7 +1901,7 @@ and elab_let spos env l args =
     settle_res env b.s_loc r;
     let state, minted, minted_level, order = forwarded env r (if env.run_pos then Some v else None) in
     if b.s_place <> None then error_in env b.s_loc "`at` is allowed only on function telescope, match annotation and value constructor entries";
-    let x, env = bind env ?minted ~minted_level ?introduced:order ~word:true ~at:b.s_loc (name_or_anon b.s_name) (Option.get b.s_mult) state r.ty ~rule:r.term in
+    let x, env = bind env ?minted ~minted_level ?introduced:order ~word:true ~at:b.s_loc b.s_name (Option.get b.s_mult) state r.ty ~rule:r.term in
     (placed env x r.place, x :: ids, r.term :: acc)
   in
   let env', ids, _ =
@@ -1969,7 +1973,7 @@ and elab_let_match spos env l args =
           ctors
       in
       if unrefuted <> [] then missing env l "let-match" sres unrefuted;
-      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Atom (l, "_") :: branches));
+      if branches <> [] then ignore (elab_match ~refute:true ~res:(sres, scode) ~cells:(cells_allowed env mid) ~skip:[ c ] None env [ Erased ] l (m :: scrut :: Wild l :: branches));
       let tele, ret = ctor_type env pl c in
       let mults = List.map (fun e -> field_under smult e.mult) tele in
       let fields, name = pattern env "a `let-match` pattern" smult sres pl c mults (cells_allowed env mid) fields in
@@ -2000,11 +2004,11 @@ and elab_comptime_match env l args =
       let env, x, sharing =
         match x with
         | List (_, [ h; a ]) when special_of env h = Some Sp.Share ->
-            let env, y = atom env l (atom_or l a "a variable") in
+            let env, y = atom_entry_or env l a "a variable" in
             if (entry env y).mult <> Unique then error_in env l "`share` needs a unique value";
             if smult = Unique then error l "many value %s used at unique" (qname env y);
             (env, y, true)
-        | _ -> let env, y = atom env l (atom_or l x "a variable") in (env, y, false)
+        | _ -> let env, y = atom_entry_or env l x "a variable" in (env, y, false)
       in
       let env = use env l ~sharing smult x in
       let value = match entry env x with { state = Const v; mult = (Many | Unique); _ } -> v | _ -> error_in env l "`comptime-match` needs a Const scrutinee that is `many` or `unique`" in
@@ -2035,7 +2039,7 @@ and elab_def_fns ?(unique = false) env l args =
       if unique && List.length fns <> 1 then error_in env l "`def-unique` defines exactly one function";
       let env, lvl =
         match lv with
-        | Atom (al, "_") -> let x, env = mint_level env ~at:al None in (env, x)
+        | Wild al -> let x, env = mint_level env ~at:al None in (env, x)
         | _ -> level_var ~alt:" or `_`" env l lv
       in
       (* the header's marks: `at` before the name makes an at-function (section 39), `at f` after it annotates a
@@ -2050,13 +2054,13 @@ and elab_def_fns ?(unique = false) env l args =
             match rest with
             | n :: colon :: sg when is_special env colon Sp.Colon ->
                 let ps, rs = split_arrow env fl sg in
-                let name = atom_or fl n "a function name" in
+                let name = binder_or fl n "a function name" in
                 let env, ty = elab_fn_type ~unique env (Var lvl) ps rs in
                 let many_params = match ty with Fn (_, ps, _) | UniqueFn (_, ps, _) -> List.length (runtime ps) | _ -> 0 in
                 let atfn = List.mem Sp.At marks and extern = List.mem Sp.Extern marks in
                 if atfn && mult = Erased then error_in env fl "an `erased` function cannot be an at-function: it is called only where nothing runs";
                 if atfn && runtime (match ty with Fn (_, _, rs) | UniqueFn (_, _, rs) -> rs | _ -> []) <> [] then error_in env fl "an at-function's returns are erased or `at`";
-                let impl = if extern && not atfn then Some (Ffi.claim_fn fl name many_params) else None in
+                let impl = if extern && not atfn then Some (Ffi.claim_fn fl (spell_binder name) many_params) else None in
                 (env, (fl, name, mult, List.mem Sp.Absurd marks, (impl, extern, atfn, delegates), ty, body))
             | _ -> error fl "malformed function header%s" (help env (Sp.hints "function-header")))
         | _ -> error (loc raw) "malformed function definition%s" (help env (Sp.hints "function-definition"))
@@ -2067,7 +2071,7 @@ and elab_def_fns ?(unique = false) env l args =
       let env, fids_headers = List.fold_left_map (fun env raw ->
         let env, ((fl, name, mult, _, (_, _, atfn, delegates), ty, _) as h) = header env raw in
         if unique && mult = Many then error_in env fl "`def-unique` requires `unique` or `erased`" else if not unique && mult = Unique then error_in env fl "use `def-unique` to define a unique function";
-        let x, env = bind env ~word:true ~at:fl (name_or_anon name) mult Dyn ty in
+        let x, env = bind env ~word:true ~at:fl name mult Dyn ty in
         let env = if not atfn then env else let p, env = witness env (proof_type Prelude.atfn [ ty; Var x ]) in merge_opens (forcing (opens_add env p)) in
         let env = match delegates with
           | None -> env
@@ -2097,16 +2101,16 @@ and elab_def_fns ?(unique = false) env l args =
         if extern && delegated <> None then error_in env fl "a function marked `extern` cannot have a `delegate` body: its implementation is promised only under its own signature, and a `Delegate` proof would let a `coerce` run it under the callee's; mark the call `tail`";
         (match delegates, delegated with
          | None, None -> ()
-         | None, Some callee -> error_in env fl "%s delegates to %s, so its header must name the callee: write `at` and the callee after the name" (tick name) (qshow envb callee)
+         | None, Some callee -> error_in env fl "%s delegates to %s, so its header must name the callee: write `at` and the callee after the name" (tick (spell_binder name)) (qshow envb callee)
          | Some f, Some callee ->
-             if not (equal (canon envb callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick name) (qname env f) (qshow envb callee);
+             if not (equal (canon envb callee) (Var f)) then error_in env fl "%s is declared `at` %s but delegates to %s" (tick (spell_binder name)) (qname env f) (qshow envb callee);
              Hashtbl.replace V.aliases x (V.resolve f)
-         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick name) (qname env f));
+         | Some f, None -> error_in env fl "%s is declared `at` %s but its body is not a `delegate` call" (tick (spell_binder name)) (qname env f));
         (* an at-function's body erases to nothing and is never run through the proof; what remains is the
            dummy a first-class call without the proof reaches (section 39) *)
-        if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick name);
+        if atfn && not absurd && not (erases_to_nothing code) then error_in env fl "the body of at-function %s does not erase to nothing, or to a reordering of variables: it stores, allocates or calls" (tick (spell_binder name));
         let code = if atfn then V.CValues [] else code in
-        (x, { V.fname = name; params = runtime_ids params pids; body = code; impl })
+        (x, { V.fname = spell_binder name; params = runtime_ids params pids; body = code; impl })
       in
       let fns = List.map2 define fids headers in
       let env = { env with uses = !capture_uses } in
@@ -2161,7 +2165,7 @@ and elab_def_adts env adts =
     | List (_, List (al, n :: colon :: sg) :: d :: rest) when is_special env colon Sp.Colon -> (
         let ps, ret = split_arrow env al sg in
         match ret with
-        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, atom_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
+        | [ ty ] -> let ms, ctors = def_marks env al [ Sp.NewtypeMark; Sp.Extern ] rest in (al, binder_or al n "a type constructor name", ps, ty, disc_of env al d, ms, ctors)
         | _ -> error al "a type constructor declares one return")
     | _ -> error_in env (loc raw) "malformed `def-adts` entry%s" (help env (Sp.hints "def-adts-entry"))
   in
@@ -2170,7 +2174,7 @@ and elab_def_adts env adts =
     List.fold_left_map
       (fun env (al, name, ps, ty, _, _, _) ->
         let env, tty = elab_tyctor env al ps [ ty ] in
-        let x, env = bind env ~at:al (name_or_anon name) Erased (const env V.VToken) tty in
+        let x, env = bind env ~at:al name Erased (const env V.VToken) tty in
         (env, x))
       env headers
   in
@@ -2180,18 +2184,19 @@ and elab_def_adts env adts =
       | List (cl, m :: n :: colon :: rest) when is_special env colon Sp.Colon ->
           let mult = mult_or env cl m in
           if mult = Unique then error_in env cl "a constructor declaration cannot be `unique`";
-          let name = atom_or cl n "a constructor name" in
+          let name = binder_or cl n "a constructor name" in
           let env', tele, ret, ty = elab_valctor env cl rest in
-          (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" (tick name) (qname env tid));
-          if List.mem Sp.NewtypeMark ms && List.exists (fun (e : entry) -> e.place <> None) tele then error_in env cl "%s has a field written `at`, so %s cannot be marked `newtype`" (tick name) (qname env tid);
-          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl [] "phantom constructor %s has a non-erased field" (tick name);
-          let c, env = bind (carry env env') ~at:cl (name_or_anon name) mult (if mult = Erased then const env V.VToken else Dyn) ty in
+          (match canon env' ret with App (Var t, _) when t = tid -> () | _ -> error cl "%s must return an application of %s" (tick (spell_binder name)) (qname env tid));
+          if List.mem Sp.NewtypeMark ms && List.exists (fun (e : entry) -> e.place <> None) tele then error_in env cl "%s has a field written `at`, so %s cannot be marked `newtype`" (tick (spell_binder name)) (qname env tid);
+          if mult = Erased && List.exists (fun e -> e.mult <> Erased) tele then warn_at cl [] "phantom constructor %s has a non-erased field" (tick (spell_binder name));
+          let c, env = bind (carry env env') ~at:cl name mult (if mult = Erased then const env V.VToken else Dyn) ty in
           (env, (mult, c))
       | _ -> error (loc raw) "malformed constructor%s" (help env (Sp.hints "constructor"))
     in
     let env, ctors = List.fold_left_map ctor env ctors in
     let ctors = List.map (fun (m, c) -> (m, Var c)) ctors in
     let shapes = shapes env al ctors in
+    let name = spell_binder name in
     let adt = mint_adt ~newtype:(List.mem Sp.NewtypeMark ms) env name disc shapes in
     Ffi.note name adt;
     if List.mem Sp.Extern ms then adt.ext <- Some (Ffi.claim_type al name adt);

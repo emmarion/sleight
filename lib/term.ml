@@ -121,7 +121,7 @@ let rec to_string_in ?(kw = Fun.id) name_of bound t =
   let form head items = "(" ^ String.concat " " (kw head :: items) ^ ")" in
   match t with
   | Var x -> name_of x
-  | Bound k -> (match List.nth_opt bound k with Some (Some n) -> n | _ -> "#" ^ string_of_int k)
+  | Bound k -> (match List.nth_opt bound k with Some (Some n) -> Literal.name n | _ -> "#" ^ string_of_int k)
   | App (Var u, []) when u = !univ && kw universe <> universe -> kw universe
   | App (h, args) -> "(" ^ String.concat " " (List.map (go bound) (h :: args)) ^ ")"
   | (Fn (l, ps, rs) | UniqueFn (l, ps, rs)) as kind ->
@@ -145,7 +145,7 @@ and tele_strings ?(kw = Fun.id) ?(marks = true) name_of bound es =
   List.fold_left_map
     (fun bound e ->
       let go = to_string_in ~kw name_of bound in
-      let n = Option.value e.name ~default:"_" in
+      let n = match e.name with Some n -> Literal.name n | None -> "_" in
       let body = match e.sg with Ty t -> go t ^ " " ^ n | Is t -> go t ^ " " ^ kw "is" ^ " " ^ n in
       let marks = if marks then (if e.subterm then kw "subterm" ^ " " else "") ^ kw (mult_name e.mult) ^ " " else "" in
       (e.name :: bound, "(" ^ marks ^ body ^ (match e.place with Some p -> " " ^ kw "at" ^ " " ^ go (match p with SlotOf v -> v | s -> s) | None -> "") ^ ")"))

@@ -12,11 +12,14 @@
   ((Raw : -> Type)
     enum
     (many RAtom : (many (Pos) pos) (many (String) s) -> (Raw))
+    (many RWild : (many (Pos) pos) -> (Raw))
+    (many RNat : (many (Pos) pos) (many (Nat) n) -> (Raw))
+    (many RChr : (many (Pos) pos) (many (Nat) code) -> (Raw))
     (many RString : (many (Pos) pos) (many (String) s) -> (Raw))
     (many RList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))))
 
 (def-fns _ $ (many raw-pos : (many (Raw) r) -> (many (Pos) pos))
-  (match many r _ ((RAtom l _) l) ((RString l _) l) ((RList l _) l)))
+  (match many r _ ((RAtom l _) l) ((RWild l) l) ((RNat l _) l) ((RChr l _) l) ((RString l _) l) ((RList l _) l)))
 
 ; Where a form's first item sits, which is what a declaration's messages name: the signature rather than
 ; the entry that carries it.
@@ -31,8 +34,7 @@
   (many TOpen : (many (Pos) pos) -> (Tok))
   (many TClose : (many (Pos) pos) -> (Tok))
   (many TDollar : (many (Pos) pos) -> (Tok))
-  (many TWord : (many (Pos) pos) (many (String) s) -> (Tok))
-  (many TStrLit : (many (Pos) pos) (many (String) s) -> (Tok))
+  (many TItem : (many (Raw) r) -> (Tok))
   (many TError : (many (Pos) pos) (many (String) msg) -> (Tok))
   (many TPragma : (many (Pos) pos) (many (List $ Raw) words) -> (Tok)))
 
@@ -88,16 +90,21 @@
     (or (nat-eq n 40)
       $ or (nat-eq n 41) $ nat-eq n 59)))
 
-(def-fns _ $ (many word-name : (many (String) w) -> (many (String) r))
-  (match many (or (str-eq w "_") $ or (is-reserved-name w) $ or (is-literal-name w) $ str-starts "\"" w) _
-    ((BTrue) w)
-    ((BFalse) (spell-name w))))
+(def-fns _ $ (many word-item : (many (Pos) pos) (many (String) w) -> (many (Tok) t))
+  (let-match many (str-eq w "_") (BFalse) ((BTrue) (TItem $ RWild pos)))
+  (let-match many (is-reserved-name w) (BFalse)
+    ((BTrue) (TError pos $ str-cat3 (str-cat3 "`" w "` begins with `__`, which is reserved for the compilers' messages; write it `") (spell-name w) "`")))
+  (let-match many (literal-error w) (None _) ((Some _ msg) (TError pos msg)))
+  (match many (classify w) _
+    ((LName) (TItem $ RAtom pos w))
+    ((LNumeral) (TItem $ RNat pos $ parse-nat w 0))
+    ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Nat) _)) ((Some _ n) n) ((None _) 0)))))
 
 (def-fns _ $ (many word-tok : (many (Pos) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
   (let ((many w) (many after) (erased p) (erased la)) (str-split start k len l (add-le-left k rl len sum)))
   (match many (str-cmp w "$") _
     ((CEq _ _ _) (TDollar pos))
-    (else (TWord pos $ word-name w))))
+    (else (word-item pos w))))
 
 (def-adts $ (StrKind : -> Type)
   enum
@@ -150,7 +157,7 @@
   (let ((many text)) $ rope-str cur)
   (match many start _
     ((None _) words)
-    ((Some _ p) (Cons _ (RAtom p $ match many (nat-lt (list-length _ words) $ pragma-limit words) (((String) _)) ((BTrue) (word-name text)) ((BFalse) text)) words))))
+    ((Some _ p) (Cons _ (RAtom p text) words))))
 
 (def-fns _ $ (many pragma-tok : (many (Pos) pos) (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (Tok) t))
   (TPragma pos $ list-rev _ $ pragma-field start cur words))
@@ -222,9 +229,9 @@
       ((BTrue)
         (let ((many body)) $ rope-str rev)
         (match many kind _
-          ((SKLit) (tail $ tokenize rest line (Succ col) $ Cons _ (TStrLit pos body) acc))
-          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TWord pos $ spell-name body) acc))
-          ((SKPragma pp ws) (tail $ pragma-line rest line (Succ col) pp (Cons _ (RAtom pos $ spell-name body) ws) (None _) (REmpty) (REmpty) acc)))))
+          ((SKLit) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RString pos body) acc))
+          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RAtom pos body) acc))
+          ((SKPragma pp ws) (tail $ pragma-line rest line (Succ col) pp (Cons _ (RAtom pos body) ws) (None _) (REmpty) (REmpty) acc)))))
     (match many (nat-eq n 92) _
       ((BTrue)
         (let-match many rest (SCons e rest2) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
@@ -291,8 +298,7 @@
   (match many t _
     ((TOpen l) (tail $ parse-toks rest (Cons _ (MkFrame l (BFalse) $ Nil _) stack) opened closed))
     ((TDollar l) (tail $ parse-toks rest (Cons _ (MkFrame l (BTrue) $ Nil _) stack) opened closed))
-    ((TWord l w) (tail $ parse-toks rest (push-item (RAtom l w) stack) opened closed))
-    ((TStrLit l s) (tail $ parse-toks rest (push-item (RString l s) stack) opened closed))
+    ((TItem r) (tail $ parse-toks rest (push-item r stack) opened closed))
     ((TError l m) (values stack (syn-err l m) closed))
     ((TPragma l ws)
       (let-match many ws (Cons _ w args) ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
@@ -349,7 +355,10 @@
 (def-fns _
   ((many show-raw : (subterm many (Raw) r) -> (many (Rope) out))
     (match many r _
-      ((RAtom _ s) (RStr s))
+      ((RAtom _ s) (RStr $ spell-name s))
+      ((RWild _) (RStr "_"))
+      ((RNat _ n) (RStr $ nat-str n))
+      ((RChr _ c) (lit-char-rope c))
       ((RString _ s) (lit-string-rope s))
       ((RList _ items) (rwrap "(" (rjoin (notail $ show-raws items) " ") ")"))))
   ((many show-raws : (subterm many (List $ Raw) rs) -> (many (List $ Rope) out))

@@ -22,7 +22,7 @@
 open Speciallang
 open Reader
 
-let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Word w -> w | Pragma _ -> ";!"
+let tok_text = function LParen -> "(" | RParen -> ")" | Dollar -> "$" | Item r -> Reader.show r | Invalid _ -> "?" | Pragma _ -> ";!"
 
 type form = { line : Z.t; col : Z.t; depth : int; text : string; mutable closes : Z.t }
 

@@ -137,6 +137,71 @@
 (def-fns _ $ (many is-reserved-name : (many (String) s) -> (many (Bool) r))
   (str-starts "__" s))
 
+(def-adts $ (LitKind : -> Type)
+  enum
+  (many LName : -> (LitKind))
+  (many LNumeral : -> (LitKind))
+  (many LChar : -> (LitKind)))
+
+(def-fns _ $ (many classify : (many (String) s) -> (many (LitKind) k))
+  (let-match many s (SCons c rest) ((SNil) (LName)))
+  (let-match many (all-digits s) (BFalse) ((BTrue) (LNumeral)))
+  (match many (and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))) _
+    ((BTrue) (LChar))
+    ((BFalse) (LName))))
+
+(def-fns _ $ (many parse-nat : (subterm many (String) s) (many (Nat) acc) -> (many (Nat) n))
+  (match many s _
+    ((SNil) acc)
+    ((SCons c rest) (tail $ parse-nat rest $ nat-add (nat-mul 10 acc) $ nat-sub (char-code c) 48))))
+
+(def-fns _ $ (many is-hex : (many (Char) c) -> (many (Bool) r))
+  (or (char-between c 48 57) $ or (char-between c 97 102) $ char-between c 65 70))
+
+(def-fns _ $ (many hex-digit : (many (Char) c) -> (many (Nat) d))
+  (let ((many n)) $ char-code c)
+  (let-match many (char-between c 48 57) (BFalse) ((BTrue) (nat-sub n 48)))
+  (match many (char-between c 97 102) _
+    ((BTrue) (nat-sub n 87))
+    ((BFalse) (nat-sub n 55))))
+
+(def-fns _ $ (many char-lit-body : (many (String) s) -> (many (String) body))
+  (let-match many s (SCons _ rest) ((SNil) (SNil)))
+  (match many rest _ ((SNil) (SNil)) ((SCons _ rest2) rest2)))
+
+; The code of #\c, #\space, #\newline, #\tab or #\xHH, or None where the literal is malformed.
+(def-fns _ $ (many char-lit-code : (many (String) s) -> (many (Maybe $ Nat) n))
+  (let ((many body)) $ char-lit-body s)
+  (match many (str-cmp body "space") _
+    ((CEq _ _ _) (Some _ 32))
+    (else
+      (match many (str-cmp body "newline") _
+        ((CEq _ _ _) (Some _ 10))
+        (else
+          (match many (str-cmp body "tab") _
+            ((CEq _ _ _) (Some _ 9))
+            (else
+              (let-match many body (SCons c rest) ((SNil) (None _)))
+              (let-match many rest (SCons h1 rest2) ((SNil) (Some _ $ char-code c)))
+              (let-match many rest2 (SCons h2 rest3) ((SNil) (None _)))
+              (match many (and (char-is c 120) $ and (is-hex h1) $ and (is-hex h2) $ str-is-empty rest3) _
+                ((BTrue) (Some _ $ nat-add (nat-mul 16 $ hex-digit h1) $ hex-digit h2))
+                ((BFalse) (None _))))))))))
+
+; What is wrong with a literal's spelling, if anything (lib/literal.ml's classify).
+(def-fns _ $ (many literal-error : (many (String) s) -> (many (Maybe $ String) r))
+  (match many (classify s) _
+    ((LName) (None _))
+    ((LNumeral)
+      (let-match many s (SCons c rest) ((SNil) (None _)))
+      (match many (and (char-is c 48) $ not $ str-is-empty rest) _
+        ((BTrue) (Some _ $ str-cat s " has a leading zero"))
+        ((BFalse) (None _))))
+    ((LChar)
+      (match many (char-lit-code s) _
+        ((Some _ _) (None _))
+        ((None _) (Some _ $ str-cat "malformed character literal " s))))))
+
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
 (def-fns _ $ (many ocaml-escape-char : (many (Char) c) -> (many (Rope) r))
@@ -565,16 +630,10 @@
   (let ((many hi) (many lo) (erased dm) (erased dmm) (erased da) (erased dp)) (divmod c 16 sixteen-positive))
   (rcat (hex-rope hi) $ hex-rope lo))
 
-(def-fns _ $ (many hex-value : (many (Char) c) -> (many (Maybe $ Nat) r))
-  (let ((many n)) $ char-code c)
-  (let-match many (char-between c 48 57) (BFalse) ((BTrue) (Some _ $ nat-sub n 48)))
-  (let-match many (char-between c 97 102) (BFalse) ((BTrue) (Some _ $ nat-sub n 87)))
-  (match many (char-between c 65 70) _ ((BTrue) (Some _ $ nat-sub n 55)) ((BFalse) (None _))))
-
 (def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
-  (let-match many (hex-value a) (Some _ h) ((None _) (None _)))
-  (let-match many (hex-value b) (Some _ l) ((None _) (None _)))
-  (Some _ $ char-of-code $ nat-add (nat-mul h 16) l))
+  (match many (and (is-hex a) (is-hex b)) _
+    ((BTrue) (Some _ $ char-of-code $ nat-add (nat-mul (hex-digit a) 16) $ hex-digit b))
+    ((BFalse) (None _))))
 
 (def-fns _ $ (many escape-char : (many (Char) c) -> (many (Rope) r))
   (let ((many k)) $ char-code c)
@@ -586,6 +645,17 @@
     ((BTrue) (RChar c))
     ((BFalse) (rcat (RStr "\\x") $ hex-byte-rope k))))
 
+(def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
+  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eq n 40) $ or (nat-eq n 41) $ nat-eq n 59))
+
+; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
+(def-fns _ $ (many lit-char-rope : (many (Nat) c) -> (many (Rope) r))
+  (let-match many (nat-eq c 32) (BFalse) ((BTrue) (RStr "#\\space")))
+  (let-match many (nat-eq c 10) (BFalse) ((BTrue) (RStr "#\\newline")))
+  (let-match many (nat-eq c 9) (BFalse) ((BTrue) (RStr "#\\tab")))
+  (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
+  (rcat (RStr "#\\x") $ hex-byte-rope c))
+
 (def-fns _ $ (many str-escape : (subterm many (String) s) -> (many (Rope) r))
   (match many s _
     ((SNil) (REmpty))
@@ -593,9 +663,6 @@
 
 (def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
   (rwrap "\"" (str-escape s) "\""))
-
-(def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
-  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eq n 40) $ or (nat-eq n 41) $ nat-eq n 59))
 
 (def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
   (match many s _
