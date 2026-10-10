@@ -111,3 +111,9 @@ by the owner and apply to every session.
     the message is reported. Before pushing an elaborator change, time
     slc compiling itself against `origin/main`'s slc on the same input;
     a slowdown beyond noise is a regression.
+
+18. **Docs state the present, not the past.** DESIGN.md, README.md
+    and the other notes describe how things are now. They are not a
+    changelog and do not explain a change to readers who knew the old
+    version. When something changes, rewrite the text as if it had
+    always been that way. History belongs in git commit messages.
