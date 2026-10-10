@@ -36,6 +36,8 @@ Hint: heapsort-fast/perf.sl times the sort alone and reports what it
 allocates. To try another size, copy it to scratch/ and change both
 `perf-size` and the numeral that `perf-size-fits` bounds.
 
+Hint: to compile without running, use the `sl` tool's `ocaml` option.
+
 Hint: the input array can be coerced to `Copy (U62)` elements at no cost (see
 `coerce` in DESIGN.md and `init-witness` in prelude.sl).
 
