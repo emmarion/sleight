@@ -114,7 +114,6 @@ is a design decision. Remove an entry when it is fixed.
     though that is not verified. `self/` shares the defect:
     `_build/self/slc --interpret` refuses both programs with the same
     message and accepts the literal variant. Found while probing the
-    `at` system
-    in a design discussion; no test in `tests/` has a nested function
-    type `at` an earlier entry whose argument is a run-position binder
-    of a constructor application.
+    `at` system in a design discussion; no test in `tests/` has a
+    nested function type `at` an earlier entry whose argument is a
+    run-position binder of a constructor application.
