@@ -510,7 +510,8 @@ TOOLS = {
                "With `gc_stats`, a program that exits normally ends its stderr with the OCaml runtime's garbage collector totals, "
                "among them `allocated_words`: the words (8 bytes each) it allocated over the whole run. "
                + ("With `ocaml`, the program is not built or run: if it compiles, the OCaml code the compiler translates it into "
-                  "is written to the file `ocaml` names, and only the compiler's messages are returned. " if OCAML else "") + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
+                  "is written to the file `ocaml` names, and only the compiler's messages are returned. Functions that are never called at run time, "
+                  "including those called only at compile time, are left out of it. " if OCAML else "") + FIRST_ERROR_NOTES.get(FIRST_ERROR, ""),
            {"paths": STRS, "stdin": STR, "args": STRS, "capture": STR, "gc_stats": BOOL}
            | ({"first_error": BOOL} if FIRST_ERROR == "choose" else {}) | ({"ocaml": STR} if OCAML else {}), ["paths"]),
     "done": (done, "The experiment phase ends when its budget runs out or when you call `done`. Then the rewrite phase continues this conversation with a fresh "
