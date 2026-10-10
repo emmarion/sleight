@@ -13,6 +13,7 @@ let close env fns =
 
 let rec eval env code =
   match code with
+  | CVar x when x < 0 -> [ Hashtbl.find literal_values x ]
   | CVar x -> (match IntMap.find_opt (resolve x) env with Some v -> [ v ] | None -> raise (Runtime ("unbound at runtime: " ^ string_of_int x)))
   | CConst v -> [ v ]
   | CErased -> [ VToken ]

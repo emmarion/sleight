@@ -2,6 +2,7 @@
    [prelude] is false. *)
 let load ?(prelude = true) () =
   Ffi.reset ();
+  Env.reset_literals ();
   Hashtbl.reset Env.numbering;
   Env.trace := [];
   let env = if prelude then Elab.run_toplevel { Prelude.env with externs = true } (Reader.parse "lib/prelude.sl" Prelude_source.source) else Prelude.env in

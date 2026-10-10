@@ -1,5 +1,4 @@
-(* Literals are sugar over the prelude, interned ahead of the top-level statement that first mentions them
-   (DESIGN.md section 45, Elab.hoist). *)
+(* Literals are sugar over the prelude, interned where they are first met (DESIGN.md section 45, Elab.intern). *)
 
 type t = Numeral of Z.t | Char of int | Str of string
 

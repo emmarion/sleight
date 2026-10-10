@@ -88,7 +88,7 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : string option; mult : mult; state : state; minted : term; minted_level : bool; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
+type entry = { name : string option; mult : mult; state : state; minted : term; minted_level : bool; introduced : id; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -128,16 +128,22 @@ type t = {
   values : Value.venv;
   pending : (id * Value.code) list;
   prelude : scope;
-  literals : (string * (id * id option)) list;
-  ladder : Value.value array;
 }
 
 let empty =
-  { signature = []; ctor_tele = false; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty }; literals = []; ladder = [||] }
+  { signature = []; ctor_tele = false; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
 let names : (id, string) Hashtbl.t = Hashtbl.create 64
+let fresh_literal () = - (fresh ())
+
+type literal = { lit : Literal.t; lit_id : id; lit_proof : id option; minted : (id * entry * fact) list }
+
+let literal_rows : (string, literal) Hashtbl.t = Hashtbl.create 64
+let literal_of : (id, literal) Hashtbl.t = Hashtbl.create 64
+let ladder : Value.value array ref = ref [||]
+let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset Value.literal_values; ladder := [||]
 
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
 
@@ -157,6 +163,18 @@ let set_state ?minted env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   let minted = Option.value minted ~default:(fact env x).ty in
   { env with entries = IntMap.add x { (entry env x) with state; minted } env.entries; values }
+
+let record_literal row =
+  Hashtbl.replace literal_rows (Literal.key row.lit) row;
+  Hashtbl.replace literal_of row.lit_id row;
+  List.iter (fun (x, e, _) -> match e.state with Const v -> Hashtbl.replace Value.literal_values x v | Dyn -> ()) row.minted
+
+let enter env row =
+  if IntMap.mem row.lit_id env.entries then env
+  else List.fold_left (fun env (x, e, f) -> set_state { env with entries = IntMap.add x e env.entries; facts = IntMap.add x f env.facts } x e.state) env row.minted
+
+let present_literals env = List.of_seq (Seq.filter_map (fun (x, _) -> Hashtbl.find_opt literal_of x) (Seq.take_while (fun (x, _) -> x < 0) (IntMap.to_seq env.entries)))
+let carry outer inner = List.fold_left enter outer (present_literals inner)
 
 let trusted env = if env.run_pos then env.facts else env.trusted
 let leave_run env = { env with run_pos = false; trusted = trusted env }
@@ -313,25 +331,23 @@ let fetches ?except env =
       | None, App (Var c, [ _; Var g ]) when c = !atfn_ctor && not (List.mem (c, g) seen) ->
           ((c, g) :: seen, match name_for g with Some n -> (y, (y, form "at-fn-of" n)) :: acc | None -> acc)
       | _ -> (seen, acc)) ([], []) env.scope.ids)
-  @ List.filter_map (fun (k, (_, p)) -> match p, Literal.classify k with
-      | Some p, `Lit lit -> (match canon env (Var p) with Var a -> Some (a, (p, form "numeral-of" (Literal.spell lit))) | _ -> None)
-      | _ -> None) env.literals
+  @ List.filter_map (fun r -> Option.bind r.lit_proof (fun p -> match canon env (Var p) with Var a -> Some (a, (p, form "numeral-of" (Literal.spell r.lit))) | _ -> None)) (present_literals env)
 
 (* An entry by its own name, else by the numeral or string literal it is, else by a fetch form yielding it, else as
    an anonymous marker. *)
 let name_of env x = match (entry env x).name with
   | Some n -> n
   | None ->
-    match List.find_map (fun (k, (y, _)) -> match Literal.classify k with `Lit ((Literal.Numeral _ | Literal.Str _) as lit) when y = x -> Some (Literal.spell lit) | _ -> None) env.literals with
-    | Some n -> n
-    | None -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
+    match Hashtbl.find_opt literal_of x with
+    | Some { lit = (Literal.Numeral _ | Literal.Str _) as lit; _ } -> Literal.spell lit
+    | _ -> (match if (entry env x).meta then None else newest (fetches env) x with Some (_, n) -> n | None -> anonymous env x)
 
 let namer ?except env terms =
   let atoms = List.fold_left (fold_vars (fun _ acc t -> match t with Var x when not (entry env x).meta -> x :: acc | _ -> acc) 0) [] terms in
   let of_atom x = match canon env (Var x) with Var a when List.mem a atoms -> Some a | _ -> if List.mem x atoms then Some x else None in
-  let lits = List.filter_map (fun (k, (x, _)) -> match Literal.classify k with
-    | `Lit ((Literal.Numeral _ | Literal.Str _) as lit) -> Option.map (fun a -> (a, (x, Literal.spell lit))) (of_atom x)
-    | _ -> None) env.literals in
+  let lits = List.filter_map (fun r -> match r.lit with
+    | (Literal.Numeral _ | Literal.Str _) as lit -> Option.map (fun a -> (a, (r.lit_id, Literal.spell lit))) (of_atom r.lit_id)
+    | _ -> None) (present_literals env) in
   let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, n))) (of_atom x)) (StringMap.bindings env.scope.named) in
   let fetched = lazy (fetches ?except env) in
   fun x ->
@@ -396,15 +412,16 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
 (* A meta (a `_` argument's unification variable, DESIGN.md section 50) enters no scope: nothing reaches it by name or by
    type, and it is solved by unification alone. No other entry's type or rule may mention one still unsolved
    -- the invariant behind the sugar -- except while a telescope with holes is being built ([holes]). *)
-let bind env ?minted ?(minted_level = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
+let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
   Option.iter (fun n ->
       if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
       if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
-  let x = fresh () in
-  let slot = fresh () in
-  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = !slot_type; minted_level = false; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let mint = if literal then fresh_literal else fresh in
+  let x = mint () in
+  let slot = mint () in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = !slot_type; minted_level = false; introduced = slot; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
   let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
@@ -421,8 +438,8 @@ let bind env ?minted ?(minted_level = false) ?(meta = false) ?(word = false) ?(t
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; meta; word; temporary; at; slot } entries in
-  let scope = if meta then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
+  let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
   (x, set_state ?minted env x state)
 
@@ -572,8 +589,8 @@ let declared_as env x = declared env x |> List.map (fun (l, m) -> (l, kind_name 
 let use env loc ?(sharing = false) ?written mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  let explain () = match List.find_map (fun (k, (y, _)) -> if y = x then Some k else None) env.literals with
-    | Some k -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:k)) (mult_name e.mult))
+  let explain () = match Hashtbl.find_opt literal_of x with
+    | Some r -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:(Literal.key r.lit))) (mult_name e.mult))
     | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
   check_mult env loc explain mult (if sharing && mult = Many then Many else e.mult);
   if e.mult <> Unique then env else (

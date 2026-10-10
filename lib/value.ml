@@ -68,6 +68,7 @@ let subcodes c =
   List.rev !seen
 
 let aliases : (id, id) Hashtbl.t = Hashtbl.create 16
+let literal_values : (id, value) Hashtbl.t = Hashtbl.create 64
 let resolve x = Option.value (Hashtbl.find_opt aliases x) ~default:x
 
 (* Extern implementations run unless stripped (section 42's invariant). *)

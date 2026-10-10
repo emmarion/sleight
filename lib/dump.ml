@@ -105,10 +105,10 @@ let position_lines env goal =
    spelling, and `vacant-slot`; a class without two such members, or without an entry the program bound, says
    nothing about anything the program bound, a character sharing its code's word being the newtype's doing. *)
 let at_lines env =
-  let literal x = List.find_map (fun (k, (y, _)) -> match Literal.classify k with `Lit lit when y = x -> Some (Literal.spell lit) | _ -> None) env.literals in
+  let literal x = Option.map (fun r -> Literal.spell r.lit) (Hashtbl.find_opt literal_of x) in
   let bound x = List.mem x env.scope.ids && not (is_prelude env x) in
   let member x = match literal x with Some s -> Some s | None -> if bound x || x = Prelude.null then Some (name_of env x) else None in
-  let slotted = Prelude.null :: List.filter_map (fun (_, (x, _)) -> Some x) env.literals @ env.scope.ids in
+  let slotted = Prelude.null :: List.map (fun r -> r.lit_id) (present_literals env) @ env.scope.ids in
   let classes = List.fold_left (fun acc x ->
     let k = canon env (slot_of x) in
     match List.assoc_opt k acc with Some c -> c := x :: !c; acc | None -> acc @ [ (k, ref [ x ]) ]) [] slotted in
@@ -128,9 +128,9 @@ let opened_lines env =
   [ header ^ ": " ^ (if listed = [] then "none" else String.concat " " (List.map (fun o -> show env (type_of env o.obj)) listed)) ]
 
 let literal_lines env =
-  let rules = List.filter_map (fun (k, (x, _)) -> match Literal.classify k, canon env (Var x) with
-    | `Lit (Literal.Numeral _ as lit), (App _ as t) -> Some (Literal.spell lit ^ " is " ^ show env t)
-    | _ -> None) env.literals in
+  let rules = List.filter_map (fun r -> match r.lit, canon env (Var r.lit_id) with
+    | (Literal.Numeral _ as lit), (App _ as t) -> Some (Literal.spell lit ^ " is " ^ show env t)
+    | _ -> None) (present_literals env) in
   if rules = [] then [] else [ "numerals with rules: " ^ String.concat "; " rules ]
 
 let scope_lines ~show_value env l =

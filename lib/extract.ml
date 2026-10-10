@@ -3,7 +3,7 @@ module V = Value
 module IntMap = V.IntMap
 
 let sanitize s = String.map (fun c -> if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') then c else '_') s
-let var x = Printf.sprintf "v%d%s" x (match Hashtbl.find_opt Env.names x with Some n -> "_" ^ sanitize n | None -> "")
+let var x = if x < 0 then Printf.sprintf "l%d" (- x) else Printf.sprintf "v%d%s" x (match Hashtbl.find_opt Env.names x with Some n -> "_" ^ sanitize n | None -> "")
 let concat = String.concat
 let params vs = if vs = [] then "()" else concat " " (List.map (fun v -> "(" ^ v ^ " : Obj.t)") vs)
 let arrows n = concat " -> " (List.init (max n 1) (fun _ -> if n = 0 then "unit" else "Obj.t") @ [ "Obj.t" ])
@@ -254,7 +254,7 @@ and closure cx cl =
       List.assq cl named
 
 and define cx x v =
-  let top = IntMap.mem x cx.env.values in
+  let top = x < 0 || IntMap.mem x cx.env.values in
   match if top then Hashtbl.find_opt cx.defined x else List.assq_opt v !(cx.captured) with
   | Some name -> name
   | None ->
@@ -288,6 +288,7 @@ and fn cx scope name f =
   Printf.sprintf "%s %s : Obj.t = %s" name (params (List.map var f.params)) body
 
 and expr cx scope code = match code with
+  | V.CVar x when x < 0 -> define cx x (Hashtbl.find V.literal_values x)
   | V.CVar x when V.resolve x <> x -> expr cx scope (V.CVar (V.resolve x))
   | V.CVar x when List.mem_assoc x scope.locals -> "(Obj.repr " ^ var x ^ ")"
   | V.CVar x -> (
@@ -366,6 +367,7 @@ let collect env items =
     List.iter code (V.subcodes c)
   in
   IntMap.iter (fun _ v -> value v) env.Env.values;
+  Hashtbl.iter (fun _ v -> value v) V.literal_values;
   List.iter (function Env.Final (v, _, _) -> value v | Env.Fns fs -> List.iter (fun (_, f) -> code f.V.body) fs) items;
   let adts = List.rev !adts in
   List.iter (fun a -> List.iter (fun c -> Hashtbl.replace defined c.V.cid (var c.cid)) a.V.ctors) adts;
