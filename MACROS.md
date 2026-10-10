@@ -291,4 +291,9 @@ may be `_` to be inferred.
   `slc --interpret` performs a program's requests as it evaluates them,
   rather than replaying steps; the world may be held inside a larger
   structure the evaluator already passes along, such as its store.
+- Decided: refactor call elaboration so that `world-do`, and later the
+  macro-world forms of section 3, are elaborated through the same code as a
+  call: the argument checking that calls and constructor applications
+  already share, then a call's return handling, moved out of call
+  elaboration so a form can use it without a callee.
 
