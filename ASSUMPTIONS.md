@@ -1818,7 +1818,7 @@ reading and choices, not the owner's; `tests/wild_*.sl` are the evidence.
     `coercible-*` terms and proofs, `level-of`, `prove-subterm`), the
     final expression in run position, and `let-match`'s scrutinee.
     `Env.bind` enforces the invariant as a backstop: a type or rule with
-    an open meta is refused with "cannot infer `_?1` in ...", so any
+    an open meta is refused with "cannot infer `__?1` in ...", so any
     form that let one leak is caught where it leaks; the one exception,
     `~holes`, is a telescope under construction. A match annotation is
     elaborated with holes allowed, unified with the expected telescope
@@ -3012,7 +3012,8 @@ to look for a guard, are the owner's.
      `Literal.spell` is `Literal.classify`'s inverse -- decimal; `#\c`
      bare where the reader's word syntax admits it, `#\space`,
      `#\newline`, `#\tab` and `#\xHH` otherwise; and a string quoted
-     with the four escapes the reader unescapes. Its character and
+     with `\"` and `\\`, and every byte outside `0x20` to `0x7e` as
+     `\n`, `\t` or `\xHH`. Its character and
      string cases live in `lib/ffi_core.ml`, which the interpreter, an
      extracted program and `slc`'s output all paste in, so one
      definition serves the three back ends. Run over all 256 codes, it
@@ -3061,7 +3062,7 @@ to look for a guard, are the owner's.
      table and not anything the checker knows.
 
      `tests/literal_print.sl` pins the two spellings the other tests
-     only touch: every character form, and the four escapes. Each
+     only touch: every character form, and the string escapes. Each
      spelling it prints, fed back as a program, prints as itself.
      `tests/literal_diag.sl` pins the same two through the diagnostic
      above, which `tests/comptime_bad.sl` reaches for a `Nat` alone;
@@ -3771,7 +3772,7 @@ session's, made without the owner.
     The report, top to bottom, all of it through `Env.show` so that a
     term is canonical and each atom named as any message names it:
     the goal, as the expected telescope under the position's
-    multiplicities with any `at`, a `_` still open numbered `_?1` and
+    multiplicities with any `at`, a `_` still open numbered `__?1` and
     placed by the usual note, and, for a goal whose type's head has an
     opened `Matchable`, that type's constructors with their types;
     the position's multiplicity; whether the enclosing position is
@@ -3780,7 +3781,7 @@ session's, made without the owner.
     order, or that this is the top level; whether this is inside an
     extern function's model. Then every entry in scope that the
     program's own files bound, newest first, one line each: its name, a fetch
-    form or `_1`, as README.md says, its canonical type, its multiplicity, `Const` or `Dyn`, a
+    form or `__1`, as README.md says, its canonical type, its multiplicity, `Const` or `Dyn`, a
     kind read off its type (function, constructor, type constructor,
     level, proof, cell, `Matchable`, type, value), which subterm
     parameter it is, whether it is anonymous, the elaborator's own

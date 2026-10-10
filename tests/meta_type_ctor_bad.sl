@@ -4,5 +4,5 @@
 (let ((many w)) (MkW _ _ (MkFB (BTrue))))
 (def-fns _ $ (many run : -> (many (False) n)) (match many w (((False) r))))
 run
-; error: argument 3, `v`, of `MkW`: type mismatch: expected `(TyCtor ((Nat) n) -> Type)`, got `(TyCtor ((Bool) b) -> Type)`: `_?1` would be `FB`
-; error: tests/meta_type_ctor_bad.sl:4:22: note: `_?1` is the `_` written here
+; error: argument 3, `v`, of `MkW`: type mismatch: expected `(TyCtor ((Nat) n) -> Type)`, got `(TyCtor ((Bool) b) -> Type)`: `__?1` would be `FB`
+; error: tests/meta_type_ctor_bad.sl:4:22: note: `__?1` is the `_` written here

@@ -3,5 +3,5 @@
   (let ((erased also)) lt)
   (f a b _))
 (Zero)
-; error: hint: `_?1` has type `(Lt a b)`, as does:
+; error: hint: `__?1` has type `(Lt a b)`, as does:
 ; error: tests/msg_hole_hint_alias_bad.sl:3:9: hint: `also`, bound here

@@ -2500,8 +2500,8 @@
 
 (def-fns _ $ (many meta-shown : (many (String) id) (many (Nat) n) -> (many (String) r))
   (let-match many id (SCons c rest)
-    ((SNil) (str-cat "_" $ nat-str n)))
-  (match many (char-is c 107) _ ((BTrue) (str-cat "_" rest)) ((BFalse) (str-cat (match many (char-is c 63) (((String) _)) ((BTrue) "_?") ((BFalse) "_")) $ nat-str n))))
+    ((SNil) (str-cat "__" $ nat-str n)))
+  (match many (char-is c 107) _ ((BTrue) (str-cat "__" rest)) ((BFalse) (str-cat (match many (char-is c 63) (((String) _)) ((BTrue) "__?") ((BFalse) "__")) $ nat-str n))))
 
 ; [mode] is 0 in the text, 1 in a marker's id and 2 in its position.
 (def-fns _ $ (many meta-scan : (subterm many (String) s) (many (Nat) mode) (many (Rope) out) (many (Rope) id) (many (Rope) where) (many (List $ MsgMeta) seen) (many (List $ MsgMeta) table) ->
@@ -2723,7 +2723,7 @@
 (def-fns _ $ (many entry-name-or-id : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
   (let-match many e (MkEInfo _ n _ _ _ _ _ _))
-  (match many n _ ((None _) (str-cat "_" $ nat-str x)) ((Some _ s2) s2)))
+  (match many n _ ((None _) (str-cat "__" $ nat-str x)) ((Some _ s2) s2)))
 
 (def-fns _ $ (many name-of : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
@@ -3080,7 +3080,7 @@
   (let ((many (Env) enve)) $ match many site _ ((Some _ l) (env-at-loc envs l)) ((None _) envs))
   (let ((many (Env) envl)) $ match many name _ ((None _) envs) ((Some _ n)
     (let-match many (is-literal-name n) (BFalse) ((BTrue) (env-back envs $ env-error enve $ str-cat n " is a literal, not a name")))
-    (match many (is-reserved-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat (tick n) " begins with `_`, which is reserved for the compilers' messages")) ((BFalse) envs))))
+    (match many (is-reserved-name n) (((Env) _)) ((BTrue) (env-back envs $ env-error enve $ str-cat3 (tick n) " begins with `__`, which is reserved for the compilers' messages; write it " $ tick $ spell-name n)) ((BFalse) envs))))
   (let-match many envl (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))

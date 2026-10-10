@@ -33,7 +33,7 @@ let resolve here s =
         Hashtbl.replace numbering key n; n in
   let note (key, (shown, at)) =
     if key.[0] = 'k' then
-      let b = String.sub shown 1 (String.length shown - 1) in
+      let b = String.sub shown 2 (String.length shown - 2) in
       if at = "" then Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed" here shown b else Printf.sprintf "\n%s: note: `%s` is `%s`, shadowed here" at shown b
     else
     let written, supplied =
@@ -51,7 +51,7 @@ let resolve here s =
       | Some j ->
           let k = String.index_from s (j + 1) '\001' and e = String.index_from s (j + 1) '\002' in
           let key = String.sub s (j + 1) (k - j - 1) and at = String.sub s (k + 1) (e - k - 1) in
-          let shown = if key.[0] = 'k' then "_" ^ String.sub key 1 (String.length key - 1) else (if key.[0] = '?' then "_?" else "_") ^ string_of_int (number key) in
+          let shown = if key.[0] = 'k' then "__" ^ String.sub key 1 (String.length key - 1) else (if key.[0] = '?' then "__?" else "__") ^ string_of_int (number key) in
           if not (List.mem key !seen) then (seen := key :: !seen; fresh := !fresh @ [ (key, (shown, at)) ]);
           Buffer.add_string b (String.sub s i (j - i) ^ shown);
           go (e + 1)
@@ -151,7 +151,7 @@ let trace : item list ref = ref []
 
 let entry env x = IntMap.find x env.entries
 let fact env x = IntMap.find x env.facts
-let entry_name env x = match (entry env x).name with Some n -> n | None -> "_" ^ string_of_int x
+let entry_name env x = match (entry env x).name with Some n -> n | None -> "__" ^ string_of_int x
 let anonymous env x =
   let e = entry env x in
   let owner = if e.slot = x then Some (entry env (x - 1)) else None in
@@ -415,7 +415,7 @@ let rec metaless env t = match t with (Var x | SlotOf (Var x)) when is_meta env 
 let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(meta = false) ?(word = false) ?(temporary = false) ?(holes = false) ?(at = Reader.nowhere) ?(written = true) ?rule name mult state ty =
   Option.iter (fun n ->
       if Literal.classify n <> `Name then error at "%s is a literal, not a name" (tick n);
-      if n <> "_" && n.[0] = '_' then error at "%s begins with `_`, which is reserved for the compilers' messages" (tick n)) name;
+      if String.starts_with ~prefix:"__" n then error at "%s begins with `__`, which is reserved for the compilers' messages; write it %s" (tick n) (tick (Literal.name n))) name;
   if (not meta) && (not holes) && (has_meta env ty || Option.fold ~none:false ~some:(has_meta env) rule) then
     unsolved Reader.nowhere env (match rule with Some r when has_meta env r -> r | _ -> ty);
   let mint = if literal then fresh_literal else fresh in

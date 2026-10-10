@@ -1,0 +1,15 @@
+; expect: (Cons _ (MkQ 2 3 4 5 6 7 $ #"A b") $ Cons _ (MkQ 2 2 2 2 2 2 $ #"C\x80") $ Nil _)
+(def-adts $ (#"T t" : -> Type)
+  enum
+  (many #"A b" : -> (#"T t"))
+  (many #"C\x80" : -> (#"T t")))
+(def-adts $ (Q : -> Type)
+  enum
+  (many MkQ : (many (Nat) a) (many (Nat) b) (many (Nat) c) (many (Nat) d) (many (Nat) e) (many (Nat) f) (many (#"T t") g) -> (Q)))
+(let ((many _x)) 2)
+(let ((many #"_")) 3)
+(let ((many #"45")) 4)
+(let ((many #"")) 5)
+(let ((many #"__y")) 6)
+(let ((many #"x y")) 7)
+(Cons _ (MkQ _x #"_" #"45" #"" #"__y" #"x y" (#"A b")) $ Cons _ (MkQ 2 2 2 2 2 2 (#"C\x80")) $ Nil _)

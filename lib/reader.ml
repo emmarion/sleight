@@ -16,6 +16,7 @@ let where fallback l =
 let loc = function Atom (l, _) | List (l, _) -> l
 
 let rec show = function
+  | Atom (_, s) when s <> "" && s.[0] = '"' -> Ffi_core.lit_string (String.sub s 1 (String.length s - 2))
   | Atom (_, s) -> s
   | List (_, items) -> "(" ^ String.concat " " (List.map show items) ^ ")"
 
@@ -39,18 +40,26 @@ let scan_upto file src =
       | '"' -> (line, bol, i + 1)
       | '\\' ->
           let e = if i + 1 < n then src.[i + 1] else err (at line bol i) unterminated in
-          Buffer.add_char buf (match e with 'n' -> '\n' | 't' -> '\t' | '"' | '\\' -> e | _ -> err (at line bol i) ("unknown escape \\" ^ String.make 1 e));
-          string buf line bol (i + 2)
+          let hex = i + 3 < n && e = 'x' && String.for_all (function '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true | _ -> false) (String.sub src (i + 2) 2) in
+          Buffer.add_char buf (match e with 'n' -> '\n' | 't' -> '\t' | '"' | '\\' -> e | 'x' when hex -> Char.chr (int_of_string ("0x" ^ String.sub src (i + 2) 2)) | _ -> err (at line bol i) ("unknown escape \\" ^ String.make 1 e));
+          string buf line bol (i + if hex then 4 else 2)
       | '\n' -> Buffer.add_char buf '\n'; string buf (line + 1) (i + 1) (i + 1)
       | c -> Buffer.add_char buf c; string buf line bol (i + 1)
   in
   let emit t = out := t :: !out in
+  let word w = if w = "_" || String.starts_with ~prefix:"__" w || Literal.classify w <> `Name then w else Literal.name w in
   let blank c = c = ' ' || c = '\t' || c = '\r' in
   let rec pragma line bol i k =
     let i = skip blank i in
     let j = skip (( <> ) '\n') i in
+    if k > 0 && i + 1 < n && src.[i] = '#' && src.[i + 1] = '"' then (
+      let buf = Buffer.create 16 in
+      let line', _, j = string buf line bol (i + 2) in
+      if line' <> line then err (at line bol i) "a pragma ends with its line";
+      Atom (at line bol i, Literal.name (Buffer.contents buf)) :: pragma line bol j (k - 1))
+    else
     let j = if k = 0 then j else skip (fun c -> not (blank c || c = '\n')) i in
-    if i >= j then [] else Atom (at line bol i, String.trim (String.sub src i (j - i))) :: (if k = 0 then [] else pragma line bol j (k - 1))
+    if i >= j then [] else if k = 0 then [ Atom (at line bol i, String.trim (String.sub src i (j - i))) ] else Atom (at line bol i, word (String.sub src i (j - i))) :: pragma line bol j (k - 1)
   in
   let rec go line bol i =
     if i < n then
@@ -63,15 +72,17 @@ let scan_upto file src =
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
-      | '"' ->
-          let buf = Buffer.create 16 in
-          let opened = at line bol i in
-          let line, bol, j = string buf line bol (i + 1) in
-          emit (opened, i, Word (Literal.quote (Buffer.contents buf))); go line bol j
+      | '"' -> literal Literal.quote line bol i (i + 1)
+      | '#' when i + 1 < n && src.[i + 1] = '"' -> literal Literal.name line bol i (i + 2)
       | _ ->
           let j = skip (fun c -> not (String.contains " \t\r\n();" c)) i in
           let w = String.sub src i (j - i) in
-          emit (at line bol i, i, if w = "$" then Dollar else Word w); go line bol j
+          emit (at line bol i, i, if w = "$" then Dollar else Word (word w)); go line bol j
+  and literal spell line bol i start =
+    let buf = Buffer.create 16 in
+    let opened = at line bol i in
+    let line, bol, j = string buf line bol start in
+    emit (opened, i, Word (spell (Buffer.contents buf))); go line bol j
   in
   let stopped = match go 1 0 0 with () -> None | exception Syntax (l, m) -> Some (l, m) in
   (List.rev !out, stopped)

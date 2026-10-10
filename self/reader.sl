@@ -88,11 +88,22 @@
     (or (nat-eq n 40)
       $ or (nat-eq n 41) $ nat-eq n 59)))
 
+(def-fns _ $ (many word-name : (many (String) w) -> (many (String) r))
+  (match many (or (str-eq w "_") $ or (is-reserved-name w) $ or (is-literal-name w) $ str-starts "\"" w) _
+    ((BTrue) w)
+    ((BFalse) (spell-name w))))
+
 (def-fns _ $ (many word-tok : (many (Pos) pos) (many (String) start) (many (Nat) k) (erased (Nat) len) (erased (StrLength start len) l) (erased (Nat) rl) (erased (Add k rl len) sum) -> (many (Tok) t))
   (let ((many w) (many after) (erased p) (erased la)) (str-split start k len l (add-le-left k rl len sum)))
   (match many (str-cmp w "$") _
     ((CEq _ _ _) (TDollar pos))
-    (else (TWord pos w))))
+    (else (TWord pos $ word-name w))))
+
+(def-adts $ (StrKind : -> Type)
+  enum
+  (many SKLit : -> (StrKind))
+  (many SKName : -> (StrKind))
+  (many SKPragma : (many (Pos) pos) (many (List $ Raw) words) -> (StrKind)))
 
 (def-fns _ $ (many escape-ok : (many (Char) e) -> (many (Bool) r))
   (let ((many n)) $ char-code e)
@@ -106,6 +117,9 @@
       (match many (nat-cmp n 116) _
         ((CEq _ _ _) #\tab)
         (else e)))))
+
+(def-fns _ $ (many bad-escape : (many (Pos) pos) (many (Char) e) -> (many (Tok) t))
+  (TError pos $ rope-str $ RCat (RStr "unknown escape \\") $ RChar e))
 
 (def-fns _ $ (many end-toks : (many (Tok) t) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
   (list-rev _ $ Cons _ t acc))
@@ -126,16 +140,17 @@
     ((BTrue) (values (BFalse) (Succ line) 0 acc))
     ((BFalse) (values (BFalse) line (Succ col) acc))))
 
-(def-fns _ $ (many pragma-field : (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (List $ Raw) r))
-  (match many start _
-    ((None _) words)
-    ((Some _ p) (Cons _ (RAtom p $ rope-str cur) words))))
-
 (def-fns _ $ (many pragma-limit : (many (List $ Raw) words) -> (many (Nat) n))
   (let-match many (list-rev _ words) (Cons _ w _)
     ((Nil _) 3))
   (let-match many w (RAtom _ s) (else 3))
   (match many (str-eq s "warn") _ ((BTrue) 2) ((BFalse) 3)))
+
+(def-fns _ $ (many pragma-field : (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (List $ Raw) r))
+  (let ((many text)) $ rope-str cur)
+  (match many start _
+    ((None _) words)
+    ((Some _ p) (Cons _ (RAtom p $ match many (nat-lt (list-length _ words) $ pragma-limit words) (((String) _)) ((BTrue) (word-name text)) ((BFalse) text)) words))))
 
 (def-fns _ $ (many pragma-tok : (many (Pos) pos) (many (Maybe $ Pos) start) (many (Rope) cur) (many (List $ Raw) words) -> (many (Tok) t))
   (TPragma pos $ list-rev _ $ pragma-field start cur words))
@@ -152,7 +167,11 @@
         (match many comment _ ((BTrue) (tail $ comment-start rest line2 col2 acc2)) ((BFalse) (tail $ tokenize rest line2 col2 acc2))))
       ((BFalse)
         (let-match many (char-is c 34) (BFalse)
-          ((BTrue) (tail $ string-lit rest line (Succ col) (MkPos line $ Succ col) (REmpty) acc)))
+          ((BTrue) (tail $ string-lit rest line (Succ col) (MkPos line $ Succ col) (SKLit) (REmpty) acc)))
+        (let-match many (and (char-is c 35) $ str-starts "\"" rest) (BFalse)
+          ((BTrue)
+            (let-match many rest (SCons _ rest2) ((SNil) (list-rev _ acc)))
+            (tail $ string-lit rest2 line (Succ (Succ col)) (MkPos line $ Succ col) (SKName) (REmpty) acc)))
         (let ((many len) (erased l)) (str-length s))
         (let-match erased l (SLenCons c0 s0 rl lr))
         (tail $ word rest line (Succ col) s len l (Succ (Zero)) rl lr (AddSucc (Zero) rl rl (AddZero rl)) (MkPos line $ Succ col) acc))))
@@ -175,9 +194,13 @@
           ((BTrue) (tail $ pragma-line rest line (Succ col) pos (pragma-field start cur words) (None _) (REmpty) (REmpty) acc))
           ((BFalse) (tail $ pragma-line rest line (Succ col) pos words start cur (RCat blanks $ RChar c) acc))))
       ((BFalse)
-        (match many start _
-          ((None _) (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkPos line $ Succ col) (RChar c) (REmpty) acc))
-          ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc))))))
+        (let-match many start (None _)
+          ((Some _ _) (tail $ pragma-line rest line (Succ col) pos words start (RCat (RCat cur blanks) $ RChar c) (REmpty) acc)))
+        (let-match many (and (nat-lt (list-length _ words) $ pragma-limit words) $ and (char-is c 35) $ str-starts "\"" rest) (BFalse)
+          ((BTrue)
+            (let-match many rest (SCons _ rest2) ((SNil) (list-rev _ acc)))
+            (tail $ string-lit rest2 line (Succ (Succ col)) (MkPos line $ Succ col) (SKPragma pos words) (REmpty) acc)))
+        (tail $ pragma-line rest line (Succ col) pos words (Some _ $ MkPos line $ Succ col) (RChar c) (REmpty) acc))))
   ((many skip-comment : (subterm many (String) s) (many (Nat) line) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (list-rev _ acc)))
     (match many (char-is c 10) _
@@ -192,21 +215,35 @@
       ((BFalse)
         (let-match erased lr (SLenCons c0 s0 rl1 lr1))
         (tail $ word rest line (Succ col) start len l (Succ k) rl1 lr1 (add-shift k rl1 len sum) pos acc))))
-  ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
+  ((many string-lit : (subterm many (String) s) (many (Nat) line) (many (Nat) col) (many (Pos) pos) (many (StrKind) kind) (many (Rope) rev) (many (List $ Tok) acc) -> (many (List $ Tok) toks))
     (let-match many s (SCons c rest) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
     (let ((many n)) $ char-code c)
     (let-match many (nat-eq n 34) (BFalse)
-      ((BTrue) (tail $ tokenize rest line (Succ col) $ Cons _ (TStrLit pos $ rope-str rev) acc)))
+      ((BTrue)
+        (let ((many body)) $ rope-str rev)
+        (match many kind _
+          ((SKLit) (tail $ tokenize rest line (Succ col) $ Cons _ (TStrLit pos body) acc))
+          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TWord pos $ spell-name body) acc))
+          ((SKPragma pp ws) (tail $ pragma-line rest line (Succ col) pp (Cons _ (RAtom pos $ spell-name body) ws) (None _) (REmpty) (REmpty) acc)))))
     (match many (nat-eq n 92) _
       ((BTrue)
         (let-match many rest (SCons e rest2) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
-        (match many (escape-ok e) _
-          ((BTrue) (tail $ string-lit rest2 line (Succ (Succ col)) pos (RCat rev $ RChar $ unescape e) acc))
-          ((BFalse) (end-toks (TError (MkPos line $ Succ col) $ rope-str $ RCat (RStr "unknown escape \\") $ RChar e) acc))))
+        (let-match many (char-is e 120) (BTrue)
+          ((BFalse)
+            (match many (escape-ok e) _
+              ((BTrue) (tail $ string-lit rest2 line (Succ (Succ col)) pos kind (RCat rev $ RChar $ unescape e) acc))
+              ((BFalse) (end-toks (bad-escape (MkPos line $ Succ col) e) acc)))))
+        (let ((many hex)) $ match many rest2 (((Maybe $ Char) _))
+          ((SCons h1 r3) (match many r3 (((Maybe $ Char) _)) ((SCons h2 _) (hex-pair h1 h2)) ((SNil) (None _))))
+          ((SNil) (None _)))
+        (let-match many hex (Some _ b) ((None _) (end-toks (bad-escape (MkPos line $ Succ col) e) acc)))
+        (let-match many rest2 (SCons _ r3) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
+        (let-match many r3 (SCons _ r4) ((SNil) (unterminated (MkPos line $ Succ col) acc)))
+        (tail $ string-lit r4 line (nat-add col 4) pos kind (RCat rev $ RChar b) acc))
       ((BFalse)
-        (match many (nat-eq n 10) _
-          ((BTrue) (tail $ string-lit rest (Succ line) 0 pos (RCat rev $ RChar c) acc))
-          ((BFalse) (tail $ string-lit rest line (Succ col) pos (RCat rev $ RChar c) acc)))))))
+        (let-match many (nat-eq n 10) (BTrue) ((BFalse) (tail $ string-lit rest line (Succ col) pos kind (RCat rev $ RChar c) acc)))
+        (let-match many kind (SKPragma _ _) (else (tail $ string-lit rest (Succ line) 0 pos kind (RCat rev $ RChar c) acc)))
+        (end-toks (TError pos "a pragma ends with its line") acc)))))
 
 ; A frame is an open form: where it opened, whether $ opened it, and its items so far, reversed.
 (def-adts $ (Frame : -> Type)
@@ -313,7 +350,7 @@
   ((many show-raw : (subterm many (Raw) r) -> (many (Rope) out))
     (match many r _
       ((RAtom _ s) (RStr s))
-      ((RString _ s) (rwrap "\"" (ocaml-escape s) "\""))
+      ((RString _ s) (lit-string-rope s))
       ((RList _ items) (rwrap "(" (rjoin (notail $ show-raws items) " ") ")"))))
   ((many show-raws : (subterm many (List $ Raw) rs) -> (many (List $ Rope) out))
     (match many rs _

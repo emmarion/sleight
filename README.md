@@ -177,31 +177,32 @@ runtime error, whose code carries no positions — names the file alone
 Within a compile-time message a name, a term or a keyword of the language is
 set off in backticks, `` `(List A)` `` or `` `share` ``, and a literal is left
 bare, since it already reads as one: `3`, `#\a`, `"ab"`. Both compilers quote
-through one function, `Env.tick` and `tick` in `self/core.sl`. Runtime errors
+through one function, `Env.tick` and `tick` in `self/core.sl`. A name is
+shown plain where that reads back as the same name, and raw otherwise, `` `#"x y"` `` (DESIGN.md section 1). Runtime errors
 are not quoted. A term is shown canonically, each piece by the spelling that
 means it where the message points:
 
 - an atom by a numeral or string literal it equals, else by the newest name
   still in scope for it, else by a fetch form that yields it there with its
-  argument a name, `(level-of f)`, `(slot-of x)`, else as `_1`, `_2` and on;
-- an unsolved `_` (DESIGN.md section 50) as `_?1`, `_?2` and on;
+  argument a name, `(level-of f)`, `(slot-of x)`, else as `__1`, `__2` and on;
+- an unsolved `_` (DESIGN.md section 50) as `__?1`, `__?2` and on;
 - a special form or annotation token, a fetch form's head included, by the
-  newest name in scope that is `Const`, non-erased and holds it, else as `_`
-  followed by its built-in name, `_Fn`, `(_level-of f)`.
+  newest name in scope that is `Const`, non-erased and holds it, else as `__`
+  followed by its built-in name, `__Fn`, `(__level-of f)`.
 
 Keywords in a message's prose follow the same rule where they stand for syntax,
 alone in backticks, ``mark it `notail` ``, or inside quoted code, ``written
 `(share x)` ``. Plain words naming a multiplicity, as in "used at unique", stay
-as written. A keyword printed as `_` and its built-in name is noted at the
-binder that shadows it, `` `_notail` is `notail`, shadowed here ``.
+as written. A keyword printed as `__` and its built-in name is noted at the
+binder that shadows it, `` `__notail` is `notail`, shadowed here ``.
 
 The two numberings follow order of first mention and hold for the whole run,
-so `_3` names one entry in every message it appears in, and every message
-that mentions one carries a note saying what it is: `` `_?1` is the `_`
-written here ``, `` `_3` is anonymous, minted here ``, `` `_Fn` is `Fn`,
+so `__3` names one entry in every message it appears in, and every message
+that mentions one carries a note saying what it is: `` `__?1` is the `_`
+written here ``, `` `__3` is anonymous, minted here ``, `` `__Fn` is `Fn`,
 shadowed here ``. An automatic slot that no name reaches is noted at its
-entry, where the source wrote one: `` `_2` is the slot of the `_` written
-here `` or `` `_2` is the slot of the entry bound here ``. Which atom canonicalization keeps for a class is an
+entry, where the source wrote one: `` `__2` is the slot of the `_` written
+here `` or `` `__2` is the slot of the entry bound here ``. Which atom canonicalization keeps for a class is an
 accident of minting order, so two numbers may turn out to denote one thing
 under later facts, and a name is shown only where it still denotes that atom
 (`Env.show`, `show-t` in `self/elab.sl`). A result that fails its return type

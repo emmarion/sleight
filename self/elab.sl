@@ -963,39 +963,13 @@
 ; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
 ; the language; an emitted printer calls Ffi_core (emit.sl).
 
-(let ((many sixteen-dec)) (lt-dec (Zero) 16))
-(comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
-
-(def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
-  (RChar $ char-of-code $ match many (nat-lt n 10) (((Nat) _)) ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
-
 ; Bare where the reader's word syntax admits the character, hexadecimal otherwise.
 (def-fns _ $ (many lit-char-rope : (many (Nat) c) -> (many (Rope) r))
   (let-match many (nat-eq c 32) (BFalse) ((BTrue) (RStr "#\\space")))
   (let-match many (nat-eq c 10) (BFalse) ((BTrue) (RStr "#\\newline")))
   (let-match many (nat-eq c 9) (BFalse) ((BTrue) (RStr "#\\tab")))
-  (let-match many (and (and (nat-lt 32 c) (nat-lt c 127)) $ not $ or (nat-eq c 40) $ or (nat-eq c 41) $ nat-eq c 59) (BFalse)
-    ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
-  (let ((many hi) (many lo) (erased dm) (erased dmm) (erased da) (erased dp)) (divmod c 16 sixteen-positive))
-  (rcat3 (RStr "#\\x") (hex-rope hi) $ hex-rope lo))
-
-; The four escapes the reader unescapes; every other byte stands as itself.
-(def-fns _ $ (many escape-char : (many (Char) c) -> (many (Rope) r))
-  (let ((many k)) $ char-code c)
-  (let-match many (nat-eq k 34) (BFalse) ((BTrue) (RStr "\\\"")))
-  (let-match many (nat-eq k 92) (BFalse) ((BTrue) (RStr "\\\\")))
-  (let-match many (nat-eq k 10) (BFalse) ((BTrue) (RStr "\\n")))
-  (match many (nat-eq k 9) _
-    ((BTrue) (RStr "\\t"))
-    ((BFalse) (RChar c))))
-
-(def-fns _ $ (many str-escape : (subterm many (String) s) -> (many (Rope) r))
-  (match many s _
-    ((SNil) (REmpty))
-    ((SCons c rest) (rcat (escape-char c) $ notail $ str-escape rest))))
-
-(def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
-  (rwrap "\"" (str-escape s) "\""))
+  (let-match many (word-code c) (BFalse) ((BTrue) (rcat (RStr "#\\") $ RChar $ char-of-code c)))
+  (rcat (RStr "#\\x") $ hex-byte-rope c))
 
 (def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) -> (many (Env) r))
   (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)

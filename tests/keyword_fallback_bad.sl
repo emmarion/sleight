@@ -4,5 +4,5 @@
 (let ((many (Nat) z)) inc)
 (Zero)
 ; warns: tests/keyword_fallback_bad.sl:3:7: warning: declaration of `->` shadows a built-in
-; error: error: type mismatch: expected `(Nat)`, got `(Fn (level-of inc) (many (Nat) n) _-> (many (Nat) m))`
-; error: tests/keyword_fallback_bad.sl:3:7: note: `_->` is `->`, shadowed here
+; error: error: type mismatch: expected `(Nat)`, got `(Fn (level-of inc) (many (Nat) n) __-> (many (Nat) m))`
+; error: tests/keyword_fallback_bad.sl:3:7: note: `__->` is `->`, shadowed here

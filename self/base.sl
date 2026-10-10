@@ -135,8 +135,7 @@
     $ and (char-is c 35) $ match many rest (((Bool) _)) ((SNil) (BFalse)) ((SCons c2 _) (char-is c2 92))))
 
 (def-fns _ $ (many is-reserved-name : (many (String) s) -> (many (Bool) r))
-  (let-match many s (SCons c rest) ((SNil) (BFalse)))
-  (and (char-is c 95) $ not $ str-is-empty rest))
+  (str-starts "__" s))
 
 ; The OCaml spelling of a string literal's body: quote, backslash, newline and tab escaped, other bytes
 ; outside the printable range as decimal escapes.
@@ -555,6 +554,61 @@
   (match many rest _
     ((Nil _) r)
     ((Cons _ _ _) (RCat r $ RCat (RStr sep) $ notail $ rjoin rest sep))))
+
+(let ((many sixteen-dec)) (lt-dec (Zero) 16))
+(comptime-match many sixteen-dec (Yes sda sdb sixteen-positive))
+
+(def-fns _ $ (many hex-rope : (many (Nat) n) -> (many (Rope) r))
+  (RChar $ char-of-code $ match many (nat-lt n 10) (((Nat) _)) ((BTrue) (nat-add 48 n)) ((BFalse) (nat-add 87 n))))
+
+(def-fns _ $ (many hex-byte-rope : (many (Nat) c) -> (many (Rope) r))
+  (let ((many hi) (many lo) (erased dm) (erased dmm) (erased da) (erased dp)) (divmod c 16 sixteen-positive))
+  (rcat (hex-rope hi) $ hex-rope lo))
+
+(def-fns _ $ (many hex-value : (many (Char) c) -> (many (Maybe $ Nat) r))
+  (let ((many n)) $ char-code c)
+  (let-match many (char-between c 48 57) (BFalse) ((BTrue) (Some _ $ nat-sub n 48)))
+  (let-match many (char-between c 97 102) (BFalse) ((BTrue) (Some _ $ nat-sub n 87)))
+  (match many (char-between c 65 70) _ ((BTrue) (Some _ $ nat-sub n 55)) ((BFalse) (None _))))
+
+(def-fns _ $ (many hex-pair : (many (Char) a) (many (Char) b) -> (many (Maybe $ Char) r))
+  (let-match many (hex-value a) (Some _ h) ((None _) (None _)))
+  (let-match many (hex-value b) (Some _ l) ((None _) (None _)))
+  (Some _ $ char-of-code $ nat-add (nat-mul h 16) l))
+
+(def-fns _ $ (many escape-char : (many (Char) c) -> (many (Rope) r))
+  (let ((many k)) $ char-code c)
+  (let-match many (nat-eq k 34) (BFalse) ((BTrue) (RStr "\\\"")))
+  (let-match many (nat-eq k 92) (BFalse) ((BTrue) (RStr "\\\\")))
+  (let-match many (nat-eq k 10) (BFalse) ((BTrue) (RStr "\\n")))
+  (let-match many (nat-eq k 9) (BFalse) ((BTrue) (RStr "\\t")))
+  (match many (and (nat-lt 31 k) (nat-lt k 127)) _
+    ((BTrue) (RChar c))
+    ((BFalse) (rcat (RStr "\\x") $ hex-byte-rope k))))
+
+(def-fns _ $ (many str-escape : (subterm many (String) s) -> (many (Rope) r))
+  (match many s _
+    ((SNil) (REmpty))
+    ((SCons c rest) (rcat (escape-char c) $ notail $ str-escape rest))))
+
+(def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
+  (rwrap "\"" (str-escape s) "\""))
+
+(def-fns _ $ (many word-code : (many (Nat) n) -> (many (Bool) r))
+  (and (and (nat-lt 32 n) (nat-lt n 127)) $ not $ or (nat-eq n 40) $ or (nat-eq n 41) $ nat-eq n 59))
+
+(def-fns _ $ (many all-word-chars : (subterm many (String) s) -> (many (Bool) r))
+  (match many s _
+    ((SNil) (BTrue))
+    ((SCons c rest) (and (word-code $ char-code c) $ notail $ all-word-chars rest))))
+
+(def-fns _ $ (many is-plain-name : (many (String) s) -> (many (Bool) r))
+  (let-match many s (SCons c _) ((SNil) (BFalse)))
+  (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eq s "_") $ and (not $ str-eq s "$")
+    $ and (not $ char-is c 34) $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
+
+(def-fns _ $ (many spell-name : (many (String) s) -> (many (String) r))
+  (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ lit-string-rope s))))
 
 (def-fns _ $ (many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (match many rs _

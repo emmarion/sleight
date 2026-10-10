@@ -1,3 +1,3 @@
-; error: `_L` begins with `_`, which is reserved for the compilers' messages
-(def-lvl _L)
+; error: `__L` begins with `__`, which is reserved for the compilers' messages
+(def-lvl __L)
 (Zero)

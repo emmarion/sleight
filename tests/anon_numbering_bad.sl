@@ -7,5 +7,5 @@
     n)
   (Cons _ dec fs))
 (Zero)
-; error: error: argument 3, `rest`, of `Cons`: type mismatch: expected `(List (Fn (level-of dec) (many (Nat) n) -> (many (Nat) m)))`, got `(List (Fn _1 (many (Nat) n) -> (many (Nat) m)))`
-; error: tests/anon_numbering_bad.sl:2:12: note: `_1` is anonymous, minted here
+; error: error: argument 3, `rest`, of `Cons`: type mismatch: expected `(List (Fn (level-of dec) (many (Nat) n) -> (many (Nat) m)))`, got `(List (Fn __1 (many (Nat) n) -> (many (Nat) m)))`
+; error: tests/anon_numbering_bad.sl:2:12: note: `__1` is anonymous, minted here

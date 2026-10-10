@@ -1,6 +1,6 @@
 ; needs: list
-; error: `_?1` is the `_` written here
-; error: cannot infer `_?1` in `(List _?1)`
+; error: `__?1` is the `_` written here
+; error: cannot infer `__?1` in `(List __?1)`
 ; A function's signature is spelled out in full: a `_` in it is refused where its entry is bound.
 (def-lvl A)
 (def-fns A $ (many len : (many (List _) xs) -> (many (Nat) n)) (Zero))

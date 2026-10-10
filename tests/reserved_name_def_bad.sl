@@ -1,4 +1,4 @@
-; error: `_T` begins with `_`, which is reserved for the compilers' messages
-(def-adts $ (_T : -> Type)
+; error: `__T` begins with `__`, which is reserved for the compilers' messages
+(def-adts $ (__T : -> Type)
   enum)
 (Zero)

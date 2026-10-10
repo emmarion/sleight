@@ -21,7 +21,13 @@ let classify s =
   else `Name
 
 let char c = Printf.sprintf "#\\x%02x" c
-let key = function Numeral z -> Z.to_string z | Char c -> char c | Str s -> quote s
+let key = function Numeral z -> Z.to_string z | Char c -> char c | Str s -> Ffi_core.lit_string s
+
+let plain s =
+  s <> "_" && s <> "$" && s <> "" && s.[0] <> '"' && (not (String.starts_with ~prefix:"__" s)) && (not (String.starts_with ~prefix:"#\"" s))
+  && String.for_all (fun c -> c > ' ' && c <= '~' && not (String.contains "();" c)) s && classify s = `Name
+
+let name s = if plain s then s else "#" ^ Ffi_core.lit_string s
 
 (* The source spelling a literal reads back from, [classify]'s inverse: a numeral in decimal, a character bare
    where the reader's word syntax admits it, and a string escaped the way [Reader.tokenize] unescapes. *)

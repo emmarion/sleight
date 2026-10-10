@@ -51,7 +51,7 @@ let lit_char c =
 let lit_string s =
   let buf = Buffer.create (String.length s + 2) in
   Buffer.add_char buf '"';
-  String.iter (fun c -> Buffer.add_string buf (match c with '"' -> "\\\"" | '\\' -> "\\\\" | '\n' -> "\\n" | '\t' -> "\\t" | c -> String.make 1 c)) s;
+  String.iter (fun c -> Buffer.add_string buf (match c with '"' -> "\\\"" | '\\' -> "\\\\" | '\n' -> "\\n" | '\t' -> "\\t" | ' ' .. '~' -> String.make 1 c | c -> Printf.sprintf "\\x%02x" (Char.code c))) s;
   Buffer.add_char buf '"';
   Buffer.contents buf
 
