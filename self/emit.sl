@@ -547,7 +547,7 @@
 (def-fns _ $ (many const-rope : (many (Env) env) (many (Nat) x) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "(failwith \"unbound constant\")")))
-  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v _) (addr-rope _ v))))
 
 (def-fns _ $ (many named-rope : (many (Named) n) (many (Env) env) -> (many (Rope) r))
@@ -966,7 +966,7 @@
     (match many (idmap-get _ x en) (((List $ Ref Block hs) _))
       ((Miss _ _ _ _) acc)
       ((Hit _ _ _ info _)
-        (let-match many info (MkEInfo _ _ _ st _ _ _))
+        (let-match many info (MkEInfo _ _ _ st _ _ _ _))
         (match many st (((List $ Ref Block hs) _))
           ((SDyn _) acc)
           ((SConst _ v _) (Cons _ v acc))))))

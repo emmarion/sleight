@@ -509,7 +509,8 @@ let rec unify_in ?(force = false) env a b =
         assign x (Var y)
     | Var x, Var y when force && listed env x y -> contradiction ()
     | Var x, Var y when force ->
-        let x, y = if x > y then (x, y) else (y, x) in
+        let age z = (z >= 0, abs z) in
+        let x, y = if age x > age y then (x, y) else (y, x) in
         let signature z = match type_of env z with (TyCtor _ | ValCtor _) as s -> Some s | _ -> None in
         let sx, sy = (signature x, signature y) in
         let env = add_rule env x (Var y) in

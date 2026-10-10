@@ -273,7 +273,7 @@
 (def-fns _ $ (many lit-terms : (many (Env) env) (subterm many (List $ LitEntry) lits) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many lits (Cons _ l rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ lit-terms env rest)
-  (let-match many l (MkLitEntry x _ s))
+  (let-match many l (MkLitEntry x _ s _ _))
   (match many (is-literal-name s) _
     ((BTrue) (Cons _ (MkPair _ _ (canon-env env $ TVar x) l) more))
     ((BFalse) more)))
@@ -299,7 +299,7 @@
 
 (def-fns _ $ (many lit-cands : (many (Env) env) (many (List $ Nat) atoms) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
-  (let-match many l (MkLitEntry x _ s))
+  (let-match many l (MkLitEntry x _ s _ _))
   (tail $ lit-cands env atoms rest $ match many (names-lit s) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) (cand-of env atoms x s acc)) ((BFalse) acc)))
 
 (def-fns _ $ (many best-cand : (many (Nat) a) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) cs) (many (Maybe $ Pair (Nat) (String)) best) -> (many (Maybe $ Pair (Nat) (String)) r))
@@ -392,7 +392,7 @@
 
 (def-fns _ $ (many numeral-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
-  (let-match many l (MkLitEntry _ proof sp))
+  (let-match many l (MkLitEntry _ proof sp _ _))
   (tail $ numeral-cands env kws rest $ match many proof (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
     ((Some _ p) (match many (canon-id env p) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ p $ fetch-form kws "numeral-of" sp) acc)) ((None _) acc)))
     ((None _) acc)))
@@ -683,7 +683,7 @@
 
 (def-fns _ $ (many entry-site : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Loc) r))
   (let ((erased hs) (many e)) $ entry env x)
-  (match many e _ ((MkEInfo _ _ _ _ _ _ site) site)))
+  (match many e _ ((MkEInfo _ _ _ _ _ _ _ site) site)))
 
 (def-fns _ $ (many same-value : (many (Env) env) (many (Nat) x) (subterm many (List $ Pair (Nat) (String)) found) -> (many (Bool) r))
   (let-match many found (Cons _ f rest) ((Nil _) (BFalse)))
@@ -693,7 +693,7 @@
 (def-fns _ $ (many typed-entries : (many (Env) env) (many (Term) ty) (subterm many (List $ Nat) xs) (many (List $ Pair (Nat) (String)) found) -> (many (List $ Pair (Nat) (String)) r))
   (let-match many xs (Cons _ x rest) ((Nil _) found))
   (let ((erased hs) (many e)) $ entry env x)
-  (let-match many e (MkEInfo _ n _ _ _ _ _))
+  (let-match many e (MkEInfo _ n _ _ _ _ _ _))
   (let-match many n (Some _ name) ((None _) (tail $ typed-entries env ty rest found)))
   (let ((many visible)) $ match many (lookup env name) (((Bool) _)) ((Some _ y) (nat-eq x y)) ((None _) (BFalse)))
   (let-match many (and visible $ and (equal-env env (type-of env x) ty) $ not $ same-value env x found) (BTrue)
@@ -732,7 +732,7 @@
 
 (def-fns _ $ (many bind-as : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
-  (let ((many env2) (many x)) $ bind-as-raw env meta holes name site written mult ty rule objid)
+  (let ((many env2) (many x)) $ bind-as-raw env meta holes (BFalse) name site written mult ty rule objid)
   (values (refuse-open env env2 meta holes ty rule) x))
 
 (def-fns _ $ (many bind : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
@@ -1000,9 +1000,9 @@
 (def-fns _ $ (many lit-string-rope : (many (String) s) -> (many (Rope) r))
   (rwrap "\"" (str-escape s) "\""))
 
-(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) -> (many (Env) r))
+(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) -> (many (Env) r))
   (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)
-  (env-push-lit env2 x proof spelling))
+  (env-push-lit env2 x proof spelling facts))
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
   (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
@@ -1012,16 +1012,16 @@
 (def-fns _ $ (many intern-numeral : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof))
   (let ((many n)) $ parse-nat key 0)
   (let ((many env1) (many nat-ty)) $ prelude-type env "Nat")
-  (let ((many env2) (many x)) $ bind-closed env1 (None _) (None _) (BFalse) (Many) (BExt _ $ PNat n) nat-ty (None _) delegate-id)
+  (let ((many env2) (many x)) $ bind-lit env1 (Many) (BExt _ $ PNat n) nat-ty (None _))
   (let ((many env2b) (many numeral)) $ prelude-id env2 "Numeral")
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
-  (let ((many env3) (many p)) $ bind-token env2c (None _) (None _) (BFalse) (Erased) pty (None _) delegate-id)
-  (values (record-literal env3 key x (Some _ p) key) x p))
+  (let ((many env3) (many p)) $ bind-lit env2c (Erased) (BToken _) pty (None _))
+  (values (record-literal env3 key x (Some _ p) key $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
-  (let-match many p (MkLitEntry y proof _))
+  (let-match many p (MkLitEntry y proof _ _ _))
   (match many (nat-cmp x y) _ ((CEq _ _ _) proof) (else (tail $ lit-proof rest x))))
 
 (def-fns _ $ (many intern-numeral-once : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof))
@@ -1052,14 +1052,14 @@
   (let ((many env2) (many num) (many np)) $ intern-numeral-once env $ nat-str code)
   (let ((many env2b) (many lt-id)) $ prelude-id env2 "Lt")
   (let ((many env2c) (many modulus)) $ prelude-id env2b "u8-modulus")
-  (let ((many env3) (many lt)) (bind-token env2c (None _) (None _) (BFalse) (Erased)
-                              (TApp (TVar lt-id) $ Cons _ (TVar num) $ Cons _ (TVar modulus) $ Nil _) (None _) delegate-id))
+  (let ((many lt-ty)) $ TApp (TVar lt-id) $ Cons _ (TVar num) $ Cons _ (TVar modulus) $ Nil _)
+  (let ((many env3) (many lt)) $ bind-lit env2c (Erased) (BToken _) lt-ty (None _))
   (let ((many env3b) (many mk-char)) $ prelude-id env3 "MkChar")
   (let ((many env3c) (many mk-u8)) $ prelude-id env3b "MkU8")
   (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
   (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
-  (let ((many env4) (many x)) $ bind-closed env3d (None _) (None _) (BFalse) (Many) (BExt _ $ PNat code) char-ty (Some _ rule) delegate-id)
-  (record-literal env4 key x (Some _ np) $ rope-str $ lit-char-rope code))
+  (let ((many env4) (many x)) $ bind-lit env3d (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
+  (record-literal env4 key x (Some _ np) (rope-str $ lit-char-rope code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
 (def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
@@ -1070,19 +1070,8 @@
   (let-match many (prelude-missing env "a string literal" "String") (None _) ((Some _ msg) (env-error env msg)))
   (let ((many body)) $ match many key (((String) _)) ((SNil) (SNil)) ((SCons _ rest) rest))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
-  (let ((many env2) (many x)) $ bind-closed env1 (None _) (None _) (BFalse) (Many) (BExt _ $ PStr body) str-ty (None _) delegate-id)
-  (record-literal env2 key x (None _) $ rope-str $ lit-string-rope body))
-
-(def-fns _
-  ((many intern-literals : (subterm many (Raw) raw) (many (Env) env) -> (many (Env) r))
-    (match many raw _
-      ((RAtom p s) (env-back env $ env-set-scope (intern (env-at env p) s $ classify s) $ env-scope env))
-      ((RString p s) (env-back env $ env-set-scope (intern-string (env-at env p) $ string-key s) $ env-scope env))
-      ((RList _ items) (tail $ intern-literals-list items env))))
-  ((many intern-literals-list : (subterm many (List $ Raw) rs) (many (Env) env) -> (many (Env) r))
-    (match many rs _
-      ((Nil _) env)
-      ((Cons _ r rest) (tail $ intern-literals-list rest $ notail $ intern-literals r env)))))
+  (let ((many env2) (many x)) $ bind-lit env1 (Many) (BExt _ $ PStr body) str-ty (None _))
+  (record-literal env2 key x (None _) (rope-str $ lit-string-rope body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _))
 
 (def-fns _ $ (many var-found : (many (Env) env) (many (String) n) -> (many (Env) r) (many (Maybe $ Nat) x))
   (let-match many (literal-error n) (None _) ((Some _ msg) (values (env-error env msg) $ None _)))
@@ -1091,7 +1080,7 @@
       (let-match many (str-eq n "_") (BFalse) ((BTrue) (values (env-error env "`_` is not a name, and nothing is inferred here") $ None _)))
       (match many (lookup env n) _
         ((Some _ x) (values env $ Some _ x))
-        ((None _) (values (env-error env $ str-cat3 "unbound name " (tick n) $ hint env n) $ None _)))) (else (match many (lit-lookup env n) _ ((Some _ x) (values env $ Some _ x)) ((None _) (values (env-error env $ str-cat3 "literal " n " outside a top-level form") $ None _))))))
+        ((None _) (values (env-error env $ str-cat3 "unbound name " (tick n) $ hint env n) $ None _)))) (else (let ((many env2)) $ intern env n $ classify n) (match many (lit-lookup env2 n) _ ((Some _ x) (values env2 $ Some _ x)) ((None _) (values env2 $ None _))))))
 
 ; The entry an atom names: a literal's, or the newest of that name in scope; id zero, which nothing binds,
 ; stands for an error already recorded.
@@ -1122,9 +1111,10 @@
   (let-match many raw (RString _ s)
     ((RAtom _ s) (var env s))
     ((RList _ _) (let ((many env2) (many _)) (name-checked env raw what)) (values env2 $ Zero)))
-  (match many (lit-lookup env $ string-key s) _
-    ((Some _ x) (values env x))
-    ((None _) (values (env-error env "string literal outside a top-level form") $ Zero))))
+  (let ((many env2)) $ intern-string env $ string-key s)
+  (match many (lit-lookup env2 $ string-key s) _
+    ((Some _ x) (values env2 x))
+    ((None _) (values env2 $ Zero))))
 
 ; A name read through its alias (ASSUMPTIONS 78), which must resolve to a variable.
 (def-fns _ $ (many named : (many (Env) env) (many (Raw) raw) (many (String) what) -> (many (Env) r) (many (Nat) x))
@@ -1602,7 +1592,7 @@
 
 (def-fns _ $ (many at-literal : (subterm many (List $ LitEntry) ls) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
-  (let-match many l (MkLitEntry x _ _))
+  (let-match many l (MkLitEntry x _ _ _ _))
   (match many (equal-env env p $ slot-atom x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-literal rest env p))))
 
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
@@ -1936,7 +1926,7 @@
 
 (def-fns _ $ (many hit-spelling : (many (Pair (Term) (LitEntry)) h) -> (many (String) s))
   (let-match many h (MkPair _ _ _ l))
-  (match many l _ ((MkLitEntry _ _ s) s)))
+  (match many l _ ((MkLitEntry _ _ s _ _) s)))
 
 (def-fns _ $ (many hit-insert : (many (Pair (Term) (LitEntry)) h) (subterm many (List $ Pair (Term) (LitEntry)) hs) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many hs (Cons _ x rest) ((Nil _) (Cons _ h $ Nil _)))
@@ -2217,19 +2207,19 @@
   (let ((many env2)) $ error-unless-msg env (provable-subterm env a b) msg-subterm)
   (mint env2 $ proof-type subterm-id $ Cons _ aty $ Cons _ a $ Cons _ bty $ Cons _ b $ Nil _))
 
-(def-fns _ $ (many predates-source : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Nat) x))
-  (let-match many (nat-lt x0 lvl) (BFalse) ((BTrue) x0))
-  (match many (canon-env env $ TVar x0) _ ((TVar y) y) (else x0)))
+(def-fns _ $ (many provable-predates : (many (Env) env) (many (Nat) x) (many (Nat) lvl) -> (many (Bool) r))
+  (let-match many (entry-introduced env x) (Some _ ix) ((None _) (BFalse)))
+  (let-match many (entry-introduced env lvl) (Some _ il) ((None _) (BFalse)))
+  (and (entry-minted env lvl) $ nat-lt ix il))
 
-(def-fns _ $ (many provable-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Bool) r))
-  (and (entry-minted env lvl) $ nat-lt (predates-source env x0 lvl) lvl))
-
-; prove-predates (section 18): the variable was in scope when the level was minted (ASSUMPTIONS 13).
-(def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x0) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
-  (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (qshow env $ TVar lvl) (say env " is not a level minted by `def-lvl`"))))
-  (let ((many x)) $ predates-source env2 x0 lvl)
-  (let ((many env3)) $ match many (nat-lt x lvl) (((Env) _)) ((BTrue) env2) ((BFalse) (env-error env2 $ str-cat3 (qshown env2 x) " was not in scope when level " $ str-cat (qshow env2 $ TVar lvl) " was minted")))
-  (mint env3 $ proof-type predates-id $ Cons _ (type-of env3 x) $ Cons _ (TVar x) $ Cons _ (TVar lvl) $ Nil _))
+; prove-predates (section 18): the variable was in scope when the level was minted, both read by their
+; binders and never canonicalized (ASSUMPTIONS 13); a literal has no introduction order (section 45).
+(def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
+  (def-fns msg-lvl $ (many level : -> (many (String) s)) (match many (env-entry-name env lvl) (((String) _)) ((None _) (qshow env $ TVar lvl)) ((Some _ _) (qshown env lvl))))
+  (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (level) (say env " is not a level minted by `def-lvl`"))))
+  (let ((many env3)) $ match many (is-literal env x) (((Env) _)) ((BTrue) (env-error env2 $ str-cat (qshown env2 x) " is a literal, which has no introduction order")) ((BFalse) env2))
+  (let ((many env4)) $ match many (or (provable-predates env x lvl) $ or (is-literal env x) $ not $ entry-minted env lvl) (((Env) _)) ((BTrue) env3) ((BFalse) (env-error env3 $ str-cat3 (qshown env3 x) " was not in scope when level " $ str-cat (level) " was minted")))
+  (mint env4 $ proof-type predates-id $ Cons _ (type-of env4 x) $ Cons _ (TVar x) $ Cons _ (TVar lvl) $ Nil _))
 
 ; The arguments of a proof of the given kind, with an error where the term is not one.
 (def-fns _ $ (many proof-args : (many (Env) env) (many (Nat) ctor) (many (Res) p) -> (many (Maybe $ List $ Term) r))
@@ -2451,7 +2441,7 @@
             (match many (not $ env-failed inner3) (((Env) _))
               ((BTrue) (env-run-let env3 (Cons _ mult $ Nil _) code $ Cons _ x $ Nil _))
               ((BFalse) (env-set-tokens env3 $ Cons _ x $ Nil _))))))))
-  (values env4 x t))
+  (values (match many t (((Env) _)) ((TVar y) (forward-marks env4 x y)) (else env4)) x t))
 
 (def-fns _ $ (many open-contradicts : (many (List $ List $ Nat) ctx) (many (Env) env) (many (Env) inner) (many (Res) r) (many (Code ctx erased-one) code) -> (many (Env) out))
   (let ((many env2) (many x) (many t)) $ open-bind ctx env inner r (Erased) code)
@@ -2852,6 +2842,9 @@
   (let-match many (canon-env env t) (TVar x) (else (values (bad) $ Zero)))
   (match many (equal-env env (type-of env x) level-term) _ ((BTrue) (values env x)) ((BFalse) (values (bad) x))))
 
+(def-fns _ $ (many level-binder : (many (Env) env) (many (Term) t) -> (many (Env) r) (many (Nat) x))
+  (match many t _ ((TVar x) (values env x)) (else (values (env-error env $ str-cat (qshow env t) " is not a level") $ Zero))))
+
 (def-fns _ $ (many one-arg : (many (List $ Raw) args) -> (many (Raw) r))
   (match many args _ ((Nil _) (RAtom (MkPos 0 0) "_")) ((Cons _ r _) r)))
 
@@ -2871,10 +2864,11 @@
     ((RString _ _) (values (env-error env $ str-cat (show-r arg) " is a string literal, which carries no `Numeral` proof") $ None _)))
   (let-match many (literal-error s) (None _) ((Some _ msg) (values (env-error env msg) $ None _)))
   (let-match many (classify s) (LName) (else
-    (let-match many (lit-lookup env s) (Some _ x) ((None _) (values (env-error env $ str-cat3 "literal " s " is not in scope") $ None _)))
-    (match many (lit-proof (env-lits env) x) (((Env) _) ((Maybe $ Term) _))
-      ((None _) (values (env-error env $ str-cat s " is a string literal, which carries no `Numeral` proof") $ None _))
-      ((Some _ p) (values env $ Some _ $ TVar p)))))
+    (let ((many env1)) $ intern env s $ classify s)
+    (let-match many (lit-lookup env1 s) (Some _ x) ((None _) (values env1 $ None _)))
+    (match many (lit-proof (env-lits env1) x) (((Env) _) ((Maybe $ Term) _))
+      ((None _) (values (env-error env1 $ str-cat s " is a string literal, which carries no `Numeral` proof") $ None _))
+      ((Some _ p) (values env1 $ Some _ $ TVar p)))))
   (values (env-error env $ str-cat (say env "`numeral-of` takes a literal, not ") $ tick s) $ None _))
 
 (def-fns _ $ (many is-fetch : (many (ExprK) e) -> (many (Bool) r))
@@ -2904,9 +2898,10 @@
                 (match many raw (((String) _))
                   ((RAtom _ s) (str-cat s " is not a numeral or character literal")) (else (str-cat "expected a numeral or character literal, got " $ show-r raw))))
               $ None _)))
-  (match many (lit-lookup env $ nat-str z) _
-    ((None _) (values (env-error env $ str-cat3 "literal " (literal-spelled raw z) " is not in scope") $ None _))
-    ((Some _ x) (values env $ Some _ $ MkPair _ _ z x))))
+  (let ((many env1)) $ match many raw (((Env) _)) ((RAtom _ s) (intern env s $ classify s)) (else env))
+  (match many (lit-lookup env1 $ nat-str z) _
+    ((None _) (values env1 $ None _))
+    ((Some _ x) (values env1 $ Some _ $ MkPair _ _ z x))))
 
 (def-fns _ $ (many literal-lt-entry : (many (Env) env) (many (Raw) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
   (let ((many (Bool) numeral)) $ match many raw (((Bool) b)) ((RAtom _ s) (match many (classify s) (((Bool) b)) ((LNumeral) (BTrue)) (else (BFalse)))) (else (BFalse)))
@@ -2929,11 +2924,10 @@
   (let ((many env4) (many r)) $ mint env3 $ proof-type lt $ Cons _ (TVar xa) $ Cons _ (TVar xb) $ Nil _)
   (values env4 $ Some _ r))
 
-; A generated form is read and its literals interned in the prelude's scope, so user shadowing cannot
-; reach it, and the caller's scope restored after; the level context stays the caller's throughout
-; (lib/elab.ml's in_prelude).
-(def-fns _ $ (many generated-form : (many (Raw) g) (many (Env) env) -> (many (Env) r))
-  (intern-literals g $ env-set-scope env $ env-prelude env))
+; A generated form is elaborated in the prelude's scope, so user shadowing cannot reach it, and the caller's
+; scope restored after; the level context stays the caller's throughout (lib/elab.ml's in_prelude).
+(def-fns _ $ (many generated-form : (many (Env) env) -> (many (Env) r))
+  (env-set-scope env $ env-prelude env))
 
 (def-fns _ $ (many leave-prelude : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
   (env-set-scope inner $ env-scope outer))
@@ -4240,7 +4234,7 @@
 (def-fns _ $ (many show-typed : (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "?")))
-  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (let-match many s (SConst _ v _) ((SDyn _) (RStr "?")))
   (let ((many body) (many app)) $ show-at _ hp v 100000 env ty)
   (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body)))
@@ -4428,7 +4422,7 @@
 
 (def-fns _ $ (many entry-flags : (many (Env) env) (many (Nat) x) -> (many (String) s))
   (let ((erased hs) (many e)) $ entry env x)
-  (let-match many e (MkEInfo _ name mult state _ _ site))
+  (let-match many e (MkEInfo _ name mult state _ _ _ site))
   (let ((many (Bool) shadowed)) $ match many name _ ((None _) (BFalse)) ((Some _ n) (match many (lookup env n) _ ((Some _ y) (not $ nat-eq y x)) ((None _) (BTrue)))))
   (let ((many where)) $ loc-str site)
   (let ((many (String) placed))
@@ -4581,7 +4575,7 @@
 
 (def-fns _ $ (many lit-ids : (subterm many (List $ LitEntry) ls) -> (many (List $ Nat) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
-  (match many l _ ((MkLitEntry x _ _) (Cons _ x $ notail $ lit-ids rest))))
+  (match many l _ ((MkLitEntry x _ _ _ _) (Cons _ x $ notail $ lit-ids rest))))
 
 (def-fns _ $ (many at-lines : (many (Env) env) -> (many (List $ String) r))
   (let ((many ids) (erased _)) $ list-append _ (Cons _ null-id $ lit-ids $ env-lits env) $ scope-ids $ env-scope env)
@@ -4613,7 +4607,7 @@
 (def-fns _ $ (many numeral-rules : (many (Env) env) (subterm many (List $ LitEntry) ls) -> (many (List $ String) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ numeral-rules env rest)
-  (let-match many l (MkLitEntry x _ s))
+  (let-match many l (MkLitEntry x _ s _ _))
   (let-match many (all-digits s) (BTrue) ((BFalse) more))
   (let ((many c)) $ canon-env env $ TVar x)
   (match many c _ ((TApp _ _) (Cons _ (str-cat3 s " is " $ show-t env c) more)) (else more)))
@@ -4816,7 +4810,7 @@
                         ((Nil _) (expr-error ctx expect env0 (sp-misuse env0 $ SpExpr $ ExProvePredates) "prove-predates")))
                       (let ((many env2) (many x)) $ var-of-raw env0 xraw "a variable")
                       (let ((many env3) (many lt) (many ltty)) $ notail $ elab-one-term sugar rest env2)
-                      (let ((many env4) (many lvl)) $ level-var-checked env3 lt "")
+                      (let ((many env4) (many lvl)) $ level-binder env3 lt)
                       (let ((many env5) (many r)) $ mint-predates env4 x lvl)
                       (erased-result ctx expect proof-what env5 r))
                     ((ExPredatesTrans)
@@ -5684,7 +5678,7 @@
     (let-match many sugar (Succ k2)
       ((Zero) (values (env-error env2 "internal: a generated form contains sugar") ctx $ SNone _)))
     (let ((many gen)) $ unary-source za l floored)
-    (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form gen env2) ctx spos "item of a body")
+    (let ((many env3) (many ctx2) (many sc)) $ notail $ elab-stmt k2 gen (generated-form env2) ctx spos "item of a body")
     (values (leave-prelude env2 env3) ctx2 sc))
 
   ; let (section 19): binders, then the right-hand side; run at once in run position (section 29); an
@@ -5743,10 +5737,11 @@
     (let ((many env2a) (many x)) $ bind env1 (name-or-anon name) (Some _ $ loc-in env1 epos) (BTrue) mult (res-ty r) (Some _ $ res-term r) delegate-id)
     (let ((many env2b)) $ mark-word env2a x $ BFalse)
     (let ((many env2)) $ placed-at env2b x $ res-place r)
+    (let ((many (Env) env2m)) (match many (res-term r) (((Env) _)) ((TVar y) (forward-marks env2 x y)) (else env2)))
     (let ((many (Env) env3))
       (match many run _
-        ((BTrue) env2)
-        ((BFalse) (match many (res-term r) (((Env) _)) ((TVar y) (forward-state env2 x y)) (else env2)))))
+        ((BTrue) env2m)
+        ((BFalse) (match many (res-term r) (((Env) _)) ((TVar y) (forward-state env2m x y)) (else env2m)))))
     (let ((many env4) (many ids) (erased lk)) $ notail $ bind-let sugar root brest env3 rrest lr2 run trest (Cons _ (res-term r) done) srest)
     (values env4 (Cons _ x ids) (LsCons _ _ b x brest ids lk)))
 
@@ -6645,7 +6640,7 @@
   (let-match many items (Cons _ item rest) ((Nil _) env))
   (let-match many (pragma-of item) (None _)
     ((Some _ words) (tail $ run-toplevel rest $ pragma (env-at env $ raw-pos item) (raw-pos item) words)))
-  (let ((many env2)) $ intern-literals item $ env-at env $ raw-pos item)
+  (let ((many env2)) $ env-at env $ raw-pos item)
   (match many (or (is-statement env2 item) $ not $ list-is-empty _ rest) _
     ((BTrue)
       (let ((many env3) (many ctx2) (many sc)) $ elab-stmt (raw-size item) item env2 (Nil _) (Many) "top-level form")

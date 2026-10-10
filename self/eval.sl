@@ -545,7 +545,7 @@
 
 (def-fns _ $ (many const-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
-  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (match many s _ ((SDyn _) (None _)) ((SConst _ v _) (Some _ v))))
 
 (def-fns _ $ (many const-value : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
@@ -869,7 +869,7 @@
           ((None _) en)
           ((Some _ y)
             (let-match many (idmap-get _ y en) (Hit _ _ _ info _) ((Miss _ _ _ _) en))
-            (let-match many info (MkEInfo _ _ _ s _ _ _))
+            (let-match many info (MkEInfo _ _ _ s _ _ _ _))
             (match many s _ ((SConst _ _ _) (entries-set-state _ en x s)) ((SDyn _) en)))))
       (tail $ close-members e _ hp en2 fi _ rest g $ Succ i))))
 
@@ -911,7 +911,7 @@
 (def-fns _ $ (many env-destruct : (many (Env) e) (many (Nat) x) (many (Ctor) ct) -> (many (Env) r) (many (Maybe $ Nat) i))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (values e $ None _)))
-  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (let-match many s (SConst _ v _) ((SDyn _) (values e $ None _)))
   (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ destruct _ hp ct v)
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
@@ -920,7 +920,7 @@
 (def-fns _ $ (many env-set-fields : (many (Env) e) (many (Nat) x) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) e))
-  (let-match many info (MkEInfo _ _ _ s _ _ _))
+  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (let-match many s (SConst _ v _) ((SDyn _) e))
   (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ destruct _ hp ct v)
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
