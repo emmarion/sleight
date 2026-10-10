@@ -5,20 +5,6 @@
 ; value, a thunk's result and a String -> String function's output are printed through the compile-time
 ; printer. The interpreted program's arguments follow a "--" among slc's own.
 
-; ---- The store as it grows: what is held at an older history, widened to the current one.
-
-(def-fns _ $ (many widen-ref : (erased (Hist Block) a) (erased (Hist Block) b) (erased (Suffix Block b a) le) (many (Ref Block a) r) -> (many (Ref Block b) r2))
-  (let ((erased r2) (erased p)) (ref-widen _ _ _ le r))
-  (coerce r p))
-
-(def-fns _ $ (many widen-refs : (erased (Hist Block) a) (erased (Hist Block) b) (erased (Suffix Block b a) le) (many (List $ Ref Block a) rs) -> (many (List $ Ref Block b) rs2))
-  (let ((erased rs2) (erased p)) (refs-widen _ _ _ le rs))
-  (coerce rs p))
-
-(def-fns _ $ (many widen-en : (erased (Hist Block) a) (erased (Hist Block) b) (erased (Suffix Block b a) le) (many (IdMap $ EInfo a) en) -> (many (IdMap $ EInfo b) en2))
-  (let ((many en2) (many fi2)) (store-grow _ _ le en (Nil _)))
-  en2)
-
 ; ---- The prelude's constructors the answers are built from, found as the driver finds them (self/emit.sl).
 
 (def-fns _ $ (many pctor : (many (Env) env) (many (String) name) -> (many (Ctor) c))
@@ -133,10 +119,6 @@
 
 ; ---- Reading a value out: a String or a U8's Nat held under the FFI, the printed form of any value, and the
 ; message of an error block, which the interpreter returns where the reference raises (self/README.md).
-
-(def-fns _ $ (many error-of : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) -> (many (Maybe $ String) m))
-  (let ((erased ns) (many b) (erased sf)) (store-read Block hs hp v))
-  (match many b _ ((BError _ m) (Some _ m)) (else (None _))))
 
 (def-fns _ $ (many final-text : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Env) env) (many (Term) ty) -> (many (String) s))
   (let-match many (named-final _ hp v env) (None _) ((Some _ text) text))

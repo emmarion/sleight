@@ -84,7 +84,7 @@ check_test() {
     # the same stderr and are filtered from both below
     (cd "$B" && env -i $envs "$B/slc" $noprelude $confine --interpret $(for f in $needs "$t"; do echo "$ROOT/$f"; done) -- $args < "$name.in" > "$name.out" 2> "$name.slc.err"); code=$?
     check_warns "$t" "$name" || return
-    grep -vE ': warning: |: note: ' "$B/$name.slc.err" > "$B/$name.err" || true
+    grep -vE '(^|: )(warning|note): ' "$B/$name.slc.err" > "$B/$name.err" || true
   else
   if ! "$B/slc" $noprelude $confine $flags $needs "$t" > "$B/$name.ml" 2> "$B/$name.slc.err"; then
     echo "FAIL $name: slc: $(head -3 "$B/$name.slc.err")"; return
@@ -100,7 +100,7 @@ check_test() {
   fi
   # The reference elaborates and runs in one process, so a warning of its own lands in the stderr the program
   # then writes to; slc wrote its warnings at compile time, checked above. What is left is the program's.
-  grep -vE ': warning: |: note: ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
+  grep -vE '(^|: )(warning|note): ' "$B/$name.ref.err" > "$B/$name.ref.err.run" || true
   if cmp -s "$B/$name.out" "$B/$name.ref.out" && cmp -s "$B/$name.err" "$B/$name.ref.err.run" && [ "$code" = "$refcode" ]; then
     echo "ok $name"
   else

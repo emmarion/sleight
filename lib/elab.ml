@@ -1817,8 +1817,11 @@ and elab_body ?tele ?sink env expect l items = hoisted env (fun env -> elab_body
 
 and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
-  match expand_seq env items with
-  | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) (spliced env branches) ->
+  let items = match expand_seq env items with
+    | List (ll, h :: m :: scrut :: pat :: branches) :: rest when is_special env h Sp.LetMatch -> List (ll, h :: m :: scrut :: pat :: spliced env branches) :: rest
+    | items -> items in
+  match items with
+  | List (ll, h :: m :: scrut :: pat :: branches) :: (_ :: _ as rest) when is_special env h Sp.LetMatch && List.exists (real_branch env) branches ->
       elab_match ?sink ~form:"let-match" tele (read_special (pos_of env expect) env h) expect ll (m :: scrut :: Wild ll :: List (loc pat, pat :: rest) :: branches)
   | stmt :: (_ :: _ as rest) ->
       let env, wrap = elab_stmt (pos_of env expect) env stmt in

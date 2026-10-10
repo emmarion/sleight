@@ -20,6 +20,11 @@
   (swap nat-add z b))
 (let ((many s3)) (f 20))
 
+(def-fns _ $ (many g : (many (Maybe $ Nat) m) -> (many (Nat) n))
+  (let-match many m (Some _ k) (splice ((None _) 0)))
+  k)
+(let ((many s5)) (g (Some _ 0)))
+
 (let ((many xs)) (Cons (splice _) 6 (Nil (splice _))))
 (let-match many xs (Cons _ h t))
-(splice (let ((many s4)) (area (Dot))) (nat-add h $ nat-add s1 $ nat-add s2 $ nat-add s3 s4))
+(splice (let ((many s4)) (area (Dot))) (nat-add h $ nat-add s1 $ nat-add s2 $ nat-add s3 $ nat-add s4 s5))

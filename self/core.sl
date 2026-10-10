@@ -111,7 +111,7 @@
 ; Where a message points: the file and the position within it (ASSUMPTIONS 194).
 (def-adts $ (Loc : -> Type)
   enum
-  (many MkLoc : (many (String) file) (many (Pos) pos) -> (Loc)))
+  (many MkLoc : (many (String) file) (many (Spot) pos) -> (Loc)))
 
 (def-adts
   ((Term : -> Type)
@@ -392,9 +392,6 @@
 ; ---- The FFI's types and functions (section 42; lib/ffi.ml), each decided from its name once, at its extern mark.
 
 (def-adts
-  ((ExtType : -> Type)
-    enum
-    (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType)))
   ((Extern : ((Nat) arity) -> Type)
     enum
     (many ExArrayNew : -> (Extern 1)) (many ExArraySwap : -> (Extern 3)) (many ExArrayPluck : -> (Extern 2)) (many ExArrayPlace : -> (Extern 3))
@@ -415,20 +412,9 @@
     enum
     (many MkSomeExtern : (erased (Nat) n) (many (Extern n) e) -> (SomeExtern))))
 
-(def-fns _ $ (many ext-type-name : (many (ExtType) t) -> (many (String) s))
-  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes")))
-
 ; The shape an implementation's view has (lib/ffi_core.ml), which its model must have too: the many-field
 ; arities of the non-phantom constructors in order, every one of them tagged. An extern function that builds
 ; a plain type's values records that type's shape the same way; one that builds none records nothing.
-(def-fns _ $ (many ext-type-shape : (many (ExtType) t) -> (many (List $ Nat) s))
-  (match many t _
-    ((ExtArray) (Cons _ 0 $ Cons _ 2 $ Nil _))
-    ((ExtNat) (Cons _ 0 $ Cons _ 1 $ Nil _))
-    ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
-    ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))
-    ((ExtBytes) (Cons _ 0 $ Cons _ 2 $ Nil _))))
-
 (def-fns _ $ (many ext-result-shape : (erased (Nat) n) (many (Extern n) e) -> (many (Maybe $ List $ Nat) s))
   (let ((many (List $ Nat) cmp)) (Cons _ 0 $ Cons _ 0 $ Cons _ 0 $ Nil _))
   (let ((many (List $ Nat) dec)) (Cons _ 0 $ Cons _ 0 $ Nil _))
@@ -445,13 +431,6 @@
     ((ExBytesMake) (None _)) ((ExBytesGet) (None _)) ((ExBytesGetMany) (None _)) ((ExBytesSet) (None _))
     ((ExBytesLength) (None _)) ((ExBytesLengthMany) (None _)) ((ExStrBytesCopy) (None _)) ((ExBytesStr) (None _)) ((ExBytesCopy) (None _)) ((ExArrayCopy) (None _))
     ((ExBytesSub) (None _)) ((ExBytesBlit) (None _)) ((ExArraySub) (None _)) ((ExArrayBlit) (None _))))
-
-(def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
-  (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
-  (let-match many (str-eq name "Half") (BFalse) ((BTrue) (Some _ $ ExtHalf)))
-  (let-match many (str-eq name "String") (BFalse) ((BTrue) (Some _ $ ExtString)))
-  (let-match many (str-eq name "Array") (BFalse) ((BTrue) (Some _ $ ExtArray)))
-  (match many (str-eq name "Bytes") _ ((BTrue) (Some _ $ ExtBytes)) ((BFalse) (None _))))
 
 (def-fns _ $ (many ext-arity : (erased (Nat) n) (many (Extern n) e) -> (many n is m))
   (match many e _
@@ -520,7 +499,12 @@
     (many PNat : (many (Nat) n) -> (Payload))
     (many PHalf : (many (Nat) n) -> (Payload))
     (many PStr : (many (String) s) -> (Payload))
-    (many PBytes : (many (String) s) -> (Payload)))
+    (many PBytes : (many (String) s) -> (Payload))
+    (many PRaw : (many (String) file) (many (Syn) r) -> (Payload)))
+  ((ExtType : -> Type)
+    enum
+    (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType))
+    (many ExtRaw : (many (Ctor) nopos) (many (Ctor) mkpos) (many (Ctor) nil) (many (Ctor) cons) -> (ExtType)))
   ; [tagged]: an enum with more than one non-phantom constructor (section 33); [ctors]: the non-phantom
   ; ones at their discriminants; [ext]: the extern type's name where the FFI holds it (section 42); a
   ; constructor's [shape] is its type's many-field arities in order, which fixes the representation.
@@ -597,6 +581,25 @@
   ((Branch : ((List $ List $ Nat) ctx) ((List $ Mult) ns) -> Type)
     enum
     (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
+
+(def-fns _ $ (many ext-type-name : (many (ExtType) t) -> (many (String) s))
+  (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes") ((ExtRaw _ _ _ _) "Raw")))
+
+(def-fns _ $ (many ext-type-shape : (many (ExtType) t) -> (many (List $ Nat) s))
+  (match many t _
+    ((ExtArray) (Cons _ 0 $ Cons _ 2 $ Nil _))
+    ((ExtNat) (Cons _ 0 $ Cons _ 1 $ Nil _))
+    ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
+    ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))
+    ((ExtBytes) (Cons _ 0 $ Cons _ 2 $ Nil _))
+    ((ExtRaw _ _ _ _) (Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Nil _))))
+
+(def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
+  (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
+  (let-match many (str-eq name "Half") (BFalse) ((BTrue) (Some _ $ ExtHalf)))
+  (let-match many (str-eq name "String") (BFalse) ((BTrue) (Some _ $ ExtString)))
+  (let-match many (str-eq name "Array") (BFalse) ((BTrue) (Some _ $ ExtArray)))
+  (match many (str-eq name "Bytes") _ ((BTrue) (Some _ $ ExtBytes)) ((BFalse) (None _))))
 
 ; Widening the bound of every holder of addresses is a coerce (section 33).
 
@@ -2216,7 +2219,7 @@
 
 (def-adts $ (Sink : -> Type)
   enum
-  (many MkSink : (many (String) owner) (many (String) noun) (many (List $ Entry) tele) (many (List $ Raw) written) (many (List $ Pair (Loc) $ String) anchors) (many (Scope) scope) (many (Maybe $ Nat) function) -> (Sink)))
+  (many MkSink : (many (String) owner) (many (String) noun) (many (List $ Entry) tele) (many (List $ Syn) written) (many (List $ Pair (Loc) $ String) anchors) (many (Scope) scope) (many (Maybe $ Nat) function) -> (Sink)))
 
 (def-adts $ (Enclosing : -> Type)
   enum
@@ -2238,7 +2241,7 @@
        (many (Trusted) run-pos) (many (List $ Nat) objects)
        (many (NameMap $ Nat) literals) (many (List $ Pair (Ref Block hl) $ Term) finals)
        (many (Maybe $ Nat) level) (many (Enclosing) enclosing) (many (List $ Pair (String) $ Loc) claimed) (many (List $ Said) diagnostics)
-       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) -> (Env)))
+       (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) (many (Nat) expansions) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ String) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Maybe $ Nat) introduced) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
@@ -2280,9 +2283,9 @@
 
 ; The store with what holds its addresses, and the same put back; the caller keeps them consistent.
 (def-fns _ $ (many env-store : (many (Env) e) -> (erased (Hist Block) hl) (many (Store Block hl) hp) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi))
-  (match many e _ ((MkEnv hs hp _ en _ _ _ _ _ _ _ fi _ _ _ _ _ _ _ _ _) (values hs hp en fi))))
+  (match many e _ ((MkEnv hs hp _ en _ _ _ _ _ _ _ fi _ _ _ _ _ _ _ _ _ _) (values hs hp en fi))))
 (def-fns _ $ (many env-with-store : (many (Env) e) (erased (Hist Block) hl2) (many (Store Block hl2) hp2) (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Ref Block hl2) $ Term) fi2) -> (many (Env) r))
-  (match many e _ ((MkEnv _ _ sc _ _ _ fr tb rp ob li _ lv st cl wa lt lo pr us hn) (MkEnv _ hp2 sc en2 _ _ fr tb rp ob li fi2 lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ _ sc _ _ _ fr tb rp ob li _ lv st cl wa lt lo pr us hn ex) (MkEnv _ hp2 sc en2 _ _ fr tb rp ob li fi2 lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many store-grow : (erased (Hist Block) hl) (erased (Hist Block) hl2) (erased (Suffix Block hl2 hl) le) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (many (IdMap $ EInfo hl2) en2) (many (List $ Pair (Ref Block hl2) $ Term) fi2))
   (let ((erased en2) (erased pe)) (entries-widen hl hl2 le en))
   (let ((erased fi2) (erased pf)) (finals-widen hl hl2 le fi))
@@ -2302,26 +2305,30 @@
   (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a x) fi2))
 
 (def-fns _ $ (many env-scope : (many (Env) e) -> (many (Scope) r))
-  (match many e _ ((MkEnv _ _ sc _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) sc)))
+  (match many e _ ((MkEnv _ _ sc _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) sc)))
 (def-fns _ $ (many env-entries : (many (Env) e) -> (erased (Hist Block) hs) (many (IdMap $ EInfo hs) r))
-  (match many e _ ((MkEnv hs _ _ en _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (values hs en))))
+  (match many e _ ((MkEnv hs _ _ en _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (values hs en))))
 (def-fns _ $ (many env-table : (many (Env) e) -> (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb))
-  (match many e _ ((MkEnv _ _ _ _ nf ff fr tb _ _ _ _ _ _ _ _ _ _ _ _ _) (values nf ff fr tb))))
+  (match many e _ ((MkEnv _ _ _ _ nf ff fr tb _ _ _ _ _ _ _ _ _ _ _ _ _ _) (values nf ff fr tb))))
 (def-fns _ $ (many env-fresh-bound : (many (Env) e) -> (many (Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _) fr)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) fr)))
 (def-fns _ $ (many env-facts : (many (Env) e) -> (erased (Nat) n) (many (Facts n) f))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table e)
   (match many tb _ ((MkTable n0 f0 _ _ _ _ _ _ _ _ _ _) (values n0 f0))))
 (def-fns _ $ (many env-run-pos : (many (Env) e) -> (many (Bool) r))
-  (let-match many e (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _ _))
   (match many rp _ ((TrustHere) (BTrue)) (else (BFalse))))
 (def-fns _ $ (many trusted-type : (many (Env) e) (many (Nat) x) -> (many (Term) r))
-  (let-match many e (MkEnv _ _ _ _ _ _ _ tb rp _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ tb rp _ _ _ _ _ _ _ _ _ _ _ _ _))
   (match many rp _
     ((TrustHere) (type-in _ _ _ tb x))
     ((TrustThen _ _ _ tb0) (type-in _ _ _ tb0 x))))
+(def-fns _ $ (many trusted-former : (many (Env) e) (many (Nat) x) -> (many (Bool) r))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ tb rp _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let ((many ty) (many rule)) $ match many rp (((Term) _) ((Maybe $ Term) _)) ((TrustHere) (fact-in _ _ _ tb x)) ((TrustThen _ _ _ tb0) (fact-in _ _ _ tb0 x)))
+  (match many ty _ ((TApp _ _) (BFalse)) ((TVar _) (BFalse)) (else (BTrue))))
 (def-fns _ $ (many env-objects : (many (Env) e) -> (many (List $ Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ ob _ _ _ _ _ _ _ _ _ _ _) ob)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ ob _ _ _ _ _ _ _ _ _ _ _ _) ob)))
 (def-fns _ $ (many env-opens : (many (Env) e) -> (many (List $ Opened) r))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table e)
   (let ((many os) (many ix) (many tc)) $ table-opens _ _ bnd tb)
@@ -2335,39 +2342,39 @@
   (let ((many os) (many ix) (many tc)) $ table-opens _ _ bnd tb)
   tc)
 (def-fns _ $ (many env-open : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr (table-open _ _ fr tb x) rp ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr (table-open _ _ fr tb x) rp ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-unopen : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr (table-unopen _ _ fr tb x) rp ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr (table-unopen _ _ fr tb x) rp ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-settled : (many (Env) e) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr (table-settled _ _ fr tb) rp ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr (table-settled _ _ fr tb) rp ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-literals : (many (Env) e) -> (many (NameMap $ Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ li _ _ _ _ _ _ _ _ _ _) li)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ li _ _ _ _ _ _ _ _ _ _ _) li)))
 
 (def-fns _ $ (many env-level : (many (Env) e) -> (many (Maybe $ Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ lv _ _ _ _ _ _ _ _) lv)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ lv _ _ _ _ _ _ _ _ _) lv)))
 (def-fns _ $ (many env-subterms : (many (Env) e) -> (many (List $ Nat) r))
-  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _ _))
   (match many st _ ((MkEnclosing _ xs _ _) xs)))
 (def-fns _ $ (many env-enclosing : (many (Env) e) -> (many (Maybe $ Nat) r))
-  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _ _))
   (match many st _ ((MkEnclosing f _ _ _) f)))
 (def-fns _ $ (many env-sink : (many (Env) e) -> (many (Maybe $ Sink) r))
-  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _))
+  (let-match many e (MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ st _ _ _ _ _ _ _ _))
   (match many st _ ((MkEnclosing _ _ k _) k)))
 (def-fns _ $ (many env-set-sink : (many (Env) e) (many (Maybe $ Sink) k) -> (many (Env) r))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
-  (match many st _ ((MkEnclosing f xs _ b) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs k b) cl wa lt lo pr us hn))))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
+  (match many st _ ((MkEnclosing f xs _ b) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs k b) cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-final : (many (Env) e) -> (many (Env) r))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
-  (match many st _ ((MkEnclosing f xs k _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs k $ BTrue) cl wa lt lo pr us hn))))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
+  (match many st _ ((MkEnclosing f xs k _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs k $ BTrue) cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-take-sink : (many (Env) e) -> (many (Env) r) (many (Maybe $ Sink) k) (many (Bool) final))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let-match many st (MkEnclosing f xs k b))
   (match many (or b $ is-some _ k) _
     ((BFalse) (values e k b))
-    ((BTrue) (values (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs (None _) (BFalse)) cl wa lt lo pr us hn) k b))))
+    ((BTrue) (values (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv (MkEnclosing f xs (None _) (BFalse)) cl wa lt lo pr us hn ex) k b))))
 (def-fns _ $ (many env-claimed : (many (Env) e) -> (many (List $ Pair (String) $ Loc) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ cl _ _ _ _ _ _) cl)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ cl _ _ _ _ _ _ _) cl)))
 (def-fns _ $ (many said-silenced : (subterm many (List $ Said) ss) -> (many (List $ Nat) r))
   (let-match many ss (Cons _ x rest)
     ((Nil _) (Nil _)))
@@ -2377,11 +2384,11 @@
     ((Nil _) ss))
   (match many x _ ((SaidSilenced _) (tail $ said-without-silenced rest)) (else (Cons _ x $ notail $ said-without-silenced rest))))
 (def-fns _ $ (many env-silenced : (many (Env) e) -> (many (List $ Nat) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _ _) (said-silenced wa))))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _ _ _) (said-silenced wa))))
 (def-fns _ $ (many env-set-said : (many (Env) e) (many (List $ Said) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl _ lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl x lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl _ lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl x lt lo pr us hn ex))))
 (def-fns _ $ (many env-said : (many (Env) e) -> (many (List $ Said) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _ _) wa)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ wa _ _ _ _ _ _) wa)))
 (def-fns _ $ (many said-failed : (many (Bool) warnings) (subterm many (List $ Said) ss) -> (many (Bool) r))
   (let-match many ss (Cons _ x rest) ((Nil _) (BFalse)))
   (let-match many (match many x (((Bool) _)) ((SaidError _ _) (BTrue)) ((SaidWarning _ _) warnings) (else (BFalse))) (BFalse) ((BTrue) (BTrue)))
@@ -2389,9 +2396,9 @@
 (def-fns _ $ (many env-failed : (many (Env) e) -> (many (Bool) r))
   (said-failed (BFalse) $ env-said e))
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _ _) lt)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _ _ _) lt)))
 (def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) f) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi _ _ cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (trusted-at (BFalse) _ _ _ tb rp) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi _ _ cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at (BFalse) _ _ _ tb rp) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa lt lo pr us hn ex))))
 ; Where a claimed name was bound, which the second claim's note names.
 (def-fns _ $ (many claimed-at : (subterm many (List $ Pair (String) $ Loc) cl) (many (String) name) ->
     (many (Maybe $ Loc) r))
@@ -2401,9 +2408,9 @@
     ((BTrue) (Some _ l))
     ((BFalse) (tail $ claimed-at rest name))))
 (def-fns _ $ (many env-claim : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st (Cons _ (MkPair _ _ x lo) cl) wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st (Cons _ (MkPair _ _ x lo) cl) wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-warn : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl (Cons _ (SaidWarning lo x) wa) lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl (Cons _ (SaidWarning lo x) wa) lt lo pr us hn ex))))
 (def-fns _ $ (many env-warn-all : (many (Env) e) (subterm many (List $ String) xs) -> (many (Env) r))
   (match many xs _
     ((Nil _) e)
@@ -2417,37 +2424,41 @@
   (match many (nat-lt bound $ lit-ordinal lits) _ ((BTrue) (tail $ lits-since rest bound $ Cons _ l acc)) ((BFalse) acc)))
 
 (def-fns _ $ (many env-push-lit : (many (Env) e) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa (Cons _ (MkLitEntry x proof spelling facts $ Succ $ lit-ordinal lt) lt) lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa (Cons _ (MkLitEntry x proof spelling facts $ Succ $ lit-ordinal lt) lt) lo pr us hn ex))))
 (def-fns _ $ (many env-set-scope : (many (Env) e) (many (Scope) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp _ en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp x en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp _ en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp x en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ _ _ rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ c x rp ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ _ _ rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ c x rp ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ _ tb rp) ob li fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ _ tb rp) ob li fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-literals : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob _ fi lv st cl wa lt lo pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob x fi lv st cl wa lt lo pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob _ fi lv st cl wa lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob x fi lv st cl wa lt lo pr us hn ex))))
 (def-fns _ $ (many env-prelude : (many (Env) e) -> (many (Scope) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ pr _ _) pr)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ pr _ _ _) pr)))
 ; The scope the prelude left, which generated forms elaborate in (lib/elab.ml's in_prelude).
 (def-fns _ $ (many env-set-prelude : (many (Env) e) (many (Scope) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo _ us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo x us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo _ us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo x us hn ex))))
 (def-fns _ $ (many env-help : (many (Env) e) -> (many (List $ String) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn) hn)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hn ex) hn)))
 (def-fns _ $ (many env-set-help : (many (Env) e) (many (String) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us $ split-on x 10))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us _ ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us (split-on x 10) ex))))
+(def-fns _ $ (many env-expansions : (many (Env) e) -> (many (Nat) r))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ex) ex)))
+(def-fns _ $ (many env-set-expansions : (many (Env) e) (many (Nat) x) -> (many (Env) r))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn _) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn x))))
 ; The next id, above every key of the table.
 (def-fns _ $ (many env-fresh-id : (many (Env) e) -> (many (Env) r) (many (Nat) x))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
-  (values (MkEnv _ hp sc en _ _ x (table-weaken _ _ _ _ tb $ lt-weaken fr x ltp) rp ob li fi lv st cl wa lt lo pr us hn) x))
+  (values (MkEnv _ hp sc en _ _ x (table-weaken _ _ _ _ tb $ lt-weaken fr x ltp) rp ob li fi lv st cl wa lt lo pr us hn ex) x))
 (def-fns _ $ (many env-loc : (many (Env) e) -> (many (Loc) r))
-  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lo _ _ _) lo)))
+  (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lo _ _ _ _) lo)))
 (def-fns _ $ (many env-at-loc : (many (Env) e) (many (Loc) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt _ pr us hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt x pr us hn))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt _ pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt x pr us hn ex))))
 ; A position in the file the environment is reading, as a Loc a message can point at.
-(def-fns _ $ (many loc-in : (many (Env) e) (many (Pos) pos) -> (many (Loc) l))
+(def-fns _ $ (many loc-in : (many (Env) e) (many (Spot) pos) -> (many (Loc) l))
   (match many (env-loc e) _ ((MkLoc f _) (MkLoc f pos))))
-(def-fns _ $ (many env-at : (many (Env) e) (many (Pos) pos) -> (many (Env) r))
+(def-fns _ $ (many env-at : (many (Env) e) (many (Spot) pos) -> (many (Env) r))
   (match many (env-loc e) _ ((MkLoc f _) (env-at-loc e $ MkLoc f pos))))
 ; Restores [outer]'s position in [inner], on leaving the form that set it.
 (def-fns _ $ (many env-back : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
@@ -2455,14 +2466,21 @@
 ; A message with the file and position in force, in the reference's format.
 (def-fns _ $ (many loc-here : (many (Loc) lo) -> (many (String) r))
   (let-match many lo (MkLoc f p))
-  (match many p _ ((MkPos l c) (str-cat3 f ":" $ str-cat3 (nat-str l) ":" $ nat-str c))))
+  (let-match many p (MkSpot l c)
+    ((PosSpot q) (match many q _ ((NoPos) "") ((MkPos f2 l c) (str-cat3 f2 ":" $ str-cat3 (nat-str l) ":" $ nat-str c)))))
+  (str-cat3 f ":" $ str-cat3 (nat-str l) ":" $ nat-str c))
+(def-fns _ $ (many labelled : (many (String) here) (many (String) kind) (many (String) x) -> (many (String) r))
+  (let-match many here (SNil) (else (str-cat3 here kind x)))
+  (let-match many kind (SCons _ k1) (else (str-cat kind x)))
+  (let-match many k1 (SCons _ k2) (else (str-cat kind x)))
+  (str-cat k2 x))
 (def-fns _ $ (many located : (many (Env) e) (many (String) kind) (many (String) x) -> (many (String) r))
-  (str-cat3 (loc-here $ env-loc e) kind x))
+  (labelled (loc-here $ env-loc e) kind x))
 ; Where a position is, in the reference's format, or nothing for none (lib/reader.ml's where).
 (def-fns _ $ (many loc-str : (many (Maybe $ Loc) site) -> (many (String) r))
   (let-match many site (Some _ l) ((None _) ""))
   (let-match many l (MkLoc f p))
-  (let-match many p (MkPos ln c))
+  (let-match many p (MkSpot ln c) ((PosSpot _) (loc-here l)))
   (match many ln _
     ((Zero) "")
     (else (str-cat3 f ":" $ str-cat3 (nat-str ln) ":" $ nat-str c))))
@@ -2609,17 +2627,17 @@
     (MkUniqueState ct uses2 caps ue ie sig words2 temp2 wd2 al2 ex2))))
 
 (def-fns _ $ (many env-restore : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
-  (let-match many outer (MkEnv _ _ sc _ _ _ _ _ rp ob _ _ lv st _ _ _ lo pr us hn))
+  (let-match many outer (MkEnv _ _ sc _ _ _ _ _ rp ob _ _ lv st _ _ _ lo pr us hn _))
   (match many inner _
-    ((MkEnv _ hp2 _ en2 _ _ fr2 tb2 _ _ li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _) (MkEnv _ hp2 sc en2 _ _ fr2 tb2 rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn))))
+    ((MkEnv _ hp2 _ en2 _ _ fr2 tb2 _ _ li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _ ex2) (MkEnv _ hp2 sc en2 _ _ fr2 tb2 rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn ex2))))
 
 ; Leaves a let's right-hand side: as env-restore, but the objects stay [inner]'s and the entries it added
 ; keep their ids in scope with their names dropped (section 27, lib/env.ml's hide).
 (def-fns _ $ (many env-hide : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
-  (let-match many outer (MkEnv _ _ sc _ _ _ fr _ rp _ _ _ lv st _ _ _ lo pr us hn))
+  (let-match many outer (MkEnv _ _ sc _ _ _ fr _ rp _ _ _ lv st _ _ _ lo pr us hn _))
   (match many inner _
-    ((MkEnv _ hp2 sc2 en2 _ _ fr2 tb2 _ ob2 li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _)
-      (MkEnv _ hp2 (MkScope (scope-names sc) $ scope-ids sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn))))
+    ((MkEnv _ hp2 sc2 en2 _ _ fr2 tb2 _ ob2 li2 fi2 _ _ cl2 wa2 lt2 _ _ us2 _ ex2)
+      (MkEnv _ hp2 (MkScope (scope-names sc) $ scope-ids sc2) (entries-anonymize _ en2 fr2 fr) _ _ fr2 tb2 rp ob2 li2 fi2 lv st cl2 wa2 lt2 lo pr (unique-restore us us2) hn ex2))))
 
 (def-fns _ $ (many reenter-facts : (subterm many (List $ LitFact) facts) (erased (Nat) n) (erased (Facts n) f) (many (Nat) bnd) (many (Table n f bnd) tb) -> (erased (Nat) n2) (erased (Facts n2) f2) (many (Table n2 f2 bnd) tb2))
   (let-match many facts (Cons _ fact rest) ((Nil _) (values n f tb)))
@@ -2639,13 +2657,13 @@
 ; supply, finals, errors and the literal table survive; scope, facts, opens and objects are the outer ones
 ; again, with the declaration facts of the literals interned inside entered again (section 45).
 (def-fns _ $ (many env-discard : (many (Env) outer) (many (Env) inner) -> (many (Env) r))
-  (let-match many outer (MkEnv _ _ sc _ nf ff fr tb rp ob _ _ lv st _ _ lt lo pr us hn))
-  (let-match many inner (MkEnv _ hp2 _ en2 _ _ fr2 _ _ _ li2 fi2 _ _ cl2 wa2 lt2 _ _ _ _))
+  (let-match many outer (MkEnv _ _ sc _ nf ff fr tb rp ob _ _ lv st _ _ lt lo pr us hn _))
+  (let-match many inner (MkEnv _ hp2 _ en2 _ _ fr2 _ _ _ li2 fi2 _ _ cl2 wa2 lt2 _ _ _ _ ex2))
   (let ((many minted)) $ lits-since lt2 (lit-ordinal lt) $ Nil _)
   (let-match many (nat-cmp fr fr2) (CLt _ _ _ _ p)
-    (else (MkEnv _ hp2 sc en2 nf ff fr tb rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr us hn)))
+    (else (MkEnv _ hp2 sc en2 nf ff fr tb rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr us hn ex2)))
   (let ((erased n3) (erased f3) (many tb3)) $ reenter-lits minted _ _ fr2 $ table-weaken _ _ _ _ tb $ lt-weaken fr fr2 p)
-  (MkEnv _ hp2 sc en2 _ _ fr2 tb3 rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr us hn))
+  (MkEnv _ hp2 sc en2 _ _ fr2 tb3 rp ob li2 fi2 lv st cl2 wa2 lt2 lo pr us hn ex2))
 
 (def-fns _ $ (many entry : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (EInfo hs) r))
   (let ((erased hs) (many en)) $ env-entries env)
@@ -2694,19 +2712,19 @@
   (match many e _ ((MkEInfo _ _ _ _ _ _ me _) me)))
 
 (def-fns _ $ (many mark-minted : (many (Env) e) (many (Nat) x) -> (many (Env) r))
-  (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let ((many (EInfo hs) info))
     (match many (idmap-get _ x en) _
       ((Miss _ _ _ _) (MkEInfo _ (None _) (Erased) (SDyn _) (BTrue) (Some _ x) (BFalse) (None _)))
       ((Hit _ _ _ i _) (match many i (((EInfo hs) _)) ((MkEInfo _ n m s _ io me site) (MkEInfo _ n m s (BTrue) io me site))))))
-  (MkEnv _ hp sc (idmap-set _ x info en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (MkEnv _ hp sc (idmap-set _ x info en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
 
 ; An entry given a name for display only, the scope untouched.
 (def-fns _ $ (many env-name-entry : (many (Env) e) (many (Nat) x) (many (String) n) -> (many (Env) r))
-  (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let ((many (EInfo hs) i)) $ match many (idmap-get _ x en) _ ((Hit _ _ _ i _) i) ((Miss _ _ _ _) (MkEInfo _ (None _) (Many) (SDyn _) (BFalse) (Some _ x) (BFalse) (None _))))
   (match many i _
-    ((MkEInfo _ _ m s mi io me site) (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ (Some _ n) m s mi io me site) en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))))
+    ((MkEInfo _ _ m s mi io me site) (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ (Some _ n) m s mi io me site) en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))))
 
 (def-fns _ $ (many anon-mark : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (let ((erased hs) (many e)) $ entry env x)
@@ -2761,27 +2779,27 @@
 
 ; Forwards [y]'s state to [x] (section 19's state-forwarding let).
 (def-fns _ $ (many forward-state : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let-match many (idmap-get _ y en) (Hit _ _ _ info _) ((Miss _ _ _ _) e))
   (match many info _
-    ((MkEInfo _ _ _ s _ _ _ _) (MkEnv _ hp sc (entries-set-state _ en x s) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))))
+    ((MkEInfo _ _ _ s _ _ _ _) (MkEnv _ hp sc (entries-set-state _ en x s) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))))
 
 (def-fns _ $ (many forward-marks : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
-  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
   (let-match many (idmap-get _ y en) (Hit _ _ _ src _) ((Miss _ _ _ _) e))
   (let-match many (idmap-get _ x en) (Hit _ _ _ dst _) ((Miss _ _ _ _) e))
   (let-match many src (MkEInfo _ _ _ _ mi io _ _))
   (let-match many dst (MkEInfo _ n m s _ own me site))
-  (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ n m s mi (match many io (((Maybe $ Nat) _)) ((None _) own) (else io)) me site) en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn))
+  (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ n m s mi (match many io (((Maybe $ Nat) _)) ((None _) own) (else io)) me site) en) _ _ fr tb rp ob li fi lv st cl wa lt lo pr us hn ex))
 
 (def-fns _ $ (many fact-at : (many (Env) env) (many (Nat) x) -> (many (Term) ty) (many (Maybe $ Term) rule))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (fact-in _ _ bnd tb x))
 
 (def-fns _ $ (many env-unique : (many (Env) env) -> (many (UniqueState) r))
-  (match many env _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ us hn) us)))
+  (match many env _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ us hn ex) us)))
 (def-fns _ $ (many env-set-unique : (many (Env) env) (many (UniqueState) state) -> (many (Env) r))
-  (match many env _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr _ hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr state hn))))
+  (match many env _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr _ hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr state hn ex))))
 (def-fns _ $ (many env-ctor-tele : (many (Env) env) -> (many (List $ Nat) r))
   (match many (env-unique env) _ ((MkUniqueState ct _ _ _ _ _ _ _ _ al ex) ct)))
 (def-fns _ $ (many env-set-ctor-tele : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
@@ -3065,7 +3083,7 @@
   (let-match many site (Some _ l) ((None _) env))
   (let-match many name (Some _ n) ((None _) env))
   (let-match many (lookup env n) (Some _ prior) ((None _) env))
-  (let-match many env (MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let-match many env (MkEnv _ _ _ _ _ _ fr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
   (match many (env-entry-at env prior) (((Env) _))
     ((Some _ pl) (env-set-said env $ Cons _ (SaidShadow (Succ fr) prior pl n l) $ env-said env))
     ((None _)
@@ -3087,7 +3105,7 @@
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
-  (let-match many envs (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn))
+  (let-match many envs (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa lt lo pr us hn ex))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))
     (match many (or meta literal) _
@@ -3103,7 +3121,7 @@
   ; every entry, erased or a meta included, is minted with its automatic slot, the next id (section 35)
   (let ((erased (Nat) nf3) (erased (Facts nf3) ff3) (many (Table nf3 ff3 (Succ x)) tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa lt lo pr us hn) x))
+  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa lt lo pr us hn ex) x))
 
 (def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ String) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -3239,7 +3257,7 @@
 (def-fns _ $ (many ty-entry : (many (String) name) (many (Term) t) -> (many (Entry) e))
   (MkEntry (Some _ name) (BFalse) (Erased) (SgTy t) (None _) (None _)))
 
-(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkPos 0 0)) scope-empty unique-empty (Nil _)))
+(let ((many empty-env)) (MkEnv _ (store-empty Block) scope-empty (MEmpty _) _ _ (Zero) empty-table (TrustHere) (Nil _) (nm-empty _) (Nil _) (None _) (MkEnclosing (None _) (Nil _) (None _) (BFalse)) (Nil _) (Nil _) (Nil _) (MkLoc "" (MkSpot 0 0)) scope-empty unique-empty (Nil _) (Zero)))
 
 (def-fns _ $ (many bind-builtin : (many (Env) env) (many (String) name) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r))
   (let ((many env2) (many x)) $ bind-token env (Some _ name) (None _) (BFalse) (Erased) ty rule delegate-id)

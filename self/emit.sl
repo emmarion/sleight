@@ -452,9 +452,32 @@
     ((None _) (RStr "m_plain"))
     ((Some _ _) (rcat3 (RStr "(Obj.repr (fun held -> ") (dispatch-rope d 0 adt (all-live adt) (RStr "held") (held-arms (adt-ctors adt) d) $ None _) $ RStr "))"))))
 
+(def-fns _ $ (many z-rope : (many (Nat) n) -> (many (Rope) r))
+  (rcat3 (RStr "(Z.of_string \"") (nat-rope n) $ RStr "\")"))
+
+(def-fns _ $ (many spot-rope : (many (String) file) (many (Spot) p) -> (many (Rope) r))
+  (let ((many q)) $ match many p (((Pos) _)) ((MkSpot l c) (MkPos file l c)) ((PosSpot q) q))
+  (let-match many q (MkPos f l c) ((NoPos) (RStr "Ffi_core.NoLoc")))
+  (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; col = ") (z-rope c)) $ RStr " })"))
+
+(def-fns _
+  ((many syn-rope : (many (String) file) (subterm many (Syn) r) -> (many (Rope) o))
+    (let ((many loc)) $ spot-rope file $ raw-pos r)
+    (let ((many (String) k) (many (Rope) x))
+      (match many r (((String) _) ((Rope) _))
+        ((RAtom _ s) (values "Atom" $ quoted s)) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
+        ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
+        ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope file xs))))
+    (match many r (((Rope) _))
+      ((RWild _) (rcat3 (RStr "(Ffi_core.Wild ") loc $ RStr ")"))
+      (else (rcat5 (RStr "(Ffi_core.") (RStr k) (RStr " (") loc $ rcat3 (RStr ", ") x $ RStr "))"))))
+  ((many syns-rope : (many (String) file) (subterm many (List $ Syn) xs) -> (many (List $ Rope) r))
+    (match many xs _ ((Nil _) (Nil _)) ((Cons _ x rest) (Cons _ (notail $ syn-rope file x) $ notail $ syns-rope file rest)))))
+
 (def-fns _ $ (many payload-rope : (many (Payload) p) -> (many (Rope) r))
   (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
-    ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))")))
+    ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))"))
+    ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope f r) $ RStr ")")))
   (let ((many n) (erased _)) (str-length s))
   (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
 
