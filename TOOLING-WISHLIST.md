@@ -390,3 +390,12 @@ files are not in this tree; they are at commit `4912ada`
     4.1 columns and code lines from 27,749 to 24,739, with
     non-whitespace characters unchanged to 0.1%: what the forms bought
     is shape rather than size.
+
+46. **A `many` binder read only where nothing runs.** In
+    `(let ((many d) (erased p)) (sub a b le))`, with `d` then read only
+    by erased lemmas, slc still emits the `sub` call on every run, and
+    says nothing; binding `(erased (Nat) d)` instead removes the call.
+    A heapsort agent session met this on a loop's decreasing measure
+    and found it only by reading the `ocaml` output. A warning on a
+    `many` binder that no running code reads, suggesting `erased`, would
+    have caught it at the binder.
