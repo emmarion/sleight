@@ -32,9 +32,10 @@ let atom_or loc raw what = match atom raw with Some n -> n | None -> error loc "
 let name_or_anon n = if n = "_" then None else Some n
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
-let special_value env x = match entry env x with
-  | { state = Const (V.VCtor (c, [||])); mult = (Many | Unique); minted; _ } when equal (canon { env with facts = trusted env } minted) Prelude.special_term -> List.assoc_opt c.cid Prelude.specials
+let const_value env x ty = match entry env x with
+  | { state = Const v; mult = (Many | Unique); minted; _ } when equal (canon { env with facts = trusted env } minted) ty -> Some v
   | _ -> None
+let special_value env x = match const_value env x Prelude.special_term with Some (V.VCtor (c, [||])) -> List.assoc_opt c.cid Prelude.specials | _ -> None
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
 
 let rec special_of env raw =
@@ -43,16 +44,6 @@ let rec special_of env raw =
   | Atom (_, n) -> Option.bind (lookup env n) value
   | List (_, [head; Atom (_, n)]) when special_of env head = Some Sp.Share -> Option.bind (lookup env n) value
   | _ -> None
-
-let read_special pos env raw =
-  match raw with
-  | Atom (l,n) -> use env l Many (Option.get (lookup env n))
-  | List (l,[h;Atom (_,n)]) when special_of env h = Some Sp.Share ->
-      if pos = Erased then error_in env l "`share` in an erased position";
-      let x = Option.get (lookup env n) in
-      if (entry env x).mult <> Unique then error_in env l "`share` needs a unique value";
-      use env l ~sharing:true Many x
-  | _ -> env
 
 let is_special env raw s = special_of env raw = Some s
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | Some Sp.Unique -> Some Unique | _ -> None
@@ -470,6 +461,16 @@ let atom env loc n =
   | `Lit lit -> let env = intern env loc lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
   | _ -> (env, var env loc n)
 
+let read_special pos env raw =
+  match raw with
+  | Atom (l,n) -> let env, x = atom env l n in use env l Many x
+  | List (l,[h;Atom (al,n)]) when special_of env h = Some Sp.Share ->
+      if pos = Erased then error_in env l "`share` in an erased position";
+      let x = var env al n in
+      if (entry env x).mult <> Unique then error_in env l "`share` needs a unique value";
+      use env l ~sharing:true Many x
+  | _ -> env
+
 (* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
 let numeral_entry env loc raw =
   let name = atom_or loc raw "a numeral or character literal" in
@@ -704,6 +705,7 @@ and elab_type_form env l sp args =
       (env, Matchable (disc_of env l d, List.mem Sp.NewtypeMark ms, List.mem Sp.Extern ms, Var (tyname env l t), cs))
   | (Sp.Fn | Sp.UniqueFn | Sp.Matchable), _ -> error l "%s" (help env (Sp.misuse sp))
   | Sp.DumpContext, _ -> dump_context env l Dump.Type args
+  | Sp.CompileError, _ -> compile_error Erased env l args
   | (Sp.LevelOf | Sp.MatchableOf | Sp.DelegateOf | Sp.NumeralOf | Sp.SlotOf | Sp.AtFnOf), _ -> fetched env l sp args
   | _ -> error l "%s cannot appear in a type" (tick (speller env (Sp.name sp)))
 
@@ -745,6 +747,20 @@ and fetched env l sp args =
       let about x = (entry env x).name = None && (match type_of env x with App (Var c, [ _; _; Var g'; _; _; _ ]) -> c = Prelude.delegate && g' = g | _ -> false) in
       match List.find_opt about env.scope.ids with Some y -> (env, Var y) | None -> error l "%s has no `Delegate` proof in scope" (qname env g))
   | _ -> error l "%s" (help env (Sp.misuse sp))
+
+and compile_text pos env l sp = function
+  | [ raw ] ->
+      let env, x = match raw with Atom (al, n) -> atom env al n | List (_, [ h; Atom (al, n) ]) when special_of env h = Some Sp.Share -> (env, var env al n) | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
+      let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
+      (match const_value env x str with
+       | Some v -> (read_special pos env raw, str_host env l v)
+       | None ->
+           let e = entry env x in
+           error_in env (loc raw) "the message of %s must be a `Const`, non-erased `String`; %s %s" (tick (speller env (Sp.name sp))) (qname env x)
+             (if e.mult = Erased then "is erased" else if e.state = Dyn then "is `Dyn`" else "has type " ^ qshow env (canon { env with facts = trusted env } e.minted) ^ ", not the prelude's `String`"))
+  | _ -> error l "%s" (help env (Sp.misuse sp))
+
+and compile_error : 'a. mult -> Env.t -> Reader.loc -> Reader.raw list -> 'a = fun pos env l args -> error l "%s" (snd (compile_text pos env l Sp.CompileError args))
 
 (* The form's arguments are terms in section 9's grammar, each shown with its type where it has one. *)
 and dump_context : 'a. Env.t -> Reader.loc -> Dump.goal -> Reader.raw list -> 'a = fun env l goal args ->
@@ -1458,6 +1474,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       | [ sg; gty; g; sf; fty; f ] -> mint env (proof_type Prelude.coercible [ sg; gty; g; sf; fty; f ])
       | _ -> assert false)
   | Sp.DumpContext, _ -> dump_context env l (Dump.Values (expect, tele)) args
+  | Sp.CompileError, _ -> compile_error pos env l args
   | sp, _ when List.mem sp Sp.statements -> error l "%s is a statement, not an expression%s" (brief (List (l, Atom (l, speller env (Sp.name sp)) :: args))) (help env (Sp.hints (Sp.name sp)))
   | sp, _ -> error l "%s" (help env (Sp.misuse sp))
 
@@ -1815,6 +1832,8 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
       | Some Sp.Unary, _ -> elab_unary spos env l args
       | Some Sp.DumpContext, _ -> dump_context env l Dump.Statement args
+      | Some Sp.CompileError, _ -> compile_error spos env l args
+      | Some Sp.CompileWarn, _ -> let env, text = compile_text spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
       | Some Sp.SlotSelf, [ a ] ->
           let x = var env (loc a) (atom_or (loc a) a "a variable") in
           check_type env (loc a) (type_of env x) Prelude.slot_term;
