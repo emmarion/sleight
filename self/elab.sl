@@ -1791,14 +1791,13 @@
     ((Nil _) (UOk env))
     ((Cons _ _ _) (merge-opens (Succ $ list-length _ $ env-opens env) (env-settled env) $ env-touched env))))
 
+(def-lvl place-lvl)
 ; [x] is at the slot term [p] (section 35): a rule on its automatic slot, minted by forcing, the opened
 ; objects merged after.
 ; While the slot is still the fresh atom it was minted as, with no rule, named by no opened object and absent
 ; from [p], the rule is added outright, which seems to be what forcing it would do; a slot a forcing has
 ; already ruled is forced as any atom is.
-(def-lvl place-lvl)
-(def-fns _ $ (many place-forced : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (UnifyRes) r))
-  (let-match many (env-slot-of env x) (Some _ s) ((None _) (UOk env)))
+(def-fns _ $ (many slot-forced : (many (Env) env) (many (Nat) s) (many (Term) p) -> (many (UnifyRes) r))
   (def-fns place-lvl $ (many forced : -> (many (UnifyRes) r)) (merge-all $ unify-force (Forcing env) (TVar s) p))
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (let-match many tb (MkTable _ f0 _ _ _ _ _ _ c1 _ _ _))
@@ -1808,10 +1807,20 @@
   (let-match many (rule-out-refresh _ _ bnd tb s ps t) (Some _ added) ((None _) (forced)))
   (match many added _ ((MkAdded _ _ _ _ tb2) (UOk $ env-set-table env _ _ bnd tb2))))
 
-(def-fns _ $ (many place-at : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (Env) r))
-  (match many (place-forced env x p) _
+(def-fns _ $ (many place-forced : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (UnifyRes) r))
+  (let-match many (env-slot-of env x) (Some _ s) ((None _) (UOk env)))
+  (slot-forced env s p))
+
+(def-fns _ $ (many placed-or : (many (Env) env) (many (Nat) x) (many (UnifyRes) o) (many (Term) p) -> (many (Env) r))
+  (match many o _
     ((UOk env2) env2)
     ((UContra m) (env-error env $ str-cat3 "internal: " (qshow env $ TVar x) $ str-cat3 " cannot sit at " (qshow env p) $ str-cat3 " (" (clash-str env m) ")"))))
+
+(def-fns _ $ (many place-at : (many (Env) env) (many (Nat) x) (many (Term) p) -> (many (Env) r))
+  (placed-or env x (place-forced env x p) p))
+
+(def-fns _ $ (many slot-at : (many (Env) env) (many (Nat) x) (many (Nat) s) (many (Term) p) -> (many (Env) r))
+  (placed-or env x (slot-forced env s p) p))
 
 (def-fns _ $ (many placed-at : (many (Env) env) (many (Nat) x) (many (Maybe $ Term) p) -> (many (Env) r))
   (match many p _ ((None _) env) ((Some _ q) (place-at env x q))))
@@ -6431,7 +6440,10 @@
                   (values env2 (first-res _ _ rs lock3) ctxa prea code))))
             (let ((many env3)) $ env-back env2 $ check-sg-about (env-at env2 apos) sg r (Some _ arg) arg-about)
             (let ((many env4a) (many _)) $ solve-about (env-at env3 apos) "value" (res-term r) (TVar m) (BTrue) (None _) arg-about)
-            (let ((many env4)) $ env-back env3 env4a)
+            (let ((many env4b)) $ match many (res-term r) (((Env) _))
+              ((TVar y) (match many (is-meta env4a y) _ ((BTrue) env4a) ((BFalse) (slot-at env4a m (Succ m) (TSlotOf $ TVar y)))))
+              (else env4a))
+            (let ((many env4)) $ env-back env3 env4b)
             (let ((many env5a) (many r2) (many id) (many ctxb) (many scb))
               (match many (and prepare (mult-is-many mult)) (((Env) _) ((Res) r0) ((Nat) x0) ((List $ List $ Nat) cb) ((StmtCode ctxa cb) _))
                 ((BTrue) (hoist-argument env4 ctxa mult mult r code))

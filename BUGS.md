@@ -87,33 +87,3 @@ is a design decision. Remove an entry when it is fixed.
     bug), or a host-level abort primitive, which would be a design
     addition. Separately, the acyclicity a measure-based traversal
     would need is a question about `heap.sl`'s store invariant.
-
-20. **A place through a meta solved to a variable that has a rule
-    resolves to the meta's own slot.** With
-    `call2 : (many (Nat) x) (many (Fn L (many (Nat) w at x) -> (many (Nat) r at x)) f) -> (many (Nat) r at x)`,
-    `(let ((many p)) (Succ (Zero)))` and
-    `g : (many (Nat) w at p) -> (many (Nat) r at p)`, the call
-    `(call2 p g)` is refused: "argument 2, `f`, of `call2`: type
-    mismatch: expected `(Fn L (many (Nat) w at _1) -> (many (Nat) r at _1))`,
-    got `(Fn L (many (Nat) w at p) -> (many (Nat) r at p))`", where
-    `_1` is the meta standing for `x`. The same call with `p` bound to
-    a literal, `(let ((many p)) 3)`, is accepted, and so is a direct
-    `at` parameter with either `p`: `(f p p)` for
-    `f : (many (Nat) x) (many (Nat) y at x) -> (many (Nat) r at x)`.
-    A constructor application is refused the same way, `(MkH p g)` for
-    `MkH : (many (Nat) x) (many (Fn L (many (Nat) w at x) -> (many (Nat) r at x)) f) -> (H x)`.
-    The suspected cause, as a session read `lib/env.ml` and
-    `lib/elab.ml`: `check_args` opens the callee's telescope with
-    metas, so the later entry's type carries `(slot-of m)` for the
-    meta `m` of `x`, and `canon`'s case for a place through a meta
-    canonicalizes `m` all the way; once `m` is solved to `p` and `p`
-    has a rule to an application, the result is not a variable, and
-    the case falls back to the meta's own slot, an atom unrelated to
-    `p`'s. Following the solution through atom aliases only, to the
-    first atom whose rule is not a variable, would seem to be the fix,
-    though that is not verified. `self/` shares the defect:
-    `_build/self/slc --interpret` refuses both programs with the same
-    message and accepts the literal variant. Found while probing the
-    `at` system in a design discussion; no test in `tests/` has a
-    nested function type `at` an earlier entry whose argument is a
-    run-position binder of a constructor application.

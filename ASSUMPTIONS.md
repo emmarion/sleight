@@ -4034,14 +4034,20 @@ pattern is optional at `unique` as at `many`, are not repeated here.
      cost in fact-table entries that rule 17 argued against. Section 35
      gives a meta no slot of its own and says no more. Here the slot of a
      `_` argument's meta is read through its solution each time it is
-     read, and nothing is recorded when the meta is solved (`Env.canon`;
-     `meta-slot-in` in `self/core.sl`, whose slot map marks a meta's entry
-     `MetaSlot`): solved to a variable, it is that variable's slot, through
-     any chain of metas; solved to any other term, it is a fresh slot, as
-     that term written out would get by being bound first; unsolved, it
-     stays `(slot-of m)`, open like the meta and settled with it. So, as
-     far as this session has found, the order in which a call's metas are
-     solved does not change the slot one names. The `at` check of section
+     read (`Env.canon`; `meta-slot-in` in `self/core.sl`, whose slot map
+     marks a meta's entry `MetaSlot`): solved to a variable, it is that
+     variable's slot, through any chain of metas; solved to any other
+     term, it is a fresh slot, as that term written out would get by being
+     bound first; unsolved, it stays `(slot-of m)`, open like the meta and
+     settled with it. A parameter's meta solved from a written variable
+     is also placed at that variable's slot when the argument is read
+     (`Elab.check_args`, `check-args-go`), since the solution a reader
+     sees is canonical and no longer says which variable was written:
+     `(let ((many p)) (Succ (Zero)))` passed for `x` left `(slot-of x)`
+     in a later entry's type at the meta's own fresh slot, refusing the
+     call (`tests/slot_of_param_type_ruled.sl`). So, as far as this
+     session has found, the order in which a call's metas are solved does
+     not change the slot one names. The `at` check of section
      36 waits for the call's metas to settle at its closing paren, rather
      than running as each argument is read. A solved meta inside `slot-of` resolves to
      that slot (`Env.metaless`), so no `slot-of` over a term survives

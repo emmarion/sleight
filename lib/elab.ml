@@ -789,7 +789,9 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
           in
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
           let ats = match e.place with Some p -> (arg, i, e.name, instantiate acc p, r.place) :: ats | None -> ats in
-          (solve ~about "value" env (Reader.loc arg) r.term (Var m), r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
+          let env = solve ~about "value" env (Reader.loc arg) r.term (Var m) in
+          let env = match r.term with Var y when not (is_meta env y) -> placed env m (Some (slot_of y)) | _ -> env in
+          (env, r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
       (env, [], [], []) (List.mapi (fun i (e, m) -> (i, e, m)) (List.combine tele metas)) args
   in
   let env = if boundary && List.exists (has_meta env) acc then against ~strict:true env else env in
