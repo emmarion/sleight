@@ -1,0 +1,13 @@
+; error: declared `many`, used at unique
+(let ((many d0)) (lt-dec 0 u8-modulus))
+(comptime-match many d0 (Yes za zb zp))
+(let ((many code0)) (MkU8 0 zp))
+(def-adts $ (Box : -> Type) enum newtype (many MkBox : (many (World) x) -> (Box)))
+(def-lvl P)
+(def-unique P $ (unique k : (unique (World) w) -> (unique (World) w2 at w) (unique (Program P) p))
+  (let ((many s)) (share w))
+  (let ((unique (Box) b)) (coerce s (coercible-wrap (Unique) MkBox s)))
+  (let-match unique b (MkBox x))
+  (let ((unique w1) (many a)) (world-do _ x (WriteOut "a\n")))
+  (values w1 (Exit _ code0)))
+(Continue _ k)
