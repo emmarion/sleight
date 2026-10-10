@@ -18,19 +18,8 @@ previous `slc` over several runs, which this session read as noise; its
 max RSS swings between about 108 and 132MB for one and the same binary,
 so no memory comparison was drawn.
 
-Two things left for a later session, both raised with the owner:
+One thing left for a later session, raised with the owner:
 
-- `prove-predates` takes an atom for `x` and a fetch form only for `L`.
-  The owner would have `x` take a fetch form too, as in
-  `(prove-predates (level-of f) L)`, which is natural since a fetch form
-  elaborates to a variable reference before anything else reads it, and
-  which would spare `tests/thunk_closure.sl` its `let` of
-  `(level-of add-one)`. In the reference this is the `x` line of the
-  `Sp.ProvePredates` arm in `lib/elab.ml`, now `atom` on `atom_or`; in
-  `slc` it is `var-of-raw` in the `ExProvePredates` arm of
-  `self/elab.sl`, where `L` already goes through `elab-one-term` and
-  `level-binder`. A meta from `_` would need refusing as the atom path
-  refuses it today.
 - MACROS.md 4.5's program store holds the literal table and the facts
   of run-position entries. Here a literal's declaration facts live in
   the scoped fact table and are entered again where needed, so a

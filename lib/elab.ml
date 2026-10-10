@@ -1372,7 +1372,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       erased (prove_subterm env l a b)
   | Sp.ProvePredates, [ x; lv ] ->
       let env, lv = level_binder env l lv in
-      let env, x = atom env l (atom_or l x "a variable") in
+      let env, x = match x with
+        | Atom (_, n) -> atom env l n
+        | _ -> (match elab_term env x with env, Var x -> (env, x) | _ -> error l "expected a variable or a fetch form, got %s" (tick (Reader.show x))) in
       erased (prove_predates env l x lv)
   | Sp.PredatesTrans, [ p; q ] ->
       compose (Prelude.predates, p) (Prelude.predates, q)

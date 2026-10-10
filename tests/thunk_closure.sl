@@ -5,11 +5,10 @@
 
 (def-lvl T)
 (let ((erased kt)) (prove-predates K T))
-(let ((erased AL)) (level-of add-one))
-(let ((erased lt)) (prove-predates AL T))
+(let ((erased lt)) (prove-predates (level-of add-one) T))
 (def-fns T $ (many main : -> (many (Nat) n))
   (inc4 (predates kt) (add-one (predates lt) (Zero))))
 
 main
-; warns: tests/thunk_closure.sl:11:32: warning: unnecessary `(predates _)`; drop it
-; warns: tests/thunk_closure.sl:11:9: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_closure.sl:10:32: warning: unnecessary `(predates _)`; drop it
+; warns: tests/thunk_closure.sl:10:9: warning: unnecessary `(predates _)`; drop it

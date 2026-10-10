@@ -662,7 +662,7 @@ type former (production 4) as opaque.
 marker of §5. A level created later is strictly higher than one created
 earlier, so a function at a later level cannot be called from code at
 an earlier level. `(prove-predates x L)` creates `(Predates A x L)`.
-`x` is a variable and `L` a variable or a fetch form (§53), namely
+`x` and `L` are each a variable or a fetch form (§53), such as
 `level-of`; both are read by their binders and never canonicalized. `L`
 must be an entry created by `def-lvl`, or a `let` binder forwarding
 from one (§19). `x` must have an introduction order (§5) earlier than
