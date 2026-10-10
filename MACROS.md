@@ -101,8 +101,12 @@ World      : (TyCtor -> Type)
   (many DeleteDir : (many (String) path) -> (Request (Result (Change))))
   (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (erased (Level) M) (erased Type A) (unique (UniqueFn M -> (many A r)) run)
-     -> (Request (Pair A (Usage)))))
+  (many Measure : (many (Compaction) c) -> (Request (Usage))))
+
+(def-adts $ (Compaction : -> Type)
+  enum
+  (many Compact : -> (Compaction))
+  (many NoCompact : -> (Compaction)))
 ```
 
 - `Pos`, `Symbol`, `Atom`, `Raw`, `Macro`, `Program`: Decided, as written.
@@ -120,7 +124,13 @@ World      : (TyCtor -> Type)
   answer, with a constructor for each row of DESIGN.md §42's `IO` table and
   for each of the prelude's further requests. Proposed: a request that
   answered nothing answers `(Unit)`; `Step` is dropped, `Continue` serving
-  its purpose; `Measure` answers `(Pair A (Usage))`.
+  its purpose.
+- `Measure` and `Compaction`: Decided. `Measure` takes no thunk. It answers
+  `Usage`'s eight figures, each the total since the program started running:
+  the driver reads all eight when it begins running the final `Program`,
+  before applying its first step, and `Measure` answers each figure less that
+  reading. `Compact` compacts the heap before reading; `NoCompact` does not.
+  The names `Compaction`, `Compact` and `NoCompact` are open.
 
 `symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)`
 is ordinary prelude code (Decided that equality returns a proof): `str-cmp`
