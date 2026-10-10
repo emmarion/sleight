@@ -882,29 +882,31 @@
 
 ; The Const fields of a value bound to their ids at their declared multiplicities (section 28): a many
 ; field its address, an erased one the token, a missing one an error block.
-(def-fns _ $ (many set-field-states : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (subterm many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Ref Block hs) vs) ->
+(def-fns _ $ (many set-field-states : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (List $ Pair (Ref Block hs) $ Term) fi) (subterm many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Maybe $ Nat) targets) (many (List $ Ref Block hs) vs) ->
     (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (many (IdMap $ EInfo hs2) en2) (many (List $ Pair (Ref Block hs2) $ Term) fi2))
   (let-match many fids (Cons _ x rest) ((Nil _) (values hs hp en fi)))
   (let ((many (Mult) m) (many (List $ Mult) mrest)) $ match many mults _ ((Nil _) (values (Many) $ Nil _)) ((Cons _ m0 mr) (values m0 mr)))
+  (let ((many (Maybe $ Nat) target) (many (List $ Maybe $ Nat) trest)) $ match many targets _ ((Nil _) (values (None _) $ Nil _)) ((Cons _ t0 tr) (values t0 tr)))
+  (let ((many (Bool) stored)) $ and (mult-is-many m) $ not $ is-some _ target)
   (let ((many (Block (Ref Block hs)) filler)) $ match many m _ ((Many) (BError _ "missing value"))
     ((Once) (BError _ "missing value")) ((Erased) (BToken _)))
-  (let ((many (Maybe $ Ref Block hs) have)) $ match many m _ ((Erased) (None _)) ((Many) (match many vs (((Maybe $ Ref Block hs) _)) ((Nil _) (None _)) ((Cons _ v _) (Some _ v))))
-    ((Once) (match many vs (((Maybe $ Ref Block hs) _)) ((Nil _) (None _)) ((Cons _ v _) (Some _ v)))))
-  (let ((many (List $ Ref Block hs) vrest)) $ match many m _ ((Erased) vs) ((Many) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr)))
-    ((Once) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr))))
+  (let ((many (Maybe $ Ref Block hs) first)) $ match many vs _ ((Nil _) (None _)) ((Cons _ v _) (Some _ v)))
+  (let ((many (Maybe $ Ref Block hs) have)) $ match many m _ ((Erased) (None _))
+    (else (match many target (((Maybe $ Ref Block hs) _)) ((Some _ y) (const-ref _ en y)) ((None _) first))))
+  (let ((many (List $ Ref Block hs) vrest)) $ match many stored _ ((BFalse) vs) ((BTrue) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr))))
   (let-match many have (None _)
-    ((Some _ v) (tail $ set-field-states _ hp (entries-set-state _ en x $ SConst _ v x) fi rest mrest vrest)))
+    ((Some _ v) (tail $ set-field-states _ hp (entries-set-state _ en x $ SConst _ v x) fi rest mrest trest vrest)))
   (let ((erased hl2) (many hp2) (erased sf2) (many t)) $ alloc Block _ hp filler)
   (let ((erased le)) sf2)
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
   (let ((erased wr1) (erased pr1)) (refs-widen _ _ _ le vrest))
-  (tail $ set-field-states _ hp2 (entries-set-state _ en2 x $ SConst _ t x) fi2 rest mrest (coerce vrest pr1)))
+  (tail $ set-field-states _ hp2 (entries-set-state _ en2 x $ SConst _ t x) fi2 rest mrest trest (coerce vrest pr1)))
 
 (def-fns _ $ (many env-run-let : (many (Env) e) (many (List $ Mult) ms) (many (Code (Nil (List (Nat))) ms) code) (many (List $ Nat) ids) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let ((erased hs2) (many hp2) (erased le) (many vs) (erased pk)) $ run-code _ hp en _ code)
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
-  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 ids ms vs)
+  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 ids ms (Nil _) vs)
   (env-with-store e _ hp3 en3 fi3))
 
 ; The discriminant of a Const entry's value under a constructor's reading, or None where it is no Const.
@@ -917,23 +919,23 @@
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
   (values (env-with-store e _ hp2 en2 fi2) $ Some _ i))
 
-(def-fns _ $ (many env-set-fields : (many (Env) e) (many (Nat) x) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) -> (many (Env) r))
+(def-fns _ $ (many env-set-fields : (many (Env) e) (many (Nat) x) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Maybe $ Nat) targets) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) e))
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (let-match many s (SConst _ v _) ((SDyn _) e))
   (let ((erased hs2) (many hp2) (erased le) (many i) (many fs)) $ destruct _ hp ct v)
   (let ((many en2) (many fi2)) $ store-grow _ _ le en fi)
-  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 fids mults fs)
+  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 fids mults targets fs)
   (env-with-store e _ hp3 en3 fi3))
 
 ; A run-position let-match: the scrutinee's code run and its fields bound (section 27).
-(def-fns _ $ (many env-run-fields : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) -> (many (Env) r))
+(def-fns _ $ (many env-run-fields : (many (Env) e) (many (Code (Nil (List (Nat))) many-one) code) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Mult) mults) (many (List $ Maybe $ Nat) targets) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let ((erased hs1) (many hp1) (erased le1) (many vs) (erased pk)) $ run-code _ hp en _ code)
   (let ((erased hs2) (many hp2) (erased le2) (many i) (many fs)) $ destruct _ hp1 ct $ vals-one _ vs pk)
   (let ((many en2) (many fi2)) $ store-grow _ _ (hist-le-trans _ _ _ le1 le2) en fi)
-  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 fids mults fs)
+  (let ((erased hs3) (many hp3) (many en3) (many fi3)) $ set-field-states _ hp2 en2 fi2 fids mults targets fs)
   (env-with-store e _ hp3 en3 fi3))
 
 ; Every binder of a run-position statement that did not run holds the token, as after an error.

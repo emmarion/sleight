@@ -1091,6 +1091,9 @@
 (def-fns _ $ (many memo-decls : (many (ShowMemo) memo) -> (many (Decls) d))
   (match many memo _ ((MkShowMemo _ _ _ _ d) d)))
 
+(def-fns _ $ (many memo-decl-const : (many (ShowMemo) memo) (many (Nat) y) -> (many (ShowMemo) r))
+  (match many memo _ ((MkShowMemo fresh count known defs d) (MkShowMemo fresh count known defs $ decl-const d y))))
+
 (def-fns _ $ (many memo-find : (subterm many (List $ Pair (Term) $ String) known) (many (Env) env) (many (Term) ty) -> (many (Maybe $ String) r))
   (let-match many known (Cons _ p rest) ((Nil _) (None _)))
   (let-match many p (MkPair _ _ t name))
@@ -1115,6 +1118,13 @@
   (match many (prelude-nullary env ty "String") (((Maybe $ Rope) _))
     ((BTrue) (Some _ $ RStr "(let (s, o, l) = (Obj.obj v : Ffi_core.slice) in Ffi_core.lit_string (String.sub s o l))"))
     ((BFalse) (None $ Rope))))
+
+(def-fns _ $ (many block-word : (many (Env) env) (many (Maybe $ Term) place) (many (Nat) i) (many (List $ Rope) words) (many (ShowMemo) memo) -> (many (Rope) w) (many (Nat) i2) (many (ShowMemo) memo2))
+  (let-match many place (Some _ p) ((None _) (values (RCat (RStr "f") $ nat-rope i) (Succ i) memo)))
+  (let ((many (Rope) constant) (many (ShowMemo) memoc)) $ match many (at-constant (env-words env) env p) _ ((Some _ y) (values (const-rope env y) $ memo-decl-const memo y)) ((None _) (values (RStr "(Obj.repr ())") memo)))
+  (let-match many p (TSlotOf c) (else (values constant i memoc)))
+  (let-match many c (TBound k) (else (values constant i memoc)))
+  (match many (list-nth _ words k) _ ((NthHit _ _ _ w _) (values w i memo)) ((NthMiss _ _ _ _) (values (RStr "(Obj.repr ())") i memo))))
 
 (def-fns _
   ((many show-type : (subterm many (Nat) fuel) (many (Env) env) (many (Term) ty0) (many (ShowMemo) memo) -> (many (ShowMemo) memo2) (many (String) name))
@@ -1166,7 +1176,7 @@
         ((UContra _) (values envb $ BFalse))))
     (let ((many (ShowMemo) memo2) (many (List $ Rope) shown))
       (match many live _
-        ((BTrue) (notail $ show-block-fields k envb2 fids memo 0))
+        ((BTrue) (notail $ show-block-fields k envb2 ctele fids memo 0 $ Nil _))
         ((BFalse) (values memo $ Nil _))))
     ; Ffi_core.show_app is the one definition the interpreter, an extracted program and this
     ; output share, so `$` is not decided again here (ASSUMPTIONS 184)
@@ -1175,17 +1185,19 @@
     (let ((many memo3) (many more)) $ notail $ show-arms k env ty rest memo2 tagged)
     (values memo3 $ match many live (((List $ Arm) _)) ((BTrue) (Cons _ (MkArm index (field-names arity 0) text) more)) ((BFalse) more)))
 
-  ((many show-block-fields : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Nat) fids) (many (ShowMemo) memo) (many (Nat) i) -> (many (ShowMemo) memo2) (many (List $ Rope) shown))
+  ((many show-block-fields : (subterm many (Nat) fuel) (many (Env) env) (many (List $ Entry) tele) (many (List $ Nat) fids) (many (ShowMemo) memo) (many (Nat) i) (many (List $ Rope) words) -> (many (ShowMemo) memo2) (many (List $ Rope) shown))
     (let-match many fuel (Succ k) ((Zero) (values memo $ Nil _)))
     (let-match many fids (Cons _ x rest) ((Nil _) (values memo $ Nil _)))
+    (let ((many (Maybe $ Term) place) (many (List $ Entry) trest)) $ match many tele _ ((Nil _) (values (None _) $ Nil _)) ((Cons _ e er) (values (entry-place e) er)))
     (match many (entry-mult-of env x) (((ShowMemo) _) ((List $ Rope) rs))
       ((Erased)
-        (let ((many memo3) (many more)) $ notail $ show-block-fields k env rest memo i)
+        (let ((many memo3) (many more)) $ notail $ show-block-fields k env trest rest memo i $ Cons _ (RStr "(Obj.repr ())") words)
         (values memo3 $ Cons _ (RStr "\"_\"") more))
       (else
         (let ((many memo2) (many name)) $ notail $ show-type k env (type-of env x) memo)
-        (let ((many memo3) (many more)) $ notail $ show-block-fields k env rest memo2 $ Succ i)
-        (values memo3 $ Cons _ (rcat3 (RStr name) (RStr " f") $ nat-rope i) more)))))
+        (let ((many fw) (many i2) (many memo2b)) $ block-word env place i words memo2)
+        (let ((many memo3) (many more)) $ notail $ show-block-fields k env trest rest memo2b i2 $ Cons _ fw words)
+        (values memo3 $ Cons _ (rcat3 (RStr name) (RStr " ") fw) more)))))
 
 (def-fns _ $ (many show-defs : (many (ShowMemo) memo) -> (many (Rope) r))
   (let-match many memo (MkShowMemo _ _ _ defs _))
@@ -1237,9 +1249,11 @@
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "IO" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb writes))
-  (let ((many roots)) $ roots-of-finals _ fi env en (Nil _))
+  (let ((many d0b) (many unused)) $ emit-finals _ hp (list-rev _ fi) env d0)
+  (let ((many d0c) (many cids)) $ decl-take-consts d0b)
+  (let ((many roots)) $ const-refs _ en cids $ roots-of-finals _ fi env en (Nil _))
   (let ((many acc2) (many d2))
-    $ trace-loop _ bound lb hp (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env en d0)
+    $ trace-loop _ bound lb hp (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env en d0c)
   (def-fns REF-CMP $ (many ref-le : (many (Ref Block hs) x) (many (Ref Block hs) y) -> (many (Bool) b))
     (nat-lt (ref-pos Block _ x) (ref-pos Block _ y)))
   (let ((many order)) $ ref-sort (Ref Block hs) ref-le acc2)

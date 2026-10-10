@@ -48,6 +48,7 @@ type cx = {
   fills : Buffer.t;
   actions : Buffer.t;
   shows : (term * string * string ref) list ref;
+  words : Buffer.t;
   narrows : ((int list * int list) * string) list ref;
   temps : int ref;
 }
@@ -378,7 +379,7 @@ let collect env items =
         | Env.Final _ -> [])
       items
   in
-  { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; fills = Buffer.create 1024; actions = Buffer.create 1024; shows = ref []; narrows = ref []; temps = ref 0 }
+  { env; adts; shapes = ref []; defined; captured = ref []; arrays = ref []; seen = Hashtbl.create 64; shared = ref 0; closures = ref closures; out = Buffer.create 4096; fills = Buffer.create 1024; actions = Buffer.create 1024; shows = ref []; words = Buffer.create 256; narrows = ref []; temps = ref 0 }
 
 let all a = List.init (List.length a.V.ctors) Fun.id
 
@@ -448,12 +449,24 @@ let rec show cx env ty =
           let tele, ret = Elab.ctor_type env Reader.nowhere c.V.cid in
           let env', fids = Elab.open_tele env tele in
           let env' = Env.merge_opens (Env.unify_force (Env.forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
-          let rec args i = function
+          let rec args i acc = function
             | [] -> []
-            | x :: rest when (Env.entry env' x).mult = Erased -> "\"_\"" :: args i rest
-            | x :: rest -> Printf.sprintf "%s f%d" (show cx env' (Env.type_of env' x)) i :: args (i + 1) rest
+            | ((_ : entry), x) :: rest when (Env.entry env' x).mult = Erased -> "\"_\"" :: args i ("\"_\"" :: acc) rest
+            | (e, x) :: rest ->
+                let word, i = match e.place with
+                  | Some (SlotOf (Bound k)) -> (List.nth acc k, i)
+                  | Some p ->
+                      ((match (Env.entry env (Elab.location_var env Reader.nowhere p)).state with
+                        | Const v ->
+                            let name = Printf.sprintf "word_%d" (stamp cx) in
+                            Buffer.add_string cx.words (Printf.sprintf "let %s : Obj.t ref = ref (Obj.repr ())\n" name);
+                            Buffer.add_string cx.fills (Printf.sprintf "let () = %s := %s\n" name (value cx v));
+                            "!" ^ name
+                        | Dyn -> "(Obj.repr ())"), i)
+                  | None -> (Printf.sprintf "f%d" i, i + 1) in
+                Printf.sprintf "%s %s" (show cx env' (Env.type_of env' x)) word :: args i (word :: acc) rest
           in
-          let text = Printf.sprintf "(Ffi_core.show_app %s [ %s ])" (quote c.V.cname) (concat "; " (args 0 fids)) in
+          let text = Printf.sprintf "(Ffi_core.show_app %s [ %s ])" (quote c.V.cname) (concat "; " (args 0 [] (List.combine tele fids))) in
           ignore a;
           Some (c, fields c, text)
         with Env.Contradiction _ | Env.Error _ | Not_found -> None
@@ -547,6 +560,7 @@ let emit env items =
       "type yes = Yes_ and no = No_\nlet m_plain : Obj.t = Obj.repr (fun (v : Obj.t) : Obj.t -> v)";
       types;
       driver;
+      Buffer.contents cx.words;
       (if shows = [] then "" else "let rec " ^ concat "\nand " shows);
       Buffer.contents cx.out;
       Buffer.contents cx.fills;

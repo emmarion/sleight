@@ -228,6 +228,15 @@
     ((Once) (Succ $ notail $ many-count rest))
     ((Erased) (tail $ many-count rest))))
 
+(def-fns _ $ (many entry-stored : (many (Entry) e) -> (many (Bool) r))
+  (and (mult-is-many $ entry-mult e) $ not $ is-some _ $ entry-place e))
+
+(def-fns _ $ (many stored-count : (subterm many (List $ Entry) es) -> (many (Nat) n))
+  (let-match many es (Cons _ e rest) ((Nil _) (Zero)))
+  (match many (entry-stored e) _
+    ((BTrue) (Succ $ notail $ stored-count rest))
+    ((BFalse) (tail $ stored-count rest))))
+
 (def-fns _ $ (many tele-mults : (subterm many (List $ Entry) es) -> (many (List $ Mult) ms))
   (match many es _
     ((Nil _) (Nil _))
@@ -2182,7 +2191,7 @@
   ((Pragmas : -> Type) enum (many MkPragmas : (many (List $ Warned) warned) (many (List $ Region) regions) (many (Bool) unwarned) -> (Pragmas)))
   ((Said : -> Type) enum (many SaidWarning : (many (Loc) here) (many (String) text) -> (Said)) (many SaidError : (many (Loc) here) (many (String) text) -> (Said)) (many SaidSilenced : (many (Nat) region) -> (Said)) (many SaidShadow : (many (Nat) x) (many (Nat) prior) (many (Loc) prior-at) (many (String) name) (many (Loc) here) -> (Said)))
   ((UniqueState : -> Type) enum
-    (many MkUniqueState : (many (Bool) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
+    (many MkUniqueState : (many (List $ Nat) ctor-tele) (many (Uses) uses) (many (List $ Nat) captures)
       (many (Bool) usage-erased) (many (Bool) in-extern) (many (List $ Nat) signature)
       (many (List $ Nat) words) (many (List $ Nat) temporary) (many (Pragmas) pragmas) (many (IdMap $ Nat) aliases) (many (Bool) extern-ok) -> (UniqueState))))
 ; An interned literal: its entry, its Numeral proof where it has one, the spelling it reads back as, and the
@@ -2195,7 +2204,7 @@
     enum
     (many MkLitEntry : (many (Nat) id) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) (many (Nat) ordinal) -> (LitEntry))))
 
-(let ((many unique-empty)) (MkUniqueState (BFalse) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _) (BFalse)) (MEmpty _) (BFalse)))
+(let ((many unique-empty)) (MkUniqueState (Nil _) (MkUses (MEmpty _) (Nil _)) (Nil _) (BFalse) (BFalse) (Nil _) (Nil _) (Nil _) (MkPragmas (Nil _) (Nil _) (BFalse)) (MEmpty _) (BFalse)))
 
 (def-adts $ (Scope : -> Type)
   enum
@@ -2761,9 +2770,9 @@
   (match many env _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ us hn) us)))
 (def-fns _ $ (many env-set-unique : (many (Env) env) (many (UniqueState) state) -> (many (Env) r))
   (match many env _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr _ hn) (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa lt lo pr state hn))))
-(def-fns _ $ (many env-ctor-tele : (many (Env) env) -> (many (Bool) r))
+(def-fns _ $ (many env-ctor-tele : (many (Env) env) -> (many (List $ Nat) r))
   (match many (env-unique env) _ ((MkUniqueState ct _ _ _ _ _ _ _ _ al ex) ct)))
-(def-fns _ $ (many env-set-ctor-tele : (many (Env) env) (many (Bool) x) -> (many (Env) r))
+(def-fns _ $ (many env-set-ctor-tele : (many (Env) env) (many (List $ Nat) x) -> (many (Env) r))
   (match many (env-unique env) _ ((MkUniqueState _ uses captures ue ie sig words temp wd al ex) (env-set-unique env (MkUniqueState x uses captures ue ie sig words temp wd al ex)))))
 (def-fns _ $ (many env-uses : (many (Env) env) -> (many (Uses) r))
   (match many (env-unique env) _ ((MkUniqueState _ uses _ _ _ _ _ _ _ al ex) uses)))

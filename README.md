@@ -231,7 +231,7 @@ evaluator is a plain recursive interpreter over that code; a value contains
 its constructor's non-erased fields, tagged only where section 33 says an
 enum carries a tag, or a closure, or a token standing for anything
 erased. Unique cells permit in-place updates, while an entry written `at`
-another, a parameter, a return or a match annotation entry, is neither
+another, a parameter, a return, a match annotation entry or a field, is neither
 passed nor returned physically but read from the word it is at (section
 36); an at-function's call and an at-match are skipped (sections 39, 40). Every
 entry has an automatic slot in the fact table, erased where the entry
