@@ -887,6 +887,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
           slot_of x) e.s_place in
         let name = e.s_name in
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Dyn ty ?rule) in
+        pend x;
         let env = placed env x place in
         (i + 1, { env with signature = x :: env.signature; ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
@@ -2314,27 +2315,24 @@ let final_form env ty =
 let final env ty = Option.value (final_form env ty) ~default:Plain
 
 let report_unused env =
-  Hashtbl.iter (fun x y -> Option.iter (fun live -> refer ~live y) (Hashtbl.find_opt referenced x)) stands_for;
-  let top = Hashtbl.create 64 in
-  StringMap.iter (fun _ x -> Hashtbl.replace top x ()) env.scope.named;
   let all = List.of_seq (Hashtbl.to_seq tracked) in
   let order (x, t) (y, u) =
     let (l, c), (l', c') = (Reader.coords t.at, Reader.coords u.at) in
     match (compare (Reader.file_of t.at) (Reader.file_of u.at), Z.compare l l', Z.compare c c') with
     | 0, 0, 0 -> compare x y
     | 0, 0, n | 0, n, _ | n, _, _ -> n in
-  let unused x = not (Hashtbl.mem referenced x) in
+  let unused x = level x = 0 in
   let deletable g = List.for_all (fun (x, t) -> match t.kind with Let (g', _) when g' = g -> unused x | _ -> true) all in
   List.iter (fun (x, t) ->
     let name = tick_name t.binder and renamed = tick_name ("_" ^ t.binder) in
-    if Hashtbl.mem top x || String.starts_with ~prefix:"_" t.binder then ()
+    if lookup env t.binder = Some x || String.starts_with ~prefix:"_" t.binder then ()
     else if unused x then
       match t.kind with
       | Optional | Definition -> warn_in env t.at [] "unused %s; delete it" name
       | Let (g, true) when deletable g -> warn_in env t.at [] "unused %s; delete its `let`" name
       | Let _ | Field -> warn_in env t.at [] "unused %s; write `_` in its place" name
       | Param -> warn_in env t.at [] "unused %s; rename it %s" name renamed
-    else if Hashtbl.find referenced x = false && t.mult <> Erased && not t.erased_scope then
+    else if level x = 1 && t.mult <> Erased && not t.erased_scope then
       match t.kind with
       | Let _ -> warn_in env t.at [] "%s is referenced only in erased positions; declare it `erased`" name
       | Param -> warn_in env t.at [] "%s is referenced only in erased positions; declare it `erased`, or rename it %s" name renamed

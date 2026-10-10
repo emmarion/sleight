@@ -590,22 +590,36 @@ type binder_kind = Let of int * bool | Param | Field | Optional | Definition
 type tracked = { binder : string; at : Reader.loc; kind : binder_kind; mult : mult; erased_scope : bool }
 
 let warn_unused = ref false
+type ref_state = Level of int | Target of id
+
 let tracked : (id, tracked) Hashtbl.t = Hashtbl.create 64
-let stands_for : (id, id) Hashtbl.t = Hashtbl.create 64
-let referenced : (id, bool) Hashtbl.t = Hashtbl.create 64
+let refs : (id, ref_state) Hashtbl.t = Hashtbl.create 64
+
+let level x = match Hashtbl.find_opt refs x with
+  | Some (Level n) -> n
+  | Some (Target y) -> (match Hashtbl.find_opt refs y with Some (Level n) -> n | _ -> 0)
+  | None -> 0
+
+let pend x = if !warn_unused && not (Hashtbl.mem refs x) then Hashtbl.replace refs x (Level 0)
 
 let track env kind x =
   if !warn_unused then
     let e = entry env x in
     match e.name with
-    | Some binder when Reader.placed e.at -> Hashtbl.replace tracked x { binder; at = e.at; kind; mult = e.mult; erased_scope = env.usage_erased }
+    | Some binder when Reader.placed e.at -> Hashtbl.replace tracked x { binder; at = e.at; kind; mult = e.mult; erased_scope = env.usage_erased }; pend x
     | _ -> ()
 
-let stand_for x y = if !warn_unused then Hashtbl.replace stands_for x y
+let stand_for x y = if !warn_unused then (Hashtbl.replace refs y (Level (max (level x) (level y))); Hashtbl.replace refs x (Target y))
 
-let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset stands_for; Hashtbl.reset referenced
+let reset_tracking () = Hashtbl.reset tracked; Hashtbl.reset refs
 
-let refer ?(live = false) x = if !warn_unused then Hashtbl.replace referenced x (live || Hashtbl.find_opt referenced x = Some true)
+let refer ?(live = false) x =
+  if !warn_unused then
+    match Hashtbl.find_opt refs x with
+    | None -> ()
+    | Some s ->
+        let x = match s with Target y -> y | Level _ -> x and want = if live then 2 else 1 in
+        if level x < want then Hashtbl.replace refs x (Level want)
 
 let use env loc ?(sharing = false) ?written mult x =
   refer ~live:(mult <> Erased && not env.usage_erased) x;
