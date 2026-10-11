@@ -1,0 +1,11 @@
+; expect: (MkU)
+(def-fns _ $ (many mk : -> (erased (TyCtor -> Type) T)
+    (many (ValCtor -> (T)) C) (many (ValCtor -> (T)) D)
+    (many (Matchable enum T (many C) (many D)) m))
+  (def-adts $ (U : -> Type) enum (many MkU : -> (U)) (many MkV : -> (U)))
+  (values U MkU MkV (matchable-of U)))
+(let ((erased T) (many C) (many D) (many m)) (mk))
+(open-adt many m)
+(let ((many v)) (C))
+(comptime-match many v (C))
+v

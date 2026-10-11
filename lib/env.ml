@@ -166,10 +166,14 @@ let anonymous env x =
   | Some o when Reader.placed o.at -> marker (if o.meta then 'm' else 's') x o.at
   | _ -> marker (if e.meta then '?' else '_') x e.at
 
-let set_state ?minted env x state =
+let rec set_state ?minted env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
   let minted = Option.value minted ~default:x in
-  { env with entries = IntMap.add x { (entry env x) with state; minted } env.entries; values }
+  let e = entry env x in
+  let env = { env with entries = IntMap.add x { e with state; minted } env.entries; values } in
+  match state with
+  | Const v when e.slot <> x && IntMap.mem e.slot env.entries && (entry env e.slot).state = Dyn -> set_state env e.slot (Const (if e.mult = Erased then Value.VToken else v))
+  | _ -> env
 
 let record_literal row =
   Hashtbl.replace literal_rows (Literal.key row.lit) row;

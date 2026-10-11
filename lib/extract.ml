@@ -469,13 +469,15 @@ let rec show cx env ty =
   | None ->
       let name = Printf.sprintf "show_%d" (List.length !(cx.shows)) and body = ref "" in
       cx.shows := (key, name, body) :: !(cx.shows);
-      let adt_of tid = List.find_opt (fun a -> match a.V.ctors with c :: _ -> (try Elab.tid_of env Reader.nowhere c.cid = tid with _ -> false) | [] -> false) cx.adts in
+      let named tid = try Elab.listed_ctors env Reader.nowhere tid with Env.Error _ -> [] in
+      let adt_of tid = match named tid with (_, ct) :: _ -> List.find_opt (fun a -> a == ct.V.adt) cx.adts | [] -> None in
       (* one arm: the constructor's name over its fields, an erased one printing as `_` and taking no binder
          (ASSUMPTIONS 184). The shared Ffi_core.show_app joins them, so `$` reads the same here as in the
          interpreter rather than being decided again. *)
-      let branch a c =
+      let branch tid a c =
+        match Elab.listed_entry (named tid) c with None -> None | Some cid ->
         try
-          let tele, ret = Elab.ctor_type env Reader.nowhere c.V.cid in
+          let tele, ret = Elab.ctor_type env Reader.nowhere cid in
           let env', fids = Elab.open_tele env tele in
           let env' = Env.merge_opens (Env.unify_force (Env.forcing env') (instantiate (List.rev_map (fun x -> Var x) fids) ret) ty) in
           let rec args i acc = function
@@ -513,8 +515,8 @@ let rec show cx env ty =
              | Some a ->
                  (* the tag where there is one, else the sole non-phantom constructor; a union with several has
                     no way to choose and prints `_` (ASSUMPTIONS 184) *)
-                 let arms = if a.V.tagged then List.filter_map (branch a) a.V.ctors
-                            else match a.V.ctors with [ c ] -> Option.to_list (branch a c) | _ -> [] in
+                 let arms = if a.V.tagged then List.filter_map (branch tid a) a.V.ctors
+                            else match a.V.ctors with [ c ] -> Option.to_list (branch tid a c) | _ -> [] in
                  if arms = [] then "\"_\""
                  else dispatch cx a (List.map (fun (c, _, _) -> c.V.index) arms) "v" arms (Some "\"_\""))
          | _ -> "\"_\""));

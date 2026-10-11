@@ -1231,7 +1231,7 @@
     (let-match many fuel (Succ k) ((Zero) (values memo $ Nil _)))
     (let-match many ctors (Cons _ c rest) ((Nil _) (values memo $ Nil _)))
     (let-match many c (MkCtor cname cid index arity _ _ _ _))
-    (let ((many ctele) (many ret)) $ ctor-type env cid)
+    (let ((many ctele) (many ret)) $ ctor-type env $ listed-entry env ty cid)
     (let ((many envb) (many fids) (erased lock)) $ open-tele ctele env (None _) (None _) (None _) (Nil _) $ BFalse)
     (let ((many (Env) envb2) (many (Bool) live))
       (match many (merge-all $ unify-force (Forcing envb) (instantiate (tvars-rev fids $ Nil _) ret) ty) _
