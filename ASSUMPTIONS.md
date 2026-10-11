@@ -4051,7 +4051,11 @@ silent.
      the second build allocating as many words as the first, which holds
      on the session's reading because both hold the same number of
      `Nat`s and every figure is a small integer; no other figure is
-     corrected. `(Measure (Stop))` reads `minor-words` as the driver
+     corrected. Both builds go through one closure hidden from the
+     optimizer by `Sys.opaque_identity`, its argument hidden too, so
+     that inlining cannot compile them differently: without that, flambda
+     at `-O3` on OCaml 5.5.1 read 2 minor words where the other settings
+     the session tried read 0. `(Measure (Stop))` reads `minor-words` as the driver
      enters `perform`, before the request is decoded, and the rest of
      the figures after it. Measured in the session's scratchpad: an
      extracted program reading `Start`, running a loop that allocates
