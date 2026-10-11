@@ -220,6 +220,10 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
                  m1 -. m0 +. extra; words (fun g -> g.Gc.promoted_words); words (fun g -> g.Gc.major_words -. g.Gc.promoted_words);
                  count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ])
         in
+        (* Start counts the words its throwaway build allocates and adds them to its reading, which is right only
+           if the real build allocates the same words. Hiding the closure and its argument from the optimizer keeps
+           the two calls compiled alike; without it, flambda at -O3 seemed to box a float in one call only, and a
+           Start then Stop read 2 minor words (ASSUMPTIONS 215). *)
         let measure = Sys.opaque_identity (fun extra -> reading (Gc.minor_words ()) extra) in
         if o.is_start c then begin
           let m = Gc.minor_words () in
