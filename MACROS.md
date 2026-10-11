@@ -296,6 +296,6 @@ scope" hint. `(constant-of m x)` makes a handle (section 3), and
 directly. `const-mult` and `const-value` read a handle anywhere, not only
 during an expansion, and an `MMany` handle carries its value into an
 extracted program. The `intern-` forms run only in an expansion, the one
-place a macro world exists. `constant-type` and `const-eq` are not
+place a macro world exists, and intern the literal where they run. `constant-type` and `const-eq` are not
 implemented, and a literal in a macro's arguments still arrives as
 `RawNat`, `RawChar` or `RawStr`.

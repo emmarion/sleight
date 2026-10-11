@@ -58,7 +58,7 @@ let types : (string * ty_spec) list =
     ( "Raw",
       view [ 2; 2; 2; 2; 1; 2; 3; 2 ] (fun adt ->
           let get = function VExt (_, Raw r) -> r | v -> bad "Raw" v in
-          { construct = (fun i args -> VExt (adt, Raw (Ffi_core.raw_of ~unhandle:(fun l -> function VHandle (x, m, v) -> Ffi_core.Handle (l, x, m, Obj.repr v) | VLitHandle (r, _) -> Reader.relocate l r | v -> bad "Const" v) ~text:host ~z ~pos:unpos ~list:unlist ~raw:get (Ffi_core.raw_model i args))));
+          { construct = (fun i args -> VExt (adt, Raw (Ffi_core.raw_of ~unhandle:(fun l -> function VHandle (x, m, v) -> Ffi_core.Handle (l, x, m, Obj.repr v) | v -> bad "Const" v) ~text:host ~z ~pos:unpos ~list:unlist ~raw:get (Ffi_core.raw_model i args))));
             destruct = (fun v -> Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, m, v) -> VHandle (x, m, Obj.obj v)) ~get ~str:(fun s -> text (s, 0, String.length s)) ~nat:(int "Nat") ~pos ~list ~raw:(fun r -> VExt (adt, Raw r)) v)) }) );
     ( "String",
       view [ 0; 2 ] (fun adt ->

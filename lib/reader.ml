@@ -16,7 +16,6 @@ let label w label = if w = "" then label else w ^ ": " ^ label
 let labelled fallback l = label (where fallback l)
 
 let loc = function Atom (l, _) | Handle (l, _, _, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
-let relocate l = function Atom (_, n) -> Atom (l, n) | Handle (_, x, m, v) -> Handle (l, x, m, v) | Wild _ -> Wild l | Nat (_, z) -> Nat (l, z) | Char (_, c) -> Char (l, c) | Str (_, s) -> Str (l, s) | List (_, xs) -> List (l, xs)
 
 let handle_name = ref (fun x -> string_of_int x)
 

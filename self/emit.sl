@@ -859,7 +859,6 @@
       ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
       ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
       ((BExt _ p) (payload-rope env p))
-      ((BLitHandle _ _ _) (RStr "(failwith \"an interned literal's handle outside its expansion\")"))
       ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
       ((BCtorFn _ c) (ctor-fn-rope d c))
       ((BMat _ adt) (matchable-rope adt d))

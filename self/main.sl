@@ -47,8 +47,8 @@
   (failed "usage: slc [--no-prelude] [--no-templates] [--interpret] [--confine-dir dir] [--confine-output-bytes n] [--no-env] [--first-error] [--warnings-as-errors] [--warn-unused] [--no-shape-note] [--hints file] file.sl ... [-- arg ...] > out.ml" w))
 
 (def-fns run-lvl $ (many run-program : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
-  (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
-  (interp-finals env pargs with-env _ (list-rev _ fi) _ hp en (le-refl hs) w))
+  (let ((erased hs) (many h)) (env-heap env))
+  (interp-finals env pargs with-env _ (list-rev _ $ heap-finals _ h) _ h (le-refl hs) w))
 
 (def-fns compile-lvl $ (many compile : (many (List $ Pair (String) $ String) flags) (many (List $ String) pargs) (many (String) help) (many (List $ Pair (String) $ String) srcs) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let ((many prelude)) $ not $ has-flag flags "--no-prelude")

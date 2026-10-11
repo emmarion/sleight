@@ -4028,23 +4028,25 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     the compilers, and is meant not to be observable. The reference holds
     the value in the handle itself, through the reader's tree as well, the
     `Handle` node of `lib/ffi_core.ml` carrying it as an `Obj.t`. `slc`'s
-    handle holds no value, its blocks having no field for one; its
-    compile-time interpreter reads the value from the `Const` table by the
-    handle's id. This session's reading is that the two agree because only
-    a `many` entry gets an `MMany` handle, and nothing seems to mutate a
-    `many` value in place (DESIGN.md section 13). Extracted programs, from
-    either compiler, hold a handle as the triple of its id, its
-    multiplicity and its value, the value being `()` for a handle that is
-    not `MMany`. `const-mult` is given the prelude's three `Mult`
-    constructors as hidden arguments after its handle, so that its
-    evaluation needs no scope. The `intern-` forms mint nothing in the
-    literal table. Their handle holds the literal and the value passed
-    in, and `RawConst` puts the literal itself, at the `RawConst`'s
-    position, into the macro's output. So a misplaced one reads as the
-    literal would ("7 is a literal, not a name") rather than as a
-    handle. A handle from an `intern-` form exists only during the
-    expansion that made it, and neither compiler can write one into an
-    extracted program.
+    handle holds no value; its compile-time interpreter reads it by the
+    handle's id from the entries of the heap it threads (below). This
+    session's reading is that the two agree because only a `many` entry
+    gets an `MMany` handle, and nothing seems to mutate a `many` value in
+    place (DESIGN.md section 13). Extracted programs, from either
+    compiler, hold a handle as the triple of its id, its multiplicity and
+    its value, the value being `()` for a handle that is not `MMany`.
+    `const-mult` is given the prelude's three `Mult` constructors as hidden
+    arguments after its handle, so that its evaluation needs no scope.
+    The `intern-` forms mint the literal's entries where they run, into
+    the program store, and return an ordinary `MMany` handle to its entry,
+    which splices as any handle to a literal does (item 215). In the
+    reference the literal table is program-wide already. In `slc` the
+    macro world carries the `Env`, and the evaluator threads a `Heap`, the
+    store together with the entries and finals that hold its addresses,
+    in place of the bare store, so that an `intern-` form mints into the
+    one store the expansion runs against. A spliced handle to a character
+    literal enters its code's numeral as well, which the character's rule
+    names.
 
 ## The world (section 42)
 

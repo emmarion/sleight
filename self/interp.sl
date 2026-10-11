@@ -10,8 +10,8 @@
 ; ---- Reading a value out: a String or a U8's Nat held under the FFI, the printed form of any value, and the
 ; message of an error block, which the interpreter returns where the reference raises (self/README.md).
 
-(def-fns _ $ (many final-text : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) v) (many (Env) env) (many (Term) ty) -> (many (String) s))
-  (let-match many (named-final _ hp v env) (None _) ((Some _ text) text))
+(def-fns _ $ (many final-text : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (many (Env) env) (many (Term) ty) -> (many (String) s))
+  (let-match many (named-final _ (heap-store _ hp) v env) (None _) ((Some _ text) text))
   (let ((many body) (many app)) (show-at _ hp v 100000 env ty))
   (rope-str (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body))))
 
@@ -78,7 +78,7 @@
 ; ---- The Program walk: each Continue step of the program becomes one of slc's, applying the program's
 ; continuation with self/eval.sl's apply to slc's own world, which a world-do it meets performs.
 
-(def-fns interp-lvl $ (many interp-program : (many (List $ Ctor) pcs) (many (Performer $ World) pf) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (many (Ref Block hs) v) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns interp-lvl $ (many interp-program : (many (List $ Ctor) pcs) (many (Performer $ World) pf) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) v) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many (error-of _ hp v) (None _) ((Some _ m) (runtime-error m w)))
   (let ((erased h1) (many hp1) (erased le1) (many i) (many fields)) (destruct _ hp (pctor pcs "Exit") v))
   (let ((many f0)) (field-at _ fields 0 (widen-ref _ _ le1 v)))
@@ -88,17 +88,16 @@
       (match many (lt-dec n u8-modulus) _
         ((Yes _ _ p) (values w (Exit _ (MkU8 n p))))
         ((No _ _ _) (values w (Exit _ exit-fail))))))
-  (let ((many en1)) (widen-en _ _ le1 en))
   (def-unique io-lvl $ (unique step : (unique (World) u) -> (unique (World) u2 at u) (unique (Program io-lvl) next))
-    (let ((erased h2) (many hp2) (erased le2) (many token)) $ alloc Block _ hp1 $ BToken _)
-    (let ((erased h3) (many hp3) (erased le3) (many vs) (erased pk) (unique (World) u1)) (apply eval-fuel _ hp2 (widen-en _ _ le2 en1) (widen-ref _ _ le2 f0) (Cons _ token $ Nil _) many-one _ pf u))
-    (tail $ interp-program pcs pf _ hp3 (widen-en _ _ le3 $ widen-en _ _ le2 en1) (vals-one _ vs pk) u1))
+    (let ((erased h2) (many hp2) (erased le2) (many token)) $ halloc _ hp1 $ BToken _)
+    (let ((erased h3) (many hp3) (erased le3) (many vs) (erased pk) (unique (World) u1)) (apply eval-fuel _ hp2 (widen-ref _ _ le2 f0) (Cons _ token $ Nil _) many-one _ pf u))
+    (tail $ interp-program pcs pf _ hp3 (vals-one _ vs pk) u1))
   (values w (Continue _ step)))
 
 ; ---- The finals in order, each as lib/program.ml's consume has it; the finals stay at the history they were
 ; recorded at and each is widened to the current one as it is reached, so the walk is structural.
 
-(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) en) (erased (Suffix Block hs hs0) le) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
+(def-fns finals-lvl $ (many interp-finals : (many (Env) env) (many (List $ String) pargs) (many (Bool) with-env) (erased (Hist Block) hs0) (subterm many (List $ Pair (Ref Block hs0) $ Term) fi) (erased (Hist Block) hs) (many (Heap hs) hp) (erased (Suffix Block hs hs0) le) (unique (World) w) -> (unique (World) w2 at w) (unique (Program io-lvl) p))
   (let-match many fi (Cons _ f rest) ((Nil _) (values w (Exit _ exit-ok))))
   (let-match many f (MkPair _ _ v0 ty))
   (let ((many v)) (widen-ref _ _ le v0))
@@ -108,27 +107,25 @@
       (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Stopwatch" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Request" $ Nil _)
       (let ((unique w1) (many base)) (world-do _ w (Measure (Stop))))
       (let ((many rq)) $ match many (prelude-adt env "Request") (((List $ Ctor) _)) ((Some _ a) (adt-ctors a)) ((None _) (Nil _)))
-      (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Store Block h) hq) (many (Ref Block h) req) (unique (World) wo) ->
-          (erased (Hist Block) h2) (many (Store Block h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
+      (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Heap h) hq) (many (Ref Block h) req) (unique (World) wo) ->
+          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
         (perform-request pcs rq pargs with-env base _ hq req wo))
-      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Store Block h) hq) (many (Sp) prim) (many (List $ Ref Block h) args) (unique (World) wo) ->
-          (erased (Hist Block) h2) (many (Store Block h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
-        (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ alloc Block _ hq $ BError _ $ no-macro-world prim)
+      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Heap h) hq) (many (Sp) prim) (many (List $ Ref Block h) args) (unique (World) wo) ->
+          (erased (Hist Block) h2) (many (Heap h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
+        (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ halloc _ hq $ BError _ $ no-macro-world prim)
         (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
-      (tail $ interp-program pcs (MkPerformer (World) perform world-prim) _ hp en v w1))
-    ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp en le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
+      (tail $ interp-program pcs (MkPerformer (World) perform world-prim) _ hp v w1))
+    ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
     ((FThunk t)
-      (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) u1)) (apply eval-fuel _ hp en v (Nil _) many-one _ compile-time u))
-      (let ((many en1)) (widen-en _ _ le1 en))
+      (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) u1)) (apply eval-fuel _ hp v (Nil _) many-one _ compile-time u))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (error-of _ hp1 r) (None _) ((Some _ m) (runtime-error m w)))
-      (tail $ interp-finals env pargs with-env _ rest _ hp1 en1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
+      (tail $ interp-finals env pargs with-env _ rest _ hp1 (hist-le-trans _ _ _ le le1) $ say-to (BFalse) (str-cat (final-text _ hp1 r env t) "\n") w))
     ((FMain)
       (let ((unique w1) (many input)) (world-do _ w (ReadRemaining)))
       (let ((erased h1) (many hp1) (erased le1) (many s)) (alloc-ext _ hp (PStr input)))
-      (let ((erased h2) (many hp2) (erased le2) (many vs) (erased pk) (unique (Unit) u1)) (apply eval-fuel _ hp1 (widen-en _ _ le1 en) (widen-ref _ _ le1 v) (Cons _ s (Nil _)) many-one _ compile-time u))
+      (let ((erased h2) (many hp2) (erased le2) (many vs) (erased pk) (unique (Unit) u1)) (apply eval-fuel _ hp1 (widen-ref _ _ le1 v) (Cons _ s (Nil _)) many-one _ compile-time u))
       (let ((erased le12)) (hist-le-trans _ _ _ le1 le2))
-      (let ((many en2)) (widen-en _ _ le12 en))
       (let ((many r)) (vals-one _ vs pk))
       (let-match many (error-of _ hp2 r) (None _) ((Some _ m) (runtime-error m w1)))
-      (tail $ interp-finals env pargs with-env _ rest _ hp2 en2 (hist-le-trans _ _ _ le le12) $ say-to (BFalse) (heap-str _ hp2 r) w1))))
+      (tail $ interp-finals env pargs with-env _ rest _ hp2 (hist-le-trans _ _ _ le le12) $ say-to (BFalse) (heap-str _ hp2 r) w1))))

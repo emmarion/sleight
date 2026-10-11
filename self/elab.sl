@@ -863,17 +863,6 @@
     ((BTrue) (env-error env $ say env $ str-cat3 what " written `" $ str-cat (mult-name m) "` in an erased position; write `erased` here"))
     ((BFalse) env)))
 
-; ---- Literals (ASSUMPTIONS 51-53, 60): numerals, characters and strings, interned per program
-
-(def-fns _ $ (many prelude-id : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Nat) x))
-  (match many (lookup (env-set-scope env $ env-prelude env) $ NSrc name) _
-    ((None _) (values (env-error env $ str-cat "unbound name " $ tick name) $ Zero))
-    ((Some _ x) (values env x))))
-
-(def-fns _ $ (many prelude-type : (many (Env) env) (many (String) name) -> (many (Env) r) (many (Term) t))
-  (let ((many env2) (many x)) $ prelude-id env name)
-  (values env2 $ TApp (TVar x) $ Nil _))
-
 ; Whether [ty] applies the prelude's [name] type constructor, found in the prelude's scope however the program
 ; shadows the name, as lib/elab.ml's nullary finds it.
 (def-fns _ $ (many prelude-nullary : (many (Env) env) (many (Term) ty) (many (String) name) -> (many (Bool) b))
@@ -910,126 +899,10 @@
   (let ((many env3) (many rest2)) $ notail $ returns-produced _ env2 demand callee mrest erest rrest)
   (values env3 $ Cons _ r2 rest2))
 
-(let ((many two-dec)) (lt-dec (Zero) 2))
-(comptime-match many two-dec (Yes tda2 tdb2 two-positive))
-(let ((many two-dec2)) (lt-dec (Succ (Zero)) 2))
-(comptime-match many two-dec2 (Yes tea2 teb2 two-above-one))
-
-; The bijective spelling by halving: n is B1 of the spelling of q when n - 1 is 2q, B2 of it when 2q + 1.
-(def-fns _ $ (many bin-of-nat : (subterm many (Nat) n) -> (many (Bin) b))
-  (let-match many n (Succ n1) ((Zero) (BZ)))
-  (let-match many n1 (Succ n2) ((Zero) (B1 $ BZ)))
-  (let ((many q) (many r) (erased m) (erased mm) (erased a) (erased p)) (divmod n1 2 two-positive))
-  (let ((erased lt)) (lt-weaken q n1 $ divmod-lt n2 2 q r m mm a two-above-one))
-  (let ((many b)) (notail $ bin-of-nat (subterm (lt-subterm q n lt)) q))
-  (match many r _ ((Zero) (B1 b)) ((Succ _) (B2 b))))
-
-(def-fns _ $ (many bin-ctor : (many (Bin) b) -> (many (String) name))
-  (match many b _ ((BZ) "BZ") ((B1 _) "B1") ((B2 _) "B2")))
-
-(def-fns _ $ (many bin-term : (subterm many (Bin) b) (many (Env) env) -> (many (Env) r) (many (Term) t))
-  (let ((many env2) (many c)) $ prelude-id env $ bin-ctor b)
-  (let ((many (Env) env3) (many (List $ Term) args))
-    (match many b _
-      ((BZ) (values env2 $ Nil _))
-      ((B1 b1) (let ((many env3) (many t)) $ notail $ bin-term b1 env2) (values env3 $ Cons _ t $ Nil _))
-      ((B2 b1) (let ((many env3) (many t)) $ notail $ bin-term b1 env2) (values env3 $ Cons _ t $ Nil _))))
-  (values env3 $ TApp (TVar c) args))
-
-; The bijective base-2 spelling of a number as a term over the prelude's Bin (ASSUMPTIONS 50).
-(def-fns _ $ (many nat-bin-term : (many (Nat) n) (many (Env) env) -> (many (Env) r) (many (Term) t))
-  (bin-term (bin-of-nat n) env))
-
-; ---- The source spelling of a literal, which a printed Nat, Char or String reads back from
-; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
-; the language; an emitted printer calls Ffi_core (emit.sl).
-
-(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) -> (many (Env) r))
-  (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)
-  (env-push-lit env2 x proof spelling facts))
-
-(def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
-  (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
-
-; Interns a numeral: a Const Nat entry outside the scope, found by its text, and an erased Numeral proof
-; relating it to its spelling (ASSUMPTIONS 51).
-(def-fns _ $ (many intern-numeral : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof))
-  (let ((many n)) $ parse-nat key 0)
-  (let ((many env1) (many nat-ty)) $ prelude-type env "Nat")
-  (let ((many env2) (many x)) $ bind-lit env1 (Many) (BExt _ $ PNat n) nat-ty (None _))
-  (let ((many env2b) (many numeral)) $ prelude-id env2 "Numeral")
-  (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
-  (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
-  (let ((many env3) (many p)) $ bind-lit env2c (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 key x (Some _ p) key $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) x p))
-
-(def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
-  (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
-  (let-match many p (MkLitEntry y proof _ _ _))
-  (match many (nat-cmp x y) _ ((CEq _ _ _) proof) (else (tail $ lit-proof rest x))))
-
-(def-fns _ $ (many intern-numeral-once : (many (Env) env) (many (String) key) -> (many (Env) r) (many (Nat) x) (many (Nat) proof))
-  (let-match many (lit-lookup env key) (Some _ x) ((None _) (intern-numeral env key)))
-  (match many (lit-proof (env-lits env) x) _
-    ((Some _ p) (values env x p))
-    ((None _) (values env x $ Zero))))
-
-(def-fns _ $ (many prelude-missing : (many (Env) env) (many (String) what) (many (String) ty) -> (many (Maybe $ String) r))
-  (match many (lookup (env-set-scope env $ env-prelude env) $ NSrc ty) _
-    ((Some _ _) (None _))
-    ((None _) (Some _ $ str-cat3 what " needs the prelude's " $ str-cat (tick ty) ", which `--no-prelude` leaves out"))))
-
-(def-fns _ $ (many char-key : (many (Nat) code) -> (many (String) k))
-  (rope-str $ lit-char-rope code))
-
-(def-fns _ $ (many intern-nat-lit : (many (Env) env) (many (Nat) n) -> (many (Env) r))
-  (let-match many (lit-lookup env $ nat-str n) (None _) ((Some _ _) env))
-  (let-match many (prelude-missing env "a numeral" "Nat") (None _) ((Some _ msg) (env-error env msg)))
-  (let ((many env2) (many x) (many p)) $ intern-numeral env $ nat-str n)
-  env2)
-
-; Interns a character literal (ASSUMPTIONS 52): (MkChar (MkU8 n p)) over its code's numeral, transparent down
-; to the opaque n.
-(def-fns _ $ (many intern-char-lit : (many (Env) env) (many (Nat) code) -> (many (Env) r))
-  (let-match many (lit-lookup env $ char-key code) (None _) ((Some _ _) env))
-  (let-match many (prelude-missing env "a character literal" "Char") (None _) ((Some _ msg) (env-error env msg)))
-  (let ((many env2) (many num) (many np)) $ intern-numeral-once env $ nat-str code)
-  (let ((many env2b) (many lt-id)) $ prelude-id env2 "Lt")
-  (let ((many env2c) (many modulus)) $ prelude-id env2b "u8-modulus")
-  (let ((many lt-ty)) $ TApp (TVar lt-id) $ Cons _ (TVar num) $ Cons _ (TVar modulus) $ Nil _)
-  (let ((many env3) (many lt)) $ bind-lit env2c (Erased) (BToken _) lt-ty (None _))
-  (let ((many env3b) (many mk-char)) $ prelude-id env3 "MkChar")
-  (let ((many env3c) (many mk-u8)) $ prelude-id env3b "MkU8")
-  (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
-  (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
-  (let ((many env4) (many x)) $ bind-lit env3d (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
-  (record-literal env4 (char-key code) x (Some _ np) (rope-str $ lit-char-rope code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _))
-
-; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
-(def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
-  (rope-str $ RCat (RChar #\x22) $ RStr s))
-
-(def-fns _ $ (many intern-string-lit : (many (Env) env) (many (String) key) -> (many (Env) r))
-  (let-match many (lit-lookup env key) (None _) ((Some _ _) env))
-  (let-match many (prelude-missing env "a string literal" "String") (None _) ((Some _ msg) (env-error env msg)))
-  (let ((many body)) $ match many key (((String) _)) ((SNil) (SNil)) ((SCons _ rest) rest))
-  (let ((many env1) (many str-ty)) $ prelude-type env "String")
-  (let ((many env2) (many x)) $ bind-lit env1 (Many) (BExt _ $ PStr body) str-ty (None _))
-  (record-literal env2 key x (None _) (rope-str $ lit-string-rope body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _))
-
-(def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ String) k))
-  (match many raw _
-    ((RNat _ n) (Some _ $ nat-str n))
-    ((RChr _ c) (Some _ $ char-key c))
-    ((RString _ s) (Some _ $ string-key s))
-    (else (None _))))
-
 (def-fns _ $ (many intern-raw : (many (Env) env) (many (Syn) raw) -> (many (Env) r))
-  (match many raw _
-    ((RNat _ n) (intern-nat-lit env n))
-    ((RChr _ c) (intern-char-lit env c))
-    ((RString _ s) (intern-string-lit env $ string-key s))
-    (else env)))
+  (let ((erased hs) (many h)) $ env-heap env)
+  (let ((many env2) (erased hs2) (many h2) (erased sf)) $ intern-lit env _ h raw)
+  (env-with-heap env2 _ h2))
 
 (def-fns _ $ (many lit-entry : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Nat) x))
   (let ((many env2)) $ intern-raw env raw)
@@ -4467,7 +4340,7 @@
 (def-fns _
   ; The rope is the rendering, and the Bool says it is an application body still missing its parens, which is
   ; what lets a caller write `$` before a last one instead (ASSUMPTIONS 184).
-  ((many show-at : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) r) (subterm many (Nat) depth)
+  ((many show-at : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) r) (subterm many (Nat) depth)
       (many (Env) env) (many (Term) ty0) -> (many (Rope) rope) (many (Bool) app))
     (let-match many depth (Succ dd) ((Zero) (values (RStr "_") (BFalse))))
     (let ((many ty)) $ canon-env env ty0)
@@ -4475,7 +4348,7 @@
     (match many ty (((Rope) _) ((Bool) b2))
       ((TCell _ _) (values (RStr "_") (BFalse)))
       (else
-        (let ((erased rs) (many blk) (erased sf)) $ store-read Block hs hp r)
+        (let ((erased rs) (many blk) (erased sf)) $ hread hs hp r)
         (let-match many (lit-rope _ env ty blk) (None _) ((Some _ text) (values text (BFalse))))
         (let-match many (type-adt env ty) (Some _ adt) ((None _) (values (RStr "_") (BFalse))))
         (let ((erased hs2) (many hp2) (erased le) (many read)) $ dispatch _ hp (adt-ext adt) (adt-tagged adt) r)
@@ -4495,13 +4368,13 @@
 
   ((many show-const : (subterm many (Nat) depth) (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) rope) (many (Bool) app))
     (let-match many depth (Succ dd) ((Zero) (values (RStr "_") (BFalse))))
-    (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-    (let-match many (const-ref _ en x) (Some _ v) ((None _) (values (RStr "_") (BFalse))))
+    (let ((erased hs) (many hp)) $ env-heap env)
+    (let-match many (const-ref _ (heap-entries _ hp) x) (Some _ v) ((None _) (values (RStr "_") (BFalse))))
     (tail $ show-at _ hp v dd env ty))
 
   ; Walks the declared fields, an erased one taking no word from the destructure; a field that is an application
   ; takes its own parens, or `$` where it is the last (DESIGN 2, ASSUMPTIONS 184).
-  ((many show-fields : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (Nat) depth)
+  ((many show-fields : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (Nat) depth)
       (subterm many (List $ Maybe $ Term) tys) (many (List $ Entry) tele) (many (List $ Ref Block hs) fs) (many (Env) env) (many (List $ FieldWord hs) words) -> (many (List $ Rope) rs))
     (let-match many tys (Cons _ mt rest) ((Nil _) (Nil _)))
     (let ((many (Maybe $ Term) place) (many (List $ Entry) trest)) $ match many tele _ ((Nil _) (values (None _) $ Nil _)) ((Cons _ e er) (values (entry-place e) er)))
@@ -4509,7 +4382,7 @@
     (let ((many shown)) $ notail $ shown-field _ hp depth rest mt fw env)
     (Cons _ shown $ notail $ show-fields _ hp depth rest trest more env (Cons _ fw words)))
 
-  ((many shown-field : (erased (Hist Block) hs) (many (Store Block hs) hp) (subterm many (Nat) depth) (subterm many (List $ Maybe $ Term) rest) (many (Maybe $ Term) mt) (many (FieldWord hs) fw) (many (Env) env) -> (many (Rope) r))
+  ((many shown-field : (erased (Hist Block) hs) (many (Heap hs) hp) (subterm many (Nat) depth) (subterm many (List $ Maybe $ Term) rest) (many (Maybe $ Term) mt) (many (FieldWord hs) fw) (many (Env) env) -> (many (Rope) r))
     (let-match many mt (Some _ t) ((None _) (RStr "_")))
     (let-match many depth (Succ dd) ((Zero) (RStr "_")))
     (let ((many (Rope) body) (many (Bool) app))
@@ -4523,10 +4396,8 @@
       ((Cons _ _ _) (rwrap "(" body ")")))))
 
 (def-fns _ $ (many show-typed : (many (Env) env) (many (Term) ty) (many (Nat) x) -> (many (Rope) r))
-  (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "?")))
-  (let-match many info (MkEInfo _ _ _ s _ _ _ _))
-  (let-match many s (SConst _ v _) ((SDyn _) (RStr "?")))
+  (let ((erased hs) (many hp)) $ env-heap env)
+  (let-match many (const-ref _ (heap-entries _ hp) x) (Some _ v) ((None _) (RStr "?")))
   (let ((many body) (many app)) $ show-at _ hp v 100000 env ty)
   (match many app (((Rope) _)) ((BTrue) (rwrap "(" body ")")) ((BFalse) body)))
 

@@ -260,7 +260,6 @@ and plain cx = function
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
   | V.VHandle (x, m, v) -> Printf.sprintf "(Obj.repr (%s, %s))" (handle x m) (value cx v)
-  | V.VLitHandle _ -> assert false
 
 and closure cx cl =
   match List.assq_opt cl !(cx.closures) with
@@ -391,7 +390,7 @@ let collect env items =
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
     | V.VHandle (_, _, v) -> value v
-    | V.VFn _ | V.VToken | V.VLitHandle _ -> ())
+    | V.VFn _ | V.VToken -> ())
   and handles = function Ffi_core.Handle (_, _, _, v) -> value (Obj.obj v) | List (_, rs) -> List.iter handles rs | _ -> ()
   and code c =
     (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());

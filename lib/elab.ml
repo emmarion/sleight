@@ -475,9 +475,11 @@ let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
 let implemented = [ Sp.Gensym; Sp.ConstMult; Sp.ConstValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
-  | Sp.InternNat, [ _; v ] -> [ V.VLitHandle (Nat (Reader.nowhere, nat_z env Reader.nowhere v), v) ]
-  | Sp.InternChar, [ _; v ] -> [ V.VLitHandle (Char (Reader.nowhere, nat_byte env Reader.nowhere v), v) ]
-  | Sp.InternString, [ _; v ] -> [ V.VLitHandle (Str (Reader.nowhere, str_host env Reader.nowhere v), v) ]
+  | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
+      let lit = match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v) in
+      ignore (intern env Reader.nowhere lit);
+      let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
+      [ V.VHandle (x, Many, Hashtbl.find V.literal_values x) ]
   | p, _ -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))
 
 let rec macro_of env raw =
@@ -499,13 +501,13 @@ let rec raw_value env r =
 
 let rec value_raw env l = function
   | V.VExt (_, V.Raw r) -> r
-  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, m, v) -> Handle (l, x, m, Obj.repr v) | V.VLitHandle (r, _) -> Reader.relocate l r | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
+  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, m, v) -> Handle (l, x, m, Obj.repr v) | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
 
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
   | Atom (_, n), _ -> (env, var env l n)
-  | Handle (_, x, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> enter env row | None -> env), x)
+  | Handle (_, x, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> intern env l row.lit | None -> env), x)
   | _, Some lit -> let env = intern env l lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))

@@ -51,7 +51,7 @@ let rec eval env code =
   | CWorldDo c -> [ !perform (eval1 env c) ]
   | CPrim (p, cs) -> (
       match p, List.map (eval1 env) cs with
-      | Special.ConstValue, [ (VHandle (_, _, v) | VLitHandle (_, v)) ] -> [ v ]
+      | Special.ConstValue, [ VHandle (_, _, v) ] -> [ v ]
       | Special.ConstMult, [ h; e; m; u ] -> [ (match h with VHandle (_, Erased, _) -> e | VHandle (_, Unique, _) -> u | _ -> m) ]
       | p, vs -> !prim p vs)
   | CAbsurd -> raise (Runtime "absurd code reached")

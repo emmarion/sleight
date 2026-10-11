@@ -1,5 +1,5 @@
 ; needs: macro_lib
-; error: 7 is a literal, not a name
+; error: a handle to 7 is not a name
 (def-fns _ $ (many bind-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((unique mw1) (many h)) (intern-nat mw 7))

@@ -532,7 +532,6 @@
     (many BMat : (erased Type R) (many (Adt) adt) -> (Block R))
     (many BGroup : (erased Type R) (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (Group gids ctx) g) (many (Frames R ctx) env) -> (Block R))
     (many BFn : (erased Type R) (many R group) (many (Nat) member) (many (Nat) id) -> (Block R))
-    (many BLitHandle : (erased Type R) (many (Syn) lit) (many R v) -> (Block R))
     (many BToken : (erased Type R) -> (Block R))
     (many BError : (erased Type R) (many (String) msg) -> (Block R)))
   ; [ctx]: the frames in scope, innermost first; a group's frame holds its block's address, a member being
@@ -649,9 +648,6 @@
     ((BFn _ g i id)
       (let ((erased g2) (erased pg)) (ref-widen _ b c le g))
       (values (BFn _ g2 i id) (coercible-ctor (Shared) BFn (Ref Block b) (Ref Block c) pg (coercible-refl (Shared) i) (coercible-refl (Shared) id))))
-    ((BLitHandle _ s v)
-      (let ((erased v2) (erased pv)) (ref-widen _ b c le v))
-      (values (BLitHandle _ s v2) (coercible-ctor (Shared) BLitHandle (Ref Block b) (Ref Block c) (coercible-refl (Shared) s) pv)))
     ((BToken _) (values (BToken _) (coercible-ctor (Shared) BToken (Ref Block b) (Ref Block c))))
     ((BError _ m) (values (BError _ m) (coercible-ctor (Shared) BError (Ref Block b) (Ref Block c) (coercible-refl (Shared) m))))))
 
@@ -2338,18 +2334,66 @@
   (let ((erased fi2) (erased pf)) (finals-widen hl hl2 le fi))
   (values (coerce en pe) (coerce fi pf)))
 
+; The store with the entries and finals that hold its addresses, threaded as one.
+(def-adts $ (Heap : ((Hist Block) hl) -> Type)
+  enum
+  (many MkHeap : (erased (Hist Block) hl) (many (Store Block hl) st) (many (IdMap $ EInfo hl) en) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (Heap hl)))
+
+(def-fns _ $ (many env-heap : (many (Env) e) -> (erased (Hist Block) hl) (many (Heap hl) h))
+  (let ((erased hl) (many hp) (many en) (many fi)) $ env-store e)
+  (values hl $ MkHeap _ hp en fi))
+
+(def-fns _ $ (many env-with-heap : (many (Env) e) (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Env) r))
+  (match many h _ ((MkHeap _ hp en fi) (env-with-store e _ hp en fi))))
+
+(def-fns _ $ (many heap-store : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Store Block hl) st))
+  (match many h _ ((MkHeap _ st _ _) st)))
+
+(def-fns _ $ (many heap-entries : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (IdMap $ EInfo hl) en))
+  (match many h _ ((MkHeap _ _ en _) en)))
+
+(def-fns _ $ (many heap-finals : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (List $ Pair (Ref Block hl) $ Term) fi))
+  (match many h _ ((MkHeap _ _ _ fi) fi)))
+
+(def-fns _ $ (many heap-with-entries : (erased (Hist Block) hl) (many (Heap hl) h) (many (IdMap $ EInfo hl) en) -> (many (Heap hl) r))
+  (match many h _ ((MkHeap _ st _ fi) (MkHeap _ st en fi))))
+
+(def-fns _ $ (many heap-with-finals : (erased (Hist Block) hl) (many (Heap hl) h) (many (List $ Pair (Ref Block hl) $ Term) fi) -> (many (Heap hl) r))
+  (match many h _ ((MkHeap _ st en _) (MkHeap _ st en fi))))
+
+(def-fns _ $ (many halloc : (erased (Hist Block) hl) (many (Heap hl) h) (many (Block (Ref Block hl)) b) ->
+    (erased (Hist Block) hl2) (many (Heap hl2) h2) (erased (Suffix Block hl2 hl) sf) (many (Ref Block hl2) a))
+  (let-match many h (MkHeap _ st en fi))
+  (let ((erased hl2) (many st2) (erased sf) (many a)) $ alloc Block _ st b)
+  (let ((many en2) (many fi2)) $ store-grow _ _ sf en fi)
+  (values hl2 (MkHeap _ st2 en2 fi2) sf a))
+
+(def-fns _ $ (many hread : (erased (Hist Block) hl) (many (Heap hl) h) (many (Ref Block hl) r) ->
+    (erased (Hist Block) s) (many (Block (Ref Block s)) body) (erased (Suffix Block hl s) sf))
+  (store-read Block _ (heap-store _ h) r))
+
+(def-fns _ $ (many hwrite : (erased (Hist Block) hl) (many (Heap hl) h) (many (Ref Block hl) r) (many (Block (Ref Block hl)) b) -> (many (Heap hl) h2))
+  (match many h _ ((MkHeap _ st en fi) (MkHeap _ (store-write Block _ st r b) en fi))))
+
+(def-fns _ $ (many hsize : (erased (Hist Block) hl) (many (Heap hl) h) -> (many (Nat) n))
+  (store-size Block _ $ heap-store _ h))
+
 (def-fns _ $ (many entries-set-state : (erased (Hist Block) hl) (many (IdMap $ EInfo hl) en) (many (Nat) x) (many (State hl) st) -> (many (IdMap $ EInfo hl) r))
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _)
     ((Miss _ _ _ _) (idmap-set _ x (MkEInfo _ (None _) (Many) st (BFalse) (Some _ x) (BFalse) (None _)) en)))
   (match many info _ ((MkEInfo _ n m _ mi io me site) (idmap-set _ x (MkEInfo _ n m st mi io me site) en))))
 
 ; A closed block, one holding no reference, allocated as the value of [x]: a descriptor, a payload, the token.
-(def-fns _ $ (many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r))
-  (let ((erased hl) (many hp) (many en) (many fi)) $ env-store e)
+(def-fns _ $ (many heap-set-closed : (erased (Hist Block) hl) (many (Heap hl) h) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) ->
+    (erased (Hist Block) hl2) (many (Heap hl2) h2) (erased (Suffix Block hl2 hl) sf))
   (let ((erased wb0) (erased pb0)) (block-widen _ _ (empty-suffix _ hl) b))
-  (let ((erased hl2) (many hp2) (erased sf) (many a)) $ alloc Block _ hp (coerce b pb0))
-  (let ((many en2) (many fi2)) $ store-grow _ _ sf en fi)
-  (env-with-store e _ hp2 (entries-set-state _ en2 x $ SConst _ a x) fi2))
+  (let ((erased hl2) (many h2) (erased sf) (many a)) $ halloc _ h (coerce b pb0))
+  (values hl2 (heap-with-entries _ h2 $ entries-set-state _ (heap-entries _ h2) x $ SConst _ a x) sf))
+
+(def-fns _ $ (many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r))
+  (let ((erased hl) (many h)) $ env-heap e)
+  (let ((erased hl2) (many h2) (erased sf)) $ heap-set-closed _ h x b)
+  (env-with-heap e _ h2))
 
 (def-fns _ $ (many env-scope : (many (Env) e) -> (many (Scope) r))
   (match many e _ ((MkEnv _ _ sc _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) sc)))
@@ -3210,11 +3254,11 @@
   (let-match many in-rule (None _) ((Some _ t) (Some _ t)))
   (match many (has-meta-env env ty) _ ((BTrue) (Some _ ty)) ((BFalse) (None _))))
 
-(def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
-    (many (Env) r) (many (Nat) x))
+(def-fns _ $ (many bind-entry : (many (Env) env) (erased (Hist Block) hl) (many (IdMap $ EInfo hl) en) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+    (many (Env) r) (many (IdMap $ EInfo hl) en2) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
-  (let-match many envs (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv sts cl wa tk lt lo pr us hn ex))
+  (let-match many envs (MkEnv _ hp sc en0 _ _ fr tb rp ob li fi lv sts cl wa tk lt lo pr us hn ex))
   (let ((many x) (erased ltp)) (values (Succ fr) (lt-succ fr)))
   (let ((many (Scope) sc2))
     (match many (or meta literal) _
@@ -3230,7 +3274,13 @@
   ; every entry, erased or a meta included, is minted with its automatic slot, the next id (section 35)
   (let ((erased (Nat) nf3) (erased (Facts nf3) ff3) (many (Table nf3 ff3 (Succ x)) tb3)) $ table-insert _ _ _ tb2 (Succ x) (lt-succ x) slot-term)
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
-  (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa tk lt lo pr us hn ex) x))
+  (values (MkEnv _ hp sc2 en0 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa tk lt lo pr us hn ex) en2 x))
+
+(def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+    (many (Env) r) (many (Nat) x))
+  (let ((erased hl) (many h)) $ env-heap env)
+  (let ((many env2) (many en2) (many x)) $ bind-entry env _ (heap-entries _ h) meta holes literal name site written mult ty rule objid)
+  (values (env-with-heap env2 _ $ heap-with-entries _ h en2) x))
 
 (def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
@@ -3247,9 +3297,11 @@
     (many (Env) r) (many (Nat) x))
   (bind-closed env name site written mult (BToken _) ty rule objid))
 
-(def-fns _ $ (many bind-lit : (many (Env) env) (many (Multiplicity) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r) (many (Nat) x))
-  (let ((many env2) (many x)) $ bind-as-raw env (BFalse) (BFalse) (BTrue) (None _) (None _) (BFalse) mult ty rule delegate-id)
-  (values (set-state-closed env2 x b) x))
+(def-fns _ $ (many bind-lit : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (Multiplicity) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) ->
+    (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) x))
+  (let ((many env2) (many en2) (many x)) $ bind-entry env _ (heap-entries _ h) (BFalse) (BFalse) (BTrue) (None _) (None _) (BFalse) mult ty rule delegate-id)
+  (let ((erased hs2) (many h2) (erased sf)) $ heap-set-closed _ (heap-with-entries _ h en2) x b)
+  (values env2 hs2 h2 sf x))
 
 (def-fns _ $ (many bind-erased-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
