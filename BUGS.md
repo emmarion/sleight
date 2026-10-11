@@ -102,3 +102,19 @@ is a design decision. Remove an entry when it is fixed.
     `self/bootstrap.sh` compares each side's whole stderr, warnings
     included, so one that did would fail there. Which order is wanted
     is not decided here.
+
+20. **A run-position call's result entries stay `Dyn`.** At run position
+    every entry of the table is meant to be `Const` (the owner's
+    statement in chat). DESIGN.md needs to change too, as the owner
+    said: section 29 makes `Const` only the names a run-position
+    statement introduces. The reference leaves the anonymous entries a call
+    returns `Dyn`, and the `let` binders that take the results alias to
+    them as the older atoms, so a `Const` binder canonicalizes to a `Dyn`
+    entry. Reproduced with `(let ((many len) (erased lp)) (two 5))` for
+    `two : (many (Nat) a) -> (many (Nat) q) (erased (Eq (Nat) q q) p)`:
+    `dump-context` shows `len` at the slot of an anonymous entry minted
+    at the call, and `lp : (Eq (Nat) len len)` names it; the prelude's
+    `u8-modulus`, `u62-modulus` and `lt-dec` bindings show the same.
+    Found with a scratch probe of the reference only; `slc`, and whether
+    matches, `coerce`s or arguments bound first do the same, were not
+    checked.

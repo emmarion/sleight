@@ -34,9 +34,11 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
 - `Const`: Decided that it is opaque and not an ADT, like `Slot`: no
   constructors, no `Matchable`, not erased by kind. A handle
   `(Const m T t)` denotes `t`, held at multiplicity `m`. Decided that its
-  run-time value may be a term rather than an entry id, and that an `MMany`
-  handle carries the value it denotes; proposed that the rest is a closed
-  term over run-position entries.
+  run-time value may be a term rather than an entry id, that an `MMany`
+  handle carries the value it denotes, and that a handle denotes a term.
+  A session found, in the reference over the tests, that a `Const`'s
+  minted type mentions only entries bound at run position, some of them
+  `Dyn` (BUGS.md 20); nothing has shown that it always holds.
 - `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque
   (`def-opaque`, INTERNALS.md section 1), declared in the prelude. It is a
   handle on the elaborator's program store (section 4), passed `unique`
@@ -102,7 +104,7 @@ gensym case needs.
 (constant-of m x)  : (many (Const m' T t) h)
     ; x a Const entry; T its minted type; t its minted is; m erased: any entry;
     ; many: x declared many; unique: x declared unique; m' the matching Mult
-(constant-type c)  : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+(const-type c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
                      (many (Const (MErased) Type T) h)
 (const-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
                      (many m is r)
@@ -115,12 +117,17 @@ is no `const-value` for erased handles (it would only rename the handle's own
 erased index) and none for unique handles (a macro's read would happen
 outside the elaborator's use accounting, possibly after the value was
 consumed and mutated in place). A `constant-slot` form was considered and
-dropped.
+dropped. Decided: `const-type` does not canonicalize the type it
+returns; `const-eq` does, where it compares. Only `const-eq` and the
+splicing of a `RawConst` read the term a handle denotes, and both happen
+during an expansion, so an extracted program need not hold it.
 
 ### The macro world
 
 ```scheme
-(const-eq mw p q)     : (unique (MacroWorld) mw) (many (Const ma A a) p) (many (Const mb B b) q) ->
+(const-eq ma A a mb B b mw p q) : (erased (Mult) ma) (erased Type A) (erased A a)
+                        (erased (Mult) mb) (erased Type B) (erased B b)
+                        (unique (MacroWorld) mw) (many (Const ma A a) p) (many (Const mb B b) q) ->
                         (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
 (gensym mw s)         : (unique (MacroWorld) mw) (many (String) s) ->
                         (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
@@ -139,9 +146,15 @@ dropped.
     ; subdirectory, of at least one of the program's source files; any other path answers Fail
 ```
 
-- `const-eq`: Decided. Proposed: it answers from run-position facts only,
-  never branch-forced ones, so that a `Just` stays true wherever the
-  macro's output goes and a call expands the same way in every branch.
+- `const-eq`: Decided, with its erased parameters written out as `def-prim`
+  needs. Decided: it answers `Just` exactly when the checker at run level,
+  given the current table, would consider the two handles' terms
+  equivalent: the facts are those of the innermost run position enclosing
+  the call, never branch-forced ones, so that a `Just` stays true wherever
+  the macro's output goes and a call expands the same way in every branch.
+  A session's reading is that this has `const-eq` enter the facts of every
+  literal the two terms mention, as the checker does where a literal is
+  written.
 - `gensym`, `gensym-unique`: Decided. Both are constructors of `Special`
   whose signatures the prelude gives with `def-prim` (INTERNALS.md
   section 2). `gensym-unique` is the one axiom; it is meant to rest on the
@@ -172,8 +185,9 @@ dropped.
    appear only in erased positions, an `MMany` handle is used at many, and an
    `MUnique` handle is used at unique, which consumes it. Decided: a handle
    cannot be used as a binder, any more than anything else that is not a
-   name can. Proposed: an `AConst` resolves to its term directly, bypassing
-   scope; in a non-erased position it must be an entry.
+   name can. Decided: a spliced `AConst` is a reference to the term it
+   denotes, bypassing scope, as a variable reference is to its entry; its
+   multiplicity, as above, decides where it may stand.
 5. The macro world (Decided). It is the elaborator's program store: the
    run-position entries with their values and facts, the literal table, the
    gensym counter and the expansion count. It is threaded sequentially
@@ -296,6 +310,6 @@ scope" hint. `(constant-of m x)` makes a handle (section 3), and
 directly. `const-mult` and `const-value` read a handle anywhere, not only
 during an expansion, and an `MMany` handle carries its value into an
 extracted program. The `intern-` forms run only in an expansion, the one
-place a macro world exists, and intern the literal where they run. `constant-type` and `const-eq` are not
+place a macro world exists, and intern the literal where they run. `const-type` and `const-eq` are not
 implemented, and a literal in a macro's arguments still arrives as
 `RawNat`, `RawChar` or `RawStr`.

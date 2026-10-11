@@ -1929,9 +1929,10 @@ which `lib/prelude.sl` is the reference:
   no location, not even a file; one at `MkPos` names exactly that
   position.
 - **Macros.** `Pos`, `Raw`, `Macro`, `Mult`, the opaque `Gensym`,
-  `MacroWorld` and `Const`, `JMEq`, and the primitives `gensym` and
-  `gensym-unique`. MACROS.md section 8 describes them and the special
-  form `constant-of`.
+  `MacroWorld` and `Const`, `JMEq`, and the primitives `gensym`,
+  `gensym-unique`, `const-mult`, `const-value`, `intern-nat`,
+  `intern-char` and `intern-string`. MACROS.md section 8 describes them
+  and the special form `constant-of`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2353,7 +2354,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
   `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
-  `constant-of` and `gensym` (MACROS.md section 3).
+  `constant-of`, `gensym`, `const-mult`, `const-value`, `intern-nat`,
+  `intern-char` and `intern-string` (MACROS.md section 3).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 

@@ -16,14 +16,6 @@ work 1.519G, about 2.5% over its base; the owner accepted that.
 Left for a later session: DESIGN.md's wording for what of this is meant to
 last (sections 19 and 42), which the owner confirms passage by passage.
 
-## Handle eliminators and interning (one session, with the owner)
-
-Done in both compilers: `const-mult`, `const-value` (named by the session at
-the owner's invitation, in place of `unwrap`), `intern-nat`, `intern-char`
-and `intern-string`, with MACROS.md updated and ASSUMPTIONS 216 for what the
-session chose. Left for a later session: DESIGN.md sections 42 and 54 do not
-list these forms yet; their wording is the owner's to confirm.
-
 ## Literals outside every scope, `prove-predates` by binder (one session, with the owner)
 
 Done in both compilers, on a design worked out with the owner in chat
