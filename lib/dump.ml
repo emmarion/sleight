@@ -30,7 +30,7 @@ let flags env x =
   let e = entry env x in
   let shadowed = match e.name with Some n -> lookup env n <> Some x | None -> false in
   List.concat
-    [ [ mult_name e.mult; (match e.state with Const _ -> "Const" | Dyn -> "Dyn"); kind env x ];
+    [ [ mult_name e.mult; (match e.state with Settled _ -> "Settled" | Hypothetical -> "Hypothetical"); kind env x ];
       (match find_index (( = ) x) env.subterms with Some i -> [ Printf.sprintf "subterm parameter %d of the enclosing function" (i + 1) ] | None -> []);
       (if e.name = None then [ "anonymous" ] else []);
       (if e.temporary then [ "the elaborator's own binder for a head or an argument" ] else []);
@@ -50,7 +50,7 @@ let unique_status env x =
 (* A value the final's printer can spell (ASSUMPTIONS 184); a function or a Matchable adds nothing to its kind. *)
 let value ~show_value env l x =
   match (entry env x).state, (entry env x).mult with
-  | Const v, (Many | Unique) -> (match show_value env l (type_of env x) v with "_" -> [] | s -> [ "= " ^ s ])
+  | Settled v, (Many | Unique) -> (match show_value env l (type_of env x) v with "_" -> [] | s -> [ "= " ^ s ])
   | _ -> []
 
 let entry_lines ~show_value env l x =
@@ -92,8 +92,8 @@ let position_lines env goal =
   List.concat
     [ (match pos with Some m -> [ "position: " ^ mult_name m ] | None -> []);
       (if env.usage_erased then [ "erased context: nothing here counts as a use, so no unique binder is consumed or shared by this code" ] else []);
-      [ (if env.run_pos then "run position: a statement here runs at once and its binders are Const"
-         else "inside a function body or a match branch: binders here are Dyn and calls need their proofs") ];
+      [ (if env.run_pos then "run position: a statement here runs at once and its binders are Settled"
+         else "inside a function body or a match branch: binders here are Hypothetical and calls need their proofs") ];
       [ (match env.level with
          | Top -> "level: the top level, above every function's level"
          | At lvl ->

@@ -89,7 +89,7 @@ and run_mode name externs src =
   in
   let consume = Program.consume world in
   (* The test's own final is run only after the extracted sources are taken: running it may update a unique
-     Const in place, which the extracted program must start from as elaboration left it, as --extract does. *)
+     Settled in place, which the extracted program must start from as elaboration left it, as --extract does. *)
   let final = ref None in
   let outcome =
     try

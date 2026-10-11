@@ -366,8 +366,8 @@ and expr cx scope code = match code with
       let source = expr cx scope c in
       Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
   | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
-  | V.CPrim (Special.ConstValue, [ h ]) -> Printf.sprintf "(let (_, _, v) = (Obj.obj %s : int * Ffi_core.mult * Obj.t) in v)" (expr cx scope h)
-  | V.CPrim (Special.ConstMult, [ h; e; m; u ]) ->
+  | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, v) = (Obj.obj %s : int * Ffi_core.mult * Obj.t) in v)" (expr cx scope h)
+  | V.CPrim (Special.SettledMult, [ h; e; m; u ]) ->
       Printf.sprintf "(match (Obj.obj %s : int * Ffi_core.mult * Obj.t) with (_, Ffi_core.Erased, _) -> %s | (_, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) (expr cx scope e) (expr cx scope m) (expr cx scope u)
   | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))
   | V.CAbsurd -> "(absurd ())"
@@ -488,12 +488,12 @@ let rec show cx env ty =
                   | Some (SlotOf (Bound k)) -> (List.nth acc k, i)
                   | Some p ->
                       ((match (Env.entry env (Elab.location_var env Reader.nowhere p)).state with
-                        | Const v ->
+                        | Settled v ->
                             let name = Printf.sprintf "word_%d" (stamp cx) in
                             Buffer.add_string cx.words (Printf.sprintf "let %s : Obj.t ref = ref (Obj.repr ())\n" name);
                             Buffer.add_string cx.fills (Printf.sprintf "let () = %s := %s\n" name (value cx v));
                             "!" ^ name
-                        | Dyn -> "(Obj.repr ())"), i)
+                        | Hypothetical -> "(Obj.repr ())"), i)
                   | None -> (Printf.sprintf "f%d" i, i + 1) in
                 Printf.sprintf "%s %s" (show cx env' (Env.type_of env' x)) word :: args i (word :: acc) rest
           in

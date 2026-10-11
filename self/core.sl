@@ -265,8 +265,8 @@
     (many ExSubtermTrans : -> (ExprK)) (many ExPredatesSubterm : -> (ExprK)) (many ExCoerce : -> (ExprK))
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
-    (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExConstantOf : -> (ExprK))
-    (many ExConstMult : -> (ExprK)) (many ExConstValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)))
+    (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
+    (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)))
   ((MarkK : -> Type)
     enum
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkUnique : -> (MarkK)) (many MkAt : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
@@ -285,8 +285,8 @@
     ((ExMatch) 0) ((ExMatchableOf) 1) ((ExSlotOf) 2) ((ExAtFnOf) 20) ((ExShare) 21) ((ExCellAlloc) 22) ((ExCellWrite) 23) ((ExCellMatch) 24) ((ExCoercibleShare) 25) ((ExNumeralOf) 3) ((ExLevelOf) 4) ((ExProveSubterm) 5)
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
-    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExConstantOf) 30)
-    ((ExConstMult) 31) ((ExConstValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35)))
+    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
+    ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35)))
 
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
@@ -298,7 +298,7 @@
     ((SpMark k) (match many k _ ((MkTail) (Some _ 1)) ((MkNoTail) (Some _ 1)) ((MkDelegate) (Some _ 1)) (else (None _))))
     ((SpExpr k)
       (match many k _
-        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExConstantOf) (Some _ 2))
+        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExSettledOf) (Some _ 2))
         ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExProveLiteralLt) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
         (else (None _))))
     (else (None _))))
@@ -333,7 +333,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "constant-of" (SpExpr $ ExConstantOf) $ sp-cons "const-mult" (SpExpr $ ExConstMult) $ sp-cons "const-value" (SpExpr $ ExConstValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $ sp-cons "notail" (SpMark $ MkNoTail) $
@@ -556,7 +556,7 @@
     (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx))
     (many MkAlias : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (String) name) (many (Nat) id) (many (Code (Cons (List (Nat)) gids ctx) many-one) target) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
-  ; what runs (section 27); a node that has to make values on its own holds them as data. A Const entry is
+  ; what runs (section 27); a node that has to make values on its own holds them as data. A Settled entry is
   ; named by its id and read from the store when the code runs (section 29); a value elaboration embeds is
   ; a closed block, allocated when reached.
   ((Code : ((List $ List $ Nat) ctx) ((List $ Multiplicity) ms) -> Type)
@@ -2198,7 +2198,7 @@
 
 
 ; ---- The scope environment (section 5) and fact table (section 7); [hl] the ghost history every
-; Const's value was allocated into, [store] the next stamp, and [entries] and [finals] hold its references.
+; Settled's value was allocated into, [store] the next stamp, and [entries] and [finals] hold its references.
 
 (def-adts $ (BinderKind : -> Type)
   enum
@@ -2290,13 +2290,13 @@
     (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ Name) name) (many (Multiplicity) mult) (many (State l) state) (many (Bool) minted) (many (Maybe $ Nat) introduced) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
   ((State : ((Hist Block) l) -> Type)
     enum
-    (many SConst : (erased (Hist Block) l) (many (Ref Block l) v) (many (Nat) minter) -> (State l))
-    (many SDyn : (erased (Hist Block) l) -> (State l))))
+    (many SSettled : (erased (Hist Block) l) (many (Ref Block l) v) (many (Nat) minter) -> (State l))
+    (many SHypothetical : (erased (Hist Block) l) -> (State l))))
 
 (def-fns _ $ (erased state-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (State b) s) -> (erased (State c) s2) (erased (Coercible (Shared) (State b) s (Shared) (State c) s2) p))
-  (let-match erased s (SConst _ v m) ((SDyn _) (values (SDyn _) (coercible-ctor (Shared) SDyn b c))))
+  (let-match erased s (SSettled _ v m) ((SHypothetical _) (values (SHypothetical _) (coercible-ctor (Shared) SHypothetical b c))))
   (let ((erased v2) (erased pv)) (ref-widen _ b c le v))
-  (values (SConst _ v2 m) (coercible-ctor (Shared) SConst b c pv (coercible-refl (Shared) m))))
+  (values (SSettled _ v2 m) (coercible-ctor (Shared) SSettled b c pv (coercible-refl (Shared) m))))
 
 (def-fns _ $ (erased einfo-widen : (erased (Hist Block) b) (erased (Hist Block) c) (erased (Suffix Block c b) le) (erased (EInfo b) e) -> (erased (EInfo c) e2) (erased (Coercible (Shared) (EInfo b) e (Shared) (EInfo c) e2) p))
   (let-match erased e (MkEInfo _ n m s mi io me site))
@@ -2388,7 +2388,7 @@
     (erased (Hist Block) hl2) (many (Heap hl2) h2) (erased (Suffix Block hl2 hl) sf))
   (let ((erased wb0) (erased pb0)) (block-widen _ _ (empty-suffix _ hl) b))
   (let ((erased hl2) (many h2) (erased sf) (many a)) $ halloc _ h (coerce b pb0))
-  (values hl2 (heap-with-entries _ h2 $ entries-set-state _ (heap-entries _ h2) x $ SConst _ a x) sf))
+  (values hl2 (heap-with-entries _ h2 $ entries-set-state _ (heap-entries _ h2) x $ SSettled _ a x) sf))
 
 (def-fns _ $ (many set-state-closed : (many (Env) e) (many (Nat) x) (many (Block (Ref Block (HEmpty Block))) b) -> (many (Env) r))
   (let ((erased hl) (many h)) $ env-heap e)
@@ -2771,7 +2771,7 @@
 (def-fns _ $ (many entry : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (EInfo hs) r))
   (let ((erased hs) (many en)) $ env-entries env)
   (match many (idmap-get _ x en) _
-    ((Miss _ _ _ _) (values hs $ MkEInfo _ (None _) (Many) (SDyn _) (BFalse) (Some _ x) (BFalse) (None _)))
+    ((Miss _ _ _ _) (values hs $ MkEInfo _ (None _) (Many) (SHypothetical _) (BFalse) (Some _ x) (BFalse) (None _)))
     ((Hit _ _ _ e _) (values hs e))))
 
 (def-fns _ $ (many env-entry-name : (many (Env) env) (many (Nat) x) -> (many (Maybe $ Name) r))
@@ -2790,9 +2790,9 @@
   (let ((erased hs) (many e)) $ entry env x)
   (match many e _ ((MkEInfo _ _ _ s _ _ _ _) (values hs s))))
 
-(def-fns _ $ (many is-const : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
+(def-fns _ $ (many is-settled : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (let ((erased hs) (many s)) $ entry-state env x)
-  (match many s _ ((SConst _ _ _) (BTrue)) ((SDyn _) (BFalse))))
+  (match many s _ ((SSettled _ _ _) (BTrue)) ((SHypothetical _) (BFalse))))
 
 (def-fns _ $ (many entry-minted : (many (Env) env) (many (Nat) x) -> (many (Bool) r))
   (let ((erased hs) (many e)) $ entry env x)
@@ -2818,14 +2818,14 @@
   (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
   (let ((many (EInfo hs) info))
     (match many (idmap-get _ x en) _
-      ((Miss _ _ _ _) (MkEInfo _ (None _) (Erased) (SDyn _) (BTrue) (Some _ x) (BFalse) (None _)))
+      ((Miss _ _ _ _) (MkEInfo _ (None _) (Erased) (SHypothetical _) (BTrue) (Some _ x) (BFalse) (None _)))
       ((Hit _ _ _ i _) (match many i (((EInfo hs) _)) ((MkEInfo _ n m s _ io me site) (MkEInfo _ n m s (BTrue) io me site))))))
   (MkEnv _ hp sc (idmap-set _ x info en) _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
 
 ; An entry given a name for display only, the scope untouched.
 (def-fns _ $ (many env-name-entry : (many (Env) e) (many (Nat) x) (many (String) n) -> (many (Env) r))
   (let-match many e (MkEnv hs hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
-  (let ((many (EInfo hs) i)) $ match many (idmap-get _ x en) _ ((Hit _ _ _ i _) i) ((Miss _ _ _ _) (MkEInfo _ (None _) (Many) (SDyn _) (BFalse) (Some _ x) (BFalse) (None _))))
+  (let ((many (EInfo hs) i)) $ match many (idmap-get _ x en) _ ((Hit _ _ _ i _) i) ((Miss _ _ _ _) (MkEInfo _ (None _) (Many) (SHypothetical _) (BFalse) (Some _ x) (BFalse) (None _))))
   (match many i _
     ((MkEInfo _ _ m s mi io me site) (MkEnv _ hp sc (idmap-set _ x (MkEInfo _ (Some _ $ NSrc n) m s mi io me site) en) _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 
@@ -2871,12 +2871,12 @@
 (def-fns _ $ (many qname : (many (Env) env) (many (Nat) x) -> (many (String) r))
   (tick $ name-of env x))
 
-; The block a Const entry's value is, read through its reference.
+; The block a Settled entry's value is, read through its reference.
 (def-fns _ $ (many env-block : (many (Env) e) (many (Nat) x) -> (erased (Hist Block) a) (many (Maybe $ Block (Ref Block a)) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store e)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (values (HEmpty Block) $ None _)))
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
-  (let-match many s (SConst _ v _) ((SDyn _) (values (HEmpty Block) $ None _)))
+  (let-match many s (SSettled _ v _) ((SHypothetical _) (values (HEmpty Block) $ None _)))
   (let ((erased a) (many b) (erased sf)) (store-read Block _ hp v))
   (values a $ Some _ b))
 
@@ -3264,7 +3264,7 @@
     (match many (or meta literal) _
       ((BTrue) sc)
       ((BFalse) (match many sc _ ((MkScope names ids) (MkScope (match many name (((NameIndex $ Nat) _)) ((None _) names) ((Some _ n) (name-index-set _ n x names))) $ Cons _ x ids))))))
-  (let ((many en2)) $ idmap-set _ x (MkEInfo _ name mult (SDyn _) (BFalse) (match many literal (((Maybe $ Nat) _)) ((BTrue) (None _)) ((BFalse) (Some _ x))) meta site) en)
+  (let ((many en2)) $ idmap-set _ x (MkEInfo _ name mult (SHypothetical _) (BFalse) (match many literal (((Maybe $ Nat) _)) ((BTrue) (None _)) ((BFalse) (Some _ x))) meta site) en)
   (let ((erased (Nat) nf2) (erased (Facts nf2) ff2) (many (Table nf2 ff2 x) tb2))
     (match many rule _
       ((None _) (table-insert _ _ _ tb x ltp ty))
@@ -3286,7 +3286,7 @@
     (many (Env) r) (many (Nat) x))
   (bind-as-raw env (BFalse) (BFalse) (BFalse) name site written mult ty rule objid))
 
-; A binder that is Const at once: over a closed block, over the token, or over the token only in run
+; A binder that is Settled at once: over a closed block, over the token, or over the token only in run
 ; position (section 29).
 (def-fns _ $ (many bind-closed : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))

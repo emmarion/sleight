@@ -1,5 +1,5 @@
 ; expect: 2
-; A run-position let-match makes a hidden special form's type known, and a forwarded Const keeps dispatching in a body.
+; A run-position let-match makes a hidden special form's type known, and a forwarded Settled keeps dispatching in a body.
 (def-fns _ $ (many make : -> (erased Type T) (many T v) (erased (Eq Type T (Special)) p))
   (values (Special) let (Refl Type (Special))))
 

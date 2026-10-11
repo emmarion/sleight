@@ -13,7 +13,7 @@
 (def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let ((many h)) nat-add)
-  (values mw $ one $ form here $ Cons _ (RawConst here _ _ _ (constant-of many h)) $ Cons _ (RawConst here _ _ _ (constant-of many k)) args))
+  (values mw $ one $ form here $ Cons _ (RawSettled here _ _ _ (settled-of many h)) $ Cons _ (RawSettled here _ _ _ (settled-of many k)) args))
 (let ((many plus-k)) (MkMacro _ plus-k-fn))
 (def-fns _ $ (many f : (many (Nat) nat-add) (many (Nat) k) -> (many (Nat) r))
   (plus-k k))
@@ -21,12 +21,12 @@
 
 (def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ three (RawConst here _ _ _ (constant-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) (RawNat here 7)))
+  (values mw $ one $ form here $ three (RawSettled here _ _ _ (settled-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) (RawNat here 7)))
 (let ((many seven)) (MkMacro _ seven-fn))
 
 (def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ one $ RawConst here _ _ _ (constant-of erased Nat)))
+  (values mw $ one $ form here $ one $ RawSettled here _ _ _ (settled-of erased Nat)))
 (let ((many PNat)) (MkMacro _ nat-fn))
 
 (let ((many let)) 0)

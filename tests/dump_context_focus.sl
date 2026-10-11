@@ -9,9 +9,9 @@
 ; error: tests/dump_context_focus.sl:7:32: error: `dump-context` stops elaboration here and reports what the checker knows
 ; error: goal: (many __?1 head)
 ; error: level: `(level-of rebuild)`; the enclosing function has no subterm parameter
-; error: xs : (List A)  [many, Dyn, value, bound at tests/dump_context_focus.sl:3:46]
+; error: xs : (List A)  [many, Hypothetical, value, bound at tests/dump_context_focus.sl:3:46]
 ; error: is (Cons A hd tl)
 ; error: `(Cons A hd tl)` canonicalizes to `(Cons A hd tl)` : `(List A)`
-; error: tl : (List A)  [many, Dyn, value, bound at tests/dump_context_focus.sl:6:17]
-; error: nat-add : (Fn nat-lvl (many (Nat) a) (many (Nat) b) -> (many (Nat) c))  [many, Const, function, bound at lib/prelude.sl:<**>]
+; error: tl : (List A)  [many, Hypothetical, value, bound at tests/dump_context_focus.sl:6:17]
+; error: nat-add : (Fn nat-lvl (many (Nat) a) (many (Nat) b) -> (many (Nat) c))  [many, Settled, function, bound at lib/prelude.sl:<**>]
 ; error: tests/dump_context_focus.sl:7:30: note: `__?1` is the `_` written here

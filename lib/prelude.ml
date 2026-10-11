@@ -1,7 +1,7 @@
 open Term
 module V = Value
 
-let token = Env.Const V.VToken
+let token = Env.Settled V.VToken
 let ty name sg = { name = Some (Reader.Src name); subterm = false; mult = Erased; sg = Ty sg; place = None; loc = Reader.nowhere }
 
 let env = Env.empty
@@ -33,9 +33,9 @@ let sharing_ctors, env =
   let env, cs = List.fold_left_map (fun env (index, name) ->
     let x, env = Env.bind env (Some (Reader.Src name)) Many token (ValCtor ([], sharing_term)) in
     let c = { V.cname = name; cid = x; index; arity = 0; adt } in
-    (Env.set_state env x (Env.Const (V.VCtorFn c)), c)) env [0, "Unique"; 1, "Shared"] in
+    (Env.set_state env x (Env.Settled (V.VCtorFn c)), c)) env [0, "Unique"; 1, "Shared"] in
   adt.ctors <- cs;
-  let x, env = Env.bind env None Many (Env.Const (V.VMatchable adt))
+  let x, env = Env.bind env None Many (Env.Settled (V.VMatchable adt))
     (Matchable (Enum, false, false, Var sharing, List.map (fun c -> Many, Var c.V.cid) cs)) in
   (cs, Env.merge_opens (Env.forcing (Env.opens_add env x)))
 let unique_term = App (Var (List.nth sharing_ctors 0).V.cid, [])
@@ -57,16 +57,16 @@ let specials, env =
   let ctor (env, index) (sp, n) =
     let c, env = Env.bind env (Some (Reader.Src ("%" ^ n))) Many token (ValCtor ([], special_term)) in
     let ctor = { V.cname = "%" ^ n; cid = c; index; arity = 0; adt } in
-    let env = Env.set_state env c (Env.Const (V.VCtorFn ctor)) in
+    let env = Env.set_state env c (Env.Settled (V.VCtorFn ctor)) in
     ((env, index + 1), (sp, n, c, ctor))
   in
   let (env, _), ctors = List.fold_left_map ctor (env, 0) Special.all in
   adt.ctors <- List.map (fun (_, _, _, c) -> c) ctors;
   let matchable = Matchable (Enum, false, false, Var special, List.map (fun (_, _, c, _) -> (Many, Var c)) ctors) in
-  let m, env = Env.bind env None Many (Env.Const (V.VMatchable adt)) matchable in
+  let m, env = Env.bind env None Many (Env.Settled (V.VMatchable adt)) matchable in
   let env = Env.merge_opens (Env.forcing (Env.opens_add env m)) in
   ( List.map (fun (sp, _, c, _) -> (c, sp)) ctors,
     List.fold_left
       (fun env (_, n, c, ctor) ->
-        snd (Env.bind env ~rule:(App (Var c, [])) (Some (Reader.Src n)) Many (Env.Const (V.VCtor (ctor, [||]))) special_term))
+        snd (Env.bind env ~rule:(App (Var c, [])) (Some (Reader.Src n)) Many (Env.Settled (V.VCtor (ctor, [||]))) special_term))
       env ctors )

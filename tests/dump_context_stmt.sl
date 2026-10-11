@@ -7,9 +7,9 @@
 ; error: tests/dump_context_stmt.sl:5:3: error: `dump-context` stops elaboration here and reports what the checker knows
 ; error: goal: none; `dump-context` stands as a statement here, so nothing is expected of it
 ; error: erased context: nothing here counts as a use, so no unique binder is consumed or shared by this code
-; error: ys : (List (Nat))  [erased, Dyn, value, bound at tests/dump_context_stmt.sl:4:9]
+; error: ys : (List (Nat))  [erased, Hypothetical, value, bound at tests/dump_context_stmt.sl:4:9]
 ; error: is xs
-; error: xs : (List (Nat))  [unique, Dyn, value, bound at tests/dump_context_stmt.sl:3:30]
+; error: xs : (List (Nat))  [unique, Hypothetical, value, bound at tests/dump_context_stmt.sl:3:30]
 ; error: unique: live, neither consumed nor shared on this path
-; error: ghost : (Fn (level-of ghost) (unique (List (Nat)) xs) (erased (Nat) n) -> (erased (Nat) r))  [erased, Dyn, function, bound at tests/dump_context_stmt.sl:3:14]
+; error: ghost : (Fn (level-of ghost) (unique (List (Nat)) xs) (erased (Nat) n) -> (erased (Nat) r))  [erased, Hypothetical, function, bound at tests/dump_context_stmt.sl:3:14]
 ; error: slots, the entries at one slot: {xs, ys}

@@ -568,7 +568,7 @@
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "(failwith \"unbound constant\")")))
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
-  (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v _) (addr-rope _ v))))
+  (match many s _ ((SHypothetical _) (RStr "(failwith \"a Hypothetical constant\")")) ((SSettled _ v _) (addr-rope _ v))))
 
 (def-fns _ $ (many handle-rope : (many (Env) env) (many (Nat) x) (many (Multiplicity) m) -> (many (Rope) r))
   (rcat3 (RStr "(") (nat-rope x) $ rcat4 (RStr "), Ffi_core.") (RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")) (RStr ", ") $
@@ -805,11 +805,11 @@
       ((CPrim _ _ p args)
         (let ((many hs)) $ notail $ emit-codes _ args env ns d)
         (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
-        (let-match many (sp-eq p $ SpExpr $ ExConstValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) in v)")))
-        (let-match many (sp-eq p $ SpExpr $ ExConstMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
-        (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
-        (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
-        (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
+        (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) in v)")))
+        (let-match many (sp-eq p $ SpExpr $ ExSettledMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
+        (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
+        (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
+        (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
         (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) with (_, Ffi_core.Erased, _) -> ") ce (RStr " | (_, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
       ((CAbsurd _ _) (RStr "(absurd ())"))
       ((CError _ _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
@@ -999,7 +999,7 @@
   (match many d _
     ((MkDecls shapes2 narrows _ _) (rcat (narrow-decls d narrows) $ shape-decls d shapes2 $ BTrue))))
 
-; ---- The walk from the roots: what a Const or a final reaches, each value once. The worklist is
+; ---- The walk from the roots: what a Settled or a final reaches, each value once. The worklist is
 ; tail recursive, which the seen set pays for: a stamp is below the store's next stamp, the trie
 ; holds at most that many keys (base.sl's bounded-le), so the keys it still lacks is a measure that
 ; strictly drops every time a fresh value is enqueued. That measure and the worklist are the two
@@ -1021,7 +1021,7 @@
     ((BGroup _ _ _ _ fr) (frames-refs _ _ fr (Nil _)))
     (else (Nil _))))
 
-(def-fns _ $ (many const-refs : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids)
+(def-fns _ $ (many settled-refs : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (subterm many (List $ Nat) ids)
     (many (List $ Ref Block hs) acc) -> (many (List $ Ref Block hs) r))
   (let-match many ids (Cons _ x rest) ((Nil _) acc))
   (let ((many acc1))
@@ -1030,9 +1030,9 @@
       ((Hit _ _ _ info _)
         (let-match many info (MkEInfo _ _ _ st _ _ _ _))
         (match many st (((List $ Ref Block hs) _))
-          ((SDyn _) acc)
-          ((SConst _ v _) (Cons _ v acc))))))
-  (tail $ const-refs _ en rest acc1))
+          ((SHypothetical _) acc)
+          ((SSettled _ v _) (Cons _ v acc))))))
+  (tail $ settled-refs _ en rest acc1))
 
 ; [rest] the stamps the seen set still lacks, [work] the worklist; the call in each branch decreases
 ; the first of those two that it can.
@@ -1052,7 +1052,7 @@
   (let ((erased kids2) (erased pk)) (refs-widen Block rs hs tsf kids))
   (let ((many d3) (many cids)) $ decl-take-consts $ collect-block _ blk env d)
   (tail (trace-loop _ bound lb hp (Succ size) (subterm (lt-subterm rest2 rest less)) rest2 sum2 seen2 bd2
-          (rev-onto _ (coerce kids pk) $ const-refs _ en cids wrest) (Cons _ at2 acc) env en d3)))
+          (rev-onto _ (coerce kids pk) $ settled-refs _ en cids wrest) (Cons _ at2 acc) env en d3)))
 
 ; A group's block is its members' top-level let rec over the names of the frames it closed over.
 (def-fns _ $ (many block-let : (erased (Hist Block) hs) (many (Ref Block hs) addr) (erased (Hist Block) a) (subterm many (Block (Ref Block a)) b) (many (Env) env) (many (Decls) d) -> (many (Rope) r))
@@ -1314,7 +1314,7 @@
   (let-match many hp (MkStore _ _ bound lb writes))
   (let ((many d0b) (many unused)) $ emit-finals _ hp (list-rev _ fi) env d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)
-  (let ((many roots)) $ const-refs _ en cids $ roots-of-finals _ fi env en (Nil _))
+  (let ((many roots)) $ settled-refs _ en cids $ roots-of-finals _ fi env en (Nil _))
   (let ((many acc2) (many d2))
     $ trace-loop _ bound lb hp (Zero) bound (AddZero bound) (MEmpty _) (BdEmpty _ bound) roots (Nil _) env en d0c)
   (def-fns REF-CMP $ (many ref-le : (many (Ref Block hs) x) (many (Ref Block hs) y) -> (many (Bool) b))

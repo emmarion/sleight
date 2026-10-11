@@ -1414,21 +1414,21 @@
   (many MMany : -> (Mult))
   (many MUnique : -> (Mult)))
 
-(def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
+(def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
 
-(def-prim $ (many const-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+(def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many m is r)))
 
-(def-prim $ (many const-value : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)))
+(def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
 
 (def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
 
 (def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
 
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
 (def-adts $ (Raw : -> Type)
   enum extern
@@ -1439,7 +1439,7 @@
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
   (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
-  (many RawConst : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Raw)))
+  (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype

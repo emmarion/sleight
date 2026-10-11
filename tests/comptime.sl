@@ -1,6 +1,6 @@
 ; needs: list
 ; expect: 1
-; comptime-match verifies a Const value and binds its fields Const.
+; comptime-match verifies a Settled value and binds its fields Settled.
 
 (let ((many two)) (Succ (Succ (Zero))))
 (comptime-match many two (Succ one))

@@ -10,7 +10,7 @@
 ; warns: tests/compile_warn.sl:35:3: warning: an erased body
 ; warns: tests/compile_warn.sl:38:3: warning: an at-function
 ; warns: tests/compile_warn.sl:40:19: warning: an erased right-hand side
-; `compile-warn` takes any Const, non-erased String: a literal, one built by hand, one computed in run position,
+; `compile-warn` takes any Settled, non-erased String: a literal, one built by hand, one computed in run position,
 ; an alias of one, or a unique one shared. It warns wherever it is elaborated, erased code and at-functions
 ; included, and elaboration goes on.
 

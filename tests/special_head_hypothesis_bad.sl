@@ -1,5 +1,5 @@
 ; error: is not a statement
-; A branch's hypothesis does not make a Const head a special form: the head's minted type is read against run-position facts.
+; A branch's hypothesis does not make a Settled head a special form: the head's minted type is read against run-position facts.
 (def-fns _ $ (many make : -> (erased Type T) (many T v))
   (def-adts $ (Hidden : -> Type) enum (many Hid0 : -> (Hidden)))
   (values (Hidden) (Hid0)))

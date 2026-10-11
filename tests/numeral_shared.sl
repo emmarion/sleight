@@ -1,6 +1,6 @@
 ; expect: 3
 ; Every occurrence of a numeral is one entry, so the literal's proof serves an alias of it,
-; and a numeral inside a body is an embedded Const.
+; and a numeral inside a body is an embedded Settled.
 
 (def-fns _ $ (erased five : (erased (Nat) n) (erased (Numeral (B1 (B2 (BZ))) n) v) -> (erased (Nat) m))
   n)

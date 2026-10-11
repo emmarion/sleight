@@ -1,5 +1,5 @@
 ; expect: (MySucc $ MyZero)
-; `comptime-match` gives a field written `at` the word of its target as its Const value.
+; `comptime-match` gives a field written `at` the word of its target as its Settled value.
 (def-adts $ (MyNat : -> Type) enum
   (many MyZero : -> (MyNat))
   (many MySucc : (unique (MyNat) pred) -> (MyNat)))

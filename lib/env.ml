@@ -82,7 +82,7 @@ let error_with ?hint ?(hints = "") loc notes fmt =
 
 let error loc fmt = error_with loc [] fmt
 
-type state = Const of Value.value | Dyn
+type state = Settled of Value.value | Hypothetical
 
 (* [at] is where the source wrote the binder, for a message about it to point at; an entry the elaborator
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
@@ -167,18 +167,18 @@ let anonymous env x =
   | _ -> marker (if e.meta then '?' else '_') x e.at
 
 let rec set_state ?minted env x state =
-  let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
+  let values = match state with Settled v -> IntMap.add x v env.values | Hypothetical -> env.values in
   let minted = Option.value minted ~default:x in
   let e = entry env x in
   let env = { env with entries = IntMap.add x { e with state; minted } env.entries; values } in
   match state with
-  | Const v when e.slot <> x && IntMap.mem e.slot env.entries && (entry env e.slot).state = Dyn -> set_state env e.slot (Const (if e.mult = Erased then Value.VToken else v))
+  | Settled v when e.slot <> x && IntMap.mem e.slot env.entries && (entry env e.slot).state = Hypothetical -> set_state env e.slot (Settled (if e.mult = Erased then Value.VToken else v))
   | _ -> env
 
 let record_literal row =
   Hashtbl.replace literal_rows (Literal.key row.lit) row;
   Hashtbl.replace literal_of row.lit_id row;
-  List.iter (fun (x, e, _) -> match e.state with Const v -> Hashtbl.replace Value.literal_values x v | Dyn -> ()) row.minted
+  List.iter (fun (x, e, _) -> match e.state with Settled v -> Hashtbl.replace Value.literal_values x v | Hypothetical -> ()) row.minted
 
 let enter env row =
   if IntMap.mem row.lit_id env.entries then env
@@ -433,7 +433,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
   let mint = if literal then fresh_literal else fresh in
   let x = mint () in
   let slot = mint () in
-  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = slot; minted_level = false; introduced = slot; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Hypothetical; minted = slot; minted_level = false; introduced = slot; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
   let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
@@ -450,7 +450,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
+  let entries = IntMap.add x { name; mult; state = Hypothetical; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
   let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
   (x, set_state ?minted env x state)
@@ -478,10 +478,10 @@ let report_shadows ?env () =
 let listed env x y =
   List.exists (fun o -> match (o.kind, o.names) with `Matchable, _ :: cs -> names_var x cs && names_var y cs | _ -> false) env.opens.opened
 
-(* A Matchable's value, where its entry is Const (section 29); a Dyn one is read when the code runs. *)
-let adt_of env x = match (entry env x).state with Const (Value.VMatchable adt) -> Some adt | _ -> None
+(* A Matchable's value, where its entry is Settled (section 29); a Hypothetical one is read when the code runs. *)
+let adt_of env x = match (entry env x).state with Settled (Value.VMatchable adt) -> Some adt | _ -> None
 
-(* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Const, else read
+(* A match that dispatches at runtime reads its Matchable's value: stamped in where the entry is Settled, else read
    from a non-erased entry still bound. Of the entries one opened group holds, the record keeps the best-ranked:
    one whose ADT the elaborator sees, then a readable one, then any. *)
 let readable env x = adt_of env x <> None || ((entry env x).mult = Many && List.mem x env.scope.ids)

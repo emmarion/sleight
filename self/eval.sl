@@ -11,7 +11,7 @@
     (erased (Suffix Block b a) p) (erased (Suffix Block c b) q) -> (erased (Suffix Block c a) r))
   (suffix-trans Block c b a q p))
 
-; What runs under: the Const entries the code names and the frames it binds.
+; What runs under: the Settled entries the code names and the frames it binds.
 (def-adts $ (St : ((Hist Block) a) ((List $ List $ Nat) ctx) -> Type)
   enum
   (many MkSt : (erased (Hist Block) a) (erased (List $ List $ Nat) ctx) (many (Frames (Ref Block a) ctx) env) -> (St a ctx)))
@@ -637,26 +637,26 @@
         ((FrVals _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))
         ((FrGroup _ _ _ _ _ rest) (tail $ frames-get-plain _ _ q _ hp rest))))))
 
-(def-fns _ $ (many const-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
+(def-fns _ $ (many settled-ref : (erased (Hist Block) hs) (many (IdMap $ EInfo hs) en) (many (Nat) x) -> (many (Maybe $ Ref Block hs) r))
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (None _)))
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
-  (match many s _ ((SDyn _) (None _)) ((SConst _ v _) (Some _ v))))
+  (match many s _ ((SHypothetical _) (None _)) ((SSettled _ v _) (Some _ v))))
 
-(def-fns _ $ (many const-entry-value : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
-  (match many (const-ref _ (heap-entries _ hp) x) _
+(def-fns _ $ (many settled-entry-value : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Nat) x) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
+  (match many (settled-ref _ (heap-entries _ hp) x) _
     ((Some _ v) (values hs hp (le-refl hs) v))
     ((None _) (halloc _ hp $ BError _ "unbound constant"))))
 
-(def-fns _ $ (many const-prim : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) p) (many (List $ Ref Block hs) args) ->
+(def-fns _ $ (many settled-prim : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Sp) p) (many (List $ Ref Block hs) args) ->
     (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
   (let-match many args (Cons _ h hidden) ((Nil _) (halloc _ hp $ BError _ "a handle form with no handle")))
   (let ((erased s) (many b) (erased sf)) (hread _ hp h))
   (let-match many b (BExt _ pl) (else (halloc _ hp $ BError _ "not a handle")))
   (let-match many pl (PHandle x mult _) (else (halloc _ hp $ BError _ "not a handle")))
-  (let-match many (sp-eq p $ SpExpr $ ExConstValue) (BFalse) ((BTrue) (tail $ const-entry-value _ hp x)))
-  (let-match many hidden (Cons _ e r1) ((Nil _) (halloc _ hp $ BError _ "`const-mult` with no constructors")))
-  (let-match many r1 (Cons _ m r2) ((Nil _) (halloc _ hp $ BError _ "`const-mult` with no constructors")))
-  (let-match many r2 (Cons _ u _) ((Nil _) (halloc _ hp $ BError _ "`const-mult` with no constructors")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (tail $ settled-entry-value _ hp x)))
+  (let-match many hidden (Cons _ e r1) ((Nil _) (halloc _ hp $ BError _ "`settled-mult` with no constructors")))
+  (let-match many r1 (Cons _ m r2) ((Nil _) (halloc _ hp $ BError _ "`settled-mult` with no constructors")))
+  (let-match many r2 (Cons _ u _) ((Nil _) (halloc _ hp $ BError _ "`settled-mult` with no constructors")))
   (values hs hp (le-refl hs) $ match many mult _ ((Erased) e) ((Many) m) ((Once) u)))
 
 (def-fns _ $ (many frames-get : (erased (Nat) x) (erased (List $ List $ Nat) ctx) (subterm many (Mem x ctx) p) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Frames (Ref Block hs) ctx) env) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v))
@@ -669,7 +669,7 @@
       (let-match many fn (MkAlias _ _ _ _ target) ((MkFunc _ _ _ _ _ _ _ _ _) (tail $ frames-get-plain _ _ p _ hp env)))
       (match many target _
         ((CVar _ _ q2) (tail $ frames-get-plain _ _ q2 _ hp env))
-        ((CConst _ t) (tail $ const-entry-value _ hp t))
+        ((CConst _ t) (tail $ settled-entry-value _ hp t))
         (else (halloc _ hp $ BError _ "internal: an alias with no target"))))
     ((MThere _ _ _ q)
       (match many env _
@@ -990,9 +990,9 @@
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
   (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
 
-; Interns a numeral: a Const Nat entry outside the scope, found by its text, and an erased Numeral proof
+; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
-; Interns a numeral: a Const Nat entry outside the scope, found by its text, and an erased Numeral proof
+; Interns a numeral: a Settled Nat entry outside the scope, found by its text, and an erased Numeral proof
 ; relating it to its spelling (ASSUMPTIONS 51).
 (def-fns _ $ (many intern-numeral : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf) (many (Nat) x) (many (Nat) proof))
@@ -1105,7 +1105,7 @@
         (let ((erased h2) (many hp2) (erased le) (many v)) $ frames-get _ _ p _ hp env)
         (values h2 hp2 le (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _) w))
       ((CConst _ x)
-        (let ((erased h2) (many hp2) (erased le) (many v)) $ const-entry-value _ hp x)
+        (let ((erased h2) (many hp2) (erased le) (many v)) $ settled-entry-value _ hp x)
         (values h2 hp2 le (Cons _ v $ Nil _) (PkMany _ _ v (Nil _) $ PkNil _) w))
       ((CValue _ v)
         (let ((erased wv3) (erased pv3)) (block-widen _ _ (empty-suffix _ hs) v))
@@ -1249,9 +1249,9 @@
         (let ((erased h1) (many hp1) (erased le1) (many avs) (unique W w1)) (notail $ eval-list fuel _ hp _ args st _ pf w))
         (let-match many pf (MkPerformer _ _ prim))
         (let ((erased h2) (many hp2) (erased le2) (many vs) (unique W w2))
-          (match many (or (sp-eq p $ SpExpr $ ExConstValue) $ sp-eq p $ SpExpr $ ExConstMult) (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((List $ Ref Block h2) vs) (W w2 at w1))
+          (match many (or (sp-eq p $ SpExpr $ ExSettledValue) $ sp-eq p $ SpExpr $ ExSettledMult) (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((List $ Ref Block h2) vs) (W w2 at w1))
             ((BTrue)
-              (let ((erased hc) (many hpc) (erased lec) (many v)) $ const-prim _ hp1 p avs)
+              (let ((erased hc) (many hpc) (erased lec) (many v)) $ settled-prim _ hp1 p avs)
               (values hc hpc lec (Cons _ v $ Nil _) w1))
             ((BFalse) (prim _ hp1 p avs w1))))
         (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ vals-fit _ hp2 ms2 vs)
@@ -1415,8 +1415,8 @@
   (let ((erased hs2) (many h2) (erased le) (many vs) (erased pk)) $ run-code _ h _ code)
   (env-with-heap e _ $ heap-with-finals _ h2 $ Cons _ (MkPair _ _ (vals-one _ vs pk) ty) $ heap-finals _ h2))
 
-(def-fns _ $ (many heap-set-const : (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) x) (many (Ref Block hs) v) -> (many (Heap hs) r))
-  (heap-with-entries _ h $ entries-set-state _ (heap-entries _ h) x $ SConst _ v x))
+(def-fns _ $ (many heap-set-settled : (erased (Hist Block) hs) (many (Heap hs) h) (many (Nat) x) (many (Ref Block hs) v) -> (many (Heap hs) r))
+  (heap-with-entries _ h $ entries-set-state _ (heap-entries _ h) x $ SSettled _ v x))
 
 (def-fns _ $ (many close-members : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) h) (erased (List $ Nat) gids) (subterm many (List $ Pair (Nat) $ Func gids (Nil (List (Nat)))) fns) (many (Ref Block hs) g) (many (Nat) i) -> (many (Env) r))
   (let-match many fns (Cons _ pr rest) ((Nil _) (env-with-heap e _ h)))
@@ -1425,11 +1425,11 @@
     ((MkFunc _ _ _ _ _ _ _ _ _)
       (let ((erased hl2) (many h2) (erased sf2) (many v)) $ halloc _ h $ BFn _ g i x)
       (let ((erased wg3) (erased pg3)) (ref-widen _ _ _ sf2 g))
-      (tail $ close-members e _ (heap-set-const _ h2 x v) _ rest (coerce g pg3) $ Succ i))
+      (tail $ close-members e _ (heap-set-settled _ h2 x v) _ rest (coerce g pg3) $ Succ i))
     ((MkAlias _ _ _ _ target)
       (let ((many (Maybe $ Nat) t)) $ match many target _ ((CVar _ y _) (Some _ y)) ((CConst _ y) (Some _ y)) (else (None _)))
-      (let ((many (Maybe $ Ref Block hs) v)) $ match many t _ ((Some _ y) (const-ref _ (heap-entries _ h) y)) ((None _) (None _)))
-      (let ((many (Heap hs) h2)) $ match many v _ ((Some _ r) (heap-set-const _ h x r)) ((None _) h))
+      (let ((many (Maybe $ Ref Block hs) v)) $ match many t _ ((Some _ y) (settled-ref _ (heap-entries _ h) y)) ((None _) (None _)))
+      (let ((many (Heap hs) h2)) $ match many v _ ((Some _ r) (heap-set-settled _ h x r)) ((None _) h))
       (tail $ close-members e _ h2 _ rest g $ Succ i))))
 
 ; A run-position def-fns: the group's block over no frames, then a closure block per member.
@@ -1438,7 +1438,7 @@
   (let ((erased hl1) (many h1) (erased sf1) (many ga)) $ halloc _ h $ BGroup _ _ _ g $ FrNil _)
   (match many g _ ((MkGroup _ _ fns _) (close-members e _ h1 _ fns ga 0))))
 
-; The Const fields of a value bound to their ids at their declared multiplicities (section 28): a many
+; The Settled fields of a value bound to their ids at their declared multiplicities (section 28): a many
 ; field its address, an erased one the token, a missing one an error block.
 (def-fns _ $ (many set-field-states : (erased (Hist Block) hs) (many (Heap hs) h) (subterm many (List $ Nat) fids) (many (List $ Multiplicity) mults) (many (List $ Maybe $ Nat) targets) (many (List $ Ref Block hs) vs) ->
     (erased (Hist Block) hs2) (many (Heap hs2) h2))
@@ -1450,13 +1450,13 @@
     ((Once) (BError _ "missing value")) ((Erased) (BToken _)))
   (let ((many (Maybe $ Ref Block hs) first)) $ match many vs _ ((Nil _) (None _)) ((Cons _ v _) (Some _ v)))
   (let ((many (Maybe $ Ref Block hs) have)) $ match many m _ ((Erased) (None _))
-    (else (match many target (((Maybe $ Ref Block hs) _)) ((Some _ y) (const-ref _ (heap-entries _ h) y)) ((None _) first))))
+    (else (match many target (((Maybe $ Ref Block hs) _)) ((Some _ y) (settled-ref _ (heap-entries _ h) y)) ((None _) first))))
   (let ((many (List $ Ref Block hs) vrest)) $ match many stored _ ((BFalse) vs) ((BTrue) (match many vs (((List $ Ref Block hs) _)) ((Nil _) (Nil _)) ((Cons _ _ vr) vr))))
   (let-match many have (None _)
-    ((Some _ v) (tail $ set-field-states _ (heap-set-const _ h x v) rest mrest trest vrest)))
+    ((Some _ v) (tail $ set-field-states _ (heap-set-settled _ h x v) rest mrest trest vrest)))
   (let ((erased hl2) (many h2) (erased sf2) (many t)) $ halloc _ h filler)
   (let ((erased wr1) (erased pr1)) (refs-widen _ _ _ sf2 vrest))
-  (tail $ set-field-states _ (heap-set-const _ h2 x t) rest mrest trest (coerce vrest pr1)))
+  (tail $ set-field-states _ (heap-set-settled _ h2 x t) rest mrest trest (coerce vrest pr1)))
 
 (def-fns _ $ (many env-run-let : (many (Env) e) (many (List $ Multiplicity) ms) (many (Code (Nil (List (Nat))) ms) code) (many (List $ Nat) ids) -> (many (Env) r))
   (let ((erased hs) (many h)) $ env-heap e)
@@ -1464,16 +1464,16 @@
   (let ((erased hs3) (many h3)) $ set-field-states _ h2 ids ms (Nil _) vs)
   (env-with-heap e _ h3))
 
-; The discriminant of a Const entry's value under a constructor's reading, or None where it is no Const.
+; The discriminant of a Settled entry's value under a constructor's reading, or None where it is no Settled.
 (def-fns _ $ (many env-destruct : (many (Env) e) (many (Nat) x) (many (Ctor) ct) -> (many (Env) r) (many (Maybe $ Nat) i))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let-match many (const-ref _ (heap-entries _ h) x) (Some _ v) ((None _) (values e $ None _)))
+  (let-match many (settled-ref _ (heap-entries _ h) x) (Some _ v) ((None _) (values e $ None _)))
   (let ((erased hs2) (many h2) (erased le) (many i) (many fs)) $ destruct _ h ct v)
   (values (env-with-heap e _ h2) $ Some _ i))
 
 (def-fns _ $ (many env-set-fields : (many (Env) e) (many (Nat) x) (many (Ctor) ct) (many (List $ Nat) fids) (many (List $ Multiplicity) mults) (many (List $ Maybe $ Nat) targets) -> (many (Env) r))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let-match many (const-ref _ (heap-entries _ h) x) (Some _ v) ((None _) e))
+  (let-match many (settled-ref _ (heap-entries _ h) x) (Some _ v) ((None _) e))
   (let ((erased hs2) (many h2) (erased le) (many i) (many fs)) $ destruct _ h ct v)
   (let ((erased hs3) (many h3)) $ set-field-states _ h2 fids mults targets fs)
   (env-with-heap e _ h3))
@@ -1502,7 +1502,7 @@
 (def-fns _ $ (many env-expand : (many (Env) e) (many (Nat) m) (many (ExtType) ext) (many (String) file) (many (Spot) here) (many (List $ Syn) args) -> (many (Env) r) (many (Result $ List $ Syn) out))
   (let-match many ext (ExtRaw np mp nl cs) (else (values e $ Fail _ "the prelude's `Raw` is not the FFI's")))
   (let ((erased hs) (many h)) $ env-heap e)
-  (let-match many (const-ref _ (heap-entries _ h) m) (Some _ f) ((None _) (values e $ Fail _ "the macro has no value")))
+  (let-match many (settled-ref _ (heap-entries _ h) m) (Some _ f) ((None _) (values e $ Fail _ "the macro has no value")))
   (let ((erased h1) (many hp1) (erased s1) (many hv)) $ pos-block _ h np mp file here)
   (let ((erased h2) (many hp2) (erased s2) (many av)) $ raw-list _ hp1 nl cs file args)
   (let ((erased ht) (many hpt) (erased st) (many token)) $ halloc _ hp2 $ BToken _)

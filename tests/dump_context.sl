@@ -15,16 +15,16 @@
 ; error: goal: (many (List A) r at cell)
 ; error: constructors of `List`: Nil : (ValCtor (erased Type A) -> (List A)); Cons : (ValCtor (erased Type A) (many A head) (many (List A) rest) -> (List A))
 ; error: position: many
-; error: inside a function body or a match branch: binders here are Dyn and calls need their proofs
+; error: inside a function body or a match branch: binders here are Hypothetical and calls need their proofs
 ; error: level: `(level-of append-into)`; its subterm arguments, in order: `xs`
-; error: r2 : (List A)  [many, Dyn, value, bound at tests/dump_context.sl:12:13]
-; error: cell2 : (Cell Cons (slot-of h) (slot-of <**>))  [unique, Dyn, cell, bound at tests/dump_context.sl:11:13]
+; error: r2 : (List A)  [many, Hypothetical, value, bound at tests/dump_context.sl:12:13]
+; error: cell2 : (Cell Cons (slot-of h) (slot-of <**>))  [unique, Hypothetical, cell, bound at tests/dump_context.sl:11:13]
 ; error: unique: live, neither consumed nor shared on this path
-; error: next : (Cell Cons vacant-slot vacant-slot)  [unique, Dyn, cell, bound at tests/dump_context.sl:10:13]
+; error: next : (Cell Cons vacant-slot vacant-slot)  [unique, Hypothetical, cell, bound at tests/dump_context.sl:10:13]
 ; error: unique: consumed at tests/dump_context.sl:12:45, so usable only erased from here on
-; error: xs : (List A)  [many, Dyn, value, subterm parameter 1 of the enclosing function, bound at tests/dump_context.sl:5:16]
+; error: xs : (List A)  [many, Hypothetical, value, subterm parameter 1 of the enclosing function, bound at tests/dump_context.sl:5:16]
 ; error: is (Cons A hd tl)
-; error: cell : (Cell Cons vacant-slot vacant-slot)  [unique, Dyn, cell, bound at tests/dump_context.sl:4:5]
+; error: cell : (Cell Cons vacant-slot vacant-slot)  [unique, Hypothetical, cell, bound at tests/dump_context.sl:4:5]
 ; error: unique: consumed at tests/dump_context.sl:11:48, so usable only erased from here on
-; error: A : Type  [erased, Dyn, type, bound at tests/dump_context.sl:3:34]
+; error: A : Type  [erased, Hypothetical, type, bound at tests/dump_context.sl:3:34]
 ; error: slots, the entries at one slot: {next, _<**>, r2} {cell, _<**>, cell2} {xs, _<**>}
