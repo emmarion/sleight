@@ -1416,6 +1416,20 @@
 
 (def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
 
+(def-prim $ (many const-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+    (many m is r)))
+
+(def-prim $ (many const-value : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)))
+
+(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)))
+
+(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)))
+
+(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))

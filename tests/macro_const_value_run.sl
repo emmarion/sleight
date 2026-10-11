@@ -1,0 +1,11 @@
+; expect: (MkPair _ _ "many" $ MkPair _ _ 40 "x")
+(let ((many k)) 40)
+(let ((many sx)) "x")
+(let ((many held)) (RawConst (NoPos) _ _ _ (constant-of many k)))
+(def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
+  (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
+(def-fns _ $ (many main : -> (many (Pair (String) $ Pair (Nat) (String)) r))
+  (let ((many m)) $ match many held (((String) s))
+    ((RawConst _ m T t c) (mult-name $ const-mult _ _ _ c)))
+  (MkPair _ _ m $ MkPair _ _ (const-value _ _ (constant-of many k)) (const-value _ _ (constant-of many sx))))
+main

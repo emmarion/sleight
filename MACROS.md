@@ -34,9 +34,9 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
 - `Const`: Decided that it is opaque and not an ADT, like `Slot`: no
   constructors, no `Matchable`, not erased by kind. A handle
   `(Const m T t)` denotes `t`, held at multiplicity `m`. Decided that its
-  run-time value may be a term rather than an entry id; proposed that it is
-  a closed term over run-position entries, plus the value for an `MMany`
-  handle.
+  run-time value may be a term rather than an entry id, and that an `MMany`
+  handle carries the value it denotes; proposed that the rest is a closed
+  term over run-position entries.
 - `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque
   (`def-opaque`, INTERNALS.md section 1), declared in the prelude. It is a
   handle on the elaborator's program store (section 4), passed `unique`
@@ -106,12 +106,12 @@ gensym case needs.
                      (many (Const (MErased) Type T) h)
 (const-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
                      (many m is r)
-(unwrap c)         : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)
+(const-value c)    : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)
 ```
 
 All Decided. Decided: a handle denotes `x`'s minted `is` at `x`'s minted
 type (DESIGN.md §5, §29), as head dispatch reads the minted type (§6). There
-is no `unwrap` for erased handles (it would only rename the handle's own
+is no `const-value` for erased handles (it would only rename the handle's own
 erased index) and none for unique handles (a macro's read would happen
 outside the elaborator's use accounting, possibly after the value was
 consumed and mutated in place). A `constant-slot` form was considered and
@@ -146,9 +146,7 @@ dropped.
   whose signatures the prelude gives with `def-prim` (INTERNALS.md
   section 2). `gensym-unique` is the one axiom; it is meant to rest on the
   counter minting each `n` once, with one text.
-- `intern-nat`, `intern-char`, `intern-string`: Decided that a macro
-  interns literals through the macro world; the exact signatures are
-  Proposed.
+- `intern-nat`, `intern-char`, `intern-string`: Decided, as written.
 - `read-file` and its jail: Decided.
 
 ## 4. Rules
@@ -255,6 +253,20 @@ The source prelude declares the following, which both compilers implement.
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
+(def-prim $ (many const-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+    (many m is r)))
+
+(def-prim $ (many const-value : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)))
+
+(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)))
+
+(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)))
+
+(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
@@ -281,6 +293,9 @@ at most 10000 expansions run in one run. `gensym` counts from 1 over the
 whole run, every file included. An unbound gensym gets no "nearest in
 scope" hint. `(constant-of m x)` makes a handle (section 3), and
 `RawConst` puts one in a macro's output, where it stands for its entry
-directly. `constant-type`, `const-mult`, `unwrap`, `const-eq` and the
-`intern-` forms are not implemented, and a literal in a macro's arguments
-still arrives as `RawNat`, `RawChar` or `RawStr`.
+directly. `const-mult` and `const-value` read a handle anywhere, not only
+during an expansion, and an `MMany` handle carries its value into an
+extracted program. The `intern-` forms run only in an expansion, the one
+place a macro world exists. `constant-type` and `const-eq` are not
+implemented, and a literal in a macro's arguments still arrives as
+`RawNat`, `RawChar` or `RawStr`.

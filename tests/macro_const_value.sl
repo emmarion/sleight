@@ -1,0 +1,25 @@
+; needs: macro_lib
+; expect: (MkPair _ _ (MkPair _ _ 46 $ MkPair _ _ "hi" #\z) $ MkPair _ _ (MkPair _ _ 40 40) $ MkPair _ _ "erased many unique" "many")
+(let ((many k)) 40)
+(let ((unique u)) (MkPair _ _ 1 2))
+(def-fns _ $ (many dbl-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
+  (let-match many a (RawNat p n) (else (values mw (Nil _))))
+  (let ((unique mw1) (many h)) (intern-nat mw (nat-add (nat-add n n) $ const-value _ _ (constant-of many k))))
+  (let ((unique mw2) (many s)) (intern-string mw1 "hi"))
+  (let ((unique mw3) (many c)) (intern-char mw2 #\z))
+  (values mw3 $ one $ form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $
+    two (RawConst p _ _ _ h) (form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (RawConst p _ _ _ s) (RawConst p _ _ _ c))))
+(let ((many dbl)) (MkMacro _ dbl-fn))
+(def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
+  (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
+(def-fns _ $ (many read-k : -> (many (Nat) r))
+  (const-value _ _ (constant-of many k)))
+(let ((many held)) (RawConst (NoPos) _ _ _ (constant-of many k)))
+(def-fns _ $ (many read-held : (many (Raw) r) -> (many (String) v))
+  (match many r _
+    ((RawConst _ m T t c) (mult-name $ const-mult _ _ _ c))
+    (else "none")))
+(let ((many names)) (str-append (mult-name $ const-mult _ _ _ (constant-of erased k)) $ str-append " " $ str-append (mult-name $ const-mult _ _ _ (constant-of many k)) $ str-append " " (mult-name $ const-mult _ _ _ (constant-of unique u))))
+(MkPair _ _ (dbl 3) $ MkPair _ _ (MkPair _ _ (const-value _ _ (constant-of many k)) (read-k)) $ MkPair _ _ names (read-held held))

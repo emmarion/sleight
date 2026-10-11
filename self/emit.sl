@@ -464,34 +464,6 @@
   (let-match many q (MkPos f l c) ((NoPos) (RStr "Ffi_core.NoLoc")))
   (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; col = ") (z-rope c)) $ RStr " })"))
 
-(def-fns _ $ (many handle-rope : (many (Nat) x) (many (Multiplicity) m) -> (many (Rope) r))
-  (rcat3 (RStr "(") (nat-rope x) $ rcat (RStr "), Ffi_core.") $ RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")))
-
-(def-fns _
-  ((many syn-rope : (many (String) file) (subterm many (Syn) r) -> (many (Rope) o))
-    (let ((many loc)) $ spot-rope file $ raw-pos r)
-    (let ((many (String) k) (many (Rope) x))
-      (match many r (((String) _) ((Rope) _))
-        ((RAtom _ s) (match many s (((String) _) ((Rope) _))
-          ((NSrc t) (values "Atom" $ rcat (RStr "Ffi_core.Src ") $ quoted t))
-          ((NGen n t) (values "Atom" $ rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")"))
-          ((NHandle x m _) (values "Handle" $ handle-rope x m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
-        ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
-        ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope file xs))))
-    (match many r (((Rope) _))
-      ((RWild _) (rcat3 (RStr "(Ffi_core.Wild ") loc $ RStr ")"))
-      (else (rcat5 (RStr "(Ffi_core.") (RStr k) (RStr " (") loc $ rcat3 (RStr ", ") x $ RStr "))"))))
-  ((many syns-rope : (many (String) file) (subterm many (List $ Syn) xs) -> (many (List $ Rope) r))
-    (match many xs _ ((Nil _) (Nil _)) ((Cons _ x rest) (Cons _ (notail $ syn-rope file x) $ notail $ syns-rope file rest)))))
-
-(def-fns _ $ (many payload-rope : (many (Payload) p) -> (many (Rope) r))
-  (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
-    ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))"))
-    ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope f r) $ RStr ")"))
-    ((PHandle x m _) (rcat3 (RStr "(Obj.repr (") (handle-rope x m) $ RStr "))")))
-  (let ((many n) (erased _)) (str-length s))
-  (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
-
 ; ---- Names for the frames code binds: one per id, in step with the frames (ASSUMPTIONS 127); a function
 ; bound by a group is named, so a call of it is direct, a value use its closure.
 
@@ -578,11 +550,54 @@
     ((Nil _) (Nil _))
     ((Cons _ v rest) (Cons _ (addr-rope _ v) $ notail $ addr-ropes _ rest))))
 
+(def-fns _ $ (many handle-decl : (many (Decls) d) (many (Nat) x) (many (Multiplicity) m) -> (many (Decls) r))
+  (match many m _ ((Many) (decl-const d x)) (else d)))
+
+(def-fns _
+  ((many syn-handle-decl : (many (Decls) d) (subterm many (Syn) r) -> (many (Decls) o))
+    (let-match many r (RAtom _ s)
+      ((RList _ xs) (tail $ syn-handle-decls d xs))
+      (else d))
+    (let-match many s (NHandle x m _) (else d))
+    (handle-decl d x m))
+  ((many syn-handle-decls : (many (Decls) d) (subterm many (List $ Syn) xs) -> (many (Decls) o))
+    (let-match many xs (Cons _ x rest) ((Nil _) d))
+    (tail $ syn-handle-decls (notail $ syn-handle-decl d x) rest)))
+
 (def-fns _ $ (many const-rope : (many (Env) env) (many (Nat) x) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
   (let-match many (idmap-get _ x en) (Hit _ _ _ info _) ((Miss _ _ _ _) (RStr "(failwith \"unbound constant\")")))
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (match many s _ ((SDyn _) (RStr "(failwith \"a Dyn constant\")")) ((SConst _ v _) (addr-rope _ v))))
+
+(def-fns _ $ (many handle-rope : (many (Env) env) (many (Nat) x) (many (Multiplicity) m) -> (many (Rope) r))
+  (rcat3 (RStr "(") (nat-rope x) $ rcat4 (RStr "), Ffi_core.") (RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")) (RStr ", ") $
+    match many m _ ((Many) (const-rope env x)) (else (RStr "(Obj.repr ())"))))
+
+(def-fns _
+  ((many syn-rope : (many (Env) env) (many (String) file) (subterm many (Syn) r) -> (many (Rope) o))
+    (let ((many loc)) $ spot-rope file $ raw-pos r)
+    (let ((many (String) k) (many (Rope) x))
+      (match many r (((String) _) ((Rope) _))
+        ((RAtom _ s) (match many s (((String) _) ((Rope) _))
+          ((NSrc t) (values "Atom" $ rcat (RStr "Ffi_core.Src ") $ quoted t))
+          ((NGen n t) (values "Atom" $ rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")"))
+          ((NHandle x m _) (values "Handle" $ handle-rope env x m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
+        ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
+        ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope env file xs))))
+    (match many r (((Rope) _))
+      ((RWild _) (rcat3 (RStr "(Ffi_core.Wild ") loc $ RStr ")"))
+      (else (rcat5 (RStr "(Ffi_core.") (RStr k) (RStr " (") loc $ rcat3 (RStr ", ") x $ RStr "))"))))
+  ((many syns-rope : (many (Env) env) (many (String) file) (subterm many (List $ Syn) xs) -> (many (List $ Rope) r))
+    (match many xs _ ((Nil _) (Nil _)) ((Cons _ x rest) (Cons _ (notail $ syn-rope env file x) $ notail $ syns-rope env file rest)))))
+
+(def-fns _ $ (many payload-rope : (many (Env) env) (many (Payload) p) -> (many (Rope) r))
+  (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
+    ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))"))
+    ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope env f r) $ RStr ")"))
+    ((PHandle x m _) (rcat3 (RStr "(Obj.repr (") (handle-rope env x m) $ RStr "))")))
+  (let ((many n) (erased _)) (str-length s))
+  (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
 
 (def-fns _ $ (many named-rope : (many (Named) n) (many (Env) env) -> (many (Rope) r))
   (match many n _
@@ -787,7 +802,15 @@
       ((CCellRead _ k2 index cell)
         (field-read-rope d k2 (notail $ emit-code _ _ cell env ns d) index $ str-cat3 "cell" (nat-str $ names-depth _ ns) "_r"))
       ((CWorldDo _ req) (rcat3 (RStr "(driver.Driver_core.perform world ") (notail $ emit-code _ _ req env ns d) $ RStr ")"))
-      ((CPrim _ _ p _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")"))
+      ((CPrim _ _ p args)
+        (let ((many hs)) $ notail $ emit-codes _ args env ns d)
+        (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
+        (let-match many (sp-eq p $ SpExpr $ ExConstValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) in v)")))
+        (let-match many (sp-eq p $ SpExpr $ ExConstMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
+        (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
+        (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
+        (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`const-mult` with no constructors\")")))
+        (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) with (_, Ffi_core.Erased, _) -> ") ce (RStr " | (_, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
       ((CAbsurd _ _) (RStr "(absurd ())"))
       ((CError _ _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
@@ -835,7 +858,8 @@
     (match many b _
       ((BTag _ c fields) (build-rope d 0 c $ addr-ropes _ fields))
       ((BTup _ fields) (tuple-rope $ addr-ropes _ fields))
-      ((BExt _ p) (payload-rope p))
+      ((BExt _ p) (payload-rope env p))
+      ((BLitHandle _ _ _) (RStr "(failwith \"an interned literal's handle outside its expansion\")"))
       ((BArray _ n es) (rcat3 (RStr "(Obj.repr [|") (rjoin (addr-ropes _ $ idmap-prefix _ es n $ Nil _) "; ") $ RStr "|])"))
       ((BCtorFn _ c) (ctor-fn-rope d c))
       ((BMat _ adt) (matchable-rope adt d))
@@ -941,6 +965,7 @@
       ((BTag _ c _) (collect-cell c d))
       ((BCtorFn _ c) (collect-ctor c d))
       ((BMat _ adt) (collect-adt adt d))
+      ((BExt _ p) (match many p _ ((PHandle x m _) (handle-decl d x m)) ((PRaw _ r) (syn-handle-decl d r)) (else d)))
       (else d))
     (match many g _ ((MkGroup _ _ fns _) (tail $ collect-group _ _ fns env d)))))
 

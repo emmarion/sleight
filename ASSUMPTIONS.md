@@ -4013,7 +4013,8 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     refused where a literal is. A `delegate`-bodied function that `slc`
     holds as its callee's value is minted at its own entry, not its
     callee's. A handle's value is the id of the entry its `Const` was
-    minted at, with the multiplicity, and `slc` also carries the text a
+    minted at, with the multiplicity (and the value, as item 216 has it),
+    and `slc` also carries the text a
     message shows it by: a literal's spelling, else the entry's name,
     else `_`. A spliced handle is read wherever a name is read as a
     reference, the heads of special forms and macros included, and an
@@ -4021,6 +4022,29 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     is "a handle to `k` is not a name". The reference
     holds a handle as a syntax node of its own, `slc` as a third kind of
     name, refused by the two functions that read binders.
+
+216. **`const-mult`, `const-value` and the `intern-` forms, where MACROS.md
+    is silent.** How an `MMany` handle carries its value differs between
+    the compilers, and is meant not to be observable. The reference holds
+    the value in the handle itself, through the reader's tree as well, the
+    `Handle` node of `lib/ffi_core.ml` carrying it as an `Obj.t`. `slc`'s
+    handle holds no value, its blocks having no field for one; its
+    compile-time interpreter reads the value from the `Const` table by the
+    handle's id. This session's reading is that the two agree because only
+    a `many` entry gets an `MMany` handle, and nothing seems to mutate a
+    `many` value in place (DESIGN.md section 13). Extracted programs, from
+    either compiler, hold a handle as the triple of its id, its
+    multiplicity and its value, the value being `()` for a handle that is
+    not `MMany`. `const-mult` is given the prelude's three `Mult`
+    constructors as hidden arguments after its handle, so that its
+    evaluation needs no scope. The `intern-` forms mint nothing in the
+    literal table. Their handle holds the literal and the value passed
+    in, and `RawConst` puts the literal itself, at the `RawConst`'s
+    position, into the macro's output. So a misplaced one reads as the
+    literal would ("7 is a literal, not a name") rather than as a
+    handle. A handle from an `intern-` form exists only during the
+    expansion that made it, and neither compiler can write one into an
+    extracted program.
 
 ## The world (section 42)
 

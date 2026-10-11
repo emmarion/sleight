@@ -19,7 +19,8 @@ and value =
   | VMatchable of adt
   | VFn of closure
   | VToken
-  | VHandle of id * mult
+  | VHandle of id * mult * value
+  | VLitHandle of Reader.raw * value
 
 and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw
 
@@ -114,4 +115,4 @@ let rec show ?(seen = []) v =
   | VCtorFn c -> "<constructor " ^ c.cname ^ ">"
   | VMatchable adt -> "<matchable " ^ adt.tname ^ ">"
   | VFn cl -> "<function " ^ cl.fn.fname ^ ">"
-  | VToken | VHandle _ -> "_"
+  | VToken | VHandle _ | VLitHandle _ -> "_"

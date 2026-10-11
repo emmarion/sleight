@@ -19,19 +19,19 @@ let quote s = "\"" ^ String.escaped s ^ "\""
 let z n = Printf.sprintf "(Z.of_string %s)" ("\"" ^ Z.to_string n ^ "\"")
 let handle x m = Printf.sprintf "(%d), Ffi_core.%s" x (String.capitalize_ascii (Term.mult_name m))
 
-let rec raw r =
+let rec raw value r =
   let l = function
     | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
     | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" in
   match r with
   | Ffi_core.Atom (p, Src s) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Src %s))" (l p) (quote s)
   | Ffi_core.Atom (p, Gen (g, s)) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Gen (%s, %s)))" (l p) (z g) (quote s)
-  | Ffi_core.Handle (p, x, m) -> Printf.sprintf "(Ffi_core.Handle (%s, %s))" (l p) (handle x m)
+  | Ffi_core.Handle (p, x, m, v) -> Printf.sprintf "(Ffi_core.Handle (%s, %s, %s))" (l p) (handle x m) (value (Obj.obj v))
   | Nat (p, n) -> Printf.sprintf "(Ffi_core.Nat (%s, %s))" (l p) (z n)
   | Char (p, c) -> Printf.sprintf "(Ffi_core.Char (%s, %d))" (l p) c
   | Str (p, s) -> Printf.sprintf "(Ffi_core.Str (%s, %s))" (l p) (quote s)
   | Wild p -> Printf.sprintf "(Ffi_core.Wild %s)" (l p)
-  | List (p, xs) -> Printf.sprintf "(Ffi_core.List (%s, [ %s ]))" (l p) (concat "; " (List.map raw xs))
+  | List (p, xs) -> Printf.sprintf "(Ffi_core.List (%s, [ %s ]))" (l p) (concat "; " (List.map (raw value) xs))
 
 (* An extern type's unwrap into its model's shape and the wrap back (lib/ffi_core.ml's views), over Obj.t. *)
 let externs =
@@ -43,7 +43,7 @@ let externs =
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr");
     ( "Raw",
       "let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
-       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:Obj.obj ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
+       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, m, v = (Obj.obj h : int * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, m, v)) ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
 
@@ -250,7 +250,7 @@ and plain cx = function
   | V.VExt (_, Int n) -> Printf.sprintf "(Obj.repr (Z.of_string %s))" (quote (Z.to_string n))
   | V.VExt (_, (Array _ | Bytes _)) as v -> value cx v
   | V.VExt (_, Slice (s, o, l)) -> Printf.sprintf "(Obj.repr ((%s, 0, %d) : Ffi_core.slice))" (quote (String.sub s o l)) l
-  | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw r ^ ")"
+  | V.VExt (_, Raw r) -> "(Obj.repr " ^ raw (value cx) r ^ ")"
   | V.VCtorFn c -> var c.cid
   | V.VMatchable adt -> (match shape adt with
       | Ext _ ->
@@ -259,7 +259,8 @@ and plain cx = function
       | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
-  | V.VHandle (x, m) -> Printf.sprintf "(Obj.repr (%s))" (handle x m)
+  | V.VHandle (x, m, v) -> Printf.sprintf "(Obj.repr (%s, %s))" (handle x m) (value cx v)
+  | V.VLitHandle _ -> assert false
 
 and closure cx cl =
   match List.assq_opt cl !(cx.closures) with
@@ -366,6 +367,9 @@ and expr cx scope code = match code with
       let source = expr cx scope c in
       Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
   | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
+  | V.CPrim (Special.ConstValue, [ h ]) -> Printf.sprintf "(let (_, _, v) = (Obj.obj %s : int * Ffi_core.mult * Obj.t) in v)" (expr cx scope h)
+  | V.CPrim (Special.ConstMult, [ h; e; m; u ]) ->
+      Printf.sprintf "(match (Obj.obj %s : int * Ffi_core.mult * Obj.t) with (_, Ffi_core.Erased, _) -> %s | (_, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) (expr cx scope e) (expr cx scope m) (expr cx scope u)
   | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))
   | V.CAbsurd -> "(absurd ())"
 
@@ -382,10 +386,13 @@ let collect env items =
     | V.VCtor (c, vs) -> adt c.adt; Array.iter value vs
     | V.VTuple vs -> List.iter value vs
     | V.VExt (adt_, Array a) -> adt adt_; Array.iter value a
+    | V.VExt (a, Raw r) -> adt a; handles r
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
-    | V.VFn _ | V.VToken | V.VHandle _ -> ())
+    | V.VHandle (_, _, v) -> value v
+    | V.VFn _ | V.VToken | V.VLitHandle _ -> ())
+  and handles = function Ffi_core.Handle (_, _, _, v) -> value (Obj.obj v) | List (_, rs) -> List.iter handles rs | _ -> ()
   and code c =
     (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
     List.iter code (V.subcodes c)

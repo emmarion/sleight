@@ -3,7 +3,7 @@ type slice = string * int * int
 type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 type name = Src of string | Gen of Z.t * string
 type mult = Erased | Many | Unique
-type raw = Atom of loc * name | Handle of loc * int * mult | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+type raw = Atom of loc * name | Handle of loc * int * mult * Obj.t | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 (* Each extern type one level deep, in the order and arities of its model's constructors: [_view] takes a host
    value apart into the constructor at the top and host values below, [_of] puts one together. *)
@@ -138,7 +138,7 @@ let raw_view ~handle ~get ~str ~nat ~pos ~list ~raw v =
   match get v with
   | Atom (l, Src s) -> RawName (p l, str s)
   | Atom (l, Gen (n, s)) -> RawGen (p l, nat n, str s)
-  | Handle (l, x, m) -> RawConst (p l, handle (x, m))
+  | Handle (l, x, m, v) -> RawConst (p l, handle (x, m, v))
   | Nat (l, n) -> RawNat (p l, nat n)
   | Char (l, c) -> RawChar (p l, nat (Z.of_int c))
   | Str (l, s) -> RawStr (p l, str s)
@@ -158,7 +158,7 @@ let raw_of ~unhandle ~text ~z ~pos ~list ~raw m =
   match m with
   | RawName (p, s) -> Atom (l p, Src (text s))
   | RawGen (p, n, s) -> Atom (l p, Gen (z n, text s))
-  | RawConst (p, h) -> let x, m = unhandle h in Handle (l p, x, m)
+  | RawConst (p, h) -> unhandle (l p) h
   | RawNat (p, n) -> Nat (l p, z n)
   | RawChar (p, c) -> Char (l p, Z.to_int (z c))
   | RawStr (p, s) -> Str (l p, text s)

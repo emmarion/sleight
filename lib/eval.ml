@@ -49,7 +49,11 @@ let rec eval env code =
       [ VCtor (k, fs) ]
   | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))
   | CWorldDo c -> [ !perform (eval1 env c) ]
-  | CPrim (p, cs) -> !prim p (List.map (eval1 env) cs)
+  | CPrim (p, cs) -> (
+      match p, List.map (eval1 env) cs with
+      | Special.ConstValue, [ (VHandle (_, _, v) | VLitHandle (_, v)) ] -> [ v ]
+      | Special.ConstMult, [ h; e; m; u ] -> [ (match h with VHandle (_, Erased, _) -> e | VHandle (_, Unique, _) -> u | _ -> m) ]
+      | p, vs -> !prim p vs)
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))

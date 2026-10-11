@@ -595,7 +595,11 @@
 (def-fns _ $ (many prim-sig : (many (Env) env) (many (Sp) sp) -> (many (Maybe $ PrimSig) r))
   (prim-sig-in (env-prims env) sp))
 
-(let ((many primitives)) $ Cons _ (SpExpr $ ExGensym) $ Cons _ (SpExpr $ ExGensymUnique) $ Nil _)
+(let ((many implemented)) $ Cons _ (SpExpr $ ExGensym) $ Cons _ (SpExpr $ ExConstMult) $ Cons _ (SpExpr $ ExConstValue) $ Cons _ (SpExpr $ ExInternNat) $ Cons _ (SpExpr $ ExInternChar) $ Cons _ (SpExpr $ ExInternString) $ Nil _)
+(let ((many primitives)) $ Cons _ (SpExpr $ ExGensymUnique) implemented)
+
+(def-fns _ $ (many nullary-ctor-code : (erased (List $ List $ Nat) ctx) (many (Nat) c) -> (many (Code ctx many-one) r))
+  (CApp _ many-one (CConst _ c) (Nil _) (CCCtor)))
 
 (def-fns _ $ (many prim-named : (subterm many (List $ Sp) ps) (many (String) s) -> (many (Maybe $ Sp) r))
   (let-match many ps (Cons _ p rest) ((Nil _) (None _)))
@@ -978,7 +982,7 @@
 (def-fns _ $ (many char-key : (many (Nat) code) -> (many (String) k))
   (rope-str $ lit-char-rope code))
 
-(def-fns _ $ (many intern-nat : (many (Env) env) (many (Nat) n) -> (many (Env) r))
+(def-fns _ $ (many intern-nat-lit : (many (Env) env) (many (Nat) n) -> (many (Env) r))
   (let-match many (lit-lookup env $ nat-str n) (None _) ((Some _ _) env))
   (let-match many (prelude-missing env "a numeral" "Nat") (None _) ((Some _ msg) (env-error env msg)))
   (let ((many env2) (many x) (many p)) $ intern-numeral env $ nat-str n)
@@ -986,7 +990,7 @@
 
 ; Interns a character literal (ASSUMPTIONS 52): (MkChar (MkU8 n p)) over its code's numeral, transparent down
 ; to the opaque n.
-(def-fns _ $ (many intern-char : (many (Env) env) (many (Nat) code) -> (many (Env) r))
+(def-fns _ $ (many intern-char-lit : (many (Env) env) (many (Nat) code) -> (many (Env) r))
   (let-match many (lit-lookup env $ char-key code) (None _) ((Some _ _) env))
   (let-match many (prelude-missing env "a character literal" "Char") (None _) ((Some _ msg) (env-error env msg)))
   (let ((many env2) (many num) (many np)) $ intern-numeral-once env $ nat-str code)
@@ -1005,7 +1009,7 @@
 (def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
   (rope-str $ RCat (RChar #\x22) $ RStr s))
 
-(def-fns _ $ (many intern-string : (many (Env) env) (many (String) key) -> (many (Env) r))
+(def-fns _ $ (many intern-string-lit : (many (Env) env) (many (String) key) -> (many (Env) r))
   (let-match many (lit-lookup env key) (None _) ((Some _ _) env))
   (let-match many (prelude-missing env "a string literal" "String") (None _) ((Some _ msg) (env-error env msg)))
   (let ((many body)) $ match many key (((String) _)) ((SNil) (SNil)) ((SCons _ rest) rest))
@@ -1022,9 +1026,9 @@
 
 (def-fns _ $ (many intern-raw : (many (Env) env) (many (Syn) raw) -> (many (Env) r))
   (match many raw _
-    ((RNat _ n) (intern-nat env n))
-    ((RChr _ c) (intern-char env c))
-    ((RString _ s) (intern-string env $ string-key s))
+    ((RNat _ n) (intern-nat-lit env n))
+    ((RChr _ c) (intern-char-lit env c))
+    ((RString _ s) (intern-string-lit env $ string-key s))
     (else env)))
 
 (def-fns _ $ (many lit-entry : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Nat) x))
@@ -5032,7 +5036,7 @@
             ((Some _ sp)
               (let-match many (misplaced envl raw) (None _) ((Some _ _) (expr-error ctx expect envl (not-a envl "not an expression" raw) "misplaced")))
               (let ((many envl2)) $ read-special envl head (BFalse) pos)
-              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExWorldDo) $ or (sp-eq sp $ SpExpr $ ExGensym) $ or (sp-eq sp $ SpExpr $ ExGensymUnique) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ or (sp-eq sp $ SpMark $ MkAt) $ or (sp-eq sp $ SpStmt $ StCompileError) $ sp-eq sp $ SpStmt $ StDumpContext)
+              (let ((many multi)) $ or (sp-eq sp $ SpExpr $ ExWorldDo) $ or (sp-eq sp $ SpExpr $ ExGensym) $ or (sp-eq sp $ SpExpr $ ExInternNat) $ or (sp-eq sp $ SpExpr $ ExInternChar) $ or (sp-eq sp $ SpExpr $ ExInternString) $ or (sp-eq sp $ SpExpr $ ExGensymUnique) $ or (sp-eq sp $ SpExpr $ ExCellMatch) $ or (sp-eq sp $ SpExpr $ ExValues) $ or (sp-eq sp $ SpExpr $ ExMatch) $ or (sp-eq sp $ SpExpr $ ExOpenAbsurd) $ or (sp-eq sp $ SpMark $ MkTail) $ or (sp-eq sp $ SpMark $ MkNoTail) $ or (sp-eq sp $ SpMark $ MkDelegate) $ or (sp-eq sp $ SpMark $ MkAt) $ or (sp-eq sp $ SpStmt $ StCompileError) $ sp-eq sp $ SpStmt $ StDumpContext)
               (let ((many (Env) env0))
                 (match many multi _
                   ((BTrue) envl2)
@@ -5266,6 +5270,11 @@
                       (erased-result ctx expect proof-what env3 r))
                     ((ExGensym) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExGensymUnique) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExConstMult) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExConstValue) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExInternNat) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExInternChar) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExInternString) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExConstantOf)
                       (let-match many args (Cons _ mraw rest) ((Nil _) (malformed ctx expect env0 sp)))
                       (let-match many rest (Cons _ araw _) ((Nil _) (malformed ctx expect env0 sp)))
@@ -6417,7 +6426,7 @@
     (let ((many env2) (many ids) (many params)) $ notail $ elab-tele fuel sugar sg one-step ps env0 (MMDeclared) (Nil _) (BFalse) (BFalse) (BTrue) $ BFalse)
     (let ((many env3) (many ids2) (many rets)) $ notail $ elab-tele fuel sugar sg one-step (subs-of after _ wa) env2 (MMDeclared) (tvars-rev ids $ Nil _) (BFalse) (BFalse) (BTrue) $ BFalse)
     (let ((many env4)) $ env-discard envm env3)
-    (let-match many (and (mult-is-many mult) $ and (not $ sp-eq sp $ SpExpr $ ExGensym) $ any-non-erased rets) (BFalse)
+    (let-match many (and (mult-is-many mult) $ and (not $ is-some _ $ prim-named implemented $ sp-name sp) $ any-non-erased rets) (BFalse)
       ((BTrue) (env-back env $ env-error env4 $ str-cat3 "the compilers have no implementation of " (tick $ sp-name sp) ", so its returns must be erased")))
     (tail $ elab-prims fuel sugar rest $ env-back env $ env-add-prim env4 $ MkPrimSig sp mult params rets))
 
@@ -6430,7 +6439,15 @@
     (let-match many psig (MkPrimSig _ m params rets0))
     (let ((many rets)) $ match many (not $ mult-is-many m) (((List $ Entry) _)) ((BTrue) (entries-erased rets0)) ((BFalse) rets0))
     (let ((many env2) (many acc) (many tys) (many ctx2) (many apre) (many actuals)) $ notail $ check-args fuel sugar args (subs-all args) one-step env0 (CalleeForm env0 $ sp-name sp) ctx params pos tele (ARCall rets) (BFalse) (BTrue) $ BTrue)
-    (call-returns env2 ctx ctx2 apre expect rets acc pos demand (None _) shown $ InvPrim _ sp actuals))
+    (let ((many env3) (many hidden)) $ match many (sp-eq sp $ SpExpr $ ExConstMult) (((Env) _) ((List $ Code ctx2 many-one) _))
+      ((BTrue)
+        (let ((many env3a) (many ce)) $ prelude-id env2 "MErased")
+        (let ((many env3b) (many cm)) $ prelude-id env3a "MMany")
+        (let ((many env3c) (many cu)) $ prelude-id env3b "MUnique")
+        (values env3c $ Cons _ (nullary-ctor-code _ ce) $ Cons _ (nullary-ctor-code _ cm) $ Cons _ (nullary-ctor-code _ cu) $ Nil _))
+      ((BFalse) (values env2 $ Nil _)))
+    (let ((many all) (erased cat)) $ list-append _ actuals hidden)
+    (call-returns env3 ctx ctx2 apre expect rets acc pos demand (None _) shown $ InvPrim _ sp all))
 
   ((many elab-adt-headers : (subterm many (Nat) fuel) (subterm many (Nat) sugar) (subterm many (List $ Syn) adts) (many (Env) env) -> (many (Env) r) (many (AdtHeaders adts) hs) (many (Tids adts hs) tids))
     (let-match many adts (Cons _ adt rest) ((Nil _) (values env (AStop _) $ TStop _)))
