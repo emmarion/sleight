@@ -28,9 +28,10 @@
 
 (def-unique Main $ (unique start : (unique (World) w) -> (unique (World) w2 at w) (unique (Program Main) next))
   (let ((unique xs) (erased lxs)) (gen size 42 (UNil) 0 (LNil) (add-zero-right size)))
-  (let ((unique w1) (many u0)) (world-do _ w (Measure (Compact))))
+  (let ((unique stop-req)) (Measure (Stop)))
+  (let ((unique w1) (many u0)) (world-do _ w (Measure (Start))))
   (let ((unique r) (erased sorted) (erased perm)) (msort xs size lxs size-fits))
-  (let ((unique w2) (many u1)) (world-do _ w1 (Measure (NoCompact))))
+  (let ((unique w2) (many u1)) (world-do _ w1 stop-req))
   (let-match many u0 (MkUsage wall0 _ _ minor0 promoted0 major0 _ _))
   (let-match many u1 (MkUsage wall1 _ _ minor1 _ major1 _ _))
   (let ((many text))
