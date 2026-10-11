@@ -1,0 +1,10 @@
+name = "heapsort"
+defaultTargets = ["bench"]
+
+[[lean_lib]]
+name = "HeapSort"
+roots = ["HeapSort", "Int63"]
+
+[[lean_exe]]
+name = "bench"
+root = "Main"
