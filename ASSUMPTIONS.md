@@ -4006,6 +4006,22 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     `let-match` in a body has its branches spliced once, before it is
     told apart as a statement or a match, in both compilers.
 
+215. **Handles, where MACROS.md is silent.** `(constant-of m x)` takes a
+    name or a handle and a written multiplicity. It is not a use of `x`;
+    each splice of the handle is. A handle to a literal enters the
+    literal's entries where it is spliced, as the literal would, and is
+    refused where a literal is. A `delegate`-bodied function that `slc`
+    holds as its callee's value is minted at its own entry, not its
+    callee's. A handle's value is the id of the entry its `Const` was
+    minted at, with the multiplicity, and `slc` also carries the text a
+    message shows it by: a literal's spelling, else the entry's name,
+    else `_`. A spliced handle is read wherever a name is read as a
+    reference, the heads of special forms and macros included, and an
+    erased one dispatches neither; where a binder is read, the message
+    is "a handle to `k` is not a name". The reference
+    holds a handle as a syntax node of its own, `slc` as a third kind of
+    name, refused by the two functions that read binders.
+
 ## The world (section 42)
 
 Choices both implementations make about the world where DESIGN.md is

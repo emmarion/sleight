@@ -4,7 +4,7 @@
 type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 
 type name = Ffi_core.name = Src of string | Gen of Z.t * string
-type raw = Ffi_core.raw = Atom of loc * name | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+type raw = Ffi_core.raw = Atom of loc * name | Handle of loc * int * Ffi_core.mult | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 exception Syntax of loc * string
 
@@ -15,10 +15,13 @@ let file_of = function At { file; _ } -> file | NoLoc | Unknown -> ""
 let label w label = if w = "" then label else w ^ ": " ^ label
 let labelled fallback l = label (where fallback l)
 
-let loc = function Atom (l, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
+let loc = function Atom (l, _) | Handle (l, _, _) | Wild l | Nat (l, _) | Char (l, _) | Str (l, _) | List (l, _) -> l
+
+let handle_name = ref (fun x -> string_of_int x)
 
 let rec show = function
   | Atom (_, s) -> Literal.name s
+  | Handle (_, x, _) -> !handle_name x
   | Wild _ -> "_"
   | Nat (_, z) -> Z.to_string z
   | Char (_, c) -> Ffi_core.lit_char c

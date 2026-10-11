@@ -17,6 +17,8 @@ let untuple vs e body =
   | vs -> Printf.sprintf "(let (%s) = (Obj.obj %s : %s) in %s)" (concat ", " vs) e (obj_tuple (List.length vs)) body
 let quote s = "\"" ^ String.escaped s ^ "\""
 let z n = Printf.sprintf "(Z.of_string %s)" ("\"" ^ Z.to_string n ^ "\"")
+let handle x m = Printf.sprintf "(%d), Ffi_core.%s" x (String.capitalize_ascii (Term.mult_name m))
+
 let rec raw r =
   let l = function
     | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
@@ -24,6 +26,7 @@ let rec raw r =
   match r with
   | Ffi_core.Atom (p, Src s) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Src %s))" (l p) (quote s)
   | Ffi_core.Atom (p, Gen (g, s)) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Gen (%s, %s)))" (l p) (z g) (quote s)
+  | Ffi_core.Handle (p, x, m) -> Printf.sprintf "(Ffi_core.Handle (%s, %s))" (l p) (handle x m)
   | Nat (p, n) -> Printf.sprintf "(Ffi_core.Nat (%s, %s))" (l p) (z n)
   | Char (p, c) -> Printf.sprintf "(Ffi_core.Char (%s, %d))" (l p) c
   | Str (p, s) -> Printf.sprintf "(Ffi_core.Str (%s, %s))" (l p) (quote s)
@@ -39,8 +42,8 @@ let externs =
     ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr");
     ( "Raw",
-      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
-       let con_Raw v = Obj.repr (Ffi_core.raw_of ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
+      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
+       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:Obj.obj ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
 
@@ -256,6 +259,7 @@ and plain cx = function
       | _ -> "m_plain")
   | V.VFn cl -> "(Obj.repr " ^ closure cx cl ^ ")"
   | V.VToken -> "(Obj.repr ())"
+  | V.VHandle (x, m) -> Printf.sprintf "(Obj.repr (%s))" (handle x m)
 
 and closure cx cl =
   match List.assq_opt cl !(cx.closures) with
@@ -381,7 +385,7 @@ let collect env items =
     | V.VExt (a, _) -> adt a
     | V.VCtorFn c -> adt c.adt
     | V.VMatchable a -> adt a
-    | V.VFn _ | V.VToken -> ())
+    | V.VFn _ | V.VToken | V.VHandle _ -> ())
   and code c =
     (match c with V.CConst v -> value v | V.CCellAlloc (c, _) -> adt c.adt | V.CLetRec (fs, _) -> List.iter (fun (_, f) -> code f.V.body) fs | _ -> ());
     List.iter code (V.subcodes c)

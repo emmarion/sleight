@@ -30,14 +30,17 @@ let pos_of env expect = if expect = [] && env.usage_erased || expect <> [] && Li
 let atom = function Atom (_, n) -> Some n | _ -> None
 let not_name loc what raw = match raw with
   | Nat _ | Char _ | Str _ -> error loc "%s is a literal, not a name" (Reader.show raw)
+  | Handle _ -> error loc "a handle to %s is not a name" (tick (Reader.show raw))
   | _ -> error loc "expected %s, got %s" what (tick (Reader.show raw))
 let atom_or loc raw what = match atom raw with Some n -> n | None -> not_name loc what raw
 let binder = function Atom (_, n) -> Some (Some n) | Wild _ -> Some None | _ -> None
 let binder_or loc raw what = match binder raw with Some b -> b | None -> not_name loc what raw
 
 (* A special form's head: a Const, non-erased entry of type (Special) holding one of its variants (section 6). *)
+let minted_type env x = let m = (entry env x).minted in canon { env with facts = trusted env } (Option.value (IntMap.find_opt m (trusted env)) ~default:(fact env m)).ty
+let minted_is env x = Var (entry env x).minted
 let const_value env x ty = match entry env x with
-  | { state = Const v; mult = (Many | Unique); minted; _ } when equal (canon { env with facts = trusted env } minted) ty -> Some v
+  | { state = Const v; mult = (Many | Unique); _ } when equal (minted_type env x) ty -> Some v
   | _ -> None
 let special_value env x = match const_value env x Prelude.special_term with Some (V.VCtor (c, [||])) -> List.assoc_opt c.cid Prelude.specials | _ -> None
 let () = Env.special_name := (fun env x -> Option.map Sp.name (special_value env x)); Env.delegate_ctor := Prelude.delegate; Env.atfn_ctor := Prelude.atfn
@@ -46,7 +49,8 @@ let rec special_of env raw =
   let value = special_value env in
   match raw with
   | Atom (_, n) -> Option.bind (lookup env n) value
-  | List (_, [head; Atom (_, n)]) when special_of env head = Some Sp.Share -> Option.bind (lookup env n) value
+  | Handle (_, x, m) -> if m = Erased then None else value x
+  | List (_, [head; (Atom _ | Handle _ as a)]) when special_of env head = Some Sp.Share -> special_of env a
   | _ -> None
 
 let is_special env raw s = special_of env raw = Some s
@@ -55,13 +59,19 @@ let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
 let misplaced env = function List (_, h :: _) -> Option.to_list (Option.bind (special_of env h) (fun sp -> if Sp.has_role sp then Some sp else None)) | _ -> []
 let brief = function
-  | List (_, (Atom _ as h) :: args) -> tick ("(" ^ Reader.show h ^ (if args = [] then ")" else " ...)"))
+  | List (_, ((Atom _ | Handle _) as h) :: args) -> tick ("(" ^ Reader.show h ^ (if args = [] then ")" else " ...)"))
   | List (_, []) -> tick "()"
   | List _ -> "this form"
   | r -> tick (Reader.show r)
 let not_a env what raw = error (loc raw) "%s is %s%s" (brief raw) what (help env (String.concat "" (List.map Sp.role_hints (misplaced env raw))))
 let at loc f = try f () with Error (Reader.Unknown, msg) -> error loc "%s" msg
 let var env loc n = match lookup env n with Some x -> refer x; x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
+let reference env loc raw what = match raw with
+  | Atom (_, n) -> var env loc n
+  | Handle (_, x, _) when x >= 0 -> refer x; x
+  | _ -> not_name loc what raw
+let handle_made = function Handle (_, _, m) -> Some m | _ -> None
+let made env raw x = Option.value (handle_made raw) ~default:(entry env x).mult
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
 
@@ -73,7 +83,7 @@ let in_prelude env f =
 
 (* An atom naming an entry, read through any alias rule the fact table holds for it (section 19). *)
 let named_of env loc what x = match canon env (Var x) with Var x -> x | t -> error loc "%s is not %s" (qshow env t) what
-let named env loc what raw = named_of env loc what (var env loc (atom_or loc raw what))
+let named env loc what raw = named_of env loc what (reference env loc raw what)
 
 let tyname env loc = named env loc "a type constructor"
 
@@ -179,13 +189,13 @@ let with_mults used tele = List.map (fun (e : entry) -> { e with mult = used e.m
 
 let describe env pos raw term ty =
   let used, marks = match ty with Fn _ | UniqueFn _ -> (under pos, true) | TyCtor _ -> (Fun.id, false) | _ -> (field_under pos, true) in
-  let apposed = match ty, raw with Cell _, Atom _ -> true | _ -> false in
+  let apposed = match ty, raw with Cell _, (Atom _ | Handle _) -> true | _ -> false in
   let view = lazy (
     let kind = kind_name env ty in
     match ty, raw, term with
-    | Cell (Var c, _), Atom _, Var x -> (sprintf_in env "%s, a `Cell` of %s" (qname env x) (qname env c), declared_as env c)
+    | Cell (Var c, _), (Atom _ | Handle _), Var x -> (sprintf_in env "%s, a `Cell` of %s" (qname env x) (qname env c), declared_as env c)
     | Cell (Var c, _), _, _ -> (sprintf_in env "the computed `Cell` of %s" (qname env c), (Reader.loc raw, respell env "the `Cell` is computed here") :: declared_as env c)
-    | _, Atom _, Var x -> (qname env x, declared_as env x)
+    | _, (Atom _ | Handle _), Var x -> (qname env x, declared_as env x)
     | _ -> ("the computed " ^ kind, [ (Reader.loc raw, Printf.sprintf "the %s is computed here" kind) ])) in
   { subject = lazy (fst (Lazy.force view)); apposed; notes = lazy (snd (Lazy.force view)); used; marks }
 
@@ -297,7 +307,7 @@ let parse_entry env raw =
       | [ n ] when binder n <> None -> [ mk None (Option.get (binder n)) ]
       | ty :: names when names <> [] && List.for_all (fun n -> binder n <> None) names ->
           List.map (fun n -> mk (Some (`Ty ty)) (Option.get (binder n))) names
-      | _ -> (match List.rev items with (Nat _ | Char _ | Str _) as r :: _ -> error (loc r) "%s is a literal, not a name" (Reader.show r) | _ -> ());
+      | _ -> (match List.rev items with (Nat _ | Char _ | Str _ | Handle _) as r :: _ -> not_name (loc r) "a name" r | _ -> ());
           error l "malformed telescope entry %s%s" (tick (Reader.show raw)) (help env (Sp.hints "telescope-entry")))
   | r -> error (loc r) "expected a telescope entry, got %s" (tick (Reader.show raw))
 
@@ -467,11 +477,12 @@ let implement env p _ = match p with
   | Sp.Gensym -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
   | p -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))
 
-let macro_of env raw =
-  let held n = Option.bind (prelude_id env "Macro") (fun m -> Option.bind (lookup env n) (fun x -> const_value env x (App (Var m, [])))) in
+let rec macro_of env raw =
+  let held x = Option.bind (prelude_id env "Macro") (fun m -> const_value env x (App (Var m, []))) in
   match raw with
-  | Atom (_, n) -> held n
-  | List (_, [ h; Atom (_, n) ]) when special_of env h = Some Sp.Share -> held n
+  | Atom (_, n) -> Option.bind (lookup env n) held
+  | Handle (_, x, m) when m <> Erased -> held x
+  | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> macro_of env a
   | _ -> None
 
 let raw_ctor env l = ctor_of env l (Option.get (prelude_id env "RawName"))
@@ -480,17 +491,18 @@ let rec raw_value env r =
   match ext_adt env "RawName" with
   | Some adt -> V.VExt (adt, V.Raw r)
   | None ->
-      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
+      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, m) -> V.VHandle (x, m)) ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
       V.construct (List.nth (raw_ctor env Reader.nowhere).V.adt.ctors i) fs
 
 let rec value_raw env l = function
   | V.VExt (_, V.Raw r) -> r
-  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
+  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(function V.VHandle (x, m) -> (x, m) | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
 
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
   | Atom (_, n), _ -> (env, var env l n)
+  | Handle (_, x, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> enter env row | None -> env), x)
   | _, Some lit -> let env = intern env l lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))
@@ -498,17 +510,18 @@ let atom_entry_or env l raw what = match raw with List _ -> error l "expected %s
 
 let read_special pos env raw =
   match raw with
-  | Atom (l, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l Many x
-  | List (l,[h;Atom (al,n)]) when special_of env h = Some Sp.Share ->
+  | Atom (l, _) | Handle (l, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l ?made:(handle_made raw) Many x
+  | List (l,[h;(Atom _ | Handle _ as a)]) when special_of env h = Some Sp.Share ->
       if pos = Erased then error_in env l "`share` in an erased position";
-      let x = var env al n in
-      if (entry env x).mult <> Unique then error_in env l "`share` needs a unique value";
+      let x = reference env (loc a) a "a name" in
+      if made env a x <> Unique then error_in env l "`share` needs a unique value";
       use env l ~sharing:true Many x
   | _ -> env
 
 let macro_refused env l head =
   let shown = tick (Reader.show head) in
-  let x = match head with Atom (_, n) -> lookup env n | List (_, [ h; Atom (_, n) ]) when special_of env h = Some Sp.Share -> lookup env n | _ -> None in
+  let rec held = function Atom (_, n) -> lookup env n | Handle (_, x, _) -> Some x | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> held a | _ -> None in
+  let x = held head in
   let bound x how where = let e = entry env x in if Reader.placed e.at then [ (e.at, respell env (Printf.sprintf "%s is bound%s here%s" (qname env x) how where)) ] else [] in
   let dyn = ", where every binding is `Dyn`" in
   match Option.map (fun x -> (x, entry env x)) x with
@@ -753,14 +766,14 @@ let rec elab_term ?expect env raw =
   let env, raw = erased_reads expand_one env raw in
   match raw with
   | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Dyn type_term in (env, Var x)
-  | Atom _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
+  | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
       | Some sp -> elab_type_form env l sp args
       | None -> (
           let env, args = erased_reads spliced env args in
-          let h = Var (var env l (atom_or l head "a constructor")) in
+          let h = Var (reference env l head "a constructor") in
           match canon env (infer env l h) with
           | (TyCtor tele | ValCtor (tele, _)) as ty -> let env, acc = elab_term_args env l ~callee:(describe env Erased head h ty) ?expect tele h args in (env, App (h, List.rev acc))
           | ty -> error l "%s has type %s and cannot be applied in a type" (qshow env h) (qshow env ty)))
@@ -837,14 +850,17 @@ and fetched env l sp args =
 
 and compile_text pos env l sp = function
   | [ raw ] ->
-      let env, x = match raw with Atom _ | Nat _ | Char _ | Str _ -> atom_entry env raw | List (_, [ h; Atom (al, n) ]) when special_of env h = Some Sp.Share -> (env, var env al n) | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
+      let env, x, m = match raw with
+        | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, x, made env raw x)
+        | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let x = reference env (loc a) a "a name" in (env, x, made env a x)
+        | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
-      (match const_value env x str with
+      (match (if m = Erased then None else const_value env x str) with
        | Some v -> (read_special pos env raw, str_host env l v)
        | None ->
            let e = entry env x in
            error_in env (loc raw) "the message of %s must be a `Const`, non-erased `String`; %s %s" (tick (speller env (Sp.name sp))) (qname env x)
-             (if e.mult = Erased then "is erased" else if e.state = Dyn then "is `Dyn`" else "has type " ^ qshow env (canon { env with facts = trusted env } e.minted) ^ ", not the prelude's `String`"))
+             (if m = Erased then "is erased" else if e.state = Dyn then "is `Dyn`" else "has type " ^ qshow env (minted_type env x) ^ ", not the prelude's `String`"))
   | _ -> error l "%s" (help env (Sp.misuse sp))
 
 and compile_error : 'a. mult -> Env.t -> Reader.loc -> Reader.raw list -> 'a = fun pos env l args -> error l "%s" (snd (compile_text pos env l Sp.CompileError args))
@@ -910,7 +926,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
         let place = Option.map (fun raw ->
           if not places then error_in env e.s_loc "`at` is allowed only on function telescope, match annotation and value constructor entries";
           if lit_of raw <> None then error_in env (loc raw) "`at` names a variable, not a literal";
-          let x = var env (loc raw) (atom_or (loc raw) raw "a location variable") in
+          let x = reference env (loc raw) raw "a location variable" in
           if ctor && List.mem x env.signature && not (List.mem x ids) then error_in env (loc raw) "`at` in a constructor's telescope cannot name %s, bound by an enclosing telescope still being written" (qname env x);
           refer ~live:(mult <> Erased && not env.usage_erased) x;
           if (entry env x).mult = Erased && mult <> Erased then error_in env (loc raw) "`at` needs a variable declared `many` or `unique`";
@@ -1158,9 +1174,9 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
   let env, raw = expand_one env raw in
   match raw with
-  | Atom (l, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
+  | Atom (l, _) | Handle (l, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
       let env, x = atom_entry env raw in
-      (use env l ~written:(Reader.show raw) (demanded env demand pos (type_of env x)) x, [ res_of env x ], if pos <> Erased then V.CVar x else V.CErased)
+      (use env l ~written:(Reader.show raw) ?made:(handle_made raw) (demanded env demand pos (type_of env x)) x, [ { (res_of env x) with erasure = made env raw x } ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
       match special_of env head with
@@ -1175,7 +1191,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
           let env, rs, code = match hty with
           | TyCtor tele ->
               let c = callee pos in
-              if pos <> Erased then error_with l (Lazy.force c.notes) "%s applied in a non-erased position" (match head with Atom _ -> "type constructor " ^ Lazy.force c.subject | _ -> Lazy.force c.subject);
+              if pos <> Erased then error_with l (Lazy.force c.notes) "%s applied in a non-erased position" (match head with Atom _ | Handle _ -> "type constructor " ^ Lazy.force c.subject | _ -> Lazy.force c.subject);
               let env, acc = elab_term_args env l ~callee:c ?expect:expect_tele tele h.term args in
               (env, [ { term = App (h.term, List.rev acc); ty = type_term; erasure = Erased; place = None } ], V.CErased)
           | ValCtor (tele, ret) ->
@@ -1376,7 +1392,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       if pos <> Erased && (entry env x).mult = Erased then error_in env l "%s is erased, as %s is, and stands in a non-erased position" (qshow env (slot_of x)) (qname env x);
       (env, [ { term = slot_of x; ty = Prelude.slot_term; erasure = pos; place = Some (slot_of x) } ], if pos = Erased then V.CErased else V.CVar x)
   | Sp.CellAlloc, [ raw ] ->
-      let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
+      let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ | Handle _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
       let c = ctor_var env l c in
       let ct, params, _ = cell_shape env l c in
       let env, slots, writes, wrap = cell_items env pos l ("`cell-alloc`", loc raw, c, params) (List.init ct.V.arity (fun _ -> Var Prelude.null))
@@ -1416,9 +1432,9 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let env, r, code = match a with
-        | Atom (al, _) | Nat (al, _) | Char (al, _) | Str (al, _) ->
+        | Atom (al, _) | Handle (al, _, _) | Nat (al, _) | Char (al, _) | Str (al, _) ->
             let env, x = atom_entry env a in
-            if (entry env x).mult <> Unique then error_in env al "`share` needs a unique value";
+            if made env a x <> Unique then error_in env al "`share` needs a unique value";
             (use env al ~sharing:true Many x, res_of env x, V.CVar x)
         | _ -> elab_expr1 env Unique a
       in
@@ -1446,6 +1462,16 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let c = { subject = lazy "`world-do`"; apposed = false; notes = lazy []; used = under pos; marks = true } in
       let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
       call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.nth codes 1))
+  | Sp.ConstantOf, [ mraw; a ] ->
+      let mode = mult_or env l mraw in
+      let x = reference env (loc a) a "a name" in
+      if (match (entry env x).state with Dyn -> true | Const _ -> false) then error_in env (loc a) "%s is `Dyn`, and a handle names a `Const`" (qname env x);
+      if mode <> Erased && made env a x <> mode then error_in env (loc a) "%s is not declared `%s`" (qname env x) (speller env (mult_name mode));
+      let id s = match prelude_id env s with Some i -> Var i | None -> error l "`constant-of` needs the prelude's `%s`, which `--no-prelude` leaves out" s in
+      let m = App (id (match mode with Erased -> "MErased" | Many -> "MMany" | Unique -> "MUnique"), []) in
+      let h, env = bind env None (under pos Many) Dyn (App (id "Const", [ m; minted_type env x; minted_is env x ])) in
+      produced env [] "a handle and so many" (type_of env h) Many;
+      (env, [ res_of env h ], if pos = Erased then V.CErased else V.CConst (V.VHandle ((entry env x).minted, mode)))
   | sp, _ when List.mem sp primitives -> (
       let shown () = tick (speller env (Sp.name sp)) in
       match Hashtbl.find_opt prims sp with
@@ -1491,7 +1517,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.ProvePredates, [ x; lv ] ->
       let env, lv = level_binder env l lv in
       let env, x = match x with
-        | Atom _ | Nat _ | Char _ | Str _ | Wild _ -> atom_entry ~at:l env x
+        | Atom _ | Handle _ | Nat _ | Char _ | Str _ | Wild _ -> atom_entry ~at:l env x
         | _ -> (match elab_term env x with env, Var x -> (env, x) | _ -> error l "expected a variable or a fetch form, got %s" (tick (Reader.show x))) in
       erased (prove_predates env l x lv)
   | Sp.PredatesTrans, [ p; q ] ->
@@ -1714,13 +1740,13 @@ and elab_match ?(demand = Fixed) ?(refute = false) ?(form = "match") ?res ?cells
       let branch raw =
         let kind, pat, body =
           match raw with
-          | List (_, [ a; (Atom _ as c) ]) when is_special env a Sp.Absurd -> (`Auto, c, [])
+          | List (_, [ a; ((Atom _ | Handle _) as c) ]) when is_special env a Sp.Absurd -> (`Auto, c, [])
           | List (_, a :: pat :: body) when is_special env a Sp.Absurd -> (`Proof, pat, body)
           | List (_, pat :: body) -> (`Present, pat, body)
           | _ -> error (loc raw) "malformed branch%s" (help env (Sp.hints "branch"))
         in
         let bl = loc pat in
-        let c, fs = match pat with Atom _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern%s" (help env (Sp.hints "branch")) in
+        let c, fs = match pat with Atom _ | Handle _ -> (pat, []) | List (_, c :: fs) -> (c, fs) | _ -> error bl "malformed pattern%s" (help env (Sp.hints "branch")) in
         let c = ctor_var env bl c in
         let extra = extra && marker env bl tid ctors c <> Erased in
         let fs, name = if kind = `Auto then (fs, if extra then Some (None, Reader.nowhere) else None) else pattern env ("a `" ^ form ^ "` branch") smult sres bl c (mults_of bl c) extra fs in
@@ -1968,7 +1994,7 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.CompileError, _ -> compile_error spos env l args
       | Some Sp.CompileWarn, _ -> let env, text = compile_text spos env l Sp.CompileWarn args in warn_at l [] "%s" text; (env, Fun.id)
       | Some Sp.SlotSelf, [ a ] ->
-          let x = var env (loc a) (atom_or (loc a) a "a variable") in
+          let x = reference env (loc a) a "a variable" in
           check_type env (loc a) (type_of env x) Prelude.slot_term;
           ((try place env x (Var x) with Contradiction msg -> error_in env l "`slot-self`: %s contradicts the facts in force (%s)" (qname env x) (Lazy.force msg)), Fun.id)
       | Some Sp.OpenAtFn, [ e ] ->
@@ -2088,7 +2114,7 @@ and elab_let_match spos env l args =
       if smult <> Erased then warn_use env l "match on" (Var tid);
       let c = ctor_var env pl c in
       if marker env pl tid ctors c = Erased && smult <> Erased then error pl "%s is phantom" (qname env c);
-      let named = List.filter_map (function List (_, _ :: (Atom _ as b) :: _) | List (_, _ :: List (_, b :: _) :: _) -> Some (ctor_var env (loc b) b) | _ -> None) branches in
+      let named = List.filter_map (function List (_, _ :: ((Atom _ | Handle _) as b) :: _) | List (_, _ :: List (_, b :: _) :: _) -> Some (ctor_var env (loc b) b) | _ -> None) branches in
       (* Test each alternative before introducing the selected constructor's facts.
          Trial fields and refinements stay local, exactly as for omitted match branches. *)
       let unrefuted =
@@ -2137,13 +2163,14 @@ and elab_comptime_match env l args =
         match x with
         | List (_, [ h; a ]) when special_of env h = Some Sp.Share ->
             let env, y = atom_entry_or env l a "a variable" in
-            if (entry env y).mult <> Unique then error_in env l "`share` needs a unique value";
+            if made env a y <> Unique then error_in env l "`share` needs a unique value";
             if smult = Unique then error l "many value %s used at unique" (qname env y);
-            (env, y, true)
-        | _ -> let env, y = atom_entry_or env l x "a variable" in (env, y, false)
+            (env, (y, a), true)
+        | _ -> let env, y = atom_entry_or env l x "a variable" in (env, (y, x), false)
       in
-      let env = use env l ~sharing smult x in
-      let value = match entry env x with { state = Const v; mult = (Many | Unique); _ } -> v | _ -> error_in env l "`comptime-match` needs a Const scrutinee that is `many` or `unique`" in
+      let x, r = x in
+      let env = use env l ~sharing ?made:(handle_made r) smult x in
+      let value = match entry env x with { state = Const v; _ } when made env r x <> Erased -> v | _ -> error_in env l "`comptime-match` needs a Const scrutinee that is `many` or `unique`" in
       let c = ctor_var env pl c in
       let tele, ret = ctor_type env pl c in
       let tid = match type_head env (type_of env x) with Some t -> t | None -> error l "scrutinee is not a datatype value" in

@@ -1408,6 +1408,14 @@
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
+(def-adts $ (Mult : -> Type)
+  enum
+  (many MErased : -> (Mult))
+  (many MMany : -> (Mult))
+  (many MUnique : -> (Mult)))
+
+(def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
@@ -1416,7 +1424,8 @@
   (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
-  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw)))
+  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
+  (many RawConst : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype

@@ -464,14 +464,18 @@
   (let-match many q (MkPos f l c) ((NoPos) (RStr "Ffi_core.NoLoc")))
   (rcat3 (rcat3 (RStr "(Ffi_core.At { file = ") (quoted f) $ RStr "; line = ") (rcat3 (z-rope l) (RStr "; col = ") (z-rope c)) $ RStr " })"))
 
+(def-fns _ $ (many handle-rope : (many (Nat) x) (many (Multiplicity) m) -> (many (Rope) r))
+  (rcat3 (RStr "(") (nat-rope x) $ rcat (RStr "), Ffi_core.") $ RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")))
+
 (def-fns _
   ((many syn-rope : (many (String) file) (subterm many (Syn) r) -> (many (Rope) o))
     (let ((many loc)) $ spot-rope file $ raw-pos r)
     (let ((many (String) k) (many (Rope) x))
       (match many r (((String) _) ((Rope) _))
-        ((RAtom _ s) (values "Atom" $ match many s (((Rope) _))
-          ((NSrc t) (rcat (RStr "Ffi_core.Src ") $ quoted t))
-          ((NGen n t) (rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")")))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
+        ((RAtom _ s) (match many s (((String) _) ((Rope) _))
+          ((NSrc t) (values "Atom" $ rcat (RStr "Ffi_core.Src ") $ quoted t))
+          ((NGen n t) (values "Atom" $ rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")"))
+          ((NHandle x m _) (values "Handle" $ handle-rope x m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
         ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
         ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope file xs))))
     (match many r (((Rope) _))
@@ -483,7 +487,8 @@
 (def-fns _ $ (many payload-rope : (many (Payload) p) -> (many (Rope) r))
   (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
     ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))"))
-    ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope f r) $ RStr ")")))
+    ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope f r) $ RStr ")"))
+    ((PHandle x m _) (rcat3 (RStr "(Obj.repr (") (handle-rope x m) $ RStr "))")))
   (let ((many n) (erased _)) (str-length s))
   (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
 
@@ -731,7 +736,7 @@
 ; ---- Code and blocks as OCaml; every piece recurses on the piece it writes.
 
 (def-fns _
-  ((many emit-code : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (Rope) r))
+  ((many emit-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (Rope) r))
     (match many code _
       ((CVar _ _ p) (named-rope (names-get _ _ p ns) env))
       ((CConst _ x) (const-rope env x))
@@ -798,7 +803,7 @@
     (let ((many indices) (many args)) $ notail $ emit-slots _ rest env ns d)
     (values (Cons _ index indices) $ Cons _ (notail $ emit-code _ _ code env ns d) args))
 
-  ((many emit-arms : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Arm) r))
+  ((many emit-arms : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Names ctx) ns) (many (Decls) d) -> (many (List $ Arm) r))
     (let-match many bs (Cons _ b rest) ((Nil _) (Nil _)))
     (match many b _
       ((MkBranch _ _ disc ids body)
@@ -876,7 +881,7 @@
     ((Cons _ y rest) (or (nat-eq x y) $ notail $ nat-list-mem rest x))))
 
 (def-fns _
-  ((many collect-code : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
+  ((many collect-code : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ms) (subterm many (Code ctx ms) code) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
     (let-match many code (CMatch _ _ scrut shape branches dfl live)
       ((CValue _ v) (tail $ collect-block _ v env d))
       ((CValues _ _ cs _) (tail $ collect-codes _ cs env d))
@@ -911,7 +916,7 @@
       ((Nil _) d))
     (match many slot _ ((MkPair _ _ _ code) (tail $ collect-slots _ rest env $ notail $ collect-code _ _ code env d))))
 
-  ((many collect-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
+  ((many collect-branches : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns2) (subterm many (List $ Branch ctx ns2) bs) (many (Env) env) (many (Decls) d) -> (many (Decls) r))
     (let-match many bs (Cons _ b rest)
       ((Nil _) d))
     (match many b _ ((MkBranch _ _ _ _ body) (tail $ collect-branches _ _ rest env $ notail $ collect-code _ _ body env d))))
