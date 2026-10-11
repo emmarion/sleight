@@ -62,7 +62,7 @@ let resolve here s =
   in
   String.concat "\n" (List.map line (String.split_on_char '\n' s))
 
-type held = Said of string | Shadow of int * int * Reader.loc * string * Reader.loc
+type held = Said of string | Shadow of int * int * Reader.loc * Reader.name * Reader.loc
 let held : held list ref = ref []
 
 let warn_at l notes fmt =
@@ -88,14 +88,20 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : string option; mult : mult; state : state; minted : term; minted_level : bool; introduced : id; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
+type entry = { name : Reader.name option; mult : mult; state : state; minted : term; minted_level : bool; introduced : id; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
-module StringMap = Map.Make (String)
+module NameMap = Map.Make (struct
+  type t = Reader.name
+  let compare a b = match a, b with
+    | Reader.Src a, Reader.Src b -> String.compare a b
+    | Src _, Gen _ -> -1 | Gen _, Src _ -> 1
+    | Gen (m, _), Gen (n, _) -> Z.compare m n
+end)
 
 (* The scope (section 5): its entries newest first, and the newest named entry of each name, for lookup. *)
-type scope = { ids : id list; named : id StringMap.t }
+type scope = { ids : id list; named : id NameMap.t }
 
 (* An opened Matchable (section 8) with the names its type holds canonically, the type constructor
    first. The names are read again whenever a variable is ruled out ([add_rule]), so they are current under the
@@ -131,11 +137,11 @@ type t = {
 }
 
 let empty =
-  { signature = []; ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = StringMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = StringMap.empty } }
+  { signature = []; ctor_tele = []; in_extern = false; unwarned = false; externs = false; warned = IntMap.empty; uses = IntMap.empty; captures = []; usage_erased = false; scope = { ids = []; named = NameMap.empty }; entries = IntMap.empty; facts = IntMap.empty; opens = { opened = []; touched = [] }; level = Top; subterms = []; enclosing = None; run_pos = true; trusted = IntMap.empty; values = IntMap.empty; pending = []; prelude = { ids = []; named = NameMap.empty } }
 
 let counter = ref 0
 let fresh () = incr counter; !counter
-let names : (id, string) Hashtbl.t = Hashtbl.create 64
+let names : (id, Reader.name) Hashtbl.t = Hashtbl.create 64
 let fresh_literal () = - (fresh ())
 
 type literal = { lit : Literal.t; lit_id : id; lit_proof : id option; minted : (id * entry * fact) list }
@@ -180,7 +186,7 @@ let trusted env = if env.run_pos then env.facts else env.trusted
 let leave_run env = { env with run_pos = false; trusted = trusted env }
 
 
-let lookup env name = StringMap.find_opt name env.scope.named
+let lookup env name = NameMap.find_opt name env.scope.named
 
 let distance a b =
   let a = String.lowercase_ascii a and b = String.lowercase_ascii b in
@@ -194,7 +200,9 @@ let distance a b =
   d.(String.length a).(String.length b)
 
 let hint env name =
-  let visible = List.filter_map (fun x -> Option.bind (entry env x).name (fun n -> if lookup env n = Some x then Some n else None)) env.scope.ids in
+  let source n = match n with Reader.Src s -> Some s | Gen _ -> None in
+  let visible = match source name with None -> [] | Some _ -> List.filter_map (fun x -> Option.bind (entry env x).name (fun n -> if lookup env n = Some x then source n else None)) env.scope.ids in
+  let name = Option.value (source name) ~default:"" in
   let best = List.fold_left (fun b n -> min b (distance name n)) max_int visible in
   match List.filter (fun n -> distance name n = best) visible with
   | [] -> ""
@@ -272,11 +280,11 @@ let speller ?except env =
     | None -> if Some x <> except && equal (canon env (Var x)) (App (Var !Term.univ, [])) then Some Term.universe else None in
   let held = lazy (List.fold_left (fun acc (n, x) -> match holds x with
     | Some b when (match List.assoc_opt b acc with Some (y, _) -> y < x | None -> true) -> (b, (x, n)) :: List.remove_assoc b acc
-    | _ -> acc) [] (StringMap.bindings env.scope.named)) in
+    | _ -> acc) [] (NameMap.bindings env.scope.named)) in
   fun b -> match List.assoc_opt b (Lazy.force held) with
     | Some (_, n) -> Literal.name n
     | None when b = Term.universe -> b
-    | None -> Printf.sprintf "\001k%s\001%s\002" b (match lookup env b with Some x -> Reader.where "" (entry env x).at | None -> "")
+    | None -> Printf.sprintf "\001k%s\001%s\002" b (match lookup env (Src b) with Some x -> Reader.where "" (entry env x).at | None -> "")
 
 (* A message's own template with each keyword that stands for syntax spelled as [speller] spells it: inside
    backticks, or anywhere in [code], a piece of syntax such as a usage hint. Only a template is respelled,
@@ -318,10 +326,10 @@ let newest cands a = List.fold_left (fun best (a', (x, n)) -> if a' = a && (matc
 let fetches ?except env =
   let kw = speller env in
   let form head arg = "(" ^ kw head ^ " " ^ arg ^ ")" in
-  let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, Literal.name n)) | _ -> None) (StringMap.bindings env.scope.named) in
+  let named = List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (Var x) with Var a -> Some (a, (x, Literal.name n)) | _ -> None) (NameMap.bindings env.scope.named) in
   let name_for a = Option.map snd (newest named a) in
   List.filter_map (fun (_, (x, n)) -> match canon env (type_of env x) with Fn (Var l, _, _) | UniqueFn (Var l, _, _) -> Some (l, (x, form "level-of" n)) | _ -> None) named
-  @ List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" (Literal.name n))) | _ -> None) (StringMap.bindings env.scope.named)
+  @ List.filter_map (fun (n, x) -> if Some x = except then None else match canon env (slot_of x) with Var a -> Some (a, (x, form "slot-of" (Literal.name n))) | _ -> None) (NameMap.bindings env.scope.named)
   @ List.filter_map (fun o -> match o.kind, canon env (Var o.obj), type_of env o.obj with
       | `Matchable, Var m, Matchable (_, _, _, Var t, _) -> Option.map (fun n -> (m, (o.obj, form "matchable-of" n))) (name_for t)
       | _ -> None) env.opens.opened
@@ -348,7 +356,7 @@ let namer ?except env terms =
   let lits = List.filter_map (fun r -> match r.lit with
     | (Literal.Numeral _ | Literal.Str _) as lit -> Option.map (fun a -> (a, (r.lit_id, Literal.spell lit))) (of_atom r.lit_id)
     | _ -> None) (present_literals env) in
-  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, Literal.name n))) (of_atom x)) (StringMap.bindings env.scope.named) in
+  let names = List.filter_map (fun (n, x) -> if Some x = except then None else Option.map (fun a -> (a, (x, Literal.name n))) (of_atom x)) (NameMap.bindings env.scope.named) in
   let fetched = lazy (fetches ?except env) in
   fun x ->
     if (entry env x).meta then anonymous env x
@@ -425,7 +433,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
   if written && Reader.placed at then
     Option.iter
       (fun n ->
-         match StringMap.find_opt n env.scope.named with
+         match NameMap.find_opt n env.scope.named with
          | Some prior ->
              (* An entry with no position was minted by the built-ins rather than read from a file: a
                 special form, an annotation token, or one of the opaque types (section 54). A binder the
@@ -438,7 +446,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
       name;
   Option.iter (Hashtbl.replace names x) name;
   let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
-  let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> StringMap.add n x env.scope.named) name } in
+  let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
   (x, set_state ?minted env x state)
 
@@ -587,7 +595,7 @@ let kind_name env ty =
 let declared_as env x = declared env x |> List.map (fun (l, m) -> (l, kind_name env (type_of env x) ^ " " ^ m))
 
 type binder_kind = Let of int * bool | Param | Field | Optional | Definition
-type tracked = { binder : string; at : Reader.loc; kind : binder_kind; mult : mult; erased_scope : bool }
+type tracked = { binder : Reader.name; at : Reader.loc; kind : binder_kind; mult : mult; erased_scope : bool }
 
 let warn_unused = ref false
 type ref_state = Level of int | Target of id

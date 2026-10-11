@@ -25,7 +25,8 @@ let plain s =
   s <> "_" && s <> "$" && s <> "" && s.[0] <> '"' && (not (String.starts_with ~prefix:"__" s)) && (not (String.starts_with ~prefix:"#\"" s))
   && String.for_all (fun c -> c > ' ' && c <= '~' && not (String.contains "();" c)) s && classify s = `Name
 
-let name s = if plain s then s else "#" ^ Ffi_core.lit_string s
+let spell_name s = if plain s then s else "#" ^ Ffi_core.lit_string s
+let name : Ffi_core.name -> string = function Src s -> spell_name s | Gen (n, s) -> "__g" ^ Z.to_string n ^ "_" ^ spell_name s
 
 (* The source spelling a literal reads back from, [classify]'s inverse: a numeral in decimal, a character bare
    where the reader's word syntax admits it, and a string escaped the way [Reader.tokenize] unescapes. *)

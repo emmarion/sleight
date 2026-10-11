@@ -1394,6 +1394,20 @@
   (many NoPos : -> (Pos))
   (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
 
+(def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
+  enum
+  (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
+
+(def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
+(def-opaque $ (MacroWorld : -> Type))
+
+(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
+
+(def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
+    (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
@@ -1401,10 +1415,12 @@
   (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
   (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
-  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
+  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype
   (many MkMacro : (erased (Level) L)
-     (many (Fn L (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out)) f)
+     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+               (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
      -> (Macro)))

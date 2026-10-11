@@ -111,7 +111,11 @@
       (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Store Block h) hq) (many (Ref Block h) req) (unique (World) wo) ->
           (erased (Hist Block) h2) (many (Store Block h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
         (perform-request pcs rq pargs with-env base _ hq req wo))
-      (tail $ interp-program pcs (MkPerformer (World) perform) _ hp en v w1))
+      (def-fns perform-lvl $ (many world-prim : (erased (Hist Block) h) (many (Store Block h) hq) (many (Sp) prim) (many (List $ Ref Block h) args) (unique (World) wo) ->
+          (erased (Hist Block) h2) (many (Store Block h2) hq2) (erased (Suffix Block h2 h) lq) (many (List $ Ref Block h2) r) (unique (World) wo2 at wo))
+        (let ((erased hl2) (many hq2) (erased sf2) (many e)) $ alloc Block _ hq $ BError _ $ no-macro-world prim)
+        (values hl2 hq2 sf2 (Cons _ e $ Nil _) wo))
+      (tail $ interp-program pcs (MkPerformer (World) perform world-prim) _ hp en v w1))
     ((FPlain) (tail $ interp-finals env pargs with-env _ rest _ hp en le $ say-to (BFalse) (str-cat (final-text _ hp v env ty) "\n") w))
     ((FThunk t)
       (let ((erased h1) (many hp1) (erased le1) (many vs) (erased pk) (unique (Unit) u1)) (apply eval-fuel _ hp en v (Nil _) many-one _ compile-time u))

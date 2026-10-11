@@ -19,7 +19,7 @@ and tele = entry list
    carrying it is what lets a message about a binder bound from a stored telescope -- a function's parameter
    inside its own body -- still point at the declaration (ASSUMPTIONS 195). It is not part of the type: a
    telescope compares as if it were absent, which [blank] is where that holds. *)
-and entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
+and entry = { name : Reader.name option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
 and sg = Ty of term | Is of term
 
 let sg_term = function Ty t | Is t -> t

@@ -674,8 +674,26 @@
   (and (all-word-chars s) $ and (not $ is-literal-name s) $ and (not $ str-eq s "_") $ and (not $ str-eq s "$")
     $ and (not $ char-is c 34) $ and (not $ is-reserved-name s) $ not $ str-starts "#\"" s))
 
-(def-fns _ $ (many spell-name : (many (String) s) -> (many (String) r))
+(def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
   (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ lit-string-rope s))))
+
+(def-adts $ (Name : -> Type)
+  enum
+  (many NSrc : (many (String) s) -> (Name))
+  (many NGen : (many (Nat) n) (many (String) s) -> (Name)))
+
+(def-fns _ $ (many spell-name : (many (Name) n) -> (many (String) r))
+  (match many n _
+    ((NSrc s) (spell-text s))
+    ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))))
+
+(def-fns _ $ (many name-text : (many (Name) n) -> (many (String) r))
+  (match many n _ ((NSrc s) s) ((NGen _ _) (spell-name n))))
+
+(def-fns _ $ (many name-eq : (many (Name) a) (many (Name) b) -> (many (Bool) r))
+  (match many a _
+    ((NSrc s) (match many b _ ((NSrc t) (str-eq s t)) ((NGen _ _) (BFalse))))
+    ((NGen m _) (match many b _ ((NSrc _) (BFalse)) ((NGen n _) (nat-eq m n))))))
 
 (def-fns _ $ (many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (match many rs _
@@ -692,6 +710,48 @@
     (let-match many kids (Cons _ k rest) ((Nil _) acc))
     (match many k _
       ((MkKid _ c submap) (tail $ nm-kids-entries _ rest path $ notail $ nm-entries _ submap (rcat path $ RChar c) acc)))))
+
+(def-adts $ (NameIndex : (Type V) -> Type)
+  enum
+  (many MkNameIndex : (erased Type V) (many (NameMap V) src) (many (List $ Pair (Name) V) gen) -> (NameIndex V)))
+
+(def-fns _ $ (many name-index-empty : (erased Type V) -> (many (NameIndex V) m))
+  (MkNameIndex _ (nm-empty _) (Nil _)))
+
+(def-fns _ $ (many gen-get : (erased Type V) (many (Name) n) (subterm many (List $ Pair (Name) V) gs) -> (many (Maybe V) r))
+  (let-match many gs (Cons _ g rest) ((Nil _) (None _)))
+  (let-match many g (MkPair _ _ k v))
+  (match many (name-eq k n) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ gen-get _ n rest))))
+
+(def-fns _ $ (many gen-id : (many (Name) n) -> (many (Nat) k))
+  (match many n _ ((NGen k _) k) ((NSrc _) 0)))
+
+(def-fns _ $ (many gen-set : (erased Type V) (many (Name) n) (many V v) (subterm many (List $ Pair (Name) V) gs) -> (many (List $ Pair (Name) V) r))
+  (let-match many gs (Cons _ g rest) ((Nil _) (Cons _ (MkPair _ _ n v) $ Nil _)))
+  (let-match many g (MkPair _ _ k _))
+  (match many (nat-lt (gen-id k) $ gen-id n) _
+    ((BTrue) (Cons _ g $ notail $ gen-set _ n v rest))
+    ((BFalse) (Cons _ (MkPair _ _ n v) $ match many (name-eq k n) (((List $ Pair (Name) V) _)) ((BTrue) rest) ((BFalse) gs)))))
+
+(def-fns _ $ (many name-index-get : (erased Type V) (many (Name) n) (many (NameIndex V) m) -> (many (Maybe V) r))
+  (let-match many m (MkNameIndex _ src gen))
+  (let-match many n (NSrc s) ((NGen _ _) (gen-get _ n gen)))
+  (match many (nm-get _ s src) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
+
+(def-fns _ $ (many name-index-set : (erased Type V) (many (Name) n) (many V v) (many (NameIndex V) m) -> (many (NameIndex V) r))
+  (let-match many m (MkNameIndex _ src gen))
+  (match many n _
+    ((NSrc s) (MkNameIndex _ (nm-set _ s v src) gen))
+    ((NGen _ _) (MkNameIndex _ src $ gen-set _ n v gen))))
+
+(def-fns _ $ (many src-pairs : (erased Type V) (subterm many (List $ Pair (String) V) ps) (many (List $ Pair (Name) V) acc) -> (many (List $ Pair (Name) V) r))
+  (let-match many ps (Cons _ p rest) ((Nil _) acc))
+  (let-match many p (MkPair _ _ s v))
+  (Cons _ (MkPair _ _ (NSrc s) v) $ notail $ src-pairs _ rest acc))
+
+(def-fns _ $ (many name-index-entries : (erased Type V) (many (NameIndex V) m) -> (many (List $ Pair (Name) V) r))
+  (let-match many m (MkNameIndex _ src gen))
+  (src-pairs _ (nm-entries _ src (REmpty) $ Nil _) $ list-rev _ gen))
 
 ; ---- lemmas over the prelude's Lt and Double, shared with heap.sl and core.sl's fact table
 

@@ -3,7 +3,8 @@
    it is raised where none is at hand, for an enclosing form to fill in. *)
 type loc = Ffi_core.loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 
-type raw = Ffi_core.raw = Atom of loc * string | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+type name = Ffi_core.name = Src of string | Gen of Z.t * string
+type raw = Ffi_core.raw = Atom of loc * name | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 exception Syntax of loc * string
 
@@ -53,9 +54,9 @@ let scan_upto file src =
   let emit t = out := t :: !out in
   let item l w =
     if w = "_" then Item (Wild l)
-    else if String.starts_with ~prefix:"__" w then Invalid (Printf.sprintf "`%s` begins with `__`, which is reserved for the compilers' messages; write it `%s`" w (Literal.name w))
+    else if String.starts_with ~prefix:"__" w then Invalid (Printf.sprintf "`%s` begins with `__`, which is reserved for the compilers' messages; write it `%s`" w (Literal.spell_name w))
     else match Literal.classify w with
-      | `Name -> Item (Atom (l, w))
+      | `Name -> Item (Atom (l, Src w))
       | `Lit (Literal.Numeral z) -> Item (Nat (l, z))
       | `Lit (Literal.Char c) -> Item (Char (l, c))
       | `Lit (Literal.Str s) -> Item (Str (l, s))
@@ -68,10 +69,10 @@ let scan_upto file src =
       let buf = Buffer.create 16 in
       let line', _, j = string buf line bol (i + 2) in
       if line' <> line then err (at line bol i) "a pragma ends with its line";
-      Atom (at line bol i, Buffer.contents buf) :: pragma line bol j (k - 1))
+      Atom (at line bol i, Src (Buffer.contents buf)) :: pragma line bol j (k - 1))
     else
     let j = if k = 0 then j else skip (fun c -> not (blank c || c = '\n')) i in
-    if i >= j then [] else if k = 0 then [ Atom (at line bol i, String.trim (String.sub src i (j - i))) ] else Atom (at line bol i, String.sub src i (j - i)) :: pragma line bol j (k - 1)
+    if i >= j then [] else if k = 0 then [ Atom (at line bol i, Src (String.trim (String.sub src i (j - i)))) ] else Atom (at line bol i, Src (String.sub src i (j - i))) :: pragma line bol j (k - 1)
   in
   let rec go line bol i =
     if i < n then
@@ -79,13 +80,13 @@ let scan_upto file src =
       | '\n' -> go (line + 1) (i + 1) (i + 1)
       | ' ' | '\t' | '\r' -> go line bol (i + 1)
       | ';' when i + 1 < n && src.[i + 1] = '!' ->
-          let words = match pragma line bol (i + 2) 2 with Atom (_, "warn") :: _ as ws -> ws | _ -> pragma line bol (i + 2) 3 in
+          let words = match pragma line bol (i + 2) 2 with Atom (_, Src "warn") :: _ as ws -> ws | _ -> pragma line bol (i + 2) 3 in
           emit (at line bol i, i, Pragma words); go line bol (skip (( <> ) '\n') i)
       | ';' -> go line bol (skip (( <> ) '\n') i)
       | '(' -> emit (at line bol i, i, LParen); go line bol (i + 1)
       | ')' -> emit (at line bol i, i, RParen); go line bol (i + 1)
       | '"' -> literal (fun l b -> Str (l, b)) line bol i (i + 1)
-      | '#' when i + 1 < n && src.[i + 1] = '"' -> literal (fun l b -> Atom (l, b)) line bol i (i + 2)
+      | '#' when i + 1 < n && src.[i + 1] = '"' -> literal (fun l b -> Atom (l, Src b)) line bol i (i + 2)
       | _ ->
           let j = skip (fun c -> not (String.contains " \t\r\n();" c)) i in
           let w = String.sub src i (j - i) in
@@ -128,7 +129,7 @@ let parse ?(shape = true) file src =
   let paren l m = Syntax (l, if shape && !shape_notes then m ^ "\n" ^ shape_note (file_of l) else m) in
   let opened = ref [] and closed = ref [] in
   let suppression l w = function
-    | Atom (_, "warn") :: Atom (_, name) :: _ -> (
+    | Atom (_, Src "warn") :: Atom (_, Src name) :: _ -> (
         match (w, List.assoc_opt name !opened) with
         | "suppress", None -> opened := (name, l) :: !opened
         | "suppress", Some first -> raise (Syntax (l, Printf.sprintf "`;! suppress warn` for `%s` is already open\n%s: note: opened here" name (where "-" first)))
@@ -139,12 +140,12 @@ let parse ?(shape = true) file src =
   let rec read_items ?(top = false) acc =
     match peek () with
     | None | Some (_, RParen) -> List.rev acc
-    | Some (l, Pragma (Atom (_, (("suppress" | "restore") as w)) :: rest)) -> advance (); suppression l w rest; read_items ~top acc
-    | Some (_, Pragma (Atom (wl, w) :: _)) when w <> "warn" -> raise (Syntax (wl, Printf.sprintf "unknown pragma `%s`" w))
+    | Some (l, Pragma (Atom (_, Src (("suppress" | "restore") as w)) :: rest)) -> advance (); suppression l w rest; read_items ~top acc
+    | Some (_, Pragma (Atom (wl, w) :: _)) when w <> Src "warn" -> raise (Syntax (wl, Printf.sprintf "unknown pragma `%s`" (Literal.name w)))
     | Some (l, Pragma []) -> raise (Syntax (l, "a pragma needs a word after `;!`"))
     | Some (l, Pragma words) ->
         if not top then raise (Syntax (l, "`;! warn` must be written between top-level forms"));
-        advance (); read_items ~top (List (l, Atom (l, ";!") :: words) :: acc)
+        advance (); read_items ~top (List (l, Atom (l, Src ";!") :: words) :: acc)
     | Some (l, ((LParen | Dollar) as opener)) ->
         advance ();
         let items = read_items [] in

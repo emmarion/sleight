@@ -4,7 +4,7 @@ open Env
 module V = Value
 module Sp = Special
 
-type entry = Term.entry = { name : string option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
+type entry = Term.entry = { name : Reader.name option; subterm : bool; mult : mult; sg : sg; place : term option; loc : Reader.loc }
 type res = { term : term; ty : term; erasure : mult; place : term option }
 type demand = Fixed | CallableHead of mult | Driver
 
@@ -280,7 +280,7 @@ let expect_proof ?(alt = "") env loc ctor p =
   | ty -> error loc "expected a %s proof%s, got %s : %s" (qname env ctor) alt (qshow env p) (qshow env ty)
 
 
-type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : string option; s_place : raw option }
+type src_entry = { s_loc : loc; s_subterm : bool; s_mult : mult option; s_sg : [ `Ty of raw | `Is of raw ] option; s_name : Reader.name option; s_place : raw option }
 
 let parse_entry env raw =
   match raw with
@@ -363,7 +363,7 @@ let open_tele env ?(word = true) ?names ?ats ?mults ?states ?(ids = []) ?meta te
    its constructor -- read from the tag where there is one, and the sole non-phantom constructor where there is
    no choice -- over its fields, each erased one printing as `_`. Everything else prints `_`, so the walk is total
    and never reaches Value.show's untyped rendering. *)
-let prelude_id env name = Env.lookup { env with scope = env.prelude } name
+let prelude_id env name = Env.lookup { env with scope = env.prelude } (Src name)
 
 let nullary env name ty = match (type_head env ty, prelude_id env name) with Some t, Some p -> t = p | _ -> false
 
@@ -459,6 +459,13 @@ let rec intern env loc lit =
 let lit_of = function Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s) | _ -> None
 
 let expansions = ref 0
+let gensyms = ref 0
+let primitives = [ Sp.Gensym; Sp.GensymUnique ]
+let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
+let implemented = [ Sp.Gensym ]
+let implement env p _ = match p with
+  | Sp.Gensym -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
+  | p -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))
 
 let macro_of env raw =
   let held n = Option.bind (prelude_id env "Macro") (fun m -> Option.bind (lookup env n) (fun x -> const_value env x (App (Var m, [])))) in
@@ -520,7 +527,8 @@ let expand env raw =
           let env = read_special Many env head in
           let here = Ffi.pos (Ffi_core.pos_view ~str:(str_value env) ~nat:(nat_value env) l) in
           let args = List.fold_right (fun a rest -> Ffi.list (Cons (raw_value env a, rest))) args (Ffi.list Nil) in
-          let out = try Eval.apply f [ here; args ] with Eval.Runtime m -> error l "macro %s failed: %s" (tick (Reader.show head)) m in
+          Eval.prim := implement env;
+          let out = try Eval.apply f [ V.VToken; here; args ] with Eval.Runtime m -> error l "macro %s failed: %s" (tick (Reader.show head)) m in
           let rec items v = match Ffi.unlist v with Nil -> [] | Cons (x, rest) -> value_raw env l x :: items rest in
           (env, items (List.hd out)))
         (macro_of env head)
@@ -719,7 +727,7 @@ let bind_cell code cell body = match cell with None -> body | Some x -> V.CLet (
 let warn_use env l what t =
   match canon env t with
   | Var x when not env.unwarned -> (
-      let means r = match StringMap.find_opt r.Reader.name env.scope.named with Some y -> canon env (Var y) = Var x | None -> false in
+      let means r = match NameMap.find_opt (Src r.Reader.name) env.scope.named with Some y -> canon env (Var y) = Var x | None -> false in
       match IntMap.find_opt x env.warned, List.filter (fun r -> Reader.covers r l && means r) (Option.value ~default:[] (Hashtbl.find_opt Reader.regions (Reader.file_of l))) with
       | Some (pl, msg), [] -> warn_at l [ (pl, Printf.sprintf "`;! warn` for %s is here" (qshow env t)) ] "%s %s: %s" what (qshow env t) msg
       | Some _, rs -> List.iter (fun r -> r.Reader.used <- true) rs
@@ -727,16 +735,16 @@ let warn_use env l what t =
   | _ -> ()
 
 let pragma env l = function
-  | [ Atom (_, "warn"); Atom (nl, n); Atom (_, msg) ] -> (
-      let x = match StringMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick_name n) (hint env n) in
+  | [ Atom (_, Src "warn"); Atom (nl, n); Atom (_, Src msg) ] -> (
+      let x = match NameMap.find_opt n env.scope.named with Some x -> x | None -> error nl "`;! warn` names %s, which is not in scope%s" (tick_name n) (hint env n) in
       match canon env (Var x), canon env (type_of env x) with
       | Var c, (TyCtor _ | ValCtor _ | Fn _ | UniqueFn _) -> (
           match IntMap.find_opt c env.warned with
           | Some (pl, _) -> error_with l [ (pl, "the first is here") ] "second `;! warn` for %s" (tick_name n)
           | None -> { env with warned = IntMap.add c (l, msg) env.warned })
       | _ -> error nl "`;! warn` names %s, which is neither a constructor nor a function" (tick_name n))
-  | [ Atom (_, "warn") ] -> error l "`;! warn` needs a name and a message"
-  | [ Atom (_, "warn"); _ ] -> error l "`;! warn` needs a message after the name"
+  | [ Atom (_, Src "warn") ] -> error l "`;! warn` needs a name and a message"
+  | [ Atom (_, Src "warn"); _ ] -> error l "`;! warn` needs a message after the name"
   | _ -> error l "`;! warn` needs a name and a message"
 
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (const env V.VToken) Prelude.level_term
@@ -1111,7 +1119,7 @@ let normalize code =
    39): renames, loads and a match whose every branch erases to nothing, dispatch included; never a store, an
    allocation or a call that was not skipped. *)
 let rec erases_to_nothing = function
-  | V.CApp _ | V.CCellAlloc _ | V.CCellWrite _ | V.CCellCopy _ | V.CWorldDo _ -> false
+  | V.CApp _ | V.CCellAlloc _ | V.CCellWrite _ | V.CCellCopy _ | V.CWorldDo _ | V.CPrim _ -> false
   | V.CLetRec (_, rest) -> erases_to_nothing rest
   | c -> List.for_all erases_to_nothing (V.subcodes c)
 
@@ -1316,7 +1324,7 @@ and call_returns ?sink ~demand env expect l callee_name acc rets inner =
 and elab_special ?sink ?final demand tele env expect l sp args =
   let pos = pos_of env expect in
   let m =
-    if List.mem sp (Sp.WorldDo :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
+    if List.mem sp (Sp.WorldDo :: primitives @ Sp.CellMatch :: Sp.CellMatch :: Sp.Values :: Sp.Match :: Sp.OpenAbsurd :: Sp.Tail :: Sp.NoTail :: Sp.Delegate :: Sp.At :: Sp.statements) then pos
     else match expect with [ m ] -> m | _ -> error l "%s produces one value" (tick (speller env (Sp.name sp)))
   in
   let expected_type env = match tele with
@@ -1432,12 +1440,21 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.Match, _ -> elab_match ~demand ?final tele env expect l args
   | Sp.WorldDo, _ ->
       let request = match prelude_id env "Request" with Some r -> r | None -> error l "`world-do` needs the prelude's `Request`" in
-      let e ?place name mult t = { name = Some name; subterm = false; mult; sg = Ty t; place; loc = Reader.nowhere } in
+      let e ?place name mult t = { name = Some (Src name); subterm = false; mult; sg = Ty t; place; loc = Reader.nowhere } in
       let params = [ e "A" Erased type_term; e "w" Unique Prelude.world_term; e "req" Unique (App (Var request, [ Bound 1 ])) ] in
       let rets = [ e ~place:(SlotOf (Bound 1)) "w2" Unique Prelude.world_term; e "r" Many (Bound 3) ] in
       let c = { subject = lazy "`world-do`"; apposed = false; notes = lazy []; used = under pos; marks = true } in
       let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
       call_returns ?sink ~demand env expect l (fun () -> "`world-do`") acc rets (fun _ -> V.CWorldDo (List.nth codes 1))
+  | sp, _ when List.mem sp primitives -> (
+      let shown () = tick (speller env (Sp.name sp)) in
+      match Hashtbl.find_opt prims sp with
+      | None -> error_in env l "%s has no signature until `def-prim` declares it" (shown ())
+      | Some (m, params, rets) ->
+          let rets = if m = Erased then List.map (fun (e : entry) -> { e with mult = Erased }) rets else rets in
+          let c = { subject = lazy (shown ()); apposed = false; notes = lazy []; used = under pos; marks = true } in
+          let env, acc, codes = check_args env l ~callee:c ~bind_args:true ~named:(slot_named_params params rets) ?expect:tele ~result:(fun mvars -> instantiate_tele mvars rets) ~pos params args elab_arg in
+          call_returns ?sink ~demand env expect l shown acc rets (fun _ -> V.CPrim (sp, codes)))
   | (Sp.Tail | Sp.NoTail | Sp.Delegate), [ (List _ as call) ] ->
       if pos = Erased then error l "%s in an erased position" (tick (speller env (Sp.name sp)));
       let cc = match sp with Sp.Tail -> V.Tail | Sp.NoTail -> V.NoTail | _ -> V.Delegate in
@@ -1942,6 +1959,8 @@ and elab_stmt_unsettled ?(within = "item of a body") spos env raw =
       | Some Sp.DefFns, _ -> elab_def_fns env l args
       | Some Sp.DefUnique, _ -> elab_def_fns ~unique:true env l args
       | Some Sp.DefAdts, _ -> elab_def_adts env args
+      | Some Sp.DefOpaque, _ -> (elab_def_opaque env l args, Fun.id)
+      | Some Sp.DefPrim, _ -> (elab_def_prim env l args, Fun.id)
       | Some Sp.ComptimeMatch, _ -> elab_comptime_match env l args
       | Some Sp.LetMatch, _ -> elab_let_match spos env l args
       | Some Sp.Unary, _ -> elab_unary spos env l args
@@ -2277,6 +2296,37 @@ and check_marks env l pids code =
               Some (Var f)
           | _ -> error_in env l "`delegate` needs exactly one call to a named function" )
 
+and declares_trusted env l sp = if not env.externs then error_in env l "only the prelude may write %s; a program that declares its own runs with `--no-prelude`" (tick (speller env (Sp.name sp)))
+
+and elab_def_opaque env l entries =
+  declares_trusted env l Sp.DefOpaque;
+  List.fold_left (fun env raw ->
+    match raw with
+    | List (_, [ List (al, n :: colon :: sg) ]) when is_special env colon Sp.Colon ->
+        let ps, ret = split_arrow env al sg in
+        let env, ty = elab_tyctor env al ps ret in
+        snd (bind env ~at:al (binder_or al n "a type constructor name") Erased (const env V.VToken) ty)
+    | _ -> error_in env (loc raw) "malformed `def-opaque` entry%s" (help env (Sp.hints "def-opaque"))) env entries
+
+and elab_def_prim env l entries =
+  declares_trusted env l Sp.DefPrim;
+  List.fold_left (fun env raw ->
+    match raw with
+    | List (_, [ List (fl, m :: n :: colon :: sg) ]) when is_special env colon Sp.Colon ->
+        let mult = mult_or env fl m in
+        if mult = Unique then error_in env fl "a primitive is declared `many` or `erased`";
+        let sp = match n with Atom (_, Src s) -> List.find_opt (fun p -> Sp.name p = s) primitives | _ -> None in
+        let sp = match sp with Some sp -> sp | None -> error (loc n) "%s names no primitive the compilers implement" (tick (Reader.show n)) in
+        if Hashtbl.mem prims sp then error fl "a second `def-prim` for %s" (tick (Sp.name sp));
+        let ps, rs = split_arrow env fl sg in
+        let env', ids, params = elab_tele env ~places:true ps in
+        let env', _, rets = elab_tele env' ~places:true ~ids:(List.rev ids) rs in
+        if mult <> Erased && not (List.mem sp implemented) && List.exists (fun (e : entry) -> e.mult <> Erased) rets then
+          error fl "the compilers have no implementation of %s, so its returns must be erased" (tick (Sp.name sp));
+        Hashtbl.replace prims sp (mult, params, rets);
+        carry env env'
+    | _ -> error_in env (loc raw) "malformed `def-prim` entry%s" (help env (Sp.hints "def-prim"))) env entries
+
 and elab_def_adts env adts =
   let header env raw =
     match raw with
@@ -2349,9 +2399,9 @@ let report_unused env =
     | 0, 0, n | 0, n, _ | n, _, _ -> n in
   let unused x = level x = 0 in
   let deletable g = List.for_all (fun (x, t) -> match t.kind with Let (g', _) when g' = g -> unused x | _ -> true) all in
-  List.iter (fun (x, t) ->
-    let name = tick_name t.binder and renamed = tick_name ("_" ^ t.binder) in
-    if lookup env t.binder = Some x || String.starts_with ~prefix:"_" t.binder then ()
+  List.iter (fun (x, t) -> match t.binder with Gen _ -> () | Src b ->
+    let name = tick_name t.binder and renamed = tick_name (Src ("_" ^ b)) in
+    if lookup env t.binder = Some x || String.starts_with ~prefix:"_" b then ()
     else if unused x then
       match t.kind with
       | Optional | Definition -> warn_in env t.at [] "unused %s; delete it" name
@@ -2370,7 +2420,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
     let env, items = expand_seq env items in
     match items with
     | [] -> env
-    | List (l, Atom (_, ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
+    | List (l, Atom (_, Src ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
     | item :: rest -> (
         reset_tracking ();
         at (loc item) (fun () ->

@@ -2,6 +2,7 @@ open Value
 
 exception Runtime of string
 let perform : (value -> value) ref = ref (fun _ -> raise (Runtime "no world"))
+let prim : (Special.t -> value list -> value list) ref = ref (fun p _ -> raise (Runtime ("`" ^ Special.name p ^ "` reached with no macro world")))
 
 let bind ids vs env =
   if List.length ids <> List.length vs then raise (Runtime "arity mismatch");
@@ -48,6 +49,7 @@ let rec eval env code =
       [ VCtor (k, fs) ]
   | CCellRead (_, i, c) -> (match eval1 env c with VCtor (_, fs) -> [ fs.(i) ] | _ -> raise (Runtime "not a cell"))
   | CWorldDo c -> [ !perform (eval1 env c) ]
+  | CPrim (p, cs) -> !prim p (List.map (eval1 env) cs)
   | CAbsurd -> raise (Runtime "absurd code reached")
 
 and eval1 env code = match eval env code with [ v ] -> v | vs -> raise (Runtime (Printf.sprintf "expected one value, got %d" (List.length vs)))

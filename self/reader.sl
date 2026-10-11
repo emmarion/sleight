@@ -12,7 +12,7 @@
 (def-adts
   ((Syn : -> Type)
     enum
-    (many RAtom : (many (Spot) pos) (many (String) s) -> (Syn))
+    (many RAtom : (many (Spot) pos) (many (Name) s) -> (Syn))
     (many RWild : (many (Spot) pos) -> (Syn))
     (many RNat : (many (Spot) pos) (many (Nat) n) -> (Syn))
     (many RChr : (many (Spot) pos) (many (Nat) code) -> (Syn))
@@ -98,10 +98,10 @@
 (def-fns _ $ (many word-item : (many (Spot) pos) (many (String) w) -> (many (Tok) t))
   (let-match many (str-eq w "_") (BFalse) ((BTrue) (TItem $ RWild pos)))
   (let-match many (is-reserved-name w) (BFalse)
-    ((BTrue) (TError pos $ str-cat3 (str-cat3 "`" w "` begins with `__`, which is reserved for the compilers' messages; write it `") (spell-name w) "`")))
+    ((BTrue) (TError pos $ str-cat3 (str-cat3 "`" w "` begins with `__`, which is reserved for the compilers' messages; write it `") (spell-text w) "`")))
   (let-match many (literal-error w) (None _) ((Some _ msg) (TError pos msg)))
   (match many (classify w) _
-    ((LName) (TItem $ RAtom pos w))
+    ((LName) (TItem $ RAtom pos $ NSrc w))
     ((LNumeral) (TItem $ RNat pos $ parse-nat w 0))
     ((LChar) (TItem $ RChr pos $ match many (char-lit-code w) (((Nat) _)) ((Some _ n) n) ((None _) 0)))))
 
@@ -155,14 +155,15 @@
 (def-fns _ $ (many pragma-limit : (many (List $ Syn) words) -> (many (Nat) n))
   (let-match many (list-rev _ words) (Cons _ w _)
     ((Nil _) 3))
-  (let-match many w (RAtom _ s) (else 3))
+  (let-match many w (RAtom _ n) (else 3))
+  (let-match many n (NSrc s) (else 3))
   (match many (str-eq s "warn") _ ((BTrue) 2) ((BFalse) 3)))
 
 (def-fns _ $ (many pragma-field : (many (Maybe $ Spot) start) (many (Rope) cur) (many (List $ Syn) words) -> (many (List $ Syn) r))
   (let ((many text)) $ rope-str cur)
   (match many start _
     ((None _) words)
-    ((Some _ p) (Cons _ (RAtom p text) words))))
+    ((Some _ p) (Cons _ (RAtom p $ NSrc text) words))))
 
 (def-fns _ $ (many pragma-tok : (many (Spot) pos) (many (Maybe $ Spot) start) (many (Rope) cur) (many (List $ Syn) words) -> (many (Tok) t))
   (TPragma pos $ list-rev _ $ pragma-field start cur words))
@@ -235,8 +236,8 @@
         (let ((many body)) $ rope-str rev)
         (match many kind _
           ((SKLit) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RString pos body) acc))
-          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RAtom pos body) acc))
-          ((SKPragma pp ws) (tail $ pragma-line rest line (Succ col) pp (Cons _ (RAtom pos body) ws) (None _) (REmpty) (REmpty) acc)))))
+          ((SKName) (tail $ tokenize rest line (Succ col) $ Cons _ (TItem $ RAtom pos $ NSrc body) acc))
+          ((SKPragma pp ws) (tail $ pragma-line rest line (Succ col) pp (Cons _ (RAtom pos $ NSrc body) ws) (None _) (REmpty) (REmpty) acc)))))
     (match many (nat-eq n 92) _
       ((BTrue)
         (let-match many rest (SCons e rest2) ((SNil) (unterminated (MkSpot line $ Succ col) acc)))
@@ -292,7 +293,9 @@
 ; frame; a ) with only the root open, a form still open at the end, or a bad token is a syntax error
 ; (DESIGN.md section 2).
 (def-fns _ $ (many is-atom-text : (many (Syn) r) (many (String) x) -> (many (Bool) b))
-  (match many r _ ((RAtom _ y) (str-eq x y)) (else (BFalse))))
+  (let-match many r (RAtom _ y) (else (BFalse)))
+  (let-match many y (NSrc t) (else (BFalse)))
+  (str-eq x t))
 
 (def-fns _ $ (many syn-err : (many (Spot) l) (many (String) m) -> (many (Maybe $ SynErr) e))
   (Some _ $ MkSynErr l m (BFalse) $ None _))
@@ -307,11 +310,12 @@
     ((TError l m) (values stack (syn-err l m) closed))
     ((TPragma l ws)
       (let-match many ws (Cons _ w args) ((Nil _) (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
-      (let-match many w (RAtom wl kw) (else (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
+      (let-match many w (RAtom wl kn) (else (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
+      (let-match many kn (NSrc kw) (else (values stack (syn-err l "a pragma needs a word after `;!`") closed)))
       (match many (str-eq kw "warn") _
         ((BTrue)
           (match many (nat-lt (list-length _ stack) 2) _
-            ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l ";!") ws) stack) opened closed))
+            ((BTrue) (tail $ parse-toks rest (push-item (RList l $ Cons _ (RAtom l $ NSrc ";!") ws) stack) opened closed))
             ((BFalse) (values stack (syn-err l "`;! warn` must be written between top-level forms") closed))))
         ((BFalse)
           (let-match many (or (str-eq kw "suppress") $ str-eq kw "restore") (BTrue)
@@ -321,7 +325,9 @@
               (let-match many (and (is-atom-text a "warn") $ not $ list-is-empty _ more) (BTrue)
                 ((BFalse) (None _)))
               (let-match many more (Cons _ n _) ((Nil _) (None _)))
-              (match many n _ ((RAtom _ x) (Some _ x)) (else (None _))))
+              (let-match many n (RAtom _ x) (else (None _)))
+              (let-match many x (NSrc text) (else (None _)))
+              (Some _ text))
             ((Nil _) (None _)))
           (let-match many name (Some _ n) ((None _) (values stack (syn-err l $ str-cat3 "`;! " kw "` takes `warn NAME`") closed)))
           (match many (str-eq kw "suppress") _

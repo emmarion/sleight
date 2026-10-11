@@ -3,7 +3,7 @@ open Term
 module V = Value
 include Driver_core
 
-let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } name
+let prelude_opt env name = Env.lookup { env with Env.scope = env.Env.prelude } (Reader.Src name)
 let prelude env name = Option.get (prelude_opt env name)
 let ctor env name = match (Env.entry env (prelude env name)).state with Env.Const (V.VCtorFn c) -> c | _ -> assert false
 

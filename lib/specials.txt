@@ -62,6 +62,10 @@ usage dump-context: (dump-context <value> ...)
 usage compile-error: (compile-error <String constant>)
 usage compile-warn: (compile-warn <String constant>)
 usage world-do: (world-do <answer type> <world> <request>)
+usage gensym: (gensym <macro world> <String>)
+usage gensym-unique: (gensym-unique <id> <text> <text> <Gensym proof> <Gensym proof>)
+usage def-opaque: (def-opaque (<name> : <parameter> ... -> Type) ...)
+usage def-prim: (def-prim (<many or erased> <primitive> : <parameter> ... -> <return> ...) ...)
 role erased: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match or open-adt
 usage erased: (erased <type> <name>)
 role many: is a multiplicity, beginning a telescope entry, a constructor, a function header or a `Matchable`'s constructor marker, or the mode of a match, let-match, comptime-match, cell-match or open-adt

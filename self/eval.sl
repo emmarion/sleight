@@ -207,11 +207,15 @@
   (let-match many fields (Cons _ pa more) ((Nil _) (PRaw "" $ RWild $ PosSpot $ NoPos)))
   (let ((many p)) $ heap-spot _ hp pa)
   (let ((many x)) $ match many more (((Ref Block hs) _)) ((Cons _ x _) x) ((Nil _) pa))
-  (let-match many index (Succ i1) ((Zero) (PRaw "" $ RAtom p $ heap-str _ hp x)))
+  (let-match many index (Succ i1) ((Zero) (PRaw "" $ RAtom p $ NSrc $ heap-str _ hp x)))
   (let-match many i1 (Succ i2) ((Zero) (PRaw "" $ RNat p $ heap-nat _ hp x)))
   (let-match many i2 (Succ i3) ((Zero) (PRaw "" $ RChr p $ heap-nat _ hp x)))
   (let-match many i3 (Succ i4) ((Zero) (PRaw "" $ RString p $ heap-str _ hp x)))
-  (let-match many i4 (Succ _) ((Zero) (PRaw "" $ RWild p)))
+  (let-match many i4 (Succ i5) ((Zero) (PRaw "" $ RWild p)))
+  (let-match many i5 (Zero)
+    ((Succ _)
+      (let ((many s)) $ match many more (((Ref Block hs) _)) ((Cons _ _ r2) (match many r2 (((Ref Block hs) _)) ((Cons _ s _) s) ((Nil _) x))) ((Nil _) x))
+      (PRaw "" $ RAtom p $ NGen (heap-nat _ hp x) $ heap-str _ hp s)))
   (let-match many (list-refs (store-size Block _ hp) _ hp x) (Some _ refs) ((None _) (PRaw "" $ RList p $ Nil _)))
   (let ((many f) (many xs)) $ heap-syns _ hp (None _) refs)
   (PRaw f $ RList p xs))
@@ -241,14 +245,20 @@
   (let ((erased h1) (many hp1) (erased s1) (many pv)) $ pos-block _ hp np mp f $ raw-pos r)
   (let ((many (Maybe $ Payload) second) (many (Nat) i))
     (match many r (((Maybe $ Payload) _) ((Nat) _))
-      ((RAtom _ s) (values (Some _ $ PStr s) 0)) ((RNat _ n) (values (Some _ $ PNat n) 1)) ((RChr _ n) (values (Some _ $ PNat n) 2))
+      ((RAtom _ s) (match many s (((Maybe $ Payload) _) ((Nat) _)) ((NSrc t) (values (Some _ $ PStr t) 0)) ((NGen k _) (values (Some _ $ PNat k) 6))))
+      ((RNat _ n) (values (Some _ $ PNat n) 1)) ((RChr _ n) (values (Some _ $ PNat n) 2))
       ((RString _ s) (values (Some _ $ PStr s) 3)) ((RWild _) (values (None _) 4)) ((RList _ _) (values (None _) 5))))
   (let-match many r (RList _ xs)
     (else
       (let-match many second (Some _ sp) ((None _) (values h1 hp1 s1 i $ Cons _ pv $ Nil _)))
       (let ((erased h2) (many hp2) (erased s2) (many a)) $ alloc-ext _ hp1 sp)
       (let ((erased w) (erased pw)) (ref-widen _ _ _ s2 pv))
-      (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
+      (let-match many r (RAtom _ nm) (else (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
+      (let-match many nm (NGen _ text) (else (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
+      (let ((erased h3) (many hp3) (erased s3) (many b)) $ alloc-ext _ hp2 $ PStr text)
+      (let ((erased w3) (erased pw3)) (ref-widen _ _ _ (hist-le-trans _ _ _ s2 s3) pv))
+      (let ((erased wa) (erased pa)) (ref-widen _ _ _ s3 a))
+      (values h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3) i $ Cons _ (coerce pv pw3) $ Cons _ (coerce a pa) $ Cons _ b $ Nil _)))
   (let ((erased h2) (many hp2) (erased s2) (many a)) $ raw-list _ hp1 nl cs f xs)
   (let ((erased w) (erased pw)) (ref-widen _ _ _ s2 pv))
   (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _))
@@ -900,19 +910,29 @@
         (values h hpx (hist-le-trans _ _ _ lec le) a w1))))
   (values h2 hp2 (hist-le-trans _ _ _ le1 le2) v w2))
 
+(def-fns _ $ (many no-macro-world : (many (Sp) prim) -> (many (String) msg))
+  (str-cat3 "`" (sp-name prim) "` reached with no macro world"))
+
 (def-lvl perform-lvl)
 
 (def-adts $ (Performer : (Type W) -> Type)
-  enum newtype
+  enum
   (many MkPerformer : (erased Type W)
      (many (Fn perform-lvl (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) req) (unique W w) ->
           (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique W w2 at w)) f)
+     (many (Fn perform-lvl (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) (unique W w) ->
+          (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique W w2 at w)) g)
      -> (Performer W)))
 
 (def-fns perform-lvl $ (many no-world : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) req) (unique (Unit) w) ->
     (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (Unit) w2 at w))
   (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ "`world-do` reached with no world")
   (values hl2 hp2 sf2 e w))
+
+(def-fns perform-lvl $ (many no-prim : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) (unique (Unit) w) ->
+    (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique (Unit) w2 at w))
+  (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ $ no-macro-world prim)
+  (values hl2 hp2 sf2 (Cons _ e $ Nil _) w))
 
 (def-fns _ $ (many error-w : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (List $ Mult) ms) (many (String) msg) (erased Type W) (unique W w) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk) (unique W w2 at w))
   (let ((erased hl2) (many hp2) (erased sf2) (many vs) (erased pk)) $ error-vals _ hp ms msg)
@@ -1067,9 +1087,15 @@
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) vs pk w1))
       ((CWorldDo _ req)
         (let ((erased h1) (many hp1) (erased le1) (many rvs) (erased rpk) (unique W w1)) (notail $ eval fuel _ hp _ _ req st _ pf w))
-        (let-match many pf (MkPerformer _ perform))
+        (let-match many pf (MkPerformer _ perform _))
         (let ((erased h2) (many hp2) (erased le2) (many v) (unique W w2)) (perform _ hp1 (vals-one _ rvs rpk) w1))
         (values h2 hp2 (hist-le-trans _ _ _ le1 le2) (Cons _ v (Nil _)) (PkMany _ _ v (Nil _) (PkNil _)) w2))
+      ((CPrim _ ms2 p args)
+        (let ((erased h1) (many hp1) (erased le1) (many avs) (unique W w1)) (notail $ eval-list fuel _ hp _ args st _ pf w))
+        (let-match many pf (MkPerformer _ _ prim))
+        (let ((erased h2) (many hp2) (erased le2) (many vs) (unique W w2)) (prim _ hp1 p avs w1))
+        (let ((erased h3) (many hp3) (erased le3) (many r) (erased rpk)) $ vals-fit _ hp2 ms2 vs)
+        (values h3 hp3 (hist-le-trans _ _ _ le1 $ hist-le-trans _ _ _ le2 le3) r rpk w2))
       ((CAbsurd _ ms2) (error-w _ hp ms2 "absurd code reached" _ w))
       ((CError _ ms2 m) (error-w _ hp ms2 m _ w))))
 
@@ -1184,7 +1210,29 @@
 
 (let ((many eval-fuel)) 1000000000)
 
-(let ((many compile-time)) (MkPerformer (Unit) no-world))
+(let ((many compile-time)) (MkPerformer (Unit) no-world no-prim))
+
+(def-adts $ (Counter : -> Type)
+  enum
+  (many MkCounter : (many (Nat) n) -> (Counter)))
+
+(def-fns perform-lvl $ (many counter-no-world : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Ref Block hs) req) (unique (Counter) w) ->
+    (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (Counter) w2 at w))
+  (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ "`world-do` reached with no world")
+  (values hl2 hp2 sf2 e w))
+
+(def-fns perform-lvl $ (many counter-prim : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (Sp) prim) (many (List $ Ref Block hs) args) (unique (Counter) w) ->
+    (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (unique (Counter) w2 at w))
+  (let-match many (sp-eq prim $ SpExpr $ ExGensym) (BTrue)
+    ((BFalse)
+      (let ((erased hl2) (many hp2) (erased sf2) (many e)) $ alloc Block _ hp $ BError _ $ str-cat3 "`" (sp-name prim) "` has no implementation")
+      (values hl2 hp2 sf2 (Cons _ e $ Nil _) w)))
+  (let-match unique w (MkCounter n u))
+  (let ((many k)) $ Succ n)
+  (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ alloc-ext _ hp $ PNat k)
+  (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u k))
+
+(let ((many macro-time)) (MkPerformer (Counter) counter-no-world counter-prim))
 
 (def-fns _ $ (many run-code : (erased (Hist Block) hs) (many (Store Block hs) hp) (many (IdMap $ EInfo hs) cs) (erased (List $ Mult) ms) (many (Code (Nil (List (Nat))) ms) code) -> (erased (Hist Block) hs2) (many (Store Block hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (List $ Ref Block hs2) vs) (erased (Picked (Ref Block hs2) ms vs) pk))
   (let ((unique (Unit) u)) (MkUnit))
@@ -1312,11 +1360,14 @@
   (let-match many (const-ref _ en m) (Some _ f) ((None _) (values e $ Fail _ "the macro has no value")))
   (let ((erased h1) (many hp1) (erased s1) (many hv)) $ pos-block _ hp np mp file here)
   (let ((erased h2) (many hp2) (erased s2) (many av)) $ raw-list _ hp1 nl cs file args)
-  (let ((erased s12)) $ hist-le-trans _ _ _ s1 s2)
-  (let ((unique (Unit) u)) (MkUnit))
-  (let ((erased h3) (many hp3) (erased s3) (many vs) (erased pk) (unique (Unit) u2)) $ apply eval-fuel _ hp2 (widen-en _ _ s12 en) (widen-ref _ _ s12 f) (Cons _ (widen-ref _ _ s2 hv) $ Cons _ av $ Nil _) many-one _ compile-time u)
+  (let ((erased ht) (many hpt) (erased st) (many token)) $ alloc Block _ hp2 $ BToken _)
+  (let ((erased s2t)) $ hist-le-trans _ _ _ s2 st)
+  (let ((erased s12)) $ hist-le-trans _ _ _ s1 s2t)
+  (let ((unique (Counter) c)) (MkCounter $ env-gensyms e))
+  (let ((erased h3) (many hp3) (erased s3) (many vs) (erased pk) (unique (Counter) c2)) $ apply eval-fuel _ hpt (widen-en _ _ s12 en) (widen-ref _ _ s12 f) (Cons _ token $ Cons _ (widen-ref _ _ s2t hv) $ Cons _ (widen-ref _ _ st av) $ Nil _) many-one _ macro-time c)
+  (let-match unique c2 (MkCounter g2))
   (let ((many en3) (many fi3)) $ store-grow _ _ (hist-le-trans _ _ _ s12 s3) en fi)
-  (let ((many e3)) $ env-with-store e _ hp3 en3 fi3)
+  (let ((many e3)) $ env-set-gensyms (env-with-store e _ hp3 en3 fi3) g2)
   (let ((many r)) $ vals-one _ vs pk)
   (let-match many (error-of _ hp3 r) (None _) ((Some _ msg) (values e3 $ Fail _ msg)))
   (let-match many (list-refs (store-size Block _ hp3) _ hp3 r) (Some _ refs) ((None _) (values e3 $ Ok _ $ Nil _)))

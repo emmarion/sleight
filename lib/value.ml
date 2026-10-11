@@ -40,6 +40,7 @@ and code =
   | CCellCopy of ctor * code * (int * code) list
   | CCellRead of ctor * int * code
   | CWorldDo of code
+  | CPrim of Special.t * code list
   | CAbsurd
 
 (* Branches are keyed by discriminant (section 33). [shape] is how the scrutinee comes apart (section 24): an
@@ -62,6 +63,7 @@ let map_code f = function
   | CCellCopy (k, c, ss) -> CCellCopy (k, f c, List.map (fun (i,s) -> i, f s) ss)
   | CCellRead (k, i, c) -> CCellRead (k, i, f c)
   | CWorldDo c -> CWorldDo (f c)
+  | CPrim (p, cs) -> CPrim (p, List.map f cs)
   | (CVar _ | CConst _ | CErased | CAbsurd) as c -> c
 
 let subcodes c =

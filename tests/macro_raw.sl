@@ -3,7 +3,7 @@
 (def-fns _ $ (many first : (many (List $ Raw) rs) -> (many (Raw) r))
   (let-match many rs (Cons _ r rest) ((Nil _) (RawWild (NoPos))))
   r)
-(let ((many out)) (swap-fn (NoPos) (three (RawName (MkPos "x.sl" 1 2) "nat-add") (RawStr (NoPos) "s") $ RawList (NoPos) $ three (RawChar (NoPos) #\a) (RawWild (NoPos)) (RawNat (NoPos) 4))))
+(let ((many out)) (swap-out (NoPos) (three (RawName (MkPos "x.sl" 1 2) "nat-add") (RawStr (NoPos) "s") $ RawList (NoPos) $ three (RawChar (NoPos) #\a) (RawWild (NoPos)) (RawNat (NoPos) 4))))
 (def-fns _ $ (many flat : (many (Raw) r) -> (many (Raw) f))
   (let-match many r (RawList p items) (else r))
   (let-match many items (Cons _ g rest) (else r))

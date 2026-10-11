@@ -3,7 +3,7 @@ module V = Value
 module IntMap = V.IntMap
 
 let sanitize s = String.map (fun c -> if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') then c else '_') s
-let var x = if x < 0 then Printf.sprintf "l%d" (- x) else Printf.sprintf "v%d%s" x (match Hashtbl.find_opt Env.names x with Some n -> "_" ^ sanitize n | None -> "")
+let var x = if x < 0 then Printf.sprintf "l%d" (- x) else Printf.sprintf "v%d%s" x (match Hashtbl.find_opt Env.names x with Some (Src n) -> "_" ^ sanitize n | Some (Gen (g, n)) -> "_g" ^ Z.to_string g ^ "_" ^ sanitize n | None -> "")
 let concat = String.concat
 let params vs = if vs = [] then "()" else concat " " (List.map (fun v -> "(" ^ v ^ " : Obj.t)") vs)
 let arrows n = concat " -> " (List.init (max n 1) (fun _ -> if n = 0 then "unit" else "Obj.t") @ [ "Obj.t" ])
@@ -22,7 +22,8 @@ let rec raw r =
     | Ffi_core.At { file; line; col } -> Printf.sprintf "(Ffi_core.At { file = %s; line = %s; col = %s })" (quote file) (z line) (z col)
     | NoLoc -> "Ffi_core.NoLoc" | Unknown -> "Ffi_core.Unknown" in
   match r with
-  | Ffi_core.Atom (p, s) -> Printf.sprintf "(Ffi_core.Atom (%s, %s))" (l p) (quote s)
+  | Ffi_core.Atom (p, Src s) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Src %s))" (l p) (quote s)
+  | Ffi_core.Atom (p, Gen (g, s)) -> Printf.sprintf "(Ffi_core.Atom (%s, Ffi_core.Gen (%s, %s)))" (l p) (z g) (quote s)
   | Nat (p, n) -> Printf.sprintf "(Ffi_core.Nat (%s, %s))" (l p) (z n)
   | Char (p, c) -> Printf.sprintf "(Ffi_core.Char (%s, %d))" (l p) c
   | Str (p, s) -> Printf.sprintf "(Ffi_core.Str (%s, %s))" (l p) (quote s)
@@ -361,6 +362,7 @@ and expr cx scope code = match code with
       let source = expr cx scope c in
       Printf.sprintf "(let %s = %s in %s%s)" name (match code with V.CCellCopy _ -> field_copy cx k source | _ -> source) stores name
   | V.CWorldDo c -> Printf.sprintf "(driver.Driver_core.perform world %s)" (expr cx scope c)
+  | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))
   | V.CAbsurd -> "(absurd ())"
 
 let collect env items =
@@ -434,7 +436,7 @@ let nat_z cx =
 (* The printer for a literal type, which prints the literal its value reads back from (Literal.spell): a Char and
    a U8 are their Nat (section 33), so neither is unwrapped first. *)
 let literal_show cx ty =
-  let named name = match (ty, Env.lookup { cx.env with Env.scope = cx.env.Env.prelude } name) with App (Var t, []), Some p -> t = p | _ -> false in
+  let named name = match (ty, Env.lookup { cx.env with Env.scope = cx.env.Env.prelude } (Reader.Src name)) with App (Var t, []), Some p -> t = p | _ -> false in
   let string_body () =
     let a = (Program.ctor cx.env "SNil").V.adt in
     match shape a with

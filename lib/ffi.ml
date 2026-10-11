@@ -56,7 +56,7 @@ let types : (string * ty_spec) list =
           { construct = (fun i args -> Ffi_core.half_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> HZ | 1, [ m ] -> H1 m | 2, [ m ] -> H2 m | _ -> raise arity));
             destruct = (fun v -> match Ffi_core.half_view ~z ~nat:(int "Nat") v with HZ -> (0, []) | H1 m -> (1, [ m ]) | H2 m -> (2, [ m ])) }) );
     ( "Raw",
-      view [ 2; 2; 2; 2; 1; 2 ] (fun adt ->
+      view [ 2; 2; 2; 2; 1; 2; 3 ] (fun adt ->
           let get = function VExt (_, Raw r) -> r | v -> bad "Raw" v in
           { construct = (fun i args -> VExt (adt, Raw (Ffi_core.raw_of ~text:host ~z ~pos:unpos ~list:unlist ~raw:get (Ffi_core.raw_model i args))));
             destruct = (fun v -> Ffi_core.raw_fields (Ffi_core.raw_view ~get ~str:(fun s -> text (s, 0, String.length s)) ~nat:(int "Nat") ~pos ~list ~raw:(fun r -> VExt (adt, Raw r)) v)) }) );

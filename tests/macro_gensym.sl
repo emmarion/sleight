@@ -1,0 +1,18 @@
+; expect: (MkPair _ _ (MkPair _ _ "user" "first") $ MkPair _ _ "user" "second")
+(def-fns _ $ (many l : (many (Pos) p) (many (List $ Raw) xs) -> (many (Raw) r)) (RawList p xs))
+(def-fns _ $ (many n : (many (Pos) p) (many (String) s) -> (many (Raw) r)) (RawName p s))
+(def-fns _ $ (many two : (many (Raw) a) (many (Raw) b) -> (many (List $ Raw) out)) (Cons _ a $ Cons _ b $ Nil _))
+(def-fns _ $ (many seq-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many k) (erased g)) (gensym mw "tmp"))
+  (let ((many t)) (RawGen here k "tmp" g))
+  (let-match many args (Cons _ e1 r1) ((Nil _) (values mw1 (Nil _))))
+  (let-match many r1 (Cons _ e2 r2) ((Nil _) (values mw1 (Nil _))))
+  (values mw1 $ two
+    (l here $ Cons _ (n here "let") $ two (l here $ Cons _ (l here $ two (n here "many") t) $ Nil _) e1)
+    (l here $ Cons _ (n here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two e2 t)))
+(let ((many seq-pair)) (MkMacro _ seq-fn))
+(let ((many tmp)) "user")
+(let ((many p1)) (seq-pair "first" tmp))
+(let ((many p2)) (seq-pair "second" tmp))
+(MkPair _ _ p1 p2)
