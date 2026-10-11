@@ -206,7 +206,7 @@ The owner suspects this section holds of the language as it stands.
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
 7. Literal constructors in `Atom`: deferred.
-8. The names `Compaction`, `Compact` and `NoCompact`.
+8. The name `Allocation`.
 
 ## 7. What implementing it would involve
 

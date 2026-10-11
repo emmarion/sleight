@@ -1107,7 +1107,7 @@
       (rcat4 (driver-op "changed" $ driver-make d env "Changed") (driver-op "unchanged" $ driver-make d env "Unchanged")
         (driver-op "mk_usage" $ rcat3 (RStr "(Obj.repr ") (driver-make d env "MkUsage") $ RStr ")")
         $ rcat3 (driver-op "request" $ driver-un d env "Request" $ AkVariant) (driver-op "step" $ driver-un d env "Program" $ AkVariant)
-        $ driver-op "compact" $ driver-un d env "Compaction" $ AkIs "Compact")
+        $ driver-op "before" $ driver-un d env "Allocation" $ AkIs "Before")
       $ RStr "Driver_core.apply = (fun (k : Obj.t) xs -> if xs = [] then (Obj.obj k : unit -> Obj.t) () else List.fold_left (fun f (x : Obj.t) -> (Obj.obj f : Obj.t -> Obj.t) x) k xs) }\n")))
 
 (def-fns _ $ (many driver-rope : (many (Decls) d) (many (Env) env) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) -> (many (Rope) r))
@@ -1286,7 +1286,7 @@
 
 (def-fns _ $ (many emit-program : (many (Bool) templates) (many (String) fence) (many (Maybe $ String) bytes) (many (Bool) with-env) (many (Env) env) -> (many (Rope) r))
   (let ((erased hs) (many hp) (many en) (many fi)) $ env-store env)
-  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Compaction" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
+  (let ((many d0)) $ collect-prelude (Cons _ "Array" $ Cons _ "Nat" $ Cons _ "String" $ Cons _ "Program" $ Cons _ "Request" $ Cons _ "Allocation" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Unit" $ Cons _ "Usage" $ Nil _) env $ MkDecls (Nil _) (Nil _) (match many templates (((List $ Template) _)) ((BTrue) (parse-templates $ split-on extern-templates 10)) ((BFalse) (Nil _))) (Nil _))
   (let-match many hp (MkStore _ _ bound lb writes))
   (let ((many d0b) (many unused)) $ emit-finals _ hp (list-rev _ fi) env d0)
   (let ((many d0c) (many cids)) $ decl-take-consts d0b)

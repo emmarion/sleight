@@ -977,10 +977,10 @@
      (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
      -> (Program L)))
 
-(def-adts $ (Compaction : -> Type)
+(def-adts $ (Allocation : -> Type)
   enum
-  (many Compact : -> (Compaction))  ; compacts the heap first
-  (many NoCompact : -> (Compaction)))
+  (many Before : -> (Allocation))  ; allocates the answer, compacts the heap, then reads
+  (many After : -> (Allocation)))  ; reads, then allocates the answer; no compaction
 
 (def-adts $ (Request : (Type A) -> Type)
   enum
@@ -1002,7 +1002,7 @@
   (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
   (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (many (Compaction) c) -> (Request (Usage))))  ; totals since the Program began
+  (many Measure : (many (Allocation) a) -> (Request (Usage))))  ; totals since the Program began
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern
