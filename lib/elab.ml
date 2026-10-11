@@ -1354,16 +1354,22 @@ and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc 
 
 and call_returns ?sink ~demand env expect l callee_name acc rets inner =
   let pos = pos_of env expect in
-  count_check ?sink l expect rets;
-  let env, ids = open_tele env ~word:false ~names:(anon rets) ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map2 (fun m (e : entry) -> under (if pos = Erased then Erased else m) e.mult) expect rets) ~ids:acc rets in
+  let env, ids = open_tele env ~word:false ~names:(anon rets) ~ats:(List.map (fun _ -> l) rets) ~mults:(List.map (fun e -> under pos e.mult) rets) ~ids:acc rets in
+  count_check ?sink l expect ids;
   List.iter2 (fun (m, (e : entry)) x ->
     let name = match e.name with Some n -> tick_name n ^ " " | None -> "" in
     let notes = if Reader.placed e.loc && e.name <> None then [ (e.loc, Printf.sprintf "%sis declared here" name) ] else [] in
     check_mult env l (fun () -> (notes, Printf.sprintf "the return %sof %s, declared `%s`" name (callee_name ()) (speller env (mult_name e.mult)))) (demanded env demand m (type_of env x)) (entry env x).mult)
     (List.combine expect rets) ids;
-  let code =
-    if pos = Erased then V.CErased else
-    reconstruct ~always:true ~init:acc ~expect:(List.map2 (fun m (e : entry) -> under m e.mult) expect rets) env l rets ids (inner env)
+  let build expect = reconstruct ~always:true ~init:acc ~expect env l rets ids (inner env) in
+  let kept = List.map2 (fun m (e : entry) -> under m e.mult) expect rets in
+  let env, code =
+    if pos = Erased then (env, V.CErased)
+    else if not env.run_pos then (env, build kept)
+    else
+      let all = List.map (fun x -> (entry env x).mult) ids in
+      let env = List.fold_left2 (fun env x v -> set_state env x (Const v)) env ids (spread all (run_code env (build all))) in
+      (env, V.CValues (List.filter_map (fun (m, x) -> if m = Erased then None else Some (V.CVar x)) (List.combine kept ids)))
   in
   (env, List.map (res_of env) ids, code)
 

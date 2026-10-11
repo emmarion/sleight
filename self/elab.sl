@@ -891,6 +891,11 @@
     ((Many) (let ((many codes) (erased pk)) $ notail $ const-codes ctx rest more) (values (Cons _ (CConst _ x) codes) (PkMany _ rest (CConst _ x) codes pk)))
     ((Once) (let ((many codes) (erased pk)) $ notail $ const-codes ctx rest more) (values (Cons _ (CConst _ x) codes) (PkOnce _ rest (CConst _ x) codes pk)))))
 
+(def-fns _ $ (many kept-ids : (subterm many (List $ Multiplicity) ms) (many (List $ Nat) ids) -> (many (List $ Nat) r))
+  (let-match many ms (Cons _ m rest) ((Nil _) (Nil _)))
+  (let-match many ids (Cons _ x more) ((Nil _) (Nil _)))
+  (match many m _ ((Erased) (tail $ kept-ids rest more)) (else (Cons _ x $ notail $ kept-ids rest more))))
+
 (def-fns _ $ (many run-form : (many (Env) env) (many (Nat) start) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (List $ Res) ress) (many (Hoisted ctx expect) h) -> (many (Env) r) (many (Hoisted ctx expect) h2))
   (let-match many (and (env-run-pos env) $ not $ env-failed env) (BTrue) ((BFalse) (values env h)))
   (let-match many ctx (Nil _) ((Cons _ _ _) (values env h)))
@@ -1449,11 +1454,6 @@
   (match many ms _
     ((Nil _) (Nil _))
     ((Cons _ m rest) (Cons _ (under pos m) $ notail $ under-list rest pos))))
-
-(def-fns _ $ (many under-each : (subterm many (List $ Multiplicity) ms) (many (List $ Multiplicity) positions) (many (Multiplicity) pos) -> (many (List $ Multiplicity) r))
-  (let-match many ms (Cons _ m rest) ((Nil _) (Nil _)))
-  (let ((many (Multiplicity) p) (many (List $ Multiplicity) more)) $ match many positions (((Multiplicity) _) ((List $ Multiplicity) _)) ((Cons _ p0 r0) (values p0 r0)) ((Nil _) (values pos $ Nil _)))
-  (Cons _ (under (match many pos (((Multiplicity) _)) ((Erased) (Erased)) (else p)) m) $ notail $ under-each rest more pos))
 
 (def-fns _ $ (many all-erased : (subterm many (List $ Multiplicity) ms) -> (many (List $ Multiplicity) r))
   (match many ms _
@@ -4900,7 +4900,7 @@
 (def-fns _ $ (many call-returns : (many (Env) env3) (many (List $ List $ Nat) ctx) (many (List $ List $ Nat) ctx2) (many (StmtCode ctx ctx2) pre) (many (List $ Multiplicity) expect) (many (List $ Entry) rets) (many (List $ Term) acc) (many (Multiplicity) pos) (many (ExprDemand expect) demand) (many (Maybe $ Nat) cid) (many (String) fallback) (many (Invoke ctx2) inv) ->
     (many (Env) r) (many (List $ Res) ress) (many (Hoisted ctx expect) code))
   (let ((many rmults)) $ physical-mults rets)
-  (let ((many env4) (many ids) (erased lock)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env3) (Some _ $ under-each (tele-mults rets) expect pos) acc $ BFalse)
+  (let ((many env4) (many ids) (erased lock)) $ open-tele rets env3 (Some _ $ anon-names rets) (Some _ $ list-replicate _ (list-length _ rets) $ Some _ $ env-loc env3) (Some _ $ under-list (tele-mults rets) pos) acc $ BFalse)
   (let ((many (Env) env5) (many (Hoisted ctx expect) code))
     (match many (mult-is-many pos) _
       ((BFalse) (values env4 $ hoist-none ctx expect $ CErased _ expect))
@@ -4921,7 +4921,16 @@
           ((LdNo _ _ _ _) (values (env-error env4 "internal: call return count") $ hoist-none ctx expect $ CError _ expect "size")))
         (let ((many bound) (erased bpk)) $ picked-of _ rmults ids lk)
         (let ((many env5) (many kept) (erased kpk)) $ result-codes expect rets ids acc env4 $ Cons _ bound ctx2)
-        (values env5 $ MkHoisted _ _ ctx2 pre $ CLet _ rmults _ bound bpk call $ CValues _ expect kept kpk))))
+        (let ((many (Code ctx2 expect) code)) $ CLet _ rmults _ bound bpk call $ CValues _ expect kept kpk)
+        (let-match many (and (env-run-pos env5) $ not $ env-failed env5) (BTrue) ((BFalse) (values env5 $ MkHoisted _ _ ctx2 pre code)))
+        (let-match many ctx2 (Nil _) ((Cons _ _ _) (values env5 $ MkHoisted _ _ ctx2 pre code)))
+        (let ((many all)) $ under-list (tele-mults rets) pos)
+        (let ((many env6) (many every) (erased epk)) $ result-codes all rets ids acc env5 $ Cons _ bound ctx2)
+        (let ((erased hs) (many hp)) $ env-heap env6)
+        (let ((erased hs2) (many hp2) (erased le) (many vs) (erased pk)) $ run-code _ hp _ $ CLet _ rmults _ bound bpk call $ CValues _ all every epk)
+        (let ((many env7)) $ env-with-heap env6 _ $ set-run-states _ hp2 (kept-ids all ids) vs)
+        (let ((many codes) (erased cpk)) $ const-codes ctx2 expect $ kept-ids expect ids)
+        (values env7 $ MkHoisted _ _ ctx2 pre $ CValues _ expect codes cpk))))
   (let ((many callee-name)) $ match many cid (((String) _)) ((Some _ cx) (qshown env5 cx)) ((None _) fallback))
   (let ((many env6) (many ress)) $ returns-produced _ env5 demand callee-name expect rets $ ress-of ids env5)
   (values env6 ress code))
