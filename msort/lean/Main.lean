@@ -10,14 +10,16 @@ def checksum : List UInt64 → Nat → Nat → Nat
   | [], _, acc => acc
   | x :: xs, i, acc => checksum xs (i + 1) (acc + i * x.toNat)
 
-@[noinline] def sortWith (which : String) (xs : List UInt64) : IO (List UInt64) :=
-  if which == "core" then return xs.mergeSort else if which == "none" then return xs else return MSort.msort xs
+@[noinline] def sortWith (which : String) (xs : List UInt64) (h : xs.length < 2 ^ 64) : IO (List UInt64) :=
+  if which == "core" then return xs.mergeSort else if which == "none" then return xs else return MSort.msort xs h
 
 def main (args : List String) : IO Unit := do
   let which := args.headD "ours"
   let size := ((args.drop 1).head?.bind String.toNat?).getD 1000000
   let xs := gen size 42 []
+  if h : xs.length < 2 ^ 64 then
   let t0 ← IO.monoNanosNow
-  let r ← sortWith which xs
+  let r ← sortWith which xs h
   let t1 ← IO.monoNanosNow
   IO.println s!"checksum {checksum r 0 0}\nsort-ns {t1 - t0}"
+  else IO.println "too long"

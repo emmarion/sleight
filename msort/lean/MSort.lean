@@ -50,27 +50,71 @@ theorem merge_sorted (xs ys : List UInt64) (hx : Sorted xs) (hy : Sorted ys) : S
     cases hy with
     | cons hh ht => exact .cons (leHead_merge (by simp [LeHead]; exact UInt64.le_of_lt (UInt64.not_le.mp h)) hh) (ih hx ht)
 
-def msort : List UInt64 → List UInt64
-  | [] => []
-  | [a] => [a]
-  | a :: b :: t =>
-    let p := (a :: b :: t).splitAt ((t.length + 3) / 2)
-    merge (msort p.1) (msort p.2)
-termination_by l => l.length
-decreasing_by all_goals simp [List.splitAt_eq]; omega
+def lenGo : List UInt64 → UInt64 → UInt64
+  | [], acc => acc
+  | _ :: t, acc => lenGo t (acc + 1)
 
-theorem msort_sorted (l : List UInt64) : Sorted (msort l) := by
-  fun_induction msort l with
-  | case1 => exact .nil
-  | case2 a => exact .cons (by simp [LeHead]) .nil
-  | case3 a b t p ih1 ih2 => exact merge_sorted _ _ ih1 ih2
+theorem lenGo_toNat (l : List UInt64) (acc : UInt64) (h : l.length + acc.toNat < 2 ^ 64) :
+    (lenGo l acc).toNat = l.length + acc.toNat := by
+  induction l generalizing acc with
+  | nil => simp [lenGo]
+  | cons x t ih =>
+    simp only [List.length_cons] at h
+    have : (acc + 1).toNat = acc.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    simp [lenGo, ih (acc + 1) (by omega), this]; omega
 
-theorem msort_perm (l : List UInt64) : (msort l).Perm l := by
-  fun_induction msort l with
-  | case1 => exact .nil
-  | case2 a => exact .refl _
-  | case3 a b t p ih1 ih2 =>
+def splitGo : UInt64 → List UInt64 → List UInt64 → List UInt64 × List UInt64
+  | _, [], acc => (acc.reverse, [])
+  | k, x :: t, acc => if k = 0 then (acc.reverse, x :: t) else splitGo (k - 1) t (x :: acc)
+
+theorem splitGo_eq (k : UInt64) (l acc : List UInt64) :
+    splitGo k l acc = (acc.reverse ++ l.take k.toNat, l.drop k.toNat) := by
+  induction l generalizing k acc with
+  | nil => simp [splitGo]
+  | cons x t ih =>
+    by_cases hk : k = 0
+    · simp [splitGo, hk]
+    · have : k.toNat = (k - 1).toNat + 1 := by
+        have : k.toNat ≠ 0 := by intro h; apply hk; exact UInt64.toNat_inj.mp (by simpa using h)
+        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp; omega
+      simp [splitGo, hk, ih, this]
+
+theorem half_facts (n : UInt64) (hn : ¬ n < 2) :
+    (n >>> 1).toNat = n.toNat / 2 ∧ (n - (n >>> 1)).toNat = n.toNat - n.toNat / 2 ∧ 2 ≤ n.toNat := by
+  have h2 : 2 ≤ n.toNat := by simp [UInt64.lt_iff_toNat_lt] at hn; omega
+  have hq : (n >>> 1).toNat = n.toNat / 2 := by simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  refine ⟨hq, ?_, h2⟩
+  rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le, hq]; omega), hq]
+
+def msortN (n : UInt64) (l : List UInt64) (h : l.length = n.toNat) : List UInt64 :=
+  if hn : n < 2 then l else
+  let q := n >>> 1
+  let p := splitGo (n - q) l []
+  merge (msortN (n - q) p.1 (by have := half_facts n hn; simp [p, splitGo_eq, q]; omega))
+    (msortN q p.2 (by have := half_facts n hn; simp [p, splitGo_eq, q]; omega))
+termination_by n.toNat
+decreasing_by all_goals (have := half_facts n hn; omega)
+
+def msort (l : List UInt64) (h : l.length < 2 ^ 64) : List UInt64 :=
+  msortN (lenGo l 0) l (by rw [lenGo_toNat l 0 (by simpa using h)]; simp)
+
+theorem msortN_sorted (n : UInt64) (l : List UInt64) (h) : Sorted (msortN n l h) := by
+  fun_induction msortN n l h with
+  | case1 n l h hn =>
+    match l, h with
+    | [], _ => exact .nil
+    | [a], _ => exact .cons (by simp [LeHead]) .nil
+    | _ :: _ :: _, h => simp [UInt64.lt_iff_toNat_lt] at h hn; omega
+  | case2 n l h hn q p ih1 ih2 => exact merge_sorted _ _ ih1 ih2
+
+theorem msortN_perm (n : UInt64) (l : List UInt64) (h) : (msortN n l h).Perm l := by
+  fun_induction msortN n l h with
+  | case1 => exact .refl _
+  | case2 n l h hn q p ih1 ih2 =>
     refine (merge_perm _ _).trans ((ih1.append ih2).trans ?_)
-    simp [p, List.splitAt_eq, List.take_append_drop]
+    simp [p, splitGo_eq, List.take_append_drop]
+
+theorem msort_sorted (l : List UInt64) (h) : Sorted (msort l h) := msortN_sorted ..
+theorem msort_perm (l : List UInt64) (h) : (msort l h).Perm l := msortN_perm ..
 
 end MSort

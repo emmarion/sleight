@@ -1,3 +1,16 @@
+(let ((many msort-s60) (erased msort-s60m)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) ten))
+(let-match erased (mul-fn _ _ _ _ msort-s60m sixty-mul) (Refl _ _))
+(let ((many msort-s62) (erased msort-s62a)) (add msort-s60 (Succ (Succ (Zero)))))
+(let-match erased (add-fn _ _ _ _ msort-s62a sixty-two-add) (Refl _ _))
+(let ((many msort-u62m) (erased msort-u62m-pow2) (erased _)) (pow2 msort-s62))
+(let-match erased (pow2-fn _ _ _ msort-u62m-pow2 u62-modulus-pow2) (Refl _ _))
+(let ((many msort-u62m-cmp)) (nat-cmp 4611686018427387904 msort-u62m))
+(comptime-match many msort-u62m-cmp (CEq _ _ _))
+(unary 0)
+(unary 1)
+(unary 2)
+(let ((erased two-fits)) (prove-literal-lt 2 4611686018427387904))
+
 (def-adts
   ((LenU : ((ULst) xs) ((Nat) n) -> Type)
     enum
@@ -121,7 +134,23 @@
     ((D0) (AddZero (Zero)))
     ((DS a b d1) (AddSucc a (Succ a) (Succ b) (add-succ-right a a b (double-add a b d1))))))
 
-(def-fns _ $ (erased add-shift : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (erased (Add a (Succ b) c) p) ->
-    (erased (Add (Succ a) b c) q))
-  (let ((erased c1) (erased e) (erased q)) (add-succ-right-inv a b c p))
-  (match erased e _ ((Refl _ _) (AddSucc a b c1 q))))
+(def-fns _ $ (erased mul-two-add : (erased (Nat) q) (erased (Nat) m) (subterm erased (Mul q (Succ (Succ (Zero))) m) mm) ->
+    (erased (Add q q m) p))
+  (let-match erased mm (MulSucc a _ c d mm1 ad) ((MulZero _) (AddZero (Zero))))
+  (let-match erased (add-fn c _ d (Succ (Succ c)) ad
+      (add-succ-right c (Succ (Zero)) (Succ c) (add-succ-right c (Zero) c (add-zero-right c)))) (Refl _ _))
+  (AddSucc a (Succ a) (Succ c) (add-succ-right a a c (mul-two-add a c mm1))))
+
+(def-fns _ $ (erased add-assoc : (erased (Nat) a) (erased (Nat) b) (erased (Nat) ab) (erased (Nat) c) (erased (Nat) t) (erased (Nat) bc)
+    (subterm erased (Add a b ab) p) (erased (Add ab c t) q) (erased (Add b c bc) r) -> (erased (Add a bc t) s))
+  (match erased p _
+    ((AddZero _) (let-match erased (add-fn b c t bc q r) (Refl _ _)) (AddZero bc))
+    ((AddSucc a1 _ ab1 p1)
+      (let-match erased q (AddSucc _ _ t1 q1))
+      (AddSucc a1 bc t1 (add-assoc a1 b ab1 c t1 bc p1 q1 r)))))
+
+(def-fns _ $ (erased add-cancel : (erased (Nat) a) (erased (Nat) b1) (erased (Nat) b2) (erased (Nat) c)
+    (subterm erased (Add a b1 c) p) (erased (Add a b2 c) q) -> (erased (Eq (Nat) b1 b2) e))
+  (let-match erased p (AddSucc a1 _ c1 p1) ((AddZero _) (let-match erased q (AddZero _)) (Refl (Nat) b1)))
+  (let-match erased q (AddSucc _ _ _ q1))
+  (add-cancel a1 b1 b2 c1 p1 q1))
