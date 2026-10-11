@@ -30,18 +30,20 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
 - `Mult`: Decided that it is a new ADT rather than `Sharing`. Its name and
   its constructors' names are open (they must not clash with `Sharing`'s
   `Unique` or with the annotation tokens).
-- `JMEq`: Decided. Whether it is built in or in the source prelude is open.
+- `JMEq`: Decided. It is in the source prelude.
 - `Const`: Decided that it is opaque and not an ADT, like `Slot`: no
   constructors, no `Matchable`, not erased by kind. A handle
   `(Const m T t)` denotes `t`, held at multiplicity `m`. Decided that its
   run-time value may be a term rather than an entry id; proposed that it is
   a closed term over run-position entries, plus the value for an `MMany`
   handle.
-- `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque,
-  not erased by kind. It is a handle on the elaborator's program store
-  (section 4), passed `unique` to a macro and returned `at` itself.
-- `Gensym`: Decided. Opaque and erased by kind: a witness that `n` was
-  minted, with text `s`. Nothing produces one but `gensym`.
+- `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque
+  (`def-opaque`, INTERNALS.md section 1), declared in the prelude. It is a
+  handle on the elaborator's program store (section 4), passed `unique`
+  to a macro and returned `at` itself.
+- `Gensym`: Decided. Opaque (`def-opaque`), declared in the prelude: a
+  witness that `n` was minted, with text `s`. Nothing produces one but
+  `gensym`, which returns it erased.
 
 ## 2. Prelude types
 
@@ -122,7 +124,8 @@ was considered and dropped.
                         (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
 (gensym mw s)         : (unique (MacroWorld) mw) (many (String) s) ->
                         (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
-(gensym-unique a b)   : (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+(gensym-unique n s t a b) : (erased (Nat) n) (erased (String) s) (erased (String) t)
+                        (erased (Gensym n s) a) (erased (Gensym n t) b) ->
                         (erased (JMEq (Gensym n s) a (Gensym n t) b) e)
 (intern-nat mw n)     : (unique (MacroWorld) mw) (many (Nat) n) ->
                         (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)
@@ -139,8 +142,10 @@ was considered and dropped.
 - `const-eq`: Decided. Proposed: it answers from run-position facts only,
   never branch-forced ones, so that a `Just` stays true wherever the
   macro's output goes and a call expands the same way in every branch.
-- `gensym`, `gensym-unique`: Decided. `gensym-unique` is the one axiom; it
-  is meant to rest on the counter minting each `n` once, with one text.
+- `gensym`, `gensym-unique`: Decided. Both are constructors of `Special`
+  whose signatures the prelude gives with `def-prim` (INTERNALS.md
+  section 2). `gensym-unique` is the one axiom; it is meant to rest on the
+  counter minting each `n` once, with one text.
 - `intern-nat`, `intern-char`, `intern-string`: Decided that a macro
   interns literals through the macro world; the exact signatures are
   Proposed.
@@ -158,9 +163,11 @@ was considered and dropped.
 2. Arguments (Proposed). A source name arrives as `(AName (SName s))`; a
    source literal as an `MMany` handle to its interned entry.
 3. Names (Decided). A name resolves exactly. `SName s` is the source's own
-   name `s`; `SGen n s g` is identified by `n` alone, and a message shows it
-   as `_n_s`. A macro may build a name the reader never yields; the owner
-   intends to forbid that eventually.
+   name `s`, and any `s` can be written raw (DESIGN.md section 1); `SGen n s
+   g` is identified by `n` alone, no source spelling stands for it, and a
+   message shows it as `__g` and `n` and `_`, followed by `s` spelled as a
+   name is spelled (README.md): `__g1_tmp`, or `__g1_#"a b"` where `s` is
+   not a plain name.
 4. Handles (Proposed). An `AConst` resolves to its term directly, bypassing
    scope. In a non-erased position it must be an entry. Splicing a unique
    handle is a use at the splice site, checked as usual.
@@ -188,11 +195,8 @@ The owner suspects this section holds of the language as it stands.
 ## 6. Open questions
 
 1. The names of `Mult` and its constructors, and `Const`.
-2. Where `JMEq` lives, which decides whether `const-eq` and `gensym-unique`
-   exist under `--no-prelude`.
 3. Whether the macro world resolves names at the call site; if so it must
    also carry the call site's scope.
-4. Whether `gensym` returns a `Symbol` directly or its parts, as above.
 5. `read-file`: what a relative path is relative to, which files count as
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
@@ -217,15 +221,27 @@ The owner suspects this section holds of the language as it stands.
 
 ## 8. What the compilers implement now
 
-Both compilers implement a smaller system than the one above, which stays
-the long-term design. The owner decided this subset in chat, except where
-an item says a session chose it.
+The source prelude declares the following, which both compilers implement.
 
 ```scheme
 (def-adts $ (Pos : -> Type)
   enum
   (many NoPos : -> (Pos))
   (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
+
+(def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
+  enum
+  (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
+
+(def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
+(def-opaque $ (MacroWorld : -> Type))
+
+(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
+
+(def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
+    (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
 (def-adts $ (Raw : -> Type)
   enum extern
@@ -234,36 +250,20 @@ an item says a session chose it.
   (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
   (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
-  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw)))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
+  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype
   (many MkMacro : (erased (Level) L)
-     (many (Fn L (many (Pos) here) (many (List $ Raw) args) -> (many (List $ Raw) out)) f)
+     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+               (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
      -> (Macro)))
 ```
 
-- The three types are in the source prelude. There is no macro world, no
-  gensym and no handle: a macro is a total function from its call's
-  position and arguments to a list of forms. The constructor names of
-  `Raw` were chosen by a session at the owner's request, `Rope` already
-  having `RStr` and `RChar`.
-- `Raw` is extern over the reader's own tree, so arguments go in and
-  output comes out without being walked. A `RawName` is a name whatever
-  its text, as a raw name is (DESIGN.md section 1); a `RawWild` is `_`. A
-  literal a macro makes, a `RawNat`, `RawChar` or `RawStr`, is interned
-  where its form is elaborated, as a written one is.
-- A call expands in statement, final, expression and type positions as
-  section 4.1 has it. Its result also splices, each item taking the
-  call's place in the list it stands in, into telescopes and `let`
-  binders, into the items of each of their entries, so that a call may
-  stand for part of an entry such as its multiplicity, into the branches
-  of a `match` or `let-match`, the constructors of a `def-adts` entry,
-  the arguments of an application and the entries of a `values`. The
-  limit is 10000 expansions in one run, every file included.
-- `here` is the position of the call's opening `(`, or of its `$`; a session
-  chose that.
-- A form at `NoPos` has no position: a message about it carries no
-  location, not even a file. A position given by `MkPos` is written exactly
-  as given, whatever its file, line and column.
-- Under `--no-prelude` there are no macros, as there are no literals.
+A call splices its result into telescopes, `let` binders and their
+entries, `match` and `let-match` branches, `def-adts` constructors,
+arguments and `values` entries, besides the positions of section 4.1;
+at most 10000 expansions run in one run. `gensym` counts from 1 over the
+whole run, every file included. An unbound gensym gets no "nearest in
+scope" hint.

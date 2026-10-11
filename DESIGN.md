@@ -1923,6 +1923,9 @@ which `lib/prelude.sl` is the reference:
   line and a column (`Nat`). A message about a form at `NoPos` carries
   no location, not even a file; one at `MkPos` names exactly that
   position.
+- **Macros.** `Pos`, `Raw`, `Macro`, the opaque `Gensym` and
+  `MacroWorld`, `JMEq`, and the primitives `gensym` and
+  `gensym-unique`. MACROS.md section 8 describes them.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions

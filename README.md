@@ -10,6 +10,10 @@ DESIGN.md specifies. The other files:
   own, because the code had to do something. A decision the owner made
   goes in DESIGN.md, never here, and an entry that stood in for one is
   removed when the owner decides it.
+- INTERNALS.md: the forms that declare what the compilers supply,
+  `def-opaque` and `def-prim`, which only the prelude may write.
+- MACROS.md: the macro system, as the compilers implement it and as it is
+  meant to become.
 - HANDOFF.md: work in progress handed from one session to the next.
 - BUGS.md: defects found in the implementation.
 - WARNINGS.md: the warnings the compilers emit, one item each.
@@ -190,6 +194,8 @@ means it where the message points:
   still in scope for it, else by a fetch form that yields it there with its
   argument a name, `(level-of f)`, `(slot-of x)`, else as `__1`, `__2` and on;
 - an unsolved `_` (DESIGN.md section 50) as `__?1`, `__?2` and on;
+- a gensym (MACROS.md) as `__g` and its number and `_`, followed by its
+  text spelled as a name is: `__g1_tmp`, `__g1_#"a b"`;
 - a special form or annotation token, a fetch form's head included, by the
   newest name in scope that is `Const`, non-erased and holds it, else as `__`
   followed by its built-in name, `__Fn`, `(__level-of f)`.
