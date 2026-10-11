@@ -66,7 +66,7 @@ type 'v ops = {
   mk_usage : 'v;
   request : 'v -> 'v request;
   step : 'v -> 'v step;
-  before : 'v -> bool;
+  is_start : 'v -> bool;
   apply : 'v -> 'v list -> 'v;
 }
 
@@ -221,7 +221,7 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
                  count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ])
         in
         let measure extra = reading (Gc.minor_words ()) extra in
-        if o.before c then begin
+        if o.is_start c then begin
           let m = Gc.minor_words () in
           ignore (Sys.opaque_identity (measure 0.));
           let extra = Gc.minor_words () -. m in

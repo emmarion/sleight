@@ -538,7 +538,7 @@ let driver cx =
       ("is_file", make "IsFile"); ("is_dir", make "IsDir"); ("is_other", make "IsOther"); ("missing", make "Missing");
       ("changed", make "Changed"); ("unchanged", make "Unchanged"); ("mk_usage", "(Obj.repr " ^ make "MkUsage" ^ ")");
       ("request", un "WriteOut" variant); ("step", un "Exit" variant);
-      ("before", un "Before" (fun ct _ -> string_of_bool (ct.V.cname = "Before")));
+      ("is_start", un "Start" (fun ct _ -> string_of_bool (ct.V.cname = "Start")));
       ("apply", apply_ocaml) ]
   in
   let host = (match shape (c "SNil").V.adt with Ext "String" -> host_conversions | _ -> "")

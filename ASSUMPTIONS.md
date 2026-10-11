@@ -4043,7 +4043,7 @@ silent.
      compaction.
 
 215. **How `Measure` orders its own allocation.** The answer to
-     `(Measure (Before))` holds the reading, so it cannot be built
+     `(Measure (Start))` holds the reading, so it cannot be built
      before the reading is taken. The reference's driver builds a
      throwaway answer first, counts the minor words that took, compacts
      the heap, takes the reading, and adds that count to `minor-words`;
@@ -4051,11 +4051,11 @@ silent.
      the second build allocating as many words as the first, which holds
      on the session's reading because both hold the same number of
      `Nat`s and every figure is a small integer; no other figure is
-     corrected. `(Measure (After))` reads `minor-words` as the driver
+     corrected. `(Measure (Stop))` reads `minor-words` as the driver
      enters `perform`, before the request is decoded, and the rest of
      the figures after it. Measured in the session's scratchpad: an
-     extracted program reading `Before`, running a loop that allocates
-     nothing, then reading `After` read 0 minor words, while the
+     extracted program reading `Start`, running a loop that allocates
+     nothing, then reading `Stop` read 0 minor words, while the
      interpreter, which allocates as it evaluates the program between
      the requests, read about 300 per loop iteration. `slc --interpret`
      passes the constructor through to its own driver and copies the

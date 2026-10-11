@@ -105,8 +105,8 @@
   (let ((unique (Unit) u)) (MkUnit))
   (match many (classify-final env ty) _
     ((FProgram)
-      (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Allocation" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Request" $ Nil _)
-      (let ((unique w1) (many base)) (world-do _ w (Measure (After))))
+      (let ((many pcs)) $ answer-ctors env $ Cons _ "Program" $ Cons _ "Stopwatch" $ Cons _ "Unit" $ Cons _ "Maybe" $ Cons _ "Result" $ Cons _ "List" $ Cons _ "Pair" $ Cons _ "EntryKind" $ Cons _ "Change" $ Cons _ "Usage" $ Cons _ "Request" $ Nil _)
+      (let ((unique w1) (many base)) (world-do _ w (Measure (Stop))))
       (let ((many rq)) $ match many (prelude-adt env "Request") (((List $ Ctor) _)) ((Some _ a) (adt-ctors a)) ((None _) (Nil _)))
       (def-fns perform-lvl $ (many perform : (erased (Hist Block) h) (many (Store Block h) hq) (many (Ref Block h) req) (unique (World) wo) ->
           (erased (Hist Block) h2) (many (Store Block h2) hq2) (erased (Suffix Block h2 h) lq) (many (Ref Block h2) r) (unique (World) wo2 at wo))
