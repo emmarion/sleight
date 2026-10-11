@@ -66,7 +66,7 @@ type 'v ops = {
   mk_usage : 'v;
   request : 'v -> 'v request;
   step : 'v -> 'v step;
-  compact : 'v -> bool;
+  is_start : 'v -> bool;
   apply : 'v -> 'v list -> 'v;
 }
 
@@ -159,6 +159,7 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
   in
   let started = lazy (Unix.gettimeofday (), Unix.times (), Gc.quick_stat (), Gc.minor_words ()) in
   let perform w req =
+    let entered = Gc.minor_words () in
     let result f = match f () with x -> o.ok x | exception ((Unix.Unix_error _ | Sys_error _) as e) -> o.fail (of_string (explain e)) in
     let list of_item xs = List.fold_right (fun x acc -> o.cons (of_item x) acc) xs o.nil in
     let change already f =
@@ -206,16 +207,28 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
         if clamp z <= !(w.limit) then (w.limit := clamp z; o.ok o.unit)
         else o.fail (of_string (Printf.sprintf "%s bytes: above the current output limit of %d bytes" (Z.to_string z) !(w.limit)))
     | Measure c ->
-        if o.compact c then Gc.compact ();
-        let t0, c0, g0, m0 = Lazy.force started in
-        let m1 = Gc.minor_words () and g1 = Gc.quick_stat () and c1 = Unix.times () and t1 = Unix.gettimeofday () in
-        let words f = f g1 -. f g0 and count f = float_of_int (f g1 - f g0) and ns f = 1e9 *. (f c1 -. f c0) in
-        let nat x = match nat_of_z with Some f -> f (Z.of_float (Float.round (Float.max 0. x))) | None -> o.zero in
-        o.apply o.mk_usage
-          (List.map nat
-             [ 1e9 *. (t1 -. t0); ns (fun c -> c.Unix.tms_utime); ns (fun c -> c.Unix.tms_stime);
-               m1 -. m0; words (fun g -> g.Gc.promoted_words); words (fun g -> g.Gc.major_words -. g.Gc.promoted_words);
-               count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ])
+        let reading m1 extra =
+          let g1 = Gc.quick_stat () in
+          let c1 = Unix.times () in
+          let t1 = Unix.gettimeofday () in
+          let t0, c0, g0, m0 = Lazy.force started in
+          let words f = f g1 -. f g0 and count f = float_of_int (f g1 - f g0) and ns f = 1e9 *. (f c1 -. f c0) in
+          let nat x = match nat_of_z with Some f -> f (Z.of_float (Float.round (Float.max 0. x))) | None -> o.zero in
+          o.apply o.mk_usage
+            (List.map nat
+               [ 1e9 *. (t1 -. t0); ns (fun c -> c.Unix.tms_utime); ns (fun c -> c.Unix.tms_stime);
+                 m1 -. m0 +. extra; words (fun g -> g.Gc.promoted_words); words (fun g -> g.Gc.major_words -. g.Gc.promoted_words);
+                 count (fun g -> g.Gc.minor_collections); count (fun g -> g.Gc.major_collections) ])
+        in
+        let measure extra = reading (Gc.minor_words ()) extra in
+        if o.is_start c then begin
+          let m = Gc.minor_words () in
+          ignore (Sys.opaque_identity (measure 0.));
+          let extra = Gc.minor_words () -. m in
+          Gc.compact ();
+          measure extra
+        end
+        else reading entered 0.
   in
   let run_program _w v =
     ignore (Lazy.force started);

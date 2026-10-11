@@ -4006,6 +4006,22 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     `let-match` in a body has its branches spliced once, before it is
     told apart as a statement or a match, in both compilers.
 
+215. **Handles, where MACROS.md is silent.** `(constant-of m x)` takes a
+    name or a handle and a written multiplicity. It is not a use of `x`;
+    each splice of the handle is. A handle to a literal enters the
+    literal's entries where it is spliced, as the literal would, and is
+    refused where a literal is. A `delegate`-bodied function that `slc`
+    holds as its callee's value is minted at its own entry, not its
+    callee's. A handle's value is the id of the entry its `Const` was
+    minted at, with the multiplicity, and `slc` also carries the text a
+    message shows it by: a literal's spelling, else the entry's name,
+    else `_`. A spliced handle is read wherever a name is read as a
+    reference, the heads of special forms and macros included, and an
+    erased one dispatches neither; where a binder is read, the message
+    is "a handle to `k` is not a name". The reference
+    holds a handle as a syntax node of its own, `slc` as a third kind of
+    name, refused by the two functions that read binders.
+
 ## The world (section 42)
 
 Choices both implementations make about the world where DESIGN.md is
@@ -4025,3 +4041,23 @@ silent.
      `Request`. The reference's driver takes its `Measure` reading when it
      begins running the final `Program`, before the first step, with no
      compaction.
+
+215. **How `Measure` orders its own allocation.** The answer to
+     `(Measure (Start))` holds the reading, so it cannot be built
+     before the reading is taken. The reference's driver builds a
+     throwaway answer first, counts the minor words that took, compacts
+     the heap, takes the reading, and adds that count to `minor-words`;
+     the answer it returns is built after the reading. This relies on
+     the second build allocating as many words as the first, which holds
+     on the session's reading because both hold the same number of
+     `Nat`s and every figure is a small integer; no other figure is
+     corrected. `(Measure (Stop))` reads `minor-words` as the driver
+     enters `perform`, before the request is decoded, and the rest of
+     the figures after it. Measured in the session's scratchpad: an
+     extracted program reading `Start`, running a loop that allocates
+     nothing, then reading `Stop` read 0 minor words, while the
+     interpreter, which allocates as it evaluates the program between
+     the requests, read about 300 per loop iteration. `slc --interpret`
+     passes the constructor through to its own driver and copies the
+     answer into its compile-time store after the reading in both
+     modes.

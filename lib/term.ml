@@ -1,5 +1,5 @@
 type id = int
-type mult = Erased | Many | Unique
+type mult = Ffi_core.mult = Erased | Many | Unique
 type disc = Enum | Union
 
 type term =

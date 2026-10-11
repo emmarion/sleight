@@ -99,9 +99,9 @@ gensym case needs.
 ### Handles
 
 ```scheme
-(constant-of m x)  : (many (Const m' T x) h)
-    ; x a Const entry; T its type; m erased: any entry; many: x declared many;
-    ; unique: x declared unique; m' the matching Mult
+(constant-of m x)  : (many (Const m' T t) h)
+    ; x a Const entry; T its minted type; t its minted is; m erased: any entry;
+    ; many: x declared many; unique: x declared unique; m' the matching Mult
 (constant-type c)  : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
                      (many (Const (MErased) Type T) h)
 (const-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
@@ -109,13 +109,13 @@ gensym case needs.
 (unwrap c)         : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)
 ```
 
-All Decided. Proposed: `constant-of` resolves `x` through its aliases to the
-run-position entry it forwards from, so that a handle never names an entry
-that a scope can drop. There is no `unwrap` for erased handles (it would
-only rename the handle's own erased index) and none for unique handles (a
-macro's read would happen outside the elaborator's use accounting, possibly
-after the value was consumed and mutated in place). A `constant-slot` form
-was considered and dropped.
+All Decided. Decided: a handle denotes `x`'s minted `is` at `x`'s minted
+type (DESIGN.md §5, §29), as head dispatch reads the minted type (§6). There
+is no `unwrap` for erased handles (it would only rename the handle's own
+erased index) and none for unique handles (a macro's read would happen
+outside the elaborator's use accounting, possibly after the value was
+consumed and mutated in place). A `constant-slot` form was considered and
+dropped.
 
 ### The macro world
 
@@ -168,9 +168,14 @@ was considered and dropped.
    message shows it as `__g` and `n` and `_`, followed by `s` spelled as a
    name is spelled (README.md): `__g1_tmp`, or `__g1_#"a b"` where `s` is
    not a plain name.
-4. Handles (Proposed). An `AConst` resolves to its term directly, bypassing
-   scope. In a non-erased position it must be an entry. Splicing a unique
-   handle is a use at the splice site, checked as usual.
+4. Handles. Decided: a handle keeps the multiplicity it was made with, the
+   `m` of `(constant-of m x)`. Where it is spliced, it is checked as if `x`
+   had been written there with that multiplicity. So an `MErased` handle may
+   appear only in erased positions, an `MMany` handle is used at many, and an
+   `MUnique` handle is used at unique, which consumes it. Decided: a handle
+   cannot be used as a binder, any more than anything else that is not a
+   name can. Proposed: an `AConst` resolves to its term directly, bypassing
+   scope; in a non-erased position it must be an entry.
 5. The macro world (Decided). It is the elaborator's program store: the
    run-position entries with their values and facts, the literal table, the
    gensym counter and the expansion count. It is threaded sequentially
@@ -201,7 +206,6 @@ The owner suspects this section holds of the language as it stands.
    the program's source files, whether reads also obey `--confine-dir`, and
    how symlinks are resolved.
 7. Literal constructors in `Atom`: deferred.
-8. The names `Compaction`, `Compact` and `NoCompact`.
 
 ## 7. What implementing it would involve
 
@@ -236,6 +240,14 @@ The source prelude declares the following, which both compilers implement.
 (def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
 (def-opaque $ (MacroWorld : -> Type))
 
+(def-adts $ (Mult : -> Type)
+  enum
+  (many MErased : -> (Mult))
+  (many MMany : -> (Mult))
+  (many MUnique : -> (Mult)))
+
+(def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
+
 (def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
 
@@ -251,7 +263,8 @@ The source prelude declares the following, which both compilers implement.
   (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
-  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw)))
+  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
+  (many RawConst : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype
@@ -266,4 +279,8 @@ entries, `match` and `let-match` branches, `def-adts` constructors,
 arguments and `values` entries, besides the positions of section 4.1;
 at most 10000 expansions run in one run. `gensym` counts from 1 over the
 whole run, every file included. An unbound gensym gets no "nearest in
-scope" hint.
+scope" hint. `(constant-of m x)` makes a handle (section 3), and
+`RawConst` puts one in a macro's output, where it stands for its entry
+directly. `constant-type`, `const-mult`, `unwrap`, `const-eq` and the
+`intern-` forms are not implemented, and a literal in a macro's arguments
+still arrives as `RawNat`, `RawChar` or `RawStr`.

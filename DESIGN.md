@@ -162,6 +162,9 @@ entry has:
 - a **minted type**, present only in state `Const`: the type the entry
   had when it became `Const`, which special-form dispatch reads (§6,
   §29);
+- a **minted `is`**, present only in state `Const`: the term the entry
+  was when it became `Const`, which a macro's handle denotes (§29,
+  MACROS.md section 3);
 - a **multiplicity** (§13), declared at the binder or fixed by the kind
   of entry (§14);
 - a **level-mint marker**, set on an entry introduced by `def-lvl`
@@ -173,7 +176,8 @@ entry has:
 - an **automatic slot** (§35).
 
 An entry's **type** and its **`is` rule** (§12) are stored in the fact
-table (§7), not on the entry, unlike its minted type. Each is a tree whose
+table (§7), not on the entry, unlike its minted type and minted `is`.
+Each is a tree whose
 leaves refer to entries (§9); an `is` tree may refer to its own entry.
 Both depend on the scope: an entry's type may be refined inside a match
 branch and revert when the branch ends.
@@ -681,7 +685,8 @@ and types.
 
 **State-forwarding `let`.** A `let` binder takes over the state of the
 right-hand-side entry it corresponds to: `Const` or `Dyn` (§5), the
-stored value and minted type if `Const`, its level-mint marker and its
+stored value, minted type and minted `is` if `Const`, its level-mint
+marker and its
 introduction order (§5), except that a binder forwarding from a
 literal's entry (§45), which has none, keeps an introduction order of
 its own, and, through an alias rule in the fact table (§7), its type
@@ -1177,9 +1182,9 @@ branch, every binding is `Dyn`, including nested definitions. So any
 `Special` or `Macro` that is ever invoked (§6) comes from run position.
 A constructor application over `Const` arguments is `Dyn` (§28).
 
-**The minted type.** At sites 1 and 2, an entry records its type,
-as it is there, as its minted type (§5); at site 3 it takes its
-source's (§19). Special-form dispatch canonicalizes the minted type
+**The minted type and minted `is`.** At sites 1 and 2, an entry
+records its type, as it is there, as its minted type, and itself as
+its minted `is` (§5); at site 3 it takes its source's of both (§19). Special-form dispatch canonicalizes the minted type
 against the facts of the innermost enclosing run position (§6), so a
 later run-position fact refines it and a branch-forced one does not.
 
@@ -1923,9 +1928,10 @@ which `lib/prelude.sl` is the reference:
   line and a column (`Nat`). A message about a form at `NoPos` carries
   no location, not even a file; one at `MkPos` names exactly that
   position.
-- **Macros.** `Pos`, `Raw`, `Macro`, the opaque `Gensym` and
-  `MacroWorld`, `JMEq`, and the primitives `gensym` and
-  `gensym-unique`. MACROS.md section 8 describes them.
+- **Macros.** `Pos`, `Raw`, `Macro`, `Mult`, the opaque `Gensym`,
+  `MacroWorld` and `Const`, `JMEq`, and the primitives `gensym` and
+  `gensym-unique`. MACROS.md section 8 describes them and the special
+  form `constant-of`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2346,7 +2352,8 @@ Every special form, as a constructor of `Special` (§19), grouped as
   before the decreasing argument, so it has more items than the
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
-  `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42).
+  `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
+  `constant-of` and `gensym` (MACROS.md section 3).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2354,6 +2361,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 
 - `prove-subterm`, `prove-predates`, `predates-trans`, `subterm-trans`
   and `predates-subterm` (§18).
+- `gensym-unique` (MACROS.md section 3).
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).

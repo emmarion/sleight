@@ -443,7 +443,7 @@ Open, in the session's estimation, none of it decided:
 ## `Program`, `Request` and `world-do` (one session, with the owner)
 
 Done in both compilers, with DESIGN.md sections 8, 27, 32, 42 and 54 in
-the owner's words: the prelude's `Program`, `Request` and `Compaction`,
+the owner's words: the prelude's `Program`, `Request` and `Stopwatch`,
 the built-in `World`, and the special form `world-do`. MACROS.md keeps
 only the macro system's items. What a later session should know:
 

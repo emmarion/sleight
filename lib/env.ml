@@ -88,7 +88,7 @@ type state = Const of Value.value | Dyn
    mints for itself carries no position (ASSUMPTIONS 195). A binder bound again from a stored telescope --
    a function's parameter inside its own body -- keeps the position its declaration gave it and is bound
    [~written:false], the declaration having already been read once. *)
-type entry = { name : Reader.name option; mult : mult; state : state; minted : term; minted_level : bool; introduced : id; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
+type entry = { name : Reader.name option; mult : mult; state : state; minted : id; minted_level : bool; introduced : id; meta : bool; word : bool; temporary : bool; at : Reader.loc; slot : id }
 type fact = { ty : term; rule : term option }
 type level = Top | At of id
 
@@ -149,6 +149,7 @@ type literal = { lit : Literal.t; lit_id : id; lit_proof : id option; minted : (
 let literal_rows : (string, literal) Hashtbl.t = Hashtbl.create 64
 let literal_of : (id, literal) Hashtbl.t = Hashtbl.create 64
 let ladder : Value.value array ref = ref [||]
+let () = Reader.handle_name := fun x -> match Hashtbl.find_opt literal_of x, Hashtbl.find_opt names x with Some r, _ -> Literal.spell r.lit | None, Some n -> Literal.name n | None, None -> "_"
 let reset_literals () = Hashtbl.reset literal_rows; Hashtbl.reset literal_of; Hashtbl.reset Value.literal_values; ladder := [||]
 
 type item = Fns of (id * Value.fn) list | Final of Value.value * term * string
@@ -167,7 +168,7 @@ let anonymous env x =
 
 let set_state ?minted env x state =
   let values = match state with Const v -> IntMap.add x v env.values | Dyn -> env.values in
-  let minted = Option.value minted ~default:(fact env x).ty in
+  let minted = Option.value minted ~default:x in
   { env with entries = IntMap.add x { (entry env x) with state; minted } env.entries; values }
 
 let record_literal row =
@@ -428,7 +429,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
   let mint = if literal then fresh_literal else fresh in
   let x = mint () in
   let slot = mint () in
-  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = !slot_type; minted_level = false; introduced = slot; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
+  let entries = IntMap.add slot { name = None; mult = (if mult = Erased then Erased else Many); state = Dyn; minted = slot; minted_level = false; introduced = slot; meta = false; word = false; temporary = false; at = Reader.nowhere; slot } env.entries in
   let facts = IntMap.add slot { ty = !slot_type; rule = None } env.facts in
   if written && Reader.placed at then
     Option.iter
@@ -445,7 +446,7 @@ let bind env ?minted ?(minted_level = false) ?introduced ?(literal = false) ?(me
          | _ -> ())
       name;
   Option.iter (Hashtbl.replace names x) name;
-  let entries = IntMap.add x { name; mult; state = Dyn; minted = ty; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
+  let entries = IntMap.add x { name; mult; state = Dyn; minted = x; minted_level; introduced = Option.value introduced ~default:x; meta; word; temporary; at; slot } entries in
   let scope = if meta || literal then env.scope else { ids = x :: env.scope.ids; named = Option.fold ~none:env.scope.named ~some:(fun n -> NameMap.add n x env.scope.named) name } in
   let env = { env with scope; entries; facts = IntMap.add x { ty; rule } facts } in
   (x, set_state ?minted env x state)
@@ -629,14 +630,15 @@ let refer ?(live = false) x =
         let x = match s with Target y -> y | Level _ -> x and want = if live then 2 else 1 in
         if level x < want then Hashtbl.replace refs x (Level want)
 
-let use env loc ?(sharing = false) ?written mult x =
+let use env loc ?(sharing = false) ?written ?made mult x =
   refer ~live:(mult <> Erased && not env.usage_erased) x;
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
-  let explain () = match Hashtbl.find_opt literal_of x with
-    | Some r -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:(Literal.key r.lit))) (mult_name e.mult))
-    | None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
-  check_mult env loc explain mult (if sharing && mult = Many then Many else e.mult);
+  let explain () = match made, Hashtbl.find_opt literal_of x with
+    | Some d, _ -> ([], Printf.sprintf "a handle to %s, made `%s`" (qname env x) (speller env (mult_name d)))
+    | None, Some r -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:(Literal.key r.lit))) (mult_name e.mult))
+    | None, None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
+  check_mult env loc explain mult (if sharing && mult = Many then Many else Option.value made ~default:e.mult);
   if e.mult <> Unique then env else (
     if mult = Unique && List.mem x env.captures then error_in env loc "`def-fns` cannot capture %s at unique" (qname env x);
     (match IntMap.find_opt x env.uses with

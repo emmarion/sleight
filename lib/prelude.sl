@@ -977,10 +977,10 @@
      (unique (UniqueFn L (unique (World) w) -> (unique (World) w2 at w) (unique (Program L) p)) k)
      -> (Program L)))
 
-(def-adts $ (Compaction : -> Type)
+(def-adts $ (Stopwatch : -> Type)
   enum
-  (many Compact : -> (Compaction))  ; compacts the heap first
-  (many NoCompact : -> (Compaction)))
+  (many Start : -> (Stopwatch))  ; allocates the answer, compacts the heap, then reads
+  (many Stop : -> (Stopwatch)))  ; reads, then allocates the answer; no compaction
 
 (def-adts $ (Request : (Type A) -> Type)
   enum
@@ -1002,7 +1002,7 @@
   (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
   (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
   (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
-  (many Measure : (many (Compaction) c) -> (Request (Usage))))  ; totals since the Program began
+  (many Measure : (many (Stopwatch) s) -> (Request (Usage))))  ; totals since the Program began
 
 (def-adts $ (Array : (Type A) ((List A) xs) -> Type)
   enum extern
@@ -1408,6 +1408,14 @@
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
+(def-adts $ (Mult : -> Type)
+  enum
+  (many MErased : -> (Mult))
+  (many MMany : -> (Mult))
+  (many MUnique : -> (Mult)))
+
+(def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
@@ -1416,7 +1424,8 @@
   (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
-  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw)))
+  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
+  (many RawConst : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype

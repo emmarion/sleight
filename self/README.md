@@ -345,7 +345,7 @@ the entry says otherwise, and recorded so it can be revisited.
   `lib/extract.ml` does: `lib/driver_core.ml` takes a record of direct
   builds and matches over the prelude's `Nat`, `U8`, `Char`, `String`,
   `Maybe`, `Result`, `Unit`, `List`, `Pair`, `EntryKind`, `Change`,
-  `Program`, `Request` and `Compaction`, found by name in the
+  `Program`, `Request` and `Stopwatch`, found by name in the
   prelude's scope, so no name is looked up while a program runs. A
   prelude renaming those needs a changed emitter.
 - **The elaborator's group carries a budget of sugar expansions** as its

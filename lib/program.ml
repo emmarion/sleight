@@ -40,7 +40,7 @@ let driver env =
     | _ -> assert false
   in
   let step v = match des "Exit" v with 0, [ x ] -> Exit x | 1, [ k ] -> Continue k | _ -> assert false in
-  let compact v = fst (des "Compact" v) = 0 in
+  let is_start v = fst (des "Start" v) = 0 in
   let slice = !V.use_externs && Hashtbl.mem Ffi.registered "String" in
   let str_of_host = if slice then Some (fun s -> Ffi.text (s, 0, String.length s)) else None in
   let str_to_host = if slice then Some (fun v -> let s, o, l = Ffi.slice v in String.sub s o l) else None in
@@ -54,7 +54,7 @@ let driver env =
       cons = (fun a b -> build "Cons" [ a; b ]); nil = build "Nil" []; pair = (fun a b -> build "MkPair" [ a; b ]);
       is_file = build "IsFile" []; is_dir = build "IsDir" []; is_other = build "IsOther" []; missing = build "Missing" [];
       changed = build "Changed" []; unchanged = build "Unchanged" []; mk_usage = V.VCtorFn (c "MkUsage");
-      request; step; compact; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
+      request; step; is_start; apply = (fun k xs -> List.hd (Eval.apply k xs)) }
 
 (* A message names where it is about, the file the location carries or, where it carries none, the file
    being read. A contradiction that reaches here escaped every form that would have placed it, and the

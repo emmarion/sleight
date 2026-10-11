@@ -3,24 +3,18 @@
 ; scope environment with its fact table (sections 5, 7), canonicalization, instantiation and the part of
 ; forced unification a trusting compiler needs. Mirrors lib/term.ml, lib/value.ml and lib/env.ml.
 
-(def-adts $ (Mult : -> Type)
-  enum
-  (many Erased : -> (Mult))
-  (many Many : -> (Mult))
-  (many Once : -> (Mult)))
-
 (let ((many many-one)) $ Cons _ (Many) $ Nil _)
 
 ; The entries of [xs] sit at the many positions of [ms], in order.
 (def-adts
-  ((Picked : (Type A) ((List $ Mult) ms) ((List A) xs) -> Type)
+  ((Picked : (Type A) ((List $ Multiplicity) ms) ((List A) xs) -> Type)
     enum
-    (many PkNil : (erased Type A) -> (Picked A (Nil (Mult)) (Nil A)))
-    (many PkMany : (erased Type A) (erased (List $ Mult) ms) (erased A x) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Mult) (Many) ms) (Cons A x xs)))
-    (many PkOnce : (erased Type A) (erased (List $ Mult) ms) (erased A x) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Mult) (Once) ms) (Cons A x xs)))
-    (many PkErased : (erased Type A) (erased (List $ Mult) ms) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Mult) (Erased) ms) xs))))
+    (many PkNil : (erased Type A) -> (Picked A (Nil (Multiplicity)) (Nil A)))
+    (many PkMany : (erased Type A) (erased (List $ Multiplicity) ms) (erased A x) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Multiplicity) (Many) ms) (Cons A x xs)))
+    (many PkOnce : (erased Type A) (erased (List $ Multiplicity) ms) (erased A x) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Multiplicity) (Once) ms) (Cons A x xs)))
+    (many PkErased : (erased Type A) (erased (List $ Multiplicity) ms) (erased (List A) xs) (erased (Picked A ms xs) p) -> (Picked A (Cons (Multiplicity) (Erased) ms) xs))))
 
-(def-fns _ $ (many picked-of : (erased Type A) (subterm many (List $ Mult) ms) (many (List A) xs) (erased (Lockstep (Mult) A ms xs) lock) -> (many (List A) r) (erased (Picked A ms r) pk))
+(def-fns _ $ (many picked-of : (erased Type A) (subterm many (List $ Multiplicity) ms) (many (List A) xs) (erased (Lockstep (Multiplicity) A ms xs) lock) -> (many (List A) r) (erased (Picked A ms r) pk))
   (let-match many ms (Cons _ m rest) ((Nil _) (values (Nil _) (PkNil _))))
   (let-match erased lock (LsCons ta tb x0 y0 xs0 ys0 p))
   (let-match many xs (Cons b x xrest))
@@ -30,7 +24,7 @@
     ((Once) (values (Cons _ x r) (PkOnce _ rest x r pk)))
     ((Erased) (values r (PkErased _ rest r pk)))))
 
-(def-fns _ $ (erased picked-along : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Lockstep A B xs ys) q) -> (erased (Picked B ms ys) r))
+(def-fns _ $ (erased picked-along : (erased Type A) (erased Type B) (erased (List $ Multiplicity) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Lockstep A B xs ys) q) -> (erased (Picked B ms ys) r))
   (match erased p _
     ((PkNil _)
       (let-match erased q (LsNil c d))
@@ -44,7 +38,7 @@
     ((PkErased _ ms2 _ p2) (PkErased _ ms2 ys $ picked-along _ _ _ _ _ p2 q))))
 
 ; Two lists picked from one erasure list walk in lockstep.
-(def-fns _ $ (erased picked-lockstep : (erased Type A) (erased Type B) (erased (List $ Mult) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Picked B ms ys) q) -> (erased (Lockstep A B xs ys) lk))
+(def-fns _ $ (erased picked-lockstep : (erased Type A) (erased Type B) (erased (List $ Multiplicity) ms) (erased (List A) xs) (erased (List B) ys) (subterm erased (Picked A ms xs) p) (erased (Picked B ms ys) q) -> (erased (Lockstep A B xs ys) lk))
   (match erased p _
     ((PkNil _)
       (let-match erased q (PkNil b))
@@ -60,17 +54,17 @@
       (picked-lockstep _ _ _ _ _ p2 q2))))
 
 ; Two erasure lists with the same many entries.
-(def-adts $ (ManySame : ((List $ Mult) a) ((List $ Mult) b) -> Type)
+(def-adts $ (ManySame : ((List $ Multiplicity) a) ((List $ Multiplicity) b) -> Type)
   enum
-  (many MsNil : -> (ManySame (Nil (Mult)) (Nil (Mult))))
-  (many MsMany : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame (Cons (Mult) (Many) a) (Cons (Mult) (Many) b)))
-  (many MsOnce : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame (Cons (Mult) (Once) a) (Cons (Mult) (Once) b)))
-  (many MsManyOnce : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame (Cons (Mult) (Many) a) (Cons (Mult) (Once) b)))
-  (many MsOnceMany : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame (Cons (Mult) (Once) a) (Cons (Mult) (Many) b)))
-  (many MsErasedL : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame (Cons (Mult) (Erased) a) b))
-  (many MsErasedR : (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (ManySame a b) p) -> (ManySame a (Cons (Mult) (Erased) b))))
+  (many MsNil : -> (ManySame (Nil (Multiplicity)) (Nil (Multiplicity))))
+  (many MsMany : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame (Cons (Multiplicity) (Many) a) (Cons (Multiplicity) (Many) b)))
+  (many MsOnce : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame (Cons (Multiplicity) (Once) a) (Cons (Multiplicity) (Once) b)))
+  (many MsManyOnce : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame (Cons (Multiplicity) (Many) a) (Cons (Multiplicity) (Once) b)))
+  (many MsOnceMany : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame (Cons (Multiplicity) (Once) a) (Cons (Multiplicity) (Many) b)))
+  (many MsErasedL : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame (Cons (Multiplicity) (Erased) a) b))
+  (many MsErasedR : (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (ManySame a b) p) -> (ManySame a (Cons (Multiplicity) (Erased) b))))
 
-(def-fns _ $ (erased picked-same : (erased Type A) (erased (List $ Mult) a) (erased (List $ Mult) b) (erased (List A) xs) (subterm erased (ManySame a b) p) (erased (Picked A a xs) q) -> (erased (Picked A b xs) r))
+(def-fns _ $ (erased picked-same : (erased Type A) (erased (List $ Multiplicity) a) (erased (List $ Multiplicity) b) (erased (List A) xs) (subterm erased (ManySame a b) p) (erased (Picked A a xs) q) -> (erased (Picked A b xs) r))
   (match erased p _
     ((MsNil) q)
     ((MsMany _ b2 p2) (let-match erased q (PkMany t a3 x xs2 q2)) (PkMany _ b2 x xs2 $ picked-same _ _ _ _ p2 q2))
@@ -80,7 +74,7 @@
     ((MsErasedL _ _ p2) (let-match erased q (PkErased t a3 xs2 q2)) (picked-same _ _ _ _ p2 q2))
     ((MsErasedR _ b2 p2) (PkErased _ b2 xs $ picked-same _ _ _ _ p2 q))))
 
-(def-fns _ $ (many mults-same : (subterm many (List $ Mult) a) (subterm many (List $ Mult) b) -> (many (Maybe $ ManySame a b) r))
+(def-fns _ $ (many mults-same : (subterm many (List $ Multiplicity) a) (subterm many (List $ Multiplicity) b) -> (many (Maybe $ ManySame a b) r))
   (match many a _
     ((Nil _)
       (let-match many b (Cons _ n br) ((Nil _) (Some _ (MsNil))))
@@ -128,14 +122,14 @@
     (many TErr : (many (String) msg) -> (Term)))
   ((Entry : -> Type)
     enum
-    (many MkEntry : (many (Maybe $ Name) name) (many (Bool) is-sub) (many (Mult) mult) (many (Sg) sg) (many (Maybe $ Term) place) (many (Maybe $ Loc) site) -> (Entry)))
+    (many MkEntry : (many (Maybe $ Name) name) (many (Bool) is-sub) (many (Multiplicity) mult) (many (Sg) sg) (many (Maybe $ Term) place) (many (Maybe $ Loc) site) -> (Entry)))
   ((Sg : -> Type)
     enum
     (many SgTy : (many (Term) t) -> (Sg))
     (many SgIs : (many (Term) t) (many (Term) ty) -> (Sg)))
   ((MCtor : -> Type)
     enum
-    (many MkMCtor : (many (Mult) m) (many (Term) c) -> (MCtor))))
+    (many MkMCtor : (many (Multiplicity) m) (many (Term) c) -> (MCtor))))
 
 ; The ids below are fixed by the order of the binds that follow; [bind-builtin] mints in that order, each
 ; entry followed by its automatic slot (section 35), so the ids step by two.
@@ -174,7 +168,7 @@
 (def-fns _ $ (many sg-ty : (many (Sg) sg) -> (many (Term) t))
   (match many sg _ ((SgTy t) t) ((SgIs _ ty) ty)))
 
-(def-fns _ $ (many entry-mult : (many (Entry) e) -> (many (Mult) m))
+(def-fns _ $ (many entry-mult : (many (Entry) e) -> (many (Multiplicity) m))
   (match many e _ ((MkEntry _ _ m _ _ _) m)))
 
 (def-fns _ $ (many entry-sg : (many (Entry) e) -> (many (Sg) sg))
@@ -186,40 +180,40 @@
 (def-fns _ $ (many entry-sub : (many (Entry) e) -> (many (Bool) s))
   (match many e _ ((MkEntry _ s _ _ _ _) s)))
 
-(def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
+(def-fns _ $ (many mult-name : (many (Multiplicity) m) -> (many (String) s))
   (match many m _ ((Erased) "erased") ((Many) "many") ((Once) "unique")))
 
-(def-fns _ $ (many mult-is-many : (many (Mult) m) -> (many (Bool) r))
+(def-fns _ $ (many mult-is-many : (many (Multiplicity) m) -> (many (Bool) r))
   (match many m _ ((Erased) (BFalse)) ((Many) (BTrue)) ((Once) (BTrue))))
 
-(def-fns _ $ (many under : (many (Mult) pos) (many (Mult) m) -> (many (Mult) r))
+(def-fns _ $ (many under : (many (Multiplicity) pos) (many (Multiplicity) m) -> (many (Multiplicity) r))
   (match many pos _ ((Erased) (Erased)) ((Many) m) ((Once) m)))
 
 ; The position of a list of expected multiplicities: erased when the list is non-empty and every entry is.
-(def-adts $ (PosOf : ((List $ Mult) ms) ((Mult) pos) -> Type)
+(def-adts $ (PosOf : ((List $ Multiplicity) ms) ((Multiplicity) pos) -> Type)
   enum
-  (many PoNil : -> (PosOf (Nil (Mult)) (Many)))
-  (many PoMany : (erased (List $ Mult) rest) -> (PosOf (Cons (Mult) (Many) rest) (Many)))
-  (many PoOnce : (erased (List $ Mult) rest) -> (PosOf (Cons (Mult) (Once) rest) (Many)))
-  (many PoOnly : -> (PosOf (Cons (Mult) (Erased) (Nil (Mult))) (Erased)))
-  (many PoErased : (erased (Mult) m) (erased (List $ Mult) rest) (erased (Mult) p) (erased (PosOf (Cons (Mult) m rest) p) q) -> (PosOf (Cons (Mult) (Erased) (Cons (Mult) m rest)) p)))
+  (many PoNil : -> (PosOf (Nil (Multiplicity)) (Many)))
+  (many PoMany : (erased (List $ Multiplicity) rest) -> (PosOf (Cons (Multiplicity) (Many) rest) (Many)))
+  (many PoOnce : (erased (List $ Multiplicity) rest) -> (PosOf (Cons (Multiplicity) (Once) rest) (Many)))
+  (many PoOnly : -> (PosOf (Cons (Multiplicity) (Erased) (Nil (Multiplicity))) (Erased)))
+  (many PoErased : (erased (Multiplicity) m) (erased (List $ Multiplicity) rest) (erased (Multiplicity) p) (erased (PosOf (Cons (Multiplicity) m rest) p) q) -> (PosOf (Cons (Multiplicity) (Erased) (Cons (Multiplicity) m rest)) p)))
 
-(def-fns _ $ (many pos-of : (subterm many (List $ Mult) ms) -> (many (Mult) r) (erased (PosOf ms r) pf))
+(def-fns _ $ (many pos-of : (subterm many (List $ Multiplicity) ms) -> (many (Multiplicity) r) (erased (PosOf ms r) pf))
   (let-match many ms (Cons _ m rest) ((Nil _) (values (Many) (PoNil))))
   (let-match many m (Erased) ((Many) (values (Many) (PoMany _))) ((Once) (values (Many) (PoOnce _))))
   (let-match many rest (Cons _ _ _) ((Nil _) (values (Erased) (PoOnly))))
   (let ((many p) (erased q)) $ tail $ pos-of rest)
   (values p (PoErased _ _ _ q)))
 
-(def-fns _ $ (many pos-mult : (many (List $ Mult) ms) -> (many (Mult) r))
+(def-fns _ $ (many pos-mult : (many (List $ Multiplicity) ms) -> (many (Multiplicity) r))
   (let-match many ms (Cons _ m rest)
     ((Nil _) (Many)))
   (match many m _ ((Once) (match many rest _ ((Nil _) (Once)) ((Cons _ _ _) (Many)))) (else (let ((many r) (erased pf)) (pos-of ms)) r)))
 
-(def-fns _ $ (many mult-is-once : (many (Mult) m) -> (many (Bool) r))
+(def-fns _ $ (many mult-is-once : (many (Multiplicity) m) -> (many (Bool) r))
   (match many m _ ((Once) (BTrue)) (else (BFalse))))
 
-(def-fns _ $ (many field-under : (many (Mult) pos) (many (Mult) m) -> (many (Mult) r))
+(def-fns _ $ (many field-under : (many (Multiplicity) pos) (many (Multiplicity) m) -> (many (Multiplicity) r))
   (let-match many pos (Many) ((Erased) (Erased)) ((Once) m))
   (match many m _ ((Once) (Many)) (else m)))
 
@@ -239,7 +233,7 @@
     ((BTrue) (Succ $ notail $ stored-count rest))
     ((BFalse) (tail $ stored-count rest))))
 
-(def-fns _ $ (many tele-mults : (subterm many (List $ Entry) es) -> (many (List $ Mult) ms))
+(def-fns _ $ (many tele-mults : (subterm many (List $ Entry) es) -> (many (List $ Multiplicity) ms))
   (match many es _
     ((Nil _) (Nil _))
     ((Cons _ e rest) (Cons _ (entry-mult e) $ notail $ tele-mults rest))))
@@ -271,7 +265,7 @@
     (many ExSubtermTrans : -> (ExprK)) (many ExPredatesSubterm : -> (ExprK)) (many ExCoerce : -> (ExprK))
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
-    (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)))
+    (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExConstantOf : -> (ExprK)))
   ((MarkK : -> Type)
     enum
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkUnique : -> (MarkK)) (many MkAt : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
@@ -290,7 +284,7 @@
     ((ExMatch) 0) ((ExMatchableOf) 1) ((ExSlotOf) 2) ((ExAtFnOf) 20) ((ExShare) 21) ((ExCellAlloc) 22) ((ExCellWrite) 23) ((ExCellMatch) 24) ((ExCoercibleShare) 25) ((ExNumeralOf) 3) ((ExLevelOf) 4) ((ExProveSubterm) 5)
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
-    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29)))
+    ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExConstantOf) 30)))
 
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
@@ -302,7 +296,7 @@
     ((SpMark k) (match many k _ ((MkTail) (Some _ 1)) ((MkNoTail) (Some _ 1)) ((MkDelegate) (Some _ 1)) (else (None _))))
     ((SpExpr k)
       (match many k _
-        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1))
+        ((ExMatchableOf) (Some _ 1)) ((ExSlotOf) (Some _ 1)) ((ExAtFnOf) (Some _ 1)) ((ExNumeralOf) (Some _ 1)) ((ExLevelOf) (Some _ 1)) ((ExCoercibleSym) (Some _ 1)) ((ExCoercibleShare) (Some _ 1)) ((ExCoercibleOf) (Some _ 1)) ((ExDelegateOf) (Some _ 1)) ((ExConstantOf) (Some _ 2))
         ((ExProveSubterm) (Some _ 2)) ((ExProvePredates) (Some _ 2)) ((ExProveLiteralLt) (Some _ 2)) ((ExPredatesTrans) (Some _ 2)) ((ExSubtermTrans) (Some _ 2)) ((ExPredatesSubterm) (Some _ 2)) ((ExCoerce) (Some _ 2)) ((ExCoercibleRefl) (Some _ 2)) ((ExCoercibleTrans) (Some _ 2))
         (else (None _))))
     (else (None _))))
@@ -337,7 +331,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "constant-of" (SpExpr $ ExConstantOf) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $ sp-cons "notail" (SpMark $ MkNoTail) $
@@ -511,7 +505,8 @@
     (many PHalf : (many (Nat) n) -> (Payload))
     (many PStr : (many (String) s) -> (Payload))
     (many PBytes : (many (String) s) -> (Payload))
-    (many PRaw : (many (String) file) (many (Syn) r) -> (Payload)))
+    (many PRaw : (many (String) file) (many (Syn) r) -> (Payload))
+    (many PHandle : (many (Nat) id) (many (Multiplicity) m) (many (String) shown) -> (Payload)))
   ((ExtType : -> Type)
     enum
     (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType))
@@ -556,31 +551,31 @@
     (many MkImpl : (many (SomeExtern) e) (many (List $ Ctor) cs) -> (Impl)))
   ((Func : ((List $ Nat) gids) ((List $ List $ Nat) ctx) -> Type)
     enum
-    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Mult) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx))
+    (many MkFunc : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) rets) (many (String) name) (many (Nat) id) (many (List $ Nat) params) (many (Code (Cons (List (Nat)) params (Cons (List (Nat)) gids ctx)) rets) body) (many (Maybe $ Impl) impl) (many (Bool) top) -> (Func gids ctx))
     (many MkAlias : (erased (List $ Nat) gids) (erased (List $ List $ Nat) ctx) (many (String) name) (many (Nat) id) (many (Code (Cons (List (Nat)) gids ctx) many-one) target) -> (Func gids ctx)))
   ; [ctx]: the frames in scope; [ms]: the multiplicities of the values the code produces, the many ones being
   ; what runs (section 27); a node that has to make values on its own holds them as data. A Const entry is
   ; named by its id and read from the store when the code runs (section 29); a value elaboration embeds is
   ; a closed block, allocated when reached.
-  ((Code : ((List $ List $ Nat) ctx) ((List $ Mult) ms) -> Type)
+  ((Code : ((List $ List $ Nat) ctx) ((List $ Multiplicity) ms) -> Type)
     enum
     (many CVar : (erased (List $ List $ Nat) ctx) (many (Nat) id) (many (Mem id ctx) p) -> (Code ctx many-one))
     (many CConst : (erased (List $ List $ Nat) ctx) (many (Nat) id) -> (Code ctx many-one))
     (many CValue : (erased (List $ List $ Nat) ctx) (many (Block (Ref Block (HEmpty Block))) v) -> (Code ctx many-one))
-    (many CErased : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
-    (many CValues : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ms cs) pk) -> (Code ctx ms))
-    (many CApp : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
-    (many CLet : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (erased (List $ Mult) ns) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (many (Code ctx ms) rhs) (many (Code (Cons (List (Nat)) ids ctx) ns) rest) -> (Code ctx ns))
-    (many CLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (erased (List $ Nat) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Nat)) gids ctx) ns) rest) -> (Code ctx ns))
-    (many CMatch : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) dflt) (many (List $ Nat) live) -> (Code ctx ns))
+    (many CErased : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) -> (Code ctx ms))
+    (many CValues : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (List $ Code ctx many-one) cs) (erased (Picked (Code ctx many-one) ms cs) pk) -> (Code ctx ms))
+    (many CApp : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (Code ctx many-one) f) (many (List $ Code ctx many-one) args) (many (CC) cc) -> (Code ctx ms))
+    (many CLet : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (erased (List $ Multiplicity) ns) (many (List $ Nat) ids) (erased (Picked (Nat) ms ids) pk) (many (Code ctx ms) rhs) (many (Code (Cons (List (Nat)) ids ctx) ns) rest) -> (Code ctx ns))
+    (many CLetRec : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (erased (List $ Nat) gids) (many (Group gids ctx) g) (many (Code (Cons (List (Nat)) gids ctx) ns) rest) -> (Code ctx ns))
+    (many CMatch : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (many (Code ctx many-one) scrut) (many (Shape ctx) shape) (many (List $ Branch ctx ns) branches) (many (Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) dflt) (many (List $ Nat) live) -> (Code ctx ns))
     (many CCellAlloc : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (List $ Code ctx many-one) slots) -> (Code ctx many-one))
     (many CCellWrite : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
     (many CCellCopy : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Code ctx many-one) cell) (many (List $ Pair (Nat) $ Code ctx many-one) slots) -> (Code ctx many-one))
     (many CCellRead : (erased (List $ List $ Nat) ctx) (many (Ctor) ctor) (many (Nat) index) (many (Code ctx many-one) cell) -> (Code ctx many-one))
     (many CWorldDo : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) req) -> (Code ctx many-one))
-    (many CPrim : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (Sp) prim) (many (List $ Code ctx many-one) args) -> (Code ctx ms))
-    (many CAbsurd : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) -> (Code ctx ms))
-    (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ms) (many (String) msg) -> (Code ctx ms)))
+    (many CPrim : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (Sp) prim) (many (List $ Code ctx many-one) args) -> (Code ctx ms))
+    (many CAbsurd : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) -> (Code ctx ms))
+    (many CError : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ms) (many (String) msg) -> (Code ctx ms)))
   ((CC : -> Type)
     enum
     (many CCPlain : -> (CC)) (many CCTail : -> (CC)) (many CCDelegate : -> (CC)) (many CCCtor : -> (CC)) (many CCNoTail : -> (CC))
@@ -591,9 +586,9 @@
     (many ShKnown : (erased (List $ List $ Nat) ctx) (many (Adt) adt) -> (Shape ctx))
     (many ShHeld : (erased (List $ List $ Nat) ctx) (many (Code ctx many-one) c) (many (Adt) adt) -> (Shape ctx))
     (many ShNone : (erased (List $ List $ Nat) ctx) -> (Shape ctx)))
-  ((Branch : ((List $ List $ Nat) ctx) ((List $ Mult) ns) -> Type)
+  ((Branch : ((List $ List $ Nat) ctx) ((List $ Multiplicity) ns) -> Type)
     enum
-    (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Mult) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
+    (many MkBranch : (erased (List $ List $ Nat) ctx) (erased (List $ Multiplicity) ns) (many (Nat) disc) (many (List $ Nat) ids) (many (Code (Cons (List (Nat)) ids ctx) ns) body) -> (Branch ctx ns))))
 
 (def-fns _ $ (many ext-type-name : (many (ExtType) t) -> (many (String) s))
   (match many t _ ((ExtArray) "Array") ((ExtNat) "Nat") ((ExtHalf) "Half") ((ExtString) "String") ((ExtBytes) "Bytes") ((ExtRaw _ _ _ _) "Raw")))
@@ -605,7 +600,7 @@
     ((ExtHalf) (Cons _ 0 $ Cons _ 1 $ Cons _ 1 $ Nil _))
     ((ExtString) (Cons _ 0 $ Cons _ 2 $ Nil _))
     ((ExtBytes) (Cons _ 0 $ Cons _ 2 $ Nil _))
-    ((ExtRaw _ _ _ _) (Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Nil _))))
+    ((ExtRaw _ _ _ _) (Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 2 $ Cons _ 1 $ Cons _ 2 $ Cons _ 3 $ Cons _ 2 $ Nil _))))
 
 (def-fns _ $ (many ext-type-of : (many (String) name) -> (many (Maybe $ ExtType) r))
   (let-match many (str-eq name "Nat") (BFalse) ((BTrue) (Some _ $ ExtNat)))
@@ -706,7 +701,7 @@
   (match many a _ ((MkAdt n _ _ _ _) n)))
 
 (def-fns _
-  ((many recast : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (Code ctx ms) c) -> (many (Code ctx ns) r))
+  ((many recast : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (many (List $ Multiplicity) ms) (erased (ManySame ms ns) same) (subterm many (Code ctx ms) c) -> (many (Code ctx ns) r))
     (let-match many c (CMatch _ _ scrut shape branches dfl live)
       ((CVar _ x p) (CValues _ ns (Cons _ (CVar _ x p) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CVar _ x p) (Nil _) $ PkNil _))
       ((CConst _ x) (CValues _ ns (Cons _ (CConst _ x) $ Nil _) $ picked-same _ _ _ _ same $ PkMany _ (Nil _) (CConst _ x) (Nil _) $ PkNil _))
@@ -726,7 +721,7 @@
       ((CError _ _ m) (CError _ ns m)))
     (CMatch _ ns scrut shape (notail $ recast-branches _ ns ms same branches)
       (match many dfl (((Maybe $ Code (Cons (List (Nat)) (Nil (Nat)) ctx) ns) _)) ((Some _ d) (Some _ $ notail $ recast _ ns ms same d)) ((None _) (None _))) live))
-  ((many recast-branches : (erased (List $ List $ Nat) ctx) (many (List $ Mult) ns) (many (List $ Mult) ms) (erased (ManySame ms ns) same) (subterm many (List $ Branch ctx ms) bs) -> (many (List $ Branch ctx ns) r))
+  ((many recast-branches : (erased (List $ List $ Nat) ctx) (many (List $ Multiplicity) ns) (many (List $ Multiplicity) ms) (erased (ManySame ms ns) same) (subterm many (List $ Branch ctx ms) bs) -> (many (List $ Branch ctx ns) r))
     (let-match many bs (Cons _ b rest)
       ((Nil _) (Nil _)))
     (match many b _ ((MkBranch _ _ d ids body) (Cons _ (MkBranch _ _ d ids $ notail $ recast _ ns ms same body) $ notail $ recast-branches _ ns ms same rest)))))
@@ -1338,7 +1333,7 @@
   ((FrT : ((Nat) n) ((Facts n) f) ((List $ Entry) es) -> Type)
     enum
     (many FrTNil : (erased (Nat) n) (erased (Facts n) f) -> (FrT n f $ Nil $ Entry))
-    (many FrTCons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Mult) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (FrS n f sg) p) (erased (FrP n f place) pp) (erased (FrT n f rest) q) -> (FrT n f $ Cons (Entry) (MkEntry nm s mu sg place site) rest)))
+    (many FrTCons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Multiplicity) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (FrS n f sg) p) (erased (FrP n f place) pp) (erased (FrT n f rest) q) -> (FrT n f $ Cons (Entry) (MkEntry nm s mu sg place site) rest)))
   ((FrP : ((Nat) n) ((Facts n) f) ((Maybe $ Term) p) -> Type)
     enum
     (many FrPNone : (erased (Nat) n) (erased (Facts n) f) -> (FrP n f $ None $ Term))
@@ -1350,7 +1345,7 @@
   ((FrM : ((Nat) n) ((Facts n) f) ((List $ MCtor) cs) -> Type)
     enum
     (many FrMNil : (erased (Nat) n) (erased (Facts n) f) -> (FrM n f $ Nil $ MCtor))
-    (many FrMCons : (erased (Nat) n) (erased (Facts n) f) (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (Fr n f c) p) (erased (FrM n f rest) q) -> (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest))))
+    (many FrMCons : (erased (Nat) n) (erased (Facts n) f) (erased (Multiplicity) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (Fr n f c) p) (erased (FrM n f rest) q) -> (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest))))
 
 ; A guard for a term being canonicalized: nothing at the top, or a table in which the term is fresh and
 ; every key seen so far is ruled, which is how the term's variables are known not to be those keys.
@@ -1414,7 +1409,7 @@
   (let-match erased p (FrLCons a b c d pt pr))
   (values pt pr))
 
-(def-fns _ $ (erased frt-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Mult) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (FrT n f $ Cons (Entry) (MkEntry nm s mu sg place site) rest) p) -> (erased (FrS n f sg) ps) (erased (FrP n f place) pp) (erased (FrT n f rest) pr))
+(def-fns _ $ (erased frt-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Multiplicity) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (FrT n f $ Cons (Entry) (MkEntry nm s mu sg place site) rest) p) -> (erased (FrS n f sg) ps) (erased (FrP n f place) pp) (erased (FrT n f rest) pr))
   (let-match erased p (FrTCons a b c d e g _ _ h ps pp pr))
   (values ps pp pr))
 
@@ -1430,7 +1425,7 @@
   (let-match erased p (FrSIs a b c d pt))
   pt)
 
-(def-fns _ $ (erased frm-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest) p) -> (erased (Fr n f c) pc) (erased (FrM n f rest) pr))
+(def-fns _ $ (erased frm-cons : (erased (Nat) n) (erased (Facts n) f) (erased (Multiplicity) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (FrM n f $ Cons (MCtor) (MkMCtor mu c) rest) p) -> (erased (Fr n f c) pc) (erased (FrM n f rest) pr))
   (let-match erased p (FrMCons a b d e g pc pr))
   (values pc pr))
 
@@ -1471,7 +1466,7 @@
   (let ((erased pt) (erased pr)) $ frl-cons _ _ _ _ p)
   (values (GAv _ _ _ _ pt a) $ GLAv _ _ _ _ pr a))
 
-(def-fns _ $ (erased guardt-cons : (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Mult) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (List $ Nat) seen) (erased (GuardT (Cons (Entry) (MkEntry nm s mu sg place site) rest) seen) g) -> (erased (GuardS sg seen) gs) (erased (GuardP place seen) gp) (erased (GuardT rest seen) gr))
+(def-fns _ $ (erased guardt-cons : (erased (Maybe $ Name) nm) (erased (Bool) s) (erased (Multiplicity) mu) (erased (Sg) sg) (erased (Maybe $ Term) place) (erased (Maybe $ Loc) site) (erased (List $ Entry) rest) (erased (List $ Nat) seen) (erased (GuardT (Cons (Entry) (MkEntry nm s mu sg place site) rest) seen) g) -> (erased (GuardS sg seen) gs) (erased (GuardP place seen) gp) (erased (GuardT rest seen) gr))
   (let-match erased g (GTAv _ _ _ _ p a) ((GTTop _) (values (GSTop _) (GPTop _) $ GTTop _)))
   (let ((erased ps) (erased pp) (erased pr)) (frt-cons _ _ _ _ _ _ _ _ _ p))
   (values (GSAv _ _ _ _ ps a) (GPAv _ _ _ _ pp a) $ GTAv _ _ _ _ pr a))
@@ -1491,7 +1486,7 @@
     ((GSTop _) (GTop _))
     ((GSAv _ _ n f p a) (GAv _ _ _ _ (frs-is n f t ty p) a))))
 
-(def-fns _ $ (erased guardm-cons : (erased (Mult) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (List $ Nat) seen) (erased (GuardM (Cons (MCtor) (MkMCtor mu c) rest) seen) g) -> (erased (Guard c seen) gc) (erased (GuardM rest seen) gr))
+(def-fns _ $ (erased guardm-cons : (erased (Multiplicity) mu) (erased (Term) c) (erased (List $ MCtor) rest) (erased (List $ Nat) seen) (erased (GuardM (Cons (MCtor) (MkMCtor mu c) rest) seen) g) -> (erased (Guard c seen) gc) (erased (GuardM rest seen) gr))
   (let-match erased g (GMAv _ _ _ _ p a) ((GMTop _) (values (GTop _) $ GMTop _)))
   (let ((erased pc) (erased pr)) $ frm-cons _ _ _ _ _ p)
   (values (GAv _ _ _ _ pc a) $ GMAv _ _ _ _ pr a))
@@ -2213,7 +2208,7 @@
 
 (def-adts $ (PrimSig : -> Type)
   enum
-  (many MkPrimSig : (many (Sp) prim) (many (Mult) mult) (many (List $ Entry) params) (many (List $ Entry) rets) -> (PrimSig)))
+  (many MkPrimSig : (many (Sp) prim) (many (Multiplicity) mult) (many (List $ Entry) params) (many (List $ Entry) rets) -> (PrimSig)))
 
 (def-adts $ (Macros : -> Type)
   enum
@@ -2221,7 +2216,7 @@
 
 (def-adts $ (Tracked : -> Type)
   enum
-  (many MkTracked : (many (Loc) site) (many (Name) name) (many (BinderKind) kind) (many (Mult) mult) (many (Bool) scope-erased) -> (Tracked)))
+  (many MkTracked : (many (Loc) site) (many (Name) name) (many (BinderKind) kind) (many (Multiplicity) mult) (many (Bool) scope-erased) -> (Tracked)))
 
 (def-adts $ (RefState : -> Type)
   enum
@@ -2290,7 +2285,7 @@
        (many (List $ LitEntry) lits) (many (Loc) loc) (many (Scope) prelude) (many (UniqueState) us) (many (List $ String) help) (many (Macros) expansions) -> (Env)))
   ((EInfo : ((Hist Block) l) -> Type)
     enum
-    (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ Name) name) (many (Mult) mult) (many (State l) state) (many (Bool) minted) (many (Maybe $ Nat) introduced) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
+    (many MkEInfo : (erased (Hist Block) l) (many (Maybe $ Name) name) (many (Multiplicity) mult) (many (State l) state) (many (Bool) minted) (many (Maybe $ Nat) introduced) (many (Bool) meta) (many (Maybe $ Loc) site) -> (EInfo l)))
   ((State : ((Hist Block) l) -> Type)
     enum
     (many SConst : (erased (Hist Block) l) (many (Ref Block l) v) (many (Nat) minter) -> (State l))
@@ -2737,7 +2732,7 @@
   (let ((erased hs) (many e)) $ entry env x)
   (match many e _ ((MkEInfo _ _ _ _ _ _ _ site) site)))
 
-(def-fns _ $ (many entry-mult-of : (many (Env) env) (many (Nat) x) -> (many (Mult) r))
+(def-fns _ $ (many entry-mult-of : (many (Env) env) (many (Nat) x) -> (many (Multiplicity) r))
   (let ((erased hs) (many e)) $ entry env x)
   (match many e _ ((MkEInfo _ _ m _ _ _ _ _) m)))
 
@@ -2989,7 +2984,7 @@
   (tail $ uses-join-keys rest from $ uses-set into k $ match many (idmap-get _ k $ uses-map into) (((Use) _)) ((Miss _ _ _ _) state) ((Hit _ _ _ old _) (use-max state old))))
 (def-fns _ $ (many uses-join : (many (Uses) a) (many (Uses) b) -> (many (Uses) r))
   (match many b _ ((MkUses m d) (uses-join-keys d m a))))
-(def-fns _ $ (many misuse : (many (Mult) demand) (many (Mult) supply) -> (many (Maybe $ String) r))
+(def-fns _ $ (many misuse : (many (Multiplicity) demand) (many (Multiplicity) supply) -> (many (Maybe $ String) r))
   (match many supply _
     ((Erased) (match many (mult-is-many demand) _ ((BTrue) (Some _ "used in a non-erased position")) ((BFalse) (None _))))
     ((Many) (match many demand _ ((Once) (Some _ "used at unique")) (else (None _))))
@@ -3001,7 +2996,7 @@
   (let-match many l (MkLitEntry y _ s _ _))
   (match many (nat-eq x y) _ ((BTrue) (Some _ s)) ((BFalse) (tail $ lit-spelling rest x))))
 
-(def-fns _ $ (many set-entry-mult : (many (Env) env) (many (Nat) x) (many (Mult) mult) -> (many (Env) r))
+(def-fns _ $ (many set-entry-mult : (many (Env) env) (many (Nat) x) (many (Multiplicity) mult) -> (many (Env) r))
   (let ((erased hs) (many hp) (many en) (many fi)) (env-store env))
   (let-match many (idmap-get _ x en) (Hit _ _ _ e _) ((Miss _ _ _ _) env))
   (match many e _
@@ -3009,7 +3004,7 @@
       (env-with-store env _ hp (idmap-set _ x (MkEInfo _ name mult state minted io meta site) en) fi))))
 
 (def-fns _ $ (many lookup : (many (Env) env) (many (Name) name) -> (many (Maybe $ Nat) r))
-  (name-index-get _ name $ scope-names $ env-scope env))
+  (match many name _ ((NHandle x _ _) (Some _ x)) (else (name-index-get _ name $ scope-names $ env-scope env))))
 
 (def-fns _ $ (many visible-names : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))
@@ -3017,7 +3012,7 @@
   (let ((erased hs) (many e)) $ entry env x)
   (let-match many e (MkEInfo _ n _ _ _ _ _ _))
   (let-match many n (Some _ nm) ((None _) names))
-  (let-match many nm (NSrc s) ((NGen _ _) names))
+  (let-match many nm (NSrc s) (else names))
   (let-match many (lookup env nm) (Some _ y)
     ((None _) names))
   (match many (nat-eq x y) _ ((BTrue) (Cons _ s names)) ((BFalse) names)))
@@ -3032,7 +3027,7 @@
     ((BFalse) (values best $ match many (nat-eq d b) (((List $ String) _)) ((BTrue) (Cons _ x ties)) ((BFalse) ties)))))
 
 (def-fns _ $ (many hint : (many (Env) env) (many (Name) n) -> (many (String) r))
-  (let-match many n (NSrc name) ((NGen _ _) ""))
+  (let-match many n (NSrc name) (else ""))
   (let ((many best) (many ties)) $ nearest-names name $ visible-names env $ scope-ids $ env-scope env)
   (match many ties _ ((Nil _) "") ((Cons _ _ _) (str-cat "\nhint: nearest in scope: " $ join-strs ties " "))))
 
@@ -3209,7 +3204,7 @@
   (let-match many in-rule (None _) ((Some _ t) (Some _ t)))
   (match many (has-meta-env env ty) _ ((BTrue) (Some _ ty)) ((BFalse) (None _))))
 
-(def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-as-raw : (many (Env) env) (many (Bool) meta) (many (Bool) holes) (many (Bool) literal) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   ; before the entry is minted, while the scope still holds what it hides
   (let ((many (Env) envs)) (warn-shadow env name site written))
@@ -3231,26 +3226,26 @@
   (let ((many (List $ Nat) ob2)) $ match many (and (not meta) $ is-object-type ty objid) _ ((BTrue) (Cons _ x ob)) ((BFalse) ob))
   (values (MkEnv _ hp sc2 en2 _ _ (Succ x) (table-add-slot _ _ _ tb3 x meta) rp ob2 li fi lv sts cl wa tk lt lo pr us hn ex) x))
 
-(def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (bind-as-raw env (BFalse) (BFalse) (BFalse) name site written mult ty rule objid))
 
 ; A binder that is Const at once: over a closed block, over the token, or over the token only in run
 ; position (section 29).
-(def-fns _ $ (many bind-closed : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-closed : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (let ((many env2) (many x)) $ bind-raw env name site written mult ty rule objid)
   (values (set-state-closed env2 x b) x))
 
-(def-fns _ $ (many bind-token : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-token : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (bind-closed env name site written mult (BToken _) ty rule objid))
 
-(def-fns _ $ (many bind-lit : (many (Env) env) (many (Mult) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r) (many (Nat) x))
+(def-fns _ $ (many bind-lit : (many (Env) env) (many (Multiplicity) mult) (many (Block (Ref Block (HEmpty Block))) b) (many (Term) ty) (many (Maybe $ Term) rule) -> (many (Env) r) (many (Nat) x))
   (let ((many env2) (many x)) $ bind-as-raw env (BFalse) (BFalse) (BTrue) (None _) (None _) (BFalse) mult ty rule delegate-id)
   (values (set-state-closed env2 x b) x))
 
-(def-fns _ $ (many bind-erased-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Mult) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
+(def-fns _ $ (many bind-erased-raw : (many (Env) env) (many (Maybe $ Name) name) (many (Maybe $ Loc) site) (many (Bool) written) (many (Multiplicity) mult) (many (Term) ty) (many (Maybe $ Term) rule) (many (Nat) objid) ->
     (many (Env) r) (many (Nat) x))
   (match many (env-run-pos env) _
     ((BTrue) (bind-token env name site written mult ty rule objid))
@@ -3355,6 +3350,11 @@
   (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
   (type-in _ _ bnd tb x))
 
+(def-fns _ $ (many minted-type : (many (Env) env) (many (Nat) m) -> (many (Term) t))
+  (match many (is-literal env m) _ ((BTrue) (type-of env m)) ((BFalse) (trusted-type env m))))
+(def-fns _ $ (many minted-is : (many (Nat) m) -> (many (Term) t))
+  (TVar m))
+
 ; An entry read through its alias rule (section 19).
 (def-fns _ $ (many resolve : (many (Env) env) (many (Nat) x) -> (many (Nat) r))
   (match many (canon-env env $ TVar x) _
@@ -3440,7 +3440,7 @@
 
 ; ---- Structural identity of canonical terms (section 9's canonicalize-then-compare)
 
-(def-fns _ $ (many mult-eq : (many (Mult) a) (many (Mult) b) -> (many (Bool) r))
+(def-fns _ $ (many mult-eq : (many (Multiplicity) a) (many (Multiplicity) b) -> (many (Bool) r))
   (and (bool-eq (mult-is-many a) $ mult-is-many b) $ bool-eq (mult-is-once a) $ mult-is-once b))
 
 (def-fns _ $ (many disc-eq : (many (Disc) a) (many (Disc) b) -> (many (Bool) r))

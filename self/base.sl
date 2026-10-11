@@ -677,23 +677,32 @@
 (def-fns _ $ (many spell-text : (many (String) s) -> (many (String) r))
   (match many (is-plain-name s) _ ((BTrue) s) ((BFalse) (rope-str $ rcat (RStr "#") $ lit-string-rope s))))
 
+(def-adts $ (Multiplicity : -> Type)
+  enum
+  (many Erased : -> (Multiplicity))
+  (many Many : -> (Multiplicity))
+  (many Once : -> (Multiplicity)))
+
 (def-adts $ (Name : -> Type)
   enum
   (many NSrc : (many (String) s) -> (Name))
-  (many NGen : (many (Nat) n) (many (String) s) -> (Name)))
+  (many NGen : (many (Nat) n) (many (String) s) -> (Name))
+  (many NHandle : (many (Nat) id) (many (Multiplicity) m) (many (String) shown) -> (Name)))
 
 (def-fns _ $ (many spell-name : (many (Name) n) -> (many (String) r))
   (match many n _
     ((NSrc s) (spell-text s))
-    ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))))
+    ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))
+    ((NHandle _ _ s) s)))
 
 (def-fns _ $ (many name-text : (many (Name) n) -> (many (String) r))
-  (match many n _ ((NSrc s) s) ((NGen _ _) (spell-name n))))
+  (match many n _ ((NSrc s) s) (else (spell-name n))))
 
 (def-fns _ $ (many name-eq : (many (Name) a) (many (Name) b) -> (many (Bool) r))
   (match many a _
-    ((NSrc s) (match many b _ ((NSrc t) (str-eq s t)) ((NGen _ _) (BFalse))))
-    ((NGen m _) (match many b _ ((NSrc _) (BFalse)) ((NGen n _) (nat-eq m n))))))
+    ((NSrc s) (match many b _ ((NSrc t) (str-eq s t)) (else (BFalse))))
+    ((NGen m _) (match many b _ ((NGen n _) (nat-eq m n)) (else (BFalse))))
+    ((NHandle m _ _) (match many b _ ((NHandle n _ _) (nat-eq m n)) (else (BFalse))))))
 
 (def-fns _ $ (many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (match many rs _
@@ -724,7 +733,7 @@
   (match many (name-eq k n) _ ((BTrue) (Some _ v)) ((BFalse) (tail $ gen-get _ n rest))))
 
 (def-fns _ $ (many gen-id : (many (Name) n) -> (many (Nat) k))
-  (match many n _ ((NGen k _) k) ((NSrc _) 0)))
+  (match many n _ ((NGen k _) k) (else 0)))
 
 (def-fns _ $ (many gen-set : (erased Type V) (many (Name) n) (many V v) (subterm many (List $ Pair (Name) V) gs) -> (many (List $ Pair (Name) V) r))
   (let-match many gs (Cons _ g rest) ((Nil _) (Cons _ (MkPair _ _ n v) $ Nil _)))
@@ -735,14 +744,14 @@
 
 (def-fns _ $ (many name-index-get : (erased Type V) (many (Name) n) (many (NameIndex V) m) -> (many (Maybe V) r))
   (let-match many m (MkNameIndex _ src gen))
-  (let-match many n (NSrc s) ((NGen _ _) (gen-get _ n gen)))
+  (let-match many n (NSrc s) (else (gen-get _ n gen)))
   (match many (nm-get _ s src) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
 
 (def-fns _ $ (many name-index-set : (erased Type V) (many (Name) n) (many V v) (many (NameIndex V) m) -> (many (NameIndex V) r))
   (let-match many m (MkNameIndex _ src gen))
   (match many n _
     ((NSrc s) (MkNameIndex _ (nm-set _ s v src) gen))
-    ((NGen _ _) (MkNameIndex _ src $ gen-set _ n v gen))))
+    (else (MkNameIndex _ src $ gen-set _ n v gen))))
 
 (def-fns _ $ (many src-pairs : (erased Type V) (subterm many (List $ Pair (String) V) ps) (many (List $ Pair (Name) V) acc) -> (many (List $ Pair (Name) V) r))
   (let-match many ps (Cons _ p rest) ((Nil _) acc))
