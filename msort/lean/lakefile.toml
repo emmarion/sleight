@@ -1,0 +1,9 @@
+name = "msort"
+defaultTargets = ["bench"]
+
+[[lean_lib]]
+name = "MSort"
+
+[[lean_exe]]
+name = "bench"
+root = "Main"
