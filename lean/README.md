@@ -44,6 +44,8 @@ printing what was skipped as `_`. Every program starts in the scope of
 - `Minimal/Lemmas.lean`, `Minimal/UnifySound.lean`, `Minimal/Sound.lean`:
   the proofs.
 - `Minimal/Reader.lean`: the reader and the elaborator to `Core`.
+- `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
+  and checking.
 - `prelude.sl`: the prelude, `Nat`, `False`, `Eq`, `List`, `Add` and
   `Lt`, declared as `lib/prelude.sl` declares them, without `extern`.
 - `examples/`: programs, with their expected output in
@@ -116,9 +118,11 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
 full language requires is required. These forms are refused as not
 supported: `unique`; `union`, `newtype` and `extern` types, so a type
-is declared `enum`; `_` as an inferred argument (section 50); and every form not named in this file,
+is declared `enum`; `_` in place of a type (section 50); and every form
+not named in this file,
 among them `coerce`, literals, macros, pragmas, cells and
-`at`. A file's top level has size one (section 27).
+`at`. A file's top level has size one, or ends in a statement and
+produces nothing (section 27).
 
 ## Differences from MINIMAL.md
 
@@ -168,6 +172,13 @@ among them `coerce`, literals, macros, pragmas, cells and
   are erased, and the stripped run takes it without looking at the
   scrutinee. A second real branch is refused outside a function or
   branch body.
+- `_` as an inferred argument (section 50). `Minimal/Infer.lean` fills
+  each `_` before checking: the `_`s of a call, a result or a `let`'s
+  term, nested constructor applications included, become fresh
+  entries, solved by first-order unification of the arguments' types
+  with the parameters' and of the term's type with what the position
+  expects. An unsolved `_` is an error. The checker then checks the
+  program as filled in, so the inference is not trusted.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.

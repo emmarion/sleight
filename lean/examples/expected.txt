@@ -22,6 +22,8 @@ examples/first_class.sl: (Cons (List (Nat)) (Cons (Nat) (Zero) (Cons (Nat) (Zero
 examples/first_class_bad.sl: refused: argument of the wrong type
 examples/first_class_match_bad.sl: refused: scrutinee not of a data type
 examples/inferred.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat)))))
+examples/inferred_args.sl: (Succ (Succ (Zero)))
+examples/inferred_args_bad.sl: error: cannot infer `_`
 examples/inferred_bad.sl: refused: subterm: not a strict subterm
 examples/is_arg_bad.sl: refused: argument not the term its is entry names
 examples/is_entries.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Zero)) (Nil (Nat))))
@@ -49,6 +51,7 @@ examples/phantom_build_bad.sl: refused: a non-erased let binder of a term mentio
 examples/phantom_ctor_bad.sl: refused: a non-erased let binder of a term mentioning something erased
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/syntax.sl: (Cons (Nat) (Succ (Succ (Succ (Zero)))) (Cons (Nat) (Zero) (Nil (Nat))))
+examples/top_statement.sl: 
 examples/type_in_type.sl: (MkBox Type (Nat))
 examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
@@ -64,6 +67,7 @@ unchecked examples/erased_match_bad.sl: (Zero)
 unchecked examples/erased_result_bad.sl: (Zero)
 unchecked examples/first_class_bad.sl: (Nil (Nat) (Zero) (Nil (Nat)))
 unchecked examples/first_class_match_bad.sl: (Zero)
+unchecked examples/inferred_args_bad.sl: error: cannot infer `_`
 unchecked examples/inferred_bad.sl: stuck: call does not decrease
 unchecked examples/is_arg_bad.sl: (MkTwo (Zero) (Succ (Zero)))
 unchecked examples/kind_level_bad.sl: (Zero)
@@ -96,6 +100,7 @@ stripped examples/erased_nested.sl: (MkPair (Succ (Succ (Zero))) _)
 stripped examples/ex_falso.sl: (Zero)
 stripped examples/first_class.sl: (Cons (List (Nat)) (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (List (Nat)) (Cons (Nat) (Succ (Zero)) (Nil (Nat))) (Nil (List (Nat)))))
 stripped examples/inferred.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat)))))
+stripped examples/inferred_args.sl: (Succ (Succ (Zero)))
 stripped examples/is_entries.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Zero)) (Nil (Nat))))
 stripped examples/is_fn.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 stripped examples/length.sl: (Succ (Succ (Succ (Zero))))
@@ -105,6 +110,7 @@ stripped examples/let_match.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Ni
 stripped examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 stripped examples/phantom.sl: (Succ (Zero))
 stripped examples/syntax.sl: (Cons (Nat) (Succ (Succ (Succ (Zero)))) (Cons (Nat) (Zero) (Nil (Nat))))
+stripped examples/top_statement.sl: 
 stripped examples/type_in_type.sl: (MkBox Type _)
 stripped examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
 stripped examples/vec_head.sl: (Succ (Zero))

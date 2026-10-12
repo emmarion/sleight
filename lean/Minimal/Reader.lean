@@ -1,4 +1,4 @@
-import Minimal.Check
+import Minimal.Infer
 
 namespace Minimal
 
@@ -6,6 +6,10 @@ inductive Sx where
   | atom (s : String)
   | list (xs : List Sx)
   deriving Repr, Inhabited, BEq
+
+partial def Sx.show : Sx → String
+  | .atom a => a
+  | .list xs => "(" ++ " ".intercalate (xs.map Sx.show) ++ ")"
 
 partial def tokenize (cs : List Char) (acc : List String) : List String :=
   match cs with
@@ -66,7 +70,7 @@ def keywords : List String :=
 abbrev Scope := List (String × Ref)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
-  if x == "_" then throw "`_` as an inferred argument is not supported"
+  if x == "_" then return .hole
   match sc.lookup x with
   | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
@@ -173,7 +177,7 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
     | none, _, some (d, c) => pure (.app (.vc d c) (.ofList (lift d ++ args)))
     | some _, _, _ => pure (.app (← look sc depth h) (.ofList args))
     | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
-  | _ => throw "malformed term"
+  | e => throw s!"malformed term {e.show.take 40}"
 
 partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
   | [] => pure .nil
@@ -290,7 +294,8 @@ def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × Nat × Scope)
     let names := ((← liftOf d').map fun _ => " lift") ++ names
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
-    let fs ← fresh (if er || ph then names.map fun _ => true else (fieldErs sig).take names.length)
+    unless names.length == (fieldErs sig).length do throw s!"a pattern for {c} binds the wrong number of fields"
+    let fs ← fresh (if er || ph then names.map fun _ => true else fieldErs sig)
     return (d', ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
   | _ => throw "malformed pattern"
 
@@ -323,6 +328,10 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
     else do
       let f ← look sc 0 h
+      let isDec : Sx → Bool | .list [.atom "predates", _] | .list [.atom "subterm", _] => true | _ => false
+      if (args.filter isDec).length > 1 then throw "a call carries at most one decrease annotation"
+      if (args.drop 1).any (· matches .list [.atom "predates", _]) then
+        throw "predates is written immediately after the callee"
       let args := args.filter fun | .list [.atom "predates", .atom "_"] | .list [.atom "subterm", .atom "_"] => false
                                   | _ => true
       let (pd, args) ← (match args with
@@ -398,6 +407,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : 
     declareAdts sc bs
     elabSeq sc want exp rest
   | .list [.atom "def-lvl", .atom L] :: rest => do
+    if L != " _" then discard <| name (.atom L)
     let [i] ← fresh [true] | throw "fresh"
     note i .level
     let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want exp rest
@@ -502,9 +512,15 @@ partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Op
   return close ss ts
 end
 
+def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match"]
+
 def elabProgram (items : List Sx) : Except String Prog := do
-  let ((ss, ts), st) ← (elabSeq [] [false] none items).run {}
-  unless ts.length == 1 do throw "the top level has size one"
+  let stmt := match items.getLast? with
+    | some (.list (.atom h :: _)) => statements.contains h
+    | _ => false
+  let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none
+    (if stmt then items ++ [.list [.atom "values"]] else items)).run {}
+  unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
   return { adts := st.decls, groups := st.groups, main := close ss ts }
 
 def load (src : String) : Except String Prog := do elabProgram (← parse src)

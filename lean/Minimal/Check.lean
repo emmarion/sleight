@@ -163,7 +163,8 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
       | .predates _ x L => do
         let ⟨hx⟩ ← need (Γ.canon x = Γ.canon l) "predates: not about the callee's level"
         let ⟨hL⟩ ← need (Γ.canon L = Γ.canon (.fv c)) "predates: not to the current level"
-        .ok ⟨.lower h hp hP hx hL⟩
+        let ⟨hs⟩ ← need (Γ.canon l ≠ Γ.canon (.fv c)) "a same-level call takes a (subterm p) annotation, not (predates p)"
+        .ok ⟨.lower h hp hP hx hL hs⟩
       | _ => .error "predates: not a Predates proof"
     | none => .error "a decrease annotation at the top level"
   | .subterm pos p => match h : Γ.cur with

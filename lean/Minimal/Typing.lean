@@ -133,7 +133,8 @@ end
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
   | top : Γ.cur = none → DecOK Γ .none l t args
   | lower : Γ.cur = some c → TmTy P Γ p Pt → Γ.canon Pt = .predates A x L →
-      Γ.canon x = Γ.canon l → Γ.canon L = Γ.canon (.fv c) → DecOK Γ (.predates p) l t args
+      Γ.canon x = Γ.canon l → Γ.canon L = Γ.canon (.fv c) → Γ.canon l ≠ Γ.canon (.fv c) →
+      DecOK Γ (.predates p) l t args
   | same : Γ.cur = some c → Γ.canon l = Γ.canon (.fv c) → markedIndex t pos 0 = some i →
       (markedArgs t args)[i]? = some a → Γ.subs[i]? = some s →
       (∀ j < i, ∀ a' s', (markedArgs t args)[j]? = some a' → Γ.subs[j]? = some s' →
