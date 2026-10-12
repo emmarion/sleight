@@ -17,7 +17,7 @@ ground.
    string literals (SR 10).
 3. **Annotation tokens go through the namespace.** `many`, `:`, `->`,
    `is`, `subterm`, `enum`, `absurd` and friends are recognized only by
-   resolving the atom to a `Const`, non-erased entry whose value is the
+   resolving the atom to a `Settled`, non-erased entry whose value is the
    corresponding `Special` variant, exactly as `let` or `match` are
    (section 6's tier 2). So all of them can be shadowed (section 19).
 
@@ -86,7 +86,7 @@ ground.
 
 19. **Every non-grammar argument, scrutinee or result gets an
     anonymous entry** (SR 14, second option): a call's returns, a
-    match's returns and a `coerce` are bound to fresh anonymous `Dyn`
+    match's returns and a `coerce` are bound to fresh anonymous
     entries carrying their types and any `is` rule, and dependent
     telescopes are instantiated with those. Grammar expressions are
     kept as trees rather than as anonymous entries with an `is` rule
@@ -138,11 +138,11 @@ ground.
     run-position right-hand side, which are unconditionally true, so
     this looked harmless. Superseded by item 138: the right-hand side's
     entries now stay in scope, so no fact outlives an entry it mentions.
-30. **Nested definitions mint `Dyn`**, as section 29 says: a
-    `def-adts`, `def-lvl` or delegate proof inside a body mints `Dyn`
+30. **Nested definitions mint `Hypothetical`**, as section 29 says: a
+    `def-adts`, `def-lvl` or delegate proof inside a body mints `Hypothetical`
     entries, and the body's code binds each nested constructor's value.
-    In run position the same mints are `Const`, and the values of
-    `Const` entries form the runtime environment every closure and
+    In run position the same mints are `Settled`, and the values of
+    `Settled` entries form the runtime environment every closure and
     run-position statement runs in (section 29's "embedded into the
     code").
 31. **`Type` is compared by canonicalizing to `(Univ)`**; error messages
@@ -159,7 +159,7 @@ ground.
     and printing shows a value as its constructor over those fields.
     An all-erased `let` compiles to nothing; a mixed one binds its
     `many` binders. The token value stands in only where elaboration
-    needs a Const for an erased entry (an erased `let` binder in run
+    needs a Settled for an erased entry (an erased `let` binder in run
     position, an erased `comptime-match` field, a `Level`).
 33. **Representation is decided at elaboration**, per section 33: a
     value is the tuple of its `many` fields, one field bare and none the
@@ -255,7 +255,7 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     transparent enum, treated the phantom (unspecified-repr) constructor
     as having no `many` fields and skipped the discriminant check
     entirely, so `(comptime-match x (F f))` for a phantom `F` succeeded
-    against any value and minted `F`'s erased fields as `Const` tokens
+    against any value and minted `F`'s erased fields as `Settled` tokens
     — and since erased fields carry no runtime bytes (DESIGN.md section 29), a
     field of type `(False)` among them was forged into scope, collapsing
     consistency. The pattern's constructor is now rejected when it is
@@ -279,7 +279,7 @@ wrong (CLAUDE.md rule 1); where possible it was checked by compiling
     the prelude and by `def-adts`), and two distinct rigid atoms
     unifying is §7's second contradiction. The prior orientation went
     purely by entry id, so a `def-adts`-minted constructor whose id
-    happened to exceed a `Dyn` variable's could receive a rewrite rule,
+    happened to exceed a `Hypothetical` variable's could receive a rewrite rule,
     aliasing one rigid constructor to another and defeating the
     disjointness check (§8). Orientation now always lands the rule on a
     non-rigid entry; two rigids still contradict. A correctness fix, not
@@ -350,7 +350,7 @@ literals as open.
     outright). It denotes
     `(let ((many _) (erased _)) (bin-to-nat <spelling>))`, interned where
     it is first met (212) and per program by value, so every occurrence is one entry: the `Nat` is
-    opaque, a `Const` with no `is` rule, and the erased `Numeral` proof
+    opaque, a `Settled` with no `is` rule, and the erased `Numeral` proof
     relates it to the spelling. Both compilers mint the two entries
     directly rather than elaborating that `let` (`Elab.intern`, slc's
     `intern-numeral`): the `Nat` holds the FFI's integer, or under
@@ -458,7 +458,7 @@ shape below is the session's.
     (`tests/string_literal.sl`). Interned by content. Whether the
     literal is `is`-transparent: it is not, as slc always had it, so
     neither compiler elaborates the characters: the reference binds a
-    `Const` `String` straight to its value (`Elab.str_value`), the
+    `Settled` `String` straight to its value (`Elab.str_value`), the
     FFI's slice, or under `--no-extern` the model's list built in
     OCaml, its characters off the Peano chain numerals share (item 51),
     so the extractor, which shares by identity, emits each `Nat` once
@@ -936,7 +936,7 @@ claim could be checked by compiling (CLAUDE.md rule 2) it was.
     to any variable (checked by patching the form to resolve, which fails
     on the ordinary `(comptime-match two (Succ one))`); an alias reaches
     the value through section 19's state forwarding instead, and an
-    erased alias of a non-erased `Const` is refused, which is section
+    erased alias of a non-erased `Settled` is refused, which is section
     34's requirement read on the name actually written,
     and `prove-predates` resolves only when the named variable is younger
     than the level, which is item 13's rule about mint order rather than
@@ -1031,11 +1031,11 @@ record how the prototype reads them, and item 79's restriction is gone.
 84. **A match carries no `Matchable` it would not read** (the owner's
     decision, in chat). A `Matchable` entry is minted `many` and its
     value carries the type's runtime shape, but a match whose
-    `Matchable` entry is `Const` (§29) -- minted by a `def-adts` in run
+    `Matchable` entry is `Settled` (§29) -- minted by a `def-adts` in run
     position, or forwarded from one -- takes that shape and mentions no
     `Matchable` at all, so a non-extern type's match is a tag read or a
     field read with nothing dynamic in front of it, in the interpreter
-    and in the extracted OCaml alike. Only a `Dyn` `Matchable` -- a
+    and in the extracted OCaml alike. Only a `Hypothetical` `Matchable` -- a
     first-class parameter (`tests/gmap.sl`, `tests/first_class.sl`,
     `tests/thunk_matchable.sl`, whose parameters are now `many`), or
     one a `def-adts` inside a body minted (item 88) -- is read at
@@ -1126,9 +1126,9 @@ suite (CLAUDE.md rule 2), not settled decisions.
     and the field arities are all in the `Matchable`'s type and the
     constructors' `ValCtor` types, so the only thing a `Matchable`'s
     *value* can carry is an `extern` type's FFI wrapper (§42), and that
-    value has the home every value has -- the entry's `Const` state in
+    value has the home every value has -- the entry's `Settled` state in
     run position, a runtime binding in a body (§29). The table is gone;
-    the `Matchable` minted inside a body is `Dyn` like the
+    the `Matchable` minted inside a body is `Hypothetical` like the
     constructors beside it, bound by the same code, and a match on it
     reads it when the code runs, as a match on a parameter does. In the
     prototype the value also names the type for the extractor, which
@@ -1145,7 +1145,7 @@ suite (CLAUDE.md rule 2), not settled decisions.
     the tail-check's normalizer, which already folds a renaming `let`
     away, also drops a `let` whose right-hand side is values embedded
     by elaboration -- literals in the post-erasure code, the entries
-    they bind staying `Dyn` as §29 has every binding in a body -- when
+    they bind staying `Hypothetical` as §29 has every binding in a body -- when
     the rest of the body mentions none of its binders. That keeps item 77's guarantee for a phantom-only
     `def-adts` (`tests/delegate_erased_inner.sl`) but reads more widely
     than item 77 did: a nested `def-adts` whose constructors the body
@@ -1182,7 +1182,7 @@ suite (CLAUDE.md rule 2), not settled decisions.
 
 Written by a session working autonomously at the owner's request, in
 chat: name the language SL for now, self-host it, write in SL a program
-compiling SL to OCaml that can interpret the compile-time `Const` part,
+compiling SL to OCaml that can interpret the compile-time `Settled` part,
 and use the existing OCaml interpreter and extractor to get there.
 `self/README.md` describes the result; items 90-92 record what it
 assumed and the one change it made to `lib/`. As elsewhere here, each
@@ -1436,7 +1436,7 @@ what it assumed while doing so.
     An erased scrutinee emits nothing, matching `elab_match`'s existing
     rule that one real branch under an erased scrutinee compiles to that
     branch's body. In run position with a `many` scrutinee it runs the
-    scrutinee and binds the fields `Const`, as `comptime-match` does,
+    scrutinee and binds the fields `Settled`, as `comptime-match` does,
     emitting nothing. Only outside run position does it emit a
     one-branch `CMatch` wrapping the rest of the enclosing expression.
     So a `let-match` at top level never costs the code after it its run
@@ -2142,7 +2142,7 @@ had noted that an `SCons` copies its tail, so building a string by
      body over its parameters, its group and the scope the group was
      defined in, and a `Closure` packs those; `Bound` in `elab.sl`
      carries the group's ids as an index so `define-fns` returns the
-     group's `Lockstep` by construction. A Const entry's value is
+     group's `Lockstep` by construction. A Settled entry's value is
      embedded with its entry (`CConst id v`, section 29's wording), so
      the top level binds no frame, a top-level closure captures
      nothing, and run position is the empty context: `elab-let`,
@@ -2159,7 +2159,7 @@ had noted that an `SCons` copies its tail, so building a string by
      The normalizer's substitution is a `Ren from ctx`, a frame of
      atoms (a variable with its place, or a constant) per frame of
      the source, weakened under each binder (`ren-weaken`), so a let
-     whose right-hand side is atoms, variables or Const entries, is
+     whose right-hand side is atoms, variables or Settled entries, is
      substituted away rather than resolved through an id map. A value
      elaboration embeds, a `matchable-of` or a nested `def-adts`'s
      binding, is `CValue`, which is no atom, so lib/elab.ml's three
@@ -2176,7 +2176,7 @@ had noted that an `SCons` copies its tail, so building a string by
      skipping it so the frame's ids and the group's `Lockstep` are by
      construction, and an empty group binds nothing (a first version
      bound erased members too, which the owner caught). What stays dynamic: the elaborator decides a
-     variable's place with `mem-dec` when it emits it, and a `Dyn`
+     variable's place with `mem-dec` when it emits it, and a `Hypothetical`
      entry it cannot place is an internal error at elaboration, so the
      invariant that the scope's non-erased entries are the context's
      is not yet in the types; a closure's arity and a branch's fields
@@ -2300,7 +2300,7 @@ bootstrap runs in the same time as before (about four minutes here).
      Rope read back for `flatten`) recurse on an erased bound that a
      field's smaller number refines, with no fuel that can run out.
      `eval` keeps its fuel; every step returns the grown store with an
-     erased `Lt hs (Succ hs2)` by which the frames, the Const entries and
+     erased `Lt hs (Succ hs2)` by which the frames, the Settled entries and
      the values in hand are widened. A group frame in the interpreter's
      environment holds the group block's address, and reading a member
      allocates its closure block, so `apply` re-closes nothing. Code
@@ -2316,19 +2316,19 @@ bootstrap runs in the same time as before (about four minutes here).
      `env-set-fields`, `env-run-fields`, `set-state-closed`), and the
      elaborator itself never holds an address; `bind` takes no state,
      `bind-closed`/`bind-token`/`bind-erased` allocate afterwards, and an
-     erased Const is a fresh token block. The environment's `values`
-     map and the `Trace` are gone: the emitter marks what every Const
+     erased Settled is a fresh token block. The environment's `values`
+     map and the `Trace` are gone: the emitter marks what every Settled
      entry and every final reaches, walking the addresses newest first
      (a block's addresses being below it, one pass suffices), then
      writes each marked block oldest first as `let a<path> = ...`, a
      group block as its members' `let rec` packed in a tuple that
-     `member` projects from, and a Const in code as the name of its
+     `member` projects from, and a Settled in code as the name of its
      address; the addresses are enumerated from the counter at emission
      (`heap-addrs`), the heap keeping no list. `alloc` always allocates,
      as the reference's physical identity does; interning was set aside
      for now. What stays dynamic: a `BFn`'s member index against the
      group block found at its address (an error block on a miss), and
-     that every `CConst` the code names has a Const entry when it runs
+     that every `CConst` the code names has a Settled entry when it runs
      and is emitted. Measured with an instrumented reference before the
      switch: slc's own sources allocate about 20k blocks at compile
      time, the largest test about 7k. Two printer issues surfaced by
@@ -2566,7 +2566,7 @@ session's reading, with the tests as the evidence.
      Matchable is subsumed. `(open-adt mult e)` is a statement, the
      owner's shape: an anonymous `let` of `e` at the written
      multiplicity, checked as a `let` binder is, run at once in run
-     position so the entry is `Const` and bound by code otherwise, then
+     position so the entry is `Settled` and bound by code otherwise, then
      the open of that binder, whose constructors must be distinct after
      canonicalization (`tests/open_adt_bad.sl`) and which then merges
      with whatever open names one of them or its type constructor
@@ -2574,9 +2574,9 @@ session's reading, with the tests as the evidence.
      `tests/open_adt_expr.sl`, `tests/matchable_prefers_many.sl`,
      `tests/known_matchable.sl`, `tests/open_adt_mult_bad.sl`,
      `tests/open_adt_not_bad.sl`). A match that dispatches at runtime
-     reads its Matchable's value, stamped in where the entry is `Const`
+     reads its Matchable's value, stamped in where the entry is `Settled`
      with its ADT and read from the entry's binding otherwise, so it
-     requires the opened entry to be *readable*: `Const` with the ADT,
+     requires the opened entry to be *readable*: `Settled` with the ADT,
      or non-erased and still bound (`Env.readable`; in `self/`,
      `readable` reads the objects list, which `env-hide` keeps).
      Readability is judged at the match, not the open: a `many`
@@ -2640,7 +2640,7 @@ session's reading, with the tests as the evidence.
      the session that wrote the other branch). Both forms now refuse an
      opened entry that is not readable (item 139) with one message, "is
      erased or out of scope". In run position a `let-match` destructs
-     through the constructor's `Const` value and reads no Matchable, so
+     through the constructor's `Settled` value and reads no Matchable, so
      it is not checked there. That `let-match` is a match for this
      purpose is the owner's.
 
@@ -3083,7 +3083,7 @@ to look for a guard, are the owner's.
     supplies newtype location information; its removal follows separately.
 
 158. The mandatory comptime-match multiplicity is `many` or `unique`;
-    `erased` is refused because verification still requires a runtime Const
+    `erased` is refused because verification still requires a runtime Settled
     discriminant. Existing non-self source uses are migrated to `many`; self's
     syntax and generated literal forms will migrate with its implementation.
     A SlotHolds operand must be a declared non-erased runtime-scope variable,
@@ -3333,7 +3333,7 @@ to look for a guard, are the owner's.
       reading is that a type is an erased position (section 14) and an
       erased mention is never a use (section 15). Before, the same mention counted
       in a `let` binder's annotation and not in a `def-fns` signature. If
-      section 32's rule that a Const read at a head is a many use is meant to cover
+      section 32's rule that a Settled read at a head is a many use is meant to cover
       type formers too, the signature path is the one to change instead.
     The other fixes follow the text without a choice this session could
     see: an `at` return's word is supplied only from a non-erased entry, an
@@ -3356,7 +3356,7 @@ to look for a guard, are the owner's.
     overflowed the stack on a cycle through a slot word.
 
 183. **Questions the audit left for the owner**, none decided here:
-    - `comptime-match many` on a unique Const is refused for want of a
+    - `comptime-match many` on a unique Settled is refused for want of a
       `share`, which cannot be written in place since the scrutinee must be
       a bare variable; section 23 decides only the `unique` mode. Is the `many`
       mode's read of the value a many use of the binder?
@@ -3438,15 +3438,15 @@ Asked for by the owner in chat: give `slc` an interpret option in place
 of emitting OCaml. The shapes below are the session's, made without the
 owner.
 
-187. **A run may update a Const the extractor then embeds.**
+187. **A run may update a Settled the extractor then embeds.**
     `test/runtest.ml` ran the interpreter's final and extracted from the
     environment afterwards. With a continuation owning a top-level unique
-    Const, the run updates that Const's block in place
+    Settled, the run updates that Settled's block in place
     (`tests/io_unique_state.sl`'s counter), and the extracted program
     began where the run had ended, exiting 6 for 3. `--extract` runs no
     final, so the harness now takes the extracted sources before running
     the deferred final. Not a defect in the language on the session's
-    reading: the Const was consumed by the definition that captured it,
+    reading: the Settled was consumed by the definition that captured it,
     and nothing reads it afterwards.
 
 188. **`slc --interpret`** performs the elaborated program's finals in
@@ -3697,7 +3697,7 @@ session's, made without the owner.
     order, or that this is the top level; whether this is inside an
     extern function's model. Then every entry in scope that the
     program's own files bound, newest first, one line each: its name, a fetch
-    form or `__1`, as README.md says, its canonical type, its multiplicity, `Const` or `Dyn`, a
+    form or `__1`, as README.md says, its canonical type, its multiplicity, `Settled` or `Hypothetical`, a
     kind read off its type (function, constructor, type constructor,
     level, proof, cell, `Matchable`, type, value), which subterm
     parameter it is, whether it is anonymous, the elaborator's own
@@ -3706,7 +3706,7 @@ session's, made without the owner.
     195; a built-in or a minted entry says so). Under it: its `is` rule,
     canonical, except an alias of an anonymous entry, which a let
     forwarding a call's result has and which names nothing a reader can
-    use; its value where it is a non-erased `Const` that the final's
+    use; its value where it is a non-erased `Settled` that the final's
     printer can spell (ASSUMPTIONS 184; a function or a `Matchable` adds
     nothing to its kind); and for a `unique` binder whether it is live, shared or
     consumed on this path and where, and whether the enclosing `def-fns`
@@ -4006,13 +4006,13 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     `let-match` in a body has its branches spliced once, before it is
     told apart as a statement or a match, in both compilers.
 
-215. **Handles, where MACROS.md is silent.** `(constant-of m x)` takes a
+215. **Handles, where MACROS.md is silent.** `(settled-of m x)` takes a
     name or a handle and a written multiplicity. It is not a use of `x`;
     each splice of the handle is. A handle to a literal enters the
     literal's entries where it is spliced, as the literal would, and is
     refused where a literal is. A `delegate`-bodied function that `slc`
     holds as its callee's value is minted at its own entry, not its
-    callee's. A handle's value is the id of the entry its `Const` was
+    callee's. A handle's value is the id of the entry its `Settled` was
     minted at, with the multiplicity (and the value, as item 216 has it),
     and `slc` also carries the text a
     message shows it by: a literal's spelling, else the entry's name,
@@ -4023,7 +4023,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     holds a handle as a syntax node of its own, `slc` as a third kind of
     name, refused by the two functions that read binders.
 
-216. **`const-mult`, `const-value` and the `intern-` forms, where MACROS.md
+216. **`settled-mult`, `settled-value` and the `intern-` forms, where MACROS.md
     is silent.** How an `MMany` handle carries its value differs between
     the compilers, and is meant not to be observable. The reference holds
     the value in the handle itself, through the reader's tree as well, the
@@ -4035,7 +4035,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     place (DESIGN.md section 13). Extracted programs, from either
     compiler, hold a handle as the triple of its id, its multiplicity and
     its value, the value being `()` for a handle that is not `MMany`.
-    `const-mult` is given the prelude's three `Mult` constructors as hidden
+    `settled-mult` is given the prelude's three `Mult` constructors as hidden
     arguments after its handle, so that its evaluation needs no scope.
     The `intern-` forms mint the literal's entries where they run, into
     the program store, and return an ordinary `MMany` handle to its entry,

@@ -319,7 +319,7 @@ the entry says otherwise, and recorded so it can be revisited.
 - **Sharing is the store's.** `lib/extract.ml` names a block met twice
   by physical identity, which SL lacks; here every value the compile-time
   interpreter makes is a block in `heap.sl`'s store, and the emitter
-  writes each block a Const or a final reaches once, in address order,
+  writes each block a Settled or a final reaches once, in address order,
   each block's addresses being below its own (ASSUMPTIONS 131). A group
   is one top-level `let rec`, its members named by their entries
   qualified by the group's address, so a group's code is written once
@@ -380,7 +380,7 @@ the entry says otherwise, and recorded so it can be revisited.
   and place (`Mem`, `At`), so the interpreter's environment is one list
   of values per frame and a lookup is total; a `let` extends the
   environment with the values picked from the same positions as its
-  ids. A Const entry's value is embedded in the code with the entry
+  ids. A Settled entry's value is embedded in the code with the entry
   that named it (section 29), so the top level binds no frames and run
   position is the empty context: a statement runs at compile time
   exactly when its context is empty, and a branch body, an `else` body

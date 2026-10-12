@@ -25,13 +25,6 @@ inconsistent or silent.
    is "marked". §60 writes `(delegate (inc ...))`, a wrapping head.
    `tail` is never shown.
 
-3. **`Const` inside bodies.** §6, §28 and §29 say every binding inside a
-   function body or match branch is `Dyn`, "nested definitions
-   included", and §29 says "nothing else mints Const". §19 and §29
-   item 3 say a state-forwarding `let` mints `Const` and is "one of the
-   ways a Const reaches into a function body". The blanket statements
-   appear to need a forwarding carve-out.
-
 4. **Field multiplicity default.** §21 says the default is "still TBD";
    §13 and §14 say multiplicity is always explicit. Looks stale.
 
@@ -116,7 +109,7 @@ inconsistent or silent.
     match as an argument leaves a dependent type nothing to refer to.
     Options seen: restrict dependent positions to §5-grammar
     expressions, or give every non-atomic argument, `values` entry and
-    scrutinee an anonymous `Dyn` entry. The `tail` and `delegate` checks
+    scrutinee an anonymous entry. The `tail` and `delegate` checks
     and the scrutinee's forced rule seem to need the same decision.
 
 15. **What `(predates p)` accepts.** §57 uses `(Predates (Level) M L)`

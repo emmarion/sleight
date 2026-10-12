@@ -36,7 +36,7 @@ One thing left for a later session, raised with the owner:
 - MACROS.md 4.5's program store holds the literal table and the facts
   of run-position entries. Here a literal's declaration facts live in
   the scoped fact table and are entered again where needed, so a
-  `const-eq` answering from run-position facts would first have to
+  `settled-eq` answering from run-position facts would first have to
   enter a handle's literal row into its snapshot (`Env.enter`,
   `table-reenter`). The owner paused on whether that placement is the
   store design or a detour from it; undecided when this was written.
@@ -66,7 +66,7 @@ What this bought, on the session's reading: the host reclaims what is
 unreachable, where the old store held every block for the whole run;
 reading a reference is a projection rather than a tree walk, and `alloc`
 a constructor rather than a rebuilt path; and the emitter walks only what
-a Const or a final reaches. Measured with an instrumented reference
+a Settled or a final reaches. Measured with an instrumented reference
 extractor before the change, reachable values against the blocks
 ASSUMPTIONS 148 counts: 1570 against about 20000 for `slc`'s own sources,
 and 197, 181, 227 and 126 against 665800, 157418, 162987 and 44797 for
@@ -76,17 +76,17 @@ value depth was 226 and 13-19 respectively.
 Things the session had to change course on, recorded so they are not
 rediscovered:
 
-- `deref` was deleted rather than kept. A call's result is `Dyn`, so
+- `deref` was deleted rather than kept. A call's result is `Hypothetical`, so
   calling it destroys the subterm relation, which is what stopped
   `rope-walk` and the printer recursing structurally. Both now match
   through `MkRef`/`MkValue` and need neither the store nor a fuel, and
   `ref-suffix`, erased, replaces what `deref` computed.
 - Post-order DFS alone does not order the output. A group's body also
-  names other Consts, and that edge is not in the value graph; today's
+  names other Settled entries, and that edge is not in the value graph; today's
   emitter got the ordering from address order instead. Emission is now in
   stamp order, which orders every edge, since anything a block names was
   allocated before it. Adding those edges to the trace was considered and
-  set aside: they jump to arbitrary Consts, so the walk would stop being
+  set aside: they jump to arbitrary Settled entries, so the walk would stop being
   structural.
 
 The stamp sort is a generic merge sort, at the owner's request, and is
@@ -461,7 +461,7 @@ only the macro system's items. What a later session should know:
   compiling the part of its own sources both versions accept, and with
   the condition the two measured within noise of each other.
 - `test/runtest.ml` extracts before it runs a test's final
-  (ASSUMPTIONS 187): a run may update a unique Const in place that the
+  (ASSUMPTIONS 187): a run may update a unique Settled in place that the
   extractor would otherwise embed after the update.
 
 Open, none of it decided:

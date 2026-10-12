@@ -136,7 +136,7 @@ that the test does not make is a mistake in this file.
   `tests/phantom_false_bad.sl` is why a phantom branch still owes its value:
   omitted, it would prove `False`.
 - `tests/comptime.sl` and `tests/comptime_transparent.sl` — `comptime-match`
-  verifying a `Const` and binding its fields `Const`, proof by reflection.
+  verifying a `Settled` and binding its fields `Settled`, proof by reflection.
 - `tests/comptime_tail.sl` — a loop run at elaboration whose measure is
   erased. A non-erased binary counter drives the dispatch, while the
   `subterm` decrease is taken on an erased `Nat` tied to that counter by the
@@ -226,11 +226,11 @@ that the test does not make is a mistake in this file.
   goal `(many (List A) r at cell)`, the scrutinee's forced rule, the cell
   consumed by the write and the fresh one consumed by the call, the live
   written cell, and the at-database's classes. `tests/dump_context_top.sl`
-  is the same form as a top-level statement over `Const` values, a `unary`
+  is the same form as a top-level statement over `Settled` values, a `unary`
   rule and a shared unique; `tests/dump_context_focus.sl` names what to
   report and has a `_` still open in the goal; `tests/dump_context_type.sl`
   and `tests/dump_context_stmt.sl` put it in a type and in an erased body;
   `tests/dump_context_empty.sl` is the form alone in a file, where the
   prelude's entries are listed; `tests/dump_context_erased_fns.sl` follows
   a run-position `def-fns` whose erased function and `Delegate` proof are
-  listed `Const`.
+  listed `Settled`.

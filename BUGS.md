@@ -103,36 +103,6 @@ is a design decision. Remove an entry when it is fixed.
     included, so one that did would fail there. Which order is wanted
     is not decided here.
 
-20. **A run-position call's result entries stay `Dyn`.** At run position
-    every entry of the table is meant to be `Const` (the owner's
-    statement in chat). DESIGN.md needs to change too, as the owner
-    said: section 29 makes `Const` only the names a run-position
-    statement introduces. The reference leaves the anonymous entries a call
-    returns `Dyn`, and the `let` binders that take the results alias to
-    them as the older atoms, so a `Const` binder canonicalizes to a `Dyn`
-    entry. Reproduced with `(let ((many len) (erased lp)) (two 5))` for
-    `two : (many (Nat) a) -> (many (Nat) q) (erased (Eq (Nat) q q) p)`:
-    `dump-context` shows `len` at the slot of an anonymous entry minted
-    at the call, and `lp : (Eq (Nat) len len)` names it; the prelude's
-    `u8-modulus`, `u62-modulus` and `lt-dec` bindings show the same.
-    `slc` does the same, and in both a match's results, a `coerce`'s and
-    an argument bound first (section 15) alias the same way; erased
-    results stay `Dyn` too. It shows beyond `dump-context` where a reader
-    takes the state of the canonical atom rather than of the binder.
-    With a type declared in a function `mk` that returns its `TyCtor`,
-    two constructors `C` and `D` and its `Matchable`, bound by
-    `(let ((erased T) (many C) (many D) (many m)) (mk))` and opened by
-    `(open-adt many m)`, and `(let ((many v)) (C))`:
-    `(comptime-match many v (C))` is refused in both compilers with
-    "`__1` is not a run-position constructor" (`ctor_of`, `ctor-of`);
-    printing `v` gives `_` in the reference, extracted or not
-    (`shown_ctor`), but `(MkU)` under `slc --interpret`, the name the
-    declaration gave; and a refuted branch on `D` is named by an
-    anonymous marker rather than `D`. A dispatching `match` on such a
-    value, head dispatch through a binder of a call's `Special` result,
-    and `constant-of` on that binder seemed to behave as expected; they
-    read the binder. Found with scratch probes; no test has this shape.
-
 21. **A constructor application in a signature whose `at` target is not
     a variable leaves the signature naming a dead entry.** With
     `MkW : (erased (Slot) s) (erased (Nat) x at s) -> (W s)` for

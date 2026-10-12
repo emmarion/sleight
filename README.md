@@ -197,7 +197,7 @@ means it where the message points:
 - a gensym (MACROS.md) as `__g` and its number and `_`, followed by its
   text spelled as a name is: `__g1_tmp`, `__g1_#"a b"`;
 - a special form or annotation token, a fetch form's head included, by the
-  newest name in scope that is `Const`, non-erased and holds it, else as `__`
+  newest name in scope that is `Settled`, non-erased and holds it, else as `__`
   followed by its built-in name, `__Fn`, `(__level-of f)`.
 
 Keywords in a message's prose follow the same rule where they stand for syntax,
@@ -232,14 +232,15 @@ The reader turns the file into s-expressions. The elaborator walks
 them with a scope of entries and a fact table (types and `is` rules,
 read canonically), dispatching each form on its head as DESIGN.md
 section 6 describes: constructor and function application by the
-head's type, special forms and macros by the head's Const value, a macro
+head's type, special forms and macros by the head's Settled value, a macro
 call being replaced by the forms its function returns (MACROS.md section 8). Elaboration
 produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
-statement in run position is elaborated, run at once by the evaluator,
-and its binders are minted Const with the resulting values (sections 27
-and 29), which form the environment later code runs in; inside function
-bodies and match branches statements compile to code instead. The
+form in run position is elaborated and run at once by the evaluator,
+and the entries it leaves in scope are minted Settled with the
+resulting values (sections 27 and 29), which form the environment later
+code runs in; inside function bodies and match branches forms compile
+to code instead. The
 evaluator is a plain recursive interpreter over that code; a value contains
 its constructor's non-erased fields, tagged only where section 33 says an
 enum carries a tag, or a closure, or a token standing for anything

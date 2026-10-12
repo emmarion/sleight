@@ -22,7 +22,7 @@ Bound before any file is read, beside `Slot` and `Sharing` (DESIGN.md §42).
   enum
   (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
 
-Const      : (TyCtor ((Mult) m) (Type T) (T t) -> Type)
+Settled      : (TyCtor ((Mult) m) (Type T) (T t) -> Type)
 MacroWorld : (TyCtor -> Type)
 Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
 ```
@@ -31,14 +31,14 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
   its constructors' names are open (they must not clash with `Sharing`'s
   `Unique` or with the annotation tokens).
 - `JMEq`: Decided. It is in the source prelude.
-- `Const`: Decided that it is opaque and not an ADT, like `Slot`: no
+- `Settled`: Decided that it is opaque and not an ADT, like `Slot`: no
   constructors, no `Matchable`, not erased by kind. A handle
-  `(Const m T t)` denotes `t`, held at multiplicity `m`. Decided that its
+  `(Settled m T t)` denotes `t`, held at multiplicity `m`. Decided that its
   run-time value may be a term rather than an entry id, that an `MMany`
   handle carries the value it denotes, and that a handle denotes a term.
-  A session found, in the reference over the tests, that a `Const`'s
-  minted type mentions only entries bound at run position, some of them
-  `Dyn` (BUGS.md 20); nothing has shown that it always holds.
+  A session found, in the reference over the tests, that a `Settled`
+  entry's minted type mentions only entries bound at run position;
+  nothing has shown that it always holds.
 - `MacroWorld`: Decided (named by the owner, in place of "Table"). Opaque
   (`def-opaque`, INTERNALS.md section 1), declared in the prelude. It is a
   handle on the elaborator's program store (section 4), passed `unique`
@@ -63,7 +63,7 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
   ((Atom : -> Type)
     enum extern
     (many AName : (many (Symbol) y) -> (Atom))
-    (many AConst : (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Atom)))
+    (many ASettled : (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Atom)))
   ((Raw : -> Type)
     enum extern
     (many RAtom : (many (Pos) pos) (many (Atom) a) -> (Raw))
@@ -82,7 +82,7 @@ Gensym     : (TyCtor ((Nat) n) ((String) s) -> Type)
   representation is the reader's own syntax tree, so a macro's arguments and
   output are passed without copying; copying would let nested expansions
   cost exponentially more than the macros' own work.
-- `AConst` is itself the existential over `m`, `A` and `a` (Decided; an
+- `ASettled` is itself the existential over `m`, `A` and `a` (Decided; an
   earlier separate `SomeConst` wrapper was dropped).
 - `RWild` is a `_` (Decided). A raw name `#"_"` is an `AName`, never an
   `RWild` (DESIGN.md §1).
@@ -101,33 +101,33 @@ gensym case needs.
 ### Handles
 
 ```scheme
-(constant-of m x)  : (many (Const m' T t) h)
-    ; x a Const entry; T its minted type; t its minted is; m erased: any entry;
+(settled-of m x)  : (many (Settled m' T t) h)
+    ; x a Settled entry; T its minted type; t its minted is; m erased: any entry;
     ; many: x declared many; unique: x declared unique; m' the matching Mult
-(const-type c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
-                     (many (Const (MErased) Type T) h)
-(const-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+(settled-type c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+                     (many (Settled (MErased) Type T) h)
+(settled-mult c)     : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
                      (many m is r)
-(const-value c)    : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)
+(settled-value c)    : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)
 ```
 
 All Decided. Decided: a handle denotes `x`'s minted `is` at `x`'s minted
 type (DESIGN.md §5, §29), as head dispatch reads the minted type (§6). There
-is no `const-value` for erased handles (it would only rename the handle's own
+is no `settled-value` for erased handles (it would only rename the handle's own
 erased index) and none for unique handles (a macro's read would happen
 outside the elaborator's use accounting, possibly after the value was
 consumed and mutated in place). A `constant-slot` form was considered and
-dropped. Decided: `const-type` does not canonicalize the type it
-returns; `const-eq` does, where it compares. Only `const-eq` and the
-splicing of a `RawConst` read the term a handle denotes, and both happen
+dropped. Decided: `settled-type` does not canonicalize the type it
+returns; `settled-eq` does, where it compares. Only `settled-eq` and the
+splicing of a `RawSettled` read the term a handle denotes, and both happen
 during an expansion, so an extracted program need not hold it.
 
 ### The macro world
 
 ```scheme
-(const-eq ma A a mb B b mw p q) : (erased (Mult) ma) (erased Type A) (erased A a)
+(settled-eq ma A a mb B b mw p q) : (erased (Mult) ma) (erased Type A) (erased A a)
                         (erased (Mult) mb) (erased Type B) (erased B b)
-                        (unique (MacroWorld) mw) (many (Const ma A a) p) (many (Const mb B b) q) ->
+                        (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
                         (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)
 (gensym mw s)         : (unique (MacroWorld) mw) (many (String) s) ->
                         (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)
@@ -135,24 +135,24 @@ during an expansion, so an extracted program need not hold it.
                         (erased (Gensym n s) a) (erased (Gensym n t) b) ->
                         (erased (JMEq (Gensym n s) a (Gensym n t) b) e)
 (intern-nat mw n)     : (unique (MacroWorld) mw) (many (Nat) n) ->
-                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)
+                        (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)
 (intern-char mw c)    : (unique (MacroWorld) mw) (many (Char) c) ->
-                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)
+                        (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)
 (intern-string mw s)  : (unique (MacroWorld) mw) (many (String) s) ->
-                        (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)
+                        (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)
 (read-file mw path)   : (unique (MacroWorld) mw) (many (String) path) ->
                         (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)
     ; read-file is jailed: after resolving symlinks, the path must lie in the directory, or a
     ; subdirectory, of at least one of the program's source files; any other path answers Fail
 ```
 
-- `const-eq`: Decided, with its erased parameters written out as `def-prim`
+- `settled-eq`: Decided, with its erased parameters written out as `def-prim`
   needs. Decided: it answers `Just` exactly when the checker at run level,
   given the current table, would consider the two handles' terms
   equivalent: the facts are those of the innermost run position enclosing
   the call, never branch-forced ones, so that a `Just` stays true wherever
   the macro's output goes and a call expands the same way in every branch.
-  A session's reading is that this has `const-eq` enter the facts of every
+  A session's reading is that this has `settled-eq` enter the facts of every
   literal the two terms mention, as the checker does where a literal is
   written.
 - `gensym`, `gensym-unique`: Decided. Both are constructors of `Special`
@@ -180,12 +180,12 @@ during an expansion, so an extracted program need not hold it.
    name is spelled (README.md): `__g1_tmp`, or `__g1_#"a b"` where `s` is
    not a plain name.
 4. Handles. Decided: a handle keeps the multiplicity it was made with, the
-   `m` of `(constant-of m x)`. Where it is spliced, it is checked as if `x`
+   `m` of `(settled-of m x)`. Where it is spliced, it is checked as if `x`
    had been written there with that multiplicity. So an `MErased` handle may
    appear only in erased positions, an `MMany` handle is used at many, and an
    `MUnique` handle is used at unique, which consumes it. Decided: a handle
    cannot be used as a binder, any more than anything else that is not a
-   name can. Decided: a spliced `AConst` is a reference to the term it
+   name can. Decided: a spliced `ASettled` is a reference to the term it
    denotes, bypassing scope, as a variable reference is to its entry; its
    multiplicity, as above, decides where it may stand.
 5. The macro world (Decided). It is the elaborator's program store: the
@@ -202,7 +202,7 @@ during an expansion, so an extracted program need not hold it.
 
 - A macro is untrusted: its output is elaborated and checked like source,
   so reflection should only be able to steer what it generates.
-- `const-eq` answers `Just` only from facts that hold unconditionally.
+- `settled-eq` answers `Just` only from facts that hold unconditionally.
 - A handle denotes its index because only built-in forms create handles.
 - A gensym cannot be forged: building an `SGen` at `many` needs an erased
   `Gensym` witness, and only `gensym` makes one.
@@ -211,7 +211,7 @@ The owner suspects this section holds of the language as it stands.
 
 ## 6. Open questions
 
-1. The names of `Mult` and its constructors, and `Const`.
+1. The names of `Mult` and its constructors, and `Settled`.
 3. Whether the macro world resolves names at the call site; if so it must
    also carry the call site's scope.
 5. `read-file`: what a relative path is relative to, which files count as
@@ -258,7 +258,7 @@ The source prelude declares the following, which both compilers implement.
   (many MMany : -> (Mult))
   (many MUnique : -> (Mult)))
 
-(def-opaque $ (Const : ((Mult) m) (Type T) (T t) -> Type))
+(def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
 
 (def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
@@ -267,19 +267,19 @@ The source prelude declares the following, which both compilers implement.
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
-(def-prim $ (many const-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Const m T t) c) ->
+(def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many m is r)))
 
-(def-prim $ (many const-value : (erased Type T) (erased T t) (many (Const (MMany) T t) c) -> (many t is v)))
+(def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
 
 (def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Nat) n) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
 
 (def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (Char) c) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
 
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
-    (unique (MacroWorld) mw2 at mw) (many (Const (MMany) (String) s) h)))
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
 (def-adts $ (Raw : -> Type)
   enum extern
@@ -290,7 +290,7 @@ The source prelude declares the following, which both compilers implement.
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
   (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
-  (many RawConst : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Const m A a) c) -> (Raw)))
+  (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
   enum newtype
@@ -305,11 +305,11 @@ entries, `match` and `let-match` branches, `def-adts` constructors,
 arguments and `values` entries, besides the positions of section 4.1;
 at most 10000 expansions run in one run. `gensym` counts from 1 over the
 whole run, every file included. An unbound gensym gets no "nearest in
-scope" hint. `(constant-of m x)` makes a handle (section 3), and
-`RawConst` puts one in a macro's output, where it stands for its entry
-directly. `const-mult` and `const-value` read a handle anywhere, not only
+scope" hint. `(settled-of m x)` makes a handle (section 3), and
+`RawSettled` puts one in a macro's output, where it stands for its entry
+directly. `settled-mult` and `settled-value` read a handle anywhere, not only
 during an expansion, and an `MMany` handle carries its value into an
 extracted program. The `intern-` forms run only in an expansion, the one
-place a macro world exists, and intern the literal where they run. `const-type` and `const-eq` are not
+place a macro world exists, and intern the literal where they run. `settled-type` and `settled-eq` are not
 implemented, and a literal in a macro's arguments still arrives as
 `RawNat`, `RawChar` or `RawStr`.

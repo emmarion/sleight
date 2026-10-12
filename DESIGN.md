@@ -142,8 +142,8 @@ does not count (README.md).
 
 `(compile-error m)` and `(compile-warn m)` report an error or a warning
 with the text of `m` at the form's position. `m` is read as a head is
-(§6): a name, a literal or `(share n)` whose entry is `Const` and
-non-erased and whose minted type canonicalizes to the prelude's
+(§6): it is elaborated, and its result must be a `Settled`,
+non-erased entry whose minted type canonicalizes to the prelude's
 `String` against the facts of the innermost enclosing run position.
 `compile-error` may stand anywhere a form may; `compile-warn` is a
 statement. Either fires wherever it is elaborated, erased code
@@ -155,15 +155,19 @@ The scope environment is a list of entries. Shadowing is allowed. An
 entry has:
 
 - a **name**, which is optional: anonymous entries exist;
-- a **state**, `Const` or `Dyn` (§28, §29);
-- a **stored value**, present only in state `Const`. For an erased
+- a **state**, `Settled` or `Hypothetical` (§28, §29). An entry
+  becomes `Settled` only at the sites §29 lists, and every `Settled`
+  entry holds outside every hypothesis, which is what lets the
+  compiler rely on it at elaboration. Every other entry is
+  `Hypothetical`, whether or not it also holds;
+- a **stored value**, present only in state `Settled`. For an erased
   entry the stored value is a token that records that the value exists;
   it is not data;
-- a **minted type**, present only in state `Const`: the type the entry
-  had when it became `Const`, which special-form dispatch reads (§6,
+- a **minted type**, present only in state `Settled`: the type the entry
+  had when it became `Settled`, which special-form dispatch reads (§6,
   §29);
-- a **minted `is`**, present only in state `Const`: the term the entry
-  was when it became `Const`, which a macro's handle denotes (§29,
+- a **minted `is`**, present only in state `Settled`: the term the entry
+  was when it became `Settled`, which a macro's handle denotes (§29,
   MACROS.md section 3);
 - a **multiplicity** (§13), declared at the binder or fixed by the kind
   of entry (§14);
@@ -199,19 +203,26 @@ function's `subterm`-marked parameters, in declaration order (§19).
 Macros and special forms are first-class values. To invoke one, rather
 than merely hold it, the head of the form must be constant-known at
 that point. A name bound inside a function body or a match branch is
-`Dyn`. A function is `Dyn` in every body of its own `def-fns` block
+`Hypothetical`. A function is `Hypothetical` in every body of its own `def-fns` block
 and in the signatures that follow its own in that block (§53). The
-binders of a statement in run position (§27) are `Const` in
-the code after it (§29).
+binders of a statement in run position (§27) are `Settled` in
+the code after it, and so is the result of every form in run
+position, from the moment the form is elaborated (§29).
 
 A list is elaborated according to its head:
 
-1. If the head is `Const` and non-erased, and its minted type
-   canonicalizes to `(Special)` against the facts of the innermost
-   enclosing run position (§27), the list is the special form named by
-   the head's stored value. A head written `(share n)`, where `n` is
-   such an entry, is dispatched the same way (§16). An erased `Const`
-   holds only the token of §5 and has no value to dispatch on.
+1. The head is elaborated first. If its result is a `Settled`,
+   non-erased entry whose minted type canonicalizes to `(Special)`
+   against the facts of the innermost enclosing run position (§27),
+   the list is the special form named by that entry's stored value. A
+   name or a literal is its own entry. A head that is a form is
+   `Settled` in run position, since it runs as soon as it is
+   elaborated (§29); inside a body it is `Settled` only when it
+   forwards a `Settled` entry, as `(share n)` does (§16). An erased
+   `Settled` holds only the token of §5 and has no value to dispatch
+   on. A head that is not dispatched is elaborated only once, and is
+   the callee of item 2. Annotation tokens (§54) are not heads, and are
+   recognised only where written as a name or `(share n)`.
 2. Otherwise, if the head's type is a type constructor, a value
    constructor, an `Fn`, a `UniqueFn` or a `Cell` (§32, §37), the list
    is an application. This needs no constant-knownness: each of these
@@ -229,30 +240,30 @@ refines the scrutinee's type as well as its structure.
 Facts are read canonically: when a rule or type is read, it is
 canonicalized to a fixed point against the rules in force. The table
 is written by declaration sites (`is` declarations, signatures,
-telescopes, `let` inference), by run-position statements when they run
+telescopes, `let` inference), by run-position forms when they run
 (§29), by `comptime-match` verifications against a stored value, by
 opens (§8), and by forced unifications when a branch is entered
 (below). A branch-forced rule is recorded even when it rewrites a
-`Const` entry; the rule is justified by the branch running.
+`Settled` entry; the rule is justified by the branch running.
 
 **A fact ends with the scope it was created in.** A branch-forced rule
 ends with its branch, whatever entries it mentions. For example,
 matching a `(Nat)` against `Zero` forces `n is (Zero)`; this names no
 branch-local entry and is still gone after the match. A fact can only
 mention entries that are in scope where it is created, so a fact never
-outlives an entry it mentions. Only run-position statements run at
-compile time (§27, §20), and their match branches are gated like any
+outlives an entry it mentions. Only run-position forms run at
+compile time (§27, §29), and their match branches are gated like any
 other. Special-form dispatch is decided at compile time anywhere, so
 it reads the table as it stood at the innermost enclosing run position
 (§6). One table is therefore enough. Compile-time effects in unreachable code
 still happen. A fact verified by a `comptime-match` in run position
-holds afterwards, so a later match on the same `Const` finds the
+holds afterwards, so a later match on the same `Settled` finds the
 contradicting branches refuted.
 
 Before an occurs check, and before recursing into either side of an
 equation, both sides are canonicalized. Canonicalization never reads a
-`Const` entry's stored value. It is driven by `is` facts alone, in the
-same way for `Const` and `Dyn`.
+`Settled` entry's stored value. It is driven by `is` facts alone, in the
+same way for `Settled` and `Hypothetical`.
 
 **Forcing.** Entering a branch equates the scrutinee with the branch's
 constructor applied to its fresh fields, and equates the scrutinee's
@@ -328,7 +339,7 @@ tag, the marks, the number of constructors, each constructor's
 multiplicity marker, the constructors and the type constructor, and so
 their signatures. Two that cannot be unified contradict. Two that can
 be unified become one; the entry kept is the one the elaborator can
-best read, which is a `Const` with the type's own declaration if there
+best read, which is a `Settled` with the type's own declaration if there
 is one, and otherwise one that is non-erased and still bound. So two
 opened `Matchable`s for one type are never ambiguous: either they are
 one, or they contradict. The facts this adds are justified by
@@ -345,9 +356,9 @@ one constructor describe one declaration.
 not gated. A match or `let-match` that dispatches at runtime, meaning
 one at `many` or `unique` on a non-erased scrutinee, uses its
 `Matchable` at `many` and requires the opened entry to be
-**readable**: either a `Const` with the type's declaration, or
+**readable**: either a `Settled` with the type's declaration, or
 non-erased and still bound. A `comptime-match` requires the stricter
-of the two, a `Const` with the declaration. Readability is judged at
+of the two, a `Settled` with the declaration. Readability is judged at
 the match. A `many` parameter opened at `erased` therefore serves no
 dispatching match. An unopened `Matchable` leaves its type constructor
 opaque, so an unopened first-class type constructor unifies with any
@@ -368,7 +379,10 @@ name.
 
 ## 9. Restricted dependent types
 
-A type never involves a function call. A type is built from:
+The elaborated form of a type never contains a function call. A
+head computed in a type must elaborate to a `Settled` entry (§6),
+which is read at elaboration and leaves no call behind. A type is
+built from:
 
 1. variable references,
 2. applications of a type constructor,
@@ -684,8 +698,8 @@ namespace. Everything in it may be shadowed, including special forms
 and types.
 
 **State-forwarding `let`.** A `let` binder takes over the state of the
-right-hand-side entry it corresponds to: `Const` or `Dyn` (§5), the
-stored value, minted type and minted `is` if `Const`, its level-mint
+right-hand-side entry it corresponds to: `Settled` or `Hypothetical` (§5), the
+stored value, minted type and minted `is` if `Settled`, its level-mint
 marker and its
 introduction order (§5), except that a binder forwarding from a
 literal's entry (§45), which has none, keeps an introduction order of
@@ -693,10 +707,18 @@ its own, and, through an alias rule in the fact table (§7), its type
 and `is` rule. This happens whenever that entry is an
 expression in §9's grammar and so has an entry of its own. It is
 decided per binder: in `(let ((many a) (many b)) (values x y))`, `a`
-takes from `x` and `b` from `y`. A call, a match or a `coerce` forwards
-nothing. Inside a body their results are `Dyn` (§28). In run position
-(§27) the statement runs and its binders become `Const` (§29).
-Forwarding is one way a `Const` can reach a function body, for example
+takes from `x` and `b` from `y`. A call, a match or a `coerce` has an
+entry of its own for each of its results (§28), at the multiplicity
+its own position gives it, and a binder of one of them forwards from
+that entry as from any other. Inside a body those entries are
+`Hypothetical`; in run position they are `Settled` from the moment
+the form has run (§29). An `erased` binder of a `Settled` entry
+holds the token of §5, not its value. A `unique` binder of a
+`Settled` entry does not forward its state, because it takes the
+value over: in run position it is minted afresh, with its own type
+as its minted type and itself as its minted `is` (§29), and inside a
+body it is `Hypothetical`.
+Forwarding is one way a `Settled` can reach a function body, for example
 a special form renamed locally. The other ways are a direct reference
 to the entry, and a macro expansion that mentions it.
 
@@ -712,11 +734,11 @@ written `at` (§36).
 
 **Special forms as data.** A special form is a nullary constructor of
 the built-in enum `Special` (§42). The elaborator dispatches on one in
-head position only when that head is `Const` and non-erased (§6). Held
+head position only when that head is `Settled` and non-erased (§6). Held
 as a value, it is ordinary data. The constructors of `Special` are the
 registry of §54, including the annotation tokens.
 
-**Macros.** A head whose entry is `Const` and non-erased, and whose
+**Macros.** A head whose entry is `Settled` and non-erased, and whose
 minted type canonicalizes to the prelude's `(Macro)` against the facts
 of the innermost enclosing run position, is dispatched as a special
 form is (§6), with `(Macro)` in place of `(Special)`: the list is a
@@ -928,11 +950,11 @@ constructor with no cell (§37) has no extra binder.
 
 `let-match` takes the same modes and the same extra binder, and binds
 outward (§27). `comptime-match` at `unique` is a destructure like any
-other: it consumes the `Const` at unique and binds its fields as
-`Const` at their labels. At `many` it reads the `Const` at many. Its
+other: it consumes the `Settled` at unique and binds its fields as
+`Settled` at their labels. At `many` it reads the `Settled` at many. Its
 scrutinee may be written `(share x)` at `many`, which is the explicit
-degradation a unique `Const` needs; `(share x)` at `unique` is an
-error. The elaborator's other reads of a `Const`, a special form at a
+degradation a unique `Settled` needs; `(share x)` at `unique` is an
+error. The elaborator's other reads of a `Settled`, a special form at a
 head or a `Matchable` read by a match, are many uses (§32). The
 readability requirements for a dispatching match are those of §8.
 
@@ -1081,7 +1103,7 @@ more than one survives, or if the pattern names a refuted constructor.
 The survivor may be phantom when `m` is `erased`; its fields are then
 erased. At `many` or `unique` a phantom constructor is refused. Nothing
 inspects the scrutinee's stored value, so the scrutinee need not be
-`Const` or non-erased, and the form is not confined to run position.
+`Settled` or non-erased, and the form is not confined to run position.
 The fields take their declared multiplicities under `m`, as the fields
 of a match do (§14). The `Matchable` must be open and, if the form
 dispatches at runtime, readable (§8). A `let-match` with further
@@ -1108,14 +1130,16 @@ for its final value to be computed by compiled code. A final value of
 `Fn` type in neither form, or of `UniqueFn` type, is an error. Any
 other value is printed (§45).
 
-**Run position.** A statement is in run position when it is under no
-function body and no match branch. Such a statement runs as soon as it
-has been elaborated, before the code after it is checked. The
-statement is elaborated, its erased positions are stripped, the
-evaluator runs the code, and its binders become `Const` with the
-resulting values (§29). This nests: the right-hand side of a `let` may
-contain statements, and those in run position complete before the
-enclosing `let` does. A file's top level is run position, so calls
+**Run position.** A form is in run position when it is under no
+function body and no match branch. Such a form runs as soon as it has
+been elaborated, before the code after it is checked: it is
+elaborated, its erased positions are stripped, the evaluator runs the
+code, and its results become `Settled` with the resulting values
+(§29). Its code is then those values, so the form around it does not
+run it again. A form in an erased position runs nothing, and its
+results are `Settled` with the token of §5. This nests: the forms
+inside a form run before it does, and the statements of a `let`'s
+right-hand side complete before the enclosing `let` does. A file's top level is run position, so calls
 there need no proofs (§20). Elaborating code under a function body or
 a match branch never runs it; such code runs at compile time only when
 called from run position, or when it is part of a macro's
@@ -1126,25 +1150,29 @@ to be stripped and run before the code after it is elaborated.
 
 ## 28. Call and match results; `comptime-match`
 
-The result of a call, the result of a match, a constructor application
-and a `coerce` (§33) are all `Dyn` where they stand, even when their
-arguments are `Const`. Nothing is folded through them. Inside a
-function body or a match branch, every binding is `Dyn`. Everywhere
-else, in run position (§27), a statement runs as soon as it is
-elaborated and its binders become `Const` (§29). A definition that is
-wanted as `Const` is therefore bound by its own `let` in run position
-(see `xs` in §57). This may be relaxed if it proves heavy.
+Inside a function body or a match branch, the result of a call, the
+result of a match, a constructor application and a `coerce` (§33) are
+`Hypothetical`, even when their arguments are `Settled`: nothing is
+folded through them there, and every binding there is
+`Hypothetical`. Everywhere else, in run position (§27), each of them
+runs as soon as it is elaborated and its results are `Settled`
+(§29), as are the binders of the statements there. A definition that
+is wanted as `Settled` is therefore written in run position (see `xs`
+in §57). This may be relaxed if it proves heavy.
 
 `(comptime-match m x (C f1 ... fn))` asserts, at elaboration time, that
-the `Const`, non-erased entry `x` holds a value headed by `C`. It is an
-error otherwise. `m` is `many` or `unique` (§23). `x` is a variable,
-or `(share x)` (§16); it names the entry whose stored value is read,
-and is not an expression. The type must be an enum, not a union. `C`
+`x` is a `Settled`, non-erased value headed by `C`. It is an error
+otherwise. `m` is `many` or `unique` (§23). `x` is a size-one
+expression taken at `m`. Since the form is in run position, `x` runs
+as soon as it is elaborated (§27), and the stored value of its
+`Settled` result is read. A variable is read as it is, and
+`(share x)` (§16) at `many` is the explicit degradation a unique
+`Settled` needs. The type must be an enum, not a union. `C`
 must not be phantom. The pattern binds every field, including the
 erased ones, and a cell binder where the type has cells. This is the
 one statement confined to run position (§27). The form consults the
 type's `Matchable` (§24) for the discriminant and binds the fields as
-`Const` at their declared multiplicities under `m` (§22): `many` fields
+`Settled` at their declared multiplicities under `m` (§22): `many` fields
 take the values projected from the stored value, and erased fields take
 the tokens of §5, since the stored value does not contain them. Its
 purpose is proof by reflection: a decidable proposition is discharged
@@ -1156,31 +1184,38 @@ value, including its discriminant and arguments. This can be used as a
 diagnostic channel: assert the expected constructor of a wrapper enum
 whose other constructors carry a message, and the message is printed.
 
-## 29. `Const` formation and compile-time inspection
+## 29. `Settled` formation and compile-time inspection
 
-The states are `Const` and `Dyn` (§5). `Const` arises at three sites.
+The states are `Settled` and `Hypothetical` (§5). `Settled` arises at three sites.
 At each, the multiplicity is declared.
 
-1. **A statement in run position** (§27, §20). Every name it
-   introduces is `Const` once the statement has run. A `let` is
-   elaborated, stripped of its erased positions, and run by the
-   evaluator; its binders take the resulting values at their declared
-   multiplicities (§19). A `def-lvl`, `def-fns`, `def-unique` or
+1. **A form in run position** (§27, §20). Every entry it creates and
+   leaves in scope is `Settled` once the form has run: its results,
+   the elaborator's own binders for its head, arguments and scrutinee
+   (§15), the binders and fields of a statement, and the automatic
+   slot (§35) of each, which holds the word of its entry, or the token
+   where the entry is erased. A `let` is elaborated, stripped of its
+   erased positions, and run by the evaluator; its binders take the
+   resulting values at their declared multiplicities (§19). A `def-lvl`, `def-fns`, `def-unique` or
    `def-adts` involves no evaluation: a function's value is its
    compiled code, a `Level` is an erased token, and a `Matchable` is
    the FFI's wrapper for an `extern` type and nothing otherwise (§24).
    In the bodies of a `def-fns` block, and in the signatures of the
    block that follow their own (§53), the block's own functions are
-   `Dyn`. After the block they are `Const`, at the multiplicity
+   `Hypothetical`. After the block they are `Settled`, at the multiplicity
    written on their lines.
 2. **Field binding by `comptime-match`** (§28), at the fields'
    declared multiplicities.
-3. **State-forwarding `let`** (§19).
+3. **State-forwarding `let`** (§19), in run position as elsewhere,
+   except that a `unique` binder of a `Settled` entry is minted at
+   site 1 in run position.
 
-Nothing else creates a `Const`. Inside a function body or a match
-branch, every binding is `Dyn`, including nested definitions. So any
-`Special` or `Macro` that is ever invoked (§6) comes from run position.
-A constructor application over `Const` arguments is `Dyn` (§28).
+Nothing else creates a `Settled`. Inside a function body or a match
+branch, every binding is `Hypothetical`, including nested
+definitions, except one that forwards a `Settled` entry (site 3). So
+any `Special` or `Macro` that is ever invoked (§6) comes from run
+position. Inside a body, a constructor application over `Settled`
+arguments is `Hypothetical` (§28).
 
 **The minted type and minted `is`.** At sites 1 and 2, an entry
 records its type, as it is there, as its minted type, and itself as
@@ -1188,14 +1223,14 @@ its minted `is` (§5); at site 3 it takes its source's of both (§19). Special-f
 against the facts of the innermost enclosing run position (§6), so a
 later run-position fact refines it and a branch-forced one does not.
 
-**Inspection requires `Const` and non-erased.** A stored value is read
+**Inspection requires `Settled` and non-erased.** A stored value is read
 in three places: head dispatch (§6), the discriminant read of
-`comptime-match`, and the running of a run-position statement that
+`comptime-match`, and the running of a run-position form that
 refers to the entry, where the value is embedded in the code that is
 run. The engine of §7 reads no stored value. All three places require
-the entry to be `Const` and non-erased. An erased `Const` holds only
+the entry to be `Settled` and non-erased. An erased `Settled` holds only
 the token of §5; its value was never computed, because the erased
-positions are stripped before the evaluator runs. An erased `Const` may
+positions are stripped before the evaluator runs. An erased `Settled` may
 still be referred to from the erased positions of a statement, because
 those positions are stripped, not read.
 
@@ -1203,9 +1238,9 @@ those positions are stripped, not read.
 source spells out. A constructor application assembles data whose
 shape the source dictates. A `comptime-match` verifies an asserted
 discriminant and projects the fields. Selecting a match branch from a
-value would be evaluation, so the results of a match stay `Dyn` even
-when the scrutinee is `Const` (§28). To branch on a `Const`, bind the
-match with its own `let` in run position, which hands the branching to
+value would be evaluation, so inside a body the results of a match
+stay `Hypothetical` even when the scrutinee is `Settled` (§28). In run
+position the match itself runs (§27), which hands the branching to
 the evaluator. The inspection sites are checks, not forwarding: by the
 time one of them runs, the multiplicity of the inspected entry is
 already decided, so no erasure demand flows backwards into code that
@@ -1213,12 +1248,11 @@ has already been checked, stripped and run. Nothing crosses an
 evaluation boundary: no erasure demand and no branch-hypothetical
 fact.
 
-**The round trip.** Checking a run-position statement is a dialogue.
-The elaborator checks the statement and produces code with the erased
+**The round trip.** Checking a run-position form is a dialogue.
+The elaborator checks the form and produces code with the erased
 positions removed. The evaluator runs that code. The resulting values
 come back to be stored (§5) and embedded as constants. Round trips
-nest: a nested statement in run position runs before the enclosing
-statement's own trip. A run-position statement is like an anonymous
+nest: a form in run position runs before the form that contains it. A run-position statement is like an anonymous
 function of no arguments: its binders declare their multiplicities at
 its boundary, as a signature does, and its result type needs no
 annotation. Every fact derived from a stored value, that is, a
@@ -1269,11 +1303,11 @@ that takes the values as parameters. The body supports `tail`,
 `notail` and `delegate`, and `delegate-of` fetches a delegate's proof
 as for a `def-fns` function.
 
-A top-level binder, which is a `Const` (§29), may be `unique` under the
+A top-level binder, which is a `Settled` (§29), may be `unique` under the
 same rules, since run-position statements are sequential. When the
-elaborator must read a `Const` as a value, for a special form at a head
+elaborator must read a `Settled` as a value, for a special form at a head
 (§6) or for a `Matchable` that a `match`, `let-match` or
-`comptime-match` reads, that read is a many use. A unique `Const` there
+`comptime-match` reads, that read is a many use. A unique `Settled` there
 is an error until it is written `(share x)`. The scrutinee of a
 `comptime-match` is used at the mode written on the form (§23). The
 driver consumes a program's final `Program` value at unique (§27) and
@@ -1299,8 +1333,9 @@ introduce it, with `(Shared)` for an `Fn` side and `(Unique)` for a
 **The expression.** `(coerce a p)`, where `p : (Coercible sa A a sb B b)`.
 `a` must be identical, after canonicalization, to the value in the
 type of `p`, and `b` is read from that type. The form produces one
-value `d : B` with `d is b` (§12). `d` is `Dyn` where it stands (§28)
-and `Const` when a run-position `let` binds it (§29). In a position of
+value `d : B` with `d is b` (§12). `d` is `Hypothetical` inside a body (§28)
+and `Settled` in run position, from the moment the `coerce` has run
+(§29). In a position of
 multiplicity `m`, with `sa` and `sb` canonicalizing to `(Unique)` or
 `(Shared)` there, the form uses `a` at the multiplicity of `sa`,
 consuming it if that is `(Unique)` (§15), and yields its result at the
@@ -1547,9 +1582,11 @@ arguments, and it is not passed. `_` cannot stand for it. Inside the
 body, the parameter is a
 rename of its target's word. An `at` return is absent from the physical
 values of a call. A `let` binds it like any return, and the elaborator
-supplies its word from a non-erased entry in the same slot, namely the
+supplies its word from a non-erased entry in the same slot: the
 caller's own binder for the argument the promise names, which the
-caller still holds whether or not the call consumed it. The `at`
+caller still holds whether or not the call consumed it, or, where the
+promise names an earlier return, that return's own entry (§19), whose
+word the call returned whatever the `let` binds it at. The `at`
 entries of a match are likewise produced by no branch and read back by
 the consumer. The promise of an `at` return is verified where the
 function or branch returns, by the canonical identity of the slots. An
@@ -1929,10 +1966,10 @@ which `lib/prelude.sl` is the reference:
   no location, not even a file; one at `MkPos` names exactly that
   position.
 - **Macros.** `Pos`, `Raw`, `Macro`, `Mult`, the opaque `Gensym`,
-  `MacroWorld` and `Const`, `JMEq`, and the primitives `gensym`,
-  `gensym-unique`, `const-mult`, `const-value`, `intern-nat`,
+  `MacroWorld` and `Settled`, `JMEq`, and the primitives `gensym`,
+  `gensym-unique`, `settled-mult`, `settled-value`, `intern-nat`,
   `intern-char` and `intern-string`. MACROS.md section 8 describes them
-  and the special form `constant-of`.
+  and the special form `settled-of`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2103,7 +2140,7 @@ denotes: a numeral by its number, a character by its code, a string by
 its characters. So `#\a` and `#\x61` are one entry, and every
 occurrence of `"ab"` is one entry. The entries a literal stands for
 are the same wherever the literal is met, in whatever scope; they
-depend on the prelude alone, as if minted by run-position statements,
+depend on the prelude alone, as if minted by run-position forms,
 and have no introduction order (§18). They refer to the prelude's
 own `Nat`, `Char` and `String` and their constructors, whatever names
 the program has shadowed since. They are anonymous and outside every
@@ -2111,7 +2148,7 @@ scope: nothing can name, shadow or rebind them, and an occurrence of
 the literal resolves to them by the literal itself. A character literal
 also interns the numeral of its code.
 
-**What the checker sees.** A numeral is opaque: a `Const` `Nat` with no
+**What the checker sees.** A numeral is opaque: a `Settled` `Nat` with no
 `is` rule, next to its erased `Numeral` proof. `3` is not
 `(Succ (Succ (Succ (Zero))))`. `(numeral-of lit)` yields a literal's
 proof by its spelling; for a character literal it yields the proof of
@@ -2124,7 +2161,7 @@ transparent down to its opaque `Nat`: its entry carries
 `is (MkChar (MkU8 n p))`, where `n` is the entry of its code's numeral
 and `p` is the erased proof of its bound, asserted rather than decided.
 So to the checker a character is its code. A string literal is opaque:
-a `Const` `String` with no rule. A rule exposing its characters would
+a `Settled` `String` with no rule. A rule exposing its characters would
 make every canonical form that mentions the literal expand to all of
 them. `comptime-match` reads its value, and
 a match inside a function takes it apart at runtime.
@@ -2301,7 +2338,7 @@ as an expression, which is a variable reference, the first production
 of §9. It is read where it is written, against the facts in force
 there. The names of a `def-fns` block are in scope in every body of
 the block. In a signature, only the functions before it in the block
-are in scope, as `Dyn` entries (§6). A signature never sees its own
+are in scope, as `Hypothetical` entries (§6). A signature never sees its own
 function or a later one. `coercible-of` is not a fetch form: it creates a
 fresh proof at each use, and it may not appear in a type.
 
@@ -2327,7 +2364,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 - `def-adts`: one or more mutually recursive ADTs, each `enum` or
   `union`, and optionally `newtype` and `extern`. It creates and opens
   each type's `Matchable` (§21, §8, §33, §42).
-- `comptime-match`: a compile-time discriminant assertion on a `Const`
+- `comptime-match`: a compile-time discriminant assertion on a `Settled`
   (§28). Confined to run position.
 - `let-match`: destructures a scrutinee of which exactly one
   constructor survives refutation, binding outward (§27, §52).
@@ -2354,7 +2391,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
   `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
-  `constant-of`, `gensym`, `const-mult`, `const-value`, `intern-nat`,
+  `settled-of`, `gensym`, `settled-mult`, `settled-value`, `intern-nat`,
   `intern-char` and `intern-string` (MACROS.md section 3).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).

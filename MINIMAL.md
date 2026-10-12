@@ -24,7 +24,7 @@ file: the full language stands, and this is a fragment of it.
    first-class `TyCtor` parameter say, cannot be matched.
 3. **`else`** branches, **`let-match`** and **`level-of`**, all
    expressible or unneeded without erasure.
-4. **`Const`** (sections 6, 28, 29): the `Const`/`Dyn` state, stored
+4. **`Settled`** (sections 6, 28, 29): the `Settled`/`Hypothetical` state, stored
    values, run-position statements running during elaboration, the
    compile-time round trip of DESIGN.md section 29, `comptime-match`,
    state-forwarding `let`, macros, and `Special` as a value. Special
