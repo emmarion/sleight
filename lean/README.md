@@ -22,6 +22,8 @@ lake build minimal              # the command-line runner
 
 `minimal` checks a program and runs it, or prints why it is refused.
 `--unchecked` skips the checker and runs the program anyway.
+`--stripped` checks it and runs it with erased code skipped (`runS`),
+printing what was skipped as `_`.
 
 ## Files
 
@@ -77,7 +79,8 @@ each one rests on, which are Lean's own three (`propext`,
   and ends in values standing for the full results. So the stripped run
   never reaches a match or a call on something it skipped, which is the
   sense in which erasure is safe here. `RunS.det` says a stripped run
-  has one outcome.
+  has one outcome, and `runS_sound` that the executable `runS`, which
+  `--stripped` uses, finds only stripped runs.
 - **`no_false`.** No checked program has as its result type a data type
   with no constructors.
 

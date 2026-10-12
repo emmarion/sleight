@@ -1,5 +1,5 @@
 import Minimal.Reader
-import Minimal.Eval
+import Minimal.Strip
 
 namespace Minimal
 
@@ -15,7 +15,7 @@ partial def Prog.show (P : Prog) : Tm → String
   | .univ => "Type"
   | .level => "(Level)"
   | .lvl n => s!"<level {n}>"
-  | .tok => "<proof>"
+  | .tok => "_"
   | .clo .. => "<function>"
   | .fn .. => "(Fn ...)"
   | .predates .. => "(Predates ...)"
@@ -27,14 +27,18 @@ def Prog.run (P : Prog) : String :=
   | .ok (vs, _) => " ".intercalate (vs.map P.show)
   | .error e => s!"stuck: {e}"
 
-def runSource (src : String) (checked : Bool) : String :=
+def Prog.runStripped (P : Prog) : String :=
+  match runS P 1000000 [] P.main with
+  | some vs => " ".intercalate (vs.map P.show)
+  | none => "stuck"
+
+def runSource (src : String) (mode : String) : String :=
   match load src with
   | .error e => s!"syntax error: {e}"
   | .ok P =>
-    if checked then
-      match checkProg P with
+    if mode == "--unchecked" then P.run
+    else match checkProg P with
       | .error e => s!"refused: {e}"
-      | .ok _ => P.run
-    else P.run
+      | .ok _ => if mode == "--stripped" then P.runStripped else P.run
 
 end Minimal

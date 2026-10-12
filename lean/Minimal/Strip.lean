@@ -19,6 +19,58 @@ inductive RunS : List Tm → Core → List Tm → Prop
   | defFns : P.groups[gid]? = some G → RunS (ρ ++ closures ρ gid G) rest out → RunS ρ (.defFns gid rest) out
   | chk : RunS ρ rest out → RunS ρ (.chk k a b rest) out
 
+def runS : Nat → List Tm → Core → Option (List Tm)
+  | 0, _, _ => none
+  | fuel + 1, ρ, c => match c with
+    | .ret ts => some (ts.toList.map (·.subst (Tm.env ρ)))
+    | .call _ _ _ true ms rest => runS fuel (ρ ++ List.replicate ms.length .tok) rest
+    | .call f _ args false _ rest => match f.subst (Tm.env ρ) with
+      | .clo env gid j => do
+        let G ← P.groups[gid]?
+        let F ← G.fns[j]?
+        let outs ← runS fuel (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body
+        runS fuel (ρ ++ outs) rest
+      | _ => none
+    | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
+    | .mtch s _ brs els false rest => match s.subst (Tm.env ρ) with
+      | .con _ c vs => do
+        let (pre, body) ← selectBr brs els c vs.toList
+        let outs ← runS fuel (ρ ++ pre) body
+        runS fuel (ρ ++ outs) rest
+      | _ => none
+    | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.eval ρ]) rest
+    | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
+    | .defFns gid rest => do runS fuel (ρ ++ closures ρ gid (← P.groups[gid]?)) rest
+    | .chk _ _ _ rest => runS fuel ρ rest
+
+variable {P} in
+theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P ρ c out := by
+  intro fuel; induction fuel with
+  | zero => intro _ _ _ h; simp [runS] at h
+  | succ fuel ih =>
+    intro ρ c out h
+    unfold runS at h
+    split at h
+    · cases h; exact .ret
+    · exact .callE (ih _ _ _ h)
+    · split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+        obtain ⟨G, hG, F, hF, outs, hb, hr⟩ := h
+        exact .call ‹_› hG hF (ih _ _ _ hb) (ih _ _ _ hr)
+      · simp at h
+    · exact .mtchE (ih _ _ _ h)
+    · split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+        obtain ⟨⟨pre, body⟩, hsel, outs, hb, hr⟩ := h
+        exact .mtch ‹_› hsel (ih _ _ _ hb) (ih _ _ _ hr)
+      · simp at h
+    · exact .prim (ih _ _ _ h)
+    · exact .defLvl (ih _ _ _ h)
+    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+      obtain ⟨G, hG, hr⟩ := h
+      exact .defFns hG (ih _ _ _ hr)
+    · exact .chk (ih _ _ _ h)
+
 variable {P} in
 theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) (h2 : RunS P ρ c b) : a = b := by
   induction h1 generalizing b with

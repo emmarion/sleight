@@ -47,5 +47,22 @@ unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
-unchecked examples/paradox_univ_subterm_bad.sl: <proof>
+unchecked examples/paradox_univ_subterm_bad.sl: _
 unchecked examples/refuted_branch_bad.sl: (Zero)
+stripped examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
+stripped examples/anon_level.sl: (Succ (Succ (Zero)))
+stripped examples/binder_refute.sl: (Zero)
+stripped examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
+stripped examples/else.sl: (Succ (Zero)) (Zero) (Zero)
+stripped examples/eq_sym.sl: (Refl (Nat) (Zero))
+stripped examples/erased.sl: (Succ (Succ (Zero)))
+stripped examples/ex_falso.sl: (Zero)
+stripped examples/inferred.sl: (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
+stripped examples/is_entries.sl: (Succ (Zero)) (Succ (Zero))
+stripped examples/is_fn.sl: (Succ (Succ (Zero))) (Succ (Succ (Zero)))
+stripped examples/length.sl: (Succ (Succ (Succ (Zero))))
+stripped examples/let_binders.sl: (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ (Succ (Zero))))
+stripped examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat))) (Succ (Succ (Zero)))
+stripped examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
+stripped examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
+stripped examples/vec_head.sl: (Succ (Zero))

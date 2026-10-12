@@ -4,3 +4,4 @@ import Minimal
 #print axioms Minimal.checked_runs
 #print axioms Minimal.no_false
 #print axioms Minimal.RunS.det
+#print axioms Minimal.runS_sound
