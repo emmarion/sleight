@@ -196,13 +196,25 @@
 
 (def-lvl nat-lvl)
 
+(def-fns nat-lvl $ (many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d))
+  (let ((many b) (erased p)) (add a a))
+  (values b (add-diag-double a b p)))
+
 (def-fns nat-lvl $ (many lt-dec : (many (Nat) a) (many (Nat) b) -> (many (Dec a b) d))
   (match many (nat-cmp a b) _
     ((CLt _ _ _ _ p) (Yes a b p))
     ((CEq _ _ _) (No a b (lt-succ a)))
     ((CGt _ _ _ _ q) (No a b (lt-weaken b a q)))))
 
+(def-fns _ $ (many pow2 : (subterm many (Nat) k) -> (many (Nat) v) (erased (Pow2 k v) p) (erased (Lt (Zero) v) q))
+  (let-match many k (Succ k1) ((Zero) (values (Succ (Zero)) (P0) (LtZ (Zero)))))
+  (let ((many v) (erased p) (erased q)) (notail $ pow2 k1))
+  (let ((many w) (erased d)) (double v))
+  (values w (PS k1 v w p d) (double-pos v w q d)))
+
 (let ((many eight)) (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))))))
+
+(let ((many u8-modulus) (erased u8-modulus-pow2) (erased u8-modulus-pos)) (pow2 eight))
 
 (let ((erased sixty) (erased sixty-mul)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
 
@@ -273,6 +285,18 @@
     (many N2 : (erased (Bin) b) (erased (Nat) m) (erased (Nat) d) (erased (Numeral b m) v) (erased (Double m d) dd)
        -> (Numeral (B2 b) (Succ (Succ d))))))
 
+(def-fns _ $ (many bin-to-nat : (subterm many (Bin) b) -> (many (Nat) n) (erased (Numeral b n) v))
+  (match many b _
+    ((BZ) (values (Zero) (NZ)))
+    ((B1 b1)
+      (let ((many m) (erased v1)) (notail $ bin-to-nat b1))
+      (let ((many d) (erased dd)) (double m))
+      (values (Succ d) (N1 b1 m d v1 dd)))
+    ((B2 b1)
+      (let ((many m) (erased v1)) (notail $ bin-to-nat b1))
+      (let ((many d) (erased dd)) (double m))
+      (values (Succ (Succ d)) (N2 b1 m d v1 dd)))))
+
 (def-fns _ $ (erased lt-unique :
     (erased (Nat) a) (erased (Nat) b) (subterm erased (Lt a b) p) (erased (Lt a b) q) ->
     (erased (Eq (Lt a b) p q) e))
@@ -295,6 +319,12 @@
   (let-match erased q (PS _ w1 w2 q1 d2)
     (absurd P0))
   (match erased (pow2-fn k1 v1 w1 p1 q1) _ ((Refl _ _) (double-fn v1 v2 w2 d1 d2))))
+
+(def-fns _ $ (many shl : (many (Nat) n) (many (Nat) k) ->
+    (many (Nat) r) (erased (Nat) v) (erased (Pow2 k v) pk) (erased (Mul n v r) p))
+  (let ((many v) (erased pk) (erased _)) (pow2 k))
+  (let ((many r) (erased p)) (mul n v))
+  (values r v pk p))
 
 (def-adts $ (Bit : -> Type)
   enum
@@ -342,11 +372,25 @@
     ((H1 m d dd) (values m (Bit1) (BC1 m d dd)))
     ((H2 m d dd) (values (Succ m) (Bit0) (BC0 (Succ m) (Succ (Succ d)) (DS m d dd))))))
 
+(def-fns _ $ (many bit-snoc : (many (Nat) c) (many (Bit) z) -> (many (Nat) c2) (erased (BitCons c z c2) p))
+  (let ((many d) (erased dd)) (double c))
+  (match many z _
+    ((Bit0) (values d (BC0 c d dd)))
+    ((Bit1) (values (Succ d) (BC1 c d dd)))))
+
 (def-fns _ $ (many bit-apply : (many (BitOp) t) (many (Bit) x) (many (Bit) y) -> (many (Bit) z) (erased (BitApply t x y z) e))
   (let-match many t (MkBitOp f01 f10 f11))
   (match many x _
     ((Bit0) (match many y _ ((Bit0) (values (Bit0) (Ap00 t))) ((Bit1) (values f01 (Ap01 f01 f10 f11)))))
     ((Bit1) (match many y _ ((Bit0) (values f10 (Ap10 f01 f10 f11))) ((Bit1) (values f11 (Ap11 f01 f10 f11)))))))
+
+(def-fns _ $ (many bitwise-step : (many (BitOp) t) (erased (Nat) a) (erased (Nat) b) (erased (Nat) a1) (erased (Nat) b1)
+    (many (Bit) x) (many (Bit) y) (erased (BitCons a1 x a) pa) (erased (BitCons b1 y b) pb)
+    (many (Nat) c1) (erased (Bitwise t a1 b1 c1) p1) ->
+    (many (Nat) c) (erased (Bitwise t a b c) p))
+  (let ((many z) (erased e)) (bit-apply t x y))
+  (let ((many c) (erased pc)) (bit-snoc c1 z))
+  (values c (BwBit t a1 b1 c1 x y z a b c p1 e pa pb pc)))
 
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)

@@ -186,7 +186,7 @@ produces nothing (section 27).
   with the parameters' and of the term's type with what the position
   expects. An unsolved `_` is an error. The checker then checks the
   program as filled in, so the inference is not trusted.
-- Numerals (section 45). Each numeral of a program is one entry, made
+- Numerals (section 45), up to 100000. Each numeral of a program is one entry, made
   at the top level before the first form that mentions it: a `Nat` of
   the prelude, the numeral's `Succ`s at run time, with no rule, so the
   checker sees it as opaque. Its `Numeral` proof is not made.

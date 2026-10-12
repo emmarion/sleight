@@ -294,11 +294,11 @@ def withTail {α : Type} (b : Bool) (x : M α) : M α := do
   modify fun st => { st with tail := t0 }
   return r
 
-def returnsBinders (xs : List String) : List Sx → Bool
-  | [.atom x] => xs == [x]
-  | [.list (.atom "values" :: es)] => es == xs.map .atom
+def returnsBinders (xs : List String) (want : List Bool) : List Sx → Bool
+  | [.list (.atom "values" :: es)] => (es.zip want).filterMap (fun (e, w) => if w then none else some e) == xs.map .atom
+  | [e] => !want.head?.getD true && xs == [e.show]
   | .list (.atom "let" :: .list bs :: _) :: rest =>
-    bs.all (· matches .list (.atom "erased" :: _)) && returnsBinders xs rest
+    bs.all (· matches .list (.atom "erased" :: _)) && returnsBinders xs want rest
   | _ => false
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
@@ -324,6 +324,7 @@ def internLits (e : Sx) : M (List Stmt) := do
   let ns := (e.numerals.filter fun n => (st.lits.lookup n).isNone).eraseDups
   if ns.isEmpty then return []
   unless st.pre do throw "a numeral needs the prelude's Nat, which --no-prelude leaves out"
+  if ns.any (· > 100000) then throw "a numeral above 100000 is not supported: the runner holds a Nat in unary"
   let some d := (st.adts.filter (·.1 == "Nat")).getLast?.map (·.2) | throw "a numeral needs the prelude's Nat"
   let ctor (c : String) := (st.ctors.find? fun (x, d', _) => x == c && d' == d).map (·.2.2)
   let (some z, some sc) := (ctor "Zero", ctor "Succ") | throw "a numeral needs the prelude's Nat"
@@ -349,7 +350,7 @@ def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × Nat × Scope)
 
 mutual
 partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
-  | .list (.atom "values" :: es) => elabArgs sc es
+  | .list (.atom "values" :: es) => elabArgs sc es want
   | e@(.list (.atom h :: args)) => do
     let st ← get
     if h ∈ ["prove-subterm", "prove-predates", "predates-trans", "subterm-trans", "predates-subterm"] then
@@ -494,7 +495,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
     let r0 := (← get).rhs
     modify fun st => { st with rhs := true }
-    let (ss, ts) ← withTail ((← get).tail && returnsBinders (bs.map (·.1)) rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
+    let (ss, ts) ← withTail ((← get).tail && returnsBinders ((bs.filter (!·.2.1)).map (·.1)) want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
     modify fun st => { st with rhs := r0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
