@@ -97,7 +97,7 @@ theorem strictSub_psub (a : Tm) : ∀ b, a.strictSub b → PSub a b := by
     · exact .tail
     · exact .trans (ih1 h) .head
     · exact .trans (ih2 h) .tail
-  | ty _ x ih | con _ _ x ih =>
+  | app _ x _ ih =>
     simp only [strictSub, Bool.or_eq_true, beq_iff_eq]
     rintro (rfl | h)
     · constructor

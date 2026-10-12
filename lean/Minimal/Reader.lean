@@ -40,6 +40,7 @@ inductive Ref where
   | fv (i : Nat)
   | bnd (lv : Nat)
   | fn (i lvl : Nat)
+  | ctor (i : Nat)
 
 structure ESt where
   n : Nat := 0
@@ -65,12 +66,32 @@ abbrev Scope := List (String × Ref)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   match sc.lookup x with
-  | some (.fv i) | some (.fn i _) => pure (.fv i)
+  | some (.fv i) | some (.fn i _) | some (.ctor i) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
-  | none => throw s!"unbound name {x}"
+  | none => do
+    let st ← get
+    let first (d : Nat) := if ((st.lifts.lookup d).getD []).isEmpty then pure () else
+      throw s!"{x} mentions top-level entries and is not first class"
+    match st.adts.lookup x, st.ctors.lookup x with
+    | some d, _ => first d; pure (.tyc d)
+    | _, some (d, c) => first d; pure (.vc d c)
+    | _, _ => throw s!"unbound name {x}"
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
-  (sc.findSome? fun | (_, .fn j l) => if j == i then some (Ref.fn j l) else none | _ => none).getD (.fv i)
+  (sc.findSome? fun
+    | (_, .fn j l) => if j == i then some (Ref.fn j l) else none
+    | (_, .ctor j) => if j == i then some (Ref.ctor j) else none
+    | _ => none).getD (.fv i)
+
+def isCtorTy : Tm → Bool
+  | .tyCtor _ | .valCtor _ => true
+  | _ => false
+
+def entRef (i : Nat) (T : Tm) : Ref := if isCtorTy T then .ctor i else .fv i
+
+def teleTys : Tm → List Tm
+  | .bind _ A r => A :: teleTys r
+  | _ => []
 
 def levelOf (sc : Scope) (f : String) : M Nat := do
   match sc.lookup f with
@@ -119,14 +140,17 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
     let l ← elabTm sc depth l
     let t ← elabTele sc depth (ps ++ rs)
     return .fn l ps.length t
+  | .list [.atom "TyCtor", .list ps] => return .tyCtor (← elabTele sc depth ps)
+  | .list [.atom "ValCtor", .list fs, ret] => return .valCtor (← elabTele sc depth (fs ++ [.list [ret, .atom "_"]]))
   | .list (.atom h :: args) => do
     let st ← get
     let args ← args.mapM (elabTm sc depth)
     let lift d := ((st.lifts.lookup d).getD []).map Tm.fv
-    match st.adts.lookup h, st.ctors.lookup h with
-    | some d, _ => pure (.ty d (.ofList (lift d ++ args)))
-    | _, some (d, c) => pure (.con d c (.ofList (lift d ++ args)))
-    | _, _ => throw s!"{h} is not a type or constructor, in a type"
+    match sc.lookup h, st.adts.lookup h, st.ctors.lookup h with
+    | none, some d, _ => pure (.app (.tyc d) (.ofList (lift d ++ args)))
+    | none, _, some (d, c) => pure (.app (.vc d c) (.ofList (lift d ++ args)))
+    | some _, _, _ => pure (.app (← look sc depth h) (.ofList args))
+    | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
   | _ => throw "malformed term"
 
 partial def elabTele (sc : Scope) (depth : Nat) : List Sx → M Tm
@@ -156,8 +180,9 @@ def abst (ids : List Nat) : Nat → Tm → Tm
     | none => .fv i
   | D, .cons h t => .cons (abst ids D h) (abst ids D t)
   | D, .bind k a r => .bind k (abst ids D a) (abst ids (D + 1) r)
-  | D, .ty d a => .ty d (abst ids D a)
-  | D, .con d c a => .con d c (abst ids D a)
+  | D, .app h a => .app (abst ids D h) (abst ids D a)
+  | D, .tyCtor p => .tyCtor (abst ids D p)
+  | D, .valCtor p => .valCtor (abst ids D p)
   | D, .predates A x L => .predates (abst ids D A) (abst ids D x) (abst ids D L)
   | D, .subterm A a B b => .subterm (abst ids D A) (abst ids D a) (abst ids D B) (abst ids D b)
   | D, .fn l np t => .fn (abst ids D l) np (abst ids D t)
@@ -242,11 +267,13 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
       let [i] ← fresh [false] | throw "fresh"
       return (ss ++ [.prim p false], [.fv i])
     else if h == "match" then elabMatch sc want args
-    else if h ∈ keywords || (st.adts.lookup h).isSome || (st.ctors.lookup h).isSome then
+    else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
-      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.ty d (.ofList ((← liftOf d) ++ ts))])
-      | _, some (d, c) => let (ss, ts) ← elabArgs sc args; return (ss, [.con d c (.ofList ((← liftOf d) ++ ts))])
+      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
+      | _, some (d, c) => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
       | _, _ => return ([], [← elabTm sc 0 e])
+    else if let some (.ctor i) := sc.lookup h then
+      let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
     else do
       let f ← look sc 0 h
       let args := args.filter fun | .list [.atom "predates", .atom "_"] | .list [.atom "subterm", .atom "_"] => false
@@ -296,7 +323,8 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     reset base
     let fs ← fresh (if er then names.map fun _ => true else (fieldErs sig).take names.length)
-    let body ← ghostly er (elabBody ((names.zip (fs.map Ref.fv)).reverse ++ sc) rms items)
+    let body ← ghostly er (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
+      rms items)
     out := out ++ [(d', ci, body)]
   reset base
   let outs ← fresh rms
@@ -337,11 +365,14 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
           ss := ss ++ [.prim (.tm t) er]
           note j t true
           pure j
+      let mut r := match t with | .tyc _ | .vc .. => .ctor i | _ => refOf sc i
       if let some (k, a) := ann then
         let a ← elabTm sc' 0 a
         ss := ss ++ [.chk k (.fv i) a]
-        if k == .ty then note i a
-      sc' := (x, refOf sc i) :: sc'
+        if k == .ty then
+          note i a
+          r := if isCtorTy a then .ctor i else r
+      sc' := (x, r) :: sc'
     let (ss2, ts2) ← elabSeq sc' want rest
     return (ss ++ ss2, ts2)
   | .list (.atom "def-fns" :: .atom "_" :: fns) :: rest =>
@@ -366,7 +397,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
       let pents ← ps.mapM parseEntry
       let pids ← fresh (pents.map (·.1.er))
       let rents ← rs.mapM parseEntry
-      let body ← ghostly er (elabBody ((pents.map (·.2.2)).zip (pids.map Ref.fv) |>.reverse |>.append fnsc)
+      let body ← ghostly er (elabBody ((pents.map (·.2.2)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
         (rents.map fun e => er || e.1.er) items)
       pure { er, np := ps.length, tele, body : FnDef }
     let gid := (← get).groups.length

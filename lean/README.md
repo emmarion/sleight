@@ -112,9 +112,7 @@ state. SOUNDNESS.md's invariants appear as:
    `def-fns` defines, or a `let` binder written with a type; or when the
    entry is a `let` of a term, which is put in its place. Any other
    entry is refused.
-2. Type constructors and value constructors are applied only by name,
-   saturated. The `TyCtor` and `ValCtor` formers are not values.
-3. The type of the program's final expression may not mention the
+2. The type of the program's final expression may not mention the
    program's own entries, once canonicalized.
 
 ## Beyond MINIMAL.md
@@ -169,6 +167,18 @@ state. SOUNDNESS.md's invariants appear as:
   pattern; the printer leaves them out. The core's types stay closed, so
   the proofs need nothing new. `def-adts` blocks are elaborated in the
   order they are written.
+- An application `(x args)` of a variable is a constructor application,
+  a term, exactly when `x`'s type is written as a `TyCtor` or `ValCtor`
+  where `x` is bound, or `x` is a `let` binder of a constructor named
+  directly; otherwise it is a call. A constructor value reached any
+  other way, a call's result say, is applied after a `let` binder
+  written with its type. A type or constructor whose `def-adts`
+  mentions top-level entries is not first class. In the core every
+  application is one former, `Tm.app`, whose head is a declared type
+  constructor, a declared value constructor or a variable, and is typed
+  through its head's type; a value of a `ValCtor` type is a declared
+  constructor with exactly that signature, and one of a `TyCtor` type a
+  declared type constructor.
 - A `let` binder written `(T x)` or `(e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.

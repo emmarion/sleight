@@ -1,0 +1,13 @@
+; DESIGN.md section 24: type and value constructors as values
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (List ((Type A)) (Nil ((Type A)) (List A)) (Cons ((Type A) (A head) ((List A) rest)) (List A))))
+(def-adts (Eq ((Type A) (A x) (A y)) (Refl ((Type A) (A x)) (Eq A x x))))
+(def-lvl L)
+(def-fns L (twice ((Type A) ((ValCtor ((Type B) (B h) ((List B) t)) (List B)) c) (A x) ((List A) xs))
+    (((List A) r))
+  (c A x (c A x xs))))
+(def-fns L (wrap (((TyCtor ((Type A))) F) (Type A) ((F A) x)) (((F A) y)) x))
+(def-fns L (never (((ValCtor (((Nat) n)) (Nat)) c) ((Eq (Nat) (c (Zero)) (Zero)) e)) (((Nat) r))
+  (match e (((Nat) r)))))
+(let (s) Succ)
+(values (twice (Nat) Cons (Zero) (Nil (Nat))) (wrap List (Nat) (Cons (Nat) (s (Zero)) (Nil (Nat)))))

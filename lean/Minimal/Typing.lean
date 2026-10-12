@@ -60,7 +60,7 @@ def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=
   let (Γf, rem) := Γ.openTele sig m
   match rem with
   | .bind (.ty _ _) R .nil =>
-    (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.con d c (Γ.fields m))), (Γ.canon (.ty d idx), Γf.canon R)])
+    (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.app (.vc d c) (Γ.fields m))), (Γ.canon (.app (.tyc d) idx), Γf.canon R)])
   | _ => (Γf, .unknown)
 
 end Ctx
@@ -74,10 +74,15 @@ variable (P : Prog)
 mutual
 def rt (Γ : Ctx) : Tm → Bool
   | .fv i => !Γ.er i
-  | .con d c args => match P.ctor d c with
+  | .app (.vc d c) args => match P.ctor d c with
     | some sig => rtArgs Γ args sig
     | none => false
-  | .ty .. | .univ | .level | .predates .. | .subterm .. | .fn .. => true
+  | .app (.fv i) args => match (Γ.tys[i]?).map Γ.canon with
+    | some (.valCtor sig) => !Γ.er i && rtArgs Γ args sig
+    | some (.tyCtor _) => true
+    | _ => false
+  | .app (.tyc _) _ | .tyc _ | .vc .. | .tyCtor _ | .valCtor _ | .univ | .level | .predates .. | .subterm .. | .fn .. =>
+    true
   | _ => false
 
 def rtArgs (Γ : Ctx) : Tm → Tm → Bool
@@ -98,8 +103,13 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | fvIs : Γ.tys[i]? = some .nil → Γ.σ i = some t → TmTy Γ t T → TmTy Γ (.fv i) T
   | univ : TmTy Γ .univ .univ
   | level : TmTy Γ .level .univ
-  | ty : P.adts[d]? = some D → ArgsTy Γ args D.params .nil → TmTy Γ (.ty d args) .univ
-  | con : P.ctor d c = some sig → ArgsTy Γ args sig (.bind (.ty m e) T .nil) → TmTy Γ (.con d c args) T
+  | tyc : P.adts[d]? = some D → TmTy Γ (.tyc d) (.tyCtor D.params)
+  | vc : P.ctor d c = some sig → TmTy Γ (.vc d c) (.valCtor sig)
+  | tyApp : TmTy Γ h H → Γ.canon H = .tyCtor ps → ArgsTy Γ args ps .nil → TmTy Γ (.app h args) .univ
+  | vcApp : TmTy Γ h H → Γ.canon H = .valCtor sig → ArgsTy Γ args sig (.bind (.ty m e) T .nil) →
+      TmTy Γ (.app h args) T
+  | tyCtor : TeleOK Γ ps → (Tm.tyCtor ps).static Γ.n 0 → TmTy Γ (.tyCtor ps) .univ
+  | valCtor : TeleOK Γ sig → (Tm.valCtor sig).static Γ.n 0 → TmTy Γ (.valCtor sig) .univ
   | predates : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ x X → Γ.canon X = Γ.canon A →
       TmTy Γ L K → Γ.canon K = .level → TmTy Γ (.predates A x L) .univ
   | subterm : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ a A' → Γ.canon A' = Γ.canon A →
@@ -160,7 +170,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) →
       CoreTy b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets →
       CoreTy b Γ (.call f dec args er ms rest) rets
-  | mtch : TmTy P Γ s St → Γ.canon St = .ty d idx → P.adts[d]? = some D →
+  | mtch : TmTy P Γ s St → Γ.canon St = .app (.tyc d) idx → P.adts[d]? = some D →
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (er || Γ.ok (rt P Γ s)) →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig →

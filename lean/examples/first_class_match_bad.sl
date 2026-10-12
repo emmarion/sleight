@@ -1,0 +1,6 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (List ((Type A)) (Nil ((Type A)) (List A)) (Cons ((Type A) (A head) ((List A) rest)) (List A))))
+(def-lvl L)
+(def-fns L (len (((TyCtor ((Type A))) F) ((F (Nat)) x)) (((Nat) n))
+  (match x (((Nat) n)) ((Nil a) (Zero)) ((Cons a h t) (Zero)))))
+(len List (Nil (Nat)))

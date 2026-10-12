@@ -9,7 +9,8 @@ namespace Tm
 def kids : Tm → List Tm
   | cons h t => [h, t]
   | bind _ a r => [a, r]
-  | ty _ a | con _ _ a => [a]
+  | app h a => [h, a]
+  | tyCtor p | valCtor p => [p]
   | predates A x L => [A, x, L]
   | subterm A a B b => [A, a, B, b]
   | fn l _ t => [l, t]
@@ -19,8 +20,7 @@ def sameHead : Tm → Tm → Bool
   | fv _, _ | _, fv _ => false
   | cons .., cons .. | predates .., predates .. | subterm .., subterm .. => true
   | bind m .., bind m' .. => m == m'
-  | ty d _, ty d' _ => d == d'
-  | con d c _, con d' c' _ => d == d' && c == c'
+  | app .., app .. | tyCtor _, tyCtor _ | valCtor _, valCtor _ => true
   | fn _ np _, fn _ np' _ => np == np'
   | a, b => a == b
 

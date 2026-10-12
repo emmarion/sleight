@@ -6,12 +6,13 @@ namespace Minimal
 def Prog.lifted (P : Prog) (d : Nat) : Nat := ((P.adts[d]?).map (·.lifted)).getD 0
 
 partial def Prog.show (P : Prog) : Tm → String
-  | .con d c args =>
-    let name := ((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}"
-    "(" ++ " ".intercalate (name :: (args.toList.drop (P.lifted d)).map P.show) ++ ")"
-  | .ty d args =>
-    let name := ((P.adts[d]?).map (·.name)).getD s!"T{d}"
-    "(" ++ " ".intercalate (name :: (args.toList.drop (P.lifted d)).map P.show) ++ ")"
+  | .app h args =>
+    let d := match h with | .tyc d | .vc d _ => d | _ => 0
+    "(" ++ " ".intercalate (P.show h :: (args.toList.drop (P.lifted d)).map P.show) ++ ")"
+  | .vc d c => ((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}"
+  | .tyc d => ((P.adts[d]?).map (·.name)).getD s!"T{d}"
+  | .tyCtor .. => "(TyCtor ...)"
+  | .valCtor .. => "(ValCtor ...)"
   | .univ => "Type"
   | .level => "(Level)"
   | .lvl n => s!"<level {n}>"

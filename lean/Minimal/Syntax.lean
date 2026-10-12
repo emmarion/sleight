@@ -18,8 +18,11 @@ inductive Tm where
   | nil
   | cons (h t : Tm)
   | bind (k : Ent) (ty rest : Tm)
-  | ty (d : Nat) (args : Tm)
-  | con (d c : Nat) (args : Tm)
+  | app (h args : Tm)
+  | tyc (d : Nat)
+  | vc (d c : Nat)
+  | tyCtor (ps : Tm)
+  | valCtor (sig : Tm)
   | univ
   | level
   | predates (A x L : Tm)
@@ -36,8 +39,9 @@ def subst (f : Nat → Tm) : Tm → Tm
   | fv i => f i
   | cons h t => cons (h.subst f) (t.subst f)
   | bind m a r => bind m (a.subst f) (r.subst f)
-  | ty d a => ty d (a.subst f)
-  | con d c a => con d c (a.subst f)
+  | app h a => app (h.subst f) (a.subst f)
+  | tyCtor p => tyCtor (p.subst f)
+  | valCtor p => valCtor (p.subst f)
   | predates A x L => predates (A.subst f) (x.subst f) (L.subst f)
   | subterm A a B b => subterm (A.subst f) (a.subst f) (B.subst f) (b.subst f)
   | fn l np t => fn (l.subst f) np (t.subst f)
@@ -47,8 +51,9 @@ def inst : Tm → Tm → Nat → Tm
   | bv i, u, k => if i = k then u else if k < i then bv (i - 1) else bv i
   | cons h t, u, k => cons (h.inst u k) (t.inst u k)
   | bind m a r, u, k => bind m (a.inst u k) (r.inst u (k + 1))
-  | ty d a, u, k => ty d (a.inst u k)
-  | con d c a, u, k => con d c (a.inst u k)
+  | app h a, u, k => app (h.inst u k) (a.inst u k)
+  | tyCtor p, u, k => tyCtor (p.inst u k)
+  | valCtor p, u, k => valCtor (p.inst u k)
   | predates A x L, u, k => predates (A.inst u k) (x.inst u k) (L.inst u k)
   | subterm A a B b, u, k => subterm (A.inst u k) (a.inst u k) (B.inst u k) (b.inst u k)
   | fn l np t, u, k => fn (l.inst u k) np (t.inst u k)
@@ -57,8 +62,8 @@ def inst : Tm → Tm → Nat → Tm
 def size : Tm → Nat
   | cons h t => h.size + t.size + 1
   | bind _ a r => a.size + r.size + 1
-  | ty _ a => a.size + 1
-  | con _ _ a => a.size + 1
+  | app h a => h.size + a.size + 1
+  | tyCtor p | valCtor p => p.size + 1
   | predates A x L => A.size + x.size + L.size + 1
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
   | fn l _ t => l.size + t.size + 1
@@ -69,8 +74,8 @@ def levels : Tm → List Nat
   | lvl n => [n]
   | cons h t => h.levels ++ t.levels
   | bind _ a r => a.levels ++ r.levels
-  | ty _ a => a.levels
-  | con _ _ a => a.levels
+  | app h a => h.levels ++ a.levels
+  | tyCtor p | valCtor p => p.levels
   | predates A x L => A.levels ++ x.levels ++ L.levels
   | subterm A a B b => A.levels ++ a.levels ++ B.levels ++ b.levels
   | fn l _ t => l.levels ++ t.levels
@@ -82,20 +87,20 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, bv i => i < d
   | d, cons h t => h.static n d && t.static n d
   | d, bind _ a r => a.static n d && r.static n (d + 1)
-  | d, ty _ a => a.static n d
-  | d, con _ _ a => a.static n d
+  | d, app h a => h.static n d && a.static n d
+  | d, tyCtor p | d, valCtor p => p.static n d
   | d, predates A x L => A.static n d && x.static n d && L.static n d
   | d, subterm A a B b => A.static n d && a.static n d && B.static n d && b.static n d
   | d, fn l _ t => l.static n d && t.static n d
-  | _, nil | _, univ | _, level => true
+  | _, nil | _, univ | _, level | _, tyc _ | _, vc .. => true
   | _, lvl _ | _, tok | _, clo .. => false
 
 def bound : Nat → Tm → Bool
   | d, bv i => i < d
   | d, cons h t => h.bound d && t.bound d
   | d, bind _ a r => a.bound d && r.bound (d + 1)
-  | d, ty _ a => a.bound d
-  | d, con _ _ a => a.bound d
+  | d, app h a => h.bound d && a.bound d
+  | d, tyCtor p | d, valCtor p => p.bound d
   | d, predates A x L => A.bound d && x.bound d && L.bound d
   | d, subterm A a B b => A.bound d && a.bound d && B.bound d && b.bound d
   | d, fn l _ t => l.bound d && t.bound d
@@ -106,8 +111,8 @@ def lc : Nat → Tm → Prop
   | d, bv i => i < d
   | d, cons h t => h.lc d ∧ t.lc d
   | d, bind _ a r => a.lc d ∧ r.lc (d + 1)
-  | d, ty _ a => a.lc d
-  | d, con _ _ a => a.lc d
+  | d, app h a => h.lc d ∧ a.lc d
+  | d, tyCtor p | d, valCtor p => p.lc d
   | d, predates A x L => A.lc d ∧ x.lc d ∧ L.lc d
   | d, subterm A a B b => A.lc d ∧ a.lc d ∧ B.lc d ∧ b.lc d
   | d, fn l _ t => l.lc d ∧ t.lc d
@@ -117,8 +122,8 @@ def fvs : Tm → List Nat
   | fv i => [i]
   | cons h t => h.fvs ++ t.fvs
   | bind _ a r => a.fvs ++ r.fvs
-  | ty _ a => a.fvs
-  | con _ _ a => a.fvs
+  | app h a => h.fvs ++ a.fvs
+  | tyCtor p | valCtor p => p.fvs
   | predates A x L => A.fvs ++ x.fvs ++ L.fvs
   | subterm A a B b => A.fvs ++ a.fvs ++ B.fvs ++ b.fvs
   | fn l _ t => l.fvs ++ t.fvs
@@ -153,13 +158,12 @@ def len : Tm → Nat
 inductive PSub : Tm → Tm → Prop
   | head : PSub h (cons h t)
   | tail : PSub t (cons h t)
-  | ty : PSub a (ty d a)
-  | con : PSub a (con d c a)
+  | app : PSub a (app h a)
   | trans : PSub a b → PSub b c → PSub a c
 
 def strictSub (a : Tm) : Tm → Bool
   | cons h t => a == h || a == t || a.strictSub h || a.strictSub t
-  | ty _ x | con _ _ x => a == x || a.strictSub x
+  | app _ x => a == x || a.strictSub x
   | _ => false
 
 def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i nil

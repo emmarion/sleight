@@ -12,6 +12,9 @@ examples/erased_let_bad.sl: refused: a non-erased let binder of an erased entry
 examples/erased_match_bad.sl: refused: a non-erased match on an erased scrutinee
 examples/erased_result_bad.sl: refused: a non-erased result mentions an erased entry
 examples/ex_falso.sl: (Zero)
+examples/first_class.sl: (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))
+examples/first_class_bad.sl: refused: argument of the wrong type
+examples/first_class_match_bad.sl: refused: scrutinee not of a data type
 examples/inferred.sl: (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 examples/inferred_bad.sl: refused: subterm: not a strict subterm
 examples/is_arg_bad.sl: refused: argument not the term its is entry names
@@ -38,6 +41,8 @@ unchecked examples/erased_fn_bad.sl: (Zero)
 unchecked examples/erased_let_bad.sl: (Zero)
 unchecked examples/erased_match_bad.sl: (Zero)
 unchecked examples/erased_result_bad.sl: (Zero)
+unchecked examples/first_class_bad.sl: (Nil (Nat) (Zero) (Nil (Nat)))
+unchecked examples/first_class_match_bad.sl: (Zero)
 unchecked examples/inferred_bad.sl: stuck: call does not decrease
 unchecked examples/is_arg_bad.sl: (MkTwo (Zero) (Succ (Zero)))
 unchecked examples/let_is_bad.sl: (Zero)
@@ -57,6 +62,7 @@ stripped examples/else.sl: (Succ (Zero)) (Zero) (Zero)
 stripped examples/eq_sym.sl: (Refl (Nat) (Zero))
 stripped examples/erased.sl: (Succ (Succ (Zero)))
 stripped examples/ex_falso.sl: (Zero)
+stripped examples/first_class.sl: (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))
 stripped examples/inferred.sl: (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 stripped examples/is_entries.sl: (Succ (Zero)) (Succ (Zero))
 stripped examples/is_fn.sl: (Succ (Succ (Zero))) (Succ (Succ (Zero)))

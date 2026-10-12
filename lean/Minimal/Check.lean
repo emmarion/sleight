@@ -17,7 +17,7 @@ def retOf : Tm → Option Tm
 structure ProgOK (P : Prog) : Prop where
   params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params ∧ D.params.static 0 0
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
-    TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx)
+    TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx)
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
   ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
@@ -34,19 +34,33 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     | none, _ => .error s!"unbound entry {i}"
   | .univ => .ok ⟨.univ, .univ⟩
   | .level => .ok ⟨.univ, .level⟩
-  | .ty d args => match h : P.adts[d]? with
-    | some D => do
-      let ⟨out, ha⟩ ← checkArgs' Γ rules args D.params
-      let ⟨ho⟩ ← need (out = .nil) "type constructor applied to the wrong number of arguments"
-      .ok ⟨.univ, .ty h (ho ▸ ha)⟩
+  | .tyc d => match h : P.adts[d]? with
+    | some D => .ok ⟨_, .tyc h⟩
     | none => .error "unknown type constructor"
-  | .con d c args => match h : P.ctor d c with
-    | some sig => do
+  | .vc d c => match h : P.ctor d c with
+    | some sig => .ok ⟨_, .vc h⟩
+    | none => .error "unknown constructor"
+  | .app hd args => do
+    let ⟨H, hh⟩ ← checkTm' Γ rules hd
+    match hH : Γ.canon H with
+    | .tyCtor ps => do
+      let ⟨out, ha⟩ ← checkArgs' Γ rules args ps
+      let ⟨ho⟩ ← need (out = .nil) "type constructor applied to the wrong number of arguments"
+      .ok ⟨.univ, .tyApp hh hH (ho ▸ ha)⟩
+    | .valCtor sig => do
       let ⟨out, ha⟩ ← checkArgs' Γ rules args sig
       match out, ha with
-      | .bind (.ty _ _) T .nil, ha => .ok ⟨T, .con h ha⟩
+      | .bind (.ty _ _) T .nil, ha => .ok ⟨T, .vcApp hh hH ha⟩
       | _, _ => .error "constructor applied to the wrong number of arguments"
-    | none => .error "unknown constructor"
+    | _ => .error "applied a head that is not a constructor"
+  | .tyCtor ps => do
+    let ⟨ht⟩ ← checkTele' Γ rules ps
+    let ⟨hs⟩ ← need ((Tm.tyCtor ps).static Γ.n 0) "TyCtor: not well scoped"
+    .ok ⟨.univ, .tyCtor ht hs⟩
+  | .valCtor sig => do
+    let ⟨ht⟩ ← checkTele' Γ rules sig
+    let ⟨hs⟩ ← need ((Tm.valCtor sig).static Γ.n 0) "ValCtor: not well scoped"
+    .ok ⟨.univ, .valCtor ht hs⟩
   | .predates A x L => do
     let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "Predates: not a type"
@@ -249,7 +263,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
   | .mtch s R0 brs els er rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
-    | .ty d idx => match hD : P.adts[d]? with
+    | .app (.tyc d) idx => match hD : P.adts[d]? with
       | some D => do
         let ⟨hl⟩ ← need (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) "a branch names a constructor of another type"
         let ⟨hR⟩ ← checkTele P Γ R0
@@ -377,18 +391,18 @@ def allIdx {α : Type} {Q : Nat → α → Prop} (f : (i : Nat) → (x : α) →
         rwa [show base + 1 + i = base + (i + 1) by omega] at this⟩
 
 def checkCtor (d : Nat) (_ : Nat) (sig : Tm) :
-    Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx))) := do
+    Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx))) := do
   let ⟨ht⟩ ← checkTele P {tys := []} sig
   let ⟨hs⟩ ← need (sig.static 0 0) "def-adts: a constructor's signature is not closed"
   match h : retOf sig with
-  | some (.ty d' idx) => do
+  | some (.app (.tyc d') idx) => do
     let ⟨e⟩ ← need (d' = d) "def-adts: a constructor returns another type"
     .ok ⟨ht, hs, idx, e ▸ h⟩
   | _ => .error "def-adts: a constructor does not return its type"
 
 def checkProg : Res {R // Checked P R} := do
   let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => (TeleOK P {tys := []} D.params ∧ D.params.static 0 0) ∧ ∀ (c : Nat) sig,
-      D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx))
+      D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx))
     (fun d D => do
       let ⟨hp⟩ ← checkTele P {tys := []} D.params
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"

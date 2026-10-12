@@ -1,0 +1,7 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (List ((Type A)) (Nil ((Type A)) (List A)) (Cons ((Type A) (A head) ((List A) rest)) (List A))))
+(def-lvl L)
+(def-fns L (apply ((Type A) ((ValCtor ((Type B) (B h) ((List B) t)) (List B)) c) (A x) ((List A) xs))
+    (((List A) r))
+  (c A x xs)))
+(apply (Nat) Nil (Zero) (Nil (Nat)))

@@ -12,7 +12,7 @@ inductive RunS : List Tm → Core → List Tm → Prop
       RunS (env.toList ++ closures env.toList gid G ++ args.toList.map (·.subst (Tm.env ρ))) F.body outs →
       RunS (ρ ++ outs) rest out → RunS ρ (.call f dec args false ms rest) out
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
-  | mtch : s.subst (Tm.env ρ) = .con d c vs → selectBr brs els c vs.toList = some (pre, body) →
+  | mtch : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
   | prim : RunS (ρ ++ [if er then .tok else p.eval ρ]) rest out → RunS ρ (.prim p er rest) out
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
@@ -33,7 +33,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
       | _ => none
     | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
     | .mtch s _ brs els false rest => match s.subst (Tm.env ρ) with
-      | .con _ c vs => do
+      | .app (.vc _ c) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         let outs ← runS fuel (ρ ++ pre) body
         runS fuel (ρ ++ outs) rest
@@ -94,11 +94,12 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
 
 mutual
 inductive Real : Tm → Tm → Prop
-  | con : P.ctor d c = some sig → Reals vsS vs sig → Real (.con d c vsS) (.con d c vs)
+  | con : P.ctor d c = some sig → Reals vsS vs sig → Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
+  | vc : Real (.vc d c) (.vc d c)
   | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false →
       envS.length = env.length → (∀ i, G.ers.getD i true = false → Real (Tm.env envS i) (Tm.env env i)) →
       Real (.clo (.ofList envS) gid j) (.clo (.ofList env) gid j)
-  | other : (∀ d c vs, v ≠ .con d c vs) → (∀ e g j, v ≠ .clo e g j) → Real vS v
+  | other : (∀ d c vs, v ≠ .app (.vc d c) vs) → (∀ d c, v ≠ .vc d c) → (∀ e g j, v ≠ .clo e g j) → Real vS v
 
 inductive Reals : Tm → Tm → Tm → Prop
   | nil : Reals .nil .nil t
