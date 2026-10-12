@@ -284,6 +284,10 @@
 
 (let ((many u8-modulus) (erased u8-modulus-pow2) (erased u8-modulus-pos)) (pow2 eight))
 
+(def-adts $ (U8 : -> Type)
+  enum newtype
+  (many MkU8 : (many (Nat) n) (erased (Lt n u8-modulus) p) -> (U8)))
+
 (let ((erased sixty) (erased sixty-mul)) (mul (Succ (Succ (Succ (Succ (Succ (Succ (Zero))))))) (Succ (Succ eight))))
 
 (let ((erased sixty-two) (erased sixty-two-add)) (add sixty (Succ (Succ (Zero)))))
@@ -604,9 +608,93 @@
       (let ((erased ed)) (double-fn x1 d1 bb dd1 ddx))
       (match erased ed _ ((Refl _ _) (Refl (Nat) n))))))
 
+(def-adts $ (Char : -> Type)
+  enum newtype
+  (many MkChar : (many (U8) u) -> (Char)))
+
+(def-adts
+  ((CharLt : ((Char) a) ((Char) b) -> Type)
+    enum
+    (many MkCharLt : (erased (Nat) m) (erased (Nat) n)
+                     (erased (Lt m u8-modulus) pm) (erased (Lt n u8-modulus) pn)
+                     (erased (Lt m n) p) -> (CharLt (MkChar (MkU8 m pm)) (MkChar (MkU8 n pn))))))
+
 (def-lvl char-lvl)
 
+(def-adts $ (String : -> Type)
+  enum
+  (many SNil : -> (String))
+  (many SCons : (many (Char) c) (many (String) rest) -> (String)))
+
+(def-adts
+  ((Append : ((String) a) ((String) b) ((String) c) -> Type)
+    enum
+    (many AppNil : (erased (String) b) -> (Append (SNil) b b))
+    (many AppCons : (erased (Char) ch) (erased (String) a) (erased (String) b) (erased (String) c) (erased (Append a b c) q)
+       -> (Append (SCons ch a) b (SCons ch c)))))
+
+(def-fns _ $ (many append : (subterm many (String) a) (many (String) b) -> (many (String) c) (erased (Append a b c) p))
+  (let-match many a (SCons ch rest) ((SNil) (values b (AppNil b))))
+  (let ((many c) (erased q)) (notail $ append rest b))
+  (values (SCons ch c) (AppCons ch rest b c q)))
+
 (def-lvl str-lvl)
+
+(def-fns str-lvl $ (many trim : (many (String) s) -> (many s is t))
+  s)
+
+(def-adts
+  ((StrLt : ((String) a) ((String) b) -> Type)
+    enum
+    (many SLtNil : (erased (Char) d) (erased (String) t) -> (StrLt (SNil) (SCons d t)))
+    (many SLtHead : (erased (Char) c) (erased (Char) d) (erased (String) s) (erased (String) t) (erased (CharLt c d) p) -> (StrLt (SCons c s) (SCons d t)))
+    (many SLtTail : (erased (Char) c) (erased (String) s) (erased (String) t) (erased (StrLt s t) p) -> (StrLt (SCons c s) (SCons c t)))))
+
+(def-adts
+  ((StrLength : ((String) s) ((Nat) n) -> Type)
+    enum
+    (many SLenNil : -> (StrLength (SNil) (Zero)))
+    (many SLenCons : (erased (Char) c) (erased (String) s) (erased (Nat) n) (erased (StrLength s n) p) -> (StrLength (SCons c s) (Succ n)))))
+
+(def-fns _ $ (many str-length : (subterm many (String) s) -> (many (Nat) n) (erased (StrLength s n) p))
+  (let-match many s (SCons c rest) ((SNil) (values (Zero) (SLenNil))))
+  (let ((many n) (erased p)) (notail $ str-length rest))
+  (values (Succ n) (SLenCons c rest n p)))
+
+(def-fns _ $ (many str-split : (many (String) s) (subterm many (Nat) k) (erased (Nat) len) (erased (StrLength s len) l) (erased (Lt k (Succ len)) le) ->
+    (many (String) a) (many (String) b) (erased (Append a b s) p) (erased (StrLength a k) la))
+  (let-match many k (Succ k1) ((Zero) (values (SNil) s (AppNil s) (SLenNil))))
+  (let-match many s (SCons c rest) (absurd (SNil) (let-match erased l (SLenNil)) (let-match erased le (LtS _ _ q)) q))
+  (let-match erased l (SLenCons _ _ len1 l1))
+  (let-match erased le (LtS _ _ q))
+  (let ((many a1) (many b) (erased p) (erased la1)) (notail $ str-split rest k1 len1 l1 q))
+  (values (SCons c a1) b (AppCons c a1 b rest p) (SLenCons c a1 k1 la1)))
+
+(def-adts $ (Rope : -> Type)
+  enum
+  (many REmpty : -> (Rope))
+  (many RStr : (many (String) s) -> (Rope))
+  (many RCat : (many (Rope) a) (many (Rope) b) -> (Rope))
+  (many RChar : (many (Char) c) -> (Rope)))
+
+(def-adts
+  ((Flat : ((Rope) r) ((String) s) -> Type)
+    enum
+    (many FlatEmpty : -> (Flat (REmpty) (SNil)))
+    (many FlatStr : (erased (String) s) -> (Flat (RStr s) s))
+    (many FlatCat : (erased (Rope) a) (erased (Rope) b) (erased (String) s1) (erased (String) s2) (erased (String) s)
+                    (erased (Flat a s1) p) (erased (Flat b s2) q) (erased (Append s1 s2 s) ap) -> (Flat (RCat a b) s))
+    (many FlatChar : (erased (Char) c) -> (Flat (RChar c) (SCons c (SNil))))))
+
+(def-fns _ $ (many flatten : (subterm many (Rope) r) -> (many (String) s) (erased (Flat r s) p))
+  (let-match many r (RCat a b)
+    ((REmpty) (values (SNil) (FlatEmpty)))
+    ((RStr s) (values s (FlatStr s)))
+    ((RChar c) (values (SCons c (SNil)) (FlatChar c))))
+  (let ((many s1) (erased p)) (notail $ flatten a))
+  (let ((many s2) (erased q)) (notail $ flatten b))
+  (let ((many s) (erased ap)) (append s1 s2))
+  (values s (FlatCat a b s1 s2 s p q ap)))
 
 (let ((many ten)) (Succ (Succ eight)))
 
@@ -628,6 +716,12 @@
     enum
     (many None : (erased Type A) -> (Maybe A))
     (many Some : (erased Type A) (many A a) -> (Maybe A))))
+
+(def-adts
+  ((Result : (Type A) -> Type)
+    enum
+    (many Ok : (erased Type A) (many A a) -> (Result A))
+    (many Fail : (erased Type A) (many (String) message) -> (Result A))))
 
 (def-adts
   ((List : (Type A) -> Type)
@@ -693,9 +787,39 @@
   (many Start : -> (Stopwatch))  ; allocates the answer, compacts the heap, then reads
   (many Stop : -> (Stopwatch)))
 
+(def-adts $ (Request : (Type A) -> Type)
+  enum
+  (many WriteOut : (many (String) text) -> (Request (Unit)))
+  (many WriteErr : (many (String) text) -> (Request (Unit)))
+  (many ReadLine : -> (Request (Maybe (String))))  ; newline stripped; None at EOF
+  (many ReadFile : (many (String) path) -> (Request (Result (String))))
+  (many ReadFileIn : (many (String) dir) (many (String) path) -> (Request (Result (String))))
+  (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many GetArgs : -> (Request (List (String))))
+  (many GetEnv : (many (String) name) -> (Request (Maybe (String))))
+  (many GetEnvs : -> (Request (List (Pair (String) (String)))))
+  (many AppendFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
+  (many ReadRemaining : -> (Request (String)))
+  (many ListDir : (many (String) path) -> (Request (Result (List (String)))))  ; sorted, without . and ..
+  (many GetCwd : -> (Request (String)))
+  (many Stat : (many (String) path) -> (Request (Result (EntryKind))))  ; Missing if absent; Fail if unreadable
+  (many MkDir : (many (String) path) -> (Request (Result (Change))))  ; one level
+  (many DeleteFile : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
+  (many DeleteDir : (many (String) path) -> (Request (Result (Change))))  ; Unchanged if absent
+  (many ConfineDir : (many (String) dir) -> (Request (Result (Unit))))
+  (many ConfineOutputBytes : (many (Nat) bytes) -> (Request (Result (Unit))))
+  (many Measure : (many (Stopwatch) s) -> (Request (Usage))))
+
 (def-adts $ (Copy : (Type A) -> Type)
   enum newtype
   (many MkCopy : (erased Type A) (many A v) -> (Copy A)))
+
+(def-adts
+  ((StrBytes : ((String) s) ((List (U8)) xs) -> Type)
+    enum
+    (many SBNil : -> (StrBytes (SNil) (Nil (U8))))
+    (many SBCons : (erased (U8) u) (erased (String) s) (erased (List (U8)) xs) (erased (StrBytes s xs) p)
+       -> (StrBytes (SCons (MkChar u) s) (Cons (U8) u xs)))))
 
 (def-adts
   ((Splice : (Type A) ((List A) xs) ((Nat) i) ((Nat) n) ((List A) ys) ((List A) zs) -> Type)
@@ -705,6 +829,11 @@
        (erased (Splice A xs (Zero) n ys zs) p) -> (Splice A (Cons A x xs) (Zero) (Succ n) (Cons A y ys) (Cons A y zs)))
     (many SpliceThere : (erased Type A) (erased A x) (erased (List A) xs) (erased (Nat) i) (erased (Nat) n) (erased (List A) ys) (erased (List A) zs)
        (erased (Splice A xs i n ys zs) p) -> (Splice A (Cons A x xs) (Succ i) n ys (Cons A x zs)))))
+
+(def-adts $ (Pos : -> Type)
+  enum
+  (many NoPos : -> (Pos))
+  (many MkPos : (many (String) file) (many (Nat) line) (many (Nat) col) -> (Pos)))
 
 (def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
   enum

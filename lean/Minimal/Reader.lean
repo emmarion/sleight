@@ -404,6 +404,14 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
           | none => pure (Dec.none, [], args)
       let (ss, ts) ← elabArgs sc args (match sc.lookup h with | some (.fn _ _ ms) => ms | _ => [])
       let outs ← fresh want
+      let known := (← get).known
+      if let some (.fn _ _ tele) := (match f with | .fv i => known.lookup i | _ => none) then
+        let _ ← (ts ++ outs.map Tm.fv).zipIdx.foldlM (fun t (a, k) => match t with
+          | .bind k' A r => do
+            if ts.length ≤ k then
+              note (outs.getD (k - ts.length) 0) A (k' matches .is _)
+            pure (r.inst a 0)
+          | t => pure t) tele
       return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want], outs.map .fv)
   | e => return ([], [← elabTm sc 0 e])
 

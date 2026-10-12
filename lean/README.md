@@ -137,8 +137,8 @@ produces nothing (section 27).
 
 1. A `def-adts` signature may mention an entry only when the elaborator
    knows its type from the text: a level, a function a `def-fns`
-   defines, a function's parameter, or a `let` binder written with a
-   type; or when the entry is a `let` of a term or an `is` parameter,
+   defines, a function's parameter, a result of a call to such a
+   function, or a `let` binder written with a type; or when the entry is a `let` of a term or an `is` parameter,
    which is put in its place. Any other entry is refused.
 
 ## Beyond MINIMAL.md

@@ -2,7 +2,7 @@ examples/absurd.sl: 1
 examples/absurd_bad.sl: refused: a branch that is not refuted is missing
 examples/absurd_listed_bad.sl: refused: an absurd branch names a constructor that is not refuted
 examples/adt_mentions.sl: 3
-examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
+examples/adt_mentions_call.sl: error: L is not an entry
 examples/annotation.sl: 2
 examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 examples/anon_level.sl: 2
@@ -68,7 +68,6 @@ examples/valctor_return_bad.sl: refused: ValCtor: the return is not an applicati
 examples/vec_head.sl: 1
 unchecked examples/absurd_bad.sl: stuck: no branch
 unchecked examples/absurd_listed_bad.sl: 0
-unchecked examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 unchecked examples/else_empty_bad.sl: 0
 unchecked examples/erased_fn_bad.sl: 0
@@ -103,6 +102,7 @@ unchecked examples/union_bad.sl: error: a match without a runtime discriminant c
 unchecked examples/valctor_return_bad.sl: 0
 stripped examples/absurd.sl: 1
 stripped examples/adt_mentions.sl: 3
+stripped examples/adt_mentions_call.sl: error: L is not an entry
 stripped examples/annotation.sl: 2
 stripped examples/anon_level.sl: 2
 stripped examples/binder_refute.sl: 0

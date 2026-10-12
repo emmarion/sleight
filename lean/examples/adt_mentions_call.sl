@@ -1,4 +1,4 @@
-(def-lvl L)
+; a def-adts signature may mention a call's result, typed by the callee's returns
 (def-fns L $ (many f : (many (Nat) n) -> (many (Nat) m))
   n)
 (let ((many h)) (f (Zero)))
