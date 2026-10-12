@@ -1,5 +1,5 @@
 ; needs: macro_lib
-; error: a handle to `k` is not a name
+; error: a handle to 1 is not a name
 (let ((many k)) 1)
 (def-fns _ $ (many m-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))

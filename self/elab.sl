@@ -902,6 +902,13 @@
   (let-match many ids (Cons _ x more) ((Nil _) (Nil _)))
   (match many m _ ((Erased) (tail $ kept-ids rest more)) (else (Cons _ x $ notail $ kept-ids rest more))))
 
+(def-fns _ $ (many forward-binders : (many (Env) e) (subterm many (List $ Nat) ids) (many (List $ Res) ress) (many (List $ Multiplicity) ms) -> (many (Env) r))
+  (let-match many ids (Cons _ x rest) ((Nil _) e))
+  (let-match many ress (Cons _ r rrest) ((Nil _) e))
+  (let-match many ms (Cons _ m mrest) ((Nil _) e))
+  (let ((many e2)) $ match many (res-term r) (((Env) _)) ((TVar y) (forward-binder e x y m)) (else e))
+  (tail $ forward-binders e2 rest rrest mrest))
+
 (def-fns _ $ (many run-form : (many (Env) env) (many (Nat) start) (many (List $ List $ Nat) ctx) (many (List $ Multiplicity) expect) (many (List $ Res) ress) (many (Hoisted ctx expect) h) -> (many (Env) r) (many (Hoisted ctx expect) h2))
   (let-match many (and (env-run-pos env) $ not $ env-failed env) (BTrue) ((BFalse) (values env h)))
   (let-match many ctx (Nil _) ((Cons _ _ _) (values env h)))
@@ -2580,7 +2587,7 @@
   (let ((many env3) (many x)) $ bind (env-hide env inner3) (None _) (Some _ $ env-loc env) (BFalse) mult (res-ty r) (Some _ t) delegate-id)
   (let ((many (Env) env4))
     (match many run _
-      ((BFalse) (match many t (((Env) _)) ((TVar y) (forward-state env3 x y)) (else env3)))
+      ((BFalse) env3)
       ((BTrue)
         (match many mult (((Env) _))
           ((Erased) (env-set-tokens env3 $ Cons _ x $ Nil _))
@@ -2589,7 +2596,7 @@
             (match many (not $ env-failed inner3) (((Env) _))
               ((BTrue) (env-run-let env3 (Cons _ mult $ Nil _) code $ Cons _ x $ Nil _))
               ((BFalse) (env-set-tokens env3 $ Cons _ x $ Nil _))))))))
-  (values (match many t (((Env) _)) ((TVar y) (forward-marks env4 x y)) (else env4)) x t))
+  (values (match many t (((Env) _)) ((TVar y) (forward-marks (forward-binder env4 x y mult) x y)) (else env4)) x t))
 
 (def-fns _ $ (many open-contradicts : (many (List $ List $ Nat) ctx) (many (Env) env) (many (Env) inner) (many (Res) r) (many (Code ctx erased-one) code) -> (many (Env) out))
   (let ((many env2) (many x) (many t)) $ open-bind ctx env inner r (Erased) code)
@@ -6223,9 +6230,9 @@
         ((Cons _ _ _) env2)
         ((Nil _)
           (let-match many run (BTrue) ((BFalse) env2))
-          (match many (and (mult-is-many $ pos-in env1 expect) $ not $ env-failed inner) (((Env) _))
+          (forward-binders (match many (and (mult-is-many $ pos-in env1 expect) $ not $ env-failed inner) (((Env) _))
             ((BTrue) (env-run-let env2 expect code ids))
-            ((BFalse) (env-set-tokens env2 ids))))))
+            ((BFalse) (env-set-tokens env2 ids))) ids ress expect))))
     (match many (or run $ not $ mult-is-many $ pos-in env1 expect) _
       ((BTrue) (values env3 ctx2 sc))
       ((BFalse) (values env3 (Cons _ many-ids ctx3) $ SSeq _ _ _ sc $ SSeq _ _ _ pre $ SLet _ expect many-ids pk code))))
@@ -6260,7 +6267,7 @@
     (let ((many (Env) env3))
       (match many run _
         ((BTrue) env2m)
-        ((BFalse) (match many (res-term r) (((Env) _)) ((TVar y) (forward-state env2m x y)) (else env2m)))))
+        ((BFalse) (match many (res-term r) (((Env) _)) ((TVar y) (forward-binder env2m x y mult)) (else env2m)))))
     (let ((many env4) (many ids) (erased lk)) $ notail $ bind-let fuel sugar root brest env3 rrest lr2 run trest (Cons _ (res-term r) done) srest)
     (values env4 (Cons _ x ids) (LsCons _ _ b x brest ids lk)))
 

@@ -2887,6 +2887,28 @@
   (match many info _
     ((MkEInfo _ _ _ s _ _ _ _) (MkEnv _ hp sc (entries-set-state _ en x s) _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 
+(def-fns _ $ (many set-hypothetical : (many (Env) e) (many (Nat) x) -> (many (Env) r))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
+  (MkEnv _ hp sc (entries-set-state _ en x $ SHypothetical _) _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
+
+(def-fns _ $ (many minted-from : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
+  (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
+  (let-match many (idmap-get _ y en) (Hit _ _ _ src _) ((Miss _ _ _ _) e))
+  (let-match many (idmap-get _ x en) (Hit _ _ _ dst _) ((Miss _ _ _ _) e))
+  (let-match many src (MkEInfo _ _ _ ss _ _ _ _))
+  (let-match many dst (MkEInfo _ _ _ ds _ _ _ _))
+  (let-match many ss (SSettled _ _ m) ((SHypothetical _) e))
+  (let-match many ds (SSettled _ v _) ((SHypothetical _) e))
+  (MkEnv _ hp sc (entries-set-state _ en x $ SSettled _ v m) _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
+
+(def-fns _ $ (many forward-binder : (many (Env) e) (many (Nat) x) (many (Nat) y) (many (Multiplicity) mult) -> (many (Env) r))
+  (let ((many run)) $ env-run-pos e)
+  (let-match many (is-settled e y) (BTrue) ((BFalse) (match many run (((Env) _)) ((BTrue) e) ((BFalse) (forward-state e x y)))))
+  (match many mult _
+    ((Once) (match many run (((Env) _)) ((BTrue) e) ((BFalse) (set-hypothetical e x))))
+    ((Many) (match many run (((Env) _)) ((BTrue) (minted-from e x y)) ((BFalse) (forward-state e x y))))
+    ((Erased) (minted-from (match many run (((Env) _)) ((BTrue) e) ((BFalse) (set-state-closed e x $ BToken _))) x y))))
+
 (def-fns _ $ (many forward-marks : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
   (let-match many (idmap-get _ y en) (Hit _ _ _ src _) ((Miss _ _ _ _) e))

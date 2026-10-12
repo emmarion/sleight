@@ -277,9 +277,14 @@ let ctor_of env loc c = match (entry env c).state with Settled (V.VCtorFn ct) ->
 let settled env v = if env.run_pos then Settled v else Hypothetical
 let ran env mult code = if not env.run_pos then None else Some (if mult = Erased then V.VToken else List.hd (Eval.eval env.values code))
 let ran_state env mult code = Option.fold ~none:Hypothetical ~some:(fun v -> Settled v) (ran env mult code)
-let forwarded env r ran =
+let forwarded env mult r ran =
   let src = match r.term with Var y -> Some (entry env y) | _ -> None in
-  let state, minted = match (ran, src) with Some v, _ -> (Settled v, None) | None, Some e -> (e.state, Some e.minted) | None, None -> (Hypothetical, None) in
+  let state, minted = match (src, ran) with
+    | Some ({ state = Settled v; _ } as e), _ when mult <> Unique -> (Settled (if mult = Erased then V.VToken else v), Some e.minted)
+    | Some { state = Settled _; _ }, _ when not env.run_pos -> (Hypothetical, None)
+    | _, Some v -> (Settled v, None)
+    | Some e, None -> (e.state, Some e.minted)
+    | None, None -> (Hypothetical, None) in
   (state, minted, Option.fold ~none:false ~some:(fun e -> e.minted_level) src, Option.bind src (fun e -> if e.introduced < 0 then None else Some e.introduced))
 let ctor_var env loc = named env loc "a constructor"
 let proof_type ctor args = App (Var ctor, args)
@@ -1262,7 +1267,7 @@ and elab_head env pos l raw =
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
-      let state, minted, minted_level, order = forwarded env r (ran env pos code) in
+      let state, minted, minted_level, order = forwarded env r.erasure r (ran env pos code) in
       let x, env = bind env ?minted ~minted_level ?introduced:order ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
       (placed env x r.place,res_of env x,V.CVar x)
@@ -1946,7 +1951,7 @@ and open_binding env l mult raw =
   let inner, r, code = elab_expr1 env mult raw in
   settle_res inner l r;
   (match canon inner r.ty with Matchable _ -> () | ty -> error_in env l "%s : %s is not a `Matchable`" (qshow inner r.term) (qshow inner ty));
-  let state, minted, minted_level, order = forwarded inner r (ran inner mult code) in
+  let state, minted, minted_level, order = forwarded inner mult r (ran inner mult code) in
   let x, env' = bind inner ?minted ~minted_level ?introduced:order ~at:l None mult state r.ty ~rule:r.term in
   (env', x, r.term, code)
 
@@ -2108,7 +2113,7 @@ and elab_let spos env l args =
       | None, None -> env
     in
     settle_res env b.s_loc r;
-    let state, minted, minted_level, order = forwarded env r (if env.run_pos then Some v else None) in
+    let state, minted, minted_level, order = forwarded env (Option.get b.s_mult) r (if env.run_pos then Some v else None) in
     if b.s_place <> None then error_in env b.s_loc "`at` is allowed only on function telescope, match annotation and value constructor entries";
     let x, env = bind env ?minted ~minted_level ?introduced:order ~word:true ~at:b.s_loc b.s_name (Option.get b.s_mult) state r.ty ~rule:r.term in
     (placed env x r.place, x :: ids, r.term :: acc)
