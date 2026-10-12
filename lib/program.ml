@@ -22,6 +22,7 @@ let driver env =
     | "WriteErr", [ s ] -> WriteErr s
     | "ReadLine", [] -> ReadLine
     | "ReadFile", [ p ] -> ReadFile p
+    | "ReadFileIn", [ d; p ] -> ReadFileIn (d, p)
     | "WriteFile", [ p; s ] -> WriteFile (p, s)
     | "GetArgs", [] -> GetArgs
     | "GetEnv", [ n ] -> GetEnv n

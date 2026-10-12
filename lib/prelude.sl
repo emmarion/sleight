@@ -988,6 +988,7 @@
   (many WriteErr : (many (String) text) -> (Request (Unit)))
   (many ReadLine : -> (Request (Maybe (String))))  ; newline stripped; None at EOF
   (many ReadFile : (many (String) path) -> (Request (Result (String))))
+  (many ReadFileIn : (many (String) dir) (many (String) path) -> (Request (Result (String))))
   (many WriteFile : (many (String) path) (many (String) text) -> (Request (Result (Unit))))
   (many GetArgs : -> (Request (List (String))))
   (many GetEnv : (many (String) name) -> (Request (Maybe (String))))
@@ -1454,6 +1455,9 @@
 
 (def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
     (unique mw is mw2 at mw) (many (Resolution) r)))
+
+(def-prim $ (many read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+    (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)))
 
 (def-adts $ (Raw : -> Type)
   enum extern

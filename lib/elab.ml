@@ -500,10 +500,11 @@ let lit_of = function
   | _ -> None
 
 let expansions = ref 0
+let sources : (string * string) list ref = ref []
 let gensyms = ref 0
-let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
-let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.Resolve; Sp.ReadFile; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let literal_handle env lit =
   ignore (intern env Reader.nowhere lit);
   let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
@@ -525,6 +526,12 @@ let implement env p args = match p, args with
          | None -> pbuild env "RUnbound" []
          | Some { state = Hypothetical; _ } -> pbuild env "RHypothetical" []
          | Some { state = Settled v; mult; minted; _ } -> pbuild env "RSettled" [ V.VHandle (minted, MintedIs, mult, if mult = Many then v else V.VToken) ]) ]
+  | Sp.ReadFile, [ _; here; path ] ->
+      let text = str_host env Reader.nowhere in
+      let read = match Ffi.unpos here with
+        | Ffi_core.MkPos (f, _, _) -> (match List.assoc_opt (text f) !sources with Some dir -> Driver_core.read_within dir (text path) | None -> Error (text f ^ ": not a source file"))
+        | NoPos -> Error "no position to read relative to" in
+      [ (match read with Ok s -> pbuild env "Ok" [ str_value env s ] | Error m -> pbuild env "Fail" [ str_value env m ]) ]
   | p, _ -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))
 
 let rec macro_of env raw =

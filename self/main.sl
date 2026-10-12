@@ -29,6 +29,11 @@
       ((None _) (let ((unique ew2) (many envt)) $ run-toplevel ew expansion-limit items 0 $ env-set-regions envw regions) (values ew2 (end-file envt)))))
   (tail $ run-files ew1 notes rest (match many first (((Env) _)) ((BTrue) (env-set-externs (env-set-prelude env2 $ env-scope env2) $ BFalse)) ((BFalse) env2)) $ BFalse))
 
+(def-fns util-lvl $ (many src-paths : (subterm many (List $ Pair (String) $ String) srcs) -> (many (List $ String) r))
+  (let-match many srcs (Cons _ ps rest) ((Nil _) (Nil _)))
+  (let-match many ps (MkPair _ _ path _))
+  (Cons _ path $ notail $ src-paths rest))
+
 (def-fns util-lvl $ (many shown : (many (Bool) first-only) (subterm many (List $ Said) ss) (many (Bool) seen) (many (List $ MsgMeta) table) -> (many (List $ String) r))
   (let-match many ss (Cons _ x rest) ((Nil _) (Nil _)))
   (let ((many lo) (many text) (many err)) $ match many x (((Loc) _) ((Maybe $ String) _) ((Bool) _))
@@ -55,7 +60,8 @@
   (let ((many with-env)) $ not $ has-flag flags "--no-env")
   (let ((many bytes)) $ flag-value flags "--confine-output-bytes")
   (let ((many fence)) $ match many (flag-value flags "--confine-dir") (((String) _)) ((Some _ d) d) ((None _) "/"))
-  (let ((many builtins)) (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help))
+  (let ((many sources)) $ list-drop _ (match many prelude (((Nat) _)) ((BTrue) 1) ((BFalse) 0)) $ src-paths srcs)
+  (let ((many builtins)) (env-set-sources (env-set-help (place-at (make-builtins) null-id $ TVar null-id) help) sources))
   (let ((unique ew)) (MkElabWorld w))
   (let ((unique ew1) (many env)) $ run-files ew (not $ has-flag flags "--no-shape-note") srcs (env-set-warn-unused (env-set-externs (match many prelude (((Env) _)) ((BTrue) builtins) ((BFalse) (env-set-prelude builtins $ env-scope builtins))) $ BTrue) $ has-flag flags "--warn-unused") prelude)
   (let-match unique ew1 (MkElabWorld w0))

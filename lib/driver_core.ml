@@ -19,6 +19,7 @@ type 'v request =
   | WriteErr of 'v
   | ReadLine
   | ReadFile of 'v
+  | ReadFileIn of 'v * 'v
   | WriteFile of 'v * 'v
   | GetArgs
   | GetEnv of 'v
@@ -100,12 +101,26 @@ let resolve ~follow p =
   in
   go 1000 [] (parts (if Filename.is_relative p then Sys.getcwd () ^ "/" ^ p else p))
 
-let admits fence ~follow p =
+let inside dir ~follow p =
   let rec prefix = function [], _ -> true | f :: fs, c :: cs -> f = c && prefix (fs, cs) | _ :: _, [] -> false in
   match resolve ~follow p with
-  | cs when prefix (parts !fence, cs) -> Ok cs
-  | _ -> Error (p ^ ": outside the confined directory " ^ !fence)
+  | cs -> Ok (if prefix (parts dir, cs) then Some cs else None)
   | exception (Sys_error _ as e) -> Error (explain e)
+
+let admits fence ~follow p =
+  Result.bind (inside !fence ~follow p) (function Some cs -> Ok cs | None -> Error (p ^ ": outside the confined directory " ^ !fence))
+
+let within dir p =
+  match path (resolve ~follow:true dir) with
+  | exception (Sys_error _ as e) -> Error (explain e)
+  | d ->
+      let full = if Filename.is_relative p then d ^ "/" ^ p else p in
+      let named m = p ^ if String.starts_with ~prefix:(full ^ ":") m then String.sub m (String.length full) (String.length m - String.length full) else ": " ^ m in
+      Result.bind (Result.map_error named (inside d ~follow:true full)) (function
+        | None -> Error (p ^ ": outside the directory " ^ dir)
+        | Some _ -> Ok (full, fun () -> match read_file full with s -> Ok s | exception Sys_error m -> Error (named m)))
+
+let read_within dir p = Result.bind (within dir p) (fun (_, read) -> read ())
 
 let confine fence dir =
   Result.bind (admits fence ~follow:true dir) (fun cs ->
@@ -175,13 +190,18 @@ let make ?str_of_host ?str_to_host ?nat_to_z ?nat_of_z o =
       | Ok _ -> if spend w (cost p) then answer p else raise (Halt 1)
       | Error m -> o.fail (of_string m)
     in
+    let read p = result (fun () -> of_string (read_file p)) in
     let write out s = let s = to_string s in if spend w (String.length s) then (out s; o.unit) else raise (Halt 1) in
     let write_to f path s = let s = to_string s in fenced ~cost:(fun p -> String.length s + created p) path (fun p -> result (fun () -> f p s; o.unit)) in
     match o.request req with
     | WriteOut s -> write w.out s
     | WriteErr s -> write w.err s
     | ReadLine -> (match w.read_line () with Some l -> o.some (of_string l) | None -> o.none)
-    | ReadFile path -> fenced path (fun p -> result (fun () -> of_string (read_file p)))
+    | ReadFile path -> fenced path read
+    | ReadFileIn (dir, path) -> (
+        match within (to_string dir) (to_string path) with
+        | Ok (full, read) -> fenced (of_string full) (fun _ -> match read () with Ok s -> o.ok (of_string s) | Error m -> o.fail (of_string m))
+        | Error m -> o.fail (of_string m))
     | WriteFile (path, s) -> write_to write_file path s
     | GetArgs -> list of_string w.args
     | GetEnv name -> (match w.env (to_string name) with Some v -> o.some (of_string v) | None -> o.none)

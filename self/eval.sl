@@ -805,7 +805,7 @@
 (def-adts $ (RqKind : -> Type)
   enum
   (many RqUnknown : -> (RqKind))
-  (many RqWriteOut : -> (RqKind)) (many RqWriteErr : -> (RqKind)) (many RqReadLine : -> (RqKind)) (many RqReadFile : -> (RqKind))
+  (many RqWriteOut : -> (RqKind)) (many RqWriteErr : -> (RqKind)) (many RqReadLine : -> (RqKind)) (many RqReadFile : -> (RqKind)) (many RqReadFileIn : -> (RqKind))
   (many RqWriteFile : -> (RqKind)) (many RqGetArgs : -> (RqKind)) (many RqGetEnv : -> (RqKind))
   (many RqGetEnvs : -> (RqKind)) (many RqAppendFile : -> (RqKind)) (many RqReadRemaining : -> (RqKind))
   (many RqListDir : -> (RqKind)) (many RqGetCwd : -> (RqKind)) (many RqStat : -> (RqKind))
@@ -821,7 +821,7 @@
 
 (let ((many request-table))
   $ rq-cons "WriteOut" (RqWriteOut) $
-  rq-cons "WriteErr" (RqWriteErr) $ rq-cons "ReadLine" (RqReadLine) $ rq-cons "ReadFile" (RqReadFile) $
+  rq-cons "WriteErr" (RqWriteErr) $ rq-cons "ReadLine" (RqReadLine) $ rq-cons "ReadFile" (RqReadFile) $ rq-cons "ReadFileIn" (RqReadFileIn) $
   rq-cons "WriteFile" (RqWriteFile) $ rq-cons "GetArgs" (RqGetArgs) $ rq-cons "GetEnv" (RqGetEnv) $
   rq-cons "GetEnvs" (RqGetEnvs) $ rq-cons "AppendFile" (RqAppendFile) $ rq-cons "ReadRemaining" (RqReadRemaining) $
   rq-cons "ListDir" (RqListDir) $ rq-cons "GetCwd" (RqGetCwd) $ rq-cons "Stat" (RqStat) $
@@ -868,6 +868,10 @@
         (values h hpx le a w1))
       ((RqReadFile)
         (let ((unique w1) (many r)) (world-do _ w (ReadFile s0)))
+        (let ((erased h) (many hpx) (erased le) (many a)) (store-result-str env _ hp1 r))
+        (values h hpx le a w1))
+      ((RqReadFileIn)
+        (let ((unique w1) (many r)) (world-do _ w (ReadFileIn s0 s1)))
         (let ((erased h) (many hpx) (erased le) (many a)) (store-result-str env _ hp1 r))
         (values h hpx le a w1))
       ((RqWriteFile)
@@ -1116,6 +1120,40 @@
   (let-match many r4 (Cons _ some _) ((Nil _) (None _)))
   (let ((many snap)) $ trusted-snapshot e)
   (Some _ $ match many (terms-canon-eq snap (heap-denoted snap _ hp p) $ heap-denoted snap _ hp q) _ ((BTrue) some) ((BFalse) none)))
+
+(def-fns _ $ (many path-dir : (many (String) path) -> (many (String) dir))
+  (let-match many (list-rev _ $ split-on path 47) (Cons _ _ above) ((Nil _) "."))
+  (let-match many above (Cons _ _ _) ((Nil _) "."))
+  (let ((many d)) $ join-strs (list-rev _ above) "/")
+  (match many (str-is-empty d) _ ((BTrue) "/") ((BFalse) d)))
+
+(def-fns _ $ (many read-target : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) here) (many (Ref Block hs) path) -> (many (Result $ Pair (String) (String)) r))
+  (let-match many (heap-spot _ hp here) (PosSpot q) (else (Fail _ "no position to read relative to")))
+  (let-match many q (MkPos f _ _) ((NoPos) (Fail _ "no position to read relative to")))
+  (let-match many (list-mem-str (env-sources e) f) (BTrue) ((BFalse) (Fail _ $ str-cat f ": not a source file")))
+  (Ok _ $ MkPair _ _ (path-dir f) $ heap-str _ hp path))
+
+(def-fns _ $ (many read-refused : (erased (Hist Block) hs) (many (Heap hs) hp) (unique (World) w) ->
+    (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
+  (let ((erased h) (many hpx) (erased le) (many a)) $ halloc _ hp $ BError _ "`read-file` with too few arguments")
+  (values h hpx le a w))
+
+(def-fns _ $ (many read-file-answer : (many (Env) e) (erased (Hist Block) hs) (many (Heap hs) hp) (many (List $ Ref Block hs) args) (unique (World) w) ->
+    (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) v) (unique (World) w2 at w))
+  (let-match many args (Cons _ _ r1) ((Nil _) (read-refused _ hp w)))
+  (let-match many r1 (Cons _ here r2) ((Nil _) (read-refused _ hp w)))
+  (let-match many r2 (Cons _ path r3) ((Nil _) (read-refused _ hp w)))
+  (let-match many r3 (Cons _ okr r4) ((Nil _) (read-refused _ hp w)))
+  (let-match many r4 (Cons _ failr _) ((Nil _) (read-refused _ hp w)))
+  (let ((erased y1) (many b1) (erased l1)) (hread _ hp okr))
+  (let-match many b1 (BCtorFn _ okc) (else (read-refused _ hp w)))
+  (let ((erased y2) (many b2) (erased l2)) (hread _ hp failr))
+  (let-match many b2 (BCtorFn _ failc) (else (read-refused _ hp w)))
+  (let ((unique w1) (many r)) $ match many (read-target e _ hp here path) (((World) w1 at w) ((Result $ String) r))
+    ((Ok _ dp) (let-match many dp (MkPair _ _ d p)) (world-do _ w (ReadFileIn d p)))
+    ((Fail _ m) (values w $ Fail _ m)))
+  (let ((erased h3) (many hp3) (erased l3) (many v)) $ match many r (((Hist Block) h3) ((Heap h3) hp3) ((Suffix Block h3 hs) l3) ((Ref Block h3) v)) ((Ok _ s) (store-wrapped-str _ hp okc s)) ((Fail _ m) (store-wrapped-str _ hp failc m)))
+  (values h3 hp3 l3 v w1))
 
 (def-lvl macro-lvl)
 (def-lvl perform-lvl)
@@ -1446,6 +1484,11 @@
     ((BTrue)
       (let ((erased hl2) (many hp2) (erased sf2) (many v)) $ resolve-answer e _ hp args)
       (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e ew)))
+  (let-match many (sp-eq prim $ SpExpr $ ExReadFile) (BFalse)
+    ((BTrue)
+      (let-match unique ew (MkElabWorld w0))
+      (let ((erased hl2) (many hp2) (erased sf2) (many v) (unique w1)) $ read-file-answer e _ hp args w0)
+      (values hl2 hp2 sf2 (Cons _ v $ Nil _) $ u sl e $ MkElabWorld w1)))
   (let-match many (sp-eq prim $ SpExpr $ ExSettledEq) (BFalse)
     ((BTrue)
       (let-match many (settled-eq-answer e _ hp args) (Some _ v)

@@ -93,6 +93,7 @@ and run_mode name externs src =
   let final = ref None in
   let outcome =
     try
+      Elab.sources := List.map (fun n -> (label n, dir)) (name :: needs);
       let one env n = let src = read (Filename.concat dir (n ^ ".sl")) in let warned = Indent.warn (label n) src in Elab.run_toplevel ~consume ~path:(label n) env (Reader.parse ~shape:(not warned) (label n) src) in
       let prelude = directive src "prelude" <> [ "none" ] in
       Env.warn_unused := false;
