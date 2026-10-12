@@ -3,10 +3,10 @@
 A Lean 4 prototype of a fragment of the minimal language of MINIMAL.md:
 a reader and elaborator from the surface syntax of `mini/README.md` to a
 core language, a checker, an evaluator, and machine-checked theorems
-connecting the two. Everything here is one session's work, done at the
-owner's request; the shapes it chose are listed at the end for the owner
-to confirm or change. A claim in this file that the Lean files do not
-check is a claim of that session, and may be mistaken.
+connecting the two. Everything here is the work of Claude sessions at
+the owner's request; the shapes they chose are listed at the end for the
+owner to confirm or change. A claim in this file that the Lean files do
+not check is a claim of those sessions, and may be mistaken.
 
 ## Build and run
 
@@ -28,6 +28,9 @@ lake build minimal              # the command-line runner
 - `Minimal/Syntax.lean`: terms (`Tm`, the type grammar of DESIGN.md
   section 9 with values and closures added), core programs (`Core`).
 - `Minimal/Eval.lean`: the evaluator.
+- `Minimal/Strip.lean`: the stripped run, which skips erased code, as a
+  relation, and `Real`, what it is for a stripped value to stand for a
+  value of the full run.
 - `Minimal/Unify.lean`: forced unification.
 - `Minimal/Typing.lean`: the typing relations.
 - `Minimal/Check.lean`: the checker. Each of its functions returns a
@@ -59,14 +62,29 @@ each one rests on, which are Lean's own three (`propext`,
 - **`checked_runs`.** If `Checked P R` (what `checkProg` returns), then
   `eval` on `P` returns values of the types `R`. So a checked program is
   never stuck: no call fails the decrease check, and no refuted branch
-  is reached.
+  is reached. And the stripped run of `P` ends too, in values that
+  stand for those (`Real`), wherever `R` is not erased.
+- **The stripped run (SOUNDNESS.md's (E)).** `RunS` runs a program with
+  every erased call and erased match skipped, its results replaced by a
+  token, erased `let`s of terms and levels held as tokens, and no
+  decrease check. A stripped value stands for a full one (`Real`) when
+  it is built by the same constructor, with its non-erased fields
+  standing for theirs, or is the same function closed over an
+  environment whose non-erased entries stand for theirs; any value
+  stands for a type, a level or a proof. `eval_sound` carries, beside
+  the full run's typing, that outside erased code a stripped run from an
+  environment whose non-erased entries stand for the full one's exists
+  and ends in values standing for the full results. So the stripped run
+  never reaches a match or a call on something it skipped, which is the
+  sense in which erasure is safe here. `RunS.det` says a stripped run
+  has one outcome.
 - **`no_false`.** No checked program has as its result type a data type
   with no constructors.
 
 The proof is a syntactic, environment-based one. `VTy` says what it is
 for a value to have a type. It is defined by recursion on values, not on
 types, so neither `Type : Type` nor a type whose constructor takes a
-function out of the type itself gets in the way. This is the session's
+function out of the type itself gets in the way. This is a session's
 reading of why the proof goes through, not something the Lean files
 state. SOUNDNESS.md's invariants appear as:
 
@@ -82,7 +100,7 @@ state. SOUNDNESS.md's invariants appear as:
   theorems are about `Core` programs.
 - That `Core`, `TmTy`, `CoreTy` and `eval` match MINIMAL.md. That
   agreement rests on reading alone, and the differences below are the
-  ones this session knows of.
+  ones known.
 
 ## Differences from MINIMAL.md
 
@@ -112,8 +130,8 @@ state. SOUNDNESS.md's invariants appear as:
   constructors, and erasure by kind, so a type, a level or a proof may
   be held at `many`; a call nested in an argument is elaborated at
   `many`, so one whose parameter is erased must be bound by an erased
-  `let` first. The checker enforces these rules; no theorem yet says
-  what they buy at run time.
+  `let` first. What the rules buy at run time is the stripped run's
+  theorem, under "What is proved".
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
@@ -152,7 +170,8 @@ state. SOUNDNESS.md's invariants appear as:
   variable can have more entries at run time than the checker counted.
 - A match's branches are keyed by constructor. A listed branch whose
   unification contradicts is an error (SPEC-REVIEW 7, as MINIMAL.md
-  records). An unlisted constructor must be refuted.
+  records). An unlisted constructor must be refuted or covered by an
+  `else`.
 - The runtime check compares sizes of values where SOUNDNESS.md uses the
   strict-subtree order. The proof uses only that a strict subtree is
   smaller.

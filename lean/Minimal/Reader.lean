@@ -44,6 +44,7 @@ inductive Ref where
 structure ESt where
   n : Nat := 0
   ers : List Bool := []
+  ghost : Bool := false
   adts : List (String × Nat) := []
   ctors : List (String × Nat × Nat) := []
   decls : List Adt := []
@@ -137,6 +138,13 @@ def fresh (ms : List Bool) : M (List Nat) :=
 
 def reset (base : Nat) : M Unit := modify fun st => { st with n := base, ers := st.ers.take base }
 
+def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
+  let old := (← get).ghost
+  modify fun st => { st with ghost := old || g }
+  let r ← x
+  modify fun st => { st with ghost := old }
+  return r
+
 abbrev Stmt := Core → Core
 
 def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofList ts))
@@ -209,7 +217,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     if let .list (.atom "else" :: items) := br then
       if els.isSome then throw "match: two else branches"
       reset base
-      els := some (← elabBody sc rms items)
+      els := some (← ghostly er (elabBody sc rms items))
       continue
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
     let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
@@ -217,7 +225,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     reset base
     let fs ← fresh (if er then names.map fun _ => true else (fieldErs sig).take names.length)
-    let body ← elabBody ((names.zip (fs.map Ref.fv)).reverse ++ sc) rms items
+    let body ← ghostly er (elabBody ((names.zip (fs.map Ref.fv)).reverse ++ sc) rms items)
     out := out ++ [(d', ci, body)]
   reset base
   let outs ← fresh rms
@@ -279,12 +287,12 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
       let pents ← ps.mapM parseEntry
       let pids ← fresh (pents.map (·.1.er))
       let rents ← rs.mapM parseEntry
-      let body ← elabBody ((pents.map (·.2.2)).zip (pids.map Ref.fv) |>.reverse |>.append fnsc)
-        (rents.map fun e => er || e.1.er) items
+      let body ← ghostly er (elabBody ((pents.map (·.2.2)).zip (pids.map Ref.fv) |>.reverse |>.append fnsc)
+        (rents.map fun e => er || e.1.er) items)
       pure { er, np := ps.length, tele, body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
-    modify fun st => { st with groups := st.groups ++ [{ ers, lvl, fns := defs }] }
+    modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     let (ss, ts) ← elabSeq fnsc want rest
     return (.defFns gid :: ss, ts)
   | e :: rest => do

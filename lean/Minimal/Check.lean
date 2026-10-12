@@ -320,8 +320,9 @@ def checkGroup (gid : Nat) (Γ : Ctx) (G : Group) : Res (PLift (GroupOK P gid Γ
     let ⟨hl⟩ ← need (Γ.canon K = .level) "def-fns: not a level"
     let ⟨hf⟩ ← checkFns gid Γ G G.fns 0
     let ⟨he⟩ ← need (∀ i < Γ.n, Γ.er i = G.ers.getD i true) "def-fns: the elaborator's erasure disagrees"
+    let ⟨hg⟩ ← need (Γ.ghost = G.ghost) "def-fns: the elaborator's erasure disagrees"
     .ok ⟨.mk hK hl (fun j F h => (hf j F (by simpa using h)).1)
-      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he⟩
+      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he hg⟩
   | none => .error "def-fns: unbound level"
 termination_by (gid + 1, 0, sizeOf G.fns + 1, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)

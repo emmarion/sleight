@@ -228,6 +228,7 @@ structure FnDef where
 
 structure Group where
   ers : List Bool := []
+  ghost : Bool := false
   lvl : Nat
   fns : List FnDef
   deriving Repr, Inhabited

@@ -77,11 +77,13 @@ def rt (Γ : Ctx) : Tm → Bool
   | .con d c args => match P.ctor d c with
     | some sig => rtArgs Γ args sig
     | none => false
-  | _ => true
+  | .ty .. | .univ | .level | .predates .. | .subterm .. | .fn .. => true
+  | _ => false
 
 def rtArgs (Γ : Ctx) : Tm → Tm → Bool
+  | .nil, _ => true
   | .cons a as, .bind k _ r => (k.er || rt Γ a) && rtArgs Γ as r
-  | _, _ => true
+  | _, _ => false
 end
 
 def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
@@ -181,7 +183,7 @@ inductive GroupOK : Nat → Ctx → Group → Prop
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → TmTy P Γ (F.type G) .univ) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → (marks F.tele F.np).count true ≤ P.k) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → CoreTy gid (Γ.body G F).1 F.body (Γ.body G F).2) →
-      (∀ i < Γ.n, Γ.er i = G.ers.getD i true) →
+      (∀ i < Γ.n, Γ.er i = G.ers.getD i true) → Γ.ghost = G.ghost →
       GroupOK gid Γ G
 end
 
