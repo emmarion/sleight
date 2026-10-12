@@ -67,7 +67,6 @@ def size : Tm → Nat
   | predates A x L => A.size + x.size + L.size + 1
   | subterm A a B b => A.size + a.size + B.size + b.size + 1
   | fn l _ t => l.size + t.size + 1
-  | clo e _ _ => e.size + 1
   | _ => 1
 
 def levels : Tm → List Nat
@@ -261,6 +260,7 @@ structure Adt where
   ctorNames : List String := []
   lifted : Nat := 0
   phantom : List Bool := []
+  union : Bool := false
   deriving Repr, Inhabited
 
 structure Prog where

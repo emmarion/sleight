@@ -180,7 +180,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       CoreTy b (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) rest rets →
       CoreTy b Γ (.mtch s R brs els er rest) rets
   | case : TmTy P Γ s St → Γ.canon St = .app (.tyc d) idx → P.adts[d]? = some D →
-      (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → (er || Γ.ok (rt P Γ s)) → (er → realCount brs els ≤ 1) →
+      (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → (er || Γ.ok (rt P Γ s)) → (Γ.ghost = false → er → realCount brs els ≤ 1) →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig →
         BranchOK b er { Γ with ghost := Γ.ghost || (!er && P.phantom d c) } s d idx c sig rets (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b Γ e rets) →

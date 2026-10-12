@@ -1690,7 +1690,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
         exact ⟨outsS, .case hsS hsel hrunb, hreb⟩
       | true =>
         have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h] <;> simp [hg]
-        rcases realBr_of_select (fun e he => (hd e he).1) hb (eval_real hr') (hreal rfl) with ⟨hlk, hrb⟩ | ⟨rfl, hrb⟩
+        rcases realBr_of_select (fun e he => (hd e he).1) hb (eval_real hr') (hreal hg rfl) with ⟨hlk, hrb⟩ | ⟨rfl, hrb⟩
         · obtain ⟨sig, hsig, hpl⟩ := hpl (by simp [hlk])
           have hSb : SimEnv P Γ'.er (ρS ++ List.replicate ((((P.ctor d c).map Tm.len).getD 0) - 1) .tok) (ρ ++ pre) :=
             hS.extend (by simp [hsig, hpl]) (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => by

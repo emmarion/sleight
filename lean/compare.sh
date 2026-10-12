@@ -6,7 +6,9 @@ for f in ../tests/*.sl; do
   grep -q '^; \(needs\|stdin\|args\|env\|externs\|confine\)' "$f" && continue
   if grep -q '^; error:' "$f"; then want=refuse; else want=accept; fi
   flag=; grep -q '^; prelude: none' "$f" && flag=--no-prelude
-  out=$($m $flag "$f" | cut -d' ' -f2-)
+  out=$(timeout 10 $m $flag "$f")
+  [ $? = 124 ] && out="stuck: timeout"
+  out=$(echo "$out" | cut -d' ' -f2-)
   case "$out" in
     *"not supported"*|*"malformed"*|*"unbound name"*|*"is not a type or constructor"*) got=unsupported ;;
     "error:"*) got=refuse ;;

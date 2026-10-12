@@ -312,7 +312,8 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       | some D => do
         let ⟨hl⟩ ← need (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) "a branch names a constructor of another type"
         let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
-        let ⟨h1⟩ ← need (er → realCount brs els ≤ 1) "a match with an erased discriminant has more than one real branch"
+        let ⟨h1⟩ ← need (Γ.ghost = false → er → realCount brs els ≤ 1)
+          "a match with an erased discriminant has more than one real branch"
         let g := fun c => Γ.ghost || (!er && P.phantom d c)
         let fes (sig : Tm) := if er then some (List.replicate (sig.len - 1) true) else none
         let ⟨R, hR1, hR2⟩ ← (match hr : rets with

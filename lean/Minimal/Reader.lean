@@ -58,6 +58,7 @@ structure ESt where
   rhs : Bool := true
   lits : List (Nat × Nat) := []
   pre : Bool := true
+  tail : Bool := false
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
   lifts : List (Nat × List Nat) := []
@@ -71,7 +72,7 @@ abbrev M := StateT ESt (Except String)
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
    "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "else",
-   "erased", "many", "unique", "absurd", "Fn", "Type", "Level", "Predates", "Subterm"]
+   "erased", "many", "unique", "absurd", "tail", "notail", "Fn", "Type", "Level", "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
 
@@ -235,9 +236,9 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     | .list (.list (T :: .atom ":" :: es) :: kws) => do
       let (ps, [.atom "Type"]) ← splitArrow es | throw "a type constructor returns Type"
       let (kw, cs) := kws.span (· matches .atom _)
-      if kw.any (· matches .atom "union" | .atom "newtype" | .atom "extern") then
-        throw "union, newtype and extern types are not supported"
-      unless kw matches [.atom "enum"] do throw "a type is declared enum"
+      if kw.contains (.atom "extern") then throw "extern types are not supported"
+      unless (kw.filter (· != .atom "newtype")) matches [.atom "enum"] | [.atom "union"] do
+        throw "a type is declared enum or union"
       let cs ← cs.mapM fun
         | .list xs => do
           let (p, xs) ← splitMult true xs
@@ -272,12 +273,33 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
     .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
-  for ((T, _, cs), (params, sigs)) in heads.zip (← elabSigs) do
+  let kinds := blocks.map fun
+    | .list (_ :: kws) => (kws.contains (.atom "union"), kws.contains (.atom "newtype"))
+    | _ => (false, false)
+  for (((T, _, cs), (params, sigs)), (union, newtype)) in (heads.zip (← elabSigs)).zip kinds do
+    let real := (cs.zip sigs).filter (!·.1.1)
+    if newtype && (real.isEmpty || (!union && real.length != 1) ||
+        real.any fun (_, sig) => (fieldErs sig).count false != 1) then
+      throw s!"{T} does not have newtype shape"
     let ctorNames := cs.map (·.2.1)
     let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
                        ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
-                       lifted := ids.length, phantom := cs.map (·.1) }
+                       lifted := ids.length, phantom := cs.map (·.1), union }
     modify fun st => { st with decls := st.decls ++ [adt] }
+
+def withTail {α : Type} (b : Bool) (x : M α) : M α := do
+  let t0 := (← get).tail
+  modify fun st => { st with tail := b }
+  let r ← x
+  modify fun st => { st with tail := t0 }
+  return r
+
+def returnsBinders (xs : List String) : List Sx → Bool
+  | [.atom x] => xs == [x]
+  | [.list (.atom "values" :: es)] => es == xs.map .atom
+  | .list (.atom "let" :: .list bs :: _) :: rest =>
+    bs.all (· matches .list (.atom "erased" :: _)) && returnsBinders xs rest
+  | _ => false
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
   let st0 ← get
@@ -343,6 +365,13 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
     else if h == "match" then elabMatch sc want exp args
+    else if h == "tail" || h == "notail" then
+      let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
+      if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
+      if st.ghost || (!want.isEmpty && want.all id) then throw s!"{h} in an erased position"
+      if h == "tail" && !st.tail then throw "tail: the call is not in tail position"
+      if h == "notail" && st.tail then throw "notail: the call is in tail position"
+      elabExpr sc want exp x
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
@@ -377,11 +406,11 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want], outs.map .fv)
   | e => return ([], [← elabTm sc 0 e])
 
-partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (List Stmt × List Tm) := do
+partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (List Stmt × List Tm) := withTail false do
   let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i false] none e
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
-partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option Tm) (brs : List Sx) :
+partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option Tm) (brs : List Sx) (extra : Nat := 0) :
     M (List (Nat × Nat × Core) × Option Core) := do
   let st ← get
   let base := st.n
@@ -408,6 +437,11 @@ partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option 
     if out.any (·.2.1 == ci) then throw "two branches for one constructor"
     out := out ++ [(d', ci, if ab then .absurd body else body)]
   reset base
+  let st ← get
+  let ph (d c : Nat) := ((st.decls[d]?).bind (·.phantom[c]?)).getD false
+  if !er && !st.ghost && out.any (fun (d, _) => ((st.decls[d]?).map (·.union)).getD false) &&
+      extra + (out.filter fun (d, c, b) => b.real && !ph d c).length + els.isSome.toNat > 1 then
+    throw "a match without a runtime discriminant can have only one real branch"
   return (out, els)
 
 partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : List Sx) : M (List Stmt × List Tm) := do
@@ -418,7 +452,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
     | .list rets, _ => elabTele sc 0 false rets
     | .atom "_", some R => pure R
     | _, _ => throw "a match annotation `_` where no telescope is expected"
-  let (ss, sts) ← elabExpr sc [false] none s
+  let (ss, sts) ← withTail false (elabExpr sc [false] none s)
   let [s] := sts | throw "match: one scrutinee"
   let rms := if er then List.replicate R0.len true else want
   let R := setErs R0 rms
@@ -460,7 +494,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
     let r0 := (← get).rhs
     modify fun st => { st with rhs := true }
-    let (ss, ts) ← elabSeq sc (bs.map (·.2.1)) bexp items
+    let (ss, ts) ← withTail ((← get).tail && returnsBinders (bs.map (·.1)) rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
     modify fun st => { st with rhs := r0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
@@ -489,11 +523,11 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     let (er, args) ← splitMult true args
     if !er && (← get).ghost then throw "a let-match written many in an erased position"
     let s :: pat :: brs := args | throw "malformed let-match"
-    let (ss, sts) ← elabExpr sc [false] none s
+    let (ss, sts) ← withTail false (elabExpr sc [false] none s)
     let [s] := sts | throw "let-match: one scrutinee"
     if (← get).rhs && brs.any (fun | .list (.atom "absurd" :: _) => false | _ => true) then
       throw "a let-match with more than one real branch outside a body"
-    let (out, els) ← elabArms sc er false want exp brs
+    let (out, els) ← elabArms sc er false want exp brs 1
     let (d', ci, fsc) ← openPattern sc er pat
     if out.any (·.2.1 == ci) then throw "two branches for one constructor"
     if !er && (((← get).decls[d']?).bind (·.phantom[ci]?)).getD false then
@@ -523,7 +557,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       let pents ← entryErs true ps
       let pids ← fresh (pents.map (·.2))
       let rents ← entryErs true rs
-      let body ← ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
+      let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
         (if ab then [true] else rents.map fun e => er || e.2) items
         (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)))
       pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }

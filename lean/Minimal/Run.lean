@@ -21,11 +21,21 @@ mutual
 partial def Prog.show (P : Prog) (nat : Option Nat) (t : Tm) : String :=
   match Prog.natOf nat t, t with
   | some n, _ => toString n
+  | none, .app h@(.vc d _) _ =>
+    match P.adts[d]? with
+    | some D => if D.union && (D.phantom.filter (!·)).length + (D.ctors.length - D.phantom.length) > 1 then "_"
+      else P.showApp nat h t
+    | none => P.showApp nat h t
   | none, .app h args => "(" ++ P.inner nat h args ++ ")"
   | none, .vc .. | none, .tyc .. => P.name t
   | none, .univ => "Type"
   | none, .level => "(Level)"
   | none, _ => "_"
+
+partial def Prog.showApp (P : Prog) (nat : Option Nat) (h t : Tm) : String :=
+  match t with
+  | .app _ args => "(" ++ P.inner nat h args ++ ")"
+  | _ => "_"
 
 partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
   let (d, ers) := match h with
@@ -35,11 +45,11 @@ partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
   let vs : List (Tm × Bool) := (args.toList.zipIdx.map fun (v, k) => (v, ers.getD k false)).drop (P.lifted d)
   let shown := vs.zipIdx.map fun ((v, er), k) =>
     if er then "_"
-    else if k + 1 == vs.length && (Prog.natOf nat v).isNone && v matches .app (.vc ..) _ then
-      match v with
-      | .app h' a' => "$ " ++ P.inner nat h' a'
-      | _ => P.show nat v
-    else P.show nat v
+    else
+      let sv := P.show nat v
+      if k + 1 == vs.length && v matches .app (.vc ..) _ && sv.startsWith "(" then
+        "$ " ++ (sv.drop 1).dropRight 1
+      else sv
   " ".intercalate (P.name h :: shown)
 end
 

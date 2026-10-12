@@ -50,8 +50,12 @@ printing what was skipped as `_`. Every program starts in the scope of
 - `Minimal/Reader.lean`: the reader and the elaborator to `Core`.
 - `Minimal/Infer.lean`: inference of `_` arguments, between elaboration
   and checking.
-- `prelude.sl`: the prelude, `Nat`, `False`, `Eq`, `List`, `Add` and
-  `Lt`, declared as `lib/prelude.sl` declares them, without `extern`.
+- `prelude.sl`: the prelude, which `prelude.py` makes from
+  `lib/prelude.sl`: the forms the runner accepts, in order, with their
+  `extern` markers removed. `python3 prelude.py ../lib/prelude.sl
+  .lake/build/bin/minimal prelude.sl` regenerates it.
+- `compare.sh`: runs the runner over the OCaml suite's `tests/` and
+  prints, per test, the verdict the test expects and the runner's.
 - `examples/`: programs, with their expected output in
   `examples/expected.txt`.
 
@@ -121,8 +125,8 @@ state. SOUNDNESS.md's invariants appear as:
 Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
 full language requires is required. These forms are refused as not
-supported: `unique`; `union`, `newtype` and `extern` types, so a type
-is declared `enum`; `_` in place of a type (section 50); and every form
+supported: `unique`; `extern` types and functions; `_` in place of a
+type (section 50); `delegate`; and every form
 not named in this file,
 among them `coerce`, character and string literals, `numeral-of`,
 `prove-literal-lt`, `unary`, macros, pragmas, cells and
@@ -189,6 +193,16 @@ produces nothing (section 27).
 - A result of the program whose type mentions the program's own entries
   is checked as a result of any type (`ArgsTy.anyCons`), so
   `checked_runs` says nothing of its type.
+- `union` and `newtype` (section 21). A `newtype` must have newtype
+  shape. A non-erased match on a union may have one real branch, outside
+  erased code; at run time the core keeps the constructor anyway, so the
+  rule is the elaborator's alone. A union value with more than one
+  non-phantom constructor prints as `_`.
+- `tail` and `notail` (section 19): the call must, or must not, be in
+  tail position: the final expression of a function body, of a branch of
+  a match in tail position, or of a `let`'s right-hand side when the
+  rest of the body returns its binders in order, after `let`s whose
+  binders are all erased. Neither is accepted in an erased position.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
