@@ -14,6 +14,9 @@ inductive RunS : List Tm → Core → List Tm → Prop
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
   | mtch : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
+  | caseE : realBr P brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true) out
+  | case : s.subst (Tm.env ρ) = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
+      RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false) out
   | prim : RunS (ρ ++ [if er then .tok else p.eval ρ]) rest out → RunS ρ (.prim p er rest) out
   | defLvl : RunS (ρ ++ [.tok]) rest out → RunS ρ (.defLvl rest) out
   | defFns : P.groups[gid]? = some G → RunS (ρ ++ closures ρ gid G) rest out → RunS ρ (.defFns gid rest) out
@@ -37,6 +40,14 @@ def runS : Nat → List Tm → Core → Option (List Tm)
         let (pre, body) ← selectBr brs els c vs.toList
         let outs ← runS fuel (ρ ++ pre) body
         runS fuel (ρ ++ outs) rest
+      | _ => none
+    | .case _ brs els true => do
+      let (pre, body) ← realBr P brs els
+      runS fuel (ρ ++ pre) body
+    | .case s brs els false => match s.subst (Tm.env ρ) with
+      | .app (.vc _ c) vs => do
+        let (pre, body) ← selectBr brs els c vs.toList
+        runS fuel (ρ ++ pre) body
       | _ => none
     | .prim p er rest => runS fuel (ρ ++ [if er then .tok else p.eval ρ]) rest
     | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
@@ -65,6 +76,14 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
         obtain ⟨⟨pre, body⟩, hsel, outs, hb, hr⟩ := h
         exact .mtch ‹_› hsel (ih _ _ _ hb) (ih _ _ _ hr)
       · simp at h
+    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+      obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
+      exact .caseE hsel (ih _ _ _ hb)
+    · split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+        obtain ⟨⟨pre, body⟩, hsel, hb⟩ := h
+        exact .case ‹_› hsel (ih _ _ _ hb)
+      · simp at h
     · exact .prim (ih _ _ _ h)
     · exact .defLvl (ih _ _ _ h)
     · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
@@ -90,6 +109,10 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
     | mtch hs' hsel' hb hr =>
       rw [hs] at hs'; cases hs'; rw [hsel] at hsel'; cases hsel'
       cases ihb hb; exact ihr hr
+  | caseE hsel _ ih => cases h2 with | caseE hsel' h => rw [hsel] at hsel'; cases hsel'; exact ih h
+  | case hs hsel _ ih =>
+    cases h2 with
+    | case hs' hsel' h => rw [hs] at hs'; cases hs'; rw [hsel] at hsel'; cases hsel'; exact ih h
   | prim _ ih => cases h2 with | prim h => exact ih h
   | defLvl _ ih => cases h2 with | defLvl h => exact ih h
   | defFns hG _ ih => cases h2 with | defFns hG' h => rw [hG] at hG'; cases hG'; exact ih h

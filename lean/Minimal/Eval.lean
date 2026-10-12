@@ -87,12 +87,18 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
     | .ok _ => .error "an absurd body returned"
     | .error e => .error e
   | .dead => .error "a refuted branch was reached"
+  | .case s brs els _ =>
+    match s.subst (Tm.env ρ) with
+    | .app (.vc _ c) vs =>
+      match hb : selectBr brs els c vs.toList with
+      | some (pre, body) => eval P μ (ρ ++ pre) cnt body
+      | none => .error "no branch"
+    | _ => .error "scrutinee is not data"
 termination_by c => ((⟨μ⟩ : Mu P.k), sizeOf c)
 decreasing_by
   all_goals first
     | exact Prod.Lex.left _ _ h
     | (apply Prod.Lex.right; simp; try omega)
-  have := sizeOf_selectBr hb
-  simp; omega
+  all_goals (have := sizeOf_selectBr hb; simp; omega)
 
 end Minimal

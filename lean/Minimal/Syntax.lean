@@ -205,9 +205,14 @@ inductive Core where
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
+  | case (s : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (er : Bool)
   | absurd (body : Core)
   | dead
   deriving Repr, Inhabited
+
+def Core.real : Core → Bool
+  | .absurd _ | .dead => false
+  | _ => true
 
 def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)
 
@@ -230,6 +235,9 @@ theorem sizeOf_selectBr {brs : List (Nat × Nat × Core)} {els : Option Core} {c
   split at h
   · rename_i hb; simp at h; obtain ⟨-, rfl⟩ := h; have := sizeOf_lookupBr hb; omega
   · cases els <;> simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
+
+def realCount (brs : List (Nat × Nat × Core)) (els : Option Core) : Nat :=
+  (brs.filter (·.2.2.real)).length + (els.filter Core.real).isSome.toNat
 
 structure FnDef where
   er : Bool := false
@@ -270,6 +278,12 @@ def Prog.k (P : Prog) : Nat :=
 def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[c]?)
 
 def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom[c]?)).getD false
+
+def realBr (P : Prog) (brs : List (Nat × Nat × Core)) (els : Option Core) : Option (List Tm × Core) :=
+  match brs.filter (·.2.2.real), els with
+  | [(d, c, body)], _ => some (List.replicate ((((P.ctor d c).map Tm.len).getD 0) - 1) .tok, body)
+  | [], some e => some ([], e)
+  | _, _ => none
 
 def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele
 

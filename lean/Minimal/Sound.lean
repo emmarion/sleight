@@ -1171,17 +1171,33 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : T
   simp only [Ctx.branch, Ctx.openTele_ghost]
   split <;> rfl
 
+section
+variable (Γ Γ' : Ctx) (ov : Option (List Bool))
+@[simp] theorem Ctx.setErs_tys : (Γ.setErs Γ' ov).tys = Γ'.tys := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_σ : (Γ.setErs Γ' ov).σ = Γ'.σ := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_mints : (Γ.setErs Γ' ov).mints = Γ'.mints := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_cur : (Γ.setErs Γ' ov).cur = Γ'.cur := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_subs : (Γ.setErs Γ' ov).subs = Γ'.subs := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_ghost : (Γ.setErs Γ' ov).ghost = Γ'.ghost := by cases ov <;> rfl
+@[simp] theorem Ctx.setErs_n : (Γ.setErs Γ' ov).n = Γ'.n := by simp [Ctx.n]
+theorem Ctx.setErs_er_lt {i : Nat} (h : i < Γ.n) : (Γ.setErs Γ' ov).er i = Γ'.er i := by
+  cases ov <;> simp [Ctx.setErs]; omega
+theorem Ctx.setErs_er_ge (ms : List Bool) (k : Nat) : (Γ.setErs Γ' (some ms)).er (Γ.n + k) = ms.getD k true := by
+  simp [Ctx.setErs]
+end
+
 theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {s St idx R : Tm} {d bnd : Nat} {D : Adt}
-    {brs : List (Nat × Nat × Core)} {els : Option Core} {g : Nat → Bool} {ge : Bool}
+    {brs : List (Nat × Nat × Core)} {els : Option Core} {g : Nat → Bool} {ge fe : Bool}
     (hs : TmTy P Γ s St) (hS : Γ.canon St = .app (.tyc d) idx) (hD : P.adts[d]? = some D)
     (hbr : ∀ (c : Nat) sig, D.ctors[c]? = some sig →
-      BranchOK P bnd { Γ with ghost := g c } s d idx c sig R (lookupBr brs c) els.isSome)
+      BranchOK P bnd fe { Γ with ghost := g c } s d idx c sig R (lookupBr brs c) els.isSome)
     (hel : ∀ e, els = some e → CoreTy P bnd { Γ with ghost := ge } e R) (hRs : R.static Γ.n 0) :
     ∃ c vs, s.subst (Tm.env ρ) = .app (.vc d c) vs ∧ ∃ pre body, selectBr brs els c vs.toList = some (pre, body) ∧
       ∃ Γ', CoreTy P bnd Γ' body R ∧ EnvOK P (ρ ++ pre) Γ' ∧ LvlBound (ρ ++ pre) cnt ∧
         MuOK μ Γ' (ρ ++ pre) ∧ R.static Γ'.n 0 ∧ (Γ'.ghost = g c ∨ Γ'.ghost = ge) ∧ (∀ i < Γ.n, Γ'.er i = Γ.er i) ∧
-        ∀ sig, P.ctor d c = some sig → ∀ k < pre.length, Γ'.er (Γ.n + k) = sig.ers.getD k true := by
+        (∀ sig, P.ctor d c = some sig → ∀ k < pre.length, Γ'.er (Γ.n + k) = (fe || sig.ers.getD k true)) ∧
+        ((lookupBr brs c).isSome → ∃ sig, P.ctor d c = some sig ∧ pre.length = sig.len - 1) := by
   have hw := hE.wf
   have hl := hE.len
   obtain ⟨hv, hss, hSs⟩ := tm_sound hP hE hs
@@ -1235,7 +1251,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   | covered =>
     obtain ⟨e, rfl⟩ := Option.isSome_iff_exists.mp hei
     refine ⟨[], e, by simp [selectBr, hbody], _, hel e rfl, ?_, by simpa using hb, ?_, hRs, .inr rfl,
-      fun _ _ => rfl, fun _ _ k hk => absurd hk (Nat.not_lt_zero _)⟩
+      fun _ _ => rfl, fun _ _ k hk => absurd hk (Nat.not_lt_zero _), fun h => by simp [hbody] at h⟩
     · rw [List.append_nil]; exact hE.congr _ rfl rfl rfl rfl rfl
     · rw [List.append_nil]; exact hm
   | live hlive hcb =>
@@ -1246,18 +1262,65 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     have hwσ := unify_wf Γf.n Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
-    refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl rfl, o1,
-      fun sig' hsig' k hk => ?_⟩
+    refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl (by simp),
+      fun i hi => by rw [Ctx.setErs_er_lt _ _ _ (by simpa [Ctx.n] using hi)]; exact o1 i hi,
+      fun sig' hsig' k hk => ?_, fun _ => ⟨sig, hctor, hvl⟩⟩
     rotate_left 4
     · rw [hctor] at hsig'; cases hsig'
-      exact o2 k (by omega) (by rw [Tm.len_ers _ hst]; omega)
+      cases fe
+      · exact o2 k (by omega) (by rw [Tm.len_ers _ hst]; omega)
+      · simp only [Bool.true_or, Ctx.setErs, Ctx.n, Nat.le_add_right, if_true, Nat.add_sub_cancel_left,
+          List.getD_eq_getElem?_getD, List.getElem?_replicate]
+        split <;> rfl
     · exact (hEf.modify (Γ' := { Γf with σ := σ' }) rfl hsσ hEf.chrono
-        ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _ rfl rfl rfl rfl rfl
+        ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩).congr _ (by simp) (by simp) (by simp) (by simp) (by simp)
     · refine LvlBound.append.mpr ⟨hb, fun v hv' x hx => ?_⟩
       have := hb.subst hss x; rw [hsv] at this
       exact this (by simp only [Tm.levels]; exact Tm.levels_toList vs v hv' x hx)
-    · exact hm.append hw hl h6.cur h6.subs
-    · exact Tm.static_mono (by simp only [Ctx.n] at h5 ⊢; omega) _ (Nat.le_refl 0) hRs
+    · exact hm.append hw hl (by simp [h6.cur]) (by simp [h6.subs])
+    · exact Tm.static_mono (by simp only [Ctx.setErs_n]; simp only [Ctx.n] at h5 ⊢; omega) _ (Nat.le_refl 0) hRs
+
+theorem eval_real {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {c : Core} {r : List Tm × Nat}
+    (h : eval P μ ρ cnt c = .ok r) : c.real = true := by
+  cases c <;> simp only [Core.real]
+  · rw [eval] at h; split at h <;> simp at h
+  · rw [eval] at h; simp at h
+
+theorem realBr_of_select {brs : List (Nat × Nat × Core)} {els : Option Core} {d c : Nat} {vs pre : List Tm}
+    {body : Core} (hd : ∀ e ∈ brs, e.1 = d) (h : selectBr brs els c vs = some (pre, body)) (hr : body.real = true)
+    (hc : realCount brs els ≤ 1) :
+    (lookupBr brs c = some body ∧
+      realBr P brs els = some (List.replicate ((((P.ctor d c).map Tm.len).getD 0) - 1) .tok, body)) ∨
+    (pre = [] ∧ realBr P brs els = some ([], body)) := by
+  unfold selectBr at h
+  split at h
+  · rename_i hb
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    refine .inl ⟨hb, ?_⟩
+    unfold lookupBr at hb; simp only [Option.map_eq_some_iff] at hb
+    obtain ⟨⟨x, y, z⟩, hf, hz⟩ := hb
+    simp only at hz; subst hz
+    have hmem := List.mem_of_find?_eq_some hf
+    have hy : y = c := by simpa using List.find?_some hf
+    have hx := hd _ hmem
+    simp only at hx; subst hx hy
+    have hin : (x, y, z) ∈ brs.filter (·.2.2.real) := List.mem_filter.mpr ⟨hmem, by simpa using hr⟩
+    have hlen : (brs.filter (·.2.2.real)).length ≤ 1 := by unfold realCount at hc; omega
+    have hfl : brs.filter (·.2.2.real) = [(x, y, z)] := by
+      generalize brs.filter (·.2.2.real) = l at hin hlen
+      match l, hin, hlen with
+      | [a], hin, _ => simp at hin; simp [hin]
+      | [], hin, _ => simp at hin
+      | _ :: _ :: _, _, hlen => simp at hlen
+    unfold realBr; rw [hfl]
+  · cases els <;> simp at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine .inr ⟨rfl, ?_⟩
+    have : brs.filter (·.2.2.real) = [] := by
+      rename_i e
+      have h1 : ((some e).filter Core.real).isSome.toNat = 1 := by simp [Option.filter, hr]
+      unfold realCount at hc; exact List.length_eq_zero_iff.mp (by omega)
+    unfold realBr; rw [this]
 
 theorem no_value_of_empty {v : Tm} {d : Nat} {D : Adt} {args : Tm} (hD : P.adts[d]? = some D)
     (hempty : D.ctors = []) : ¬ VTy P v (.app (.tyc d) args) := by
@@ -1449,7 +1512,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
             SimEnv P Γ'.er (ρS ++ preS) (ρ ++ pre) := by
           rcases selectBr_same (vs' := vsS.toList) hb with ⟨rfl, hsel⟩ | ⟨rfl, hsel⟩
           · refine ⟨_, hsel, hS.extend hrv.len (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => ?_⟩
-            rw [hl, he2 sig hsig k (List.getElem?_eq_some_iff.mp hb).1] at he
+            rw [hl, he2.1 sig hsig k (List.getElem?_eq_some_iff.mp hb).1, Bool.false_or] at he
             exact hrv.get k a b ha hb he
           · exact ⟨_, hsel, hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h⟩
         obtain ⟨preS, hsel, hSb⟩ := hSb
@@ -1588,6 +1651,65 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
   | case17 μ ρ cnt =>
     intro b Γ rets hc
     cases hc
+  | case18 μ ρ cnt s brs els er d c vs hs pre body hb ih =>
+    intro bnd Γ rets hc hE hlb hm hrs
+    cases hc with
+    | case hst hS hD hd hok hreal hbr hel =>
+    obtain ⟨c', vs', hsv, pre', body', hb', Γ', hcb, hE', hlb', hm', hRs', hg', he1, he2, hpl⟩ :=
+      match_setup (ge := Γ.ghost) hP hE hlb hm hst hS hD hbr (fun e h => by simpa using hel e h) hrs
+    rw [hs] at hsv; cases hsv
+    rw [hb] at hb'; cases hb'
+    have hl := hE.len
+    obtain ⟨hres, hsb⟩ := ih bnd Γ' rets hcb hE' hlb' hm' hRs'
+    rw [eval]; simp only [hs]
+    split
+    · rename_i pre'' body'' hb''
+      rw [hb] at hb''; cases hb''
+      refine ⟨Result.weaken hres (hl ▸ hrs) (Nat.le_refl _), fun hg ρS hS vs'' cnt' hr' => ?_⟩
+      cases er with
+      | false =>
+        simp only [Ctx.ok, hg, Bool.false_or] at hok
+        have hR := rt_real hE hS s hok; rw [hs] at hR
+        obtain ⟨vsS, sig, hsS, hsig, hph, hrv⟩ := hR.con_inv
+        have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h] <;> simp [hg, hph]
+        have hSb : ∃ preS, selectBr brs els c vsS.toList = some (preS, body) ∧
+            SimEnv P Γ'.er (ρS ++ preS) (ρ ++ pre) := by
+          rcases selectBr_same (vs' := vsS.toList) hb with ⟨rfl, hsel⟩ | ⟨rfl, hsel⟩
+          · refine ⟨_, hsel, hS.extend hrv.len (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => ?_⟩
+            rw [hl, he2 sig hsig k (List.getElem?_eq_some_iff.mp hb).1, Bool.false_or] at he
+            exact hrv.get k a b ha hb he
+          · exact ⟨_, hsel, hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h⟩
+        obtain ⟨preS, hsel, hSb⟩ := hSb
+        obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb _ hSb vs'' cnt' hr'
+        exact ⟨outsS, .case hsS hsel hrunb, hreb⟩
+      | true =>
+        have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h] <;> simp [hg]
+        rcases realBr_of_select (fun e he => (hd e he).1) hb (eval_real hr') (hreal rfl) with ⟨hlk, hrb⟩ | ⟨rfl, hrb⟩
+        · obtain ⟨sig, hsig, hpl⟩ := hpl (by simp [hlk])
+          have hSb : SimEnv P Γ'.er (ρS ++ List.replicate ((((P.ctor d c).map Tm.len).getD 0) - 1) .tok) (ρ ++ pre) :=
+            hS.extend (by simp [hsig, hpl]) (fun i hi => he1 i (hl ▸ hi)) fun k a b ha hb he => by
+              rw [hl, he2 sig hsig k (List.getElem?_eq_some_iff.mp hb).1, Bool.true_or] at he; cases he
+          obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb _ hSb vs'' cnt' hr'
+          exact ⟨outsS, .caseE hrb hrunb, hreb⟩
+        · obtain ⟨outsS, hrunb, hreb⟩ := hsb hgb _
+            (hS.extend rfl (fun i hi => he1 i (hl ▸ hi)) fun k _ _ h => by simp at h) vs'' cnt' hr'
+          exact ⟨outsS, .caseE hrb hrunb, hreb⟩
+    · rename_i hno; rw [hb] at hno; cases hno
+  | case19 μ ρ cnt s brs els er d c vs hs hb =>
+    intro bnd Γ rets hc hE hlb hm hrs
+    cases hc with
+    | case hst hS hD hd hok hreal hbr hel =>
+    obtain ⟨c', vs', hsv, pre', body', hb', _⟩ :=
+      match_setup (ge := Γ.ghost) hP hE hlb hm hst hS hD hbr (fun e h => by simpa using hel e h) hrs
+    rw [hs] at hsv; cases hsv
+    rw [hb] at hb'; cases hb'
+  | case20 μ ρ cnt s brs els er hs =>
+    intro bnd Γ rets hc hE hlb hm hrs
+    cases hc with
+    | case hst hS hD hd hok hreal hbr hel =>
+    obtain ⟨c', vs', hsv, _⟩ :=
+      match_setup (ge := Γ.ghost) hP hE hlb hm hst hS hD hbr (fun e h => by simpa using hel e h) hrs
+    exact (hs _ _ _ hsv).elim
 
 theorem checked_runs {rets : Tm} (h : Checked P rets) :
     ∃ vs cnt, eval P none [] 0 P.main = .ok (vs, cnt) ∧ VTys P (.ofList vs) rets .nil ∧

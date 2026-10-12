@@ -172,10 +172,16 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (er || Γ.ok (rt P Γ s)) →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig →
-        BranchOK b { Γ with ghost := Γ.ghost || er || P.phantom d c } s d idx c sig R (lookupBr brs c) els.isSome) →
+        BranchOK b false { Γ with ghost := Γ.ghost || er || P.phantom d c } s d idx c sig R (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b { Γ with ghost := Γ.ghost || er } e R) →
       CoreTy b (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) rest rets →
       CoreTy b Γ (.mtch s R brs els er rest) rets
+  | case : TmTy P Γ s St → Γ.canon St = .app (.tyc d) idx → P.adts[d]? = some D →
+      (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → (er || Γ.ok (rt P Γ s)) → (er → realCount brs els ≤ 1) →
+      (∀ (c : Nat) sig, D.ctors[c]? = some sig →
+        BranchOK b er { Γ with ghost := Γ.ghost || (!er && P.phantom d c) } s d idx c sig rets (lookupBr brs c) els.isSome) →
+      (∀ e, els = some e → CoreTy b Γ e rets) →
+      CoreTy b Γ (.case s brs els er) rets
   | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Γ.pushPrim T er p) rest rets →
       CoreTy b Γ (.prim p er rest) rets
   | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
@@ -188,12 +194,13 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | absurd : CoreTy b { Γ with ghost := true } body (.bind (.ty m e) (.app (.tyc d) idx) .nil) →
       (Tm.app (.tyc d) idx).static Γ.n 0 → P.adts[d]? = some D → D.ctors = [] → CoreTy b Γ (.absurd body) rets
 
-inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
-  | live : Γ.branch s d c idx sig = (Γf, .ok σ) → CoreTy b { Γf with σ := σ } body R →
-      BranchOK b Γ s d idx c sig R (some body) els
-  | dead : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R none els
-  | covered : BranchOK b Γ s d idx c sig R none true
-  | refuted : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R (some .dead) els
+inductive BranchOK : Nat → Bool → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
+  | live : Γ.branch s d c idx sig = (Γf, .ok σ) →
+      CoreTy b (Γ.setErs { Γf with σ := σ } (if fe then some (List.replicate (sig.len - 1) true) else none)) body R →
+      BranchOK b fe Γ s d idx c sig R (some body) els
+  | dead : (Γ.branch s d c idx sig).2 = .contra → BranchOK b fe Γ s d idx c sig R none els
+  | covered : BranchOK b fe Γ s d idx c sig R none true
+  | refuted : (Γ.branch s d c idx sig).2 = .contra → BranchOK b fe Γ s d idx c sig R (some .dead) els
 
 inductive GroupOK : Nat → Ctx → Group → Prop
   | mk {G : Group} : Γ.tys[G.lvl]? = some K → Γ.canon K = .level →
