@@ -47,6 +47,7 @@ structure ESt where
   ers : List Bool := []
   ghost : Bool := false
   top : Bool := true
+  rhs : Bool := true
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
   lifts : List (Nat × List Nat) := []
@@ -281,6 +282,18 @@ def entry (sc : Scope) : Sx → M Nat
   | .list [.atom "level-of", .atom f] => levelOf sc f
   | _ => throw "not an entry"
 
+def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × Nat × Scope)
+  | .list (.atom c :: xs) => do
+    let st ← get
+    let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
+    let names ← xs.mapM name
+    let names := ((← liftOf d').map fun _ => " lift") ++ names
+    let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
+    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
+    let fs ← fresh (if er || ph then names.map fun _ => true else (fieldErs sig).take names.length)
+    return (d', ci, (names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
+  | _ => throw "malformed pattern"
+
 mutual
 partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
   | .list (.atom "values" :: es) => elabArgs sc es
@@ -333,6 +346,35 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (Lis
   let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i false] none e
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
+partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option Tm) (brs : List Sx) :
+    M (List (Nat × Nat × Core) × Option Core) := do
+  let st ← get
+  let base := st.n
+  let mut out : List (Nat × Nat × Core) := []
+  let mut els : Option Core := none
+  for br in brs do
+    if let .list (.atom "else" :: items) := br then
+      if els.isSome then throw "match: two else branches"
+      reset base
+      els := some (← ghostly gEr (elabBody sc rms items R))
+      continue
+    if let .list [.atom "absurd", .atom c] := br then
+      let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
+      out := out ++ [(d', ci, .dead)]
+      continue
+    let (ab, br) := match br with
+      | .list (.atom "absurd" :: rest) => (true, Sx.list rest)
+      | br => (false, br)
+    let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
+    reset base
+    let (d', ci, fsc) ← openPattern sc er (.list (.atom c :: xs))
+    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
+    let body ← ghostly (gEr || ab || (ph && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R))
+    if out.any (·.2.1 == ci) then throw "two branches for one constructor"
+    out := out ++ [(d', ci, if ab then .absurd body else body)]
+  reset base
+  return (out, els)
+
 partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : List Sx) : M (List Stmt × List Tm) := do
   let (er, args) ← splitMult true args
   if !er && ((← get).ghost || (!want.isEmpty && want.all id)) then throw "a match written many in an erased position"
@@ -345,35 +387,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
   let [s] := sts | throw "match: one scrutinee"
   let rms := if er then List.replicate R0.len true else want
   let R := setErs R0 rms
-  let st ← get
-  let base := st.n
-  let mut out : List (Nat × Nat × Core) := []
-  let mut els : Option Core := none
-  for br in brs do
-    if let .list (.atom "else" :: items) := br then
-      if els.isSome then throw "match: two else branches"
-      reset base
-      els := some (← ghostly er (elabBody sc rms items R))
-      continue
-    if let .list [.atom "absurd", .atom c] := br then
-      let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
-      out := out ++ [(d', ci, .dead)]
-      continue
-    let (ab, br) := match br with
-      | .list (.atom "absurd" :: rest) => (true, Sx.list rest)
-      | br => (false, br)
-    let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
-    let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
-    let names ← xs.mapM fun | .atom x => pure x | _ => throw "malformed pattern"
-    let names := ((← liftOf d').map fun _ => " lift") ++ names
-    let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
-    reset base
-    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
-    let fs ← fresh (if er || ph then names.map fun _ => true else (fieldErs sig).take names.length)
-    let body ← ghostly (er || ab || ph) (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
-      (if ab then [true] else rms) items (if ab then none else some R))
-    out := out ++ [(d', ci, if ab then .absurd body else body)]
-  reset base
+  let (out, els) ← elabArms sc er er rms (some R) brs
   let outs ← fresh rms
   return (ss ++ [.mtch s R out els er], outs.map .fv)
 
@@ -400,7 +414,10 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : 
         | _ => throw "malformed let binder"
       | _ => throw "malformed let binder"
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
+    let r0 := (← get).rhs
+    modify fun st => { st with rhs := true }
     let (ss, ts) ← elabSeq sc (bs.map (·.2.1)) bexp items
+    modify fun st => { st with rhs := r0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
     let mut sc' := sc
@@ -424,6 +441,21 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : 
       sc' := (x, r) :: sc'
     let (ss2, ts2) ← elabSeq sc' want exp rest
     return (ss ++ ss2, ts2)
+  | .list (.atom "let-match" :: args) :: rest => do
+    let (er, args) ← splitMult true args
+    if !er && (← get).ghost then throw "a let-match written many in an erased position"
+    let s :: pat :: brs := args | throw "malformed let-match"
+    let (ss, sts) ← elabExpr sc [false] none s
+    let [s] := sts | throw "let-match: one scrutinee"
+    if (← get).rhs && brs.any (fun | .list (.atom "absurd" :: _) => false | _ => true) then
+      throw "a let-match with more than one real branch outside a body"
+    let (out, els) ← elabArms sc er false want exp brs
+    let (d', ci, fsc) ← openPattern sc er pat
+    if out.any (·.2.1 == ci) then throw "two branches for one constructor"
+    if !er && (((← get).decls[d']?).bind (·.phantom[ci]?)).getD false then
+      throw "a let-match on a phantom constructor at many"
+    let (ss2, ts) ← elabSeq fsc want exp rest
+    return (ss ++ [fun k => .case s ((d', ci, k) :: out) els er] ++ ss2, ts)
   | .list (.atom "def-fns" :: .atom "_" :: fns) :: rest =>
     elabSeq sc want exp (.list [.atom "def-lvl", .atom " _"] :: .list (.atom "def-fns" :: .atom " _" :: fns) :: rest)
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
@@ -463,7 +495,10 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : 
     return (ss ++ ss2, ts)
 
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none) : M Core := do
+  let r0 := (← get).rhs
+  modify fun st => { st with rhs := false }
   let (ss, ts) ← elabSeq sc want exp items
+  modify fun st => { st with rhs := r0 }
   return close ss ts
 end
 

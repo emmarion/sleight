@@ -33,6 +33,9 @@ examples/length.sl: (Succ (Succ (Succ (Zero))))
 examples/let_binders.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Succ (Zero)))) (Nil (Nat)))))
 examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat)))
 examples/let_is_bad.sl: refused: let: the binder is not the term its is clause names
+examples/let_match.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
+examples/let_match_refuted_bad.sl: refused: a branch that is not refuted is missing
+examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch outside a body
 examples/let_type_bad.sl: refused: let: the binder is not of the type written
 examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
@@ -67,6 +70,8 @@ unchecked examples/kind_level_bad.sl: (Zero)
 unchecked examples/kind_proof_bad.sl: (Zero)
 unchecked examples/kind_type_bad.sl: (Nat)
 unchecked examples/let_is_bad.sl: (Zero)
+unchecked examples/let_match_refuted_bad.sl: stuck: no branch
+unchecked examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch outside a body
 unchecked examples/let_type_bad.sl: (Zero)
 unchecked examples/missing_branch_bad.sl: (Zero)
 unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
@@ -96,6 +101,7 @@ stripped examples/is_fn.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (
 stripped examples/length.sl: (Succ (Succ (Succ (Zero))))
 stripped examples/let_binders.sl: (Cons (Nat) (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Succ (Zero)))) (Nil (Nat)))))
 stripped examples/let_forward.sl: (VCons _ (Zero) (Succ (Succ (Zero))) (VNil _))
+stripped examples/let_match.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Zero) (Nil (Nat))))
 stripped examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 stripped examples/phantom.sl: (Succ (Zero))
 stripped examples/syntax.sl: (Cons (Nat) (Succ (Succ (Succ (Zero)))) (Cons (Nat) (Zero) (Nil (Nat))))

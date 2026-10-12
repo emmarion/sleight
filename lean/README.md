@@ -117,7 +117,7 @@ Programs are written in the full language's syntax (DESIGN.md sections
 full language requires is required. These forms are refused as not
 supported: `unique`; `union`, `newtype` and `extern` types, so a type
 is declared `enum`; `_` as an inferred argument (section 50); and every form not named in this file,
-among them `let-match`, `coerce`, literals, macros, pragmas, cells and
+among them `coerce`, literals, macros, pragmas, cells and
 `at`. A file's top level has size one (section 27).
 
 ## Differences from MINIMAL.md
@@ -160,6 +160,14 @@ among them `let-match`, `coerce`, literals, macros, pragmas, cells and
   Refuting the facts in force in place of that value (section 51) is
   not supported. An absurd body never returns in a checked program,
   since nothing has a type with no constructors.
+- `let-match` (sections 27 and 52), with or without further branches,
+  elaborated to the core's `case`: a match without an annotation or a
+  continuation of its own, whose branches each end the enclosing code.
+  The pattern's branch holds everything after the `let-match`. Under an
+  erased scrutinee a `case` has at most one real branch, whose fields
+  are erased, and the stripped run takes it without looking at the
+  scrutinee. A second real branch is refused outside a function or
+  branch body.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.

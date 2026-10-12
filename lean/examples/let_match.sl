@@ -1,0 +1,11 @@
+; let-match (DESIGN.md sections 27 and 52): one constructor survives, or the other branches are listed
+(def-fns _ $ (erased lt-pred : (erased (Nat) a b) (erased (Lt (Succ a) (Succ b)) p) -> (erased (Lt a b) q))
+  (let-match erased p (LtS x y q))
+  q)
+(def-fns _ $ (many pred : (many (Nat) n) -> (many (Nat) m))
+  (let-match many n (Succ k) ((Zero) (Zero)))
+  k)
+(let ((many three)) (Succ (Succ (Succ (Zero)))))
+(let-match many three (Succ two))
+(let ((erased p)) (lt-pred (Zero) (Succ (Zero)) (LtS (Zero) (Succ (Zero)) (LtZ (Zero)))))
+(Cons (Nat) (pred two) (Cons (Nat) (pred (Zero)) (Nil (Nat))))
