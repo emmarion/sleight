@@ -2,6 +2,8 @@ import Minimal.Eval
 import Minimal.Unify
 import Minimal.Typing
 import Minimal.Lemmas
+import Minimal.UnifySound
+import Minimal.Sound
 import Minimal.Check
 import Minimal.Reader
 import Minimal.Run

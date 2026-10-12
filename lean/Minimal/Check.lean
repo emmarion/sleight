@@ -15,7 +15,7 @@ def retOf : Tm → Option Tm
   | _ => none
 
 structure ProgOK (P : Prog) : Prop where
-  params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params
+  params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params ∧ D.params.static 0 0
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
     TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx)
 
@@ -198,12 +198,13 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
     | .fn l np t => do
+      let ⟨ht⟩ ← need (t.isTele) "not a telescope"
       let ⟨outs, ha⟩ ← checkArgs P Γ args t
       let ⟨hn⟩ ← need (args.len = np) "wrong number of arguments"
       let ⟨hd⟩ ← checkDec P Γ l t args dec
       let ⟨ho⟩ ← need (outs.len = n) "wrong number of results bound"
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs) rest rets
-      .ok ⟨R, .call hf hF ha hn hd ho hr, e⟩
+      .ok ⟨R, .call hf hF ht ha hn hd ho hr, e⟩
     | _ => .error "not a function"
   | .mtch s R0 brs rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
@@ -212,9 +213,11 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
       | some D => do
         let ⟨hl⟩ ← need (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) "a branch names a constructor of another type"
         let ⟨hR⟩ ← checkTele P Γ R0
+        let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
+        let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
         let ⟨hb⟩ ← checkBranches b Γ s d idx R0 brs D.ctors 0
         let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0) rest rets
-        .ok ⟨R, .mtch hs hS hD hl hR (fun c sig h1 => by simpa using hb c sig h1) hr, e⟩
+        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt (fun c sig h1 => by simpa using hb c sig h1) hr, e⟩
       | none => .error "unknown type"
     | _ => .error "scrutinee not of a data type"
   | .prim p rest, rets => do
@@ -313,12 +316,13 @@ def checkCtor (d : Nat) (_ : Nat) (sig : Tm) :
   | _ => .error "def-adts: a constructor does not return its type"
 
 def checkProg : Res {R // Checked P R} := do
-  let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => TeleOK P {tys := []} D.params ∧ ∀ (c : Nat) sig,
+  let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => (TeleOK P {tys := []} D.params ∧ D.params.static 0 0) ∧ ∀ (c : Nat) sig,
       D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx))
     (fun d D => do
       let ⟨hp⟩ ← checkTele P {tys := []} D.params
+      let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
       let ⟨hc⟩ ← allIdx (checkCtor P d) D.ctors 0
-      .ok ⟨hp, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
+      .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
   let ⟨R, h, _⟩ ← checkCore P P.groups.length {tys := []} P.main none
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
     fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2⟩, h⟩

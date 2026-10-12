@@ -27,14 +27,14 @@ def pushMint (Γ : Ctx) : Ctx := { Γ.push .level with mints := Γ.mints ++ [Γ.
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx := { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G) }
 
+def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
+
 def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
   let Γ1 := Γ.pushFns G
   let (Γ2, rem) := Γ1.openTele F.tele F.np
   ({ Γ2 with cur := some G.lvl,
-             subs := (marks F.tele F.np).zipIdx.filterMap fun (m, j) => if m then some (Γ1.n + j) else none },
+             subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap fun | .fv i => some i | _ => none },
    rem)
-
-def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
 def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
@@ -101,11 +101,11 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
 mutual
 inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | ret : ArgsTy P Γ ts rets .nil → CoreTy b Γ (.ret ts) rets
-  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t → ArgsTy P Γ args t outs → args.len = np →
+  | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t → t.isTele → ArgsTy P Γ args t outs → args.len = np →
       DecOK P Γ dec l t args → outs.len = n → CoreTy b (Γ.pushTele outs) rest rets →
       CoreTy b Γ (.call f dec args n rest) rets
   | mtch : TmTy P Γ s St → Γ.canon St = .ty d idx → P.adts[d]? = some D →
-      (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R →
+      (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK b Γ s d idx c sig R (lookupBr brs c)) →
       CoreTy b (Γ.pushTele R) rest rets → CoreTy b Γ (.mtch s R brs rest) rets
   | prim : PrimTy P Γ p T → CoreTy b (Γ.push T) rest rets → CoreTy b Γ (.prim p rest) rets

@@ -109,27 +109,33 @@ def toList : Tm → List Tm
   | cons h t => h :: t.toList
   | _ => []
 
+def isList : Tm → Bool
+  | nil => true
+  | cons _ t => t.isList
+  | _ => false
+
+def isTele : Tm → Bool
+  | nil => true
+  | bind _ _ r => r.isTele
+  | _ => false
+
 def len : Tm → Nat
   | cons _ t | bind _ _ t => t.len + 1
   | _ => 0
 
-inductive Sub : Tm → Tm → Prop
-  | refl : Sub a a
-  | head : Sub a h → Sub a (cons h t)
-  | tail : Sub a t → Sub a (cons h t)
-  | ty : Sub a args → Sub a (ty d args)
-  | con : Sub a args → Sub a (con d c args)
+inductive PSub : Tm → Tm → Prop
+  | head : PSub h (cons h t)
+  | tail : PSub t (cons h t)
+  | ty : PSub a (ty d a)
+  | con : PSub a (con d c a)
+  | trans : PSub a b → PSub b c → PSub a c
 
-def StrictSub (a b : Tm) : Prop := Sub a b ∧ a ≠ b
+def strictSub (a : Tm) : Tm → Bool
+  | cons h t => a == h || a == t || a.strictSub h || a.strictSub t
+  | ty _ x | con _ _ x => a == x || a.strictSub x
+  | _ => false
 
-def sub (a : Tm) : Tm → Bool
-  | b@(cons h t) => a == b || a.sub h || a.sub t
-  | b@(ty _ x) | b@(con _ _ x) => a == b || a.sub x
-  | b => a == b
-
-def strictSub (a b : Tm) : Bool := a != b && a.sub b
-
-def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i (fv i)
+def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i nil
 
 end Tm
 
