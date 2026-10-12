@@ -9,7 +9,8 @@ references are to DESIGN.md.
 1. Consistency. Is the language sound with `Type : Type` and no
    positivity restriction (§10)? Termination is carried by the level
    and subterm order (§17), and types never compute (§9). The owner
-   holds that it is sound. No soundness argument has been written.
+   holds that it is sound. SOUNDNESS.md sketches an argument, unchecked,
+   that reduces the question to the lemmas it names.
 2. Erasure conservativity. Take any program that compiles and collapse
    `unique` to `many`: a `UniqueFn` becomes an `Fn`, every cell
    operation becomes an allocation, `share` and `slot-of` become the

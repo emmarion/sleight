@@ -5,6 +5,8 @@ DESIGN.md specifies. The other files:
 
 - OPEN.md: the open questions about the language.
 - SPEC-REVIEW.md: open points found in the spec by a review.
+- SOUNDNESS.md: a sketch of why `Type : Type` with no positivity
+  requirement (DESIGN.md section 10) appears sound, and what it assumes.
 - ASSUMPTIONS.md: the assumptions the implementations make where the
   spec is silent. Every entry is a choice a session had to make on its
   own, because the code had to do something. A decision the owner made
