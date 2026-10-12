@@ -1,3 +1,4 @@
+examples/anon_level.sl: (Succ (Succ (Zero)))
 examples/binder_refute.sl: (Zero)
 examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
 examples/eq_sym.sl: (Refl (Nat) (Zero))

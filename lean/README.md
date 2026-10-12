@@ -96,6 +96,14 @@ state. SOUNDNESS.md's invariants appear as:
 3. The type of the program's final expression may not mention the
    program's own entries, once canonicalized.
 
+## Beyond MINIMAL.md
+
+- `_` as a `def-fns` level (DESIGN.md section 46).
+- `(level-of f)` (section 53), in a term and as an argument of
+  `prove-predates`, for an `f` that a `def-fns` in scope names, directly
+  or through `let` binders forwarding from one. The elaborator does not
+  know types, so `level-of` of a parameter is refused.
+
 ## Shapes chosen here, for the owner to confirm or change
 
 - An `is` entry of a telescope, `(e is x)`, opens to an entry with the

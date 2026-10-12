@@ -39,6 +39,7 @@ def parse (src : String) : Except String (List Sx) := do
 inductive Ref where
   | fv (i : Nat)
   | bnd (lv : Nat)
+  | fn (i lvl : Nat)
 
 structure ESt where
   n : Nat := 0
@@ -51,22 +52,31 @@ abbrev M := StateT ESt (Except String)
 
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
-   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "Fn", "Type", "Level",
+   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "Fn", "Type", "Level",
    "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   match sc.lookup x with
-  | some (.fv i) => pure (.fv i)
+  | some (.fv i) | some (.fn i _) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
   | none => throw s!"unbound name {x}"
+
+def refOf (sc : Scope) (i : Nat) : Ref :=
+  (sc.findSome? fun | (_, .fn j l) => if j == i then some (Ref.fn j l) else none | _ => none).getD (.fv i)
+
+def levelOf (sc : Scope) (f : String) : M Nat := do
+  match sc.lookup f with
+  | some (.fn _ l) => pure l
+  | _ => throw s!"level-of: {f} is not named by a def-fns in scope"
 
 mutual
 partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
   | .atom "Type" => pure .univ
   | .atom x => look sc depth x
   | .list [.atom "Level"] => pure .level
+  | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
   | .list [.atom "Predates", A, x, L] =>
     return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
   | .list [.atom "Subterm", A, a, B, b] =>
@@ -117,10 +127,12 @@ def Stmt.wrap (rest : Core) : Stmt → Core
 
 def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (fun s c => s.wrap c) (.ret (.ofList ts))
 
-def entry (sc : Scope) (x : String) : M Nat := do
-  match sc.lookup x with
-  | some (.fv i) => pure i
-  | _ => throw s!"{x} is not an entry"
+def entry (sc : Scope) : Sx → M Nat
+  | .atom x => match sc.lookup x with
+    | some (.fv i) | some (.fn i _) => pure i
+    | _ => throw s!"{x} is not an entry"
+  | .list [.atom "level-of", .atom f] => levelOf sc f
+  | _ => throw "not an entry"
 
 mutual
 partial def elabExpr (sc : Scope) (want : Nat) : Sx → M (List Stmt × List Tm)
@@ -131,7 +143,7 @@ partial def elabExpr (sc : Scope) (want : Nat) : Sx → M (List Stmt × List Tm)
       let (ss, ts) ← elabArgs sc args
       let p ← match h, ts, args with
         | "prove-subterm", [a, b], _ => pure (.proveSubterm a b)
-        | "prove-predates", _, [.atom x, .atom L] => do
+        | "prove-predates", _, [x, L] => do
           pure (Prim.provePredates (← entry sc x) (← entry sc L))
         | "predates-trans", [p, q], _ => pure (.predatesTrans p q)
         | "subterm-trans", [p, q], _ => pure (.subtermTrans p q)
@@ -214,16 +226,18 @@ partial def elabSeq (sc : Scope) (want : Nat) : List Sx → M (List Stmt × List
           ss := ss ++ [.prim (.tm t)]
           pure j
       if let some (k, a) := ann then ss := ss ++ [.chk k (.fv i) (← elabTm sc' 0 a)]
-      sc' := (x, .fv i) :: sc'
+      sc' := (x, refOf sc i) :: sc'
     let (ss2, ts2) ← elabSeq sc' want rest
     return (ss ++ ss2, ts2)
+  | .list (.atom "def-fns" :: .atom "_" :: fns) :: rest =>
+    elabSeq sc want (.list [.atom "def-lvl", .atom " _"] :: .list (.atom "def-fns" :: .atom " _" :: fns) :: rest)
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
-    let lvl ← entry sc L
+    let lvl ← entry sc (.atom L)
     let sigs ← fns.mapM fun
       | .list (.atom f :: .list ps :: .list rs :: items) => pure (f, ps, rs, items)
       | _ => throw "malformed def-fns"
     let base := (← get).n
-    let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fv (base + j))).reverse ++ sc
+    let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl)).reverse ++ sc
     let defs ← sigs.mapM fun (_, ps, rs, items) => do
       let tele ← elabTele sc 0 (ps ++ rs)
       modify fun st => { st with n := base + sigs.length }
