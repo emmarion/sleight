@@ -5,11 +5,18 @@ questions. README.md describes the implementations and their command
 lines. EXAMPLES.md indexes the tests. The code and the other files cite
 sections of this file by number.
 
-The language has two aims besides its design. It matches the dynamism
+The language has three aims besides its design. It matches the dynamism
 of Kernel, John Shutt's Lisp dialect, while still compiling cleanly
 with static types; the constant-knownness of a head (§6) is what
-reconciles the two. And it supports LLMs writing code in it, which is
-explicitly one purpose of the language and its tooling.
+reconciles the two. It supports LLMs writing code in it, which is
+explicitly one purpose of the language and its tooling. And it lets a
+certified program be written so that it could run fast: what a program
+proves is erased (§13 to §16), a `unique` binder is the only reference
+to its value, so the value can be updated in place rather than copied
+(§13, §15), and nothing in the language stops a program's runtime part
+from being shaped to compile to tight machine code. This is an aim for
+the language, not for the implementations, whose own speed, and the
+speed of the code they produce, are not aims.
 
 - Syntax: §1 to §4.
 - The scope environment and the fact table: §5 to §8.
