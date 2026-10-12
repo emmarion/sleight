@@ -39,7 +39,7 @@ def parse (src : String) : Except String (List Sx) := do
 inductive Ref where
   | fv (i : Nat)
   | bnd (lv : Nat)
-  | fn (i lvl : Nat)
+  | fn (i lvl : Nat) (ers : List Bool)
   | ctor (i : Nat)
 
 structure ESt where
@@ -66,7 +66,7 @@ abbrev Scope := List (String × Ref)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   match sc.lookup x with
-  | some (.fv i) | some (.fn i _) | some (.ctor i) => pure (.fv i)
+  | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
   | none => do
     let st ← get
@@ -79,7 +79,7 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
   (sc.findSome? fun
-    | (_, .fn j l) => if j == i then some (Ref.fn j l) else none
+    | (_, .fn j l ms) => if j == i then some (Ref.fn j l ms) else none
     | (_, .ctor j) => if j == i then some (Ref.ctor j) else none
     | _ => none).getD (.fv i)
 
@@ -95,7 +95,7 @@ def teleTys : Tm → List Tm
 
 def levelOf (sc : Scope) (f : String) : M Nat := do
   match sc.lookup f with
-  | some (.fn _ l) => pure l
+  | some (.fn _ l _) => pure l
   | _ => throw s!"level-of: {f} is not named by a def-fns in scope"
 
 def splitMult : List Sx → M (Bool × List Sx)
@@ -247,7 +247,7 @@ def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (· ·) (.ret (.ofL
 
 def entry (sc : Scope) : Sx → M Nat
   | .atom x => match sc.lookup x with
-    | some (.fv i) | some (.fn i _) => pure i
+    | some (.fv i) | some (.fn i _ _) => pure i
     | _ => throw s!"{x} is not an entry"
   | .list [.atom "level-of", .atom f] => levelOf sc f
   | _ => throw "not an entry"
@@ -273,7 +273,9 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
-      | _, some (d, c) => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
+      | _, some (d, c) =>
+        let sig := ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
+        let (ss, ts) ← elabArgs sc args ((fieldErs sig).drop ((st.lifts.lookup d).getD []).length); return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
       | _, _ => return ([], [← elabTm sc 0 e])
     else if let some (.ctor i) := sc.lookup h then
       let (ss, ts) ← elabArgs sc args; return (ss, [.app (.fv i) (.ofList ts)])
@@ -293,13 +295,13 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
               pure (Dec.subterm pos ps.head!, ss, args.eraseIdx pos)
             | _ => throw "unreachable"
           | none => pure (Dec.none, [], args)
-      let (ss, ts) ← elabArgs sc args
+      let (ss, ts) ← elabArgs sc args (match sc.lookup h with | some (.fn _ _ ms) => ms | _ => [])
       let outs ← fresh want
       return (ss0 ++ ss ++ [.call f dec (.ofList ts) (!want.isEmpty && want.all id) want], outs.map .fv)
   | e => return ([], [← elabTm sc 0 e])
 
-partial def elabArgs (sc : Scope) (es : List Sx) : M (List Stmt × List Tm) := do
-  let rs ← es.mapM (elabExpr sc [false])
+partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (List Stmt × List Tm) := do
+  let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i false] e
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
 partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List Stmt × List Tm) := do
@@ -395,15 +397,16 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
         let (er, xs) ← splitMult xs
         let (ab, xs) := match xs with | .atom "absurd" :: xs => (true, xs) | xs => (false, xs)
         match xs with
-        | .atom f :: .list ps :: .list rs :: items => pure (f, (er, ab), ps, rs, items)
+        | .atom f :: .list ps :: .list rs :: items => do
+          pure (f, (er, ab), ps, rs, items, (← ps.mapM parseEntry).map (·.1.er))
         | _ => throw "malformed def-fns"
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
     let ers := st.ers
     let _ ← fresh (sigs.map (·.2.1.1))
-    let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl)).reverse ++ sc
-    let defs ← sigs.mapM fun (_, (er, ab), ps, rs, items) => do
+    let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl sigs[j]!.2.2.2.2.2)).reverse ++ sc
+    let defs ← sigs.mapM fun (_, (er, ab), ps, rs, items, _) => do
       let tele ← elabTele sc 0 (ps ++ rs)
       reset (base + sigs.length)
       let pents ← ps.mapM parseEntry

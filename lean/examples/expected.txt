@@ -13,6 +13,7 @@ examples/erased.sl: (Succ (Succ (Zero)))
 examples/erased_fn_bad.sl: refused: a non-erased call mentions an erased entry or a phantom constructor, or binds an erased result at many
 examples/erased_let_bad.sl: refused: a non-erased let binder of an erased entry
 examples/erased_match_bad.sl: refused: a non-erased match on an erased scrutinee
+examples/erased_nested.sl: (Succ (Succ (Zero))) (MkPair (Succ (Succ (Zero))) (AddS (Succ (Zero)) (Zero) (Succ (Zero)) (AddS (Zero) (Zero) (Zero) (AddZ (Zero)))))
 examples/erased_result_bad.sl: refused: a non-erased result mentions an erased entry or a phantom constructor
 examples/ex_falso.sl: (Zero)
 examples/first_class.sl: (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))
@@ -75,6 +76,7 @@ stripped examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
 stripped examples/else.sl: (Succ (Zero)) (Zero) (Zero)
 stripped examples/eq_sym.sl: (Refl (Nat) (Zero))
 stripped examples/erased.sl: (Succ (Succ (Zero)))
+stripped examples/erased_nested.sl: (Succ (Succ (Zero))) (MkPair (Succ (Succ (Zero))) _)
 stripped examples/ex_falso.sl: (Zero)
 stripped examples/first_class.sl: (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))
 stripped examples/inferred.sl: (Succ (Succ (Zero))) (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))

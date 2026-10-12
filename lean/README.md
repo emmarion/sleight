@@ -130,10 +130,13 @@ state. SOUNDNESS.md's invariants appear as:
   throughout. A constructor declared `erased` is phantom (DESIGN.md
   section 21): only an erased position may build or hold it, and its
   branch under a non-erased match is erased throughout. What this omits
-  from the full language: `unique` and erasure by kind, so a type, a level or a proof may
-  be held at `many`; a call nested in an argument is elaborated at
-  `many`, so one whose parameter is erased must be bound by an erased
-  `let` first. What the rules buy at run time is the stripped run's
+  from the full language: `unique` and erasure by kind, so a type, a
+  level or a proof may be held at `many`. A call nested in an argument
+  is erased when the parameter or field it stands for is, which the
+  elaborator knows for a function a `def-fns` in scope names and for a
+  constructor named directly; elsewhere it is elaborated at `many`, so
+  one whose parameter is erased must be bound by an erased `let` first.
+  What the rules buy at run time is the stripped run's
   theorem, under "What is proved".
 - `absurd` (DESIGN.md sections 21 and 25): a function marked `absurd`,
   and a branch `(absurd (C f ...) body ...)`, whose body is erased and
