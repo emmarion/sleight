@@ -109,6 +109,10 @@ def toList : Tm → List Tm
   | cons h t => h :: t.toList
   | _ => []
 
+def fvIdx : Tm → Option Nat
+  | fv i => some i
+  | _ => none
+
 def isList : Tm → Bool
   | nil => true
   | cons _ t => t.isList

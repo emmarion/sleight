@@ -26,7 +26,9 @@ DESIGN.md specifies. The other files:
   (`self/README.md`, `self/bootstrap.sh`).
 - MINIMAL.md: a minimal fragment of the language. `mini/`: its
   semantics, written as relations in the language itself
-  (`mini/README.md`).
+  (`mini/README.md`). `lean/`: a Lean 4 interpreter for part of that
+  fragment that needs no fuel, with a machine-checked proof that checked
+  programs run to a value of their type (`lean/README.md`).
 - `pal/`: certified longest-palindrome programs (`pal/README.md`).
 - `std/`: source libraries a program names on the command line before its
   own files. `std/macro.sl` holds helpers for writing macros, `std/nat.sl`

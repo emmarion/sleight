@@ -1,0 +1,21 @@
+examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
+examples/eq_sym.sl: (Refl (Nat) (Zero))
+examples/ex_falso.sl: (Zero)
+examples/length.sl: (Succ (Succ (Succ (Zero))))
+examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
+examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
+examples/no_annotation_bad.sl: refused: a call in a body needs a predates or subterm proof
+examples/paradox_curry_bad.sl: refused: prove-predates: not introduced before the level
+examples/paradox_knot_bad.sl: refused: prove-predates: not introduced before the level
+examples/paradox_same_level_bad.sl: refused: prove-subterm: not a strict subterm
+examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subterm
+examples/refuted_branch_bad.sl: refused: a listed branch is refuted
+examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
+examples/vec_head.sl: (Succ (Zero))
+unchecked examples/missing_branch_bad.sl: (Zero)
+unchecked examples/no_annotation_bad.sl: stuck: call does not decrease
+unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
+unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
+unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
+unchecked examples/paradox_univ_subterm_bad.sl: <proof>
+unchecked examples/refuted_branch_bad.sl: (Zero)

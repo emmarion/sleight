@@ -33,7 +33,7 @@ def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
   let Γ1 := Γ.pushFns G
   let (Γ2, rem) := Γ1.openTele F.tele F.np
   ({ Γ2 with cur := some G.lvl,
-             subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap fun | .fv i => some i | _ => none },
+             subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap Tm.fvIdx },
    rem)
 
 def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=

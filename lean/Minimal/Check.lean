@@ -19,7 +19,8 @@ structure ProgOK (P : Prog) : Prop where
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
     TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.ty d idx)
 
-def Checked (P : Prog) (rets : Tm) : Prop := ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets
+def Checked (P : Prog) (rets : Tm) : Prop :=
+  ProgOK P ∧ CoreTy P P.groups.length {tys := []} P.main rets ∧ rets.static 0 0
 
 variable (P : Prog)
 
@@ -324,7 +325,8 @@ def checkProg : Res {R // Checked P R} := do
       let ⟨hc⟩ ← allIdx (checkCtor P d) D.ctors 0
       .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
   let ⟨R, h, _⟩ ← checkCore P P.groups.length {tys := []} P.main none
+  let ⟨hs⟩ ← need (R.static 0 0) "the program's result type mentions its own entries"
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
-    fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2⟩, h⟩
+    fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2⟩, h, hs⟩
 
 end Minimal

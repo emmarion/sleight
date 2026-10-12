@@ -21,7 +21,7 @@ theorem subst_ne_of_head (f : Nat → Tm) (a b : Tm) (ha : ∀ i, a ≠ fv i) (h
   cases a <;> cases b <;> simp_all [sameHead, subst]
 
 theorem kids_eq_of_subst (f : Nat → Tm) (a b : Tm) (ha : ∀ i, a ≠ fv i) (hb : ∀ i, b ≠ fv i)
-    (h : a.sameHead b = true) (e : a.subst f = b.subst f) :
+    (_ : a.sameHead b = true) (e : a.subst f = b.subst f) :
     ∀ p ∈ a.kids.zip b.kids, p.1.subst f = p.2.subst f := by
   have := congrArg kids e
   rw [kids_subst f a ha, kids_subst f b hb] at this
@@ -69,7 +69,7 @@ theorem unify_sound (f : Nat → Tm) (n : Nat) : ∀ σ dom eqs, Sat f σ → (�
     have hab' := he (a, b) (by simp)
     have het : f e = t.subst f := by
       rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
-    rw [unify]; simp only [hab, ite_false, hv, hocc, hok, ite_true, dite_true]
+    rw [unify]; simp only [hab, ite_false, hv, hocc, hok]
     simp only [List.map_attach_eq_pmap, List.pmap_eq_map] at ih ⊢
     apply ih
     · intro x u hx
@@ -111,7 +111,7 @@ theorem unify_wf (n : Nat) : ∀ σ dom eqs σ', RulesWF n σ → unify n σ dom
   | case3 σ dom a b rest hab e t hv hocc => intro σ' _ h; rw [unify] at h; simp [hab, hv, hocc] at h
   | case4 σ dom a b rest hab e t hv hocc hok ih =>
     intro σ' hw h
-    rw [unify] at h; simp only [hab, ite_false, hv, hocc, hok, and_self, dite_true] at h
+    rw [unify] at h; simp only [hab, ite_false, hv, hocc, hok, and_self] at h
     simp only [List.map_attach_eq_pmap, List.pmap_eq_map] at ih h
     refine ih σ' (fun x u hx => ?_) h
     simp only [assign] at hx; split at hx
