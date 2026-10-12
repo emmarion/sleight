@@ -16,9 +16,9 @@ PINNED=$(git rev-parse --short --verify "$1^{commit}") || { echo "commit $1 is n
 SLC=${2:-$B/slc}
 P=_build/bench/$PINNED
 [ -d "$P/self" ] || { mkdir -p "$P" && git archive "$PINNED" self lib | tar -x -C "$P"; } || exit 1
-python3 "$P/self/gen_header.py" || exit 1
+[ ! -f "$P/self/gen_header.py" ] || python3 "$P/self/gen_header.py" || exit 1
 PIN=""
-for f in base heap reader core eval elab header emit interp main; do [ -f "$P/self/$f.sl" ] && PIN="$PIN $P/self/$f.sl"; done
+for f in self/base self/heap self/reader self/core self/eval self/elab lib/embed self/header self/emit self/interp self/main; do [ -f "$P/$f.sl" ] && PIN="$PIN $P/$f.sl"; done
 
 # timed <file> <command...>: runs the command, writing "wall-seconds user-seconds max-rss-KB" to the file (GNU time
 # takes -f; BSD time, as on macOS, takes -l and reports its maximum resident set in bytes).

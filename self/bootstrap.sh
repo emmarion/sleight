@@ -18,8 +18,10 @@ set -u
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 if [ "${1:-}" = check ]; then B=$BOOTSTRAP_B; else B=${1:-_build/self}; [ "$B" = one ] && B=_build/self; mkdir -p "$B"; B=$(cd "$B" && pwd); fi
-SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
+SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 REF=_build/default/bin/main.exe
+# what lib/embed.sl and self/header.sl read into slc when it is compiled
+EMBEDDED="lib/ffi_core.ml lib/driver_core.ml lib/ffi_templates.txt lib/specials.txt lib/prelude.sl self/runtime.ml"
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 OCB="ocamlfind ocamlc -package zarith,unix -linkpkg"
 
@@ -110,8 +112,7 @@ if [ "${1:-}" = check ]; then check_test "$2" "$3" "$4"; exit 0; fi
 
 build_slc() {
   dune build 2>&1 | head -5
-  python3 self/gen_header.py
-  key=$(cat $SL $REF | md5sum)
+  key=$(cat $SL $EMBEDDED $REF | md5sum)
   if [ "${1:-}" = cached ] && [ -x "$B/slc" ] && [ "$key" = "$(cat "$B/slc.key" 2>/dev/null)" ]; then return; fi
   echo "== extracting slc with the reference extractor"
   $REF --warnings-as-errors $SL --extract "$B/slc.ml" || exit 1

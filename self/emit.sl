@@ -89,7 +89,7 @@
   (many MkNarrow : (many (List $ Nat) shape) (many (List $ Nat) live) -> (Narrow)))
 
 ; ---- Extraction templates (lib/ffi_templates.txt, ASSUMPTIONS 133): an extern type's matches and builds as
-; OCaml text with holes, embedded as header.sl's extern-templates; a type without one is taken apart and
+; OCaml text with holes, embedded as lib/embed.sl's extern-templates; a type without one is taken apart and
 ; built through its view as before.
 
 (def-adts $ (Hole : -> Type)

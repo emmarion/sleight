@@ -11,12 +11,11 @@ mkdir -p "$(dirname "$OUT")"
 OUT=$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")
 B=$(dirname "$OUT")/release-work
 mkdir -p "$B"
-SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
+SL="self/base.sl self/heap.sl self/reader.sl self/core.sl self/eval.sl self/elab.sl lib/embed.sl self/header.sl self/emit.sl self/interp.sl self/main.sl"
 OC="ocamlfind ocamlopt -package zarith,unix -linkpkg"
 REL=
 ocamlfind ocamlopt -config | grep -q '^flambda: true' && REL=-O3
 dune build bin/main.exe
-python3 self/gen_header.py
 _build/default/bin/main.exe $SL --extract "$B/stage1.ml"
 $OC "$B/stage1.ml" -o "$B/stage1"
 "$B/stage1" $SL > "$B/slc.ml"

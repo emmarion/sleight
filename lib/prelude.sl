@@ -2,8 +2,8 @@
 ; definitions are the models the FFI's implementations in ffi.ml stand in for.
 ;
 ; Neither compiler reads this file at run time: lib/dune embeds it into the reference as Prelude_source,
-; and self/gen_header.py into slc as self/header.sl's prelude-source, so an edit here needs a rebuild of
-; each (self/bootstrap.sh regenerates the header). Both compilers also name some of its definitions in their
+; and lib/embed.sl into slc as prelude-source, read when slc is compiled, so an edit here needs a rebuild
+; of each. Both compilers also name some of its definitions in their
 ; own source -- the literal types, the driver's Program and Request, the lemmas unary and distinct expand to,
 ; and the externs lib/ffi.ml and lib/ffi_templates.txt implement -- so renaming one here means renaming it there too.
 

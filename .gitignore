@@ -1,5 +1,4 @@
 _build/
-self/header.sl
 io-test.txt
 .claude/worktrees/
 .DS_Store

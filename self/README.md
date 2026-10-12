@@ -115,11 +115,12 @@ host (section 42); a `U8` or a
   with adds to `lib/ffi_core.ml` and `lib/driver_core.ml`: `absurd`,
   the phantom indices of narrowing, the identity `Matchable`, each
   extern type's unwrap and wrap over `Obj.t`, and the `world` the
-  driver runs in. `gen_header.py` turns the three files into `header.sl`, the same
-  text as one SL string literal, with `lib/ffi_templates.txt` and
-  `lib/prelude.sl` as two more. `header.sl` is generated, not committed:
-  `bootstrap.sh` and `bench/` regenerate it, and a fresh checkout needs
-  `python3 self/gen_header.py` before anything else reads `self/*.sl`.
+  driver runs in. `header.sl` joins the three into one string, read when
+  slc is compiled by the `embed` macro of `lib/embed.sl`, which also reads
+  `lib/ffi_templates.txt`, `lib/specials.txt` and `lib/prelude.sl`. Its
+  calls sit in `lib/` so that `read-file` may read there (DESIGN.md
+  section 65); slc's sources are listed with `lib/embed.sl` ahead of
+  `header.sl`.
 - `emit.sl` — extraction to OCaml in the reference's scheme: a walk
   collecting the shapes and narrowings a program needs, the blocks and
   groups as OCaml, the driver's operations, and a generated printer
@@ -145,7 +146,7 @@ _build/self/slc --interpret tests/io_echo.sl -- arg1 arg2
 ```
 
 `slc` takes the files to compile as its program arguments, elaborates
-them in one scope in order after the prelude it embeds (`header.sl`'s
+them in one scope in order after the prelude it embeds (`lib/embed.sl`'s
 `prelude-source`, which `--no-prelude` leaves out) as the interpreter does,
 and writes the OCaml program to stdout; elaboration errors go to stderr
 with exit code 1. The compiled program takes its own arguments after

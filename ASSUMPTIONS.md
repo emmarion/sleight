@@ -2421,7 +2421,7 @@ bootstrap runs in the same time as before (about four minutes here).
      compiles a subset without them. Held constructors and Matchables
      still go through the view (`tests/thunk_extern_first_class.sl`).
      The file is embedded in the interpreter by a dune rule and in `slc`
-     through `header.sl`, one text parsed by both, though only the
+     through `lib/embed.sl`, one text parsed by both, though only the
      reference checks it. Measured in the session's scratchpad: the
      Ackermann benchmark 58 ms through the views, 35 ms through the
      templates, 24 ms hand-written on zarith; a million-iteration tail
