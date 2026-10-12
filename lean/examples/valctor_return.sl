@@ -1,7 +1,9 @@
 ; a ValCtor whose return is headed by a type constructor from an enclosing former
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (Box ((Type A)) (MkBox ((Type A) (A x)) (Box A))))
+(def-adts
+  ((Box : (Type A) -> Type)
+    enum
+    (many MkBox : (erased Type A) (many A x) -> (Box A))))
 (def-lvl L)
-(def-fns L (mk (((TyCtor ((Type A))) F) ((ValCtor ((Type B) (B y)) (F B)) c) ((Nat) n)) (((F (Nat)) r))
-  (c (Nat) n)))
+(def-fns L $ (many mk : (erased (TyCtor (Type A) -> Type) F) (many (ValCtor (erased Type B) (many B y) -> (F B)) c) (many (Nat) n) -> (many (F (Nat)) r))
+  (c (Nat) n))
 (mk Box MkBox (Succ (Zero)))

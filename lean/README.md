@@ -1,8 +1,9 @@
 # lean/: the minimal language in Lean 4, with a soundness proof
 
-A Lean 4 prototype of a fragment of the minimal language of MINIMAL.md:
-a reader and elaborator from the surface syntax of `mini/README.md` to a
-core language, a checker, an evaluator, and machine-checked theorems
+A Lean 4 prototype of a fragment of the language of DESIGN.md, the
+minimal language of MINIMAL.md and the additions listed below: a reader
+and elaborator from the full language's surface syntax to a core
+language, a checker, an evaluator, and machine-checked theorems
 connecting the two. Everything here is the work of Claude sessions at
 the owner's request; the shapes they chose are listed at the end for the
 owner to confirm or change. A claim in this file that the Lean files do
@@ -23,7 +24,8 @@ lake build minimal              # the command-line runner
 `minimal` checks a program and runs it, or prints why it is refused.
 `--unchecked` skips the checker and runs the program anyway.
 `--stripped` checks it and runs it with erased code skipped (`runS`),
-printing what was skipped as `_`.
+printing what was skipped as `_`. Every program starts in the scope of
+`prelude.sl`, unless `--no-prelude` is given.
 
 ## Files
 
@@ -41,6 +43,8 @@ printing what was skipped as `_`.
 - `Minimal/Lemmas.lean`, `Minimal/UnifySound.lean`, `Minimal/Sound.lean`:
   the proofs.
 - `Minimal/Reader.lean`: the reader and the elaborator to `Core`.
+- `prelude.sl`: the prelude, `Nat`, `False`, `Eq`, `List`, `Add` and
+  `Lt`, declared as `lib/prelude.sl` declares them, without `extern`.
 - `examples/`: programs, with their expected output in
   `examples/expected.txt`.
 
@@ -105,6 +109,17 @@ state. SOUNDNESS.md's invariants appear as:
   agreement rests on reading alone, and the differences below are the
   ones known.
 
+## Syntax
+
+Programs are written in the full language's syntax (DESIGN.md sections
+1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
+full language requires is required. These forms are refused as not
+supported: `unique`; `union`, `newtype` and `extern` types, so a type
+is declared `enum`; `_` as a match annotation (section 47) and as an
+inferred argument (section 50); and every form not named in this file,
+among them `let-match`, `coerce`, literals, macros, pragmas, cells and
+`at`. A file's top level has size one (section 27).
+
 ## Differences from MINIMAL.md
 
 1. A `def-adts` signature may mention a top-level entry only when the
@@ -118,10 +133,8 @@ state. SOUNDNESS.md's invariants appear as:
 ## Beyond MINIMAL.md
 
 - Multiplicities (DESIGN.md sections 13 and 14), `erased` and `many`,
-  written as in the full language on telescope entries, `let` binders,
-  a `match`'s mode and a `def-fns` function. A binder written without
-  one is `many`, so MINIMAL.md's programs mean what they meant. A
-  non-erased position may not mention an erased entry: the callee and
+  on telescope entries, `let` binders, a `match`'s mode, a `def-fns`
+  function and a `def-adts` constructor. A non-erased position may not mention an erased entry: the callee and
   the arguments for non-erased parameters of a non-erased call, the
   scrutinee of a non-erased match, a non-erased result, a non-erased
   `let` binder; a field of a constructor is a non-erased position
@@ -131,7 +144,8 @@ state. SOUNDNESS.md's invariants appear as:
   section 21): only an erased position may build or hold it, and its
   branch under a non-erased match is erased throughout. What this omits
   from the full language: `unique` and erasure by kind, so a type, a
-  level or a proof may be held at `many`. A call nested in an argument
+  level or a proof may be held at `many`, where the full language
+  refuses it; and an `erased` match's results are erased. A call nested in an argument
   is erased when the parameter or field it stands for is, which the
   elaborator knows for a function a `def-fns` in scope names and for a
   constructor named directly; elsewhere it is elaborated at `many`, so
@@ -167,7 +181,7 @@ state. SOUNDNESS.md's invariants appear as:
 
 ## Shapes chosen here, for the owner to confirm or change
 
-- An `is` entry of a telescope, `(e is x)`, opens to an entry with the
+- An `is` entry of a telescope, `(m e is x)`, opens to an entry with the
   rule that it is `e`, and is typed through that rule, so its type is
   `e`'s (DESIGN.md section 12). An argument or a result supplied for it
   must canonicalize to `e`. In the core such an entry has no type of its
@@ -193,10 +207,7 @@ state. SOUNDNESS.md's invariants appear as:
   through its head's type; a value of a `ValCtor` type is a declared
   constructor with exactly that signature, and one of a `TyCtor` type a
   declared type constructor.
-- A constructor is marked phantom by writing `erased` before its name
-  in `def-adts`, `(erased C (fields) ret)`, as a binder's multiplicity is
-  written in this syntax; `many` there is the default.
-- A `let` binder written `(T x)` or `(e is x)` is checked, after
+- A `let` binder written `(m T x)` or `(m e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.
 - A `let` binder forwards from its right-hand side, as DESIGN.md

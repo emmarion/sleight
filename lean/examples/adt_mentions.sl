@@ -1,15 +1,20 @@
 ; def-adts signatures mentioning top-level entries: a level, a function, a typed let and a let of a term
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (Eq ((Type A) (A x) (A y)) (Refl ((Type A) (A x)) (Eq A x x))))
+(def-adts
+  ((Eq : (Type A) (A x) (A y) -> Type)
+    enum
+    (many Refl : (erased Type A) (many A x) -> (Eq A x x))))
 (def-lvl L)
-(def-fns L (inc (((Nat) n)) (((Nat) m)) (Succ n)))
-(let (((Nat) two)) (Succ (Succ (Zero))))
-(let (N) (Nat))
-(def-adts (Box ()
-  (MkBox (((Fn L ((N n)) ((N m))) f) ((Eq N two two) e)) (Box))))
+(def-fns L $ (many inc : (many (Nat) n) -> (many (Nat) m))
+  (Succ n))
+(let ((many (Nat) two)) (Succ (Succ (Zero))))
+(let ((erased N)) (Nat))
+(def-adts
+  ((Box : -> Type)
+    enum
+    (many MkBox : (many (Fn L (many N n) -> (many N m)) f) (many (Eq N two two) e) -> (Box))))
 (def-lvl M)
-(let (p) (prove-predates L M))
-(def-fns M (apply (((Box) b) (N x)) ((N y))
-  (match b ((N y))
-    ((MkBox f e) (f (predates p) x)))))
+(let ((erased p)) (prove-predates L M))
+(def-fns M $ (many apply : (many (Box) b) (many N x) -> (many N y))
+  (match many b ((N y))
+    ((MkBox f e) (f (predates p) x))))
 (apply (MkBox inc (Refl N two)) two)

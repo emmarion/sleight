@@ -1,0 +1,12 @@
+; the full syntax's conveniences: several names in one entry, `$`, `_` binders and the prelude's types
+(def-fns _ $ (many plus : (subterm many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Add a b c) p))
+  (match many a (((Nat) c) ((Add a b c) p))
+    ((Zero) (values b (AddZero b)))
+    ((Succ k)
+      (let ((erased q)) (prove-subterm k a))
+      (let ((many c) (erased p)) (plus (subterm q) k b))
+      (values (Succ c) (AddSucc k b c p)))))
+(def-fns _ $ (many both : (many (Nat) x y) -> (many (List (Nat)) r))
+  (Cons (Nat) x $ Cons (Nat) y $ Nil (Nat)))
+(let ((many three) (erased _)) (plus (Succ $ Succ $ Zero) (Succ $ Zero)))
+(both three (Zero))

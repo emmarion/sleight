@@ -5,7 +5,7 @@ namespace Minimal
 inductive Sx where
   | atom (s : String)
   | list (xs : List Sx)
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, BEq
 
 partial def tokenize (cs : List Char) (acc : List String) : List String :=
   match cs with
@@ -65,6 +65,7 @@ def keywords : List String :=
 abbrev Scope := List (String × Ref)
 
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
+  if x == "_" then throw "`_` as an inferred argument is not supported"
   match sc.lookup x with
   | some (.fv i) | some (.fn i _ _) | some (.ctor i) => pure (.fv i)
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
@@ -98,21 +99,33 @@ def levelOf (sc : Scope) (f : String) : M Nat := do
   | some (.fn _ l _) => pure l
   | _ => throw s!"level-of: {f} is not named by a def-fns in scope"
 
-def splitMult : List Sx → M (Bool × List Sx)
+def splitMult (need : Bool := true) : List Sx → M (Bool × List Sx)
   | .atom "erased" :: xs => pure (true, xs)
   | .atom "many" :: xs => pure (false, xs)
   | .atom "unique" :: _ => throw "unique is not supported"
-  | xs => pure (false, xs)
+  | xs => if need then throw "a multiplicity is required" else pure (false, xs)
 
-def parseEntry : Sx → M (Ent × Sx × String)
+def splitArrow (xs : List Sx) : M (List Sx × List Sx) :=
+  match xs.idxOf? (.atom "->") with
+  | some k => pure (xs.take k, xs.drop (k + 1))
+  | none => throw "missing ->"
+
+def name : Sx → M String
+  | .atom x => if x ∈ keywords then throw s!"{x} is not a name" else pure x
+  | _ => throw "malformed name"
+
+def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
   | .list xs => do
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
-    let (er, xs) ← splitMult xs
+    let (er, xs) ← splitMult need xs
     match xs with
-    | [e, .atom "is", .atom x] => if sub then throw "an is entry cannot be subterm" else pure (.is er, e, x)
-    | [T, .atom x] => pure (.ty sub er, T, x)
+    | [e, .atom "is", x] => if sub then throw "an is entry cannot be subterm" else pure (.is er, e, [← name x])
+    | T :: x :: xs => pure (.ty sub er, T, ← (x :: xs).mapM name)
     | _ => throw "malformed telescope entry"
   | _ => throw "malformed telescope entry"
+
+def entryErs (need : Bool) (es : List Sx) : M (List (String × Bool)) :=
+  es.flatMapM fun e => do let (k, _, xs) ← parseEntry need e; pure (xs.map (·, k.er))
 
 def Ent.withEr : Ent → Bool → Ent
   | .ty m _, e => .ty m e
@@ -136,12 +149,17 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
     return .predates (← elabTm sc depth A) (← elabTm sc depth x) (← elabTm sc depth L)
   | .list [.atom "Subterm", A, a, B, b] =>
     return .subterm (← elabTm sc depth A) (← elabTm sc depth a) (← elabTm sc depth B) (← elabTm sc depth b)
-  | .list [.atom "Fn", l, .list ps, .list rs] => do
+  | .list (.atom "Fn" :: l :: es) => do
     let l ← elabTm sc depth l
-    let t ← elabTele sc depth (ps ++ rs)
-    return .fn l ps.length t
-  | .list [.atom "TyCtor", .list ps] => return .tyCtor (← elabTele sc depth ps)
-  | .list [.atom "ValCtor", .list fs, ret] => return .valCtor (← elabTele sc depth (fs ++ [.list [ret, .atom "_"]]))
+    let (ps, rs) ← splitArrow es
+    let t ← elabTele sc depth true (ps ++ rs)
+    return .fn l (← entryErs true ps).length t
+  | .list (.atom "TyCtor" :: es) => do
+    let (ps, [.atom "Type"]) ← splitArrow es | throw "a TyCtor returns Type"
+    return .tyCtor (← elabTele sc depth false ps)
+  | .list (.atom "ValCtor" :: es) => do
+    let (fs, [ret]) ← splitArrow es | throw "a ValCtor has one return"
+    return .valCtor (← elabTele sc depth true (fs ++ [.list [.atom "many", ret, .atom "_"]]))
   | .list (.atom h :: args) => do
     let st ← get
     let args ← args.mapM (elabTm sc depth)
@@ -153,13 +171,14 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
     | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
   | _ => throw "malformed term"
 
-partial def elabTele (sc : Scope) (depth : Nat) : List Sx → M Tm
+partial def elabTele (sc : Scope) (depth : Nat) (need : Bool) : List Sx → M Tm
   | [] => pure .nil
   | e :: es => do
-    let (k, T, x) ← parseEntry e
-    let T ← elabTm sc depth T
-    let r ← elabTele ((x, .bnd depth) :: sc) (depth + 1) es
-    return .bind k T r
+    let (k, T, xs) ← parseEntry need e
+    let Ts ← (List.range xs.length).mapM fun j => elabTm sc (depth + j) T
+    let sc := xs.zipIdx.foldl (fun sc (x, j) => (x, .bnd (depth + j)) :: sc) sc
+    let r ← elabTele sc (depth + xs.length) need es
+    return Ts.foldr (.bind k) r
 end
 
 def fresh (ms : List Bool) : M (List Nat) :=
@@ -194,10 +213,20 @@ def teleAppend : Tm → Tm → Tm
 
 def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let heads ← blocks.mapM fun (b : Sx) => match b with
-    | .list (.atom T :: .list ps :: cs) => do
-      let cs ← cs.mapM fun | .list xs => do let (p, xs) ← splitMult xs; pure (p, Sx.list xs)
-                           | _ => throw "malformed constructor"
-      pure (T, ps, cs)
+    | .list (.list (T :: .atom ":" :: es) :: kws) => do
+      let (ps, [.atom "Type"]) ← splitArrow es | throw "a type constructor returns Type"
+      let (kw, cs) := kws.span (· matches .atom _)
+      if kw.any (· matches .atom "union" | .atom "newtype" | .atom "extern") then
+        throw "union, newtype and extern types are not supported"
+      unless kw matches [.atom "enum"] do throw "a type is declared enum"
+      let cs ← cs.mapM fun
+        | .list xs => do
+          let (p, xs) ← splitMult true xs
+          let C :: .atom ":" :: es := xs | throw "malformed constructor"
+          let (fs, [ret]) ← splitArrow es | throw "a constructor has one return"
+          pure (p, ← name C, fs, ret)
+        | _ => throw "malformed constructor"
+      pure (← name T, ps, cs)
     | _ => throw "malformed def-adts"
   let st ← get
   if !st.top then throw "def-adts is confined to the top level"
@@ -205,16 +234,13 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let mut ctors := st.ctors
   for ((_, _, cs), j) in heads.zipIdx do
     for (c, ci) in cs.zipIdx do
-      let (_, .list (.atom C :: _)) := c | throw "malformed constructor"
-      ctors := (C, base + j, ci) :: ctors
-  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
+      ctors := (c.2.1, base + j, ci) :: ctors
+  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × String × List Sx × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
   let inline (t : Tm) : Tm := (List.range st.inl.length).foldl
     (fun t _ => t.subst fun i => (st.inl.lookup i).getD (.fv i)) t
   let elabSigs := heads.mapM fun (_, ps, cs) => do
-    let params ← elabTele sc 0 ps
-    let sigs ← cs.mapM fun (c : Bool × Sx) => match c.2 with
-      | .list [_, .list fs, ret] => elabTele sc 0 (fs ++ [.list [ret, .atom "_"]])
-      | _ => throw "malformed constructor"
+    let params ← elabTele sc 0 false ps
+    let sigs ← cs.mapM fun (_, _, fs, ret) => elabTele sc 0 true (fs ++ [.list [.atom "many", ret, .atom "_"]])
     pure (inline params, sigs.map inline)
   let raw ← elabSigs
   let mut ids : List Nat := (raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).eraseDups
@@ -228,7 +254,7 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
   for ((T, _, cs), (params, sigs)) in heads.zip (← elabSigs) do
-    let ctorNames := cs.filterMap fun | (_, .list (.atom C :: _)) => some C | _ => none
+    let ctorNames := cs.map (·.2.1)
     let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
                        ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
                        lifted := ids.length, phantom := cs.map (·.1) }
@@ -305,12 +331,14 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (Lis
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
 partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List Stmt × List Tm) := do
-  let (er, args) ← splitMult args
+  let (er, args) ← splitMult true args
+  if let _ :: .atom "_" :: _ := args then throw "a match annotation `_` is not supported"
   let s :: .list rets :: brs := args | throw "malformed match"
   let (ss, sts) ← elabExpr sc [false] s
   let [s] := sts | throw "match: one scrutinee"
-  let rms := if er then rets.map fun _ => true else want
-  let R := setErs (← elabTele sc 0 rets) rms
+  let n := (← entryErs false rets).length
+  let rms := if er then List.replicate n true else want
+  let R := setErs (← elabTele sc 0 false rets) rms
   let st ← get
   let base := st.n
   let mut out : List (Nat × Nat × Core) := []
@@ -356,14 +384,14 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
     return (.defLvl :: ss, ts)
   | .list (.atom "let" :: .list xs :: items) :: rest => do
     let bs ← xs.mapM fun
-      | .atom x => pure (x, false, none)
       | .list xs => do
-        let (er, xs) ← splitMult xs
+        let (er, xs) ← splitMult true xs
         match xs with
-        | [.atom x] => pure (x, er, none)
-        | [e, .atom "is", .atom x] => pure (x, er, some (Chk.is, e))
-        | [T, .atom x] => pure (x, er, some (Chk.ty, T))
+        | [x] => pure (← name x, er, none)
+        | [e, .atom "is", x] => pure (← name x, er, some (Chk.is, e))
+        | [T, x] => pure (← name x, er, some (Chk.ty, T))
         | _ => throw "malformed let binder"
+      | _ => throw "malformed let binder"
     let (ss, ts) ← elabSeq sc (bs.map (·.2.1)) items
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
@@ -393,13 +421,12 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
     let lvl ← entry sc (.atom L)
     let sigs ← fns.mapM fun
-      | .list xs => do
-        let (er, xs) ← splitMult xs
+      | .list (.list xs :: items) => do
+        let (er, xs) ← splitMult true xs
         let (ab, xs) := match xs with | .atom "absurd" :: xs => (true, xs) | xs => (false, xs)
-        match xs with
-        | .atom f :: .list ps :: .list rs :: items => do
-          pure (f, (er, ab), ps, rs, items, (← ps.mapM parseEntry).map (·.1.er))
-        | _ => throw "malformed def-fns"
+        let f :: .atom ":" :: es := xs | throw "malformed def-fns"
+        let (ps, rs) ← splitArrow es
+        pure (← name f, (er, ab), ps, rs, items, (← entryErs true ps).map (·.2))
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
@@ -407,14 +434,14 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
     let _ ← fresh (sigs.map (·.2.1.1))
     let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl sigs[j]!.2.2.2.2.2)).reverse ++ sc
     let defs ← sigs.mapM fun (_, (er, ab), ps, rs, items, _) => do
-      let tele ← elabTele sc 0 (ps ++ rs)
+      let tele ← elabTele sc 0 true (ps ++ rs)
       reset (base + sigs.length)
-      let pents ← ps.mapM parseEntry
-      let pids ← fresh (pents.map (·.1.er))
-      let rents ← rs.mapM parseEntry
-      let body ← ghostly (er || ab) (elabBody ((pents.map (·.2.2)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
-        (if ab then [true] else rents.map fun e => er || e.1.er) items)
-      pure { er, np := ps.length, tele, body := if ab then .absurd body else body : FnDef }
+      let pents ← entryErs true ps
+      let pids ← fresh (pents.map (·.2))
+      let rents ← entryErs true rs
+      let body ← ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
+        (if ab then [true] else rents.map fun e => er || e.2) items)
+      pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
@@ -432,8 +459,9 @@ partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) : M Core 
 end
 
 def elabProgram (items : List Sx) : Except String Prog := do
-  let (main, st) ← (elabBody [] [false] items).run {}
-  return { adts := st.decls, groups := st.groups, main }
+  let ((ss, ts), st) ← (elabSeq [] [false] items).run {}
+  unless ts.length == 1 do throw "the top level has size one"
+  return { adts := st.decls, groups := st.groups, main := close ss ts }
 
 def load (src : String) : Except String Prog := do elabProgram (← parse src)
 

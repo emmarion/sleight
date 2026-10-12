@@ -1,9 +1,10 @@
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (Vec ((Type A) ((Nat) n))
-  (VNil ((Type A)) (Vec A (Zero)))
-  (VCons ((Type A) ((Nat) n) (A x) ((Vec A n) xs)) (Vec A (Succ n)))))
+(def-adts
+  ((Vec : (Type A) ((Nat) n) -> Type)
+    enum
+    (many VNil : (erased Type A) -> (Vec A (Zero)))
+    (many VCons : (erased Type A) (many (Nat) n) (many A x) (many (Vec A n) xs) -> (Vec A (Succ n)))))
 (def-lvl L)
-(def-fns L (head ((Type A) ((Nat) n) ((Vec A (Succ n)) v)) ((A x))
-  (match v ((A x))
-    ((VCons a m x xs) x))))
+(def-fns L $ (many head : (erased Type A) (many (Nat) n) (many (Vec A (Succ n)) v) -> (many A x))
+  (match many v ((A x))
+    ((VCons a m x xs) x)))
 (head (Nat) (Zero) (VCons (Nat) (Zero) (Succ (Zero)) (VNil (Nat))))

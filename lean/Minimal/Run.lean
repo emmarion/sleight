@@ -33,8 +33,10 @@ def Prog.runStripped (P : Prog) : String :=
   | some vs => " ".intercalate (vs.map P.show)
   | none => "stuck"
 
-def runSource (src : String) (mode : String) : String :=
-  match load src with
+def prelude : String := include_str "../prelude.sl"
+
+def runSource (src : String) (mode : String) (pre : Bool) : String :=
+  match load ((if pre then prelude else "") ++ src) with
   | .error e => s!"syntax error: {e}"
   | .ok P =>
     if mode == "--unchecked" then P.run

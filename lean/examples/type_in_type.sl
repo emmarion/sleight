@@ -1,7 +1,9 @@
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (Box () (MkBox ((Type T) (T x)) (Box))))
+(def-adts
+  ((Box : -> Type)
+    enum
+    (many MkBox : (erased Type T) (erased T x) -> (Box))))
 (def-lvl L)
-(def-fns L (id ((Type A) (A x)) ((A y)) x))
-(let (t) (id Type (Nat)))
-(let (b) (MkBox Type Type))
-(values t b (id Type Type))
+(def-fns L $ (erased id : (erased Type A) (erased A x) -> (erased A y))
+  x)
+(let ((erased t)) (id Type (Nat)))
+(MkBox Type (id Type t))

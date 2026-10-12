@@ -1,11 +1,14 @@
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (Vec ((Type A) ((Nat) n))
-  (VNil ((Type A)) (Vec A (Zero)))
-  (VCons ((Type A) ((Nat) n) (A x) ((Vec A n) xs)) (Vec A (Succ n)))))
-(def-adts (W ((Type F))
-  (MkW (((Level) l) ((Nat) k)) (W (Fn l (((Nat) x)) (((Vec (Nat) k) y)))))))
+(def-adts
+  ((Vec : (Type A) ((Nat) n) -> Type)
+    enum
+    (many VNil : (erased Type A) -> (Vec A (Zero)))
+    (many VCons : (erased Type A) (many (Nat) n) (many A x) (many (Vec A n) xs) -> (Vec A (Succ n)))))
+(def-adts
+  ((W : (Type F) -> Type)
+    enum
+    (many MkW : (erased (Level) l) (many (Nat) k) -> (W (Fn l (many (Nat) x) -> (many (Vec (Nat) k) y))))))
 (def-lvl L)
 (def-lvl M)
-(def-fns M (never ((Type A) ((W (Fn L (((Nat) x)) (((Vec (Nat) x) y)))) w)) ((A r))
-  (match w ((A r)))))
+(def-fns M $ (many never : (erased Type A) (many (W (Fn L (many (Nat) x) -> (many (Vec (Nat) x) y))) w) -> (many A r))
+  (match many w ((A r))))
 (Zero)

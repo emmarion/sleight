@@ -1,8 +1,13 @@
 name = "minimal"
 defaultTargets = ["Minimal"]
 
+[[input_file]]
+name = "prelude"
+path = "prelude.sl"
+
 [[lean_lib]]
 name = "Minimal"
+needs = ["prelude"]
 
 [[lean_exe]]
 name = "minimal"

@@ -1,3 +1,3 @@
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-fns _ (absurd lie (((Nat) n)) (((Nat) m)) n))
+(def-fns _ $ (many absurd lie : (many (Nat) n) -> (many (Nat) m))
+  n)
 (lie (Zero))

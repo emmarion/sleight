@@ -1,7 +1,13 @@
-(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
-(def-adts (False ()))
-(def-adts (Eq ((Type A) (A x) (A y)) (Refl ((Type A) (A x)) (Eq A x x))))
+(def-adts
+  ((False : -> Type)
+    enum))
+(def-adts
+  ((Eq : (Type A) (A x) (A y) -> Type)
+    enum
+    (many Refl : (erased Type A) (many A x) -> (Eq A x x))))
 (def-lvl L)
-(def-fns L (explode (((False) f)) (((Nat) n)) (match f (((Nat) n)))))
-(def-fns L (zero-not-one (((Eq (Nat) (Zero) (Succ (Zero))) e)) (((False) f)) (match e (((False) f)))))
+(def-fns L $ (many explode : (many (False) f) -> (many (Nat) n))
+  (match many f (((Nat) n))))
+(def-fns L $ (many zero-not-one : (many (Eq (Nat) (Zero) (Succ (Zero))) e) -> (many (False) f))
+  (match many e (((False) f))))
 (Zero)
