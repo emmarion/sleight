@@ -40,7 +40,7 @@ def setErs (Γ Γ' : Ctx) : Option (List Bool) → Ctx
 
 def pushTele (Γ : Ctx) (R : Tm) (ov : Option (List Bool) := none) : Ctx := Γ.setErs (Γ.openTele R R.len).1 ov
 
-def pushMint (Γ : Ctx) : Ctx := { Γ.push .level with mints := Γ.mints ++ [Γ.n] }
+def pushMint (Γ : Ctx) : Ctx := { Γ.push .level true with mints := Γ.mints ++ [Γ.n] }
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx :=
   { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
@@ -79,11 +79,8 @@ def rt (Γ : Ctx) : Tm → Bool
     | none => false
   | .app (.fv i) args => match (Γ.tys[i]?).map Γ.canon with
     | some (.valCtor sig) => !Γ.er i && rtArgs Γ args sig
-    | some (.tyCtor _) => true
     | _ => false
   | .vc d c => !P.phantom d c
-  | .app (.tyc _) _ | .tyc _ | .tyCtor _ | .valCtor _ | .univ | .level | .predates .. | .subterm .. | .fn .. =>
-    true
   | _ => false
 
 def rtArgs (Γ : Ctx) : Tm → Tm → Bool
@@ -96,7 +93,7 @@ def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t => Minimal.rt P Γ t
-  | _ => true
+  | _ => false
 
 mutual
 inductive TmTy : Ctx → Tm → Tm → Prop

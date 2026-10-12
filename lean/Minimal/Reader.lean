@@ -293,8 +293,8 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
         | "subterm-trans", [p, q], _ => pure (.subtermTrans p q)
         | "predates-subterm", [p, q], _ => pure (.predatesSubterm p q)
         | _, _, _ => throw s!"malformed {h}"
-      let [i] ← fresh [false] | throw "fresh"
-      return (ss ++ [.prim p false], [.fv i])
+      let [i] ← fresh [true] | throw "fresh"
+      return (ss ++ [.prim p true], [.fv i])
     else if h == "match" then elabMatch sc want args
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
@@ -378,7 +378,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
     declareAdts sc bs
     elabSeq sc want rest
   | .list [.atom "def-lvl", .atom L] :: rest => do
-    let [i] ← fresh [false] | throw "fresh"
+    let [i] ← fresh [true] | throw "fresh"
     note i .level
     let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want rest
     return (.defLvl :: ss, ts)

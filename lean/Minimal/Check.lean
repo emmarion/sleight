@@ -246,11 +246,11 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .ret ts, .inl r => do
     let ⟨out, h⟩ ← checkArgs P Γ ts r
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
-    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions an erased entry or a phantom constructor"
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions something erased"
     .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Sum.inl.inj e, fun _ e => (by cases e)⟩
   | .ret ts, .inr n => do
     let ⟨R, h, hs⟩ ← synthRets P Γ n ts
-    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions an erased entry or a phantom constructor"
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions something erased"
     .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
   | .absurd body, rets => do
     let ⟨R, hb, _, hs⟩ ← checkCore b { Γ with ghost := true } body (.inr Γ.n)
@@ -275,7 +275,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨hd⟩ ← checkDec P Γ l t args dec
       let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))
-        "a non-erased call mentions an erased entry or a phantom constructor, or binds an erased result at many"
+        "a non-erased call mentions something erased, or binds an erased result at many"
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets
       .ok ⟨R, .call hf hF ht ha hn hd ho hm hr, e⟩
     | _ => .error "not a function"
@@ -305,7 +305,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     | _ => .error "scrutinee not of a data type"
   | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
-    let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning an erased entry or a phantom constructor"
+    let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning something erased"
     let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T er p) rest rets
     .ok ⟨R, .prim hp hm hr, e⟩
   | .defLvl rest, rets => do

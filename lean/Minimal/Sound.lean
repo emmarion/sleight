@@ -907,21 +907,11 @@ theorem rt_real {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv 
         have hR := hS.2 i h.1; rw [hev] at hR
         simp only [Tm.subst]; rw [hev, hR.vc_inv.1]
         exact .con hc hR.vc_inv.2 (rtArgs_reals hE hS args _ (rtArgs_subst _ args sig h.2))
-      · rename_i ps heq
-        simp only [Option.map_eq_some_iff] at heq
-        obtain ⟨T, hT, hcT⟩ := heq
-        obtain ⟨v, -, hev, hv⟩ := hE.get hT
-        rw [← hE.canon, hcT] at hv; simp only [Tm.subst] at hv
-        cases hv with
-        | tyCtor => simp only [Tm.subst]; rw [hev]; exact .other (by simp) (by simp) (by simp)
-        | con _ _ he => cases he
       · simp at h
-    | tyc _ => exact .other (by simp [Tm.subst]) (by simp [Tm.subst]) (by simp [Tm.subst])
     | _ => simp [rt] at h
   | .vc _ _, h => by simp only [Tm.subst]; exact .vc (by simpa [rt] using h)
-  | .tyc _, _ | .tyCtor _, _ | .valCtor _, _ | .univ, _ | .level, _ | .predates .., _ | .subterm .., _
-  | .fn .., _ => .other (by simp [Tm.subst]) (by simp [Tm.subst]) (by simp [Tm.subst])
-  | .nil, h | .bv _, h | .cons .., h | .bind .., h | .lvl _, h | .tok, h | .clo .., h => by simp [rt] at h
+  | .tyc _, h | .tyCtor _, h | .valCtor _, h | .univ, h | .level, h | .predates .., h | .subterm .., h
+  | .fn .., h | .nil, h | .bv _, h | .cons .., h | .bind .., h | .lvl _, h | .tok, h | .clo .., h => by simp [rt] at h
 
 theorem rtArgs_reals {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv P Γ.er ρS ρ) :
     ∀ (args tele : Tm), rtArgs P Γ args tele = true →

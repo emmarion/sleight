@@ -19,6 +19,7 @@ lake build minimal              # the command-line runner
 .lake/build/bin/minimal examples/map.sl
 .lake/build/bin/minimal --unchecked examples/paradox_knot_bad.sl
 ./test.sh                       # examples against examples/expected.txt, then the axioms
+./regen.sh                      # rewrite examples/expected.txt from the current runner
 ```
 
 `minimal` checks a program and runs it, or prints why it is refused.
@@ -143,9 +144,10 @@ among them `let-match`, `coerce`, literals, macros, pragmas, cells and
   throughout. A constructor declared `erased` is phantom (DESIGN.md
   section 21): only an erased position may build or hold it, and its
   branch under a non-erased match is erased throughout. What this omits
-  from the full language: `unique` and erasure by kind, so a type, a
-  level or a proof may be held at `many`, where the full language
-  refuses it; and an `erased` match's results are erased. A call nested in an argument
+  from the full language: `unique`, and an `erased` match's results are
+  erased. A type, a type constructor, a level and a proof are erased by
+  their kind (section 14): `def-lvl`, the proof forms and every type
+  former make erased entries, and a type is not a non-erased value. A call nested in an argument
   is erased when the parameter or field it stands for is, which the
   elaborator knows for a function a `def-fns` in scope names and for a
   constructor named directly; elsewhere it is elaborated at `many`, so
