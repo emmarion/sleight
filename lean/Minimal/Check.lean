@@ -189,6 +189,7 @@ def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ
 
 def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
   | .tm t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .tm h⟩
+  | .lit t => do let ⟨T, h⟩ ← checkTm P Γ t; .ok ⟨T, .lit h⟩
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     let ⟨B, hb⟩ ← checkTm P Γ b
@@ -238,7 +239,7 @@ def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .n
         by simp [Tm.static, Tm.static_mono (Nat.zero_le n) _ (Nat.le_refl 0) hs, hR1]⟩
     else if hs : T.static n 0 then
       .ok ⟨.bind (.ty false false) T R, .cons ha rfl (by rw [hi]; exact hr), by simp [Tm.static, hs, hR1]⟩
-    else .error "a result's type mentions entries it may not"
+    else .ok ⟨.bind (.ty false false) .nil R, .anyCons ha (by rw [hi]; exact hr), by simp [Tm.static, hR1]⟩
   | _ => .error "not a list of results"
 
 mutual

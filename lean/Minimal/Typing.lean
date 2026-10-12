@@ -92,7 +92,7 @@ end
 def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
-  | .tm t => Minimal.rt P Γ t
+  | .tm t | .lit t => Minimal.rt P Γ t
   | _ => false
 
 mutual
@@ -122,6 +122,7 @@ inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
       ArgsTy Γ (.cons a as) (.bind (.ty m e) A r) out
   | isCons : TmTy Γ a T → Γ.canon a = Γ.canon e → ArgsTy Γ as (r.inst a 0) out →
       ArgsTy Γ (.cons a as) (.bind (.is _) e r) out
+  | anyCons : TmTy Γ a T → ArgsTy Γ as (r.inst a 0) out → ArgsTy Γ (.cons a as) (.bind (.ty m e) .nil r) out
 
 inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
@@ -150,6 +151,7 @@ inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
 
 inductive PrimTy : Ctx → Prim → Tm → Prop
   | tm : TmTy P Γ t T → PrimTy Γ (.tm t) T
+  | lit : TmTy P Γ t T → PrimTy Γ (.lit t) T
   | proveSubterm : TmTy P Γ a A → TmTy P Γ b B → (Γ.canon a).strictSub (Γ.canon b) →
       PrimTy Γ (.proveSubterm a b) (.subterm A a B b)
   | provePredates : x < L → L ∈ Γ.mints → Γ.tys[x]? = some X →

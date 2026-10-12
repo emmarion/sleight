@@ -11,6 +11,10 @@ partial def Sx.show : Sx → String
   | .atom a => a
   | .list xs => "(" ++ " ".intercalate (xs.map Sx.show) ++ ")"
 
+partial def Sx.numerals : Sx → List Nat
+  | .atom a => if !a.isEmpty && a.all Char.isDigit && (a == "0" || !a.startsWith "0") then [a.toNat!] else []
+  | .list xs => xs.flatMap Sx.numerals
+
 partial def tokenize (cs : List Char) (acc : List String) : List String :=
   match cs with
   | [] => acc.reverse
@@ -52,6 +56,8 @@ structure ESt where
   ghost : Bool := false
   top : Bool := true
   rhs : Bool := true
+  lits : List (Nat × Nat) := []
+  pre : Bool := true
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
   lifts : List (Nat × List Nat) := []
@@ -124,6 +130,7 @@ def name : Sx → M String
 
 def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
   | .list xs => do
+    if xs.contains (.atom "at") then throw "at is not supported"
     let (sub, xs) := match xs with | .atom "subterm" :: xs => (true, xs) | xs => (false, xs)
     let (er, xs) ← splitMult need xs
     match xs with
@@ -150,7 +157,11 @@ def fieldErs : Tm → List Bool
 mutual
 partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
   | .atom "Type" => pure .univ
-  | .atom x => look sc depth x
+  | e@(.atom x) => match e.numerals with
+    | [n] => do match (← get).lits.lookup n with
+      | some i => pure (.fv i)
+      | none => throw s!"the numeral {x} is not interned"
+    | _ => look sc depth x
   | .list [.atom "Level"] => pure .level
   | .list [.atom "level-of", .atom f] => return .fv (← levelOf sc f)
   | .list [.atom "Predates", A, x, L] =>
@@ -286,6 +297,21 @@ def entry (sc : Scope) : Sx → M Nat
   | .list [.atom "level-of", .atom f] => levelOf sc f
   | _ => throw "not an entry"
 
+def internLits (e : Sx) : M (List Stmt) := do
+  let st ← get
+  let ns := (e.numerals.filter fun n => (st.lits.lookup n).isNone).eraseDups
+  if ns.isEmpty then return []
+  unless st.pre do throw "a numeral needs the prelude's Nat, which --no-prelude leaves out"
+  let some d := (st.adts.filter (·.1 == "Nat")).getLast?.map (·.2) | throw "a numeral needs the prelude's Nat"
+  let ctor (c : String) := (st.ctors.find? fun (x, d', _) => x == c && d' == d).map (·.2.2)
+  let (some z, some sc) := (ctor "Zero", ctor "Succ") | throw "a numeral needs the prelude's Nat"
+  ns.mapM fun n => do
+    let [i] ← fresh [false] | throw "fresh"
+    note i (.app (.tyc d) .nil)
+    modify fun st => { st with lits := (n, i) :: st.lits }
+    let t := (List.range n).foldl (fun t _ => Tm.app (.vc d sc) (.cons t .nil)) (.app (.vc d z) .nil)
+    return (.prim (.lit t) false : Stmt)
+
 def openPattern (sc : Scope) (er : Bool) : Sx → M (Nat × Nat × Scope)
   | .list (.atom c :: xs) => do
     let st ← get
@@ -400,7 +426,15 @@ partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : 
   let outs ← fresh rms
   return (ss ++ [.mtch s R out els er], outs.map .fv)
 
-partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : List Sx → M (List Stmt × List Tm)
+partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) (items : List Sx) :
+    M (List Stmt × List Tm) := do
+  let ss ← match items with
+    | e :: _ => if (← get).top then internLits e else pure []
+    | [] => pure []
+  let (ss2, ts) ← elabSeq' sc want exp items
+  return (ss ++ ss2, ts)
+
+partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
   | [e] => elabExpr sc want exp e
   | .list (.atom "def-adts" :: bs) :: rest => do
@@ -499,10 +533,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : 
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
-  | e :: rest => do
-    let (ss, _) ← elabExpr sc [] none e
-    let (ss2, ts) ← elabSeq sc want exp rest
-    return (ss ++ ss2, ts)
+  | e :: _ => throw s!"{e.show.take 40} is not a statement"
 
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none) : M Core := do
   let r0 := (← get).rhs
@@ -514,15 +545,15 @@ end
 
 def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-match"]
 
-def elabProgram (items : List Sx) : Except String Prog := do
+def elabProgram (items : List Sx) (pre : Bool) : Except String Prog := do
   let stmt := match items.getLast? with
     | some (.list (.atom h :: _)) => statements.contains h
     | _ => false
   let ((ss, ts), st) ← (elabSeq [] (if stmt then [] else [false]) none
-    (if stmt then items ++ [.list [.atom "values"]] else items)).run {}
+    (if stmt then items ++ [.list [.atom "values"]] else items)).run { pre }
   unless ts.length == (if stmt then 0 else 1) do throw "the top level has size one"
   return { adts := st.decls, groups := st.groups, main := close ss ts }
 
-def load (src : String) : Except String Prog := do elabProgram (← parse src)
+def load (src : String) (pre : Bool := true) : Except String Prog := do elabProgram (← parse src) pre
 
 end Minimal

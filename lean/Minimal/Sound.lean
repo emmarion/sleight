@@ -189,6 +189,12 @@ theorem args_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     rw [Tm.subst_inst _ (Tm.env_lc hE.closed) a r 0] at hvs
     have e' : a.subst (Tm.env ρ) = e.subst (Tm.env ρ) := by rw [← hE.canon, hc, hE.canon]
     refine ⟨by simp only [Tm.subst]; exact .isCons e' hvs, by simp [Tm.static, has, hass], hout⟩
+  | _, _, _, .anyCons (a := a) (r := r) ha hr, hs => by
+    have hs' : r.static Γ.n 1 := by simpa [Tm.static] using hs
+    obtain ⟨hv, has, _⟩ := tm_sound hP hE ha
+    obtain ⟨hvs, hass, hout⟩ := args_sound hP hE hr (Tm.static_inst has r 0 hs')
+    rw [Tm.subst_inst _ (Tm.env_lc hE.closed) a r 0] at hvs
+    refine ⟨by simp only [Tm.subst]; exact .cons .top hvs, by simp [Tm.static, has, hass], hout⟩
 end
 
 theorem getElem?_append_cases {α : Type} {l1 l2 : List α} {i : Nat} {x : α} (h : (l1 ++ l2)[i]? = some x) :
@@ -577,15 +583,15 @@ theorem TeleOK.isTele {Γ : Ctx} {t : Tm} : TeleOK P Γ t → t.isTele
 
 theorem ArgsTy.isList {Γ : Ctx} {args tele out : Tm} : ArgsTy P Γ args tele out → args.isList
   | .nil => rfl
-  | .cons _ _ h | .isCons _ _ h => by simp only [Tm.isList]; exact h.isList
+  | .cons _ _ h | .isCons _ _ h | .anyCons _ h => by simp only [Tm.isList]; exact h.isList
 
 theorem ArgsTy.isTele {Γ : Ctx} {args tele out : Tm} : ArgsTy P Γ args tele out → tele.isTele → out.isTele
   | .nil, h => h
-  | .cons _ _ hr, h | .isCons _ _ hr, h => hr.isTele (Tm.isTele_inst _ _ 0 (by simpa [Tm.isTele] using h))
+  | .cons _ _ hr, h | .isCons _ _ hr, h | .anyCons _ hr, h => hr.isTele (Tm.isTele_inst _ _ 0 (by simpa [Tm.isTele] using h))
 
 theorem ArgsTy.len {Γ : Ctx} {args tele out : Tm} : ArgsTy P Γ args tele out → tele.isTele → args.len + out.len = tele.len
   | .nil, _ => by simp [Tm.len]
-  | .cons (r := r) _ _ hr, h | .isCons (r := r) _ _ hr, h => by
+  | .cons (r := r) _ _ hr, h | .isCons (r := r) _ _ hr, h | .anyCons (r := r) _ hr, h => by
     simp only [Tm.isTele] at h
     have := hr.len (Tm.isTele_inst _ _ 0 h)
     rw [Tm.len_inst _ _ _ h] at this
@@ -677,7 +683,7 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
   have sem : ∀ {t T : Tm}, TmTy P Γ t T → VTy P (t.subst (Tm.env ρ)) ((Γ.canon T).subst (Tm.env ρ)) := fun ht => by
     rw [hE.canon]; exact (tm_sound hP hE ht).1
   cases h with
-  | tm ht =>
+  | tm ht | lit ht =>
     obtain ⟨hv, hs, hT⟩ := tm_sound hP hE ht
     exact ⟨hv, hT, lc_of_static hE.closed hs, hb.subst hs⟩
   | proveSubterm ha hb' hst =>
@@ -1568,7 +1574,7 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
           rw [her, if_pos (by omega)] at he; subst he
           simp only [Ctx.ok, hg, Bool.false_or] at hok
           cases p with
-          | tm t => exact rt_real hE hS t hok
+          | tm t | lit t => exact rt_real hE hS t hok
           | _ => exact .other (by simp [Prim.eval]) (by simp [Prim.eval]) (by simp [Prim.eval])) vs cnt' hr'
     exact ⟨vsS, .prim hrun, hre⟩
   | case11 μ ρ cnt rest ih =>

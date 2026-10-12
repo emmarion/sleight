@@ -23,6 +23,10 @@ lake build minimal              # the command-line runner
 ```
 
 `minimal` checks a program and runs it, or prints why it is refused.
+A value prints as DESIGN.md section 45 has it: a `Nat` of the prelude
+as a numeral, an erased field as `_`, and a last argument that is an
+application after `$`. A final value that is a function with no
+parameters is applied, and its result printed (section 27).
 `--unchecked` skips the checker and runs the program anyway.
 `--stripped` checks it and runs it with erased code skipped (`runS`),
 printing what was skipped as `_`. Every program starts in the scope of
@@ -120,7 +124,8 @@ full language requires is required. These forms are refused as not
 supported: `unique`; `union`, `newtype` and `extern` types, so a type
 is declared `enum`; `_` in place of a type (section 50); and every form
 not named in this file,
-among them `coerce`, literals, macros, pragmas, cells and
+among them `coerce`, character and string literals, `numeral-of`,
+`prove-literal-lt`, `unary`, macros, pragmas, cells and
 `at`. A file's top level has size one, or ends in a statement and
 produces nothing (section 27).
 
@@ -131,8 +136,6 @@ produces nothing (section 27).
    `def-fns` defines, or a `let` binder written with a type; or when the
    entry is a `let` of a term, which is put in its place. Any other
    entry is refused.
-2. The type of the program's final expression may not mention the
-   program's own entries, once canonicalized.
 
 ## Beyond MINIMAL.md
 
@@ -179,6 +182,13 @@ produces nothing (section 27).
   with the parameters' and of the term's type with what the position
   expects. An unsolved `_` is an error. The checker then checks the
   program as filled in, so the inference is not trusted.
+- Numerals (section 45). Each numeral of a program is one entry, made
+  at the top level before the first form that mentions it: a `Nat` of
+  the prelude, the numeral's `Succ`s at run time, with no rule, so the
+  checker sees it as opaque. Its `Numeral` proof is not made.
+- A result of the program whose type mentions the program's own entries
+  is checked as a result of any type (`ArgsTy.anyCons`), so
+  `checked_runs` says nothing of its type.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.

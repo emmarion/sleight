@@ -184,6 +184,7 @@ inductive Dec where
 
 inductive Prim where
   | tm (t : Tm)
+  | lit (t : Tm)
   | proveSubterm (a b : Tm)
   | provePredates (x L : Nat)
   | predatesTrans (p q : Tm)

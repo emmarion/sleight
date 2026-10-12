@@ -41,7 +41,7 @@ structure Mu (k : Nat) where
 instance (k : Nat) : WellFoundedRelation (Mu k) := ⟨fun a b => MuLt k a.μ b.μ, InvImage.wf _ (MuLt_wf k)⟩
 
 def Prim.eval (ρ : List Tm) : Prim → Tm
-  | .tm t => t.subst (Tm.env ρ)
+  | .tm t | .lit t => t.subst (Tm.env ρ)
   | _ => .tok
 
 def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)

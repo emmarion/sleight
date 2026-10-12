@@ -12,7 +12,9 @@ for f in ../tests/*.sl; do
     "error:"*) got=refuse ;;
     "refused:"*) got=refuse ;;
     "stuck"*) got=stuck ;;
-    *) got=accept ;;
+    *) got=accept
+       exp=$(grep -m1 '^; expect: ' "$f" | cut -d' ' -f3-)
+       [ -n "$exp" ] && [ "$exp" != "$out" ] && got=mismatch ;;
   esac
   echo "$want $got $(basename "$f") $out"
 done
