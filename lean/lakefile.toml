@@ -1,0 +1,9 @@
+name = "minimal"
+defaultTargets = ["Minimal"]
+
+[[lean_lib]]
+name = "Minimal"
+
+[[lean_exe]]
+name = "minimal"
+root = "Main"

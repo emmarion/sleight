@@ -1,0 +1,7 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (Eq ((Type A) (A x) (A y)) (Refl ((Type A) (A x)) (Eq A x x))))
+(def-lvl L)
+(def-fns L (sym ((Type A) (A x) (A y) ((Eq A x y) e)) (((Eq A y x) r))
+  (match e (((Eq A y x) r))
+    ((Refl a z) (Refl a z)))))
+(sym (Nat) (Zero) (Zero) (Refl (Nat) (Zero)))

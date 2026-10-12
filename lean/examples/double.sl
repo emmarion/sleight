@@ -1,0 +1,7 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-lvl L)
+(def-fns L (double ((subterm (Nat) n)) (((Nat) r))
+  (match n (((Nat) r))
+    ((Zero) (Zero))
+    ((Succ k) (let (p) (prove-subterm k n)) (Succ (Succ (double (subterm p) k)))))))
+(double (Succ (Succ (Zero))))

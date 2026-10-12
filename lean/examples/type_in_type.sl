@@ -1,0 +1,7 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (Box () (MkBox ((Type T) (T x)) (Box))))
+(def-lvl L)
+(def-fns L (id ((Type A) (A x)) ((A y)) x))
+(let (t) (id Type (Nat)))
+(let (b) (MkBox Type Type))
+(values t b (id Type Type))

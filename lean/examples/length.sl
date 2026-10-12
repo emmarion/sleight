@@ -1,0 +1,8 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (List ((Type A)) (Nil ((Type A)) (List A)) (Cons ((Type A) (A head) ((List A) rest)) (List A))))
+(def-lvl L)
+(def-fns L (length ((Type A) (subterm (List A) xs)) (((Nat) n))
+  (match xs (((Nat) n))
+    ((Nil a) (Zero))
+    ((Cons a hd tl) (let (p) (prove-subterm tl xs)) (Succ (length a (subterm p) tl))))))
+(length (Nat) (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat))))))

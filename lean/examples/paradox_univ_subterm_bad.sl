@@ -1,0 +1,1 @@
+(prove-subterm Type Type)
