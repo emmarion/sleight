@@ -111,7 +111,10 @@ def splitArrow (xs : List Sx) : M (List Sx × List Sx) :=
   | none => throw "missing ->"
 
 def name : Sx → M String
-  | .atom x => if x ∈ keywords then throw s!"{x} is not a name" else pure x
+  | .atom x =>
+    if x ∈ keywords || x.all Char.isDigit || x.startsWith "\"" || x.startsWith "#\\" then throw s!"{x} is not a name"
+    else if x.startsWith "__" then throw s!"{x} begins with __, which is reserved"
+    else pure x
   | _ => throw "malformed name"
 
 def parseEntry (need : Bool) : Sx → M (Ent × Sx × List String)
@@ -332,6 +335,7 @@ partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (Lis
 
 partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List Stmt × List Tm) := do
   let (er, args) ← splitMult true args
+  if !er && ((← get).ghost || (!want.isEmpty && want.all id)) then throw "a match written many in an erased position"
   if let _ :: .atom "_" :: _ := args then throw "a match annotation `_` is not supported"
   let s :: .list rets :: brs := args | throw "malformed match"
   let (ss, sts) ← elabExpr sc [false] s
@@ -386,6 +390,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
     let bs ← xs.mapM fun
       | .list xs => do
         let (er, xs) ← splitMult true xs
+        if !er && (← get).ghost then throw "a let binder written many in an erased position"
         match xs with
         | [x] => pure (← name x, er, none)
         | [e, .atom "is", x] => pure (← name x, er, some (Chk.is, e))

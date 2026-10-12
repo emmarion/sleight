@@ -37,7 +37,7 @@ def prelude : String := include_str "../prelude.sl"
 
 def runSource (src : String) (mode : String) (pre : Bool) : String :=
   match load ((if pre then prelude else "") ++ src) with
-  | .error e => s!"syntax error: {e}"
+  | .error e => s!"error: {e}"
   | .ok P =>
     if mode == "--unchecked" then P.run
     else match checkProg P with
