@@ -15,7 +15,8 @@ tail call, even if measurements show no gain.
 For reference: README.md (the implementations and their command lines),
 WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
 prelude.sl (the standard library), std/ (source libraries, among them
-std/nat.sl, which holds `Le`), tests/ (example programs), pal/ (a
+std/nat.sl, which holds `Le`, and std/list.sl, lemmas about `Length`, `Nth`,
+`SetNth` and `Repeat`), tests/ (example programs), pal/ (a
 certified program), and self/ (the compiler, itself written in SL).
 
 Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
