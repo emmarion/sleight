@@ -2192,10 +2192,10 @@
 ; prove-predates (section 18): the variable was in scope when the level was minted, both read by their
 ; binders and never canonicalized (ASSUMPTIONS 13); a literal has no introduction order (section 45).
 (def-fns _ $ (many mint-predates : (many (Env) env) (many (Nat) x) (many (Nat) lvl) -> (many (Env) r) (many (Res) res))
-  (def-fns msg-lvl $ (many level : -> (many (String) s)) (match many (env-entry-name env lvl) (((String) _)) ((None _) (qshow env $ TVar lvl)) ((Some _ _) (qshown env lvl))))
-  (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (level) (say env " is not a level minted by `def-lvl`"))))
+  (def-fns msg-lvl $ (many who : (many (Nat) y) -> (many (String) s)) (match many (env-entry-name env y) (((String) _)) ((None _) (qshow env $ TVar y)) ((Some _ _) (qshown env y))))
+  (let ((many env2)) $ match many (entry-minted env lvl) (((Env) _)) ((BTrue) env) ((BFalse) (env-error env $ str-cat (who lvl) (say env " is not a level minted by `def-lvl`"))))
   (let ((many env3)) $ match many (is-literal env x) (((Env) _)) ((BTrue) (env-error env2 $ str-cat (qshown env2 x) " is a literal, which has no introduction order")) ((BFalse) env2))
-  (let ((many env4)) $ match many (or (provable-predates env x lvl) $ or (is-literal env x) $ not $ entry-minted env lvl) (((Env) _)) ((BTrue) env3) ((BFalse) (env-error env3 $ str-cat3 (qshown env3 x) " was not in scope when level " $ str-cat (level) " was minted")))
+  (let ((many env4)) $ match many (or (provable-predates env x lvl) $ or (is-literal env x) $ not $ entry-minted env lvl) (((Env) _)) ((BTrue) env3) ((BFalse) (env-error env3 $ str-cat3 (who x) " was not in scope when level " $ str-cat (who lvl) " was minted")))
   (mint env4 $ proof-type predates-id $ Cons _ (type-of env4 x) $ Cons _ (TVar x) $ Cons _ (TVar lvl) $ Nil _))
 
 ; The arguments of a proof of the given kind, with an error where the term is not one.
@@ -3435,6 +3435,25 @@
     ((Nil _) (Nil _)))
   (match many p _ ((MkPair _ _ m c) (Cons _ (MkMCtor m $ TVar c) $ notail $ mctors-of rest))))
 
+
+(def-fns _ $ (many slot-term-of : (many (Env) env) (many (Nat) x) -> (many (Term) t))
+  (let-match many (env-slot-of env x) (Some _ s) ((None _) (slot-atom x)))
+  (TVar s))
+
+(def-fns _ $ (many slot-pairs : (many (Env) env) (subterm many (List $ Nat) ids) -> (many (List $ Nat) xs) (many (List $ Nat) ss))
+  (let-match many ids (Cons _ x rest) ((Nil _) (values (Nil _) (Nil _))))
+  (let ((many xs) (many ss)) $ notail $ slot-pairs env rest)
+  (let-match many (env-slot-of env x) (Some _ s) ((None _) (values xs ss)))
+  (match many (nat-eq s x) (((List $ Nat) _) ((List $ Nat) _)) ((BTrue) (values xs ss)) ((BFalse) (values (Cons _ x xs) (Cons _ s ss)))))
+
+(def-fns _ $ (many abstract-slots : (many (Env) env) (many (List $ Nat) ids) (many (Term) t) -> (many (Term) r))
+  (let ((many xs) (many ss)) $ slot-pairs env ids)
+  (abstract ids $ mapv t (OpSlots xs ss) 0))
+
+(def-fns _ $ (many abstract-slots-sg : (many (Env) env) (many (List $ Nat) ids) (many (Sg) sg) -> (many (Sg) r))
+  (match many sg _
+    ((SgTy t) (SgTy $ abstract-slots env ids t))
+    ((SgIs t ty) (SgIs (abstract-slots env ids t) $ abstract-slots env ids ty))))
 
 (def-fns _ $ (many bin-ids-of : (subterm many (List $ Term) ts) -> (many (List $ Nat) r))
   (let-match many ts (Cons _ t rest) ((Nil _) (Nil _)))
@@ -5058,7 +5077,7 @@
                       (let ((many env1b)) $ match many (and (mult-is-many pos) $ not $ mult-is-many $ entry-mult-of env1 id) (((Env) _))
                         ((BTrue) (env-error env1 $ say env1 $ str-cat3 (qshow env1 $ slot-atom id) " is erased, as " $ str-cat (qname env1 id) " is, and stands in a non-erased position"))
                         ((BFalse) env1))
-                      (cell-result-hoisted ctx expect env1b (MkRes (slot-atom id) slot-term (pos-in env1b expect) $ Some _ $ slot-atom id) (hoist-none ctx many-one $ var-code env1b ctx id)))
+                      (cell-result-hoisted ctx expect env1b (MkRes (slot-term-of env1b id) slot-term (pos-in env1b expect) $ Some _ $ slot-atom id) (hoist-none ctx many-one $ var-code env1b ctx id)))
                     ((ExAtFnOf)
                       (let ((many env2) (many found)) $ notail $ fetched fuel sugar args one-step env0 ex)
                       (match many found (((Env) _) ((List $ Res) rs) ((Hoisted ctx expect) c))
@@ -5489,7 +5508,7 @@
           ((None _) (values (env-error env3 $ str-cat (qshown env3 tid) (say env3 " has no `Matchable` open")) $ None _)))
         (match many i _ ((MkMatchInfo mid _ _ _) (values env3 $ Some _ $ TVar mid))))
       ((ExNumeralOf) (numeral-of-term env arg))
-      ((ExSlotOf) (let ((many env2) (many id)) (slot-var env arg)) (values env2 $ Some _ $ slot-atom id))
+      ((ExSlotOf) (let ((many env2) (many id)) (slot-var env arg)) (values env2 $ Some _ $ slot-term-of env2 id))
       ((ExDelegateOf) (fetched-proof env arg delegate-id 6 2 "Delegate"))
       ((ExAtFnOf) (fetched-proof env arg atfn-id 2 1 "AtFn"))
       (else (values (env-error env $ sp-misuse env $ SpExpr e) $ None _))))
@@ -5838,7 +5857,7 @@
                          $ match many (type-of env3 t) (((Bool) _)) ((TTyCtor _) (BTrue)) (else (BFalse)))) (else (BFalse)))) (else (BFalse))))
     (def-fns msg-lvl $ (many msg-return : -> (many (String) s)) (str-cat "a constructor returns an application of a type constructor in scope, not " $ qshow env3 ret))
     (let ((many env4)) $ error-unless-msg env3 ok msg-return)
-    (values (env-set-ctor-tele (env-set-signature env4 $ env-signature env) $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract (list-rev _ ids) ret))
+    (values (env-set-ctor-tele (env-set-signature env4 $ env-signature env) $ env-ctor-tele env) tele ret $ TValCtor tele $ abstract-slots env4 (list-rev _ ids) ret))
 
   ; Source entries into a closed telescope, each name bound for the entries after it (section 3).
   ; [ids]: binders already in force, innermost first.
@@ -5883,8 +5902,8 @@
     (let ((many env3)) (placed-at env3b x atplace))
     (let ((many env3s)) (env-set-signature env3 (Cons _ x (env-signature env3))))
     (let ((many env3e)) $ match many ctor (((Env) _)) ((BTrue) (env-set-ctor-tele env3s (Cons _ x $ env-ctor-tele env3s))) ((BFalse) env3s))
-    (let ((many ap)) $ match many atplace (((Maybe $ Term) _)) ((None _) (None _)) ((Some _ p) (Some _ $ abstract (bin-ids-of ids) p)))
-    (let ((many entry3)) $ MkEntry nm sub2 mult (abstract-sg (bin-ids-of ids) sg) ap (Some _ $ loc-in env2a epos))
+    (let ((many ap)) $ match many atplace (((Maybe $ Term) _)) ((None _) (None _)) ((Some _ p) (Some _ $ abstract-slots env2a (bin-ids-of ids) p)))
+    (let ((many entry3)) $ MkEntry nm sub2 mult (abstract-slots-sg env2a (bin-ids-of ids) sg) ap (Some _ $ loc-in env2a epos))
     (let ((many env4) (many bound2) (many tele)) $ notail $ elab-src-entries fuel sugar root st rest env3e mode2 (Cons _ (TVar x) ids) (Cons _ x bound) outer subterm-ok holes places ctor warns)
     (values env4 bound2 $ Cons _ entry3 tele))
   ; A body: statements then the final expression (section 27); [items] sits within [root].

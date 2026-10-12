@@ -2911,7 +2911,7 @@
 
 (def-fns _ $ (many forward-marks : (many (Env) e) (many (Nat) x) (many (Nat) y) -> (many (Env) r))
   (let-match many e (MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex))
-  (let-match many (idmap-get _ y en) (Hit _ _ _ src _) ((Miss _ _ _ _) e))
+  (let ((erased hs) (many src)) $ entry e y)
   (let-match many (idmap-get _ x en) (Hit _ _ _ dst _) ((Miss _ _ _ _) e))
   (let-match many src (MkEInfo _ _ _ _ mi io _ _))
   (let-match many dst (MkEInfo _ n m s _ own me site))
@@ -3339,7 +3339,8 @@
   (many OpInst : (many (List $ Term) args) -> (VOp))
   (many OpAbs : (many (List $ Nat) ids) -> (VOp))
   (many OpMeta : (many (Env) env) -> (VOp))
-  (many OpWild : (many (Nat) fresh) -> (VOp)))
+  (many OpWild : (many (Nat) fresh) -> (VOp))
+  (many OpSlots : (many (List $ Nat) ids) (many (List $ Nat) slots) -> (VOp)))
 
 ; [args] are closed terms, innermost binder first; [ids] likewise, the head becoming Bound 0.
 (def-fns _ $ (many op-leaf : (many (VOp) op) (many (Nat) d) (many (Term) t) -> (many (Term) r))
@@ -3364,7 +3365,12 @@
       (match many (is-meta env x) _ ((BTrue) (canon-env env t)) ((BFalse) t)))
     ((OpWild f)
       (let-match many t (TVar x) (else t))
-      (match many (nat-lt x f) _ ((BTrue) t) ((BFalse) (TVar (Zero)))))))
+      (match many (nat-lt x f) _ ((BTrue) t) ((BFalse) (TVar (Zero)))))
+    ((OpSlots ids slots)
+      (let-match many t (TVar s) (else t))
+      (match many (index-of-bin slots s 0) _
+        ((Some _ i) (TSlotOf $ TVar $ list-nth-or _ ids i s))
+        ((None _) t)))))
 
 (def-fns _ $ (many meta-slot : (many (VOp) op) (many (Term) c) -> (many (Maybe $ Env) r))
   (let-match many op (OpMeta env) (else (None _)))

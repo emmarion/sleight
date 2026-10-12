@@ -176,6 +176,9 @@ let slot_named_params params rets =
     | SlotOf (Bound k) when k >= d -> (i - 1 - (k - d)) :: acc
     | t -> List.fold_left (fun acc (dd, t) -> go i (d + dd) acc t) acc (parts t) in
   List.concat (List.mapi (fun i (e : entry) -> List.fold_left (go i 0) [] (sg_term e.sg :: Option.to_list e.place)) (params @ rets))
+let abstract_slots env ids t =
+  let rec slots t = match t with Var s -> (match List.find_opt (fun x -> (entry env x).slot = s) ids with Some x -> SlotOf (Var x) | None -> t) | t -> map_shallow slots t in
+  abstract ids (slots t)
 let ctor_named tele = if List.exists (fun (e : entry) -> e.place <> None) tele then slot_named_params tele [] else []
 let with_words ?(word = true) env ids = List.fold_left (fun env x -> { env with entries = IntMap.add x { (entry env x) with word } env.entries }) env ids
 let closing env ids code = (with_words ~word:false env ids, code)
@@ -850,7 +853,7 @@ and slot_var env l = function
 
 and fetched env l sp args =
   match (sp, args) with
-  | Sp.SlotOf, _ -> let env, x = slot_var env l args in (env, slot_of x)
+  | Sp.SlotOf, _ -> let env, x = slot_var env l args in (env, Var (entry env x).slot)
   | Sp.AtFnOf, [ g ] -> (
       let g = named env l "a function name" g in
       match List.find_opt (fun x -> (entry env x).name = None && is_atfn_proof env x g) env.scope.ids with
@@ -919,7 +922,7 @@ and elab_valctor env l items =
   (match canon env' ret with
   | App (Var t, _) when (not (List.mem t ids)) && (match type_of env' t with TyCtor _ -> true | _ -> false) -> ()
   | _ -> error l "a constructor returns an application of a type constructor in scope, not %s" (qshow env' ret));
-  (env', tele, ret, ValCtor (tele, abstract (List.rev ids) ret))
+  (env', tele, ret, ValCtor (tele, abstract_slots env' (List.rev ids) ret))
 
 and disc_of env l d = match special_of env d with Some Sp.Enum -> Enum | Some Sp.Union -> Union | _ -> error_in env l "expected `enum` or `union`"
 
@@ -964,7 +967,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
         let x, env = at e.s_loc (fun () -> bind env ?holes ?written ~at:e.s_loc name mult Hypothetical ty ?rule) in
         pend x;
         let env = placed env x place in
-        (i + 1, { env with signature = x :: env.signature; ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract ids) sg; place = Option.map (abstract ids) place; loc = e.s_loc } :: tele))
+        (i + 1, { env with signature = x :: env.signature; ctor_tele = (if ctor then x :: env.ctor_tele else env.ctor_tele) }, x :: ids, { name; subterm = e.s_subterm; mult; sg = map_sg (abstract_slots env ids) sg; place = Option.map (abstract_slots env ids) place; loc = e.s_loc } :: tele))
       (0, env, ids, []) entries
   in
   (env, List.rev ids, List.rev tele)
@@ -1120,10 +1123,10 @@ let introduced env x = (entry env x).introduced
 let provable_predates env x lvl = (entry env lvl).minted_level && introduced env x >= 0 && introduced env x < introduced env lvl
 
 let prove_predates env l x lvl =
-  let level () = if (entry env lvl).name = None then qshow env (Var lvl) else qname env lvl in
-  if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (level ());
+  let who y = if (entry env y).name = None then qshow env (Var y) else qname env y in
+  if not (entry env lvl).minted_level then error_in env l "%s is not a level minted by `def-lvl`" (who lvl);
   if introduced env x < 0 then error l "%s is a literal, which has no introduction order" (qname env x);
-  if introduced env x >= introduced env lvl then error l "%s was not in scope when level %s was minted" (qname env x) (level ());
+  if introduced env x >= introduced env lvl then error l "%s was not in scope when level %s was minted" (who x) (who lvl);
   mint env (proof_type Prelude.predates [ type_of env x; Var x; Var lvl ])
 
 (* The post-erasure normalizer behind the `tail` and `delegate` checks (section 19, ASSUMPTIONS 164, 189): lets
@@ -1452,7 +1455,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let env, x = slot_var env l args in
       refer ~live:(pos <> Erased && not env.usage_erased) x;
       if pos <> Erased && (entry env x).mult = Erased then error_in env l "%s is erased, as %s is, and stands in a non-erased position" (qshow env (slot_of x)) (qname env x);
-      (env, [ { term = slot_of x; ty = Prelude.slot_term; erasure = pos; place = Some (slot_of x) } ], if pos = Erased then V.CErased else V.CVar x)
+      (env, [ { term = Var (entry env x).slot; ty = Prelude.slot_term; erasure = pos; place = Some (slot_of x) } ], if pos = Erased then V.CErased else V.CVar x)
   | Sp.CellAlloc, [ raw ] ->
       let c, items = match raw with List (_, c :: ss) -> (c, Some ss) | Atom _ | Handle _ -> (raw, None) | _ -> error l "%s" (help env (Sp.misuse Sp.CellAlloc)) in
       let c = ctor_var env l c in
