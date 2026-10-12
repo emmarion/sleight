@@ -118,11 +118,13 @@ the body runs; a nested function's body runs after its definition, so
 its own entries come after every `def-lvl` of the enclosing body that
 precedes the definition and cannot see any that follow it; and the top
 level runs in order. A value bound at that step contains only levels
-already minted, so (I3) holds of the new token. The lemma uses that `L`
-is a mint, not a parameter: §18 refuses `prove-predates x L` for a
-parameter `L`, and a parameter's level may have been minted after
-anything at all. `tests/paradox_curry_bad.sl` and `tests/predates_*`
-exercise this check.
+already minted, so (I3) holds of the new token. `x` may be anything
+introduced early enough, a level that came in as a parameter included,
+as `M` in §57's `(prove-predates M L)`: a parameter is bound before the
+body that mints `L` runs. The lemma does use that `L` is a mint: §18
+refuses `prove-predates x L` for a parameter `L`, since a parameter's
+level may have been minted after anything at all.
+`tests/paradox_curry_bad.sl` and `tests/predates_*` exercise this check.
 
 **Preservation of (I1)** is the load-bearing lemma that this note does
 *not* prove. It needs the forcing rules of §7 to be valid for equality
