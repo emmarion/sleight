@@ -136,6 +136,17 @@ state. SOUNDNESS.md's invariants appear as:
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
 - `_` as a `def-fns` level (DESIGN.md section 46).
+- A call in a body with no decrease annotation, or with `(predates _)`
+  or `(subterm _)` written anywhere in it (section 48): the checker
+  supplies a `predates` proof when the callee's level does not
+  canonicalize to the current one, which needs the callee's level to
+  canonicalize to an entry made before the current level, and otherwise
+  a `subterm` proof for the first `subterm` argument that differs from
+  its counterpart, which needs it to be a strict subtree of the
+  counterpart after canonicalization. A same-level call whose `subterm`
+  arguments are all unchanged is refused. Where a `_` is written does
+  not matter here, where section 48 reads `(subterm _)` before its
+  argument.
 - `(level-of f)` (section 53), in a term and as an argument of
   `prove-predates`, for an `f` that a `def-fns` in scope names, directly
   or through `let` binders forwarding from one. The elaborator does not

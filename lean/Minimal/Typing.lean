@@ -132,6 +132,12 @@ inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
         Γ.canon a' = Γ.canon (.fv s')) →
       TmTy P Γ p Pt → Γ.canon Pt = .subterm A a0 B b0 →
       Γ.canon a0 = Γ.canon a → Γ.canon b0 = Γ.canon (.fv s) → DecOK Γ (.subterm pos p) l t args
+  | autoPred : Γ.cur = some c → Γ.canon l = .fv x → x < c → c ∈ Γ.mints → DecOK Γ .none l t args
+  | autoSub {i : Nat} : Γ.cur = some c → Γ.canon l = Γ.canon (.fv c) →
+      (markedArgs t args)[i]? = some a → Γ.subs[i]? = some s →
+      (∀ j < i, ∀ a' s', (markedArgs t args)[j]? = some a' → Γ.subs[j]? = some s' →
+        Γ.canon a' = Γ.canon (.fv s')) →
+      (Γ.canon a).strictSub (Γ.canon (.fv s)) → DecOK Γ .none l t args
 
 inductive PrimTy : Ctx → Prim → Tm → Prop
   | tm : TmTy P Γ t T → PrimTy Γ (.tm t) T

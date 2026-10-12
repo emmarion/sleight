@@ -181,6 +181,8 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
       | _, _ => return ([], [← elabTm sc 0 e])
     else do
       let f ← look sc 0 h
+      let args := args.filter fun | .list [.atom "predates", .atom "_"] | .list [.atom "subterm", .atom "_"] => false
+                                  | _ => true
       let (pd, args) ← (match args with
         | .list [.atom "predates", p] :: rest => pure (some p, rest)
         | _ => pure (none, args) : M (Option Sx × List Sx))

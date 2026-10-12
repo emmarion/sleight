@@ -725,6 +725,41 @@ theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P �
     simp [Tm.env, hl, Prim.eval]
   | _ => exact h1
 
+theorem dec_same {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {μ : Option (List Nat)} (hm : MuOK μ Γ ρ)
+    {l t args a : Tm} {c i s n1 : Nat} (hal : args.isList) (hl : l.subst (Tm.env ρ) = .lvl n1)
+    (hk : (marks t args.len).count true ≤ P.k) (hc : Γ.cur = some c) (hl' : Γ.canon l = Γ.canon (.fv c))
+    (hai : (markedArgs t args)[i]? = some a) (hsi : Γ.subs[i]? = some s)
+    (hpre : ∀ j < i, ∀ a' s', (markedArgs t args)[j]? = some a' → Γ.subs[j]? = some s' →
+      Γ.canon a' = Γ.canon (.fv s'))
+    (hps : Tm.PSub (a.subst (Tm.env ρ)) ((Tm.fv s).subst (Tm.env ρ))) :
+    muLt P.k (some (n1 :: (markedArgs t (args.subst (Tm.env ρ))).map Tm.size)) μ = true := by
+  have eqc : ∀ {a b : Tm}, Γ.canon a = Γ.canon b → a.subst (Tm.env ρ) = b.subst (Tm.env ρ) :=
+    fun h => by rw [← hE.canon, h, hE.canon]
+  unfold MuOK at hm
+  rw [hc] at hm; obtain ⟨lam, hlam, rfl⟩ := hm
+  rw [eqc hl'] at hl; simp [Tm.subst, Tm.env, hlam] at hl; subst hl
+  have hi : i < (markedArgs t args).length := (List.getElem?_eq_some_iff.mp hai).1
+  have hik : i < P.k := Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le hi (markedArgs_length t args hal)) hk
+  simp only [muLt, markedArgs_subst_args _ t args hal, List.map_map]
+  refine lexLt_of (i + 1) _ _ _ (by omega) (fun j hj => ?_) ?_
+  · cases j with
+    | zero => rfl
+    | succ j =>
+      simp only [List.getD_eq_getElem?_getD]
+      have hj' : j < i := by omega
+      cases ea : (markedArgs t args)[j]? with
+      | none => have := List.getElem?_eq_none_iff.mp ea; omega
+      | some a' =>
+        cases es : Γ.subs[j]? with
+        | none =>
+          have := List.getElem?_eq_none_iff.mp es
+          have := (List.getElem?_eq_some_iff.mp hsi).1; omega
+        | some s' =>
+          have := hpre j hj' a' s' ea es
+          simp [List.getElem?_cons_succ, List.getElem?_map, ea, es, eqc this, Tm.subst]
+  · simp only [List.getD_eq_getElem?_getD]
+    simpa [List.getElem?_cons_succ, List.getElem?_map, hai, hsi, Tm.subst] using Tm.psub_size hps
+
 theorem dec_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {μ : Option (List Nat)}
     (hm : MuOK μ Γ ρ) {dec : Dec} {l t args : Tm} (hd : DecOK P Γ dec l t args) (hal : args.isList)
     {n1 : Nat} (hl : l.subst (Tm.env ρ) = .lvl n1) (hk : (marks t args.len).count true ≤ P.k) :
@@ -745,34 +780,26 @@ theorem dec_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ)
     have := hlt n1 (by simp [Tm.levels])
     simp only [muLt]
     exact lexLt_of 0 _ _ _ (by omega) (fun _ h => absurd h (Nat.not_lt_zero _)) (by simp; omega)
-  | same hc hl' hmi hai hsi hpre hp hP' h0 h1 =>
-    rename_i c pos i a s p Pt A a0 B b0
-    rw [hc] at hm; obtain ⟨lam, hlam, rfl⟩ := hm
-    rw [eqc hl'] at hl; simp [Tm.subst, Tm.env, hlam] at hl; subst hl
+  | same hc hl' _ hai hsi hpre hp hP' h0 h1 =>
     have v := sem hp; rw [hP'] at v; simp only [Tm.subst] at v
     have hps := v.subterm_inv
     rw [eqc h0, eqc h1] at hps
-    have hi : i < (markedArgs t args).length := (List.getElem?_eq_some_iff.mp hai).1
-    have hik : i < P.k := Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le hi (markedArgs_length t args hal)) hk
-    simp only [muLt, markedArgs_subst_args _ t args hal, List.map_map]
-    refine lexLt_of (i + 1) _ _ _ (by omega) (fun j hj => ?_) ?_
-    · cases j with
-      | zero => rfl
-      | succ j =>
-        simp only [List.getD_eq_getElem?_getD]
-        have hj' : j < i := by omega
-        cases ea : (markedArgs t args)[j]? with
-        | none => have := List.getElem?_eq_none_iff.mp ea; omega
-        | some a' =>
-          cases es : Γ.subs[j]? with
-          | none =>
-            have := List.getElem?_eq_none_iff.mp es
-            have := (List.getElem?_eq_some_iff.mp hsi).1; omega
-          | some s' =>
-            have := hpre j hj' a' s' ea es
-            simp [List.getElem?_cons_succ, List.getElem?_map, ea, es, eqc this, Tm.subst]
-    · simp only [List.getD_eq_getElem?_getD]
-      simpa [List.getElem?_cons_succ, List.getElem?_map, hai, hsi, Tm.subst] using Tm.psub_size hps
+    exact dec_same hE (by unfold MuOK; exact hm) hal hl hk hc hl' hai hsi hpre hps
+  | autoSub hc hl' hai hsi hpre hst =>
+    have hps := Tm.psub_subst (Tm.env ρ) (Tm.strictSub_psub _ _ hst)
+    rw [hE.canon, hE.canon] at hps
+    exact dec_same hE (by unfold MuOK; exact hm) hal hl hk hc hl' hai hsi hpre hps
+  | autoPred hc hx hxc hcm =>
+    rename_i c x
+    rw [hc] at hm; obtain ⟨lam, hlam, rfl⟩ := hm
+    obtain ⟨m, hmc, hlt⟩ := hE.chrono c hcm
+    rw [hlam] at hmc; cases hmc
+    have hxl : x < ρ.length := by rw [hE.len]; have := hE.wf.cur c hc; omega
+    have e := hE.canon l; rw [hx, hl] at e; simp only [Tm.subst, Tm.env] at e
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hxl, Option.getD_some] at e
+    have := hlt x hxc _ (List.getElem?_eq_getElem hxl) n1 (by rw [e]; simp [Tm.levels])
+    simp only [muLt]
+    exact lexLt_of 0 _ _ _ (by omega) (fun _ h => absurd h (Nat.not_lt_zero _)) (by simp; omega)
 
 theorem fv_filterMap_env (ρ : List Tm) (g : Tm → Nat) : ∀ (L : List Tm), (∀ x ∈ L, ∃ i, x = .fv i) →
     (L.filterMap Tm.fvIdx).map (fun s => g (Tm.env ρ s)) = (L.map (Tm.subst (Tm.env ρ))).map g

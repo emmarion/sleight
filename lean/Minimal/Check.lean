@@ -121,7 +121,26 @@ instance (l : List Tm) (s : List Nat) (Γ : Ctx) (i : Nat) :
 def checkDec (Γ : Ctx) (l t args : Tm) : (dec : Dec) → Res (PLift (DecOK P Γ dec l t args))
   | .none => match h : Γ.cur with
     | none => .ok ⟨.top h⟩
-    | some _ => .error "a call in a body needs a predates or subterm proof"
+    | some c =>
+      if hl : Γ.canon l = Γ.canon (.fv c) then
+        let ms := markedArgs t args
+        match ((List.range ms.length).find? fun j =>
+            Γ.canon ms[j]! != Γ.canon (.fv (Γ.subs.getD j 0))) with
+        | none => .error "a same-level call whose subterm arguments are all unchanged"
+        | some i =>
+          match ha : ms[i]?, hs : Γ.subs[i]? with
+          | some a, some s => do
+            let ⟨hpre⟩ ← need (∀ j < i, ∀ a' s', ms[j]? = some a' → Γ.subs[j]? = some s' →
+                Γ.canon a' = Γ.canon (.fv s')) "unreachable"
+            let ⟨hst⟩ ← need ((Γ.canon a).strictSub (Γ.canon (.fv s))) "subterm: not a strict subterm"
+            .ok ⟨.autoSub h hl ha hs hpre hst⟩
+          | _, _ => .error "subterm: no such subterm argument"
+      else match hx : Γ.canon l with
+        | .fv x => do
+          let ⟨h1⟩ ← need (x < c) "predates: the callee's level was not made before the current one"
+          let ⟨h2⟩ ← need (c ∈ Γ.mints) "predates: the current level is not made by def-lvl"
+          .ok ⟨.autoPred h hx h1 h2⟩
+        | _ => .error "predates: the callee's level is not an entry"
   | .predates p => match h : Γ.cur with
     | some c => do
       let ⟨Pt, hp⟩ ← checkTm P Γ p
