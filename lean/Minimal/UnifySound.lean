@@ -38,6 +38,12 @@ theorem kids_eq_of_subst (f : Nat → Tm) (a b : Tm) (ha : ∀ i, a ≠ fv i) (h
       · exact this.1
       · exact ih ys this.2 p hp
 
+theorem bound_of_subst (f : Nat → Tm) : ∀ (t : Tm) d, (t.subst f).bound d = true → t.bound d = true := by
+  intro t; induction t <;> intro d h <;> simp_all [subst, bound]
+
+theorem bound_of_lc : ∀ (t : Tm) d, t.lc d → t.bound d = true := by
+  intro t; induction t <;> intro d h <;> simp_all [lc, bound]
+
 end Tm
 
 theorem varSide_spec {a b : Tm} {e : Nat} {t : Tm} (h : varSide a b = some (e, t)) :
@@ -52,7 +58,7 @@ theorem substOne_subst (f : Nat → Tm) (e : Nat) (t u : Tm) (h : f e = t.subst 
   simp only [substOne, Tm.subst_subst]
   congr 1; funext i; split <;> simp_all [Tm.subst]
 
-theorem unify_sound (f : Nat → Tm) (n : Nat) : ∀ σ dom eqs, Sat f σ → (∀ p ∈ eqs, p.1.subst f = p.2.subst f) →
+theorem unify_sound (f : Nat → Tm) (hf : ∀ i, (f i).bound 0 = true) (n : Nat) : ∀ σ dom eqs, Sat f σ → (∀ p ∈ eqs, p.1.subst f = p.2.subst f) →
     (∀ σ', unify n σ dom eqs = .ok σ' → Sat f σ') ∧ unify n σ dom eqs ≠ .contra := by
   intro σ dom eqs
   induction σ, dom, eqs using unify.induct n with
@@ -61,9 +67,14 @@ theorem unify_sound (f : Nat → Tm) (n : Nat) : ∀ σ dom eqs, Sat f σ → (�
   | case3 σ dom a b rest hab e t hv hocc =>
     intro hs he; exfalso
     have hab' := he (a, b) (by simp)
-    rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-    · have := Tm.size_lt_occurs f e t hocc (Ne.symm hab); simp [Tm.subst] at hab'; rw [hab'] at this; omega
-    · have := Tm.size_lt_occurs f e t hocc hab; simp [Tm.subst] at hab'; rw [← hab'] at this; omega
+    rcases hocc with hocc | hb
+    · rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+      · have := Tm.size_lt_occurs f e t hocc (Ne.symm hab); simp [Tm.subst] at hab'; rw [hab'] at this; omega
+      · have := Tm.size_lt_occurs f e t hocc hab; simp [Tm.subst] at hab'; rw [← hab'] at this; omega
+    · have het : f e = t.subst f := by
+        rcases varSide_spec hv with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [Tm.subst]
+      have := Tm.bound_of_subst f t 0 (het ▸ hf e)
+      simp_all
   | case4 σ dom a b rest hab e t hv hocc hok ih =>
     intro hs he
     have hab' := he (a, b) (by simp)

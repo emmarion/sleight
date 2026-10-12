@@ -108,8 +108,10 @@ state. SOUNDNESS.md's invariants appear as:
   applied to the branch's field entries, and the scrutinee's type equals
   the constructor's return type.
 - Unification decomposes every node of the same shape, binders included.
-  It assigns a variable only a term with no bound variable in it. When it
-  can neither assign nor refute, the program is refused.
+  A variable equated with a term that mentions a binder contradicts, as
+  DESIGN.md section 7's third case has it; the proof rests on no value
+  mentioning a binder it is not under. When it can neither assign nor
+  refute, the program is refused.
 - A call's `Fn` telescope and a match's return telescope must be written
   out entry by entry, not reached through a variable (`Tm.isTele`).
   Without this check the proof did not go through: a telescope held in a

@@ -875,7 +875,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
       rw [canon_sound (Γ := Γ) hsat, canon_sound hEf.sat, hRc,
         Tm.subst_append (t := Tm.ty d idx) (by simpa [Tm.static, hl] using hSs')]
       simp [Tm.subst]
-  have hun := unify_sound (Tm.env (ρ ++ vs.toList)) Γf.n Γf.σ [] _ hEf.sat heqs
+  have hun := unify_sound (Tm.env (ρ ++ vs.toList)) (fun i => Tm.bound_of_lc _ 0 (Tm.env_lc hEf.closed i)) Γf.n Γf.σ [] _ hEf.sat heqs
   refine ⟨c, vs, hsv, ?_⟩
   have hbr' := hbr c sig hsig
   generalize hbody : lookupBr brs c = br at hbr'

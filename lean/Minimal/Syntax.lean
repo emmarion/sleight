@@ -78,6 +78,17 @@ def static (n : Nat) : Nat → Tm → Bool
   | _, nil | _, univ | _, level => true
   | _, lvl _ | _, tok | _, clo .. => false
 
+def bound : Nat → Tm → Bool
+  | d, bv i => i < d
+  | d, cons h t => h.bound d && t.bound d
+  | d, bind _ a r => a.bound d && r.bound (d + 1)
+  | d, ty _ a => a.bound d
+  | d, con _ _ a => a.bound d
+  | d, predates A x L => A.bound d && x.bound d && L.bound d
+  | d, subterm A a B b => A.bound d && a.bound d && B.bound d && b.bound d
+  | d, fn l _ t => l.bound d && t.bound d
+  | _, _ => true
+
 def lc : Nat → Tm → Prop
   | _, fv _ => False
   | d, bv i => i < d

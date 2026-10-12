@@ -60,7 +60,7 @@ def unify (n : Nat) (σ : Nat → Option Tm) (dom : List Nat) : List (Tm × Tm) 
     if a = b then unify n σ dom rest
     else match varSide a b with
       | some (e, t) =>
-        if e ∈ t.fvs then .contra
+        if e ∈ t.fvs ∨ t.bound 0 = false then .contra
         else if h : dom.length < n ∧ e ∉ dom ∧ e < n ∧ t.static n 0 then
           unify n (assign e t σ) (e :: dom) (rest.map fun p => (substOne e t p.1, substOne e t p.2))
         else .unknown
