@@ -53,6 +53,7 @@ let rec eval env code =
       match p, List.map (eval1 env) cs with
       | Special.SettledValue, [ VHandle (_, _, _, v) ] -> [ v ]
       | Special.SettledMult, [ h; e; m; u ] -> [ (match h with VHandle (_, _, Erased, _) -> e | VHandle (_, _, Unique, _) -> u | _ -> m) ]
+      | Special.SettledErase, [ VHandle (x, r, _, _) ] -> [ VHandle (x, r, Erased, VToken) ]
       | Special.SettledType, [ VHandle (x, r, _, _) ] -> [ (match r with MintedIs -> VHandle (x, MintedType, Erased, VToken) | MintedType -> VHandle (!Term.type_entry, MintedIs, Erased, VToken)) ]
       | p, vs -> !prim p vs)
   | CAbsurd -> raise (Runtime "absurd code reached")

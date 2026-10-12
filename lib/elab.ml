@@ -30,6 +30,7 @@ let pos_of env expect = if expect = [] && env.usage_erased || expect <> [] && Li
 let atom = function Atom (_, n) -> Some n | _ -> None
 let not_name loc what raw = match raw with
   | Nat _ | Char _ | Str _ -> error loc "%s is a literal, not a name" (Reader.show raw)
+  | Handle (_, x, MintedIs, Many, _) when Hashtbl.mem literal_of x -> error loc "%s is a literal, not a name" (Reader.show raw)
   | Handle _ -> error loc "a handle to %s is not a name" (tick (Reader.show raw))
   | _ -> error loc "expected %s, got %s" what (tick (Reader.show raw))
 let atom_or loc raw what = match atom raw with Some n -> n | None -> not_name loc what raw
@@ -493,20 +494,25 @@ let rec enter_mentioned env t =
         | None -> env)
     | _ -> env) 0 env t
 
-let lit_of = function Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s) | _ -> None
+let lit_of = function
+  | Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s)
+  | Handle (_, x, MintedIs, Many, _) -> Option.map (fun r -> r.lit) (Hashtbl.find_opt literal_of x)
+  | _ -> None
 
 let expansions = ref 0
 let gensyms = ref 0
-let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
-let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledErase; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let literal_handle env lit =
+  ignore (intern env Reader.nowhere lit);
+  let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
+  V.VHandle (x, MintedIs, Many, Hashtbl.find V.literal_values x)
+
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
   | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
-      let lit = match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v) in
-      ignore (intern env Reader.nowhere lit);
-      let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
-      [ V.VHandle (x, MintedIs, Many, Hashtbl.find V.literal_values x) ]
+      [ literal_handle env (match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v)) ]
   | Sp.SettledEq, [ _; V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
       let snap = List.fold_left enter_mentioned { env with facts = trusted env } [ Var x; Var y ] in
       let denoted x r = let f = minted_fact snap x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ] in
@@ -523,18 +529,18 @@ let rec macro_of env raw =
   | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> macro_of env a
   | _ -> None
 
-let raw_ctor env l = ctor_of env l (Option.get (prelude_id env "RawName"))
+let raw_ctor env l = ctor_of env l (Option.get (prelude_id env "RawSymbol"))
 
 let rec raw_value env r =
-  match ext_adt env "RawName" with
+  match ext_adt env "RawSymbol" with
   | Some adt -> V.VExt (adt, V.Raw r)
   | None ->
-      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, r, m, v) -> V.VHandle (x, r, m, Obj.obj v)) ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
+      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, r, m, v) -> V.VHandle (x, r, m, Obj.obj v)) ~symbol:Ffi.symbol ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
       V.construct (List.nth (raw_ctor env Reader.nowhere).V.adt.ctors i) fs
 
 let rec value_raw env l = function
   | V.VExt (_, V.Raw r) -> r
-  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v) | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
+  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v) | _ -> assert false) ~unsymbol:Ffi.unsymbol ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
 
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
@@ -617,9 +623,9 @@ let spliced_entries env entries =
 (* The entry holding the [Nat] a numeral or character literal stands for: a character's is its code's. *)
 let numeral_entry env loc raw =
   let z, lit =
-    match raw with
-    | Nat (_, z) -> (z, Literal.Numeral z)
-    | Char (_, c) -> (Z.of_int c, Literal.Char c)
+    match lit_of raw with
+    | Some (Literal.Numeral z as lit) -> (z, lit)
+    | Some (Literal.Char c as lit) -> (Z.of_int c, lit)
     | _ -> error loc "%s is not a numeral or character literal" (tick (Reader.show raw))
   in
   let env = intern env loc lit in
@@ -1287,7 +1293,7 @@ and elab_head env pos l raw =
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
   | Handle (_, x, _, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
   | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
-  | Nat _ | Char _ | Str _ -> error l "%s is a literal, not a name" (Reader.show raw)
+  | _ when lit_of raw <> None -> error l "%s is a literal, not a name" (Reader.show raw)
   | _ ->
       let demand = if pos = Erased then Fixed else CallableHead pos in
       let env,r,code = elab_expr1 ~demand env (under pos Many) raw in
@@ -1587,8 +1593,8 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       (env, List.map (res_of env) ids, if pos = Erased then V.CErased else V.CAbsurd)
   | (Sp.NumeralOf | Sp.DelegateOf | Sp.AtFnOf), _ -> (match fetched env l sp args with env, Var y -> erased (env, res_of env y) | _ -> assert false)
   | Sp.ProveLiteralLt, [ a; b ] ->
-      let numeral env raw = match raw with
-        | Nat _ -> numeral_entry env l raw
+      let numeral env raw = match lit_of raw with
+        | Some (Literal.Numeral _) -> numeral_entry env l raw
         | _ -> error_in env l "`prove-literal-lt` takes two numerals, got %s" (tick (Reader.show raw)) in
       let env, za, xa, sa = numeral env a in
       let env, zb, xb, sb = numeral env b in
@@ -2534,16 +2540,24 @@ let report_unused env =
       | Field | Optional | Definition -> ()) (List.sort order all);
   reset_tracking ()
 
+let rec interned env = function
+  | List (l, rs) -> List (l, List.map (interned env) rs)
+  | r -> (match lit_of r with Some lit -> (match at (loc r) (fun () -> literal_handle env lit) with V.VHandle (x, rd, m, v) -> Handle (loc r, x, rd, m, Obj.repr v) | _ -> r) | None -> r)
+
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
-  let rec go env items =
-    let env, items = expand_seq Many env items in
-    match items with
+  let rec go env = function
     | [] -> env
-    | List (l, Atom (_, Src ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
+    | (List (_, Atom (_, Src ";!") :: _) as p) :: rest -> step env [ p ] rest
+    | item :: rest -> step env [ interned env item ] rest
+  and step env pending source =
+    let env, pending = expand_seq Many env pending in
+    match pending with
+    | [] -> go env source
+    | List (l, Atom (_, Src ";!") :: words) :: rest -> step (at l (fun () -> pragma env l words)) rest source
     | item :: rest -> (
         reset_tracking ();
         at (loc item) (fun () ->
-            if rest = [] && not (is_statement env item) then (
+            if rest = [] && source = [] && not (is_statement env item) then (
               if misplaced env item <> [] then not_a env "neither a statement nor an expression" item;
               let env, ress, code = elab_expr ~demand:Driver env [ Many ] item in
               settle_res env (loc item) (single (loc item) ress);
@@ -2558,7 +2572,7 @@ let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-"
             else
               let env = fst (elab_stmt ~within:"top-level form" Many env item) in
               if !warn_unused then report_unused env;
-              go env rest))
+              step env rest source))
   in
   let env = Fun.protect ~finally:report_shadows (fun () -> go env items) in
   (match items with

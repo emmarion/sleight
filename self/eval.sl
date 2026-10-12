@@ -204,20 +204,21 @@
   (let-match many b (BExt _ p) (else (NSrc "")))
   (match many p _ ((PHandle i rd m t) (NHandle i rd m t)) (else (NSrc ""))))
 
+(def-fns _ $ (many heap-symbol : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ref Block hs) a) -> (many (Name) n))
+  (let ((erased x) (many b) (erased lt)) (hread _ hp a))
+  (let-match many b (BTag _ ct fs) (else (NSrc "")))
+  (let ((erased w) (erased pw)) (refs-widen _ _ _ lt fs))
+  (let-match many (coerce fs pw) (Cons _ f r1) ((Nil _) (NSrc "")))
+  (let-match many r1 (Cons _ s _) ((Nil _) (NSrc $ heap-str _ hp f)))
+  (NGen (heap-nat _ hp f) $ heap-str _ hp s))
+
 (def-fns _ $ (many raw-construct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Nat) index) (many (List $ Ref Block hs) fields) -> (many (Payload) p))
   (let-match many fields (Cons _ pa more) ((Nil _) (PRaw "" $ RWild $ PosSpot $ NoPos)))
   (let ((many p)) $ heap-spot _ hp pa)
   (let ((many x)) $ match many more (((Ref Block hs) _)) ((Cons _ x _) x) ((Nil _) pa))
-  (let-match many index (Succ i1) ((Zero) (PRaw "" $ RAtom p $ NSrc $ heap-str _ hp x)))
-  (let-match many i1 (Succ i2) ((Zero) (PRaw "" $ RNat p $ heap-nat _ hp x)))
-  (let-match many i2 (Succ i3) ((Zero) (PRaw "" $ RChr p $ heap-nat _ hp x)))
-  (let-match many i3 (Succ i4) ((Zero) (PRaw "" $ RString p $ heap-str _ hp x)))
-  (let-match many i4 (Succ i5) ((Zero) (PRaw "" $ RWild p)))
-  (let-match many i5 (Zero)
-    ((Succ i6)
-      (let-match many i6 (Zero) ((Succ _) (PRaw "" $ RAtom p $ heap-handle _ hp x)))
-      (let ((many s)) $ match many more (((Ref Block hs) _)) ((Cons _ _ r2) (match many r2 (((Ref Block hs) _)) ((Cons _ s _) s) ((Nil _) x))) ((Nil _) x))
-      (PRaw "" $ RAtom p $ NGen (heap-nat _ hp x) $ heap-str _ hp s)))
+  (let-match many index (Succ i1) ((Zero) (PRaw "" $ RAtom p $ heap-symbol _ hp x)))
+  (let-match many i1 (Succ i2) ((Zero) (PRaw "" $ RWild p)))
+  (let-match many i2 (Zero) ((Succ _) (PRaw "" $ RAtom p $ heap-handle _ hp x)))
   (let-match many (list-refs (hsize _ hp) _ hp x) (Some _ refs) ((None _) (PRaw "" $ RList p $ Nil _)))
   (let ((many f) (many xs)) $ heap-syns _ hp (None _) refs)
   (PRaw f $ RList p xs))
@@ -230,7 +231,7 @@
         ((Zero) (Zero)) ((Succ _) (Succ (field-nat _ hp fields 0)))))))
     ((ExtString) (alloc-ext _ hp $ PStr $ cons-string _ hp index fields))
     ((ExtBytes) (alloc-ext _ hp $ PBytes $ cons-string _ hp index fields))
-    ((ExtRaw _ _ _ _) (alloc-ext _ hp $ raw-construct _ hp index fields)))
+    ((ExtRaw _ _ _ _ _ _) (alloc-ext _ hp $ raw-construct _ hp index fields)))
   (let ((many d) (erased dd)) (double (field-nat _ hp fields 0)))
   (alloc-ext _ hp (PHalf (match many index (((Nat) _))
     ((Zero) 0) ((Succ k) (match many k (((Nat) _)) ((Zero) (Succ d)) ((Succ _) (Succ (Succ d)))))))))
@@ -242,28 +243,31 @@
   (let ((erased w1) (erased p1)) (ref-widen _ _ _ sf3 a1))
   (values hl3 hp3 (hist-le-trans _ _ _ sf2 sf3) 1 $ Cons _ (coerce a1 p1) $ Cons _ a2 $ Nil _))
 
+(def-fns _ $ (many symbol-block : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) sname) (many (Ctor) sgen) (many (Name) n) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Ref Block hs2) a))
+  (let ((many (Ctor) c) (many (List $ Payload) ps)) $ match many n (((Ctor) _) ((List $ Payload) _))
+    ((NGen k t) (values sgen $ Cons _ (PNat k) $ Cons _ (PStr t) $ Nil _))
+    (else (values sname $ Cons _ (PStr $ name-text n) $ Nil _)))
+  (let ((erased h1) (many hp1) (erased s1) (many rs)) $ alloc-payloads _ hp ps)
+  (let ((erased h2) (many hp2) (erased s2) (many a)) $ halloc _ hp1 $ BTag _ c rs)
+  (values h2 hp2 (hist-le-trans _ _ _ s1 s2) a))
+
+(def-fns _ $ (many raw-second : (erased (Hist Block) hs) (many (Heap hs) hp) (many (Ctor) nl) (many (Ctor) cs) (many (Ctor) sn) (many (Ctor) sg) (many (String) f) (many (Syn) r) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (Ref Block hs2) a))
+  (match many r _
+    ((RList _ xs) (let ((erased h2) (many hp2) (erased s2) (many a)) $ raw-list _ hp nl cs f xs) (values h2 hp2 s2 2 a))
+    ((RAtom _ nm)
+      (match many nm _
+        ((NHandle x rd m t) (let ((erased h2) (many hp2) (erased s2) (many a)) $ alloc-ext _ hp $ PHandle x rd m t) (values h2 hp2 s2 3 a))
+        (else (let ((erased h2) (many hp2) (erased s2) (many a)) $ symbol-block _ hp sn sg nm) (values h2 hp2 s2 0 a))))
+    (else (let ((erased h2) (many hp2) (erased s2) (many a)) $ halloc _ hp $ BError _ "a literal is a handle in a macro's arguments") (values h2 hp2 s2 3 a))))
+
 (def-fns _ $ (many raw-destruct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (ExtType) e) (many (String) f) (many (Syn) r) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
-  (let-match many e (ExtRaw np mp nl cs) (else (values hs hp (le-refl hs) 0 $ Nil _)))
+  (let-match many e (ExtRaw np mp nl cs sn sg) (else (values hs hp (le-refl hs) 0 $ Nil _)))
   (let ((erased h1) (many hp1) (erased s1) (many pv)) $ pos-block _ hp np mp f $ raw-pos r)
-  (let ((many (Maybe $ Payload) second) (many (Nat) i))
-    (match many r (((Maybe $ Payload) _) ((Nat) _))
-      ((RAtom _ s) (match many s (((Maybe $ Payload) _) ((Nat) _)) ((NSrc t) (values (Some _ $ PStr t) 0)) ((NGen k _) (values (Some _ $ PNat k) 6)) ((NHandle x rd m t) (values (Some _ $ PHandle x rd m t) 7))))
-      ((RNat _ n) (values (Some _ $ PNat n) 1)) ((RChr _ n) (values (Some _ $ PNat n) 2))
-      ((RString _ s) (values (Some _ $ PStr s) 3)) ((RWild _) (values (None _) 4)) ((RList _ _) (values (None _) 5))))
-  (let-match many r (RList _ xs)
-    (else
-      (let-match many second (Some _ sp) ((None _) (values h1 hp1 s1 i $ Cons _ pv $ Nil _)))
-      (let ((erased h2) (many hp2) (erased s2) (many a)) $ alloc-ext _ hp1 sp)
-      (let ((erased w) (erased pw)) (ref-widen _ _ _ s2 pv))
-      (let-match many r (RAtom _ nm) (else (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
-      (let-match many nm (NGen _ text) (else (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
-      (let ((erased h3) (many hp3) (erased s3) (many b)) $ alloc-ext _ hp2 $ PStr text)
-      (let ((erased w3) (erased pw3)) (ref-widen _ _ _ (hist-le-trans _ _ _ s2 s3) pv))
-      (let ((erased wa) (erased pa)) (ref-widen _ _ _ s3 a))
-      (values h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3) i $ Cons _ (coerce pv pw3) $ Cons _ (coerce a pa) $ Cons _ b $ Nil _)))
-  (let ((erased h2) (many hp2) (erased s2) (many a)) $ raw-list _ hp1 nl cs f xs)
-  (let ((erased w) (erased pw)) (ref-widen _ _ _ s2 pv))
-  (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _))
+  (let-match many r (RWild _) (else
+    (let ((erased h2) (many hp2) (erased s2) (many i) (many a)) $ raw-second _ hp1 nl cs sn sg f r)
+    (let ((erased w) (erased pw)) (ref-widen _ _ _ s2 pv))
+    (values h2 hp2 (hist-le-trans _ _ _ s1 s2) i $ Cons _ (coerce pv pw) $ Cons _ a $ Nil _)))
+  (values h1 hp1 s1 1 $ Cons _ pv $ Nil _))
 
 (def-fns _ $ (many ext-destruct : (erased (Hist Block) hs) (many (Heap hs) hp) (many (ExtType) e) (many (Payload) p) -> (erased (Hist Block) hs2) (many (Heap hs2) hp2) (erased (Suffix Block hs2 hs) le) (many (Nat) index) (many (List $ Ref Block hs2) fields))
   (match many p _
@@ -652,7 +656,8 @@
   (let-match many args (Cons _ h hidden) ((Nil _) (halloc _ hp $ BError _ "a handle form with no handle")))
   (let ((erased s) (many b) (erased sf)) (hread _ hp h))
   (let-match many b (BExt _ pl) (else (halloc _ hp $ BError _ "not a handle")))
-  (let-match many pl (PHandle x rd mult _) (else (halloc _ hp $ BError _ "not a handle")))
+  (let-match many pl (PHandle x rd mult shown) (else (halloc _ hp $ BError _ "not a handle")))
+  (let-match many (sp-eq p $ SpExpr $ ExSettledErase) (BFalse) ((BTrue) (alloc-ext _ hp $ PHandle x rd (Erased) shown)))
   (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
     ((BTrue) (alloc-ext _ hp $ match many rd _ ((MintedIs) (PHandle x (MintedType) (Erased) "_")) ((MintedType) (PHandle type-id (MintedIs) (Erased) "Type")))))
   (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (tail $ settled-entry-value _ hp x)))
@@ -985,9 +990,9 @@
 ; (lib/ffi_core.ml's lit_char and lit_string, lib/literal.ml's spell). The compile-time printer below spells in
 ; the language; an emitted printer calls Ffi_core (emit.sl).
 
-(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (List $ LitFact) facts) -> (many (Env) r))
+(def-fns _ $ (many record-literal : (many (Env) env) (many (String) key) (many (Nat) x) (many (Maybe $ Nat) proof) (many (String) spelling) (many (Syn) node) (many (List $ LitFact) facts) -> (many (Env) r))
   (let ((many env2)) $ env-set-literals env $ nm-set _ key x $ env-literals env)
-  (env-push-lit env2 x proof spelling facts))
+  (env-push-lit env2 x proof spelling facts node))
 
 (def-fns _ $ (many lit-lookup : (many (Env) env) (many (String) key) -> (many (Maybe $ Nat) r))
   (match many (nm-get _ key $ env-literals env) _ ((NHit _ _ _ x _) (Some _ x)) ((NMiss _ _ _ _) (None _))))
@@ -1005,11 +1010,11 @@
   (let ((many env2c) (many spelled)) $ nat-bin-term n env2b)
   (let ((many pty)) $ TApp (TVar numeral) $ Cons _ spelled $ Cons _ (TVar x) $ Nil _)
   (let ((many env3) (erased h2) (many hp2) (erased s2) (many p)) $ bind-lit env2c _ hp1 (Erased) (BToken _) pty (None _))
-  (values (record-literal env3 key x (Some _ p) key $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
+  (values (record-literal env3 key x (Some _ p) key (RNat (PosSpot $ NoPos) n) $ Cons _ (MkLitFact x nat-ty $ None _) $ Cons _ (MkLitFact p pty $ None _) $ Nil _) h2 hp2 (hist-le-trans _ _ _ s1 s2) x p))
 
 (def-fns _ $ (many lit-proof : (subterm many (List $ LitEntry) lits) (many (Nat) x) -> (many (Maybe $ Nat) r))
   (let-match many lits (Cons _ p rest) ((Nil _) (None _)))
-  (let-match many p (MkLitEntry y proof _ _ _))
+  (let-match many p (MkLitEntry y proof _ _ _ _))
   (match many (nat-cmp x y) _ ((CEq _ _ _) proof) (else (tail $ lit-proof rest x))))
 
 (def-fns _ $ (many intern-numeral-once : (many (Env) env) (erased (Hist Block) hs) (many (Heap hs) h) (many (String) key) ->
@@ -1039,7 +1044,7 @@
   (let ((many rule)) $ TApp (TVar mk-char) $ Cons _ (TApp (TVar mk-u8) $ Cons _ (TVar num) $ Cons _ (TVar lt) $ Nil _) $ Nil _)
   (let ((many env3d) (many char-ty)) $ prelude-type env3c "Char")
   (let ((many env4) (erased h3) (many hp3) (erased s3) (many x)) $ bind-lit env3d _ hp2 (Many) (BExt _ $ PNat code) char-ty (Some _ rule))
-  (values (record-literal env4 (char-key code) x (Some _ np) (rope-str $ lit-char-rope code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
+  (values (record-literal env4 (char-key code) x (Some _ np) (rope-str $ lit-char-rope code) (RChr (PosSpot $ NoPos) code) $ Cons _ (MkLitFact lt lt-ty $ None _) $ Cons _ (MkLitFact x char-ty $ Some _ rule) $ Nil _) h3 hp3 (hist-le-trans _ _ _ s1 $ hist-le-trans _ _ _ s2 s3)))
 
 ; Interns a string (ASSUMPTIONS 60): its characters, holding no proof.
 (def-fns _ $ (many string-key : (many (String) s) -> (many (String) key))
@@ -1049,7 +1054,7 @@
     (many (Env) r) (erased (Hist Block) hs2) (many (Heap hs2) h2) (erased (Suffix Block hs2 hs) sf))
   (let ((many env1) (many str-ty)) $ prelude-type env "String")
   (let ((many env2) (erased h1) (many hp1) (erased s1) (many x)) $ bind-lit env1 _ h (Many) (BExt _ $ PStr body) str-ty (None _))
-  (values (record-literal env2 (string-key body) x (None _) (rope-str $ lit-string-rope body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
+  (values (record-literal env2 (string-key body) x (None _) (rope-str $ lit-string-rope body) (RString (PosSpot $ NoPos) body) $ Cons _ (MkLitFact x str-ty $ None _) $ Nil _) h1 hp1 s1))
 
 (def-fns _ $ (many lit-key : (many (Syn) raw) -> (many (Maybe $ String) k))
   (match many raw _
@@ -1273,7 +1278,7 @@
         (let ((erased h1) (many hp1) (erased le1) (many avs) (unique W w1)) (notail $ eval-list fuel _ hp _ args st _ pf w))
         (let-match many pf (MkPerformer _ _ prim))
         (let ((erased h2) (many hp2) (erased le2) (many vs) (unique W w2))
-          (match many (or (sp-eq p $ SpExpr $ ExSettledType) $ or (sp-eq p $ SpExpr $ ExSettledValue) $ sp-eq p $ SpExpr $ ExSettledMult) (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((List $ Ref Block h2) vs) (W w2 at w1))
+          (match many (or (sp-eq p $ SpExpr $ ExSettledType) $ or (sp-eq p $ SpExpr $ ExSettledErase) $ or (sp-eq p $ SpExpr $ ExSettledValue) $ sp-eq p $ SpExpr $ ExSettledMult) (((Hist Block) h2) ((Heap h2) hp2) ((Suffix Block h2 h1) le2) ((List $ Ref Block h2) vs) (W w2 at w1))
             ((BTrue)
               (let ((erased hc) (many hpc) (erased lec) (many v)) $ settled-prim _ hp1 p avs)
               (values hc hpc lec (Cons _ v $ Nil _) w1))
@@ -1531,7 +1536,7 @@
   (match many b _ ((BError _ m) (Some _ m)) (else (None _))))
 
 (def-fns _ $ (many env-expand : (many (Env) e) (many (Nat) m) (many (ExtType) ext) (many (String) file) (many (Spot) here) (many (List $ Syn) args) -> (many (Env) r) (many (Result $ List $ Syn) out))
-  (let-match many ext (ExtRaw np mp nl cs) (else (values e $ Fail _ "the prelude's `Raw` is not the FFI's")))
+  (let-match many ext (ExtRaw np mp nl cs _ _) (else (values e $ Fail _ "the prelude's `Raw` is not the FFI's")))
   (let ((erased hs) (many h)) $ env-heap e)
   (let-match many (settled-ref _ (heap-entries _ h) m) (Some _ f) ((None _) (values e $ Fail _ "the macro has no value")))
   (let ((erased h1) (many hp1) (erased s1) (many hv)) $ pos-block _ h np mp file here)

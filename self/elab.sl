@@ -274,7 +274,7 @@
 (def-fns _ $ (many lit-terms : (many (Env) env) (subterm many (List $ LitEntry) lits) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many lits (Cons _ l rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ lit-terms env rest)
-  (let-match many l (MkLitEntry x _ s _ _))
+  (let-match many l (MkLitEntry x _ s _ _ _))
   (match many (is-literal-name s) _
     ((BTrue) (Cons _ (MkPair _ _ (canon-env env $ TVar x) l) more))
     ((BFalse) more)))
@@ -300,7 +300,7 @@
 
 (def-fns _ $ (many lit-cands : (many (Env) env) (many (List $ Nat) atoms) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
-  (let-match many l (MkLitEntry x _ s _ _))
+  (let-match many l (MkLitEntry x _ s _ _ _))
   (tail $ lit-cands env atoms rest $ match many (names-lit s) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((BTrue) (cand-of env atoms x s acc)) ((BFalse) acc)))
 
 (def-fns _ $ (many best-cand : (many (Nat) a) (subterm many (List $ Pair (Nat) $ Pair (Nat) (String)) cs) (many (Maybe $ Pair (Nat) (String)) best) -> (many (Maybe $ Pair (Nat) (String)) r))
@@ -393,7 +393,7 @@
 
 (def-fns _ $ (many numeral-cands : (many (Env) env) (many (List $ Pair (String) $ Pair (Nat) (String)) kws) (subterm many (List $ LitEntry) ls) (many (List $ Pair (Nat) $ Pair (Nat) (String)) acc) -> (many (List $ Pair (Nat) $ Pair (Nat) (String)) r))
   (let-match many ls (Cons _ l rest) ((Nil _) acc))
-  (let-match many l (MkLitEntry _ proof sp _ _))
+  (let-match many l (MkLitEntry _ proof sp _ _ _))
   (tail $ numeral-cands env kws rest $ match many proof (((List $ Pair (Nat) $ Pair (Nat) (String)) _))
     ((Some _ p) (match many (canon-id env p) (((List $ Pair (Nat) $ Pair (Nat) (String)) _)) ((Some _ a) (Cons _ (MkPair _ _ a $ MkPair _ _ p $ fetch-form kws "numeral-of" sp) acc)) ((None _) acc)))
     ((None _) acc)))
@@ -479,7 +479,9 @@
   (let ((many env)) $ env-refer env0 live x)
   (let-match many live (BTrue) ((BFalse) env))
   (let ((many m)) (entry-mult-of env x))
-  (let ((many (Maybe $ Multiplicity) handle)) $ match many written _ ((Some _ w) (match many w (((Maybe $ Multiplicity) _)) ((NHandle _ _ hm _) (Some _ hm)) (else (None _)))) ((None _) (None _)))
+  (let ((many (Maybe $ Multiplicity) hmade)) $ match many written _ ((Some _ w) (match many w (((Maybe $ Multiplicity) _)) ((NHandle _ _ hm _) (Some _ hm)) (else (None _)))) ((None _) (None _)))
+  (let ((many (Bool) lit-many)) $ and (is-some _ $ lit-spelling (env-lits env) x) $ match many hmade (((Bool) _)) ((Some _ hm) (mult-eq hm $ Many)) ((None _) (BFalse)))
+  (let ((many (Maybe $ Multiplicity) handle)) $ match many lit-many _ ((BTrue) (None _)) ((BFalse) hmade))
   (let ((many supply)) $ match many (and sharing $ not $ mult-is-once pos) (((Multiplicity) _)) ((BTrue) (Many)) ((BFalse) (match many handle _ ((Some _ hm) hm) ((None _) m))))
   (let ((many env1))
     (match many (misuse pos supply) (((Env) _))
@@ -595,7 +597,7 @@
 (def-fns _ $ (many prim-sig : (many (Env) env) (many (Sp) sp) -> (many (Maybe $ PrimSig) r))
   (prim-sig-in (env-prims env) sp))
 
-(let ((many implemented)) $ Cons _ (SpExpr $ ExGensym) $ Cons _ (SpExpr $ ExSettledType) $ Cons _ (SpExpr $ ExSettledEq) $ Cons _ (SpExpr $ ExSettledMult) $ Cons _ (SpExpr $ ExSettledValue) $ Cons _ (SpExpr $ ExInternNat) $ Cons _ (SpExpr $ ExInternChar) $ Cons _ (SpExpr $ ExInternString) $ Nil _)
+(let ((many implemented)) $ Cons _ (SpExpr $ ExGensym) $ Cons _ (SpExpr $ ExSettledType) $ Cons _ (SpExpr $ ExSettledErase) $ Cons _ (SpExpr $ ExSettledEq) $ Cons _ (SpExpr $ ExSettledMult) $ Cons _ (SpExpr $ ExSettledValue) $ Cons _ (SpExpr $ ExInternNat) $ Cons _ (SpExpr $ ExInternChar) $ Cons _ (SpExpr $ ExInternString) $ Nil _)
 (let ((many primitives)) $ Cons _ (SpExpr $ ExGensymUnique) implemented)
 
 (def-fns _ $ (many nullary-ctor-code : (erased (List $ List $ Nat) ctx) (many (Nat) c) -> (many (Code ctx many-one) r))
@@ -967,6 +969,37 @@
   (let ((many env2) (erased hs2) (many h2) (erased sf)) $ intern-lit env _ h raw)
   (env-with-heap env2 _ h2))
 
+(def-fns _ $ (many lit-node : (subterm many (List $ LitEntry) ls) (many (Nat) x) -> (many (Maybe $ Syn) r))
+  (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
+  (let-match many l (MkLitEntry y _ _ _ _ node))
+  (match many (nat-eq x y) _ ((BTrue) (Some _ node)) ((BFalse) (tail $ lit-node rest x))))
+
+(def-fns _ $ (many syn-at : (many (Spot) p) (many (Syn) r) -> (many (Syn) r2))
+  (match many r _ ((RNat _ n) (RNat p n)) ((RChr _ c) (RChr p c)) ((RString _ s) (RString p s)) (else r)))
+
+(def-fns _ $ (many syn-literal : (many (Env) env) (many (Syn) raw) -> (many (Syn) r))
+  (let-match many raw (RAtom p n) (else raw))
+  (let-match many n (NHandle x rd m _) (else raw))
+  (let-match many (and (reading-eq rd $ MintedIs) $ mult-eq m $ Many) (BTrue) ((BFalse) raw))
+  (match many (lit-node (env-lits env) x) _ ((Some _ node) (syn-at p node)) ((None _) raw)))
+
+(def-fns _ $ (many lit-interned : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Syn) r2))
+  (let-match many (lit-key raw) (Some _ k) ((None _) (values env raw)))
+  (let ((many env2)) $ env-back env $ intern-raw (env-at env $ raw-pos raw) raw)
+  (let-match many (lit-lookup env2 k) (Some _ x) ((None _) (values env2 raw)))
+  (values env2 $ RAtom (raw-pos raw) $ NHandle x (MintedIs) (Many) $ match many (lit-spelling (env-lits env2) x) _ ((Some _ s) s) ((None _) "_")))
+
+(def-fns _
+  ((many syn-interned : (many (Env) env) (subterm many (Syn) r) -> (many (Env) e2) (many (Syn) r2))
+    (let-match many r (RList p xs) (else (lit-interned env r)))
+    (let ((many e2) (many ys)) $ notail $ syns-interned env xs)
+    (values e2 $ RList p ys))
+  ((many syns-interned : (many (Env) env) (subterm many (List $ Syn) xs) -> (many (Env) e2) (many (List $ Syn) ys))
+    (let-match many xs (Cons _ x rest) ((Nil _) (values env $ Nil _)))
+    (let ((many e1) (many y)) $ notail $ syn-interned env x)
+    (let ((many e2) (many ys)) $ notail $ syns-interned e1 rest)
+    (values e2 $ Cons _ y ys)))
+
 (def-fns _ $ (many lit-entry : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Nat) x))
   (let ((many env2)) $ intern-raw env raw)
   (let-match many (lit-key raw) (Some _ k) ((None _) (values env2 $ None _)))
@@ -997,7 +1030,7 @@
 (def-fns _ $ (many at-place : (many (Env) env) (many (Bool) places) (many (Multiplicity) mult) (many (Spot) epos) (many (Syn) target) (many (Bool) ctor) (many (List $ Nat) bound) -> (many (Env) r) (many (Maybe $ Term) p))
   (let-match many places (BTrue) ((BFalse) (values (error-at env epos $ say env "`at` is allowed only on function telescope, match annotation and value constructor entries") $ None _)))
   (let ((many tpos)) $ raw-pos target)
-  (let-match many (raw-is-literal target) (BFalse) ((BTrue) (values (error-at env tpos $ say env "`at` names a variable, not a literal") $ None _)))
+  (let-match many (raw-is-literal $ syn-literal env target) (BFalse) ((BTrue) (values (error-at env tpos $ say env "`at` names a variable, not a literal") $ None _)))
   (let ((many envv) (many found)) $ match many target (((Env) _) ((Maybe $ Nat) _))
     ((RAtom _ n) (var-found (env-at env tpos) n))
     (else (values (error-at env tpos $ str-cat "expected a location variable, got " $ qraw target) $ None _)))
@@ -1010,7 +1043,8 @@
 (def-fns _ $ (many not-name : (many (Syn) raw) -> (many (String) s))
   (match many (raw-handle raw) _ ((BTrue) (str-cat3 "a handle to " (qraw raw) " is not a name")) ((BFalse) (str-cat (show-r raw) " is a literal, not a name"))))
 
-(def-fns _ $ (many name-checked : (many (Env) env) (many (Syn) raw) (many (String) what) -> (many (Env) r) (many (Maybe $ Name) s))
+(def-fns _ $ (many name-checked : (many (Env) env) (many (Syn) raw0) (many (String) what) -> (many (Env) r) (many (Maybe $ Name) s))
+  (let ((many raw)) $ syn-literal env raw0)
   (let-match many (raw-binder raw) (Some _ b)
     ((None _)
       (match many (or (raw-is-literal raw) $ raw-handle raw) _
@@ -1018,7 +1052,8 @@
         ((BFalse) (values (env-error env $ str-cat3 "expected " what $ str-cat ", got " $ qraw raw) $ None _)))))
   (values env b))
 
-(def-fns _ $ (many var-of-raw : (many (Env) env) (many (Syn) raw) (many (String) what) -> (many (Env) r) (many (Nat) x))
+(def-fns _ $ (many var-of-raw : (many (Env) env) (many (Syn) raw0) (many (String) what) -> (many (Env) r) (many (Nat) x))
+  (let ((many raw)) $ syn-literal env raw0)
   (match many raw _
     ((RAtom _ s) (var env s))
     ((RWild _) (values (env-error env "`_` is not a name, and nothing is inferred here") $ Zero))
@@ -1248,7 +1283,9 @@
   (let-match many (ctor-named env "MkPos") (Some _ mp) ((None _) (None _)))
   (let-match many (ctor-named env "Nil") (Some _ nl) ((None _) (None _)))
   (let-match many (ctor-named env "Cons") (Some _ cs) ((None _) (None _)))
-  (Some _ $ ExtRaw np mp nl cs))
+  (let-match many (ctor-named env "SName") (Some _ sn) ((None _) (None _)))
+  (let-match many (ctor-named env "SGen") (Some _ sg) ((None _) (None _)))
+  (Some _ $ ExtRaw np mp nl cs sn sg))
 
 (def-fns _ $ (many ctor-type : (many (Env) env) (many (Nat) c) -> (many (List $ Entry) tele) (many (Term) ret))
   (match many (type-of env c) _
@@ -1581,7 +1618,7 @@
 
 (def-fns _ $ (many at-literal : (subterm many (List $ LitEntry) ls) (many (Env) env) (many (Term) p) -> (many (Maybe $ Nat) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (None _)))
-  (let-match many l (MkLitEntry x _ _ _ _))
+  (let-match many l (MkLitEntry x _ _ _ _ _))
   (match many (equal-env env p $ slot-atom x) _ ((BTrue) (Some _ x)) ((BFalse) (tail $ at-literal rest env p))))
 
 ; A variable the code holds physically whose slot is [p], the word an `at` entry is read from (section 36).
@@ -1915,7 +1952,7 @@
 
 (def-fns _ $ (many hit-spelling : (many (Pair (Term) (LitEntry)) h) -> (many (String) s))
   (let-match many h (MkPair _ _ _ l))
-  (match many l _ ((MkLitEntry _ _ s _ _) s)))
+  (match many l _ ((MkLitEntry _ _ s _ _ _) s)))
 
 (def-fns _ $ (many hit-insert : (many (Pair (Term) (LitEntry)) h) (subterm many (List $ Pair (Term) (LitEntry)) hs) -> (many (List $ Pair (Term) (LitEntry)) r))
   (let-match many hs (Cons _ x rest) ((Nil _) (Cons _ h $ Nil _)))
@@ -2406,7 +2443,7 @@
     ((BFalse) (None _))))
 
 (def-fns _ $ (many raw-ext-of : (many (Env) env) -> (many (Maybe $ ExtType) r))
-  (let-match many (lookup (env-set-scope env $ env-prelude env) $ NSrc "RawName") (Some _ x) ((None _) (None _)))
+  (let-match many (lookup (env-set-scope env $ env-prelude env) $ NSrc "RawSymbol") (Some _ x) ((None _) (None _)))
   (let-match many (ctor-of env x) (Some _ c) ((None _) (None _)))
   (let-match many c (MkCtor _ _ _ _ _ ext _ _))
   ext)
@@ -3014,7 +3051,7 @@
 (def-fns _ $ (many malformed-entry : (many (Env) env) (many (Syn) r) -> (many (Env) e))
   (let-match many (list-rev _ $ raw-items r) (Cons _ last _) ((Nil _) (env-error env $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
   (let-match many (or (raw-is-literal last) $ raw-handle last) (BTrue) ((BFalse) (env-error env $ str-cat3 "malformed telescope entry " (qraw r) $ sp-hints env "telescope-entry")))
-  (error-at env (raw-pos last) $ not-name last))
+  (error-at env (raw-pos last) $ not-name $ syn-literal env last))
 
 (def-fns _ $ (many parse-entries-checked : (erased (List $ Syn) root) (subterm many (List $ Sub root) subs) (many (Env) env) -> (many (Env) r) (many (List $ SrcEntry root) es))
   (let-match many subs (Cons _ s rest) ((Nil _) (values env $ Nil _)))
@@ -3064,7 +3101,8 @@
     ((BFalse) (None _))))
 
 ; numeral-of (ASSUMPTIONS 53): a numeral or character literal by its own spelling, never an expression.
-(def-fns _ $ (many numeral-of-term : (many (Env) env) (many (Syn) arg) -> (many (Env) r) (many (Maybe $ Term) t))
+(def-fns _ $ (many numeral-of-term : (many (Env) env) (many (Syn) arg0) -> (many (Env) r) (many (Maybe $ Term) t))
+  (let ((many arg)) $ syn-literal env arg0)
   (let-match many (raw-is-literal arg) (BTrue)
     ((BFalse)
       (match many arg _
@@ -3089,7 +3127,8 @@
 
 ; The entry holding the Nat a numeral or character literal stands for, a character's being its code's
 ; (lib/elab.ml's numeral_entry).
-(def-fns _ $ (many numeral-entry : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
+(def-fns _ $ (many numeral-entry : (many (Env) env) (many (Syn) raw0) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
+  (let ((many raw)) $ syn-literal env raw0)
   (let-match many (lit-number raw) (Some _ z)
     ((None _)
       (values (env-error env
@@ -3100,7 +3139,8 @@
     ((None _) (values env1 $ None _))
     ((Some _ x) (values env1 $ Some _ $ MkPair _ _ z x))))
 
-(def-fns _ $ (many literal-lt-entry : (many (Env) env) (many (Syn) raw) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
+(def-fns _ $ (many literal-lt-entry : (many (Env) env) (many (Syn) raw0) -> (many (Env) r) (many (Maybe $ Pair (Nat) $ Nat) e))
+  (let ((many raw)) $ syn-literal env raw0)
   (let ((many (Bool) numeral)) $ match many raw (((Bool) b)) ((RNat _ _) (BTrue)) (else (BFalse)))
   (match many numeral _
     ((BFalse) (values (env-error env $ str-cat (say env "`prove-literal-lt` takes two numerals, got ") $ qraw raw) $ None _))
@@ -4393,7 +4433,7 @@
 ; a second extern declaration of an already bound name is refused (ASSUMPTIONS 42), so ExtNat and ExtString
 ; tag the prelude's own types alone, which lit-rope spells before this is reached.
 (def-fns _ $ (many show-ext-typed : (erased (Hist Block) a) (many (Block (Ref Block a)) b) (many (ExtType) e) -> (many (Rope) r))
-  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)) ((ExtBytes) (show-plain _ b)) ((ExtRaw _ _ _ _) (show-plain _ b)))
+  (let-match many e (ExtHalf) ((ExtArray) (show-plain _ b)) ((ExtNat) (show-plain _ b)) ((ExtString) (show-plain _ b)) ((ExtBytes) (show-plain _ b)) ((ExtRaw _ _ _ _ _ _) (show-plain _ b)))
   (let-match many b (BExt _ p)
     (else (show-plain _ b)))
   (match many p (((Rope) _)) ((PHalf n) (show-half-typed n)) (else (show-plain _ b))))
@@ -4872,7 +4912,7 @@
 
 (def-fns _ $ (many lit-ids : (subterm many (List $ LitEntry) ls) -> (many (List $ Nat) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
-  (match many l _ ((MkLitEntry x _ _ _ _) (Cons _ x $ notail $ lit-ids rest))))
+  (match many l _ ((MkLitEntry x _ _ _ _ _) (Cons _ x $ notail $ lit-ids rest))))
 
 (def-fns _ $ (many at-lines : (many (Env) env) -> (many (List $ String) r))
   (let ((many ids) (erased _)) $ list-append _ (Cons _ null-id $ lit-ids $ env-lits env) $ scope-ids $ env-scope env)
@@ -4904,7 +4944,7 @@
 (def-fns _ $ (many numeral-rules : (many (Env) env) (subterm many (List $ LitEntry) ls) -> (many (List $ String) r))
   (let-match many ls (Cons _ l rest) ((Nil _) (Nil _)))
   (let ((many more)) $ notail $ numeral-rules env rest)
-  (let-match many l (MkLitEntry x _ s _ _))
+  (let-match many l (MkLitEntry x _ s _ _ _))
   (let-match many (all-digits s) (BTrue) ((BFalse) more))
   (let ((many c)) $ canon-env env $ TVar x)
   (match many c _ ((TApp _ _) (Cons _ (str-cat3 s " is " $ show-t env c) more)) (else more)))
@@ -5286,6 +5326,7 @@
                     ((ExGensym) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExGensymUnique) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExSettledType) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
+                    ((ExSettledErase) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExSettledEq) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExSettledMult) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
                     ((ExSettledValue) (notail $ elab-prim-call fuel sugar items env0 ctx expect tele demand pos sp))
@@ -7343,27 +7384,29 @@
   (let ((many all)) $ idmap-pairs _ bs 1 0 $ Nil _)
   (warn-unused env1 (binder-sort (Pair (Nat) $ Tracked) binder-le all) all rf))
 
-(def-fns _ $ (many run-toplevel : (subterm many (Nat) fuel) (subterm many (List $ Syn) items) (many (Env) env) -> (many (Env) r))
-  (let-match many items (Cons _ item rest) ((Nil _) env))
-  (let-match many (pragma-of item) (None _)
-    ((Some _ words) (tail $ run-toplevel fuel rest $ pragma (env-at env $ raw-pos item) (raw-pos item) words)))
+(def-fns _ $ (many run-toplevel : (subterm many (Nat) fuel) (subterm many (List $ Syn) items) (many (Nat) expanded) (many (Env) env0) -> (many (Env) r))
+  (let-match many items (Cons _ item0 rest) ((Nil _) env0))
+  (let ((many after)) $ match many expanded (((Nat) _)) ((Zero) (Zero)) ((Succ k) k))
+  (let-match many (pragma-of item0) (None _)
+    ((Some _ words) (tail $ run-toplevel fuel rest after $ pragma (env-at env0 $ raw-pos item0) (raw-pos item0) words)))
+  (let ((many env) (many item)) $ match many expanded (((Env) _) ((Syn) _)) ((Zero) (syn-interned env0 item0)) ((Succ _) (values env0 item0)))
   (let ((many envm) (many mx)) $ expand (env-at env $ raw-pos item) item)
   (let-match many mx (None _)
     ((Some _ me)
       (let-match many me (Spliced out) ((Refused m) (env-error envm m)))
       (let-match many fuel (Succ f2) ((Zero) (env-error envm "more than 10000 macro expansions")))
       (let ((many all) (erased cp)) $ list-append _ out rest)
-      (tail $ run-toplevel f2 all envm)))
+      (tail $ run-toplevel f2 all (nat-add (list-length _ out) after) envm)))
   (let ((many envs) (many settled) (many ctxs) (many spre)) $ settle-item expansion-limit (raw-size item) item (env-at env $ raw-pos item) (Nil _) (Many))
   (let-match many settled (None _)
     ((Some _ item2)
       (let-match many fuel (Succ f2) ((Zero) (env-error envs "more than 10000 macro expansions")))
-      (tail $ run-toplevel f2 (Cons _ item2 rest) envs)))
+      (tail $ run-toplevel f2 (Cons _ item2 rest) expanded envs)))
   (let ((many env2)) $ env-set-warn-unused (env-at env $ raw-pos item) $ env-warn-unused env)
   (match many (or (is-statement env2 item) $ not $ list-is-empty _ rest) _
     ((BTrue)
       (let ((many env3) (many ctx2) (many sc)) $ elab-stmt expansion-limit (raw-size item) item env2 (Nil _) (Many) "top-level form")
-      (tail $ run-toplevel fuel rest $ report-unused env3))
+      (tail $ run-toplevel fuel rest after $ report-unused env3))
     ((BFalse)
       (let-match many (misplaced env2 item) (None _) ((Some _ _) (env-error env2 $ not-a env2 "neither a statement nor an expression" item)))
       (let ((many env3a) (many ress) (many h) (erased lock)) $ elab-expr-demand expansion-limit (raw-size item) item env2 (Nil _) many-one no-tele (CCPlain) (FinalDemand))

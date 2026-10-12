@@ -6,8 +6,8 @@
 ; warns: <**>:12:7: note: shadowed binder is here
 ; warns: <**>:20:7: warning: declaration of `k` shadows a previous binder
 ; warns: <**>:12:7: note: shadowed binder is here
-; warns: <**>:32:7: warning: declaration of `let` shadows a built-in
-; warns: <**>:33:13: warning: declaration of `Nat` shadows a previous binder
+; warns: <**>:33:7: warning: declaration of `let` shadows a built-in
+; warns: <**>:34:13: warning: declaration of `Nat` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here
 (let ((many k)) 100)
 (def-fns _ $ (many plus-k-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
@@ -21,7 +21,8 @@
 
 (def-fns _ $ (many seven-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
-  (values mw $ one $ form here $ three (RawSettled here _ _ _ (settled-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) (RawNat here 7)))
+  (let ((unique mw9) (many lit)) (nat-raw mw here 7))
+  (values mw9 $ one $ form here $ three (RawSettled here _ _ _ (settled-of many let)) (form here $ one $ form here $ two (name here "many") (name here "x")) lit))
 (let ((many seven)) (MkMacro _ seven-fn))
 
 (def-fns _ $ (many nat-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

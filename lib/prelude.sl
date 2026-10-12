@@ -1419,6 +1419,9 @@
 (def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many (Settled (MErased) Type T) h)))
 
+(def-prim $ (many settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) T t) h)))
+
 (def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
     (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
@@ -1438,15 +1441,16 @@
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
+(def-adts $ (Symbol : -> Type)
+  enum
+  (many SName : (many (String) s) -> (Symbol))
+  (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
-  (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
-  (many RawNat : (many (Pos) pos) (many (Nat) n) -> (Raw))
-  (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
-  (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
+  (many RawSymbol : (many (Pos) pos) (many (Symbol) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
-  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
   (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)

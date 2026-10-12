@@ -5,8 +5,10 @@
 (def-fns _ $ (many dbl-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
-  (let-match many a (RawNat p n) (else (values mw (Nil _))))
-  (let ((unique mw1) (many h)) (intern-nat mw (nat-add (nat-add n n) $ settled-value _ _ (settled-of many k))))
+  (let ((unique mw0) (many mn)) (arg-nat mw a))
+  (let-match many mn (Some _ n) ((None _) (values mw0 (Nil _))))
+  (let ((many p)) here)
+  (let ((unique mw1) (many h)) (intern-nat mw0 (nat-add (nat-add n n) $ settled-value _ _ (settled-of many k))))
   (let ((unique mw2) (many s)) (intern-string mw1 "hi"))
   (let ((unique mw3) (many c)) (intern-char mw2 #\z))
   (values mw3 $ one $ form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $

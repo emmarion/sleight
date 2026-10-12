@@ -20,10 +20,11 @@
   (let ((unique mw7) (many fresh)) (intern-nat mw6 12345))
   (let ((unique mw8) (many r6)) (settled-eq _ _ _ _ _ _ mw7 (settled-type _ _ _ fresh) (settled-type _ _ _ (settled-of many uno))))
   (let ((many s)) (str-append (said _ _ _ _ r1) $ str-append (said _ _ _ _ r2) $ str-append (said _ _ _ _ r3) $ str-append (said _ _ _ _ r4) $ str-append (said _ _ _ _ r5) (said _ _ _ _ r6)))
-  (values mw8 $ two
+  (let ((unique mw9) (many sr)) (str-raw mw8 here s))
+  (values mw9 $ two
     (form here $ three (name here "let") (form here $ one $ form here $ three (name here "many") (RawSettled here _ _ _ tx) (name here "zs")) (name here "ys"))
     (form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (name here "zs") $
-      form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (RawStr here s) (name here "erased-name"))))
+      form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two sr (name here "erased-name"))))
 (let ((many eqs)) (MkMacro _ eqs-fn))
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))

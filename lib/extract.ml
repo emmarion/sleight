@@ -44,8 +44,8 @@ let externs =
     ("Bytes", view "Bytes" "bytes" "~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr" "~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr");
     ("String", view "String" "str" "~slice:Obj.obj ~u8:Obj.repr ~str:Obj.repr" "~z:Obj.obj ~slice:Obj.obj ~str:Obj.repr");
     ( "Raw",
-      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
-       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v = (Obj.obj h : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, r, m, v)) ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
+      "let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~symbol:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)\n\
+       let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v = (Obj.obj h : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, r, m, v)) ~unsymbol:Obj.obj ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))" ) ]
 
 type shape = Ext of string | Tagged of int list | Untagged of int list | Union
 
@@ -371,6 +371,8 @@ and expr cx scope code = match code with
   | V.CPrim (Special.SettledValue, [ h ]) -> Printf.sprintf "(let (_, _, _, v) = (Obj.obj %s : %s) in v)" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledMult, [ h; e; m; u ]) ->
       Printf.sprintf "(match (Obj.obj %s : %s) with (_, _, Ffi_core.Erased, _) -> %s | (_, _, Ffi_core.Many, _) -> %s | _ -> %s)" (expr cx scope h) handle_ty (expr cx scope e) (expr cx scope m) (expr cx scope u)
+  | V.CPrim (Special.SettledErase, [ h ]) ->
+      Printf.sprintf "(Obj.repr (let (x, r, _, _) = (Obj.obj %s : %s) in (x, r, Ffi_core.Erased, Obj.repr ())))" (expr cx scope h) handle_ty
   | V.CPrim (Special.SettledType, [ h ]) ->
       Printf.sprintf "(Obj.repr (match (Obj.obj %s : %s) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (%s, Obj.repr ())))" (expr cx scope h) handle_ty (handle !Term.type_entry MintedIs Erased)
   | V.CPrim (p, _) -> Printf.sprintf "(failwith %s)" (quote ("`" ^ Special.name p ^ "` reached with no macro world"))

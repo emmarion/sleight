@@ -809,6 +809,8 @@
         (let ((many hs)) $ notail $ emit-codes _ args env ns d)
         (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
         (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in v)")))
+        (let-match many (sp-eq p $ SpExpr $ ExSettledErase) (BFalse)
+          ((BTrue) (rcat3 (RStr "(Obj.repr (let (x, r, _, _) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in (x, r, Ffi_core.Erased, Obj.repr ())))")))
         (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
           ((BTrue) (rcat5 (RStr "(Obj.repr (match (Obj.obj ") h (RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (") (handle-rope env type-id (MintedIs) (Erased)) $ RStr ")))")))
         (let-match many (sp-eq p $ SpExpr $ ExSettledMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))

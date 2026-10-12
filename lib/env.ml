@@ -639,8 +639,8 @@ let use env loc ?(sharing = false) ?written ?made mult x =
   if mult = Erased || env.usage_erased then env else
   let e = entry env x in
   let explain () = match made, Hashtbl.find_opt literal_of x with
+    | (None | Some Many), Some r -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:(Literal.key r.lit))) (mult_name e.mult))
     | Some d, _ -> ([], Printf.sprintf "a handle to %s, made `%s`" (qshow env (Var x)) (speller env (mult_name d)))
-    | None, Some r -> ([], Printf.sprintf "%s, a literal and so %s" (tick (Option.value written ~default:(Literal.key r.lit))) (mult_name e.mult))
     | None, None -> (declared env x, Printf.sprintf "%s, declared `%s`" (qname env x) (speller env (mult_name e.mult))) in
   check_mult env loc explain mult (if sharing && mult = Many then Many else Option.value made ~default:e.mult);
   if e.mult <> Unique then env else (

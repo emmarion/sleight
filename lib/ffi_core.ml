@@ -130,39 +130,32 @@ let flatten ~rope ~slice ~z ~str root =
 type 'a array_model = ANil | ACons of 'a * 'a
 type 'v list_model = Nil | Cons of 'v * 'v
 type 'v pos_model = NoPos | MkPos of 'v * 'v * 'v
-type 'v raw_model = RawName of 'v * 'v | RawNat of 'v * 'v | RawChar of 'v * 'v | RawStr of 'v * 'v | RawWild of 'v | RawList of 'v * 'v | RawGen of 'v * 'v * 'v | RawSettled of 'v * 'v
+type 'v symbol_model = SName of 'v | SGen of 'v * 'v
+type 'v raw_model = RawSymbol of 'v * 'v | RawWild of 'v | RawList of 'v * 'v | RawSettled of 'v * 'v
 
 let pos_view ~str ~nat = function At { file; line; col } -> MkPos (str file, nat line, nat col) | NoLoc | Unknown -> NoPos
 
-let raw_view ~handle ~get ~str ~nat ~pos ~list ~raw v =
+let raw_view ~handle ~symbol ~get ~str ~nat ~pos ~list ~raw v =
   let p l = pos (pos_view ~str ~nat l) in
   match get v with
-  | Atom (l, Src s) -> RawName (p l, str s)
-  | Atom (l, Gen (n, s)) -> RawGen (p l, nat n, str s)
+  | Atom (l, Src s) -> RawSymbol (p l, symbol (SName (str s)))
+  | Atom (l, Gen (n, s)) -> RawSymbol (p l, symbol (SGen (nat n, str s)))
   | Handle (l, x, r, m, v) -> RawSettled (p l, handle (x, r, m, v))
-  | Nat (l, n) -> RawNat (p l, nat n)
-  | Char (l, c) -> RawChar (p l, nat (Z.of_int c))
-  | Str (l, s) -> RawStr (p l, str s)
+  | Nat _ | Char _ | Str _ -> invalid_arg "raw_view: a literal is a handle in a macro's arguments"
   | Wild l -> RawWild (p l)
   | List (l, xs) -> RawList (p l, List.fold_right (fun x rest -> list (Cons (raw x, rest))) xs (list Nil))
 
 let raw_fields = function
-  | RawName (p, s) -> (0, [ p; s ]) | RawNat (p, n) -> (1, [ p; n ]) | RawChar (p, c) -> (2, [ p; c ])
-  | RawStr (p, s) -> (3, [ p; s ]) | RawWild p -> (4, [ p ]) | RawList (p, xs) -> (5, [ p; xs ]) | RawGen (p, n, s) -> (6, [ p; n; s ]) | RawSettled (p, h) -> (7, [ p; h ])
+  | RawSymbol (p, s) -> (0, [ p; s ]) | RawWild p -> (1, [ p ]) | RawList (p, xs) -> (2, [ p; xs ]) | RawSettled (p, h) -> (3, [ p; h ])
 let raw_model i fs = match (i, fs) with
-  | 0, [ p; s ] -> RawName (p, s) | 1, [ p; n ] -> RawNat (p, n) | 2, [ p; c ] -> RawChar (p, c)
-  | 3, [ p; s ] -> RawStr (p, s) | 4, [ p ] -> RawWild p | 5, [ p; xs ] -> RawList (p, xs) | 6, [ p; n; s ] -> RawGen (p, n, s) | 7, [ p; h ] -> RawSettled (p, h) | _ -> invalid_arg "raw_model"
+  | 0, [ p; s ] -> RawSymbol (p, s) | 1, [ p ] -> RawWild p | 2, [ p; xs ] -> RawList (p, xs) | 3, [ p; h ] -> RawSettled (p, h) | _ -> invalid_arg "raw_model"
 
-let raw_of ~unhandle ~text ~z ~pos ~list ~raw m =
+let raw_of ~unhandle ~unsymbol ~text ~z ~pos ~list ~raw m =
   let l p = match pos p with NoPos -> NoLoc | MkPos (f, line, col) -> At { file = text f; line = z line; col = z col } in
   let rec items v = match list v with Nil -> [] | Cons (x, rest) -> raw x :: items rest in
   match m with
-  | RawName (p, s) -> Atom (l p, Src (text s))
-  | RawGen (p, n, s) -> Atom (l p, Gen (z n, text s))
+  | RawSymbol (p, s) -> Atom (l p, match unsymbol s with SName t -> Src (text t) | SGen (n, t) -> Gen (z n, text t))
   | RawSettled (p, h) -> unhandle (l p) h
-  | RawNat (p, n) -> Nat (l p, z n)
-  | RawChar (p, c) -> Char (l p, Z.to_int (z c))
-  | RawStr (p, s) -> Str (l p, text s)
   | RawWild p -> Wild (l p)
   | RawList (p, xs) -> List (l p, items xs)
 

@@ -32,12 +32,14 @@ let plain name i args = construct (ctor_at (Hashtbl.find adts name) i) args
 let host v = let s, o, n = slice v in String.sub s o n
 let pos = function Ffi_core.NoPos -> plain "Pos" 0 [] | MkPos (f, l, c) -> plain "Pos" 1 [ f; l; c ]
 let list = function Ffi_core.Nil -> plain "List" 0 [] | Cons (x, r) -> plain "List" 1 [ x; r ]
+let symbol = function Ffi_core.SName s -> plain "Symbol" 0 [ s ] | SGen (n, s) -> plain "Symbol" 1 [ n; s ]
 
 (* The interpreter's construction and matching of an extern type, through lib/ffi_core.ml's one-level view. *)
 let bad name v = raise (Eval.Runtime (Printf.sprintf "not a %s: %s" name (show v)))
 let des = function VCtor (c, fs) -> (c.index, Array.to_list fs) | v -> bad "constructor" v
 let unpos v = match des v with 0, [] -> Ffi_core.NoPos | 1, [ f; l; c ] -> MkPos (f, l, c) | _ -> bad "Pos" v
 let unlist v = match des v with 0, [] -> Ffi_core.Nil | 1, [ x; r ] -> Cons (x, r) | _ -> bad "List" v
+let unsymbol v = match des v with 0, [ s ] -> Ffi_core.SName s | 1, [ n; s ] -> SGen (n, s) | _ -> bad "Symbol" v
 let view shape view = { shape; view }
 let types : (string * ty_spec) list =
   let nat adt n = VExt (adt, Int n) in
@@ -56,10 +58,10 @@ let types : (string * ty_spec) list =
           { construct = (fun i args -> Ffi_core.half_of ~z ~nat:(nat adt) (match (i, args) with 0, [] -> HZ | 1, [ m ] -> H1 m | 2, [ m ] -> H2 m | _ -> raise arity));
             destruct = (fun v -> match Ffi_core.half_view ~z ~nat:(int "Nat") v with HZ -> (0, []) | H1 m -> (1, [ m ]) | H2 m -> (2, [ m ])) }) );
     ( "Raw",
-      view [ 2; 2; 2; 2; 1; 2; 3; 2 ] (fun adt ->
+      view [ 2; 1; 2; 2 ] (fun adt ->
           let get = function VExt (_, Raw r) -> r | v -> bad "Raw" v in
-          { construct = (fun i args -> VExt (adt, Raw (Ffi_core.raw_of ~unhandle:(fun l -> function VHandle (x, r, m, v) -> Ffi_core.Handle (l, x, r, m, Obj.repr v) | v -> bad "Settled" v) ~text:host ~z ~pos:unpos ~list:unlist ~raw:get (Ffi_core.raw_model i args))));
-            destruct = (fun v -> Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, r, m, v) -> VHandle (x, r, m, Obj.obj v)) ~get ~str:(fun s -> text (s, 0, String.length s)) ~nat:(int "Nat") ~pos ~list ~raw:(fun r -> VExt (adt, Raw r)) v)) }) );
+          { construct = (fun i args -> VExt (adt, Raw (Ffi_core.raw_of ~unhandle:(fun l -> function VHandle (x, r, m, v) -> Ffi_core.Handle (l, x, r, m, Obj.repr v) | v -> bad "Settled" v) ~unsymbol ~text:host ~z ~pos:unpos ~list:unlist ~raw:get (Ffi_core.raw_model i args))));
+            destruct = (fun v -> Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, r, m, v) -> VHandle (x, r, m, Obj.obj v)) ~symbol ~get ~str:(fun s -> text (s, 0, String.length s)) ~nat:(int "Nat") ~pos ~list ~raw:(fun r -> VExt (adt, Raw r)) v)) }) );
     ( "String",
       view [ 0; 2 ] (fun adt ->
           let str s = VExt (adt, Slice s) in
