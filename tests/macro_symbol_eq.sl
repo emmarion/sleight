@@ -1,0 +1,25 @@
+; needs: macro_lib
+; expect: (MkPair _ _ "same" $ MkPair _ _ "other" "same other other")
+; symbol-eq proves two symbols equal: names by their text, gensyms by their number, gensym-unique giving the text.
+(def-fns _ $ (many said : (many (Symbol) x) (many (Symbol) y) -> (many (String) s))
+  (match many (symbol-eq x y) _ ((Some _ _) "same") ((None _) "other")))
+(def-fns _ $ (many same-name-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let-match many args (Cons _ a rest) ((Nil _) (values mw (Nil _))))
+  (let-match many rest (Cons _ b _) ((Nil _) (values mw (Nil _))))
+  (let-match many a (RawSymbol p x) (else (values mw (Nil _))))
+  (let-match many b (RawSymbol q y) (else (values mw (Nil _))))
+  (let ((unique mw1) (many o)) (str-raw mw here $ said x y))
+  (values mw1 $ one o))
+(let ((many same-name)) (MkMacro _ same-name-fn))
+(def-fns _ $ (many gensyms-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many n) (erased g)) (gensym mw "t"))
+  (let ((unique mw2) (many m) (erased h)) (gensym mw1 "t"))
+  (let ((many a)) (SGen n "t" g))
+  (let ((many b)) (SGen m "t" h))
+  (let ((many t)) $ str-append (said a a) $ str-append " " $ str-append (said a b) $ str-append " " $ said a $ SName "t")
+  (let ((unique mw3) (many o)) (str-raw mw2 here t))
+  (values mw3 $ one o))
+(let ((many gensyms)) (MkMacro _ gensyms-fn))
+(MkPair _ _ (same-name x x) $ MkPair _ _ (same-name x y) (gensyms))

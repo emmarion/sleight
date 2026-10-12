@@ -1447,6 +1447,17 @@
   (many SName : (many (String) s) -> (Symbol))
   (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
 
+(def-fns _ $ (many symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r))
+  (match many x _
+    ((SName s)
+      (let-match many y (SName t) (else (None _)))
+      (match many (str-cmp s t) _ ((CEq _ _ _) (Some _ $ Refl _ _)) (else (None _))))
+    ((SGen n s g)
+      (let-match many y (SGen m t h) (else (None _)))
+      (let-match many (nat-cmp n m) (CEq _ _ _) (else (None _)))
+      (let-match erased (gensym-unique n s t g h) (JMRefl _ _))
+      (Some _ $ Refl _ _))))
+
 (def-adts $ (Resolution : -> Type)
   enum
   (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
