@@ -104,11 +104,11 @@ state. SOUNDNESS.md's invariants appear as:
 
 ## Differences from MINIMAL.md
 
-1. A `def-adts` signature may not mention any entry, a top-level level
-   included: it may mention only types, its own binders and `Type`.
-   `examples/paradox_same_level_bad.sl` therefore carries the level as
-   an index, where `tests/paradox_same_level_bad.sl` names a top-level
-   level.
+1. A `def-adts` signature may mention a top-level entry only when the
+   elaborator knows its type from the text: a level, a function a
+   `def-fns` defines, or a `let` binder written with a type; or when the
+   entry is a `let` of a term, which is put in its place. Any other
+   entry is refused.
 2. Type constructors and value constructors are applied only by name,
    saturated. The `TyCtor` and `ValCtor` formers are not values.
 3. The type of the program's final expression may not mention the
@@ -160,6 +160,12 @@ state. SOUNDNESS.md's invariants appear as:
   must canonicalize to `e`. In the core such an entry has no type of its
   own: its recorded type is a marker (`Tm.nil`) that the checker reads
   as "the type of its rule" and that every value has.
+- The top-level entries a `def-adts` block's signatures mention become
+  leading `erased` parameters of each of its types and constructors,
+  which the elaborator supplies at every use and binds, unnamed, in every
+  pattern; the printer leaves them out. The core's types stay closed, so
+  the proofs need nothing new. `def-adts` blocks are elaborated in the
+  order they are written.
 - A `let` binder written `(T x)` or `(e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.

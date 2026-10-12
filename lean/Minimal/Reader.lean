@@ -45,6 +45,10 @@ structure ESt where
   n : Nat := 0
   ers : List Bool := []
   ghost : Bool := false
+  top : Bool := true
+  known : List (Nat × Tm) := []
+  inl : List (Nat × Tm) := []
+  lifts : List (Nat × List Nat) := []
   adts : List (String × Nat) := []
   ctors : List (String × Nat × Nat) := []
   decls : List Adt := []
@@ -118,9 +122,10 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
   | .list (.atom h :: args) => do
     let st ← get
     let args ← args.mapM (elabTm sc depth)
+    let lift d := ((st.lifts.lookup d).getD []).map Tm.fv
     match st.adts.lookup h, st.ctors.lookup h with
-    | some d, _ => pure (.ty d (.ofList args))
-    | _, some (d, c) => pure (.con d c (.ofList args))
+    | some d, _ => pure (.ty d (.ofList (lift d ++ args)))
+    | _, some (d, c) => pure (.con d c (.ofList (lift d ++ args)))
     | _, _ => throw s!"{h} is not a type or constructor, in a type"
   | _ => throw "malformed term"
 
@@ -136,13 +141,76 @@ end
 def fresh (ms : List Bool) : M (List Nat) :=
   modifyGet fun st => (List.range' st.n ms.length, { st with n := st.n + ms.length, ers := st.ers ++ ms })
 
-def reset (base : Nat) : M Unit := modify fun st => { st with n := base, ers := st.ers.take base }
+def reset (base : Nat) : M Unit := modify fun st =>
+  { st with n := base, ers := st.ers.take base, known := st.known.filter (·.1 < base),
+            inl := st.inl.filter (·.1 < base) }
+
+def liftOf (d : Nat) : M (List Tm) := return (((← get).lifts.lookup d).getD []).map Tm.fv
+
+def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
+  if !st.top then st else if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
+
+def abst (ids : List Nat) : Nat → Tm → Tm
+  | D, .fv i => match ids.idxOf? i with
+    | some k => .bv (D - 1 - k)
+    | none => .fv i
+  | D, .cons h t => .cons (abst ids D h) (abst ids D t)
+  | D, .bind k a r => .bind k (abst ids D a) (abst ids (D + 1) r)
+  | D, .ty d a => .ty d (abst ids D a)
+  | D, .con d c a => .con d c (abst ids D a)
+  | D, .predates A x L => .predates (abst ids D A) (abst ids D x) (abst ids D L)
+  | D, .subterm A a B b => .subterm (abst ids D A) (abst ids D a) (abst ids D B) (abst ids D b)
+  | D, .fn l np t => .fn (abst ids D l) np (abst ids D t)
+  | _, t => t
+
+def teleAppend : Tm → Tm → Tm
+  | .bind k a r, t => .bind k a (teleAppend r t)
+  | _, t => t
+
+def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
+  let heads ← blocks.mapM fun (b : Sx) => match b with
+    | .list (.atom T :: .list ps :: cs) => pure (T, ps, cs)
+    | _ => throw "malformed def-adts"
+  let st ← get
+  if !st.top then throw "def-adts is confined to the top level"
+  let base := st.decls.length
+  let mut ctors := st.ctors
+  for ((_, _, cs), j) in heads.zipIdx do
+    for (c, ci) in cs.zipIdx do
+      let .list (.atom C :: _) := c | throw "malformed constructor"
+      ctors := (C, base + j, ci) :: ctors
+  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List Sx), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
+  let inline (t : Tm) : Tm := (List.range st.inl.length).foldl
+    (fun t _ => t.subst fun i => (st.inl.lookup i).getD (.fv i)) t
+  let elabSigs := heads.mapM fun (_, ps, cs) => do
+    let params ← elabTele sc 0 ps
+    let sigs ← cs.mapM fun (c : Sx) => match c with
+      | .list [_, .list fs, ret] => elabTele sc 0 (fs ++ [.list [ret, .atom "_"]])
+      | _ => throw "malformed constructor"
+    pure (inline params, sigs.map inline)
+  let raw ← elabSigs
+  let mut ids : List Nat := (raw.flatMap fun (p, ss) => p.fvs ++ ss.flatMap Tm.fvs).eraseDups
+  for _ in List.range (st.n + 1) do
+    let more ← ids.flatMapM fun i => match st.known.lookup i with
+      | some T => pure (inline T).fvs
+      | none => throw "a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term"
+    ids := (ids ++ more).eraseDups
+  ids := ids.mergeSort
+  let liftTele := ids.zipIdx.foldr (fun (i, k) r =>
+    .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
+  modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
+  for ((T, _, cs), (params, sigs)) in heads.zip (← elabSigs) do
+    let ctorNames := cs.filterMap fun | .list (.atom C :: _) => some C | _ => none
+    let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
+                       ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
+                       lifted := ids.length }
+    modify fun st => { st with decls := st.decls ++ [adt] }
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
-  let old := (← get).ghost
-  modify fun st => { st with ghost := old || g }
+  let st0 ← get
+  modify fun st => { st with ghost := st0.ghost || g, top := false }
   let r ← x
-  modify fun st => { st with ghost := old }
+  modify fun st => { st with ghost := st0.ghost, top := st0.top }
   return r
 
 abbrev Stmt := Core → Core
@@ -176,8 +244,8 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
     else if h == "match" then elabMatch sc want args
     else if h ∈ keywords || (st.adts.lookup h).isSome || (st.ctors.lookup h).isSome then
       match st.adts.lookup h, st.ctors.lookup h with
-      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.ty d (.ofList ts)])
-      | _, some (d, c) => let (ss, ts) ← elabArgs sc args; return (ss, [.con d c (.ofList ts)])
+      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.ty d (.ofList ((← liftOf d) ++ ts))])
+      | _, some (d, c) => let (ss, ts) ← elabArgs sc args; return (ss, [.con d c (.ofList ((← liftOf d) ++ ts))])
       | _, _ => return ([], [← elabTm sc 0 e])
     else do
       let f ← look sc 0 h
@@ -224,6 +292,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
     let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
     let names ← xs.mapM fun | .atom x => pure x | _ => throw "malformed pattern"
+    let names := ((← liftOf d').map fun _ => " lift") ++ names
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     reset base
     let fs ← fresh (if er then names.map fun _ => true else (fieldErs sig).take names.length)
@@ -236,8 +305,12 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
 partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
   | [e] => elabExpr sc want e
+  | .list (.atom "def-adts" :: bs) :: rest => do
+    declareAdts sc bs
+    elabSeq sc want rest
   | .list [.atom "def-lvl", .atom L] :: rest => do
     let [i] ← fresh [false] | throw "fresh"
+    note i .level
     let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want rest
     return (.defLvl :: ss, ts)
   | .list (.atom "let" :: .list xs :: items) :: rest => do
@@ -262,8 +335,12 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
         | _ => do
           let [j] ← fresh [er] | throw "fresh"
           ss := ss ++ [.prim (.tm t) er]
+          note j t true
           pure j
-      if let some (k, a) := ann then ss := ss ++ [.chk k (.fv i) (← elabTm sc' 0 a)]
+      if let some (k, a) := ann then
+        let a ← elabTm sc' 0 a
+        ss := ss ++ [.chk k (.fv i) a]
+        if k == .ty then note i a
       sc' := (x, refOf sc i) :: sc'
     let (ss2, ts2) ← elabSeq sc' want rest
     return (ss ++ ss2, ts2)
@@ -294,6 +371,7 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
       pure { er, np := ps.length, tele, body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
+    for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     let (ss, ts) ← elabSeq fnsc want rest
     return (.defFns gid :: ss, ts)
@@ -307,30 +385,8 @@ partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) : M Core 
   return close ss ts
 end
 
-def declareAdts (blocks : List Sx) : M Unit := do
-  let heads ← blocks.mapM fun (b : Sx) => match b with
-    | .list (.atom T :: .list ps :: cs) => pure (T, ps, cs)
-    | _ => throw "malformed def-adts"
-  let st ← get
-  let base := st.decls.length
-  let mut ctors := st.ctors
-  for ((_, _, cs), j) in heads.zipIdx do
-    for (c, ci) in cs.zipIdx do
-      let .list (.atom C :: _) := c | throw "malformed constructor"
-      ctors := (C, base + j, ci) :: ctors
-  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List Sx), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
-  for (T, ps, cs) in heads do
-    let params ← elabTele [] 0 ps
-    let sigs ← cs.mapM fun (c : Sx) => match c with
-      | .list [_, .list fs, ret] => elabTele [] 0 (fs ++ [.list [ret, .atom "_"]])
-      | _ => throw "malformed constructor"
-    let ctorNames := cs.filterMap fun | .list (.atom C :: _) => some C | _ => none
-    modify fun st => { st with decls := st.decls ++ [{ params, ctors := sigs, name := T, ctorNames }] }
-
 def elabProgram (items : List Sx) : Except String Prog := do
-  let adts := items.filterMap fun | .list (.atom "def-adts" :: bs) => some bs | _ => none
-  let rest := items.filter fun | .list (.atom "def-adts" :: _) => false | _ => true
-  let (main, st) ← (do adts.forM declareAdts; elabBody [] [false] rest).run {}
+  let (main, st) ← (elabBody [] [false] items).run {}
   return { adts := st.decls, groups := st.groups, main }
 
 def load (src : String) : Except String Prog := do elabProgram (← parse src)

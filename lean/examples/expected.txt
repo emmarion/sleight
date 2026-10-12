@@ -1,3 +1,5 @@
+examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
+examples/adt_mentions_bad.sl: syntax error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 examples/anon_level.sl: (Succ (Succ (Zero)))
 examples/binder_refute.sl: (Zero)
 examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
@@ -30,6 +32,7 @@ examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subte
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/vec_head.sl: (Succ (Zero))
+unchecked examples/adt_mentions_bad.sl: syntax error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 unchecked examples/else_empty_bad.sl: (Zero)
 unchecked examples/erased_fn_bad.sl: (Zero)
 unchecked examples/erased_let_bad.sl: (Zero)

@@ -3,13 +3,15 @@ import Minimal.Eval
 
 namespace Minimal
 
+def Prog.lifted (P : Prog) (d : Nat) : Nat := ((P.adts[d]?).map (·.lifted)).getD 0
+
 partial def Prog.show (P : Prog) : Tm → String
   | .con d c args =>
     let name := ((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}"
-    "(" ++ " ".intercalate (name :: args.toList.map P.show) ++ ")"
+    "(" ++ " ".intercalate (name :: (args.toList.drop (P.lifted d)).map P.show) ++ ")"
   | .ty d args =>
     let name := ((P.adts[d]?).map (·.name)).getD s!"T{d}"
-    "(" ++ " ".intercalate (name :: args.toList.map P.show) ++ ")"
+    "(" ++ " ".intercalate (name :: (args.toList.drop (P.lifted d)).map P.show) ++ ")"
   | .univ => "Type"
   | .level => "(Level)"
   | .lvl n => s!"<level {n}>"

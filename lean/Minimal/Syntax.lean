@@ -238,6 +238,7 @@ structure Adt where
   ctors : List Tm
   name : String := ""
   ctorNames : List String := []
+  lifted : Nat := 0
   deriving Repr, Inhabited
 
 structure Prog where

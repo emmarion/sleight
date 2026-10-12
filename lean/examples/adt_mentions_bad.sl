@@ -1,0 +1,6 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-lvl L)
+(def-fns L (f (((Nat) n)) (((Nat) m)) n))
+(let (h) (f (Zero)))
+(def-adts (Bad () (MkBad (((Nat) b) ((Succ h) is c)) (Bad))))
+(Zero)
