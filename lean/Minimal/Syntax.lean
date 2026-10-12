@@ -251,6 +251,7 @@ structure Adt where
   name : String := ""
   ctorNames : List String := []
   lifted : Nat := 0
+  phantom : List Bool := []
   deriving Repr, Inhabited
 
 structure Prog where
@@ -267,6 +268,8 @@ def Prog.k (P : Prog) : Nat :=
   P.groups.foldr (fun G acc => G.fns.foldr (fun F acc => max ((marks F.tele F.np).count true) acc) acc) 0
 
 def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[c]?)
+
+def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom[c]?)).getD false
 
 def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele
 

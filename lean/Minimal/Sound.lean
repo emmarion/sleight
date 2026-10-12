@@ -876,9 +876,9 @@ theorem rtArgs_subst {Γ : Ctx} (f : Nat → Tm) : ∀ (args sig : Tm), rtArgs P
   | .valCtor _, _, h | .univ, _, h | .level, _, h | .predates .., _, h | .subterm .., _, h | .fn .., _, h
   | .lvl _, _, h | .tok, _, h | .clo .., _, h => by simp [rtArgs] at h
 
-theorem Real.vc_inv {vS : Tm} {d c : Nat} (h : Real P vS (.vc d c)) : vS = .vc d c := by
+theorem Real.vc_inv {vS : Tm} {d c : Nat} (h : Real P vS (.vc d c)) : vS = .vc d c ∧ P.phantom d c = false := by
   cases h with
-  | vc => rfl
+  | vc h => exact ⟨rfl, h⟩
   | other _ h2 _ => exact absurd rfl (h2 _ _)
 
 mutual
@@ -890,7 +890,9 @@ theorem rt_real {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv 
     | vc d c =>
       simp only [rt] at h
       split at h
-      · rename_i sig hc; exact .con hc (rtArgs_reals hE hS args sig h)
+      · rename_i sig hc
+        simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at h
+        exact .con hc h.1 (rtArgs_reals hE hS args sig h.2)
       · simp at h
     | fv i =>
       simp only [rt] at h
@@ -903,8 +905,8 @@ theorem rt_real {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv 
         rw [← hE.canon, hcT] at hv; simp only [Tm.subst] at hv
         obtain ⟨d, c, rfl, hc⟩ := hv.vc_inv
         have hR := hS.2 i h.1; rw [hev] at hR
-        simp only [Tm.subst]; rw [hev, hR.vc_inv]
-        exact .con hc (rtArgs_reals hE hS args _ (rtArgs_subst _ args sig h.2))
+        simp only [Tm.subst]; rw [hev, hR.vc_inv.1]
+        exact .con hc hR.vc_inv.2 (rtArgs_reals hE hS args _ (rtArgs_subst _ args sig h.2))
       · rename_i ps heq
         simp only [Option.map_eq_some_iff] at heq
         obtain ⟨T, hT, hcT⟩ := heq
@@ -916,7 +918,7 @@ theorem rt_real {Γ : Ctx} {ρS ρ : List Tm} (hE : EnvOK P ρ Γ) (hS : SimEnv 
       · simp at h
     | tyc _ => exact .other (by simp [Tm.subst]) (by simp [Tm.subst]) (by simp [Tm.subst])
     | _ => simp [rt] at h
-  | .vc _ _, _ => by simp only [Tm.subst]; exact .vc
+  | .vc _ _, h => by simp only [Tm.subst]; exact .vc (by simpa [rt] using h)
   | .tyc _, _ | .tyCtor _, _ | .valCtor _, _ | .univ, _ | .level, _ | .predates .., _ | .subterm .., _
   | .fn .., _ => .other (by simp [Tm.subst]) (by simp [Tm.subst]) (by simp [Tm.subst])
   | .nil, h | .bv _, h | .cons .., h | .bind .., h | .lvl _, h | .tok, h | .clo .., h => by simp [rt] at h
@@ -1013,9 +1015,9 @@ theorem Real.clo_inv {vS e : Tm} {gid j : Nat} (h : Real P vS (.clo e gid j)) :
   | other _ _ h3 => exact absurd rfl (h3 _ _ _)
 
 theorem Real.con_inv {vS : Tm} {d c : Nat} {vs : Tm} (h : Real P vS (.app (.vc d c) vs)) :
-    ∃ vsS sig, vS = .app (.vc d c) vsS ∧ P.ctor d c = some sig ∧ Reals P vsS vs sig := by
+    ∃ vsS sig, vS = .app (.vc d c) vsS ∧ P.ctor d c = some sig ∧ P.phantom d c = false ∧ Reals P vsS vs sig := by
   cases h with
-  | con hc hr => exact ⟨_, _, rfl, hc, hr⟩
+  | con hc hp hr => exact ⟨_, _, rfl, hc, hp, hr⟩
   | other h1 _ => exact absurd rfl (h1 _ _ _)
 
 theorem selectBr_same {brs : List (Nat × Nat × Core)} {els : Option Core} {c : Nat} {vs vs' pre : List Tm}
@@ -1181,14 +1183,14 @@ theorem Ctx.branch_ghost (g : Bool) (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : T
 
 theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {s St idx R : Tm} {d bnd : Nat} {D : Adt}
-    {brs : List (Nat × Nat × Core)} {els : Option Core} {g : Bool}
+    {brs : List (Nat × Nat × Core)} {els : Option Core} {g : Nat → Bool} {ge : Bool}
     (hs : TmTy P Γ s St) (hS : Γ.canon St = .app (.tyc d) idx) (hD : P.adts[d]? = some D)
     (hbr : ∀ (c : Nat) sig, D.ctors[c]? = some sig →
-      BranchOK P bnd { Γ with ghost := g } s d idx c sig R (lookupBr brs c) els.isSome)
-    (hel : ∀ e, els = some e → CoreTy P bnd { Γ with ghost := g } e R) (hRs : R.static Γ.n 0) :
+      BranchOK P bnd { Γ with ghost := g c } s d idx c sig R (lookupBr brs c) els.isSome)
+    (hel : ∀ e, els = some e → CoreTy P bnd { Γ with ghost := ge } e R) (hRs : R.static Γ.n 0) :
     ∃ c vs, s.subst (Tm.env ρ) = .app (.vc d c) vs ∧ ∃ pre body, selectBr brs els c vs.toList = some (pre, body) ∧
       ∃ Γ', CoreTy P bnd Γ' body R ∧ EnvOK P (ρ ++ pre) Γ' ∧ LvlBound (ρ ++ pre) cnt ∧
-        MuOK μ Γ' (ρ ++ pre) ∧ R.static Γ'.n 0 ∧ Γ'.ghost = g ∧ (∀ i < Γ.n, Γ'.er i = Γ.er i) ∧
+        MuOK μ Γ' (ρ ++ pre) ∧ R.static Γ'.n 0 ∧ (Γ'.ghost = g c ∨ Γ'.ghost = ge) ∧ (∀ i < Γ.n, Γ'.er i = Γ.er i) ∧
         ∀ sig, P.ctor d c = some sig → ∀ k < pre.length, Γ'.er (Γ.n + k) = sig.ers.getD k true := by
   have hw := hE.wf
   have hl := hE.len
@@ -1242,7 +1244,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   | dead hd | refuted hd => rw [Ctx.branch_ghost, hbranch] at hd; exact absurd hd hun.2
   | covered =>
     obtain ⟨e, rfl⟩ := Option.isSome_iff_exists.mp hei
-    refine ⟨[], e, by simp [selectBr, hbody], _, hel e rfl, ?_, by simpa using hb, ?_, hRs, rfl,
+    refine ⟨[], e, by simp [selectBr, hbody], _, hel e rfl, ?_, by simpa using hb, ?_, hRs, .inr rfl,
       fun _ _ => rfl, fun _ _ k hk => absurd hk (Nat.not_lt_zero _)⟩
     · rw [List.append_nil]; exact hE.congr _ rfl rfl rfl rfl rfl
     · rw [List.append_nil]; exact hm
@@ -1254,7 +1256,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     have hwσ := unify_wf Γf.n Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
     obtain ⟨-, o1, o2⟩ := Ctx.openTele_er (sig.len - 1) Γ sig hst
     rw [hpr] at o1 o2
-    refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, rfl, o1,
+    refine ⟨vs.toList, body, by simp [selectBr, hbody], _, hcb, ?_, ?_, ?_, ?_, .inl rfl, o1,
       fun sig' hsig' k hk => ?_⟩
     rotate_left 4
     · rw [hctor] at hsig'; cases hsig'
@@ -1451,8 +1453,8 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
       | false =>
         simp only [Ctx.ok, hg, Bool.false_or] at hok
         have hR := rt_real hE hS s hok; rw [hs] at hR
-        obtain ⟨vsS, sig, hsS, hsig, hrv⟩ := hR.con_inv
-        have hgb : Γ'.ghost = false := by rw [hg', hg]; rfl
+        obtain ⟨vsS, sig, hsS, hsig, hph, hrv⟩ := hR.con_inv
+        have hgb : Γ'.ghost = false := by rcases hg' with h | h <;> rw [h, hg] <;> simp [hph]
         have hSb : ∃ preS, selectBr brs els c vsS.toList = some (preS, body) ∧
             SimEnv P Γ'.er (ρS ++ preS) (ρ ++ pre) := by
           rcases selectBr_same (vs' := vsS.toList) hb with ⟨rfl, hsel⟩ | ⟨rfl, hsel⟩

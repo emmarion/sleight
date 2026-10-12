@@ -10,10 +10,10 @@ examples/else.sl: (Succ (Zero)) (Zero) (Zero)
 examples/else_empty_bad.sl: refused: else: it stands for no constructor
 examples/eq_sym.sl: (Refl (Nat) (Zero))
 examples/erased.sl: (Succ (Succ (Zero)))
-examples/erased_fn_bad.sl: refused: a non-erased call mentions an erased entry, or binds an erased result at many
+examples/erased_fn_bad.sl: refused: a non-erased call mentions an erased entry or a phantom constructor, or binds an erased result at many
 examples/erased_let_bad.sl: refused: a non-erased let binder of an erased entry
 examples/erased_match_bad.sl: refused: a non-erased match on an erased scrutinee
-examples/erased_result_bad.sl: refused: a non-erased result mentions an erased entry
+examples/erased_result_bad.sl: refused: a non-erased result mentions an erased entry or a phantom constructor
 examples/ex_falso.sl: (Zero)
 examples/first_class.sl: (Cons (Nat) (Zero) (Cons (Nat) (Zero) (Nil (Nat)))) (Cons (Nat) (Succ (Zero)) (Nil (Nat)))
 examples/first_class_bad.sl: refused: argument of the wrong type
@@ -35,6 +35,9 @@ examples/paradox_curry_bad.sl: refused: prove-predates: not introduced before th
 examples/paradox_knot_bad.sl: refused: prove-predates: not introduced before the level
 examples/paradox_same_level_bad.sl: refused: prove-subterm: not a strict subterm
 examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subterm
+examples/phantom.sl: (Succ (Zero))
+examples/phantom_build_bad.sl: refused: a non-erased let binder of a term mentioning an erased entry or a phantom constructor
+examples/phantom_ctor_bad.sl: refused: a non-erased let binder of a term mentioning an erased entry or a phantom constructor
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
@@ -60,6 +63,8 @@ unchecked examples/paradox_curry_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_univ_subterm_bad.sl: _
+unchecked examples/phantom_build_bad.sl: (Hidden (Zero))
+unchecked examples/phantom_ctor_bad.sl: (Hidden (Zero))
 unchecked examples/refuted_branch_bad.sl: (Zero)
 unchecked examples/valctor_return_bad.sl: (Zero)
 stripped examples/absurd.sl: (Succ (Zero))
@@ -79,6 +84,7 @@ stripped examples/length.sl: (Succ (Succ (Succ (Zero))))
 stripped examples/let_binders.sl: (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ (Succ (Zero))))
 stripped examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat))) (Succ (Succ (Zero)))
 stripped examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
+stripped examples/phantom.sl: (Succ (Zero))
 stripped examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 stripped examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
 stripped examples/vec_head.sl: (Succ (Zero))

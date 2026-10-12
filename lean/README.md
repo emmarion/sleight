@@ -70,7 +70,7 @@ each one rests on, which are Lean's own three (`propext`,
   every erased call and erased match skipped, its results replaced by a
   token, erased `let`s of terms and levels held as tokens, and no
   decrease check. A stripped value stands for a full one (`Real`) when
-  it is built by the same constructor, with its non-erased fields
+  it is built by the same constructor, which is not phantom, with its non-erased fields
   standing for theirs, or is the same function closed over an
   environment whose non-erased entries stand for theirs; any value
   stands for a type, a level or a proof. `eval_sound` carries, beside
@@ -127,8 +127,10 @@ state. SOUNDNESS.md's invariants appear as:
   `let` binder; a field of a constructor is a non-erased position
   exactly when the field is. A call whose binders are all erased, an
   `erased` match and the body of an `erased` function are erased
-  throughout. What this omits from the full language: `unique`, phantom
-  constructors, and erasure by kind, so a type, a level or a proof may
+  throughout. A constructor declared `erased` is phantom (DESIGN.md
+  section 21): only an erased position may build or hold it, and its
+  branch under a non-erased match is erased throughout. What this omits
+  from the full language: `unique` and erasure by kind, so a type, a level or a proof may
   be held at `many`; a call nested in an argument is elaborated at
   `many`, so one whose parameter is erased must be bound by an erased
   `let` first. What the rules buy at run time is the stripped run's
@@ -188,6 +190,9 @@ state. SOUNDNESS.md's invariants appear as:
   through its head's type; a value of a `ValCtor` type is a declared
   constructor with exactly that signature, and one of a `TyCtor` type a
   declared type constructor.
+- A constructor is marked phantom by writing `erased` before its name
+  in `def-adts`, `(erased C (fields) ret)`, as a binder's multiplicity is
+  written in this syntax; `many` there is the default.
 - A `let` binder written `(T x)` or `(e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.

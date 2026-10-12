@@ -246,11 +246,11 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
   | .ret ts, .inl r => do
     let ⟨out, h⟩ ← checkArgs P Γ ts r
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
-    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions an erased entry"
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions an erased entry or a phantom constructor"
     .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Sum.inl.inj e, fun _ e => (by cases e)⟩
   | .ret ts, .inr n => do
     let ⟨R, h, hs⟩ ← synthRets P Γ n ts
-    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions an erased entry"
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions an erased entry or a phantom constructor"
     .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
   | .absurd body, rets => do
     let ⟨R, hb, _, hs⟩ ← checkCore b { Γ with ghost := true } body (.inr Γ.n)
@@ -275,7 +275,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
       let ⟨hd⟩ ← checkDec P Γ l t args dec
       let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
       let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))
-        "a non-erased call mentions an erased entry, or binds an erased result at many"
+        "a non-erased call mentions an erased entry or a phantom constructor, or binds an erased result at many"
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets
       .ok ⟨R, .call hf hF ht ha hn hd ho hm hr, e⟩
     | _ => .error "not a function"
@@ -290,7 +290,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
         let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
         let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
         let Γg := { Γ with ghost := Γ.ghost || er }
-        let ⟨hb⟩ ← checkBranches b Γg s d idx R0 brs els.isSome D.ctors 0
+        let ⟨hb⟩ ← checkBranches b Γ er s d idx R0 brs els.isSome D.ctors 0
         let ⟨he⟩ ← (match els with
           | some eb => do
             let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
@@ -305,7 +305,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     | _ => .error "scrutinee not of a data type"
   | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
-    let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning an erased entry"
+    let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning an erased entry or a phantom constructor"
     let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T er p) rest rets
     .ok ⟨R, .prim hp hm hr, e⟩
   | .defLvl rest, rets => do
@@ -338,13 +338,15 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
 termination_by c => (b, 1, sizeOf c, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 
-def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : List (Nat × Nat × Core))
+def checkBranches (b : Nat) (Γ : Ctx) (er : Bool) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : List (Nat × Nat × Core))
     (els : Bool) : (ctors : List Tm) → (base : Nat) →
     Res (PLift (∀ (c : Nat) sig, ctors[c]? = some sig →
-      BranchOK P b Γ s d idx (base + c) sig R0 (lookupBr brs (base + c)) els))
+      BranchOK P b { Γ with ghost := Γ.ghost || er || P.phantom d (base + c) } s d idx (base + c) sig R0
+        (lookupBr brs (base + c)) els))
   | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
   | sig :: cs, base => do
-    let ⟨hh⟩ ← (match hb : Γ.branch s d base idx sig, hl : lookupBr brs base with
+    let Γc : Ctx := { Γ with ghost := Γ.ghost || er || P.phantom d base }
+    let ⟨hh⟩ ← (match hb : Γc.branch s d base idx sig, hl : lookupBr brs base with
       | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
       | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do
@@ -355,8 +357,8 @@ def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : L
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
           else .error "a branch that is not refuted is missing" :
-      Res (PLift (BranchOK P b Γ s d idx base sig R0 (lookupBr brs base) els)))
-    let ⟨ht⟩ ← checkBranches b Γ s d idx R0 brs els cs (base + 1)
+      Res (PLift (BranchOK P b Γc s d idx base sig R0 (lookupBr brs base) els)))
+    let ⟨ht⟩ ← checkBranches b Γ er s d idx R0 brs els cs (base + 1)
     .ok ⟨fun
       | 0, _, h1 => by simp at h1; subst h1; simpa using hh
       | c + 1, sig, h1 => by

@@ -194,7 +194,10 @@ def teleAppend : Tm → Tm → Tm
 
 def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let heads ← blocks.mapM fun (b : Sx) => match b with
-    | .list (.atom T :: .list ps :: cs) => pure (T, ps, cs)
+    | .list (.atom T :: .list ps :: cs) => do
+      let cs ← cs.mapM fun | .list xs => do let (p, xs) ← splitMult xs; pure (p, Sx.list xs)
+                           | _ => throw "malformed constructor"
+      pure (T, ps, cs)
     | _ => throw "malformed def-adts"
   let st ← get
   if !st.top then throw "def-adts is confined to the top level"
@@ -202,14 +205,14 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
   let mut ctors := st.ctors
   for ((_, _, cs), j) in heads.zipIdx do
     for (c, ci) in cs.zipIdx do
-      let .list (.atom C :: _) := c | throw "malformed constructor"
+      let (_, .list (.atom C :: _)) := c | throw "malformed constructor"
       ctors := (C, base + j, ci) :: ctors
-  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List Sx), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
+  set { st with adts := (heads.zipIdx.map fun ((h : String × List Sx × List (Bool × Sx)), j) => (h.1, base + j)).reverse ++ st.adts, ctors }
   let inline (t : Tm) : Tm := (List.range st.inl.length).foldl
     (fun t _ => t.subst fun i => (st.inl.lookup i).getD (.fv i)) t
   let elabSigs := heads.mapM fun (_, ps, cs) => do
     let params ← elabTele sc 0 ps
-    let sigs ← cs.mapM fun (c : Sx) => match c with
+    let sigs ← cs.mapM fun (c : Bool × Sx) => match c.2 with
       | .list [_, .list fs, ret] => elabTele sc 0 (fs ++ [.list [ret, .atom "_"]])
       | _ => throw "malformed constructor"
     pure (inline params, sigs.map inline)
@@ -225,10 +228,10 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
     .bind (.ty false true) (abst ids k (inline ((st.known.lookup i).getD .nil))) r) .nil
   modify fun st => { st with lifts := (heads.zipIdx.map fun (_, j) => (base + j, ids)) ++ st.lifts }
   for ((T, _, cs), (params, sigs)) in heads.zip (← elabSigs) do
-    let ctorNames := cs.filterMap fun | .list (.atom C :: _) => some C | _ => none
+    let ctorNames := cs.filterMap fun | (_, .list (.atom C :: _)) => some C | _ => none
     let adt : Adt := { params := teleAppend liftTele (abst ids ids.length params),
                        ctors := sigs.map (fun s => teleAppend liftTele (abst ids ids.length s)), name := T, ctorNames,
-                       lifted := ids.length }
+                       lifted := ids.length, phantom := cs.map (·.1) }
     modify fun st => { st with decls := st.decls ++ [adt] }
 
 def ghostly {α : Type} (g : Bool) (x : M α) : M α := do
@@ -329,8 +332,9 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let names := ((← liftOf d').map fun _ => " lift") ++ names
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     reset base
-    let fs ← fresh (if er then names.map fun _ => true else (fieldErs sig).take names.length)
-    let body ← ghostly (er || ab) (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
+    let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
+    let fs ← fresh (if er || ph then names.map fun _ => true else (fieldErs sig).take names.length)
+    let body ← ghostly (er || ab || ph) (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
       (if ab then [true] else rms) items)
     out := out ++ [(d', ci, if ab then .absurd body else body)]
   reset base

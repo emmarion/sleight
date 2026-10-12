@@ -97,8 +97,9 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
 
 mutual
 inductive Real : Tm → Tm → Prop
-  | con : P.ctor d c = some sig → Reals vsS vs sig → Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
-  | vc : Real (.vc d c) (.vc d c)
+  | con : P.ctor d c = some sig → P.phantom d c = false → Reals vsS vs sig →
+      Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
+  | vc : P.phantom d c = false → Real (.vc d c) (.vc d c)
   | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false →
       envS.length = env.length → (∀ i, G.ers.getD i true = false → Real (Tm.env envS i) (Tm.env env i)) →
       Real (.clo (.ofList envS) gid j) (.clo (.ofList env) gid j)

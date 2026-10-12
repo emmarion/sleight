@@ -75,13 +75,14 @@ mutual
 def rt (Γ : Ctx) : Tm → Bool
   | .fv i => !Γ.er i
   | .app (.vc d c) args => match P.ctor d c with
-    | some sig => rtArgs Γ args sig
+    | some sig => !P.phantom d c && rtArgs Γ args sig
     | none => false
   | .app (.fv i) args => match (Γ.tys[i]?).map Γ.canon with
     | some (.valCtor sig) => !Γ.er i && rtArgs Γ args sig
     | some (.tyCtor _) => true
     | _ => false
-  | .app (.tyc _) _ | .tyc _ | .vc .. | .tyCtor _ | .valCtor _ | .univ | .level | .predates .. | .subterm .. | .fn .. =>
+  | .vc d c => !P.phantom d c
+  | .app (.tyc _) _ | .tyc _ | .tyCtor _ | .valCtor _ | .univ | .level | .predates .. | .subterm .. | .fn .. =>
     true
   | _ => false
 
@@ -174,7 +175,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (er || Γ.ok (rt P Γ s)) →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig →
-        BranchOK b { Γ with ghost := Γ.ghost || er } s d idx c sig R (lookupBr brs c) els.isSome) →
+        BranchOK b { Γ with ghost := Γ.ghost || er || P.phantom d c } s d idx c sig R (lookupBr brs c) els.isSome) →
       (∀ e, els = some e → CoreTy b { Γ with ghost := Γ.ghost || er } e R) →
       CoreTy b (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) rest rets →
       CoreTy b Γ (.mtch s R brs els er rest) rets
