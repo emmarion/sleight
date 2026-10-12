@@ -2,6 +2,7 @@ examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
 examples/eq_sym.sl: (Refl (Nat) (Zero))
 examples/ex_falso.sl: (Zero)
 examples/length.sl: (Succ (Succ (Succ (Zero))))
+examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat))) (Succ (Succ (Zero)))
 examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
 examples/no_annotation_bad.sl: refused: a call in a body needs a predates or subterm proof

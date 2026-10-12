@@ -220,6 +220,15 @@ theorem EnvOK.modify {ρ : List Tm} {Γ Γ' : Ctx} (hE : EnvOK P ρ Γ) (ht : Γ
     (hσ : Sat (Tm.env ρ) Γ'.σ) (hm : ∀ L ∈ Γ'.mints, Chrono ρ L) (hw : Γ'.WF) : EnvOK P ρ Γ' :=
   .mk (by rw [hE.len]; simp [Ctx.n, ht]) (fun i v T h1 h2 => hE.vals i v T h1 (ht ▸ h2)) hE.closed hσ hm hw
 
+theorem EnvOK.withRule {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {e : Nat} {t : Tm} (he : e < Γ.n)
+    (ht : t.static Γ.n 0) (hv : Tm.env ρ e = t.subst (Tm.env ρ)) : EnvOK P ρ (Γ.withRule e t) := by
+  refine hE.modify rfl (fun i u hi => ?_) hE.chrono ⟨hE.wf.tys, fun i u hi => ?_, hE.wf.mints, hE.wf.cur, hE.wf.subs⟩
+  all_goals simp only [Ctx.withRule] at hi; split at hi
+  · cases hi; subst_vars; exact hv
+  · exact hE.sat i u hi
+  · cases hi; subst_vars; exact ⟨he, ht⟩
+  · exact hE.wf.σ i u hi
+
 def LvlBound (ρ : List Tm) (cnt : Nat) : Prop := ∀ v ∈ ρ, ∀ n ∈ v.levels, n < cnt
 
 theorem EnvOK.pushMint {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt) :
@@ -642,6 +651,22 @@ theorem prim_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
     simp only [Tm.subst, e]
     exact .predates fun n hn => hl n (Tm.psub_levels hs n hn)
 
+theorem EnvOK.pushPrim (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {p : Prim} {T v : Tm}
+    (hp : PrimTy P Γ p T) (hv : VTy P v (T.subst (Tm.env ρ))) (hT : T.static Γ.n 0) (hc : v.lc 0)
+    (he : v = p.eval ρ) :
+    EnvOK P (ρ ++ [v]) (Γ.pushPrim T p) ∧ (Γ.pushPrim T p).cur = Γ.cur ∧ (Γ.pushPrim T p).subs = Γ.subs ∧
+      (Γ.pushPrim T p).n = Γ.n + 1 := by
+  have h1 := hE.push hv hT hc
+  refine ⟨?_, by cases p <;> rfl, by cases p <;> rfl, by cases p <;> simp [Ctx.pushPrim, Ctx.withRule, Ctx.push, Ctx.n]⟩
+  cases hp with
+  | tm ht =>
+    have hl := hE.len
+    have hs := canon_static hE.wf (tm_sound hP hE ht).2.1
+    refine h1.withRule (by simp [Ctx.push, Ctx.n]) (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hs) ?_
+    rw [Tm.subst_append (hl ▸ hs), hE.canon, he]
+    simp [Tm.env, hl, Prim.eval]
+  | _ => exact h1
+
 theorem dec_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {μ : Option (List Nat)}
     (hm : MuOK μ Γ ρ) {dec : Dec} {l t args : Tm} (hd : DecOK P Γ dec l t args) (hal : args.isList)
     {n1 : Nat} (hl : l.subst (Tm.env ρ) = .lvl n1) (hk : (marks t args.len).count true ≤ P.k) :
@@ -972,10 +997,11 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     cases hc with
     | prim hp hr =>
     obtain ⟨hv, hT, hlc, hlv⟩ := prim_sound hP hE hb hp
+    obtain ⟨hE', hcur, hsubs, hn⟩ := hE.pushPrim hP hp hv hT hlc rfl
     rw [eval]
     have hl := hE.len
-    refine Result.weaken (ih b _ rets hr (hE.push hv hT hlc) ?_ (hm.append hE.wf hl rfl rfl)
-      (Tm.static_mono (by simp [Ctx.push, Ctx.n]) _ (Nat.le_refl 0) hrs)) (hl ▸ hrs) (Nat.le_refl _)
+    refine Result.weaken (ih b _ rets hr hE' ?_ (hm.append hE.wf hl hcur hsubs)
+      (Tm.static_mono (by omega) _ (Nat.le_refl 0) hrs)) (hl ▸ hrs) (Nat.le_refl _)
     exact LvlBound.append.mpr ⟨hb, by simpa [LvlBound] using hlv⟩
   | case11 μ ρ cnt rest ih =>
     intro b Γ rets hc hE hb hm hrs

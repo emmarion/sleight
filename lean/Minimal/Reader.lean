@@ -194,16 +194,14 @@ partial def elabBody (sc : Scope) (want : Nat) : List Sx → M Core
     return .defLvl (← elabBody ((L, .fv i) :: sc) want rest)
   | .list (.atom "let" :: .list xs :: [e]) :: rest => do
     let names ← xs.mapM fun | .atom x => pure x | _ => throw "let binders are bare names here"
-    let n0 := (← get).n
     let (ss, ts) ← elabExpr sc names.length e
     if ts.length != names.length then throw "let: wrong number of binders"
     let mut ss := ss
     let mut ids : List Nat := []
     for t in ts do
       if let .fv i := t then
-        if n0 ≤ i then
-          ids := ids ++ [i]
-          continue
+        ids := ids ++ [i]
+        continue
       let js ← fresh 1
       ss := ss ++ [.prim (.tm t)]
       ids := ids ++ js

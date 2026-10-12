@@ -23,6 +23,12 @@ def openTele : Ctx → Tm → Nat → Ctx × Tm
 
 def pushTele (Γ : Ctx) (R : Tm) : Ctx := (Γ.openTele R R.len).1
 
+def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
+
+def pushPrim (Γ : Ctx) (T : Tm) : Prim → Ctx
+  | .tm t => (Γ.push T).withRule Γ.n (Γ.canon t)
+  | _ => Γ.push T
+
 def pushMint (Γ : Ctx) : Ctx := { Γ.push .level with mints := Γ.mints ++ [Γ.n] }
 
 def pushFns (Γ : Ctx) (G : Group) : Ctx := { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G) }
@@ -108,7 +114,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
       (∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK b Γ s d idx c sig R (lookupBr brs c)) →
       CoreTy b (Γ.pushTele R) rest rets → CoreTy b Γ (.mtch s R brs rest) rets
-  | prim : PrimTy P Γ p T → CoreTy b (Γ.push T) rest rets → CoreTy b Γ (.prim p rest) rets
+  | prim : PrimTy P Γ p T → CoreTy b (Γ.pushPrim T p) rest rets → CoreTy b Γ (.prim p rest) rets
   | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
       CoreTy b (Γ.pushFns G) rest rets → CoreTy b Γ (.defFns gid rest) rets

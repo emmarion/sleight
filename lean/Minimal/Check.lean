@@ -223,7 +223,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
     | _ => .error "scrutinee not of a data type"
   | .prim p rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
-    let ⟨R, hr, e⟩ ← checkCore b (Γ.push T) rest rets
+    let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T p) rest rets
     .ok ⟨R, .prim hp hr, e⟩
   | .defLvl rest, rets => do
     let ⟨R, hr, e⟩ ← checkCore b Γ.pushMint rest rets
