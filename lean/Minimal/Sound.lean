@@ -1030,6 +1030,12 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     intro b Γ rets hc
     cases hc with
     | defFns _ hG' => rw [hG] at hG'; cases hG'
+  | case14 μ ρ cnt k a e rest ih =>
+    intro b Γ rets hc hE hb hm hrs
+    rw [eval]
+    cases hc with
+    | chkIs _ _ hr => exact ih b Γ rets hr hE hb hm hrs
+    | chkTy _ _ _ _ hr => exact ih b Γ rets hr hE hb hm hrs
 
 theorem checked_runs {rets : Tm} (h : Checked P rets) :
     ∃ vs cnt, eval P none [] 0 P.main = .ok (vs, cnt) ∧ VTys P (.ofList vs) rets .nil := by

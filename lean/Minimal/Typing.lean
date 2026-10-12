@@ -118,6 +118,9 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
       CoreTy b (Γ.pushFns G) rest rets → CoreTy b Γ (.defFns gid rest) rets
+  | chkIs : TmTy P Γ e E → Γ.canon a = Γ.canon e → CoreTy b Γ rest rets → CoreTy b Γ (.chk false a e rest) rets
+  | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
+      CoreTy b Γ (.chk true a T rest) rets
 
 inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) → CoreTy b { Γf with σ := σ } body R →

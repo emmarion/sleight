@@ -91,8 +91,7 @@ state. SOUNDNESS.md's invariants appear as:
    `examples/paradox_same_level_bad.sl` therefore carries the level as
    an index, where `tests/paradox_same_level_bad.sl` names a top-level
    level.
-2. There are no `is` entries, in telescopes or `let` binders. A `let`
-   binder is a bare name.
+2. There are no `is` entries in telescopes.
 3. Type constructors and value constructors are applied only by name,
    saturated. The `TyCtor` and `ValCtor` formers are not values.
 4. The type of the program's final expression may not mention the
@@ -100,6 +99,9 @@ state. SOUNDNESS.md's invariants appear as:
 
 ## Shapes chosen here, for the owner to confirm or change
 
+- A `let` binder written `(T x)` or `(e is x)` is checked, after
+  canonicalization, against the type or the term written, and adds no
+  rule of its own.
 - A `let` binder forwards from its right-hand side, as DESIGN.md
   section 19 has it: a binder of a variable is that variable's entry,
   and a binder of any other term of the type grammar is a new entry

@@ -51,7 +51,7 @@ abbrev M := StateT ESt (Except String)
 
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
-   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "Fn", "Type", "Level",
+   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "Fn", "Type", "Level",
    "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
@@ -104,6 +104,7 @@ inductive Stmt where
   | prim (p : Prim)
   | defLvl
   | defFns (gid : Nat)
+  | chk (isType : Bool) (a b : Tm)
 
 def Stmt.wrap (rest : Core) : Stmt → Core
   | .call f d a n => .call f d a n rest
@@ -111,6 +112,7 @@ def Stmt.wrap (rest : Core) : Stmt → Core
   | .prim p => .prim p rest
   | .defLvl => .defLvl rest
   | .defFns g => .defFns g rest
+  | .chk k a b => .chk k a b rest
 
 def close (ss : List Stmt) (ts : List Tm) : Core := ss.foldr (fun s c => s.wrap c) (.ret (.ofList ts))
 
@@ -186,27 +188,34 @@ partial def elabMatch (sc : Scope) (_want : Nat) : List Sx → M (List Stmt × L
     return (ss ++ [.mtch s R out], outs.map .fv)
   | _ => throw "malformed match"
 
-partial def elabBody (sc : Scope) (want : Nat) : List Sx → M Core
+partial def elabSeq (sc : Scope) (want : Nat) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
-  | [e] => do let (ss, ts) ← elabExpr sc want e; pure (close ss ts)
+  | [e] => elabExpr sc want e
   | .list [.atom "def-lvl", .atom L] :: rest => do
     let [i] ← fresh 1 | throw "fresh"
-    return .defLvl (← elabBody ((L, .fv i) :: sc) want rest)
-  | .list (.atom "let" :: .list xs :: [e]) :: rest => do
-    let names ← xs.mapM fun | .atom x => pure x | _ => throw "let binders are bare names here"
-    let (ss, ts) ← elabExpr sc names.length e
-    if ts.length != names.length then throw "let: wrong number of binders"
+    let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want rest
+    return (.defLvl :: ss, ts)
+  | .list (.atom "let" :: .list xs :: items) :: rest => do
+    let bs ← xs.mapM fun
+      | .atom x => pure (x, none)
+      | .list [e, .atom "is", .atom x] => pure (x, some (false, e))
+      | .list [T, .atom x] => pure (x, some (true, T))
+      | _ => throw "malformed let binder"
+    let (ss, ts) ← elabSeq sc bs.length items
+    if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
-    let mut ids : List Nat := []
-    for t in ts do
-      if let .fv i := t then
-        ids := ids ++ [i]
-        continue
-      let js ← fresh 1
-      ss := ss ++ [.prim (.tm t)]
-      ids := ids ++ js
-    let body ← elabBody ((names.zip (ids.map Ref.fv)).reverse ++ sc) want rest
-    return ss.foldr (fun s c => s.wrap c) body
+    let mut sc' := sc
+    for ((x, ann), t) in bs.zip ts do
+      let i ← match t with
+        | .fv i => pure i
+        | _ => do
+          let [j] ← fresh 1 | throw "fresh"
+          ss := ss ++ [.prim (.tm t)]
+          pure j
+      if let some (k, a) := ann then ss := ss ++ [.chk k (.fv i) (← elabTm sc' 0 a)]
+      sc' := (x, .fv i) :: sc'
+    let (ss2, ts2) ← elabSeq sc' want rest
+    return (ss ++ ss2, ts2)
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
     let lvl ← entry sc L
     let sigs ← fns.mapM fun
@@ -224,10 +233,16 @@ partial def elabBody (sc : Scope) (want : Nat) : List Sx → M Core
       pure { np := ps.length, tele, body : FnDef }
     let gid := (← get).groups.length
     modify fun st => { st with n := base + sigs.length, groups := st.groups ++ [{ lvl, fns := defs }] }
-    return .defFns gid (← elabBody fnsc want rest)
+    let (ss, ts) ← elabSeq fnsc want rest
+    return (.defFns gid :: ss, ts)
   | e :: rest => do
     let (ss, _) ← elabExpr sc 0 e
-    return ss.foldr (fun s c => s.wrap c) (← elabBody sc want rest)
+    let (ss2, ts) ← elabSeq sc want rest
+    return (ss ++ ss2, ts)
+
+partial def elabBody (sc : Scope) (want : Nat) (items : List Sx) : M Core := do
+  let (ss, ts) ← elabSeq sc want items
+  return close ss ts
 end
 
 def declareAdts (blocks : List Sx) : M Unit := do

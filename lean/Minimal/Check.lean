@@ -236,6 +236,18 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushFns G) rest rets
       .ok ⟨R, .defFns hg hG hok hr, e⟩
     | none => .error "unknown group"
+  | .chk false a e rest, rets => do
+    let ⟨_, he⟩ ← checkTm P Γ e
+    let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "let: the binder is not the term its is clause names"
+    let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
+    .ok ⟨R, .chkIs he h hr, eq⟩
+  | .chk true a T rest, rets => do
+    let ⟨A, ha⟩ ← checkTm P Γ a
+    let ⟨U, hT⟩ ← checkTm P Γ T
+    let ⟨hU⟩ ← need (Γ.canon U = .univ) "let: the binder's annotation is not a type"
+    let ⟨h⟩ ← need (Γ.canon A = Γ.canon T) "let: the binder is not of the type written"
+    let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
+    .ok ⟨R, .chkTy ha hT hU h hr, eq⟩
 termination_by c => (b, 1, sizeOf c, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 

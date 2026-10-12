@@ -82,6 +82,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
     match P.groups[gid]? with
     | some G => eval P μ (ρ ++ closures ρ gid G) cnt rest
     | none => .error "no group"
+  | .chk _ _ _ rest => eval P μ ρ cnt rest
 termination_by c => ((⟨μ⟩ : Mu P.k), sizeOf c)
 decreasing_by
   all_goals first

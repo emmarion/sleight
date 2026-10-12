@@ -176,6 +176,7 @@ inductive Core where
   | prim (p : Prim) (rest : Core)
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
+  | chk (isType : Bool) (a b : Tm) (rest : Core)
   deriving Repr, Inhabited
 
 def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)
