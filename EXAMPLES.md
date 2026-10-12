@@ -252,4 +252,6 @@ that the test does not make is a mistake in this file.
   handles, so the `hygienic` lemma, whose parameters shadow them, still
   checks. `tests/tactic_lt_lemma_bad.sl` is a true goal that no chain
   reaches, needing `LtS`; `tests/tactic_lt_lemma_head_bad.sl` is a goal
-  whose head is not `Lt`.
+  whose head is not `Lt`; `tests/tactic_lt_lemma_gensym.sl` has another
+  macro write the call with every variable a gensym, which the chain search
+  matches through the prelude's `symbol-eq`.

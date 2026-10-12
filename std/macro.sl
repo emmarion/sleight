@@ -39,9 +39,7 @@
 (def-fns _ $ (many same-sym : (many (Raw) a) (many (Raw) b) -> (many (Bool) r))
   (let-match many a (RawSymbol p x) (else (BFalse)))
   (let-match many b (RawSymbol q y) (else (BFalse)))
-  (let-match many x (SName s) (else (BFalse)))
-  (let-match many y (SName t) (else (BFalse)))
-  (match many (str-cmp s t) _ ((CEq _ _ _) (BTrue)) (else (BFalse))))
+  (match many (symbol-eq x y) _ ((Some _ e) (BTrue)) ((None _) (BFalse))))
 
 (def-fns _
   ((many same-raw : (subterm many (Raw) a) (many (Raw) b) -> (many (Bool) r))
