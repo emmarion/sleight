@@ -270,6 +270,9 @@ The source prelude declares the following, which both compilers implement.
 (def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many (Settled (MErased) Type T) h)))
 
+(def-prim $ (many settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) T t) h)))
+
 (def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
     (erased (Mult) mb) (erased Type B) (erased B b)
     (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
@@ -289,15 +292,25 @@ The source prelude declares the following, which both compilers implement.
 (def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
 
+(def-adts $ (Symbol : -> Type)
+  enum
+  (many SName : (many (String) s) -> (Symbol))
+  (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
+(def-adts $ (Resolution : -> Type)
+  enum
+  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
+  (many RHypothetical : -> (Resolution))
+  (many RUnbound : -> (Resolution)))
+
+(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+    (unique mw is mw2 at mw) (many (Resolution) r)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
-  (many RawName : (many (Pos) pos) (many (String) name) -> (Raw))
-  (many RawNat : (many (Pos) pos) (many (Nat) n) -> (Raw))
-  (many RawChar : (many (Pos) pos) (many (Char) c) -> (Raw))
-  (many RawStr : (many (Pos) pos) (many (String) s) -> (Raw))
+  (many RawSymbol : (many (Pos) pos) (many (Symbol) s) -> (Raw))
   (many RawWild : (many (Pos) pos) -> (Raw))
   (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
-  (many RawGen : (many (Pos) pos) (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Raw))
   (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
 
 (def-adts $ (Macro : -> Type)
@@ -319,12 +332,23 @@ directly. A handle names the entry its `Settled` was minted at and how it
 reads that entry: `MintedIs`, standing for the entry's minted `is`, or
 `MintedType`, standing for its minted type. `settled-type` turns a
 `MintedIs` handle into the `MintedType` handle on the same entry.
-`settled-mult`, `settled-value` and `settled-type` read a handle anywhere,
-not only during an expansion, and an `MMany` handle carries its value into
-an extracted program. The `intern-` forms and `settled-eq` run only in an
-expansion, the one place a macro world exists. The `intern-` forms intern
-the literal where they run. `settled-eq` compares the terms the two handles
-stand for and their types, canonically, against the facts of the innermost
-enclosing run position, into which it first enters the declaration facts of
-the literals it needs. A literal in a macro's arguments still arrives as
-`RawNat`, `RawChar` or `RawStr`.
+`settled-erase` makes the `MErased` handle on the same entry and reading.
+`settled-mult`, `settled-value`, `settled-type` and `settled-erase` read a
+handle anywhere, not only during an expansion, and an `MMany` handle
+carries its value into an extracted program. The `intern-` forms,
+`settled-eq` and `resolve` run only in an expansion, the one place a macro
+world exists. The `intern-` forms intern the literal where they run.
+`settled-eq` compares the terms the two handles stand for and their types,
+canonically, against the facts of the innermost enclosing run position,
+into which it first enters the declaration facts of the literals it needs.
+`resolve` looks a name up in the scope at the macro call form: a `Settled`
+entry answers `RSettled` with a `MintedIs` handle at the entry's declared
+multiplicity, any other bound entry `RHypothetical`, and a name not in
+scope `RUnbound`; the lookup is not a reference to the entry.
+
+The reader's tree keeps its literal nodes, but each top-level form of the
+source has its literals interned, and replaced by `MMany` handles to their
+entries, just before it is elaborated, so a literal reaches a macro as a
+`RawSettled` and `Raw` has no literal constructor. A macro builds a literal
+by interning it. A handle to a literal is treated as the literal wherever
+the elaborator words a refusal, and is shown canonically.

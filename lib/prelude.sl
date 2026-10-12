@@ -1446,6 +1446,15 @@
   (many SName : (many (String) s) -> (Symbol))
   (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
 
+(def-adts $ (Resolution : -> Type)
+  enum
+  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
+  (many RHypothetical : -> (Resolution))
+  (many RUnbound : -> (Resolution)))
+
+(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+    (unique mw is mw2 at mw) (many (Resolution) r)))
+
 (def-adts $ (Raw : -> Type)
   enum extern
   (many RawSymbol : (many (Pos) pos) (many (Symbol) s) -> (Raw))

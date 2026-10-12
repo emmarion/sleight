@@ -4075,6 +4075,25 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     prelude's `None` and `(Some (JMRefl))` as hidden arguments after
     its handles, as `settled-mult` gets the `Mult` constructors.
 
+218. **Literals as handles, `settled-erase` and `resolve`, where MACROS.md
+    is silent.** The conversion of a top-level form's literals into
+    handles runs on the forms read from the source alone: the forms a
+    macro returns are not walked again, holding no literal node of their
+    own. A literal that cannot be interned, for want of the prelude, is
+    refused at its own position, as when it was interned where met. Only
+    a `MintedIs` handle at `MMany` to a literal's entry counts as that
+    literal, so an `MErased` one made by `settled-erase` is refused as a
+    handle where a literal would be. `slc` keeps each literal's node in
+    its row of the literal table, and reads a handle to a literal back
+    as that node where its elaborator tells literals apart by syntax;
+    the reference recognizes the handle where it reads a literal
+    instead. The view of `Raw` meets no literal node on this session's
+    reading, and fails if it does. `settled-erase` keeps the handle's
+    reading. `resolve` gives an `RSettled` handle the entry's value only
+    at `MMany`, as `settled-of` does. `slc`'s own function named
+    `resolve`, which nothing called, is gone rather than renamed, the
+    built-in having taken the name.
+
 ## The world (section 42)
 
 Choices both implementations make about the world where DESIGN.md is
