@@ -8,6 +8,12 @@
 (lt-lemma (erased mixed : (erased (Nat) a b c) (erased (Lt (Succ a) b) h1) (erased (Lt b c) h2) -> (erased (Lt a (Succ c)) r)))
 (lt-lemma (erased hygienic : (erased (Nat) a b) (erased (Lt a b) h) (erased (Nat) lt-succ lt-trans def-fns compile-error) ->
     (erased (Lt a (Succ (Succ b))) r)))
+(lt-lemma (erased shift-up : (erased (Nat) a b) (erased (Lt a b) h) -> (erased (Lt (Succ a) (Succ b)) r)))
+(lt-lemma (erased shift-down : (erased (Nat) a b) (erased (Lt (Succ (Succ a)) (Succ (Succ b))) h) -> (erased (Lt a b) r)))
+(lt-lemma (erased peel-uneven : (erased (Nat) a b) (erased (Lt (Succ (Succ (Succ a))) (Succ b)) h) -> (erased (Lt a b) r)))
+(lt-lemma (erased shifted-chain : (erased (Nat) a b c d)
+    (erased (Lt (Succ a) b) h1) (erased (Lt (Succ (Succ b)) (Succ c)) h2) (erased (Lt c (Succ (Succ d))) h3) ->
+    (erased (Lt (Succ (Succ a)) (Succ d)) r)))
 (let ((many S)) Succ)
 (lt-lemma (erased aliased : (erased (Nat) a b) (erased (Lt a b) h) -> (erased (Lt a (S b)) r)))
 (def-fns _ $ (erased use-chain3 : (erased (Nat) a b c d) (erased (Lt a b) x) (erased (Lt b c) y) (erased (Lt c d) z) ->

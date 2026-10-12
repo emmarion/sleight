@@ -242,21 +242,24 @@ that the test does not make is a mistake in this file.
   outside the directory, of `NoPos` and of a position that names no source.
   `tests/macro_symbol_eq.sl` compares names and gensyms with `symbol-eq`.
 - `tests/tactic_lt_lemma.sl` — a proof tactic written as a macro, `lt-lemma`
-  from `std/tactics.sl`. It takes a lemma's whole signature, reads the `Lt`
-  and `Le` hypotheses and the goal from it as syntax, adds a strict step from
-  `t` to `(Succ t)` by `lt-succ` wherever `(Succ t)` appears, searches for a
-  chain, strict somewhere when the goal is `Lt`, and emits the `def-fns`
-  with the chain's proof as its body, built from `lt-le-trans`, `LtS` and
-  `lt-weaken` over `Le`'s `Lt` field, which is then checked like any other
-  definition. `tests/tactic_le_lemma.sl` covers `Le`: each way of joining a
-  strict and a non-strict step, `(Le a a)` from no hypotheses, and a weakened
-  `Lt`; `tests/tactic_le_lemma_bad.sl` is two `Le` steps offered for an `Lt`
-  goal. It checks the `Lt` and `Succ`
-  heads against the prelude's through `resolve` and `settled-eq`, so the
-  `aliased` lemma's `S` passes, and it emits the prelude names it uses as
-  handles, so the `hygienic` lemma, whose parameters shadow them, still
-  checks. `tests/tactic_lt_lemma_bad.sl` is a true goal that no chain
-  reaches, needing `LtS`; `tests/tactic_lt_lemma_head_bad.sl` is a goal
-  whose head is not `Lt`; `tests/tactic_lt_lemma_gensym.sl` has another
-  macro write the call with every variable a gensym, which the chain search
+  from `std/tactics.sl`. It takes a lemma's whole signature and reads the `Lt`
+  and `Le` hypotheses and the goal from it as syntax, each side as a base term
+  under some number of `Succ`s. Each hypothesis is an edge between two bases,
+  carrying its proof as an `Lt` between the two sides; the tactic searches for
+  a path between the goal's bases, joins its edges with `lt-le-trans`, moves
+  `Succ`s across a proof with `LtS` and with `lt-pred` from `std/nat.sl`, and
+  weakens the result to the goal with `lt-succ-left` and `lt-weaken`. It then
+  emits the `def-fns` with that proof as its body, which is checked like any
+  other definition. The test covers chains, a `Succ` added to or peeled off
+  both sides, unevenly too, and a chain whose links differ in their `Succ`s.
+  `tests/tactic_le_lemma.sl` covers `Le`: each way of joining a strict and a
+  non-strict step, `(Le a a)` from no hypotheses, a weakened `Lt` and `Le`
+  under `Succ`s; `tests/tactic_le_lemma_bad.sl` is two `Le` steps offered for
+  an `Lt` goal. It checks the `Lt` and `Succ` heads against the prelude's
+  through `resolve` and `settled-eq`, so the `aliased` lemma's `S` passes,
+  and it emits the names it uses as handles, so the `hygienic` lemmas, whose
+  parameters shadow them, still check. `tests/tactic_lt_lemma_bad.sl` is a
+  goal the hypotheses do not imply; `tests/tactic_lt_lemma_head_bad.sl` is a
+  goal whose head is not `Lt`; `tests/tactic_lt_lemma_gensym.sl` has another
+  macro write the call with every variable a gensym, which the search
   matches through the prelude's `symbol-eq`.
