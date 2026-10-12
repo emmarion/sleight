@@ -1,0 +1,7 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-lvl L)
+(def-fns L (erased g (((Nat) n)) (((Nat) y)) n))
+(def-lvl M)
+(let (p) (prove-predates L M))
+(def-fns M (f (((Nat) n)) (((Nat) y)) (g (predates p) n)))
+(f (Zero))

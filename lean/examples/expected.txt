@@ -4,6 +4,11 @@ examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
 examples/else.sl: (Succ (Zero)) (Zero) (Zero)
 examples/else_empty_bad.sl: refused: else: it stands for no constructor
 examples/eq_sym.sl: (Refl (Nat) (Zero))
+examples/erased.sl: (Succ (Succ (Zero)))
+examples/erased_fn_bad.sl: refused: a non-erased call mentions an erased entry, or binds an erased result at many
+examples/erased_let_bad.sl: refused: a non-erased let binder of an erased entry
+examples/erased_match_bad.sl: refused: a non-erased match on an erased scrutinee
+examples/erased_result_bad.sl: refused: a non-erased result mentions an erased entry
 examples/ex_falso.sl: (Zero)
 examples/is_arg_bad.sl: refused: argument not the term its is entry names
 examples/is_entries.sl: (Succ (Zero)) (Succ (Zero))
@@ -24,6 +29,10 @@ examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/vec_head.sl: (Succ (Zero))
 unchecked examples/else_empty_bad.sl: (Zero)
+unchecked examples/erased_fn_bad.sl: (Zero)
+unchecked examples/erased_let_bad.sl: (Zero)
+unchecked examples/erased_match_bad.sl: (Zero)
+unchecked examples/erased_result_bad.sl: (Zero)
 unchecked examples/is_arg_bad.sl: (MkTwo (Zero) (Succ (Zero)))
 unchecked examples/let_is_bad.sl: (Zero)
 unchecked examples/let_type_bad.sl: (Zero)

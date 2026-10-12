@@ -55,7 +55,7 @@ def callee (P : Prog) : Tm → Option (List Tm × Nat × Nat × Group × FnDef)
 
 def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core → Except String (List Tm × Nat)
   | .ret ts => .ok (ts.toList.map (·.subst (Tm.env ρ)), cnt)
-  | .call f _ args _ rest =>
+  | .call f _ args _ _ rest =>
     match callee P (f.subst (Tm.env ρ)) with
     | some (env, n, gid, G, F) =>
       let argv := args.toList.map (·.subst (Tm.env ρ))
@@ -66,7 +66,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
         | .error e => .error e
       else .error "call does not decrease"
     | none => .error "callee is not a function"
-  | .mtch s _ brs els rest =>
+  | .mtch s _ brs els _ rest =>
     match s.subst (Tm.env ρ) with
     | .con _ c vs =>
       match hb : selectBr brs els c vs.toList with
@@ -76,7 +76,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
         | .error e => .error e
       | none => .error "no branch"
     | _ => .error "scrutinee is not data"
-  | .prim p rest => eval P μ (ρ ++ [p.eval ρ]) cnt rest
+  | .prim p _ rest => eval P μ (ρ ++ [p.eval ρ]) cnt rest
   | .defLvl rest => eval P μ (ρ ++ [.lvl cnt]) (cnt + 1) rest
   | .defFns gid rest =>
     match P.groups[gid]? with

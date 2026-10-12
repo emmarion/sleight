@@ -98,6 +98,22 @@ state. SOUNDNESS.md's invariants appear as:
 
 ## Beyond MINIMAL.md
 
+- Multiplicities (DESIGN.md sections 13 and 14), `erased` and `many`,
+  written as in the full language on telescope entries, `let` binders,
+  a `match`'s mode and a `def-fns` function. A binder written without
+  one is `many`, so MINIMAL.md's programs mean what they meant. A
+  non-erased position may not mention an erased entry: the callee and
+  the arguments for non-erased parameters of a non-erased call, the
+  scrutinee of a non-erased match, a non-erased result, a non-erased
+  `let` binder; a field of a constructor is a non-erased position
+  exactly when the field is. A call whose binders are all erased, an
+  `erased` match and the body of an `erased` function are erased
+  throughout. What this omits from the full language: `unique`, phantom
+  constructors, and erasure by kind, so a type, a level or a proof may
+  be held at `many`; a call nested in an argument is elaborated at
+  `many`, so one whose parameter is erased must be bound by an erased
+  `let` first. The checker enforces these rules; no theorem yet says
+  what they buy at run time.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.

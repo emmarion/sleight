@@ -1,13 +1,16 @@
 namespace Minimal
 
 inductive Ent where
-  | ty (mark : Bool)
-  | is
+  | ty (mark er : Bool)
+  | is (er : Bool)
   deriving DecidableEq, Repr, Inhabited
 
 def Ent.marked : Ent → Bool
-  | ty m => m
-  | is => false
+  | ty m _ => m
+  | is _ => false
+
+def Ent.er : Ent → Bool
+  | ty _ e | is e => e
 
 inductive Tm where
   | fv (i : Nat)
@@ -178,14 +181,20 @@ inductive Prim where
   | predatesSubterm (p q : Tm)
   deriving Repr, Inhabited
 
+inductive Chk where
+  | is
+  | ty
+  | rt
+  deriving Repr, Inhabited, DecidableEq
+
 inductive Core where
   | ret (ts : Tm)
-  | call (f : Tm) (dec : Dec) (args : Tm) (n : Nat) (rest : Core)
-  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (rest : Core)
-  | prim (p : Prim) (rest : Core)
+  | call (f : Tm) (dec : Dec) (args : Tm) (er : Bool) (ms : List Bool) (rest : Core)
+  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (er : Bool) (rest : Core)
+  | prim (p : Prim) (er : Bool) (rest : Core)
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
-  | chk (isType : Bool) (a b : Tm) (rest : Core)
+  | chk (k : Chk) (a b : Tm) (rest : Core)
   deriving Repr, Inhabited
 
 def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)
@@ -211,12 +220,14 @@ theorem sizeOf_selectBr {brs : List (Nat × Nat × Core)} {els : Option Core} {c
   · cases els <;> simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
 
 structure FnDef where
+  er : Bool := false
   np : Nat
   tele : Tm
   body : Core
   deriving Repr, Inhabited
 
 structure Group where
+  ers : List Bool := []
   lvl : Nat
   fns : List FnDef
   deriving Repr, Inhabited

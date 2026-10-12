@@ -10,7 +10,7 @@ def need (b : Prop) [Decidable b] (msg : String) : Res (PLift b) :=
   if h : b then .ok ⟨h⟩ else .error msg
 
 def retOf : Tm → Option Tm
-  | .bind (.ty _) R .nil => some R
+  | .bind (.ty _ _) R .nil => some R
   | .bind _ _ r => retOf r
   | _ => none
 
@@ -44,7 +44,7 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     | some sig => do
       let ⟨out, ha⟩ ← checkArgs' Γ rules args sig
       match out, ha with
-      | .bind (.ty _) T .nil, ha => .ok ⟨T, .con h ha⟩
+      | .bind (.ty _ _) T .nil, ha => .ok ⟨T, .con h ha⟩
       | _, _ => .error "constructor applied to the wrong number of arguments"
     | none => .error "unknown constructor"
   | .predates A x L => do
@@ -78,12 +78,12 @@ decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size
 
 def checkArgs' (Γ : Ctx) (rules : Bool) : (args tele : Tm) → Res {out // ArgsTy P Γ args tele out}
   | .nil, t => .ok ⟨t, .nil⟩
-  | .cons a as, .bind (.ty _) A r => do
+  | .cons a as, .bind (.ty _ _) A r => do
     let ⟨T, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon T = Γ.canon A) "argument of the wrong type"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
     .ok ⟨out, .cons ha h hr⟩
-  | .cons a as, .bind .is e r => do
+  | .cons a as, .bind (.is _) e r => do
     let ⟨_, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "argument not the term its is entry names"
     let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
@@ -94,14 +94,14 @@ decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size
 
 def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ t))
   | .nil => .ok ⟨.nil⟩
-  | .bind (.ty _) A r => do
+  | .bind (.ty _ _) A r => do
     let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "telescope entry not a type"
     let ⟨hr⟩ ← checkTele' (Γ.push A) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.cons hA hU hr⟩
-  | .bind .is e r => do
+  | .bind (.is _) e r => do
     let ⟨_, he⟩ ← checkTm' Γ rules e
-    let ⟨hr⟩ ← checkTele' (Γ.pushEnt .is e) rules (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt (.is false) e) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
 termination_by t => (rules.toNat, t.size)
@@ -198,7 +198,7 @@ def synthRets (Γ : Ctx) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .nil ∧ R.s
     let ⟨R, hr, hR⟩ ← synthRets Γ as
     have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
     have hi : R.inst a 0 = R := Tm.inst_static 0 R 0 0 hR (Nat.le_refl 0)
-    .ok ⟨.bind (.ty false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr), by simp [Tm.static, hs, Tm.static_mono (Nat.le_refl 0) R (Nat.zero_le 1) hR]⟩
+    .ok ⟨.bind (.ty false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr), by simp [Tm.static, hs, Tm.static_mono (Nat.le_refl 0) R (Nat.zero_le 1) hR]⟩
   | _ => .error "not a list of results"
 
 mutual
@@ -207,11 +207,13 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
   | .ret ts, some r => do
     let ⟨out, h⟩ ← checkArgs P Γ ts r
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
-    .ok ⟨r, .ret (ho ▸ h), fun _ e => Option.some.inj e⟩
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions an erased entry"
+    .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Option.some.inj e⟩
   | .ret ts, none => do
     let ⟨R, h, _⟩ ← synthRets P Γ ts
-    .ok ⟨R, .ret h, fun _ e => nomatch e⟩
-  | .call f dec args n rest, rets => do
+    let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions an erased entry"
+    .ok ⟨R, .ret h hr, fun _ e => nomatch e⟩
+  | .call f dec args er ms rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
     | .fn l np t => do
@@ -219,11 +221,13 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
       let ⟨outs, ha⟩ ← checkArgs P Γ args t
       let ⟨hn⟩ ← need (args.len = np) "wrong number of arguments"
       let ⟨hd⟩ ← checkDec P Γ l t args dec
-      let ⟨ho⟩ ← need (outs.len = n) "wrong number of results bound"
-      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs) rest rets
-      .ok ⟨R, .call hf hF ht ha hn hd ho hr, e⟩
+      let ⟨ho⟩ ← need (outs.len = ms.length) "wrong number of results bound"
+      let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs))
+        "a non-erased call mentions an erased entry, or binds an erased result at many"
+      let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets
+      .ok ⟨R, .call hf hF ht ha hn hd ho hm hr, e⟩
     | _ => .error "not a function"
-  | .mtch s R0 brs els rest, rets => do
+  | .mtch s R0 brs els er rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
     | .ty d idx => match hD : P.adts[d]? with
@@ -232,23 +236,26 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
         let ⟨hR⟩ ← checkTele P Γ R0
         let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
         let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
-        let ⟨hb⟩ ← checkBranches b Γ s d idx R0 brs els.isSome D.ctors 0
+        let ⟨hm⟩ ← need (er || Γ.ok (rt P Γ s)) "a non-erased match on an erased scrutinee"
+        let Γg := { Γ with ghost := Γ.ghost || er }
+        let ⟨hb⟩ ← checkBranches b Γg s d idx R0 brs els.isSome D.ctors 0
         let ⟨he⟩ ← (match els with
           | some eb => do
             let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
                 (lookupBr brs c).isNone && (Γ.branch s d c idx sig).2 matches .ok _ | .unknown)
               "else: it stands for no constructor"
-            let ⟨_, h, e⟩ ← checkCore b Γ eb (some R0)
+            let ⟨_, h, e⟩ ← checkCore b Γg eb (some R0)
             .ok ⟨fun _ h' => by cases h'; exact e R0 rfl ▸ h⟩
-          | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γ e R0)))
-        let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0) rest rets
-        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt (fun c sig h1 => by simpa using hb c sig h1) he hr, e⟩
+          | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
+        let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) rest rets
+        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt hm (fun c sig h1 => by simpa using hb c sig h1) he hr, e⟩
       | none => .error "unknown type"
     | _ => .error "scrutinee not of a data type"
-  | .prim p rest, rets => do
+  | .prim p er rest, rets => do
     let ⟨T, hp⟩ ← checkPrim P Γ p
-    let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T p) rest rets
-    .ok ⟨R, .prim hp hr, e⟩
+    let ⟨hm⟩ ← need (er || Γ.ok (p.rt P Γ)) "a non-erased let binder of a term mentioning an erased entry"
+    let ⟨R, hr, e⟩ ← checkCore b (Γ.pushPrim T er p) rest rets
+    .ok ⟨R, .prim hp hm hr, e⟩
   | .defLvl rest, rets => do
     let ⟨R, hr, e⟩ ← checkCore b Γ.pushMint rest rets
     .ok ⟨R, .defLvl hr, e⟩
@@ -260,12 +267,16 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushFns G) rest rets
       .ok ⟨R, .defFns hg hG hok hr, e⟩
     | none => .error "unknown group"
-  | .chk false a e rest, rets => do
+  | .chk .rt a _ rest, rets => do
+    let ⟨h⟩ ← need (Γ.ok (rt P Γ a)) "a non-erased let binder of an erased entry"
+    let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
+    .ok ⟨R, .chkRt h hr, eq⟩
+  | .chk .is a e rest, rets => do
     let ⟨_, he⟩ ← checkTm P Γ e
     let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "let: the binder is not the term its is clause names"
     let ⟨R, hr, eq⟩ ← checkCore b Γ rest rets
     .ok ⟨R, .chkIs he h hr, eq⟩
-  | .chk true a T rest, rets => do
+  | .chk .ty a T rest, rets => do
     let ⟨A, ha⟩ ← checkTm P Γ a
     let ⟨U, hT⟩ ← checkTm P Γ T
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "let: the binder's annotation is not a type"
@@ -308,8 +319,9 @@ def checkGroup (gid : Nat) (Γ : Ctx) (G : Group) : Res (PLift (GroupOK P gid Γ
   | some K => do
     let ⟨hl⟩ ← need (Γ.canon K = .level) "def-fns: not a level"
     let ⟨hf⟩ ← checkFns gid Γ G G.fns 0
+    let ⟨he⟩ ← need (∀ i < Γ.n, Γ.er i = G.ers.getD i true) "def-fns: the elaborator's erasure disagrees"
     .ok ⟨.mk hK hl (fun j F h => (hf j F (by simpa using h)).1)
-      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2)⟩
+      (fun j F h => (hf j F (by simpa using h)).2.1) (fun j F h => (hf j F (by simpa using h)).2.2) he⟩
   | none => .error "def-fns: unbound level"
 termination_by (gid + 1, 0, sizeOf G.fns + 1, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)

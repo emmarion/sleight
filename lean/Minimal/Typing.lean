@@ -8,6 +8,8 @@ structure Ctx where
   mints : List Nat := []
   cur : Option Nat := none
   subs : List Nat := []
+  er : Nat → Bool := fun _ => true
+  ghost : Bool := false
 
 namespace Ctx
 
@@ -15,34 +17,41 @@ def n (Γ : Ctx) : Nat := Γ.tys.length
 
 def canon (Γ : Ctx) (t : Tm) : Tm := t.subst fun i => (Γ.σ i).getD (.fv i)
 
-def push (Γ : Ctx) (T : Tm) : Ctx := { Γ with tys := Γ.tys ++ [T] }
+def push (Γ : Ctx) (T : Tm) (e : Bool := false) : Ctx :=
+  { Γ with tys := Γ.tys ++ [T], er := fun i => if i = Γ.n then e else Γ.er i }
 
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
-def pushPrim (Γ : Ctx) (T : Tm) : Prim → Ctx
-  | .tm t => (Γ.push T).withRule Γ.n (Γ.canon t)
-  | _ => Γ.push T
+def pushPrim (Γ : Ctx) (T : Tm) (er : Bool) : Prim → Ctx
+  | .tm t => (Γ.push T er).withRule Γ.n (Γ.canon t)
+  | _ => Γ.push T er
 
 def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
-  | .ty _, A => Γ.push A
-  | .is, e => (Γ.push .nil).withRule Γ.n (Γ.canon e)
+  | .ty _ e, A => Γ.push A e
+  | .is e, x => (Γ.push .nil e).withRule Γ.n (Γ.canon x)
 
 def openTele : Ctx → Tm → Nat → Ctx × Tm
   | Γ, .bind k A r, m + 1 => (Γ.pushEnt k A).openTele (r.inst (.fv Γ.n) 0) m
   | Γ, t, _ => (Γ, t)
 
-def pushTele (Γ : Ctx) (R : Tm) : Ctx := (Γ.openTele R R.len).1
+def setErs (Γ Γ' : Ctx) : Option (List Bool) → Ctx
+  | none => Γ'
+  | some ms => { Γ' with er := fun i => if Γ.n ≤ i then ms.getD (i - Γ.n) true else Γ'.er i }
+
+def pushTele (Γ : Ctx) (R : Tm) (ov : Option (List Bool) := none) : Ctx := Γ.setErs (Γ.openTele R R.len).1 ov
 
 def pushMint (Γ : Ctx) : Ctx := { Γ.push .level with mints := Γ.mints ++ [Γ.n] }
 
-def pushFns (Γ : Ctx) (G : Group) : Ctx := { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G) }
+def pushFns (Γ : Ctx) (G : Group) : Ctx :=
+  { Γ with tys := Γ.tys ++ G.fns.map (FnDef.type G),
+           er := fun i => if Γ.n ≤ i then (G.fns[i - Γ.n]?.map (·.er)).getD true else Γ.er i }
 
 def fields (Γ : Ctx) (m : Nat) : Tm := .ofList ((List.range m).map fun j => .fv (Γ.n + j))
 
 def body (Γ : Ctx) (G : Group) (F : FnDef) : Ctx × Tm :=
   let Γ1 := Γ.pushFns G
   let (Γ2, rem) := Γ1.openTele F.tele F.np
-  ({ Γ2 with cur := some G.lvl,
+  ({ Γ2 with cur := some G.lvl, ghost := Γ.ghost || F.er,
              subs := (markedArgs F.tele (Γ1.fields F.np)).filterMap Tm.fvIdx },
    rem)
 
@@ -50,13 +59,36 @@ def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
   match rem with
-  | .bind (.ty _) R .nil =>
+  | .bind (.ty _ _) R .nil =>
     (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.con d c (Γ.fields m))), (Γ.canon (.ty d idx), Γf.canon R)])
   | _ => (Γf, .unknown)
 
 end Ctx
 
+def compat : List Bool → Tm → Bool
+  | m :: ms, .bind k _ r => (m || !k.er) && compat ms r
+  | _, _ => true
+
 variable (P : Prog)
+
+mutual
+def rt (Γ : Ctx) : Tm → Bool
+  | .fv i => !Γ.er i
+  | .con d c args => match P.ctor d c with
+    | some sig => rtArgs Γ args sig
+    | none => false
+  | _ => true
+
+def rtArgs (Γ : Ctx) : Tm → Tm → Bool
+  | .cons a as, .bind k _ r => (k.er || rt Γ a) && rtArgs Γ as r
+  | _, _ => true
+end
+
+def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
+
+def Prim.rt (Γ : Ctx) : Prim → Bool
+  | .tm t => Minimal.rt P Γ t
+  | _ => true
 
 mutual
 inductive TmTy : Ctx → Tm → Tm → Prop
@@ -65,7 +97,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | univ : TmTy Γ .univ .univ
   | level : TmTy Γ .level .univ
   | ty : P.adts[d]? = some D → ArgsTy Γ args D.params .nil → TmTy Γ (.ty d args) .univ
-  | con : P.ctor d c = some sig → ArgsTy Γ args sig (.bind (.ty m) T .nil) → TmTy Γ (.con d c args) T
+  | con : P.ctor d c = some sig → ArgsTy Γ args sig (.bind (.ty m e) T .nil) → TmTy Γ (.con d c args) T
   | predates : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ x X → Γ.canon X = Γ.canon A →
       TmTy Γ L K → Γ.canon K = .level → TmTy Γ (.predates A x L) .univ
   | subterm : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ a A' → Γ.canon A' = Γ.canon A →
@@ -77,15 +109,15 @@ inductive TmTy : Ctx → Tm → Tm → Prop
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | nil : ArgsTy Γ .nil t t
   | cons : TmTy Γ a T → Γ.canon T = Γ.canon A → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind (.ty m) A r) out
+      ArgsTy Γ (.cons a as) (.bind (.ty m e) A r) out
   | isCons : TmTy Γ a T → Γ.canon a = Γ.canon e → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind .is e r) out
+      ArgsTy Γ (.cons a as) (.bind (.is _) e r) out
 
 inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
-      TeleOK Γ (.bind (.ty m) A r)
-  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt .is e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind .is e r)
+      TeleOK Γ (.bind (.ty m e) A r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt (.is false) e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind (.is _) e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
@@ -114,22 +146,29 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
 
 mutual
 inductive CoreTy : Nat → Ctx → Core → Tm → Prop
-  | ret : ArgsTy P Γ ts rets .nil → CoreTy b Γ (.ret ts) rets
+  | ret : ArgsTy P Γ ts rets .nil → Γ.ok (rtArgs P Γ ts rets) → CoreTy b Γ (.ret ts) rets
   | call : TmTy P Γ f Ft → Γ.canon Ft = .fn l np t → t.isTele → ArgsTy P Γ args t outs → args.len = np →
-      DecOK P Γ dec l t args → outs.len = n → CoreTy b (Γ.pushTele outs) rest rets →
-      CoreTy b Γ (.call f dec args n rest) rets
+      DecOK P Γ dec l t args → outs.len = ms.length →
+      (er || Γ.ok (rt P Γ f && rtArgs P Γ args t && compat ms outs)) →
+      CoreTy b (Γ.pushTele outs (some (ms.map (er || ·)))) rest rets →
+      CoreTy b Γ (.call f dec args er ms rest) rets
   | mtch : TmTy P Γ s St → Γ.canon St = .ty d idx → P.adts[d]? = some D →
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
-      (∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK b Γ s d idx c sig R (lookupBr brs c) els.isSome) →
-      (∀ e, els = some e → CoreTy b Γ e R) →
-      CoreTy b (Γ.pushTele R) rest rets → CoreTy b Γ (.mtch s R brs els rest) rets
-  | prim : PrimTy P Γ p T → CoreTy b (Γ.pushPrim T p) rest rets → CoreTy b Γ (.prim p rest) rets
+      (er || Γ.ok (rt P Γ s)) →
+      (∀ (c : Nat) sig, D.ctors[c]? = some sig →
+        BranchOK b { Γ with ghost := Γ.ghost || er } s d idx c sig R (lookupBr brs c) els.isSome) →
+      (∀ e, els = some e → CoreTy b { Γ with ghost := Γ.ghost || er } e R) →
+      CoreTy b (Γ.pushTele R (if er then some (List.replicate R.len true) else none)) rest rets →
+      CoreTy b Γ (.mtch s R brs els er rest) rets
+  | prim : PrimTy P Γ p T → (er || Γ.ok (p.rt P Γ)) → CoreTy b (Γ.pushPrim T er p) rest rets →
+      CoreTy b Γ (.prim p er rest) rets
   | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
       CoreTy b (Γ.pushFns G) rest rets → CoreTy b Γ (.defFns gid rest) rets
-  | chkIs : TmTy P Γ e E → Γ.canon a = Γ.canon e → CoreTy b Γ rest rets → CoreTy b Γ (.chk false a e rest) rets
+  | chkIs : TmTy P Γ e E → Γ.canon a = Γ.canon e → CoreTy b Γ rest rets → CoreTy b Γ (.chk .is a e rest) rets
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
-      CoreTy b Γ (.chk true a T rest) rets
+      CoreTy b Γ (.chk .ty a T rest) rets
+  | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
 
 inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) → CoreTy b { Γf with σ := σ } body R →
@@ -142,6 +181,7 @@ inductive GroupOK : Nat → Ctx → Group → Prop
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → TmTy P Γ (F.type G) .univ) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → (marks F.tele F.np).count true ≤ P.k) →
       (∀ (j : Nat) (F : FnDef), G.fns[j]? = some F → CoreTy gid (Γ.body G F).1 F.body (Γ.body G F).2) →
+      (∀ i < Γ.n, Γ.er i = G.ers.getD i true) →
       GroupOK gid Γ G
 end
 
