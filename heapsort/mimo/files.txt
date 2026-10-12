@@ -1,0 +1,10 @@
+heapsort/mimo/lemmas.sl
+heapsort/mimo/u62imm.sl
+heapsort/mimo/heappf.sl
+heapsort/mimo/tree.sl
+heapsort/mimo/heap.sl
+heapsort/mimo/heap2.sl
+heapsort/mimo/heap3.sl
+heapsort/mimo/heap4.sl
+heapsort/mimo/loops.sl
+heapsort/mimo/sort.sl

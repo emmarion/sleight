@@ -4,3 +4,5 @@
 *.o
 heapsort_ml
 heapsort_ml_unsafe
+mimo_perf.ml
+mimo_perf
