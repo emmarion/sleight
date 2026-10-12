@@ -153,8 +153,23 @@ of `subterm`-marked parameters of any function in the program text, which
 is finite once macros have expanded (§62).
 
 Order measures lexicographically: λ by minting order, then each sᵢ by
-strict subtree with ⊤ on top. Each component is well-founded, so the
-order is.
+strict subtree with ⊤ on top. Each component is well-founded and there
+are k + 1 of them, so the order is.
+
+The bound k is essential. A call may decrease its argument at index i
+and pass anything after i, so with no bound on the number of `subterm`
+parameters this chain would go down at every step and never end, each
+call decreasing a later index than the one before:
+
+  (1), (0, 1), (0, 0, 1), (0, 0, 0, 1), …
+
+k exists because a function's telescope is syntax, written once in the
+source or in a macro's output, and the number of its `subterm` marks is
+read off that text. Nothing at run time builds a telescope: `Fn` is a
+type former (§9, §11), and a type is never computed by a call (§9).
+`Type : Type` lets a type be passed around as a value, but every `Fn`
+type it can hold was written in the finite program text, so the bound
+holds whatever types are passed.
 
 Every call goes down in it:
 
@@ -250,6 +265,9 @@ revisiting:
   the result of a call a subterm;
 - recursion by any route other than a call under §19's evidence, such as
   a recursive `let` or a loop form;
+- a way to build a telescope at run time, or any other way for the
+  number of `subterm` parameters a call can meet to be unbounded
+  (part 5);
 - a construct that runs at the top level without being total.
 
 ASSUMPTIONS.md 75's question is consistent with this: under either
