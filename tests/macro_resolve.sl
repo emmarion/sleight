@@ -1,6 +1,7 @@
 ; needs: macro_lib
-; expect: (MkPair _ _ (MkPair _ _ "settled many" $ MkPair _ _ "settled erased" "unbound") $ MkPair _ _ "hypothetical" $ MkPair _ _ "same" "other")
+; expect: (MkPair _ _ (MkPair _ _ "settled many" $ MkPair _ _ "settled erased" "unbound") $ MkPair _ _ (MkPair _ _ "hypothetical" $ MkPair _ _ "same" "other") $ MkPair _ _ (MkPair _ _ "settled unique" $ MkPair _ _ "settled many" "hypothetical") $ MkPair _ _ "unbound" $ MkPair _ _ "settled many" "fresh")
 (let ((many k)) 5)
+(let ((unique u)) (MkPair _ _ 1 2))
 (let ((erased E)) (Nat))
 (def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
   (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
@@ -32,5 +33,27 @@
 (let ((many before)) (same-let))
 (def-fns _ $ (many shadowing : (many (Nat) let) -> (many (String) s))
   (same-let))
-(MkPair _ _ (MkPair _ _ (probe k) $ MkPair _ _ (probe E) (probe nope)) $ MkPair _ _ (inside 1) $ MkPair _ _ before (shadowing 2))
-; warns: <**>:33:32: warning: declaration of `let` shadows a built-in
+(def-fns _ $ (many branch : (many (Maybe (Nat)) m) -> (many (String) s))
+  (match many m _ ((None _) (probe k)) ((Some _ v) (probe v))))
+(def-fns _ $ (many gen-name-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let-match many args (Cons _ a _) ((Nil _) (values mw (Nil _))))
+  (let-match many a (RawSymbol p s) (else (values mw (Nil _))))
+  (let-match many s (SGen n t g) (else (values mw (Nil _))))
+  (let ((unique mw1) (many o)) (str-raw mw here t))
+  (values mw1 $ one o))
+(let ((many gen-name)) (MkMacro _ gen-name-fn))
+(def-fns _ $ (many named : (many (Pos) here) (many (String) b) (many (Raw) call) -> (many (Raw) r))
+  (form here $ three (name here "let") (form here $ one $ form here $ two (name here "many") (name here b)) call))
+(def-fns _ $ (many gen-probe-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((unique mw1) (many n) (erased g)) (gensym mw "fresh"))
+  (let ((many sym)) (RawSymbol here $ SGen n "fresh" g))
+  (let ((many bind)) (form here $ three (name here "let") (form here $ one $ form here $ two (name here "many") sym) (name here "k")))
+  (values mw1 $ Cons _ (named here "before-gen" $ form here $ two (name here "probe") sym) $ Cons _ bind $
+    two (named here "after-gen" $ form here $ two (name here "probe") sym) (named here "gen-text" $ form here $ two (name here "gen-name") sym)))
+(let ((many gen-probe)) (MkMacro _ gen-probe-fn))
+(gen-probe)
+(MkPair _ _ (MkPair _ _ (probe k) $ MkPair _ _ (probe E) (probe nope)) $ MkPair _ _ (MkPair _ _ (inside 1) $ MkPair _ _ before (shadowing 2)) $
+  MkPair _ _ (MkPair _ _ (probe u) $ MkPair _ _ (branch (None _)) (branch (Some _ 3))) $ MkPair _ _ before-gen $ MkPair _ _ after-gen gen-text)
+; warns: <**>:34:32: warning: declaration of `let` shadows a built-in
