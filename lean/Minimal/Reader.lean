@@ -60,7 +60,7 @@ abbrev M := StateT ESt (Except String)
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
    "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "else",
-   "erased", "many", "unique", "Fn", "Type", "Level", "Predates", "Subterm"]
+   "erased", "many", "unique", "absurd", "Fn", "Type", "Level", "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
 
@@ -316,6 +316,13 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
       reset base
       els := some (← ghostly er (elabBody sc rms items))
       continue
+    if let .list [.atom "absurd", .atom c] := br then
+      let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
+      out := out ++ [(d', ci, .dead)]
+      continue
+    let (ab, br) := match br with
+      | .list (.atom "absurd" :: rest) => (true, Sx.list rest)
+      | br => (false, br)
     let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
     let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
     let names ← xs.mapM fun | .atom x => pure x | _ => throw "malformed pattern"
@@ -323,9 +330,9 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let sig := ((st.decls[d']?).bind (·.ctors[ci]?)).getD .nil
     reset base
     let fs ← fresh (if er then names.map fun _ => true else (fieldErs sig).take names.length)
-    let body ← ghostly er (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
-      rms items)
-    out := out ++ [(d', ci, body)]
+    let body ← ghostly (er || ab) (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
+      (if ab then [true] else rms) items)
+    out := out ++ [(d', ci, if ab then .absurd body else body)]
   reset base
   let outs ← fresh rms
   return (ss ++ [.mtch s R out els er], outs.map .fv)
@@ -382,24 +389,25 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
     let sigs ← fns.mapM fun
       | .list xs => do
         let (er, xs) ← splitMult xs
+        let (ab, xs) := match xs with | .atom "absurd" :: xs => (true, xs) | xs => (false, xs)
         match xs with
-        | .atom f :: .list ps :: .list rs :: items => pure (f, er, ps, rs, items)
+        | .atom f :: .list ps :: .list rs :: items => pure (f, (er, ab), ps, rs, items)
         | _ => throw "malformed def-fns"
       | _ => throw "malformed def-fns"
     let st ← get
     let base := st.n
     let ers := st.ers
-    let _ ← fresh (sigs.map (·.2.1))
+    let _ ← fresh (sigs.map (·.2.1.1))
     let fnsc := (sigs.zipIdx.map fun ((f, _), j) => (f, Ref.fn (base + j) lvl)).reverse ++ sc
-    let defs ← sigs.mapM fun (_, er, ps, rs, items) => do
+    let defs ← sigs.mapM fun (_, (er, ab), ps, rs, items) => do
       let tele ← elabTele sc 0 (ps ++ rs)
       reset (base + sigs.length)
       let pents ← ps.mapM parseEntry
       let pids ← fresh (pents.map (·.1.er))
       let rents ← rs.mapM parseEntry
-      let body ← ghostly er (elabBody ((pents.map (·.2.2)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
-        (rents.map fun e => er || e.1.er) items)
-      pure { er, np := ps.length, tele, body : FnDef }
+      let body ← ghostly (er || ab) (elabBody ((pents.map (·.2.2)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
+        (if ab then [true] else rents.map fun e => er || e.1.er) items)
+      pure { er, np := ps.length, tele, body := if ab then .absurd body else body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })

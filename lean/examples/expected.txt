@@ -1,3 +1,6 @@
+examples/absurd.sl: (Succ (Zero))
+examples/absurd_bad.sl: refused: absurd: the body's value is of a type with constructors
+examples/absurd_listed_bad.sl: refused: an absurd branch names a constructor that is not refuted
 examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
 examples/adt_mentions_bad.sl: syntax error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 examples/anon_level.sl: (Succ (Succ (Zero)))
@@ -37,6 +40,8 @@ examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
 examples/vec_head.sl: (Succ (Zero))
+unchecked examples/absurd_bad.sl: stuck: an absurd body returned
+unchecked examples/absurd_listed_bad.sl: (Zero)
 unchecked examples/adt_mentions_bad.sl: syntax error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 unchecked examples/else_empty_bad.sl: (Zero)
 unchecked examples/erased_fn_bad.sl: (Zero)
@@ -57,6 +62,7 @@ unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_univ_subterm_bad.sl: _
 unchecked examples/refuted_branch_bad.sl: (Zero)
 unchecked examples/valctor_return_bad.sl: (Zero)
+stripped examples/absurd.sl: (Succ (Zero))
 stripped examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
 stripped examples/anon_level.sl: (Succ (Succ (Zero)))
 stripped examples/binder_refute.sl: (Zero)

@@ -133,6 +133,13 @@ state. SOUNDNESS.md's invariants appear as:
   `many`, so one whose parameter is erased must be bound by an erased
   `let` first. What the rules buy at run time is the stripped run's
   theorem, under "What is proved".
+- `absurd` (DESIGN.md sections 21 and 25): a function marked `absurd`,
+  and a branch `(absurd (C f ...) body ...)`, whose body is erased and
+  ends in one value of a data type with no constructors; and
+  `(absurd C)`, which lists a constructor that must be refuted.
+  Refuting the facts in force in place of that value (section 51) is
+  not supported. An absurd body never returns in a checked program,
+  since nothing has a type with no constructors.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.

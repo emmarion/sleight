@@ -83,6 +83,10 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
     | some G => eval P μ (ρ ++ closures ρ gid G) cnt rest
     | none => .error "no group"
   | .chk _ _ _ rest => eval P μ ρ cnt rest
+  | .absurd body => match eval P μ ρ cnt body with
+    | .ok _ => .error "an absurd body returned"
+    | .error e => .error e
+  | .dead => .error "a refuted branch was reached"
 termination_by c => ((⟨μ⟩ : Mu P.k), sizeOf c)
 decreasing_by
   all_goals first

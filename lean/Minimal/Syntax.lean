@@ -205,6 +205,8 @@ inductive Core where
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
   | chk (k : Chk) (a b : Tm) (rest : Core)
+  | absurd (body : Core)
+  | dead
   deriving Repr, Inhabited
 
 def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)

@@ -1239,7 +1239,7 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   generalize hbody : lookupBr brs c = br at hbr'
   generalize hei : els.isSome = eb at hbr'
   cases hbr' with
-  | dead hd => rw [Ctx.branch_ghost, hbranch] at hd; exact absurd hd hun.2
+  | dead hd | refuted hd => rw [Ctx.branch_ghost, hbranch] at hd; exact absurd hd hun.2
   | covered =>
     obtain ⟨e, rfl⟩ := Option.isSome_iff_exists.mp hei
     refine ⟨[], e, by simp [selectBr, hbody], _, hel e rfl, ?_, by simpa using hb, ?_, hRs, rfl,
@@ -1266,6 +1266,12 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
       exact this (by simp only [Tm.levels]; exact Tm.levels_toList vs v hv' x hx)
     · exact hm.append hw hl h6.cur h6.subs
     · exact Tm.static_mono (by simp only [Ctx.n] at h5 ⊢; omega) _ (Nat.le_refl 0) hRs
+
+theorem no_value_of_empty {v : Tm} {d : Nat} {D : Adt} {args : Tm} (hD : P.adts[d]? = some D)
+    (hempty : D.ctors = []) : ¬ VTy P v (.app (.tyc d) args) := by
+  intro h
+  obtain ⟨c, vs, sig, mk, me, _, hc, _⟩ := h.ty_inv
+  simp [Prog.ctor, hD, hempty] at hc
 
 def Sim (P : Prog) (Γ : Ctx) (ρ : List Tm) (c : Core) (rets : Tm) (r : Except String (List Tm × Nat)) : Prop :=
   Γ.ghost = false → ∀ ρS, SimEnv P Γ.er ρS ρ → ∀ vs cnt', r = .ok (vs, cnt') →
@@ -1569,6 +1575,27 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     refine ⟨ih'.1, fun hg ρS hS vs cnt' hr' => ?_⟩
     obtain ⟨vsS, hrun, hre⟩ := ih'.2 hg ρS hS vs cnt' hr'
     exact ⟨vsS, .chk hrun, hre⟩
+  | case15 μ ρ cnt body a hev ih =>
+    intro b Γ rets hc hE hb hm hrs
+    cases hc with
+    | absurd hcb hst hD hemp =>
+    obtain ⟨⟨vs, c', e, hv, -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm
+      (by simpa [Tm.static, Ctx.n] using hst)
+    exfalso
+    generalize Tm.ofList vs = w at hv
+    simp only [Tm.subst] at hv
+    cases hv with
+    | cons hv _ => exact no_value_of_empty hD hemp hv
+  | case16 μ ρ cnt body e hev ih =>
+    intro b Γ rets hc hE hb hm hrs
+    cases hc with
+    | absurd hcb hst hD hemp =>
+    obtain ⟨⟨vs, c', e', -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm
+      (by simpa [Tm.static, Ctx.n] using hst)
+    rw [hev] at e'; cases e'
+  | case17 μ ρ cnt =>
+    intro b Γ rets hc
+    cases hc
 
 theorem checked_runs {rets : Tm} (h : Checked P rets) :
     ∃ vs cnt, eval P none [] 0 P.main = .ok (vs, cnt) ∧ VTys P (.ofList vs) rets .nil ∧
@@ -1581,12 +1608,6 @@ theorem checked_runs {rets : Tm} (h : Checked P rets) :
     eval_sound hP none [] 0 P.main _ _ rets hc hE (by simp [LvlBound]) (by simp [MuOK]) (by simpa [Ctx.n] using hs)
   exact ⟨vs, cnt, e, by rwa [Tm.subst_static0 _ _ 0 hs] at hv,
     hsim rfl [] ⟨rfl, fun _ _ => by simpa [Tm.env] using Real.nil' (P := P) .nil⟩ vs cnt e⟩
-
-theorem no_value_of_empty {v : Tm} {d : Nat} {D : Adt} {args : Tm} (hD : P.adts[d]? = some D)
-    (hempty : D.ctors = []) : ¬ VTy P v (.app (.tyc d) args) := by
-  intro h
-  obtain ⟨c, vs, sig, mk, me, _, hc, _⟩ := h.ty_inv
-  simp [Prog.ctor, hD, hempty] at hc
 
 theorem no_false {d : Nat} {D : Adt} {args : Tm} {m e : Bool} (hD : P.adts[d]? = some D) (hempty : D.ctors = []) :
     ¬ Checked P (.bind (.ty m e) (.app (.tyc d) args) .nil) := by

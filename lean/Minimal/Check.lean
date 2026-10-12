@@ -224,29 +224,47 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
       .ok ⟨_, .predatesSubterm hp hq h1 (e.1 ▸ e.2 ▸ h2)⟩
     | _, _ => .error "predates-subterm: not the right proofs"
 
-def synthRets (Γ : Ctx) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .nil ∧ R.static 0 0}
+def synthRets (Γ : Ctx) (n : Nat) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .nil ∧ R.static n 0}
   | .nil => .ok ⟨.nil, .nil, rfl⟩
   | .cons a as => do
     let ⟨T, ha⟩ ← checkTm P Γ a
-    let ⟨hs⟩ ← need ((Γ.canon T).static 0 0) "the program's result type mentions its own entries"
-    let ⟨R, hr, hR⟩ ← synthRets Γ as
-    have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
-    have hi : R.inst a 0 = R := Tm.inst_static 0 R 0 0 hR (Nat.le_refl 0)
-    .ok ⟨.bind (.ty false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr), by simp [Tm.static, hs, Tm.static_mono (Nat.le_refl 0) R (Nat.zero_le 1) hR]⟩
+    let ⟨R, hr, hR⟩ ← synthRets Γ n as
+    have hi : R.inst a 0 = R := Tm.inst_static n R 0 0 hR (Nat.le_refl 0)
+    have hR1 := Tm.static_mono (Nat.le_refl n) R (Nat.zero_le 1) hR
+    if hs : (Γ.canon T).static 0 0 then
+      have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
+      .ok ⟨.bind (.ty false false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr),
+        by simp [Tm.static, Tm.static_mono (Nat.zero_le n) _ (Nat.le_refl 0) hs, hR1]⟩
+    else if hs : T.static n 0 then
+      .ok ⟨.bind (.ty false false) T R, .cons ha rfl (by rw [hi]; exact hr), by simp [Tm.static, hs, hR1]⟩
+    else .error "a result's type mentions entries it may not"
   | _ => .error "not a list of results"
 
 mutual
-def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
-    Res {R // CoreTy P b Γ c R ∧ ∀ r, rets = some r → R = r}
-  | .ret ts, some r => do
+def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
+    Res {R // CoreTy P b Γ c R ∧ (∀ r, rets = .inl r → R = r) ∧ ∀ n, rets = .inr n → R.static n 0}
+  | .ret ts, .inl r => do
     let ⟨out, h⟩ ← checkArgs P Γ ts r
     let ⟨ho⟩ ← need (out = .nil) "wrong number of results"
     let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts r)) "a non-erased result mentions an erased entry"
-    .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Option.some.inj e⟩
-  | .ret ts, none => do
-    let ⟨R, h, _⟩ ← synthRets P Γ ts
+    .ok ⟨r, .ret (ho ▸ h) hr, fun _ e => Sum.inl.inj e, fun _ e => (by cases e)⟩
+  | .ret ts, .inr n => do
+    let ⟨R, h, hs⟩ ← synthRets P Γ n ts
     let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions an erased entry"
-    .ok ⟨R, .ret h hr, fun _ e => nomatch e⟩
+    .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
+  | .absurd body, rets => do
+    let ⟨R, hb, _, hs⟩ ← checkCore b { Γ with ghost := true } body (.inr Γ.n)
+    match hR : R with
+    | .bind (.ty _ _) (.app (.tyc d) idx) .nil => match hD : P.adts[d]? with
+      | some D => do
+        let ⟨he⟩ ← need (D.ctors = []) "absurd: the body's value is of a type with constructors"
+        have hst : (Tm.app (.tyc d) idx).static Γ.n 0 := by
+          have := hs Γ.n rfl; rw [hR] at this; simp only [Tm.static, Bool.and_eq_true] at this ⊢; exact this.1
+        let R' := match rets with | .inl r => r | .inr _ => .nil
+        .ok ⟨R', .absurd (hR ▸ hb) hst hD he, fun r e => by simp [R', e], fun n e => by simp [R', e, Tm.static]⟩
+      | none => .error "unknown type"
+    | _ => .error "absurd: the body does not end in one value of a data type"
+  | .dead, _ => .error "a refuted branch outside a match"
   | .call f dec args er ms rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f
     match hF : Γ.canon Ft with
@@ -278,8 +296,8 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
             let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
                 (lookupBr brs c).isNone && (Γ.branch s d c idx sig).2 matches .ok _ | .unknown)
               "else: it stands for no constructor"
-            let ⟨_, h, e⟩ ← checkCore b Γg eb (some R0)
-            .ok ⟨fun _ h' => by cases h'; exact e R0 rfl ▸ h⟩
+            let ⟨_, h, e⟩ ← checkCore b Γg eb (.inl R0)
+            .ok ⟨fun _ h' => by cases h'; exact e.1 R0 rfl ▸ h⟩
           | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γg e R0)))
         let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0 (if er then some (List.replicate R0.len true) else none)) rest rets
         .ok ⟨R, .mtch hs hS hD hl hR hRs hRt hm (fun c sig h1 => by simpa using hb c sig h1) he hr, e⟩
@@ -327,9 +345,11 @@ def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : L
   | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
   | sig :: cs, base => do
     let ⟨hh⟩ ← (match hb : Γ.branch s d base idx sig, hl : lookupBr brs base with
+      | (_, .contra), some .dead => .ok ⟨BranchOK.refuted (by rw [hb])⟩
+      | (_, _), some .dead => .error "an absurd branch names a constructor that is not refuted"
       | (Γf, .ok σ), some body => do
-        let ⟨_, hr, e⟩ ← checkCore b { Γf with σ := σ } body (some R0)
-        .ok ⟨BranchOK.live hb (e R0 rfl ▸ hr)⟩
+        let ⟨_, hr, e⟩ ← checkCore b { Γf with σ := σ } body (.inl R0)
+        .ok ⟨BranchOK.live hb (e.1 R0 rfl ▸ hr)⟩
       | (_, .contra), none => .ok ⟨BranchOK.dead (by rw [hb])⟩
       | (_, .contra), some _ => .error "a listed branch is refuted"
       | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
@@ -370,10 +390,10 @@ def checkFns (gid : Nat) (Γ : Ctx) (G : Group) : (fns : List FnDef) → (base :
     let ⟨T, ht⟩ ← checkTm P Γ (F.type G)
     let ⟨hT⟩ ← need (T = .univ) "def-fns: not a function type"
     let ⟨hk⟩ ← need ((marks F.tele F.np).count true ≤ P.k) "def-fns: too many subterm parameters"
-    let ⟨_, hb, e⟩ ← checkCore gid (Γ.body G F).1 F.body (some (Γ.body G F).2)
+    let ⟨_, hb, e⟩ ← checkCore gid (Γ.body G F).1 F.body (.inl (Γ.body G F).2)
     let ⟨hr⟩ ← checkFns gid Γ G fs (base + 1)
     .ok ⟨fun
-      | 0, F', h => by simp at h; subst h; exact ⟨hT ▸ ht, hk, e _ rfl ▸ hb⟩
+      | 0, F', h => by simp at h; subst h; exact ⟨hT ▸ ht, hk, e.1 _ rfl ▸ hb⟩
       | j + 1, F', h => hr j F' (by simpa using h)⟩
 termination_by fns => (gid + 1, 0, sizeOf fns, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
@@ -409,8 +429,8 @@ def checkProg : Res {R // Checked P R} := do
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
       let ⟨hc⟩ ← allIdx (checkCtor P d) D.ctors 0
       .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
-  let ⟨R, h, _⟩ ← checkCore P P.groups.length {tys := []} P.main none
-  let ⟨hs⟩ ← need (R.static 0 0) "the program's result type mentions its own entries"
+  let ⟨R, h, _, hs⟩ ← checkCore P P.groups.length {tys := []} P.main (.inr 0)
+  have hs := hs 0 rfl
   .ok ⟨R, ⟨fun d D e => by have := ha d D e; simp only [Nat.zero_add] at this; exact this.1,
     fun d D c sig e1 e2 => by have := ha d D e1; simp only [Nat.zero_add] at this; exact this.2 c sig e2⟩, h, hs⟩
 

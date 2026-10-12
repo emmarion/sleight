@@ -1,0 +1,6 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-fns _ (f (((Nat) n)) (((Nat) r))
+  (match n (((Nat) r))
+    ((Zero) (Zero))
+    (absurd Succ))))
+(f (Zero))

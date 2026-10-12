@@ -42,6 +42,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
     | .defLvl rest => runS fuel (ρ ++ [.tok]) rest
     | .defFns gid rest => do runS fuel (ρ ++ closures ρ gid (← P.groups[gid]?)) rest
     | .chk _ _ _ rest => runS fuel ρ rest
+    | .absurd _ | .dead => none
 
 variable {P} in
 theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P ρ c out := by
@@ -70,6 +71,8 @@ theorem runS_sound : ∀ fuel ρ c out, runS P fuel ρ c = some out → RunS P �
       obtain ⟨G, hG, hr⟩ := h
       exact .defFns hG (ih _ _ _ hr)
     · exact .chk (ih _ _ _ h)
+    · simp at h
+    · simp at h
 
 variable {P} in
 theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) (h2 : RunS P ρ c b) : a = b := by

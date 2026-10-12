@@ -187,12 +187,15 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
+  | absurd : CoreTy b { Γ with ghost := true } body (.bind (.ty m e) (.app (.tyc d) idx) .nil) →
+      (Tm.app (.tyc d) idx).static Γ.n 0 → P.adts[d]? = some D → D.ctors = [] → CoreTy b Γ (.absurd body) rets
 
 inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) → CoreTy b { Γf with σ := σ } body R →
       BranchOK b Γ s d idx c sig R (some body) els
   | dead : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R none els
   | covered : BranchOK b Γ s d idx c sig R none true
+  | refuted : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R (some .dead) els
 
 inductive GroupOK : Nat → Ctx → Group → Prop
   | mk {G : Group} : Γ.tys[G.lvl]? = some K → Γ.canon K = .level →
