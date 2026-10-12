@@ -223,7 +223,7 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
       let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele outs) rest rets
       .ok ⟨R, .call hf hF ht ha hn hd ho hr, e⟩
     | _ => .error "not a function"
-  | .mtch s R0 brs rest, rets => do
+  | .mtch s R0 brs els rest, rets => do
     let ⟨St, hs⟩ ← checkTm P Γ s
     match hS : Γ.canon St with
     | .ty d idx => match hD : P.adts[d]? with
@@ -232,9 +232,17 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
         let ⟨hR⟩ ← checkTele P Γ R0
         let ⟨hRs⟩ ← need (R0.static Γ.n 0) "match: return telescope not well scoped"
         let ⟨hRt⟩ ← need (R0.isTele) "match: not a telescope"
-        let ⟨hb⟩ ← checkBranches b Γ s d idx R0 brs D.ctors 0
+        let ⟨hb⟩ ← checkBranches b Γ s d idx R0 brs els.isSome D.ctors 0
+        let ⟨he⟩ ← (match els with
+          | some eb => do
+            let ⟨_⟩ ← need (D.ctors.zipIdx.any fun (sig, c) =>
+                (lookupBr brs c).isNone && (Γ.branch s d c idx sig).2 matches .ok _ | .unknown)
+              "else: it stands for no constructor"
+            let ⟨_, h, e⟩ ← checkCore b Γ eb (some R0)
+            .ok ⟨fun _ h' => by cases h'; exact e R0 rfl ▸ h⟩
+          | none => .ok ⟨fun _ h' => nomatch h'⟩ : Res (PLift (∀ e, els = some e → CoreTy P b Γ e R0)))
         let ⟨R, hr, e⟩ ← checkCore b (Γ.pushTele R0) rest rets
-        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt (fun c sig h1 => by simpa using hb c sig h1) hr, e⟩
+        .ok ⟨R, .mtch hs hS hD hl hR hRs hRt (fun c sig h1 => by simpa using hb c sig h1) he hr, e⟩
       | none => .error "unknown type"
     | _ => .error "scrutinee not of a data type"
   | .prim p rest, rets => do
@@ -267,9 +275,10 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Option Tm) →
 termination_by c => (b, 1, sizeOf c, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 
-def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : List (Nat × Nat × Core)) :
-    (ctors : List Tm) → (base : Nat) →
-    Res (PLift (∀ (c : Nat) sig, ctors[c]? = some sig → BranchOK P b Γ s d idx (base + c) sig R0 (lookupBr brs (base + c))))
+def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : List (Nat × Nat × Core))
+    (els : Bool) : (ctors : List Tm) → (base : Nat) →
+    Res (PLift (∀ (c : Nat) sig, ctors[c]? = some sig →
+      BranchOK P b Γ s d idx (base + c) sig R0 (lookupBr brs (base + c)) els))
   | [], _ => .ok ⟨fun _ _ h => by simp at h⟩
   | sig :: cs, base => do
     let ⟨hh⟩ ← (match hb : Γ.branch s d base idx sig, hl : lookupBr brs base with
@@ -277,11 +286,12 @@ def checkBranches (b : Nat) (Γ : Ctx) (s : Tm) (d : Nat) (idx R0 : Tm) (brs : L
         let ⟨_, hr, e⟩ ← checkCore b { Γf with σ := σ } body (some R0)
         .ok ⟨BranchOK.live hb (e R0 rfl ▸ hr)⟩
       | (_, .contra), none => .ok ⟨BranchOK.dead (by rw [hb])⟩
-      | (_, .ok _), none => .error "a branch that is not refuted is missing"
       | (_, .contra), some _ => .error "a listed branch is refuted"
-      | (_, .unknown), _ => .error "cannot decide whether the branch is refuted" :
-      Res (PLift (BranchOK P b Γ s d idx base sig R0 (lookupBr brs base))))
-    let ⟨ht⟩ ← checkBranches b Γ s d idx R0 brs cs (base + 1)
+      | (_, .unknown), some _ => .error "cannot decide whether the branch is refuted"
+      | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
+          else .error "a branch that is not refuted is missing" :
+      Res (PLift (BranchOK P b Γ s d idx base sig R0 (lookupBr brs base) els)))
+    let ⟨ht⟩ ← checkBranches b Γ s d idx R0 brs els cs (base + 1)
     .ok ⟨fun
       | 0, _, h1 => by simp at h1; subst h1; simpa using hh
       | c + 1, sig, h1 => by

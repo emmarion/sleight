@@ -865,13 +865,13 @@ theorem call_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ
 
 theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) {cnt : Nat} (hb : LvlBound ρ cnt)
     {μ : Option (List Nat)} (hm : MuOK μ Γ ρ) {s St idx R : Tm} {d bnd : Nat} {D : Adt}
-    {brs : List (Nat × Nat × Core)}
+    {brs : List (Nat × Nat × Core)} {els : Option Core}
     (hs : TmTy P Γ s St) (hS : Γ.canon St = .ty d idx) (hD : P.adts[d]? = some D)
-    (hbr : ∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK P bnd Γ s d idx c sig R (lookupBr brs c))
-    (hRs : R.static Γ.n 0) :
-    ∃ c vs, s.subst (Tm.env ρ) = .con d c vs ∧ ∃ body, lookupBr brs c = some body ∧
-      ∃ Γ', CoreTy P bnd Γ' body R ∧ EnvOK P (ρ ++ vs.toList) Γ' ∧ LvlBound (ρ ++ vs.toList) cnt ∧
-        MuOK μ Γ' (ρ ++ vs.toList) ∧ R.static Γ'.n 0 := by
+    (hbr : ∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK P bnd Γ s d idx c sig R (lookupBr brs c) els.isSome)
+    (hel : ∀ e, els = some e → CoreTy P bnd Γ e R) (hRs : R.static Γ.n 0) :
+    ∃ c vs, s.subst (Tm.env ρ) = .con d c vs ∧ ∃ pre body, selectBr brs els c vs.toList = some (pre, body) ∧
+      ∃ Γ', CoreTy P bnd Γ' body R ∧ EnvOK P (ρ ++ pre) Γ' ∧ LvlBound (ρ ++ pre) cnt ∧
+        MuOK μ Γ' (ρ ++ pre) ∧ R.static Γ'.n 0 := by
   have hw := hE.wf
   have hl := hE.len
   obtain ⟨hv, hss, hSs⟩ := tm_sound hP hE hs
@@ -919,15 +919,20 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
   refine ⟨c, vs, hsv, ?_⟩
   have hbr' := hbr c sig hsig
   generalize hbody : lookupBr brs c = br at hbr'
+  generalize hei : els.isSome = eb at hbr'
   cases hbr' with
   | dead hd => rw [hbranch] at hd; exact absurd hd hun.2
+  | covered =>
+    obtain ⟨e, rfl⟩ := Option.isSome_iff_exists.mp hei
+    exact ⟨[], e, by simp [selectBr, hbody], Γ, hel e rfl, by simpa using hE, by simpa using hb, by simpa using hm,
+      hRs⟩
   | live hlive hcb =>
     rename_i Γf' body σ'
     rw [hbranch] at hlive; simp only [Prod.mk.injEq] at hlive
     obtain ⟨rfl, hu⟩ := hlive
     have hsσ := hun.1 σ' hu
     have hwσ := unify_wf Γf.n Γf.σ [] _ σ' (fun e t he => hEf.wf.σ e t he) hu
-    refine ⟨body, rfl, { Γf with σ := σ' }, hcb, ?_, ?_, ?_, ?_⟩
+    refine ⟨vs.toList, body, by simp [selectBr, hbody], { Γf with σ := σ' }, hcb, ?_, ?_, ?_, ?_⟩
     · exact hEf.modify rfl hsσ hEf.chrono ⟨hEf.wf.tys, hwσ, hEf.wf.mints, hEf.wf.cur, hEf.wf.subs⟩
     · refine LvlBound.append.mpr ⟨hb, fun v hv' x hx => ?_⟩
       have := hb.subst hss x; rw [hsv] at this
@@ -990,11 +995,12 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     | call hf hF ht ha hn hd ho hr =>
     obtain ⟨env', n1', gid', G', F', hcal', _⟩ := call_setup hP hE hb hm hf hF ht ha hn hd
     rw [hcal] at hcal'; cases hcal'
-  | case6 μ ρ cnt s R brs rest d c vs hs body hb outs cnt1 hev ihb ihr =>
+  | case6 μ ρ cnt s R brs els rest d c vs hs pre body hb outs cnt1 hev ihb ihr =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
-    | mtch hst hS hD _ _ hRs hRt hbr hr =>
-    obtain ⟨c', vs', hsv, body', hb', Γ', hcb, hE', hlb', hm', hRs'⟩ := match_setup hP hE hlb hm hst hS hD hbr hRs
+    | mtch hst hS hD _ _ hRs hRt hbr hel hr =>
+    obtain ⟨c', vs', hsv, pre', body', hb', Γ', hcb, hE', hlb', hm', hRs'⟩ :=
+      match_setup hP hE hlb hm hst hS hD hbr hel hRs
     rw [hs] at hsv; cases hsv
     rw [hb] at hb'; cases hb'
     obtain ⟨outs', c', e, hvs, hbv, hle, hlc⟩ := ihb bnd Γ' R hcb hE' hlb' hm' hRs'
@@ -1004,33 +1010,34 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
     obtain ⟨hE'', hcur, hsubs, hnle⟩ := hE.pushTele hRt hRs hvs hlc
     rw [eval]; simp only [hs]
     split
-    · rename_i body'' hb''
+    · rename_i pre'' body'' hb''
       rw [hb] at hb''; cases hb''
       simp only [hev]
       exact Result.weaken (ihr bnd _ rets hr hE'' (LvlBound.append.mpr ⟨hlb.mono hle, hbv⟩)
         (hm.append hE.wf hl hcur hsubs) (Tm.static_mono hnle _ (Nat.le_refl 0) hrs)) (hl ▸ hrs) hle
-    · rename_i hno; exact absurd hb (hno _)
-  | case7 μ ρ cnt s R brs rest d c vs hs body hb e hev ihb =>
+    · rename_i hno; rw [hb] at hno; cases hno
+  | case7 μ ρ cnt s R brs els rest d c vs hs pre body hb e hev ihb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
-    | mtch hst hS hD _ _ hRs hRt hbr hr =>
-    obtain ⟨c', vs', hsv, body', hb', Γ', hcb, hE', hlb', hm', hRs'⟩ := match_setup hP hE hlb hm hst hS hD hbr hRs
+    | mtch hst hS hD _ _ hRs hRt hbr hel hr =>
+    obtain ⟨c', vs', hsv, pre', body', hb', Γ', hcb, hE', hlb', hm', hRs'⟩ :=
+      match_setup hP hE hlb hm hst hS hD hbr hel hRs
     rw [hs] at hsv; cases hsv
     rw [hb] at hb'; cases hb'
     obtain ⟨_, _, e', _⟩ := ihb bnd Γ' R hcb hE' hlb' hm' hRs'
     rw [hev] at e'; cases e'
-  | case8 μ ρ cnt s R brs rest d c vs hs hb =>
+  | case8 μ ρ cnt s R brs els rest d c vs hs hb =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
-    | mtch hst hS hD _ _ hRs hRt hbr hr =>
-    obtain ⟨c', vs', hsv, body', hb', _⟩ := match_setup hP hE hlb hm hst hS hD hbr hRs
+    | mtch hst hS hD _ _ hRs hRt hbr hel hr =>
+    obtain ⟨c', vs', hsv, pre', body', hb', _⟩ := match_setup hP hE hlb hm hst hS hD hbr hel hRs
     rw [hs] at hsv; cases hsv
-    exact (hb _ hb').elim
-  | case9 μ ρ cnt s R brs rest hs =>
+    rw [hb] at hb'; cases hb'
+  | case9 μ ρ cnt s R brs els rest hs =>
     intro bnd Γ rets hc hE hlb hm hrs
     cases hc with
-    | mtch hst hS hD _ _ hRs hRt hbr hr =>
-    obtain ⟨c', vs', hsv, _⟩ := match_setup hP hE hlb hm hst hS hD hbr hRs
+    | mtch hst hS hD _ _ hRs hRt hbr hel hr =>
+    obtain ⟨c', vs', hsv, _⟩ := match_setup hP hE hlb hm hst hS hD hbr hel hRs
     exact (hs _ _ _ hsv).elim
   | case10 μ ρ cnt p rest ih =>
     intro b Γ rets hc hE hb hm hrs

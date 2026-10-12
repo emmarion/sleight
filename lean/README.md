@@ -98,6 +98,9 @@ state. SOUNDNESS.md's invariants appear as:
 
 ## Beyond MINIMAL.md
 
+- `else` branches (DESIGN.md section 21): an `else` stands for every
+  constructor neither listed nor refuted, binds nothing, is checked with
+  no forced facts, and is an error when it stands for no constructor.
 - `_` as a `def-fns` level (DESIGN.md section 46).
 - `(level-of f)` (section 53), in a term and as an argument of
   `prove-predates`, for an `f` that a `def-fns` in scope names, directly

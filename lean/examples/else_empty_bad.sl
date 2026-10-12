@@ -1,0 +1,8 @@
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-lvl L)
+(def-fns L (f (((Nat) n)) (((Nat) r))
+  (let (m) (Succ n))
+  (match m (((Nat) r))
+    ((Succ k) k)
+    (else n))))
+(f (Zero))

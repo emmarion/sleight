@@ -120,8 +120,9 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
       CoreTy b Γ (.call f dec args n rest) rets
   | mtch : TmTy P Γ s St → Γ.canon St = .ty d idx → P.adts[d]? = some D →
       (∀ e ∈ brs, e.1 = d ∧ e.2.1 < D.ctors.length) → TeleOK P Γ R → R.static Γ.n 0 → R.isTele →
-      (∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK b Γ s d idx c sig R (lookupBr brs c)) →
-      CoreTy b (Γ.pushTele R) rest rets → CoreTy b Γ (.mtch s R brs rest) rets
+      (∀ (c : Nat) sig, D.ctors[c]? = some sig → BranchOK b Γ s d idx c sig R (lookupBr brs c) els.isSome) →
+      (∀ e, els = some e → CoreTy b Γ e R) →
+      CoreTy b (Γ.pushTele R) rest rets → CoreTy b Γ (.mtch s R brs els rest) rets
   | prim : PrimTy P Γ p T → CoreTy b (Γ.pushPrim T p) rest rets → CoreTy b Γ (.prim p rest) rets
   | defLvl : CoreTy b Γ.pushMint rest rets → CoreTy b Γ (.defLvl rest) rets
   | defFns : gid < b → P.groups[gid]? = some G → GroupOK gid Γ G →
@@ -130,10 +131,11 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk true a T rest) rets
 
-inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Prop
+inductive BranchOK : Nat → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) → CoreTy b { Γf with σ := σ } body R →
-      BranchOK b Γ s d idx c sig R (some body)
-  | dead : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R none
+      BranchOK b Γ s d idx c sig R (some body) els
+  | dead : (Γ.branch s d c idx sig).2 = .contra → BranchOK b Γ s d idx c sig R none els
+  | covered : BranchOK b Γ s d idx c sig R none true
 
 inductive GroupOK : Nat → Ctx → Group → Prop
   | mk {G : Group} : Γ.tys[G.lvl]? = some K → Γ.canon K = .level →

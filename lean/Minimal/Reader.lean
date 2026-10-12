@@ -52,7 +52,7 @@ abbrev M := StateT ESt (Except String)
 
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
-   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "Fn", "Type", "Level",
+   "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "else", "Fn", "Type", "Level",
    "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
@@ -111,7 +111,7 @@ def fresh (k : Nat) : M (List Nat) := modifyGet fun st => (List.range' st.n k, {
 
 inductive Stmt where
   | call (f : Tm) (dec : Dec) (args : Tm) (n : Nat)
-  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core))
+  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core)
   | prim (p : Prim)
   | defLvl
   | defFns (gid : Nat)
@@ -119,7 +119,7 @@ inductive Stmt where
 
 def Stmt.wrap (rest : Core) : Stmt → Core
   | .call f d a n => .call f d a n rest
-  | .mtch s r b => .mtch s r b rest
+  | .mtch s r b e => .mtch s r b e rest
   | .prim p => .prim p rest
   | .defLvl => .defLvl rest
   | .defFns g => .defFns g rest
@@ -188,7 +188,13 @@ partial def elabMatch (sc : Scope) (_want : Nat) : List Sx → M (List Stmt × L
     let st ← get
     let base := st.n
     let mut out : List (Nat × Nat × Core) := []
+    let mut els : Option Core := none
     for br in brs do
+      if let .list (.atom "else" :: items) := br then
+        if els.isSome then throw "match: two else branches"
+        modify fun st => { st with n := base }
+        els := some (← elabBody sc rets.length items)
+        continue
       let .list (.list (.atom c :: xs) :: items) := br | throw "malformed branch"
       let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
       let names ← xs.mapM fun | .atom x => pure x | _ => throw "malformed pattern"
@@ -198,7 +204,7 @@ partial def elabMatch (sc : Scope) (_want : Nat) : List Sx → M (List Stmt × L
       out := out ++ [(d', ci, body)]
     modify fun st => { st with n := base }
     let outs ← fresh rets.length
-    return (ss ++ [.mtch s R out], outs.map .fv)
+    return (ss ++ [.mtch s R out els], outs.map .fv)
   | _ => throw "malformed match"
 
 partial def elabSeq (sc : Scope) (want : Nat) : List Sx → M (List Stmt × List Tm)

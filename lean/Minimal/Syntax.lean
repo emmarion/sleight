@@ -181,7 +181,7 @@ inductive Prim where
 inductive Core where
   | ret (ts : Tm)
   | call (f : Tm) (dec : Dec) (args : Tm) (n : Nat) (rest : Core)
-  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (rest : Core)
+  | mtch (s : Tm) (rets : Tm) (brs : List (Nat × Nat × Core)) (els : Option Core) (rest : Core)
   | prim (p : Prim) (rest : Core)
   | defLvl (rest : Core)
   | defFns (gid : Nat) (rest : Core)
@@ -196,6 +196,19 @@ theorem sizeOf_lookupBr {brs : List (Nat × Nat × Core)} {c : Nat} {body : Core
   obtain ⟨⟨x, y, z⟩, he, rfl⟩ := h
   have := List.sizeOf_lt_of_mem (List.mem_of_find?_eq_some he)
   simp at this ⊢; omega
+
+def selectBr (brs : List (Nat × Nat × Core)) (els : Option Core) (c : Nat) (vs : List Tm) :
+    Option (List Tm × Core) :=
+  match lookupBr brs c with
+  | some body => some (vs, body)
+  | none => els.map (([], ·))
+
+theorem sizeOf_selectBr {brs : List (Nat × Nat × Core)} {els : Option Core} {c : Nat} {vs pre : List Tm}
+    {body : Core} (h : selectBr brs els c vs = some (pre, body)) : sizeOf body < sizeOf brs + sizeOf els := by
+  unfold selectBr at h
+  split at h
+  · rename_i hb; simp at h; obtain ⟨-, rfl⟩ := h; have := sizeOf_lookupBr hb; omega
+  · cases els <;> simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
 
 structure FnDef where
   np : Nat

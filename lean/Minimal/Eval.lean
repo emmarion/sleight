@@ -66,15 +66,15 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
         | .error e => .error e
       else .error "call does not decrease"
     | none => .error "callee is not a function"
-  | .mtch s _ brs rest =>
+  | .mtch s _ brs els rest =>
     match s.subst (Tm.env ρ) with
     | .con _ c vs =>
-      match hb : lookupBr brs c with
-      | some body =>
-        match eval P μ (ρ ++ vs.toList) cnt body with
+      match hb : selectBr brs els c vs.toList with
+      | some (pre, body) =>
+        match eval P μ (ρ ++ pre) cnt body with
         | .ok (outs, cnt) => eval P μ (ρ ++ outs) cnt rest
         | .error e => .error e
-      | _ => .error "no branch"
+      | none => .error "no branch"
     | _ => .error "scrutinee is not data"
   | .prim p rest => eval P μ (ρ ++ [p.eval ρ]) cnt rest
   | .defLvl rest => eval P μ (ρ ++ [.lvl cnt]) (cnt + 1) rest
@@ -88,7 +88,7 @@ decreasing_by
   all_goals first
     | exact Prod.Lex.left _ _ h
     | (apply Prod.Lex.right; simp; try omega)
-  have := sizeOf_lookupBr hb
+  have := sizeOf_selectBr hb
   simp; omega
 
 end Minimal

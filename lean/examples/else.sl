@@ -1,0 +1,13 @@
+; DESIGN.md section 21's else branch
+(def-adts (Nat () (Zero () (Nat)) (Succ (((Nat) pred)) (Nat))))
+(def-adts (Color () (Red () (Color)) (Green () (Color)) (Blue () (Color))))
+(def-lvl L)
+(def-fns L (isRed (((Color) c)) (((Nat) r))
+  (match c (((Nat) r))
+    ((Red) (Succ (Zero)))
+    (else (Zero)))))
+(def-fns L (pred (((Nat) n)) (((Nat) r))
+  (let (m) (Succ n))
+  (match m (((Nat) r))
+    (else n))))
+(values (isRed (Red)) (isRed (Blue)) (pred (Zero)))

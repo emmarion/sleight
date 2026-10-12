@@ -1,6 +1,8 @@
 examples/anon_level.sl: (Succ (Succ (Zero)))
 examples/binder_refute.sl: (Zero)
 examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
+examples/else.sl: (Succ (Zero)) (Zero) (Zero)
+examples/else_empty_bad.sl: refused: else: it stands for no constructor
 examples/eq_sym.sl: (Refl (Nat) (Zero))
 examples/ex_falso.sl: (Zero)
 examples/is_arg_bad.sl: refused: argument not the term its is entry names
@@ -21,6 +23,7 @@ examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subte
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/vec_head.sl: (Succ (Zero))
+unchecked examples/else_empty_bad.sl: (Zero)
 unchecked examples/is_arg_bad.sl: (MkTwo (Zero) (Succ (Zero)))
 unchecked examples/let_is_bad.sl: (Zero)
 unchecked examples/let_type_bad.sl: (Zero)
