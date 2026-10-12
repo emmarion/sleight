@@ -1,7 +1,7 @@
 ; Length of the array to sort.
 (let ((many perf-size)) 1048576)
 
-(let ((erased (Lt perf-size u62-modulus) perf-size-fits)) (prove-literal-lt 1048576 4611686018427387904))
+(let ((erased (Lt perf-size max-array-length) perf-size-fits)) (prove-literal-lt 1048576 18014398509481984))
 (let ((erased perf-range-fits)) (prove-literal-lt 1073741824 4611686018427387904))
 (unary 0)
 (let ((erased perf-range-pos)) (prove-literal-lt 0 1073741824))

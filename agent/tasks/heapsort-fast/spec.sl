@@ -6,6 +6,9 @@
 (let-match erased (pow2-fn _ _ _ spec-u62m-pow2 u62-modulus-pow2) (Refl _ _))
 (let ((many spec-u62m-cmp)) (nat-cmp 4611686018427387904 u62m))
 (comptime-match many spec-u62m-cmp (CEq _ _ _))
+(let ((many max-array-length)) 18014398509481984)
+(let ((erased (Lt max-array-length u62-modulus) max-array-length-below-u62))
+  (prove-literal-lt 18014398509481984 4611686018427387904))
 
 (def-adts
   ((Le : ((Nat) a) ((Nat) b) -> Type)
