@@ -267,6 +267,14 @@ The source prelude declares the following, which both compilers implement.
     (erased (Gensym n s) a) (erased (Gensym n t) b) ->
     (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
 
+(def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) Type T) h)))
+
+(def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
+    (erased (Mult) mb) (erased Type B) (erased B b)
+    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+
 (def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many m is r)))
 
@@ -307,9 +315,16 @@ at most 10000 expansions run in one run. `gensym` counts from 1 over the
 whole run, every file included. An unbound gensym gets no "nearest in
 scope" hint. `(settled-of m x)` makes a handle (section 3), and
 `RawSettled` puts one in a macro's output, where it stands for its entry
-directly. `settled-mult` and `settled-value` read a handle anywhere, not only
-during an expansion, and an `MMany` handle carries its value into an
-extracted program. The `intern-` forms run only in an expansion, the one
-place a macro world exists, and intern the literal where they run. `settled-type` and `settled-eq` are not
-implemented, and a literal in a macro's arguments still arrives as
+directly. A handle names the entry its `Settled` was minted at and how it
+reads that entry: `MintedIs`, standing for the entry's minted `is`, or
+`MintedType`, standing for its minted type. `settled-type` turns a
+`MintedIs` handle into the `MintedType` handle on the same entry.
+`settled-mult`, `settled-value` and `settled-type` read a handle anywhere,
+not only during an expansion, and an `MMany` handle carries its value into
+an extracted program. The `intern-` forms and `settled-eq` run only in an
+expansion, the one place a macro world exists. The `intern-` forms intern
+the literal where they run. `settled-eq` compares the terms the two handles
+stand for and their types, canonically, against the facts of the innermost
+enclosing run position, into which it first enters the declaration facts of
+the literals it needs. A literal in a macro's arguments still arrives as
 `RawNat`, `RawChar` or `RawStr`.

@@ -1,0 +1,31 @@
+; needs: macro_lib
+; expect: (MkPair _ _ (Cons _ 2 $ Nil _) $ MkPair _ _ "yesnoyesnoyesyes" "erased")
+(let ((many xs)) (Cons (Nat) 1 $ Nil (Nat)))
+(let ((many ys)) (Cons (Nat) 2 $ Nil (Nat)))
+(let ((many uno)) 1)
+(let ((many sum)) (nat-add 0 1))
+(def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
+    (many (String) s))
+  (match many r _ ((None _) "no") ((Some _ e) "yes")))
+(def-fns _ $ (many eqs-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (let ((many tx)) (settled-type _ _ _ (settled-of many xs)))
+  (let ((many ty)) (settled-type _ _ _ (settled-of many ys)))
+  (let ((unique mw1) (many lit)) (intern-nat mw 1))
+  (let ((unique mw2) (many r1)) (settled-eq _ _ _ _ _ _ mw1 tx ty))
+  (let ((unique mw3) (many r2)) (settled-eq _ _ _ _ _ _ mw2 tx (settled-type _ _ _ (settled-of many uno))))
+  (let ((unique mw4) (many r3)) (settled-eq _ _ _ _ _ _ mw3 lit (settled-of many uno)))
+  (let ((unique mw5) (many r4)) (settled-eq _ _ _ _ _ _ mw4 lit (settled-of many sum)))
+  (let ((unique mw6) (many r5)) (settled-eq _ _ _ _ _ _ mw5 (settled-type _ _ _ tx) (settled-of erased Type)))
+  (let ((unique mw7) (many fresh)) (intern-nat mw6 12345))
+  (let ((unique mw8) (many r6)) (settled-eq _ _ _ _ _ _ mw7 (settled-type _ _ _ fresh) (settled-type _ _ _ (settled-of many uno))))
+  (let ((many s)) (str-append (said _ _ _ _ r1) $ str-append (said _ _ _ _ r2) $ str-append (said _ _ _ _ r3) $ str-append (said _ _ _ _ r4) $ str-append (said _ _ _ _ r5) (said _ _ _ _ r6)))
+  (values mw8 $ two
+    (form here $ three (name here "let") (form here $ one $ form here $ three (name here "many") (RawSettled here _ _ _ tx) (name here "zs")) (name here "ys"))
+    (form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (name here "zs") $
+      form here $ Cons _ (name here "MkPair") $ Cons _ (RawWild here) $ Cons _ (RawWild here) $ two (RawStr here s) (name here "erased-name"))))
+(let ((many eqs)) (MkMacro _ eqs-fn))
+(def-fns _ $ (many mult-name : (many (Mult) m) -> (many (String) s))
+  (match many m _ ((MErased) "erased") ((MMany) "many") ((MUnique) "unique")))
+(let ((many erased-name)) (mult-name $ settled-mult _ _ _ $ settled-type _ _ _ $ settled-of many xs))
+(eqs)

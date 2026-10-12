@@ -37,7 +37,8 @@ let binder = function Atom (_, n) -> Some (Some n) | Wild _ -> Some None | _ -> 
 let binder_or loc raw what = match binder raw with Some b -> b | None -> not_name loc what raw
 
 (* A special form's head: a Settled, non-erased entry of type (Special) holding one of its variants (section 6). *)
-let minted_type env x = let m = (entry env x).minted in canon { env with facts = trusted env } (Option.value (IntMap.find_opt m (trusted env)) ~default:(fact env m)).ty
+let minted_fact env m = Option.value (IntMap.find_opt m (trusted env)) ~default:(fact env m)
+let minted_type env x = canon { env with facts = trusted env } (minted_fact env (entry env x).minted).ty
 let minted_is env x = Var (entry env x).minted
 let settled_value env x ty = match entry env x with
   | { state = Settled v; mult = (Many | Unique); _ } when equal (minted_type env x) ty -> Some v
@@ -49,7 +50,7 @@ let rec special_of env raw =
   let value = special_value env in
   match raw with
   | Atom (_, n) -> Option.bind (lookup env n) value
-  | Handle (_, x, m, _) -> if m = Erased then None else value x
+  | Handle (_, x, _, m, _) -> if m = Erased then None else value x
   | List (_, [head; (Atom _ | Handle _ as a)]) when special_of env head = Some Sp.Share -> special_of env a
   | _ -> None
 
@@ -69,9 +70,9 @@ let at loc f = try f () with Error (Reader.Unknown, msg) -> error loc "%s" msg
 let var env loc n = match lookup env n with Some x -> refer x; x | None -> error loc "unbound name %s%s" (tick_name n) (hint env n)
 let reference env loc raw what = match raw with
   | Atom (_, n) -> var env loc n
-  | Handle (_, x, _, _) when x >= 0 -> refer x; x
+  | Handle (_, x, MintedIs, _, _) when x >= 0 -> refer x; x
   | _ -> not_name loc what raw
-let handle_made = function Handle (_, _, m, _) -> Some m | _ -> None
+let handle_made = function Handle (_, _, _, m, _) -> Some m | _ -> None
 let made env raw x = Option.value (handle_made raw) ~default:(entry env x).mult
 
 let resolve env x = match canon env (Var x) with Var y -> y | _ -> x
@@ -191,7 +192,7 @@ let expected = function [] -> "" | ss -> ": expected " ^ tick (String.concat " "
 let counted n what = Printf.sprintf "%d %s%s" n what (if n = 1 then "" else "s")
 let with_mults used tele = List.map (fun (e : entry) -> { e with mult = used e.mult }) tele
 
-let computed env = function Handle (_, x, _, _) -> x >= 0 && (entry env x).temporary && (entry env x).name = None | _ -> false
+let computed env = function Handle (_, x, MintedIs, _, _) -> x >= 0 && (entry env x).temporary && (entry env x).name = None | _ -> false
 
 let describe env pos raw term ty =
   let raw = if computed env raw then List (Reader.loc raw, []) else raw in
@@ -480,27 +481,45 @@ let rec intern env loc lit =
       record_literal { lit; lit_id = x; lit_proof; minted = List.concat_map (fun x -> List.map (fun i -> (i, entry env i, fact env i)) [ x; (entry env x).slot ]) own };
       env
 
+let literal_row y = match Hashtbl.find_opt literal_of y with Some r -> Some r | None -> Seq.find (fun r -> List.exists (fun (i, _, _) -> i = y) r.minted) (Hashtbl.to_seq_values literal_rows)
+
+let rec enter_mentioned env t =
+  fold_vars (fun _ env t -> match t with
+    | Var y when y < 0 && not (IntMap.mem y env.facts) -> (
+        match literal_row y with
+        | Some row ->
+            let env = List.fold_left (fun env (x, e, f) -> set_state { env with entries = IntMap.add x e env.entries; facts = IntMap.add x f env.facts } x e.state) env row.minted in
+            List.fold_left (fun env (_, _, (f : fact)) -> List.fold_left enter_mentioned env (f.ty :: Option.to_list f.rule)) env row.minted
+        | None -> env)
+    | _ -> env) 0 env t
+
 let lit_of = function Nat (_, z) -> Some (Literal.Numeral z) | Char (_, c) -> Some (Literal.Char c) | Str (_, s) -> Some (Literal.Str s) | _ -> None
 
 let expansions = ref 0
 let gensyms = ref 0
-let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let primitives = [ Sp.Gensym; Sp.GensymUnique; Sp.SettledType; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let prims : (Sp.t, mult * entry list * entry list) Hashtbl.t = Hashtbl.create 4
-let implemented = [ Sp.Gensym; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
+let implemented = [ Sp.Gensym; Sp.SettledType; Sp.SettledEq; Sp.SettledMult; Sp.SettledValue; Sp.InternNat; Sp.InternChar; Sp.InternString ]
 let implement env p args = match p, args with
   | Sp.Gensym, _ -> incr gensyms; [ nat_value env (Z.of_int !gensyms) ]
   | (Sp.InternNat | Sp.InternChar | Sp.InternString), [ _; v ] ->
       let lit = match p with Sp.InternNat -> Literal.Numeral (nat_z env Reader.nowhere v) | Sp.InternChar -> Literal.Char (nat_byte env Reader.nowhere v) | _ -> Literal.Str (str_host env Reader.nowhere v) in
       ignore (intern env Reader.nowhere lit);
       let x = (Hashtbl.find literal_rows (Literal.key lit)).lit_id in
-      [ V.VHandle (x, Many, Hashtbl.find V.literal_values x) ]
+      [ V.VHandle (x, MintedIs, Many, Hashtbl.find V.literal_values x) ]
+  | Sp.SettledEq, [ _; V.VHandle (x, rx, _, _); V.VHandle (y, ry, _, _) ] ->
+      let snap = List.fold_left enter_mentioned { env with facts = trusted env } [ Var x; Var y ] in
+      let denoted x r = let f = minted_fact snap x in match r with Ffi_core.MintedIs -> [ Var x; f.ty ] | MintedType -> [ f.ty; type_term ] in
+      let a = denoted x rx and b = denoted y ry in
+      let snap = List.fold_left enter_mentioned snap (a @ b) in
+      [ (if List.for_all2 (fun s t -> equal (canon snap s) (canon snap t)) a b then pbuild env "Some" [ pbuild env "JMRefl" [] ] else pbuild env "None" []) ]
   | p, _ -> raise (Eval.Runtime ("`" ^ Sp.name p ^ "` has no implementation"))
 
 let rec macro_of env raw =
   let held x = Option.bind (prelude_id env "Macro") (fun m -> settled_value env x (App (Var m, []))) in
   match raw with
   | Atom (_, n) -> Option.bind (lookup env n) held
-  | Handle (_, x, m, _) when m <> Erased -> held x
+  | Handle (_, x, _, m, _) when m <> Erased -> held x
   | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> macro_of env a
   | _ -> None
 
@@ -510,18 +529,19 @@ let rec raw_value env r =
   match ext_adt env "RawName" with
   | Some adt -> V.VExt (adt, V.Raw r)
   | None ->
-      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, m, v) -> V.VHandle (x, m, Obj.obj v)) ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
+      let i, fs = Ffi_core.raw_fields (Ffi_core.raw_view ~handle:(fun (x, r, m, v) -> V.VHandle (x, r, m, Obj.obj v)) ~get:Fun.id ~str:(str_value env) ~nat:(nat_value env) ~pos:Ffi.pos ~list:Ffi.list ~raw:(raw_value env) r) in
       V.construct (List.nth (raw_ctor env Reader.nowhere).V.adt.ctors i) fs
 
 let rec value_raw env l = function
   | V.VExt (_, V.Raw r) -> r
-  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, m, v) -> Handle (l, x, m, Obj.repr v) | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
+  | v -> let i, fs = V.destruct (raw_ctor env l) v in Ffi_core.raw_of ~unhandle:(fun l -> function V.VHandle (x, r, m, v) -> Handle (l, x, r, m, Obj.repr v) | _ -> assert false) ~text:(str_host env l) ~z:(nat_z env l) ~pos:Ffi.unpos ~list:Ffi.unlist ~raw:(value_raw env l) (Ffi_core.raw_model i fs)
 
 let atom_entry ?at env raw =
   let l = Option.value at ~default:(loc raw) in
   match raw, lit_of raw with
   | Atom (_, n), _ -> (env, var env l n)
-  | Handle (_, x, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> intern env l row.lit | None -> env), x)
+  | Handle (_, x, MintedIs, _, _), _ -> refer x; ((match Hashtbl.find_opt literal_of x with Some row -> intern env l row.lit | None -> env), x)
+  | Handle (_, x, MintedType, _, _), _ -> let t = (minted_fact env x).ty in let y, env = bind (enter_mentioned env t) None Erased (settled env V.VToken) ~rule:t type_term in (env, y)
   | _, Some lit -> let env = intern env l lit in (env, (Hashtbl.find literal_rows (Literal.key lit)).lit_id)
   | Wild _, _ -> error l "`_` is not a name, and nothing is inferred here"
   | _ -> error l "expected a name or a literal, got %s" (tick (Reader.show raw))
@@ -529,7 +549,7 @@ let atom_entry_or env l raw what = match raw with List _ -> error l "expected %s
 
 let read_special pos env raw =
   match raw with
-  | Atom (l, _) | Handle (l, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l ?made:(handle_made raw) Many x
+  | Atom (l, _) | Handle (l, _, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) -> let env, x = atom_entry env raw in use env l ?made:(handle_made raw) Many x
   | List (l,[h;(Atom _ | Handle _ as a)]) when special_of env h = Some Sp.Share ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let x = reference env (loc a) a "a name" in
@@ -539,7 +559,7 @@ let read_special pos env raw =
 
 let macro_refused env l head =
   let shown = tick (Reader.show head) in
-  let rec held = function Atom (_, n) -> lookup env n | Handle (_, x, _, _) -> Some x | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> held a | _ -> None in
+  let rec held = function Atom (_, n) -> lookup env n | Handle (_, x, MintedIs, _, _) -> Some x | List (_, [ h; a ]) when special_of env h = Some Sp.Share -> held a | _ -> None in
   let x = held head in
   let bound x how where = let e = entry env x in if Reader.placed e.at then [ (e.at, respell env (Printf.sprintf "%s is bound%s here%s" (qname env x) how where)) ] else [] in
   let dyn = ", where every binding is `Hypothetical`" in
@@ -885,7 +905,7 @@ and compile_text pos env l sp = function
       let env, x, m = match raw with
         | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, x, made env raw x)
         | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let x = reference env (loc a) a "a name" in (env, x, made env a x)
-        | _ -> (match !settle_head env Many (List (loc raw, [ raw ])) with env, List (_, [ Handle (_, x, m, _) ]) -> (env, x, m) | _ -> assert false) in
+        | _ -> (match !settle_head env Many (List (loc raw, [ raw ])) with env, List (_, [ Handle (_, x, _, m, _) ]) -> (env, x, m) | _ -> assert false) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
       (match (if m = Erased then None else settled_value env x str) with
        | Some v -> (read_special pos env raw, str_host env l v)
@@ -1224,7 +1244,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
   let env, raw = expand_one pos env raw in
   match raw with
-  | Atom (l, _) | Handle (l, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
+  | Atom (l, _) | Handle (l, _, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
       let env, x = atom_entry env raw in
       (use env l ~written:(Reader.show raw) ?made:(handle_made raw) (demanded env demand pos (type_of env x)) x, [ { (res_of env x) with erasure = made env raw x } ], if pos <> Erased then V.CVar x else V.CErased)
   | List (l, []) -> error l "empty form"
@@ -1265,7 +1285,7 @@ and elab_arg env m a tele = elab_expr1 ?tele env m a
 and elab_head env pos l raw =
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
-  | Handle (_, x, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
+  | Handle (_, x, _, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
   | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
   | Nat _ | Char _ | Str _ -> error l "%s is a literal, not a name" (Reader.show raw)
   | _ ->
@@ -1281,7 +1301,7 @@ and computed_head env pos raw =
   | List (l, (List (hl, _) as h) :: args) when not (named_share env h) ->
       let env, r, _ = elab_head env pos hl h in
       let x = match r.term with Var x -> x | _ -> assert false in
-      (env, List (l, Handle (hl, x, (entry env x).mult, Obj.repr V.VToken) :: args))
+      (env, List (l, Handle (hl, x, MintedIs, (entry env x).mult, Obj.repr V.VToken) :: args))
   | _ -> (env, raw)
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
@@ -1497,7 +1517,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
   | Sp.Share, [ a ] ->
       if pos = Erased then error_in env l "`share` in an erased position";
       let env, r, code = match a with
-        | Atom (al, _) | Handle (al, _, _, _) | Nat (al, _) | Char (al, _) | Str (al, _) ->
+        | Atom (al, _) | Handle (al, _, _, _, _) | Nat (al, _) | Char (al, _) | Str (al, _) ->
             let env, x = atom_entry env a in
             if made env a x <> Unique then error_in env al "`share` needs a unique value";
             (use env al ~sharing:true Many x, res_of env x, V.CVar x)
@@ -1536,7 +1556,7 @@ and elab_special ?sink ?final demand tele env expect l sp args =
       let m = App (id (match mode with Erased -> "MErased" | Many -> "MMany" | Unique -> "MUnique"), []) in
       let h, env = bind env None (under pos Many) Hypothetical (App (id "Settled", [ m; minted_type env x; minted_is env x ])) in
       produced env [] "a handle and so many" (type_of env h) Many;
-      (env, [ res_of env h ], if pos = Erased then V.CErased else V.CConst (V.VHandle ((entry env x).minted, mode, match (entry env x).state with Settled v when mode = Many -> v | _ -> V.VToken)))
+      (env, [ res_of env h ], if pos = Erased then V.CErased else V.CConst (V.VHandle ((entry env x).minted, MintedIs, mode, match (entry env x).state with Settled v when mode = Many -> v | _ -> V.VToken)))
   | sp, _ when List.mem sp primitives -> (
       let shown () = tick (speller env (Sp.name sp)) in
       match Hashtbl.find_opt prims sp with

@@ -12,7 +12,7 @@ let con_Array v = Ffi_core.array_of ~array:Obj.obj ~wrap:Obj.repr (Obj.obj v)
 let des_Bytes v = Obj.repr (Ffi_core.bytes_view ~bytes:Obj.obj ~u8:Obj.repr ~wrap:Obj.repr v)
 let con_Bytes v = Ffi_core.bytes_of ~z:Obj.obj ~bytes:Obj.obj ~wrap:Obj.repr (Obj.obj v)
 let des_Raw v = Obj.repr (Ffi_core.raw_view ~handle:Obj.repr ~get:Obj.obj ~str:(fun s -> Obj.repr ((s, 0, String.length s) : Ffi_core.slice)) ~nat:Obj.repr ~pos:Obj.repr ~list:Obj.repr ~raw:Obj.repr v)
-let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, m, v = (Obj.obj h : int * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, m, v)) ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))
+let con_Raw v = Obj.repr (Ffi_core.raw_of ~unhandle:(fun l h -> let x, r, m, v = (Obj.obj h : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in Ffi_core.Handle (l, x, r, m, v)) ~text:(fun v -> let (s, o, l) = (Obj.obj v : Ffi_core.slice) in String.sub s o l) ~z:Obj.obj ~pos:Obj.obj ~list:Obj.obj ~raw:Obj.obj (Obj.obj v))
 let show_any (v : Obj.t) : string = "?"
 let flush_to oc s = output_string oc s; flush oc
 let print_final = print_endline

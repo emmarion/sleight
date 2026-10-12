@@ -16,7 +16,7 @@ let slot_term = App (Var slot, [])
 let () = Env.slot_type := slot_term
 let null, env = Env.bind env (Some (Reader.Src "vacant-slot")) Many token slot_term
 let env = Env.place env null (Var null)
-let () = Term.univ := univ
+let () = Term.univ := univ; Term.type_entry := type_
 let world, env = Env.bind env (Some (Reader.Src "World")) Erased token (TyCtor [])
 let world_term = App (Var world, [])
 

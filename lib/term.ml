@@ -113,6 +113,7 @@ let mult_name = function Erased -> "erased" | Many -> "many" | Unique -> "unique
 let disc_name = function Enum -> "enum" | Union -> "union"
 
 let univ = ref (-1)
+let type_entry = ref (-1)
 let universe = "(Univ)"
 
 (* [name_of] resolves free ids; bound names come from the telescopes being printed. [kw] spells a keyword. *)

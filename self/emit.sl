@@ -558,7 +558,7 @@
     (let-match many r (RAtom _ s)
       ((RList _ xs) (tail $ syn-handle-decls d xs))
       (else d))
-    (let-match many s (NHandle x m _) (else d))
+    (let-match many s (NHandle x _ m _) (else d))
     (handle-decl d x m))
   ((many syn-handle-decls : (many (Decls) d) (subterm many (List $ Syn) xs) -> (many (Decls) o))
     (let-match many xs (Cons _ x rest) ((Nil _) d))
@@ -570,8 +570,11 @@
   (let-match many info (MkEInfo _ _ _ s _ _ _ _))
   (match many s _ ((SHypothetical _) (RStr "(failwith \"a Hypothetical constant\")")) ((SSettled _ v _) (addr-rope _ v))))
 
-(def-fns _ $ (many handle-rope : (many (Env) env) (many (Nat) x) (many (Multiplicity) m) -> (many (Rope) r))
-  (rcat3 (RStr "(") (nat-rope x) $ rcat4 (RStr "), Ffi_core.") (RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")) (RStr ", ") $
+(def-fns _ $ (many reading-rope : (many (Reading) rd) -> (many (Rope) r))
+  (RStr $ match many rd _ ((MintedIs) "Ffi_core.MintedIs") ((MintedType) "Ffi_core.MintedType")))
+
+(def-fns _ $ (many handle-rope : (many (Env) env) (many (Nat) x) (many (Reading) rd) (many (Multiplicity) m) -> (many (Rope) r))
+  (rcat5 (RStr "(") (nat-rope x) (RStr "), ") (reading-rope rd) $ rcat4 (RStr ", Ffi_core.") (RStr $ match many m _ ((Erased) "Erased") ((Many) "Many") ((Once) "Unique")) (RStr ", ") $
     match many m _ ((Many) (const-rope env x)) (else (RStr "(Obj.repr ())"))))
 
 (def-fns _
@@ -582,7 +585,7 @@
         ((RAtom _ s) (match many s (((String) _) ((Rope) _))
           ((NSrc t) (values "Atom" $ rcat (RStr "Ffi_core.Src ") $ quoted t))
           ((NGen n t) (values "Atom" $ rcat5 (RStr "Ffi_core.Gen (") (z-rope n) (RStr ", ") (quoted t) $ RStr ")"))
-          ((NHandle x m _) (values "Handle" $ handle-rope env x m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
+          ((NHandle x rd m _) (values "Handle" $ handle-rope env x rd m)))) ((RNat _ n) (values "Nat" $ z-rope n)) ((RChr _ n) (values "Char" $ nat-rope n))
         ((RString _ s) (values "Str" $ quoted s)) ((RWild _) (values "Wild" $ REmpty))
         ((RList _ xs) (values "List" $ bracketed $ notail $ syns-rope env file xs))))
     (match many r (((Rope) _))
@@ -595,7 +598,7 @@
   (let-match many p (PStr s) ((PNat n) (nat-literal n)) ((PHalf n) (nat-literal n))
     ((PBytes b) (rcat3 (RStr "(Obj.repr (Bytes.of_string ") (quoted b) $ RStr "))"))
     ((PRaw f r) (rcat3 (RStr "(Obj.repr ") (syn-rope env f r) $ RStr ")"))
-    ((PHandle x m _) (rcat3 (RStr "(Obj.repr (") (handle-rope env x m) $ RStr "))")))
+    ((PHandle x rd m _) (rcat3 (RStr "(Obj.repr (") (handle-rope env x rd m) $ RStr "))")))
   (let ((many n) (erased _)) (str-length s))
   (rcat5 (RStr "(Obj.repr ((") (quoted s) (RStr ", 0, ") (nat-rope n) $ RStr ") : Ffi_core.slice))"))
 
@@ -805,12 +808,14 @@
       ((CPrim _ _ p args)
         (let ((many hs)) $ notail $ emit-codes _ args env ns d)
         (let-match many hs (Cons _ h hidden) ((Nil _) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
-        (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) in v)")))
+        (let-match many (sp-eq p $ SpExpr $ ExSettledValue) (BFalse) ((BTrue) (rcat3 (RStr "(let (_, _, _, v) = (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) in v)")))
+        (let-match many (sp-eq p $ SpExpr $ ExSettledType) (BFalse)
+          ((BTrue) (rcat5 (RStr "(Obj.repr (match (Obj.obj ") h (RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (x, Ffi_core.MintedIs, _, _) -> (x, Ffi_core.MintedType, Ffi_core.Erased, Obj.repr ()) | _ -> (") (handle-rope env type-id (MintedIs) (Erased)) $ RStr ")))")))
         (let-match many (sp-eq p $ SpExpr $ ExSettledMult) (BTrue) ((BFalse) (rcat3 (RStr "(failwith ") (quoted $ no-macro-world p) $ RStr ")")))
         (let-match many hidden (Cons _ ce r1) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
         (let-match many r1 (Cons _ cm r2) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
         (let-match many r2 (Cons _ cu _) ((Nil _) (RStr "(failwith \"`settled-mult` with no constructors\")")))
-        (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.mult * Obj.t) with (_, Ffi_core.Erased, _) -> ") ce (RStr " | (_, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
+        (rcat5 (rcat3 (RStr "(match (Obj.obj ") h $ RStr " : int * Ffi_core.reading * Ffi_core.mult * Obj.t) with (_, _, Ffi_core.Erased, _) -> ") ce (RStr " | (_, _, Ffi_core.Many, _) -> ") cm $ rcat3 (RStr " | _ -> ") cu $ RStr ")"))
       ((CAbsurd _ _) (RStr "(absurd ())"))
       ((CError _ _ m) (rcat3 (RStr "(failwith ") (quoted m) $ RStr ")"))))
 
@@ -964,7 +969,7 @@
       ((BTag _ c _) (collect-cell c d))
       ((BCtorFn _ c) (collect-ctor c d))
       ((BMat _ adt) (collect-adt adt d))
-      ((BExt _ p) (match many p _ ((PHandle x m _) (handle-decl d x m)) ((PRaw _ r) (syn-handle-decl d r)) (else d)))
+      ((BExt _ p) (match many p _ ((PHandle x _ m _) (handle-decl d x m)) ((PRaw _ r) (syn-handle-decl d r)) (else d)))
       (else d))
     (match many g _ ((MkGroup _ _ fns _) (tail $ collect-group _ _ fns env d)))))
 

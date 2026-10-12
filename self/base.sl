@@ -683,17 +683,27 @@
   (many Many : -> (Multiplicity))
   (many Once : -> (Multiplicity)))
 
+(def-adts $ (Reading : -> Type)
+  enum
+  (many MintedIs : -> (Reading))
+  (many MintedType : -> (Reading)))
+
+(def-fns _ $ (many reading-eq : (many (Reading) a) (many (Reading) b) -> (many (Bool) r))
+  (match many a _
+    ((MintedIs) (match many b _ ((MintedIs) (BTrue)) ((MintedType) (BFalse))))
+    ((MintedType) (match many b _ ((MintedIs) (BFalse)) ((MintedType) (BTrue))))))
+
 (def-adts $ (Name : -> Type)
   enum
   (many NSrc : (many (String) s) -> (Name))
   (many NGen : (many (Nat) n) (many (String) s) -> (Name))
-  (many NHandle : (many (Nat) id) (many (Multiplicity) m) (many (String) shown) -> (Name)))
+  (many NHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (String) shown) -> (Name)))
 
 (def-fns _ $ (many spell-name : (many (Name) n) -> (many (String) r))
   (match many n _
     ((NSrc s) (spell-text s))
     ((NGen k s) (str-cat3 "__g" (nat-str k) $ str-cat "_" $ spell-text s))
-    ((NHandle _ _ s) s)))
+    ((NHandle _ _ _ s) s)))
 
 (def-fns _ $ (many name-text : (many (Name) n) -> (many (String) r))
   (match many n _ ((NSrc s) s) (else (spell-name n))))
@@ -702,7 +712,7 @@
   (match many a _
     ((NSrc s) (match many b _ ((NSrc t) (str-eq s t)) (else (BFalse))))
     ((NGen m _) (match many b _ ((NGen n _) (nat-eq m n)) (else (BFalse))))
-    ((NHandle m _ _) (match many b _ ((NHandle n _ _) (nat-eq m n)) (else (BFalse))))))
+    ((NHandle m ra _ _) (match many b _ ((NHandle n rb _ _) (and (nat-eq m n) $ reading-eq ra rb)) (else (BFalse))))))
 
 (def-fns _ $ (many rlist : (subterm many (List $ Rope) rs) -> (many (Rope) r))
   (match many rs _

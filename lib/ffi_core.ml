@@ -3,7 +3,8 @@ type slice = string * int * int
 type loc = At of { file : string; line : Z.t; col : Z.t } | NoLoc | Unknown
 type name = Src of string | Gen of Z.t * string
 type mult = Erased | Many | Unique
-type raw = Atom of loc * name | Handle of loc * int * mult * Obj.t | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
+type reading = MintedIs | MintedType
+type raw = Atom of loc * name | Handle of loc * int * reading * mult * Obj.t | Wild of loc | Nat of loc * Z.t | Char of loc * int | Str of loc * string | List of loc * raw list
 
 (* Each extern type one level deep, in the order and arities of its model's constructors: [_view] takes a host
    value apart into the constructor at the top and host values below, [_of] puts one together. *)
@@ -138,7 +139,7 @@ let raw_view ~handle ~get ~str ~nat ~pos ~list ~raw v =
   match get v with
   | Atom (l, Src s) -> RawName (p l, str s)
   | Atom (l, Gen (n, s)) -> RawGen (p l, nat n, str s)
-  | Handle (l, x, m, v) -> RawSettled (p l, handle (x, m, v))
+  | Handle (l, x, r, m, v) -> RawSettled (p l, handle (x, r, m, v))
   | Nat (l, n) -> RawNat (p l, nat n)
   | Char (l, c) -> RawChar (p l, nat (Z.of_int c))
   | Str (l, s) -> RawStr (p l, str s)

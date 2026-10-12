@@ -19,7 +19,7 @@ and value =
   | VMatchable of adt
   | VFn of closure
   | VToken
-  | VHandle of id * mult * value
+  | VHandle of id * Ffi_core.reading * mult * value
 
 and payload = Int of Z.t | Slice of Ffi_core.slice | Array of value array | Bytes of bytes | Raw of Reader.raw
 

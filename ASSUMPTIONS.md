@@ -4048,6 +4048,33 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     literal enters its code's numeral as well, which the character's rule
     names.
 
+217. **`settled-type` and `settled-eq`, where MACROS.md is silent.**
+    `settled-type` of a `MintedType` handle is a `MintedIs` handle to
+    the built-in `Type` entry, on this session's reading that the type
+    of a type is `Type`, which `(Univ)` canonicalizes to as well. It
+    reads the minted type as the fact table holds it at the innermost
+    run position, without canonicalizing it. A `MintedType` handle is
+    `MErased` and holds no value; an extracted program holds a handle as
+    its id, its reading, its multiplicity and its value. Spliced where
+    an expression or a type is read, a `MintedType` handle binds an
+    anonymous erased entry whose `is` rule is that type and whose type
+    is `Type`, and refers to it; where a name is read, it is refused as
+    "a handle to `_` is not a name", a `MintedType` handle written raw
+    showing as `_`. The message about a handle used at the wrong
+    multiplicity shows the term the handle stands for, canonically, in
+    both compilers. `settled-eq` answers `Just` only when the two terms
+    and also their two types are identical after canonicalizing, since
+    `JMRefl` needs the types equal too. The literals whose declaration
+    facts it enters differ between the compilers and are meant not to
+    be observable, a literal's declaration facts rewriting only its own
+    entries: the reference enters those of the literals the terms and
+    types mention, and of those their facts mention in turn; `slc`
+    enters every literal interned so far, into its trusted table
+    widened first to the current id bound, which is why its `TrustThen`
+    carries that bound at `many`. `slc` passes `settled-eq` the
+    prelude's `None` and `(Some (JMRefl))` as hidden arguments after
+    its handles, as `settled-mult` gets the `Mult` constructors.
+
 ## The world (section 42)
 
 Choices both implementations make about the world where DESIGN.md is

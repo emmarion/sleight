@@ -266,7 +266,7 @@
     (many ExCoercibleRefl : -> (ExprK)) (many ExCoercibleSym : -> (ExprK)) (many ExCoercibleTrans : -> (ExprK))
     (many ExCoercibleWrap : -> (ExprK)) (many ExCoercibleCtor : -> (ExprK)) (many ExCoercibleOf : -> (ExprK)) (many ExDelegateOf : -> (ExprK))
     (many ExProveLiteralLt : -> (ExprK)) (many ExOpenAbsurd : -> (ExprK)) (many ExWorldDo : -> (ExprK)) (many ExGensym : -> (ExprK)) (many ExGensymUnique : -> (ExprK)) (many ExSettledOf : -> (ExprK))
-    (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)))
+    (many ExSettledType : -> (ExprK)) (many ExSettledEq : -> (ExprK)) (many ExSettledMult : -> (ExprK)) (many ExSettledValue : -> (ExprK)) (many ExInternNat : -> (ExprK)) (many ExInternChar : -> (ExprK)) (many ExInternString : -> (ExprK)))
   ((MarkK : -> Type)
     enum
     (many MkErased : -> (MarkK)) (many MkMany : -> (MarkK)) (many MkUnique : -> (MarkK)) (many MkAt : -> (MarkK)) (many MkColon : -> (MarkK)) (many MkIs : -> (MarkK))
@@ -286,7 +286,7 @@
     ((ExProvePredates) 6) ((ExValues) 7) ((ExPredatesTrans) 8) ((ExSubtermTrans) 9) ((ExPredatesSubterm) 10)
     ((ExCoerce) 11) ((ExCoercibleRefl) 12) ((ExCoercibleSym) 13) ((ExCoercibleTrans) 14) ((ExCoercibleWrap) 15)
     ((ExCoercibleCtor) 16) ((ExCoercibleOf) 17) ((ExProveLiteralLt) 18) ((ExOpenAbsurd) 19) ((ExDelegateOf) 26) ((ExWorldDo) 27) ((ExGensym) 28) ((ExGensymUnique) 29) ((ExSettledOf) 30)
-    ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35)))
+    ((ExSettledMult) 31) ((ExSettledValue) 32) ((ExInternNat) 33) ((ExInternChar) 34) ((ExInternString) 35) ((ExSettledType) 36) ((ExSettledEq) 37)))
 
 (def-fns _ $ (many mark-code : (many (MarkK) k) -> (many (Nat) n))
   (match many k _
@@ -333,7 +333,7 @@
   sp-cons "predates-subterm" (SpExpr $ ExPredatesSubterm) $
   sp-cons "coerce" (SpExpr $ ExCoerce) $ sp-cons "coercible-refl" (SpExpr $ ExCoercibleRefl) $ sp-cons "coercible-sym" (SpExpr $ ExCoercibleSym) $
   sp-cons "coercible-trans" (SpExpr $ ExCoercibleTrans) $ sp-cons "coercible-wrap" (SpExpr $ ExCoercibleWrap) $
-  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
+  sp-cons "coercible-ctor" (SpExpr $ ExCoercibleCtor) $ sp-cons "coercible-of" (SpExpr $ ExCoercibleOf) $ sp-cons "delegate-of" (SpExpr $ ExDelegateOf) $ sp-cons "coercible-share" (SpExpr $ ExCoercibleShare) $ sp-cons "dump-context" (SpStmt $ StDumpContext) $ sp-cons "compile-error" (SpStmt $ StCompileError) $ sp-cons "compile-warn" (SpStmt $ StCompileWarn) $ sp-cons "world-do" (SpExpr $ ExWorldDo) $ sp-cons "gensym" (SpExpr $ ExGensym) $ sp-cons "gensym-unique" (SpExpr $ ExGensymUnique) $ sp-cons "settled-of" (SpExpr $ ExSettledOf) $ sp-cons "settled-type" (SpExpr $ ExSettledType) $ sp-cons "settled-eq" (SpExpr $ ExSettledEq) $ sp-cons "settled-mult" (SpExpr $ ExSettledMult) $ sp-cons "settled-value" (SpExpr $ ExSettledValue) $ sp-cons "intern-nat" (SpExpr $ ExInternNat) $ sp-cons "intern-char" (SpExpr $ ExInternChar) $ sp-cons "intern-string" (SpExpr $ ExInternString) $ sp-cons "def-opaque" (SpStmt $ StDefOpaque) $ sp-cons "def-prim" (SpStmt $ StDefPrim) $
   sp-cons "erased" (SpMark $ MkErased) $ sp-cons "many" (SpMark $ MkMany) $ sp-cons "unique" (SpMark $ MkUnique) $ sp-cons ":" (SpMark $ MkColon) $
   sp-cons "is" (SpMark $ MkIs) $ sp-cons "->" (SpMark $ MkArrow) $ sp-cons "subterm" (SpMark $ MkSubterm) $
   sp-cons "enum" (SpMark $ MkEnum) $ sp-cons "union" (SpMark $ MkUnion) $ sp-cons "tail" (SpMark $ MkTail) $ sp-cons "notail" (SpMark $ MkNoTail) $
@@ -508,7 +508,7 @@
     (many PStr : (many (String) s) -> (Payload))
     (many PBytes : (many (String) s) -> (Payload))
     (many PRaw : (many (String) file) (many (Syn) r) -> (Payload))
-    (many PHandle : (many (Nat) id) (many (Multiplicity) m) (many (String) shown) -> (Payload)))
+    (many PHandle : (many (Nat) id) (many (Reading) rd) (many (Multiplicity) m) (many (String) shown) -> (Payload)))
   ((ExtType : -> Type)
     enum
     (many ExtArray : -> (ExtType)) (many ExtNat : -> (ExtType)) (many ExtHalf : -> (ExtType)) (many ExtString : -> (ExtType)) (many ExtBytes : -> (ExtType))
@@ -2271,11 +2271,11 @@
 (def-adts $ (Trusted : -> Type)
   enum
   (many TrustHere : -> (Trusted))
-  (many TrustThen : (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) -> (Trusted)))
+  (many TrustThen : (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) tb) -> (Trusted)))
 
-(def-fns _ $ (many trusted-at : (many (Bool) run) (erased (Nat) n) (erased (Facts n) f) (erased (Nat) c) (many (Table n f c) tb) (many (Trusted) rp) -> (many (Trusted) r))
+(def-fns _ $ (many trusted-at : (many (Bool) run) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) tb) (many (Trusted) rp) -> (many (Trusted) r))
   (let-match many run (BFalse) ((BTrue) (TrustHere)))
-  (match many rp _ ((TrustHere) (TrustThen _ _ _ tb)) (else rp)))
+  (match many rp _ ((TrustHere) (TrustThen _ _ c tb)) (else rp)))
 
 (def-adts
   ((Env : -> Type)
@@ -2489,7 +2489,7 @@
 (def-fns _ $ (many env-lits : (many (Env) e) -> (many (List $ LitEntry) r))
   (match many e _ ((MkEnv _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ lt _ _ _ _ _) lt)))
 (def-fns _ $ (many env-enter-body : (many (Env) e) (many (Nat) f) (many (Nat) level) (many (List $ Nat) subterms) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi _ _ cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at (BFalse) _ _ _ tb rp) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa tk lt lo pr us hn ex))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi _ _ cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at (BFalse) _ _ fr tb rp) ob li fi (Some _ level) (MkEnclosing (Some _ f) subterms (None _) (BFalse)) cl wa tk lt lo pr us hn ex))))
 ; Where a claimed name was bound, which the second claim's note names.
 (def-fns _ $ (many claimed-at : (subterm many (List $ Pair (String) $ Loc) cl) (many (String) name) ->
     (many (Maybe $ Loc) r))
@@ -2521,7 +2521,7 @@
 (def-fns _ $ (many env-set-table : (many (Env) e) (erased (Nat) n) (erased (Facts n) f) (many (Nat) c) (many (Table n f c) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ _ _ rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ c x rp ob li fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-run-pos : (many (Env) e) (many (Bool) x) -> (many (Env) r))
-  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ _ tb rp) ob li fi lv st cl wa tk lt lo pr us hn ex))))
+  (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob li fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb (trusted-at x _ _ fr tb rp) ob li fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-set-literals : (many (Env) e) (many (NameMap $ Nat) x) -> (many (Env) r))
   (match many e _ ((MkEnv _ hp sc en _ _ fr tb rp ob _ fi lv st cl wa tk lt lo pr us hn ex) (MkEnv _ hp sc en _ _ fr tb rp ob x fi lv st cl wa tk lt lo pr us hn ex))))
 (def-fns _ $ (many env-prelude : (many (Env) e) -> (many (Scope) r))
@@ -2767,6 +2767,15 @@
     (else (MkEnv _ hp2 sc en2 nf ff fr tb rp ob li2 fi2 lv st cl2 wa2 tk2 lt2 lo pr us hn ex2)))
   (let ((erased n3) (erased f3) (many tb3)) $ reenter-lits minted _ _ fr2 $ table-weaken _ _ _ _ tb $ lt-weaken fr fr2 p)
   (MkEnv _ hp2 sc en2 _ _ fr2 tb3 rp ob li2 fi2 lv st cl2 wa2 tk2 lt2 lo pr us hn ex2))
+
+(def-fns _ $ (many trusted-snapshot : (many (Env) env) -> (many (Env) r))
+  (let ((erased n) (erased f) (many bnd) (many tb)) $ env-table env)
+  (let-match many env (MkEnv _ _ _ _ _ _ _ _ rp _ _ _ _ _ _ _ _ _ _ _ _ _ _))
+  (let ((erased n0) (erased f0) (many tb0)) $ match many rp (((Nat) n0) ((Facts n0) f0) ((Table n0 f0 bnd) _))
+    ((TrustHere) (values n f tb))
+    ((TrustThen tn tf c tb1) (match many (nat-cmp c bnd) (((Nat) n0) ((Facts n0) f0) ((Table n0 f0 bnd) _)) ((CLt _ _ _ _ p) (values tn tf $ table-weaken _ _ _ _ tb1 $ lt-weaken c bnd p)) (else (values n f tb)))))
+  (let ((erased n2) (erased f2) (many tb2)) $ reenter-lits (env-lits env) _ _ bnd tb0)
+  (env-set-run-pos (env-set-table env _ _ bnd tb2) (BTrue)))
 
 (def-fns _ $ (many entry : (many (Env) env) (many (Nat) x) -> (erased (Hist Block) hs) (many (EInfo hs) r))
   (let ((erased hs) (many en)) $ env-entries env)
@@ -3076,7 +3085,7 @@
       (env-with-store env _ hp (idmap-set _ x (MkEInfo _ name mult state minted io meta site) en) fi))))
 
 (def-fns _ $ (many lookup : (many (Env) env) (many (Name) name) -> (many (Maybe $ Nat) r))
-  (match many name _ ((NHandle x _ _) (Some _ x)) (else (name-index-get _ name $ scope-names $ env-scope env))))
+  (match many name _ ((NHandle x _ _ _) (Some _ x)) (else (name-index-get _ name $ scope-names $ env-scope env))))
 
 (def-fns _ $ (many visible-names : (many (Env) env) (subterm many (List $ Nat) xs) -> (many (List $ String) r))
   (let-match many xs (Cons _ x rest) ((Nil _) (Nil _)))

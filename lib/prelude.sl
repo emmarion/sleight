@@ -1416,6 +1416,14 @@
 
 (def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
 
+(def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) Type T) h)))
+
+(def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
+    (erased (Mult) mb) (erased Type B) (erased B b)
+    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+
 (def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
     (many m is r)))
 
