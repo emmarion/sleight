@@ -1,10 +1,41 @@
-# `Type : Type` and no positivity: a soundness sketch
+# `Type : Type` and no positivity: why they appear sound here
 
-This note argues that §10 of DESIGN.md, `Type : Type` with no positivity
-requirement, plausibly does not make the language unsound. It is a
-sketch written by a Claude session, not a proof anyone has checked, and
-it is not machine-checked. It reduces OPEN.md 1 to lemmas that are named
-below and are themselves unproved. Section numbers are DESIGN.md's.
+A reader who knows Girard's and Curry's paradoxes will expect §10 of
+DESIGN.md, `Type : Type` with no positivity requirement, to make this
+language unsound. This note argues that it does not. It is a sketch by a
+Claude session, not a checked proof, and section numbers are DESIGN.md's.
+
+## In short
+
+The claim is relative: **whatever soundness the rest of the language
+has, §10 does not take away.** The language also has mutual recursion,
+recursion through function pointers stored in data, and first-class
+types. None of these appears to reopen the paradoxes, for four reasons:
+
+1. **Types never compute.** A type contains no call (§9) and the checker
+   never evaluates (§29), so a paradox has no way to make checking loop.
+2. **Termination does not come from types.** Every call must go down in
+   §17's order: the callee's level, then the `subterm`-marked arguments.
+   Levels are ordered by when they are minted, and `Subterm` is strict
+   subtree on finite values. Neither looks at a type, so neither cares
+   whether `Type` contains itself or whether a datatype occurs
+   negatively in its own constructors.
+3. **A stored function is a leaf.** The result of calling a function
+   held in data is never a subterm of that data. Calling the function
+   needs the same level or subterm evidence as any other call. A Curry
+   knot fails at exactly that call: `tests/paradox_*.sl` compile the
+   standard knots, and the checker refuses each at the self-application.
+4. **The number of `subterm` parameters is bounded by the program
+   text.** Telescopes are syntax, never built at run time, so the
+   lexicographic order has a fixed length and is well-founded.
+
+Parts 1 to 7 turn this into an argument. It rests on lemmas about the
+rest of the language that are not proved here: that the facts the
+checker records hold of the values, that uniqueness and cells implement
+immutable values, that the FFI matches its models, and so on. A
+stratified, strictly positive version of the language would need every
+one of those too. A bug in any of them is a bug, but it is not a cost of
+§10.
 
 ## 1. What is claimed
 
