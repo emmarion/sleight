@@ -243,10 +243,15 @@ that the test does not make is a mistake in this file.
   `tests/macro_symbol_eq.sl` compares names and gensyms with `symbol-eq`.
 - `tests/tactic_lt_lemma.sl` — a proof tactic written as a macro, `lt-lemma`
   from `std/tactics.sl`. It takes a lemma's whole signature, reads the `Lt`
-  hypotheses and the goal from it as syntax, adds a step from `t` to
-  `(Succ t)` by `lt-succ` wherever `(Succ t)` appears, searches for a chain,
-  and emits the `def-fns` with nested `lt-trans` calls as its body, which is
-  then checked like any other definition. It checks the `Lt` and `Succ`
+  and `Le` hypotheses and the goal from it as syntax, adds a strict step from
+  `t` to `(Succ t)` by `lt-succ` wherever `(Succ t)` appears, searches for a
+  chain, strict somewhere when the goal is `Lt`, and emits the `def-fns`
+  with the chain's proof as its body, built from `lt-le-trans`, `LtS` and
+  `lt-weaken` over `Le`'s `Lt` field, which is then checked like any other
+  definition. `tests/tactic_le_lemma.sl` covers `Le`: each way of joining a
+  strict and a non-strict step, `(Le a a)` from no hypotheses, and a weakened
+  `Lt`; `tests/tactic_le_lemma_bad.sl` is two `Le` steps offered for an `Lt`
+  goal. It checks the `Lt` and `Succ`
   heads against the prelude's through `resolve` and `settled-eq`, so the
   `aliased` lemma's `S` passes, and it emits the prelude names it uses as
   handles, so the `hygienic` lemma, whose parameters shadow them, still

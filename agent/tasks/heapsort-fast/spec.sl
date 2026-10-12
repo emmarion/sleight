@@ -11,11 +11,6 @@
   (prove-literal-lt 18014398509481984 4611686018427387904))
 
 (def-adts
-  ((Le : ((Nat) a) ((Nat) b) -> Type)
-    enum
-    (many MkLe : (erased (Nat) a) (erased (Nat) b) (erased (Lt a (Succ b)) p) -> (Le a b))))
-
-(def-adts
   ((AllTo : (Type A) ((TyCtor (A x) (A y) -> Type) R) ((List A) xs) (A m) -> Type)
     enum
     (many AllToNil : (erased Type A) (erased (TyCtor (A x) (A y) -> Type) R) (erased A m)

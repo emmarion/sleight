@@ -1,10 +1,10 @@
-#!pi -f ../../README.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1
+#!pi -f ../../std -f ../../README.md -f ../../WARNINGS.md -f ../../DESIGN.md -f ../../lib/prelude.sl -f ../../tests -f ../../pal -f ../../self -f heapsort-fast -c work -k HANDOFF.md:60000 -k FEEDBACK.md:120000 -n 20 PI_RUN_TIMEOUT=60 PI_CONTEXT_STOP=50 PI_REWRITE_STOP=20 PI_FIRST_ERROR=no PI_OCAML=1
 Your task is to write a fast, in-place heapsort in SL, certified correct against
 heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
 This task will likely take many sessions, so leaving solid, well-recorded
 progress matters more than finishing in this one.
 
-To check your work, compile in order: heapsort-fast/spec.sl, your files,
+To check your work, compile in order: std/nat.sl, heapsort-fast/spec.sl, your files,
 heapsort-fast/accept.sl, then heapsort-fast/perf.sl. The finished solution must
 compile with no warnings, and none of the files in work/files.txt may contain
 a `;! suppress`; intermediate work may have both. A solution is not
@@ -14,7 +14,8 @@ tail call, even if measurements show no gain.
 
 For reference: README.md (the implementations and their command lines),
 WARNINGS.md (the warnings the compilers emit), DESIGN.md (the language),
-prelude.sl (the standard library), tests/ (example programs), pal/ (a
+prelude.sl (the standard library), std/ (source libraries, among them
+std/nat.sl, which holds `Le`), tests/ (example programs), pal/ (a
 certified program), and self/ (the compiler, itself written in SL).
 
 Only work/, HANDOFF.md, and FEEDBACK.md carry over to the next session. In
@@ -45,7 +46,7 @@ Hint: heapsort-fast/bsearch-demo.sl coerces a `List (Nat)` with an `AllTo`
 proof to `List (U62)` at no cost, and holds `bsearch`, a certified binary
 search, with a program that times it. It compiles with no warnings. Its
 `Absent` proof walks the whole list, yet the search runs in O(log n), since
-erased code never runs; to see what is left, compile heapsort-fast/spec.sl and
+erased code never runs; to see what is left, compile std/nat.sl, heapsort-fast/spec.sl and
 heapsort-fast/bsearch-demo.sl with the `sl` tool's `ocaml` option.
 
 Hint: spec.sl ties `u62-modulus` to the numeral 4611686018427387904, so a

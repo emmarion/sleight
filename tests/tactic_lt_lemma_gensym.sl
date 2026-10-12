@@ -1,4 +1,4 @@
-; needs: ../std/macro ../std/tactics
+; needs: ../std/macro ../std/nat ../std/tactics
 ; expect: "ok"
 (def-fns _ $ (many gen-name : (unique (MacroWorld) mw) (many (Pos) p) (many (String) s) ->
     (unique (MacroWorld) mw2 at mw) (many (Raw) r))

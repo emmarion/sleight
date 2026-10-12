@@ -27,8 +27,9 @@ DESIGN.md specifies. The other files:
   (`mini/README.md`).
 - `pal/`: certified longest-palindrome programs (`pal/README.md`).
 - `std/`: source libraries a program names on the command line before its
-  own files. `std/macro.sl` holds helpers for writing macros, and
-  `std/tactics.sl`, which needs it, holds proof tactics written as macros.
+  own files. `std/macro.sl` holds helpers for writing macros, `std/nat.sl`
+  holds `Le`, the non-strict order on `Nat`, and `std/tactics.sl`, which
+  needs both, holds proof tactics written as macros.
 
 ## Build and run
 

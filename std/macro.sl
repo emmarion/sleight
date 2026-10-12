@@ -54,5 +54,8 @@
         (let-match many (notail $ same-raw x y) (BTrue) ((BFalse) (BFalse)))
         (tail $ same-raws xr yr)))))
 
-(def-fns _ $ (many raw-count : (subterm many (List $ Raw) xs) -> (many (Nat) n))
-  (match many xs _ ((Nil _) (Zero)) ((Cons _ h t) (Succ $ notail $ raw-count t))))
+(def-fns _ $ (many ref : (many (Pos) p) (erased Type T) (erased T t) (many (Settled (MErased) T t) h) -> (many (Raw) r))
+  (RawSettled p _ _ _ h))
+
+(def-fns _ $ (many app : (many (Pos) p) (many (Raw) f) (many (List $ Raw) args) -> (many (Raw) r))
+  (form p $ Cons _ f args))

@@ -1,4 +1,4 @@
-; needs: ../std/macro ../std/tactics
+; needs: ../std/macro ../std/nat ../std/tactics
 ; expect: "ok"
 (lt-lemma (erased chain3 : (erased (Nat) a b c d e)
     (erased (Lt c d) h3) (erased (Lt a e) junk) (erased (Lt a b) h1 h2) (erased (Lt b c) h4) -> (erased (Lt a d) r)))
