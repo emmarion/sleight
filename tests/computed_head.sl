@@ -1,0 +1,13 @@
+; expect: (MkPair _ _ 5 $ MkPair _ _ 6 $ MkPair _ _ 7 8)
+(def-fns _ $ (many pick : (many (Special) s) -> (many (Special) r)) s)
+(def-fns _ $ (many pass : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+    (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
+  (values mw args))
+(let ((many splice)) (MkMacro _ pass))
+(def-fns _ $ (many idm : (many (Macro) m) -> (many (Macro) r)) m)
+(def-fns _ $ (many inc : (many (Nat) a) -> (many (Nat) b)) (Succ a))
+((pick let) ((many x)) 5)
+(let ((many y)) ((pick values) 6))
+(let ((many z)) ((idm splice) 7))
+(let ((many ((pick Fn) (level-of inc) (many (Nat) a) -> (many (Nat) b)) g)) inc)
+(MkPair (Nat) (Pair (Nat) (Pair (Nat) (Nat))) x $ MkPair (Nat) (Pair (Nat) (Nat)) y $ MkPair (Nat) (Nat) z (g 7))

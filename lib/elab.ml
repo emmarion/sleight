@@ -54,6 +54,7 @@ let rec special_of env raw =
   | _ -> None
 
 let is_special env raw s = special_of env raw = Some s
+let named_share env = function List (_, [ h; (Atom _ | Handle _) ]) -> is_special env h Sp.Share | _ -> false
 let mult_of env raw = match special_of env raw with Some Sp.Erased -> Some Erased | Some Sp.Many -> Some Many | Some Sp.Unique -> Some Unique | _ -> None
 let mult_or env loc raw = match mult_of env raw with Some m -> m | None -> error loc "expected a multiplicity, got %s" (tick (Reader.show raw))
 let is_statement env = function List (_, h :: _) -> List.exists (is_special env h) Sp.statements | _ -> false
@@ -187,7 +188,10 @@ let expected = function [] -> "" | ss -> ": expected " ^ tick (String.concat " "
 let counted n what = Printf.sprintf "%d %s%s" n what (if n = 1 then "" else "s")
 let with_mults used tele = List.map (fun (e : entry) -> { e with mult = used e.mult }) tele
 
+let computed env = function Handle (_, x, _, _) -> x >= 0 && (entry env x).temporary && (entry env x).name = None | _ -> false
+
 let describe env pos raw term ty =
+  let raw = if computed env raw then List (Reader.loc raw, []) else raw in
   let used, marks = match ty with Fn _ | UniqueFn _ -> (under pos, true) | TyCtor _ -> (Fun.id, false) | _ -> (field_under pos, true) in
   let apposed = match ty, raw with Cell _, (Atom _ | Handle _) -> true | _ -> false in
   let view = lazy (
@@ -554,14 +558,19 @@ let expand env raw =
         (macro_of env head)
   | _ -> None
 
-let rec expand_one env raw =
+let settle_head : (Env.t -> mult -> raw -> Env.t * raw) ref = ref (fun env _ raw -> (env, raw))
+
+let rec expand_one pos env raw =
+  let env, raw = !settle_head env pos raw in
   match expand env raw with
   | None -> (env, raw)
-  | Some (env, [ r ]) -> expand_one env r
+  | Some (env, [ r ]) -> expand_one pos env r
   | Some (_, rs) -> error (loc raw) "%s must expand to one form here, and expanded to %d" (brief raw) (List.length rs)
 
-let rec expand_seq env = function
-  | item :: rest as items -> (match expand env item with Some (env, out) -> expand_seq env (out @ rest) | None -> (env, items))
+let rec expand_seq pos env = function
+  | item :: rest ->
+      let env, item = !settle_head env pos item in
+      (match expand env item with Some (env, out) -> expand_seq pos env (out @ rest) | None -> (env, item :: rest))
   | [] -> (env, [])
 
 let rec spliced env = function
@@ -776,12 +785,14 @@ let pragma env l = function
 let mint_level env ~at name = bind env ~minted_level:true ~at name Erased (settled env V.VToken) Prelude.level_term
 
 let rec elab_term ?expect env raw =
-  let env, raw = erased_reads expand_one env raw in
+  let env, raw = erased_reads (expand_one Many) env raw in
   match raw with
   | Wild l -> let x, env = bind env ~meta:true ~at:l None Erased Hypothetical type_term in (env, Var x)
   | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, Var x)
   | List (l, []) -> error l "empty form"
   | List (l, head :: args) -> (
+      if computed env head && (entry env (reference env l head "a head")).state = Hypothetical then
+        error_in env (loc head) "a computed head in a type must be `Settled`, and this one is `Hypothetical`";
       match special_of env head with
       | Some sp -> elab_type_form env l sp args
       | None -> (
@@ -866,7 +877,7 @@ and compile_text pos env l sp = function
       let env, x, m = match raw with
         | Atom _ | Handle _ | Nat _ | Char _ | Str _ -> let env, x = atom_entry env raw in (env, x, made env raw x)
         | List (_, [ h; (Atom _ | Handle _ as a) ]) when special_of env h = Some Sp.Share -> let x = reference env (loc a) a "a name" in (env, x, made env a x)
-        | _ -> error (loc raw) "%s is not a name" (tick (Reader.show raw)) in
+        | _ -> (match !settle_head env Many (List (loc raw, [ raw ])) with env, List (_, [ Handle (_, x, m, _) ]) -> (env, x, m) | _ -> assert false) in
       let str = match prelude_id env "String" with Some t -> App (Var t, []) | None -> error l "%s needs the prelude's `String`, which `--no-prelude` leaves out" (tick (speller env (Sp.name sp))) in
       (match (if m = Erased then None else settled_value env x str) with
        | Some v -> (read_special pos env raw, str_host env l v)
@@ -1202,7 +1213,7 @@ and elab_erased env raw =
 
 and elab_form ?sink ~final demand cc expect_tele env expect raw =
   let pos = pos_of env expect in
-  let env, raw = expand_one env raw in
+  let env, raw = expand_one pos env raw in
   match raw with
   | Atom (l, _) | Handle (l, _, _, _) | Nat (l, _) | Char (l, _) | Str (l, _) | Wild l ->
       let env, x = atom_entry env raw in
@@ -1245,6 +1256,7 @@ and elab_arg env m a tele = elab_expr1 ?tele env m a
 and elab_head env pos l raw =
   match raw with
   | Atom (_,n) -> let x = var env l n in (env,res_of env x,V.CVar x)
+  | Handle (_, x, _, _) when computed env raw -> (env,res_of env x,V.CVar x)
   | Wild _ -> error l "`_` is not a name, and nothing is inferred here"
   | Nat _ | Char _ | Str _ -> error l "%s is a literal, not a name" (Reader.show raw)
   | _ ->
@@ -1254,6 +1266,14 @@ and elab_head env pos l raw =
       let x, env = bind env ?minted ~minted_level ?introduced:order ~word:true ~temporary:true None r.erasure state r.ty ~rule:r.term in
       let env = if env.run_pos || pos = Erased then env else { env with pending = (x, code) :: env.pending } in
       (placed env x r.place,res_of env x,V.CVar x)
+
+and computed_head env pos raw =
+  match raw with
+  | List (l, (List (hl, _) as h) :: args) when not (named_share env h) ->
+      let env, r, _ = elab_head env pos hl h in
+      let x = match r.term with Var x -> x | _ -> assert false in
+      (env, List (l, Handle (hl, x, (entry env x).mult, Obj.repr V.VToken) :: args))
+  | _ -> (env, raw)
 
 and elab_call ?(unique = false) ?(assert_at = false) ?sink ?(demand = Fixed) cc env ?tele expect l hl c callee hcode lv params rets args =
   let pos = pos_of env expect in
@@ -1940,7 +1960,7 @@ and elab_body ?tele ?sink env expect l items = hoisted env (fun env -> elab_body
 
 and elab_body_items ?tele ?sink env expect l items =
   report_shadows ~env ();
-  let env, items = expand_seq env items in
+  let env, items = expand_seq (pos_of env expect) env items in
   let env, items = match items with
     | List (ll, h :: m :: scrut :: pat :: branches) :: rest when is_special env h Sp.LetMatch -> let env, branches = spliced env branches in (env, List (ll, h :: m :: scrut :: pat :: branches) :: rest)
     | items -> (env, items) in
@@ -1964,7 +1984,7 @@ and real_branch env = function List (_, a :: _) -> not (is_special env a Sp.Absu
 
 (* The statements before a body's final expression, and the code they wrap around what follows them. *)
 and elab_stmts ?within spos env l items =
-  let env, items = expand_seq env items in
+  let env, items = expand_seq spos env items in
   match items with
   | [] -> error l "a body needs a final expression"
   | [ final ] -> (env, Fun.id, final)
@@ -2446,6 +2466,8 @@ and elab_def_adts env adts =
   let env, cids = List.fold_left2 define (env, []) tids headers in
   (env, if env.run_pos then Fun.id else fun rest -> V.CLet (List.map fst cids, V.CValues (List.map (fun (_, v) -> V.CConst v) cids), rest))
 
+let () = settle_head := computed_head
+
 type final = Main | Program | Thunk of term | Plain
 
 let final_form env ty =
@@ -2485,7 +2507,7 @@ let report_unused env =
 
 let run_toplevel ?(consume = fun _ _ v -> print_endline (V.show v)) ?(path = "-") env items =
   let rec go env items =
-    let env, items = expand_seq env items in
+    let env, items = expand_seq Many env items in
     match items with
     | [] -> env
     | List (l, Atom (_, Src ";!") :: words) :: rest -> go (at l (fun () -> pragma env l words)) rest
