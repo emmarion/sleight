@@ -109,7 +109,7 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | vcApp : TmTy Γ h H → Γ.canon H = .valCtor sig → ArgsTy Γ args sig (.bind (.ty m e) T .nil) →
       TmTy Γ (.app h args) T
   | tyCtor : TeleOK Γ ps → (Tm.tyCtor ps).static Γ.n 0 → TmTy Γ (.tyCtor ps) .univ
-  | valCtor : TeleOK Γ sig → (Tm.valCtor sig).static Γ.n 0 → TmTy Γ (.valCtor sig) .univ
+  | valCtor : TeleOK Γ sig → (Tm.valCtor sig).static Γ.n 0 → sig.valRet 0 → TmTy Γ (.valCtor sig) .univ
   | predates : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ x X → Γ.canon X = Γ.canon A →
       TmTy Γ L K → Γ.canon K = .level → TmTy Γ (.predates A x L) .univ
   | subterm : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ a A' → Γ.canon A' = Γ.canon A →

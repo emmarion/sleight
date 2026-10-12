@@ -34,6 +34,8 @@ examples/paradox_same_level_bad.sl: refused: prove-subterm: not a strict subterm
 examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subterm
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
+examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
+examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
 examples/vec_head.sl: (Succ (Zero))
 unchecked examples/adt_mentions_bad.sl: syntax error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 unchecked examples/else_empty_bad.sl: (Zero)
@@ -54,6 +56,7 @@ unchecked examples/paradox_knot_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_same_level_bad.sl: stuck: call does not decrease
 unchecked examples/paradox_univ_subterm_bad.sl: _
 unchecked examples/refuted_branch_bad.sl: (Zero)
+unchecked examples/valctor_return_bad.sl: (Zero)
 stripped examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
 stripped examples/anon_level.sl: (Succ (Succ (Zero)))
 stripped examples/binder_refute.sl: (Zero)
@@ -71,4 +74,5 @@ stripped examples/let_binders.sl: (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ
 stripped examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat))) (Succ (Succ (Zero)))
 stripped examples/map.sl: (Cons (Nat) (Succ (Zero)) (Cons (Nat) (Succ (Succ (Zero))) (Nil (Nat))))
 stripped examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
+stripped examples/valctor_return.sl: (MkBox (Nat) (Succ (Zero)))
 stripped examples/vec_head.sl: (Succ (Zero))

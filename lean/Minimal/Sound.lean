@@ -161,7 +161,7 @@ theorem tm_sound (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ Γ) 
     refine ⟨?_, by simp [Tm.static, hs, hargs], by simpa [Tm.static] using hout⟩
     simp only [Tm.subst]; rw [hv]; exact .con hc hvs hidx
   | _, _, .tyCtor _ hs => ⟨.univ, hs, rfl⟩
-  | _, _, .valCtor _ hs => ⟨.univ, hs, rfl⟩
+  | _, _, .valCtor _ hs _ => ⟨.univ, hs, rfl⟩
   | _, _, .predates hA _ hx _ hL _ => by
     have := tm_sound hP hE hA; have := tm_sound hP hE hx; have := tm_sound hP hE hL
     exact ⟨.univ, by simp_all [Tm.static], rfl⟩

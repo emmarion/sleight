@@ -60,7 +60,8 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
   | .valCtor sig => do
     let ⟨ht⟩ ← checkTele' Γ rules sig
     let ⟨hs⟩ ← need ((Tm.valCtor sig).static Γ.n 0) "ValCtor: not well scoped"
-    .ok ⟨.univ, .valCtor ht hs⟩
+    let ⟨hr⟩ ← need (sig.valRet 0) "ValCtor: the return is not an application of a type constructor from outside"
+    .ok ⟨.univ, .valCtor ht hs hr⟩
   | .predates A x L => do
     let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "Predates: not a type"

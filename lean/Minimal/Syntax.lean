@@ -168,6 +168,12 @@ def strictSub (a : Tm) : Tm → Bool
 
 def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i nil
 
+def valRet : Tm → Nat → Bool
+  | bind _ _ r@(bind ..), n => r.valRet (n + 1)
+  | bind (.ty _ _) (app (tyc _) _) nil, _ | bind (.ty _ _) (app (fv _) _) nil, _ => true
+  | bind (.ty _ _) (app (bv k) _) nil, n => n ≤ k
+  | _, _ => false
+
 end Tm
 
 inductive Dec where

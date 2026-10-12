@@ -173,7 +173,9 @@ state. SOUNDNESS.md's invariants appear as:
   directly; otherwise it is a call. A constructor value reached any
   other way, a call's result say, is applied after a `let` binder
   written with its type. A type or constructor whose `def-adts`
-  mentions top-level entries is not first class. In the core every
+  mentions top-level entries is not first class. A `ValCtor`'s return
+  must be an application of a type constructor that is not one of its
+  own fields (ASSUMPTIONS.md 80). In the core every
   application is one former, `Tm.app`, whose head is a declared type
   constructor, a declared value constructor or a variable, and is typed
   through its head's type; a value of a `ValCtor` type is a declared
