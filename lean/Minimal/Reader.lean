@@ -59,6 +59,7 @@ structure ESt where
   lits : List (Nat × Nat) := []
   pre : Bool := true
   tail : Bool := false
+  refute : Bool := false
   known : List (Nat × Tm) := []
   inl : List (Nat × Tm) := []
   lifts : List (Nat × List Nat) := []
@@ -434,7 +435,7 @@ partial def elabArms (sc : Scope) (er gEr : Bool) (rms : List Bool) (R : Option 
     reset base
     let (d', ci, fsc) ← openPattern sc er (.list (.atom c :: xs))
     let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
-    let body ← ghostly (gEr || ab || (ph && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R))
+    let body ← ghostly (gEr || ab || (ph && !er)) (elabBody fsc (if ab then [true] else rms) items (if ab then none else R) ab)
     if out.any (·.2.1 == ci) then throw "two branches for one constructor"
     out := out ++ [(d', ci, if ab then .absurd body else body)]
   reset base
@@ -471,7 +472,18 @@ partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) (i
 
 partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
-  | [e] => elabExpr sc want exp e
+  | [e] => do
+    if !(← get).refute then return ← elabExpr sc want exp e
+    match e with
+    | .list (.atom "match" :: args@(_ :: _ :: .atom "_" :: _)) => do
+      let (true, s :: _ :: brs) ← splitMult true args | throw "a refuting match is erased"
+      let (ss, [s]) ← withTail false (elabExpr sc [true] none s) | throw "match: one scrutinee"
+      let (out, els) ← elabArms sc true true [] none brs
+      if els.isSome then throw "a refuting match has no else"
+      return (ss ++ [(fun _ => .case s out none true : Stmt)], [])
+    | e => do
+      let (ss, [t]) ← elabExpr sc [true] none e | throw "a refutation is one value"
+      return (ss ++ [(fun _ => .case t [] none true : Stmt)], [])
   | .list (.atom "def-adts" :: bs) :: rest => do
     declareAdts sc bs
     elabSeq sc want exp rest
@@ -493,10 +505,10 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
         | _ => throw "malformed let binder"
       | _ => throw "malformed let binder"
     let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
-    let r0 := (← get).rhs
-    modify fun st => { st with rhs := true }
+    let (r0, f0) := ((← get).rhs, (← get).refute)
+    modify fun st => { st with rhs := true, refute := false }
     let (ss, ts) ← withTail ((← get).tail && returnsBinders ((bs.filter (!·.2.1)).map (·.1)) want rest) (elabSeq sc (bs.map (·.2.1)) bexp items)
-    modify fun st => { st with rhs := r0 }
+    modify fun st => { st with rhs := r0, refute := f0 }
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
     let mut sc' := sc
@@ -560,7 +572,7 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       let rents ← entryErs true rs
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
         (if ab then [true] else rents.map fun e => er || e.2) items
-        (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)))
+        (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)) ab)
       pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
@@ -570,11 +582,12 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     return (.defFns gid :: ss, ts)
   | e :: _ => throw s!"{e.show.take 40} is not a statement"
 
-partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none) : M Core := do
-  let r0 := (← get).rhs
-  modify fun st => { st with rhs := false }
+partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none)
+    (refute : Bool := false) : M Core := do
+  let (r0, f0) := ((← get).rhs, (← get).refute)
+  modify fun st => { st with rhs := false, refute }
   let (ss, ts) ← elabSeq sc want exp items
-  modify fun st => { st with rhs := r0 }
+  modify fun st => { st with rhs := r0, refute := f0 }
   return close ss ts
 end
 

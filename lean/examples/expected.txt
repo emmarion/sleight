@@ -1,5 +1,5 @@
 examples/absurd.sl: 1
-examples/absurd_bad.sl: refused: absurd: the body's value is of a type with constructors
+examples/absurd_bad.sl: refused: a branch that is not refuted is missing
 examples/absurd_listed_bad.sl: refused: an absurd branch names a constructor that is not refuted
 examples/adt_mentions.sl: 3
 examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
@@ -53,6 +53,7 @@ examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subte
 examples/phantom.sl: 1
 examples/phantom_build_bad.sl: refused: a non-erased let binder of a term mentioning something erased
 examples/phantom_ctor_bad.sl: refused: a non-erased let binder of a term mentioning something erased
+examples/refute.sl: 1
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
 examples/tail.sl: 4
@@ -64,7 +65,7 @@ examples/union_bad.sl: error: a match without a runtime discriminant can have on
 examples/valctor_return.sl: (MkBox _ 1)
 examples/valctor_return_bad.sl: refused: ValCtor: the return is not an application of a type constructor from outside
 examples/vec_head.sl: 1
-unchecked examples/absurd_bad.sl: stuck: an absurd body returned
+unchecked examples/absurd_bad.sl: stuck: no branch
 unchecked examples/absurd_listed_bad.sl: 0
 unchecked examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
 unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
@@ -123,6 +124,7 @@ stripped examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 stripped examples/newtype.sl: (MkMeters 3)
 stripped examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 stripped examples/phantom.sl: 1
+stripped examples/refute.sl: 1
 stripped examples/syntax.sl: (Cons _ 3 $ Cons _ 0 $ Nil _)
 stripped examples/tail.sl: 4
 stripped examples/top_statement.sl: 

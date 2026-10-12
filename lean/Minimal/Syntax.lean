@@ -210,9 +210,23 @@ inductive Core where
   | dead
   deriving Repr, Inhabited
 
-def Core.real : Core → Bool
-  | .absurd _ | .dead => false
-  | _ => true
+mutual
+def Core.noRet : Core → Bool
+  | .ret _ => false
+  | .call _ _ _ _ _ r | .mtch _ _ _ _ _ r | .prim _ _ r | .defLvl r | .defFns _ r | .chk _ _ _ r => r.noRet
+  | .case _ brs els _ => Core.armsNoRet brs && Core.optNoRet els
+  | .absurd _ | .dead => true
+
+def Core.armsNoRet : List (Nat × Nat × Core) → Bool
+  | [] => true
+  | (_, _, b) :: t => b.noRet && Core.armsNoRet t
+
+def Core.optNoRet : Option Core → Bool
+  | none => true
+  | some e => e.noRet
+end
+
+def Core.real (c : Core) : Bool := !c.noRet
 
 def lookupBr (brs : List (Nat × Nat × Core)) (c : Nat) : Option Core := (brs.find? (·.2.1 == c)).map (·.2.2)
 

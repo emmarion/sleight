@@ -166,11 +166,14 @@ produces nothing (section 27).
   theorem, under "What is proved".
 - `absurd` (DESIGN.md sections 21 and 25): a function marked `absurd`,
   and a branch `(absurd (C f ...) body ...)`, whose body is erased and
-  ends in one value of a data type with no constructors; and
+  ends by refuting the facts in force (section 51): with a `match`
+  annotated `_` whose branches all refute, or with any other expression,
+  whose every constructor must be refuted, one match deep; a value of a
+  type with no constructors is the case where there are none. And
   `(absurd C)`, which lists a constructor that must be refuted.
-  Refuting the facts in force in place of that value (section 51) is
-  not supported. An absurd body never returns in a checked program,
-  since nothing has a type with no constructors.
+  `open-absurd` is not supported. In the core a refutation is a `case`
+  with no branch that returns (`Core.noRet`), so an absurd body never
+  returns in a checked program.
 - `let-match` (sections 27 and 52), with or without further branches,
   elaborated to the core's `case`: a match without an annotation or a
   continuation of its own, whose branches each end the enclosing code.

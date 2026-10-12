@@ -194,8 +194,7 @@ inductive CoreTy : Nat → Ctx → Core → Tm → Prop
   | chkTy : TmTy P Γ a A → TmTy P Γ T U → Γ.canon U = .univ → Γ.canon A = Γ.canon T → CoreTy b Γ rest rets →
       CoreTy b Γ (.chk .ty a T rest) rets
   | chkRt : Γ.ok (rt P Γ a) → CoreTy b Γ rest rets → CoreTy b Γ (.chk .rt a x rest) rets
-  | absurd : CoreTy b { Γ with ghost := true } body (.bind (.ty m e) (.app (.tyc d) idx) .nil) →
-      (Tm.app (.tyc d) idx).static Γ.n 0 → P.adts[d]? = some D → D.ctors = [] → CoreTy b Γ (.absurd body) rets
+  | absurd : CoreTy b { Γ with ghost := true } body .nil → body.noRet = true → CoreTy b Γ (.absurd body) rets
 
 inductive BranchOK : Nat → Bool → Ctx → Tm → Nat → Tm → Nat → Tm → Tm → Option Core → Bool → Prop
   | live : Γ.branch s d c idx sig = (Γf, .ok σ) →

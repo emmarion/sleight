@@ -101,6 +101,11 @@
     (absurd D0)
     ((DS _ b2 _) (LtZ (Succ b2)))))
 
+(def-fns _ $ (erased absurd lt-asym : (erased (Nat) r) (erased (Nat) c) (subterm erased (Lt r c) p) (erased (Lt c (Succ r)) g) -> (erased (False) f))
+  (match erased p _
+    (absurd (LtZ _) (let-match erased g (LtS _ _ g1)) g1)
+    (absurd (LtS a b p1) (let-match erased g (LtS _ _ g1)) (lt-asym a b p1 g1))))
+
 (def-fns _ $ (erased mod-succ-lt : (erased (Nat) s) (erased (Nat) c) (erased (Nat) r) (subterm erased (Mod s c r) q) (erased (Lt (Succ r) c) lt) ->
     (erased (Mod (Succ s) c (Succ r)) q1))
   (match erased q _
@@ -172,10 +177,54 @@
   (let ((many c) (erased q)) (add b c1))
   (values c (MulSucc a1 b c1 c m (add-comm b c1 c q))))
 
+(def-fns _ $ (many sub : (many (Nat) a) (subterm many (Nat) b) (erased (Lt b (Succ a)) le) -> (many (Nat) c) (erased (Add b c a) p))
+  (let-match many b (Succ b1) ((Zero) (values a (AddZero a))))
+  (let-match many a (Succ a1) (absurd (Zero) (let-match erased le (LtS _ _ l1)) l1))
+  (let ((erased le1)) (match erased le (((Lt b1 (Succ a1)) l)) (absurd LtZ) ((LtS _ _ l1) l1)))
+  (let ((many c) (erased q)) (tail $ sub a1 b1 le1))
+  (values c (AddSucc b1 c a1 q)))
+
+(def-fns _ $ (many succ-div : (many (Nat) q) (many (Nat) r) (many (Nat) c) (erased (Nat) m) (erased (Nat) s)
+    (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p) ->
+    (many (Nat) q1) (many (Nat) r1) (erased (Nat) m1) (erased (Mul q1 c m1) mm1) (erased (Add m1 r1 (Succ s)) a1) (erased (Lt r1 c) p1))
+  (match many (nat-cmp (Succ r) c) _
+    ((CLt _ _ _ _ lt) (values q (Succ r) m mm (add-succ-right m r s a) lt))
+    ((CEq _ _ _) (values (Succ q) (Zero) (Succ s) (MulSucc q c m (Succ s) mm (add-succ-right m r s a)) (add-zero-right (Succ s)) (LtZ r)))
+    (absurd (CGt _ _ _ _ gt) (lt-asym r c p gt))))
+
+(def-fns _ $ (many divmod : (subterm many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
+    (many (Nat) q) (many (Nat) r) (erased (Nat) m) (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p))
+  (let-match many s (Succ s1) ((Zero) (values (Zero) (Zero) (Zero) (MulZero c) (AddZero (Zero)) pos)))
+  (let ((many q1) (many r1) (erased m1) (erased mm1) (erased a1) (erased p1)) (notail $ divmod s1 c pos))
+  (succ-div q1 r1 c m1 s1 mm1 a1 p1))
+
+(def-fns _ $ (many div : (many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
+    (many (Nat) q) (erased (Nat) m) (erased (Nat) r) (erased (Mul q c m) mm) (erased (Add m r s) a) (erased (Lt r c) p))
+  (let ((many q) (erased r) (erased m) (erased mm) (erased a) (erased p)) (divmod s c pos))
+  (values q m r mm a p))
+
 (def-fns _ $ (erased lt-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Lt a b) p) (erased (Lt b c) q) -> (erased (Lt a c) r))
   (match erased p _
     ((LtZ _) (match erased q _ ((LtS _ y _) (LtZ y))))
     ((LtS a1 b1 p1) (match erased q _ ((LtS _ y q1) (LtS a1 y (lt-trans a1 b1 y p1 q1)))))))
+
+(def-fns _ $ (erased lt-le-trans : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Lt a b) p) (erased (Lt b (Succ c)) q) -> (erased (Lt a c) r))
+  (match erased p _
+    ((LtZ _)
+      (let-match erased q (LtS _ _ q1))
+      (match erased q1 _ ((LtZ z) (LtZ z)) ((LtS _ y2 _) (LtZ y2))))
+    ((LtS a1 b1 p1)
+      (let-match erased q (LtS _ _ q1))
+      (match erased q1 _
+        (absurd (LtZ _) p1)
+        ((LtS b2 c1 q2) (LtS a1 c1 (lt-le-trans a1 b1 c1 p1 (LtS b2 c1 q2))))))))
+
+(def-fns _ $ (erased lt-subterm : (erased (Nat) a) (subterm erased (Nat) b) (erased (Lt a b) p) -> (erased (Subterm (Nat) a (Nat) b) s))
+  (let-match erased b (Succ b1) (absurd (Zero) p))
+  (match erased (nat-cmp a b1) _
+    ((CLt _ _ _ _ q) (subterm-trans (lt-subterm a b1 q) (prove-subterm b1 b)))
+    ((CEq _ _ _) (prove-subterm a b))
+    (absurd (CGt _ _ _ _ g) (lt-asym b1 a g p))))
 
 (def-fns _ $ (erased add-le-left : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c) (subterm erased (Add a b c) p) -> (erased (Lt a (Succ c)) q))
   (match erased p _
@@ -194,6 +243,12 @@
   (let-match erased mm0 (MulZero _))
   (match erased p0 _ ((AddZero _) two)))
 
+(def-fns _ $ (erased divmod-lt : (erased (Nat) s) (erased (Nat) c) (erased (Nat) q) (erased (Nat) r) (erased (Nat) m)
+    (erased (Mul q c m) mm) (erased (Add m r (Succ s)) a) (erased (Lt (Succ (Zero)) c) two) -> (erased (Lt q (Succ s)) l))
+  (match erased q _
+    ((Zero) (LtZ s))
+    ((Succ q1) (lt-le-trans q m (Succ s) (mul-lt q1 c m mm two) (add-le-left m r (Succ s) a)))))
+
 (def-lvl nat-lvl)
 
 (def-fns nat-lvl $ (many double : (many (Nat) a) -> (many (Nat) b) (erased (Double a b) d))
@@ -205,6 +260,19 @@
     ((CLt _ _ _ _ p) (Yes a b p))
     ((CEq _ _ _) (No a b (lt-succ a)))
     ((CGt _ _ _ _ q) (No a b (lt-weaken b a q)))))
+
+(def-fns _ $ (many succ-mod : (many (Nat) r) (many (Nat) c) (erased (Nat) s) (erased (Lt r c) p) (erased (Mod s c r) q) ->
+    (many (Nat) r1) (erased (Lt r1 c) p1) (erased (Mod (Succ s) c r1) q1))
+  (match many (nat-cmp (Succ r) c) _
+    ((CLt _ _ _ _ lt) (values (Succ r) lt (mod-succ-lt s c r q lt)))
+    ((CEq _ _ _) (values (Zero) (LtZ r) (mod-succ-wrap s r q)))
+    (absurd (CGt _ _ _ _ gt) (lt-asym r c p gt))))
+
+(def-fns _ $ (many nat-mod : (subterm many (Nat) s) (many (Nat) c) (erased (Lt (Zero) c) pos) ->
+    (many (Nat) r) (erased (Lt r c) p) (erased (Mod s c r) q))
+  (let-match many s (Succ s1) ((Zero) (values (Zero) pos (ModLt (Zero) c pos))))
+  (let ((many r1) (erased p1) (erased q1)) (notail $ nat-mod s1 c pos))
+  (succ-mod r1 c s1 p1 q1))
 
 (def-fns _ $ (many pow2 : (subterm many (Nat) k) -> (many (Nat) v) (erased (Pow2 k v) p) (erased (Lt (Zero) v) q))
   (let-match many k (Succ k1) ((Zero) (values (Succ (Zero)) (P0) (LtZ (Zero)))))
@@ -251,6 +319,12 @@
       (let-match erased q (PS _ w1 _ q1 dq))
       (double-mono v1 w1 v w (pow2-lt k1 k3 v1 w1 l1 p1 q1) dp dq))))
 
+(def-fns _ $ (erased eight-lt-sixty-two : -> (erased (Lt eight sixty-two) l))
+  (let-match erased sixty-mul (MulSucc _ _ _ _ _ s60))
+  (let ((erased ten-le)) (add-le-left _ _ _ (add-comm _ _ _ s60)))
+  (let ((erased eight-ten)) (lt-trans eight (Succ eight) (Succ (Succ eight)) (lt-succ eight) (lt-succ (Succ eight))))
+  (lt-le-trans eight sixty sixty-two (lt-le-trans _ _ _ eight-ten ten-le) (add-le-left _ _ _ sixty-two-add)))
+
 (def-fns _ $ (erased add-fn : (erased (Nat) a) (erased (Nat) b) (erased (Nat) c1) (erased (Nat) c2)
     (subterm erased (Add a b c1) p) (erased (Add a b c2) q) -> (erased (Eq (Nat) c1 c2) e))
   (let-match erased p (AddSucc a1 _ d1 p1) ((AddZero _) (match erased q _ ((AddZero _) (Refl (Nat) c1)) (absurd AddSucc))))
@@ -269,6 +343,12 @@
   (match erased p _
     ((AddZero _) pos)
     ((AddSucc a1 _ c1 p1) (LtS a1 c1 (add-pos-lt a1 b c1 p1 pos)))))
+
+(def-fns _ $ (erased mul-le : (erased (Nat) q) (erased (Nat) c) (erased (Nat) k) (subterm erased (Mul q c k) mm) (erased (Lt (Zero) c) pos) -> (erased (Lt q (Succ k)) l))
+  (match erased mm _
+    ((MulZero _) (LtZ k))
+    ((MulSucc q1 _ k1 _ mm1 p1)
+      (LtS q1 k (lt-le-trans q1 (Succ k1) k (mul-le q1 c k1 mm1 pos) (LtS k1 k (add-pos-lt k1 c k p1 pos)))))))
 
 (def-adts $ (Bin : -> Type)
   enum
@@ -326,6 +406,13 @@
   (let ((many r) (erased p)) (mul n v))
   (values r v pk p))
 
+(def-fns _ $ (many shr : (many (Nat) n) (many (Nat) k) ->
+    (many (Nat) q) (erased (Nat) v) (erased (Pow2 k v) pk)
+    (erased (Nat) m) (erased (Nat) r) (erased (Mul q v m) mm) (erased (Add m r n) a) (erased (Lt r v) p))
+  (let ((many v) (erased pk) (erased pos)) (pow2 k))
+  (let ((many q) (erased m) (erased r) (erased mm) (erased a) (erased p)) (div n v pos))
+  (values q v pk m r mm a p))
+
 (def-adts $ (Bit : -> Type)
   enum
   (many Bit0 : -> (Bit))
@@ -366,6 +453,13 @@
     ((D0) (LtZ (Zero)))
     ((DS a b d1) (LtS a (Succ (Succ b)) (lt-weaken a (Succ b) (double-lt a b d1))))))
 
+(def-fns _ $ (erased bitcons-lt : (erased (Nat) m) (erased (Bit) x) (erased (Nat) n) (erased (BitCons m x n) p) (erased (Lt (Zero) n) pos) -> (erased (Lt m n) l))
+  (let-match erased p (BC0 _ _ dd)
+    ((BC1 _ d dd) (double-lt m d dd)))
+  (match erased dd _
+    (absurd (D0) pos)
+    ((DS a b d1) (LtS a (Succ b) (double-lt a b d1)))))
+
 (def-fns _ $ (many nat-bit : (many (Nat) n) -> (many (Nat) m) (many (Bit) x) (erased (BitCons m x n) p))
   (match many (nat-halve n) _
     ((HZ) (values (Zero) (Bit0) (BC0 (Zero) (Zero) (D0))))
@@ -391,6 +485,31 @@
   (let ((many z) (erased e)) (bit-apply t x y))
   (let ((many c) (erased pc)) (bit-snoc c1 z))
   (values c (BwBit t a1 b1 c1 x y z a b c p1 e pa pb pc)))
+
+(def-fns _ $ (many bitwise : (many (BitOp) t) (subterm many (Nat) a) (subterm many (Nat) b) -> (many (Nat) c) (erased (Bitwise t a b c) p))
+  (let ((many a1) (many x) (erased pa)) (nat-bit a))
+  (let ((many b1) (many y) (erased pb)) (nat-bit b))
+  (match many a _
+    ((Zero)
+      (let-match many b (Succ b0) ((Zero) (values (Zero) (BwZero t))))
+      (let-match erased pa (BC0 _ _ da) (absurd BC1))
+      (let-match erased da (D0) (absurd DS))
+      (let ((erased sb)) (lt-subterm b1 b (bitcons-lt b1 y b pb (LtZ b0))))
+      (let ((many c1) (erased p1)) (notail $ bitwise t a1 (subterm sb) b1))
+      (bitwise-step t a b a1 b1 x y pa pb c1 p1))
+    ((Succ a0)
+      (let ((erased sa)) (lt-subterm a1 a (bitcons-lt a1 x a pa (LtZ a0))))
+      (let ((many c1) (erased p1)) (notail $ bitwise t (subterm sa) a1 b1))
+      (bitwise-step t a b a1 b1 x y pa pb c1 p1))))
+
+(def-fns _ $ (many nat-and : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise and-op a b c) p))
+  (tail (bitwise and-op a b)))
+
+(def-fns _ $ (many nat-or : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise or-op a b c) p))
+  (tail (bitwise or-op a b)))
+
+(def-fns _ $ (many nat-xor : (many (Nat) a) (many (Nat) b) -> (many (Nat) c) (erased (Bitwise xor-op a b c) p))
+  (tail (bitwise xor-op a b)))
 
 (def-fns _ $ (erased double-inj :
     (erased (Nat) m1) (erased (Nat) m2) (erased (Nat) d)

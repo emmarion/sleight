@@ -255,17 +255,10 @@ def checkCore (b : Nat) (Γ : Ctx) : (c : Core) → (rets : Tm ⊕ Nat) →
     let ⟨hr⟩ ← need (Γ.ok (rtArgs P Γ ts R)) "a non-erased result mentions something erased"
     .ok ⟨R, .ret h hr, fun _ e => (by cases e), fun _ e => by cases e; exact hs⟩
   | .absurd body, rets => do
-    let ⟨R, hb, _, hs⟩ ← checkCore b { Γ with ghost := true } body (.inr Γ.n)
-    match hR : R with
-    | .bind (.ty _ _) (.app (.tyc d) idx) .nil => match hD : P.adts[d]? with
-      | some D => do
-        let ⟨he⟩ ← need (D.ctors = []) "absurd: the body's value is of a type with constructors"
-        have hst : (Tm.app (.tyc d) idx).static Γ.n 0 := by
-          have := hs Γ.n rfl; rw [hR] at this; simp only [Tm.static, Bool.and_eq_true] at this ⊢; exact this.1
-        let R' := match rets with | .inl r => r | .inr _ => .nil
-        .ok ⟨R', .absurd (hR ▸ hb) hst hD he, fun r e => by simp [R', e], fun n e => by simp [R', e, Tm.static]⟩
-      | none => .error "unknown type"
-    | _ => .error "absurd: the body does not end in one value of a data type"
+    let ⟨_, hb, e⟩ ← checkCore b { Γ with ghost := true } body (.inl .nil)
+    let ⟨hn⟩ ← need (body.noRet = true) "absurd: the body does not refute the facts in force"
+    let R' := match rets with | .inl r => r | .inr _ => .nil
+    .ok ⟨R', .absurd (e.1 _ rfl ▸ hb) hn, fun r e => by simp [R', e], fun n e => by simp [R', e, Tm.static]⟩
   | .dead, _ => .error "a refuted branch outside a match"
   | .call f dec args er ms rest, rets => do
     let ⟨Ft, hf⟩ ← checkTm P Γ f

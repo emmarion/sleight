@@ -1286,11 +1286,106 @@ theorem match_setup (hP : ProgOK P) {ρ : List Tm} {Γ : Ctx} (hE : EnvOK P ρ �
     · exact hm.append hw hl (by simp [h6.cur]) (by simp [h6.subs])
     · exact Tm.static_mono (by simp only [Ctx.setErs_n]; simp only [Ctx.n] at h5 ⊢; omega) _ (Nat.le_refl 0) hRs
 
+theorem noRet_select {brs : List (Nat × Nat × Core)} {els : Option Core} {c : Nat} {vs pre : List Tm}
+    {body : Core} (h : selectBr brs els c vs = some (pre, body)) (hb : Core.armsNoRet brs = true)
+    (he : Core.optNoRet els = true) : body.noRet = true := by
+  unfold selectBr at h
+  split at h
+  · rename_i hl
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    unfold lookupBr at hl; simp only [Option.map_eq_some_iff] at hl
+    obtain ⟨⟨x, y, z⟩, hf, rfl⟩ := hl
+    have hmem := List.mem_of_find?_eq_some hf
+    clear hf
+    induction brs with
+    | nil => simp at hmem
+    | cons a t ih =>
+      simp only [Core.armsNoRet, Bool.and_eq_true] at hb
+      rcases List.mem_cons.mp hmem with rfl | hm
+      · exact hb.1
+      · exact ih hb.2 hm
+  · cases els <;> simp at h
+    obtain ⟨-, rfl⟩ := h
+    simpa [Core.optNoRet] using he
+
+theorem noRet_eval : ∀ μ ρ cnt c, c.noRet = true → ∀ r, eval P μ ρ cnt c ≠ .ok r := by
+  intro μ ρ cnt c
+  induction μ, ρ, cnt, c using eval.induct P with
+  | case1 => intro h; simp [Core.noRet] at h
+  | case2 μ ρ cnt f dec args er ms rest env n1 gid G F hcal argv μ' hmu outs cnt1 hev ihb ihr =>
+    intro h r e
+    rw [eval] at e; simp only [hcal] at e; rw [dif_pos hmu] at e; simp only [argv, μ'] at hev; simp only [hev] at e
+    exact ihr (by simpa [Core.noRet] using h) r e
+  | case3 μ ρ cnt f dec args er ms rest env n1 gid G F hcal argv μ' hmu e' hev ihb =>
+    intro h r e
+    rw [eval] at e; simp only [hcal] at e; rw [dif_pos hmu] at e; simp only [argv, μ'] at hev; simp only [hev] at e
+    cases e
+  | case4 μ ρ cnt f dec args er ms rest env n1 gid G F hcal argv μ' hmu =>
+    intro h r e
+    rw [eval] at e; simp only [hcal] at e; rw [dif_neg hmu] at e; cases e
+  | case5 μ ρ cnt f dec args er ms rest hcal =>
+    intro h r e
+    rw [eval] at e; simp only [hcal] at e; cases e
+  | case7 μ ρ cnt s R brs els er rest d c vs hs pre body hb e' hev ihb =>
+    intro h r e
+    rw [eval] at e; simp only [hs] at e
+    split at e
+    · rename_i pre' body' hb'
+      rw [hb] at hb'; cases hb'
+      simp only [hev] at e; cases e
+    · simp at e
+  | case6 μ ρ cnt s R brs els er rest d c vs hs pre body hb outs cnt1 hev ihb ihr =>
+    intro h r e
+    rw [eval] at e; simp only [hs] at e
+    split at e
+    · rename_i pre' body' hb'
+      rw [hb] at hb'; cases hb'
+      simp only [hev] at e
+      exact ihr (by simpa [Core.noRet] using h) r e
+    · simp at e
+  | case8 μ ρ cnt s R brs els er rest d c vs hs hb =>
+    intro h r e
+    rw [eval] at e; simp only [hs] at e
+    split at e
+    · rename_i hb'; rw [hb] at hb'; cases hb'
+    · cases e
+  | case19 μ ρ cnt s brs els er d c vs hs hb =>
+    intro h r e
+    rw [eval] at e; simp only [hs] at e
+    split at e
+    · rename_i hb'; rw [hb] at hb'; cases hb'
+    · cases e
+  | case10 μ ρ cnt p er rest ih =>
+    intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
+  | case11 μ ρ cnt rest ih =>
+    intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
+  | case12 μ ρ cnt gid rest G hG ih =>
+    intro h r e; rw [eval, hG] at e; exact ih (by simpa [Core.noRet] using h) r e
+  | case14 μ ρ cnt k a b rest ih =>
+    intro h r e; rw [eval] at e; exact ih (by simpa [Core.noRet] using h) r e
+  | case18 μ ρ cnt s brs els er d c vs hs pre body hb ih =>
+    intro h r e
+    simp only [Core.noRet, Bool.and_eq_true] at h
+    rw [eval] at e; simp only [hs] at e
+    split at e
+    · rename_i pre' body' hb'
+      rw [hb] at hb'; cases hb'
+      exact ih (noRet_select hb h.1 h.2) r e
+    · simp at e
+  | _ =>
+    intro _ r e
+    rw [eval] at e
+    first
+      | simp_all
+      | (split at e <;> simp_all)
+      | (simp only [*] at e; simp at e)
+
 theorem eval_real {μ : Option (List Nat)} {ρ : List Tm} {cnt : Nat} {c : Core} {r : List Tm × Nat}
     (h : eval P μ ρ cnt c = .ok r) : c.real = true := by
-  cases c <;> simp only [Core.real]
-  · rw [eval] at h; split at h <;> simp at h
-  · rw [eval] at h; simp at h
+  simp only [Core.real, Bool.not_eq_eq_eq_not, Bool.not_true]
+  cases hn : c.noRet
+  · rfl
+  · exact absurd h (noRet_eval _ _ _ _ hn r)
 
 theorem realBr_of_select {brs : List (Nat × Nat × Core)} {els : Option Core} {d c : Nat} {vs pre : List Tm}
     {body : Core} (hd : ∀ e ∈ brs, e.1 = d) (h : selectBr brs els c vs = some (pre, body)) (hr : body.real = true)
@@ -1639,20 +1734,12 @@ theorem eval_sound (hP : ProgOK P) : ∀ μ ρ cnt c, ∀ b Γ rets, CoreTy P b 
   | case15 μ ρ cnt body a hev ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
-    | absurd hcb hst hD hemp =>
-    obtain ⟨⟨vs, c', e, hv, -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm
-      (by simpa [Tm.static, Ctx.n] using hst)
-    exfalso
-    generalize Tm.ofList vs = w at hv
-    simp only [Tm.subst] at hv
-    cases hv with
-    | cons hv _ => exact no_value_of_empty hD hemp hv
+    | absurd hcb hn => exact absurd hev (noRet_eval _ _ _ _ hn a)
   | case16 μ ρ cnt body e hev ih =>
     intro b Γ rets hc hE hb hm hrs
     cases hc with
-    | absurd hcb hst hD hemp =>
-    obtain ⟨⟨vs, c', e', -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm
-      (by simpa [Tm.static, Ctx.n] using hst)
+    | absurd hcb hn =>
+    obtain ⟨⟨vs, c', e', -⟩, -⟩ := ih b _ _ hcb (hE.congr _ rfl rfl rfl rfl rfl) hb hm rfl
     rw [hev] at e'; cases e'
   | case17 μ ρ cnt =>
     intro b Γ rets hc
