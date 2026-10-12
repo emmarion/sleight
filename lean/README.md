@@ -135,11 +135,11 @@ produces nothing (section 27).
 
 ## Differences from MINIMAL.md
 
-1. A `def-adts` signature may mention a top-level entry only when the
-   elaborator knows its type from the text: a level, a function a
-   `def-fns` defines, or a `let` binder written with a type; or when the
-   entry is a `let` of a term, which is put in its place. Any other
-   entry is refused.
+1. A `def-adts` signature may mention an entry only when the elaborator
+   knows its type from the text: a level, a function a `def-fns`
+   defines, a function's parameter, or a `let` binder written with a
+   type; or when the entry is a `let` of a term or an `is` parameter,
+   which is put in its place. Any other entry is refused.
 
 ## Beyond MINIMAL.md
 
@@ -237,12 +237,14 @@ produces nothing (section 27).
   must canonicalize to `e`. In the core such an entry has no type of its
   own: its recorded type is a marker (`Tm.nil`) that the checker reads
   as "the type of its rule" and that every value has.
-- The top-level entries a `def-adts` block's signatures mention become
+- The entries a `def-adts` block's signatures mention become
   leading `erased` parameters of each of its types and constructors,
   which the elaborator supplies at every use and binds, unnamed, in every
   pattern; the printer leaves them out. The core's types stay closed, so
   the proofs need nothing new. `def-adts` blocks are elaborated in the
-  order they are written.
+  order they are written. A block inside a body is declared in the
+  program like any other, and its names are in scope to the end of the
+  body.
 - An application `(x args)` of a variable is a constructor application,
   a term, exactly when `x`'s type is written as a `TyCtor` or `ValCtor`
   where `x` is bound, or `x` is a `let` binder of a constructor named

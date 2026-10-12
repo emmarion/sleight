@@ -41,6 +41,7 @@ examples/let_match_rhs_bad.sl: error: a let-match with more than one real branch
 examples/let_type_bad.sl: refused: let: the binder is not of the type written
 examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
 examples/missing_branch_bad.sl: refused: a branch that is not refuted is missing
+examples/nested_adt.sl: 2
 examples/newtype.sl: (MkMeters 3)
 examples/newtype_bad.sl: error: Pair2 does not have newtype shape
 examples/no_annotation_bad.sl: refused: a same-level call whose subterm arguments are all unchanged
@@ -121,6 +122,7 @@ stripped examples/let_binders.sl: (Cons _ 2 $ Cons _ 1 $ Cons _ 3 $ Nil _)
 stripped examples/let_forward.sl: (VCons _ 0 2 $ VNil _)
 stripped examples/let_match.sl: (Cons _ 1 $ Cons _ 0 $ Nil _)
 stripped examples/map.sl: (Cons _ 1 $ Cons _ 2 $ Nil _)
+stripped examples/nested_adt.sl: 2
 stripped examples/newtype.sl: (MkMeters 3)
 stripped examples/numerals.sl: (Cons _ 3 $ Cons _ 2 $ Cons _ 0 $ Nil _)
 stripped examples/phantom.sl: 1

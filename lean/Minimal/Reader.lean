@@ -212,7 +212,7 @@ def reset (base : Nat) : M Unit := modify fun st =>
 def liftOf (d : Nat) : M (List Tm) := return (((← get).lifts.lookup d).getD []).map Tm.fv
 
 def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
-  if !st.top then st else if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
+  if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
 
 def abst (ids : List Nat) : Nat → Tm → Tm
   | D, .fv i => match ids.idxOf? i with
@@ -250,7 +250,6 @@ def declareAdts (sc : Scope) (blocks : List Sx) : M Unit := do
       pure (← name T, ps, cs)
     | _ => throw "malformed def-adts"
   let st ← get
-  if !st.top then throw "def-adts is confined to the top level"
   let base := st.decls.length
   let mut ctors := st.ctors
   for ((_, _, cs), j) in heads.zipIdx do
@@ -569,6 +568,10 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
       reset (base + sigs.length)
       let pents ← entryErs true ps
       let pids ← fresh (pents.map (·.2))
+      let _ ← pids.foldlM (fun t i => match t with
+        | .bind (.is _) e r => do note i e true; pure (r.inst (.fv i) 0)
+        | .bind _ A r => do note i A; pure (r.inst (.fv i) 0)
+        | t => pure t) tele
       let rents ← entryErs true rs
       let body ← withTail (!ab) <| ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
         (if ab then [true] else rents.map fun e => er || e.2) items
@@ -589,10 +592,10 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
 
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none)
     (refute : Bool := false) : M Core := do
-  let (r0, f0) := ((← get).rhs, (← get).refute)
+  let (r0, f0, a0, c0) := ((← get).rhs, (← get).refute, (← get).adts, (← get).ctors)
   modify fun st => { st with rhs := false, refute }
   let (ss, ts) ← elabSeq sc want exp items
-  modify fun st => { st with rhs := r0, refute := f0 }
+  modify fun st => { st with rhs := r0, refute := f0, adts := a0, ctors := c0 }
   return close ss ts
 end
 
