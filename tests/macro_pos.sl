@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: 9
 (warn-nowhere)
 (warn-zero)

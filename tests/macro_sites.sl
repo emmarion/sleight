@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: 60
 (def-adts $ (Shape : -> Type)
   enum

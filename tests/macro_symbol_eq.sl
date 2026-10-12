@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ "same" $ MkPair _ _ "other" "same other other")
 ; symbol-eq proves two symbols equal: names by their text, gensyms by their number, gensym-unique giving the text.
 (def-fns _ $ (many said : (many (Symbol) x) (many (Symbol) y) -> (many (String) s))

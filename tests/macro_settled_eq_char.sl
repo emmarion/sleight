@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: "no yes"
 (def-fns _ $ (many said : (erased Type A) (erased A a) (erased Type B) (erased B b) (many (Maybe $ JMEq A a B b) r) ->
     (many (String) t))

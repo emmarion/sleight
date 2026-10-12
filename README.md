@@ -26,6 +26,9 @@ DESIGN.md specifies. The other files:
   semantics, written as relations in the language itself
   (`mini/README.md`).
 - `pal/`: certified longest-palindrome programs (`pal/README.md`).
+- `std/`: source libraries a program names on the command line before its
+  own files. `std/macro.sl` holds helpers for writing macros, and
+  `std/tactics.sl`, which needs it, holds proof tactics written as macros.
 
 ## Build and run
 

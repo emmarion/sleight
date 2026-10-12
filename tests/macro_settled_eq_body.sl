@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: "yes no"
 (let ((many k)) 5)
 (let ((many s)) "s")

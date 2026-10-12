@@ -241,3 +241,15 @@ that the test does not make is a mistake in this file.
   position and interns the text. The same test shows the refusals of a path
   outside the directory, of `NoPos` and of a position that names no source.
   `tests/macro_symbol_eq.sl` compares names and gensyms with `symbol-eq`.
+- `tests/tactic_lt_lemma.sl` — a proof tactic written as a macro, `lt-lemma`
+  from `std/tactics.sl`. It takes a lemma's whole signature, reads the `Lt`
+  hypotheses and the goal from it as syntax, adds a step from `t` to
+  `(Succ t)` by `lt-succ` wherever `(Succ t)` appears, searches for a chain,
+  and emits the `def-fns` with nested `lt-trans` calls as its body, which is
+  then checked like any other definition. It checks the `Lt` and `Succ`
+  heads against the prelude's through `resolve` and `settled-eq`, so the
+  `aliased` lemma's `S` passes, and it emits the prelude names it uses as
+  handles, so the `hygienic` lemma, whose parameters shadow them, still
+  checks. `tests/tactic_lt_lemma_bad.sl` is a true goal that no chain
+  reaches, needing `LtS`; `tests/tactic_lt_lemma_head_bad.sl` is a goal
+  whose head is not `Lt`.

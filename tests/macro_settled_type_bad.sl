@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; error: type mismatch: expected `(List (Nat))`, got `(Nat)`
 (let ((many xs)) (Cons (Nat) 1 $ Nil (Nat)))
 (def-fns _ $ (many typed-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

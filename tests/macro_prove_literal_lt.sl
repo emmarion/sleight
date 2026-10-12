@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: "ok"
 (let ((many k)) 5)
 (def-fns _ $ (many lt-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

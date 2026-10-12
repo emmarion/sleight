@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; error: a handle to 5, made `erased`, used in a non-erased position
 (let ((many k)) 5)
 (def-fns _ $ (many use-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ 102 $ MkPair _ _ 7 $ MkPair _ _ 5 6)
 ; warns: <**>:18:24: warning: declaration of `nat-add` shadows a previous binder
 ; warns: lib/prelude.sl:<**>: note: shadowed binder is here

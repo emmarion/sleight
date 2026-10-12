@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ (MkPair _ _ "settled many" $ MkPair _ _ "settled erased" "unbound") $ MkPair _ _ (MkPair _ _ "hypothetical" $ MkPair _ _ "same" "other") $ MkPair _ _ (MkPair _ _ "settled unique" $ MkPair _ _ "settled many" "hypothetical") $ MkPair _ _ "unbound" $ MkPair _ _ "settled many" "fresh")
 (let ((many k)) 5)
 (let ((unique u)) (MkPair _ _ 1 2))

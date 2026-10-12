@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (RawList (NoPos) $ Cons _ (RawSymbol (MkPos "x.sl" 1 2) $ SName "nat-add") $ Cons _ (RawSettled (NoPos) _ _ _ _) $ Cons _ (RawWild $ NoPos) $ Cons _ (RawSettled (NoPos) _ _ _ _) $ Nil _)
 (def-fns _ $ (many first : (many (List $ Raw) rs) -> (many (Raw) r))
   (let-match many rs (Cons _ r rest) ((Nil _) (RawWild (NoPos))))

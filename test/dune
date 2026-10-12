@@ -2,6 +2,7 @@
  (name sources)
  (deps
   (glob_files %{project_root}/tests/*.sl)
+  (glob_files %{project_root}/std/*.sl)
   (glob_files %{project_root}/pal/*.sl)
   %{project_root}/self/base.sl
   (glob_files %{project_root}/mini/*.sl)))

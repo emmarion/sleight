@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; error: unique value `u` has conflicting non-erased uses
 (let ((unique u)) (MkPair _ _ 1 2))
 (def-fns _ $ (many m-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

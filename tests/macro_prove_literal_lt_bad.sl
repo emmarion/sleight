@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; error: `prove-literal-lt` takes two numerals
 (let ((many k)) (nat-add 2 3))
 (def-fns _ $ (many lt-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->

@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ (Cons _ 2 $ Nil _) $ MkPair _ _ "yesnoyesnoyesyes" "erased")
 (let ((many xs)) (Cons (Nat) 1 $ Nil (Nat)))
 (let ((many ys)) (Cons (Nat) 2 $ Nil (Nat)))

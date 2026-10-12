@@ -1,36 +1,4 @@
-(def-fns _ $ (many name : (many (Pos) p) (many (String) s) -> (many (Raw) r))
-  (RawSymbol p (SName s)))
-
-(def-fns _ $ (many nat-raw : (unique (MacroWorld) mw) (many (Pos) p) (many (Nat) n) -> (unique (MacroWorld) mw2 at mw) (many (Raw) r))
-  (let ((unique mw1) (many h)) (intern-nat mw n))
-  (values mw1 (RawSettled p _ _ _ h)))
-
-(def-fns _ $ (many str-raw : (unique (MacroWorld) mw) (many (Pos) p) (many (String) s) -> (unique (MacroWorld) mw2 at mw) (many (Raw) r))
-  (let ((unique mw1) (many h)) (intern-string mw s))
-  (values mw1 (RawSettled p _ _ _ h)))
-
-(let ((erased nat-type)) (Nat))
-
-(def-fns _ $ (many arg-nat : (unique (MacroWorld) mw) (many (Raw) r) -> (unique (MacroWorld) mw2 at mw) (many (Maybe (Nat)) n))
-  (let-match many r (RawSettled p m T t c) (else (values mw (None _))))
-  (let-match many (settled-mult _ _ _ c) (MMany) (else (values mw (None _))))
-  (let ((unique mw1) (many e)) (settled-eq _ _ _ _ _ _ mw (settled-type _ _ _ c) (settled-of erased nat-type)))
-  (let-match many e (Some _ j) ((None _) (values mw1 (None _))))
-  (let-match erased j (JMRefl _ _))
-  (values mw1 (Some _ $ settled-value _ _ c)))
-
-(def-fns _ $ (many form : (many (Pos) p) (many (List $ Raw) items) -> (many (Raw) r))
-  (RawList p items))
-
-(def-fns _ $ (many one : (many (Raw) a) -> (many (List $ Raw) out))
-  (Cons _ a $ Nil _))
-
-(def-fns _ $ (many two : (many (Raw) a) (many (Raw) b) -> (many (List $ Raw) out))
-  (Cons _ a $ Cons _ b $ Nil _))
-
-(def-fns _ $ (many three : (many (Raw) a) (many (Raw) b) (many (Raw) c) -> (many (List $ Raw) out))
-  (Cons _ a $ Cons _ b $ Cons _ c $ Nil _))
-
+; needs: ../std/macro
 (def-fns _ $ (many splice-fn : (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
     (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out))
   (values mw args))

@@ -1,4 +1,4 @@
-; needs: macro_lib
+; needs: ../std/macro macro_lib
 ; expect: (MkPair _ _ "erased many" $ MkPair _ _ 1 2)
 (let ((unique u)) (MkPair _ _ 1 2))
 (let ((many k)) 5)
