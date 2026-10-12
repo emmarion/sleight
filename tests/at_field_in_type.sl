@@ -1,6 +1,6 @@
 ; expect: (MkState _ (MySucc $ MyZero) 0)
 ; Applications of a constructor with a field written `at` inside types: in an `is` return, in an `Eq` index
-; over sibling parameters, and over `(slot-of n)`, whose argument is bound first.
+; over sibling parameters, and over `(slot-of n)`.
 (def-adts $ (MyNat : -> Type) enum
   (many MyZero : -> (MyNat))
   (many MySucc : (unique (MyNat) pred) -> (MyNat)))

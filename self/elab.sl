@@ -1384,6 +1384,11 @@
       ((BTrue) (tail $ term-place env a))
       ((BFalse) (tail $ stored-arg-place env trest rest)))))
 
+(def-fns _ $ (many at-target : (many (Env) env) (many (List $ Term) acc) (many (Term) p) -> (many (Term) r))
+  (let-match many p (TSlotOf b) (else (instantiate acc p)))
+  (let-match many b (TBound k) (else (instantiate acc p)))
+  (maybe-or _ (term-place env $ list-nth-or _ acc k $ TBound k) $ instantiate acc p))
+
 (def-fns _ $ (many term-res : (many (Env) env) (many (Term) t) (many (Term) ty) -> (many (Res) r))
   (MkRes t ty (Erased) $ None _))
 
@@ -7058,7 +7063,7 @@
                 ((BTrue) (hoist-argument env4 ctxa mult mult r code))
                 ((BFalse)
                   (let ((many is-var)) $ match many (res-term r) (((Bool) _)) ((TVar _) (BTrue)) (else (BFalse)))
-                  (let-match many (and prepare $ and (not is-var) $ list-mem-bin slotted $ list-length _ acc) (BTrue)
+                  (let-match many (and prepare $ and (not fields) $ and (not is-var) $ list-mem-bin slotted $ list-length _ acc) (BTrue)
                     ((BFalse) (values env4 r 0 ctxa $ SNone _)))
                   (let ((many env5) (many r3) (many x3)) (prepare-argument env4 (res-erasure r) r $ BFalse))
                   (values env5 r3 x3 ctxa $ SNone _))))
@@ -7067,7 +7072,7 @@
             (let ((many (List $ AtCheck) ats2) (many (Bool) omitted))
               (match many (entry-place e) _
                 ((None _) (values ats $ BFalse))
-                ((Some _ pl) (values (Cons _ (MkAtCheck apos (Succ $ list-length _ acc) (entry-name e) (instantiate acc pl) $ res-place r2) ats) $ BTrue))))
+                ((Some _ pl) (values (Cons _ (MkAtCheck apos (Succ $ list-length _ acc) (entry-name e) (at-target env5a acc pl) $ res-place r2) ats) $ BTrue))))
             (let ((many ids2)) $ match many (or omitted $ not $ mult-is-many mult) (((List $ Nat) _)) ((BTrue) ids) ((BFalse) (Cons _ id ids)))
             (tail $ check-args-go fuel sugar root arest st env5a callee ctx0 ctxb (SSeq _ _ _ chain $ SSeq _ _ _ prea scb) rest mrest lp pos as-term prepare fields slotted
               (Cons _ (res-term r2) acc) (Cons _ (res-ty r2) tys) ids2 ats2))))))

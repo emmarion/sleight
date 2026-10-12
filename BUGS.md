@@ -102,27 +102,3 @@ is a design decision. Remove an entry when it is fixed.
     `self/bootstrap.sh` compares each side's whole stderr, warnings
     included, so one that did would fail there. Which order is wanted
     is not decided here.
-
-21. **A constructor application in a signature whose `at` target is not
-    a variable leaves the signature naming a dead entry.** With
-    `MkW : (erased (Slot) s) (erased (Nat) x at s) -> (W s)` for
-    `W : ((Slot) s) -> Type`, a `def-fns` function with the parameter
-    `(erased (Eq (W (slot-of v)) (MkW (slot-of v) v) (MkW (slot-of v) v)) e)`
-    after `(many (Nat) v)` makes the reference die with an uncaught
-    `Not_found`, raised by `Env.fact` from `Env.bind` of the function's
-    entry in `elab_def_fns`. A return entry mentioning `(MkW (slot-of v) v)`
-    does the same. `slc` accepts the definition, but the type it records
-    names an entry with no fact: the call `(f 3 (Refl _ _))` is refused
-    with "expected `__?1`, got `(W <error: no fact for 19387>)`". With a
-    variable target, `(MkW s v)` for a parameter `(many (Slot) s)` and
-    `(many (Nat) v at s)`, both accept the function, and so do both with
-    the `(MkW (slot-of v) v)` term in a body, as a `let` of its `Refl`.
-    The likely cause, read from the reference's `check_args` and not
-    confirmed: an argument that is not a variable, for a field whose slot
-    a later field's `at` names, is bound to a temporary entry that the
-    application's term then mentions (section 15), and in a signature
-    that entry is gone once the header has been elaborated. Section 15
-    places such a binding just before the statement that contains the
-    call, which a telescope does not have. Found while prototyping a
-    prelude change with `(UninitAt A (slot-of v) v)` in `array-pluck`'s
-    returns; returning that proof as an entry of its own avoids it.

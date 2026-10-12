@@ -975,7 +975,7 @@ and elab_tele env ?(places = false) ?(ctor = false) ?(subterm = false) ?(ids = [
    to its meta. [result] is the application's result telescope over the parameters' metas, unified with
    [expect] eagerly, where a `_` is present, before any argument is read, and again, reporting the mismatch,
    when a `_` would otherwise stay unsolved at the closing paren; every `_` is solved by then or refused. *)
-and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundary = true) ?(bind_args = false) ?(named = []) tele args elab =
+and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -> []) ?(pos = Erased) ?(boundary = true) ?(bind_args = false) ?(ctor = false) ?(named = []) tele args elab =
   if List.length tele <> List.length args then count_error env loc c what tele (List.length args);
   let ats = List.map (fun a -> if wild a then Reader.loc a else Reader.nowhere) args in
   let env, metas = open_tele env ~meta:true ~names:(anon tele) ~ats ~mults:(List.map (fun _ -> Erased) tele) tele in
@@ -1004,13 +1004,14 @@ and check_args env loc ~callee:c ?(what = "argument") ?expect ?(result = fun _ -
                   let x, env = bind env ~holes:true ~word:true ~temporary:true None r.erasure (ran_state env r.erasure code) r.ty ~rule:r.term in
                   let env = if env.run_pos then env else { env with pending = (x, code) :: env.pending } in
                   (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, V.CVar x))
-            else if bind_args && List.mem i named && (match r.term with Var _ -> false | _ -> true) then
+            else if bind_args && not ctor && List.mem i named && (match r.term with Var _ -> false | _ -> true) then
               let x, env = bind env ~holes:true ~temporary:true None r.erasure (ran_state env r.erasure code) r.ty ~rule:r.term in
               (placed env x r.place, { r with term = Var x; place = Some (slot_of x) }, code)
             else (env, r, code)
           in
           (* an argument for a parameter written `at` must sit where its target does, and is not passed (section 36) *)
-          let ats = match e.place with Some p -> (arg, i, e.name, instantiate acc p, r.place) :: ats | None -> ats in
+          let target = function SlotOf (Bound k) as p -> Option.value (term_place env (List.nth acc k)) ~default:(instantiate acc p) | p -> instantiate acc p in
+          let ats = match e.place with Some p -> (arg, i, e.name, target p, r.place) :: ats | None -> ats in
           let env = solve ~about "value" env (Reader.loc arg) r.term (Var m) in
           let env = match r.term with Var y when not (is_meta env y) -> placed env m (Some (slot_of y)) | _ -> env in
           (env, r.term :: acc, (if e.mult <> Erased && e.place = None then code :: codes else codes), ats))
@@ -1043,7 +1044,7 @@ and solve_tele ~strict env loc expect result =
    open past its paren for the arguments after it, or the position, to solve. *)
 and elab_term_args env loc ~callee ?what ?expect tele ret args =
   let env, acc, _ =
-    check_args env loc ~callee ?what ?expect ~result:(ctor_result ret) ~boundary:false ~bind_args:true ~named:(ctor_named tele) tele args (fun env _ a expect ->
+    check_args env loc ~callee ?what ?expect ~result:(ctor_result ret) ~boundary:false ~bind_args:true ~ctor:true ~named:(ctor_named tele) tele args (fun env _ a expect ->
         let env, t = elab_term ?expect env a in
         (env, term_res env (Reader.loc a) t, V.CErased))
   in
@@ -1245,7 +1246,7 @@ and elab_form ?sink ~final demand cc expect_tele env expect raw =
               let pos = demanded env demand pos ret in
               if pos <> Erased then warn_use env (loc head) "application of" h.term;
               let env = match h.term with Var x -> use env l (under pos Many) x | _ -> env in
-              let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~named:(ctor_named tele) ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
+              let env, acc, codes = check_args env l ~callee:(callee pos) ~bind_args:true ~ctor:true ~named:(ctor_named tele) ?expect:expect_tele ~result:(ctor_result h.term) ~pos ~boundary:false tele args elab_arg in
               let is_wrapper = newtype_of env (match canon env h.term with Var c -> c | _ -> -1) <> None in
               let code = if pos = Erased then V.CErased else if is_wrapper then List.hd codes else V.CApp (hcode, codes, V.Ctor) in
               let place = term_place env (App (h.term, List.rev acc)) in
@@ -1711,7 +1712,7 @@ and elab_cell_invoke ?(full = false) env expect l callee h hcode ctor slots args
     | [] -> if mark then error_in env l "`at` must precede an argument" else [] in
   let marked = marks false args in
   let raw = List.map snd marked in
-  let env, acc, codes = check_args env l ~callee ~bind_args:true ~named:(ctor_named params) ~result:(ctor_result (Var c)) ~pos ~boundary:false params raw elab_arg in
+  let env, acc, codes = check_args env l ~callee ~bind_args:true ~ctor:true ~named:(ctor_named params) ~result:(ctor_result (Var c)) ~pos ~boundary:false params raw elab_arg in
   let _, writes = List.fold_left2 (fun (i, writes) ((e : entry), t) (skip, _) ->
     if e.mult = Erased then (if skip then error_in env l "`at` cannot mark an erased argument"; (i, writes)) else
     if e.place <> None then (if skip then error_in env l "`at` cannot mark an argument written `at`: there is no store to skip"; (i, writes)) else
