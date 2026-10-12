@@ -87,13 +87,14 @@ partial def elabTm (sc : Scope) (depth : Nat) : Sx → M Tm
 partial def elabTele (sc : Scope) (depth : Nat) : List Sx → M Tm
   | [] => pure .nil
   | e :: es => do
-    let (m, T, x) ← match e with
-      | .list [.atom "subterm", T, .atom x] => pure (true, T, x)
-      | .list [T, .atom x] => pure (false, T, x)
+    let (k, T, x) ← match e with
+      | .list [.atom "subterm", T, .atom x] => pure (Ent.ty true, T, x)
+      | .list [T, .atom "is", .atom x] => pure (.is, T, x)
+      | .list [T, .atom x] => pure (.ty false, T, x)
       | _ => throw "malformed telescope entry"
     let T ← elabTm sc depth T
     let r ← elabTele ((x, .bnd depth) :: sc) (depth + 1) es
-    return .bind m T r
+    return .bind k T r
 end
 
 def fresh (k : Nat) : M (List Nat) := modifyGet fun st => (List.range' st.n k, { st with n := st.n + k })
@@ -227,7 +228,8 @@ partial def elabSeq (sc : Scope) (want : Nat) : List Sx → M (List Stmt × List
       let tele ← elabTele sc 0 (ps ++ rs)
       modify fun st => { st with n := base + sigs.length }
       let pids ← fresh ps.length
-      let pnames ← ps.mapM fun | .list [.atom "subterm", _, .atom x] | .list [_, .atom x] => pure x
+      let pnames ← ps.mapM fun | .list [.atom "subterm", _, .atom x] | .list [_, .atom "is", .atom x]
+                                | .list [_, .atom x] => pure x
                                 | _ => throw "malformed parameter"
       let body ← elabBody ((pnames.zip (pids.map Ref.fv)).reverse ++ fnsc) rs.length items
       pure { np := ps.length, tele, body : FnDef }

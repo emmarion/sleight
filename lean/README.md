@@ -91,14 +91,19 @@ state. SOUNDNESS.md's invariants appear as:
    `examples/paradox_same_level_bad.sl` therefore carries the level as
    an index, where `tests/paradox_same_level_bad.sl` names a top-level
    level.
-2. There are no `is` entries in telescopes.
-3. Type constructors and value constructors are applied only by name,
+2. Type constructors and value constructors are applied only by name,
    saturated. The `TyCtor` and `ValCtor` formers are not values.
-4. The type of the program's final expression may not mention the
-   program's own entries.
+3. The type of the program's final expression may not mention the
+   program's own entries, once canonicalized.
 
 ## Shapes chosen here, for the owner to confirm or change
 
+- An `is` entry of a telescope, `(e is x)`, opens to an entry with the
+  rule that it is `e`, and is typed through that rule, so its type is
+  `e`'s (DESIGN.md section 12). An argument or a result supplied for it
+  must canonicalize to `e`. In the core such an entry has no type of its
+  own: its recorded type is a marker (`Tm.nil`) that the checker reads
+  as "the type of its rule" and that every value has.
 - A `let` binder written `(T x)` or `(e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.

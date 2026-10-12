@@ -1,11 +1,20 @@
 namespace Minimal
 
+inductive Ent where
+  | ty (mark : Bool)
+  | is
+  deriving DecidableEq, Repr, Inhabited
+
+def Ent.marked : Ent → Bool
+  | ty m => m
+  | is => false
+
 inductive Tm where
   | fv (i : Nat)
   | bv (i : Nat)
   | nil
   | cons (h t : Tm)
-  | bind (mark : Bool) (ty rest : Tm)
+  | bind (k : Ent) (ty rest : Tm)
   | ty (d : Nat) (args : Tm)
   | con (d c : Nat) (args : Tm)
   | univ
@@ -213,7 +222,7 @@ structure Prog where
   deriving Repr, Inhabited
 
 def marks : Tm → Nat → List Bool
-  | .bind m _ r, n + 1 => m :: marks r n
+  | .bind k _ r, n + 1 => k.marked :: marks r n
   | _, _ => []
 
 def Prog.k (P : Prog) : Nat :=
@@ -227,12 +236,12 @@ def closures (env : List Tm) (gid : Nat) (G : Group) : List Tm :=
   (List.range G.fns.length).map (.clo (.ofList env) gid)
 
 def markedIndex : Tm → Nat → Nat → Option Nat
-  | .bind m _ _, 0, i => if m then some i else none
-  | .bind m _ r, pos + 1, i => markedIndex r pos (if m then i + 1 else i)
+  | .bind k _ _, 0, i => if k.marked then some i else none
+  | .bind k _ r, pos + 1, i => markedIndex r pos (if k.marked then i + 1 else i)
   | _, _, _ => none
 
 def markedArgs : Tm → Tm → List Tm
-  | .bind m _ r, .cons a as => if m then a :: markedArgs r as else markedArgs r as
+  | .bind k _ r, .cons a as => if k.marked then a :: markedArgs r as else markedArgs r as
   | _, _ => []
 
 end Minimal

@@ -17,17 +17,21 @@ def canon (Γ : Ctx) (t : Tm) : Tm := t.subst fun i => (Γ.σ i).getD (.fv i)
 
 def push (Γ : Ctx) (T : Tm) : Ctx := { Γ with tys := Γ.tys ++ [T] }
 
-def openTele : Ctx → Tm → Nat → Ctx × Tm
-  | Γ, .bind _ A r, m + 1 => (Γ.push A).openTele (r.inst (.fv Γ.n) 0) m
-  | Γ, t, _ => (Γ, t)
-
-def pushTele (Γ : Ctx) (R : Tm) : Ctx := (Γ.openTele R R.len).1
-
 def withRule (Γ : Ctx) (e : Nat) (t : Tm) : Ctx := { Γ with σ := fun i => if i = e then some t else Γ.σ i }
 
 def pushPrim (Γ : Ctx) (T : Tm) : Prim → Ctx
   | .tm t => (Γ.push T).withRule Γ.n (Γ.canon t)
   | _ => Γ.push T
+
+def pushEnt (Γ : Ctx) : Ent → Tm → Ctx
+  | .ty _, A => Γ.push A
+  | .is, e => (Γ.push .nil).withRule Γ.n (Γ.canon e)
+
+def openTele : Ctx → Tm → Nat → Ctx × Tm
+  | Γ, .bind k A r, m + 1 => (Γ.pushEnt k A).openTele (r.inst (.fv Γ.n) 0) m
+  | Γ, t, _ => (Γ, t)
+
+def pushTele (Γ : Ctx) (R : Tm) : Ctx := (Γ.openTele R R.len).1
 
 def pushMint (Γ : Ctx) : Ctx := { Γ.push .level with mints := Γ.mints ++ [Γ.n] }
 
@@ -46,8 +50,8 @@ def branch (Γ : Ctx) (s : Tm) (d c : Nat) (idx sig : Tm) : Ctx × UResult :=
   let m := sig.len - 1
   let (Γf, rem) := Γ.openTele sig m
   match rem with
-  | .bind _ R .nil =>
-    (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, .con d c (Γ.fields m)), (Γ.canon (.ty d idx), Γf.canon R)])
+  | .bind (.ty _) R .nil =>
+    (Γf, unify Γf.n Γf.σ [] [(Γ.canon s, Γf.canon (.con d c (Γ.fields m))), (Γ.canon (.ty d idx), Γf.canon R)])
   | _ => (Γf, .unknown)
 
 end Ctx
@@ -57,10 +61,11 @@ variable (P : Prog)
 mutual
 inductive TmTy : Ctx → Tm → Tm → Prop
   | fv : Γ.tys[i]? = some T → TmTy Γ (.fv i) T
+  | fvIs : Γ.tys[i]? = some .nil → Γ.σ i = some t → TmTy Γ t T → TmTy Γ (.fv i) T
   | univ : TmTy Γ .univ .univ
   | level : TmTy Γ .level .univ
   | ty : P.adts[d]? = some D → ArgsTy Γ args D.params .nil → TmTy Γ (.ty d args) .univ
-  | con : P.ctor d c = some sig → ArgsTy Γ args sig (.bind m T .nil) → TmTy Γ (.con d c args) T
+  | con : P.ctor d c = some sig → ArgsTy Γ args sig (.bind (.ty m) T .nil) → TmTy Γ (.con d c args) T
   | predates : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ x X → Γ.canon X = Γ.canon A →
       TmTy Γ L K → Γ.canon K = .level → TmTy Γ (.predates A x L) .univ
   | subterm : TmTy Γ A U → Γ.canon U = .univ → TmTy Γ a A' → Γ.canon A' = Γ.canon A →
@@ -72,12 +77,15 @@ inductive TmTy : Ctx → Tm → Tm → Prop
 inductive ArgsTy : Ctx → Tm → Tm → Tm → Prop
   | nil : ArgsTy Γ .nil t t
   | cons : TmTy Γ a T → Γ.canon T = Γ.canon A → ArgsTy Γ as (r.inst a 0) out →
-      ArgsTy Γ (.cons a as) (.bind m A r) out
+      ArgsTy Γ (.cons a as) (.bind (.ty m) A r) out
+  | isCons : TmTy Γ a T → Γ.canon a = Γ.canon e → ArgsTy Γ as (r.inst a 0) out →
+      ArgsTy Γ (.cons a as) (.bind .is e r) out
 
 inductive TeleOK : Ctx → Tm → Prop
   | nil : TeleOK Γ .nil
   | cons : TmTy Γ A U → Γ.canon U = .univ → TeleOK (Γ.push A) (r.inst (.fv Γ.n) 0) →
-      TeleOK Γ (.bind m A r)
+      TeleOK Γ (.bind (.ty m) A r)
+  | isCons : TmTy Γ e T → TeleOK (Γ.pushEnt .is e) (r.inst (.fv Γ.n) 0) → TeleOK Γ (.bind .is e r)
 end
 
 inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop

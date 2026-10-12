@@ -10,7 +10,7 @@ def need (b : Prop) [Decidable b] (msg : String) : Res (PLift b) :=
   if h : b then .ok ⟨h⟩ else .error msg
 
 def retOf : Tm → Option Tm
-  | .bind _ R .nil => some R
+  | .bind (.ty _) R .nil => some R
   | .bind _ _ r => retOf r
   | _ => none
 
@@ -25,76 +25,92 @@ def Checked (P : Prog) (rets : Tm) : Prop :=
 variable (P : Prog)
 
 mutual
-def checkTm (Γ : Ctx) : (t : Tm) → Res {T // TmTy P Γ t T}
-  | .fv i => match h : Γ.tys[i]? with
-    | some T => .ok ⟨T, .fv h⟩
-    | none => .error s!"unbound entry {i}"
+def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
+  | .fv i => match h : Γ.tys[i]?, rules with
+    | some .nil, true => match hs : Γ.σ i with
+      | some t => do let ⟨T, ht⟩ ← checkTm' Γ false t; .ok ⟨T, .fvIs h hs ht⟩
+      | none => .error s!"entry {i} has no type"
+    | some T, _ => .ok ⟨T, .fv h⟩
+    | none, _ => .error s!"unbound entry {i}"
   | .univ => .ok ⟨.univ, .univ⟩
   | .level => .ok ⟨.univ, .level⟩
   | .ty d args => match h : P.adts[d]? with
     | some D => do
-      let ⟨out, ha⟩ ← checkArgs Γ args D.params
+      let ⟨out, ha⟩ ← checkArgs' Γ rules args D.params
       let ⟨ho⟩ ← need (out = .nil) "type constructor applied to the wrong number of arguments"
       .ok ⟨.univ, .ty h (ho ▸ ha)⟩
     | none => .error "unknown type constructor"
   | .con d c args => match h : P.ctor d c with
     | some sig => do
-      let ⟨out, ha⟩ ← checkArgs Γ args sig
+      let ⟨out, ha⟩ ← checkArgs' Γ rules args sig
       match out, ha with
-      | .bind _ T .nil, ha => .ok ⟨T, .con h ha⟩
+      | .bind (.ty _) T .nil, ha => .ok ⟨T, .con h ha⟩
       | _, _ => .error "constructor applied to the wrong number of arguments"
     | none => .error "unknown constructor"
   | .predates A x L => do
-    let ⟨U, hA⟩ ← checkTm Γ A
+    let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "Predates: not a type"
-    let ⟨X, hx⟩ ← checkTm Γ x
+    let ⟨X, hx⟩ ← checkTm' Γ rules x
     let ⟨hX⟩ ← need (Γ.canon X = Γ.canon A) "Predates: term not of the type"
-    let ⟨K, hL⟩ ← checkTm Γ L
+    let ⟨K, hL⟩ ← checkTm' Γ rules L
     let ⟨hK⟩ ← need (Γ.canon K = .level) "Predates: not a level"
     .ok ⟨.univ, .predates hA hU hx hX hL hK⟩
   | .subterm A a B b => do
-    let ⟨U, hA⟩ ← checkTm Γ A
+    let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "Subterm: not a type"
-    let ⟨A', ha⟩ ← checkTm Γ a
+    let ⟨A', ha⟩ ← checkTm' Γ rules a
     let ⟨hA'⟩ ← need (Γ.canon A' = Γ.canon A) "Subterm: term not of the type"
-    let ⟨V, hB⟩ ← checkTm Γ B
+    let ⟨V, hB⟩ ← checkTm' Γ rules B
     let ⟨hV⟩ ← need (Γ.canon V = .univ) "Subterm: not a type"
-    let ⟨B', hb⟩ ← checkTm Γ b
+    let ⟨B', hb⟩ ← checkTm' Γ rules b
     let ⟨hB'⟩ ← need (Γ.canon B' = Γ.canon B) "Subterm: term not of the type"
     .ok ⟨.univ, .subterm hA hU ha hA' hB hV hb hB'⟩
   | .fn l np t => do
-    let ⟨K, hl⟩ ← checkTm Γ l
+    let ⟨K, hl⟩ ← checkTm' Γ rules l
     let ⟨hK⟩ ← need (Γ.canon K = .level) "Fn: not a level"
-    let ⟨ht⟩ ← checkTele Γ t
+    let ⟨ht⟩ ← checkTele' Γ rules t
     let ⟨hn⟩ ← need (np ≤ t.len) "Fn: more parameters than entries"
     let ⟨hs⟩ ← need ((Tm.fn l np t).static Γ.n 0) "Fn: not well scoped"
     .ok ⟨.univ, .fn hl hK ht hn hs⟩
   | _ => .error "not a term of the type grammar"
-termination_by t => t.size
-decreasing_by all_goals simp [Tm.size]; try omega
+termination_by t => (rules.toNat, t.size)
+decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size]; try omega)
 
-def checkArgs (Γ : Ctx) : (args tele : Tm) → Res {out // ArgsTy P Γ args tele out}
+def checkArgs' (Γ : Ctx) (rules : Bool) : (args tele : Tm) → Res {out // ArgsTy P Γ args tele out}
   | .nil, t => .ok ⟨t, .nil⟩
-  | .cons a as, .bind m A r => do
-    let ⟨T, ha⟩ ← checkTm Γ a
+  | .cons a as, .bind (.ty _) A r => do
+    let ⟨T, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon T = Γ.canon A) "argument of the wrong type"
-    let ⟨out, hr⟩ ← checkArgs Γ as (r.inst a 0)
+    let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
     .ok ⟨out, .cons ha h hr⟩
+  | .cons a as, .bind .is e r => do
+    let ⟨_, ha⟩ ← checkTm' Γ rules a
+    let ⟨h⟩ ← need (Γ.canon a = Γ.canon e) "argument not the term its is entry names"
+    let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
+    .ok ⟨out, .isCons ha h hr⟩
   | _, _ => .error "too many arguments"
-termination_by args => args.size
-decreasing_by all_goals simp [Tm.size]; try omega
+termination_by args => (rules.toNat, args.size)
+decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size]; try omega)
 
-def checkTele (Γ : Ctx) : (t : Tm) → Res (PLift (TeleOK P Γ t))
+def checkTele' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res (PLift (TeleOK P Γ t))
   | .nil => .ok ⟨.nil⟩
-  | .bind m A r => do
-    let ⟨U, hA⟩ ← checkTm Γ A
+  | .bind (.ty _) A r => do
+    let ⟨U, hA⟩ ← checkTm' Γ rules A
     let ⟨hU⟩ ← need (Γ.canon U = .univ) "telescope entry not a type"
-    let ⟨hr⟩ ← checkTele (Γ.push A) (r.inst (.fv Γ.n) 0)
+    let ⟨hr⟩ ← checkTele' (Γ.push A) rules (r.inst (.fv Γ.n) 0)
     .ok ⟨.cons hA hU hr⟩
+  | .bind .is e r => do
+    let ⟨_, he⟩ ← checkTm' Γ rules e
+    let ⟨hr⟩ ← checkTele' (Γ.pushEnt .is e) rules (r.inst (.fv Γ.n) 0)
+    .ok ⟨.isCons he hr⟩
   | _ => .error "not a telescope"
-termination_by t => t.size
-decreasing_by all_goals simp [Tm.size, Tm.size_inst_fv]; try omega
+termination_by t => (rules.toNat, t.size)
+decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size, Tm.size_inst_fv]; try omega)
 end
+
+def checkTm (Γ : Ctx) := checkTm' P Γ true
+def checkArgs (Γ : Ctx) := checkArgs' P Γ true
+def checkTele (Γ : Ctx) := checkTele' P Γ true
 
 instance (l : List Tm) (s : List Nat) (Γ : Ctx) (i : Nat) :
     Decidable (∀ j < i, ∀ a' s', l[j]? = some a' → s[j]? = some s' → Γ.canon a' = Γ.canon (.fv s')) :=
@@ -182,7 +198,7 @@ def synthRets (Γ : Ctx) : (ts : Tm) → Res {R // ArgsTy P Γ ts R .nil ∧ R.s
     let ⟨R, hr, hR⟩ ← synthRets Γ as
     have hc : Γ.canon (Γ.canon T) = Γ.canon T := Tm.subst_static0 _ _ _ hs
     have hi : R.inst a 0 = R := Tm.inst_static 0 R 0 0 hR (Nat.le_refl 0)
-    .ok ⟨.bind false (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr), by simp [Tm.static, hs, Tm.static_mono (Nat.le_refl 0) R (Nat.zero_le 1) hR]⟩
+    .ok ⟨.bind (.ty false) (Γ.canon T) R, .cons ha hc.symm (by rw [hi]; exact hr), by simp [Tm.static, hs, Tm.static_mono (Nat.le_refl 0) R (Nat.zero_le 1) hR]⟩
   | _ => .error "not a list of results"
 
 mutual

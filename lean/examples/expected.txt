@@ -2,6 +2,9 @@ examples/binder_refute.sl: (Zero)
 examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
 examples/eq_sym.sl: (Refl (Nat) (Zero))
 examples/ex_falso.sl: (Zero)
+examples/is_arg_bad.sl: refused: argument not the term its is entry names
+examples/is_entries.sl: (Succ (Zero)) (Succ (Zero))
+examples/is_fn.sl: (Succ (Succ (Zero))) (Succ (Succ (Zero)))
 examples/length.sl: (Succ (Succ (Succ (Zero))))
 examples/let_binders.sl: (Succ (Succ (Zero))) (Succ (Zero)) (Succ (Succ (Succ (Zero))))
 examples/let_forward.sl: (VCons (Nat) (Zero) (Succ (Succ (Zero))) (VNil (Nat))) (Succ (Succ (Zero)))
@@ -17,6 +20,7 @@ examples/paradox_univ_subterm_bad.sl: refused: prove-subterm: not a strict subte
 examples/refuted_branch_bad.sl: refused: a listed branch is refuted
 examples/type_in_type.sl: (Nat) (MkBox Type Type) Type
 examples/vec_head.sl: (Succ (Zero))
+unchecked examples/is_arg_bad.sl: (MkTwo (Zero) (Succ (Zero)))
 unchecked examples/let_is_bad.sl: (Zero)
 unchecked examples/let_type_bad.sl: (Zero)
 unchecked examples/missing_branch_bad.sl: (Zero)
