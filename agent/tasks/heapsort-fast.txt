@@ -4,8 +4,9 @@ heapsort-fast/spec.sl. Or: to lay the groundwork for a future session to do so.
 This task will likely take many sessions, so leaving solid, well-recorded
 progress matters more than finishing in this one.
 
-To check your work, compile in order: std/nat.sl, heapsort-fast/spec.sl, your files,
-heapsort-fast/accept.sl, then heapsort-fast/perf.sl. The finished solution must
+To check your work, compile in order: std/nat.sl, std/list.sl,
+heapsort-fast/spec.sl, your files, heapsort-fast/accept.sl, then
+heapsort-fast/perf.sl. The finished solution must
 compile with no warnings, and none of the files in work/files.txt may contain
 a `;! suppress`; intermediate work may have both. A solution is not
 finished while the sort allocates, any array write could be an `-imm` one, any
