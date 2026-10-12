@@ -282,7 +282,7 @@ def entry (sc : Scope) : Sx → M Nat
   | _ => throw "not an entry"
 
 mutual
-partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × List Tm)
+partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → M (List Stmt × List Tm)
   | .list (.atom "values" :: es) => elabArgs sc es
   | e@(.list (.atom h :: args)) => do
     let st ← get
@@ -298,7 +298,7 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
         | _, _, _ => throw s!"malformed {h}"
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
-    else if h == "match" then elabMatch sc want args
+    else if h == "match" then elabMatch sc want exp args
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
       | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
@@ -330,19 +330,21 @@ partial def elabExpr (sc : Scope) (want : List Bool) : Sx → M (List Stmt × Li
   | e => return ([], [← elabTm sc 0 e])
 
 partial def elabArgs (sc : Scope) (es : List Sx) (ms : List Bool := []) : M (List Stmt × List Tm) := do
-  let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i false] e
+  let rs ← es.zipIdx.mapM fun (e, i) => elabExpr sc [ms.getD i false] none e
   return (rs.flatMap (·.1), rs.flatMap (·.2))
 
-partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List Stmt × List Tm) := do
+partial def elabMatch (sc : Scope) (want : List Bool) (exp : Option Tm) (args : List Sx) : M (List Stmt × List Tm) := do
   let (er, args) ← splitMult true args
   if !er && ((← get).ghost || (!want.isEmpty && want.all id)) then throw "a match written many in an erased position"
-  if let _ :: .atom "_" :: _ := args then throw "a match annotation `_` is not supported"
-  let s :: .list rets :: brs := args | throw "malformed match"
-  let (ss, sts) ← elabExpr sc [false] s
+  let s :: ann :: brs := args | throw "malformed match"
+  let R0 ← match ann, exp with
+    | .list rets, _ => elabTele sc 0 false rets
+    | .atom "_", some R => pure R
+    | _, _ => throw "a match annotation `_` where no telescope is expected"
+  let (ss, sts) ← elabExpr sc [false] none s
   let [s] := sts | throw "match: one scrutinee"
-  let n := (← entryErs false rets).length
-  let rms := if er then List.replicate n true else want
-  let R := setErs (← elabTele sc 0 false rets) rms
+  let rms := if er then List.replicate R0.len true else want
+  let R := setErs R0 rms
   let st ← get
   let base := st.n
   let mut out : List (Nat × Nat × Core) := []
@@ -351,7 +353,7 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     if let .list (.atom "else" :: items) := br then
       if els.isSome then throw "match: two else branches"
       reset base
-      els := some (← ghostly er (elabBody sc rms items))
+      els := some (← ghostly er (elabBody sc rms items R))
       continue
     if let .list [.atom "absurd", .atom c] := br then
       let some (d', ci) := st.ctors.lookup c | throw s!"unknown constructor {c}"
@@ -369,22 +371,22 @@ partial def elabMatch (sc : Scope) (want : List Bool) (args : List Sx) : M (List
     let ph := ((st.decls[d']?).bind (·.phantom[ci]?)).getD false
     let fs ← fresh (if er || ph then names.map fun _ => true else (fieldErs sig).take names.length)
     let body ← ghostly (er || ab || ph) (elabBody ((names.zip (fs.zipWith (fun i T => entRef i T) (teleTys sig))).reverse ++ sc)
-      (if ab then [true] else rms) items)
+      (if ab then [true] else rms) items (if ab then none else some R))
     out := out ++ [(d', ci, if ab then .absurd body else body)]
   reset base
   let outs ← fresh rms
   return (ss ++ [.mtch s R out els er], outs.map .fv)
 
-partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt × List Tm)
+partial def elabSeq (sc : Scope) (want : List Bool) (exp : Option Tm := none) : List Sx → M (List Stmt × List Tm)
   | [] => throw "empty body"
-  | [e] => elabExpr sc want e
+  | [e] => elabExpr sc want exp e
   | .list (.atom "def-adts" :: bs) :: rest => do
     declareAdts sc bs
-    elabSeq sc want rest
+    elabSeq sc want exp rest
   | .list [.atom "def-lvl", .atom L] :: rest => do
     let [i] ← fresh [true] | throw "fresh"
     note i .level
-    let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want rest
+    let (ss, ts) ← elabSeq ((L, .fv i) :: sc) want exp rest
     return (.defLvl :: ss, ts)
   | .list (.atom "let" :: .list xs :: items) :: rest => do
     let bs ← xs.mapM fun
@@ -397,7 +399,8 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
         | [T, x] => pure (← name x, er, some (Chk.ty, T))
         | _ => throw "malformed let binder"
       | _ => throw "malformed let binder"
-    let (ss, ts) ← elabSeq sc (bs.map (·.2.1)) items
+    let bexp ← if bs.all (·.2.2.isSome) then some <$> elabTele sc 0 true xs else pure none
+    let (ss, ts) ← elabSeq sc (bs.map (·.2.1)) bexp items
     if ts.length != bs.length then throw "let: wrong number of binders"
     let mut ss := ss
     let mut sc' := sc
@@ -419,10 +422,10 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
           note i a
           r := if isCtorTy a then .ctor i else r
       sc' := (x, r) :: sc'
-    let (ss2, ts2) ← elabSeq sc' want rest
+    let (ss2, ts2) ← elabSeq sc' want exp rest
     return (ss ++ ss2, ts2)
   | .list (.atom "def-fns" :: .atom "_" :: fns) :: rest =>
-    elabSeq sc want (.list [.atom "def-lvl", .atom " _"] :: .list (.atom "def-fns" :: .atom " _" :: fns) :: rest)
+    elabSeq sc want exp (.list [.atom "def-lvl", .atom " _"] :: .list (.atom "def-fns" :: .atom " _" :: fns) :: rest)
   | .list (.atom "def-fns" :: .atom L :: fns) :: rest => do
     let lvl ← entry sc (.atom L)
     let sigs ← fns.mapM fun
@@ -445,26 +448,27 @@ partial def elabSeq (sc : Scope) (want : List Bool) : List Sx → M (List Stmt �
       let pids ← fresh (pents.map (·.2))
       let rents ← entryErs true rs
       let body ← ghostly (er || ab) (elabBody ((pents.map (·.1)).zip (pids.zipWith entRef (teleTys tele)) |>.reverse |>.append fnsc)
-        (if ab then [true] else rents.map fun e => er || e.2) items)
+        (if ab then [true] else rents.map fun e => er || e.2) items
+        (if ab then none else some (pids.foldl (fun t i => match t with | .bind _ _ r => r.inst (.fv i) 0 | t => t) tele)))
       pure { er, np := pents.length, tele, body := if ab then .absurd body else body : FnDef }
     let gid := (← get).groups.length
     reset (base + sigs.length)
     for (F, j) in defs.zipIdx do note (base + j) (F.type { lvl, fns := defs })
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
-    let (ss, ts) ← elabSeq fnsc want rest
+    let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
   | e :: rest => do
-    let (ss, _) ← elabExpr sc [] e
-    let (ss2, ts) ← elabSeq sc want rest
+    let (ss, _) ← elabExpr sc [] none e
+    let (ss2, ts) ← elabSeq sc want exp rest
     return (ss ++ ss2, ts)
 
-partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) : M Core := do
-  let (ss, ts) ← elabSeq sc want items
+partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none) : M Core := do
+  let (ss, ts) ← elabSeq sc want exp items
   return close ss ts
 end
 
 def elabProgram (items : List Sx) : Except String Prog := do
-  let ((ss, ts), st) ← (elabSeq [] [false] items).run {}
+  let ((ss, ts), st) ← (elabSeq [] [false] none items).run {}
   unless ts.length == 1 do throw "the top level has size one"
   return { adts := st.decls, groups := st.groups, main := close ss ts }
 

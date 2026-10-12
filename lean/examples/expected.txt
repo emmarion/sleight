@@ -3,6 +3,8 @@ examples/absurd_bad.sl: refused: absurd: the body's value is of a type with cons
 examples/absurd_listed_bad.sl: refused: an absurd branch names a constructor that is not refuted
 examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
 examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
+examples/annotation.sl: (Succ (Succ (Zero)))
+examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 examples/anon_level.sl: (Succ (Succ (Zero)))
 examples/binder_refute.sl: (Zero)
 examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))
@@ -51,6 +53,7 @@ examples/vec_head.sl: (Succ (Zero))
 unchecked examples/absurd_bad.sl: stuck: an absurd body returned
 unchecked examples/absurd_listed_bad.sl: (Zero)
 unchecked examples/adt_mentions_bad.sl: error: a def-adts signature may mention only levels, def-fns functions and let binders written with a type or a term
+unchecked examples/annotation_bad.sl: error: a match annotation `_` where no telescope is expected
 unchecked examples/else_empty_bad.sl: (Zero)
 unchecked examples/erased_fn_bad.sl: (Zero)
 unchecked examples/erased_let_bad.sl: (Zero)
@@ -77,6 +80,7 @@ unchecked examples/refuted_branch_bad.sl: (Zero)
 unchecked examples/valctor_return_bad.sl: (Zero)
 stripped examples/absurd.sl: (Succ (Zero))
 stripped examples/adt_mentions.sl: (Succ (Succ (Succ (Zero))))
+stripped examples/annotation.sl: (Succ (Succ (Zero)))
 stripped examples/anon_level.sl: (Succ (Succ (Zero)))
 stripped examples/binder_refute.sl: (Zero)
 stripped examples/double.sl: (Succ (Succ (Succ (Succ (Zero)))))

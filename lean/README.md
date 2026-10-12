@@ -116,8 +116,7 @@ Programs are written in the full language's syntax (DESIGN.md sections
 1 to 3, 11, 21 and 26), with `$` and comments. Each multiplicity the
 full language requires is required. These forms are refused as not
 supported: `unique`; `union`, `newtype` and `extern` types, so a type
-is declared `enum`; `_` as a match annotation (section 47) and as an
-inferred argument (section 50); and every form not named in this file,
+is declared `enum`; `_` as an inferred argument (section 50); and every form not named in this file,
 among them `let-match`, `coerce`, literals, macros, pragmas, cells and
 `at`. A file's top level has size one (section 27).
 
@@ -165,6 +164,9 @@ among them `let-match`, `coerce`, literals, macros, pragmas, cells and
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
 - `_` as a `def-fns` level (DESIGN.md section 46).
+- `_` as a match annotation (section 47) in the final expression of a
+  function body, of a branch, and of a `let` whose binders all carry a
+  type or `is` clause. In an argument position it is refused.
 - A call in a body with no decrease annotation, or with `(predates _)`
   or `(subterm _)` written anywhere in it (section 48): the checker
   supplies a `predates` proof when the callee's level does not
