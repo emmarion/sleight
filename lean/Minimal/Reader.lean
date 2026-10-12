@@ -73,7 +73,7 @@ abbrev M := StateT ESt (Except String)
 def keywords : List String :=
   ["def-adts", "def-lvl", "def-fns", "let", "match", "values", "prove-subterm", "prove-predates",
    "predates-trans", "subterm-trans", "predates-subterm", "predates", "subterm", "is", "level-of", "else",
-   "erased", "many", "unique", "absurd", "tail", "notail", "Fn", "Type", "Level", "Predates", "Subterm"]
+   "erased", "many", "unique", "absurd", "Fn", "Type", "Level", "Predates", "Subterm"]
 
 abbrev Scope := List (String × Ref)
 
@@ -367,7 +367,7 @@ partial def elabExpr (sc : Scope) (want : List Bool) (exp : Option Tm) : Sx → 
       let [i] ← fresh [true] | throw "fresh"
       return (ss ++ [.prim p true], [.fv i])
     else if h == "match" then elabMatch sc want exp args
-    else if h == "tail" || h == "notail" then
+    else if (h == "tail" || h == "notail") && (sc.lookup h).isNone then
       let [x@(.list (.atom f :: _))] := args | throw s!"{h} wraps a call"
       if (st.adts.lookup f).isSome || (st.ctors.lookup f).isSome || keywords.contains f then throw s!"{h} wraps a call"
       if st.ghost || (!want.isEmpty && want.all id) then throw s!"{h} in an erased position"
@@ -580,7 +580,12 @@ partial def elabSeq' (sc : Scope) (want : List Bool) (exp : Option Tm) : List Sx
     modify fun st => { st with groups := st.groups ++ [{ ers, ghost := st.ghost, lvl, fns := defs }] }
     let (ss, ts) ← elabSeq fnsc want exp rest
     return (.defFns gid :: ss, ts)
-  | e :: _ => throw s!"{e.show.take 40} is not a statement"
+  | e :: _ => match e with
+    | .list (.atom h :: _) =>
+      if ["comptime-match", "def-unique", "open-adt", "compile-warn", "compile-error", "dump-context", "def-opaque",
+          "def-prim", "slot-self", "open-at-fn", "unary"].contains h then throw s!"{h} is not supported"
+      else throw s!"{e.show.take 40} is not a statement"
+    | _ => throw s!"{e.show.take 40} is not a statement"
 
 partial def elabBody (sc : Scope) (want : List Bool) (items : List Sx) (exp : Option Tm := none)
     (refute : Bool := false) : M Core := do

@@ -93,6 +93,10 @@ decreasing_by all_goals (try simp only [Prod.lex_def]); all_goals (simp [Tm.size
 
 def checkArgs' (Γ : Ctx) (rules : Bool) : (args tele : Tm) → Res {out // ArgsTy P Γ args tele out}
   | .nil, t => .ok ⟨t, .nil⟩
+  | .cons a as, .bind (.ty _ _) .nil r => do
+    let ⟨_, ha⟩ ← checkTm' Γ rules a
+    let ⟨out, hr⟩ ← checkArgs' Γ rules as (r.inst a 0)
+    .ok ⟨out, .anyCons ha hr⟩
   | .cons a as, .bind (.ty _ _) A r => do
     let ⟨T, ha⟩ ← checkTm' Γ rules a
     let ⟨h⟩ ← need (Γ.canon T = Γ.canon A) "argument of the wrong type"

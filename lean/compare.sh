@@ -7,7 +7,7 @@ for f in ../tests/*.sl; do
   if grep -q '^; error:' "$f"; then want=refuse; else want=accept; fi
   flag=; grep -q '^; prelude: none' "$f" && flag=--no-prelude
   out=$(timeout 10 $m $flag "$f")
-  [ $? = 124 ] && out="stuck: timeout"
+  [ $? = 124 ] && out="x: stuck: timeout"
   out=$(echo "$out" | cut -d' ' -f2-)
   case "$out" in
     *"not supported"*|*"malformed"*|*"unbound name"*|*"is not a type or constructor"*) got=unsupported ;;
