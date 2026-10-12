@@ -31,16 +31,6 @@ previous `slc` over several runs, which this session read as noise; its
 max RSS swings between about 108 and 132MB for one and the same binary,
 so no memory comparison was drawn.
 
-One thing left for a later session, raised with the owner:
-
-- MACROS.md 4.5's program store holds the literal table and the facts
-  of run-position entries. Here a literal's declaration facts live in
-  the scoped fact table and are entered again where needed, so a
-  `settled-eq` answering from run-position facts would first have to
-  enter a handle's literal row into its snapshot (`Env.enter`,
-  `table-reenter`). The owner paused on whether that placement is the
-  store design or a detour from it; undecided when this was written.
-
 ## The compile-time store: stamped values, a ghost history (`self/`)
 
 Done, at the owner's direction and to the owner's design. `slc`'s
