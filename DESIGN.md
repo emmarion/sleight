@@ -24,6 +24,7 @@ explicitly one purpose of the language and its tooling.
 - Sugar, provisional: §46 to §53.
 - The special-form registry: §54.
 - Worked examples: §55 to §61.
+- Macros: §62 to §65.
 
 ## 1. Syntax
 
@@ -168,7 +169,7 @@ entry has:
   §29);
 - a **minted `is`**, present only in state `Settled`: the term the entry
   was when it became `Settled`, which a macro's handle denotes (§29,
-  MACROS.md section 3);
+  §64);
 - a **multiplicity** (§13), declared at the binder or fixed by the kind
   of entry (§14);
 - a **level-mint marker**, set on an entry introduced by `def-lvl`
@@ -742,14 +743,8 @@ registry of §54, including the annotation tokens.
 minted type canonicalizes to the prelude's `(Macro)` against the facts
 of the innermost enclosing run position, is dispatched as a special
 form is (§6), with `(Macro)` in place of `(Special)`: the list is a
-macro call. The macro's function receives the call's position and its
-arguments, unexpanded and unresolved; the head is not passed. The call
-is replaced by the forms the function returns, which are elaborated
-and checked as if they had been written there, so a macro can only
-steer what it generates. Expansion counts against a global limit.
-Macros rest on the prelude's types, so under `--no-prelude` there are
-none. MACROS.md describes the macro system as it is implemented now and
-as it is meant to become.
+macro call, which expands as §62 describes. Macros rest on the
+prelude's types, so under `--no-prelude` there are none.
 
 **Call-site proofs.** How the decrease of §17 is discharged depends on
 the kind of call:
@@ -1965,11 +1960,13 @@ which `lib/prelude.sl` is the reference:
   line and a column (`Nat`). A message about a form at `NoPos` carries
   no location, not even a file; one at `MkPos` names exactly that
   position.
-- **Macros.** `Pos`, `Raw`, `Macro`, `Mult`, the opaque `Gensym`,
-  `MacroWorld` and `Settled`, `JMEq`, and the primitives `gensym`,
-  `gensym-unique`, `settled-mult`, `settled-value`, `intern-nat`,
-  `intern-char` and `intern-string`. MACROS.md section 8 describes them
-  and the special form `settled-of`.
+- **Macros.** `Macro`, `Symbol`, `Raw`, `Mult`, `Resolution`, `JMEq`,
+  the opaque `Gensym`, `MacroWorld` and `Settled`, and the primitives
+  `gensym`, `gensym-unique`, `settled-type`, `settled-erase`,
+  `settled-mult`, `settled-value`, `settled-eq`, `intern-nat`,
+  `intern-char`, `intern-string`, `resolve` and `read-file`, and the
+  function `symbol-eq`. §62 to §65 describe them and the special form
+  `settled-of`.
 - **Arrays**: see §44.
 
 ## 43. Extern types and functions
@@ -2391,8 +2388,9 @@ Every special form, as a constructor of `Special` (§19), grouped as
   callee's arity.
 - `coerce` (§33), `share` (§16), `cell-alloc`, `cell-write` and
   `cell-match` (§37, §38), `open-absurd` (§8), `world-do` (§42),
-  `settled-of`, `gensym`, `settled-mult`, `settled-value`, `intern-nat`,
-  `intern-char` and `intern-string` (MACROS.md section 3).
+  `settled-of`, `settled-type`, `settled-erase`, `settled-mult` and
+  `settled-value` (§64), and `gensym`, `settled-eq`, `intern-nat`,
+  `intern-char`, `intern-string`, `resolve` and `read-file` (§65).
 - the `at` wrapper around a cell invocation or an at-function call
   (§37, §39).
 
@@ -2400,7 +2398,7 @@ Every special form, as a constructor of `Special` (§19), grouped as
 
 - `prove-subterm`, `prove-predates`, `predates-trans`, `subterm-trans`
   and `predates-subterm` (§18).
-- `gensym-unique` (MACROS.md section 3).
+- `gensym-unique` (§65).
 - `coercible-refl`, `coercible-sym`, `coercible-trans`,
   `coercible-share`, `coercible-wrap`, `coercible-ctor` and
   `coercible-of` (§33).
@@ -2657,3 +2655,223 @@ store would follow the call and the `tail` claim would fail. Per
 element: one allocation, two stores, constant stack.
 
 `tests/cell_append.sl` is this program.
+
+## 62. Macro expansion
+
+A macro is a value of the prelude's `Macro`, a newtype over the
+function it holds:
+
+```scheme
+(def-adts $ (Macro : -> Type)
+  enum newtype
+  (many MkMacro : (erased (Level) L)
+     (many (Fn L (unique (MacroWorld) mw) (many (Pos) here) (many (List $ Raw) args) ->
+               (unique (MacroWorld) mw2 at mw) (many (List $ Raw) out)) f)
+     -> (Macro)))
+```
+
+A list whose head dispatches as a macro is a macro call (§6, §19). The
+function is applied to a macro world (§65), the position of the call's
+opening `(` or `$`, and the call's arguments as `Raw` (§63),
+unexpanded and unresolved; the head is not passed. The forms it returns
+replace the call. In statement position each of them is a statement; in
+final position the last is the final form and the ones before it are
+statements before it. A call also expands in a telescope, among the
+binders of a `let` and as one of its entries, as a branch of a `match`
+or `let-match`, as a constructor of a `def-adts`, and as an argument or
+an entry of a `values`, where its forms take its place. Anywhere else it
+must return exactly one form. The forms are elaborated and checked as if
+they had been written there, so a macro can only steer what it
+generates. At most 10000 expansions run in one run, every file on the
+command line included.
+
+## 63. `Symbol` and `Raw`
+
+```scheme
+(def-adts $ (Symbol : -> Type)
+  enum
+  (many SName : (many (String) s) -> (Symbol))
+  (many SGen : (many (Nat) n) (many (String) s) (erased (Gensym n s) g) -> (Symbol)))
+
+(def-adts $ (Raw : -> Type)
+  enum extern
+  (many RawSymbol : (many (Pos) pos) (many (Symbol) s) -> (Raw))
+  (many RawWild : (many (Pos) pos) -> (Raw))
+  (many RawList : (many (Pos) pos) (many (List $ Raw) items) -> (Raw))
+  (many RawSettled : (many (Pos) pos) (erased (Mult) m) (erased Type A) (erased A a) (many (Settled m A a) c) -> (Raw)))
+```
+
+`Pos` is that of §42. `Raw` is `extern` so that its representation is
+the reader's own syntax tree: a macro's arguments and output pass
+without copying, which would let nested expansions cost exponentially
+more than the macros' own work. `RawWild` is a `_`; a raw name `#"_"` is
+a `RawSymbol` (§1).
+
+A name in the source reaches a macro as `(RawSymbol p (SName s))`. A
+literal reaches it as an `MMany` handle (§64) to its interned entry
+(§45): each top-level form of the source has its literals interned and
+replaced by such handles just before it is elaborated. So `Raw` has no
+literal constructor, and a macro builds a literal by interning it
+(§65). A handle to a literal is treated as the literal wherever a
+refusal is worded, and is shown as the literal.
+
+A name resolves exactly. `SName s` is the source's own name `s`, and
+any `s` can be written raw (§1). `SGen n s g` is a gensym (§65): it is
+identified by `n` alone, and no source spelling stands for it. A
+message shows it as `__g` and `n` and `_`, followed by `s` spelled as a
+name is spelled: `__g1_tmp`, or `__g1_#"a b"` where `s` is not a plain
+name. An unbound gensym gets no "nearest in scope" hint.
+
+```scheme
+symbol-eq : (many (Symbol) x) (many (Symbol) y) -> (many (Maybe (Eq (Symbol) x y)) r)
+```
+
+`symbol-eq` is ordinary prelude code. It answers `Some` for two names
+whose texts `str-cmp` finds equal, and for two gensyms whose numbers
+`nat-cmp` finds equal, where `gensym-unique` (§65) gives that their
+texts are equal too; any other pair answers `None`.
+
+## 64. Handles
+
+```scheme
+(def-adts $ (Mult : -> Type)
+  enum
+  (many MErased : -> (Mult))
+  (many MMany : -> (Mult))
+  (many MUnique : -> (Mult)))
+
+(def-opaque $ (Settled : ((Mult) m) (Type T) (T t) -> Type))
+```
+
+A handle `(Settled m T t)` denotes `t`, of type `T`, held at
+multiplicity `m`. `Settled` is opaque, like `Slot`: it has no
+constructors and no `Matchable`, and it is not erased by kind. A handle
+names the `Settled` entry (§5, §29) it was minted from, and reads it in
+one of two ways: as the entry's minted `is`, at its minted type, or as
+its minted type, at `Type`.
+
+`(settled-of m x)` is a handle that reads `x`'s minted `is`, where `x`
+is a `Settled` entry, named or given by a handle, and `m` is a written
+multiplicity: `erased` for any entry, `many` for an entry declared
+`many`, and `unique` for one declared `unique`. Its `Mult` is the
+matching constructor. It is not a use of `x`; each splice of the handle
+is. The other forms on handles are primitives:
+
+```scheme
+(def-prim $ (many settled-type : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) Type T) h)))
+
+(def-prim $ (many settled-erase : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many (Settled (MErased) T t) h)))
+
+(def-prim $ (many settled-mult : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) c) ->
+    (many m is r)))
+
+(def-prim $ (many settled-value : (erased Type T) (erased T t) (many (Settled (MMany) T t) c) -> (many t is v)))
+```
+
+`settled-type` turns a handle that reads an entry's minted `is` into
+the handle that reads its minted type, and does not canonicalize the
+type. `settled-erase` makes the `MErased` handle on the same entry,
+read the same way. `settled-mult` gives a handle's `Mult`.
+`settled-value` gives the value of an `MMany` handle. There is none for
+an `MErased` handle, which would only rename its own erased index, and
+none for an `MUnique` handle, whose read would happen outside the
+elaborator's use accounting, possibly after the value was consumed and
+mutated in place. These four read a handle anywhere, not only during an
+expansion, and an `MMany` handle carries its value into an extracted
+program. Only built-in forms create handles, so a handle denotes its
+index.
+
+`RawSettled` puts a handle in a macro's output. Spliced there, it is a
+reference to the term it denotes, bypassing scope, as a variable
+reference is to its entry, and it is checked as if `x` had been written
+there with the handle's multiplicity: an `MErased` handle may stand only
+in an erased position, an `MMany` handle is used at many, and an
+`MUnique` handle is used at unique, which consumes it. A handle cannot
+be a binder, any more than anything else that is not a name can.
+
+## 65. The macro world
+
+```scheme
+(def-opaque $ (MacroWorld : -> Type))
+(def-opaque $ (Gensym : ((Nat) n) ((String) s) -> Type))
+
+(def-adts $ (JMEq : (Type A) (A a) (Type B) (B b) -> Type)
+  enum
+  (many JMRefl : (erased Type A) (erased A a) -> (JMEq A a A a)))
+```
+
+The macro world is the elaborator's program store: the run-position
+entries with their values and facts, the literal table, the gensym
+counter and the expansion count. It is threaded sequentially through
+all of elaboration, carried out of every scope where uses are carried,
+and passed along rather than joined. Only the expander supplies a
+`MacroWorld`, to a macro's function. It has no constructor and is no
+entry, so it never escapes an expansion, and the forms below that take
+one run only there. A function that takes a macro world returns it `at`
+its parameter. The forms are primitives, checked as calls:
+
+```scheme
+(def-prim $ (many gensym : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Nat) n) (erased (Gensym n s) g)))
+
+(def-prim $ (erased gensym-unique : (erased (Nat) n) (erased (String) s) (erased (String) t)
+    (erased (Gensym n s) a) (erased (Gensym n t) b) ->
+    (erased (JMEq (Gensym n s) a (Gensym n t) b) e)))
+
+(def-prim $ (many settled-eq : (erased (Mult) ma) (erased Type A) (erased A a)
+    (erased (Mult) mb) (erased Type B) (erased B b)
+    (unique (MacroWorld) mw) (many (Settled ma A a) p) (many (Settled mb B b) q) ->
+    (unique mw is mw2 at mw) (many (Maybe (JMEq A a B b)) r)))
+
+(def-prim $ (many intern-nat : (unique (MacroWorld) mw) (many (Nat) n) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Nat) n) h)))
+
+(def-prim $ (many intern-char : (unique (MacroWorld) mw) (many (Char) c) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (Char) c) h)))
+
+(def-prim $ (many intern-string : (unique (MacroWorld) mw) (many (String) s) ->
+    (unique (MacroWorld) mw2 at mw) (many (Settled (MMany) (String) s) h)))
+
+(def-adts $ (Resolution : -> Type)
+  enum
+  (many RSettled : (erased (Mult) m) (erased Type T) (erased T t) (many (Settled m T t) h) -> (Resolution))
+  (many RHypothetical : -> (Resolution))
+  (many RUnbound : -> (Resolution)))
+
+(def-prim $ (many resolve : (unique (MacroWorld) mw) (many (Symbol) s) ->
+    (unique mw is mw2 at mw) (many (Resolution) r)))
+
+(def-prim $ (many read-file : (unique (MacroWorld) mw) (many (Pos) here) (many (String) path) ->
+    (unique (MacroWorld) mw2 at mw) (many (Result (String)) r)))
+```
+
+`gensym` mints a number, counting from 1 over the whole run, every file
+included, and returns it with a `Gensym` witness for it and the text
+`s`. Nothing else makes a witness, so a gensym cannot be forged:
+building an `SGen` at `many` needs one. `gensym-unique` is an axiom,
+resting on the counter minting each number once, with one text.
+
+`settled-eq` answers `Some` exactly when the terms the two handles
+denote, and their types, are identical after canonicalizing against the
+facts of the innermost run position enclosing the call, never
+branch-forced ones, so that an answer stays true wherever the macro's
+output goes and a call expands the same way in every branch. It first
+enters the declaration facts of the literals it needs into those facts.
+
+`intern-nat`, `intern-char` and `intern-string` intern the literal (§45)
+where they run, and give an `MMany` handle to its entry.
+
+`resolve` looks a name up in the scope at the macro call: a `Settled`
+entry answers `RSettled` with a handle that reads its minted `is`, at
+the entry's declared multiplicity, any other bound entry
+`RHypothetical`, and a name not in scope `RUnbound`. The lookup is not a
+reference to the entry.
+
+`read-file` reads a file relative to a source file. `here` must name one
+of the program's source files, spelled as the command line names it;
+standard input is not one. `path` is resolved against that file's
+directory and must land, through any symlinks, inside that directory or
+below it. Otherwise, for `NoPos`, and where the read fails, it
+answers `Fail`. `--confine-dir` does not apply to it.

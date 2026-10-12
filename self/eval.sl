@@ -1460,7 +1460,7 @@
   enum newtype
   (many MkElabWorld : (unique (World) w) -> (ElabWorld)))
 
-; The macro world (MACROS.md section 4.5): the program store, which an expansion threads and its primitives
+; The macro world (DESIGN.md section 65): the program store, which an expansion threads and its primitives
 ; extend where they run. [s] is the slot of the elaborator's world, which the state holds at [s] so that an
 ; expansion gets it back where it was.
 (def-adts $ (MacroState : ((Slot) s) -> Type)

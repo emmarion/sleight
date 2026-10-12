@@ -12,8 +12,6 @@ DESIGN.md specifies. The other files:
   removed when the owner decides it.
 - INTERNALS.md: the forms that declare what the compilers supply,
   `def-opaque` and `def-prim`, which only the prelude may write.
-- MACROS.md: the macro system, as the compilers implement it and as it is
-  meant to become.
 - HANDOFF.md: work in progress handed from one session to the next.
 - BUGS.md: defects found in the implementation.
 - WARNINGS.md: the warnings the compilers emit, one item each.
@@ -175,7 +173,7 @@ and column of the form it names, `path:line:col: error: text`, with `warning`,
 token's first character sits, both counted from one. A message about two
 places writes the second as a `note` on its own line under it, which may be
 in another file. A
-form a macro places at `NoPos` (MACROS.md section 8) is about nowhere, and a
+form a macro places at `NoPos` (DESIGN.md section 62) is about nowhere, and a
 message about it carries no location at all, not even a file; a position a macro
 gives with `MkPos` is written exactly as given. A
 message with nothing to point at — a contradiction that reached the driver, a
@@ -194,7 +192,7 @@ means it where the message points:
   still in scope for it, else by a fetch form that yields it there with its
   argument a name, `(level-of f)`, `(slot-of x)`, else as `__1`, `__2` and on;
 - an unsolved `_` (DESIGN.md section 50) as `__?1`, `__?2` and on;
-- a gensym (MACROS.md) as `__g` and its number and `_`, followed by its
+- a gensym (DESIGN.md section 63) as `__g` and its number and `_`, followed by its
   text spelled as a name is: `__g1_tmp`, `__g1_#"a b"`;
 - a special form or annotation token, a fetch form's head included, by the
   newest name in scope that is `Settled`, non-erased and holds it, else as `__`
@@ -233,7 +231,7 @@ them with a scope of entries and a fact table (types and `is` rules,
 read canonically), dispatching each form on its head as DESIGN.md
 section 6 describes: constructor and function application by the
 head's type, special forms and macros by the head's Settled value, a macro
-call being replaced by the forms its function returns (MACROS.md section 8). Elaboration
+call being replaced by the forms its function returns (DESIGN.md section 62). Elaboration
 produces, for every expression, the terms and types of its values and
 a piece of post-erasure code in which erased positions are gone. A
 form in run position is elaborated and run at once by the evaluator,

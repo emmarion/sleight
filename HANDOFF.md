@@ -3,18 +3,41 @@
 Work in progress handed from one session to the next. Written by a
 Claude session; nothing here is a design decision.
 
+## `read-file`, `symbol-eq` and the elaborator's world (one session, with the owner)
+
+Done in both compilers, to the owner's design given in chat, with DESIGN.md
+sections 62 to 65 in the owner's words; MACROS.md is gone, its content
+there or settled. ASSUMPTIONS 219 has what the session chose. `slc`'s
+elaborator threads a unique `ElabWorld`, a newtype over the `World` that
+`compile` holds, through every function that can reach an expansion.
+`self/bootstrap.sh` and `dune test` are clean. callgrind on `slc`
+compiling `base.sl`, `heap.sl` and `reader.sl`: 1.7436G instructions for
+the base, 1.7439G with the threading, 1.7487G with `read-file` and its
+prelude declarations.
+
+Left for later, none of it decided:
+
+1. The owner suggested `ElabWorld` become a bundle of the elaborator's
+   unique, run-wide state; the gensym counter and the literal table, now
+   in `Env`, look like candidates. A second non-erased field would end its
+   `newtype` shape, and with it, on this session's reading, the way
+   `compile` gets its `World` back `at` the one it gave; `MacroState`'s
+   slot index (ASSUMPTIONS 219) may serve there too.
+2. A cache of what `read-file` reads, so every expansion in a run sees one
+   content; the owner set it aside for now.
+3. MACROS.md's section 5, a session's argument that reflection can only
+   steer what a macro generates, was not carried into DESIGN.md; it is in
+   git history.
+
 ## Bare-bones macros (one session, with the owner)
 
-Done in both compilers, to the owner's design given in chat; MACROS.md
-section 8 says what is implemented and ASSUMPTIONS 213 what the session
-chose. `self/bootstrap.sh` is clean and now compares each side's whole
+Done in both compilers, to the owner's design given in chat; DESIGN.md
+sections 62 to 65 say what is implemented and ASSUMPTIONS 213 what the
+session chose. `self/bootstrap.sh` is clean and now compares each side's whole
 stderr. Measured with callgrind on `origin/main`'s `base.sl`, `heap.sl`
 and `reader.sl` (`Pos` and `Raw` renamed, so nothing warns): `slc` built
 from `origin/main` 1.393G instructions, from `raw-names` 1.482G, from this
 work 1.519G, about 2.5% over its base; the owner accepted that.
-
-Left for a later session: DESIGN.md's wording for what of this is meant to
-last (sections 19 and 42), which the owner confirms passage by passage.
 
 ## Literals outside every scope, `prove-predates` by binder (one session, with the owner)
 
@@ -434,8 +457,8 @@ Open, in the session's estimation, none of it decided:
 
 Done in both compilers, with DESIGN.md sections 8, 27, 32, 42 and 54 in
 the owner's words: the prelude's `Program`, `Request` and `Stopwatch`,
-the built-in `World`, and the special form `world-do`. MACROS.md keeps
-only the macro system's items. What a later session should know:
+the built-in `World`, and the special form `world-do`. What a later
+session should know:
 
 - `slc --interpret` performs requests as evaluation reaches them: every
   function of `self/eval.sl`'s evaluator threads a world of a type it is
@@ -445,7 +468,7 @@ only the macro system's items. What a later session should know:
   interpreter builds at that level is called from inside evaluation.
 - Both compilers' call elaboration ends in a return handler a form uses
   without a callee (`call_returns`, `call-returns`), as `world-do` does
-  and as MACROS.md section 7 has the macro-world forms do. In `slc`, a
+  and as the macro-world forms do. In `slc`, a
   call's `CCSame` mark is computed only in a non-erased position: built
   for every call, its `qshow` cost about 24% more allocation in `slc`
   compiling the part of its own sources both versions accept, and with

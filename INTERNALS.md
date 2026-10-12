@@ -28,7 +28,7 @@ erased is an axiom and has none. Declaring a primitive the compilers
 do not implement, a second time, or with a non-erased return when the
 compilers have no implementation of it, is an error. Whatever a
 primitive promises, a callback included, is the prelude's promise.
-The primitives are `gensym` and `gensym-unique` (MACROS.md).
+The primitives are those of DESIGN.md sections 64 and 65.
 A `def-prim` entry is written like a `def-fns` header and a
 `def-opaque` entry like a `def-adts` header alone. A primitive's
 parameters may not be marked `subterm`. A primitive declared `erased`

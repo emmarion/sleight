@@ -234,3 +234,10 @@ that the test does not make is a mistake in this file.
   prelude's entries are listed; `tests/dump_context_erased_fns.sl` follows
   a run-position `def-fns` whose erased function and `Delegate` proof are
   listed `Settled`.
+- `tests/macro_read_file.sl` — a macro that splices in the text of
+  `tests/macro_read_file_data.sl` as a string literal. Its path arrives as a
+  literal, so as a handle, whose type the macro checks with `settled-eq`
+  before reading its value; it reads with `read-file` at its own call's
+  position and interns the text. The same test shows the refusals of a path
+  outside the directory, of `NoPos` and of a position that names no source.
+  `tests/macro_symbol_eq.sl` compares names and gensyms with `symbol-eq`.

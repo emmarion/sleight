@@ -3992,7 +3992,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     a literal in a name position is refused as "is a literal, not a
     name". `self/bootstrap.sh` checks that the two compilers agree on
     every test.
-213. **Macro expansion, where MACROS.md section 8 is silent.** A call's
+213. **Macro expansion, where DESIGN.md section 62 is silent.** A call's
     `here` is the position of its opening `(` or `$`. The 10000
     expansions are counted over the whole run, every file on the command
     line included. A position a macro gives that names a file other than
@@ -4006,7 +4006,7 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     `let-match` in a body has its branches spliced once, before it is
     told apart as a statement or a match, in both compilers.
 
-215. **Handles, where MACROS.md is silent.** `(settled-of m x)` takes a
+215. **Handles, where DESIGN.md section 64 is silent.** `(settled-of m x)` takes a
     name or a handle and a written multiplicity. It is not a use of `x`;
     each splice of the handle is. A handle to a literal enters the
     literal's entries where it is spliced, as the literal would, and is
@@ -4023,8 +4023,8 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     holds a handle as a syntax node of its own, `slc` as a third kind of
     name, refused by the two functions that read binders.
 
-216. **`settled-mult`, `settled-value` and the `intern-` forms, where MACROS.md
-    is silent.** How an `MMany` handle carries its value differs between
+216. **`settled-mult`, `settled-value` and the `intern-` forms, where DESIGN.md
+    sections 64 and 65 are silent.** How an `MMany` handle carries its value differs between
     the compilers, and is meant not to be observable. The reference holds
     the value in the handle itself, through the reader's tree as well, the
     `Handle` node of `lib/ffi_core.ml` carrying it as an `Obj.t`. `slc`'s
@@ -4048,7 +4048,8 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     literal enters its code's numeral as well, which the character's rule
     names.
 
-217. **`settled-type` and `settled-eq`, where MACROS.md is silent.**
+217. **`settled-type` and `settled-eq`, where DESIGN.md sections 64 and 65
+    are silent.**
     `settled-type` of a `MintedType` handle is a `MintedIs` handle to
     the built-in `Type` entry, on this session's reading that the type
     of a type is `Type`, which `(Univ)` canonicalizes to as well. It
@@ -4075,8 +4076,8 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     prelude's `None` and `(Some (JMRefl))` as hidden arguments after
     its handles, as `settled-mult` gets the `Mult` constructors.
 
-218. **Literals as handles, `settled-erase` and `resolve`, where MACROS.md
-    is silent.** The conversion of a top-level form's literals into
+218. **Literals as handles, `settled-erase` and `resolve`, where DESIGN.md
+    sections 63 to 65 are silent.** The conversion of a top-level form's literals into
     handles runs on the forms read from the source alone: the forms a
     macro returns are not walked again, holding no literal node of their
     own. A literal that cannot be interned, for want of the prelude, is
@@ -4093,6 +4094,27 @@ pattern is optional at `unique` as at `many`, are not repeated here.
     at `MMany`, as `settled-of` does. `slc`'s own function named
     `resolve`, which nothing called, is gone rather than renamed, the
     built-in having taken the name.
+
+219. **`read-file` and `ReadFileIn`, where DESIGN.md section 65 is
+    silent.** A refusal names the path as the macro wrote it and the
+    directory as given, not their resolved forms: `../dune: outside the
+    directory ../tests`, `missing.txt: No such file or directory`,
+    `elsewhere.sl: not a source file` and, for `NoPos`, `no position to
+    read relative to`, so that a test's expected output does not depend
+    on where it runs. A source's directory is the text of its name before
+    the last `/`, or `/` where that `/` comes first, or `.` where there is
+    none, in both compilers. Both read through the request
+    `ReadFileIn dir path`, which `lib/driver_core.ml` performs: the path
+    is resolved against the directory, its symlinks followed, and refused
+    unless it lands inside it; a running program's own fence is checked
+    after that. The reference keeps each source as its name and the
+    directory it is read from, since `test/runtest.ml` names a test
+    `tests/x.sl` and reads it from `../tests`; `slc` keeps the names and
+    derives the directories. `slc`'s macro state is indexed by the slot of
+    the elaborator's world, which it holds `at` a `Slot` field, and
+    `env-expand` asserts `slot-self` on that field after an expansion;
+    that is the only way this session found to have the world come back
+    `at` the one that went in.
 
 ## The world (section 42)
 
