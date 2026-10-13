@@ -14,11 +14,13 @@ def retOf : Tm → Option Tm
   | .bind _ _ r => retOf r
   | _ => none
 
+def liftBvs (m k : Nat) : Tm := .ofList ((List.range k).map fun j => .bv (m - 1 - j))
+
 structure ProgOK (P : Prog) : Prop where
   params : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → TeleOK P {tys := []} D.params ∧ D.params.static 0 0
   ctors : ∀ (d : Nat) (D : Adt) (c : Nat) sig, P.adts[d]? = some D → D.ctors[c]? = some sig →
-    TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx)
-  newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → sig.ntField.isSome
+    TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx)
+  newtype : ∀ d c sig, P.isNt d = true → P.phantom d c = false → P.ctor d c = some sig → (sig.skip (P.lifted d)).ntField.isSome
   coer : ∀ (d : Nat) (D : Adt), P.adts[d]? = some D → D.coercible = true → D.ctors = []
 
 def Checked (P : Prog) (rets : Tm) : Prop :=
@@ -36,11 +38,17 @@ def checkTm' (Γ : Ctx) (rules : Bool) : (t : Tm) → Res {T // TmTy P Γ t T}
     | none, _ => .error s!"unbound entry {i}"
   | .univ => .ok ⟨.univ, .univ⟩
   | .level => .ok ⟨.univ, .level⟩
-  | .tyc d => match h : P.adts[d]? with
-    | some D => .ok ⟨_, .tyc h⟩
+  | .tyc d ls => match h : P.adts[d]? with
+    | some D => do
+      let ⟨hl⟩ ← need (ls.len = D.lifted) "a type constructor with the wrong number of lifted arguments"
+      let ⟨out, ha⟩ ← checkArgs' Γ rules ls D.params
+      .ok ⟨_, .tyc h hl ha⟩
     | none => .error "unknown type constructor"
-  | .vc d c => match h : P.ctor d c with
-    | some sig => .ok ⟨_, .vc h⟩
+  | .vc d c ls => match h : P.ctor d c with
+    | some sig => do
+      let ⟨hl⟩ ← need (ls.len = P.lifted d) "a constructor with the wrong number of lifted arguments"
+      let ⟨out, ha⟩ ← checkArgs' Γ rules ls sig
+      .ok ⟨_, .vc h hl ha⟩
     | none => .error "unknown constructor"
   | .app hd args => do
     let ⟨H, hh⟩ ← checkTm' Γ rules hd
@@ -248,7 +256,7 @@ def deleAdt : Res {x : Nat × Adt // P.adts[x.1]? = some x.2 ∧ x.2.coercible =
 
 def coerParts (dC : Nat) : (t : Tm) →
     Option {x : Tm × Tm × Tm × Tm × Tm × Tm // t = Tm.coer dC x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2}
-  | .app (.tyc d) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) =>
+  | .app (.tyc d .nil) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) =>
     if h : d = dC then some ⟨(sa, A, a, sb, B, b), by subst h; rfl⟩ else none
   | _ => none
 
@@ -277,7 +285,7 @@ def wrapAt (Γ : Ctx) (C : Tm) (m : Nat) (oe : Bool) (hm : (m, oe) ∈ Γ.opened
 
 def wrapOf (Γ : Ctx) (C : Tm) : Res {k // WrapOK P Γ C k} :=
   match hC : Γ.canon C with
-  | .vc d c => match hw : P.wrapField d c with
+  | .vc d c _ => match hw : P.wrapField d c with
     | some k => .ok ⟨k, .decl hC hw⟩
     | none => .error "coercible-wrap: the constructor has no opened newtype `Matchable`"
   | _ =>
@@ -296,7 +304,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨hs⟩ ← need (t.static 0 0) "a literal's proof is not closed"
     let ⟨hS⟩ ← need (P.simpleStep P.simple = P.simple) "unreachable"
     let ⟨hk⟩ ← need ((A.fvs.all fun i => match Γ.tys[i]? with
-        | some (.app (.tyc d) .nil) => P.simple.contains d && (Γ.fixed[i]?.join).isSome
+        | some (.app (.tyc d .nil) .nil) => P.simple.contains d && (Γ.fixed[i]?.join).isSome
         | _ => false) = true)
       "a literal's fact mentions an entry whose value is not known"
     let ⟨he⟩ ← need (A.subst Γ.fixedEnv = T) "a literal's proof is not of the fact it states"
@@ -367,7 +375,7 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
     let ⟨k, hwk⟩ ← wrapOf P Γ C
     let ⟨_, hf⟩ ← checkTm P Γ (args.toList.getD k .nil)
     let fu : Bool := match Γ.canon C with
-      | .vc d c => ((P.ctor d c).map (·.uAt k)).getD false
+      | .vc d c ls => ((P.ctor d c).map (·.uAt (ls.len + k))).getD false
       | C' => match (checkTm P Γ C').toOption with
         | some ⟨K, _⟩ => match Γ.canon K with | .valCtor sig => sig.uAt k | _ => false
         | none => false
@@ -407,11 +415,12 @@ def checkPrim (Γ : Ctx) : (p : Prim) → Res {T // PrimTy P Γ p T}
           have : e = false := by simpa [List.getD_eq_getElem?_getD, h] using hj
           simpa using hf j e h (by simpa using hjl) this) hD hc⟩
     | _ => .error "coercible-ctor: not a value constructor"
-  | .mtblOf d => match h : P.adts[d]? with
+  | .mtblOf d ls => match h : P.adts[d]? with
     | some D => do
-      let ⟨hl⟩ ← need (D.lifted = 0) "matchable-of: a type whose def-adts mentions entries is not first class"
+      let ⟨hl⟩ ← need (ls.len = D.lifted) "matchable-of: the wrong number of lifted arguments"
+      let ⟨_, ha⟩ ← checkArgs P Γ ls D.params
       let ⟨hc⟩ ← need (D.coercible = false) "matchable-of: Coercible has no Matchable"
-      .ok ⟨_, .mtblOf h hl hc⟩
+      .ok ⟨_, .mtblOf h hl ha hc⟩
     | none => .error "matchable-of: unknown type"
   | .proveSubterm a b => do
     let ⟨A, ha⟩ ← checkTm P Γ a
@@ -468,10 +477,13 @@ def armsOf (Γ : Ctx) (ph : List Bool) : (ks : List Tm) → (base : Nat) →
     | _ => .error "Matchable: an entry is not a value constructor"
 
 def shapeOf (Γ : Ctx) (er : Bool) : (H : Tm) → Res ((shp : List Arm) × {nt // Shape P Γ er H shp nt})
-  | .tyc d => match h : P.adts[d]? with
+  | .tyc d ls => match h : P.adts[d]? with
     | some D => do
       let ⟨hc⟩ ← need (D.coercible = false) "a match on Coercible, which has no constructors to match"
-      .ok ⟨_, _, .decl h hc⟩
+      let ⟨hl⟩ ← need (ls.len = D.lifted) "a type constructor with the wrong number of lifted arguments"
+      let ⟨hi⟩ ← need ls.isList "a type constructor's lifted arguments are not a list"
+      let ⟨hs⟩ ← need (ls.static Γ.n 0) "a type constructor's lifted arguments are not well scoped"
+      .ok ⟨_, _, .decl h hc hl hi hs⟩
     | none => .error "unknown type"
   | H =>
     let names (e : Nat × Bool) : Bool := match (Γ.tys[e.1]?).map Γ.canon with
@@ -725,7 +737,7 @@ def checkBranches (b : Nat) (Γ : Ctx) (fe : Bool) (g : Bool → Bool) (s H idx 
       | (_, _), none => if h : els then .ok ⟨h ▸ BranchOK.covered⟩
           else match s, hk : Γc.known k with
             | .fv x, some (d', c) => match hs : Γc.fixed[x]?.join with
-              | some (.app (.vc d c0) vs) =>
+              | some (.app (.vc d c0 _) vs) =>
                 if hd : Γc.cmode = true ∧ d' = d ∧ c ≠ c0 ∧ P.isNt d = false then
                   .ok ⟨by obtain ⟨hm, rfl, hc, hn⟩ := hd; exact BranchOK.fixedOut hm hs hk hc hn⟩
                 else .error "a branch that is not refuted is missing"
@@ -777,26 +789,28 @@ termination_by fns => (gid + 1, 0, sizeOf fns, 0)
 decreasing_by all_goals (simp only [Prod.lex_def]; simp; try omega)
 end
 
-def checkCtor (d : Nat) (_ : Nat) (sig : Tm) :
-    Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx))) := do
+def checkCtor (d k : Nat) (_ : Nat) (sig : Tm) :
+    Res (PLift (TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) k)) idx))) := do
   let ⟨ht⟩ ← checkTele P {tys := []} sig
   let ⟨hs⟩ ← need (sig.static 0 0) "def-adts: a constructor's signature is not closed"
   match h : retOf sig with
-  | some (.app (.tyc d') idx) => do
+  | some (.app (.tyc d' ls) idx) => do
     let ⟨e⟩ ← need (d' = d) "def-adts: a constructor returns another type"
-    .ok ⟨ht, hs, idx, e ▸ h⟩
+    let ⟨el⟩ ← need (ls = liftBvs (sig.len - 1) k) "def-adts: a constructor's return does not pass on the lifted parameters"
+    .ok ⟨ht, hs, idx, e ▸ el ▸ h⟩
   | _ => .error "def-adts: a constructor does not return its type"
 
 def checkProg : Res {R // Checked P R} := do
   let ⟨ha⟩ ← allIdx (Q := fun d (D : Adt) => (TeleOK P {tys := []} D.params ∧ D.params.static 0 0) ∧ ∀ (c : Nat) sig,
-      D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧ ∃ idx, retOf sig = some (.app (.tyc d) idx))
+      D.ctors[c]? = some sig → TeleOK P {tys := []} sig ∧ sig.static 0 0 ∧
+        ∃ idx, retOf sig = some (.app (.tyc d (liftBvs (sig.len - 1) D.lifted)) idx))
     (fun d D => do
       let ⟨hp⟩ ← checkTele P {tys := []} D.params
       let ⟨hps⟩ ← need (D.params.static 0 0) "def-adts: parameters not closed"
-      let ⟨hc⟩ ← allIdx (checkCtor P d) D.ctors 0
+      let ⟨hc⟩ ← allIdx (checkCtor P d D.lifted) D.ctors 0
       .ok ⟨⟨hp, hps⟩, fun c sig h => by simpa using hc c sig h⟩) P.adts 0
   let ⟨hn⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ c ∈ List.range (((P.adts[d]?).map fun (D : Adt) => D.ctors.length).getD 0),
-      P.isNt d = true → P.phantom d c = false → ((P.ctor d c).bind Tm.ntField).isSome)
+      P.isNt d = true → P.phantom d c = false → ((P.ctor d c).bind fun sig => (sig.skip (P.lifted d)).ntField).isSome)
     "a newtype does not have newtype shape"
   let ⟨hco⟩ ← need (∀ d ∈ List.range P.adts.length, ∀ D, P.adts[d]? = some D → D.coercible = true → D.ctors = [])
     "unreachable: Coercible has constructors"

@@ -5,12 +5,13 @@ namespace Minimal
 mutual
 def Prog.subU (P : Prog) (f : Nat → Tm) : Tm → Tm
   | .fv i => f i
+  | .vc d c _ => .vc d c .nil
   | .app h args =>
     let args' := P.subUArgs f args
     match P.subU f h with
-    | .vc d c => match P.wrapField d c with
+    | .vc d c _ => match P.wrapField d c with
       | some k => args'.toList.getD k .nil
-      | none => .app (.vc d c) args'
+      | none => .app (.vc d c .nil) args'
     | h' => .app h' args'
   | t => t.subst f
 
@@ -56,12 +57,12 @@ inductive RunS : List Tm → Core → List Tm → Prop
       RunS (env.toList ++ closuresS env.toList gid G ++ F.spreadIn ve (args.toList.map (P.sub ρ))) F.body outs →
       RunS (ρ ++ F.spreadOut ve args.toList.length outs) rest out → RunS ρ (.call f dec args false ms ve rest) out
   | mtchE : RunS (ρ ++ List.replicate R.len .tok) rest out → RunS ρ (.mtch s R brs els true rest) out
-  | mtch : P.sub ρ s = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
+  | mtch : P.sub ρ s = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body outs → RunS (ρ ++ outs) rest out → RunS ρ (.mtch s R brs els false rest) out
   | caseE : realBr brs els = some (pre, body) → RunS (ρ ++ pre) body out → RunS ρ (.case s brs els true nt) out
   | caseN : realBr brs els = some (pre, body) → RunS (ρ ++ pre.map fun _ => P.sub ρ s) body out →
       RunS ρ (.case s brs els false true) out
-  | case : P.sub ρ s = .app (.vc d c) vs → selectBr brs els c vs.toList = some (pre, body) →
+  | case : P.sub ρ s = .app (.vc d c ls) vs → selectBr brs els c vs.toList = some (pre, body) →
       RunS (ρ ++ pre) body out → RunS ρ (.case s brs els false false) out
   | seq : RunS ρ body outs → RunS (ρ ++ outs) rest out → RunS ρ (.seq R body rest) out
   | prim : RunS (ρ ++ [if er then .tok else p.evalS P ρ]) rest out → RunS ρ (.prim p er rest) out
@@ -83,7 +84,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
       | _ => none
     | .mtch _ R _ _ true rest => runS fuel (ρ ++ List.replicate R.len .tok) rest
     | .mtch s _ brs els false rest => match P.sub ρ s with
-      | .app (.vc _ c) vs => do
+      | .app (.vc _ c _) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         let outs ← runS fuel (ρ ++ pre) body
         runS fuel (ρ ++ outs) rest
@@ -95,7 +96,7 @@ def runS : Nat → List Tm → Core → Option (List Tm)
       let (pre, body) ← realBr brs els
       runS fuel (ρ ++ pre.map fun _ => P.sub ρ s) body
     | .case s brs els false false => match P.sub ρ s with
-      | .app (.vc _ c) vs => do
+      | .app (.vc _ c _) vs => do
         let (pre, body) ← selectBr brs els c vs.toList
         runS fuel (ρ ++ pre) body
       | _ => none
@@ -181,16 +182,16 @@ theorem RunS.det {ρ : List Tm} {c : Core} {a b : List Tm} (h1 : RunS P ρ c a) 
 
 mutual
 inductive Real : Tm → Tm → Prop
-  | con : P.ctor d c = some sig → P.phantom d c = false → P.wrapField d c = none → Reals vsS vs sig →
-      Real (.app (.vc d c) vsS) (.app (.vc d c) vs)
-  | wrap : P.wrapField d c = some k → Real vS (vs.toList.getD k .nil) → Real vS (.app (.vc d c) vs)
-  | vc : P.phantom d c = false → Real (.vc d c) (.vc d c)
+  | con : P.ctor d c = some sig → P.phantom d c = false → P.wrapField d c = none → Reals vsS vs (sig.skip (P.lifted d)) →
+      Real (.app (.vc d c .nil) vsS) (.app (.vc d c ls) vs)
+  | wrap : P.wrapField d c = some k → Real vS (vs.toList.getD k .nil) → Real vS (.app (.vc d c ls) vs)
+  | vc : P.phantom d c = false → Real (.vc d c .nil) (.vc d c ls)
   | clo : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = none →
       envS.length = env.length → (∀ i, G.ers.getD i true = false → Real (Tm.env envS i) (Tm.env env i)) →
       Real (.clo (.ofList envS) gid j) (.clo (.ofList env) gid j)
   | dele : P.groups[gid]? = some G → G.ghost = false → G.fns[j]? = some F → F.er = false → F.dele = some t →
       Real vS (Tm.env (env ++ closures env gid G) t) → Real vS (.clo (.ofList env) gid j)
-  | other : (∀ d c vs, v ≠ .app (.vc d c) vs) → (∀ d c, v ≠ .vc d c) → (∀ e g j, v ≠ .clo e g j) → Real vS v
+  | other : (∀ d c ls vs, v ≠ .app (.vc d c ls) vs) → (∀ d c ls, v ≠ .vc d c ls) → (∀ e g j, v ≠ .clo e g j) → Real vS v
 
 inductive Reals : Tm → Tm → Tm → Prop
   | nil : Reals .nil .nil t

@@ -7,6 +7,7 @@ namespace Minimal
 namespace Tm
 
 def kids : Tm → List Tm
+  | tyc _ ls | vc _ _ ls => [ls]
   | cons h t => [h, t]
   | bind _ a r => [a, r]
   | app h a => [h, a]
@@ -18,11 +19,13 @@ def kids : Tm → List Tm
   | _ => []
 
 def isAtom : Tm → Bool
-  | tyc _ | vc .. | univ | level => true
+  | tyc _ .nil | vc _ _ .nil | univ | level => true
   | _ => false
 
 def sameHead : Tm → Tm → Bool
   | fv _, _ | _, fv _ => false
+  | tyc d _, tyc d' _ => d == d'
+  | vc d c _, vc d' c' _ => d == d' && c == c'
   | cons .., cons .. | predates .., predates .. | subterm .., subterm .. => true
   | bind m .., bind m' .. => m == m'
   | app .., app .. | tyCtor _, tyCtor _ | valCtor _, valCtor _ => true

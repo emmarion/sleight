@@ -357,13 +357,14 @@ it is `Settled`, and its `is` rule.
   carries, which names a function in scope at the header, an earlier
   one of the block included: the call must be to `f`, in tail position,
   passing the function's non-erased parameters straight through in
-  order. In the core it is an ordinary call, and the function records
-  its target (`FnDef.dele`). The body is checked with every entry made
-  before the function's parameters erased, its target aside, and the
-  checker requires its post-erasure code to be the one call, as above
-  (`Group.deleOK`): renames, erased code and other run-free statements
-  before and after it, and a final result that returns the call's
-  non-erased results in order.
+  order, each either itself or a `coerce` of it. In the core it is an
+  ordinary call, and the function records its target (`FnDef.dele`).
+  The body is checked with every entry made before the function's
+  parameters erased, its target aside, and the checker requires its
+  post-erasure code to be the one call, as above (`Group.deleOK`):
+  renames, erased code, erased `let-match`es and other run-free
+  statements before and after it, and a final result that returns the
+  call's non-erased results in order.
 - `Delegate`, `(delegate-of g)` and `(coercible-of d)` (sections 19, 33
   and 34). `Delegate` is a built-in type with no constructors and no
   `Matchable`, read by `VTy` as `Coercible` is. `def-fns` records, for
@@ -373,12 +374,15 @@ it is `Settled`, and its `is` rule.
   the bodies of the block and after it, and `(coercible-of d)` turns it
   into the `Coercible` proof between the same sides. `EnvOK` carries
   that a stripped value stands for each such `g` exactly when it stands
-  for its `f` (`DeleOK`). `delegate-of` is not supported in a type.
+  for its `f` (`DeleOK`). `def-fns` makes the proof once, after its
+  block; `delegate-of` in a type names that one, so it is refused in a
+  signature of the block itself.
 - `tail` and `notail` (section 19): the call must, or must not, be in
   tail position: the final expression of a function body, of a branch of
   a match in tail position, or of a `let`'s right-hand side when the
-  rest of the body returns its binders in order, after `let`s whose
-  binders are all erased. Neither is accepted in an erased position.
+  rest of the body returns its binders in order, or a `coerce` of its
+  one binder, after `let`s whose binders are all erased. Neither is
+  accepted in an erased position.
 - `else` branches (DESIGN.md section 21): an `else` stands for every
   constructor neither listed nor refuted, binds nothing, is checked with
   no forced facts, and is an error when it stands for no constructor.
@@ -412,11 +416,17 @@ it is `Settled`, and its `is` rule.
   own: its recorded type is a marker (`Tm.nil`) that the checker reads
   as "the type of its rule" and that every value has.
 - The entries a `def-adts` block's signatures mention become
-  leading `erased` parameters of each of its types and constructors,
-  which the elaborator supplies at every use and binds, unnamed, in every
-  pattern; the printer leaves them out. The core's types stay closed, so
-  the proofs need nothing new. `def-adts` blocks are elaborated in the
-  order they are written. A block inside a body is declared in the
+  leading `erased` parameters of each of its types and constructors. In
+  the core they are part of the head: `Tm.tyc d ls` and `Tm.vc d c ls`
+  carry them, so `String` alone is a `TyCtor` of its own parameters and
+  `SCons` a `ValCtor` of its own fields, and both are first class. A
+  constructor's value holds only its own fields, and its type carries
+  the lifted arguments; the stripped run leaves them out of the head.
+  The elaborator supplies them at every use, a pattern binds only the
+  constructor's own fields, and the printer shows only those. A match on
+  such a type goes through its declaration with the lifted arguments of
+  the scrutinee's type. The core's declarations stay closed. `def-adts`
+  blocks are elaborated in the order they are written. A block inside a body is declared in the
   program like any other, and its names are in scope to the end of the
   body.
 - An application `(x args)` of a variable is a constructor application,
@@ -426,15 +436,15 @@ it is `Settled`, and its `is` rule.
   elaborator knows to be a `TyCtor` or `ValCtor`, a call's result
   through the callee's written return entry say; otherwise it is a
   call. A constructor value reached any other way is applied after a
-  `let` binder written with its type. A type or constructor whose `def-adts`
-  mentions top-level entries is not first class. A `ValCtor`'s return
+  `let` binder written with its type. A `ValCtor`'s return
   must be an application of a type constructor that is not one of its
   own fields (ASSUMPTIONS.md 80). In the core every
   application is one former, `Tm.app`, whose head is a declared type
   constructor, a declared value constructor or a variable, and is typed
   through its head's type; a value of a `ValCtor` type is a declared
-  constructor with exactly that signature, and one of a `TyCtor` type a
-  declared type constructor.
+  constructor head whose signature, instantiated with the head's lifted
+  arguments, is that type, and one of a `TyCtor` type likewise a
+  declared type constructor head.
 - A `let` binder written `(m T x)` or `(m e is x)` is checked, after
   canonicalization, against the type or the term written, and adds no
   rule of its own.

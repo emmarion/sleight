@@ -9,11 +9,10 @@ may be mistaken.
 
 `lean/` reads the full syntax and supports what `lean/README.md` lists.
 `lean/compare.sh` runs it over `tests/` and prints, per test, the verdict
-the test expects and the runner's. At the last run 147 tests were
+the test expects and the runner's. At the last run 149 tests were
 accepted with OCaml's value, none mismatched, 316 refusals agreed, and
-146 + 169 were refused as unsupported. No test the OCaml suite
-refuses is accepted. Of the tests it accepts, one is refused
-(`thunk_extern_first_class.sl`) and two time out at ten seconds:
+145 + 169 were refused as unsupported. No test the OCaml suite
+refuses is accepted. Of the tests it accepts, two time out at ten seconds:
 `comptime_tail.sl` finishes in about a minute, and
 `extern_tail.sl` ran out of memory on this session's machine.
 
@@ -43,10 +42,6 @@ before checking, and the checker requires it.
    change nothing in an immutable run, which suggests checking them in
    the elaborator; but slot facts come from forcing too (section 36's
    writers), which the elaborator does not do. Not started.
-3. **A type whose `def-adts` mentions top-level entries is not first
-   class** (`String` passed as a value, `StrLt` as `Cmp`'s order). Its
-   mentions are lifted into leading parameters, and the core has no
-   partial application of a type constructor.
 4. **The full evaluator on the prelude.** `u62-modulus` is `2^62` in
    unary, so `prelude-full.sl`, which `--full` and `--unchecked` load,
    leaves out it and everything over `U62`. `prelude.sl` has them, since

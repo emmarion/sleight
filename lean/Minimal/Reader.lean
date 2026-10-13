@@ -187,6 +187,7 @@ structure ESt where
   delegated : Bool := false
   deles : List (Nat × Nat) := []
   delePf : List (Nat × Nat) := []
+  renames : List (Nat × Nat) := []
   uq : List Nat := []
   sides : List (Nat × Option Mode × Option Mode) := []
   uses : List (Nat × Bool) := []
@@ -224,14 +225,15 @@ partial def ESt.factCanon (st : ESt) : Nat → Tm → Tm
 
 def ESt.mintedSpecial (st : ESt) (i : Nat) : Bool :=
   match st.inl.lookup i, ((st.known.filter (·.1 == i)).getLast?).map (·.2), st.topCtx with
-  | some (.app (.vc d _) .nil), _, _ => d == st.special
-  | _, _, some Γ => ((Γ.tys[i]?).map Γ.canon) == some (.app (.tyc st.special) .nil)
-  | _, some T, none => st.factCanon 100 T == .app (.tyc st.special) .nil
+  | some (.app (.vc d _ _) .nil), _, _ => d == st.special
+  | _, _, some Γ => ((Γ.tys[i]?).map Γ.canon) == some (.app (.tyc st.special .nil) .nil)
+  | _, some T, none => st.factCanon 100 T == .app (.tyc st.special .nil) .nil
   | _, _, _ => false
 
 def warn (msg : String) : M Unit := modify fun st => { st with warns := st.warns ++ [msg] }
 
 def warnUse (t : Tm) (kind shown : String) : M Unit := do
+  let t := match t with | .vc d c _ => .vc d c .nil | .tyc d _ => .tyc d .nil | t => t
   let st ← get
   if st.inPrelude then return
   let some (_, msg) := st.pwarn.find? (·.1 == t) | return
@@ -252,6 +254,8 @@ def showName (x : String) : String :=
 
 abbrev Scope := List (String × Ref)
 
+def ESt.liftTm (st : ESt) (d : Nat) : Tm := .ofList (((st.lifts.lookup d).getD []).map Tm.fv)
+
 def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   if x == "_" then return .hole
   match sc.lookup x with
@@ -259,14 +263,12 @@ def look (sc : Scope) (depth : Nat) (x : String) : M Tm := do
   | some (.bnd lv) => pure (.bv (depth - 1 - lv))
   | none => do
     let st ← get
-    let first (d : Nat) := if ((st.lifts.lookup d).getD []).isEmpty then pure () else
-      throw s!"{x} mentions top-level entries and is not first class"
     match st.adts.lookup x, st.ctors.lookup x with
-    | some d, _ => first d; pure (.tyc d)
-    | _, some (d, c) => first d; pure (.vc d c)
+    | some d, _ => pure (.tyc d (st.liftTm d))
+    | _, some (d, c) => pure (.vc d c (st.liftTm d))
     | _, _ =>
       match specialNames.idxOf? x with
-      | some c => if st.decls.length > 0 then pure (.app (.vc st.special c) .nil) else throw s!"unbound name {showName x}"
+      | some c => if st.decls.length > 0 then pure (.app (.vc st.special c .nil) .nil) else throw s!"unbound name {showName x}"
       | none => throw s!"unbound name {showName x}"
 
 def refOf (sc : Scope) (i : Nat) : Ref :=
@@ -362,7 +364,7 @@ def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
     | some r =>
       let i := match r with | .fv i | .fn i _ _ | .ctor i => some i | _ => none
       match i.bind st.settledVal with
-      | some (.app (.vc d c) _) =>
+      | some (.app (.vc d c _) _) =>
         if d == st.special && st.decls.length > 0 && (i.map st.mintedSpecial).getD false then
           let s := specialNames.getD c ""
           if (sc.lookup s).isSome then throw s!"the special form {s} is shadowed where {showName h} dispatches to it"
@@ -374,15 +376,15 @@ def resolveHead (sc : Scope) (use : Nat → M Unit) : Sx → M Sx
   | e => return e
 
 partial def natOfVal : Tm → Option Nat
-  | .app (.vc _ 0) .nil => some 0
-  | .app (.vc _ 1) (.cons x .nil) => (natOfVal x).map (· + 1)
+  | .app (.vc _ 0 _) .nil => some 0
+  | .app (.vc _ 1 _) (.cons x .nil) => (natOfVal x).map (· + 1)
   | _ => none
 
 def ESt.adtName (st : ESt) (d : Nat) : String := ((st.decls[d]?).map (·.name)).getD ""
 
 partial def ESt.strOfVal (st : ESt) : Tm → Option (List Char)
-  | .app (.vc d 0) _ => if st.firstAdt "String" == some d then some [] else none
-  | .app (.vc d 1) args => do
+  | .app (.vc d 0 _) _ => if st.firstAdt "String" == some d then some [] else none
+  | .app (.vc d 1 _) args => do
     if st.firstAdt "String" != some d then none
     let as := args.toList
     let n ← natOfVal as[as.length - 2]!
@@ -406,13 +408,9 @@ partial def ESt.showTm (st : ESt) (nm : Nat → String) : Tm → String
   | .bv k => s!"#{k}"
   | .univ => "Type"
   | .level => "(Level)"
-  | .tyc d => showName ((st.decls[d]?).map (·.name) |>.getD s!"T{d}")
-  | .vc d c => showName (((st.decls[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
-  | .app h args =>
-    let drop := match h with
-      | .tyc d | .vc d _ => ((st.decls[d]?).map (·.lifted)).getD 0
-      | _ => 0
-    "(" ++ " ".intercalate (st.showTm nm h :: (args.toList.drop drop).map (st.showTm nm)) ++ ")"
+  | .tyc d _ => showName ((st.decls[d]?).map (·.name) |>.getD s!"T{d}")
+  | .vc d c _ => showName (((st.decls[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
+  | .app h args => "(" ++ " ".intercalate (st.showTm nm h :: args.toList.map (st.showTm nm)) ++ ")"
   | .predates A x L => s!"(Predates {st.showTm nm A} {st.showTm nm x} {st.showTm nm L})"
   | .subterm A a B b => s!"(Subterm {st.showTm nm A} {st.showTm nm a} {st.showTm nm B} {st.showTm nm b})"
   | .fn l np t u => s!"({if u then "UniqueFn" else "Fn"} {st.showTm nm l} {st.showTele nm np t})"
@@ -542,8 +540,8 @@ partial def elabTm' (sc : Scope) (depth : Nat) : Sx → M Tm
     let args ← args.mapM (elabTm sc depth)
     let lift d := ((st.lifts.lookup d).getD []).map Tm.fv
     match sc.lookup h, st.adts.lookup h, st.ctors.lookup h with
-    | none, some d, _ => pure (.app (.tyc d) (.ofList (lift d ++ args)))
-    | none, _, some (d, c) => pure (.app (.vc d c) (.ofList (lift d ++ args)))
+    | none, some d, _ => pure (.app (.tyc d (.ofList (lift d))) (.ofList args))
+    | none, _, some (d, c) => pure (.app (.vc d c (.ofList (lift d))) (.ofList args))
     | some _, _, _ => pure (.app (← look sc depth h) (.ofList args))
     | _, _, _ => throw s!"{h} is not a type or constructor, in a type"
   | e => throw s!"malformed term {e.show.take 40}"
@@ -577,9 +575,9 @@ def reset (base : Nat) : M Unit := modify fun st =>
             inl := st.inl.filter (·.1 < base), opened := st.opened.filter (· < base),
             uq := st.uq.filter (· < base), uses := st.uses.filter (·.1 < base),
             sides := st.sides.filter (·.1 < base), deles := st.deles.filter (·.1 < base),
-            delePf := st.delePf.filter (·.2 < base) }
+            delePf := st.delePf.filter (·.2 < base), renames := st.renames.filter (·.1 < base) }
 
-def liftOf (d : Nat) : M (List Tm) := return (((← get).lifts.lookup d).getD []).map Tm.fv
+def liftTm (d : Nat) : M Tm := return (← get).liftTm d
 
 def note (i : Nat) (T : Tm) (isTerm : Bool := false) : M Unit := modify fun st =>
   if isTerm then { st with inl := (i, T) :: st.inl } else { st with known := (i, T) :: st.known }
@@ -588,6 +586,8 @@ def abst (ids : List Nat) : Nat → Tm → Tm
   | D, .fv i => match ids.idxOf? i with
     | some k => .bv (D - 1 - k)
     | none => .fv i
+  | D, .tyc d ls => .tyc d (abst ids D ls)
+  | D, .vc d c ls => .vc d c (abst ids D ls)
   | D, .cons h t => .cons (abst ids D h) (abst ids D t)
   | D, .bind k a r => .bind k (abst ids D a) (abst ids (D + 1) r)
   | D, .app h a => .app (abst ids D h) (abst ids D a)
@@ -675,6 +675,7 @@ def withTail {α : Type} (b : Bool) (x : M α) : M α := do
 
 def returnsBinders (xs : List String) (want : List Mode) : List Sx → Bool
   | [.list (.atom "values" :: es)] => (es.zip want).filterMap (fun (e, w) => if w.isEr then none else some e) == xs.map .atom
+  | [.list [.atom "coerce", e, _]] => returnsBinders xs want [e]
   | [e] => !(want.head?.getD .er).isEr && xs == [e.show]
   | .list (.atom "let" :: .list bs :: _) :: rest =>
     bs.all (· matches .list (.atom "erased" :: _)) && returnsBinders xs want rest
@@ -716,7 +717,7 @@ partial def Sx.litForms : Sx → List Sx
   | .list xs => .list xs :: xs.flatMap Sx.litForms
 
 def natTm (d z sc : Nat) (n : Nat) : Tm :=
-  (List.range n).foldl (fun t _ => Tm.app (.vc d sc) (.cons t .nil)) (.app (.vc d z) .nil)
+  (List.range n).foldl (fun t _ => Tm.app (.vc d sc .nil) (.cons t .nil)) (.app (.vc d z .nil) .nil)
 
 def ctorIx (d : Nat) (c : String) : M Nat := do
   match ((← get).decls[d]?).bind (·.ctorNames.idxOf? c) with
@@ -763,7 +764,7 @@ def internLits (e : Sx) : M (List Stmt) := do
   let z ← ctorIx nat "Zero"
   let sc ← ctorIx nat "Succ"
   let nt := natTm nat z sc
-  let natTy := Tm.app (.tyc nat) .nil
+  let natTy := Tm.app (.tyc nat .nil) .nil
   for n in nums do
     let i ← fresh1 false
     note i natTy
@@ -781,8 +782,8 @@ def internLits (e : Sx) : M (List Stmt) := do
   let ltTm : Nat → Nat → M Tm := fun a b => do
     let lz ← ctorIx ltD "LtZ"
     let ls ← ctorIx ltD "LtS"
-    pure <| (List.range a).foldr (fun k t => app (.vc ltD ls) [nt (a - 1 - k), nt (b - 1 - k), t])
-      (app (.vc ltD lz) [nt (b - a - 1)])
+    pure <| (List.range a).foldr (fun k t => app (.vc ltD ls .nil) [nt (a - 1 - k), nt (b - 1 - k), t])
+      (app (.vc ltD lz .nil) [nt (b - a - 1)])
   let stc ← get
   let newChars := charsWanted.filter fun c => (stc.chars.lookup c).isNone
   if !newChars.isEmpty then
@@ -791,11 +792,11 @@ def internLits (e : Sx) : M (List Stmt) := do
     let some m := (← get).u8mod | throw "character literals need the prelude's u8-modulus"
     for c in newChars do
       if c > 255 then throw "a character literal is one byte"
-      let (p, sp) ← assertPf (← ltTm c 256) (app (.tyc ltD) [← lit c, .fv m])
+      let (p, sp) ← assertPf (← ltTm c 256) (app (.tyc ltD .nil) [← lit c, .fv m])
       out := out ++ [sp]
       let i ← fresh1 false
-      let t := app (.vc chr 0) ((← liftOf chr) ++ [app (.vc u8 0) ((← liftOf u8) ++ [← lit c, .fv p])])
-      note i (app (.tyc chr) (← liftOf chr))
+      let t := app (.vc chr 0 (← liftTm chr)) [app (.vc u8 0 (← liftTm u8)) [← lit c, .fv p]]
+      note i (app (.tyc chr (← liftTm chr)) [])
       note i t true
       modify fun st => { st with chars := (c, i) :: st.chars }
       out := out ++ [.prim (.tm t) false]
@@ -804,13 +805,13 @@ def internLits (e : Sx) : M (List Stmt) := do
     let sd ← preAdt "String"
     let nilC ← ctorIx sd "SNil"
     let consC ← ctorIx sd "SCons"
-    let ls ← liftOf sd
-    let mut t := app (.vc sd nilC) ls
+    let ls ← liftTm sd
+    let mut t := app (.vc sd nilC ls) []
     for c in str.reverse do
       let some ci := (← get).chars.lookup c | throw "unreachable"
-      t := app (.vc sd consC) (ls ++ [.fv ci, t])
+      t := app (.vc sd consC ls) [.fv ci, t]
     let i ← fresh1 false
-    note i (app (.tyc sd) ls)
+    note i (app (.tyc sd ls) [])
     modify fun st => { st with strs := (str, i) :: st.strs }
     out := out ++ [.prim (.lit t) false]
   if !numOf.isEmpty then
@@ -820,24 +821,24 @@ def internLits (e : Sx) : M (List Stmt) := do
     let (bz, b1, b2) := (← ctorIx bin "BZ", ← ctorIx bin "B1", ← ctorIx bin "B2")
     let (nz, n1, n2) := (← ctorIx numD "NZ", ← ctorIx numD "N1", ← ctorIx numD "N2")
     let (d0, ds) := (← ctorIx dbl "D0", ← ctorIx dbl "DS")
-    let dblTm (m : Nat) : Tm := (List.range m).foldl (fun t k => app (.vc dbl ds) [nt k, nt (2 * k), t]) (app (.vc dbl d0) [])
+    let dblTm (m : Nat) : Tm := (List.range m).foldl (fun t k => app (.vc dbl ds .nil) [nt k, nt (2 * k), t]) (app (.vc dbl d0 .nil) [])
     let rec spell : Nat → Nat → Tm × Tm
-      | 0, _ => (app (.vc bin bz) [], app (.vc numD nz) [])
-      | _, 0 => (app (.vc bin bz) [], app (.vc numD nz) [])
+      | 0, _ => (app (.vc bin bz .nil) [], app (.vc numD nz .nil) [])
+      | _, 0 => (app (.vc bin bz .nil) [], app (.vc numD nz .nil) [])
       | fuel + 1, n + 1 =>
         let m := n / 2
         let (b, v) := spell fuel m
-        if n % 2 == 0 then (app (.vc bin b1) [b], app (.vc numD n1) [b, nt m, nt (2 * m), v, dblTm m])
-        else (app (.vc bin b2) [b], app (.vc numD n2) [b, nt m, nt (2 * m), v, dblTm m])
+        if n % 2 == 0 then (app (.vc bin b1 .nil) [b], app (.vc numD n1 .nil) [b, nt m, nt (2 * m), v, dblTm m])
+        else (app (.vc bin b2 .nil) [b], app (.vc numD n2 .nil) [b, nt m, nt (2 * m), v, dblTm m])
     for n in numOf.eraseDups do
       if ((← get).numPf.lookup n).isSome then continue
       let (b, v) := spell (n + 1) n
-      let (i, sp) ← assertPf v (app (.tyc numD) [b, ← lit n])
+      let (i, sp) ← assertPf v (app (.tyc numD .nil) [b, ← lit n])
       out := out ++ [sp]
       modify fun st => { st with numPf := (n, i) :: st.numPf }
   for (a, b) in ltOf.eraseDups do
     if ((← get).ltPf.lookup (a, b)).isSome then continue
-    let (i, sp) ← assertPf (← ltTm a b) (app (.tyc ltD) [← lit a, ← lit b])
+    let (i, sp) ← assertPf (← ltTm a b) (app (.tyc ltD .nil) [← lit a, ← lit b])
     out := out ++ [sp]
     modify fun st => { st with ltPf := ((a, b), i) :: st.ltPf }
   for (a, b) in eqOf.eraseDups do
@@ -846,11 +847,15 @@ def internLits (e : Sx) : M (List Stmt) := do
     let refl ← ctorIx eqD "Refl"
     let floor ← match b with | some b => lit b | none => pure (nt 0)
     let k := a - b.getD 0
-    let rhs := (List.range k).foldl (fun t _ => app (.vc nat sc) [t]) floor
-    let (i, sp) ← assertPf (app (.vc eqD refl) [natTy, nt a]) (app (.tyc eqD) [natTy, ← lit a, rhs])
+    let rhs := (List.range k).foldl (fun t _ => app (.vc nat sc .nil) [t]) floor
+    let (i, sp) ← assertPf (app (.vc eqD refl .nil) [natTy, nt a]) (app (.tyc eqD .nil) [natTy, ← lit a, rhs])
     out := out ++ [sp]
     modify fun st => { st with eqPf := ((a, b), i) :: st.eqPf }
   return out
+
+def peelTele : Tm → List Tm → Tm
+  | .bind _ _ r, x :: xs => peelTele (r.inst x 0) xs
+  | t, _ => t
 
 structure CtorInfo where
   k : Tm
@@ -858,22 +863,22 @@ structure CtorInfo where
   sig : Tm
   phantom : Bool
   union : Bool
-  lifted : Nat
   nt : Bool
 
 def ctorInfo (sc : Scope) (c : String) : M CtorInfo := do
   let st ← get
   let global (d ci : Nat) : M CtorInfo := do
     let some D := st.decls[d]? | throw s!"unknown constructor {c}"
-    return ⟨.vc d ci, ci, D.ctors.getD ci .nil, D.phantom.getD ci false, D.union, D.lifted, D.newtype⟩
+    let ls := ((st.lifts.lookup d).getD []).map Tm.fv
+    return ⟨.vc d ci (.ofList ls), ci, peelTele (D.ctors.getD ci .nil) ls, D.phantom.getD ci false, D.union, D.newtype⟩
   match sc.lookup c with
   | some (.ctor i) | some (.fv i) =>
-    if let some (.vc d ci) := st.inl.lookup i then return ← global d ci
+    if let some (.vc d ci _) := st.inl.lookup i then return ← global d ci
     let found := st.opened.findSome? fun m => match st.known.lookup m with
       | some (.mtbl u nt _ ph _ cs) => (cs.toList.idxOf? (.fv i)).map fun p => (p, u, ph.getD p false, nt)
       | _ => none
     match found, st.known.lookup i with
-    | some (p, u, ph, nt), some (.valCtor sig) => return ⟨.fv i, p, sig, ph, u, 0, nt⟩
+    | some (p, u, ph, nt), some (.valCtor sig) => return ⟨.fv i, p, sig, ph, u, nt⟩
     | some _, _ => throw s!"{c} is not a value constructor"
     | none, _ => throw s!"{c} has no Matchable open"
   | _ => match st.ctors.lookup c with
@@ -884,7 +889,6 @@ def openPattern (sc : Scope) (md : Mode) : Sx → M (Nat × CtorInfo × Scope)
   | .list (.atom c :: xs) => do
     let ci ← ctorInfo sc c
     let names ← xs.mapM name
-    let names := (List.replicate ci.lifted " lift") ++ names
     if names.length == (fieldErs ci.sig).length + 1 then throw "a cell binder in a pattern is not supported"
     unless names.length == (fieldErs ci.sig).length do throw s!"a pattern for {c} binds the wrong number of fields"
     let fs ← freshMd (if md.isEr || ci.phantom then names.map fun _ => Mode.er
@@ -933,15 +937,15 @@ def joinUses (a b : List (Nat × Bool)) : List (Nat × Bool) :=
     | _ => (i, c) :: acc.filter (·.1 != i)) a
 
 def sideMode : Tm → Option Mode
-  | .app (.vc d 0) .nil => if d == sharingD then some .uniq else none
-  | .app (.vc d 1) .nil => if d == sharingD then some .many else none
+  | .app (.vc d 0 _) .nil => if d == sharingD then some .uniq else none
+  | .app (.vc d 1 _) .nil => if d == sharingD then some .many else none
   | _ => none
 
 def coerSides (t : Tm) : M (Option Mode × Option Mode) := do
   let st ← get
   let .fv i := t | return (none, none)
   let (ka, kb) := match st.known.lookup i with
-    | some (.app (.tyc _) args) => match args.toList with
+    | some (.app (.tyc _ _) args) => match args.toList with
       | [sa, _, _, sb, _, _] => (sideMode sa, sideMode sb)
       | _ => (none, none)
     | _ => (none, none)
@@ -957,7 +961,7 @@ def primSides : Prim → M (Option Mode × Option Mode)
   | .coerWrap s C _ => do
     let st ← get
     let sig := match C with
-      | .vc d c => ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
+      | .vc d c ls => peelTele (((st.decls[d]?).bind (·.ctors[c]?)).getD .nil) ls.toList
       | .fv i => match st.known.lookup i with | some (.valCtor sig) => sig | _ => .nil
       | _ => .nil
     return (if (fieldMds sig).contains .uniq then sideMode s else some .many, sideMode s)
@@ -965,16 +969,16 @@ def primSides : Prim → M (Option Mode × Option Mode)
 
 def bindTemp (sc : Scope) (t : Tm) (er : Bool) : M (List Stmt × Ref) := do
   match t with
-  | .fv i => return ([], match (← get).inl.lookup i with | some (.vc ..) | some (.tyc _) => .ctor i | _ => refOf sc i)
+  | .fv i => return ([], match (← get).inl.lookup i with | some (.vc ..) | some (.tyc ..) => .ctor i | _ => refOf sc i)
   | _ => do
     let [j] ← fresh [er] | throw "fresh"
     note j t true
-    return ([.prim (.tm t) er], match t with | .vc .. | .tyc _ => .ctor j | _ => .fv j)
+    return ([.prim (.tm t) er], match t with | .vc .. | .tyc .. => .ctor j | _ => .fv j)
 
 def warnMatch (ks : List Tm) : M Unit := do
   let st ← get
-  if let some d := ks.findSome? (fun | .vc d _ => some d | _ => none) then
-    warnUse (.tyc d) "match" (showName ((st.decls[d]?).map (·.name)).get!)
+  if let some d := ks.findSome? (fun | .vc d _ _ => some d | _ => none) then
+    warnUse (.tyc d .nil) "match" (showName ((st.decls[d]?).map (·.name)).get!)
 
 def warnTarget (sc : Scope) (x : String) : M Tm := do
   let st ← get
@@ -982,13 +986,13 @@ def warnTarget (sc : Scope) (x : String) : M Tm := do
   match sc.lookup x with
   | some (.fn i _ _) => return .fv i
   | some (.fv i) | some (.ctor i) => match st.inl.lookup i with
-    | some (.vc d c) => return .vc d c
-    | some (.tyc d) => return .tyc d
+    | some (.vc d c _) => return .vc d c .nil
+    | some (.tyc d _) => return .tyc d .nil
     | _ => if fnTy i then return .fv i else throw s!"`;! warn` names `{showName x}`, which is neither a constructor nor a function"
   | some _ => throw s!"`;! warn` names `{showName x}`, which is neither a constructor nor a function"
   | none => match st.adts.lookup x, st.ctors.lookup x with
-    | some d, _ => return .tyc d
-    | _, some (d, c) => return .vc d c
+    | some d, _ => return .tyc d .nil
+    | _, some (d, c) => return .vc d c .nil
     | _, _ => throw s!"`;! warn` names `{showName x}`, which {if x ∈ specialNames then "is neither a constructor nor a function" else "is not in scope"}"
 
 def pragmaWords (p : String) : Except String (List String × String) := do
@@ -1075,7 +1079,7 @@ partial def dispatchComputed (sc : Scope) : Sx → M (Option (List Stmt × Sx))
     let st ← get
     let P : Prog := { adts := st.decls, groups := st.groups, main := .dead }
     match runS P 10000000 st0.vals (close ss [t]) with
-    | some [.app (.vc d c) _] =>
+    | some [.app (.vc d c _) _] =>
       if d == st.special && st.decls.length > 0 then
         let f := specialNames.getD c ""
         if (sc.lookup f).isSome then throw s!"the special form {f} is shadowed where a computed head dispatches to it"
@@ -1146,29 +1150,27 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
           let (ss, ts) ← elabArgs sc [p, q] [true, true]; pure (ss, Prim.coerTrans ts[0]! ts[1]!)
         | "coercible-wrap", s :: .atom c :: xs => do
           let ci ← ctorInfo sc c
-          let n := (fieldErs ci.sig).length - ci.lifted
+          let n := (fieldErs ci.sig).length
           unless xs.length == n do
             throw s!"`coercible-wrap` of `{c}` expects {n} more arguments, got {xs.length}"
           let (ss, ts) ← elabArgs sc (s :: xs) (List.replicate (xs.length + 1) true)
-          let lift ← match ci.k with | .vc d _ => liftOf d | _ => pure []
-          pure (ss, Prim.coerWrap ts[0]! ci.k (.ofList (lift ++ ts.drop 1)))
+          pure (ss, Prim.coerWrap ts[0]! ci.k (.ofList (ts.drop 1)))
         | "coercible-ctor", s :: .atom c :: xs => do
           let ci ← try ctorInfo sc c catch e => do
             let st ← get
             match sc.lookup c with
             | some (.ctor i) | some (.fv i) => match st.known.lookup i with
-              | some (.valCtor sig) => pure ⟨.fv i, 0, sig, false, false, 0, false⟩
+              | some (.valCtor sig) => pure ⟨.fv i, 0, sig, false, false, false⟩
               | _ => throw e
             | _ => throw e
-          let ers := (fieldErs ci.sig).drop ci.lifted
+          let ers := fieldErs ci.sig
           let want := (ers.map fun e => if e then 2 else 1).sum
           unless xs.length == want do
             throw s!"`coercible-ctor` of `{c}` expects {want} more arguments, got {xs.length}: expected a source and a target for each erased field and a `Coercible` proof for each other field"
           let (ss, ts) ← elabArgs sc (s :: xs) (List.replicate (xs.length + 1) true)
-          let lift ← match ci.k with | .vc d _ => liftOf d | _ => pure []
           let (srcs, tgts, ps, _) := ers.foldl (fun (srcs, tgts, ps, k) e =>
             if e then (srcs ++ [ts[k]!], tgts ++ [ts[k + 1]!], ps ++ [Tm.nil], k + 2)
-            else (srcs ++ [Tm.hole], tgts ++ [Tm.hole], ps ++ [ts[k]!], k + 1)) (lift, lift, lift.map fun _ => Tm.nil, 1)
+            else (srcs ++ [Tm.hole], tgts ++ [Tm.hole], ps ++ [ts[k]!], k + 1)) ([], [], [], 1)
           pure (ss, Prim.coerCtor ts[0]! ci.k (.ofList srcs) (.ofList tgts) (.ofList ps))
         | _, _ => throw s!"malformed {h}"
       let [i] ← fresh [true] | throw "fresh"
@@ -1190,6 +1192,7 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       let bm := if er then Mode.er else sb.getD (want.headD .many)
       supply want [bm]
       let [i] ← freshMd [bm] | throw "fresh"
+      if let .fv j := ta[0]! then modify fun st => { st with renames := (i, j) :: st.renames }
       return (ss1 ++ ss2 ++ [.prim (.coerce ta[0]! .hole tp[0]!) er], [.fv i])
     else if h == "match" then elabMatch sc want exp args
     else if h == "share" && (sc.lookup h).isNone then
@@ -1231,7 +1234,9 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       unless (← look sc 0 f) == .fv tgt do throw "delegate: the call is not to the function its header names"
       let ms := match sc.lookup f with | some (.fn _ _ ms) => ms | _ => []
       let plain := cargs.filter fun | .list [.atom "predates", _] | .list [.atom "subterm", _] => false | _ => true
-      let passed ← ((plain.zip ms).filter (!·.2.isEr)).mapM fun (a, _) => entry sc a
+      let rn := (← get).renames
+      let passed ← ((plain.zip ms).filter (!·.2.isEr)).mapM fun (a, _) => do
+        return (List.range rn.length).foldl (fun i _ => (rn.lookup i).getD i) (← entry sc a)
       unless passed == params.filterMap (fun (i, e) => if e then none else some i) do
         throw "delegate: the non-erased parameters are not passed straight through, in order"
       modify fun st => { st with delegated := true }
@@ -1245,12 +1250,13 @@ partial def elabExpr' (sc : Scope) (want : List Mode) (exp : Option Tm) : Sx →
       elabExpr sc want exp x
     else if h ∈ keywords || (sc.lookup h).isNone then
       match st.adts.lookup h, st.ctors.lookup h with
-      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d) (.ofList ((← liftOf d) ++ ts))])
+      | some d, _ => let (ss, ts) ← elabArgs sc args; return (ss, [.app (.tyc d (← liftTm d)) (.ofList ts)])
       | _, some (d, c) =>
         let sig := ((st.decls[d]?).bind (·.ctors[c]?)).getD .nil
-        unless ← erasedPos want do warnUse (.vc d c) "application" (showName h)
+        unless ← erasedPos want do warnUse (.vc d c .nil) "application" (showName h)
         let fm := fun (m : Mode) => if m == .uniq && want != [.uniq] then Mode.many else m
-        let (ss, ts) ← elabArgs sc args (((fieldMds sig).drop ((st.lifts.lookup d).getD []).length).map fm); return (ss, [.app (.vc d c) (.ofList ((← liftOf d) ++ ts))])
+        let (ss, ts) ← elabArgs sc args (((fieldMds sig).drop ((st.lifts.lookup d).getD []).length).map fm)
+        return (ss, [.app (.vc d c (← liftTm d)) (.ofList ts)])
       | _, _ =>
         unless h ∈ ["Fn", "UniqueFn", "TyCtor", "ValCtor", "Matchable", "Level", "Predates", "Subterm", "level-of", "numeral-of", "prove-literal-lt"] do
           throw (if h ∈ specialNames then s!"{h} is not supported here" else s!"unbound name {showName h}")
@@ -1422,11 +1428,11 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let mut ss : List Stmt := []
     for d in List.range' base (st.decls.length - base) do
       if let some D := st.decls[d]? then
-        if D.lifted == 0 then
-          let [i] ← fresh [false] | throw "fresh"
-          note i (D.mtbl d)
-          modify fun st => { st with mtbls := (d, i) :: st.mtbls }
-          ss := ss ++ [.prim (.mtblOf d) false]
+        let ls := st.liftTm d
+        let [i] ← fresh [false] | throw "fresh"
+        note i (D.mtbl d ls)
+        modify fun st => { st with mtbls := (d, i) :: st.mtbls }
+        ss := ss ++ [.prim (.mtblOf d ls) false]
     recordTop n0 ss
     let (ss2, ts) ← elabSeq sc want exp rest
     return (ss ++ ss2, ts)
@@ -1473,7 +1479,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
           note j t true
           pure j
       let mut r := match t with
-        | .tyc _ | .vc .. => .ctor i
+        | .tyc .. | .vc .. => .ctor i
         | .fv i0 => if token then (match refOf sc i0 with | .ctor _ => .ctor i | _ => .fv i) else refOf sc i
         | _ => refOf sc i
       if r matches .fv _ && ((← get).known.lookup i).any isCtorTy then r := .ctor i
@@ -1506,7 +1512,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     recordTop n0 (ss ++ [(fun k => .case s ((n, ci.pos, ci.k, k) :: out) els er nt : Stmt)])
     if (← get).top then
       if let .fv j := s then
-        if let some (.app (.tyc d) idx) := (← get).known.lookup j then
+        if let some (.app (.tyc d _) idx) := (← get).known.lookup j then
           if (← get).firstAdt "Eq" == some d then
             if let [_, .fv x, y] := idx.toList then modify fun st => { st with facts := (x, y) :: st.facts }
     let (ss2, ts) ← elabSeq fsc want exp rest
@@ -1534,7 +1540,7 @@ partial def elabSeq' (sc : Scope) (want : List Mode) (exp : Option Tm) : List Sx
     let cm : Stmt := fun k => Core.chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt)
     recordTop n0 (ss ++ ss1 ++ [cm])
     if let some v := (← get).settledVal x then
-      if let .app (.vc _ c) _ := v then
+      if let .app (.vc _ c _) _ := v then
         if c != ci.pos && !ci.nt then throw s!"comptime-match: expected `{showName pat.show}`, got a value headed by another constructor"
     let (ss2, ts) ← elabSeq fsc want exp rest
     return (ss ++ ss1 ++ [fun k => .chk .cm (.fv x) .nil (.case (.fv x) [(n, ci.pos, ci.k, k)] none false ci.nt)] ++ ss2, ts)
@@ -1678,10 +1684,10 @@ def statements : List String := ["def-adts", "def-lvl", "def-fns", "let", "let-m
   "comptime-match", "unary", "compile-warn", "dump-context", "slot-self", "open-at-fn"]
 
 def nullary (name : String) (d : Nat) (cs : List String) : Adt :=
-  { params := .nil, ctors := cs.map fun _ => .bind (.ty false false false) (.app (.tyc d) .nil) .nil, name, ctorNames := cs }
+  { params := .nil, ctors := cs.map fun _ => .bind (.ty false false false) (.app (.tyc d .nil) .nil) .nil, name, ctorNames := cs }
 
 def coercibleAdt : Adt :=
-  let sh : Tm := .app (.tyc sharingD) .nil
+  let sh : Tm := .app (.tyc sharingD .nil) .nil
   let e (A : Tm) (r : Tm) : Tm := .bind (.ty false true false) A r
   { params := e sh (e .univ (e (.bv 0) (e sh (e .univ (e (.bv 0) .nil))))), ctors := [], name := "Coercible",
     coercible := true }

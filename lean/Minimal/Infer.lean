@@ -16,7 +16,7 @@ structure Metas where
   eqs : List (Tm × Tm) := []
 
 def coerOf' (T : Tm) : Option (Tm × Tm × Tm × Tm × Tm × Tm) := match T with
-  | .app (.tyc _) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) => some (sa, A, a, sb, B, b)
+  | .app (.tyc _ .nil) (.cons sa (.cons A (.cons a (.cons sb (.cons B (.cons b .nil)))))) => some (sa, A, a, sb, B, b)
   | _ => none
 
 def Metas.typeOf (m : Metas) (t : Tm) : Option Tm :=
@@ -109,8 +109,12 @@ partial def inferTerm (Γ : Ctx) (t : Tm) (A : Option Tm) : Except String Tm := 
   | .valCtor sig => return .valCtor (← inferTele Γ sig)
   | .tyCtor ps => return .tyCtor (← inferTele Γ ps)
   | .fn l np tele u => return .fn l np (← inferTele Γ tele) u
-  | t =>
-    let (m, t) ← ({ Γ, base := Γ.n } : Metas).openTm P t A
+  | t => do
+    let m0 : Metas := { Γ, base := Γ.n }
+    let (m, A) ← match A with
+      | some A => if A.hasHole then (fun (m, A) => (m, some A)) <$> m0.openTm P A (some .univ) else pure (m0, some A)
+      | none => pure (m0, none)
+    let (m, t) ← m.openTm P t A
     let [t] ← m.fill P [t] | .error "cannot infer `_`"
     .ok t
 
@@ -123,12 +127,19 @@ partial def inferTele (Γ : Ctx) : Tm → Except String Tm
 
 end
 
+def fvClosure (f : Nat → List Nat) : Nat → List Nat → List Nat → List Nat
+  | 0, _, seen | _, [], seen => seen
+  | fuel + 1, i :: todo, seen =>
+    let new := ((f i).filter (!seen.contains ·)).eraseDups
+    fvClosure f fuel (todo ++ new) (seen ++ new)
+
 def addMentions (Γ : Ctx) (ts : Tm) : Tm × Nat :=
   match ts.toList.mapM fun t => (checkTm P Γ t).toOption.map fun ⟨T, _⟩ => Γ.canon T with
   | none => (ts, 0)
   | some Ts =>
     let tyFvs (i : Nat) : List Nat := ((Γ.tys[i]?).map fun T => (Γ.canon T).fvs).getD []
-    let ms := ((List.range (Γ.n + 1)).foldl (fun xs _ => (xs ++ xs.flatMap tyFvs).eraseDups) (Ts.flatMap Tm.fvs)).mergeSort
+    let init := (Ts.flatMap Tm.fvs).eraseDups
+    let ms := (fvClosure tyFvs (Γ.n + init.length + 1) init init).mergeSort
     (.ofList (ms.map Tm.fv ++ ts.toList), ms.length)
 
 abbrev IM := StateT (List Group × Nat) (Except String)

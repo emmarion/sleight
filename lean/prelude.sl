@@ -733,6 +733,32 @@
 
 (def-lvl char-lvl)
 
+(def-fns char-lvl $ (many char-cmp at u62-cmp : (many (Char) a) (many (Char) b) ->
+    (many (Cmp (Char) CharLt a b) c))
+  (let-match erased a (MkChar ua))
+  (let-match erased ua (MkU8 ma pa))
+  (let-match erased b (MkChar ub))
+  (let-match erased ub (MkU8 nb pb))
+  (let ((many ka)) (coerce a (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ua))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 ma pa)))))
+  (let ((many kb)) (coerce b (coercible-trans (coercible-sym (coercible-wrap (Shared) MkChar ub))
+                                            (coercible-sym (coercible-wrap (Shared) MkU8 nb pb)))))
+  (let ((many r)) (delegate (u62-cmp ka kb (lt-trans _ _ _ pa u8-below-u62) (lt-trans _ _ _ pb u8-below-u62))))
+  (let ((erased _) (erased cr))
+    (match erased r (((Cmp (Char) CharLt a b) c2)
+                     ((Coercible (Shared) (Cmp (Nat) Lt ka kb) r (Shared) (Cmp (Char) CharLt a b) c2) cc))
+      ((CLt _ _ _ _ p)
+        (values (CLt (Char) CharLt a b (MkCharLt ma nb pa pb p))
+                (coercible-ctor (Shared) CLt (Nat) (Char) Lt CharLt ka a kb b p (MkCharLt ma nb pa pb p))))
+      ((CEq _ _ _)
+        (let-match erased (lt-unique ma u8-modulus pa pb) (Refl _ _))
+        (values (CEq (Char) CharLt a)
+                (coercible-ctor (Shared) CEq (Nat) (Char) Lt CharLt ka a)))
+      ((CGt _ _ _ _ q)
+        (values (CGt (Char) CharLt a b (MkCharLt nb ma pb pa q))
+                (coercible-ctor (Shared) CGt (Nat) (Char) Lt CharLt ka a kb b q (MkCharLt nb ma pb pa q))))))
+  (coerce r cr))
+
 (def-adts $ (String : -> Type)
   enum extern
   (many SNil : -> (String))
@@ -767,6 +793,17 @@
     (many SLtNil : (erased (Char) d) (erased (String) t) -> (StrLt (SNil) (SCons d t)))
     (many SLtHead : (erased (Char) c) (erased (Char) d) (erased (String) s) (erased (String) t) (erased (CharLt c d) p) -> (StrLt (SCons c s) (SCons d t)))
     (many SLtTail : (erased (Char) c) (erased (String) s) (erased (String) t) (erased (StrLt s t) p) -> (StrLt (SCons c s) (SCons c t)))))
+
+(def-fns _ $ (many extern str-cmp : (subterm many (String) a) (many (String) b) -> (many (Cmp (String) StrLt a b) r))
+  (let-match many a (SCons c s) ((SNil) (match many b _ ((SNil) (CEq _ _ a)) ((SCons d t) (CLt _ _ a b $ SLtNil d t)))))
+  (let-match many b (SCons d t) ((SNil) (CGt _ _ a b $ SLtNil c s)))
+  (let-match many (char-cmp c d) (CEq _ _ _)
+    ((CLt _ _ _ _ p) (CLt _ _ a b $ SLtHead c d s t p))
+    ((CGt _ _ _ _ p) (CGt _ _ a b $ SLtHead d c t s p)))
+  (match many (notail $ str-cmp s t) _
+    ((CLt _ _ _ _ q) (CLt _ _ a b $ SLtTail c s t q))
+    ((CEq _ _ _) (CEq _ _ a))
+    ((CGt _ _ _ _ q) (CGt _ _ a b $ SLtTail c t s q))))
 
 (def-adts
   ((StrLength : ((String) s) ((Nat) n) -> Type)

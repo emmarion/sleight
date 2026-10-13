@@ -5,23 +5,23 @@ namespace Minimal
 
 def Prog.nat (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "Nat")
 
-def Prog.lifted (P : Prog) (d : Nat) : Nat := ((P.adts[d]?).map (·.lifted)).getD 0
+def Prog.ownErs (P : Prog) (d c : Nat) : List Bool := ((P.ctor d c).map fun sig => fieldErs (sig.skip (P.lifted d))).getD []
 
 def Prog.natOf (nat : Option Nat) : Tm → Option Nat
-  | .app (.vc d 0) .nil => if nat = some d then some 0 else none
-  | .app (.vc d 1) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
+  | .app (.vc d 0 _) .nil => if nat = some d then some 0 else none
+  | .app (.vc d 1 _) (.cons x .nil) => if nat = some d then (Prog.natOf nat x).map (· + 1) else none
   | _ => none
 
 def Prog.charOf (P : Prog) (nat : Option Nat) : Tm → Option Nat
-  | .app (.vc d 0) args =>
+  | .app (.vc d 0 _) args =>
     if P.adts.findIdx? (·.name == "Char") != some d then none else
     match args.toList.getLast? with
-    | some (.app (.vc _ 0) uargs) => let us := uargs.toList; Prog.natOf nat (us.getD (us.length - 2) .nil)
+    | some (.app (.vc _ 0 _) uargs) => let us := uargs.toList; Prog.natOf nat (us.getD (us.length - 2) .nil)
     | _ => none
   | _ => none
 
 partial def Prog.strOf (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
-  | .app (.vc d c) args =>
+  | .app (.vc d c _) args =>
     if P.adts.findIdx? (·.name == "String") != some d then none
     else if c == 0 then some []
     else
@@ -46,8 +46,8 @@ def showStr (cs : List Nat) : String :=
     else if 32 ≤ c && c ≤ 126 then (Char.ofNat c).toString else "\\x" ++ hex2 c) ++ "\""
 
 def Prog.name (P : Prog) : Tm → String
-  | .vc d c => showName (((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
-  | .tyc d => showName (((P.adts[d]?).map (·.name)).getD s!"T{d}")
+  | .vc d c _ => showName (((P.adts[d]?).bind (·.ctorNames[c]?)).getD s!"C{d}.{c}")
+  | .tyc d _ => showName (((P.adts[d]?).map (·.name)).getD s!"T{d}")
   | _ => "_"
 
 mutual
@@ -58,7 +58,7 @@ partial def Prog.show (P : Prog) (nat : Option Nat) (t : Tm) : String :=
   | some c, _ => showChar c
   | _, some cs => showStr cs
   | _, _ => match t with
-  | .app h@(.vc d _) _ =>
+  | .app h@(.vc d _ _) _ =>
     match P.adts[d]? with
     | some D => if D.union && (D.phantom.filter (!·)).length + (D.ctors.length - D.phantom.length) > 1 then "_"
       else P.showApp nat h t
@@ -75,11 +75,10 @@ partial def Prog.showApp (P : Prog) (nat : Option Nat) (h t : Tm) : String :=
   | _ => "_"
 
 partial def Prog.inner (P : Prog) (nat : Option Nat) (h args : Tm) : String :=
-  let (d, ers) := match h with
-    | .vc d c => (d, ((P.ctor d c).map fieldErs).getD [])
-    | .tyc d => (d, [])
-    | _ => (0, [])
-  let vs : List (Tm × Bool) := (args.toList.zipIdx.map fun (v, k) => (v, ers.getD k false)).drop (P.lifted d)
+  let ers := match h with
+    | .vc d c _ => P.ownErs d c
+    | _ => []
+  let vs : List (Tm × Bool) := args.toList.zipIdx.map fun (v, k) => (v, ers.getD k false)
   let shown := vs.zipIdx.map fun ((v, er), k) =>
     if er then "_"
     else
@@ -95,6 +94,7 @@ def printHole : Nat := 2 ^ 41
 partial def matchTy (sol : List (Nat × Tm)) : Tm → Tm → List (Nat × Tm)
   | .fv i, t => if printHole ≤ i && (sol.lookup i).isNone then (i, t) :: sol else sol
   | .app h a, .app h' a' => matchTy (matchTy sol h h') a a'
+  | .tyc _ l, .tyc _ l' => matchTy sol l l'
   | .cons h t, .cons h' t' => matchTy (matchTy sol h h') t t'
   | _, _ => sol
 
@@ -108,15 +108,15 @@ partial def openSig : Nat → Tm → List (Option Tm) × Tm
 def Prog.fieldTys (P : Prog) (d c : Nat) (T : Tm) : List (Option Tm) :=
   let (fs, R) := openSig 0 ((P.ctor d c).getD .nil)
   let sol := matchTy [] R T
-  fs.map fun F => F.bind fun F =>
+  (fs.drop (P.lifted d)).map fun F => F.bind fun F =>
     let F := F.subst fun i => (sol.lookup i).getD (.fv i)
-    if (F.fvs.any (printHole ≤ ·) && !(F matches .app (.tyc _) _)) || F.levels.length > 0 then none else some F
+    if (F.fvs.any (printHole ≤ ·) && !(F matches .app (.tyc ..) _)) || F.levels.length > 0 then none else some F
 
 def Prog.adtIs (P : Prog) (d : Nat) (name : String) : Bool := P.adts.findIdx? (·.name == name) == some d
 
 partial def Prog.strT (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
-  | .app (.vc _ 0) _ => some []
-  | .app (.vc _ 1) args => do
+  | .app (.vc _ 0 _) _ => some []
+  | .app (.vc _ 1 _) args => do
     let as := args.toList
     let c ← Prog.natOf nat (as.getD (as.length - 2) .nil)
     let rest ← P.strT nat (as.getD (as.length - 1) .nil)
@@ -125,7 +125,7 @@ partial def Prog.strT (P : Prog) (nat : Option Nat) : Tm → Option (List Nat)
 
 mutual
 partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → String × Bool
-  | some (.app (.tyc d) idx), v =>
+  | some (.app (.tyc d ls) idx), v =>
     let lit : Option String :=
       if nat == some d then (Prog.natOf nat v).map toString
       else if nat.isSome && P.adtIs d "Char" then (Prog.natOf nat v).map showChar
@@ -138,27 +138,27 @@ partial def Prog.showT (P : Prog) (nat : Option Nat) : Option Tm → Tm → Stri
       if D.newtype then match live with
         | [c] => match P.wrapField d c with
           | some k =>
-            let n := ((P.ctor d c).map fieldErs).getD [] |>.length
-            P.showCon nat (.app (.tyc d) idx) d c ((List.range n).map fun j => if j == k then v else .tok)
+            let n := (P.ownErs d c).length
+            P.showCon nat (.app (.tyc d ls) idx) d c ((List.range n).map fun j => if j == k then v else .tok)
           | none => ("_", false)
         | _ => ("_", false)
       else if D.union && live.length > 1 then ("_", false)
       else match v with
-        | .app (.vc d' c) args => if d' == d then P.showCon nat (.app (.tyc d) idx) d c args.toList else (P.show nat v, false)
+        | .app (.vc d' c _) args => if d' == d then P.showCon nat (.app (.tyc d ls) idx) d c args.toList else (P.show nat v, false)
         | _ => (P.show nat v, false)
     | none, none => (P.show nat v, false)
   | _, v => (P.show nat v, v matches .app (.vc ..) _)
 
 partial def Prog.showCon (P : Prog) (nat : Option Nat) (T : Tm) (d c : Nat) (args : List Tm) : String × Bool :=
-  let ers := ((P.ctor d c).map fieldErs).getD []
+  let ers := P.ownErs d c
   let tys := P.fieldTys d c T
-  let vs := (args.zipIdx.map fun (v, k) => (v, ers.getD k false, (tys.getD k none))).drop (P.lifted d)
+  let vs := args.zipIdx.map fun (v, k) => (v, ers.getD k false, (tys.getD k none))
   let shown := vs.zipIdx.map fun ((v, er, ty), k) =>
     if er then "_"
     else
       let (sv, ap) := P.showT nat ty v
       if k + 1 == vs.length && ap && sv.startsWith "(" then "$ " ++ (sv.drop 1).dropRight 1 else sv
-  ("(" ++ " ".intercalate (P.name (.vc d c) :: shown) ++ ")", true)
+  ("(" ++ " ".intercalate (P.name (.vc d c .nil) :: shown) ++ ")", true)
 end
 
 def Prog.typesOf : Tm → List Tm → List (Option Tm)
@@ -168,19 +168,19 @@ def Prog.typesOf : Tm → List Tm → List (Option Tm)
 def Prog.strD (P : Prog) : Option Nat := P.adts.findIdx? (·.name == "String")
 
 def Prog.isStr (P : Prog) : Tm → Bool
-  | .app (.tyc d) _ => P.strD == some d
+  | .app (.tyc d _) _ => P.strD == some d
   | _ => false
 
 def Prog.mkStr (P : Prog) (wrapped : Bool) (bytes : List Nat) : Tm := Id.run do
   let some sd := P.strD | return .nil
   let nat := P.nat.getD 0
-  let lift (d : Nat) : List Tm := List.replicate (P.lifted d) .tok
-  let natT (n : Nat) : Tm := (List.range n).foldl (fun t _ => Tm.app (.vc nat 1) (.cons t .nil)) (.app (.vc nat 0) .nil)
+  let lift (d : Nat) : Tm := .ofList (List.replicate (P.lifted d) .tok)
+  let natT (n : Nat) : Tm := (List.range n).foldl (fun t _ => Tm.app (.vc nat 1 .nil) (.cons t .nil)) (.app (.vc nat 0 .nil) .nil)
   let ch (n : Nat) : Tm := match wrapped, P.adts.findIdx? (·.name == "Char"), P.adts.findIdx? (·.name == "U8") with
     | true, some chr, some u8 =>
-      .app (.vc chr 0) (.ofList (lift chr ++ [.app (.vc u8 0) (.ofList (lift u8 ++ [natT n, .tok]))]))
+      .app (.vc chr 0 (lift chr)) (.ofList [.app (.vc u8 0 (lift u8)) (.ofList [natT n, .tok])])
     | _, _, _ => natT n
-  return bytes.foldr (fun b acc => .app (.vc sd 1) (.ofList (lift sd ++ [ch b, acc]))) (.app (.vc sd 0) (.ofList (lift sd)))
+  return bytes.foldr (fun b acc => .app (.vc sd 1 (lift sd)) (.ofList [ch b, acc])) (.app (.vc sd 0 (lift sd)) .nil)
 
 inductive Out where
   | text (s : String)

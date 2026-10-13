@@ -22,8 +22,8 @@ inductive Tm where
   | cons (h t : Tm)
   | bind (k : Ent) (ty rest : Tm)
   | app (h args : Tm)
-  | tyc (d : Nat)
-  | vc (d c : Nat)
+  | tyc (d : Nat) (ls : Tm)
+  | vc (d c : Nat) (ls : Tm)
   | tyCtor (ps : Tm)
   | valCtor (sig : Tm)
   | univ
@@ -41,6 +41,8 @@ namespace Tm
 
 def subst (f : Nat → Tm) : Tm → Tm
   | fv i => f i
+  | tyc d ls => tyc d (ls.subst f)
+  | vc d c ls => vc d c (ls.subst f)
   | cons h t => cons (h.subst f) (t.subst f)
   | bind m a r => bind m (a.subst f) (r.subst f)
   | app h a => app (h.subst f) (a.subst f)
@@ -54,6 +56,8 @@ def subst (f : Nat → Tm) : Tm → Tm
 
 def inst : Tm → Tm → Nat → Tm
   | bv i, u, k => if i = k then u else if k < i then bv (i - 1) else bv i
+  | tyc d ls, u, k => tyc d (ls.inst u k)
+  | vc d c ls, u, k => vc d c (ls.inst u k)
   | cons h t, u, k => cons (h.inst u k) (t.inst u k)
   | bind m a r, u, k => bind m (a.inst u k) (r.inst u (k + 1))
   | app h a, u, k => app (h.inst u k) (a.inst u k)
@@ -66,6 +70,7 @@ def inst : Tm → Tm → Nat → Tm
   | t, _, _ => t
 
 def size : Tm → Nat
+  | tyc _ ls | vc _ _ ls => ls.size + 1
   | cons h t => h.size + t.size + 1
   | bind _ a r => a.size + r.size + 1
   | app h a => h.size + a.size + 1
@@ -78,6 +83,7 @@ def size : Tm → Nat
 
 def levels : Tm → List Nat
   | lvl n => [n]
+  | tyc _ ls | vc _ _ ls => ls.levels
   | cons h t => h.levels ++ t.levels
   | bind _ a r => a.levels ++ r.levels
   | app h a => h.levels ++ a.levels
@@ -92,6 +98,7 @@ def levels : Tm → List Nat
 def static (n : Nat) : Nat → Tm → Bool
   | _, fv i => i < n
   | d, bv i => i < d
+  | d, tyc _ ls | d, vc _ _ ls => ls.static n d
   | d, cons h t => h.static n d && t.static n d
   | d, bind _ a r => a.static n d && r.static n (d + 1)
   | d, app h a => h.static n d && a.static n d
@@ -100,11 +107,12 @@ def static (n : Nat) : Nat → Tm → Bool
   | d, subterm A a B b => A.static n d && a.static n d && B.static n d && b.static n d
   | d, fn l _ t _ => l.static n d && t.static n d
   | d, mtbl _ _ _ _ T cs => T.static n d && cs.static n d
-  | _, nil | _, univ | _, level | _, tyc _ | _, vc .. => true
+  | _, nil | _, univ | _, level => true
   | _, lvl _ | _, tok | _, clo .. => false
 
 def bound : Nat → Tm → Bool
   | d, bv i => i < d
+  | d, tyc _ ls | d, vc _ _ ls => ls.bound d
   | d, cons h t => h.bound d && t.bound d
   | d, bind _ a r => a.bound d && r.bound (d + 1)
   | d, app h a => h.bound d && a.bound d
@@ -118,6 +126,7 @@ def bound : Nat → Tm → Bool
 def lc : Nat → Tm → Prop
   | _, fv _ => False
   | d, bv i => i < d
+  | d, tyc _ ls | d, vc _ _ ls => ls.lc d
   | d, cons h t => h.lc d ∧ t.lc d
   | d, bind _ a r => a.lc d ∧ r.lc (d + 1)
   | d, app h a => h.lc d ∧ a.lc d
@@ -130,6 +139,7 @@ def lc : Nat → Tm → Prop
 
 def fvs : Tm → List Nat
   | fv i => [i]
+  | tyc _ ls | vc _ _ ls => ls.fvs
   | cons h t => h.fvs ++ t.fvs
   | bind _ a r => a.fvs ++ r.fvs
   | app h a => h.fvs ++ a.fvs
@@ -171,6 +181,14 @@ def uAt : Tm → Nat → Bool
   | bind _ _ r, n + 1 => r.uAt n
   | _, _ => false
 
+def peel : Tm → Tm → Tm
+  | bind _ _ r, cons a as => (r.inst a 0).peel as
+  | t, _ => t
+
+def skip : Nat → Tm → Tm
+  | n + 1, bind _ _ r => r.skip n
+  | _, t => t
+
 def ers : Tm → List Bool
   | bind k _ r => k.er :: r.ers
   | _ => []
@@ -195,7 +213,7 @@ def env (ρ : List Tm) (i : Nat) : Tm := ρ.getD i nil
 
 def valRet : Tm → Nat → Bool
   | bind _ _ r@(bind ..), n => r.valRet (n + 1)
-  | bind (.ty ..) (app (tyc _) _) nil, _ | bind (.ty ..) (app (fv _) _) nil, _ => true
+  | bind (.ty ..) (app (tyc ..) _) nil, _ | bind (.ty ..) (app (fv _) _) nil, _ => true
   | bind (.ty ..) (app (bv k) _) nil, n => n ≤ k
   | _, _ => false
 
@@ -207,6 +225,8 @@ def Tm.hole : Tm := .fv holeBase
 
 def Tm.close (i : Nat) : Nat → Tm → Tm
   | k, .fv j => if j = i then .bv k else .fv j
+  | k, .tyc d ls => .tyc d (ls.close i k)
+  | k, .vc d c ls => .vc d c (ls.close i k)
   | k, .cons h t => .cons (h.close i k) (t.close i k)
   | k, .bind m a r => .bind m (a.close i k) (r.close i (k + 1))
   | k, .app h a => .app (h.close i k) (a.close i k)
@@ -232,7 +252,7 @@ inductive Prim where
   | predatesTrans (p q : Tm)
   | subtermTrans (p q : Tm)
   | predatesSubterm (p q : Tm)
-  | mtblOf (d : Nat)
+  | mtblOf (d : Nat) (ls : Tm)
   | assert (t A : Tm)
   | coerce (a b p : Tm)
   | coerRefl (s e : Tm)
@@ -342,21 +362,21 @@ structure Adt where
   coercible : Bool := false
   deriving Repr, Inhabited
 
-def Tm.coer (d : Nat) (sa A a sb B b : Tm) : Tm := .app (.tyc d) (.ofList [sa, A, a, sb, B, b])
+def Tm.coer (d : Nat) (sa A a sb B b : Tm) : Tm := .app (.tyc d .nil) (.ofList [sa, A, a, sb, B, b])
 
 def sharingD : Nat := 1
 
-def sharedTm : Tm := .app (.vc sharingD 1) .nil
+def sharedTm : Tm := .app (.vc sharingD 1 .nil) .nil
 
-def uniqueTm : Tm := .app (.vc sharingD 0) .nil
+def uniqueTm : Tm := .app (.vc sharingD 0 .nil) .nil
 
 def fnSide : Tm → Tm
   | .fn _ _ _ true => uniqueTm
   | _ => sharedTm
 
-def Adt.mtbl (D : Adt) (d : Nat) : Tm :=
-  .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d)
-    (.ofList ((List.range D.ctors.length).map (.vc d)))
+def Adt.mtbl (D : Adt) (d : Nat) (ls : Tm) : Tm :=
+  .mtbl D.union D.newtype D.extern ((List.range D.ctors.length).map (D.phantom.getD · false)) (.tyc d ls)
+    (.ofList ((List.range D.ctors.length).map (.vc d · ls)))
 
 structure Prog where
   adts : List Adt
@@ -374,12 +394,14 @@ def Prog.k (P : Prog) : Nat :=
 
 def Prog.ctor (P : Prog) (d c : Nat) : Option Tm := (P.adts[d]?).bind (·.ctors[c]?)
 
+def Prog.lifted (P : Prog) (d : Nat) : Nat := ((P.adts[d]?).map (·.lifted)).getD 0
+
 def Prog.phantom (P : Prog) (d c : Nat) : Bool := ((P.adts[d]?).bind (·.phantom[c]?)).getD false
 
 def Prog.isNt (P : Prog) (d : Nat) : Bool := ((P.adts[d]?).map (·.newtype)).getD false
 
 def Prog.wrapField (P : Prog) (d c : Nat) : Option Nat :=
-  if P.isNt d && !P.phantom d c then (P.ctor d c).bind Tm.ntField else none
+  if P.isNt d && !P.phantom d c then (P.ctor d c).bind fun sig => (sig.skip (P.lifted d)).ntField else none
 
 mutual
 def Prog.unwrapArgs (P : Prog) : Tm → Tm
@@ -387,9 +409,9 @@ def Prog.unwrapArgs (P : Prog) : Tm → Tm
   | t => t
 
 def Prog.unwrap (P : Prog) : Tm → Tm
-  | .app (.vc d c) args => match P.wrapField d c with
+  | .app (.vc d c ls) args => match P.wrapField d c with
     | some k => (P.unwrapArgs args).toList.getD k .nil
-    | none => .app (.vc d c) (P.unwrapArgs args)
+    | none => .app (.vc d c ls) (P.unwrapArgs args)
   | t => t
 end
 
@@ -398,6 +420,18 @@ def realBr (brs : List Br) (els : Option Core) : Option (List Tm × Core) :=
   | [(n, _, _, body)], _ => some (List.replicate n .tok, body)
   | [], some e => some ([], e)
   | _, _ => none
+
+theorem sizeOf_realBr {brs : List Br} {els : Option Core} {pre : List Tm} {body : Core}
+    (h : realBr brs els = some (pre, body)) : sizeOf body < sizeOf brs + sizeOf els := by
+  unfold realBr at h
+  split at h
+  · rename_i n c k b hf
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    have hm : (n, c, k, b) ∈ brs.filter (·.2.2.2.real) := by rw [hf]; simp
+    have := List.sizeOf_lt_of_mem (List.mem_filter.mp hm).1
+    simp at this ⊢; omega
+  · simp at h; obtain ⟨-, rfl⟩ := h; simp; omega
+  · cases h
 
 def FnDef.type (G : Group) (F : FnDef) : Tm := .fn (.fv G.lvl) F.np F.tele F.u
 

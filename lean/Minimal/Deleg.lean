@@ -201,7 +201,7 @@ theorem walk2 {t n0 cnt : Nat} {re : List Bool} {S so : List Tm} :
     simpa using resolve_spec P hI (Option.some.inj this)
   | callE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact ih _ hw (hI.toks _)
   | mtchE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact ih _ hw (hI.toks _)
-  | prim _ ih => intro al hw hI; simp only [delegWalk] at hw; exact ih _ hw (prim_resolve hI _ _)
+  | prim _ ih => intro al hw hI; unfold delegWalk at hw; exact ih _ hw (prim_resolve hI _ _)
   | defLvl _ ih =>
     intro al hw hI; simp only [delegWalk] at hw
     exact ih _ hw (hI.push (by simp) fun i b r he => by cases i <;> simp at he)
@@ -209,6 +209,11 @@ theorem walk2 {t n0 cnt : Nat} {re : List Bool} {S so : List Tm} :
   | defFns hG _ ih =>
     intro al hw hI; simp only [delegWalk, hG] at hw
     exact ih _ hw (hI.push (by simp [closuresS_length]) fun i b r he => by simp [List.getElem?_replicate] at he)
+  | caseE hsel _ ih =>
+    intro al hw hI; rw [delegWalk] at hw; split at hw
+    · rename_i hsel'; rw [hsel] at hsel'; cases hsel'
+      exact ih _ hw (hI.push (by simp) fun i b r he => by simp at he)
+    · cases hw
   | _ => intro al hw; simp [delegWalk] at hw
 
 theorem WInv.spreadOut {n0 : Nat} {ρ : List Tm} {al : List (Option (Bool × Nat))} {S so : List Tm}
@@ -258,7 +263,7 @@ theorem walk1 {t n0 cnt : Nat} {re : List Bool} {S : List Tm} (hS : S.length = c
     · exact walk2 (by simpa [FnDef.spreadOut] using hr) _ hw ((hI _).spreadOut _)
   | callE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact walk1_tr ht hI (ih _ hw fun so => (hI so).toks _)
   | mtchE _ ih => intro al hw hI; simp only [delegWalk] at hw; exact walk1_tr ht hI (ih _ hw fun so => (hI so).toks _)
-  | prim _ ih => intro al hw hI; simp only [delegWalk] at hw; exact walk1_tr ht hI (ih _ hw fun so => prim_resolve (hI so) _ _)
+  | prim _ ih => intro al hw hI; unfold delegWalk at hw; exact walk1_tr ht hI (ih _ hw fun so => prim_resolve (hI so) _ _)
   | defLvl _ ih =>
     intro al hw hI; simp only [delegWalk] at hw
     exact walk1_tr ht hI (ih _ hw fun so => (hI so).push (by simp) fun i b r he => by cases i <;> simp at he)
@@ -267,6 +272,11 @@ theorem walk1 {t n0 cnt : Nat} {re : List Bool} {S : List Tm} (hS : S.length = c
     intro al hw hI; simp only [delegWalk, hG] at hw
     exact walk1_tr ht hI (ih _ hw fun so => (hI so).push (by simp [closuresS_length]) fun i b r he => by
       simp [List.getElem?_replicate] at he)
+  | caseE hsel _ ih =>
+    intro al hw hI; rw [delegWalk] at hw; split at hw
+    · rename_i hsel'; rw [hsel] at hsel'; cases hsel'
+      exact walk1_tr ht hI (ih _ hw fun so => (hI so).push (by simp) fun i b r he => by simp at he)
+    · cases hw
   | _ => intro al hw; simp [delegWalk] at hw
 
 end Minimal

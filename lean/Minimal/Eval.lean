@@ -70,7 +70,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
     | none => .error "callee is not a function"
   | .mtch s _ brs els _ rest =>
     match s.subst (Tm.env ρ) with
-    | .app (.vc _ c) vs =>
+    | .app (.vc _ c _) vs =>
       match hb : selectBr brs els c vs.toList with
       | some (pre, body) =>
         match eval P μ (ρ ++ pre) cnt body with
@@ -91,7 +91,7 @@ def eval (P : Prog) (μ : Option (List Nat)) (ρ : List Tm) (cnt : Nat) : Core �
   | .dead => .error "a refuted branch was reached"
   | .case s brs els _ _ =>
     match s.subst (Tm.env ρ) with
-    | .app (.vc _ c) vs =>
+    | .app (.vc _ c _) vs =>
       match hb : selectBr brs els c vs.toList with
       | some (pre, body) => eval P μ (ρ ++ pre) cnt body
       | none => .error "no branch"

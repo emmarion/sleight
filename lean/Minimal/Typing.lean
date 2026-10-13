@@ -93,7 +93,7 @@ def stepS (P : Prog) (ρ : List Tm) : Core → Option (List Tm)
     | _ => none
   | .mtch _ R _ _ true _ => some (List.replicate R.len .tok)
   | .mtch s _ brs els false _ => match P.sub ρ s with
-    | .app (.vc _ c) vs => do
+    | .app (.vc _ c _) vs => do
       let (pre, body) ← selectBr brs els c vs.toList
       runS P fixFuel (ρ ++ pre) body
     | _ => none
@@ -110,9 +110,9 @@ def Ctx.adv (P : Prog) (Γ Γ' : Ctx) (c : Core) : Ctx :=
   else Γ'
 
 def Ctx.known (Γ : Ctx) : Tm → Option (Nat × Nat)
-  | .vc d c => some (d, c)
+  | .vc d c _ => some (d, c)
   | .fv y => match Γ.fixed[y]?.join with
-    | some (.vc d c) => some (d, c)
+    | some (.vc d c _) => some (d, c)
     | _ => none
   | _ => none
 
@@ -121,7 +121,7 @@ def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :
     if fe then Γ.record Γ' (List.replicate n .tok)
     else match s, Γ.known k with
       | .fv x, some (d, c) => if P.isNt d then Γ' else match Γ.fixed[x]?.join with
-        | some (.app (.vc d' c') vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
+        | some (.app (.vc d' c' _) vs) => if d' = d ∧ c' = c then Γ.record Γ' vs.toList else Γ'
         | _ => Γ'
       | _, _ => Γ'
   else Γ'
@@ -129,7 +129,7 @@ def Ctx.advBr (P : Prog) (Γ Γ' : Ctx) (s k : Tm) (fe : Bool) (n : Nat) : Ctx :
 def Ctx.fixedEnv (Γ : Ctx) (i : Nat) : Tm := (Γ.fixed[i]?.join).getD .nil
 
 def fieldsSimple (S : List Nat) : Tm → Bool
-  | .bind (.ty _ false _) (.app (.tyc d) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
+  | .bind (.ty _ false _) (.app (.tyc d .nil) .nil) r@(.bind ..) => S.contains d && fieldsSimple S r
   | .bind (.ty _ false _) _ .nil => true
   | _ => false
 
@@ -148,23 +148,24 @@ def compat : List Bool → Tm → Bool
 variable (P : Prog)
 
 def declMtbl : Tm → List Tm
-  | .tyc d | .vc d _ => ((P.adts[d]?).map (·.mtbl d)).toList
+  | .tyc d .nil | .vc d _ .nil => ((P.adts[d]?).map (·.mtbl d .nil)).toList
   | _ => []
 
 def sigOf (Γ : Ctx) : Tm → Option Tm
   | .fv i => Γ.sig i
-  | .tyc d => (P.adts[d]?).map fun D => .tyCtor D.params
-  | .vc d c => (P.ctor d c).map .valCtor
+  | .tyc d .nil => if P.lifted d = 0 then (P.adts[d]?).map fun D => .tyCtor D.params else none
+  | .vc d c .nil => if P.lifted d = 0 then (P.ctor d c).map .valCtor else none
   | _ => none
 
 def declShape : Tm → Option (Tm × Option Tm)
-  | .tyc d => (P.adts[d]?).map fun D => (.tyCtor D.params, some (D.mtbl d))
-  | .vc d c => (P.adts[d]?).bind fun D => (D.ctors[c]?).map fun sig => (.valCtor sig, some (D.mtbl d))
+  | .tyc d .nil => if P.lifted d = 0 then (P.adts[d]?).map fun D => (.tyCtor D.params, some (D.mtbl d .nil)) else none
+  | .vc d c .nil => if P.lifted d = 0 then
+      (P.adts[d]?).bind fun D => (D.ctors[c]?).map fun sig => (.valCtor sig, some (D.mtbl d .nil)) else none
   | .univ | .level => some (.tyCtor .nil, none)
   | _ => none
 
 def clash : Tm → Tm → Bool
-  | .vc d c, .vc d' c' => d == d' && c != c'
+  | .vc d c _, .vc d' c' _ => d == d' && c != c'
   | _, _ => false
 
 def declIso : Nat → List (List Tm) → List (Tm × Tm) → Bool
@@ -184,7 +185,7 @@ def declIso : Nat → List (List Tm) → List (Tm × Tm) → Bool
 
 def Prog.isoFuel : Nat :=
   let n := P.adts.length + (P.adts.map (·.ctors.length)).sum + 2
-  n * ((P.adts.zipIdx.map fun (D, d) => D.params.size + (D.mtbl d).size + (D.ctors.map Tm.size).sum).sum + n) + 1
+  n * ((P.adts.zipIdx.map fun (D, d) => D.params.size + (D.mtbl d .nil).size + (D.ctors.map Tm.size).sum).sum + n) + 1
 
 def Ctx.lists (Γ : Ctx) (σ : Nat → Option Tm) : List (Tm × Tm × List Tm) :=
   Γ.opened.filterMap fun (m, _) => match (Γ.tys[m]?).map (canonBy σ) with
@@ -218,13 +219,13 @@ def Ctx.branch (Γ : Ctx) (s k H idx sig : Tm) : Ctx × UResult :=
 mutual
 def rt (Γ : Ctx) : Tm → Bool
   | .fv i => !Γ.er i
-  | .app (.vc d c) args => match P.ctor d c with
-    | some sig => !P.phantom d c && rtArgs Γ args sig
+  | .app (.vc d c ls) args => match P.ctor d c with
+    | some sig => !P.phantom d c && ls.len == P.lifted d && rtArgs Γ args (sig.skip (P.lifted d))
     | none => false
   | .app (.fv i) args => match (Γ.tys[i]?).map Γ.canon with
     | some (.valCtor sig) => !Γ.er i && rtArgs Γ args sig
     | _ => false
-  | .vc d c => !P.phantom d c
+  | .vc d c _ => !P.phantom d c
   | _ => false
 
 def rtArgs (Γ : Ctx) : Tm → Tm → Bool
@@ -237,7 +238,7 @@ def Ctx.ok (Γ : Ctx) (b : Bool) : Bool := Γ.ghost || b
 
 def Prim.rt (Γ : Ctx) : Prim → Bool
   | .tm t | .lit t | .coerce t _ _ => Minimal.rt P Γ t
-  | .mtblOf _ => true
+  | .mtblOf .. => true
   | _ => false
 
 mutual
@@ -246,8 +247,8 @@ inductive TmTy : Ctx → Tm → Tm → Prop
   | fvIs : Γ.tys[i]? = some .nil → Γ.σ i = some t → TmTy Γ t T → TmTy Γ (.fv i) T
   | univ : TmTy Γ .univ .univ
   | level : TmTy Γ .level .univ
-  | tyc : P.adts[d]? = some D → TmTy Γ (.tyc d) (.tyCtor D.params)
-  | vc : P.ctor d c = some sig → TmTy Γ (.vc d c) (.valCtor sig)
+  | tyc : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy Γ ls D.params out → TmTy Γ (.tyc d ls) (.tyCtor out)
+  | vc : P.ctor d c = some sig → ls.len = P.lifted d → ArgsTy Γ ls sig out → TmTy Γ (.vc d c ls) (.valCtor out)
   | tyApp : TmTy Γ h H → Γ.canon H = .tyCtor ps → ArgsTy Γ args ps .nil → TmTy Γ (.app h args) .univ
   | vcApp : TmTy Γ h H → Γ.canon H = .valCtor sig → ArgsTy Γ args sig (.bind (.ty m e u) T .nil) →
       TmTy Γ (.app h args) T
@@ -298,7 +299,7 @@ inductive DecOK : Ctx → Dec → Tm → Tm → Tm → Prop
       DecOK Γ dec l t args
 
 inductive WrapOK : Ctx → Tm → Nat → Prop
-  | decl : Γ.canon C = .vc d c → P.wrapField d c = some k → WrapOK Γ C k
+  | decl : Γ.canon C = .vc d c ls → P.wrapField d c = some k → WrapOK Γ C k
   | opened : (m, oe) ∈ Γ.opened → Γ.tys[m]? = some M → Γ.canon M = .mtbl u true ex ph H cs → cs.isList →
       cs.toList[i]? = some C' → Γ.canon C = Γ.canon C' → ph.getD i false = false →
       TmTy P Γ C K → Γ.canon K = .valCtor sig → sig.isTele → sig.ntField = some k → WrapOK Γ C k
@@ -314,11 +315,12 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
       Γ.canon Qt = .predates C l1 l2 → PrimTy Γ (.predatesTrans p q) (.predates A a l2)
   | subtermTrans : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .subterm A a B b →
       Γ.canon Qt = .subterm B b C c → PrimTy Γ (.subtermTrans p q) (.subterm A a C c)
-  | mtblOf : P.adts[d]? = some D → D.lifted = 0 → D.coercible = false → PrimTy Γ (.mtblOf d) (D.mtbl d)
+  | mtblOf : P.adts[d]? = some D → ls.len = D.lifted → ArgsTy P Γ ls D.params out → D.coercible = false →
+      PrimTy Γ (.mtblOf d ls) (D.mtbl d ls)
   | predatesSubterm : TmTy P Γ p Pt → TmTy P Γ q Qt → Γ.canon Pt = .predates A a l →
       Γ.canon Qt = .subterm B b A a → PrimTy Γ (.predatesSubterm p q) (.predates B b l)
   | assert : TmTy P Γ t T → t.static 0 0 → P.simpleStep P.simple = P.simple →
-      (∀ i ∈ A.fvs, ∃ d vS, Γ.tys[i]? = some (.app (.tyc d) .nil) ∧ d ∈ P.simple ∧ Γ.fixed[i]?.join = some vS) →
+      (∀ i ∈ A.fvs, ∃ d vS, Γ.tys[i]? = some (.app (.tyc d .nil) .nil) ∧ d ∈ P.simple ∧ Γ.fixed[i]?.join = some vS) →
       A.subst Γ.fixedEnv = T → A.static Γ.n 0 → PrimTy Γ (.assert t A) A
   | coerce : TmTy P Γ p Pt → Γ.canon Pt = Tm.coer dC sa A a' sb B b' → P.adts[dC]? = some D → D.coercible = true →
       Γ.canon a = Γ.canon a' → TmTy P Γ b Tb → Γ.canon b = Γ.canon b' → Γ.canon Tb = Γ.canon B →
@@ -350,8 +352,8 @@ inductive PrimTy : Ctx → Prim → Tm → Prop
 abbrev Arm := Tm × Tm × Bool
 
 inductive Shape : Ctx → Bool → Tm → List Arm → Bool → Prop
-  | decl : P.adts[d]? = some D → D.coercible = false →
-      Shape Γ er (.tyc d) (D.ctors.zipIdx.map fun (sig, c) => (.vc d c, sig, P.phantom d c)) D.newtype
+  | decl : P.adts[d]? = some D → D.coercible = false → ls.len = D.lifted → ls.isList → ls.static Γ.n 0 →
+      Shape Γ er (.tyc d ls) (D.ctors.zipIdx.map fun (sig, c) => (.vc d c ls, sig.peel ls, P.phantom d c)) D.newtype
   | opened : (m, oe) ∈ Γ.opened → Γ.tys[m]? = some M → Γ.canon M = .mtbl u nt ex ph H cs → cs.isList →
       shp.map (·.1) = cs.toList →
       (∀ i k sig p, shp[i]? = some (k, sig, p) → p = ph.getD i false ∧ sig.isTele ∧ sig.static Γ.n 0 ∧
@@ -388,7 +390,14 @@ def delegWalk (t n0 cnt : Nat) (re : List Bool) : Bool → List (Option (Bool ×
       delegWalk t n0 cnt re true (al ++ symSpread true (ve.drop args.toList.length)) r
   | true, al, .ret ts => ts.toList.length == re.length &&
     (filt re ts.toList).map (resolve n0 al) == (List.range (re.count false)).map (fun r => some (true, r))
+  | ph, al, .case _ brs els true _ => match h : realBr brs els with
+    | some (pre, body) =>
+      have := sizeOf_realBr h
+      delegWalk t n0 cnt re ph (al ++ pre.map fun _ => none) body
+    | none => false
   | _, _, _ => false
+termination_by _ _ c => sizeOf c
+decreasing_by all_goals simp_wf <;> omega
 
 def Group.deleOK (G : Group) (n : Nat) : Bool :=
   G.fns.zipIdx.all fun (F, j) => match F.dele with
@@ -449,7 +458,7 @@ inductive BranchOK : Nat → Bool → Ctx → Tm → Tm → Tm → Tm → Tm →
       BranchOK b fe Γ s k H idx sig R (some body) els
   | dead : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R none els
   | covered : BranchOK b fe Γ s k H idx sig R none true
-  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0) vs) → Γ.known k = some (d, c) → c ≠ c0 →
+  | fixedOut : Γ.cmode = true → Γ.fixed[x]?.join = some (.app (.vc d c0 ls) vs) → Γ.known k = some (d, c) → c ≠ c0 →
       P.isNt d = false →
       BranchOK b fe Γ (.fv x) k H idx sig R none els
   | refuted : (Γ.branch P s k H idx sig).2 = .contra → BranchOK b fe Γ s k H idx sig R (some .dead) els
